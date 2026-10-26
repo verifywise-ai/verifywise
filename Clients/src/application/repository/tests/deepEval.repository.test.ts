@@ -453,9 +453,15 @@ describe("Test DeepEval Repository – Metrics", () => {
 // ── MODEL VALIDATION ──────────────────────────────────────────────────────────
 
 describe("Test DeepEval Repository – Model Validation", () => {
-  it("validateModel delegates with modelName and provider", () => {
+  it("validateModel delegates with modelName, provider and the probe flag", () => {
     validateModel("gpt-4", "openai");
-    expect(mockModelValidationService.validateModel).toHaveBeenCalledWith("gpt-4", "openai");
+    expect(mockModelValidationService.validateModel).toHaveBeenCalledWith("gpt-4", "openai", false);
+    validateModel("gpt-4", "openai", true);
+    expect(mockModelValidationService.validateModel).toHaveBeenLastCalledWith(
+      "gpt-4",
+      "openai",
+      true,
+    );
   });
 
   it("validateModelForExperiment delegates with config", () => {

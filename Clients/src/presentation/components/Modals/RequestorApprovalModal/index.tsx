@@ -10,7 +10,6 @@ import {
   Tooltip,
   Typography,
   Chip,
-  Link,
   AccordionSummary,
   Accordion,
   AccordionDetails,
@@ -38,7 +37,6 @@ import {
   stepDividerStyle,
   stepDetailsStack,
   approverNameStyle,
-  seeDetailsLinkStyle,
   commentLabelStyle,
   commentTextStyle,
   commentFieldStyle,
@@ -52,14 +50,13 @@ import {
   ApprovalStatus,
   ApprovalStepStatus,
 } from "../../../../domain/enums/aiApprovalWorkflow.enum";
-import StepDetailsModal from "./StepDetailsModal";
 import DualButtonModal from "../../Dialogs/ConfirmationModal";
 import Field from "../../Inputs/Field";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import {
   IMenuItemExtended,
   IRequestorApprovalProps,
-  IStepDetails,
+  ITimelineApprover,
   ITimelineStep,
 } from "src/domain/interfaces/i.approvalForkflow";
 import TabBar, { TabItem } from "../../TabBar";
@@ -72,6 +69,14 @@ import {
   withdrawRequest,
 } from "../../../../application/repository/approvalRequest.repository";
 import { logEngine } from "../../../../application/tools/log.engine";
+import { showAlert } from "../../../../application/tools/alertUtils";
+import { useTranslation } from "../../../../application/hooks/useTranslation";
+import {
+  approveMayHaveChangedEntity,
+  getApproveOutcome,
+  getApproveOutcomeMessage,
+  type RequestAfterApprove,
+} from "./approveOutcome";
 import { EmptyState } from "../../EmptyState";
 import DetailField from "./DetailField";
 import EntityDetailsSection from "./EntityDetailsSection";
@@ -107,15 +112,15 @@ import { background } from "../../../themes/palette";
 
 const getWorkflowChipProps = (value: string) => {
   const styles: Record<string, { bg: string; color: string }> = {
-    [ApprovalStatus.APPROVED]: {
+    [ApprovalStatus.APPROVED.toLowerCase()]: {
       bg: "#E6F4EA",
       color: "#2E7D32",
     },
-    [ApprovalStatus.REJECTED]: {
+    [ApprovalStatus.REJECTED.toLowerCase()]: {
       bg: "#FDECEA",
       color: "#C62828",
     },
-    [ApprovalStatus.PENDING]: {
+    [ApprovalStatus.PENDING.toLowerCase()]: {
       bg: "#FFF9E6",
       color: "#F57C00",
     },
@@ -133,7 +138,7 @@ const getWorkflowChipProps = (value: string) => {
     },
   };
 
-  const style = styles[value] || { bg: `${background.surface}`, color: "#616161" };
+  const style = styles[value.toLowerCase()] || { bg: `${background.surface}`, color: "#616161" };
 
   return {
     label: value.charAt(0).toUpperCase() + value.slice(1),
@@ -156,8 +161,7 @@ const getWorkflowChipProps = (value: string) => {
 
 const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({ isOpen, onClose, onRefresh }) => {
   const formatDate = useFormattedDate();
-  const [isStepDetailsModalOpen, setIsStepDetailsModalOpen] = useState(false);
-  const [selectedStepDetails, setSelectedStepDetails] = useState<IStepDetails | null>(null);
+  const { t } = useTranslation();
   const [selectedItem, setSelectedItem] = useState<IMenuItemExtended | null>(null);
   const [comment, setComment] = useState<string>("");
   const [commentError, setCommentError] = useState<string | undefined>(undefined);
@@ -216,11 +220,6 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({ isOpen, onClose, 
       }));
     };
 
-  const handleSeeDetailsClick = (_stepId: number) => {
-    setSelectedStepDetails(null);
-    setIsStepDetailsModalOpen(true);
-  };
-
   const handleApprovalActionError = (error: unknown, actionLabel: string) => {
     logEngine({
       type: "error",
@@ -258,6 +257,11 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({ isOpen, onClose, 
     }
 
     const approvedRequestId = selectedItem.id;
+    // The step this vote lands on, to tell the approver afterwards whether it
+    // finished the step or is still waiting on other approvers.
+    const votedStepId = timelineData.find(
+      (step) => step.status !== ApprovalStepStatus.Completed,
+    )?.id;
     setIsProcessing(true);
     setCommentError(undefined);
     try {
@@ -265,12 +269,21 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({ isOpen, onClose, 
         id: selectedItem.id,
         body: { comments: comment },
       });
+    } catch (error) {
+      handleApprovalActionError(error, "approve");
+      setIsProcessing(false);
+      return;
+    }
 
-      logEngine({
-        type: "info",
-        message: "Request approved successfully!",
-      });
+    logEngine({
+      type: "info",
+      message: "Request approved successfully!",
+    });
 
+    // The vote is committed from here on. A failed refresh must not report
+    // "Failed to approve": a retry would only get a 409.
+    let approvedRequest: RequestAfterApprove | undefined;
+    try {
       // Clear selected item before refreshing data so the auto-select picks the next item
       setSelectedItem(null);
       await fetchRequestsData();
@@ -283,31 +296,42 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({ isOpen, onClose, 
       // Check if the request is still pending after approval
       // If not, it means all steps are completed and we should close the modal
       const response = await getApprovalRequestById({ id: approvedRequestId });
-      const requestStatus = response?.data?.status?.toLowerCase();
-
-      // If this was a file approval, dispatch event to refresh file lists
-      if (requestDetails?.entityType === "file") {
-        dispatchFileApprovalChanged({ status: "approved" });
-      }
-
-      // If this was an AI write action (e.g. agent_create_risk), tell
-      // any background page showing that entity's table to refetch.
-      // The AI executor runs inside the same approve transaction, so
-      // by the time approveRequest resolves the new row exists.
-      if (requestDetails?.entityType === "ai_action") {
-        dispatchAiActionCompleted({
-          toolName: requestDetails?.aiToolName,
-          status: "approved",
-        });
-      }
-
-      if (requestStatus === "approved") {
-        onClose();
-      }
+      approvedRequest = response?.data;
     } catch (error) {
-      handleApprovalActionError(error, "approve");
+      logEngine({
+        type: "error",
+        message: `Refresh after approving request ${approvedRequestId} failed: ${error}`,
+      });
     } finally {
       setIsProcessing(false);
+    }
+
+    showAlert({
+      variant: "success",
+      body: getApproveOutcomeMessage(getApproveOutcome(approvedRequest, votedStepId), t),
+      isToast: true,
+    });
+
+    const entityChanged = approveMayHaveChangedEntity(approvedRequest);
+
+    // If this was a file approval, dispatch event to refresh file lists
+    if (entityChanged && requestDetails?.entityType === "file") {
+      dispatchFileApprovalChanged({ status: "approved" });
+    }
+
+    // If this was an AI write action (e.g. agent_create_risk), tell
+    // any background page showing that entity's table to refetch.
+    // The AI executor runs inside the approve transaction that completes
+    // the last step, so by the time that call resolves the new row exists.
+    if (entityChanged && requestDetails?.entityType === "ai_action") {
+      dispatchAiActionCompleted({
+        toolName: requestDetails?.aiToolName,
+        status: "approved",
+      });
+    }
+
+    if (approvedRequest?.status?.toLowerCase() === "approved") {
+      onClose();
     }
   };
 
@@ -451,10 +475,13 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({ isOpen, onClose, 
               step.status?.toLowerCase() === ApprovalStepStatus.Completed
                 ? ApprovalStepStatus.Completed
                 : ApprovalStepStatus.Pending,
-            approverName: step.approvals?.map((a: any) => `${a.name} ${a.surname}`).join(", "),
-            approvalResult: step.approvals?.[0]?.approval_result,
-            comment: step.approvals?.[0]?.comments,
-            showDetailsLink: step.approvals && step.approvals.length > 1,
+            approvers: (step.approvals ?? []).map((a: any) => ({
+              id: a.approver_id,
+              name: `${a.name ?? ""} ${a.surname ?? ""}`.trim(),
+              result: (a.approval_result?.toLowerCase() ??
+                "pending") as ITimelineApprover["result"],
+              comment: a.comments || undefined,
+            })),
             dueAt: step.due_at ?? null,
             escalatedAt: step.escalated_at ?? null,
             isOverdue:
@@ -885,9 +912,9 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({ isOpen, onClose, 
                                 </Typography>
                               )}
                             </Stack>
-                            {step.approvalResult && (
+                            {step.status === ApprovalStepStatus.Completed && (
                               <Chip
-                                {...(getWorkflowChipProps(step.approvalResult.toLowerCase()) || {})}
+                                {...getWorkflowChipProps(ApprovalStatus.APPROVED)}
                                 sx={{ mt: 4, alignSelf: "flex-start" }}
                               />
                             )}
@@ -910,29 +937,26 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({ isOpen, onClose, 
                             <Divider orientation="vertical" flexItem sx={stepDividerStyle} />
                           )}
                           <Stack sx={stepDetailsStack} spacing={4} ml={2}>
-                            {step.approverName && (
-                              <Stack direction="row" spacing={4} alignItems="center">
-                                <Typography sx={approverNameStyle}>
-                                  Approver: {step.approverName}
+                            {step.approvers.length > 0 && (
+                              <Stack spacing="8px">
+                                <Typography sx={commentLabelStyle}>
+                                  {step.approvers.length > 1 ? "Approvers" : "Approver"}
                                 </Typography>
-                              </Stack>
-                            )}
-                            {step.showDetailsLink && (
-                              <Link
-                                component="button"
-                                variant="body2"
-                                onClick={() => {
-                                  handleSeeDetailsClick(step.id);
-                                }}
-                                sx={seeDetailsLinkStyle}
-                              >
-                                See details
-                              </Link>
-                            )}
-                            {step.comment && (
-                              <Stack direction="column" spacing={2}>
-                                <Typography sx={commentLabelStyle}>Comment</Typography>
-                                <Typography sx={commentTextStyle}>{step.comment}</Typography>
+                                {step.approvers.map((approver) => (
+                                  <Stack key={approver.id} spacing="4px">
+                                    <Stack direction="row" spacing="8px" alignItems="center">
+                                      <Typography sx={approverNameStyle}>
+                                        {approver.name}
+                                      </Typography>
+                                      <Chip {...getWorkflowChipProps(approver.result)} />
+                                    </Stack>
+                                    {approver.comment && (
+                                      <Typography sx={commentTextStyle}>
+                                        {approver.comment}
+                                      </Typography>
+                                    )}
+                                  </Stack>
+                                ))}
                               </Stack>
                             )}
                           </Stack>
@@ -975,14 +999,6 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({ isOpen, onClose, 
           onClick={() => setActionToast(null)}
         />
       )}
-      <StepDetailsModal
-        isOpen={isStepDetailsModalOpen}
-        onClose={() => {
-          setIsStepDetailsModalOpen(false);
-          setSelectedStepDetails(null);
-        }}
-        stepDetails={selectedStepDetails}
-      />
       <DualButtonModal
         isOpen={isWithdrawConfirmationOpen}
         title="Confirm Withdrawal"

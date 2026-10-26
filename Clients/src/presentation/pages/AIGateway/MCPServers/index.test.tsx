@@ -1,6 +1,13 @@
 import { screen, waitFor, fireEvent } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 
+const mockNavigate = vi.fn();
+
+vi.mock("react-router", async () => {
+  const actual: any = await vi.importActual("react-router");
+  return { ...actual, useNavigate: () => mockNavigate };
+});
+
 vi.mock("../../../../infrastructure/api/networkServices", () => ({
   apiServices: {
     get: vi.fn(),
@@ -23,6 +30,7 @@ vi.mock("../../../components/Layout/PageHeaderExtended", () => ({
 
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import MCPServersPage from "./index";
+import CustomException from "../../../../infrastructure/exceptions/customeException";
 
 const mockGet = apiServices.get as unknown as ReturnType<typeof vi.fn>;
 const mockPost = apiServices.post as unknown as ReturnType<typeof vi.fn>;
@@ -294,7 +302,9 @@ describe("MCPServersPage", () => {
 
   it("shows the server-provided error message when submit fails", async () => {
     mockGet.mockResolvedValue({ data: { servers: [] } });
-    mockPost.mockRejectedValue({ response: { data: { detail: "Slug already taken" } } });
+    mockPost.mockRejectedValue(
+      new CustomException("Conflict", 409, { detail: "Slug already taken" }),
+    );
     renderWithProviders(<MCPServersPage />, { route: "/ai-gateway/mcp/servers" });
 
     await waitFor(() => {
@@ -346,11 +356,144 @@ describe("MCPServersPage", () => {
     });
   });
 
+  it("says what changed when row discovery updates the tool list", async () => {
+    mockGet.mockResolvedValue({ data: { servers: [makeServer()] } });
+    mockPost.mockResolvedValue({
+      data: {
+        status: "success",
+        tools_discovered: 8,
+        changes: { added: 2, removed: 1, changed: 1, unchanged: 5 },
+      },
+    });
+    renderWithProviders(<MCPServersPage />, { route: "/ai-gateway/mcp/servers" });
+    await waitFor(() => expect(screen.getByText("Search Server")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole("button", { name: "Discover tools" }));
+
+    await waitFor(() => expect(screen.getByText("Tools updated")).toBeInTheDocument());
+    expect(screen.getByText("2 new, 1 removed, 1 changed")).toBeInTheDocument();
+  });
+
+  it("says no changes when discovery finds the same tools", async () => {
+    mockGet.mockResolvedValue({ data: { servers: [makeServer()] } });
+    mockPost.mockResolvedValue({
+      data: {
+        status: "success",
+        tools_discovered: 7,
+        changes: { added: 0, removed: 0, changed: 0, unchanged: 7 },
+      },
+    });
+    renderWithProviders(<MCPServersPage />, { route: "/ai-gateway/mcp/servers" });
+    await waitFor(() => expect(screen.getByText("Search Server")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole("button", { name: "Discover tools" }));
+
+    await waitFor(() => expect(screen.getByText("No changes")).toBeInTheDocument());
+    expect(screen.getByText("7 tools found")).toBeInTheDocument();
+  });
+
+  it("links the discovery toast to that server's tools", async () => {
+    mockGet.mockResolvedValue({ data: { servers: [makeServer({ id: 3 })] } });
+    mockPost.mockResolvedValue({ data: { status: "success", tools_discovered: 7 } });
+    renderWithProviders(<MCPServersPage />, { route: "/ai-gateway/mcp/servers" });
+    await waitFor(() => expect(screen.getByText("Search Server")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole("button", { name: "Discover tools" }));
+    fireEvent.click(await screen.findByRole("button", { name: "View tools" }));
+
+    expect(mockNavigate).toHaveBeenCalledWith("/ai-gateway/mcp/tools?server=3", {
+      state: { from: "mcp-servers" },
+    });
+  });
+
+  it("opens the server's tools from the tools count without opening the editor", async () => {
+    mockGet.mockResolvedValue({ data: { servers: [makeServer({ id: 3, tool_count: 4 })] } });
+    renderWithProviders(<MCPServersPage />, { route: "/ai-gateway/mcp/servers" });
+    await waitFor(() => expect(screen.getByText("Search Server")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole("button", { name: "View 4 tools" }));
+
+    expect(mockNavigate).toHaveBeenCalledWith("/ai-gateway/mcp/tools?server=3", {
+      state: { from: "mcp-servers" },
+    });
+    expect(screen.queryByText("Edit server")).not.toBeInTheDocument();
+  });
+
+  it("names a single tool in the count link's label", async () => {
+    mockGet.mockResolvedValue({ data: { servers: [makeServer({ id: 3, tool_count: 1 })] } });
+    renderWithProviders(<MCPServersPage />, { route: "/ai-gateway/mcp/servers" });
+    expect(await screen.findByRole("button", { name: "View one tool" })).toBeInTheDocument();
+  });
+
+  it("offers no tools link when discovery only removed tools", async () => {
+    mockGet.mockResolvedValue({ data: { servers: [makeServer({ id: 3, tool_count: 0 })] } });
+    mockPost.mockResolvedValue({
+      data: {
+        status: "success",
+        tools_discovered: 0,
+        changes: { added: 0, removed: 2, changed: 0, unchanged: 0 },
+      },
+    });
+    renderWithProviders(<MCPServersPage />, { route: "/ai-gateway/mcp/servers" });
+    await waitFor(() => expect(screen.getByText("Search Server")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole("button", { name: "Discover tools" }));
+
+    await waitFor(() => expect(screen.getByText("2 removed")).toBeInTheDocument());
+    expect(screen.queryByRole("button", { name: "View tools" })).not.toBeInTheDocument();
+  });
+
+  it("keeps each row's spinner until its own discovery finishes", async () => {
+    mockGet.mockResolvedValue({
+      data: { servers: [makeServer({ id: 1 }), makeServer({ id: 2, name: "Other Server" })] },
+    });
+    const finish: Array<(v: unknown) => void> = [];
+    mockPost.mockImplementation(() => new Promise((resolve) => finish.push(resolve)));
+    renderWithProviders(<MCPServersPage />, { route: "/ai-gateway/mcp/servers" });
+    await waitFor(() => expect(screen.getByText("Other Server")).toBeInTheDocument());
+
+    const [first, second] = screen.getAllByRole("button", { name: "Discover tools" });
+    fireEvent.click(first);
+    fireEvent.click(second);
+    await waitFor(() => expect(finish).toHaveLength(2));
+
+    finish[0]({ data: { status: "success", tools_discovered: 4 } });
+    await waitFor(() => expect(first).toHaveAttribute("aria-busy", "false"));
+    expect(second).toHaveAttribute("aria-busy", "true");
+
+    finish[1]({ data: { status: "success", tools_discovered: 4 } });
+    await waitFor(() => expect(second).toHaveAttribute("aria-busy", "false"));
+  });
+
+  it("keeps the table and spins the discover button while discovery runs", async () => {
+    mockGet.mockResolvedValue({ data: { servers: [makeServer()] } });
+    let finish: (v: unknown) => void = () => {};
+    mockPost.mockReturnValue(new Promise((resolve) => (finish = resolve)));
+    renderWithProviders(<MCPServersPage />, { route: "/ai-gateway/mcp/servers" });
+    await waitFor(() => expect(screen.getByText("Search Server")).toBeInTheDocument());
+
+    const button = screen.getByRole("button", { name: "Discover tools" });
+    fireEvent.click(button);
+
+    await waitFor(() => expect(button).toHaveAttribute("aria-busy", "true"));
+    expect(button.querySelector(".MuiCircularProgress-root")).toBeInTheDocument();
+
+    finish({ data: { status: "success", tools_discovered: 4 } });
+    await waitFor(() => expect(screen.getByText("4 tools found")).toBeInTheDocument());
+    // The reload after discovery must not swap the table for the skeleton.
+    expect(screen.getByText("Search Server")).toBeInTheDocument();
+    expect(document.querySelector(".MuiSkeleton-root")).not.toBeInTheDocument();
+    await waitFor(() => expect(mockGet).toHaveBeenCalledTimes(2));
+    expect(document.querySelector(".MuiSkeleton-root")).not.toBeInTheDocument();
+  });
+
   it("shows the gateway's reason when row discovery fails", async () => {
     mockGet.mockResolvedValue({ data: { servers: [makeServer()] } });
-    mockPost.mockRejectedValue({
-      response: { data: { detail: "Could not connect to the server address" } },
-    });
+    mockPost.mockRejectedValue(
+      new CustomException("Bad Request", 400, {
+        detail: "Could not connect to the server address",
+      }),
+    );
     renderWithProviders(<MCPServersPage />, { route: "/ai-gateway/mcp/servers" });
     await waitFor(() => expect(screen.getByText("Search Server")).toBeInTheDocument());
 
@@ -422,6 +565,28 @@ describe("MCPServersPage", () => {
 
     await waitFor(() => expect(screen.getByText("Server switched on")).toBeInTheDocument());
     expect(screen.getByText("2 tools found")).toBeInTheDocument();
+  });
+
+  it("reports changes, not the total, when re-saving a server changes its tools", async () => {
+    mockGet.mockResolvedValue({ data: { servers: [makeServer({ is_active: false })] } });
+    mockPatch.mockResolvedValue({
+      data: {
+        server: makeServer(),
+        discovery: {
+          status: "success",
+          tools_discovered: 4,
+          changes: { added: 1, removed: 0, changed: 0, unchanged: 3 },
+          error: null,
+        },
+      },
+    });
+    renderWithProviders(<MCPServersPage />, { route: "/ai-gateway/mcp/servers" });
+    await waitFor(() => expect(screen.getByText("Search Server")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole("switch"));
+
+    await waitFor(() => expect(screen.getByText("Server switched on")).toBeInTheDocument());
+    expect(screen.getByText("1 new")).toBeInTheDocument();
   });
 
   it("explains an unhealthy status on hover", async () => {

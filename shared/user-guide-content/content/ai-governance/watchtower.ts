@@ -24,7 +24,7 @@ export const watchtowerContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Navigate to **Event Tracker** from the main sidebar. The page is organized into two tabs: Events and Logs.',
+      text: 'Navigate to **Event Tracker** from the main sidebar. The page is organized into two tabs: Events and Logs. Every member sees the Events tab. The Logs tab is shown only to Admins.',
     },
     {
       type: 'heading',
@@ -58,7 +58,7 @@ export const watchtowerContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The Logs tab provides access to raw application logs. This is useful for technical troubleshooting when you need to see exactly what happened at the system level.',
+      text: 'The Logs tab provides access to raw application logs. This is useful for technical troubleshooting when you need to see exactly what happened at the system level. Only Admins can open the Logs tab.',
     },
     {
       type: 'bullet-list',

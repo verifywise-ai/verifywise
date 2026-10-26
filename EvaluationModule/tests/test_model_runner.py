@@ -14,6 +14,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from deepeval_engine.gateway_litellm_client import GatewayCompletion
+
 
 def _make_runner(provider: str, model_name: str = "test-model", gateway_mode: bool = False):
     """Build a ModelRunner instance without running __init__."""
@@ -27,11 +29,9 @@ def _make_runner(provider: str, model_name: str = "test-model", gateway_mode: bo
     runner.tokenizer = None
     runner._gateway_mode = gateway_mode
     runner._gateway_api_key = "sk-fake" if gateway_mode else None
-    runner.openai_client = MagicMock()
-    runner.anthropic_client = MagicMock()
-    runner.google_client = MagicMock()
-    runner.xai_client = MagicMock()
-    runner.mistral_client = MagicMock()
+    runner.last_completion = None
+    runner.dropped_params = set()
+    runner.custom_client = MagicMock()
     runner.ollama_client = MagicMock()
     runner.openrouter_client = MagicMock()
     return runner
@@ -40,27 +40,6 @@ def _make_runner(provider: str, model_name: str = "test-model", gateway_mode: bo
 # --------------------------------------------------------------------------- #
 # Provider dispatch table — gateway OFF                                       #
 # --------------------------------------------------------------------------- #
-
-
-@pytest.mark.parametrize(
-    "provider,private_method",
-    [
-        ("openai", "_generate_openai"),
-        ("anthropic", "_generate_anthropic"),
-        ("google", "_generate_google"),
-        ("xai", "_generate_xai"),
-        ("mistral", "_generate_mistral"),
-        ("openrouter", "_generate_openrouter"),
-        ("ollama", "_generate_ollama"),
-        ("huggingface", "_generate_huggingface"),
-    ],
-)
-def test_generate_dispatches_to_correct_provider(provider: str, private_method: str) -> None:
-    runner = _make_runner(provider)
-    with patch.object(runner, private_method, return_value="dispatched") as mocked:
-        result = runner.generate("hello", max_tokens=10)
-    assert result == "dispatched"
-    mocked.assert_called_once()
 
 
 def test_generate_unknown_provider_raises() -> None:
@@ -98,15 +77,18 @@ def test_generate_gateway_mode_uses_litellm_prefix(
         captured["litellm_model"] = litellm_model
         captured["api_key"] = api_key
         captured["messages"] = messages
-        return "gateway response"
+        return GatewayCompletion(text="gateway response", total_tokens=11, cost_usd=0.0003)
 
     monkeypatch.setattr(
-        "deepeval_engine.gateway_litellm_client.gateway_chat_completion_sync",
+        "deepeval_engine.gateway_litellm_client.gateway_completion_sync",
         fake_completion,
     )
 
     result = runner.generate("hi", max_tokens=5, temperature=0.1)
     assert result == "gateway response"
+    # The gateway's usage and cost stay on the runner for the caller to record
+    assert runner.last_completion.total_tokens == 11
+    assert runner.last_completion.cost_usd == 0.0003
     assert captured["litellm_model"] == expected_litellm
     assert captured["api_key"] == "sk-fake"
     assert captured["messages"] == [{"role": "user", "content": "hi"}]
@@ -120,137 +102,8 @@ def test_generate_gateway_mode_requires_api_key(monkeypatch: pytest.MonkeyPatch)
 
 
 # --------------------------------------------------------------------------- #
-# _retry_with_backoff — rate-limit retries                                    #
+# Local providers (Ollama, HuggingFace)                                       #
 # --------------------------------------------------------------------------- #
-
-
-def test_retry_with_backoff_retries_on_rate_limit(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr("deepeval_engine.model_runner.time.sleep", lambda _: None)
-    runner = _make_runner("openai")
-
-    attempts = {"count": 0}
-
-    def flaky():
-        attempts["count"] += 1
-        if attempts["count"] < 3:
-            raise RuntimeError("Status 429: rate limit hit")
-        return "ok"
-
-    result = runner._retry_with_backoff(flaky, max_retries=3, base_delay=1)
-    assert result == "ok"
-    assert attempts["count"] == 3
-
-
-def test_retry_with_backoff_raises_on_non_rate_limit() -> None:
-    runner = _make_runner("openai")
-
-    def boom():
-        raise ValueError("not a rate limit")
-
-    with pytest.raises(ValueError, match="not a rate limit"):
-        runner._retry_with_backoff(boom, max_retries=3, base_delay=0)
-
-
-def test_retry_with_backoff_exhausts_retries(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr("deepeval_engine.model_runner.time.sleep", lambda _: None)
-    runner = _make_runner("openai")
-
-    def always_rate_limit():
-        raise RuntimeError("Status 429 rate limit")
-
-    with pytest.raises(RuntimeError, match="429"):
-        runner._retry_with_backoff(always_rate_limit, max_retries=2, base_delay=1)
-
-
-# --------------------------------------------------------------------------- #
-# Provider-specific generate paths (no real SDK calls)                        #
-# --------------------------------------------------------------------------- #
-
-
-def test_generate_openai_returns_content() -> None:
-    runner = _make_runner("openai")
-    response = MagicMock()
-    response.choices = [MagicMock(message=MagicMock(content="hello world"))]
-    runner.openai_client.chat.completions.create.return_value = response
-
-    result = runner._generate_openai("prompt", max_tokens=10, temperature=0.5, top_p=None)
-    assert result == "hello world"
-
-
-def test_generate_openai_drops_top_p_for_o_series_models() -> None:
-    runner = _make_runner("openai", model_name="o3-mini")
-    response = MagicMock()
-    response.choices = [MagicMock(message=MagicMock(content="resp"))]
-    runner.openai_client.chat.completions.create.return_value = response
-
-    runner._generate_openai("prompt", max_tokens=10, temperature=0.5, top_p=0.9)
-    call_kwargs = runner.openai_client.chat.completions.create.call_args.kwargs
-    assert "top_p" not in call_kwargs
-
-
-def test_generate_openai_includes_top_p_for_normal_models() -> None:
-    runner = _make_runner("openai", model_name="gpt-4o")
-    response = MagicMock()
-    response.choices = [MagicMock(message=MagicMock(content="resp"))]
-    runner.openai_client.chat.completions.create.return_value = response
-
-    runner._generate_openai("prompt", max_tokens=10, temperature=0.5, top_p=0.9)
-    call_kwargs = runner.openai_client.chat.completions.create.call_args.kwargs
-    assert call_kwargs["top_p"] == 0.9
-
-
-def test_generate_openai_raises_on_empty_content() -> None:
-    runner = _make_runner("openai")
-    response = MagicMock()
-    response.choices = [MagicMock(message=MagicMock(content=None))]
-    runner.openai_client.chat.completions.create.return_value = response
-    with pytest.raises(ValueError, match="empty response"):
-        runner._generate_openai("p", max_tokens=10, temperature=0.5, top_p=None)
-
-
-def test_generate_anthropic_extracts_text() -> None:
-    runner = _make_runner("anthropic")
-    block = MagicMock()
-    block.text = "anthropic out"
-    runner.anthropic_client.messages.create.return_value = MagicMock(content=[block])
-    result = runner._generate_anthropic("prompt", max_tokens=5, temperature=0.5, top_p=None)
-    assert result == "anthropic out"
-
-
-def test_generate_anthropic_top_p_excludes_temperature() -> None:
-    runner = _make_runner("anthropic")
-    block = MagicMock()
-    block.text = "ok"
-    runner.anthropic_client.messages.create.return_value = MagicMock(content=[block])
-    runner._generate_anthropic("p", max_tokens=5, temperature=0.5, top_p=0.9)
-    kwargs = runner.anthropic_client.messages.create.call_args.kwargs
-    assert "top_p" in kwargs
-    assert "temperature" not in kwargs
-
-
-def test_generate_google_returns_text() -> None:
-    runner = _make_runner("google")
-    runner.google_client.generate_content.return_value = MagicMock(text="g out")
-    out = runner._generate_google("p", max_tokens=10, temperature=0.0, top_p=None)
-    assert out == "g out"
-
-
-def test_generate_mistral_handles_string_content() -> None:
-    runner = _make_runner("mistral")
-    chat_response = MagicMock()
-    chat_response.choices = [MagicMock(message=MagicMock(content="m out"))]
-    runner.mistral_client.chat.complete.return_value = chat_response
-    out = runner._generate_mistral("p", max_tokens=5, temperature=0.0, top_p=None)
-    assert out == "m out"
-
-
-def test_generate_mistral_handles_list_content_with_text_blocks() -> None:
-    runner = _make_runner("mistral")
-    chat_response = MagicMock()
-    chat_response.choices = [MagicMock(message=MagicMock(content=[{"text": "a"}, {"text": "b"}]))]
-    runner.mistral_client.chat.complete.return_value = chat_response
-    out = runner._generate_mistral("p", max_tokens=5, temperature=0.0, top_p=None)
-    assert out == "ab"
 
 
 def test_generate_ollama_returns_response() -> None:
@@ -258,29 +111,6 @@ def test_generate_ollama_returns_response() -> None:
     runner.ollama_client.generate.return_value = {"response": "  ollama out  "}
     out = runner._generate_ollama("p", max_tokens=5, temperature=0.0, top_p=None)
     assert out == "ollama out"
-
-
-def test_generate_openrouter_returns_content() -> None:
-    runner = _make_runner("openrouter")
-    response = MagicMock()
-    response.choices = [MagicMock(message=MagicMock(content="or out"))]
-    runner.openrouter_client.chat.completions.create.return_value = response
-    out = runner._generate_openrouter("p", max_tokens=5, temperature=0.0, top_p=None)
-    assert out == "or out"
-
-
-def test_generate_openrouter_raises_on_empty_content() -> None:
-    runner = _make_runner("openrouter")
-    response = MagicMock()
-    response.choices = [MagicMock(message=MagicMock(content=None))]
-    runner.openrouter_client.chat.completions.create.return_value = response
-    with pytest.raises(ValueError, match="empty response"):
-        runner._generate_openrouter("p", max_tokens=5, temperature=0.0, top_p=None)
-
-
-# --------------------------------------------------------------------------- #
-# generate_batch                                                               #
-# --------------------------------------------------------------------------- #
 
 
 def test_generate_batch_returns_list_of_same_length(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -326,3 +156,284 @@ def test_env_api_key_for_unknown_provider_returns_none() -> None:
     from deepeval_engine.model_runner import ModelRunner
 
     assert ModelRunner._env_api_key_for_provider_static("not-real") is None
+
+
+def test_gateway_quota_error_is_not_retried(monkeypatch: pytest.MonkeyPatch) -> None:
+    from deepeval_engine.gateway_litellm_client import GatewayProviderError
+
+    runner = _make_runner("openai", model_name="gpt-4o", gateway_mode=True)
+    calls = {"count": 0}
+
+    def quota(*_args, **_kwargs):
+        calls["count"] += 1
+        raise GatewayProviderError("RateLimitError", 429, "insufficient_quota")
+
+    monkeypatch.setattr("deepeval_engine.gateway_litellm_client.gateway_completion_sync", quota)
+    monkeypatch.setattr("deepeval_engine.model_runner.time.sleep", lambda _s: pytest.fail("slept"))
+
+    with pytest.raises(GatewayProviderError):
+        runner.generate("hi")
+    assert calls["count"] == 1
+
+
+def test_gateway_passing_rate_limit_is_retried_with_backoff(monkeypatch: pytest.MonkeyPatch) -> None:
+    from deepeval_engine.gateway_litellm_client import GatewayCompletion, GatewayProviderError
+
+    runner = _make_runner("openai", model_name="gpt-4o", gateway_mode=True)
+    calls = {"count": 0}
+    slept = []
+
+    def flaky(*_args, **_kwargs):
+        calls["count"] += 1
+        if calls["count"] < 3:
+            raise GatewayProviderError("RateLimitError", 429, "Rate limit reached for requests per min")
+        return GatewayCompletion(text="ok")
+
+    monkeypatch.setattr("deepeval_engine.gateway_litellm_client.gateway_completion_sync", flaky)
+    monkeypatch.setattr("deepeval_engine.model_runner.time.sleep", slept.append)
+
+    assert runner.generate("hi") == "ok"
+    assert calls["count"] == 3
+    assert slept == [2, 4]
+
+
+@pytest.mark.parametrize(
+    "message, attempt, delay",
+    [
+        ("Rate limit reached for requests per min", 1, 4),
+        ("Quota exceeded ... per minute. Please retry in 30s", 0, 30),
+        ("Quota exceeded ... per minute. Please retry in 1.5s", 2, 8),
+        ("Quota exceeded ... per minute. Please retry in 300s", 0, 60),
+    ],
+)
+def test_rate_limit_delay_uses_hint_capped_at_a_minute(message: str, attempt: int, delay: float) -> None:
+    from deepeval_engine.gateway_litellm_client import GatewayProviderError
+    from deepeval_engine.model_runner import _rate_limit_delay
+
+    assert _rate_limit_delay(GatewayProviderError("RateLimitError", 429, message), attempt) == delay
+
+
+@pytest.mark.parametrize(
+    "message, passing",
+    [
+        ("Quota exceeded for metric generate_content_free_tier_requests per minute. Please retry in 30s", True),
+        ("Rate limit reached for requests per min", True),
+        ('Resource exhausted. "retryDelay": "12s"', True),
+        ("Too many requests", True),
+        ("Quota exceeded for metric generate_content_free_tier_requests per day. Please retry in 30s", False),
+        ("Quota exceeded for metric generate_content_free_tier_requests", False),
+        ('quotaId: "GenerateRequestsPerMinutePerProjectPerModel"', True),
+        ("Quota exceeded for metric x, limit: 0, model: gemini-2.5-pro. Please retry in 30s", False),
+        ("Rate limit reached on requests per day (RPD): Limit 200. Please try again in 8s", False),
+        ("Insufficient credits. Please retry in 10s", False),
+        (
+            "You exceeded your current quota, please check your plan and billing details. "
+            "Quota exceeded for metric x, limit: 10. Please retry in 43.6s",
+            True,
+        ),
+        ("You exceeded your current quota, please check your plan and billing details. insufficient_quota", False),
+        ("Your credit balance is too low", False),
+    ],
+)
+def test_passing_rate_limit_rule(message: str, passing: bool) -> None:
+    from deepeval_engine.gateway_litellm_client import GatewayProviderError
+    from deepeval_engine.model_runner import _is_passing_rate_limit
+
+    assert _is_passing_rate_limit(GatewayProviderError("RateLimitError", 429, message)) is passing
+
+
+def test_gateway_retries_stop_at_the_wait_budget(monkeypatch: pytest.MonkeyPatch) -> None:
+    from deepeval_engine.gateway_litellm_client import GatewayProviderError
+
+    runner = _make_runner("google", model_name="gemini-3.8-flash", gateway_mode=True)
+    slept = []
+
+    def limited(*_args, **_kwargs):
+        raise GatewayProviderError("RateLimitError", 429, "Quota exceeded ... per minute. Please retry in 40s")
+
+    monkeypatch.setattr("deepeval_engine.gateway_litellm_client.gateway_completion_sync", limited)
+    monkeypatch.setattr("deepeval_engine.model_runner.time.sleep", slept.append)
+
+    with pytest.raises(GatewayProviderError):
+        runner.generate("hi")
+    # 40 + 40 fits the 90 s budget; a third 40 s wait would not
+    assert slept == [40, 40]
+
+
+def test_gateway_forwards_top_p_and_collects_dropped_settings(monkeypatch: pytest.MonkeyPatch) -> None:
+    from deepeval_engine.gateway_litellm_client import GatewayCompletion
+
+    runner = _make_runner("openai", model_name="o3-mini", gateway_mode=True)
+    seen = {}
+
+    def fake(_model, _messages, _key, **kwargs):
+        seen.update(kwargs)
+        return GatewayCompletion(text="ok", dropped_params=["temperature", "top_p"])
+
+    monkeypatch.setattr("deepeval_engine.gateway_litellm_client.gateway_completion_sync", fake)
+
+    assert runner.generate("hi", temperature=0.7, top_p=0.5) == "ok"
+    assert seen["top_p"] == 0.5
+    assert runner.dropped_params == {"temperature", "top_p"}
+
+
+@pytest.mark.parametrize("provider", ["openai", "anthropic", "google", "xai", "mistral", "openrouter"])
+def test_cloud_provider_without_the_gateway_raises(monkeypatch: pytest.MonkeyPatch, provider: str) -> None:
+    from deepeval_engine.model_runner import ModelRunner
+
+    monkeypatch.delenv("AI_GATEWAY_INTERNAL_KEY", raising=False)
+    with pytest.raises(RuntimeError, match="AI_GATEWAY_INTERNAL_KEY"):
+        ModelRunner(model_name="m", provider=provider, device="cpu")
+
+
+def test_custom_api_uses_its_own_endpoint_not_the_gateway(monkeypatch: pytest.MonkeyPatch) -> None:
+    from deepeval_engine.model_runner import ModelRunner
+
+    monkeypatch.setenv("AI_GATEWAY_INTERNAL_KEY", "internal-test-key")
+    built = {}
+
+    def fake_client(base_url, api_key):
+        built.update(api_key=api_key, base_url=base_url)
+        client = MagicMock()
+        client.chat.completions.create.return_value = MagicMock(
+            choices=[MagicMock(message=MagicMock(content=" out "))]
+        )
+        return client
+
+    monkeypatch.setattr("deepeval_engine.endpoint_client.openai_compatible_client", fake_client)
+    runner = ModelRunner(
+        model_name="my-model", provider="custom_api", device="cpu",
+        endpoint_url="http://vllm.local:8000/v1/", api_key="k-1",
+    )
+    assert runner._gateway_mode is False
+    assert built == {"api_key": "k-1", "base_url": "http://vllm.local:8000/v1"}
+    assert runner.generate("hi", top_p=0.5) == "out"
+    assert runner.custom_client.chat.completions.create.call_args.kwargs["top_p"] == 0.5
+
+
+def test_custom_api_needs_an_endpoint() -> None:
+    from deepeval_engine.model_runner import ModelRunner
+
+    with pytest.raises(ValueError, match="endpoint URL"):
+        ModelRunner(model_name="m", provider="custom_api", device="cpu")
+
+
+def test_self_hosted_judge_runs_against_its_endpoint(monkeypatch: pytest.MonkeyPatch) -> None:
+    from deepeval_engine import deepeval_evaluator
+
+    built = {}
+    monkeypatch.setattr(deepeval_evaluator, "ModelRunner", lambda **kw: built.update(kw) or "runner")
+    monkeypatch.setenv("G_EVAL_BASE_URL", "http://host:8080/v1")
+    monkeypatch.delenv("G_EVAL_API_KEY", raising=False)
+
+    assert deepeval_evaluator.judge_runner("tinyllama", "openai") == "runner"
+    assert built == {"model_name": "tinyllama", "provider": "custom_api", "endpoint_url": "http://host:8080/v1", "api_key": None}
+
+    monkeypatch.delenv("G_EVAL_BASE_URL")
+    built.clear()
+    deepeval_evaluator.judge_runner("gpt-4o-mini", "openai")
+    assert built == {"model_name": "gpt-4o-mini", "provider": "openai"}
+
+
+@pytest.mark.parametrize(
+    "url",
+    ["http://169.254.169.254/latest/meta-data", "file:///etc/passwd", "http://user:pw@host/v1", "http://0.0.0.0:8000"],
+)
+def test_custom_api_refuses_unsafe_endpoints(url: str) -> None:
+    from deepeval_engine.model_runner import ModelRunner
+    from deepeval_engine.safe_outbound_url import UnsafeOutboundUrlError
+
+    with pytest.raises(UnsafeOutboundUrlError):
+        ModelRunner(model_name="m", provider="custom_api", device="cpu", endpoint_url=url)
+
+
+def test_outbound_policy_matches_the_gateway_copy() -> None:
+    """EvaluationModule keeps its own copy (separate deploy); its code must not drift.
+    Only the module docstring may differ (it describes where each copy is used)."""
+    import ast
+    from pathlib import Path
+
+    def code(path: Path) -> str:
+        tree = ast.parse(path.read_text())
+        if ast.get_docstring(tree) is not None:
+            tree.body = tree.body[1:]
+        return ast.dump(tree)
+
+    here = Path(__file__).resolve().parents[1] / "src" / "deepeval_engine" / "safe_outbound_url.py"
+    gateway = Path(__file__).resolve().parents[2] / "AIGateway" / "src" / "utils" / "safe_outbound_url.py"
+    if not gateway.is_file():
+        pytest.skip("AIGateway source not present")
+    assert code(here) == code(gateway)
+
+
+def test_endpoint_clients_do_not_follow_redirects() -> None:
+    from deepeval_engine.endpoint_client import ollama_client, openai_compatible_client
+
+    assert openai_compatible_client("http://host:8000/v1")._client.follow_redirects is False
+    assert ollama_client()._client.follow_redirects is False
+
+
+@pytest.mark.parametrize(
+    "entered, base",
+    [("http://host:8000", "http://host:8000/v1"), ("http://host:8000/", "http://host:8000/v1"),
+     ("http://host:8000/openai/v1", "http://host:8000/openai/v1")],
+)
+def test_custom_api_bare_host_gets_v1(monkeypatch: pytest.MonkeyPatch, entered: str, base: str) -> None:
+    from deepeval_engine import endpoint_client
+    from deepeval_engine.model_runner import ModelRunner
+
+    seen = {}
+    monkeypatch.setattr(endpoint_client, "openai_compatible_client", lambda url, key: seen.update(url=url) or MagicMock())
+    ModelRunner(model_name="m", provider="custom_api", device="cpu", endpoint_url=entered)
+    assert seen["url"] == base
+
+
+def test_local_model_is_refused_not_loaded_or_sent_to_the_gateway(monkeypatch: pytest.MonkeyPatch) -> None:
+    from deepeval_engine.model_runner import ModelRunner
+
+    monkeypatch.setenv("AI_GATEWAY_INTERNAL_KEY", "internal-test-key")
+    loaded = []
+    monkeypatch.setattr(ModelRunner, "_load_huggingface_model", lambda self: loaded.append(self.model_name))
+    with pytest.raises(ValueError, match="custom API model"):
+        ModelRunner(model_name="TinyLlama/TinyLlama-1.1B-Chat-v1.0", provider="local", device="cpu")
+    assert loaded == []
+
+
+@pytest.mark.parametrize(
+    "entered, base",
+    [
+        ("localhost:11434", "http://localhost:11434/v1"),
+        ("192.168.1.5:8000/", "http://192.168.1.5:8000/v1"),
+        ("http://proxy:4000?api-version=2024-02", "http://proxy:4000/v1?api-version=2024-02"),
+        ("http://host:8000/openai", "http://host:8000/openai/v1"),
+        ("https://host/v1", "https://host/v1"),
+    ],
+)
+def test_openai_base_url_normalises_entered_endpoints(entered: str, base: str) -> None:
+    from deepeval_engine.endpoint_client import openai_base_url
+
+    assert openai_base_url(entered) == base
+
+
+def test_ollama_client_uses_this_runs_checked_host_not_the_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+    from deepeval_engine.endpoint_client import ollama_client
+    from deepeval_engine.safe_outbound_url import UnsafeOutboundUrlError
+
+    monkeypatch.setenv("OLLAMA_HOST", "http://other-orgs-host:11434")
+    assert "10.0.0.5" in str(ollama_client("10.0.0.5:11434")._client.base_url)
+    with pytest.raises(UnsafeOutboundUrlError):
+        ollama_client("http://169.254.169.254")
+
+
+@pytest.mark.parametrize(
+    "entered, base",
+    [
+        ("https://generativelanguage.googleapis.com/v1beta/openai", "https://generativelanguage.googleapis.com/v1beta/openai"),
+        ("http://host:8000", "http://host:8000/v1"),
+        ("proxy:4000?target=http://x", "http://proxy:4000/v1?target=http://x"),
+    ],
+)
+def test_custom_api_keeps_an_entered_path(entered: str, base: str) -> None:
+    from deepeval_engine.endpoint_client import openai_base_url
+
+    assert openai_base_url(entered, keep_entered_path=True) == base

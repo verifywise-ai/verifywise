@@ -5,6 +5,7 @@ import CustomFieldsSection, {
   type CustomFieldsSectionHandle,
 } from "../../../components/CustomFieldsSection";
 import { PolicyFormData, PolicyFormErrors } from "../../../types/interfaces/i.policy";
+import ReadOnlyFieldset from "../../../components/ReadOnlyFieldset";
 
 export interface PolicyMetadataSidebarProps {
   formRef: RefObject<HTMLDivElement | null>;
@@ -19,6 +20,8 @@ export interface PolicyMetadataSidebarProps {
     pendingDefinitionIds: ReadonlySet<number>,
     clearedRequired?: ReadonlyArray<{ id: number; label: string }>,
   ) => void;
+  /** Disables the metadata fields for roles that cannot edit policies. */
+  readOnly?: boolean;
 }
 
 /** Metadata form and custom fields region of the policy editor. */
@@ -32,9 +35,10 @@ export function PolicyMetadataSidebar({
   customFieldsRef,
   entityId,
   onPendingChange,
+  readOnly = false,
 }: PolicyMetadataSidebarProps) {
   return (
-    <>
+    <ReadOnlyFieldset readOnly={readOnly}>
       <Box
         ref={formRef}
         sx={{
@@ -63,6 +67,6 @@ export function PolicyMetadataSidebar({
           onPendingChange={onPendingChange}
         />
       </Stack>
-    </>
+    </ReadOnlyFieldset>
   );
 }

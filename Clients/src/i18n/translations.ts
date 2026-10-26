@@ -21,10 +21,317 @@
 //   subprocessor   → alt işleyici
 //   trust center   → güven merkezi
 
+import { de as aiAuditDe, fr as aiAuditFr, es as aiAuditEs } from "./modules/aiAudit";
+import {
+  de as aiContentReviewDe,
+  fr as aiContentReviewFr,
+  es as aiContentReviewEs,
+} from "./modules/aiContentReview";
+import {
+  de as aiObservabilityDe,
+  fr as aiObservabilityFr,
+  es as aiObservabilityEs,
+} from "./modules/aiObservability";
+import { de as approvalsDe, fr as approvalsFr, es as approvalsEs } from "./modules/approvals";
+import {
+  de as authenticationDe,
+  fr as authenticationFr,
+  es as authenticationEs,
+} from "./modules/authentication";
+import { de as dashboardDe, fr as dashboardFr, es as dashboardEs } from "./modules/dashboard";
+import { de as datasetsDe, fr as datasetsFr, es as datasetsEs } from "./modules/datasets";
+import {
+  de as eventTrackerDe,
+  fr as eventTrackerFr,
+  es as eventTrackerEs,
+} from "./modules/eventTracker";
+import { de as incidentsDe, fr as incidentsFr, es as incidentsEs } from "./modules/incidents";
+import { de as tasksDe, fr as tasksFr, es as tasksEs } from "./modules/tasks";
+import { de as trainingDe, fr as trainingFr, es as trainingEs } from "./modules/training";
+
 export type Lang = "en" | "de" | "fr" | "es";
 
 export const translations: Record<string, Record<string, string>> = {
   de: {
+    ...aiAuditDe,
+    ...aiContentReviewDe,
+    ...aiObservabilityDe,
+    ...approvalsDe,
+    ...authenticationDe,
+    ...dashboardDe,
+    ...datasetsDe,
+    ...eventTrackerDe,
+    ...incidentsDe,
+    ...tasksDe,
+    ...trainingDe,
+    "senior": "leitend",
+    "standard": "Standard",
+    "close calls": "Grenzfälle",
+    "not routed": "nicht zugewiesen",
+    "routing off": "Weiterleitung aus",
+    "days": "Tage",
+    "missed of completed": "übersehen von abgeschlossen",
+    "open": "offen",
+    "prohibited": "verboten",
+    "high risk": "hohes Risiko",
+    "decisions": "Entscheidungen",
+    "Second review open": "Zweitprüfung offen",
+    "Second review missed": "Zweitprüfung: etwas übersehen",
+    "Prohibited, pending": "Verboten, ausstehend",
+    "Pending too long": "Zu lange ausstehend",
+    "No active reviewer": "Kein aktiver Prüfer",
+    "Former user": "Ehemaliger Benutzer",
+    "That submission could not be found": "Diese Einreichung wurde nicht gefunden",
+    "Only an Admin can change review routing.":
+      "Nur ein Administrator kann die Prüfungszuweisung ändern.",
+    "All forms": "Alle Formulare",
+    "Band changed": "Stufe geändert",
+    "Band kept": "Stufe beibehalten",
+    "Band kept, senior lane": "Stufe beibehalten, leitender Bereich",
+    "Check": "Prüfen",
+    "Close call": "Grenzfall",
+    "Counts the band in force at decision": "Zählt die Stufe, die bei der Entscheidung galt",
+    "Decisions": "Entscheidungen",
+    "Failed to load the oversight figures.":
+      "Die Kennzahlen zur Aufsicht konnten nicht geladen werden.",
+    "Last 12 weeks": "Letzte 12 Wochen",
+    "Last 4 weeks": "Letzte 4 Wochen",
+    "Last 8 weeks": "Letzte 8 Wochen",
+    "Median time": "Mediane Zeit",
+    "Median time to decision": "Mediane Zeit bis zur Entscheidung",
+    "Needs attention": "Erfordert Aufmerksamkeit",
+    "Never changed a band in": "Keine Stufe geändert in",
+    "No decisions in this period.": "Keine Entscheidungen in diesem Zeitraum.",
+    "No submissions in this period.": "Keine Einreichungen in diesem Zeitraum.",
+    "Oversight": "Aufsicht",
+    "Redlines caught": "Erkannte rote Linien",
+    "Second reviews": "Zweitprüfungen",
+    "Submissions by lane": "Einreichungen nach Bereich",
+    "Suggested risks accepted": "Übernommene Risikovorschläge",
+    "Routing off": "Weiterleitung aus",
+    "Failed to send to senior review. Please try again.":
+      "Übergabe an die leitende Prüfung fehlgeschlagen. Bitte versuchen Sie es erneut.",
+    "Failed to save the second review. Please try again.":
+      "Die Zweitprüfung konnte nicht gespeichert werden. Bitte versuchen Sie es erneut.",
+    "Within": "Innerhalb von",
+    "points of the threshold": "Punkten um den Schwellenwert",
+    "Prohibited practice": "Verbotene Praktik",
+    "No usable score": "Keine verwertbare Bewertung",
+    "threshold": "Schwellenwert",
+    "below": "unter",
+    "Band raised by a reviewer": "Stufe von einem Prüfer erhöht",
+    "Sent to senior review:": "An die leitende Prüfung übergeben:",
+    "Senior review": "Prüfung durch leitende Prüfer",
+    "Standard review": "Standardprüfung",
+    "Not routed yet": "Noch nicht zugewiesen",
+    "Only": "Nur",
+    "can decide this submission.": "können über diese Einreichung entscheiden.",
+    "Send to senior review": "An leitende Prüfer übergeben",
+    "Senior reviewers will decide this submission. Say why it needs a closer look.":
+      "Leitende Prüfer entscheiden über diese Einreichung. Nennen Sie den Grund für eine genauere Prüfung.",
+    "Why does this need a senior reviewer?": "Warum braucht dies einen leitenden Prüfer?",
+    "Second review": "Zweitprüfung",
+    "A senior reviewer will check this approval.":
+      "Ein leitender Prüfer wird diese Genehmigung prüfen.",
+    "Required when something was missed": "Erforderlich, wenn etwas übersehen wurde",
+    "Agree": "Zustimmen",
+    "Missed something": "Etwas übersehen",
+    "Agreed with the approval": "Der Genehmigung zugestimmt",
+    "Something was missed": "Etwas wurde übersehen",
+    "Note:": "Hinweis:",
+    "Resolution:": "Lösung:",
+    "Resolution note": "Hinweis zur Lösung",
+    "What was done about it?": "Was wurde dagegen unternommen?",
+    "Mark resolved": "Als gelöst markieren",
+    "Lane": "Bereich",
+    "Senior": "Leitend",
+    "Not routed": "Nicht zugewiesen",
+    "Assigned to me": "Mir zugewiesen",
+    "Scores of": "Bewertungen ab",
+    "or more, prohibited practices and scores within":
+      "oder mehr, verbotene Praktiken und Bewertungen innerhalb von",
+    "points of": "Punkten um",
+    "go to senior reviewers.": "gehen an leitende Prüfer.",
+    "Route by risk score": "Nach Risikobewertung weiterleiten",
+    "Send submissions to senior or standard reviewers based on their risk score.":
+      "Einreichungen anhand ihrer Risikobewertung an leitende oder Standard-Prüfer weiterleiten.",
+    "Senior reviewers": "Leitende Prüfer",
+    "Standard reviewers": "Standard-Prüfer",
+    "Select senior reviewers": "Leitende Prüfer auswählen",
+    "Select standard reviewers": "Standard-Prüfer auswählen",
+    "Pick at least one senior reviewer": "Wählen Sie mindestens einen leitenden Prüfer",
+    "Pick at least one standard reviewer": "Wählen Sie mindestens einen Standard-Prüfer",
+    "Close-call margin": "Spanne für Grenzfälle",
+    "Second review share %": "Anteil der Zweitprüfungen in %",
+    "Risk score that separates the lanes": "Risikobewertung, die die Bereiche trennt",
+    "Points either side of the threshold": "Punkte auf beiden Seiten des Schwellenwerts",
+    "Share of standard decisions checked again":
+      "Anteil der Standardentscheidungen, die erneut geprüft werden",
+    "Use a number from 1 to 99": "Verwenden Sie eine Zahl von 1 bis 99",
+    "Use a number from 0 to 25": "Verwenden Sie eine Zahl von 0 bis 25",
+    "Use a number from 0 to 100": "Verwenden Sie eine Zahl von 0 bis 100",
+    "Fix the routing settings before saving":
+      "Korrigieren Sie die Weiterleitungseinstellungen vor dem Speichern",
+    "Fix the routing settings before publishing":
+      "Korrigieren Sie die Weiterleitungseinstellungen vor dem Veröffentlichen",
+    "No risk score was recorded for this submission.":
+      "Für diese Einreichung wurde kein Risikowert erfasst.",
+    "set to": "gesetzt auf",
+    "band set to": "Stufe gesetzt auf",
+    // AI intake assessment
+    "Scoring…": "Bewertung läuft…",
+    "No score yet": "Noch keine Bewertung",
+    "at least": "mindestens",
+    "(rules only)": "(nur Regeln)",
+    "AI scores ranged": "KI-Bewertungen lagen zwischen",
+    "The AI median set this score.": "Der KI-Median hat diesen Wert bestimmt.",
+    "The rule minimum set this score. The AI scored it lower.":
+      "Das Regelminimum hat diesen Wert bestimmt. Die KI hat niedriger bewertet.",
+    "Band set to": "Stufe gesetzt auf",
+    "by": "von",
+    "AI scoring isn't set up for this form.":
+      "Die KI-Bewertung ist für dieses Formular nicht eingerichtet.",
+    "AI scoring failed. The score shown comes from the rules only.":
+      "Die KI-Bewertung ist fehlgeschlagen. Der angezeigte Wert stammt nur aus den Regeln.",
+    "Not rule-checked. EU AI Act questions apply to use cases, not models.":
+      "Nicht regelbasiert geprüft. Die Fragen zum EU AI Act gelten für Anwendungsfälle, nicht für Modelle.",
+    "Not rule-checked. This form doesn't ask the EU AI Act questions.":
+      "Nicht regelbasiert geprüft. Dieses Formular stellt die Fragen zum EU AI Act nicht.",
+    "Minimum based on your level change": "Minimum basiert auf Ihrer Stufenänderung",
+    "Rules updated since this was scored": "Regeln wurden seit der Bewertung aktualisiert",
+    "How this score is built": "So entsteht dieser Wert",
+    "EU AI Act level": "Stufe nach EU AI Act",
+    "EU AI Act questions apply to use cases, not models.":
+      "Die Fragen zum EU AI Act gelten für Anwendungsfälle, nicht für Modelle.",
+    "Not rule-checked: this form doesn't ask the EU AI Act questions.":
+      "Nicht regelbasiert geprüft: Dieses Formular stellt die Fragen zum EU AI Act nicht.",
+    "Rule minimum": "Regelminimum",
+    "AI scores": "KI-Bewertungen",
+    "failed": "fehlgeschlagen",
+    "Median": "Median",
+    "Range": "Spanne",
+    "No AI scores": "Keine KI-Bewertungen",
+    "The final score is the higher of the rule minimum and the AI median. The AI can raise the score but never lower it.":
+      "Der endgültige Wert ist der höhere aus Regelminimum und KI-Median. Die KI kann den Wert erhöhen, aber nie senken.",
+    "Reasons": "Gründe",
+    "Band override": "Manuelle Stufe",
+    "Suggesting risks…": "Risiken werden vorgeschlagen…",
+    "AI scoring isn't set up for this form, so no risks are suggested.":
+      "Die KI-Bewertung ist für dieses Formular nicht eingerichtet, daher werden keine Risiken vorgeschlagen.",
+    "Risk suggestions failed. Use Retry in the score section to try again.":
+      "Die Risikovorschläge sind fehlgeschlagen. Nutzen Sie „Erneut versuchen“ im Bewertungsbereich.",
+    "Risk suggestions haven't started. Use Retry in the score section to start them.":
+      "Die Risikovorschläge wurden noch nicht gestartet. Nutzen Sie „Erneut versuchen“ im Bewertungsbereich, um sie zu starten.",
+    "No risks were suggested for this submission.":
+      "Für diese Einreichung wurden keine Risiken vorgeschlagen.",
+    "accepted": "angenommen",
+    "dismissed": "verworfen",
+    "Accept all": "Alle annehmen",
+    "From the risk catalog": "Aus dem Risikokatalog",
+    "Likelihood:": "Wahrscheinlichkeit:",
+    "Severity:": "Schweregrad:",
+    "Add a mitigation plan before accepting this risk.":
+      "Fügen Sie einen Minderungsplan hinzu, bevor Sie dieses Risiko annehmen.",
+    "Accept": "Annehmen",
+    "lower-rated suggestions not shown": "niedriger bewertete Vorschläge werden nicht angezeigt",
+    "not accepted: they need a mitigation plan first":
+      "nicht angenommen: Sie brauchen zuerst einen Minderungsplan",
+    "Couldn't save the change. Please try again.":
+      "Die Änderung konnte nicht gespeichert werden. Bitte versuchen Sie es erneut.",
+    "Couldn't accept the suggestions. Please try again.":
+      "Die Vorschläge konnten nicht angenommen werden. Bitte versuchen Sie es erneut.",
+    "Couldn't retry the assessment. Please try again.":
+      "Die Bewertung konnte nicht wiederholt werden. Bitte versuchen Sie es erneut.",
+    "Accepted risks are added to the register when you approve.":
+      "Angenommene Risiken werden beim Genehmigen in das Register übernommen.",
+    "Model risk category": "Modellrisikokategorie",
+    "Model risk level": "Modellrisikostufe",
+    "(default: 90 days after approval)": "(Standard: 90 Tage nach Genehmigung)",
+    "Name must be at most 200 characters": "Der Name darf höchstens 200 Zeichen lang sein",
+    "Must be at most 1000 characters": "Darf höchstens 1000 Zeichen lang sein",
+    "An accepted risk needs a mitigation plan":
+      "Ein angenommenes Risiko braucht einen Minderungsplan",
+    "Override band": "Stufe überschreiben",
+    "Can't be lower than the rule minimum allows":
+      "Darf nicht unter dem liegen, was das Regelminimum erlaubt",
+    "Risk score:": "Risikowert:",
+    "EU AI Act questions are off. Submissions won't get a rule-based EU AI Act classification, so their risk score has no rule-based minimum and is marked \"not rule-checked\". Use cases approved from this form won't get an EU AI Act classification either.":
+      "Die Fragen zum EU AI Act sind deaktiviert. Einreichungen erhalten keine regelbasierte Einstufung nach dem EU AI Act, daher hat ihr Risikowert kein regelbasiertes Minimum und wird als „nicht regelbasiert geprüft“ markiert. Anwendungsfälle, die aus diesem Formular genehmigt werden, erhalten ebenfalls keine Einstufung nach dem EU AI Act.",
+    "Used to score submissions and suggest risks. You can also generate suggested questions and field guidance text with AI.":
+      "Wird verwendet, um Einreichungen zu bewerten und Risiken vorzuschlagen. Sie können mit KI auch Fragenvorschläge und Hilfetexte für Felder erstellen.",
+    "Used to score submissions and suggest risks. Without a key, reviewers see the rule-based classification only. Add a key in Settings > LLM keys.":
+      "Wird verwendet, um Einreichungen zu bewerten und Risiken vorzuschlagen. Ohne Schlüssel sehen Prüfer nur die regelbasierte Einstufung. Fügen Sie einen Schlüssel unter Einstellungen > LLM-Schlüssel hinzu.",
+    // Jira incidents extension
+    "Only issues created in Jira after this is set up are imported. VerifyWise doesn't create Jira issues.":
+      "Importiert werden nur Vorgänge, die nach dieser Einrichtung in Jira erstellt werden. VerifyWise erstellt keine Jira-Vorgänge.",
+    "After import, only status stays in sync, in both directions. Later changes to other Jira fields aren't copied.":
+      "Nach dem Import bleibt nur der Status synchron, in beide Richtungen. Spätere Änderungen an anderen Jira-Feldern werden nicht übernommen.",
+    "If a Jira status move needs a field such as Resolution, VerifyWise can't make it. Those incidents show an error, and you can change the status in Jira.":
+      "Wenn ein Statuswechsel in Jira ein Feld wie Lösung erfordert, kann VerifyWise ihn nicht ausführen. Diese Vorfälle zeigen einen Fehler, und Sie können den Status in Jira ändern.",
+    "Create a classic API token for the service account at id.atlassian.com. Scoped tokens aren't supported.":
+      "Erstellen Sie unter id.atlassian.com ein klassisches API-Token für das Dienstkonto. Tokens mit Bereichen werden nicht unterstützt.",
+    "Stored. Enter a new token to replace it":
+      "Gespeichert. Geben Sie ein neues Token ein, um es zu ersetzen",
+    "API token": "API-Token",
+    "Choose": "Auswählen",
+    "Choose a project and issue type to map statuses.":
+      "Wählen Sie ein Projekt und einen Vorgangstyp, um Status zuzuordnen.",
+    "Choose a use case": "Anwendungsfall auswählen",
+    "Choose an incident type": "Vorfallstyp auswählen",
+    "Choose an issue type": "Vorgangstyp auswählen",
+    "Connection": "Verbindung",
+    "Could not load the Jira incidents settings. Reload the page to try again.":
+      "Die Einstellungen für Jira-Vorfälle konnten nicht geladen werden. Laden Sie die Seite neu, um es erneut zu versuchen.",
+    "Could not load the sync activity.":
+      "Die Synchronisierungsaktivität konnte nicht geladen werden.",
+    "Defaults for imported incidents": "Standardwerte für importierte Vorfälle",
+    "Import only issues with this label. Leave empty to import every issue.":
+      "Nur Vorgänge mit diesem Label importieren. Leer lassen, um alle Vorgänge zu importieren.",
+    "Issue type": "Vorgangstyp",
+    "Jira project": "Jira-Projekt",
+    "Jira site URL": "Jira-Website-URL",
+    "Jira to VerifyWise": "Jira nach VerifyWise",
+    "VerifyWise to Jira": "VerifyWise nach Jira",
+    "No sync activity yet": "Noch keine Synchronisierungsaktivität",
+    "Save the connection to choose a Jira project.":
+      "Speichern Sie die Verbindung, um ein Jira-Projekt auszuwählen.",
+    "Save the connection to map Jira priorities.":
+      "Speichern Sie die Verbindung, um Jira-Prioritäten zuzuordnen.",
+    "Service account email": "E-Mail des Dienstkontos",
+    "Settings saved.": "Einstellungen gespeichert.",
+    "Severity mapping": "Zuordnung des Schweregrads",
+    "Status mapping": "Statuszuordnung",
+    "Sync activity": "Synchronisierungsaktivität",
+    "Which issues to import": "Welche Vorgänge importiert werden",
+    "Label": "Label",
+    "Jira status": "Jira-Status",
+    "VerifyWise status": "VerifyWise-Status",
+    "Jira priority": "Jira-Priorität",
+    "Don't change Jira": "Jira nicht ändern",
+    "Event": "Ereignis",
+    "Jira issue": "Jira-Vorgang",
+    "Imported": "Importiert",
+    "Status from Jira": "Status aus Jira",
+    "Status to Jira": "Status nach Jira",
+    "Conflict": "Konflikt",
+    "Deleted in Jira": "In Jira gelöscht",
+    "Sync error": "Synchronisierungsfehler",
+    "Jira left unchanged": "Jira unverändert gelassen",
+    "Enter your Jira site URL": "Geben Sie die URL Ihrer Jira-Website ein",
+    "Enter the service account email": "Geben Sie die E-Mail des Dienstkontos ein",
+    "Enter the API token": "Geben Sie das API-Token ein",
+    "Enter the API token again after changing the site URL or email":
+      "Geben Sie das API-Token nach einer Änderung der Website-URL oder E-Mail erneut ein",
+    "Map every Jira status": "Ordnen Sie jeden Jira-Status zu",
+    "Enter the reporter": "Geben Sie den Meldenden ein",
+    "Could not save the settings.": "Die Einstellungen konnten nicht gespeichert werden.",
+    "Could not test the connection to Jira.":
+      "Die Verbindung zu Jira konnte nicht getestet werden.",
+    "Could not load the options from Jira.": "Die Optionen aus Jira konnten nicht geladen werden.",
+    "Import new Jira issues and sync status on a schedule":
+      "Neue Jira-Vorgänge importieren und Status nach Zeitplan synchronisieren",
+    "Each sync imports issues created since the last one, then syncs status both ways.":
+      "Jede Synchronisierung importiert die seit der letzten erstellten Vorgänge und synchronisiert dann den Status in beide Richtungen.",
     // Agent Control monitor only mode
     "Enforce": "Durchsetzen",
     "Monitor only": "Nur überwachen",
@@ -81,6 +388,15 @@ export const translations: Record<string, Record<string, string>> = {
     "Server switched on": "Server eingeschaltet",
     "The server offered no tools": "Der Server hat keine Tools angeboten",
     "One tool found": "Ein Tool gefunden",
+    "Tools updated": "Tools aktualisiert",
+    "No changes": "Keine Änderungen",
+    "View tools": "Tools anzeigen",
+    "{count} tools found": "{count} Tools gefunden",
+    "{count} new": "{count} neu",
+    "{count} removed": "{count} entfernt",
+    "{count} changed": "{count} geändert",
+    "View {count} tools": "{count} Tools anzeigen",
+    "View one tool": "Ein Tool anzeigen",
     "Discovery failed": "Erkennung fehlgeschlagen",
     "Server saved, but discovery failed":
       "Server gespeichert, aber die Erkennung ist fehlgeschlagen",
@@ -612,6 +928,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Agent not found": "Agent nicht gefunden",
     "Could not load this agent.": "Dieser Agent konnte nicht geladen werden.",
     "Back to AI agents": "Zurück zu KI-Agenten",
+    "Back to MCP servers": "Zurück zu MCP-Servern",
     "Accountable owners": "Verantwortliche Eigentümer",
     "Manually entered": "Manuell erfasst",
     "Inactive 30+ days": "Seit über 30 Tagen inaktiv",
@@ -630,7 +947,7 @@ export const translations: Record<string, Record<string, string>> = {
       "Keine Agenten gefunden. Stellen Sie sicher, dass die Erweiterung Azure AI Foundry aktiviert und konfiguriert ist.",
     "Sync failed. Check that the Azure AI Foundry extension is enabled and configured.":
       "Synchronisierung fehlgeschlagen. Prüfen Sie, ob die Erweiterung Azure AI Foundry aktiviert und konfiguriert ist.",
-    "Agent review status updated.": "Prüfstatus des Agenten aktualisiert.",
+    "Agent updated.": "Agent aktualisiert.",
     "Agent updated successfully.": "Agent erfolgreich aktualisiert.",
     "Agent added successfully.": "Agent erfolgreich hinzugefügt.",
     "Agent deleted successfully.": "Agent erfolgreich gelöscht.",
@@ -641,12 +958,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Description cannot exceed 32,767 characters.":
       "Die Beschreibung darf 32.767 Zeichen nicht überschreiten.",
     "Description is required.": "Beschreibung ist erforderlich.",
-    "The selected use case is no longer available.":
-      "Der ausgewählte Anwendungsfall ist nicht mehr verfügbar.",
-    "The selected affected model is no longer available.":
-      "Das ausgewählte betroffene Modell ist nicht mehr verfügbar.",
-    "The selected owner is no longer available.":
-      "Der ausgewählte Verantwortliche ist nicht mehr verfügbar.",
     "Description must be at least 5 characters.":
       "Die Beschreibung muss mindestens 5 Zeichen lang sein.",
     "Edit agent": "Agent bearbeiten",
@@ -657,6 +968,9 @@ export const translations: Record<string, Record<string, string>> = {
     "Review status changed": "Prüfstatus geändert",
     "Linked to a model in the inventory": "Mit einem Modell im Inventar verknüpft",
     "Unlinked from its model": "Verknüpfung mit dem Modell aufgehoben",
+    "Linked to a use case": "Mit einem Anwendungsfall verknüpft",
+    "Unlinked from its use case": "Verknüpfung mit dem Anwendungsfall aufgehoben",
+    "Updated description": "Beschreibung aktualisiert",
     'Updated name: "{from}" → "{to}"': "Name aktualisiert: „{from}“ → „{to}“",
     "Updated name": "Name aktualisiert",
     'Updated type: "{from}" → "{to}"': "Typ aktualisiert: „{from}“ → „{to}“",
@@ -698,7 +1012,6 @@ export const translations: Record<string, Record<string, string>> = {
     "LLM Evals": "LLM-Bewertungen",
     "Shadow AI": "Schatten-KI",
     "Shadow AI detection": "Schatten-KI-Erkennung",
-    "AI Training Registry": "KI-Schulungsregister",
     "Plugins": "Plugins",
 
     // Buttons / actions
@@ -742,12 +1055,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Add vendor risk": "Anbieterrisiko hinzufügen",
     "Add new vendor": "Neuen Anbieter hinzufügen",
     "Add new policy": "Neue Richtlinie hinzufügen",
-    "Add new task": "Neue Aufgabe hinzufügen",
-    "Add new training": "Neue Schulung hinzufügen",
-    "Add new dataset": "Neuen Datensatz hinzufügen",
     "Add new model": "Neues Modell hinzufügen",
-    "Add new incident": "Neuen Vorfall hinzufügen",
-    "Add new workflow": "Neuen Workflow hinzufügen",
     "Add new resource": "Neue Ressource hinzufügen",
     "Add a new resource": "Neue Ressource hinzufügen",
     "Add new subprocessor": "Neuen Unterauftragsverarbeiter hinzufügen",
@@ -757,18 +1065,14 @@ export const translations: Record<string, Record<string, string>> = {
     "Create API key": "API-Schlüssel erstellen",
     "New experiment": "Neues Experiment",
     "New battle": "Neuer Vergleich",
-    "New training": "Neue Schulung",
-    "New use case": "Neuer Anwendungsfall",
     "New Project": "Neues Projekt",
     "Create new use case": "Neuen Anwendungsfall erstellen",
     "Create new framework": "Neues Rahmenwerk erstellen",
     "Create new policies": "Neue Richtlinien erstellen",
-    "Create new tasks": "Neue Aufgaben erstellen",
     "Create from templates": "Aus Vorlagen erstellen",
     "Create your account": "Konto erstellen",
     "Create your first project": "Erstes Projekt erstellen",
     "Create your first use case": "Ersten Anwendungsfall erstellen",
-    "Create approval workflows": "Genehmigungsabläufe erstellen",
     "Version history": "Versionsverlauf",
     "Unlink risk": "Risikoverknüpfung aufheben",
     "Edit framework": "Rahmenwerk bearbeiten",
@@ -799,21 +1103,14 @@ export const translations: Record<string, Record<string, string>> = {
     "Manage frameworks": "Rahmenwerke verwalten",
     "Register new models": "Neue Modelle registrieren",
     "Record each model": "Jedes Modell erfassen",
-    "Log new incidents": "Neue Vorfälle erfassen",
     "Track expiry dates": "Ablaufdaten verfolgen",
-    "Track feedback and comments": "Feedback und Kommentare verfolgen",
     "Track model status": "Modellstatus verfolgen",
     "Track your progress": "Ihren Fortschritt verfolgen",
-    "Set due dates on tasks": "Fälligkeitsdaten für Aufgaben festlegen",
-    "Set renewal dates": "Erneuerungsdaten festlegen",
     "Set up your organization": "Organisation einrichten",
     "Link policies to controls": "Richtlinien mit Kontrollen verknüpfen",
     "Link to models": "Mit Modellen verknüpfen",
     "Link to vendors and risks": "Mit Anbietern und Risiken verknüpfen",
     "Assign owners": "Verantwortliche zuweisen",
-    "Assign owners and track resolution": "Verantwortliche zuweisen und Lösung verfolgen",
-    "Assign reviewers": "Prüfer zuweisen",
-    "Assign training to team members": "Teammitgliedern Schulungen zuweisen",
     "Select PDF File": "PDF-Datei auswählen",
     "Select classification": "Klassifizierung auswählen",
     "Select type": "Typ auswählen",
@@ -835,7 +1132,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Whether this scenario activation is currently active":
       "[DE] Whether this activation is active",
     "Yes": "Ja",
-    "Later": "Später",
     "Back to policies": "Zurück zu Richtlinien",
 
     // Statuses
@@ -852,7 +1148,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Pending": "Ausstehend",
     "Approved": "Genehmigt",
     "Approved by": "Genehmigt von",
-    "APPROVED BY": "GENEHMIGT VON",
     "Rejected": "Abgelehnt",
     "Accepted": "Akzeptiert",
     "Archived": "Archiviert",
@@ -941,10 +1236,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Date": "Datum",
     "Date detected": "Erkennungsdatum",
     "Date generated": "Erstellungsdatum",
-    "Date updated": "Aktualisierungsdatum",
-    "DATE UPDATED": "AKTUALISIERUNGSDATUM",
     "Due date": "Fälligkeitsdatum",
-    "Due today": "Heute fällig",
     "No default": "Kein Standard",
     "No due date": "Kein Fälligkeitsdatum",
     "Expiry": "Ablauf",
@@ -958,7 +1250,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Last activity": "Letzte Aktivität",
     "LAST ACTIVITY": "LETZTE AKTIVITÄT",
     "Occurred date": "Ereignisdatum",
-    "OCCURRED DATE": "EREIGNISDATUM",
     "Next review": "Nächste Prüfung",
     "Next Review": "Nächste Prüfung",
     "Next review date": "Nächstes Prüfdatum",
@@ -982,7 +1273,6 @@ export const translations: Record<string, Record<string, string>> = {
     "APPROVER": "GENEHMIGER",
     "Reporter": "Meldender",
     "Reviewer": "Prüfer",
-    "Creator": "Ersteller",
     "Category": "Kategorie",
     "Categories": "Kategorien",
     "Classification": "Klassifizierung",
@@ -991,7 +1281,6 @@ export const translations: Record<string, Record<string, string>> = {
     "TYPE": "TYP",
     "Tags": "Schlagwörter",
     "Title": "Titel",
-    "TITLE": "TITEL",
     "Version": "Version",
     "VERSION": "VERSION",
     "Version change log": "Versionsänderungsprotokoll",
@@ -999,13 +1288,11 @@ export const translations: Record<string, Record<string, string>> = {
     "Location": "Ort",
     "LOCATION": "ORT",
     "Department": "Abteilung",
-    "DEPARTMENT": "ABTEILUNG",
     "Duration": "Dauer",
     "DURATION": "DAUER",
     "Entity": "Entität",
     "ENTITY": "ENTITÄT",
     "People": "Personen",
-    "PEOPLE": "PERSONEN",
     "Permissions": "Berechtigungen",
     "PERMISSIONS": "BERECHTIGUNGEN",
     "Provider": "Anbieter",
@@ -1057,11 +1344,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Linked Controls": "Verknüpfte Kontrollen",
     "Training": "Schulung",
     "Training name": "Schulungsname",
-    "TRAINING NAME": "SCHULUNGSNAME",
     "Training status": "Schulungsstatus",
     "Trainings": "Schulungen",
-    "Incident ID": "Vorfall-ID",
-    "INCIDENT ID": "VORFALL-ID",
     "Incident status": "Vorfallstatus",
     "Incidents": "Vorfälle",
     "Resource name": "Ressourcenname",
@@ -1085,16 +1369,11 @@ export const translations: Record<string, Record<string, string>> = {
     "Controls progress": "Kontrollfortschritt",
     "Controls topics": "Kontrollthemen",
     "Approval status": "Genehmigungsstatus",
-    "Approval Status": "Genehmigungsstatus",
     "Business criticality": "Geschäftskritikalität",
     "Data sensitivity": "Datensensitivität",
-    "Steps count": "Anzahl der Schritte",
-    "STEPS COUNT": "ANZAHL DER SCHRITTE",
     "Task": "Aufgabe",
     "Task list": "Aufgabenliste",
     "Task management": "Aufgabenverwaltung",
-    "Task Management": "Aufgabenverwaltung",
-    "Task overview": "Aufgabenübersicht",
     "PII": "Personenbezogene Daten",
     "PII detected": "Personenbezogene Daten erkannt",
     "PII types": "Arten personenbezogener Daten",
@@ -1247,13 +1526,10 @@ export const translations: Record<string, Record<string, string>> = {
     "Filter by framework": "Nach Rahmenwerk filtern",
     "Filter by Status": "Nach Status filtern",
     "Filter evidence": "Nachweise filtern",
-    "Filter tasks": "Aufgaben filtern",
     "Advanced risk filtering": "Erweiterte Risikofilterung",
     "Search agents...": "Agenten suchen...",
     "Search datasets...": "Datensätze suchen...",
     "Search evidence...": "Nachweise suchen...",
-    "Search incidents": "Vorfälle suchen",
-    "Search incidents...": "Vorfälle suchen...",
     "Search models": "Modelle suchen",
     "Search models...": "Modelle suchen...",
     "Search policies": "Richtlinien suchen",
@@ -1261,11 +1537,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Search policy templates...": "Richtlinienvorlagen suchen...",
     "Search reports...": "Berichte suchen...",
     "Search risks...": "Risiken suchen...",
-    "Search tasks": "Aufgaben suchen",
-    "Search tasks...": "Aufgaben suchen...",
-    "Search trainings...": "Schulungen suchen...",
     "Search vendors...": "Anbieter suchen...",
-    "Search workflows...": "Workflows suchen...",
     "Find in document...": "Im Dokument suchen...",
     "Deleted only": "Nur gelöschte",
 
@@ -1273,7 +1545,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Loading": "Wird geladen",
     "Loading...": "Wird geladen...",
     "Loading agents...": "Agenten werden geladen...",
-    "Loading dashboard": "Dashboard wird geladen",
     "Loading datasets...": "Datensätze werden geladen...",
     "Loading frameworks...": "Rahmenwerke werden geladen...",
     "Loading models...": "Modelle werden geladen...",
@@ -1292,8 +1563,6 @@ export const translations: Record<string, Record<string, string>> = {
     "No agents discovered yet": "Noch keine Agenten erkannt",
     "No AI models linked to this framework yet":
       "Noch keine KI-Modelle mit diesem Rahmenwerk verknüpft",
-    "No approval workflows yet. Define review and sign-off chains for your governance process.":
-      "Noch keine Genehmigungsabläufe. Definieren Sie Prüf- und Freigabeketten für Ihren Governance-Prozess.",
     "No datasets found. Add a dataset to start tracking your AI training and validation data.":
       "Keine Datensätze gefunden. Fügen Sie einen Datensatz hinzu, um Ihre KI-Trainings- und Validierungsdaten zu verfolgen.",
     "No evidence data": "Keine Nachweisdaten",
@@ -1301,8 +1570,6 @@ export const translations: Record<string, Record<string, string>> = {
       "Noch keine Nachweise. Laden Sie Dokumente hoch, die die Einhaltung jeder Anforderung belegen.",
     "No incidents": "Keine Vorfälle",
     "No incidents found.": "Keine Vorfälle gefunden.",
-    "No incidents reported yet. Track and manage AI-related incidents to maintain compliance.":
-      "Noch keine Vorfälle gemeldet. Verfolgen und verwalten Sie KI-bezogene Vorfälle zur Wahrung der Compliance.",
     "No model risks": "Keine Modellrisiken",
     "No models": "Keine Modelle",
     "No models available": "Keine Modelle verfügbar",
@@ -1313,35 +1580,24 @@ export const translations: Record<string, Record<string, string>> = {
     "No risks identified": "Keine Risiken identifiziert",
     "No subprocessors data available": "Keine Daten zu Unterauftragsverarbeitern verfügbar",
     "No training data": "Keine Schulungsdaten",
-    "No training records yet. Track AI governance training for your team.":
-      "Noch keine Schulungsnachweise. Verfolgen Sie KI-Governance-Schulungen für Ihr Team.",
-    "No upcoming deadlines. All tasks are completed or have no due dates.":
-      "Keine bevorstehenden Fristen. Alle Aufgaben sind abgeschlossen oder haben kein Fälligkeitsdatum.",
     "No use cases created yet": "Noch keine Anwendungsfälle erstellt",
     "No vendor risks": "Keine Anbieterrisiken",
     "No vendors available": "Keine Anbieter verfügbar",
-    "No workflow data found for this ID.": "Für diese ID wurden keine Workflow-Daten gefunden.",
     "No ID provided for fetching vendor data.": "Keine ID zum Abrufen der Anbieterdaten angegeben.",
     "There are currently no model risks in this table.":
       "Derzeit keine Modellrisiken in dieser Tabelle.",
     "Unable to get subtopics": "Unterthemen können nicht abgerufen werden",
     "Unable to get topics": "Themen können nicht abgerufen werden",
     "Unexpected response. Please try again.": "Unerwartete Antwort. Bitte erneut versuchen.",
-    "API response missing data": "API-Antwort enthält keine Daten",
     "Failed to fetch vendor data.": "Anbieterdaten konnten nicht abgerufen werden.",
     "Failed to save requirement changes. Please try again.":
       "Anforderungsänderungen konnten nicht gespeichert werden. Bitte erneut versuchen.",
     "Failed to update risk data.": "Risikodaten konnten nicht aktualisiert werden.",
     "Error archiving task": "Fehler beim Archivieren der Aufgabe",
     "Error creating task": "Fehler beim Erstellen der Aufgabe",
-    "Error deleting task": "Fehler beim Löschen der Aufgabe",
     "Error loading compliance data": "Fehler beim Laden der Compliance-Daten",
     "Error loading controls": "Fehler beim Laden der Kontrollen",
-    "Error restoring task": "Fehler beim Wiederherstellen der Aufgabe",
     "Error updating task": "Fehler beim Aktualisieren der Aufgabe",
-    "Error updating task priority": "Fehler beim Aktualisieren der Aufgabenpriorität",
-    "Error updating task status": "Fehler beim Aktualisieren des Aufgabenstatus",
-    "Cannot update training without ID": "Schulung kann ohne ID nicht aktualisiert werden",
     "Please select a project to view assessments":
       "Wählen Sie ein Projekt, um Bewertungen anzuzeigen",
     "Please select a project to view compliance data":
@@ -1352,8 +1608,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Welcome": "Willkommen",
     "Getting started": "Erste Schritte",
     "Quick start guide": "Schnellstartanleitung",
-    "Quick stats overview": "Schnellübersicht der Statistiken",
-    "Quick add menu": "Schnellzugriffsmenü",
     "Navigating the dashboard": "Navigation im Dashboard",
     "Installing VerifyWise": "VerifyWise installieren",
     "Explore VerifyWise": "VerifyWise erkunden",
@@ -1369,8 +1623,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Recent activity": "Letzte Aktivität",
     "Recent use cases": "Letzte Anwendungsfälle",
     "Activity history": "Aktivitätsverlauf",
-    "Deadline view": "Fristenansicht",
-    "List view": "Listenansicht",
     "Executive view": "Executive-Ansicht",
     "Operations view": "Betriebsansicht",
     "Scorecard": "Bewertungskarte",
@@ -1383,38 +1635,19 @@ export const translations: Record<string, Record<string, string>> = {
       "Diesem Anwendungsfall ist kein Rahmenwerk zugeordnet",
     "Requirements, assessment tracker, clauses and annexes, and NIST subcategories need a framework, so they are left out. The report still covers risks, models, vendors, training, policies and incidents. Assign a framework to the use case to include compliance sections.":
       "Anforderungen, Bewertungs-Tracker, Klauseln und Anhänge sowie NIST-Unterkategorien benötigen ein Rahmenwerk und entfallen daher. Der Bericht umfasst weiterhin Risiken, Modelle, Anbieter, Schulungen, Richtlinien und Vorfälle. Ordnen Sie dem Anwendungsfall ein Rahmenwerk zu, um Compliance-Abschnitte aufzunehmen.",
-    "AI project": "KI-Projekt",
     "AI Project": "KI-Projekt",
-    "AI PROJECT": "KI-PROJEKT",
     "Affected model": "Betroffenes Modell",
-    "AFFECTED MODEL": "BETROFFENES MODELL",
     "Select model from inventory": "Modell aus dem Inventar auswählen",
     "Project": "Projekt",
-    "Create a new use case by filling in the following details":
-      "Erstellen Sie einen neuen Anwendungsfall, indem Sie die folgenden Angaben ausfüllen",
     "Manage AI use cases, projects, and their lifecycle stages.":
       "Verwalten Sie KI-Anwendungsfälle, Projekte und ihre Lebenszyklusphasen.",
 
     // Tasks
-    "How deadlines work": "So funktionieren Fristen",
-    "Open any task and set a due date. It will automatically appear in the correct deadline group on this view.":
-      "Öffnen Sie eine Aufgabe und setzen Sie ein Fälligkeitsdatum. Sie erscheint in dieser Ansicht automatisch in der passenden Fristengruppe.",
-    "Tasks in a filterable table": "Aufgaben in einer filterbaren Tabelle",
-    "Tasks organized by due date": "Nach Fälligkeitsdatum geordnete Aufgaben",
-    "Tomorrow": "Morgen",
     "This week": "Diese Woche",
     "This month": "Diesen Monat",
-    "Next week": "Nächste Woche",
     "View and manage compliance tasks assigned to your team.":
       "Compliance-Aufgaben Ihres Teams anzeigen und verwalten.",
-    "Task archived successfully": "Aufgabe erfolgreich archiviert",
     "Task created successfully": "Aufgabe erfolgreich erstellt",
-    "Task deleted permanently": "Aufgabe dauerhaft gelöscht",
-    "Task restored successfully": "Aufgabe erfolgreich wiederhergestellt",
-    "Task updated successfully": "Aufgabe erfolgreich aktualisiert",
-    "Workflow archived successfully!": "Workflow erfolgreich archiviert!",
-    "Workflow created successfully!": "Workflow erfolgreich erstellt!",
-    "Workflow updated successfully!": "Workflow erfolgreich aktualisiert!",
     "Requirement updated successfully": "Anforderung erfolgreich aktualisiert",
 
     // Risk management
@@ -1447,8 +1680,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Describe the dataset and its purpose": "Beschreiben Sie den Datensatz und seinen Zweck",
     "Comma-separated column names containing PII":
       "Kommagetrennte Spaltennamen mit personenbezogenen Daten",
-    "Manage training and evaluation datasets used by your models. Track data lineage, classification, and compliance metadata.":
-      "Verwalten Sie Trainings- und Bewertungsdatensätze, die Ihre Modelle nutzen. Verfolgen Sie Datenherkunft, Klassifizierung und Compliance-Metadaten.",
     "Label data quality": "Datenqualität kennzeichnen",
 
     // Agent discovery
@@ -1473,22 +1704,11 @@ export const translations: Record<string, Record<string, string>> = {
     "Start typing your policy content...": "Geben Sie Ihren Richtlinieninhalt ein...",
 
     // Incidents
-    "Any unintended AI behavior, data breach, biased output, system outage, or safety concern. Log them early, even if minor.":
-      "Jedes unbeabsichtigte KI-Verhalten, jede Datenpanne, voreingenommene Ausgabe, Systemstörung oder Sicherheitsbedenken. Erfassen Sie sie frühzeitig, auch wenn sie geringfügig sind.",
-    "Incident lifecycle overview": "Übersicht des Vorfallslebenszyklus",
-    "Document root cause and response": "Ursache und Reaktion dokumentieren",
-    "What counts as an incident?": "Was zählt als Vorfall?",
     "What counts as a model?": "Was zählt als Modell?",
     "What counts as evidence?": "Was zählt als Nachweis?",
     "What to document": "Was zu dokumentieren ist",
 
     // Approval workflows
-    "A structured overview of all approval processes, including steps, conditions, and current status.":
-      "Strukturierte Übersicht aller Genehmigungsprozesse einschließlich Schritte, Bedingungen und aktuellem Status.",
-    "Define multi-step review chains that run automatically when controls, evidence, or policies need sign-off.":
-      "Definieren Sie mehrstufige Prüfketten, die automatisch ablaufen, wenn Kontrollen, Nachweise oder Richtlinien freigegeben werden müssen.",
-    "Reviewers can approve, reject, or request changes with detailed comments. The full audit trail is preserved.":
-      "Prüfer können mit ausführlichen Kommentaren genehmigen, ablehnen oder Änderungen anfordern. Der vollständige Prüfpfad bleibt erhalten.",
 
     // Compliance tracker
     "Regulatory requirements and the controls implementing them":
@@ -1500,9 +1720,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Update your framework details below": "Aktualisieren Sie unten Ihre Rahmenwerksdetails",
 
     // Training registry
-    "Common training topics": "Häufige Schulungsthemen",
-    "Some certifications and training expire. Record renewal dates so you can keep track of upcoming expirations.":
-      "Manche Zertifizierungen und Schulungen laufen ab. Erfassen Sie Erneuerungsdaten, um bevorstehende Abläufe im Blick zu behalten.",
 
     // Reporting
     "Generate a comprehensive report across all use cases, vendors, models, and organization-wide metrics.":
@@ -1688,8 +1905,6 @@ export const translations: Record<string, Record<string, string>> = {
       "Jeder Anwendungsfall kann nach Risikoniveau (hoch, begrenzt, minimal) klassifiziert werden, um zu bestimmen, welche Compliance-Kontrollen gelten.",
     "Enable this option to automatically fill in the Requirements and Controls questions with AI-generated answers, helping you save time. You can review and edit these answers anytime.":
       "Aktivieren Sie diese Option, um die Fragen zu Anforderungen und Kontrollen automatisch mit KI-generierten Antworten zu füllen. Das spart Zeit; Sie können die Antworten jederzeit prüfen und bearbeiten.",
-    "End-to-end management of the AI incident lifecycle. You can log events in full detail, analyze root causes, and document corrective and preventive actions.":
-      "Durchgängige Verwaltung des KI-Vorfallslebenszyklus. Ereignisse vollständig protokollieren, Ursachen analysieren und korrigierende sowie präventive Maßnahmen dokumentieren.",
     "Enter folder description (optional)": "Ordnerbeschreibung eingeben (optional)",
     "Enter the display text (optional)": "Anzeigetext eingeben (optional)",
     "Enter total participants (e.g., 25)": "Gesamtteilnehmer eingeben (z. B. 25)",
@@ -1758,8 +1973,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Summarize the outcome of the review (e.g., approved, rejected, pending more info, or risk concerns identified).":
       "Fassen Sie das Ergebnis der Prüfung zusammen (z. B. genehmigt, abgelehnt, weitere Informationen erforderlich oder Risikobedenken festgestellt).",
     "System / project name": "System- oder Projektname",
-    "System events, API calls, and background job results are logged automatically. Logs appear as your workspace generates activity.":
-      "Systemereignisse, API-Aufrufe und Ergebnisse von Hintergrundjobs werden automatisch protokolliert. Protokolle erscheinen, sobald Ihr Arbeitsbereich Aktivität erzeugt.",
     "Team & Compliance": "Team und Compliance",
     "Templates are grouped by framework (EU AI Act, ISO 42001, etc.). Use the search bar to find templates relevant to your compliance needs.":
       "Vorlagen sind nach Rahmenwerk gruppiert (EU-KI-Verordnung, ISO 42001 usw.). Nutzen Sie die Suchleiste, um Vorlagen passend zu Ihren Compliance-Anforderungen zu finden.",
@@ -1841,7 +2054,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Captcha answer": "Captcha-Antwort",
     "Click to upload": "Zum Hochladen klicken",
     "Close AI dependency graph modal": "Modal für KI-Abhängigkeitsgraph schließen",
-    "Close banner": "Banner schließen",
     "Close details panel": "Detailbereich schließen",
     "Close dialog": "Dialog schließen",
     "Close drawer": "Schublade schließen",
@@ -1864,11 +2076,9 @@ export const translations: Record<string, Record<string, string>> = {
     "Confirm action": "Aktion bestätigen",
     "Confirm new password": "Neues Passwort bestätigen",
     "Confirm owner change": "Verantwortlichenwechsel bestätigen",
-    "Confirm password": "Passwort bestätigen",
     "Confirm save": "Speichern bestätigen",
     "Confirm uninstall": "Deinstallation bestätigen",
     "Confirm Withdrawal": "Zurückziehen bestätigen",
-    "Confirm your password": "Passwort bestätigen",
     "Connect data sources": "Datenquellen verbinden",
     "Connect external tool servers": "Externe Tool-Server verbinden",
     "Tool discovery": "Tool-Erkennung",
@@ -1894,7 +2104,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Copy to my datasets?": "In meine Datensätze kopieren?",
     "Create a new project to organize your LLM evaluations":
       "Neues Projekt erstellen, um Ihre LLM-Bewertungen zu organisieren",
-    "Create a password": "Passwort erstellen",
     "Create a use case": "Anwendungsfall erstellen",
     "Create agent key": "Agentenschlüssel erstellen",
     "Denylist for MCP server tools called through the proxy: these are always denied, even if also in the allowlist. Comma-separated; leave empty to block none.":
@@ -2029,6 +2238,11 @@ export const translations: Record<string, Record<string, string>> = {
     "Link tasks to controls or risks": "Aufgaben mit Kontrollen oder Risiken verknüpfen",
     "Link to governance artifacts": "Mit Governance-Artefakten verknüpfen",
     "Link to model": "Mit Modell verknüpfen",
+    "Link to use case": "Mit Anwendungsfall verknüpfen",
+    "Link use case": "Anwendungsfall verknüpfen",
+    "Select the use case this agent belongs to.":
+      "Wählen Sie den Anwendungsfall, zu dem dieser Agent gehört.",
+    "Unlink use case": "Anwendungsfallverknüpfung aufheben",
     "Lock": "Sperren",
     "Login": "Anmelden",
     "Logout": "Abmelden",
@@ -2051,7 +2265,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Recalculating risk score": "Risikobewertung wird neu berechnet",
     "Refresh link": "Link aktualisieren",
     "Refresh list": "Liste aktualisieren",
-    "Refresh logs": "Protokolle aktualisieren",
     "Regenerate": "Neu generieren",
     "Remove all demo data from your workspace": "Alle Demodaten aus Ihrem Arbeitsbereich entfernen",
     "Remove API key": "API-Schlüssel entfernen",
@@ -2070,6 +2283,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Revoke invitation": "Einladung widerrufen",
     "Revoke key": "Schlüssel widerrufen",
     "Revoke virtual key": "Virtuellen Schlüssel widerrufen",
+    "Revoked": "Widerrufen",
     "Run all": "Alle ausführen",
     "Run first experiment": "Erstes Experiment ausführen",
     "Run your first experiment": "Ihr erstes Experiment ausführen",
@@ -2189,10 +2403,20 @@ export const translations: Record<string, Record<string, string>> = {
     "Annex III category": "Anhang-III-Kategorie",
     "Any additional context about this agent": "Zusätzlicher Kontext zu diesem Agenten",
     "Any language or framework": "Beliebige Sprache oder Rahmenwerk",
+    "Any endpoint or model": "Beliebiger Endpunkt oder beliebiges Modell",
     "API calls": "API-Aufrufe",
     "API key": "API-Schlüssel",
     "API Key": "API-Schlüssel",
     "API key may not be configured": "API-Schlüssel ist möglicherweise nicht konfiguriert",
+    "The provider refused this model": "Der Anbieter hat dieses Modell abgelehnt",
+    "The provider refused the saved API key":
+      "Der Anbieter hat den gespeicherten API-Schlüssel abgelehnt",
+    "The provider refused this request": "Der Anbieter hat diese Anfrage abgelehnt",
+    "Saved models": "Gespeicherte Modelle",
+    "Find a model or type its ID": "Modell suchen oder ID eingeben",
+    "Self-hosted model": "Selbst gehostetes Modell",
+    "Search or type a model ID": "Modell-ID suchen oder eingeben",
+    "Search or type an ID, e.g. openai/gpt-4o": "ID suchen oder eingeben, z. B. openai/gpt-4o",
     "API keys": "API-Schlüssel",
     "Applicability:": "Anwendbarkeit:",
     "Applicable": "Anwendbar",
@@ -2507,10 +2731,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Multi-turn dataset detected": "Multi-Turn-Datensatz erkannt",
     "Multiple rule types": "Mehrere Regeltypen",
     "Multiple tags": "Mehrere Tags",
-    "Must be at least 8 characters": "Mindestens 8 Zeichen lang",
-    "Must contain at least one uppercase letter": "Muss mindestens einen Großbuchstaben enthalten",
-    "Must contain atleast one number": "Muss mindestens eine Zahl enthalten",
-    "Must contain one special character": "Muss ein Sonderzeichen enthalten",
     "Name your organization": "Organisation benennen",
     "New bias audit": "Neue Verzerrungsprüfung",
     "New chat": "Neuer Chat",
@@ -2615,7 +2835,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Registration date": "Registrierungsdatum",
     "Regulatory exposure": "Regulatorische Exposition",
     "Release notes": "Versionshinweise",
-    "Remember for 30 days": "30 Tage merken",
     "Replacement text": "Ersatztext",
     "Report": "Bericht",
     "Report Preview": "Berichtsvorschau",
@@ -2681,7 +2900,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Scope rules to specific tools": "Regeln auf bestimmte Tools beschränken",
     "Score": "Bewertung",
     "Scorers": "Scorer",
-    "Search and filter": "Suchen und filtern",
     "Search and select a risk from the IBM AI Risk Database":
       "Risiko aus der IBM-AI-Risk-Datenbank suchen und auswählen",
     "Search and select a risk from the MIT AI Risk Database":
@@ -2702,7 +2920,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Search from the risk database:": "In der Risikodatenbank suchen:",
     "Search guardrails...": "Guardrails suchen...",
     "Search icons...": "Symbole suchen...",
-    "Search logs...": "Protokolle suchen...",
     "Search organizations...": "Organisationen suchen...",
     "Search plugins by name, description, or tags...":
       "Plugins nach Name, Beschreibung oder Tags suchen...",
@@ -2856,7 +3073,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Website": "Website",
     "Weight": "Gewicht",
     "What": "Was",
-    "What appears here": "Was hier erscheint",
     "What changed?": "Was hat sich geändert?",
     "What does the vendor provide?": "Was stellt der Anbieter bereit?",
     "What gets detected?": "Was wird erkannt?",
@@ -2873,7 +3089,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Who is a Signatory?": "Wer ist ein Unterzeichner?",
     "Whose name and role appear on the declaration document":
       "Wessen Name und Rolle auf dem Erklärungsdokument erscheinen",
-    "Wise": "Wise",
     "Wise Search": "Wise Search",
     "Word document": "Word-Dokument",
     "Workflow title": "Workflow-Titel",
@@ -2883,11 +3098,11 @@ export const translations: Record<string, Record<string, string>> = {
     "Write risk name": "Risikoname schreiben",
     "You can use": "Sie können",
     "Your app": "Ihre App",
+    "The provider rejected the saved API key. Enter a working key. It is saved as a new key, and an Admin can remove the old one in AI Gateway settings.":
+      "Der Anbieter hat den gespeicherten API-Schlüssel abgelehnt. Geben Sie einen funktionierenden Schlüssel ein. Er wird als neuer Schlüssel gespeichert, und ein Admin kann den alten in den AI Gateway-Einstellungen entfernen.",
     "Your key will be saved securely for future experiments":
       "Ihr Schlüssel wird für zukünftige Experimente sicher gespeichert",
     "Your name": "Ihr Name",
-    "Your organization name": "Name Ihrer Organisation",
-    "Your surname": "Ihr Nachname",
 
     // Empty states (extended)
     "No AI models linked to this project yet": "Noch keine KI-Modelle mit diesem Projekt verknüpft",
@@ -2936,6 +3151,9 @@ export const translations: Record<string, Record<string, string>> = {
     "No members have been assigned to the use case":
       "Dem Anwendungsfall wurden keine Mitglieder zugewiesen",
     "No models found": "Keine Modelle gefunden",
+    "Updating model list…": "Modellliste wird aktualisiert…",
+    "Choose a judge model to save this scorer":
+      "Wählen Sie ein Bewertungsmodell, um diesen Scorer zu speichern",
     "No models found. Model preferences are automatically saved when you run an experiment.":
       "Keine Modelle gefunden. Modellpräferenzen werden automatisch gespeichert, wenn Sie ein Experiment ausführen.",
     "No models match your filters.": "Keine Modelle entsprechen Ihren Filtern.",
@@ -3155,9 +3373,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Enter vendor name": "Anbieternamen eingeben",
     "Enter vendor website": "Anbieter-Website eingeben",
     "Enter workflow title": "Workflow-Titel eingeben",
-    "Enter your email": "E-Mail eingeben",
     "Enter your organization name": "Organisationsname eingeben",
-    "Enter your password": "Passwort eingeben",
     "Evaluate AI agents for planning and tool usage":
       "KI-Agenten auf Planung und Tool-Nutzung bewerten",
     "Evaluate AI agents for planning, tool usage, and task completion":
@@ -3235,7 +3451,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Loading form data": "Formulardaten werden geladen",
     "Loading form data...": "Formulardaten werden geladen...",
     "Loading graph...": "Graph wird geladen...",
-    "Loading logs...": "Protokolle werden geladen...",
     "Loading policies...": "Richtlinien werden geladen...",
     "Loading question data...": "Fragedaten werden geladen...",
     "Loading roles...": "Rollen werden geladen...",
@@ -3263,7 +3478,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Monitor adoption curves and usage spikes. Correlate activity with policy changes or new tool introductions.":
       "Adoptionskurven und Nutzungsspitzen überwachen. Aktivität mit Richtlinienänderungen oder der Einführung neuer Tools in Beziehung setzen.",
     "Monitor costs and enforce budgets": "Kosten überwachen und Budgets durchsetzen",
-    "Monitor for issues": "Auf Probleme überwachen",
     "Monitor LLM usage and costs across your organization.":
       "LLM-Nutzung und -Kosten in Ihrer Organisation überwachen.",
     "Monitor risk trends and patterns": "Risikotrends und -muster überwachen",
@@ -3495,8 +3709,6 @@ export const translations: Record<string, Record<string, string>> = {
     "View request, response, and guardrail detection logs for all AI Gateway traffic.":
       "Anfrage-, Antwort- und Guardrail-Erkennungsprotokolle für den gesamten KI-Gateway-Verkehr anzeigen.",
     "Want a report? We": "Möchten Sie einen Bericht? Wir",
-    "Watch for error-level entries that may indicate failed operations, authentication problems, or service disruptions.":
-      "Achten Sie auf Einträge auf Fehlerebene, die auf fehlgeschlagene Vorgänge, Authentifizierungsprobleme oder Dienstunterbrechungen hinweisen können.",
 
     // Final round — remaining strings
     "A project groups related evaluations for a single LLM application. Define test suites, scoring criteria, and track quality over time.":
@@ -3507,8 +3719,6 @@ export const translations: Record<string, Record<string, string>> = {
       "KI-Ethikrichtlinie, Data-Governance-Richtlinie, KI-Risikomanagement-Richtlinie, Vorfallsreaktions-Richtlinie und Drittanbieter-KI-Richtlinie.",
     "AI Trust Center centralizes your AI policies, certifications, and subprocessors to demonstrate responsible, transparent, and compliant AI practices.":
       "Das KI-Vertrauenszentrum zentralisiert Ihre KI-Richtlinien, Zertifizierungen und Unterauftragsverarbeiter, um verantwortungsvolle, transparente und konforme KI-Praktiken zu belegen.",
-    "AI ethics, data privacy, responsible AI use, bias awareness, incident reporting procedures, and framework-specific requirements.":
-      "KI-Ethik, Datenschutz, verantwortungsvolle KI-Nutzung, Sensibilisierung für Verzerrungen, Verfahren zur Vorfallsmeldung und rahmenwerkspezifische Anforderungen.",
     "Affected persons / groups": "Betroffene Personen / Gruppen",
     "After adding a key, create endpoints in the Endpoints tab. Each endpoint uses one API key to authenticate with the LLM provider.":
       "Nach dem Hinzufügen eines Schlüssels erstellen Sie Endpunkte im Endpunkte-Tab. Jeder Endpunkt verwendet einen API-Schlüssel zur Authentifizierung beim LLM-Anbieter.",
@@ -3521,8 +3731,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Apply the same scorers across different experiments to track how model quality changes over time or between configurations.":
       "Dieselben Scorer über verschiedene Experimente hinweg anwenden, um zu verfolgen, wie sich die Modellqualität im Zeitverlauf oder zwischen Konfigurationen ändert.",
     "Approval notes / comments": "Genehmigungsnotizen / Kommentare",
-    "Assign each incident to a responsible person and track it through to resolution. A clear ownership chain speeds up response times.":
-      "Weisen Sie jedem Vorfall eine verantwortliche Person zu und verfolgen Sie ihn bis zur Lösung. Eine klare Verantwortungskette beschleunigt die Reaktionszeiten.",
     "Choose from PII detection, content filtering, or prompt injection detection. Each rule can either block the request or mask matched content.":
       "Wählen Sie zwischen PII-Erkennung, Inhaltsfilterung oder Prompt-Injection-Erkennung. Jede Regel kann entweder die Anfrage blockieren oder erkannte Inhalte maskieren.",
     "Classify detected tools as approved, under review, or blocked. Set policies per tool and notify users of compliance requirements.":
@@ -3562,8 +3770,6 @@ export const translations: Record<string, Record<string, string>> = {
       "Jeder Experimentlauf wird hier mit Bewertungen und Metadaten gespeichert. Führen Sie denselben Datensatz über verschiedene Modelle oder Konfigurationen aus, um den Fortschritt zu verfolgen.",
     "Each policy can be mapped to specific compliance controls, creating an audit trail showing which policies address which requirements.":
       "Jede Richtlinie kann bestimmten Compliance-Kontrollen zugeordnet werden, wodurch ein Prüfpfad entsteht, der zeigt, welche Richtlinien welche Anforderungen abdecken.",
-    "Each record tracks who completed what training, when, and their score. This creates an audit trail for competency requirements.":
-      "Jeder Datensatz verfolgt, wer welche Schulung wann absolviert hat und mit welcher Bewertung. Dies erstellt einen Prüfpfad für Kompetenzanforderungen.",
     "Each scan creates a snapshot. Compare scans to see what AI components were added, removed, or changed across your codebase.":
       "Jeder Scan erstellt einen Snapshot. Vergleichen Sie Scans, um zu sehen, welche KI-Komponenten in Ihrer Codebasis hinzugefügt, entfernt oder geändert wurden.",
     "Empty state": "Leerer Zustand",
@@ -3637,8 +3843,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Purple / Validation": "Violett / Validierung",
     "Record dataset name, source, size, format, and the date it was collected or last updated. Include any preprocessing steps applied.":
       "Name, Quelle, Größe, Format des Datensatzes sowie das Erfassungs- oder letzte Aktualisierungsdatum erfassen. Angewandte Vorverarbeitungsschritte einschließen.",
-    "Record what happened, why it happened, the impact, and what corrective actions were taken. This builds your incident response history.":
-      "Erfassen, was passiert ist, warum, die Auswirkung und welche Korrekturmaßnahmen ergriffen wurden. Dies baut Ihren Vorfallsreaktionsverlauf auf.",
     "Regular": "Regulär",
     "Relationship / causality": "Beziehung / Kausalität",
     "Requests/day": "Anfragen/Tag",
@@ -3662,24 +3866,16 @@ export const translations: Record<string, Record<string, string>> = {
     "Start with a blank policy or use one of the built-in templates. Fill in the details for your organization and publish when ready.":
       "Mit einer leeren Richtlinie beginnen oder eine der integrierten Vorlagen verwenden. Details für Ihre Organisation ausfüllen und bei Bereitschaft veröffentlichen.",
     "Success / Active": "Erfolg / Aktiv",
-    "Tasks with due dates appear here grouped by urgency: overdue, due today, this week, and later. Complete or update tasks to clear them.":
-      "Aufgaben mit Fälligkeitsdatum erscheinen hier gruppiert nach Dringlichkeit: überfällig, heute fällig, diese Woche, später. Aufgaben abschließen oder aktualisieren, um sie zu entfernen.",
     "The audit calculates performance differences across groups. See pass rates, accuracy gaps, and statistical significance scores.":
       "Die Prüfung berechnet Leistungsunterschiede zwischen Gruppen. Zeigt Bestehensquoten, Genauigkeitsunterschiede und statistische Signifikanzwerte.",
-    "This registry lists all AI-related training programs available to your organization. You can view, add, and manage training details here.":
-      "Dieses Register listet alle KI-bezogenen Schulungsprogramme auf, die Ihrer Organisation zur Verfügung stehen. Hier können Sie Schulungsdetails ansehen, hinzufügen und verwalten.",
     "Top 10 tools by calls": "Top 10 Tools nach Aufrufen",
     "Top P": "Top P",
     "Top users": "Top-Nutzer",
     "Total AI/ML detections found in this scan": "Gesamte KI-/ML-Erkennungen in diesem Scan",
     "Upload CSV or JSONL files containing prompts and expected responses. These are used to evaluate model performance across experiments.":
       "CSV- oder JSONL-Dateien mit Prompts und erwarteten Antworten hochladen. Diese werden zur Bewertung der Modellleistung über Experimente hinweg verwendet.",
-    "Use case is a real-world scenario describing how an AI system is applied within an organization to achieve a defined purpose or outcome.":
-      "Ein Anwendungsfall beschreibt ein reales Szenario, in dem ein KI-System in einer Organisation eingesetzt wird, um einen definierten Zweck oder ein Ergebnis zu erreichen.",
     "Use pre-built scorers for common checks like exact match or similarity, or write your own scoring logic for domain-specific needs.":
       "Vorgefertigte Scorer für gängige Prüfungen wie exakte Übereinstimmung oder Ähnlichkeit nutzen oder eigene Bewertungslogik für domänenspezifische Anforderungen schreiben.",
-    "Use the search bar and level filters above to find specific log entries. Filter by severity to focus on warnings or errors.":
-      "Nutzen Sie die Suchleiste und Ebenen-Filter oben, um bestimmte Protokolleinträge zu finden. Nach Schweregrad filtern, um sich auf Warnungen oder Fehler zu konzentrieren.",
     "VerifyWise logo": "VerifyWise-Logo",
     "Warning / Pending": "Warnung / Ausstehend",
     "Wide": "Breit",
@@ -4798,7 +4994,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Back to Admin Panel": "Zurück zum Admin-Bereich",
     "Back to My Plugins": "Zurück zu meinen Plugins",
     "Back to home": "Zurück zur Startseite",
-    "Back to log in": "Zurück zur Anmeldung",
     "Base commit SHA (older)": "Basis-Commit-SHA (älter)",
     "Based on the scan results, no additional compliance requirements were identified.":
       "Basierend auf den Scanergebnissen wurden keine zusätzlichen Compliance-Anforderungen identifiziert.",
@@ -4824,7 +5019,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Calculate your AI risk classification": "Berechnen Sie Ihre KI-Risikoklassifizierung",
     "Categories of harm": "Schadenskategorien",
     "Change history": "Änderungsverlauf",
-    "Check your email": "Prüfen Sie Ihre E-Mails",
     "Choice": "Auswahl",
     "Choice scores": "Auswahlbewertungen",
     "Choose a dataset containing prompts and expected outputs. Upload your own JSON file, select from saved datasets, or use a template.":
@@ -4839,7 +5033,6 @@ export const translations: Record<string, Record<string, string>> = {
       'Klicken Sie auf "Lokalen Anbieter hinzufügen", um zu beginnen',
     'Click "Save draft" to create your first version.':
       'Klicken Sie auf "Entwurf speichern", um Ihre erste Version zu erstellen.',
-    "Click to resend": "Zum erneuten Senden klicken",
     "Click to upload CSV file": "Klicken Sie, um eine CSV-Datei hochzuladen",
     "Column mapping": "Spaltenzuordnung",
     "Comma-separated tool names. Leave empty to apply to all MCP tools.":
@@ -4884,11 +5077,22 @@ export const translations: Record<string, Record<string, string>> = {
     "Copied!": "Kopiert!",
     "Copy": "Kopieren",
     "Copy results to clipboard": "Ergebnisse in die Zwischenablage kopieren",
+    "You can rerun this experiment once it finishes.":
+      "Sie können dieses Experiment erneut ausführen, sobald es abgeschlossen ist.",
+    "Save this experiment's settings, average scores and up to 10 samples as a JSON file. For more samples, open the experiment and use Download there.":
+      "Die Einstellungen, Durchschnittswerte und bis zu 10 Stichproben dieses Experiments als JSON-Datei speichern. Für weitere Stichproben öffnen Sie das Experiment und verwenden Sie dort „Herunterladen“.",
+    "Copy this experiment's settings, average scores and up to 10 samples as JSON. For more samples, open the experiment and use Copy there.":
+      "Die Einstellungen, Durchschnittswerte und bis zu 10 Stichproben dieses Experiments als JSON kopieren. Für weitere Stichproben öffnen Sie das Experiment und verwenden Sie dort „Kopieren“.",
+    "Save this experiment's settings and each sample's input, output and scores as a JSON file. Up to the 1,000 most recent samples are included.":
+      "Die Einstellungen dieses Experiments sowie Eingabe, Ausgabe und Bewertungen jeder Stichprobe als JSON-Datei speichern. Es werden bis zu 1.000 der neuesten Stichproben einbezogen.",
+    "Copy this experiment's settings and each sample's input, output and scores to the clipboard as JSON. Up to the 1,000 most recent samples are included.":
+      "Die Einstellungen dieses Experiments sowie Eingabe, Ausgabe und Bewertungen jeder Stichprobe als JSON in die Zwischenablage kopieren. Es werden bis zu 1.000 der neuesten Stichproben einbezogen.",
+    "Start a new experiment with the same settings. This experiment is kept, and every prompt is run and scored again.":
+      "Ein neues Experiment mit denselben Einstellungen starten. Dieses Experiment bleibt erhalten, und jeder Prompt wird erneut ausgeführt und bewertet.",
     "Copy this key now. You won't be able to see it again.":
       "Kopieren Sie diesen Schlüssel jetzt. Sie können ihn nicht mehr einsehen.",
     "Core definition test (EU AI Act)": "Kerndefinitionstest (EU-KI-Verordnung)",
     "Create Scorer": "Bewerter erstellen",
-    "Create VerifyWise user account": "VerifyWise-Benutzerkonto erstellen",
     "Create a custom risk manually": "Manuell ein benutzerdefiniertes Risiko erstellen",
     "Create a new API key for programmatic access to your account.":
       "Erstellen Sie einen neuen API-Schlüssel für programmgesteuerten Zugriff auf Ihr Konto.",
@@ -4899,7 +5103,6 @@ export const translations: Record<string, Record<string, string>> = {
       "Erstellen Sie eine Regel, um Benachrichtigungen zu erhalten, wenn bestimmte Schatten-KI-Aktivitäten erkannt werden. Wählen Sie einen Auslöser-Typ und das System benachrichtigt Sie, sobald die Bedingung erfüllt ist.",
     "Create a scorer to use custom evaluation criteria":
       "Erstellen Sie einen Bewerter, um benutzerdefinierte Bewertungskriterien zu verwenden",
-    "Create admin account": "Administratorkonto erstellen",
     "Create and track AI projects, assign teams, and monitor compliance status across all your initiatives.":
       "Erstellen und verfolgen Sie KI-Projekte, weisen Sie Teams zu und überwachen Sie den Compliance-Status all Ihrer Initiativen.",
     "Create at least one endpoint before generating virtual keys.":
@@ -4909,14 +5112,12 @@ export const translations: Record<string, Record<string, string>> = {
     'Create your first automation to get started. Click on the "Create new automation" button above':
       'Erstellen Sie Ihre erste Automatisierung, um loszulegen. Klicken Sie oben auf die Schaltfläche "Neue Automatisierung erstellen"',
     "Create your first demo project": "Erstellen Sie Ihr erstes Demoprojekt",
-    "Create your organization": "Erstellen Sie Ihre Organisation",
     "Cross-ref": "Querverweis",
     "Custom headers": "Benutzerdefinierte Header",
     "Custom scorers": "Benutzerdefinierte Bewerter",
     "Customize": "Anpassen",
     "DECLARATION DOCUMENT LINK": "ERKLÄRUNGSDOKUMENT-LINK",
     "Dashboard Action Buttons (30px)": "Dashboard-Aktionsschaltflächen (30px)",
-    "Dashboard Error": "Dashboard-Fehler",
     "Data preview": "Datenvorschau",
     "Dataset contains personally identifiable information (PII)":
       "Datensatz enthält personenbezogene Daten (PII)",
@@ -4940,7 +5141,6 @@ export const translations: Record<string, Record<string, string>> = {
       "Konzipiert für die Bewertung von Konversationen mit mehreren Zügen",
     "Details": "Details",
     "Detected libraries": "Erkannte Bibliotheken",
-    "Development Error Details:": "Entwicklungs-Fehlerdetails:",
     "Development stage of this use case": "Entwicklungsstadium dieses Anwendungsfalls",
     "Dimension breakdown": "Dimensionsaufschlüsselung",
     "Dimension weights": "Dimensionsgewichte",
@@ -4987,7 +5187,6 @@ export const translations: Record<string, Record<string, string>> = {
       "Geben Sie die genaue Modell-ID ein, die von Ihrem Endpunkt unterstützt wird",
     "Entity mapping": "Entitätszuordnung",
     "Entity relationships": "Entitätsbeziehungen",
-    "Error Details (Development Only):": "Fehlerdetails (nur Entwicklung):",
     "Error loading AI Trust Center settings":
       "Fehler beim Laden der KI-Vertrauenszentrum-Einstellungen",
     "Error loading frameworks. Please try again.":
@@ -5084,7 +5283,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Flagged": "Markiert",
     "Flagged rights": "Markierte Rechte",
     "Forgot password": "Passwort vergessen",
-    "Forgot password?": "Passwort vergessen?",
     "Form settings": "Formulareinstellungen",
     "Form unavailable": "Formular nicht verfügbar",
     "Format Preview": "Formatvorschau",
@@ -5139,8 +5337,6 @@ export const translations: Record<string, Record<string, string>> = {
     "ISO 42001, ISO 27001, NIST AI RMF": "ISO 42001, ISO 27001, NIST AI RMF",
     "Icon Buttons": "Symbolschaltflächen",
     "Identify and mitigate risks": "Risiken identifizieren und mindern",
-    "If an account exists with this email, we'll send a password reset link":
-      "Falls ein Konto mit dieser E-Mail-Adresse existiert, senden wir einen Link zum Zurücksetzen des Passworts",
     "If you are not sure about the high risk role,&nbsp;":
       "Wenn Sie sich bezüglich der Hochrisikorolle nicht sicher sind,&nbsp;",
     "Image not found": "Bild nicht gefunden",
@@ -5151,7 +5347,6 @@ export const translations: Record<string, Record<string, string>> = {
     "In the product": "Im Produkt",
     "In this article": "In diesem Artikel",
     "Incidents for this use case": "Vorfälle für diesen Anwendungsfall",
-    "Include archived": "Archivierte einbeziehen",
     "Industry sector for this use case": "Branche für diesen Anwendungsfall",
     "Industry-standard benchmarks powered by DeepEval for comprehensive LLM evaluation.":
       "Branchenübliche Benchmarks unterstützt von DeepEval für umfassende LLM-Bewertung.",
@@ -5185,6 +5380,17 @@ export const translations: Record<string, Record<string, string>> = {
     "Linked Items": "Verknüpfte Elemente",
     "Linked controls components": "Verknüpfte Kontrollkomponenten",
     "Linked model": "Verknüpftes Modell",
+    "Linked use case": "Verknüpfter Anwendungsfall",
+    "Select a use case": "Anwendungsfall auswählen",
+    "What this agent does": "Was dieser Agent macht",
+    "No use cases": "Keine Anwendungsfälle",
+    "No models in the inventory": "Keine Modelle im Inventar",
+    "Could not load models": "Modelle konnten nicht geladen werden",
+    "Could not load use cases": "Anwendungsfälle konnten nicht geladen werden",
+    "Description must be at most {max} characters.":
+      "Die Beschreibung darf höchstens {max} Zeichen lang sein.",
+    "All users selected": "Alle Benutzer ausgewählt",
+    "No users": "Keine Benutzer",
     "Linked risks": "Verknüpfte Risiken",
     "Live updates": "Live-Aktualisierungen",
     "Loading approval workflows...": "Genehmigungsabläufe werden geladen...",
@@ -5258,7 +5464,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Multi-Select Components": "Mehrfachauswahl-Komponenten",
     "Multi-Turn Conversations": "Mehrstufige Konversationen",
     "Multi-turn mode:": "Mehrstufiger Modus:",
-    "My tasks only": "Nur meine Aufgaben",
     "NIST AI RMF - Govern categories": "NIST AI RMF – Govern-Kategorien",
     "NIST AI RMF - Manage categories": "NIST AI RMF – Manage-Kategorien",
     "NIST AI RMF - Map categories": "NIST AI RMF – Map-Kategorien",
@@ -5380,10 +5585,8 @@ export const translations: Record<string, Record<string, string>> = {
     "No sub-entities found for this framework":
       "Keine Untereinheiten für dieses Rahmenwerk gefunden",
     "No syslog sources configured": "Keine Syslog-Quellen konfiguriert",
-    "No tasks in this time period": "Keine Aufgaben in diesem Zeitraum",
     "No tool usage recorded": "Keine Tool-Nutzung aufgezeichnet",
     "No tools match the selected filters.": "Keine Tools entsprechen den ausgewählten Filtern.",
-    "No training data available.": "Keine Trainingsdaten verfügbar.",
     "No trend data available yet": "Noch keine Trenddaten verfügbar",
     "No use cases found. Try another search term or create a new use case.":
       "Keine Anwendungsfälle gefunden. Versuchen Sie einen anderen Suchbegriff oder erstellen Sie einen neuen Anwendungsfall.",
@@ -5391,8 +5594,6 @@ export const translations: Record<string, Record<string, string>> = {
     "No vendors available. Please create a vendor first to add vendor risks.":
       "Keine Anbieter verfügbar. Bitte erstellen Sie zuerst einen Anbieter, um Anbieterrisiken hinzuzufügen.",
     "No versions yet": "Noch keine Versionen",
-    "No worries, we'll send you reset instructions.":
-      "Keine Sorge, wir senden Ihnen Anweisungen zum Zurücksetzen.",
     "Not linked": "Nicht verknüpft",
     "Not sure about your risk level?&nbsp;": "Unsicher über Ihr Risikoniveau?&nbsp;",
     "Note": "Hinweis",
@@ -5431,7 +5632,6 @@ export const translations: Record<string, Record<string, string>> = {
     "POST /v1/chat/completions": "POST /v1/chat/completions",
     "Params": "Parameter",
     "Pass threshold": "Bestehensschwelle",
-    "Password reset": "Passwort-Zurücksetzung",
     "Pending attach": "Anhängen ausstehend",
     "Pending attach from File Manager": "Anhängen aus Dateimanager ausstehend",
     "Pending upload": "Hochladen ausstehend",
@@ -5498,7 +5698,6 @@ export const translations: Record<string, Record<string, string>> = {
       "Anfragen ablehnen, wenn das Budget überschritten ist",
     "Reject submission": "Einreichung ablehnen",
     "Reject this submission instead": "Diese Einreichung stattdessen ablehnen",
-    "Reload Page": "Seite neu laden",
     "Reload now": "Jetzt neu laden",
     "Reminder after": "Erinnerung nach",
     "Remove step": "Schritt entfernen",
@@ -5633,7 +5832,9 @@ export const translations: Record<string, Record<string, string>> = {
     "Status breakdown": "Statusaufschlüsselung",
     "Status is controlled by the approval workflow and cannot be changed manually.":
       "Der Status wird durch den Genehmigungsablauf gesteuert und kann nicht manuell geändert werden.",
+    "Submission approved": "Einreichung genehmigt",
     "Submission received": "Einreichung empfangen",
+    "Submission rejected": "Einreichung abgelehnt",
     "Submission responses will be emailed to selected recipients":
       "Einreichungsantworten werden per E-Mail an ausgewählte Empfänger gesendet",
     "Successful": "Erfolgreich",
@@ -5697,8 +5898,6 @@ export const translations: Record<string, Record<string, string>> = {
       "Dieser Titel wird auf der KI-Vertrauenszentrum-Seite angezeigt",
     "This tool is marked as high risk. Consider enabling approval to ensure human review before execution.":
       "Dieses Tool ist als hochriskant markiert. Erwägen Sie, die Genehmigung zu aktivieren, um eine menschliche Überprüfung vor der Ausführung zu gewährleisten.",
-    "This widget failed to load properly.":
-      "Dieses Widget konnte nicht ordnungsgemäß geladen werden.",
     "This will permanently remove the user and all their data from this organization.":
       "Dies entfernt den Benutzer und alle seine Daten dauerhaft aus dieser Organisation.",
     "This will permanently remove the user and all their data.":
@@ -5785,7 +5984,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Vector databases (Pinecone, Chroma, Qdrant), document loaders, and embedding models will appear here":
       "Vektordatenbanken (Pinecone, Chroma, Qdrant), Dokumentenlader und Einbettungsmodelle erscheinen hier",
     "Vendor scorecard (advanced)": "Anbieter-Scorecard (erweitert)",
-    "Verify": "Verifizieren",
     "VerifyWise is your AI governance and compliance platform. In 3 minutes, we'll help you get started with managing AI risks, compliance frameworks, and building trust.":
       "VerifyWise ist Ihre KI-Governance- und Compliance-Plattform. In 3 Minuten helfen wir Ihnen beim Einstieg in die Verwaltung von KI-Risiken, Compliance-Rahmenwerken und Vertrauensaufbau.",
     "Versions": "Versionen",
@@ -5849,8 +6047,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Your experts": "Ihre Experten",
     "Your message blocks above will be prepended as context. Type a user message below and the model will respond using your prompt template.":
       "Ihre Nachrichtenblöcke oben werden als Kontext vorangestellt. Geben Sie unten eine Benutzernachricht ein und das Modell antwortet mit Ihrer Prompt-Vorlage.",
-    "Your password has been successfully reset. Click below to log in.":
-      "Ihr Passwort wurde erfolgreich zurückgesetzt. Klicken Sie unten, um sich anzumelden.",
     "Your previous submission data has been pre-filled. You can update and resubmit.":
       "Ihre vorherigen Einreichungsdaten wurden vorausgefüllt. Sie können aktualisieren und erneut absenden.",
     "Your progress": "Ihr Fortschritt",
@@ -5939,7 +6135,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Access to essential private or public services":
       "Zugang zu wesentlichen privaten oder öffentlichen Dienstleistungen",
     "Account already exists.": "Konto existiert bereits.",
-    "Account created successfully.": "Konto erfolgreich erstellt.",
     "Account created successfully. Redirecting to login...":
       "Konto erfolgreich erstellt. Weiterleitung zur Anmeldung...",
     "Accountability and governance": "Rechenschaftspflicht und Governance",
@@ -6011,7 +6206,6 @@ export const translations: Record<string, Record<string, string>> = {
     "All providers": "Alle Anbieter",
     "All risk levels": "Alle Risikoniveaus",
     "All servers": "Alle Server",
-    "All states": "Alle Zustände",
     "All statuses": "Alle Status",
     "All submissions": "Alle Einreichungen",
     "All uploaded files are catalogued here. Filter by project, uploader, or date to quickly find what you need.":
@@ -6087,8 +6281,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Assessments status overview": "Statusübersicht der Bewertungen",
     "Assign competent individuals with authority to oversee AI system usage.":
       "Weisen Sie kompetente Personen mit Befugnis zu, die KI-Systemnutzung zu überwachen.",
-    "Assign governance and compliance tasks to team members. Set priorities, due dates, and track progress from creation to completion.":
-      "Weisen Sie Governance- und Compliance-Aufgaben Teammitgliedern zu. Setzen Sie Prioritäten, Fälligkeitsdaten und verfolgen Sie den Fortschritt von der Erstellung bis zum Abschluss.",
     "Assign mitigations, set deadlines, and track resolution progress across your portfolio.":
       "Weisen Sie Maßnahmen zu, setzen Sie Fristen und verfolgen Sie den Behebungsfortschritt über Ihr Portfolio hinweg.",
     "Assign ownership": "Verantwortung zuweisen",
@@ -6223,18 +6415,12 @@ export const translations: Record<string, Record<string, string>> = {
       'Klicken Sie auf "Risiken hinzufügen/entfernen", um Risiken aus Ihrer Risikodatenbank zu verknüpfen',
     'Click "Create use case" below to proceed with setting up this AI use case in VerifyWise.':
       'Klicken Sie unten auf "Anwendungsfall erstellen", um diesen KI-Anwendungsfall in VerifyWise einzurichten.',
-    "Click the card again or click Total to see all datasets.":
-      "Klicken Sie erneut auf die Karte oder auf Gesamt, um alle Datensätze zu sehen.",
     "Click the card again or click Total to see all models.":
       "Klicken Sie erneut auf die Karte oder auf Gesamt, um alle Modelle zu sehen.",
     "Click the card again or click Total to see all policies.":
       "Klicken Sie erneut auf die Karte oder auf Gesamt, um alle Richtlinien zu sehen.",
     "Click the card again or click Total to see all risks.":
       "Klicken Sie erneut auf die Karte oder auf Gesamt, um alle Risiken zu sehen.",
-    "Click the card again or click Total to see all tasks.":
-      "Klicken Sie erneut auf die Karte oder auf Gesamt, um alle Aufgaben zu sehen.",
-    "Click the card again to see all incidents.":
-      "Klicken Sie erneut auf die Karte, um alle Vorfälle zu sehen.",
     "Close risks": "Risiken schließen",
     "Cloud (different region)": "Cloud (andere Region)",
     "Cloud (same region)": "Cloud (gleiche Region)",
@@ -6409,13 +6595,11 @@ export const translations: Record<string, Record<string, string>> = {
     "Data sent to external cloud APIs. Risk of data leakage, vendor lock-in, and compliance violations.":
       "Daten werden an externe Cloud-APIs gesendet. Risiko von Datenlecks, Anbieterabhängigkeit und Compliance-Verstößen.",
     "Dataset Description": "Datensatzbeschreibung",
-    "Dataset deleted successfully!": "Datensatz erfolgreich gelöscht!",
     "Dataset descriptions ensure transparency, compliance with intellectual property laws, and ethical use of data.":
       "Datensatzbeschreibungen gewährleisten Transparenz, Einhaltung von Urheberrechtsgesetzen und ethische Datennutzung.",
     "Dataset descriptions provide transparency in training, validation, and testing, ensuring alignment with standards.":
       "Datensatzbeschreibungen schaffen Transparenz bei Training, Validierung und Tests und gewährleisten die Übereinstimmung mit Standards.",
     "Dataset removed": "Datensatz entfernt",
-    "Dataset updated successfully!": "Datensatz erfolgreich aktualisiert!",
     "Dataset, judge model, enabled metrics, and thresholds":
       "Datensatz, Bewertermodell, aktivierte Metriken und Schwellenwerte",
     "Datasets Used Documentation": "Dokumentation der verwendeten Datensätze",
@@ -6479,7 +6663,6 @@ export const translations: Record<string, Record<string, string>> = {
       "Detaillierte Aufzeichnungen von Korrekturmaßnahmen bieten Verantwortlichkeit und unterstützen Audits oder regulatorische Überprüfungen.",
     "Detailed records of registration activities provide transparency and facilitate compliance verification.":
       "Detaillierte Aufzeichnungen von Registrierungsaktivitäten schaffen Transparenz und erleichtern die Compliance-Überprüfung.",
-    "Detailed system and audit logs": "Detaillierte System- und Audit-Protokolle",
     "Detailed view of specific AI tool": "Detailansicht eines bestimmten KI-Tools",
     "Detailed view of specific model": "Detailansicht eines bestimmten Modells",
     "Detailed view of specific scan results": "Detailansicht bestimmter Scanergebnisse",
@@ -6514,8 +6697,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Development": "Entwicklung",
     "Dismissed": "Verworfen",
     "Do not proceed": "Nicht fortfahren",
-    "Document AI-related incidents with full details including severity, impact assessment, affected parties, immediate mitigations, and planned corrective actions.":
-      "Dokumentieren Sie KI-bezogene Vorfälle mit vollständigen Details, einschließlich Schweregrad, Folgenabschätzung, Betroffene, Sofortmaßnahmen und geplante Korrekturmaßnahmen.",
     "Document Processing with NLP": "Dokumentenverarbeitung mit NLP",
     "Document Q&A Multi-Turn": "Dokument-Q&A mehrstufig",
     "Document all information about the AI system, including its capabilities, limitations, and any relevant technical details.":
@@ -6711,8 +6892,6 @@ export const translations: Record<string, Record<string, string>> = {
       "Konto konnte nicht gelöscht werden. Bitte versuchen Sie es erneut.",
     "Failed to delete API key": "Löschen des API-Schlüssels fehlgeschlagen",
     "Failed to delete comparison": "Löschen des Vergleichs fehlgeschlagen",
-    "Failed to delete dataset. Please try again.":
-      "Löschen des Datensatzes fehlgeschlagen. Bitte erneut versuchen.",
     "Failed to delete demo data.": "Löschen der Demodaten fehlgeschlagen.",
     "Failed to delete evidence. Please try again.":
       "Löschen des Nachweises fehlgeschlagen. Bitte erneut versuchen.",
@@ -6736,11 +6915,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Failed to delete rule": "Löschen der Regel fehlgeschlagen",
     "Failed to delete scorer": "Löschen des Bewerters fehlgeschlagen",
     "Failed to delete suppression rule": "Löschen der Unterdrückungsregel fehlgeschlagen",
-    "Failed to delete the task. Please try again.":
-      "Löschen der Aufgabe fehlgeschlagen. Bitte erneut versuchen.",
     "Failed to delete token": "Löschen des Tokens fehlgeschlagen",
-    "Failed to delete training. Please try again.":
-      "Löschen der Schulung fehlgeschlagen. Bitte erneut versuchen.",
     "Failed to delete use case. Please try again.":
       "Löschen des Anwendungsfalls fehlgeschlagen. Bitte erneut versuchen.",
     "Failed to delete vendor. It may have already been deleted or there was a network error.":
@@ -6771,12 +6946,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Failed to load chart data": "Laden der Diagrammdaten fehlgeschlagen",
     "Failed to load clause data": "Laden der Klauseldaten fehlgeschlagen",
     "Failed to load dataset": "Laden des Datensatzes fehlgeschlagen",
-    "Failed to load dataset details. Please try again.":
-      "Laden der Datensatzdetails fehlgeschlagen. Bitte erneut versuchen.",
     "Failed to load dataset for editing": "Laden des Datensatzes zur Bearbeitung fehlgeschlagen",
     "Failed to load datasets": "Laden der Datensätze fehlgeschlagen",
-    "Failed to load datasets. Please try again later.":
-      "Laden der Datensätze fehlgeschlagen. Bitte später erneut versuchen.",
     "Failed to load evidence data. Please try again later.":
       "Laden der Nachweisdaten fehlgeschlagen. Bitte später erneut versuchen.",
     "Failed to load evidence model details. Please try again.":
@@ -6805,8 +6976,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Failed to load suppression rules": "Laden der Unterdrückungsregeln fehlgeschlagen",
     "Failed to load template datasets": "Laden der Vorlagendatensätze fehlgeschlagen",
     "Failed to load token status": "Laden des Token-Status fehlgeschlagen",
-    "Failed to load training data. Please try again later.":
-      "Laden der Schulungsdaten fehlgeschlagen. Bitte später erneut versuchen.",
     "Failed to load version history": "Laden des Versionsverlaufs fehlgeschlagen",
     "Failed to open scorer for editing": "Öffnen des Bewerters zur Bearbeitung fehlgeschlagen",
     "Failed to publish form": "Veröffentlichen des Formulars fehlgeschlagen",
@@ -6826,8 +6995,6 @@ export const translations: Record<string, Record<string, string>> = {
       "Neuer Freigabelink erstellt. Von anderen Benutzern erstellte Links sind noch aktiv; nur diese können sie deaktivieren.",
     "Share link replaced. Previous links no longer work.":
       "Freigabelink ersetzt. Vorherige Links funktionieren nicht mehr.",
-    "Failed to restore the task. Please try again.":
-      "Wiederherstellen der Aufgabe fehlgeschlagen. Bitte erneut versuchen.",
     "Failed to save": "Speichern fehlgeschlagen",
     "Failed to save configuration": "Speichern der Konfiguration fehlgeschlagen",
     "Failed to save configuration. Please try again.":
@@ -6870,10 +7037,6 @@ export const translations: Record<string, Record<string, string>> = {
       "Aktualisieren des Status fehlgeschlagen. Bitte erneut versuchen.",
     "Failed to update the task. Please try again.":
       "Aktualisieren der Aufgabe fehlgeschlagen. Bitte erneut versuchen.",
-    "Failed to update the task priority. Please try again.":
-      "Aktualisieren der Aufgabenpriorität fehlgeschlagen. Bitte erneut versuchen.",
-    "Failed to update the task status. Please try again.":
-      "Aktualisieren des Aufgabenstatus fehlgeschlagen. Bitte erneut versuchen.",
     "Failed to update the vendor risk. Please try again.":
       "Aktualisieren des Anbieterrisikos fehlgeschlagen. Bitte erneut versuchen.",
     "Failed to upload": "Hochladen fehlgeschlagen",
@@ -6895,8 +7058,6 @@ export const translations: Record<string, Record<string, string>> = {
     "File removed from upload queue.": "Datei aus der Upload-Warteschlange entfernt.",
     "File size must be less than 5MB": "Dateigröße muss kleiner als 5 MB sein",
     "File upload failed": "Datei-Upload fehlgeschlagen",
-    "Filter by status, priority, or assignee to focus on specific subsets of tasks. Combine filters to find exactly what you need.":
-      "Filtern Sie nach Status, Priorität oder Beauftragtem, um sich auf bestimmte Teilmengen von Aufgaben zu konzentrieren. Kombinieren Sie Filter, um genau zu finden, was Sie brauchen.",
     "Filter evidence files by type to quickly find compliance documentation, assessments, and audit artifacts.":
       "Filtern Sie Nachweisdateien nach Typ, um Compliance-Dokumentation, Bewertungen und Audit-Artefakte schnell zu finden.",
     "Filter risks by category, severity level, likelihood, mitigation status, and deletion status. Combine filters to find exactly what you":
@@ -7123,7 +7284,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Incident archived successfully.": "Vorfall erfolgreich archiviert.",
     "Incident details": "Vorfallsdetails",
     "Incident management details": "Details des Vorfallsmanagements",
-    "Incident updated successfully!": "Vorfall erfolgreich aktualisiert!",
     "This incident was changed by someone else since you opened it. The form now shows their changes with your edits kept: save again to apply your edits.":
       "Dieser Vorfall wurde von jemand anderem geändert, seit Sie ihn geöffnet haben. Das Formular zeigt jetzt diese Änderungen, Ihre Bearbeitungen bleiben erhalten: Speichern Sie erneut, um Ihre Bearbeitungen zu übernehmen.",
     "Someone else also changed: {fields}. Saving again will replace their values with yours.":
@@ -7155,7 +7315,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Intended use of the model": "Vorgesehene Verwendung des Modells",
     "Inter": "Inter",
     "Internal Approval Record": "Interner Genehmigungsdatensatz",
-    "Internal Server Error": "Interner Serverfehler",
     "Internal audit": "Internes Audit",
     "Internal only": "Nur intern",
     "Internal organization": "Interne Organisation",
@@ -7244,7 +7403,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Local provider removed": "Lokaler Anbieter entfernt",
     "Logging systems provide traceability, aiding audits and troubleshooting while supporting regulatory requirements.":
       "Protokollierungssysteme bieten Nachverfolgbarkeit, unterstützen Audits und Fehlerbehebung und erfüllen regulatorische Anforderungen.",
-    "Login successful.": "Anmeldung erfolgreich.",
     "Long text": "Langer Text",
     "Low (0-25)": "Niedrig (0–25)",
     "Low (vendor supports non-core functions)":
@@ -7363,17 +7521,11 @@ export const translations: Record<string, Record<string, string>> = {
     "Monitor": "Überwachen",
     "Monitor and respond to incidents involving third-party components.":
       "Überwachen und reagieren Sie auf Vorfälle mit Drittanbieterkomponenten.",
-    "Monitor incidents across their lifecycle: Open, Investigating, Mitigated, Closed, Suspended, and Emergency action. Track resolution progress and identify incidents requiring immediate attention.":
-      "Überwachen Sie Vorfälle über ihren Lebenszyklus: Offen, In Untersuchung, Gemildert, Geschlossen, Ausgesetzt und Notfallmaßnahme. Verfolgen Sie den Behebungsfortschritt und identifizieren Sie Vorfälle, die sofortige Aufmerksamkeit erfordern.",
     "Monitor incidents related to AI systems and respond post-deployment.":
       "Überwachen Sie Vorfälle im Zusammenhang mit KI-Systemen und reagieren Sie nach der Bereitstellung.",
     "Monitor mitigation efforts in real-time": "Minderungsbemühungen in Echtzeit überwachen",
     "Monitor progress from initiation to completion with real-time status updates.":
       "Überwachen Sie den Fortschritt von der Initiierung bis zum Abschluss mit Echtzeit-Statusaktualisierungen.",
-    "Monitor total tasks, overdue items, in-progress work, and completed tasks. Identify bottlenecks and workload distribution at a glance.":
-      "Überwachen Sie Gesamtaufgaben, überfällige Elemente, laufende Arbeiten und abgeschlossene Aufgaben. Identifizieren Sie Engpässe und Arbeitslastverteilung auf einen Blick.",
-    "Monitor your AI governance metrics at a glance. View counts for models, vendors, policies, trainings, and incidents. Click any card to navigate to its detailed view.":
-      "Überwachen Sie Ihre KI-Governance-Metriken auf einen Blick. Zeigen Sie die Anzahl von Modellen, Anbietern, Richtlinien, Schulungen und Vorfällen an. Klicken Sie auf eine Karte, um zu deren Detailansicht zu navigieren.",
     "Monitor your overall compliance status at a glance. The progress bar shows how many controls have been completed and what still needs attention.":
       "Überwachen Sie Ihren gesamten Compliance-Status auf einen Blick. Die Fortschrittsleiste zeigt, wie viele Kontrollen abgeschlossen sind und was noch Aufmerksamkeit benötigt.",
     "Monitor your policies at a glance by status: Draft, Under Review, Approved, Published, Archived, and Deprecated.":
@@ -7448,11 +7600,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Needs legal review": "Benötigt rechtliche Überprüfung",
     "Negligible": "Vernachlässigbar",
     "Netskope (JSON-in-syslog)": "Netskope (JSON-in-Syslog)",
-    "Network error during login.": "Netzwerkfehler bei der Anmeldung.",
     "New Dataset": "Neuer Datensatz",
-    "New dataset added successfully!": "Neuer Datensatz erfolgreich hinzugefügt!",
     "New evidence added successfully!": "Neuer Nachweis erfolgreich hinzugefügt!",
-    "New incident added successfully!": "Neuer Vorfall erfolgreich hinzugefügt!",
     "New model inventory added successfully!": "Neues Modellinventar erfolgreich hinzugefügt!",
     "New model risk added successfully!": "Neues Modellrisiko erfolgreich hinzugefügt!",
     "New policy": "Neue Richtlinie",
@@ -7509,7 +7658,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Organization name must be less than 50 characters":
       "Organisationsname muss weniger als 50 Zeichen lang sein",
     "Organization name updated successfully!": "Organisationsname erfolgreich aktualisiert!",
-    "Organization or account already exists.": "Organisation oder Konto existiert bereits.",
     "Organization users": "Organisationsbenutzer",
     "Organization-Level Reports (ISO)": "Berichte auf Organisationsebene (ISO)",
     "Organization-wide framework": "Organisationsweites Rahmenwerk",
@@ -7555,6 +7703,10 @@ export const translations: Record<string, Record<string, string>> = {
     "Persons with disabilities": "Menschen mit Behinderungen",
     "Plan Adherence": "Plantreue",
     "Plan Quality": "Planqualität",
+    "Planning Quality": "Planungsqualität",
+    "Bias (lower is better)": "Bias (niedriger ist besser)",
+    "Toxicity (lower is better)": "Toxizität (niedriger ist besser)",
+    "Hallucination (lower is better)": "Halluzination (niedriger ist besser)",
     "Plan responses to AI system risks, including defining risk tolerance and mitigation strategies.":
       "Planen Sie Reaktionen auf KI-Systemrisiken, einschließlich der Festlegung von Risikotoleranz und Minderungsstrategien.",
     "Please add at least one recipient to the Send Email action before saving.":
@@ -7571,7 +7723,6 @@ export const translations: Record<string, Record<string, string>> = {
       "Bitte geben Sie einen API-Schlüssel für diesen Anbieter ein",
     "Please enter an automation name before saving.":
       "Bitte geben Sie einen Automatisierungsnamen ein, bevor Sie speichern.",
-    "Please enter an email address": "Bitte geben Sie eine E-Mail-Adresse ein",
     "Please login again to continue.": "Bitte melden Sie sich erneut an, um fortzufahren.",
     "Please save the changes to attach the selected files.":
       "Bitte speichern Sie die Änderungen, um die ausgewählten Dateien anzuhängen.",
@@ -7622,7 +7773,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Problem definition & planning": "Problemdefinition und -planung",
     "Proceed": "Fortfahren",
     "Proceed with conditions": "Mit Bedingungen fortfahren",
-    "Processing": "Wird verarbeitet",
     "Product Docs": "Produktdokumentation",
     "Prohibited AI system": "Verbotenes KI-System",
     "Project / Organization": "Projekt / Organisation",
@@ -7682,14 +7832,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Veröffentlichen Sie zuerst das Formular, um einen teilbaren Link zu generieren",
     "Quarterly": "Vierteljährlich",
     "Question updated successfully": "Frage erfolgreich aktualisiert",
-    "Quickly create new use cases, vendors, models, risks, or policies without navigating to different pages. Your shortcuts to common actions.":
-      "Erstellen Sie schnell neue Anwendungsfälle, Anbieter, Modelle, Risiken oder Richtlinien, ohne zu verschiedenen Seiten zu navigieren. Ihre Verknüpfungen zu häufigen Aktionen.",
     "Quickly filter policies by their current approval and lifecycle status to focus on what needs your attention.":
       "Filtern Sie Richtlinien schnell nach ihrem aktuellen Genehmigungs- und Lebenszyklusstatus, um sich auf das zu konzentrieren, was Ihre Aufmerksamkeit benötigt.",
-    "Quickly find specific incidents by searching titles or descriptions. Perfect for locating incidents in large lists.":
-      "Finden Sie schnell bestimmte Vorfälle durch Suchen von Titeln oder Beschreibungen. Perfekt zum Auffinden von Vorfällen in großen Listen.",
-    "Quickly find tasks by searching titles or descriptions. Perfect for locating specific work items in large task lists.":
-      "Finden Sie schnell Aufgaben durch Suchen von Titeln oder Beschreibungen. Perfekt zum Auffinden bestimmter Arbeitselemente in großen Aufgabenlisten.",
     "REVIEW DATE": "ÜBERPRÜFUNGSDATUM",
     "RISK LEVEL": "RISIKONIVEAU",
     "RISK NAME": "RISIKONAME",
@@ -7715,8 +7859,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Reference Controls (Statement of Applicability)":
       "Referenzkontrollen (Erklärung zur Anwendbarkeit)",
     "References to AI models in the codebase": "Verweise auf KI-Modelle im Code",
-    "Register AI-related training programs and educational resources. Track completion status, certifications, and learning progress across your team.":
-      "Registrieren Sie KI-bezogene Schulungsprogramme und Bildungsressourcen. Verfolgen Sie den Abschlussstatus, Zertifizierungen und den Lernfortschritt in Ihrem Team.",
     "Register and track AI models with details like hosting, biases, and limitations. Extend with the Model Lifecycle extension.":
       "Registrieren und verfolgen Sie KI-Modelle mit Details wie Hosting, Verzerrungen und Einschränkungen. Erweitern Sie mit der Extension Model Lifecycle.",
     "Register external AI providers and third-party services. Document vendor information, contracts, and compliance requirements in one centralized location.":
@@ -7731,9 +7873,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Registration Activity Records Maintenance":
       "Pflege der Registrierungsaktivitätsaufzeichnungen",
     "Registration Information Maintenance": "Pflege der Registrierungsinformationen",
-    "Registration failed.": "Registrierung fehlgeschlagen.",
-    "Registration successful. Redirecting to login page...":
-      "Registrierung erfolgreich. Weiterleitung zur Anmeldeseite...",
     "Regular evaluations ensure systems continue to fulfill their intended purpose and remain aligned with organizational goals.":
       "Regelmäßige Bewertungen stellen sicher, dass Systeme weiterhin ihren vorgesehenen Zweck erfüllen und mit Organisationszielen abgestimmt bleiben.",
     "Regular evaluations help ensure AI systems are ethical, equitable, and environmentally sustainable.":
@@ -7968,8 +8107,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Standardized intake process with automated risk classification for new AI use cases.":
       "Standardisierter Aufnahmeprozess mit automatisierter Risikoklassifizierung für neue KI-Anwendungsfälle.",
     "Start Date": "Startdatum",
-    "Start by creating a project that represents an AI activity or system in your organization. Each project helps you manage compliance, assessments, and vendor relationships.":
-      "Beginnen Sie damit, ein Projekt zu erstellen, das eine KI-Aktivität oder ein KI-System in Ihrer Organisation repräsentiert. Jedes Projekt hilft Ihnen, Compliance, Bewertungen und Anbieterbeziehungen zu verwalten.",
     "Started": "Gestartet",
     "Starting new evaluation run...": "Neuer Bewertungslauf wird gestartet...",
     "Status updated successfully": "Status erfolgreich aktualisiert",
@@ -7999,7 +8136,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Summarize use cases": "Anwendungsfälle zusammenfassen",
     "Sunday": "Sonntag",
     "Super Admin": "Super-Administrator",
-    "Super-admin login successful.": "Super-Administrator-Anmeldung erfolgreich.",
     "Superseded": "Ersetzt",
     "Supplier agreements for AI": "Lieferantenvereinbarungen für KI",
     "Suppress": "Unterdrücken",
@@ -8083,8 +8219,6 @@ export const translations: Record<string, Record<string, string>> = {
       "Für diesen Anbieter ist bereits ein Schlüssel konfiguriert. Entfernen Sie ihn zuerst, um einen neuen hinzuzufügen.",
     "This section has been been marked as done, but there's still a risk linked to it:":
       "Dieser Abschnitt wurde als erledigt markiert, aber es ist noch ein Risiko damit verknüpft:",
-    "This training no longer exists or you do not have access to it.":
-      "Diese Schulung existiert nicht mehr oder Sie haben keinen Zugriff darauf.",
     "This will permanently remove this API key record. This action cannot be undone.":
       "Dies entfernt diesen API-Schlüssel-Datensatz dauerhaft. Diese Aktion kann nicht rückgängig gemacht werden.",
     "Thorough documentation and assessment of changes prevent compliance gaps and support accountability.":
@@ -8128,10 +8262,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Verfolgen Sie den Abschlussstatus Ihrer Bewertungen in Echtzeit. Diese Fortschrittsanzeige zeigt, wie viele Themen bewertet wurden und was noch zu behandeln ist.",
     "Track your progress implementing compliance frameworks like ISO 42001. Monitor clause completion and identify gaps in your governance process.":
       "Verfolgen Sie Ihren Fortschritt bei der Umsetzung von Compliance-Rahmenwerken wie ISO 42001. Überwachen Sie den Klauselabschluss und identifizieren Sie Lücken in Ihrem Governance-Prozess.",
-    "Tracked events across your organization": "Verfolgte Ereignisse in Ihrer Organisation",
     "Train personnel on regulatory requirements and procedures for responding to authority requests.":
       "Schulen Sie das Personal in regulatorischen Anforderungen und Verfahren zur Beantwortung von Behördenanfragen.",
-    "Training deleted successfully!": "Schulung erfolgreich gelöscht!",
     "Training details": "Schulungsdetails",
     "Training equips employees to responsibly manage and understand AI systems, fostering ethics and legal adherence.":
       "Schulungen befähigen Mitarbeitende, KI-Systeme verantwortungsbewusst zu verwalten und zu verstehen, und fördern Ethik und Gesetzestreue.",
@@ -8166,6 +8298,7 @@ export const translations: Record<string, Record<string, string>> = {
     "USE CASE": "ANWENDUNGSFALL",
     "USER (ID)": "BENUTZER (ID)",
     "Ulas Ozguven": "Ulas Ozguven",
+    "Ioana Polmolea": "Ioana Polmolea",
     "Unable to edit metadata. File data not available.":
       "Metadaten können nicht bearbeitet werden. Dateidaten nicht verfügbar.",
     "Unable to preview file. Metadata not available.":
@@ -8221,8 +8354,6 @@ export const translations: Record<string, Record<string, string>> = {
     "User notification of AI system use": "Nutzerbenachrichtigung über KI-Systemnutzung",
     "User session not found. Please log in again.":
       "Benutzersitzung nicht gefunden. Bitte erneut anmelden.",
-    "User with this email already exists. Please use a different email.":
-      "Ein Benutzer mit dieser E-Mail-Adresse existiert bereits. Bitte verwenden Sie eine andere E-Mail.",
     "Users in a specific organization": "Benutzer in einer bestimmten Organisation",
     "Uses the highest sensitivity score among departments accessing the tool. Finance, Legal, and HR are rated highest (80).":
       "Verwendet die höchste Sensibilitätsbewertung unter den Abteilungen, die auf das Tool zugreifen. Finanzen, Recht und Personalwesen werden am höchsten bewertet (80).",
@@ -8500,7 +8631,13 @@ export const translations: Record<string, Record<string, string>> = {
       "Sie können dieses Onboarding jederzeit aus Ihrem Profilmenü erneut aufrufen.",
     "Your AI governance and compliance platform. In 3 minutes, we":
       "Ihre KI-Governance- und Compliance-Plattform. In 3 Minuten",
-    "Your changes have been saved.": "Ihre Änderungen wurden gespeichert.",
+    "Your approval is recorded.": "Ihre Genehmigung wurde erfasst.",
+    "Your approval is recorded. Waiting on 1 more approver for this step.":
+      "Ihre Genehmigung wurde erfasst. Für diesen Schritt fehlt noch 1 Genehmiger.",
+    "Your approval is recorded. Waiting on {count} more approvers for this step.":
+      "Ihre Genehmigung wurde erfasst. Für diesen Schritt fehlen noch {count} Genehmiger.",
+    "Your approval is recorded. The request moved to the next step.":
+      "Ihre Genehmigung wurde erfasst. Die Anfrage ist zum nächsten Schritt übergegangen.",
     "Your name, email and personal details":
       "Ihr Name, Ihre E-Mail-Adresse und persönlichen Angaben",
     "Your new task has been added.": "Ihre neue Aufgabe wurde hinzugefügt.",
@@ -8547,45 +8684,31 @@ export const translations: Record<string, Record<string, string>> = {
     "AI-generated": "AI-generated",
     "AI-reviewed": "AI-reviewed",
     "AI-suggested": "AI-suggested",
-    "Action audit trail": "Action audit trail",
     "Action type": "Action type",
-    "Actions by category": "Actions by category",
-    "Actions by state": "Actions by state",
     "Add Rule": "Add Rule",
     "Add or hide dashboard tabs": "Add or hide dashboard tabs",
     "Add review notes (optional)...": "Add review notes (optional)...",
     "Adequate Evidence": "Adequate Evidence",
     "Alignment with the control": "Alignment with the control",
-    "All AI content": "All AI content",
-    "All actors": "All actors",
-    "All caught up!": "All caught up!",
     "Analyzer abstained": "Analyzer abstained",
     "Apply all": "Apply all",
     "Approved and executed": "Approved and executed",
     "At Risk": "At Risk",
     "At risk": "At risk",
-    "Audit log": "Audit log",
-    "Audit readiness": "Audit readiness",
     "Authority": "Authority",
     "Auto-Approve": "Auto-Approve",
     "Auto-Reject": "Auto-Reject",
-    "Auto-approve rate": "Auto-approve rate",
     "Automation": "Automation",
     "Automation Details": "Automation Details",
     "Avg confidence": "Avg confidence",
-    "Avg wait time": "Avg wait time",
     "By type": "By type",
-    "Complete audit trail for every AI action (EU AI Act art. 12)":
-      "Complete audit trail for every AI action (EU AI Act art. 12)",
-    "Complete audit trail for every AI action. EU AI Act Article 12 compliance.":
-      "Complete audit trail for every AI action. EU AI Act Article 12 compliance.",
+    "By {name} · {date}": "Von {name} · {date}",
     "Conditions (JSON)": "Conditions (JSON)",
     "Configure auto-approve, require-approval, and auto-reject rules for AI operations":
       "Configure auto-approve, require-approval, and auto-reject rules for AI operations",
     "Content": "Content",
     "Coverage of requirements": "Coverage of requirements",
     "Create a custom rule": "Create a custom rule",
-    "Daily volume": "Daily volume",
     "Dashboard tabs": "Dashboard tabs",
     "Dataset Details": "Dataset Details",
     "Decision": "Decision",
@@ -8596,7 +8719,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Evidence Quality Details": "Evidence Quality Details",
     "Explicit dates": "Explicit dates",
     "Export CSV": "Export CSV",
-    "Filter by actor:": "Filter by actor:",
     "Hide tab": "Hide tab",
     "How current the evidence is": "How current the evidence is",
     "Incident Details": "Incident Details",
@@ -8604,7 +8726,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Loading analysis...": "Loading analysis...",
     "Loading heatmap...": "Loading heatmap...",
     "Low Quality Evidence": "Low Quality Evidence",
-    "Main dashboard with metrics and activity": "Main dashboard with metrics and activity",
     "Model Details": "Model Details",
     "Modified": "Modified",
     "Named owner": "Named owner",
@@ -8612,12 +8733,9 @@ export const translations: Record<string, Record<string, string>> = {
     "Needs work": "Needs work",
     "No AI analysis available for this evidence yet.":
       "No AI analysis available for this evidence yet.",
-    "No AI-generated content pending review.": "No AI-generated content pending review.",
     "No AI-generated content tracked yet.": "No AI-generated content tracked yet.",
     "No Evidence": "No Evidence",
     "No approval rules configured.": "No approval rules configured.",
-    "No audit entries found": "No audit entries found",
-    "No audit trail entries found": "No audit trail entries found",
     "No compliance areas detected.": "No compliance areas detected.",
     "No control data available for gap analysis.": "No control data available for gap analysis.",
     "No key findings extracted.": "No key findings extracted.",
@@ -8632,31 +8750,22 @@ export const translations: Record<string, Record<string, string>> = {
     "Overall Quality Score": "Overall Quality Score",
     "PMM Config": "PMM Config",
     "PMM Config Details": "PMM Config Details",
-    "Per-control readiness scores and audit preparation":
-      "Per-control readiness scores and audit preparation",
-    "Per-control readiness scores, framework aggregations, and improvement recommendations.":
-      "Per-control readiness scores, framework aggregations, and improvement recommendations.",
     "Policy Details": "Policy Details",
     "Private": "Private",
     "Quality breakdown": "Quality breakdown",
     "Readiness trend": "Readiness trend",
     "Ready": "Ready",
     "Recency": "Recency",
-    "Rejection rate": "Rejection rate",
     "Reliability": "Reliability",
     "Require Approval": "Require Approval",
     "Reversible action": "Reversible action",
-    "Review and approve AI-generated content (EU AI Act art. 52)":
-      "Review and approve AI-generated content (EU AI Act art. 52)",
     "Review outcomes": "Review outcomes",
     "Review progress": "Review progress",
     "Risk Details": "Risk Details",
-    "Rule engine": "Rule engine",
     "Select which tabs to show": "Select which tabs to show",
     "Specificity": "Specificity",
     "State": "State",
     "Task Details": "Task Details",
-    "Total actions": "Total actions",
     "Total items": "Total items",
     "Training Details": "Training Details",
     "Truncated": "Truncated",
@@ -8808,16 +8917,11 @@ export const translations: Record<string, Record<string, string>> = {
       "Sie haben jetzt mehrere Frameworks zugewiesen. Aktivieren Sie Governance OS, um übergreifende Zuordnungen zu erkunden, intelligente Empfehlungen zu erhalten und die Abdeckung über alle Frameworks hinweg zu analysieren.",
     "Your compliance dashboard will prioritize tasks from the primary framework first":
       "Ihr Compliance-Dashboard priorisiert zuerst Aufgaben aus dem primären Framework",
-    "All AI-related training programs": "Alle KI-bezogenen Schulungsprogramme",
     "Assessment Result": "Bewertungsergebnis",
     "Attendance Record": "Anwesenheitsnachweis",
-    "Compliance evidence linked to trainings": "Mit Schulungen verknüpfte Compliance-Nachweise",
     "Course Completion": "Kursabschluss",
     "Delete evidence": "Nachweis löschen",
-    "Failed to load evidence details. Please try again.":
-      "Nachweisdetails konnten nicht geladen werden. Bitte versuchen Sie es erneut.",
     "MAPPED TRAININGS": "ZUGEORDNETE SCHULUNGEN",
-    "Mapped trainings": "Zugeordnete Schulungen",
     "Next file": "Nächste Datei",
     "No evidence uploaded yet for this training.":
       "Für diese Schulung wurden noch keine Nachweise hochgeladen.",
@@ -8825,14 +8929,10 @@ export const translations: Record<string, Record<string, string>> = {
     "Optional notes about this evidence": "Optionale Notizen zu diesem Nachweis",
     "Policy owner": "Richtlinienverantwortlicher",
     "Previous file": "Vorherige Datei",
-    "Quarter (year)": "Quartal (Jahr)",
     "Select a training": "Schulung auswählen",
     "Select a type": "Typ auswählen",
     "Select policy owner": "Richtlinienverantwortlichen auswählen",
-    "This evidence has no file attached to preview.":
-      "Diesem Nachweis ist keine Datei zur Vorschau angehängt.",
     "Training Certificate": "Schulungszertifikat",
-    "Training Evidence Hub": "Schulungsnachweiszentrale",
     "Upload certificates, attendance proofs, or other compliance evidence for this training.":
       "Laden Sie Zertifikate, Anwesenheitsnachweise oder andere Compliance-Nachweise für diese Schulung hoch.",
 
@@ -8893,9 +8993,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Enter your Application (client) ID": "Geben Sie Ihre Anwendungs-(Client-)ID ein",
     "Client secret": "Client-Geheimnis",
     "Enter your client secret": "Geben Sie Ihr Client-Geheimnis ein",
-    "Select your organization": "Wählen Sie Ihre Organisation aus",
-    "Completing sign in...": "Anmeldung wird abgeschlossen...",
-    "Redirecting to login...": "Weiterleitung zur Anmeldung...",
 
     // Governance OS
     "Activate": "Aktivieren",
@@ -9219,8 +9316,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Switch to the Unified Insights tab here in Governance OS to monitor your per-project coverage and identify gaps as you work through controls.":
       "Wechseln Sie hier in Governance OS zum Tab Unified Insights, um Ihre Abdeckung pro Projekt zu überwachen und Lücken zu identifizieren, während Sie die Kontrollen abarbeiten.",
     "Target Framework *": "Ziel-Rahmenwerk *",
-    "Tasks assigned to team members show up in their personal task list. Use the 'My tasks only' toggle on the list view to filter.":
-      "Aufgaben, die Teammitgliedern zugewiesen sind, erscheinen in deren persönlicher Aufgabenliste. Verwenden Sie den Schalter 'Nur meine Aufgaben' in der Listenansicht zum Filtern.",
     "The Evidence Hub will connect to your existing evidence sources, auto-collect compliance artifacts, and provide a unified view of evidence coverage across frameworks.":
       "Der Evidence Hub verbindet sich mit Ihren vorhandenen Nachweisquellen, erfasst Compliance-Artefakte automatisch und bietet eine einheitliche Übersicht über die Nachweisabdeckung über alle Rahmenwerke hinweg.",
     "The Knowledge Graph will render an interactive visualization of frameworks, controls, mappings, risks, and evidence — making complex governance relationships explorable at a glance.":
@@ -9388,7 +9483,6 @@ export const translations: Record<string, Record<string, string>> = {
     // AI Gateway empty/error states
     "Click Save draft to create your first version.":
       "Klicken Sie auf Entwurf speichern, um Ihre erste Version zu erstellen.",
-    "Could not load metrics.": "Die Metriken konnten nicht geladen werden.",
     "Could not load this run.": "Dieser Lauf konnte nicht geladen werden.",
     "Create your first version": "Erstellen Sie Ihre erste Version",
     "Error loading AI Trust Center settings. Please try again.":
@@ -9610,6 +9704,9 @@ export const translations: Record<string, Record<string, string>> = {
     "Vendor {id}": "Anbieter {id}",
     "Vendor risk {id}": "Anbieterrisiko {id}",
     "{linked} of {total}": "{linked} von {total}",
+    "{name} (inactive)": "{name} (inaktiv)",
+    "#{id} (not found)": "#{id} (nicht gefunden)",
+    "No endpoints": "Keine Endpunkte",
     "Vendors with reach": "Anbieter mit Reichweite",
     "Inheriting project risks": "Erbende Projektrisiken",
     "Affected use cases": "Betroffene Anwendungsfälle",
@@ -9665,6 +9762,28 @@ export const translations: Record<string, Record<string, string>> = {
       "Die Gruppierung läuft noch. Öffnen Sie diesen Tab erneut, um neue Vorschläge zu sehen.",
     "Scanning {count} risks. Links will appear as the scan completes.":
       "{count} Risiken werden gescannt. Verknüpfungen erscheinen, sobald der Scan abgeschlossen ist.",
+    "Scanning {count} risk. Links will appear as the scan completes.":
+      "{count} Risiko wird gescannt. Verknüpfungen erscheinen, sobald der Scan abgeschlossen ist.",
+    "Related risks": "Verwandte Risiken",
+    "How is this risk connected?": "Wie ist dieses Risiko verbunden?",
+    "Where is the parent risk?": "Wo befindet sich das übergeordnete Risiko?",
+    "The two risks are connected, but neither depends on the other.":
+      "Die beiden Risiken sind verbunden, aber keines hängt vom anderen ab.",
+    "This risk is part of a broader parent risk. When the parent's level changes, this risk is flagged for review.":
+      "Dieses Risiko ist Teil eines übergeordneten Risikos. Ändert sich dessen Stufe, wird dieses Risiko zur Prüfung markiert.",
+    "The other risk becomes a child of this one and is flagged when this risk's level changes.":
+      "Das andere Risiko wird diesem untergeordnet und markiert, wenn sich die Stufe dieses Risikos ändert.",
+    "Another risk in the risk register.": "Ein anderes Risiko im Risikoregister.",
+    "A risk recorded on a model.": "Ein Risiko, das zu einem Modell erfasst ist.",
+    "A risk recorded on a vendor.": "Ein Risiko, das zu einem Anbieter erfasst ist.",
+    "Grouping {count} cluster of related risks. Suggestions appear here as they finish.":
+      "{count} Cluster verwandter Risiken wird gruppiert. Vorschläge erscheinen hier, sobald sie fertig sind.",
+    "{count} cluster was too large to group in one pass.":
+      "{count} Cluster war zu groß, um ihn in einem Durchgang zu gruppieren.",
+    "Link this risk to others it is connected to. VerifyWise also suggests links from what risks have in common, such as category, controls, lifecycle phase or project. Confirm a suggestion to keep it, or dismiss it.":
+      "Verknüpfen Sie dieses Risiko mit anderen, mit denen es zusammenhängt. VerifyWise schlägt außerdem Verknüpfungen anhand von Gemeinsamkeiten vor, etwa Kategorie, Kontrollen, Lebenszyklusphase oder Projekt. Bestätigen Sie einen Vorschlag, um ihn zu behalten, oder verwerfen Sie ihn.",
+    "Uses AI to propose parent and child links among risks that are already related. Suggestions appear in this list for you to confirm.":
+      "Schlägt mit KI über- und untergeordnete Verknüpfungen zwischen bereits verwandten Risiken vor. Die Vorschläge erscheinen in dieser Liste zur Bestätigung.",
     "Grouping {count} clusters of related risks. Suggestions appear here as they finish.":
       "{count} Cluster verwandter Risiken werden gruppiert. Vorschläge erscheinen hier, sobald sie fertig sind.",
     "{count} clusters were too large to group in one pass.":
@@ -9695,6 +9814,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Verwandte Anbieterrisiken erscheinen, sobald Anbieterrisiken gespeichert werden oder ein Administrator einen Scan ausführt.",
     "Scanning {count} vendor risks. Related vendor risks appear here as the scan completes.":
       "{count} Anbieterrisiken werden gescannt. Verwandte Anbieterrisiken erscheinen hier, sobald der Scan abgeschlossen ist.",
+    "Scanning {count} vendor risk. Related vendor risks appear here as the scan completes.":
+      "{count} Anbieterrisiko wird gescannt. Verwandte Anbieterrisiken erscheinen hier, sobald der Scan abgeschlossen ist.",
     "Scan finished. No related vendor risks found.":
       "Scan abgeschlossen. Keine verwandten Anbieterrisiken gefunden.",
     "Search vendor risks": "Anbieterrisiken suchen",
@@ -9702,6 +9823,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Verwandte Anbieterrisiken beschreiben dieselbe Gefährdung, bei diesem oder einem anderen Anbieter. Keines erbt vom anderen.",
     "Similar wording": "Ähnliche Formulierung",
     "Same vendor": "Gleicher Anbieter",
+    "Sample text must be at most {max} characters":
+      "Der Beispieltext darf höchstens {max} Zeichen lang sein",
     "Shared framework": "Gemeinsames Rahmenwerk",
     "Shared use case": "Gemeinsamer Anwendungsfall",
     "Why are you dismissing {name}?": "Warum verwerfen Sie {name}?",
@@ -9735,7 +9858,6 @@ export const translations: Record<string, Record<string, string>> = {
     "custom framework items": "benutzerdefinierte Rahmenwerkelemente",
     // Reporting, readiness and AI observability
     "AI analyses": "KI-Analysen",
-    "AI observability": "KI-Observability",
     "AI readiness": "KI-Bereitschaft",
     "Action failed": "Aktion fehlgeschlagen",
     "Add a language-model key in Settings to enable AI insights.":
@@ -9768,7 +9890,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Generate": "Erstellen",
     "Hour": "Stunde",
     "Key findings": "Wichtigste Erkenntnisse",
-    "Latency over time": "Latenz im Zeitverlauf",
     "Leave empty to include every framework in scope.":
       "Leer lassen, um alle Rahmenwerke im Umfang einzuschließen.",
     "My templates": "Meine Vorlagen",
@@ -9779,8 +9900,6 @@ export const translations: Record<string, Record<string, string>> = {
     "No report templates available yet.": "Noch keine Berichtsvorlagen verfügbar.",
     "No scheduled reports yet. Create one from the Templates tab.":
       "Noch keine geplanten Berichte. Erstellen Sie einen im Tab „Vorlagen“.",
-    "No spans found for this trace": "Keine Spans für diesen Trace gefunden",
-    "No traces found": "Keine Traces gefunden",
     "Overall quality grade": "Gesamtbewertung der Qualität",
     "Parallel agents": "Parallele Agenten",
     "Per-section summaries": "Zusammenfassungen pro Abschnitt",
@@ -9804,11 +9923,6 @@ export const translations: Record<string, Record<string, string>> = {
     "This template has no configurable sections.":
       "Diese Vorlage hat keine konfigurierbaren Abschnitte.",
     "Timezone": "Zeitzone",
-    "Total traces": "Traces insgesamt",
-    "Trace waterfall": "Trace-Wasserfall",
-    "Traces": "Traces",
-    "Traces, cost tracking, and latency & error metrics for every AI request.":
-      "Traces, Kostenverfolgung sowie Latenz- und Fehlermetriken für jede KI-Anfrage.",
     "Update the name, output format and delivery schedule.":
       "Aktualisieren Sie Name, Ausgabeformat und Zustellungszeitplan.",
     "Update the template name, description, and category.":
@@ -9877,6 +9991,10 @@ export const translations: Record<string, Record<string, string>> = {
     'Click "Add to Slack" above to connect your first workspace.':
       'Klicken Sie oben auf "Zu Slack hinzufügen", um Ihren ersten Workspace zu verbinden.',
     "Click to upload documents": "Zum Hochladen von Dokumenten klicken",
+    "Could not remove the file. Try again.":
+      "Die Datei konnte nicht entfernt werden. Versuchen Sie es erneut.",
+    "Could not upload the file. Try again.":
+      "Die Datei konnte nicht hochgeladen werden. Versuchen Sie es erneut.",
     "Configuration saved.": "Konfiguration gespeichert.",
     "Configure Model Lifecycle": "Modelllebenszyklus konfigurieren",
     "Configure Phases": "Phasen konfigurieren",
@@ -10878,9 +10996,303 @@ export const translations: Record<string, Record<string, string>> = {
       "Die Datenprüfungen haben diesen Lauf nicht für den Export freigegeben; sein Verhältnis wird daher mit diesem Vorbehalt angezeigt.",
     "A hollow point marks a run the data checks did not clear for export. Its ratio is shown with that caveat.":
       "Ein hohler Punkt markiert einen Lauf, den die Datenprüfungen nicht für den Export freigegeben haben. Sein Verhältnis wird mit diesem Vorbehalt angezeigt.",
+    // Super admin MCP connect
+    "Connect Claude Code to this deployment": "Claude Code mit dieser Bereitstellung verbinden",
+    "Download the config file": "Konfigurationsdatei herunterladen",
+    "Token expires in": "Token läuft ab in",
+    "Config file downloaded": "Konfigurationsdatei heruntergeladen",
+    "Add it to Claude Code": "Zu Claude Code hinzufügen",
+    "Check it worked": "Prüfen, ob es funktioniert hat",
+    "What the file contains": "Was die Datei enthält",
+    "Tools it adds": "Hinzugefügte Tools",
+    "Download config file": "Konfigurationsdatei herunterladen",
+    "Preparing...": "Wird vorbereitet...",
+    "7 days": "7 Tage",
+    "30 days": "30 Tage",
+    "60 days": "60 Tage",
+    "90 days": "90 Tage",
+    "180 days": "180 Tage",
+    "Failed to create the config file.": "Die Konfigurationsdatei konnte nicht erstellt werden.",
+    "Downloading revokes the token issued here last time. Anything set up with the previous file, on this machine or another, stops working immediately.":
+      "Beim Herunterladen wird das zuletzt hier ausgestellte Token widerrufen. Alles, was mit der vorherigen Datei eingerichtet wurde, auf diesem oder einem anderen Rechner, funktioniert sofort nicht mehr.",
   },
 
   fr: {
+    ...aiAuditFr,
+    ...aiContentReviewFr,
+    ...aiObservabilityFr,
+    ...approvalsFr,
+    ...authenticationFr,
+    ...dashboardFr,
+    ...datasetsFr,
+    ...eventTrackerFr,
+    ...incidentsFr,
+    ...tasksFr,
+    ...trainingFr,
+    "senior": "senior",
+    "standard": "standard",
+    "close calls": "cas limites",
+    "not routed": "non attribué",
+    "routing off": "acheminement désactivé",
+    "days": "jours",
+    "missed of completed": "manquées sur terminées",
+    "open": "ouvertes",
+    "prohibited": "interdit",
+    "high risk": "risque élevé",
+    "decisions": "décisions",
+    "Second review open": "Seconde revue ouverte",
+    "Second review missed": "Seconde revue : élément manqué",
+    "Prohibited, pending": "Interdit, en attente",
+    "Pending too long": "En attente depuis trop longtemps",
+    "No active reviewer": "Aucun relecteur actif",
+    "Former user": "Ancien utilisateur",
+    "That submission could not be found": "Cette soumission est introuvable",
+    "Only an Admin can change review routing.":
+      "Seul un administrateur peut modifier l'acheminement des révisions.",
+    "All forms": "Tous les formulaires",
+    "Band changed": "Niveau modifié",
+    "Band kept": "Niveau conservé",
+    "Band kept, senior lane": "Niveau conservé, voie senior",
+    "Check": "À vérifier",
+    "Close call": "Cas limite",
+    "Counts the band in force at decision": "Compte le niveau en vigueur au moment de la décision",
+    "Decisions": "Décisions",
+    "Failed to load the oversight figures.": "Impossible de charger les chiffres de supervision.",
+    "Last 12 weeks": "12 dernières semaines",
+    "Last 4 weeks": "4 dernières semaines",
+    "Last 8 weeks": "8 dernières semaines",
+    "Median time": "Délai médian",
+    "Median time to decision": "Délai médian de décision",
+    "Needs attention": "À examiner",
+    "Never changed a band in": "N'a jamais modifié un niveau sur",
+    "No decisions in this period.": "Aucune décision sur cette période.",
+    "No submissions in this period.": "Aucune soumission sur cette période.",
+    "Oversight": "Supervision",
+    "Redlines caught": "Lignes rouges détectées",
+    "Second reviews": "Secondes revues",
+    "Submissions by lane": "Soumissions par voie",
+    "Suggested risks accepted": "Risques suggérés acceptés",
+    "Routing off": "Acheminement désactivé",
+    "Failed to send to senior review. Please try again.":
+      "Échec de l'envoi à la revue senior. Veuillez réessayer.",
+    "Failed to save the second review. Please try again.":
+      "Échec de l'enregistrement de la seconde revue. Veuillez réessayer.",
+    "Within": "À moins de",
+    "points of the threshold": "points du seuil",
+    "Prohibited practice": "Pratique interdite",
+    "No usable score": "Aucun score exploitable",
+    "threshold": "seuil",
+    "below": "inférieur à",
+    "Band raised by a reviewer": "Niveau relevé par un réviseur",
+    "Sent to senior review:": "Envoyé à la revue senior :",
+    "Senior review": "Revue senior",
+    "Standard review": "Revue standard",
+    "Not routed yet": "Pas encore acheminé",
+    "Only": "Seuls",
+    "can decide this submission.": "peuvent décider de cette soumission.",
+    "Send to senior review": "Envoyer à la revue senior",
+    "Senior reviewers will decide this submission. Say why it needs a closer look.":
+      "Les réviseurs seniors décideront de cette soumission. Indiquez pourquoi elle demande un examen plus approfondi.",
+    "Why does this need a senior reviewer?": "Pourquoi faut-il un réviseur senior ?",
+    "Second review": "Seconde revue",
+    "A senior reviewer will check this approval.":
+      "Un réviseur senior vérifiera cette approbation.",
+    "Required when something was missed": "Obligatoire si un point a été manqué",
+    "Agree": "D'accord",
+    "Missed something": "Point manqué",
+    "Agreed with the approval": "D'accord avec l'approbation",
+    "Something was missed": "Un point a été manqué",
+    "Note:": "Note :",
+    "Resolution:": "Résolution :",
+    "Resolution note": "Note de résolution",
+    "What was done about it?": "Qu'a-t-on fait à ce sujet ?",
+    "Mark resolved": "Marquer comme résolu",
+    "Lane": "Voie",
+    "Senior": "Senior",
+    "Not routed": "Non acheminé",
+    "Assigned to me": "Assignées à moi",
+    "Scores of": "Les scores de",
+    "or more, prohibited practices and scores within":
+      "ou plus, les pratiques interdites et les scores à moins de",
+    "points of": "points de",
+    "go to senior reviewers.": "vont aux réviseurs seniors.",
+    "Route by risk score": "Acheminer selon le score de risque",
+    "Send submissions to senior or standard reviewers based on their risk score.":
+      "Envoyer les soumissions aux réviseurs seniors ou standard selon leur score de risque.",
+    "Senior reviewers": "Réviseurs seniors",
+    "Standard reviewers": "Réviseurs standard",
+    "Select senior reviewers": "Sélectionner les réviseurs seniors",
+    "Select standard reviewers": "Sélectionner les réviseurs standard",
+    "Pick at least one senior reviewer": "Choisissez au moins un réviseur senior",
+    "Pick at least one standard reviewer": "Choisissez au moins un réviseur standard",
+    "Close-call margin": "Marge des cas limites",
+    "Second review share %": "Part des secondes révisions en %",
+    "Risk score that separates the lanes": "Score de risque qui sépare les filières",
+    "Points either side of the threshold": "Points de part et d'autre du seuil",
+    "Share of standard decisions checked again": "Part des décisions standard revérifiées",
+    "Use a number from 1 to 99": "Utilisez un nombre de 1 à 99",
+    "Use a number from 0 to 25": "Utilisez un nombre de 0 à 25",
+    "Use a number from 0 to 100": "Utilisez un nombre de 0 à 100",
+    "Fix the routing settings before saving":
+      "Corrigez les paramètres d'acheminement avant d'enregistrer",
+    "Fix the routing settings before publishing":
+      "Corrigez les paramètres d'acheminement avant de publier",
+    "No risk score was recorded for this submission.":
+      "Aucun score de risque n'a été enregistré pour cette soumission.",
+    "set to": "fixé à",
+    "band set to": "niveau fixé à",
+    // AI intake assessment
+    "Scoring…": "Évaluation en cours…",
+    "No score yet": "Pas encore de score",
+    "at least": "au moins",
+    "(rules only)": "(règles uniquement)",
+    "AI scores ranged": "Les scores de l'IA allaient de",
+    "The AI median set this score.": "La médiane de l'IA a fixé ce score.",
+    "The rule minimum set this score. The AI scored it lower.":
+      "Le minimum des règles a fixé ce score. L'IA l'a évalué plus bas.",
+    "Band set to": "Niveau fixé à",
+    "by": "par",
+    "AI scoring isn't set up for this form.":
+      "L'évaluation par IA n'est pas configurée pour ce formulaire.",
+    "AI scoring failed. The score shown comes from the rules only.":
+      "L'évaluation par IA a échoué. Le score affiché provient uniquement des règles.",
+    "Not rule-checked. EU AI Act questions apply to use cases, not models.":
+      "Non vérifié par les règles. Les questions sur l'AI Act de l'UE s'appliquent aux cas d'usage, pas aux modèles.",
+    "Not rule-checked. This form doesn't ask the EU AI Act questions.":
+      "Non vérifié par les règles. Ce formulaire ne pose pas les questions sur l'AI Act de l'UE.",
+    "Minimum based on your level change": "Minimum basé sur votre changement de niveau",
+    "Rules updated since this was scored": "Règles mises à jour depuis l'évaluation",
+    "How this score is built": "Comment ce score est calculé",
+    "EU AI Act level": "Niveau selon l'AI Act de l'UE",
+    "EU AI Act questions apply to use cases, not models.":
+      "Les questions sur l'AI Act de l'UE s'appliquent aux cas d'usage, pas aux modèles.",
+    "Not rule-checked: this form doesn't ask the EU AI Act questions.":
+      "Non vérifié par les règles : ce formulaire ne pose pas les questions sur l'AI Act de l'UE.",
+    "Rule minimum": "Minimum des règles",
+    "AI scores": "Scores de l'IA",
+    "failed": "échec",
+    "Median": "Médiane",
+    "Range": "Plage",
+    "No AI scores": "Aucun score de l'IA",
+    "The final score is the higher of the rule minimum and the AI median. The AI can raise the score but never lower it.":
+      "Le score final est le plus élevé entre le minimum des règles et la médiane de l'IA. L'IA peut augmenter le score, jamais le baisser.",
+    "Reasons": "Raisons",
+    "Band override": "Niveau modifié",
+    "Suggesting risks…": "Suggestion des risques…",
+    "AI scoring isn't set up for this form, so no risks are suggested.":
+      "L'évaluation par IA n'est pas configurée pour ce formulaire, aucun risque n'est donc suggéré.",
+    "Risk suggestions failed. Use Retry in the score section to try again.":
+      "Les suggestions de risques ont échoué. Utilisez « Réessayer » dans la section du score.",
+    "Risk suggestions haven't started. Use Retry in the score section to start them.":
+      "Les suggestions de risques n'ont pas démarré. Utilisez « Réessayer » dans la section du score pour les lancer.",
+    "No risks were suggested for this submission.":
+      "Aucun risque n'a été suggéré pour cette soumission.",
+    "accepted": "acceptés",
+    "dismissed": "écartés",
+    "Accept all": "Tout accepter",
+    "From the risk catalog": "Du catalogue de risques",
+    "Likelihood:": "Probabilité :",
+    "Severity:": "Gravité :",
+    "Add a mitigation plan before accepting this risk.":
+      "Ajoutez un plan d'atténuation avant d'accepter ce risque.",
+    "Accept": "Accepter",
+    "lower-rated suggestions not shown": "suggestions moins bien notées non affichées",
+    "not accepted: they need a mitigation plan first":
+      "non acceptés : ils ont d'abord besoin d'un plan d'atténuation",
+    "Couldn't save the change. Please try again.":
+      "Impossible d'enregistrer la modification. Veuillez réessayer.",
+    "Couldn't accept the suggestions. Please try again.":
+      "Impossible d'accepter les suggestions. Veuillez réessayer.",
+    "Couldn't retry the assessment. Please try again.":
+      "Impossible de relancer l'évaluation. Veuillez réessayer.",
+    "Accepted risks are added to the register when you approve.":
+      "Les risques acceptés sont ajoutés au registre lorsque vous approuvez.",
+    "Model risk category": "Catégorie de risque du modèle",
+    "Model risk level": "Niveau de risque du modèle",
+    "(default: 90 days after approval)": "(par défaut : 90 jours après l'approbation)",
+    "Name must be at most 200 characters": "Le nom doit comporter 200 caractères au maximum",
+    "Must be at most 1000 characters": "Doit comporter 1000 caractères au maximum",
+    "An accepted risk needs a mitigation plan":
+      "Un risque accepté a besoin d'un plan d'atténuation",
+    "Override band": "Modifier le niveau",
+    "Can't be lower than the rule minimum allows":
+      "Ne peut pas être inférieur à ce que permet le minimum des règles",
+    "Risk score:": "Score de risque :",
+    "EU AI Act questions are off. Submissions won't get a rule-based EU AI Act classification, so their risk score has no rule-based minimum and is marked \"not rule-checked\". Use cases approved from this form won't get an EU AI Act classification either.":
+      "Les questions sur l'AI Act de l'UE sont désactivées. Les soumissions n'obtiendront pas de classification fondée sur les règles de l'AI Act de l'UE : leur score de risque n'a donc pas de minimum fondé sur les règles et est marqué « non vérifié par les règles ». Les cas d'usage approuvés depuis ce formulaire n'obtiendront pas non plus de classification selon l'AI Act de l'UE.",
+    "Used to score submissions and suggest risks. You can also generate suggested questions and field guidance text with AI.":
+      "Sert à évaluer les soumissions et à suggérer des risques. Vous pouvez aussi générer avec l'IA des questions suggérées et des textes d'aide pour les champs.",
+    "Used to score submissions and suggest risks. Without a key, reviewers see the rule-based classification only. Add a key in Settings > LLM keys.":
+      "Sert à évaluer les soumissions et à suggérer des risques. Sans clé, les réviseurs ne voient que la classification fondée sur les règles. Ajoutez une clé dans Paramètres > Clés LLM.",
+    // Jira incidents extension
+    "Only issues created in Jira after this is set up are imported. VerifyWise doesn't create Jira issues.":
+      "Seuls les tickets créés dans Jira après cette configuration sont importés. VerifyWise ne crée pas de tickets Jira.",
+    "After import, only status stays in sync, in both directions. Later changes to other Jira fields aren't copied.":
+      "Après l'import, seul le statut reste synchronisé, dans les deux sens. Les modifications ultérieures des autres champs Jira ne sont pas copiées.",
+    "If a Jira status move needs a field such as Resolution, VerifyWise can't make it. Those incidents show an error, and you can change the status in Jira.":
+      "Si un changement de statut dans Jira exige un champ comme Résolution, VerifyWise ne peut pas l'effectuer. Ces incidents affichent une erreur, et vous pouvez changer le statut dans Jira.",
+    "Create a classic API token for the service account at id.atlassian.com. Scoped tokens aren't supported.":
+      "Créez un jeton d'API classique pour le compte de service sur id.atlassian.com. Les jetons à portée limitée ne sont pas pris en charge.",
+    "Stored. Enter a new token to replace it":
+      "Enregistré. Saisissez un nouveau jeton pour le remplacer",
+    "API token": "Jeton d'API",
+    "Choose": "Choisir",
+    "Choose a project and issue type to map statuses.":
+      "Choisissez un projet et un type de ticket pour mapper les statuts.",
+    "Choose a use case": "Choisir un cas d'usage",
+    "Choose an incident type": "Choisir un type d'incident",
+    "Choose an issue type": "Choisir un type de ticket",
+    "Connection": "Connexion",
+    "Could not load the Jira incidents settings. Reload the page to try again.":
+      "Impossible de charger les paramètres des incidents Jira. Rechargez la page pour réessayer.",
+    "Could not load the sync activity.": "Impossible de charger l'activité de synchronisation.",
+    "Defaults for imported incidents": "Valeurs par défaut des incidents importés",
+    "Import only issues with this label. Leave empty to import every issue.":
+      "Importer uniquement les tickets portant cette étiquette. Laissez vide pour importer tous les tickets.",
+    "Issue type": "Type de ticket",
+    "Jira project": "Projet Jira",
+    "Jira site URL": "URL du site Jira",
+    "Jira to VerifyWise": "De Jira vers VerifyWise",
+    "VerifyWise to Jira": "De VerifyWise vers Jira",
+    "No sync activity yet": "Aucune activité de synchronisation pour l'instant",
+    "Save the connection to choose a Jira project.":
+      "Enregistrez la connexion pour choisir un projet Jira.",
+    "Save the connection to map Jira priorities.":
+      "Enregistrez la connexion pour mapper les priorités Jira.",
+    "Service account email": "E-mail du compte de service",
+    "Settings saved.": "Paramètres enregistrés.",
+    "Severity mapping": "Mappage de la gravité",
+    "Status mapping": "Mappage des statuts",
+    "Sync activity": "Activité de synchronisation",
+    "Which issues to import": "Tickets à importer",
+    "Label": "Étiquette",
+    "Jira status": "Statut Jira",
+    "VerifyWise status": "Statut VerifyWise",
+    "Jira priority": "Priorité Jira",
+    "Don't change Jira": "Ne pas modifier Jira",
+    "Event": "Événement",
+    "Jira issue": "Ticket Jira",
+    "Imported": "Importé",
+    "Status from Jira": "Statut depuis Jira",
+    "Status to Jira": "Statut vers Jira",
+    "Conflict": "Conflit",
+    "Deleted in Jira": "Supprimé dans Jira",
+    "Sync error": "Erreur de synchronisation",
+    "Jira left unchanged": "Jira laissé inchangé",
+    "Enter your Jira site URL": "Saisissez l'URL de votre site Jira",
+    "Enter the service account email": "Saisissez l'e-mail du compte de service",
+    "Enter the API token": "Saisissez le jeton d'API",
+    "Enter the API token again after changing the site URL or email":
+      "Saisissez de nouveau le jeton d'API après avoir modifié l'URL du site ou l'e-mail",
+    "Map every Jira status": "Mappez chaque statut Jira",
+    "Enter the reporter": "Saisissez le rapporteur",
+    "Could not save the settings.": "Impossible d'enregistrer les paramètres.",
+    "Could not test the connection to Jira.": "Impossible de tester la connexion à Jira.",
+    "Could not load the options from Jira.": "Impossible de charger les options depuis Jira.",
+    "Import new Jira issues and sync status on a schedule":
+      "Importer les nouveaux tickets Jira et synchroniser les statuts selon un planning",
+    "Each sync imports issues created since the last one, then syncs status both ways.":
+      "Chaque synchronisation importe les tickets créés depuis la précédente, puis synchronise les statuts dans les deux sens.",
     // Agent Control monitor only mode
     "Enforce": "Appliquer",
     "Monitor only": "Surveillance uniquement",
@@ -10937,6 +11349,15 @@ export const translations: Record<string, Record<string, string>> = {
     "Server switched on": "Serveur activé",
     "The server offered no tools": "Le serveur n'a proposé aucun outil",
     "One tool found": "Un outil trouvé",
+    "Tools updated": "Outils mis à jour",
+    "No changes": "Aucune modification",
+    "View tools": "Voir les outils",
+    "{count} tools found": "{count} outils trouvés",
+    "{count} new": "{count} nouveau(x)",
+    "{count} removed": "{count} supprimé(s)",
+    "{count} changed": "{count} modifié(s)",
+    "View {count} tools": "Voir les {count} outils",
+    "View one tool": "Voir l'outil",
     "Discovery failed": "Échec de la découverte",
     "Server saved, but discovery failed": "Serveur enregistré, mais la découverte a échoué",
     "Server switched on, but discovery failed": "Serveur activé, mais la découverte a échoué",
@@ -11466,6 +11887,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Agent not found": "Agent introuvable",
     "Could not load this agent.": "Impossible de charger cet agent.",
     "Back to AI agents": "Retour aux agents IA",
+    "Back to MCP servers": "Retour aux serveurs MCP",
     "Accountable owners": "Propriétaires responsables",
     "Manually entered": "Saisi manuellement",
     "Inactive 30+ days": "Inactif depuis plus de 30 jours",
@@ -11484,7 +11906,7 @@ export const translations: Record<string, Record<string, string>> = {
       "Aucun agent trouvé. Vérifiez que l'extension Azure AI Foundry est activée et configurée.",
     "Sync failed. Check that the Azure AI Foundry extension is enabled and configured.":
       "Échec de la synchronisation. Vérifiez que l'extension Azure AI Foundry est activée et configurée.",
-    "Agent review status updated.": "Statut de relecture de l'agent mis à jour.",
+    "Agent updated.": "Agent mis à jour.",
     "Agent updated successfully.": "Agent mis à jour avec succès.",
     "Agent added successfully.": "Agent ajouté avec succès.",
     "Agent deleted successfully.": "Agent supprimé avec succès.",
@@ -11495,12 +11917,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Description cannot exceed 32,767 characters.":
       "La description ne peut pas dépasser 32 767 caractères.",
     "Description is required.": "La description est obligatoire.",
-    "The selected use case is no longer available.":
-      "Le cas d'usage sélectionné n'est plus disponible.",
-    "The selected affected model is no longer available.":
-      "Le modèle concerné sélectionné n'est plus disponible.",
-    "The selected owner is no longer available.":
-      "Le responsable sélectionné n'est plus disponible.",
     "Description must be at least 5 characters.":
       "La description doit comporter au moins 5 caractères.",
     "Edit agent": "Modifier l'agent",
@@ -11511,6 +11927,9 @@ export const translations: Record<string, Record<string, string>> = {
     "Review status changed": "Statut de relecture modifié",
     "Linked to a model in the inventory": "Lié à un modèle de l'inventaire",
     "Unlinked from its model": "Dissocié de son modèle",
+    "Linked to a use case": "Associé à un cas d'usage",
+    "Unlinked from its use case": "Dissocié de son cas d'usage",
+    "Updated description": "Description mise à jour",
     'Updated name: "{from}" → "{to}"': "Nom mis à jour : « {from} » → « {to} »",
     "Updated name": "Nom mis à jour",
     'Updated type: "{from}" → "{to}"': "Type mis à jour : « {from} » → « {to} »",
@@ -11553,7 +11972,6 @@ export const translations: Record<string, Record<string, string>> = {
     "LLM Evals": "Évaluations LLM",
     "Shadow AI": "IA fantôme",
     "Shadow AI detection": "Détection d'IA fantôme",
-    "AI Training Registry": "Registre des formations IA",
     "Plugins": "Plugins",
 
     // Buttons / actions
@@ -11591,12 +12009,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Add new risks": "Ajouter de nouveaux risques",
     "Add new vendor": "Ajouter un nouveau fournisseur",
     "Add new policy": "Ajouter une nouvelle politique",
-    "Add new task": "Ajouter une nouvelle tâche",
-    "Add new training": "Ajouter une nouvelle formation",
-    "Add new dataset": "Ajouter un nouveau jeu de données",
     "Add new model": "Ajouter un nouveau modèle",
-    "Add new incident": "Ajouter un nouvel incident",
-    "Add new workflow": "Ajouter un nouveau flux",
     "Add new resource": "Ajouter une nouvelle ressource",
     "Add new subprocessor": "Ajouter un nouveau sous-traitant",
     "Add item": "Ajouter un élément",
@@ -11605,7 +12018,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Create new use case": "Créer un cas d'usage",
     "Create new framework": "Créer un référentiel",
     "Create new policies": "Créer de nouvelles politiques",
-    "Create new tasks": "Créer de nouvelles tâches",
     "Create from templates": "Créer à partir de modèles",
     "Create your account": "Créer votre compte",
     "Version history": "Historique des versions",
@@ -11623,7 +12035,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Configure": "Configurer",
     "Manage": "Gérer",
     "Assign owners": "Attribuer des responsables",
-    "Assign reviewers": "Attribuer des relecteurs",
     "Map": "Mapper",
     "Measure": "Mesurer",
     "Govern": "Gouverner",
@@ -11639,7 +12050,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Whether this scenario activation is currently active":
       "[FR] Whether this activation is active",
     "Yes": "Oui",
-    "Later": "Plus tard",
     "Submit": "Soumettre",
     "Edit": "Modifier",
     "Export": "Exporter",
@@ -11772,7 +12182,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Actions": "Actions",
     "Date": "Date",
     "Due date": "Date d'échéance",
-    "Due today": "Dû aujourd'hui",
     "No default": "Aucune valeur par défaut",
     "No due date": "Aucune échéance",
     "Expiry": "Expiration",
@@ -11793,7 +12202,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Approver": "Approbateur",
     "Reporter": "Rapporteur",
     "Reviewer": "Relecteur",
-    "Creator": "Créateur",
     "Category": "Catégorie",
     "Categories": "Catégories",
     "Classification": "Classification",
@@ -11935,7 +12343,6 @@ export const translations: Record<string, Record<string, string>> = {
     // Empty / loading / error
     "Loading": "Chargement",
     "Loading...": "Chargement...",
-    "Loading dashboard": "Chargement du tableau de bord",
     "Loading datasets...": "Chargement des jeux de données...",
     "Loading frameworks...": "Chargement des référentiels...",
     "Loading models...": "Chargement des modèles...",
@@ -11968,7 +12375,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Recent activity": "Activité récente",
     "Recent use cases": "Cas d'usage récents",
     "Activity history": "Historique d'activité",
-    "List view": "Vue liste",
     "Executive view": "Vue direction",
     "Scorecard": "Tableau de bord",
     "Analytics": "Analytique",
@@ -11979,24 +12385,17 @@ export const translations: Record<string, Record<string, string>> = {
     "This use case has no framework assigned": "Aucun référentiel n'est associé à ce cas d'usage",
     "Requirements, assessment tracker, clauses and annexes, and NIST subcategories need a framework, so they are left out. The report still covers risks, models, vendors, training, policies and incidents. Assign a framework to the use case to include compliance sections.":
       "Les exigences, le suivi des évaluations, les clauses et annexes ainsi que les sous-catégories NIST nécessitent un référentiel et sont donc exclus. Le rapport couvre toujours les risques, les modèles, les fournisseurs, les formations, les politiques et les incidents. Associez un référentiel au cas d'usage pour inclure les sections de conformité.",
-    "AI project": "Projet IA",
     "AI Project": "Projet IA",
     "Project": "Projet",
-    "Create a new use case by filling in the following details":
-      "Créez un nouveau cas d'usage en remplissant les informations ci-dessous",
     "Manage AI use cases, projects, and their lifecycle stages.":
       "Gérez les cas d'usage IA, les projets et leurs étapes du cycle de vie.",
 
     // Tasks
-    "Tomorrow": "Demain",
     "This week": "Cette semaine",
     "This month": "Ce mois-ci",
-    "Next week": "La semaine prochaine",
     "Today": "Aujourd'hui",
     "Yesterday": "Hier",
     "Task created successfully": "Tâche créée avec succès",
-    "Task deleted permanently": "Tâche supprimée définitivement",
-    "Task updated successfully": "Tâche mise à jour avec succès",
 
     // Risk management
     "Identify, assess, and track risks across all AI systems.":
@@ -12010,15 +12409,12 @@ export const translations: Record<string, Record<string, string>> = {
 
     // Datasets
     "Dataset Bulk Upload": "Téléversement en masse de jeux de données",
-    "Manage training and evaluation datasets used by your models. Track data lineage, classification, and compliance metadata.":
-      "Gérez les jeux de données d'entraînement et d'évaluation utilisés par vos modèles. Suivez la lignée des données, la classification et les métadonnées de conformité.",
 
     // Policies
     "Create and manage AI governance policies for your organization.":
       "Créez et gérez les politiques de gouvernance IA de votre organisation.",
 
     // Incidents
-    "What counts as an incident?": "Qu'est-ce qui compte comme incident ?",
     "What counts as a model?": "Qu'est-ce qui compte comme modèle ?",
     "What counts as evidence?": "Qu'est-ce qui compte comme preuve ?",
 
@@ -12158,10 +12554,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Add repository": "Ajouter un dépôt",
     "New experiment": "Nouvelle expérience",
     "New battle": "Nouvelle comparaison",
-    "New training": "Nouvelle formation",
     "Create your first project": "Créer votre premier projet",
     "Create your first use case": "Créer votre premier cas d'usage",
-    "Create approval workflows": "Créer des flux d'approbation",
     "Unlink risk": "Dissocier le risque",
     "Edit subprocessor": "Modifier le sous-traitant",
     "Confirm framework removal": "Confirmer la suppression du référentiel",
@@ -12178,19 +12572,13 @@ export const translations: Record<string, Record<string, string>> = {
     "Manage frameworks": "Gérer les référentiels",
     "Register new models": "Enregistrer de nouveaux modèles",
     "Record each model": "Enregistrer chaque modèle",
-    "Log new incidents": "Consigner de nouveaux incidents",
     "Track expiry dates": "Suivre les dates d'expiration",
-    "Track feedback and comments": "Suivre les commentaires",
     "Track model status": "Suivre le statut du modèle",
     "Track your progress": "Suivre votre progression",
-    "Set due dates on tasks": "Définir les échéances des tâches",
-    "Set renewal dates": "Définir les dates de renouvellement",
     "Set up your organization": "Configurer votre organisation",
     "Link policies to controls": "Relier les politiques aux contrôles",
     "Link to models": "Relier aux modèles",
     "Link to vendors and risks": "Relier aux fournisseurs et risques",
-    "Assign owners and track resolution": "Attribuer des responsables et suivre la résolution",
-    "Assign training to team members": "Attribuer des formations aux membres",
     "Select PDF File": "Sélectionner un fichier PDF",
     "Select classification": "Sélectionner une classification",
     "Select type": "Sélectionner un type",
@@ -12199,7 +12587,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Complete a risk assessment": "Compléter une évaluation des risques",
     "Back to policies": "Retour aux politiques",
     "Active only": "Actifs uniquement",
-    "APPROVED BY": "APPROUVÉ PAR",
     "Stale": "Périmé",
     "Needs Rework": "Retravail nécessaire",
     "Awaiting Approval": "En attente d'approbation",
@@ -12215,15 +12602,12 @@ export const translations: Record<string, Record<string, string>> = {
     "Action owner": "Responsable d'action",
     "Date detected": "Date de détection",
     "Date generated": "Date de génération",
-    "Date updated": "Date de mise à jour",
-    "DATE UPDATED": "DATE DE MISE À JOUR",
     "EXPIRY": "EXPIRATION",
     "EXPERIMENT NAME": "NOM DE L'EXPÉRIENCE",
     "JUDGE/SCORER": "JUGE/ÉVALUATEUR",
     "Last Updated": "Dernière mise à jour",
     "LAST ACTIVITY": "DERNIÈRE ACTIVITÉ",
     "Occurred date": "Date de survenance",
-    "OCCURRED DATE": "DATE DE SURVENANCE",
     "Next Review": "Prochaine révision",
     "Target Date": "Date cible",
     "Uploaded date": "Date de téléversement",
@@ -12235,15 +12619,12 @@ export const translations: Record<string, Record<string, string>> = {
     "Assignees": "Assignés",
     "APPROVER": "APPROBATEUR",
     "CLASSIFICATION": "CLASSIFICATION",
-    "TITLE": "TITRE",
     "Version change log": "Journal des versions",
     "LOCATION": "EMPLACEMENT",
-    "DEPARTMENT": "DÉPARTEMENT",
     "DURATION": "DURÉE",
     "Entity": "Entité",
     "ENTITY": "ENTITÉ",
     "People": "Personnes",
-    "PEOPLE": "PERSONNES",
     "Permissions": "Autorisations",
     "PERMISSIONS": "AUTORISATIONS",
     "PROVIDER": "FOURNISSEUR",
@@ -12270,10 +12651,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Linked models": "Modèles liés",
     "Linked Controls": "Contrôles liés",
     "Training name": "Nom de la formation",
-    "TRAINING NAME": "NOM DE LA FORMATION",
     "Training status": "Statut de la formation",
-    "Incident ID": "ID d'incident",
-    "INCIDENT ID": "ID D'INCIDENT",
     "Incident status": "Statut de l'incident",
     "Resource name": "Nom de la ressource",
     "RESOURCE NAME": "NOM DE LA RESSOURCE",
@@ -12294,16 +12672,11 @@ export const translations: Record<string, Record<string, string>> = {
     "Controls progress": "Progression des contrôles",
     "Controls topics": "Thèmes des contrôles",
     "Approval status": "Statut d'approbation",
-    "Approval Status": "Statut d'approbation",
     "Business criticality": "Criticité métier",
     "Data sensitivity": "Sensibilité des données",
-    "Steps count": "Nombre d'étapes",
-    "STEPS COUNT": "NOMBRE D'ÉTAPES",
     "Task": "Tâche",
     "Task list": "Liste des tâches",
     "Task management": "Gestion des tâches",
-    "Task Management": "Gestion des tâches",
-    "Task overview": "Vue d'ensemble des tâches",
     "PII": "Données personnelles",
     "PII detected": "Données personnelles détectées",
     "PII types": "Types de données personnelles",
@@ -12353,13 +12726,10 @@ export const translations: Record<string, Record<string, string>> = {
     "Filter by framework": "Filtrer par référentiel",
     "Filter by Status": "Filtrer par statut",
     "Filter evidence": "Filtrer les preuves",
-    "Filter tasks": "Filtrer les tâches",
     "Advanced risk filtering": "Filtrage avancé des risques",
     "Search agents...": "Rechercher des agents...",
     "Search datasets...": "Rechercher des jeux de données...",
     "Search evidence...": "Rechercher des preuves...",
-    "Search incidents": "Rechercher des incidents",
-    "Search incidents...": "Rechercher des incidents...",
     "Search models": "Rechercher des modèles",
     "Search models...": "Rechercher des modèles...",
     "Search policies": "Rechercher des politiques",
@@ -12367,11 +12737,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Search policy templates...": "Rechercher des modèles de politiques...",
     "Search reports...": "Rechercher des rapports...",
     "Search risks...": "Rechercher des risques...",
-    "Search tasks": "Rechercher des tâches",
-    "Search tasks...": "Rechercher des tâches...",
-    "Search trainings...": "Rechercher des formations...",
     "Search vendors...": "Rechercher des fournisseurs...",
-    "Search workflows...": "Rechercher des flux...",
     "Find in document...": "Rechercher dans le document...",
     "Deleted only": "Supprimés uniquement",
     "Loading agents...": "Chargement des agents...",
@@ -12382,8 +12748,6 @@ export const translations: Record<string, Record<string, string>> = {
     "No agents discovered yet": "Aucun agent découvert pour le moment",
     "No AI models linked to this framework yet":
       "Aucun modèle IA n'est encore relié à ce référentiel",
-    "No approval workflows yet. Define review and sign-off chains for your governance process.":
-      "Aucun flux d'approbation pour le moment. Définissez des chaînes de relecture et d'approbation pour votre processus de gouvernance.",
     "No datasets found. Add a dataset to start tracking your AI training and validation data.":
       "Aucun jeu de données trouvé. Ajoutez-en un pour commencer à suivre vos données d'entraînement et de validation.",
     "No evidence data": "Aucune donnée de preuve",
@@ -12391,8 +12755,6 @@ export const translations: Record<string, Record<string, string>> = {
       "Aucune preuve pour le moment. Téléversez des documents démontrant la conformité à chaque exigence.",
     "No incidents": "Aucun incident",
     "No incidents found.": "Aucun incident trouvé.",
-    "No incidents reported yet. Track and manage AI-related incidents to maintain compliance.":
-      "Aucun incident signalé pour le moment. Suivez et gérez les incidents liés à l'IA pour maintenir la conformité.",
     "No model risks": "Aucun risque de modèle",
     "No models": "Aucun modèle",
     "No models available": "Aucun modèle disponible",
@@ -12403,13 +12765,8 @@ export const translations: Record<string, Record<string, string>> = {
     "No risks identified": "Aucun risque identifié",
     "No subprocessors data available": "Aucune donnée de sous-traitant disponible",
     "No training data": "Aucune donnée de formation",
-    "No training records yet. Track AI governance training for your team.":
-      "Aucun enregistrement de formation pour le moment. Suivez la formation à la gouvernance IA de votre équipe.",
-    "No upcoming deadlines. All tasks are completed or have no due dates.":
-      "Aucune échéance à venir. Toutes les tâches sont terminées ou sans date d'échéance.",
     "No vendor risks": "Aucun risque fournisseur",
     "No vendors available": "Aucun fournisseur disponible",
-    "No workflow data found for this ID.": "Aucune donnée de flux trouvée pour cet identifiant.",
     "No ID provided for fetching vendor data.":
       "Aucun identifiant fourni pour récupérer les données fournisseur.",
     "There are currently no model risks in this table.":
@@ -12417,7 +12774,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Unable to get subtopics": "Impossible d'obtenir les sous-sujets",
     "Unable to get topics": "Impossible d'obtenir les sujets",
     "Unexpected response. Please try again.": "Réponse inattendue. Veuillez réessayer.",
-    "API response missing data": "Données manquantes dans la réponse API",
     "Failed to fetch vendor data.": "Échec de la récupération des données fournisseur.",
     "Failed to save requirement changes. Please try again.":
       "Échec de l'enregistrement des modifications. Veuillez réessayer.",
@@ -12426,39 +12782,19 @@ export const translations: Record<string, Record<string, string>> = {
     "Failed to update risk data.": "Échec de la mise à jour des données de risque.",
     "Error archiving task": "Erreur lors de l'archivage de la tâche",
     "Error creating task": "Erreur lors de la création de la tâche",
-    "Error deleting task": "Erreur lors de la suppression de la tâche",
     "Error loading compliance data": "Erreur lors du chargement des données de conformité",
     "Error loading controls": "Erreur lors du chargement des contrôles",
-    "Error restoring task": "Erreur lors de la restauration de la tâche",
     "Error updating task": "Erreur lors de la mise à jour de la tâche",
-    "Error updating task priority": "Erreur lors de la mise à jour de la priorité de la tâche",
-    "Error updating task status": "Erreur lors de la mise à jour du statut de la tâche",
-    "Cannot update training without ID": "Impossible de mettre à jour une formation sans ID",
     "Please select a project to view assessments":
       "Sélectionnez un projet pour voir les évaluations",
     "Please select a project to view compliance data":
       "Sélectionnez un projet pour voir les données de conformité",
-    "Quick stats overview": "Vue d'ensemble rapide des statistiques",
-    "Quick add menu": "Menu d'ajout rapide",
     "Installing VerifyWise": "Installer VerifyWise",
-    "Deadline view": "Vue des échéances",
     "Operations view": "Vue opérationnelle",
-    "AI PROJECT": "PROJET IA",
     "Affected model": "Modèle affecté",
-    "AFFECTED MODEL": "MODÈLE AFFECTÉ",
     "Select model from inventory": "Sélectionner un modèle dans l'inventaire",
-    "How deadlines work": "Comment fonctionnent les échéances",
-    "Open any task and set a due date. It will automatically appear in the correct deadline group on this view.":
-      "Ouvrez une tâche et définissez une date d'échéance. Elle apparaîtra automatiquement dans le bon groupe d'échéance sur cette vue.",
-    "Tasks in a filterable table": "Tâches dans un tableau filtrable",
-    "Tasks organized by due date": "Tâches organisées par date d'échéance",
     "View and manage compliance tasks assigned to your team.":
       "Consultez et gérez les tâches de conformité assignées à votre équipe.",
-    "Task archived successfully": "Tâche archivée avec succès",
-    "Task restored successfully": "Tâche restaurée avec succès",
-    "Workflow archived successfully!": "Flux archivé avec succès !",
-    "Workflow created successfully!": "Flux créé avec succès !",
-    "Workflow updated successfully!": "Flux mis à jour avec succès !",
     "Requirement updated successfully": "Exigence mise à jour avec succès",
     "Insert risk from IBM AI Risk database": "Insérer un risque depuis la base IBM AI Risk",
     "Insert risk from MIT AI Risk database": "Insérer un risque depuis la base MIT AI Risk",
@@ -12494,17 +12830,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Policy templates": "Modèles de politiques",
     "What are policy templates?": "Que sont les modèles de politiques ?",
     "Start typing your policy content...": "Saisissez le contenu de votre politique...",
-    "Any unintended AI behavior, data breach, biased output, system outage, or safety concern. Log them early, even if minor.":
-      "Tout comportement IA non désiré, violation de données, résultat biaisé, panne système ou préoccupation de sécurité. Consignez-les tôt, même mineurs.",
-    "Incident lifecycle overview": "Vue d'ensemble du cycle de vie des incidents",
-    "Document root cause and response": "Documenter la cause racine et la réponse",
     "What to document": "Ce qu'il faut documenter",
-    "A structured overview of all approval processes, including steps, conditions, and current status.":
-      "Une vue d'ensemble structurée de tous les processus d'approbation, y compris les étapes, conditions et statut actuel.",
-    "Define multi-step review chains that run automatically when controls, evidence, or policies need sign-off.":
-      "Définissez des chaînes de relecture multi-étapes qui s'exécutent automatiquement quand des contrôles, preuves ou politiques requièrent une approbation.",
-    "Reviewers can approve, reject, or request changes with detailed comments. The full audit trail is preserved.":
-      "Les relecteurs peuvent approuver, rejeter ou demander des modifications avec commentaires détaillés. La piste d'audit complète est conservée.",
     "Regulatory requirements and the controls implementing them":
       "Exigences réglementaires et contrôles qui les mettent en œuvre",
     "This page provides an overview of available AI and data governance frameworks to your organization.":
@@ -12513,9 +12839,6 @@ export const translations: Record<string, Record<string, string>> = {
       "Configurez un nouveau référentiel organisationnel ci-dessous",
     "Update your framework details below":
       "Mettez à jour les détails de votre référentiel ci-dessous",
-    "Common training topics": "Sujets de formation courants",
-    "Some certifications and training expire. Record renewal dates so you can keep track of upcoming expirations.":
-      "Certaines certifications et formations expirent. Enregistrez les dates de renouvellement pour suivre les échéances à venir.",
     "Generate a comprehensive report across all use cases, vendors, models, and organization-wide metrics.":
       "Générez un rapport complet couvrant tous les cas d'usage, fournisseurs, modèles et métriques de l'organisation.",
     "Generate a report for a specific AI use case with its associated risks, compliance status, and assessments.":
@@ -12686,8 +13009,6 @@ export const translations: Record<string, Record<string, string>> = {
       "Chaque cas d'usage peut être classé par niveau de risque (élevé, limité, minimal) pour déterminer les contrôles de conformité applicables.",
     "Enable this option to automatically fill in the Requirements and Controls questions with AI-generated answers, helping you save time. You can review and edit these answers anytime.":
       "Activez cette option pour remplir automatiquement les questions « Exigences et contrôles » avec des réponses générées par IA, ce qui vous fait gagner du temps. Vous pouvez les revoir et les modifier à tout moment.",
-    "End-to-end management of the AI incident lifecycle. You can log events in full detail, analyze root causes, and document corrective and preventive actions.":
-      "Gestion de bout en bout du cycle de vie des incidents IA. Vous pouvez consigner les événements en détail, analyser les causes racines et documenter les actions correctives et préventives.",
     "Enter folder description (optional)": "Saisir la description du dossier (optionnel)",
     "Enter the display text (optional)": "Saisir le texte affiché (optionnel)",
     "Enter total participants (e.g., 25)": "Saisir le total de participants (ex. 25)",
@@ -12757,8 +13078,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Summarize the outcome of the review (e.g., approved, rejected, pending more info, or risk concerns identified).":
       "Résumez le résultat de la revue (ex. approuvé, rejeté, en attente d'informations complémentaires ou préoccupations de risque identifiées).",
     "System / project name": "Nom du système ou du projet",
-    "System events, API calls, and background job results are logged automatically. Logs appear as your workspace generates activity.":
-      "Les événements système, appels API et résultats des tâches en arrière-plan sont journalisés automatiquement. Les journaux apparaissent au fil de l'activité de votre espace de travail.",
     "Team & Compliance": "Équipe et conformité",
     "Templates are grouped by framework (EU AI Act, ISO 42001, etc.). Use the search bar to find templates relevant to your compliance needs.":
       "Les modèles sont groupés par référentiel (règlement IA de l'UE, ISO 42001, etc.). Utilisez la barre de recherche pour trouver des modèles correspondant à vos besoins de conformité.",
@@ -12835,7 +13154,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Captcha answer": "Réponse au captcha",
     "Click to upload": "Cliquer pour téléverser",
     "Close AI dependency graph modal": "Fermer la fenêtre du graphe de dépendances IA",
-    "Close banner": "Fermer la bannière",
     "Close details panel": "Fermer le panneau de détails",
     "Close dialog": "Fermer la boîte de dialogue",
     "Close drawer": "Fermer le tiroir",
@@ -12857,11 +13175,9 @@ export const translations: Record<string, Record<string, string>> = {
     "Confirm action": "Confirmer l'action",
     "Confirm new password": "Confirmer le nouveau mot de passe",
     "Confirm owner change": "Confirmer le changement de responsable",
-    "Confirm password": "Confirmer le mot de passe",
     "Confirm save": "Confirmer l'enregistrement",
     "Confirm uninstall": "Confirmer la désinstallation",
     "Confirm Withdrawal": "Confirmer le retrait",
-    "Confirm your password": "Confirmez votre mot de passe",
     "Connect data sources": "Connecter les sources de données",
     "Connect external tool servers": "Connecter des serveurs d'outils externes",
     "Tool discovery": "Découverte d'outils",
@@ -12887,7 +13203,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Copy to my datasets?": "Copier dans mes jeux de données ?",
     "Create a new project to organize your LLM evaluations":
       "Créer un nouveau projet pour organiser vos évaluations LLM",
-    "Create a password": "Créer un mot de passe",
     "Create a use case": "Créer un cas d'usage",
     "Create agent key": "Créer une clé d'agent",
     "Denylist for MCP server tools called through the proxy: these are always denied, even if also in the allowlist. Comma-separated; leave empty to block none.":
@@ -13015,6 +13330,11 @@ export const translations: Record<string, Record<string, string>> = {
     "Link tasks to controls or risks": "Relier les tâches aux contrôles ou risques",
     "Link to governance artifacts": "Relier aux artefacts de gouvernance",
     "Link to model": "Relier au modèle",
+    "Link to use case": "Relier au cas d'usage",
+    "Link use case": "Relier le cas d'usage",
+    "Select the use case this agent belongs to.":
+      "Sélectionnez le cas d'usage auquel cet agent appartient.",
+    "Unlink use case": "Dissocier le cas d'usage",
     "Make your first request": "Envoyez votre première requête",
     "Mark all as read": "Tout marquer comme lu",
     "Move down": "Déplacer vers le bas",
@@ -13033,7 +13353,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Recalculating risk score": "Recalcul du score de risque",
     "Refresh link": "Actualiser le lien",
     "Refresh list": "Actualiser la liste",
-    "Refresh logs": "Actualiser les journaux",
     "Remove all demo data from your workspace":
       "Retirer toutes les données de démonstration de votre espace de travail",
     "Remove API key": "Retirer la clé API",
@@ -13051,6 +13370,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Revoke invitation": "Révoquer l'invitation",
     "Revoke key": "Révoquer la clé",
     "Revoke virtual key": "Révoquer la clé virtuelle",
+    "Revoked": "Révoqué",
     "Run all": "Tout exécuter",
     "Run first experiment": "Lancer la première expérience",
     "Run your first experiment": "Lancez votre première expérience",
@@ -13160,10 +13480,19 @@ export const translations: Record<string, Record<string, string>> = {
     "Annex III category": "Catégorie de l'annexe III",
     "Any additional context about this agent": "Tout contexte supplémentaire sur cet agent",
     "Any language or framework": "Toute langue ou référentiel",
+    "Any endpoint or model": "N'importe quel point de terminaison ou modèle",
     "API calls": "Appels API",
     "API key": "Clé API",
     "API Key": "Clé API",
     "API key may not be configured": "La clé API n'est peut-être pas configurée",
+    "The provider refused this model": "Le fournisseur a refusé ce modèle",
+    "The provider refused the saved API key": "Le fournisseur a refusé la clé API enregistrée",
+    "The provider refused this request": "Le fournisseur a refusé cette requête",
+    "Saved models": "Modèles enregistrés",
+    "Find a model or type its ID": "Rechercher un modèle ou saisir son ID",
+    "Self-hosted model": "Modèle auto-hébergé",
+    "Search or type a model ID": "Rechercher ou saisir un ID de modèle",
+    "Search or type an ID, e.g. openai/gpt-4o": "Rechercher ou saisir un ID, p. ex. openai/gpt-4o",
     "API keys": "Clés API",
     "Applicability:": "Applicabilité :",
     "Applicable": "Applicable",
@@ -13481,10 +13810,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Multi-turn dataset detected": "Jeu de données multi-tours détecté",
     "Multiple rule types": "Plusieurs types de règles",
     "Multiple tags": "Plusieurs étiquettes",
-    "Must be at least 8 characters": "Doit contenir au moins 8 caractères",
-    "Must contain at least one uppercase letter": "Doit contenir au moins une majuscule",
-    "Must contain atleast one number": "Doit contenir au moins un chiffre",
-    "Must contain one special character": "Doit contenir un caractère spécial",
     "Name your organization": "Nommez votre organisation",
     "New bias audit": "Nouvel audit de biais",
     "New chat": "Nouveau chat",
@@ -13589,7 +13914,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Registration date": "Date d'enregistrement",
     "Regulatory exposure": "Exposition réglementaire",
     "Release notes": "Notes de version",
-    "Remember for 30 days": "Mémoriser pendant 30 jours",
     "Replacement text": "Texte de remplacement",
     "Report": "Rapport",
     "Report Preview": "Aperçu du rapport",
@@ -13655,7 +13979,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Scope rules to specific tools": "Limiter les règles à des outils spécifiques",
     "Score": "Score",
     "Scorers": "Scorers",
-    "Search and filter": "Rechercher et filtrer",
     "Search and select a risk from the IBM AI Risk Database":
       "Rechercher et sélectionner un risque dans la base IBM AI Risk",
     "Search and select a risk from the MIT AI Risk Database":
@@ -13677,7 +14000,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Search from the risk database:": "Rechercher dans la base de risques :",
     "Search guardrails...": "Rechercher des garde-fous...",
     "Search icons...": "Rechercher des icônes...",
-    "Search logs...": "Rechercher dans les journaux...",
     "Search organizations...": "Rechercher des organisations...",
     "Search plugins by name, description, or tags...":
       "Rechercher des plugins par nom, description ou étiquettes...",
@@ -13824,7 +14146,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Website": "Site web",
     "Weight": "Poids",
     "What": "Quoi",
-    "What appears here": "Ce qui apparaît ici",
     "What changed?": "Qu'est-ce qui a changé ?",
     "What does the vendor provide?": "Que fournit le fournisseur ?",
     "What gets detected?": "Qu'est-ce qui est détecté ?",
@@ -13841,7 +14162,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Who is a Signatory?": "Qui est signataire ?",
     "Whose name and role appear on the declaration document":
       "Dont le nom et le rôle figurent sur le document de déclaration",
-    "Wise": "Wise",
     "Wise Search": "Wise Search",
     "Word document": "Document Word",
     "Workflow title": "Titre du flux",
@@ -13851,11 +14171,11 @@ export const translations: Record<string, Record<string, string>> = {
     "Write risk name": "Rédiger le nom du risque",
     "You can use": "Vous pouvez utiliser",
     "Your app": "Votre application",
+    "The provider rejected the saved API key. Enter a working key. It is saved as a new key, and an Admin can remove the old one in AI Gateway settings.":
+      "Le fournisseur a refusé la clé API enregistrée. Saisissez une clé valide. Elle est enregistrée comme nouvelle clé, et un administrateur peut supprimer l'ancienne dans les paramètres d'AI Gateway.",
     "Your key will be saved securely for future experiments":
       "Votre clé sera enregistrée de manière sécurisée pour de futures expériences",
     "Your name": "Votre nom",
-    "Your organization name": "Nom de votre organisation",
-    "Your surname": "Votre nom de famille",
     "No AI models linked to this project yet": "Aucun modèle IA n'est encore relié à ce projet",
     "No AI tools detected yet. Connect a data source to monitor AI tool usage.":
       "Aucun outil IA détecté pour le moment. Connectez une source de données pour surveiller l'utilisation des outils IA.",
@@ -13902,6 +14222,9 @@ export const translations: Record<string, Record<string, string>> = {
     "No members have been assigned to the use case":
       "Aucun membre n'a été assigné à ce cas d'usage",
     "No models found": "Aucun modèle trouvé",
+    "Updating model list…": "Mise à jour de la liste des modèles…",
+    "Choose a judge model to save this scorer":
+      "Choisissez un modèle juge pour enregistrer ce scorer",
     "No models found. Model preferences are automatically saved when you run an experiment.":
       "Aucun modèle trouvé. Les préférences de modèles sont automatiquement enregistrées lorsque vous lancez une expérience.",
     "No models match your filters.": "Aucun modèle ne correspond à vos filtres.",
@@ -14124,9 +14447,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Enter vendor name": "Saisir le nom du fournisseur",
     "Enter vendor website": "Saisir le site web du fournisseur",
     "Enter workflow title": "Saisir le titre du flux",
-    "Enter your email": "Saisir votre e-mail",
     "Enter your organization name": "Saisir le nom de votre organisation",
-    "Enter your password": "Saisir votre mot de passe",
     "Evaluate AI agents for planning and tool usage":
       "Évaluer les agents IA sur la planification et l'utilisation d'outils",
     "Evaluate AI agents for planning, tool usage, and task completion":
@@ -14204,7 +14525,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Loading form data": "Chargement des données de formulaire",
     "Loading form data...": "Chargement des données de formulaire...",
     "Loading graph...": "Chargement du graphe...",
-    "Loading logs...": "Chargement des journaux...",
     "Loading policies...": "Chargement des politiques...",
     "Loading question data...": "Chargement des données de question...",
     "Loading roles...": "Chargement des rôles...",
@@ -14232,7 +14552,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Monitor adoption curves and usage spikes. Correlate activity with policy changes or new tool introductions.":
       "Surveillez les courbes d'adoption et les pics d'utilisation. Corrélez l'activité avec les changements de politique ou l'arrivée de nouveaux outils.",
     "Monitor costs and enforce budgets": "Surveiller les coûts et faire respecter les budgets",
-    "Monitor for issues": "Surveiller les problèmes",
     "Monitor LLM usage and costs across your organization.":
       "Surveiller l'utilisation et les coûts des LLM dans toute votre organisation.",
     "Monitor risk trends and patterns": "Surveiller les tendances et motifs de risque",
@@ -14468,8 +14787,6 @@ export const translations: Record<string, Record<string, string>> = {
     "View request, response, and guardrail detection logs for all AI Gateway traffic.":
       "Consulter les journaux de requête, de réponse et de détection par les garde-fous pour tout le trafic de la passerelle IA.",
     "Want a report? We": "Vous voulez un rapport ? Nous",
-    "Watch for error-level entries that may indicate failed operations, authentication problems, or service disruptions.":
-      "Surveillez les entrées de niveau erreur qui peuvent indiquer des opérations échouées, des problèmes d'authentification ou des interruptions de service.",
     "A project groups related evaluations for a single LLM application. Define test suites, scoring criteria, and track quality over time.":
       "Un projet regroupe les évaluations associées pour une même application LLM. Définissez des suites de tests, des critères de notation et suivez la qualité dans le temps.",
     "A scorer defines how model outputs are graded. It can check for accuracy, relevance, tone, safety, or any custom criteria you set.":
@@ -14478,8 +14795,6 @@ export const translations: Record<string, Record<string, string>> = {
       "Politique d'éthique de l'IA, Politique de gouvernance des données, Politique de gestion des risques IA, Politique de réponse aux incidents et Politique relative aux fournisseurs IA tiers.",
     "AI Trust Center centralizes your AI policies, certifications, and subprocessors to demonstrate responsible, transparent, and compliant AI practices.":
       "Le centre de confiance IA centralise vos politiques IA, vos certifications et vos sous-traitants pour démontrer des pratiques IA responsables, transparentes et conformes.",
-    "AI ethics, data privacy, responsible AI use, bias awareness, incident reporting procedures, and framework-specific requirements.":
-      "Éthique de l'IA, confidentialité des données, usage responsable de l'IA, sensibilisation aux biais, procédures de signalement d'incidents et exigences propres au référentiel.",
     "Affected persons / groups": "Personnes / groupes affectés",
     "After adding a key, create endpoints in the Endpoints tab. Each endpoint uses one API key to authenticate with the LLM provider.":
       "Après avoir ajouté une clé, créez des points de terminaison dans l'onglet Points de terminaison. Chaque point de terminaison utilise une clé API pour s'authentifier auprès du fournisseur LLM.",
@@ -14492,8 +14807,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Apply the same scorers across different experiments to track how model quality changes over time or between configurations.":
       "Appliquez les mêmes scorers sur différentes expériences pour suivre l'évolution de la qualité des modèles dans le temps ou entre configurations.",
     "Approval notes / comments": "Notes / commentaires d'approbation",
-    "Assign each incident to a responsible person and track it through to resolution. A clear ownership chain speeds up response times.":
-      "Attribuez chaque incident à une personne responsable et suivez-le jusqu'à résolution. Une chaîne de responsabilité claire accélère les délais de réponse.",
     "Choose from PII detection, content filtering, or prompt injection detection. Each rule can either block the request or mask matched content.":
       "Choisissez entre la détection de données personnelles, le filtrage de contenu ou la détection d'injection de prompt. Chaque règle peut bloquer la requête ou masquer le contenu correspondant.",
     "Classify detected tools as approved, under review, or blocked. Set policies per tool and notify users of compliance requirements.":
@@ -14533,8 +14846,6 @@ export const translations: Record<string, Record<string, string>> = {
       "Chaque exécution d'expérience est enregistrée ici avec les scores et métadonnées. Exécutez le même jeu de données sur différents modèles ou configurations pour suivre l'avancement.",
     "Each policy can be mapped to specific compliance controls, creating an audit trail showing which policies address which requirements.":
       "Chaque politique peut être reliée à des contrôles de conformité spécifiques, créant une piste d'audit montrant quelles politiques couvrent quelles exigences.",
-    "Each record tracks who completed what training, when, and their score. This creates an audit trail for competency requirements.":
-      "Chaque enregistrement suit qui a suivi quelle formation, quand et avec quel score. Cela crée une piste d'audit pour les exigences de compétence.",
     "Each scan creates a snapshot. Compare scans to see what AI components were added, removed, or changed across your codebase.":
       "Chaque analyse crée un instantané. Comparez les analyses pour voir quels composants IA ont été ajoutés, retirés ou modifiés dans votre code.",
     "Empty state": "État vide",
@@ -14608,8 +14919,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Purple / Validation": "Violet / Validation",
     "Record dataset name, source, size, format, and the date it was collected or last updated. Include any preprocessing steps applied.":
       "Consignez le nom, la source, la taille, le format du jeu de données et la date de collecte ou de dernière mise à jour. Incluez les étapes de prétraitement appliquées.",
-    "Record what happened, why it happened, the impact, and what corrective actions were taken. This builds your incident response history.":
-      "Consignez ce qui s'est passé, pourquoi, l'impact et les actions correctives prises. Cela constitue votre historique de réponse aux incidents.",
     "Regular": "Normal",
     "Relationship / causality": "Relation / causalité",
     "Requests/day": "Requêtes/jour",
@@ -14632,12 +14941,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Start with a blank policy or use one of the built-in templates. Fill in the details for your organization and publish when ready.":
       "Commencez avec une politique vierge ou utilisez un des modèles intégrés. Renseignez les détails pour votre organisation et publiez lorsque vous êtes prêt.",
     "Success / Active": "Succès / Actif",
-    "Tasks with due dates appear here grouped by urgency: overdue, due today, this week, and later. Complete or update tasks to clear them.":
-      "Les tâches avec dates d'échéance apparaissent ici groupées par urgence : en retard, dues aujourd'hui, cette semaine et plus tard. Terminez ou mettez à jour les tâches pour les retirer.",
     "The audit calculates performance differences across groups. See pass rates, accuracy gaps, and statistical significance scores.":
       "L'audit calcule les écarts de performance entre groupes. Consultez les taux de réussite, les écarts de précision et les scores de significativité statistique.",
-    "This registry lists all AI-related training programs available to your organization. You can view, add, and manage training details here.":
-      "Ce registre liste tous les programmes de formation liés à l'IA disponibles pour votre organisation. Vous pouvez y consulter, ajouter et gérer les détails des formations.",
     "Top 10 tools by calls": "Top 10 des outils par appels",
     "Top P": "Top P",
     "Top users": "Utilisateurs principaux",
@@ -14645,12 +14950,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Total des détections IA/ML trouvées dans cette analyse",
     "Upload CSV or JSONL files containing prompts and expected responses. These are used to evaluate model performance across experiments.":
       "Téléversez des fichiers CSV ou JSONL contenant des prompts et des réponses attendues. Ils servent à évaluer la performance des modèles à travers les expériences.",
-    "Use case is a real-world scenario describing how an AI system is applied within an organization to achieve a defined purpose or outcome.":
-      "Un cas d'usage est un scénario réel décrivant comment un système IA est utilisé dans une organisation pour atteindre un objectif défini.",
     "Use pre-built scorers for common checks like exact match or similarity, or write your own scoring logic for domain-specific needs.":
       "Utilisez des scorers prêts à l'emploi pour des vérifications courantes comme la correspondance exacte ou la similarité, ou écrivez votre propre logique de notation pour des besoins spécifiques à votre domaine.",
-    "Use the search bar and level filters above to find specific log entries. Filter by severity to focus on warnings or errors.":
-      "Utilisez la barre de recherche et les filtres de niveau ci-dessus pour trouver des entrées de journal spécifiques. Filtrez par gravité pour vous concentrer sur les avertissements ou erreurs.",
     "VerifyWise logo": "Logo VerifyWise",
     "Warning / Pending": "Avertissement / En attente",
     "Wide": "Large",
@@ -15116,7 +15417,6 @@ export const translations: Record<string, Record<string, string>> = {
       "L'analyse des causes racines prévient les incidents récurrents.",
 
     // Final batch
-    "New use case": "Nouveau cas d'usage",
     "New Project": "Nouveau projet",
     "STATUS": "STATUT",
     "ACTION": "ACTION",
@@ -15601,7 +15901,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Back to Admin Panel": "Retour au panneau d'administration",
     "Back to My Plugins": "Retour à mes plugins",
     "Back to home": "Retour à l'accueil",
-    "Back to log in": "Retour à la connexion",
     "Base commit SHA (older)": "SHA du commit de base (plus ancien)",
     "Based on the scan results, no additional compliance requirements were identified.":
       "D'après les résultats de l'analyse, aucune exigence de conformité supplémentaire n'a été identifiée.",
@@ -15628,7 +15927,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Calculate your AI risk classification": "Calculer votre classification de risque IA",
     "Categories of harm": "Catégories de préjudice",
     "Change history": "Historique des modifications",
-    "Check your email": "Vérifiez votre e-mail",
     "Choice": "Choix",
     "Choice scores": "Scores de choix",
     "Choose a dataset containing prompts and expected outputs. Upload your own JSON file, select from saved datasets, or use a template.":
@@ -15643,7 +15941,6 @@ export const translations: Record<string, Record<string, string>> = {
       'Cliquez sur "Ajouter un fournisseur local" pour commencer',
     'Click "Save draft" to create your first version.':
       'Cliquez sur "Enregistrer le brouillon" pour créer votre première version.',
-    "Click to resend": "Cliquez pour renvoyer",
     "Click to upload CSV file": "Cliquez pour téléverser un fichier CSV",
     "Column mapping": "Mappage des colonnes",
     "Comma-separated tool names. Leave empty to apply to all MCP tools.":
@@ -15688,11 +15985,22 @@ export const translations: Record<string, Record<string, string>> = {
     "Copied!": "Copié !",
     "Copy": "Copier",
     "Copy results to clipboard": "Copier les résultats dans le presse-papiers",
+    "You can rerun this experiment once it finishes.":
+      "Vous pourrez réexécuter cette expérience une fois qu'elle sera terminée.",
+    "Save this experiment's settings, average scores and up to 10 samples as a JSON file. For more samples, open the experiment and use Download there.":
+      "Enregistrer les paramètres, les scores moyens et jusqu'à 10 échantillons de cette expérience dans un fichier JSON. Pour plus d'échantillons, ouvrez l'expérience et utilisez « Télécharger » depuis celle-ci.",
+    "Copy this experiment's settings, average scores and up to 10 samples as JSON. For more samples, open the experiment and use Copy there.":
+      "Copier les paramètres, les scores moyens et jusqu'à 10 échantillons de cette expérience au format JSON. Pour plus d'échantillons, ouvrez l'expérience et utilisez « Copier » depuis celle-ci.",
+    "Save this experiment's settings and each sample's input, output and scores as a JSON file. Up to the 1,000 most recent samples are included.":
+      "Enregistrer les paramètres de cette expérience ainsi que l'entrée, la sortie et les scores de chaque échantillon dans un fichier JSON. Jusqu'aux 1 000 échantillons les plus récents sont inclus.",
+    "Copy this experiment's settings and each sample's input, output and scores to the clipboard as JSON. Up to the 1,000 most recent samples are included.":
+      "Copier dans le presse-papiers, au format JSON, les paramètres de cette expérience ainsi que l'entrée, la sortie et les scores de chaque échantillon. Jusqu'aux 1 000 échantillons les plus récents sont inclus.",
+    "Start a new experiment with the same settings. This experiment is kept, and every prompt is run and scored again.":
+      "Lancer une nouvelle expérience avec les mêmes paramètres. Cette expérience est conservée, et chaque prompt est de nouveau exécuté et évalué.",
     "Copy this key now. You won't be able to see it again.":
       "Copiez cette clé maintenant. Vous ne pourrez plus la voir.",
     "Core definition test (EU AI Act)": "Test de définition centrale (Règlement IA de l'UE)",
     "Create Scorer": "Créer un évaluateur",
-    "Create VerifyWise user account": "Créer un compte utilisateur VerifyWise",
     "Create a custom risk manually": "Créer manuellement un risque personnalisé",
     "Create a new API key for programmatic access to your account.":
       "Créez une nouvelle clé API pour un accès programmatique à votre compte.",
@@ -15703,7 +16011,6 @@ export const translations: Record<string, Record<string, string>> = {
       "Créez une règle pour recevoir des alertes lorsqu'une activité Shadow AI spécifique est détectée. Choisissez un type de déclencheur et le système vous notifiera lorsque la condition est remplie.",
     "Create a scorer to use custom evaluation criteria":
       "Créez un évaluateur pour utiliser des critères d'évaluation personnalisés",
-    "Create admin account": "Créer un compte administrateur",
     "Create and track AI projects, assign teams, and monitor compliance status across all your initiatives.":
       "Créez et suivez des projets IA, attribuez des équipes et surveillez l'état de conformité de toutes vos initiatives.",
     "Create at least one endpoint before generating virtual keys.":
@@ -15713,14 +16020,12 @@ export const translations: Record<string, Record<string, string>> = {
     'Create your first automation to get started. Click on the "Create new automation" button above':
       'Créez votre première automatisation pour commencer. Cliquez sur le bouton "Créer une nouvelle automatisation" ci-dessus',
     "Create your first demo project": "Créez votre premier projet de démonstration",
-    "Create your organization": "Créez votre organisation",
     "Cross-ref": "Référence croisée",
     "Custom headers": "En-têtes personnalisés",
     "Custom scorers": "Évaluateurs personnalisés",
     "Customize": "Personnaliser",
     "DECLARATION DOCUMENT LINK": "LIEN DU DOCUMENT DE DÉCLARATION",
     "Dashboard Action Buttons (30px)": "Boutons d'action du tableau de bord (30px)",
-    "Dashboard Error": "Erreur du tableau de bord",
     "Data preview": "Aperçu des données",
     "Dataset contains personally identifiable information (PII)":
       "Le jeu de données contient des informations personnelles identifiables (PII)",
@@ -15744,7 +16049,6 @@ export const translations: Record<string, Record<string, string>> = {
       "Conçu pour l'évaluation de conversations multi-tours",
     "Details": "Détails",
     "Detected libraries": "Bibliothèques détectées",
-    "Development Error Details:": "Détails d'erreur de développement :",
     "Development stage of this use case": "Stade de développement de ce cas d'usage",
     "Dimension breakdown": "Détail des dimensions",
     "Dimension weights": "Poids des dimensions",
@@ -15791,7 +16095,6 @@ export const translations: Record<string, Record<string, string>> = {
       "Saisissez l'ID exact du modèle pris en charge par votre point de terminaison",
     "Entity mapping": "Mappage d'entité",
     "Entity relationships": "Relations entre entités",
-    "Error Details (Development Only):": "Détails d'erreur (développement uniquement) :",
     "Error loading AI Trust Center settings":
       "Erreur lors du chargement des paramètres du centre de confiance IA",
     "Error loading frameworks. Please try again.":
@@ -15888,7 +16191,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Flagged": "Signalé",
     "Flagged rights": "Droits signalés",
     "Forgot password": "Mot de passe oublié",
-    "Forgot password?": "Mot de passe oublié ?",
     "Form settings": "Paramètres du formulaire",
     "Form unavailable": "Formulaire non disponible",
     "Format Preview": "Aperçu du format",
@@ -15943,8 +16245,6 @@ export const translations: Record<string, Record<string, string>> = {
     "ISO 42001, ISO 27001, NIST AI RMF": "ISO 42001, ISO 27001, NIST AI RMF",
     "Icon Buttons": "Boutons d'icône",
     "Identify and mitigate risks": "Identifier et atténuer les risques",
-    "If an account exists with this email, we'll send a password reset link":
-      "Si un compte existe avec cet e-mail, nous enverrons un lien de réinitialisation du mot de passe",
     "If you are not sure about the high risk role,&nbsp;":
       "Si vous n'êtes pas sûr du rôle à haut risque,&nbsp;",
     "Image not found": "Image introuvable",
@@ -15955,7 +16255,6 @@ export const translations: Record<string, Record<string, string>> = {
     "In the product": "Dans le produit",
     "In this article": "Dans cet article",
     "Incidents for this use case": "Incidents pour ce cas d'usage",
-    "Include archived": "Inclure les archivés",
     "Industry sector for this use case": "Secteur d'activité pour ce cas d'usage",
     "Industry-standard benchmarks powered by DeepEval for comprehensive LLM evaluation.":
       "Benchmarks standards de l'industrie propulsés par DeepEval pour une évaluation LLM complète.",
@@ -15989,6 +16288,17 @@ export const translations: Record<string, Record<string, string>> = {
     "Linked Items": "Éléments liés",
     "Linked controls components": "Composants de contrôle liés",
     "Linked model": "Modèle lié",
+    "Linked use case": "Cas d'usage associé",
+    "Select a use case": "Sélectionner un cas d'usage",
+    "What this agent does": "Ce que fait cet agent",
+    "No use cases": "Aucun cas d'usage",
+    "No models in the inventory": "Aucun modèle dans l'inventaire",
+    "Could not load models": "Impossible de charger les modèles",
+    "Could not load use cases": "Impossible de charger les cas d'usage",
+    "Description must be at most {max} characters.":
+      "La description ne doit pas dépasser {max} caractères.",
+    "All users selected": "Tous les utilisateurs sont sélectionnés",
+    "No users": "Aucun utilisateur",
     "Linked risks": "Risques liés",
     "Live updates": "Mises à jour en direct",
     "Loading approval workflows...": "Chargement des flux d'approbation...",
@@ -16061,7 +16371,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Multi-Select Components": "Composants à sélection multiple",
     "Multi-Turn Conversations": "Conversations multi-tours",
     "Multi-turn mode:": "Mode multi-tours :",
-    "My tasks only": "Mes tâches uniquement",
     "NIST AI RMF - Govern categories": "NIST AI RMF – catégories Govern",
     "NIST AI RMF - Manage categories": "NIST AI RMF – catégories Manage",
     "NIST AI RMF - Map categories": "NIST AI RMF – catégories Map",
@@ -16183,10 +16492,8 @@ export const translations: Record<string, Record<string, string>> = {
     "No status data available": "Aucune donnée de statut disponible",
     "No sub-entities found for this framework": "Aucune sous-entité trouvée pour ce référentiel",
     "No syslog sources configured": "Aucune source syslog configurée",
-    "No tasks in this time period": "Aucune tâche dans cette période",
     "No tool usage recorded": "Aucune utilisation d'outil enregistrée",
     "No tools match the selected filters.": "Aucun outil ne correspond aux filtres sélectionnés.",
-    "No training data available.": "Aucune donnée de formation disponible.",
     "No trend data available yet": "Pas encore de données de tendance disponibles",
     "No use cases found. Try another search term or create a new use case.":
       "Aucun cas d'usage trouvé. Essayez un autre terme de recherche ou créez un nouveau cas d'usage.",
@@ -16194,8 +16501,6 @@ export const translations: Record<string, Record<string, string>> = {
     "No vendors available. Please create a vendor first to add vendor risks.":
       "Aucun fournisseur disponible. Veuillez d'abord créer un fournisseur pour ajouter des risques fournisseur.",
     "No versions yet": "Pas encore de versions",
-    "No worries, we'll send you reset instructions.":
-      "Pas d'inquiétude, nous vous enverrons les instructions de réinitialisation.",
     "Not linked": "Non lié",
     "Not sure about your risk level?&nbsp;": "Pas sûr de votre niveau de risque ?&nbsp;",
     "Note": "Remarque",
@@ -16235,7 +16540,6 @@ export const translations: Record<string, Record<string, string>> = {
     "POST /v1/chat/completions": "POST /v1/chat/completions",
     "Params": "Paramètres",
     "Pass threshold": "Seuil de réussite",
-    "Password reset": "Réinitialisation du mot de passe",
     "Pending attach": "Pièce jointe en attente",
     "Pending attach from File Manager":
       "Pièce jointe en attente depuis le gestionnaire de fichiers",
@@ -16302,7 +16606,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Reject requests when budget is exceeded": "Rejeter les requêtes lorsque le budget est dépassé",
     "Reject submission": "Rejeter la soumission",
     "Reject this submission instead": "Rejeter cette soumission à la place",
-    "Reload Page": "Recharger la page",
     "Reload now": "Recharger maintenant",
     "Reminder after": "Rappel après",
     "Remove step": "Supprimer l'étape",
@@ -16438,7 +16741,9 @@ export const translations: Record<string, Record<string, string>> = {
     "Status breakdown": "Répartition par statut",
     "Status is controlled by the approval workflow and cannot be changed manually.":
       "Le statut est contrôlé par le flux d'approbation et ne peut pas être modifié manuellement.",
+    "Submission approved": "Soumission approuvée",
     "Submission received": "Soumission reçue",
+    "Submission rejected": "Soumission rejetée",
     "Submission responses will be emailed to selected recipients":
       "Les réponses de soumission seront envoyées par e-mail aux destinataires sélectionnés",
     "Successful": "Réussi",
@@ -16501,7 +16806,6 @@ export const translations: Record<string, Record<string, string>> = {
       "Ce titre sera affiché sur la page du centre de confiance IA",
     "This tool is marked as high risk. Consider enabling approval to ensure human review before execution.":
       "Cet outil est marqué à haut risque. Envisagez d'activer l'approbation pour garantir un examen humain avant l'exécution.",
-    "This widget failed to load properly.": "Ce widget n'a pas pu se charger correctement.",
     "This will permanently remove the user and all their data from this organization.":
       "Cela supprimera définitivement l'utilisateur et toutes ses données de cette organisation.",
     "This will permanently remove the user and all their data.":
@@ -16588,7 +16892,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Vector databases (Pinecone, Chroma, Qdrant), document loaders, and embedding models will appear here":
       "Les bases de données vectorielles (Pinecone, Chroma, Qdrant), les chargeurs de documents et les modèles d'embedding apparaîtront ici",
     "Vendor scorecard (advanced)": "Carte de score fournisseur (avancée)",
-    "Verify": "Vérifier",
     "VerifyWise is your AI governance and compliance platform. In 3 minutes, we'll help you get started with managing AI risks, compliance frameworks, and building trust.":
       "VerifyWise est votre plateforme de gouvernance et de conformité IA. En 3 minutes, nous vous aiderons à démarrer la gestion des risques IA, des référentiels de conformité et la construction de la confiance.",
     "Versions": "Versions",
@@ -16653,8 +16956,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Your experts": "Vos experts",
     "Your message blocks above will be prepended as context. Type a user message below and the model will respond using your prompt template.":
       "Vos blocs de messages ci-dessus seront ajoutés en préambule comme contexte. Tapez un message utilisateur ci-dessous et le modèle répondra en utilisant votre modèle d'invite.",
-    "Your password has been successfully reset. Click below to log in.":
-      "Votre mot de passe a été réinitialisé avec succès. Cliquez ci-dessous pour vous connecter.",
     "Your previous submission data has been pre-filled. You can update and resubmit.":
       "Vos données de soumission précédentes ont été pré-remplies. Vous pouvez les mettre à jour et soumettre à nouveau.",
     "Your progress": "Votre progression",
@@ -16741,7 +17042,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Access to essential private or public services":
       "Accès aux services privés ou publics essentiels",
     "Account already exists.": "Le compte existe déjà.",
-    "Account created successfully.": "Compte créé avec succès.",
     "Account created successfully. Redirecting to login...":
       "Compte créé avec succès. Redirection vers la connexion...",
     "Accountability and governance": "Responsabilité et gouvernance",
@@ -16813,7 +17113,6 @@ export const translations: Record<string, Record<string, string>> = {
     "All providers": "Tous les fournisseurs",
     "All risk levels": "Tous les niveaux de risque",
     "All servers": "Tous les serveurs",
-    "All states": "Tous les états",
     "All statuses": "Tous les statuts",
     "All submissions": "Toutes les soumissions",
     "All uploaded files are catalogued here. Filter by project, uploader, or date to quickly find what you need.":
@@ -16889,8 +17188,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Assessments status overview": "Aperçu du statut des évaluations",
     "Assign competent individuals with authority to oversee AI system usage.":
       "Désignez des personnes compétentes ayant l'autorité de superviser l'utilisation du système IA.",
-    "Assign governance and compliance tasks to team members. Set priorities, due dates, and track progress from creation to completion.":
-      "Attribuez des tâches de gouvernance et de conformité aux membres de l'équipe. Définissez des priorités, des dates d'échéance et suivez la progression de la création à l'achèvement.",
     "Assign mitigations, set deadlines, and track resolution progress across your portfolio.":
       "Attribuez des mesures d'atténuation, fixez des échéances et suivez la progression de la résolution dans votre portefeuille.",
     "Assign ownership": "Attribuer la propriété",
@@ -17024,18 +17321,12 @@ export const translations: Record<string, Record<string, string>> = {
       'Cliquez sur "Ajouter/supprimer des risques" pour lier les risques de votre base de risques',
     'Click "Create use case" below to proceed with setting up this AI use case in VerifyWise.':
       "Cliquez sur \"Créer un cas d'usage\" ci-dessous pour configurer ce cas d'usage IA dans VerifyWise.",
-    "Click the card again or click Total to see all datasets.":
-      "Cliquez à nouveau sur la carte ou sur Total pour voir tous les jeux de données.",
     "Click the card again or click Total to see all models.":
       "Cliquez à nouveau sur la carte ou sur Total pour voir tous les modèles.",
     "Click the card again or click Total to see all policies.":
       "Cliquez à nouveau sur la carte ou sur Total pour voir toutes les politiques.",
     "Click the card again or click Total to see all risks.":
       "Cliquez à nouveau sur la carte ou sur Total pour voir tous les risques.",
-    "Click the card again or click Total to see all tasks.":
-      "Cliquez à nouveau sur la carte ou sur Total pour voir toutes les tâches.",
-    "Click the card again to see all incidents.":
-      "Cliquez à nouveau sur la carte pour voir tous les incidents.",
     "Close risks": "Fermer les risques",
     "Cloud (different region)": "Cloud (région différente)",
     "Cloud (same region)": "Cloud (même région)",
@@ -17209,13 +17500,11 @@ export const translations: Record<string, Record<string, string>> = {
     "Data sent to external cloud APIs. Risk of data leakage, vendor lock-in, and compliance violations.":
       "Données envoyées à des API cloud externes. Risque de fuite de données, de dépendance fournisseur et de non-conformité.",
     "Dataset Description": "Description du jeu de données",
-    "Dataset deleted successfully!": "Jeu de données supprimé avec succès !",
     "Dataset descriptions ensure transparency, compliance with intellectual property laws, and ethical use of data.":
       "Les descriptions des jeux de données garantissent la transparence, la conformité aux lois sur la propriété intellectuelle et l'utilisation éthique des données.",
     "Dataset descriptions provide transparency in training, validation, and testing, ensuring alignment with standards.":
       "Les descriptions des jeux de données apportent de la transparence à l'entraînement, à la validation et aux tests, garantissant l'alignement sur les normes.",
     "Dataset removed": "Jeu de données supprimé",
-    "Dataset updated successfully!": "Jeu de données mis à jour avec succès !",
     "Dataset, judge model, enabled metrics, and thresholds":
       "Jeu de données, modèle juge, métriques activées et seuils",
     "Datasets Used Documentation": "Documentation des jeux de données utilisés",
@@ -17279,7 +17568,6 @@ export const translations: Record<string, Record<string, string>> = {
       "Des registres détaillés des actions correctives assurent la responsabilité et soutiennent les audits ou examens réglementaires.",
     "Detailed records of registration activities provide transparency and facilitate compliance verification.":
       "Des registres détaillés des activités d'enregistrement assurent la transparence et facilitent la vérification de la conformité.",
-    "Detailed system and audit logs": "Journaux système et d'audit détaillés",
     "Detailed view of specific AI tool": "Vue détaillée d'un outil IA spécifique",
     "Detailed view of specific model": "Vue détaillée d'un modèle spécifique",
     "Detailed view of specific scan results": "Vue détaillée de résultats d'analyse spécifiques",
@@ -17314,8 +17602,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Development": "Développement",
     "Dismissed": "Rejeté",
     "Do not proceed": "Ne pas continuer",
-    "Document AI-related incidents with full details including severity, impact assessment, affected parties, immediate mitigations, and planned corrective actions.":
-      "Documentez les incidents liés à l'IA avec des détails complets, y compris la gravité, l'évaluation d'impact, les parties affectées, les atténuations immédiates et les actions correctives planifiées.",
     "Document Processing with NLP": "Traitement de documents avec NLP",
     "Document Q&A Multi-Turn": "Q&R sur document multi-tours",
     "Document all information about the AI system, including its capabilities, limitations, and any relevant technical details.":
@@ -17512,8 +17798,6 @@ export const translations: Record<string, Record<string, string>> = {
       "Échec de la suppression du compte. Veuillez réessayer.",
     "Failed to delete API key": "Échec de la suppression de la clé API",
     "Failed to delete comparison": "Échec de la suppression de la comparaison",
-    "Failed to delete dataset. Please try again.":
-      "Échec de la suppression du jeu de données. Veuillez réessayer.",
     "Failed to delete demo data.": "Échec de la suppression des données de démonstration.",
     "Failed to delete evidence. Please try again.":
       "Échec de la suppression de la preuve. Veuillez réessayer.",
@@ -17537,11 +17821,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Failed to delete rule": "Échec de la suppression de la règle",
     "Failed to delete scorer": "Échec de la suppression de l'évaluateur",
     "Failed to delete suppression rule": "Échec de la suppression de la règle de suppression",
-    "Failed to delete the task. Please try again.":
-      "Échec de la suppression de la tâche. Veuillez réessayer.",
     "Failed to delete token": "Échec de la suppression du jeton",
-    "Failed to delete training. Please try again.":
-      "Échec de la suppression de la formation. Veuillez réessayer.",
     "Failed to delete use case. Please try again.":
       "Échec de la suppression du cas d'usage. Veuillez réessayer.",
     "Failed to delete vendor. It may have already been deleted or there was a network error.":
@@ -17572,12 +17852,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Failed to load chart data": "Échec du chargement des données du graphique",
     "Failed to load clause data": "Échec du chargement des données de clause",
     "Failed to load dataset": "Échec du chargement du jeu de données",
-    "Failed to load dataset details. Please try again.":
-      "Échec du chargement des détails du jeu de données. Veuillez réessayer.",
     "Failed to load dataset for editing": "Échec du chargement du jeu de données pour édition",
     "Failed to load datasets": "Échec du chargement des jeux de données",
-    "Failed to load datasets. Please try again later.":
-      "Échec du chargement des jeux de données. Veuillez réessayer plus tard.",
     "Failed to load evidence data. Please try again later.":
       "Échec du chargement des données de preuve. Veuillez réessayer plus tard.",
     "Failed to load evidence model details. Please try again.":
@@ -17606,8 +17882,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Failed to load suppression rules": "Échec du chargement des règles de suppression",
     "Failed to load template datasets": "Échec du chargement des jeux de données modèles",
     "Failed to load token status": "Échec du chargement du statut du jeton",
-    "Failed to load training data. Please try again later.":
-      "Échec du chargement des données de formation. Veuillez réessayer plus tard.",
     "Failed to load version history": "Échec du chargement de l'historique des versions",
     "Failed to open scorer for editing": "Échec de l'ouverture de l'évaluateur pour édition",
     "Failed to publish form": "Échec de la publication du formulaire",
@@ -17627,8 +17901,6 @@ export const translations: Record<string, Record<string, string>> = {
       "Nouveau lien de partage créé. Les liens créés par d'autres utilisateurs sont encore actifs ; seuls eux peuvent les désactiver.",
     "Share link replaced. Previous links no longer work.":
       "Lien de partage remplacé. Les liens précédents ne fonctionnent plus.",
-    "Failed to restore the task. Please try again.":
-      "Échec de la restauration de la tâche. Veuillez réessayer.",
     "Failed to save": "Échec de l'enregistrement",
     "Failed to save configuration": "Échec de l'enregistrement de la configuration",
     "Failed to save configuration. Please try again.":
@@ -17671,10 +17943,6 @@ export const translations: Record<string, Record<string, string>> = {
       "Échec de la mise à jour du statut. Veuillez réessayer.",
     "Failed to update the task. Please try again.":
       "Échec de la mise à jour de la tâche. Veuillez réessayer.",
-    "Failed to update the task priority. Please try again.":
-      "Échec de la mise à jour de la priorité de la tâche. Veuillez réessayer.",
-    "Failed to update the task status. Please try again.":
-      "Échec de la mise à jour du statut de la tâche. Veuillez réessayer.",
     "Failed to update the vendor risk. Please try again.":
       "Échec de la mise à jour du risque fournisseur. Veuillez réessayer.",
     "Failed to upload": "Échec du téléversement",
@@ -17696,8 +17964,6 @@ export const translations: Record<string, Record<string, string>> = {
     "File removed from upload queue.": "Fichier retiré de la file d'attente de téléversement.",
     "File size must be less than 5MB": "La taille du fichier doit être inférieure à 5 Mo",
     "File upload failed": "Échec du téléversement du fichier",
-    "Filter by status, priority, or assignee to focus on specific subsets of tasks. Combine filters to find exactly what you need.":
-      "Filtrez par statut, priorité ou personne assignée pour vous concentrer sur des sous-ensembles spécifiques de tâches. Combinez les filtres pour trouver exactement ce dont vous avez besoin.",
     "Filter evidence files by type to quickly find compliance documentation, assessments, and audit artifacts.":
       "Filtrez les fichiers de preuve par type pour trouver rapidement la documentation de conformité, les évaluations et les artefacts d'audit.",
     "Filter risks by category, severity level, likelihood, mitigation status, and deletion status. Combine filters to find exactly what you":
@@ -17923,7 +18189,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Incident archived successfully.": "Incident archivé avec succès.",
     "Incident details": "Détails de l'incident",
     "Incident management details": "Détails de la gestion des incidents",
-    "Incident updated successfully!": "Incident mis à jour avec succès !",
     "This incident was changed by someone else since you opened it. The form now shows their changes with your edits kept: save again to apply your edits.":
       "Cet incident a été modifié par quelqu'un d'autre depuis que vous l'avez ouvert. Le formulaire affiche maintenant ses modifications et conserve les vôtres : enregistrez à nouveau pour appliquer vos modifications.",
     "Someone else also changed: {fields}. Saving again will replace their values with yours.":
@@ -17956,7 +18221,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Intended use of the model": "Utilisation prévue du modèle",
     "Inter": "Inter",
     "Internal Approval Record": "Registre d'approbation interne",
-    "Internal Server Error": "Erreur interne du serveur",
     "Internal audit": "Audit interne",
     "Internal only": "Interne uniquement",
     "Internal organization": "Organisation interne",
@@ -18050,7 +18314,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Local provider removed": "Fournisseur local supprimé",
     "Logging systems provide traceability, aiding audits and troubleshooting while supporting regulatory requirements.":
       "Les systèmes de journalisation assurent la traçabilité, soutenant les audits et le dépannage tout en répondant aux exigences réglementaires.",
-    "Login successful.": "Connexion réussie.",
     "Long text": "Texte long",
     "Low (0-25)": "Faible (0-25)",
     "Low (vendor supports non-core functions)":
@@ -18169,17 +18432,11 @@ export const translations: Record<string, Record<string, string>> = {
     "Monitor": "Surveiller",
     "Monitor and respond to incidents involving third-party components.":
       "Surveillez et répondez aux incidents impliquant des composants tiers.",
-    "Monitor incidents across their lifecycle: Open, Investigating, Mitigated, Closed, Suspended, and Emergency action. Track resolution progress and identify incidents requiring immediate attention.":
-      "Surveillez les incidents tout au long de leur cycle de vie : Ouverts, En cours d'investigation, Atténués, Clôturés, Suspendus et Action d'urgence. Suivez la progression de la résolution et identifiez les incidents nécessitant une attention immédiate.",
     "Monitor incidents related to AI systems and respond post-deployment.":
       "Surveillez les incidents liés aux systèmes IA et réagissez après le déploiement.",
     "Monitor mitigation efforts in real-time": "Surveiller les efforts d'atténuation en temps réel",
     "Monitor progress from initiation to completion with real-time status updates.":
       "Surveillez la progression de l'initiation à l'achèvement avec des mises à jour de statut en temps réel.",
-    "Monitor total tasks, overdue items, in-progress work, and completed tasks. Identify bottlenecks and workload distribution at a glance.":
-      "Surveillez le total des tâches, les éléments en retard, le travail en cours et les tâches terminées. Identifiez les goulots d'étranglement et la répartition de la charge de travail en un coup d'œil.",
-    "Monitor your AI governance metrics at a glance. View counts for models, vendors, policies, trainings, and incidents. Click any card to navigate to its detailed view.":
-      "Surveillez vos métriques de gouvernance IA en un coup d'œil. Affichez les compteurs pour les modèles, fournisseurs, politiques, formations et incidents. Cliquez sur n'importe quelle carte pour accéder à sa vue détaillée.",
     "Monitor your overall compliance status at a glance. The progress bar shows how many controls have been completed and what still needs attention.":
       "Surveillez votre statut de conformité global en un coup d'œil. La barre de progression indique combien de contrôles ont été terminés et ce qui nécessite encore attention.",
     "Monitor your policies at a glance by status: Draft, Under Review, Approved, Published, Archived, and Deprecated.":
@@ -18252,11 +18509,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Needs legal review": "Nécessite un examen juridique",
     "Negligible": "Négligeable",
     "Netskope (JSON-in-syslog)": "Netskope (JSON dans syslog)",
-    "Network error during login.": "Erreur réseau pendant la connexion.",
     "New Dataset": "Nouveau jeu de données",
-    "New dataset added successfully!": "Nouveau jeu de données ajouté avec succès !",
     "New evidence added successfully!": "Nouvelle preuve ajoutée avec succès !",
-    "New incident added successfully!": "Nouvel incident ajouté avec succès !",
     "New model inventory added successfully!": "Nouvel inventaire de modèles ajouté avec succès !",
     "New model risk added successfully!": "Nouveau risque de modèle ajouté avec succès !",
     "New policy": "Nouvelle politique",
@@ -18312,7 +18566,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Organization name must be less than 50 characters":
       "Le nom de l'organisation doit comporter moins de 50 caractères",
     "Organization name updated successfully!": "Nom de l'organisation mis à jour avec succès !",
-    "Organization or account already exists.": "L'organisation ou le compte existe déjà.",
     "Organization users": "Utilisateurs de l'organisation",
     "Organization-Level Reports (ISO)": "Rapports au niveau de l'organisation (ISO)",
     "Organization-wide framework": "Référentiel à l'échelle de l'organisation",
@@ -18357,6 +18610,10 @@ export const translations: Record<string, Record<string, string>> = {
     "Persons with disabilities": "Personnes handicapées",
     "Plan Adherence": "Respect du plan",
     "Plan Quality": "Qualité du plan",
+    "Planning Quality": "Qualité de la planification",
+    "Bias (lower is better)": "Biais (plus bas est meilleur)",
+    "Toxicity (lower is better)": "Toxicité (plus bas est meilleur)",
+    "Hallucination (lower is better)": "Hallucination (plus bas est meilleur)",
     "Plan responses to AI system risks, including defining risk tolerance and mitigation strategies.":
       "Planifiez les réponses aux risques du système IA, y compris la définition de la tolérance au risque et des stratégies d'atténuation.",
     "Please add at least one recipient to the Send Email action before saving.":
@@ -18372,7 +18629,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Please enter an API key for this provider": "Veuillez saisir une clé API pour ce fournisseur",
     "Please enter an automation name before saving.":
       "Veuillez saisir un nom d'automatisation avant d'enregistrer.",
-    "Please enter an email address": "Veuillez saisir une adresse e-mail",
     "Please login again to continue.": "Veuillez vous reconnecter pour continuer.",
     "Please save the changes to attach the selected files.":
       "Veuillez enregistrer les modifications pour joindre les fichiers sélectionnés.",
@@ -18423,7 +18679,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Problem definition & planning": "Définition du problème et planification",
     "Proceed": "Continuer",
     "Proceed with conditions": "Continuer avec conditions",
-    "Processing": "Traitement en cours",
     "Product Docs": "Documentation produit",
     "Prohibited AI system": "Système IA interdit",
     "Project / Organization": "Projet / Organisation",
@@ -18483,14 +18738,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Publiez d'abord le formulaire pour générer un lien partageable",
     "Quarterly": "Trimestriel",
     "Question updated successfully": "Question mise à jour avec succès",
-    "Quickly create new use cases, vendors, models, risks, or policies without navigating to different pages. Your shortcuts to common actions.":
-      "Créez rapidement de nouveaux cas d'usage, fournisseurs, modèles, risques ou politiques sans naviguer vers différentes pages. Vos raccourcis vers les actions courantes.",
     "Quickly filter policies by their current approval and lifecycle status to focus on what needs your attention.":
       "Filtrez rapidement les politiques par leur statut actuel d'approbation et de cycle de vie pour vous concentrer sur ce qui nécessite votre attention.",
-    "Quickly find specific incidents by searching titles or descriptions. Perfect for locating incidents in large lists.":
-      "Trouvez rapidement des incidents spécifiques en recherchant par titre ou description. Parfait pour localiser des incidents dans de grandes listes.",
-    "Quickly find tasks by searching titles or descriptions. Perfect for locating specific work items in large task lists.":
-      "Trouvez rapidement des tâches en recherchant par titre ou description. Parfait pour localiser des éléments de travail spécifiques dans de grandes listes de tâches.",
     "REVIEW DATE": "DATE D'EXAMEN",
     "RISK LEVEL": "NIVEAU DE RISQUE",
     "RISK NAME": "NOM DU RISQUE",
@@ -18516,8 +18765,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Reference Controls (Statement of Applicability)":
       "Contrôles de référence (Déclaration d'applicabilité)",
     "References to AI models in the codebase": "Références aux modèles IA dans le code",
-    "Register AI-related training programs and educational resources. Track completion status, certifications, and learning progress across your team.":
-      "Enregistrez les programmes de formation et ressources éducatives liés à l'IA. Suivez l'état d'achèvement, les certifications et la progression de l'apprentissage dans votre équipe.",
     "Register and track AI models with details like hosting, biases, and limitations. Extend with the Model Lifecycle extension.":
       "Enregistrez et suivez les modèles IA avec des détails comme l'hébergement, les biais et les limitations. Étendez avec l'extension Model Lifecycle.",
     "Register external AI providers and third-party services. Document vendor information, contracts, and compliance requirements in one centralized location.":
@@ -18531,9 +18778,6 @@ export const translations: Record<string, Record<string, string>> = {
       "L'enregistrement des systèmes assure la conformité aux exigences du Règlement IA de l'UE et facilite la surveillance et la transparence.",
     "Registration Activity Records Maintenance": "Tenue des registres d'activités d'enregistrement",
     "Registration Information Maintenance": "Tenue à jour des informations d'enregistrement",
-    "Registration failed.": "L'enregistrement a échoué.",
-    "Registration successful. Redirecting to login page...":
-      "Enregistrement réussi. Redirection vers la page de connexion...",
     "Regular evaluations ensure systems continue to fulfill their intended purpose and remain aligned with organizational goals.":
       "Des évaluations régulières garantissent que les systèmes continuent de remplir leur finalité prévue et restent alignés sur les objectifs organisationnels.",
     "Regular evaluations help ensure AI systems are ethical, equitable, and environmentally sustainable.":
@@ -18771,8 +19015,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Standardized intake process with automated risk classification for new AI use cases.":
       "Processus d'admission standardisé avec classification automatique des risques pour les nouveaux cas d'usage IA.",
     "Start Date": "Date de début",
-    "Start by creating a project that represents an AI activity or system in your organization. Each project helps you manage compliance, assessments, and vendor relationships.":
-      "Commencez par créer un projet qui représente une activité ou un système IA dans votre organisation. Chaque projet vous aide à gérer la conformité, les évaluations et les relations fournisseurs.",
     "Started": "Démarré",
     "Starting new evaluation run...": "Démarrage d'une nouvelle exécution d'évaluation...",
     "Status updated successfully": "Statut mis à jour avec succès",
@@ -18802,7 +19044,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Summarize use cases": "Résumer les cas d'usage",
     "Sunday": "Dimanche",
     "Super Admin": "Super administrateur",
-    "Super-admin login successful.": "Connexion super administrateur réussie.",
     "Superseded": "Remplacé",
     "Supplier agreements for AI": "Accords avec les fournisseurs pour l'IA",
     "Suppress": "Supprimer",
@@ -18886,8 +19127,6 @@ export const translations: Record<string, Record<string, string>> = {
       "Ce fournisseur a déjà une clé configurée. Supprimez-la d'abord pour en ajouter une nouvelle.",
     "This section has been been marked as done, but there's still a risk linked to it:":
       "Cette section a été marquée comme terminée, mais un risque y est encore lié :",
-    "This training no longer exists or you do not have access to it.":
-      "Cette formation n'existe plus ou vous n'y avez pas accès.",
     "This will permanently remove this API key record. This action cannot be undone.":
       "Cela supprimera définitivement cet enregistrement de clé API. Cette action est irréversible.",
     "Thorough documentation and assessment of changes prevent compliance gaps and support accountability.":
@@ -18931,10 +19170,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Suivez l'état d'achèvement de vos évaluations en temps réel. Cet indicateur de progression montre combien de thèmes ont été évalués et ce qui reste à traiter.",
     "Track your progress implementing compliance frameworks like ISO 42001. Monitor clause completion and identify gaps in your governance process.":
       "Suivez votre progression dans la mise en œuvre de référentiels de conformité comme ISO 42001. Surveillez l'achèvement des clauses et identifiez les lacunes dans votre processus de gouvernance.",
-    "Tracked events across your organization": "Événements suivis dans votre organisation",
     "Train personnel on regulatory requirements and procedures for responding to authority requests.":
       "Formez le personnel aux exigences réglementaires et aux procédures de réponse aux demandes des autorités.",
-    "Training deleted successfully!": "Formation supprimée avec succès !",
     "Training details": "Détails de la formation",
     "Training equips employees to responsibly manage and understand AI systems, fostering ethics and legal adherence.":
       "La formation permet aux employés de gérer et de comprendre de manière responsable les systèmes IA, favorisant l'éthique et le respect des lois.",
@@ -18969,6 +19206,7 @@ export const translations: Record<string, Record<string, string>> = {
     "USE CASE": "CAS D'USAGE",
     "USER (ID)": "UTILISATEUR (ID)",
     "Ulas Ozguven": "Ulas Ozguven",
+    "Ioana Polmolea": "Ioana Polmolea",
     "Unable to edit metadata. File data not available.":
       "Impossible de modifier les métadonnées. Données du fichier non disponibles.",
     "Unable to preview file. Metadata not available.":
@@ -19023,8 +19261,6 @@ export const translations: Record<string, Record<string, string>> = {
     "User notification of AI system use": "Notification utilisateur de l'utilisation du système IA",
     "User session not found. Please log in again.":
       "Session utilisateur introuvable. Veuillez vous reconnecter.",
-    "User with this email already exists. Please use a different email.":
-      "Un utilisateur avec cet e-mail existe déjà. Veuillez utiliser un autre e-mail.",
     "Users in a specific organization": "Utilisateurs dans une organisation spécifique",
     "Uses the highest sensitivity score among departments accessing the tool. Finance, Legal, and HR are rated highest (80).":
       "Utilise le score de sensibilité le plus élevé parmi les départements accédant à l'outil. Finance, Juridique et RH sont les mieux notés (80).",
@@ -19301,7 +19537,13 @@ export const translations: Record<string, Record<string, string>> = {
       "Vous pouvez toujours revoir cette intégration depuis le menu de votre profil.",
     "Your AI governance and compliance platform. In 3 minutes, we":
       "Votre plateforme de gouvernance et de conformité IA. En 3 minutes, nous",
-    "Your changes have been saved.": "Vos modifications ont été enregistrées.",
+    "Your approval is recorded.": "Votre approbation est enregistrée.",
+    "Your approval is recorded. Waiting on 1 more approver for this step.":
+      "Votre approbation est enregistrée. Il manque encore 1 approbateur pour cette étape.",
+    "Your approval is recorded. Waiting on {count} more approvers for this step.":
+      "Votre approbation est enregistrée. Il manque encore {count} approbateurs pour cette étape.",
+    "Your approval is recorded. The request moved to the next step.":
+      "Votre approbation est enregistrée. La demande est passée à l’étape suivante.",
     "Your name, email and personal details": "Vos nom, e-mail et coordonnées personnelles",
     "Your new task has been added.": "Votre nouvelle tâche a été ajoutée.",
     "Your report is being generated.": "Votre rapport est en cours de génération.",
@@ -19348,45 +19590,31 @@ export const translations: Record<string, Record<string, string>> = {
     "AI-generated": "AI-generated",
     "AI-reviewed": "AI-reviewed",
     "AI-suggested": "AI-suggested",
-    "Action audit trail": "Action audit trail",
     "Action type": "Action type",
-    "Actions by category": "Actions by category",
-    "Actions by state": "Actions by state",
     "Add Rule": "Add Rule",
     "Add or hide dashboard tabs": "Add or hide dashboard tabs",
     "Add review notes (optional)...": "Add review notes (optional)...",
     "Adequate Evidence": "Adequate Evidence",
     "Alignment with the control": "Alignment with the control",
-    "All AI content": "All AI content",
-    "All actors": "All actors",
-    "All caught up!": "All caught up!",
     "Analyzer abstained": "Analyzer abstained",
     "Apply all": "Apply all",
     "Approved and executed": "Approved and executed",
     "At Risk": "At Risk",
     "At risk": "At risk",
-    "Audit log": "Audit log",
-    "Audit readiness": "Audit readiness",
     "Authority": "Authority",
     "Auto-Approve": "Auto-Approve",
     "Auto-Reject": "Auto-Reject",
-    "Auto-approve rate": "Auto-approve rate",
     "Automation": "Automation",
     "Automation Details": "Automation Details",
     "Avg confidence": "Avg confidence",
-    "Avg wait time": "Avg wait time",
     "By type": "By type",
-    "Complete audit trail for every AI action (EU AI Act art. 12)":
-      "Complete audit trail for every AI action (EU AI Act art. 12)",
-    "Complete audit trail for every AI action. EU AI Act Article 12 compliance.":
-      "Complete audit trail for every AI action. EU AI Act Article 12 compliance.",
+    "By {name} · {date}": "Par {name} · {date}",
     "Conditions (JSON)": "Conditions (JSON)",
     "Configure auto-approve, require-approval, and auto-reject rules for AI operations":
       "Configure auto-approve, require-approval, and auto-reject rules for AI operations",
     "Content": "Content",
     "Coverage of requirements": "Coverage of requirements",
     "Create a custom rule": "Create a custom rule",
-    "Daily volume": "Daily volume",
     "Dashboard tabs": "Dashboard tabs",
     "Dataset Details": "Dataset Details",
     "Decision": "Decision",
@@ -19397,7 +19625,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Evidence Quality Details": "Evidence Quality Details",
     "Explicit dates": "Explicit dates",
     "Export CSV": "Export CSV",
-    "Filter by actor:": "Filter by actor:",
     "Hide tab": "Hide tab",
     "How current the evidence is": "How current the evidence is",
     "Incident Details": "Incident Details",
@@ -19405,7 +19632,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Loading analysis...": "Loading analysis...",
     "Loading heatmap...": "Loading heatmap...",
     "Low Quality Evidence": "Low Quality Evidence",
-    "Main dashboard with metrics and activity": "Main dashboard with metrics and activity",
     "Model Details": "Model Details",
     "Modified": "Modified",
     "Named owner": "Named owner",
@@ -19413,12 +19639,9 @@ export const translations: Record<string, Record<string, string>> = {
     "Needs work": "Needs work",
     "No AI analysis available for this evidence yet.":
       "No AI analysis available for this evidence yet.",
-    "No AI-generated content pending review.": "No AI-generated content pending review.",
     "No AI-generated content tracked yet.": "No AI-generated content tracked yet.",
     "No Evidence": "No Evidence",
     "No approval rules configured.": "No approval rules configured.",
-    "No audit entries found": "No audit entries found",
-    "No audit trail entries found": "No audit trail entries found",
     "No compliance areas detected.": "No compliance areas detected.",
     "No control data available for gap analysis.": "No control data available for gap analysis.",
     "No key findings extracted.": "No key findings extracted.",
@@ -19433,31 +19656,22 @@ export const translations: Record<string, Record<string, string>> = {
     "Overall Quality Score": "Overall Quality Score",
     "PMM Config": "PMM Config",
     "PMM Config Details": "PMM Config Details",
-    "Per-control readiness scores and audit preparation":
-      "Per-control readiness scores and audit preparation",
-    "Per-control readiness scores, framework aggregations, and improvement recommendations.":
-      "Per-control readiness scores, framework aggregations, and improvement recommendations.",
     "Policy Details": "Policy Details",
     "Private": "Private",
     "Quality breakdown": "Quality breakdown",
     "Readiness trend": "Readiness trend",
     "Ready": "Ready",
     "Recency": "Recency",
-    "Rejection rate": "Rejection rate",
     "Reliability": "Reliability",
     "Require Approval": "Require Approval",
     "Reversible action": "Reversible action",
-    "Review and approve AI-generated content (EU AI Act art. 52)":
-      "Review and approve AI-generated content (EU AI Act art. 52)",
     "Review outcomes": "Review outcomes",
     "Review progress": "Review progress",
     "Risk Details": "Risk Details",
-    "Rule engine": "Rule engine",
     "Select which tabs to show": "Select which tabs to show",
     "Specificity": "Specificity",
     "State": "State",
     "Task Details": "Task Details",
-    "Total actions": "Total actions",
     "Total items": "Total items",
     "Training Details": "Training Details",
     "Truncated": "Truncated",
@@ -19611,16 +19825,11 @@ export const translations: Record<string, Record<string, string>> = {
       "Vous avez désormais plusieurs référentiels assignés. Activez Governance OS pour explorer les correspondances inter-référentiels, obtenir des recommandations intelligentes et analyser la couverture sur l'ensemble de vos référentiels.",
     "Your compliance dashboard will prioritize tasks from the primary framework first":
       "Votre tableau de bord de conformité priorisera d'abord les tâches du référentiel principal",
-    "All AI-related training programs": "Tous les programmes de formation liés à l'IA",
     "Assessment Result": "Résultat d'évaluation",
     "Attendance Record": "Registre de présence",
-    "Compliance evidence linked to trainings": "Preuves de conformité liées aux formations",
     "Course Completion": "Achèvement du cours",
     "Delete evidence": "Supprimer la preuve",
-    "Failed to load evidence details. Please try again.":
-      "Échec du chargement des détails de la preuve. Veuillez réessayer.",
     "MAPPED TRAININGS": "FORMATIONS ASSOCIÉES",
-    "Mapped trainings": "Formations associées",
     "Next file": "Fichier suivant",
     "No evidence uploaded yet for this training.":
       "Aucune preuve n'a encore été téléversée pour cette formation.",
@@ -19628,14 +19837,10 @@ export const translations: Record<string, Record<string, string>> = {
     "Optional notes about this evidence": "Notes facultatives concernant cette preuve",
     "Policy owner": "Responsable de la politique",
     "Previous file": "Fichier précédent",
-    "Quarter (year)": "Trimestre (année)",
     "Select a training": "Sélectionner une formation",
     "Select a type": "Sélectionner un type",
     "Select policy owner": "Sélectionner le responsable de la politique",
-    "This evidence has no file attached to preview.":
-      "Aucun fichier n'est attaché à cette preuve pour l'aperçu.",
     "Training Certificate": "Certificat de formation",
-    "Training Evidence Hub": "Centre de preuves de formation",
     "Upload certificates, attendance proofs, or other compliance evidence for this training.":
       "Téléversez des certificats, des justificatifs de présence ou d'autres preuves de conformité pour cette formation.",
 
@@ -19696,9 +19901,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Enter your Application (client) ID": "Saisissez l'ID de votre application (client)",
     "Client secret": "Secret client",
     "Enter your client secret": "Saisissez votre secret client",
-    "Select your organization": "Sélectionnez votre organisation",
-    "Completing sign in...": "Finalisation de la connexion...",
-    "Redirecting to login...": "Redirection vers la page de connexion...",
 
     // Governance OS
     "Activate": "Activer",
@@ -20024,8 +20226,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Switch to the Unified Insights tab here in Governance OS to monitor your per-project coverage and identify gaps as you work through controls.":
       "Passez à l'onglet Unified Insights ici dans Governance OS pour suivre votre couverture par projet et identifier les lacunes à mesure que vous traitez les contrôles.",
     "Target Framework *": "Cadre cible *",
-    "Tasks assigned to team members show up in their personal task list. Use the 'My tasks only' toggle on the list view to filter.":
-      "Les tâches attribuées aux membres de l'équipe apparaissent dans leur liste de tâches personnelle. Utilisez le commutateur « Mes tâches uniquement » sur la vue en liste pour filtrer.",
     "The Evidence Hub will connect to your existing evidence sources, auto-collect compliance artifacts, and provide a unified view of evidence coverage across frameworks.":
       "L'Evidence Hub se connectera à vos sources de preuves existantes, collectera automatiquement les artefacts de conformité et fournira une vue unifiée de la couverture des preuves à travers les cadres.",
     "The Knowledge Graph will render an interactive visualization of frameworks, controls, mappings, risks, and evidence — making complex governance relationships explorable at a glance.":
@@ -20192,7 +20392,6 @@ export const translations: Record<string, Record<string, string>> = {
     // AI Gateway empty/error states
     "Click Save draft to create your first version.":
       "Cliquez sur Enregistrer le brouillon pour créer votre première version.",
-    "Could not load metrics.": "Impossible de charger les métriques.",
     "Could not load this run.": "Impossible de charger cette exécution.",
     "Create your first version": "Créer votre première version",
     "Error loading AI Trust Center settings. Please try again.":
@@ -20410,6 +20609,9 @@ export const translations: Record<string, Record<string, string>> = {
     "Vendor {id}": "Fournisseur {id}",
     "Vendor risk {id}": "Risque fournisseur {id}",
     "{linked} of {total}": "{linked} sur {total}",
+    "{name} (inactive)": "{name} (inactif)",
+    "#{id} (not found)": "#{id} (introuvable)",
+    "No endpoints": "Aucun point de terminaison",
     "Vendors with reach": "Fournisseurs avec portée",
     "Inheriting project risks": "Risques de projet héritiers",
     "Affected use cases": "Cas d'usage concernés",
@@ -20464,6 +20666,28 @@ export const translations: Record<string, Record<string, string>> = {
       "Regroupement en cours. Rouvrez cet onglet pour voir les nouvelles suggestions.",
     "Scanning {count} risks. Links will appear as the scan completes.":
       "Analyse de {count} risques en cours. Les liens apparaîtront à la fin de l'analyse.",
+    "Scanning {count} risk. Links will appear as the scan completes.":
+      "Analyse de {count} risque en cours. Les liens apparaîtront à la fin de l'analyse.",
+    "Related risks": "Risques connexes",
+    "How is this risk connected?": "Comment ce risque est-il lié ?",
+    "Where is the parent risk?": "Où se trouve le risque parent ?",
+    "The two risks are connected, but neither depends on the other.":
+      "Les deux risques sont liés, mais aucun ne dépend de l'autre.",
+    "This risk is part of a broader parent risk. When the parent's level changes, this risk is flagged for review.":
+      "Ce risque fait partie d'un risque parent plus large. Quand le niveau du parent change, ce risque est signalé pour révision.",
+    "The other risk becomes a child of this one and is flagged when this risk's level changes.":
+      "L'autre risque devient un enfant de celui-ci et est signalé quand le niveau de ce risque change.",
+    "Another risk in the risk register.": "Un autre risque du registre des risques.",
+    "A risk recorded on a model.": "Un risque enregistré sur un modèle.",
+    "A risk recorded on a vendor.": "Un risque enregistré sur un fournisseur.",
+    "Grouping {count} cluster of related risks. Suggestions appear here as they finish.":
+      "Regroupement de {count} groupe de risques connexes. Les suggestions apparaîtront ici au fur et à mesure.",
+    "{count} cluster was too large to group in one pass.":
+      "{count} groupe était trop volumineux pour être regroupé en une seule passe.",
+    "Link this risk to others it is connected to. VerifyWise also suggests links from what risks have in common, such as category, controls, lifecycle phase or project. Confirm a suggestion to keep it, or dismiss it.":
+      "Liez ce risque aux autres risques avec lesquels il est en relation. VerifyWise suggère aussi des liens à partir de ce que les risques ont en commun, comme la catégorie, les contrôles, la phase du cycle de vie ou le projet. Confirmez une suggestion pour la garder, ou ignorez-la.",
+    "Uses AI to propose parent and child links among risks that are already related. Suggestions appear in this list for you to confirm.":
+      "Utilise l'IA pour proposer des liens parent-enfant entre des risques déjà liés. Les suggestions apparaissent dans cette liste pour que vous les confirmiez.",
     "Grouping {count} clusters of related risks. Suggestions appear here as they finish.":
       "Regroupement de {count} groupes de risques connexes. Les suggestions apparaîtront ici au fur et à mesure.",
     "{count} clusters were too large to group in one pass.":
@@ -20494,6 +20718,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Les risques fournisseurs connexes apparaissent à l'enregistrement des risques fournisseurs, ou après une analyse lancée par un administrateur.",
     "Scanning {count} vendor risks. Related vendor risks appear here as the scan completes.":
       "Analyse de {count} risques fournisseurs en cours. Les risques fournisseurs connexes apparaîtront ici à la fin de l'analyse.",
+    "Scanning {count} vendor risk. Related vendor risks appear here as the scan completes.":
+      "Analyse de {count} risque fournisseur en cours. Les risques fournisseurs connexes apparaîtront ici à la fin de l'analyse.",
     "Scan finished. No related vendor risks found.":
       "Analyse terminée. Aucun risque fournisseur connexe trouvé.",
     "Search vendor risks": "Rechercher des risques fournisseurs",
@@ -20501,6 +20727,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Des risques fournisseurs connexes décrivent la même exposition, chez ce fournisseur ou un autre. Aucun n'hérite de l'autre.",
     "Similar wording": "Formulation similaire",
     "Same vendor": "Même fournisseur",
+    "Sample text must be at most {max} characters":
+      "Le texte d'exemple ne doit pas dépasser {max} caractères",
     "Shared framework": "Cadre commun",
     "Shared use case": "Cas d'usage commun",
     "Why are you dismissing {name}?": "Pourquoi rejetez-vous {name} ?",
@@ -20534,7 +20762,6 @@ export const translations: Record<string, Record<string, string>> = {
     "custom framework items": "éléments de référentiel personnalisés",
     // Reporting, readiness and AI observability
     "AI analyses": "Analyses IA",
-    "AI observability": "Observabilité IA",
     "AI readiness": "Préparation à l'IA",
     "Action failed": "L'action a échoué",
     "Add a language-model key in Settings to enable AI insights.":
@@ -20566,7 +20793,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Generate": "Générer",
     "Hour": "Heure",
     "Key findings": "Constats clés",
-    "Latency over time": "Latence au fil du temps",
     "Leave empty to include every framework in scope.":
       "Laissez vide pour inclure tous les référentiels de la portée.",
     "My templates": "Mes modèles",
@@ -20577,8 +20803,6 @@ export const translations: Record<string, Record<string, string>> = {
     "No report templates available yet.": "Aucun modèle de rapport disponible pour le moment.",
     "No scheduled reports yet. Create one from the Templates tab.":
       "Aucun rapport planifié pour le moment. Créez-en un depuis l'onglet Modèles.",
-    "No spans found for this trace": "Aucun span trouvé pour cette trace",
-    "No traces found": "Aucune trace trouvée",
     "Overall quality grade": "Note globale de qualité",
     "Parallel agents": "Agents parallèles",
     "Per-section summaries": "Résumés par section",
@@ -20601,11 +20825,6 @@ export const translations: Record<string, Record<string, string>> = {
     "This section was not generated.": "Cette section n'a pas été générée.",
     "This template has no configurable sections.": "Ce modèle n'a aucune section configurable.",
     "Timezone": "Fuseau horaire",
-    "Total traces": "Total des traces",
-    "Trace waterfall": "Cascade de la trace",
-    "Traces": "Traces",
-    "Traces, cost tracking, and latency & error metrics for every AI request.":
-      "Traces, suivi des coûts et métriques de latence et d'erreurs pour chaque requête IA.",
     "Update the name, output format and delivery schedule.":
       "Mettez à jour le nom, le format de sortie et la planification de distribution.",
     "Update the template name, description, and category.":
@@ -20673,6 +20892,8 @@ export const translations: Record<string, Record<string, string>> = {
     'Click "Add to Slack" above to connect your first workspace.':
       "Cliquez sur « Ajouter à Slack » ci-dessus pour connecter votre premier espace de travail.",
     "Click to upload documents": "Cliquez pour téléverser des documents",
+    "Could not remove the file. Try again.": "Impossible de supprimer le fichier. Réessayez.",
+    "Could not upload the file. Try again.": "Impossible de téléverser le fichier. Réessayez.",
     "Configuration saved.": "Configuration enregistrée.",
     "Configure Model Lifecycle": "Configurer le cycle de vie du modèle",
     "Configure Phases": "Configurer les phases",
@@ -21675,8 +21896,300 @@ export const translations: Record<string, Record<string, string>> = {
       "Les contrôles des données n’ont pas validé l’export de cette exécution ; son ratio est donc affiché avec cette réserve.",
     "A hollow point marks a run the data checks did not clear for export. Its ratio is shown with that caveat.":
       "Un point creux signale une exécution dont les contrôles des données n’ont pas validé l’export. Son ratio est affiché avec cette réserve.",
+    // Super admin MCP connect
+    "Connect Claude Code to this deployment": "Connecter Claude Code à ce déploiement",
+    "Download the config file": "Télécharger le fichier de configuration",
+    "Token expires in": "Le jeton expire dans",
+    "Config file downloaded": "Fichier de configuration téléchargé",
+    "Add it to Claude Code": "L'ajouter à Claude Code",
+    "Check it worked": "Vérifier que cela fonctionne",
+    "What the file contains": "Contenu du fichier",
+    "Tools it adds": "Outils ajoutés",
+    "Download config file": "Télécharger le fichier de configuration",
+    "Preparing...": "Préparation...",
+    "7 days": "7 jours",
+    "30 days": "30 jours",
+    "60 days": "60 jours",
+    "90 days": "90 jours",
+    "180 days": "180 jours",
+    "Failed to create the config file.": "Impossible de créer le fichier de configuration.",
+    "Downloading revokes the token issued here last time. Anything set up with the previous file, on this machine or another, stops working immediately.":
+      "Le téléchargement révoque le jeton émis ici la dernière fois. Tout ce qui a été configuré avec le fichier précédent, sur cette machine ou une autre, cesse immédiatement de fonctionner.",
   },
   es: {
+    ...aiAuditEs,
+    ...aiContentReviewEs,
+    ...aiObservabilityEs,
+    ...approvalsEs,
+    ...authenticationEs,
+    ...dashboardEs,
+    ...datasetsEs,
+    ...eventTrackerEs,
+    ...incidentsEs,
+    ...tasksEs,
+    ...trainingEs,
+    "senior": "sénior",
+    "standard": "estándar",
+    "close calls": "casos límite",
+    "not routed": "sin asignar",
+    "routing off": "enrutamiento desactivado",
+    "days": "días",
+    "missed of completed": "omitidas de completadas",
+    "open": "abiertas",
+    "prohibited": "prohibido",
+    "high risk": "riesgo alto",
+    "decisions": "decisiones",
+    "Second review open": "Segunda revisión abierta",
+    "Second review missed": "Segunda revisión: algo omitido",
+    "Prohibited, pending": "Prohibido, pendiente",
+    "Pending too long": "Pendiente demasiado tiempo",
+    "No active reviewer": "Ningún revisor activo",
+    "Former user": "Usuario anterior",
+    "That submission could not be found": "No se encontró ese envío",
+    "Only an Admin can change review routing.":
+      "Solo un administrador puede cambiar la asignación de revisiones.",
+    "All forms": "Todos los formularios",
+    "Band changed": "Nivel cambiado",
+    "Band kept": "Nivel mantenido",
+    "Band kept, senior lane": "Nivel mantenido, vía sénior",
+    "Check": "Revisar",
+    "Close call": "Caso límite",
+    "Counts the band in force at decision": "Cuenta el nivel vigente en el momento de la decisión",
+    "Decisions": "Decisiones",
+    "Failed to load the oversight figures.": "No se pudieron cargar las cifras de supervisión.",
+    "Last 12 weeks": "Últimas 12 semanas",
+    "Last 4 weeks": "Últimas 4 semanas",
+    "Last 8 weeks": "Últimas 8 semanas",
+    "Median time": "Tiempo mediano",
+    "Median time to decision": "Tiempo mediano hasta la decisión",
+    "Needs attention": "Requiere atención",
+    "Never changed a band in": "Nunca cambió un nivel en",
+    "No decisions in this period.": "Ninguna decisión en este período.",
+    "No submissions in this period.": "Ningún envío en este período.",
+    "Oversight": "Supervisión",
+    "Redlines caught": "Líneas rojas detectadas",
+    "Second reviews": "Segundas revisiones",
+    "Submissions by lane": "Envíos por vía",
+    "Suggested risks accepted": "Riesgos sugeridos aceptados",
+    "Routing off": "Enrutamiento desactivado",
+    "Failed to send to senior review. Please try again.":
+      "No se pudo enviar a revisión sénior. Inténtelo de nuevo.",
+    "Failed to save the second review. Please try again.":
+      "No se pudo guardar la segunda revisión. Inténtelo de nuevo.",
+    "Within": "A menos de",
+    "points of the threshold": "puntos del umbral",
+    "Prohibited practice": "Práctica prohibida",
+    "No usable score": "Sin puntuación utilizable",
+    "threshold": "umbral",
+    "below": "por debajo de",
+    "Band raised by a reviewer": "Nivel elevado por un revisor",
+    "Sent to senior review:": "Enviado a revisión sénior:",
+    "Senior review": "Revisión sénior",
+    "Standard review": "Revisión estándar",
+    "Not routed yet": "Aún sin enrutar",
+    "Only": "Solo",
+    "can decide this submission.": "pueden decidir sobre este envío.",
+    "Send to senior review": "Enviar a revisión sénior",
+    "Senior reviewers will decide this submission. Say why it needs a closer look.":
+      "Los revisores sénior decidirán sobre este envío. Indique por qué requiere un examen más detallado.",
+    "Why does this need a senior reviewer?": "¿Por qué necesita un revisor sénior?",
+    "Second review": "Segunda revisión",
+    "A senior reviewer will check this approval.": "Un revisor sénior comprobará esta aprobación.",
+    "Required when something was missed": "Obligatoria si se pasó algo por alto",
+    "Agree": "De acuerdo",
+    "Missed something": "Se pasó algo por alto",
+    "Agreed with the approval": "De acuerdo con la aprobación",
+    "Something was missed": "Se pasó algo por alto",
+    "Note:": "Nota:",
+    "Resolution:": "Resolución:",
+    "Resolution note": "Nota de resolución",
+    "What was done about it?": "¿Qué se hizo al respecto?",
+    "Mark resolved": "Marcar como resuelto",
+    "Lane": "Carril",
+    "Senior": "Sénior",
+    "Not routed": "Sin enrutar",
+    "Assigned to me": "Asignados a mí",
+    "Scores of": "Las puntuaciones de",
+    "or more, prohibited practices and scores within":
+      "o más, las prácticas prohibidas y las puntuaciones a menos de",
+    "points of": "puntos de",
+    "go to senior reviewers.": "pasan a los revisores sénior.",
+    "Route by risk score": "Enrutar según la puntuación de riesgo",
+    "Send submissions to senior or standard reviewers based on their risk score.":
+      "Enviar los envíos a revisores sénior o estándar según su puntuación de riesgo.",
+    "Senior reviewers": "Revisores sénior",
+    "Standard reviewers": "Revisores estándar",
+    "Select senior reviewers": "Seleccionar revisores sénior",
+    "Select standard reviewers": "Seleccionar revisores estándar",
+    "Pick at least one senior reviewer": "Elija al menos un revisor sénior",
+    "Pick at least one standard reviewer": "Elija al menos un revisor estándar",
+    "Close-call margin": "Margen de casos límite",
+    "Second review share %": "Porcentaje de segundas revisiones",
+    "Risk score that separates the lanes": "Puntuación de riesgo que separa los carriles",
+    "Points either side of the threshold": "Puntos a cada lado del umbral",
+    "Share of standard decisions checked again":
+      "Porcentaje de decisiones estándar que se revisan de nuevo",
+    "Use a number from 1 to 99": "Use un número del 1 al 99",
+    "Use a number from 0 to 25": "Use un número del 0 al 25",
+    "Use a number from 0 to 100": "Use un número del 0 al 100",
+    "Fix the routing settings before saving":
+      "Corrija la configuración de enrutamiento antes de guardar",
+    "Fix the routing settings before publishing":
+      "Corrija la configuración de enrutamiento antes de publicar",
+    "No risk score was recorded for this submission.":
+      "No se registró ninguna puntuación de riesgo para este envío.",
+    "set to": "fijado en",
+    "band set to": "banda fijada en",
+    // AI intake assessment
+    "Scoring…": "Calculando la puntuación…",
+    "No score yet": "Aún no hay puntuación",
+    "at least": "al menos",
+    "(rules only)": "(solo reglas)",
+    "AI scores ranged": "Las puntuaciones de la IA oscilaron entre",
+    "The AI median set this score.": "La mediana de la IA fijó esta puntuación.",
+    "The rule minimum set this score. The AI scored it lower.":
+      "El mínimo de las reglas fijó esta puntuación. La IA la puntuó más baja.",
+    "Band set to": "Banda fijada en",
+    "by": "por",
+    "AI scoring isn't set up for this form.":
+      "La puntuación con IA no está configurada para este formulario.",
+    "AI scoring failed. The score shown comes from the rules only.":
+      "La puntuación con IA falló. La puntuación mostrada procede solo de las reglas.",
+    "Not rule-checked. EU AI Act questions apply to use cases, not models.":
+      "Sin comprobación de reglas. Las preguntas de la Ley de IA de la UE se aplican a los casos de uso, no a los modelos.",
+    "Not rule-checked. This form doesn't ask the EU AI Act questions.":
+      "Sin comprobación de reglas. Este formulario no hace las preguntas de la Ley de IA de la UE.",
+    "Minimum based on your level change": "Mínimo basado en tu cambio de nivel",
+    "Rules updated since this was scored": "Las reglas cambiaron desde que se puntuó",
+    "How this score is built": "Cómo se calcula esta puntuación",
+    "EU AI Act level": "Nivel según la Ley de IA de la UE",
+    "EU AI Act questions apply to use cases, not models.":
+      "Las preguntas de la Ley de IA de la UE se aplican a los casos de uso, no a los modelos.",
+    "Not rule-checked: this form doesn't ask the EU AI Act questions.":
+      "Sin comprobación de reglas: este formulario no hace las preguntas de la Ley de IA de la UE.",
+    "Rule minimum": "Mínimo de las reglas",
+    "AI scores": "Puntuaciones de la IA",
+    "failed": "fallida",
+    "Median": "Mediana",
+    "Range": "Rango",
+    "No AI scores": "Sin puntuaciones de la IA",
+    "The final score is the higher of the rule minimum and the AI median. The AI can raise the score but never lower it.":
+      "La puntuación final es la mayor entre el mínimo de las reglas y la mediana de la IA. La IA puede subir la puntuación, pero nunca bajarla.",
+    "Reasons": "Motivos",
+    "Band override": "Banda modificada",
+    "Suggesting risks…": "Sugiriendo riesgos…",
+    "AI scoring isn't set up for this form, so no risks are suggested.":
+      "La puntuación con IA no está configurada para este formulario, así que no se sugieren riesgos.",
+    "Risk suggestions failed. Use Retry in the score section to try again.":
+      "Las sugerencias de riesgos fallaron. Usa «Reintentar» en la sección de puntuación.",
+    "Risk suggestions haven't started. Use Retry in the score section to start them.":
+      "Las sugerencias de riesgos no se han iniciado. Usa «Reintentar» en la sección de puntuación para iniciarlas.",
+    "No risks were suggested for this submission.": "No se sugirieron riesgos para este envío.",
+    "accepted": "aceptados",
+    "dismissed": "descartados",
+    "Accept all": "Aceptar todos",
+    "From the risk catalog": "Del catálogo de riesgos",
+    "Likelihood:": "Probabilidad:",
+    "Severity:": "Gravedad:",
+    "Add a mitigation plan before accepting this risk.":
+      "Añade un plan de mitigación antes de aceptar este riesgo.",
+    "Accept": "Aceptar",
+    "lower-rated suggestions not shown": "sugerencias con menor puntuación no se muestran",
+    "not accepted: they need a mitigation plan first":
+      "no aceptados: primero necesitan un plan de mitigación",
+    "Couldn't save the change. Please try again.":
+      "No se pudo guardar el cambio. Inténtalo de nuevo.",
+    "Couldn't accept the suggestions. Please try again.":
+      "No se pudieron aceptar las sugerencias. Inténtalo de nuevo.",
+    "Couldn't retry the assessment. Please try again.":
+      "No se pudo reintentar la evaluación. Inténtalo de nuevo.",
+    "Accepted risks are added to the register when you approve.":
+      "Los riesgos aceptados se añaden al registro cuando apruebas.",
+    "Model risk category": "Categoría de riesgo del modelo",
+    "Model risk level": "Nivel de riesgo del modelo",
+    "(default: 90 days after approval)": "(por defecto: 90 días después de la aprobación)",
+    "Name must be at most 200 characters": "El nombre debe tener como máximo 200 caracteres",
+    "Must be at most 1000 characters": "Debe tener como máximo 1000 caracteres",
+    "An accepted risk needs a mitigation plan": "Un riesgo aceptado necesita un plan de mitigación",
+    "Override band": "Cambiar la banda",
+    "Can't be lower than the rule minimum allows":
+      "No puede ser inferior a lo que permite el mínimo de las reglas",
+    "Risk score:": "Puntuación de riesgo:",
+    "EU AI Act questions are off. Submissions won't get a rule-based EU AI Act classification, so their risk score has no rule-based minimum and is marked \"not rule-checked\". Use cases approved from this form won't get an EU AI Act classification either.":
+      "Las preguntas de la Ley de IA de la UE están desactivadas. Los envíos no obtendrán una clasificación basada en reglas de la Ley de IA de la UE, así que su puntuación de riesgo no tiene un mínimo basado en reglas y se marca como «sin comprobación de reglas». Los casos de uso aprobados desde este formulario tampoco obtendrán una clasificación de la Ley de IA de la UE.",
+    "Used to score submissions and suggest risks. You can also generate suggested questions and field guidance text with AI.":
+      "Se usa para puntuar envíos y sugerir riesgos. También puedes generar con IA preguntas sugeridas y textos de ayuda para los campos.",
+    "Used to score submissions and suggest risks. Without a key, reviewers see the rule-based classification only. Add a key in Settings > LLM keys.":
+      "Se usa para puntuar envíos y sugerir riesgos. Sin clave, los revisores solo ven la clasificación basada en reglas. Añade una clave en Configuración > Claves LLM.",
+    // Jira incidents extension
+    "Only issues created in Jira after this is set up are imported. VerifyWise doesn't create Jira issues.":
+      "Solo se importan las incidencias creadas en Jira después de esta configuración. VerifyWise no crea incidencias en Jira.",
+    "After import, only status stays in sync, in both directions. Later changes to other Jira fields aren't copied.":
+      "Tras la importación, solo el estado se mantiene sincronizado, en ambos sentidos. Los cambios posteriores en otros campos de Jira no se copian.",
+    "If a Jira status move needs a field such as Resolution, VerifyWise can't make it. Those incidents show an error, and you can change the status in Jira.":
+      "Si un cambio de estado en Jira requiere un campo como Resolución, VerifyWise no puede hacerlo. Esos incidentes muestran un error y puede cambiar el estado en Jira.",
+    "Create a classic API token for the service account at id.atlassian.com. Scoped tokens aren't supported.":
+      "Cree un token de API clásico para la cuenta de servicio en id.atlassian.com. Los tokens con ámbito no son compatibles.",
+    "Stored. Enter a new token to replace it":
+      "Guardado. Introduzca un token nuevo para reemplazarlo",
+    "API token": "Token de API",
+    "Choose": "Elegir",
+    "Choose a project and issue type to map statuses.":
+      "Elija un proyecto y un tipo de incidencia para asignar los estados.",
+    "Choose a use case": "Elegir un caso de uso",
+    "Choose an incident type": "Elegir un tipo de incidente",
+    "Choose an issue type": "Elegir un tipo de incidencia",
+    "Connection": "Conexión",
+    "Could not load the Jira incidents settings. Reload the page to try again.":
+      "No se pudo cargar la configuración de incidentes de Jira. Recargue la página para intentarlo de nuevo.",
+    "Could not load the sync activity.": "No se pudo cargar la actividad de sincronización.",
+    "Defaults for imported incidents": "Valores predeterminados de los incidentes importados",
+    "Import only issues with this label. Leave empty to import every issue.":
+      "Importar solo las incidencias con esta etiqueta. Déjelo vacío para importar todas.",
+    "Issue type": "Tipo de incidencia",
+    "Jira project": "Proyecto de Jira",
+    "Jira site URL": "URL del sitio de Jira",
+    "Jira to VerifyWise": "De Jira a VerifyWise",
+    "VerifyWise to Jira": "De VerifyWise a Jira",
+    "No sync activity yet": "Aún no hay actividad de sincronización",
+    "Save the connection to choose a Jira project.":
+      "Guarde la conexión para elegir un proyecto de Jira.",
+    "Save the connection to map Jira priorities.":
+      "Guarde la conexión para asignar las prioridades de Jira.",
+    "Service account email": "Correo de la cuenta de servicio",
+    "Settings saved.": "Configuración guardada.",
+    "Severity mapping": "Asignación de gravedad",
+    "Status mapping": "Asignación de estados",
+    "Sync activity": "Actividad de sincronización",
+    "Which issues to import": "Qué incidencias importar",
+    "Label": "Etiqueta",
+    "Jira status": "Estado de Jira",
+    "VerifyWise status": "Estado de VerifyWise",
+    "Jira priority": "Prioridad de Jira",
+    "Don't change Jira": "No cambiar Jira",
+    "Event": "Evento",
+    "Jira issue": "Incidencia de Jira",
+    "Imported": "Importado",
+    "Status from Jira": "Estado desde Jira",
+    "Status to Jira": "Estado hacia Jira",
+    "Conflict": "Conflicto",
+    "Deleted in Jira": "Eliminado en Jira",
+    "Sync error": "Error de sincronización",
+    "Jira left unchanged": "Jira sin cambios",
+    "Enter your Jira site URL": "Introduzca la URL de su sitio de Jira",
+    "Enter the service account email": "Introduzca el correo de la cuenta de servicio",
+    "Enter the API token": "Introduzca el token de API",
+    "Enter the API token again after changing the site URL or email":
+      "Vuelva a introducir el token de API después de cambiar la URL del sitio o el correo",
+    "Map every Jira status": "Asigne cada estado de Jira",
+    "Enter the reporter": "Introduzca el notificador",
+    "Could not save the settings.": "No se pudo guardar la configuración.",
+    "Could not test the connection to Jira.": "No se pudo probar la conexión con Jira.",
+    "Could not load the options from Jira.": "No se pudieron cargar las opciones de Jira.",
+    "Import new Jira issues and sync status on a schedule":
+      "Importar nuevas incidencias de Jira y sincronizar estados según una programación",
+    "Each sync imports issues created since the last one, then syncs status both ways.":
+      "Cada sincronización importa las incidencias creadas desde la anterior y luego sincroniza los estados en ambos sentidos.",
     // Agent Control monitor only mode
     "Enforce": "Aplicar",
     "Monitor only": "Solo supervisión",
@@ -21732,6 +22245,15 @@ export const translations: Record<string, Record<string, string>> = {
     "Server switched on": "Servidor activado",
     "The server offered no tools": "El servidor no ofreció herramientas",
     "One tool found": "Se encontró una herramienta",
+    "Tools updated": "Herramientas actualizadas",
+    "No changes": "Sin cambios",
+    "View tools": "Ver herramientas",
+    "{count} tools found": "Se encontraron {count} herramientas",
+    "{count} new": "{count} nueva(s)",
+    "{count} removed": "{count} eliminada(s)",
+    "{count} changed": "{count} modificada(s)",
+    "View {count} tools": "Ver las {count} herramientas",
+    "View one tool": "Ver la herramienta",
     "Discovery failed": "Error en la detección",
     "Server saved, but discovery failed": "Servidor guardado, pero la detección falló",
     "Server switched on, but discovery failed": "Servidor activado, pero la detección falló",
@@ -22050,6 +22572,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Agent not found": "Agente no encontrado",
     "Could not load this agent.": "No se pudo cargar este agente.",
     "Back to AI agents": "Volver a agentes de IA",
+    "Back to MCP servers": "Volver a servidores MCP",
     "Accountable owners": "Propietarios responsables",
     "Manually entered": "Introducido manualmente",
     "Inactive 30+ days": "Inactivo desde hace más de 30 días",
@@ -22068,7 +22591,7 @@ export const translations: Record<string, Record<string, string>> = {
       "No se encontraron agentes. Asegúrese de que la extensión Azure AI Foundry esté habilitada y configurada.",
     "Sync failed. Check that the Azure AI Foundry extension is enabled and configured.":
       "La sincronización falló. Compruebe que la extensión Azure AI Foundry esté habilitada y configurada.",
-    "Agent review status updated.": "Estado de revisión del agente actualizado.",
+    "Agent updated.": "Agente actualizado.",
     "Agent updated successfully.": "Agente actualizado correctamente.",
     "Agent added successfully.": "Agente añadido correctamente.",
     "Agent deleted successfully.": "Agente eliminado correctamente.",
@@ -22079,12 +22602,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Description cannot exceed 32,767 characters.":
       "La descripción no puede superar los 32.767 caracteres.",
     "Description is required.": "La descripción es obligatoria.",
-    "The selected use case is no longer available.":
-      "El caso de uso seleccionado ya no está disponible.",
-    "The selected affected model is no longer available.":
-      "El modelo afectado seleccionado ya no está disponible.",
-    "The selected owner is no longer available.":
-      "El responsable seleccionado ya no está disponible.",
     "Description must be at least 5 characters.":
       "La descripción debe tener al menos 5 caracteres.",
     "Edit agent": "Editar agente",
@@ -22095,6 +22612,9 @@ export const translations: Record<string, Record<string, string>> = {
     "Review status changed": "Estado de revisión cambiado",
     "Linked to a model in the inventory": "Vinculado a un modelo del inventario",
     "Unlinked from its model": "Desvinculado de su modelo",
+    "Linked to a use case": "Vinculado a un caso de uso",
+    "Unlinked from its use case": "Desvinculado de su caso de uso",
+    "Updated description": "Descripción actualizada",
     'Updated name: "{from}" → "{to}"': "Nombre actualizado: «{from}» → «{to}»",
     "Updated name": "Nombre actualizado",
     'Updated type: "{from}" → "{to}"': "Tipo actualizado: «{from}» → «{to}»",
@@ -22136,7 +22656,6 @@ export const translations: Record<string, Record<string, string>> = {
     "LLM Evals": "Evaluaciones de LLM",
     "Shadow AI": "IA en la sombra",
     "Shadow AI detection": "Detección de IA en la sombra",
-    "AI Training Registry": "Registro de formaciones de IA",
     "Plugins": "Complementos",
     "Save": "Guardar",
     "Saving...": "Guardando...",
@@ -22177,12 +22696,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Add vendor risk": "Añadir riesgo de proveedor",
     "Add new vendor": "Añadir nuevo proveedor",
     "Add new policy": "Añadir nueva política",
-    "Add new task": "Añadir nueva tarea",
-    "Add new training": "Añadir nueva formación",
-    "Add new dataset": "Añadir nuevo conjunto de datos",
     "Add new model": "Añadir nuevo modelo",
-    "Add new incident": "Añadir nuevo incidente",
-    "Add new workflow": "Añadir nuevo flujo de trabajo",
     "Add new resource": "Añadir nuevo recurso",
     "Add a new resource": "Añadir un nuevo recurso",
     "Add new subprocessor": "Añadir nuevo subencargado",
@@ -22192,18 +22706,14 @@ export const translations: Record<string, Record<string, string>> = {
     "Create API key": "Crear clave API",
     "New experiment": "Nuevo experimento",
     "New battle": "Nueva comparación",
-    "New training": "Nueva formación",
-    "New use case": "Nuevo caso de uso",
     "New Project": "Nuevo proyecto",
     "Create new use case": "Crear nuevo caso de uso",
     "Create new framework": "Crear nuevo marco",
     "Create new policies": "Crear nuevas políticas",
-    "Create new tasks": "Crear nuevas tareas",
     "Create from templates": "Crear a partir de plantillas",
     "Create your account": "Crea tu cuenta",
     "Create your first project": "Crea tu primer proyecto",
     "Create your first use case": "Crea tu primer caso de uso",
-    "Create approval workflows": "Crear flujos de aprobación",
     "Version history": "Historial de versiones",
     "Unlink risk": "Desvincular riesgo",
     "Edit framework": "Editar marco",
@@ -22234,21 +22744,14 @@ export const translations: Record<string, Record<string, string>> = {
     "Manage frameworks": "Gestionar marcos",
     "Register new models": "Registrar nuevos modelos",
     "Record each model": "Registrar cada modelo",
-    "Log new incidents": "Registrar nuevos incidentes",
     "Track expiry dates": "Controlar fechas de caducidad",
-    "Track feedback and comments": "Seguir comentarios y observaciones",
     "Track model status": "Seguir el estado del modelo",
     "Track your progress": "Seguir tu progreso",
-    "Set due dates on tasks": "Establecer fechas de vencimiento en las tareas",
-    "Set renewal dates": "Establecer fechas de renovación",
     "Set up your organization": "Configura tu organización",
     "Link policies to controls": "Vincular políticas a controles",
     "Link to models": "Vincular a modelos",
     "Link to vendors and risks": "Vincular a proveedores y riesgos",
     "Assign owners": "Asignar responsables",
-    "Assign owners and track resolution": "Asignar responsables y seguir la resolución",
-    "Assign reviewers": "Asignar revisores",
-    "Assign training to team members": "Asignar formación a los miembros del equipo",
     "Select PDF File": "Seleccionar archivo PDF",
     "Select classification": "Seleccionar clasificación",
     "Select type": "Seleccionar tipo",
@@ -22262,7 +22765,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Share view": "Compartir vista",
     "Complete a risk assessment": "Completar una evaluación de riesgos",
     "Yes": "Sí",
-    "Later": "Más tarde",
     "Back to policies": "Volver a políticas",
     "Active": "Activo",
     "Active only": "Solo activos",
@@ -22277,7 +22779,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Pending": "Pendiente",
     "Approved": "Aprobado",
     "Approved by": "Aprobado por",
-    "APPROVED BY": "APROBADO POR",
     "Rejected": "Rechazado",
     "Accepted": "Aceptado",
     "Archived": "Archivado",
@@ -22362,10 +22863,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Date": "Fecha",
     "Date detected": "Fecha de detección",
     "Date generated": "Fecha de generación",
-    "Date updated": "Fecha de actualización",
-    "DATE UPDATED": "FECHA DE ACTUALIZACIÓN",
     "Due date": "Fecha de vencimiento",
-    "Due today": "Vence hoy",
     "No default": "Sin valor predeterminado",
     "No due date": "Sin fecha de vencimiento",
     "Expiry": "Caducidad",
@@ -22379,7 +22877,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Last activity": "Última actividad",
     "LAST ACTIVITY": "ÚLTIMA ACTIVIDAD",
     "Occurred date": "Fecha de ocurrencia",
-    "OCCURRED DATE": "FECHA DE OCURRENCIA",
     "Next review": "Próxima revisión",
     "Next Review": "Próxima revisión",
     "Next review date": "Fecha de próxima revisión",
@@ -22403,7 +22900,6 @@ export const translations: Record<string, Record<string, string>> = {
     "APPROVER": "APROBADOR",
     "Reporter": "Notificador",
     "Reviewer": "Revisor",
-    "Creator": "Creador",
     "Category": "Categoría",
     "Categories": "Categorías",
     "Classification": "Clasificación",
@@ -22412,7 +22908,6 @@ export const translations: Record<string, Record<string, string>> = {
     "TYPE": "TIPO",
     "Tags": "Etiquetas",
     "Title": "Título",
-    "TITLE": "TÍTULO",
     "Version": "Versión",
     "VERSION": "VERSIÓN",
     "Version change log": "Registro de cambios de versión",
@@ -22420,13 +22915,11 @@ export const translations: Record<string, Record<string, string>> = {
     "Location": "Ubicación",
     "LOCATION": "UBICACIÓN",
     "Department": "Departamento",
-    "DEPARTMENT": "DEPARTAMENTO",
     "Duration": "Duración",
     "DURATION": "DURACIÓN",
     "Entity": "Entidad",
     "ENTITY": "ENTIDAD",
     "People": "Personas",
-    "PEOPLE": "PERSONAS",
     "Permissions": "Permisos",
     "PERMISSIONS": "PERMISOS",
     "Provider": "Proveedor",
@@ -22478,11 +22971,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Linked Controls": "Controles vinculados",
     "Training": "Formación",
     "Training name": "Nombre de la formación",
-    "TRAINING NAME": "NOMBRE DE LA FORMACIÓN",
     "Training status": "Estado de la formación",
     "Trainings": "Formaciones",
-    "Incident ID": "ID del incidente",
-    "INCIDENT ID": "ID DEL INCIDENTE",
     "Incident status": "Estado del incidente",
     "Incidents": "Incidentes",
     "Resource name": "Nombre del recurso",
@@ -22506,16 +22996,11 @@ export const translations: Record<string, Record<string, string>> = {
     "Controls progress": "Progreso de los controles",
     "Controls topics": "Temas de los controles",
     "Approval status": "Estado de aprobación",
-    "Approval Status": "Estado de aprobación",
     "Business criticality": "Criticidad para el negocio",
     "Data sensitivity": "Sensibilidad de los datos",
-    "Steps count": "Número de pasos",
-    "STEPS COUNT": "NÚMERO DE PASOS",
     "Task": "Tarea",
     "Task list": "Lista de tareas",
     "Task management": "Gestión de tareas",
-    "Task Management": "Gestión de tareas",
-    "Task overview": "Resumen de tareas",
     "PII": "PII",
     "PII detected": "PII detectada",
     "PII types": "Tipos de PII",
@@ -22653,13 +23138,10 @@ export const translations: Record<string, Record<string, string>> = {
     "Filter by framework": "Filtrar por marco",
     "Filter by Status": "Filtrar por estado",
     "Filter evidence": "Filtrar evidencia",
-    "Filter tasks": "Filtrar tareas",
     "Advanced risk filtering": "Filtrado avanzado de riesgos",
     "Search agents...": "Buscar agentes...",
     "Search datasets...": "Buscar conjuntos de datos...",
     "Search evidence...": "Buscar evidencia...",
-    "Search incidents": "Buscar incidentes",
-    "Search incidents...": "Buscar incidentes...",
     "Search models": "Buscar modelos",
     "Search models...": "Buscar modelos...",
     "Search policies": "Buscar políticas",
@@ -22667,17 +23149,12 @@ export const translations: Record<string, Record<string, string>> = {
     "Search policy templates...": "Buscar plantillas de políticas...",
     "Search reports...": "Buscar informes...",
     "Search risks...": "Buscar riesgos...",
-    "Search tasks": "Buscar tareas",
-    "Search tasks...": "Buscar tareas...",
-    "Search trainings...": "Buscar formaciones...",
     "Search vendors...": "Buscar proveedores...",
-    "Search workflows...": "Buscar flujos de trabajo...",
     "Find in document...": "Buscar en el documento...",
     "Deleted only": "Solo eliminados",
     "Loading": "Cargando",
     "Loading...": "Cargando...",
     "Loading agents...": "Cargando agentes...",
-    "Loading dashboard": "Cargando panel",
     "Loading datasets...": "Cargando conjuntos de datos...",
     "Loading frameworks...": "Cargando marcos...",
     "Loading models...": "Cargando modelos...",
@@ -22708,32 +23185,22 @@ export const translations: Record<string, Record<string, string>> = {
     "No use cases created yet": "Aún no se ha creado ningún caso de uso",
     "No vendor risks": "Sin riesgos de proveedor",
     "No vendors available": "No hay proveedores disponibles",
-    "No workflow data found for this ID.":
-      "No se encontraron datos de flujo de trabajo para este ID.",
     "No ID provided for fetching vendor data.":
       "No se proporcionó ningún ID para obtener los datos del proveedor.",
     "Unable to get subtopics": "No se pudieron obtener los subtemas",
     "Unable to get topics": "No se pudieron obtener los temas",
     "Unexpected response. Please try again.": "Respuesta inesperada. Inténtelo de nuevo.",
-    "API response missing data": "Faltan datos en la respuesta de la API",
     "Failed to fetch vendor data.": "Error al obtener los datos del proveedor.",
     "Failed to update risk data.": "Error al actualizar los datos del riesgo.",
     "Error archiving task": "Error al archivar la tarea",
     "Error creating task": "Error al crear la tarea",
-    "Error deleting task": "Error al eliminar la tarea",
     "Error loading compliance data": "Error al cargar los datos de cumplimiento",
     "Error loading controls": "Error al cargar los controles",
-    "Error restoring task": "Error al restaurar la tarea",
     "Error updating task": "Error al actualizar la tarea",
-    "Error updating task priority": "Error al actualizar la prioridad de la tarea",
-    "Error updating task status": "Error al actualizar el estado de la tarea",
-    "Cannot update training without ID": "No se puede actualizar la formación sin un ID",
     "Welcome to VerifyWise": "Te damos la bienvenida a VerifyWise",
     "Welcome": "Bienvenido",
     "Getting started": "Primeros pasos",
     "Quick start guide": "Guía de inicio rápido",
-    "Quick stats overview": "Resumen rápido de estadísticas",
-    "Quick add menu": "Menú de adición rápida",
     "Navigating the dashboard": "Navegar por el panel",
     "Installing VerifyWise": "Instalar VerifyWise",
     "Explore VerifyWise": "Explorar VerifyWise",
@@ -22749,8 +23216,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Recent activity": "Actividad reciente",
     "Recent use cases": "Casos de uso recientes",
     "Activity history": "Historial de actividad",
-    "Deadline view": "Vista de plazos",
-    "List view": "Vista de lista",
     "Executive view": "Vista ejecutiva",
     "Operations view": "Vista de operaciones",
     "Scorecard": "Cuadro de mando",
@@ -22760,28 +23225,13 @@ export const translations: Record<string, Record<string, string>> = {
     "This use case has no framework assigned": "Este caso de uso no tiene ningún marco asignado",
     "Requirements, assessment tracker, clauses and annexes, and NIST subcategories need a framework, so they are left out. The report still covers risks, models, vendors, training, policies and incidents. Assign a framework to the use case to include compliance sections.":
       "Los requisitos, el seguimiento de evaluaciones, las cláusulas y anexos y las subcategorías de NIST necesitan un marco, por lo que se omiten. El informe sigue cubriendo riesgos, modelos, proveedores, formación, políticas e incidentes. Asigne un marco al caso de uso para incluir las secciones de cumplimiento.",
-    "AI project": "Proyecto de IA",
     "AI Project": "Proyecto de IA",
-    "AI PROJECT": "PROYECTO DE IA",
     "Affected model": "Modelo afectado",
-    "AFFECTED MODEL": "MODELO AFECTADO",
     "Select model from inventory": "Seleccionar modelo del inventario",
     "Project": "Proyecto",
-    "How deadlines work": "Cómo funcionan los plazos",
-    "Tasks in a filterable table": "Tareas en una tabla filtrable",
-    "Tasks organized by due date": "Tareas organizadas por fecha de vencimiento",
-    "Tomorrow": "Mañana",
     "This week": "Esta semana",
     "This month": "Este mes",
-    "Next week": "Próxima semana",
-    "Task archived successfully": "Tarea archivada correctamente",
     "Task created successfully": "Tarea creada correctamente",
-    "Task deleted permanently": "Tarea eliminada permanentemente",
-    "Task restored successfully": "Tarea restaurada correctamente",
-    "Task updated successfully": "Tarea actualizada correctamente",
-    "Workflow archived successfully!": "¡Flujo de trabajo archivado correctamente!",
-    "Workflow created successfully!": "¡Flujo de trabajo creado correctamente!",
-    "Workflow updated successfully!": "¡Flujo de trabajo actualizado correctamente!",
     "Requirement updated successfully": "Requisito actualizado correctamente",
     "Insert risk from IBM AI Risk database": "Insertar riesgo desde la base de datos IBM AI Risk",
     "Insert risk from MIT AI Risk database": "Insertar riesgo desde la base de datos MIT AI Risk",
@@ -22799,14 +23249,10 @@ export const translations: Record<string, Record<string, string>> = {
     "Policy templates": "Plantillas de políticas",
     "What are policy templates?": "¿Qué son las plantillas de políticas?",
     "Start typing your policy content...": "Empiece a escribir el contenido de su política...",
-    "Incident lifecycle overview": "Resumen del ciclo de vida del incidente",
-    "Document root cause and response": "Documente la causa raíz y la respuesta",
-    "What counts as an incident?": "¿Qué se considera un incidente?",
     "What counts as a model?": "¿Qué se considera un modelo?",
     "What counts as evidence?": "¿Qué se considera evidencia?",
     "What to document": "Qué documentar",
     "Update your framework details below": "Actualice los detalles de su marco a continuación",
-    "Common training topics": "Temas de formación habituales",
     "Compliance and certification badges": "Insignias de cumplimiento y certificación",
     "Enter company email...": "Introduzca el correo electrónico de la empresa...",
     "Enter privacy policy URL...": "Introduzca la URL de la política de privacidad...",
@@ -23030,7 +23476,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Captcha answer": "Respuesta del captcha",
     "Click to upload": "Haga clic para cargar",
     "Close AI dependency graph modal": "Cerrar la ventana del gráfico de dependencias de IA",
-    "Close banner": "Cerrar banner",
     "Close details panel": "Cerrar panel de detalles",
     "Close dialog": "Cerrar diálogo",
     "Close drawer": "Cerrar panel",
@@ -23053,11 +23498,9 @@ export const translations: Record<string, Record<string, string>> = {
     "Confirm action": "Confirmar acción",
     "Confirm new password": "Confirmar nueva contraseña",
     "Confirm owner change": "Confirmar el cambio de propietario",
-    "Confirm password": "Confirmar contraseña",
     "Confirm save": "Confirmar guardado",
     "Confirm uninstall": "Confirmar desinstalación",
     "Confirm Withdrawal": "Confirmar retirada",
-    "Confirm your password": "Confirme su contraseña",
     "Connect data sources": "Conectar fuentes de datos",
     "Connect external tool servers": "Conectar servidores de herramientas externas",
     "Tool discovery": "Descubrimiento de herramientas",
@@ -23080,7 +23523,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Copy response": "Copiar respuesta",
     "Copy the key below. It won": "Copie la clave de abajo. No se",
     "Copy to my datasets?": "¿Copiar a mis conjuntos de datos?",
-    "Create a password": "Cree una contraseña",
     "Create a use case": "Crear un caso de uso",
     "Create agent key": "Crear clave de agente",
     "Denylist for MCP server tools called through the proxy: these are always denied, even if also in the allowlist. Comma-separated; leave empty to block none.":
@@ -23212,6 +23654,11 @@ export const translations: Record<string, Record<string, string>> = {
     "Link tasks to controls or risks": "Vincular tareas a controles o riesgos",
     "Link to governance artifacts": "Vincular a artefactos de gobernanza",
     "Link to model": "Vincular al modelo",
+    "Link to use case": "Vincular al caso de uso",
+    "Link use case": "Vincular caso de uso",
+    "Select the use case this agent belongs to.":
+      "Seleccione el caso de uso al que pertenece este agente.",
+    "Unlink use case": "Desvincular caso de uso",
     "Lock": "Bloquear",
     "Login": "Iniciar sesión",
     "Logout": "Cerrar sesión",
@@ -23234,7 +23681,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Recalculating risk score": "Recalculando puntuación de riesgo",
     "Refresh link": "Actualizar enlace",
     "Refresh list": "Actualizar lista",
-    "Refresh logs": "Actualizar registros",
     "Regenerate": "Regenerar",
     "Remove all demo data from your workspace":
       "Eliminar todos los datos de demostración de tu espacio de trabajo",
@@ -23254,6 +23700,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Revoke invitation": "Revocar invitación",
     "Revoke key": "Revocar clave",
     "Revoke virtual key": "Revocar clave virtual",
+    "Revoked": "Revocado",
     "Run all": "Ejecutar todo",
     "Run first experiment": "Ejecutar primer experimento",
     "Run your first experiment": "Ejecuta tu primer experimento",
@@ -23366,10 +23813,19 @@ export const translations: Record<string, Record<string, string>> = {
     "Annex III category": "Categoría del Anexo III",
     "Any additional context about this agent": "Cualquier contexto adicional sobre este agente",
     "Any language or framework": "Cualquier lenguaje o marco",
+    "Any endpoint or model": "Cualquier endpoint o modelo",
     "API calls": "Llamadas a la API",
     "API key": "Clave de API",
     "API Key": "Clave de API",
     "API key may not be configured": "Es posible que la clave de API no esté configurada",
+    "The provider refused this model": "El proveedor rechazó este modelo",
+    "The provider refused the saved API key": "El proveedor rechazó la clave de API guardada",
+    "The provider refused this request": "El proveedor rechazó esta solicitud",
+    "Saved models": "Modelos guardados",
+    "Find a model or type its ID": "Busca un modelo o escribe su ID",
+    "Self-hosted model": "Modelo autoalojado",
+    "Search or type a model ID": "Busca o escribe un ID de modelo",
+    "Search or type an ID, e.g. openai/gpt-4o": "Busca o escribe un ID, p. ej., openai/gpt-4o",
     "API keys": "Claves de API",
     "Applicability:": "Aplicabilidad:",
     "Applicable": "Aplicable",
@@ -23672,10 +24128,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Multi-turn dataset detected": "Conjunto de datos multiturno detectado",
     "Multiple rule types": "Varios tipos de reglas",
     "Multiple tags": "Varias etiquetas",
-    "Must be at least 8 characters": "Debe tener al menos 8 caracteres",
-    "Must contain at least one uppercase letter": "Debe contener al menos una letra mayúscula",
-    "Must contain atleast one number": "Debe contener al menos un número",
-    "Must contain one special character": "Debe contener un carácter especial",
     "Name your organization": "Asigna un nombre a tu organización",
     "New bias audit": "Nueva auditoría de sesgo",
     "New chat": "Nuevo chat",
@@ -23773,7 +24225,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Registration date": "Fecha de registro",
     "Regulatory exposure": "Exposición regulatoria",
     "Release notes": "Notas de la versión",
-    "Remember for 30 days": "Recordar durante 30 días",
     "Replacement text": "Texto de reemplazo",
     "Report": "Informe",
     "Report Preview": "Vista previa del informe",
@@ -23838,7 +24289,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Scope rules to specific tools": "Limitar las reglas a herramientas específicas",
     "Score": "Puntuación",
     "Scorers": "Evaluadores",
-    "Search and filter": "Buscar y filtrar",
     "Search articles...": "Buscar artículos...",
     "Search audits...": "Buscar auditorías...",
     "Search battles...": "Buscar enfrentamientos...",
@@ -23853,7 +24303,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Search from the risk database:": "Buscar en la base de datos de riesgos:",
     "Search guardrails...": "Buscar barreras de protección...",
     "Search icons...": "Buscar iconos...",
-    "Search logs...": "Buscar registros...",
     "Search organizations...": "Buscar organizaciones...",
     "Search projects...": "Buscar proyectos...",
     "Search scans...": "Buscar análisis...",
@@ -23993,7 +24442,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Website": "Sitio web",
     "Weight": "Peso",
     "What": "Qué",
-    "What appears here": "Qué aparece aquí",
     "What changed?": "¿Qué ha cambiado?",
     "What does the vendor provide?": "¿Qué proporciona el proveedor?",
     "What gets detected?": "¿Qué se detecta?",
@@ -24006,7 +24454,6 @@ export const translations: Record<string, Record<string, string>> = {
     "What type of entity will this form create?": "¿Qué tipo de entidad creará este formulario?",
     "What's new?": "¿Qué hay de nuevo?",
     "Who is a Signatory?": "¿Quién es un firmante?",
-    "Wise": "Wise",
     "Wise Search": "Wise Search",
     "Word document": "Documento de Word",
     "Workflow title": "Título del flujo de trabajo",
@@ -24017,8 +24464,6 @@ export const translations: Record<string, Record<string, string>> = {
     "You can use": "Puedes usar",
     "Your app": "Tu aplicación",
     "Your name": "Tu nombre",
-    "Your organization name": "El nombre de tu organización",
-    "Your surname": "Tus apellidos",
     "No AI models linked to this project yet":
       "Aún no hay modelos de IA vinculados a este proyecto",
     "No alerts have been triggered yet.": "Aún no se ha activado ninguna alerta.",
@@ -24041,6 +24486,8 @@ export const translations: Record<string, Record<string, string>> = {
     "No label": "Sin etiqueta",
     "No linked items found.": "No se han encontrado elementos vinculados.",
     "No models found": "No se han encontrado modelos",
+    "Updating model list…": "Actualizando la lista de modelos…",
+    "Choose a judge model to save this scorer": "Elija un modelo juez para guardar este evaluador",
     "No models match your filters.": "Ningún modelo coincide con tus filtros.",
     "No more questions.": "No hay más preguntas.",
     "No policies found": "No se han encontrado políticas",
@@ -24138,9 +24585,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Enter vendor name": "Introduce el nombre del proveedor",
     "Enter vendor website": "Introduce el sitio web del proveedor",
     "Enter workflow title": "Introduce el título del flujo de trabajo",
-    "Enter your email": "Introduce tu correo electrónico",
     "Enter your organization name": "Introduce el nombre de tu organización",
-    "Enter your password": "Introduce tu contraseña",
     "Evaluate conversational experiences": "Evaluar experiencias conversacionales",
     "Evaluate retrieval-augmented generation": "Evaluar la generación aumentada por recuperación",
     "Explain the relationship to AI system": "Explica la relación con el sistema de IA",
@@ -24170,7 +24615,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Loading form data": "Cargando datos del formulario",
     "Loading form data...": "Cargando datos del formulario...",
     "Loading graph...": "Cargando grafo...",
-    "Loading logs...": "Cargando registros...",
     "Loading policies...": "Cargando políticas...",
     "Loading question data...": "Cargando datos de la pregunta...",
     "Loading roles...": "Cargando roles...",
@@ -24186,7 +24630,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Map to entity field": "Asignar al campo de entidad",
     "Measure disparate impact": "Medir el impacto dispar",
     "Monitor costs and enforce budgets": "Supervisar costes y aplicar presupuestos",
-    "Monitor for issues": "Supervisar incidencias",
     "Monitor risk trends and patterns": "Supervisar tendencias y patrones de riesgo",
     "Monitor your project": "Supervisa tu proyecto",
     "Notify the right people": "Notificar a las personas adecuadas",
@@ -24820,7 +25263,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Back to Admin Panel": "Volver al panel de administración",
     "Back to My Plugins": "Volver a mis complementos",
     "Back to home": "Volver al inicio",
-    "Back to log in": "Volver al inicio de sesión",
     "Base commit SHA (older)": "SHA del commit base (anterior)",
     "Basic settings": "Configuración básica",
     "Batch defaults (apply to all files)":
@@ -24839,12 +25281,10 @@ export const translations: Record<string, Record<string, string>> = {
     "Calculate your AI risk classification": "Calcula tu clasificación de riesgo de IA",
     "Categories of harm": "Categorías de daño",
     "Change history": "Historial de cambios",
-    "Check your email": "Revisa tu correo electrónico",
     "Choice": "Opción",
     "Choice scores": "Puntuaciones de las opciones",
     "Classification and scope": "Clasificación y alcance",
     "Clear search": "Borrar búsqueda",
-    "Click to resend": "Haz clic para reenviar",
     "Click to upload CSV file": "Haz clic para subir un archivo CSV",
     "Column mapping": "Asignación de columnas",
     "Command Palette Error": "Error de la paleta de comandos",
@@ -24871,23 +25311,31 @@ export const translations: Record<string, Record<string, string>> = {
     "Copied!": "¡Copiado!",
     "Copy": "Copiar",
     "Copy results to clipboard": "Copiar resultados al portapapeles",
+    "You can rerun this experiment once it finishes.":
+      "Podrás volver a ejecutar este experimento cuando termine.",
+    "Save this experiment's settings, average scores and up to 10 samples as a JSON file. For more samples, open the experiment and use Download there.":
+      "Guardar la configuración, las puntuaciones medias y hasta 10 muestras de este experimento como archivo JSON. Para ver más muestras, abre el experimento y usa «Descargar» allí.",
+    "Copy this experiment's settings, average scores and up to 10 samples as JSON. For more samples, open the experiment and use Copy there.":
+      "Copiar la configuración, las puntuaciones medias y hasta 10 muestras de este experimento como JSON. Para ver más muestras, abre el experimento y usa «Copiar» allí.",
+    "Save this experiment's settings and each sample's input, output and scores as a JSON file. Up to the 1,000 most recent samples are included.":
+      "Guardar la configuración de este experimento y la entrada, la salida y las puntuaciones de cada muestra como archivo JSON. Se incluyen hasta las 1000 muestras más recientes.",
+    "Copy this experiment's settings and each sample's input, output and scores to the clipboard as JSON. Up to the 1,000 most recent samples are included.":
+      "Copiar al portapapeles como JSON la configuración de este experimento y la entrada, la salida y las puntuaciones de cada muestra. Se incluyen hasta las 1000 muestras más recientes.",
+    "Start a new experiment with the same settings. This experiment is kept, and every prompt is run and scored again.":
+      "Iniciar un nuevo experimento con la misma configuración. Este experimento se conserva, y cada prompt se ejecuta y se evalúa de nuevo.",
     "Core definition test (EU AI Act)": "Prueba de definición básica (EU AI Act)",
     "Create Scorer": "Crear evaluador",
-    "Create VerifyWise user account": "Crear cuenta de usuario de VerifyWise",
     "Create a custom risk manually": "Crear un riesgo personalizado manualmente",
     "Create a new token on GitHub": "Crear un nuevo token en GitHub",
-    "Create admin account": "Crear cuenta de administrador",
     "Create form": "Crear formulario",
     "Create new automation": "Crear nueva automatización",
     "Create your first demo project": "Crea tu primer proyecto de demostración",
-    "Create your organization": "Crea tu organización",
     "Cross-ref": "Referencia cruzada",
     "Custom headers": "Encabezados personalizados",
     "Custom scorers": "Evaluadores personalizados",
     "Customize": "Personalizar",
     "DECLARATION DOCUMENT LINK": "ENLACE DEL DOCUMENTO DE DECLARACIÓN",
     "Dashboard Action Buttons (30px)": "Botones de acción del panel (30px)",
-    "Dashboard Error": "Error del panel",
     "Data preview": "Vista previa de datos",
     "Dataset metadata": "Metadatos del conjunto de datos",
     "Days before escalating": "Días antes de escalar",
@@ -24901,7 +25349,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Design": "Diseño",
     "Details": "Detalles",
     "Detected libraries": "Bibliotecas detectadas",
-    "Development Error Details:": "Detalles del error de desarrollo:",
     "Development stage of this use case": "Etapa de desarrollo de este caso de uso",
     "Dimension breakdown": "Desglose por dimensión",
     "Dimension weights": "Pesos de las dimensiones",
@@ -24925,7 +25372,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Enter Model Name": "Introduce el nombre del modelo",
     "Entity mapping": "Asignación de entidades",
     "Entity relationships": "Relaciones entre entidades",
-    "Error Details (Development Only):": "Detalles del error (solo desarrollo):",
     "Escalate after": "Escalar después de",
     "Escalation contact": "Contacto de escalado",
     "Evaluation Metrics": "Métricas de evaluación",
@@ -25000,7 +25446,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Flagged": "Marcado",
     "Flagged rights": "Derechos marcados",
     "Forgot password": "Olvidé mi contraseña",
-    "Forgot password?": "¿Olvidaste tu contraseña?",
     "Form settings": "Configuración del formulario",
     "Form unavailable": "Formulario no disponible",
     "Format Preview": "Vista previa del formato",
@@ -25053,7 +25498,6 @@ export const translations: Record<string, Record<string, string>> = {
     "In the product": "En el producto",
     "In this article": "En este artículo",
     "Incidents for this use case": "Incidentes de este caso de uso",
-    "Include archived": "Incluir archivados",
     "Industry sector for this use case": "Sector industrial de este caso de uso",
     "Initializing chat...": "Inicializando el chat...",
     "Input": "Entrada",
@@ -25077,6 +25521,17 @@ export const translations: Record<string, Record<string, string>> = {
     "Linked Items": "Elementos vinculados",
     "Linked controls components": "Componentes de controles vinculados",
     "Linked model": "Modelo vinculado",
+    "Linked use case": "Caso de uso vinculado",
+    "Select a use case": "Seleccionar un caso de uso",
+    "What this agent does": "Qué hace este agente",
+    "No use cases": "No hay casos de uso",
+    "No models in the inventory": "No hay modelos en el inventario",
+    "Could not load models": "No se pudieron cargar los modelos",
+    "Could not load use cases": "No se pudieron cargar los casos de uso",
+    "Description must be at most {max} characters.":
+      "La descripción debe tener como máximo {max} caracteres.",
+    "All users selected": "Todos los usuarios seleccionados",
+    "No users": "No hay usuarios",
     "Linked risks": "Riesgos vinculados",
     "Live updates": "Actualizaciones en directo",
     "Loading approval workflows...": "Cargando flujos de trabajo de aprobación...",
@@ -25128,7 +25583,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Multi-Select Components": "Componentes de selección múltiple",
     "Multi-Turn Conversations": "Conversaciones de varios turnos",
     "Multi-turn mode:": "Modo de varios turnos:",
-    "My tasks only": "Solo mis tareas",
     "NIST AI RMF - Govern categories": "NIST AI RMF: categorías de gobernanza",
     "NIST AI RMF - Manage categories": "NIST AI RMF: categorías de gestión",
     "NIST AI RMF - Map categories": "NIST AI RMF: categorías de mapeo",
@@ -25198,11 +25652,9 @@ export const translations: Record<string, Record<string, string>> = {
     "No specific compliance actions needed": "No se necesitan acciones de cumplimiento específicas",
     "No status data available": "No hay datos de estado disponibles",
     "No syslog sources configured": "No hay fuentes de syslog configuradas",
-    "No tasks in this time period": "No hay tareas en este periodo",
     "No tool usage recorded": "No se ha registrado uso de herramientas",
     "No tools match the selected filters.":
       "Ninguna herramienta coincide con los filtros seleccionados.",
-    "No training data available.": "No hay datos de formación disponibles.",
     "No trend data available yet": "Aún no hay datos de tendencias disponibles",
     "No use-cases available": "No hay casos de uso disponibles",
     "No versions yet": "Aún no hay versiones",
@@ -25227,7 +25679,6 @@ export const translations: Record<string, Record<string, string>> = {
     "POST /v1/chat/completions": "POST /v1/chat/completions",
     "Params": "Parámetros",
     "Pass threshold": "Umbral de aprobación",
-    "Password reset": "Restablecimiento de contraseña",
     "Pending attach": "Adjunto pendiente",
     "Pending attach from File Manager": "Adjunto pendiente desde el gestor de archivos",
     "Pending upload": "Subida pendiente",
@@ -25265,7 +25716,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Reject": "Rechazar",
     "Reject submission": "Rechazar envío",
     "Reject this submission instead": "Rechazar este envío en su lugar",
-    "Reload Page": "Recargar página",
     "Reload now": "Recargar ahora",
     "Reminder after": "Recordatorio después de",
     "Remove step": "Eliminar paso",
@@ -25352,7 +25802,9 @@ export const translations: Record<string, Record<string, string>> = {
     "State Comparison (Hover, Active, Disabled)":
       "Comparación de estados (al pasar el cursor, activo, deshabilitado)",
     "Status breakdown": "Desglose por estado",
+    "Submission approved": "Envío aprobado",
     "Submission received": "Envío recibido",
+    "Submission rejected": "Envío rechazado",
     "Successful": "Correcto",
     "Suggested questions": "Preguntas sugeridas",
     "Summary": "Resumen",
@@ -25410,7 +25862,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Used in frameworks": "Utilizado en marcos",
     "User not found": "Usuario no encontrado",
     "Vendor scorecard (advanced)": "Cuadro de mando del proveedor (avanzado)",
-    "Verify": "Verificar",
     "Versions": "Versiones",
     "Very high risks": "Riesgos muy altos",
     "Very low risks": "Riesgos muy bajos",
@@ -25513,7 +25964,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Accepted risk": "Riesgo aceptado",
     "Access Denied": "Acceso denegado",
     "Account already exists.": "La cuenta ya existe.",
-    "Account created successfully.": "Cuenta creada correctamente.",
     "Accountability and governance": "Responsabilidad y gobernanza",
     "Accountability for AI systems": "Responsabilidad de los sistemas de IA",
     "Accuracy, robustness, cyber security": "Precisión, robustez y ciberseguridad",
@@ -25543,7 +25993,6 @@ export const translations: Record<string, Record<string, string>> = {
     "All providers": "Todos los proveedores",
     "All risk levels": "Todos los niveles de riesgo",
     "All servers": "Todos los servidores",
-    "All states": "Todos los estados",
     "All statuses": "Todos los estados",
     "All submissions": "Todos los envíos",
     "Allow request (fail-open)": "Permitir la solicitud (fallo abierto)",
@@ -25727,9 +26176,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Data quality for AI systems": "Calidad de los datos para sistemas de IA",
     "Data resources": "Recursos de datos",
     "Dataset Description": "Descripción del conjunto de datos",
-    "Dataset deleted successfully!": "¡Conjunto de datos eliminado correctamente!",
     "Dataset removed": "Conjunto de datos eliminado",
-    "Dataset updated successfully!": "¡Conjunto de datos actualizado correctamente!",
     "Datasets Used Documentation": "Documentación de los conjuntos de datos utilizados",
     "Date picker": "Selector de fecha",
     "Dr. Gorkem Cetin": "Dr. Gorkem Cetin",
@@ -25749,7 +26196,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Deployment & integration": "Despliegue e integración",
     "Describe the evidence": "Describir la evidencia",
     "Description saved": "Descripción guardada",
-    "Detailed system and audit logs": "Registros detallados del sistema y de auditoría",
     "Detailed view of specific AI tool": "Vista detallada de una herramienta de IA específica",
     "Detailed view of specific model": "Vista detallada de un modelo específico",
     "Detailed view of specific scan results":
@@ -26080,7 +26526,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Incident archived successfully.": "Incidente archivado correctamente.",
     "Incident details": "Detalles del incidente",
     "Incident management details": "Detalles de la gestión de incidentes",
-    "Incident updated successfully!": "¡Incidente actualizado correctamente!",
     "This incident was changed by someone else since you opened it. The form now shows their changes with your edits kept: save again to apply your edits.":
       "Otra persona modificó este incidente después de que lo abrieras. El formulario muestra ahora sus cambios y conserva los tuyos: guarda de nuevo para aplicar tus cambios.",
     "Someone else also changed: {fields}. Saving again will replace their values with yours.":
@@ -26096,7 +26541,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Intended use of the model": "Uso previsto del modelo",
     "Inter": "Inter",
     "Internal Approval Record": "Registro de aprobación interna",
-    "Internal Server Error": "Error interno del servidor",
     "Internal audit": "Auditoría interna",
     "Internal only": "Solo interno",
     "Internal organization": "Organización interna",
@@ -26143,7 +26587,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Loading risks and evidence...": "Cargando riesgos y evidencia...",
     "Local": "Local",
     "Local provider removed": "Proveedor local eliminado",
-    "Login successful.": "Inicio de sesión correcto.",
     "Long text": "Texto largo",
     "Low (0-25)": "Bajo (0-25)",
     "Low / Minimal": "Bajo / Mínimo",
@@ -26264,11 +26707,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Needs legal review": "Requiere revisión legal",
     "Negligible": "Insignificante",
     "Netskope (JSON-in-syslog)": "Netskope (JSON-in-syslog)",
-    "Network error during login.": "Error de red durante el inicio de sesión.",
     "New Dataset": "Nuevo conjunto de datos",
-    "New dataset added successfully!": "¡Nuevo conjunto de datos añadido correctamente!",
     "New evidence added successfully!": "¡Nueva evidencia añadida correctamente!",
-    "New incident added successfully!": "¡Nuevo incidente añadido correctamente!",
     "New model inventory added successfully!":
       "¡Nuevo inventario de modelos añadido correctamente!",
     "New model risk added successfully!": "¡Nuevo riesgo del modelo añadido correctamente!",
@@ -26312,7 +26752,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Organization name is required": "El nombre de la organización es obligatorio",
     "Organization name updated successfully!":
       "¡Nombre de la organización actualizado correctamente!",
-    "Organization or account already exists.": "La organización o la cuenta ya existe.",
     "Organization users": "Usuarios de la organización",
     "Organization-Level Reports (ISO)": "Informes a nivel de organización (ISO)",
     "Organization-wide framework": "Marco para toda la organización",
@@ -26342,9 +26781,12 @@ export const translations: Record<string, Record<string, string>> = {
     "Persons with disabilities": "Personas con discapacidad",
     "Plan Adherence": "Cumplimiento del plan",
     "Plan Quality": "Calidad del plan",
+    "Planning Quality": "Calidad de la planificación",
+    "Bias (lower is better)": "Sesgo (más bajo es mejor)",
+    "Toxicity (lower is better)": "Toxicidad (más bajo es mejor)",
+    "Hallucination (lower is better)": "Alucinación (más bajo es mejor)",
     "Please enter a token": "Introduce un token",
     "Please enter a token to test": "Introduce un token para probar",
-    "Please enter an email address": "Introduce una dirección de correo electrónico",
     "Please login again to continue.": "Vuelve a iniciar sesión para continuar.",
     "Please select a provider and model": "Selecciona un proveedor y un modelo",
     "Please select a valid image file": "Selecciona un archivo de imagen válido",
@@ -26368,7 +26810,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Problem definition & planning": "Definición del problema y planificación",
     "Proceed": "Continuar",
     "Proceed with conditions": "Continuar con condiciones",
-    "Processing": "Procesando",
     "Product Docs": "Documentación del producto",
     "Prohibited AI system": "Sistema de IA prohibido",
     "Project / Organization": "Proyecto / Organización",
@@ -26416,7 +26857,6 @@ export const translations: Record<string, Record<string, string>> = {
     "References to AI models in the codebase": "Referencias a modelos de IA en el código",
     "Registered": "Registrado",
     "Registration Information Maintenance": "Mantenimiento de la información de registro",
-    "Registration failed.": "Error en el registro.",
     "Regulatory": "Normativo",
     "Regulatory Training and Response Procedures":
       "Formación normativa y procedimientos de respuesta",
@@ -26585,7 +27025,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Summarize use cases": "Resumir casos de uso",
     "Sunday": "Domingo",
     "Super Admin": "Superadministrador",
-    "Super-admin login successful.": "Inicio de sesión de superadministrador correcto.",
     "Superseded": "Sustituido",
     "Supplier agreements for AI": "Acuerdos con proveedores para la IA",
     "Suppress": "Suprimir",
@@ -26644,8 +27083,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Track": "Seguir",
     "Track progress": "Seguir el progreso",
     "Track status": "Seguir el estado",
-    "Tracked events across your organization": "Eventos rastreados en su organización",
-    "Training deleted successfully!": "¡Formación eliminada correctamente!",
     "Training details": "Detalles de la formación",
     "Transparency & user information": "Transparencia e información al usuario",
     "Transparency and Explainability Evaluation": "Evaluación de transparencia y explicabilidad",
@@ -26668,6 +27105,7 @@ export const translations: Record<string, Record<string, string>> = {
     "USE CASE": "CASO DE USO",
     "USER (ID)": "USUARIO (ID)",
     "Ulas Ozguven": "Ulas Ozguven",
+    "Ioana Polmolea": "Ioana Polmolea",
     "Unacceptable risk": "Riesgo inaceptable",
     "Unclear": "Poco claro",
     "Unexpected Impact Integration": "Integración de impacto inesperado",
@@ -26743,7 +27181,13 @@ export const translations: Record<string, Record<string, string>> = {
     "Workflow": "Flujo de trabajo",
     "Yes/No": "Sí/No",
     "You are ready to work with VerifyWise": "Ya está listo para trabajar con VerifyWise",
-    "Your changes have been saved.": "Sus cambios se han guardado.",
+    "Your approval is recorded.": "Tu aprobación se ha registrado.",
+    "Your approval is recorded. Waiting on 1 more approver for this step.":
+      "Tu aprobación se ha registrado. Falta 1 aprobador más en este paso.",
+    "Your approval is recorded. Waiting on {count} more approvers for this step.":
+      "Tu aprobación se ha registrado. Faltan {count} aprobadores más en este paso.",
+    "Your approval is recorded. The request moved to the next step.":
+      "Tu aprobación se ha registrado. La solicitud pasó al siguiente paso.",
     "Your new task has been added.": "Su nueva tarea se ha añadido.",
     "Your report is being generated.": "Su informe se está generando.",
     "Add tags": "Añadir etiquetas",
@@ -26773,39 +27217,29 @@ export const translations: Record<string, Record<string, string>> = {
     "AI-generated": "Generado por IA",
     "AI-reviewed": "Revisado por IA",
     "AI-suggested": "Sugerido por IA",
-    "Action audit trail": "Registro de auditoría de acciones",
     "Action type": "Tipo de acción",
-    "Actions by category": "Acciones por categoría",
-    "Actions by state": "Acciones por estado",
     "Add Rule": "Añadir regla",
     "Add or hide dashboard tabs": "Añadir u ocultar pestañas del panel",
     "Add review notes (optional)...": "Añadir notas de revisión (opcional)...",
     "Adequate Evidence": "Evidencia adecuada",
     "Alignment with the control": "Alineación con el control",
-    "All AI content": "Todo el contenido de IA",
-    "All actors": "Todos los actores",
-    "All caught up!": "¡Todo al día!",
     "Analyzer abstained": "El analizador se abstuvo",
     "Apply all": "Aplicar todo",
     "Approved and executed": "Aprobado y ejecutado",
     "At Risk": "En riesgo",
     "At risk": "En riesgo",
-    "Audit log": "Registro de auditoría",
-    "Audit readiness": "Preparación para auditoría",
     "Authority": "Autoridad",
     "Auto-Approve": "Aprobar automáticamente",
     "Auto-Reject": "Rechazar automáticamente",
-    "Auto-approve rate": "Tasa de aprobación automática",
     "Automation": "Automatización",
     "Automation Details": "Detalles de la automatización",
     "Avg confidence": "Confianza media",
-    "Avg wait time": "Tiempo de espera medio",
     "By type": "Por tipo",
+    "By {name} · {date}": "Por {name} · {date}",
     "Conditions (JSON)": "Condiciones (JSON)",
     "Content": "Contenido",
     "Coverage of requirements": "Cobertura de los requisitos",
     "Create a custom rule": "Crear una regla personalizada",
-    "Daily volume": "Volumen diario",
     "Dashboard tabs": "Pestañas del panel",
     "Dataset Details": "Detalles del conjunto de datos",
     "Decision": "Decisión",
@@ -26816,7 +27250,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Evidence Quality Details": "Detalles de la calidad de la evidencia",
     "Explicit dates": "Fechas explícitas",
     "Export CSV": "Exportar CSV",
-    "Filter by actor:": "Filtrar por actor:",
     "Hide tab": "Ocultar pestaña",
     "How current the evidence is": "Cómo de actualizada está la evidencia",
     "Incident Details": "Detalles del incidente",
@@ -26824,19 +27257,14 @@ export const translations: Record<string, Record<string, string>> = {
     "Loading analysis...": "Cargando análisis...",
     "Loading heatmap...": "Cargando mapa de calor...",
     "Low Quality Evidence": "Evidencia de baja calidad",
-    "Main dashboard with metrics and activity": "Panel principal con métricas y actividad",
     "Model Details": "Detalles del modelo",
     "Modified": "Modificado",
     "Named owner": "Responsable designado",
     "Needs Work": "Necesita mejoras",
     "Needs work": "Necesita mejoras",
-    "No AI-generated content pending review.":
-      "No hay contenido generado por IA pendiente de revisión.",
     "No AI-generated content tracked yet.": "Aún no se ha rastreado contenido generado por IA.",
     "No Evidence": "Sin evidencia",
     "No approval rules configured.": "No hay reglas de aprobación configuradas.",
-    "No audit entries found": "No se encontraron entradas de auditoría",
-    "No audit trail entries found": "No se encontraron entradas en el registro de auditoría",
     "No compliance areas detected.": "No se detectaron áreas de cumplimiento.",
     "No control data available for gap analysis.":
       "No hay datos de control disponibles para el análisis de brechas.",
@@ -26853,19 +27281,16 @@ export const translations: Record<string, Record<string, string>> = {
     "Readiness trend": "Tendencia de preparación",
     "Ready": "Listo",
     "Recency": "Actualidad",
-    "Rejection rate": "Tasa de rechazo",
     "Reliability": "Fiabilidad",
     "Require Approval": "Requerir aprobación",
     "Reversible action": "Acción reversible",
     "Review outcomes": "Resultados de la revisión",
     "Review progress": "Progreso de la revisión",
     "Risk Details": "Detalles del riesgo",
-    "Rule engine": "Motor de reglas",
     "Select which tabs to show": "Seleccione qué pestañas mostrar",
     "Specificity": "Especificidad",
     "State": "Estado",
     "Task Details": "Detalles de la tarea",
-    "Total actions": "Total de acciones",
     "Total items": "Total de elementos",
     "Training Details": "Detalles de la formación",
     "Truncated": "Truncado",
@@ -26972,26 +27397,20 @@ export const translations: Record<string, Record<string, string>> = {
     "Use Framework Mapper": "Usar el asignador de marcos",
     "What is this scenario?": "¿Qué es este escenario?",
     "What this means for you": "Qué significa esto para usted",
-    "All AI-related training programs": "Todos los programas de formación relacionados con la IA",
     "Assessment Result": "Resultado de la evaluación",
     "Attendance Record": "Registro de asistencia",
-    "Compliance evidence linked to trainings":
-      "Evidencias de cumplimiento vinculadas a formaciones",
     "Course Completion": "Finalización del curso",
     "Delete evidence": "Eliminar evidencia",
     "MAPPED TRAININGS": "FORMACIONES ASIGNADAS",
-    "Mapped trainings": "Formaciones asignadas",
     "Next file": "Archivo siguiente",
     "No files uploaded yet.": "Aún no se han cargado archivos.",
     "Optional notes about this evidence": "Notas opcionales sobre esta evidencia",
     "Policy owner": "Responsable de la política",
     "Previous file": "Archivo anterior",
-    "Quarter (year)": "Trimestre (año)",
     "Select a training": "Seleccione una formación",
     "Select a type": "Seleccione un tipo",
     "Select policy owner": "Seleccione el responsable de la política",
     "Training Certificate": "Certificado de formación",
-    "Training Evidence Hub": "Centro de evidencias de formación",
     "Edit training": "Editar formación",
     "Update training": "Actualizar formación",
     "Create training": "Crear formación",
@@ -27030,9 +27449,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Enter your Application (client) ID": "Introduzca su ID de aplicación (cliente)",
     "Client secret": "Secreto de cliente",
     "Enter your client secret": "Introduzca su secreto de cliente",
-    "Select your organization": "Seleccione su organización",
-    "Completing sign in...": "Completando el inicio de sesión...",
-    "Redirecting to login...": "Redirigiendo al inicio de sesión...",
     "Small": "Pequeño",
     "View all risks associated with this model": "Ver todos los riesgos asociados a este modelo",
     "View all risks associated with this vendor":
@@ -27058,7 +27474,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Reject requests when budget is exceeded":
       "Rechazar solicitudes cuando se supere el presupuesto",
     "This system does not appear to be an AI system": "Este sistema no parece ser un sistema de IA",
-    "This widget failed to load properly.": "Este widget no se cargó correctamente.",
     "Type at least 2 characters to search...": "Escriba al menos 2 caracteres para buscar...",
     "AI System Scope and Impact Definition": "Definición del alcance e impacto del sistema de IA",
     "AI/ML libraries detected in this repository":
@@ -27092,20 +27507,12 @@ export const translations: Record<string, Record<string, string>> = {
     "If classified as AI, it should enter your AI inventory and follow your AI governance lifecycle.":
       "Si se clasifica como IA, debe incorporarse a su inventario de IA y seguir su ciclo de vida de gobernanza de IA.",
     "No AI models linked to this framework yet": "Aún no hay modelos de IA vinculados a este marco",
-    "No approval workflows yet. Define review and sign-off chains for your governance process.":
-      "Aún no hay flujos de trabajo de aprobación. Defina las cadenas de revisión y validación para su proceso de gobernanza.",
     "No datasets found. Add a dataset to start tracking your AI training and validation data.":
       "No se encontraron conjuntos de datos. Añada un conjunto de datos para empezar a hacer seguimiento de sus datos de entrenamiento y validación de IA.",
     "No evidence yet. Upload documents that prove compliance with each requirement.":
       "Aún no hay evidencia. Suba documentos que demuestren el cumplimiento de cada requisito.",
-    "No incidents reported yet. Track and manage AI-related incidents to maintain compliance.":
-      "Aún no se han notificado incidentes. Haga seguimiento y gestione los incidentes relacionados con la IA para mantener el cumplimiento.",
     "No models registered yet. Maintain a complete inventory of all AI models your organization uses.":
       "Aún no hay modelos registrados. Mantenga un inventario completo de todos los modelos de IA que utiliza su organización.",
-    "No training records yet. Track AI governance training for your team.":
-      "Aún no hay registros de formación. Haga seguimiento de la formación en gobernanza de IA para su equipo.",
-    "No upcoming deadlines. All tasks are completed or have no due dates.":
-      "No hay fechas límite próximas. Todas las tareas están completadas o no tienen fecha de vencimiento.",
     "There are currently no model risks in this table.":
       "Actualmente no hay riesgos de modelo en esta tabla.",
     "Failed to save requirement changes. Please try again.":
@@ -27114,12 +27521,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Seleccione un proyecto para ver las evaluaciones",
     "Please select a project to view compliance data":
       "Seleccione un proyecto para ver los datos de cumplimiento",
-    "Create a new use case by filling in the following details":
-      "Cree un nuevo caso de uso rellenando los siguientes datos",
     "Manage AI use cases, projects, and their lifecycle stages.":
       "Gestione los casos de uso de IA, los proyectos y sus etapas del ciclo de vida.",
-    "Open any task and set a due date. It will automatically appear in the correct deadline group on this view.":
-      "Abra cualquier tarea y establezca una fecha de vencimiento. Aparecerá automáticamente en el grupo de fechas límite correcto en esta vista.",
     "View and manage compliance tasks assigned to your team.":
       "Vea y gestione las tareas de cumplimiento asignadas a su equipo.",
     "Identify, assess, and track risks across all AI systems.":
@@ -27138,8 +27541,6 @@ export const translations: Record<string, Record<string, string>> = {
       "Servicios de terceros que tratan datos en su nombre",
     "Comma-separated column names containing PII":
       "Nombres de columnas separados por comas que contienen PII",
-    "Manage training and evaluation datasets used by your models. Track data lineage, classification, and compliance metadata.":
-      "Gestione los conjuntos de datos de entrenamiento y evaluación que utilizan sus modelos. Haga seguimiento del linaje de datos, la clasificación y los metadatos de cumplimiento.",
     "Each discovered agent can be confirmed, rejected, or linked to a model in your inventory for compliance tracking.":
       "Cada agente descubierto puede confirmarse, rechazarse o vincularse a un modelo de su inventario para el seguimiento del cumplimiento.",
     "Compliance evidence and documentation for audits":
@@ -27150,22 +27551,12 @@ export const translations: Record<string, Record<string, string>> = {
       "Si ninguna plantilla encaja, cree una política desde cero en la pestaña de políticas. Siempre puede volver aquí como referencia.",
     "Pre-built templates to create new policies from":
       "Plantillas predefinidas para crear nuevas políticas",
-    "Any unintended AI behavior, data breach, biased output, system outage, or safety concern. Log them early, even if minor.":
-      "Cualquier comportamiento no intencionado de la IA, violación de datos, resultado sesgado, interrupción del sistema o problema de seguridad. Regístrelos pronto, aunque sean menores.",
-    "A structured overview of all approval processes, including steps, conditions, and current status.":
-      "Una visión estructurada de todos los procesos de aprobación, incluidos los pasos, las condiciones y el estado actual.",
-    "Define multi-step review chains that run automatically when controls, evidence, or policies need sign-off.":
-      "Defina cadenas de revisión de varios pasos que se ejecutan automáticamente cuando los controles, la evidencia o las políticas necesitan validación.",
-    "Reviewers can approve, reject, or request changes with detailed comments. The full audit trail is preserved.":
-      "Los revisores pueden aprobar, rechazar o solicitar cambios con comentarios detallados. Se conserva el registro de auditoría completo.",
     "Regulatory requirements and the controls implementing them":
       "Requisitos normativos y los controles que los implementan",
     "This page provides an overview of available AI and data governance frameworks to your organization.":
       "Esta página ofrece una visión general de los marcos de gobernanza de IA y datos disponibles para su organización.",
     "Set up a new organizational framework below":
       "Configure un nuevo marco organizativo a continuación",
-    "Some certifications and training expire. Record renewal dates so you can keep track of upcoming expirations.":
-      "Algunas certificaciones y formaciones caducan. Registre las fechas de renovación para poder hacer seguimiento de los próximos vencimientos.",
     "Generate a comprehensive report across all use cases, vendors, models, and organization-wide metrics.":
       "Genere un informe completo de todos los casos de uso, proveedores, modelos y métricas de toda la organización.",
     "Generate a report for a specific AI use case with its associated risks, compliance status, and assessments.":
@@ -27225,8 +27616,6 @@ export const translations: Record<string, Record<string, string>> = {
       "Cada caso de uso puede clasificarse por nivel de riesgo (alto, limitado, mínimo) para determinar qué controles de cumplimiento se aplican.",
     "Enable this option to automatically fill in the Requirements and Controls questions with AI-generated answers, helping you save time. You can review and edit these answers anytime.":
       "Active esta opción para rellenar automáticamente las preguntas de requisitos y controles con respuestas generadas por IA, ayudándole a ahorrar tiempo. Puede revisar y editar estas respuestas en cualquier momento.",
-    "End-to-end management of the AI incident lifecycle. You can log events in full detail, analyze root causes, and document corrective and preventive actions.":
-      "Gestión de extremo a extremo del ciclo de vida de los incidentes de IA. Puede registrar los eventos con todo detalle, analizar las causas raíz y documentar las acciones correctivas y preventivas.",
     "Explain key benefits like efficiency, security, customer support, and ethical AI practices. You can also detail your AI offering functionality, use cases, and benefits to users.":
       "Explique los beneficios clave como la eficiencia, la seguridad, la atención al cliente y las prácticas éticas de IA. También puede detallar la funcionalidad de su oferta de IA, sus casos de uso y los beneficios para los usuarios.",
     "Explain the potential consequences if this risk occurs (e.g., financial, reputational, regulatory).":
@@ -27249,8 +27638,6 @@ export const translations: Record<string, Record<string, string>> = {
       "Establezca prioridades (baja, media, alta, urgente) y agrupe las tareas por estado, responsable o fecha de vencimiento para hacer seguimiento del progreso.",
     "Summarize the outcome of the review (e.g., approved, rejected, pending more info, or risk concerns identified).":
       "Resuma el resultado de la revisión (p. ej., aprobado, rechazado, pendiente de más información o con problemas de riesgo identificados).",
-    "System events, API calls, and background job results are logged automatically. Logs appear as your workspace generates activity.":
-      "Los eventos del sistema, las llamadas a la API y los resultados de los trabajos en segundo plano se registran automáticamente. Los registros aparecen a medida que su espacio de trabajo genera actividad.",
     "Templates are grouped by framework (EU AI Act, ISO 42001, etc.). Use the search bar to find templates relevant to your compliance needs.":
       "Las plantillas se agrupan por marco (EU AI Act, ISO 42001, etc.). Utilice la barra de búsqueda para encontrar plantillas relevantes para sus necesidades de cumplimiento.",
     "The marketplace tab above lists available plugins for frameworks (SOC 2, GDPR, HIPAA), integrations (Slack, Jira), and more.":
@@ -27319,6 +27706,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Lo que sus barreras de protección detectaron en este periodo",
     "Whose name and role appear on the declaration document":
       "Cuyo nombre y cargo aparecen en el documento de declaración",
+    "The provider rejected the saved API key. Enter a working key. It is saved as a new key, and an Admin can remove the old one in AI Gateway settings.":
+      "El proveedor rechazó la clave de API guardada. Introduzca una clave válida. Se guarda como una clave nueva, y un administrador puede eliminar la anterior en la configuración de AI Gateway.",
     "Your key will be saved securely for future experiments":
       "Su clave se guardará de forma segura para futuros experimentos",
     "No AI tools detected yet. Connect a data source to monitor AI tool usage.":
@@ -27647,8 +28036,6 @@ export const translations: Record<string, Record<string, string>> = {
       "Vea los análisis de repositorios anteriores y sus resultados.",
     "View request, response, and guardrail detection logs for all AI Gateway traffic.":
       "Vea los registros de solicitudes, respuestas y detecciones de barreras de protección de todo el tráfico de AI Gateway.",
-    "Watch for error-level entries that may indicate failed operations, authentication problems, or service disruptions.":
-      "Esté atento a las entradas de nivel de error que puedan indicar operaciones fallidas, problemas de autenticación o interrupciones del servicio.",
     "A project groups related evaluations for a single LLM application. Define test suites, scoring criteria, and track quality over time.":
       "Un proyecto agrupa evaluaciones relacionadas para una única aplicación LLM. Defina conjuntos de pruebas y criterios de puntuación, y haga un seguimiento de la calidad a lo largo del tiempo.",
     "A scorer defines how model outputs are graded. It can check for accuracy, relevance, tone, safety, or any custom criteria you set.":
@@ -27657,8 +28044,6 @@ export const translations: Record<string, Record<string, string>> = {
       "Política de ética de la IA, Política de gobernanza de datos, Política de gestión de riesgos de la IA, Política de respuesta a incidentes y Política de proveedores externos de IA.",
     "AI Trust Center centralizes your AI policies, certifications, and subprocessors to demonstrate responsible, transparent, and compliant AI practices.":
       "AI Trust Center centraliza sus políticas de IA, certificaciones y subencargados para demostrar unas prácticas de IA responsables, transparentes y conformes.",
-    "AI ethics, data privacy, responsible AI use, bias awareness, incident reporting procedures, and framework-specific requirements.":
-      "Ética de la IA, privacidad de los datos, uso responsable de la IA, concienciación sobre los sesgos, procedimientos de notificación de incidentes y requisitos específicos de cada marco.",
     "After adding a key, create endpoints in the Endpoints tab. Each endpoint uses one API key to authenticate with the LLM provider.":
       "Después de añadir una clave, cree endpoints en la pestaña Endpoints. Cada endpoint utiliza una clave de API para autenticarse con el proveedor del LLM.",
     "After installing a plugin, add your project endpoint and API key in the plugin settings. Then click Sync on this page to pull in your agents.":
@@ -27669,8 +28054,6 @@ export const translations: Record<string, Record<string, string>> = {
       "Aplique barreras de protección de forma global o restríjalas a herramientas MCP específicas. Por ejemplo, bloquee la PII solo al invocar herramientas de consulta de bases de datos.",
     "Apply the same scorers across different experiments to track how model quality changes over time or between configurations.":
       "Aplique los mismos evaluadores en diferentes experimentos para hacer un seguimiento de cómo cambia la calidad del modelo a lo largo del tiempo o entre configuraciones.",
-    "Assign each incident to a responsible person and track it through to resolution. A clear ownership chain speeds up response times.":
-      "Asigne cada incidente a un responsable y haga un seguimiento hasta su resolución. Una cadena de responsabilidad clara acelera los tiempos de respuesta.",
     "Choose from PII detection, content filtering, or prompt injection detection. Each rule can either block the request or mask matched content.":
       "Elija entre detección de PII, filtrado de contenido o detección de inyección de prompts. Cada regla puede bloquear la solicitud o enmascarar el contenido coincidente.",
     "Classify detected tools as approved, under review, or blocked. Set policies per tool and notify users of compliance requirements.":
@@ -27707,8 +28090,6 @@ export const translations: Record<string, Record<string, string>> = {
       "Cada ejecución de un experimento se guarda aquí con sus puntuaciones y metadatos. Ejecute el mismo conjunto de datos en diferentes modelos o configuraciones para hacer un seguimiento del progreso.",
     "Each policy can be mapped to specific compliance controls, creating an audit trail showing which policies address which requirements.":
       "Cada política puede asignarse a controles de cumplimiento específicos, creando un rastro de auditoría que muestra qué políticas abordan qué requisitos.",
-    "Each record tracks who completed what training, when, and their score. This creates an audit trail for competency requirements.":
-      "Cada registro indica quién completó qué formación, cuándo y con qué puntuación. Esto crea un rastro de auditoría para los requisitos de competencia.",
     "Each scan creates a snapshot. Compare scans to see what AI components were added, removed, or changed across your codebase.":
       "Cada análisis crea una instantánea. Compare los análisis para ver qué componentes de IA se han añadido, eliminado o modificado en su base de código.",
     "Enter a public GitHub repository URL to detect AI/ML libraries and frameworks.":
@@ -27755,8 +28136,6 @@ export const translations: Record<string, Record<string, string>> = {
       "Proporcione una descripción detallada de este paso de evaluación de la conformidad, incluyendo los objetivos, los entregables y los criterios de éxito.",
     "Record dataset name, source, size, format, and the date it was collected or last updated. Include any preprocessing steps applied.":
       "Registre el nombre, la fuente, el tamaño, el formato del conjunto de datos y la fecha en que se recopiló o actualizó por última vez. Incluya cualquier paso de preprocesamiento aplicado.",
-    "Record what happened, why it happened, the impact, and what corrective actions were taken. This builds your incident response history.":
-      "Registre qué ocurrió, por qué ocurrió, el impacto y qué acciones correctivas se tomaron. Esto construye su historial de respuesta a incidentes.",
     "Run the same test suite across different models or prompts. The arena view shows head-to-head comparisons with automated scoring.":
       "Ejecute el mismo conjunto de pruebas en diferentes modelos o prompts. La vista de arena muestra comparaciones cara a cara con puntuación automatizada.",
     "Security concerns including hardcoded API keys/secrets and model file vulnerabilities that could pose risks.":
@@ -27771,20 +28150,12 @@ export const translations: Record<string, Record<string, string>> = {
       "Establezca reglas que se activen cuando se cumplan condiciones específicas: detección de una nueva herramienta, superación de un umbral de uso o activación de indicadores de sensibilidad de los datos.",
     "Start with a blank policy or use one of the built-in templates. Fill in the details for your organization and publish when ready.":
       "Empiece con una política en blanco o utilice una de las plantillas integradas. Rellene los datos de su organización y publíquela cuando esté lista.",
-    "Tasks with due dates appear here grouped by urgency: overdue, due today, this week, and later. Complete or update tasks to clear them.":
-      "Las tareas con fecha de vencimiento aparecen aquí agrupadas por urgencia: vencidas, vencen hoy, esta semana y más adelante. Complete o actualice las tareas para descartarlas.",
     "The audit calculates performance differences across groups. See pass rates, accuracy gaps, and statistical significance scores.":
       "La auditoría calcula las diferencias de rendimiento entre los grupos. Vea las tasas de aprobación, las brechas de precisión y las puntuaciones de significancia estadística.",
-    "This registry lists all AI-related training programs available to your organization. You can view, add, and manage training details here.":
-      "Este registro enumera todos los programas de formación relacionados con la IA disponibles para su organización. Aquí puede ver, añadir y gestionar los detalles de la formación.",
     "Upload CSV or JSONL files containing prompts and expected responses. These are used to evaluate model performance across experiments.":
       "Cargue archivos CSV o JSONL que contengan prompts y respuestas esperadas. Estos se utilizan para evaluar el rendimiento del modelo en los experimentos.",
-    "Use case is a real-world scenario describing how an AI system is applied within an organization to achieve a defined purpose or outcome.":
-      "Un caso de uso es un escenario del mundo real que describe cómo se aplica un sistema de IA dentro de una organización para lograr una finalidad o un resultado definidos.",
     "Use pre-built scorers for common checks like exact match or similarity, or write your own scoring logic for domain-specific needs.":
       "Utilice evaluadores predefinidos para comprobaciones habituales como la coincidencia exacta o la similitud, o escriba su propia lógica de puntuación para necesidades específicas de su dominio.",
-    "Use the search bar and level filters above to find specific log entries. Filter by severity to focus on warnings or errors.":
-      "Utilice la barra de búsqueda y los filtros de nivel de arriba para encontrar entradas de registro específicas. Filtre por gravedad para centrarse en las advertencias o los errores.",
     "e.g. Added few-shot examples for edge cases":
       "p. ej., Se añadieron ejemplos de few-shot para casos límite",
     "e.g., Used by the backend orchestration agent":
@@ -28451,8 +28822,6 @@ export const translations: Record<string, Record<string, string>> = {
       "Durante cuánto tiempo conservar los registros de detección de las barreras de protección. Estos registros recogen cada solicitud bloqueada o enmascarada para la auditoría de cumplimiento (EU AI Act, art. 12).",
     "How would you like to get started? You can explore with sample data or begin with a clean slate.":
       "¿Cómo le gustaría empezar? Puede explorar con datos de ejemplo o comenzar desde cero.",
-    "If an account exists with this email, we'll send a password reset link":
-      "Si existe una cuenta con este correo electrónico, le enviaremos un enlace para restablecer la contraseña",
     "If you are not sure about the high risk role,&nbsp;":
       "Si no está seguro del rol de alto riesgo,&nbsp;",
     "Industry-standard benchmarks powered by DeepEval for comprehensive LLM evaluation.":
@@ -28539,8 +28908,6 @@ export const translations: Record<string, Record<string, string>> = {
       "No se encontraron casos de uso. Pruebe otro término de búsqueda o cree un nuevo caso de uso.",
     "No vendors available. Please create a vendor first to add vendor risks.":
       "No hay proveedores disponibles. Cree primero un proveedor para añadir riesgos de proveedores.",
-    "No worries, we'll send you reset instructions.":
-      "No se preocupe, le enviaremos instrucciones para restablecerla.",
     "Only administrators can generate and download reports.":
       "Solo los administradores pueden generar y descargar informes.",
     "OpenAI-compatible endpoint (LiteLLM, vLLM, Ollama, Azure OpenAI, etc.)":
@@ -28748,8 +29115,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Your custom scorer will be used instead.": "En su lugar, se usará su evaluador personalizado.",
     "Your message blocks above will be prepended as context. Type a user message below and the model will respond using your prompt template.":
       "Sus bloques de mensaje anteriores se antepondrán como contexto. Escriba un mensaje de usuario a continuación y el modelo responderá usando su plantilla de prompt.",
-    "Your password has been successfully reset. Click below to log in.":
-      "Su contraseña se ha restablecido correctamente. Haga clic abajo para iniciar sesión.",
     "Your previous submission data has been pre-filled. You can update and resubmit.":
       "Los datos de su envío anterior se han rellenado previamente. Puede actualizarlos y volver a enviarlos.",
     "A concise plan ensures employees are informed of AI system impacts in their workplace roles and rights.":
@@ -28844,8 +29209,6 @@ export const translations: Record<string, Record<string, string>> = {
       "Evalúe la relevancia y representatividad de los datos de entrada utilizados para el entrenamiento y la operación del sistema de IA.",
     "Assign competent individuals with authority to oversee AI system usage.":
       "Asigne personas competentes con autoridad para supervisar el uso del sistema de IA.",
-    "Assign governance and compliance tasks to team members. Set priorities, due dates, and track progress from creation to completion.":
-      "Asigne tareas de gobernanza y cumplimiento a los miembros del equipo. Establezca prioridades, fechas de vencimiento y haga un seguimiento del progreso desde la creación hasta la finalización.",
     "Assign mitigations, set deadlines, and track resolution progress across your portfolio.":
       "Asigne mitigaciones, establezca plazos y haga un seguimiento del progreso de la resolución en toda su cartera.",
     "Assign technical and organizational measures, along with human oversight, to ensure compliance with AI regulations and manage associated risks.":
@@ -28920,18 +29283,12 @@ export const translations: Record<string, Record<string, string>> = {
       'Haga clic en "Añadir/eliminar riesgos" para vincular riesgos de su base de datos de riesgos',
     'Click "Create use case" below to proceed with setting up this AI use case in VerifyWise.':
       'Haga clic en "Crear caso de uso" abajo para continuar con la configuración de este caso de uso de IA en VerifyWise.',
-    "Click the card again or click Total to see all datasets.":
-      "Vuelva a hacer clic en la tarjeta o haga clic en Total para ver todos los conjuntos de datos.",
     "Click the card again or click Total to see all models.":
       "Vuelva a hacer clic en la tarjeta o haga clic en Total para ver todos los modelos.",
     "Click the card again or click Total to see all policies.":
       "Vuelva a hacer clic en la tarjeta o haga clic en Total para ver todas las políticas.",
     "Click the card again or click Total to see all risks.":
       "Vuelva a hacer clic en la tarjeta o haga clic en Total para ver todos los riesgos.",
-    "Click the card again or click Total to see all tasks.":
-      "Vuelva a hacer clic en la tarjeta o haga clic en Total para ver todas las tareas.",
-    "Click the card again to see all incidents.":
-      "Vuelva a hacer clic en la tarjeta para ver todos los incidentes.",
     "Collaborate with team members by assigning owners and stakeholders to each project.":
       "Colabore con los miembros del equipo asignando responsables y partes interesadas a cada proyecto.",
     "Collaboration with notified bodies or conducting internal reviews ensures rigorous evaluation of AI system compliance.":
@@ -29090,8 +29447,6 @@ export const translations: Record<string, Record<string, string>> = {
       "Desarrolle y reevalúe periódicamente estrategias para medir los impactos del sistema de IA, incluida la supervisión de impactos inesperados.",
     "Develop the AI literacy of staff and others who operate or use AI systems on behalf of the organization.":
       "Desarrolle la alfabetización en IA del personal y de quienes operan o utilizan sistemas de IA en nombre de la organización.",
-    "Document AI-related incidents with full details including severity, impact assessment, affected parties, immediate mitigations, and planned corrective actions.":
-      "Documente los incidentes relacionados con la IA con todos los detalles, incluidos la gravedad, la evaluación de impacto, las partes afectadas, las mitigaciones inmediatas y las acciones correctivas planificadas.",
     "Document all information about the AI system, including its capabilities, limitations, and any relevant technical details.":
       "Documente toda la información sobre el sistema de IA, incluidas sus capacidades, limitaciones y cualquier detalle técnico relevante.",
     "Document and track risks associated with your vendors. Assess severity, assign owners, and define mitigation strategies for each vendor-related risk.":
@@ -29187,8 +29542,6 @@ export const translations: Record<string, Record<string, string>> = {
       "No se pudo crear la tarea. Inténtelo de nuevo.",
     "Failed to create the vendor risk. Please try again.":
       "No se pudo crear el riesgo del proveedor. Inténtelo de nuevo.",
-    "Failed to delete dataset. Please try again.":
-      "No se pudo eliminar el conjunto de datos. Inténtelo de nuevo.",
     "Failed to delete evidence. Please try again.":
       "No se pudo eliminar la evidencia. Inténtelo de nuevo.",
     "Failed to delete model inventory. Please try again.":
@@ -29201,10 +29554,6 @@ export const translations: Record<string, Record<string, string>> = {
       "No se pudo eliminar el proyecto. Inténtelo de nuevo.",
     "Failed to delete risk. It may have already been deleted or there was a network error.":
       "No se pudo eliminar el riesgo. Es posible que ya se haya eliminado o que se haya producido un error de red.",
-    "Failed to delete the task. Please try again.":
-      "No se pudo eliminar la tarea. Inténtelo de nuevo.",
-    "Failed to delete training. Please try again.":
-      "No se pudo eliminar la formación. Inténtelo de nuevo.",
     "Failed to delete use case. Please try again.":
       "No se pudo eliminar el caso de uso. Inténtelo de nuevo.",
     "Failed to delete vendor. It may have already been deleted or there was a network error.":
@@ -29219,10 +29568,6 @@ export const translations: Record<string, Record<string, string>> = {
       "No se pudo generar el enlace para compartir. Inténtelo de nuevo.",
     "Failed to install plugin. Please try again.":
       "No se pudo instalar el complemento. Inténtelo de nuevo.",
-    "Failed to load dataset details. Please try again.":
-      "No se pudieron cargar los detalles del conjunto de datos. Inténtelo de nuevo.",
-    "Failed to load datasets. Please try again later.":
-      "No se pudieron cargar los conjuntos de datos. Inténtelo de nuevo más tarde.",
     "Failed to load evidence data. Please try again later.":
       "No se pudieron cargar los datos de evidencia. Inténtelo de nuevo más tarde.",
     "Failed to load evidence model details. Please try again.":
@@ -29237,8 +29582,6 @@ export const translations: Record<string, Record<string, string>> = {
       "No se pudieron cargar los detalles del riesgo del modelo. Inténtelo de nuevo.",
     "Failed to load model risks data. Please try again later.":
       "No se pudieron cargar los datos de los riesgos del modelo. Inténtelo de nuevo más tarde.",
-    "Failed to load training data. Please try again later.":
-      "No se pudieron cargar los datos de formación. Inténtelo de nuevo más tarde.",
     "Failed to remove framework. Please try again.":
       "No se pudo eliminar el marco. Inténtelo de nuevo.",
     "Failed to replace share link. Please try again.":
@@ -29251,8 +29594,6 @@ export const translations: Record<string, Record<string, string>> = {
       "Se creó un nuevo enlace para compartir. Los enlaces creados por otros usuarios siguen activos; solo ellos pueden desactivarlos.",
     "Share link replaced. Previous links no longer work.":
       "Enlace para compartir reemplazado. Los enlaces anteriores ya no funcionan.",
-    "Failed to restore the task. Please try again.":
-      "No se pudo restaurar la tarea. Inténtelo de nuevo.",
     "Failed to save configuration. Please try again.":
       "No se pudo guardar la configuración. Inténtelo de nuevo.",
     "Failed to send reset email. Please try again.":
@@ -29269,18 +29610,12 @@ export const translations: Record<string, Record<string, string>> = {
       "No se pudo actualizar el estado. Inténtelo de nuevo.",
     "Failed to update the task. Please try again.":
       "No se pudo actualizar la tarea. Inténtelo de nuevo.",
-    "Failed to update the task priority. Please try again.":
-      "No se pudo actualizar la prioridad de la tarea. Inténtelo de nuevo.",
-    "Failed to update the task status. Please try again.":
-      "No se pudo actualizar el estado de la tarea. Inténtelo de nuevo.",
     "Failed to update the vendor risk. Please try again.":
       "No se pudo actualizar el riesgo del proveedor. Inténtelo de nuevo.",
     "File marked for deletion. Please save to apply changes.":
       "Archivo marcado para eliminación. Guarde para aplicar los cambios.",
     "File marked for deletion. Save to apply changes.":
       "Archivo marcado para eliminación. Guarde para aplicar los cambios.",
-    "Filter by status, priority, or assignee to focus on specific subsets of tasks. Combine filters to find exactly what you need.":
-      "Filtre por estado, prioridad o responsable para centrarse en subconjuntos específicos de tareas. Combine filtros para encontrar exactamente lo que necesita.",
     "Filter evidence files by type to quickly find compliance documentation, assessments, and audit artifacts.":
       "Filtre los archivos de evidencia por tipo para encontrar rápidamente documentación de cumplimiento, evaluaciones y artefactos de auditoría.",
     "Filter risks by category, severity level, likelihood, mitigation status, and deletion status. Combine filters to find exactly what you":
@@ -29488,16 +29823,10 @@ export const translations: Record<string, Record<string, string>> = {
       "Restricciones moderadas (LGPL, MPL, CC-BY-SA). Algunas obligaciones, pero por lo general permite el uso comercial.",
     "Monitor and respond to incidents involving third-party components.":
       "Supervise y responda a los incidentes que afecten a componentes de terceros.",
-    "Monitor incidents across their lifecycle: Open, Investigating, Mitigated, Closed, Suspended, and Emergency action. Track resolution progress and identify incidents requiring immediate attention.":
-      "Supervise los incidentes a lo largo de su ciclo de vida: Abierto, En investigación, Mitigado, Cerrado, Suspendido y Acción de emergencia. Haga seguimiento del progreso de resolución e identifique los incidentes que requieren atención inmediata.",
     "Monitor incidents related to AI systems and respond post-deployment.":
       "Supervise los incidentes relacionados con los sistemas de IA y responda tras el despliegue.",
     "Monitor progress from initiation to completion with real-time status updates.":
       "Supervise el progreso desde el inicio hasta la finalización con actualizaciones de estado en tiempo real.",
-    "Monitor total tasks, overdue items, in-progress work, and completed tasks. Identify bottlenecks and workload distribution at a glance.":
-      "Supervise el total de tareas, los elementos vencidos, el trabajo en curso y las tareas completadas. Identifique los cuellos de botella y la distribución de la carga de trabajo de un vistazo.",
-    "Monitor your AI governance metrics at a glance. View counts for models, vendors, policies, trainings, and incidents. Click any card to navigate to its detailed view.":
-      "Supervise sus métricas de gobernanza de IA de un vistazo. Vea los recuentos de modelos, proveedores, políticas, formaciones e incidentes. Haga clic en cualquier tarjeta para acceder a su vista detallada.",
     "Monitor your overall compliance status at a glance. The progress bar shows how many controls have been completed and what still needs attention.":
       "Supervise su estado general de cumplimiento de un vistazo. La barra de progreso muestra cuántos controles se han completado y qué queda por atender.",
     "Monitor your policies at a glance by status: Draft, Under Review, Approved, Published, Archived, and Deprecated.":
@@ -29615,14 +29944,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Publique primero el formulario para generar un enlace de vista previa",
     "Publish the form first to generate a shareable link":
       "Publique primero el formulario para generar un enlace para compartir",
-    "Quickly create new use cases, vendors, models, risks, or policies without navigating to different pages. Your shortcuts to common actions.":
-      "Cree rápidamente nuevos casos de uso, proveedores, modelos, riesgos o políticas sin tener que navegar a páginas diferentes. Sus atajos para las acciones habituales.",
     "Quickly filter policies by their current approval and lifecycle status to focus on what needs your attention.":
       "Filtre rápidamente las políticas por su estado de aprobación y de ciclo de vida actual para centrarse en lo que requiere su atención.",
-    "Quickly find specific incidents by searching titles or descriptions. Perfect for locating incidents in large lists.":
-      "Encuentre rápidamente incidentes específicos buscando por títulos o descripciones. Ideal para localizar incidentes en listas extensas.",
-    "Quickly find tasks by searching titles or descriptions. Perfect for locating specific work items in large task lists.":
-      "Encuentre rápidamente tareas buscando por títulos o descripciones. Ideal para localizar elementos de trabajo específicos en listas de tareas extensas.",
     "Re-evaluating strategies ensures continued relevance and effectiveness in managing AI system impacts.":
       "Reevaluar las estrategias garantiza una relevancia y eficacia continuadas en la gestión de los impactos del sistema de IA.",
     "Real time remote biometric identification in publicly accessible spaces":
@@ -29631,8 +29954,6 @@ export const translations: Record<string, Record<string, string>> = {
       "Puntuaciones de cumplimiento en tiempo real por marco con desglose detallado de las carencias y los elementos incompletos.",
     "Reference Controls (Statement of Applicability)":
       "Controles de referencia (Declaración de aplicabilidad)",
-    "Register AI-related training programs and educational resources. Track completion status, certifications, and learning progress across your team.":
-      "Registre programas de formación y recursos educativos relacionados con la IA. Haga seguimiento del estado de finalización, las certificaciones y el progreso de aprendizaje de todo su equipo.",
     "Register and track AI models with details like hosting, biases, and limitations. Extend with the Model Lifecycle extension.":
       "Registre y haga seguimiento de los modelos de IA con detalles como el alojamiento, los sesgos y las limitaciones. Amplíe con la extensión Model Lifecycle.",
     "Register external AI providers and third-party services. Document vendor information, contracts, and compliance requirements in one centralized location.":
@@ -29643,8 +29964,6 @@ export const translations: Record<string, Record<string, string>> = {
       "Registre, clasifique y supervise los casos de uso de IA con formularios de admisión y puntuación de riesgos.",
     "Registering systems ensures compliance with EU AI Act requirements and facilitates monitoring and transparency.":
       "Registrar los sistemas garantiza el cumplimiento de los requisitos del EU AI Act y facilita la supervisión y la transparencia.",
-    "Registration successful. Redirecting to login page...":
-      "Registro completado correctamente. Redirigiendo a la página de inicio de sesión...",
     "Regular evaluations ensure systems continue to fulfill their intended purpose and remain aligned with organizational goals.":
       "Las evaluaciones periódicas garantizan que los sistemas sigan cumpliendo su propósito previsto y se mantengan alineados con los objetivos de la organización.",
     "Regular evaluations help ensure AI systems are ethical, equitable, and environmentally sustainable.":
@@ -29745,8 +30064,6 @@ export const translations: Record<string, Record<string, string>> = {
       "Especificar los roles y responsabilidades evita lagunas en la rendición de cuentas y garantiza el cumplimiento a lo largo de la cadena de suministro de la IA.",
     "Standardized intake process with automated risk classification for new AI use cases.":
       "Proceso de admisión estandarizado con clasificación automática de riesgos para nuevos casos de uso de IA.",
-    "Start by creating a project that represents an AI activity or system in your organization. Each project helps you manage compliance, assessments, and vendor relationships.":
-      "Empieza creando un proyecto que represente una actividad o un sistema de IA de tu organización. Cada proyecto te ayuda a gestionar el cumplimiento, las evaluaciones y las relaciones con los proveedores.",
     "Switch between project overview, use case risks, and settings. Each tab provides detailed information and management capabilities for your AI use case.":
       "Cambia entre la vista general del proyecto, los riesgos del caso de uso y la configuración. Cada pestaña ofrece información detallada y funciones de gestión para tu caso de uso de IA.",
     "System Validation and Reliability Documentation":
@@ -29793,8 +30110,6 @@ export const translations: Record<string, Record<string, string>> = {
       "Este proveedor ya tiene una clave configurada. Elimínala primero para añadir una nueva.",
     "This section has been been marked as done, but there's still a risk linked to it:":
       "Esta sección se ha marcado como completada, pero todavía hay un riesgo vinculado a ella:",
-    "This training no longer exists or you do not have access to it.":
-      "Esta formación ya no existe o no tienes acceso a ella.",
     "This will permanently remove this API key record. This action cannot be undone.":
       "Esto eliminará permanentemente este registro de clave API. Esta acción no se puede deshacer.",
     "Thorough documentation and assessment of changes prevent compliance gaps and support accountability.":
@@ -29857,8 +30172,6 @@ export const translations: Record<string, Record<string, string>> = {
       "Utiliza el panel para obtener una visión general rápida de todas tus tareas pendientes, los próximos plazos y la actividad reciente en todos tus proyectos.",
     "User session not found. Please log in again.":
       "No se encontró la sesión del usuario. Inicia sesión de nuevo.",
-    "User with this email already exists. Please use a different email.":
-      "Ya existe un usuario con este correo electrónico. Utiliza un correo electrónico diferente.",
     "Uses the highest sensitivity score among departments accessing the tool. Finance, Legal, and HR are rated highest (80).":
       "Utiliza la puntuación de sensibilidad más alta entre los departamentos que acceden a la herramienta. Finanzas, Legal y RR. HH. tienen la valoración más alta (80).",
     "Validation and documentation demonstrate that systems operate reliably and meet required compliance standards.":
@@ -30096,10 +30409,6 @@ export const translations: Record<string, Record<string, string>> = {
       "Sustituye las etiquetas existentes. Déjalo vacío para borrarlas.",
     "AI-derived score breakdown across 5 dimensions":
       "Desglose de la puntuación derivada por IA en 5 dimensiones",
-    "Complete audit trail for every AI action (EU AI Act art. 12)":
-      "Registro de auditoría completo de cada acción de IA (EU AI Act art. 12)",
-    "Complete audit trail for every AI action. EU AI Act Article 12 compliance.":
-      "Registro de auditoría completo de cada acción de IA. Cumplimiento del artículo 12 del EU AI Act.",
     "Configure auto-approve, require-approval, and auto-reject rules for AI operations":
       "Configura reglas de aprobación automática, requerir aprobación y rechazo automático para las operaciones de IA",
     "No AI analysis available for this evidence yet.":
@@ -30110,12 +30419,6 @@ export const translations: Record<string, Record<string, string>> = {
       "Todavía no hay puntuaciones de preparación. Haz clic en &quot;Calcular preparación&quot; para empezar.",
     "No weak controls found. Your compliance posture looks strong!":
       "No se encontraron controles débiles. ¡Tu postura de cumplimiento parece sólida!",
-    "Per-control readiness scores and audit preparation":
-      "Puntuaciones de preparación por control y preparación para auditorías",
-    "Per-control readiness scores, framework aggregations, and improvement recommendations.":
-      "Puntuaciones de preparación por control, agregaciones por marco y recomendaciones de mejora.",
-    "Review and approve AI-generated content (EU AI Act art. 52)":
-      "Revisa y aprueba el contenido generado por IA (EU AI Act art. 52)",
     "A URL-safe identifier used internally. Auto-generated from the name.":
       "Un identificador seguro para URL que se utiliza internamente. Se genera automáticamente a partir del nombre.",
     "A human-readable name for this scorer, shown in dropdowns and reports.":
@@ -30161,12 +30464,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Ahora tienes varios marcos asignados. Activa Governance OS para explorar las asignaciones entre marcos, obtener recomendaciones inteligentes y analizar la cobertura en todos tus marcos.",
     "Your compliance dashboard will prioritize tasks from the primary framework first":
       "Tu panel de cumplimiento priorizará primero las tareas del marco principal",
-    "Failed to load evidence details. Please try again.":
-      "No se pudieron cargar los detalles de la evidencia. Inténtalo de nuevo.",
     "No evidence uploaded yet for this training.":
       "Aún no se ha subido ninguna evidencia para esta formación.",
-    "This evidence has no file attached to preview.":
-      "Esta evidencia no tiene ningún archivo adjunto para previsualizar.",
     "Upload certificates, attendance proofs, or other compliance evidence for this training.":
       "Sube certificados, justificantes de asistencia u otra evidencia de cumplimiento para esta formación.",
     "Number of people is required and must be a positive number.":
@@ -30737,8 +31036,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Switch to the Unified Insights tab here in Governance OS to monitor your per-project coverage and identify gaps as you work through controls.":
       "Cambie a la pestaña Unified Insights aquí en Governance OS para supervisar la cobertura por proyecto e identificar carencias a medida que avanza con los controles.",
     "Target Framework *": "Marco de destino *",
-    "Tasks assigned to team members show up in their personal task list. Use the 'My tasks only' toggle on the list view to filter.":
-      "Las tareas asignadas a los miembros del equipo aparecen en su lista de tareas personal. Utilice el interruptor «Solo mis tareas» en la vista de lista para filtrar.",
     "The Evidence Hub will connect to your existing evidence sources, auto-collect compliance artifacts, and provide a unified view of evidence coverage across frameworks.":
       "Evidence Hub se conectará a sus fuentes de evidencia existentes, recopilará automáticamente los artefactos de cumplimiento y ofrecerá una vista unificada de la cobertura de evidencias entre marcos.",
     "The Knowledge Graph will render an interactive visualization of frameworks, controls, mappings, risks, and evidence — making complex governance relationships explorable at a glance.":
@@ -30904,7 +31201,6 @@ export const translations: Record<string, Record<string, string>> = {
     // AI Gateway empty/error states
     "Click Save draft to create your first version.":
       "Haga clic en Guardar borrador para crear su primera versión.",
-    "Could not load metrics.": "No se pudieron cargar las métricas.",
     "Could not load this run.": "No se pudo cargar esta ejecución.",
     "Create your first version": "Crear su primera versión",
     "Error loading AI Trust Center settings. Please try again.":
@@ -31123,6 +31419,9 @@ export const translations: Record<string, Record<string, string>> = {
     "Vendor {id}": "Proveedor {id}",
     "Vendor risk {id}": "Riesgo del proveedor {id}",
     "{linked} of {total}": "{linked} de {total}",
+    "{name} (inactive)": "{name} (inactivo)",
+    "#{id} (not found)": "#{id} (no encontrado)",
+    "No endpoints": "Sin endpoints",
     "Vendors with reach": "Proveedores con alcance",
     "Inheriting project risks": "Riesgos de proyecto que heredan",
     "Affected use cases": "Casos de uso afectados",
@@ -31178,6 +31477,28 @@ export const translations: Record<string, Record<string, string>> = {
       "Aún se está agrupando. Vuelve a abrir esta pestaña para ver nuevas sugerencias.",
     "Scanning {count} risks. Links will appear as the scan completes.":
       "Analizando {count} riesgos. Los vínculos aparecerán cuando termine el análisis.",
+    "Scanning {count} risk. Links will appear as the scan completes.":
+      "Analizando {count} riesgo. Los vínculos aparecerán cuando termine el análisis.",
+    "Related risks": "Riesgos relacionados",
+    "How is this risk connected?": "¿Cómo está conectado este riesgo?",
+    "Where is the parent risk?": "¿Dónde está el riesgo principal?",
+    "The two risks are connected, but neither depends on the other.":
+      "Los dos riesgos están conectados, pero ninguno depende del otro.",
+    "This risk is part of a broader parent risk. When the parent's level changes, this risk is flagged for review.":
+      "Este riesgo forma parte de un riesgo principal más amplio. Cuando cambia el nivel del principal, este riesgo se marca para revisión.",
+    "The other risk becomes a child of this one and is flagged when this risk's level changes.":
+      "El otro riesgo pasa a depender de este y se marca cuando cambia el nivel de este riesgo.",
+    "Another risk in the risk register.": "Otro riesgo del registro de riesgos.",
+    "A risk recorded on a model.": "Un riesgo registrado en un modelo.",
+    "A risk recorded on a vendor.": "Un riesgo registrado en un proveedor.",
+    "Grouping {count} cluster of related risks. Suggestions appear here as they finish.":
+      "Agrupando {count} grupo de riesgos relacionados. Las sugerencias aparecerán aquí a medida que terminen.",
+    "{count} cluster was too large to group in one pass.":
+      "{count} grupo era demasiado grande para agruparse en una sola pasada.",
+    "Link this risk to others it is connected to. VerifyWise also suggests links from what risks have in common, such as category, controls, lifecycle phase or project. Confirm a suggestion to keep it, or dismiss it.":
+      "Vincule este riesgo con otros con los que está conectado. VerifyWise también sugiere vínculos según lo que los riesgos tienen en común, como la categoría, los controles, la fase del ciclo de vida o el proyecto. Confirme una sugerencia para conservarla o descártela.",
+    "Uses AI to propose parent and child links among risks that are already related. Suggestions appear in this list for you to confirm.":
+      "Usa IA para proponer vínculos principal-secundario entre riesgos ya relacionados. Las sugerencias aparecen en esta lista para que las confirme.",
     "Grouping {count} clusters of related risks. Suggestions appear here as they finish.":
       "Agrupando {count} grupos de riesgos relacionados. Las sugerencias aparecerán aquí a medida que terminen.",
     "{count} clusters were too large to group in one pass.":
@@ -31208,6 +31529,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Los riesgos de proveedor relacionados aparecen al guardar los riesgos de proveedor, o después de que un administrador ejecute un análisis.",
     "Scanning {count} vendor risks. Related vendor risks appear here as the scan completes.":
       "Analizando {count} riesgos de proveedor. Los riesgos de proveedor relacionados aparecerán aquí cuando termine el análisis.",
+    "Scanning {count} vendor risk. Related vendor risks appear here as the scan completes.":
+      "Analizando {count} riesgo de proveedor. Los riesgos de proveedor relacionados aparecerán aquí cuando termine el análisis.",
     "Scan finished. No related vendor risks found.":
       "Análisis finalizado. No se encontraron riesgos de proveedor relacionados.",
     "Search vendor risks": "Buscar riesgos de proveedor",
@@ -31215,6 +31538,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Los riesgos de proveedor relacionados describen la misma exposición, en este proveedor o en otro. Ninguno hereda del otro.",
     "Similar wording": "Redacción similar",
     "Same vendor": "Mismo proveedor",
+    "Sample text must be at most {max} characters":
+      "El texto de ejemplo no puede superar los {max} caracteres",
     "Shared framework": "Marco compartido",
     "Shared use case": "Caso de uso compartido",
     "Why are you dismissing {name}?": "¿Por qué descartas {name}?",
@@ -31248,7 +31573,6 @@ export const translations: Record<string, Record<string, string>> = {
     "custom framework items": "elementos de marco personalizados",
     // Reporting, readiness and AI observability
     "AI analyses": "Análisis de IA",
-    "AI observability": "Observabilidad de IA",
     "AI readiness": "Preparación para la IA",
     "Action failed": "La acción falló",
     "Add a language-model key in Settings to enable AI insights.":
@@ -31281,7 +31605,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Generate": "Generar",
     "Hour": "Hora",
     "Key findings": "Hallazgos clave",
-    "Latency over time": "Latencia a lo largo del tiempo",
     "Leave empty to include every framework in scope.":
       "Déjelo vacío para incluir todos los marcos del alcance.",
     "My templates": "Mis plantillas",
@@ -31292,8 +31615,6 @@ export const translations: Record<string, Record<string, string>> = {
     "No report templates available yet.": "Aún no hay plantillas de informe disponibles.",
     "No scheduled reports yet. Create one from the Templates tab.":
       "Aún no hay informes programados. Cree uno desde la pestaña Plantillas.",
-    "No spans found for this trace": "No se encontraron spans para esta traza",
-    "No traces found": "No se encontraron trazas",
     "Overall quality grade": "Calificación general de calidad",
     "Parallel agents": "Agentes paralelos",
     "Per-section summaries": "Resúmenes por sección",
@@ -31317,11 +31638,6 @@ export const translations: Record<string, Record<string, string>> = {
     "This template has no configurable sections.":
       "Esta plantilla no tiene secciones configurables.",
     "Timezone": "Zona horaria",
-    "Total traces": "Trazas totales",
-    "Trace waterfall": "Cascada de la traza",
-    "Traces": "Trazas",
-    "Traces, cost tracking, and latency & error metrics for every AI request.":
-      "Trazas, seguimiento de costes y métricas de latencia y errores para cada solicitud de IA.",
     "Update the name, output format and delivery schedule.":
       "Actualice el nombre, el formato de salida y la programación de entrega.",
     "Update the template name, description, and category.":
@@ -31388,6 +31704,8 @@ export const translations: Record<string, Record<string, string>> = {
     'Click "Add to Slack" above to connect your first workspace.':
       'Haga clic en "Añadir a Slack" arriba para conectar su primer espacio de trabajo.',
     "Click to upload documents": "Haga clic para cargar documentos",
+    "Could not remove the file. Try again.": "No se pudo quitar el archivo. Inténtelo de nuevo.",
+    "Could not upload the file. Try again.": "No se pudo cargar el archivo. Inténtelo de nuevo.",
     "Configuration saved.": "Configuración guardada.",
     "Configure Model Lifecycle": "Configurar el ciclo de vida del modelo",
     "Configure Phases": "Configurar fases",
@@ -32384,5 +32702,24 @@ export const translations: Record<string, Record<string, string>> = {
       "Las comprobaciones de datos no autorizaron la exportación de esta ejecución, por lo que su ratio se muestra con esa salvedad.",
     "A hollow point marks a run the data checks did not clear for export. Its ratio is shown with that caveat.":
       "Un punto hueco marca una ejecución cuya exportación no autorizaron las comprobaciones de datos. Su ratio se muestra con esa salvedad.",
+    // Super admin MCP connect
+    "Connect Claude Code to this deployment": "Conectar Claude Code a esta implementación",
+    "Download the config file": "Descargar el archivo de configuración",
+    "Token expires in": "El token caduca en",
+    "Config file downloaded": "Archivo de configuración descargado",
+    "Add it to Claude Code": "Añadirlo a Claude Code",
+    "Check it worked": "Comprobar que funcionó",
+    "What the file contains": "Qué contiene el archivo",
+    "Tools it adds": "Herramientas que añade",
+    "Download config file": "Descargar el archivo de configuración",
+    "Preparing...": "Preparando...",
+    "7 days": "7 días",
+    "30 days": "30 días",
+    "60 days": "60 días",
+    "90 days": "90 días",
+    "180 days": "180 días",
+    "Failed to create the config file.": "No se pudo crear el archivo de configuración.",
+    "Downloading revokes the token issued here last time. Anything set up with the previous file, on this machine or another, stops working immediately.":
+      "Al descargarlo se revoca el token emitido aquí la última vez. Todo lo que se configuró con el archivo anterior, en este equipo o en otro, deja de funcionar de inmediato.",
   },
 };

@@ -4,6 +4,7 @@
  * Following VerifyWise clean architecture patterns
  */
 
+import { brand, text } from "../../tools/design-tokens/palette";
 import {
   ReportData,
   ReportMetadata,
@@ -660,8 +661,8 @@ export class ReportDataCollector {
     return {
       organizationName,
       organizationLogo,
-      primaryColor: "#13715B", // VerifyWise green
-      secondaryColor: "#1C2130",
+      primaryColor: brand.primary,
+      secondaryColor: text.primary,
     };
   }
 

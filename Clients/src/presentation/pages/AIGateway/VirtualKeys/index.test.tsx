@@ -23,6 +23,7 @@ vi.mock("../../../components/Layout/PageHeaderExtended", () => ({
 
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import VirtualKeysPage from "./index";
+import CustomException from "../../../../infrastructure/exceptions/customeException";
 
 const mockGet = apiServices.get as unknown as ReturnType<typeof vi.fn>;
 const mockPost = apiServices.post as unknown as ReturnType<typeof vi.fn>;
@@ -138,10 +139,143 @@ describe("AIGateway - VirtualKeys", () => {
     expect(screen.getByText("vk_abc123")).toBeInTheDocument();
     expect(screen.getByText("$12.5000 / $50.00")).toBeInTheDocument();
     expect(screen.getByText("60 RPM")).toBeInTheDocument();
-    expect(screen.getByText("Only models: gpt-4o-mini")).toBeInTheDocument();
+    expect(screen.getByText("Allowed models: gpt-4o-mini")).toBeInTheDocument();
     expect(screen.getByText("Blocked models: gpt-4o")).toBeInTheDocument();
-    expect(screen.getByText("Only providers: openai")).toBeInTheDocument();
+    expect(screen.getByText("Allowed providers: openai")).toBeInTheDocument();
     expect(screen.getByText("Blocked providers: openrouter")).toBeInTheDocument();
+    expect(screen.queryByText("Any endpoint or model")).not.toBeInTheDocument();
+  });
+
+  it("names a key's endpoints from the key itself, marking inactive and unnamed ones", async () => {
+    // The endpoints list is role-filtered and may be empty or fail; names
+    // come with the key. Id 4 has no name (hidden from this role): shown by id.
+    mockLoad(
+      [
+        makeKey({
+          allowed_endpoint_ids: [1, 2, 3, 4],
+          allowed_endpoints: [
+            { id: 1, name: "Collections assistant", is_active: true },
+            { id: 2, name: "collections-assistant-claude", is_active: false },
+            { id: 3, name: "Claims, EU", is_active: true },
+          ],
+        }),
+      ],
+      [],
+    );
+    renderWithProviders(<VirtualKeysPage />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(
+          "Endpoints: Collections assistant; collections-assistant-claude (inactive); Claims, EU; #4",
+        ),
+      ).toBeInTheDocument();
+    });
+    expect(screen.queryByText("Any endpoint or model")).not.toBeInTheDocument();
+  });
+
+  it("marks a missing endpoint's id apart from a hidden one", async () => {
+    // Deleting a key's last endpoint leaves its id so the key does not widen.
+    mockLoad([makeKey({ allowed_endpoint_ids: [9, 4, 9], missing_endpoint_ids: [9] })]);
+    renderWithProviders(<VirtualKeysPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Endpoints: #9 (not found); #4")).toBeInTheDocument();
+    });
+    expect(screen.getByText("Active")).toBeInTheDocument();
+  });
+
+  it("does not call a key active when none of its endpoints exists", async () => {
+    mockLoad([makeKey({ allowed_endpoint_ids: [9], missing_endpoint_ids: [9] })]);
+    renderWithProviders(<VirtualKeysPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("No endpoints")).toBeInTheDocument();
+    });
+    expect(screen.queryByText("Active")).not.toBeInTheDocument();
+    expect(screen.queryByText("Any endpoint or model")).not.toBeInTheDocument();
+  });
+
+  it("ignores a null left in a key's endpoint ids", async () => {
+    mockLoad([makeKey({ allowed_endpoint_ids: [9, null], missing_endpoint_ids: [9] })]);
+    renderWithProviders(<VirtualKeysPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("No endpoints")).toBeInTheDocument();
+    });
+    expect(screen.getByText("Endpoints: #9 (not found)")).toBeInTheDocument();
+  });
+
+  it("never calls a key holding only nulls unlimited", async () => {
+    // The gateway treats any non-empty list as a restriction, so it refuses all.
+    mockLoad([makeKey({ allowed_endpoint_ids: [null], missing_endpoint_ids: [] })]);
+    renderWithProviders(<VirtualKeysPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("No endpoints")).toBeInTheDocument();
+    });
+    expect(screen.queryByText("Any endpoint or model")).not.toBeInTheDocument();
+  });
+
+  it("never calls an endpoint-limited key unlimited, even with no names", async () => {
+    // e.g. an older gateway without allowed_endpoints, or ids it cannot name
+    mockLoad([makeKey({ allowed_endpoint_ids: [999] })]);
+    renderWithProviders(<VirtualKeysPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Endpoints: #999")).toBeInTheDocument();
+    });
+    expect(screen.queryByText("Any endpoint or model")).not.toBeInTheDocument();
+  });
+
+  it("does not call a revoked key unlimited, and hides a zero rate limit", async () => {
+    mockLoad([
+      makeKey({ is_active: false, revoked_at: "2025-02-01T00:00:00Z", rate_limit_rpm: 0 }),
+    ]);
+    renderWithProviders(<VirtualKeysPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Revoked")).toBeInTheDocument();
+    });
+    expect(screen.queryByText("Any endpoint or model")).not.toBeInTheDocument();
+    expect(screen.queryByText("0")).not.toBeInTheDocument();
+  });
+
+  it("renders a key whose lists are null instead of crashing", async () => {
+    mockLoad([
+      makeKey({
+        allowed_endpoint_ids: null,
+        allowed_models: null,
+        blocked_models: null,
+        allowed_providers: null,
+        blocked_providers: null,
+        created_by_name: null,
+      }),
+    ]);
+    renderWithProviders(<VirtualKeysPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Any endpoint or model")).toBeInTheDocument();
+    });
+    expect(screen.queryByText(/null/)).not.toBeInTheDocument();
+  });
+
+  it("shows who created a key and when", async () => {
+    mockLoad([makeKey()]);
+    renderWithProviders(<VirtualKeysPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/^By Jane Doe · /)).toBeInTheDocument();
+    });
+  });
+
+  it("says when a key has no endpoint, model or provider limits", async () => {
+    mockLoad([makeKey()]);
+    renderWithProviders(<VirtualKeysPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Any endpoint or model")).toBeInTheDocument();
+    });
   });
 
   it("shows a Revoked status for revoked keys and a Delete action for inactive keys", async () => {
@@ -253,7 +387,9 @@ describe("AIGateway - VirtualKeys", () => {
 
   it("shows the API error message when create submission fails", async () => {
     mockLoad([]);
-    mockPost.mockRejectedValue({ response: { data: { detail: "Budget must be positive" } } });
+    mockPost.mockRejectedValue(
+      new CustomException("Bad Request", 400, { detail: "Budget must be positive" }),
+    );
     renderWithProviders(<VirtualKeysPage />);
 
     await waitFor(() => {

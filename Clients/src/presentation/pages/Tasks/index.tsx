@@ -51,10 +51,10 @@ import { useFilterBy } from "../../../application/hooks/useFilterBy";
 import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/useColumnVisibility";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import Alert from "../../components/Alert";
-import CustomizableSkeleton from "../../components/Skeletons";
 import TabBar from "../../components/TabBar";
 import DeadlineView from "./DeadlineView";
 import { toggleLabelStyle, toggleContainerStyle } from "./style";
+import ListStateWrapper from "../../components/ListStateWrapper";
 import {
   TASK_PRIORITY_OPTIONS,
   PRIORITY_DISPLAY_MAP,
@@ -89,19 +89,22 @@ const Tasks: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [includeArchived, setIncludeArchived] = useState(false);
   const queryClient = useQueryClient();
+  // The task list renders its own inline error state.
   const {
     data: rawTasks = [],
     isLoading,
     error: queryError,
     refetch,
-  } = useTasks({ includeArchived });
+  } = useTasks({ includeArchived, suppressGlobalErrorToast: true });
   const tasks = useMemo(() => rawTasks.map((task) => new TaskModel(task)), [rawTasks]);
   const updateTaskStatusMutation = useUpdateTaskStatus();
   const updateTaskPriorityMutation = useUpdateTaskPriority();
   const createTaskMutation = useCreateTask();
   const updateTaskMutation = useUpdateTask();
   const archiveTaskMutation = useArchiveTask();
-  const error = queryError ? "Failed to load tasks. Please try again later." : null;
+  // A failed background refetch keeps the cached tasks on screen.
+  const error =
+    queryError && !rawTasks.length ? "Failed to load tasks. Please try again later." : null;
   const [isCreateTaskModalOpen, setIsCreateTaskModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<ITask | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -702,6 +705,90 @@ const Tasks: React.FC = () => {
     });
   }, [filteredTasks, users, formatDate]);
 
+  // The populated views render their own empty placeholders, so the same
+  // element serves as the empty state. One element also keeps the table mounted
+  // (and its page and sort) when a search briefly matches nothing.
+  const taskListContent = (
+    <>
+      {activeTab === "list" && (
+        <GroupedTableView
+          groupedData={groupedTasks}
+          ungroupedData={filteredTasks}
+          renderTable={(data, options) => (
+            <TasksTable
+              tasks={data}
+              users={users}
+              onArchive={handleArchiveTask}
+              onEdit={handleEditTask}
+              onStatusChange={handleTaskStatusChange}
+              statusOptions={TASK_STATUS_OPTIONS.map((status) => {
+                const displayStatus = STATUS_DISPLAY_MAP[status as TaskStatus] || status;
+                return displayStatus;
+              })}
+              onPriorityChange={handleTaskPriorityChange}
+              priorityOptions={TASK_PRIORITY_OPTIONS.map((priority) => {
+                const displayPriority = PRIORITY_DISPLAY_MAP[priority as TaskPriority] || priority;
+                return {
+                  value: priority,
+                  label: displayPriority,
+                  icon: Flag,
+                  color: PRIORITY_COLOR_MAP[priority as TaskPriority],
+                };
+              })}
+              isUpdateDisabled={isCreatingDisabled}
+              onRowClick={handleEditTask}
+              hidePagination={options?.hidePagination}
+              onRestore={handleRestoreTask}
+              onHardDelete={handleHardDeleteTask}
+              flashRowId={flashRowId}
+              visibleColumns={visibleColumns}
+              canRunBulkActions={!isCreatingDisabled}
+              onBulkActionSuccess={(action, count) => {
+                setAlert({
+                  variant: "success",
+                  title:
+                    action === "mark_complete"
+                      ? `${count} task${count === 1 ? "" : "s"} marked complete`
+                      : `Categories updated on ${count} task${count === 1 ? "" : "s"}`,
+                });
+                setTimeout(() => setAlert(null), 4000);
+              }}
+            />
+          )}
+        />
+      )}
+
+      {activeTab === "deadline" && (
+        <DeadlineView
+          tasks={filteredTasks}
+          users={users}
+          onArchive={handleArchiveTask}
+          onEdit={handleEditTask}
+          onStatusChange={handleTaskStatusChange}
+          statusOptions={TASK_STATUS_OPTIONS.map((status) => {
+            const displayStatus = STATUS_DISPLAY_MAP[status as TaskStatus] || status;
+            return displayStatus;
+          })}
+          onPriorityChange={handleTaskPriorityChange}
+          priorityOptions={TASK_PRIORITY_OPTIONS.map((priority) => {
+            const displayPriority = PRIORITY_DISPLAY_MAP[priority as TaskPriority] || priority;
+            return {
+              value: priority,
+              label: displayPriority,
+              icon: Flag,
+              color: PRIORITY_COLOR_MAP[priority as TaskPriority],
+            };
+          })}
+          isUpdateDisabled={isCreatingDisabled}
+          onRowClick={handleEditTask}
+          onRestore={handleRestoreTask}
+          onHardDelete={handleHardDeleteTask}
+          flashRowId={flashRowId}
+        />
+      )}
+    </>
+  );
+
   return (
     <PageHeaderExtended
       title="Task management"
@@ -887,95 +974,15 @@ const Tasks: React.FC = () => {
 
       {/* Content Area */}
       <Box>
-        {isLoading && (
-          <Stack spacing={2}>
-            <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
-          </Stack>
-        )}
-
-        {error && (
-          <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
-            <Typography color="error">{error}</Typography>
-          </Box>
-        )}
-
-        {!isLoading && !error && activeTab === "list" && (
-          <GroupedTableView
-            groupedData={groupedTasks}
-            ungroupedData={filteredTasks}
-            renderTable={(data, options) => (
-              <TasksTable
-                tasks={data}
-                users={users}
-                onArchive={handleArchiveTask}
-                onEdit={handleEditTask}
-                onStatusChange={handleTaskStatusChange}
-                statusOptions={TASK_STATUS_OPTIONS.map((status) => {
-                  const displayStatus = STATUS_DISPLAY_MAP[status as TaskStatus] || status;
-                  return displayStatus;
-                })}
-                onPriorityChange={handleTaskPriorityChange}
-                priorityOptions={TASK_PRIORITY_OPTIONS.map((priority) => {
-                  const displayPriority =
-                    PRIORITY_DISPLAY_MAP[priority as TaskPriority] || priority;
-                  return {
-                    value: priority,
-                    label: displayPriority,
-                    icon: Flag,
-                    color: PRIORITY_COLOR_MAP[priority as TaskPriority],
-                  };
-                })}
-                isUpdateDisabled={isCreatingDisabled}
-                onRowClick={handleEditTask}
-                hidePagination={options?.hidePagination}
-                onRestore={handleRestoreTask}
-                onHardDelete={handleHardDeleteTask}
-                flashRowId={flashRowId}
-                visibleColumns={visibleColumns}
-                canRunBulkActions={!isCreatingDisabled}
-                onBulkActionSuccess={(action, count) => {
-                  setAlert({
-                    variant: "success",
-                    title:
-                      action === "mark_complete"
-                        ? `${count} task${count === 1 ? "" : "s"} marked complete`
-                        : `Categories updated on ${count} task${count === 1 ? "" : "s"}`,
-                  });
-                  setTimeout(() => setAlert(null), 4000);
-                }}
-              />
-            )}
-          />
-        )}
-
-        {!isLoading && !error && activeTab === "deadline" && (
-          <DeadlineView
-            tasks={filteredTasks}
-            users={users}
-            onArchive={handleArchiveTask}
-            onEdit={handleEditTask}
-            onStatusChange={handleTaskStatusChange}
-            statusOptions={TASK_STATUS_OPTIONS.map((status) => {
-              const displayStatus = STATUS_DISPLAY_MAP[status as TaskStatus] || status;
-              return displayStatus;
-            })}
-            onPriorityChange={handleTaskPriorityChange}
-            priorityOptions={TASK_PRIORITY_OPTIONS.map((priority) => {
-              const displayPriority = PRIORITY_DISPLAY_MAP[priority as TaskPriority] || priority;
-              return {
-                value: priority,
-                label: displayPriority,
-                icon: Flag,
-                color: PRIORITY_COLOR_MAP[priority as TaskPriority],
-              };
-            })}
-            isUpdateDisabled={isCreatingDisabled}
-            onRowClick={handleEditTask}
-            onRestore={handleRestoreTask}
-            onHardDelete={handleHardDeleteTask}
-            flashRowId={flashRowId}
-          />
-        )}
+        <ListStateWrapper
+          items={filteredTasks}
+          isLoading={isLoading}
+          loadingLabel="Loading tasks"
+          errorMessage={error}
+          emptyState={taskListContent}
+        >
+          {taskListContent}
+        </ListStateWrapper>
       </Box>
 
       {/* Create Task Modal */}

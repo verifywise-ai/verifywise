@@ -7,7 +7,7 @@ export const connectYourAgentContent: ArticleContent = {
     { type: 'heading', id: 'step-1', level: 2, text: '1. Create an agent key' },
     { type: 'paragraph', text: 'In the UI, go to AI Gateway > Agent Control > Agent keys and create a key. Copy the value (it starts with sk-mcp-). You only see it once.' },
     { type: 'heading', id: 'step-2', level: 2, text: '2. Set the environment variables' },
-    { type: 'code', language: 'bash', code: 'export VW_GATEWAY_URL=http://localhost:8100   # your gateway URL\nexport VW_AGENT_KEY=sk-mcp-...                 # the key you just copied' },
+    { type: 'code', language: 'bash', code: 'export VW_GATEWAY_URL=https://your-verifywise-host   # the URL you open VerifyWise at\nexport VW_AGENT_KEY=sk-mcp-...                       # the key you just copied\n# Local development: the dev server does not forward /v1, so use the backend, e.g. VW_GATEWAY_URL=http://localhost:3000' },
     { type: 'heading', id: 'step-3', level: 2, text: '3. Wire the hook' },
     { type: 'paragraph', text: 'Both agents below run the same bundled script, scripts/vw-tool-hook.sh. The script needs curl and jq on the PATH. Pick the wiring for your agent.' },
     { type: 'heading', id: 'step-3-claude-code', level: 3, text: 'Claude Code' },

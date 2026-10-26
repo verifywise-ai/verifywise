@@ -1,4 +1,5 @@
 import { Likelihood, Severity } from "../RiskLevel/constants";
+import { RiskFormValues } from "../../../domain/types/riskForm.types";
 
 /**
  * Raw risk data structure from JSON databases
@@ -10,26 +11,6 @@ export interface RiskData {
   "Risk Severity": string;
   "Likelihood": string;
   "Risk Category": string;
-}
-
-/**
- * Mapped risk data structure for form consumption
- */
-export interface SelectedRiskData {
-  riskName: string;
-  actionOwner: number;
-  aiLifecyclePhase: number;
-  riskDescription: string;
-  riskCategory: number[];
-  potentialImpact: string;
-  assessmentMapping: string;
-  controlsMapping: string;
-  likelihood: number;
-  riskSeverity: number;
-  riskLevel: number;
-  reviewNotes: string;
-  applicableProjects: number[];
-  applicableFrameworks: number[];
 }
 
 /**
@@ -51,7 +32,7 @@ export interface RiskDatabaseModalProps {
   /** Callback to set the modal open state */
   setIsOpen: (open: boolean) => void;
   /** Callback when a risk is selected */
-  onRiskSelected?: (riskData: SelectedRiskData) => void;
+  onRiskSelected?: (riskData: RiskFormValues) => void;
   /** The risk data array to display */
   riskData: RiskData[];
   /** Function to map severity strings to Severity enum */

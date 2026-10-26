@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { AppModule, setActiveModule } from "../redux/ui/uiSlice";
 import { RootState } from "../redux/store";
 import { storageService } from "../../infrastructure/storage";
+import { getAppModuleFromPath } from "../utils/appModule";
 
 const STORAGE_KEY = "verifywise_active_module";
 
@@ -20,30 +21,10 @@ export function useActiveModule() {
   const activeModule = useSelector((state: RootState) => state.ui.appModule?.active ?? "main");
 
   // Detect module from URL path
-  const getModuleFromPath = useCallback((pathname: string): AppModule => {
-    if (pathname.startsWith("/evals")) {
-      return "evals";
-    }
-    if (pathname.startsWith("/ai-detection")) {
-      return "ai-detection";
-    }
-    if (pathname.startsWith("/shadow-ai")) {
-      return "shadow-ai";
-    }
-    if (pathname.startsWith("/ai-gateway")) {
-      return "ai-gateway";
-    }
-    if (pathname.startsWith("/ai-trust-index")) {
-      return "ai-trust-index";
-    }
-    if (pathname.startsWith("/bias-audit")) {
-      return "bias-audit";
-    }
-    if (pathname.startsWith("/super-admin")) {
-      return "super-admin";
-    }
-    return "main";
-  }, []);
+  const getModuleFromPath = useCallback(
+    (pathname: string): AppModule => getAppModuleFromPath(pathname),
+    [],
+  );
 
   // Sync module state with URL on navigation
   useEffect(() => {

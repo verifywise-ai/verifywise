@@ -7,6 +7,7 @@ import {
   deleteModelRiskById,
 } from "../controllers/modelRisk.ctrl";
 import authenticateJWT from "../middleware/auth.middleware";
+import authorize from "../middleware/accessControl.middleware";
 
 const router = Router();
 
@@ -20,15 +21,15 @@ router.get("/", getAllModelRisks);
 router.get("/:id", getModelRiskById);
 
 // POST /modelRisks - Create new model risk
-router.post("/", createNewModelRisk);
+router.post("/", authorize("model.edit"), createNewModelRisk);
 
 // PUT /modelRisks/:id - Update model risk by ID
-router.put("/:id", updateModelRiskById);
+router.put("/:id", authorize("model.edit"), updateModelRiskById);
 
 // PATCH /modelRisks/:id - Update model risk by ID (alternative)
-router.patch("/:id", updateModelRiskById);
+router.patch("/:id", authorize("model.edit"), updateModelRiskById);
 
 // DELETE /modelRisks/:id - Delete model risk by ID
-router.delete("/:id", deleteModelRiskById);
+router.delete("/:id", authorize("model.edit"), deleteModelRiskById);
 
 export default router;

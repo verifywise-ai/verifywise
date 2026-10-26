@@ -5,7 +5,7 @@ import { Box, Collapse, Typography } from "@mui/material";
 import { Send, Loader2, Info, AlertCircle } from "lucide-react";
 import Field from "../../components/Inputs/Field";
 import { CustomizableButton } from "../../components/button/customizable-button";
-import { FormFieldRenderer, FormFieldHint } from "./FormFieldRenderer";
+import { FormFieldRenderer, FormFieldHint, FieldLabel } from "./FormFieldRenderer";
 import { CalculatedFieldDisplay } from "./CalculatedFieldDisplay";
 import {
   cleanSubmission,
@@ -433,8 +433,8 @@ export function PublicIntakeForm() {
   // Same order the show/hide rules and formulas use.
   const sortedFields = sortFields(formData.schema.fields);
 
-  // Resolve design settings
-  const ds = formData.designSettings ?? DEFAULT_DESIGN_SETTINGS;
+  // Resolve design settings; a key missing from the saved settings takes its default.
+  const ds = { ...DEFAULT_DESIGN_SETTINGS, ...formData.designSettings };
   const collectContactInfo = true;
   const maxWidth = ds.format === "wide" ? 820 : 620;
   const formMargin =
@@ -607,53 +607,31 @@ export function PublicIntakeForm() {
                   >
                     Your contact information
                   </Typography>
-                  <Box sx={{ display: "flex", flexDirection: "column", gap: "20px", mb: 3 }}>
-                    <Field
-                      id="submitter-name"
-                      label="Name"
-                      placeholder="Your name"
-                      value={submitterName}
-                      onChange={(e) => setSubmitterName(e.target.value)}
-                      sx={{
-                        "& .MuiOutlinedInput-root": {
-                          "borderRadius": "8px",
-                          "fontSize": "15px",
-                          "& fieldset": { borderColor: "#e2e8f0" },
-                          "&:hover fieldset": { borderColor: "#cbd5e1" },
-                          "&.Mui-focused fieldset": { borderColor: ds.colorTheme },
-                        },
-                        "& .MuiOutlinedInput-input": {
-                          padding: "12px 14px",
-                        },
-                      }}
-                    />
-                    <Field
-                      id="submitter-email"
-                      label="Email"
-                      type="email"
-                      isRequired
-                      value={submitterEmail}
-                      onChange={(e) => {
-                        setSubmitterEmail(e.target.value);
-                        setEmailError(null);
-                      }}
-                      error={emailError || undefined}
-                      sx={{
-                        "& .MuiOutlinedInput-root": {
-                          "borderRadius": "8px",
-                          "fontSize": "15px",
-                          "& fieldset": { borderColor: emailError ? "#ef4444" : "#e2e8f0" },
-                          "&:hover fieldset": { borderColor: emailError ? "#ef4444" : "#cbd5e1" },
-                          "&.Mui-focused fieldset": {
-                            borderColor: emailError ? "#ef4444" : ds.colorTheme,
-                          },
-                        },
-                        "& .MuiOutlinedInput-input": {
-                          padding: "12px 14px",
-                        },
-                      }}
-                    />
-                    <FormFieldHint text="We'll send you updates about your submission" />
+                  {/* Laid out like the question fields below: label, input, hint. */}
+                  <Box sx={{ display: "flex", flexDirection: "column", gap: "24px", mb: 3 }}>
+                    <Box>
+                      <FieldLabel label="Name" htmlFor="submitter-name" />
+                      <Field
+                        id="submitter-name"
+                        placeholder="Your name"
+                        value={submitterName}
+                        onChange={(e) => setSubmitterName(e.target.value)}
+                      />
+                    </Box>
+                    <Box>
+                      <FieldLabel label="Email" required htmlFor="submitter-email" />
+                      <Field
+                        id="submitter-email"
+                        type="email"
+                        value={submitterEmail}
+                        onChange={(e) => {
+                          setSubmitterEmail(e.target.value);
+                          setEmailError(null);
+                        }}
+                        error={emailError || undefined}
+                      />
+                      <FormFieldHint text="We'll send you updates about your submission" />
+                    </Box>
                   </Box>
 
                   <Box sx={{ my: 4, borderTop: "1px solid #e2e8f0" }} />

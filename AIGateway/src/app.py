@@ -1,5 +1,7 @@
+import logging
 import os
 import sys
+from contextlib import asynccontextmanager
 from importlib.metadata import version
 
 import litellm
@@ -7,6 +9,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from config import settings
+from middlewares.invalid_unicode import InvalidUnicodeMiddleware
 from middlewares.tenant import TenantMiddleware
 from routers.completions import router as completions_router
 from routers.models import router as models_router
@@ -33,6 +36,7 @@ from routers.mcp_proxy import router as mcp_proxy_router
 from routers.mcp_hook import router as mcp_hook_router
 from routers.tenant_chat import router as tenant_chat_router
 from middlewares.auth import include_internal_router
+from services.guardrail_service import preload_pii_engine, shutdown_scan_executor
 
 # Disable LiteLLM verbose logging to prevent key leakage
 litellm.suppress_debug_info = True
@@ -47,11 +51,33 @@ if settings.ai_gateway_internal_key.lower() in _PLACEHOLDER_VALUES:
     )
     sys.exit(1)
 
+logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    if settings.guardrails_preload_pii:
+        # Fire and forget: serving starts at once, and the model loads on the
+        # guardrail scan thread, where PII scans wait for it anyway.
+        try:
+            preload_pii_engine()
+        except Exception as e:
+            logger.error(f"Could not start PII engine preload: {e}")
+    yield
+    shutdown_scan_executor()
+
+
 app = FastAPI(
     title="VerifyWise AI Gateway",
     version="1.0.0",
     redirect_slashes=False,
+    lifespan=lifespan,
 )
+
+# Reject request bodies carrying a lone UTF-16 surrogate or invalid UTF-8 with a
+# 400 before any route runs; otherwise they fail as 500s when echoed, stored
+# or logged. Added first so it sits inside CORS (its 400s carry CORS headers).
+app.add_middleware(InvalidUnicodeMiddleware)
 
 # CORS: allow the Express backend plus any explicitly configured origins.
 # Never use "*": key-authenticated endpoints must not be callable from
@@ -81,13 +107,13 @@ setup_observability(app, "verifywise-ai-gateway")
 # Mounted under /internal prefix to avoid conflict with public /v1 routes
 include_internal_router(app, completions_router, tags=["Internal"])
 include_internal_router(app, models_router, tags=["Internal"])
-include_internal_router(app, guardrails_router, tags=["Internal"])
 
 # CRUD routes (Express backend → Gateway, authenticated via internal key + tenant headers)
 include_internal_router(app, api_keys_router, tags=["CRUD"])
 include_internal_router(app, budget_router, tags=["CRUD"])
 include_internal_router(app, endpoints_router, tags=["CRUD"])
 include_internal_router(app, spend_router, tags=["CRUD"])
+include_internal_router(app, guardrails_router, tags=["CRUD"])
 include_internal_router(app, guardrails_crud_router, tags=["CRUD"])
 include_internal_router(app, virtual_keys_router, tags=["CRUD"])
 include_internal_router(app, prompts_router, tags=["CRUD"])

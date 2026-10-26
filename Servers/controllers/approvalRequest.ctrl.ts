@@ -19,7 +19,10 @@ import { sequelize } from "../database/db";
 import { QueryTypes } from "sequelize";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import { logStructured } from "../utils/logger/fileLogger";
-import { ValidationException } from "../domain.layer/exceptions/custom.exception";
+import {
+  ForbiddenException,
+  ValidationException,
+} from "../domain.layer/exceptions/custom.exception";
 import {
   createApprovalRequestQuery,
   getMyApprovalRequestsQuery,
@@ -28,7 +31,9 @@ import {
   processApprovalQuery,
   withdrawApprovalRequestQuery,
   tryAutoApproveRequestQuery,
+  ApprovalOverride,
 } from "../utils/approvalRequest.utils";
+import { roleHasPermission } from "../utils/rolePermissions.utils";
 import { TransientApprovalError } from "../advisor/approval/approvalGateway";
 import {
   getApprovalWorkflowByIdQuery,
@@ -52,6 +57,43 @@ import {
 import { EMAIL_TEMPLATES } from "../constants/emailTemplates";
 
 import { translateError } from "../utils/i18n.utils";
+
+/**
+ * Reads an admin override (`override: true` + `step_number`, validated by
+ * validateApprovalActionBody) from an approve/reject body. Only a role with
+ * approvalRequest.admin may override; anyone else gets a 403.
+ */
+async function resolveOverride(req: Request): Promise<ApprovalOverride | undefined> {
+  if (req.body?.override !== true) {
+    return undefined;
+  }
+  const allowed =
+    !!req.role &&
+    (await roleHasPermission(req.organizationId ?? null, req.role, "approvalRequest.admin"));
+  if (!allowed) {
+    throw new ForbiddenException("Only an admin can override an approval step");
+  }
+  return { stepNumber: Number(req.body.step_number) };
+}
+
+/**
+ * Answers a failed resolveOverride. The override is resolved before the
+ * decision's transaction opens, so a refusal holds no pooled connection.
+ */
+function respondOverrideFailure(req: Request, res: Response, error: unknown, fn: string) {
+  if (error instanceof ForbiddenException) {
+    logStructured(
+      "error",
+      `override forbidden: user ${req.userId} on request ${req.params.id}: ${error.message}`,
+      fn,
+      "approvalRequest.ctrl.ts",
+    );
+    return res.status(403).json(STATUS_CODE[403](translateError(req, error)));
+  }
+  logStructured("error", "failed to check override permission", fn, "approvalRequest.ctrl.ts");
+  return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+}
+
 /**
  * Create new approval request
  * @route POST /api/approval-requests
@@ -355,6 +397,13 @@ export async function getApprovalRequestById(req: Request, res: Response): Promi
  * @access Approvers only
  */
 export async function approveRequest(req: Request, res: Response): Promise<any> {
+  let override: ApprovalOverride | undefined;
+  try {
+    override = await resolveOverride(req);
+  } catch (error) {
+    return respondOverrideFailure(req, res, error, "approveRequest");
+  }
+
   const transaction = await sequelize.transaction();
 
   logStructured("processing", "approving request", "approveRequest", "approvalRequest.ctrl.ts");
@@ -380,13 +429,16 @@ export async function approveRequest(req: Request, res: Response): Promise<any> 
       comments,
       organizationId,
       transaction,
+      override,
     );
 
     await transaction.commit();
 
     logStructured(
       "successful",
-      `approved request ${requestId}`,
+      override
+        ? `approved request ${requestId} step ${override.stepNumber} by admin override (user ${userId})`
+        : `approved request ${requestId}`,
       "approveRequest",
       "approvalRequest.ctrl.ts",
     );
@@ -520,10 +572,19 @@ export async function approveRequest(req: Request, res: Response): Promise<any> 
       );
       return res.status(409).json(STATUS_CODE[409](error.message));
     }
+    if (error instanceof ForbiddenException) {
+      logStructured(
+        "error",
+        `approval forbidden: user ${req.userId} on request ${req.params.id}: ${error.message}`,
+        "approveRequest",
+        "approvalRequest.ctrl.ts",
+      );
+      return res.status(403).json(STATUS_CODE[403](translateError(req, error)));
+    }
     if (error instanceof ValidationException) {
       logStructured(
         "processing",
-        `approval rejected — request no longer pending: ${error.message}`,
+        `approval refused: ${error.message}`,
         "approveRequest",
         "approvalRequest.ctrl.ts",
       );
@@ -545,6 +606,13 @@ export async function approveRequest(req: Request, res: Response): Promise<any> 
  * @access Approvers only
  */
 export async function rejectRequest(req: Request, res: Response): Promise<any> {
+  let override: ApprovalOverride | undefined;
+  try {
+    override = await resolveOverride(req);
+  } catch (error) {
+    return respondOverrideFailure(req, res, error, "rejectRequest");
+  }
+
   const transaction = await sequelize.transaction();
 
   logStructured("processing", "rejecting request", "rejectRequest", "approvalRequest.ctrl.ts");
@@ -570,13 +638,16 @@ export async function rejectRequest(req: Request, res: Response): Promise<any> {
       comments,
       organizationId,
       transaction,
+      override,
     );
 
     await transaction.commit();
 
     logStructured(
       "successful",
-      `rejected request ${requestId}`,
+      override
+        ? `rejected request ${requestId} step ${override.stepNumber} by admin override (user ${userId})`
+        : `rejected request ${requestId}`,
       "rejectRequest",
       "approvalRequest.ctrl.ts",
     );
@@ -645,10 +716,19 @@ export async function rejectRequest(req: Request, res: Response): Promise<any> {
       .json(STATUS_CODE[200]({ message: req.t!("Request rejected successfully") }));
   } catch (error) {
     await transaction.rollback();
+    if (error instanceof ForbiddenException) {
+      logStructured(
+        "error",
+        `rejection forbidden: user ${req.userId} on request ${req.params.id}: ${error.message}`,
+        "rejectRequest",
+        "approvalRequest.ctrl.ts",
+      );
+      return res.status(403).json(STATUS_CODE[403](translateError(req, error)));
+    }
     if (error instanceof ValidationException) {
       logStructured(
         "processing",
-        `rejection rejected — request no longer pending: ${error.message}`,
+        `rejection refused: ${error.message}`,
         "rejectRequest",
         "approvalRequest.ctrl.ts",
       );

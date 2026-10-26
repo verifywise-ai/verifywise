@@ -47,6 +47,7 @@ export const AUDIT_RECORD_TABLES: ReadonlyArray<{ table: string; timestampColumn
   { table: "fria_change_history", timestampColumn: "changed_at" },
   { table: "ai_action_audit_log", timestampColumn: "created_at" },
   { table: "file_access_logs", timestampColumn: "access_date" },
+  { table: "jira_incident_sync_events", timestampColumn: "created_at" },
 ];
 
 type AuditTable = (typeof AUDIT_RECORD_TABLES)[number];

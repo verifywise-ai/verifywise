@@ -20,7 +20,8 @@ from utils.mcp_credentials import normalize_auth_config
 
 pytestmark = pytest.mark.asyncio
 
-OK = {"status": "success", "tools_discovered": 3, "error": None}
+CHANGES = {"added": 1, "removed": 0, "changed": 0, "unchanged": 2}
+OK = {"status": "success", "tools_discovered": 3, "changes": CHANGES, "error": None}
 
 
 def _request(body=None, role="Admin"):
@@ -106,7 +107,7 @@ class TestCreate:
     async def test_create_inactive_skips_discovery(self, fakes):
         body = {"name": "S", "slug": "s", "url": "https://a/mcp", "auth_type": "none", "is_active": False}
         out = await router.create_mcp_server(_request(body))
-        assert out["discovery"] == {"status": "skipped", "tools_discovered": 0, "error": None}
+        assert out["discovery"] == {"status": "skipped", "tools_discovered": 0, "changes": None, "error": None}
         assert fakes["discovery"] == []
 
     async def test_create_missing_secret_is_400(self, fakes):
@@ -160,12 +161,12 @@ class TestPatch:
 class TestDiscoverEndpoint:
     async def test_manual_discovery_uses_25s_budget(self, fakes):
         out = await router.discover_server_tools(9, _request())
-        assert out == {"status": "success", "tools_discovered": 3}
+        assert out == {"status": "success", "tools_discovered": 3, "changes": CHANGES}
         assert fakes["discovery"] == [(9, router.MANUAL_DISCOVERY_SECONDS)]
 
     async def test_manual_failure_is_502_with_message(self, fakes, monkeypatch):
         async def fail(org_id, server, budget):
-            return {"status": "failed", "tools_discovered": 0, "error": "Could not connect to the server address"}
+            return {"status": "failed", "tools_discovered": 0, "changes": None, "error": "Could not connect to the server address"}
         monkeypatch.setattr(router, "run_discovery", fail)
         with pytest.raises(HTTPException) as e:
             await router.discover_server_tools(9, _request())

@@ -11,7 +11,7 @@ export const connectPythonAgentsContent: ArticleContent = {
     { type: 'paragraph', text: 'The package is MIT licensed, so you can ship it inside your own agent.' },
     { type: 'heading', id: 'configure', level: 2, text: '2. Set the environment variables' },
     { type: 'paragraph', text: 'Create an agent key in AI Gateway > Agent Control > Agent keys, then set:' },
-    { type: 'code', language: 'bash', code: 'export VW_GATEWAY_URL=http://localhost:8100   # your gateway URL\nexport VW_AGENT_KEY=sk-mcp-...                 # your agent key' },
+    { type: 'code', language: 'bash', code: 'export VW_GATEWAY_URL=https://your-verifywise-host   # the URL you open VerifyWise at\nexport VW_AGENT_KEY=sk-mcp-...                       # your agent key\n# Local development: the dev server does not forward /v1, so use the backend, e.g. VW_GATEWAY_URL=http://localhost:3000' },
     { type: 'table', columns: [
       { key: 'name', label: 'Variable', width: '30%' },
       { key: 'meaning', label: 'Default and meaning', width: '70%' },

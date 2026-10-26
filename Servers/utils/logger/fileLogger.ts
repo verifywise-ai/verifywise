@@ -4,42 +4,13 @@ import path from "path";
 import { getTenantIdForLogging, ensureTenantLogDirectory } from "../tenant/tenantContext";
 import { emitOtlpLog } from "../../observability/otel";
 import { getServerLogRetentionDays } from "./logRetention";
+import { redactSensitiveInfo } from "./redact";
 
 const { combine, timestamp, printf, colorize } = format;
 const isDev = process.env.NODE_ENV !== "production";
 
-/**
- * Defense-in-depth redaction for accidentally-logged secrets.
- * Applied to every log message before it reaches the transport.
- */
-export function redactSensitiveInfo(input: string): string {
-  return (
-    input
-      // OpenAI-style API keys and similar long key prefixes
-      .replace(/\b(sk-[A-Za-z0-9_-]{10,})\b/g, "[REDACTED]")
-      // Authorization: Bearer <token>
-      .replace(/(\bAuthorization\s*:\s*Bearer\s+)\S+/gi, "$1[REDACTED]")
-      // key=value or key: value style sensitive fields
-      .replace(
-        /\b(password|secret|token|apiKey|api_key|refreshToken|accessToken)\b\s*[:=]\s*[^\s&,"{}]+/gi,
-        "$1=[REDACTED]",
-      )
-      // JSON double-quoted sensitive fields
-      .replace(
-        /"(password|secret|token|apiKey|api_key|refreshToken|accessToken)"\s*:\s*"[^"]*"/gi,
-        '"$1":"[REDACTED]"',
-      )
-      // JSON single-quoted sensitive fields
-      .replace(
-        /'(password|secret|token|apiKey|api_key|refreshToken|accessToken)'\s*:\s*'[^']*'/gi,
-        "'$1':'[REDACTED]'",
-      )
-  );
-}
-
 const logFormat = printf(({ level, message, timestamp }) => {
-  const safeMessage = typeof message === "string" ? redactSensitiveInfo(message) : String(message);
-  return `${timestamp} [${level}]: ${safeMessage}`;
+  return `${timestamp} [${level}]: ${redactSensitiveInfo(message)}`;
 });
 
 /**

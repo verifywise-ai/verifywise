@@ -428,18 +428,20 @@ export const formatEntityFieldChanges = async (
  *
  * @param entityType - The type of entity being created
  * @param entityId - The ID of the newly created entity
- * @param changedByUserId - ID of the user creating the entity
+ * @param changedByUserId - ID of the user creating the entity; null with changedBySystem
  * @param organizationId - Organization ID for tenant isolation
  * @param entityData - The initial entity data
  * @param transaction - Optional database transaction
+ * @param changedBySystem - True when an integration, not a user, creates the entity
  */
 export const recordEntityCreation = async (
   entityType: EntityType,
   entityId: number,
-  changedByUserId: number,
+  changedByUserId: number | null,
   organizationId: number,
   entityData: any,
   transaction?: Transaction,
+  changedBySystem = false,
 ): Promise<void> => {
   const config = getEntityConfig(entityType);
 
@@ -458,6 +460,7 @@ export const recordEntityCreation = async (
         // Tenant-scoped name lookups, on the creating transaction.
         await formatFieldValue(entityType, field, value, { organizationId, transaction }),
         transaction,
+        changedBySystem,
       );
     }
   }

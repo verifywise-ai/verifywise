@@ -16,6 +16,7 @@ import { AlertProps } from "../../types/alert.types";
 import { closeIconStyles, iconButtonStyles } from "./style";
 import { CloseIconProps } from "../../../domain/interfaces/i.widget";
 import AlertBody from "./AlertBody";
+import { VWLink } from "../Link/VWLink";
 
 import {
   Info as BlueInfoIcon,
@@ -57,6 +58,7 @@ const Alert: React.FC<AlertProps> = ({
   isToast,
   hasIcon = true,
   onClick,
+  action,
   sx,
 }: AlertProps): JSX.Element => {
   const theme = useTheme();
@@ -95,6 +97,16 @@ const Alert: React.FC<AlertProps> = ({
       <Stack direction={"column"} gap={"2px"} sx={{ flex: 1 }}>
         {title && <Typography sx={{ fontWeight: 700, color: text }}>{title}</Typography>}
         {body && <AlertBody body={body} textColor={text} />}
+        {action && (
+          <Box>
+            <VWLink
+              onClick={action.onClick}
+              sx={{ "color": text, "fontWeight": 600, "&:hover": { color: text } }}
+            >
+              {action.label}
+            </VWLink>
+          </Box>
+        )}
       </Stack>
       {isToast && (
         <IconButton

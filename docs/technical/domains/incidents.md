@@ -249,9 +249,10 @@ re-approval in a later update.
 All updates to an existing incident go through
 `updateIncident(organizationId, incidentId, updates, userId, { transaction?, changedBySystem?, expectedUpdatedAt? })`
 in `Servers/services/incidentManagement.service.ts`. Callers today: the HTTP
-update (`PATCH /ai-incident-managements/:id`) and the AI Advisor tools
-`agent_update_incident` / `agent_update_incident_status`. Integrations such as
-issue-tracker sync are meant to use it too. In order, it:
+update (`PATCH /ai-incident-managements/:id`), the AI Advisor tools
+`agent_update_incident` / `agent_update_incident_status`, and the Jira
+incidents status sync (`changedBySystem: true`, see
+[Imported incidents](#imported-incidents-jira-incidents-extension)). In order, it:
 
 1. Loads the incident once, `SELECT ... FOR UPDATE OF i` inside the transaction
    (its own, or the caller's when `transaction` is passed; it only commits or
@@ -518,6 +519,11 @@ This supports EU AI Act Article 73 requirements for documenting serious incident
 | `incident_updated` | Incident modified |
 | `incident_deleted` | Incident deleted |
 
+`incident_added` is enqueued in `transaction.afterCommit` inside
+`createNewIncidentQuery`, so it applies to every caller (the HTTP create, the AI
+Advisor, the Jira import and the demo driver): a rolled-back create never sends
+it.
+
 ### Email Template Variables
 
 For incident notifications:
@@ -582,6 +588,93 @@ The incident management system supports Article 73 requirements:
 | `application/validations/incidentValidation.ts` | Description length rule |
 | `domain/enums/aiIncidentManagement.enum.ts` | Client enums |
 | `domain/models/Common/incidentManagement/` | Client model |
+
+## Imported incidents (Jira incidents extension)
+
+The Jira incidents extension (`Servers/extensions/jira-incidents/`, see
+[extensions.md](../infrastructure/extensions.md#jira-incidents)) imports new
+Jira Cloud issues as incidents and then keeps status in sync both ways. Only
+status syncs; VerifyWise never creates Jira issues.
+
+### Tables
+
+| Table | Holds |
+|---|---|
+| `jira_incidents_config` | One row per organization: site URL, email, encrypted API token, service account id and time zone, project, issue type, optional label, the three mappings (`status_map_in`, `status_map_out`, `severity_map`), defaults (use case, type, reporter), `import_from`, `last_checked_at` |
+| `jira_incident_links` | One row per imported issue: `jira_issue_id`, key, URL, `incident_id`, `state` (`ok`, `error`, `conflict`, `deleted_in_jira`, `deleted_in_verifywise`), `state_reason`, `last_jira_status_id`, `last_vw_status`, `last_synced_at` (last check), `remote_link_pending`, `remote_link_tried_at`. UNIQUE (organization_id, jira_issue_id); a composite FK (incident_id, organization_id) keeps the link in its incident's organization |
+| `jira_incident_sync_events` | Sync activity: `imported`, `status_from_jira`, `status_to_jira`, `conflict`, `error`, `deleted_in_jira`, with a JSON `detail`; an audit record under data retention |
+
+### Creating an imported incident
+
+`createIncidentForImport` (`Servers/services/incidentImport.service.ts`) is the
+system creation path: it writes the incident inside the import's transaction,
+records creation history as system (no user), enqueues `incident_added` after
+commit and starts the incident response workflow for Very serious incidents,
+as an HTTP create would. Each issue imports in its own transaction together
+with its link row and `imported` event.
+
+What is copied: the summary and the description (ADF converted to plain text,
+cut to 32,767 characters, padded with the issue key when under 5), severity
+from `severity_map` (Serious when the issue has no priority), status from
+`status_map_in`, the issue's created date as `occurred_date` and
+`date_detected`, and the configured use case, type and reporter. Approval
+status starts at Pending. After commit, a remote link back to the incident is
+added to the Jira issue when `FRONTEND_URL` is set. The link row is written
+with `remote_link_pending = true`, cleared once Jira accepts the link. After
+status sync, each run retries up to 20 pending links from earlier runs
+(`retryRemoteLinks`): never-tried first, then by oldest failed attempt
+(`remote_link_tried_at`), so links that keep failing cannot block the rest. A
+link's first failed attempt records an `error` event; later failures are
+logged only. A rate limit stops the run and leaves the link pending; links
+imported while `FRONTEND_URL` was unset get theirs once it is set.
+
+### Status rules
+
+Each run reads both sides for every link in `ok`, `error`, `conflict` or
+`deleted_in_jira` whose incident exists and is not archived, except settled
+links: `ok`, the incident Closed and `last_vw_status` Closed are re-read from
+Jira at most once every 24 hours (`SETTLED_RECHECK_HOURS`, measured from
+`last_synced_at`). A reopen in Jira can therefore take up to a day to reach a
+closed incident (a manual **Sync now** reads them all); a VerifyWise change
+unsettles the link at once. "Changed"
+means different from `last_jira_status_id` / `last_vw_status`:
+
+| Jira changed? | VerifyWise changed? | Action |
+|---|---|---|
+| no | no | nothing |
+| yes | no | set the incident to `status_map_in[jira status]` through `updateIncident(..., { changedBySystem: true })`; `status_from_jira` event |
+| no | yes | if `status_map_out[vw status]` is "Don't change Jira", record it and do nothing; otherwise transition the issue; `status_to_jira` event |
+| yes | yes | the later of the two change times wins and is applied to the other side; `conflict` event with both values; link `state = conflict` |
+
+- Both `last_*` values are updated in the same transaction as the write, so a
+  status written by the sync is never seen as a change on the next run.
+- The link and incident are locked and re-checked before each write (lock
+  order link → incident, as on the delete path); if either changed in the
+  meantime, the link waits for the next run.
+- An issue imported in an unmapped status has an empty `last_jira_status_id`,
+  so a later mapping is applied. A VerifyWise change on it is VerifyWise's
+  alone (no conflict) unless Jira's changelog shows a status move after the
+  link was created (less one minute, for clock skew and the search-to-write
+  gap: a move that close counts as a conflict).
+- An unmapped Jira status, or a transition that needs a field (such as
+  Resolution) or does not exist from the current status, marks the link
+  `error` with the reason; the incident is left as it is.
+- Jira refusing one issue (403: issue security, a transition the account may
+  not use) marks only that link `error`; a rejected token (401) fails the run.
+- Links already `deleted_in_jira` are read one by one, and a batch search that
+  Jira rejects (it does when it names a deleted issue) falls back to per-issue
+  reads, so one deleted issue never stops the rest of the batch.
+- A Jira status that reopens a Closed incident goes through `updateIncident`,
+  so the reopen rule applies.
+- An issue that Jira answers 404 for, while the project is still readable, is
+  `deleted_in_jira`; the incident is untouched and the link recovers if the
+  issue comes back.
+
+### Deleting an imported incident
+
+Deleting the incident marks its link `deleted_in_verifywise` (in the delete
+transaction, `utils/incidentManagement.utils.ts`); the FK then nulls
+`incident_id`. The row stays so the issue is never imported again.
 
 ## Follow-ups
 

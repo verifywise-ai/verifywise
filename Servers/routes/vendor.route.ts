@@ -12,6 +12,7 @@ import {
 } from "../controllers/vendor.ctrl";
 
 import authenticateJWT from "../middleware/auth.middleware";
+import authorize from "../middleware/accessControl.middleware";
 
 // GET requests
 router.get("/", authenticateJWT, getAllVendors);
@@ -22,8 +23,8 @@ router.get("/:id", authenticateJWT, getVendorById);
 router.get("/:id/riskSuggestions", authenticateJWT, getVendorRiskSuggestions);
 
 // POST, PUT, DELETE requests
-router.post("/", authenticateJWT, createVendor);
-router.patch("/:id", authenticateJWT, updateVendorById);
-router.delete("/:id", authenticateJWT, deleteVendorById);
+router.post("/", authenticateJWT, authorize("vendor.edit"), createVendor);
+router.patch("/:id", authenticateJWT, authorize("vendor.edit"), updateVendorById);
+router.delete("/:id", authenticateJWT, authorize("vendor.edit"), deleteVendorById);
 
 export default router;

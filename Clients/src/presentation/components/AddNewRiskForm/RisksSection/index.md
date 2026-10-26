@@ -153,10 +153,6 @@ const FORM_CONSTANTS = {
 - `aiLifecyclePhase` - AI lifecycle phase options
 - `riskCategoryItems` - Risk category options for autocomplete
 
-### Styling
-
-- `styles.module.css` - Component-specific styles
-
 ## License
 
 This component is licensed under the MIT License.

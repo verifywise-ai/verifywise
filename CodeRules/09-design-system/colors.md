@@ -2,105 +2,86 @@
 
 Complete color palette for the VerifyWise design system. Always use theme tokens — never hardcode hex values.
 
+Scale hex lives in `shared/design-tokens/primitives.ts`. Semantic tokens live in `shared/design-tokens/palette.ts`. The client `palette.ts` re-exports the shared palette. New screen styles should use `theme.palette`, a palette export, `textStyles` / `fontSize`, and `theme.spacing()`.
+
 ## Primary
 
-| Token | Value | Usage |
-|-------|-------|-------|
-| `primary.main` | `#13715B` | Brand green, primary actions |
-| `primary.hover` | `#0f604d` | Hover state for primary |
-| `primary.light` | `#5FA896` | Light variant |
-| `primary.focusRing` | `rgba(19,113,91,0.1)` | Focus outline |
+| Token                            | Value     | Usage                        |
+| -------------------------------- | --------- | ---------------------------- |
+| `brand.primary` / `primary.main` | `#13715B` | Brand green, primary actions |
+| `brand.primaryHover`             | `#0F5A47` | Hover state for primary      |
+| `brand.primaryLight`             | `#E6F0EC` | Light variant                |
+| `brand.primaryDark`              | `#10614D` | Dark variant                 |
 
 ## Text
 
-| Token | Value | Usage |
-|-------|-------|-------|
-| `text.primary` | `#1c2130` | Main body text (contrast 21:1) |
-| `text.secondary` | `#344054` | Supporting text (contrast 10:1) |
-| `text.tertiary` | `#475467` | Muted text, placeholders (contrast 6.4:1) |
-| `text.accent` | `#838c99` | Hints, disabled text |
+| Token            | Value     | Usage                    |
+| ---------------- | --------- | ------------------------ |
+| `text.primary`   | `#1C2130` | Main body text           |
+| `text.secondary` | `#344054` | Supporting text          |
+| `text.tertiary`  | `#475467` | Muted text, placeholders |
+| `text.accent`    | `#838C99` | Hints                    |
+| `text.disabled`  | `#9CA3AF` | Disabled text            |
+| `text.icon`      | `#667085` | Default icon color       |
 
 ## Backgrounds
 
-| Token | Value | Usage |
-|-------|-------|-------|
-| `background.main` | `#FFFFFF` | Page background |
-| `background.alt` | `#FCFCFD` | Alternate panels |
-| `background.modal` | `#FCFCFD` | Modal background |
-| `background.fill` | `#F4F4F4` | Fill areas, secondary |
-| `background.accent` | `#f9fafb` | Subtle accent areas |
+| Token               | Value     | Usage                          |
+| ------------------- | --------- | ------------------------------ |
+| `background.main`   | `#FFFFFF` | Page background                |
+| `background.alt`    | `#F9FAFB` | Alternate panels               |
+| `background.modal`  | `#F9FAFB` | Modal background               |
+| `background.fill`   | `#E6F0EC` | Fill areas, selected tint      |
+| `background.accent` | `#F9FAFB` | Subtle accent areas            |
+| `background.hover`  | `#F3F4F6` | Hover states                   |
+| `secondary.main`    | `#F4F4F4` | Secondary button fill          |
+| `secondary.dark`    | `#e3e3e3` | Secondary hover and other fill |
 
 ## Borders
 
-| Token | Value | Usage |
-|-------|-------|-------|
-| `border.light` | `#eaecf0` | Subtle separators |
-| `border.dark` | `#d0d5dd` | Default borders, dividers |
+| Token          | Value     | Usage                     |
+| -------------- | --------- | ------------------------- |
+| `border.light` | `#E5E7EB` | Subtle separators         |
+| `border.dark`  | `#D0D5DD` | Default borders, dividers |
 
-> **Standard border:** Use `#d0d5dd` for card borders and dividers.
-> Never use `#EEEEEE` for card borders.
+> **Standard border:** Use `theme.palette.border.dark` for card borders and dividers.
 
 ## Status Colors
 
 ### Success
 
-| Token | Value | Usage |
-|-------|-------|-------|
-| `status.success.text` | `#079455` | Success text |
-| `status.success.main` | `#17b26a` | Success indicators |
-| `status.success.light` | `#d4f4e1` | Light background |
-| `status.success.bg` | `#ecfdf3` | Badge/chip background |
+| Token                   | Value     | Usage                                                |
+| ----------------------- | --------- | ---------------------------------------------------- |
+| `status.success.text`   | `#138A5E` | Success text                                         |
+| `status.success.bg`     | `#E6F4EA` | Badge/chip background                                |
+| `status.success.border` | `#C8E6D0` | Success borders                                      |
+| `status.success.strong` | `#079455` | Transient confirmation only. Not on the green scale. |
 
 ### Error
 
-| Token | Value | Usage |
-|-------|-------|-------|
-| `status.error.text` | `#f04438` | Error text (contrast 4.5:1) |
-| `status.error.main` | `#d32f2f` | Error indicators |
-| `status.error.light` | `#fbd1d1` | Light background |
-| `status.error.bg` | `#f9eced` | Badge/chip background |
-| `status.error.border` | `#FDA29B` | Error borders |
+| Token                 | Value     | Usage                 |
+| --------------------- | --------- | --------------------- |
+| `status.error.text`   | `#D32F2F` | Error text            |
+| `status.error.bg`     | `#FFD6D6` | Badge/chip background |
+| `status.error.border` | `#F5B8B8` | Error borders         |
 
 ### Warning
 
-| Token | Value | Usage |
-|-------|-------|-------|
-| `status.warning.text` | `#DC6803` | Warning text |
-| `status.warning.main` | `#fdb022` | Warning indicators |
-| `status.warning.light` | `#ffecbc` | Light background |
-| `status.warning.bg` | `#fffcf5` | Badge/chip background |
-| `status.warning.border` | `#fec84b` | Warning borders |
+| Token                   | Value     | Usage                 |
+| ----------------------- | --------- | --------------------- |
+| `status.warning.text`   | `#795548` | Warning text          |
+| `status.warning.bg`     | `#FFF8E1` | Badge/chip background |
+| `status.warning.border` | `#F5E6B8` | Warning borders       |
 
 ### Info
 
-| Token | Value | Usage |
-|-------|-------|-------|
-| `status.info.text` | `#1c2130` | Info text |
-| `status.info.main` | `#475467` | Info indicators |
-| `status.info.bg` | `#FFFFFF` | Info background |
-| `status.info.border` | `#d0d5dd` | Info borders |
+| Token                | Value     | Usage           |
+| -------------------- | --------- | --------------- |
+| `status.info.text`   | `#1565C0` | Info text       |
+| `status.info.bg`     | `#E3F2FD` | Info background |
+| `status.info.border` | `#BBDEFB` | Info borders    |
 
-## Button Colors
-
-| Purpose | Value |
-|---------|-------|
-| Primary | `#13715B` |
-| Secondary | `#6B7280` |
-| Success | `#059669` |
-| Warning | `#D97706` |
-| Error | `#DB504A` |
-| Info | `#3B82F6` |
-
-## Other Tokens
-
-| Token | Value | Usage |
-|-------|-------|-------|
-| Icon default | `#667085` | Default icon color |
-| Line | `#d6d9dd` | Thin lines |
-| Fill | `#e3e3e3` | Fill areas |
-| Grid | `#a2a3a3` | Grid lines |
-
-## Usage in Code
+## Usage in code
 
 ```tsx
 // Always use theme references

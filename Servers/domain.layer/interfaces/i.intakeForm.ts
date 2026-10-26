@@ -2,6 +2,18 @@ import { IntakeFormStatus } from "../enums/intake-form-status.enum";
 import { IntakeEntityType } from "../enums/intake-entity-type.enum";
 
 /**
+ * Per-form review routing settings (intake_forms.routing JSONB)
+ */
+export interface IFormRouting {
+  enabled: boolean;
+  seniorReviewerIds: number[];
+  standardReviewerIds: number[];
+  threshold: number;
+  closeCallMargin: number;
+  secondReviewRate: number;
+}
+
+/**
  * Field type options for intake form fields
  */
 export type IntakeFieldType =
@@ -83,6 +95,7 @@ export interface IIntakeForm {
   suggestedQuestionsEnabled: boolean;
   euAiActRiskStepEnabled: boolean;
   designSettings: Record<string, unknown> | null;
+  routing: IFormRouting | null;
   createdBy: number;
   createdAt: Date;
   updatedAt: Date;
@@ -107,6 +120,7 @@ export interface ICreateIntakeFormInput {
   suggestedQuestionsEnabled?: boolean;
   euAiActRiskStepEnabled?: boolean;
   designSettings?: Record<string, unknown> | null;
+  routing?: IFormRouting | null;
   createdBy: number;
 }
 
@@ -129,6 +143,7 @@ export interface IUpdateIntakeFormInput {
   suggestedQuestionsEnabled?: boolean;
   euAiActRiskStepEnabled?: boolean;
   designSettings?: Record<string, unknown> | null;
+  routing?: IFormRouting | null;
 }
 
 /**

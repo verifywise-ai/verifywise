@@ -49,6 +49,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useFormValidation } from "../../../../application/hooks/useFormValidation";
 import { focusFormFieldById } from "../../../../application/utils/formValidationFocus";
 import { checkStringValidation } from "../../../../application/validations/stringValidation";
+import { useAuth } from "../../../../application/hooks/useAuth";
+import allowedRoles from "../../../../application/constants/permissions";
+import ReadOnlyFieldset from "../../ReadOnlyFieldset";
 
 dayjs.extend(utc);
 
@@ -174,6 +177,9 @@ const NewModelInventory: FC<NewModelInventoryProps> = ({
   const [values, setValues] = useState<NewModelInventoryFormValues>(initialData || initialState);
   const [users, setUsers] = useState<User[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+  // Roles without edit rights can open an existing record but not change it.
+  const { userRoleName } = useAuth();
+  const isReadOnly = isEdit && !allowedRoles.modelInventory.edit.includes(userRoleName);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("details");
@@ -1052,6 +1058,7 @@ const NewModelInventory: FC<NewModelInventoryProps> = ({
       onSubmit={activeTab === "details" ? handleSaveModelInventory : undefined}
       submitButtonText={isEdit ? "Update model" : "Save"}
       isSubmitting={isButtonDisabled}
+      hideSubmitButton={isReadOnly}
       maxWidth="760px"
       expandedHeight={values.security_assessment}
     >
@@ -1093,16 +1100,18 @@ const NewModelInventory: FC<NewModelInventoryProps> = ({
           }}
         >
           <Box sx={{ display: activeTab === "details" ? "block" : "none" }}>
-            {modelDetailsSection}
+            <ReadOnlyFieldset readOnly={isReadOnly}>{modelDetailsSection}</ReadOnlyFieldset>
           </Box>
           {activeTab === "evidence" && isEdit && evidenceSection}
           <Box sx={{ display: activeTab === "custom-fields" ? "block" : "none" }}>
-            <CustomFieldsSection
-              ref={customFieldsRef}
-              entityType="model_inventory"
-              entityId={isEdit ? ((selectedModelInventoryId as number) ?? null) : null}
-              onPendingChange={customFieldsGate.onPendingChange}
-            />
+            <ReadOnlyFieldset readOnly={isReadOnly}>
+              <CustomFieldsSection
+                ref={customFieldsRef}
+                entityType="model_inventory"
+                entityId={isEdit ? ((selectedModelInventoryId as number) ?? null) : null}
+                onPendingChange={customFieldsGate.onPendingChange}
+              />
+            </ReadOnlyFieldset>
           </Box>
           {activeTab === "activity" && isEdit && (
             <HistorySidebar

@@ -32,7 +32,7 @@ def _validate_slug(slug: str) -> None:
         )
 
 
-SKIPPED = {"status": "skipped", "tools_discovered": 0, "error": None}
+SKIPPED = {"status": "skipped", "tools_discovered": 0, "changes": None, "error": None}
 
 
 def _present(server: dict, request: Request) -> dict:
@@ -227,4 +227,8 @@ async def discover_server_tools(server_id: int, request: Request) -> Any:
     result = await run_discovery(org_id, server, MANUAL_DISCOVERY_SECONDS)
     if result["status"] != "success":
         raise HTTPException(status_code=502, detail=result["error"])
-    return {"status": "success", "tools_discovered": result["tools_discovered"]}
+    return {
+        "status": "success",
+        "tools_discovered": result["tools_discovered"],
+        "changes": result["changes"],
+    }

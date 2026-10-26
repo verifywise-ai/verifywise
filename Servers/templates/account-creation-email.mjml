@@ -52,7 +52,7 @@
       <mj-section>
         <mj-column width="100%">
           <mj-text>
-                <!-- name, link --><h2 class="email-heading">Welcome to VerifyWise</h2><p class="email-body">Hello {{name}},</p><p class="email-body">An administrator has created an account for you on the VerifyWise server.</p><p class="email-body">Click the button below to set up your account and get started.</p><p style="margin: 28px 0 24px 0;"><a href="{{link}}" class="btn btn-primary">Create account</a></p><p class="email-body">If you did not expect this invitation, please ignore this email.</p><p class="email-body">Thank you.</p>
+                <!-- heading, greeting, intro, instruction, button, ignore, thanks, link --><h2 class="email-heading">{{heading}}</h2><p class="email-body">{{greeting}}</p><p class="email-body">{{intro}}</p><p class="email-body">{{instruction}}</p><p style="margin: 28px 0 24px 0;"><a href="{{link}}" class="btn btn-primary">{{button}}</a></p><p class="email-body">{{ignore}}</p><p class="email-body">{{thanks}}</p>
           </mj-text>
         </mj-column>
       </mj-section>
@@ -60,7 +60,7 @@
     <mj-section padding="32px 20px">
       <mj-column width="100%">
         <mj-text css-class="email-footer" align="center">
-          Sent with care from VerifyWise
+          {{footer}}
         </mj-text>
       </mj-column>
     </mj-section>

@@ -41,6 +41,7 @@ vi.mock("../../../components/Skeletons", () => ({
 
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import MCPAgentKeysPage from "./index";
+import CustomException from "../../../../infrastructure/exceptions/customeException";
 
 const mockKeys = [
   {
@@ -249,9 +250,9 @@ describe("MCPAgentKeysPage", () => {
 
   it("shows a create error message returned by the API", async () => {
     (apiServices.get as any).mockResolvedValue({ data: { data: [] } });
-    (apiServices.post as any).mockRejectedValue({
-      response: { data: { detail: "Name already taken" } },
-    });
+    (apiServices.post as any).mockRejectedValue(
+      new CustomException("Conflict", 409, { detail: "Name already taken" }),
+    );
     const user = userEvent.setup();
     renderWithProviders(<MCPAgentKeysPage />);
 

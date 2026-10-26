@@ -16,6 +16,7 @@ jest.mock("../../utils/intakeForm.utils", () => ({
   createSubmissionQuery: jest.fn(),
   getSubmissionByIdQuery: jest.fn(),
   approveSubmissionQuery: jest.fn(),
+  setDecisionRecordQuery: jest.fn<any>().mockResolvedValue(undefined),
   updateSubmissionRiskQuery: jest.fn<any>().mockResolvedValue(undefined),
   updateSubmissionRiskOverrideQuery: jest.fn<any>().mockResolvedValue(undefined),
   updateIntakeFormQuery: jest.fn<any>().mockResolvedValue({ id: 1 }),
@@ -36,8 +37,8 @@ jest.mock("../../services/intakeFormEmail.service", () => ({
   sendSubmissionApprovedEmail: jest.fn<any>().mockResolvedValue(undefined),
   sendSubmissionRejectedEmail: jest.fn<any>().mockResolvedValue(undefined),
 }));
-jest.mock("../../services/intakeRiskScoring.service", () => ({
-  calculateSubmissionRisk: jest.fn<any>().mockResolvedValue({}),
+jest.mock("../../services/intakeScoring/enqueue", () => ({
+  enqueueIntakeAssessment: jest.fn<any>().mockResolvedValue(undefined),
 }));
 jest.mock("../../services/intakeLLM.service", () => ({
   generateSuggestedQuestions: jest.fn(),

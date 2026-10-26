@@ -26,6 +26,8 @@ jest.mock("../../utils/logger/fileLogger", () => ({
   default: serverLogger,
   logStructured,
   logCentralOnly,
+}));
+jest.mock("../../utils/logger/redact", () => ({
   redactSensitiveInfo: (s: string) => s.replace(/password=\S+/g, "password=[REDACTED]"),
 }));
 const logEvent = jest.fn<any>().mockResolvedValue(undefined);

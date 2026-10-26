@@ -15,6 +15,8 @@ import {
 } from "../../../application/repository/policy.repository";
 import { useUpdatePolicy } from "../../../application/hooks/usePolicyMutations";
 import useUsers from "../../../application/hooks/useUsers";
+import { useAuth } from "../../../application/hooks/useAuth";
+import allowedRoles from "../../../application/constants/permissions";
 import { User } from "../../../domain/types/User";
 import { PolicyFormData, PolicyInput } from "../../types/interfaces/i.policy";
 import { PolicyManagerModel } from "../../../domain/models/Common/policy/policyManager.model";
@@ -37,6 +39,8 @@ export default function PolicyEditorPage() {
   const navigate = useNavigate();
   const { users } = useUsers();
   const updatePolicyMutation = useUpdatePolicy();
+  const { userRoleName } = useAuth();
+  const readOnly = !userRoleName || !allowedRoles.policies.edit.includes(userRoleName);
 
   const isNew = !id;
   const templateId = searchParams.get("templateId");
@@ -269,6 +273,11 @@ export default function PolicyEditorPage() {
 
   const findReplace = usePolicyFindReplace(editor);
 
+  // Reviewer and Auditor can read policies but not change them.
+  useEffect(() => {
+    editor?.setEditable(!readOnly);
+  }, [editor, readOnly]);
+
   // ── Save (validation, create/update, custom-fields flush, navigation) ──
   const {
     save,
@@ -496,6 +505,7 @@ export default function PolicyEditorPage() {
                     : "Save"
             }
             onSave={save}
+            readOnly={readOnly}
           />
 
           {/* ── Metadata form ────────────────────────────────────────── */}
@@ -509,6 +519,7 @@ export default function PolicyEditorPage() {
             customFieldsRef={customFieldsRef}
             entityId={isNew ? null : (policy?.id ?? null)}
             onPendingChange={customFieldsGate.onPendingChange}
+            readOnly={readOnly}
           />
 
           <PolicyContentEditor
@@ -523,6 +534,7 @@ export default function PolicyEditorPage() {
             onCloseLink={handleCloseLink}
             onInsertLink={handleInsertLink}
             findReplace={findReplace}
+            readOnly={readOnly}
           >
             <PolicyReviewPanel isOpen={isHistorySidebarOpen} isNew={isNew} policyId={policy?.id} />
           </PolicyContentEditor>

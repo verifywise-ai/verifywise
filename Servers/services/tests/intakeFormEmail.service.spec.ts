@@ -20,6 +20,7 @@ jest.mock("../../constants/emailTemplates", () => ({
   EMAIL_TEMPLATES: {
     INTAKE_SUBMISSION_RECEIVED: "submission-received",
     INTAKE_NEW_SUBMISSION_ADMIN: "new-submission-admin",
+    INTAKE_SECOND_REVIEW: "second-review",
     INTAKE_SUBMISSION_APPROVED: "submission-approved",
     INTAKE_SUBMISSION_REJECTED: "submission-rejected",
   },
@@ -27,6 +28,9 @@ jest.mock("../../constants/emailTemplates", () => ({
 
 jest.mock("../../utils/intakeForm.utils", () => ({
   getUsersByIds: jest.fn(),
+  getEligibleReviewerIdsQuery: jest.fn(),
+  getSubmissionByIdQuery: jest.fn(),
+  getIntakeFormByIdQuery: jest.fn(),
 }));
 
 jest.mock("../../utils/logger/fileLogger", () => ({
@@ -37,11 +41,18 @@ jest.mock("../../utils/logger/fileLogger", () => ({
 import {
   sendSubmissionReceivedEmail,
   sendNewSubmissionAdminNotification,
+  renderIntakeResultsHtml,
+  sendSecondReviewRequestEmail,
   sendSubmissionApprovedEmail,
   sendSubmissionRejectedEmail,
 } from "../intakeFormEmail.service";
 import { sendEmail } from "../emailService";
-import { getUsersByIds } from "../../utils/intakeForm.utils";
+import {
+  getEligibleReviewerIdsQuery,
+  getIntakeFormByIdQuery,
+  getSubmissionByIdQuery,
+  getUsersByIds,
+} from "../../utils/intakeForm.utils";
 import { sequelize } from "../../database/db";
 import { IntakeEntityType } from "../../domain.layer/enums/intake-entity-type.enum";
 
@@ -256,6 +267,163 @@ describe("intakeFormEmail.service", () => {
       );
 
       expect(mockSendEmail).toHaveBeenCalledTimes(2);
+    });
+
+    it("sends an empty results block when no results are given", async () => {
+      mockGetUsersByIds.mockResolvedValue([{ id: 1, name: "Admin", email: "a@test.com" }] as any);
+      mockSendEmail.mockResolvedValue(undefined);
+
+      await sendNewSubmissionAdminNotification(
+        [1],
+        "Form",
+        "S",
+        "s@test.com",
+        42,
+        IntakeEntityType.USE_CASE,
+      );
+
+      expect((mockSendEmail.mock.calls[0][3] as Record<string, string>).resultsHtml).toBe("");
+    });
+
+    it("includes the results block when results are given", async () => {
+      mockGetUsersByIds.mockResolvedValue([{ id: 1, name: "Admin", email: "a@test.com" }] as any);
+      mockSendEmail.mockResolvedValue(undefined);
+
+      await sendNewSubmissionAdminNotification(
+        [1],
+        "Form",
+        "S",
+        "s@test.com",
+        42,
+        IntakeEntityType.USE_CASE,
+        "en",
+        { level: "High risk", scoreText: "70 (High)", suggestionCount: 3, capReached: false },
+      );
+
+      const html = (mockSendEmail.mock.calls[0][3] as Record<string, string>).resultsHtml;
+      expect(html).toContain("70 (High)");
+      expect(html).toContain("High risk");
+      expect(html).toContain("</strong> 3</p>");
+    });
+  });
+
+  describe("renderIntakeResultsHtml", () => {
+    it("is empty without results", () => {
+      expect(renderIntakeResultsHtml(undefined)).toBe("");
+    });
+
+    it("shows level, score and suggestion count, escaped", () => {
+      const html = renderIntakeResultsHtml({
+        level: null,
+        scoreText: "<b>64</b> (High)",
+        suggestionCount: 0,
+        capReached: false,
+      });
+      expect(html).toContain("Initial assessment");
+      expect(html).toContain("Not rule-checked");
+      expect(html).toContain("&lt;b&gt;64&lt;/b&gt; (High)");
+      expect(html).not.toContain("<b>64</b>");
+      expect(html).toContain("Suggested risks:");
+    });
+
+    it("shows only a still-running note when the wait ran out", () => {
+      const html = renderIntakeResultsHtml({
+        level: "High risk",
+        scoreText: "70 (High)",
+        suggestionCount: 2,
+        capReached: true,
+      });
+      expect(html).toContain("Scoring was still running");
+      expect(html).not.toContain("70 (High)");
+    });
+
+    it("never words the score as a probability, confidence or certainty", () => {
+      for (const capReached of [true, false]) {
+        const html = renderIntakeResultsHtml({
+          level: "High risk",
+          scoreText: "70 (High)",
+          suggestionCount: 1,
+          capReached,
+        }).toLowerCase();
+        expect(html).not.toMatch(/probability|confidence|certainty/);
+      }
+    });
+  });
+
+  describe("sendSecondReviewRequestEmail", () => {
+    it("emails each senior reviewer with the form and approver", async () => {
+      (getSubmissionByIdQuery as jest.Mock).mockResolvedValue({
+        formId: 3,
+        reviewedBy: 2,
+        entityType: IntakeEntityType.MODEL,
+      });
+      (getIntakeFormByIdQuery as jest.Mock).mockResolvedValue({ name: "AI intake" });
+      mockGetUsersByIds
+        .mockResolvedValueOnce([{ id: 2, name: "Sam", email: "sam@test.com" }])
+        .mockResolvedValueOnce([
+          { id: 1, name: "Ann", email: "ann@test.com" },
+          { id: 9, name: "", email: "bo@test.com" },
+        ]);
+      mockSendEmail.mockResolvedValue(undefined);
+      (getEligibleReviewerIdsQuery as jest.Mock).mockResolvedValue([1, 9]);
+
+      await sendSecondReviewRequestEmail(7, 11, [1, 9], "en");
+
+      expect(getSubmissionByIdQuery).toHaveBeenCalledWith(11, 7);
+      expect(mockSendEmail).toHaveBeenCalledTimes(2);
+      expect(mockSendEmail).toHaveBeenCalledWith(
+        "ann@test.com",
+        "Second review requested: AI intake",
+        "second-review",
+        expect.objectContaining({
+          reviewerName: "Ann",
+          formName: "AI intake",
+          submissionId: "11",
+          entityType: "Model",
+          approverName: "Sam",
+          reviewLink: "https://app.example.com/intake-forms/submissions?submission=11",
+        }),
+      );
+      expect(mockSendEmail.mock.calls[1][3]).toMatchObject({ reviewerName: "bo" });
+    });
+
+    it("only looks up and emails eligible senior reviewers", async () => {
+      (getSubmissionByIdQuery as jest.Mock).mockResolvedValue({
+        formId: 3,
+        reviewedBy: null,
+        entityType: IntakeEntityType.MODEL,
+      });
+      (getIntakeFormByIdQuery as jest.Mock).mockResolvedValue({ name: "AI intake" });
+      (getEligibleReviewerIdsQuery as jest.Mock).mockResolvedValue([1]);
+      mockGetUsersByIds.mockResolvedValue([{ id: 1, name: "Ann", email: "ann@test.com" }]);
+      mockSendEmail.mockResolvedValue(undefined);
+
+      await sendSecondReviewRequestEmail(7, 11, [1, 5], "en");
+
+      expect(getEligibleReviewerIdsQuery).toHaveBeenCalledWith(7, [1, 5]);
+      expect(mockGetUsersByIds).toHaveBeenLastCalledWith([1]);
+      expect(mockSendEmail).toHaveBeenCalledTimes(1);
+    });
+
+    it("sends nothing when no senior reviewer is eligible", async () => {
+      (getSubmissionByIdQuery as jest.Mock).mockResolvedValue({
+        formId: 3,
+        reviewedBy: null,
+        entityType: IntakeEntityType.MODEL,
+      });
+      (getIntakeFormByIdQuery as jest.Mock).mockResolvedValue({ name: "AI intake" });
+      (getEligibleReviewerIdsQuery as jest.Mock).mockResolvedValue([]);
+      mockGetUsersByIds.mockResolvedValue([]);
+
+      await sendSecondReviewRequestEmail(7, 11, [5], "en");
+
+      expect(mockSendEmail).not.toHaveBeenCalled();
+    });
+
+    it("never throws when the lookup fails", async () => {
+      (getSubmissionByIdQuery as jest.Mock).mockRejectedValue(new Error("db down"));
+      await expect(sendSecondReviewRequestEmail(7, 11, [1], "en")).resolves.toBeUndefined();
+      expect(mockSendEmail).not.toHaveBeenCalled();
     });
   });
 

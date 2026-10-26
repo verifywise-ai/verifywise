@@ -282,6 +282,45 @@ describe("getAuditLedger", () => {
     expect(res.status).toHaveBeenCalledWith(400);
     expect(sequelize.query).not.toHaveBeenCalled();
   });
+
+  // The ledger is hash-chained, so rows written before write-time redaction
+  // cannot be rewritten; they are redacted on the way out instead.
+  it("redacts secrets in descriptions it returns", async () => {
+    const query = sequelize.query as unknown as jest.MockedFunction<any>;
+    query.mockResolvedValueOnce([{ count: "1" }]).mockResolvedValueOnce([
+      {
+        ...makeRows(1, 1)[0],
+        description: "failed: password=hunter2",
+        old_value: "token=abc",
+        new_value: "plain",
+      },
+    ]);
+    const res = createRes();
+    await getAuditLedger(createReq(), res);
+    const { entries } = res.json.mock.calls[0][0].data;
+    expect(entries[0].description).toBe("failed: password=[REDACTED]");
+    expect(entries[0].old_value).toBe("token=[REDACTED]");
+    expect(entries[0].new_value).toBe("plain");
+  });
+});
+
+// The export is the verifiable copy kept before retention cleanup, so it
+// carries the stored text and every row still matches its entry_hash.
+describe("exportAuditLedger stored text", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    appendLedger.mockResolvedValue(undefined);
+  });
+
+  it("exports descriptions as stored", async () => {
+    fetchBatch.mockResolvedValueOnce([
+      { ...makeRows(1, 1)[0], description: "failed: client_secret=abc123" },
+    ]);
+    const res = createRes();
+    await exportAuditLedger(createReq(), res);
+    await flush();
+    expect(res.chunks.join("")).toContain("client_secret=abc123");
+  });
 });
 
 describe("verifyAuditLedger", () => {

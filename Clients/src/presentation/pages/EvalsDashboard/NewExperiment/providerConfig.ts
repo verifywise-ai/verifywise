@@ -11,7 +11,6 @@ import { ReactComponent as GeminiLogo } from "../../../assets/icons/gemini_logo.
 import { ReactComponent as MistralLogo } from "../../../assets/icons/mistral_logo.svg";
 import { ReactComponent as XAILogo } from "../../../assets/icons/xai_logo.svg";
 import { ReactComponent as OpenRouterLogo } from "../../../assets/icons/openrouter_logo.svg";
-import { ReactComponent as FolderFilledIcon } from "../../../assets/icons/folder_filled.svg";
 import { BuildIcon, HuggingFaceLogo, OllamaLogo } from "./experimentIcons";
 import type { ProviderType } from "./newExperimentConfig";
 
@@ -33,14 +32,6 @@ export const CLOUD_PROVIDER_IDS = [
   "mistral",
   "xai",
   "openrouter",
-] as const;
-
-export const OPENROUTER_POPULAR_MODELS = [
-  { id: "openai/gpt-4o", name: "GPT-4o" },
-  { id: "anthropic/claude-3.5-sonnet", name: "Claude 3.5 Sonnet" },
-  { id: "google/gemini-pro-1.5", name: "Gemini Pro 1.5" },
-  { id: "meta-llama/llama-3.1-70b-instruct", name: "Llama 3.1 70B" },
-  { id: "mistralai/mistral-large", name: "Mistral Large" },
 ] as const;
 
 /** Cloud providers that need API keys. */
@@ -81,17 +72,13 @@ export const availableJudgeProviders: readonly ProviderEntry[] = [
   ...localProviders,
 ];
 
-/** All model-under-test providers, including the Local (needsUrl) entry. */
+/**
+ * All model-under-test providers. No bare "Local" entry: EvalServer does not load model
+ * files itself; a local model is served by Ollama or added as Custom / Self-hosted.
+ */
 export const allModelProviders: readonly ProviderEntry[] = [
   ...cloudProviders.map((p) => ({ ...p, needsUrl: false })),
   ...localProviders.map((p) => ({ ...p, needsUrl: false })),
-  {
-    id: "local",
-    name: "Local",
-    Logo: FolderFilledIcon,
-    needsApiKey: false,
-    needsUrl: true,
-  },
 ];
 
 export const availableModelProviders = allModelProviders;

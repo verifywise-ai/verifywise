@@ -10,12 +10,17 @@ on:
     branches: ['master', 'develop']
     paths:
       - 'Clients/**'
+      - 'ansible/templates/verifywise-nginx.conf.j2'
       - '.github/workflows/frontend-checks.yml'
   push:
     branches: ['master', 'develop']
     paths:
       - 'Clients/**'
+      - 'ansible/templates/verifywise-nginx.conf.j2'
       - '.github/workflows/frontend-checks.yml'
+  # Manual trigger only: used by the flake-check job (#4503-CI), which runs the
+  # unit suite three consecutive times and is too heavy for PR CI.
+  workflow_dispatch:
 
 jobs:
   security-audit:
@@ -79,6 +84,9 @@ jobs:
         run: npm run typecheck
 
       - name: ESLint (errors only)
+        # (#4617-3) Frontend ESLint gate. Already enforced here via --quiet
+        # (errors fail the job); warnings are left non-blocking while the
+        # backlog is burned down.
         run: npm run lint -- --quiet
 
       - name: i18n audit (catch dictionary drift)
@@ -88,6 +96,18 @@ jobs:
         run: |
           npm audit --audit-level=high --omit=dev || true
           node $GITHUB_WORKSPACE/scripts/security/npm-audit-gate.js .
+
+  # The production nginx image must proxy /api and /v1 to the backend. Builds
+  # only the Dockerfile's nginx stage (no npm build), so it takes seconds.
+  nginx-proxy:
+    name: Frontend nginx proxies /api and /v1
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Test the nginx proxy routes
+        run: Clients/scripts/test-nginx-proxy.sh
 
   unit-and-component-tests:
     name: Unit & Component Tests (shard ${{ matrix.shard }}/4)
@@ -250,6 +270,41 @@ jobs:
                 body,
               });
             }
+
+  # (#4503-CI) Flake detector: run the unit suite 3 consecutive times with
+  # retries disabled. Running the full suite three times per PR roughly
+  # triples the CI wall-clock and compute cost of every frontend PR for a
+  # signal that matters maybe once a month, so this is workflow_dispatch-only
+  # — run it when touching the test harness, timers, or async fixtures, and
+  # investigate any pass1/pass2/pass3 mismatch. If a suite proves stable over
+  # time, consider promoting a smoke subset to a blocking PR job instead.
+  flake-check:
+    name: Flake check (3 consecutive unit runs)
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Clients
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: Clients/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Run unit suite 3 consecutive times (retries disabled)
+        run: |
+          for i in 1 2 3; do
+            echo "=== Flake check run $i/3 ==="
+            npx vitest run --retry=0
+          done
 
   dependency-review:
     name: Dependency Review

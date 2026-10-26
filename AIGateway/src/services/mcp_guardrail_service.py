@@ -12,7 +12,7 @@ from typing import Optional
 from sqlalchemy import text
 
 from database.db import get_db
-from services.guardrail_service import scan_text, ScanResult, REDOS_SCAN_CAP
+from services.guardrail_service import scan_text_async, ScanResult, REDOS_SCAN_CAP
 from utils.mcp_tool_content import extract_scannable_content
 from utils.redis import get_redis
 
@@ -145,7 +145,7 @@ async def scan_tool_input(
             })
 
     # Run existing scan_text for PII + content filter rules
-    result = scan_text(
+    result = await scan_text_async(
         text=input_text,
         guardrail_rules=transformed_rules,
         settings=guardrail_settings,
@@ -279,9 +279,10 @@ async def scan_result_blob(
             })
         if not transformed_rules:
             return blob
-        result = scan_text(text=blob, guardrail_rules=transformed_rules, settings=guardrail_settings)
-        # masked_text is None when nothing matched — fall back to the original blob
-        return result.masked_text or blob
+        result = await scan_text_async(text=blob, guardrail_rules=transformed_rules, settings=guardrail_settings)
+        # masked_text is None when nothing matched; an empty string is still a
+        # mask and must not fall back to the unmasked original.
+        return result.masked_text if result.masked_text is not None else blob
     except Exception as e:
         logger.error(f"scan_result_blob failed, storing unmasked: {e}")
         return blob

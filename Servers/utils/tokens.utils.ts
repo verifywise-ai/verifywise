@@ -62,11 +62,13 @@ const orgScope = (organizationId: number | null): string =>
   organizationId === null ? "organization_id IS NULL" : "organization_id = :organizationId";
 
 export const getNumberOfApiTokensQuery = async (organizationId: number | null) => {
-  // Only active (non-revoked) tokens count toward the per-organization limit.
-  // Revoked rows are retained for audit but must not consume a slot, otherwise
-  // revoking a token would permanently reduce the org's creation capacity.
+  // Only tokens that can still authenticate count toward the per-organization
+  // limit. Revoked and expired rows are retained for audit but must not consume
+  // a slot — otherwise revoking a token, or simply letting one lapse, would
+  // permanently reduce the org's creation capacity.
   const numberOfTokens = (await sequelize.query(
-    `SELECT COUNT(*) FROM api_tokens WHERE ${orgScope(organizationId)} AND revoked = false;`,
+    `SELECT COUNT(*) FROM api_tokens
+       WHERE ${orgScope(organizationId)} AND revoked = false AND expires_at > NOW();`,
     { replacements: { organizationId } },
   )) as [{ count: string }[], number];
   return parseInt(numberOfTokens[0][0].count, 10);

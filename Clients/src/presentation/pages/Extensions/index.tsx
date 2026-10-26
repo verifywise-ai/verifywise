@@ -45,7 +45,12 @@ function ExtensionCard({
   // Extensions that own a dedicated post-enable settings UI. Adding a new
   // extension with its own settings component means adding it here so the
   // "Configure" button appears once enabled.
-  const KEYS_WITH_POST_ENABLE_UI = new Set(["slack", "model-lifecycle", "jira-assets"]);
+  const KEYS_WITH_POST_ENABLE_UI = new Set([
+    "slack",
+    "model-lifecycle",
+    "jira-assets",
+    "jira-incidents",
+  ]);
   const hasPostEnableSurface =
     (extension.configFields?.length ?? 0) > 0 || KEYS_WITH_POST_ENABLE_UI.has(extension.key);
   // Show the primary button only when there is something for it to do:

@@ -527,8 +527,8 @@ export const collections: Collection[] = [
       {
         id: 'extensions',
         title: 'Extensions',
-        description: 'Enable, configure and disable the built-in extensions: Slack, MLflow, Azure AI Foundry, Model Lifecycle, Risk Import, Jira Assets and Dataset Bulk Upload.',
-        keywords: ['extension', 'extensions', 'enable', 'disable', 'configure', 'integration', 'slack', 'mlflow', 'azure ai foundry', 'model lifecycle', 'risk import', 'excel', 'jira', 'jira assets', 'dataset bulk upload', 'bulk upload', 'plugin', 'marketplace'],
+        description: 'Enable, configure and disable the built-in extensions: Slack, MLflow, Azure AI Foundry, Model Lifecycle, Risk Import, Jira Assets, Jira incidents and Dataset Bulk Upload.',
+        keywords: ['extension', 'extensions', 'enable', 'disable', 'configure', 'integration', 'slack', 'mlflow', 'azure ai foundry', 'model lifecycle', 'risk import', 'excel', 'jira', 'jira assets', 'jira incidents', 'incident sync', 'dataset bulk upload', 'bulk upload', 'plugin', 'marketplace'],
       },
     ],
   },

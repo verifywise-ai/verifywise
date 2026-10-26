@@ -1,20 +1,15 @@
 """
 DeepEval Router
 
-Endpoints for running DeepEval LLM evaluations.
+Endpoints for DeepEval metrics, datasets, custom scorers and saved models.
+Evaluations run as experiments (routers/evaluation_logs.py).
 Shared-schema multi-tenancy: Uses organization_id from request.state.
 """
 
-from fastapi import APIRouter, BackgroundTasks, Request, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, Request, HTTPException, UploadFile, File, Form
 from fastapi.responses import JSONResponse
 from pathlib import Path
-import json
 from controllers.deepeval import (
-    create_deepeval_evaluation_controller,
-    get_deepeval_evaluation_status_controller,
-    get_deepeval_evaluation_results_controller,
-    get_all_deepeval_evaluations_controller,
-    delete_deepeval_evaluation_controller,
     get_available_deepeval_metrics_controller,
     get_evaluation_dataset_info_controller,
     upload_deepeval_dataset_controller,
@@ -38,7 +33,6 @@ from controllers.deepeval import (
 from request_schemas import (
     CreateModelRequest,
     CreateScorerRequest,
-    EvaluateConfig,
     ScorerTestRequest,
     UpdateModelRequest,
     UpdateScorerRequest,
@@ -53,154 +47,6 @@ def _get_organization_id(request: Request) -> int:
     if org_id is None:
         raise HTTPException(status_code=400, detail="Missing organization id")
     return org_id
-
-
-@router.post("/evaluate")
-async def create_deepeval_evaluation(
-    request: Request,
-    background_tasks: BackgroundTasks,
-    config_data: EvaluateConfig
-):
-    """
-    Create and run a DeepEval evaluation.
-
-    Request body:
-    {
-        "model": {
-            "name": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
-            "provider": "huggingface",
-            "generation": {
-                "max_tokens": 500,
-                "temperature": 0.7
-            }
-        },
-        "dataset": {
-            "use_builtin": true,
-            "categories": ["coding", "mathematics"],  // optional
-            "difficulties": ["easy", "medium"],  // optional
-            "limit": 10  // optional
-        },
-        "metrics": {
-            "answer_relevancy": true,
-            "bias": true,
-            "toxicity": true,
-            "faithfulness": false,
-            "hallucination": false,
-            "contextual_relevancy": false
-        },
-        "metric_thresholds": {
-            "answer_relevancy": 0.5,
-            "bias": 0.5,
-            "toxicity": 0.5
-        },
-        "selectedScorers": ["scorer_id_1", "scorer_id_2"]  // optional - if not specified, all enabled scorers will run
-    }
-    """
-    organization_id = _get_organization_id(request)
-    return await create_deepeval_evaluation_controller(
-        background_tasks=background_tasks,
-        config_data=config_data.model_dump(exclude_none=True),
-        organization_id=organization_id
-    )
-
-
-@router.get("/evaluate/status/{eval_id}")
-async def get_evaluation_status(eval_id: str, request: Request):
-    """
-    Get the status of a DeepEval evaluation.
-    
-    Returns:
-    {
-        "eval_id": "deepeval_20250130_120000",
-        "status": "running" | "completed" | "failed",
-        "progress": "3/10 prompts evaluated",
-        "created_at": "2025-01-30T12:00:00",
-        "updated_at": "2025-01-30T12:01:30"
-    }
-    """
-    organization_id = _get_organization_id(request)
-    return await get_deepeval_evaluation_status_controller(
-        eval_id,
-        organization_id
-    )
-
-
-@router.get("/evaluate/results/{eval_id}")
-async def get_evaluation_results(eval_id: str, request: Request):
-    """
-    Get the results of a completed DeepEval evaluation.
-    
-    Returns:
-    {
-        "eval_id": "deepeval_20250130_120000",
-        "status": "completed",
-        "results": {
-            "model": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
-            "total_samples": 10,
-            "metric_summaries": {
-                "answer_relevancy": {
-                    "average_score": 0.745,
-                    "pass_rate": 80.0,
-                    "min_score": 0.267,
-                    "max_score": 1.0
-                },
-                "bias": {...},
-                "toxicity": {...}
-            },
-            "category_breakdown": {...},
-            "detailed_results": [...]
-        }
-    }
-    """
-    organization_id = _get_organization_id(request)
-    return await get_deepeval_evaluation_results_controller(
-        eval_id,
-        organization_id
-    )
-
-
-@router.get("/evaluations")
-async def get_all_evaluations(request: Request):
-    """
-    Get all DeepEval evaluations for the current tenant.
-    
-    Returns:
-    {
-        "evaluations": [
-            {
-                "eval_id": "deepeval_20250130_120000",
-                "status": "completed",
-                "model": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
-                "total_samples": 10,
-                "created_at": "2025-01-30T12:00:00",
-                "completed_at": "2025-01-30T12:05:30"
-            },
-            ...
-        ]
-    }
-    """
-    organization_id = _get_organization_id(request)
-    return await get_all_deepeval_evaluations_controller(
-        organization_id
-    )
-
-
-@router.delete("/evaluations/{eval_id}")
-async def delete_evaluation(eval_id: str, request: Request):
-    """
-    Delete a DeepEval evaluation and its results.
-    
-    Returns:
-    {
-        "message": "Evaluation deleted successfully",
-        "eval_id": "deepeval_20250130_120000"
-    }
-    """
-    organization_id = _get_organization_id(request)
-    return await delete_deepeval_evaluation_controller(
-        eval_id,
-        organization_id
-    )
 
 
 @router.get("/metrics/available")

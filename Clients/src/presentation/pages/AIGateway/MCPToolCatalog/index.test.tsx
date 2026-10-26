@@ -1,6 +1,13 @@
 import { screen, waitFor, fireEvent } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 
+const mockNavigate = vi.fn();
+
+vi.mock("react-router", async () => {
+  const actual: any = await vi.importActual("react-router");
+  return { ...actual, useNavigate: () => mockNavigate };
+});
+
 vi.mock("../../../../infrastructure/api/networkServices", () => ({
   apiServices: {
     get: vi.fn(),
@@ -12,8 +19,9 @@ vi.mock("../../../../infrastructure/api/networkServices", () => ({
 }));
 
 vi.mock("../../../components/Layout/PageHeaderExtended", () => ({
-  PageHeaderExtended: ({ children, title, actionButton }: any) => (
+  PageHeaderExtended: ({ children, title, actionButton, backButton }: any) => (
     <div data-testid="page-header">
+      {backButton}
       <h1>{title}</h1>
       {actionButton}
       {children}
@@ -23,6 +31,7 @@ vi.mock("../../../components/Layout/PageHeaderExtended", () => ({
 
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import MCPToolCatalogPage from "./index";
+import CustomException from "../../../../infrastructure/exceptions/customeException";
 
 const mockGet = apiServices.get as unknown as ReturnType<typeof vi.fn>;
 const mockPatch = apiServices.patch as unknown as ReturnType<typeof vi.fn>;
@@ -114,6 +123,69 @@ describe("MCPToolCatalogPage", () => {
     expect(screen.getByText("(2 tools)")).toBeInTheDocument();
     expect(screen.getByText("Other Server")).toBeInTheDocument();
     expect(screen.getByText("(1 tool)")).toBeInTheDocument();
+  });
+
+  it("filters to the server named in the URL", async () => {
+    mockLoad(
+      [
+        makeTool({ id: 1, tool_name: "search_docs" }),
+        makeTool({ id: 2, server_id: 20, server_name: "Other Server", tool_name: "solo_tool" }),
+      ],
+      [...defaultServers, { id: 20, name: "Other Server" }],
+    );
+    renderWithProviders(<MCPToolCatalogPage />, { route: "/ai-gateway/mcp/tools?server=20" });
+
+    await waitFor(() => expect(screen.getByText("solo_tool")).toBeInTheDocument());
+    expect(screen.queryByText("search_docs")).not.toBeInTheDocument();
+  });
+
+  it("links back to the MCP servers page when opened from it", async () => {
+    mockLoad([makeTool()]);
+    renderWithProviders(<MCPToolCatalogPage />, {
+      route: "/ai-gateway/mcp/tools?server=10",
+      routeState: { from: "mcp-servers" },
+    });
+
+    await waitFor(() => expect(screen.getByText("search_docs")).toBeInTheDocument());
+    fireEvent.click(screen.getByTestId("mcp-tools-back"));
+    expect(mockNavigate).toHaveBeenCalledWith(-1);
+  });
+
+  it("keeps the back link when the server filter changes", async () => {
+    mockLoad(
+      [
+        makeTool({ id: 1, tool_name: "search_docs" }),
+        makeTool({ id: 2, server_id: 20, server_name: "Other Server", tool_name: "solo_tool" }),
+      ],
+      [...defaultServers, { id: 20, name: "Other Server" }],
+    );
+    renderWithProviders(<MCPToolCatalogPage />, {
+      route: "/ai-gateway/mcp/tools?server=10",
+      routeState: { from: "mcp-servers" },
+    });
+
+    await waitFor(() => expect(screen.getByText("search_docs")).toBeInTheDocument());
+    expect(screen.queryByText("solo_tool")).not.toBeInTheDocument();
+    fireEvent.mouseDown(screen.getByRole("combobox", { name: "Filter by server" }));
+    fireEvent.click(screen.getByRole("option", { name: "All servers" }));
+
+    await waitFor(() => expect(screen.getByText("solo_tool")).toBeInTheDocument());
+    expect(screen.getByTestId("mcp-tools-back")).toBeInTheDocument();
+  });
+
+  it("shows no back link when not opened from the MCP servers page", async () => {
+    mockLoad([makeTool()]);
+    renderWithProviders(<MCPToolCatalogPage />, { route: "/ai-gateway/mcp/tools?server=10" });
+
+    await waitFor(() => expect(screen.getByText("search_docs")).toBeInTheDocument());
+    expect(screen.queryByTestId("mcp-tools-back")).not.toBeInTheDocument();
+  });
+
+  it("shows all tools when the URL names an unknown server", async () => {
+    mockLoad([makeTool({ tool_name: "search_docs" })]);
+    renderWithProviders(<MCPToolCatalogPage />, { route: "/ai-gateway/mcp/tools?server=999" });
+
+    await waitFor(() => expect(screen.getByText("search_docs")).toBeInTheDocument());
   });
 
   it("falls back to the server map / server id when tool.server_name is missing", async () => {
@@ -255,7 +327,11 @@ describe("MCPToolCatalogPage", () => {
 
   it("shows the server-provided error message when the update fails", async () => {
     mockLoad([makeTool()]);
-    mockPatch.mockRejectedValue({ response: { data: { message: "Update rejected" } } });
+    mockPatch.mockRejectedValue(
+      new CustomException("Bad Request", 400, {
+        detail: { message: "Update rejected", code: "tool_invalid" },
+      }),
+    );
     renderWithProviders(<MCPToolCatalogPage />, { route: "/ai-gateway/mcp/tools" });
 
     await waitFor(() => {
@@ -266,5 +342,22 @@ describe("MCPToolCatalogPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
 
     expect(await screen.findByText("Update rejected")).toBeInTheDocument();
+  });
+
+  it("shows a 4xx reason the network layer lifted into the error message", async () => {
+    mockLoad([makeTool()]);
+    mockPatch.mockRejectedValue(
+      new CustomException("Tool name is taken", 409, { message: "Tool name is taken" }),
+    );
+    renderWithProviders(<MCPToolCatalogPage />, { route: "/ai-gateway/mcp/tools" });
+
+    await waitFor(() => {
+      expect(screen.getByText("search_docs")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit tool" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+
+    expect(await screen.findByText("Tool name is taken")).toBeInTheDocument();
   });
 });

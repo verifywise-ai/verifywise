@@ -105,7 +105,7 @@ export default function RelateVendorRiskForm({
   };
 
   return (
-    <Stack spacing={4} sx={{ py: 4 }}>
+    <Stack spacing="8px" sx={{ py: "8px" }}>
       <AutoCompleteField<VendorRiskOption>
         label="Vendor risk"
         placeholder="Search vendor risks"
@@ -116,7 +116,7 @@ export default function RelateVendorRiskForm({
           <li {...props} key={option.id}>
             <Stack
               direction="row"
-              spacing={4}
+              spacing="8px"
               alignItems="center"
               sx={{ width: "100%", justifyContent: "space-between" }}
             >
@@ -138,9 +138,13 @@ export default function RelateVendorRiskForm({
         inherits from the other.
       </Typography>
 
-      {error && <Alert severity="error">{error}</Alert>}
+      {error && (
+        <Alert severity="error" sx={{ fontSize: "13px" }}>
+          {error}
+        </Alert>
+      )}
 
-      <Stack direction="row" spacing={4}>
+      <Stack direction="row" spacing="8px">
         <CustomizableButton
           size="small"
           variant="contained"

@@ -74,6 +74,19 @@ describe("getDeduped", () => {
     expect(mockedGet).toHaveBeenCalledTimes(2);
   });
 
+  it("never shares a toast-suppressed call with a caller that relies on the toast", () => {
+    mockedGet.mockReturnValue(deferred().promise);
+
+    getDeduped("/vendors");
+    getDeduped("/vendors", { suppressGlobalErrorToast: true });
+
+    expect(mockedGet).toHaveBeenCalledTimes(2);
+    expect(mockedGet).toHaveBeenNthCalledWith(1, "/vendors", undefined);
+    expect(mockedGet).toHaveBeenNthCalledWith(2, "/vendors", {
+      suppressGlobalErrorToast: true,
+    });
+  });
+
   it("shares fate among concurrent callers when the request rejects", async () => {
     const d = deferred<unknown>();
     mockedGet.mockReturnValueOnce(d.promise);

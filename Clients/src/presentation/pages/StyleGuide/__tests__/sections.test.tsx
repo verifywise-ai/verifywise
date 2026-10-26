@@ -20,6 +20,7 @@ import ButtonsSection from "../sections/ButtonsSection";
 import CardsSection from "../sections/CardsSection";
 import ChipSection from "../sections/ChipSection";
 import ColorsSection from "../sections/ColorsSection";
+import TokensSection from "../sections/TokensSection";
 import CommonPatternsSection from "../sections/CommonPatternsSection";
 import DosAndDontsSection from "../sections/DosAndDontsSection";
 import EmptyStatesSection from "../sections/EmptyStatesSection";
@@ -59,6 +60,7 @@ const sections: Array<{
   { name: "CardsSection", Component: CardsSection, title: "Cards & containers" },
   { name: "ChipSection", Component: ChipSection, title: "Chips" },
   { name: "ColorsSection", Component: ColorsSection, title: "Colors" },
+  { name: "TokensSection", Component: TokensSection, title: "Tokens" },
   { name: "CommonPatternsSection", Component: CommonPatternsSection, title: "Common patterns" },
   { name: "DosAndDontsSection", Component: DosAndDontsSection, title: "Do's and don'ts" },
   { name: "EmptyStatesSection", Component: EmptyStatesSection, title: "Empty states" },
@@ -89,6 +91,19 @@ describe("ChipSection", () => {
     expect(screen.getByText("Boolean")).toBeInTheDocument();
     expect(screen.getByText("Sizes")).toBeInTheDocument();
     expect(screen.getByText("Lowercase (uppercase=false)")).toBeInTheDocument();
+  });
+});
+
+describe("EmptyStatesSection", () => {
+  it("documents the unified loading, error, and empty list states", () => {
+    renderWithProviders(<EmptyStatesSection />);
+
+    expect(screen.getByText("Unified list states")).toBeInTheDocument();
+    expect(screen.getByRole("status", { name: "Loading datasets" })).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent("Failed to load datasets");
+    expect(
+      screen.getAllByText("No datasets found. Add a dataset to get started.").length,
+    ).toBeGreaterThan(0);
   });
 });
 

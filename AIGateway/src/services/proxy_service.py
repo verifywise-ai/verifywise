@@ -19,7 +19,7 @@ from sqlalchemy import text
 from config import settings
 from database.db import get_db
 from services.cost_service import _safe_cost
-from services.guardrail_service import scan_text
+from services.guardrail_service import scan_text_async
 from utils.encryption import decrypt as decrypt_api_key  # noqa: F401 — re-export
 from utils.redis import get_redis as _get_redis
 from utils.rate_limit import check_rate_limit
@@ -446,7 +446,7 @@ async def run_guardrails(
 
     async def scan(text: str) -> str:
         """Scan one text; log detections, raise on block, return the text to send."""
-        result = scan_text(text=text, guardrail_rules=guardrail_rules, settings=guardrail_settings)
+        result = await scan_text_async(text=text, guardrail_rules=guardrail_rules, settings=guardrail_settings)
 
         for detection in (result.detections or []):
             await _log_guardrail_detection(

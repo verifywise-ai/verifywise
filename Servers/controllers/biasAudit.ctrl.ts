@@ -13,7 +13,8 @@ import multer from "multer";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import { controllerWrapper, type HttpStatusCode } from "../utils/controllerWrapper.utils";
 import { logFailure, logProcessing, logSuccess } from "../utils/logger/logHelper";
-import logger, { logCentralOnly, redactSensitiveInfo } from "../utils/logger/fileLogger";
+import logger, { logCentralOnly } from "../utils/logger/fileLogger";
+import { redactSensitiveInfo } from "../utils/logger/redact";
 import {
   isCustomException,
   NotFoundException,

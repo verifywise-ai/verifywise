@@ -1,6 +1,6 @@
 const allowedRoles = {
   projects: {
-    view: ["Admin", "Editor", "Auditor"],
+    view: ["Admin", "Editor", "Reviewer", "Auditor"],
     create: ["Admin", "Editor"],
     edit: ["Admin", "Editor"],
     delete: ["Admin", "Editor"],
@@ -9,36 +9,41 @@ const allowedRoles = {
     classify: ["Admin", "Editor"],
   },
   projectRisks: {
-    view: ["Admin", "Editor", "Auditor"],
+    view: ["Admin", "Editor", "Reviewer", "Auditor"],
     create: ["Admin", "Editor"],
     edit: ["Admin", "Editor"],
     delete: ["Admin", "Editor"],
   },
   vendors: {
-    view: ["Admin", "Editor", "Auditor"],
+    view: ["Admin", "Editor", "Reviewer", "Auditor"],
     create: ["Admin", "Editor"],
     edit: ["Admin", "Editor"],
     delete: ["Admin", "Editor"],
   },
   frameworks: {
-    view: ["Admin", "Editor", "Auditor"],
+    view: ["Admin", "Editor", "Reviewer", "Auditor"],
     edit: ["Admin", "Editor"],
     manage: ["Admin", "Editor"],
     audit: ["Admin", "Editor", "Auditor"],
   },
   organizations: {
-    view: ["Admin", "Editor", "Auditor"],
+    view: ["Admin", "Editor", "Reviewer", "Auditor"],
     create: ["Admin"],
     edit: ["Admin"],
   },
   training: {
-    view: ["Admin", "Editor", "Auditor"],
-    create: ["Admin"],
-    edit: ["Admin"],
+    view: ["Admin", "Editor", "Reviewer", "Auditor"],
+    create: ["Admin", "Editor"],
+    edit: ["Admin", "Editor"],
     delete: ["Admin"],
   },
+  policies: {
+    create: ["Admin", "Editor"],
+    edit: ["Admin", "Editor"],
+    delete: ["Admin", "Editor"],
+  },
   modelInventory: {
-    view: ["Admin", "Editor", "Auditor"],
+    view: ["Admin", "Editor", "Reviewer", "Auditor"],
     create: ["Admin", "Editor"],
     edit: ["Admin", "Editor"],
     delete: ["Admin", "Editor"],
@@ -73,7 +78,7 @@ const allowedRoles = {
     manageApiKeys: ["Admin"],
   },
   postMarketMonitoring: {
-    view: ["Admin", "Editor", "Auditor"],
+    view: ["Admin", "Editor", "Reviewer", "Auditor"],
     edit: ["Admin", "Editor"],
   },
 };

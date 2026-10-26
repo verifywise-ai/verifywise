@@ -17,9 +17,11 @@ import pytest
 import respx
 
 from utils.gateway_litellm_client import (
+    GatewayProviderError,
     _extract_assistant_text,
     gateway_chat_completion_async,
     gateway_chat_completion_sync,
+    gateway_completion_sync,
     gateway_mode_enabled,
     to_litellm_model,
 )
@@ -160,6 +162,69 @@ def test_gateway_chat_completion_sync_non_200_raises(gateway_env: str) -> None:
             messages=[{"role": "user", "content": "x"}],
             api_key="sk",
         )
+
+
+@respx.mock
+def test_gateway_completion_sync_returns_usage_and_cost(gateway_env: str) -> None:
+    respx.post(COMPLETIONS_URL).mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "choices": [{"message": {"content": "hello"}}],
+                "usage": {"prompt_tokens": 7, "completion_tokens": 2, "total_tokens": 9},
+                "cost_usd": 0.0001,
+            },
+        ),
+    )
+    completion = gateway_completion_sync(
+        litellm_model="gpt-4o", messages=[{"role": "user", "content": "x"}], api_key="sk"
+    )
+    assert completion.text == "hello"
+    assert (completion.prompt_tokens, completion.completion_tokens, completion.total_tokens) == (7, 2, 9)
+    assert completion.cost_usd == 0.0001
+
+
+@respx.mock
+def test_gateway_completion_sync_unpriced_cost_is_unknown(gateway_env: str) -> None:
+    # The gateway sends 0.0 for a model LiteLLM cannot price
+    respx.post(COMPLETIONS_URL).mock(
+        return_value=httpx.Response(
+            200, json={"choices": [{"message": {"content": "hi"}}], "cost_usd": 0.0}
+        ),
+    )
+    completion = gateway_completion_sync(
+        litellm_model="openrouter/x", messages=[{"role": "user", "content": "x"}], api_key="sk"
+    )
+    assert completion.cost_usd is None
+
+
+@respx.mock
+def test_gateway_completion_sync_without_usage_leaves_it_unset(gateway_env: str) -> None:
+    respx.post(COMPLETIONS_URL).mock(
+        return_value=httpx.Response(200, json={"choices": [{"message": {"content": "hi"}}]}),
+    )
+    completion = gateway_completion_sync(
+        litellm_model="gpt-4o", messages=[{"role": "user", "content": "x"}], api_key="sk"
+    )
+    assert completion.total_tokens is None
+    assert completion.cost_usd is None
+
+
+@respx.mock
+def test_gateway_typed_error_raises_provider_error(gateway_env: str) -> None:
+    respx.post(COMPLETIONS_URL).mock(
+        return_value=httpx.Response(
+            502,
+            json={"error": {"type": "NotFoundError", "status_code": 404, "message": "no such model"}},
+        ),
+    )
+    with pytest.raises(GatewayProviderError) as exc:
+        gateway_chat_completion_sync(
+            litellm_model="gemini/gone", messages=[{"role": "user", "content": "x"}], api_key="sk"
+        )
+    assert exc.value.error_type == "NotFoundError"
+    assert exc.value.status_code == 404
+    assert str(exc.value) == "NotFoundError (404): no such model"
 
 
 def test_gateway_chat_completion_sync_requires_internal_key(disable_gateway_env: None) -> None:

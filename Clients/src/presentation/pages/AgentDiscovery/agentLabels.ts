@@ -68,6 +68,14 @@ export function formatModelLabel(model: ModelLabelSource): string {
   return model.provider ? `${model.provider} · ${modelName}` : modelName;
 }
 
+/** Label an agent's linked use case: its title, or "Use case #<id>". */
+export function formatUseCaseLabel(agent: {
+  linked_project_id?: number | null;
+  linked_project_title?: string | null;
+}): string {
+  return agent.linked_project_title || `Use case #${agent.linked_project_id}`;
+}
+
 // ── Review status ────────────────────────────────────────────────────────────
 
 /** Chip variant for a review status. */

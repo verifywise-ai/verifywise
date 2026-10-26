@@ -9,6 +9,7 @@ import { useCallback, useState, useEffect, useRef } from "react";
 import { evalModelsService } from "../../infrastructure/api/evalModelsService";
 import { deepEvalScorersService } from "../../infrastructure/api/deepEvalScorersService";
 import { deepEvalOrgsService } from "../../infrastructure/api/deepEvalOrgsService";
+import { DEFAULT_JUDGE } from "../../presentation/utils/providers";
 
 export interface ModelPreferences {
   // Model being evaluated
@@ -98,18 +99,17 @@ export function useModelPreferences(projectId: string, orgId?: string | null) {
                 provider:
                   latestJudge.config?.judgeModel?.provider ||
                   latestJudge.config?.provider ||
-                  "openai",
+                  DEFAULT_JUDGE.provider,
                 model:
-                  latestJudge.config?.judgeModel?.name || latestJudge.config?.model || "gpt-4o",
+                  latestJudge.config?.judgeModel?.name ||
+                  latestJudge.config?.model ||
+                  DEFAULT_JUDGE.model,
                 endpointUrl:
                   latestJudge.config?.judgeModel?.endpointUrl ||
                   latestJudge.config?.endpointUrl ||
                   undefined,
               }
-            : {
-                provider: "openai",
-                model: "gpt-4o",
-              },
+            : { provider: DEFAULT_JUDGE.provider, model: DEFAULT_JUDGE.model },
           savedAt: latestModel?.updatedAt || latestJudge?.updatedAt || undefined,
         };
         setPreferences(prefs);

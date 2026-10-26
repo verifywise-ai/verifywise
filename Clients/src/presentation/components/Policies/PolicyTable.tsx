@@ -19,6 +19,8 @@ import { store } from "../../../application/redux/store";
 import { useCustomFieldDefinitions } from "../../../application/hooks/useCustomFields";
 import { formatCustomFieldValue } from "../CustomFieldsSection/formatCustomFieldValue";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
+import { useAuth } from "../../../application/hooks/useAuth";
+import allowedRoles from "../../../application/constants/permissions";
 
 const tableHeaders = [
   { id: "title", name: "Title" },
@@ -47,6 +49,8 @@ const PolicyTable: React.FC<PolicyTableProps> = ({
   onBulkActionSuccess,
 }) => {
   const formatDate = useFormattedDate();
+  const { userRoleName } = useAuth();
+  const canModifyPolicies = !!userRoleName && allowedRoles.policies.edit.includes(userRoleName);
   const cellStyle = singleTheme.tableStyles.primary.body.cell;
 
   const isVisible = useCallback(
@@ -487,6 +491,7 @@ const PolicyTable: React.FC<PolicyTableProps> = ({
                   warningTitle="Delete this policy?"
                   warningMessage="When you delete this policy, all data related to it will be removed. This action is non-recoverable."
                   type="Policy"
+                  canDelete={canModifyPolicies}
                 />
               </div>
             </TableCell>

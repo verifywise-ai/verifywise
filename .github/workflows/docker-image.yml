@@ -5,9 +5,6 @@ name: Build and Push Images to GitHub Container Registry
 # pushed by digest only, with no tag. The publish job then joins the two
 # digests of an image into one multi-arch manifest and tags it, so no release
 # tag exists until every image has been built and scanned.
-#
-# deploy-to-production.yml triggers on a successful run of this workflow by
-# name. Keep the name, and keep this file free of non-release triggers.
 
 on:
   release:

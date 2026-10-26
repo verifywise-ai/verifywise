@@ -20,6 +20,7 @@ import {
   getLabelVariant,
   streamPromptTest,
   GATEWAY_URL,
+  resolveGatewayUrl,
 } from "./shared";
 
 const mockGet = vi.fn();
@@ -79,6 +80,18 @@ describe("AIGateway shared utilities", () => {
     it("returns null for an unknown provider", () => {
       expect(getProviderIcon("totally-unknown-provider")).toBeNull();
     });
+
+    it("maps LiteLLM provider variants to their provider's icon", () => {
+      expect(getProviderIcon("vercel_ai_gateway")).toBe(getProviderIcon("v0"));
+      expect(getProviderIcon("vercel_ai_gateway")).not.toBeNull();
+      expect(getProviderIcon("vertex_ai-anthropic_models")).toBe(getProviderIcon("gemini"));
+      expect(getProviderIcon("bedrock_converse")).toBe(getProviderIcon("bedrock"));
+      expect(getProviderIcon("text-completion-openai")).toBe(getProviderIcon("openai"));
+      expect(getProviderIcon("fireworks_ai-embedding-models")).toBe(
+        getProviderIcon("fireworks_ai"),
+      );
+      expect(getProviderIcon("fireworks_ai")).not.toBeNull();
+    });
   });
 
   describe("ProviderIcon", () => {
@@ -87,10 +100,17 @@ describe("AIGateway shared utilities", () => {
       expect(container.querySelector("svg")).toBeInTheDocument();
     });
 
-    it("renders nothing for an unknown provider", () => {
-      const { container } = render(
-        React.createElement(ProviderIcon, { provider: "not-a-real-provider" }),
+    it("renders a same-size initial tile for a provider without a logo", () => {
+      const { getByTestId } = render(
+        React.createElement(ProviderIcon, { provider: "deepinfra", size: 20 }),
       );
+      const tile = getByTestId("provider-icon-fallback");
+      expect(tile).toHaveTextContent("D");
+      expect(tile).toHaveStyle({ width: "20px", height: "20px" });
+    });
+
+    it("renders nothing when the provider has no letters or digits", () => {
+      const { container } = render(React.createElement(ProviderIcon, { provider: "" }));
       expect(container).toBeEmptyDOMElement();
     });
 
@@ -167,6 +187,57 @@ describe("AIGateway shared utilities", () => {
         { _id: "anthropic/claude-3-opus", name: "claude-3-opus" },
       ]);
       expect(result.current.getModelsForProvider("unknown")).toEqual([]);
+    });
+
+    it("does not prefix model ids that already carry the provider", async () => {
+      // LiteLLM lists most Gemini (and xAI, Mistral...) models as
+      // "gemini/<model>"; prefixing them again gave "gemini/gemini/<model>",
+      // which the provider rejects. Some keys appear both with and without
+      // the prefix, so they must collapse into one item.
+      mockGet.mockResolvedValue({
+        data: {
+          data: {
+            providers: ["gemini"],
+            models: {
+              gemini: [
+                { id: "gemini/gemini-2.5-flash", mode: "chat" },
+                { id: "gemini-flash-latest", mode: "chat" },
+                { id: "gemini/gemini-flash-latest", mode: "chat" },
+              ],
+            },
+          },
+        },
+      });
+
+      const { result } = renderHook(() => useGatewayModels());
+
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      expect(result.current.getModelsForProvider("gemini")).toEqual([
+        { _id: "gemini/gemini-2.5-flash", name: "gemini-2.5-flash" },
+        { _id: "gemini/gemini-flash-latest", name: "gemini-flash-latest" },
+      ]);
+    });
+
+    it("returns the same array for a provider across calls and re-renders", async () => {
+      mockGet.mockResolvedValue({
+        data: {
+          data: {
+            providers: ["openai"],
+            models: { openai: [{ id: "gpt-4o", mode: "chat" }] },
+          },
+        },
+      });
+
+      const { result, rerender } = renderHook(() => useGatewayModels());
+
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      const first = result.current.getModelsForProvider("openai");
+      const firstUnknown = result.current.getModelsForProvider("unknown");
+      rerender();
+      expect(result.current.getModelsForProvider("openai")).toBe(first);
+      expect(result.current.getModelsForProvider("unknown")).toBe(firstUnknown);
     });
 
     it("drops providers that an API key cannot be stored for", async () => {
@@ -339,6 +410,43 @@ describe("AIGateway shared utilities", () => {
     it("is a non-empty string", () => {
       expect(typeof GATEWAY_URL).toBe("string");
       expect(GATEWAY_URL.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe("resolveGatewayUrl", () => {
+    it("keeps the page origin's port in deployments", () => {
+      expect(resolveGatewayUrl({}, "https://vw.example.com:8443")).toBe(
+        "https://vw.example.com:8443",
+      );
+      expect(resolveGatewayUrl({}, "https://app.verifywise.ai")).toBe("https://app.verifywise.ai");
+    });
+
+    it("uses VITE_APP_API_URL without its /api suffix", () => {
+      expect(
+        resolveGatewayUrl(
+          { VITE_APP_API_URL: "http://localhost:3000/api/" },
+          "http://localhost:5173",
+        ),
+      ).toBe("http://localhost:3000");
+    });
+
+    it("uses VITE_APP_API_BASE_URL, as local development sets it", () => {
+      expect(
+        resolveGatewayUrl(
+          { VITE_APP_API_BASE_URL: "http://localhost:3000/" },
+          "http://localhost:5173",
+        ),
+      ).toBe("http://localhost:3000");
+    });
+
+    it("treats an empty VITE_APP_API_BASE_URL as same origin", () => {
+      expect(resolveGatewayUrl({ VITE_APP_API_BASE_URL: "" }, "https://vw.example.com")).toBe(
+        "https://vw.example.com",
+      );
+    });
+
+    it("falls back to a placeholder without a browser origin", () => {
+      expect(resolveGatewayUrl({}, undefined)).toBe("https://your-verifywise-host");
     });
   });
 

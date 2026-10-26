@@ -61,6 +61,15 @@ services:
       - backend
     image: ghcr.io/verifywise-ai/verifywise-frontend:latest
     pull_policy: always
+    environment:
+      # Where the frontend's nginx proxies /api and /v1 (used when a host
+      # proxy sends everything to the frontend)
+      - VW_BACKEND_URL=http://backend:${BACKEND_PORT:?BACKEND_PORT must be set in the env file before starting}
+      # Believe X-Forwarded-For from the host proxy, which reaches this
+      # container from a Docker bridge address. Safe here because the
+      # frontend is never published publicly (the prod overlay binds it to
+      # 127.0.0.1); narrow it if you publish the frontend port yourself.
+      - VW_TRUSTED_PROXIES=10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 127.0.0.0/8 fc00::/7 ::1
     restart: unless-stopped
   worker:
     depends_on:

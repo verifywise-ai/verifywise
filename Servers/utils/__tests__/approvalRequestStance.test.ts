@@ -41,6 +41,8 @@ function route(sql: string, options: any): unknown {
   }
   if (sql.includes("SELECT * FROM approval_request_steps")) return [{ id: 11 }];
   if (sql.includes("requires_all_approvers")) return [{ requires_all_approvers: true }];
+  // The caller is a pending approver of the current step.
+  if (sql.includes("SELECT approval_result")) return [{ approval_result: "Pending" }];
   if (sql.includes("SELECT approver_id"))
     return [{ approver_id: 1, approval_result: approvalResult }];
   if (sql.includes("COUNT(*) as count")) return [{ count: "1" }];

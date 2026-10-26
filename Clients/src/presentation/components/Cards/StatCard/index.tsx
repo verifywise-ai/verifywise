@@ -4,14 +4,15 @@ import { Info } from "lucide-react";
 import { cardStyles } from "../../../themes";
 import { palette } from "../../../themes/palette";
 import type { LucideIcon } from "lucide-react";
+import type { ReactNode } from "react";
 
 interface StatCardProps {
   title: string;
-  value: string | number;
+  value: ReactNode;
   Icon: LucideIcon;
   highlight?: boolean;
   active?: boolean;
-  subtitle?: string;
+  subtitle?: ReactNode;
   tooltip?: string;
   onClick?: () => void;
 }

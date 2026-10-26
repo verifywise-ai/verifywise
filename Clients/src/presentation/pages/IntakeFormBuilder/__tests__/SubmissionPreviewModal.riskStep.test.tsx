@@ -75,7 +75,14 @@ function mockPreview(withClassification = true) {
 
 function renderModal() {
   return renderWithProviders(
-    <SubmissionPreviewModal isOpen onClose={vi.fn()} submissionId={5} onApproved={vi.fn()} />,
+    <SubmissionPreviewModal
+      isOpen
+      onClose={vi.fn()}
+      submissionId={5}
+      onApproved={vi.fn()}
+      onRejected={vi.fn()}
+      onChanged={vi.fn()}
+    />,
   );
 }
 
@@ -183,7 +190,7 @@ describe("SubmissionPreviewModal EU AI Act risk step", () => {
         "Review the intake risk score, EU AI Act classification and entity data before approving or rejecting",
       ),
     ).toBeInTheDocument();
-    expect(screen.getByText("Intake risk score pending...")).toBeInTheDocument();
+    expect(screen.getByText("Scoring…")).toBeInTheDocument();
   });
 
   it("sends no override when the level is unchanged", async () => {

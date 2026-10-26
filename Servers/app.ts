@@ -44,6 +44,7 @@ import slackExtensionRoutes from "./extensions/slack/slack.route";
 import mlflowExtensionRoutes from "./extensions/mlflow/mlflow.route";
 import azureAiFoundryExtensionRoutes from "./extensions/azure-ai-foundry/azureAiFoundry.route";
 import jiraAssetsExtensionRoutes from "./extensions/jira-assets/jiraAssets.route";
+import jiraIncidentsExtensionRoutes from "./extensions/jira-incidents/jiraIncidents.route";
 import modelLifecycleExtensionRoutes from "./extensions/model-lifecycle/modelLifecycle.route";
 import datasetRoutes from "./routes/dataset.route";
 import riskHistoryRoutes from "./routes/riskHistory.route";
@@ -123,8 +124,13 @@ import customFieldRoutes from "./routes/customField.route";
 import virtualKeyProxyRoutes from "./routes/virtualKeyProxy.route";
 import internalRoutes from "./routes/internal.route";
 import superAdminRoutes from "./routes/superAdmin.route";
+import mcpRoutes from "./routes/mcp.route";
 import { i18nMiddleware } from "./middleware/i18n.middleware";
-import { generalApiLimiter, healthCheckLimiter } from "./middleware/rateLimit.middleware";
+import {
+  generalApiLimiter,
+  healthCheckLimiter,
+  virtualKeyProxyLimiter,
+} from "./middleware/rateLimit.middleware";
 import { sequelize } from "./database/db";
 import redisClient from "./database/redis";
 import ssoConfigRoutes from "./routes/ssoConfig.route";
@@ -184,6 +190,13 @@ export function createApp(preRoutesMiddleware?: RequestHandler[]): express.Appli
       return next();
     }
     if (req.url.startsWith("/api/webhooks/")) {
+      return next();
+    }
+    // The /v1 virtual key proxy forwards the raw body: the AI Gateway parses
+    // and validates it, and answers bad JSON in its own error format.
+    // Same match as the "/v1" mount: case-insensitive, and "/v1" itself or
+    // "/v1?..." as well as "/v1/...".
+    if (/^\/v1(?:[/?]|$)/i.test(req.url)) {
       return next();
     }
     express.json({ limit: "10mb" })(req, res, next);
@@ -286,6 +299,12 @@ export function createApp(preRoutesMiddleware?: RequestHandler[]): express.Appli
   // signature-verified and have their own per-route controls.
   app.use("/api/webhooks", webhookRoutes);
 
+  // OpenAI-compatible AI Gateway API for virtual keys. Mounted before the
+  // global limiter: one customer app server sends all of its LLM traffic from
+  // one IP, so it gets its own, higher per-IP ceiling. The gateway enforces
+  // each key's RPM and budget.
+  app.use("/v1", virtualKeyProxyLimiter, virtualKeyProxyRoutes());
+
   // Global API rate limiter (audit 4.5): a loose per-IP ceiling mounted
   // ahead of every route mount. Stricter per-route limiters (auth, file
   // ops, ingestion, ...) still apply on top. /health has its own generous
@@ -337,6 +356,7 @@ export function createApp(preRoutesMiddleware?: RequestHandler[]): express.Appli
   app.use("/api/extensions/mlflow", mlflowExtensionRoutes);
   app.use("/api/extensions/azure-ai-foundry", azureAiFoundryExtensionRoutes);
   app.use("/api/extensions/jira-assets", jiraAssetsExtensionRoutes);
+  app.use("/api/extensions/jira-incidents", jiraIncidentsExtensionRoutes);
   app.use("/api/extensions/model-lifecycle", modelLifecycleExtensionRoutes);
   app.use("/api/model-inventory-change-history", modelInventoryChangeHistoryRoutes);
   app.use("/api/mrm", mrmRoutes);
@@ -425,9 +445,9 @@ export function createApp(preRoutesMiddleware?: RequestHandler[]): express.Appli
   app.use("/api/custom-fields", customFieldRoutes);
 
   app.use("/api/super-admin", superAdminRoutes);
+  app.use("/api/mcp", mcpRoutes);
   app.use("/api/internal", internalRoutes);
   app.use("/api/telemetry", telemetryRoutes);
-  app.use("/v1", virtualKeyProxyRoutes());
   app.use("/api/ssoConfig", ssoConfigRoutes);
   app.use("/api/ai-trust-index", aiTrustIndexRoutes);
 

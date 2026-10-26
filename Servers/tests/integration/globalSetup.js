@@ -6,6 +6,8 @@ const { execSync } = require("node:child_process");
 const { assertSafeTestDatabase } = require("../testDatabaseGuard");
 
 module.exports = async function globalSetup() {
+  require("../compileDesignTokens").compileDesignTokens();
+
   const envTestPath = path.resolve(__dirname, "../../.env.test");
   const loaded = dotenv.config({ path: envTestPath });
 

@@ -9,7 +9,7 @@ import {
   normalizeSlug,
   getAppsQuery,
   upsertFeedTx,
-  describeMaterialChanges,
+  diffMaterialFields,
 } from "../aiTrustIndex.utils";
 import { sequelize } from "../../database/db";
 import { ITrustIndexAppData } from "../../domain.layer/interfaces/i.aiTrustIndex";
@@ -203,30 +203,29 @@ describe("upsertFeedTx soft-delete", () => {
   });
 });
 
-describe("describeMaterialChanges", () => {
+describe("diffMaterialFields", () => {
   it("reports a grade change using displayedGrade, not letterGrade", () => {
     const prev = { ...feedApp("a0"), letterGrade: "A", displayedGrade: "B" };
     // letterGrade unchanged (A→A) but displayedGrade moved B→C: the digest must
     // follow the governance grade, so it reports the displayed change.
     const next = { ...feedApp("a0"), letterGrade: "A", displayedGrade: "C" };
-    expect(describeMaterialChanges(prev, next)).toContain("grade B → C");
+    expect(diffMaterialFields(prev, next).grade).toEqual({ from: "B", to: "C" });
   });
 
   it("does NOT report a grade transition when only the uncapped letterGrade moved", () => {
-    // letterGrade A→B but displayedGrade stays B and nothing else changed. The
-    // digest must not claim a grade transition ("B → ..."); with no other
-    // material change it falls back to stating the current displayed grade.
+    // letterGrade A→B but displayedGrade stays B: the grade reads as unchanged,
+    // and a note keeps the row from showing no change at all.
     const prev = { ...feedApp("a0"), letterGrade: "A", displayedGrade: "B" };
     const next = { ...feedApp("a0"), letterGrade: "B", displayedGrade: "B" };
-    const out = describeMaterialChanges(prev, next);
-    expect(out).toEqual(["grade B"]);
-    expect(out.some((c) => c.includes("→"))).toBe(false);
+    const out = diffMaterialFields(prev, next);
+    expect(out.grade).toEqual({ from: "B", to: "B" });
+    expect(out.notes).toEqual(["assessment updated"]);
   });
 
   it("reports a score change as old → new", () => {
     const prev = { ...feedApp("a0"), scoreOutOf100: 78 };
     const next = { ...feedApp("a0"), scoreOutOf100: 71 };
-    expect(describeMaterialChanges(prev, next)).toContain("score 78 → 71");
+    expect(diffMaterialFields(prev, next).score).toEqual({ from: 78, to: 71 });
   });
 
   it("reports a new dealbreaker flag and a policy update together", () => {
@@ -236,18 +235,41 @@ describe("describeMaterialChanges", () => {
       dealbreakerFlags: ["sells data with no opt-out"],
       policyLastUpdated: "2026-06-01",
     };
-    const out = describeMaterialChanges(prev, next);
-    expect(out).toContain("new dealbreaker flag");
-    expect(out).toContain("policy updated");
+    expect(diffMaterialFields(prev, next).notes).toEqual([
+      "new dealbreaker flag",
+      "policy updated",
+    ]);
+  });
+
+  it("reports a cleared dealbreaker flag", () => {
+    const prev = { ...feedApp("a0"), dealbreakerFlags: ["sells data with no opt-out"] };
+    const next = { ...feedApp("a0"), dealbreakerFlags: [] };
+    expect(diffMaterialFields(prev, next).notes).toContain("dealbreaker flag cleared");
   });
 
   it("reports biometrics turning on", () => {
     const prev = { ...feedApp("a0"), processesBiometrics: false };
     const next = { ...feedApp("a0"), processesBiometrics: true };
-    expect(describeMaterialChanges(prev, next)).toContain("now processes biometrics");
+    expect(diffMaterialFields(prev, next).notes).toContain("now processes biometrics");
   });
 
-  it("falls back to the current displayed grade when no previous record exists", () => {
-    expect(describeMaterialChanges(null, feedApp("a0"))).toEqual(["grade B"]);
+  it("reads a stored string score as a number", () => {
+    const prev = { ...feedApp("a0"), scoreOutOf100: "80" as unknown as number };
+    expect(diffMaterialFields(prev, feedApp("a0")).score).toEqual({ from: 80, to: 80 });
+  });
+
+  it("reads a non-numeric score as unknown, never 0", () => {
+    for (const bad of ["", "N/A", true, [], {}]) {
+      const prev = { ...feedApp("a0"), scoreOutOf100: bad as unknown as number };
+      const next = { ...feedApp("a0"), scoreOutOf100: bad as unknown as number };
+      const out = diffMaterialFields(prev, next).score;
+      expect(out).toEqual({ from: null, to: null });
+    }
+  });
+
+  it("has no previous values when no previous record exists", () => {
+    const out = diffMaterialFields(null, feedApp("a0"));
+    expect(out.grade).toEqual({ from: null, to: "B" });
+    expect(out.score.from).toBeNull();
   });
 });

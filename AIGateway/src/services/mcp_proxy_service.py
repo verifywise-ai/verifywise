@@ -260,17 +260,79 @@ async def fetch_server_tools(
     return tools
 
 
-async def store_discovered_tools(org_id: int, server_id: int, tools: list[dict]) -> list[dict]:
-    """Database phase of discovery: upsert advertised tools, deactivate the rest."""
-    discovered_tool_names = set()
+def _schema(value) -> dict:
+    """A stored or advertised input schema as a dict (jsonb may come back as text)."""
+    if isinstance(value, str):
+        try:
+            value = json.loads(value)
+        except ValueError:
+            return {}
+    return value or {}
+
+
+def diff_discovered_tools(existing: list[dict], tools: list[dict]) -> dict:
+    """Count what a discovery run changes against the server's stored tools.
+
+    A previously deactivated tool that comes back counts as added. Removed means
+    an active tool the server no longer offers.
+    """
+    active = {row["tool_name"]: row for row in existing if row.get("is_active")}
+    advertised = {tool.get("name", ""): tool for tool in tools}
+
+    changes = {"added": 0, "removed": 0, "changed": 0, "unchanged": 0}
+    for name, tool in advertised.items():
+        row = active.get(name)
+        if row is None:
+            changes["added"] += 1
+        elif (row.get("description") or "") != (tool.get("description") or "") or _schema(
+            row.get("input_schema")
+        ) != _schema(tool.get("inputSchema")):
+            changes["changed"] += 1
+        else:
+            changes["unchanged"] += 1
+    changes["removed"] = sum(1 for name in active if name not in advertised)
+    return changes
+
+
+async def store_discovered_tools(
+    org_id: int, server_id: int, tools: list[dict]
+) -> tuple[list[dict], dict]:
+    """Database phase of discovery: upsert advertised tools, deactivate the rest.
+
+    Returns the stored tools, one per name, and the counts from
+    diff_discovered_tools.
+    """
+    # A server that lists a name twice gets one row; the last entry wins, as the
+    # upserts below would do anyway.
+    advertised = {tool.get("name", ""): tool for tool in tools}
     discovered_tools = []
 
     async with get_db() as db:
-        for tool in tools:
-            tool_name = tool.get("name", "")
+        # Lock the server row so two discoveries of one server run one after the
+        # other; otherwise both diff against the same old rows and report the
+        # same changes. NO KEY UPDATE, not UPDATE: inserts into tables with a
+        # foreign key to this row (audit logs) take KEY SHARE and must not wait.
+        await db.execute(
+            text("""
+                SELECT id FROM ai_gateway_mcp_servers
+                WHERE organization_id = :org_id AND id = :server_id
+                FOR NO KEY UPDATE
+            """),
+            {"org_id": org_id, "server_id": server_id},
+        )
+        existing = await db.execute(
+            text("""
+                SELECT tool_name, description, input_schema, is_active
+                FROM ai_gateway_mcp_tools
+                WHERE organization_id = :org_id AND server_id = :server_id
+            """),
+            {"org_id": org_id, "server_id": server_id},
+        )
+        changes = diff_discovered_tools([dict(r) for r in existing.mappings().all()], tools)
+
+        for tool_name, tool in advertised.items():
             description = tool.get("description", "")
             input_schema = tool.get("inputSchema", {})
-            discovered_tool_names.add(tool_name)
 
             await db.execute(
                 text("""
@@ -301,7 +363,7 @@ async def store_discovered_tools(org_id: int, server_id: int, tools: list[dict])
                 "input_schema": input_schema,
             })
 
-        if discovered_tool_names:
+        if advertised:
             await db.execute(
                 text("""
                     UPDATE ai_gateway_mcp_tools
@@ -314,7 +376,7 @@ async def store_discovered_tools(org_id: int, server_id: int, tools: list[dict])
                 {
                     "org_id": org_id,
                     "server_id": server_id,
-                    "tool_names": list(discovered_tool_names),
+                    "tool_names": list(advertised),
                 },
             )
         else:
@@ -335,7 +397,7 @@ async def store_discovered_tools(org_id: int, server_id: int, tools: list[dict])
         "Discovered %d tools from server %s for org %s",
         len(discovered_tools), server_id, org_id,
     )
-    return discovered_tools
+    return discovered_tools, changes
 
 
 def describe_discovery_error(exc: BaseException, budget_seconds) -> str:
@@ -395,17 +457,17 @@ async def run_discovery(
         error = describe_discovery_error(exc, budget_seconds)
         logger.warning("MCP discovery failed for server %s: %s", server_id, error)
         await record_failure(error)
-        return {"status": "failed", "tools_discovered": 0, "error": error}
+        return {"status": "failed", "tools_discovered": 0, "changes": None, "error": error}
 
     try:
-        stored = await store_discovered_tools(org_id, server["id"], tools)
+        stored, changes = await store_discovered_tools(org_id, server["id"], tools)
         await mcp_servers_crud.record_discovery_result(org_id, server["id"], None)
     except Exception:  # noqa: BLE001 — database or malformed-tool failure
         logger.exception("MCP discovery could not save tools for server %s", server_id)
         error = "Could not save the discovered tools"
         await record_failure(error)
-        return {"status": "failed", "tools_discovered": 0, "error": error}
-    return {"status": "success", "tools_discovered": len(stored), "error": None}
+        return {"status": "failed", "tools_discovered": 0, "changes": None, "error": error}
+    return {"status": "success", "tools_discovered": len(stored), "changes": changes, "error": None}
 
 
 # ─── Tool Call Forwarding ──────────────────────────────────────────────────

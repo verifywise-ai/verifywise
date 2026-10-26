@@ -16,4 +16,6 @@ export interface PageHeaderExtendedProps {
   titleFontFamily?: string;
   breadcrumbItems?: BreadcrumbItem[];
   actionButton?: ReactNode | null;
+  /** "Back to ..." link rendered between the breadcrumbs and the title. */
+  backButton?: ReactNode;
 }

@@ -24,6 +24,7 @@ import {
 } from "../../../application/repository/deepEval.repository";
 import { useIsAdmin } from "../../../application/hooks/useIsAdmin";
 import { palette } from "../../themes/palette";
+import { LLM_PROVIDERS as ALL_LLM_PROVIDERS } from "./llmProviders";
 
 interface SavedKey {
   id?: number;
@@ -33,15 +34,8 @@ interface SavedKey {
   keyName?: string;
 }
 
-const LLM_PROVIDERS = [
-  { _id: "openrouter", name: "OpenRouter" },
-  { _id: "openai", name: "OpenAI" },
-  { _id: "anthropic", name: "Anthropic" },
-  { _id: "google", name: "Gemini" },
-  { _id: "xai", name: "xAI" },
-  { _id: "mistral", name: "Mistral" },
-  { _id: "huggingface", name: "Hugging Face" },
-];
+// Organization settings save keys for hosted providers only
+const LLM_PROVIDERS = ALL_LLM_PROVIDERS.filter((p) => p._id !== "custom");
 
 /**
  * API key format patterns for validation

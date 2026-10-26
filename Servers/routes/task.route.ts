@@ -27,7 +27,7 @@ router.get("/:id", authenticateJWT, getTaskById);
 router.get("/:id/entities", authenticateJWT, getTaskEntityLinks);
 
 // POST requests
-router.post("/", authenticateJWT, createTask);
+router.post("/", authenticateJWT, authorize("task.edit"), createTask);
 router.post("/:id/entities", authenticateJWT, addTaskEntityLink);
 
 // PATCH requests

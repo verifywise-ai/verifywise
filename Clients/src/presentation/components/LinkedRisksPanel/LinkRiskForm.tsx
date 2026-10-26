@@ -1,9 +1,11 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Alert, FormControlLabel, Radio, RadioGroup, Stack } from "@mui/material";
+import { Alert, Stack, Typography } from "@mui/material";
+import Radio from "../Inputs/Radio";
 import AutoCompleteField from "../Inputs/Autocomplete";
 import Chip from "../Chip";
 import { CustomizableButton } from "../button/customizable-button";
+import { textStyles } from "../../themes/typography";
 import { getAllProjectRisks } from "../../../application/repository/projectRisk.repository";
 import { getAllVendorRisks } from "../../../application/repository/vendorRisk.repository";
 import { getAllEntities } from "../../../application/repository/entity.repository";
@@ -27,19 +29,33 @@ interface Candidate {
 /** "Is inherited by" is the same relation with the ids swapped. */
 type Choice = "related_to" | "inherits_from" | "inherited_by";
 
-const CHOICES: { value: Choice; label: string }[] = [
-  { value: "related_to", label: "Relates to" },
-  { value: "inherits_from", label: "Inherits from" },
-  { value: "inherited_by", label: "Is inherited by" },
+const CHOICES: { value: Choice; label: string; desc: string }[] = [
+  {
+    value: "related_to",
+    label: "Relates to",
+    desc: "The two risks are connected, but neither depends on the other.",
+  },
+  {
+    value: "inherits_from",
+    label: "Inherits from",
+    desc: "This risk is part of a broader parent risk. When the parent's level changes, this risk is flagged for review.",
+  },
+  {
+    value: "inherited_by",
+    label: "Is inherited by",
+    desc: "The other risk becomes a child of this one and is flagged when this risk's level changes.",
+  },
 ];
 
 type ParentSource = "risk" | "model_risk" | "vendor_risk";
 
-const PARENT_SOURCES: { value: ParentSource; label: string }[] = [
-  { value: "risk", label: "Project risk" },
-  { value: "model_risk", label: "Model risk" },
-  { value: "vendor_risk", label: "Vendor risk" },
+const PARENT_SOURCES: { value: ParentSource; label: string; desc: string }[] = [
+  { value: "risk", label: "Project risk", desc: "Another risk in the risk register." },
+  { value: "model_risk", label: "Model risk", desc: "A risk recorded on a model." },
+  { value: "vendor_risk", label: "Vendor risk", desc: "A risk recorded on a vendor." },
 ];
+
+const groupLabelSx = { ...textStyles.formLabel, color: "text.primary" };
 
 /** Why a candidate is ranked first: the projects it shares with this risk. */
 export function SameProjectChip({ projects }: { projects: string[] }) {
@@ -224,36 +240,65 @@ export default function LinkRiskForm({ riskId, existingLinks, onClose }: LinkRis
   };
 
   return (
-    <Stack spacing={4} sx={{ py: 4 }}>
-      <RadioGroup
-        row
-        value={choice}
-        onChange={(event) => handleChoice(event.target.value as Choice)}
+    <Stack spacing="16px" sx={{ py: "8px" }}>
+      {/* useFlexGap: Stack's margin spacing would reset each Radio's -5px
+          margin, which offsets its hover padding. */}
+      <Stack
+        spacing="16px"
+        useFlexGap
+        role="radiogroup"
+        aria-labelledby={`link-risk-relation-${riskId}`}
       >
-        {CHOICES.map(({ value, label }) => (
-          <FormControlLabel
+        <Typography id={`link-risk-relation-${riskId}`} sx={groupLabelSx}>
+          How is this risk connected?
+        </Typography>
+        {CHOICES.map(({ value, label, desc }) => (
+          <Radio
             key={value}
+            id={`link-risk-relation-${riskId}-${value}`}
+            name={`link-risk-relation-${riskId}`}
+            size="small"
             value={value}
-            control={<Radio disabled={disabled[value]} />}
-            label={label}
+            checked={choice === value}
             disabled={disabled[value]}
+            onChange={() => handleChoice(value)}
+            title={label}
+            desc={desc}
           />
         ))}
-      </RadioGroup>
+      </Stack>
 
       {choice === "inherits_from" && (
-        <RadioGroup
-          row
-          value={source}
-          onChange={(event) => handleSource(event.target.value as ParentSource)}
+        <Stack
+          spacing="16px"
+          useFlexGap
+          role="radiogroup"
+          aria-labelledby={`link-risk-parent-${riskId}`}
         >
-          {PARENT_SOURCES.map(({ value, label }) => (
-            <FormControlLabel key={value} value={value} control={<Radio />} label={label} />
+          <Typography id={`link-risk-parent-${riskId}`} sx={groupLabelSx}>
+            Where is the parent risk?
+          </Typography>
+          {PARENT_SOURCES.map(({ value, label, desc }) => (
+            <Radio
+              key={value}
+              id={`link-risk-parent-${riskId}-${value}`}
+              name={`link-risk-parent-${riskId}`}
+              size="small"
+              value={value}
+              checked={source === value}
+              onChange={() => handleSource(value)}
+              title={label}
+              desc={desc}
+            />
           ))}
-        </RadioGroup>
+        </Stack>
       )}
 
-      {restriction && <Alert severity="info">{restriction}</Alert>}
+      {restriction && (
+        <Alert severity="info" sx={{ fontSize: "13px" }}>
+          {restriction}
+        </Alert>
+      )}
       <AutoCompleteField<Candidate>
         label={PARENT_SOURCES.find((s) => s.value === source)!.label}
         placeholder="Search risks"
@@ -266,7 +311,7 @@ export default function LinkRiskForm({ riskId, existingLinks, onClose }: LinkRis
             <li {...props} key={`${source}:${option.id}`}>
               <Stack
                 direction="row"
-                spacing={4}
+                spacing="8px"
                 alignItems="center"
                 sx={{ width: "100%", justifyContent: "space-between" }}
               >
@@ -283,9 +328,13 @@ export default function LinkRiskForm({ riskId, existingLinks, onClose }: LinkRis
         }}
       />
 
-      {error && <Alert severity="error">{error}</Alert>}
+      {error && (
+        <Alert severity="error" sx={{ fontSize: "13px" }}>
+          {error}
+        </Alert>
+      )}
 
-      <Stack direction="row" spacing={4}>
+      <Stack direction="row" spacing="8px">
         <CustomizableButton
           size="small"
           variant="contained"

@@ -78,7 +78,7 @@ VerifyWise supports these built-in metrics:
 | `hallucination` | Lower is better | Rate of fabricated information |
 | `toxicity` | Lower is better | Harmful content detection |
 | `bias` | Lower is better | Bias detection |
-| `conversationSafety` | Lower is better | Safety of conversational outputs |
+| `conversationSafety` | Higher is better | Safety of conversational outputs |
 | `completeness` | Higher is better | Coverage of expected content |
 | `coherence` | Higher is better | Logical consistency |
 

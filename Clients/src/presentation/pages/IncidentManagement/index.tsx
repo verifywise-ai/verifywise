@@ -43,6 +43,7 @@ import { ColumnSelector } from "../../components/Table/ColumnSelector";
 import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/useColumnVisibility";
 
 import Alert from "../../components/Alert";
+import { useJiraIncidentLinks } from "../../../application/hooks/useJiraIncidentLinks";
 import {
   getApiValidationMessage,
   UserFacingFieldErrors,
@@ -137,6 +138,8 @@ const IncidentManagement: React.FC = () => {
   const hasProcessedUrlParam = useRef(false);
   const [incidentsData, setIncidentsData] = useState<AIIncidentManagementModel[]>([]);
   const [selectedIncident, setSelectedIncident] = useState<AIIncidentManagementModel | null>(null);
+  const incidentIds = useMemo(() => incidentsData.map((i) => i.id), [incidentsData]);
+  const jiraLinks = useJiraIncidentLinks(incidentIds);
 
   const [isLoading, setIsLoading] = useState(true);
   const [, setIsModalLoading] = useState(false);
@@ -899,6 +902,7 @@ const IncidentManagement: React.FC = () => {
               archivedId={archiveId}
               hidePagination={options?.hidePagination}
               visibleColumns={incidentVisibleColumns}
+              jiraLinks={jiraLinks}
             />
           )}
         />
@@ -912,6 +916,7 @@ const IncidentManagement: React.FC = () => {
         isEdit={!!selectedIncident}
         mode={mode}
         incidentId={selectedIncident?.id}
+        jiraLink={selectedIncident ? jiraLinks.get(selectedIncident.id) : undefined}
       />
 
       <PageTour

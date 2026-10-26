@@ -38,15 +38,14 @@ describe("model lifecycle files and bias audit stance PDFs", () => {
   });
 
   it("attachFile refuses a stance PDF exactly as a missing file and writes nothing", async () => {
-    const run = () =>
-      attachFile(ORG, 7, 3, 9, 2).catch((e: any) => ({ status: e.statusCode, message: e.message }));
+    // The controller answers null with the same 404 "File not found".
     table = [stanceRow()];
-    const stance = await run();
+    const stance = await attachFile(ORG, 7, 3, 9, 2);
     table = [];
-    const missing = await run();
+    const missing = await attachFile(ORG, 7, 3, 9, 2);
 
-    expect(stance).toEqual(missing);
-    expect(stance).toEqual({ status: 404, message: "File not found" });
+    expect(stance).toBeNull();
+    expect(missing).toBeNull();
     const writes = mockQuery.mock.calls.filter(([sql]) => /^\s*INSERT/i.test(String(sql)));
     expect(writes).toHaveLength(0);
   });

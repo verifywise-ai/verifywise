@@ -7,7 +7,6 @@
 import {
   Box,
   Button,
-  Chip as MuiChip,
   Divider,
   FormControl,
   MenuItem,
@@ -18,10 +17,10 @@ import {
 import { Check } from "lucide-react";
 import type { RefObject } from "react";
 import Field from "../../../components/Inputs/Field";
+import ModelPicker from "../../../components/Inputs/ModelPicker";
 import { palette } from "../../../themes/palette";
 import { PROVIDERS, type ModelInfo } from "../../../utils/providers";
-import type { ProviderType } from "./newExperimentConfig";
-import { OPENROUTER_POPULAR_MODELS } from "./providerConfig";
+import { apiKeyHelperText, type ProviderType } from "./newExperimentConfig";
 
 export interface ProviderModelFieldsProps {
   /** `model` shows input/output cost in the cloud dropdown; `judge` omits it. */
@@ -33,10 +32,14 @@ export interface ProviderModelFieldsProps {
   apiKey: string;
   useCustomModelName: boolean;
   hasApiKeyConfigured: boolean;
+  /** A key is saved but the provider refused it; the key field explains why it is back. */
+  savedKeyRejected?: boolean;
   needsApiKey: boolean;
   needsUrl: boolean;
   fieldsRef?: RefObject<HTMLDivElement | null>;
   getProviderModels: (providerId: string) => ModelInfo[];
+  /** The organization's saved model IDs for this provider; the picker lists them first */
+  savedModelIds?: string[];
   onModelChange: (name: string) => void;
   onEndpointChange: (url: string) => void;
   onApiKeyChange: (key: string) => void;
@@ -52,10 +55,12 @@ export default function ProviderModelFields({
   apiKey,
   useCustomModelName,
   hasApiKeyConfigured,
+  savedKeyRejected = false,
   needsApiKey,
   needsUrl,
   fieldsRef,
   getProviderModels,
+  savedModelIds,
   onModelChange,
   onEndpointChange,
   onApiKeyChange,
@@ -71,132 +76,28 @@ export default function ProviderModelFields({
       label="Endpoint URL"
       value={endpointUrl}
       onChange={(e) => onEndpointChange(e.target.value)}
-      placeholder={
-        providerId === "local"
-          ? "http://localhost:11434/api/generate"
-          : "https://api.example.com/v1/chat/completions"
-      }
+      // The OpenAI-compatible base URL; the client adds /chat/completions
+      placeholder="http://localhost:8000/v1"
     />
   ) : null;
 
   const modelField = (() => {
-    if (providerId === "openrouter") {
-      return (
-        <Box>
-          <Typography
-            sx={{
-              fontSize: "13px",
-              fontWeight: 500,
-              color: palette.text.secondary,
-              mb: 1,
-            }}
-          >
-            Model
-          </Typography>
-          <Typography sx={{ fontSize: "11px", color: palette.text.tertiary, mb: 1.5 }}>
-            OpenRouter supports any model. Enter the model ID or select from saved or popular
-            options.
-          </Typography>
-          <Field
-            label=""
-            value={modelValue}
-            onChange={(e) => onModelChange(e.target.value)}
-            placeholder="e.g., openai/gpt-4o, anthropic/claude-3-opus"
-          />
-          <Typography
-            sx={{
-              fontSize: "11px",
-              fontWeight: 600,
-              color: palette.text.disabled,
-              mt: 2,
-              mb: 1,
-              textTransform: "uppercase",
-            }}
-          >
-            Popular Models
-          </Typography>
-          <Stack direction="row" flexWrap="wrap" gap={1}>
-            {OPENROUTER_POPULAR_MODELS.map((m) => (
-              <MuiChip
-                key={m.id}
-                label={m.name}
-                variant={modelValue === m.id ? "filled" : "outlined"}
-                onClick={() => onModelChange(m.id)}
-                sx={{
-                  "cursor": "pointer",
-                  "backgroundColor":
-                    modelValue === m.id ? palette.brand.primaryLight : "transparent",
-                  "borderColor": modelValue === m.id ? palette.brand.primary : palette.border.dark,
-                  "color": modelValue === m.id ? palette.brand.primary : palette.text.secondary,
-                  "&:hover": {
-                    backgroundColor:
-                      modelValue === m.id ? palette.brand.primaryLight : palette.background.accent,
-                    borderColor: palette.brand.primary,
-                  },
-                }}
-              />
-            ))}
-          </Stack>
-        </Box>
-      );
-    }
-
+    // Cloud providers, OpenRouter included: the gateway catalog, searchable, any ID typed
     if (PROVIDERS[providerId]) {
       return (
-        <Box>
-          <Typography
-            sx={{
-              fontSize: "13px",
-              fontWeight: 500,
-              color: palette.text.secondary,
-              mb: 1,
-            }}
-          >
-            Model
-          </Typography>
-          <FormControl fullWidth size="small">
-            <Select
-              value={modelValue}
-              onChange={(e) => onModelChange(e.target.value as string)}
-              displayEmpty
-              sx={{
-                "fontSize": "13px",
-                "& .MuiOutlinedInput-notchedOutline": {
-                  borderColor: palette.border.dark,
-                },
-                "&:hover .MuiOutlinedInput-notchedOutline": {
-                  borderColor: palette.border.dark,
-                },
-                "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                  borderColor: palette.brand.primary,
-                },
-              }}
-            >
-              <MenuItem value="" disabled>
-                <Typography sx={{ color: palette.text.disabled, fontSize: "13px" }}>
-                  Select a model
-                </Typography>
-              </MenuItem>
-              {getProviderModels(providerId).map((model) => (
-                <MenuItem key={model.id} value={model.id}>
-                  <Stack
-                    direction="row"
-                    alignItems="center"
-                    justifyContent="space-between"
-                    sx={{ width: "100%" }}
-                  >
-                    <Typography sx={{ fontSize: "13px" }}>{model.name}</Typography>
-                    {mode === "model" && model.inputCost !== undefined && (
-                      <Typography sx={{ fontSize: "11px", color: palette.text.disabled }}>
-                        ${model.inputCost}/1M in • ${model.outputCost}/1M out
-                      </Typography>
-                    )}
-                  </Stack>
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </Box>
+        <ModelPicker
+          value={modelValue}
+          onChange={onModelChange}
+          models={getProviderModels(providerId)}
+          savedModelIds={savedModelIds}
+          showPrices={mode === "model"}
+          placeholder={
+            providerId === "openrouter"
+              ? "Search or type an ID, e.g. openai/gpt-4o"
+              : "Search or type a model ID"
+          }
+          testId={mode}
+        />
       );
     }
 
@@ -359,9 +260,7 @@ export default function ProviderModelFields({
               }
               autoComplete="off"
               helperText={
-                providerId === "custom_api"
-                  ? undefined
-                  : "Your key will be saved securely for future experiments"
+                providerId === "custom_api" ? undefined : apiKeyHelperText(savedKeyRejected)
               }
             />
           ))}

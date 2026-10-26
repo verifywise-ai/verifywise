@@ -1126,6 +1126,14 @@ export const createRoutes = (triggerSidebar: boolean, _triggerSidebarReload: () 
           </Suspense>
         }
       />
+      <Route
+        path="oversight"
+        element={
+          <Suspense fallback={<LazyFallback />}>
+            <IntakeFormsListPage />
+          </Suspense>
+        }
+      />
     </Route>
     <Route
       path="/intake-forms/:formId/edit"

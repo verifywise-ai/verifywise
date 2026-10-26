@@ -124,6 +124,11 @@ export const ROLE_PERMISSIONS = {
     description: "Add, edit and delete LLM API keys",
     legacyRoles: ADMIN,
   },
+  "logs.admin": {
+    module: "Event tracker",
+    description: "View the organization's server logs",
+    legacyRoles: ADMIN,
+  },
   "organization.admin": {
     module: "Organization",
     description: "Update organization settings",
@@ -142,6 +147,11 @@ export const ROLE_PERMISSIONS = {
   "ssoConfig.admin": {
     module: "SSO",
     description: "Configure SSO",
+    legacyRoles: ADMIN,
+  },
+  "training.admin": {
+    module: "Training registry",
+    description: "Delete training records",
     legacyRoles: ADMIN,
   },
 
@@ -189,6 +199,26 @@ export const ROLE_PERMISSIONS = {
   "intakeForm.edit": {
     module: "Intake forms",
     description: "Create and manage intake forms and submissions",
+    legacyRoles: EDITOR,
+  },
+  "useCase.edit": {
+    module: "Use cases",
+    description: "Create, update and delete use cases",
+    legacyRoles: EDITOR,
+  },
+  "vendor.edit": {
+    module: "Vendors",
+    description: "Create, update and delete vendors and vendor risks",
+    legacyRoles: EDITOR,
+  },
+  "model.edit": {
+    module: "Model inventory",
+    description: "Create, update and delete models and model risks",
+    legacyRoles: EDITOR,
+  },
+  "training.edit": {
+    module: "Training registry",
+    description: "Create and update training records",
     legacyRoles: EDITOR,
   },
   "useCase.classify": {

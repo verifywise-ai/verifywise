@@ -212,6 +212,8 @@ The backend mounts **116 route modules** (including 7 extension routers). Each s
 | PATCH | `/:id/review` | JWT, authorize(['Admin']) | `reviewAgentPrimitive` |
 | PATCH | `/:id/link-model` | JWT, authorize(['Admin']) | `linkModelToAgent` |
 | PATCH | `/:id/unlink-model` | JWT, authorize(['Admin']) | `unlinkModelFromAgent` |
+| PATCH | `/:id/link-use-case` | JWT, authorize(['Admin']) | `linkUseCaseToAgent` |
+| PATCH | `/:id/unlink-use-case` | JWT, authorize(['Admin']) | `unlinkUseCaseFromAgent` |
 | GET | `/:id/audit-logs` | JWT | `getAgentAuditLogs` |
 | DELETE | `/:id` | JWT, authorize(['Admin']) | `deleteAgentPrimitiveById` |
 

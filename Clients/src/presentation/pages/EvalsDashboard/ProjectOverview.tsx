@@ -32,6 +32,7 @@ import { useAuth } from "../../../application/hooks/useAuth";
 import allowedRoles from "../../../application/constants/permissions";
 import { palette } from "../../themes/palette";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
+import { experimentPromptCount } from "./experimentPromptCount";
 
 interface ProjectOverviewProps {
   projectId: string;
@@ -359,12 +360,7 @@ export default function ProjectOverview({
         judgeDisplay = scorerName;
       }
 
-      // Calculate prompt count from config or results
-      const promptCount =
-        exp.config?.dataset?.count ||
-        exp.config?.dataset?.prompts?.length ||
-        exp.results?.total_prompts ||
-        0;
+      const promptCount = experimentPromptCount(exp);
 
       return {
         id: exp.id,

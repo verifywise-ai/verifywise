@@ -46,7 +46,14 @@ function mockPreview(entityPreview: Record<string, unknown>) {
 
 const renderModal = () =>
   renderWithProviders(
-    <SubmissionPreviewModal isOpen onClose={vi.fn()} submissionId={5} onApproved={vi.fn()} />,
+    <SubmissionPreviewModal
+      isOpen
+      onClose={vi.fn()}
+      submissionId={5}
+      onApproved={vi.fn()}
+      onRejected={vi.fn()}
+      onChanged={vi.fn()}
+    />,
   );
 
 describe("SubmissionPreviewModal high-risk roles mapping", () => {

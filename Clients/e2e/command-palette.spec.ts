@@ -41,6 +41,54 @@ function getSearchInput(page: Page) {
 }
 
 test.describe("Command Palette (Ctrl+K)", () => {
+  test("Cmd+K (metaKey) opens command palette and the X button closes it", async ({
+    authedPage: page,
+  }) => {
+    const welcomeSkip = page.getByRole("button", { name: /skip for now/i });
+    if (await welcomeSkip.isVisible({ timeout: 3_000 }).catch(() => false)) {
+      await welcomeSkip.click();
+      await page.waitForTimeout(1000);
+    }
+
+    // Issue #4820 (item c): Cmd+K must open the palette. useCommandPalette
+    // accepts metaKey || ctrlKey; Chromium on Windows intercepts the physical
+    // key combo, so dispatch the synthetic event (same approach as
+    // openCommandPalette, but with metaKey).
+    await page.evaluate(() => {
+      document.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "k",
+          metaKey: true,
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+    });
+    await page.waitForTimeout(500);
+
+    const searchInput = getSearchInput(page);
+    if (
+      !(await searchInput
+        .first()
+        .isVisible({ timeout: 5_000 })
+        .catch(() => false))
+    ) {
+      test.skip();
+      return;
+    }
+    await expect(searchInput.first()).toBeVisible();
+
+    // The palette's own close button (X icon, aria-label "Close") must close
+    // the dialog — Esc alone is no longer the only way out.
+    const closeButton = page
+      .locator(".command-input-wrapper")
+      .getByRole("button", { name: /^close$/i });
+    await expect(closeButton).toBeVisible({ timeout: 5_000 });
+    await closeButton.click();
+
+    await expect(page.locator(".command-dialog")).not.toBeVisible({ timeout: 5_000 });
+  });
+
   test("Ctrl+K opens command palette", async ({ authedPage: page }) => {
     // Dismiss any welcome dialogs first
     const welcomeSkip = page.getByRole("button", { name: /skip for now/i });

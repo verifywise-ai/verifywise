@@ -16,6 +16,7 @@ import {
   Table2,
   LayoutGrid,
   Palette,
+  Boxes,
   Type,
   Layers,
   MousePointer2,
@@ -44,6 +45,7 @@ import {
 import FormInputsSection from "./sections/FormInputsSection";
 import ButtonsSection from "./sections/ButtonsSection";
 import ColorsSection from "./sections/ColorsSection";
+import TokensSection from "./sections/TokensSection";
 import TypographySection from "./sections/TypographySection";
 import TablesSection from "./sections/TablesSection";
 import CardsSection from "./sections/CardsSection";
@@ -238,6 +240,14 @@ const StyleGuide: React.FC = () => {
       keywords: ["tab", "tabbar", "navigation", "panel"],
     },
     // Foundations
+    {
+      id: "tokens",
+      label: "Tokens",
+      icon: <Boxes size={18} />,
+      component: <TokensSection />,
+      category: "foundations",
+      keywords: ["token", "color", "palette", "spacing", "typography", "theme"],
+    },
     {
       id: "colors",
       label: "Colors",

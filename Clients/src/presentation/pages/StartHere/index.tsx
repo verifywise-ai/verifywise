@@ -933,9 +933,20 @@ const StartHere = () => {
             <Stack
               direction="row"
               alignItems="flex-start"
-              sx={{ gap: "12px", position: "relative", width: "fit-content" }}
+              sx={{
+                gap: "12px",
+                position: "relative",
+                width: "fit-content",
+                maxWidth: "100%",
+                flexWrap: "wrap",
+              }}
             >
               {[
+                {
+                  name: "Ioana Polmolea",
+                  photo: "/images/ioanapolmolea.jpg",
+                  role: "AI governance expert",
+                },
                 {
                   name: "Ulas Ozguven",
                   photo: "https://verifywise.ai/images/team/ulas.jpeg",
@@ -977,6 +988,8 @@ const StartHere = () => {
                       height: 56,
                       borderRadius: "50%",
                       objectFit: "cover",
+                      // Photos come in mixed colour; show them all in black and white
+                      filter: "grayscale(100%)",
                     }}
                   />
                   <Typography sx={{ fontSize: 13, fontWeight: 600, textAlign: "center" }}>
