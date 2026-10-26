@@ -37,7 +37,6 @@ import {
 } from "../controllers/fileManager.ctrl";
 import authenticateJWT from "../middleware/auth.middleware";
 import authorize from "../middleware/accessControl.middleware";
-import { refuseStanceFile } from "../middleware/stanceFileGuard.middleware";
 import {
   getFileOrgSettingsHandler,
   updateFileOrgSettingsHandler,
@@ -222,14 +221,7 @@ router.put(
  * @returns {404} File not found
  * @returns {500} Server error
  */
-router.get(
-  "/:id",
-  fileOperationsLimiter,
-  authenticateJWT,
-  validateFileIdParam,
-  refuseStanceFile,
-  downloadFile,
-);
+router.get("/:id", fileOperationsLimiter, authenticateJWT, validateFileIdParam, downloadFile);
 
 /**
  * @route   GET /file-manager/:id/metadata
@@ -246,7 +238,6 @@ router.get(
   fileOperationsLimiter,
   authenticateJWT,
   validateFileIdParam,
-  refuseStanceFile,
   getFileMetadata,
 );
 
@@ -264,7 +255,6 @@ router.get(
   fileOperationsLimiter,
   authenticateJWT,
   validateFileIdParam,
-  refuseStanceFile,
   getFileVersionHistory,
 );
 
@@ -286,7 +276,6 @@ router.patch(
   authenticateJWT,
   authorize("fileManager.contribute"),
   validateUpdateFileMetadata,
-  refuseStanceFile,
   updateMetadata,
 );
 
@@ -306,7 +295,6 @@ router.get(
   fileOperationsLimiter,
   authenticateJWT,
   validateFileIdParam,
-  refuseStanceFile,
   previewFile,
 );
 
@@ -326,7 +314,6 @@ router.delete(
   authenticateJWT,
   authorize("fileManager.contribute"),
   validateFileIdParam,
-  refuseStanceFile,
   removeFile,
 );
 

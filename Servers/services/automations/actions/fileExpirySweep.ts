@@ -3,6 +3,7 @@ import { sequelize } from "../../../database/db";
 import { getAllOrganizationsQuery } from "../../../utils/organization.utils";
 import { notifyFileExpiring } from "../../inAppNotification.service";
 import logger from "../../../utils/logger/fileLogger";
+import { VISIBLE_FILE_REPLACEMENTS, VISIBLE_FILE_SQL } from "../../../utils/files/visibleFiles";
 
 /**
  * Files — daily expiry sweep.
@@ -17,7 +18,8 @@ import logger from "../../../utils/logger/fileLogger";
  * an "Expired" badge on files past expiry_date; the sweep stops nagging.
  *
  * files with NULL expiry_date, NULL uploaded_by, or expiry_date outside
- * the window are skipped entirely.
+ * the window are skipped entirely, as are bias audit stance PDFs (served
+ * only by the stance endpoint).
  */
 
 const NOTIFY_WINDOW_DAYS = 6; // T-6 through T-0 → 7 daily notifications
@@ -52,10 +54,15 @@ export async function runFileExpirySweep(
       WHERE organization_id = :organizationId
         AND expiry_date IS NOT NULL
         AND uploaded_by IS NOT NULL
+        AND ${VISIBLE_FILE_SQL("files")}
         AND (expiry_date - CURRENT_DATE) BETWEEN 0 AND :windowDays
       ORDER BY expiry_date ASC, id ASC`,
     {
-      replacements: { organizationId, windowDays: NOTIFY_WINDOW_DAYS },
+      replacements: {
+        organizationId,
+        windowDays: NOTIFY_WINDOW_DAYS,
+        ...VISIBLE_FILE_REPLACEMENTS,
+      },
       type: QueryTypes.SELECT,
     },
   )) as ExpiringFileRow[];

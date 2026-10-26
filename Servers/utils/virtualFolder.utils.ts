@@ -24,6 +24,21 @@ import {
 // ============================================================================
 
 /**
+ * Folder mappings joined to their visible files, for counting. A stale
+ * mapping to a bias audit stance PDF is never counted.
+ */
+const VISIBLE_MAPPINGS_JOIN_SQL = `LEFT JOIN (
+      file_folder_mappings ffm
+      JOIN files f ON f.id = ffm.file_id AND f.organization_id = :organizationId
+        AND ${VISIBLE_FILE_SQL("f")}
+    ) ON vf.id = ffm.folder_id AND ffm.organization_id = :organizationId`;
+
+/** `:fileId` when it names a visible file of the organization, else nothing. */
+const VISIBLE_FILE_ID_SQL = `SELECT files.id FROM files
+  WHERE files.organization_id = :organizationId AND files.id = :fileId
+    AND ${VISIBLE_FILE_SQL("files")}`;
+
+/**
  * Get all folders for an organization (flat list)
  */
 export const getAllFoldersQuery = async (organizationId: number): Promise<IFolderWithCount[]> => {
@@ -32,12 +47,12 @@ export const getAllFoldersQuery = async (organizationId: number): Promise<IFolde
       vf.*,
       COALESCE(COUNT(ffm.id), 0)::INTEGER as file_count
     FROM virtual_folders vf
-    LEFT JOIN file_folder_mappings ffm ON vf.id = ffm.folder_id AND ffm.organization_id = :organizationId
+    ${VISIBLE_MAPPINGS_JOIN_SQL}
     WHERE vf.organization_id = :organizationId
     GROUP BY vf.id
     ORDER BY vf.name ASC`,
     {
-      replacements: { organizationId },
+      replacements: { organizationId, ...VISIBLE_FILE_REPLACEMENTS },
       type: QueryTypes.SELECT,
     },
   );
@@ -101,11 +116,11 @@ export const getFolderByIdQuery = async (
       vf.*,
       COALESCE(COUNT(ffm.id), 0)::INTEGER as file_count
     FROM virtual_folders vf
-    LEFT JOIN file_folder_mappings ffm ON vf.id = ffm.folder_id AND ffm.organization_id = :organizationId
+    ${VISIBLE_MAPPINGS_JOIN_SQL}
     WHERE vf.organization_id = :organizationId AND vf.id = :id
     GROUP BY vf.id`,
     {
-      replacements: { organizationId, id },
+      replacements: { organizationId, id, ...VISIBLE_FILE_REPLACEMENTS },
       type: QueryTypes.SELECT,
     },
   );
@@ -423,7 +438,9 @@ export const getFileFoldersQuery = async (
 };
 
 /**
- * Assign files to a folder
+ * Assign files to a folder. Only visible files are assigned: a missing id,
+ * another organization's file and a bias audit stance PDF are skipped alike.
+ * Returns the number of new mappings.
  */
 export const assignFilesToFolderQuery = async (
   organizationId: number,
@@ -434,27 +451,23 @@ export const assignFilesToFolderQuery = async (
 ): Promise<number> => {
   if (fileIds.length === 0) return 0;
 
-  // Use INSERT ... ON CONFLICT DO NOTHING to handle duplicates gracefully
-  const values = fileIds
-    .map((_, i) => `(:organizationId, :file_id_${i}, :folderId, :userId, NOW())`)
-    .join(", ");
-
-  const replacements: Record<string, unknown> = {
-    organizationId,
-    folderId,
-    userId,
-  };
-  fileIds.forEach((fileId, i) => {
-    replacements[`file_id_${i}`] = fileId;
-  });
-
+  // ON CONFLICT DO NOTHING handles duplicates gracefully
   const result = await sequelize.query<{ id: number }>(
     `INSERT INTO file_folder_mappings (organization_id, file_id, folder_id, assigned_by, assigned_at)
-     VALUES ${values}
+     SELECT files.organization_id, files.id, :folderId, :userId, NOW()
+       FROM files
+      WHERE files.organization_id = :organizationId AND files.id IN (:fileIds)
+        AND ${VISIBLE_FILE_SQL("files")}
      ON CONFLICT (file_id, folder_id) DO NOTHING
      RETURNING id`,
     {
-      replacements,
+      replacements: {
+        organizationId,
+        folderId,
+        userId,
+        fileIds: [...new Set(fileIds)],
+        ...VISIBLE_FILE_REPLACEMENTS,
+      },
       type: QueryTypes.SELECT,
       transaction,
     },
@@ -464,7 +477,8 @@ export const assignFilesToFolderQuery = async (
 };
 
 /**
- * Remove a file from a folder
+ * Remove a file from a folder. A bias audit stance PDF answers as a missing
+ * file: no mapping is removed and the answer is false.
  */
 export const removeFileFromFolderQuery = async (
   organizationId: number,
@@ -475,9 +489,10 @@ export const removeFileFromFolderQuery = async (
   const result = await sequelize.query<{ id: number }>(
     `DELETE FROM file_folder_mappings
      WHERE organization_id = :organizationId AND folder_id = :folderId AND file_id = :fileId
+       AND file_id IN (${VISIBLE_FILE_ID_SQL})
      RETURNING id`,
     {
-      replacements: { organizationId, folderId, fileId },
+      replacements: { organizationId, folderId, fileId, ...VISIBLE_FILE_REPLACEMENTS },
       type: QueryTypes.SELECT,
       transaction,
     },
@@ -486,7 +501,10 @@ export const removeFileFromFolderQuery = async (
 };
 
 /**
- * Bulk update file folder assignments (replace all folder assignments for a file)
+ * Bulk update file folder assignments (replace all folder assignments for a
+ * file). Only a visible file is touched: for a missing id or a bias audit
+ * stance PDF nothing is deleted or inserted. Only the organization's own
+ * folders are assigned; other ids are skipped.
  */
 export const bulkUpdateFileFoldersQuery = async (
   organizationId: number,
@@ -495,37 +513,23 @@ export const bulkUpdateFileFoldersQuery = async (
   userId: number,
   transaction?: Transaction,
 ): Promise<void> => {
+  const replacements = { organizationId, fileId, userId, folderIds, ...VISIBLE_FILE_REPLACEMENTS };
+
   // Delete existing assignments
   await sequelize.query(
-    `DELETE FROM file_folder_mappings WHERE organization_id = :organizationId AND file_id = :fileId`,
-    {
-      replacements: { organizationId, fileId },
-      transaction,
-    },
+    `DELETE FROM file_folder_mappings
+      WHERE organization_id = :organizationId AND file_id IN (${VISIBLE_FILE_ID_SQL})`,
+    { replacements, transaction },
   );
 
   // Add new assignments
   if (folderIds.length > 0) {
-    const values = folderIds
-      .map((_, i) => `(:organizationId, :fileId, :folder_id_${i}, :userId, NOW())`)
-      .join(", ");
-
-    const replacements: Record<string, unknown> = {
-      organizationId,
-      fileId,
-      userId,
-    };
-    folderIds.forEach((folderId, i) => {
-      replacements[`folder_id_${i}`] = folderId;
-    });
-
     await sequelize.query(
       `INSERT INTO file_folder_mappings (organization_id, file_id, folder_id, assigned_by, assigned_at)
-       VALUES ${values}`,
-      {
-        replacements,
-        transaction,
-      },
+       SELECT :organizationId, v.id, vf.id, :userId, NOW()
+         FROM (${VISIBLE_FILE_ID_SQL}) AS v
+         JOIN virtual_folders vf ON vf.organization_id = :organizationId AND vf.id IN (:folderIds)`,
+      { replacements, transaction },
     );
   }
 };

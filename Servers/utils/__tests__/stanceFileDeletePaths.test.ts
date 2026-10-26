@@ -7,7 +7,7 @@ jest.mock("../../database/db", () => ({
   sequelize: { query: (...args: any[]) => mockQuery(...args) },
 }));
 
-import { ConflictException } from "../../domain.layer/exceptions/custom.exception";
+import { everyFilesReferenceFiltered } from "../files/__tests__/helpers/fakeFilesTable";
 import { BIAS_AUDIT_STANCE_SOURCE } from "../fileUpload.utils";
 import { deleteReportByIdQuery } from "../reporting.utils";
 import { deleteItem, detachFile } from "../../extensions/model-lifecycle/modelLifecycle.service";
@@ -17,20 +17,23 @@ const tx = {} as any;
 beforeEach(() => mockQuery.mockReset());
 
 describe("report delete", () => {
-  it("refuses a stance PDF passed as a report id and deletes nothing", async () => {
-    mockQuery.mockResolvedValueOnce([{ source: BIAS_AUDIT_STANCE_SOURCE }]);
-    await expect(deleteReportByIdQuery(77, 5, tx)).rejects.toBeInstanceOf(ConflictException);
-    const sql = mockQuery.mock.calls.map((c) => c[0] as string);
-    expect(sql.some((s) => s.includes("DELETE"))).toBe(false);
+  it("answers a stance PDF id as a missing id: false, and deletes only visible files", async () => {
+    mockQuery.mockResolvedValue([]);
+    await expect(deleteReportByIdQuery(77, 5, tx)).resolves.toBe(false);
+    const deletes = mockQuery.mock.calls.filter(([sql]) => /^\s*DELETE\b/.test(sql));
+    expect(deletes).toHaveLength(1);
+    for (const [sql, opts] of deletes) {
+      expect(sql).toMatch(/\bFROM\s+files\b/);
+      expect(everyFilesReferenceFiltered(sql)).toBe(true);
+      expect(opts.replacements.stanceSource).toBe(BIAS_AUDIT_STANCE_SOURCE);
+      expect(opts.transaction).toBe(tx);
+    }
   });
 
   it("still deletes a report", async () => {
-    mockQuery
-      .mockResolvedValueOnce([{ source: "Reporting" }])
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([{ id: 77 }]);
+    mockQuery.mockResolvedValueOnce([{ id: 77 }]);
     await expect(deleteReportByIdQuery(77, 5, tx)).resolves.toBe(true);
-    expect(mockQuery.mock.calls[2][0]).toContain("DELETE FROM files");
+    expect(mockQuery.mock.calls[0][0]).toContain("DELETE FROM files");
   });
 });
 

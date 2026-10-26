@@ -1,3 +1,20 @@
+/**
+ * The entity types agent_attach_file_to_entity may write into files.source:
+ * the three it links through a column (project, organization, model) and the
+ * other examples the tool names. The value is model-supplied, so anything
+ * else is refused before an approval is queued; above all the bias audit
+ * stance source, which would hide a normal file everywhere.
+ */
+export const ATTACHABLE_ENTITY_TYPES = [
+  "project",
+  "organization",
+  "model",
+  "risk",
+  "vendor",
+  "control",
+  "evidence",
+] as const;
+
 export const toolsDefinition: any[] = [
   {
     type: "function",
@@ -128,8 +145,8 @@ export const toolsDefinition: any[] = [
           },
           entity_type: {
             type: "string",
-            description:
-              "The type of entity to attach the file to (e.g., 'risk', 'vendor', 'control', 'evidence').",
+            enum: [...ATTACHABLE_ENTITY_TYPES],
+            description: "The type of entity to attach the file to.",
           },
           entity_id: {
             type: "number",

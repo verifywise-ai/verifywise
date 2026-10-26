@@ -3,9 +3,16 @@
  *
  * A bias audit stance PDF is a files row, but it is served only by the bias
  * audit stance endpoint, which applies the project-member rule with no
- * SuperAdmin bypass and checks the recorded hash. Every generic list, lookup
- * or link that takes a file from the files table applies VISIBLE_FILE_SQL, so
- * a stance PDF answers there exactly as a missing file does.
+ * SuperAdmin bypass and checks the recorded hash. Every generic list, lookup,
+ * link, write or delete that takes a file from the files table applies
+ * VISIBLE_FILE_SQL, so a stance PDF answers there exactly as a missing file
+ * does. The shared by-id readers and writers (getFileById in the repository
+ * and in fileUpload.utils, deleteVisibleFileQuery, assignFilesToFolderQuery)
+ * apply it themselves, so their callers need no check of their own.
+ *
+ * The one reader that sees stance rows is getStanceDownloadQuery
+ * (utils/biasAudit.utils.ts), used only by the stance download endpoint. The
+ * stance generator writes the row through uploadFile.
  *
  * This module imports nothing from the file utilities, so the repository,
  * the evidence-link utilities and fileUpload.utils can all import it without
@@ -70,16 +77,26 @@ export async function allFilesVisibleQuery(
   return Number(rows[0]?.count ?? 0) === unique.length;
 }
 
-/** Whether this file id is a stance PDF in the organization. */
-export async function isStanceFile(fileId: number, organizationId: number): Promise<boolean> {
-  const rows = await sequelize.query(
-    `SELECT 1 FROM files
-      WHERE id = :fileId AND organization_id = :organizationId AND source = :stanceSource
-      LIMIT 1`,
+/**
+ * Delete a visible file. The one delete every generic path uses. Its folder
+ * mappings and entity links go with it (both file_id foreign keys are
+ * ON DELETE CASCADE). A stance PDF is never deleted, and like a missing id
+ * it is a silent no-op: nothing is touched and the answer is false.
+ */
+export async function deleteVisibleFileQuery(
+  fileId: number,
+  organizationId: number,
+  transaction: Transaction,
+): Promise<boolean> {
+  const deleted = await sequelize.query(
+    `DELETE FROM files
+      WHERE organization_id = :organizationId AND id = :fileId AND ${VISIBLE_FILE_SQL("files")}
+      RETURNING id`,
     {
-      replacements: { fileId, organizationId, stanceSource: BIAS_AUDIT_STANCE_SOURCE },
+      replacements: { fileId, organizationId, ...VISIBLE_FILE_REPLACEMENTS },
       type: QueryTypes.SELECT,
+      transaction,
     },
   );
-  return rows.length > 0;
+  return deleted.length > 0;
 }

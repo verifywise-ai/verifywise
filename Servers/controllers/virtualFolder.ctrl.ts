@@ -525,8 +525,13 @@ export const updateFileFolders = async (req: Request, res: Response): Promise<Re
       return res.status(400).json(STATUS_CODE[400](req.t!("Invalid file ID")));
     }
 
+    // Each id a positive integer that fits the INTEGER column; strings and
+    // booleans are refused like file_ids are, never coerced.
     const { folder_ids } = req.body as { folder_ids: number[] };
-    if (!Array.isArray(folder_ids)) {
+    if (
+      !Array.isArray(folder_ids) ||
+      !folder_ids.every((id) => Number.isSafeInteger(id) && id > 0 && id <= 2147483647)
+    ) {
       await transaction.rollback();
       return res.status(400).json(STATUS_CODE[400](req.t!("Folder IDs array is required")));
     }

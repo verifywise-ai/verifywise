@@ -7,7 +7,6 @@ jest.mock("../../utils/fileUpload.utils", () => ({
   getFileMetadataByProjectId: jest.fn(),
   uploadFile: jest.fn(),
   canUserAccessFile: jest.fn(),
-  BIAS_AUDIT_STANCE_SOURCE: "Bias audit stance report",
 }));
 jest.mock("../../utils/files/getUserFilesMetaData.utils", () => ({
   __esModule: true,
@@ -166,21 +165,6 @@ describe("file.ctrl", () => {
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.end).toHaveBeenCalled();
     });
-    it("should answer a stance PDF as not found, even to an Admin", async () => {
-      mockCanAccess.mockResolvedValue(true);
-      mockGetFile.mockResolvedValue({
-        id: 1,
-        filename: "stance.pdf",
-        type: "application/pdf",
-        source: "Bias audit stance report",
-        content: Buffer.from("%PDF"),
-      } as any);
-      const req = createReq({ params: { id: "1" } });
-      const res = createRes();
-      await getFileContentById(req, res);
-      expect(res.status).toHaveBeenCalledWith(404);
-      expect(res.end).not.toHaveBeenCalled();
-    });
     it("should return 404 when file is not found", async () => {
       mockCanAccess.mockResolvedValue(true);
       mockGetFile.mockResolvedValue(null as any);
@@ -270,20 +254,18 @@ describe("file.ctrl", () => {
       expect(res.status).toHaveBeenCalledWith(500);
     });
 
-    it("answers 409, not 500, when the delete list names a stance PDF", async () => {
-      mockDeleteFile.mockRejectedValue(
-        Object.assign(new Error("This file is a bias audit stance record and cannot be deleted"), {
-          statusCode: 409,
-        }),
-      );
+    it("answers as usual when a delete-list id deletes nothing (missing or stance PDF)", async () => {
+      // deleteFileById hides stance PDFs: for a stance id, as for a missing
+      // one, it deletes nothing and answers false, so the request succeeds.
+      mockDeleteFile.mockResolvedValue(false);
       const req = createReq({
         body: { question_id: "1", project_id: 1, user_id: 1, delete: "[77]" },
         files: [],
       });
       const res = createRes();
       await postFileContent(req, res);
-      expect(res.status).toHaveBeenCalledWith(409);
-      expect(mockUpload).not.toHaveBeenCalled();
+      expect(mockDeleteFile).toHaveBeenCalledWith(77, expect.anything(), expect.anything());
+      expect(res.status).toHaveBeenCalledWith(201);
     });
   });
 
