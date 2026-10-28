@@ -22,6 +22,7 @@ import {
   deletePhase,
   detachFile,
   updateItem,
+  upsertValue,
 } from "../modelLifecycle.service";
 
 const mockQuery = sequelize.query as jest.Mock;
@@ -245,5 +246,89 @@ describe("attachFile", () => {
 
     expect(link).toEqual({ id: 3, value_id: 55, file_id: 99 });
     expect(String(mockQuery.mock.calls[3][0])).toMatch(/INSERT INTO model_lifecycle_item_files/);
+  });
+});
+
+// Per-model answers written through upsertValue get the same change-history
+describe("upsertValue change history (issue #4977)", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockQuery.mockReset();
+  });
+
+  const mockBeforeThenUpsert = (before: any, upserted: any) => {
+    mockQuery
+      .mockReset()
+      .mockResolvedValueOnce(before ? [before] : []) // before-snapshot SELECT
+      .mockResolvedValueOnce([[upserted], 1]); // upsert INSERT ... RETURNING
+  };
+
+  it("records a created change when the model first answers an item", async () => {
+    mockBeforeThenUpsert(null, { id: 9, value_text: "Yes", value_json: null });
+
+    const result = await upsertValue(1, 10, 5, 7, { value_text: "Yes" });
+
+    expect(result).toEqual({ id: 9, value_text: "Yes", value_json: null });
+    const insert = historyInsert();
+    expect(insert).toBeDefined();
+    expect(insert[1].replacements).toEqual(
+      expect.objectContaining({
+        organizationId: 1,
+        itemId: 5,
+        changeType: "created",
+        changedBy: 7,
+        oldValue: null,
+        newValue: JSON.stringify({ value_text: "Yes" }),
+        modelInventoryId: 10,
+      }),
+    );
+    expect(String(insert[0])).toContain("model_inventory_id");
+    expect(appendToAuditLedger).toHaveBeenCalledWith(
+      expect.objectContaining({
+        organizationId: 1,
+        entryType: "change_history",
+        userId: 7,
+        entityType: "model_lifecycle_value",
+        entityId: 5,
+        action: "created",
+      }),
+    );
+  });
+
+  it("records an updated change with old and new snapshots", async () => {
+    mockBeforeThenUpsert({ value_text: "No", value_json: null }, { value_text: "Yes" });
+
+    await upsertValue(1, 10, 5, 7, { value_text: "Yes" });
+
+    const insert = historyInsert();
+    expect(insert[1].replacements.changeType).toBe("updated");
+    expect(insert[1].replacements.oldValue).toBe(JSON.stringify({ value_text: "No" }));
+    expect(insert[1].replacements.newValue).toBe(JSON.stringify({ value_text: "Yes" }));
+    expect(insert[1].replacements.modelInventoryId).toBe(10);
+  });
+
+  it("records nothing when the value is unchanged", async () => {
+    mockBeforeThenUpsert({ value_text: "Yes" }, { value_text: "Yes" });
+
+    await upsertValue(1, 10, 5, 7, { value_text: "Yes" });
+
+    expect(historyInsert()).toBeUndefined();
+    expect(appendToAuditLedger).not.toHaveBeenCalled();
+  });
+
+  // JSONB does not keep key order, so a string compare would see an unchanged
+  // structured answer as edited.
+  it("records nothing when a JSON answer differs only in key order", async () => {
+    mockBeforeThenUpsert(
+      { value_json: { max: 2, threshold: 1 } },
+      {
+        value_json: { threshold: 1, max: 2 },
+      },
+    );
+
+    await upsertValue(1, 10, 5, 7, { value_json: { threshold: 1, max: 2 } });
+
+    expect(historyInsert()).toBeUndefined();
+    expect(appendToAuditLedger).not.toHaveBeenCalled();
   });
 });
