@@ -39,6 +39,16 @@ const TOOL_NAMES = [
   "invite_user",
   "update_user",
   "delete_user",
+  "list_use_cases",
+  "get_use_case",
+  "create_use_case",
+  "update_use_case",
+  "list_risks",
+  "get_risk",
+  "create_risk",
+  "update_risk",
+  "list_frameworks",
+  "get_compliance_posture",
 ];
 
 /** The same expiry choices the API keys page offers; this mints the same kind of token. */
@@ -275,9 +285,9 @@ const McpConnect: React.FC = () => {
     >
       <Stack sx={{ flex: 1, minWidth: 0, maxWidth: 640 }} gap={theme.spacing(8)}>
         <Typography sx={{ fontSize: 13, color: theme.palette.text.secondary }}>
-          Manage organizations and users on this deployment from Claude Code, or any MCP client. The
-          server runs here — nothing is installed on your machine, and the connection is authorized
-          by an API token you create below.
+          Manage organizations, users and their governance data on this deployment from Claude Code,
+          or any MCP client. The server runs here — nothing is installed on your machine, and the
+          connection is authorized by an API token you create below.
         </Typography>
 
         {error && (
@@ -359,8 +369,8 @@ const McpConnect: React.FC = () => {
             <Box component="span" sx={{ fontFamily: "monospace" }}>
               {SERVER_NAME}
             </Box>{" "}
-            should be listed with nine tools for creating, listing, updating and deleting
-            organizations and users, and for inviting users by email.
+            should be listed with nineteen tools, covering organizations, users, use cases, risks
+            and compliance posture.
           </Typography>
         </Step>
 

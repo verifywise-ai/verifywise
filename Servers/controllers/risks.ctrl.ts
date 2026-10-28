@@ -7,13 +7,11 @@ import {
   getRiskByIdQuery,
   getRisksByFrameworkQuery,
   getRisksByProjectQuery,
-  updateRiskByIdQuery,
   bulkSetProjectRisksOwnerQuery,
   bulkSetProjectRisksCategoryQuery,
   bulkArchiveProjectRisksQuery,
   PROJECT_RISK_CATEGORIES_SET,
 } from "../utils/risk.utils";
-import { RiskModel } from "../domain.layer/models/risks/risk.model";
 import { sequelize } from "../database/db";
 import {
   ValidationException,
@@ -24,16 +22,15 @@ import { parseBulkIds, assertOrgOwnsIds, withBulkTransaction } from "../utils/bu
 import { logProcessing } from "../utils/logger/logHelper";
 import logger, { logStructured } from "../utils/logger/fileLogger";
 import { logEvent } from "../utils/logger/dbLogger";
-import {
-  recordMultipleFieldChanges,
-  trackProjectRiskChanges,
-  recordProjectRiskDeletion,
-} from "../utils/projectRiskChangeHistory.utils";
+import { recordProjectRiskDeletion } from "../utils/projectRiskChangeHistory.utils";
 import { notifyUserAssigned } from "../services/inAppNotification.service";
 import { QueryTypes } from "sequelize";
-import { computeDerivedFields, recordPortfolioSnapshot } from "../utils/quantitativeRisk.utils";
-import { validateQuantitativeRiskFields } from "../utils/validations/quantitativeRiskValidation.utils";
-import { createRiskService } from "../services/risk.service";
+import { recordPortfolioSnapshot } from "../utils/quantitativeRisk.utils";
+import {
+  createRiskService,
+  QuantitativeRiskValidationError,
+  updateRiskService,
+} from "../services/risk.service";
 import { enqueueRiskLinkRecompute } from "../services/automations/automationProducer";
 import { getProjectByIdQuery } from "../utils/project.utils";
 import { getLLMKeysWithKeyQuery, getLLMProviderUrl } from "../utils/llmKey.utils";
@@ -417,15 +414,6 @@ export async function updateRiskById(req: Request, res: Response): Promise<any> 
   );
   logger.debug(`✏️ Update requested for project risk ID: ${projectRiskId}`);
   try {
-    // Convert optional FK fields (0 => NULL)
-    const updateDataTyped = {
-      ...updateData,
-      risk_owner:
-        updateData.risk_owner && Number(updateData.risk_owner) !== 0
-          ? Number(updateData.risk_owner)
-          : null,
-    } as Partial<RiskModel & { projects: number[]; frameworks: number[] }>;
-
     // Find existing risk to track changes
     const existingProjectRisk = await getRiskByIdQuery(projectRiskId, req.organizationId!);
 
@@ -446,95 +434,15 @@ export async function updateRiskById(req: Request, res: Response): Promise<any> 
       return res.status(404).json(STATUS_CODE[404](req.t!("Project risk not found")));
     }
 
-    // Validate and auto-compute FAIR quantitative fields if present
-    if (
-      updateDataTyped.event_frequency_min !== undefined ||
-      updateDataTyped.control_effectiveness !== undefined ||
-      updateDataTyped.mitigation_cost_annual !== undefined
-    ) {
-      // Merge existing FAIR fields with incoming updates for full recomputation
-      const mergedFairFields = {
-        event_frequency_min:
-          updateDataTyped.event_frequency_min ?? existingProjectRisk.event_frequency_min,
-        event_frequency_likely:
-          updateDataTyped.event_frequency_likely ?? existingProjectRisk.event_frequency_likely,
-        event_frequency_max:
-          updateDataTyped.event_frequency_max ?? existingProjectRisk.event_frequency_max,
-        loss_regulatory_min:
-          updateDataTyped.loss_regulatory_min ?? existingProjectRisk.loss_regulatory_min,
-        loss_regulatory_likely:
-          updateDataTyped.loss_regulatory_likely ?? existingProjectRisk.loss_regulatory_likely,
-        loss_regulatory_max:
-          updateDataTyped.loss_regulatory_max ?? existingProjectRisk.loss_regulatory_max,
-        loss_operational_min:
-          updateDataTyped.loss_operational_min ?? existingProjectRisk.loss_operational_min,
-        loss_operational_likely:
-          updateDataTyped.loss_operational_likely ?? existingProjectRisk.loss_operational_likely,
-        loss_operational_max:
-          updateDataTyped.loss_operational_max ?? existingProjectRisk.loss_operational_max,
-        loss_litigation_min:
-          updateDataTyped.loss_litigation_min ?? existingProjectRisk.loss_litigation_min,
-        loss_litigation_likely:
-          updateDataTyped.loss_litigation_likely ?? existingProjectRisk.loss_litigation_likely,
-        loss_litigation_max:
-          updateDataTyped.loss_litigation_max ?? existingProjectRisk.loss_litigation_max,
-        loss_reputational_min:
-          updateDataTyped.loss_reputational_min ?? existingProjectRisk.loss_reputational_min,
-        loss_reputational_likely:
-          updateDataTyped.loss_reputational_likely ?? existingProjectRisk.loss_reputational_likely,
-        loss_reputational_max:
-          updateDataTyped.loss_reputational_max ?? existingProjectRisk.loss_reputational_max,
-        control_effectiveness:
-          updateDataTyped.control_effectiveness ?? existingProjectRisk.control_effectiveness,
-        mitigation_cost_annual:
-          updateDataTyped.mitigation_cost_annual ?? existingProjectRisk.mitigation_cost_annual,
-      };
-
-      const fairErrors = validateQuantitativeRiskFields(
-        mergedFairFields as Record<string, unknown>,
-      );
-      if (fairErrors.length > 0) {
-        await transaction.rollback();
-        return res.status(400).json(
-          STATUS_CODE[400]({
-            message: req.t!("Quantitative risk validation failed"),
-            errors: fairErrors,
-          }),
-        );
-      }
-      const derived = computeDerivedFields(mergedFairFields);
-      Object.assign(updateDataTyped, derived);
-    }
-
-    // Track changes before updating
-    const changes = await trackProjectRiskChanges(
-      existingProjectRisk as RiskModel,
-      updateDataTyped,
-    );
-
-    const updatedProjectRisk = await updateRiskByIdQuery(
+    const updatedProjectRisk = await updateRiskService(
       projectRiskId,
-      {
-        ...updateDataTyped,
-        projects: req.body.projects || [],
-        frameworks: req.body.frameworks || [],
-      },
-      req.organizationId!,
+      updateData,
+      existingProjectRisk,
+      { userId: req.userId!, organizationId: req.organizationId! },
       transaction,
     );
 
     if (updatedProjectRisk) {
-      // Record changes in change history
-      if (changes.length > 0 && req.userId) {
-        await recordMultipleFieldChanges(
-          projectRiskId,
-          req.userId,
-          req.organizationId!,
-          changes,
-          transaction,
-        );
-      }
-
       await transaction.commit();
       logStructured(
         "successful",
@@ -619,6 +527,18 @@ export async function updateRiskById(req: Request, res: Response): Promise<any> 
     return res.status(404).json(STATUS_CODE[404](req.t!("Project risk not found")));
   } catch (error) {
     await transaction.rollback();
+
+    // Raised by updateRiskService when the merged FAIR field set does not
+    // validate. Answered with the whole list, exactly as this handler did
+    // before the check moved into the service.
+    if (error instanceof QuantitativeRiskValidationError) {
+      return res.status(400).json(
+        STATUS_CODE[400]({
+          message: req.t!("Quantitative risk validation failed"),
+          errors: error.errors,
+        }),
+      );
+    }
 
     // Handle specific validation and business logic errors
     if (error instanceof ValidationException) {
