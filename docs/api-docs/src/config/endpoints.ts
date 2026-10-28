@@ -2442,6 +2442,28 @@ export const changeHistoryEndpoints: Endpoint[] = [
     ],
     tag: "Change History",
   },
+  {
+    method: 'GET',
+    path: '/evidence-hub-change-history/{id}',
+    summary: "Get Evidence Hub Change History By Id",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Change History",
+  },
+  {
+    method: 'GET',
+    path: '/model-lifecycle-change-history/{id}',
+    summary: "Get Model Lifecycle Change History By Id",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Change History",
+  },
 ];
 
 // Compliance endpoints

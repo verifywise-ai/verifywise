@@ -20988,6 +20988,34 @@ paths:
           description: Unauthorized
         '500':
           description: 'Internal server error'
+  '/evidence-hub-change-history/{id}':
+    get:
+      summary: 'Get Evidence Hub Change History By Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Change History'
+      operationId: getEvidenceHubChangeHistoryById
+      security:
+        -
+          bearerAuth: []
+  '/model-lifecycle-change-history/{id}':
+    get:
+      summary: 'Get Model Lifecycle Change History By Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Change History'
+      operationId: getModelLifecycleChangeHistoryById
+      security:
+        -
+          bearerAuth: []
   /approval-workflows:
     get:
       tags:
