@@ -77,12 +77,28 @@ describe("FieldEditor pending edit", () => {
     expect(onChange).toHaveBeenCalledTimes(1);
   });
 
-  it("lets an outside update to the same field win over the pending edit", () => {
+  it("keeps both an outside update to the same field and the pending edit", () => {
     const onChange = vi.fn();
     const { rerender } = renderWithProviders(editorFor(FIRST, onChange));
-    typeLabel("First renamed");
+    const input = typeLabel("First renamed");
+    // A reorder or a save response replaces the field object mid-edit.
     rerender(editorFor({ ...FIRST, order: 5 }, onChange));
+    expect(input.value).toBe("First renamed");
     vi.advanceTimersByTime(300);
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "first", label: "First renamed", order: 5 }),
+    );
+  });
+
+  it("leaves the edit to the debounce when focus moves to another input in the editor", () => {
+    const onChange = vi.fn();
+    renderWithProviders(editorFor(FIRST, onChange));
+    const input = typeLabel("First renamed");
+    const placeholder = document.getElementById("field-placeholder") as HTMLInputElement;
+    fireEvent.blur(input, { relatedTarget: placeholder });
     expect(onChange).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(300);
+    expect(onChange).toHaveBeenCalledTimes(1);
   });
 });
