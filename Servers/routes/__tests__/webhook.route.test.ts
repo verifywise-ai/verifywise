@@ -87,11 +87,7 @@ const PAYLOAD = JSON.stringify({
 const sign = (body: string, secret: string = WEBHOOK_SECRET) =>
   "sha256=" + crypto.createHmac("sha256", secret).update(body).digest("hex");
 
-const postGithub = (
-  body: string,
-  headers: Record<string, string> = {},
-  signature?: string,
-) => {
+const postGithub = (body: string, headers: Record<string, string> = {}, signature?: string) => {
   let r = request(app())
     .post("/webhooks/github")
     .set("Content-Type", "application/json")

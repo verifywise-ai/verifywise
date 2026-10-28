@@ -117,11 +117,19 @@ describe("POST /api/internal/ai-gateway/notify — x-internal-key guard", () => 
     const res = await request(app())
       .post("/api/internal/ai-gateway/notify")
       .set("x-internal-key", INTERNAL_KEY)
-      .send({ type: "config_change", organization_id: 42, changed_by_user_id: 7, event: "x" });
+      .send({
+        type: "config_change",
+        organization_id: 42,
+        changed_by_user_id: 7,
+        event: { entityType: "Endpoint", action: "updated" },
+      });
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ ok: true });
-    expect(notifyConfigChange).toHaveBeenCalledWith(42, 7, "x");
+    expect(notifyConfigChange).toHaveBeenCalledWith(42, 7, {
+      entityType: "Endpoint",
+      action: "updated",
+    });
   });
 
   it("rejects a valid-key request missing type/organization_id with 400", async () => {

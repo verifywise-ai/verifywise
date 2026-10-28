@@ -106,7 +106,9 @@ beforeEach(() => {
 const keyLookupCalls = () =>
   sequelizeQuery.mock.calls.filter(([sql]) => (sql as string).includes("shadow_ai_api_keys"));
 const insertCalls = () =>
-  sequelizeQuery.mock.calls.filter(([sql]) => (sql as string).includes("INSERT INTO shadow_ai_events"));
+  sequelizeQuery.mock.calls.filter(([sql]) =>
+    (sql as string).includes("INSERT INTO shadow_ai_events"),
+  );
 
 describe("POST /api/v1/shadow-ai/events — X-API-Key guard", () => {
   it("rejects a request with no X-API-Key header with 401 (real controller check)", async () => {
