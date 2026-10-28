@@ -192,28 +192,44 @@ export function FieldEditor({
   const theme = useTheme();
   const [localField, setLocalField] = useState<FormField>(field);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // The edit waiting on the debounce. It is sent early, never dropped, when
+  // the editor moves to another field, closes or loses focus.
+  const pendingEditRef = useRef<FormField | null>(null);
+  const onChangeRef = useRef(onChange);
 
-  // Clear pending debounce when field changes to prevent stale updates
   useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
+
+  const cancelPendingEdit = useCallback(() => {
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-    setLocalField(field);
-  }, [field]);
-
-  // Flush pending debounce on unmount
-  useEffect(() => {
-    return () => {
-      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-    };
+    debounceTimerRef.current = null;
+    pendingEditRef.current = null;
   }, []);
+
+  const flushPendingEdit = useCallback(() => {
+    const pending = pendingEditRef.current;
+    cancelPendingEdit();
+    if (pending) onChangeRef.current(pending);
+  }, [cancelPendingEdit]);
+
+  // A pending edit to the previous field is sent before showing the new one.
+  // An outside update to the same field wins over it.
+  useEffect(() => {
+    if (pendingEditRef.current && pendingEditRef.current.id !== field.id) flushPendingEdit();
+    else cancelPendingEdit();
+    setLocalField(field);
+  }, [field, flushPendingEdit, cancelPendingEdit]);
+
+  useEffect(() => flushPendingEdit, [flushPendingEdit]);
 
   const debouncedOnChange = useCallback(
     (updated: FormField) => {
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-      debounceTimerRef.current = setTimeout(() => {
-        onChange(updated);
-      }, 300);
+      pendingEditRef.current = updated;
+      debounceTimerRef.current = setTimeout(flushPendingEdit, 300);
     },
-    [onChange],
+    [flushPendingEdit],
   );
 
   const handleChange = <K extends keyof FormField>(key: K, value: FormField[K]) => {
@@ -287,6 +303,7 @@ export function FieldEditor({
 
   return (
     <Box
+      onBlur={flushPendingEdit}
       sx={{
         width: 325,
         height: "100%",
