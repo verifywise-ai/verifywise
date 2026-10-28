@@ -394,6 +394,51 @@ export const trackEntityChanges = async (
 };
 
 /**
+ * Best-effort field-level history for an UPDATE already expressed as a
+ * set-values object (the values going into the SET clause). Callers snapshot
+ * the tracked columns before updating, pass the values they actually write,
+ * and this diffs, formats and records the changes on the same transaction.
+ *
+ * A caller that cannot name the acting user (e.g. an advisor write tool,
+ * which only receives an organization id) should omit `changedBy` entirely:
+ * the change is then recorded as made by the system rather than mislabeled as
+ * an anonymous user.
+ *
+ * History must never fail the underlying edit: any error is logged and
+ * swallowed, matching the model-lifecycle extension's guarantee.
+ */
+export const recordUpdateChanges = async (
+  entityType: EntityType,
+  entityId: number,
+  before: Record<string, unknown> | null | undefined,
+  updateValues: Record<string, unknown>,
+  changedBy: number | null | undefined,
+  organizationId: number,
+  transaction?: Transaction,
+): Promise<void> => {
+  if (!before) return;
+  try {
+    const changes = await trackEntityChanges(entityType, before, updateValues, {
+      organizationId,
+      transaction,
+    });
+    if (changes.length === 0) return;
+    const changedBySystem = changedBy === undefined;
+    await recordMultipleFieldChanges(
+      entityType,
+      entityId,
+      changedBy ?? null,
+      organizationId,
+      changes,
+      transaction,
+      changedBySystem,
+    );
+  } catch (error) {
+    logger.error(`Error recording ${entityType} change history: ${error}`);
+  }
+};
+
+/**
  * Build history entries for fields the caller has already decided changed
  * (for example from the same diff that drives its UPDATE), so the history
  * matches the write exactly. Unlike trackEntityChanges this does not compare
