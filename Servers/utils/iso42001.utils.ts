@@ -26,6 +26,7 @@ import {
   deleteAllFileEntityLinksForEntities,
 } from "./files/evidenceFiles.utils";
 import { toId } from "./validations/validation.utils";
+import { recordUpdateChanges } from "./changeHistory.base.utils";
 
 const getDemoSubClauses = (): object[] => {
   const subClauses = [];
@@ -993,6 +994,7 @@ export const updateAnnexCategoryQuery = async (
   deletedFiles: number[] = [],
   organizationId: number,
   transaction: Transaction,
+  changedBy?: number | null,
 ) => {
   const updateAnnexCategory: Partial<Record<keyof AnnexCategoryISO, any>> & {
     organizationId?: number;
@@ -1037,6 +1039,16 @@ export const updateAnnexCategoryQuery = async (
   let annexCategoryResult: AnnexCategoryISOModel;
 
   if (setClause.length > 0) {
+    // Snapshot the tracked fields before the update so the change history can
+    // record field-level before/after values (#4977).
+    const beforeRows = (await sequelize.query(
+      `SELECT is_applicable, justification_for_exclusion, implementation_description,
+              status, owner, reviewer, approver, due_date, auditor_feedback
+         FROM annexcategories_iso WHERE organization_id = :organizationId AND id = :id;`,
+      { replacements: { organizationId, id }, type: QueryTypes.SELECT, transaction },
+    )) as Array<Record<string, unknown>>;
+    const before = beforeRows[0] ?? null;
+
     const query = `UPDATE annexcategories_iso SET ${setClause} WHERE organization_id = :organizationId AND id = :id RETURNING *;`;
     updateAnnexCategory.id = id;
 
@@ -1045,6 +1057,16 @@ export const updateAnnexCategoryQuery = async (
       transaction,
     })) as [AnnexCategoryISOModel[], number];
     annexCategoryResult = result[0][0];
+
+    await recordUpdateChanges(
+      "annex_category",
+      id,
+      before,
+      updateAnnexCategory,
+      changedBy,
+      organizationId,
+      transaction,
+    );
   } else {
     // No fields to update, fetch current record
     const result = (await sequelize.query(
