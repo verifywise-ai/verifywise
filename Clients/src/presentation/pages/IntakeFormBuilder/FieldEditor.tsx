@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, type FocusEvent } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useCallback, type FocusEvent } from "react";
 import {
   Box,
   Typography,
@@ -196,7 +196,9 @@ export function FieldEditor({
   // when the editor moves to another field, closes or loses focus, and are
   // merged onto the latest field so an outside update (a save response, a
   // reorder) and the edit both survive.
-  const pendingEditRef = useRef<{ id: string; patch: Partial<FormField> } | null>(null);
+  // `base` is the field the edit was made on: it is the fallback when the
+  // editor has already moved on, so a pending edit is never dropped.
+  const pendingEditRef = useRef<{ base: FormField; patch: Partial<FormField> } | null>(null);
   const fieldRef = useRef(field);
   const onChangeRef = useRef(onChange);
 
@@ -209,16 +211,17 @@ export function FieldEditor({
     debounceTimerRef.current = null;
     const pending = pendingEditRef.current;
     pendingEditRef.current = null;
-    if (pending && pending.id === fieldRef.current.id) {
-      onChangeRef.current({ ...fieldRef.current, ...pending.patch });
-    }
+    if (!pending) return;
+    const latest = fieldRef.current.id === pending.base.id ? fieldRef.current : pending.base;
+    onChangeRef.current({ ...latest, ...pending.patch });
   }, []);
 
   // Send the previous field's edit before showing the new one; keep a same-field
-  // edit on top of the update.
-  useEffect(() => {
+  // edit on top of the update. A layout effect, so a debounce timer can never
+  // run between the new field rendering and fieldRef pointing at it.
+  useLayoutEffect(() => {
     const pending = pendingEditRef.current;
-    if (pending && pending.id !== field.id) flushPendingEdit();
+    if (pending && pending.base.id !== field.id) flushPendingEdit();
     fieldRef.current = field;
     const kept = pendingEditRef.current?.patch;
     setLocalField(kept ? { ...field, ...kept } : field);
@@ -228,9 +231,10 @@ export function FieldEditor({
 
   const queueEdit = useCallback(
     (patch: Partial<FormField>) => {
-      const id = fieldRef.current.id;
-      const earlier = pendingEditRef.current?.id === id ? pendingEditRef.current.patch : {};
-      pendingEditRef.current = { id, patch: { ...earlier, ...patch } };
+      const base = fieldRef.current;
+      const earlier =
+        pendingEditRef.current?.base.id === base.id ? pendingEditRef.current.patch : {};
+      pendingEditRef.current = { base, patch: { ...earlier, ...patch } };
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
       debounceTimerRef.current = setTimeout(flushPendingEdit, 300);
     },
@@ -238,7 +242,7 @@ export function FieldEditor({
   );
 
   const handleChange = <K extends keyof FormField>(key: K, value: FormField[K]) => {
-    setLocalField({ ...localField, [key]: value });
+    setLocalField((current) => ({ ...current, [key]: value }));
     queueEdit({ [key]: value } as Partial<FormField>);
   };
 
@@ -248,7 +252,7 @@ export function FieldEditor({
     if (value === undefined) {
       delete (validation as Record<string, unknown>)[key];
     }
-    setLocalField({ ...localField, validation });
+    setLocalField((current) => ({ ...current, validation }));
     queueEdit({ validation });
   };
 
@@ -264,23 +268,34 @@ export function FieldEditor({
 
   const generateGuidance = useCallback(async () => {
     if (!llmKeyId || !localField.label) return;
+    const fieldId = fieldRef.current.id;
+    const guidanceAtClick = localField.guidanceText ?? "";
     setGuidanceLoading(true);
     try {
       const result = await getLLMFieldGuidance(localField.label, entityType, llmKeyId);
       const text = result.data?.guidanceText;
-      if (text) {
-        // Merged with anything typed while the request ran, not built from
-        // the field as it was when the button was clicked.
-        setLocalField((current) => ({ ...current, guidanceText: text }));
-        queueEdit({ guidanceText: text });
-        flushPendingEdit();
-      }
+      // Dropped when another field is now open, or when the user wrote their
+      // own guidance while the request ran.
+      const pendingPatch =
+        pendingEditRef.current?.base.id === fieldId ? pendingEditRef.current.patch : {};
+      const guidanceNow =
+        "guidanceText" in pendingPatch
+          ? (pendingPatch.guidanceText ?? "")
+          : (fieldRef.current.guidanceText ?? "");
+      if (!text || fieldRef.current.id !== fieldId || guidanceNow !== guidanceAtClick) return;
+      // Merged with any other edit made while the request ran.
+      setLocalField((current) => ({ ...current, guidanceText: text }));
+      pendingEditRef.current = {
+        base: fieldRef.current,
+        patch: { ...pendingPatch, guidanceText: text },
+      };
+      flushPendingEdit();
     } catch {
       // Silently fail — the field stays as is
     } finally {
       setGuidanceLoading(false);
     }
-  }, [llmKeyId, localField.label, entityType, queueEdit, flushPendingEdit]);
+  }, [llmKeyId, localField.label, localField.guidanceText, entityType, flushPendingEdit]);
 
   const entityMappings = ENTITY_FIELD_MAPPINGS[entityType] || [];
   const compatibleMappings = entityMappings.filter((mapping: EntityFieldMapping) =>

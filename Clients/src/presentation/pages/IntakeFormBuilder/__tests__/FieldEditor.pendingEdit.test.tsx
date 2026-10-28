@@ -1,18 +1,28 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { fireEvent } from "@testing-library/react";
+import { act, fireEvent, screen } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import { FieldEditor } from "../FieldEditor";
 import { IntakeEntityType } from "../../../../domain/intake/enums";
+import { getLLMFieldGuidance } from "../../../../application/repository/intakeForm.repository";
 import type { FormField } from "../types";
+
+vi.mock("../../../../application/repository/intakeForm.repository", () => ({
+  getLLMFieldGuidance: vi.fn(),
+}));
 
 const FIRST: FormField = { id: "first", type: "text", label: "First", order: 0 };
 const SECOND: FormField = { id: "second", type: "text", label: "Second", order: 1 };
 
-const editorFor = (field: FormField, onChange: (field: FormField) => void) => (
+const editorFor = (
+  field: FormField,
+  onChange: (field: FormField) => void,
+  llmKeyId: number | null = null,
+) => (
   <FieldEditor
     field={field}
     allFields={[FIRST, SECOND]}
     entityType={IntakeEntityType.USE_CASE}
+    llmKeyId={llmKeyId}
     onChange={onChange}
     onClose={vi.fn()}
   />
@@ -100,5 +110,56 @@ describe("FieldEditor pending edit", () => {
     expect(onChange).not.toHaveBeenCalled();
     vi.advanceTimersByTime(300);
     expect(onChange).toHaveBeenCalledTimes(1);
+  });
+});
+
+// Generated guidance lands on the field it was asked for, after the request.
+describe("FieldEditor generated guidance", () => {
+  const guidanceRequest = () => {
+    let resolve: (text: string) => void = () => {};
+    vi.mocked(getLLMFieldGuidance).mockReturnValue(
+      new Promise((done) => {
+        resolve = (text) => done({ data: { guidanceText: text } } as never);
+      }) as never,
+    );
+    return (text: string) => act(async () => resolve(text));
+  };
+
+  it("applies the guidance to the field it was generated for", async () => {
+    const respond = guidanceRequest();
+    const onChange = vi.fn();
+    renderWithProviders(editorFor(FIRST, onChange, 1));
+    fireEvent.click(screen.getByText("AI"));
+    await respond("Why First matters");
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "first", guidanceText: "Why First matters" }),
+    );
+  });
+
+  it("drops the guidance when another field was opened while it was generated", async () => {
+    const respond = guidanceRequest();
+    const onChange = vi.fn();
+    const { rerender } = renderWithProviders(editorFor(FIRST, onChange, 1));
+    fireEvent.click(screen.getByText("AI"));
+    rerender(editorFor(SECOND, onChange, 1));
+    await respond("Why First matters");
+    expect(onChange).not.toHaveBeenCalledWith(
+      expect.objectContaining({ guidanceText: "Why First matters" }),
+    );
+    expect((document.getElementById("field-guidance") as HTMLTextAreaElement).value).toBe("");
+  });
+
+  it("keeps guidance the user wrote while it was generated", async () => {
+    const respond = guidanceRequest();
+    const onChange = vi.fn();
+    renderWithProviders(editorFor(FIRST, onChange, 1));
+    fireEvent.click(screen.getByText("AI"));
+    const guidance = document.getElementById("field-guidance") as HTMLTextAreaElement;
+    fireEvent.change(guidance, { target: { value: "My own guidance" } });
+    await respond("Why First matters");
+    expect(guidance.value).toBe("My own guidance");
+    expect(onChange).not.toHaveBeenCalledWith(
+      expect.objectContaining({ guidanceText: "Why First matters" }),
+    );
   });
 });
