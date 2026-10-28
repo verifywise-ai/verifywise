@@ -193,6 +193,25 @@ export async function createItem(
 // Item change history (issue #4915)
 // ---------------------------------------------------------------------------
 
+// JSONB does not keep key order, so objects compare with sorted keys:
+// otherwise re-saving an unchanged config or value records a change.
+const canonical = (value: unknown): unknown =>
+  Array.isArray(value)
+    ? value.map(canonical)
+    : value !== null && typeof value === "object"
+      ? Object.fromEntries(
+          Object.keys(value as Record<string, unknown>)
+            .sort()
+            .map((k) => [k, canonical((value as Record<string, unknown>)[k])]),
+        )
+      : value;
+const normalize = (value: unknown): string | null =>
+  value === undefined || value === null
+    ? null
+    : typeof value === "object"
+      ? JSON.stringify(canonical(value))
+      : String(value);
+
 /**
  * Record one row in model_lifecycle_change_history. The table has a bespoke
  * schema (change_type + JSONB old/new snapshots), so it is written directly
@@ -205,12 +224,17 @@ async function recordItemChange(
   changedBy: number | null,
   oldValue: Record<string, unknown> | null,
   newValue: Record<string, unknown> | null,
+  modelInventoryId?: number | null,
 ): Promise<void> {
+  // model_inventory_id is only set for per-model changes (value edits); the
+  // column stays NULL for template item edits, as before.
+  const modelColumn = modelInventoryId != null ? ", model_inventory_id" : "";
+  const modelValue = modelInventoryId != null ? ", :modelInventoryId" : "";
   await sequelize.query(
     `INSERT INTO model_lifecycle_change_history
-       (organization_id, item_id, change_type, changed_by, old_value, new_value)
+       (organization_id, item_id, change_type, changed_by, old_value, new_value${modelColumn})
      VALUES (:organizationId, :itemId, :changeType, :changedBy,
-             CAST(:oldValue AS JSONB), CAST(:newValue AS JSONB));`,
+             CAST(:oldValue AS JSONB), CAST(:newValue AS JSONB)${modelValue});`,
     {
       replacements: {
         organizationId,
@@ -219,6 +243,7 @@ async function recordItemChange(
         changedBy,
         oldValue: oldValue ? JSON.stringify(oldValue) : null,
         newValue: newValue ? JSON.stringify(newValue) : null,
+        modelInventoryId: modelInventoryId ?? null,
       },
     },
   );
@@ -302,25 +327,6 @@ export async function updateItem(
       "config",
       "is_active",
     ] as const;
-    // JSONB does not keep key order, so objects compare with sorted keys:
-    // otherwise re-saving an unchanged config records a change.
-    const canonical = (value: unknown): unknown =>
-      Array.isArray(value)
-        ? value.map(canonical)
-        : value !== null && typeof value === "object"
-          ? Object.fromEntries(
-              Object.keys(value as Record<string, unknown>)
-                .sort()
-                .map((k) => [k, canonical((value as Record<string, unknown>)[k])]),
-            )
-          : value;
-    const normalize = (value: unknown): string | null =>
-      value === undefined || value === null
-        ? null
-        : typeof value === "object"
-          ? JSON.stringify(canonical(value))
-          : String(value);
-
     const oldSnapshot: Record<string, unknown> = {};
     const newSnapshot: Record<string, unknown> = {};
     for (const key of TRACKED) {
@@ -552,6 +558,16 @@ export async function upsertValue(
   userId: number,
   input: { value_text?: string | null; value_json?: unknown },
 ): Promise<any> {
+  // Snapshot the current answer (if any) so the change history can store
+  // before/after values (#4977).
+  const beforeRows = (await sequelize.query(
+    `SELECT value_text, value_json
+       FROM model_lifecycle_values
+      WHERE organization_id = :organizationId AND model_inventory_id = :modelId AND item_id = :itemId;`,
+    { replacements: { organizationId, modelId, itemId }, type: QueryTypes.SELECT },
+  )) as any[];
+  const before = beforeRows[0] ?? null;
+
   const rows = (await sequelize.query(
     `INSERT INTO model_lifecycle_values
        (organization_id, model_inventory_id, item_id, value_text, value_json, updated_by)
@@ -577,7 +593,55 @@ export async function upsertValue(
       type: QueryTypes.INSERT,
     },
   )) as unknown as [any[], number];
-  return (rows[0] as any)[0];
+  const upserted = (rows[0] as any)[0];
+
+  if (upserted) {
+    try {
+      const TRACKED = ["value_text", "value_json"] as const;
+      const oldSnapshot: Record<string, unknown> = {};
+      const newSnapshot: Record<string, unknown> = {};
+      for (const key of TRACKED) {
+        const oldValue = before ? (before as Record<string, unknown>)[key] : null;
+        const newValue = (upserted as Record<string, unknown>)[key];
+        if (normalize(oldValue) === normalize(newValue)) continue;
+        oldSnapshot[key] = oldValue ?? null;
+        newSnapshot[key] = newValue ?? null;
+      }
+
+      if (Object.keys(newSnapshot).length > 0) {
+        const changeType = before ? "updated" : "created";
+        await recordItemChange(
+          organizationId,
+          itemId,
+          changeType,
+          userId ?? null,
+          before ? oldSnapshot : null,
+          newSnapshot,
+          modelId,
+        );
+        // Same tamper-evident trail the generic change-history writer keeps.
+        appendToAuditLedger({
+          organizationId,
+          entryType: "change_history",
+          userId: userId ?? null,
+          entityType: "model_lifecycle_value",
+          entityId: itemId,
+          action: changeType,
+          description: `Model lifecycle value for item ${itemId} ${changeType} (${Object.keys(newSnapshot).join(", ")})`,
+        }).catch((error) => {
+          console.error(
+            "Failed to append model lifecycle value change to the audit ledger:",
+            error,
+          );
+        });
+      }
+    } catch (error) {
+      // History must never fail the edit.
+      console.error("Failed to record model lifecycle value change:", error);
+    }
+  }
+
+  return upserted;
 }
 
 async function ensureValueRow(
