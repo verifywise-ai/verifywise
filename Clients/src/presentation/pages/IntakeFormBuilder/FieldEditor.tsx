@@ -216,9 +216,9 @@ export function FieldEditor({
     debounceTimerRef.current = null;
     const pending = pendingEditRef.current;
     pendingEditRef.current = null;
-    if (!pending) return;
-    // Always the edited field: the [field] layout effect flushes before it
-    // points fieldRef at another field.
+    // The [field] layout effect flushes before it points fieldRef at another
+    // field; the id check keeps an edit off the wrong field if that changes.
+    if (!pending || pending.fieldId !== fieldRef.current.id) return;
     onChangeRef.current({ ...fieldRef.current, ...pending.patch });
   }, []);
 
@@ -299,7 +299,7 @@ export function FieldEditor({
 
   const generateGuidance = useCallback(async () => {
     const labelAtClick = latestValue("label");
-    if (!llmKeyId || !labelAtClick) return;
+    if (!llmKeyId || !labelAtClick?.trim()) return;
     const request = ++guidanceRequestRef.current;
     const guidanceAtClick = latestValue("guidanceText") ?? "";
     setGuidanceLoading(true);
@@ -326,6 +326,9 @@ export function FieldEditor({
       if (request === guidanceRequestRef.current) setGuidanceLoading(false);
     }
   }, [llmKeyId, entityType, latestValue, queueEdit, flushPendingEdit]);
+
+  // The same blank-label rule as generateGuidance, so the button never offers a call it refuses.
+  const hasGuidanceLabel = Boolean(localField.label?.trim());
 
   const entityMappings = ENTITY_FIELD_MAPPINGS[entityType] || [];
   const compatibleMappings = entityMappings.filter((mapping: EntityFieldMapping) =>
@@ -478,24 +481,24 @@ export function FieldEditor({
                     </Typography>
                     {llmKeyId && (
                       <Tooltip
-                        title={localField.label ? "Generate with AI" : "Add a label first"}
+                        title={hasGuidanceLabel ? "Generate with AI" : "Add a label first"}
                         placement="top"
                       >
                         <Box
                           onClick={
-                            !guidanceLoading && localField.label ? generateGuidance : undefined
+                            !guidanceLoading && hasGuidanceLabel ? generateGuidance : undefined
                           }
                           sx={{
                             "display": "flex",
                             "alignItems": "center",
                             "gap": "3px",
-                            "cursor": !guidanceLoading && localField.label ? "pointer" : "default",
-                            "opacity": !localField.label ? 0.4 : 1,
+                            "cursor": !guidanceLoading && hasGuidanceLabel ? "pointer" : "default",
+                            "opacity": !hasGuidanceLabel ? 0.4 : 1,
                             "color": theme.palette.primary.main,
                             "borderRadius": "4px",
                             "px": "6px",
                             "py": "2px",
-                            "&:hover": localField.label
+                            "&:hover": hasGuidanceLabel
                               ? { backgroundColor: theme.palette.background.fill }
                               : {},
                           }}
