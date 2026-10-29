@@ -175,6 +175,7 @@ export function IntakeFormBuilder() {
           } else setLoadFailed(true);
         })
         .catch(() => {
+          if (loadCountRef.current !== load) return;
           setLoadFailed(true);
           setSnackbar({
             open: true,
@@ -182,7 +183,9 @@ export function IntakeFormBuilder() {
             severity: "error",
           });
         })
-        .finally(() => setIsLoadingForm(false));
+        .finally(() => {
+          if (loadCountRef.current === load) setIsLoadingForm(false);
+        });
     } else if (formId === "new") {
       const entityType =
         entityTypeParam === IntakeEntityType.MODEL
