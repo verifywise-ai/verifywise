@@ -25,6 +25,7 @@ import {
   Pencil,
   PaintBucket,
   Plus,
+  Workflow,
 } from "lucide-react";
 import {
   getIntakeForm,
@@ -46,6 +47,7 @@ import {
 } from "./FieldPalette";
 import { FormCanvas, FormCanvasHandle } from "./FormCanvas";
 import { FieldEditor } from "./FieldEditor";
+import { LogicOverviewPanel } from "./logic/LogicOverviewPanel";
 import { DesignPanel } from "./DesignPanel";
 import RoutingSettingsSection, { getRoutingErrors } from "./routing/RoutingSettingsSection";
 import CustomizableMultiSelect from "../../components/Inputs/Select/Multi";
@@ -75,6 +77,14 @@ import { PageBreadcrumbs } from "../../components/breadcrumbs/PageBreadcrumbs";
 // Helpers
 // ============================================================================
 
+type BuilderMode = "edit" | "design" | "logic";
+
+const BUILDER_MODES: Array<{ mode: BuilderMode; label: string; Icon: typeof Pencil }> = [
+  { mode: "edit", label: "Edit", Icon: Pencil },
+  { mode: "design", label: "Design", Icon: PaintBucket },
+  { mode: "logic", label: "Logic", Icon: Workflow },
+];
+
 function arrayMove<T>(arr: T[], from: number, to: number): T[] {
   const result = [...arr];
   const [item] = result.splice(from, 1);
@@ -95,7 +105,7 @@ export function IntakeFormBuilder() {
 
   // --- Builder state ---
   const isEditing = Boolean(formId) && formId !== "new";
-  const [builderMode, setBuilderMode] = useState<"edit" | "design">("edit");
+  const [builderMode, setBuilderMode] = useState<BuilderMode>("edit");
   const [form, setForm] = useState<IntakeForm>(createEmptyForm());
   const canvasRef = useRef<FormCanvasHandle>(null);
   const suggestedPanelRef = useRef<SuggestedQuestionsPanelHandle>(null);
@@ -725,7 +735,7 @@ export function IntakeFormBuilder() {
                   </Box>
                 </Box>
 
-                {/* Centered Edit / Design toggle */}
+                {/* Centered Edit / Design / Logic toggle */}
                 <Box
                   sx={{
                     position: "absolute",
@@ -738,71 +748,48 @@ export function IntakeFormBuilder() {
                     overflow: "hidden",
                   }}
                 >
-                  <Box
-                    onClick={() => setBuilderMode("edit")}
-                    sx={{
-                      "display": "flex",
-                      "alignItems": "center",
-                      "gap": "5px",
-                      "px": "12px",
-                      "py": "5px",
-                      "cursor": "pointer",
-                      "fontSize": "12px",
-                      "fontWeight": 600,
-                      "userSelect": "none",
-                      "backgroundColor":
-                        builderMode === "edit"
-                          ? theme.palette.primary.main
-                          : theme.palette.background.main,
-                      "color":
-                        builderMode === "edit"
-                          ? theme.palette.background.main
-                          : theme.palette.text.secondary,
-                      "transition": "all 0.15s ease",
-                      "&:hover": {
-                        backgroundColor:
-                          builderMode === "edit"
-                            ? "brand.primaryHover"
-                            : theme.palette.background.accent,
-                      },
-                    }}
-                  >
-                    <Pencil size={13} />
-                    Edit
-                  </Box>
-                  <Box
-                    onClick={() => setBuilderMode("design")}
-                    sx={{
-                      "display": "flex",
-                      "alignItems": "center",
-                      "gap": "5px",
-                      "px": "12px",
-                      "py": "5px",
-                      "cursor": "pointer",
-                      "fontSize": "12px",
-                      "fontWeight": 600,
-                      "userSelect": "none",
-                      "borderLeft": `1px solid ${theme.palette.border.dark}`,
-                      "backgroundColor":
-                        builderMode === "design"
-                          ? theme.palette.primary.main
-                          : theme.palette.background.main,
-                      "color":
-                        builderMode === "design"
-                          ? theme.palette.background.main
-                          : theme.palette.text.secondary,
-                      "transition": "all 0.15s ease",
-                      "&:hover": {
-                        backgroundColor:
-                          builderMode === "design"
-                            ? "brand.primaryHover"
-                            : theme.palette.background.accent,
-                      },
-                    }}
-                  >
-                    <PaintBucket size={13} />
-                    Design
-                  </Box>
+                  {BUILDER_MODES.map(({ mode, label, Icon }, index) => (
+                    <Box
+                      key={mode}
+                      component="button"
+                      type="button"
+                      aria-pressed={builderMode === mode}
+                      onClick={() => setBuilderMode(mode)}
+                      sx={{
+                        "display": "flex",
+                        "alignItems": "center",
+                        "gap": "5px",
+                        "px": "12px",
+                        "py": "5px",
+                        "border": "none",
+                        "borderLeft":
+                          index === 0 ? "none" : `1px solid ${theme.palette.border.dark}`,
+                        "font": "inherit",
+                        "cursor": "pointer",
+                        "fontSize": "12px",
+                        "fontWeight": 600,
+                        "userSelect": "none",
+                        "backgroundColor":
+                          builderMode === mode
+                            ? theme.palette.primary.main
+                            : theme.palette.background.main,
+                        "color":
+                          builderMode === mode
+                            ? theme.palette.background.main
+                            : theme.palette.text.secondary,
+                        "transition": "all 0.15s ease",
+                        "&:hover": {
+                          backgroundColor:
+                            builderMode === mode
+                              ? "brand.primaryHover"
+                              : theme.palette.background.accent,
+                        },
+                      }}
+                    >
+                      <Icon size={13} />
+                      {label}
+                    </Box>
+                  ))}
                 </Box>
 
                 <Box
@@ -954,6 +941,17 @@ export function IntakeFormBuilder() {
                     settings={form.designSettings ?? DEFAULT_DESIGN_SETTINGS}
                     onChange={(designSettings) => {
                       updateForm({ designSettings });
+                    }}
+                  />
+                ) : builderMode === "logic" ? (
+                  <LogicOverviewPanel
+                    fields={form.schema.fields}
+                    logicErrors={logicErrors}
+                    routing={form.routing ?? null}
+                    reviewers={routingReviewers}
+                    onSelectField={(fieldId) => {
+                      setSelectedFieldId(fieldId);
+                      setBuilderMode("edit");
                     }}
                   />
                 ) : selectedField ? (

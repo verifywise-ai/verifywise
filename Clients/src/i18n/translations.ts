@@ -78,6 +78,11 @@ import {
   fr as intakeLiveChecksFr,
   es as intakeLiveChecksEs,
 } from "./modules/intakeLiveChecks";
+import {
+  de as intakeLogicDe,
+  fr as intakeLogicFr,
+  es as intakeLogicEs,
+} from "./modules/intakeLogic";
 import { de as trainingDe, fr as trainingFr, es as trainingEs } from "./modules/training";
 import { de as vendorsDe, fr as vendorsFr, es as vendorsEs } from "./modules/vendors";
 
@@ -106,6 +111,7 @@ export const translations: Record<string, Record<string, string>> = {
     ...superAdminDe,
     ...tasksDe,
     ...intakeLiveChecksDe,
+    ...intakeLogicDe,
     ...trainingDe,
     ...vendorsDe,
     "senior": "leitend",
@@ -9565,6 +9571,7 @@ export const translations: Record<string, Record<string, string>> = {
     ...superAdminFr,
     ...tasksFr,
     ...intakeLiveChecksFr,
+    ...intakeLogicFr,
     ...trainingFr,
     ...vendorsFr,
     "senior": "senior",
@@ -18964,6 +18971,7 @@ export const translations: Record<string, Record<string, string>> = {
     ...superAdminEs,
     ...tasksEs,
     ...intakeLiveChecksEs,
+    ...intakeLogicEs,
     ...trainingEs,
     ...vendorsEs,
     "senior": "sénior",
