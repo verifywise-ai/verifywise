@@ -635,12 +635,28 @@ function humanizeHandlerName(name: string): string {
 // ---------------------------------------------------------------------------
 // Merge discovered endpoints into existing swagger.yaml
 // ---------------------------------------------------------------------------
+
+// Generator-owned API description. swagger.yaml is never hand-edited, so the
+// versioning conventions live here and are (re)applied on every run.
+const API_DOC_DESCRIPTION = `AI Governance Platform API.
+
+**Versioning (ADR 0001):** paths under \`/v1/...\` (relative to the \`/api\`
+server — e.g. \`/v1/shadow-ai/events\` is served at \`/api/v1/shadow-ai/events\`)
+are the versioned API surface. All other paths are the legacy, unversioned
+surface: backward-compatible, frozen for bug fixes only, and deprecated
+through the process in \`docs/technical/adr/0001-api-versioning.md\`. New
+endpoints and changed contracts are introduced under \`/api/v1\`.
+
+**Tags:** versioned operations are tagged \`v1: <Resource>\`; legacy
+operations keep their historical tags.`;
+
 export function mergeSwagger(endpoints: Endpoint[], existing: any): any {
   const doc = JSON.parse(JSON.stringify(existing));
 
   // Ensure top-level structure
   doc.openapi = doc.openapi || "3.0.0";
   doc.info = doc.info || { title: "VerifyWise API", version: "2.0.0" };
+  doc.info.description = API_DOC_DESCRIPTION;
   doc.paths = doc.paths || {};
   doc.components = doc.components || {};
   doc.components.securitySchemes = doc.components.securitySchemes || {

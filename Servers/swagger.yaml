@@ -1,7 +1,7 @@
 openapi: 3.0.0
 info:
   title: 'VerifyWise API'
-  description: 'AI Governance Platform API'
+  description: "AI Governance Platform API.\n\n**Versioning (ADR 0001):** paths under `/v1/...` (relative to the `/api`\nserver — e.g. `/v1/shadow-ai/events` is served at `/api/v1/shadow-ai/events`)\nare the versioned API surface. All other paths are the legacy, unversioned\nsurface: backward-compatible, frozen for bug fixes only, and deprecated\nthrough the process in `docs/technical/adr/0001-api-versioning.md`. New\nendpoints and changed contracts are introduced under `/api/v1`.\n\n**Tags:** versioned operations are tagged `v1: <Resource>`; legacy\noperations keep their historical tags."
   version: 2.0.0
 servers:
   -
