@@ -45,15 +45,77 @@ function calculate(field: LogicField, effective: Answers): number | null {
   return evaluateFormula(parsed.ast, values, normalizeDecimals(field.decimals));
 }
 
+/** Ids a field reads: its show/hide conditions and, for a calculated field, its formula. */
+export function dependenciesOf(field: LogicField): string[] {
+  const ids: string[] = [];
+  const conditions = field.visibility?.conditions;
+  if (Array.isArray(conditions)) {
+    for (const condition of conditions) {
+      if (condition && typeof condition === "object" && typeof condition.fieldId === "string") {
+        ids.push(condition.fieldId);
+      }
+    }
+  }
+  if (field.type === "calculated") {
+    const parsed = parseFormula(field.formula ?? "");
+    if (parsed.ok) ids.push(...parsed.refs);
+  }
+  return ids;
+}
+
 /**
- * One top-to-bottom pass. Conditions and formulas only read fields above
- * them, so each field is settled when reached: hidden fields add nothing to
- * `effectiveAnswers`, and a visible calculated field adds its value so later
- * conditions and formulas can read it.
+ * Fields ordered so each comes after every field it reads, ties kept in form
+ * order. A form whose rules and formulas only read fields above keeps form
+ * order. Fields in a loop, or reading one, cannot be ordered: they follow in
+ * form order and read only what is settled by then, so a loop gives empty
+ * values instead of hanging. Saving rejects loops.
+ */
+function evaluationOrder(fields: LogicField[]): LogicField[] {
+  // Indexes, not ids: a form with a duplicate id (rejected on save) still
+  // evaluates every field. A reference reads the last field with that id, as
+  // the id lookups below do.
+  const indexOf = new Map(fields.map((field, index) => [field.id, index] as const));
+  const dependents: number[][] = fields.map(() => []);
+  const waiting = fields.map((field, index) => {
+    const deps = new Set<number>();
+    for (const id of dependenciesOf(field)) {
+      const dep = indexOf.get(id);
+      if (dep !== undefined) deps.add(dep);
+    }
+    for (const dep of deps) if (dep !== index) dependents[dep].push(index);
+    // A field reading itself is a loop: it is never ready.
+    return deps.size;
+  });
+  const ready = waiting.flatMap((count, index) => (count === 0 ? [index] : []));
+  const placed = new Set<number>();
+  const ordered: LogicField[] = [];
+  while (ready.length > 0) {
+    // Earliest in form order first, so independent fields keep their order.
+    ready.sort((a, b) => a - b);
+    const index = ready.shift() as number;
+    placed.add(index);
+    ordered.push(fields[index]);
+    for (const dependent of dependents[index]) {
+      waiting[dependent] -= 1;
+      if (waiting[dependent] === 0) ready.push(dependent);
+    }
+  }
+  fields.forEach((field, index) => {
+    if (!placed.has(index)) ordered.push(field);
+  });
+  return ordered;
+}
+
+/**
+ * Fields are settled in dependency order, so rules and formulas may read
+ * fields anywhere in the form: hidden fields add nothing to
+ * `effectiveAnswers`, and a visible calculated field adds its value for the
+ * rules and formulas that read it.
  */
 export function evaluateForm(schema: LogicSchema, answers: Answers): FormEvaluation {
-  const fields = sortFields(fieldsOf(schema));
-  const byId = new Map(fields.map((field) => [field.id, field] as const));
+  const sorted = sortFields(fieldsOf(schema));
+  const fields = evaluationOrder(sorted);
+  const byId = new Map(sorted.map((field) => [field.id, field] as const));
   const visibleIds = new Set<string>();
   const calculated = createRecord<number | null>();
   const effectiveAnswers = createRecord<unknown>();

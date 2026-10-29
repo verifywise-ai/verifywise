@@ -231,7 +231,7 @@ export const intakeFormsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Open "Show this field only if…" in a field\'s settings to show it only when answers above it match. Add one or more conditions and choose whether all or any must match. A condition can only use fields above the one you are editing. Until the earlier question is answered, the field stays hidden.',
+      text: 'Open "Show this field only if…" in a field\'s settings to show it only when other answers match. Add one or more conditions and choose whether all or any must match. A condition can use any other field in the form, above or below. Until that question is answered, the field stays hidden.',
     },
     {
       type: 'paragraph',
@@ -245,11 +245,11 @@ export const intakeFormsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'A calculated field shows a read-only result that updates as the submitter types, for example annual cost from a monthly cost. Add one from the Advanced section of the field palette. Formulas use + − × ÷ (typed as + - * /), parentheses and numbers, and refer to number or calculated fields above the field. Type { in the formula box to insert a field.',
+      text: 'A calculated field shows a read-only result that updates as the submitter types, for example annual cost from a monthly cost. Add one from the Advanced section of the field palette. Formulas use + − × ÷ (typed as + - * /), parentheses and numbers, and refer to number or calculated fields anywhere in the form, so a total at the top can add up fields below it. Type { in the formula box to insert a field.',
     },
     {
       type: 'paragraph',
-      text: 'Set decimals (0 to 6) and an optional prefix or suffix, such as € or people. If an input is empty or hidden, the result shows a dash. The value is recalculated by VerifyWise when the form is submitted and is shown to reviewers.',
+      text: 'Set decimals (0 to 6) and an optional prefix or suffix, such as € or people. If an input is empty or hidden, the result shows a dash. The value is recalculated by VerifyWise when the form is submitted and is shown to reviewers. A form cannot be published while its formulas or conditions go round in a loop, for example two fields that each read the other. A draft can still be saved.',
     },
     {
       type: 'heading',

@@ -9,7 +9,7 @@ import {
 } from "./types";
 import type { Condition, LogicField, LogicSchema, SchemaLogicError } from "./types";
 import { parseFormula } from "./formula";
-import { sortFields } from "./evaluate";
+import { dependenciesOf, sortFields } from "./evaluate";
 
 const NUMERIC_TYPES = ["number", "calculated"];
 const OPTION_TYPES = ["select", "multiselect"];
@@ -40,8 +40,29 @@ function conditionValueError(condition: Condition, ref: LogicField): "value" | "
  */
 export function validateSchemaLogic(schema: LogicSchema, entityType: string): SchemaLogicError[] {
   const fields = sortFields(schema && Array.isArray(schema.fields) ? schema.fields : []);
-  const position = new Map(fields.map((field, index) => [field.id, index] as const));
   const byId = new Map(fields.map((field) => [field.id, field] as const));
+  const dependencies = new Map(fields.map((field) => [field.id, dependenciesOf(field)] as const));
+  // Whether `target` can be reached from `start` through rules and formulas.
+  const reaches = (start: string, target: string): boolean => {
+    const seen = new Set<string>();
+    const stack = [start];
+    while (stack.length > 0) {
+      const id = stack.pop() as string;
+      if (id === target) return true;
+      if (seen.has(id)) continue;
+      seen.add(id);
+      stack.push(...(dependencies.get(id) ?? []));
+    }
+    return false;
+  };
+  // The first of `refs` that leads back to `field`, if any.
+  const loopThrough = (field: LogicField, refs: string[]): LogicField | null => {
+    for (const refId of refs) {
+      const ref = byId.get(refId);
+      if (ref && (refId === field.id || reaches(refId, field.id))) return ref;
+    }
+    return null;
+  };
   const requiredEntityFields = Object.prototype.hasOwnProperty.call(
     REQUIRED_ENTITY_FIELDS,
     entityType,
@@ -59,7 +80,7 @@ export function validateSchemaLogic(schema: LogicSchema, entityType: string): Sc
     ),
   );
 
-  fields.forEach((field, index) => {
+  fields.forEach((field) => {
     const add = (message: string) =>
       errors.push({ fieldId: field.id, message: `Field "${field.label}": ${message}` });
 
@@ -91,11 +112,15 @@ export function validateSchemaLogic(schema: LogicSchema, entityType: string): Sc
           const ref = byId.get(refId);
           if (!ref) {
             add("the formula refers to a field that was removed");
-          } else if ((position.get(refId) ?? Infinity) >= index) {
-            add(`the formula uses "${ref.label}", which is not above it`);
           } else if (!NUMERIC_TYPES.includes(ref.type)) {
             add(`the formula uses "${ref.label}", which is not a number or calculated field`);
           }
+        }
+        const loop = loopThrough(field, parsed.refs);
+        if (loop === field) {
+          add("the formula uses this field itself");
+        } else if (loop) {
+          add(`the formula forms a circular reference with "${loop.label}"`);
         }
       }
       if (
@@ -161,10 +186,6 @@ export function validateSchemaLogic(schema: LogicSchema, entityType: string): Sc
         add("a condition refers to a field that was removed");
         continue;
       }
-      if ((position.get(ref.id) ?? Infinity) >= index) {
-        add(`depends on "${ref.label}", which is not above it`);
-        continue;
-      }
       const allowed = Object.prototype.hasOwnProperty.call(OPERATORS_BY_TYPE, ref.type)
         ? OPERATORS_BY_TYPE[ref.type]
         : [];
@@ -178,6 +199,17 @@ export function validateSchemaLogic(schema: LogicSchema, entityType: string): Sc
       } else if (valueError === "value") {
         add(`the condition on "${ref.label}" needs a valid value`);
       }
+    }
+    const loop = loopThrough(
+      field,
+      visibility.conditions.flatMap((condition) =>
+        condition && typeof condition === "object" ? [condition.fieldId] : [],
+      ),
+    );
+    if (loop === field) {
+      add("the show/hide rules depend on this field itself");
+    } else if (loop) {
+      add(`the show/hide rules form a circular reference with "${loop.label}"`);
     }
   });
 

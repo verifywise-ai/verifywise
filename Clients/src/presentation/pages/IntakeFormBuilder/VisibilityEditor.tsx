@@ -88,8 +88,8 @@ export function withOperator(
 
 interface VisibilityEditorProps {
   visibility?: Visibility;
-  /** Fields above the one being edited; rules may only use these. */
-  earlierFields: FormField[];
+  /** Every other field in the form; rules may use any of them. */
+  otherFields: FormField[];
   onChange: (visibility: Visibility | undefined) => void;
   /**
    * Why no rule can be added (e.g. the field is mapped to a required entity
@@ -100,17 +100,16 @@ interface VisibilityEditorProps {
 
 export function VisibilityEditor({
   visibility,
-  earlierFields: allEarlierFields,
+  otherFields: allOtherFields,
   onChange,
   blockedReason,
 }: VisibilityEditorProps) {
   const theme = useTheme();
   const conditions = Array.isArray(visibility?.conditions) ? visibility.conditions : [];
   const match = visibility?.match ?? "all";
-  const earlierFields = blockedReason ? [] : allEarlierFields;
+  const otherFields = blockedReason ? [] : allOtherFields;
   const hint =
-    blockedReason ??
-    (earlierFields.length === 0 ? "Add a field above this one to create a rule" : null);
+    blockedReason ?? (otherFields.length === 0 ? "Add another field to create a rule" : null);
 
   const commit = (next: Condition[], nextMatch = match) =>
     onChange(next.length === 0 ? undefined : { match: nextMatch, conditions: next });
@@ -142,7 +141,7 @@ export function VisibilityEditor({
       {conditions.map((condition, index) => {
         // A removed field, or one moved below this field, is not offered:
         // the row says so instead of showing a different field's condition.
-        const ref = earlierFields.find((f) => f.id === condition.fieldId);
+        const ref = otherFields.find((f) => f.id === condition.fieldId);
         const operators = (ref && OPERATORS_BY_TYPE[ref.type]) ?? ["is_empty", "is_not_empty"];
         const operator = condition.operator as ConditionOperator;
         return (
@@ -164,11 +163,11 @@ export function VisibilityEditor({
                   label="Field"
                   value={ref?.id ?? ""}
                   items={[
-                    ...(ref ? [] : [{ _id: "", name: "Choose a field above this one" }]),
-                    ...earlierFields.map((f) => ({ _id: f.id, name: f.label })),
+                    ...(ref ? [] : [{ _id: "", name: "Choose a field" }]),
+                    ...otherFields.map((f) => ({ _id: f.id, name: f.label })),
                   ]}
                   onChange={(e) => {
-                    const next = earlierFields.find((f) => f.id === e.target.value);
+                    const next = otherFields.find((f) => f.id === e.target.value);
                     if (next) update(index, defaultCondition(next));
                   }}
                 />
@@ -266,7 +265,7 @@ export function VisibilityEditor({
           text="Add condition"
           startIcon={<Plus size={14} />}
           isDisabled={conditions.length >= MAX_CONDITIONS}
-          onClick={() => commit([...conditions, defaultCondition(earlierFields[0])])}
+          onClick={() => commit([...conditions, defaultCondition(otherFields[0])])}
         />
       )}
     </Box>

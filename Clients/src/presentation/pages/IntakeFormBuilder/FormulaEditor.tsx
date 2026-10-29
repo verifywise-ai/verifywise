@@ -14,7 +14,7 @@ import {
 
 interface FormulaEditorProps {
   formula: string;
-  /** Number and calculated fields above the field being edited. */
+  /** Number and calculated fields other than the one being edited. */
   numericFields: FormField[];
   decimals?: number;
   onChange: (formula: string) => void;
@@ -99,7 +99,7 @@ export function FormulaEditor({ formula, numericFields, decimals, onChange }: Fo
         disableRestoreFocus
       >
         {numericFields.length === 0 ? (
-          <MenuItem disabled>Add a number field above this one first</MenuItem>
+          <MenuItem disabled>Add a number field first</MenuItem>
         ) : (
           numericFields.map((field) => (
             <MenuItem
