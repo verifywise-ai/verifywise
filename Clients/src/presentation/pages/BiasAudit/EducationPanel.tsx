@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Box, ButtonBase, Collapse, Stack, Typography } from "@mui/material";
 import { ChevronDown, Info } from "lucide-react";
 import { palette } from "../../themes/palette";
@@ -26,9 +26,9 @@ const bodySx = { fontSize: 13, lineHeight: 1.6, color: palette.text.tertiary } a
  */
 const EducationPanel = ({ pageKey }: EducationPanelProps) => {
   const [open, setOpen] = useState(false);
+  const panelId = useId();
   const block = EDUCATION[pageKey];
   if (!block) return null;
-  const panelId = `education-${pageKey.replace(/\W/g, "-")}-body`;
 
   return (
     <Box data-testid={`education-${pageKey}`}>

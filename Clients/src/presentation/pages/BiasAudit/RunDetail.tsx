@@ -80,6 +80,14 @@ const SectionTitle = ({ children }: { children: React.ReactNode }) => (
   </Typography>
 );
 
+const SummaryFigure = ({ label, value }: { label: string; value: number }) => (
+  <Typography sx={{ fontSize: 13, color: palette.text.secondary }}>
+    <span>{label}</span>
+    <span>: </span>
+    <strong>{value}</strong>
+  </Typography>
+);
+
 /** The figures a reader needs first: the lowest ratio per table and the data checks. */
 const Summary = ({
   result,
@@ -132,17 +140,16 @@ const Summary = ({
             </Table>
           </Box>
           <Stack gap="4px" sx={{ mt: "12px" }}>
-            <Typography sx={{ fontSize: 13, color: palette.text.secondary }}>
-              <span>{`${result.totalApplicants} candidates assessed`}</span>
-              <span>{` · ${result.unknownCount} in an unknown category`}</span>
+            {/* Label and number in separate elements, so the page translator matches each label. */}
+            <Stack direction="row" columnGap="24px" rowGap="4px" flexWrap="wrap">
+              <SummaryFigure label="Candidates assessed" value={result.totalApplicants} />
+              <SummaryFigure label="In an unknown category" value={result.unknownCount} />
               {scoring && result.overallMedian !== null && (
-                <span>{` · median score ${result.overallMedian}`}</span>
+                <SummaryFigure label="Median score" value={result.overallMedian} />
               )}
-            </Typography>
+              <SummaryFigure label="Impact ratios below 0.80" value={flagged} />
+            </Stack>
             <Typography sx={helperSx}>
-              {flagged === 0
-                ? "No impact ratio is below 0.80."
-                : `${flagged} impact ${flagged === 1 ? "ratio is" : "ratios are"} below 0.80.`}{" "}
               Local Law 144 sets no pass mark. 0.80 is the EEOC four-fifths convention: a lower
               ratio is something to investigate and report, not a failure.
             </Typography>
@@ -298,7 +305,11 @@ const BasisAndExpiry = ({ runId, basis, expiryDate, expiryTrigger, canAttest }: 
 
       <Typography sx={{ fontSize: 13, color: palette.text.secondary, mt: "12px" }}>
         <span>Valid until</span> <strong>{formatDate(expiryDate)}</strong>
-        <span>, one year after this run, or earlier if one of the conditions below occurs.</span>
+        {basis || expiryTrigger ? (
+          <span>, one year after this run, or earlier if one of the conditions below occurs.</span>
+        ) : (
+          <span>, one year after this run.</span>
+        )}
       </Typography>
 
       {basis ? (

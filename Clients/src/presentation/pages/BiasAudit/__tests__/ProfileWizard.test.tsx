@@ -182,6 +182,20 @@ describe("ProfileWizard: consequences", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("counts a question answered only once its answer settles it", () => {
+    renderWizard();
+    const progress = screen.getByTestId("profile-progress");
+    const before = progress.textContent;
+    fireEvent.click(within(question("role.party")).getByRole("radio", { name: /I don't know/ }));
+    expect(progress.textContent).toBe(before);
+    fireEvent.click(
+      within(question("role.party")).getByRole("radio", {
+        name: /We use it to hire our own staff/,
+      }),
+    );
+    expect(progress.textContent).not.toBe(before);
+  });
+
   it("keeps optional notes closed until asked for, and required notes open", () => {
     renderWizard();
     expect(within(question("role.party")).getByRole("textbox")).toBeInTheDocument();

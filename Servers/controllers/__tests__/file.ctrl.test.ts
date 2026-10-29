@@ -54,11 +54,13 @@ jest.mock("../../repositories/file.repository", () => ({
 }));
 jest.mock("../../utils/bulkAction.utils", () => ({
   parseBulkIds: jest.fn((ids: number[]) => ids),
-  assertOrgOwnsIds: jest.fn().mockResolvedValue(undefined),
   withBulkTransaction: jest.fn().mockImplementation(async (_opts: any, fn: any) => {
     const transaction = { commit: jest.fn(), rollback: jest.fn() };
     await fn(transaction);
   }),
+}));
+jest.mock("../../utils/files/visibleFiles", () => ({
+  allFilesVisibleQuery: jest.fn().mockResolvedValue(true),
 }));
 jest.mock("../../utils/project.utils", () => ({
   getUserProjects: jest.fn(),
@@ -87,8 +89,7 @@ import {
 import getUserFilesMetaDataQuery from "../../utils/files/getUserFilesMetaData.utils";
 import { addFileToAnswerEU } from "../../utils/eu.utils";
 import { getUserProjects } from "../../utils/project.utils";
-import { assertOrgOwnsIds } from "../../utils/bulkAction.utils";
-import { ForbiddenException } from "../../domain.layer/exceptions/custom.exception";
+import { allFilesVisibleQuery } from "../../utils/files/visibleFiles";
 import { createFileEntityLink, deleteFileEntityLink } from "../../repositories/file.repository";
 
 const mockGetFile = getFileById as jest.MockedFunction<typeof getFileById>;
@@ -103,7 +104,9 @@ const mockGetUserFiles = getUserFilesMetaDataQuery as jest.MockedFunction<
 >;
 const mockAddFile = addFileToAnswerEU as jest.MockedFunction<typeof addFileToAnswerEU>;
 const mockGetUserProjects = getUserProjects as jest.MockedFunction<typeof getUserProjects>;
-const mockAssertOrgOwnsIds = assertOrgOwnsIds as jest.MockedFunction<typeof assertOrgOwnsIds>;
+const mockAllFilesVisible = allFilesVisibleQuery as jest.MockedFunction<
+  typeof allFilesVisibleQuery
+>;
 const mockCreateLink = createFileEntityLink as jest.MockedFunction<typeof createFileEntityLink>;
 const mockDeleteLink = deleteFileEntityLink as jest.MockedFunction<typeof deleteFileEntityLink>;
 
@@ -236,7 +239,7 @@ describe("file.ctrl", () => {
     beforeEach(() => {
       // By default the user belongs to project 1 (non-admin membership list).
       mockGetUserProjects.mockResolvedValue([{ id: 1 } as any]);
-      mockAssertOrgOwnsIds.mockResolvedValue(undefined);
+      mockAllFilesVisible.mockResolvedValue(true);
     });
 
     it("should return 201 when files are uploaded", async () => {
@@ -314,8 +317,10 @@ describe("file.ctrl", () => {
       expect(mockUpload).not.toHaveBeenCalled();
     });
 
-    it("should return 403 when delete ids are not owned by the organization", async () => {
-      mockAssertOrgOwnsIds.mockRejectedValue(new ForbiddenException("not accessible"));
+    it("should return 403 when delete ids are not visible files of the organization", async () => {
+      // A missing id, another organization's file and a bias audit stance PDF
+      // are refused alike, so none of them can be told apart.
+      mockAllFilesVisible.mockResolvedValue(false);
       const req = createReq({
         body: { question_id: "1", project_id: 1, delete: "[55]" },
         files: [],
@@ -351,17 +356,16 @@ describe("file.ctrl", () => {
       expect(res.status).toHaveBeenCalledWith(500);
     });
 
-    it("answers as usual when a delete-list id deletes nothing (missing or stance PDF)", async () => {
-      // deleteFileById hides stance PDFs: for a stance id, as for a missing
-      // one, it deletes nothing and answers false, so the request succeeds.
-      mockDeleteFile.mockResolvedValue(false);
+    it("checks the delete list once, then deletes each visible file", async () => {
       const req = createReq({
-        body: { question_id: "1", project_id: 1, user_id: 1, delete: "[77]" },
+        body: { question_id: "1", project_id: 1, user_id: 1, delete: "[77, 78]" },
         files: [],
       });
       const res = createRes();
       await postFileContent(req, res);
+      expect(mockAllFilesVisible).toHaveBeenCalledWith([77, 78], 1, expect.anything());
       expect(mockDeleteFile).toHaveBeenCalledWith(77, expect.anything(), expect.anything());
+      expect(mockDeleteFile).toHaveBeenCalledWith(78, expect.anything(), expect.anything());
       expect(res.status).toHaveBeenCalledWith(201);
     });
   });

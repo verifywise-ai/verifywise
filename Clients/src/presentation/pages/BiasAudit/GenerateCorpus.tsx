@@ -285,7 +285,7 @@ const GenerateCorpus = ({
           <Stack gap="12px">
             <Box>
               <Typography component="h2" sx={titleSx}>
-                Check your platform&apos;s criteria (optional)
+                Compare with the criteria from your platform (optional)
               </Typography>
               <Box sx={{ mt: "4px" }}>
                 <EducationPanel pageKey="run.criteria_comparison" />

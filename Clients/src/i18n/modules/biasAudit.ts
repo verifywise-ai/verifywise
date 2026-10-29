@@ -2,8 +2,6 @@
 // Spread into ../translations.ts. Other areas stay in that file for now.
 
 export const de: Record<string, string> = {
-  "The output is one input among several with no extra weight.":
-    "Die Ausgabe ist ein Faktor unter mehreren ohne zusätzliches Gewicht.",
   "Add a note": "Notiz hinzufügen",
   "Add the required description to:": "Ergänzen Sie die erforderliche Beschreibung bei:",
   "Answer the profile questions.": "Beantworten Sie die Profilfragen.",
@@ -18,7 +16,6 @@ export const de: Record<string, string> = {
   "Candidates": "Kandidaten",
   "Check your hiring tool against NYC Local Law 144 before the independent audit. Results are for your internal use. A self-run test is not a bias audit under the law.":
     "Prüfen Sie Ihr Einstellungstool vor dem unabhängigen Audit anhand von NYC Local Law 144. Die Ergebnisse sind für Ihren internen Gebrauch. Ein selbst durchgeführter Test ist kein Bias-Audit im Sinne des Gesetzes.",
-  "Check your platform&apos;s criteria (optional)": "Kriterien Ihrer Plattform prüfen (optional)",
   "Checks": "Prüfungen",
   "Common mistakes": "Häufige Fehler",
   "Confirm this basis": "Diese Grundlage bestätigen",
@@ -69,8 +66,6 @@ export const de: Record<string, string> = {
   "To start, open a use case, go to its settings and add the NYC Local Law 144 framework.":
     "Öffnen Sie zum Start einen Anwendungsfall, gehen Sie zu dessen Einstellungen und fügen Sie das Framework NYC Local Law 144 hinzu.",
   "Valid until": "Gültig bis",
-  "VerifyWise&apos;s own measure of audit readiness, not a legal test.":
-    "Eigene Messgröße von VerifyWise für die Audit-Bereitschaft, kein rechtlicher Maßstab.",
   "What it decides": "Was dies entscheidet",
   "Why this matters": "Warum das wichtig ist",
   "Open profile": "Profil öffnen",
@@ -93,7 +88,6 @@ export const de: Record<string, string> = {
     "Dieser Lauf berechnet Scoring-Raten, weil eine Person den Schwellenwert anwendet.",
   "This run calculates selection rates, because your platform applies the cutoff.":
     "Dieser Lauf berechnet Auswahlraten, weil Ihre Plattform den Schwellenwert anwendet.",
-  "No impact ratio is below 0.80.": "Keine Impact Ratio liegt unter 0,80.",
   "Local Law 144 sets no pass mark. 0.80 is the EEOC four-fifths convention: a lower ratio is something to investigate and report, not a failure.":
     "Local Law 144 legt keine Bestehensgrenze fest. 0,80 ist die Vier-Fünftel-Konvention der EEOC: Eine niedrigere Ratio ist zu untersuchen und zu berichten, kein Nichtbestehen.",
   "Excluded: under 2% of the data": "Ausgeschlossen: unter 2 % der Daten",
@@ -128,11 +122,27 @@ export const de: Record<string, string> = {
     "Sie können dies speichern, aber das Profil kann erst attestiert werden, wenn diese Frage beantwortet ist.",
   "The file needs only the candidate_id column and the score or selection. Leave out the artifact column to stay under the 30 MB upload limit.":
     "Die Datei braucht nur die Spalte candidate_id und die Bewertung oder Auswahl. Lassen Sie die Spalte artifact weg, um unter der Upload-Grenze von 30 MB zu bleiben.",
+  "Compare with the criteria from your platform (optional)":
+    "Mit den Kriterien Ihrer Plattform vergleichen (optional)",
+  "A VerifyWise measure of audit readiness, not a legal test.":
+    "Eine VerifyWise-Messgröße für die Audit-Bereitschaft, kein rechtlicher Maßstab.",
+  "The output is one input among several with no extra weight.":
+    "Die Ausgabe ist ein Faktor unter mehreren ohne zusätzliches Gewicht.",
+  "Candidates assessed": "Bewertete Kandidaten",
+  "In an unknown category": "In einer unbekannten Kategorie",
+  "Median score": "Medianwert",
+  "Impact ratios below 0.80": "Impact Ratios unter 0,80",
+  ", one year after this run.": ", ein Jahr nach diesem Lauf.",
+  "Finish and attest your latest answers so new runs use them.":
+    "Vervollständigen und attestieren Sie Ihre neuesten Antworten, damit neue Läufe sie verwenden.",
+  "Answer who applies the cutoff, then attest again.":
+    "Geben Sie an, wer den Schwellenwert anwendet, und attestieren Sie dann erneut.",
+  "Upload scored results from your platform as your first run.":
+    "Laden Sie bewertete Ergebnisse aus Ihrer Plattform als ersten Lauf hoch.",
+  "Copy failed": "Kopieren fehlgeschlagen",
 };
 
 export const fr: Record<string, string> = {
-  "The output is one input among several with no extra weight.":
-    "Le résultat est un élément parmi d'autres, sans poids supplémentaire.",
   "Add a note": "Ajouter une note",
   "Add the required description to:": "Ajoutez la description requise pour :",
   "Answer the profile questions.": "Répondez aux questions du profil.",
@@ -147,8 +157,6 @@ export const fr: Record<string, string> = {
   "Candidates": "Candidats",
   "Check your hiring tool against NYC Local Law 144 before the independent audit. Results are for your internal use. A self-run test is not a bias audit under the law.":
     "Vérifiez votre outil de recrutement au regard de la NYC Local Law 144 avant l'audit indépendant. Les résultats sont destinés à un usage interne. Un test réalisé par vous-même n'est pas un audit de biais au sens de la loi.",
-  "Check your platform&apos;s criteria (optional)":
-    "Vérifier les critères de votre plateforme (facultatif)",
   "Checks": "Contrôles",
   "Common mistakes": "Erreurs fréquentes",
   "Confirm this basis": "Confirmer cette base",
@@ -200,8 +208,6 @@ export const fr: Record<string, string> = {
   "To start, open a use case, go to its settings and add the NYC Local Law 144 framework.":
     "Pour commencer, ouvrez un cas d'usage, allez dans ses paramètres et ajoutez le cadre NYC Local Law 144.",
   "Valid until": "Valable jusqu'au",
-  "VerifyWise&apos;s own measure of audit readiness, not a legal test.":
-    "Mesure propre à VerifyWise de la préparation à l'audit, pas un critère juridique.",
   "What it decides": "Ce que cela détermine",
   "Why this matters": "Pourquoi c'est important",
   "Open profile": "Ouvrir le profil",
@@ -224,7 +230,6 @@ export const fr: Record<string, string> = {
     "Cette exécution calcule des taux de notation, car une personne applique le seuil.",
   "This run calculates selection rates, because your platform applies the cutoff.":
     "Cette exécution calcule des taux de sélection, car votre plateforme applique le seuil.",
-  "No impact ratio is below 0.80.": "Aucun ratio d'impact n'est inférieur à 0,80.",
   "Local Law 144 sets no pass mark. 0.80 is the EEOC four-fifths convention: a lower ratio is something to investigate and report, not a failure.":
     "La Local Law 144 ne fixe aucun seuil de réussite. 0,80 est la convention des quatre cinquièmes de l'EEOC : un ratio inférieur est à examiner et à signaler, ce n'est pas un échec.",
   "Excluded: under 2% of the data": "Exclu : moins de 2 % des données",
@@ -259,11 +264,27 @@ export const fr: Record<string, string> = {
     "Vous pouvez enregistrer, mais le profil ne pourra pas être attesté tant que cette question n'aura pas de réponse.",
   "The file needs only the candidate_id column and the score or selection. Leave out the artifact column to stay under the 30 MB upload limit.":
     "Le fichier n'a besoin que de la colonne candidate_id et du score ou de la sélection. Omettez la colonne artifact pour rester sous la limite d'import de 30 Mo.",
+  "Compare with the criteria from your platform (optional)":
+    "Comparer avec les critères de votre plateforme (facultatif)",
+  "A VerifyWise measure of audit readiness, not a legal test.":
+    "Une mesure VerifyWise de la préparation à l'audit, pas un critère juridique.",
+  "The output is one input among several with no extra weight.":
+    "Le résultat est un élément parmi d'autres, sans poids supplémentaire.",
+  "Candidates assessed": "Candidats évalués",
+  "In an unknown category": "Dans une catégorie inconnue",
+  "Median score": "Score médian",
+  "Impact ratios below 0.80": "Ratios d'impact inférieurs à 0,80",
+  ", one year after this run.": ", un an après cette exécution.",
+  "Finish and attest your latest answers so new runs use them.":
+    "Terminez et attestez vos dernières réponses pour que les nouvelles exécutions les utilisent.",
+  "Answer who applies the cutoff, then attest again.":
+    "Indiquez qui applique le seuil, puis attestez à nouveau.",
+  "Upload scored results from your platform as your first run.":
+    "Importez les résultats notés de votre plateforme comme première exécution.",
+  "Copy failed": "Échec de la copie",
 };
 
 export const es: Record<string, string> = {
-  "The output is one input among several with no extra weight.":
-    "El resultado es un elemento entre varios, sin peso adicional.",
   "Add a note": "Añadir una nota",
   "Add the required description to:": "Añada la descripción obligatoria en:",
   "Answer the profile questions.": "Responda a las preguntas del perfil.",
@@ -278,8 +299,6 @@ export const es: Record<string, string> = {
   "Candidates": "Candidatos",
   "Check your hiring tool against NYC Local Law 144 before the independent audit. Results are for your internal use. A self-run test is not a bias audit under the law.":
     "Compruebe su herramienta de contratación según la NYC Local Law 144 antes de la auditoría independiente. Los resultados son para uso interno. Una prueba realizada por usted no es una auditoría de sesgo según la ley.",
-  "Check your platform&apos;s criteria (optional)":
-    "Comprobar los criterios de su plataforma (opcional)",
   "Checks": "Comprobaciones",
   "Common mistakes": "Errores frecuentes",
   "Confirm this basis": "Confirmar esta base",
@@ -332,8 +351,6 @@ export const es: Record<string, string> = {
   "To start, open a use case, go to its settings and add the NYC Local Law 144 framework.":
     "Para empezar, abra un caso de uso, vaya a su configuración y añada el marco NYC Local Law 144.",
   "Valid until": "Válido hasta",
-  "VerifyWise&apos;s own measure of audit readiness, not a legal test.":
-    "Medida propia de VerifyWise de la preparación para la auditoría, no un criterio legal.",
   "What it decides": "Qué decide",
   "Why this matters": "Por qué importa",
   "Open profile": "Abrir perfil",
@@ -356,7 +373,6 @@ export const es: Record<string, string> = {
     "Esta ejecución calcula tasas de puntuación, porque una persona aplica el umbral.",
   "This run calculates selection rates, because your platform applies the cutoff.":
     "Esta ejecución calcula tasas de selección, porque su plataforma aplica el umbral.",
-  "No impact ratio is below 0.80.": "Ningún ratio de impacto es inferior a 0,80.",
   "Local Law 144 sets no pass mark. 0.80 is the EEOC four-fifths convention: a lower ratio is something to investigate and report, not a failure.":
     "La Local Law 144 no fija ningún umbral de aprobación. 0,80 es la convención de las cuatro quintas partes de la EEOC: un ratio inferior se investiga y se informa, no es un suspenso.",
   "Excluded: under 2% of the data": "Excluido: menos del 2 % de los datos",
@@ -391,4 +407,22 @@ export const es: Record<string, string> = {
     "Puede guardarlo, pero el perfil no podrá atestiguarse hasta que esta pregunta tenga respuesta.",
   "The file needs only the candidate_id column and the score or selection. Leave out the artifact column to stay under the 30 MB upload limit.":
     "El archivo solo necesita la columna candidate_id y la puntuación o selección. Omita la columna artifact para no superar el límite de subida de 30 MB.",
+  "Compare with the criteria from your platform (optional)":
+    "Comparar con los criterios de su plataforma (opcional)",
+  "A VerifyWise measure of audit readiness, not a legal test.":
+    "Una medida de VerifyWise de la preparación para la auditoría, no un criterio legal.",
+  "The output is one input among several with no extra weight.":
+    "El resultado es un elemento entre varios, sin peso adicional.",
+  "Candidates assessed": "Candidatos evaluados",
+  "In an unknown category": "En una categoría desconocida",
+  "Median score": "Puntuación mediana",
+  "Impact ratios below 0.80": "Ratios de impacto inferiores a 0,80",
+  ", one year after this run.": ", un año después de esta ejecución.",
+  "Finish and attest your latest answers so new runs use them.":
+    "Complete y atestigüe sus últimas respuestas para que las nuevas ejecuciones las usen.",
+  "Answer who applies the cutoff, then attest again.":
+    "Indique quién aplica el umbral y vuelva a atestiguar.",
+  "Upload scored results from your platform as your first run.":
+    "Suba los resultados puntuados de su plataforma como primera ejecución.",
+  "Copy failed": "Error al copiar",
 };

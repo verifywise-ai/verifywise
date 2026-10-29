@@ -51,6 +51,7 @@ import OpenVetoList from "./OpenVetoList";
 import { questionTitle } from "./intakeLayout";
 import { cardSx, cellSx, headSx, helperSx, labelSx } from "./styles";
 import { parseSection, sectionPath, type BiasAuditSection } from "./sections";
+import { nextStepFor, type NextStep } from "./nextStep";
 
 /**
  * NYC Local Law 144 bias audit module: the profile intake, runs against an
@@ -390,53 +391,6 @@ const DRAFT_SCOPE_NOTE: Record<AedtReadiness["scope"], string> = {
   undetermined: "Your draft answers leave scope undetermined.",
 };
 
-interface NextStep {
-  section: BiasAuditSection;
-  text: string;
-  action: string;
-}
-
-/** The one thing to do next, from the profile and the runs recorded so far. */
-function nextStepFor(profile: AedtProfileView, runsCount: number): NextStep {
-  const current = profile.profile;
-  const decision = profile.attestedDecision;
-  if (!current) {
-    return { section: "profile", text: "Answer the profile questions.", action: "Open profile" };
-  }
-  if (!decision) {
-    return profile.readiness.missingVetoes.length > 0
-      ? {
-          section: "profile",
-          text: "Answer the required questions, then attest the profile.",
-          action: "Open profile",
-        }
-      : {
-          section: "profile",
-          text: "Attest the profile. An Admin confirms the answers as your position.",
-          action: "Open profile",
-        };
-  }
-  if (decision.readiness.scope === "out_of_scope") {
-    return {
-      section: "scope",
-      text: "The tool is out of scope on your answers. Record a scope determination.",
-      action: "Open scope determination",
-    };
-  }
-  if (runsCount === 0) {
-    return {
-      section: "generate",
-      text: "Generate test candidates, score them in your platform, then upload the scores as a run.",
-      action: "Generate test candidates",
-    };
-  }
-  return {
-    section: "runs",
-    text: "Record a run for this month to keep your results current.",
-    action: "Open runs",
-  };
-}
-
 interface ProfileSummaryProps {
   profile: AedtProfileView;
   nextStep: NextStep;
@@ -526,7 +480,7 @@ const ProfileSummary = ({ profile, nextStep, onGo }: ProfileSummaryProps) => {
               {`${readiness.score}%`}
             </Typography>
             <Typography sx={helperSx}>
-              VerifyWise&apos;s own measure of audit readiness, not a legal test.
+              A VerifyWise measure of audit readiness, not a legal test.
             </Typography>
           </>
         )}

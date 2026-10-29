@@ -233,7 +233,8 @@ const ProfileWizard = ({
   else if (profileStatus === "attested")
     attestReason = "This version is attested. Change an answer to start a new version.";
   const attestDisabled = locked || attestReason !== null || openVetoes.length > 0;
-  const answeredCount = visible.filter((q) => isAnswered(draft[q.key])).length;
+  // "I don't know" leaves a question open, as the attest gate reads it.
+  const answeredCount = visible.filter((q) => hasUsableAnswer(draft[q.key])).length;
 
   return (
     <Stack gap="16px">

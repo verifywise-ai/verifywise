@@ -88,19 +88,19 @@ export const LL144_QUESTIONS: IntakeQuestion[] = [
         value: "only",
         label: "It is the only thing looked at",
         consequence:
-          "On this answer the tool fits the law's definition of an automated employment decision tool (5-300), so Local Law 144 applies.",
+          "This matches the description of an automated employment decision tool in 5-300, so the test treats the tool as in scope.",
       },
       {
         value: "biggest",
         label: "It is the biggest single factor",
         consequence:
-          "On this answer the tool fits the law's definition of an automated employment decision tool (5-300), so Local Law 144 applies.",
+          "This matches the description of an automated employment decision tool in 5-300, so the test treats the tool as in scope.",
       },
       {
         value: "overrules",
         label: "It can overrule a person's conclusion",
         consequence:
-          "On this answer the tool fits the law's definition of an automated employment decision tool (5-300), because its output can overrule a person's conclusion.",
+          "Output that can overrule a person's conclusion matches the description of an automated employment decision tool in 5-300, so the test treats the tool as in scope.",
       },
       {
         value: "one_of_several",

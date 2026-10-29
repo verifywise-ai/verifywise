@@ -10,7 +10,7 @@ import {
   TableRow,
   Typography,
 } from "@mui/material";
-import { Download, FileText } from "lucide-react";
+import { Copy, Download, FileText } from "lucide-react";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import { EmptyState } from "../../components/EmptyState";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
@@ -235,8 +235,8 @@ const StancePanel = ({
                       <PersonLabel userId={s.generated_by} />
                     </TableCell>
                     <TableCell sx={cellSx}>{s.profile_version}</TableCell>
-                    <TableCell sx={{ ...cellSx, fontSize: 12 }} title={s.pdf_sha256 ?? undefined}>
-                      {s.pdf_sha256 ? `${s.pdf_sha256.slice(0, 12)}…` : "—"}
+                    <TableCell sx={cellSx}>
+                      {s.pdf_sha256 ? <HashCell hash={s.pdf_sha256} /> : "—"}
                     </TableCell>
                     <TableCell sx={cellSx} align="right">
                       <CustomizableButton
@@ -258,6 +258,34 @@ const StancePanel = ({
         )}
       </Stack>
     </Box>
+  );
+};
+
+/**
+ * A stance PDF's SHA-256, shortened on screen. The full digest is copied in
+ * one click, so a downloaded file can still be checked against it.
+ */
+const HashCell = ({ hash }: { hash: string }) => {
+  const [copied, setCopied] = useState<"idle" | "copied" | "failed">("idle");
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(hash);
+      setCopied("copied");
+    } catch {
+      setCopied("failed");
+    }
+  };
+  return (
+    <Stack direction="row" alignItems="center" gap="8px">
+      <Box component="span" title={hash} sx={{ fontSize: 12 }}>{`${hash.slice(0, 12)}…`}</Box>
+      <CustomizableButton
+        variant="text"
+        size="small"
+        text={copied === "copied" ? "Copied" : copied === "failed" ? "Copy failed" : "Copy"}
+        startIcon={<Copy size={14} strokeWidth={1.5} />}
+        onClick={() => void copy()}
+      />
+    </Stack>
   );
 };
 

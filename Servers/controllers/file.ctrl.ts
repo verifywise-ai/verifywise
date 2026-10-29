@@ -23,7 +23,7 @@ import {
   EntityType,
   LinkType,
 } from "../repositories/file.repository";
-import { parseBulkIds, assertOrgOwnsIds, withBulkTransaction } from "../utils/bulkAction.utils";
+import { parseBulkIds, withBulkTransaction } from "../utils/bulkAction.utils";
 import { getUserProjects } from "../utils/project.utils";
 import {
   ForbiddenException,
@@ -266,14 +266,17 @@ export async function postFileContent(req: RequestWithFile, res: Response): Prom
 
     const filesToDelete = JSON.parse(body.delete || "[]") as number[];
     if (filesToDelete.length > 0) {
-      // Verify every file belongs to this organization before deleting, so
-      // cross-organization ids cannot be probed or removed (#4722).
-      await assertOrgOwnsIds({
-        table: "files",
-        ids: filesToDelete,
-        organizationId: req.organizationId!,
-        transaction,
-      });
+      // Every id must be a visible file of this organization before anything
+      // is deleted, so cross-organization ids cannot be probed or removed
+      // (#4722). A bias audit stance PDF answers exactly as a missing file.
+      if (!(await allFilesVisibleQuery(filesToDelete, req.organizationId!, transaction))) {
+        throw new ForbiddenException(
+          "One or more ids are not accessible in this organization",
+          "files",
+          "bulk_action",
+          { metadata: { expected: filesToDelete.length } },
+        );
+      }
       for (let fileToDelete of filesToDelete) {
         await deleteFileById(fileToDelete, req.organizationId!, transaction);
       }
@@ -338,10 +341,6 @@ export async function postFileContent(req: RequestWithFile, res: Response): Prom
     }
     if (error instanceof ForbiddenException) {
       return res.status(403).json(STATUS_CODE[403](error.message));
-    }
-    // e.g. a delete list naming a bias audit stance PDF, which is never deletable
-    if ((error as { statusCode?: number })?.statusCode === 409) {
-      return res.status(409).json(STATUS_CODE[409](translateError(req, error)));
     }
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
