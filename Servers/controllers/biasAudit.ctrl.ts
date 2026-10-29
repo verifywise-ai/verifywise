@@ -65,8 +65,8 @@ const FILE_NAME = "biasAudit.ctrl.ts";
 /** The one framework this module serves. */
 export const LL144_FRAMEWORK_ID = nycLocalLaw144Structure.id;
 
-/** Upload limit for a dataset, matching the shared upload default. */
-export const DATASET_MAX_BYTES = 30 * 1024 * 1024;
+/** Upload limit for a dataset; the parser bounds its read by the same value. */
+export { DATASET_MAX_BYTES } from "../services/biasAudit/datasetParser";
 
 // ----------------------------------------------------------- validation
 

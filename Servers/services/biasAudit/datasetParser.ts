@@ -47,9 +47,18 @@ export interface ParsedDataset {
 const TRUE_WORDS = new Set(["1", "true", "yes", "y", "t"]);
 const FALSE_WORDS = new Set(["0", "false", "no", "n", "f"]);
 
+/** Upload limit for a dataset, matching the shared upload default. */
+export const DATASET_MAX_BYTES = 30 * 1024 * 1024;
+
 /** RFC 4180 reader: quoted fields may hold commas, doubled quotes and newlines. */
 function readCsv(text: string): string[][] {
+  if (typeof text !== "string") throw new DatasetParseError("The file could not be read as text.");
   const src = text.replace(/^﻿/, "");
+  // UTF-8 never decodes to more characters than bytes, so an upload within
+  // the limit always passes; this bounds the loop below for any other caller.
+  if (src.length > DATASET_MAX_BYTES) {
+    throw new DatasetParseError("The file is too large to read.");
+  }
   const rows: string[][] = [];
   let row: string[] = [];
   let field = "";

@@ -20,6 +20,7 @@
 
 /** Number of maximal consecutive stretches of equal values. */
 export function countRuns(values: string[]): number {
+  if (!Array.isArray(values)) throw new TypeError("countRuns needs an array of values.");
   if (values.length === 0) return 0;
   let runs = 1;
   for (let i = 1; i < values.length; i++) {
