@@ -4,13 +4,15 @@ import { AlertCircle } from "lucide-react";
 import type { SchemaLogicError } from "../../../../application/utils/intakeFormLogic";
 import type { FormField, FormRouting } from "../types";
 import type { RoutingReviewer } from "../routing/RoutingSettingsSection";
-import { buildLogicOverview, type ConditionText } from "./logicOverview";
+import { buildLogicOverview, MISSING_FIELD, type ConditionText } from "./logicOverview";
 
 interface LogicOverviewPanelProps {
   fields: FormField[];
   logicErrors: SchemaLogicError[];
   routing: FormRouting | null;
   reviewers: RoutingReviewer[];
+  /** False until the reviewer list has loaded. */
+  reviewersLoaded: boolean;
   /** Opens the field's editor. */
   onSelectField: (fieldId: string) => void;
 }
@@ -21,6 +23,7 @@ export function LogicOverviewPanel({
   logicErrors,
   routing,
   reviewers,
+  reviewersLoaded,
   onSelectField,
 }: LogicOverviewPanelProps) {
   const theme = useTheme();
@@ -41,43 +44,54 @@ export function LogicOverviewPanel({
 
   const empty = (message: string) => <Typography sx={text}>{message}</Typography>;
 
-  const row = (fieldId: string, label: string, errors: string[], body: ReactNode) => (
+  // The field name is the button; the row around it also opens the field on a click.
+  const row = (key: string, fieldId: string, label: string, errors: string[], body?: ReactNode) => (
     <Box
-      key={fieldId}
-      component="button"
-      type="button"
-      onClick={() => onSelectField(fieldId)}
+      key={key}
       data-testid={`logic-row-${fieldId}`}
+      onClick={() => onSelectField(fieldId)}
       sx={{
         "display": "flex",
         "flexDirection": "column",
         "gap": "4px",
-        "width": "100%",
-        "textAlign": "left",
         "p": "8px 10px",
         "border": `1px solid ${errors.length > 0 ? theme.palette.status.error.text : theme.palette.border.dark}`,
         "borderRadius": "4px",
-        "backgroundColor": theme.palette.background.main,
         "cursor": "pointer",
-        "font": "inherit",
         "&:hover": { backgroundColor: theme.palette.background.accent },
-        "&:focus-visible": {
-          outline: `2px solid ${theme.palette.primary.main}`,
-          outlineOffset: "1px",
-        },
       }}
     >
-      <Typography
-        component="span"
-        data-vw-no-translate="true"
-        sx={{ fontSize: "13px", fontWeight: 600, color: theme.palette.text.primary }}
+      <Box
+        component="button"
+        type="button"
+        onClick={(event) => {
+          event.stopPropagation();
+          onSelectField(fieldId);
+        }}
+        sx={{
+          "alignSelf": "flex-start",
+          "p": 0,
+          "border": "none",
+          "background": "none",
+          "font": "inherit",
+          "fontSize": "13px",
+          "fontWeight": 600,
+          "textAlign": "left",
+          "color": theme.palette.text.primary,
+          "cursor": "pointer",
+          "&:focus-visible": {
+            outline: `2px solid ${theme.palette.primary.main}`,
+            outlineOffset: "2px",
+            borderRadius: "4px",
+          },
+        }}
       >
-        {label}
-      </Typography>
+        <span data-vw-no-translate="true">{label}</span>
+      </Box>
       {body}
-      {errors.map((message) => (
+      {errors.map((message, index) => (
         <Typography
-          key={message}
+          key={index}
           component="span"
           sx={{
             display: "flex",
@@ -88,16 +102,21 @@ export function LogicOverviewPanel({
           }}
         >
           <AlertCircle size={14} strokeWidth={1.5} style={{ flexShrink: 0, marginTop: 2 }} />
-          {message}
+          <span data-vw-no-translate="true">{message}</span>
         </Typography>
       ))}
     </Box>
   );
 
-  // Field names stay as typed; the fixed words go through the page translator.
+  // Field names and values stay as typed; the fixed words go through the page translator.
   const condition = (part: ConditionText, index: number) => (
-    <Box component="li" key={index} sx={{ ...text, ml: "16px" }}>
-      <span data-vw-no-translate="true">{part.field}</span> <span>{part.operator}</span>
+    <Box component="li" key={index} sx={text}>
+      {part.field === MISSING_FIELD ? (
+        <span>{MISSING_FIELD}</span>
+      ) : (
+        <span data-vw-no-translate="true">{part.field}</span>
+      )}{" "}
+      <span>{part.operator}</span>
       {part.value && (
         <>
           {" "}
@@ -107,11 +126,27 @@ export function LogicOverviewPanel({
     </Box>
   );
 
-  const names = (ids: number[]) =>
-    ids
-      .map((id) => reviewers.find((reviewer) => reviewer._id === id)?.name)
-      .filter(Boolean)
-      .join(", ");
+  // Saved reviewers who can no longer review still count, as in the routing settings.
+  const names = (ids: number[]): ReactNode => {
+    const known = ids.flatMap((id) => {
+      const reviewer = reviewers.find((candidate) => candidate._id === id);
+      return reviewer ? [reviewer.name] : [];
+    });
+    const former = reviewersLoaded ? ids.length - known.length : 0;
+    if (known.length === 0 && former === 0) return "-";
+    return (
+      <>
+        <span data-vw-no-translate="true">{known.join(", ")}</span>
+        {former > 0 && (
+          <>
+            {known.length > 0 && ", "}
+            <span>Former user</span>
+            {former > 1 && ` (${former})`}
+          </>
+        )}
+      </>
+    );
+  };
 
   return (
     <Box
@@ -142,14 +177,21 @@ export function LogicOverviewPanel({
         "Calculations",
         overview.calculations.length === 0
           ? empty("No calculations yet. Add a calculated field from the Advanced section.")
-          : overview.calculations.map((item) =>
+          : overview.calculations.map((item, index) =>
               row(
+                `calc-${index}`,
                 item.fieldId,
                 item.fieldLabel,
                 item.errors,
-                <Typography component="span" data-vw-no-translate="true" sx={text}>
-                  {item.formula || "No formula yet"}
-                </Typography>,
+                item.formula ? (
+                  <Typography component="span" data-vw-no-translate="true" sx={text}>
+                    {item.formula}
+                  </Typography>
+                ) : (
+                  <Typography component="span" sx={text}>
+                    No formula yet
+                  </Typography>
+                ),
               ),
             ),
       )}
@@ -158,18 +200,17 @@ export function LogicOverviewPanel({
         "Show/hide rules",
         overview.rules.length === 0
           ? empty("No show/hide rules yet.")
-          : overview.rules.map((item) =>
+          : overview.rules.map((item, index) =>
               row(
+                `rule-${index}`,
                 item.fieldId,
                 item.fieldLabel,
                 item.errors,
                 <>
                   <Typography component="span" sx={text}>
-                    {item.match === "any"
-                      ? "Shown when any of these match"
-                      : "Shown when all of these match"}
+                    {item.summary}
                   </Typography>
-                  <Box component="ul" sx={{ m: 0, p: 0 }}>
+                  <Box component="ul" sx={{ m: 0, pl: "20px" }}>
                     {item.conditions.map(condition)}
                   </Box>
                 </>,
@@ -180,8 +221,9 @@ export function LogicOverviewPanel({
       {overview.riskTags.length > 0 &&
         group(
           "Risk scoring",
-          overview.riskTags.map((item) =>
+          overview.riskTags.map((item, index) =>
             row(
+              `tag-${index}`,
               item.fieldId,
               item.fieldLabel,
               item.errors,
@@ -192,19 +234,30 @@ export function LogicOverviewPanel({
           ),
         )}
 
+      {overview.otherProblems.length > 0 &&
+        group(
+          "Other problems",
+          overview.otherProblems.map((item, index) =>
+            row(`other-${index}`, item.fieldId, item.fieldLabel, item.errors),
+          ),
+        )}
+
       {group(
         "Routing",
         !routing?.enabled ? (
           empty("Routing is off. Turn it on in Form settings.")
         ) : (
           <Box sx={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            {/* The order laneFor applies the rules in. */}
             <Box component="ol" sx={{ ...text, m: 0, pl: "20px" }}>
               <li>Prohibited practices go to senior reviewers.</li>
               <li>Submissions without a score go to senior reviewers.</li>
-              <li>
-                <span>Scores within</span> {routing.closeCallMargin} <span>points of</span>{" "}
-                {routing.threshold} <span>go to senior reviewers.</span>
-              </li>
+              {routing.closeCallMargin > 0 && (
+                <li>
+                  <span>Scores less than</span> {routing.closeCallMargin} <span>points from</span>{" "}
+                  {routing.threshold} <span>go to senior reviewers.</span>
+                </li>
+              )}
               <li>
                 <span>Scores of</span> {routing.threshold}{" "}
                 <span>or more go to senior reviewers.</span>
@@ -212,17 +265,20 @@ export function LogicOverviewPanel({
               <li>Other submissions go to standard reviewers.</li>
             </Box>
             <Typography sx={text}>
-              <span>Senior reviewers:</span>{" "}
-              <span data-vw-no-translate="true">{names(routing.seniorReviewerIds) || "-"}</span>
+              <span>Senior reviewers:</span> {names(routing.seniorReviewerIds)}
             </Typography>
             <Typography sx={text}>
-              <span>Standard reviewers:</span>{" "}
-              <span data-vw-no-translate="true">{names(routing.standardReviewerIds) || "-"}</span>
+              <span>Standard reviewers:</span> {names(routing.standardReviewerIds)}
             </Typography>
-            <Typography sx={text}>
-              {routing.secondReviewRate}%{" "}
-              <span>of approvals get a second review by another senior reviewer.</span>
-            </Typography>
+            {routing.secondReviewRate > 0 && (
+              <Typography sx={text}>
+                {routing.secondReviewRate}%{" "}
+                <span>
+                  of standard lane approvals by reviewers who are not senior are picked at random
+                  for a second review by a senior reviewer.
+                </span>
+              </Typography>
+            )}
           </Box>
         ),
       )}

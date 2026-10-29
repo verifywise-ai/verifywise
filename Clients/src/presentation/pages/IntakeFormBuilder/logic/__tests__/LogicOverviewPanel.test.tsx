@@ -40,6 +40,7 @@ const renderPanel = (props: Partial<React.ComponentProps<typeof LogicOverviewPan
       logicErrors={[]}
       routing={ROUTING}
       reviewers={REVIEWERS}
+      reviewersLoaded
       onSelectField={onSelectField}
       {...props}
     />,
@@ -52,7 +53,7 @@ describe("LogicOverviewPanel", () => {
     renderPanel();
     expect(screen.getByTestId("logic-row-annual")).toHaveTextContent("= Monthly cost × 12");
     const rule = screen.getByTestId("logic-row-note");
-    expect(rule).toHaveTextContent("Shown when all of these match");
+    expect(rule).toHaveTextContent("Shown when all conditions match");
     expect(rule).toHaveTextContent("Annual cost > 500");
   });
 
@@ -66,21 +67,38 @@ describe("LogicOverviewPanel", () => {
     renderPanel({
       logicErrors: [{ fieldId: "annual", message: 'Field "Annual cost": the formula is broken' }],
     });
-    expect(screen.getByTestId("logic-row-annual")).toHaveTextContent(
-      'Field "Annual cost": the formula is broken',
-    );
+    expect(screen.getByTestId("logic-row-annual")).toHaveTextContent("the formula is broken");
   });
 
   it("summarises routing with its numbers and reviewers", () => {
     renderPanel();
-    expect(screen.getByText(/Scores within/).closest("li")).toHaveTextContent(
-      "Scores within 5 points of 60 go to senior reviewers.",
+    expect(screen.getByText(/Scores less than/).closest("li")).toHaveTextContent(
+      "Scores less than 5 points from 60 go to senior reviewers.",
     );
     expect(screen.getByText("Sam Senior")).toBeInTheDocument();
     expect(screen.getByText("Pat Standard")).toBeInTheDocument();
-    expect(screen.getByText(/of approvals get a second review/).parentElement).toHaveTextContent(
-      "20% of approvals get a second review by another senior reviewer.",
+    expect(screen.getByText(/are picked at random/).parentElement).toHaveTextContent(
+      "20% of standard lane approvals by reviewers who are not senior are picked at random for a second review by a senior reviewer.",
     );
+  });
+
+  it("opens the field from its name button", () => {
+    const onSelectField = renderPanel();
+    fireEvent.click(screen.getByRole("button", { name: "Annual cost" }));
+    expect(onSelectField).toHaveBeenCalledTimes(1);
+    expect(onSelectField).toHaveBeenCalledWith("annual");
+  });
+
+  it("names saved reviewers who can no longer review as former users", () => {
+    renderPanel({ routing: { ...ROUTING, seniorReviewerIds: [1, 9] } });
+    expect(screen.getByText("Senior reviewers:").parentElement).toHaveTextContent(
+      "Senior reviewers: Sam Senior, Former user",
+    );
+  });
+
+  it("leaves out the close call line when the margin is 0", () => {
+    renderPanel({ routing: { ...ROUTING, closeCallMargin: 0 } });
+    expect(screen.queryByText(/Scores less than/)).not.toBeInTheDocument();
   });
 
   it("says when routing is off and when nothing is set up yet", () => {

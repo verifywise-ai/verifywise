@@ -949,6 +949,7 @@ export function IntakeFormBuilder() {
                     logicErrors={logicErrors}
                     routing={form.routing ?? null}
                     reviewers={routingReviewers}
+                    reviewersLoaded={routingReviewersLoaded}
                     onSelectField={(fieldId) => {
                       setSelectedFieldId(fieldId);
                       setBuilderMode("edit");

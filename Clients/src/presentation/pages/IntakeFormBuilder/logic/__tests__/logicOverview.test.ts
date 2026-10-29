@@ -47,7 +47,7 @@ describe("buildLogicOverview", () => {
   it("words each rule condition with labels, option labels and the combinator", () => {
     const { rules } = buildLogicOverview([COUNTRY, COST, ANNUAL, GDPR]);
     expect(rules).toHaveLength(1);
-    expect(rules[0].match).toBe("any");
+    expect(rules[0].summary).toBe("Shown when any condition matches");
     expect(rules[0].conditions).toEqual([
       { field: "Country", operator: "is", value: "EU" },
       { field: "Annual cost", operator: ">", value: "1000" },
@@ -62,12 +62,24 @@ describe("buildLogicOverview", () => {
     expect(riskTags[0].dimension).not.toBe("data_sensitivity");
   });
 
-  it("puts each field's logic errors on its rows", () => {
-    const { calculations } = buildLogicOverview(
-      [COST, ANNUAL],
+  it("shows a field's errors once, on its first row, without the field prefix", () => {
+    const tagged = { ...ANNUAL, riskDimension: "data_sensitivity" };
+    const overview = buildLogicOverview(
+      [COST, tagged],
       [{ fieldId: "annual", message: 'Field "Annual cost": broken' }],
     );
-    expect(calculations[0].errors).toEqual(['Field "Annual cost": broken']);
+    expect(overview.calculations[0].errors).toEqual(["broken"]);
+    expect(overview.riskTags[0].errors).toEqual([]);
+  });
+
+  it("lists errors on fields with no logic row under other problems", () => {
+    const { otherProblems } = buildLogicOverview(
+      [COUNTRY, COST],
+      [{ fieldId: "country", message: 'Field "Country": two options share a value' }],
+    );
+    expect(otherProblems).toEqual([
+      { fieldId: "country", fieldLabel: "Country", errors: ["two options share a value"] },
+    ]);
   });
 
   it("is empty for a form without logic", () => {
@@ -75,6 +87,7 @@ describe("buildLogicOverview", () => {
       calculations: [],
       rules: [],
       riskTags: [],
+      otherProblems: [],
     });
   });
 
