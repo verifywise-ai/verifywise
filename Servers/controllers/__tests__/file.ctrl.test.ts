@@ -54,10 +54,14 @@ jest.mock("../../repositories/file.repository", () => ({
 }));
 jest.mock("../../utils/bulkAction.utils", () => ({
   parseBulkIds: jest.fn((ids: number[]) => ids),
+  assertOrgOwnsIds: jest.fn().mockResolvedValue(undefined),
   withBulkTransaction: jest.fn().mockImplementation(async (_opts: any, fn: any) => {
     const transaction = { commit: jest.fn(), rollback: jest.fn() };
     await fn(transaction);
   }),
+}));
+jest.mock("../../utils/project.utils", () => ({
+  getUserProjects: jest.fn(),
 }));
 jest.mock("../../domain.layer/exceptions/custom.exception", () => ({
   ForbiddenException: class ForbiddenException extends Error {},
@@ -82,6 +86,9 @@ import {
 } from "../../utils/fileUpload.utils";
 import getUserFilesMetaDataQuery from "../../utils/files/getUserFilesMetaData.utils";
 import { addFileToAnswerEU } from "../../utils/eu.utils";
+import { getUserProjects } from "../../utils/project.utils";
+import { assertOrgOwnsIds } from "../../utils/bulkAction.utils";
+import { ForbiddenException } from "../../domain.layer/exceptions/custom.exception";
 import { createFileEntityLink, deleteFileEntityLink } from "../../repositories/file.repository";
 
 const mockGetFile = getFileById as jest.MockedFunction<typeof getFileById>;
@@ -95,6 +102,8 @@ const mockGetUserFiles = getUserFilesMetaDataQuery as jest.MockedFunction<
   typeof getUserFilesMetaDataQuery
 >;
 const mockAddFile = addFileToAnswerEU as jest.MockedFunction<typeof addFileToAnswerEU>;
+const mockGetUserProjects = getUserProjects as jest.MockedFunction<typeof getUserProjects>;
+const mockAssertOrgOwnsIds = assertOrgOwnsIds as jest.MockedFunction<typeof assertOrgOwnsIds>;
 const mockCreateLink = createFileEntityLink as jest.MockedFunction<typeof createFileEntityLink>;
 const mockDeleteLink = deleteFileEntityLink as jest.MockedFunction<typeof deleteFileEntityLink>;
 
@@ -224,6 +233,12 @@ describe("file.ctrl", () => {
   });
 
   describe("postFileContent", () => {
+    beforeEach(() => {
+      // By default the user belongs to project 1 (non-admin membership list).
+      mockGetUserProjects.mockResolvedValue([{ id: 1 } as any]);
+      mockAssertOrgOwnsIds.mockResolvedValue(undefined);
+    });
+
     it("should return 201 when files are uploaded", async () => {
       mockUpload.mockResolvedValue({
         id: 1,
@@ -236,17 +251,99 @@ describe("file.ctrl", () => {
       } as any);
       mockAddFile.mockResolvedValue({ evidence_files: [{ id: 1 }] } as any);
       const req = createReq({
-        body: { question_id: "1", project_id: 1, user_id: 1, delete: "[]" },
+        body: { question_id: "1", project_id: 1, delete: "[]" },
         files: [{ originalname: "test.txt", buffer: Buffer.from("hello") }],
       });
       const res = createRes();
       await postFileContent(req, res);
       expect(res.status).toHaveBeenCalledWith(201);
+      // The uploader is the authenticated user, never a client-supplied id (#4722).
+      expect(mockUpload).toHaveBeenCalledWith(
+        expect.anything(),
+        req.userId,
+        1,
+        "Assessment tracker group",
+        req.organizationId,
+        expect.anything(),
+      );
     });
+
+    it("should ignore a client-supplied user_id and use the authenticated user", async () => {
+      mockUpload.mockResolvedValue({
+        id: 1,
+        filename: "test.txt",
+        project_id: 1,
+        uploaded_by: 1,
+        uploaded_time: new Date(),
+        type: "text/plain",
+        source: "upload",
+      } as any);
+      mockAddFile.mockResolvedValue({ evidence_files: [{ id: 1 }] } as any);
+      const req = createReq({
+        body: { question_id: "1", project_id: 1, user_id: 999, delete: "[]" },
+        files: [{ originalname: "test.txt", buffer: Buffer.from("hello") }],
+      });
+      const res = createRes();
+      await postFileContent(req, res);
+      expect(res.status).toHaveBeenCalledWith(201);
+      expect(mockUpload.mock.calls[0][1]).toBe(req.userId);
+      expect(mockUpload.mock.calls[0][1]).not.toBe(999);
+    });
+
+    it("should return 403 when the user has no access to the target project", async () => {
+      mockGetUserProjects.mockResolvedValue([{ id: 2 } as any]);
+      const req = createReq({
+        role: "Editor",
+        body: { question_id: "1", project_id: 1, delete: "[]" },
+        files: [{ originalname: "test.txt", buffer: Buffer.from("hello") }],
+      });
+      const res = createRes();
+      await postFileContent(req, res);
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(mockUpload).not.toHaveBeenCalled();
+    });
+
+    it("should return 400 for an invalid project id", async () => {
+      const req = createReq({
+        body: { question_id: "1", project_id: "abc", delete: "[]" },
+        files: [{ originalname: "test.txt", buffer: Buffer.from("hello") }],
+      });
+      const res = createRes();
+      await postFileContent(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(mockUpload).not.toHaveBeenCalled();
+    });
+
+    it("should return 403 when delete ids are not owned by the organization", async () => {
+      mockAssertOrgOwnsIds.mockRejectedValue(new ForbiddenException("not accessible"));
+      const req = createReq({
+        body: { question_id: "1", project_id: 1, delete: "[55]" },
+        files: [],
+      });
+      const res = createRes();
+      await postFileContent(req, res);
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(mockDeleteFile).not.toHaveBeenCalled();
+    });
+
+    it("should return 401 when userId is missing", async () => {
+      const req = createReq({ userId: undefined });
+      const res = createRes();
+      await postFileContent(req, res);
+      expect(res.status).toHaveBeenCalledWith(401);
+    });
+
+    it("should return 400 when organizationId is missing", async () => {
+      const req = createReq({ organizationId: undefined });
+      const res = createRes();
+      await postFileContent(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+    });
+
     it("should return 500 on error", async () => {
       mockUpload.mockRejectedValue(new Error("DB error"));
       const req = createReq({
-        body: { question_id: "1", project_id: 1, user_id: 1, delete: "[]" },
+        body: { question_id: "1", project_id: 1, delete: "[]" },
         files: [{ originalname: "test.txt", buffer: Buffer.from("hello") }],
       });
       const res = createRes();

@@ -32,6 +32,8 @@
  *   5/min each — outbound email
  * - slackWebhookCreateLimiter / slackWorkspaceCreateLimiter: 10/hour each
  * - healthCheckLimiter: 1000/min — probe endpoint
+ * - intakeLiveChecksVisitorLimiter: 10/min, intakePrefillVisitorLimiter: 3/10min —
+ *   public intake AI calls, keyed by IP plus resolved form id
  *
  * The strict auth/refresh limits apply by default. They are relaxed ONLY when
  * NODE_ENV is an explicit dev/test value, so a single developer hammering
@@ -65,6 +67,12 @@ export interface RateLimitConfig {
   // ingestion) key by token so tenants behind a shared NAT don't share a budget.
   keyGenerator?: Options["keyGenerator"];
 }
+
+/** IP plus the resolved public intake form id (see intakePublicForm.middleware). */
+const intakeVisitorKey: Options["keyGenerator"] = (req, res) => {
+  const formId = (res.locals?.intakeForm as { form?: { id?: number } } | undefined)?.form?.id;
+  return `${ipKeyGenerator(req.ip ?? "")}:${formId ?? "unknown"}`;
+};
 
 /**
  * Builds the rate limit configurations for every endpoint type.
@@ -148,6 +156,23 @@ export const buildRateLimitConfigs = (relaxed: boolean): Record<string, RateLimi
       // IPv6 addresses are normalized (raw req.ip is rejected by express-rate-limit v8).
       return tokenId !== undefined ? `mrm-token:${tokenId}` : ipKeyGenerator(req.ip ?? "");
     },
+  },
+  // Public intake AI calls (live checks and vendor-document prefill) spend the
+  // form's LLM key, so they are not relaxed in dev/test. Keyed on IP plus the
+  // form id resolvePublicIntakeForm put on res.locals, so the by-id URL and the
+  // slug URL of one form share one budget. The per-form hourly caps across all
+  // visitors live in Redis (services/intakeLiveChecks/formBudget.ts).
+  intakeLiveChecksVisitor: {
+    windowMinutes: 1,
+    maxRequests: 10,
+    message: "Too many live check requests. Please try again in a minute.",
+    keyGenerator: intakeVisitorKey,
+  },
+  intakePrefillVisitor: {
+    windowMinutes: 10,
+    maxRequests: 3,
+    message: "Too many document uploads. Please try again in a few minutes.",
+    keyGenerator: intakeVisitorKey,
   },
   // The OpenAI-compatible /v1 proxy for virtual keys. Mounted ahead of the
   // global ceiling because one customer app server sends all of its LLM
@@ -346,3 +371,13 @@ export const slackWorkspaceCreateLimiter = createRateLimiter(
 
 /** Generous limiter for the GET /health probe endpoint. */
 export const healthCheckLimiter = createRateLimiter(RATE_LIMIT_CONFIGS.healthCheck);
+
+/** Per visitor and form: 10 a minute on the public intake live-check endpoint. */
+export const intakeLiveChecksVisitorLimiter = createRateLimiter(
+  RATE_LIMIT_CONFIGS.intakeLiveChecksVisitor,
+);
+
+/** Per visitor and form: 3 per 10 minutes on the public intake prefill endpoint. */
+export const intakePrefillVisitorLimiter = createRateLimiter(
+  RATE_LIMIT_CONFIGS.intakePrefillVisitor,
+);

@@ -41,6 +41,8 @@ import {
 import ScoreSection from "./assessment/ScoreSection";
 import SuggestedRisksSection from "./assessment/SuggestedRisksSection";
 import { isRetryable } from "./assessment/scoreView";
+import { AnswerLiveChecks, LiveChecksSection } from "./LiveChecksSection";
+import type { ILiveChecks } from "../../../domain/types/intakeLiveChecks";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import { formatAnswer } from "../../../application/utils/intakeAnswerFormat";
 import { isEmptyAnswer, sortFields } from "../../../application/utils/intakeFormLogic";
@@ -86,6 +88,7 @@ interface PreviewData {
   suggestedRisks: SuggestedRisksBlock | null;
   assessedLevel: ClassificationLevel | null;
   riskOverride: RiskOverride | null;
+  liveChecks: ILiveChecks | null;
   routing: SubmissionRouting | null;
   routingEnabled: boolean;
   canDecide: boolean;
@@ -393,6 +396,7 @@ function SubmissionPreviewModal({
           suggestedRisks: response.data.suggestedRisks ?? null,
           assessedLevel: response.data.assessedLevel ?? null,
           riskOverride: response.data.riskOverride ?? null,
+          liveChecks: response.data.liveChecks ?? null,
           routing: response.data.routing ?? null,
           routingEnabled: response.data.routingEnabled ?? false,
           canDecide: response.data.canDecide ?? true,
@@ -792,6 +796,10 @@ function SubmissionPreviewModal({
               />
             )}
 
+            <Box sx={{ mt: "16px" }}>
+              <LiveChecksSection liveChecks={previewData?.liveChecks ?? null} />
+            </Box>
+
             {/* Override toggle — only for pending submissions */}
             {isPending && (
               <>
@@ -940,15 +948,20 @@ function SubmissionPreviewModal({
                     const currentValue = String(editedEntityData[fieldKey] ?? "");
 
                     return (
-                      <Field
-                        key={field.id}
-                        id={`entity-${field.id}`}
-                        label={field.label}
-                        value={currentValue}
-                        onChange={(e) => handleFieldChange(fieldKey, e.target.value)}
-                        rows={field.type === "textarea" ? 2 : undefined}
-                        placeholder={field.placeholder ?? ""}
-                      />
+                      <Box key={field.id}>
+                        <Field
+                          id={`entity-${field.id}`}
+                          label={field.label}
+                          value={currentValue}
+                          onChange={(e) => handleFieldChange(fieldKey, e.target.value)}
+                          rows={field.type === "textarea" ? 2 : undefined}
+                          placeholder={field.placeholder ?? ""}
+                        />
+                        <AnswerLiveChecks
+                          liveChecks={previewData?.liveChecks ?? null}
+                          questionId={field.id}
+                        />
+                      </Box>
                     );
                   })}
                 </Box>
@@ -1003,15 +1016,21 @@ function SubmissionPreviewModal({
                       >
                         {field.label}
                       </Typography>
-                      <Typography
-                        sx={{
-                          fontSize: "13px",
-                          color: theme.palette.text.primary,
-                          wordBreak: "break-word",
-                        }}
-                      >
-                        {formatAnswer(field, submissionData[field.id], formatDate)}
-                      </Typography>
+                      <Box>
+                        <Typography
+                          sx={{
+                            fontSize: "13px",
+                            color: theme.palette.text.primary,
+                            wordBreak: "break-word",
+                          }}
+                        >
+                          {formatAnswer(field, submissionData[field.id], formatDate)}
+                        </Typography>
+                        <AnswerLiveChecks
+                          liveChecks={previewData?.liveChecks ?? null}
+                          questionId={field.id}
+                        />
+                      </Box>
                     </Box>
                   ))}
                 </Box>

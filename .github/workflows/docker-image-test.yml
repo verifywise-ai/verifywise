@@ -91,6 +91,15 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Trigger test deployment
+        run: |
+          curl -fsS -X POST https://deploy.verifywise.ai/api/project/1/tasks \
+            -H "Authorization: Bearer $SEMAPHORE_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{"template_id": 5}'
+        env:
+          SEMAPHORE_API_TOKEN: ${{ secrets.SEMAPHORE_API_TOKEN }}
+
       # Nightly informational Trivy scans of the pushed :test images.
       # Non-blocking (exit-code 0); results go to the job summary.
       - name: Scan Frontend test image with Trivy

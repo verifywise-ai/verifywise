@@ -31,7 +31,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    image: ghcr.io/verifywise-ai/verifywise-backend:latest
+    image: ghcr.io/verifywise-ai/verifywise-backend:${IMAGE_TAG:-latest}
     pull_policy: always
     ports:
       # Bind to localhost only: the plain-HTTP API must not be reachable from
@@ -59,7 +59,7 @@ services:
   frontend:
     depends_on:
       - backend
-    image: ghcr.io/verifywise-ai/verifywise-frontend:latest
+    image: ghcr.io/verifywise-ai/verifywise-frontend:${IMAGE_TAG:-latest}
     pull_policy: always
     environment:
       # Where the frontend's nginx proxies /api and /v1 (used when a host
@@ -77,7 +77,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    image: ghcr.io/verifywise-ai/verifywise-backend:latest
+    image: ghcr.io/verifywise-ai/verifywise-backend:${IMAGE_TAG:-latest}
     pull_policy: always
     command: ["node", "dist/jobs/worker.js"]
     environment:
@@ -98,7 +98,7 @@ services:
       - backend
       - redis
       - ai_gateway
-    image: ghcr.io/verifywise-ai/verifywise-eval-server:latest
+    image: ghcr.io/verifywise-ai/verifywise-eval-server:${IMAGE_TAG:-latest}
     expose:
       - "8000"
     volumes:
@@ -122,7 +122,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    image: ghcr.io/verifywise-ai/verifywise-ai-gateway:latest
+    image: ghcr.io/verifywise-ai/verifywise-ai-gateway:${IMAGE_TAG:-latest}
     expose:
       - "8100"
     environment:

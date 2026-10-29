@@ -14,6 +14,10 @@ import { sendAutomationEmail } from "../../emailService";
 import { compileMjmlToHtml } from "../../../tools/mjmlCompiler";
 import { readFileSync } from "fs";
 import path from "path";
+import { emailColorTokens } from "../../../tools/emailColors";
+
+const WORSE = emailColorTokens.colorErrorText;
+const BETTER = emailColorTokens.colorSuccessText;
 
 const feedApp = (slug: string, grade = "B") => ({
   slug,
@@ -136,13 +140,13 @@ describe("email HTML escaping", () => {
   });
   it("shows grade and score as old → new with the score delta", () => {
     const html = changedSectionHtml([{ name: "Workday", diff: diff("B", "F", 60, 34) }]);
-    expect(html).toMatch(/B →<\/span> <span style="color: #B42318[^"]*">F</);
-    expect(html).toMatch(/60 →<\/span> <span style="color: #B42318[^"]*">34</);
+    expect(html).toMatch(new RegExp(`B →</span> <span style="color: ${WORSE}[^"]*">F<`));
+    expect(html).toMatch(new RegExp(`60 →</span> <span style="color: ${WORSE}[^"]*">34<`));
     expect(html).toContain("−26");
   });
   it("colours an improvement green", () => {
     const html = changedSectionHtml([{ name: "Gemini", diff: diff("F", "C", 31, 53) }]);
-    expect(html).toMatch(/<span style="color: #067647[^"]*">C</);
+    expect(html).toMatch(new RegExp(`<span style="color: ${BETTER}[^"]*">C<`));
     expect(html).toContain("+22");
   });
   it("shows an unchanged grade as the plain value", () => {

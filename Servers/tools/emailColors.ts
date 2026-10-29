@@ -5,8 +5,19 @@
  * changes nothing.
  */
 import { background, border, brand, risk, status, text } from "./design-tokens/palette";
+import logger from "../utils/logger/fileLogger";
 
-export const emailColorTokens: Record<string, string> = {
+export const emailColorTokens = {
+  // Email roles. Templates use these for page and button colors, so a change
+  // to a general palette token (page background, status text) does not move a
+  // button fill or label by accident. Change the mapping here, in one place.
+  colorPageBackground: background.surface,
+  colorButtonText: background.main,
+  colorButtonPrimary: brand.primary,
+  colorButtonSuccess: status.success.text,
+  colorButtonError: status.error.text,
+  colorButtonWarning: status.warning.text,
+  colorButtonInfo: status.info.text,
   colorBrandPrimary: brand.primary,
   colorBrandPrimaryHover: brand.primaryHover,
   colorBrandPrimaryLight: brand.primaryLight,
@@ -44,13 +55,59 @@ export const emailColorTokens: Record<string, string> = {
   colorRiskLowText: risk.low.text,
   colorRiskVeryLowBg: risk.veryLow.bg,
   colorRiskVeryLowText: risk.veryLow.text,
-};
+} as const satisfies Record<string, string>;
+
+const isColorToken = (key: string): key is keyof typeof emailColorTokens =>
+  Object.prototype.hasOwnProperty.call(emailColorTokens, key);
 
 const COLOR_PLACEHOLDER = /{{(color[A-Za-z0-9]+)}}/g;
 
-/** Replace {{color...}} placeholders. Any other placeholder is left in place. */
+const HEX_COLOR = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
+
+/** CSS variables for templates that should stay valid CSS. Names match pdf.css. */
+export const emailCssVariables: Record<string, string> = {
+  "--color-primary": emailColorTokens.colorBrandPrimary,
+  "--color-background": emailColorTokens.colorBackground,
+  "--color-success": emailColorTokens.colorSuccessText,
+  "--color-error": emailColorTokens.colorErrorText,
+  "--color-error-bg": emailColorTokens.colorErrorBg,
+  "--color-warning": emailColorTokens.colorWarningText,
+  "--color-warning-bg": emailColorTokens.colorWarningBg,
+  "--color-risk-high": emailColorTokens.colorRiskHighText,
+  "--color-risk-high-bg": emailColorTokens.colorRiskHighBg,
+  "--color-risk-medium": emailColorTokens.colorRiskMediumText,
+  "--color-risk-medium-bg": emailColorTokens.colorRiskMediumBg,
+  "--color-risk-low": emailColorTokens.colorRiskLowText,
+  "--color-risk-low-bg": emailColorTokens.colorRiskLowBg,
+};
+
+/** `:root` block inserted into a report stylesheet at render time. */
+export function colorTokenRoot(primaryColor?: string): string {
+  const variables = { ...emailCssVariables };
+  const primary = primaryColor?.trim();
+  if (primary && HEX_COLOR.test(primary)) {
+    variables["--color-primary"] = primary;
+  }
+  const declarations = Object.entries(variables)
+    .map(([name, value]) => `      ${name}: ${value};`)
+    .join("\n");
+  return `:root {\n${declarations}\n    }`;
+}
+
+const reportedUnknownTokens = new Set<string>();
+
+/**
+ * Replace {{color...}} placeholders. Any other placeholder is left in place.
+ * An unknown color key is left in place too and logged once, so a typo in a
+ * template shows up in the logs instead of shipping invalid CSS silently.
+ */
 export function applyColorTokens(source: string): string {
   return source.replace(COLOR_PLACEHOLDER, (placeholder, key: string) => {
-    return emailColorTokens[key] ?? placeholder;
+    if (isColorToken(key)) return emailColorTokens[key];
+    if (!reportedUnknownTokens.has(key)) {
+      reportedUnknownTokens.add(key);
+      logger.warn(`Unknown email color token {{${key}}} left in template`);
+    }
+    return placeholder;
   });
 }

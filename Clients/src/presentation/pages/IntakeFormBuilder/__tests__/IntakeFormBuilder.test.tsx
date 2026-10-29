@@ -192,6 +192,21 @@ describe("IntakeFormBuilder Page", () => {
       );
     });
 
+    it("saves live checks off when the submitter-typing toggle is turned off", async () => {
+      mockGetLLMKeys.mockResolvedValue({ data: { data: [openAIKey] } });
+      vi.mocked(getIntakeForm).mockResolvedValue(savedForm(3) as never);
+      renderEditRoute();
+      await formLoaded();
+
+      fireEvent.click(await screen.findByText("Check answers while the submitter types"));
+      fireEvent.click(screen.getByRole("button", { name: "Save" }));
+      await waitFor(() => expect(updateIntakeForm).toHaveBeenCalled());
+      expect(
+        (vi.mocked(updateIntakeForm).mock.calls[0][1] as { liveChecksEnabled: unknown })
+          .liveChecksEnabled,
+      ).toBe(false);
+    });
+
     it("still counts while the key list is loading", async () => {
       mockGetLLMKeys.mockReturnValue(new Promise(() => {}));
       vi.mocked(getIntakeForm).mockResolvedValue(savedForm(3, false) as never);

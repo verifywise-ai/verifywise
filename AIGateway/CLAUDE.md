@@ -1,6 +1,6 @@
 # AIGateway — LLM Gateway Service
 
-> **Last Updated:** 2026-10-20
+> **Last Updated:** 2026-10-26
 
 ---
 
@@ -110,7 +110,7 @@ Config changes reach the Express backend through `utils/notifications.py`. Build
 **Self-contained (CI):**
 - `tests/unit/` — unit suite: cost/guardrail/cache/proxy services, rate limiter, LiteLLM error mapping. DB = FakeSession, Redis = in-memory fake, LiteLLM = monkeypatched.
 - `tests/test_cache_service.py`, `tests/test_cost_service.py` — pure-function unit tests.
-- `tests/test_proxy_tool_calling.py`, `tests/test_virtual_key_endpoint_names.py`, `tests/test_endpoint_delete_keeps_key_limits.py`, `tests/test_guardrail_test_route.py`, `tests/test_guardrail_scan_offload.py`, `tests/test_spend_by_day_sql.py`, `tests/test_model_catalog_contract.py`, `tests/test_agent_policy_scope.py`, `tests/test_retention.py`, `tests/test_agent_control_retention.py`, `tests/test_internal_key.py`, `tests/test_18_mcp_credentials.py`, `tests/test_19_mcp_discovery.py`, `tests/test_20_mcp_servers_router.py`, `tests/test_21_safe_outbound_url.py`, `tests/test_22_monitor_mode.py`, `tests/test_mcp_hook_tool_acls.py`, `tests/test_mcp_hook_result_outcome.py`, `tests/test_mcp_hook_request_validation.py`, `tests/test_config_change_notifications.py`, `tests/test_endpoint_role_visibility.py`, `tests/test_invalid_unicode_body.py` — mocked router/service tests (no live services).
+- `tests/test_proxy_tool_calling.py`, `tests/test_virtual_key_endpoint_names.py`, `tests/test_endpoint_delete_keeps_key_limits.py`, `tests/test_guardrail_test_route.py`, `tests/test_guardrail_logs_route.py`, `tests/test_guardrail_scan_offload.py`, `tests/test_spend_by_day_sql.py`, `tests/test_model_catalog_contract.py`, `tests/test_agent_policy_scope.py`, `tests/test_retention.py`, `tests/test_agent_control_retention.py`, `tests/test_internal_key.py`, `tests/test_18_mcp_credentials.py`, `tests/test_19_mcp_discovery.py`, `tests/test_20_mcp_servers_router.py`, `tests/test_21_safe_outbound_url.py`, `tests/test_22_monitor_mode.py`, `tests/test_mcp_hook_tool_acls.py`, `tests/test_mcp_hook_result_outcome.py`, `tests/test_mcp_hook_request_validation.py`, `tests/test_config_change_notifications.py`, `tests/test_endpoint_role_visibility.py`, `tests/test_invalid_unicode_body.py` — mocked router/service tests (no live services).
 
 **Needs live services (not in CI):**
 - `tests/test_01_api_keys.py` … `tests/test_17_mcp_runs.py` — numbered E2E suites; hit the real backend/gateway over httpx.

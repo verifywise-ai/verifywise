@@ -23,7 +23,8 @@ import {
   EntityType,
   LinkType,
 } from "../repositories/file.repository";
-import { parseBulkIds, withBulkTransaction } from "../utils/bulkAction.utils";
+import { parseBulkIds, assertOrgOwnsIds, withBulkTransaction } from "../utils/bulkAction.utils";
+import { getUserProjects } from "../utils/project.utils";
 import {
   ForbiddenException,
   NotFoundException,
@@ -215,6 +216,14 @@ export const getUserFilesMetaData = async (req: Request, res: Response) => {
 };
 
 export async function postFileContent(req: RequestWithFile, res: Response): Promise<any> {
+  // Validate authentication - these should be set by authenticateJWT middleware
+  if (!req.userId) {
+    return res.status(401).json(STATUS_CODE[401](req.t!("Unauthenticated")));
+  }
+  if (!req.organizationId) {
+    return res.status(400).json(STATUS_CODE[400](req.t!("Missing tenant")));
+  }
+
   const transaction = await sequelize.transaction();
 
   logProcessing({
@@ -229,22 +238,53 @@ export async function postFileContent(req: RequestWithFile, res: Response): Prom
     const body = req.body as {
       question_id: string;
       project_id: number;
-      user_id: number;
       delete: string;
     };
 
-    const filesToDelete = JSON.parse(body.delete || "[]") as number[];
-    for (let fileToDelete of filesToDelete) {
-      await deleteFileById(fileToDelete, req.organizationId!, transaction);
+    // The uploader is the authenticated user, never a client-supplied id (#4722).
+    const userId = req.userId;
+
+    // Validate the target project and verify the uploader belongs to it, so a
+    // member of one project cannot plant evidence in another project of the
+    // same organization (#4722).
+    const projectId = Number(body.project_id);
+    if (!Number.isSafeInteger(projectId) || projectId <= 0) {
+      throw new ValidationException("Invalid project ID", "project_id", body.project_id);
+    }
+    const questionId = parseInt(body.question_id, 10);
+    if (!Number.isSafeInteger(questionId)) {
+      throw new ValidationException("Invalid question ID", "question_id", body.question_id);
+    }
+    const userProjects = await getUserProjects(
+      { userId, role: req.role || "" },
+      req.organizationId!,
+    );
+    const canContribute = userProjects.some((p) => Number(p.id) === projectId);
+    if (!canContribute) {
+      throw new ForbiddenException("You do not have access to the target project", "project_id");
     }
 
-    const questionId = parseInt(body.question_id);
+    const filesToDelete = JSON.parse(body.delete || "[]") as number[];
+    if (filesToDelete.length > 0) {
+      // Verify every file belongs to this organization before deleting, so
+      // cross-organization ids cannot be probed or removed (#4722).
+      await assertOrgOwnsIds({
+        table: "files",
+        ids: filesToDelete,
+        organizationId: req.organizationId!,
+        transaction,
+      });
+      for (let fileToDelete of filesToDelete) {
+        await deleteFileById(fileToDelete, req.organizationId!, transaction);
+      }
+    }
+
     let uploadedFiles: FileType[] = [];
     for (let file of req.files! as UploadedFile[]) {
       const uploadedFile = await uploadFile(
         file,
-        body.user_id,
-        body.project_id,
+        userId,
+        projectId,
         "Assessment tracker group",
         req.organizationId!,
         transaction,
@@ -262,7 +302,7 @@ export async function postFileContent(req: RequestWithFile, res: Response): Prom
 
     const question = await addFileToAnswerEU(
       questionId,
-      body.project_id,
+      projectId,
       uploadedFiles,
       filesToDelete,
       req.organizationId!,
@@ -293,6 +333,12 @@ export async function postFileContent(req: RequestWithFile, res: Response): Prom
       organizationId: req.organizationId!,
     });
 
+    if (error instanceof ValidationException) {
+      return res.status(400).json(STATUS_CODE[400](error.message));
+    }
+    if (error instanceof ForbiddenException) {
+      return res.status(403).json(STATUS_CODE[403](error.message));
+    }
     // e.g. a delete list naming a bias audit stance PDF, which is never deletable
     if ((error as { statusCode?: number })?.statusCode === 409) {
       return res.status(409).json(STATUS_CODE[409](translateError(req, error)));

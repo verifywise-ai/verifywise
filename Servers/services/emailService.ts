@@ -28,6 +28,8 @@ const refreshCredentialsIfNeeded = async (provider: EmailProvider): Promise<void
   }
 };
 
+const TEMPLATE_FILE_NAME = /^[\w./-]+\.mjml$/i;
+
 // Function to send an email
 export const sendEmail = async (
   to: string,
@@ -35,6 +37,14 @@ export const sendEmail = async (
   template: string,
   data: Record<string, string>,
 ) => {
+  // A template file name compiles to "Parsing failed. Check your mjml.",
+  // which hides the real mistake; name it instead.
+  if (TEMPLATE_FILE_NAME.test(template.trim())) {
+    throw new Error(
+      `sendEmail takes MJML source, not a template file name (${template}). Use notificationService.sendEmailWithTemplate.`,
+    );
+  }
+
   // Initialize provider if not already done
   const provider = initializeEmailProvider();
 

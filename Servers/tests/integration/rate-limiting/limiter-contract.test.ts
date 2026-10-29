@@ -80,6 +80,13 @@ const LIMITERS = [
   },
   { name: "healthCheckLimiter", key: "healthCheck", limit: 1000, windowMinutes: 1 },
   { name: "virtualKeyProxyLimiter", key: "virtualKeyProxy", limit: 3000, windowMinutes: 1 },
+  {
+    name: "intakeLiveChecksVisitorLimiter",
+    key: "intakeLiveChecksVisitor",
+    limit: 10,
+    windowMinutes: 1,
+  },
+  { name: "intakePrefillVisitorLimiter", key: "intakePrefillVisitor", limit: 3, windowMinutes: 10 },
 ] as const;
 
 describe.each(LIMITERS)("$name (production config)", ({ key, limit, windowMinutes }) => {

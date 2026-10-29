@@ -4,6 +4,10 @@ import type {
   ISuggestedRisksBlock,
   StageStatus,
 } from "../../../domain.layer/interfaces/i.intakeSubmission";
+import type {
+  ILiveChecks,
+  LiveChecksAiStatus,
+} from "../../../domain.layer/interfaces/i.intakeLiveChecks";
 
 const NOW = new Date("2026-10-21T12:00:00.000Z");
 const ago = (ms: number) => new Date(NOW.getTime() - ms).toISOString();
@@ -56,5 +60,34 @@ describe("selectRetryStages", () => {
   it("treats an unreadable start time as lost", () => {
     const broken = { ...assessment("pending"), stageStartedAt: "not a date" };
     expect(selectRetryStages(broken, block("complete"), NOW)).toEqual(["scoring"]);
+  });
+});
+
+describe("selectRetryStages: live checks", () => {
+  const liveChecks = (status: LiveChecksAiStatus, startedMsAgo = 0): ILiveChecks => ({
+    version: 1,
+    rules: [],
+    ai: { status, hints: [], stageStartedAt: ago(startedMsAgo), language: "en" },
+    prefill: {},
+  });
+  const done = [assessment("complete"), block("complete"), NOW] as const;
+
+  it("re-runs failed AI checks", () => {
+    expect(selectRetryStages(...done, liveChecks("failed"))).toEqual(["liveChecks"]);
+    expect(
+      selectRetryStages(assessment("ai_failed"), block("complete"), NOW, liveChecks("failed")),
+    ).toEqual(["scoring", "liveChecks"]);
+  });
+
+  it("re-runs AI checks pending past the stale limit, not fresh ones", () => {
+    expect(selectRetryStages(...done, liveChecks("pending", 15 * 60_000))).toEqual(["liveChecks"]);
+    expect(selectRetryStages(...done, liveChecks("pending", 60_000))).toEqual([]);
+  });
+
+  it("never re-runs done or skipped AI checks, or none stored", () => {
+    expect(selectRetryStages(...done, liveChecks("done"))).toEqual([]);
+    expect(selectRetryStages(...done, liveChecks("skipped"))).toEqual([]);
+    expect(selectRetryStages(...done, null)).toEqual([]);
+    expect(selectRetryStages(...done)).toEqual([]);
   });
 });

@@ -8,6 +8,7 @@ import {
   ComplianceProgressData,
   AssessmentStatusData,
 } from "../../domain.layer/interfaces/i.reportGeneration";
+import { background, status, text } from "../../tools/design-tokens/palette";
 
 /**
  * Generate a horizontal bar chart SVG for risk distribution
@@ -35,7 +36,7 @@ export function generateRiskDistributionChart(
 
   // Title
   if (title) {
-    svg += `<text x="${width / 2}" y="20" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="600" fill="#1C2130">${title}</text>`;
+    svg += `<text x="${width / 2}" y="20" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="600" fill="${text.primary}">${title}</text>`;
   }
 
   // Bars
@@ -44,10 +45,10 @@ export function generateRiskDistributionChart(
     const barWidth = maxCount > 0 ? (item.count / maxCount) * chartWidth : 0;
 
     // Label
-    svg += `<text x="${labelWidth - 8}" y="${y + barHeight / 2 + 4}" text-anchor="end" font-family="Inter, system-ui, sans-serif" font-size="12" fill="#667085">${item.level}</text>`;
+    svg += `<text x="${labelWidth - 8}" y="${y + barHeight / 2 + 4}" text-anchor="end" font-family="Inter, system-ui, sans-serif" font-size="12" fill="${text.icon}">${item.level}</text>`;
 
     // Background bar
-    svg += `<rect x="${labelWidth}" y="${y}" width="${chartWidth}" height="${barHeight}" rx="4" fill="#F2F4F7"/>`;
+    svg += `<rect x="${labelWidth}" y="${y}" width="${chartWidth}" height="${barHeight}" rx="4" fill="${background.hover}"/>`;
 
     // Value bar
     if (barWidth > 0) {
@@ -55,7 +56,7 @@ export function generateRiskDistributionChart(
     }
 
     // Count label
-    svg += `<text x="${labelWidth + chartWidth + 8}" y="${y + barHeight / 2 + 4}" text-anchor="start" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="500" fill="#1C2130">${item.count}</text>`;
+    svg += `<text x="${labelWidth + chartWidth + 8}" y="${y + barHeight / 2 + 4}" text-anchor="start" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="500" fill="${text.primary}">${item.count}</text>`;
   });
 
   svg += "</svg>";
@@ -88,7 +89,7 @@ export function generateRiskDonutChart(
 
   // Title
   if (title) {
-    svg += `<text x="${size / 2}" y="20" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="600" fill="#1C2130">${title}</text>`;
+    svg += `<text x="${size / 2}" y="20" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="600" fill="${text.primary}">${title}</text>`;
   }
 
   // Draw donut segments
@@ -129,8 +130,8 @@ export function generateRiskDonutChart(
   });
 
   // Center text (total)
-  svg += `<text x="${centerX}" y="${centerY - 5}" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="24" font-weight="700" fill="#1C2130">${total}</text>`;
-  svg += `<text x="${centerX}" y="${centerY + 15}" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#667085">Total Risks</text>`;
+  svg += `<text x="${centerX}" y="${centerY - 5}" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="24" font-weight="700" fill="${text.primary}">${total}</text>`;
+  svg += `<text x="${centerX}" y="${centerY + 15}" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="11" fill="${text.icon}">Total Risks</text>`;
 
   svg += "</svg>";
   return svg;
@@ -159,7 +160,7 @@ export function generateComplianceProgressChart(
 
   // Title
   if (title) {
-    svg += `<text x="0" y="20" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="600" fill="#1C2130">${title}</text>`;
+    svg += `<text x="0" y="20" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="600" fill="${text.primary}">${title}</text>`;
   }
 
   // Progress bars
@@ -167,13 +168,17 @@ export function generateComplianceProgressChart(
     const y = titleHeight + index * rowHeight;
     const progressWidth = (item.percentage / 100) * (width - 60);
     const progressColor =
-      item.percentage >= 80 ? "#027A48" : item.percentage >= 50 ? "#B54708" : "#B42318";
+      item.percentage >= 80
+        ? status.success.text
+        : item.percentage >= 50
+          ? status.warning.text
+          : status.error.text;
 
     // Category label
-    svg += `<text x="0" y="${y + labelHeight}" font-family="Inter, system-ui, sans-serif" font-size="12" fill="#1C2130">${item.category}</text>`;
+    svg += `<text x="0" y="${y + labelHeight}" font-family="Inter, system-ui, sans-serif" font-size="12" fill="${text.primary}">${item.category}</text>`;
 
     // Progress bar background
-    svg += `<rect x="0" y="${y + labelHeight + 6}" width="${width - 60}" height="${barHeight}" rx="4" fill="#F2F4F7"/>`;
+    svg += `<rect x="0" y="${y + labelHeight + 6}" width="${width - 60}" height="${barHeight}" rx="4" fill="${background.hover}"/>`;
 
     // Progress bar fill
     if (progressWidth > 0) {
@@ -184,7 +189,7 @@ export function generateComplianceProgressChart(
     svg += `<text x="${width - 50}" y="${y + labelHeight + 20}" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="500" fill="${progressColor}">${item.percentage}%</text>`;
 
     // Count label
-    svg += `<text x="${width}" y="${y + labelHeight + 20}" text-anchor="end" font-family="Inter, system-ui, sans-serif" font-size="10" fill="#667085">${item.completed}/${item.total}</text>`;
+    svg += `<text x="${width}" y="${y + labelHeight + 20}" text-anchor="end" font-family="Inter, system-ui, sans-serif" font-size="10" fill="${text.icon}">${item.completed}/${item.total}</text>`;
   });
 
   svg += "</svg>";
@@ -211,7 +216,7 @@ export function generateRiskLegend(
     data.forEach((item, index) => {
       const x = index * itemWidth;
       svg += `<rect x="${x}" y="6" width="12" height="12" rx="2" fill="${item.color}"/>`;
-      svg += `<text x="${x + 16}" y="16" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#667085">${item.level} (${item.count})</text>`;
+      svg += `<text x="${x + 16}" y="16" font-family="Inter, system-ui, sans-serif" font-size="11" fill="${text.icon}">${item.level} (${item.count})</text>`;
     });
 
     svg += "</svg>";
@@ -225,7 +230,7 @@ export function generateRiskLegend(
   data.forEach((item, index) => {
     const y = index * 24 + 5;
     svg += `<rect x="0" y="${y}" width="12" height="12" rx="2" fill="${item.color}"/>`;
-    svg += `<text x="18" y="${y + 10}" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#667085">${item.level}: ${item.count}</text>`;
+    svg += `<text x="18" y="${y + 10}" font-family="Inter, system-ui, sans-serif" font-size="11" fill="${text.icon}">${item.level}: ${item.count}</text>`;
   });
 
   svg += "</svg>";
@@ -258,7 +263,7 @@ export function generateAssessmentStatusChart(
 
   // Title
   if (title) {
-    svg += `<text x="${size / 2}" y="20" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="600" fill="#1C2130">${title}</text>`;
+    svg += `<text x="${size / 2}" y="20" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="600" fill="${text.primary}">${title}</text>`;
   }
 
   // Draw pie segments
@@ -299,8 +304,8 @@ export function generateAssessmentStatusChart(
   // Center percentage
   const answered = data.find((d) => d.status === "Answered")?.count || 0;
   const percentage = Math.round((answered / total) * 100);
-  svg += `<text x="${centerX}" y="${centerY - 5}" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="24" font-weight="700" fill="#1C2130">${percentage}%</text>`;
-  svg += `<text x="${centerX}" y="${centerY + 15}" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#667085">Complete</text>`;
+  svg += `<text x="${centerX}" y="${centerY - 5}" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="24" font-weight="700" fill="${text.primary}">${percentage}%</text>`;
+  svg += `<text x="${centerX}" y="${centerY + 15}" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="11" fill="${text.icon}">Complete</text>`;
 
   svg += "</svg>";
   return svg;
@@ -325,7 +330,7 @@ export function generateAssessmentLegend(
   data.forEach((item, index) => {
     const x = index * itemWidth;
     svg += `<rect x="${x}" y="6" width="12" height="12" rx="2" fill="${item.color}"/>`;
-    svg += `<text x="${x + 16}" y="16" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#667085">${item.status} (${item.count})</text>`;
+    svg += `<text x="${x + 16}" y="16" font-family="Inter, system-ui, sans-serif" font-size="11" fill="${text.icon}">${item.status} (${item.count})</text>`;
   });
 
   svg += "</svg>";

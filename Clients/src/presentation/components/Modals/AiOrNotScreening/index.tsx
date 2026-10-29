@@ -229,7 +229,7 @@ const AiOrNotScreening: React.FC<AiOrNotScreeningProps> = ({
             )}
             {renderQuestion(
               "q3",
-              "Are the system's outputs not fully predetermined by explicit, hard-coded rules?",
+              "Can the system produce different outputs for the same or similar inputs, rather than always producing one fixed output?",
               3,
             )}
           </>

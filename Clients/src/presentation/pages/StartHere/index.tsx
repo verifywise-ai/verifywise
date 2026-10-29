@@ -46,6 +46,27 @@ const fadeInUp = keyframes`
   to { opacity: 1; transform: translateY(0); }
 `;
 
+// ── "Your experts" cards (row 4) ──
+// Photos are local assets under Clients/public/images — no hotlinked URLs,
+// which broke the card when offline or when the site restructured (#4806).
+const EXPERTS = [
+  {
+    name: "Ioana Polmolea",
+    photo: "/images/ioanapolmolea.jpg",
+    role: "AI governance expert",
+  },
+  {
+    name: "Ulas Ozguven",
+    photo: "/images/ulasozguven.jpeg",
+    role: "AI governance expert",
+  },
+  {
+    name: "Dr. Gorkem Cetin",
+    photo: "/images/gorkemcetin.png",
+    role: "AI governance expert",
+  },
+];
+
 const shimmer = keyframes`
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
@@ -941,23 +962,7 @@ const StartHere = () => {
                 flexWrap: "wrap",
               }}
             >
-              {[
-                {
-                  name: "Ioana Polmolea",
-                  photo: "/images/ioanapolmolea.jpg",
-                  role: "AI governance expert",
-                },
-                {
-                  name: "Ulas Ozguven",
-                  photo: "https://verifywise.ai/images/team/ulas.jpeg",
-                  role: "AI governance expert",
-                },
-                {
-                  name: "Dr. Gorkem Cetin",
-                  photo: "/images/gorkemcetin.png",
-                  role: "AI governance expert",
-                },
-              ].map((expert) => (
+              {EXPERTS.map((expert) => (
                 <Stack
                   key={expert.name}
                   onClick={() =>

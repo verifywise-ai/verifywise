@@ -17,7 +17,7 @@ import {
 import { uploadFile } from "../../utils/fileUpload.utils";
 import logger from "../../utils/logger/fileLogger";
 import { getSharedBrowser } from "../../utils/pdfBrowser.utils";
-import { applyColorTokens } from "../../tools/emailColors";
+import { applyColorTokens, colorTokenRoot } from "../../tools/emailColors";
 
 /**
  * Render EJS template to HTML string
@@ -25,7 +25,10 @@ import { applyColorTokens } from "../../tools/emailColors";
 async function renderTemplate(reportData: IPMMReportData): Promise<string> {
   const templatePath = path.join(__dirname, "../../templates/reports/pmm-report.ejs");
 
-  const templateContent = applyColorTokens(fs.readFileSync(templatePath, "utf-8"));
+  const templateContent = applyColorTokens(fs.readFileSync(templatePath, "utf-8")).replace(
+    "<style>",
+    `<style>\n    ${colorTokenRoot(reportData.branding?.primary_color)}`,
+  );
 
   // Render with EJS
   const html = ejs.render(templateContent, reportData);
