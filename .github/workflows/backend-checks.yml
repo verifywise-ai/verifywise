@@ -304,6 +304,10 @@ jobs:
         run: npm ci
 
       - name: Run tests with coverage
+        # --detectOpenHandles runs every suite in one process, so heap use
+        # grows with the suite; the 4 GB default ran out at ~420 suites.
+        env:
+          NODE_OPTIONS: --max-old-space-size=8192
         run: npm run test:coverage
 
       - name: Upload coverage report
