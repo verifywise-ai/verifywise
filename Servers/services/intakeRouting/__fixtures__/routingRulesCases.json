@@ -1,48 +1,134 @@
 {
   "laneFor": [
     {
-      "input": { "level": "Prohibited", "finalScore": 12, "scoringStatus": "complete" },
-      "cfg": { "threshold": 50, "closeCallMargin": 10 },
-      "expected": { "lane": "senior", "reason": "prohibited" }
+      "input": {
+        "level": "Prohibited",
+        "finalScore": 12,
+        "scoringStatus": "complete"
+      },
+      "cfg": {
+        "threshold": 50,
+        "closeCallMargin": 10
+      },
+      "expected": {
+        "lane": "senior",
+        "reason": "prohibited"
+      }
     },
     {
-      "input": { "level": "High risk", "finalScore": null, "scoringStatus": "complete" },
-      "cfg": { "threshold": 50, "closeCallMargin": 10 },
-      "expected": { "lane": "senior", "reason": "no_score" }
+      "input": {
+        "level": "High risk",
+        "finalScore": null,
+        "scoringStatus": "complete"
+      },
+      "cfg": {
+        "threshold": 50,
+        "closeCallMargin": 10
+      },
+      "expected": {
+        "lane": "senior",
+        "reason": "no_score"
+      }
     },
     {
-      "input": { "level": "High risk", "finalScore": 20, "scoringStatus": "ai_failed" },
-      "cfg": { "threshold": 50, "closeCallMargin": 10 },
-      "expected": { "lane": "senior", "reason": "no_score" }
+      "input": {
+        "level": "High risk",
+        "finalScore": 20,
+        "scoringStatus": "ai_failed"
+      },
+      "cfg": {
+        "threshold": 50,
+        "closeCallMargin": 10
+      },
+      "expected": {
+        "lane": "senior",
+        "reason": "no_score"
+      }
     },
     {
-      "input": { "level": null, "finalScore": 41, "scoringStatus": "complete" },
-      "cfg": { "threshold": 50, "closeCallMargin": 10 },
-      "expected": { "lane": "senior", "reason": "close_call" }
+      "input": {
+        "level": null,
+        "finalScore": 41,
+        "scoringStatus": "complete"
+      },
+      "cfg": {
+        "threshold": 50,
+        "closeCallMargin": 10
+      },
+      "expected": {
+        "lane": "senior",
+        "reason": "close_call"
+      }
     },
     {
-      "input": { "level": null, "finalScore": 40, "scoringStatus": "complete" },
-      "cfg": { "threshold": 50, "closeCallMargin": 10 },
-      "expected": { "lane": "standard", "reason": "below_threshold" }
+      "input": {
+        "level": null,
+        "finalScore": 40,
+        "scoringStatus": "complete"
+      },
+      "cfg": {
+        "threshold": 50,
+        "closeCallMargin": 10
+      },
+      "expected": {
+        "lane": "standard",
+        "reason": "below_threshold"
+      }
     },
     {
-      "input": { "level": null, "finalScore": 60, "scoringStatus": "complete" },
-      "cfg": { "threshold": 50, "closeCallMargin": 10 },
-      "expected": { "lane": "senior", "reason": "at_or_above_threshold" }
+      "input": {
+        "level": null,
+        "finalScore": 60,
+        "scoringStatus": "complete"
+      },
+      "cfg": {
+        "threshold": 50,
+        "closeCallMargin": 10
+      },
+      "expected": {
+        "lane": "senior",
+        "reason": "at_or_above_threshold"
+      }
     },
     {
-      "input": { "level": null, "finalScore": 50, "scoringStatus": "complete" },
-      "cfg": { "threshold": 50, "closeCallMargin": 0 },
-      "expected": { "lane": "senior", "reason": "at_or_above_threshold" }
+      "input": {
+        "level": null,
+        "finalScore": 50,
+        "scoringStatus": "complete"
+      },
+      "cfg": {
+        "threshold": 50,
+        "closeCallMargin": 0
+      },
+      "expected": {
+        "lane": "senior",
+        "reason": "at_or_above_threshold"
+      }
     },
     {
-      "input": { "level": "Minimal risk", "finalScore": 49, "scoringStatus": "complete" },
-      "cfg": { "threshold": 50, "closeCallMargin": 0 },
-      "expected": { "lane": "standard", "reason": "below_threshold" }
+      "input": {
+        "level": "Minimal risk",
+        "finalScore": 49,
+        "scoringStatus": "complete"
+      },
+      "cfg": {
+        "threshold": 50,
+        "closeCallMargin": 0
+      },
+      "expected": {
+        "lane": "standard",
+        "reason": "below_threshold"
+      }
     }
   ],
   "canDecideLane": [
-    { "lane": "senior", "userId": 7, "isAdmin": false, "cfg": null, "expected": true },
+    {
+      "lane": "senior",
+      "userId": 7,
+      "isAdmin": false,
+      "cfg": null,
+      "expected": true
+    },
     {
       "lane": "senior",
       "userId": 7,
@@ -157,7 +243,11 @@
     }
   ],
   "laneReviewerIdsFor": [
-    { "lane": "senior", "cfg": null, "expected": [] },
+    {
+      "lane": "senior",
+      "cfg": null,
+      "expected": []
+    },
     {
       "lane": null,
       "cfg": {
@@ -209,7 +299,10 @@
   ],
   "laneOnRecord": [
     {
-      "stored": { "lane": "senior", "reason": "close_call" },
+      "stored": {
+        "lane": "senior",
+        "reason": "close_call"
+      },
       "cfg": null,
       "effective": {
         "level": null,
@@ -217,10 +310,16 @@
         "scoringStatus": "complete",
         "bandInForce": null
       },
-      "expected": { "lane": null, "reason": null }
+      "expected": {
+        "lane": null,
+        "reason": null
+      }
     },
     {
-      "stored": { "lane": "standard", "reason": "below_threshold" },
+      "stored": {
+        "lane": "standard",
+        "reason": "below_threshold"
+      },
       "cfg": {
         "enabled": true,
         "seniorReviewerIds": [1],
@@ -235,7 +334,10 @@
         "scoringStatus": "complete",
         "bandInForce": null
       },
-      "expected": { "lane": "standard", "reason": "below_threshold" }
+      "expected": {
+        "lane": "standard",
+        "reason": "below_threshold"
+      }
     },
     {
       "stored": null,
@@ -253,7 +355,10 @@
         "scoringStatus": "complete",
         "bandInForce": null
       },
-      "expected": { "lane": "standard", "reason": "below_threshold" }
+      "expected": {
+        "lane": "standard",
+        "reason": "below_threshold"
+      }
     },
     {
       "stored": null,
@@ -271,7 +376,10 @@
         "scoringStatus": "pending",
         "bandInForce": null
       },
-      "expected": { "lane": "senior", "reason": "no_score" }
+      "expected": {
+        "lane": "senior",
+        "reason": "no_score"
+      }
     },
     {
       "stored": null,
@@ -289,12 +397,18 @@
         "scoringStatus": "complete",
         "bandInForce": "Critical"
       },
-      "expected": { "lane": "senior", "reason": "at_or_above_threshold" }
+      "expected": {
+        "lane": "senior",
+        "reason": "at_or_above_threshold"
+      }
     }
   ],
   "laneAtDecision": [
     {
-      "stored": { "lane": "senior", "reason": "escalated" },
+      "stored": {
+        "lane": "senior",
+        "reason": "escalated"
+      },
       "cfg": {
         "enabled": true,
         "seniorReviewerIds": [1],
@@ -309,10 +423,16 @@
         "scoringStatus": "complete",
         "bandInForce": null
       },
-      "expected": { "lane": "senior", "reason": "escalated" }
+      "expected": {
+        "lane": "senior",
+        "reason": "escalated"
+      }
     },
     {
-      "stored": { "lane": "standard", "reason": "below_threshold" },
+      "stored": {
+        "lane": "standard",
+        "reason": "below_threshold"
+      },
       "cfg": {
         "enabled": true,
         "seniorReviewerIds": [1],
@@ -327,10 +447,16 @@
         "scoringStatus": "complete",
         "bandInForce": "High"
       },
-      "expected": { "lane": "senior", "reason": "close_call" }
+      "expected": {
+        "lane": "senior",
+        "reason": "close_call"
+      }
     },
     {
-      "stored": { "lane": "standard", "reason": "below_threshold" },
+      "stored": {
+        "lane": "standard",
+        "reason": "below_threshold"
+      },
       "cfg": {
         "enabled": true,
         "seniorReviewerIds": [1],
@@ -345,7 +471,72 @@
         "scoringStatus": "complete",
         "bandInForce": "Medium"
       },
-      "expected": { "lane": "standard", "reason": "below_threshold" }
+      "expected": {
+        "lane": "standard",
+        "reason": "below_threshold"
+      }
+    }
+  ],
+  "entityLevel": [
+    {
+      "entityType": "use_case",
+      "runLevel": "High risk",
+      "mapped": "prohibited",
+      "expected": "High risk"
+    },
+    {
+      "entityType": "use_case",
+      "runLevel": null,
+      "mapped": "unacceptable",
+      "expected": "Prohibited"
+    },
+    {
+      "entityType": "use_case",
+      "runLevel": null,
+      "mapped": "Prohibited",
+      "expected": "Prohibited"
+    },
+    {
+      "entityType": "use_case",
+      "runLevel": null,
+      "mapped": " High ",
+      "expected": "High risk"
+    },
+    {
+      "entityType": "use_case",
+      "runLevel": null,
+      "mapped": "minimal",
+      "expected": "Minimal risk"
+    },
+    {
+      "entityType": "use_case",
+      "runLevel": null,
+      "mapped": "GPAI",
+      "expected": "GPAI"
+    },
+    {
+      "entityType": "use_case",
+      "runLevel": null,
+      "mapped": "",
+      "expected": null
+    },
+    {
+      "entityType": "use_case",
+      "runLevel": null,
+      "mapped": null,
+      "expected": null
+    },
+    {
+      "entityType": "model",
+      "runLevel": null,
+      "mapped": "prohibited",
+      "expected": null
+    },
+    {
+      "entityType": "model",
+      "runLevel": "Prohibited",
+      "mapped": null,
+      "expected": "Prohibited"
     }
   ]
 }

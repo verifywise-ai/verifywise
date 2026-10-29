@@ -6,15 +6,18 @@ import {
   type PreviewRole,
 } from "../../../../application/utils/intakeRouting/previewRole";
 import { RoleSwitch } from "./PreviewMenu";
+import { outlinedButtonSx } from "./previewStyles";
 
 interface PreviewRoleBannerProps {
   role: PreviewRole;
+  /** A short status line, e.g. while the form's routing loads. */
+  note?: string | null;
   onRoleChange: (role: PreviewRole) => void;
   onExit: () => void;
 }
 
 /** Shown on every simulated view: names the role and that nothing is saved. */
-export const PreviewRoleBanner = ({ role, onRoleChange, onExit }: PreviewRoleBannerProps) => {
+export const PreviewRoleBanner = ({ role, note, onRoleChange, onExit }: PreviewRoleBannerProps) => {
   const theme = useTheme();
   const info = theme.palette.status.info;
   return (
@@ -44,6 +47,14 @@ export const PreviewRoleBanner = ({ role, onRoleChange, onExit }: PreviewRoleBan
         <Typography sx={{ fontSize: "13px", color: theme.palette.text.secondary }}>
           Actions are turned off. The server still checks every real action against your own role.
         </Typography>
+        {note && (
+          <Typography
+            data-testid="preview-role-banner-note"
+            sx={{ fontSize: "13px", fontWeight: 500, color: theme.palette.text.primary }}
+          >
+            {note}
+          </Typography>
+        )}
       </Box>
       <RoleSwitch role={role} onChange={onRoleChange} />
       <CustomizableButton
@@ -52,14 +63,7 @@ export const PreviewRoleBanner = ({ role, onRoleChange, onExit }: PreviewRoleBan
         text="Exit preview"
         onClick={onExit}
         testId="button-preview-exit"
-        sx={{
-          "height": 30,
-          "fontSize": "13px",
-          "borderColor": "border.dark",
-          "color": "text.secondary",
-          "backgroundColor": "background.main",
-          "&:hover": { borderColor: "text.accent", backgroundColor: "background.accent" },
-        }}
+        sx={outlinedButtonSx}
       />
     </Box>
   );

@@ -1,8 +1,10 @@
 // Clients/src/application/utils/intakeRouting/routingRules.ts
 // Client copy of the deterministic lane functions in
 // Servers/services/intakeRouting/routingRules.ts (laneFor, canDecideLane,
-// laneReviewerIdsFor) and Servers/services/intakeRouting/decisionGate.ts
-// (laneAtDecision, laneOnRecord). Keep identical: both test suites run
+// laneReviewerIdsFor), Servers/services/intakeRouting/decisionGate.ts
+// (laneAtDecision, laneOnRecord) and the level lookup in
+// Servers/controllers/intakeForm.ctrl.ts (entityLevel, mapToAiRiskClassification).
+// Keep identical: both test suites run
 // Servers/services/intakeRouting/__fixtures__/routingRulesCases.json.
 // Used only to simulate a reviewer role in preview; the server decides who acts.
 
@@ -12,7 +14,13 @@ import type {
   ReviewLane,
   RoutingReason,
   SubmissionRouting,
-} from "../../../presentation/pages/IntakeFormBuilder/types";
+} from "../../../domain/types/intakeRouting";
+
+/** The parts of a form's routing that say who reviews. */
+export type ReviewerLists = Pick<
+  FormRouting,
+  "enabled" | "seniorReviewerIds" | "standardReviewerIds"
+>;
 
 export const DEFAULT_ROUTING: Omit<
   FormRouting,
@@ -49,7 +57,7 @@ export function canDecideLane(
   lane: ReviewLane | null,
   userId: number,
   isAdmin: boolean,
-  cfg: FormRouting | null,
+  cfg: ReviewerLists | null,
 ): boolean {
   if (!cfg?.enabled || lane === null || isAdmin) return true;
   if (cfg.seniorReviewerIds.includes(userId)) return true;
@@ -57,7 +65,7 @@ export function canDecideLane(
 }
 
 /** Ids of the users who can decide a submission in a lane: senior reviewers sit in both. */
-export function laneReviewerIdsFor(lane: ReviewLane | null, cfg: FormRouting | null): number[] {
+export function laneReviewerIdsFor(lane: ReviewLane | null, cfg: ReviewerLists | null): number[] {
   if (!cfg?.enabled || lane === null) return [];
   if (lane === "senior") return cfg.seniorReviewerIds;
   return [...new Set([...cfg.standardReviewerIds, ...cfg.seniorReviewerIds])];
@@ -108,4 +116,37 @@ export function laneOnRecord(
   if (!cfg?.enabled) return { lane: null, reason: null };
   if (stored) return { lane: stored.lane, reason: stored.reason };
   return laneAtDecision(null, cfg, effective);
+}
+
+/** Map lowercase form option values to the classification levels. */
+const AI_RISK_CLASSIFICATIONS: Record<string, string> = {
+  "minimal": "Minimal risk",
+  "limited": "Limited risk",
+  "high": "High risk",
+  "unacceptable": "Prohibited",
+  // Also accept display values directly
+  "minimal risk": "Minimal risk",
+  "limited risk": "Limited risk",
+  "high risk": "High risk",
+  "prohibited": "Prohibited",
+  "out of scope": "Out of scope",
+};
+
+export function mapToAiRiskClassification(value: string): string {
+  return AI_RISK_CLASSIFICATIONS[value?.toLowerCase()?.trim()] || value || "";
+}
+
+/**
+ * The level routing uses: the EU AI Act run's level, else (use cases only) the
+ * answer mapped to the use case's risk classification.
+ */
+export function entityLevel(
+  entityType: string,
+  runLevel: string | null,
+  entityData: Record<string, unknown>,
+): string | null {
+  if (runLevel !== null) return runLevel;
+  const mapped = entityData.ai_risk_classification;
+  if (entityType !== "use_case" || typeof mapped !== "string") return null;
+  return mapToAiRiskClassification(mapped) || null;
 }

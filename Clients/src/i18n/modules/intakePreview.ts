@@ -21,6 +21,11 @@ export const de: Record<string, string> = {
   "This is the form people see from your public link. Submitting it sends a real submission to your reviewers.":
     "So sehen Personen das Formular über Ihren öffentlichen Link. Beim Absenden geht eine echte Einreichung an Ihre Prüfer.",
   "Dismiss preview notice": "Vorschauhinweis schließen",
+  // Review simulation, routing state and blocked line
+  "Loading routing for this form": "Routing für dieses Formular wird geladen",
+  "Could not load routing for this form": "Routing für dieses Formular konnte nicht geladen werden",
+  "This submission is assigned to senior reviewers":
+    "Diese Einreichung ist Senior-Prüfern zugewiesen",
 };
 
 export const fr: Record<string, string> = {
@@ -42,6 +47,11 @@ export const fr: Record<string, string> = {
   "This is the form people see from your public link. Submitting it sends a real submission to your reviewers.":
     "Voici le formulaire que les personnes voient depuis votre lien public. L’envoyer crée une vraie soumission pour vos réviseurs.",
   "Dismiss preview notice": "Fermer l’avis d’aperçu",
+  // Review simulation, routing state and blocked line
+  "Loading routing for this form": "Chargement du routage de ce formulaire",
+  "Could not load routing for this form": "Impossible de charger le routage de ce formulaire",
+  "This submission is assigned to senior reviewers":
+    "Cette soumission est attribuée aux réviseurs seniors",
 };
 
 export const es: Record<string, string> = {
@@ -63,4 +73,8 @@ export const es: Record<string, string> = {
   "This is the form people see from your public link. Submitting it sends a real submission to your reviewers.":
     "Este es el formulario que se ve desde su enlace público. Al enviarlo se crea un envío real para sus revisores.",
   "Dismiss preview notice": "Cerrar el aviso de vista previa",
+  // Review simulation, routing state and blocked line
+  "Loading routing for this form": "Cargando el enrutamiento de este formulario",
+  "Could not load routing for this form": "No se pudo cargar el enrutamiento de este formulario",
+  "This submission is assigned to senior reviewers": "Este envío está asignado a revisores sénior",
 };

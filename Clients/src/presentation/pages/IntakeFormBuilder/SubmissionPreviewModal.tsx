@@ -16,6 +16,7 @@ import Chip from "../../components/Chip";
 import HighRiskRolesField from "../../components/Inputs/HighRiskRolesField";
 import {
   getSubmissionPreview,
+  getIntakeForm,
   approveSubmission,
   rejectSubmission,
   retrySubmissionAssessment,
@@ -63,6 +64,14 @@ import {
   type PreviewRole,
 } from "../../../application/utils/intakeRouting/previewRole";
 
+/** A form's routing as loaded for a simulation; the gate waits for "ready". */
+type SimulationRouting =
+  | { formId: number; status: "failed" }
+  | { formId: number; status: "ready"; formRouting: FormRouting | null };
+
+const ROUTING_LOADING = "Loading routing for this form";
+const ROUTING_FAILED = "Could not load routing for this form";
+
 /** The entity mapping for the use case's high-risk roles (the key saved forms use). */
 const ROLE_MAPPING = "type_of_high_risk_role";
 
@@ -83,8 +92,6 @@ interface SubmissionPreviewModalProps {
    * and every action that would change data is turned off.
    */
   simulatedRole?: PreviewRole | null;
-  /** The submission's form routing, used to route an unrouted submission in simulation. */
-  formRouting?: FormRouting | null;
   onSimulatedRoleChange?: (role: PreviewRole) => void;
   onExitSimulation?: () => void;
 }
@@ -94,6 +101,7 @@ interface PreviewData {
   entityPreview: Record<string, unknown>;
   formSchema: FormSchema;
   formName: string;
+  formId: number | null;
   entityType: string;
   submissionStatus: string;
   euAiActClassification: EuAiActClassificationData | null;
@@ -324,7 +332,6 @@ function SubmissionPreviewModal({
   onRejected,
   onChanged,
   simulatedRole = null,
-  formRouting = null,
   onSimulatedRoleChange,
   onExitSimulation,
 }: SubmissionPreviewModalProps) {
@@ -407,6 +414,7 @@ function SubmissionPreviewModal({
           entityPreview,
           formSchema: form?.schema ?? { version: "1.0", fields: [] },
           formName: form?.name ?? "Unknown form",
+          formId: form?.id ?? null,
           entityType: form?.entityType ?? "use_case",
           submissionStatus: sub?.status ?? "pending",
           euAiActClassification: response.data.euAiActClassification ?? null,
@@ -450,6 +458,35 @@ function SubmissionPreviewModal({
       controller.abort();
     };
   }, [isOpen, submissionId]);
+
+  // In simulation the lanes come from the form's current routing, read fresh
+  // for the submission on screen. Until it loads, no decision control shows.
+  const simulationFormId = simulating ? (previewData?.formId ?? null) : null;
+  const [loadedRouting, setLoadedRouting] = useState<SimulationRouting | null>(null);
+  useEffect(() => {
+    if (simulationFormId === null) return;
+    const controller = new AbortController();
+    getIntakeForm(simulationFormId, controller.signal)
+      .then((response) => {
+        if (controller.signal.aborted) return;
+        setLoadedRouting({
+          formId: simulationFormId,
+          status: "ready",
+          formRouting: response.data?.routing ?? null,
+        });
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) {
+          setLoadedRouting({ formId: simulationFormId, status: "failed" });
+        }
+      });
+    return () => controller.abort();
+  }, [simulationFormId]);
+  // Anything loaded for another form counts as still loading.
+  const simulationRouting =
+    loadedRouting && loadedRouting.formId === simulationFormId
+      ? loadedRouting
+      : ({ status: "loading" } as const);
 
   // Re-read only the AI assessment parts, so the reviewer's edits stay. Once
   // suggestions are complete only the reviewer's own (server-confirmed)
@@ -647,6 +684,8 @@ function SubmissionPreviewModal({
   const showLane = routingEnabled;
   // Mirrors the server: pending and in the standard lane, for the form's reviewers or an Admin.
   const realGate = {
+    laneReviewers,
+    decideBlockedReason: previewData?.decideBlockedReason ?? null,
     canDecide: previewData?.canDecide ?? true,
     canEscalate:
       isPending &&
@@ -675,21 +714,44 @@ function SubmissionPreviewModal({
       : overrideTier;
   // In simulation the role's view is worked out the way the server works out
   // the signed-in user's: the lane on record, else the lane the values route to.
-  const { canDecide, canEscalate, canSecondReview } =
-    simulatedRole !== null && previewData
-      ? simulatedReviewGate(simulatedRole, {
-          isPending,
-          routingEnabled,
-          formRouting,
-          stored: lane,
-          effective: {
-            level: euAiAct?.current.level ?? null,
-            finalScore: assessmentV2?.finalScore ?? null,
-            scoringStatus: assessmentV2?.status ?? null,
-            bandInForce: bandsApply ? bandOfTier(previewData.riskOverride?.tier) : null,
-          },
-        })
-      : realGate;
+  // While the form's routing loads, or if it can't, nothing is guessed.
+  const simulationNote =
+    simulating && simulationRouting.status !== "ready"
+      ? simulationRouting.status === "failed"
+        ? ROUTING_FAILED
+        : ROUTING_LOADING
+      : null;
+  const gate = (() => {
+    if (simulatedRole === null || !previewData) return realGate;
+    if (simulationRouting.status !== "ready") {
+      return {
+        laneReviewers: [],
+        decideBlockedReason: simulationNote,
+        canDecide: false,
+        canEscalate: false,
+        canSecondReview: false,
+      };
+    }
+    const simulated = simulatedReviewGate(simulatedRole, {
+      isPending,
+      routingEnabled,
+      formRouting: simulationRouting.formRouting,
+      stored: lane,
+      entityType: previewData.entityType,
+      runLevel: euAiAct?.current.level ?? null,
+      entityData: previewData.entityPreview ?? {},
+      finalScore: assessmentV2?.finalScore ?? null,
+      scoringStatus: assessmentV2?.status ?? null,
+      bandInForce: bandsApply ? bandOfTier(previewData.riskOverride?.tier) : null,
+    });
+    // Named as the server names them; a user no longer in the organization is left out.
+    const named = simulated.laneReviewerIds.flatMap((id) => {
+      const user = users.find((u) => u.id === id);
+      return user ? [{ id, name: [user.name, user.surname].filter(Boolean).join(" ") }] : [];
+    });
+    return { ...simulated, laneReviewers: named };
+  })();
+  const { canDecide, canEscalate, canSecondReview } = gate;
   // No stored assessment (or no suggestions block) means the job never ran,
   // e.g. the queue was down at submit; the server retries those too.
   const neverQueued =
@@ -747,6 +809,7 @@ function SubmissionPreviewModal({
         <Box sx={{ p: "8px", pb: "16px" }}>
           <PreviewRoleBanner
             role={simulatedRole}
+            note={simulationNote}
             onRoleChange={(role) => onSimulatedRoleChange?.(role)}
             onExit={() => onExitSimulation?.()}
           />
@@ -774,8 +837,8 @@ function SubmissionPreviewModal({
               submissionId={submissionId}
               routing={lane}
               canDecide={canDecide || !isPending}
-              decideBlockedReason={previewData?.decideBlockedReason}
-              laneReviewers={laneReviewers}
+              decideBlockedReason={gate.decideBlockedReason}
+              laneReviewers={gate.laneReviewers}
               canEscalate={canEscalate}
               actionsDisabled={simulating}
               onEscalated={() => {

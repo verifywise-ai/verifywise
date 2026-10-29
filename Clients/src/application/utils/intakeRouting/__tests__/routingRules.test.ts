@@ -6,6 +6,7 @@ import {
   BAND_LOWER_BOUND,
   DEFAULT_ROUTING,
   canDecideLane,
+  entityLevel,
   laneAtDecision,
   laneFor,
   laneOnRecord,
@@ -16,7 +17,7 @@ import type {
   ReviewLane,
   RoutingReason,
   SubmissionRouting,
-} from "../../../../presentation/pages/IntakeFormBuilder/types";
+} from "../../../../domain/types/intakeRouting";
 
 // The server suite runs the same cases against Servers/services/intakeRouting,
 // so the two copies cannot drift apart without one suite failing.
@@ -46,6 +47,12 @@ const cases = JSON.parse(readFileSync(FIXTURE, "utf8")) as {
   laneReviewerIdsFor: Array<{ lane: ReviewLane | null; cfg: Cfg; expected: number[] }>;
   laneOnRecord: Array<{ stored: Stored; cfg: Cfg; effective: Effective; expected: LaneResult }>;
   laneAtDecision: Array<{ stored: Stored; cfg: Cfg; effective: Effective; expected: LaneResult }>;
+  entityLevel: Array<{
+    entityType: string;
+    runLevel: string | null;
+    mapped: string | null;
+    expected: string | null;
+  }>;
 };
 
 describe("routingRules client mirror", () => {
@@ -67,6 +74,13 @@ describe("routingRules client mirror", () => {
 
   it.each(cases.laneAtDecision)("laneAtDecision %#", ({ stored, cfg, effective, expected }) => {
     expect(laneAtDecision(stored, cfg, effective)).toEqual(expected);
+  });
+
+  // The server runs these through getSubmissionPreview, where the mapped answer
+  // reaches entityLevel as the entity data's ai_risk_classification.
+  it.each(cases.entityLevel)("entityLevel %#", ({ entityType, runLevel, mapped, expected }) => {
+    const entityData = mapped === null ? {} : { ai_risk_classification: mapped };
+    expect(entityLevel(entityType, runLevel, entityData)).toBe(expected);
   });
 
   it("keeps the server defaults and band bounds", () => {

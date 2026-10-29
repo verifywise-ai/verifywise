@@ -5,11 +5,18 @@
 
 import type {
   FormRouting,
+  ReviewLane,
   SubmissionRouting,
-} from "../../../presentation/pages/IntakeFormBuilder/types";
-import { hasPendingSecondReview } from "../../../presentation/pages/IntakeFormBuilder/routing/laneFilter";
+} from "../../../domain/types/intakeRouting";
 import type { ScoreBand } from "../intakeScoring/scoreMath";
-import { canDecideLane, DEFAULT_ROUTING, laneOnRecord, laneReviewerIdsFor } from "./routingRules";
+import { hasPendingSecondReview } from "./secondReview";
+import {
+  canDecideLane,
+  entityLevel,
+  laneOnRecord,
+  laneReviewerIdsFor,
+  type ReviewerLists,
+} from "./routingRules";
 
 export type PreviewRole = "admin" | "senior" | "standard";
 
@@ -31,6 +38,9 @@ export const PUBLIC_PREVIEW_QUERY = `${PUBLIC_PREVIEW_PARAM}=1&as=submitter`;
 /** A stand-in user id that matches no real user, so no real assignment applies. */
 export const SIMULATED_USER_ID = -1;
 
+/** The server's wording when a user may not decide a senior-lane submission. */
+export const DECIDE_BLOCKED_SENIOR = "This submission is assigned to senior reviewers";
+
 export function parsePreviewRole(raw: string | null | undefined): PreviewRole | null {
   return PREVIEW_ROLES.find((role) => role === raw) ?? null;
 }
@@ -40,62 +50,81 @@ export function reviewPreviewPath(role: PreviewRole): string {
   return `/intake-forms/submissions?${SIMULATE_ROLE_PARAM}=${role}`;
 }
 
-/**
- * The form's routing as it applies to a simulated viewer: the same lane
- * settings, with the viewer as the only reviewer of their kind.
- */
-export function simulatedRouting(
-  role: PreviewRole,
-  routingEnabled: boolean,
-  formRouting: FormRouting | null | undefined,
-): FormRouting {
-  const base = formRouting ?? {
-    ...DEFAULT_ROUTING,
-    seniorReviewerIds: [],
-    standardReviewerIds: [],
-  };
+/** Reviewer lists with the simulated viewer as the only reviewer of their kind. */
+function simulatedLists(role: PreviewRole, routingEnabled: boolean): ReviewerLists {
   return {
-    ...base,
     enabled: routingEnabled,
     seniorReviewerIds: role === "senior" ? [SIMULATED_USER_ID] : [],
     standardReviewerIds: role === "standard" ? [SIMULATED_USER_ID] : [],
   };
 }
 
+/**
+ * Whether the role can act on a second review: one is waiting, and the role is
+ * one the server lets act (a senior reviewer or an Admin). The simulated viewer
+ * never made the approval. The review modal and the list filter both use this.
+ */
+export function simulatedCanSecondReview(
+  role: PreviewRole,
+  row: { routing?: SubmissionRouting | null },
+): boolean {
+  return hasPendingSecondReview(row) && (role === "admin" || role === "senior");
+}
+
 export interface SimulatedGateInput {
   isPending: boolean;
   routingEnabled: boolean;
-  formRouting: FormRouting | null | undefined;
+  /** The form's current routing settings, as loaded for the simulation; null when it has none. */
+  formRouting: FormRouting | null;
   stored: SubmissionRouting | null;
-  effective: {
-    level: string | null;
-    finalScore: number | null;
-    scoringStatus: string | null;
-    bandInForce: ScoreBand | null;
-  };
+  entityType: string;
+  /** The level of the submission's EU AI Act run, when it has one. */
+  runLevel: string | null;
+  entityData: Record<string, unknown>;
+  finalScore: number | null;
+  scoringStatus: string | null;
+  bandInForce: ScoreBand | null;
 }
 
 export interface SimulatedGate {
+  lane: ReviewLane | null;
   canDecide: boolean;
   canEscalate: boolean;
   canSecondReview: boolean;
+  /** The form's real reviewers who can decide the lane, as the server lists them. */
+  laneReviewerIds: number[];
+  decideBlockedReason: string | null;
 }
 
 /** What the review modal would show a viewer in this role, as the server decides it. */
 export function simulatedReviewGate(role: PreviewRole, input: SimulatedGateInput): SimulatedGate {
-  const cfg = simulatedRouting(role, input.routingEnabled, input.formRouting);
+  const cfg: FormRouting | null = input.formRouting
+    ? { ...input.formRouting, ...simulatedLists(role, input.routingEnabled) }
+    : null;
   const isAdmin = role === "admin";
-  const { lane } = laneOnRecord(input.stored, cfg, input.effective);
+  const { lane } = laneOnRecord(input.stored, cfg, {
+    level: entityLevel(input.entityType, input.runLevel, input.entityData),
+    finalScore: input.finalScore,
+    scoringStatus: input.scoringStatus,
+    bandInForce: input.bandInForce,
+  });
+  const canDecide = canDecideLane(lane, SIMULATED_USER_ID, isAdmin, cfg);
   const inLane = laneReviewerIdsFor(lane, cfg).includes(SIMULATED_USER_ID);
   return {
-    canDecide: canDecideLane(lane, SIMULATED_USER_ID, isAdmin, cfg),
+    lane,
+    canDecide,
     canEscalate:
       input.isPending &&
       input.routingEnabled &&
       input.stored?.lane === "standard" &&
       (isAdmin || inLane),
-    // The simulated viewer never made the approval.
-    canSecondReview: isAdmin || role === "senior",
+    canSecondReview: simulatedCanSecondReview(role, { routing: input.stored }),
+    laneReviewerIds: input.formRouting
+      ? laneReviewerIdsFor(lane, { ...input.formRouting, enabled: input.routingEnabled })
+      : [],
+    // A simulated role is always on its own reviewer list, so only the senior
+    // lane can block it.
+    decideBlockedReason: canDecide ? null : DECIDE_BLOCKED_SENIOR,
   };
 }
 
@@ -108,10 +137,12 @@ interface LaneRow {
 
 /** A Submissions list row with its assignments as they apply to the simulated viewer. */
 export function simulatedLaneRow<T extends LaneRow>(row: T, role: PreviewRole): T {
-  const cfg = simulatedRouting(role, !!row.routingEnabled, null);
   return {
     ...row,
-    laneReviewerIds: laneReviewerIdsFor(row.routing?.lane ?? null, cfg),
-    secondReviewerIds: hasPendingSecondReview(row) && role === "senior" ? [SIMULATED_USER_ID] : [],
+    laneReviewerIds: laneReviewerIdsFor(
+      row.routing?.lane ?? null,
+      simulatedLists(role, !!row.routingEnabled),
+    ),
+    secondReviewerIds: simulatedCanSecondReview(role, row) ? [SIMULATED_USER_ID] : [],
   };
 }

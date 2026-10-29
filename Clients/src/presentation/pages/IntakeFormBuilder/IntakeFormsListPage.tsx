@@ -1093,10 +1093,6 @@ export function IntakeFormsListPage() {
         onRejected={() => handleSubmissionDecided("Submission rejected")}
         onChanged={refreshAfterReview}
         simulatedRole={simulatedRole}
-        formRouting={
-          forms.find((f) => f.id === submissions.find((s) => s.id === selectedSubmissionId)?.formId)
-            ?.routing ?? null
-        }
         onSimulatedRoleChange={setSimulatedRole}
         onExitSimulation={() => setSimulatedRole(null)}
       />
