@@ -215,6 +215,10 @@ export function IntakeFormBuilder() {
     setIsDirty(true);
   }, []);
 
+  // The field editor sends edits after a pause; this enables Save on the
+  // first keystroke, so a quick Save click is not lost on a disabled button.
+  const markDirty = useCallback(() => setIsDirty(true), []);
+
   const updateField = useCallback((updatedField: FormField) => {
     setForm((prev) => ({
       ...prev,
@@ -969,6 +973,7 @@ export function IntakeFormBuilder() {
                     )}
                     llmKeyId={activeLlmKeyId}
                     onChange={updateField}
+                    onEdit={markDirty}
                     onClose={() => setSelectedFieldId(null)}
                   />
                 ) : (

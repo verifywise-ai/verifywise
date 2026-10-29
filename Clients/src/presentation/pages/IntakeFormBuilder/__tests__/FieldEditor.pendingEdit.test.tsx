@@ -10,6 +10,9 @@ vi.mock("../../../../application/repository/intakeForm.repository", () => ({
   getLLMFieldGuidance: vi.fn(),
 }));
 
+// A mock implementation set in one test must not answer the next one.
+afterEach(() => vi.mocked(getLLMFieldGuidance).mockReset());
+
 const FIRST: FormField = { id: "first", type: "text", label: "First", order: 0 };
 const SECOND: FormField = { id: "second", type: "text", label: "Second", order: 1 };
 
@@ -17,6 +20,7 @@ const editorFor = (
   field: FormField,
   onChange: (field: FormField) => void,
   llmKeyId: number | null = null,
+  onEdit?: () => void,
 ) => (
   <FieldEditor
     field={field}
@@ -24,6 +28,7 @@ const editorFor = (
     entityType={IntakeEntityType.USE_CASE}
     llmKeyId={llmKeyId}
     onChange={onChange}
+    onEdit={onEdit}
     onClose={vi.fn()}
   />
 );
@@ -85,6 +90,19 @@ describe("FieldEditor pending edit", () => {
     );
     vi.advanceTimersByTime(300);
     expect(onChange).toHaveBeenCalledTimes(1);
+  });
+
+  // Save is disabled until the form is dirty. The page must hear about the
+  // first keystroke at once, or a quick Save click lands on a disabled button.
+  it("reports each edit at once, before the debounce sends it", () => {
+    const onChange = vi.fn();
+    const onEdit = vi.fn();
+    renderWithProviders(editorFor(FIRST, onChange, null, onEdit));
+    typeLabel("F");
+    expect(onEdit).toHaveBeenCalledTimes(1);
+    expect(onChange).not.toHaveBeenCalled();
+    typeLabel("Fi");
+    expect(onEdit).toHaveBeenCalledTimes(2);
   });
 
   it("keeps both an outside update to the same field and the pending edit", () => {
