@@ -263,7 +263,7 @@ export function IntakeFormBuilder() {
     setDeleteFieldModalOpen(false);
   }, [fieldToDelete, selectedFieldId]);
 
-  // The copy goes right after the original, so its rules still point above it.
+  // The copy goes right after the original.
   const duplicateField = useCallback((field: FormField) => {
     const newField: FormField = {
       ...field,

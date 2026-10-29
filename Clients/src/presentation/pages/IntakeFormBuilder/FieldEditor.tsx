@@ -29,6 +29,7 @@ import {
   MAX_DECIMALS,
   REQUIRED_ENTITY_FIELDS,
   RISK_TAGGABLE_TYPES,
+  readersOf,
   sortFields,
   type SchemaLogicError,
 } from "../../../application/utils/intakeFormLogic";
@@ -331,8 +332,15 @@ export function FieldEditor({
   const isCalculated = localField.type === "calculated";
   const hasRules =
     Array.isArray(localField.visibility?.conditions) && localField.visibility.conditions.length > 0;
-  // Rules and formulas may read any other field; saving rejects loops.
-  const otherFields = sortFields(allFields).filter((candidate) => candidate.id !== localField.id);
+  // Rules and formulas may read any other field, except one that already
+  // reads this field: picking it would make a loop.
+  const otherFields = (() => {
+    const sorted = sortFields(allFields);
+    const readers = readersOf(sorted, localField.id);
+    return sorted.filter(
+      (candidate) => candidate.id !== localField.id && !readers.has(candidate.id),
+    );
+  })();
   const numericFields = otherFields.filter(
     (candidate) => candidate.type === "number" || candidate.type === "calculated",
   );

@@ -139,7 +139,7 @@ export function VisibilityEditor({
         />
       )}
       {conditions.map((condition, index) => {
-        // A removed field, or one moved below this field, is not offered:
+        // A removed field, or one that would make a loop, is not offered:
         // the row says so instead of showing a different field's condition.
         const ref = otherFields.find((f) => f.id === condition.fieldId);
         const operators = (ref && OPERATORS_BY_TYPE[ref.type]) ?? ["is_empty", "is_not_empty"];

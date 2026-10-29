@@ -9,7 +9,7 @@ import {
 } from "./types";
 import type { Condition, LogicField, LogicSchema, SchemaLogicError } from "./types";
 import { parseFormula } from "./formula";
-import { dependenciesOf, sortFields } from "./evaluate";
+import { dependencyGraph, sortFields } from "./evaluate";
 
 const NUMERIC_TYPES = ["number", "calculated"];
 const OPTION_TYPES = ["select", "multiselect"];
@@ -41,25 +41,15 @@ function conditionValueError(condition: Condition, ref: LogicField): "value" | "
 export function validateSchemaLogic(schema: LogicSchema, entityType: string): SchemaLogicError[] {
   const fields = sortFields(schema && Array.isArray(schema.fields) ? schema.fields : []);
   const byId = new Map(fields.map((field) => [field.id, field] as const));
-  const dependencies = new Map(fields.map((field) => [field.id, dependenciesOf(field)] as const));
-  // Whether `target` can be reached from `start` through rules and formulas.
-  const reaches = (start: string, target: string): boolean => {
-    const seen = new Set<string>();
-    const stack = [start];
-    while (stack.length > 0) {
-      const id = stack.pop() as string;
-      if (id === target) return true;
-      if (seen.has(id)) continue;
-      seen.add(id);
-      stack.push(...(dependencies.get(id) ?? []));
-    }
-    return false;
-  };
-  // The first of `refs` that leads back to `field`, if any.
-  const loopThrough = (field: LogicField, refs: string[]): LogicField | null => {
+  const graph = dependencyGraph(fields);
+  const positionOf = new Map(fields.map((field, index) => [field.id, index] as const));
+  // The first of `refs` that leads back to the field at `index`, if any: a
+  // ref leads back exactly when it is the field itself or in its component.
+  const loopThrough = (index: number, refs: string[]): number | null => {
     for (const refId of refs) {
-      const ref = byId.get(refId);
-      if (ref && (refId === field.id || reaches(refId, field.id))) return ref;
+      const ref = positionOf.get(refId);
+      if (ref === undefined) continue;
+      if (ref === index || graph.componentOf[ref] === graph.componentOf[index]) return ref;
     }
     return null;
   };
@@ -80,7 +70,7 @@ export function validateSchemaLogic(schema: LogicSchema, entityType: string): Sc
     ),
   );
 
-  fields.forEach((field) => {
+  fields.forEach((field, index) => {
     const add = (message: string) =>
       errors.push({ fieldId: field.id, message: `Field "${field.label}": ${message}` });
 
@@ -116,11 +106,11 @@ export function validateSchemaLogic(schema: LogicSchema, entityType: string): Sc
             add(`the formula uses "${ref.label}", which is not a number or calculated field`);
           }
         }
-        const loop = loopThrough(field, parsed.refs);
-        if (loop === field) {
+        const loop = loopThrough(index, parsed.refs);
+        if (loop === index) {
           add("the formula uses this field itself");
-        } else if (loop) {
-          add(`the formula forms a circular reference with "${loop.label}"`);
+        } else if (loop !== null) {
+          add(`the formula forms a circular reference with "${fields[loop].label}"`);
         }
       }
       if (
@@ -201,15 +191,15 @@ export function validateSchemaLogic(schema: LogicSchema, entityType: string): Sc
       }
     }
     const loop = loopThrough(
-      field,
+      index,
       visibility.conditions.flatMap((condition) =>
         condition && typeof condition === "object" ? [condition.fieldId] : [],
       ),
     );
-    if (loop === field) {
+    if (loop === index) {
       add("the show/hide rules depend on this field itself");
-    } else if (loop) {
-      add(`the show/hide rules form a circular reference with "${loop.label}"`);
+    } else if (loop !== null) {
+      add(`the show/hide rules form a circular reference with "${fields[loop].label}"`);
     }
   });
 
