@@ -57,11 +57,23 @@ interface RouteRegistration {
 
 // Files parsed for route registrations, in mount order. app.ts holds the
 // global middleware and the mounts that stay top-level (webhooks, the /v1
-// gateway proxy, /api/v1). Legacy registration modules (routes/legacy/) and
-// the versioned registry (routes/v1/index.ts) are appended here as app.ts is
-// decomposed. Registrations are emitted in list order, which keeps the
-// generated paths: block order aligned with runtime mount order.
-const REGISTRATION_FILES = [APP_FILE];
+// gateway proxy, /api/v1). The legacy registration modules (routes/legacy/)
+// are listed in the order app.ts calls their register functions. The v1
+// registry (routes/v1/index.ts) is not listed here: it is expanded in place
+// when the /api/v1 mount in app.ts is parsed.
+const REGISTRATION_FILES = [
+  APP_FILE,
+  path.join(ROUTES_DIR, "legacy", "coreAuth.routes.ts"),
+  path.join(ROUTES_DIR, "legacy", "vendors.routes.ts"),
+  path.join(ROUTES_DIR, "legacy", "projectsRisks.routes.ts"),
+  path.join(ROUTES_DIR, "legacy", "billingMisc.routes.ts"),
+  path.join(ROUTES_DIR, "legacy", "filesData.routes.ts"),
+  path.join(ROUTES_DIR, "legacy", "frameworks.routes.ts"),
+  path.join(ROUTES_DIR, "legacy", "aiGovernance.routes.ts"),
+  path.join(ROUTES_DIR, "legacy", "aiPlatform.routes.ts"),
+  path.join(ROUTES_DIR, "legacy", "workflows.routes.ts"),
+  path.join(ROUTES_DIR, "legacy", "reporting.routes.ts"),
+];
 
 // Versioned API registry (ADR 0001). app.ts mounts this router once at
 // /api/v1; its `router.use("/<resource>", <router>)` registrations are
@@ -640,7 +652,20 @@ export function mergeSwagger(endpoints: Endpoint[], existing: any): any {
   const usedOperationIds = new Set<string>();
   const allTags = new Set<string>();
 
-  for (const ep of endpoints) {
+  // Process endpoints in the existing spec's path order so regeneration is
+  // stable no matter how route registration is organized across app.ts and
+  // the legacy/v1 registration modules. Without this, reordering mounts would
+  // reshuffle the paths: block and swap operationIds between duplicate
+  // handler names (first occurrence wins the bare id). Undocumented endpoints
+  // keep their discovery order at the end.
+  const existingOrder = new Map(Object.keys(existingPaths).map((p, i) => [p, i]));
+  const orderedEndpoints = [...endpoints].sort((a, b) => {
+    const ai = existingOrder.get(a.openApiPath) ?? Number.MAX_SAFE_INTEGER;
+    const bi = existingOrder.get(b.openApiPath) ?? Number.MAX_SAFE_INTEGER;
+    return ai - bi;
+  });
+
+  for (const ep of orderedEndpoints) {
     const method = ep.method.toLowerCase();
     const openApiPath = ep.openApiPath;
 
