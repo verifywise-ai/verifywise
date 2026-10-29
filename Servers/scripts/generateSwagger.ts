@@ -5,7 +5,9 @@
  * Run: npm run generate:swagger  (or: npx ts-node scripts/generateSwagger.ts)
  *
  * What it does:
- * 1. Parses app.ts to get the base path -> route file mapping.
+ * 1. Parses the route registration files (REGISTRATION_FILES: app.ts today; legacy
+ *    registration modules and routes/v1/index.ts are added as app.ts is decomposed)
+ *    to get the base path -> route file mapping.
  * 2. Reads each route file to extract method, path, middleware, and handler name.
  * 3. Infers bearerAuth security for routes protected by authenticateJWT / superAdminOnly.
  * 4. Merges the discovered endpoints into the existing swagger.yaml, preserving rich
@@ -45,53 +47,142 @@ interface RouteRegistration {
   importName: string;
   isFactory: boolean;
   line: number;
+  // Absolute path of the file the registration was parsed from. Imports are
+  // resolved relative to this file's directory.
+  sourceFile: string;
 }
 
+// Files parsed for route registrations, in mount order. app.ts holds the
+// global middleware and the mounts that stay top-level (webhooks, the /v1
+// gateway proxy, /api/v1). Legacy registration modules (routes/legacy/) and
+// the versioned registry (routes/v1/index.ts) are appended here as app.ts is
+// decomposed. Registrations are emitted in list order, which keeps the
+// generated paths: block order aligned with runtime mount order.
+const REGISTRATION_FILES = [APP_FILE];
+
 // ---------------------------------------------------------------------------
-// Parse app.ts for route registrations
+// Parse the registration files for route registrations
 // ---------------------------------------------------------------------------
 export function parseAppFile(): RouteRegistration[] {
-  const content = fs.readFileSync(APP_FILE, "utf-8");
-  const lines = content.split("\n");
   const registrations: RouteRegistration[] = [];
 
-  // Matches:
-  //   app.use("/api/users", userRoutes);
-  //   app.use("/api/deepeval", deepEvalRoutes());
-  //   app.use("/api/automations", automation);
-  const useRegex = /app\.use\s*\(\s*"([^"]+)"\s*,\s*(\w+)(?:\s*\(\s*\))?\s*\)/g;
+  for (const sourceFile of REGISTRATION_FILES) {
+    const content = fs.readFileSync(sourceFile, "utf-8");
+    const lines = content.split("\n");
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    let match: RegExpExecArray | null;
-    while ((match = useRegex.exec(line)) !== null) {
-      registrations.push({
-        basePath: match[1],
-        importName: match[2],
-        isFactory: line.includes(`${match[2]}()`),
-        line: i + 1,
-      });
+    // Matches:
+    //   app.use("/api/users", userRoutes);
+    //   app.use("/api/deepeval", deepEvalRoutes());
+    //   app.use("/api/automations", automation);
+    const useRegex = /app\.use\s*\(\s*"([^"]+)"\s*,\s*(\w+)(?:\s*\(\s*\))?\s*\)/g;
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      let match: RegExpExecArray | null;
+      while ((match = useRegex.exec(line)) !== null) {
+        registrations.push({
+          basePath: match[1],
+          importName: match[2],
+          isFactory: line.includes(`${match[2]}()`),
+          line: i + 1,
+          sourceFile,
+        });
+      }
     }
-  }
 
-  // Inline health endpoints (/health, /health/live, /health/ready)
-  for (const match of content.matchAll(/app\.get\("(\/health(?:\/[a-z]+)?)"/g)) {
-    registrations.push({
-      basePath: match[1],
-      importName: "_inline_health",
-      isFactory: false,
-      line: 0,
-    });
+    // Inline health endpoints (/health, /health/live, /health/ready) live in
+    // app.ts only.
+    if (sourceFile === APP_FILE) {
+      for (const match of content.matchAll(/app\.get\("(\/health(?:\/[a-z]+)?)"/g)) {
+        registrations.push({
+          basePath: match[1],
+          importName: "_inline_health",
+          isFactory: false,
+          line: 0,
+          sourceFile,
+        });
+      }
+    }
   }
 
   return registrations;
 }
 
 // ---------------------------------------------------------------------------
-// Find the route file that corresponds to an import name in app.ts
+// Extract the local binding names from an import statement's binding clause.
+// Handles default imports, named imports (incl. aliases), and mixed forms:
+//   userRoutes                          -> ["userRoutes"]
+//   virtualFolderRoutes, { filesFolderRouter } -> ["virtualFolderRoutes", "filesFolderRouter"]
+//   { a, b as c }                       -> ["a", "c"]
 // ---------------------------------------------------------------------------
-export function findRouteFile(importName: string): string | null {
-  const content = fs.readFileSync(APP_FILE, "utf-8");
+function parseImportedNames(bindings: string): string[] {
+  const names: string[] = [];
+  const namedMatch = bindings.match(/\{([^}]*)\}/);
+  const defaultPart = bindings.replace(/\{[^}]*\}/, "").replace(/,/g, " ").trim();
+  if (defaultPart && !defaultPart.startsWith("*")) {
+    names.push(defaultPart);
+  }
+  if (namedMatch) {
+    for (const entry of namedMatch[1].split(",")) {
+      const e = entry.trim();
+      if (!e) continue;
+      const asMatch = e.match(/\bas\s+(\w+)$/);
+      names.push(asMatch ? asMatch[1] : e);
+    }
+  }
+  return names;
+}
+
+// ---------------------------------------------------------------------------
+// Resolve an imported router binding to its route file by parsing the source
+// file's own import statements. The specifier is resolved relative to the
+// source file's directory, so registration modules outside Servers/ root
+// (routes/legacy/*.ts, routes/v1/index.ts) work unchanged. Only resolutions
+// that land on an existing .ts file under routes/ or extensions/ are
+// accepted; anything else returns null so callers can fall back to the legacy
+// heuristics.
+// ---------------------------------------------------------------------------
+function resolveImportBinding(sourceFile: string, importName: string): string | null {
+  const content = fs.readFileSync(sourceFile, "utf-8");
+  const sourceDir = path.dirname(sourceFile);
+  const importRegex = /import\s+([^;]+?)\s+from\s+"(\.[^"]+)";/g;
+
+  let match: RegExpExecArray | null;
+  while ((match = importRegex.exec(content)) !== null) {
+    const bindings = match[1];
+    const specifier = match[2];
+    if (!parseImportedNames(bindings).includes(importName)) continue;
+
+    let resolved = path.resolve(sourceDir, specifier);
+    if (resolved.endsWith(".js")) resolved = resolved.slice(0, -3);
+    if (resolved.endsWith(".ts")) resolved = resolved.slice(0, -3);
+    resolved += ".ts";
+
+    if (!fs.existsSync(resolved)) continue;
+
+    const rel = path.relative(SERVERS_DIR, resolved);
+    if (rel.startsWith("routes" + path.sep) || rel.startsWith("extensions" + path.sep)) {
+      return resolved;
+    }
+  }
+
+  return null;
+}
+
+// ---------------------------------------------------------------------------
+// Find the route file that corresponds to an imported router binding.
+// Prefers binding-exact import resolution relative to the file the
+// registration was parsed from; falls back to the legacy substring heuristics
+// (which read sourceFile, i.e. app.ts for the flat mount list).
+// ---------------------------------------------------------------------------
+export function findRouteFile(
+  importName: string,
+  sourceFile: string = APP_FILE,
+): string | null {
+  const resolved = resolveImportBinding(sourceFile, importName);
+  if (resolved) return resolved;
+
+  const content = fs.readFileSync(sourceFile, "utf-8");
   // Match imports from either the legacy `./routes/` folder or the newer
   // `./extensions/<key>/` layout — both register Express routers.
   const importPathRegex = /from\s+"\.\/(routes|extensions)\/([^"]+)";/g;
@@ -323,7 +414,7 @@ export function buildEndpoints(): Endpoint[] {
       continue;
     }
 
-    const routeFilePath = findRouteFile(reg.importName);
+    const routeFilePath = findRouteFile(reg.importName, reg.sourceFile);
     if (!routeFilePath || !fs.existsSync(routeFilePath)) {
       console.warn(`  Could not find route file for: ${reg.basePath} (${reg.importName})`);
       continue;
@@ -582,7 +673,7 @@ if (require.main === module) {
 }
 
 function main() {
-  console.log("Parsing app.ts for route mappings...");
+  console.log("Parsing route registration files for route mappings...");
   const endpoints = buildEndpoints();
   console.log(`Found ${endpoints.length} endpoints`);
 
