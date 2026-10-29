@@ -7892,6 +7892,8 @@ tags:
     name: Vendors
   -
     name: Webhooks
+  -
+    name: 'v1: Shadow AI'
 paths:
   /webhooks/github:
     post:
@@ -23621,7 +23623,7 @@ paths:
   /v1/shadow-ai/events:
     post:
       tags:
-        - 'Shadow AI'
+        - 'v1: Shadow AI'
       summary: 'Ingest Events'
       operationId: ingestEvents
       requestBody:

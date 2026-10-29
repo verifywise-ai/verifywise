@@ -50,6 +50,9 @@ interface RouteRegistration {
   // Absolute path of the file the registration was parsed from. Imports are
   // resolved relative to this file's directory.
   sourceFile: string;
+  // Set for registrations expanded from a versioned registry (e.g. "v1");
+  // used to derive version-aware OpenAPI tags.
+  apiVersion?: string;
 }
 
 // Files parsed for route registrations, in mount order. app.ts holds the
@@ -59,6 +62,12 @@ interface RouteRegistration {
 // decomposed. Registrations are emitted in list order, which keeps the
 // generated paths: block order aligned with runtime mount order.
 const REGISTRATION_FILES = [APP_FILE];
+
+// Versioned API registry (ADR 0001). app.ts mounts this router once at
+// /api/v1; its `router.use("/<resource>", <router>)` registrations are
+// expanded in place so the generated spec keeps mount order.
+const V1_REGISTRY_FILE = path.join(ROUTES_DIR, "v1", "index.ts");
+const V1_MOUNT_PATH = "/api/v1";
 
 // ---------------------------------------------------------------------------
 // Parse the registration files for route registrations
@@ -80,6 +89,13 @@ export function parseAppFile(): RouteRegistration[] {
       const line = lines[i];
       let match: RegExpExecArray | null;
       while ((match = useRegex.exec(line)) !== null) {
+        // The /api/v1 mount is a nested registry router, not a route file:
+        // expand its router.use() registrations in place so endpoints keep
+        // their runtime mount order and get version-aware tags.
+        if (match[1] === V1_MOUNT_PATH && fs.existsSync(V1_REGISTRY_FILE)) {
+          registrations.push(...parseVersionedRegistry(V1_MOUNT_PATH, V1_REGISTRY_FILE));
+          continue;
+        }
         registrations.push({
           basePath: match[1],
           importName: match[2],
@@ -102,6 +118,38 @@ export function parseAppFile(): RouteRegistration[] {
           sourceFile,
         });
       }
+    }
+  }
+
+  return registrations;
+}
+
+// ---------------------------------------------------------------------------
+// Parse a versioned registry (routes/v1/index.ts) for router.use()
+// registrations and expand them under the registry's mount path.
+// ---------------------------------------------------------------------------
+function parseVersionedRegistry(mountPath: string, registryFile: string): RouteRegistration[] {
+  const apiVersion = mountPath.replace(/^\/api\//, ""); // "/api/v1" -> "v1"
+  const content = fs.readFileSync(registryFile, "utf-8");
+  const lines = content.split("\n");
+  const registrations: RouteRegistration[] = [];
+
+  // Matches the registry convention:
+  //   router.use("/shadow-ai", shadowAiIngestionRoutes);
+  const useRegex = /router\.use\s*\(\s*"([^"]+)"\s*,\s*(\w+)(?:\s*\(\s*\))?\s*\)/g;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    let match: RegExpExecArray | null;
+    while ((match = useRegex.exec(line)) !== null) {
+      registrations.push({
+        basePath: mountPath + match[1],
+        importName: match[2],
+        isFactory: line.includes(`${match[2]}()`),
+        line: i + 1,
+        sourceFile: registryFile,
+        apiVersion,
+      });
     }
   }
 
@@ -421,7 +469,8 @@ export function buildEndpoints(): Endpoint[] {
     }
 
     const rawEndpoints = parseRouteFile(routeFilePath);
-    const tag = deriveTag(reg.basePath);
+    const baseTag = deriveTag(reg.basePath);
+    const tag = reg.apiVersion ? `${reg.apiVersion}: ${baseTag}` : baseTag;
 
     for (const ep of rawEndpoints) {
       const fullPath = reg.basePath + ep.routePath;

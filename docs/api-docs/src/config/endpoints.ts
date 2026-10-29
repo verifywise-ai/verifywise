@@ -10915,7 +10915,7 @@ export const shadowAiEndpoints: Endpoint[] = [
       { status: 201, description: "Created successfully" },
       { status: 500, description: "Internal server error" },
     ],
-    tag: "Shadow AI",
+    tag: "v1: Shadow AI",
   },
 ];
 

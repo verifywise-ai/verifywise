@@ -98,7 +98,7 @@ import governanceOsRoutes from "./routes/governanceOs.route";
 import complianceRoutes from "./routes/compliance.route";
 import virtualFolderRoutes, { filesFolderRouter } from "./routes/virtualFolder.route";
 import shadowAiRoutes from "./routes/shadowAi.route";
-import shadowAiIngestionRoutes from "./routes/shadowAiIngestion.route";
+import v1Routes from "./routes/v1";
 import agentDiscoveryRoutes from "./routes/agentDiscovery.route";
 import invitationRoutes from "./routes/invitation.route";
 import intakeFormRoutes from "./routes/intakeForm.route";
@@ -428,7 +428,10 @@ export function createApp(preRoutesMiddleware?: RequestHandler[]): express.Appli
   app.use("/api/virtual-folders", virtualFolderRoutes);
   app.use("/api/files", filesFolderRouter);
   app.use("/api/shadow-ai", shadowAiRoutes);
-  app.use("/api/v1/shadow-ai", shadowAiIngestionRoutes);
+  // Versioned API surface (ADR 0001): all /api/v1/* routes are registered in
+  // routes/v1/index.ts. Mounted at the position of the original
+  // /api/v1/shadow-ai mount to preserve route-matching order.
+  app.use("/api/v1", v1Routes);
   app.use("/api/agent-primitives", agentDiscoveryRoutes);
   app.use("/api/intake", intakeFormRoutes);
   app.use("/api/version", versionRoutes);
