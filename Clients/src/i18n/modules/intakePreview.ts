@@ -3,6 +3,15 @@
 // ("Previewing as", the role, "simulation only") so each part translates.
 
 export const de: Record<string, string> = {
+  "Test submit": "Testweise absenden",
+  "Submit for real": "Echt absenden",
+  "How to submit": "Wie absenden",
+  "Checks your answers and sends nothing: no submission, no emails, no AI scoring.":
+    "Prüft Ihre Antworten und sendet nichts: keine Einreichung, keine E-Mails, keine KI-Bewertung.",
+  "Creates a real submission, emails your reviewers and runs AI scoring if the form uses it.":
+    "Erstellt eine echte Einreichung, benachrichtigt Ihre Prüfer per E-Mail und führt die KI-Bewertung aus, wenn das Formular sie nutzt.",
+  "Test submit passed. Nothing was sent.":
+    "Testweises Absenden erfolgreich. Es wurde nichts gesendet.",
   // Builder Preview menu
   "Form as a submitter": "Formular als einreichende Person",
   "Opens the public form in a new tab": "Öffnet das öffentliche Formular in einem neuen Tab",
@@ -18,8 +27,8 @@ export const de: Record<string, string> = {
   "Exit preview": "Vorschau beenden",
   // Public form preview notice
   "Previewing as a submitter": "Vorschau als einreichende Person",
-  "This is the form people see from your public link. Submitting it sends a real submission to your reviewers.":
-    "So sehen Personen das Formular über Ihren öffentlichen Link. Beim Absenden geht eine echte Einreichung an Ihre Prüfer.",
+  "This is the form people see from your public link. Submit lets you test it, which sends nothing, or submit for real, which reaches your reviewers.":
+    "So sehen Personen das Formular über Ihren öffentlichen Link. Mit Absenden können Sie es testen, dann wird nichts gesendet, oder echt absenden, dann erreicht es Ihre Prüfer.",
   "Dismiss preview notice": "Vorschauhinweis schließen",
   // Review simulation, routing state and blocked line
   "Loading routing for this form": "Routing für dieses Formular wird geladen",
@@ -29,6 +38,14 @@ export const de: Record<string, string> = {
 };
 
 export const fr: Record<string, string> = {
+  "Test submit": "Tester l’envoi",
+  "Submit for real": "Envoyer pour de vrai",
+  "How to submit": "Comment envoyer",
+  "Checks your answers and sends nothing: no submission, no emails, no AI scoring.":
+    "Vérifie vos réponses et n’envoie rien : aucune soumission, aucun e-mail, aucune évaluation par l’IA.",
+  "Creates a real submission, emails your reviewers and runs AI scoring if the form uses it.":
+    "Crée une vraie soumission, envoie un e-mail à vos réviseurs et lance l’évaluation par l’IA si le formulaire l’utilise.",
+  "Test submit passed. Nothing was sent.": "Test d’envoi réussi. Rien n’a été envoyé.",
   // Builder Preview menu
   "Form as a submitter": "Formulaire en tant que demandeur",
   "Opens the public form in a new tab": "Ouvre le formulaire public dans un nouvel onglet",
@@ -44,8 +61,8 @@ export const fr: Record<string, string> = {
   "Exit preview": "Quitter l’aperçu",
   // Public form preview notice
   "Previewing as a submitter": "Aperçu en tant que demandeur",
-  "This is the form people see from your public link. Submitting it sends a real submission to your reviewers.":
-    "Voici le formulaire que les personnes voient depuis votre lien public. L’envoyer crée une vraie soumission pour vos réviseurs.",
+  "This is the form people see from your public link. Submit lets you test it, which sends nothing, or submit for real, which reaches your reviewers.":
+    "Voici le formulaire que les personnes voient depuis votre lien public. Envoyer permet de le tester, sans rien envoyer, ou de l’envoyer pour de vrai, à vos réviseurs.",
   "Dismiss preview notice": "Fermer l’avis d’aperçu",
   // Review simulation, routing state and blocked line
   "Loading routing for this form": "Chargement du routage de ce formulaire",
@@ -55,6 +72,14 @@ export const fr: Record<string, string> = {
 };
 
 export const es: Record<string, string> = {
+  "Test submit": "Probar envío",
+  "Submit for real": "Enviar de verdad",
+  "How to submit": "Cómo enviar",
+  "Checks your answers and sends nothing: no submission, no emails, no AI scoring.":
+    "Revisa sus respuestas y no envía nada: ningún envío, ningún correo, ninguna evaluación con IA.",
+  "Creates a real submission, emails your reviewers and runs AI scoring if the form uses it.":
+    "Crea un envío real, envía un correo a sus revisores y ejecuta la evaluación con IA si el formulario la usa.",
+  "Test submit passed. Nothing was sent.": "Prueba de envío correcta. No se envió nada.",
   // Builder Preview menu
   "Form as a submitter": "Formulario como solicitante",
   "Opens the public form in a new tab": "Abre el formulario público en una pestaña nueva",
@@ -70,8 +95,8 @@ export const es: Record<string, string> = {
   "Exit preview": "Salir de la vista previa",
   // Public form preview notice
   "Previewing as a submitter": "Vista previa como solicitante",
-  "This is the form people see from your public link. Submitting it sends a real submission to your reviewers.":
-    "Este es el formulario que se ve desde su enlace público. Al enviarlo se crea un envío real para sus revisores.",
+  "This is the form people see from your public link. Submit lets you test it, which sends nothing, or submit for real, which reaches your reviewers.":
+    "Este es el formulario que se ve desde su enlace público. Enviar le permite probarlo, sin enviar nada, o enviarlo de verdad, a sus revisores.",
   "Dismiss preview notice": "Cerrar el aviso de vista previa",
   // Review simulation, routing state and blocked line
   "Loading routing for this form": "Cargando el enrutamiento de este formulario",

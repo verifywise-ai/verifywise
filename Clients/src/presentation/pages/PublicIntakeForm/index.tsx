@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useParams, useSearchParams, useNavigate } from "react-router";
 import { useForm } from "react-hook-form";
 import { Box, Collapse, Typography, useMediaQuery } from "@mui/material";
-import { Send, Loader2, Info, AlertCircle, Sparkles } from "lucide-react";
+import { Send, Loader2, Info, AlertCircle, Sparkles, ChevronDown } from "lucide-react";
 import Field from "../../components/Inputs/Field";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import { FormFieldRenderer, FormFieldHint, FieldLabel } from "./FormFieldRenderer";
@@ -12,6 +12,7 @@ import { IntakeAssistantPanel } from "./IntakeAssistantPanel";
 import { VendorPrefillCard } from "./VendorPrefillCard";
 import { PrefillLine } from "./PrefillLine";
 import { PreviewBanner } from "./PreviewBanner";
+import { PreviewSubmitMenu, TestSubmitPassed, type PreviewSubmitMode } from "./PreviewSubmitMenu";
 import { PUBLIC_PREVIEW_PARAM } from "../../../application/utils/intakeRouting/previewRole";
 import {
   cleanSubmission,
@@ -167,9 +168,14 @@ export function PublicIntakeForm() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const resubmissionToken = searchParams.get("token") || undefined;
-  // A builder's preview only adds a notice; it changes nothing else on the form.
+  // A builder's preview adds a notice and asks, on Submit, whether to test
+  // (check the answers, send nothing) or submit for real. It unlocks nothing.
+  const isPreview = searchParams.get(PUBLIC_PREVIEW_PARAM) === "1";
   const [previewDismissed, setPreviewDismissed] = useState(false);
-  const showPreviewBanner = searchParams.get(PUBLIC_PREVIEW_PARAM) === "1" && !previewDismissed;
+  const showPreviewBanner = isPreview && !previewDismissed;
+  const [submitMenuAnchor, setSubmitMenuAnchor] = useState<HTMLElement | null>(null);
+  const submitModeRef = useRef<PreviewSubmitMode>("real");
+  const [testSubmitPassed, setTestSubmitPassed] = useState(false);
 
   // State
   const [formData, setFormData] = useState<PublicFormData | null>(null);
@@ -364,6 +370,7 @@ export function PublicIntakeForm() {
 
   const onSubmit = async (data: Record<string, unknown>) => {
     if (!formData) return;
+    setTestSubmitPassed(false);
     const isNewFormat = !!publicId;
     if (!isNewFormat && (!tenantSlug || !formSlug)) return;
 
@@ -384,6 +391,12 @@ export function PublicIntakeForm() {
     const captchaNum = Number(captchaValue.trim());
     if (!captchaValue.trim() || isNaN(captchaNum)) {
       setCaptchaError("Please enter a valid number");
+      return;
+    }
+
+    // Every check above has passed; a test stops here and sends nothing.
+    if (isPreview && submitModeRef.current === "test") {
+      setTestSubmitPassed(true);
       return;
     }
 
@@ -663,7 +676,16 @@ export function PublicIntakeForm() {
 
             {/* Form body */}
             {(!riskStep || step === "form") && (
-              <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ p: "32px" }}>
+              <Box
+                component="form"
+                onSubmit={(event: React.FormEvent<HTMLFormElement>) => {
+                  // In a preview, Enter in a field runs a test: a real submission
+                  // only comes from choosing it in the Submit menu.
+                  if (isPreview) submitModeRef.current = "test";
+                  return handleSubmit(onSubmit)(event);
+                }}
+                sx={{ p: "32px" }}
+              >
                 {/* Back to the risk step */}
                 {riskStep && (
                   <Box sx={{ mb: "16px" }}>
@@ -852,9 +874,16 @@ export function PublicIntakeForm() {
 
                 {assistantPanel && !panelBeside && <Box sx={{ mb: "24px" }}>{assistantPanel}</Box>}
 
-                {/* Submit button */}
+                {testSubmitPassed && <TestSubmitPassed />}
+
+                {/* Submit button. In a preview it opens the test / real choice. */}
                 <CustomizableButton
-                  type="submit"
+                  type={isPreview ? "button" : "submit"}
+                  onClick={
+                    isPreview ? (event) => setSubmitMenuAnchor(event.currentTarget) : undefined
+                  }
+                  endIcon={isPreview ? <ChevronDown size={16} /> : undefined}
+                  testId="public-form-submit"
                   variant="contained"
                   isDisabled={isSubmitting}
                   startIcon={
@@ -887,6 +916,17 @@ export function PublicIntakeForm() {
                     },
                   }}
                 />
+                {isPreview && (
+                  <PreviewSubmitMenu
+                    anchor={submitMenuAnchor}
+                    onClose={() => setSubmitMenuAnchor(null)}
+                    onChoose={(mode) => {
+                      setSubmitMenuAnchor(null);
+                      submitModeRef.current = mode;
+                      void handleSubmit(onSubmit)();
+                    }}
+                  />
+                )}
               </Box>
             )}
           </Box>

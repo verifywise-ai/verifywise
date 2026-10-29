@@ -6,8 +6,8 @@ interface PreviewBannerProps {
 }
 
 /**
- * Framing for a builder previewing the public form. It only adds this notice:
- * the form, its checks and its submission work as they do for anyone.
+ * Framing for a builder previewing the public form. The form and its checks
+ * work as they do for anyone; Submit asks whether to test or submit for real.
  */
 export const PreviewBanner = ({ onDismiss }: PreviewBannerProps) => {
   const theme = useTheme();
@@ -35,8 +35,8 @@ export const PreviewBanner = ({ onDismiss }: PreviewBannerProps) => {
           Previewing as a submitter
         </Typography>
         <Typography sx={{ fontSize: "13px", color: theme.palette.text.secondary }}>
-          This is the form people see from your public link. Submitting it sends a real submission
-          to your reviewers.
+          This is the form people see from your public link. Submit lets you test it, which sends
+          nothing, or submit for real, which reaches your reviewers.
         </Typography>
       </Box>
       <IconButton
