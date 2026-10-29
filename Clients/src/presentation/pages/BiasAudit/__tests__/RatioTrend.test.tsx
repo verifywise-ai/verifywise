@@ -141,7 +141,7 @@ describe("RatioTrend", () => {
     render(oneSegment);
     expect(screen.getByText(/0\.80/)).toBeInTheDocument();
     expect(screen.getByText(/convention|four-fifths/i)).toBeInTheDocument();
-    expect(screen.getByText(/0\.80/)).toHaveTextContent(/does not adopt/i);
+    expect(screen.getByText(/0\.80/)).toHaveTextContent(/sets no pass mark/i);
   });
 
   it("renders an empty state for a single run rather than a one-point chart", () => {

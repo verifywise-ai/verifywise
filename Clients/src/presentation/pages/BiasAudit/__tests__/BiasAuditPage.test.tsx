@@ -146,10 +146,11 @@ describe("BiasAuditPage", () => {
 
   it("offers only use cases with the LL 144 framework, and shows the education panel", () => {
     renderBiasAuditPage();
-    expect(screen.getByText("LL 144 bias audit")).toBeInTheDocument();
+    expect(screen.getAllByText("LL 144 bias audit").length).toBeGreaterThan(0);
     expect(screen.getByText("Screening tool")).toBeInTheDocument();
     expect(screen.queryByText("Other use case")).not.toBeInTheDocument();
-    expect(screen.getByText(/VerifyWise's own measure/)).toBeInTheDocument();
+    expect(screen.getByTestId("aedt-profile-summary")).toHaveTextContent("Out of scope");
+    expect(screen.getByTestId("aedt-next-step")).toHaveTextContent(/scope determination/i);
   });
 
   it("labels a scope determination superseded by a later attestation", () => {
@@ -196,7 +197,7 @@ describe("BiasAuditPage", () => {
 
   it("closes generation for an out-of-scope attested profile", () => {
     renderBiasAuditPage("/bias-audit/7/generate");
-    expect(screen.getByText(/a corpus would have no run to feed/i)).toBeInTheDocument();
+    expect(screen.getByText(/there is nothing to test/i)).toBeInTheDocument();
     expect(screen.getByTestId("aedt-generate-corpus")).toBeDisabled();
   });
 
@@ -215,7 +216,7 @@ describe("BiasAuditPage", () => {
   it("opens the profile for an unknown section", () => {
     renderBiasAuditPage("/bias-audit/7/nonsense");
     expect(screen.getByTestId("aedt-save-answers")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /run measures/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /calculate results/i })).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: /generate scope determination/i }),
     ).not.toBeInTheDocument();
@@ -224,8 +225,8 @@ describe("BiasAuditPage", () => {
   it("explains why the runs tab cannot record a run for an out-of-scope profile", () => {
     renderBiasAuditPage();
     openSection("runs");
-    expect(screen.getByText(/does not run its measures/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /run measures/i })).toBeDisabled();
+    expect(screen.getByText(/there is nothing to measure/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /calculate results/i })).toBeDisabled();
     expect(screen.getByTestId("education-run.upload")).toBeInTheDocument();
   });
 
@@ -252,10 +253,8 @@ describe("BiasAuditPage", () => {
       expect(screen.getByText("60%")).toBeInTheDocument();
 
       openSection("runs");
-      expect(screen.queryByText(/does not run its measures/)).not.toBeInTheDocument();
-      expect(
-        screen.getByText(/attested cutoff answer means this run computes scoring rates/),
-      ).toBeInTheDocument();
+      expect(screen.queryByText(/there is nothing to measure/)).not.toBeInTheDocument();
+      expect(screen.getByText(/This run calculates scoring rates/)).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /choose csv file/i })).not.toBeDisabled();
     });
 
@@ -290,7 +289,7 @@ describe("BiasAuditPage", () => {
         screen.getByRole("button", { name: /generate scope determination/i }),
       ).not.toBeDisabled();
       openSection("runs");
-      expect(screen.getByText(/attested profile places the tool out of scope/)).toBeInTheDocument();
+      expect(screen.getByText(/attested answers the tool is out of scope/)).toBeInTheDocument();
     });
 
     it("names the draft's score when only the score differs", () => {
@@ -416,7 +415,7 @@ describe("BiasAuditPage", () => {
     };
     renderBiasAuditPage();
     const summary = screen.getByTestId("aedt-profile-summary");
-    expect(summary).toHaveTextContent("No score yet.");
+    expect(summary).toHaveTextContent("No score yet");
     expect(summary).not.toHaveTextContent("null%");
   });
 

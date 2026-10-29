@@ -238,6 +238,22 @@ describe("BiasAuditPage run detail", () => {
         created_by: 1,
         created_at: "2026-10-17T10:00:00.000Z",
       },
+      {
+        id: 12,
+        profile_id: 1,
+        profile_version: 1,
+        question_set_version: 1,
+        job_description_key: null,
+        metric: "selection_rate",
+        readiness_score: 100,
+        readiness_blocked_reason: null,
+        expiry_date: "2027-11-17",
+        row_count: 120,
+        dataset_sha256: "def",
+        has_result: true,
+        created_by: 1,
+        created_at: "2026-11-17T10:00:00.000Z",
+      },
     ]);
     repo.getAedtRun.mockResolvedValue({
       run: {
@@ -286,15 +302,22 @@ describe("BiasAuditPage run detail", () => {
     });
   });
 
-  it("shows the ratio trend for the use case beneath the run's stance panel", async () => {
+  it("shows the ratio trend for the use case beneath the runs list", async () => {
     await renderPage();
     openSection("runs");
-    fireEvent.click(await screen.findByTestId("aedt-open-run-11"));
 
     const trend = await screen.findByTestId("aedt-ratio-trend");
     expect(repo.getAedtRunTrend).toHaveBeenCalledWith(7);
     expect(trend).toHaveTextContent("0.860");
-    const stance = screen.getByTestId("education-stance");
-    expect(stance.compareDocumentPosition(trend) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const table = await screen.findByTestId("run-row-11");
+    expect(table.compareDocumentPosition(trend) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("leaves the trend off a run's detail", async () => {
+    await renderPage();
+    openSection("runs");
+    fireEvent.click(await screen.findByTestId("aedt-open-run-11"));
+    await screen.findByTestId("education-stance");
+    expect(screen.queryByTestId("aedt-ratio-trend")).not.toBeInTheDocument();
   });
 });

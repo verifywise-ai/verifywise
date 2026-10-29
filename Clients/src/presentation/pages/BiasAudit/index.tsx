@@ -12,7 +12,7 @@ import {
   TableRow,
   Typography,
 } from "@mui/material";
-import { FolderTree, ListChecks } from "lucide-react";
+import { ArrowRight, FolderTree, ListChecks } from "lucide-react";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
 import Select from "../../components/Inputs/Select";
 import { EmptyState } from "../../components/EmptyState";
@@ -45,10 +45,11 @@ import RunUpload from "./RunUpload";
 import GenerateCorpus from "./GenerateCorpus";
 import RunDetail from "./RunDetail";
 import StancePanel from "./StancePanel";
+import { RatioTrendSection } from "./RatioTrend";
 import PersonLabel from "./PersonLabel";
 import OpenVetoList from "./OpenVetoList";
 import { questionTitle } from "./intakeLayout";
-import { cardSx, cellSx, headSx } from "./styles";
+import { cardSx, cellSx, headSx, helperSx, labelSx } from "./styles";
 import { parseSection, sectionPath, type BiasAuditSection } from "./sections";
 
 /**
@@ -93,7 +94,7 @@ const BiasAuditPage = () => {
   return (
     <PageHeaderExtended
       title="LL 144 bias audit"
-      description="Test your hiring tool against the calculations NYC Local Law 144 requires, record your position, and generate a stance document. A self-administered test is not a bias audit under the law, which requires an independent auditor."
+      description="Check your hiring tool against NYC Local Law 144 before the independent audit. Results are for your internal use. A self-run test is not a bias audit under the law."
     >
       {projectsLoading ? (
         <Stack alignItems="center" sx={{ py: "32px" }}>
@@ -102,9 +103,16 @@ const BiasAuditPage = () => {
       ) : projects.length === 0 && parsed === null ? (
         <EmptyState
           icon={FolderTree}
-          message="No use case has the NYC Local Law 144 framework. Add the framework to a use case to start."
+          message="To start, open a use case, go to its settings and add the NYC Local Law 144 framework."
           showBorder
-        />
+        >
+          <CustomizableButton
+            variant="contained"
+            text="Go to use cases"
+            testId="aedt-go-to-use-cases"
+            onClick={() => navigate("/overview")}
+          />
+        </EmptyState>
       ) : (
         <Stack gap="16px">
           {projects.length > 0 && (
@@ -140,6 +148,7 @@ interface WorkspaceProps {
 }
 
 const ProjectWorkspace = ({ projectId, canEdit, canAttest, activeSection }: WorkspaceProps) => {
+  const navigate = useNavigate();
   const profileQuery = useAedtProfile(projectId);
   const questionsQuery = useAedtQuestions(projectId);
   const runsQuery = useAedtRuns(projectId);
@@ -240,9 +249,9 @@ const ProjectWorkspace = ({ projectId, canEdit, canAttest, activeSection }: Work
   const outOfScope = decision?.readiness.scope === "out_of_scope";
 
   const runBlockedReason = !profile.attested
-    ? "Attest the profile before recording a run. A run records the attested answers it was measured against."
+    ? "Attest the profile before recording a run."
     : outOfScope
-      ? "The attested profile places the tool out of scope, so the module does not run its measures. Generate a scope determination instead."
+      ? "On the attested answers the tool is out of scope, so there is nothing to measure. Record a scope determination instead."
       : null;
 
   // A corpus becomes a run, and an out-of-scope profile records no runs, so
@@ -250,7 +259,7 @@ const ProjectWorkspace = ({ projectId, canEdit, canAttest, activeSection }: Work
   const generateBlockedReason = !decision
     ? "Attest the profile first."
     : outOfScope
-      ? "The attested profile places the tool out of scope, so the module does not run its measures. A corpus would have no run to feed."
+      ? "On the attested answers the tool is out of scope, so there is nothing to test."
       : decision.mayGenerate
         ? null
         : decision.generationBlocked.join("; ");
@@ -262,6 +271,8 @@ const ProjectWorkspace = ({ projectId, canEdit, canAttest, activeSection }: Work
       : !outOfScope
         ? "A scope determination is available only when the attested answers place the tool out of scope. Otherwise the stance comes from a run."
         : null;
+
+  const nextStep = nextStepFor(profile, runsCount);
 
   return (
     <Stack gap="16px">
@@ -294,7 +305,15 @@ const ProjectWorkspace = ({ projectId, canEdit, canAttest, activeSection }: Work
           </Typography>
         </Alert>
       )}
-      <ProfileSummary profile={profile} />
+      <ProfileSummary
+        profile={profile}
+        nextStep={nextStep}
+        onGo={
+          nextStep.section === activeSection
+            ? null
+            : () => navigate(sectionPath(projectId, nextStep.section))
+        }
+      />
 
       {activeSection === "profile" && !reloadRequired && (
         // No key: the wizard overlays its edits on whatever answers the
@@ -346,6 +365,7 @@ const ProjectWorkspace = ({ projectId, canEdit, canAttest, activeSection }: Work
               error={runsQuery.error ? describeAedtError(runsQuery.error).message : null}
               onOpen={setSelectedRun}
             />
+            {runsCount > 1 && <RatioTrendSection projectId={projectId} />}
           </Stack>
         ))}
 
@@ -370,7 +390,61 @@ const DRAFT_SCOPE_NOTE: Record<AedtReadiness["scope"], string> = {
   undetermined: "Your draft answers leave scope undetermined.",
 };
 
-const ProfileSummary = ({ profile }: { profile: AedtProfileView }) => {
+interface NextStep {
+  section: BiasAuditSection;
+  text: string;
+  action: string;
+}
+
+/** The one thing to do next, from the profile and the runs recorded so far. */
+function nextStepFor(profile: AedtProfileView, runsCount: number): NextStep {
+  const current = profile.profile;
+  const decision = profile.attestedDecision;
+  if (!current) {
+    return { section: "profile", text: "Answer the profile questions.", action: "Open profile" };
+  }
+  if (!decision) {
+    return profile.readiness.missingVetoes.length > 0
+      ? {
+          section: "profile",
+          text: "Answer the required questions, then attest the profile.",
+          action: "Open profile",
+        }
+      : {
+          section: "profile",
+          text: "Attest the profile. An Admin confirms the answers as your position.",
+          action: "Open profile",
+        };
+  }
+  if (decision.readiness.scope === "out_of_scope") {
+    return {
+      section: "scope",
+      text: "The tool is out of scope on your answers. Record a scope determination.",
+      action: "Open scope determination",
+    };
+  }
+  if (runsCount === 0) {
+    return {
+      section: "generate",
+      text: "Generate test candidates, score them in your platform, then upload the scores as a run.",
+      action: "Generate test candidates",
+    };
+  }
+  return {
+    section: "runs",
+    text: "Record a run for this month to keep your results current.",
+    action: "Open runs",
+  };
+}
+
+interface ProfileSummaryProps {
+  profile: AedtProfileView;
+  nextStep: NextStep;
+  /** Opens the next step's section; null when the page already shows it. */
+  onGo: (() => void) | null;
+}
+
+const ProfileSummary = ({ profile, nextStep, onGo }: ProfileSummaryProps) => {
   const formatDate = useFormattedDate();
   const { attested, attestedDecision } = profile;
   const current = profile.profile;
@@ -391,60 +465,50 @@ const ProfileSummary = ({ profile }: { profile: AedtProfileView }) => {
       sx={{
         ...cardSx,
         display: "grid",
-        gridTemplateColumns: { xs: "1fr", md: "1fr 2fr" },
-        gap: "16px",
+        gridTemplateColumns: { xs: "1fr", md: "1fr 1fr 1.4fr" },
+        gap: "24px",
       }}
       data-testid="aedt-profile-summary"
     >
-      <Stack gap="8px">
-        <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>Profile</Typography>
+      <Stack gap="4px">
+        <Typography sx={labelSx}>Profile</Typography>
         {current ? (
-          <Typography sx={{ fontSize: 13, color: palette.text.secondary }}>
+          <Typography sx={valueSx}>
             <span>Version</span> <span>{current.version}</span>
             <span>{" · "}</span>
             <span>{current.status === "attested" ? "Attested" : "Draft"}</span>
           </Typography>
         ) : (
-          <Typography sx={{ fontSize: 13, color: palette.text.secondary }}>
-            No answers saved yet
-          </Typography>
+          <Typography sx={valueSx}>No answers saved yet</Typography>
         )}
         {attested && (
-          <Stack direction="row" alignItems="center" gap="8px" flexWrap="wrap">
-            <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>Attested by</Typography>
+          <Stack direction="row" alignItems="center" gap="6px" flexWrap="wrap">
+            <Typography sx={helperSx}>Attested by</Typography>
             <PersonLabel userId={attested.attestedByUserId} />
-            <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
-              {formatDate(attested.attestedAt)}
-            </Typography>
+            <Typography sx={helperSx}>{formatDate(attested.attestedAt)}</Typography>
           </Stack>
         )}
         {draftAhead && !draftDiffers && (
-          <Typography sx={{ fontSize: 12, color: palette.status.warning.text }}>
+          <Typography sx={{ ...helperSx, color: palette.status.warning.text }}>
             Runs use the attested version until you attest this draft.
           </Typography>
         )}
       </Stack>
 
-      <Stack gap="8px">
-        <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>Readiness</Typography>
-        {!attestedDecision && current && (
-          <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
-            From your saved answers. Nothing is attested yet, so no run or scope determination can
-            be recorded.
-          </Typography>
-        )}
+      <Stack gap="4px">
+        <Typography sx={labelSx}>Readiness</Typography>
         {readiness.scope === "out_of_scope" ? (
-          <Typography sx={{ fontSize: 13, color: palette.text.secondary }}>
-            {attestedDecision
-              ? "On the attested answers, the tool's output is one input among several with no extra weight. No score is shown; you can generate a scope determination instead of a run."
-              : "On your saved answers, the tool's output is one input among several with no extra weight. No score is shown. Attest the profile to generate a scope determination."}
-          </Typography>
+          <>
+            <Typography sx={valueSx}>Out of scope</Typography>
+            <Typography sx={helperSx}>
+              The output is one input among several with no extra weight.
+            </Typography>
+          </>
         ) : readiness.missingVetoes.length > 0 ? (
           // The server's blockedReason quotes raw question keys; name them by title.
-          <Box sx={{ color: palette.text.secondary }}>
-            <Typography sx={{ fontSize: 13, color: palette.text.secondary }}>
-              Scope is not established. Answer these deciding questions before a score can be shown:
-            </Typography>
+          <Box sx={{ color: palette.text.tertiary }}>
+            <Typography sx={valueSx}>Not established yet</Typography>
+            <Typography sx={helperSx}>Required questions still open:</Typography>
             <OpenVetoList
               vetoes={readiness.missingVetoes.map((key) => ({
                 key,
@@ -455,18 +519,24 @@ const ProfileSummary = ({ profile }: { profile: AedtProfileView }) => {
         ) : readiness.score === null ? (
           // Not expected (the server scores whenever scope is in), but never
           // render "null%".
-          <Typography sx={{ fontSize: 13, color: palette.text.secondary }}>
-            No score yet.
-          </Typography>
+          <Typography sx={valueSx}>No score yet</Typography>
         ) : (
-          <Typography sx={{ fontSize: 20, fontWeight: 600, color: palette.text.primary }}>
-            {`${readiness.score}%`}
-          </Typography>
+          <>
+            <Typography sx={{ fontSize: 22, fontWeight: 600, color: palette.text.primary }}>
+              {`${readiness.score}%`}
+            </Typography>
+            <Typography sx={helperSx}>
+              VerifyWise&apos;s own measure of audit readiness, not a legal test.
+            </Typography>
+          </>
+        )}
+        {!attestedDecision && current && (
+          <Typography sx={helperSx}>From your saved answers. Nothing is attested yet.</Typography>
         )}
         {draftDiffers && (
           <Typography
             component="div"
-            sx={{ fontSize: 12, color: palette.status.warning.text }}
+            sx={{ ...helperSx, color: palette.status.warning.text }}
             data-testid="aedt-draft-differs"
           >
             {draftScopeDiffers ? (
@@ -479,56 +549,60 @@ const ProfileSummary = ({ profile }: { profile: AedtProfileView }) => {
             <span>
               Runs and scope determinations follow the attested version until you attest the draft.
             </span>
-            {/* An undetermined draft names the deciding questions that leave it open, by title. */}
-            {draftScopeDiffers && draft.scope === "undetermined" && (
-              <>
-                {draft.missingVetoes.length > 0 && (
-                  <>
-                    <Box component="p" sx={{ m: 0, mt: "4px" }}>
-                      Deciding questions still open in the draft:
-                    </Box>
-                    <OpenVetoList
-                      vetoes={draft.missingVetoes.map((key) => ({
-                        key,
-                        dontKnow: draftAnswers.get(key)?.dontKnow ?? false,
-                      }))}
-                    />
-                  </>
-                )}
-              </>
-            )}
+            {/* An undetermined draft names the required questions that leave it open, by title. */}
+            {draftScopeDiffers &&
+              draft.scope === "undetermined" &&
+              draft.missingVetoes.length > 0 && (
+                <>
+                  <Box component="p" sx={{ m: 0, mt: "4px" }}>
+                    Required questions still open in the draft:
+                  </Box>
+                  <OpenVetoList
+                    vetoes={draft.missingVetoes.map((key) => ({
+                      key,
+                      dontKnow: draftAnswers.get(key)?.dontKnow ?? false,
+                    }))}
+                  />
+                </>
+              )}
           </Typography>
         )}
-        <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
-          The readiness score is VerifyWise&apos;s own measure of how close you are to commissioning
-          an independent audit. No regulator recognises it.
-        </Typography>
         {/* Open items are work for the wizard, so they follow the answers being edited. */}
         {draft.openItems.length > 0 && (
-          <Box>
-            <Stack direction="row" alignItems="center" gap="6px">
-              <ListChecks size={14} strokeWidth={1.5} color={palette.text.tertiary} />
-              <Typography sx={{ fontSize: 12, fontWeight: 600, color: palette.text.tertiary }}>
-                {draftAhead ? "Open items in your draft" : "Open items"}
-              </Typography>
-            </Stack>
-            <Box component="ul" sx={{ m: 0, pl: "18px" }}>
-              {draft.openItems.map((item) => (
-                <Typography
-                  component="li"
-                  key={item.key}
-                  sx={{ fontSize: 12, color: palette.text.tertiary }}
-                >
-                  {questionTitle(item.key)}
-                </Typography>
-              ))}
-            </Box>
-          </Box>
+          <Typography sx={helperSx} data-testid="aedt-open-items">
+            <span>{draftAhead ? "Open items in your draft:" : "Open items:"}</span>{" "}
+            <span>{draft.openItems.map((item) => questionTitle(item.key)).join(", ")}</span>
+          </Typography>
+        )}
+      </Stack>
+
+      <Stack
+        gap="8px"
+        alignItems="flex-start"
+        sx={{
+          borderLeft: { md: `1px solid ${palette.border.light}` },
+          pl: { md: "24px" },
+        }}
+        data-testid="aedt-next-step"
+      >
+        <Typography sx={labelSx}>Next step</Typography>
+        <Typography sx={{ fontSize: 13, color: palette.text.primary }}>{nextStep.text}</Typography>
+        {onGo && (
+          <CustomizableButton
+            variant="contained"
+            size="small"
+            text={nextStep.action}
+            testId="aedt-next-step-go"
+            endIcon={<ArrowRight size={14} strokeWidth={1.5} />}
+            onClick={onGo}
+          />
         )}
       </Stack>
     </Box>
   );
 };
+
+const valueSx = { fontSize: 15, fontWeight: 600, color: palette.text.primary } as const;
 
 interface RunsTableProps {
   runs: AedtRunSummary[];
@@ -564,12 +638,12 @@ const RunsTable = ({ runs, isLoading, error, onOpen }: RunsTableProps) => {
         <TableHead>
           <TableRow>
             <TableCell sx={headSx}>Recorded</TableCell>
-            <TableCell sx={headSx}>Rate computed</TableCell>
+            <TableCell sx={headSx}>Rate</TableCell>
             <TableCell sx={headSx} align="right">
               Rows
             </TableCell>
             <TableCell sx={headSx}>Profile version</TableCell>
-            <TableCell sx={headSx}>Figures</TableCell>
+            <TableCell sx={headSx}>Results</TableCell>
             <TableCell sx={headSx}>Expires</TableCell>
             <TableCell sx={headSx} />
           </TableRow>
@@ -585,7 +659,7 @@ const RunsTable = ({ runs, isLoading, error, onOpen }: RunsTableProps) => {
                 {r.row_count ?? "—"}
               </TableCell>
               <TableCell sx={cellSx}>{r.profile_version}</TableCell>
-              <TableCell sx={cellSx}>{r.has_result ? "Computed" : "Withheld"}</TableCell>
+              <TableCell sx={cellSx}>{r.has_result ? "Calculated" : "Withheld"}</TableCell>
               <TableCell sx={cellSx}>{formatDate(r.expiry_date)}</TableCell>
               <TableCell sx={cellSx} align="right">
                 <CustomizableButton

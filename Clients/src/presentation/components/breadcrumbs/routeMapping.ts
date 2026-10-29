@@ -128,6 +128,7 @@ export const routeMapping: Record<string, string> = {
   "/framework/settings": "Settings",
 
   // AI Detection
+  "/bias-audit": "LL 144 bias audit",
   "/ai-detection": "AI detection",
   "/ai-detection/scan": "Scan repository",
   "/ai-detection/history": "Scan history",
@@ -383,6 +384,26 @@ export const routeIconMapping: Record<string, () => React.ReactNode> = {
  * Route pattern configuration for dynamic route matching
  */
 export const dynamicRoutePatterns = [
+  {
+    pattern: /^\/bias-audit\/\d+\/profile$/,
+    label: "Profile",
+    description: "LL 144 bias audit section of one use case",
+  },
+  {
+    pattern: /^\/bias-audit\/\d+\/generate$/,
+    label: "Test candidates",
+    description: "LL 144 bias audit section of one use case",
+  },
+  {
+    pattern: /^\/bias-audit\/\d+\/runs$/,
+    label: "Runs",
+    description: "LL 144 bias audit section of one use case",
+  },
+  {
+    pattern: /^\/bias-audit\/\d+\/scope$/,
+    label: "Scope determination",
+    description: "LL 144 bias audit section of one use case",
+  },
   {
     pattern: /\/project-view.*projectId=/,
     label: "Project details",

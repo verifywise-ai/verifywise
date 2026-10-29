@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Alert, Box, RadioGroup, Stack, Typography } from "@mui/material";
+import { Plus } from "lucide-react";
 import Radio from "../../components/Inputs/Radio";
 import Field from "../../components/Inputs/Field";
 import { CustomizableButton } from "../../components/button/customizable-button";
@@ -12,7 +13,7 @@ import type {
 import EducationPanel from "./EducationPanel";
 import OpenVetoList from "./OpenVetoList";
 import { evaluatePredicate, groupQuestions, hasUsableAnswer, questionTitle } from "./intakeLayout";
-import { cardSx, titleSx } from "./styles";
+import { cardSx, helperSx, titleSx } from "./styles";
 
 const DONT_KNOW = "__dont_know__";
 /** Held in a constant: the i18n audit's attribute scan stops at a straight apostrophe. */
@@ -92,18 +93,18 @@ function withoutSaved(
   return next;
 }
 
-/** Shown beside "I don't know": what that answer does, before it is given. */
+/** What "I don't know" does, shown once it is chosen. */
 function dontKnowConsequence(q: AedtQuestion): string {
   return q.weight === "veto"
-    ? "This is a deciding question. The profile cannot be attested while it is answered this way."
+    ? "You can save this, but the profile cannot be attested until this question has an answer."
     : "Recorded as an open item in your readiness score.";
 }
 
 /**
- * The profile intake. Each option's consequence is printed beside it, so the
- * customer reads what an answer decides before giving it. Attest is withheld,
- * with the reason named, while a deciding question is open or answers are
- * unsaved, rather than failing on submit.
+ * The profile intake. The consequence of the chosen answer shows under the
+ * question, so the customer sees what the answer decides without reading every
+ * option's. Attest is withheld, with the reason named, while a required
+ * question is open or answers are unsaved, rather than failing on submit.
  *
  * Saved answers come from the `answers` prop; the wizard keeps only the edits
  * on top of them. Inputs, Save and Attest are locked while a save or attest
@@ -232,35 +233,52 @@ const ProfileWizard = ({
   else if (profileStatus === "attested")
     attestReason = "This version is attested. Change an answer to start a new version.";
   const attestDisabled = locked || attestReason !== null || openVetoes.length > 0;
+  const answeredCount = visible.filter((q) => isAnswered(draft[q.key])).length;
 
   return (
     <Stack gap="16px">
-      {groups.map(({ section, questions: sectionQuestions }) => (
-        <Box key={section.id} component="section" data-testid={`section-${section.id}`} sx={cardSx}>
-          <Typography sx={{ ...titleSx, mb: "12px" }}>{section.title}</Typography>
+      <Typography sx={helperSx} data-testid="profile-progress">
+        <span>{`${answeredCount} of ${visible.length}`}</span>{" "}
+        <span>questions answered. Questions marked Required decide what the test can measure.</span>
+      </Typography>
+
+      {groups.map(({ section, questions: sectionQuestions }) => {
+        // A section of one question takes that question's title, so the card
+        // is not headed by the same words twice.
+        const single = sectionQuestions.length === 1;
+        return (
           <Box
-            sx={{
-              display: "grid",
-              gridTemplateColumns: { xs: "1fr", lg: section.educationKey ? "3fr 2fr" : "1fr" },
-              gap: "16px",
-              alignItems: "start",
-            }}
+            key={section.id}
+            component="section"
+            data-testid={`section-${section.id}`}
+            sx={cardSx}
           >
-            <Stack gap="20px">
+            <Stack direction="row" alignItems="center" gap="8px" flexWrap="wrap">
+              <Typography component="h2" sx={titleSx}>
+                {single ? questionTitle(sectionQuestions[0].key) : section.title}
+              </Typography>
+              {single && sectionQuestions[0].weight === "veto" && <RequiredTag />}
+            </Stack>
+            {section.educationKey && (
+              <Box sx={{ mt: "4px" }}>
+                <EducationPanel pageKey={section.educationKey} />
+              </Box>
+            )}
+            <Stack gap="24px" sx={{ mt: "16px", maxWidth: "760px" }}>
               {sectionQuestions.map((q) => (
                 <QuestionBlock
                   key={q.key}
                   question={q}
+                  showTitle={!single}
                   answer={draft[q.key]}
                   disabled={!canEdit || locked}
                   onChange={(patch) => update(q.key, patch)}
                 />
               ))}
             </Stack>
-            {section.educationKey && <EducationPanel pageKey={section.educationKey} />}
           </Box>
-        </Box>
-      ))}
+        );
+      })}
 
       {errorMessage && (
         <Alert severity="error" sx={{ borderRadius: "4px" }} data-testid="profile-error">
@@ -286,13 +304,11 @@ const ProfileWizard = ({
             loading={isSaving}
           />
           {!canEdit && (
-            <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
-              Only an Admin or Editor can change answers.
-            </Typography>
+            <Typography sx={helperSx}>Only an Admin or Editor can change answers.</Typography>
           )}
           {canEdit && unsaveable.length > 0 && (
             <Typography
-              sx={{ fontSize: 12, color: palette.status.error.text }}
+              sx={{ ...helperSx, color: palette.status.error.text }}
               data-testid="save-blocked-unsaveable"
             >
               Answer or discard the edits below before saving.
@@ -300,7 +316,7 @@ const ProfileWizard = ({
           )}
           {unsaveable.length > 0 && (
             <Box data-testid="unsaveable-edits">
-              <Typography sx={{ fontSize: 12, color: palette.status.warning.text }}>
+              <Typography sx={{ ...helperSx, color: palette.status.warning.text }}>
                 These edits cannot be saved:
               </Typography>
               <Box component="ul" sx={{ m: 0, pl: "18px", mb: "8px" }}>
@@ -308,7 +324,7 @@ const ProfileWizard = ({
                   <Typography
                     component="li"
                     key={u.key}
-                    sx={{ fontSize: 12, color: palette.status.warning.text }}
+                    sx={{ ...helperSx, color: palette.status.warning.text }}
                   >
                     <span>{questionTitle(u.key)}</span>{" "}
                     <span>{u.hidden ? "(no longer applies)" : "(notes without an answer)"}</span>
@@ -327,15 +343,15 @@ const ProfileWizard = ({
           )}
           {canEdit && missingNotes.length > 0 && (
             <Box data-testid="save-blocked-reason">
-              <Typography sx={{ fontSize: 12, color: palette.status.error.text }}>
-                Notes are required before these answers can be saved:
+              <Typography sx={{ ...helperSx, color: palette.status.error.text }}>
+                Add the required description to:
               </Typography>
               <Box component="ul" sx={{ m: 0, pl: "18px" }}>
                 {missingNotes.map((q) => (
                   <Typography
                     component="li"
                     key={q.key}
-                    sx={{ fontSize: 12, color: palette.status.error.text }}
+                    sx={{ ...helperSx, color: palette.status.error.text }}
                   >
                     {questionTitle(q.key)}
                   </Typography>
@@ -358,72 +374,97 @@ const ProfileWizard = ({
           />
           {(attestReason !== null || openVetoes.length > 0) && (
             <Box data-testid="attest-blocked-reason">
-              {attestReason && (
-                <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
-                  {attestReason}
-                </Typography>
-              )}
+              {attestReason && <Typography sx={helperSx}>{attestReason}</Typography>}
               {openVetoes.length > 0 && (
                 <>
-                  <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
-                    These deciding questions need a saved answer before you can attest:
-                  </Typography>
+                  <Typography sx={helperSx}>Save an answer to these required questions:</Typography>
                   <OpenVetoList vetoes={openVetoes} color={palette.text.tertiary} />
                 </>
               )}
-              <Typography sx={{ fontSize: 12, color: palette.text.tertiary, mt: "4px" }}>
-                Attesting records these answers as your own statement of your position.
-              </Typography>
             </Box>
           )}
+          <Typography sx={helperSx}>
+            Attesting records these answers as your own statement of your position.
+          </Typography>
         </Stack>
       </Box>
     </Stack>
   );
 };
 
+/** A prompt that only restates the question's title ("Who is performing this test?"). */
+const repeatsTitle = (q: AedtQuestion) => {
+  const plain = (text: string) =>
+    text
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N} ]/gu, "")
+      .trim();
+  return plain(q.prompt) === plain(questionTitle(q.key));
+};
+
+/** Marks a question that decides what the test can measure (a veto question). */
+const RequiredTag = () => (
+  <Box
+    component="span"
+    sx={{
+      fontSize: 12,
+      lineHeight: "18px",
+      color: palette.status.warning.text,
+      backgroundColor: palette.status.warning.bg,
+      border: `1px solid ${palette.status.warning.border}`,
+      borderRadius: "4px",
+      px: "6px",
+    }}
+  >
+    Required
+  </Box>
+);
+
 interface QuestionBlockProps {
   question: AedtQuestion;
+  /** False when the section card is already headed by this question's title. */
+  showTitle: boolean;
   answer: DraftAnswer | undefined;
   disabled: boolean;
   onChange: (patch: Partial<DraftAnswer>) => void;
 }
 
-const QuestionBlock = ({ question: q, answer, disabled, onChange }: QuestionBlockProps) => {
+const QuestionBlock = ({
+  question: q,
+  showTitle,
+  answer,
+  disabled,
+  onChange,
+}: QuestionBlockProps) => {
   const selected = answer?.dontKnow ? DONT_KNOW : (answer?.value ?? "");
   const notesMissing =
     q.notesRequired && isAnswered(answer) && !answer?.dontKnow && answer?.notes.trim() === "";
+  // Optional notes stay behind a link until opened or already written.
+  const [notesOpen, setNotesOpen] = useState(false);
+  const showNotes = q.notesRequired || notesOpen || (answer?.notes ?? "") !== "";
+  const consequence =
+    selected === DONT_KNOW
+      ? dontKnowConsequence(q)
+      : (q.options.find((o) => o.value === selected)?.consequence ?? null);
 
   return (
     <Box data-testid={`question-${q.key}`}>
-      <Stack direction="row" alignItems="center" gap="8px" flexWrap="wrap" sx={{ mb: "4px" }}>
-        <Typography sx={{ fontSize: 13, fontWeight: 600, color: palette.text.primary }}>
-          {questionTitle(q.key)}
-        </Typography>
-        {q.weight === "veto" && (
-          <Box
-            component="span"
-            sx={{
-              fontSize: 11,
-              color: palette.status.warning.text,
-              backgroundColor: palette.status.warning.bg,
-              border: `1px solid ${palette.status.warning.border}`,
-              borderRadius: "4px",
-              px: "6px",
-            }}
+      {showTitle && (
+        <Stack direction="row" alignItems="center" gap="8px" flexWrap="wrap" sx={{ mb: "4px" }}>
+          <Typography
+            component="h3"
+            sx={{ fontSize: 14, fontWeight: 600, color: palette.text.primary }}
           >
-            Deciding question
-          </Box>
-        )}
-        {q.statutoryRef && (
-          <Typography component="span" sx={{ fontSize: 11, color: palette.text.accent }}>
-            § {q.statutoryRef}
+            {questionTitle(q.key)}
           </Typography>
-        )}
-      </Stack>
-      <Typography sx={{ fontSize: 13, color: palette.text.secondary, mb: "12px" }}>
-        {q.prompt}
-      </Typography>
+          {q.weight === "veto" && <RequiredTag />}
+        </Stack>
+      )}
+      {!repeatsTitle(q) && (
+        <Typography sx={{ fontSize: 13, color: palette.text.secondary, mb: "12px" }}>
+          {q.prompt}
+        </Typography>
+      )}
 
       <Box component="fieldset" disabled={disabled} sx={{ border: 0, m: 0, p: 0, minWidth: 0 }}>
         <RadioGroup name={q.key} aria-label={questionTitle(q.key)} sx={{ gap: "12px", pl: "10px" }}>
@@ -436,7 +477,6 @@ const QuestionBlock = ({ question: q, answer, disabled, onChange }: QuestionBloc
               checked={selected === o.value}
               onChange={() => onChange({ value: o.value, dontKnow: false })}
               title={o.label}
-              desc={o.consequence ?? ""}
             />
           ))}
           {q.allowDontKnow && (
@@ -447,24 +487,54 @@ const QuestionBlock = ({ question: q, answer, disabled, onChange }: QuestionBloc
               checked={selected === DONT_KNOW}
               onChange={() => onChange({ value: null, dontKnow: true })}
               title={DONT_KNOW_LABEL}
-              desc={dontKnowConsequence(q)}
             />
           )}
         </RadioGroup>
 
-        <Box sx={{ mt: "16px" }}>
-          <Field
-            id={`${q.key}-notes`}
-            label={q.notesPrompt ?? "Notes"}
-            isRequired={q.notesRequired}
-            isOptional={!q.notesRequired}
-            multiline
-            rows={2}
-            value={answer?.notes ?? ""}
-            onChange={(e) => onChange({ notes: e.target.value })}
-            error={notesMissing ? "Describe the answer in your own words." : undefined}
-            disabled={disabled}
-          />
+        {consequence && (
+          <Typography
+            sx={{
+              fontSize: 13,
+              lineHeight: 1.5,
+              color: palette.text.secondary,
+              backgroundColor: palette.background.accent,
+              borderLeft: `2px solid ${palette.brand.primary}`,
+              borderRadius: "4px",
+              px: "12px",
+              py: "8px",
+              mt: "12px",
+            }}
+            data-testid={`consequence-${q.key}`}
+          >
+            {consequence}
+          </Typography>
+        )}
+
+        <Box sx={{ mt: "12px" }}>
+          {showNotes ? (
+            <Field
+              id={`${q.key}-notes`}
+              label={q.notesPrompt ?? "Notes"}
+              isRequired={q.notesRequired}
+              isOptional={!q.notesRequired}
+              multiline
+              rows={2}
+              value={answer?.notes ?? ""}
+              onChange={(e) => onChange({ notes: e.target.value })}
+              error={notesMissing ? "Describe the answer in your own words." : undefined}
+              disabled={disabled}
+            />
+          ) : (
+            <CustomizableButton
+              variant="text"
+              size="small"
+              text="Add a note"
+              testId={`${q.key}-add-note`}
+              startIcon={<Plus size={14} strokeWidth={1.5} />}
+              onClick={() => setNotesOpen(true)}
+              isDisabled={disabled}
+            />
+          )}
         </Box>
       </Box>
     </Box>

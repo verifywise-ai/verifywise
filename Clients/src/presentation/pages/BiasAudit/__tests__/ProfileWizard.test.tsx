@@ -157,20 +157,36 @@ function renderWizard(props: Partial<Parameters<typeof ProfileWizard>[0]> = {}) 
 
 const question = (key: string) => screen.getByTestId(`question-${key}`);
 const queryQuestion = (key: string) => screen.queryByTestId(`question-${key}`);
+/** An optional question's notes, opening them from "Add a note" when closed. */
+const notesOf = (key: string) => {
+  const add = within(question(key)).queryByRole("button", { name: /add a note/i });
+  if (add) fireEvent.click(add);
+  return within(question(key)).getByRole("textbox");
+};
 
 describe("ProfileWizard: consequences", () => {
-  it("shows each option's consequence beside it before anything is selected", () => {
+  it("shows only the chosen option's consequence, once it is chosen", () => {
     renderWizard();
     const party = question("role.party");
     for (const radio of within(party).getAllByRole("radio")) {
       expect(radio).not.toBeChecked();
     }
+    expect(within(party).queryByTestId("consequence-role.party")).not.toBeInTheDocument();
+
+    fireEvent.click(within(party).getByRole("radio", { name: /We use it to hire our own staff/ }));
+    expect(within(party).getByTestId("consequence-role.party")).toHaveTextContent(
+      "The duty to publish a summary of results falls on you.",
+    );
     expect(
-      within(party).getByText("The duty to publish a summary of results falls on you."),
-    ).toBeVisible();
-    expect(
-      within(party).getByText("The publication duty falls on each employer deploying the tool."),
-    ).toBeVisible();
+      within(party).queryByText("The publication duty falls on each employer deploying the tool."),
+    ).not.toBeInTheDocument();
+  });
+
+  it("keeps optional notes closed until asked for, and required notes open", () => {
+    renderWizard();
+    expect(within(question("role.party")).getByRole("textbox")).toBeInTheDocument();
+    expect(within(question("cutoff.applied_by")).queryByRole("textbox")).not.toBeInTheDocument();
+    expect(notesOf("cutoff.applied_by")).toBeInTheDocument();
   });
 });
 
@@ -186,7 +202,7 @@ describe("ProfileWizard: notes on veto questions", () => {
     const save = screen.getByRole("button", { name: /save answers/i });
     expect(save).toBeDisabled();
     const reason = screen.getByTestId("save-blocked-reason");
-    expect(within(reason).getByText(/notes are required/i)).toBeInTheDocument();
+    expect(within(reason).getByText(/add the required description/i)).toBeInTheDocument();
     expect(within(reason).getByText("Your role")).toBeInTheDocument();
 
     fireEvent.click(save);
@@ -371,7 +387,7 @@ describe("ProfileWizard: edits that cannot be saved", () => {
   // an edit Save cannot send would be lost without a word.
   it("blocks attest over notes typed on an unanswered question, and names it", () => {
     renderWizard({ answers: ALL_VETOES, profileStatus: "draft" });
-    fireEvent.change(within(question("cutoff.applied_by")).getByRole("textbox"), {
+    fireEvent.change(notesOf("cutoff.applied_by"), {
       target: { value: "Still checking with the vendor." },
     });
     expect(screen.getByRole("button", { name: /save answers/i })).toBeDisabled();
@@ -386,7 +402,7 @@ describe("ProfileWizard: edits that cannot be saved", () => {
 
   it("lets the edits be discarded, which clears the block", () => {
     const { onAttest } = renderWizard({ answers: ALL_VETOES, profileStatus: "draft" });
-    const notes = within(question("cutoff.applied_by")).getByRole("textbox");
+    const notes = notesOf("cutoff.applied_by");
     fireEvent.change(notes, { target: { value: "Still checking." } });
     fireEvent.click(screen.getByRole("button", { name: /discard these edits/i }));
     expect(notes).toHaveValue("");
@@ -399,7 +415,7 @@ describe("ProfileWizard: edits that cannot be saved", () => {
 
   it("does not count notes typed and then removed again", () => {
     renderWizard({ answers: ALL_VETOES, profileStatus: "draft" });
-    const notes = within(question("cutoff.applied_by")).getByRole("textbox");
+    const notes = notesOf("cutoff.applied_by");
     fireEvent.change(notes, { target: { value: "x" } });
     fireEvent.change(notes, { target: { value: "" } });
     expect(screen.queryByTestId("unsaveable-edits")).not.toBeInTheDocument();
@@ -543,7 +559,7 @@ describe("ProfileWizard: new saved answers without a remount", () => {
       const { rerender } = renderWithProviders(
         <ProfileWizard {...props} onSave={vi.fn()} answers={ALL_VETOES} />,
       );
-      fireEvent.change(within(question("cutoff.applied_by")).getByRole("textbox"), {
+      fireEvent.change(notesOf("cutoff.applied_by"), {
         target: { value: " " },
       });
       rerender(
@@ -575,7 +591,7 @@ describe("ProfileWizard: new saved answers without a remount", () => {
 describe("ProfileWizard: Save blocked by an edit it cannot send", () => {
   it("says why under the Save button", () => {
     renderWizard({ answers: ALL_VETOES, profileStatus: "draft" });
-    fireEvent.change(within(question("cutoff.applied_by")).getByRole("textbox"), {
+    fireEvent.change(notesOf("cutoff.applied_by"), {
       target: { value: "Still checking." },
     });
     expect(screen.getByTestId("save-blocked-unsaveable")).toHaveTextContent(

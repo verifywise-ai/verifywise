@@ -1,6 +1,6 @@
 /**
- * Layout styles the bias audit pages share: the bordered card, the
- * content-beside-education grid, section titles and the table cells.
+ * Layout styles the bias audit pages share: the bordered card, section
+ * titles, helper text and the table cells.
  */
 import { palette } from "../../themes/palette";
 
@@ -18,15 +18,11 @@ export const tableFrameSx = {
   overflowX: "auto",
 } as const;
 
-/** Content on the left, its education panel on the right; stacked below `lg`. */
-export const twoColumnSx = {
-  display: "grid",
-  gridTemplateColumns: { xs: "1fr", lg: "3fr 2fr" },
-  gap: "16px",
-  alignItems: "start",
-} as const;
-
 export const titleSx = { fontSize: 15, fontWeight: 600, color: palette.text.primary } as const;
+/** Body copy under a title, and the reason a button is disabled. */
+export const helperSx = { fontSize: 13, color: palette.text.tertiary } as const;
+/** A short label above a value. */
+export const labelSx = { fontSize: 12, color: palette.text.tertiary } as const;
 export const cellSx = { fontSize: 13, color: palette.text.secondary, py: "8px" } as const;
 export const headSx = {
   fontSize: 12,

@@ -43,7 +43,7 @@ export default function BiasAuditSidebar({
     },
     {
       id: "generate",
-      label: "Generate",
+      label: "Test candidates",
       value: "generate",
       icon: <Database size={16} strokeWidth={1.5} />,
       disabled,

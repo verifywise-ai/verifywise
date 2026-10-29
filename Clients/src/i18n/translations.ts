@@ -44,6 +44,7 @@ import {
   es as aiTrustCenterEs,
 } from "./modules/aiTrustCenter";
 import { de as approvalsDe, fr as approvalsFr, es as approvalsEs } from "./modules/approvals";
+import { de as biasAuditDe, fr as biasAuditFr, es as biasAuditEs } from "./modules/biasAudit";
 import {
   de as authenticationDe,
   fr as authenticationFr,
@@ -93,6 +94,7 @@ export const translations: Record<string, Record<string, string>> = {
     ...aiTrustCenterDe,
     ...approvalsDe,
     ...authenticationDe,
+    ...biasAuditDe,
     ...dashboardDe,
     ...datasetsDe,
     ...eventTrackerDe,
@@ -9933,6 +9935,7 @@ export const translations: Record<string, Record<string, string>> = {
     ...aiTrustCenterFr,
     ...approvalsFr,
     ...authenticationFr,
+    ...biasAuditFr,
     ...dashboardFr,
     ...datasetsFr,
     ...eventTrackerFr,
@@ -19714,6 +19717,7 @@ export const translations: Record<string, Record<string, string>> = {
     ...aiTrustCenterEs,
     ...approvalsEs,
     ...authenticationEs,
+    ...biasAuditEs,
     ...dashboardEs,
     ...datasetsEs,
     ...eventTrackerEs,

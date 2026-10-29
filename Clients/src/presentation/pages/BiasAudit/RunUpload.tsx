@@ -16,7 +16,7 @@ import {
 } from "../../../application/repository/aedtBiasAudit.repository";
 import EducationPanel from "./EducationPanel";
 import { readCsvHeaders } from "./csvHeaders";
-import { cardSx, titleSx, twoColumnSx } from "./styles";
+import { cardSx, helperSx, titleSx } from "./styles";
 
 /** The server's upload limit (`DATASET_MAX_BYTES`, 30 MB). */
 const MAX_BYTES = 30 * 1024 * 1024;
@@ -120,7 +120,7 @@ const RunUpload = ({ projectId, metric, canEdit, blockedReason, onCreated }: Run
     (!canEdit
       ? "Only an Admin or Editor can record a run."
       : metric === null
-        ? "The attested profile does not say who applies the cutoff. Answer it, save and attest again, so the module knows whether to compute selection rates or scoring rates."
+        ? "The attested profile does not say who applies the cutoff. Answer that question and attest again, so the right rate can be calculated."
         : null);
   // The server's checks, made here so a refused title never costs an upload.
   const trimmedJobDescription = jobDescription.normalize("NFC").trim().replace(/\s+/g, " ");
@@ -159,145 +159,140 @@ const RunUpload = ({ projectId, metric, canEdit, blockedReason, onCreated }: Run
   const runError = createRun.error ? describeAedtError(createRun.error).message : null;
 
   return (
-    <Box sx={twoColumnSx}>
-      <Box sx={cardSx}>
-        <Stack gap="16px">
-          <Box>
-            <Typography sx={titleSx}>New run</Typography>
-            <Typography sx={{ fontSize: 13, color: palette.text.tertiary, mt: "4px" }}>
-              Upload one CSV file with a row per candidate, then say which column holds each value.
-            </Typography>
-            {metric && (
-              <Typography sx={{ fontSize: 13, color: palette.text.tertiary, mt: "4px" }}>
-                {metric === "scoring_rate"
-                  ? "The attested cutoff answer means this run computes scoring rates under 5-301(c)."
-                  : "The attested cutoff answer means this run computes selection rates under 5-301(b)."}
-              </Typography>
-            )}
+    <Box sx={cardSx}>
+      <Stack gap="16px">
+        <Box>
+          <Typography component="h2" sx={titleSx}>
+            New run
+          </Typography>
+          <Typography sx={{ ...helperSx, mt: "4px" }}>
+            Upload a CSV with one row per candidate, then match its columns.
+            {metric &&
+              (metric === "scoring_rate"
+                ? " This run calculates scoring rates, because a person applies the cutoff."
+                : " This run calculates selection rates, because your platform applies the cutoff.")}
+          </Typography>
+          <Box sx={{ mt: "4px" }}>
+            <EducationPanel pageKey="run.upload" />
           </Box>
+        </Box>
 
-          {completeCorpora.length > 0 && (
-            <Select
-              id="aedt-run-corpus"
-              dataTestId="aedt-run-corpus"
-              label="Data source"
-              value={source}
-              items={[
-                { _id: UPLOADED, name: "Your own data" },
-                ...completeCorpora.map((c) => ({
-                  _id: String(c.id),
-                  name: `Scored from generated corpus #${c.id}`,
-                })),
-              ]}
-              onChange={(e) => {
-                setSource(String(e.target.value));
-                setMapping({});
-                createRun.reset();
-              }}
-              sx={{ width: "100%", maxWidth: "420px" }}
-            />
-          )}
-          {corpus && (
-            <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
-              The file needs only the candidate_id column and the score or selection. Leave out the
-              artifact column to keep a large corpus under the 30 MB upload limit.
+        {completeCorpora.length > 0 && (
+          <Select
+            id="aedt-run-corpus"
+            dataTestId="aedt-run-corpus"
+            label="Data source"
+            value={source}
+            items={[
+              { _id: UPLOADED, name: "Your own data" },
+              ...completeCorpora.map((c) => ({
+                _id: String(c.id),
+                name: `Scored test candidates (set ${c.id})`,
+              })),
+            ]}
+            onChange={(e) => {
+              setSource(String(e.target.value));
+              setMapping({});
+              createRun.reset();
+            }}
+            sx={{ width: "100%", maxWidth: "420px" }}
+          />
+        )}
+        {corpus && (
+          <Typography sx={helperSx}>
+            The file needs only the candidate_id column and the score or selection. Leave out the
+            artifact column to stay under the 30 MB upload limit.
+          </Typography>
+        )}
+
+        <Stack direction="row" alignItems="center" gap="12px" flexWrap="wrap">
+          <input
+            ref={inputRef}
+            type="file"
+            accept=".csv,text/csv"
+            hidden
+            data-testid="aedt-dataset-input"
+            onChange={(e) => {
+              void handleFile(e.target.files?.[0]);
+              e.target.value = "";
+            }}
+          />
+          <CustomizableButton
+            variant="outlined"
+            text="Choose CSV file"
+            testId="aedt-choose-dataset"
+            startIcon={<Upload size={14} strokeWidth={1.5} />}
+            onClick={() => inputRef.current?.click()}
+            isDisabled={runReason !== null}
+          />
+          {file && (
+            <Typography sx={{ fontSize: 13, color: palette.text.secondary }}>
+              {file.name}
             </Typography>
           )}
+        </Stack>
+        {fileError && (
+          <Alert severity="error" sx={{ borderRadius: "4px" }}>
+            {fileError}
+          </Alert>
+        )}
 
-          <Stack direction="row" alignItems="center" gap="12px" flexWrap="wrap">
-            <input
-              ref={inputRef}
-              type="file"
-              accept=".csv,text/csv"
-              hidden
-              data-testid="aedt-dataset-input"
-              onChange={(e) => {
-                void handleFile(e.target.files?.[0]);
-                e.target.value = "";
-              }}
-            />
-            <CustomizableButton
-              variant="outlined"
-              text="Choose CSV file"
-              testId="aedt-choose-dataset"
-              startIcon={<Upload size={14} strokeWidth={1.5} />}
-              onClick={() => inputRef.current?.click()}
-              isDisabled={runReason !== null}
-            />
-            {file && (
-              <Typography sx={{ fontSize: 13, color: palette.text.secondary }}>
-                {file.name}
+        {file && (
+          <Stack gap="12px">
+            {fields.map((f) => (
+              <Select
+                key={f.key}
+                id={`aedt-map-${f.key}`}
+                label={f.label}
+                value={mapping[f.key] ?? UNMAPPED}
+                items={items}
+                isRequired={f.key === outcomeKey}
+                onChange={(e) =>
+                  setMapping((prev) => ({ ...prev, [f.key]: String(e.target.value) }))
+                }
+                sx={{ width: "100%", maxWidth: "420px" }}
+              />
+            ))}
+            {corpus ? (
+              <Typography
+                sx={{ fontSize: 13, color: palette.text.secondary }}
+                data-testid="aedt-run-corpus-job-description"
+              >
+                {`Job description: ${corpusRoleTitle} (fixed)`}
               </Typography>
+            ) : (
+              <Field
+                id="aedt-job-description"
+                label="Job description tested"
+                isOptional
+                placeholder="For example, Account executive"
+                value={jobDescription}
+                onChange={(e) => setJobDescription(e.target.value)}
+                error={jobDescriptionError}
+                helperText="Named in the stance. The trend only joins runs on the same role."
+                sx={{ width: "100%", maxWidth: "420px" }}
+              />
             )}
           </Stack>
-          {fileError && (
+        )}
+
+        <Stack gap="8px" alignItems="flex-start">
+          <CustomizableButton
+            variant="contained"
+            text="Calculate results"
+            testId="aedt-create-run"
+            onClick={handleRun}
+            isDisabled={runDisabled}
+            loading={createRun.isPending}
+          />
+          {runReason && <Typography sx={helperSx}>{runReason}</Typography>}
+          {runError && (
             <Alert severity="error" sx={{ borderRadius: "4px" }}>
-              {fileError}
+              {runError}
             </Alert>
           )}
-
-          {file && (
-            <Stack gap="12px">
-              {fields.map((f) => (
-                <Select
-                  key={f.key}
-                  id={`aedt-map-${f.key}`}
-                  label={f.label}
-                  value={mapping[f.key] ?? UNMAPPED}
-                  items={items}
-                  isRequired={f.key === outcomeKey}
-                  onChange={(e) =>
-                    setMapping((prev) => ({ ...prev, [f.key]: String(e.target.value) }))
-                  }
-                  sx={{ width: "100%", maxWidth: "420px" }}
-                />
-              ))}
-              {corpus ? (
-                <Typography
-                  sx={{ fontSize: 13, color: palette.text.secondary }}
-                  data-testid="aedt-run-corpus-job-description"
-                >
-                  {`Job description: ${corpusRoleTitle} (fixed)`}
-                </Typography>
-              ) : (
-                <Field
-                  id="aedt-job-description"
-                  label="Job description tested"
-                  isOptional
-                  placeholder="For example, Account executive"
-                  value={jobDescription}
-                  onChange={(e) => setJobDescription(e.target.value)}
-                  error={jobDescriptionError}
-                  helperText="The stance names it. Runs on different job descriptions are not joined in the trend."
-                  sx={{ width: "100%", maxWidth: "420px" }}
-                />
-              )}
-            </Stack>
-          )}
-
-          <Stack gap="8px" alignItems="flex-start">
-            <CustomizableButton
-              variant="contained"
-              text="Run measures"
-              testId="aedt-create-run"
-              onClick={handleRun}
-              isDisabled={runDisabled}
-              loading={createRun.isPending}
-            />
-            {runReason && (
-              <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
-                {runReason}
-              </Typography>
-            )}
-            {runError && (
-              <Alert severity="error" sx={{ borderRadius: "4px" }}>
-                {runError}
-              </Alert>
-            )}
-          </Stack>
         </Stack>
-      </Box>
-      <EducationPanel pageKey="run.upload" />
+      </Stack>
     </Box>
   );
 };

@@ -10,7 +10,7 @@ import {
   TableRow,
   Typography,
 } from "@mui/material";
-import { Copy, Database, Download, RotateCw } from "lucide-react";
+import { Circle, CircleDot, Copy, Database, Download, RotateCw } from "lucide-react";
 import Field from "../../components/Inputs/Field";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import { EmptyState } from "../../components/EmptyState";
@@ -33,7 +33,7 @@ import {
 import { palette } from "../../themes/palette";
 import { triggerBrowserDownload } from "../../utils/browserDownload.utils";
 import EducationPanel from "./EducationPanel";
-import { cardSx, cellSx, headSx, tableFrameSx, titleSx, twoColumnSx } from "./styles";
+import { cardSx, cellSx, headSx, helperSx, tableFrameSx, titleSx } from "./styles";
 
 /** The server's bounds on a corpus (`CORPUS_COUNT` in corpusService.ts). */
 const DEFAULT_COUNT = 5000;
@@ -77,12 +77,12 @@ const FINAL_FAILURES = new Set([
 function failureText(code: string | null): string {
   if (code === null) return "Generation stopped before it finished.";
   if (code === "model_changed" || code === "corpus_model_changed") {
-    return "The configured model changed, so this corpus cannot be finished. Generate a new one.";
+    return "The configured model changed, so this set cannot be finished. Generate a new one.";
   }
   if (code === "job_description_changed" || code === "plan_changed") {
-    return "The job description or plan changed, so this corpus cannot be finished. Generate a new one.";
+    return "The job description or plan changed, so this set cannot be finished. Generate a new one.";
   }
-  if (FINAL_FAILURES.has(code)) return "This corpus cannot be finished. Generate a new one.";
+  if (FINAL_FAILURES.has(code)) return "This set cannot be finished. Generate a new one.";
   if (code === "gateway_guardrail") {
     return "An AI Gateway guardrail blocked generation. Ask an Admin to let these requests through, then resume.";
   }
@@ -137,15 +137,15 @@ const GenerateCorpus = ({
   const running = corpora.some((c) => c.status === "running");
 
   const generateReason = !canEdit
-    ? "Only an Admin or Editor can generate a corpus."
+    ? "Only an Admin or Editor can generate test candidates."
     : !mayGenerate
       ? (blockedReason ?? "The attested profile does not allow generation.")
       : jdQuery.data && !generationAvailable
         ? "Generation is not available on this deployment. Contact VerifyWise."
         : running
-          ? "A corpus is already generating for this use case. Wait for it to finish."
+          ? "Test candidates are already generating for this use case. Wait for them to finish."
           : !selected
-            ? "Choose a job description first."
+            ? "Choose a role first."
             : null;
   // Resuming starts generation again, so it needs what starting it needs.
   const canResume = canEdit && mayGenerate && generationAvailable && !running;
@@ -203,93 +203,100 @@ const GenerateCorpus = ({
 
   return (
     <Stack gap="16px">
-      <Box sx={twoColumnSx}>
+      <Typography sx={helperSx} data-testid="aedt-generate-how">
+        Pick a role and generate test candidates. Download them, score them in your platform with
+        the same job description, then upload the scores under Runs.
+      </Typography>
+      <Box sx={cardSx}>
+        <Stack gap="12px">
+          <Box>
+            <Typography component="h2" sx={titleSx}>
+              Role to test
+            </Typography>
+            <Box sx={{ mt: "4px" }}>
+              <EducationPanel pageKey="run.job_description" />
+            </Box>
+          </Box>
+          {jdQuery.error && (
+            <Alert severity="error" sx={{ borderRadius: "4px" }}>
+              {describeAedtError(jdQuery.error).message}
+            </Alert>
+          )}
+          <Box
+            role="radiogroup"
+            aria-label="Job description"
+            sx={{
+              display: "grid",
+              gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
+              gap: "12px",
+            }}
+          >
+            {jobDescriptions.map((jd) => (
+              <JobDescriptionCard
+                key={jd.key}
+                jd={jd}
+                selected={jd.key === selectedKey}
+                onSelect={() => choose(jd.key)}
+              />
+            ))}
+          </Box>
+          {selected && (
+            <Stack gap="8px">
+              <Box
+                sx={{
+                  border: `1px solid ${palette.border.dark}`,
+                  borderRadius: "4px",
+                  p: "12px",
+                  maxHeight: "280px",
+                  overflowY: "auto",
+                  fontSize: 13,
+                  color: palette.text.secondary,
+                  whiteSpace: "pre-wrap",
+                }}
+                data-testid="aedt-job-description-body"
+              >
+                {selected.body}
+              </Box>
+              <Box>
+                <CustomizableButton
+                  variant="outlined"
+                  size="small"
+                  text={copied === "copied" ? "Copied" : "Copy job description"}
+                  testId="aedt-copy-job-description"
+                  startIcon={<Copy size={14} strokeWidth={1.5} />}
+                  onClick={() => void handleCopy()}
+                />
+              </Box>
+              {copied === "failed" && (
+                <Typography sx={{ ...helperSx, color: palette.status.error.text }}>
+                  The job description could not be copied. Select the text above and copy it.
+                </Typography>
+              )}
+            </Stack>
+          )}
+          <Typography sx={helperSx} data-testid="aedt-generate-role-statement">
+            The result describes your tool on that role, not across all of your hiring.
+          </Typography>
+        </Stack>
+      </Box>
+
+      {selected && (
         <Box sx={cardSx}>
           <Stack gap="12px">
             <Box>
-              <Typography sx={titleSx}>Job description</Typography>
-              <Typography sx={{ fontSize: 13, color: palette.text.tertiary, mt: "4px" }}>
-                Choose the role to test. Run the same job description through your own platform.
+              <Typography component="h2" sx={titleSx}>
+                Check your platform&apos;s criteria (optional)
               </Typography>
+              <Box sx={{ mt: "4px" }}>
+                <EducationPanel pageKey="run.criteria_comparison" />
+              </Box>
             </Box>
-            {jdQuery.error && (
-              <Alert severity="error" sx={{ borderRadius: "4px" }}>
-                {describeAedtError(jdQuery.error).message}
-              </Alert>
-            )}
-            <Box
-              role="radiogroup"
-              aria-label="Job description"
-              sx={{
-                display: "grid",
-                gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
-                gap: "12px",
-              }}
-            >
-              {jobDescriptions.map((jd) => (
-                <JobDescriptionCard
-                  key={jd.key}
-                  jd={jd}
-                  selected={jd.key === selectedKey}
-                  onSelect={() => choose(jd.key)}
-                />
-              ))}
-            </Box>
-            {selected && (
-              <Stack gap="8px">
-                <Box
-                  sx={{
-                    border: `1px solid ${palette.border.dark}`,
-                    borderRadius: "4px",
-                    p: "12px",
-                    maxHeight: "280px",
-                    overflowY: "auto",
-                    fontSize: 13,
-                    color: palette.text.secondary,
-                    whiteSpace: "pre-wrap",
-                  }}
-                  data-testid="aedt-job-description-body"
-                >
-                  {selected.body}
-                </Box>
-                <Box>
-                  <CustomizableButton
-                    variant="outlined"
-                    size="small"
-                    text={copied === "copied" ? "Copied" : "Copy job description"}
-                    testId="aedt-copy-job-description"
-                    startIcon={<Copy size={14} strokeWidth={1.5} />}
-                    onClick={() => void handleCopy()}
-                  />
-                </Box>
-                {copied === "failed" && (
-                  <Typography sx={{ fontSize: 12, color: palette.status.error.text }}>
-                    The job description could not be copied. Select the text above and copy it.
-                  </Typography>
-                )}
-              </Stack>
-            )}
-            <Typography
-              sx={{ fontSize: 13, color: palette.text.secondary }}
-              data-testid="aedt-generate-role-statement"
-            >
-              The result describes your tool on that role, not across all of your hiring.
-            </Typography>
-          </Stack>
-        </Box>
-        <EducationPanel pageKey="run.job_description" />
-      </Box>
-
-      <Box sx={twoColumnSx}>
-        <Box sx={cardSx}>
-          <Stack gap="12px">
-            <Typography sx={titleSx}>Criteria comparison</Typography>
             <Field
               id="aedt-criteria-supplied"
               label="Criteria your platform generated"
               isOptional
               multiline
-              rows={5}
+              rows={4}
               placeholder="One criterion per line"
               value={criteria}
               disabled={!canEdit}
@@ -298,8 +305,8 @@ const GenerateCorpus = ({
                 compare.reset();
               }}
               error={criteriaError}
-              helperText="Paste the criteria your platform produced from this job description. Optional."
-              sx={{ width: "100%" }}
+              helperText="Paste the criteria your platform produced from this job description."
+              sx={{ width: "100%", maxWidth: "760px" }}
             />
             <Box>
               <CustomizableButton
@@ -318,40 +325,37 @@ const GenerateCorpus = ({
                 {describeAedtError(compare.error).message}
               </Alert>
             )}
-            {compare.data && selected && (
+            {compare.data && (
               <ComparisonResult comparison={compare.data} jobDescription={selected} />
             )}
           </Stack>
         </Box>
-        <EducationPanel pageKey="run.criteria_comparison" />
-      </Box>
+      )}
 
       <Box sx={cardSx}>
         <Stack gap="12px" alignItems="flex-start">
-          <Typography sx={titleSx}>Generate</Typography>
+          <Typography component="h2" sx={titleSx}>
+            Generate test candidates
+          </Typography>
           <Field
             id="aedt-corpus-count"
-            label="Number of records"
+            label="Number of candidates"
             value={countText}
             onChange={(e) => setCountText(e.target.value)}
             error={countProblem}
-            helperText="Between 700 and 10,000. Rounded down so every cell holds the same mix."
-            sx={{ width: "100%", maxWidth: "240px" }}
+            helperText="Between 700 and 10,000, rounded down so every group gets the same mix."
+            sx={{ width: "100%", maxWidth: "420px" }}
           />
           <CustomizableButton
             variant="contained"
-            text="Generate corpus"
+            text="Generate test candidates"
             testId="aedt-generate-corpus"
             startIcon={<Database size={14} strokeWidth={1.5} />}
             onClick={handleGenerate}
             isDisabled={generateDisabled}
             loading={create.isPending}
           />
-          {generateReason && (
-            <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
-              {generateReason}
-            </Typography>
-          )}
+          {generateReason && <Typography sx={helperSx}>{generateReason}</Typography>}
           {create.error && (
             <Alert severity="error" sx={{ borderRadius: "4px" }}>
               {describeAedtError(create.error).message}
@@ -361,7 +365,9 @@ const GenerateCorpus = ({
       </Box>
 
       <Stack gap="12px">
-        <Typography sx={titleSx}>Corpora</Typography>
+        <Typography component="h2" sx={titleSx}>
+          Generated test sets
+        </Typography>
         {corporaQuery.error && (
           <Alert severity="error" sx={{ borderRadius: "4px" }}>
             {describeAedtError(corporaQuery.error).message}
@@ -379,18 +385,22 @@ const GenerateCorpus = ({
         )}
         {corpora.length === 0 ? (
           !corporaQuery.isLoading && (
-            <EmptyState icon={Database} message="No corpus has been generated yet." showBorder />
+            <EmptyState
+              icon={Database}
+              message="No test candidates have been generated yet."
+              showBorder
+            />
           )
         ) : (
           <Box sx={tableFrameSx}>
             <Table size="small">
               <TableHead>
                 <TableRow>
-                  <TableCell sx={headSx}>Job description</TableCell>
+                  <TableCell sx={headSx}>Role</TableCell>
                   <TableCell sx={headSx}>Status</TableCell>
-                  <TableCell sx={headSx}>Records</TableCell>
-                  <TableCell sx={headSx}>Models observed</TableCell>
-                  <TableCell sx={headSx}>Release findings</TableCell>
+                  <TableCell sx={headSx}>Candidates</TableCell>
+                  <TableCell sx={headSx}>Model</TableCell>
+                  <TableCell sx={headSx}>Checks</TableCell>
                   <TableCell sx={headSx}>Generated</TableCell>
                   <TableCell sx={headSx} />
                 </TableRow>
@@ -442,18 +452,29 @@ const JobDescriptionCard = ({
     sx={{
       "border": `1px solid ${selected ? palette.brand.primary : palette.border.dark}`,
       "borderRadius": "4px",
-      "p": "12px",
+      "p": "12px 16px",
       "cursor": "pointer",
       "backgroundColor": selected ? palette.background.accent : palette.background.main,
+      "&:hover": { borderColor: palette.brand.primary },
       "&:focus-visible": { outline: `2px solid ${palette.brand.primary}`, outlineOffset: "2px" },
     }}
   >
-    <Typography sx={{ fontSize: 13, fontWeight: 600, color: palette.text.primary }}>
-      {jd.roleTitle}
+    <Stack direction="row" alignItems="center" gap="8px">
+      {selected ? (
+        <CircleDot size={16} strokeWidth={1.5} color={palette.brand.primary} />
+      ) : (
+        <Circle size={16} strokeWidth={1.5} color={palette.text.tertiary} />
+      )}
+      <Typography sx={{ fontSize: 14, fontWeight: 600, color: palette.text.primary }}>
+        {jd.roleTitle}
+      </Typography>
+    </Stack>
+    <Typography sx={{ fontSize: 12, color: palette.text.tertiary, mt: "8px" }}>
+      Criteria the candidates are built on
     </Typography>
-    <Box component="ul" sx={{ m: 0, mt: "6px", pl: "16px" }}>
+    <Box component="ul" sx={{ m: 0, mt: "4px", pl: "18px" }}>
       {jd.expectedCriteria.map((c) => (
-        <Typography component="li" key={c.key} sx={{ fontSize: 12, color: palette.text.tertiary }}>
+        <Typography component="li" key={c.key} sx={{ fontSize: 13, color: palette.text.tertiary }}>
           {c.label}
         </Typography>
       ))}
@@ -487,8 +508,8 @@ const ComparisonResult = ({
       <Stack gap="6px">
         <Typography sx={{ fontSize: 13, fontWeight: 600 }}>
           {comparison.verdict === "divergent"
-            ? "The corpus may not exercise your configuration well"
-            : "Your platform's criteria are close to the ones the corpus is built against"}
+            ? "The test candidates may not exercise your configuration well"
+            : "The criteria from your platform are close to the ones the test candidates are built on"}
         </Typography>
         {comparison.unmatchedExpected.length > 0 && (
           <Typography sx={{ fontSize: 13 }}>
@@ -536,7 +557,7 @@ const CorpusRow = ({
         <Stack gap="2px">
           <span>{STATUS_LABEL[corpus.status]}</span>
           {corpus.status === "failed" && (
-            <Typography sx={{ fontSize: 11, color: palette.text.tertiary }}>
+            <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
               {failureText(corpus.failure_code)}
             </Typography>
           )}

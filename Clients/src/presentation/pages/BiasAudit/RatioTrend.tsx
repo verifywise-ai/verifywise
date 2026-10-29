@@ -99,10 +99,11 @@ function chartRows(segments: AedtTrendSegment[]): ChartRow[] {
 
 const Frame = ({ children, testId }: { children: ReactNode; testId: string }) => (
   <Box sx={cardSx} data-testid={testId}>
-    <Typography sx={{ ...titleSx, mb: "4px" }}>Lowest impact ratio across runs</Typography>
-    <Typography sx={{ fontSize: 12, color: palette.text.tertiary, mb: "12px" }}>
-      Each point is the lowest impact ratio of any group in one run. The line breaks wherever the
-      profile, question set, job description or measure changed, and each break says what changed.
+    <Typography component="h2" sx={{ ...titleSx, mb: "4px" }}>
+      Lowest impact ratio over time
+    </Typography>
+    <Typography sx={{ fontSize: 13, color: palette.text.tertiary, mb: "12px" }}>
+      One point per run. The line breaks where the profile, role or measure changed.
     </Typography>
     {children}
   </Box>
@@ -330,13 +331,13 @@ const RatioTrend = ({ series }: RatioTrendProps) => {
                 ticks={rows.map((r) => r.x)}
                 allowDecimals={false}
                 tickFormatter={tickLabel}
-                tick={{ fontSize: 11, fill: palette.text.tertiary }}
+                tick={{ fontSize: 12, fill: palette.text.tertiary }}
                 stroke={palette.border.dark}
               />
               <YAxis
                 domain={[0, 1]}
                 ticks={[0, 0.2, 0.4, 0.6, 0.8, 1]}
-                tick={{ fontSize: 11, fill: palette.text.tertiary }}
+                tick={{ fontSize: 12, fill: palette.text.tertiary }}
                 stroke={palette.border.dark}
                 width={36}
               />
@@ -357,7 +358,7 @@ const RatioTrend = ({ series }: RatioTrendProps) => {
                     label={{
                       value: String(m.number),
                       position: "top",
-                      fontSize: 11,
+                      fontSize: 12,
                       fill: palette.status.warning.text,
                     }}
                   />
@@ -379,14 +380,12 @@ const RatioTrend = ({ series }: RatioTrendProps) => {
             </LineChart>
           </ResponsiveContainer>
         </Box>
-        <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
-          The dashed line at 0.80 marks the EEOC four-fifths convention. Local Law 144 does not
-          adopt it: a ratio below it is a number to report and investigate, and a ratio above it is
-          not a clearance.
+        <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
+          The dashed line is 0.80, the EEOC four-fifths convention. Local Law 144 sets no pass mark.
         </Typography>
         {hasCaveat && (
           <Typography
-            sx={{ fontSize: 12, color: palette.text.tertiary }}
+            sx={{ fontSize: 13, color: palette.text.tertiary }}
             data-testid="aedt-trend-caveat"
           >
             A hollow point marks a run the data checks did not clear for export. Its ratio is shown

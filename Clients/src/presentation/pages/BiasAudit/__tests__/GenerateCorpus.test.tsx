@@ -180,7 +180,7 @@ describe("GenerateCorpus", () => {
     renderWithProviders(<GenerateCorpus {...props} />);
     await userEvent.click(await screen.findByText("Account Executive"));
     await userEvent.type(screen.getByLabelText(/criteria your platform/i), "  Quota attainment ");
-    const count = screen.getByLabelText(/number of records/i);
+    const count = screen.getByLabelText(/number of candidates/i);
     await userEvent.clear(count);
     await userEvent.type(count, "700");
     await userEvent.click(screen.getByTestId("aedt-generate-corpus"));
@@ -194,7 +194,7 @@ describe("GenerateCorpus", () => {
   it("refuses a count below 700 without calling the server", async () => {
     renderWithProviders(<GenerateCorpus {...props} />);
     await userEvent.click(await screen.findByText("Account Executive"));
-    const count = screen.getByLabelText(/number of records/i);
+    const count = screen.getByLabelText(/number of candidates/i);
     await userEvent.clear(count);
     await userEvent.type(count, "300");
     expect(screen.getByText(/at least 700/i)).toBeInTheDocument();
@@ -204,7 +204,7 @@ describe("GenerateCorpus", () => {
   it.each(["10001", "700.5", "abc"])("refuses a count of %s", async (value) => {
     renderWithProviders(<GenerateCorpus {...props} />);
     await userEvent.click(await screen.findByText("Account Executive"));
-    const count = screen.getByLabelText(/number of records/i);
+    const count = screen.getByLabelText(/number of candidates/i);
     await userEvent.clear(count);
     await userEvent.type(count, value);
     expect(screen.getByTestId("aedt-generate-corpus")).toBeDisabled();

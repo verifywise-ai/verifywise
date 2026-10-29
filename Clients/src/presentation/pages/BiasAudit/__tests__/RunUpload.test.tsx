@@ -68,7 +68,7 @@ describe("RunUpload", () => {
     fireEvent.change(screen.getByLabelText(/job description tested/i), {
       target: { value: "Account executive" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /run measures/i }));
+    fireEvent.click(screen.getByRole("button", { name: /calculate results/i }));
     expect(mutate).toHaveBeenCalledWith(
       expect.objectContaining({
         mapping: { selected: "outcome" },
@@ -85,7 +85,7 @@ describe("RunUpload", () => {
       target: { value: "x".repeat(65) },
     });
     expect(screen.getByText("Use at most 64 characters.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /run measures/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /calculate results/i })).toBeDisabled();
   });
 
   it("withholds the run for a job description with no letter or digit, before any upload", async () => {
@@ -95,7 +95,7 @@ describe("RunUpload", () => {
       target: { value: "— ?!" },
     });
     expect(screen.getByText("Include at least one letter or digit.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /run measures/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /calculate results/i })).toBeDisabled();
   });
 
   it("keeps the later file when an earlier file's header read finishes last", async () => {
@@ -116,9 +116,7 @@ describe("RunUpload", () => {
 
   it("states the rate the attested profile forces", () => {
     renderUpload("scoring_rate");
-    expect(
-      screen.getByText(/attested cutoff answer means this run computes scoring rates/),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/This run calculates scoring rates/)).toBeInTheDocument();
   });
 
   it("explains a missing rate and withholds the run", () => {
@@ -137,9 +135,9 @@ describe("RunUpload", () => {
         screen.getByTestId("aedt-run-corpus").querySelector('[role="combobox"]')!,
       );
       fireEvent.click(
-        await screen.findByRole("option", { name: "Scored from generated corpus #3" }),
+        await screen.findByRole("option", { name: "Scored test candidates (set 3)" }),
       );
-      expect(screen.queryByRole("option", { name: /corpus #4/ })).toBeNull();
+      expect(screen.queryByRole("option", { name: /\(set 4\)/ })).toBeNull();
       readHeaders.mockResolvedValueOnce(["id", "outcome"]);
       fireEvent.change(screen.getByTestId("aedt-dataset-input"), {
         target: { files: [csv("scored.csv")] },
@@ -163,10 +161,10 @@ describe("RunUpload", () => {
       const selects = screen.getAllByRole("combobox");
       fireEvent.mouseDown(selects[selects.length - 2]);
       fireEvent.click(await screen.findByRole("option", { name: "id" }));
-      expect(screen.getByRole("button", { name: /run measures/i })).toBeDisabled();
+      expect(screen.getByRole("button", { name: /calculate results/i })).toBeDisabled();
       fireEvent.mouseDown(selects[selects.length - 1]);
       fireEvent.click(await screen.findByRole("option", { name: "outcome" }));
-      fireEvent.click(screen.getByRole("button", { name: /run measures/i }));
+      fireEvent.click(screen.getByRole("button", { name: /calculate results/i }));
       expect(mutate).toHaveBeenCalledWith(
         {
           file: expect.any(File),

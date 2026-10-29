@@ -35,7 +35,7 @@ describe("BiasAuditSidebar", () => {
     const items = shell.props!.flatItems;
     expect(items.map((i) => [i.label, i.count])).toEqual([
       ["Profile", undefined],
-      ["Generate", undefined],
+      ["Test candidates", undefined],
       ["Runs", 4],
       ["Scope determination", 2],
     ]);

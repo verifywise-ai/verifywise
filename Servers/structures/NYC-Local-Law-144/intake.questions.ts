@@ -87,18 +87,20 @@ export const LL144_QUESTIONS: IntakeQuestion[] = [
       {
         value: "only",
         label: "It is the only thing looked at",
-        consequence: "This describes the first limb of the 5-300 definition.",
+        consequence:
+          "On this answer the tool fits the law's definition of an automated employment decision tool (5-300), so Local Law 144 applies.",
       },
       {
         value: "biggest",
         label: "It is the biggest single factor",
-        consequence: "This describes the second limb of the 5-300 definition.",
+        consequence:
+          "On this answer the tool fits the law's definition of an automated employment decision tool (5-300), so Local Law 144 applies.",
       },
       {
         value: "overrules",
         label: "It can overrule a person's conclusion",
         consequence:
-          "This describes the third limb of the 5-300 definition: output used to overrule a conclusion a person reached.",
+          "On this answer the tool fits the law's definition of an automated employment decision tool (5-300), because its output can overrule a person's conclusion.",
       },
       {
         value: "one_of_several",
@@ -413,7 +415,7 @@ export const LL144_QUESTIONS: IntakeQuestion[] = [
       {
         value: "no",
         label: "No, everything contributes to a score",
-        consequence: "Rates measure one mechanism.",
+        consequence: "Every candidate is scored, so each rate reflects the scoring alone.",
       },
       {
         value: "yes",
@@ -444,7 +446,11 @@ export const LL144_QUESTIONS: IntakeQuestion[] = [
     allowDontKnow: true,
     appliesWhen: IN_SCOPE,
     options: [
-      { value: "never", label: "Never audited", consequence: "Recorded as context." },
+      {
+        value: "never",
+        label: "Never audited",
+        consequence: "Noted in the result. It does not change what is measured.",
+      },
       {
         value: "audited_unchanged",
         label: "Audited, and unchanged since",
