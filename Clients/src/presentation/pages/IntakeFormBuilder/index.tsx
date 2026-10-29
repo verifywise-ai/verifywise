@@ -156,12 +156,14 @@ export function IntakeFormBuilder() {
       createdIdRef.current = null;
       return;
     }
-    loadCountRef.current += 1;
+    const load = ++loadCountRef.current;
     if (isEditing && formId) {
       setIsLoadingForm(true);
       setLoadFailed(false);
       getIntakeForm(parseInt(formId))
         .then((response) => {
+          // A later load opened another form: this reply is not for it.
+          if (loadCountRef.current !== load) return;
           if (response.data) {
             setForm({
               ...response.data,
@@ -470,8 +472,11 @@ export function IntakeFormBuilder() {
         const response = await createIntakeForm(formData);
         if (response.data?.id) {
           applySaved(response.data, editsAtStart, loadsAtStart);
-          createdIdRef.current = response.data.id;
-          navigate(`/intake-forms/${response.data.id}/edit`, { replace: true });
+          // Only when the new form is still the one on screen.
+          if (loadCountRef.current === loadsAtStart) {
+            createdIdRef.current = response.data.id;
+            navigate(`/intake-forms/${response.data.id}/edit`, { replace: true });
+          }
           setSnackbar({
             open: true,
             message: savedMessage ?? "Form created successfully",
@@ -532,7 +537,7 @@ export function IntakeFormBuilder() {
       } else {
         const response = await createIntakeForm(formData);
         publishedData = response.data;
-        if (publishedData?.id) {
+        if (publishedData?.id && loadCountRef.current === loadsAtStart) {
           createdIdRef.current = publishedData.id;
           navigate(`/intake-forms/${publishedData.id}/edit`, { replace: true });
         }
@@ -611,12 +616,15 @@ export function IntakeFormBuilder() {
     if (!formId || formId === "new" || isSaving) return;
     // Shares the saving lock with Save and Publish: a save reply landing
     // after the archive would put the old status back.
+    const loadsAtStart = loadCountRef.current;
     setIsSaving(true);
     try {
       await updateIntakeForm(parseInt(formId), {
         status: IntakeFormStatus.ARCHIVED,
       });
-      setForm((prev) => ({ ...prev, status: IntakeFormStatus.ARCHIVED }));
+      if (loadCountRef.current === loadsAtStart) {
+        setForm((prev) => ({ ...prev, status: IntakeFormStatus.ARCHIVED }));
+      }
       setSnackbar({
         open: true,
         message: "Form archived successfully",
