@@ -241,13 +241,22 @@ export function FieldEditor({
     [flushPendingEdit],
   );
 
+  // The value the field will have once the waiting edit is sent.
+  const latestValue = useCallback(<K extends keyof FormField>(key: K): FormField[K] => {
+    const pending = pendingEditRef.current;
+    if (pending?.base.id === fieldRef.current.id && key in pending.patch) {
+      return pending.patch[key] as FormField[K];
+    }
+    return fieldRef.current[key];
+  }, []);
+
   const handleChange = <K extends keyof FormField>(key: K, value: FormField[K]) => {
     setLocalField((current) => ({ ...current, [key]: value }));
     queueEdit({ [key]: value } as Partial<FormField>);
   };
 
   const handleValidationChange = (key: string, value: boolean | number | string | undefined) => {
-    const validation = { ...localField.validation, [key]: value };
+    const validation = { ...latestValue("validation"), [key]: value };
     // Remove undefined keys to keep the object clean
     if (value === undefined) {
       delete (validation as Record<string, unknown>)[key];
@@ -265,37 +274,43 @@ export function FieldEditor({
 
   // LLM guidance generation
   const [guidanceLoading, setGuidanceLoading] = useState(false);
+  // Bumped when a request starts, another field opens or the editor closes,
+  // so only the newest request for the open field can apply its result.
+  const guidanceRequestRef = useRef(0);
+
+  useLayoutEffect(() => {
+    guidanceRequestRef.current += 1;
+    setGuidanceLoading(false);
+  }, [field.id]);
+
+  useEffect(
+    () => () => {
+      guidanceRequestRef.current += 1;
+    },
+    [],
+  );
 
   const generateGuidance = useCallback(async () => {
     if (!llmKeyId || !localField.label) return;
-    const fieldId = fieldRef.current.id;
-    const guidanceAtClick = localField.guidanceText ?? "";
+    const request = ++guidanceRequestRef.current;
+    const guidanceAtClick = latestValue("guidanceText") ?? "";
     setGuidanceLoading(true);
     try {
       const result = await getLLMFieldGuidance(localField.label, entityType, llmKeyId);
+      if (request !== guidanceRequestRef.current) return;
       const text = result.data?.guidanceText;
-      // Dropped when another field is now open, or when the user wrote their
-      // own guidance while the request ran.
-      const pendingPatch =
-        pendingEditRef.current?.base.id === fieldId ? pendingEditRef.current.patch : {};
-      const guidanceNow =
-        "guidanceText" in pendingPatch
-          ? (pendingPatch.guidanceText ?? "")
-          : (fieldRef.current.guidanceText ?? "");
-      if (!text || fieldRef.current.id !== fieldId || guidanceNow !== guidanceAtClick) return;
+      // Dropped when the user wrote their own guidance while the request ran.
+      if (!text || (latestValue("guidanceText") ?? "") !== guidanceAtClick) return;
       // Merged with any other edit made while the request ran.
       setLocalField((current) => ({ ...current, guidanceText: text }));
-      pendingEditRef.current = {
-        base: fieldRef.current,
-        patch: { ...pendingPatch, guidanceText: text },
-      };
+      queueEdit({ guidanceText: text });
       flushPendingEdit();
     } catch {
       // Silently fail — the field stays as is
     } finally {
-      setGuidanceLoading(false);
+      if (request === guidanceRequestRef.current) setGuidanceLoading(false);
     }
-  }, [llmKeyId, localField.label, localField.guidanceText, entityType, flushPendingEdit]);
+  }, [llmKeyId, localField.label, entityType, latestValue, queueEdit, flushPendingEdit]);
 
   const entityMappings = ENTITY_FIELD_MAPPINGS[entityType] || [];
   const compatibleMappings = entityMappings.filter((mapping: EntityFieldMapping) =>

@@ -113,6 +113,38 @@ describe("FieldEditor pending edit", () => {
   });
 });
 
+// Validation edits build on the latest rules, so one change never undoes another.
+describe("FieldEditor validation edits", () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  const setLength = (id: string, value: string) =>
+    fireEvent.change(document.getElementById(id) as HTMLInputElement, { target: { value } });
+
+  it("keeps every rule changed within one debounce", () => {
+    const onChange = vi.fn();
+    renderWithProviders(editorFor(FIRST, onChange));
+    setLength("field-minlength", "3");
+    setLength("field-maxlength", "10");
+    vi.advanceTimersByTime(300);
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "first", validation: { minLength: 3, maxLength: 10 } }),
+    );
+  });
+
+  it("keeps a rule set by an outside update to the same field", () => {
+    const onChange = vi.fn();
+    const { rerender } = renderWithProviders(editorFor(FIRST, onChange));
+    rerender(editorFor({ ...FIRST, validation: { required: true } }, onChange));
+    setLength("field-minlength", "3");
+    vi.advanceTimersByTime(300);
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({ validation: { required: true, minLength: 3 } }),
+    );
+  });
+});
+
 // Generated guidance lands on the field it was asked for, after the request.
 describe("FieldEditor generated guidance", () => {
   const guidanceRequest = () => {
@@ -147,6 +179,26 @@ describe("FieldEditor generated guidance", () => {
       expect.objectContaining({ guidanceText: "Why First matters" }),
     );
     expect((document.getElementById("field-guidance") as HTMLTextAreaElement).value).toBe("");
+  });
+
+  it("lets the newly opened field ask for guidance while an old request runs", () => {
+    guidanceRequest();
+    const onChange = vi.fn();
+    const { rerender } = renderWithProviders(editorFor(FIRST, onChange, 1));
+    fireEvent.click(screen.getByText("AI"));
+    expect(screen.getByText("Generating...")).toBeInTheDocument();
+    rerender(editorFor(SECOND, onChange, 1));
+    expect(screen.getByText("AI")).toBeInTheDocument();
+  });
+
+  it("drops the guidance when the editor closed while it was generated", async () => {
+    const respond = guidanceRequest();
+    const onChange = vi.fn();
+    const { unmount } = renderWithProviders(editorFor(FIRST, onChange, 1));
+    fireEvent.click(screen.getByText("AI"));
+    unmount();
+    await respond("Why First matters");
+    expect(onChange).not.toHaveBeenCalled();
   });
 
   it("keeps guidance the user wrote while it was generated", async () => {
