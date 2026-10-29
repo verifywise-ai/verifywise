@@ -6,8 +6,6 @@ import {
   updateAgentPrimitiveQuery,
   deleteAgentPrimitiveByIdQuery,
   updateReviewStatusQuery,
-  linkModelQuery,
-  unlinkModelQuery,
   getAgentStatsQuery,
   getSyncLogsQuery,
   getLatestSyncStatusQuery,
@@ -17,6 +15,10 @@ import {
   getAgentOwnersQuery,
   getUserIdsInOrganizationQuery,
   lockAgentPrimitiveQuery,
+  modelInOrganizationQuery,
+  useCaseInOrganizationQuery,
+  setAgentLinkQuery,
+  AgentLinkColumn,
 } from "../utils/agentDiscovery.utils";
 import { ForeignKeyConstraintError, Transaction } from "sequelize";
 import { sequelize } from "../database/db";
@@ -54,6 +56,98 @@ function parseOwnerId(value: unknown): number | null {
     return null;
   }
   return Number.isSafeInteger(n) && n > 0 && n <= MAX_USER_ID ? n : null;
+}
+
+/** Longest description an agent can have. */
+const MAX_DESCRIPTION_LENGTH = 5000;
+
+/** A parsed request field, or the message (and its variables) for a 400. */
+type Parsed<T> = { value: T } | { error: string; vars?: Record<string, number> };
+
+/**
+ * Read `description`: undefined when not sent, null when blank (clears it),
+ * otherwise the trimmed text.
+ */
+function parseDescription(value: unknown): Parsed<string | null | undefined> {
+  if (value === undefined) return { value: undefined };
+  if (value === null) return { value: null };
+  if (typeof value !== "string") return { error: "description must be text" };
+  const text = value.trim();
+  if (text.length > MAX_DESCRIPTION_LENGTH) {
+    return {
+      error: "description must be at most {max} characters",
+      vars: { max: MAX_DESCRIPTION_LENGTH },
+    };
+  }
+  return { value: text || null };
+}
+
+/**
+ * Read a link id (linked model or use case): undefined when not sent, null
+ * when null or "" (removes the link), otherwise a positive integer id.
+ */
+function parseLinkId(value: unknown, error: string): Parsed<number | null | undefined> {
+  if (value === undefined) return { value: undefined };
+  if (value === null || value === "") return { value: null };
+  // Same rules as a user id: a positive integer that fits a Postgres INTEGER.
+  const id = parseOwnerId(value);
+  return id === null ? { error } : { value: id };
+}
+
+/** The description and link fields of a create or update request. */
+interface AgentDetailFields {
+  description: string | null | undefined;
+  linked_model_inventory_id: number | null | undefined;
+  linked_project_id: number | null | undefined;
+}
+
+function parseAgentDetailFields(body: Record<string, unknown>): Parsed<AgentDetailFields> {
+  const description = parseDescription(body.description);
+  if ("error" in description) return description;
+  const model = parseLinkId(body.linked_model_inventory_id, "Linked model must be a valid ID");
+  if ("error" in model) return model;
+  const useCase = parseLinkId(body.linked_project_id, "Linked use case must be a valid ID");
+  if ("error" in useCase) return useCase;
+  return {
+    value: {
+      description: description.value,
+      linked_model_inventory_id: model.value,
+      linked_project_id: useCase.value,
+    },
+  };
+}
+
+/**
+ * The message for a 400 when a link points outside the organization, or null
+ * when every link that changes is valid. Links equal to `current` are not
+ * checked again, so an edit never fails on a link it leaves alone.
+ */
+async function invalidLinkMessage(
+  fields: AgentDetailFields,
+  organizationId: number,
+  transaction: Transaction,
+  current: { linked_model_inventory_id: number | null; linked_project_id: number | null } = {
+    linked_model_inventory_id: null,
+    linked_project_id: null,
+  },
+): Promise<string | null> {
+  const modelId = fields.linked_model_inventory_id;
+  if (
+    modelId != null &&
+    modelId !== current.linked_model_inventory_id &&
+    !(await modelInOrganizationQuery(modelId, organizationId, transaction))
+  ) {
+    return "Linked model was not found in your model inventory";
+  }
+  const projectId = fields.linked_project_id;
+  if (
+    projectId != null &&
+    projectId !== current.linked_project_id &&
+    !(await useCaseInOrganizationQuery(projectId, organizationId, transaction))
+  ) {
+    return LINKED_USE_CASE_NOT_FOUND;
+  }
+  return null;
 }
 
 /**
@@ -170,11 +264,8 @@ async function ownersBelongToOrganization(
   return ownerIds.every((id) => found.includes(id));
 }
 
-/**
- * True for a foreign-key violation on agent_primitive_owners.user_id: an owner
- * whose user was deleted after the membership check, before the insert.
- */
-function isOwnerUserForeignKeyViolation(error: unknown): boolean {
+/** True for a foreign-key violation on `table`.`column`. */
+function isForeignKeyViolation(error: unknown, table: string, column: string): boolean {
   const err = error as {
     index?: string;
     table?: string;
@@ -182,10 +273,26 @@ function isOwnerUserForeignKeyViolation(error: unknown): boolean {
   } | null;
   const isFkViolation = error instanceof ForeignKeyConstraintError || err?.parent?.code === "23503";
   if (!isFkViolation) return false;
-  const table = err?.table ?? err?.parent?.table;
+  const errorTable = err?.table ?? err?.parent?.table;
   const constraint = err?.index ?? err?.parent?.constraint ?? "";
-  return table === "agent_primitive_owners" && constraint.includes("user_id");
+  return errorTable === table && constraint.includes(column);
 }
+
+/**
+ * True for a foreign-key violation on agent_primitive_owners.user_id: an owner
+ * whose user was deleted after the membership check, before the insert.
+ */
+const isOwnerUserForeignKeyViolation = (error: unknown) =>
+  isForeignKeyViolation(error, "agent_primitive_owners", "user_id");
+
+/**
+ * True for a foreign-key violation on agent_primitives.linked_project_id: a
+ * use case deleted after the link check, before the write.
+ */
+const isLinkedUseCaseForeignKeyViolation = (error: unknown) =>
+  isForeignKeyViolation(error, "agent_primitives", "linked_project_id");
+
+const LINKED_USE_CASE_NOT_FOUND = "Linked use case was not found";
 
 const sameOwnerSet = (a: string[], b: string[]) =>
   a.length === b.length && [...a].sort().join(",") === [...b].sort().join(",");
@@ -325,6 +432,10 @@ export async function createAgentPrimitive(req: Request, res: Response) {
         .status(400)
         .json(STATUS_CODE[400](req.t!("display_name and primitive_type are required")));
     }
+    const details = parseAgentDetailFields(req.body);
+    if ("error" in details) {
+      return res.status(400).json(STATUS_CODE[400](req.t!(details.error, details.vars)));
+    }
 
     // Owners: an owner_ids array (multi-owner, primary first) and/or the legacy
     // single owner_id, which may also be free text (see parseOwnerChange).
@@ -346,6 +457,11 @@ export async function createAgentPrimitive(req: Request, res: Response) {
         await transaction.rollback();
         return notInOrganization();
       }
+      const linkError = await invalidLinkMessage(details.value, req.organizationId!, transaction);
+      if (linkError) {
+        await transaction.rollback();
+        return res.status(400).json(STATUS_CODE[400](req.t!(linkError)));
+      }
       primitive = await createAgentPrimitiveQuery(
         {
           display_name,
@@ -357,6 +473,7 @@ export async function createAgentPrimitive(req: Request, res: Response) {
           source_system: "manual",
           external_id: `manual_${Date.now()}`,
           is_manual: true,
+          ...details.value,
         },
         req.organizationId!,
         transaction,
@@ -369,6 +486,9 @@ export async function createAgentPrimitive(req: Request, res: Response) {
     } catch (error) {
       await transaction.rollback();
       if (isOwnerUserForeignKeyViolation(error)) return notInOrganization();
+      if (isLinkedUseCaseForeignKeyViolation(error)) {
+        return res.status(400).json(STATUS_CODE[400](req.t!(LINKED_USE_CASE_NOT_FOUND)));
+      }
       throw error;
     }
     (primitive as any).owner_ids = owners;
@@ -405,13 +525,21 @@ export async function updateAgentPrimitive(req: Request, res: Response) {
     }
 
     const { display_name, primitive_type, owner_id, owner_ids, metadata } = req.body;
+    const details = parseAgentDetailFields(req.body);
+    if ("error" in details) {
+      return res.status(400).json(STATUS_CODE[400](req.t!(details.error, details.vars)));
+    }
+    const { description, linked_model_inventory_id, linked_project_id } = details.value;
 
     if (
       display_name === undefined &&
       primitive_type === undefined &&
       owner_id === undefined &&
       owner_ids === undefined &&
-      metadata === undefined
+      metadata === undefined &&
+      description === undefined &&
+      linked_model_inventory_id === undefined &&
+      linked_project_id === undefined
     ) {
       return res.status(400).json(STATUS_CODE[400](req.t!("No fields to update")));
     }
@@ -436,6 +564,16 @@ export async function updateAgentPrimitive(req: Request, res: Response) {
       }
       // Old values for the audit come from the locked row, not from `existing`
       // (read before the lock, so a concurrent edit could have changed it).
+      const linkError = await invalidLinkMessage(
+        details.value,
+        organizationId,
+        transaction,
+        locked,
+      );
+      if (linkError) {
+        await transaction.rollback();
+        return res.status(400).json(STATUS_CODE[400](req.t!(linkError)));
+      }
       const previousPrimary = locked.owner_id;
       const currentOwners = await getAgentOwnersQuery(id, organizationId, transaction);
       const previousShown = effectiveOwners(currentOwners, {
@@ -470,7 +608,15 @@ export async function updateAgentPrimitive(req: Request, res: Response) {
 
       updated = await updateAgentPrimitiveQuery(
         id,
-        { display_name, primitive_type, owner_id: primaryOwnerId, metadata },
+        {
+          display_name,
+          primitive_type,
+          owner_id: primaryOwnerId,
+          metadata,
+          description,
+          linked_model_inventory_id,
+          linked_project_id,
+        },
         organizationId,
         transaction,
       );
@@ -483,7 +629,7 @@ export async function updateAgentPrimitive(req: Request, res: Response) {
       // once, as owner_ids; owner_id is recorded only when the set is the same
       // but the primary owner changed (a reorder).
       const ownerSetChanged = change !== undefined && !sameOwnerSet(previousShown, newShown);
-      const fieldsToCheck: Array<{ field: string; oldVal: any; newVal: any }> = [
+      const fieldsToCheck: Array<{ field: string; oldVal: any; newVal: any; action?: string }> = [
         { field: "display_name", oldVal: locked.display_name, newVal: display_name },
         { field: "primitive_type", oldVal: locked.primitive_type, newVal: primitive_type },
         {
@@ -502,14 +648,28 @@ export async function updateAgentPrimitive(req: Request, res: Response) {
           oldVal: JSON.stringify(locked.metadata),
           newVal: metadata !== undefined ? JSON.stringify(metadata) : undefined,
         },
+        { field: "description", oldVal: locked.description, newVal: description },
+        // Links are recorded with the same actions as the link endpoints use.
+        {
+          field: "linked_model_inventory_id",
+          oldVal: locked.linked_model_inventory_id,
+          newVal: linked_model_inventory_id,
+          action: linked_model_inventory_id === null ? "model_unlinked" : "model_linked",
+        },
+        {
+          field: "linked_project_id",
+          oldVal: locked.linked_project_id,
+          newVal: linked_project_id,
+          action: linked_project_id === null ? "use_case_unlinked" : "use_case_linked",
+        },
       ];
 
-      for (const { field, oldVal, newVal } of fieldsToCheck) {
+      for (const { field, oldVal, newVal, action } of fieldsToCheck) {
         if (newVal !== undefined && String(oldVal ?? "") !== String(newVal ?? "")) {
           await createAuditLogQuery(
             {
               agent_primitive_id: id,
-              action: "field_updated",
+              action: action ?? "field_updated",
               field_changed: field,
               old_value: oldVal != null ? String(oldVal) : null,
               new_value: newVal != null ? String(newVal) : null,
@@ -529,6 +689,10 @@ export async function updateAgentPrimitive(req: Request, res: Response) {
         return res
           .status(400)
           .json(STATUS_CODE[400](req.t!("Owners must be users in your organization")));
+      }
+      // The new use case deleted between the link check and the update.
+      if (isLinkedUseCaseForeignKeyViolation(error)) {
+        return res.status(400).json(STATUS_CODE[400](req.t!(LINKED_USE_CASE_NOT_FOUND)));
       }
       throw error;
     }
@@ -619,12 +783,59 @@ export async function reviewAgentPrimitive(req: Request, res: Response) {
   }
 }
 
+/** What one link endpoint changes, and how it checks and audits it. */
+interface AgentLinkSpec {
+  column: AgentLinkColumn;
+  /** Request body field holding the id to link. */
+  bodyKey: "model_id" | "project_id";
+  requiredMessage: string;
+  invalidMessage: string;
+  notFoundMessage: string;
+  inOrganization: (
+    id: number,
+    organizationId: number,
+    transaction: Transaction,
+  ) => Promise<boolean>;
+  linkedAction: string;
+  unlinkedAction: string;
+  label: string;
+}
+
+const MODEL_LINK: AgentLinkSpec = {
+  column: "linked_model_inventory_id",
+  bodyKey: "model_id",
+  requiredMessage: "model_id is required",
+  invalidMessage: "Linked model must be a valid ID",
+  notFoundMessage: "Linked model was not found in your model inventory",
+  inOrganization: modelInOrganizationQuery,
+  linkedAction: "model_linked",
+  unlinkedAction: "model_unlinked",
+  label: "model",
+};
+
+const USE_CASE_LINK: AgentLinkSpec = {
+  column: "linked_project_id",
+  bodyKey: "project_id",
+  requiredMessage: "project_id is required",
+  invalidMessage: "Linked use case must be a valid ID",
+  notFoundMessage: LINKED_USE_CASE_NOT_FOUND,
+  inOrganization: useCaseInOrganizationQuery,
+  linkedAction: "use_case_linked",
+  unlinkedAction: "use_case_unlinked",
+  label: "use case",
+};
+
 /**
- * Link agent primitive to a model inventory item
+ * Link (or, with `unlink`, unlink) an agent to a model or a use case. Works
+ * for synced agents too, unlike the edit endpoint. The row is locked for the
+ * check, write and audit entry, so concurrent changes audit the right old
+ * value and a link never lands without its entry. A request that changes
+ * nothing (unlink with no link, or the same link again) writes no audit entry.
  */
-export async function linkModelToAgent(req: Request, res: Response) {
-  const functionName = "linkModelToAgent";
-  logStructured("processing", "linking model to agent", functionName, fileName);
+async function applyAgentLink(req: Request, res: Response, spec: AgentLinkSpec, unlink: boolean) {
+  const verb = unlink ? "unlink" : "link";
+  const functionName = `${verb}AgentLink`;
+  logStructured("processing", `${verb}ing ${spec.label} for agent`, functionName, fileName);
 
   try {
     const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
@@ -632,77 +843,97 @@ export async function linkModelToAgent(req: Request, res: Response) {
       return res.status(400).json(STATUS_CODE[400](req.t!("Invalid agent primitive ID")));
     }
 
-    const { model_id } = req.body;
-    if (!model_id) {
-      return res.status(400).json(STATUS_CODE[400](req.t!("model_id is required")));
+    let target: number | null = null;
+    if (!unlink) {
+      const raw = req.body?.[spec.bodyKey];
+      if (raw == null || raw === "") {
+        return res.status(400).json(STATUS_CODE[400](req.t!(spec.requiredMessage)));
+      }
+      target = parseOwnerId(raw);
+      if (target === null) {
+        return res.status(400).json(STATUS_CODE[400](req.t!(spec.invalidMessage)));
+      }
     }
 
-    const existing = await getAgentPrimitiveByIdQuery(id, req.organizationId!);
-    if (!existing) {
-      return res.status(404).json(STATUS_CODE[404](req.t!("Agent primitive not found")));
+    const transaction = await sequelize.transaction();
+    let primitive;
+    try {
+      const locked = await lockAgentPrimitiveQuery(id, req.organizationId!, transaction);
+      if (!locked) {
+        await transaction.rollback();
+        return res.status(404).json(STATUS_CODE[404](req.t!("Agent primitive not found")));
+      }
+      const current = locked[spec.column];
+
+      if (current === target) {
+        // Nothing to change, so nothing to audit.
+        await transaction.commit();
+        primitive = await getAgentPrimitiveByIdQuery(id, req.organizationId!);
+        return res.status(200).json(STATUS_CODE[200](primitive));
+      }
+
+      if (
+        target !== null &&
+        !(await spec.inOrganization(target, req.organizationId!, transaction))
+      ) {
+        await transaction.rollback();
+        return res.status(400).json(STATUS_CODE[400](req.t!(spec.notFoundMessage)));
+      }
+
+      primitive = await setAgentLinkQuery(
+        id,
+        spec.column,
+        target,
+        req.organizationId!,
+        transaction,
+      );
+
+      await createAuditLogQuery(
+        {
+          agent_primitive_id: id,
+          action: unlink ? spec.unlinkedAction : spec.linkedAction,
+          field_changed: spec.column,
+          old_value: current?.toString() ?? null,
+          new_value: target?.toString() ?? null,
+          performed_by: req.userId!,
+        },
+        req.organizationId!,
+        transaction,
+      );
+
+      await transaction.commit();
+    } catch (error) {
+      await transaction.rollback();
+      // The model or use case was deleted between the check and the write.
+      if (isForeignKeyViolation(error, "agent_primitives", spec.column)) {
+        return res.status(400).json(STATUS_CODE[400](req.t!(spec.notFoundMessage)));
+      }
+      throw error;
     }
 
-    const primitive = await linkModelQuery(id, model_id, req.organizationId!);
-
-    await createAuditLogQuery(
-      {
-        agent_primitive_id: id,
-        action: "model_linked",
-        field_changed: "linked_model_inventory_id",
-        old_value: existing.linked_model_inventory_id?.toString() || null,
-        new_value: model_id.toString(),
-        performed_by: req.userId!,
-      },
-      req.organizationId!,
-    );
-
-    logStructured("successful", "model linked to agent", functionName, fileName);
+    logStructured("successful", `${spec.label} ${verb}ed for agent`, functionName, fileName);
     return res.status(200).json(STATUS_CODE[200](primitive));
   } catch (error) {
-    logStructured("error", "failed to link model to agent", functionName, fileName);
+    logStructured("error", `failed to ${verb} ${spec.label} for agent`, functionName, fileName);
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
-/**
- * Unlink model from agent primitive
- */
-export async function unlinkModelFromAgent(req: Request, res: Response) {
-  const functionName = "unlinkModelFromAgent";
-  logStructured("processing", "unlinking model from agent", functionName, fileName);
+/** Link agent primitive to a model inventory item */
+export const linkModelToAgent = (req: Request, res: Response) =>
+  applyAgentLink(req, res, MODEL_LINK, false);
 
-  try {
-    const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
-    if (isNaN(id)) {
-      return res.status(400).json(STATUS_CODE[400](req.t!("Invalid agent primitive ID")));
-    }
+/** Unlink model from agent primitive */
+export const unlinkModelFromAgent = (req: Request, res: Response) =>
+  applyAgentLink(req, res, MODEL_LINK, true);
 
-    const existing = await getAgentPrimitiveByIdQuery(id, req.organizationId!);
-    if (!existing) {
-      return res.status(404).json(STATUS_CODE[404](req.t!("Agent primitive not found")));
-    }
+/** Link agent primitive to a use case */
+export const linkUseCaseToAgent = (req: Request, res: Response) =>
+  applyAgentLink(req, res, USE_CASE_LINK, false);
 
-    const primitive = await unlinkModelQuery(id, req.organizationId!);
-
-    await createAuditLogQuery(
-      {
-        agent_primitive_id: id,
-        action: "model_unlinked",
-        field_changed: "linked_model_inventory_id",
-        old_value: existing.linked_model_inventory_id?.toString() || null,
-        new_value: null,
-        performed_by: req.userId!,
-      },
-      req.organizationId!,
-    );
-
-    logStructured("successful", "model unlinked from agent", functionName, fileName);
-    return res.status(200).json(STATUS_CODE[200](primitive));
-  } catch (error) {
-    logStructured("error", "failed to unlink model from agent", functionName, fileName);
-    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
-  }
-}
+/** Unlink use case from agent primitive */
+export const unlinkUseCaseFromAgent = (req: Request, res: Response) =>
+  applyAgentLink(req, res, USE_CASE_LINK, true);
 
 /**
  * Get audit logs for an agent primitive

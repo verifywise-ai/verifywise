@@ -67,6 +67,7 @@ import StandardModal from "../../components/Modals/StandardModal";
 import Select from "../../components/Inputs/Select";
 import Checkbox from "../../components/Inputs/Checkbox";
 import EuAiActStepToggle from "./EuAiActStepToggle";
+import LiveChecksToggle from "./LiveChecksToggle";
 import Chip from "../../components/Chip";
 import { PageBreadcrumbs } from "../../components/breadcrumbs/PageBreadcrumbs";
 
@@ -373,6 +374,7 @@ export function IntakeFormBuilder() {
         llmKeyId: activeLlmKeyId,
         suggestedQuestionsEnabled: form.suggestedQuestionsEnabled ?? false,
         euAiActRiskStepEnabled: form.euAiActRiskStepEnabled ?? false,
+        liveChecksEnabled: form.liveChecksEnabled ?? true,
         ...(canEditRouting ? {} : { routing: undefined }),
       };
       if (isEditing && formId) {
@@ -440,6 +442,7 @@ export function IntakeFormBuilder() {
         llmKeyId: activeLlmKeyId,
         suggestedQuestionsEnabled: form.suggestedQuestionsEnabled ?? false,
         euAiActRiskStepEnabled: form.euAiActRiskStepEnabled ?? false,
+        liveChecksEnabled: form.liveChecksEnabled ?? true,
         ...(canEditRouting ? {} : { routing: undefined }),
         status: IntakeFormStatus.ACTIVE,
       };
@@ -1341,6 +1344,11 @@ export function IntakeFormBuilder() {
                                 : {}),
                             })
                           }
+                        />
+
+                        <LiveChecksToggle
+                          enabled={form.liveChecksEnabled ?? true}
+                          onToggle={(enabled) => updateForm({ liveChecksEnabled: enabled })}
                         />
                       </Box>
                     </Collapse>

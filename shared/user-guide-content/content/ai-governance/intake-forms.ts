@@ -4,7 +4,7 @@ export const intakeFormsContent: ArticleContent = {
   blocks: [
     {
       type: 'time-estimate',
-      text: '12 min read',
+      text: '13 min read',
     },
     {
       type: 'heading',
@@ -427,6 +427,16 @@ export const intakeFormsContent: ArticleContent = {
     },
     {
       type: 'heading',
+      id: 'live-checks-toggle',
+      level: 3,
+      text: 'Check answers while the submitter types',
+    },
+    {
+      type: 'paragraph',
+      text: 'This setting is on by default for every form. It shows hints under answers on the public form and stores them with the submission for the reviewer (see **Live checks** below). Rule checks work on every form. AI checks and vendor document prefill also need the form\'s LLM key. Every AI call they make uses that key. Turn the setting off to stop all three for this form.',
+    },
+    {
+      type: 'heading',
       id: 'contact-info-toggle',
       level: 3,
       text: 'Collect contact information',
@@ -510,6 +520,32 @@ export const intakeFormsContent: ArticleContent = {
         { bold: 'Math CAPTCHA', text: 'A simple arithmetic question that changes on each page load. The answer is verified server-side using a time-limited cryptographic token that expires after 5 minutes.' },
         { bold: 'IP-based rate limiting', text: 'Limits the number of submissions from a single IP address within a time window. Exceeding the limit returns a "Too many submissions" error.' },
       ],
+    },
+    {
+      type: 'heading',
+      id: 'live-checks',
+      level: 3,
+      text: 'Live checks',
+    },
+    {
+      type: 'paragraph',
+      text: 'While someone fills in the form, hints appear under answers that may need a second look. An **Intake assistant** panel counts them, jumps to each question and runs AI checks on request. The hints never block submission.',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { bold: 'Rule checks', text: 'Run in the browser on every change. They flag placeholder or very short answers, answers that mention a practice prohibited under EU AI Act Article 5, uses listed as high-risk in Annex III and decisions made without human review (GDPR Article 22). The hint says what the answer mentions and why it may matter; it never says the system is prohibited. Rules match English answers; the hint text is shown in the submitter\'s language.' },
+        { bold: 'AI checks', text: 'With an LLM key, the panel has a **Check my answers** button. It asks the AI once about vague answers and answers that contradict each other. Answers go to the AI only when the submitter selects it, so typing never uses your key. After a check, the button stays off until an answer changes. A notice at the top of the form explains this.' },
+        { bold: 'Fill from a vendor document', text: 'With an LLM key, the submitter can upload a PDF or Word file of up to 10 MB. The AI suggests answers for empty questions. Each one is marked **AI-suggested** with the file and section it was read from. A **Confirm** button sits next to it. Suggestions never replace an answer the submitter already gave. The file is not stored.' },
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: 'AI calls are rate-limited per visitor and per form, so a busy or misused link cannot run up costs on your key. When a limit is reached, rule checks keep working and the panel shows that AI checks are paused for a few minutes.',
+    },
+    {
+      type: 'paragraph',
+      text: 'At submit, VerifyWise runs the checks again on the server and stores them with the submission; AI checks finish in the background. In the review modal, an **Intake checks** section counts the hints by kind. Each flagged answer shows its hints as chips (hover for the full text). Answers filled from a vendor document show the file, the section and whether the submitter confirmed them.',
     },
     {
       type: 'heading',

@@ -62,11 +62,24 @@ async function copyLocales() {
   }
 }
 
+/**
+ * Compiled palette lives in tools/design-tokens so tsc and Jest can resolve it.
+ * The emitted server requires ./design-tokens/palette from dist/tools.
+ */
+async function copyDesignTokens() {
+  const sourceDir = path.join(__dirname, "..", "tools", "design-tokens");
+  const destDir = path.join(__dirname, "..", "dist", "tools", "design-tokens");
+
+  await copyDir(sourceDir, destDir);
+  console.log("tools/design-tokens/ copied successfully!");
+}
+
 async function copyFile() {
   try {
     await copySQLFile();
     await copyTemplates();
     await copyLocales();
+    await copyDesignTokens();
   } catch (error) {
     console.error("Error copying file: ", error);
     process.exit(1);

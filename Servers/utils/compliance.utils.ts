@@ -124,12 +124,14 @@ async function getRiskManagementData(organizationId: number): Promise<RiskManage
       { type: QueryTypes.SELECT, replacements: { organizationId } },
     )) as { count: string }[];
 
-    // High risks (unmitigated)
+    // High risks (unmitigated). NULL mitigation_status means "not yet
+    // assessed", which is unmitigated — SQL three-valued logic would
+    // silently drop those rows from a != comparison (#3911).
     const highResult = (await sequelize.query(
       `SELECT COUNT(*) as count FROM risks
        WHERE organization_id = :organizationId
        AND (is_deleted = false OR is_deleted IS NULL)
-       AND mitigation_status != 'Completed'
+       AND (mitigation_status IS NULL OR mitigation_status != 'Completed')
        AND (current_risk_level = 'High risk' OR current_risk_level = 'Very high risk')`,
       { type: QueryTypes.SELECT, replacements: { organizationId } },
     )) as { count: string }[];
@@ -139,7 +141,7 @@ async function getRiskManagementData(organizationId: number): Promise<RiskManage
       `SELECT COUNT(*) as count FROM risks
        WHERE organization_id = :organizationId
        AND (is_deleted = false OR is_deleted IS NULL)
-       AND mitigation_status != 'Completed'
+       AND (mitigation_status IS NULL OR mitigation_status != 'Completed')
        AND current_risk_level = 'Very high risk'`,
       { type: QueryTypes.SELECT, replacements: { organizationId } },
     )) as { count: string }[];

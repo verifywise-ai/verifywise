@@ -76,7 +76,14 @@ function mockPreview(level: string, extra: Record<string, unknown> = {}) {
 
 async function openBands() {
   renderWithProviders(
-    <SubmissionPreviewModal isOpen onClose={vi.fn()} submissionId={5} onApproved={vi.fn()} />,
+    <SubmissionPreviewModal
+      isOpen
+      onClose={vi.fn()}
+      submissionId={5}
+      onApproved={vi.fn()}
+      onRejected={vi.fn()}
+      onChanged={vi.fn()}
+    />,
   );
   fireEvent.click(await screen.findByText("Override intake risk score"));
   await screen.findByText("Override band");
@@ -136,7 +143,14 @@ describe("override band floor", () => {
       riskOverride: { tier: "Medium", justification: "Saved earlier", overriddenBy: 1 },
     });
     renderWithProviders(
-      <SubmissionPreviewModal isOpen onClose={vi.fn()} submissionId={5} onApproved={vi.fn()} />,
+      <SubmissionPreviewModal
+        isOpen
+        onClose={vi.fn()}
+        submissionId={5}
+        onApproved={vi.fn()}
+        onRejected={vi.fn()}
+        onChanged={vi.fn()}
+      />,
     );
     expect(await screen.findByText("Override band")).toBeInTheDocument();
     expect(screen.getAllByRole("combobox")[0]).toHaveTextContent("High");
@@ -161,7 +175,14 @@ describe("override band floor", () => {
       },
     } as never);
     renderWithProviders(
-      <SubmissionPreviewModal isOpen onClose={vi.fn()} submissionId={5} onApproved={vi.fn()} />,
+      <SubmissionPreviewModal
+        isOpen
+        onClose={vi.fn()}
+        submissionId={5}
+        onApproved={vi.fn()}
+        onRejected={vi.fn()}
+        onChanged={vi.fn()}
+      />,
     );
     expect(
       await screen.findByText("No risk score was recorded for this submission."),

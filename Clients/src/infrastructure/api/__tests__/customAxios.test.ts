@@ -245,6 +245,41 @@ describe("customAxios", () => {
       expect(callback).not.toHaveBeenCalled();
     });
 
+    it.each(["/modelInventory", "/vendors", "/policies", "/tasks?page=1", "/training"])(
+      "still toasts a list GET %s that did not opt out (other screens rely on the toast)",
+      async (url) => {
+        const callback = vi.fn();
+        setShowAlertCallback(callback);
+
+        const error = {
+          config: { url, method: "get" },
+          response: { status: 500, data: { message: "Server error" } },
+          message: "Internal Server Error",
+        };
+
+        await expect(rejected(error)).rejects.toEqual(error);
+        expect(callback).toHaveBeenCalledWith({
+          variant: "error",
+          title: "Error",
+          body: "An error occurred. Please try again later",
+        });
+      },
+    );
+
+    it("does not toast a list GET that opted out with suppressGlobalErrorToast", async () => {
+      const callback = vi.fn();
+      setShowAlertCallback(callback);
+
+      const error = {
+        config: { url: "/vendors", method: "get", suppressGlobalErrorToast: true },
+        response: { status: 500, data: { message: "Server error" } },
+        message: "Internal Server Error",
+      };
+
+      await expect(rejected(error)).rejects.toEqual(error);
+      expect(callback).not.toHaveBeenCalled();
+    });
+
     it("still toasts the same incident 409 when the request did not opt out", async () => {
       const callback = vi.fn();
       setShowAlertCallback(callback);

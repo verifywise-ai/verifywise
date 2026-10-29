@@ -46,6 +46,7 @@ import { User } from "../../../domain/types/User";
 
 import Alert from "../../../presentation/components/Alert";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
+import ListStateWrapper from "../../components/ListStateWrapper";
 
 // Types (Type Safety)
 type AlertVariant = "success" | "info" | "warning" | "error";
@@ -140,6 +141,7 @@ const Training: React.FC = () => {
   const hasProcessedUrlParam = useRef(false);
   const [trainingData, setTrainingData] = useState<TrainingRegistarModel[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [trainingError, setTrainingError] = useState<string | null>(null);
   const [isNewTrainingModalOpen, setIsNewTrainingModalOpen] = useState(false);
   const [selectedTrainingId, setSelectedTrainingId] = useState<string | null>(null);
   const [selectedTraining, setSelectedTraining] = useState<TrainingRegistarModel | null>(null);
@@ -216,8 +218,13 @@ const Training: React.FC = () => {
 
   const fetchTrainingData = useCallback(async () => {
     setIsLoading(true);
+    setTrainingError(null);
     try {
-      const response = await getAllEntities({ routeUrl: "/training" });
+      const response = await getAllEntities({
+        routeUrl: "/training",
+        // The training list renders its own inline error state.
+        suppressGlobalErrorToast: true,
+      });
       if (response?.data) {
         setTrainingData(response.data);
       }
@@ -226,11 +233,7 @@ const Training: React.FC = () => {
         type: "error",
         message: `Failed to fetch training data: ${error}`,
       });
-      setAlert({
-        variant: "error",
-        body: "Failed to load training data. Please try again later.",
-      });
-      setShowAlert(true);
+      setTrainingError("Failed to load training data. Please try again later.");
     } finally {
       setIsLoading(false);
     }
@@ -860,6 +863,26 @@ const Training: React.FC = () => {
     });
   }, [filteredEvidence, trainingNameById, formatDate]);
 
+  // GroupedTableView renders the table's own placeholder for an empty list, so the
+  // same element serves as the empty state and the table stays mounted (keeping
+  // its page and sort) when a search briefly matches nothing.
+  const trainingList = (
+    <GroupedTableView
+      groupedData={groupedTraining}
+      ungroupedData={filteredTraining}
+      renderTable={(data, options) => (
+        <TrainingTable
+          data={data}
+          isLoading={false}
+          onEdit={handleEditTraining}
+          onDelete={handleDeleteTraining}
+          hidePagination={options?.hidePagination}
+          visibleColumns={visibleColumns as Set<string>}
+        />
+      )}
+    />
+  );
+
   return (
     <PageHeaderExtended
       title="AI Training Registry"
@@ -991,20 +1014,16 @@ const Training: React.FC = () => {
           </Stack>
 
           {/* Table */}
-          <GroupedTableView
-            groupedData={groupedTraining}
-            ungroupedData={filteredTraining}
-            renderTable={(data, options) => (
-              <TrainingTable
-                data={data}
-                isLoading={isLoading}
-                onEdit={handleEditTraining}
-                onDelete={handleDeleteTraining}
-                hidePagination={options?.hidePagination}
-                visibleColumns={visibleColumns as Set<string>}
-              />
-            )}
-          />
+          <ListStateWrapper
+            items={filteredTraining}
+            isLoading={isLoading}
+            loadingLabel="Loading training records"
+            // A failed refresh after a save keeps the loaded records on screen.
+            errorMessage={trainingData.length ? null : trainingError}
+            emptyState={trainingList}
+          >
+            {trainingList}
+          </ListStateWrapper>
         </>
       )}
 

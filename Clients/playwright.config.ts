@@ -1,5 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 import dotenv from "dotenv";
+import { CANARY_AUTH_STATE_PATH, e2eBaseUrl, isDeployedTarget } from "./e2e/helpers/target.helper";
 
 dotenv.config({ quiet: true });
 
@@ -42,6 +43,11 @@ const FLAKY_TAG = /@flaky/;
 // set PLAYWRIGHT_USE_SYSTEM_CHROME=1 to use the locally installed Google Chrome.
 const browserChannel = process.env.PLAYWRIGHT_USE_SYSTEM_CHROME ? "chrome" : undefined;
 
+// Against a deployed environment the canary signs in its own account
+// (canary.setup.ts) and never runs global.setup.ts, which deletes and recreates
+// organizations. Locally and in PR CI it reuses the seeded org Admin.
+const DEPLOYED_TARGET = isDeployedTarget();
+
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: false, // Run sequentially — tests may depend on DB state
@@ -55,7 +61,7 @@ export default defineConfig({
   timeout: 60_000,
 
   use: {
-    baseURL: process.env.E2E_BASE_URL || "http://localhost:5173",
+    baseURL: e2eBaseUrl(),
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
@@ -154,21 +160,36 @@ export default defineConfig({
     // Scheduled canary smoke tests (issue #4681-a) + CSP evidence capture
     // (issue #4686-a), both owned by the canary pod under e2e/canary/. The
     // scheduled workflow runs `npx playwright test --project=canary
-    // --grep @canary`, so both specs live in this project. Org Admin auth
+    // --grep @canary`, so both specs live in this project. In-org auth
     // state: the journey opens /overview, and ProtectedRoute sends a
     // super-admin (user.json) to /super-admin instead. csp-capture tolerates
     // the login redirect on protected routes by design.
+    // Login only, for a deployed target; creates and deletes nothing. Absent
+    // otherwise, since a full local or PR run would also run it.
+    ...(DEPLOYED_TARGET
+      ? [
+          {
+            name: "canary-setup",
+            testDir: "./e2e/canary",
+            testMatch: /canary\.setup\.ts/,
+            use: {
+              ...devices["Desktop Chrome"],
+              channel: browserChannel,
+            },
+          },
+        ]
+      : []),
     {
       name: "canary",
       testDir: "./e2e/canary",
       testMatch: /(canary|csp-capture)\.spec\.ts/,
       grep: /@canary/,
       grepInvert: FLAKY_TAG,
-      dependencies: ["setup"],
+      dependencies: [DEPLOYED_TARGET ? "canary-setup" : "setup"],
       use: {
         ...devices["Desktop Chrome"],
         channel: browserChannel,
-        storageState: "e2e/.auth/admin.json",
+        storageState: DEPLOYED_TARGET ? CANARY_AUTH_STATE_PATH : "e2e/.auth/admin.json",
       },
     },
     // Quarantined specs (currently only plugins.spec.ts, see the file's
@@ -187,10 +208,13 @@ export default defineConfig({
     },
   ],
 
-  webServer: {
-    command: "npm run dev:vite",
-    url: "http://localhost:5173",
-    reuseExistingServer: true,
-    timeout: 60_000,
-  },
+  // A deployed target serves its own frontend
+  webServer: DEPLOYED_TARGET
+    ? undefined
+    : {
+        command: "npm run dev:vite",
+        url: "http://localhost:5173",
+        reuseExistingServer: true,
+        timeout: 60_000,
+      },
 });

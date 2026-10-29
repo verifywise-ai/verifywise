@@ -97,7 +97,7 @@ export interface FormDesignSettings {
  */
 export const DEFAULT_DESIGN_SETTINGS: FormDesignSettings = {
   format: "narrow",
-  alignment: "left",
+  alignment: "center",
   colorTheme: `${brand.primary}`,
   backgroundColor: "#fafafa",
   logoUrl: "",
@@ -217,6 +217,7 @@ export interface IntakeForm {
   llmKeyId?: number | null;
   suggestedQuestionsEnabled?: boolean;
   euAiActRiskStepEnabled?: boolean;
+  liveChecksEnabled?: boolean;
   designSettings?: FormDesignSettings | null;
   routing?: FormRouting | null;
   createdBy?: number;
@@ -241,6 +242,7 @@ export interface CreateIntakeFormInput {
   llmKeyId?: number | null;
   suggestedQuestionsEnabled?: boolean;
   euAiActRiskStepEnabled?: boolean;
+  liveChecksEnabled?: boolean;
   designSettings?: FormDesignSettings | null;
   routing?: FormRouting | null;
 }
@@ -261,6 +263,7 @@ export interface UpdateIntakeFormInput {
   llmKeyId?: number | null;
   suggestedQuestionsEnabled?: boolean;
   euAiActRiskStepEnabled?: boolean;
+  liveChecksEnabled?: boolean;
   designSettings?: FormDesignSettings | null;
   routing?: FormRouting | null;
 }
@@ -916,6 +919,7 @@ export function createEmptyForm(entityType?: IntakeEntityType): IntakeForm {
     // New use case forms start with the EU AI Act step on; it replaces the
     // old risk level and role questions of the template.
     euAiActRiskStepEnabled: type === IntakeEntityType.USE_CASE,
+    liveChecksEnabled: true,
     designSettings: { ...DEFAULT_DESIGN_SETTINGS },
   };
 }

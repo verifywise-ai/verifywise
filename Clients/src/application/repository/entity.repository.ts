@@ -90,10 +90,14 @@ export async function deleteEntityById({ routeUrl }: RequestParams): Promise<any
 export async function getAllEntities({
   routeUrl,
   params,
+  suppressGlobalErrorToast,
 }: RequestParams & { params?: Record<string, any> }): Promise<any> {
   // Deduped: list fetches (e.g. /projects) are requested by several dashboard
   // consumers at mount. Concurrent identical GETs share one in-flight request.
-  const response = await getDeduped(routeUrl, { params });
+  const response = await getDeduped(routeUrl, {
+    params,
+    ...(suppressGlobalErrorToast ? { suppressGlobalErrorToast } : {}),
+  });
   return response.data;
 }
 

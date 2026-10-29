@@ -4,6 +4,7 @@
  * Following VerifyWise clean architecture patterns
  */
 
+import { background, brand, risk, status, text } from "../../tools/design-tokens/palette";
 import {
   ReportData,
   ReportMetadata,
@@ -69,18 +70,18 @@ import { QueryTypes } from "sequelize";
  * without the suffix, and they share this map.
  */
 const RISK_LEVEL_COLORS: Record<string, string> = {
-  Critical: "#B42318",
-  "Very high risk": "#B42318",
-  "Very High": "#B42318",
-  "High risk": "#C4320A",
-  High: "#C4320A",
-  "Medium risk": "#B54708",
-  Medium: "#B54708",
-  "Low risk": "#027A48",
-  Low: "#027A48",
-  "Very low risk": "#026AA2",
-  "Very Low": "#026AA2",
-  "No risk": "#667085",
+  Critical: risk.critical.text,
+  "Very high risk": risk.critical.text,
+  "Very High": risk.critical.text,
+  "High risk": risk.high.text,
+  High: risk.high.text,
+  "Medium risk": risk.medium.text,
+  Medium: risk.medium.text,
+  "Low risk": risk.low.text,
+  Low: risk.low.text,
+  "Very low risk": risk.veryLow.text,
+  "Very Low": risk.veryLow.text,
+  "No risk": text.icon,
 };
 
 /**
@@ -105,18 +106,8 @@ export const isoDate = (value: unknown): string | undefined => {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 };
 
-// Status color mapping (for future use with charts)
-// const STATUS_COLORS: Record<string, string> = {
-//   Compliant: "#027A48",
-//   Complete: "#027A48",
-//   Completed: "#027A48",
-//   "In Progress": "#B54708",
-//   Partial: "#B54708",
-//   "Non-Compliant": "#B42318",
-//   Incomplete: "#B42318",
-//   "Not Applicable": "#344054",
-//   Draft: "#344054",
-// };
+// A future status chart should use status.success.text, status.warning.text,
+// status.error.text, and text.secondary from the shared palette.
 
 export class ReportDataCollector {
   private organizationId: number;
@@ -660,8 +651,8 @@ export class ReportDataCollector {
     return {
       organizationName,
       organizationLogo,
-      primaryColor: "#13715B", // VerifyWise green
-      secondaryColor: "#1C2130",
+      primaryColor: brand.primary,
+      secondaryColor: text.primary,
     };
   }
 
@@ -704,11 +695,11 @@ export class ReportDataCollector {
     if (sections.assessment) {
       const { answeredQuestions, totalQuestions } = sections.assessment;
       chartData.assessmentStatus = [
-        { status: "Answered", count: answeredQuestions, color: "#027A48" },
+        { status: "Answered", count: answeredQuestions, color: status.success.text },
         {
           status: "Pending",
           count: Math.max(totalQuestions - answeredQuestions, 0),
-          color: "#F2F4F7",
+          color: background.hover,
         },
       ];
     }
@@ -741,7 +732,7 @@ export class ReportDataCollector {
       risksByLevel: Object.entries(risksByLevel).map(([level, count]) => ({
         level,
         count,
-        color: RISK_LEVEL_COLORS[level] || "#667085",
+        color: RISK_LEVEL_COLORS[level] || text.icon,
       })),
       risks: risks.map((risk) => ({
         id: risk.id,

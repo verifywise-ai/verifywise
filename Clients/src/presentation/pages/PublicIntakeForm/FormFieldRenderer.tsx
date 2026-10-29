@@ -5,6 +5,7 @@ import Select from "../../components/Inputs/Select";
 import Checkbox from "../../components/Inputs/Checkbox";
 import { FormField } from "../IntakeFormBuilder/types";
 import { isEmptyAnswer } from "../../../application/utils/intakeFormLogic";
+import { status } from "../../themes/palette";
 
 /**
  * Renders a field label.
@@ -17,7 +18,7 @@ import { isEmptyAnswer } from "../../../application/utils/intakeFormLogic";
  * Pass `id` instead for a group of controls — a multiselect's option list —
  * where the label names the group via aria-labelledby rather than one input.
  */
-function FieldLabel({
+export function FieldLabel({
   label,
   required,
   htmlFor,
@@ -108,12 +109,14 @@ interface FormFieldRendererProps {
   field: FormField;
   control: Control<Record<string, unknown>>;
   errors: FieldErrors<Record<string, unknown>>;
+  /** Border color from live-check hints: red for a possible prohibited practice, amber for a regulated use or a conflict. */
+  tone?: "error" | "warning";
 }
 
 /**
  * Renders a single form field based on its type
  */
-export function FormFieldRenderer({ field, control, errors }: FormFieldRendererProps) {
+export function FormFieldRenderer({ field, control, errors, tone }: FormFieldRendererProps) {
   const error = errors[field.id];
   const errorMessage = error?.message as string | undefined;
   const isRequired = field.validation?.required;
@@ -499,7 +502,24 @@ export function FormFieldRenderer({ field, control, errors }: FormFieldRendererP
     }
   };
 
-  return <Box>{renderField()}</Box>;
+  const toneColor = tone ? status[tone].text : undefined;
+  return (
+    <Box
+      sx={
+        toneColor
+          ? {
+              // "&&&" repeats the class so this outranks the field's own border at
+              // rest and the page's hover border (getInputStyles, which scores
+              // 0,5,1). The page keeps its green focus border (!important).
+              "&&& .MuiOutlinedInput-root .MuiOutlinedInput-notchedOutline, &&& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline":
+                { borderColor: toneColor },
+            }
+          : undefined
+      }
+    >
+      {renderField()}
+    </Box>
+  );
 }
 
 export default FormFieldRenderer;

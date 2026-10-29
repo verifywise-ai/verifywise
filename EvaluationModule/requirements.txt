@@ -8,7 +8,7 @@ pyyaml>=6.0.3
 
 # Machine learning and fairness
 scikit-learn>=1.9.1
-fairlearn>=0.14.0
+fairlearn>=0.15.0
 
 # Deep learning and transformers
 torch>=2.14.1,<3.0.0
@@ -25,9 +25,9 @@ pyarrow>=25.0.1
 # Security pins (transitive deps)
 # nltk is pulled in transitively (langfair / rouge_score / textblob).
 # CVE-2026-81726 (GHSA-8mgp-746c-j5xp / PYSEC-2026-3740): file sandbox bypass in model-artifact
-# APIs. 3.10.3 is the latest release but is still listed as last_affected ("not yet patched"),
+# APIs. 3.10.4 is the latest release but is still listed as last_affected ("not yet patched"),
 # so this pin only keeps us on the newest nltk; the pip-audit gate suppresses the unfixed finding.
-nltk>=3.10.3
+nltk>=3.10.4
 
 # Utilities
 tqdm>=4.70.1
@@ -37,8 +37,8 @@ python-dotenv>=1.2.4
 # LLM clients: cloud models run through the AI Gateway (httpx); openai is for
 # self-hosted and custom OpenAI-compatible endpoints, ollama for local models
 httpx>=0.27.0
-openai>=3.31.0
-ollama>=0.6.2
+openai>=3.37.0
+ollama>=0.6.3
 
 # DeepEval for comprehensive LLM evaluation
 deepeval>=4.2.3

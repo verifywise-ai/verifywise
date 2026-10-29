@@ -42,9 +42,16 @@ function mockPreview(extra: Record<string, unknown>, submission: Record<string, 
   } as never);
 }
 
-const renderModal = (onApproved = vi.fn()) =>
+const renderModal = (onApproved = vi.fn(), onChanged = vi.fn()) =>
   renderWithProviders(
-    <SubmissionPreviewModal isOpen onClose={vi.fn()} submissionId={11} onApproved={onApproved} />,
+    <SubmissionPreviewModal
+      isOpen
+      onClose={vi.fn()}
+      submissionId={11}
+      onApproved={onApproved}
+      onRejected={vi.fn()}
+      onChanged={onChanged}
+    />,
   );
 
 describe("SubmissionPreviewModal lane", () => {
@@ -125,8 +132,11 @@ describe("SubmissionPreviewModal lane", () => {
       },
     } as never);
     const onApproved = vi.fn();
-    renderModal(onApproved);
+    const onChanged = vi.fn();
+    renderModal(onApproved, onChanged);
     fireEvent.click(await screen.findByRole("button", { name: "Agree" }));
-    await waitFor(() => expect(onApproved).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(onChanged).toHaveBeenCalledTimes(1));
+    // Recording a second review is not a new approval
+    expect(onApproved).not.toHaveBeenCalled();
   });
 });

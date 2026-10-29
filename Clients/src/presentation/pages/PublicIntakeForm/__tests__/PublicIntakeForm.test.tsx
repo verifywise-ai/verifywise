@@ -16,6 +16,9 @@ vi.mock("../../../../application/repository/intakeForm.repository", () => ({
 vi.mock("../FormFieldRenderer", () => ({
   FormFieldRenderer: () => <div data-testid="form-field-renderer" />,
   FormFieldHint: ({ text }: { text?: string }) => (text ? <p>{text}</p> : null),
+  FieldLabel: ({ label, htmlFor }: { label: string; htmlFor?: string }) => (
+    <label htmlFor={htmlFor}>{label}</label>
+  ),
 }));
 
 vi.mock("../MathCaptcha", () => ({
@@ -63,6 +66,40 @@ describe("PublicIntakeForm Page", () => {
     ).toBeInTheDocument();
     expect(screen.getByLabelText(/Email/)).toBeInTheDocument();
     expect(screen.getByText("We'll send you updates about your submission")).toBeInTheDocument();
+  });
+
+  it("labels the contact inputs", async () => {
+    renderForm();
+
+    expect(await screen.findByLabelText("Name")).toHaveAttribute("id", "submitter-name");
+    expect(screen.getByLabelText("Email")).toHaveAttribute("id", "submitter-email");
+  });
+
+  // The form column is the main landmark's only child.
+  const formColumn = () => screen.getByRole("main").firstElementChild as HTMLElement;
+
+  it.each([
+    ["has no design settings", undefined],
+    ["has design settings without an alignment", { colorTheme: "#13715B" }],
+  ])("centers the form when it %s", async (_label, designSettings) => {
+    mockedGetPublicFormById.mockResolvedValue({
+      data: { form: { ...mockForm, designSettings } },
+    } as Awaited<ReturnType<typeof getPublicFormById>>);
+    renderForm();
+
+    await screen.findByRole("heading", { level: 1, name: "Vendor intake" });
+    expect(formColumn()).toHaveStyle({ marginLeft: "auto", marginRight: "auto" });
+  });
+
+  it("keeps a form left-aligned when that alignment is saved", async () => {
+    // Saved design settings can be partial; the page fills in the defaults.
+    mockedGetPublicFormById.mockResolvedValue({
+      data: { form: { ...mockForm, designSettings: { alignment: "left" } } },
+    } as unknown as Awaited<ReturnType<typeof getPublicFormById>>);
+    renderForm();
+
+    await screen.findByRole("heading", { level: 1, name: "Vendor intake" });
+    expect(formColumn()).toHaveStyle({ marginLeft: "0px", marginRight: "auto" });
   });
 
   it("uses a main landmark and h1 when the form cannot be loaded", async () => {

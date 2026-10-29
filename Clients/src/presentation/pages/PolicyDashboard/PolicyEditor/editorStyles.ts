@@ -9,8 +9,16 @@ const { text, background, border, brand, accent, editor } = palette;
  * Module-level constant from static design tokens — no theme, no per-render work.
  */
 export const policyEditorStyles: GlobalStylesProps["styles"] = {
+  // The EditorContent wrapper must be a sized flex column so the percentage/
+  // flex height on .ProseMirror below actually resolves — otherwise the editor
+  // never fills its bounded container and the page layout breaks (#3923).
+  ".policy-tiptap-editor": {
+    height: "100%",
+    display: "flex",
+    flexDirection: "column",
+  },
   ".policy-tiptap-editor .ProseMirror": {
-    "height": "100%",
+    "flex": 1,
     "minHeight": 300,
     "overflowY": "auto",
     "padding": "20px 24px",

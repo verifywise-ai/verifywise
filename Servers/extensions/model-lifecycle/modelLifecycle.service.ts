@@ -10,9 +10,12 @@ import { appendToAuditLedger } from "../../utils/auditLedger.utils";
  * _item_people / _item_approvals / _change_history) are declared in the
  * extensions migration.
  *
- * Note on file cleanup: on phase/item delete the extension unlinks and
- * hard-deletes any `files` rows attached via item_files — otherwise the
- * cascade would orphan the file blobs.
+ * Note on files: the extension never deletes a `files` row. An attached file
+ * may be evidence or a policy document that other records point to, so
+ * detaching it (`detachFile`) or deleting its phase/item only removes the
+ * item_files link (phase/item delete via ON DELETE CASCADE through
+ * model_lifecycle_values). The file stays in the File Manager, which owns
+ * deleting it.
  */
 
 // ---------------------------------------------------------------------------
@@ -118,15 +121,6 @@ export async function updatePhase(
 }
 
 export async function deletePhase(organizationId: number, phaseId: number): Promise<void> {
-  await unlinkAndDeleteFiles(organizationId, {
-    linkedFilesQuery: `
-      SELECT DISTINCT lf.file_id
-        FROM model_lifecycle_item_files lf
-        JOIN model_lifecycle_values v ON lf.value_id = v.id
-        JOIN model_lifecycle_items i  ON v.item_id  = i.id
-       WHERE i.organization_id = :organizationId AND i.phase_id = :phaseId;`,
-    replacements: { organizationId, phaseId },
-  });
   await sequelize.query(
     `DELETE FROM model_lifecycle_phases
       WHERE organization_id = :organizationId AND id = :phaseId;`,
@@ -370,14 +364,6 @@ export async function updateItem(
 }
 
 export async function deleteItem(organizationId: number, itemId: number): Promise<void> {
-  await unlinkAndDeleteFiles(organizationId, {
-    linkedFilesQuery: `
-      SELECT DISTINCT lf.file_id
-        FROM model_lifecycle_item_files lf
-        JOIN model_lifecycle_values v ON lf.value_id = v.id
-       WHERE v.organization_id = :organizationId AND v.item_id = :itemId;`,
-    replacements: { organizationId, itemId },
-  });
   await sequelize.query(
     `DELETE FROM model_lifecycle_items
       WHERE organization_id = :organizationId AND id = :itemId;`,
@@ -455,7 +441,7 @@ export async function getLifecycleForModel(
         `SELECT lf.id, lf.value_id, lf.file_id, lf.created_at,
                 f.filename, f.type AS mimetype
            FROM model_lifecycle_item_files lf
-           JOIN files f ON lf.file_id = f.id
+           JOIN files f ON lf.file_id = f.id AND f.organization_id = lf.organization_id
           WHERE lf.organization_id = :organizationId AND lf.value_id IN (:valueIds);`,
         {
           replacements: { organizationId, valueIds },
@@ -619,13 +605,24 @@ async function ensureValueRow(
 // Files
 // ---------------------------------------------------------------------------
 
+/**
+ * Link a file to a lifecycle item. Returns null when the file is not in the
+ * caller's organization (the foreign key alone accepts any tenant's file), so
+ * the caller can answer 404 without revealing whether the id exists.
+ */
 export async function attachFile(
   organizationId: number,
   modelId: number,
   itemId: number,
   userId: number,
   fileId: number,
-): Promise<any> {
+): Promise<any | null> {
+  const owned = (await sequelize.query(
+    `SELECT 1 FROM files WHERE id = :fileId AND organization_id = :organizationId;`,
+    { replacements: { fileId, organizationId }, type: QueryTypes.SELECT },
+  )) as unknown[];
+  if (owned.length === 0) return null;
+
   const valueId = await ensureValueRow(organizationId, modelId, itemId, userId);
   const rows = (await sequelize.query(
     `INSERT INTO model_lifecycle_item_files (organization_id, value_id, file_id)
@@ -640,27 +637,38 @@ export async function attachFile(
   return (rows[0] as any)?.[0] ?? { value_id: valueId, file_id: fileId };
 }
 
+/**
+ * Remove the link between a lifecycle item and a file. Returns false when the
+ * item had no link to that file, so the caller can answer 404.
+ *
+ * The `files` row is deliberately left in place. Lifecycle uploads go through
+ * the File Manager, so the file is listed there, and `attachFile` accepts any
+ * file id in the organization: the file may be evidence or a policy document
+ * that other records point to, some of them without a foreign key. Deleting
+ * it belongs to the File Manager, which checks the caller's role and project
+ * access and clears folder mappings.
+ */
 export async function detachFile(
   organizationId: number,
   modelId: number,
   itemId: number,
   fileId: number,
-): Promise<void> {
-  await sequelize.query(
+): Promise<boolean> {
+  const rows = (await sequelize.query(
     `DELETE FROM model_lifecycle_item_files
       WHERE organization_id = :organizationId AND file_id = :fileId
         AND value_id = (
           SELECT id FROM model_lifecycle_values
            WHERE organization_id = :organizationId
              AND model_inventory_id = :modelId AND item_id = :itemId
-        );`,
-    { replacements: { organizationId, fileId, modelId, itemId } },
-  );
-  // Hard-delete the file so we don't accumulate orphans.
-  await sequelize.query(
-    `DELETE FROM files WHERE organization_id = :organizationId AND id = :fileId;`,
-    { replacements: { organizationId, fileId } },
-  );
+        )
+      RETURNING id;`,
+    {
+      replacements: { organizationId, fileId, modelId, itemId },
+      type: QueryTypes.DELETE,
+    },
+  )) as unknown as Array<{ id: number }> | undefined;
+  return Array.isArray(rows) && rows.length > 0;
 }
 
 // ---------------------------------------------------------------------------
@@ -777,24 +785,4 @@ export async function updateApprovalStatus(
     },
   )) as unknown as [any[], number];
   return (rows[0] as any)?.[0] ?? null;
-}
-
-// ---------------------------------------------------------------------------
-// Shared helper — unlink and hard-delete files attached under a subtree
-// ---------------------------------------------------------------------------
-
-async function unlinkAndDeleteFiles(
-  organizationId: number,
-  params: { linkedFilesQuery: string; replacements: Record<string, unknown> },
-): Promise<void> {
-  const linked = (await sequelize.query(params.linkedFilesQuery, {
-    replacements: params.replacements,
-    type: QueryTypes.SELECT,
-  })) as Array<{ file_id: number }>;
-  if (linked.length === 0) return;
-  const fileIds = linked.map((r) => r.file_id);
-  await sequelize.query(
-    `DELETE FROM files WHERE organization_id = :organizationId AND id IN (:fileIds);`,
-    { replacements: { organizationId, fileIds } },
-  );
 }

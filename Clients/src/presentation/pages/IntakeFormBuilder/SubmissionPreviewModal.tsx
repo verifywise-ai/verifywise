@@ -41,6 +41,8 @@ import {
 import ScoreSection from "./assessment/ScoreSection";
 import SuggestedRisksSection from "./assessment/SuggestedRisksSection";
 import { isRetryable } from "./assessment/scoreView";
+import { AnswerLiveChecks, LiveChecksSection } from "./LiveChecksSection";
+import type { ILiveChecks } from "../../../domain/types/intakeLiveChecks";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import { formatAnswer } from "../../../application/utils/intakeAnswerFormat";
 import { isEmptyAnswer, sortFields } from "../../../application/utils/intakeFormLogic";
@@ -68,7 +70,9 @@ interface SubmissionPreviewModalProps {
   onClose: () => void;
   submissionId: number | null;
   onApproved: () => void;
-  onRejected?: () => void;
+  onRejected: () => void;
+  // A change that is not a decision (escalation, second review): refresh only
+  onChanged: () => void;
 }
 
 interface PreviewData {
@@ -84,6 +88,7 @@ interface PreviewData {
   suggestedRisks: SuggestedRisksBlock | null;
   assessedLevel: ClassificationLevel | null;
   riskOverride: RiskOverride | null;
+  liveChecks: ILiveChecks | null;
   routing: SubmissionRouting | null;
   routingEnabled: boolean;
   canDecide: boolean;
@@ -303,6 +308,7 @@ function SubmissionPreviewModal({
   submissionId,
   onApproved,
   onRejected,
+  onChanged,
 }: SubmissionPreviewModalProps) {
   const theme = useTheme();
   const formatDate = useFormattedDate();
@@ -390,6 +396,7 @@ function SubmissionPreviewModal({
           suggestedRisks: response.data.suggestedRisks ?? null,
           assessedLevel: response.data.assessedLevel ?? null,
           riskOverride: response.data.riskOverride ?? null,
+          liveChecks: response.data.liveChecks ?? null,
           routing: response.data.routing ?? null,
           routingEnabled: response.data.routingEnabled ?? false,
           canDecide: response.data.canDecide ?? true,
@@ -490,7 +497,7 @@ function SubmissionPreviewModal({
 
   // Handle approve
   async function handleApprove() {
-    if (submissionId === null) return;
+    if (submissionId === null || isApproving || isRejecting) return;
 
     // Validate override if expanded — justification is required
     if (overrideExpanded) {
@@ -553,7 +560,7 @@ function SubmissionPreviewModal({
 
   // Handle reject
   async function handleReject() {
-    if (submissionId === null) return;
+    if (submissionId === null || isApproving || isRejecting) return;
     if (!rejectReason.trim()) {
       setApproveError("Please provide a reason for rejection.");
       return;
@@ -568,8 +575,7 @@ function SubmissionPreviewModal({
 
     try {
       await rejectSubmission(submissionId, rejectReason.trim());
-      onRejected?.();
-      onApproved(); // Also triggers list refresh
+      onRejected();
       onClose();
     } catch {
       setApproveError("Failed to reject submission. Please try again.");
@@ -723,7 +729,7 @@ function SubmissionPreviewModal({
               laneReviewers={laneReviewers}
               canEscalate={canEscalate}
               onEscalated={() => {
-                onApproved();
+                onChanged();
                 onClose();
               }}
             />
@@ -736,7 +742,7 @@ function SubmissionPreviewModal({
               onChange={(next) => {
                 setPreviewData((prev) => (prev ? { ...prev, routing: next } : prev));
                 // The list chip and the oversight figures read this routing too
-                onApproved();
+                onChanged();
               }}
             />
           )}
@@ -789,6 +795,10 @@ function SubmissionPreviewModal({
                 }
               />
             )}
+
+            <Box sx={{ mt: "16px" }}>
+              <LiveChecksSection liveChecks={previewData?.liveChecks ?? null} />
+            </Box>
 
             {/* Override toggle — only for pending submissions */}
             {isPending && (
@@ -938,15 +948,20 @@ function SubmissionPreviewModal({
                     const currentValue = String(editedEntityData[fieldKey] ?? "");
 
                     return (
-                      <Field
-                        key={field.id}
-                        id={`entity-${field.id}`}
-                        label={field.label}
-                        value={currentValue}
-                        onChange={(e) => handleFieldChange(fieldKey, e.target.value)}
-                        rows={field.type === "textarea" ? 2 : undefined}
-                        placeholder={field.placeholder ?? ""}
-                      />
+                      <Box key={field.id}>
+                        <Field
+                          id={`entity-${field.id}`}
+                          label={field.label}
+                          value={currentValue}
+                          onChange={(e) => handleFieldChange(fieldKey, e.target.value)}
+                          rows={field.type === "textarea" ? 2 : undefined}
+                          placeholder={field.placeholder ?? ""}
+                        />
+                        <AnswerLiveChecks
+                          liveChecks={previewData?.liveChecks ?? null}
+                          questionId={field.id}
+                        />
+                      </Box>
                     );
                   })}
                 </Box>
@@ -1001,15 +1016,21 @@ function SubmissionPreviewModal({
                       >
                         {field.label}
                       </Typography>
-                      <Typography
-                        sx={{
-                          fontSize: "13px",
-                          color: theme.palette.text.primary,
-                          wordBreak: "break-word",
-                        }}
-                      >
-                        {formatAnswer(field, submissionData[field.id], formatDate)}
-                      </Typography>
+                      <Box>
+                        <Typography
+                          sx={{
+                            fontSize: "13px",
+                            color: theme.palette.text.primary,
+                            wordBreak: "break-word",
+                          }}
+                        >
+                          {formatAnswer(field, submissionData[field.id], formatDate)}
+                        </Typography>
+                        <AnswerLiveChecks
+                          liveChecks={previewData?.liveChecks ?? null}
+                          questionId={field.id}
+                        />
+                      </Box>
                     </Box>
                   ))}
                 </Box>

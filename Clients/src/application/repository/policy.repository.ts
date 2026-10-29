@@ -9,10 +9,16 @@ function extractData<T>(response: { data: { data: T } }): T {
   return response.data.data;
 }
 
-export async function getAllPolicies(): Promise<PolicyManagerModel[]> {
+export async function getAllPolicies({
+  suppressGlobalErrorToast,
+}: {
+  /** Skip the global error toast; the caller shows its own message. */
+  suppressGlobalErrorToast?: boolean;
+} = {}): Promise<PolicyManagerModel[]> {
   try {
     const response = await apiServices.get<{ message: string; data: PolicyManagerModel[] }>(
       "/policies",
+      suppressGlobalErrorToast ? { suppressGlobalErrorToast } : {},
     );
     return extractData<PolicyManagerModel[]>(response);
   } catch (error: any) {

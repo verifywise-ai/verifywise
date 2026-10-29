@@ -16,6 +16,7 @@ import {
 } from "../../domain.layer/interfaces/i.postMarketMonitoring";
 import { uploadFile } from "../../utils/fileUpload.utils";
 import logger from "../../utils/logger/fileLogger";
+import { applyColorTokens, colorTokenRoot } from "../../tools/emailColors";
 
 // Browser instance singleton for reuse
 let browserInstance: Browser | null = null;
@@ -57,7 +58,10 @@ export async function closeBrowser(): Promise<void> {
 async function renderTemplate(reportData: IPMMReportData): Promise<string> {
   const templatePath = path.join(__dirname, "../../templates/reports/pmm-report.ejs");
 
-  const templateContent = fs.readFileSync(templatePath, "utf-8");
+  const templateContent = applyColorTokens(fs.readFileSync(templatePath, "utf-8")).replace(
+    "<style>",
+    `<style>\n    ${colorTokenRoot(reportData.branding?.primary_color)}`,
+  );
 
   // Render with EJS
   const html = ejs.render(templateContent, reportData);

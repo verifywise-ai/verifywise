@@ -5,7 +5,7 @@ export const STATUSES = [
   "Awaiting review",
   "Awaiting approval",
   "Implemented",
-  // "Audited",
+  "Audited",
   "Needs rework",
 ] as const;
 

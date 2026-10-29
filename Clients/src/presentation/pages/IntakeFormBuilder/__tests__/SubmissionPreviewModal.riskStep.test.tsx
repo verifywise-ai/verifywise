@@ -75,7 +75,14 @@ function mockPreview(withClassification = true) {
 
 function renderModal() {
   return renderWithProviders(
-    <SubmissionPreviewModal isOpen onClose={vi.fn()} submissionId={5} onApproved={vi.fn()} />,
+    <SubmissionPreviewModal
+      isOpen
+      onClose={vi.fn()}
+      submissionId={5}
+      onApproved={vi.fn()}
+      onRejected={vi.fn()}
+      onChanged={vi.fn()}
+    />,
   );
 }
 

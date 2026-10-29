@@ -1,4 +1,4 @@
-name: Build and Deploy to Testing
+name: Build Testing Images
 
 on:
   schedule:
@@ -6,7 +6,7 @@ on:
     - cron: '0 * * * *'
 
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
     environment: Build
 
@@ -91,6 +91,15 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Trigger test deployment
+        run: |
+          curl -fsS -X POST https://deploy.verifywise.ai/api/project/1/tasks \
+            -H "Authorization: Bearer $SEMAPHORE_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{"template_id": 5}'
+        env:
+          SEMAPHORE_API_TOKEN: ${{ secrets.SEMAPHORE_API_TOKEN }}
+
       # Nightly informational Trivy scans of the pushed :test images.
       # Non-blocking (exit-code 0); results go to the job summary.
       - name: Scan Frontend test image with Trivy
@@ -142,15 +151,3 @@ jobs:
             cat "$f-trivy-results.txt" >> "$GITHUB_STEP_SUMMARY" || true
             echo '```' >> "$GITHUB_STEP_SUMMARY"
           done
-
-      - name: Deploy to Testing
-        uses: appleboy/ssh-action@v1.2.5
-        with:
-          host: ${{ secrets.TEST_HOST }}
-          username: ${{ secrets.TEST_USER }}
-          key: ${{ secrets.TEST_SSH_KEY }}
-          script: |
-            cd /root/verifywise/_saas_deployment
-            docker-compose --env-file .env.prod down
-            docker-compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.prod pull
-            ./install.sh

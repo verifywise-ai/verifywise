@@ -234,6 +234,14 @@ const SidebarShell: FC<SidebarShellProps> = ({
   const renderMenuItem = (item: SidebarMenuItem, showTooltip = true) => {
     const isActive = checkIsActive(item);
     const isDisabled = item.disabled;
+    // WCAG 2.5.3 (label-content-name-mismatch): when the count chip is
+    // rendered, its text is visible inside the button, so the accessible name
+    // must contain it. Axe 4.14+ enforces this rule.
+    const count = item.count ?? 0;
+    const showsCountChip = !collapsed && count > 0 && !isDisabled;
+    const accessibleLabel = showsCountChip
+      ? `${item.label} ${count > 99 ? "99+" : count}`
+      : item.label;
 
     const tooltipSlotProps = {
       popper: {
@@ -248,7 +256,7 @@ const SidebarShell: FC<SidebarShellProps> = ({
           className={isActive ? "selected-path" : "unselected"}
           onClick={() => handleItemClick(item)}
           disabled={isDisabled}
-          aria-label={item.label}
+          aria-label={accessibleLabel}
           sx={{
             "height": "32px",
             "gap": collapsed ? 0 : theme.spacing(4),
@@ -342,29 +350,37 @@ const SidebarShell: FC<SidebarShellProps> = ({
               {item.label}
             </ListItemText>
           )}
+          {/* Whitespace text node inside the fragment: keeps the label and the
+              count chip as separate words for axe's label-content-name-mismatch
+              tokenization (WCAG 2.5.3). React emits no inter-element whitespace,
+              so without it the visible text joins into "Tasks12" while the
+              accessible name is "Tasks 12", and the tokens no longer match. */}
           {!collapsed && item.count !== undefined && item.count > 0 && !isDisabled && (
-            <Chip
-              label={item.count > 99 ? "99+" : item.count}
-              size="small"
-              sx={{
-                "height": "18px",
-                "fontSize": "10px",
-                "fontWeight": 500,
-                "backgroundColor": isActive ? "#f8fafc" : "#e2e8f0",
-                "color": "#475569",
-                "borderRadius": "9px",
-                "minWidth": "18px",
-                "maxWidth": "36px",
-                "& .MuiChip-label": {
-                  px: "6px",
-                  py: 0,
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                },
-                "ml": "auto",
-              }}
-            />
+            <>
+              {" "}
+              <Chip
+                label={item.count > 99 ? "99+" : item.count}
+                size="small"
+                sx={{
+                  "height": "18px",
+                  "fontSize": "10px",
+                  "fontWeight": 500,
+                  "backgroundColor": isActive ? "#f8fafc" : "#e2e8f0",
+                  "color": "#475569",
+                  "borderRadius": "9px",
+                  "minWidth": "18px",
+                  "maxWidth": "36px",
+                  "& .MuiChip-label": {
+                    px: "6px",
+                    py: 0,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  },
+                  "ml": "auto",
+                }}
+              />
+            </>
           )}
         </ListItemButton>
       </span>
@@ -374,7 +390,7 @@ const SidebarShell: FC<SidebarShellProps> = ({
         className={isActive ? "selected-path" : "unselected"}
         onClick={() => handleItemClick(item)}
         disabled={isDisabled}
-        aria-label={item.label}
+        aria-label={accessibleLabel}
         sx={{
           "height": "32px",
           "gap": collapsed ? 0 : theme.spacing(4),
@@ -469,29 +485,37 @@ const SidebarShell: FC<SidebarShellProps> = ({
             {item.label}
           </ListItemText>
         )}
+        {/* Whitespace text node inside the fragment: keeps the label and the
+            count chip as separate words for axe's label-content-name-mismatch
+            tokenization (WCAG 2.5.3). React emits no inter-element whitespace,
+            so without it the visible text joins into "Tasks12" while the
+            accessible name is "Tasks 12", and the tokens no longer match. */}
         {!collapsed && item.count !== undefined && item.count > 0 && !isDisabled && (
-          <Chip
-            label={item.count > 99 ? "99+" : item.count}
-            size="small"
-            sx={{
-              "height": "18px",
-              "fontSize": "10px",
-              "fontWeight": 500,
-              "backgroundColor": isActive ? "#f8fafc" : "#e2e8f0",
-              "color": "#475569",
-              "borderRadius": "9px",
-              "minWidth": "18px",
-              "maxWidth": "36px",
-              "& .MuiChip-label": {
-                px: "6px",
-                py: 0,
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-              },
-              "ml": "auto",
-            }}
-          />
+          <>
+            {" "}
+            <Chip
+              label={item.count > 99 ? "99+" : item.count}
+              size="small"
+              sx={{
+                "height": "18px",
+                "fontSize": "10px",
+                "fontWeight": 500,
+                "backgroundColor": isActive ? "#f8fafc" : "#e2e8f0",
+                "color": "#475569",
+                "borderRadius": "9px",
+                "minWidth": "18px",
+                "maxWidth": "36px",
+                "& .MuiChip-label": {
+                  px: "6px",
+                  py: 0,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                },
+                "ml": "auto",
+              }}
+            />
+          </>
         )}
       </ListItemButton>
     );

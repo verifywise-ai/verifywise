@@ -19,8 +19,33 @@ on:
   workflow_dispatch:
 
 jobs:
+  # Configure CANARY_BASE_URL as a repo variable and CANARY_EMAIL /
+  # CANARY_PASSWORD as secrets for the target environment. The account must be
+  # an in-org user, not a super-admin. Until all three exist the canary job is
+  # skipped with a warning instead of failing every 30 minutes.
+  config:
+    name: Check canary configuration
+    runs-on: ubuntu-latest
+    outputs:
+      available: ${{ steps.cfg.outputs.available }}
+    steps:
+      - id: cfg
+        env:
+          CANARY_BASE_URL: ${{ vars.CANARY_BASE_URL }}
+          CANARY_EMAIL: ${{ secrets.CANARY_EMAIL }}
+          CANARY_PASSWORD: ${{ secrets.CANARY_PASSWORD }}
+        run: |
+          if [ -n "$CANARY_BASE_URL" ] && [ -n "$CANARY_EMAIL" ] && [ -n "$CANARY_PASSWORD" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::CANARY_BASE_URL, CANARY_EMAIL or CANARY_PASSWORD is not set - skipping the canary."
+          fi
+
   canary:
     name: Canary critical journey (@canary)
+    needs: config
+    if: needs.config.outputs.available == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     # Single worker on purpose: the canary is a fast, deterministic signal;
@@ -52,14 +77,13 @@ jobs:
         working-directory: Clients
         run: npx playwright install --with-deps chromium
 
-      # BASE_URL placeholder: point at staging. The `canary` Playwright
-      # project and E2E_BASE_URL wiring ship in this PR (do NOT edit
-      # Clients/ here); configure CANARY_BASE_URL as a repo variable and
-      # CANARY_EMAIL / CANARY_PASSWORD as secrets for the target env.
+      # Against a deployed URL the `canary` project signs in with E2E_EMAIL
+      # (e2e/canary/canary.setup.ts) and never runs global.setup.ts, which
+      # deletes and recreates organizations.
       - name: Run canary suite
         working-directory: Clients
         env:
-          E2E_BASE_URL: ${{ vars.CANARY_BASE_URL || 'https://staging.verifywise.com' }}
+          E2E_BASE_URL: ${{ vars.CANARY_BASE_URL }}
           E2E_EMAIL: ${{ secrets.CANARY_EMAIL }}
           E2E_PASSWORD: ${{ secrets.CANARY_PASSWORD }}
         run: npx playwright test --project=canary --grep @canary

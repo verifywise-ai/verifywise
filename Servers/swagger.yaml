@@ -15097,10 +15097,14 @@ paths:
     post:
       summary: 'Attach File Ctrl'
       responses:
-        '200':
-          description: Success
+        '201':
+          description: 'File linked to the item'
+        '400':
+          description: 'fileId (body) or a path id is not a positive integer up to 2147483647'
         '403':
           description: 'Extension not enabled for this organization, or role not allowed'
+        '404':
+          description: 'File not found in this organization'
         '500':
           description: 'Internal server error'
       tags:
@@ -15130,9 +15134,13 @@ paths:
       summary: 'Detach File Ctrl'
       responses:
         '200':
-          description: Success
+          description: 'Link removed. The file itself is kept and stays in the File Manager.'
+        '400':
+          description: 'id, itemId or fileId is not a positive integer up to 2147483647'
         '403':
           description: 'Extension not enabled for this organization, or role not allowed'
+        '404':
+          description: 'The lifecycle item has no link to this file'
         '500':
           description: 'Internal server error'
       tags:
@@ -16591,6 +16599,7 @@ paths:
       tags:
         - Reporting
       summary: 'Delete Generated Report By Id'
+      description: 'Admin only. Deletes a generated report file; any other file id answers 404.'
       operationId: deleteGeneratedReportById
       security:
         -
@@ -16605,8 +16614,14 @@ paths:
       responses:
         '200':
           description: 'Deleted successfully'
+        '400':
+          description: 'id is not a positive integer up to 2147483647'
         '401':
           description: Unauthorized
+        '403':
+          description: 'Role not allowed to delete reports'
+        '404':
+          description: 'No generated report with this id in the organization'
         '500':
           description: 'Internal server error'
   /dashboard:
@@ -23938,6 +23953,34 @@ paths:
         '500':
           description: 'Internal server error'
       description: 'Requires role: Admin'
+  '/agent-primitives/{id}/link-use-case':
+    patch:
+      summary: 'Link Use Case To Agent'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Agent Discovery'
+      operationId: linkUseCaseToAgent
+      security:
+        -
+          bearerAuth: []
+  '/agent-primitives/{id}/unlink-use-case':
+    patch:
+      summary: 'Unlink Use Case From Agent'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Agent Discovery'
+      operationId: unlinkUseCaseFromAgent
+      security:
+        -
+          bearerAuth: []
   '/agent-primitives/{id}/audit-logs':
     get:
       tags:
@@ -24749,6 +24792,208 @@ paths:
           description: Success
         '500':
           description: 'Internal server error'
+  '/intake/public/by-id/{publicId}/live-checks':
+    post:
+      tags:
+        - 'Intake Forms'
+      summary: 'Post Public Live Checks'
+      description: 'Runs AI checks for vague and conflicting answers on a public intake form. Unauthenticated; rate-limited per visitor and per form. Returns aiAvailable false when live checks are off or the form has no usable LLM key.'
+      operationId: postPublicLiveChecks
+      parameters:
+        -
+          name: publicId
+          in: path
+          required: true
+          description: 'Public form id (hex)'
+          schema:
+            type: string
+            pattern: '^[0-9a-f]+$'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+              properties:
+                data:
+                  type: object
+                  description: 'Current answers keyed by question id'
+                language:
+                  type: string
+                  description: 'Language for hint text (en, de, fr, es)'
+      responses:
+        '200':
+          description: 'data is { aiAvailable, hints, error? }. A failed model call is still a 200 with hints [] and error "unavailable".'
+        '400':
+          description: 'data is not an object'
+        '404':
+          description: 'Form not found or not active'
+        '413':
+          description: 'Request body over 10 MB'
+        '429':
+          description: 'Rate limit or form budget reached; see the Retry-After header'
+        '500':
+          description: 'Internal server error'
+  '/intake/public/by-id/{publicId}/prefill':
+    post:
+      tags:
+        - 'Intake Forms'
+      summary: 'Post Public Prefill'
+      description: 'Suggests answers for empty questions from an uploaded vendor document (PDF or Word .docx). The file is not stored. Unauthenticated; rate-limited per visitor and per form.'
+      operationId: postPublicPrefill
+      parameters:
+        -
+          name: publicId
+          in: path
+          required: true
+          description: 'Public form id (hex)'
+          schema:
+            type: string
+            pattern: '^[0-9a-f]+$'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                data:
+                  type: string
+                  description: 'Current answers as a JSON object string'
+                language:
+                  type: string
+                  description: 'Language for suggestions (en, de, fr, es)'
+      responses:
+        '200':
+          description: 'data is { fileName, suggestions }'
+        '400':
+          description: 'Missing file, invalid data, or an unreadable multipart body (extra fields or files)'
+        '404':
+          description: 'Form not found or prefill unavailable'
+        '413':
+          description: 'File too large'
+        '415':
+          description: 'Not a PDF or .docx file (extension, MIME type and content must match)'
+        '422':
+          description: 'File could not be read'
+        '429':
+          description: 'Rate limit or form budget reached; see the Retry-After header'
+        '500':
+          description: 'Internal server error'
+        '502':
+          description: 'Model call failed'
+  '/intake/public/{tenantSlug}/{formSlug}/live-checks':
+    post:
+      tags:
+        - 'Intake Forms'
+      summary: 'Post Public Live Checks'
+      description: 'Legacy slug URL for the live checks endpoint. Same behaviour as /intake/public/by-id/{publicId}/live-checks.'
+      operationId: intake_postPublicLiveChecks
+      parameters:
+        -
+          name: tenantSlug
+          in: path
+          required: true
+          schema:
+            type: string
+        -
+          name: formSlug
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+              properties:
+                data:
+                  type: object
+                  description: 'Current answers keyed by question id'
+                language:
+                  type: string
+                  description: 'Language for hint text (en, de, fr, es)'
+      responses:
+        '200':
+          description: 'data is { aiAvailable, hints, error? }. A failed model call is still a 200 with hints [] and error "unavailable".'
+        '400':
+          description: 'data is not an object'
+        '404':
+          description: 'Form not found or not active'
+        '413':
+          description: 'Request body over 10 MB'
+        '429':
+          description: 'Rate limit or form budget reached; see the Retry-After header'
+        '500':
+          description: 'Internal server error'
+  '/intake/public/{tenantSlug}/{formSlug}/prefill':
+    post:
+      tags:
+        - 'Intake Forms'
+      summary: 'Post Public Prefill'
+      description: 'Legacy slug URL for the prefill endpoint. Same behaviour as /intake/public/by-id/{publicId}/prefill.'
+      operationId: intake_postPublicPrefill
+      parameters:
+        -
+          name: tenantSlug
+          in: path
+          required: true
+          schema:
+            type: string
+        -
+          name: formSlug
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                data:
+                  type: string
+                  description: 'Current answers as a JSON object string'
+                language:
+                  type: string
+                  description: 'Language for suggestions (en, de, fr, es)'
+      responses:
+        '200':
+          description: 'data is { fileName, suggestions }'
+        '400':
+          description: 'Missing file, invalid data, or an unreadable multipart body (extra fields or files)'
+        '404':
+          description: 'Form not found or prefill unavailable'
+        '413':
+          description: 'File too large'
+        '415':
+          description: 'Not a PDF or .docx file (extension, MIME type and content must match)'
+        '422':
+          description: 'File could not be read'
+        '429':
+          description: 'Rate limit or form budget reached; see the Retry-After header'
+        '500':
+          description: 'Internal server error'
+        '502':
+          description: 'Model call failed'
   '/intake/public/by-id/{publicId}':
     get:
       tags:

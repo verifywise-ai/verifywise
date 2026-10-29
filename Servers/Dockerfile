@@ -38,6 +38,8 @@ ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 ENV PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
 COPY ./Servers/ ./
+# prebuild compiles the shared colour tokens from ../shared/design-tokens
+COPY ./shared/design-tokens /shared/design-tokens
 COPY ./Servers/SQL_Commands.sql ./SQL_Commands.sql
 
 RUN npm run build

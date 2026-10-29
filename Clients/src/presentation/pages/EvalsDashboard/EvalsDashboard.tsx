@@ -126,9 +126,9 @@ const API_KEY_PATTERNS: Record<string, { pattern: RegExp; example: string; descr
       description: 'Anthropic keys start with "sk-ant-" (typically "sk-ant-api03-")',
     },
     google: {
-      pattern: /^AIza[a-zA-Z0-9_-]{35,}$/,
+      pattern: /^(AIza|AQ\.)[a-zA-Z0-9_-]{35,}$/,
       example: "AIza...",
-      description: 'Google API keys start with "AIza"',
+      description: 'Google API keys start with "AIza" or "AQ."',
     },
     xai: {
       pattern: /^xai-[a-zA-Z0-9_-]{20,}$/,
