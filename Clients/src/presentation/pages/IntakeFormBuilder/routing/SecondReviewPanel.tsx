@@ -16,6 +16,8 @@ interface SecondReviewPanelProps {
   secondReview: SecondReview | undefined;
   /** A senior reviewer or Admin who didn't make the approval. */
   canReview: boolean;
+  /** Preview simulation: the actions show but are turned off. */
+  actionsDisabled?: boolean;
   onChange: (routing: SubmissionRouting) => void;
 }
 
@@ -23,6 +25,7 @@ const SecondReviewPanel = ({
   submissionId,
   secondReview,
   canReview,
+  actionsDisabled = false,
   onChange,
 }: SecondReviewPanelProps) => {
   const theme = useTheme();
@@ -36,6 +39,7 @@ const SecondReviewPanel = ({
   const noteTooLong = trimmed.length > NOTE_MAX;
 
   const run = async (action: () => Promise<{ data: SubmissionRouting }>) => {
+    if (actionsDisabled) return;
     setBusy(true);
     setError(null);
     try {
@@ -95,7 +99,7 @@ const SecondReviewPanel = ({
               variant="outlined"
               size="small"
               text="Agree"
-              isDisabled={busy || noteTooLong}
+              isDisabled={actionsDisabled || busy || noteTooLong}
               onClick={() =>
                 run(() => recordSecondReview(submissionId, "agreed", trimmed || undefined))
               }
@@ -104,7 +108,7 @@ const SecondReviewPanel = ({
               variant="outlined"
               size="small"
               text="Missed something"
-              isDisabled={busy || !trimmed || noteTooLong}
+              isDisabled={actionsDisabled || busy || !trimmed || noteTooLong}
               onClick={() => run(() => recordSecondReview(submissionId, "missed", trimmed))}
             />
           </Box>
@@ -153,7 +157,7 @@ const SecondReviewPanel = ({
               variant="outlined"
               size="small"
               text="Mark resolved"
-              isDisabled={busy || !trimmed || noteTooLong}
+              isDisabled={actionsDisabled || busy || !trimmed || noteTooLong}
               onClick={() => run(() => resolveSecondReviewMiss(submissionId, trimmed))}
             />
           </Box>

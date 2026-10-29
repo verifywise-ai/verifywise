@@ -11,6 +11,8 @@ import { LiveCheckHints, fieldToneFor } from "./LiveCheckHints";
 import { IntakeAssistantPanel } from "./IntakeAssistantPanel";
 import { VendorPrefillCard } from "./VendorPrefillCard";
 import { PrefillLine } from "./PrefillLine";
+import { PreviewBanner } from "./PreviewBanner";
+import { PUBLIC_PREVIEW_PARAM } from "../../../application/utils/intakeRouting/previewRole";
 import {
   cleanSubmission,
   evaluateForm,
@@ -165,6 +167,9 @@ export function PublicIntakeForm() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const resubmissionToken = searchParams.get("token") || undefined;
+  // A builder's preview only adds a notice; it changes nothing else on the form.
+  const [previewDismissed, setPreviewDismissed] = useState(false);
+  const showPreviewBanner = searchParams.get(PUBLIC_PREVIEW_PARAM) === "1" && !previewDismissed;
 
   // State
   const [formData, setFormData] = useState<PublicFormData | null>(null);
@@ -572,6 +577,7 @@ export function PublicIntakeForm() {
           ...formMargin,
         }}
       >
+        {showPreviewBanner && <PreviewBanner onDismiss={() => setPreviewDismissed(true)} />}
         <Box sx={{ display: "flex", gap: `${PANEL_GAP}px`, alignItems: "flex-start" }}>
           {/* Card with banner + form body */}
           <Box
