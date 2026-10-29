@@ -34,9 +34,7 @@ describe("v1 registry — /api/v1/shadow-ai/events", () => {
   });
 
   it("rejects requests without an X-API-Key header (401)", async () => {
-    const res = await request(buildApp())
-      .post("/api/v1/shadow-ai/events")
-      .send({ events: [] });
+    const res = await request(buildApp()).post("/api/v1/shadow-ai/events").send({ events: [] });
     expect(res.status).toBe(401);
     expect(mockValidateKey).not.toHaveBeenCalled();
   });

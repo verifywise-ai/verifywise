@@ -178,7 +178,10 @@ function parseVersionedRegistry(mountPath: string, registryFile: string): RouteR
 function parseImportedNames(bindings: string): string[] {
   const names: string[] = [];
   const namedMatch = bindings.match(/\{([^}]*)\}/);
-  const defaultPart = bindings.replace(/\{[^}]*\}/, "").replace(/,/g, " ").trim();
+  const defaultPart = bindings
+    .replace(/\{[^}]*\}/, "")
+    .replace(/,/g, " ")
+    .trim();
   if (defaultPart && !defaultPart.startsWith("*")) {
     names.push(defaultPart);
   }
@@ -235,10 +238,7 @@ function resolveImportBinding(sourceFile: string, importName: string): string | 
 // registration was parsed from; falls back to the legacy substring heuristics
 // (which read sourceFile, i.e. app.ts for the flat mount list).
 // ---------------------------------------------------------------------------
-export function findRouteFile(
-  importName: string,
-  sourceFile: string = APP_FILE,
-): string | null {
+export function findRouteFile(importName: string, sourceFile: string = APP_FILE): string | null {
   const resolved = resolveImportBinding(sourceFile, importName);
   if (resolved) return resolved;
 
