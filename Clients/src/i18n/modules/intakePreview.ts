@@ -6,12 +6,12 @@ export const de: Record<string, string> = {
   "Test submit": "Testweise absenden",
   "Submit for real": "Echt absenden",
   "How to submit": "Wie absenden",
-  "Checks your answers and sends nothing: no submission, no emails, no AI scoring.":
-    "Prüft Ihre Antworten und sendet nichts: keine Einreichung, keine E-Mails, keine KI-Bewertung.",
+  "Runs the checks on this page and sends nothing: no submission, no emails, no AI scoring.":
+    "Führt die Prüfungen auf dieser Seite aus und sendet nichts: keine Einreichung, keine E-Mails, keine KI-Bewertung.",
   "Creates a real submission, emails your reviewers and runs AI scoring if the form uses it.":
     "Erstellt eine echte Einreichung, benachrichtigt Ihre Prüfer per E-Mail und führt die KI-Bewertung aus, wenn das Formular sie nutzt.",
-  "Test submit passed. Nothing was sent.":
-    "Testweises Absenden erfolgreich. Es wurde nichts gesendet.",
+  "Test submit passed the checks on this page. Nothing was sent. The captcha answer and the server checks only run on a real submit.":
+    "Testweises Absenden hat die Prüfungen auf dieser Seite bestanden. Es wurde nichts gesendet. Die Captcha-Antwort und die Serverprüfungen laufen nur beim echten Absenden.",
   // Builder Preview menu
   "Form as a submitter": "Formular als einreichende Person",
   "Opens the public form in a new tab": "Öffnet das öffentliche Formular in einem neuen Tab",
@@ -41,11 +41,12 @@ export const fr: Record<string, string> = {
   "Test submit": "Tester l’envoi",
   "Submit for real": "Envoyer pour de vrai",
   "How to submit": "Comment envoyer",
-  "Checks your answers and sends nothing: no submission, no emails, no AI scoring.":
-    "Vérifie vos réponses et n’envoie rien : aucune soumission, aucun e-mail, aucune évaluation par l’IA.",
+  "Runs the checks on this page and sends nothing: no submission, no emails, no AI scoring.":
+    "Lance les vérifications de cette page et n’envoie rien : aucune soumission, aucun e-mail, aucune évaluation par l’IA.",
   "Creates a real submission, emails your reviewers and runs AI scoring if the form uses it.":
     "Crée une vraie soumission, envoie un e-mail à vos réviseurs et lance l’évaluation par l’IA si le formulaire l’utilise.",
-  "Test submit passed. Nothing was sent.": "Test d’envoi réussi. Rien n’a été envoyé.",
+  "Test submit passed the checks on this page. Nothing was sent. The captcha answer and the server checks only run on a real submit.":
+    "Le test d’envoi a passé les vérifications de cette page. Rien n’a été envoyé. La réponse au captcha et les vérifications du serveur ne s’exécutent que lors d’un vrai envoi.",
   // Builder Preview menu
   "Form as a submitter": "Formulaire en tant que demandeur",
   "Opens the public form in a new tab": "Ouvre le formulaire public dans un nouvel onglet",
@@ -75,11 +76,12 @@ export const es: Record<string, string> = {
   "Test submit": "Probar envío",
   "Submit for real": "Enviar de verdad",
   "How to submit": "Cómo enviar",
-  "Checks your answers and sends nothing: no submission, no emails, no AI scoring.":
-    "Revisa sus respuestas y no envía nada: ningún envío, ningún correo, ninguna evaluación con IA.",
+  "Runs the checks on this page and sends nothing: no submission, no emails, no AI scoring.":
+    "Ejecuta las comprobaciones de esta página y no envía nada: ningún envío, ningún correo, ninguna evaluación con IA.",
   "Creates a real submission, emails your reviewers and runs AI scoring if the form uses it.":
     "Crea un envío real, envía un correo a sus revisores y ejecuta la evaluación con IA si el formulario la usa.",
-  "Test submit passed. Nothing was sent.": "Prueba de envío correcta. No se envió nada.",
+  "Test submit passed the checks on this page. Nothing was sent. The captcha answer and the server checks only run on a real submit.":
+    "La prueba de envío pasó las comprobaciones de esta página. No se envió nada. La respuesta del captcha y las comprobaciones del servidor solo se ejecutan en un envío real.",
   // Builder Preview menu
   "Form as a submitter": "Formulario como solicitante",
   "Opens the public form in a new tab": "Abre el formulario público en una pestaña nueva",

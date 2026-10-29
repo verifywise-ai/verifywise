@@ -93,9 +93,12 @@ describe("PublicIntakeForm builder preview", () => {
     fireEvent.click(screen.getByTestId("public-form-submit"));
     fireEvent.click(await screen.findByText("Test submit"));
     expect(await screen.findByTestId("preview-test-submit-passed")).toHaveTextContent(
-      "Test submit passed. Nothing was sent.",
+      "Nothing was sent.",
     );
     expect(submitPublicFormById).not.toHaveBeenCalled();
+    // Any change afterwards clears the result.
+    fireEvent.change(screen.getByTestId("math-captcha"), { target: { value: "8" } });
+    expect(screen.queryByTestId("preview-test-submit-passed")).not.toBeInTheDocument();
   });
 
   it("submits for real only when that is chosen", async () => {
@@ -111,7 +114,9 @@ describe("PublicIntakeForm builder preview", () => {
     await waitFor(() => expect(submitPublicFormById).toHaveBeenCalledTimes(1));
   });
 
-  it("treats Enter in a field as a test in a preview", async () => {
+  // Enter clicks the submit button, which opens the menu; a form submit that
+  // bypasses the button only runs a test.
+  it("only tests on a form submit that bypasses the menu in a preview", async () => {
     renderForm("/abc123/use-case-form-intake?vwPreview=1&as=submitter");
     await screen.findByTestId("public-preview-banner");
     fillRequired();

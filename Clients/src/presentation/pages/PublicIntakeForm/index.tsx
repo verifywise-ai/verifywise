@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams, useSearchParams, useNavigate } from "react-router";
 import { useForm } from "react-hook-form";
 import { Box, Collapse, Typography, useMediaQuery } from "@mui/material";
@@ -174,7 +174,6 @@ export function PublicIntakeForm() {
   const [previewDismissed, setPreviewDismissed] = useState(false);
   const showPreviewBanner = isPreview && !previewDismissed;
   const [submitMenuAnchor, setSubmitMenuAnchor] = useState<HTMLElement | null>(null);
-  const submitModeRef = useRef<PreviewSubmitMode>("real");
   const [testSubmitPassed, setTestSubmitPassed] = useState(false);
 
   // State
@@ -368,7 +367,7 @@ export function PublicIntakeForm() {
     return emailRegex.test(email);
   };
 
-  const onSubmit = async (data: Record<string, unknown>) => {
+  const onSubmit = async (data: Record<string, unknown>, mode: PreviewSubmitMode = "real") => {
     if (!formData) return;
     setTestSubmitPassed(false);
     const isNewFormat = !!publicId;
@@ -395,7 +394,7 @@ export function PublicIntakeForm() {
     }
 
     // Every check above has passed; a test stops here and sends nothing.
-    if (isPreview && submitModeRef.current === "test") {
+    if (mode === "test") {
       setTestSubmitPassed(true);
       return;
     }
@@ -678,12 +677,10 @@ export function PublicIntakeForm() {
             {(!riskStep || step === "form") && (
               <Box
                 component="form"
-                onSubmit={(event: React.FormEvent<HTMLFormElement>) => {
-                  // In a preview, Enter in a field runs a test: a real submission
-                  // only comes from choosing it in the Submit menu.
-                  if (isPreview) submitModeRef.current = "test";
-                  return handleSubmit(onSubmit)(event);
-                }}
+                // In a preview, Submit (and Enter, which clicks it) opens the
+                // test / real menu instead; a stray submit there only tests.
+                onSubmit={handleSubmit((data) => onSubmit(data, isPreview ? "test" : "real"))}
+                onChange={() => setTestSubmitPassed(false)}
                 sx={{ p: "32px" }}
               >
                 {/* Back to the risk step */}
@@ -878,9 +875,15 @@ export function PublicIntakeForm() {
 
                 {/* Submit button. In a preview it opens the test / real choice. */}
                 <CustomizableButton
-                  type={isPreview ? "button" : "submit"}
+                  type="submit"
                   onClick={
-                    isPreview ? (event) => setSubmitMenuAnchor(event.currentTarget) : undefined
+                    isPreview
+                      ? (event) => {
+                          event.preventDefault();
+                          setTestSubmitPassed(false);
+                          setSubmitMenuAnchor(event.currentTarget);
+                        }
+                      : undefined
                   }
                   endIcon={isPreview ? <ChevronDown size={16} /> : undefined}
                   testId="public-form-submit"
@@ -922,8 +925,7 @@ export function PublicIntakeForm() {
                     onClose={() => setSubmitMenuAnchor(null)}
                     onChoose={(mode) => {
                       setSubmitMenuAnchor(null);
-                      submitModeRef.current = mode;
-                      void handleSubmit(onSubmit)();
+                      void handleSubmit((data) => onSubmit(data, mode))();
                     }}
                   />
                 )}
