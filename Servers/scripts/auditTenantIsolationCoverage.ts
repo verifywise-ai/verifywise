@@ -69,6 +69,11 @@ const sharedTables: SharedTableEntry[] = [
       "Migration backup of jira_assets_use_cases links whose project was missing or in another organization, removed by 20261012165625 when the composite FK was added; no application code reads it, only that migration's down().",
   },
   {
+    name: "intake_forms_alignment_backup",
+    justification:
+      "Migration record of the intake forms 20261024110000 moved from left to center (previous alignment only); rows cascade-delete with their form. No application code reads it, only that migration's down().",
+  },
+  {
     name: "*_struct_*",
     justification:
       "Framework structure/reference tables are global by convention; the wildcard matches all struct tables.",

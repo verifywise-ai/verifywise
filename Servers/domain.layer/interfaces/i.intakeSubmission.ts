@@ -6,6 +6,7 @@ import type {
   ScoreSource,
 } from "../../services/intakeScoring/scoreMath";
 import type { AiReason } from "../../services/intakeScoring/aiScoring";
+import type { ILiveChecks } from "./i.intakeLiveChecks";
 import type { IntakeSuggestedRisk } from "../../services/intakeScoring/intakeSuggestions";
 
 /**
@@ -180,6 +181,7 @@ export interface IIntakeSubmission {
   suggestedRisks: ISuggestedRisksBlock | null;
   routing: ISubmissionRouting | null;
   decisionRecord: IDecisionRecord | null;
+  liveChecks: ILiveChecks | null;
   notificationSentAt: Date | null;
   createdAt: Date;
   updatedAt: Date;

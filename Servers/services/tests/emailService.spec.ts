@@ -82,6 +82,15 @@ describe("emailService", () => {
       );
     });
 
+    it("should reject a template file name instead of compiling it", async () => {
+      await expect(
+        sendEmail("to@example.com", "Subject", "intake-submission-received.mjml", {}),
+      ).rejects.toThrow("not a template file name");
+
+      expect(mockCompileMjml).not.toHaveBeenCalled();
+      expect(mockProvider.sendEmail).not.toHaveBeenCalled();
+    });
+
     it("should validate email options before sending", async () => {
       await sendEmail("to@example.com", "Subject", "<mjml>tpl</mjml>", {});
 

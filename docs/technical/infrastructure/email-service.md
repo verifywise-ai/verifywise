@@ -266,6 +266,8 @@ await sendEmail(
 );
 ```
 
+`sendEmail` compiles its third argument as MJML source. Passing a file name such as `EMAIL_TEMPLATES.X` fails with "Parsing failed. Check your mjml." — to send by file name, use `notificationService.sendEmailWithTemplate` (below), which reads the file from `Servers/templates/`.
+
 ### Automation Email (HTML Body)
 
 ```typescript

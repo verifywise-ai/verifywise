@@ -11,6 +11,7 @@ import {
   IRiskOverride,
   ISuggestedRisksBlock,
 } from "../../interfaces/i.intakeSubmission";
+import type { ILiveChecks } from "../../interfaces/i.intakeLiveChecks";
 import { ValidationException } from "../../exceptions/custom.exception";
 
 @Table({
@@ -165,6 +166,13 @@ export class IntakeSubmissionModel
   decisionRecord!: IDecisionRecord | null;
 
   @Column({
+    type: DataType.JSONB,
+    allowNull: true,
+    field: "live_checks",
+  })
+  liveChecks!: ILiveChecks | null;
+
+  @Column({
     type: DataType.DATE,
     allowNull: true,
     field: "notification_sent_at",
@@ -293,6 +301,7 @@ export class IntakeSubmissionModel
       suggestedRisks: this.suggestedRisks,
       routing: this.routing,
       decisionRecord: this.decisionRecord,
+      liveChecks: this.liveChecks,
       notificationSentAt: this.notificationSentAt,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
