@@ -181,6 +181,18 @@ describe("FieldEditor generated guidance", () => {
     expect((document.getElementById("field-guidance") as HTMLTextAreaElement).value).toBe("");
   });
 
+  it("drops the guidance when the field was renamed while it was generated", async () => {
+    const respond = guidanceRequest();
+    const onChange = vi.fn();
+    renderWithProviders(editorFor(FIRST, onChange, 1));
+    fireEvent.click(screen.getByText("AI"));
+    typeLabel("Data retention period");
+    await respond("Why First matters");
+    expect(onChange).not.toHaveBeenCalledWith(
+      expect.objectContaining({ guidanceText: "Why First matters" }),
+    );
+  });
+
   it("lets the newly opened field ask for guidance while an old request runs", () => {
     guidanceRequest();
     const onChange = vi.fn();

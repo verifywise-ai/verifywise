@@ -293,14 +293,22 @@ export function FieldEditor({
   const generateGuidance = useCallback(async () => {
     if (!llmKeyId || !localField.label) return;
     const request = ++guidanceRequestRef.current;
+    const labelAtClick = latestValue("label");
     const guidanceAtClick = latestValue("guidanceText") ?? "";
     setGuidanceLoading(true);
     try {
-      const result = await getLLMFieldGuidance(localField.label, entityType, llmKeyId);
+      const result = await getLLMFieldGuidance(labelAtClick, entityType, llmKeyId);
       if (request !== guidanceRequestRef.current) return;
       const text = result.data?.guidanceText;
-      // Dropped when the user wrote their own guidance while the request ran.
-      if (!text || (latestValue("guidanceText") ?? "") !== guidanceAtClick) return;
+      // Dropped when the user renamed the field or wrote their own guidance
+      // while the request ran.
+      if (
+        !text ||
+        latestValue("label") !== labelAtClick ||
+        (latestValue("guidanceText") ?? "") !== guidanceAtClick
+      ) {
+        return;
+      }
       // Merged with any other edit made while the request ran.
       setLocalField((current) => ({ ...current, guidanceText: text }));
       queueEdit({ guidanceText: text });
@@ -595,7 +603,7 @@ export function FieldEditor({
                     isChecked={localField.validation?.required || false}
                     value="required"
                     onChange={() =>
-                      handleValidationChange("required", !localField.validation?.required)
+                      handleValidationChange("required", !latestValue("validation")?.required)
                     }
                     size="small"
                   />
