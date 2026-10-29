@@ -7757,6 +7757,8 @@ tags:
   -
     name: Automations
   -
+    name: 'Bias Audit'
+  -
     name: 'CE Marking'
   -
     name: 'Change History'
@@ -25175,6 +25177,308 @@ paths:
       tags:
         - Audit
       operationId: exportAuditLedger
+      security:
+        -
+          bearerAuth: []
+  '/bias-audit/questions/{frameworkId}':
+    get:
+      summary: 'Get Questions'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Bias Audit'
+      operationId: bias_audit_getQuestions
+      security:
+        -
+          bearerAuth: []
+  '/bias-audit/profiles/{projectId}/{frameworkId}':
+    get:
+      summary: 'Get Profile'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Bias Audit'
+      operationId: getProfile
+      security:
+        -
+          bearerAuth: []
+    put:
+      summary: 'Save Profile Answers'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Bias Audit'
+      operationId: saveProfileAnswers
+      security:
+        -
+          bearerAuth: []
+  '/bias-audit/profiles/{projectId}/{frameworkId}/attest':
+    post:
+      summary: 'Attest Profile'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Bias Audit'
+      operationId: attestProfile
+      security:
+        -
+          bearerAuth: []
+  '/bias-audit/profiles/{projectId}/{frameworkId}/stance':
+    post:
+      summary: 'Generate Profile Stance'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Bias Audit'
+      operationId: generateProfileStance
+      security:
+        -
+          bearerAuth: []
+  /bias-audit/runs:
+    post:
+      summary: 'Create Run'
+      responses:
+        '201':
+          description: 'Run recorded (with its gate findings, whether or not a result was computed)'
+        '400':
+          description: 'The upload, mapping or job description is invalid: no file, a CSV that cannot be read, a mapped key the run does not read, or a job description over 64 characters or with no letter or digit'
+        '401':
+          description: 'Not authenticated'
+        '403':
+          description: 'The caller''s role may not record a run (biasAudit.edit)'
+        '404':
+          description: 'Project not found or not available to the caller, or no attested profile to run against'
+        '409':
+          description: 'The attested profile refuses a run: it places the tool out of scope, or its cutoff answer does not establish which rate applies'
+        '413':
+          description: 'The dataset exceeds the 30 MB upload limit'
+        '415':
+          description: 'The dataset is not a .csv file'
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Bias Audit'
+      operationId: createRun
+      security:
+        -
+          bearerAuth: []
+    get:
+      summary: 'List Runs'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Bias Audit'
+      operationId: bias_audit_listRuns
+      security:
+        -
+          bearerAuth: []
+  /bias-audit/runs/trend:
+    get:
+      summary: 'Get Run Trend'
+      description: 'The lowest impact ratio of each run of a project for one framework, oldest first, segmented wherever the profile version, question set, job description or metric changed. Each break names what changed. A run with no result, or a fairness_metrics run (which computes no impact ratio), contributes no point and does not break the series. A run its data checks did not clear for export is plotted with caveat true. Raw run results are not returned.'
+      parameters:
+        -
+          name: projectId
+          in: query
+          required: true
+          schema:
+            type: integer
+        -
+          name: frameworkId
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: {type: string}
+                  data: {type: object, properties: {segments: {type: array, items: {type: object, properties: {profileVersion: {type: integer}, questionSetVersion: {type: integer}, jobDescriptionKey: {type: string, nullable: true}, metric: {type: string, description: 'The run''s stored metric. fairness_metrics runs contribute no point, so in practice selection_rate or scoring_rate'}, points: {type: array, items: {type: object, properties: {runId: {type: integer}, date: {type: string}, category: {type: string, nullable: true, description: 'categoryKey of the table holding the lowest ratio; null when the run produced no ratio'}, lowestRatio: {type: number, nullable: true}, flagged: {type: boolean, description: 'Whether any non-excluded group in the run was flagged'}, caveat: {type: boolean, description: 'True when the run''s data checks did not clear it for export (any finding other than a note, or no findings record)'}}}}}}}, breaks: {type: array, items: {type: object, properties: {afterRunId: {type: integer}, reasons: {type: array, items: {type: string}}}}}}}
+        '400':
+          description: 'projectId or frameworkId is missing or not a positive integer'
+        '404':
+          description: 'Project not found, or the caller is not a member of it'
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Bias Audit'
+      operationId: getRunTrend
+      security:
+        -
+          bearerAuth: []
+  '/bias-audit/runs/{id}':
+    get:
+      summary: 'Get Run'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Bias Audit'
+      operationId: bias_audit_getRun
+      security:
+        -
+          bearerAuth: []
+  '/bias-audit/runs/{id}/derived-basis/confirm':
+    post:
+      summary: 'Confirm Derived Basis'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Bias Audit'
+      operationId: confirmDerivedBasis
+      security:
+        -
+          bearerAuth: []
+  '/bias-audit/runs/{id}/stance':
+    post:
+      summary: 'Generate Stance'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Bias Audit'
+      operationId: generateStance
+      security:
+        -
+          bearerAuth: []
+  '/bias-audit/stances/{id}/download':
+    get:
+      summary: 'Download Stance'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Bias Audit'
+      operationId: downloadStance
+      security:
+        -
+          bearerAuth: []
+  /bias-audit/job-descriptions:
+    get:
+      summary: 'Get Job Descriptions'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Bias Audit'
+      operationId: getJobDescriptions
+      security:
+        -
+          bearerAuth: []
+  /bias-audit/criteria-comparison:
+    post:
+      summary: 'Compare Criteria'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Bias Audit'
+      operationId: compareCriteria
+      security:
+        -
+          bearerAuth: []
+  /bias-audit/corpora:
+    post:
+      summary: 'Create Corpus'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Bias Audit'
+      operationId: createCorpus
+      security:
+        -
+          bearerAuth: []
+    get:
+      summary: 'List Corpora'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Bias Audit'
+      operationId: listCorpora
+      security:
+        -
+          bearerAuth: []
+  '/bias-audit/corpora/{id}':
+    get:
+      summary: 'Get Corpus'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Bias Audit'
+      operationId: getCorpus
+      security:
+        -
+          bearerAuth: []
+  '/bias-audit/corpora/{id}/download':
+    get:
+      summary: 'Download Corpus'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Bias Audit'
+      operationId: downloadCorpus
+      security:
+        -
+          bearerAuth: []
+  '/bias-audit/corpora/{id}/resume':
+    post:
+      summary: 'Resume Corpus'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Bias Audit'
+      operationId: resumeCorpus
       security:
         -
           bearerAuth: []

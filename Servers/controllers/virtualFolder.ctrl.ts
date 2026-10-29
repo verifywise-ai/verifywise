@@ -31,6 +31,7 @@ import {
   wouldCreateCircularReferenceQuery,
 } from "../utils/virtualFolder.utils";
 import { sequelize } from "../database/db";
+import { allFilesVisibleQuery } from "../utils/files/visibleFiles";
 import { translateError } from "../utils/i18n.utils";
 import {
   IVirtualFolderInput,
@@ -411,7 +412,11 @@ export const assignFilesToFolder = async (req: Request, res: Response): Promise<
     }
 
     const { file_ids } = req.body as { file_ids: number[] };
-    if (!Array.isArray(file_ids) || file_ids.length === 0) {
+    if (
+      !Array.isArray(file_ids) ||
+      file_ids.length === 0 ||
+      !file_ids.every((id) => Number.isSafeInteger(id) && id > 0)
+    ) {
       await transaction.rollback();
       return res.status(400).json(STATUS_CODE[400](req.t!("File IDs array is required")));
     }
@@ -421,6 +426,12 @@ export const assignFilesToFolder = async (req: Request, res: Response): Promise<
     if (!folder) {
       await transaction.rollback();
       return res.status(404).json(STATUS_CODE[404](req.t!("Folder not found")));
+    }
+
+    // A missing id, another organization's file and a stance PDF are refused alike.
+    if (!(await allFilesVisibleQuery(file_ids, req.organizationId!, transaction))) {
+      await transaction.rollback();
+      return res.status(404).json(STATUS_CODE[404](req.t!("File not found")));
     }
 
     const assignedCount = await assignFilesToFolderQuery(
@@ -514,10 +525,20 @@ export const updateFileFolders = async (req: Request, res: Response): Promise<Re
       return res.status(400).json(STATUS_CODE[400](req.t!("Invalid file ID")));
     }
 
+    // Each id a positive integer that fits the INTEGER column; strings and
+    // booleans are refused like file_ids are, never coerced.
     const { folder_ids } = req.body as { folder_ids: number[] };
-    if (!Array.isArray(folder_ids)) {
+    if (
+      !Array.isArray(folder_ids) ||
+      !folder_ids.every((id) => Number.isSafeInteger(id) && id > 0 && id <= 2147483647)
+    ) {
       await transaction.rollback();
       return res.status(400).json(STATUS_CODE[400](req.t!("Folder IDs array is required")));
+    }
+
+    if (!(await allFilesVisibleQuery([fileId], req.organizationId!, transaction))) {
+      await transaction.rollback();
+      return res.status(404).json(STATUS_CODE[404](req.t!("File not found")));
     }
 
     await bulkUpdateFileFoldersQuery(

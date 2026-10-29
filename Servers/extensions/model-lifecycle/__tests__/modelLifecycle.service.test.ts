@@ -221,22 +221,20 @@ describe("attachFile", () => {
   beforeEach(() => mockQuery.mockReset());
 
   it("refuses a file outside the organization and writes nothing", async () => {
-    mockQuery.mockResolvedValueOnce([]); // ownership SELECT: no row
+    mockQuery.mockResolvedValueOnce([{ count: "0" }]); // visibility COUNT: no row
 
     const link = await attachFile(1, 10, 20, 7, 99);
 
     expect(link).toBeNull();
     expect(mockQuery).toHaveBeenCalledTimes(1);
     const [sql, options] = mockQuery.mock.calls[0];
-    expect(String(sql)).toMatch(
-      /FROM files WHERE id = :fileId AND organization_id = :organizationId/,
-    );
-    expect(options.replacements).toEqual({ fileId: 99, organizationId: 1 });
+    expect(String(sql)).toMatch(/files\.organization_id = :organizationId/);
+    expect(options.replacements).toMatchObject({ fileIds: [99], organizationId: 1 });
   });
 
   it("links a file the organization owns", async () => {
     mockQuery
-      .mockResolvedValueOnce([{ "?column?": 1 }]) // ownership SELECT
+      .mockResolvedValueOnce([{ count: "1" }]) // visibility COUNT
       .mockResolvedValueOnce(undefined) // ensureValueRow INSERT
       .mockResolvedValueOnce([{ id: 55 }]) // ensureValueRow SELECT
       .mockResolvedValueOnce([[{ id: 3, value_id: 55, file_id: 99 }], 1]); // link INSERT

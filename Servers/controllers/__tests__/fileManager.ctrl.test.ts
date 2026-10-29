@@ -51,6 +51,7 @@ jest.mock("../../utils/statusCode.utils", () => ({
     400: (d: any) => ({ message: "Bad Request", data: d }),
     403: (d: any) => ({ message: "Forbidden", data: d }),
     404: (d: any) => ({ message: "Not Found", data: d }),
+    409: (d: any) => ({ message: "Conflict", data: d }),
     413: (d: any) => ({ message: "Payload Too Large", data: d }),
     500: (d: any) => ({ message: "Internal Server Error", data: d }),
   },
@@ -248,6 +249,16 @@ describe("fileManager.ctrl", () => {
       expect(res.status).toHaveBeenCalledWith(400);
     });
 
+    it("refuses a client-supplied stance source with 400 and writes nothing", async () => {
+      // Only the stance generator may write that source; a client file under
+      // it would be undeletable and pose as a stance record.
+      mockValidateUpload.mockReturnValue({ valid: true });
+      const req = createReq({ file: makeFile(), body: { source: "Bias audit stance report" } });
+      const res = createRes();
+      await uploadFile(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(mockUploadOrgFile).not.toHaveBeenCalled();
+    });
     it.each(["All reports", "Project risks report"])(
       "returns 400 and stores nothing when the source is the report source %s",
       async (source) => {

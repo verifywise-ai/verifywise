@@ -23,12 +23,14 @@ import {
   EntityType,
   LinkType,
 } from "../repositories/file.repository";
-import { parseBulkIds, assertOrgOwnsIds, withBulkTransaction } from "../utils/bulkAction.utils";
+import { parseBulkIds, withBulkTransaction } from "../utils/bulkAction.utils";
 import { getUserProjects } from "../utils/project.utils";
 import {
   ForbiddenException,
+  NotFoundException,
   ValidationException,
 } from "../domain.layer/exceptions/custom.exception";
+import { allFilesVisibleQuery } from "../utils/files/visibleFiles";
 
 export async function getFileContentById(req: Request, res: Response): Promise<any> {
   const fileId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
@@ -264,14 +266,17 @@ export async function postFileContent(req: RequestWithFile, res: Response): Prom
 
     const filesToDelete = JSON.parse(body.delete || "[]") as number[];
     if (filesToDelete.length > 0) {
-      // Verify every file belongs to this organization before deleting, so
-      // cross-organization ids cannot be probed or removed (#4722).
-      await assertOrgOwnsIds({
-        table: "files",
-        ids: filesToDelete,
-        organizationId: req.organizationId!,
-        transaction,
-      });
+      // Every id must be a visible file of this organization before anything
+      // is deleted, so cross-organization ids cannot be probed or removed
+      // (#4722). A bias audit stance PDF answers exactly as a missing file.
+      if (!(await allFilesVisibleQuery(filesToDelete, req.organizationId!, transaction))) {
+        throw new ForbiddenException(
+          "One or more ids are not accessible in this organization",
+          "files",
+          "bulk_action",
+          { metadata: { expected: filesToDelete.length } },
+        );
+      }
       for (let fileToDelete of filesToDelete) {
         await deleteFileById(fileToDelete, req.organizationId!, transaction);
       }
@@ -407,6 +412,9 @@ export async function attachFileToEntity(req: Request, res: Response): Promise<a
       return res.status(200).json({ message: req.t!("File already attached to this entity") });
     }
   } catch (error) {
+    if (error instanceof NotFoundException) {
+      return res.status(404).json(STATUS_CODE[404](req.t!("File not found")));
+    }
     await logFailure({
       eventType: "Create",
       description: "Failed to attach file to entity",
@@ -756,12 +764,15 @@ export async function bulkUpdateFileTags(req: Request, res: Response): Promise<a
         },
       },
       async (transaction) => {
-        await assertOrgOwnsIds({
-          table: "files",
-          ids,
-          organizationId: req.organizationId!,
-          transaction,
-        });
+        // Refuses an id outside the organization, a missing id and a stance PDF alike.
+        if (!(await allFilesVisibleQuery(ids, req.organizationId!, transaction))) {
+          throw new ForbiddenException(
+            "One or more ids are not accessible in this organization",
+            "files",
+            "bulk_action",
+            { metadata: { expected: ids.length } },
+          );
+        }
 
         await bulkUpdateFileTagsQuery({
           organizationId: req.organizationId!,

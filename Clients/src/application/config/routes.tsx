@@ -70,6 +70,8 @@ const EvalsDashboard = lazyRoute(
   () => import("../../presentation/pages/EvalsDashboard/EvalsDashboard"),
 );
 const OrgSettings = lazyRoute(() => import("../../presentation/pages/EvalsDashboard/OrgSettings"));
+// NYC Local Law 144 bias audit module. Separate from the Evals dashboard's bias audit.
+const BiasAudit = lazyRoute(() => import("../../presentation/pages/BiasAudit"));
 const DatasetEditorPage = lazyRoute(
   () => import("../../presentation/pages/EvalsDashboard/DatasetEditorPage"),
 );
@@ -220,11 +222,7 @@ const WizardShowcase = lazyRoute(() => import("../../presentation/pages/WizardSh
 // Check if we're in development mode
 const isDev = import.meta.env.DEV;
 
-export const createRoutes = (
-  triggerSidebar: boolean,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  _triggerSidebarReload: () => void,
-) => [
+export const createRoutes = (triggerSidebar: boolean, _triggerSidebarReload: () => void) => [
   // ReactFlow Demo - Development only (must be before dashboard route)
   ...(isDev
     ? [
@@ -496,6 +494,15 @@ export const createRoutes = (
       element={
         <Suspense fallback={<LazyFallback />}>
           <OrgSettings />
+        </Suspense>
+      }
+    />
+    {/* One route, so moving between sections keeps the page mounted. */}
+    <Route
+      path="/bias-audit/:projectId?/:section?"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <BiasAudit />
         </Suspense>
       }
     />

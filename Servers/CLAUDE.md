@@ -1,6 +1,6 @@
 # Servers — Backend Development Guide
 
-> **Last Updated:** 2026-10-19
+> **Last Updated:** 2026-10-25
 
 ---
 
@@ -224,27 +224,28 @@ the generated files with your route change.
 
 Read the relevant file BEFORE implementing changes in that area:
 
-| When working on...                                | Read this file                                               |
-| ------------------------------------------------- | ------------------------------------------------------------ |
-| Controller/route/utils patterns                   | `docs/technical/guides/backend-patterns.md`                  |
-| Adding a new feature (full guide)                 | `docs/technical/guides/adding-new-feature.md`                |
-| Adding a new framework                            | `docs/technical/guides/adding-new-framework.md`              |
-| Extensions (catalog, gate, config)                | `docs/technical/infrastructure/extensions.md`                |
-| Extension sync engine (providers, runs, schedule) | `docs/technical/infrastructure/extensions.md#scheduled-sync` |
-| API conventions                                   | `docs/technical/guides/api-conventions.md`                   |
-| Code style (short version)                        | `docs/technical/guides/code-style.md`                        |
-| Detailed backend coding standards                 | `CodeRules/04-backend/`                                      |
-| TypeScript standards & naming                     | `CodeRules/02-typescript/`                                   |
-| API routes & endpoints                            | `docs/technical/api/endpoints.md`                            |
-| Background jobs (BullMQ)                          | `docs/technical/infrastructure/automations.md`               |
-| Email templates (MJML; values escaped by default) | `docs/technical/infrastructure/email-service.md`             |
-| PDF/DOCX reporting                                | `docs/technical/infrastructure/pdf-generation.md`            |
-| File upload system                                | `docs/technical/infrastructure/file-storage.md`              |
-| Error handling & exceptions                       | `docs/claude/error-handling.md`                              |
-| Logging system                                    | `docs/claude/logging.md`                                     |
-| Middleware (rate limit, RBAC, JWT, Redis)         | `docs/claude/middleware.md`                                  |
-| Database schema                                   | `docs/technical/architecture/database-schema.md`             |
-| Multi-tenancy architecture                        | `docs/technical/architecture/multi-tenancy.md`               |
-| Tenant isolation security runbook                 | `docs/technical/security/tenant-isolation.md`                |
+| When working on...                                                      | Read this file                                               |
+| ----------------------------------------------------------------------- | ------------------------------------------------------------ |
+| Controller/route/utils patterns                                         | `docs/technical/guides/backend-patterns.md`                  |
+| Adding a new feature (full guide)                                       | `docs/technical/guides/adding-new-feature.md`                |
+| Adding a new framework                                                  | `docs/technical/guides/adding-new-framework.md`              |
+| Extensions (catalog, gate, config)                                      | `docs/technical/infrastructure/extensions.md`                |
+| Extension sync engine (providers, runs, schedule)                       | `docs/technical/infrastructure/extensions.md#scheduled-sync` |
+| API conventions                                                         | `docs/technical/guides/api-conventions.md`                   |
+| Code style (short version)                                              | `docs/technical/guides/code-style.md`                        |
+| Detailed backend coding standards                                       | `CodeRules/04-backend/`                                      |
+| TypeScript standards & naming                                           | `CodeRules/02-typescript/`                                   |
+| API routes & endpoints                                                  | `docs/technical/api/endpoints.md`                            |
+| Background jobs (BullMQ)                                                | `docs/technical/infrastructure/automations.md`               |
+| Email templates (MJML; values escaped by default)                       | `docs/technical/infrastructure/email-service.md`             |
+| Bias audit computation (standalone; no EvalServer/AIGateway dependency) | `Servers/services/biasAudit/README.md`                       |
+| PDF/DOCX reporting                                                      | `docs/technical/infrastructure/pdf-generation.md`            |
+| File upload system                                                      | `docs/technical/infrastructure/file-storage.md`              |
+| Error handling & exceptions                                             | `docs/claude/error-handling.md`                              |
+| Logging system                                                          | `docs/claude/logging.md`                                     |
+| Middleware (rate limit, RBAC, JWT, Redis)                               | `docs/claude/middleware.md`                                  |
+| Database schema                                                         | `docs/technical/architecture/database-schema.md`             |
+| Multi-tenancy architecture                                              | `docs/technical/architecture/multi-tenancy.md`               |
+| Tenant isolation security runbook                                       | `docs/technical/security/tenant-isolation.md`                |
 
 > All `docs/` paths are relative to the repository root.

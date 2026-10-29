@@ -849,6 +849,7 @@
   "Invalid EU AI Act classification level": "Ungültige Klassifizierungsstufe nach dem EU AI Act",
   "Only admins can change retention periods": "Nur Administratoren können Aufbewahrungsfristen ändern",
   "Invalid retention period": "Ungültige Aufbewahrungsfrist",
+  "This file source is reserved": "Diese Dateiquelle ist reserviert",
   "Welcome to VerifyWise": "Willkommen bei VerifyWise",
   "Hello {name},": "Hallo {name},",
   "An administrator has created an account for you on the VerifyWise server.": "Ein Administrator hat ein Konto für Sie auf dem VerifyWise-Server erstellt.",

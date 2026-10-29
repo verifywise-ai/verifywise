@@ -2226,6 +2226,233 @@ export const automationEndpoints: Endpoint[] = [
   },
 ];
 
+// Bias Audit endpoints
+export const biasAuditEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/bias-audit/questions/{frameworkId}',
+    summary: "Get Questions",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Bias Audit",
+  },
+  {
+    method: 'GET',
+    path: '/bias-audit/profiles/{projectId}/{frameworkId}',
+    summary: "Get Profile",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Bias Audit",
+  },
+  {
+    method: 'PUT',
+    path: '/bias-audit/profiles/{projectId}/{frameworkId}',
+    summary: "Save Profile Answers",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Bias Audit",
+  },
+  {
+    method: 'POST',
+    path: '/bias-audit/profiles/{projectId}/{frameworkId}/attest',
+    summary: "Attest Profile",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Bias Audit",
+  },
+  {
+    method: 'POST',
+    path: '/bias-audit/profiles/{projectId}/{frameworkId}/stance',
+    summary: "Generate Profile Stance",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Bias Audit",
+  },
+  {
+    method: 'GET',
+    path: '/bias-audit/runs',
+    summary: "List Runs",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Bias Audit",
+  },
+  {
+    method: 'POST',
+    path: '/bias-audit/runs',
+    summary: "Create Run",
+    requiresAuth: true,
+    responses: [
+      { status: 201, description: "Run recorded (with its gate findings, whether or not a result was computed)" },
+      { status: 400, description: "The upload, mapping or job description is invalid: no file, a CSV that cannot be read, a mapped key the run does not read, or a job description over 64 characters or with no letter or digit" },
+      { status: 401, description: "Not authenticated" },
+      { status: 403, description: "The caller's role may not record a run (biasAudit.edit)" },
+      { status: 404, description: "Project not found or not available to the caller, or no attested profile to run against" },
+      { status: 409, description: "The attested profile refuses a run: it places the tool out of scope, or its cutoff answer does not establish which rate applies" },
+      { status: 413, description: "The dataset exceeds the 30 MB upload limit" },
+      { status: 415, description: "The dataset is not a .csv file" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Bias Audit",
+  },
+  {
+    method: 'GET',
+    path: '/bias-audit/runs/trend',
+    summary: "Get Run Trend",
+    description: "The lowest impact ratio of each run of a project for one framework, oldest first, segmented wherever the profile version, question set, job description or metric changed. Each break names what changed. A run with no result, or a fairness_metrics run (which computes no impact ratio), contributes no point and does not break the series. A run its data checks did not clear for export is plotted with caveat true. Raw run results are not returned.",
+    requiresAuth: true,
+    parameters: [
+      { name: 'projectId', in: 'query', type: 'integer', required: true, description: "The projectId" },
+      { name: 'frameworkId', in: 'query', type: 'integer', required: true, description: "The frameworkId" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 400, description: "projectId or frameworkId is missing or not a positive integer" },
+      { status: 404, description: "Project not found, or the caller is not a member of it" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Bias Audit",
+  },
+  {
+    method: 'GET',
+    path: '/bias-audit/runs/{id}',
+    summary: "Get Run",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Bias Audit",
+  },
+  {
+    method: 'POST',
+    path: '/bias-audit/runs/{id}/derived-basis/confirm',
+    summary: "Confirm Derived Basis",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Bias Audit",
+  },
+  {
+    method: 'POST',
+    path: '/bias-audit/runs/{id}/stance',
+    summary: "Generate Stance",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Bias Audit",
+  },
+  {
+    method: 'GET',
+    path: '/bias-audit/stances/{id}/download',
+    summary: "Download Stance",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Bias Audit",
+  },
+  {
+    method: 'GET',
+    path: '/bias-audit/job-descriptions',
+    summary: "Get Job Descriptions",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Bias Audit",
+  },
+  {
+    method: 'POST',
+    path: '/bias-audit/criteria-comparison',
+    summary: "Compare Criteria",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Bias Audit",
+  },
+  {
+    method: 'GET',
+    path: '/bias-audit/corpora',
+    summary: "List Corpora",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Bias Audit",
+  },
+  {
+    method: 'POST',
+    path: '/bias-audit/corpora',
+    summary: "Create Corpus",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Bias Audit",
+  },
+  {
+    method: 'GET',
+    path: '/bias-audit/corpora/{id}',
+    summary: "Get Corpus",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Bias Audit",
+  },
+  {
+    method: 'GET',
+    path: '/bias-audit/corpora/{id}/download',
+    summary: "Download Corpus",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Bias Audit",
+  },
+  {
+    method: 'POST',
+    path: '/bias-audit/corpora/{id}/resume',
+    summary: "Resume Corpus",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Bias Audit",
+  },
+];
+
 // CE Marking endpoints
 export const ceMarkingEndpoints: Endpoint[] = [
   {
@@ -12398,6 +12625,7 @@ export const allEndpoints = {
   audit: auditEndpoints,
   authentication: authenticationEndpoints,
   automation: automationEndpoints,
+  biasAudit: biasAuditEndpoints,
   ceMarking: ceMarkingEndpoints,
   changeHistory: changeHistoryEndpoints,
   compliance: complianceEndpoints,

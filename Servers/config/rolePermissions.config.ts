@@ -84,6 +84,11 @@ export const ROLE_PERMISSIONS = {
     description: "Verify and export the audit ledger",
     legacyRoles: ADMIN,
   },
+  "biasAudit.attest": {
+    module: "Bias audit",
+    description: "Attest an AEDT profile and confirm the derived data basis",
+    legacyRoles: ADMIN,
+  },
   "autoDriver.admin": {
     module: "Automation driver",
     description: "Configure the automation driver",
@@ -181,6 +186,11 @@ export const ROLE_PERMISSIONS = {
     description: "Import risks",
     legacyRoles: EDITOR,
   },
+  "biasAudit.edit": {
+    module: "Bias audit",
+    description: "Draft AEDT profile answers, record runs and generate stances",
+    legacyRoles: EDITOR,
+  },
   "file.edit": {
     module: "Files",
     description: "Bulk-tag files",
@@ -273,6 +283,11 @@ export const ROLE_PERMISSIONS = {
   "aiDetection.read": {
     module: "AI detection",
     description: "View AI detection scans, findings and statistics",
+    legacyRoles: READER,
+  },
+  "biasAudit.read": {
+    module: "Bias audit",
+    description: "View AEDT profiles, runs, trends and stances",
     legacyRoles: READER,
   },
   "aiDetectionRepository.read": {

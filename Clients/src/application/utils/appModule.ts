@@ -21,6 +21,9 @@ export function getAppModuleFromPath(pathname: string): AppModule {
   if (pathname.startsWith("/ai-trust-index")) {
     return "ai-trust-index";
   }
+  if (pathname.startsWith("/bias-audit")) {
+    return "bias-audit";
+  }
   if (pathname.startsWith("/super-admin")) {
     return "super-admin";
   }

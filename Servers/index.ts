@@ -17,6 +17,7 @@ import {
   stopAiDetectionProgressCleanup,
 } from "./services/aiDetection.service";
 import { warnIfGatewayKeyMissing } from "./utils/aiGatewayKeyCheck";
+import { closeSharedBrowser } from "./utils/pdfBrowser.utils";
 import { warnIfLocalOverrideIgnored } from "./extensions/jira-incidents/siteUrl";
 import logger from "./utils/logger/fileLogger";
 
@@ -132,6 +133,13 @@ try {
         console.log("Notification subscriber closed");
       } catch (err: unknown) {
         console.error("Error closing notification subscriber:", err);
+      }
+
+      try {
+        await closeSharedBrowser();
+        logger.info("PDF browser closed");
+      } catch (err: unknown) {
+        logger.error("Error closing PDF browser:", err);
       }
 
       try {

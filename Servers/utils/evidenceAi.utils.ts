@@ -1,5 +1,6 @@
 import { sequelize } from "../database/db";
 import { buildVisibilityFilterForEvidence } from "./visibility.utils";
+import { VISIBLE_FILE_REPLACEMENTS, VISIBLE_FILE_SQL } from "./files/visibleFiles";
 import type { QualityGrade } from "../domain.layer/interfaces/i.evidenceAi";
 import { logStructured } from "./logger/fileLogger";
 
@@ -429,7 +430,9 @@ export const getSuggestionsQuery = async (fileId: number, organizationId: number
 };
 
 /**
- * Apply suggested control links by creating file_entity_links.
+ * Apply suggested control links by creating file_entity_links. A link is only
+ * created for a visible file in the organization: a stance PDF, a missing id
+ * or another organization's file inserts nothing.
  */
 export const applySuggestionsQuery = async (
   fileId: number,
@@ -446,9 +449,10 @@ export const applySuggestionsQuery = async (
     const [result] = await sequelize.query(
       `INSERT INTO file_entity_links (
          organization_id, file_id, framework_type, entity_type, entity_id, link_type, created_by
-       ) VALUES (
-         :organizationId, :fileId, :frameworkType, 'control', :entityId, 'evidence', :createdBy
        )
+       SELECT :organizationId, f.id, :frameworkType, 'control', :entityId, 'evidence', :createdBy
+         FROM files f
+        WHERE f.id = :fileId AND f.organization_id = :organizationId AND ${VISIBLE_FILE_SQL("f")}
        ON CONFLICT (file_id, framework_type, entity_type, entity_id) DO NOTHING
        RETURNING *`,
       {
@@ -458,6 +462,7 @@ export const applySuggestionsQuery = async (
           frameworkType: suggestion.framework_type,
           entityId: suggestion.control_id,
           createdBy: createdBy || null,
+          ...VISIBLE_FILE_REPLACEMENTS,
         },
       },
     );

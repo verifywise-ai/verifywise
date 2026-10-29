@@ -153,6 +153,20 @@ export const tenantIsolationRegistry: IsolationEntity[] = [
     testFile: "extensionRuns.isolation.test.ts",
   },
   {
+    // Self-service LL 144 bias module. Routes arrive with the controller task;
+    // until then the hand-written file pins what the schema guarantees.
+    name: "bias_audit",
+    tables: [
+      "aedt_profiles",
+      "aedt_profile_answers",
+      "bias_audit_runs",
+      "bias_audit_stances",
+      "bias_audit_corpora",
+      "bias_audit_corpus_records",
+    ],
+    baseRoute: "/api/bias-audit",
+  },
+  {
     // Jira incidents extension. Routes are keyed by the caller's organization
     // (/api/extensions/jira-incidents/…), not by row id, so a hand-written file covers them.
     name: "jira_incidents",

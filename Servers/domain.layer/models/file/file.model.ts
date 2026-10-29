@@ -35,6 +35,7 @@ export type FileSource =
   | "policy_editor"
   | "Post-Market Monitoring report"
   | "dataset_bulk_upload"
+  | "Bias audit stance report"
   // Per-framework generic labels (mirror Servers/structures/*.source_labels)
   | "AI Ethics requirements"
   | "ALTAI assessment areas"
@@ -223,6 +224,7 @@ export class FileModel extends Model<File> {
       "policy_editor",
       "Post-Market Monitoring report",
       "dataset_bulk_upload",
+      "Bias audit stance report",
       // Per-framework generic labels (mirror Servers/structures/*.source_labels)
       "AI Ethics requirements",
       "ALTAI assessment areas",

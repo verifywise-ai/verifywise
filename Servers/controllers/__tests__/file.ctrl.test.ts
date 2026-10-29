@@ -32,6 +32,7 @@ jest.mock("../../utils/statusCode.utils", () => ({
     401: (d: any) => ({ message: "Unauthorized", data: d }),
     403: (d: any) => ({ message: "Forbidden", data: d }),
     404: (d: any) => ({ message: "Not Found", data: d }),
+    409: (d: any) => ({ message: "Conflict", data: d }),
     500: (d: any) => ({ message: "Internal Server Error", data: d }),
   },
 }));
@@ -53,17 +54,20 @@ jest.mock("../../repositories/file.repository", () => ({
 }));
 jest.mock("../../utils/bulkAction.utils", () => ({
   parseBulkIds: jest.fn((ids: number[]) => ids),
-  assertOrgOwnsIds: jest.fn().mockResolvedValue(undefined),
   withBulkTransaction: jest.fn().mockImplementation(async (_opts: any, fn: any) => {
     const transaction = { commit: jest.fn(), rollback: jest.fn() };
     await fn(transaction);
   }),
+}));
+jest.mock("../../utils/files/visibleFiles", () => ({
+  allFilesVisibleQuery: jest.fn().mockResolvedValue(true),
 }));
 jest.mock("../../utils/project.utils", () => ({
   getUserProjects: jest.fn(),
 }));
 jest.mock("../../domain.layer/exceptions/custom.exception", () => ({
   ForbiddenException: class ForbiddenException extends Error {},
+  NotFoundException: class NotFoundException extends Error {},
   ValidationException: class ValidationException extends Error {},
 }));
 
@@ -85,8 +89,7 @@ import {
 import getUserFilesMetaDataQuery from "../../utils/files/getUserFilesMetaData.utils";
 import { addFileToAnswerEU } from "../../utils/eu.utils";
 import { getUserProjects } from "../../utils/project.utils";
-import { assertOrgOwnsIds } from "../../utils/bulkAction.utils";
-import { ForbiddenException } from "../../domain.layer/exceptions/custom.exception";
+import { allFilesVisibleQuery } from "../../utils/files/visibleFiles";
 import { createFileEntityLink, deleteFileEntityLink } from "../../repositories/file.repository";
 
 const mockGetFile = getFileById as jest.MockedFunction<typeof getFileById>;
@@ -101,7 +104,9 @@ const mockGetUserFiles = getUserFilesMetaDataQuery as jest.MockedFunction<
 >;
 const mockAddFile = addFileToAnswerEU as jest.MockedFunction<typeof addFileToAnswerEU>;
 const mockGetUserProjects = getUserProjects as jest.MockedFunction<typeof getUserProjects>;
-const mockAssertOrgOwnsIds = assertOrgOwnsIds as jest.MockedFunction<typeof assertOrgOwnsIds>;
+const mockAllFilesVisible = allFilesVisibleQuery as jest.MockedFunction<
+  typeof allFilesVisibleQuery
+>;
 const mockCreateLink = createFileEntityLink as jest.MockedFunction<typeof createFileEntityLink>;
 const mockDeleteLink = deleteFileEntityLink as jest.MockedFunction<typeof deleteFileEntityLink>;
 
@@ -234,7 +239,7 @@ describe("file.ctrl", () => {
     beforeEach(() => {
       // By default the user belongs to project 1 (non-admin membership list).
       mockGetUserProjects.mockResolvedValue([{ id: 1 } as any]);
-      mockAssertOrgOwnsIds.mockResolvedValue(undefined);
+      mockAllFilesVisible.mockResolvedValue(true);
     });
 
     it("should return 201 when files are uploaded", async () => {
@@ -312,8 +317,10 @@ describe("file.ctrl", () => {
       expect(mockUpload).not.toHaveBeenCalled();
     });
 
-    it("should return 403 when delete ids are not owned by the organization", async () => {
-      mockAssertOrgOwnsIds.mockRejectedValue(new ForbiddenException("not accessible"));
+    it("should return 403 when delete ids are not visible files of the organization", async () => {
+      // A missing id, another organization's file and a bias audit stance PDF
+      // are refused alike, so none of them can be told apart.
+      mockAllFilesVisible.mockResolvedValue(false);
       const req = createReq({
         body: { question_id: "1", project_id: 1, delete: "[55]" },
         files: [],
@@ -347,6 +354,19 @@ describe("file.ctrl", () => {
       const res = createRes();
       await postFileContent(req, res);
       expect(res.status).toHaveBeenCalledWith(500);
+    });
+
+    it("checks the delete list once, then deletes each visible file", async () => {
+      const req = createReq({
+        body: { question_id: "1", project_id: 1, user_id: 1, delete: "[77, 78]" },
+        files: [],
+      });
+      const res = createRes();
+      await postFileContent(req, res);
+      expect(mockAllFilesVisible).toHaveBeenCalledWith([77, 78], 1, expect.anything());
+      expect(mockDeleteFile).toHaveBeenCalledWith(77, expect.anything(), expect.anything());
+      expect(mockDeleteFile).toHaveBeenCalledWith(78, expect.anything(), expect.anything());
+      expect(res.status).toHaveBeenCalledWith(201);
     });
   });
 
@@ -383,6 +403,18 @@ describe("file.ctrl", () => {
       const res = createRes();
       await attachFileToEntity(req, res);
       expect(res.status).toHaveBeenCalledWith(200);
+    });
+    it("should return 404 when the file is not visible", async () => {
+      const { NotFoundException } = jest.requireMock(
+        "../../domain.layer/exceptions/custom.exception",
+      );
+      mockCreateLink.mockRejectedValue(new NotFoundException("File not found"));
+      const req = createReq({
+        body: { file_id: 1, framework_type: "eu", entity_type: "control", entity_id: 1 },
+      });
+      const res = createRes();
+      await attachFileToEntity(req, res);
+      expect(res.status).toHaveBeenCalledWith(404);
     });
     it("should return 500 on error", async () => {
       mockCreateLink.mockRejectedValue(new Error("DB error"));

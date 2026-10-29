@@ -104,6 +104,7 @@ import invitationRoutes from "./routes/invitation.route";
 import intakeFormRoutes from "./routes/intakeForm.route";
 import versionRoutes from "./routes/version.route";
 import auditLedgerRoutes from "./routes/auditLedger.route";
+import biasAuditRoutes from "./routes/biasAudit.route";
 import evidenceAiRoutes from "./routes/evidenceAi.route";
 import readinessRoutes from "./routes/readiness.route";
 import aiContentRoutes from "./routes/aiContent.route";
@@ -433,6 +434,7 @@ export function createApp(preRoutesMiddleware?: RequestHandler[]): express.Appli
   app.use("/api/intake", intakeFormRoutes);
   app.use("/api/version", versionRoutes);
   app.use("/api/audit-ledger", auditLedgerRoutes);
+  app.use("/api/bias-audit", biasAuditRoutes);
   app.use("/api/feature-settings", featureSettingsRoutes);
   app.use("/api/data-retention", dataRetentionRoutes);
   app.use("/api/fria", friaRoutes);

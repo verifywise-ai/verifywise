@@ -7,6 +7,8 @@
 
 import { sequelize } from "../../database/db";
 import { QueryTypes } from "sequelize";
+import { allFilesVisibleQuery } from "./visibleFiles";
+import { NotFoundException } from "../../domain.layer/exceptions/custom.exception";
 
 /**
  * Standard evidence file structure matching the old JSONB format
@@ -145,6 +147,10 @@ export async function createFileEntityLink(
   createdBy?: number,
   transaction?: any,
 ): Promise<void> {
+  // A missing id, another organization's file and a stance PDF are refused alike.
+  if (!(await allFilesVisibleQuery([fileId], organizationId, transaction))) {
+    throw new NotFoundException("File not found", "File", fileId);
+  }
   await sequelize.query(
     `INSERT INTO file_entity_links
       (organization_id, file_id, framework_type, entity_type, entity_id, link_type, created_by, created_at)

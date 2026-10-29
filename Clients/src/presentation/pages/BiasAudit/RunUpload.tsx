@@ -1,0 +1,300 @@
+import { useRef, useState } from "react";
+import { Alert, Box, Stack, Typography } from "@mui/material";
+import { Upload } from "lucide-react";
+import Select from "../../components/Inputs/Select";
+import Field from "../../components/Inputs/Field";
+import { CustomizableButton } from "../../components/button/customizable-button";
+import { palette } from "../../themes/palette";
+import {
+  useAedtCorpora,
+  useAedtJobDescriptions,
+  useCreateAedtRun,
+} from "../../../application/hooks/useAedtBiasAudit";
+import {
+  describeAedtError,
+  type AedtRunMetric,
+} from "../../../application/repository/aedtBiasAudit.repository";
+import EducationPanel from "./EducationPanel";
+import { readCsvHeaders } from "./csvHeaders";
+import { cardSx, helperSx, titleSx } from "./styles";
+
+/** The server's upload limit (`DATASET_MAX_BYTES`, 30 MB). */
+const MAX_BYTES = 30 * 1024 * 1024;
+/** The server's limit on the job title (`JOB_DESCRIPTION_MAX`, the column's width). */
+const JOB_DESCRIPTION_MAX = 64;
+const UNMAPPED = "";
+/** The data-source value for a file of the customer's own data. */
+const UPLOADED = "uploaded";
+
+interface RunUploadProps {
+  projectId: number;
+  /**
+   * The rate the ATTESTED profile forces (the profile view's
+   * `attestedDecision.metric`), which is what the server computes. Null when
+   * it forces none.
+   */
+  metric: AedtRunMetric | null;
+  canEdit: boolean;
+  /** Null when a run may be recorded; otherwise why not. */
+  blockedReason: string | null;
+  onCreated: (runId: number) => void;
+}
+
+/**
+ * Upload a dataset and map its columns. The file is read here only for its
+ * header line; the server hashes and reads the whole file and keeps none of
+ * it. A mapped column the file lacks is reported by the server as a fault in
+ * the mapping, not in the data.
+ */
+const RunUpload = ({ projectId, metric, canEdit, blockedReason, onCreated }: RunUploadProps) => {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [file, setFile] = useState<File | null>(null);
+  const [headers, setHeaders] = useState<string[]>([]);
+  const [mapping, setMapping] = useState<Record<string, string>>({});
+  const [fileError, setFileError] = useState<string | null>(null);
+  const [jobDescription, setJobDescription] = useState("");
+  const [source, setSource] = useState(UPLOADED);
+  // Each pick bumps this, so a slow header read for an earlier file cannot
+  // overwrite the state of a later one.
+  const pickRef = useRef(0);
+  const createRun = useCreateAedtRun(projectId);
+  const corporaQuery = useAedtCorpora(projectId);
+  const jdQuery = useAedtJobDescriptions();
+  // Only a complete corpus has a manifest to join a scored file to.
+  const completeCorpora = (corporaQuery.data ?? []).filter((c) => c.status === "complete");
+  const corpus = completeCorpora.find((c) => String(c.id) === source) ?? null;
+  const corpusRoleTitle = corpus
+    ? (jdQuery.data?.jobDescriptions.find((jd) => jd.key === corpus.job_description_key)
+        ?.roleTitle ?? corpus.job_description_key)
+    : null;
+
+  const fields = (() => {
+    const outcome =
+      metric === "scoring_rate"
+        ? { key: "score", label: "Score column" }
+        : { key: "selected", label: "Selected column (1, 0, yes, no, true, false)" };
+    // A scored corpus carries no demographics: the corpus manifest supplies them.
+    return corpus
+      ? [{ key: "candidate_id", label: "Candidate ID column" }, outcome]
+      : [
+          { key: "sex", label: "Sex column" },
+          { key: "race_ethnicity", label: "Race or ethnicity column" },
+          outcome,
+        ];
+  })();
+
+  const handleFile = async (picked: File | undefined) => {
+    const pick = ++pickRef.current;
+    setFileError(null);
+    setFile(null);
+    setHeaders([]);
+    setMapping({});
+    createRun.reset();
+    if (!picked) return;
+    if (!picked.name.toLowerCase().endsWith(".csv")) {
+      setFileError("Upload the dataset as a .csv file.");
+      return;
+    }
+    if (picked.size > MAX_BYTES) {
+      setFileError("The dataset is larger than the 30 MB upload limit.");
+      return;
+    }
+    try {
+      const found = await readCsvHeaders(picked);
+      if (pick !== pickRef.current) return;
+      if (found.length === 0) {
+        setFileError("The file has no header row. Put the column names on the first line.");
+        return;
+      }
+      setFile(picked);
+      setHeaders(found);
+    } catch {
+      if (pick !== pickRef.current) return;
+      setFileError("The file could not be read. Choose it again.");
+    }
+  };
+
+  const outcomeKey = metric === "scoring_rate" ? "score" : "selected";
+  const runReason =
+    blockedReason ??
+    (!canEdit
+      ? "Only an Admin or Editor can record a run."
+      : metric === null
+        ? "The attested profile does not say who applies the cutoff. Answer that question and attest again, so the right rate can be calculated."
+        : null);
+  // The server's checks, made here so a refused title never costs an upload.
+  const trimmedJobDescription = jobDescription.normalize("NFC").trim().replace(/\s+/g, " ");
+  const jobDescriptionError =
+    Array.from(trimmedJobDescription).length > JOB_DESCRIPTION_MAX
+      ? "Use at most 64 characters."
+      : trimmedJobDescription !== "" && !/[\p{L}\p{N}]/u.test(trimmedJobDescription)
+        ? "Include at least one letter or digit."
+        : undefined;
+  const runDisabled =
+    runReason !== null ||
+    !file ||
+    !mapping[outcomeKey] ||
+    (corpus !== null && !mapping.candidate_id) ||
+    (corpus === null && jobDescriptionError !== undefined) ||
+    createRun.isPending;
+
+  const handleRun = () => {
+    if (runDisabled || !file) return;
+    const sent: Record<string, string> = {};
+    for (const f of fields) if (mapping[f.key]) sent[f.key] = mapping[f.key];
+    createRun.mutate(
+      // The checked form, so the server receives exactly what passed here. A
+      // corpus run sends no title: the corpus's fixed job description is it.
+      corpus
+        ? { file, mapping: sent, jobDescription: "", corpusId: corpus.id }
+        : { file, mapping: sent, jobDescription: trimmedJobDescription },
+      { onSuccess: (r) => onCreated(r.runId) },
+    );
+  };
+
+  const items = [
+    { _id: UNMAPPED, name: "Not in this file" },
+    ...headers.map((h) => ({ _id: h, name: h })),
+  ];
+  const runError = createRun.error ? describeAedtError(createRun.error).message : null;
+
+  return (
+    <Box sx={cardSx}>
+      <Stack gap="16px">
+        <Box>
+          <Typography component="h2" sx={titleSx}>
+            New run
+          </Typography>
+          <Typography sx={{ ...helperSx, mt: "4px" }}>
+            Upload a CSV with one row per candidate, then match its columns.
+            {metric &&
+              (metric === "scoring_rate"
+                ? " This run calculates scoring rates, because a person applies the cutoff."
+                : " This run calculates selection rates, because your platform applies the cutoff.")}
+          </Typography>
+          <Box sx={{ mt: "4px" }}>
+            <EducationPanel pageKey="run.upload" />
+          </Box>
+        </Box>
+
+        {completeCorpora.length > 0 && (
+          <Select
+            id="aedt-run-corpus"
+            dataTestId="aedt-run-corpus"
+            label="Data source"
+            value={source}
+            items={[
+              { _id: UPLOADED, name: "Your own data" },
+              ...completeCorpora.map((c) => ({
+                _id: String(c.id),
+                name: `Scored test candidates (set ${c.id})`,
+              })),
+            ]}
+            onChange={(e) => {
+              setSource(String(e.target.value));
+              setMapping({});
+              createRun.reset();
+            }}
+            sx={{ width: "100%", maxWidth: "420px" }}
+          />
+        )}
+        {corpus && (
+          <Typography sx={helperSx}>
+            The file needs only the candidate_id column and the score or selection. Leave out the
+            artifact column to stay under the 30 MB upload limit.
+          </Typography>
+        )}
+
+        <Stack direction="row" alignItems="center" gap="12px" flexWrap="wrap">
+          <input
+            ref={inputRef}
+            type="file"
+            accept=".csv,text/csv"
+            hidden
+            data-testid="aedt-dataset-input"
+            onChange={(e) => {
+              void handleFile(e.target.files?.[0]);
+              e.target.value = "";
+            }}
+          />
+          <CustomizableButton
+            variant="outlined"
+            text="Choose CSV file"
+            testId="aedt-choose-dataset"
+            startIcon={<Upload size={14} strokeWidth={1.5} />}
+            onClick={() => inputRef.current?.click()}
+            isDisabled={runReason !== null}
+          />
+          {file && (
+            <Typography sx={{ fontSize: 13, color: palette.text.secondary }}>
+              {file.name}
+            </Typography>
+          )}
+        </Stack>
+        {fileError && (
+          <Alert severity="error" sx={{ borderRadius: "4px" }}>
+            {fileError}
+          </Alert>
+        )}
+
+        {file && (
+          <Stack gap="12px">
+            {fields.map((f) => (
+              <Select
+                key={f.key}
+                id={`aedt-map-${f.key}`}
+                label={f.label}
+                value={mapping[f.key] ?? UNMAPPED}
+                items={items}
+                isRequired={f.key === outcomeKey}
+                onChange={(e) =>
+                  setMapping((prev) => ({ ...prev, [f.key]: String(e.target.value) }))
+                }
+                sx={{ width: "100%", maxWidth: "420px" }}
+              />
+            ))}
+            {corpus ? (
+              <Typography
+                sx={{ fontSize: 13, color: palette.text.secondary }}
+                data-testid="aedt-run-corpus-job-description"
+              >
+                {`Job description: ${corpusRoleTitle} (fixed)`}
+              </Typography>
+            ) : (
+              <Field
+                id="aedt-job-description"
+                label="Job description tested"
+                isOptional
+                placeholder="For example, Account executive"
+                value={jobDescription}
+                onChange={(e) => setJobDescription(e.target.value)}
+                error={jobDescriptionError}
+                helperText="Named in the stance. The trend only joins runs on the same role."
+                sx={{ width: "100%", maxWidth: "420px" }}
+              />
+            )}
+          </Stack>
+        )}
+
+        <Stack gap="8px" alignItems="flex-start">
+          <CustomizableButton
+            variant="contained"
+            text="Calculate results"
+            testId="aedt-create-run"
+            onClick={handleRun}
+            isDisabled={runDisabled}
+            loading={createRun.isPending}
+          />
+          {runReason && <Typography sx={helperSx}>{runReason}</Typography>}
+          {runError && (
+            <Alert severity="error" sx={{ borderRadius: "4px" }}>
+              {runError}
+            </Alert>
+          )}
+        </Stack>
+      </Stack>
+    </Box>
+  );
+};
+
+export default RunUpload;

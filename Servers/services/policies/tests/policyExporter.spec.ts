@@ -5,10 +5,11 @@
 /**
  * @fileoverview Policy Exporter Tests
  *
- * Covers all four exported functions: generateFilename, generatePolicyPDF,
- * generatePolicyDOCX and closeBrowser.
+ * Covers the three exported functions: generateFilename, generatePolicyPDF
+ * and generatePolicyDOCX.
  *
- * Playwright is mocked (following services/reporting/tests/pdfGenerator.spec.ts);
+ * Playwright is mocked under the server's shared browser
+ * (utils/pdfBrowser.utils), which is reset between tests;
  * the docx library is NOT mocked — DOCX output is generated for real and
  * inspected by unzipping document.xml (following docxGenerator.spec.ts).
  *
@@ -62,12 +63,8 @@ jest.mock("../../../repositories/file.repository", () => ({
 
 import { TextEncoder, TextDecoder } from "util";
 import JSZip from "jszip";
-import {
-  generateFilename,
-  generatePolicyPDF,
-  generatePolicyDOCX,
-  closeBrowser,
-} from "../policyExporter";
+import { generateFilename, generatePolicyPDF, generatePolicyDOCX } from "../policyExporter";
+import { closeSharedBrowser } from "../../../utils/pdfBrowser.utils";
 
 // The jsdom test environment does not expose Node's text encoders, which docx
 // needs when packing the document.
@@ -173,7 +170,7 @@ describe("policyExporter", () => {
   });
   describe("generatePolicyPDF", () => {
     beforeEach(async () => {
-      await closeBrowser();
+      await closeSharedBrowser();
       jest.clearAllMocks();
       mockBrowser.newPage.mockResolvedValue(mockPage);
       mockBrowser.isConnected.mockReturnValue(true);
@@ -191,10 +188,12 @@ describe("policyExporter", () => {
     it("launches a headless browser with the sandbox flags", async () => {
       await generatePolicyPDF("Security Policy", "<p>Body</p>", 1);
 
-      expect(mockLaunch).toHaveBeenCalledWith({
-        headless: true,
-        args: ["--no-sandbox", "--disable-setuid-sandbox"],
-      });
+      expect(mockLaunch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          headless: true,
+          args: expect.arrayContaining(["--no-sandbox", "--disable-setuid-sandbox"]),
+        }),
+      );
     });
 
     it("renders the title and content into the page HTML", async () => {
@@ -309,47 +308,6 @@ describe("policyExporter", () => {
       expect(mockGetFileById).not.toHaveBeenCalled();
       const [html] = mockPage.setContent.mock.calls[0];
       expect(html).toContain('src="https://example.com/a.png"');
-    });
-  });
-
-  describe("closeBrowser", () => {
-    beforeEach(async () => {
-      await closeBrowser();
-      jest.clearAllMocks();
-      mockBrowser.newPage.mockResolvedValue(mockPage);
-      mockBrowser.isConnected.mockReturnValue(true);
-      mockLaunch.mockResolvedValue(mockBrowser);
-      mockPage.pdf.mockResolvedValue(Buffer.from("%PDF-1.4 fake"));
-    });
-
-    it("closes an open browser instance", async () => {
-      await generatePolicyPDF("Security Policy", "<p>Body</p>", 1);
-
-      await closeBrowser();
-
-      expect(mockBrowser.close).toHaveBeenCalledTimes(1);
-    });
-
-    it("is a no-op when no browser has been launched", async () => {
-      await expect(closeBrowser()).resolves.toBeUndefined();
-      expect(mockBrowser.close).not.toHaveBeenCalled();
-    });
-
-    it("clears the singleton so the next export launches a fresh browser", async () => {
-      await generatePolicyPDF("First", "<p>a</p>", 1);
-      await closeBrowser();
-      await generatePolicyPDF("Second", "<p>b</p>", 1);
-
-      expect(mockLaunch).toHaveBeenCalledTimes(2);
-    });
-
-    it("does not close twice when called repeatedly", async () => {
-      await generatePolicyPDF("Security Policy", "<p>Body</p>", 1);
-
-      await closeBrowser();
-      await closeBrowser();
-
-      expect(mockBrowser.close).toHaveBeenCalledTimes(1);
     });
   });
 

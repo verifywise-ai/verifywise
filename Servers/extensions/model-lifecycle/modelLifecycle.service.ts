@@ -1,6 +1,11 @@
 import { QueryTypes } from "sequelize";
 import { sequelize } from "../../database/db";
 import { appendToAuditLedger } from "../../utils/auditLedger.utils";
+import {
+  allFilesVisibleQuery,
+  VISIBLE_FILE_REPLACEMENTS,
+  VISIBLE_FILE_SQL,
+} from "../../utils/files/visibleFiles";
 
 /**
  * DB helpers for the model-lifecycle extension.
@@ -442,9 +447,10 @@ export async function getLifecycleForModel(
                 f.filename, f.type AS mimetype
            FROM model_lifecycle_item_files lf
            JOIN files f ON lf.file_id = f.id AND f.organization_id = lf.organization_id
-          WHERE lf.organization_id = :organizationId AND lf.value_id IN (:valueIds);`,
+          WHERE lf.organization_id = :organizationId AND lf.value_id IN (:valueIds)
+            AND ${VISIBLE_FILE_SQL("f")};`,
         {
-          replacements: { organizationId, valueIds },
+          replacements: { organizationId, valueIds, ...VISIBLE_FILE_REPLACEMENTS },
           type: QueryTypes.SELECT,
         },
       )) as any[];
@@ -617,11 +623,9 @@ export async function attachFile(
   userId: number,
   fileId: number,
 ): Promise<any | null> {
-  const owned = (await sequelize.query(
-    `SELECT 1 FROM files WHERE id = :fileId AND organization_id = :organizationId;`,
-    { replacements: { fileId, organizationId }, type: QueryTypes.SELECT },
-  )) as unknown[];
-  if (owned.length === 0) return null;
+  // A missing file, another organization's file and a bias audit stance PDF
+  // (served only by the stance endpoint) are refused alike.
+  if (!(await allFilesVisibleQuery([fileId], organizationId))) return null;
 
   const valueId = await ensureValueRow(organizationId, modelId, itemId, userId);
   const rows = (await sequelize.query(

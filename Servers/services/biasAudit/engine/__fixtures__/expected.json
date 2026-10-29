@@ -1,0 +1,1681 @@
+{
+  "fairness_metrics_basic": {
+    "excluded_count": 0,
+    "fairness_metrics_tables": [
+      {
+        "category_key": "sex",
+        "equal_opportunity_difference": 0.006239,
+        "equalized_odds_difference": 0.006239,
+        "fpr_max_group": "Male",
+        "fpr_min_group": "Female",
+        "groups": [
+          {
+            "accuracy": 0.8,
+            "category_name": "Female",
+            "category_type": "sex",
+            "count": 100,
+            "excluded": false,
+            "false_negative": 7,
+            "false_negative_rate": 0.212121,
+            "false_positive": 13,
+            "false_positive_rate": 0.19403,
+            "precision": 0.666667,
+            "true_negative": 54,
+            "true_negative_rate": 0.80597,
+            "true_positive": 26,
+            "true_positive_rate": 0.787879
+          },
+          {
+            "accuracy": 0.8,
+            "category_name": "Male",
+            "category_type": "sex",
+            "count": 100,
+            "excluded": false,
+            "false_negative": 7,
+            "false_negative_rate": 0.205882,
+            "false_positive": 13,
+            "false_positive_rate": 0.19697,
+            "precision": 0.675,
+            "true_negative": 53,
+            "true_negative_rate": 0.80303,
+            "true_positive": 27,
+            "true_positive_rate": 0.794118
+          }
+        ],
+        "predictive_parity_difference": 0.008333,
+        "title": "Fairness metrics by sex",
+        "tpr_max_group": "Male",
+        "tpr_min_group": "Female"
+      }
+    ],
+    "flags_count": 0,
+    "metric": "fairness_metrics",
+    "overall_selection_rate": 0.395,
+    "score_distribution_tables": [],
+    "summary": "Audit analyzed 200 applicants (overall rate: 39.5%).",
+    "tables": [],
+    "total_applicants": 200,
+    "total_selected": 79,
+    "unknown_count": 0
+  },
+  "score_distribution_present": {
+    "excluded_count": 0,
+    "fairness_metrics_tables": [],
+    "flags_count": 0,
+    "metric": "selection_rate",
+    "overall_selection_rate": 0.335,
+    "score_distribution_tables": [
+      {
+        "category_key": "sex",
+        "groups": [
+          {
+            "bins": [
+              {
+                "count": 5,
+                "lower": 0.0,
+                "upper": 5.0
+              },
+              {
+                "count": 5,
+                "lower": 5.0,
+                "upper": 10.0
+              },
+              {
+                "count": 5,
+                "lower": 10.0,
+                "upper": 15.0
+              },
+              {
+                "count": 5,
+                "lower": 15.0,
+                "upper": 20.0
+              },
+              {
+                "count": 5,
+                "lower": 20.0,
+                "upper": 25.0
+              },
+              {
+                "count": 5,
+                "lower": 25.0,
+                "upper": 30.0
+              },
+              {
+                "count": 5,
+                "lower": 30.0,
+                "upper": 35.0
+              },
+              {
+                "count": 5,
+                "lower": 35.0,
+                "upper": 40.0
+              },
+              {
+                "count": 5,
+                "lower": 40.0,
+                "upper": 45.0
+              },
+              {
+                "count": 5,
+                "lower": 45.0,
+                "upper": 50.0
+              },
+              {
+                "count": 5,
+                "lower": 50.0,
+                "upper": 55.0
+              },
+              {
+                "count": 5,
+                "lower": 55.0,
+                "upper": 60.0
+              },
+              {
+                "count": 5,
+                "lower": 60.0,
+                "upper": 65.0
+              },
+              {
+                "count": 5,
+                "lower": 65.0,
+                "upper": 70.0
+              },
+              {
+                "count": 5,
+                "lower": 70.0,
+                "upper": 75.0
+              },
+              {
+                "count": 5,
+                "lower": 75.0,
+                "upper": 80.0
+              },
+              {
+                "count": 5,
+                "lower": 80.0,
+                "upper": 85.0
+              },
+              {
+                "count": 4,
+                "lower": 85.0,
+                "upper": 90.0
+              },
+              {
+                "count": 5,
+                "lower": 90.0,
+                "upper": 95.0
+              },
+              {
+                "count": 6,
+                "lower": 95.0,
+                "upper": 100.0
+              }
+            ],
+            "category_name": "Female",
+            "category_type": "sex",
+            "count": 100,
+            "ks_pvalue": 1.0,
+            "ks_statistic": 0.015,
+            "mean": 49.62,
+            "median": 49.5,
+            "std": 29.050225
+          },
+          {
+            "bins": [
+              {
+                "count": 5,
+                "lower": 0.0,
+                "upper": 5.0
+              },
+              {
+                "count": 5,
+                "lower": 5.0,
+                "upper": 10.0
+              },
+              {
+                "count": 5,
+                "lower": 10.0,
+                "upper": 15.0
+              },
+              {
+                "count": 5,
+                "lower": 15.0,
+                "upper": 20.0
+              },
+              {
+                "count": 5,
+                "lower": 20.0,
+                "upper": 25.0
+              },
+              {
+                "count": 5,
+                "lower": 25.0,
+                "upper": 30.0
+              },
+              {
+                "count": 5,
+                "lower": 30.0,
+                "upper": 35.0
+              },
+              {
+                "count": 5,
+                "lower": 35.0,
+                "upper": 40.0
+              },
+              {
+                "count": 5,
+                "lower": 40.0,
+                "upper": 45.0
+              },
+              {
+                "count": 5,
+                "lower": 45.0,
+                "upper": 50.0
+              },
+              {
+                "count": 5,
+                "lower": 50.0,
+                "upper": 55.0
+              },
+              {
+                "count": 5,
+                "lower": 55.0,
+                "upper": 60.0
+              },
+              {
+                "count": 5,
+                "lower": 60.0,
+                "upper": 65.0
+              },
+              {
+                "count": 5,
+                "lower": 65.0,
+                "upper": 70.0
+              },
+              {
+                "count": 5,
+                "lower": 70.0,
+                "upper": 75.0
+              },
+              {
+                "count": 4,
+                "lower": 75.0,
+                "upper": 80.0
+              },
+              {
+                "count": 5,
+                "lower": 80.0,
+                "upper": 85.0
+              },
+              {
+                "count": 5,
+                "lower": 85.0,
+                "upper": 90.0
+              },
+              {
+                "count": 5,
+                "lower": 90.0,
+                "upper": 95.0
+              },
+              {
+                "count": 6,
+                "lower": 95.0,
+                "upper": 100.0
+              }
+            ],
+            "category_name": "Male",
+            "category_type": "sex",
+            "count": 100,
+            "ks_pvalue": 1.0,
+            "ks_statistic": 0.01,
+            "mean": 49.75,
+            "median": 49.5,
+            "std": 29.192251
+          }
+        ],
+        "overall_mean": 49.685,
+        "overall_median": 49.5,
+        "title": "Score distributions by sex"
+      }
+    ],
+    "summary": "Audit analyzed 200 applicants (overall rate: 33.5%). No adverse impact flags detected.",
+    "tables": [
+      {
+        "category_key": "sex",
+        "highest_group": "Male",
+        "highest_rate": 0.34,
+        "rows": [
+          {
+            "applicant_count": 100,
+            "category_name": "Female",
+            "category_type": "sex",
+            "excluded": false,
+            "flagged": false,
+            "impact_ratio": 0.970588,
+            "selected_count": 33,
+            "selection_rate": 0.33
+          },
+          {
+            "applicant_count": 100,
+            "category_name": "Male",
+            "category_type": "sex",
+            "excluded": false,
+            "flagged": false,
+            "impact_ratio": 1.0,
+            "selected_count": 34,
+            "selection_rate": 0.34
+          }
+        ],
+        "title": "Impact ratios by sex"
+      }
+    ],
+    "total_applicants": 200,
+    "total_selected": 67,
+    "unknown_count": 0
+  },
+  "scoring_rate_continuous": {
+    "excluded_count": 0,
+    "fairness_metrics_tables": [],
+    "flags_count": 0,
+    "metric": "scoring_rate",
+    "overall_selection_rate": 0.5,
+    "score_distribution_tables": [
+      {
+        "category_key": "sex",
+        "groups": [
+          {
+            "bins": [
+              {
+                "count": 5,
+                "lower": 0.0,
+                "upper": 5.0
+              },
+              {
+                "count": 5,
+                "lower": 5.0,
+                "upper": 10.0
+              },
+              {
+                "count": 5,
+                "lower": 10.0,
+                "upper": 15.0
+              },
+              {
+                "count": 5,
+                "lower": 15.0,
+                "upper": 20.0
+              },
+              {
+                "count": 5,
+                "lower": 20.0,
+                "upper": 25.0
+              },
+              {
+                "count": 5,
+                "lower": 25.0,
+                "upper": 30.0
+              },
+              {
+                "count": 5,
+                "lower": 30.0,
+                "upper": 35.0
+              },
+              {
+                "count": 5,
+                "lower": 35.0,
+                "upper": 40.0
+              },
+              {
+                "count": 5,
+                "lower": 40.0,
+                "upper": 45.0
+              },
+              {
+                "count": 5,
+                "lower": 45.0,
+                "upper": 50.0
+              },
+              {
+                "count": 5,
+                "lower": 50.0,
+                "upper": 55.0
+              },
+              {
+                "count": 5,
+                "lower": 55.0,
+                "upper": 60.0
+              },
+              {
+                "count": 5,
+                "lower": 60.0,
+                "upper": 65.0
+              },
+              {
+                "count": 5,
+                "lower": 65.0,
+                "upper": 70.0
+              },
+              {
+                "count": 5,
+                "lower": 70.0,
+                "upper": 75.0
+              },
+              {
+                "count": 5,
+                "lower": 75.0,
+                "upper": 80.0
+              },
+              {
+                "count": 5,
+                "lower": 80.0,
+                "upper": 85.0
+              },
+              {
+                "count": 5,
+                "lower": 85.0,
+                "upper": 90.0
+              },
+              {
+                "count": 4,
+                "lower": 90.0,
+                "upper": 95.0
+              },
+              {
+                "count": 6,
+                "lower": 95.0,
+                "upper": 100.0
+              }
+            ],
+            "category_name": "Female",
+            "category_type": "sex",
+            "count": 100,
+            "ks_pvalue": 1.0,
+            "ks_statistic": 0.015,
+            "mean": 49.56,
+            "median": 49.5,
+            "std": 28.964571
+          },
+          {
+            "bins": [
+              {
+                "count": 5,
+                "lower": 0.0,
+                "upper": 5.0
+              },
+              {
+                "count": 5,
+                "lower": 5.0,
+                "upper": 10.0
+              },
+              {
+                "count": 5,
+                "lower": 10.0,
+                "upper": 15.0
+              },
+              {
+                "count": 5,
+                "lower": 15.0,
+                "upper": 20.0
+              },
+              {
+                "count": 5,
+                "lower": 20.0,
+                "upper": 25.0
+              },
+              {
+                "count": 5,
+                "lower": 25.0,
+                "upper": 30.0
+              },
+              {
+                "count": 5,
+                "lower": 30.0,
+                "upper": 35.0
+              },
+              {
+                "count": 5,
+                "lower": 35.0,
+                "upper": 40.0
+              },
+              {
+                "count": 5,
+                "lower": 40.0,
+                "upper": 45.0
+              },
+              {
+                "count": 5,
+                "lower": 45.0,
+                "upper": 50.0
+              },
+              {
+                "count": 5,
+                "lower": 50.0,
+                "upper": 55.0
+              },
+              {
+                "count": 5,
+                "lower": 55.0,
+                "upper": 60.0
+              },
+              {
+                "count": 5,
+                "lower": 60.0,
+                "upper": 65.0
+              },
+              {
+                "count": 5,
+                "lower": 65.0,
+                "upper": 70.0
+              },
+              {
+                "count": 5,
+                "lower": 70.0,
+                "upper": 75.0
+              },
+              {
+                "count": 5,
+                "lower": 75.0,
+                "upper": 80.0
+              },
+              {
+                "count": 5,
+                "lower": 80.0,
+                "upper": 85.0
+              },
+              {
+                "count": 4,
+                "lower": 85.0,
+                "upper": 90.0
+              },
+              {
+                "count": 5,
+                "lower": 90.0,
+                "upper": 95.0
+              },
+              {
+                "count": 6,
+                "lower": 95.0,
+                "upper": 100.0
+              }
+            ],
+            "category_name": "Male",
+            "category_type": "sex",
+            "count": 100,
+            "ks_pvalue": 1.0,
+            "ks_statistic": 0.01,
+            "mean": 49.63,
+            "median": 49.5,
+            "std": 29.06326
+          }
+        ],
+        "overall_mean": 49.595,
+        "overall_median": 49.5,
+        "title": "Score distributions by sex"
+      }
+    ],
+    "summary": "Audit analyzed 200 applicants (overall rate: 50.0%). No adverse impact flags detected.",
+    "tables": [
+      {
+        "category_key": "sex",
+        "highest_group": "Female",
+        "highest_rate": 0.5,
+        "rows": [
+          {
+            "applicant_count": 100,
+            "category_name": "Female",
+            "category_type": "sex",
+            "excluded": false,
+            "flagged": false,
+            "impact_ratio": 1.0,
+            "selected_count": 50,
+            "selection_rate": 0.5
+          },
+          {
+            "applicant_count": 100,
+            "category_name": "Male",
+            "category_type": "sex",
+            "excluded": false,
+            "flagged": false,
+            "impact_ratio": 1.0,
+            "selected_count": 50,
+            "selection_rate": 0.5
+          }
+        ],
+        "title": "Scoring rate impact ratios by sex"
+      }
+    ],
+    "total_applicants": 200,
+    "total_selected": 100,
+    "unknown_count": 0
+  },
+  "scoring_rate_median_equals_mode": {
+    "excluded_count": 0,
+    "fairness_metrics_tables": [],
+    "flags_count": 0,
+    "metric": "scoring_rate",
+    "overall_selection_rate": 0.0,
+    "score_distribution_tables": [
+      {
+        "category_key": "sex",
+        "groups": [
+          {
+            "bins": [
+              {
+                "count": 5,
+                "lower": 1.0,
+                "upper": 1.1
+              },
+              {
+                "count": 0,
+                "lower": 1.1,
+                "upper": 1.2
+              },
+              {
+                "count": 0,
+                "lower": 1.2,
+                "upper": 1.3
+              },
+              {
+                "count": 0,
+                "lower": 1.3,
+                "upper": 1.4
+              },
+              {
+                "count": 0,
+                "lower": 1.4,
+                "upper": 1.5
+              },
+              {
+                "count": 0,
+                "lower": 1.5,
+                "upper": 1.6
+              },
+              {
+                "count": 0,
+                "lower": 1.6,
+                "upper": 1.7
+              },
+              {
+                "count": 0,
+                "lower": 1.7,
+                "upper": 1.8
+              },
+              {
+                "count": 0,
+                "lower": 1.8,
+                "upper": 1.9
+              },
+              {
+                "count": 0,
+                "lower": 1.9,
+                "upper": 2.0
+              },
+              {
+                "count": 8,
+                "lower": 2.0,
+                "upper": 2.1
+              },
+              {
+                "count": 0,
+                "lower": 2.1,
+                "upper": 2.2
+              },
+              {
+                "count": 0,
+                "lower": 2.2,
+                "upper": 2.3
+              },
+              {
+                "count": 0,
+                "lower": 2.3,
+                "upper": 2.4
+              },
+              {
+                "count": 0,
+                "lower": 2.4,
+                "upper": 2.5
+              },
+              {
+                "count": 0,
+                "lower": 2.5,
+                "upper": 2.6
+              },
+              {
+                "count": 0,
+                "lower": 2.6,
+                "upper": 2.7
+              },
+              {
+                "count": 0,
+                "lower": 2.7,
+                "upper": 2.8
+              },
+              {
+                "count": 0,
+                "lower": 2.8,
+                "upper": 2.9
+              },
+              {
+                "count": 37,
+                "lower": 2.9,
+                "upper": 3.0
+              }
+            ],
+            "category_name": "Female",
+            "category_type": "sex",
+            "count": 50,
+            "ks_pvalue": 0.0,
+            "ks_statistic": 0.75,
+            "mean": 2.64,
+            "median": 3.0,
+            "std": 0.656049
+          },
+          {
+            "bins": [
+              {
+                "count": 5,
+                "lower": 1.0,
+                "upper": 1.1
+              },
+              {
+                "count": 0,
+                "lower": 1.1,
+                "upper": 1.2
+              },
+              {
+                "count": 0,
+                "lower": 1.2,
+                "upper": 1.3
+              },
+              {
+                "count": 0,
+                "lower": 1.3,
+                "upper": 1.4
+              },
+              {
+                "count": 0,
+                "lower": 1.4,
+                "upper": 1.5
+              },
+              {
+                "count": 0,
+                "lower": 1.5,
+                "upper": 1.6
+              },
+              {
+                "count": 0,
+                "lower": 1.6,
+                "upper": 1.7
+              },
+              {
+                "count": 0,
+                "lower": 1.7,
+                "upper": 1.8
+              },
+              {
+                "count": 0,
+                "lower": 1.8,
+                "upper": 1.9
+              },
+              {
+                "count": 0,
+                "lower": 1.9,
+                "upper": 2.0
+              },
+              {
+                "count": 7,
+                "lower": 2.0,
+                "upper": 2.1
+              },
+              {
+                "count": 0,
+                "lower": 2.1,
+                "upper": 2.2
+              },
+              {
+                "count": 0,
+                "lower": 2.2,
+                "upper": 2.3
+              },
+              {
+                "count": 0,
+                "lower": 2.3,
+                "upper": 2.4
+              },
+              {
+                "count": 0,
+                "lower": 2.4,
+                "upper": 2.5
+              },
+              {
+                "count": 0,
+                "lower": 2.5,
+                "upper": 2.6
+              },
+              {
+                "count": 0,
+                "lower": 2.6,
+                "upper": 2.7
+              },
+              {
+                "count": 0,
+                "lower": 2.7,
+                "upper": 2.8
+              },
+              {
+                "count": 0,
+                "lower": 2.8,
+                "upper": 2.9
+              },
+              {
+                "count": 38,
+                "lower": 2.9,
+                "upper": 3.0
+              }
+            ],
+            "category_name": "Male",
+            "category_type": "sex",
+            "count": 50,
+            "ks_pvalue": 0.0,
+            "ks_statistic": 0.75,
+            "mean": 2.66,
+            "median": 3.0,
+            "std": 0.65146
+          }
+        ],
+        "overall_mean": 2.65,
+        "overall_median": 3.0,
+        "title": "Score distributions by sex"
+      }
+    ],
+    "summary": "Audit analyzed 100 applicants (overall rate: 0.0%). No adverse impact flags detected.",
+    "tables": [
+      {
+        "category_key": "sex",
+        "highest_group": "",
+        "highest_rate": null,
+        "rows": [
+          {
+            "applicant_count": 50,
+            "category_name": "Female",
+            "category_type": "sex",
+            "excluded": false,
+            "flagged": false,
+            "impact_ratio": null,
+            "selected_count": 0,
+            "selection_rate": 0.0
+          },
+          {
+            "applicant_count": 50,
+            "category_name": "Male",
+            "category_type": "sex",
+            "excluded": false,
+            "flagged": false,
+            "impact_ratio": null,
+            "selected_count": 0,
+            "selection_rate": 0.0
+          }
+        ],
+        "title": "Scoring rate impact ratios by sex"
+      }
+    ],
+    "total_applicants": 100,
+    "total_selected": 0,
+    "unknown_count": 0
+  },
+  "scoring_rate_rounding_half": {
+    "excluded_count": 0,
+    "fairness_metrics_tables": [],
+    "flags_count": 1,
+    "metric": "scoring_rate",
+    "overall_selection_rate": 0.253906,
+    "score_distribution_tables": [
+      {
+        "category_key": "sex",
+        "groups": [
+          {
+            "bins": [
+              {
+                "count": 127,
+                "lower": 10.0,
+                "upper": 14.0
+              },
+              {
+                "count": 0,
+                "lower": 14.0,
+                "upper": 18.0
+              },
+              {
+                "count": 0,
+                "lower": 18.0,
+                "upper": 22.0
+              },
+              {
+                "count": 0,
+                "lower": 22.0,
+                "upper": 26.0
+              },
+              {
+                "count": 0,
+                "lower": 26.0,
+                "upper": 30.0
+              },
+              {
+                "count": 0,
+                "lower": 30.0,
+                "upper": 34.0
+              },
+              {
+                "count": 0,
+                "lower": 34.0,
+                "upper": 38.0
+              },
+              {
+                "count": 0,
+                "lower": 38.0,
+                "upper": 42.0
+              },
+              {
+                "count": 0,
+                "lower": 42.0,
+                "upper": 46.0
+              },
+              {
+                "count": 0,
+                "lower": 46.0,
+                "upper": 50.0
+              },
+              {
+                "count": 0,
+                "lower": 50.0,
+                "upper": 54.0
+              },
+              {
+                "count": 0,
+                "lower": 54.0,
+                "upper": 58.0
+              },
+              {
+                "count": 0,
+                "lower": 58.0,
+                "upper": 62.0
+              },
+              {
+                "count": 0,
+                "lower": 62.0,
+                "upper": 66.0
+              },
+              {
+                "count": 0,
+                "lower": 66.0,
+                "upper": 70.0
+              },
+              {
+                "count": 0,
+                "lower": 70.0,
+                "upper": 74.0
+              },
+              {
+                "count": 0,
+                "lower": 74.0,
+                "upper": 78.0
+              },
+              {
+                "count": 0,
+                "lower": 78.0,
+                "upper": 82.0
+              },
+              {
+                "count": 0,
+                "lower": 82.0,
+                "upper": 86.0
+              },
+              {
+                "count": 1,
+                "lower": 86.0,
+                "upper": 90.0
+              }
+            ],
+            "category_name": "Female",
+            "category_type": "sex",
+            "count": 128,
+            "ks_pvalue": 0.0,
+            "ks_statistic": 0.992188,
+            "mean": 10.625,
+            "median": 10.0,
+            "std": 7.043392
+          },
+          {
+            "bins": [
+              {
+                "count": 64,
+                "lower": 10.0,
+                "upper": 14.0
+              },
+              {
+                "count": 0,
+                "lower": 14.0,
+                "upper": 18.0
+              },
+              {
+                "count": 0,
+                "lower": 18.0,
+                "upper": 22.0
+              },
+              {
+                "count": 0,
+                "lower": 22.0,
+                "upper": 26.0
+              },
+              {
+                "count": 0,
+                "lower": 26.0,
+                "upper": 30.0
+              },
+              {
+                "count": 0,
+                "lower": 30.0,
+                "upper": 34.0
+              },
+              {
+                "count": 0,
+                "lower": 34.0,
+                "upper": 38.0
+              },
+              {
+                "count": 0,
+                "lower": 38.0,
+                "upper": 42.0
+              },
+              {
+                "count": 0,
+                "lower": 42.0,
+                "upper": 46.0
+              },
+              {
+                "count": 0,
+                "lower": 46.0,
+                "upper": 50.0
+              },
+              {
+                "count": 0,
+                "lower": 50.0,
+                "upper": 54.0
+              },
+              {
+                "count": 0,
+                "lower": 54.0,
+                "upper": 58.0
+              },
+              {
+                "count": 0,
+                "lower": 58.0,
+                "upper": 62.0
+              },
+              {
+                "count": 0,
+                "lower": 62.0,
+                "upper": 66.0
+              },
+              {
+                "count": 0,
+                "lower": 66.0,
+                "upper": 70.0
+              },
+              {
+                "count": 0,
+                "lower": 70.0,
+                "upper": 74.0
+              },
+              {
+                "count": 0,
+                "lower": 74.0,
+                "upper": 78.0
+              },
+              {
+                "count": 0,
+                "lower": 78.0,
+                "upper": 82.0
+              },
+              {
+                "count": 0,
+                "lower": 82.0,
+                "upper": 86.0
+              },
+              {
+                "count": 64,
+                "lower": 86.0,
+                "upper": 90.0
+              }
+            ],
+            "category_name": "Male",
+            "category_type": "sex",
+            "count": 128,
+            "ks_pvalue": 0.0,
+            "ks_statistic": 0.5,
+            "mean": 50.0,
+            "median": 50.0,
+            "std": 40.0
+          }
+        ],
+        "overall_mean": 30.3125,
+        "overall_median": 10.0,
+        "title": "Score distributions by sex"
+      }
+    ],
+    "summary": "Audit analyzed 256 applicants (overall rate: 25.4%). 1 group(s) flagged with impact ratio below 0.80 threshold.",
+    "tables": [
+      {
+        "category_key": "sex",
+        "highest_group": "Male",
+        "highest_rate": 0.5,
+        "rows": [
+          {
+            "applicant_count": 128,
+            "category_name": "Female",
+            "category_type": "sex",
+            "excluded": false,
+            "flagged": true,
+            "impact_ratio": 0.015624,
+            "selected_count": 1,
+            "selection_rate": 0.007812
+          },
+          {
+            "applicant_count": 128,
+            "category_name": "Male",
+            "category_type": "sex",
+            "excluded": false,
+            "flagged": false,
+            "impact_ratio": 1.0,
+            "selected_count": 64,
+            "selection_rate": 0.5
+          }
+        ],
+        "title": "Scoring rate impact ratios by sex"
+      }
+    ],
+    "total_applicants": 256,
+    "total_selected": 65,
+    "unknown_count": 0
+  },
+  "selection_rate_all_selected": {
+    "excluded_count": 0,
+    "fairness_metrics_tables": [],
+    "flags_count": 0,
+    "metric": "selection_rate",
+    "overall_selection_rate": 1.0,
+    "score_distribution_tables": [],
+    "summary": "Audit analyzed 100 applicants (overall rate: 100.0%). No adverse impact flags detected.",
+    "tables": [
+      {
+        "category_key": "sex",
+        "highest_group": "Female",
+        "highest_rate": 1.0,
+        "rows": [
+          {
+            "applicant_count": 50,
+            "category_name": "Female",
+            "category_type": "sex",
+            "excluded": false,
+            "flagged": false,
+            "impact_ratio": 1.0,
+            "selected_count": 50,
+            "selection_rate": 1.0
+          },
+          {
+            "applicant_count": 50,
+            "category_name": "Male",
+            "category_type": "sex",
+            "excluded": false,
+            "flagged": false,
+            "impact_ratio": 1.0,
+            "selected_count": 50,
+            "selection_rate": 1.0
+          }
+        ],
+        "title": "Impact ratios by sex"
+      }
+    ],
+    "total_applicants": 100,
+    "total_selected": 100,
+    "unknown_count": 0
+  },
+  "selection_rate_balanced": {
+    "excluded_count": 0,
+    "fairness_metrics_tables": [],
+    "flags_count": 1,
+    "metric": "selection_rate",
+    "overall_selection_rate": 0.5,
+    "score_distribution_tables": [],
+    "summary": "Audit analyzed 200 applicants (overall rate: 50.0%). 1 group(s) flagged with impact ratio below 0.80 threshold.",
+    "tables": [
+      {
+        "category_key": "sex",
+        "highest_group": "Male",
+        "highest_rate": 0.6,
+        "rows": [
+          {
+            "applicant_count": 100,
+            "category_name": "Female",
+            "category_type": "sex",
+            "excluded": false,
+            "flagged": true,
+            "impact_ratio": 0.666667,
+            "selected_count": 40,
+            "selection_rate": 0.4
+          },
+          {
+            "applicant_count": 100,
+            "category_name": "Male",
+            "category_type": "sex",
+            "excluded": false,
+            "flagged": false,
+            "impact_ratio": 1.0,
+            "selected_count": 60,
+            "selection_rate": 0.6
+          }
+        ],
+        "title": "Impact ratios by sex"
+      }
+    ],
+    "total_applicants": 200,
+    "total_selected": 100,
+    "unknown_count": 0
+  },
+  "selection_rate_blank_group_names": {
+    "excluded_count": 0,
+    "fairness_metrics_tables": [],
+    "flags_count": 0,
+    "metric": "selection_rate",
+    "overall_selection_rate": 0.34,
+    "score_distribution_tables": [],
+    "summary": "Audit analyzed 100 applicants (overall rate: 34.0%). No adverse impact flags detected.",
+    "tables": [
+      {
+        "category_key": "sex",
+        "highest_group": "Female",
+        "highest_rate": 0.333333,
+        "rows": [
+          {
+            "applicant_count": 6,
+            "category_name": "Female",
+            "category_type": "sex",
+            "excluded": false,
+            "flagged": false,
+            "impact_ratio": 0.999999,
+            "selected_count": 2,
+            "selection_rate": 0.333333
+          },
+          {
+            "applicant_count": 6,
+            "category_name": "Male",
+            "category_type": "sex",
+            "excluded": false,
+            "flagged": false,
+            "impact_ratio": 0.999999,
+            "selected_count": 2,
+            "selection_rate": 0.333333
+          }
+        ],
+        "title": "Impact ratios by sex"
+      }
+    ],
+    "total_applicants": 100,
+    "total_selected": 34,
+    "unknown_count": 0
+  },
+  "selection_rate_intersectional": {
+    "excluded_count": 0,
+    "fairness_metrics_tables": [],
+    "flags_count": 10,
+    "metric": "selection_rate",
+    "overall_selection_rate": 0.571429,
+    "score_distribution_tables": [],
+    "summary": "Audit analyzed 1,400 applicants (overall rate: 57.1%). 10 group(s) flagged with impact ratio below 0.80 threshold.",
+    "tables": [
+      {
+        "category_key": "sex",
+        "highest_group": "Female",
+        "highest_rate": 0.571429,
+        "rows": [
+          {
+            "applicant_count": 700,
+            "category_name": "Female",
+            "category_type": "sex",
+            "excluded": false,
+            "flagged": false,
+            "impact_ratio": 1.000001,
+            "selected_count": 400,
+            "selection_rate": 0.571429
+          },
+          {
+            "applicant_count": 700,
+            "category_name": "Male",
+            "category_type": "sex",
+            "excluded": false,
+            "flagged": false,
+            "impact_ratio": 1.000001,
+            "selected_count": 400,
+            "selection_rate": 0.571429
+          }
+        ],
+        "title": "Impact ratios by sex"
+      },
+      {
+        "category_key": "race_ethnicity",
+        "highest_group": "Black or African American",
+        "highest_rate": 1.0,
+        "rows": [
+          {
+            "applicant_count": 200,
+            "category_name": "Asian",
+            "category_type": "race_ethnicity",
+            "excluded": false,
+            "flagged": true,
+            "impact_ratio": 0.5,
+            "selected_count": 100,
+            "selection_rate": 0.5
+          },
+          {
+            "applicant_count": 200,
+            "category_name": "Black or African American",
+            "category_type": "race_ethnicity",
+            "excluded": false,
+            "flagged": false,
+            "impact_ratio": 1.0,
+            "selected_count": 200,
+            "selection_rate": 1.0
+          },
+          {
+            "applicant_count": 200,
+            "category_name": "Hispanic or Latino",
+            "category_type": "race_ethnicity",
+            "excluded": false,
+            "flagged": true,
+            "impact_ratio": 0.0,
+            "selected_count": 0,
+            "selection_rate": 0.0
+          },
+          {
+            "applicant_count": 200,
+            "category_name": "Native American or Alaska Native",
+            "category_type": "race_ethnicity",
+            "excluded": false,
+            "flagged": true,
+            "impact_ratio": 0.5,
+            "selected_count": 100,
+            "selection_rate": 0.5
+          },
+          {
+            "applicant_count": 200,
+            "category_name": "Native Hawaiian or Pacific Islander",
+            "category_type": "race_ethnicity",
+            "excluded": false,
+            "flagged": false,
+            "impact_ratio": 1.0,
+            "selected_count": 200,
+            "selection_rate": 1.0
+          },
+          {
+            "applicant_count": 200,
+            "category_name": "Two or more races",
+            "category_type": "race_ethnicity",
+            "excluded": false,
+            "flagged": true,
+            "impact_ratio": 0.0,
+            "selected_count": 0,
+            "selection_rate": 0.0
+          },
+          {
+            "applicant_count": 200,
+            "category_name": "White",
+            "category_type": "race_ethnicity",
+            "excluded": false,
+            "flagged": false,
+            "impact_ratio": 1.0,
+            "selected_count": 200,
+            "selection_rate": 1.0
+          }
+        ],
+        "title": "Impact ratios by race/ethnicity"
+      },
+      {
+        "category_key": "intersectional",
+        "highest_group": "Female - Asian",
+        "highest_rate": 1.0,
+        "rows": [
+          {
+            "applicant_count": 100,
+            "category_name": "Female - Asian",
+            "category_type": "intersectional",
+            "excluded": false,
+            "flagged": false,
+            "impact_ratio": 1.0,
+            "selected_count": 100,
+            "selection_rate": 1.0
+          },
+          {
+            "applicant_count": 100,
+            "category_name": "Female - Black or African American",
+            "category_type": "intersectional",
+            "excluded": false,
+            "flagged": false,
+            "impact_ratio": 1.0,
+            "selected_count": 100,
+            "selection_rate": 1.0
+          },
+          {
+            "applicant_count": 100,
+            "category_name": "Female - Hispanic or Latino",
+            "category_type": "intersectional",
+            "excluded": false,
+            "flagged": true,
+            "impact_ratio": 0.0,
+            "selected_count": 0,
+            "selection_rate": 0.0
+          },
+          {
+            "applicant_count": 100,
+            "category_name": "Female - Native American or Alaska Native",
+            "category_type": "intersectional",
+            "excluded": false,
+            "flagged": true,
+            "impact_ratio": 0.0,
+            "selected_count": 0,
+            "selection_rate": 0.0
+          },
+          {
+            "applicant_count": 100,
+            "category_name": "Female - Native Hawaiian or Pacific Islander",
+            "category_type": "intersectional",
+            "excluded": false,
+            "flagged": false,
+            "impact_ratio": 1.0,
+            "selected_count": 100,
+            "selection_rate": 1.0
+          },
+          {
+            "applicant_count": 100,
+            "category_name": "Female - Two or more races",
+            "category_type": "intersectional",
+            "excluded": false,
+            "flagged": true,
+            "impact_ratio": 0.0,
+            "selected_count": 0,
+            "selection_rate": 0.0
+          },
+          {
+            "applicant_count": 100,
+            "category_name": "Female - White",
+            "category_type": "intersectional",
+            "excluded": false,
+            "flagged": false,
+            "impact_ratio": 1.0,
+            "selected_count": 100,
+            "selection_rate": 1.0
+          },
+          {
+            "applicant_count": 100,
+            "category_name": "Male - Asian",
+            "category_type": "intersectional",
+            "excluded": false,
+            "flagged": true,
+            "impact_ratio": 0.0,
+            "selected_count": 0,
+            "selection_rate": 0.0
+          },
+          {
+            "applicant_count": 100,
+            "category_name": "Male - Black or African American",
+            "category_type": "intersectional",
+            "excluded": false,
+            "flagged": false,
+            "impact_ratio": 1.0,
+            "selected_count": 100,
+            "selection_rate": 1.0
+          },
+          {
+            "applicant_count": 100,
+            "category_name": "Male - Hispanic or Latino",
+            "category_type": "intersectional",
+            "excluded": false,
+            "flagged": true,
+            "impact_ratio": 0.0,
+            "selected_count": 0,
+            "selection_rate": 0.0
+          },
+          {
+            "applicant_count": 100,
+            "category_name": "Male - Native American or Alaska Native",
+            "category_type": "intersectional",
+            "excluded": false,
+            "flagged": false,
+            "impact_ratio": 1.0,
+            "selected_count": 100,
+            "selection_rate": 1.0
+          },
+          {
+            "applicant_count": 100,
+            "category_name": "Male - Native Hawaiian or Pacific Islander",
+            "category_type": "intersectional",
+            "excluded": false,
+            "flagged": false,
+            "impact_ratio": 1.0,
+            "selected_count": 100,
+            "selection_rate": 1.0
+          },
+          {
+            "applicant_count": 100,
+            "category_name": "Male - Two or more races",
+            "category_type": "intersectional",
+            "excluded": false,
+            "flagged": true,
+            "impact_ratio": 0.0,
+            "selected_count": 0,
+            "selection_rate": 0.0
+          },
+          {
+            "applicant_count": 100,
+            "category_name": "Male - White",
+            "category_type": "intersectional",
+            "excluded": false,
+            "flagged": false,
+            "impact_ratio": 1.0,
+            "selected_count": 100,
+            "selection_rate": 1.0
+          }
+        ],
+        "title": "Impact ratios by intersectional category"
+      }
+    ],
+    "total_applicants": 1400,
+    "total_selected": 800,
+    "unknown_count": 0
+  },
+  "selection_rate_none_selected": {
+    "excluded_count": 0,
+    "fairness_metrics_tables": [],
+    "flags_count": 0,
+    "metric": "selection_rate",
+    "overall_selection_rate": 0.0,
+    "score_distribution_tables": [],
+    "summary": "Audit analyzed 100 applicants (overall rate: 0.0%). No adverse impact flags detected.",
+    "tables": [
+      {
+        "category_key": "sex",
+        "highest_group": "",
+        "highest_rate": null,
+        "rows": [
+          {
+            "applicant_count": 50,
+            "category_name": "Female",
+            "category_type": "sex",
+            "excluded": false,
+            "flagged": false,
+            "impact_ratio": null,
+            "selected_count": 0,
+            "selection_rate": 0.0
+          },
+          {
+            "applicant_count": 50,
+            "category_name": "Male",
+            "category_type": "sex",
+            "excluded": false,
+            "flagged": false,
+            "impact_ratio": null,
+            "selected_count": 0,
+            "selection_rate": 0.0
+          }
+        ],
+        "title": "Impact ratios by sex"
+      }
+    ],
+    "total_applicants": 100,
+    "total_selected": 0,
+    "unknown_count": 0
+  },
+  "selection_rate_single_group": {
+    "excluded_count": 0,
+    "fairness_metrics_tables": [],
+    "flags_count": 0,
+    "metric": "selection_rate",
+    "overall_selection_rate": 0.333333,
+    "score_distribution_tables": [],
+    "summary": "Audit analyzed 60 applicants (overall rate: 33.3%). No adverse impact flags detected.",
+    "tables": [
+      {
+        "category_key": "sex",
+        "highest_group": "Male",
+        "highest_rate": 0.333333,
+        "rows": [
+          {
+            "applicant_count": 60,
+            "category_name": "Male",
+            "category_type": "sex",
+            "excluded": false,
+            "flagged": false,
+            "impact_ratio": 0.999999,
+            "selected_count": 20,
+            "selection_rate": 0.333333
+          }
+        ],
+        "title": "Impact ratios by sex"
+      }
+    ],
+    "total_applicants": 60,
+    "total_selected": 20,
+    "unknown_count": 0
+  },
+  "selection_rate_small_sample_excluded": {
+    "excluded_count": 1,
+    "fairness_metrics_tables": [],
+    "flags_count": 0,
+    "metric": "selection_rate",
+    "overall_selection_rate": 0.25,
+    "score_distribution_tables": [],
+    "summary": "Audit analyzed 1,000 applicants (overall rate: 25.0%). No adverse impact flags detected. 1 group(s) excluded from calculations due to small sample size.",
+    "tables": [
+      {
+        "category_key": "race_ethnicity",
+        "highest_group": "Two or more races",
+        "highest_rate": 0.3,
+        "rows": [
+          {
+            "applicant_count": 500,
+            "category_name": "Asian",
+            "category_type": "race_ethnicity",
+            "excluded": false,
+            "flagged": false,
+            "impact_ratio": 0.833333,
+            "selected_count": 125,
+            "selection_rate": 0.25
+          },
+          {
+            "applicant_count": 10,
+            "category_name": "Two or more races",
+            "category_type": "race_ethnicity",
+            "excluded": true,
+            "flagged": false,
+            "impact_ratio": null,
+            "selected_count": 3,
+            "selection_rate": 0.3
+          },
+          {
+            "applicant_count": 490,
+            "category_name": "White",
+            "category_type": "race_ethnicity",
+            "excluded": false,
+            "flagged": false,
+            "impact_ratio": 0.829933,
+            "selected_count": 122,
+            "selection_rate": 0.24898
+          }
+        ],
+        "title": "Impact ratios by race/ethnicity"
+      }
+    ],
+    "total_applicants": 1000,
+    "total_selected": 250,
+    "unknown_count": 0
+  }
+}

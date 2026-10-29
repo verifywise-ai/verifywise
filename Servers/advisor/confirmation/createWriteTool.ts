@@ -19,6 +19,12 @@ interface WriteToolConfig {
   warningLevel: WarningLevel;
   descriptionFn: (params: Record<string, unknown>) => string;
   executeFn: WriteExecuteFn;
+  /**
+   * Throws on parameters the tool must refuse outright. It runs before the
+   * request is submitted for approval, so an invalid call never queues an
+   * approval card, and again before execution.
+   */
+  validateFn?: (params: Record<string, unknown>) => void;
 }
 
 /**
@@ -41,12 +47,22 @@ export function createWriteToolFn(
   organizationId: number,
 ) => Promise<ConfirmationToolResult | unknown> {
   // Register the executor so the gateway can find it
-  writeToolExecutors.set(config.toolName, config.executeFn);
+  const { validateFn, executeFn } = config;
+  writeToolExecutors.set(
+    config.toolName,
+    validateFn
+      ? async (params, organizationId) => {
+          validateFn(params);
+          return executeFn(params, organizationId);
+        }
+      : executeFn,
+  );
 
   return async (
     params: Record<string, unknown>,
     organizationId: number,
   ): Promise<ConfirmationToolResult | unknown> => {
+    validateFn?.(params);
     const userId = (params._userId as number) || 0;
     const sanitized = sanitizeParams(params);
     const description = config.descriptionFn(sanitized);

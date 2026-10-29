@@ -3,14 +3,16 @@
  *
  * `files.tags` is stored as a JSONB array of strings. These helpers run
  * tenant-scoped UPDATEs that replace, union, or subtract a tag list against
- * the existing column. The caller must validate org ownership beforehand
- * (e.g. via `assertOrgOwnsIds`).
+ * the existing column. Every UPDATE skips bias audit stance PDFs itself;
+ * callers still check beforehand that every id is a visible file in the
+ * organization (`allFilesVisibleQuery`) so a bad id is refused, not skipped.
  *
  * @module utils/files/bulkFiles.utils
  */
 
 import { Transaction } from "sequelize";
 import { sequelize } from "../../database/db";
+import { VISIBLE_FILE_REPLACEMENTS, VISIBLE_FILE_SQL } from "./visibleFiles";
 
 export type BulkTagMode = "set" | "add" | "remove";
 
@@ -42,6 +44,7 @@ export const bulkUpdateFileTagsQuery = async ({
     organizationId,
     ids,
     tags: JSON.stringify(tags),
+    ...VISIBLE_FILE_REPLACEMENTS,
   };
 
   if (mode === "set") {
@@ -49,7 +52,8 @@ export const bulkUpdateFileTagsQuery = async ({
       `UPDATE files
          SET tags = CAST(:tags AS jsonb)
        WHERE organization_id = :organizationId
-         AND id IN (:ids)`,
+         AND id IN (:ids)
+         AND ${VISIBLE_FILE_SQL("files")}`,
       { replacements, transaction },
     );
     return;
@@ -65,7 +69,8 @@ export const bulkUpdateFileTagsQuery = async ({
            ) AS t
          )
        WHERE f.organization_id = :organizationId
-         AND f.id IN (:ids)`,
+         AND f.id IN (:ids)
+         AND ${VISIBLE_FILE_SQL("f")}`,
       { replacements, transaction },
     );
     return;
@@ -82,7 +87,8 @@ export const bulkUpdateFileTagsQuery = async ({
          )
        )
      WHERE f.organization_id = :organizationId
-       AND f.id IN (:ids)`,
+       AND f.id IN (:ids)
+       AND ${VISIBLE_FILE_SQL("f")}`,
     { replacements, transaction },
   );
 };

@@ -72,8 +72,59 @@ export default logger;
 
 let logId = 1;
 
+type LogState = "processing" | "successful" | "error";
+
+/**
+ * Ship one line to the central log stack (OTLP) only, with the attributes
+ * every structured line carries; the deployment name is added by
+ * emitOtlpLog. No-op when observability is disabled. Writes nothing to the
+ * tenant file log, so a line sent only here is not readable by org users.
+ * logStructured sends its own line through this, passing the tenant it has
+ * already resolved; other callers leave it out and it is resolved here.
+ */
+export function logCentralOnly(
+  state: LogState,
+  text: string,
+  functionName: string,
+  fileName: string,
+  tenant: string = getTenantIdForLogging(),
+): void {
+  emitOtlpLog(state === "error" ? "error" : "info", text, {
+    "tenant.hash": tenant,
+    "log.state": state,
+    "log.function": functionName,
+    "log.file": fileName,
+    "service.name": "verifywise-backend",
+  });
+}
+
+/**
+ * File-log failures already reported, keyed by tenant and error code (or
+ * message), so a lasting failure is reported once and a new kind is still
+ * reported.
+ */
+const reportedTenantLogFailures = new Set<string>();
+
+/**
+ * Writes one line to the tenant's file log. A failure (the tenant log
+ * directory cannot be created, say) goes to stderr once per tenant and kind
+ * of failure and is never thrown: it must not reject a log call, hang a
+ * request, or stop the central line and the event-log write that follow it.
+ */
+function writeTenantLine(tenant: string, line: string): void {
+  try {
+    getTenantLogger(tenant).info(line);
+  } catch (error) {
+    const kind = (error as NodeJS.ErrnoException)?.code ?? String((error as Error)?.message);
+    const key = `${tenant}:${kind}`;
+    if (reportedTenantLogFailures.has(key)) return;
+    reportedTenantLogFailures.add(key);
+    console.error(`Failed to write the file log for tenant ${tenant}:`, error);
+  }
+}
+
 export function logStructured(
-  state: "processing" | "successful" | "error",
+  state: LogState,
   description: string,
   functionName: string,
   fileName: string,
@@ -85,19 +136,10 @@ export function logStructured(
 
   // Resolve the tenant scope from request context; falls back to 'default' when unset.
   const tenant = getTenantIdForLogging();
-  const tenantLogger = getTenantLogger(tenant);
+  writeTenantLine(tenant, line);
 
-  tenantLogger.info(line);
-
-  // Ship the same line to the central stack (deployment name is added by
-  // emitOtlpLog). No-op when observability is disabled. File format unchanged.
-  emitOtlpLog(state === "error" ? "error" : "info", line, {
-    "tenant.hash": tenant,
-    "log.state": state,
-    "log.function": functionName,
-    "log.file": fileName,
-    "service.name": "verifywise-backend",
-  });
+  // Ship the same line to the central stack. File format unchanged.
+  logCentralOnly(state, line, functionName, fileName, tenant);
 }
 
 /**
