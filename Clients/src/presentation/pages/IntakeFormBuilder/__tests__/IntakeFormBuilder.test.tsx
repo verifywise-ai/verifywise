@@ -231,6 +231,7 @@ describe("IntakeFormBuilder Page", () => {
 
       const save = screen.getByRole("button", { name: "Save" });
       await waitFor(() => expect(save).toBeEnabled());
+      expect(screen.getByText("Unsaved")).toBeInTheDocument();
       fireEvent.click(save);
       await waitFor(() => expect(updateIntakeForm).toHaveBeenCalledTimes(2));
       const second = vi.mocked(updateIntakeForm).mock.calls[1][1] as {
@@ -253,7 +254,9 @@ describe("IntakeFormBuilder Page", () => {
       fireEvent.click(await screen.findByText("Check answers while the submitter types"));
       fireEvent.click(screen.getByRole("button", { name: "Save" }));
       await waitFor(() => expect(updateIntakeForm).toHaveBeenCalledTimes(1));
-      await waitFor(() => expect(screen.getByRole("button", { name: "Save" })).toBeDisabled());
+      // "Unsaved" follows isDirty alone; Save is also disabled while saving.
+      await waitFor(() => expect(screen.queryByText("Unsaved")).not.toBeInTheDocument());
+      expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
     });
 
     it("still counts while the key list is loading", async () => {

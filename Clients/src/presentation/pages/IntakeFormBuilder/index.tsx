@@ -142,8 +142,21 @@ export function IntakeFormBuilder() {
   // Data loading
   // ============================================================================
 
+  // Bumped each time the builder opens a form, so a save reply for the
+  // previous form is ignored (see applySaved).
+  const loadCountRef = useRef(0);
+  // Set by a create just before it moves to the new form's edit route.
+  const createdIdRef = useRef<number | null>(null);
+
   // Load single form for the builder
   useEffect(() => {
+    // The form just created is already on screen, with any edit made while
+    // it saved: loading it again would replace those edits.
+    if (isEditing && formId && createdIdRef.current === parseInt(formId)) {
+      createdIdRef.current = null;
+      return;
+    }
+    loadCountRef.current += 1;
     if (isEditing && formId) {
       setIsLoadingForm(true);
       setLoadFailed(false);
@@ -228,8 +241,11 @@ export function IntakeFormBuilder() {
     (
       saved: Partial<IntakeForm> | undefined,
       editsAtStart: number,
+      loadsAtStart: number,
       overrides?: Partial<IntakeForm>,
     ) => {
+      // Another form was opened while the request ran: this reply is not for it.
+      if (loadCountRef.current !== loadsAtStart) return;
       const editedDuringSave = editCountRef.current !== editsAtStart;
       if (saved) {
         setForm((prev) =>
@@ -248,8 +264,6 @@ export function IntakeFormBuilder() {
               }
             : { ...prev, ...saved, ...overrides },
         );
-      } else if (overrides) {
-        setForm((prev) => ({ ...prev, ...overrides }));
       }
       setIsDirty(editedDuringSave);
     },
@@ -429,6 +443,7 @@ export function IntakeFormBuilder() {
     const savedMessage =
       logicErrors.length > 0 ? "Draft saved. Fix the highlighted fields before publishing" : null;
     const editsAtStart = editCountRef.current;
+    const loadsAtStart = loadCountRef.current;
     setIsSaving(true);
     try {
       const formData = {
@@ -444,7 +459,7 @@ export function IntakeFormBuilder() {
       };
       if (isEditing && formId) {
         const response = await updateIntakeForm(parseInt(formId), formData);
-        applySaved(response.data, editsAtStart);
+        applySaved(response.data, editsAtStart, loadsAtStart);
         setSnackbar({
           open: true,
           message: savedMessage ?? "Form saved successfully",
@@ -454,7 +469,8 @@ export function IntakeFormBuilder() {
       } else {
         const response = await createIntakeForm(formData);
         if (response.data?.id) {
-          applySaved(response.data, editsAtStart);
+          applySaved(response.data, editsAtStart, loadsAtStart);
+          createdIdRef.current = response.data.id;
           navigate(`/intake-forms/${response.data.id}/edit`, { replace: true });
           setSnackbar({
             open: true,
@@ -493,6 +509,7 @@ export function IntakeFormBuilder() {
       return;
     }
     const editsAtStart = editCountRef.current;
+    const loadsAtStart = loadCountRef.current;
     setIsSaving(true);
     try {
       const formData = {
@@ -516,10 +533,11 @@ export function IntakeFormBuilder() {
         const response = await createIntakeForm(formData);
         publishedData = response.data;
         if (publishedData?.id) {
+          createdIdRef.current = publishedData.id;
           navigate(`/intake-forms/${publishedData.id}/edit`, { replace: true });
         }
       }
-      applySaved(publishedData, editsAtStart, { status: IntakeFormStatus.ACTIVE });
+      applySaved(publishedData, editsAtStart, loadsAtStart, { status: IntakeFormStatus.ACTIVE });
       setSnackbar({
         open: true,
         message: "Form published successfully",
@@ -590,7 +608,10 @@ export function IntakeFormBuilder() {
   };
 
   const handleArchiveBuilder = async () => {
-    if (!formId || formId === "new") return;
+    if (!formId || formId === "new" || isSaving) return;
+    // Shares the saving lock with Save and Publish: a save reply landing
+    // after the archive would put the old status back.
+    setIsSaving(true);
     try {
       await updateIntakeForm(parseInt(formId), {
         status: IntakeFormStatus.ARCHIVED,
@@ -607,6 +628,8 @@ export function IntakeFormBuilder() {
         message: "Failed to archive form",
         severity: "error",
       });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -909,6 +932,7 @@ export function IntakeFormBuilder() {
                     <CustomizableButton
                       variant="outlined"
                       onClick={handleArchiveBuilder}
+                      isDisabled={isSaving}
                       icon={<Archive size={14} />}
                       text="Archive"
                       sx={{
