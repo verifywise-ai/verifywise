@@ -80,7 +80,7 @@ const SecondReviewPanel = ({
 
       {isOpen && !canReview && (
         <Typography sx={{ fontSize: "13px", color: theme.palette.text.tertiary }}>
-          A senior reviewer will check this approval.
+          An expert reviewer will check this approval.
         </Typography>
       )}
 

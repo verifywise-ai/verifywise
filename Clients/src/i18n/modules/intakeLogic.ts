@@ -7,28 +7,28 @@ export const de: Record<string, string> = {
   "missing field": "fehlendes Feld",
   "Scores less than": "Bewertungen weniger als",
   "points from": "Punkte von",
-  "of standard lane approvals by reviewers who are not senior are picked at random for a second review by a senior reviewer.":
-    "der Genehmigungen im Standardpfad durch nicht leitende Prüfer werden zufällig für eine zweite Prüfung durch einen leitenden Prüfer ausgewählt.",
+  "of regular review approvals by reviewers who are not expert reviewers are picked at random for a second review by an expert reviewer.":
+    "der regulären Genehmigungen durch Prüfer, die keine Expertenprüfer sind, werden zufällig für eine zweite Prüfung durch einen Expertenprüfer ausgewählt.",
   "Logic": "Logik",
   "What each rule and formula reads. Click a row to edit it.":
     "Was jede Regel und Formel liest. Klicken Sie auf eine Zeile, um sie zu bearbeiten.",
-  "Calculations": "Berechnungen",
-  "No calculations yet. Add a calculated field from the Advanced section.":
-    "Noch keine Berechnungen. Fügen Sie ein berechnetes Feld aus dem Bereich Erweitert hinzu.",
+  "Calculated values": "Berechnete Werte",
+  "No calculated values yet. Add a calculated field from the Advanced section.":
+    "Noch keine berechneten Werte. Fügen Sie ein berechnetes Feld aus dem Bereich Erweitert hinzu.",
   "No formula yet": "Noch keine Formel",
-  "Show/hide rules": "Ein-/Ausblenderegeln",
-  "No show/hide rules yet.": "Noch keine Ein-/Ausblenderegeln.",
+  "Conditional fields": "Bedingte Felder",
+  "No conditional fields yet.": "Noch keine bedingten Felder.",
   "Feeds": "Fließt ein in",
-  "Routing": "Weiterleitung",
-  "Routing is off. Turn it on in Form settings.":
-    "Die Weiterleitung ist aus. Schalten Sie sie in den Formulareinstellungen ein.",
-  "Prohibited practices go to senior reviewers.": "Verbotene Praktiken gehen an leitende Prüfer.",
-  "Submissions without a score go to senior reviewers.":
-    "Einreichungen ohne Bewertung gehen an leitende Prüfer.",
-  "or more go to senior reviewers.": "oder mehr gehen an leitende Prüfer.",
-  "Other submissions go to standard reviewers.": "Andere Einreichungen gehen an Standard-Prüfer.",
-  "Senior reviewers:": "Leitende Prüfer:",
-  "Standard reviewers:": "Standard-Prüfer:",
+  "Reviewer assignment": "Prüferzuweisung",
+  "Reviewer assignment is off. Turn it on in Form settings.":
+    "Die Prüferzuweisung ist aus. Schalten Sie sie in den Formulareinstellungen ein.",
+  "Prohibited practices go to expert reviewers.": "Verbotene Praktiken gehen an Expertenprüfer.",
+  "Submissions without a score go to expert reviewers.":
+    "Einreichungen ohne Bewertung gehen an Expertenprüfer.",
+  "or more go to expert reviewers.": "oder mehr gehen an Expertenprüfer.",
+  "Other submissions go to regular reviewers.": "Andere Einreichungen gehen an reguläre Prüfer.",
+  "Expert reviewers:": "Expertenprüfer:",
+  "Regular reviewers:": "Reguläre Prüfer:",
 };
 
 export const fr: Record<string, string> = {
@@ -36,30 +36,30 @@ export const fr: Record<string, string> = {
   "missing field": "champ manquant",
   "Scores less than": "Les scores à moins de",
   "points from": "points de",
-  "of standard lane approvals by reviewers who are not senior are picked at random for a second review by a senior reviewer.":
-    "des approbations de la voie standard par des réviseurs non seniors sont tirées au hasard pour une deuxième revue par un réviseur senior.",
+  "of regular review approvals by reviewers who are not expert reviewers are picked at random for a second review by an expert reviewer.":
+    "des approbations en revue habituelle par des réviseurs qui ne sont pas experts sont tirées au hasard pour une deuxième revue par un réviseur expert.",
   "Logic": "Logique",
   "What each rule and formula reads. Click a row to edit it.":
     "Ce que lit chaque règle et chaque formule. Cliquez sur une ligne pour la modifier.",
-  "Calculations": "Calculs",
-  "No calculations yet. Add a calculated field from the Advanced section.":
-    "Aucun calcul pour le moment. Ajoutez un champ calculé depuis la section Avancé.",
+  "Calculated values": "Valeurs calculées",
+  "No calculated values yet. Add a calculated field from the Advanced section.":
+    "Aucune valeur calculée pour le moment. Ajoutez un champ calculé depuis la section Avancé.",
   "No formula yet": "Pas encore de formule",
-  "Show/hide rules": "Règles d’affichage",
-  "No show/hide rules yet.": "Aucune règle d’affichage pour le moment.",
+  "Conditional fields": "Champs conditionnels",
+  "No conditional fields yet.": "Aucun champ conditionnel pour le moment.",
   "Feeds": "Alimente",
-  "Routing": "Routage",
-  "Routing is off. Turn it on in Form settings.":
-    "Le routage est désactivé. Activez-le dans les paramètres du formulaire.",
-  "Prohibited practices go to senior reviewers.":
-    "Les pratiques interdites vont aux réviseurs seniors.",
-  "Submissions without a score go to senior reviewers.":
-    "Les soumissions sans score vont aux réviseurs seniors.",
-  "or more go to senior reviewers.": "ou plus vont aux réviseurs seniors.",
-  "Other submissions go to standard reviewers.":
-    "Les autres soumissions vont aux réviseurs standard.",
-  "Senior reviewers:": "Réviseurs seniors :",
-  "Standard reviewers:": "Réviseurs standard :",
+  "Reviewer assignment": "Attribution des réviseurs",
+  "Reviewer assignment is off. Turn it on in Form settings.":
+    "L'attribution des réviseurs est désactivée. Activez-la dans les paramètres du formulaire.",
+  "Prohibited practices go to expert reviewers.":
+    "Les pratiques interdites vont aux réviseurs experts.",
+  "Submissions without a score go to expert reviewers.":
+    "Les soumissions sans score vont aux réviseurs experts.",
+  "or more go to expert reviewers.": "ou plus vont aux réviseurs experts.",
+  "Other submissions go to regular reviewers.":
+    "Les autres soumissions vont aux réviseurs habituels.",
+  "Expert reviewers:": "Réviseurs experts :",
+  "Regular reviewers:": "Réviseurs habituels :",
 };
 
 export const es: Record<string, string> = {
@@ -67,27 +67,28 @@ export const es: Record<string, string> = {
   "missing field": "campo faltante",
   "Scores less than": "Las puntuaciones a menos de",
   "points from": "puntos de",
-  "of standard lane approvals by reviewers who are not senior are picked at random for a second review by a senior reviewer.":
-    "de las aprobaciones del carril estándar hechas por revisores no sénior se eligen al azar para una segunda revisión de un revisor sénior.",
+  "of regular review approvals by reviewers who are not expert reviewers are picked at random for a second review by an expert reviewer.":
+    "de las aprobaciones en revisión habitual hechas por revisores que no son expertos se eligen al azar para una segunda revisión de un revisor experto.",
   "Logic": "Lógica",
   "What each rule and formula reads. Click a row to edit it.":
     "Lo que lee cada regla y fórmula. Haga clic en una fila para editarla.",
-  "Calculations": "Cálculos",
-  "No calculations yet. Add a calculated field from the Advanced section.":
-    "Aún no hay cálculos. Agregue un campo calculado desde la sección Avanzado.",
+  "Calculated values": "Valores calculados",
+  "No calculated values yet. Add a calculated field from the Advanced section.":
+    "Aún no hay valores calculados. Agregue un campo calculado desde la sección Avanzado.",
   "No formula yet": "Aún no hay fórmula",
-  "Show/hide rules": "Reglas de mostrar/ocultar",
-  "No show/hide rules yet.": "Aún no hay reglas de mostrar/ocultar.",
+  "Conditional fields": "Campos condicionales",
+  "No conditional fields yet.": "Aún no hay campos condicionales.",
   "Feeds": "Alimenta",
-  "Routing": "Enrutamiento",
-  "Routing is off. Turn it on in Form settings.":
-    "El enrutamiento está desactivado. Actívelo en la configuración del formulario.",
-  "Prohibited practices go to senior reviewers.":
-    "Las prácticas prohibidas pasan a los revisores sénior.",
-  "Submissions without a score go to senior reviewers.":
-    "Los envíos sin puntuación pasan a los revisores sénior.",
-  "or more go to senior reviewers.": "o más pasan a los revisores sénior.",
-  "Other submissions go to standard reviewers.": "Los demás envíos pasan a los revisores estándar.",
-  "Senior reviewers:": "Revisores sénior:",
-  "Standard reviewers:": "Revisores estándar:",
+  "Reviewer assignment": "Asignación de revisores",
+  "Reviewer assignment is off. Turn it on in Form settings.":
+    "La asignación de revisores está desactivada. Actívela en la configuración del formulario.",
+  "Prohibited practices go to expert reviewers.":
+    "Las prácticas prohibidas pasan a los revisores expertos.",
+  "Submissions without a score go to expert reviewers.":
+    "Los envíos sin puntuación pasan a los revisores expertos.",
+  "or more go to expert reviewers.": "o más pasan a los revisores expertos.",
+  "Other submissions go to regular reviewers.":
+    "Los demás envíos pasan a los revisores habituales.",
+  "Expert reviewers:": "Revisores expertos:",
+  "Regular reviewers:": "Revisores habituales:",
 };

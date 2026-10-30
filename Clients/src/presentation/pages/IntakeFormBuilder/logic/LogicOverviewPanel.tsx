@@ -174,9 +174,9 @@ export function LogicOverviewPanel({
       </Box>
 
       {group(
-        "Calculations",
+        "Calculated values",
         overview.calculations.length === 0
-          ? empty("No calculations yet. Add a calculated field from the Advanced section.")
+          ? empty("No calculated values yet. Add a calculated field from the Advanced section.")
           : overview.calculations.map((item, index) =>
               row(
                 `calc-${index}`,
@@ -197,9 +197,9 @@ export function LogicOverviewPanel({
       )}
 
       {group(
-        "Show/hide rules",
+        "Conditional fields",
         overview.rules.length === 0
-          ? empty("No show/hide rules yet.")
+          ? empty("No conditional fields yet.")
           : overview.rules.map((item, index) =>
               row(
                 `rule-${index}`,
@@ -243,39 +243,39 @@ export function LogicOverviewPanel({
         )}
 
       {group(
-        "Routing",
+        "Reviewer assignment",
         !routing?.enabled ? (
-          empty("Routing is off. Turn it on in Form settings.")
+          empty("Reviewer assignment is off. Turn it on in Form settings.")
         ) : (
           <Box sx={{ display: "flex", flexDirection: "column", gap: "8px" }}>
             {/* The order laneFor applies the rules in. */}
             <Box component="ol" sx={{ ...text, m: 0, pl: "20px" }}>
-              <li>Prohibited practices go to senior reviewers.</li>
-              <li>Submissions without a score go to senior reviewers.</li>
+              <li>Prohibited practices go to expert reviewers.</li>
+              <li>Submissions without a score go to expert reviewers.</li>
               {routing.closeCallMargin > 0 && (
                 <li>
                   <span>Scores less than</span> {routing.closeCallMargin} <span>points from</span>{" "}
-                  {routing.threshold} <span>go to senior reviewers.</span>
+                  {routing.threshold} <span>go to expert reviewers.</span>
                 </li>
               )}
               <li>
                 <span>Scores of</span> {routing.threshold}{" "}
-                <span>or more go to senior reviewers.</span>
+                <span>or more go to expert reviewers.</span>
               </li>
-              <li>Other submissions go to standard reviewers.</li>
+              <li>Other submissions go to regular reviewers.</li>
             </Box>
             <Typography sx={text}>
-              <span>Senior reviewers:</span> {names(routing.seniorReviewerIds)}
+              <span>Expert reviewers:</span> {names(routing.seniorReviewerIds)}
             </Typography>
             <Typography sx={text}>
-              <span>Standard reviewers:</span> {names(routing.standardReviewerIds)}
+              <span>Regular reviewers:</span> {names(routing.standardReviewerIds)}
             </Typography>
             {routing.secondReviewRate > 0 && (
               <Typography sx={text}>
                 {routing.secondReviewRate}%{" "}
                 <span>
-                  of standard lane approvals by reviewers who are not senior are picked at random
-                  for a second review by a senior reviewer.
+                  of regular review approvals by reviewers who are not expert reviewers are picked
+                  at random for a second review by an expert reviewer.
                 </span>
               </Typography>
             )}

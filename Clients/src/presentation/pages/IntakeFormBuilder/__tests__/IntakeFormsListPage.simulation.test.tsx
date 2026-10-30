@@ -34,7 +34,7 @@ describe("IntakeFormsListPage preview as a role", () => {
       route: "/intake-forms/submissions?simulateRole=standard",
     });
     expect(await screen.findByTestId("preview-role-banner-title")).toHaveTextContent(
-      "Previewing as Standard reviewer, simulation only",
+      "Previewing as Regular reviewer, simulation only",
     );
     expect(screen.getByTestId("modal-role")).toHaveTextContent("standard");
   });
@@ -44,9 +44,9 @@ describe("IntakeFormsListPage preview as a role", () => {
       route: "/intake-forms/submissions?simulateRole=standard",
     });
     fireEvent.click(await screen.findByTestId("button-preview-switch-role"));
-    fireEvent.click(await screen.findByRole("menuitem", { name: "Senior reviewer" }));
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Expert reviewer" }));
     expect(await screen.findByTestId("preview-role-banner-title")).toHaveTextContent(
-      "Previewing as Senior reviewer, simulation only",
+      "Previewing as Expert reviewer, simulation only",
     );
     expect(screen.getByTestId("modal-role")).toHaveTextContent("senior");
 

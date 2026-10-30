@@ -24,8 +24,8 @@ export const PREVIEW_ROLES: readonly PreviewRole[] = ["admin", "senior", "standa
 
 export const PREVIEW_ROLE_LABELS: Record<PreviewRole, string> = {
   admin: "Admin",
-  senior: "Senior reviewer",
-  standard: "Standard reviewer",
+  senior: "Expert reviewer",
+  standard: "Regular reviewer",
 };
 
 /** Query param on the Submissions page that turns simulation on. */
@@ -39,7 +39,7 @@ export const PUBLIC_PREVIEW_QUERY = `${PUBLIC_PREVIEW_PARAM}=1&as=submitter`;
 export const SIMULATED_USER_ID = -1;
 
 /** The server's wording when a user may not decide a senior-lane submission. */
-export const DECIDE_BLOCKED_SENIOR = "This submission is assigned to senior reviewers";
+export const DECIDE_BLOCKED_SENIOR = "This submission is assigned to expert reviewers";
 
 export function parsePreviewRole(raw: string | null | undefined): PreviewRole | null {
   return PREVIEW_ROLES.find((role) => role === raw) ?? null;

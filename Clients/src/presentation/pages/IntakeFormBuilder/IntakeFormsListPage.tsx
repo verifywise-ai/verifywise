@@ -746,7 +746,7 @@ export function IntakeFormsListPage() {
                   }
                 }}
                 items={LANE_FILTER_ITEMS}
-                sx={{ width: 160, backgroundColor: theme.palette.background.main }}
+                sx={{ width: 180, backgroundColor: theme.palette.background.main }}
               />
             </Stack>
             <SearchBox
@@ -781,7 +781,9 @@ export function IntakeFormsListPage() {
                     <TableCell sx={singleTheme.tableStyles.primary.header.cell}>
                       Risk tier
                     </TableCell>
-                    <TableCell sx={singleTheme.tableStyles.primary.header.cell}>Lane</TableCell>
+                    <TableCell sx={singleTheme.tableStyles.primary.header.cell}>
+                      Review level
+                    </TableCell>
                     <TableCell sx={singleTheme.tableStyles.primary.header.cell}>
                       Submitted
                     </TableCell>

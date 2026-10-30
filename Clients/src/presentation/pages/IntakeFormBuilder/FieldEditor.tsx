@@ -554,7 +554,7 @@ export function FieldEditor({
 
           {isCalculated && (
             <>
-              <EditorSection title="Calculation" defaultOpen>
+              <EditorSection title="Calculated value" defaultOpen>
                 <FormulaEditor
                   formula={localField.formula ?? ""}
                   numericFields={numericFields}

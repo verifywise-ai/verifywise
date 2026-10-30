@@ -118,7 +118,7 @@ describe("SubmissionPreviewModal preview as a role", () => {
     mockPreview({ routing: lane("senior") });
     renderModal("senior");
     expect(await screen.findByTestId("preview-role-banner-title")).toHaveTextContent(
-      "Previewing as Senior reviewer, simulation only",
+      "Previewing as Expert reviewer, simulation only",
     );
   });
 
@@ -154,7 +154,7 @@ describe("SubmissionPreviewModal preview as a role", () => {
     await waitFor(
       () =>
         expect(screen.getByTestId("lane-blocked")).toHaveTextContent(
-          "This submission is assigned to senior reviewers",
+          "This submission is assigned to expert reviewers",
         ),
       ROUTING_LOADED,
     );
@@ -183,14 +183,14 @@ describe("SubmissionPreviewModal preview as a role", () => {
     mockPreview({ routing: lane("standard") });
     renderModal("senior");
     expect(await screen.findByTestId("preview-role-banner-note")).toHaveTextContent(
-      "Loading routing for this form",
+      "Loading reviewer assignment for this form",
     );
     expect(await screen.findByTestId("lane-blocked")).toHaveTextContent(
-      "Loading routing for this form",
+      "Loading reviewer assignment for this form",
     );
     expect(screen.queryByText("Approve and create use case")).not.toBeInTheDocument();
     expect(screen.queryByText("Reject this submission instead")).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Send to senior review" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Request expert review" })).not.toBeInTheDocument();
   });
 
   it("keeps every decision control off when the routing can't be loaded", async () => {
@@ -200,7 +200,7 @@ describe("SubmissionPreviewModal preview as a role", () => {
     await waitFor(
       () =>
         expect(screen.getByTestId("preview-role-banner-note")).toHaveTextContent(
-          "Could not load routing for this form",
+          "Could not load reviewer assignment for this form",
         ),
       ROUTING_LOADED,
     );
@@ -236,7 +236,7 @@ describe("SubmissionPreviewModal preview as a role", () => {
     renderModal("standard");
     const escalate = await screen.findByRole(
       "button",
-      { name: "Send to senior review" },
+      { name: "Request expert review" },
       ROUTING_LOADED,
     );
     expect(escalate).toBeDisabled();
@@ -260,7 +260,7 @@ describe("SubmissionPreviewModal preview as a role", () => {
     mockPreview(OPEN_SECOND, { status: "approved", reviewedBy: 2 });
     renderModal("standard");
     expect(
-      await screen.findByText("A senior reviewer will check this approval.", {}, ROUTING_LOADED),
+      await screen.findByText("An expert reviewer will check this approval.", {}, ROUTING_LOADED),
     ).toBeVisible();
     expect(screen.queryByRole("button", { name: "Agree" })).not.toBeInTheDocument();
   });

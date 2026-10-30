@@ -52,7 +52,7 @@
       <mj-section>
         <mj-column width="100%">
           <mj-text>
-                <!-- reviewerName, formName, submissionId, entityType, approverName, reviewLink --><h2 class="email-heading">Second review requested</h2><p class="email-body">Hello {{reviewerName}},</p><p class="email-body">An approval for <strong>{{formName}}</strong> was picked at random for a second look by a senior reviewer. The approval stands; your check is a sample to confirm that the first decision was sound.</p><div class="box box-info"><p class="box-subtitle" style="margin-bottom: 6px;"><strong>Reference:</strong> #{{submissionId}}</p>
+                <!-- reviewerName, formName, submissionId, entityType, approverName, reviewLink --><h2 class="email-heading">Second review requested</h2><p class="email-body">Hello {{reviewerName}},</p><p class="email-body">An approval for <strong>{{formName}}</strong> was picked at random for a second look by an expert reviewer. The approval stands; your check is a sample to confirm that the first decision was sound.</p><div class="box box-info"><p class="box-subtitle" style="margin-bottom: 6px;"><strong>Reference:</strong> #{{submissionId}}</p>
                 <p class="box-subtitle" style="margin-bottom: 6px;"><strong>Entity type:</strong> {{entityType}}</p>
                 <p class="box-subtitle"><strong>Approved by:</strong> {{approverName}}</p></div><p style="margin: 28px 0 24px 0;"><a href="{{reviewLink}}" class="btn btn-primary">Open submission</a></p>
           </mj-text>
