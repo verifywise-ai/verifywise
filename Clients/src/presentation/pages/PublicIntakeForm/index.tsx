@@ -524,7 +524,7 @@ export function PublicIntakeForm() {
     return null;
   }
 
-  // Same order the show/hide rules and formulas use.
+  // Form order. Rules and formulas are settled in dependency order (evaluateForm).
   const sortedFields = sortFields(formData.schema.fields);
 
   // Resolve design settings; a key missing from the saved settings takes its default.

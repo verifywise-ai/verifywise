@@ -104,6 +104,14 @@ describe("IntakeFormBuilder Page", () => {
     expect(container).toBeInTheDocument();
   });
 
+  it("shows the logic overview from the header toggle", () => {
+    renderWithProviders(<IntakeFormBuilder />, { route: "/intake-forms/new/edit" });
+    expect(screen.queryByTestId("logic-overview-panel")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Logic" }));
+    expect(screen.getByTestId("logic-overview-panel")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Logic" })).toHaveAttribute("aria-pressed", "true");
+  });
+
   it("lists the keys from the shared query cache without fetching them again", async () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false, staleTime: Infinity } },
@@ -300,7 +308,7 @@ describe("IntakeFormBuilder Page", () => {
           schema: {
             version: "1.0",
             fields: [
-              { id: "total", type: "calculated", label: "Total", order: 0, formula: "{later} + 1" },
+              { id: "total", type: "calculated", label: "Total", order: 0, formula: "{total} + 1" },
               { id: "later", type: "number", label: "Later", order: 1 },
             ],
           },
@@ -329,7 +337,7 @@ describe("IntakeFormBuilder Page", () => {
           schema: {
             version: "1.0",
             fields: [
-              { id: "total", type: "calculated", label: "Total", order: 0, formula: "{later} + 1" },
+              { id: "total", type: "calculated", label: "Total", order: 0, formula: "{total} + 1" },
               { id: "later", type: "number", label: "Later", order: 1 },
             ],
           },
@@ -358,7 +366,7 @@ describe("IntakeFormBuilder Page", () => {
           schema: {
             version: "1.0",
             fields: [
-              { id: "total", type: "calculated", label: "Total", order: 0, formula: "{later} + 1" },
+              { id: "total", type: "calculated", label: "Total", order: 0, formula: "{total} + 1" },
               { id: "later", type: "number", label: "Later", order: 1 },
             ],
           },

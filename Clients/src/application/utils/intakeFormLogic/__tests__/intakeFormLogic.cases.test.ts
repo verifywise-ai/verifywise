@@ -72,9 +72,21 @@ describe("intake form logic cases (client copy)", () => {
 
   describe("evaluateForm", () => {
     it.each(cases.evaluateForm)("$name", (c) => {
-      const result = evaluateForm({ fields: c.fields }, c.answers);
-      expect(Array.from(result.visibleIds).sort()).toEqual(c.visibleIds);
-      expect({ ...result.calculated }).toEqual(c.calculated);
+      // "anyOrder" cases must give the same result with the fields in reverse order.
+      const layouts = c.anyOrder
+        ? [
+            c.fields,
+            c.fields.map((field: object, i: number) => ({
+              ...field,
+              order: c.fields.length - 1 - i,
+            })),
+          ]
+        : [c.fields];
+      for (const fields of layouts) {
+        const result = evaluateForm({ fields }, c.answers);
+        expect(Array.from(result.visibleIds).sort()).toEqual(c.visibleIds);
+        expect({ ...result.calculated }).toEqual(c.calculated);
+      }
     });
   });
 
@@ -97,6 +109,9 @@ describe("intake form logic cases (client copy)", () => {
     it.each(cases.validateSchemaLogic)("$name", (c) => {
       const errors = validateSchemaLogic({ fields: c.fields }, c.entityType);
       expect(Array.from(new Set(errors.map((e) => e.fieldId))).sort()).toEqual(c.errorFieldIds);
+      for (const message of c.messages ?? []) {
+        expect(errors.map((e) => e.message)).toContain(message);
+      }
     });
   });
 });
