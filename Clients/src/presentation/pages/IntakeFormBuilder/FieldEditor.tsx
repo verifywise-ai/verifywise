@@ -543,6 +543,7 @@ export function FieldEditor({
                 <FormulaEditor
                   formula={localField.formula ?? ""}
                   numericFields={numericFields}
+                  allFields={allFields}
                   decimals={localField.decimals}
                   onChange={(formula) => handleChange("formula", formula)}
                 />
