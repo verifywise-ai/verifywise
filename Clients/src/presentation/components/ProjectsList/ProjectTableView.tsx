@@ -17,6 +17,7 @@ import useNavigateSearch from "../../../application/hooks/useNavigateSearch";
 import singleTheme from "../../themes/v1SingleTheme";
 import TablePaginationActions from "../../components/TablePagination";
 import { EmptyState } from "../EmptyState";
+import { AiRiskClassification } from "../../../domain/enums/aiRiskClassification.enum";
 import Chip from "../Chip";
 import ViewRelationshipsButton from "../ViewRelationshipsButton";
 import IconButton from "../IconButton";
@@ -64,14 +65,16 @@ type SortDirection = "asc" | "desc" | null;
  * Severity rank for sorting by AI risk level. Prohibited used to fall through
  * to 0 and sort below Minimal risk; it is the most severe class.
  */
-export const getRiskSortValue = (risk: string | null | undefined): number => {
-  const riskLower = (risk || "").toLowerCase().trim();
-  if (riskLower.includes("prohibited")) return 4;
-  if (riskLower.includes("high")) return 3;
-  if (riskLower.includes("limited")) return 2;
-  if (riskLower.includes("minimal")) return 1;
-  return 0; // GPAI, General risk, Out of scope and unknown values
+const RISK_SORT_RANK: Record<string, number> = {
+  [AiRiskClassification.PROHIBITED.toLowerCase()]: 4,
+  [AiRiskClassification.HIGH_RISK.toLowerCase()]: 3,
+  [AiRiskClassification.LIMITED_RISK.toLowerCase()]: 2,
+  [AiRiskClassification.MINIMAL_RISK.toLowerCase()]: 1,
 };
+
+export const getRiskSortValue = (risk: string | null | undefined): number =>
+  // GPAI, General risk, Out of scope and unknown values rank 0
+  RISK_SORT_RANK[(risk || "").toLowerCase().trim()] ?? 0;
 type SortConfig = {
   key: string;
   direction: SortDirection;
@@ -405,6 +408,9 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
   // page; clamp to the last page that has rows so the table never shows an
   // empty page with no way to tell why.
   const lastPage = Math.max(0, Math.ceil(sortedProjects.length / rowsPerPage) - 1);
+  // Store the clamp too, so clearing the search doesn't jump back to the old page.
+  // Adjusting state while rendering is React's pattern for state derived from props.
+  if (page > lastPage) setPage(lastPage);
   const currentPage = Math.min(page, lastPage);
 
   const getRange = useMemo(() => {
@@ -422,22 +428,6 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
     );
   }, [sortedProjects, currentPage, rowsPerPage, hidePagination]);
 
-  if ((!projects || projects.length === 0) && emptyMessage) {
-    return (
-      <TableEmptyStateLayout
-        header={
-          <SortableTableHeader
-            columns={visibleColumnsArray}
-            sortConfig={sortConfig}
-            onSort={handleSort}
-          />
-        }
-      >
-        <EmptyState icon={SearchX} message={emptyMessage} />
-      </TableEmptyStateLayout>
-    );
-  }
-
   if (!projects || projects.length === 0) {
     return (
       <TableEmptyStateLayout
@@ -449,26 +439,30 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
           />
         }
       >
-        <EmptyState
-          icon={Briefcase}
-          message="No use cases yet. A use case describes how an AI system is applied within your organization."
-        >
-          <EmptyStateTip
-            icon={PlusCircle}
-            title="Create a use case"
-            description="Define the AI system, its purpose, the data it processes, and the people it affects. This forms the basis for risk and compliance tracking."
-          />
-          <EmptyStateTip
-            icon={Target}
-            title="Scope and classify"
-            description="Each use case can be classified by risk level (high, limited, minimal) to determine which compliance controls apply."
-          />
-          <EmptyStateTip
-            icon={Link2}
-            title="Link to governance artifacts"
-            description="Connect use cases to risks, policies, models, and evidence. This creates full traceability from business need to compliance proof."
-          />
-        </EmptyState>
+        {emptyMessage ? (
+          <EmptyState icon={SearchX} message={emptyMessage} />
+        ) : (
+          <EmptyState
+            icon={Briefcase}
+            message="No use cases yet. A use case describes how an AI system is applied within your organization."
+          >
+            <EmptyStateTip
+              icon={PlusCircle}
+              title="Create a use case"
+              description="Define the AI system, its purpose, the data it processes, and the people it affects. This forms the basis for risk and compliance tracking."
+            />
+            <EmptyStateTip
+              icon={Target}
+              title="Scope and classify"
+              description="Each use case can be classified by risk level (high, limited, minimal) to determine which compliance controls apply."
+            />
+            <EmptyStateTip
+              icon={Link2}
+              title="Link to governance artifacts"
+              description="Connect use cases to risks, policies, models, and evidence. This creates full traceability from business need to compliance proof."
+            />
+          </EmptyState>
+        )}
       </TableEmptyStateLayout>
     );
   }

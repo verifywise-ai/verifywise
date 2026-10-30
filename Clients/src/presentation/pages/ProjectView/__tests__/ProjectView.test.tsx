@@ -140,6 +140,21 @@ describe("ProjectView (VWProjectView)", () => {
     expect(navigateMock).toHaveBeenCalledWith("/overview");
   });
 
+  it("retries the load from the error page", () => {
+    projectDataMock.mockReturnValue({
+      project: null,
+      error: "Failed to fetch project #1: Network Error",
+      isLoading: false,
+    });
+    renderWithProviders(<VWProjectView />, { route: "/project-view?projectId=1" });
+    const callsBefore = projectDataMock.mock.calls.length;
+
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    const lastArgs = (projectDataMock.mock.lastCall as unknown as [{ refreshKey: number }])[0];
+    expect(projectDataMock.mock.calls.length).toBeGreaterThan(callsBefore);
+    expect(lastArgs.refreshKey).toBe(1);
+  });
+
   it("keeps the skeletons while the use case is still loading", () => {
     projectDataMock.mockReturnValue({ project: null, error: null, isLoading: true });
     renderWithProviders(<VWProjectView />, { route: "/project-view?projectId=1" });

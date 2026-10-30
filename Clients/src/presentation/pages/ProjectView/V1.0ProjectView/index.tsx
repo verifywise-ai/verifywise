@@ -177,8 +177,9 @@ const VWProjectView = () => {
     return "This tab is currently unavailable.";
   };
 
-  // A deleted use case, a stale link or a use case the user cannot access used
-  // to leave the page on skeletons forever. Say so and offer the way back.
+  // A deleted use case, a stale link, a use case the user cannot access or a
+  // failed request used to leave the page on skeletons forever. Say so, and
+  // offer a retry and the way back.
   if (!project && projectError && !isProjectLoading) {
     return (
       <Stack className="vw-project-view">
@@ -186,13 +187,20 @@ const VWProjectView = () => {
         <Stack sx={{ mt: "16px", gap: "16px", alignItems: "center" }}>
           <EmptyState
             icon={FileXIcon}
-            message="This use case could not be loaded. It may have been deleted, or you may not have access to it."
+            message="This use case could not be loaded. It may have been deleted, you may not have access to it, or the connection failed."
           />
-          <CustomizableButton
-            variant="contained"
-            text="Back to use cases"
-            onClick={() => navigate("/overview")}
-          />
+          <Stack direction="row" sx={{ gap: "8px" }}>
+            <CustomizableButton
+              variant="outlined"
+              text="Try again"
+              onClick={() => setRefreshKey((key) => key + 1)}
+            />
+            <CustomizableButton
+              variant="contained"
+              text="Back to use cases"
+              onClick={() => navigate("/overview")}
+            />
+          </Stack>
         </Stack>
       </Stack>
     );

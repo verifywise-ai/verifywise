@@ -97,4 +97,20 @@ describe("ProjectTableView", () => {
     expect(screen.getByText("UC-1")).toBeInTheDocument();
     expect(screen.getByText(/Showing 1 - 3 of 3/)).toBeInTheDocument();
   });
+
+  it("stays on the first page when the list grows back", () => {
+    const many = Array.from({ length: 12 }, (_, i) => makeProject(i + 1));
+    const { rerender } = renderWithProviders(<ProjectTableView projects={many} />);
+    fireEvent.click(screen.getByRole("button", { name: /next page/i }));
+
+    rerender(<ProjectTableView projects={many.slice(0, 3)} />);
+    rerender(<ProjectTableView projects={many} />);
+    expect(screen.getByText("UC-1")).toBeInTheDocument();
+    expect(screen.queryByText("UC-11")).not.toBeInTheDocument();
+  });
+
+  it("ranks by the exact class, not a word inside it", () => {
+    expect(getRiskSortValue("high risk")).toBe(getRiskSortValue("High risk"));
+    expect(getRiskSortValue("Not high risk")).toBe(0);
+  });
 });

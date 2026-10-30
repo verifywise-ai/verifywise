@@ -5,8 +5,8 @@ export const de: Record<string, string> = {
   "Back to use cases": "Zurück zu den Anwendungsfällen",
   "CE marking": "CE-Kennzeichnung",
   "Delete this use case?": "Diesen Anwendungsfall löschen?",
-  "All data linked to this use case, including its risks and framework progress, will be removed. This cannot be undone.":
-    "Alle mit diesem Anwendungsfall verknüpften Daten, einschließlich seiner Risiken und des Fortschritts in den Rahmenwerken, werden entfernt. Dies kann nicht rückgängig gemacht werden.",
+  "This deletes the use case, its framework progress and its files. Its risks stay in the risk register but are no longer linked to it. This cannot be undone.":
+    "Dadurch werden der Anwendungsfall, sein Framework-Fortschritt und seine Dateien gelöscht. Seine Risiken bleiben im Risikoregister, sind aber nicht mehr mit ihm verknüpft. Dies kann nicht rückgängig gemacht werden.",
   "EU AI Act completion status": "Fertigstellungsstatus EU-KI-Verordnung",
   "ISO 42001 completion status": "Fertigstellungsstatus ISO 42001",
   "Framework not found or could not be removed from the use case":
@@ -14,8 +14,8 @@ export const de: Record<string, string> = {
   "General risk": "Allgemeines Risiko",
   "Governance status, risks, frameworks and activity for this use case.":
     "Governance-Status, Risiken, Rahmenwerke und Aktivitäten für diesen Anwendungsfall.",
-  "This use case could not be loaded. It may have been deleted, or you may not have access to it.":
-    "Dieser Anwendungsfall konnte nicht geladen werden. Möglicherweise wurde er gelöscht oder Sie haben keinen Zugriff darauf.",
+  "This use case could not be loaded. It may have been deleted, you may not have access to it, or the connection failed.":
+    "Dieser Anwendungsfall konnte nicht geladen werden. Möglicherweise wurde er gelöscht, Sie haben keinen Zugriff darauf oder die Verbindung ist fehlgeschlagen.",
   "Use case details": "Details zum Anwendungsfall",
   "Use case updated successfully": "Anwendungsfall erfolgreich aktualisiert",
   "Use case deleted successfully.": "Anwendungsfall erfolgreich gelöscht.",
@@ -28,8 +28,8 @@ export const fr: Record<string, string> = {
   "Back to use cases": "Retour aux cas d'usage",
   "CE marking": "Marquage CE",
   "Delete this use case?": "Supprimer ce cas d'usage ?",
-  "All data linked to this use case, including its risks and framework progress, will be removed. This cannot be undone.":
-    "Toutes les données liées à ce cas d'usage, y compris ses risques et sa progression dans les référentiels, seront supprimées. Cette action est irréversible.",
+  "This deletes the use case, its framework progress and its files. Its risks stay in the risk register but are no longer linked to it. This cannot be undone.":
+    "Cela supprime le cas d'usage, sa progression dans les référentiels et ses fichiers. Ses risques restent dans le registre des risques, mais ne lui sont plus liés. Cette action est irréversible.",
   "EU AI Act completion status": "Statut d'achèvement du Règlement IA de l'UE",
   "ISO 42001 completion status": "Statut d'achèvement ISO 42001",
   "Framework not found or could not be removed from the use case":
@@ -37,8 +37,8 @@ export const fr: Record<string, string> = {
   "General risk": "Risque général",
   "Governance status, risks, frameworks and activity for this use case.":
     "Statut de gouvernance, risques, référentiels et activité de ce cas d'usage.",
-  "This use case could not be loaded. It may have been deleted, or you may not have access to it.":
-    "Ce cas d'usage n'a pas pu être chargé. Il a peut-être été supprimé, ou vous n'y avez pas accès.",
+  "This use case could not be loaded. It may have been deleted, you may not have access to it, or the connection failed.":
+    "Ce cas d'usage n'a pas pu être chargé. Il a peut-être été supprimé, vous n'y avez peut-être pas accès, ou la connexion a échoué.",
   "Use case details": "Détails du cas d'usage",
   "Use case updated successfully": "Cas d'usage mis à jour avec succès",
   "Use case deleted successfully.": "Cas d'usage supprimé avec succès.",
@@ -51,8 +51,8 @@ export const es: Record<string, string> = {
   "Back to use cases": "Volver a los casos de uso",
   "CE marking": "Marcado CE",
   "Delete this use case?": "¿Eliminar este caso de uso?",
-  "All data linked to this use case, including its risks and framework progress, will be removed. This cannot be undone.":
-    "Se eliminarán todos los datos vinculados a este caso de uso, incluidos sus riesgos y el progreso en los marcos. Esta acción no se puede deshacer.",
+  "This deletes the use case, its framework progress and its files. Its risks stay in the risk register but are no longer linked to it. This cannot be undone.":
+    "Esto elimina el caso de uso, su progreso en los marcos y sus archivos. Sus riesgos permanecen en el registro de riesgos, pero ya no están vinculados a él. Esta acción no se puede deshacer.",
   "EU AI Act completion status": "Estado de finalización del EU AI Act",
   "ISO 42001 completion status": "Estado de finalización de ISO 42001",
   "Framework not found or could not be removed from the use case":
@@ -60,8 +60,8 @@ export const es: Record<string, string> = {
   "General risk": "Riesgo general",
   "Governance status, risks, frameworks and activity for this use case.":
     "Estado de gobernanza, riesgos, marcos y actividad de este caso de uso.",
-  "This use case could not be loaded. It may have been deleted, or you may not have access to it.":
-    "No se pudo cargar este caso de uso. Puede que se haya eliminado o que no tenga acceso a él.",
+  "This use case could not be loaded. It may have been deleted, you may not have access to it, or the connection failed.":
+    "No se pudo cargar este caso de uso. Puede que se haya eliminado, que no tenga acceso a él o que la conexión haya fallado.",
   "Use case details": "Detalles del caso de uso",
   "Use case updated successfully": "Caso de uso actualizado correctamente",
   "Use case deleted successfully.": "Caso de uso eliminado correctamente.",

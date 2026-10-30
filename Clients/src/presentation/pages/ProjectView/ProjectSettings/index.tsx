@@ -1646,8 +1646,8 @@ const ProjectSettings = React.memo(
             title="Delete this use case?"
             body={
               <Typography fontSize={13}>
-                All data linked to this use case, including its risks and framework progress, will
-                be removed. This cannot be undone.
+                This deletes the use case, its framework progress and its files. Its risks stay in
+                the risk register but are no longer linked to it. This cannot be undone.
               </Typography>
             }
             cancelText="Cancel"
