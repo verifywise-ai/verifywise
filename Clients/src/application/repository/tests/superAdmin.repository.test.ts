@@ -10,7 +10,7 @@ import {
   getOrgUsers,
   inviteUserToOrg,
   updateUser,
-  removeUser,
+  removeOrgUser,
 } from "../superAdmin.repository";
 
 vi.mock("../../../infrastructure/api/networkServices", () => ({
@@ -483,6 +483,15 @@ describe("superAdmin.repository", () => {
       expect(apiServices.patch).toHaveBeenCalledWith("/super-admin/users/77", payload);
     });
 
+    it("sends the organization whose role is changed", async () => {
+      const payload = { roleId: 2, organizationId: 4 };
+      vi.mocked(apiServices.patch).mockResolvedValue({ data: { code: 200 } } as any);
+
+      await updateUser(9, payload);
+
+      expect(apiServices.patch).toHaveBeenCalledWith("/super-admin/users/9", payload);
+    });
+
     it("should patch with only roleId field", async () => {
       const payload = { roleId: 2 };
       const mockResponse = { data: { code: 200 } };
@@ -520,56 +529,30 @@ describe("superAdmin.repository", () => {
   });
 
   // ----------------------------------------------------------------
-  // removeUser
+  // removeOrgUser
   // ----------------------------------------------------------------
-  describe("removeUser", () => {
+  describe("removeOrgUser", () => {
     beforeEach(() => {
       vi.mocked(apiServices.delete).mockClear();
     });
 
-    it("should call delete with the correct endpoint", async () => {
-      const mockResponse = { data: { code: 200 } };
+    it("removes the user from that organization only", async () => {
+      const mockResponse = {
+        data: { code: 200, data: { removed: true, userId: 9, accountDeleted: false } },
+      };
       vi.mocked(apiServices.delete).mockResolvedValue(mockResponse as any);
 
-      const result = await removeUser(1);
+      const result = await removeOrgUser(4, 9);
 
-      expect(apiServices.delete).toHaveBeenCalledWith("/super-admin/users/1");
+      expect(apiServices.delete).toHaveBeenCalledWith("/super-admin/organizations/4/users/9");
       expect(result).toEqual(mockResponse);
     });
 
-    it("should interpolate different userIds correctly", async () => {
-      const mockResponse = { data: { code: 200 } };
-      vi.mocked(apiServices.delete).mockResolvedValue(mockResponse as any);
-
-      await removeUser(55);
-
-      expect(apiServices.delete).toHaveBeenCalledWith("/super-admin/users/55");
-    });
-
-    it("should propagate network errors", async () => {
-      const mockError = new Error("Remove user failed");
-      vi.mocked(apiServices.delete).mockRejectedValue(mockError);
-
-      await expect(removeUser(1)).rejects.toThrow("Remove user failed");
-      expect(apiServices.delete).toHaveBeenCalledOnce();
-    });
-
     it("should propagate 404 errors", async () => {
-      const mockError = {
-        response: { status: 404, statusText: "Not Found" },
-      };
+      const mockError = { response: { status: 404, statusText: "Not Found" } };
       vi.mocked(apiServices.delete).mockRejectedValue(mockError);
 
-      await expect(removeUser(999)).rejects.toEqual(mockError);
-    });
-
-    it("should propagate 403 forbidden errors", async () => {
-      const mockError = {
-        response: { status: 403, statusText: "Forbidden" },
-      };
-      vi.mocked(apiServices.delete).mockRejectedValue(mockError);
-
-      await expect(removeUser(1)).rejects.toEqual(mockError);
+      await expect(removeOrgUser(4, 999)).rejects.toEqual(mockError);
     });
   });
 });

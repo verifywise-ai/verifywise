@@ -86,26 +86,32 @@ async function api(token: string, method: string, path: string, body?: unknown):
 
 async function bootstrapOrgAndAdmin(): Promise<{ orgId: number; userId: number }> {
   const [existing] = (await sequelize.query(
-    `SELECT id, organization_id FROM users WHERE email = :email`,
+    `SELECT u.id, om.organization_id, o.name AS organization_name
+       FROM users u
+       LEFT JOIN organization_members om ON om.user_id = u.id
+       LEFT JOIN organizations o ON o.id = om.organization_id
+      WHERE u.email = :email`,
     { replacements: { email: ADMIN_EMAIL } },
   )) as any[];
   if (existing[0]) {
-    // Safety: only reuse the admin if it lives in the dedicated demo org. If the
-    // email points at a user in any other org (a misconfigured DEMO_ADMIN_EMAIL),
-    // refuse: --reset would otherwise wipe that org's demo data and backfills.
-    const [orgRows] = (await sequelize.query(`SELECT name FROM organizations WHERE id = :id`, {
-      replacements: { id: existing[0].organization_id },
-    })) as any[];
-    const orgName: string | undefined = orgRows[0]?.name;
-    if (orgName !== ORG_NAME) {
+    // Safety: only reuse the admin if it is a member of the dedicated demo org.
+    // If the email points at a user of other orgs only (a misconfigured
+    // DEMO_ADMIN_EMAIL), refuse: --reset would otherwise wipe that org's demo
+    // data and backfills.
+    const demoMembership = existing.find((m: any) => m.organization_name === ORG_NAME);
+    if (!demoMembership) {
+      const orgs = existing
+        .filter((m: any) => m.organization_id !== null)
+        .map((m: any) => `${m.organization_id} ("${m.organization_name}")`)
+        .join(", ");
       throw new Error(
-        `DEMO_ADMIN_EMAIL ${ADMIN_EMAIL} belongs to org ${existing[0].organization_id} ` +
-          `("${orgName ?? "none"}"), not the demo org "${ORG_NAME}". Refusing to seed into it. ` +
+        `DEMO_ADMIN_EMAIL ${ADMIN_EMAIL} belongs to ${orgs ? `org ${orgs}` : "no org"}, ` +
+          `not the demo org "${ORG_NAME}". Refusing to seed into it. ` +
           `Use a dedicated DEMO_ADMIN_EMAIL, or set DEMO_ORG_NAME to that org's exact name.`,
       );
     }
-    log(`reusing demo admin (user ${existing[0].id}, org ${existing[0].organization_id})`);
-    return { orgId: existing[0].organization_id, userId: existing[0].id };
+    log(`reusing demo admin (user ${demoMembership.id}, org ${demoMembership.organization_id})`);
+    return { orgId: demoMembership.organization_id, userId: demoMembership.id };
   }
 
   const [orgRes] = (await sequelize.query(
@@ -116,9 +122,15 @@ async function bootstrapOrgAndAdmin(): Promise<{ orgId: number; userId: number }
   const orgId = orgRes[0].id;
 
   const hash = await bcrypt.hash(ADMIN_PASSWORD, 10);
+  // One statement, so the user and their membership commit together.
   const [userRes] = (await sequelize.query(
-    `INSERT INTO users (name, surname, email, password_hash, role_id, organization_id, created_at, updated_at)
-     VALUES ('Dr. Gorkem', 'Cetin', :email, :hash, 1, :orgId, NOW(), NOW()) RETURNING id`,
+    `WITH created AS (
+       INSERT INTO users (name, surname, email, password_hash, created_at, updated_at)
+       VALUES ('Dr. Gorkem', 'Cetin', :email, :hash, NOW(), NOW()) RETURNING id
+     )
+     INSERT INTO organization_members (organization_id, user_id, role_id)
+     SELECT :orgId, id, 1 FROM created
+     RETURNING user_id AS id`,
     { replacements: { email: ADMIN_EMAIL, hash, orgId } },
   )) as any[];
 
@@ -139,23 +151,31 @@ async function seedExtraUsers(ctx: Ctx): Promise<Record<string, number>> {
   // Rename any legacy "Demo Admin" to the plausible primary name (idempotent).
   await sequelize.query(
     `UPDATE users SET name = 'Dr. Gorkem', surname = 'Cetin', updated_at = NOW()
-     WHERE organization_id = :orgId AND email = :email AND name IN ('Demo', 'Gorkem')`,
+     WHERE email = :email AND name IN ('Demo', 'Gorkem')
+       AND id IN (SELECT user_id FROM organization_members WHERE organization_id = :orgId)`,
     { replacements: { orgId: ctx.orgId, email: ADMIN_EMAIL } },
   );
 
   const hash = await bcrypt.hash(ADMIN_PASSWORD, 10);
   for (const u of EXTRA_USERS) {
     await sequelize.query(
-      `INSERT INTO users (name, surname, email, password_hash, role_id, organization_id, created_at, updated_at)
-       VALUES (:name, :surname, :email, :hash, :role, :orgId, NOW(), NOW())
-       ON CONFLICT (email) DO NOTHING`,
+      `WITH created AS (
+         INSERT INTO users (name, surname, email, password_hash, created_at, updated_at)
+         VALUES (:name, :surname, :email, :hash, NOW(), NOW())
+         ON CONFLICT (email) DO NOTHING
+         RETURNING id
+       )
+       INSERT INTO organization_members (organization_id, user_id, role_id)
+       SELECT :orgId, id, :role FROM created`,
       { replacements: { ...u, hash, orgId: ctx.orgId } },
     );
   }
 
   // Return an email → id map so the agent seeder can assign owners by name.
   const rows = (await sequelize.query(
-    `SELECT id, email FROM users WHERE organization_id = :orgId`,
+    `SELECT u.id, u.email
+       FROM users u
+       JOIN organization_members om ON om.user_id = u.id AND om.organization_id = :orgId`,
     { replacements: { orgId: ctx.orgId } },
   )) as any[];
   const byEmail: Record<string, number> = {};

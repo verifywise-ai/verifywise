@@ -18,7 +18,7 @@ import {
 import { UserPlus, Users as UsersIcon, ArrowUp, ArrowDown } from "lucide-react";
 import {
   getAllUsers,
-  removeUser,
+  removeOrgUser,
   updateUser,
   getOrganizations,
   inviteUserToOrg,
@@ -36,28 +36,29 @@ import singleTheme from "../../../themes/v1SingleTheme";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import { getSelectStyles } from "../../../utils/inputStyles";
 
-const DeleteUserModal = ({
+/** Removes the user from this row's organization only. */
+const RemoveUserModal = ({
   target,
   onClose,
-  onDeleted,
+  onRemoved,
 }: {
   target: GlobalUser | null;
   onClose: () => void;
-  onDeleted: () => void;
+  onRemoved: () => void;
 }) => {
-  const [deleting, setDeleting] = useState(false);
+  const [removing, setRemoving] = useState(false);
 
   const handleSubmit = async () => {
     if (!target) return;
-    setDeleting(true);
+    setRemoving(true);
     try {
-      await removeUser(target.id);
+      await removeOrgUser(target.organization_id, target.id);
       onClose();
-      onDeleted();
+      onRemoved();
     } catch (error) {
       console.error("Failed to remove user:", error);
     } finally {
-      setDeleting(false);
+      setRemoving(false);
     }
   };
 
@@ -65,16 +66,17 @@ const DeleteUserModal = ({
     <StandardModal
       isOpen={!!target}
       onClose={onClose}
-      title="Remove User"
-      description={`Remove "${target?.name} ${target?.surname || ""}" from ${target?.organization_name || "their organization"}?`}
+      title="Remove user"
+      description={`Remove "${target?.name} ${target?.surname || ""}" from ${target?.organization_name}?`}
       submitButtonText="Remove"
       onSubmit={handleSubmit}
-      isSubmitting={deleting}
+      isSubmitting={removing}
       submitButtonColor="error"
       maxWidth="480px"
     >
       <Typography variant="body2" sx={{ color: "text.secondary" }}>
-        This will permanently remove the user and all their data.
+        They lose access to this organization. If it is their only organization, their account is
+        deleted too.
       </Typography>
     </StandardModal>
   );
@@ -112,11 +114,13 @@ const EditUserModal = ({
     setSubmitting(true);
     setError("");
     try {
+      // The role is this row's membership; name and email are the account's.
       await updateUser(target.id, {
         name: name.trim(),
         surname: surname.trim(),
         email: email.trim(),
         roleId,
+        organizationId: target.organization_id,
       });
       onClose();
       onUpdated();
@@ -162,6 +166,9 @@ const EditUserModal = ({
           onChange={(e) => setEmail(e.target.value)}
           sx={{ width: "100%" }}
         />
+        <Typography sx={{ fontSize: 12, color: "text.secondary" }}>
+          Name and email apply in every organization the user belongs to.
+        </Typography>
         <Stack spacing={0.5}>
           <Typography variant="body2" fontWeight={500}>
             Organization
@@ -341,7 +348,7 @@ const AllUsers = () => {
   const [filterRole, setFilterRole] = useState<string>("all");
   const [sortField, setSortField] = useState<SortField>("name");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
-  const [deleteTarget, setDeleteTarget] = useState<GlobalUser | null>(null);
+  const [removeTarget, setRemoveTarget] = useState<GlobalUser | null>(null);
   const [editTarget, setEditTarget] = useState<GlobalUser | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
 
@@ -564,7 +571,7 @@ const AllUsers = () => {
                 const colors = ROLE_COLORS[user.role_name] || { bg: "#f3f4f6", text: "#6b7280" };
                 return (
                   <TableRow
-                    key={user.id}
+                    key={`${user.id}-${user.organization_id}`}
                     sx={{ ...tableStyles.body.row, cursor: "pointer" }}
                     onClick={() => setEditTarget(user)}
                   >
@@ -626,7 +633,7 @@ const AllUsers = () => {
                         variant="outlined"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setDeleteTarget(user);
+                          setRemoveTarget(user);
                         }}
                         sx={{
                           ...tableStyles.body.button,
@@ -650,10 +657,10 @@ const AllUsers = () => {
         </TableContainer>
       )}
 
-      <DeleteUserModal
-        target={deleteTarget}
-        onClose={() => setDeleteTarget(null)}
-        onDeleted={fetchUsers}
+      <RemoveUserModal
+        target={removeTarget}
+        onClose={() => setRemoveTarget(null)}
+        onRemoved={fetchUsers}
       />
       <EditUserModal
         target={editTarget}

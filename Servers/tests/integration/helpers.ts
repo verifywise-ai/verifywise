@@ -33,9 +33,16 @@ export async function createTestUser(
 ): Promise<number> {
   const hash = await bcrypt.hash(password, 10);
   const suffix = String(Date.now()).slice(-6);
+  // One statement, so the user and their membership commit together (a user
+  // with no membership and no super_admins row is refused at commit).
   const [result] = await sequelize.query(
-    `INSERT INTO users (name, surname, email, password_hash, role_id, organization_id, created_at, updated_at)
-     VALUES (:name, :surname, :email, :hash, :roleId, :orgId, NOW(), NOW()) RETURNING id`,
+    `WITH created AS (
+       INSERT INTO users (name, surname, email, password_hash, created_at, updated_at)
+       VALUES (:name, :surname, :email, :hash, NOW(), NOW()) RETURNING id
+     )
+     INSERT INTO organization_members (organization_id, user_id, role_id)
+     SELECT :orgId, id, :roleId FROM created
+     RETURNING user_id AS id`,
     {
       replacements: {
         name: `Test${suffix}`,

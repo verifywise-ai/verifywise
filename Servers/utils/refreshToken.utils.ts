@@ -13,6 +13,7 @@
  */
 
 import crypto from "crypto";
+import { Transaction } from "sequelize";
 import { sequelize } from "../database/db";
 
 export interface StoredRefreshToken {
@@ -89,5 +90,18 @@ export async function revokeAllUserTokens(userId: number): Promise<void> {
     `UPDATE refresh_tokens SET revoked_at = now()
      WHERE user_id = :userId AND revoked_at IS NULL`,
     { replacements: { userId } },
+  );
+}
+
+/** Revokes a user's refresh tokens for one organization (removal from that organization). */
+export async function revokeUserOrganizationTokens(
+  userId: number,
+  organizationId: number,
+  transaction: Transaction,
+): Promise<void> {
+  await sequelize.query(
+    `UPDATE refresh_tokens SET revoked_at = now()
+     WHERE user_id = :userId AND organization_id = :organizationId AND revoked_at IS NULL`,
+    { replacements: { userId, organizationId }, transaction },
   );
 }

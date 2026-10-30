@@ -1219,10 +1219,11 @@ export async function getEligibleReviewersQuery(
   if (ids && ids.length === 0) return [];
 
   const users = (await sequelize.query(
-    `SELECT id, name, surname, email, role_id
-    FROM users
-    WHERE organization_id = :organizationId${ids ? " AND id = ANY(ARRAY[:ids]::INTEGER[])" : ""}
-    ORDER BY name, surname, id`,
+    `SELECT u.id, u.name, u.surname, u.email, om.role_id
+    FROM users u
+    JOIN organization_members om ON om.user_id = u.id AND om.organization_id = :organizationId
+    ${ids ? "WHERE u.id = ANY(ARRAY[:ids]::INTEGER[])" : ""}
+    ORDER BY u.name, u.surname, u.id`,
     {
       replacements: { organizationId, ids: ids ?? [] },
       type: QueryTypes.SELECT,

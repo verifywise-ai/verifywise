@@ -17,7 +17,7 @@ import {
   getOrgInvitations,
   inviteUserToOrg,
   createUserInOrg,
-  removeUser,
+  removeOrgUser,
   OrgUser,
   OrgInvitation,
 } from "../../../../application/repository/superAdmin.repository";
@@ -99,10 +99,13 @@ const Users = () => {
 
   const canSubmitAdd = useMemo(() => {
     if (!userForm.name.trim()) return false;
-    if (emailStatus !== "available") return false;
+    if (emailStatus !== "available" && emailStatus !== "existing") return false;
     if (addMode === "direct") {
       if (userForm.surname.trim().length < 2) return false;
-      if (!passwordValidation(userForm.password).isValid) return false;
+      // An existing account keeps its own password.
+      if (emailStatus === "available" && !passwordValidation(userForm.password).isValid) {
+        return false;
+      }
     }
     return true;
   }, [addMode, userForm, emailStatus]);
@@ -121,7 +124,10 @@ const Users = () => {
       if (addMode === "invite") {
         await inviteUserToOrg(parseInt(orgId), shared);
       } else {
-        await createUserInOrg(parseInt(orgId), { ...shared, password: userForm.password });
+        await createUserInOrg(parseInt(orgId), {
+          ...shared,
+          ...(emailStatus === "available" ? { password: userForm.password } : {}),
+        });
       }
       setAddOpen(false);
       setUserForm(EMPTY_USER_FORM);
@@ -138,10 +144,10 @@ const Users = () => {
   };
 
   const handleRemove = async () => {
-    if (!deleteTarget) return;
+    if (!deleteTarget || !orgId) return;
     setDeleting(true);
     try {
-      await removeUser(deleteTarget.id);
+      await removeOrgUser(parseInt(orgId), deleteTarget.id);
       setDeleteOpen(false);
       setDeleteTarget(null);
       await fetchUsers();
@@ -426,7 +432,7 @@ const Users = () => {
           setDeleteOpen(false);
           setDeleteTarget(null);
         }}
-        title="Remove User"
+        title="Remove user"
         description={`Remove "${deleteTarget?.name} ${deleteTarget?.surname}" from this organization?`}
         submitButtonText="Remove"
         onSubmit={handleRemove}
@@ -435,7 +441,8 @@ const Users = () => {
         maxWidth="480px"
       >
         <Typography variant="body2" sx={{ color: "text.secondary" }}>
-          This will permanently remove the user and all their data from this organization.
+          They lose access to this organization. If it is their only organization, their account is
+          deleted too.
         </Typography>
       </StandardModal>
     </PageHeaderExtended>

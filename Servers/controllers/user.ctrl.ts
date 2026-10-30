@@ -28,8 +28,8 @@ import { Request, Response } from "express";
 import {
   checkUserExistsQuery,
   createNewUserQuery,
-  deleteUserByIdQuery,
   isLastAdminQuery,
+  removeUserFromOrganizationQuery,
   deleteUserProfilePhotoQuery,
   getAllUsersQuery,
   getAssessmentsForProject,
@@ -51,8 +51,13 @@ import { sendMemberRoleChangedEditorToAdminNotification } from "../services/user
 import { logFailure } from "../utils/logger/logHelper";
 import bcrypt from "bcrypt";
 import { STATUS_CODE } from "../utils/statusCode.utils";
-import { getRefreshTokenPayload } from "../utils/jwt.utils";
+import {
+  generateOrganizationSelectionToken,
+  getRefreshTokenPayload,
+  getTokenPayload,
+} from "../utils/jwt.utils";
 import { UserModel } from "../domain.layer/models/user/user.model";
+import { numberValidation } from "../domain.layer/validations/number.valid";
 import { sequelize } from "../database/db";
 import {
   ValidationException,
@@ -73,6 +78,7 @@ import {
 import { sendSlackNotification } from "../services/slack/slackNotificationService";
 import { SlackNotificationRoutingType } from "../domain.layer/enums/slack.enum";
 import { getRoleByIdQuery } from "../utils/role.utils";
+import { getRoleNameById } from "../utils/roleMap";
 import { uploadFile } from "../utils/fileUpload.utils";
 import { markInvitationAcceptedQuery } from "../utils/invitation.utils";
 import { ConfidentialClientApplication } from "@azure/msal-node";
@@ -85,6 +91,12 @@ import {
   updateUserPreferencesByIdQuery,
 } from "../utils/userPreference.utils";
 import { isUserSuperAdmin as isUserSuperAdminUtil } from "../utils/superAdmin.utils";
+import {
+  addOrganizationMemberQuery,
+  getUserOrganizationsQuery,
+  updateOrganizationMemberRoleQuery,
+  UserOrganization,
+} from "../utils/organizationMember.utils";
 import { UserDateFormat } from "../domain.layer/enums/user-preferences.enum";
 import { UserPreferencesModel } from "../domain.layer/models/userPreferences/userPreferences.model";
 import { UserLanguage } from "../domain.layer/interfaces/i.userPreferences";
@@ -138,13 +150,6 @@ async function getPreferencesForCurrentUser(req: Request, res: Response): Promis
     const user = (await getUserByIdQuery(req.userId!)) as UserModel;
     if (!user) {
       return res.status(404).json(STATUS_CODE[404](req.t!("User not found")));
-    }
-
-    const isSelfLookup = req.userId === user.id;
-    if (!isSelfLookup && user.organization_id !== req.organizationId) {
-      return res
-        .status(403)
-        .json(STATUS_CODE[403](req.t!("Forbidden: Access to this user is denied")));
     }
 
     const userPreference = await getPreferencesByUserQuery(req.userId!);
@@ -359,11 +364,16 @@ async function getUserById(req: Request, res: Response) {
   logger.debug(`🔍 Looking up user with ID: ${id}`);
 
   try {
-    const user = (await getUserByIdQuery(id)) as UserModel | null;
-    const isSelfLookup = id === req.userId;
     // A user in another organization answers like a missing one, so the
-    // endpoint does not reveal which user ids exist.
-    if (!user || (!isSelfLookup && user.organization_id !== req.organizationId)) {
+    // endpoint does not reveal which user ids exist. A pure SuperAdmin (no
+    // organization) can only look themselves up.
+    const user =
+      req.organizationId !== undefined
+        ? await getUserByIdQuery(id, null, req.organizationId)
+        : id === req.userId
+          ? await getUserByIdQuery(id)
+          : null;
+    if (!user) {
       logStructured("successful", `no user found: ID ${id}`, "getUserById", "user.ctrl.ts");
       return res.status(404).json(STATUS_CODE[404](req.t!("User not found")));
     }
@@ -396,15 +406,15 @@ async function createNewUserWrapper(
     throw new ConflictException("User with this email already exists");
   }
 
+  if (!numberValidation(roleId, 1)) {
+    throw new ValidationException("Invalid role_id", "role_id", roleId);
+  }
+  if (!numberValidation(organizationId, 1)) {
+    throw new ValidationException("Invalid organization_id", "organization_id", organizationId);
+  }
+
   // Create user using the enhanced UserModel method
-  const userModel = await UserModel.createNewUser(
-    name,
-    surname,
-    email,
-    password,
-    roleId,
-    organizationId,
-  );
+  const userModel = await UserModel.createNewUser(name, surname, email, password);
 
   // Validate user data before saving
   await userModel.validateUserData();
@@ -415,7 +425,11 @@ async function createNewUserWrapper(
     throw new ConflictException("Email already exists");
   }
 
-  const user = (await createNewUserQuery(userModel, transaction)) as UserModel;
+  const user = (await createNewUserQuery(
+    userModel,
+    { organizationId, roleId },
+    transaction,
+  )) as UserModel;
   return user;
 }
 
@@ -492,15 +506,15 @@ async function createNewUser(req: Request, res: Response) {
       return res.status(409).json(STATUS_CODE[409](req.t!("User with this email already exists")));
     }
 
+    if (!numberValidation(roleId, 1)) {
+      throw new ValidationException("Invalid role_id", "role_id", roleId);
+    }
+    if (!numberValidation(organizationId, 1)) {
+      throw new ValidationException("Invalid organization_id", "organization_id", organizationId);
+    }
+
     // Create user model with automatic password hashing
-    const userModel = await UserModel.createNewUser(
-      name,
-      surname,
-      email,
-      password,
-      roleId,
-      organizationId,
-    );
+    const userModel = await UserModel.createNewUser(name, surname, email, password);
     await userModel.validateUserData();
 
     // Double-check email uniqueness
@@ -517,7 +531,11 @@ async function createNewUser(req: Request, res: Response) {
       return res.status(409).json(STATUS_CODE[409](req.t!("Email already exists")));
     }
 
-    const user = (await createNewUserQuery(userModel, transaction)) as UserModel;
+    const user = (await createNewUserQuery(
+      userModel,
+      { organizationId, roleId },
+      transaction,
+    )) as UserModel;
 
     if (user) {
       // In the same transaction: a link works once, so if the invitation
@@ -603,6 +621,146 @@ async function createNewUser(req: Request, res: Response) {
 }
 
 /**
+ * Accepts an invitation as a user who already has an account: they confirm
+ * it is theirs with their own password, join the inviting organization with
+ * the invited role, and are logged in to it. The account itself is not
+ * changed. registerJWT has checked the link and set the invited email, role
+ * and organization on the body.
+ *
+ * @example
+ * POST /api/users/invitations/accept
+ * Authorization: Bearer <invite token>
+ * { "email": "priya@x.io", "password": "...", "roleId": 3, "organizationId": 4 }
+ *
+ * Response 202: the same body as a single-organization login.
+ */
+async function acceptInvitationAsExistingUser(req: Request, res: Response): Promise<any> {
+  const { email, password, roleId, organizationId } = req.body;
+  const orgId = Number(organizationId);
+
+  try {
+    const user = await getUserByEmailQuery(email);
+    // The same answer for an unknown address and a wrong password.
+    const passwordIsMatched =
+      !!user?.password_hash && (await bcrypt.compare(String(password ?? ""), user.password_hash));
+    if (!user || !passwordIsMatched) {
+      return res.status(401).json(STATUS_CODE[401](req.t!("Invalid email or password")));
+    }
+
+    const organizations = await getUserOrganizationsQuery(user.id!);
+    // A pure SuperAdmin never joins an organization: that, and their account
+    // never being deletable, keeps at least one SuperAdmin on the deployment.
+    if (organizations.length === 0) {
+      return res
+        .status(409)
+        .json(STATUS_CODE[409](req.t!("A super admin cannot join an organization")));
+    }
+    if (organizations.some((o) => o.organization_id === orgId)) {
+      return res
+        .status(409)
+        .json(STATUS_CODE[409](req.t!("User is already a member of this organization")));
+    }
+
+    const transaction = await sequelize.transaction();
+    try {
+      await addOrganizationMemberQuery(orgId, user.id!, Number(roleId), transaction);
+      // A link works once: if the invitation cannot be marked accepted, the
+      // membership is not added either.
+      const accepted = await markInvitationAcceptedQuery(orgId, res.locals.invitation, transaction);
+      if (accepted === 0) {
+        await transaction.rollback();
+        return res
+          .status(403)
+          .json(
+            STATUS_CODE[403](
+              req.t!(
+                "This invitation link is no longer valid. Use the most recent invitation email, or ask your administrator to resend it.",
+              ),
+            ),
+          );
+      }
+      await transaction.commit();
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
+
+    const joined = (await getUserOrganizationsQuery(user.id!)).find(
+      (o) => o.organization_id === orgId,
+    )!;
+    await logEvent(
+      "Create",
+      `Existing user ${user.email} joined organization ${orgId}`,
+      user.id!,
+      orgId,
+    );
+    return await completeOrganizationLogin(res, user, joined);
+  } catch (error) {
+    logger.error("❌ Error in acceptInvitationAsExistingUser:", error);
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+  }
+}
+
+/**
+ * Issues the session for one of the user's organizations: tokens scoped to
+ * that organization and role, plus the setup-modal and SuperAdmin flags.
+ */
+async function completeOrganizationLogin(
+  res: Response,
+  user: UserModel,
+  organization: UserOrganization,
+): Promise<Response> {
+  const orgId = organization.organization_id;
+  const { accessToken } = await generateUserTokens(
+    {
+      id: user.id!,
+      email: user.email,
+      roleName: organization.role_name,
+      organizationId: orgId,
+    },
+    res,
+  );
+
+  // Get organization onboarding status for setup modal
+  let onboardingStatus = "completed";
+  const [orgResult] = await sequelize.query(
+    `SELECT onboarding_status FROM organizations WHERE id = :orgId`,
+    { replacements: { orgId }, type: "SELECT" as any },
+  );
+  if (orgResult && (orgResult as any).onboarding_status) {
+    onboardingStatus = (orgResult as any).onboarding_status;
+  }
+
+  // Check if user is the org creator (first Admin to join)
+  const [creatorResult] = await sequelize.query(
+    `SELECT user_id FROM organization_members
+     WHERE organization_id = :orgId AND role_id = 1
+     ORDER BY joined_at ASC, user_id ASC LIMIT 1`,
+    { replacements: { orgId }, type: "SELECT" as any },
+  );
+  const isOrgCreator = !!creatorResult && (creatorResult as any).user_id === user.id;
+
+  // Elected SuperAdmin overlay: normal user + row in super_admins.
+  const electedSuperAdmin = await isUserSuperAdminUtil(user.id!);
+
+  logStructured(
+    "successful",
+    `login successful for ${user.email}`,
+    "completeOrganizationLogin",
+    "user.ctrl.ts",
+  );
+
+  return res.status(202).json(
+    STATUS_CODE[202]({
+      token: accessToken,
+      onboarding_status: onboardingStatus,
+      is_org_creator: isOrgCreator,
+      isSuperAdmin: electedSuperAdmin,
+    }),
+  );
+}
+
+/**
  * Authenticates a user with email and password credentials
  *
  * Implements secure login flow with bcrypt password verification and JWT token generation.
@@ -630,11 +788,22 @@ async function createNewUser(req: Request, res: Response) {
  *   "password": "SecurePassword123!"
  * }
  *
- * Response 202:
+ * Response 202, one organization (or a pure SuperAdmin):
  * {
  *   "code": 202,
  *   "data": {
  *     "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+ *   }
+ * }
+ *
+ * Response 202, several organizations: no session yet; the client posts the
+ * chosen organization to POST /api/users/login/select-organization.
+ * {
+ *   "code": 202,
+ *   "data": {
+ *     "requiresOrganizationSelection": true,
+ *     "organizations": [{ "id": 4, "name": "Acme", "role_name": "Admin" }],
+ *     "selectionToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
  *   }
  * }
  * Set-Cookie: refresh_token=<token>; Path=/api/users; HttpOnly; Secure (prod); SameSite=none (prod) or lax (dev)
@@ -668,28 +837,33 @@ async function loginUser(req: Request, res: Response): Promise<any> {
       if (passwordIsMatched) {
         user.updateLastLogin();
 
-        // Pure SuperAdmin: no org, no role. Identified by organization_id
-        // being NULL; a DB trigger guarantees they have a super_admins row.
-        const isPureSuperAdmin = (userData as any).organization_id == null;
+        const organizations = await getUserOrganizationsQuery(user.id!);
 
-        const { accessToken } = await generateUserTokens(
-          {
-            id: user.id!,
-            email: email,
-            roleName: (userData as any).role_name || (isPureSuperAdmin ? "SuperAdmin" : ""),
-            organizationId: isPureSuperAdmin ? null : (userData as any).organization_id,
-          },
-          res,
-        );
+        if (organizations.length === 0) {
+          // Pure SuperAdmin: a super_admins row and no membership. Zero
+          // memberships alone never means superadmin.
+          if (!(await isUserSuperAdminUtil(user.id!))) {
+            logStructured(
+              "error",
+              `login refused, no organization: ${email}`,
+              "loginUser",
+              "user.ctrl.ts",
+            );
+            return res
+              .status(403)
+              .json(STATUS_CODE[403](req.t!("You are not a member of any organization")));
+          }
 
-        if (isPureSuperAdmin) {
+          const { accessToken } = await generateUserTokens(
+            { id: user.id!, email, roleName: "SuperAdmin", organizationId: null },
+            res,
+          );
           logStructured(
             "successful",
             `super-admin login successful for ${email}`,
             "loginUser",
             "user.ctrl.ts",
           );
-
           return res.status(202).json(
             STATUS_CODE[202]({
               token: accessToken,
@@ -698,47 +872,28 @@ async function loginUser(req: Request, res: Response): Promise<any> {
           );
         }
 
-        // Get organization onboarding status for setup modal
-        const orgId = (userData as any).organization_id;
-        let onboardingStatus = "completed";
-        let isOrgCreator = false;
-
-        if (orgId) {
-          // Get organization onboarding status
-          const [orgResult] = await sequelize.query(
-            `SELECT onboarding_status FROM organizations WHERE id = :orgId`,
-            { replacements: { orgId }, type: "SELECT" as any },
+        if (organizations.length > 1) {
+          // The organization is chosen once, here, and fixed for the session.
+          logStructured(
+            "processing",
+            `organization selection required for ${email}`,
+            "loginUser",
+            "user.ctrl.ts",
           );
-          if (orgResult && (orgResult as any).onboarding_status) {
-            onboardingStatus = (orgResult as any).onboarding_status;
-          }
-
-          // Check if user is the org creator (first admin by creation date)
-          const [creatorResult] = await sequelize.query(
-            `SELECT id FROM users
-             WHERE organization_id = :orgId AND role_id = 1
-             ORDER BY created_at ASC LIMIT 1`,
-            { replacements: { orgId }, type: "SELECT" as any },
+          return res.status(202).json(
+            STATUS_CODE[202]({
+              requiresOrganizationSelection: true,
+              organizations: organizations.map((o) => ({
+                id: o.organization_id,
+                name: o.organization_name,
+                role_name: o.role_name,
+              })),
+              selectionToken: generateOrganizationSelectionToken({ id: user.id!, email }),
+            }),
           );
-          if (creatorResult && (creatorResult as any).id === user.id) {
-            isOrgCreator = true;
-          }
         }
 
-        // Elected SuperAdmin overlay: normal user + row in super_admins.
-        // Bootstrap SuperAdmins take the isSuperAdmin=true branch above.
-        const electedSuperAdmin = await isUserSuperAdminUtil(user.id!);
-
-        logStructured("successful", `login successful for ${email}`, "loginUser", "user.ctrl.ts");
-
-        return res.status(202).json(
-          STATUS_CODE[202]({
-            token: accessToken,
-            onboarding_status: onboardingStatus,
-            is_org_creator: isOrgCreator,
-            isSuperAdmin: electedSuperAdmin,
-          }),
-        );
+        return await completeOrganizationLogin(res, user, organizations[0]);
       } else {
         logStructured("error", `invalid credentials for ${email}`, "loginUser", "user.ctrl.ts");
         return res.status(401).json(STATUS_CODE[401](req.t!("Invalid email or password")));
@@ -750,6 +905,48 @@ async function loginUser(req: Request, res: Response): Promise<any> {
   } catch (error) {
     logStructured("error", `unexpected error during login: ${email}`, "loginUser", "user.ctrl.ts");
     logger.error("❌ Error in loginUser:", error);
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+  }
+}
+
+/**
+ * Completes a login that needed an organization choice.
+ *
+ * @example
+ * POST /api/users/login/select-organization
+ * { "selectionToken": "<from POST /api/users/login>", "organizationId": 4 }
+ *
+ * Response 202: the same body as a single-organization login.
+ */
+async function selectLoginOrganization(req: Request, res: Response): Promise<any> {
+  const { selectionToken, organizationId } = req.body ?? {};
+
+  try {
+    const decoded = getTokenPayload(selectionToken);
+    if (!decoded || decoded.type !== "organization_selection" || typeof decoded.id !== "number") {
+      return res.status(401).json(STATUS_CODE[401](req.t!("Invalid token")));
+    }
+    if (decoded.expire < Date.now()) {
+      return res.status(406).json(STATUS_CODE[406]({ message: req.t!("Token expired") }));
+    }
+
+    const user = await getUserByIdQuery(decoded.id);
+    if (!user) {
+      return res.status(401).json(STATUS_CODE[401](req.t!("Invalid token")));
+    }
+
+    const organization = (await getUserOrganizationsQuery(user.id!)).find(
+      (o) => o.organization_id === Number(organizationId),
+    );
+    if (!organization) {
+      return res
+        .status(403)
+        .json(STATUS_CODE[403](req.t!("User does not belong to this organization")));
+    }
+
+    return await completeOrganizationLogin(res, user, organization);
+  } catch (error) {
+    logger.error("❌ Error in selectLoginOrganization:", error);
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
@@ -850,47 +1047,61 @@ async function loginUserWithMicrosoft(req: Request, res: Response): Promise<any>
     const roleName = roleClaim && SSO_ROLE_MAP.has(roleClaim) ? roleClaim : "Editor";
     const roleId = SSO_ROLE_MAP.get(roleName)!;
 
-    let user = (await getUserByEmailQuery(email)) as UserModel | undefined;
+    let user = await getUserByEmailQuery(email);
     if (!user) {
       const userModel = await UserModel.createNewUser(
         userInfo.givenName || userInfo.displayName || "User",
         userInfo.surname || userInfo.givenName || userInfo.displayName || "User",
         email,
         null,
-        roleId,
-        Number(organizationId),
         "AzureAD",
         userInfo.id,
       );
       await userModel.validateUserData?.();
-      user = await createNewUserQuery(userModel, transaction);
-    } else if (user.organization_id !== Number(organizationId)) {
-      await transaction.rollback();
-      return res
-        .status(403)
-        .json(STATUS_CODE[403]("User does not belong to the selected organization"));
-    } else if (user.role_id !== roleId) {
-      await updateUserByIdQuery(user.id!, { role_id: roleId }, transaction);
-      user.role_id = roleId;
+      user = await createNewUserQuery(
+        userModel,
+        { organizationId: Number(organizationId), roleId },
+        transaction,
+      );
+    } else {
+      // An existing account signs in through this organization's SSO only if
+      // it is already a member; joining takes an invitation.
+      const membership = (await getUserOrganizationsQuery(user.id!, transaction)).find(
+        (o) => o.organization_id === Number(organizationId),
+      );
+      if (!membership) {
+        await transaction.rollback();
+        return res
+          .status(403)
+          .json(STATUS_CODE[403]("User does not belong to the selected organization"));
+      }
+      if (membership.role_id !== roleId) {
+        await updateOrganizationMemberRoleQuery(
+          Number(organizationId),
+          user.id!,
+          roleId,
+          transaction,
+        );
+      }
     }
 
     const { accessToken } = await generateUserTokens(
       {
-        id: user!.id!,
-        email: user!.email,
+        id: user.id!,
+        email: user.email,
         roleName,
-        organizationId: user!.organization_id ?? null,
+        organizationId: Number(organizationId),
       },
       res,
     );
 
     await transaction.commit();
 
-    const electedSuperAdmin = await isUserSuperAdminUtil(user!.id!);
+    const electedSuperAdmin = await isUserSuperAdminUtil(user.id!);
 
     logStructured(
       "successful",
-      `Microsoft SSO login successful for ${user!.email}`,
+      `Microsoft SSO login successful for ${user.email}`,
       "loginUserWithMicrosoft",
       "user.ctrl.ts",
     );
@@ -990,6 +1201,27 @@ async function refreshAccessToken(req: Request, res: Response): Promise<any> {
       return res.status(406).json(STATUS_CODE[406]({ message: req.t!("Token expired") }));
     }
 
+    // Re-mint from the current membership, not the old token's claims: a
+    // user removed from the organization gets no new token, and a role
+    // changed since login takes effect. A token without an organization is a
+    // pure SuperAdmin's, valid only while the super_admins row exists.
+    let roleName: string;
+    if (decoded.organizationId === null || decoded.organizationId === undefined) {
+      if (!(await isUserSuperAdminUtil(decoded.id))) {
+        await revokeTokenFamily(stored.family_id);
+        return res.status(401).json(STATUS_CODE[401](req.t!("Invalid refresh token")));
+      }
+      roleName = "SuperAdmin";
+    } else {
+      const member = await getUserByIdQuery(decoded.id, null, decoded.organizationId);
+      const memberRoleName = member ? await getRoleNameById(member.role_id!) : undefined;
+      if (!memberRoleName) {
+        await revokeTokenFamily(stored.family_id);
+        return res.status(401).json(STATUS_CODE[401](req.t!("Invalid refresh token")));
+      }
+      roleName = memberRoleName;
+    }
+
     // Rotate: revoke the presented token, issue a new one in the same family.
     await revokeRefreshTokenByHash(stored.token_hash);
 
@@ -997,7 +1229,7 @@ async function refreshAccessToken(req: Request, res: Response): Promise<any> {
       {
         id: decoded.id,
         email: decoded.email,
-        roleName: decoded.roleName,
+        roleName,
         organizationId: decoded.organizationId,
       },
       res,
@@ -1011,9 +1243,12 @@ async function refreshAccessToken(req: Request, res: Response): Promise<any> {
       "user.ctrl.ts",
     );
 
+    // The refresh cookie is shared by every tab. The organization tells a tab
+    // that logged in elsewhere that this session now belongs to another org.
     return res.status(200).json(
       STATUS_CODE[200]({
         token: newAccessToken,
+        organizationId: decoded.organizationId ?? null,
       }),
     );
   } catch (error) {
@@ -1036,16 +1271,12 @@ async function resetPassword(req: Request, res: Response) {
   logger.debug(`🔁 Password reset requested for ${email}`);
 
   try {
-    const _user = (await getUserByEmailQuery(email)) as UserModel & {
-      role_name: string;
-    };
+    const _user = (await getUserByEmailQuery(email)) as UserModel;
     const user = await UserModel.createNewUser(
       _user.name,
       _user.surname,
       _user.email,
       _user.password_hash,
-      _user.role_id,
-      _user.organization_id!,
     );
 
     if (user) {
@@ -1150,11 +1381,11 @@ async function updateUserById(req: Request, res: Response) {
   try {
     // Check permissions (if user context is available)
     const currentUserId = (req as any).user?.id;
-    const user = await getUserByIdQuery(id);
-    const isSelf = req.userId === id;
     // A user in another organization answers like a missing one, so the
     // endpoint does not reveal which user ids exist.
-    if (!user || (!isSelf && user.organization_id !== req.organizationId)) {
+    const user = await getUserByIdQuery(id, transaction, req.organizationId);
+    const isSelf = req.userId === id;
+    if (!user) {
       logStructured("error", `user not found: ID ${id}`, "updateUserById", "user.ctrl.ts");
       await transaction.rollback();
       return res.status(404).json(STATUS_CODE[404](req.t!("User not found")));
@@ -1176,6 +1407,27 @@ async function updateUserById(req: Request, res: Response) {
       return res
         .status(403)
         .json(STATUS_CODE[403](req.t!("Forbidden: Only admins can update other users")));
+    }
+
+    // Name and email belong to the person, who may be a member of other
+    // organizations too: only they change them. An Admin changes the role.
+    const changesIdentity =
+      (name !== undefined && name !== user.name) ||
+      (surname !== undefined && surname !== user.surname) ||
+      (email !== undefined && email !== user.email);
+    if (!isSelf && changesIdentity) {
+      logStructured(
+        "error",
+        `user ${req.userId} attempted to change the name or email of user ID ${id}`,
+        "updateUserById",
+        "user.ctrl.ts",
+      );
+      await transaction.rollback();
+      return res
+        .status(403)
+        .json(
+          STATUS_CODE[403](req.t!("Forbidden: Only the user can change their own name or email")),
+        );
     }
 
     if (!isPrivileged && roleId !== undefined && roleId !== user.role_id) {
@@ -1218,7 +1470,7 @@ async function updateUserById(req: Request, res: Response) {
         return res.status(400).json(STATUS_CODE[400](req.t!("Unknown role")));
       }
 
-      if (await isLastAdminQuery(user.organization_id!, id, transaction)) {
+      if (await isLastAdminQuery(req.organizationId!, id, transaction)) {
         logStructured(
           "error",
           `refused to change the role of the last Admin, user ID ${id}`,
@@ -1245,15 +1497,18 @@ async function updateUserById(req: Request, res: Response) {
           name: user.name,
           surname: user.surname,
           last_login: last_login ?? user.last_login,
-          role_id: roleId ?? user.role_id,
         },
         transaction,
       )) as UserModel;
+      if (roleId !== undefined && roleId !== oldRoleId) {
+        await updateOrganizationMemberRoleQuery(req.organizationId!, id, roleId, transaction);
+      }
+      updatedUser.role_id = roleId ?? oldRoleId;
 
       await transaction.commit();
 
       const actor = await getUserByIdQuery(req.userId!);
-      const role = await getRoleByIdQuery(updatedUser.role_id);
+      const role = await getRoleByIdQuery(updatedUser.role_id!);
 
       await sendSlackNotification(
         {
@@ -1394,12 +1649,11 @@ async function deleteUserById(req: Request, res: Response) {
   logger.debug(`🗑️ Delete request for user ID ${id}`);
 
   try {
-    const user = await getUserByIdQuery(id);
-
     // A user in another organization answers like a missing one, so the
     // endpoint does not reveal which user ids exist. This also covers a pure
-    // SuperAdmin (no role, no organization), never deletable from here.
-    if (!user || user.organization_id !== req.organizationId) {
+    // SuperAdmin (no membership), never removable from here.
+    const user = await getUserByIdQuery(id, transaction, req.organizationId);
+    if (!user) {
       logStructured("error", `user not found: ID ${id}`, "deleteUserById", "user.ctrl.ts");
       await transaction.rollback();
       return res.status(404).json(STATUS_CODE[404](req.t!("User not found")));
@@ -1444,18 +1698,29 @@ async function deleteUserById(req: Request, res: Response) {
           .json(STATUS_CODE[409](req.t!("The organization must keep at least one Admin")));
       }
 
-      const deletedUser = await deleteUserByIdQuery(id, req.organizationId!, transaction);
+      // Removes the user from this organization only; the account goes too
+      // when this was their last membership.
+      const { removed, accountDeleted } = await removeUserFromOrganizationQuery(
+        id,
+        req.organizationId!,
+        transaction,
+      );
       await transaction.commit();
 
-      logStructured("successful", `user deleted: ID ${id}`, "deleteUserById", "user.ctrl.ts");
+      logStructured(
+        "successful",
+        `user removed from organization: ID ${id}${accountDeleted ? ", account deleted" : ""}`,
+        "deleteUserById",
+        "user.ctrl.ts",
+      );
       await logEvent(
         "Delete",
-        `User deleted: ID ${id}, email: ${user.email}`,
+        `User removed from organization: ID ${id}, email: ${user.email}${accountDeleted ? " (account deleted)" : ""}`,
         req.userId!,
         req.organizationId!,
       );
 
-      return res.status(202).json(STATUS_CODE[202](deletedUser));
+      return res.status(202).json(STATUS_CODE[202](removed));
     }
 
     logStructured("error", `user not found: ID ${id}`, "deleteUserById", "user.ctrl.ts");
@@ -1735,7 +2000,8 @@ async function updateUserRole(req: Request, res: Response) {
       return res.status(403).json(STATUS_CODE[403](req.t!("Cannot assign SuperAdmin role")));
     }
 
-    const targetUser = await getUserByIdQuery(parseInt(id));
+    // A pure SuperAdmin has no membership, so is never found here.
+    const targetUser = await getUserByIdQuery(parseInt(id), transaction, req.organizationId);
     if (!targetUser) {
       logStructured("error", `target user not found: ID ${id}`, "updateUserRole", "user.ctrl.ts");
       await logEvent(
@@ -1748,13 +2014,7 @@ async function updateUserRole(req: Request, res: Response) {
       return res.status(404).json(STATUS_CODE[404](req.t!("User not found")));
     }
 
-    // Pure SuperAdmin has no role — nothing to change here.
-    if (targetUser.role_id == null && targetUser.organization_id == null) {
-      await transaction.rollback();
-      return res.status(403).json(STATUS_CODE[403](req.t!("Cannot modify SuperAdmin role")));
-    }
-
-    const currentUser = await getUserByIdQuery(currentUserId);
+    const currentUser = await getUserByIdQuery(currentUserId, transaction, req.organizationId);
     if (!currentUser) {
       logStructured(
         "error",
@@ -1777,11 +2037,13 @@ async function updateUserRole(req: Request, res: Response) {
 
     await targetUser.updateRole(newRoleId, currentUser);
 
-    const updatedUser = (await updateUserByIdQuery(
-      parseInt(Array.isArray(id) ? id[0] : id),
-      { role_id: targetUser.role_id },
+    await updateOrganizationMemberRoleQuery(
+      req.organizationId!,
+      targetUser.id!,
+      targetUser.role_id!,
       transaction,
-    )) as UserModel;
+    );
+    const updatedUser = targetUser;
 
     await transaction.commit();
     logStructured("successful", `role updated for user ID ${id}`, "updateUserRole", "user.ctrl.ts");
@@ -1900,9 +2162,9 @@ async function uploadUserProfilePhoto(req: any, res: Response) {
   logger.debug(`📸 Uploading profile photo for user ID ${userId}`);
 
   try {
-    const user = await getUserByIdQuery(userId);
     // A missing user and another organization's answer alike (no id oracle).
-    if (!user || user.organization_id !== req.organizationId) {
+    const user = await getUserByIdQuery(userId, null, req.organizationId);
+    if (!user) {
       logStructured(
         "error",
         `access denied to user ID ${userId}`,
@@ -2032,9 +2294,9 @@ async function getUserProfilePhoto(req: Request, res: Response) {
   logger.debug(`📸 Fetching profile photo for user ID ${userId}`);
 
   try {
-    const user = await getUserByIdQuery(userId);
     // A missing user and another organization's answer alike (no id oracle).
-    if (!user || user.organization_id !== req.organizationId) {
+    const user = await getUserByIdQuery(userId, null, req.organizationId);
+    if (!user) {
       logStructured(
         "error",
         `access denied to user ID ${userId}`,
@@ -2098,9 +2360,9 @@ async function deleteUserProfilePhoto(req: Request, res: Response) {
   logger.debug(`🗑️ Deleting profile photo for user ID ${userId}`);
 
   try {
-    const user = await getUserByIdQuery(userId);
     // A missing user and another organization's answer alike (no id oracle).
-    if (!user || user.organization_id !== req.organizationId) {
+    const user = await getUserByIdQuery(userId, null, req.organizationId);
+    if (!user) {
       logStructured(
         "error",
         `access denied to user ID ${userId}`,
@@ -2222,7 +2484,9 @@ export {
   patchPreferencesForCurrentUser,
   createNewUserWrapper,
   createNewUser,
+  acceptInvitationAsExistingUser,
   loginUser,
+  selectLoginOrganization,
   loginUserWithMicrosoft,
   resetPassword,
   updateUserById,

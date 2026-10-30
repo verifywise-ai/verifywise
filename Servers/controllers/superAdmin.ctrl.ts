@@ -12,6 +12,7 @@ import {
   createUserInOrganization,
   deleteOrganization,
   removeUserById,
+  removeUserFromOrganization,
   updateOrganization,
   updateUserDetails,
 } from "../services/superAdmin.service";
@@ -31,12 +32,12 @@ import {
   organizationExists,
   listOrganizationUsersQuery,
   listOrganizationsQuery,
-  userExistsByEmail,
   listSuperAdmins as listSuperAdminsUtil,
   revokeSuperAdmin as revokeSuperAdminUtil,
 } from "../utils/superAdmin.utils";
 
 import { translateError } from "../utils/i18n.utils";
+import { getUserOrganizationsQuery } from "../utils/organizationMember.utils";
 
 /**
  * Strip the auth_header secret before returning config to the browser.
@@ -149,11 +150,6 @@ export async function createOrgWithUser(req: Request, res: Response) {
       .status(400)
       .json(STATUS_CODE[400]({ message: req.t!("surname is required for direct creation") }));
   }
-  if (mode === "direct" && !user.password) {
-    return res
-      .status(400)
-      .json(STATUS_CODE[400]({ message: req.t!("password is required for direct creation") }));
-  }
   const roleId = parseRoleId(user.roleId);
   if (roleId === null) {
     return res
@@ -164,6 +160,7 @@ export async function createOrgWithUser(req: Request, res: Response) {
   let orgId: number | undefined;
   // Invite mode stores this on the row and signs the emailed link for it.
   let invitationExpiresAt: Date;
+  let existingAccount = false;
 
   try {
     const created = await createOrganizationWithUser({
@@ -182,6 +179,7 @@ export async function createOrgWithUser(req: Request, res: Response) {
     });
     orgId = created.organizationId;
     invitationExpiresAt = created.invitationExpiresAt;
+    existingAccount = created.existingAccount;
   } catch (error: any) {
     if (error instanceof ConflictException) {
       return res.status(409).json(STATUS_CODE[409](error.message));
@@ -226,7 +224,7 @@ export async function createOrgWithUser(req: Request, res: Response) {
     }
   }
 
-  return res.status(201).json(STATUS_CODE[201]({ organizationId: orgId }));
+  return res.status(201).json(STATUS_CODE[201]({ organizationId: orgId, existingAccount }));
 }
 
 /**
@@ -265,12 +263,13 @@ export async function updateOrg(req: Request, res: Response) {
 }
 
 /**
- * Get total user count (excludes pure super-admins with no org/role).
+ * Get total user count: people in at least one organization (excludes pure
+ * super-admins, who have no membership).
  */
 export async function getUserCount(_req: Request, res: Response) {
   try {
     const [result]: any[] = await sequelize.query(
-      `SELECT COUNT(*) AS count FROM users WHERE organization_id IS NOT NULL`,
+      `SELECT COUNT(DISTINCT user_id) AS count FROM organization_members`,
       { type: "SELECT" as any },
     );
     return res.status(200).json(STATUS_CODE[200]({ count: parseInt(result.count, 10) }));
@@ -280,7 +279,8 @@ export async function getUserCount(_req: Request, res: Response) {
 }
 
 /**
- * List all users across all organizations (excludes pure super-admins).
+ * List every organization membership across all organizations (excludes pure
+ * super-admins). A user in several organizations has one row per organization.
  */
 export async function listAllUsers(_req: Request, res: Response) {
   try {
@@ -299,6 +299,34 @@ export async function listOrgUsers(req: Request, res: Response) {
 
     return res.status(200).json(STATUS_CODE[200](await listOrganizationUsersQuery(orgId)));
   } catch (error) {
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+  }
+}
+
+/**
+ * Remove a user from one organization; the account is deleted only when it
+ * was their last one.
+ */
+export async function removeOrgUser(req: Request, res: Response) {
+  try {
+    const orgId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
+    const userId = parseInt(
+      Array.isArray(req.params.userId) ? req.params.userId[0] : req.params.userId,
+      10,
+    );
+    if (isNaN(orgId)) {
+      return res.status(400).json(STATUS_CODE[400]({ message: req.t!("Invalid organization ID") }));
+    }
+    if (isNaN(userId)) {
+      return res.status(400).json(STATUS_CODE[400]({ message: req.t!("Invalid user ID") }));
+    }
+    return res
+      .status(200)
+      .json(STATUS_CODE[200](await removeUserFromOrganization(orgId, userId, req.t!)));
+  } catch (error) {
+    if (error instanceof NotFoundException) {
+      return res.status(404).json(STATUS_CODE[404](error.message));
+    }
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
@@ -340,11 +368,6 @@ export async function inviteUserToOrg(req: Request, res: Response) {
     if (!(await organizationExists(orgId))) {
       return res.status(404).json(STATUS_CODE[404](req.t!("Organization not found")));
     }
-    if (await userExistsByEmail(email)) {
-      return res
-        .status(409)
-        .json(STATUS_CODE[409](req.t!("A user with this email already exists")));
-    }
   } catch (error) {
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
@@ -385,11 +408,12 @@ export async function createUserInOrg(req: Request, res: Response) {
     return res.status(400).json(STATUS_CODE[400]({ message: req.t!("Invalid organization ID") }));
   }
 
+  // The password is checked by the service: only a new account needs one.
   const { email, name, surname, password } = req.body;
-  if (!email || !name || !surname || !password || !req.body.roleId) {
+  if (!email || !name || !surname || !req.body.roleId) {
     return res.status(400).json(
       STATUS_CODE[400]({
-        message: req.t!("email, name, surname, password, and roleId are required"),
+        message: req.t!("email, name, surname, and roleId are required"),
       }),
     );
   }
@@ -425,14 +449,19 @@ export async function createUserInOrg(req: Request, res: Response) {
 }
 
 /**
- * Update a user's details (name, surname, email, role)
+ * Update a user's details (name, surname, email), and their role in the
+ * organization named by organizationId.
  */
 export async function updateUser(req: Request, res: Response) {
   try {
     const userId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
-    const { name, surname, email, roleId } = req.body;
+    const { name, surname, email, roleId, organizationId } = req.body;
 
-    const updated = await updateUserDetails(userId, { name, surname, email, roleId }, req.t!);
+    const updated = await updateUserDetails(
+      userId,
+      { name, surname, email, roleId, organizationId },
+      req.t!,
+    );
     return res.status(200).json(STATUS_CODE[200](updated));
   } catch (error) {
     if (error instanceof NotFoundException) {
@@ -451,7 +480,7 @@ export async function updateUser(req: Request, res: Response) {
 }
 
 /**
- * Remove a user from their organization
+ * Delete a user's account, from every organization they belong to
  */
 export async function removeUser(req: Request, res: Response) {
   try {
@@ -603,6 +632,15 @@ export async function revokeSuperAdmin(req: Request, res: Response) {
       return res
         .status(400)
         .json(STATUS_CODE[400]({ message: req.t!("Cannot revoke the last SuperAdmin") }));
+    }
+    // A pure super admin (no organization) is one only through super_admins:
+    // revoking would leave an account that belongs nowhere.
+    if ((await getUserOrganizationsQuery(targetUserId)).length === 0) {
+      return res.status(400).json(
+        STATUS_CODE[400]({
+          message: req.t!("A super admin with no organization cannot be revoked"),
+        }),
+      );
     }
 
     await revokeSuperAdminUtil(targetUserId);

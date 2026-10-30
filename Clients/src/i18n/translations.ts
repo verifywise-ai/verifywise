@@ -2273,7 +2273,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Remove from queue": "Aus Warteschlange entfernen",
     "Remove guardrail rule": "Guardrail-Regel entfernen",
     "Remove profile photo": "Profilbild entfernen",
-    "Remove User": "Benutzer entfernen",
+    "Remove user": "Benutzer entfernen",
     "Rename project": "Projekt umbenennen",
     "Rerun experiment": "Experiment erneut ausführen",
     "Resend invitation": "Einladung erneut senden",
@@ -5900,10 +5900,10 @@ export const translations: Record<string, Record<string, string>> = {
       "Dieser Titel wird auf der KI-Vertrauenszentrum-Seite angezeigt",
     "This tool is marked as high risk. Consider enabling approval to ensure human review before execution.":
       "Dieses Tool ist als hochriskant markiert. Erwägen Sie, die Genehmigung zu aktivieren, um eine menschliche Überprüfung vor der Ausführung zu gewährleisten.",
-    "This will permanently remove the user and all their data from this organization.":
-      "Dies entfernt den Benutzer und alle seine Daten dauerhaft aus dieser Organisation.",
-    "This will permanently remove the user and all their data.":
-      "Dies entfernt den Benutzer und alle seine Daten dauerhaft.",
+    "They lose access to this organization. If it is their only organization, their account is deleted too.":
+      "Der Benutzer verliert den Zugriff auf diese Organisation. Ist es seine einzige Organisation, wird auch sein Konto gelöscht.",
+    "This permanently deletes the account and removes it from its organization.":
+      "Dies löscht das Konto dauerhaft und entfernt es aus seiner Organisation.",
     "This will remove the project and its experiments. This action cannot be undone.":
       "Dies entfernt das Projekt und seine Experimente. Diese Aktion kann nicht rückgängig gemacht werden.",
     "This will remove the repository from monitoring. Existing scan history will not be deleted.":
@@ -9877,16 +9877,25 @@ export const translations: Record<string, Record<string, string>> = {
     "Elect": "Wählen",
     "Elect Super Admin": "Super Admin wählen",
     "Elect a Super Admin": "Einen Super Admin wählen",
+    "A Super Admin with no organization cannot be revoked":
+      "Einem Super Admin ohne Organisation kann die Rolle nicht entzogen werden",
+    "Delete user": "Benutzer löschen",
+    "Name and email apply in every organization the user belongs to.":
+      "Name und E-Mail gelten in jeder Organisation, der der Benutzer angehört.",
+    "This email already has an account. The invitation lets them join with it.":
+      "Für diese E-Mail-Adresse gibt es bereits ein Konto. Mit der Einladung tritt der Benutzer mit diesem Konto bei.",
+    "This email already has an account. It joins with its own name and password.":
+      "Für diese E-Mail-Adresse gibt es bereits ein Konto. Es tritt mit seinem eigenen Namen und Passwort bei.",
     "Elect other users as Super Admins": "Andere Benutzer als Super Admins wählen",
-    "Grant an existing user cross-organization Super Admin capabilities. Their base organization role is unchanged.":
-      "Einem bestehenden Benutzer organisationsübergreifende Super Admin-Berechtigungen erteilen. Seine Basisrolle in der Organisation bleibt unverändert.",
+    "Grant an existing user cross-organization Super Admin capabilities. Their organization roles are unchanged.":
+      "Einem bestehenden Benutzer organisationsübergreifende Super Admin-Berechtigungen erteilen. Seine Rollen in den Organisationen bleiben unverändert.",
     "No Super Admins yet.": "Noch keine Super Admins.",
     "Revoke Super Admin": "Super Admin widerrufen",
     "Search by name or email": "Nach Name oder E-Mail suchen",
     "Sent": "Gesendet",
     "Super Admins": "Super Admins",
-    "They will keep their normal organization role but lose cross-organization access.":
-      "Er behält seine normale Organisationsrolle, verliert jedoch den organisationsübergreifenden Zugriff.",
+    "They will keep their organization roles but lose cross-organization access.":
+      "Er behält seine Organisationsrollen, verliert jedoch den organisationsübergreifenden Zugriff.",
 
     // Extensions surface — i18n gap fill.
     "Accordion": "Akkordeon",
@@ -12984,7 +12993,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Remove from queue": "Retirer de la file",
     "Remove guardrail rule": "Retirer la règle de garde-fou",
     "Remove profile photo": "Retirer la photo de profil",
-    "Remove User": "Retirer l'utilisateur",
+    "Remove user": "Retirer l'utilisateur",
     "Rename project": "Renommer le projet",
     "Rerun experiment": "Relancer l'expérience",
     "Resend invitation": "Renvoyer l'invitation",
@@ -16431,10 +16440,10 @@ export const translations: Record<string, Record<string, string>> = {
       "Ce titre sera affiché sur la page du centre de confiance IA",
     "This tool is marked as high risk. Consider enabling approval to ensure human review before execution.":
       "Cet outil est marqué à haut risque. Envisagez d'activer l'approbation pour garantir un examen humain avant l'exécution.",
-    "This will permanently remove the user and all their data from this organization.":
-      "Cela supprimera définitivement l'utilisateur et toutes ses données de cette organisation.",
-    "This will permanently remove the user and all their data.":
-      "Cela supprimera définitivement l'utilisateur et toutes ses données.",
+    "They lose access to this organization. If it is their only organization, their account is deleted too.":
+      "Il perd l'accès à cette organisation. Si c'est sa seule organisation, son compte est également supprimé.",
+    "This permanently deletes the account and removes it from its organization.":
+      "Cela supprime définitivement le compte et le retire de son organisation.",
     "This will remove the project and its experiments. This action cannot be undone.":
       "Cela supprimera le projet et ses expériences. Cette action est irréversible.",
     "This will remove the repository from monitoring. Existing scan history will not be deleted.":
@@ -20402,16 +20411,25 @@ export const translations: Record<string, Record<string, string>> = {
     "Elect": "Élire",
     "Elect Super Admin": "Élire un Super Admin",
     "Elect a Super Admin": "Élire un Super Admin",
+    "A Super Admin with no organization cannot be revoked":
+      "Un Super Admin sans organisation ne peut pas être révoqué",
+    "Delete user": "Supprimer l'utilisateur",
+    "Name and email apply in every organization the user belongs to.":
+      "Le nom et l'e-mail s'appliquent dans toutes les organisations de l'utilisateur.",
+    "This email already has an account. The invitation lets them join with it.":
+      "Cette adresse e-mail a déjà un compte. L'invitation lui permet de rejoindre l'organisation avec ce compte.",
+    "This email already has an account. It joins with its own name and password.":
+      "Cette adresse e-mail a déjà un compte. Il rejoint l'organisation avec son propre nom et mot de passe.",
     "Elect other users as Super Admins": "Élire d'autres utilisateurs comme Super Admins",
-    "Grant an existing user cross-organization Super Admin capabilities. Their base organization role is unchanged.":
-      "Accordez à un utilisateur existant des capacités de Super Admin inter-organisations. Son rôle de base dans l'organisation reste inchangé.",
+    "Grant an existing user cross-organization Super Admin capabilities. Their organization roles are unchanged.":
+      "Accordez à un utilisateur existant des capacités de Super Admin inter-organisations. Ses rôles dans les organisations restent inchangés.",
     "No Super Admins yet.": "Aucun Super Admin pour le moment.",
     "Revoke Super Admin": "Révoquer Super Admin",
     "Search by name or email": "Rechercher par nom ou e-mail",
     "Sent": "Envoyé",
     "Super Admins": "Super Admins",
-    "They will keep their normal organization role but lose cross-organization access.":
-      "Il conservera son rôle normal dans l'organisation mais perdra l'accès inter-organisations.",
+    "They will keep their organization roles but lose cross-organization access.":
+      "Il conservera ses rôles dans les organisations mais perdra l'accès inter-organisations.",
 
     // Extensions surface — i18n gap fill.
     "Accordion": "Accordéon",
@@ -22935,7 +22953,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Remove from queue": "Eliminar de la cola",
     "Remove guardrail rule": "Eliminar regla de barrera de protección",
     "Remove profile photo": "Eliminar foto de perfil",
-    "Remove User": "Eliminar usuario",
+    "Remove user": "Quitar usuario",
     "Rename project": "Renombrar proyecto",
     "Rerun experiment": "Volver a ejecutar el experimento",
     "Resend invitation": "Reenviar invitación",
@@ -28294,10 +28312,10 @@ export const translations: Record<string, Record<string, string>> = {
       "Este título se mostrará en la página del AI Trust Center",
     "This tool is marked as high risk. Consider enabling approval to ensure human review before execution.":
       "Esta herramienta está marcada como de alto riesgo. Considere activar la aprobación para garantizar la revisión humana antes de la ejecución.",
-    "This will permanently remove the user and all their data from this organization.":
-      "Esto eliminará permanentemente al usuario y todos sus datos de esta organización.",
-    "This will permanently remove the user and all their data.":
-      "Esto eliminará permanentemente al usuario y todos sus datos.",
+    "They lose access to this organization. If it is their only organization, their account is deleted too.":
+      "Pierde el acceso a esta organización. Si es su única organización, también se elimina su cuenta.",
+    "This permanently deletes the account and removes it from its organization.":
+      "Esto elimina permanentemente la cuenta y la quita de su organización.",
     "This will remove the project and its experiments. This action cannot be undone.":
       "Esto eliminará el proyecto y sus experimentos. Esta acción no se puede deshacer.",
     "This will remove the repository from monitoring. Existing scan history will not be deleted.":
@@ -30836,16 +30854,25 @@ export const translations: Record<string, Record<string, string>> = {
     "Elect": "Elegir",
     "Elect Super Admin": "Elegir Super Admin",
     "Elect a Super Admin": "Elegir un Super Admin",
+    "A Super Admin with no organization cannot be revoked":
+      "Un Super Admin sin organización no se puede revocar",
+    "Delete user": "Eliminar usuario",
+    "Name and email apply in every organization the user belongs to.":
+      "El nombre y el correo se aplican en todas las organizaciones del usuario.",
+    "This email already has an account. The invitation lets them join with it.":
+      "Este correo ya tiene una cuenta. La invitación le permite unirse con ella.",
+    "This email already has an account. It joins with its own name and password.":
+      "Este correo ya tiene una cuenta. Se une con su propio nombre y contraseña.",
     "Elect other users as Super Admins": "Elegir a otros usuarios como Super Admins",
-    "Grant an existing user cross-organization Super Admin capabilities. Their base organization role is unchanged.":
-      "Conceda a un usuario existente capacidades de Super Admin entre organizaciones. Su rol base en la organización no cambia.",
+    "Grant an existing user cross-organization Super Admin capabilities. Their organization roles are unchanged.":
+      "Conceda a un usuario existente capacidades de Super Admin entre organizaciones. Sus roles en las organizaciones no cambian.",
     "No Super Admins yet.": "Aún no hay Super Admins.",
     "Revoke Super Admin": "Revocar Super Admin",
     "Search by name or email": "Buscar por nombre o correo electrónico",
     "Sent": "Enviado",
     "Super Admins": "Super Admins",
-    "They will keep their normal organization role but lose cross-organization access.":
-      "Mantendrá su rol normal en la organización pero perderá el acceso entre organizaciones.",
+    "They will keep their organization roles but lose cross-organization access.":
+      "Mantendrá sus roles en las organizaciones pero perderá el acceso entre organizaciones.",
 
     // Extensions surface — i18n gap fill.
     "Accordion": "Acordeón",

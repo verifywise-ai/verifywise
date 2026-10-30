@@ -349,6 +349,63 @@ describe("customAxios", () => {
       });
     });
 
+    it("logs out on the auth middleware's 401 to a session request (account deleted)", async () => {
+      vi.useFakeTimers();
+      const originalLocation = window.location;
+      Object.defineProperty(window, "location", {
+        configurable: true,
+        writable: true,
+        value: { href: "", assign: vi.fn() },
+      });
+      mockStore.getState.mockReturnValue({ auth: { authToken: "token" } } as any);
+      const callback = vi.fn();
+      setShowAlertCallback(callback);
+
+      const error = {
+        config: { url: "/test", headers: {}, _sentWithSession: true },
+        response: {
+          status: 401,
+          data: { message: "Unauthorized", data: { message: "Unauthorized **" } },
+        },
+        message: "Unauthorized",
+      };
+
+      await expect(rejected(error)).rejects.toThrow("Unauthorized **");
+      expect(callback).toHaveBeenCalledTimes(1);
+      expect(callback).toHaveBeenCalledWith({
+        variant: "info",
+        title: "Access Denied",
+        body: "Please login again to continue.",
+      });
+      await vi.runAllTimersAsync();
+      vi.useRealTimers();
+      Object.defineProperty(window, "location", {
+        configurable: true,
+        writable: true,
+        value: originalLocation,
+      });
+    });
+
+    it("keeps the session on a 401 to a request sent with an emailed link's token", async () => {
+      mockStore.getState.mockReturnValue({ auth: { authToken: "token" } } as any);
+      const callback = vi.fn();
+      setShowAlertCallback(callback);
+
+      const error = {
+        config: { url: "/users/reset-password", headers: {} },
+        response: {
+          status: 401,
+          data: { message: "Unauthorized", data: { message: "Unauthorized **" } },
+        },
+        message: "Unauthorized",
+      };
+
+      await expect(rejected(error)).rejects.toEqual(error);
+      expect(callback).not.toHaveBeenCalledWith(
+        expect.objectContaining({ title: "Access Denied" }),
+      );
+    });
+
     // Hooks that abort in-flight requests on cleanup (the assessment hooks do)
     // reject with a CanceledError that carries no response. That is the caller
     // walking away, not a failure — it must not reach the user as an error toast.
@@ -612,6 +669,91 @@ describe("customAxios", () => {
 
       expect(mockStore.dispatch).not.toHaveBeenCalled();
       expect(queryClient.getQueryData(["projects"])).toBeDefined();
+    });
+
+    describe("refresh for another organization", () => {
+      // Only the payload is read client-side.
+      const tokenFor = (organizationId: number | null) =>
+        `header.${btoa(JSON.stringify({ organizationId }))}.signature`;
+      const retried = vi.fn(async (config: any) => ({
+        data: "retried",
+        status: 200,
+        statusText: "OK",
+        headers: {},
+        config,
+      }));
+      const expiredRequest = () => ({
+        config: { url: "/test", headers: {}, adapter: retried },
+        response: { status: 406, data: { message: "Not Acceptable" } },
+        message: "Not Acceptable",
+      });
+
+      beforeEach(() => {
+        retried.mockClear();
+        mockStore.getState.mockReturnValue({ auth: { authToken: tokenFor(4) } } as any);
+      });
+
+      it("retries with the new token when the organization is unchanged", async () => {
+        const newToken = tokenFor(4);
+        vi.spyOn(CustomAxios, "post").mockResolvedValueOnce({
+          status: 200,
+          data: { data: { token: newToken, organizationId: 4 } },
+        });
+
+        const response = await rejected(expiredRequest());
+
+        expect(response.data).toBe("retried");
+        expect(retried.mock.calls[0][0].headers.Authorization).toBe(`Bearer ${newToken}`);
+        expect(mockStore.dispatch).toHaveBeenCalledWith({
+          type: "auth/setAuthToken",
+          payload: newToken,
+        });
+        expect(mockAssign).not.toHaveBeenCalled();
+      });
+
+      it("reloads into the new organization after a login in another tab", async () => {
+        vi.useFakeTimers();
+        const alert = vi.fn();
+        setShowAlertCallback(alert);
+        const newToken = tokenFor(5);
+        vi.spyOn(CustomAxios, "post").mockResolvedValueOnce({
+          status: 200,
+          data: { data: { token: newToken, organizationId: 5 } },
+        });
+
+        await expect(rejected(expiredRequest())).rejects.toThrow(
+          "Session moved to another organization",
+        );
+
+        // This tab's screens are the old organization's: no retry, and the
+        // cached responses go with them.
+        expect(retried).not.toHaveBeenCalled();
+        expect(queryClient.getQueryData(["projects"])).toBeUndefined();
+        expect(mockStore.dispatch).toHaveBeenCalledWith({
+          type: "auth/setAuthToken",
+          payload: newToken,
+        });
+        expect(alert).toHaveBeenCalledWith(
+          expect.objectContaining({ title: "Organization changed" }),
+        );
+        expect(mockAssign).not.toHaveBeenCalled();
+        await vi.advanceTimersByTimeAsync(1500);
+        expect(mockAssign).toHaveBeenCalledWith("/");
+        setShowAlertCallback(null as any);
+      });
+
+      it("treats a pure super admin's refresh (no organization) as unchanged", async () => {
+        mockStore.getState.mockReturnValue({ auth: { authToken: tokenFor(null) } } as any);
+        vi.spyOn(CustomAxios, "post").mockResolvedValueOnce({
+          status: 200,
+          data: { data: { token: tokenFor(null), organizationId: null } },
+        });
+
+        const response = await rejected(expiredRequest());
+
+        expect(response.data).toBe("retried");
+        expect(mockAssign).not.toHaveBeenCalled();
+      });
     });
   });
 

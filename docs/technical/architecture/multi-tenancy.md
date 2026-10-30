@@ -198,7 +198,7 @@ const query = `
 | Table | Purpose |
 |-------|---------|
 | `organizations` | Organization records |
-| `users` | User accounts (has `organization_id` FK) |
+| `users` | User accounts, identity only. A user's organizations and roles are `organization_members` rows (tenant-scoped, below) |
 | `roles` | System roles (Admin, Reviewer, Editor, Auditor) |
 | `frameworks` | Compliance framework definitions |
 | `subscriptions` | Billing information |
@@ -209,6 +209,7 @@ const query = `
 
 | Table | Purpose |
 |-------|---------|
+| `organization_members` | Which users belong to the organization, and each one's role in it |
 | `projects` | AI use cases/projects |
 | `vendors` | Third-party vendors |
 | `model_inventories` | AI model inventory |

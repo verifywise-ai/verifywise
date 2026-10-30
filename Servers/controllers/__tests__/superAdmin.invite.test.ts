@@ -22,11 +22,23 @@ jest.mock("../../utils/inviteRole.utils", () => ({
 jest.mock("../user.ctrl", () => ({
   createNewUserWrapper: jest.fn(),
 }));
+jest.mock("../../utils/user.utils", () => ({
+  getUserByIdQuery: jest.fn(),
+  getUserByEmailQuery: jest.fn(),
+  removeUserFromOrganizationQuery: jest.fn(),
+}));
+jest.mock("../../utils/organizationMember.utils", () => ({
+  getUserOrganizationsQuery: jest.fn(),
+  updateOrganizationMemberRoleQuery: jest.fn(),
+  addOrganizationMemberQuery: jest.fn(),
+}));
 
 import {
   createOrgWithUser,
   createUserInOrg,
   inviteUserToOrg,
+  removeOrgUser,
+  revokeSuperAdmin,
   updateUser,
 } from "../superAdmin.ctrl";
 import { createNewUserWrapper } from "../user.ctrl";
@@ -35,6 +47,16 @@ import { sequelize } from "../../database/db";
 import { createOrganizationQuery } from "../../utils/organization.utils";
 import { createInvitationQuery } from "../../utils/invitation.utils";
 import { inviteRoleRefusal } from "../../utils/inviteRole.utils";
+import {
+  getUserByEmailQuery,
+  getUserByIdQuery,
+  removeUserFromOrganizationQuery,
+} from "../../utils/user.utils";
+import {
+  addOrganizationMemberQuery,
+  getUserOrganizationsQuery,
+  updateOrganizationMemberRoleQuery,
+} from "../../utils/organizationMember.utils";
 
 const mockInvite = invite as jest.MockedFunction<typeof invite>;
 const mockQuery = sequelize.query as unknown as jest.Mock;
@@ -49,7 +71,7 @@ const createRes = (): any => {
 describe("superAdmin.ctrl inviteUserToOrg", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    // No existing user with the email; the organization exists.
+    // The organization exists.
     mockQuery.mockImplementation(async (sql: unknown) =>
       String(sql).includes("FROM organizations") ? [{ id: 12 }] : [],
     );
@@ -223,30 +245,310 @@ describe("superAdmin.ctrl direct role assignment", () => {
     expect(res.status).toHaveBeenCalledWith(400);
   });
 
-  it.each([
-    ["an unchanged role", 3, 3],
-    ["a cleared role sent back as null", null, null],
-  ])("saves other fields without checking %s", async (_label, current, sent) => {
-    mockQuery.mockResolvedValue([{ id: 5, role_id: current, organization_id: 12 }] as never);
-    const req: any = { params: { id: "5" }, body: { name: "Renamed", roleId: sent }, t };
-    const res = createRes();
+  describe("creating a user whose email already has an account", () => {
+    const createReqFor = () => ({
+      params: { id: "12" },
+      body: { email: "priya@x.io", name: "New", surname: "U", password: "pw", roleId: "3" },
+      t,
+    });
 
-    await updateUser(req, res);
+    beforeEach(() => {
+      (inviteRoleRefusal as unknown as jest.Mock).mockResolvedValue(null as never);
+      (getUserByEmailQuery as unknown as jest.Mock).mockResolvedValue({
+        id: 7,
+        email: "priya@x.io",
+        password_hash: "hash",
+      } as never);
+    });
 
-    expect(inviteRoleRefusal).not.toHaveBeenCalled();
-    expect(String(mockQuery.mock.calls[1][0])).not.toContain("role_id = :roleId");
-    expect(res.status).not.toHaveBeenCalledWith(400);
+    it("adds the account to the organization, leaving its password alone", async () => {
+      (getUserOrganizationsQuery as unknown as jest.Mock).mockResolvedValue([
+        { organization_id: 4, organization_name: "Globex", role_id: 1, role_name: "Admin" },
+      ] as never);
+      const res = createRes();
+
+      await createUserInOrg(createReqFor() as any, res);
+
+      expect(addOrganizationMemberQuery).toHaveBeenCalledWith(12, 7, 3, transaction);
+      expect(createNewUserWrapper).not.toHaveBeenCalled();
+      expect(transaction.commit).toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(201);
+      const data = (res.json as jest.Mock).mock.calls[0][0] as any;
+      expect(data.data).toEqual(
+        expect.objectContaining({ id: 7, role_id: 3, existing_account: true }),
+      );
+      expect(data.data.password_hash).toBeUndefined();
+    });
+
+    it("refuses a pure super admin", async () => {
+      (getUserOrganizationsQuery as unknown as jest.Mock).mockResolvedValue([] as never);
+      const res = createRes();
+
+      await createUserInOrg(createReqFor() as any, res);
+
+      expect(addOrganizationMemberQuery).not.toHaveBeenCalled();
+      expect(transaction.rollback).toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(409);
+    });
+
+    it("refuses an account that is already a member", async () => {
+      (getUserOrganizationsQuery as unknown as jest.Mock).mockResolvedValue([
+        { organization_id: 12, organization_name: "Acme", role_id: 4, role_name: "Auditor" },
+      ] as never);
+      const res = createRes();
+
+      await createUserInOrg(createReqFor() as any, res);
+
+      expect(addOrganizationMemberQuery).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(409);
+    });
   });
 
-  it("refuses a role the rules refuse when updating a user, without updating", async () => {
-    mockQuery.mockResolvedValue([{ id: 5, role_id: 3, organization_id: 12 }] as never);
-    const req: any = { params: { id: "5" }, body: { roleId: 60 }, t };
+  describe("updating a user", () => {
+    beforeEach(() => {
+      (getUserByIdQuery as unknown as jest.Mock).mockResolvedValue({ id: 5 } as never);
+      (getUserOrganizationsQuery as unknown as jest.Mock).mockResolvedValue([
+        { organization_id: 12, organization_name: "Acme", role_id: 3, role_name: "Editor" },
+      ] as never);
+      mockQuery.mockResolvedValue([{ id: 5 }] as never);
+    });
+
+    it("saves other fields without checking an unchanged role", async () => {
+      const req: any = {
+        params: { id: "5" },
+        body: { name: "Renamed", roleId: 3, organizationId: 12 },
+        t,
+      };
+      const res = createRes();
+
+      await updateUser(req, res);
+
+      expect(inviteRoleRefusal).not.toHaveBeenCalled();
+      expect(updateOrganizationMemberRoleQuery).not.toHaveBeenCalled();
+      expect(String(mockQuery.mock.calls[0][0])).toContain("UPDATE users SET name = :name");
+      expect(res.status).toHaveBeenCalledWith(200);
+    });
+
+    it("changes the role of the membership in the named organization", async () => {
+      (inviteRoleRefusal as unknown as jest.Mock).mockResolvedValue(null as never);
+      const req: any = { params: { id: "5" }, body: { roleId: 4, organizationId: 12 }, t };
+      const res = createRes();
+
+      await updateUser(req, res);
+
+      expect(inviteRoleRefusal).toHaveBeenCalledWith(12, null, 4);
+      expect(updateOrganizationMemberRoleQuery).toHaveBeenCalledWith(12, 5, 4, transaction);
+      expect(res.status).toHaveBeenCalledWith(200);
+    });
+
+    it("refuses a role the rules refuse when updating a user, without updating", async () => {
+      const req: any = { params: { id: "5" }, body: { roleId: 60, organizationId: 12 }, t };
+      const res = createRes();
+
+      await updateUser(req, res);
+
+      expect(inviteRoleRefusal).toHaveBeenCalledWith(12, null, 60);
+      expect(sequelize.transaction).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(400);
+    });
+
+    it("answers 404 for a role in an organization the user is not a member of", async () => {
+      const req: any = { params: { id: "5" }, body: { roleId: 3, organizationId: 99 }, t };
+      const res = createRes();
+
+      await updateUser(req, res);
+
+      expect(inviteRoleRefusal).not.toHaveBeenCalled();
+      expect(sequelize.transaction).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(404);
+    });
+
+    it("refuses a pure super admin, who has no membership", async () => {
+      (getUserOrganizationsQuery as unknown as jest.Mock).mockResolvedValue([] as never);
+      const req: any = { params: { id: "5" }, body: { name: "Renamed" }, t };
+      const res = createRes();
+
+      await updateUser(req, res);
+
+      expect(sequelize.transaction).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(403);
+    });
+  });
+});
+
+describe("superAdmin.ctrl accounts that already exist", () => {
+  const transaction = { commit: jest.fn(), rollback: jest.fn() };
+  const t = (k: string) => k;
+  const existing = { id: 7, email: "priya@x.io", password_hash: "hash" };
+  const memberElsewhere = [
+    { organization_id: 4, organization_name: "Globex", role_id: 1, role_name: "Admin" },
+  ];
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (sequelize.transaction as unknown as jest.Mock).mockResolvedValue(transaction as never);
+    (createOrganizationQuery as unknown as jest.Mock).mockResolvedValue({ id: 30 } as never);
+    (inviteRoleRefusal as unknown as jest.Mock).mockResolvedValue(null as never);
+    (getUserByEmailQuery as unknown as jest.Mock).mockResolvedValue(null as never);
+  });
+
+  const createOrgReq = (mode: "invite" | "direct", password?: string): any => ({
+    body: {
+      orgName: "Acme",
+      mode,
+      user: { email: "priya@x.io", name: "Priya", surname: "S", roleId: 1, password },
+    },
+    userId: 1,
+    t,
+  });
+
+  it("creating an organization adds an existing account as its first user", async () => {
+    (getUserByEmailQuery as unknown as jest.Mock).mockResolvedValue(existing as never);
+    (getUserOrganizationsQuery as unknown as jest.Mock).mockResolvedValue(memberElsewhere as never);
     const res = createRes();
 
-    await updateUser(req, res);
+    await createOrgWithUser(createOrgReq("direct"), res);
 
-    expect(inviteRoleRefusal).toHaveBeenCalledWith(12, null, 60);
-    expect(mockQuery).toHaveBeenCalledTimes(1);
+    expect(addOrganizationMemberQuery).toHaveBeenCalledWith(30, 7, 1, transaction);
+    expect(createNewUserWrapper).not.toHaveBeenCalled();
+    expect(transaction.commit).toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(201);
+    expect((res.json as jest.Mock).mock.calls[0][0]).toEqual(
+      expect.objectContaining({ data: { organizationId: 30, existingAccount: true } }),
+    );
+  });
+
+  it.each(["direct", "invite"] as const)(
+    "creating an organization refuses a pure super admin (%s)",
+    async (mode) => {
+      (getUserByEmailQuery as unknown as jest.Mock).mockResolvedValue(existing as never);
+      (getUserOrganizationsQuery as unknown as jest.Mock).mockResolvedValue([] as never);
+      const res = createRes();
+
+      await createOrgWithUser(createOrgReq(mode, "Password#1"), res);
+
+      expect(addOrganizationMemberQuery).not.toHaveBeenCalled();
+      expect(createInvitationQuery).not.toHaveBeenCalled();
+      expect(transaction.rollback).toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(409);
+    },
+  );
+
+  it("creating an organization still needs a password for a new account", async () => {
+    const res = createRes();
+
+    await createOrgWithUser(createOrgReq("direct"), res);
+
+    expect(createNewUserWrapper).not.toHaveBeenCalled();
+    expect(transaction.rollback).toHaveBeenCalled();
     expect(res.status).toHaveBeenCalledWith(400);
+  });
+
+  const createUserReq = (password?: string): any => ({
+    params: { id: "12" },
+    body: { email: "priya@x.io", name: "Priya", surname: "S", roleId: "3", password },
+    t,
+  });
+
+  it("creating a user needs no password for an existing account", async () => {
+    (getUserByEmailQuery as unknown as jest.Mock).mockResolvedValue(existing as never);
+    (getUserOrganizationsQuery as unknown as jest.Mock).mockResolvedValue(memberElsewhere as never);
+    const res = createRes();
+
+    await createUserInOrg(createUserReq(), res);
+
+    expect(addOrganizationMemberQuery).toHaveBeenCalledWith(12, 7, 3, transaction);
+    expect(res.status).toHaveBeenCalledWith(201);
+  });
+
+  it("creating a user needs a password for a new account", async () => {
+    const res = createRes();
+
+    await createUserInOrg(createUserReq(), res);
+
+    expect(createNewUserWrapper).not.toHaveBeenCalled();
+    expect(transaction.rollback).toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(400);
+  });
+});
+
+describe("superAdmin.ctrl removeOrgUser", () => {
+  const transaction = { commit: jest.fn(), rollback: jest.fn() };
+  const req = (id: string, userId: string): any => ({
+    params: { id, userId },
+    t: (k: string) => k,
+  });
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (sequelize.transaction as unknown as jest.Mock).mockResolvedValue(transaction as never);
+  });
+
+  it("removes the user from that organization only", async () => {
+    (removeUserFromOrganizationQuery as unknown as jest.Mock).mockResolvedValue({
+      removed: true,
+      accountDeleted: false,
+    } as never);
+    const res = createRes();
+
+    await removeOrgUser(req("12", "7"), res);
+
+    expect(removeUserFromOrganizationQuery).toHaveBeenCalledWith(7, 12, transaction);
+    expect(transaction.commit).toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect((res.json as jest.Mock).mock.calls[0][0]).toEqual(
+      expect.objectContaining({ data: { removed: true, userId: 7, accountDeleted: false } }),
+    );
+  });
+
+  it("answers 404 for a user who is not a member", async () => {
+    (removeUserFromOrganizationQuery as unknown as jest.Mock).mockResolvedValue({
+      removed: false,
+      accountDeleted: false,
+    } as never);
+    const res = createRes();
+
+    await removeOrgUser(req("12", "7"), res);
+
+    expect(transaction.rollback).toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(404);
+  });
+
+  it.each([
+    ["abc", "7"],
+    ["12", "abc"],
+  ])("answers 400 for ids %p / %p", async (id, userId) => {
+    const res = createRes();
+
+    await removeOrgUser(req(id, userId), res);
+
+    expect(removeUserFromOrganizationQuery).not.toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(400);
+  });
+});
+
+describe("superAdmin.ctrl revokeSuperAdmin", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    // The target is a super admin, and there are two.
+    mockQuery.mockImplementation(async (sql: unknown) => {
+      if (String(sql).includes("COUNT(*)")) return [{ count: "2" }];
+      if (String(sql).includes("FROM super_admins WHERE user_id")) return [{ exists: 1 }];
+      return [];
+    });
+  });
+
+  it("refuses a super admin with no organization", async () => {
+    (getUserOrganizationsQuery as unknown as jest.Mock).mockResolvedValue([] as never);
+    const req: any = { params: { user_id: "7" }, userId: 1, t: (k: string) => k };
+    const res = createRes();
+
+    await revokeSuperAdmin(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(mockQuery).not.toHaveBeenCalledWith(
+      expect.stringContaining("DELETE FROM super_admins"),
+      expect.anything(),
+    );
   });
 });

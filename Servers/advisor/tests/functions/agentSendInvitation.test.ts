@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, jest } from "@jest/globals";
 
+jest.mock("../../../utils/organizationMember.utils", () => ({
+  inviteeRefusalQuery: jest.fn().mockResolvedValue(null),
+}));
 jest.mock("../../../database/db", () => ({ sequelize: { query: jest.fn() } }));
 jest.mock("../../approval/approvalGateway", () => ({ submitForApproval: jest.fn() }));
 jest.mock("../../../utils/invitation.utils", () => ({ createInvitationQuery: jest.fn() }));

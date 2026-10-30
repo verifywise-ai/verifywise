@@ -17,9 +17,20 @@ import { OrganizationModel } from "../domain.layer/models/organization/organizat
 import { createOrganizationQuery } from "../utils/organization.utils";
 import { createNewUserWrapper } from "../controllers/user.ctrl";
 import { createInvitationQuery } from "../utils/invitation.utils";
-import { deleteUserByIdQuery } from "../utils/user.utils";
+import {
+  deleteUserAccountQuery,
+  getUserByEmailQuery,
+  getUserByIdQuery,
+  removeUserFromOrganizationQuery,
+} from "../utils/user.utils";
+import {
+  addOrganizationMemberQuery,
+  getUserOrganizationsQuery,
+  updateOrganizationMemberRoleQuery,
+} from "../utils/organizationMember.utils";
 import { inviteRoleRefusal } from "../utils/inviteRole.utils";
 import {
+  ConflictException,
   ForbiddenException,
   NotFoundException,
   ValidationException,
@@ -51,6 +62,8 @@ export interface CreateOrgWithUserResult {
   organizationId: number;
   /** Stored on the invitation row; the emailed link must be signed for the same instant. */
   invitationExpiresAt: Date;
+  /** Direct mode added an existing account: its name and password are unchanged. */
+  existingAccount: boolean;
 }
 
 /**
@@ -60,6 +73,9 @@ export interface CreateOrgWithUserResult {
  * step fails. In invite mode the email is NOT sent here: the row is committed
  * first so a delivery failure still leaves a usable invitation behind, and the
  * caller decides how to report that.
+ *
+ * An email that already has an account is added to the new organization
+ * (direct) or gets the join link (invite); a pure super admin is refused.
  */
 export async function createOrganizationWithUser(
   input: CreateOrgWithUserInput,
@@ -83,13 +99,29 @@ export async function createOrganizationWithUser(
       throw new ValidationException(t("Unknown role"), "roleId");
     }
 
-    if (input.mode === "direct") {
+    // A pure super admin never joins an organization.
+    const existing = await getUserByEmailQuery(input.user.email);
+    if (existing && (await getUserOrganizationsQuery(existing.id!, transaction)).length === 0) {
+      throw new ConflictException(t("A super admin cannot join an organization"));
+    }
+
+    if (input.mode === "direct" && existing) {
+      await addOrganizationMemberQuery(
+        organizationId,
+        existing.id!,
+        input.user.roleId,
+        transaction,
+      );
+    } else if (input.mode === "direct") {
+      if (!input.user.password) {
+        throw new ValidationException(t("password is required for direct creation"), "password");
+      }
       await createNewUserWrapper(
         {
           name: input.user.name,
           surname: input.user.surname!,
           email: input.user.email,
-          password: input.user.password!,
+          password: input.user.password,
           roleId: input.user.roleId,
           organizationId,
         },
@@ -109,7 +141,11 @@ export async function createOrganizationWithUser(
     }
 
     await transaction.commit();
-    return { organizationId, invitationExpiresAt };
+    return {
+      organizationId,
+      invitationExpiresAt,
+      existingAccount: input.mode === "direct" && !!existing,
+    };
   } catch (error) {
     await transaction.rollback();
     throw error;
@@ -117,10 +153,11 @@ export async function createOrganizationWithUser(
 }
 
 /**
- * Delete an organization and everyone in it.
+ * Delete an organization and remove everyone from it.
  *
- * Users go first so their FK references are cleared before the organization
- * row is removed; the rest is left to the cascade.
+ * Members are removed first so their FK references are cleared before the
+ * organization row is removed; the rest is left to the cascade. A member of
+ * another organization keeps their account; anyone else's account is deleted.
  */
 export async function deleteOrganization(
   organizationId: number,
@@ -128,12 +165,12 @@ export async function deleteOrganization(
   const transaction = await sequelize.transaction();
   try {
     const users = await sequelize.query<{ id: number }>(
-      `SELECT id FROM users WHERE organization_id = :organizationId`,
+      `SELECT user_id AS id FROM organization_members WHERE organization_id = :organizationId`,
       { replacements: { organizationId }, type: QueryTypes.SELECT, transaction },
     );
 
     for (const user of users) {
-      await deleteUserByIdQuery(user.id, organizationId, transaction);
+      await removeUserFromOrganizationQuery(user.id, organizationId, transaction);
     }
 
     await sequelize.query(`DELETE FROM organizations WHERE id = :organizationId`, {
@@ -199,7 +236,8 @@ export interface CreateUserInOrgInput {
   email: string;
   name: string;
   surname: string;
-  password: string;
+  /** Required for a new account; an existing account keeps its own. */
+  password?: string;
   roleId: number;
   t?: (message: string) => string;
 }
@@ -207,6 +245,10 @@ export interface CreateUserInOrgInput {
 /**
  * Create an active user inside an existing organization. No invitation email —
  * the password is set here and the account works immediately.
+ *
+ * An email that already has an account adds that account to the organization
+ * instead; its name and password are left as they are. A pure super admin
+ * (no membership) never joins an organization, and a member is refused.
  */
 export async function createUserInOrganization(input: CreateUserInOrgInput): Promise<any> {
   const t = input.t ?? identity;
@@ -215,6 +257,30 @@ export async function createUserInOrganization(input: CreateUserInOrgInput): Pro
     // The same role check as an invite into this organization.
     if (await inviteRoleRefusal(input.organizationId, null, input.roleId)) {
       throw new ValidationException(t("Unknown role"), "roleId");
+    }
+
+    const existing = await getUserByEmailQuery(input.email);
+    if (existing) {
+      const organizations = await getUserOrganizationsQuery(existing.id!, transaction);
+      if (organizations.length === 0) {
+        throw new ConflictException(t("A super admin cannot join an organization"));
+      }
+      if (organizations.some((o) => o.organization_id === input.organizationId)) {
+        throw new ConflictException(t("User is already a member of this organization"));
+      }
+      await addOrganizationMemberQuery(
+        input.organizationId,
+        existing.id!,
+        input.roleId,
+        transaction,
+      );
+      await transaction.commit();
+      const { password_hash, ...safeUser } = existing as any;
+      return { ...safeUser, role_id: input.roleId, existing_account: true };
+    }
+
+    if (!input.password) {
+      throw new ValidationException(t("password is required for a new account"), "password");
     }
     const user = await createNewUserWrapper(
       {
@@ -240,34 +306,30 @@ export interface UpdateUserInput {
   name?: string;
   surname?: string;
   email?: string;
-  /** Undefined leaves the role alone; null is only meaningful for a cleared role. */
-  roleId?: number | null;
+  /** Undefined leaves the role alone. A role is per organization: needs organizationId. */
+  roleId?: number;
+  /** The membership whose role roleId sets. */
+  organizationId?: number;
 }
 
 /**
- * Update a user's details.
+ * Update a user's details, and their role in one organization.
  *
- * Throws NotFoundException for an unknown id and ForbiddenException for a pure
- * super admin (no role, no organization), who has no org role to change.
+ * Throws NotFoundException for an unknown id or a missing membership, and
+ * ForbiddenException for a pure super admin (no membership), who has no
+ * organization role to change.
  */
 export async function updateUserDetails(
   userId: number,
   input: UpdateUserInput,
   t: (message: string) => string = identity,
 ): Promise<any> {
-  const rows = await sequelize.query<{
-    id: number;
-    role_id: number | null;
-    organization_id: number | null;
-  }>(`SELECT id, role_id, organization_id FROM users WHERE id = :userId`, {
-    replacements: { userId },
-    type: QueryTypes.SELECT,
-  });
-
-  if (rows.length === 0) {
+  const user = await getUserByIdQuery(userId);
+  if (!user) {
     throw new NotFoundException(t("User not found"), "user", userId);
   }
-  if (rows[0].role_id == null && rows[0].organization_id == null) {
+  const organizations = await getUserOrganizationsQuery(userId);
+  if (organizations.length === 0) {
     throw new ForbiddenException(t("Super-admin user cannot be modified"));
   }
 
@@ -287,53 +349,100 @@ export async function updateUserDetails(
     replacements.email = input.email;
   }
 
-  // The edit form sends the current role back, null included (users whose
-  // former SuperAdmin role was cleared); only a change is checked and saved.
-  const currentRoleId = rows[0].role_id ?? null;
-  const roleChanged =
-    input.roleId !== undefined &&
-    (input.roleId === null ? currentRoleId !== null : Number(input.roleId) !== currentRoleId);
-  if (roleChanged) {
-    // The same role check as an invite into the user's organization.
-    const checkedRoleId = Number(input.roleId);
-    if (
-      !Number.isInteger(checkedRoleId) ||
-      checkedRoleId <= 0 ||
-      rows[0].organization_id == null ||
-      (await inviteRoleRefusal(rows[0].organization_id, null, checkedRoleId))
-    ) {
-      throw new ValidationException(t("Unknown role"), "roleId");
+  // The edit form sends the current role back; only a change is checked and saved.
+  let roleChange: { organizationId: number; roleId: number } | null = null;
+  if (input.roleId !== undefined) {
+    const membership = organizations.find((o) => o.organization_id === input.organizationId);
+    if (!membership) {
+      throw new NotFoundException(
+        t("User is not a member of this organization"),
+        "organization",
+        input.organizationId,
+      );
     }
-    updates.push("role_id = :roleId");
-    replacements.roleId = checkedRoleId;
+    const checkedRoleId = Number(input.roleId);
+    if (checkedRoleId !== membership.role_id) {
+      // The same role check as an invite into that organization.
+      if (
+        !Number.isInteger(checkedRoleId) ||
+        checkedRoleId <= 0 ||
+        (await inviteRoleRefusal(membership.organization_id, null, checkedRoleId))
+      ) {
+        throw new ValidationException(t("Unknown role"), "roleId");
+      }
+      roleChange = { organizationId: membership.organization_id, roleId: checkedRoleId };
+    }
   }
 
-  if (updates.length === 0) {
+  if (updates.length === 0 && !roleChange) {
     throw new ValidationException(t("No fields to update"), "name");
   }
 
+  const transaction = await sequelize.transaction();
+  try {
+    if (updates.length > 0) {
+      await sequelize.query(
+        `UPDATE users SET ${updates.join(", ")}, updated_at = NOW() WHERE id = :userId`,
+        { replacements, transaction },
+      );
+    }
+    if (roleChange) {
+      await updateOrganizationMemberRoleQuery(
+        roleChange.organizationId,
+        userId,
+        roleChange.roleId,
+        transaction,
+      );
+    }
+    await transaction.commit();
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+
   const [updated] = await sequelize.query(
-    `WITH updated AS (
-      UPDATE users SET ${updates.join(", ")}, updated_at = NOW() WHERE id = :userId
-      RETURNING *
-    )
-    SELECT u.id, u.name, u.surname, u.email, u.role_id, r.name as role_name,
-           u.organization_id, o.name as organization_name,
-           u.created_at, u.last_login
-    FROM updated u
-    LEFT JOIN roles r ON u.role_id = r.id
-    LEFT JOIN organizations o ON u.organization_id = o.id`,
-    { replacements, type: QueryTypes.SELECT },
+    `SELECT u.id, u.name, u.surname, u.email, u.created_at, u.last_login
+     FROM users u
+     WHERE u.id = :userId`,
+    { replacements: { userId }, type: QueryTypes.SELECT },
   );
 
-  return updated;
+  return { ...(updated as object), organizations: await getUserOrganizationsQuery(userId) };
 }
 
 /**
- * Remove a user from their organization.
+ * Remove a user from one organization. The account is deleted only when it
+ * was the user's last organization.
+ */
+export async function removeUserFromOrganization(
+  organizationId: number,
+  userId: number,
+  t: (message: string) => string = identity,
+): Promise<{ removed: true; userId: number; accountDeleted: boolean }> {
+  const transaction = await sequelize.transaction();
+  try {
+    const { removed, accountDeleted } = await removeUserFromOrganizationQuery(
+      userId,
+      organizationId,
+      transaction,
+    );
+    if (!removed) {
+      throw new NotFoundException(t("User is not a member of this organization"), "user", userId);
+    }
+    await transaction.commit();
+    return { removed: true, userId, accountDeleted };
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+}
+
+/**
+ * Delete a user's account, from every organization they belong to.
  *
- * A pure super admin is refused: the database trigger would block it anyway,
- * since revoking their super_admins row would orphan them.
+ * A pure super admin (no membership) is refused, which keeps at least one
+ * super admin on the deployment: they can neither be deleted nor join an
+ * organization.
  */
 export async function removeUserById(
   userId: number,
@@ -341,27 +450,15 @@ export async function removeUserById(
 ): Promise<{ deleted: true; userId: number }> {
   const transaction = await sequelize.transaction();
   try {
-    const rows = await sequelize.query<{
-      id: number;
-      organization_id: number | null;
-      role_id: number | null;
-    }>(`SELECT id, organization_id, role_id FROM users WHERE id = :userId`, {
-      replacements: { userId },
-      type: QueryTypes.SELECT,
-      transaction,
-    });
-    const user = rows[0];
-
+    const user = await getUserByIdQuery(userId, transaction);
     if (!user) {
       throw new NotFoundException(t("User not found"), "user", userId);
     }
-    if (user.role_id == null && user.organization_id == null) {
+    if ((await getUserOrganizationsQuery(userId, transaction)).length === 0) {
       throw new ForbiddenException(t("Super-admin user cannot be deleted"));
     }
 
-    // Cast, not assertion: a user with a role but no organization still reaches
-    // here and is passed through exactly as the controller did before.
-    await deleteUserByIdQuery(userId, user.organization_id as number, transaction);
+    await deleteUserAccountQuery(userId, transaction);
     await transaction.commit();
     return { deleted: true, userId };
   } catch (error) {

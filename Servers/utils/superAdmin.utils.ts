@@ -6,10 +6,13 @@ export interface SuperAdminRow {
   name: string;
   surname: string;
   email: string;
-  role_id: number | null;
-  role_name: string | null;
-  organization_id: number | null;
-  organization_name: string | null;
+  /** Empty for a pure super admin. */
+  organizations: {
+    organization_id: number;
+    organization_name: string;
+    role_id: number;
+    role_name: string;
+  }[];
 }
 
 export async function isUserSuperAdmin(userId: number): Promise<boolean> {
@@ -31,12 +34,25 @@ export async function countSuperAdmins(): Promise<number> {
 export async function listSuperAdmins(): Promise<SuperAdminRow[]> {
   return (await sequelize.query(
     `SELECT sa.user_id,
-            u.name, u.surname, u.email, u.role_id, r.name AS role_name,
-            u.organization_id, o.name AS organization_name
+            u.name, u.surname, u.email,
+            COALESCE(
+              (SELECT json_agg(
+                        json_build_object(
+                          'organization_id', om.organization_id,
+                          'organization_name', o.name,
+                          'role_id', om.role_id,
+                          'role_name', r.name
+                        )
+                        ORDER BY o.name, om.organization_id
+                      )
+                 FROM organization_members om
+                 JOIN organizations o ON o.id = om.organization_id
+                 JOIN roles r ON r.id = om.role_id
+                WHERE om.user_id = sa.user_id),
+              '[]'::json
+            ) AS organizations
      FROM super_admins sa
      JOIN users u ON u.id = sa.user_id
-     LEFT JOIN roles r ON r.id = u.role_id
-     LEFT JOIN organizations o ON o.id = u.organization_id
      ORDER BY u.name ASC, u.surname ASC`,
     { type: QueryTypes.SELECT },
   )) as SuperAdminRow[];
@@ -62,7 +78,7 @@ export interface OrganizationRow {
 export async function listOrganizationsQuery(): Promise<OrganizationRow[]> {
   return (await sequelize.query(
     `SELECT o.id, o.name, o.logo, o.created_at, o.onboarding_status,
-            (SELECT COUNT(*) FROM users u WHERE u.organization_id = o.id) AS user_count
+            (SELECT COUNT(*) FROM organization_members om WHERE om.organization_id = o.id) AS user_count
      FROM organizations o
      ORDER BY o.created_at DESC`,
     { type: QueryTypes.SELECT },
@@ -83,21 +99,22 @@ export interface UserRow {
 }
 
 /**
- * Every user that belongs to an organization, newest first.
+ * Every organization membership, newest user first: a user in several
+ * organizations has one row per organization.
  *
- * Pure super admins (no role, no organization) are excluded: they have no
- * organization membership to report and are not editable through this surface.
+ * Pure super admins (no membership) are excluded: they have no organization
+ * membership to report and are not editable through this surface.
  */
 export async function listAllUsersQuery(): Promise<UserRow[]> {
   return (await sequelize.query(
-    `SELECT u.id, u.name, u.surname, u.email, u.role_id, r.name as role_name,
-            u.organization_id, o.name as organization_name,
+    `SELECT u.id, u.name, u.surname, u.email, om.role_id, r.name as role_name,
+            om.organization_id, o.name as organization_name,
             u.created_at, u.last_login
-     FROM users u
-     LEFT JOIN roles r ON u.role_id = r.id
-     LEFT JOIN organizations o ON u.organization_id = o.id
-     WHERE u.organization_id IS NOT NULL
-     ORDER BY u.created_at DESC`,
+     FROM organization_members om
+     JOIN users u ON u.id = om.user_id
+     JOIN roles r ON r.id = om.role_id
+     JOIN organizations o ON o.id = om.organization_id
+     ORDER BY u.created_at DESC, u.id ASC, o.name ASC`,
     { type: QueryTypes.SELECT },
   )) as UserRow[];
 }
@@ -105,11 +122,12 @@ export async function listAllUsersQuery(): Promise<UserRow[]> {
 /** The users of one organization, oldest first. */
 export async function listOrganizationUsersQuery(organizationId: number): Promise<UserRow[]> {
   return (await sequelize.query(
-    `SELECT u.id, u.name, u.surname, u.email, u.role_id, r.name as role_name,
+    `SELECT u.id, u.name, u.surname, u.email, om.role_id, r.name as role_name,
             u.created_at, u.last_login
-     FROM users u
-     LEFT JOIN roles r ON u.role_id = r.id
-     WHERE u.organization_id = :organizationId
+     FROM organization_members om
+     JOIN users u ON u.id = om.user_id
+     JOIN roles r ON r.id = om.role_id
+     WHERE om.organization_id = :organizationId
      ORDER BY u.created_at ASC`,
     { replacements: { organizationId }, type: QueryTypes.SELECT },
   )) as UserRow[];
@@ -119,15 +137,6 @@ export async function listOrganizationUsersQuery(organizationId: number): Promis
 export async function organizationExists(organizationId: number): Promise<boolean> {
   const rows = await sequelize.query(`SELECT 1 FROM organizations WHERE id = :organizationId`, {
     replacements: { organizationId },
-    type: QueryTypes.SELECT,
-  });
-  return rows.length > 0;
-}
-
-/** Whether any user already uses this email address. */
-export async function userExistsByEmail(email: string): Promise<boolean> {
-  const rows = await sequelize.query(`SELECT 1 FROM users WHERE email = :email`, {
-    replacements: { email },
     type: QueryTypes.SELECT,
   });
   return rows.length > 0;

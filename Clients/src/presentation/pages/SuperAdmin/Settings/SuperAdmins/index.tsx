@@ -28,15 +28,28 @@ import { EmptyState } from "../../../../components/EmptyState";
 import singleTheme from "../../../../themes/v1SingleTheme";
 import { useAuth } from "../../../../../application/hooks/useAuth";
 
+/** A user who can be elected: one per account, with every organization they belong to. */
+interface Candidate {
+  id: number;
+  name: string;
+  surname: string;
+  email: string;
+  organizationNames: string[];
+}
+
+/** "Acme (Admin), Globex (Editor)"; a pure super admin has none. */
+const describeOrganizations = (organizations: SuperAdminEntry["organizations"]) =>
+  organizations.map((o) => `${o.organization_name} (${o.role_name})`).join(", ") || "—";
+
 interface ElectModalProps {
   isOpen: boolean;
-  candidates: GlobalUser[];
+  candidates: Candidate[];
   onClose: () => void;
   onElected: () => void;
 }
 
 const ElectModal = ({ isOpen, candidates, onClose, onElected }: ElectModalProps) => {
-  const [selected, setSelected] = useState<GlobalUser | null>(null);
+  const [selected, setSelected] = useState<Candidate | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -72,14 +85,14 @@ const ElectModal = ({ isOpen, candidates, onClose, onElected }: ElectModalProps)
       isOpen={isOpen}
       onClose={onClose}
       title="Elect a Super Admin"
-      description="Grant an existing user cross-organization Super Admin capabilities. Their base organization role is unchanged."
+      description="Grant an existing user cross-organization Super Admin capabilities. Their organization roles are unchanged."
       submitButtonText="Elect"
       onSubmit={handleSubmit}
       isSubmitting={submitting}
       maxWidth="480px"
     >
       <Stack spacing={2}>
-        <AutoCompleteField<GlobalUser>
+        <AutoCompleteField<Candidate>
           label="User"
           isRequired
           placeholder="Search by name or email"
@@ -104,7 +117,9 @@ const ElectModal = ({ isOpen, candidates, onClose, onElected }: ElectModalProps)
                   </Typography>
                   <Typography sx={{ fontSize: 12, color: "#666666" }}>
                     {option.email}
-                    {option.organization_name ? ` · ${option.organization_name}` : ""}
+                    {option.organizationNames.length > 0
+                      ? ` · ${option.organizationNames.join(", ")}`
+                      : ""}
                   </Typography>
                 </Stack>
               </Box>
@@ -153,7 +168,7 @@ const RevokeModal = ({ target, onClose, onRevoked }: RevokeModalProps) => {
       maxWidth="480px"
     >
       <Typography variant="body2" sx={{ color: "text.secondary" }}>
-        They will keep their normal organization role but lose cross-organization access.
+        They will keep their organization roles but lose cross-organization access.
       </Typography>
     </StandardModal>
   );
@@ -185,9 +200,26 @@ const SuperAdmins = () => {
     fetchData();
   }, [fetchData]);
 
+  // The user list has one row per membership: one candidate per account.
   const candidates = useMemo(() => {
     const takenIds = new Set(superAdmins.map((s) => s.user_id));
-    return allUsers.filter((u) => !takenIds.has(u.id));
+    const byId = new Map<number, Candidate>();
+    for (const u of allUsers) {
+      if (takenIds.has(u.id)) continue;
+      const candidate = byId.get(u.id);
+      if (candidate) {
+        candidate.organizationNames.push(u.organization_name);
+      } else {
+        byId.set(u.id, {
+          id: u.id,
+          name: u.name,
+          surname: u.surname,
+          email: u.email,
+          organizationNames: [u.organization_name],
+        });
+      }
+    }
+    return [...byId.values()];
   }, [allUsers, superAdmins]);
 
   const tableStyles = singleTheme.tableStyles.primary;
@@ -225,7 +257,7 @@ const SuperAdmins = () => {
           <Table sx={{ ...tableStyles.frame }}>
             <TableHead sx={{ backgroundColor: tableStyles.header.backgroundColors }}>
               <TableRow>
-                {["Name", "Email", "Organization", "Base role", ""].map((label) => (
+                {["Name", "Email", "Organizations", ""].map((label) => (
                   <TableCell
                     key={label || "actions"}
                     align={label === "" ? "right" : "left"}
@@ -244,20 +276,25 @@ const SuperAdmins = () => {
             <TableBody>
               {superAdmins.map((sa) => {
                 const isSelf = sa.user_id === userId;
-                const disabled = isLastSuperAdmin || isSelf;
+                // Without an organization the account is only a Super Admin.
+                const hasNoOrganization = sa.organizations.length === 0;
+                const disabled = isLastSuperAdmin || isSelf || hasNoOrganization;
                 const title = isSelf
                   ? "You cannot revoke yourself"
                   : isLastSuperAdmin
                     ? "Cannot revoke the last Super Admin"
-                    : "Revoke Super Admin";
+                    : hasNoOrganization
+                      ? "A Super Admin with no organization cannot be revoked"
+                      : "Revoke Super Admin";
                 return (
                   <TableRow key={sa.user_id} sx={tableStyles.body.row}>
                     <TableCell sx={tableStyles.body.cell}>
                       {`${sa.name} ${sa.surname || ""}`.trim()}
                     </TableCell>
                     <TableCell sx={tableStyles.body.cell}>{sa.email}</TableCell>
-                    <TableCell sx={tableStyles.body.cell}>{sa.organization_name || "—"}</TableCell>
-                    <TableCell sx={tableStyles.body.cell}>{sa.role_name || "—"}</TableCell>
+                    <TableCell sx={tableStyles.body.cell}>
+                      {describeOrganizations(sa.organizations)}
+                    </TableCell>
                     <TableCell sx={tableStyles.body.cell} align="right">
                       <IconButton
                         size="small"

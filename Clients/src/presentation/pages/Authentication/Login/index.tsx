@@ -1,4 +1,13 @@
-import { Button, Divider, IconButton, Stack, Typography, useTheme, Box } from "@mui/material";
+import {
+  Button,
+  Divider,
+  IconButton,
+  Stack,
+  Typography,
+  useTheme,
+  Box,
+  SelectChangeEvent,
+} from "@mui/material";
 import React, { Suspense, useEffect, useState } from "react";
 import { X } from "lucide-react";
 import { ReactComponent as Background } from "../../../assets/imgs/background-grid.svg";
@@ -7,19 +16,15 @@ import Field from "../../../components/Inputs/Field";
 import singleTheme from "../../../themes/v1SingleTheme";
 import { useNavigate } from "react-router";
 import { logEngine } from "../../../../application/tools/log.engine";
-import { useDispatch } from "react-redux";
-import {
-  setExpiration,
-  setOnboardingStatus,
-  setIsOrgCreator,
-  setIsSuperAdmin,
-} from "../../../../application/redux/auth/authSlice";
-import { startSession } from "../../../../application/utils/clearSession";
 import Alert from "../../../components/Alert";
 import { ENV_VARs } from "../../../../../env.vars";
-import { loginUser } from "../../../../application/repository/user.repository";
+import {
+  loginUser,
+  selectLoginOrganization,
+  type OrganizationSelection,
+} from "../../../../application/repository/user.repository";
 import { checkOrganizationExists } from "../../../../application/repository/organization.repository";
-import { extractUserToken } from "../../../../application/tools/extractToken";
+import { useStartLoginSession } from "../../../../application/hooks/useStartLoginSession";
 import {
   CheckSsoStatus,
   GetSsoOrgs,
@@ -123,15 +128,68 @@ const initialState: FormValues = {
   rememberMe: false,
 };
 
+/** A failed login request, as apiServices and axios reject it. */
+interface LoginError {
+  status?: number;
+  message?: string;
+  response?: { status?: number; data?: { error?: string; message?: string } };
+}
+
+/**
+ * The message for a failed login or organization selection; server and
+ * network failures are logged.
+ */
+const loginErrorMessage = (error: LoginError): string => {
+  const status = error.status || error.response?.status;
+  const responseData = error.response?.data;
+
+  if (status === 401 || status === 429) {
+    // Expected user errors - no logging needed, just show the message
+    return error.message || "Invalid email or password";
+  }
+  if (status === 500) {
+    // Backend returns: { message: "Internal Server Error", error: <error message> }
+    const errorMessage = responseData?.error || responseData?.message;
+    logEngine({
+      type: "error",
+      message: `Server error during login: ${errorMessage || "Unknown error"}`,
+    });
+    return errorMessage
+      ? `Server error: ${errorMessage}`
+      : "Internal server error. Please try again later.";
+  }
+  if (error.message === "Network Error" || !error.response) {
+    logEngine({
+      type: "error",
+      message: "Network error during login.",
+    });
+    return "Network error. Please check your connection and try again.";
+  }
+  // Handle other unexpected status codes - these are worth logging
+  const errorMessage = responseData?.message || responseData?.error || error.message;
+  logEngine({
+    type: "error",
+    message: `Unexpected error during login: ${errorMessage}`,
+  });
+  return errorMessage || "An unexpected error occurred. Please try again.";
+};
+
 const Login: React.FC = () => {
   const navigate = useNavigate();
-  const dispatch = useDispatch();
+  const startLoginSession = useStartLoginSession();
   // State for form values
   const [values, setValues] = useState<FormValues>(initialState);
+  // A user in several organizations picks one after the password check.
+  const [selection, setSelection] = useState<
+    (OrganizationSelection & { rememberMe: boolean }) | null
+  >(null);
+  const [selectedOrgId, setSelectedOrgId] = useState<number | "">("");
 
-  const loginText = isDemoApp
-    ? "Click on Sign in button directly to continue"
-    : "Log in to your account";
+  const loginText = selection
+    ? "Choose an organization"
+    : isDemoApp
+      ? "Click on Sign in button directly to continue"
+      : "Log in to your account";
 
   //disabled overlay state/modal
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -197,6 +255,16 @@ const Login: React.FC = () => {
     setValues({ ...values, [prop]: event.target.value });
   };
 
+  const showError = (body: string) => {
+    setAlert({ variant: "error", body });
+    setTimeout(() => setAlert(null), 5000);
+  };
+
+  const backToSignIn = () => {
+    setSelection(null);
+    setSelectedOrgId("");
+  };
+
   // Handle form submission
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -207,90 +275,47 @@ const Login: React.FC = () => {
     })
       .then(async (response) => {
         setValues(initialState);
-
-        if (response.status === 202) {
-          const token = response.data.data.token;
-          const isSuperAdminFlag = response.data.data.isSuperAdmin || false;
-
-          startSession(dispatch, token);
-          dispatch(setExpiration(values.rememberMe ? Date.now() + 30 * 24 * 60 * 60 * 1000 : null));
-
-          dispatch(setIsSuperAdmin(isSuperAdminFlag));
-
-          // Bootstrap SuperAdmin: JWT has no organizationId — take them
-          // straight to /super-admin. Elected SuperAdmins have their own
-          // org and fall through to the normal tenant landing page; they
-          // can jump to /super-admin from the AppSwitcher.
-          if (isSuperAdminFlag) {
-            const tokenPayload = extractUserToken(token);
-            if (!tokenPayload?.organizationId) {
-              localStorage.setItem("root_version", __APP_VERSION__);
-              logEngine({ type: "info", message: "Super-admin login successful." });
-              setIsSubmitting(false);
-              navigate("/super-admin");
-              return;
-            }
-          }
-
-          const onboardingStatus = response.data.data.onboarding_status || "completed";
-          const isOrgCreatorFlag = response.data.data.is_org_creator || false;
-
-          // Store onboarding status from server
-          dispatch(setOnboardingStatus(onboardingStatus));
-          dispatch(setIsOrgCreator(isOrgCreatorFlag));
-
-          localStorage.setItem("root_version", __APP_VERSION__);
-
-          logEngine({
-            type: "info",
-            message: "Login successful.",
-          });
-
-          setIsSubmitting(false);
-          navigate("/");
-        }
-      })
-      .catch((error) => {
         setIsSubmitting(false);
 
-        let message: string;
-        const status = error.status || error.response?.status;
-        const responseData = error.response?.data;
-
-        if (status === 401 || status === 429) {
-          // Expected user errors - no logging needed, just show the message
-          message = error.message || "Invalid email or password";
-        } else if (status === 500) {
-          // Backend returns: { message: "Internal Server Error", error: <error message> }
-          const errorMessage = responseData?.error || responseData?.message;
-          message = errorMessage
-            ? `Server error: ${errorMessage}`
-            : "Internal server error. Please try again later.";
-
-          logEngine({
-            type: "error",
-            message: `Server error during login: ${errorMessage || "Unknown error"}`,
-          });
-        } else if (error.message === "Network Error" || !error.response) {
-          message = "Network error. Please check your connection and try again.";
-
-          logEngine({
-            type: "error",
-            message: "Network error during login.",
-          });
-        } else {
-          // Handle other unexpected status codes - these are worth logging
-          const errorMessage = responseData?.message || responseData?.error || error.message;
-          message = errorMessage || "An unexpected error occurred. Please try again.";
-
-          logEngine({
-            type: "error",
-            message: `Unexpected error during login: ${errorMessage}`,
-          });
+        if (response.status === 202) {
+          const data = response.data.data;
+          if ("requiresOrganizationSelection" in data) {
+            setSelection({ ...data, rememberMe: values.rememberMe });
+            return;
+          }
+          startLoginSession(data, values.rememberMe);
         }
+      })
+      .catch((error: LoginError) => {
+        setIsSubmitting(false);
+        showError(loginErrorMessage(error));
+      });
+  };
 
-        setAlert({ variant: "error", body: message });
-        setTimeout(() => setAlert(null), 5000);
+  const handleSelectOrganization = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!selection || !selectedOrgId) return;
+    setIsSubmitting(true);
+
+    await selectLoginOrganization({
+      selectionToken: selection.selectionToken,
+      organizationId: selectedOrgId,
+    })
+      .then((response) => {
+        setIsSubmitting(false);
+        if (response.status === 202) {
+          startLoginSession(response.data.data, selection.rememberMe);
+        }
+      })
+      .catch((error: LoginError) => {
+        setIsSubmitting(false);
+        // The selection token lasts a few minutes: sign in again.
+        if ((error.status || error.response?.status) === 406) {
+          backToSignIn();
+          showError("Your sign-in expired. Please sign in again.");
+          return;
+        }
+        showError(loginErrorMessage(error));
       });
   };
 
@@ -333,7 +358,7 @@ const Login: React.FC = () => {
         }}
       />
 
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={selection ? handleSelectOrganization : handleSubmit}>
         <Stack
           className="reg-admin-form"
           sx={{
@@ -389,128 +414,170 @@ const Login: React.FC = () => {
               </IconButton>
             </Stack>
           )}
-          <Stack sx={{ gap: theme.spacing(7.5) }}>
-            <Field
-              label="Email"
-              isRequired
-              placeholder="name.surname@companyname.com"
-              sx={fieldStyles}
-              type="email"
-              value={values.email}
-              onChange={handleChange("email")}
-              disabled={isDemoApp}
-            />
-            <Field
-              label="Password"
-              isRequired
-              placeholder="Enter your password"
-              sx={fieldStyles}
-              type="password"
-              value={values.password}
-              onChange={handleChange("password")}
-              disabled={isDemoApp}
-            />
-            <Stack
-              sx={{
-                display: "flex",
-                flexDirection: "row",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              <Checkbox
-                id="30-days-memory"
-                label="Remember for 30 days"
-                isChecked={values.rememberMe}
-                value={values.rememberMe ? "true" : "false"}
-                onChange={(e) => {
-                  setValues({ ...values, rememberMe: e.target.checked });
-                }}
-                size="small"
+          {selection ? (
+            <Stack sx={{ gap: theme.spacing(7.5) }}>
+              <Select
+                id="login-organization"
+                label="Organization"
+                isRequired
+                placeholder="Select your organization"
+                value={selectedOrgId}
+                items={selection.organizations.map((o) => ({
+                  _id: o.id,
+                  name: `${o.name} (${o.role_name})`,
+                }))}
+                onChange={(e: SelectChangeEvent<string | number>) =>
+                  setSelectedOrgId(e.target.value ? Number(e.target.value) : "")
+                }
+                getOptionValue={(option) => option._id}
+                sx={{ width: 360 }}
               />
+              <Button
+                type="submit"
+                disableRipple
+                variant="contained"
+                disabled={!selectedOrgId}
+                sx={singleTheme.buttons.primary.contained}
+              >
+                Continue
+              </Button>
               <Typography
                 sx={{
                   color: singleTheme.buttons.primary.contained.backgroundColor,
                   fontSize: 13,
                   fontWeight: "bold",
                   cursor: "pointer",
+                  textAlign: "center",
                 }}
-                onClick={() => {
-                  navigate("/forgot-password", {
-                    state: { email: values.email },
-                  });
-                }}
+                onClick={backToSignIn}
               >
-                Forgot password
+                Back to sign in
               </Typography>
             </Stack>
-            <Button
-              type="submit"
-              disableRipple
-              variant="contained"
-              sx={singleTheme.buttons.primary.contained}
-            >
-              Sign in
-            </Button>
-            {ssoFeatureEnabled && (
-              <>
-                {/* Divider with "or" */}
-                <Stack sx={{ position: "relative", my: 4 }}>
-                  <Divider />
-                  <Typography
-                    sx={{
-                      position: "absolute",
-                      top: "50%",
-                      left: "50%",
-                      transform: "translate(-50%, -50%)",
-                      backgroundColor: "#fff",
-                      px: 2,
-                      fontSize: 14,
-                      color: theme.palette.text.secondary,
-                      fontWeight: 500,
-                    }}
-                  >
-                    or
-                  </Typography>
-                </Stack>
-
-                {/* Organization Selection - Always show */}
-                <Select
-                  id="sso-organization"
-                  label="Organization"
-                  isRequired
-                  placeholder="Select your organization"
-                  value={selectedSsoOrgId}
-                  items={ssoOrgs.map((o) => ({
-                    _id: o.id,
-                    name: o.ssoEnabled ? o.name : `${o.name} (SSO not enabled)`,
-                  }))}
-                  onChange={(e: any) =>
-                    setSelectedSsoOrgId(e.target.value ? Number(e.target.value) : "")
-                  }
-                  getOptionValue={(option) => option._id}
-                  disabled={ssoOrgs.length === 0}
-                  sx={{ width: 360 }}
+          ) : (
+            <Stack sx={{ gap: theme.spacing(7.5) }}>
+              <Field
+                label="Email"
+                isRequired
+                placeholder="name.surname@companyname.com"
+                sx={fieldStyles}
+                type="email"
+                value={values.email}
+                onChange={handleChange("email")}
+                disabled={isDemoApp}
+              />
+              <Field
+                label="Password"
+                isRequired
+                placeholder="Enter your password"
+                sx={fieldStyles}
+                type="password"
+                value={values.password}
+                onChange={handleChange("password")}
+                disabled={isDemoApp}
+              />
+              <Stack
+                sx={{
+                  display: "flex",
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <Checkbox
+                  id="30-days-memory"
+                  label="Remember for 30 days"
+                  isChecked={values.rememberMe}
+                  value={values.rememberMe ? "true" : "false"}
+                  onChange={(e) => {
+                    setValues({ ...values, rememberMe: e.target.checked });
+                  }}
+                  size="small"
                 />
+                <Typography
+                  sx={{
+                    color: singleTheme.buttons.primary.contained.backgroundColor,
+                    fontSize: 13,
+                    fontWeight: "bold",
+                    cursor: "pointer",
+                  }}
+                  onClick={() => {
+                    navigate("/forgot-password", {
+                      state: { email: values.email },
+                    });
+                  }}
+                >
+                  Forgot password
+                </Typography>
+              </Stack>
+              <Button
+                type="submit"
+                disableRipple
+                variant="contained"
+                sx={singleTheme.buttons.primary.contained}
+              >
+                Sign in
+              </Button>
+              {ssoFeatureEnabled && (
+                <>
+                  {/* Divider with "or" */}
+                  <Stack sx={{ position: "relative", my: 4 }}>
+                    <Divider />
+                    <Typography
+                      sx={{
+                        position: "absolute",
+                        top: "50%",
+                        left: "50%",
+                        transform: "translate(-50%, -50%)",
+                        backgroundColor: "#fff",
+                        px: 2,
+                        fontSize: 14,
+                        color: theme.palette.text.secondary,
+                        fontWeight: 500,
+                      }}
+                    >
+                      or
+                    </Typography>
+                  </Stack>
 
-                {/* Microsoft SSO Button - Show when organization is selected */}
-                {selectedSsoOrgId && (
-                  <MicrosoftSignIn
-                    isSubmitting={isSubmitting}
-                    setIsSubmitting={setIsSubmitting}
-                    tenantId={ssoConfig.tenantId}
-                    clientId={ssoConfig.clientId}
-                    organizationId={ssoConfig.organizationId ?? Number(selectedSsoOrgId)}
-                    text="Sign in with Microsoft"
-                    onError={(message) => {
-                      setAlert({ variant: "error", body: message });
-                      setTimeout(() => setAlert(null), 5000);
-                    }}
+                  {/* Organization Selection - Always show */}
+                  <Select
+                    id="sso-organization"
+                    label="Organization"
+                    isRequired
+                    placeholder="Select your organization"
+                    value={selectedSsoOrgId}
+                    items={ssoOrgs.map((o) => ({
+                      _id: o.id,
+                      name: o.ssoEnabled ? o.name : `${o.name} (SSO not enabled)`,
+                    }))}
+                    onChange={(e: any) =>
+                      setSelectedSsoOrgId(e.target.value ? Number(e.target.value) : "")
+                    }
+                    getOptionValue={(option) => option._id}
+                    disabled={ssoOrgs.length === 0}
+                    sx={{ width: 360 }}
                   />
-                )}
-              </>
-            )}
-          </Stack>
+
+                  {/* Microsoft SSO Button - Show when organization is selected */}
+                  {selectedSsoOrgId && (
+                    <MicrosoftSignIn
+                      isSubmitting={isSubmitting}
+                      setIsSubmitting={setIsSubmitting}
+                      tenantId={ssoConfig.tenantId}
+                      clientId={ssoConfig.clientId}
+                      organizationId={ssoConfig.organizationId ?? Number(selectedSsoOrgId)}
+                      text="Sign in with Microsoft"
+                      onError={(message) => {
+                        setAlert({ variant: "error", body: message });
+                        setTimeout(() => setAlert(null), 5000);
+                      }}
+                    />
+                  )}
+                </>
+              )}
+            </Stack>
+          )}
         </Stack>
       </form>
     </Stack>

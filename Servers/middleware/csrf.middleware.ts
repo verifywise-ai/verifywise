@@ -24,8 +24,10 @@ const STATE_CHANGING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 // refresh_token cookie left in the browser must not block login/registration.
 const CSRF_EXEMPT_PATHS = new Set([
   "/api/users/login",
+  "/api/users/login/select-organization",
   "/api/users/login-microsoft",
   "/api/users/register",
+  "/api/users/invitations/accept",
   "/api/users/reset-password",
 ]);
 

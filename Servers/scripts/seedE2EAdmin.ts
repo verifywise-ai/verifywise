@@ -55,10 +55,9 @@ interface ParsedArgs {
 }
 
 async function findExistingUser(email: string): Promise<number | null> {
-  const [rows] = await sequelize.query(
-    `SELECT id, organization_id FROM verifywise.users WHERE email = :email`,
-    { replacements: { email } },
-  );
+  const [rows] = await sequelize.query(`SELECT id FROM verifywise.users WHERE email = :email`, {
+    replacements: { email },
+  });
   const row = (rows as any[])[0];
   return row ? row.id : null;
 }
@@ -74,16 +73,23 @@ async function createOrganization(name: string): Promise<number> {
 
 async function createAdminUser(orgId: number, args: ParsedArgs): Promise<number> {
   const hash = await bcrypt.hash(args.password, 10);
+  // One statement, so the user and their membership commit together (a user
+  // with no membership and no super_admins row is refused at commit).
   const [result] = await sequelize.query(
-    `INSERT INTO verifywise.users (
-       name, surname, email, password_hash, role_id, organization_id,
-       created_at, updated_at
+    `WITH created AS (
+       INSERT INTO verifywise.users (
+         name, surname, email, password_hash,
+         created_at, updated_at
+       )
+       VALUES (
+         :name, :surname, :email, :hash,
+         NOW(), NOW()
+       )
+       RETURNING id
      )
-     VALUES (
-       :name, :surname, :email, :hash, :roleId, :orgId,
-       NOW(), NOW()
-     )
-     RETURNING id`,
+     INSERT INTO verifywise.organization_members (organization_id, user_id, role_id)
+     SELECT :orgId, id, :roleId FROM created
+     RETURNING user_id AS id`,
     {
       replacements: {
         name: args.name,
@@ -132,7 +138,10 @@ async function main(): Promise<void> {
   if (existingUserId !== null) {
     // Re-seed the same user so credentials stay stable across runs.
     const [rows] = await sequelize.query(
-      `SELECT organization_id FROM verifywise.users WHERE id = :id`,
+      `SELECT organization_id FROM verifywise.organization_members
+       WHERE user_id = :id
+       ORDER BY joined_at ASC, organization_id ASC
+       LIMIT 1`,
       { replacements: { id: existingUserId } },
     );
     const existingOrgId = (rows as any[])[0]?.organization_id ?? null;
