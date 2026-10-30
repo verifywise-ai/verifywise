@@ -175,6 +175,8 @@ interface FieldEditorProps {
   usedEntityMappings?: string[];
   llmKeyId?: number | null;
   onChange: (field: FormField) => void;
+  /** Called on every edit, before the debounce sends it, so the page can enable Save at once. */
+  onEdit?: () => void;
   onClose: () => void;
   /** Problems the schema checks found on this field. */
   logicErrors?: SchemaLogicError[];
@@ -187,6 +189,7 @@ export function FieldEditor({
   usedEntityMappings = [],
   llmKeyId,
   onChange,
+  onEdit,
   onClose,
   logicErrors = [],
 }: FieldEditorProps) {
@@ -197,24 +200,27 @@ export function FieldEditor({
   // when the editor moves to another field, closes or loses focus, and are
   // merged onto the latest field so an outside update (a save response, a
   // reorder) and the edit both survive.
-  // `base` is the field the edit was made on: it is the fallback when the
-  // editor has already moved on, so a pending edit is never dropped.
-  const pendingEditRef = useRef<{ base: FormField; patch: Partial<FormField> } | null>(null);
+  const pendingEditRef = useRef<{ fieldId: string; patch: Partial<FormField> } | null>(null);
   const fieldRef = useRef(field);
   const onChangeRef = useRef(onChange);
+  const onEditRef = useRef(onEdit);
 
-  useEffect(() => {
+  // Declared before the [field] layout effect below, which can flush, so the
+  // flush never calls the previous render's handler.
+  useLayoutEffect(() => {
     onChangeRef.current = onChange;
-  }, [onChange]);
+    onEditRef.current = onEdit;
+  }, [onChange, onEdit]);
 
   const flushPendingEdit = useCallback(() => {
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
     debounceTimerRef.current = null;
     const pending = pendingEditRef.current;
     pendingEditRef.current = null;
-    if (!pending) return;
-    const latest = fieldRef.current.id === pending.base.id ? fieldRef.current : pending.base;
-    onChangeRef.current({ ...latest, ...pending.patch });
+    // The [field] layout effect flushes before it points fieldRef at another
+    // field; the id check keeps an edit off the wrong field if that changes.
+    if (!pending || pending.fieldId !== fieldRef.current.id) return;
+    onChangeRef.current({ ...fieldRef.current, ...pending.patch });
   }, []);
 
   // Send the previous field's edit before showing the new one; keep a same-field
@@ -222,7 +228,7 @@ export function FieldEditor({
   // run between the new field rendering and fieldRef pointing at it.
   useLayoutEffect(() => {
     const pending = pendingEditRef.current;
-    if (pending && pending.base.id !== field.id) flushPendingEdit();
+    if (pending && pending.fieldId !== field.id) flushPendingEdit();
     fieldRef.current = field;
     const kept = pendingEditRef.current?.patch;
     setLocalField(kept ? { ...field, ...kept } : field);
@@ -232,10 +238,11 @@ export function FieldEditor({
 
   const queueEdit = useCallback(
     (patch: Partial<FormField>) => {
-      const base = fieldRef.current;
+      const fieldId = fieldRef.current.id;
       const earlier =
-        pendingEditRef.current?.base.id === base.id ? pendingEditRef.current.patch : {};
-      pendingEditRef.current = { base, patch: { ...earlier, ...patch } };
+        pendingEditRef.current?.fieldId === fieldId ? pendingEditRef.current.patch : {};
+      pendingEditRef.current = { fieldId, patch: { ...earlier, ...patch } };
+      onEditRef.current?.();
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
       debounceTimerRef.current = setTimeout(flushPendingEdit, 300);
     },
@@ -245,7 +252,7 @@ export function FieldEditor({
   // The value the field will have once the waiting edit is sent.
   const latestValue = useCallback(<K extends keyof FormField>(key: K): FormField[K] => {
     const pending = pendingEditRef.current;
-    if (pending?.base.id === fieldRef.current.id && key in pending.patch) {
+    if (pending?.fieldId === fieldRef.current.id && key in pending.patch) {
       return pending.patch[key] as FormField[K];
     }
     return fieldRef.current[key];
@@ -292,9 +299,9 @@ export function FieldEditor({
   );
 
   const generateGuidance = useCallback(async () => {
-    if (!llmKeyId || !localField.label) return;
-    const request = ++guidanceRequestRef.current;
     const labelAtClick = latestValue("label");
+    if (!llmKeyId || !labelAtClick?.trim()) return;
+    const request = ++guidanceRequestRef.current;
     const guidanceAtClick = latestValue("guidanceText") ?? "";
     setGuidanceLoading(true);
     try {
@@ -319,7 +326,10 @@ export function FieldEditor({
     } finally {
       if (request === guidanceRequestRef.current) setGuidanceLoading(false);
     }
-  }, [llmKeyId, localField.label, entityType, latestValue, queueEdit, flushPendingEdit]);
+  }, [llmKeyId, entityType, latestValue, queueEdit, flushPendingEdit]);
+
+  // The same blank-label rule as generateGuidance, so the button never offers a call it refuses.
+  const hasGuidanceLabel = Boolean(localField.label?.trim());
 
   const entityMappings = ENTITY_FIELD_MAPPINGS[entityType] || [];
   const compatibleMappings = entityMappings.filter((mapping: EntityFieldMapping) =>
@@ -476,24 +486,24 @@ export function FieldEditor({
                     </Typography>
                     {llmKeyId && (
                       <Tooltip
-                        title={localField.label ? "Generate with AI" : "Add a label first"}
+                        title={hasGuidanceLabel ? "Generate with AI" : "Add a label first"}
                         placement="top"
                       >
                         <Box
                           onClick={
-                            !guidanceLoading && localField.label ? generateGuidance : undefined
+                            !guidanceLoading && hasGuidanceLabel ? generateGuidance : undefined
                           }
                           sx={{
                             "display": "flex",
                             "alignItems": "center",
                             "gap": "3px",
-                            "cursor": !guidanceLoading && localField.label ? "pointer" : "default",
-                            "opacity": !localField.label ? 0.4 : 1,
+                            "cursor": !guidanceLoading && hasGuidanceLabel ? "pointer" : "default",
+                            "opacity": !hasGuidanceLabel ? 0.4 : 1,
                             "color": theme.palette.primary.main,
                             "borderRadius": "4px",
                             "px": "6px",
                             "py": "2px",
-                            "&:hover": localField.label
+                            "&:hover": hasGuidanceLabel
                               ? { backgroundColor: theme.palette.background.fill }
                               : {},
                           }}

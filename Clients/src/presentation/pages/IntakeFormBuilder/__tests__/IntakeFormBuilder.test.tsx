@@ -215,6 +215,58 @@ describe("IntakeFormBuilder Page", () => {
       ).toBe(false);
     });
 
+    // The reply carries the form as it was sent; an edit made while the
+    // request ran must survive it and keep the form unsaved.
+    it("keeps an edit made while a save is running", async () => {
+      mockGetLLMKeys.mockResolvedValue({ data: { data: [openAIKey] } });
+      vi.mocked(getIntakeForm).mockResolvedValue(savedForm(3) as never);
+      let reply: (value: unknown) => void = () => {};
+      vi.mocked(updateIntakeForm).mockImplementationOnce(
+        () => new Promise((resolve) => (reply = resolve)) as never,
+      );
+      renderEditRoute();
+      await formLoaded();
+
+      const liveChecks = await screen.findByText("Check answers while the submitter types");
+      fireEvent.click(liveChecks);
+      fireEvent.click(screen.getByRole("button", { name: "Save" }));
+      await waitFor(() => expect(updateIntakeForm).toHaveBeenCalledTimes(1));
+      // Turned back on while the save of "off" is still running.
+      fireEvent.click(liveChecks);
+      await act(async () => {
+        reply({ data: { ...savedForm(3).data, liveChecksEnabled: false, publicId: "abc" } });
+      });
+
+      const save = screen.getByRole("button", { name: "Save" });
+      await waitFor(() => expect(save).toBeEnabled());
+      expect(screen.getByText("Unsaved")).toBeInTheDocument();
+      fireEvent.click(save);
+      await waitFor(() => expect(updateIntakeForm).toHaveBeenCalledTimes(2));
+      const second = vi.mocked(updateIntakeForm).mock.calls[1][1] as {
+        liveChecksEnabled: unknown;
+        publicId: unknown;
+      };
+      expect(second.liveChecksEnabled).toBe(true);
+      expect(second.publicId).toBe("abc");
+    });
+
+    it("marks the form saved when nothing changed during the save", async () => {
+      mockGetLLMKeys.mockResolvedValue({ data: { data: [openAIKey] } });
+      vi.mocked(getIntakeForm).mockResolvedValue(savedForm(3) as never);
+      vi.mocked(updateIntakeForm).mockResolvedValueOnce({
+        data: { ...savedForm(3).data, liveChecksEnabled: false },
+      } as never);
+      renderEditRoute();
+      await formLoaded();
+
+      fireEvent.click(await screen.findByText("Check answers while the submitter types"));
+      fireEvent.click(screen.getByRole("button", { name: "Save" }));
+      await waitFor(() => expect(updateIntakeForm).toHaveBeenCalledTimes(1));
+      // "Unsaved" follows isDirty alone; Save is also disabled while saving.
+      await waitFor(() => expect(screen.queryByText("Unsaved")).not.toBeInTheDocument());
+      expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+    });
+
     it("still counts while the key list is loading", async () => {
       mockGetLLMKeys.mockReturnValue(new Promise(() => {}));
       vi.mocked(getIntakeForm).mockResolvedValue(savedForm(3, false) as never);

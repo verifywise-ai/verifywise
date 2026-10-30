@@ -157,13 +157,28 @@ export function IntakeFormBuilder() {
   // Data loading
   // ============================================================================
 
+  // Bumped each time the builder opens a form, so a save reply for the
+  // previous form is ignored (see applySaved).
+  const loadCountRef = useRef(0);
+  // Set by a create just before it moves to the new form's edit route.
+  const createdIdRef = useRef<number | null>(null);
+
   // Load single form for the builder
   useEffect(() => {
+    // The form just created is already on screen, with any edit made while
+    // it saved: loading it again would replace those edits.
+    if (isEditing && formId && createdIdRef.current === parseInt(formId)) {
+      createdIdRef.current = null;
+      return;
+    }
+    const load = ++loadCountRef.current;
     if (isEditing && formId) {
       setIsLoadingForm(true);
       setLoadFailed(false);
       getIntakeForm(parseInt(formId))
         .then((response) => {
+          // A later load opened another form: this reply is not for it.
+          if (loadCountRef.current !== load) return;
           if (response.data) {
             setForm({
               ...response.data,
@@ -175,6 +190,7 @@ export function IntakeFormBuilder() {
           } else setLoadFailed(true);
         })
         .catch(() => {
+          if (loadCountRef.current !== load) return;
           setLoadFailed(true);
           setSnackbar({
             open: true,
@@ -182,7 +198,9 @@ export function IntakeFormBuilder() {
             severity: "error",
           });
         })
-        .finally(() => setIsLoadingForm(false));
+        .finally(() => {
+          if (loadCountRef.current === load) setIsLoadingForm(false);
+        });
     } else if (formId === "new") {
       const entityType =
         entityTypeParam === IntakeEntityType.MODEL
@@ -225,36 +243,92 @@ export function IntakeFormBuilder() {
   // Builder handlers
   // ============================================================================
 
-  const updateForm = useCallback((updates: Partial<IntakeForm>) => {
-    setForm((prev) => ({ ...prev, ...updates }));
+  // Counts every edit, so a save can tell whether the form changed while
+  // its request ran (see applySaved).
+  const editCountRef = useRef(0);
+  // Also passed to the field editor, which sends edits after a pause: Save is
+  // enabled on the first keystroke, so a quick Save click is not lost on a
+  // disabled button.
+  const markEdited = useCallback(() => {
+    editCountRef.current += 1;
     setIsDirty(true);
   }, []);
 
-  const updateField = useCallback((updatedField: FormField) => {
-    setForm((prev) => ({
-      ...prev,
-      schema: {
-        ...prev.schema,
-        fields: prev.schema.fields.map((f) => (f.id === updatedField.id ? updatedField : f)),
-      },
-    }));
-    setIsDirty(true);
-  }, []);
+  // The server replies with the form as it was sent. An edit made while the
+  // request ran is newer, so it is kept: only server-owned values are taken
+  // from the reply and the form stays unsaved.
+  const applySaved = useCallback(
+    (
+      saved: Partial<IntakeForm> | undefined,
+      editsAtStart: number,
+      loadsAtStart: number,
+      overrides?: Partial<IntakeForm>,
+    ) => {
+      // Another form was opened while the request ran: this reply is not for it.
+      if (loadCountRef.current !== loadsAtStart) return;
+      const editedDuringSave = editCountRef.current !== editsAtStart;
+      if (saved) {
+        setForm((prev) =>
+          editedDuringSave
+            ? {
+                ...prev,
+                id: saved.id ?? prev.id,
+                slug: prev.slug || saved.slug || "",
+                publicId: saved.publicId ?? prev.publicId,
+                status: saved.status ?? prev.status,
+                ttlExpiresAt: saved.ttlExpiresAt ?? prev.ttlExpiresAt,
+                createdBy: saved.createdBy ?? prev.createdBy,
+                createdAt: saved.createdAt ?? prev.createdAt,
+                updatedAt: saved.updatedAt ?? prev.updatedAt,
+                ...overrides,
+              }
+            : { ...prev, ...saved, ...overrides },
+        );
+      }
+      setIsDirty(editedDuringSave);
+    },
+    [],
+  );
 
-  const addField = useCallback((field: FormField) => {
-    setForm((prev) => ({
-      ...prev,
-      schema: {
-        ...prev.schema,
-        fields: [...prev.schema.fields, field].map((f, i) =>
-          f.order === i ? f : { ...f, order: i },
-        ),
-      },
-    }));
-    setIsDirty(true);
-    setSelectedFieldId(field.id);
-    canvasRef.current?.scrollToBottom();
-  }, []);
+  const updateForm = useCallback(
+    (updates: Partial<IntakeForm>) => {
+      setForm((prev) => ({ ...prev, ...updates }));
+      markEdited();
+    },
+    [markEdited],
+  );
+
+  const updateField = useCallback(
+    (updatedField: FormField) => {
+      setForm((prev) => ({
+        ...prev,
+        schema: {
+          ...prev.schema,
+          fields: prev.schema.fields.map((f) => (f.id === updatedField.id ? updatedField : f)),
+        },
+      }));
+      markEdited();
+    },
+    [markEdited],
+  );
+
+  const addField = useCallback(
+    (field: FormField) => {
+      setForm((prev) => ({
+        ...prev,
+        schema: {
+          ...prev.schema,
+          fields: [...prev.schema.fields, field].map((f, i) =>
+            f.order === i ? f : { ...f, order: i },
+          ),
+        },
+      }));
+      markEdited();
+      setSelectedFieldId(field.id);
+      canvasRef.current?.scrollToBottom();
+    },
+    [markEdited],
+  );
 
   const requestDeleteField = useCallback((fId: string) => {
     setFieldToDelete(fId);
@@ -272,67 +346,76 @@ export function IntakeFormBuilder() {
           .map((f, i) => (f.order === i ? f : { ...f, order: i })),
       },
     }));
-    setIsDirty(true);
+    markEdited();
     if (selectedFieldId === fieldToDelete) setSelectedFieldId(null);
     setFieldToDelete(null);
     setDeleteFieldModalOpen(false);
-  }, [fieldToDelete, selectedFieldId]);
+  }, [fieldToDelete, selectedFieldId, markEdited]);
 
   // The copy goes right after the original.
-  const duplicateField = useCallback((field: FormField) => {
-    const newField: FormField = {
-      ...field,
-      id: generateFieldId(),
-      label: `${field.label} (copy)`,
-    };
-    setForm((prev) => {
-      const index = prev.schema.fields.findIndex((f) => f.id === field.id);
-      const fields = [...prev.schema.fields];
-      fields.splice(index < 0 ? fields.length : index + 1, 0, newField);
-      return {
-        ...prev,
-        schema: { ...prev.schema, fields: fields.map((f, i) => ({ ...f, order: i })) },
+  const duplicateField = useCallback(
+    (field: FormField) => {
+      const newField: FormField = {
+        ...field,
+        id: generateFieldId(),
+        label: `${field.label} (copy)`,
       };
-    });
-    setIsDirty(true);
-    setSelectedFieldId(newField.id);
-  }, []);
+      setForm((prev) => {
+        const index = prev.schema.fields.findIndex((f) => f.id === field.id);
+        const fields = [...prev.schema.fields];
+        fields.splice(index < 0 ? fields.length : index + 1, 0, newField);
+        return {
+          ...prev,
+          schema: { ...prev.schema, fields: fields.map((f, i) => ({ ...f, order: i })) },
+        };
+      });
+      markEdited();
+      setSelectedFieldId(newField.id);
+    },
+    [markEdited],
+  );
 
-  const moveFieldUp = useCallback((fId: string) => {
-    setForm((prev) => {
-      const index = prev.schema.fields.findIndex((f) => f.id === fId);
-      if (index <= 0) return prev;
-      return {
-        ...prev,
-        schema: {
-          ...prev.schema,
-          fields: arrayMove(prev.schema.fields, index, index - 1).map((f, i) => ({
-            ...f,
-            order: i,
-          })),
-        },
-      };
-    });
-    setIsDirty(true);
-  }, []);
+  const moveFieldUp = useCallback(
+    (fId: string) => {
+      setForm((prev) => {
+        const index = prev.schema.fields.findIndex((f) => f.id === fId);
+        if (index <= 0) return prev;
+        return {
+          ...prev,
+          schema: {
+            ...prev.schema,
+            fields: arrayMove(prev.schema.fields, index, index - 1).map((f, i) => ({
+              ...f,
+              order: i,
+            })),
+          },
+        };
+      });
+      markEdited();
+    },
+    [markEdited],
+  );
 
-  const moveFieldDown = useCallback((fId: string) => {
-    setForm((prev) => {
-      const index = prev.schema.fields.findIndex((f) => f.id === fId);
-      if (index === -1 || index >= prev.schema.fields.length - 1) return prev;
-      return {
-        ...prev,
-        schema: {
-          ...prev.schema,
-          fields: arrayMove(prev.schema.fields, index, index + 1).map((f, i) => ({
-            ...f,
-            order: i,
-          })),
-        },
-      };
-    });
-    setIsDirty(true);
-  }, []);
+  const moveFieldDown = useCallback(
+    (fId: string) => {
+      setForm((prev) => {
+        const index = prev.schema.fields.findIndex((f) => f.id === fId);
+        if (index === -1 || index >= prev.schema.fields.length - 1) return prev;
+        return {
+          ...prev,
+          schema: {
+            ...prev.schema,
+            fields: arrayMove(prev.schema.fields, index, index + 1).map((f, i) => ({
+              ...f,
+              order: i,
+            })),
+          },
+        };
+      });
+      markEdited();
+    },
+    [markEdited],
+  );
 
   /**
    * Shows why a form write failed. A rejected write that sent a key may mean
@@ -379,6 +462,8 @@ export function IntakeFormBuilder() {
     }
     const savedMessage =
       logicErrors.length > 0 ? "Draft saved. Fix the highlighted fields before publishing" : null;
+    const editsAtStart = editCountRef.current;
+    const loadsAtStart = loadCountRef.current;
     setIsSaving(true);
     try {
       const formData = {
@@ -394,28 +479,27 @@ export function IntakeFormBuilder() {
       };
       if (isEditing && formId) {
         const response = await updateIntakeForm(parseInt(formId), formData);
-        const updatedData = response.data;
-        if (updatedData) {
-          setForm((prev) => ({ ...prev, ...updatedData }));
-        }
+        applySaved(response.data, editsAtStart, loadsAtStart);
         setSnackbar({
           open: true,
           message: savedMessage ?? "Form saved successfully",
           severity: savedMessage ? "warning" : "success",
         });
-        setIsDirty(false);
         return parseInt(formId);
       } else {
         const response = await createIntakeForm(formData);
         if (response.data?.id) {
-          setForm((prev) => ({ ...prev, ...response.data }));
-          navigate(`/intake-forms/${response.data.id}/edit`, { replace: true });
+          applySaved(response.data, editsAtStart, loadsAtStart);
+          // Only when the new form is still the one on screen.
+          if (loadCountRef.current === loadsAtStart) {
+            createdIdRef.current = response.data.id;
+            navigate(`/intake-forms/${response.data.id}/edit`, { replace: true });
+          }
           setSnackbar({
             open: true,
             message: savedMessage ?? "Form created successfully",
             severity: savedMessage ? "warning" : "success",
           });
-          setIsDirty(false);
           return response.data.id;
         }
       }
@@ -447,6 +531,8 @@ export function IntakeFormBuilder() {
       });
       return;
     }
+    const editsAtStart = editCountRef.current;
+    const loadsAtStart = loadCountRef.current;
     setIsSaving(true);
     try {
       const formData = {
@@ -469,14 +555,12 @@ export function IntakeFormBuilder() {
       } else {
         const response = await createIntakeForm(formData);
         publishedData = response.data;
-        if (publishedData?.id) {
+        if (publishedData?.id && loadCountRef.current === loadsAtStart) {
+          createdIdRef.current = publishedData.id;
           navigate(`/intake-forms/${publishedData.id}/edit`, { replace: true });
         }
       }
-      if (publishedData) {
-        setForm((prev) => ({ ...prev, ...publishedData, status: IntakeFormStatus.ACTIVE }));
-      }
-      setIsDirty(false);
+      applySaved(publishedData, editsAtStart, loadsAtStart, { status: IntakeFormStatus.ACTIVE });
       setSnackbar({
         open: true,
         message: "Form published successfully",
@@ -547,12 +631,18 @@ export function IntakeFormBuilder() {
   };
 
   const handleArchiveBuilder = async () => {
-    if (!formId || formId === "new") return;
+    if (!formId || formId === "new" || isSaving) return;
+    // Shares the saving lock with Save and Publish: a save reply landing
+    // after the archive would put the old status back.
+    const loadsAtStart = loadCountRef.current;
+    setIsSaving(true);
     try {
       await updateIntakeForm(parseInt(formId), {
         status: IntakeFormStatus.ARCHIVED,
       });
-      setForm((prev) => ({ ...prev, status: IntakeFormStatus.ARCHIVED }));
+      if (loadCountRef.current === loadsAtStart) {
+        setForm((prev) => ({ ...prev, status: IntakeFormStatus.ARCHIVED }));
+      }
       setSnackbar({
         open: true,
         message: "Form archived successfully",
@@ -564,6 +654,8 @@ export function IntakeFormBuilder() {
         message: "Failed to archive form",
         severity: "error",
       });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -839,6 +931,7 @@ export function IntakeFormBuilder() {
                     <CustomizableButton
                       variant="outlined"
                       onClick={handleArchiveBuilder}
+                      isDisabled={isSaving}
                       icon={<Archive size={14} />}
                       text="Archive"
                       sx={{
@@ -969,6 +1062,7 @@ export function IntakeFormBuilder() {
                     )}
                     llmKeyId={activeLlmKeyId}
                     onChange={updateField}
+                    onEdit={markEdited}
                     onClose={() => setSelectedFieldId(null)}
                   />
                 ) : (
@@ -1045,7 +1139,7 @@ export function IntakeFormBuilder() {
                               ...prev,
                               schema: { ...prev.schema, fields: [...prev.schema.fields, newField] },
                             }));
-                            setIsDirty(true);
+                            markEdited();
                           };
 
                           return (
@@ -1195,7 +1289,7 @@ export function IntakeFormBuilder() {
                               const val = e.target.value;
                               const ids = (Array.isArray(val) ? val : [val]).map(Number);
                               setForm((prev) => ({ ...prev, recipients: ids }));
-                              setIsDirty(true);
+                              markEdited();
                             }}
                             items={orgUsers.map((u) => ({
                               _id: u.id,
