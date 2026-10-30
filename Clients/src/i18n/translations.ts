@@ -90,6 +90,7 @@ import {
 } from "./modules/intakeLogic";
 import { de as trainingDe, fr as trainingFr, es as trainingEs } from "./modules/training";
 import { de as vendorsDe, fr as vendorsFr, es as vendorsEs } from "./modules/vendors";
+import { de as useCasesDe, fr as useCasesFr, es as useCasesEs } from "./modules/useCases";
 
 export type Lang = "en" | "de" | "fr" | "es";
 
@@ -120,6 +121,7 @@ export const translations: Record<string, Record<string, string>> = {
     ...intakeLogicDe,
     ...trainingDe,
     ...vendorsDe,
+    ...useCasesDe,
     "expert": "in Expertenprüfung",
     "regular": "in regulärer Prüfung",
     "close calls": "Grenzfälle",
@@ -9590,6 +9592,7 @@ export const translations: Record<string, Record<string, string>> = {
     ...intakeLogicFr,
     ...trainingFr,
     ...vendorsFr,
+    ...useCasesFr,
     "expert": "expert",
     "regular": "habituel",
     "close calls": "cas limites",
@@ -19000,6 +19003,7 @@ export const translations: Record<string, Record<string, string>> = {
     ...intakeLogicEs,
     ...trainingEs,
     ...vendorsEs,
+    ...useCasesEs,
     "expert": "experto",
     "regular": "habitual",
     "close calls": "casos límite",

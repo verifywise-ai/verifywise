@@ -1,10 +1,18 @@
+import { fireEvent, screen } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 
 // Mock hooks
+const { projectDataMock, navigateMock } = vi.hoisted(() => ({
+  projectDataMock: vi.fn(() => ({
+    project: null as unknown,
+    error: null as string | null,
+    isLoading: true,
+  })),
+  navigateMock: vi.fn(),
+}));
+
 vi.mock("../../../../application/hooks/useProjectData", () => ({
-  default: () => ({
-    project: null,
-  }),
+  default: projectDataMock,
 }));
 
 vi.mock("../../../../application/hooks/useAuth", () => ({
@@ -100,6 +108,7 @@ vi.mock("react-router", async () => {
   return {
     ...actual,
     useSearchParams: () => [new URLSearchParams("projectId=1"), vi.fn()],
+    useNavigate: () => navigateMock,
   };
 });
 
@@ -115,5 +124,53 @@ describe("ProjectView (VWProjectView)", () => {
       route: "/project-view?projectId=1",
     });
     expect(container).toBeTruthy();
+  });
+
+  it("shows a way back when the use case cannot be loaded", () => {
+    projectDataMock.mockReturnValue({
+      project: null,
+      error: "Failed to fetch project #1: Request failed with status code 404",
+      isLoading: false,
+    });
+    renderWithProviders(<VWProjectView />, { route: "/project-view?projectId=1" });
+
+    expect(screen.getByText(/This use case could not be loaded/)).toBeInTheDocument();
+    expect(screen.queryByTestId("tab-bar")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Back to use cases" }));
+    expect(navigateMock).toHaveBeenCalledWith("/overview");
+  });
+
+  it("retries the load from the error page", () => {
+    projectDataMock.mockReturnValue({
+      project: null,
+      error: "Failed to fetch project #1: Network Error",
+      isLoading: false,
+    });
+    renderWithProviders(<VWProjectView />, { route: "/project-view?projectId=1" });
+    const callsBefore = projectDataMock.mock.calls.length;
+
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    const lastArgs = (projectDataMock.mock.lastCall as unknown as [{ refreshKey: number }])[0];
+    expect(projectDataMock.mock.calls.length).toBeGreaterThan(callsBefore);
+    expect(lastArgs.refreshKey).toBe(1);
+  });
+
+  it("keeps the skeletons while the use case is still loading", () => {
+    projectDataMock.mockReturnValue({ project: null, error: null, isLoading: true });
+    renderWithProviders(<VWProjectView />, { route: "/project-view?projectId=1" });
+
+    expect(screen.queryByText(/This use case could not be loaded/)).not.toBeInTheDocument();
+    expect(screen.getByTestId("tab-bar")).toBeInTheDocument();
+  });
+
+  it("titles the page with the use case ID and name", () => {
+    projectDataMock.mockReturnValue({
+      project: { id: 1, uc_id: "UC-7", project_title: "Resume screening" },
+      error: null,
+      isLoading: false,
+    });
+    renderWithProviders(<VWProjectView />, { route: "/project-view?projectId=1" });
+
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("UC-7: Resume screening");
   });
 });
