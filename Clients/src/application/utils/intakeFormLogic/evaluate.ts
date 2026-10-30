@@ -45,15 +45,143 @@ function calculate(field: LogicField, effective: Answers): number | null {
   return evaluateFormula(parsed.ast, values, normalizeDecimals(field.decimals));
 }
 
+/** Ids a field reads: its show/hide conditions and, for a calculated field, its formula. */
+export function dependenciesOf(field: LogicField): string[] {
+  const ids: string[] = [];
+  const conditions = field.visibility?.conditions;
+  if (Array.isArray(conditions)) {
+    for (const condition of conditions) {
+      if (condition && typeof condition === "object" && typeof condition.fieldId === "string") {
+        ids.push(condition.fieldId);
+      }
+    }
+  }
+  if (field.type === "calculated") {
+    const parsed = parseFormula(field.formula ?? "");
+    if (parsed.ok) ids.push(...parsed.refs);
+  }
+  return ids;
+}
+
+export interface DependencyGraph {
+  /** Per field (by array position): the positions of the fields it reads. */
+  deps: number[][];
+  /**
+   * Strongly connected components, each listing positions in form order,
+   * with every component after the components it reads. A component of more
+   * than one field, or a field reading itself, is a loop.
+   */
+  components: number[][];
+  /** Per field: the index of its component in `components`. */
+  componentOf: number[];
+}
+
 /**
- * One top-to-bottom pass. Conditions and formulas only read fields above
- * them, so each field is settled when reached: hidden fields add nothing to
- * `effectiveAnswers`, and a visible calculated field adds its value so later
- * conditions and formulas can read it.
+ * The read graph of `fields` (in form order) and its loops, in one linear
+ * pass (Tarjan's algorithm, iterative). Positions, not ids, are the nodes,
+ * so a form with a duplicate id (rejected on save) still covers every field;
+ * a reference reads the last field with that id, as id lookups do.
+ */
+export function dependencyGraph(fields: LogicField[]): DependencyGraph {
+  const indexOf = new Map(fields.map((field, index) => [field.id, index] as const));
+  const deps = fields.map((field) => {
+    const read = new Set<number>();
+    for (const id of dependenciesOf(field)) {
+      const dep = indexOf.get(id);
+      if (dep !== undefined) read.add(dep);
+    }
+    return Array.from(read);
+  });
+  const order = new Array<number>(fields.length).fill(-1);
+  const low = new Array<number>(fields.length).fill(0);
+  const onStack = new Array<boolean>(fields.length).fill(false);
+  const componentOf = new Array<number>(fields.length).fill(-1);
+  const stack: number[] = [];
+  const components: number[][] = [];
+  let counter = 0;
+  for (let root = 0; root < fields.length; root += 1) {
+    if (order[root] !== -1) continue;
+    // Each frame: a node and how many of its edges have been followed.
+    const frames: Array<[number, number]> = [[root, 0]];
+    order[root] = low[root] = counter++;
+    stack.push(root);
+    onStack[root] = true;
+    while (frames.length > 0) {
+      const frame = frames[frames.length - 1];
+      const [node, edge] = frame;
+      if (edge < deps[node].length) {
+        frame[1] += 1;
+        const next = deps[node][edge];
+        if (order[next] === -1) {
+          order[next] = low[next] = counter++;
+          stack.push(next);
+          onStack[next] = true;
+          frames.push([next, 0]);
+        } else if (onStack[next]) {
+          low[node] = Math.min(low[node], order[next]);
+        }
+        continue;
+      }
+      frames.pop();
+      if (frames.length > 0) {
+        const parent = frames[frames.length - 1][0];
+        low[parent] = Math.min(low[parent], low[node]);
+      }
+      if (low[node] === order[node]) {
+        const component: number[] = [];
+        let member: number;
+        do {
+          member = stack.pop() as number;
+          onStack[member] = false;
+          componentOf[member] = components.length;
+          component.push(member);
+        } while (member !== node);
+        components.push(component.sort((a, b) => a - b));
+      }
+    }
+  }
+  return { deps, components, componentOf };
+}
+
+/**
+ * Ids of the fields that read `fieldId`, directly or through other fields.
+ * A rule or formula on `fieldId` that reads one of them would make a loop.
+ */
+export function readersOf(fields: LogicField[], fieldId: string): Set<string> {
+  const { deps } = dependencyGraph(fields);
+  const readers: number[][] = fields.map(() => []);
+  deps.forEach((read, index) => {
+    for (const dep of read) readers[dep].push(index);
+  });
+  const found = new Set<number>();
+  const stack = fields.flatMap((field, index) => (field.id === fieldId ? [index] : []));
+  while (stack.length > 0) {
+    const index = stack.pop() as number;
+    for (const reader of readers[index]) {
+      if (found.has(reader)) continue;
+      found.add(reader);
+      stack.push(reader);
+    }
+  }
+  return new Set(Array.from(found, (index) => fields[index].id));
+}
+
+/**
+ * Fields are settled in dependency order, so rules and formulas may read
+ * fields anywhere in the form: hidden fields add nothing to
+ * `effectiveAnswers`, and a visible calculated field adds its value for the
+ * rules and formulas that read it.
  */
 export function evaluateForm(schema: LogicSchema, answers: Answers): FormEvaluation {
-  const fields = sortFields(fieldsOf(schema));
-  const byId = new Map(fields.map((field) => [field.id, field] as const));
+  const sorted = sortFields(fieldsOf(schema));
+  // Every field after what it reads. Forms whose rules and formulas only
+  // read fields above keep form order. The fields of a loop run in form
+  // order and read only what is settled by then, so a loop gives empty
+  // values instead of hanging. Saving a live form rejects loops.
+  const fields = dependencyGraph(sorted).components.flatMap((component) =>
+    component.map((index) => sorted[index]),
+  );
+  const byId = new Map(sorted.map((field) => [field.id, field] as const));
   const visibleIds = new Set<string>();
   const calculated = createRecord<number | null>();
   const effectiveAnswers = createRecord<unknown>();

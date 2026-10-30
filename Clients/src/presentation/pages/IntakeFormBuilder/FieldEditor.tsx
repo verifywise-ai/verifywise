@@ -29,6 +29,7 @@ import {
   MAX_DECIMALS,
   REQUIRED_ENTITY_FIELDS,
   RISK_TAGGABLE_TYPES,
+  readersOf,
   sortFields,
   type SchemaLogicError,
 } from "../../../application/utils/intakeFormLogic";
@@ -168,7 +169,7 @@ function OptionsEditor({ options, onChange }: OptionsEditorProps) {
 
 interface FieldEditorProps {
   field: FormField;
-  /** Every field in the form, used for rules and formulas on earlier fields. */
+  /** Every field in the form, used for the rules and formulas on this field. */
   allFields: FormField[];
   entityType: IntakeEntityType;
   usedEntityMappings?: string[];
@@ -331,12 +332,16 @@ export function FieldEditor({
   const isCalculated = localField.type === "calculated";
   const hasRules =
     Array.isArray(localField.visibility?.conditions) && localField.visibility.conditions.length > 0;
-  const earlierFields = (() => {
+  // Rules and formulas may read any other field, except one that already
+  // reads this field: picking it would make a loop.
+  const otherFields = (() => {
     const sorted = sortFields(allFields);
-    const index = sorted.findIndex((candidate) => candidate.id === localField.id);
-    return index < 0 ? sorted : sorted.slice(0, index);
+    const readers = readersOf(sorted, localField.id);
+    return sorted.filter(
+      (candidate) => candidate.id !== localField.id && !readers.has(candidate.id),
+    );
   })();
-  const numericFields = earlierFields.filter(
+  const numericFields = otherFields.filter(
     (candidate) => candidate.type === "number" || candidate.type === "calculated",
   );
 
@@ -705,7 +710,7 @@ export function FieldEditor({
           >
             <VisibilityEditor
               visibility={localField.visibility}
-              earlierFields={earlierFields}
+              otherFields={otherFields}
               onChange={(visibility) => handleChange("visibility", visibility)}
               blockedReason={
                 localField.entityFieldMapping &&

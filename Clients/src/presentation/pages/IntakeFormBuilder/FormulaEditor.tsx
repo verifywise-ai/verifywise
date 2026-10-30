@@ -745,7 +745,7 @@ export function FormulaEditor({
           >
             <MenuList id={menuId} autoFocusItem={false}>
               {numericFields.length === 0 ? (
-                <MenuItem disabled>Add a number field above this one first</MenuItem>
+                <MenuItem disabled>Add a number field first</MenuItem>
               ) : (
                 numericFields.map((field, index) => (
                   <MenuItem

@@ -256,7 +256,7 @@ describe("IntakeFormBuilder Page", () => {
           schema: {
             version: "1.0",
             fields: [
-              { id: "total", type: "calculated", label: "Total", order: 0, formula: "{later} + 1" },
+              { id: "total", type: "calculated", label: "Total", order: 0, formula: "{total} + 1" },
               { id: "later", type: "number", label: "Later", order: 1 },
             ],
           },
@@ -285,7 +285,7 @@ describe("IntakeFormBuilder Page", () => {
           schema: {
             version: "1.0",
             fields: [
-              { id: "total", type: "calculated", label: "Total", order: 0, formula: "{later} + 1" },
+              { id: "total", type: "calculated", label: "Total", order: 0, formula: "{total} + 1" },
               { id: "later", type: "number", label: "Later", order: 1 },
             ],
           },
@@ -314,7 +314,7 @@ describe("IntakeFormBuilder Page", () => {
           schema: {
             version: "1.0",
             fields: [
-              { id: "total", type: "calculated", label: "Total", order: 0, formula: "{later} + 1" },
+              { id: "total", type: "calculated", label: "Total", order: 0, formula: "{total} + 1" },
               { id: "later", type: "number", label: "Later", order: 1 },
             ],
           },
