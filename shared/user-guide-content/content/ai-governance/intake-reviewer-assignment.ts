@@ -33,7 +33,7 @@ export const intakeReviewerAssignmentContent: ArticleContent = {
         { text: 'Check **Assign reviewers by risk score**.' },
         { text: 'Choose at least one person under **Expert reviewers** and at least one under **Regular reviewers**. Only users whose role can edit intake forms are listed.' },
         { text: 'Set **Threshold**, **Close-call margin** and **Second review share %**, or keep the defaults (see below).' },
-        { text: 'Check the summary line under the settings. It reads like "Scores of 50 or more, prohibited practices and scores within 10 points of 50 go to expert reviewers."' },
+        { text: 'Check the summary line under the settings. It reads like "Scores of 50 or more, prohibited practices and scores less than 10 points from 50 go to expert reviewers."' },
         { text: 'Click **Save**. Pending submissions on the form are assigned with the new settings.' },
       ],
     },
@@ -48,7 +48,7 @@ export const intakeReviewerAssignmentContent: ArticleContent = {
       rows: [
         { setting: 'Threshold', what: 'The risk score that separates expert review from regular review.', range: '1 to 99', default: '50' },
         { setting: 'Close-call margin', what: 'Scores this close to the threshold go to expert review even when they are below it.', range: '0 to 25', default: '10' },
-        { setting: 'Second review share %', what: 'The chance that a regular reviewer\'s approval is picked for a second review.', range: '0 to 100', default: '10' },
+        { setting: 'Second review share %', what: 'The chance that an approval in regular review, by someone who isn\'t one of the form\'s expert reviewers, is picked for a second review. Approvals made before the submission had a review level are never picked.', range: '0 to 100', default: '10' },
       ],
     },
     {
@@ -101,7 +101,7 @@ export const intakeReviewerAssignmentContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Use the **Review level** filter to narrow the list: All review levels, Expert, Regular, Not assigned, Assigned to me or Second review. **Assigned to me** shows the submissions you can decide, plus the second reviews you can do.',
+      text: 'Use the **Review level** filter to narrow the list: All review levels, Expert, Regular, Not assigned, Assigned to me or Second review. **Assigned to me** shows the submissions where you are on the form\'s expert or regular reviewer list, plus the second reviews you can do as an expert reviewer. Submissions not assigned yet don\'t appear there, and neither does anything for an Admin who isn\'t on either list.',
     },
     {
       type: 'heading',
@@ -135,7 +135,7 @@ export const intakeReviewerAssignmentContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'A submission in regular review can move to expert review in three ways. Nothing moves a submission from expert review back to regular review.',
+      text: 'A submission in regular review can move to expert review in three ways. A reviewer can\'t move it back. Only saving changed settings can, as described under Changing the settings later.',
     },
     {
       type: 'bullet-list',

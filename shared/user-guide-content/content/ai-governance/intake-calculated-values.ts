@@ -59,7 +59,7 @@ export const intakeCalculatedValuesContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Multiplication and division come before addition and subtraction. Otherwise the formula is worked out left to right, and parentheses change the order. Spaces are ignored. A formula can be up to 500 characters long.',
+      text: 'Multiplication and division come before addition and subtraction. Otherwise the formula is worked out left to right, and parentheses change the order. Spaces are ignored. There is a length limit of 500 characters, counted on the stored formula, where each field takes about 30 characters. In practice that means about 15 fields in one formula.',
     },
     {
       type: 'callout',

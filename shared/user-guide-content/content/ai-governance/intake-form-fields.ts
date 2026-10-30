@@ -54,7 +54,7 @@ export const intakeFormFieldsContent: ArticleContent = {
         { type: 'Short text', stores: 'One line of text', checks: 'Min length and max length. New fields start with a max length of 255.' },
         { type: 'Long text', stores: 'Several lines of text', checks: 'Min length and max length. New fields start with a max length of 2000.' },
         { type: 'Email', stores: 'An email address', checks: 'Must be a valid email address.' },
-        { type: 'URL', stores: 'A web address', checks: 'Must be a full web address, such as https://example.com.' },
+        { type: 'URL', stores: 'A web address', checks: 'Must be a full address that starts with a scheme, such as https://example.com.' },
         { type: 'Number', stores: 'A number', checks: 'Must be a number, within the min and max value if you set them.' },
         { type: 'Date', stores: 'A date from a date picker', checks: 'Must be a valid date.' },
         { type: 'Dropdown', stores: 'One option from a list', checks: 'Must be one of the field\'s options.' },
@@ -82,7 +82,7 @@ export const intakeFormFieldsContent: ArticleContent = {
       ],
       rows: [
         { setting: 'Label', what: 'The question shown to the submitter. Required.', where: 'None' },
-        { setting: 'Placeholder', what: 'Hint text inside an empty input.', where: 'Calculated' },
+        { setting: 'Placeholder', what: 'Hint text inside an empty input. The public form shows it only on short text, long text, email, URL and number fields. Dropdowns always show "Select an option".', where: 'Calculated' },
         { setting: 'Help text', what: 'A short line shown under the field.', where: 'None' },
         { setting: 'Guidance text', what: 'A longer explanation of why the question matters, also shown under the field. If the form has an LLM key, click **AI** to draft it from the label.', where: 'Calculated' },
         { setting: 'Required field', what: 'The form can\'t be submitted without an answer. Once the field has conditions, this reads **Required when shown**.', where: 'Calculated' },
@@ -112,7 +112,7 @@ export const intakeFormFieldsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: '**Email** fields show "Please enter a valid email address" when the submitter tries to submit an answer that isn\'t one. **URL** fields are checked when the form reaches VerifyWise: the answer must be a full address including the scheme, so https://example.com passes and example.com does not.',
+      text: '**Email** fields show "Please enter a valid email address" when the submitter tries to submit an answer that isn\'t one. **URL** fields are checked when the form reaches VerifyWise: the answer must be a full address that starts with a scheme, so https://example.com passes and example.com does not. The check doesn\'t limit which scheme is used.',
     },
     {
       type: 'heading',
@@ -197,7 +197,7 @@ export const intakeFormFieldsContent: ArticleContent = {
         { text: 'Checkbox answers show as Yes or No.' },
         { text: 'Dates are formatted for reading.' },
         { text: 'Calculated values show with their prefix, suffix and decimals.' },
-        { text: 'An unanswered field shows a dash ("—"). Answers to hidden fields are not stored.' },
+        { text: 'An unanswered field usually shows a dash ("—"). A multi-select with nothing picked shows as blank. Answers to hidden fields are not stored.' },
       ],
     },
     {
