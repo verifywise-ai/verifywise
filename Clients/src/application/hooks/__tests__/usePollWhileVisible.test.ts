@@ -58,6 +58,27 @@ describe("usePollWhileVisible", () => {
     expect(onPoll).toHaveBeenCalledTimes(1);
   });
 
+  it("skips an interval tick that lands right after a resume poll", () => {
+    const onPoll = vi.fn();
+    renderHook(() => usePollWhileVisible(onPoll, 30_000));
+    setVisibility("hidden");
+    vi.advanceTimersByTime(29_500);
+    setVisibility("visible");
+    expect(onPoll).toHaveBeenCalledTimes(1);
+    vi.advanceTimersByTime(500);
+    expect(onPoll).toHaveBeenCalledTimes(1);
+    vi.advanceTimersByTime(30_000);
+    expect(onPoll).toHaveBeenCalledTimes(2);
+  });
+
+  it("ignores window focus soon after the last poll", () => {
+    const onPoll = vi.fn();
+    renderHook(() => usePollWhileVisible(onPoll, 30_000));
+    vi.advanceTimersByTime(POLL_RESUME_MIN_GAP_MS - 1);
+    window.dispatchEvent(new Event("focus"));
+    expect(onPoll).not.toHaveBeenCalled();
+  });
+
   it("does nothing while disabled and stops on unmount", () => {
     const onPoll = vi.fn();
     const { rerender, unmount } = renderHook(

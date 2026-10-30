@@ -222,12 +222,16 @@ export function IntakeFormsListPage() {
     loadForms();
   }, [loadForms]);
 
-  // Only the latest request may set the list, so a slow poll can't overwrite a
-  // newer load, for example one for a changed status filter.
+  // Only the latest request may set the list or clear the spinner, so a slow load
+  // can't overwrite a newer one, for example one for a changed status filter.
+  // A background refresh never replaces a load already in flight.
   const submissionsRequestRef = useRef(0);
+  const submissionsInFlightRef = useRef(false);
   const loadSubmissions = useCallback(
     async ({ quiet = false }: { quiet?: boolean } = {}) => {
+      if (quiet && submissionsInFlightRef.current) return;
       const requestId = ++submissionsRequestRef.current;
+      submissionsInFlightRef.current = true;
       if (!quiet) setIsLoadingSubmissions(true);
       try {
         const params: { status?: string } = {};
@@ -243,7 +247,10 @@ export function IntakeFormsListPage() {
           setSnackbar({ open: true, message: "Failed to load submissions", severity: "error" });
         }
       } finally {
-        if (!quiet) setIsLoadingSubmissions(false);
+        if (requestId === submissionsRequestRef.current) {
+          submissionsInFlightRef.current = false;
+          setIsLoadingSubmissions(false);
+        }
       }
     },
     [submissionStatusFilter],
@@ -297,7 +304,7 @@ export function IntakeFormsListPage() {
   }, [loadSubmissions]);
 
   // New submissions from public forms show up without a reload. Paused while the
-  // review modal is open; closing it after a decision refreshes the list anyway.
+  // review modal is open; closing the modal refreshes the list.
   usePollWhileVisible(() => loadSubmissions({ quiet: true }), SUBMISSIONS_POLL_MS, !previewOpen);
 
   // "Preview as" simulation, entered from the builder's Preview menu. It lives
@@ -1106,6 +1113,7 @@ export function IntakeFormsListPage() {
         onClose={() => {
           setPreviewOpen(false);
           setSelectedSubmissionId(null);
+          loadSubmissions({ quiet: true });
         }}
         submissionId={selectedSubmissionId}
         onApproved={() => handleSubmissionDecided("Submission approved")}

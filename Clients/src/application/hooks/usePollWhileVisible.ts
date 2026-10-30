@@ -1,7 +1,11 @@
 import { useEffect, useRef } from "react";
 
-/** Focus and visibilitychange often fire together; calls closer than this are dropped. */
-export const POLL_RESUME_MIN_GAP_MS = 2000;
+/**
+ * Polls closer together than this are dropped: focus and visibilitychange often
+ * fire together, focus fires on every switch back to the window, and a resume
+ * can land just before an interval tick.
+ */
+export const POLL_RESUME_MIN_GAP_MS = 10_000;
 
 const isVisible = () => document.visibilityState === "visible";
 
@@ -18,26 +22,25 @@ export const usePollWhileVisible = (onPoll: () => void, intervalMs: number, enab
 
   useEffect(() => {
     if (!enabled) return;
+    const minGap = Math.min(POLL_RESUME_MIN_GAP_MS, intervalMs);
     let lastRun = Date.now();
     const run = () => {
       lastRun = Date.now();
       onPollRef.current();
     };
 
-    const interval = setInterval(() => {
-      if (isVisible()) run();
-    }, intervalMs);
-
-    const onResume = () => {
-      if (isVisible() && Date.now() - lastRun >= POLL_RESUME_MIN_GAP_MS) run();
+    const runIfDue = () => {
+      if (isVisible() && Date.now() - lastRun >= minGap) run();
     };
-    document.addEventListener("visibilitychange", onResume);
-    window.addEventListener("focus", onResume);
+
+    const interval = setInterval(runIfDue, intervalMs);
+    document.addEventListener("visibilitychange", runIfDue);
+    window.addEventListener("focus", runIfDue);
 
     return () => {
       clearInterval(interval);
-      document.removeEventListener("visibilitychange", onResume);
-      window.removeEventListener("focus", onResume);
+      document.removeEventListener("visibilitychange", runIfDue);
+      window.removeEventListener("focus", runIfDue);
     };
   }, [intervalMs, enabled]);
 };

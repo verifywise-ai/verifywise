@@ -13,8 +13,12 @@ vi.mock("../../../components/Layout/PageHeaderExtended", () => ({
 }));
 
 vi.mock("../SubmissionPreviewModal", () => ({
-  SubmissionPreviewModal: ({ isOpen }: { isOpen: boolean }) =>
-    isOpen ? <div data-testid="review-modal" /> : null,
+  SubmissionPreviewModal: ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) =>
+    isOpen ? (
+      <div data-testid="review-modal">
+        <button onClick={onClose}>Close review</button>
+      </div>
+    ) : null,
 }));
 
 vi.mock("../../../../application/repository/intakeForm.repository", async (orig) => ({
@@ -114,6 +118,42 @@ describe("IntakeFormsListPage background refresh", () => {
 
     await nextPoll();
     expect(getPendingSubmissions).toHaveBeenCalledTimes(callsWithModal);
+  });
+
+  it("refreshes when the review modal closes without a decision", async () => {
+    vi.mocked(getPendingSubmissions).mockResolvedValue({ data: [row(1, "Ada")] } as never);
+    renderWithProviders(<IntakeFormsListPage />, { route: "/intake-forms/submissions" });
+    fireEvent.click(await screen.findByText("Ada"));
+
+    vi.mocked(getPendingSubmissions).mockResolvedValue({
+      data: [row(2, "Ben"), row(1, "Ada")],
+    } as never);
+    fireEvent.click(screen.getByText("Close review"));
+    expect(await screen.findByText("Ben")).toBeInTheDocument();
+  });
+
+  it("doesn't let a background refresh replace a load in flight", async () => {
+    vi.mocked(getPendingSubmissions).mockResolvedValue({ data: [row(1, "Ada")] } as never);
+    renderWithProviders(<IntakeFormsListPage />, { route: "/intake-forms/submissions" });
+    expect(await screen.findByText("Ada")).toBeInTheDocument();
+
+    let resolveSlow: (value: unknown) => void = () => {};
+    vi.mocked(getPendingSubmissions).mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveSlow = resolve;
+      }) as never,
+    );
+    fireEvent.click(await screen.findByText("Ada"));
+    fireEvent.click(screen.getByText("Close review"));
+    const callsWithSlowLoad = vi.mocked(getPendingSubmissions).mock.calls.length;
+
+    await nextPoll();
+    expect(getPendingSubmissions).toHaveBeenCalledTimes(callsWithSlowLoad);
+
+    await act(async () => {
+      resolveSlow({ data: [row(3, "Cara"), row(1, "Ada")] });
+    });
+    expect(screen.getByText("Cara")).toBeInTheDocument();
   });
 
   it("keeps the list and shows no error when a background refresh fails", async () => {
