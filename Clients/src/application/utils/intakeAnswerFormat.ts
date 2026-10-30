@@ -86,7 +86,14 @@ export function formatAnswer(
   if (field.type === "calculated") {
     return formatCalculatedValue(typeof value === "number" ? value : null, field);
   }
-  if (value === null || value === undefined || value === "") return "—";
+  if (
+    value === null ||
+    value === undefined ||
+    (typeof value === "string" && value.trim() === "") ||
+    (Array.isArray(value) && value.length === 0)
+  ) {
+    return "—";
+  }
   if (field.type === "checkbox") return value ? "Yes" : "No";
   if (field.type === "date") return formatDate(value as string);
   if (field.type === "select" && field.options) {

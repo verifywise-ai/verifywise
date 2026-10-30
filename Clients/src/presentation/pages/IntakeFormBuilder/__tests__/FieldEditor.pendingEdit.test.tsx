@@ -245,3 +245,21 @@ describe("FieldEditor generated guidance", () => {
     );
   });
 });
+
+describe("FieldEditor placeholder setting", () => {
+  it.each(["text", "textarea", "email", "url", "number"] as const)(
+    "is offered for %s fields",
+    (type) => {
+      renderWithProviders(editorFor({ ...FIRST, type }, vi.fn()));
+      expect(document.getElementById("field-placeholder")).not.toBeNull();
+    },
+  );
+
+  it.each(["select", "multiselect", "checkbox", "date", "calculated"] as const)(
+    "is hidden for %s fields, where the public form never shows it",
+    (type) => {
+      renderWithProviders(editorFor({ ...FIRST, type }, vi.fn()));
+      expect(document.getElementById("field-placeholder")).toBeNull();
+    },
+  );
+});

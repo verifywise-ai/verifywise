@@ -5184,8 +5184,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Shareable link": "Teilbarer Link",
     "Show AI-suggested questions while building the form":
       "KI-vorgeschlagene Fragen beim Erstellen des Formulars anzeigen",
-    "Shown as a tooltip next to the field label on the public form":
-      "Wird als Tooltip neben dem Feldlabel im öffentlichen Formular angezeigt",
+    "Shown under the field on the public form":
+      "Wird im öffentlichen Formular unter dem Feld angezeigt",
     "Sign in": "Anmelden",
     "Signatory": "Unterzeichner",
     "Simulated Conversations": "Simulierte Konversationen",
@@ -14597,8 +14597,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Shareable link": "Lien partageable",
     "Show AI-suggested questions while building the form":
       "Afficher les questions suggérées par l'IA lors de la création du formulaire",
-    "Shown as a tooltip next to the field label on the public form":
-      "Affiché en info-bulle à côté du libellé du champ sur le formulaire public",
+    "Shown under the field on the public form": "Affiché sous le champ sur le formulaire public",
     "Sign in": "Se connecter",
     "Signatory": "Signataire",
     "Simulated Conversations": "Conversations simulées",
@@ -25319,8 +25318,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Establezca un límite de gasto mensual. Cuando el límite estricto está activado, las solicitudes se rechazan una vez superado.",
     "Show AI-suggested questions while building the form":
       "Mostrar preguntas sugeridas por IA mientras se crea el formulario",
-    "Shown as a tooltip next to the field label on the public form":
-      "Se muestra como información sobre herramientas junto a la etiqueta del campo en el formulario público",
+    "Shown under the field on the public form":
+      "Se muestra debajo del campo en el formulario público",
     "Some actions completed successfully, but others failed":
       "Algunas acciones se completaron correctamente, pero otras fallaron",
     "Submission responses will be emailed to selected recipients":

@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { describeFormula, formatCalculatedValue, splitFormula } from "../intakeAnswerFormat";
+import {
+  describeFormula,
+  formatAnswer,
+  formatCalculatedValue,
+  splitFormula,
+} from "../intakeAnswerFormat";
 
 describe("formatCalculatedValue", () => {
   it("formats with grouping, fixed decimals and a prefix", () => {
@@ -68,5 +73,29 @@ describe("splitFormula", () => {
   });
   it("is empty for an empty formula", () => {
     expect(splitFormula("")).toEqual([]);
+  });
+});
+
+describe("formatAnswer", () => {
+  const formatDate = (date: string) => `date:${date}`;
+  const multiselect = {
+    type: "multiselect",
+    options: [
+      { label: "Alpha", value: "a" },
+      { label: "Beta", value: "b" },
+    ],
+  };
+
+  it("shows a dash for a multi-select with nothing picked", () => {
+    expect(formatAnswer(multiselect, [], formatDate)).toBe("—");
+  });
+  it("shows a dash for text that is only spaces", () => {
+    expect(formatAnswer({ type: "text" }, "   ", formatDate)).toBe("—");
+  });
+  it("lists picked options by label", () => {
+    expect(formatAnswer(multiselect, ["a", "b"], formatDate)).toBe("Alpha, Beta");
+  });
+  it("keeps an unchecked checkbox as No", () => {
+    expect(formatAnswer({ type: "checkbox" }, false, formatDate)).toBe("No");
   });
 });

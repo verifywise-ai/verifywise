@@ -94,6 +94,7 @@ import {
 } from "../utils/intakeSubmissionData.utils";
 import { toId } from "../utils/validations/validation.utils";
 import { isEmail } from "../utils/validations/email.utils";
+import { isWebUrl } from "../utils/validations/url.utils";
 import {
   isAssessmentV2,
   type IIntakeSubmission,
@@ -667,14 +668,8 @@ function validateFormData(
         break;
       }
       case "url": {
-        if (typeof value !== "string") {
+        if (!isWebUrl(value)) {
           errors.push(`"${field.label}" must be a valid URL`);
-        } else {
-          try {
-            new URL(value);
-          } catch {
-            errors.push(`"${field.label}" must be a valid URL`);
-          }
         }
         break;
       }
