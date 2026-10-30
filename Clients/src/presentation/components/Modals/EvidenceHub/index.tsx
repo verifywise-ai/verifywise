@@ -14,6 +14,7 @@ import Field from "../../Inputs/Field";
 import { useTheme } from "@mui/material";
 import CustomizableMultiSelect from "../../Inputs/Select/Multi";
 import TagInput from "../../Inputs/TagInput";
+import { HistorySidebar } from "../../Common/HistorySidebar";
 
 interface NewEvidenceHubProps {
   isOpen: boolean;
@@ -286,6 +287,11 @@ const NewEvidenceHub: FC<NewEvidenceHubProps> = ({
     }
     return true;
   };
+
+  // The activity step only exists for existing evidence: there is no history
+  // to show while a new record is being created.
+  const showActivityStep = isEdit && !!initialData?.id;
+  const steps = showActivityStep ? [...WIZARD_STEPS, "Activity"] : WIZARD_STEPS;
 
   const handleNext = () => {
     if (validateCurrentStep()) {
@@ -569,6 +575,17 @@ const NewEvidenceHub: FC<NewEvidenceHubProps> = ({
           </Stack>
         );
 
+      case 5:
+        // Activity history of an existing evidence record (issue #4977)
+        return (
+          <HistorySidebar
+            inline
+            isOpen={true}
+            entityType="evidence_hub"
+            entityId={initialData?.id as number}
+          />
+        );
+
       default:
         return null;
     }
@@ -579,7 +596,7 @@ const NewEvidenceHub: FC<NewEvidenceHubProps> = ({
       isOpen={isOpen}
       onClose={() => setIsOpen(false)}
       title={isEdit ? "Edit evidence" : "Add new evidence"}
-      steps={WIZARD_STEPS}
+      steps={steps}
       activeStep={activeStep}
       onNext={handleNext}
       onBack={handleBack}
