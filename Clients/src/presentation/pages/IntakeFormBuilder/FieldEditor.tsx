@@ -36,6 +36,16 @@ import {
 import { FormulaEditor } from "./FormulaEditor";
 import { EditorSection } from "./EditorSection";
 
+// The public form shows a placeholder only in these inputs; a dropdown always
+// reads "Select an option".
+const PLACEHOLDER_TYPES: ReadonlySet<FieldType> = new Set([
+  "text",
+  "textarea",
+  "email",
+  "url",
+  "number",
+]);
+
 const FIELD_TYPE_LABELS: Record<FieldType, string> = {
   text: "Short text",
   textarea: "Long text",
@@ -450,7 +460,7 @@ export function FieldEditor({
                 value={localField.label}
                 onChange={(e) => handleChange("label", e.target.value)}
               />
-              {!isCalculated && (
+              {PLACEHOLDER_TYPES.has(localField.type) && (
                 <Field
                   id="field-placeholder"
                   label="Placeholder"
@@ -532,7 +542,7 @@ export function FieldEditor({
                     rows={2}
                   />
                   <Typography sx={{ fontSize: "11px", color: theme.palette.other.icon, mt: "4px" }}>
-                    Shown as a tooltip next to the field label on the public form
+                    Shown under the field on the public form
                   </Typography>
                 </Box>
               )}

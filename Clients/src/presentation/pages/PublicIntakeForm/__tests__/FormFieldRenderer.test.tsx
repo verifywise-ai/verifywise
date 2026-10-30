@@ -148,3 +148,42 @@ describe("FormFieldRenderer accessible names", () => {
     });
   });
 });
+
+describe("FormFieldRenderer URL check", () => {
+  function UrlHarness() {
+    const { control, handleSubmit, formState } = useForm<Record<string, unknown>>();
+    return (
+      <form noValidate onSubmit={handleSubmit(() => undefined)}>
+        <FormFieldRenderer
+          field={makeField({ id: "site", type: "url", label: "Website" })}
+          control={control}
+          errors={formState.errors}
+        />
+        <button type="submit">Go</button>
+      </form>
+    );
+  }
+
+  it.each(["mailto:a@b.c", "javascript:alert(1)", "example.com"])(
+    "rejects %s before it reaches the server",
+    async (value) => {
+      const user = userEvent.setup();
+      renderWithProviders(<UrlHarness />);
+      await user.type(screen.getByLabelText(/Website/), value);
+      await user.click(screen.getByRole("button", { name: "Go" }));
+      expect(
+        await screen.findByText("Enter a full web address starting with http:// or https://"),
+      ).toBeInTheDocument();
+    },
+  );
+
+  it("accepts an https address", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<UrlHarness />);
+    await user.type(screen.getByLabelText(/Website/), "https://example.com");
+    await user.click(screen.getByRole("button", { name: "Go" }));
+    expect(
+      screen.queryByText("Enter a full web address starting with http:// or https://"),
+    ).not.toBeInTheDocument();
+  });
+});

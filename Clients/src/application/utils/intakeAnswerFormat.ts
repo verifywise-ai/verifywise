@@ -1,4 +1,4 @@
-import { normalizeDecimals } from "./intakeFormLogic";
+import { isEmptyAnswer, normalizeDecimals } from "./intakeFormLogic";
 
 interface CalculatedDisplay {
   decimals?: number | null;
@@ -86,7 +86,7 @@ export function formatAnswer(
   if (field.type === "calculated") {
     return formatCalculatedValue(typeof value === "number" ? value : null, field);
   }
-  if (value === null || value === undefined || value === "") return "—";
+  if (isEmptyAnswer(value)) return "—";
   if (field.type === "checkbox") return value ? "Yes" : "No";
   if (field.type === "date") return formatDate(value as string);
   if (field.type === "select" && field.options) {

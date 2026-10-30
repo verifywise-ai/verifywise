@@ -5,6 +5,7 @@ import Select from "../../components/Inputs/Select";
 import Checkbox from "../../components/Inputs/Checkbox";
 import { FormField } from "../IntakeFormBuilder/types";
 import { isEmptyAnswer } from "../../../application/utils/intakeFormLogic";
+import { isWebUrl } from "../../../application/utils/webUrl";
 import { status } from "../../themes/palette";
 
 /**
@@ -123,6 +124,12 @@ export function FormFieldRenderer({ field, control, errors, tone }: FormFieldRen
   // The server treats whitespace-only text and empty lists as missing; so must the form.
   const notBlankWhenRequired = (value: unknown) =>
     !isRequired || !isEmptyAnswer(value) || "This field is required";
+  // The browser's url check accepts any scheme and the preview submit skips it;
+  // this matches the server, which takes only http and https.
+  const webUrlWhenAnswered = (value: unknown) =>
+    isEmptyAnswer(value) ||
+    isWebUrl(value) ||
+    "Enter a full web address starting with http:// or https://";
   // Field/Select put this id on the rendered input, so the label can point at it.
   const controlId = `field-${field.id}`;
   const labelId = `${controlId}-label`;
@@ -141,7 +148,10 @@ export function FormFieldRenderer({ field, control, errors, tone }: FormFieldRen
               defaultValue={field.defaultValue || ""}
               rules={{
                 required: isRequired ? "This field is required" : false,
-                validate: notBlankWhenRequired,
+                validate:
+                  field.type === "url"
+                    ? { notBlank: notBlankWhenRequired, webUrl: webUrlWhenAnswered }
+                    : notBlankWhenRequired,
                 minLength: field.validation?.minLength
                   ? {
                       value: field.validation.minLength,
