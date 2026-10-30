@@ -79,6 +79,11 @@ import {
   es as intakeLiveChecksEs,
 } from "./modules/intakeLiveChecks";
 import {
+  de as intakePreviewDe,
+  fr as intakePreviewFr,
+  es as intakePreviewEs,
+} from "./modules/intakePreview";
+import {
   de as intakeLogicDe,
   fr as intakeLogicFr,
   es as intakeLogicEs,
@@ -111,6 +116,7 @@ export const translations: Record<string, Record<string, string>> = {
     ...superAdminDe,
     ...tasksDe,
     ...intakeLiveChecksDe,
+    ...intakePreviewDe,
     ...intakeLogicDe,
     ...trainingDe,
     ...vendorsDe,
@@ -9576,6 +9582,7 @@ export const translations: Record<string, Record<string, string>> = {
     ...superAdminFr,
     ...tasksFr,
     ...intakeLiveChecksFr,
+    ...intakePreviewFr,
     ...intakeLogicFr,
     ...trainingFr,
     ...vendorsFr,
@@ -18980,6 +18987,7 @@ export const translations: Record<string, Record<string, string>> = {
     ...superAdminEs,
     ...tasksEs,
     ...intakeLiveChecksEs,
+    ...intakePreviewEs,
     ...intakeLogicEs,
     ...trainingEs,
     ...vendorsEs,

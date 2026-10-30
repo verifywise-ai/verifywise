@@ -16,7 +16,6 @@ import {
   Save,
   Send,
   Archive,
-  Eye,
   Copy,
   Settings,
   ChevronDown,
@@ -50,6 +49,12 @@ import { FieldEditor } from "./FieldEditor";
 import { LogicOverviewPanel } from "./logic/LogicOverviewPanel";
 import { DesignPanel } from "./DesignPanel";
 import RoutingSettingsSection, { getRoutingErrors } from "./routing/RoutingSettingsSection";
+import { PreviewMenu } from "./preview/PreviewMenu";
+import {
+  PUBLIC_PREVIEW_QUERY,
+  reviewPreviewPath,
+  type PreviewRole,
+} from "../../../application/utils/intakeRouting/previewRole";
 import CustomizableMultiSelect from "../../components/Inputs/Select/Multi";
 import {
   FormField,
@@ -583,7 +588,14 @@ export function IntakeFormBuilder() {
 
   const handlePreviewBuilder = () => {
     const publicId = form.publicId;
-    if (publicId) window.open(`/${publicId}/use-case-form-intake`, "_blank");
+    if (publicId) {
+      window.open(`/${publicId}/use-case-form-intake?${PUBLIC_PREVIEW_QUERY}`, "_blank");
+    }
+  };
+
+  // A new tab, so unsaved builder changes stay put.
+  const handlePreviewReview = (role: PreviewRole) => {
+    window.open(reviewPreviewPath(role), "_blank");
   };
 
   const [publishWarningOpen, setPublishWarningOpen] = useState(false);
@@ -817,21 +829,10 @@ export function IntakeFormBuilder() {
                           <Copy size={15} color={theme.palette.text.tertiary} />
                         </Box>
                       </Tooltip>
-                      <Tooltip title="Preview">
-                        <Box
-                          onClick={handlePreviewBuilder}
-                          sx={{
-                            "cursor": "pointer",
-                            "display": "flex",
-                            "alignItems": "center",
-                            "p": 0.5,
-                            "borderRadius": "4px",
-                            "&:hover": { backgroundColor: theme.palette.background.accent },
-                          }}
-                        >
-                          <Eye size={15} color={theme.palette.text.tertiary} />
-                        </Box>
-                      </Tooltip>
+                      <PreviewMenu
+                        onPreviewForm={handlePreviewBuilder}
+                        onPreviewReview={handlePreviewReview}
+                      />
                     </>
                   )}
                   {form.status === IntakeFormStatus.ACTIVE && (

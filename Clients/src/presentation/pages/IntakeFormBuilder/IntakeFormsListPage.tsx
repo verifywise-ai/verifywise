@@ -79,6 +79,15 @@ import {
   paginationSelectStyle,
 } from "../ModelInventory/style";
 import { pageOfLabel } from "../../components/Table/pageOfLabel";
+import { PreviewRoleBanner } from "./preview/PreviewRoleBanner";
+import {
+  parsePreviewRole,
+  PUBLIC_PREVIEW_QUERY,
+  SIMULATE_ROLE_PARAM,
+  SIMULATED_USER_ID,
+  simulatedLaneRow,
+  type PreviewRole,
+} from "../../../application/utils/intakeRouting/previewRole";
 
 // ============================================================================
 // Helpers
@@ -272,6 +281,17 @@ export function IntakeFormsListPage() {
     loadSubmissions();
   }, [loadSubmissions]);
 
+  // "Preview as" simulation, entered from the builder's Preview menu. It lives
+  // only in the URL and only on the Submissions tab, so it never carries over.
+  const simulatedRole =
+    mainTab === "submissions" ? parsePreviewRole(searchParams.get(SIMULATE_ROLE_PARAM)) : null;
+  const setSimulatedRole = (role: PreviewRole | null) => {
+    const next = new URLSearchParams(searchParams);
+    if (role) next.set(SIMULATE_ROLE_PARAM, role);
+    else next.delete(SIMULATE_ROLE_PARAM);
+    setSearchParams(next, { replace: true });
+  };
+
   // Filter forms by search query
   const filteredForms = forms.filter((form) => {
     if (searchQuery) {
@@ -316,7 +336,9 @@ export function IntakeFormsListPage() {
   // Filter submissions by search
   const filteredSubmissions = submissions.filter(
     (s) =>
-      matchesLaneFilter(s, laneFilter, userId) &&
+      (simulatedRole
+        ? matchesLaneFilter(simulatedLaneRow(s, simulatedRole), laneFilter, SIMULATED_USER_ID)
+        : matchesLaneFilter(s, laneFilter, userId)) &&
       (!submissionsSearch ||
         (s.submitterName || "").toLowerCase().includes(submissionsSearch.toLowerCase()) ||
         (s.submitterEmail || "").toLowerCase().includes(submissionsSearch.toLowerCase())),
@@ -345,7 +367,10 @@ export function IntakeFormsListPage() {
 
   const handlePreview = () => {
     if (selectedForm?.publicId) {
-      window.open(`/${selectedForm.publicId}/use-case-form-intake`, "_blank");
+      window.open(
+        `/${selectedForm.publicId}/use-case-form-intake?${PUBLIC_PREVIEW_QUERY}`,
+        "_blank",
+      );
     } else {
       setSnackbar({
         open: true,
@@ -674,6 +699,15 @@ export function IntakeFormsListPage() {
 
       {mainTab === "submissions" && (
         <>
+          {simulatedRole && (
+            <Box sx={{ mb: "8px" }}>
+              <PreviewRoleBanner
+                role={simulatedRole}
+                onRoleChange={setSimulatedRole}
+                onExit={() => setSimulatedRole(null)}
+              />
+            </Box>
+          )}
           {/* Filter + Search */}
           <Stack
             direction="row"
@@ -1058,6 +1092,9 @@ export function IntakeFormsListPage() {
         onApproved={() => handleSubmissionDecided("Submission approved")}
         onRejected={() => handleSubmissionDecided("Submission rejected")}
         onChanged={refreshAfterReview}
+        simulatedRole={simulatedRole}
+        onSimulatedRoleChange={setSimulatedRole}
+        onExitSimulation={() => setSimulatedRole(null)}
       />
 
       {/* Snackbar */}

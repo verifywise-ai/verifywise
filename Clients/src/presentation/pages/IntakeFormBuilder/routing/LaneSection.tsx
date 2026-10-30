@@ -72,6 +72,8 @@ interface LaneSectionProps {
   decideBlockedReason?: string | null;
   laneReviewers: Array<{ id: number; name: string }>;
   canEscalate: boolean;
+  /** Preview simulation: the escalation button shows but does nothing. */
+  actionsDisabled?: boolean;
   onEscalated: (routing: SubmissionRouting) => void;
 }
 
@@ -82,6 +84,7 @@ const LaneSection = ({
   decideBlockedReason,
   laneReviewers,
   canEscalate,
+  actionsDisabled = false,
   onEscalated,
 }: LaneSectionProps) => {
   const theme = useTheme();
@@ -100,7 +103,7 @@ const LaneSection = ({
   };
 
   const handleEscalate = async () => {
-    if (!reasonValid || isSending) return;
+    if (!reasonValid || isSending || actionsDisabled) return;
     setIsSending(true);
     setError(null);
     try {
@@ -142,6 +145,7 @@ const LaneSection = ({
               variant="outlined"
               size="small"
               text="Send to senior review"
+              isDisabled={actionsDisabled}
               onClick={() => setEscalateOpen(true)}
             />
           </Box>
