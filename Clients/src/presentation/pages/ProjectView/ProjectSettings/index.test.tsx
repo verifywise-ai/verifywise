@@ -175,7 +175,7 @@ describe("ProjectSettings", () => {
       expect(screen.getByDisplayValue("Chatbot Assistant")).toBeInTheDocument();
     });
     expect(screen.getByText("Use Case Overview")).toBeInTheDocument();
-    expect(screen.getByText("Project Details")).toBeInTheDocument();
+    expect(screen.getByText("Use case details")).toBeInTheDocument();
     expect(screen.getByText("Team & Compliance")).toBeInTheDocument();
     expect(screen.getByTestId("intake-submission-card")).toBeInTheDocument();
     expect(screen.getByTestId("custom-fields-section")).toBeInTheDocument();
@@ -277,7 +277,7 @@ describe("ProjectSettings", () => {
 
     await waitFor(() => expect(mockFlushCustomFields).toHaveBeenCalledWith(5));
     expect(mockUpdateProject).not.toHaveBeenCalled();
-    expect(await screen.findByText("Project updated successfully")).toBeInTheDocument();
+    expect(await screen.findByText("Use case updated successfully")).toBeInTheDocument();
   });
 
   it("disables Save while a save is in progress", async () => {
@@ -312,7 +312,7 @@ describe("ProjectSettings", () => {
       id: 5,
       body: expect.objectContaining({ project_title: "Renamed Assistant" }),
     });
-    expect(await screen.findByText("Project updated successfully")).toBeInTheDocument();
+    expect(await screen.findByText("Use case updated successfully")).toBeInTheDocument();
   });
 
   it("shows a server error message when saving fails with status 400", async () => {
@@ -484,7 +484,8 @@ describe("ProjectSettings", () => {
     await waitFor(() => expect(screen.getByDisplayValue("Chatbot Assistant")).toBeInTheDocument());
 
     fireEvent.click(screen.getByRole("button", { name: "Delete use case" }));
-    expect(screen.getByText("Are you sure you want to delete the use case?")).toBeInTheDocument();
+    expect(screen.getByText("Delete this use case?")).toBeInTheDocument();
+    expect(screen.getByText(/This cannot be undone\./)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Delete" }));
 
@@ -505,7 +506,7 @@ describe("ProjectSettings", () => {
     fireEvent.click(screen.getByRole("button", { name: "Delete" }));
 
     expect(
-      await screen.findByText("Failed to delete project. Please try again."),
+      await screen.findByText("Failed to delete use case. Please try again."),
     ).toBeInTheDocument();
     expect(mockNavigate).not.toHaveBeenCalled();
   });

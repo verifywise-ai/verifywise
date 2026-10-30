@@ -4,7 +4,7 @@ import TabPanel from "@mui/lab/TabPanel";
 import { SyntheticEvent, useState, useEffect, useMemo } from "react";
 import TabContext from "@mui/lab/TabContext";
 import VWProjectOverview from "./Overview";
-import { useSearchParams } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import CustomizableSkeleton from "../../../components/Skeletons";
 import VWProjectRisks from "./ProjectRisks";
 import LinkedModels from "./LinkedModels";
@@ -21,7 +21,9 @@ import { PageBreadcrumbs } from "../../../components/breadcrumbs/PageBreadcrumbs
 import { useAuth } from "../../../../application/hooks/useAuth";
 import { BreadcrumbItem } from "../../../types/interfaces/i.breadcrumbs";
 import { getRouteIcon } from "../../../components/breadcrumbs/routeMapping";
-import { FileText as FileTextIcon } from "lucide-react";
+import { FileText as FileTextIcon, FileX as FileXIcon } from "lucide-react";
+import { EmptyState } from "../../../components/EmptyState";
+import { CustomizableButton } from "../../../components/button/customizable-button";
 import TabBar from "../../../components/TabBar";
 import { getAllProjectRisksByProjectId } from "../../../../application/repository/projectRisk.repository";
 import { getAllEntities } from "../../../../application/repository/entity.repository";
@@ -41,7 +43,15 @@ const VWProjectView = () => {
   const tabParam = searchParams.get("tab");
   const framework = searchParams.get("framework");
   const [refreshKey, setRefreshKey] = useState(0);
-  const { project } = useProjectData({ projectId, refreshKey });
+  const navigate = useNavigate();
+  const {
+    project,
+    error: projectError,
+    isLoading: isProjectLoading,
+  } = useProjectData({
+    projectId,
+    refreshKey,
+  });
   const { isEnabled } = useExtensions();
 
   const projectSource = (project as any)?._source;
@@ -167,6 +177,27 @@ const VWProjectView = () => {
     return "This tab is currently unavailable.";
   };
 
+  // A deleted use case, a stale link or a use case the user cannot access used
+  // to leave the page on skeletons forever. Say so and offer the way back.
+  if (!project && projectError && !isProjectLoading) {
+    return (
+      <Stack className="vw-project-view">
+        <PageBreadcrumbs items={breadcrumbItems} autoGenerate={false} showCurrentPage={true} />
+        <Stack sx={{ mt: "16px", gap: "16px", alignItems: "center" }}>
+          <EmptyState
+            icon={FileXIcon}
+            message="This use case could not be loaded. It may have been deleted, or you may not have access to it."
+          />
+          <CustomizableButton
+            variant="contained"
+            text="Back to use cases"
+            onClick={() => navigate("/overview")}
+          />
+        </Stack>
+      </Stack>
+    );
+  }
+
   return (
     <Stack className="vw-project-view">
       <PageBreadcrumbs items={breadcrumbItems} autoGenerate={false} showCurrentPage={true} />
@@ -174,12 +205,12 @@ const VWProjectView = () => {
       <Stack className="vw-project-view-header" sx={{ mb: 10 }}>
         {project ? (
           <>
-            <Typography sx={projectViewHeaderTitle}>Use-case general view</Typography>
+            <Typography component="h1" sx={projectViewHeaderTitle}>
+              {project.uc_id ? `${project.uc_id}: ` : ""}
+              {project.project_title}
+            </Typography>
             <Typography sx={projectViewHeaderDesc}>
-              This use case includes all the governance process status of{" "}
-              <Typography component="span" sx={{ color: "brand.primary", fontSize: "inherit" }}>
-                {project.project_title}
-              </Typography>
+              Governance status, risks, frameworks and activity for this use case.
             </Typography>
           </>
         ) : (
@@ -226,7 +257,7 @@ const VWProjectView = () => {
                 tooltip: "Compliance frameworks applied to this use case",
               },
               {
-                label: "CE Marking",
+                label: "CE marking",
                 value: "ce-marking",
                 icon: "Award",
                 disabled: isApprovalBlocked,

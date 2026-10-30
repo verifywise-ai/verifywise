@@ -580,7 +580,7 @@ const ProjectSettings = React.memo(
         } else if (response.status === 404) {
           setAlert({
             variant: "error",
-            body: "Framework not found or could not be removed from the project",
+            body: "Framework not found or could not be removed from the use case",
             isToast: true,
             visible: true,
           });
@@ -721,7 +721,7 @@ const ProjectSettings = React.memo(
       }
       setAlert({
         variant: "success",
-        body: "Project updated successfully",
+        body: "Use case updated successfully",
         isToast: true,
         visible: true,
       });
@@ -795,7 +795,7 @@ const ProjectSettings = React.memo(
 
           setAlert({
             variant: "success",
-            body: "Project updated successfully",
+            body: "Use case updated successfully",
             isToast: true,
             visible: true,
           });
@@ -828,8 +828,8 @@ const ProjectSettings = React.memo(
           variant: isError ? "error" : "success",
           title: isError ? "Error" : "Success",
           body: isError
-            ? "Failed to delete project. Please try again."
-            : "Project deleted successfully.",
+            ? "Failed to delete use case. Please try again."
+            : "Use case deleted successfully.",
           isToast: true,
           visible: true,
         });
@@ -854,7 +854,7 @@ const ProjectSettings = React.memo(
         setAlert({
           variant: "error",
           title: "Error",
-          body: "Failed to delete project. Please try again.",
+          body: "Failed to delete use case. Please try again.",
           isToast: true,
           visible: true,
         });
@@ -975,9 +975,9 @@ const ProjectSettings = React.memo(
                 </Box>
               </Box>
 
-              {/* Project Details Card */}
+              {/* Use case details card */}
               <Box sx={styles.card}>
-                <Typography sx={styles.sectionTitle}>Project Details</Typography>
+                <Typography sx={styles.sectionTitle}>Use case details</Typography>
                 <Box
                   sx={{
                     display: "grid",
@@ -1643,9 +1643,12 @@ const ProjectSettings = React.memo(
 
         {isDeleteModalOpen && (
           <ConfirmationModal
-            title="Confirm delete"
+            title="Delete this use case?"
             body={
-              <Typography fontSize={13}>Are you sure you want to delete the use case?</Typography>
+              <Typography fontSize={13}>
+                All data linked to this use case, including its risks and framework progress, will
+                be removed. This cannot be undone.
+              </Typography>
             }
             cancelText="Cancel"
             proceedText="Delete"
