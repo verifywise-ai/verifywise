@@ -6,7 +6,7 @@ export { hasPendingSecondReview };
 export type LaneFilter = "all" | "senior" | "standard" | "unrouted" | "mine" | "second_review";
 
 export const LANE_FILTER_ITEMS: Array<{ _id: LaneFilter; name: string }> = [
-  { _id: "all", name: "All" },
+  { _id: "all", name: "All review levels" },
   { _id: "senior", name: "Expert" },
   { _id: "standard", name: "Regular" },
   { _id: "unrouted", name: "Not assigned" },

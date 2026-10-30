@@ -174,9 +174,9 @@ export function LogicOverviewPanel({
       </Box>
 
       {group(
-        "Calculations",
+        "Calculated values",
         overview.calculations.length === 0
-          ? empty("No calculations yet. Add a calculated field from the Advanced section.")
+          ? empty("No calculated values yet. Add a calculated field from the Advanced section.")
           : overview.calculations.map((item, index) =>
               row(
                 `calc-${index}`,

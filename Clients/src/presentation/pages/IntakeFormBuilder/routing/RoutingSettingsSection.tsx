@@ -80,7 +80,7 @@ const NUMBER_FIELDS: Array<{ key: NumberKey; label: string; hint: string }> = [
   {
     key: "secondReviewRate",
     label: "Second review share %",
-    hint: "Share of standard decisions checked again",
+    hint: "Share of regular review decisions checked again",
   },
 ];
 

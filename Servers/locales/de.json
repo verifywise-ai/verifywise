@@ -897,7 +897,7 @@
   "This submission is assigned to expert reviewers": "Diese Einreichung ist Expertenprüfern zugewiesen",
   "This submission is assigned to the form's reviewers": "Diese Einreichung ist den Prüfern des Formulars zugewiesen",
   "A reason of 1 to 1000 characters is required": "Eine Begründung mit 1 bis 1000 Zeichen ist erforderlich",
-  "Only pending submissions in regular review can be sent to expert review": "Nur ausstehende Einreichungen in der regulären Prüfung können zur Expertenprüfung gesendet werden",
+  "Expert review can only be requested for pending submissions in regular review": "Eine Expertenprüfung kann nur für ausstehende Einreichungen in der regulären Prüfung angefordert werden",
   "Only this form's reviewers can request expert review": "Nur die Prüfer dieses Formulars können eine Expertenprüfung anfordern",
   "Review level:": "Prüfstufe:",
   "Second review requested: {formName}": "Zweitprüfung angefordert: {formName}",

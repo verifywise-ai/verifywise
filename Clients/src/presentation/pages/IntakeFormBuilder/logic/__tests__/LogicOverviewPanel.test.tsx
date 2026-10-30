@@ -107,7 +107,9 @@ describe("LogicOverviewPanel", () => {
       screen.getByText("Reviewer assignment is off. Turn it on in Form settings."),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("No calculations yet. Add a calculated field from the Advanced section."),
+      screen.getByText(
+        "No calculated values yet. Add a calculated field from the Advanced section.",
+      ),
     ).toBeInTheDocument();
     expect(screen.getByText("No conditional fields yet.")).toBeInTheDocument();
   });

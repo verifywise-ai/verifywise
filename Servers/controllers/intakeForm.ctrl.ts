@@ -2808,7 +2808,7 @@ export async function escalateSubmission(req: Request, res: Response) {
         .status(409)
         .json(
           STATUS_CODE[409](
-            req.t!("Only pending submissions in regular review can be sent to expert review"),
+            req.t!("Expert review can only be requested for pending submissions in regular review"),
           ),
         );
     }

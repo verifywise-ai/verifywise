@@ -12,14 +12,13 @@ export const de: Record<string, string> = {
   "Logic": "Logik",
   "What each rule and formula reads. Click a row to edit it.":
     "Was jede Regel und Formel liest. Klicken Sie auf eine Zeile, um sie zu bearbeiten.",
-  "Calculations": "Berechnungen",
-  "No calculations yet. Add a calculated field from the Advanced section.":
-    "Noch keine Berechnungen. Fügen Sie ein berechnetes Feld aus dem Bereich Erweitert hinzu.",
+  "Calculated values": "Berechnete Werte",
+  "No calculated values yet. Add a calculated field from the Advanced section.":
+    "Noch keine berechneten Werte. Fügen Sie ein berechnetes Feld aus dem Bereich Erweitert hinzu.",
   "No formula yet": "Noch keine Formel",
   "Conditional fields": "Bedingte Felder",
   "No conditional fields yet.": "Noch keine bedingten Felder.",
   "Feeds": "Fließt ein in",
-  "Routing": "Weiterleitung",
   "Reviewer assignment": "Prüferzuweisung",
   "Reviewer assignment is off. Turn it on in Form settings.":
     "Die Prüferzuweisung ist aus. Schalten Sie sie in den Formulareinstellungen ein.",
@@ -42,14 +41,13 @@ export const fr: Record<string, string> = {
   "Logic": "Logique",
   "What each rule and formula reads. Click a row to edit it.":
     "Ce que lit chaque règle et chaque formule. Cliquez sur une ligne pour la modifier.",
-  "Calculations": "Calculs",
-  "No calculations yet. Add a calculated field from the Advanced section.":
-    "Aucun calcul pour le moment. Ajoutez un champ calculé depuis la section Avancé.",
+  "Calculated values": "Valeurs calculées",
+  "No calculated values yet. Add a calculated field from the Advanced section.":
+    "Aucune valeur calculée pour le moment. Ajoutez un champ calculé depuis la section Avancé.",
   "No formula yet": "Pas encore de formule",
   "Conditional fields": "Champs conditionnels",
   "No conditional fields yet.": "Aucun champ conditionnel pour le moment.",
   "Feeds": "Alimente",
-  "Routing": "Routage",
   "Reviewer assignment": "Attribution des réviseurs",
   "Reviewer assignment is off. Turn it on in Form settings.":
     "L'attribution des réviseurs est désactivée. Activez-la dans les paramètres du formulaire.",
@@ -74,14 +72,13 @@ export const es: Record<string, string> = {
   "Logic": "Lógica",
   "What each rule and formula reads. Click a row to edit it.":
     "Lo que lee cada regla y fórmula. Haga clic en una fila para editarla.",
-  "Calculations": "Cálculos",
-  "No calculations yet. Add a calculated field from the Advanced section.":
-    "Aún no hay cálculos. Agregue un campo calculado desde la sección Avanzado.",
+  "Calculated values": "Valores calculados",
+  "No calculated values yet. Add a calculated field from the Advanced section.":
+    "Aún no hay valores calculados. Agregue un campo calculado desde la sección Avanzado.",
   "No formula yet": "Aún no hay fórmula",
   "Conditional fields": "Campos condicionales",
   "No conditional fields yet.": "Aún no hay campos condicionales.",
   "Feeds": "Alimenta",
-  "Routing": "Enrutamiento",
   "Reviewer assignment": "Asignación de revisores",
   "Reviewer assignment is off. Turn it on in Form settings.":
     "La asignación de revisores está desactivada. Actívela en la configuración del formulario.",
