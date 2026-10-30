@@ -502,7 +502,7 @@ function routingReasonText(req: Request, reason: RoutingReason | null): string {
     case "override_raised":
       return req.t!("a reviewer raised the band");
     case "escalated":
-      return req.t!("a reviewer sent it to senior review");
+      return req.t!("a reviewer requested expert review");
     default:
       return req.t!("the score is below the threshold");
   }
@@ -878,7 +878,7 @@ const EMPTY_LANE_MESSAGE =
 const sameIds = (a: number[], b: number[]) =>
   a.length === b.length && a.every((id) => b.includes(id));
 
-const ROUTING_FORBIDDEN_MESSAGE = "Only an Admin can change review routing";
+const ROUTING_FORBIDDEN_MESSAGE = "Only an Admin can change reviewer assignment";
 
 /**
  * Whether saving `next` changes the stored routing. Compared by value: id
@@ -1772,7 +1772,7 @@ export async function getSubmissionPreview(req: Request, res: Response) {
     const decideBlockedReason = canDecide
       ? null
       : lane === "senior"
-        ? req.t!("This submission is assigned to senior reviewers")
+        ? req.t!("This submission is assigned to expert reviewers")
         : req.t!("This submission is assigned to the form's reviewers");
 
     return res.status(200).json(
@@ -2371,7 +2371,7 @@ export async function approveSubmission(req: Request, res: Response) {
       return res.status(403).json(
         STATUS_CODE[403](
           decision.lane === "senior"
-            ? req.t!("A senior reviewer has to decide this: {reason}", {
+            ? req.t!("An expert reviewer has to decide this: {reason}", {
                 reason: routingReasonText(req, decision.reason),
               })
             : req.t!("This submission is assigned to the form's reviewers"),
@@ -2685,7 +2685,7 @@ export async function rejectSubmission(req: Request, res: Response) {
         .json(
           STATUS_CODE[403](
             lane === "senior"
-              ? req.t!("This submission is assigned to senior reviewers")
+              ? req.t!("This submission is assigned to expert reviewers")
               : req.t!("This submission is assigned to the form's reviewers"),
           ),
         );
@@ -2808,7 +2808,7 @@ export async function escalateSubmission(req: Request, res: Response) {
         .status(409)
         .json(
           STATUS_CODE[409](
-            req.t!("Only pending submissions in standard review can be sent to senior review"),
+            req.t!("Only pending submissions in regular review can be sent to expert review"),
           ),
         );
     }
@@ -2820,11 +2820,7 @@ export async function escalateSubmission(req: Request, res: Response) {
     ) {
       return res
         .status(403)
-        .json(
-          STATUS_CODE[403](
-            req.t!("Only this form's reviewers can send a submission to senior review"),
-          ),
-        );
+        .json(STATUS_CODE[403](req.t!("Only this form's reviewers can request expert review")));
     }
 
     const at = new Date().toISOString();
@@ -2850,7 +2846,7 @@ export async function escalateSubmission(req: Request, res: Response) {
 
     await logSuccess({
       eventType: "Update",
-      description: `submission ${submissionId} escalated to senior review`,
+      description: `submission ${submissionId} escalated to expert review`,
       functionName: "escalateSubmission",
       fileName: "intakeForm.ctrl.ts",
       userId,
@@ -3712,7 +3708,9 @@ async function loadSecondReview(req: Request, res: Response, submissionId: numbe
   if (!isSenior && !isAdminRequest(req)) {
     res
       .status(403)
-      .json(STATUS_CODE[403](req.t!("Only a senior reviewer of this form can do a second review")));
+      .json(
+        STATUS_CODE[403](req.t!("Only an expert reviewer of this form can do a second review")),
+      );
     return null;
   }
   if (submission.reviewedBy === req.userId) {

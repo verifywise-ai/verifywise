@@ -781,7 +781,9 @@ export function IntakeFormsListPage() {
                     <TableCell sx={singleTheme.tableStyles.primary.header.cell}>
                       Risk tier
                     </TableCell>
-                    <TableCell sx={singleTheme.tableStyles.primary.header.cell}>Lane</TableCell>
+                    <TableCell sx={singleTheme.tableStyles.primary.header.cell}>
+                      Review level
+                    </TableCell>
                     <TableCell sx={singleTheme.tableStyles.primary.header.cell}>
                       Submitted
                     </TableCell>

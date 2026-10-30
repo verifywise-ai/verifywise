@@ -611,13 +611,13 @@ export function scoreTextFor(assessment: IRiskAssessmentV2 | null, lang?: string
 }
 
 const SENIOR_LANE_TEXT: Record<RoutingReason, string> = {
-  prohibited: "Senior review: prohibited practice",
-  no_score: "Senior review: no usable score",
-  close_call: "Senior review: close call",
-  at_or_above_threshold: "Senior review: score at or above the threshold",
-  below_threshold: "Senior review: score below the threshold",
-  override_raised: "Senior review: a reviewer raised the band",
-  escalated: "Senior review: sent by a reviewer",
+  prohibited: "Expert review: prohibited practice",
+  no_score: "Expert review: no usable score",
+  close_call: "Expert review: close call",
+  at_or_above_threshold: "Expert review: score at or above the threshold",
+  below_threshold: "Expert review: score below the threshold",
+  override_raised: "Expert review: a reviewer raised the band",
+  escalated: "Expert review: requested by a reviewer",
 };
 
 /**
@@ -646,10 +646,10 @@ export async function notificationAudience(
   // form's own recipients are left as configured.
   const reviewers = await d.getEligibleIds(organizationId, laneIds);
   const laneText = !lane
-    ? "Not routed yet: scoring is still running"
+    ? "Not assigned yet: scoring is still running"
     : lane === "senior"
       ? SENIOR_LANE_TEXT[submission.routing!.reason]
-      : "Standard review";
+      : "Regular review";
   return {
     recipients: [...new Set([...base, ...reviewers])],
     laneText: translate(lang, laneText),

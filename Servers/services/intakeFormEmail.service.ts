@@ -203,7 +203,7 @@ export async function sendNewSubmissionAdminNotification(
     const resultsHtml = renderIntakeResultsHtml(results, lang);
     const laneHtml = laneText
       ? `<p class="box-subtitle" style="margin-top: 6px;"><strong>${escapeHtml(
-          translate(lang, "Review lane:"),
+          translate(lang, "Review level:"),
         )}</strong> ${escapeHtml(laneText)}</p>`
       : "";
     let sent = 0;

@@ -362,7 +362,7 @@ export function IntakeFormBuilder() {
     if (canEditRouting && Object.keys(getRoutingErrors(form.routing ?? null)).length > 0) {
       setSnackbar({
         open: true,
-        message: "Fix the routing settings before saving",
+        message: "Fix the reviewer assignment settings before saving",
         severity: "error",
       });
       return null;
@@ -442,7 +442,7 @@ export function IntakeFormBuilder() {
     if (canEditRouting && Object.keys(getRoutingErrors(form.routing ?? null)).length > 0) {
       setSnackbar({
         open: true,
-        message: "Fix the routing settings before publishing",
+        message: "Fix the reviewer assignment settings before publishing",
         severity: "error",
       });
       return;

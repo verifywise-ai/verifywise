@@ -56,17 +56,19 @@ describe("RoutingSettingsSection for a non-Admin", () => {
   it("shows the settings read-only with a helper line", () => {
     mockRole = "Editor";
     renderWithProviders(<Harness initial={on()} />);
-    expect(screen.getByText("Only an Admin can change review routing.")).toBeInTheDocument();
+    expect(screen.getByText("Only an Admin can change reviewer assignment.")).toBeInTheDocument();
     expect(screen.getByLabelText("Threshold")).toBeDisabled();
     expect(screen.getByLabelText("Close-call margin")).toBeDisabled();
     expect(document.querySelectorAll(".vw-multi-select .Mui-disabled").length).toBeGreaterThan(0);
-    fireEvent.click(screen.getByText("Route by risk score"));
+    fireEvent.click(screen.getByText("Assign reviewers by risk score"));
     expect(latest?.enabled).toBe(true);
   });
 
   it("hides the helper line for an Admin", () => {
     renderWithProviders(<Harness initial={on()} />);
-    expect(screen.queryByText("Only an Admin can change review routing.")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Only an Admin can change reviewer assignment."),
+    ).not.toBeInTheDocument();
   });
 });
 
@@ -90,26 +92,26 @@ describe("RoutingSettingsSection stale reviewers", () => {
 describe("RoutingSettingsSection", () => {
   it("is off by default and hides the fields", () => {
     renderWithProviders(<Harness />);
-    expect(screen.getByText("Route by risk score")).toBeInTheDocument();
+    expect(screen.getByText("Assign reviewers by risk score")).toBeInTheDocument();
     expect(screen.queryByLabelText("Threshold")).not.toBeInTheDocument();
-    expect(screen.queryByText("Senior reviewers")).not.toBeInTheDocument();
+    expect(screen.queryByText("Expert reviewers")).not.toBeInTheDocument();
   });
 
   it("shows the fields with 50, 10 and 10 when turned on", () => {
     renderWithProviders(<Harness />);
-    fireEvent.click(screen.getByText("Route by risk score"));
+    fireEvent.click(screen.getByText("Assign reviewers by risk score"));
     expect(screen.getByLabelText("Threshold")).toHaveValue(50);
     expect(screen.getByLabelText("Close-call margin")).toHaveValue(10);
     expect(screen.getByLabelText("Second review share %")).toHaveValue(10);
-    expect(screen.getByText("Senior reviewers")).toBeInTheDocument();
-    expect(screen.getByText("Standard reviewers")).toBeInTheDocument();
+    expect(screen.getByText("Expert reviewers")).toBeInTheDocument();
+    expect(screen.getByText("Regular reviewers")).toBeInTheDocument();
   });
 
   it("asks for at least one senior and one standard reviewer when on with none", () => {
     renderWithProviders(<Harness />);
-    fireEvent.click(screen.getByText("Route by risk score"));
-    expect(screen.getByText("Pick at least one senior reviewer")).toBeInTheDocument();
-    expect(screen.getByText("Pick at least one standard reviewer")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("Assign reviewers by risk score"));
+    expect(screen.getByText("Pick at least one expert reviewer")).toBeInTheDocument();
+    expect(screen.getByText("Pick at least one regular reviewer")).toBeInTheDocument();
   });
 
   it("flags a threshold of 0", () => {
@@ -127,11 +129,11 @@ describe("RoutingSettingsSection", () => {
   it("updates the helper line when the threshold changes", () => {
     renderWithProviders(<Harness initial={on()} />);
     expect(screen.getByTestId("routing-helper")).toHaveTextContent(
-      "Scores of 50 or more, prohibited practices and scores within 10 points of 50 go to senior reviewers.",
+      "Scores of 50 or more, prohibited practices and scores within 10 points of 50 go to expert reviewers.",
     );
     fireEvent.change(screen.getByLabelText("Threshold"), { target: { value: "60" } });
     expect(screen.getByTestId("routing-helper")).toHaveTextContent(
-      "Scores of 60 or more, prohibited practices and scores within 10 points of 60 go to senior reviewers.",
+      "Scores of 60 or more, prohibited practices and scores within 10 points of 60 go to expert reviewers.",
     );
   });
 
@@ -145,7 +147,7 @@ describe("RoutingSettingsSection", () => {
     renderWithProviders(<Harness initial={on()} />);
     fireEvent.change(screen.getByLabelText("Threshold"), { target: { value: "" } });
     expect(screen.getByText("Use a number from 1 to 99")).toBeInTheDocument();
-    fireEvent.click(screen.getByText("Route by risk score"));
+    fireEvent.click(screen.getByText("Assign reviewers by risk score"));
     expect(latest?.enabled).toBe(false);
     expect(latest?.threshold).toBe(50);
     expect(getRoutingErrors(latest)).toEqual({});
@@ -162,6 +164,6 @@ describe("RoutingSettingsSection", () => {
     renderWithProviders(<Harness initial={on()} />);
     expect(screen.getByText("Scores of")).toBeInTheDocument();
     expect(screen.getByText("points of")).toBeInTheDocument();
-    expect(screen.getByText("go to senior reviewers.")).toBeInTheDocument();
+    expect(screen.getByText("go to expert reviewers.")).toBeInTheDocument();
   });
 });

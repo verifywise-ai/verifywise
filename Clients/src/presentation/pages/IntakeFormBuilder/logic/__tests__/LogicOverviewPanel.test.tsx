@@ -73,12 +73,12 @@ describe("LogicOverviewPanel", () => {
   it("summarises routing with its numbers and reviewers", () => {
     renderPanel();
     expect(screen.getByText(/Scores less than/).closest("li")).toHaveTextContent(
-      "Scores less than 5 points from 60 go to senior reviewers.",
+      "Scores less than 5 points from 60 go to expert reviewers.",
     );
     expect(screen.getByText("Sam Senior")).toBeInTheDocument();
     expect(screen.getByText("Pat Standard")).toBeInTheDocument();
     expect(screen.getByText(/are picked at random/).parentElement).toHaveTextContent(
-      "20% of standard lane approvals by reviewers who are not senior are picked at random for a second review by a senior reviewer.",
+      "20% of regular review approvals by reviewers who are not expert reviewers are picked at random for a second review by an expert reviewer.",
     );
   });
 
@@ -91,8 +91,8 @@ describe("LogicOverviewPanel", () => {
 
   it("names saved reviewers who can no longer review as former users", () => {
     renderPanel({ routing: { ...ROUTING, seniorReviewerIds: [1, 9] } });
-    expect(screen.getByText("Senior reviewers:").parentElement).toHaveTextContent(
-      "Senior reviewers: Sam Senior, Former user",
+    expect(screen.getByText("Expert reviewers:").parentElement).toHaveTextContent(
+      "Expert reviewers: Sam Senior, Former user",
     );
   });
 
@@ -103,10 +103,12 @@ describe("LogicOverviewPanel", () => {
 
   it("says when routing is off and when nothing is set up yet", () => {
     renderPanel({ fields: [COST], routing: null });
-    expect(screen.getByText("Routing is off. Turn it on in Form settings.")).toBeInTheDocument();
+    expect(
+      screen.getByText("Reviewer assignment is off. Turn it on in Form settings."),
+    ).toBeInTheDocument();
     expect(
       screen.getByText("No calculations yet. Add a calculated field from the Advanced section."),
     ).toBeInTheDocument();
-    expect(screen.getByText("No show/hide rules yet.")).toBeInTheDocument();
+    expect(screen.getByText("No conditional fields yet.")).toBeInTheDocument();
   });
 });

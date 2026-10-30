@@ -69,8 +69,8 @@ type SimulationRouting =
   | { formId: number; status: "failed" }
   | { formId: number; status: "ready"; formRouting: FormRouting | null };
 
-const ROUTING_LOADING = "Loading routing for this form";
-const ROUTING_FAILED = "Could not load routing for this form";
+const ROUTING_LOADING = "Loading reviewer assignment for this form";
+const ROUTING_FAILED = "Could not load reviewer assignment for this form";
 
 /** The entity mapping for the use case's high-risk roles (the key saved forms use). */
 const ROLE_MAPPING = "type_of_high_risk_role";

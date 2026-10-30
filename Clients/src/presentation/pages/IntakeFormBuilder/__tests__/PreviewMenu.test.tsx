@@ -19,7 +19,7 @@ describe("PreviewMenu", () => {
     expect(onPreviewForm).toHaveBeenCalledTimes(1);
 
     fireEvent.click(screen.getByTestId("button-intake-preview"));
-    fireEvent.click(await screen.findByRole("menuitem", { name: "Standard reviewer" }));
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Regular reviewer" }));
     expect(onPreviewReview).toHaveBeenCalledWith("standard");
   });
 

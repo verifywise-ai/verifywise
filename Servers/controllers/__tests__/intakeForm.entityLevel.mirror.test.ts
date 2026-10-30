@@ -203,7 +203,7 @@ describe("entityLevel shared cases, through getSubmissionPreview", () => {
     const prohibited = c.expected === "Prohibited";
     expect(body.canDecide).toBe(!prohibited);
     expect(body.decideBlockedReason).toBe(
-      prohibited ? "This submission is assigned to senior reviewers" : null,
+      prohibited ? "This submission is assigned to expert reviewers" : null,
     );
   });
 });

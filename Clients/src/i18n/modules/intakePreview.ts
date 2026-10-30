@@ -16,8 +16,8 @@ export const de: Record<string, string> = {
   "Form as a submitter": "Formular als einreichende Person",
   "Opens the public form in a new tab": "Öffnet das öffentliche Formular in einem neuen Tab",
   "Review flow as": "Prüfablauf als",
-  "Senior reviewer": "Senior-Prüfer",
-  "Standard reviewer": "Standard-Prüfer",
+  "Expert reviewer": "Expertenprüfer",
+  "Regular reviewer": "Regulärer Prüfer",
   // Review simulation banner
   "Previewing as": "Vorschau als",
   "simulation only": "nur Simulation",
@@ -31,10 +31,11 @@ export const de: Record<string, string> = {
     "So sehen Personen das Formular über Ihren öffentlichen Link. Mit Absenden können Sie es testen, dann wird nichts gesendet, oder echt absenden, dann erreicht es Ihre Prüfer.",
   "Dismiss preview notice": "Vorschauhinweis schließen",
   // Review simulation, routing state and blocked line
-  "Loading routing for this form": "Routing für dieses Formular wird geladen",
-  "Could not load routing for this form": "Routing für dieses Formular konnte nicht geladen werden",
-  "This submission is assigned to senior reviewers":
-    "Diese Einreichung ist Senior-Prüfern zugewiesen",
+  "Loading reviewer assignment for this form": "Prüferzuweisung für dieses Formular wird geladen",
+  "Could not load reviewer assignment for this form":
+    "Prüferzuweisung für dieses Formular konnte nicht geladen werden",
+  "This submission is assigned to expert reviewers":
+    "Diese Einreichung ist Expertenprüfern zugewiesen",
 };
 
 export const fr: Record<string, string> = {
@@ -51,8 +52,8 @@ export const fr: Record<string, string> = {
   "Form as a submitter": "Formulaire en tant que demandeur",
   "Opens the public form in a new tab": "Ouvre le formulaire public dans un nouvel onglet",
   "Review flow as": "Circuit de revue en tant que",
-  "Senior reviewer": "Réviseur senior",
-  "Standard reviewer": "Réviseur standard",
+  "Expert reviewer": "Réviseur expert",
+  "Regular reviewer": "Réviseur habituel",
   // Review simulation banner
   "Previewing as": "Aperçu en tant que",
   "simulation only": "simulation uniquement",
@@ -66,10 +67,12 @@ export const fr: Record<string, string> = {
     "Voici le formulaire que les personnes voient depuis votre lien public. Envoyer permet de le tester, sans rien envoyer, ou de l’envoyer pour de vrai, à vos réviseurs.",
   "Dismiss preview notice": "Fermer l’avis d’aperçu",
   // Review simulation, routing state and blocked line
-  "Loading routing for this form": "Chargement du routage de ce formulaire",
-  "Could not load routing for this form": "Impossible de charger le routage de ce formulaire",
-  "This submission is assigned to senior reviewers":
-    "Cette soumission est attribuée aux réviseurs seniors",
+  "Loading reviewer assignment for this form":
+    "Chargement de l'attribution des réviseurs de ce formulaire",
+  "Could not load reviewer assignment for this form":
+    "Impossible de charger l'attribution des réviseurs de ce formulaire",
+  "This submission is assigned to expert reviewers":
+    "Cette soumission est attribuée aux réviseurs experts",
 };
 
 export const es: Record<string, string> = {
@@ -86,8 +89,8 @@ export const es: Record<string, string> = {
   "Form as a submitter": "Formulario como solicitante",
   "Opens the public form in a new tab": "Abre el formulario público en una pestaña nueva",
   "Review flow as": "Flujo de revisión como",
-  "Senior reviewer": "Revisor sénior",
-  "Standard reviewer": "Revisor estándar",
+  "Expert reviewer": "Revisor experto",
+  "Regular reviewer": "Revisor habitual",
   // Review simulation banner
   "Previewing as": "Vista previa como",
   "simulation only": "solo simulación",
@@ -101,7 +104,10 @@ export const es: Record<string, string> = {
     "Este es el formulario que se ve desde su enlace público. Enviar le permite probarlo, sin enviar nada, o enviarlo de verdad, a sus revisores.",
   "Dismiss preview notice": "Cerrar el aviso de vista previa",
   // Review simulation, routing state and blocked line
-  "Loading routing for this form": "Cargando el enrutamiento de este formulario",
-  "Could not load routing for this form": "No se pudo cargar el enrutamiento de este formulario",
-  "This submission is assigned to senior reviewers": "Este envío está asignado a revisores sénior",
+  "Loading reviewer assignment for this form":
+    "Cargando la asignación de revisores de este formulario",
+  "Could not load reviewer assignment for this form":
+    "No se pudo cargar la asignación de revisores de este formulario",
+  "This submission is assigned to expert reviewers":
+    "Este envío está asignado a revisores expertos",
 };
