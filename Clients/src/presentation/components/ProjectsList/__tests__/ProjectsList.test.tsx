@@ -64,7 +64,8 @@ vi.mock("../../../../application/hooks/useColumnVisibility", () => ({
 }));
 
 import { renderWithProviders } from "../../../../test/renderWithProviders";
-import ProjectList from "../ProjectsList";
+import ProjectList, { RISK_LEVEL_FILTER_OPTIONS } from "../ProjectsList";
+import { AiRiskClassification } from "../../../../domain/enums/aiRiskClassification.enum";
 
 describe("ProjectsList", () => {
   it("renders without crashing with empty projects", () => {
@@ -79,5 +80,10 @@ describe("ProjectsList", () => {
     expect(key(["Provider", "Deployer"])).toEqual(["Provider", "Deployer"]);
     expect(key(["Deployer"])).toEqual(["Deployer"]);
     expect(key([])).toBe("Unknown");
+  });
+
+  it("offers every AI risk classification in the risk level filter", () => {
+    const values = RISK_LEVEL_FILTER_OPTIONS.map((o) => o.value).sort();
+    expect(values).toEqual(Object.values(AiRiskClassification).sort());
   });
 });

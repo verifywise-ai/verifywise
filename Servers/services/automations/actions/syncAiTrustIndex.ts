@@ -11,6 +11,7 @@ import {
 } from "../../../utils/aiTrustIndex.utils";
 import { sendAutomationEmail } from "../../emailService";
 import { compileMjmlToHtml } from "../../../tools/mjmlCompiler";
+import { emailColorTokens } from "../../../tools/emailColors";
 import logger from "../../../utils/logger/fileLogger";
 import { escapeHtml } from "../../../utils/sanitization.utils";
 
@@ -29,11 +30,11 @@ export interface DigestItem {
   diff?: MaterialDiff;
 }
 
-const TEXT = "#1c2130";
-const MUTED = "#667085";
-const WORSE = "#B42318";
-const BETTER = "#067647";
-const DIVIDER = "1px solid #eaecf0";
+const TEXT = emailColorTokens.colorTextPrimary;
+const MUTED = emailColorTokens.colorTextIcon;
+const WORSE = emailColorTokens.colorErrorText;
+const BETTER = emailColorTokens.colorSuccessText;
+const DIVIDER = `1px solid ${emailColorTokens.colorBorderLight}`;
 // Outlook and some other clients do not pass the template's font into a table.
 // Keep in step with <mj-all font-family> in templates/ai-trust-index-digest.mjml.
 const FONT =

@@ -4,6 +4,7 @@ import { createAnthropic } from "@ai-sdk/anthropic";
 import { getLLMKeysWithKeyQuery } from "../utils/llmKey.utils";
 import logger from "../utils/logger/fileLogger";
 import { isEmptyAnswer } from "./intakeFormLogic";
+import { escapeRegExp } from "../utils/regex.utils";
 
 // ============================================================================
 // TYPES
@@ -304,8 +305,6 @@ export function answersForScoring(
   }
   return answers;
 }
-
-const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 /**
  * Keywords match at the start of a word, so plurals and compounds count

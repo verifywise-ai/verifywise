@@ -1,7 +1,7 @@
 import request from "supertest";
 import express from "express";
 
-jest.mock("../../middleware/auth.middleware", () => ({
+jest.mock("../../../middleware/auth.middleware", () => ({
   __esModule: true,
   default: (req: any, _res: any, next: any) => {
     req.userId = 9;
@@ -11,7 +11,7 @@ jest.mock("../../middleware/auth.middleware", () => ({
   },
 }));
 // The real middleware answers 403 when the org has the extension off.
-jest.mock("../../middleware/requireExtensionEnabled.middleware", () => ({
+jest.mock("../../../middleware/requireExtensionEnabled.middleware", () => ({
   requireExtensionEnabled: jest.fn(
     (key: string) => (req: any, res: any, next: any) =>
       key === "model-lifecycle" && req.headers["x-extension-off"]
@@ -19,12 +19,12 @@ jest.mock("../../middleware/requireExtensionEnabled.middleware", () => ({
         : next(),
   ),
 }));
-jest.mock("../../controllers/modelLifecycleChangeHistory.ctrl", () => ({
+jest.mock("../../../controllers/modelLifecycleChangeHistory.ctrl", () => ({
   getModelLifecycleChangeHistoryById: jest.fn((_req: any, res: any) => res.status(200).json({})),
 }));
 
 import routes from "../modelLifecycleChangeHistory.route";
-import { getModelLifecycleChangeHistoryById } from "../../controllers/modelLifecycleChangeHistory.ctrl";
+import { getModelLifecycleChangeHistoryById } from "../../../controllers/modelLifecycleChangeHistory.ctrl";
 
 const app = express();
 app.use("/api/model-lifecycle-change-history", routes);

@@ -17,6 +17,13 @@ import type {
   IntakeOversight,
   SubmissionRouting,
 } from "../../presentation/pages/IntakeFormBuilder/types";
+import type {
+  ILiveChecks,
+  LiveCheckHint,
+  PrefillSuggestion,
+  PrefillSubmitEntry,
+} from "../../domain/types/intakeLiveChecks";
+import CustomAxios from "../../infrastructure/api/customAxios";
 import type { Visibility } from "../utils/intakeFormLogic";
 import type { ClassificationLevel, ScoreBand, ScoreSource } from "../utils/intakeScoring/scoreMath";
 
@@ -116,6 +123,7 @@ export interface IntakeForm {
   llmKeyId?: number | null;
   suggestedQuestionsEnabled?: boolean;
   euAiActRiskStepEnabled?: boolean;
+  liveChecksEnabled?: boolean;
   designSettings?: FormDesignSettings | null;
   routing?: FormRouting | null;
   createdBy: number;
@@ -343,6 +351,7 @@ export async function createIntakeForm(
     llmKeyId?: number | null;
     suggestedQuestionsEnabled?: boolean;
     euAiActRiskStepEnabled?: boolean;
+    liveChecksEnabled?: boolean;
     designSettings?: FormDesignSettings | null;
     routing?: FormRouting | null;
   },
@@ -370,6 +379,7 @@ export async function updateIntakeForm(
     llmKeyId?: number | null;
     suggestedQuestionsEnabled?: boolean;
     euAiActRiskStepEnabled?: boolean;
+    liveChecksEnabled?: boolean;
     designSettings?: FormDesignSettings | null;
     routing?: FormRouting | null;
   },
@@ -460,6 +470,8 @@ export interface SubmissionPreview {
   /** The level the AI was given when the score was computed. */
   assessedLevel?: ClassificationLevel | null;
   routing?: SubmissionRouting | null;
+  /** The live-check hints the submitter saw, or null for older submissions. */
+  liveChecks?: ILiveChecks | null;
   routingEnabled?: boolean;
   canDecide?: boolean;
   decideBlockedReason?: string | null;
@@ -705,6 +717,7 @@ export async function getPublicForm(
     previousSubmitterEmail?: string;
     euAiActRiskStep?: { questionnaire: Questionnaire } | null;
     previousRiskAnswers?: Answers;
+    liveChecks?: { enabled: boolean; aiAvailable: boolean };
   };
 }> {
   const queryParams = resubmissionToken ? `?token=${resubmissionToken}` : "";
@@ -729,6 +742,7 @@ export async function getPublicForm(
       previousSubmitterEmail?: string;
       euAiActRiskStep?: { questionnaire: Questionnaire } | null;
       previousRiskAnswers?: Answers;
+      liveChecks?: { enabled: boolean; aiAvailable: boolean };
     };
   };
 }
@@ -747,6 +761,7 @@ export async function submitPublicForm(
     captchaAnswer: number;
     resubmissionToken?: string;
     euAiActRiskAnswers?: Answers;
+    prefill?: Record<string, PrefillSubmitEntry>;
   },
 ): Promise<{
   data: {
@@ -785,6 +800,7 @@ export async function getPublicFormById(
     previousSubmitterEmail?: string;
     euAiActRiskStep?: { questionnaire: Questionnaire } | null;
     previousRiskAnswers?: Answers;
+    liveChecks?: { enabled: boolean; aiAvailable: boolean };
   };
 }> {
   const queryParams = resubmissionToken ? `?token=${resubmissionToken}` : "";
@@ -807,6 +823,7 @@ export async function getPublicFormById(
       previousSubmitterEmail?: string;
       euAiActRiskStep?: { questionnaire: Questionnaire } | null;
       previousRiskAnswers?: Answers;
+      liveChecks?: { enabled: boolean; aiAvailable: boolean };
     };
   };
 }
@@ -828,6 +845,7 @@ export async function submitPublicFormById(
     captchaAnswer: number;
     resubmissionToken?: string;
     euAiActRiskAnswers?: Answers;
+    prefill?: Record<string, PrefillSubmitEntry>;
   },
 ): Promise<{
   data: {
@@ -910,4 +928,126 @@ export async function getIntakeOversight(
   if (formId !== undefined) params.append("formId", String(formId));
   const response = await apiServices.get(`${BASE_URL}/oversight?${params}`, { signal });
   return response.data as { data: IntakeOversight };
+}
+
+// ============================================================================
+// Public form live checks and document prefill
+// ============================================================================
+
+/** Which public form a live-check call is about: by public id or by tenant and form slug. */
+export type PublicFormRef = { publicId: string } | { tenantSlug: string; formSlug: string };
+
+/** Default pause, in seconds, when a 429 carries no usable RateLimit-Reset header. */
+export const DEFAULT_RATE_LIMIT_PAUSE_SECONDS = 300;
+
+/** A failed live-check or prefill call: the HTTP status (undefined for a network error), the server's message, and for a 429 the seconds until the limit resets. */
+export class LiveCheckRequestError extends Error {
+  readonly status: number | undefined;
+  readonly retryAfterSeconds: number | undefined;
+
+  constructor(message: string, status?: number, retryAfterSeconds?: number) {
+    super(message);
+    this.name = "LiveCheckRequestError";
+    this.status = status;
+    this.retryAfterSeconds = retryAfterSeconds;
+  }
+}
+
+function publicBase(ref: PublicFormRef): string {
+  return "publicId" in ref
+    ? `${BASE_URL}/public/by-id/${encodeURIComponent(ref.publicId)}`
+    : `${BASE_URL}/public/${encodeURIComponent(ref.tenantSlug)}/${encodeURIComponent(ref.formSlug)}`;
+}
+
+/**
+ * The server puts 4xx messages under `data` (repo response helpers) and the
+ * prefill 502 message under `error`; accept either, plus `message`.
+ */
+function serverMessage(body: unknown, fallback: string): string {
+  if (body && typeof body === "object") {
+    const { data, error, message } = body as Record<string, unknown>;
+    if (typeof data === "string" && data) return data;
+    if (typeof error === "string" && error) return error;
+    if (typeof message === "string" && message) return message;
+  }
+  return fallback;
+}
+
+function toRequestError(error: unknown): LiveCheckRequestError {
+  const err = error as {
+    message?: string;
+    response?: { status?: number; data?: unknown; headers?: Record<string, unknown> };
+  };
+  const status = err?.response?.status;
+  let retryAfter: number | undefined;
+  if (status === 429) {
+    const seconds = Number(err.response?.headers?.["ratelimit-reset"]);
+    retryAfter =
+      Number.isFinite(seconds) && seconds > 0
+        ? Math.ceil(seconds)
+        : DEFAULT_RATE_LIMIT_PAUSE_SECONDS;
+  }
+  return new LiveCheckRequestError(
+    serverMessage(err?.response?.data, err?.message ?? "Request failed"),
+    status,
+    retryAfter,
+  );
+}
+
+/** AI hints for the answers so far. Throws LiveCheckRequestError (429 carries retryAfterSeconds). */
+export async function postLiveChecks(
+  ref: PublicFormRef,
+  data: Record<string, unknown>,
+  language: string,
+  signal?: AbortSignal,
+): Promise<{ aiAvailable: boolean; hints: LiveCheckHint[]; error?: string }> {
+  try {
+    const response = await CustomAxios.post(`${publicBase(ref)}/live-checks`, { data, language }, {
+      signal,
+      suppressGlobalErrorToast: true,
+    } as Record<string, unknown>);
+    const body = (response.data?.data ?? {}) as {
+      aiAvailable?: boolean;
+      hints?: LiveCheckHint[];
+      error?: string;
+    };
+    return {
+      aiAvailable: body.aiAvailable === true,
+      hints: Array.isArray(body.hints) ? body.hints : [],
+      ...(typeof body.error === "string" ? { error: body.error } : {}),
+    };
+  } catch (error) {
+    throw toRequestError(error);
+  }
+}
+
+/** Suggested answers read from an uploaded vendor document (PDF or DOCX). */
+export async function postPrefill(
+  ref: PublicFormRef,
+  file: File,
+  data: Record<string, unknown>,
+  language: string,
+  signal?: AbortSignal,
+): Promise<{ fileName: string; suggestions: PrefillSuggestion[] }> {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("data", JSON.stringify(data));
+  formData.append("language", language);
+  try {
+    const response = await CustomAxios.post(`${publicBase(ref)}/prefill`, formData, {
+      signal,
+      headers: { "Content-Type": "multipart/form-data" },
+      suppressGlobalErrorToast: true,
+    } as Record<string, unknown>);
+    const body = (response.data?.data ?? {}) as {
+      fileName?: string;
+      suggestions?: PrefillSuggestion[];
+    };
+    return {
+      fileName: typeof body.fileName === "string" ? body.fileName : file.name,
+      suggestions: Array.isArray(body.suggestions) ? body.suggestions : [],
+    };
+  } catch (error) {
+    throw toRequestError(error);
+  }
 }

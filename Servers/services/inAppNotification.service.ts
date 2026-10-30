@@ -3,6 +3,7 @@ import { sequelize } from "../database/db";
 import { QueryTypes } from "sequelize";
 import logger from "../utils/logger/fileLogger";
 import { escapeHtml } from "../utils/sanitization.utils";
+import { emailColorTokens } from "../tools/emailColors";
 import { createNotificationQuery, createBulkNotificationsQuery } from "../utils/notification.utils";
 import {
   ICreateNotification,
@@ -454,15 +455,15 @@ async function buildEntityLinksHtml(
 
     // This table goes into a raw-HTML slot, so user text is escaped here.
     const nameHtml = url
-      ? `<a href="${escapeHtml(url)}" style="color: #13715B; text-decoration: none; font-weight: 500;">${escapeHtml(displayName)}</a>`
+      ? `<a href="${escapeHtml(url)}" style="color: ${emailColorTokens.colorBrandPrimary}; text-decoration: none; font-weight: 500;">${escapeHtml(displayName)}</a>`
       : `<span style="font-weight: 500;">${escapeHtml(displayName)}</span>`;
 
     linkRows.push(
-      `<tr><td style="color: #667085; padding: 4px 0; font-size: 13px; vertical-align: top;">${escapeHtml(typeLabel)}:</td><td style="color: #344054; padding: 4px 0 4px 8px; font-size: 13px;">${nameHtml}</td></tr>`,
+      `<tr><td style="color: ${emailColorTokens.colorTextIcon}; padding: 4px 0; font-size: 13px; vertical-align: top;">${escapeHtml(typeLabel)}:</td><td style="color: ${emailColorTokens.colorTextSecondary}; padding: 4px 0 4px 8px; font-size: 13px;">${nameHtml}</td></tr>`,
     );
   }
 
-  return `<table style="width: 100%; margin: 16px 0;"><tr><td colspan="2" style="color: #344054; font-weight: 500; padding-bottom: 8px;">Items to complete:</td></tr>${linkRows.join("")}</table>`;
+  return `<table style="width: 100%; margin: 16px 0;"><tr><td colspan="2" style="color: ${emailColorTokens.colorTextSecondary}; font-weight: 500; padding-bottom: 8px;">Items to complete:</td></tr>${linkRows.join("")}</table>`;
 }
 
 /**
@@ -1653,25 +1654,25 @@ function buildEntityContextHtml(context?: AssignmentEntityContext): string {
 
   if (context.frameworkName) {
     rows.push(
-      `<tr><td style="padding: 4px 0; color: #667085; font-size: 13px; width: 110px;">Framework:</td><td style="padding: 4px 0; color: #344054; font-size: 13px;">${escapeHtml(context.frameworkName)}</td></tr>`,
+      `<tr><td style="padding: 4px 0; color: ${emailColorTokens.colorTextIcon}; font-size: 13px; width: 110px;">Framework:</td><td style="padding: 4px 0; color: ${emailColorTokens.colorTextSecondary}; font-size: 13px;">${escapeHtml(context.frameworkName)}</td></tr>`,
     );
   }
 
   if (context.projectName) {
     rows.push(
-      `<tr><td style="padding: 4px 0; color: #667085; font-size: 13px; width: 110px;">Project:</td><td style="padding: 4px 0; color: #344054; font-size: 13px;">${escapeHtml(context.projectName)}</td></tr>`,
+      `<tr><td style="padding: 4px 0; color: ${emailColorTokens.colorTextIcon}; font-size: 13px; width: 110px;">Project:</td><td style="padding: 4px 0; color: ${emailColorTokens.colorTextSecondary}; font-size: 13px;">${escapeHtml(context.projectName)}</td></tr>`,
     );
   }
 
   if (context.parentType && context.parentName) {
     rows.push(
-      `<tr><td style="padding: 4px 0; color: #667085; font-size: 13px; width: 110px;">${escapeHtml(context.parentType)}:</td><td style="padding: 4px 0; color: #344054; font-size: 13px;">${escapeHtml(context.parentName)}</td></tr>`,
+      `<tr><td style="padding: 4px 0; color: ${emailColorTokens.colorTextIcon}; font-size: 13px; width: 110px;">${escapeHtml(context.parentType)}:</td><td style="padding: 4px 0; color: ${emailColorTokens.colorTextSecondary}; font-size: 13px;">${escapeHtml(context.parentName)}</td></tr>`,
     );
   }
 
   if (context.description) {
     rows.push(
-      `<tr><td style="padding: 8px 0 4px 0; color: #667085; font-size: 13px; width: 110px; vertical-align: top;">About:</td><td style="padding: 8px 0 4px 0; color: #344054; font-size: 13px;">${escapeHtml(context.description)}</td></tr>`,
+      `<tr><td style="padding: 8px 0 4px 0; color: ${emailColorTokens.colorTextIcon}; font-size: 13px; width: 110px; vertical-align: top;">About:</td><td style="padding: 8px 0 4px 0; color: ${emailColorTokens.colorTextSecondary}; font-size: 13px;">${escapeHtml(context.description)}</td></tr>`,
     );
   }
 

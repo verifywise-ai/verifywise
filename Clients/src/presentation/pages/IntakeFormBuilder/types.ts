@@ -1,3 +1,4 @@
+import type { FormRouting } from "../../../domain/types/intakeRouting";
 import { IntakeFormStatus, IntakeEntityType } from "../../../domain/intake/enums";
 import { brand } from "../../themes/palette";
 import {
@@ -105,50 +106,14 @@ export const DEFAULT_DESIGN_SETTINGS: FormDesignSettings = {
   collectContactInfo: true,
 };
 
-/** Per-form review routing settings, as the server stores them. */
-export interface FormRouting {
-  enabled: boolean;
-  seniorReviewerIds: number[];
-  standardReviewerIds: number[];
-  threshold: number;
-  closeCallMargin: number;
-  secondReviewRate: number;
-}
-
-export type ReviewLane = "senior" | "standard";
-
-export type RoutingReason =
-  | "prohibited"
-  | "no_score"
-  | "close_call"
-  | "at_or_above_threshold"
-  | "below_threshold"
-  | "override_raised"
-  | "escalated";
-
-export interface SecondReview {
-  status: "open" | "agreed" | "missed";
-  selectedAt: string;
-  reviewedBy?: number;
-  reviewedAt?: string;
-  note?: string;
-  resolvedBy?: number;
-  resolvedAt?: string;
-  resolutionNote?: string;
-}
-
-/** Lane decision for one submission. */
-export interface SubmissionRouting {
-  lane: ReviewLane;
-  reason: RoutingReason;
-  score: number | null;
-  threshold: number;
-  closeCallMargin: number;
-  routedAt: string;
-  escalation?: { by: number; at: string; reason: string };
-  secondReview?: SecondReview;
-}
-
+// Routing types live in the domain layer; re-exported for existing imports.
+export type {
+  FormRouting,
+  ReviewLane,
+  RoutingReason,
+  SecondReview,
+  SubmissionRouting,
+} from "../../../domain/types/intakeRouting";
 export type NeedsAttentionKind =
   | "second_review_open"
   | "second_review_missed"
@@ -217,6 +182,7 @@ export interface IntakeForm {
   llmKeyId?: number | null;
   suggestedQuestionsEnabled?: boolean;
   euAiActRiskStepEnabled?: boolean;
+  liveChecksEnabled?: boolean;
   designSettings?: FormDesignSettings | null;
   routing?: FormRouting | null;
   createdBy?: number;
@@ -241,6 +207,7 @@ export interface CreateIntakeFormInput {
   llmKeyId?: number | null;
   suggestedQuestionsEnabled?: boolean;
   euAiActRiskStepEnabled?: boolean;
+  liveChecksEnabled?: boolean;
   designSettings?: FormDesignSettings | null;
   routing?: FormRouting | null;
 }
@@ -261,6 +228,7 @@ export interface UpdateIntakeFormInput {
   llmKeyId?: number | null;
   suggestedQuestionsEnabled?: boolean;
   euAiActRiskStepEnabled?: boolean;
+  liveChecksEnabled?: boolean;
   designSettings?: FormDesignSettings | null;
   routing?: FormRouting | null;
 }
@@ -916,6 +884,7 @@ export function createEmptyForm(entityType?: IntakeEntityType): IntakeForm {
     // New use case forms start with the EU AI Act step on; it replaces the
     // old risk level and role questions of the template.
     euAiActRiskStepEnabled: type === IntakeEntityType.USE_CASE,
+    liveChecksEnabled: true,
     designSettings: { ...DEFAULT_DESIGN_SETTINGS },
   };
 }

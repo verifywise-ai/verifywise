@@ -1,5 +1,4 @@
 import { Request, Response } from "express";
-import { createHmac, timingSafeEqual } from "crypto";
 import { Transaction } from "sequelize";
 import { sequelize } from "../database/db";
 import {
@@ -95,6 +94,7 @@ import {
 } from "../utils/intakeSubmissionData.utils";
 import { toId } from "../utils/validations/validation.utils";
 import { isEmail } from "../utils/validations/email.utils";
+import { isWebUrl } from "../utils/validations/url.utils";
 import {
   isAssessmentV2,
   type IIntakeSubmission,
@@ -137,15 +137,16 @@ import {
 } from "../services/intakeRouting/decisionGate";
 import { raiseForOverride, rerouteFormPending } from "../services/intakeRouting/routingService";
 import { getIntakeOversightQuery, OVERSIGHT_WEEKS } from "../services/intakeRouting/oversight";
-import type { IFormRouting, IIntakeForm } from "../domain.layer/interfaces/i.intakeForm";
+import type {
+  IFormRouting,
+  IIntakeForm,
+  IPublicIntakeForm,
+} from "../domain.layer/interfaces/i.intakeForm";
+import { createSignedToken, verifySignedToken } from "../utils/signedToken.utils";
+import { formAiAvailable } from "../services/intakeLiveChecks/availability";
+import { recordSubmitLiveChecks } from "../services/intakeLiveChecks/submit";
 /** Safely extract a single string from req.params (which may be string | string[]). */
 const paramStr = (val: string | string[]): string => (Array.isArray(val) ? val[0] : val);
-
-/** Secret key for signing CAPTCHA and resubmission tokens. */
-const TOKEN_SECRET = process.env.JWT_SECRET || process.env.ENCRYPTION_KEY;
-if (!TOKEN_SECRET) {
-  throw new Error("JWT_SECRET or ENCRYPTION_KEY must be set for intake form token signing");
-}
 
 /** Map lowercase form option values to valid AiRiskClassification enum values. */
 function mapToAiRiskClassification(value: string): AiRiskClassification | string {
@@ -162,30 +163,6 @@ function mapToAiRiskClassification(value: string): AiRiskClassification | string
     "out of scope": AiRiskClassification.OUT_OF_SCOPE,
   };
   return map[value?.toLowerCase()?.trim()] || value || "";
-}
-
-/** Create an HMAC-signed token from a payload object. */
-function createSignedToken(payload: Record<string, unknown>): string {
-  const data = JSON.stringify(payload);
-  const signature = createHmac("sha256", TOKEN_SECRET!).update(data).digest("hex");
-  return Buffer.from(JSON.stringify({ data, signature })).toString("base64");
-}
-
-/** Verify and decode an HMAC-signed token. Returns null if invalid. */
-function verifySignedToken<T = Record<string, unknown>>(token: string): T | null {
-  try {
-    const { data, signature } = JSON.parse(Buffer.from(token, "base64").toString());
-    const expectedSignature = createHmac("sha256", TOKEN_SECRET!).update(data).digest("hex");
-    // Use timing-safe comparison to prevent timing attacks
-    const sigBuf = Buffer.from(signature, "hex");
-    const expectedBuf = Buffer.from(expectedSignature, "hex");
-    if (sigBuf.length !== expectedBuf.length || !timingSafeEqual(sigBuf, expectedBuf)) {
-      return null;
-    }
-    return JSON.parse(data) as T;
-  } catch {
-    return null;
-  }
 }
 
 /** Parse and validate an integer ID parameter. Returns NaN for invalid values. */
@@ -244,6 +221,26 @@ async function handleLlmKeyRequest(
     }
     logger.error(`Error in ${functionName}:`, error);
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+  }
+}
+
+/**
+ * What the public page needs to know about live checks before making any call.
+ * Reads the full form row for llmKeyId; the key id and provider are never sent.
+ */
+async function buildPublicLiveChecks(
+  form: IPublicIntakeForm,
+  organizationId: number,
+): Promise<{ enabled: boolean; aiAvailable: boolean }> {
+  const enabled = Boolean(form.liveChecksEnabled);
+  if (!enabled) return { enabled, aiAvailable: false };
+  try {
+    const full = await getIntakeFormByIdQuery(form.id, organizationId);
+    return { enabled, aiAvailable: full ? await formAiAvailable(full, organizationId) : false };
+  } catch (error) {
+    // Rules still run; only AI is withheld.
+    logger.error(`Error reading the LLM key of form ${form.id}`, error);
+    return { enabled, aiAvailable: false };
   }
 }
 
@@ -325,6 +322,8 @@ function startIntakeAssessment(params: {
   form: IIntakeForm | null;
   /** Email the organization's admins when the form has no recipients. */
   adminFallback: boolean;
+  /** Also run the AI live checks (stored pending at submit). */
+  liveChecks: boolean;
   formId: number;
   formName: string;
   submitterName: string;
@@ -335,7 +334,9 @@ function startIntakeAssessment(params: {
   return enqueueIntakeAssessment({
     organizationId,
     submissionId,
-    stages: ["scoring", "suggestions"],
+    stages: params.liveChecks
+      ? ["scoring", "suggestions", "liveChecks"]
+      : ["scoring", "suggestions"],
     notify: true,
     lang,
     adminFallback,
@@ -502,7 +503,7 @@ function routingReasonText(req: Request, reason: RoutingReason | null): string {
     case "override_raised":
       return req.t!("a reviewer raised the band");
     case "escalated":
-      return req.t!("a reviewer sent it to senior review");
+      return req.t!("a reviewer requested expert review");
     default:
       return req.t!("the score is below the threshold");
   }
@@ -667,14 +668,8 @@ function validateFormData(
         break;
       }
       case "url": {
-        if (typeof value !== "string") {
+        if (!isWebUrl(value)) {
           errors.push(`"${field.label}" must be a valid URL`);
-        } else {
-          try {
-            new URL(value);
-          } catch {
-            errors.push(`"${field.label}" must be a valid URL`);
-          }
         }
         break;
       }
@@ -878,7 +873,7 @@ const EMPTY_LANE_MESSAGE =
 const sameIds = (a: number[], b: number[]) =>
   a.length === b.length && a.every((id) => b.includes(id));
 
-const ROUTING_FORBIDDEN_MESSAGE = "Only an Admin can change review routing";
+const ROUTING_FORBIDDEN_MESSAGE = "Only an Admin can change reviewer assignment";
 
 /**
  * Whether saving `next` changes the stored routing. Compared by value: id
@@ -1051,6 +1046,7 @@ export async function createIntakeForm(req: Request, res: Response) {
       llmKeyId,
       suggestedQuestionsEnabled,
       euAiActRiskStepEnabled,
+      liveChecksEnabled,
       designSettings,
     } = req.body;
 
@@ -1136,6 +1132,7 @@ export async function createIntakeForm(req: Request, res: Response) {
         llmKeyId: llmKey.llmKeyId,
         suggestedQuestionsEnabled,
         euAiActRiskStepEnabled: riskStep.enabled,
+        liveChecksEnabled: liveChecksEnabled == null ? true : Boolean(liveChecksEnabled),
         designSettings,
         routing: routing.value,
         createdBy: req.userId!,
@@ -1217,6 +1214,7 @@ export async function updateIntakeForm(req: Request, res: Response) {
       llmKeyId,
       suggestedQuestionsEnabled,
       euAiActRiskStepEnabled,
+      liveChecksEnabled,
       designSettings,
     } = req.body;
 
@@ -1304,6 +1302,7 @@ export async function updateIntakeForm(req: Request, res: Response) {
         llmKeyId: llmKey.llmKeyId,
         suggestedQuestionsEnabled,
         euAiActRiskStepEnabled: riskStep.enabled,
+        liveChecksEnabled: liveChecksEnabled == null ? undefined : Boolean(liveChecksEnabled),
         designSettings,
         routing: routing.value,
       },
@@ -1768,7 +1767,7 @@ export async function getSubmissionPreview(req: Request, res: Response) {
     const decideBlockedReason = canDecide
       ? null
       : lane === "senior"
-        ? req.t!("This submission is assigned to senior reviewers")
+        ? req.t!("This submission is assigned to expert reviewers")
         : req.t!("This submission is assigned to the form's reviewers");
 
     return res.status(200).json(
@@ -1784,6 +1783,7 @@ export async function getSubmissionPreview(req: Request, res: Response) {
         riskAssessment: submission.riskAssessment,
         riskTier: submission.riskTier,
         riskOverride: submission.riskOverride,
+        liveChecks: submission.liveChecks ?? null,
         entityPreview: entityData,
         euAiActClassification,
         assessment,
@@ -1996,10 +1996,12 @@ export async function retrySubmissionAssessment(req: Request, res: Response) {
         .json(STATUS_CODE[409](req.t!("Only pending submissions can be changed")));
     }
 
+    // The live checks stage reads the submitter's stored language, not this request's.
     const stages = selectRetryStages(
       submission.riskAssessment,
       submission.suggestedRisks,
       new Date(),
+      submission.liveChecks,
     );
     if (stages.length === 0) {
       return res.status(409).json(STATUS_CODE[409](req.t!("Nothing to retry")));
@@ -2364,7 +2366,7 @@ export async function approveSubmission(req: Request, res: Response) {
       return res.status(403).json(
         STATUS_CODE[403](
           decision.lane === "senior"
-            ? req.t!("A senior reviewer has to decide this: {reason}", {
+            ? req.t!("An expert reviewer has to decide this: {reason}", {
                 reason: routingReasonText(req, decision.reason),
               })
             : req.t!("This submission is assigned to the form's reviewers"),
@@ -2678,7 +2680,7 @@ export async function rejectSubmission(req: Request, res: Response) {
         .json(
           STATUS_CODE[403](
             lane === "senior"
-              ? req.t!("This submission is assigned to senior reviewers")
+              ? req.t!("This submission is assigned to expert reviewers")
               : req.t!("This submission is assigned to the form's reviewers"),
           ),
         );
@@ -2801,7 +2803,7 @@ export async function escalateSubmission(req: Request, res: Response) {
         .status(409)
         .json(
           STATUS_CODE[409](
-            req.t!("Only pending submissions in standard review can be sent to senior review"),
+            req.t!("Expert review can only be requested for pending submissions in regular review"),
           ),
         );
     }
@@ -2813,11 +2815,7 @@ export async function escalateSubmission(req: Request, res: Response) {
     ) {
       return res
         .status(403)
-        .json(
-          STATUS_CODE[403](
-            req.t!("Only this form's reviewers can send a submission to senior review"),
-          ),
-        );
+        .json(STATUS_CODE[403](req.t!("Only this form's reviewers can request expert review")));
     }
 
     const at = new Date().toISOString();
@@ -2843,7 +2841,7 @@ export async function escalateSubmission(req: Request, res: Response) {
 
     await logSuccess({
       eventType: "Update",
-      description: `submission ${submissionId} escalated to senior review`,
+      description: `submission ${submissionId} escalated to expert review`,
       functionName: "escalateSubmission",
       fileName: "intakeForm.ctrl.ts",
       userId,
@@ -3045,6 +3043,7 @@ export async function getPublicFormByPublicId(req: Request, res: Response) {
         previousSubmitterName,
         previousSubmitterEmail,
         ...(await buildPublicRiskStep(form, previousSubmissionId, tenantInfo.orgId)),
+        liveChecks: await buildPublicLiveChecks(form, tenantInfo.orgId),
       }),
     );
   } catch (error) {
@@ -3259,10 +3258,21 @@ export async function submitPublicFormByPublicId(req: Request, res: Response) {
       // Get full form with recipients to send notifications
       const fullForm = await getIntakeFormByIdQuery(form.id, tenantInfo.orgId);
 
+      // After the commit and never thrown: a failed write leaves the submission as is.
+      const liveChecks = await recordSubmitLiveChecks({
+        form: fullFormForValidation,
+        organizationId: tenantInfo.orgId,
+        submissionId: submission.id!,
+        data: cleanedData,
+        prefill: req.body.prefill,
+        language: req.lang,
+      });
+
       void startIntakeAssessment({
         organizationId: tenantInfo.orgId,
         submissionId: submission.id!,
         lang: req.lang,
+        liveChecks,
         form: fullForm,
         adminFallback: false,
         formId: form.id,
@@ -3384,6 +3394,7 @@ export async function getPublicForm(req: Request, res: Response) {
         previousSubmitterName,
         previousSubmitterEmail,
         ...(await buildPublicRiskStep(form, previousSubmissionId, tenantInfo.id)),
+        liveChecks: await buildPublicLiveChecks(form, tenantInfo.id),
       }),
     );
   } catch (error) {
@@ -3599,10 +3610,21 @@ export async function submitPublicForm(req: Request, res: Response) {
       // Use per-form recipients; this route falls back to org admins without them
       const fullForm = await getIntakeFormByIdQuery(form.id, tenantInfo.id);
 
+      // After the commit and never thrown: a failed write leaves the submission as is.
+      const liveChecks = await recordSubmitLiveChecks({
+        form: fullFormForValidation,
+        organizationId: tenantInfo.id,
+        submissionId: submission.id!,
+        data: cleanedData,
+        prefill: req.body.prefill,
+        language: req.lang,
+      });
+
       void startIntakeAssessment({
         organizationId: tenantInfo.id,
         submissionId: submission.id!,
         lang: req.lang,
+        liveChecks,
         form: fullForm,
         adminFallback: true,
         formId: form.id,
@@ -3681,7 +3703,9 @@ async function loadSecondReview(req: Request, res: Response, submissionId: numbe
   if (!isSenior && !isAdminRequest(req)) {
     res
       .status(403)
-      .json(STATUS_CODE[403](req.t!("Only a senior reviewer of this form can do a second review")));
+      .json(
+        STATUS_CODE[403](req.t!("Only an expert reviewer of this form can do a second review")),
+      );
     return null;
   }
   if (submission.reviewedBy === req.userId) {

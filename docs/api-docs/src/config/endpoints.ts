@@ -2442,61 +2442,6 @@ export const changeHistoryEndpoints: Endpoint[] = [
     ],
     tag: "Change History",
   },
-  {
-    method: 'GET',
-    path: '/evidence-hub-change-history/{id}',
-    summary: "Get Evidence Hub Change History By Id",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Change History",
-  },
-  {
-    method: 'GET',
-    path: '/model-lifecycle-change-history/{id}',
-    summary: "Get Model Lifecycle Change History By Id",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Change History",
-  },
-  {
-    method: 'GET',
-    path: '/control-eu-change-history/{id}',
-    summary: "Get EU AI Act Control Change History By Id",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Change History",
-  },
-  {
-    method: 'GET',
-    path: '/subcontrol-eu-change-history/{id}',
-    summary: "Get EU AI Act Subcontrol Change History By Id",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Change History",
-  },
-  {
-    method: 'GET',
-    path: '/annex-category-change-history/{id}',
-    summary: "Get ISO 42001 Annex Category Change History By Id",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Change History",
-  },
 ];
 
 // Compliance endpoints
@@ -6349,6 +6294,108 @@ export const intakeFormEndpoints: Endpoint[] = [
     responses: [
       { status: 200, description: "Success" },
       { status: 500, description: "Internal server error" },
+    ],
+    tag: "Intake Forms",
+  },
+  {
+    method: 'POST',
+    path: '/intake/public/by-id/{publicId}/live-checks',
+    summary: "Post Public Live Checks",
+    description: "Runs AI checks for vague and conflicting answers on a public intake form. Unauthenticated; rate-limited per visitor and per form. Returns aiAvailable false when live checks are off or the form has no usable LLM key.",
+    requiresAuth: false,
+    parameters: [
+      { name: 'publicId', in: 'path', type: 'string', required: true, description: "Public form id (hex)" },
+    ],
+    requestBody: {
+      "data": "object (required)",
+      "language": "string (optional)",
+    },
+    responses: [
+      { status: 200, description: "data is { aiAvailable, hints, error? }. A failed model call is still a 200 with hints [] and error \"unavailable\"." },
+      { status: 400, description: "data is not an object" },
+      { status: 404, description: "Form not found or not active" },
+      { status: 413, description: "Request body over 10 MB" },
+      { status: 429, description: "Rate limit or form budget reached; see the Retry-After header" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Intake Forms",
+  },
+  {
+    method: 'POST',
+    path: '/intake/public/by-id/{publicId}/prefill',
+    summary: "Post Public Prefill",
+    description: "Suggests answers for empty questions from an uploaded vendor document (PDF or Word .docx). The file is not stored. Unauthenticated; rate-limited per visitor and per form.",
+    requiresAuth: false,
+    parameters: [
+      { name: 'publicId', in: 'path', type: 'string', required: true, description: "Public form id (hex)" },
+    ],
+    requestBody: {
+      "file": "string (required)",
+      "data": "string (optional)",
+      "language": "string (optional)",
+    },
+    responses: [
+      { status: 200, description: "data is { fileName, suggestions }" },
+      { status: 400, description: "Missing file, invalid data, or an unreadable multipart body (extra fields or files)" },
+      { status: 404, description: "Form not found or prefill unavailable" },
+      { status: 413, description: "File too large" },
+      { status: 415, description: "Not a PDF or .docx file (extension, MIME type and content must match)" },
+      { status: 422, description: "File could not be read" },
+      { status: 429, description: "Rate limit or form budget reached; see the Retry-After header" },
+      { status: 500, description: "Internal server error" },
+      { status: 502, description: "Model call failed" },
+    ],
+    tag: "Intake Forms",
+  },
+  {
+    method: 'POST',
+    path: '/intake/public/{tenantSlug}/{formSlug}/live-checks',
+    summary: "Post Public Live Checks",
+    description: "Legacy slug URL for the live checks endpoint. Same behaviour as /intake/public/by-id/{publicId}/live-checks.",
+    requiresAuth: false,
+    parameters: [
+      { name: 'tenantSlug', in: 'path', type: 'string', required: true, description: "The tenantSlug" },
+      { name: 'formSlug', in: 'path', type: 'string', required: true, description: "The formSlug" },
+    ],
+    requestBody: {
+      "data": "object (required)",
+      "language": "string (optional)",
+    },
+    responses: [
+      { status: 200, description: "data is { aiAvailable, hints, error? }. A failed model call is still a 200 with hints [] and error \"unavailable\"." },
+      { status: 400, description: "data is not an object" },
+      { status: 404, description: "Form not found or not active" },
+      { status: 413, description: "Request body over 10 MB" },
+      { status: 429, description: "Rate limit or form budget reached; see the Retry-After header" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Intake Forms",
+  },
+  {
+    method: 'POST',
+    path: '/intake/public/{tenantSlug}/{formSlug}/prefill',
+    summary: "Post Public Prefill",
+    description: "Legacy slug URL for the prefill endpoint. Same behaviour as /intake/public/by-id/{publicId}/prefill.",
+    requiresAuth: false,
+    parameters: [
+      { name: 'tenantSlug', in: 'path', type: 'string', required: true, description: "The tenantSlug" },
+      { name: 'formSlug', in: 'path', type: 'string', required: true, description: "The formSlug" },
+    ],
+    requestBody: {
+      "file": "string (required)",
+      "data": "string (optional)",
+      "language": "string (optional)",
+    },
+    responses: [
+      { status: 200, description: "data is { fileName, suggestions }" },
+      { status: 400, description: "Missing file, invalid data, or an unreadable multipart body (extra fields or files)" },
+      { status: 404, description: "Form not found or prefill unavailable" },
+      { status: 413, description: "File too large" },
+      { status: 415, description: "Not a PDF or .docx file (extension, MIME type and content must match)" },
+      { status: 422, description: "File could not be read" },
+      { status: 429, description: "Rate limit or form budget reached; see the Retry-After header" },
+      { status: 500, description: "Internal server error" },
+      { status: 502, description: "Model call failed" },
     ],
     tag: "Intake Forms",
   },
@@ -10868,7 +10915,7 @@ export const shadowAiEndpoints: Endpoint[] = [
       { status: 201, description: "Created successfully" },
       { status: 500, description: "Internal server error" },
     ],
-    tag: "Shadow AI",
+    tag: "v1: Shadow AI",
   },
 ];
 
@@ -12070,6 +12117,65 @@ export const userEndpoints: Endpoint[] = [
   },
 ];
 
+// v1: Change History endpoints
+export const v1ChangeHistoryEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/evidence-hub-change-history/{id}',
+    summary: "Get Evidence Hub Change History By Id",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Change History",
+  },
+  {
+    method: 'GET',
+    path: '/v1/model-lifecycle-change-history/{id}',
+    summary: "Get Model Lifecycle Change History By Id",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Change History",
+  },
+  {
+    method: 'GET',
+    path: '/v1/control-eu-change-history/{id}',
+    summary: "Get Control E U Change History By Id",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Change History",
+  },
+  {
+    method: 'GET',
+    path: '/v1/subcontrol-eu-change-history/{id}',
+    summary: "Get Subcontrol E U Change History By Id",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Change History",
+  },
+  {
+    method: 'GET',
+    path: '/v1/annex-category-change-history/{id}',
+    summary: "Get Annex Category Change History By Id",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Change History",
+  },
+];
+
 // Vendors endpoints
 export const vendorEndpoints: Endpoint[] = [
   {
@@ -12415,6 +12521,7 @@ export const allEndpoints = {
   telemetry: telemetryEndpoints,
   training: trainingEndpoints,
   user: userEndpoints,
+  v1ChangeHistory: v1ChangeHistoryEndpoints,
   vendor: vendorEndpoints,
   vendorRisk: vendorRiskEndpoints,
   webhook: webhookEndpoints,

@@ -62,16 +62,16 @@ export function getRoutingErrors(value: FormRouting | null): RoutingErrors {
   }
   if (!value.enabled) return errors;
   if (value.seniorReviewerIds.length === 0) {
-    errors.seniorReviewerIds = "Pick at least one senior reviewer";
+    errors.seniorReviewerIds = "Pick at least one expert reviewer";
   }
   if (value.standardReviewerIds.length === 0) {
-    errors.standardReviewerIds = "Pick at least one standard reviewer";
+    errors.standardReviewerIds = "Pick at least one regular reviewer";
   }
   return errors;
 }
 
 const NUMBER_FIELDS: Array<{ key: NumberKey; label: string; hint: string }> = [
-  { key: "threshold", label: "Threshold", hint: "Risk score that separates the lanes" },
+  { key: "threshold", label: "Threshold", hint: "Risk score that separates the review levels" },
   {
     key: "closeCallMargin",
     label: "Close-call margin",
@@ -80,7 +80,7 @@ const NUMBER_FIELDS: Array<{ key: NumberKey; label: string; hint: string }> = [
   {
     key: "secondReviewRate",
     label: "Second review share %",
-    hint: "Share of standard decisions checked again",
+    hint: "Share of regular review decisions checked again",
   },
 ];
 
@@ -176,10 +176,10 @@ const RoutingSettingsSection = ({
           <Typography
             sx={{ fontSize: "12px", fontWeight: 600, color: theme.palette.text.secondary }}
           >
-            Route by risk score
+            Assign reviewers by risk score
           </Typography>
           <Typography sx={{ fontSize: "11px", color: theme.palette.text.accent }}>
-            Send submissions to senior or standard reviewers based on their risk score.
+            Send submissions to expert or regular reviewers based on their risk score.
           </Typography>
         </Box>
       </Box>
@@ -189,7 +189,7 @@ const RoutingSettingsSection = ({
           data-testid="routing-admin-only"
           sx={{ fontSize: "11px", color: theme.palette.text.accent }}
         >
-          Only an Admin can change review routing.
+          Only an Admin can change reviewer assignment.
         </Typography>
       )}
 
@@ -197,11 +197,11 @@ const RoutingSettingsSection = ({
         <>
           <Box>
             <CustomizableMultiSelect
-              label="Senior reviewers"
+              label="Expert reviewers"
               value={current.seniorReviewerIds}
               onChange={onIds("seniorReviewerIds")}
               items={itemsFor(current.seniorReviewerIds)}
-              placeholder="Select senior reviewers"
+              placeholder="Select expert reviewers"
               error={errors.seniorReviewerIds}
               sx={selectSx}
               disabled={!canEdit}
@@ -209,11 +209,11 @@ const RoutingSettingsSection = ({
           </Box>
           <Box>
             <CustomizableMultiSelect
-              label="Standard reviewers"
+              label="Regular reviewers"
               value={current.standardReviewerIds}
               onChange={onIds("standardReviewerIds")}
               items={itemsFor(current.standardReviewerIds)}
-              placeholder="Select standard reviewers"
+              placeholder="Select regular reviewers"
               error={errors.standardReviewerIds}
               sx={selectSx}
               disabled={!canEdit}
@@ -243,8 +243,9 @@ const RoutingSettingsSection = ({
             sx={{ fontSize: "11px", color: theme.palette.text.accent }}
           >
             <span>Scores of</span> {current.threshold}{" "}
-            <span>or more, prohibited practices and scores within</span> {current.closeCallMargin}{" "}
-            <span>points of</span> {current.threshold} <span>go to senior reviewers.</span>
+            <span>or more, prohibited practices and scores less than</span>{" "}
+            {current.closeCallMargin} <span>points from</span> {current.threshold}{" "}
+            <span>go to expert reviewers.</span>
           </Typography>
         </>
       )}

@@ -4,133 +4,21 @@ import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import { csrfProtection } from "./middleware/csrf.middleware";
 
-import assessmentRoutes from "./routes/assessment.route";
-import projectRoutes from "./routes/project.route";
-import euAiActClassificationRoutes from "./routes/euAiActClassification.route";
-import risksRoutes from "./routes/risks.route";
-import riskLinksRoutes from "./routes/riskLinks.route";
-import questionRoutes from "./routes/question.route";
-import userRoutes from "./routes/user.route";
-import vendorRoutes from "./routes/vendor.route";
-import vendorRiskRoutes from "./routes/vendorRisk.route";
-import vendorChangeHistoryRoutes from "./routes/vendorChangeHistory.route";
-import roleRoutes from "./routes/role.route";
-import fileRoutes from "./routes/file.route";
-import mailRoutes from "./routes/vwmailer.route";
-import euRouter from "./routes/eu.route";
-import reportRoutes from "./routes/reporting.route";
-import reportTemplateRoutes from "./routes/reportTemplate.route";
-import scheduledReportRoutes from "./routes/scheduledReport.route";
-import reportRunRoutes from "./routes/reportRun.route";
-import frameworks from "./routes/frameworks.route";
-import frameworkImpl from "./routes/frameworkImpl.route";
-import organizationRoutes from "./routes/organization.route";
-import isoRoutes from "./routes/iso42001.route";
-import trainingRoutes from "./routes/trainingRegistar.route";
-import aiTrustCentreRoutes from "./routes/aiTrustCentre.route";
-import policyRoutes from "./routes/policy.route";
-import policyFolderRoutes from "./routes/policyFolder.route";
-import loggerRoutes from "./routes/logger.route";
-import dashboardRoutes from "./routes/dashboard.route";
-import iso27001Routes from "./routes/iso27001.route";
-import modelInventoryRoutes from "./routes/modelInventory.route";
-import modelInventoryHistoryRoutes from "./routes/modelInventoryHistory.route";
-import modelInventoryChangeHistoryRoutes from "./routes/modelInventoryChangeHistory.route";
-import mrmRoutes from "./routes/mrm.route";
-import mrmIngestionRoutes from "./routes/mrmIngestion.route";
-import datasetBulkUploadRoutes from "./extensions/dataset-bulk-upload/datasetBulkUpload.route";
-import riskImportRoutes from "./extensions/risk-import/riskImport.route";
-import slackExtensionRoutes from "./extensions/slack/slack.route";
-import mlflowExtensionRoutes from "./extensions/mlflow/mlflow.route";
-import azureAiFoundryExtensionRoutes from "./extensions/azure-ai-foundry/azureAiFoundry.route";
-import jiraAssetsExtensionRoutes from "./extensions/jira-assets/jiraAssets.route";
-import jiraIncidentsExtensionRoutes from "./extensions/jira-incidents/jiraIncidents.route";
-import modelLifecycleExtensionRoutes from "./extensions/model-lifecycle/modelLifecycle.route";
-import datasetRoutes from "./routes/dataset.route";
-import riskHistoryRoutes from "./routes/riskHistory.route";
-import modelRiskRoutes from "./routes/modelRisk.route";
-import tiersRoutes from "./routes/tiers.route";
-import subscriptionRoutes from "./routes/subscription.route";
-import autoDriverRoutes from "./routes/autoDriver.route";
-import taskRoutes from "./routes/task.route";
-import deadlineRoutes from "./routes/deadline.route";
-import slackWebhookRoutes from "./routes/slackWebhook.route";
-import extensionRoutes from "./routes/extension.route";
-import extensionRunsRoutes from "./routes/extensionRuns.route";
-import tokenRoutes from "./routes/tokens.route";
-import shareLinkRoutes from "./routes/shareLink.route";
-import automation from "./routes/automation.route.js";
-import fileManagerRoutes from "./routes/fileManager.route";
+import webhookRoutes from "./routes/webhook.route";
+import virtualKeyProxyRoutes from "./routes/virtualKeyProxy.route";
+import v1Routes from "./routes/v1";
+import { registerCoreAuthRoutes } from "./routes/legacy/coreAuth.routes";
+import { registerVendorRoutes } from "./routes/legacy/vendors.routes";
+import { registerProjectsRisksRoutes } from "./routes/legacy/projectsRisks.routes";
+import { registerBillingMiscRoutes } from "./routes/legacy/billingMisc.routes";
+import { registerFilesDataRoutes } from "./routes/legacy/filesData.routes";
+import { registerFrameworksRoutes } from "./routes/legacy/frameworks.routes";
+import { registerAiGovernanceRoutes } from "./routes/legacy/aiGovernance.routes";
+import { registerAiPlatformRoutes } from "./routes/legacy/aiPlatform.routes";
+import { registerWorkflowsRoutes } from "./routes/legacy/workflows.routes";
+import { registerReportingRoutes } from "./routes/legacy/reporting.routes";
 import swaggerUi from "swagger-ui-express";
 import YAML from "yamljs";
-import aiIncidentRouter from "./routes/aiIncidentManagement.route";
-import userPreferenceRouter from "./routes/userPreference.route";
-import llmKeyRouter from "./routes/llmKey.route";
-import nistAiRmfRoutes from "./routes/nist_ai_rmf.route";
-import evidenceHubRouter from "./routes/evidenceHub.route";
-import ceMarkingRoutes from "./routes/ceMarking.route";
-import advisorRouter from "./routes/advisor.route";
-import searchRoutes from "./routes/search.route";
-import deepEvalRoutes from "./routes/deepEvalRoutes.route";
-import evaluationLlmApiKeyRoutes from "./routes/evaluationLlmApiKey.route";
-import notesRoutes from "./routes/notes.route";
-import entityGraphRoutes from "./routes/entityGraph.route";
-import vendorRiskChangeHistoryRoutes from "./routes/vendorRiskChangeHistory.route";
-import policyChangeHistoryRoutes from "./routes/policyChangeHistory.route";
-import incidentChangeHistoryRoutes from "./routes/incidentChangeHistory.route";
-import useCaseChangeHistoryRoutes from "./routes/useCaseChangeHistory.route";
-import projectRiskChangeHistoryRoutes from "./routes/projectRiskChangeHistory.route";
-import fileChangeHistoryRoutes from "./routes/fileChangeHistory.route";
-import taskChangeHistoryRoutes from "./routes/taskChangeHistory.route";
-import trainingChangeHistoryRoutes from "./routes/trainingChangeHistory.route";
-import modelRiskChangeHistoryRoutes from "./routes/modelRiskChangeHistory.route";
-import datasetChangeHistoryRoutes from "./routes/datasetChangeHistory.route";
-import evidenceHubChangeHistoryRoutes from "./routes/evidenceHubChangeHistory.route";
-import modelLifecycleChangeHistoryRoutes from "./routes/modelLifecycleChangeHistory.route";
-import {
-  controlEUChangeHistoryRoutes,
-  subcontrolEUChangeHistoryRoutes,
-  annexCategoryChangeHistoryRoutes,
-} from "./routes/frameworkControlChangeHistory.route";
-import policyLinkedObjects from "./routes/policyLinkedObjects.route";
-import approvalWorkflowRoutes from "./routes/approvalWorkflow.route";
-import approvalRequestRoutes from "./routes/approvalRequest.route";
-import webhookRoutes from "./routes/webhook.route";
-import aiDetectionRoutes from "./routes/aiDetection.route";
-import aiDetectionRepositoryRoutes from "./routes/aiDetectionRepository.route";
-import githubIntegrationRoutes from "./routes/githubIntegration.route";
-import notificationRoutes from "./routes/notification.route";
-import postMarketMonitoringRoutes from "./routes/postMarketMonitoring.route";
-import governanceOsRoutes from "./routes/governanceOs.route";
-import complianceRoutes from "./routes/compliance.route";
-import virtualFolderRoutes, { filesFolderRouter } from "./routes/virtualFolder.route";
-import shadowAiRoutes from "./routes/shadowAi.route";
-import shadowAiIngestionRoutes from "./routes/shadowAiIngestion.route";
-import agentDiscoveryRoutes from "./routes/agentDiscovery.route";
-import invitationRoutes from "./routes/invitation.route";
-import intakeFormRoutes from "./routes/intakeForm.route";
-import versionRoutes from "./routes/version.route";
-import auditLedgerRoutes from "./routes/auditLedger.route";
-import evidenceAiRoutes from "./routes/evidenceAi.route";
-import readinessRoutes from "./routes/readiness.route";
-import aiContentRoutes from "./routes/aiContent.route";
-import aiConfirmationRoutes from "./routes/aiConfirmation.route";
-import aiApprovalRoutes from "./routes/aiApproval.route";
-import aiApprovalRulesRoutes from "./routes/aiApprovalRules.route";
-import aiAppRoutes from "./routes/aiApp.route";
-import aiAuditRoutes from "./routes/aiAudit.route";
-import observabilityRouter from "./routes/observability.route";
-import featureSettingsRoutes from "./routes/featureSettings.route";
-import dataRetentionRoutes from "./routes/dataRetention.route";
-import friaRoutes from "./routes/fria.route";
-import riskBenchmarkRoutes from "./routes/riskBenchmark.route";
-import quantitativeRiskRoutes from "./routes/quantitativeRisk.route";
-import aiGatewayRoutes from "./routes/aiGateway.route";
-import customFieldRoutes from "./routes/customField.route";
-import virtualKeyProxyRoutes from "./routes/virtualKeyProxy.route";
-import internalRoutes from "./routes/internal.route";
-import superAdminRoutes from "./routes/superAdmin.route";
-import mcpRoutes from "./routes/mcp.route";
 import { i18nMiddleware } from "./middleware/i18n.middleware";
 import {
   generalApiLimiter,
@@ -139,9 +27,6 @@ import {
 } from "./middleware/rateLimit.middleware";
 import { sequelize } from "./database/db";
 import redisClient from "./database/redis";
-import ssoConfigRoutes from "./routes/ssoConfig.route";
-import aiTrustIndexRoutes from "./routes/aiTrustIndex.route";
-import telemetryRoutes from "./routes/telemetry.route";
 import { requestMetricsMiddleware } from "./middleware/requestMetrics.middleware";
 import { getGatewayUrl } from "./utils/aiGatewayConfig";
 
@@ -317,149 +202,29 @@ export function createApp(preRoutesMiddleware?: RequestHandler[]): express.Appli
   // per-IP limiter above.
   app.use(generalApiLimiter);
 
-  app.use("/api/users", userRoutes);
-  app.use("/api/vendorRisks", vendorRiskRoutes);
-  app.use("/api/vendors", vendorRoutes);
-  app.use("/api/vendor-change-history", vendorChangeHistoryRoutes);
-  app.use("/api/projects", projectRoutes);
-  app.use("/api/eu-ai-act-classification", euAiActClassificationRoutes);
-  app.use("/api/questions", questionRoutes);
-  app.use("/api/autoDrivers", autoDriverRoutes);
-  app.use("/api/assessments", assessmentRoutes);
-  app.use("/api/projectRisks", risksRoutes);
-  app.use("/api/riskLinks", riskLinksRoutes);
-  app.use("/api/roles", roleRoutes);
-  app.use("/api/files", fileRoutes);
-  app.use("/api/mail", mailRoutes);
-  app.use("/api/invitations", invitationRoutes);
-  app.use("/api/frameworks", frameworks);
-  app.use("/api/frameworks", frameworkImpl);
-  app.use("/api/eu-ai-act", euRouter); // **
-  app.use("/api/organizations", organizationRoutes);
-  app.use("/api/iso-42001", isoRoutes); // **
-  app.use("/api/iso-27001", iso27001Routes); // **
-  app.use("/api/training", trainingRoutes);
-  app.use("/api/aiTrustCentre", aiTrustCentreRoutes);
-  app.use("/api/logger", loggerRoutes);
-  app.use("/api/modelInventory", modelInventoryRoutes);
-  app.use("/api/modelInventoryHistory", modelInventoryHistoryRoutes);
-  // The generic /api/extensions catalog router MUST be mounted BEFORE the
-  // per-extension routers below. Express matches app.use() prefixes in
-  // registration order, and a per-extension mount (e.g. /api/extensions/slack)
-  // would otherwise swallow catalog requests like GET /api/extensions/slack
-  // and 403 via requireExtensionEnabled — even when the caller just wants
-  // the catalog detail. Generic routes here are /, /:key, /:key/enable,
-  // /:key/disable, /:key/configuration; none collide with per-extension
-  // sub-paths (which all use multi-segment paths like /oauth/workspaces,
-  // /models, /config, /import, /sync, /use-cases, etc.).
-  app.use("/api/extensions", extensionRoutes);
-  // Sync engine routes (/:key/runs, /:key/runs/status, /:key/schedule). A key
-  // without a sync provider falls through to the per-extension routers below.
-  app.use("/api/extensions", extensionRunsRoutes);
-  app.use("/api/extensions/dataset-bulk-upload", datasetBulkUploadRoutes);
-  app.use("/api/extensions/risk-import", riskImportRoutes);
-  app.use("/api/extensions/slack", slackExtensionRoutes);
-  app.use("/api/extensions/mlflow", mlflowExtensionRoutes);
-  app.use("/api/extensions/azure-ai-foundry", azureAiFoundryExtensionRoutes);
-  app.use("/api/extensions/jira-assets", jiraAssetsExtensionRoutes);
-  app.use("/api/extensions/jira-incidents", jiraIncidentsExtensionRoutes);
-  app.use("/api/extensions/model-lifecycle", modelLifecycleExtensionRoutes);
-  app.use("/api/model-inventory-change-history", modelInventoryChangeHistoryRoutes);
-  app.use("/api/mrm", mrmRoutes);
-  // Token-authed machine ingestion surface, mounted on the same base path.
-  // Its route (POST /models/:externalModelKey/metrics) does not collide with
-  // any JWT mrm route and uses its own token middleware + rate limiter.
-  app.use("/api/mrm", mrmIngestionRoutes);
-  app.use("/api/datasets", datasetRoutes);
-  app.use("/api/riskHistory", riskHistoryRoutes);
-  app.use("/api/modelRisks", modelRiskRoutes);
-  app.use("/api/reporting/templates", reportTemplateRoutes);
-  app.use("/api/reporting/scheduled-reports", scheduledReportRoutes);
-  app.use("/api/reporting/runs", reportRunRoutes);
-  app.use("/api/reporting", reportRoutes);
-  app.use("/api/dashboard", dashboardRoutes);
-  app.use("/api/tiers", tiersRoutes);
-  app.use("/api/subscriptions", subscriptionRoutes);
-  app.use("/api/tasks", taskRoutes);
-  app.use("/api/deadlines", deadlineRoutes);
   if (process.env.NODE_ENV !== "production") {
     app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerDoc));
   }
-  app.use("/api/policies", policyRoutes);
-  app.use("/api/policies", policyFolderRoutes);
-  app.use("/api/slackWebhooks", slackWebhookRoutes);
-  app.use("/api/tokens", tokenRoutes);
-  app.use("/api/shares", shareLinkRoutes);
-  app.use("/api/file-manager", fileManagerRoutes);
-  app.use("/api/automations", automation);
-  app.use("/api/user-preferences", userPreferenceRouter);
-  app.use("/api/llm-keys", llmKeyRouter);
-  app.use("/api/nist-ai-rmf", nistAiRmfRoutes);
-  app.use("/api/evidenceHub", evidenceHubRouter);
-  app.use("/api/evidence-ai", evidenceAiRoutes);
-  app.use("/api/readiness", readinessRoutes);
-  app.use("/api/ai-content", aiContentRoutes);
-  app.use("/api/ai-confirmation", aiConfirmationRoutes);
-  app.use("/api/ai-approvals", aiApprovalRoutes);
-  app.use("/api/ai-approval-rules", aiApprovalRulesRoutes);
-  app.use("/api/ai-apps", aiAppRoutes);
-  app.use("/api/ai-audit", aiAuditRoutes);
-  app.use("/api/observability", observabilityRouter);
-  app.use("/api/advisor", advisorRouter);
-  app.use("/api/policy-linked", policyLinkedObjects);
-  app.use("/api/ai-incident-managements", aiIncidentRouter);
-  app.use("/api/ce-marking", ceMarkingRoutes);
-  app.use("/api/search", searchRoutes);
-  app.use("/api/deepeval", deepEvalRoutes());
-  app.use("/api/evaluation-llm-keys", evaluationLlmApiKeyRoutes);
-  app.use("/api/notes", notesRoutes);
-  app.use("/api/entity-graph", entityGraphRoutes);
-  app.use("/api/vendor-risk-change-history", vendorRiskChangeHistoryRoutes);
-  app.use("/api/policy-change-history", policyChangeHistoryRoutes);
-  app.use("/api/incident-change-history", incidentChangeHistoryRoutes);
-  app.use("/api/use-case-change-history", useCaseChangeHistoryRoutes);
-  app.use("/api/risk-change-history", projectRiskChangeHistoryRoutes);
-  app.use("/api/file-change-history", fileChangeHistoryRoutes);
-  app.use("/api/task-change-history", taskChangeHistoryRoutes);
-  app.use("/api/training-change-history", trainingChangeHistoryRoutes);
-  app.use("/api/model-risk-change-history", modelRiskChangeHistoryRoutes);
-  app.use("/api/dataset-change-history", datasetChangeHistoryRoutes);
-  app.use("/api/evidence-hub-change-history", evidenceHubChangeHistoryRoutes);
-  app.use("/api/model-lifecycle-change-history", modelLifecycleChangeHistoryRoutes);
-  app.use("/api/control-eu-change-history", controlEUChangeHistoryRoutes);
-  app.use("/api/subcontrol-eu-change-history", subcontrolEUChangeHistoryRoutes);
-  app.use("/api/annex-category-change-history", annexCategoryChangeHistoryRoutes);
-  app.use("/api/approval-workflows", approvalWorkflowRoutes);
-  app.use("/api/approval-requests", approvalRequestRoutes);
-  app.use("/api/ai-detection", aiDetectionRoutes);
-  app.use("/api/ai-detection/repositories", aiDetectionRepositoryRoutes);
-  app.use("/api/integrations/github", githubIntegrationRoutes);
-  app.use("/api/notifications", notificationRoutes);
-  app.use("/api/pmm", postMarketMonitoringRoutes);
-  app.use("/api/compliance", complianceRoutes);
-  app.use("/api/virtual-folders", virtualFolderRoutes);
-  app.use("/api/files", filesFolderRouter);
-  app.use("/api/shadow-ai", shadowAiRoutes);
-  app.use("/api/v1/shadow-ai", shadowAiIngestionRoutes);
-  app.use("/api/agent-primitives", agentDiscoveryRoutes);
-  app.use("/api/intake", intakeFormRoutes);
-  app.use("/api/version", versionRoutes);
-  app.use("/api/audit-ledger", auditLedgerRoutes);
-  app.use("/api/feature-settings", featureSettingsRoutes);
-  app.use("/api/data-retention", dataRetentionRoutes);
-  app.use("/api/fria", friaRoutes);
-  app.use("/api/governance-os", governanceOsRoutes);
-  app.use("/api/risk-benchmarks", riskBenchmarkRoutes);
-  app.use("/api/quantitative-risks", quantitativeRiskRoutes);
-  app.use("/api/ai-gateway", aiGatewayRoutes());
-  app.use("/api/custom-fields", customFieldRoutes);
 
-  app.use("/api/super-admin", superAdminRoutes);
-  app.use("/api/mcp", mcpRoutes);
-  app.use("/api/internal", internalRoutes);
-  app.use("/api/telemetry", telemetryRoutes);
-  app.use("/api/ssoConfig", ssoConfigRoutes);
-  app.use("/api/ai-trust-index", aiTrustIndexRoutes);
+  // Legacy API surface (ADR 0001): unversioned mounts, grouped by domain in
+  // routes/legacy/. Each module lists its mounts in the exact order they had
+  // in this file before the decomposition; order-sensitive mounts carry
+  // explanatory comments in their module.
+  registerCoreAuthRoutes(app);
+  registerVendorRoutes(app);
+  registerProjectsRisksRoutes(app);
+  registerBillingMiscRoutes(app);
+  registerFilesDataRoutes(app);
+  registerFrameworksRoutes(app);
+  registerAiGovernanceRoutes(app);
+  registerAiPlatformRoutes(app);
+  registerWorkflowsRoutes(app);
+  registerReportingRoutes(app);
+
+  // Versioned API surface (ADR 0001): all /api/v1/* routes are registered in
+  // routes/v1/index.ts. No legacy mount path is a prefix of /api/v1, so
+  // mounting after the legacy groups preserves route-matching behavior.
+  app.use("/api/v1", v1Routes);
 
   return app;
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useCallback, type FocusEvent } from "react";
 import {
   Box,
   Typography,
@@ -29,11 +29,22 @@ import {
   MAX_DECIMALS,
   REQUIRED_ENTITY_FIELDS,
   RISK_TAGGABLE_TYPES,
+  readersOf,
   sortFields,
   type SchemaLogicError,
 } from "../../../application/utils/intakeFormLogic";
 import { FormulaEditor } from "./FormulaEditor";
 import { EditorSection } from "./EditorSection";
+
+// The public form shows a placeholder only in these inputs; a dropdown always
+// reads "Select an option".
+const PLACEHOLDER_TYPES: ReadonlySet<FieldType> = new Set([
+  "text",
+  "textarea",
+  "email",
+  "url",
+  "number",
+]);
 
 const FIELD_TYPE_LABELS: Record<FieldType, string> = {
   text: "Short text",
@@ -168,12 +179,14 @@ function OptionsEditor({ options, onChange }: OptionsEditorProps) {
 
 interface FieldEditorProps {
   field: FormField;
-  /** Every field in the form, used for rules and formulas on earlier fields. */
+  /** Every field in the form, used for the rules and formulas on this field. */
   allFields: FormField[];
   entityType: IntakeEntityType;
   usedEntityMappings?: string[];
   llmKeyId?: number | null;
   onChange: (field: FormField) => void;
+  /** Called on every edit, before the debounce sends it, so the page can enable Save at once. */
+  onEdit?: () => void;
   onClose: () => void;
   /** Problems the schema checks found on this field. */
   logicErrors?: SchemaLogicError[];
@@ -186,73 +199,147 @@ export function FieldEditor({
   usedEntityMappings = [],
   llmKeyId,
   onChange,
+  onEdit,
   onClose,
   logicErrors = [],
 }: FieldEditorProps) {
   const theme = useTheme();
   const [localField, setLocalField] = useState<FormField>(field);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Keys edited here and not yet sent. They go out on the debounce, or early
+  // when the editor moves to another field, closes or loses focus, and are
+  // merged onto the latest field so an outside update (a save response, a
+  // reorder) and the edit both survive.
+  const pendingEditRef = useRef<{ fieldId: string; patch: Partial<FormField> } | null>(null);
+  const fieldRef = useRef(field);
+  const onChangeRef = useRef(onChange);
+  const onEditRef = useRef(onEdit);
 
-  // Clear pending debounce when field changes to prevent stale updates
-  useEffect(() => {
+  // Declared before the [field] layout effect below, which can flush, so the
+  // flush never calls the previous render's handler.
+  useLayoutEffect(() => {
+    onChangeRef.current = onChange;
+    onEditRef.current = onEdit;
+  }, [onChange, onEdit]);
+
+  const flushPendingEdit = useCallback(() => {
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-    setLocalField(field);
-  }, [field]);
-
-  // Flush pending debounce on unmount
-  useEffect(() => {
-    return () => {
-      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-    };
+    debounceTimerRef.current = null;
+    const pending = pendingEditRef.current;
+    pendingEditRef.current = null;
+    // The [field] layout effect flushes before it points fieldRef at another
+    // field; the id check keeps an edit off the wrong field if that changes.
+    if (!pending || pending.fieldId !== fieldRef.current.id) return;
+    onChangeRef.current({ ...fieldRef.current, ...pending.patch });
   }, []);
 
-  const debouncedOnChange = useCallback(
-    (updated: FormField) => {
+  // Send the previous field's edit before showing the new one; keep a same-field
+  // edit on top of the update. A layout effect, so a debounce timer can never
+  // run between the new field rendering and fieldRef pointing at it.
+  useLayoutEffect(() => {
+    const pending = pendingEditRef.current;
+    if (pending && pending.fieldId !== field.id) flushPendingEdit();
+    fieldRef.current = field;
+    const kept = pendingEditRef.current?.patch;
+    setLocalField(kept ? { ...field, ...kept } : field);
+  }, [field, flushPendingEdit]);
+
+  useEffect(() => flushPendingEdit, [flushPendingEdit]);
+
+  const queueEdit = useCallback(
+    (patch: Partial<FormField>) => {
+      const fieldId = fieldRef.current.id;
+      const earlier =
+        pendingEditRef.current?.fieldId === fieldId ? pendingEditRef.current.patch : {};
+      pendingEditRef.current = { fieldId, patch: { ...earlier, ...patch } };
+      onEditRef.current?.();
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-      debounceTimerRef.current = setTimeout(() => {
-        onChange(updated);
-      }, 300);
+      debounceTimerRef.current = setTimeout(flushPendingEdit, 300);
     },
-    [onChange],
+    [flushPendingEdit],
   );
 
+  // The value the field will have once the waiting edit is sent.
+  const latestValue = useCallback(<K extends keyof FormField>(key: K): FormField[K] => {
+    const pending = pendingEditRef.current;
+    if (pending?.fieldId === fieldRef.current.id && key in pending.patch) {
+      return pending.patch[key] as FormField[K];
+    }
+    return fieldRef.current[key];
+  }, []);
+
   const handleChange = <K extends keyof FormField>(key: K, value: FormField[K]) => {
-    const updated = { ...localField, [key]: value };
-    setLocalField(updated);
-    debouncedOnChange(updated);
+    setLocalField((current) => ({ ...current, [key]: value }));
+    queueEdit({ [key]: value } as Partial<FormField>);
   };
 
   const handleValidationChange = (key: string, value: boolean | number | string | undefined) => {
-    const validation = { ...localField.validation, [key]: value };
+    const validation = { ...latestValue("validation"), [key]: value };
     // Remove undefined keys to keep the object clean
     if (value === undefined) {
       delete (validation as Record<string, unknown>)[key];
     }
-    const updated = { ...localField, validation };
-    setLocalField(updated);
-    debouncedOnChange(updated);
+    setLocalField((current) => ({ ...current, validation }));
+    queueEdit({ validation });
+  };
+
+  // Moving focus between inputs in the editor leaves the debounce to it.
+  const handleBlur = (event: FocusEvent<HTMLElement>) => {
+    const next = event.relatedTarget;
+    if (next instanceof Node && event.currentTarget.contains(next)) return;
+    flushPendingEdit();
   };
 
   // LLM guidance generation
   const [guidanceLoading, setGuidanceLoading] = useState(false);
+  // Bumped when a request starts, another field opens or the editor closes,
+  // so only the newest request for the open field can apply its result.
+  const guidanceRequestRef = useRef(0);
+
+  useLayoutEffect(() => {
+    guidanceRequestRef.current += 1;
+    setGuidanceLoading(false);
+  }, [field.id]);
+
+  useEffect(
+    () => () => {
+      guidanceRequestRef.current += 1;
+    },
+    [],
+  );
 
   const generateGuidance = useCallback(async () => {
-    if (!llmKeyId || !localField.label) return;
+    const labelAtClick = latestValue("label");
+    if (!llmKeyId || !labelAtClick?.trim()) return;
+    const request = ++guidanceRequestRef.current;
+    const guidanceAtClick = latestValue("guidanceText") ?? "";
     setGuidanceLoading(true);
     try {
-      const result = await getLLMFieldGuidance(localField.label, entityType, llmKeyId);
+      const result = await getLLMFieldGuidance(labelAtClick, entityType, llmKeyId);
+      if (request !== guidanceRequestRef.current) return;
       const text = result.data?.guidanceText;
-      if (text) {
-        const updated = { ...localField, guidanceText: text };
-        setLocalField(updated);
-        onChange(updated);
+      // Dropped when the user renamed the field or wrote their own guidance
+      // while the request ran.
+      if (
+        !text ||
+        latestValue("label") !== labelAtClick ||
+        (latestValue("guidanceText") ?? "") !== guidanceAtClick
+      ) {
+        return;
       }
+      // Merged with any other edit made while the request ran.
+      setLocalField((current) => ({ ...current, guidanceText: text }));
+      queueEdit({ guidanceText: text });
+      flushPendingEdit();
     } catch {
       // Silently fail — the field stays as is
     } finally {
-      setGuidanceLoading(false);
+      if (request === guidanceRequestRef.current) setGuidanceLoading(false);
     }
-  }, [llmKeyId, localField, entityType, onChange]);
+  }, [llmKeyId, entityType, latestValue, queueEdit, flushPendingEdit]);
+
+  // The same blank-label rule as generateGuidance, so the button never offers a call it refuses.
+  const hasGuidanceLabel = Boolean(localField.label?.trim());
 
   const entityMappings = ENTITY_FIELD_MAPPINGS[entityType] || [];
   const compatibleMappings = entityMappings.filter((mapping: EntityFieldMapping) =>
@@ -265,12 +352,16 @@ export function FieldEditor({
   const isCalculated = localField.type === "calculated";
   const hasRules =
     Array.isArray(localField.visibility?.conditions) && localField.visibility.conditions.length > 0;
-  const earlierFields = (() => {
+  // Rules and formulas may read any other field, except one that already
+  // reads this field: picking it would make a loop.
+  const otherFields = (() => {
     const sorted = sortFields(allFields);
-    const index = sorted.findIndex((candidate) => candidate.id === localField.id);
-    return index < 0 ? sorted : sorted.slice(0, index);
+    const readers = readersOf(sorted, localField.id);
+    return sorted.filter(
+      (candidate) => candidate.id !== localField.id && !readers.has(candidate.id),
+    );
   })();
-  const numericFields = earlierFields.filter(
+  const numericFields = otherFields.filter(
     (candidate) => candidate.type === "number" || candidate.type === "calculated",
   );
 
@@ -287,6 +378,7 @@ export function FieldEditor({
 
   return (
     <Box
+      onBlur={handleBlur}
       sx={{
         width: 325,
         height: "100%",
@@ -368,7 +460,7 @@ export function FieldEditor({
                 value={localField.label}
                 onChange={(e) => handleChange("label", e.target.value)}
               />
-              {!isCalculated && (
+              {PLACEHOLDER_TYPES.has(localField.type) && (
                 <Field
                   id="field-placeholder"
                   label="Placeholder"
@@ -404,24 +496,24 @@ export function FieldEditor({
                     </Typography>
                     {llmKeyId && (
                       <Tooltip
-                        title={localField.label ? "Generate with AI" : "Add a label first"}
+                        title={hasGuidanceLabel ? "Generate with AI" : "Add a label first"}
                         placement="top"
                       >
                         <Box
                           onClick={
-                            !guidanceLoading && localField.label ? generateGuidance : undefined
+                            !guidanceLoading && hasGuidanceLabel ? generateGuidance : undefined
                           }
                           sx={{
                             "display": "flex",
                             "alignItems": "center",
                             "gap": "3px",
-                            "cursor": !guidanceLoading && localField.label ? "pointer" : "default",
-                            "opacity": !localField.label ? 0.4 : 1,
+                            "cursor": !guidanceLoading && hasGuidanceLabel ? "pointer" : "default",
+                            "opacity": !hasGuidanceLabel ? 0.4 : 1,
                             "color": theme.palette.primary.main,
                             "borderRadius": "4px",
                             "px": "6px",
                             "py": "2px",
-                            "&:hover": localField.label
+                            "&:hover": hasGuidanceLabel
                               ? { backgroundColor: theme.palette.background.fill }
                               : {},
                           }}
@@ -450,7 +542,7 @@ export function FieldEditor({
                     rows={2}
                   />
                   <Typography sx={{ fontSize: "11px", color: theme.palette.other.icon, mt: "4px" }}>
-                    Shown as a tooltip next to the field label on the public form
+                    Shown under the field on the public form
                   </Typography>
                 </Box>
               )}
@@ -472,10 +564,11 @@ export function FieldEditor({
 
           {isCalculated && (
             <>
-              <EditorSection title="Calculation" defaultOpen>
+              <EditorSection title="Calculated value" defaultOpen>
                 <FormulaEditor
                   formula={localField.formula ?? ""}
                   numericFields={numericFields}
+                  allFields={allFields}
                   decimals={localField.decimals}
                   onChange={(formula) => handleChange("formula", formula)}
                 />
@@ -536,7 +629,7 @@ export function FieldEditor({
                     isChecked={localField.validation?.required || false}
                     value="required"
                     onChange={() =>
-                      handleValidationChange("required", !localField.validation?.required)
+                      handleValidationChange("required", !latestValue("validation")?.required)
                     }
                     size="small"
                   />
@@ -637,7 +730,7 @@ export function FieldEditor({
           >
             <VisibilityEditor
               visibility={localField.visibility}
-              earlierFields={earlierFields}
+              otherFields={otherFields}
               onChange={(visibility) => handleChange("visibility", visibility)}
               blockedReason={
                 localField.entityFieldMapping &&

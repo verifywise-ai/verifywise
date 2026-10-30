@@ -1,7 +1,7 @@
 openapi: 3.0.0
 info:
   title: 'VerifyWise API'
-  description: 'AI Governance Platform API'
+  description: "AI Governance Platform API.\n\n**Versioning (ADR 0001):** paths under `/v1/...` (relative to the `/api`\nserver — e.g. `/v1/shadow-ai/events` is served at `/api/v1/shadow-ai/events`)\nare the versioned API surface. All other paths are the legacy, unversioned\nsurface: backward-compatible, frozen for bug fixes only, and deprecated\nthrough the process in `docs/technical/adr/0001-api-versioning.md`. New\nendpoints and changed contracts are introduced under `/api/v1`.\n\n**Tags:** versioned operations are tagged `v1: <Resource>`; legacy\noperations keep their historical tags."
   version: 2.0.0
 servers:
   -
@@ -7892,6 +7892,10 @@ tags:
     name: Vendors
   -
     name: Webhooks
+  -
+    name: 'v1: Change History'
+  -
+    name: 'v1: Shadow AI'
 paths:
   /webhooks/github:
     post:
@@ -10807,7 +10811,7 @@ paths:
       tags:
         - Files
       summary: 'Get User Files Meta Data'
-      operationId: files_getAllFolders
+      operationId: getAllFolders
       security:
         -
           bearerAuth: []
@@ -10822,7 +10826,7 @@ paths:
       tags:
         - Files
       summary: 'Post File Content'
-      operationId: files_createFolder
+      operationId: createFolder
       security:
         -
           bearerAuth: []
@@ -10974,7 +10978,7 @@ paths:
       tags:
         - Files
       summary: 'Get File Content By Id'
-      operationId: files_getFolderById
+      operationId: getFolderById
       security:
         -
           bearerAuth: []
@@ -10999,7 +11003,7 @@ paths:
       tags:
         - Files
       summary: 'Update Folder'
-      operationId: files_updateFolder
+      operationId: updateFolder
       security:
         -
           bearerAuth: []
@@ -11026,7 +11030,7 @@ paths:
       tags:
         - Files
       summary: 'Delete Folder'
-      operationId: files_deleteFolder
+      operationId: deleteFolder
       security:
         -
           bearerAuth: []
@@ -20988,76 +20992,6 @@ paths:
           description: Unauthorized
         '500':
           description: 'Internal server error'
-  '/evidence-hub-change-history/{id}':
-    get:
-      summary: 'Get Evidence Hub Change History By Id'
-      responses:
-        '200':
-          description: Success
-        '500':
-          description: 'Internal server error'
-      tags:
-        - 'Change History'
-      operationId: getEvidenceHubChangeHistoryById
-      security:
-        -
-          bearerAuth: []
-  '/model-lifecycle-change-history/{id}':
-    get:
-      summary: 'Get Model Lifecycle Change History By Id'
-      responses:
-        '200':
-          description: Success
-        '500':
-          description: 'Internal server error'
-      tags:
-        - 'Change History'
-      operationId: getModelLifecycleChangeHistoryById
-      security:
-        -
-          bearerAuth: []
-  '/control-eu-change-history/{id}':
-    get:
-      summary: 'Get EU AI Act Control Change History By Id'
-      responses:
-        '200':
-          description: Success
-        '500':
-          description: 'Internal server error'
-      tags:
-        - 'Change History'
-      operationId: getControlEUChangeHistoryById
-      security:
-        -
-          bearerAuth: []
-  '/subcontrol-eu-change-history/{id}':
-    get:
-      summary: 'Get EU AI Act Subcontrol Change History By Id'
-      responses:
-        '200':
-          description: Success
-        '500':
-          description: 'Internal server error'
-      tags:
-        - 'Change History'
-      operationId: getSubcontrolEUChangeHistoryById
-      security:
-        -
-          bearerAuth: []
-  '/annex-category-change-history/{id}':
-    get:
-      summary: 'Get ISO 42001 Annex Category Change History By Id'
-      responses:
-        '200':
-          description: Success
-        '500':
-          description: 'Internal server error'
-      tags:
-        - 'Change History'
-      operationId: getAnnexCategoryChangeHistoryById
-      security:
-        -
-          bearerAuth: []
   /approval-workflows:
     get:
       tags:
@@ -22781,7 +22715,7 @@ paths:
       tags:
         - Files
       summary: 'Get All Folders'
-      operationId: getAllFolders
+      operationId: virtual_folders_getAllFolders
       security:
         -
           bearerAuth: []
@@ -22796,7 +22730,7 @@ paths:
       tags:
         - Files
       summary: 'Create Folder'
-      operationId: createFolder
+      operationId: virtual_folders_createFolder
       security:
         -
           bearerAuth: []
@@ -22849,7 +22783,7 @@ paths:
       tags:
         - Files
       summary: 'Get Folder By Id'
-      operationId: getFolderById
+      operationId: virtual_folders_getFolderById
       security:
         -
           bearerAuth: []
@@ -22871,7 +22805,7 @@ paths:
       tags:
         - Files
       summary: 'Update Folder'
-      operationId: updateFolder
+      operationId: virtual_folders_updateFolder
       security:
         -
           bearerAuth: []
@@ -22898,7 +22832,7 @@ paths:
       tags:
         - Files
       summary: 'Delete Folder'
-      operationId: deleteFolder
+      operationId: virtual_folders_deleteFolder
       security:
         -
           bearerAuth: []
@@ -23691,7 +23625,7 @@ paths:
   /v1/shadow-ai/events:
     post:
       tags:
-        - 'Shadow AI'
+        - 'v1: Shadow AI'
       summary: 'Ingest Events'
       operationId: ingestEvents
       requestBody:
@@ -24862,6 +24796,208 @@ paths:
           description: Success
         '500':
           description: 'Internal server error'
+  '/intake/public/by-id/{publicId}/live-checks':
+    post:
+      tags:
+        - 'Intake Forms'
+      summary: 'Post Public Live Checks'
+      description: 'Runs AI checks for vague and conflicting answers on a public intake form. Unauthenticated; rate-limited per visitor and per form. Returns aiAvailable false when live checks are off or the form has no usable LLM key.'
+      operationId: postPublicLiveChecks
+      parameters:
+        -
+          name: publicId
+          in: path
+          required: true
+          description: 'Public form id (hex)'
+          schema:
+            type: string
+            pattern: '^[0-9a-f]+$'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+              properties:
+                data:
+                  type: object
+                  description: 'Current answers keyed by question id'
+                language:
+                  type: string
+                  description: 'Language for hint text (en, de, fr, es)'
+      responses:
+        '200':
+          description: 'data is { aiAvailable, hints, error? }. A failed model call is still a 200 with hints [] and error "unavailable".'
+        '400':
+          description: 'data is not an object'
+        '404':
+          description: 'Form not found or not active'
+        '413':
+          description: 'Request body over 10 MB'
+        '429':
+          description: 'Rate limit or form budget reached; see the Retry-After header'
+        '500':
+          description: 'Internal server error'
+  '/intake/public/by-id/{publicId}/prefill':
+    post:
+      tags:
+        - 'Intake Forms'
+      summary: 'Post Public Prefill'
+      description: 'Suggests answers for empty questions from an uploaded vendor document (PDF or Word .docx). The file is not stored. Unauthenticated; rate-limited per visitor and per form.'
+      operationId: postPublicPrefill
+      parameters:
+        -
+          name: publicId
+          in: path
+          required: true
+          description: 'Public form id (hex)'
+          schema:
+            type: string
+            pattern: '^[0-9a-f]+$'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                data:
+                  type: string
+                  description: 'Current answers as a JSON object string'
+                language:
+                  type: string
+                  description: 'Language for suggestions (en, de, fr, es)'
+      responses:
+        '200':
+          description: 'data is { fileName, suggestions }'
+        '400':
+          description: 'Missing file, invalid data, or an unreadable multipart body (extra fields or files)'
+        '404':
+          description: 'Form not found or prefill unavailable'
+        '413':
+          description: 'File too large'
+        '415':
+          description: 'Not a PDF or .docx file (extension, MIME type and content must match)'
+        '422':
+          description: 'File could not be read'
+        '429':
+          description: 'Rate limit or form budget reached; see the Retry-After header'
+        '500':
+          description: 'Internal server error'
+        '502':
+          description: 'Model call failed'
+  '/intake/public/{tenantSlug}/{formSlug}/live-checks':
+    post:
+      tags:
+        - 'Intake Forms'
+      summary: 'Post Public Live Checks'
+      description: 'Legacy slug URL for the live checks endpoint. Same behaviour as /intake/public/by-id/{publicId}/live-checks.'
+      operationId: intake_postPublicLiveChecks
+      parameters:
+        -
+          name: tenantSlug
+          in: path
+          required: true
+          schema:
+            type: string
+        -
+          name: formSlug
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+              properties:
+                data:
+                  type: object
+                  description: 'Current answers keyed by question id'
+                language:
+                  type: string
+                  description: 'Language for hint text (en, de, fr, es)'
+      responses:
+        '200':
+          description: 'data is { aiAvailable, hints, error? }. A failed model call is still a 200 with hints [] and error "unavailable".'
+        '400':
+          description: 'data is not an object'
+        '404':
+          description: 'Form not found or not active'
+        '413':
+          description: 'Request body over 10 MB'
+        '429':
+          description: 'Rate limit or form budget reached; see the Retry-After header'
+        '500':
+          description: 'Internal server error'
+  '/intake/public/{tenantSlug}/{formSlug}/prefill':
+    post:
+      tags:
+        - 'Intake Forms'
+      summary: 'Post Public Prefill'
+      description: 'Legacy slug URL for the prefill endpoint. Same behaviour as /intake/public/by-id/{publicId}/prefill.'
+      operationId: intake_postPublicPrefill
+      parameters:
+        -
+          name: tenantSlug
+          in: path
+          required: true
+          schema:
+            type: string
+        -
+          name: formSlug
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                data:
+                  type: string
+                  description: 'Current answers as a JSON object string'
+                language:
+                  type: string
+                  description: 'Language for suggestions (en, de, fr, es)'
+      responses:
+        '200':
+          description: 'data is { fileName, suggestions }'
+        '400':
+          description: 'Missing file, invalid data, or an unreadable multipart body (extra fields or files)'
+        '404':
+          description: 'Form not found or prefill unavailable'
+        '413':
+          description: 'File too large'
+        '415':
+          description: 'Not a PDF or .docx file (extension, MIME type and content must match)'
+        '422':
+          description: 'File could not be read'
+        '429':
+          description: 'Rate limit or form budget reached; see the Retry-After header'
+        '500':
+          description: 'Internal server error'
+        '502':
+          description: 'Model call failed'
   '/intake/public/by-id/{publicId}':
     get:
       tags:
@@ -27004,3 +27140,73 @@ paths:
       tags:
         - System
       operationId: healthCheck
+  '/v1/evidence-hub-change-history/{id}':
+    get:
+      summary: 'Get Evidence Hub Change History By Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Change History'
+      operationId: getEvidenceHubChangeHistoryById
+      security:
+        -
+          bearerAuth: []
+  '/v1/model-lifecycle-change-history/{id}':
+    get:
+      summary: 'Get Model Lifecycle Change History By Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Change History'
+      operationId: getModelLifecycleChangeHistoryById
+      security:
+        -
+          bearerAuth: []
+  '/v1/control-eu-change-history/{id}':
+    get:
+      summary: 'Get Control E U Change History By Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Change History'
+      operationId: getControlEUChangeHistoryById
+      security:
+        -
+          bearerAuth: []
+  '/v1/subcontrol-eu-change-history/{id}':
+    get:
+      summary: 'Get Subcontrol E U Change History By Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Change History'
+      operationId: getSubcontrolEUChangeHistoryById
+      security:
+        -
+          bearerAuth: []
+  '/v1/annex-category-change-history/{id}':
+    get:
+      summary: 'Get Annex Category Change History By Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Change History'
+      operationId: getAnnexCategoryChangeHistoryById
+      security:
+        -
+          bearerAuth: []

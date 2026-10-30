@@ -1,46 +1,6 @@
 <mjml>
-<mj-head>
-  <mj-font name="Inter" href="https://fonts.googleapis.com/css?family=Inter:400,500,600"></mj-font>
-  <mj-attributes>
-    <mj-all font-family="Geist, Inter, system-ui, -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif" color="{{colorTextSecondary}}"></mj-all>
-    <mj-text font-size="15px" line-height="24px" color="{{colorTextSecondary}}" padding="0"></mj-text>
-    <mj-section padding="0px"></mj-section>
-    <mj-column padding="0px"></mj-column>
-    <mj-button background-color="{{colorBrandPrimary}}" color="{{colorBackground}}" border-radius="4px" font-size="14px" font-weight="500" padding="0" height="44px"></mj-button>
-  </mj-attributes>
-  <mj-style inline="inline">
-    .email-card { background-color: {{colorBackground}}; border: 1px solid #eaecf0; border-radius: 10px; overflow: hidden; }
-    .email-heading { color: {{colorTextPrimary}}; font-size: 22px; font-weight: 600; line-height: 1.35; margin: 0 0 24px 0; letter-spacing: -0.2px; }
-    .email-body { color: {{colorTextSecondary}}; font-size: 15px; line-height: 24px; margin: 0 0 20px 0; }
-    .email-muted { color: {{colorTextTertiary}}; font-size: 14px; line-height: 22px; margin: 0; }
-    .email-footer { color: {{colorTextAccent}}; font-size: 13px; line-height: 20px; text-align: center; }
-    .box { padding: 20px; border-radius: 6px; margin: 24px 0; }
-    .box-info { background-color: {{colorBackgroundAlt}}; }
-    .box-success { background-color: {{colorSuccessBg}}; }
-    .box-error { background-color: {{colorErrorBg}}; }
-    .box-warning { background-color: {{colorWarningBg}}; }
-    .box-primary { background-color: {{colorBrandPrimaryLight}}; }
-    .box-title { color: {{colorTextPrimary}}; font-weight: 600; font-size: 15px; margin: 0 0 10px 0; }
-    .box-subtitle { color: {{colorTextTertiary}}; font-size: 14px; line-height: 22px; margin: 0; }
-    .box-status-success { color: {{colorSuccessText}}; font-size: 14px; font-weight: 600; margin: 0; }
-    .box-status-error { color: {{colorErrorText}}; font-size: 14px; font-weight: 600; margin: 0; }
-    .data-table { width: 100%; font-size: 14px; border-collapse: collapse; margin: 24px 0; }
-    .data-table td { padding: 10px 0; vertical-align: top; }
-    .data-label { color: {{colorTextTertiary}}; width: 140px; padding-right: 20px; }
-    .data-value { color: {{colorTextPrimary}}; font-weight: 500; }
-    ul { margin: 0 0 20px 0; padding-left: 24px; color: {{colorTextSecondary}}; }
-    li { margin-bottom: 10px; line-height: 22px; }
-    a { color: {{colorBrandPrimary}}; text-decoration: none; }
-    .btn { display: inline-block; padding: 12px 24px; border-radius: 4px; text-decoration: none; font-size: 14px; font-weight: 500; color: {{colorBackground}}; }
-    .btn-primary { background-color: {{colorBrandPrimary}}; }
-    .btn-success { background-color: {{colorSuccessText}}; }
-    .btn-error { background-color: {{colorErrorText}}; }
-    .btn-warning { background-color: {{colorWarningText}}; }
-    .btn-info { background-color: {{colorInfoText}}; }
-    .spacer { height: 8px; }
-  </mj-style>
-</mj-head>
-  <mj-body background-color="#f4f6f8">
+<mj-include path="./partials/email-head.mjml" />
+  <mj-body background-color="{{colorPageBackground}}">
     <mj-section padding="32px 20px 20px">
       <mj-column width="100%">
         <mj-text align="center" padding="0 0 24px 0">
@@ -55,7 +15,7 @@
                 <h2 class="email-heading">You&apos;ve been assigned as {{role_type}}</h2><p class="email-body">Hi {{recipient_name}},</p><p class="email-body"><strong>{{assigner_name}}</strong> has assigned you as <strong>{{role_type}}</strong> for the following {{entity_type}}.</p><div class="box box-info"><p class="box-title" style="font-size: 16px;">{{entity_name}}</p>
                 <p class="box-subtitle" style="margin-bottom: 16px;">{{entity_type}}</p>
                 {{entity_context_html}}
-                <div style="border-top: 1px solid #eaecf0; margin-top: 16px; padding-top: 16px;">
+                <div style="border-top: 1px solid {{colorBorderLight}}; margin-top: 16px; padding-top: 16px;">
                   <table class="data-table" style="margin: 0;">
                     <tr><td class="data-label">Assigned on</td><td class="data-value">{{assignment_date}}</td></tr>
                     <tr><td class="data-label">Assigned by</td><td class="data-value">{{assigner_name}}</td></tr>
