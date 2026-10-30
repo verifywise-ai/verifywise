@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useCallback, type FocusEvent } from "react";
 import {
   Box,
   Typography,
@@ -192,67 +192,133 @@ export function FieldEditor({
   const theme = useTheme();
   const [localField, setLocalField] = useState<FormField>(field);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Keys edited here and not yet sent. They go out on the debounce, or early
+  // when the editor moves to another field, closes or loses focus, and are
+  // merged onto the latest field so an outside update (a save response, a
+  // reorder) and the edit both survive.
+  // `base` is the field the edit was made on: it is the fallback when the
+  // editor has already moved on, so a pending edit is never dropped.
+  const pendingEditRef = useRef<{ base: FormField; patch: Partial<FormField> } | null>(null);
+  const fieldRef = useRef(field);
+  const onChangeRef = useRef(onChange);
 
-  // Clear pending debounce when field changes to prevent stale updates
   useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
+
+  const flushPendingEdit = useCallback(() => {
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-    setLocalField(field);
-  }, [field]);
-
-  // Flush pending debounce on unmount
-  useEffect(() => {
-    return () => {
-      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-    };
+    debounceTimerRef.current = null;
+    const pending = pendingEditRef.current;
+    pendingEditRef.current = null;
+    if (!pending) return;
+    const latest = fieldRef.current.id === pending.base.id ? fieldRef.current : pending.base;
+    onChangeRef.current({ ...latest, ...pending.patch });
   }, []);
 
-  const debouncedOnChange = useCallback(
-    (updated: FormField) => {
+  // Send the previous field's edit before showing the new one; keep a same-field
+  // edit on top of the update. A layout effect, so a debounce timer can never
+  // run between the new field rendering and fieldRef pointing at it.
+  useLayoutEffect(() => {
+    const pending = pendingEditRef.current;
+    if (pending && pending.base.id !== field.id) flushPendingEdit();
+    fieldRef.current = field;
+    const kept = pendingEditRef.current?.patch;
+    setLocalField(kept ? { ...field, ...kept } : field);
+  }, [field, flushPendingEdit]);
+
+  useEffect(() => flushPendingEdit, [flushPendingEdit]);
+
+  const queueEdit = useCallback(
+    (patch: Partial<FormField>) => {
+      const base = fieldRef.current;
+      const earlier =
+        pendingEditRef.current?.base.id === base.id ? pendingEditRef.current.patch : {};
+      pendingEditRef.current = { base, patch: { ...earlier, ...patch } };
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-      debounceTimerRef.current = setTimeout(() => {
-        onChange(updated);
-      }, 300);
+      debounceTimerRef.current = setTimeout(flushPendingEdit, 300);
     },
-    [onChange],
+    [flushPendingEdit],
   );
 
+  // The value the field will have once the waiting edit is sent.
+  const latestValue = useCallback(<K extends keyof FormField>(key: K): FormField[K] => {
+    const pending = pendingEditRef.current;
+    if (pending?.base.id === fieldRef.current.id && key in pending.patch) {
+      return pending.patch[key] as FormField[K];
+    }
+    return fieldRef.current[key];
+  }, []);
+
   const handleChange = <K extends keyof FormField>(key: K, value: FormField[K]) => {
-    const updated = { ...localField, [key]: value };
-    setLocalField(updated);
-    debouncedOnChange(updated);
+    setLocalField((current) => ({ ...current, [key]: value }));
+    queueEdit({ [key]: value } as Partial<FormField>);
   };
 
   const handleValidationChange = (key: string, value: boolean | number | string | undefined) => {
-    const validation = { ...localField.validation, [key]: value };
+    const validation = { ...latestValue("validation"), [key]: value };
     // Remove undefined keys to keep the object clean
     if (value === undefined) {
       delete (validation as Record<string, unknown>)[key];
     }
-    const updated = { ...localField, validation };
-    setLocalField(updated);
-    debouncedOnChange(updated);
+    setLocalField((current) => ({ ...current, validation }));
+    queueEdit({ validation });
+  };
+
+  // Moving focus between inputs in the editor leaves the debounce to it.
+  const handleBlur = (event: FocusEvent<HTMLElement>) => {
+    const next = event.relatedTarget;
+    if (next instanceof Node && event.currentTarget.contains(next)) return;
+    flushPendingEdit();
   };
 
   // LLM guidance generation
   const [guidanceLoading, setGuidanceLoading] = useState(false);
+  // Bumped when a request starts, another field opens or the editor closes,
+  // so only the newest request for the open field can apply its result.
+  const guidanceRequestRef = useRef(0);
+
+  useLayoutEffect(() => {
+    guidanceRequestRef.current += 1;
+    setGuidanceLoading(false);
+  }, [field.id]);
+
+  useEffect(
+    () => () => {
+      guidanceRequestRef.current += 1;
+    },
+    [],
+  );
 
   const generateGuidance = useCallback(async () => {
     if (!llmKeyId || !localField.label) return;
+    const request = ++guidanceRequestRef.current;
+    const labelAtClick = latestValue("label");
+    const guidanceAtClick = latestValue("guidanceText") ?? "";
     setGuidanceLoading(true);
     try {
-      const result = await getLLMFieldGuidance(localField.label, entityType, llmKeyId);
+      const result = await getLLMFieldGuidance(labelAtClick, entityType, llmKeyId);
+      if (request !== guidanceRequestRef.current) return;
       const text = result.data?.guidanceText;
-      if (text) {
-        const updated = { ...localField, guidanceText: text };
-        setLocalField(updated);
-        onChange(updated);
+      // Dropped when the user renamed the field or wrote their own guidance
+      // while the request ran.
+      if (
+        !text ||
+        latestValue("label") !== labelAtClick ||
+        (latestValue("guidanceText") ?? "") !== guidanceAtClick
+      ) {
+        return;
       }
+      // Merged with any other edit made while the request ran.
+      setLocalField((current) => ({ ...current, guidanceText: text }));
+      queueEdit({ guidanceText: text });
+      flushPendingEdit();
     } catch {
       // Silently fail — the field stays as is
     } finally {
-      setGuidanceLoading(false);
+      if (request === guidanceRequestRef.current) setGuidanceLoading(false);
     }
-  }, [llmKeyId, localField, entityType, onChange]);
+  }, [llmKeyId, localField.label, entityType, latestValue, queueEdit, flushPendingEdit]);
 
   const entityMappings = ENTITY_FIELD_MAPPINGS[entityType] || [];
   const compatibleMappings = entityMappings.filter((mapping: EntityFieldMapping) =>
@@ -287,6 +353,7 @@ export function FieldEditor({
 
   return (
     <Box
+      onBlur={handleBlur}
       sx={{
         width: 325,
         height: "100%",
@@ -536,7 +603,7 @@ export function FieldEditor({
                     isChecked={localField.validation?.required || false}
                     value="required"
                     onChange={() =>
-                      handleValidationChange("required", !localField.validation?.required)
+                      handleValidationChange("required", !latestValue("validation")?.required)
                     }
                     size="small"
                   />

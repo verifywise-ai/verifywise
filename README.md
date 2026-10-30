@@ -7,7 +7,6 @@
 >
 > Questions? See the [licensing FAQ](LICENSING-FAQ.md) or write to hello@verifywise.ai. Thank you for using and supporting VerifyWise.
 
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/bluewave-labs/verifywise)
 ![](https://img.shields.io/github/repo-size/bluewave-labs/verifywise)
 ![](https://img.shields.io/github/commit-activity/m/bluewave-labs/verifywise)
 ![](https://img.shields.io/github/last-commit/bluewave-labs/verifywise)
@@ -24,7 +23,7 @@ We are democratizing AI best practices with a solution that can be hosted on-pre
 ## Quick links
 
 - [Join our Discord channel](https://discord.com/invite/d3k3E4uEpR) to ask your questions and get the latest announcemnets.
-- [Need to talk to someone](https://verifywise.ai/contact)? Get with us to see the latest demo, or [click here](https://app.verifywise.ai) to experience the demo yourself.
+- [Need to talk to someone](https://verifywise.ai/contact)? Get with us to see the latest demo.
 - [Read our documentation](https://verifywise.ai/user-guide/) to understand features and capabilities
 
 ## Screenshots

@@ -20,6 +20,7 @@ jest.mock("../../utils/intakeForm.utils", () => ({
   updateSubmissionRiskQuery: jest.fn<any>().mockResolvedValue(undefined),
   updateSubmissionRiskOverrideQuery: jest.fn<any>().mockResolvedValue(undefined),
   updateIntakeFormQuery: jest.fn<any>().mockResolvedValue({ id: 1 }),
+  createIntakeFormQuery: jest.fn<any>().mockResolvedValue({ id: 1 }),
 }));
 jest.mock("../../utils/euAiActClassification.utils", () => ({
   insertClassificationRunQuery: jest.fn(),
@@ -694,5 +695,55 @@ describe("updating a form's EU AI Act step", () => {
     );
     expect(r.status).toHaveBeenCalledWith(200);
     expect(intake.updateIntakeFormQuery.mock.calls[0][1].euAiActRiskStepEnabled).toBe(expected);
+  });
+});
+
+describe("a form's live checks toggle", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    intake.getIntakeFormByIdQuery.mockResolvedValue({
+      id: 1,
+      entityType: "use_case",
+      euAiActRiskStepEnabled: false,
+      liveChecksEnabled: true,
+      schema: { version: "1.0", fields: [] },
+    });
+  });
+
+  const create = (liveChecksEnabled?: unknown) =>
+    ctrl.createIntakeForm(
+      req({
+        body: {
+          name: "F",
+          entityType: "use_case",
+          schema: { version: "1.0", fields: [] },
+          ...(liveChecksEnabled === undefined ? {} : { liveChecksEnabled }),
+        },
+      }) as any,
+      res(),
+    );
+
+  it.each([
+    [undefined, true],
+    [true, true],
+    [false, false],
+    [0, false],
+    ["yes", true],
+  ])("creating with %p stores %p", async (value, expected) => {
+    await create(value);
+    expect(intake.createIntakeFormQuery).toHaveBeenCalledTimes(1);
+    expect(intake.createIntakeFormQuery.mock.calls[0][0].liveChecksEnabled).toBe(expected);
+  });
+
+  it.each([
+    [false, false],
+    [1, true],
+    [undefined, undefined],
+  ])("updating with %p passes %p", async (value, expected) => {
+    await ctrl.updateIntakeForm(
+      req({ params: { id: "1" }, body: { liveChecksEnabled: value } }) as any,
+      res(),
+    );
+    expect(intake.updateIntakeFormQuery.mock.calls[0][1].liveChecksEnabled).toBe(expected);
   });
 });

@@ -70,7 +70,14 @@ jobs:
           # Audit the installed environment so presidio-anonymizer (installed with --no-deps)
           # is checked alongside the cryptography>=50.0.0 requirement. The spaCy model
           # (en_core_web_md, a pinned GitHub wheel) is not on PyPI, so pip-audit skips it.
-          .venv/bin/python -m pip_audit
+          # filelock CVE-2026-112909 (GHSA-69hj-f68j-2879) and CVE-2026-112910
+          # (GHSA-8mx5-7m5m-r77g): moderate, local-only (another local user, or Windows ACLs).
+          # Fixed only in filelock 4.2.1, and litellm caps filelock<4.0, so requirements.txt
+          # stays on 3.20.3 (below the 3.20.4-4.2.0 high-severity window).
+          # TODO: remove both --ignore-vuln and the filelock pin once litellm allows filelock>=4.2.1.
+          .venv/bin/python -m pip_audit \
+            --ignore-vuln CVE-2026-112909 \
+            --ignore-vuln CVE-2026-112910
 
       # Most tests under tests/ are E2E and need a live Express backend,
       # gateway, and database (see tests/conftest.py). Run only the

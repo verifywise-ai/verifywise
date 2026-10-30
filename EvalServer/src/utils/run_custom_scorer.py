@@ -239,25 +239,17 @@ def label_to_score(label: str, choice_scores: List[Dict[str, Any]]) -> float:
     return 0.0
 
 
-def _lowest_score(choice_scores: List[Dict[str, Any]]) -> float:
-    """The lowest score label_to_score can return for these choices."""
-    lowest = 0.0
-    for choice in choice_scores:
-        try:
-            lowest = min(lowest, float(choice.get("score", 0.0)))
-        except (TypeError, ValueError, OverflowError):
-            continue
-    return lowest
+def _parse_threshold(value: Any, scorer_name: str) -> float:
+    """A scorer's defaultThreshold as a float, defaulting to 0.5.
 
-
-def _parse_threshold(value: Any, scorer_name: str) -> Optional[float]:
-    """A scorer's defaultThreshold as a float, or None when it has none.
-
-    Numeric strings are accepted. Any other value falls back to 0.5 with a warning, so
-    the row is still judged instead of failing as a judge-model error.
+    A missing (None) threshold coalesces to 0.5 — the default the scorer UI,
+    the auto-provisioned judge scorer, and run_evaluation all use — so a judge's
+    explicit FAIL is never reported as passed (issue #4783).
+    Numeric strings are accepted. Any other invalid value falls back to 0.5 with a
+    warning, so the row is still judged instead of failing as a judge-model error.
     """
     if value is None:
-        return None
+        return 0.5
     if isinstance(value, (int, float, str)) and not isinstance(value, bool):
         try:
             number = float(value)
@@ -378,9 +370,9 @@ async def run_custom_scorer(
     messages_templates = config.get("messages", [])
     choice_scores = config.get("choiceScores", [])
     threshold = _parse_threshold(scorer_config.get("defaultThreshold", 0.5), scorer_name)
-    # The pass line stored with every result. Without a threshold every score passes, so
-    # store the lowest score possible (unknown labels and errors score 0).
-    pass_line = threshold if threshold is not None else _lowest_score(choice_scores)
+    # The pass line stored with every result. A scorer with no configured threshold
+    # is judged against the same 0.5 default used everywhere else.
+    pass_line = threshold
     
     if not messages_templates:
         raise ValueError(f"Scorer {scorer_name} has no message templates configured")
@@ -473,7 +465,7 @@ async def run_custom_scorer(
         # Extract label and map to score
         label = json_label if json_label else extract_label(raw_response, choice_scores)
         score = label_to_score(label, choice_scores)
-        passed = score >= threshold if threshold is not None else True
+        passed = score >= threshold
 
         return ScorerResult(
             scorer_id=scorer_id,

@@ -1,3 +1,5 @@
+import fs from "fs";
+import path from "path";
 import { brand } from "../../../shared/design-tokens/palette";
 import {
   applyColorTokens,
@@ -32,6 +34,27 @@ describe("email color tokens", () => {
   it("substitutes a color placeholder and leaves other placeholders", () => {
     const html = applyColorTokens('<a style="color: {{colorBrandPrimary}}">{{heading}}</a>');
     expect(html).toBe(`<a style="color: ${brand.primary}">{{heading}}</a>`);
+  });
+
+  it("substitutes palette colors in the approval requested email", async () => {
+    const mjml = fs.readFileSync(
+      path.join(__dirname, "../../templates/approval-requested.mjml"),
+      "utf-8",
+    );
+    const html = await compileMjmlToHtml(mjml, {
+      step_number: "1",
+      approver_name: "Ada",
+      use_case_name: "Hiring assistant",
+      requester_name: "Grace",
+      workflow_name: "Launch",
+      total_steps: "3",
+      approval_url: "https://example.com/approve",
+    });
+
+    expect(mjml).not.toMatch(/#13715b/i);
+    expect(html).toContain(brand.primary);
+    expect(html).toContain("Hiring assistant");
+    expect(html).not.toContain("{{color");
   });
 
   it("substitutes color placeholders before MJML compilation", async () => {

@@ -134,6 +134,14 @@ export class IntakeFormModel extends Model<IntakeFormModel> implements IIntakeFo
   euAiActRiskStepEnabled!: boolean;
 
   @Column({
+    type: DataType.BOOLEAN,
+    allowNull: false,
+    defaultValue: true,
+    field: "live_checks_enabled",
+  })
+  liveChecksEnabled!: boolean;
+
+  @Column({
     type: DataType.JSONB,
     allowNull: true,
     field: "design_settings",
@@ -251,6 +259,7 @@ export class IntakeFormModel extends Model<IntakeFormModel> implements IIntakeFo
       submitButtonText: this.submitButtonText,
       publicId: this.publicId,
       euAiActRiskStepEnabled: this.euAiActRiskStepEnabled,
+      liveChecksEnabled: this.liveChecksEnabled,
       designSettings: this.designSettings,
     };
   }
@@ -276,6 +285,7 @@ export class IntakeFormModel extends Model<IntakeFormModel> implements IIntakeFo
       llmKeyId: this.llmKeyId,
       suggestedQuestionsEnabled: this.suggestedQuestionsEnabled,
       euAiActRiskStepEnabled: this.euAiActRiskStepEnabled,
+      liveChecksEnabled: this.liveChecksEnabled,
       designSettings: this.designSettings,
       routing: this.routing,
       createdBy: this.createdBy,
