@@ -5,6 +5,10 @@ import { dashboardContent } from './getting-started/dashboard';
 import { quickStartContent } from './getting-started/quick-start';
 import { useCasesContent } from './ai-governance/use-cases';
 import { intakeFormsContent } from './ai-governance/intake-forms';
+import { intakeFormFieldsContent } from './ai-governance/intake-form-fields';
+import { intakeCalculatedValuesContent } from './ai-governance/intake-calculated-values';
+import { intakeConditionalFieldsContent } from './ai-governance/intake-conditional-fields';
+import { intakeReviewerAssignmentContent } from './ai-governance/intake-reviewer-assignment';
 import { modelInventoryContent } from './ai-governance/model-inventory';
 import { aiAppsContent } from './ai-governance/ai-apps';
 import { modelLifecycleContent } from './ai-governance/model-lifecycle';
@@ -127,6 +131,10 @@ export const articleContentMap: Record<string, ArticleContent> = {
   // AI Governance
   'ai-governance/use-cases': useCasesContent,
   'ai-governance/intake-forms': intakeFormsContent,
+  'ai-governance/intake-form-fields': intakeFormFieldsContent,
+  'ai-governance/intake-calculated-values': intakeCalculatedValuesContent,
+  'ai-governance/intake-conditional-fields': intakeConditionalFieldsContent,
+  'ai-governance/intake-reviewer-assignment': intakeReviewerAssignmentContent,
   'ai-governance/model-inventory': modelInventoryContent,
   'ai-governance/ai-apps': aiAppsContent,
   'ai-governance/model-lifecycle': modelLifecycleContent,
