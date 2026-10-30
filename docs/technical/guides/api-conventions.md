@@ -393,13 +393,16 @@ GET /resources?filter=all      // Both
 
 ## API Versioning
 
-Currently, v2 is used for newer endpoints:
+The authoritative policy is [ADR 0001](../adr/0001-api-versioning.md). In short:
 
-```
-POST /reporting/v2/generate-report
-```
+- Existing unversioned `/api/*` endpoints are the frozen legacy surface (bug fixes only).
+- New endpoints and changed contracts are introduced under `/api/v1/...`, with versioned
+  routers in `Servers/routes/v1/` registered via `Servers/routes/v1/index.ts`. The version
+  prefix is applied at mount level, never inside router paths.
 
-Legacy endpoints redirect to v2 where applicable.
+Historical exception: `POST /api/reporting/v2/generate-report` predates this policy and
+uses an in-path `v2` segment. Do not follow that pattern for new work; it remains until
+migrated through the deprecation process in ADR 0001.
 
 ## Date/Time Format
 

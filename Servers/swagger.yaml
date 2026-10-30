@@ -1,7 +1,7 @@
 openapi: 3.0.0
 info:
   title: 'VerifyWise API'
-  description: 'AI Governance Platform API'
+  description: "AI Governance Platform API.\n\n**Versioning (ADR 0001):** paths under `/v1/...` (relative to the `/api`\nserver — e.g. `/v1/shadow-ai/events` is served at `/api/v1/shadow-ai/events`)\nare the versioned API surface. All other paths are the legacy, unversioned\nsurface: backward-compatible, frozen for bug fixes only, and deprecated\nthrough the process in `docs/technical/adr/0001-api-versioning.md`. New\nendpoints and changed contracts are introduced under `/api/v1`.\n\n**Tags:** versioned operations are tagged `v1: <Resource>`; legacy\noperations keep their historical tags."
   version: 2.0.0
 servers:
   -
@@ -7892,6 +7892,8 @@ tags:
     name: Vendors
   -
     name: Webhooks
+  -
+    name: 'v1: Shadow AI'
 paths:
   /webhooks/github:
     post:
@@ -10807,7 +10809,7 @@ paths:
       tags:
         - Files
       summary: 'Get User Files Meta Data'
-      operationId: files_getAllFolders
+      operationId: getAllFolders
       security:
         -
           bearerAuth: []
@@ -10822,7 +10824,7 @@ paths:
       tags:
         - Files
       summary: 'Post File Content'
-      operationId: files_createFolder
+      operationId: createFolder
       security:
         -
           bearerAuth: []
@@ -10974,7 +10976,7 @@ paths:
       tags:
         - Files
       summary: 'Get File Content By Id'
-      operationId: files_getFolderById
+      operationId: getFolderById
       security:
         -
           bearerAuth: []
@@ -10999,7 +11001,7 @@ paths:
       tags:
         - Files
       summary: 'Update Folder'
-      operationId: files_updateFolder
+      operationId: updateFolder
       security:
         -
           bearerAuth: []
@@ -11026,7 +11028,7 @@ paths:
       tags:
         - Files
       summary: 'Delete Folder'
-      operationId: files_deleteFolder
+      operationId: deleteFolder
       security:
         -
           bearerAuth: []
@@ -22711,7 +22713,7 @@ paths:
       tags:
         - Files
       summary: 'Get All Folders'
-      operationId: getAllFolders
+      operationId: virtual_folders_getAllFolders
       security:
         -
           bearerAuth: []
@@ -22726,7 +22728,7 @@ paths:
       tags:
         - Files
       summary: 'Create Folder'
-      operationId: createFolder
+      operationId: virtual_folders_createFolder
       security:
         -
           bearerAuth: []
@@ -22779,7 +22781,7 @@ paths:
       tags:
         - Files
       summary: 'Get Folder By Id'
-      operationId: getFolderById
+      operationId: virtual_folders_getFolderById
       security:
         -
           bearerAuth: []
@@ -22801,7 +22803,7 @@ paths:
       tags:
         - Files
       summary: 'Update Folder'
-      operationId: updateFolder
+      operationId: virtual_folders_updateFolder
       security:
         -
           bearerAuth: []
@@ -22828,7 +22830,7 @@ paths:
       tags:
         - Files
       summary: 'Delete Folder'
-      operationId: deleteFolder
+      operationId: virtual_folders_deleteFolder
       security:
         -
           bearerAuth: []
@@ -23621,7 +23623,7 @@ paths:
   /v1/shadow-ai/events:
     post:
       tags:
-        - 'Shadow AI'
+        - 'v1: Shadow AI'
       summary: 'Ingest Events'
       operationId: ingestEvents
       requestBody:
