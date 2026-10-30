@@ -5,6 +5,8 @@ import { Shield, Map, Gauge, Settings, ChevronRight } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { getEntityById } from "../../../../application/repository/entity.repository";
 import { getStatusColor } from "../../ISO/style";
+import { background, border as borderPalette, icon, text } from "../../../themes/palette";
+import { textStyles } from "../../../themes/typography";
 
 interface FrameworkData {
   frameworkId: number;
@@ -166,7 +168,7 @@ const NISTFunctionsOverviewCard = ({
           py: 4,
           backgroundColor: "background.accent",
           borderRadius: 2,
-          border: "1px solid #d0d5dd",
+          border: `1px solid ${borderPalette.dark}`,
         }}
       >
         <Typography variant="body1" color="text.secondary">
@@ -194,7 +196,7 @@ const NISTFunctionsOverviewCard = ({
     return (
       <Box
         sx={{
-          border: "1px solid #d0d5dd",
+          border: `1px solid ${borderPalette.dark}`,
           borderRadius: "4px",
           overflow: "hidden",
           backgroundColor: "background.main",
@@ -203,21 +205,21 @@ const NISTFunctionsOverviewCard = ({
         {/* Header Section */}
         <Box
           sx={{
-            backgroundColor: "#F1F3F4",
+            backgroundColor: background.surface,
             p: "10px 16px",
-            borderBottom: "1px solid #d0d5dd",
+            borderBottom: `1px solid ${borderPalette.dark}`,
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
           }}
         >
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <IconComponent size={14} style={{ color: "#666666" }} />
+            <IconComponent size={14} style={{ color: icon.default }} />
             <Typography
               sx={{
-                fontSize: 13,
-                fontWeight: 600,
-                color: "text.black",
+                ...textStyles.subsectionTitle,
+
+                color: text.primary,
                 lineHeight: "16px",
                 m: 0,
                 textTransform: "capitalize",
@@ -240,7 +242,7 @@ const NISTFunctionsOverviewCard = ({
                 },
               }}
             >
-              <ChevronRight size={16} style={{ color: "#666666" }} />
+              <ChevronRight size={16} style={{ color: icon.default }} />
             </Box>
           )}
         </Box>
@@ -248,7 +250,6 @@ const NISTFunctionsOverviewCard = ({
         {/* Content Section */}
         <Box
           sx={{
-            background: "linear-gradient(135deg, #FEFFFE 0%, #F8F9FA 100%)",
             p: "16px",
           }}
         >
@@ -271,17 +272,16 @@ const NISTFunctionsOverviewCard = ({
             <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
               <Typography
                 sx={{
-                  fontSize: 12,
-                  color: "text.black",
-                  fontWeight: 600,
+                  ...textStyles.subsectionTitle,
+                  color: text.primary,
                 }}
               >
                 {implementedCount}/{allSubcategories.length}
               </Typography>
               <Typography
                 sx={{
-                  fontSize: 12,
-                  color: "#666666",
+                  ...textStyles.bodySmall,
+                  color: text.secondary,
                 }}
               >
                 subcategories implemented
@@ -290,17 +290,16 @@ const NISTFunctionsOverviewCard = ({
             <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
               <Typography
                 sx={{
-                  fontSize: 12,
-                  color: "text.black",
-                  fontWeight: 600,
+                  ...textStyles.subsectionTitle,
+                  color: text.primary,
                 }}
               >
                 {assignedCount}/{allSubcategories.length}
               </Typography>
               <Typography
                 sx={{
-                  fontSize: 12,
-                  color: "#666666",
+                  ...textStyles.bodySmall,
+                  color: text.secondary,
                 }}
               >
                 assigned
@@ -336,9 +335,9 @@ const NISTFunctionsOverviewCard = ({
           <Box>
             <Typography
               sx={{
-                fontSize: 15,
+                ...textStyles.cardTitle,
                 fontWeight: 600,
-                color: "text.black",
+                color: text.primary,
                 mb: 2,
                 textTransform: "capitalize",
               }}
@@ -354,9 +353,8 @@ const NISTFunctionsOverviewCard = ({
           <Box>
             <Typography
               sx={{
-                fontSize: 15,
-                fontWeight: 600,
-                color: "text.black",
+                ...textStyles.cardTitle,
+                color: text.primary,
                 mb: 2,
                 textTransform: "capitalize",
               }}
@@ -387,9 +385,8 @@ const NISTFunctionsOverviewCard = ({
           <Box>
             <Typography
               sx={{
-                fontSize: 15,
-                fontWeight: 600,
-                color: "text.black",
+                ...textStyles.cardTitle,
+                color: text.primary,
                 mb: 2,
                 textTransform: "capitalize",
               }}
@@ -405,9 +402,8 @@ const NISTFunctionsOverviewCard = ({
           <Box>
             <Typography
               sx={{
-                fontSize: 15,
-                fontWeight: 600,
-                color: "text.black",
+                ...textStyles.cardTitle,
+                color: text.primary,
                 mb: 2,
                 textTransform: "capitalize",
               }}

@@ -9,6 +9,7 @@ export {
   accent,
   chart,
   text,
+  icon,
   background,
   border,
   brand,

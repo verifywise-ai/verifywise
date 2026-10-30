@@ -80,6 +80,12 @@ export const text = {
   subdued: grey[450],
 } as const;
 
+/** Icon strokes. Read the scales directly so icons do not depend on text tokens. */
+export const icon = {
+  default: grey[450],
+  error: red[500],
+} as const;
+
 export const background = {
   main: grey[50],
   alt: grey[100],
@@ -139,6 +145,7 @@ export const palette = {
   accent,
   chart,
   text,
+  icon,
   background,
   border,
   brand,

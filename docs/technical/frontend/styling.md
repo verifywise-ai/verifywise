@@ -429,7 +429,7 @@ import { Settings, Send, Bot, X, Save, AlertCircle, Clock } from "lucide-react";
       backgroundColor: theme.palette.background.fill,
     },
     "& svg path": {
-      stroke: theme.palette.other.icon, // #667085
+      stroke: theme.palette.icon.default, // #667085
     },
   }}
 >

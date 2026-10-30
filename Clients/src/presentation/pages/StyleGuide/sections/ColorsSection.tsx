@@ -13,6 +13,7 @@ import {
   teal,
   pink,
 } from "@design-tokens/primitives";
+import { fontSize } from "../../../themes/typography";
 
 const ColorsSection: React.FC = () => {
   const theme = useTheme();
@@ -429,7 +430,7 @@ const ColorsSection: React.FC = () => {
           <ColorCard
             label="Success main"
             color="#138A5E"
-            usage="Success icons, indicators"
+            usage="Success indicators"
             themeKey="theme.palette.status.success.main"
             onCopy={handleCopy}
             textColor="#fff"
@@ -482,7 +483,7 @@ const ColorsSection: React.FC = () => {
           <ColorCard
             label="Error main"
             color="#D32F2F"
-            usage="Error icons"
+            usage="Error indicators"
             themeKey="theme.palette.status.error.main"
             onCopy={handleCopy}
             textColor="#fff"
@@ -588,7 +589,7 @@ const ColorsSection: React.FC = () => {
           <ColorCard
             label="Info main"
             color="#1565C0"
-            usage="Info icons"
+            usage="Info indicators"
             themeKey="theme.palette.status.info.main"
             onCopy={handleCopy}
             textColor="#fff"
@@ -678,20 +679,44 @@ const ColorsSection: React.FC = () => {
 
       <Divider sx={{ my: "32px" }} />
 
-      {/* Other Colors */}
-      <SpecSection title="Other colors">
-        <Typography sx={{ fontSize: 13, color: theme.palette.text.tertiary, mb: "24px" }}>
-          Miscellaneous colors for icons, lines, and other UI elements.
+      {/* Icon Colors */}
+      <SpecSection title="Icon colors">
+        <Typography
+          sx={{ fontSize: fontSize.base, color: theme.palette.text.tertiary, mb: "24px" }}
+        >
+          Stroke colors for icons. These read the color scales directly and are separate from text
+          tokens.
         </Typography>
-        <ColorGrid>
+        <ColorGrid columns={2}>
           <ColorCard
             label="Icon default"
-            color="#667085"
-            usage="Default icon color"
-            themeKey="theme.palette.other.icon"
+            color={theme.palette.icon.default}
+            usage="Default icon stroke"
+            themeKey="icon.default"
             onCopy={handleCopy}
-            textColor="#fff"
+            textColor={theme.palette.text.primary}
           />
+          <ColorCard
+            label="Icon error"
+            color={theme.palette.icon.error}
+            usage="Destructive icons, such as delete"
+            themeKey="icon.error"
+            onCopy={handleCopy}
+            textColor={theme.palette.text.primary}
+          />
+        </ColorGrid>
+      </SpecSection>
+
+      <Divider sx={{ my: "32px" }} />
+
+      {/* Other Colors */}
+      <SpecSection title="Other colors">
+        <Typography
+          sx={{ fontSize: fontSize.base, color: theme.palette.text.tertiary, mb: "24px" }}
+        >
+          Miscellaneous colors for lines and other UI elements.
+        </Typography>
+        <ColorGrid>
           <ColorCard
             label="Line"
             color="#d6d9dd"

@@ -26,6 +26,8 @@ import {
   calculateItemPercentages,
   clampValue,
 } from "../../../../application/utils/frameworkDataUtils";
+import { background, border as borderPalette, icon, text } from "../../../themes/palette";
+import { textStyles } from "../../../themes/typography";
 
 interface FrameworkData {
   frameworkId: number;
@@ -251,7 +253,7 @@ const AnnexOverviewCard = ({ frameworksData, onNavigate }: AnnexOverviewCardProp
             height: 12,
             borderRadius: "2px",
             backgroundColor: "status.default.border",
-            border: "1px solid #D1D5DB",
+            border: `1px solid ${borderPalette.dark}`,
           }}
         />
       );
@@ -288,9 +290,8 @@ const AnnexOverviewCard = ({ frameworksData, onNavigate }: AnnexOverviewCardProp
       <Stack spacing={2}>
         <Typography
           sx={{
-            fontSize: 15,
-            fontWeight: 600,
-            color: "text.black",
+            ...textStyles.cardTitle,
+            color: text.primary,
           }}
         >
           {title}
@@ -312,7 +313,7 @@ const AnnexOverviewCard = ({ frameworksData, onNavigate }: AnnexOverviewCardProp
               <Box
                 key={category.id}
                 sx={{
-                  border: "1px solid #d0d5dd",
+                  border: `1px solid ${borderPalette.dark}`,
                   borderRadius: "4px",
                   overflow: "hidden",
                   backgroundColor: "background.main",
@@ -321,21 +322,20 @@ const AnnexOverviewCard = ({ frameworksData, onNavigate }: AnnexOverviewCardProp
                 {/* Header Section */}
                 <Box
                   sx={{
-                    backgroundColor: "#F1F3F4",
+                    backgroundColor: background.surface,
                     p: "10px 16px",
-                    borderBottom: "1px solid #d0d5dd",
+                    borderBottom: `1px solid ${borderPalette.dark}`,
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center",
                   }}
                 >
                   <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                    <IconComponent size={14} style={{ color: "#666666" }} />
+                    <IconComponent size={14} style={{ color: icon.default }} />
                     <Typography
                       sx={{
-                        fontSize: 13,
-                        fontWeight: 600,
-                        color: "text.black",
+                        ...textStyles.subsectionTitle,
+                        color: text.primary,
                         lineHeight: "16px",
                         m: 0,
                       }}
@@ -357,7 +357,7 @@ const AnnexOverviewCard = ({ frameworksData, onNavigate }: AnnexOverviewCardProp
                         },
                       }}
                     >
-                      <ChevronRight size={16} style={{ color: "#666666" }} />
+                      <ChevronRight size={16} style={{ color: icon.default }} />
                     </Box>
                   )}
                 </Box>
@@ -365,7 +365,6 @@ const AnnexOverviewCard = ({ frameworksData, onNavigate }: AnnexOverviewCardProp
                 {/* Content Section */}
                 <Box
                   sx={{
-                    background: "linear-gradient(135deg, #FEFFFE 0%, #F8F9FA 100%)",
                     p: "16px",
                   }}
                 >
@@ -390,9 +389,8 @@ const AnnexOverviewCard = ({ frameworksData, onNavigate }: AnnexOverviewCardProp
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                       <Typography
                         sx={{
-                          fontSize: 12,
-                          color: "text.black",
-                          fontWeight: 600,
+                          ...textStyles.subsectionTitle,
+                          color: text.primary,
                         }}
                       >
                         {category.items.filter((item) => isCompletedStatus(item.status)).length}/
@@ -400,8 +398,8 @@ const AnnexOverviewCard = ({ frameworksData, onNavigate }: AnnexOverviewCardProp
                       </Typography>
                       <Typography
                         sx={{
-                          fontSize: 12,
-                          color: "#666666",
+                          ...textStyles.bodySmall,
+                          color: text.secondary,
                         }}
                       >
                         controls implemented
@@ -410,9 +408,8 @@ const AnnexOverviewCard = ({ frameworksData, onNavigate }: AnnexOverviewCardProp
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                       <Typography
                         sx={{
-                          fontSize: 12,
-                          color: "text.black",
-                          fontWeight: 600,
+                          ...textStyles.subsectionTitle,
+                          color: text.primary,
                         }}
                       >
                         {
@@ -424,8 +421,8 @@ const AnnexOverviewCard = ({ frameworksData, onNavigate }: AnnexOverviewCardProp
                       </Typography>
                       <Typography
                         sx={{
-                          fontSize: 12,
-                          color: "#666666",
+                          ...textStyles.bodySmall,
+                          color: text.secondary,
                         }}
                       >
                         assigned
@@ -465,7 +462,7 @@ const AnnexOverviewCard = ({ frameworksData, onNavigate }: AnnexOverviewCardProp
           py: 4,
           backgroundColor: "background.accent",
           borderRadius: 2,
-          border: "1px solid #d0d5dd",
+          border: `1px solid ${borderPalette.dark}`,
         }}
       >
         <Typography variant="body1" color="text.secondary">

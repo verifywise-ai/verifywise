@@ -21,7 +21,8 @@ import {
 } from "../../../../application/repository/entity.repository";
 import Alert from "../../../components/Alert";
 import CustomizableToast from "../../../components/Toast";
-import { background } from "../../../themes/palette";
+import { background, border as borderPalette, status, text } from "../../../themes/palette";
+import { fontSize, fontWeight, textStyles } from "../../../themes/typography";
 
 interface FrameworkSettingsProps {
   organizationalProject: Project;
@@ -219,10 +220,9 @@ const FrameworkSettings: React.FC<FrameworkSettingsProps> = ({
       <Box>
         <Typography
           sx={{
-            fontSize: 15,
-            fontWeight: 600,
+            ...textStyles.cardTitle,
             mb: 3,
-            color: "text.black",
+            color: text.primary,
           }}
         >
           Framework settings
@@ -239,7 +239,7 @@ const FrameworkSettings: React.FC<FrameworkSettingsProps> = ({
           <Box
             sx={{
               background: `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
-              border: "1px solid #d0d5dd",
+              border: `1px solid ${borderPalette.dark}`,
               borderRadius: "4px",
               p: "24px",
               display: "flex",
@@ -248,10 +248,10 @@ const FrameworkSettings: React.FC<FrameworkSettingsProps> = ({
             }}
           >
             <Box>
-              <Typography sx={{ fontSize: 13, fontWeight: 500, mb: 1, color: "text.black" }}>
+              <Typography sx={{ ...textStyles.subsectionTitle, mb: 1, color: text.primary }}>
                 {organizationalProject.project_title}
               </Typography>
-              <Typography sx={{ fontSize: 13, color: "#666666" }}>
+              <Typography sx={{ ...textStyles.body, color: text.tertiary }}>
                 Organizational framework
               </Typography>
             </Box>
@@ -264,31 +264,23 @@ const FrameworkSettings: React.FC<FrameworkSettingsProps> = ({
                 onClick={handleEditProjectClick}
                 isDisabled={!allowedRoles.projects.edit.includes(userRoleName)}
                 sx={{
-                  "borderColor": "#D1D5DB",
+                  "borderColor": borderPalette.dark,
                   "width": "170px",
-                  "color": "#374151",
+                  "color": text.primary,
                   "&:hover": {
-                    borderColor: "text.disabled",
-                    backgroundColor: "background.accent",
+                    borderColor: borderPalette.dark,
+                    backgroundColor: background.hover,
                   },
                 }}
               />
 
               <CustomizableButton
                 variant="outlined"
+                color="error"
                 icon={<DeleteIconRed size={16} />}
                 text="Delete framework"
                 onClick={handleDeleteProjectClick}
                 isDisabled={!allowedRoles.projects.delete.includes(userRoleName)}
-                sx={{
-                  "borderColor": "#F87171",
-                  "width": "170px",
-                  "color": "#DC2626",
-                  "&:hover": {
-                    borderColor: "#EF4444",
-                    backgroundColor: "#FEF2F2",
-                  },
-                }}
               />
             </Stack>
           </Box>
@@ -299,8 +291,8 @@ const FrameworkSettings: React.FC<FrameworkSettingsProps> = ({
       <Box>
         <Typography
           sx={{
-            fontSize: 15,
-            fontWeight: 600,
+            fontSize: fontSize.lg,
+            fontWeight: fontWeight.semibold,
             mb: 3,
             color: "text.black",
           }}
@@ -328,7 +320,7 @@ const FrameworkSettings: React.FC<FrameworkSettingsProps> = ({
                 key={fw.id}
                 sx={{
                   background: `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
-                  border: "1px solid #d0d5dd",
+                  border: `1px solid ${borderPalette.dark}`,
                   borderRadius: "4px",
                   p: "24px",
                   display: "flex",
@@ -447,7 +439,7 @@ const FrameworkSettings: React.FC<FrameworkSettingsProps> = ({
         <ConfirmationModal
           title="Confirm delete"
           body={
-            <Typography fontSize={13}>
+            <Typography fontSize={fontSize.base}>
               Are you sure you want to delete the framework "{organizationalProject.project_title}"?
               This action cannot be undone and will remove all associated data.
             </Typography>
@@ -466,7 +458,7 @@ const FrameworkSettings: React.FC<FrameworkSettingsProps> = ({
         <ConfirmationModal
           title="Confirm framework removal"
           body={
-            <Typography fontSize={13}>
+            <Typography fontSize={fontSize.base}>
               Are you sure you want to remove {frameworkToRemove.name} from the framework?
             </Typography>
           }

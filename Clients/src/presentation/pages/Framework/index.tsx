@@ -55,21 +55,22 @@ import NISTAIRMFMap from "./NIST-AI-RMF/Map";
 import NISTAIRMFMeasure from "./NIST-AI-RMF/Measure";
 import NISTAIRMFManage from "./NIST-AI-RMF/Manage";
 import GenericFramework from "./Generic";
-import { brand } from "../../themes/palette";
+import { brand, border as borderPalette, icon } from "../../themes/palette";
 import GovernanceIntelligenceContextBar from "../../components/GovernanceOS/GovernanceIntelligenceContextBar";
 import { storageService } from "../../../infrastructure/storage";
+import { textStyles } from "../../themes/typography";
 
 // Tab styles following ProjectFrameworks pattern
 const tabStyle = {
   "textTransform": "none",
-  "fontWeight": 400,
+  ...textStyles.body,
   "alignItems": "center",
   "justifyContent": "flex-end",
   "padding": "16px 0 7px",
   "minHeight": "20px",
   "minWidth": "auto",
   "&.Mui-selected": {
-    color: `${brand.primary}`,
+    color: brand.primary,
   },
 };
 
@@ -808,12 +809,9 @@ const Framework = () => {
                     !allowedRoles.projects.delete.includes(userRoleName)
                   }
                   sx={{
-                    "backgroundColor": "brand.primary",
-                    "border": "1px solid brand.primary",
-                    "gap": 2,
-                    "&:hover": {
-                      backgroundColor: "#0e5c47",
-                    },
+                    backgroundColor: "brand.primary",
+                    border: "1px solid brand.primary",
+                    gap: 2,
                   }}
                 />
                 <Popover
@@ -833,7 +831,7 @@ const Framework = () => {
                     "& .MuiPopover-paper": {
                       borderRadius: "4px",
                       boxShadow: "0 8px 24px rgba(0, 0, 0, 0.12)",
-                      border: "1px solid #d0d5dd",
+                      border: `1px solid ${borderPalette.dark}`,
                       overflow: "visible",
                       backgroundColor: "background.main",
                     },
@@ -844,18 +842,12 @@ const Framework = () => {
                     disabled={!allowedRoles.frameworks.manage.includes(userRoleName)}
                   >
                     <ListItemIcon sx={{ minWidth: 32 }}>
-                      <SettingsIcon
-                        size={16}
-                        style={{
-                          color: "text.secondary",
-                        }}
-                      />
+                      <SettingsIcon size={16} color={icon.default} />
                     </ListItemIcon>
                     <ListItemText
                       primary="Add/remove frameworks"
                       primaryTypographyProps={{
-                        fontSize: "13px",
-                        fontWeight: 400,
+                        ...textStyles.body,
                         color: "text.primary",
                       }}
                     />
@@ -865,18 +857,12 @@ const Framework = () => {
                     disabled={!allowedRoles.projects.edit.includes(userRoleName)}
                   >
                     <ListItemIcon sx={{ minWidth: 32 }}>
-                      <EditIconGrey
-                        size={16}
-                        style={{
-                          color: "text.secondary",
-                        }}
-                      />
+                      <EditIconGrey size={16} color={icon.default} />
                     </ListItemIcon>
                     <ListItemText
                       primary="Edit project"
                       primaryTypographyProps={{
-                        fontSize: "13px",
-                        fontWeight: 400,
+                        ...textStyles.body,
                         color: "text.primary",
                       }}
                     />
@@ -887,19 +873,13 @@ const Framework = () => {
                     disabled={!allowedRoles.projects.delete.includes(userRoleName)}
                   >
                     <ListItemIcon sx={{ minWidth: 32 }}>
-                      <DeleteIconRed
-                        size={16}
-                        style={{
-                          color: "#DB504A",
-                        }}
-                      />
+                      <DeleteIconRed size={16} color={icon.error} />
                     </ListItemIcon>
                     <ListItemText
                       primary="Delete project"
                       primaryTypographyProps={{
-                        fontSize: "13px",
-                        fontWeight: 400,
-                        color: "error.main",
+                        ...textStyles.body,
+                        color: icon.error,
                       }}
                     />
                   </MenuItem>
@@ -1129,7 +1109,7 @@ const Framework = () => {
           <ConfirmationModal
             title="Confirm Delete"
             body={
-              <Typography fontSize={13}>
+              <Typography {...textStyles.body}>
                 Are you sure you want to delete the project "{organizationalProject.project_title}"?
                 This action cannot be undone and will remove all associated data.
               </Typography>

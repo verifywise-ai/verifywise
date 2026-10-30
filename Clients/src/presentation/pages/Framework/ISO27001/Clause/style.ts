@@ -1,6 +1,7 @@
 import { SxProps, Theme } from "@mui/material";
 import { commonStyles, flashAnimation } from "../../../ISO/style";
-import { border as borderPalette } from "../../../../themes/palette";
+import { border as borderPalette, text } from "../../../../themes/palette";
+import { fontSize, textStyles } from "../../../../themes/typography";
 
 // Component styles
 export const styles = {
@@ -18,7 +19,7 @@ export const styles = {
       "padding": "16px",
       "borderBottom": isLast ? "none" : `1px solid ${borderPalette.dark}`,
       "cursor": "pointer",
-      "fontSize": 13,
+      "fontSize": fontSize.base,
       "animation": isFlashing ? `${flashAnimation} 2s ease-in-out` : "none",
       "&:hover": {
         backgroundColor: isFlashing ? "transparent" : "background.surface",
@@ -38,7 +39,7 @@ export const styles = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    color: "#666",
+    color: text.tertiary,
   } as SxProps<Theme>,
 
   controlRow: (isLast: boolean, isFlashing: boolean) =>
@@ -48,9 +49,9 @@ export const styles = {
       "justifyContent": "space-between",
       "alignItems": "center",
       "padding": "16px",
-      "borderBottom": isLast ? "none" : "1px solid #d0d5dd",
+      "borderBottom": isLast ? "none" : `1px solid ${borderPalette.dark}`,
       "cursor": "pointer",
-      "fontSize": 13,
+      "fontSize": fontSize.base,
       "animation": isFlashing ? `${flashAnimation} 2s ease-in-out` : "none",
       "&:hover": {
         backgroundColor: isFlashing ? "transparent" : "background.surface",
@@ -58,7 +59,6 @@ export const styles = {
     }) as SxProps<Theme>,
 
   controlTitle: {
-    fontSize: 13,
-    fontWeight: 600,
+    ...textStyles.subsectionTitle,
   } as SxProps<Theme>,
 };

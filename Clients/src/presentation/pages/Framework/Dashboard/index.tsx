@@ -15,7 +15,7 @@ import ControlCategoriesCard from "./ControlCategoriesCard";
 import AnnexOverviewCard from "./AnnexOverviewCard";
 import NISTFunctionsOverviewCard from "./NISTFunctionsOverviewCard";
 import GenericFrameworkOverviewCard from "./GenericFrameworkOverviewCard";
-import { brand } from "../../../themes/palette";
+import { brand, border as borderPalette } from "../../../themes/palette";
 
 // localStorage keys for framework controls navigation
 const FRAMEWORK_SELECTED_KEY = "verifywise_framework_selected";
@@ -521,7 +521,7 @@ const FrameworkDashboard = ({ organizationalProject, filteredFrameworks }: Dashb
           py: 8,
           backgroundColor: "background.accent",
           borderRadius: 2,
-          border: "1px solid #d0d5dd",
+          border: `1px solid ${borderPalette.dark}`,
         }}
       >
         <Typography variant="body1" color="text.secondary">

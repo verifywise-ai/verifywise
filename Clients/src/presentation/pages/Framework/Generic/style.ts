@@ -1,5 +1,7 @@
 import { SxProps, Theme } from "@mui/material";
 import { commonStyles, flashAnimation } from "../../ISO/style";
+import { border as borderPalette, text } from "../../../themes/palette";
+import { fontSize } from "../../../themes/typography";
 
 /**
  * Mirrors Servers/../pages/Framework/ISO27001/Clause/style.ts so the
@@ -18,9 +20,9 @@ export const styles = {
       "flexDirection": "row",
       "justifyContent": "space-between",
       "padding": "16px",
-      "borderBottom": isLast ? "none" : "1px solid #d0d5dd",
+      "borderBottom": isLast ? "none" : `1px solid ${borderPalette.dark}`,
       "cursor": "pointer",
-      "fontSize": 13,
+      "fontSize": fontSize.base,
       "animation": isFlashing ? `${flashAnimation} 2s ease-in-out` : "none",
       "&:hover": {
         backgroundColor: isFlashing ? "transparent" : "background.surface",
@@ -40,7 +42,7 @@ export const styles = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    color: "#666",
+    color: text.secondary,
   } as SxProps<Theme>,
 
   errorContainer: {

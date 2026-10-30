@@ -24,7 +24,7 @@ Clients/src/presentation/themes/
 └── tables.ts          # Table-specific styles
 ```
 
-`shared/design-tokens/primitives.ts` holds the scale hex. `shared/design-tokens/palette.ts` builds brand, text, background, border, and status from those scales. The client `palette.ts` re-exports the shared palette, so existing screen imports stay valid. Email and PDF rendering can import the shared modules.
+`shared/design-tokens/primitives.ts` holds the scale hex. `shared/design-tokens/palette.ts` builds brand, text, icon, background, border, and status from those scales. The client `palette.ts` re-exports the shared palette, so existing screen imports stay valid. Email and PDF rendering can import the shared modules.
 
 ### Theme Provider Setup
 
@@ -62,7 +62,16 @@ function App() {
 | `text.tertiary`  | `#475467` | Muted text, placeholders |
 | `text.accent`    | `#838C99` | Hints                    |
 | `text.disabled`  | `#9CA3AF` | Disabled state text      |
-| `text.icon`      | `#667085` | Default icon color       |
+| `text.icon`      | `#667085` | Muted text; same grey as `icon.default` |
+
+### Icon Colors
+
+Icon strokes. They read the color scales directly and do not alias text tokens.
+
+| Token          | Value     | Usage                              |
+| -------------- | --------- | ---------------------------------- |
+| `icon.default` | `#667085` | Default icon stroke                |
+| `icon.error`   | `#D32F2F` | Destructive icons, such as delete  |
 
 ### Background Colors
 

@@ -34,6 +34,8 @@ import {
   type SubClauseData,
   type ClauseData,
 } from "../../../../application/utils/frameworkDataUtils";
+import { background, border as borderPalette, icon, text } from "../../../themes/palette";
+import { textStyles } from "../../../themes/typography";
 
 interface ControlCategoriesCardProps {
   frameworksData: BaseFrameworkData[];
@@ -264,8 +266,8 @@ const ControlCategoriesCard = ({ frameworksData, onNavigate }: ControlCategories
             width: 12,
             height: 12,
             borderRadius: "2px",
-            backgroundColor: "status.default.border",
-            border: "1px solid #D1D5DB",
+            backgroundColor: background.main,
+            border: `1px solid ${borderPalette.dark}`,
           }}
         />
       );
@@ -302,9 +304,8 @@ const ControlCategoriesCard = ({ frameworksData, onNavigate }: ControlCategories
       <Stack spacing={2}>
         <Typography
           sx={{
-            fontSize: 15,
-            fontWeight: 600,
-            color: "text.black",
+            ...textStyles.cardTitle,
+            color: text.primary,
           }}
         >
           {title}
@@ -326,7 +327,7 @@ const ControlCategoriesCard = ({ frameworksData, onNavigate }: ControlCategories
               <Box
                 key={category.id}
                 sx={{
-                  border: "1px solid #d0d5dd",
+                  border: `1px solid ${borderPalette.dark}`,
                   borderRadius: "4px",
                   overflow: "hidden",
                   backgroundColor: "background.main",
@@ -337,19 +338,18 @@ const ControlCategoriesCard = ({ frameworksData, onNavigate }: ControlCategories
                   sx={{
                     backgroundColor: "#F1F3F4",
                     p: "10px 16px",
-                    borderBottom: "1px solid #d0d5dd",
+                    borderBottom: `1px solid ${borderPalette.dark}`,
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center",
                   }}
                 >
                   <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                    <IconComponent size={14} style={{ color: "#666666" }} />
+                    <IconComponent size={14} style={{ color: icon.default }} />
                     <Typography
                       sx={{
-                        fontSize: 13,
-                        fontWeight: 600,
-                        color: "text.black",
+                        ...textStyles.subsectionTitle,
+                        color: text.primary,
                         lineHeight: "16px",
                         m: 0,
                       }}
@@ -371,7 +371,7 @@ const ControlCategoriesCard = ({ frameworksData, onNavigate }: ControlCategories
                         },
                       }}
                     >
-                      <ChevronRight size={16} style={{ color: "#666666" }} />
+                      <ChevronRight size={16} style={{ color: icon.default }} />
                     </Box>
                   )}
                 </Box>
@@ -379,7 +379,6 @@ const ControlCategoriesCard = ({ frameworksData, onNavigate }: ControlCategories
                 {/* Content Section */}
                 <Box
                   sx={{
-                    background: "linear-gradient(135deg, #FEFFFE 0%, #F8F9FA 100%)",
                     p: "16px",
                   }}
                 >
@@ -404,9 +403,8 @@ const ControlCategoriesCard = ({ frameworksData, onNavigate }: ControlCategories
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                       <Typography
                         sx={{
-                          fontSize: 12,
-                          color: "text.black",
-                          fontWeight: 600,
+                          ...textStyles.subsectionTitle,
+                          color: text.primary,
                         }}
                       >
                         {category.subClauses.filter((sub) => isCompletedStatus(sub.status)).length}/
@@ -414,8 +412,8 @@ const ControlCategoriesCard = ({ frameworksData, onNavigate }: ControlCategories
                       </Typography>
                       <Typography
                         sx={{
-                          fontSize: 12,
-                          color: "#666666",
+                          ...textStyles.bodySmall,
+                          color: text.secondary,
                         }}
                       >
                         subclauses implemented
@@ -424,9 +422,8 @@ const ControlCategoriesCard = ({ frameworksData, onNavigate }: ControlCategories
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                       <Typography
                         sx={{
-                          fontSize: 12,
-                          color: "text.black",
-                          fontWeight: 600,
+                          ...textStyles.subsectionTitle,
+                          color: text.primary,
                         }}
                       >
                         {
@@ -438,8 +435,8 @@ const ControlCategoriesCard = ({ frameworksData, onNavigate }: ControlCategories
                       </Typography>
                       <Typography
                         sx={{
-                          fontSize: 12,
-                          color: "#666666",
+                          ...textStyles.bodySmall,
+                          color: text.secondary,
                         }}
                       >
                         assigned
@@ -479,7 +476,7 @@ const ControlCategoriesCard = ({ frameworksData, onNavigate }: ControlCategories
           py: 4,
           backgroundColor: "background.accent",
           borderRadius: 2,
-          border: "1px solid #d0d5dd",
+          border: `1px solid ${borderPalette.dark}`,
         }}
       >
         <Typography variant="body1" color="text.secondary">
