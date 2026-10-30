@@ -35,6 +35,7 @@ import { FilePickerModal } from "../../FilePickerModal";
 import { text, status } from "../../../themes/palette";
 
 import NotesTab from "../../Notes/NotesTab";
+import { HistorySidebar } from "../../Common/HistorySidebar";
 import { LinkedRisksPopup } from "../../LinkedRisks";
 import AddNewRiskForm from "../../AddNewRiskForm";
 
@@ -940,6 +941,11 @@ const NewControlPane = ({
       label: "Notes",
       value: "notes",
       icon: "MessageSquare" as keyof typeof LucideIcons,
+    },
+    {
+      label: "Activity",
+      value: "activity",
+      icon: "History" as keyof typeof LucideIcons,
     },
   ];
 
@@ -2273,6 +2279,34 @@ const NewControlPane = ({
                     attachedTo="EU_AI_ACT_SUBCONTROL"
                     attachedToId={currentSubcontrol.id?.toString() || ""}
                   />
+                </TabPanel>
+
+                {/* TAB 5: ACTIVITY - subcontrol edits, then the control-level fields */}
+                <TabPanel value="activity" sx={{ padding: "15px 0" }}>
+                  <Stack gap="16px">
+                    <Stack gap="8px">
+                      <Typography fontSize={13} fontWeight={600}>
+                        This subcontrol
+                      </Typography>
+                      <HistorySidebar
+                        inline
+                        isOpen={activeTab === "activity"}
+                        entityType="subcontrol_eu"
+                        entityId={currentSubcontrol.id}
+                      />
+                    </Stack>
+                    <Stack gap="8px">
+                      <Typography fontSize={13} fontWeight={600}>
+                        Control
+                      </Typography>
+                      <HistorySidebar
+                        inline
+                        isOpen={activeTab === "activity"}
+                        entityType="control_eu"
+                        entityId={controlData.id}
+                      />
+                    </Stack>
+                  </Stack>
                 </TabPanel>
               </TabContext>
             </Stack>

@@ -25,7 +25,7 @@ import { getEvidenceFilesForEntities } from "./files/evidenceFiles.utils";
 import { logStructured } from "./logger/fileLogger";
 import { demoDueDate } from "./demoSeedFields";
 import { highRiskRolesArraySql } from "./highRiskRoles.utils";
-import { recordUpdateChanges } from "./changeHistory.base.utils";
+import { recordUpdateChanges, writtenValues } from "./changeHistory.base.utils";
 
 const getDemoAnswers = (): string[] => {
   const answers = [];
@@ -1059,10 +1059,12 @@ export const updateControlEUByIdQuery = async (
   }
 
   // Snapshot the tracked fields before the update so the change history can
-  // record field-level before/after values (#4977).
+  // record field-level before/after values (#4977). FOR UPDATE holds the row
+  // until commit, so a concurrent save cannot change it in between.
   const beforeRows = (await sequelize.query(
     `SELECT status, approver, risk_review, owner, reviewer, due_date
-       FROM controls_eu WHERE organization_id = :organizationId AND id = :id;`,
+       FROM controls_eu WHERE organization_id = :organizationId AND id = :id
+          FOR UPDATE;`,
     { replacements: { organizationId, id }, type: QueryTypes.SELECT, transaction },
   )) as Array<Record<string, unknown>>;
   const before = beforeRows[0] ?? null;
@@ -1085,7 +1087,7 @@ export const updateControlEUByIdQuery = async (
     "control_eu",
     id,
     before,
-    updateControl,
+    writtenValues(controlResult, updateControl),
     changedBy,
     organizationId,
     transaction,
@@ -1152,10 +1154,12 @@ export const updateSubcontrolEUByIdQuery = async (
     subcontrolResult = existing[0];
   } else {
     // Snapshot the tracked fields before the update so the change history can
-    // record field-level before/after values (#4977).
+    // record field-level before/after values (#4977). FOR UPDATE holds the row
+    // until commit, so a concurrent save cannot change it in between.
     const beforeRows = (await sequelize.query(
       `SELECT status, implementation_details, evidence_description, feedback_description
-         FROM subcontrols_eu WHERE organization_id = :organizationId AND id = :id;`,
+         FROM subcontrols_eu WHERE organization_id = :organizationId AND id = :id
+          FOR UPDATE;`,
       { replacements: { organizationId, id }, type: QueryTypes.SELECT, transaction },
     )) as Array<Record<string, unknown>>;
     const before = beforeRows[0] ?? null;
@@ -1178,7 +1182,7 @@ export const updateSubcontrolEUByIdQuery = async (
       "subcontrol_eu",
       id,
       before,
-      updateSubControl,
+      writtenValues(subcontrolResult, updateSubControl),
       changedBy,
       organizationId,
       transaction,

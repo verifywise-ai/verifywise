@@ -44,6 +44,7 @@ import { getEntityById } from "../../../../application/repository/entity.reposit
 import { attachFilesToEntity } from "../../../../application/repository/file.repository";
 import { useInvalidateEvidenceGaps } from "../../../../application/hooks/useEvidenceAi";
 import allowedRoles from "../../../../application/constants/permissions";
+import { HistorySidebar } from "../../Common/HistorySidebar";
 
 const FRAMEWORK_TYPE = "iso_42001";
 const ENTITY_TYPE = "annex_category";
@@ -92,6 +93,7 @@ const TABS: DrawerTab[] = [
   { label: "Evidence", value: "evidence", icon: "FolderOpen" },
   { label: "Cross mappings", value: "cross-mappings", icon: "Link" },
   { label: "Notes", value: "notes", icon: "MessageSquare" },
+  { label: "Activity", value: "activity", icon: "History" },
 ];
 
 const VWISO42001AnnexDrawerDialog = ({
@@ -477,6 +479,15 @@ const VWISO42001AnnexDrawerDialog = ({
           <NotesTab
             attachedTo={NOTES_ATTACHED_TO}
             attachedToId={fetchedAnnex?.id?.toString() || ""}
+          />
+        </TabPanel>
+
+        <TabPanel value="activity" sx={{ padding: "15px 20px" }}>
+          <HistorySidebar
+            inline
+            isOpen={activeTab === "activity"}
+            entityType="annex_category"
+            entityId={fetchedAnnex?.id}
           />
         </TabPanel>
       </DrawerFrame>

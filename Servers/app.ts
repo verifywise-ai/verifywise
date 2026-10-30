@@ -87,6 +87,11 @@ import modelRiskChangeHistoryRoutes from "./routes/modelRiskChangeHistory.route"
 import datasetChangeHistoryRoutes from "./routes/datasetChangeHistory.route";
 import evidenceHubChangeHistoryRoutes from "./routes/evidenceHubChangeHistory.route";
 import modelLifecycleChangeHistoryRoutes from "./routes/modelLifecycleChangeHistory.route";
+import {
+  controlEUChangeHistoryRoutes,
+  subcontrolEUChangeHistoryRoutes,
+  annexCategoryChangeHistoryRoutes,
+} from "./routes/frameworkControlChangeHistory.route";
 import policyLinkedObjects from "./routes/policyLinkedObjects.route";
 import approvalWorkflowRoutes from "./routes/approvalWorkflow.route";
 import approvalRequestRoutes from "./routes/approvalRequest.route";
@@ -421,6 +426,9 @@ export function createApp(preRoutesMiddleware?: RequestHandler[]): express.Appli
   app.use("/api/dataset-change-history", datasetChangeHistoryRoutes);
   app.use("/api/evidence-hub-change-history", evidenceHubChangeHistoryRoutes);
   app.use("/api/model-lifecycle-change-history", modelLifecycleChangeHistoryRoutes);
+  app.use("/api/control-eu-change-history", controlEUChangeHistoryRoutes);
+  app.use("/api/subcontrol-eu-change-history", subcontrolEUChangeHistoryRoutes);
+  app.use("/api/annex-category-change-history", annexCategoryChangeHistoryRoutes);
   app.use("/api/approval-workflows", approvalWorkflowRoutes);
   app.use("/api/approval-requests", approvalRequestRoutes);
   app.use("/api/ai-detection", aiDetectionRoutes);

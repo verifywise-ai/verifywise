@@ -926,5 +926,10 @@
   "{name} must contain positive integer user ids": "{name} muss positive ganzzahlige Benutzer-IDs enthalten",
   "{key} must be a whole number from {min} to {max}": "{key} muss eine ganze Zahl von {min} bis {max} sein",
   "seniorReviewerIds and standardReviewerIds must each have at least one reviewer": "seniorReviewerIds und standardReviewerIds müssen jeweils mindestens einen Prüfer enthalten",
-  "Only an Admin can change review routing": "Nur ein Administrator kann die Prüfungszuweisung ändern"
+  "Only an Admin can change review routing": "Nur ein Administrator kann die Prüfungszuweisung ändern",
+  "Invalid control ID": "Ungültige Kontroll-ID",
+  "Invalid subcontrol ID": "Ungültige Unterkontroll-ID",
+  "Invalid annex category ID": "Ungültige Anhangskategorie-ID",
+  "Invalid evidence hub ID": "Ungültige Nachweis-ID",
+  "Invalid model ID": "Ungültige Modell-ID"
 }

@@ -23,6 +23,7 @@ import {
   FormatterContext,
   getEntityConfig,
   GENERIC_FORMATTERS,
+  runInSavepoint,
 } from "../config/changeHistory.config";
 import { ValidationException } from "../domain.layer/exceptions/custom.exception";
 import logger from "./logger/fileLogger";
@@ -394,6 +395,29 @@ export const trackEntityChanges = async (
 };
 
 /**
+ * The written values of the keys an UPDATE set, read back from its RETURNING
+ * row. Diffing these instead of the request values compares what the
+ * database stored on both sides: Postgres has already cast form strings such
+ * as "false" or a long date string to the column types, so an unchanged
+ * value never shows as a change. Accepts a plain row or a sequelize instance.
+ */
+export const writtenValues = (
+  returned: unknown,
+  updateValues: Record<string, unknown>,
+): Record<string, unknown> => {
+  if (!returned || typeof returned !== "object") return updateValues;
+  const row =
+    typeof (returned as { get?: unknown }).get === "function"
+      ? (returned as { get: (o: { plain: true }) => Record<string, unknown> }).get({ plain: true })
+      : (returned as Record<string, unknown>);
+  return Object.fromEntries(
+    Object.keys(updateValues)
+      .filter((key) => key in row)
+      .map((key) => [key, row[key]]),
+  );
+};
+
+/**
  * Best-effort field-level history for an UPDATE already expressed as a
  * set-values object (the values going into the SET clause). Callers snapshot
  * the tracked columns before updating, pass the values they actually write,
@@ -404,8 +428,9 @@ export const trackEntityChanges = async (
  * the change is then recorded as made by the system rather than mislabeled as
  * an anonymous user.
  *
- * History must never fail the underlying edit: any error is logged and
- * swallowed, matching the model-lifecycle extension's guarantee.
+ * History must never fail the underlying edit: on a transaction the work runs
+ * in a savepoint, and any error is logged and swallowed, matching the
+ * model-lifecycle extension's guarantee.
  */
 export const recordUpdateChanges = async (
   entityType: EntityType,
@@ -418,21 +443,25 @@ export const recordUpdateChanges = async (
 ): Promise<void> => {
   if (!before) return;
   try {
-    const changes = await trackEntityChanges(entityType, before, updateValues, {
-      organizationId,
-      transaction,
-    });
-    if (changes.length === 0) return;
-    const changedBySystem = changedBy === undefined;
-    await recordMultipleFieldChanges(
-      entityType,
-      entityId,
-      changedBy ?? null,
-      organizationId,
-      changes,
-      transaction,
-      changedBySystem,
-    );
+    // A savepoint keeps a failed history write from aborting the caller's
+    // transaction, which would fail the edit at its next statement.
+    await runInSavepoint(async () => {
+      const changes = await trackEntityChanges(entityType, before, updateValues, {
+        organizationId,
+        transaction,
+      });
+      if (changes.length === 0) return;
+      const changedBySystem = changedBy === undefined;
+      await recordMultipleFieldChanges(
+        entityType,
+        entityId,
+        changedBy ?? null,
+        organizationId,
+        changes,
+        transaction,
+        changedBySystem,
+      );
+    }, transaction);
   } catch (error) {
     logger.error(`Error recording ${entityType} change history: ${error}`);
   }

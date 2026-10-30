@@ -7,7 +7,11 @@
  */
 
 jest.mock("../../../database/db", () => ({
-  sequelize: { query: jest.fn() },
+  sequelize: {
+    query: jest.fn(),
+    // upsertValue runs its snapshot and write in one transaction.
+    transaction: jest.fn(async (work: (t: unknown) => unknown) => work({})),
+  },
 }));
 
 jest.mock("../../../utils/auditLedger.utils", () => ({
@@ -21,6 +25,8 @@ import {
   deleteItem,
   deletePhase,
   detachFile,
+  formatLifecycleSnapshot,
+  updateApprovalStatus,
   updateItem,
   upsertValue,
 } from "../modelLifecycle.service";
@@ -162,12 +168,14 @@ describe("detachFile", () => {
   });
 
   it("removes the link, scoped to the organization, model and item, and reports true", async () => {
-    mockQuery.mockResolvedValueOnce([{ id: 7 }]);
+    mockQuery
+      .mockResolvedValueOnce([{ id: 7 }]) // DELETE ... RETURNING
+      .mockResolvedValueOnce([{ filename: "report.pdf" }]) // file name for history
+      .mockResolvedValue(undefined); // history INSERT
 
-    const detached = await detachFile(1, 10, 20, 99);
+    const detached = await detachFile(1, 10, 20, 99, 7);
 
     expect(detached).toBe(true);
-    expect(mockQuery).toHaveBeenCalledTimes(1);
     const [sql, options] = mockQuery.mock.calls[0];
     expect(String(sql)).toMatch(/DELETE FROM model_lifecycle_item_files/);
     expect(String(sql)).toMatch(/organization_id = :organizationId/);
@@ -180,6 +188,19 @@ describe("detachFile", () => {
     });
     // The file may be linked elsewhere; the File Manager owns its deletion.
     expect(fileDeletes()).toHaveLength(0);
+    // The removal is recorded against the model, by the acting user.
+    const history = mockQuery.mock.calls.find((call) =>
+      /INSERT INTO model_lifecycle_change_history/.test(String(call[0])),
+    );
+    expect(history[1].replacements).toEqual(
+      expect.objectContaining({
+        changeType: "file_removed",
+        changedBy: 7,
+        oldValue: JSON.stringify({ file: "report.pdf" }),
+        newValue: null,
+        modelInventoryId: 10,
+      }),
+    );
   });
 });
 
@@ -246,6 +267,46 @@ describe("attachFile", () => {
 
     expect(link).toEqual({ id: 3, value_id: 55, file_id: 99 });
     expect(String(mockQuery.mock.calls[3][0])).toMatch(/INSERT INTO model_lifecycle_item_files/);
+  });
+
+  it("records the attached file in the model's history", async () => {
+    mockQuery
+      .mockResolvedValueOnce([{ "?column?": 1 }]) // ownership SELECT
+      .mockResolvedValueOnce(undefined) // ensureValueRow INSERT
+      .mockResolvedValueOnce([{ id: 55 }]) // ensureValueRow SELECT
+      .mockResolvedValueOnce([[{ id: 3, value_id: 55, file_id: 99 }], 1]) // link INSERT
+      .mockResolvedValueOnce([{ filename: "report.pdf" }]) // file name
+      .mockResolvedValue(undefined); // history INSERT
+
+    await attachFile(1, 10, 20, 7, 99);
+
+    const history = mockQuery.mock.calls.find((call) =>
+      /INSERT INTO model_lifecycle_change_history/.test(String(call[0])),
+    );
+    expect(history[1].replacements).toEqual(
+      expect.objectContaining({
+        changeType: "file_attached",
+        changedBy: 7,
+        newValue: JSON.stringify({ file: "report.pdf" }),
+        modelInventoryId: 10,
+      }),
+    );
+  });
+
+  it("records nothing when the file was already linked", async () => {
+    mockQuery
+      .mockResolvedValueOnce([{ "?column?": 1 }]) // ownership SELECT
+      .mockResolvedValueOnce(undefined) // ensureValueRow INSERT
+      .mockResolvedValueOnce([{ id: 55 }]) // ensureValueRow SELECT
+      .mockResolvedValueOnce([[], 0]); // ON CONFLICT DO NOTHING
+
+    await attachFile(1, 10, 20, 7, 99);
+
+    expect(
+      mockQuery.mock.calls.some((call) =>
+        /INSERT INTO model_lifecycle_change_history/.test(String(call[0])),
+      ),
+    ).toBe(false);
   });
 });
 
@@ -330,5 +391,94 @@ describe("upsertValue change history (issue #4977)", () => {
 
     expect(historyInsert()).toBeUndefined();
     expect(appendToAuditLedger).not.toHaveBeenCalled();
+  });
+});
+
+describe("upsertValue snapshot (review follow-ups)", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockQuery.mockReset();
+  });
+
+  it("locks the current answer while it is snapshotted", async () => {
+    mockQuery
+      .mockResolvedValueOnce([{ value_text: "No", value_json: null }])
+      .mockResolvedValueOnce([[{ value_text: "Yes", value_json: null }], 1])
+      .mockResolvedValue(undefined);
+
+    await upsertValue(1, 10, 5, 7, { value_text: "Yes" });
+
+    expect(String(mockQuery.mock.calls[0][0])).toMatch(/FOR UPDATE/);
+    expect(mockQuery.mock.calls[0][1].transaction).toBeDefined();
+    expect(mockQuery.mock.calls[1][1].transaction).toBe(mockQuery.mock.calls[0][1].transaction);
+  });
+
+  // A file, person or approver action creates the value row empty first.
+  it("records the first real answer as created when the row was empty", async () => {
+    mockQuery
+      .mockResolvedValueOnce([{ value_text: null, value_json: null }])
+      .mockResolvedValueOnce([[{ value_text: "Yes", value_json: null }], 1])
+      .mockResolvedValue(undefined);
+
+    await upsertValue(1, 10, 5, 7, { value_text: "Yes" });
+
+    const insert = historyInsert();
+    expect(insert[1].replacements.changeType).toBe("created");
+    expect(insert[1].replacements.oldValue).toBeNull();
+  });
+});
+
+describe("updateApprovalStatus history", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockQuery.mockReset();
+  });
+
+  it("records an approval with the previous and new status", async () => {
+    mockQuery
+      .mockResolvedValueOnce([[{ id: 4, status: "approved", previous_status: "pending" }], 1])
+      .mockResolvedValueOnce([{ name: "Ada", surname: "Lovelace" }])
+      .mockResolvedValue(undefined);
+
+    const row = await updateApprovalStatus(1, 10, 5, 8, "approved", 7);
+
+    expect(row).toEqual({ id: 4, status: "approved" });
+    const insert = historyInsert();
+    expect(insert[1].replacements).toEqual(
+      expect.objectContaining({
+        changeType: "approved",
+        changedBy: 7,
+        oldValue: JSON.stringify({ approver: "Ada Lovelace", status: "pending" }),
+        newValue: JSON.stringify({ approver: "Ada Lovelace", status: "approved" }),
+        modelInventoryId: 10,
+      }),
+    );
+  });
+
+  it("records nothing when the status did not change", async () => {
+    mockQuery.mockResolvedValueOnce([
+      [{ id: 4, status: "approved", previous_status: "approved" }],
+      1,
+    ]);
+
+    await updateApprovalStatus(1, 10, 5, 8, "approved", 7);
+
+    expect(historyInsert()).toBeUndefined();
+  });
+});
+
+describe("formatLifecycleSnapshot", () => {
+  it("shows a cleared answer as nothing, not raw JSON", () => {
+    expect(formatLifecycleSnapshot({ value_text: null })).toBeUndefined();
+    expect(formatLifecycleSnapshot({ value_text: "", value_json: null })).toBeUndefined();
+  });
+
+  it("shows answers, files, people and approvals as text", () => {
+    expect(formatLifecycleSnapshot({ value_text: "Yes" })).toBe("Yes");
+    expect(formatLifecycleSnapshot({ file: "report.pdf" })).toBe("report.pdf");
+    expect(formatLifecycleSnapshot({ person: "Ada Lovelace" })).toBe("Ada Lovelace");
+    expect(formatLifecycleSnapshot({ approver: "Ada Lovelace", status: "approved" })).toBe(
+      "Ada Lovelace (approved)",
+    );
   });
 });

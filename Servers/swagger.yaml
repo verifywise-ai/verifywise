@@ -21016,6 +21016,48 @@ paths:
       security:
         -
           bearerAuth: []
+  '/control-eu-change-history/{id}':
+    get:
+      summary: 'Get EU AI Act Control Change History By Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Change History'
+      operationId: getControlEUChangeHistoryById
+      security:
+        -
+          bearerAuth: []
+  '/subcontrol-eu-change-history/{id}':
+    get:
+      summary: 'Get EU AI Act Subcontrol Change History By Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Change History'
+      operationId: getSubcontrolEUChangeHistoryById
+      security:
+        -
+          bearerAuth: []
+  '/annex-category-change-history/{id}':
+    get:
+      summary: 'Get ISO 42001 Annex Category Change History By Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Change History'
+      operationId: getAnnexCategoryChangeHistoryById
+      security:
+        -
+          bearerAuth: []
   /approval-workflows:
     get:
       tags:

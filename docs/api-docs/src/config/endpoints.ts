@@ -2464,6 +2464,39 @@ export const changeHistoryEndpoints: Endpoint[] = [
     ],
     tag: "Change History",
   },
+  {
+    method: 'GET',
+    path: '/control-eu-change-history/{id}',
+    summary: "Get EU AI Act Control Change History By Id",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Change History",
+  },
+  {
+    method: 'GET',
+    path: '/subcontrol-eu-change-history/{id}',
+    summary: "Get EU AI Act Subcontrol Change History By Id",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Change History",
+  },
+  {
+    method: 'GET',
+    path: '/annex-category-change-history/{id}',
+    summary: "Get ISO 42001 Annex Category Change History By Id",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Change History",
+  },
 ];
 
 // Compliance endpoints

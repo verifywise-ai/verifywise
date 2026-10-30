@@ -26,7 +26,7 @@ import {
   deleteAllFileEntityLinksForEntities,
 } from "./files/evidenceFiles.utils";
 import { toId } from "./validations/validation.utils";
-import { recordUpdateChanges } from "./changeHistory.base.utils";
+import { recordUpdateChanges, writtenValues } from "./changeHistory.base.utils";
 
 const getDemoSubClauses = (): object[] => {
   const subClauses = [];
@@ -1040,11 +1040,14 @@ export const updateAnnexCategoryQuery = async (
 
   if (setClause.length > 0) {
     // Snapshot the tracked fields before the update so the change history can
-    // record field-level before/after values (#4977).
+    // record field-level before/after values (#4977). FOR UPDATE holds the row
+    // until commit, so a concurrent save cannot change it between the
+    // snapshot and the write.
     const beforeRows = (await sequelize.query(
       `SELECT is_applicable, justification_for_exclusion, implementation_description,
               status, owner, reviewer, approver, due_date, auditor_feedback
-         FROM annexcategories_iso WHERE organization_id = :organizationId AND id = :id;`,
+         FROM annexcategories_iso WHERE organization_id = :organizationId AND id = :id
+          FOR UPDATE;`,
       { replacements: { organizationId, id }, type: QueryTypes.SELECT, transaction },
     )) as Array<Record<string, unknown>>;
     const before = beforeRows[0] ?? null;
@@ -1062,7 +1065,7 @@ export const updateAnnexCategoryQuery = async (
       "annex_category",
       id,
       before,
-      updateAnnexCategory,
+      writtenValues(annexCategoryResult, updateAnnexCategory),
       changedBy,
       organizationId,
       transaction,

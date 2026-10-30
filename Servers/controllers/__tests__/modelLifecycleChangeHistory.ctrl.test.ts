@@ -6,12 +6,11 @@ jest.mock("../../database/db", () => ({
 jest.mock("../../utils/statusCode.utils", () => ({
   STATUS_CODE: new Proxy({}, { get: () => (data: unknown) => data }),
 }));
-jest.mock("../../utils/logger/fileLogger", () => ({
-  __esModule: true,
-  default: { error: jest.fn(), info: jest.fn() },
-  logStructured: jest.fn(),
+jest.mock("../../utils/logger/logHelper", () => ({
+  logProcessing: jest.fn(),
+  logSuccess: jest.fn(),
+  logFailure: jest.fn(),
 }));
-jest.mock("../../utils/i18n.utils", () => ({ translateError: jest.fn() }));
 
 import { getModelLifecycleChangeHistoryById } from "../modelLifecycleChangeHistory.ctrl";
 import { sequelize } from "../../database/db";
@@ -100,15 +99,81 @@ describe("getModelLifecycleChangeHistoryById (issue #4977)", () => {
         user_surname: "Lovelace",
       }),
     );
+    // Lifecycle events never create or delete the model, so the sidebar shows
+    // every one of them as an update.
     expect(body.data[1]).toEqual(
       expect.objectContaining({
         id: 12,
-        action: "created",
+        action: "updated",
         field_name: "Lifecycle item #6",
         old_value: undefined,
         new_value: JSON.stringify({ level: 2 }),
         changed_by_user_id: null,
       }),
+    );
+  });
+
+  it("clamps limit and offset instead of passing NaN to SQL", async () => {
+    mockQuery.mockResolvedValueOnce([{ total: 0 }]).mockResolvedValueOnce([]);
+    const req: any = {
+      params: { id: "10" },
+      query: { limit: "abc", offset: "-5" },
+      organizationId: 1,
+      t: (s: string) => s,
+    };
+    const res = createRes();
+
+    await getModelLifecycleChangeHistoryById(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(mockQuery.mock.calls[1][1].replacements).toEqual(
+      expect.objectContaining({ limit: 100, offset: 0 }),
+    );
+  });
+
+  it("labels file, person and approval events and hides cleared answers", async () => {
+    mockQuery.mockResolvedValueOnce([{ total: 2 }]).mockResolvedValueOnce([
+      {
+        id: 21,
+        item_id: 5,
+        change_type: "file_attached",
+        changed_by: 3,
+        old_value: null,
+        new_value: { file: "report.pdf" },
+        created_at: "2026-10-28T10:00:00Z",
+        user_name: null,
+        user_surname: null,
+        user_email: null,
+        item_name: "Validation report",
+      },
+      {
+        id: 22,
+        item_id: 5,
+        change_type: "updated",
+        changed_by: 3,
+        old_value: { value_text: "Yes" },
+        new_value: { value_text: null },
+        created_at: "2026-10-28T09:00:00Z",
+        user_name: null,
+        user_surname: null,
+        user_email: null,
+        item_name: "Validation report",
+      },
+    ]);
+    const req: any = { params: { id: "10" }, query: {}, organizationId: 1, t: (s: string) => s };
+    const res = createRes();
+
+    await getModelLifecycleChangeHistoryById(req, res);
+
+    const body = res.json.mock.calls[0][0];
+    expect(body.data[0]).toEqual(
+      expect.objectContaining({
+        field_name: "Validation report: file",
+        new_value: "report.pdf",
+      }),
+    );
+    expect(body.data[1]).toEqual(
+      expect.objectContaining({ old_value: "Yes", new_value: undefined }),
     );
   });
 });

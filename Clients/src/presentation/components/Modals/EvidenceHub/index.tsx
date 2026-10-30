@@ -2,7 +2,7 @@
 import React, { FC, useState, useEffect, useCallback, Suspense } from "react";
 import { Stack, Box, Typography, IconButton, Tooltip, Chip } from "@mui/material";
 import StepperModal from "../StepperModal";
-import { UploadIcon } from "lucide-react";
+import { UploadIcon, History as HistoryIcon } from "lucide-react";
 import { CustomizableButton } from "../../button/customizable-button";
 import FileManagerUploadModal from "../FileManagerUpload";
 import { Trash2 as DeleteIconGrey } from "lucide-react";
@@ -132,6 +132,7 @@ const NewEvidenceHub: FC<NewEvidenceHubProps> = ({
   const [riskOptions, setRiskOptions] = useState<{ _id: number; name: string }[]>([]);
   const [userOptions, setUserOptions] = useState<{ _id: number; name: string }[]>([]);
   const [activeStep, setActiveStep] = useState(0);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
   const theme = useTheme();
 
@@ -149,6 +150,7 @@ const NewEvidenceHub: FC<NewEvidenceHubProps> = ({
       setErrors({});
       setIsSubmitting(false);
       setActiveStep(0);
+      setIsHistoryOpen(false);
       fetchModels();
       fetchRisks();
       fetchUsers();
@@ -288,18 +290,20 @@ const NewEvidenceHub: FC<NewEvidenceHubProps> = ({
     return true;
   };
 
-  // The activity step only exists for existing evidence: there is no history
-  // to show while a new record is being created.
-  const showActivityStep = isEdit && !!initialData?.id;
-  const steps = showActivityStep ? [...WIZARD_STEPS, "Activity"] : WIZARD_STEPS;
+  // Activity history only exists for saved evidence. It is a header toggle,
+  // not a wizard step, so the last step keeps the Update button (issue #4977).
+  const evidenceId = isEdit ? initialData?.id : undefined;
 
+  // Moving between steps returns from the activity view to the form.
   const handleNext = () => {
     if (validateCurrentStep()) {
+      setIsHistoryOpen(false);
       setActiveStep((prev) => prev + 1);
     }
   };
 
   const handleBack = () => {
+    setIsHistoryOpen(false);
     setActiveStep((prev) => prev - 1);
   };
 
@@ -575,17 +579,6 @@ const NewEvidenceHub: FC<NewEvidenceHubProps> = ({
           </Stack>
         );
 
-      case 5:
-        // Activity history of an existing evidence record (issue #4977)
-        return (
-          <HistorySidebar
-            inline
-            isOpen={true}
-            entityType="evidence_hub"
-            entityId={initialData?.id as number}
-          />
-        );
-
       default:
         return null;
     }
@@ -596,7 +589,7 @@ const NewEvidenceHub: FC<NewEvidenceHubProps> = ({
       isOpen={isOpen}
       onClose={() => setIsOpen(false)}
       title={isEdit ? "Edit evidence" : "Add new evidence"}
-      steps={steps}
+      steps={WIZARD_STEPS}
       activeStep={activeStep}
       onNext={handleNext}
       onBack={handleBack}
@@ -605,8 +598,34 @@ const NewEvidenceHub: FC<NewEvidenceHubProps> = ({
       isSubmitting={isSubmitting}
       submitButtonText={isEdit ? "Update" : "Save"}
       maxWidth="900px"
+      headerAction={
+        evidenceId ? (
+          <Tooltip title="Activity history" arrow>
+            <IconButton
+              aria-label="Activity history"
+              aria-pressed={isHistoryOpen}
+              onClick={() => setIsHistoryOpen((prev) => !prev)}
+              size="small"
+              sx={{
+                "color": isHistoryOpen ? theme.palette.primary.main : theme.palette.text.secondary,
+                "border": `1px solid ${theme.palette.divider}`,
+                "borderRadius": "4px",
+                "&:hover": {
+                  backgroundColor: theme.palette.background.fill,
+                },
+              }}
+            >
+              <HistoryIcon size={16} />
+            </IconButton>
+          </Tooltip>
+        ) : undefined
+      }
     >
-      {renderStepContent()}
+      {isHistoryOpen && evidenceId ? (
+        <HistorySidebar inline isOpen={true} entityType="evidence_hub" entityId={evidenceId} />
+      ) : (
+        renderStepContent()
+      )}
     </StepperModal>
   );
 };
