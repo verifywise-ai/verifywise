@@ -18,12 +18,12 @@ New article covering the 10 intake field types, their settings, submit checks an
 ### Finding 2 — URL check described as "web address"
 - **Status:** ✅ fixed
 - **Reality:** The server only ran `new URL(value)`, which accepts `javascript:`, `mailto:` and other schemes.
-- **Fix:** Server now requires http or https (`Servers/utils/validations/url.utils.ts`). Article updated.
+- **Fix:** Server now requires http or https (`Servers/utils/validations/url.utils.ts`, PR for `fix/intake-guide-followups`). Article describes the fixed behaviour.
 
 ### Finding 3 — Unanswered fields always show a dash
 - **Status:** ✅ fixed
 - **Reality:** An empty multi-select and whitespace-only text showed blank (`intakeAnswerFormat.ts` `formatAnswer`).
-- **Fix:** `formatAnswer` now shows "—" for both.
+- **Fix:** `formatAnswer` now shows "—" for both (`fix/intake-guide-followups`). Article describes the fixed behaviour.
 
 ## Verified claims (sampled)
 - The 10 field types and their palette defaults — `IntakeFormBuilder/types.ts`, `FieldPalette.tsx`.
