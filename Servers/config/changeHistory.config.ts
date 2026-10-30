@@ -165,7 +165,7 @@ export interface EntityConfig {
 export const GENERIC_FORMATTERS: { [key: string]: FieldFormatter } = {
   // Boolean formatter
   boolean: async (value: unknown): Promise<string> => {
-    if (value === null || value === undefined || value === "") return "-";
+    if (value === null || value === undefined) return "-";
     // Multipart form fields arrive as the strings "true"/"false".
     if (typeof value === "string") {
       return ["false", "0", "no", "off"].includes(value.trim().toLowerCase()) ? "No" : "Yes";

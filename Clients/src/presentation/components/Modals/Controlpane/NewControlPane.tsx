@@ -36,6 +36,7 @@ import { text, status } from "../../../themes/palette";
 
 import NotesTab from "../../Notes/NotesTab";
 import { HistorySidebar } from "../../Common/HistorySidebar";
+import { useQueryClient } from "@tanstack/react-query";
 import { LinkedRisksPopup } from "../../LinkedRisks";
 import AddNewRiskForm from "../../AddNewRiskForm";
 
@@ -117,6 +118,7 @@ const NewControlPane = ({
   const [activeTab, setActiveTab] = useState("details");
   const [alert, setAlert] = useState<AlertProps | null>(null);
   const invalidateEvidenceGaps = useInvalidateEvidenceGaps();
+  const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [projectMembers, setProjectMembers] = useState<User[]>([]);
   const [searchParams] = useSearchParams();
@@ -890,6 +892,11 @@ const NewControlPane = ({
         OnSave?.(controlData);
         // Evidence attached here feeds framework coverage, which is cached
         invalidateEvidenceGaps();
+        // The save can change the control and any of its subcontrols.
+        queryClient.invalidateQueries({
+          queryKey: ["changeHistory", "control_eu", controlData.id],
+        });
+        queryClient.invalidateQueries({ queryKey: ["changeHistory", "subcontrol_eu"] });
         onComplianceUpdate?.();
 
         handleAlert({

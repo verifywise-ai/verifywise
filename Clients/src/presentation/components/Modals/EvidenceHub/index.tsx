@@ -15,6 +15,7 @@ import { useTheme } from "@mui/material";
 import CustomizableMultiSelect from "../../Inputs/Select/Multi";
 import TagInput from "../../Inputs/TagInput";
 import { HistorySidebar } from "../../Common/HistorySidebar";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface NewEvidenceHubProps {
   isOpen: boolean;
@@ -133,6 +134,7 @@ const NewEvidenceHub: FC<NewEvidenceHubProps> = ({
   const [userOptions, setUserOptions] = useState<{ _id: number; name: string }[]>([]);
   const [activeStep, setActiveStep] = useState(0);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const queryClient = useQueryClient();
 
   const theme = useTheme();
 
@@ -294,25 +296,39 @@ const NewEvidenceHub: FC<NewEvidenceHubProps> = ({
   // not a wizard step, so the last step keeps the Update button (issue #4977).
   const evidenceId = isEdit ? initialData?.id : undefined;
 
-  // Moving between steps returns from the activity view to the form.
+  // From the activity view, Next and Back first return to the form, so a
+  // failed validation is shown on fields the user can see.
   const handleNext = () => {
-    if (validateCurrentStep()) {
+    if (isHistoryOpen) {
       setIsHistoryOpen(false);
+      return;
+    }
+    if (validateCurrentStep()) {
       setActiveStep((prev) => prev + 1);
     }
   };
 
   const handleBack = () => {
-    setIsHistoryOpen(false);
+    if (isHistoryOpen) {
+      setIsHistoryOpen(false);
+      return;
+    }
     setActiveStep((prev) => prev - 1);
   };
 
   const handleSaveEvidence = async () => {
-    if (!validateCurrentStep()) return;
+    if (!validateCurrentStep()) {
+      setIsHistoryOpen(false);
+      return;
+    }
 
     setIsSubmitting(true);
     try {
       if (onSuccess) onSuccess(values);
+      // Marks the cached activity stale, so reopening the evidence refetches.
+      if (evidenceId) {
+        queryClient.invalidateQueries({ queryKey: ["changeHistory", "evidence_hub", evidenceId] });
+      }
       setIsOpen(false);
     } catch (error) {
       console.error("[NewEvidenceHub.handleSaveEvidence] error:", error);
@@ -594,7 +610,7 @@ const NewEvidenceHub: FC<NewEvidenceHubProps> = ({
       onNext={handleNext}
       onBack={handleBack}
       onSubmit={handleSaveEvidence}
-      canProceed={canProceed()}
+      canProceed={isHistoryOpen || canProceed()}
       isSubmitting={isSubmitting}
       submitButtonText={isEdit ? "Update" : "Save"}
       maxWidth="900px"

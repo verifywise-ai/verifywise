@@ -320,6 +320,7 @@ describe("upsertValue change history (issue #4977)", () => {
   const mockBeforeThenUpsert = (before: any, upserted: any) => {
     mockQuery
       .mockReset()
+      .mockResolvedValueOnce(undefined) // ensure-row INSERT ... DO NOTHING
       .mockResolvedValueOnce(before ? [before] : []) // before-snapshot SELECT
       .mockResolvedValueOnce([[upserted], 1]); // upsert INSERT ... RETURNING
   };
@@ -400,22 +401,29 @@ describe("upsertValue snapshot (review follow-ups)", () => {
     mockQuery.mockReset();
   });
 
-  it("locks the current answer while it is snapshotted", async () => {
+  it("creates the row first, then locks the current answer while it is snapshotted", async () => {
     mockQuery
+      .mockResolvedValueOnce(undefined)
       .mockResolvedValueOnce([{ value_text: "No", value_json: null }])
       .mockResolvedValueOnce([[{ value_text: "Yes", value_json: null }], 1])
       .mockResolvedValue(undefined);
 
     await upsertValue(1, 10, 5, 7, { value_text: "Yes" });
 
-    expect(String(mockQuery.mock.calls[0][0])).toMatch(/FOR UPDATE/);
-    expect(mockQuery.mock.calls[0][1].transaction).toBeDefined();
-    expect(mockQuery.mock.calls[1][1].transaction).toBe(mockQuery.mock.calls[0][1].transaction);
+    // An existing row is what FOR UPDATE can lock, so even two first answers
+    // saved at once are serialized.
+    expect(String(mockQuery.mock.calls[0][0])).toMatch(/ON CONFLICT .* DO NOTHING/s);
+    expect(String(mockQuery.mock.calls[1][0])).toMatch(/FOR UPDATE/);
+    const tx = mockQuery.mock.calls[0][1].transaction;
+    expect(tx).toBeDefined();
+    expect(mockQuery.mock.calls[1][1].transaction).toBe(tx);
+    expect(mockQuery.mock.calls[2][1].transaction).toBe(tx);
   });
 
   // A file, person or approver action creates the value row empty first.
   it("records the first real answer as created when the row was empty", async () => {
     mockQuery
+      .mockResolvedValueOnce(undefined)
       .mockResolvedValueOnce([{ value_text: null, value_json: null }])
       .mockResolvedValueOnce([[{ value_text: "Yes", value_json: null }], 1])
       .mockResolvedValue(undefined);

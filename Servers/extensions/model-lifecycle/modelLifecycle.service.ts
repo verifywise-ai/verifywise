@@ -1,6 +1,7 @@
 import { QueryTypes } from "sequelize";
 import { sequelize } from "../../database/db";
 import { appendToAuditLedger } from "../../utils/auditLedger.utils";
+import { GENERIC_FORMATTERS } from "../../config/changeHistory.config";
 
 /**
  * DB helpers for the model-lifecycle extension.
@@ -559,9 +560,18 @@ export async function upsertValue(
   input: { value_text?: string | null; value_json?: unknown },
 ): Promise<any> {
   const { before, upserted } = await sequelize.transaction(async (transaction) => {
-    // Snapshot the current answer (if any) so the change history can store
-    // before/after values (#4977). FOR UPDATE holds the row until commit, so
-    // a concurrent save cannot change it between the snapshot and the write.
+    // Make sure the row exists, then snapshot the current answer so the
+    // change history can store before/after values (#4977). FOR UPDATE holds
+    // the row until commit, so a concurrent save, even of a first answer,
+    // waits instead of reading the same "before". A row created here is
+    // empty, which counts as no answer below.
+    await sequelize.query(
+      `INSERT INTO model_lifecycle_values
+         (organization_id, model_inventory_id, item_id, updated_by)
+       VALUES (:organizationId, :modelId, :itemId, :userId)
+       ON CONFLICT (organization_id, model_inventory_id, item_id) DO NOTHING;`,
+      { replacements: { organizationId, modelId, itemId, userId }, transaction },
+    );
     const beforeRows = (await sequelize.query(
       `SELECT value_text, value_json
          FROM model_lifecycle_values
@@ -633,23 +643,24 @@ export async function upsertValue(
   return upserted;
 }
 
-/** "Name Surname" of a user in the organization, or "User #id". */
-async function userLabel(organizationId: number, userId: number): Promise<string> {
-  const rows = (await sequelize.query(
-    `SELECT name, surname FROM users WHERE id = :userId AND organization_id = :organizationId;`,
-    { replacements: { userId, organizationId }, type: QueryTypes.SELECT },
-  )) as Array<{ name: string | null; surname: string | null }>;
-  const name = [rows[0]?.name, rows[0]?.surname].filter(Boolean).join(" ");
-  return name || `User #${userId}`;
-}
+/** A user's display name, as every other history table shows it. */
+const userLabel = (organizationId: number, userId: number): Promise<string> =>
+  GENERIC_FORMATTERS.user(userId, { organizationId });
 
-/** File name of a file in the organization, or "File #id". */
+/**
+ * File name of a file in the organization, or "File #id". A failed lookup
+ * also falls back to the id: history must never fail the edit.
+ */
 async function fileLabel(organizationId: number, fileId: number): Promise<string> {
-  const rows = (await sequelize.query(
-    `SELECT filename FROM files WHERE id = :fileId AND organization_id = :organizationId;`,
-    { replacements: { fileId, organizationId }, type: QueryTypes.SELECT },
-  )) as Array<{ filename: string | null }>;
-  return rows[0]?.filename || `File #${fileId}`;
+  try {
+    const rows = (await sequelize.query(
+      `SELECT filename FROM files WHERE id = :fileId AND organization_id = :organizationId;`,
+      { replacements: { fileId, organizationId }, type: QueryTypes.SELECT },
+    )) as Array<{ filename: string | null }>;
+    return rows[0]?.filename || `File #${fileId}`;
+  } catch {
+    return `File #${fileId}`;
+  }
 }
 
 /**
@@ -691,15 +702,6 @@ async function recordValueEvent(
     });
   } catch (error) {
     console.error("Failed to record model lifecycle value change:", error);
-  }
-}
-
-/** Look a display name up for history without ever failing the edit. */
-async function safeLabel(lookup: () => Promise<string>, fallback: string): Promise<string> {
-  try {
-    return await lookup();
-  } catch {
-    return fallback;
   }
 }
 
@@ -760,7 +762,7 @@ export async function attachFile(
   const linked = (rows[0] as any)?.[0];
   // Only a new link is history; ON CONFLICT DO NOTHING returns no row.
   if (linked) {
-    const file = await safeLabel(() => fileLabel(organizationId, fileId), `File #${fileId}`);
+    const file = await fileLabel(organizationId, fileId);
     await recordValueEvent(
       organizationId,
       modelId,
@@ -811,7 +813,7 @@ export async function detachFile(
   )) as unknown as Array<{ id: number }> | undefined;
   const detached = Array.isArray(rows) && rows.length > 0;
   if (detached) {
-    const file = await safeLabel(() => fileLabel(organizationId, fileId), `File #${fileId}`);
+    const file = await fileLabel(organizationId, fileId);
     await recordValueEvent(
       organizationId,
       modelId,
@@ -850,10 +852,7 @@ export async function addPerson(
   )) as unknown as [any[], number];
   const added = (rows[0] as any)?.[0];
   if (added) {
-    const person = await safeLabel(
-      () => userLabel(organizationId, personUserId),
-      `User #${personUserId}`,
-    );
+    const person = await userLabel(organizationId, personUserId);
     await recordValueEvent(
       organizationId,
       modelId,
@@ -892,10 +891,7 @@ export async function removePerson(
     },
   )) as unknown as Array<{ id: number }> | undefined;
   if (Array.isArray(rows) && rows.length > 0) {
-    const person = await safeLabel(
-      () => userLabel(organizationId, personUserId),
-      `User #${personUserId}`,
-    );
+    const person = await userLabel(organizationId, personUserId);
     await recordValueEvent(
       organizationId,
       modelId,
@@ -933,10 +929,7 @@ export async function addApprover(
   )) as unknown as [any[], number];
   const added = (rows[0] as any)?.[0];
   if (added) {
-    const approver = await safeLabel(
-      () => userLabel(organizationId, approverUserId),
-      `User #${approverUserId}`,
-    );
+    const approver = await userLabel(organizationId, approverUserId);
     // The change-type constraint has no approver_added, so this is an update
     // whose snapshot names the approver.
     await recordValueEvent(
@@ -975,10 +968,7 @@ export async function removeApprover(
     },
   )) as unknown as Array<{ status: string }> | undefined;
   if (Array.isArray(rows) && rows.length > 0) {
-    const approver = await safeLabel(
-      () => userLabel(organizationId, approverUserId),
-      `User #${approverUserId}`,
-    );
+    const approver = await userLabel(organizationId, approverUserId);
     await recordValueEvent(
       organizationId,
       modelId,
@@ -1032,10 +1022,7 @@ export async function updateApprovalStatus(
   if (!row) return null;
   const { previous_status: previousStatus, ...updated } = row;
   if (previousStatus !== status) {
-    const approver = await safeLabel(
-      () => userLabel(organizationId, approverUserId),
-      `User #${approverUserId}`,
-    );
+    const approver = await userLabel(organizationId, approverUserId);
     await recordValueEvent(
       organizationId,
       modelId,

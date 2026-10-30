@@ -89,4 +89,54 @@ describe("recordUpdateChanges never fails the caller's transaction", () => {
       statements.some((sql: string) => /^RELEASE SAVEPOINT history_write_\d+$/.test(sql)),
     ).toBe(true);
   });
+
+  // Rolling back to the savepoint removes rows already written, so their
+  // append-only ledger entries must never be queued.
+  it("queues no ledger entry when a later history row fails", async () => {
+    let inserts = 0;
+    mockQuery.mockImplementation(async (sql: string) => {
+      if (sql.startsWith("INSERT") && ++inserts === 2) throw new Error("constraint");
+      return [[], 0];
+    });
+    const tx = { id: "tx", afterCommit: jest.fn() } as any;
+
+    await recordUpdateChanges(
+      "subcontrol_eu",
+      4,
+      { status: "Waiting", implementation_details: "a" },
+      { status: "Done", implementation_details: "b" },
+      7,
+      1,
+      tx,
+    );
+
+    expect(inserts).toBe(2);
+    expect(tx.afterCommit).not.toHaveBeenCalled();
+  });
+
+  it("queues one ledger entry per row once every row is written", async () => {
+    mockQuery.mockResolvedValue([[], 0]);
+    const tx = { id: "tx", afterCommit: jest.fn() } as any;
+
+    await recordUpdateChanges(
+      "subcontrol_eu",
+      4,
+      { status: "Waiting", implementation_details: "a" },
+      { status: "Done", implementation_details: "b" },
+      7,
+      1,
+      tx,
+    );
+
+    expect(tx.afterCommit).toHaveBeenCalledTimes(2);
+  });
+
+  it("opens no savepoint when nothing changed", async () => {
+    mockQuery.mockResolvedValue([[], 0]);
+    const tx = { id: "tx", afterCommit: jest.fn() } as any;
+
+    await recordUpdateChanges("subcontrol_eu", 4, { status: "Done" }, { status: "Done" }, 7, 1, tx);
+
+    expect(mockQuery).not.toHaveBeenCalled();
+  });
 });

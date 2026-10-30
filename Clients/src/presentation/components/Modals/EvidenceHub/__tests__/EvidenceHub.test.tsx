@@ -76,6 +76,25 @@ describe("EvidenceHub (NewEvidenceHub)", () => {
     expect(screen.getByTestId("history-sidebar").textContent).toBe("evidence_hub:12");
   });
 
+  it("returns from the activity view to the same step when Next is pressed", () => {
+    renderWithProviders(
+      <NewEvidenceHub
+        isOpen={true}
+        setIsOpen={vi.fn()}
+        isEdit={true}
+        initialData={{ id: 12, evidence_name: "Policy", evidence_type: "Policy" } as any}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Activity history" }));
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+
+    expect(screen.queryByTestId("history-sidebar")).toBeNull();
+    expect(screen.getByText("of", { exact: false }).parentElement?.textContent).toMatch(
+      /Step\s*1\s*of\s*5/,
+    );
+  });
+
   it("offers no activity toggle while adding new evidence", () => {
     renderWithProviders(<NewEvidenceHub isOpen={true} setIsOpen={vi.fn()} />);
 

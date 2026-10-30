@@ -72,6 +72,7 @@ export const recordEntityChange = async (
   newValue?: string,
   transaction?: Transaction,
   changedBySystem = false,
+  deferLedger?: (append: () => void) => void,
 ): Promise<void> => {
   try {
     const config = getEntityConfig(entityType);
@@ -117,7 +118,9 @@ export const recordEntityChange = async (
         oldValue: oldValue || null,
         newValue: newValue || null,
       }).catch((err) => logger.error(`[audit_ledger] write failed: ${err}`));
-    if (transaction) {
+    if (deferLedger) {
+      deferLedger(appendLedger);
+    } else if (transaction) {
       transaction.afterCommit(() => {
         appendLedger();
       });
@@ -149,6 +152,7 @@ export const recordMultipleFieldChanges = async (
   changes: Array<{ fieldName: string; oldValue: string; newValue: string }>,
   transaction?: Transaction,
   changedBySystem = false,
+  deferLedger?: (append: () => void) => void,
 ): Promise<void> => {
   for (const change of changes) {
     await recordEntityChange(
@@ -162,6 +166,7 @@ export const recordMultipleFieldChanges = async (
       change.newValue,
       transaction,
       changedBySystem,
+      deferLedger,
     );
   }
 };
@@ -443,25 +448,36 @@ export const recordUpdateChanges = async (
 ): Promise<void> => {
   if (!before) return;
   try {
+    // Name lookups already run in their own savepoints.
+    const changes = await trackEntityChanges(entityType, before, updateValues, {
+      organizationId,
+      transaction,
+    });
+    if (changes.length === 0) return;
+    const changedBySystem = changedBy === undefined;
     // A savepoint keeps a failed history write from aborting the caller's
-    // transaction, which would fail the edit at its next statement.
-    await runInSavepoint(async () => {
-      const changes = await trackEntityChanges(entityType, before, updateValues, {
-        organizationId,
-        transaction,
-      });
-      if (changes.length === 0) return;
-      const changedBySystem = changedBy === undefined;
-      await recordMultipleFieldChanges(
-        entityType,
-        entityId,
-        changedBy ?? null,
-        organizationId,
-        changes,
-        transaction,
-        changedBySystem,
-      );
-    }, transaction);
+    // transaction, which would fail the edit at its next statement. Ledger
+    // appends wait until every row is written: a rolled-back row must not
+    // leave an append-only ledger entry behind.
+    const ledgerAppends: Array<() => void> = [];
+    await runInSavepoint(
+      () =>
+        recordMultipleFieldChanges(
+          entityType,
+          entityId,
+          changedBy ?? null,
+          organizationId,
+          changes,
+          transaction,
+          changedBySystem,
+          (append) => ledgerAppends.push(append),
+        ),
+      transaction,
+    );
+    for (const append of ledgerAppends) {
+      if (transaction) transaction.afterCommit(() => append());
+      else append();
+    }
   } catch (error) {
     logger.error(`Error recording ${entityType} change history: ${error}`);
   }
