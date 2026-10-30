@@ -14,6 +14,9 @@ describe("isWebUrl", () => {
     "ftp://example.com",
     "data:text/html,hi",
     "foo:bar",
+    "https:example.com",
+    "http:/example.com",
+    "  https://example.com  ",
     "example.com",
     "",
   ])("rejects %s", (value) => {
