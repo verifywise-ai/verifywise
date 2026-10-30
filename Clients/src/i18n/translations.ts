@@ -169,8 +169,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Anfordern der Expertenprüfung fehlgeschlagen. Bitte versuchen Sie es erneut.",
     "Failed to save the second review. Please try again.":
       "Die Zweitprüfung konnte nicht gespeichert werden. Bitte versuchen Sie es erneut.",
-    "Within": "Innerhalb von",
-    "points of the threshold": "Punkten um den Schwellenwert",
+    "Less than": "Weniger als",
+    "points from the threshold": "Punkte vom Schwellenwert entfernt",
     "Prohibited practice": "Verbotene Praktik",
     "No usable score": "Keine verwertbare Bewertung",
     "threshold": "Schwellenwert",
@@ -205,9 +205,9 @@ export const translations: Record<string, Record<string, string>> = {
     "Not assigned": "Nicht zugewiesen",
     "Assigned to me": "Mir zugewiesen",
     "Scores of": "Bewertungen ab",
-    "or more, prohibited practices and scores within":
-      "oder mehr, verbotene Praktiken und Bewertungen innerhalb von",
-    "points of": "Punkten um",
+    "or more, prohibited practices and scores less than":
+      "oder mehr, verbotene Praktiken und Bewertungen mit weniger als",
+    "points from": "Punkten Abstand zu",
     "go to expert reviewers.": "gehen an Expertenprüfer.",
     "Assign reviewers by risk score": "Prüfer nach Risikobewertung zuweisen",
     "Send submissions to expert or regular reviewers based on their risk score.":
@@ -9636,8 +9636,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Échec de la demande de revue experte. Veuillez réessayer.",
     "Failed to save the second review. Please try again.":
       "Échec de l'enregistrement de la seconde revue. Veuillez réessayer.",
-    "Within": "À moins de",
-    "points of the threshold": "points du seuil",
+    "Less than": "À moins de",
+    "points from the threshold": "points du seuil",
     "Prohibited practice": "Pratique interdite",
     "No usable score": "Aucun score exploitable",
     "threshold": "seuil",
@@ -9672,9 +9672,9 @@ export const translations: Record<string, Record<string, string>> = {
     "Not assigned": "Non attribué",
     "Assigned to me": "Assignées à moi",
     "Scores of": "Les scores de",
-    "or more, prohibited practices and scores within":
+    "or more, prohibited practices and scores less than":
       "ou plus, les pratiques interdites et les scores à moins de",
-    "points of": "points de",
+    "points from": "points de",
     "go to expert reviewers.": "vont aux réviseurs experts.",
     "Assign reviewers by risk score": "Attribuer les réviseurs selon le score de risque",
     "Send submissions to expert or regular reviewers based on their risk score.":
@@ -19045,8 +19045,8 @@ export const translations: Record<string, Record<string, string>> = {
       "No se pudo solicitar la revisión experta. Inténtelo de nuevo.",
     "Failed to save the second review. Please try again.":
       "No se pudo guardar la segunda revisión. Inténtelo de nuevo.",
-    "Within": "A menos de",
-    "points of the threshold": "puntos del umbral",
+    "Less than": "A menos de",
+    "points from the threshold": "puntos del umbral",
     "Prohibited practice": "Práctica prohibida",
     "No usable score": "Sin puntuación utilizable",
     "threshold": "umbral",
@@ -19081,9 +19081,9 @@ export const translations: Record<string, Record<string, string>> = {
     "Not assigned": "Sin asignar",
     "Assigned to me": "Asignados a mí",
     "Scores of": "Las puntuaciones de",
-    "or more, prohibited practices and scores within":
+    "or more, prohibited practices and scores less than":
       "o más, las prácticas prohibidas y las puntuaciones a menos de",
-    "points of": "puntos de",
+    "points from": "puntos de",
     "go to expert reviewers.": "pasan a los revisores expertos.",
     "Assign reviewers by risk score": "Asignar revisores según la puntuación de riesgo",
     "Send submissions to expert or regular reviewers based on their risk score.":

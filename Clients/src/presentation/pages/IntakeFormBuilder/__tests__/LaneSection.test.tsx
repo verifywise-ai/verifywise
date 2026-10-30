@@ -52,7 +52,7 @@ describe("LaneSection", () => {
   });
 
   it.each([
-    [{ reason: "close_call", closeCallMargin: 10 }, "Within 10 points of the threshold"],
+    [{ reason: "close_call", closeCallMargin: 10 }, "Less than 10 points from the threshold"],
     [{ reason: "prohibited" }, "Prohibited practice"],
     [{ reason: "no_score", score: null }, "No usable score"],
     [{ reason: "at_or_above_threshold", score: 80 }, "Score 80, threshold 50"],

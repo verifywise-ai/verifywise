@@ -129,11 +129,11 @@ describe("RoutingSettingsSection", () => {
   it("updates the helper line when the threshold changes", () => {
     renderWithProviders(<Harness initial={on()} />);
     expect(screen.getByTestId("routing-helper")).toHaveTextContent(
-      "Scores of 50 or more, prohibited practices and scores within 10 points of 50 go to expert reviewers.",
+      "Scores of 50 or more, prohibited practices and scores less than 10 points from 50 go to expert reviewers.",
     );
     fireEvent.change(screen.getByLabelText("Threshold"), { target: { value: "60" } });
     expect(screen.getByTestId("routing-helper")).toHaveTextContent(
-      "Scores of 60 or more, prohibited practices and scores within 10 points of 60 go to expert reviewers.",
+      "Scores of 60 or more, prohibited practices and scores less than 10 points from 60 go to expert reviewers.",
     );
   });
 
@@ -163,7 +163,7 @@ describe("RoutingSettingsSection", () => {
   it("renders the helper line as separate text fragments", () => {
     renderWithProviders(<Harness initial={on()} />);
     expect(screen.getByText("Scores of")).toBeInTheDocument();
-    expect(screen.getByText("points of")).toBeInTheDocument();
+    expect(screen.getByText("points from")).toBeInTheDocument();
     expect(screen.getByText("go to expert reviewers.")).toBeInTheDocument();
   });
 });

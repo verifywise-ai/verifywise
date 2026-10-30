@@ -33,7 +33,7 @@ const ReasonLine = ({ routing }: { routing: SubmissionRouting }) => {
     case "close_call":
       return (
         <>
-          <span>Within</span> {routing.closeCallMargin} <span>points of the threshold</span>
+          <span>Less than</span> {routing.closeCallMargin} <span>points from the threshold</span>
         </>
       );
     case "prohibited":

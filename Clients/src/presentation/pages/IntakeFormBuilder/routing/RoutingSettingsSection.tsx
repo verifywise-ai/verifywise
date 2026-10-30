@@ -243,8 +243,9 @@ const RoutingSettingsSection = ({
             sx={{ fontSize: "11px", color: theme.palette.text.accent }}
           >
             <span>Scores of</span> {current.threshold}{" "}
-            <span>or more, prohibited practices and scores within</span> {current.closeCallMargin}{" "}
-            <span>points of</span> {current.threshold} <span>go to expert reviewers.</span>
+            <span>or more, prohibited practices and scores less than</span>{" "}
+            {current.closeCallMargin} <span>points from</span> {current.threshold}{" "}
+            <span>go to expert reviewers.</span>
           </Typography>
         </>
       )}
