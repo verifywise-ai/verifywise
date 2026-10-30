@@ -88,6 +88,7 @@ import {
   simulatedLaneRow,
   type PreviewRole,
 } from "../../../application/utils/intakeRouting/previewRole";
+import { usePollWhileVisible } from "../../../application/hooks/usePollWhileVisible";
 
 // ============================================================================
 // Helpers
@@ -121,6 +122,9 @@ const INTAKE_FORMS_ROWS_PER_PAGE_KEY = "verifywise_intake_forms_rows_per_page";
 
 // How long a reviewed submission row stays green, as on other tables
 const FLASH_DURATION_MS = 3000;
+
+// How often an open page checks for new submissions while the browser tab is visible
+const SUBMISSIONS_POLL_MS = 30_000;
 
 const SelectorVertical = (props: React.SVGAttributes<SVGSVGElement>) => (
   <ChevronsUpDown size={16} {...props} />
@@ -218,21 +222,39 @@ export function IntakeFormsListPage() {
     loadForms();
   }, [loadForms]);
 
-  const loadSubmissions = useCallback(async () => {
-    setIsLoadingSubmissions(true);
-    try {
-      const params: { status?: string } = {};
-      if (submissionStatusFilter !== "all") {
-        params.status = submissionStatusFilter;
+  // Only the latest request may set the list or clear the spinner, so a slow load
+  // can't overwrite a newer one, for example one for a changed status filter.
+  // A background refresh never replaces a load already in flight.
+  const submissionsRequestRef = useRef(0);
+  const submissionsInFlightRef = useRef(false);
+  const loadSubmissions = useCallback(
+    async ({ quiet = false }: { quiet?: boolean } = {}) => {
+      if (quiet && submissionsInFlightRef.current) return;
+      const requestId = ++submissionsRequestRef.current;
+      submissionsInFlightRef.current = true;
+      if (!quiet) setIsLoadingSubmissions(true);
+      try {
+        const params: { status?: string } = {};
+        if (submissionStatusFilter !== "all") {
+          params.status = submissionStatusFilter;
+        }
+        const response = await getPendingSubmissions(params);
+        if (requestId !== submissionsRequestRef.current) return;
+        setSubmissions(Array.isArray(response.data) ? response.data : []);
+      } catch {
+        // A failed background refresh keeps the list as it is; the next one retries.
+        if (!quiet && requestId === submissionsRequestRef.current) {
+          setSnackbar({ open: true, message: "Failed to load submissions", severity: "error" });
+        }
+      } finally {
+        if (requestId === submissionsRequestRef.current) {
+          submissionsInFlightRef.current = false;
+          setIsLoadingSubmissions(false);
+        }
       }
-      const response = await getPendingSubmissions(params);
-      setSubmissions(Array.isArray(response.data) ? response.data : []);
-    } catch {
-      setSnackbar({ open: true, message: "Failed to load submissions", severity: "error" });
-    } finally {
-      setIsLoadingSubmissions(false);
-    }
-  }, [submissionStatusFilter]);
+    },
+    [submissionStatusFilter],
+  );
 
   // The list chips and the Oversight tab both read what the review modal changes
   const refreshAfterReview = () => {
@@ -280,6 +302,10 @@ export function IntakeFormsListPage() {
   useEffect(() => {
     loadSubmissions();
   }, [loadSubmissions]);
+
+  // New submissions from public forms show up without a reload. Paused while the
+  // review modal is open; closing the modal refreshes the list.
+  usePollWhileVisible(() => loadSubmissions({ quiet: true }), SUBMISSIONS_POLL_MS, !previewOpen);
 
   // "Preview as" simulation, entered from the builder's Preview menu. It lives
   // only in the URL and only on the Submissions tab, so it never carries over.
@@ -1089,6 +1115,7 @@ export function IntakeFormsListPage() {
         onClose={() => {
           setPreviewOpen(false);
           setSelectedSubmissionId(null);
+          loadSubmissions({ quiet: true });
         }}
         submissionId={selectedSubmissionId}
         onApproved={() => handleSubmissionDecided("Submission approved")}
