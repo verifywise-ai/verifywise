@@ -22,6 +22,11 @@ export interface IProjectTableViewProps {
   hidePagination?: boolean;
   onProjectDeleted?: () => void;
   visibleColumns?: Set<string>;
+  /**
+   * Shown instead of the "no use cases yet" guidance when the list is empty
+   * because a search or filter hid every row, not because none exist.
+   */
+  emptyMessage?: string;
 }
 
 export interface IProjectRiskMitigationProps {
