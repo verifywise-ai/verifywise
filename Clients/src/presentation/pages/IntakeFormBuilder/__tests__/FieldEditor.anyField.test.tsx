@@ -35,6 +35,8 @@ describe("FieldEditor references to any field", () => {
 
   it("does not offer the field itself in its own formula", () => {
     renderEditor({ ...TOTAL, formula: "{total} + 1" }, [TOTAL, COST]);
-    expect(screen.getByText("= missing field + 1")).toBeInTheDocument();
+    const self = document.querySelector(".formula-chip[data-field-id='total']");
+    expect(self).toHaveAttribute("data-state", "unusable");
+    expect(self).toHaveTextContent("Not usable in this formula");
   });
 });

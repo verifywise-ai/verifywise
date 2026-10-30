@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { describeFormula, formatCalculatedValue } from "../intakeAnswerFormat";
+import { describeFormula, formatCalculatedValue, splitFormula } from "../intakeAnswerFormat";
 
 describe("formatCalculatedValue", () => {
   it("formats with grouping, fixed decimals and a prefix", () => {
@@ -52,5 +52,21 @@ describe("describeFormula", () => {
   });
   it("is empty for an empty formula", () => {
     expect(describeFormula("  ", fields)).toBe("");
+  });
+});
+
+describe("splitFormula", () => {
+  it("splits references from text with offsets into the formula", () => {
+    expect(splitFormula("{cost} * {field_1-a}")).toEqual([
+      { kind: "ref", fieldId: "cost", start: 0, end: 6 },
+      { kind: "text", text: " * ", start: 6 },
+      { kind: "ref", fieldId: "field_1-a", start: 9, end: 20 },
+    ]);
+  });
+  it("leaves an unfinished reference as text", () => {
+    expect(splitFormula("2 + {co")).toEqual([{ kind: "text", text: "2 + {co", start: 0 }]);
+  });
+  it("is empty for an empty formula", () => {
+    expect(splitFormula("")).toEqual([]);
   });
 });

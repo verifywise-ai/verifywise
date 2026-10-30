@@ -253,6 +253,16 @@ export const intakeFormsContent: ArticleContent = {
     },
     {
       type: 'heading',
+      id: 'logic-overview',
+      level: 2,
+      text: 'Logic overview',
+    },
+    {
+      type: 'paragraph',
+      text: 'Select **Logic** at the top of the form builder to see all the logic on the form in one list: every calculated field and its formula, every show/hide rule and the answers it depends on, risk dimension tags, and how routing sends submissions to senior or standard reviewers. A row with a problem is outlined in red with the reason. Click a row to open that field in the editor.',
+    },
+    {
+      type: 'heading',
       id: 'risk-dimension-tags',
       level: 2,
       text: 'Risk dimension tags',

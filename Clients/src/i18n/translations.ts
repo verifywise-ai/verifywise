@@ -78,6 +78,11 @@ import {
   fr as intakeLiveChecksFr,
   es as intakeLiveChecksEs,
 } from "./modules/intakeLiveChecks";
+import {
+  de as intakeLogicDe,
+  fr as intakeLogicFr,
+  es as intakeLogicEs,
+} from "./modules/intakeLogic";
 import { de as trainingDe, fr as trainingFr, es as trainingEs } from "./modules/training";
 import { de as vendorsDe, fr as vendorsFr, es as vendorsEs } from "./modules/vendors";
 
@@ -106,6 +111,7 @@ export const translations: Record<string, Record<string, string>> = {
     ...superAdminDe,
     ...tasksDe,
     ...intakeLiveChecksDe,
+    ...intakeLogicDe,
     ...trainingDe,
     ...vendorsDe,
     "senior": "leitend",
@@ -4650,6 +4656,11 @@ export const translations: Record<string, Record<string, string>> = {
     "is not empty": "ist nicht leer",
     "Required when shown": "Erforderlich, wenn angezeigt",
     "Type { to insert a field": "Geben Sie { ein, um ein Feld einzufügen",
+    "Field:": "Feld:",
+    "Missing field": "Fehlendes Feld",
+    "Not usable in this formula": "In dieser Formel nicht verwendbar",
+    "Unnamed field": "Unbenanntes Feld",
+    "The problem is just after": "Das Problem liegt direkt nach",
     "Add another field to create a rule":
       "Fügen Sie ein weiteres Feld hinzu, um eine Regel zu erstellen",
     "Add condition": "Bedingung hinzufügen",
@@ -9565,6 +9576,7 @@ export const translations: Record<string, Record<string, string>> = {
     ...superAdminFr,
     ...tasksFr,
     ...intakeLiveChecksFr,
+    ...intakeLogicFr,
     ...trainingFr,
     ...vendorsFr,
     "senior": "senior",
@@ -14053,6 +14065,11 @@ export const translations: Record<string, Record<string, string>> = {
     "is not empty": "n'est pas vide",
     "Required when shown": "Requis lorsqu'il est affiché",
     "Type { to insert a field": "Tapez { pour insérer un champ",
+    "Field:": "Champ :",
+    "Missing field": "Champ manquant",
+    "Not usable in this formula": "Non utilisable dans cette formule",
+    "Unnamed field": "Champ sans nom",
+    "The problem is just after": "Le problème se trouve juste après",
     "Add another field to create a rule": "Ajoutez un autre champ pour créer une règle",
     "Add condition": "Ajouter une condition",
     "All conditions": "Toutes les conditions",
@@ -18963,6 +18980,7 @@ export const translations: Record<string, Record<string, string>> = {
     ...superAdminEs,
     ...tasksEs,
     ...intakeLiveChecksEs,
+    ...intakeLogicEs,
     ...trainingEs,
     ...vendorsEs,
     "senior": "sénior",
@@ -21929,6 +21947,11 @@ export const translations: Record<string, Record<string, string>> = {
     "is not empty": "no está vacío",
     "Required when shown": "Obligatorio cuando se muestra",
     "Type { to insert a field": "Escriba { para insertar un campo",
+    "Field:": "Campo:",
+    "Missing field": "Campo faltante",
+    "Not usable in this formula": "No se puede usar en esta fórmula",
+    "Unnamed field": "Campo sin nombre",
+    "The problem is just after": "El problema está justo después de",
     "Add another field to create a rule": "Agregue otro campo para crear una regla",
     "Add condition": "Agregar condición",
     "All conditions": "Todas las condiciones",
