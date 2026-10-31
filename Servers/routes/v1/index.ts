@@ -20,6 +20,7 @@ import modelLifecycleChangeHistoryRoutes from "./modelLifecycleChangeHistory.rou
 import controlEUChangeHistoryRoutes from "./controlEUChangeHistory.route";
 import subcontrolEUChangeHistoryRoutes from "./subcontrolEUChangeHistory.route";
 import annexCategoryChangeHistoryRoutes from "./annexCategoryChangeHistory.route";
+import intakeFormReviewTimeRoutes from "./intakeFormReviewTime.route";
 
 const router = express.Router();
 
@@ -34,5 +35,9 @@ router.use("/model-lifecycle-change-history", modelLifecycleChangeHistoryRoutes)
 router.use("/control-eu-change-history", controlEUChangeHistoryRoutes);
 router.use("/subcontrol-eu-change-history", subcontrolEUChangeHistoryRoutes);
 router.use("/annex-category-change-history", annexCategoryChangeHistoryRoutes);
+
+// An intake form's agreed review time (#5189); the legacy /api/intake form
+// contracts are frozen, so it is its own resource.
+router.use("/intake-form-review-time", intakeFormReviewTimeRoutes);
 
 export default router;

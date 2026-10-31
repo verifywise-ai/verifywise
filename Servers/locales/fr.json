@@ -931,5 +931,6 @@
   "Invalid subcontrol ID": "ID de sous-contrôle invalide",
   "Invalid annex category ID": "ID de catégorie d'annexe invalide",
   "Invalid evidence hub ID": "ID de preuve invalide",
-  "Invalid model ID": "ID de modèle invalide"
+  "Invalid model ID": "ID de modèle invalide",
+  "Review time must be a whole number of business days from {min} to {max}": "Le délai d'examen doit être un nombre entier de jours ouvrés compris entre {min} et {max}"
 }

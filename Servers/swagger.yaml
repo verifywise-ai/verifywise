@@ -7896,6 +7896,8 @@ tags:
     name: 'v1: Change History'
   -
     name: 'v1: Shadow AI'
+  -
+    name: 'v1: V1/Intake Form Review Time'
 paths:
   /webhooks/github:
     post:
@@ -27207,6 +27209,33 @@ paths:
       tags:
         - 'v1: Change History'
       operationId: getAnnexCategoryChangeHistoryById
+      security:
+        -
+          bearerAuth: []
+  '/v1/intake-form-review-time/{formId}':
+    get:
+      summary: 'Get Intake Form Review Time'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Intake Form Review Time'
+      operationId: getIntakeFormReviewTime
+      security:
+        -
+          bearerAuth: []
+    put:
+      summary: 'Update Intake Form Review Time'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Intake Form Review Time'
+      operationId: updateIntakeFormReviewTime
       security:
         -
           bearerAuth: []

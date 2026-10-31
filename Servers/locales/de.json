@@ -931,5 +931,6 @@
   "Invalid subcontrol ID": "Ungültige Unterkontroll-ID",
   "Invalid annex category ID": "Ungültige Anhangskategorie-ID",
   "Invalid evidence hub ID": "Ungültige Nachweis-ID",
-  "Invalid model ID": "Ungültige Modell-ID"
+  "Invalid model ID": "Ungültige Modell-ID",
+  "Review time must be a whole number of business days from {min} to {max}": "Die Prüfdauer muss eine ganze Zahl von Werktagen zwischen {min} und {max} sein"
 }

@@ -861,6 +861,35 @@ export async function submitPublicFormById(
 }
 
 // ============================================================================
+// Review time (v1 resource: the /intake form contracts are frozen, ADR 0001)
+// ============================================================================
+
+const REVIEW_TIME_URL = "/v1/intake-form-review-time";
+
+/** A form's agreed review time in business days. */
+export async function getIntakeFormReviewTime(
+  formId: number,
+  signal?: AbortSignal,
+): Promise<number> {
+  const response = await apiServices.get(`${REVIEW_TIME_URL}/${formId}`, { signal });
+  return (response.data as { data: { reviewDays: number } }).data.reviewDays;
+}
+
+/** Set a form's agreed review time; resolves to the stored value. */
+export async function updateIntakeFormReviewTime(
+  formId: number,
+  reviewDays: number,
+  signal?: AbortSignal,
+): Promise<number> {
+  const response = await apiServices.put(
+    `${REVIEW_TIME_URL}/${formId}`,
+    { reviewDays },
+    { signal },
+  );
+  return (response.data as { data: { reviewDays: number } }).data.reviewDays;
+}
+
+// ============================================================================
 // Review routing
 // ============================================================================
 

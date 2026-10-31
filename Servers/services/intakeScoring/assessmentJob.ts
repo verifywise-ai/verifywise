@@ -48,6 +48,8 @@ import {
 } from "../intakeLiveChecks/aiChecks";
 import { visibleScoringAnswers } from "../intakeLiveChecks/answers";
 import { routeSubmission } from "../intakeRouting/routingService";
+import { laneAssigneeIds } from "../intakeRouting/routingRules";
+import { trySendSubmitterConfirmation } from "../intakeConfirmation/confirmation";
 import { ClassificationContext, runAiScoring } from "./aiScoring";
 import { AssessmentStage, enqueueIntakeAssessment, IntakeAssessmentJobData } from "./enqueue";
 import { generateIntakeSuggestions } from "./intakeSuggestions";
@@ -78,6 +80,15 @@ export interface AssessmentDeps {
   listNeedingAssessment: typeof getSubmissionsNeedingAssessmentQuery;
   enqueue: typeof enqueueIntakeAssessment;
   routeSubmission: typeof routeSubmission;
+  /**
+   * The submitter's confirmation, once routing has run (or failed): it names
+   * the lane's reviewers, or the governance team when no lane was stored.
+   */
+  confirmSubmitter: (
+    organizationId: number,
+    submissionId: number,
+    lang: string | undefined,
+  ) => Promise<void>;
   generateImpl?: GenerateObjectImpl;
   now: () => Date;
 }
@@ -99,6 +110,8 @@ const defaultDeps: AssessmentDeps = {
   listNeedingAssessment: getSubmissionsNeedingAssessmentQuery,
   enqueue: enqueueIntakeAssessment,
   routeSubmission,
+  confirmSubmitter: (organizationId, submissionId, lang) =>
+    trySendSubmitterConfirmation(organizationId, submissionId, lang, { fallback: true }),
   now: () => new Date(),
 };
 
@@ -505,9 +518,9 @@ export async function runIntakeAssessment(
     );
     await settleAll([
       wants("scoring")
-        ? failScoring(classification, error).then(() =>
-            routeSettled(d, submissionId, organizationId),
-          )
+        ? failScoring(classification, error)
+            .then(() => routeSettled(d, submissionId, organizationId))
+            .then(() => d.confirmSubmitter(organizationId, submissionId, data.lang))
         : undefined,
       wants("suggestions") ? failSuggestions(error) : undefined,
       liveChecksStage(error instanceof Error ? error : new Error(String(error))),
@@ -529,6 +542,7 @@ export async function runIntakeAssessment(
             return failScoring(ctx.classification, error);
           })
           .then(() => routeSettled(d, submissionId, organizationId))
+          .then(() => d.confirmSubmitter(organizationId, submissionId, data.lang))
       : undefined,
     wants("suggestions")
       ? runSuggestionsStage(ctx, startedAt, d).catch((error) => {
@@ -636,12 +650,7 @@ export async function notificationAudience(
   const cfg = form.routing;
   if (!cfg?.enabled) return { recipients: base };
   const lane = submission.routing?.lane;
-  const laneIds =
-    lane === "senior"
-      ? cfg.seniorReviewerIds
-      : lane === "standard"
-        ? cfg.standardReviewerIds
-        : [...cfg.seniorReviewerIds, ...cfg.standardReviewerIds];
+  const laneIds = laneAssigneeIds(cfg, lane);
   // Saved ids can go stale (user deleted, role lost intakeForm.edit); the
   // form's own recipients are left as configured.
   const reviewers = await d.getEligibleIds(organizationId, laneIds);
