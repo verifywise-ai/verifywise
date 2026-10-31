@@ -601,7 +601,7 @@ export const intakeFormsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Applicants can **Accept** the suggestion or **Add context** for the reviewer. **Why this matters** lists what the EU AI Act asks at that level, for the applicant\'s role as provider or deployer. Either way, the governance team makes the final call in the review dialog and sees how the applicant responded.',
+      text: 'Applicants can **Accept** the suggestion or **Add context** for the reviewer. When the level comes with duties, **Why this matters** lists what the EU AI Act asks at that level, for the applicant\'s role as provider or deployer. Either way, the governance team makes the final call in the review dialog and sees how the applicant responded.',
     },
     {
       type: 'image',
