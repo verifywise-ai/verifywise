@@ -122,6 +122,8 @@ export interface IGetAiAppsFilters {
   status?: AiAppStatus;
   /** Set to list one lifecycle stage; served by GET /api/v1/ai-apps. */
   lifecycleStage?: LifecycleStage;
+  /** Name or description match; v1 list only. */
+  search?: string;
   vendorId?: number;
   page?: number;
   limit?: number;

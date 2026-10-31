@@ -143,6 +143,25 @@ const job = (overrides = {}) => ({
 });
 
 describe("runIntakeAssessment", () => {
+  it("generates no risk suggestions for an AI app request (#5193)", async () => {
+    const llm = fakeLlm(64);
+    const h = harness(submission({ entityType: IntakeEntityType.AI_APP }), {
+      generateImpl: llm,
+      getForm: jest.fn(async () => form({ entityType: IntakeEntityType.AI_APP })),
+      getClassification: jest.fn(async () => null),
+    });
+    await runIntakeAssessment(job(), h.deps);
+
+    const b = finalBlock(h);
+    expect(b.status).toBe("complete");
+    expect(b.items).toEqual([]);
+    // Only the scoring stage asked the model; suggestions never did.
+    const systems = llm.mock.calls.map((c: any[]) => c[0].system as string);
+    expect(systems.some((sys) => sys.includes("risk analyst"))).toBe(false);
+    // The stage settles, so the new-request email still goes out once.
+    expect(h.deps.sendNotification).toHaveBeenCalledTimes(1);
+  });
+
   it("scores, suggests and emails once when both stages complete", async () => {
     const h = harness(submission(), { generateImpl: fakeLlm(64) });
     await runIntakeAssessment(job(), h.deps);

@@ -74,27 +74,41 @@ export default function AIApps() {
   const staleIds = useMemo(() => new Set(lifecycleSummary?.stale_ids ?? []), [lifecycleSummary]);
   const hasAnyApps = Object.values(lifecycleSummary?.counts ?? {}).some((n) => n > 0);
 
+  // Each tab lists every app in its stage: the server filters, searches,
+  // sorts and pages, so the tab count and the list always agree.
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [sort, setSort] = useState<{ sortBy?: string; order?: "asc" | "desc" }>({});
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchTerm.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+  // A new tab, filter, search or sort starts again on the first page: the
+  // page is remembered only for the filters it was chosen under.
+  const filterKey = [stage, statusFilter, debouncedSearch, sort.sortBy, sort.order].join("|");
+  const [paging, setPaging] = useState({ key: filterKey, page: 0 });
+  const page = paging.key === filterKey ? paging.page : 0;
+  const setPage = (next: number) => setPaging({ key: filterKey, page: next });
+  const handleSortChange = useCallback((key: string, direction: "asc" | "desc" | null) => {
+    setSort(key && direction ? { sortBy: key, order: direction } : {});
+  }, []);
+
   const { data, isLoading, error } = useAiApps({
     status: statusFilter === "all" ? undefined : statusFilter,
     lifecycleStage: stage,
+    search: debouncedSearch || undefined,
+    page: page + 1,
+    limit: rowsPerPage,
+    ...sort,
   });
 
   const deleteAiAppMutation = useDeleteAiApp();
 
-  const filteredApps = useMemo(() => {
-    const apps = data?.ai_apps || [];
-    if (!searchTerm.trim()) return apps;
-    const term = searchTerm.toLowerCase();
-    return apps.filter(
-      (app) =>
-        app.name.toLowerCase().includes(term) ||
-        (app.description && app.description.toLowerCase().includes(term)),
-    );
-  }, [data, searchTerm]);
+  const apps = data?.ai_apps ?? [];
 
   // Distinguish a genuinely empty inventory from a search/filter that matched nothing,
   // so the explanatory placeholder only shows when there is no data at all.
-  const hasNoApps = (data?.ai_apps || []).length === 0 && !hasAnyApps;
+  const hasNoApps = apps.length === 0 && !hasAnyApps;
 
   const handleNewApp = useCallback(() => {
     setEditingApp(null);
@@ -196,7 +210,18 @@ export default function AIApps() {
           <EmptyState message="Failed to load AI apps. Please try again." showBorder />
         ) : (
           <AIAppsTable
-            apps={filteredApps}
+            apps={apps}
+            serverPaging={{
+              total: data?.total ?? 0,
+              page,
+              rowsPerPage,
+              onPageChange: setPage,
+              onRowsPerPageChange: (next) => {
+                setRowsPerPage(next);
+                setPage(0);
+              },
+              onSortChange: handleSortChange,
+            }}
             onEditApp={handleEditApp}
             onViewApp={handleViewApp}
             onDeleteApp={handleRequestDelete}

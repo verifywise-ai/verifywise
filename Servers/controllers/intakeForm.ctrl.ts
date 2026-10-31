@@ -36,7 +36,11 @@ import {
 } from "../utils/intakeForm.utils";
 import { createNewModelInventoryQuery } from "../utils/modelInventory.utils";
 import { createNewProjectQuery } from "../utils/project.utils";
-import { aiAppDepartmentsFrom, createAiAppQuery } from "../utils/aiApp.utils";
+import {
+  AI_APP_NAME_CONSTRAINT,
+  aiAppDepartmentsFrom,
+  createAiAppQuery,
+} from "../utils/aiApp.utils";
 import { AiAppDiscoveredSource, AiAppStatus } from "../domain.layer/enums/ai-app-status.enum";
 import { createEUFrameworkQuery } from "../utils/eu.utils";
 import { EU_AI_ACT_FRAMEWORK_ID } from "../utils/validations/projectValidation.utils";
@@ -70,7 +74,10 @@ import {
 } from "../utils/euAiActClassification.utils";
 import { recordMultipleFieldChanges } from "../utils/useCaseChangeHistory.utils";
 import { STATUS_CODE } from "../utils/statusCode.utils";
-import { NotFoundException } from "../domain.layer/exceptions/custom.exception";
+import {
+  NotFoundException,
+  ValidationException,
+} from "../domain.layer/exceptions/custom.exception";
 import { llmKeyExistsQuery } from "../utils/llmKey.utils";
 import { sanitizeUserHtml } from "../utils/sanitization.utils";
 import logger from "../utils/logger/fileLogger";
@@ -2529,11 +2536,18 @@ export async function approveSubmission(req: Request, res: Response) {
           },
           req.organizationId!,
           transaction,
+          req.userId!,
         );
         entityId = createdApp.id!;
       } catch (error) {
-        const pg = (error as { parent?: { code?: string } })?.parent;
-        if (pg?.code === "23505") {
+        // A blank or too long name, or another invalid answer: say which.
+        if (error instanceof ValidationException) {
+          await transaction.rollback();
+          return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
+        }
+        // Only the per-org name constraint means the name is taken.
+        const pg = (error as { parent?: { code?: string; constraint?: string } })?.parent;
+        if (pg?.code === "23505" && pg.constraint === AI_APP_NAME_CONSTRAINT) {
           await transaction.rollback();
           return res
             .status(409)
@@ -2550,13 +2564,19 @@ export async function approveSubmission(req: Request, res: Response) {
     // entity, in this transaction: any failure rolls the approval back. The
     // submission row is locked above, so no suggestion changes underneath.
     const approval = { approverId: req.userId!, approvedAt: new Date(), submissionId };
-    // AI apps have no risk register yet, so their accepted suggestions stay on
-    // the submission instead of becoming use case risks under the app's id.
-    const acceptedSuggestions =
-      submission.entityType === IntakeEntityType.AI_APP
-        ? []
-        : (submission.suggestedRisks?.items ?? []);
-    for (const s of acceptedSuggestions) {
+    // AI apps have no risk register (#5193): their requests get no
+    // suggestions, and an accepted one from before that is refused rather than
+    // dropped or filed as a use case risk under the app's id.
+    if (
+      submission.entityType === IntakeEntityType.AI_APP &&
+      (submission.suggestedRisks?.items ?? []).some((s) => s.state === "accepted")
+    ) {
+      await transaction.rollback();
+      return res
+        .status(400)
+        .json(STATUS_CODE[400](req.t!("AI app requests cannot carry accepted risk suggestions")));
+    }
+    for (const s of submission.suggestedRisks?.items ?? []) {
       if (s.state !== "accepted") continue;
       if (submission.entityType === IntakeEntityType.MODEL) {
         await createNewModelRiskQuery(

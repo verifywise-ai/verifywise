@@ -260,6 +260,20 @@ async function runSuggestionsStage(
   deps: AssessmentDeps,
 ): Promise<void> {
   const { model, submission, form, answers, classification, submissionId, organizationId } = ctx;
+  // AI apps have no risk register, so their requests get no suggestions
+  // (#5193). The stage is stored as settled so nothing waits on it.
+  if (submission.entityType === IntakeEntityType.AI_APP) {
+    await deps.saveSuggestions(
+      submissionId,
+      {
+        ...pendingSuggestions(startedAt),
+        status: "complete",
+        generatedAt: deps.now().toISOString(),
+      },
+      organizationId,
+    );
+    return;
+  }
   if (!model) {
     await deps.saveSuggestions(
       submissionId,

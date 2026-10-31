@@ -201,8 +201,79 @@ describe("AI app lifecycle", () => {
     expect(await findConfirmationsDue(entity, orgId, 90)).toEqual([]);
   });
 
+  it("keeps the stage in step with the approval status", async () => {
+    const orgId = await createTestOrganization();
+    const adminId = await userIn(orgId, "Admin");
+    const api = await as(orgId, adminId, "Admin");
+
+    const created = await api
+      .post("/api/ai-apps")
+      .send({ name: "Review me", status: "under_review", owner_id: adminId });
+    expect(created.status).toBe(201);
+    const id = Number(created.body.data.id);
+    expect((await row(id)).lifecycle_stage).toBe("in_review");
+
+    // Leaving review: approved → planned.
+    expect((await api.patch(`/api/ai-apps/${id}/status`).send({ status: "approved" })).status).toBe(
+      200,
+    );
+    expect((await row(id)).lifecycle_stage).toBe("planned");
+
+    // Back under review from planned, then restricted → planned again.
+    await api.patch(`/api/ai-apps/${id}/status`).send({ status: "under_review" });
+    expect((await row(id)).lifecycle_stage).toBe("in_review");
+    await api.patch(`/api/ai-apps/${id}`).send({ status: "restricted" });
+    expect((await row(id)).lifecycle_stage).toBe("planned");
+
+    // A live app that is banned is retired and leaves the still-live check.
+    await setRow(id, `lifecycle_stage = 'live', go_live_date = CURRENT_DATE - 200`);
+    expect(await findConfirmationsDue(LIFECYCLE_ENTITIES.ai_app, orgId, 90)).toHaveLength(1);
+    await api.patch(`/api/ai-apps/${id}/status`).send({ status: "banned" });
+    const banned = await row(id);
+    expect(banned.lifecycle_stage).toBe("retired");
+    expect(banned.retired_at).not.toBeNull();
+    expect(await findConfirmationsDue(LIFECYCLE_ENTITIES.ai_app, orgId, 90)).toEqual([]);
+
+    // Approving a banned app does not bring it back to life.
+    await api.patch(`/api/ai-apps/${id}/status`).send({ status: "approved" });
+    expect((await row(id)).lifecycle_stage).toBe("retired");
+
+    const history = await api.get(`/api/v1/ai-app-lifecycle/${id}/history`);
+    const moves = history.body.data.data
+      .filter((h: any) => h.field_name === "lifecycle_stage")
+      .map((h: any) => `${h.old_value}->${h.new_value}`)
+      .reverse();
+    expect(moves).toEqual([
+      "Planned->In review",
+      "In review->Planned",
+      "Planned->In review",
+      "In review->Planned",
+      "Live->Retired",
+    ]);
+  });
+
+  it("searches and pages the v1 list on the server", async () => {
+    const orgId = await createTestOrganization();
+    const adminId = await userIn(orgId, "Admin");
+    for (const name of ["Alpha notes", "Beta notes", "Gamma 100%_off"]) {
+      await aiApp(orgId, adminId, name);
+    }
+    const api = await as(orgId, adminId, "Admin");
+
+    const page2 = await api.get(
+      "/api/v1/ai-apps?lifecycle_stage=planned&search=notes&limit=1&page=2&sortBy=name&order=asc",
+    );
+    expect(page2.body.data.total).toBe(2);
+    expect(page2.body.data.ai_apps.map((a: any) => a.name)).toEqual(["Beta notes"]);
+    // % and _ are matched literally.
+    const literal = await api.get("/api/v1/ai-apps?search=100%25_");
+    expect(literal.body.data.ai_apps.map((a: any) => a.name)).toEqual(["Gamma 100%_off"]);
+    const none = await api.get("/api/v1/ai-apps?search=_");
+    expect(none.body.data.total).toBe(1);
+  });
+
   describe("AI app intake", () => {
-    async function seed(answers: Record<string, unknown>) {
+    async function seed(answers: Record<string, unknown>, suggestedRisks: unknown = null) {
       const orgId = await createTestOrganization();
       const adminId = await userIn(orgId, "Admin");
       const [forms] = await sequelize.query(
@@ -231,9 +302,17 @@ describe("AI app lifecycle", () => {
       );
       const formId = Number((forms as any[])[0].id);
       const [subs] = await sequelize.query(
-        `INSERT INTO intake_submissions (organization_id, form_id, submitter_name, data, entity_type, status)
-         VALUES (:orgId, :formId, 'Sam', :data, 'ai_app', 'pending') RETURNING id`,
-        { replacements: { orgId, formId, data: JSON.stringify(answers) } },
+        `INSERT INTO intake_submissions
+           (organization_id, form_id, submitter_name, data, entity_type, status, suggested_risks)
+         VALUES (:orgId, :formId, 'Sam', :data, 'ai_app', 'pending', :suggestedRisks) RETURNING id`,
+        {
+          replacements: {
+            orgId,
+            formId,
+            data: JSON.stringify(answers),
+            suggestedRisks: suggestedRisks ? JSON.stringify(suggestedRisks) : null,
+          },
+        },
       );
       return {
         orgId,
@@ -272,6 +351,30 @@ describe("AI app lifecycle", () => {
         { replacements: { id: Number(sub.entity_id) } },
       );
       expect((depts as any[]).map((d) => d.department)).toEqual(["Sales", "Support"]);
+    });
+
+    it("answers 400 with the reason when the name is blank", async () => {
+      const { submissionId, api } = await seed({ f_name: "   " });
+      const res = await api.post(`/api/intake/submissions/${submissionId}/approve`).send({});
+      expect(res.status).toBe(400);
+      expect(JSON.stringify(res.body)).toMatch(/name is required/i);
+    });
+
+    it("refuses accepted risk suggestions instead of dropping them", async () => {
+      const { submissionId, api } = await seed(
+        { f_name: "Has suggestions" },
+        {
+          status: "complete",
+          items: [{ id: "s1", state: "accepted", name: "r" }],
+          droppedCount: 0,
+          stageStartedAt: new Date().toISOString(),
+          generatedAt: new Date().toISOString(),
+        },
+      );
+      const res = await api.post(`/api/intake/submissions/${submissionId}/approve`).send({});
+      expect(res.status).toBe(400);
+      const [apps] = await sequelize.query(`SELECT 1 FROM ai_apps WHERE name = 'Has suggestions'`);
+      expect(apps).toHaveLength(0);
     });
 
     it("refuses a duplicate AI app name without approving the request", async () => {

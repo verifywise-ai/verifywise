@@ -252,7 +252,7 @@ export interface LifecycleRow {
 }
 
 /** The lifecycle columns of a row; department is NULL where the table has none. */
-function lifecycleColumnsSql(entity: LifecycleEntityConfig): string {
+export function lifecycleColumnsSql(entity: LifecycleEntityConfig): string {
   return `id, lifecycle_stage, go_live_date, retired_at, last_confirmed_at, last_confirmed_by,
     ${entity.hasDepartmentColumn ? "department" : "NULL::varchar AS department"}`;
 }
@@ -264,9 +264,7 @@ export async function getLifecycleRow(
   transaction?: Transaction,
 ): Promise<LifecycleRow | null> {
   const rows = (await sequelize.query(
-    `SELECT id, ${entity.ownerColumn} AS owner, lifecycle_stage, go_live_date, retired_at,
-            last_confirmed_at, last_confirmed_by,
-            ${entity.hasDepartmentColumn ? "department" : "NULL::varchar AS department"}
+    `SELECT ${lifecycleColumnsSql(entity)}, ${entity.ownerColumn} AS owner
        FROM ${entity.table} e
       WHERE e.organization_id = :organizationId AND e.id = :id${scopeSql(entity, "e")}`,
     { replacements: { organizationId, id }, type: QueryTypes.SELECT, transaction },
@@ -353,38 +351,44 @@ export async function updateDepartment(
 }
 
 /**
- * Move a use case between in review and planned when its approval request
- * opens or ends, and record the move in the use case change history. Only a
- * row in `from` changes; anything else (live, retired) is left alone.
- * `changedBy` null means the system made the change (auto-approval, a job).
+ * Move an entry to `to` if it is in one of `from`, and record the move in its
+ * change history. Retiring also stamps retired_at. Anything not in `from` is
+ * left alone. `changedBy` null means the system made the change (automatic
+ * approval, a job). Returns whether the row moved.
  */
-async function moveUseCaseStage(
+export async function moveLifecycleStage(
+  entity: LifecycleEntityConfig,
   organizationId: number,
   id: number,
-  from: LifecycleStage,
+  from: LifecycleStage[],
   to: LifecycleStage,
   changedBy: number | null,
   transaction?: Transaction,
 ): Promise<boolean> {
-  const rows = (await sequelize.query(
-    `UPDATE projects
-        SET lifecycle_stage = :to
-      WHERE organization_id = :organizationId
-        AND id = :id
-        AND lifecycle_stage = :from
-      RETURNING id`,
-    { replacements: { organizationId, id, from, to }, type: QueryTypes.SELECT, transaction },
-  )) as { id: number }[];
-  if (rows.length === 0) return false;
+  const current = (await sequelize.query(
+    `SELECT lifecycle_stage FROM ${entity.table}
+      WHERE organization_id = :organizationId AND id = :id
+      FOR UPDATE`,
+    { replacements: { organizationId, id }, type: QueryTypes.SELECT, transaction },
+  )) as { lifecycle_stage: LifecycleStage }[];
+  const fromStage = current[0]?.lifecycle_stage;
+  if (!fromStage || !from.includes(fromStage) || fromStage === to) return false;
+
+  await sequelize.query(
+    `UPDATE ${entity.table}
+        SET lifecycle_stage = :to${to === LifecycleStage.RETIRED ? ", retired_at = NOW()" : ""}
+      WHERE organization_id = :organizationId AND id = :id`,
+    { replacements: { organizationId, id, to }, transaction },
+  );
   await recordMultipleFieldChanges(
-    "use_case",
+    entity.historyEntity,
     id,
     changedBy,
     organizationId,
     [
       {
         fieldName: "lifecycle_stage",
-        oldValue: LIFECYCLE_STAGE_LABELS[from],
+        oldValue: LIFECYCLE_STAGE_LABELS[fromStage],
         newValue: LIFECYCLE_STAGE_LABELS[to],
       },
     ],
@@ -392,6 +396,54 @@ async function moveUseCaseStage(
     changedBy === null,
   );
   return true;
+}
+
+/**
+ * An AI app's approval status drives its stage where the meaning is clear
+ * (#5193): under review → in review (from planned); leaving under review →
+ * planned (if still in review); banned → retired (from anything else), which
+ * also ends its still-live checks. Approved and restricted otherwise leave
+ * the stage alone: approval says an app may be used, not that it is.
+ */
+export async function syncAiAppStageWithStatus(
+  organizationId: number,
+  id: number,
+  status: string,
+  changedBy: number | null,
+  transaction?: Transaction,
+): Promise<boolean> {
+  const entity = LIFECYCLE_ENTITIES.ai_app;
+  if (status === "under_review") {
+    return moveLifecycleStage(
+      entity,
+      organizationId,
+      id,
+      [LifecycleStage.PLANNED],
+      LifecycleStage.IN_REVIEW,
+      changedBy,
+      transaction,
+    );
+  }
+  if (status === "banned") {
+    return moveLifecycleStage(
+      entity,
+      organizationId,
+      id,
+      [LifecycleStage.IN_REVIEW, LifecycleStage.PLANNED, LifecycleStage.LIVE],
+      LifecycleStage.RETIRED,
+      changedBy,
+      transaction,
+    );
+  }
+  return moveLifecycleStage(
+    entity,
+    organizationId,
+    id,
+    [LifecycleStage.IN_REVIEW],
+    LifecycleStage.PLANNED,
+    changedBy,
+    transaction,
+  );
 }
 
 /**
@@ -404,10 +456,11 @@ export async function releaseUseCaseFromReview(
   changedBy: number | null,
   transaction?: Transaction,
 ): Promise<boolean> {
-  return moveUseCaseStage(
+  return moveLifecycleStage(
+    LIFECYCLE_ENTITIES.use_case,
     organizationId,
     id,
-    LifecycleStage.IN_REVIEW,
+    [LifecycleStage.IN_REVIEW],
     LifecycleStage.PLANNED,
     changedBy,
     transaction,
@@ -421,10 +474,11 @@ export async function moveUseCaseIntoReview(
   changedBy: number | null,
   transaction?: Transaction,
 ): Promise<boolean> {
-  return moveUseCaseStage(
+  return moveLifecycleStage(
+    LIFECYCLE_ENTITIES.use_case,
     organizationId,
     id,
-    LifecycleStage.PLANNED,
+    [LifecycleStage.PLANNED],
     LifecycleStage.IN_REVIEW,
     changedBy,
     transaction,

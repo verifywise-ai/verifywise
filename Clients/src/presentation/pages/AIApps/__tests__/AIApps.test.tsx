@@ -86,7 +86,10 @@ describe("AIApps page", () => {
     ]);
     expect(tabs[1].textContent).toContain("4");
     expect(tabs[2].textContent).toContain("2");
-    expect(mockUseAiApps).toHaveBeenCalledWith(expect.objectContaining({ lifecycleStage: "live" }));
+    // One server page of the selected stage, not a client slice of 20 rows.
+    expect(mockUseAiApps).toHaveBeenCalledWith(
+      expect.objectContaining({ lifecycleStage: "live", page: 1, limit: 10 }),
+    );
     // ChatGPT (id 1) is in the stale list.
     expect(screen.getByTestId("lifecycle-stale-marker")).toBeInTheDocument();
   });

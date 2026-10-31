@@ -93,7 +93,7 @@ export const aiAppsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Existing apps were placed as follows when the lifecycle arrived: Under review apps in In review, Banned apps in Retired, and every other app in Planned. Mark the ones in use as live.',
+      text: 'The status moves the stage where its meaning is clear: setting an app to Under review puts a planned app in In review, leaving Under review brings it back to Planned, and banning an app retires it, which also stops its still-live checks. Approved and Restricted do not mark an app live; mark the ones in use as live yourself. Existing apps were placed the same way when the lifecycle arrived.',
     },
     {
       type: 'paragraph',

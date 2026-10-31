@@ -945,5 +945,6 @@
   "Only a planned or live AI app can be retired": "Only a planned or live AI app can be retired",
   "Only a live AI app can be confirmed as still live": "Only a live AI app can be confirmed as still live",
   "Invalid lifecycle stage": "Invalid lifecycle stage",
-  "An AI app with this name already exists": "An AI app with this name already exists"
+  "An AI app with this name already exists": "An AI app with this name already exists",
+  "AI app requests cannot carry accepted risk suggestions": "AI app requests cannot carry accepted risk suggestions"
 }

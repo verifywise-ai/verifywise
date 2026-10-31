@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { STATUS_CODE } from "../utils/statusCode.utils";
-import logger, { logStructured } from "../utils/logger/fileLogger";
+import { logStructured } from "../utils/logger/fileLogger";
 import { sequelize } from "../database/db";
 import { toId } from "../utils/validations/validation.utils";
 import {
@@ -17,16 +17,18 @@ import {
 } from "../utils/useCaseLifecycle.utils";
 import { isConfirmationInterval } from "../domain.layer/enums/lifecycle-stage.enum";
 import { recordMultipleFieldChanges } from "../utils/changeHistory.base.utils";
-import { canManageLifecycle, lifecycleActionHandlers, parseIsoDate } from "./lifecycle.ctrl";
+import {
+  canManageLifecycle,
+  lifecycleActionHandlers,
+  parseIsoDate,
+  serverError as sharedServerError,
+} from "./lifecycle.ctrl";
 
 const FILE = "useCaseLifecycle.ctrl.ts";
 const USE_CASE = LIFECYCLE_ENTITIES.use_case;
 
-function serverError(req: Request, res: Response, fn: string, error: unknown) {
-  logStructured("error", `${fn} failed`, fn, FILE);
-  logger.error(`❌ Error in ${fn}:`, error);
-  return res.status(500).json(STATUS_CODE[500](req.t!("Internal server error")));
-}
+const serverError = (req: Request, res: Response, fn: string, error: unknown) =>
+  sharedServerError(req, res, fn, error, FILE);
 
 export async function getLifecycleSummaryHandler(req: Request, res: Response) {
   const fn = "getLifecycleSummaryHandler";

@@ -18,6 +18,7 @@ function buildQueryString(filters: IGetAiAppsFilters): string {
   if (filters.sortBy) params.append("sortBy", filters.sortBy);
   if (filters.order) params.append("order", filters.order);
   if (filters.lifecycleStage) params.append("lifecycle_stage", filters.lifecycleStage);
+  if (filters.search) params.append("search", filters.search);
   const query = params.toString();
   return query ? `?${query}` : "";
 }

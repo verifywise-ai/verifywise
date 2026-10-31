@@ -55,8 +55,9 @@ function listOptionsFrom(req: Request) {
 }
 
 /**
- * GET /api/v1/ai-apps (#5193): the legacy list plus the lifecycle columns and
- * an optional ?lifecycle_stage= filter. Same query and filters otherwise.
+ * GET /api/v1/ai-apps (#5193): the legacy list plus the lifecycle columns, an
+ * optional ?lifecycle_stage= filter and ?search= (name or description). Same
+ * query, paging and sorting otherwise.
  */
 export async function getAllAiAppsV1(req: Request, res: Response): Promise<any> {
   const stage = req.query.lifecycle_stage;
@@ -64,10 +65,13 @@ export async function getAllAiAppsV1(req: Request, res: Response): Promise<any> 
     return res.status(400).json(STATUS_CODE[400](req.t!("Invalid lifecycle stage")));
   }
   try {
+    const search =
+      typeof req.query.search === "string" ? req.query.search.trim().slice(0, 200) : "";
     const result = await getAllAiAppsQuery(req.organizationId!, {
       ...listOptionsFrom(req),
       lifecycleStage: stage,
       withLifecycle: true,
+      search: search || undefined,
     });
     return res.status(200).json(STATUS_CODE[200](result));
   } catch (error) {
@@ -182,7 +186,12 @@ export async function createAiApp(req: Request, res: Response): Promise<any> {
   const transaction = await sequelize.transaction();
 
   try {
-    const aiApp = await createAiAppQuery(req.body, req.organizationId!, transaction);
+    const aiApp = await createAiAppQuery(
+      req.body,
+      req.organizationId!,
+      transaction,
+      req.userId ?? null,
+    );
     await transaction.commit();
 
     await logSuccess({
@@ -224,7 +233,13 @@ export async function updateAiAppById(req: Request, res: Response): Promise<any>
   const transaction = await sequelize.transaction();
 
   try {
-    const aiApp = await updateAiAppByIdQuery(aiAppId, req.body, req.organizationId!, transaction);
+    const aiApp = await updateAiAppByIdQuery(
+      aiAppId,
+      req.body,
+      req.organizationId!,
+      transaction,
+      req.userId ?? null,
+    );
 
     if (!aiApp) {
       await transaction.rollback();
@@ -277,7 +292,13 @@ export async function updateAiAppStatus(req: Request, res: Response): Promise<an
       throw new ValidationException("Invalid status value", "status", status);
     }
 
-    const aiApp = await updateAiAppByIdQuery(aiAppId, { status }, req.organizationId!, transaction);
+    const aiApp = await updateAiAppByIdQuery(
+      aiAppId,
+      { status },
+      req.organizationId!,
+      transaction,
+      req.userId ?? null,
+    );
 
     if (!aiApp) {
       await transaction.rollback();

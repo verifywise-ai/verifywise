@@ -945,5 +945,6 @@
   "Only a planned or live AI app can be retired": "Seule une application IA planifiée ou en service peut être retirée",
   "Only a live AI app can be confirmed as still live": "Seule une application IA en service peut être confirmée comme toujours en service",
   "Invalid lifecycle stage": "Étape du cycle de vie invalide",
-  "An AI app with this name already exists": "Une application IA portant ce nom existe déjà"
+  "An AI app with this name already exists": "Une application IA portant ce nom existe déjà",
+  "AI app requests cannot carry accepted risk suggestions": "Les demandes d'application IA ne peuvent pas comporter de suggestions de risques acceptées"
 }

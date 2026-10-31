@@ -945,5 +945,6 @@
   "Only a planned or live AI app can be retired": "Nur eine geplante oder aktive KI-App kann außer Betrieb genommen werden",
   "Only a live AI app can be confirmed as still live": "Nur eine aktive KI-App kann als weiterhin aktiv bestätigt werden",
   "Invalid lifecycle stage": "Ungültige Lebenszyklusphase",
-  "An AI app with this name already exists": "Eine KI-App mit diesem Namen existiert bereits"
+  "An AI app with this name already exists": "Eine KI-App mit diesem Namen existiert bereits",
+  "AI app requests cannot carry accepted risk suggestions": "KI-App-Anfragen können keine angenommenen Risikovorschläge enthalten"
 }

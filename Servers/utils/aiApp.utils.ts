@@ -13,11 +13,14 @@ import {
   IAIAppUpdatePayload,
 } from "../domain.layer/interfaces/i.aiApp";
 import { LifecycleStage } from "../domain.layer/enums/lifecycle-stage.enum";
-import { parseDepartment } from "./lifecycle.utils";
+import { parseDepartment, syncAiAppStageWithStatus } from "./lifecycle.utils";
 import {
   ValidationException,
   NotFoundException,
 } from "../domain.layer/exceptions/custom.exception";
+
+/** UNIQUE(organization_id, name) on ai_apps (20260615140000-create-ai-apps). */
+export const AI_APP_NAME_CONSTRAINT = "ai_apps_organization_id_name_key";
 
 const DATA_EXPOSURE_DEFAULTS = [
   { data_type: "Public Data", allowed: true },
@@ -48,6 +51,8 @@ interface GetAllAiAppsOptions {
   lifecycleStage?: LifecycleStage;
   /** v1 only (#5193): add the lifecycle columns to each row. */
   withLifecycle?: boolean;
+  /** v1 only (#5193): case-insensitive match on name or description. */
+  search?: string;
   vendorId?: number;
   page?: number;
   limit?: number;
@@ -102,6 +107,13 @@ export async function getAllAiAppsQuery(
   if (options.status) {
     whereConditions.push("ai_apps.status = :status");
     replacements.status = options.status;
+  }
+
+  if (options.search) {
+    whereConditions.push(
+      "(ai_apps.name ILIKE :search ESCAPE '\\' OR ai_apps.description ILIKE :search ESCAPE '\\')",
+    );
+    replacements.search = `%${options.search.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
   }
 
   if (options.lifecycleStage) {
@@ -257,6 +269,8 @@ export async function createAiAppQuery(
   data: IAIAppCreatePayload,
   organizationId: number,
   transaction: Transaction,
+  /** Who created it, for the lifecycle change history; null for the system. */
+  changedBy: number | null = null,
 ): Promise<IAIAppDetail> {
   const app = AiAppModel.createNewAiApp(organizationId, data);
   await app.validateAiAppData();
@@ -290,6 +304,14 @@ export async function createAiAppQuery(
   );
 
   const createdApp = (createdRows as any[])[0];
+  // A new app starts planned; its status may already say otherwise (#5193).
+  await syncAiAppStageWithStatus(
+    organizationId,
+    createdApp.id,
+    createdApp.status,
+    changedBy,
+    transaction,
+  );
 
   await linkModelsToAiAppQuery(
     createdApp.id,
@@ -326,6 +348,8 @@ export async function updateAiAppByIdQuery(
   data: IAIAppUpdatePayload,
   organizationId: number,
   transaction: Transaction,
+  /** Who changed it, for the lifecycle change history; null for the system. */
+  changedBy: number | null = null,
 ): Promise<IAIAppDetail | null> {
   const [existingRows] = await sequelize.query(
     `SELECT * FROM ai_apps WHERE organization_id = :organizationId AND id = :id`,
@@ -371,6 +395,11 @@ export async function updateAiAppByIdQuery(
      WHERE organization_id = :organizationId AND id = :id`,
     { replacements, transaction },
   );
+
+  // Keep the lifecycle stage in step with a status change (#5193).
+  if (data.status !== undefined && data.status !== apps[0].status) {
+    await syncAiAppStageWithStatus(organizationId, id, data.status, changedBy, transaction);
+  }
 
   return getAiAppByIdQuery(id, organizationId, transaction);
 }

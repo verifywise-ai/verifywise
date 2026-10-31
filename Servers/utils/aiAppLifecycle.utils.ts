@@ -6,7 +6,7 @@ import {
   LifecycleRow,
   ORG_INTERVAL_SQL,
   getLifecycleOrgSettings,
-  getLifecycleRow,
+  lifecycleColumnsSql,
   staleSql,
 } from "./lifecycle.utils";
 
@@ -65,27 +65,26 @@ export interface AiAppLifecycleState extends Omit<LifecycleRow, "department"> {
   confirmation_interval_days: number;
 }
 
-/** One AI app's lifecycle, for its detail page. Null when not in the org. */
+/** One AI app's lifecycle, staleness and the org interval in one query. Null when not in the org. */
 export async function getAiAppLifecycleState(
   organizationId: number,
   id: number,
 ): Promise<AiAppLifecycleState | null> {
-  const [row, settings, stale] = await Promise.all([
-    getLifecycleRow(AI_APP, organizationId, id),
-    getLifecycleOrgSettings(organizationId),
-    sequelize.query(
-      `SELECT 1 FROM ai_apps a
-        WHERE a.organization_id = :organizationId AND a.id = :id
-          AND ${staleSql("a", ORG_INTERVAL_SQL, AI_APP)}`,
-      { replacements: { organizationId, id }, type: QueryTypes.SELECT },
-    ),
-  ]);
+  const rows = (await sequelize.query(
+    `SELECT ${lifecycleColumnsSql(AI_APP)}, a.${AI_APP.ownerColumn} AS owner,
+            ${staleSql("a", ORG_INTERVAL_SQL, AI_APP)} AS is_stale,
+            ${ORG_INTERVAL_SQL} AS confirmation_interval_days
+       FROM ai_apps a
+      WHERE a.organization_id = :organizationId AND a.id = :id`,
+    { replacements: { organizationId, id }, type: QueryTypes.SELECT },
+  )) as Array<LifecycleRow & { is_stale: boolean; confirmation_interval_days: number }>;
+  const row = rows[0];
   if (!row) return null;
   const { department: _department, ...lifecycle } = row;
   return {
     ...lifecycle,
     id: Number(lifecycle.id),
-    is_stale: stale.length > 0,
-    confirmation_interval_days: settings.confirmation_interval_days,
+    is_stale: Boolean(row.is_stale),
+    confirmation_interval_days: Number(row.confirmation_interval_days),
   };
 }

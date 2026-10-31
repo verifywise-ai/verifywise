@@ -25,8 +25,15 @@ import type { PermissionKey } from "../config/rolePermissions.config";
 
 const FILE = "lifecycle.ctrl.ts";
 
-function serverError(req: Request, res: Response, fn: string, error: unknown) {
-  logStructured("error", `${fn} failed`, fn, FILE);
+/** The 500 every lifecycle controller returns: logs, never leaks the error. */
+export function serverError(
+  req: Request,
+  res: Response,
+  fn: string,
+  error: unknown,
+  file: string = FILE,
+) {
+  logStructured("error", `${fn} failed`, fn, file);
   logger.error(`❌ Error in ${fn}:`, error);
   return res.status(500).json(STATUS_CODE[500](req.t!("Internal server error")));
 }

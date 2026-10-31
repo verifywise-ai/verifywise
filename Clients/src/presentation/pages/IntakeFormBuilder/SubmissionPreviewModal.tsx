@@ -975,39 +975,42 @@ function SubmissionPreviewModal({
             />
           )}
 
-          {submissionId !== null && (assessmentV2 || previewData?.suggestedRisks) && (
-            <Box
-              sx={{
-                border: `1px solid ${theme.palette.border.dark}`,
-                borderRadius: "4px",
-                p: "20px",
-              }}
-            >
-              <Typography
+          {/* AI app requests get no risk suggestions (no AI app risk register). */}
+          {submissionId !== null &&
+            previewData?.entityType !== "ai_app" &&
+            (assessmentV2 || previewData?.suggestedRisks) && (
+              <Box
                 sx={{
-                  fontSize: "14px",
-                  fontWeight: 600,
-                  color: theme.palette.text.primary,
-                  mb: "12px",
+                  border: `1px solid ${theme.palette.border.dark}`,
+                  borderRadius: "4px",
+                  p: "20px",
                 }}
               >
-                Suggested risks
-              </Typography>
-              <SuggestedRisksSection
-                submissionId={submissionId}
-                block={previewData?.suggestedRisks ?? null}
-                isModel={isModel}
-                readOnly={!isPending || simulating}
-                onChange={(update) =>
-                  setPreviewData((prev) =>
-                    prev?.suggestedRisks
-                      ? { ...prev, suggestedRisks: update(prev.suggestedRisks) }
-                      : prev,
-                  )
-                }
-              />
-            </Box>
-          )}
+                <Typography
+                  sx={{
+                    fontSize: "14px",
+                    fontWeight: 600,
+                    color: theme.palette.text.primary,
+                    mb: "12px",
+                  }}
+                >
+                  Suggested risks
+                </Typography>
+                <SuggestedRisksSection
+                  submissionId={submissionId}
+                  block={previewData?.suggestedRisks ?? null}
+                  isModel={isModel}
+                  readOnly={!isPending || simulating}
+                  onChange={(update) =>
+                    setPreviewData((prev) =>
+                      prev?.suggestedRisks
+                        ? { ...prev, suggestedRisks: update(prev.suggestedRisks) }
+                        : prev,
+                    )
+                  }
+                />
+              </Box>
+            )}
 
           {/* ------------------------------------------------------------------ */}
           {/* Section 2: Entity preview (editable for pending, read-only otherwise) */}

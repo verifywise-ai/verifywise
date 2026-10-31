@@ -13,7 +13,7 @@ import { aiAppQueryKeys } from "./useAiApps";
  * creating, editing or deleting an AI app refreshes the counts too.
  */
 export const aiAppLifecycleKeys = {
-  all: [...aiAppQueryKeys.all, "lifecycle"] as const,
+  all: aiAppQueryKeys.lifecycle(),
   summary: () => [...aiAppLifecycleKeys.all, "summary"] as const,
   detail: (id: number) => [...aiAppLifecycleKeys.all, "detail", id] as const,
 };
