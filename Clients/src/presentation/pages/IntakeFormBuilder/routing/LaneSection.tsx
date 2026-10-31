@@ -18,12 +18,12 @@ interface LaneChipProps {
 
 /** The lane a submission sits in. */
 export const LaneChip = ({ routing, routingEnabled = true }: LaneChipProps) => {
-  if (!routingEnabled) return <Chip label="Routing off" uppercase={false} />;
-  if (!routing) return <Chip label="Not routed yet" uppercase={false} />;
+  if (!routingEnabled) return <Chip label="Assignment off" uppercase={false} />;
+  if (!routing) return <Chip label="Not assigned yet" uppercase={false} />;
   return routing.lane === "senior" ? (
-    <Chip label="Senior review" uppercase={false} variant="warning" />
+    <Chip label="Expert review" uppercase={false} variant="warning" />
   ) : (
-    <Chip label="Standard review" uppercase={false} variant="success" />
+    <Chip label="Regular review" uppercase={false} variant="success" />
   );
 };
 
@@ -33,7 +33,7 @@ const ReasonLine = ({ routing }: { routing: SubmissionRouting }) => {
     case "close_call":
       return (
         <>
-          <span>Within</span> {routing.closeCallMargin} <span>points of the threshold</span>
+          <span>Less than</span> {routing.closeCallMargin} <span>points from the threshold</span>
         </>
       );
     case "prohibited":
@@ -57,7 +57,7 @@ const ReasonLine = ({ routing }: { routing: SubmissionRouting }) => {
     case "escalated":
       return (
         <>
-          <span>Sent to senior review:</span> {routing.escalation?.reason ?? ""}
+          <span>Expert review requested:</span> {routing.escalation?.reason ?? ""}
         </>
       );
     default:
@@ -72,6 +72,8 @@ interface LaneSectionProps {
   decideBlockedReason?: string | null;
   laneReviewers: Array<{ id: number; name: string }>;
   canEscalate: boolean;
+  /** Preview simulation: the escalation button shows but does nothing. */
+  actionsDisabled?: boolean;
   onEscalated: (routing: SubmissionRouting) => void;
 }
 
@@ -82,6 +84,7 @@ const LaneSection = ({
   decideBlockedReason,
   laneReviewers,
   canEscalate,
+  actionsDisabled = false,
   onEscalated,
 }: LaneSectionProps) => {
   const theme = useTheme();
@@ -100,7 +103,7 @@ const LaneSection = ({
   };
 
   const handleEscalate = async () => {
-    if (!reasonValid || isSending) return;
+    if (!reasonValid || isSending || actionsDisabled) return;
     setIsSending(true);
     setError(null);
     try {
@@ -108,7 +111,7 @@ const LaneSection = ({
       closeEscalate();
       onEscalated(response.data);
     } catch (err) {
-      setError(serverErrorMessage(err) ?? "Failed to send to senior review. Please try again.");
+      setError(serverErrorMessage(err) ?? "Failed to request expert review. Please try again.");
     } finally {
       setIsSending(false);
     }
@@ -141,7 +144,8 @@ const LaneSection = ({
             <CustomizableButton
               variant="outlined"
               size="small"
-              text="Send to senior review"
+              text="Request expert review"
+              isDisabled={actionsDisabled}
               onClick={() => setEscalateOpen(true)}
             />
           </Box>
@@ -167,10 +171,10 @@ const LaneSection = ({
       <StandardModal
         isOpen={escalateOpen}
         onClose={closeEscalate}
-        title="Send to senior review"
-        description="Senior reviewers will decide this submission. Say why it needs a closer look."
+        title="Request expert review"
+        description="Expert reviewers will decide this submission. Say why it needs a closer look."
         onSubmit={handleEscalate}
-        submitButtonText="Send to senior review"
+        submitButtonText="Request expert review"
         isSubmitDisabled={!reasonValid}
         isSubmitting={isSending}
         maxWidth="480px"
@@ -180,7 +184,7 @@ const LaneSection = ({
             id="escalate-reason"
             label="Reason"
             isRequired
-            placeholder="Why does this need a senior reviewer?"
+            placeholder="Why does this need an expert reviewer?"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             rows={3}

@@ -59,11 +59,11 @@ const ATTENTION_LABELS: Record<NeedsAttentionKind, string> = {
 
 const SERIES: Array<{ key: keyof IntakeOversight["byWeek"][number]; name: string; color: string }> =
   [
-    { key: "senior", name: "Senior", color: chartPalette[1] },
+    { key: "senior", name: "Expert", color: chartPalette[1] },
     { key: "closeCall", name: "Close call", color: chartPalette[6] },
-    { key: "standard", name: "Standard", color: chartPalette[0] },
-    { key: "notRouted", name: "Not routed", color: chartPalette[2] },
-    { key: "routingOff", name: "Routing off", color: palette.border.dark },
+    { key: "standard", name: "Regular", color: chartPalette[0] },
+    { key: "notRouted", name: "Not assigned", color: chartPalette[2] },
+    { key: "routingOff", name: "Assignment off", color: palette.border.dark },
   ];
 
 interface OversightTabProps {
@@ -174,9 +174,9 @@ export function OversightTab({
             value={d.totals.submissions}
             subtitle={
               <>
-                {d.totals.senior} <span>senior</span> · {d.totals.standard} <span>standard</span> ·{" "}
+                {d.totals.senior} <span>expert</span> · {d.totals.standard} <span>regular</span> ·{" "}
                 {d.totals.closeCalls} <span>close calls</span> · {d.totals.notRouted}{" "}
-                <span>not routed</span> · {d.totals.routingOff} <span>routing off</span>
+                <span>not assigned</span> · {d.totals.routingOff} <span>assignment off</span>
               </>
             }
           />
@@ -188,8 +188,8 @@ export function OversightTab({
             value={<Days hours={d.medianDecisionHours.all} />}
             subtitle={
               <>
-                <span>Senior</span> <Days hours={d.medianDecisionHours.senior} /> ·{" "}
-                <span>Standard</span> <Days hours={d.medianDecisionHours.standard} />
+                <span>Expert</span> <Days hours={d.medianDecisionHours.senior} /> ·{" "}
+                <span>Regular</span> <Days hours={d.medianDecisionHours.standard} />
               </>
             }
           />
@@ -227,7 +227,7 @@ export function OversightTab({
 
       <Box sx={cardSx}>
         <Typography sx={{ fontWeight: 600, fontSize: 16, mb: "12px" }}>
-          Submissions by lane
+          Submissions by review level
         </Typography>
         <ResponsiveContainer width="100%" height={260} minWidth={0} style={{ outline: "none" }}>
           <BarChart data={d.byWeek.map((w) => ({ ...w, label: weekLabel(w.weekStart) }))}>
@@ -317,7 +317,7 @@ export function OversightTab({
         </Box>
         <Box sx={cardSx} data-testid="band-kept-senior">
           <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
-            Band kept, senior lane
+            Band kept, expert review
           </Typography>
           <Typography sx={{ fontSize: 16, fontWeight: 600 }}>
             <Rate part={d.bandKept.seniorKept} whole={d.bandKept.seniorDecided} />

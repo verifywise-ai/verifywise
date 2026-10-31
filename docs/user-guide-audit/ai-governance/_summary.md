@@ -1,6 +1,6 @@
 # Collection summary — ai-governance
 **Date:** 2026-04-29
-**Articles audited:** 16
+**Articles audited:** 20 (4 intake articles added 2026-10-29, #5170)
 **Verification:** see `_verification.md`
 
 ## Verdicts
@@ -15,6 +15,10 @@
 | evidence-collection | ✅ clean | 0 | 0 | 0 |
 | incident-management | ✅ clean | 0 | 0 | 0 |
 | intake-forms | ⚠️ minor (1) | 0 | 1 | 0 |
+| intake-form-fields | ✅ clean (3 fixed) | 0 | 0 | 0 |
+| intake-calculated-values | ✅ clean (1 fixed) | 0 | 0 | 0 |
+| intake-conditional-fields | ✅ clean | 0 | 0 | 0 |
+| intake-reviewer-assignment | ✅ clean (4 fixed) | 0 | 0 | 0 |
 | linked-models | ✅ clean | 0 | 0 | 0 |
 | model-inventory | ✅ clean | 0 | 0 | 0 |
 | model-lifecycle | ⚠️ minor (2) | 0 | 1 | 1 |

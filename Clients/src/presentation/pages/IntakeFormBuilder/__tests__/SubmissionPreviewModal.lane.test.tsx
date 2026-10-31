@@ -60,14 +60,14 @@ describe("SubmissionPreviewModal lane", () => {
       routing: SENIOR_LANE,
       routingEnabled: true,
       canDecide: false,
-      decideBlockedReason: "This submission is assigned to senior reviewers",
+      decideBlockedReason: "This submission is assigned to expert reviewers",
       laneReviewers: [{ id: 1, name: "Sam Senior" }],
     });
     renderModal();
     expect(await screen.findByTestId("lane-blocked")).toHaveTextContent(
       "Only Sam Senior can decide this submission.",
     );
-    expect(screen.getByText("Senior review")).toBeInTheDocument();
+    expect(screen.getByText("Expert review")).toBeInTheDocument();
     expect(screen.queryByText("Approve and create use case")).not.toBeInTheDocument();
     expect(screen.queryByText("Reject this submission instead")).not.toBeInTheDocument();
   });
@@ -90,7 +90,7 @@ describe("SubmissionPreviewModal lane", () => {
     renderModal();
     expect(await screen.findByText("Approve and create use case")).toBeInTheDocument();
     expect(screen.queryByTestId("lane-section")).not.toBeInTheDocument();
-    expect(screen.queryByText("Send to senior review")).not.toBeInTheDocument();
+    expect(screen.queryByText("Request expert review")).not.toBeInTheDocument();
   });
 
   it("shows an open second review to a senior reviewer who didn't approve", async () => {

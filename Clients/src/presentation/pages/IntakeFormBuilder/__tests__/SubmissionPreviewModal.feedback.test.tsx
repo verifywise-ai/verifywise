@@ -155,11 +155,11 @@ describe("SubmissionPreviewModal review feedback", () => {
       laneReviewers: [{ id: 1, name: "Sam Standard" }],
     });
     renderModal({ onApproved, onRejected, onChanged });
-    fireEvent.click(await screen.findByRole("button", { name: "Send to senior review" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Request expert review" }));
     fireEvent.change(document.getElementById("escalate-reason")!, {
       target: { value: "Touches hiring decisions." },
     });
-    const sendButtons = screen.getAllByRole("button", { name: "Send to senior review" });
+    const sendButtons = screen.getAllByRole("button", { name: "Request expert review" });
     fireEvent.click(sendButtons[sendButtons.length - 1]);
     await waitFor(() => expect(onChanged).toHaveBeenCalledTimes(1));
     expect(onApproved).not.toHaveBeenCalled();

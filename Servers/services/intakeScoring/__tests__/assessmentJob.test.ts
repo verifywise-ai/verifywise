@@ -758,19 +758,19 @@ describe("sendIntakeNotificationOnce: lanes", () => {
   it("a senior-lane submission also goes to the senior reviewers, once each", async () => {
     const call = await send({ routing: cfg }, lane("senior", "close_call"));
     expect(call[0]).toEqual([1, 9]);
-    expect(call[8]).toBe("Senior review: close call");
+    expect(call[8]).toBe("Expert review: close call");
   });
 
   it("a standard-lane submission goes to the standard reviewers", async () => {
     const call = await send({ routing: cfg }, lane("standard", "below_threshold"));
     expect(call[0]).toEqual([1, 2]);
-    expect(call[8]).toBe("Standard review");
+    expect(call[8]).toBe("Regular review");
   });
 
   it("no lane yet goes to both lanes and says it isn't routed", async () => {
     const call = await send({ routing: cfg }, null);
     expect(call[0]).toEqual([1, 9, 2]);
-    expect(call[8]).toBe("Not routed yet: scoring is still running");
+    expect(call[8]).toBe("Not assigned yet: scoring is still running");
   });
 
   it("routing off or disabled notifies the form recipients only, with no lane line", async () => {

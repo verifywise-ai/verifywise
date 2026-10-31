@@ -1,12 +1,15 @@
 import type { SubmissionRouting } from "../types";
+import { hasPendingSecondReview } from "../../../../application/utils/intakeRouting/secondReview";
+
+export { hasPendingSecondReview };
 
 export type LaneFilter = "all" | "senior" | "standard" | "unrouted" | "mine" | "second_review";
 
 export const LANE_FILTER_ITEMS: Array<{ _id: LaneFilter; name: string }> = [
-  { _id: "all", name: "All" },
-  { _id: "senior", name: "Senior" },
-  { _id: "standard", name: "Standard" },
-  { _id: "unrouted", name: "Not routed" },
+  { _id: "all", name: "All review levels" },
+  { _id: "senior", name: "Expert" },
+  { _id: "standard", name: "Regular" },
+  { _id: "unrouted", name: "Not assigned" },
   { _id: "mine", name: "Assigned to me" },
   { _id: "second_review", name: "Second review" },
 ];
@@ -19,14 +22,6 @@ interface LaneRow {
   secondReviewerIds?: number[];
   /** The user who approved the submission */
   reviewedBy?: number;
-}
-
-/** A second review is waiting: open, or missed and not yet resolved. */
-export function hasPendingSecondReview(row: Pick<LaneRow, "routing">): boolean {
-  const second = row.routing?.secondReview;
-  return (
-    !!second && (second.status === "open" || (second.status === "missed" && !second.resolvedAt))
-  );
 }
 
 /** Whether a list row passes the lane filter; "mine" = the user can decide its assigned lane. */

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams, useSearchParams, useNavigate } from "react-router";
 import { useForm } from "react-hook-form";
 import { Box, Collapse, Typography, useMediaQuery } from "@mui/material";
-import { Send, Loader2, Info, AlertCircle, Sparkles } from "lucide-react";
+import { Send, Loader2, Info, AlertCircle, Sparkles, ChevronDown } from "lucide-react";
 import Field from "../../components/Inputs/Field";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import { FormFieldRenderer, FormFieldHint, FieldLabel } from "./FormFieldRenderer";
@@ -11,6 +11,9 @@ import { LiveCheckHints, fieldToneFor } from "./LiveCheckHints";
 import { IntakeAssistantPanel } from "./IntakeAssistantPanel";
 import { VendorPrefillCard } from "./VendorPrefillCard";
 import { PrefillLine } from "./PrefillLine";
+import { PreviewBanner } from "./PreviewBanner";
+import { PreviewSubmitMenu, TestSubmitPassed, type PreviewSubmitMode } from "./PreviewSubmitMenu";
+import { PUBLIC_PREVIEW_PARAM } from "../../../application/utils/intakeRouting/previewRole";
 import {
   cleanSubmission,
   evaluateForm,
@@ -165,6 +168,13 @@ export function PublicIntakeForm() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const resubmissionToken = searchParams.get("token") || undefined;
+  // A builder's preview adds a notice and asks, on Submit, whether to test
+  // (check the answers, send nothing) or submit for real. It unlocks nothing.
+  const isPreview = searchParams.get(PUBLIC_PREVIEW_PARAM) === "1";
+  const [previewDismissed, setPreviewDismissed] = useState(false);
+  const showPreviewBanner = isPreview && !previewDismissed;
+  const [submitMenuAnchor, setSubmitMenuAnchor] = useState<HTMLElement | null>(null);
+  const [testSubmitPassed, setTestSubmitPassed] = useState(false);
 
   // State
   const [formData, setFormData] = useState<PublicFormData | null>(null);
@@ -357,8 +367,9 @@ export function PublicIntakeForm() {
     return emailRegex.test(email);
   };
 
-  const onSubmit = async (data: Record<string, unknown>) => {
+  const onSubmit = async (data: Record<string, unknown>, mode: PreviewSubmitMode = "real") => {
     if (!formData) return;
+    setTestSubmitPassed(false);
     const isNewFormat = !!publicId;
     if (!isNewFormat && (!tenantSlug || !formSlug)) return;
 
@@ -379,6 +390,12 @@ export function PublicIntakeForm() {
     const captchaNum = Number(captchaValue.trim());
     if (!captchaValue.trim() || isNaN(captchaNum)) {
       setCaptchaError("Please enter a valid number");
+      return;
+    }
+
+    // Every check above has passed; a test stops here and sends nothing.
+    if (mode === "test") {
+      setTestSubmitPassed(true);
       return;
     }
 
@@ -524,7 +541,7 @@ export function PublicIntakeForm() {
     return null;
   }
 
-  // Same order the show/hide rules and formulas use.
+  // Form order. Rules and formulas are settled in dependency order (evaluateForm).
   const sortedFields = sortFields(formData.schema.fields);
 
   // Resolve design settings; a key missing from the saved settings takes its default.
@@ -572,6 +589,7 @@ export function PublicIntakeForm() {
           ...formMargin,
         }}
       >
+        {showPreviewBanner && <PreviewBanner onDismiss={() => setPreviewDismissed(true)} />}
         <Box sx={{ display: "flex", gap: `${PANEL_GAP}px`, alignItems: "flex-start" }}>
           {/* Card with banner + form body */}
           <Box
@@ -657,7 +675,14 @@ export function PublicIntakeForm() {
 
             {/* Form body */}
             {(!riskStep || step === "form") && (
-              <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ p: "32px" }}>
+              <Box
+                component="form"
+                // In a preview, Submit (and Enter, which clicks it) opens the
+                // test / real menu instead; a stray submit there only tests.
+                onSubmit={handleSubmit((data) => onSubmit(data, isPreview ? "test" : "real"))}
+                onChange={() => setTestSubmitPassed(false)}
+                sx={{ p: "32px" }}
+              >
                 {/* Back to the risk step */}
                 {riskStep && (
                   <Box sx={{ mb: "16px" }}>
@@ -846,9 +871,22 @@ export function PublicIntakeForm() {
 
                 {assistantPanel && !panelBeside && <Box sx={{ mb: "24px" }}>{assistantPanel}</Box>}
 
-                {/* Submit button */}
+                {testSubmitPassed && <TestSubmitPassed />}
+
+                {/* Submit button. In a preview it opens the test / real choice. */}
                 <CustomizableButton
                   type="submit"
+                  onClick={
+                    isPreview
+                      ? (event) => {
+                          event.preventDefault();
+                          setTestSubmitPassed(false);
+                          setSubmitMenuAnchor(event.currentTarget);
+                        }
+                      : undefined
+                  }
+                  endIcon={isPreview ? <ChevronDown size={16} /> : undefined}
+                  testId="public-form-submit"
                   variant="contained"
                   isDisabled={isSubmitting}
                   startIcon={
@@ -881,6 +919,16 @@ export function PublicIntakeForm() {
                     },
                   }}
                 />
+                {isPreview && (
+                  <PreviewSubmitMenu
+                    anchor={submitMenuAnchor}
+                    onClose={() => setSubmitMenuAnchor(null)}
+                    onChoose={(mode) => {
+                      setSubmitMenuAnchor(null);
+                      void handleSubmit((data) => onSubmit(data, mode))();
+                    }}
+                  />
+                )}
               </Box>
             )}
           </Box>

@@ -350,7 +350,7 @@ const VWProjectOverview = ({ project }: { project?: Project }) => {
             <>
               {projectFrameworkId && (
                 <Stack sx={columnStyle}>
-                  <Typography sx={projectRiskSection}>EU AI Act Completion Status</Typography>
+                  <Typography sx={projectRiskSection}>EU AI Act completion status</Typography>
                   <GroupStatsCard
                     completed={completedEuActNumbers}
                     total={totalEuActNumbers}
@@ -361,7 +361,7 @@ const VWProjectOverview = ({ project }: { project?: Project }) => {
               )}
               {projectFrameworkId2 && (
                 <Stack sx={columnStyle}>
-                  <Typography sx={projectRiskSection}>ISO 42001 Completion Status</Typography>
+                  <Typography sx={projectRiskSection}>ISO 42001 completion status</Typography>
                   <GroupStatsCard
                     completed={completedIso42001Numbers}
                     total={totalIso42001Numbers}
@@ -372,7 +372,7 @@ const VWProjectOverview = ({ project }: { project?: Project }) => {
               )}
               {genericFrameworkProgress.map((fw) => (
                 <Stack key={fw.framework_id} sx={columnStyle}>
-                  <Typography sx={projectRiskSection}>{`${fw.name} Completion Status`}</Typography>
+                  <Typography sx={projectRiskSection}>{`${fw.name} completion status`}</Typography>
                   <GroupStatsCard
                     completed={[fw.done]}
                     total={[fw.total]}

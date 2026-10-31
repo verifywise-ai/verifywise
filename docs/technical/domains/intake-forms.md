@@ -22,6 +22,8 @@ Design specs: `docs/superpowers/specs/2026-10-21-ai-intake-classification-design
 | Lane rules, decision gate, routing writes | `Servers/services/intakeRouting/routingRules.ts`, `decisionGate.ts`, `routingService.ts` |
 | Oversight figures | `Servers/services/intakeRouting/oversight.ts` |
 | Routing and oversight UI | `Clients/src/presentation/pages/IntakeFormBuilder/routing/`, `oversight/` |
+| Lane rules (client mirror, for "Preview as") | `Clients/src/application/utils/intakeRouting/routingRules.ts`, `previewRole.ts` |
+| Preview menu and role banner | `Clients/src/presentation/pages/IntakeFormBuilder/preview/`, `PublicIntakeForm/PreviewBanner.tsx` |
 
 ## Score
 
@@ -149,6 +151,15 @@ A reviewer who is deleted, or who loses `intakeForm.edit`, stays in the form's l
 
 Second-review actions by senior reviewers keep working after routing is turned off: `loadSecondReview` checks the stored senior list, not `routing.enabled`.
 
+### Preview as a role
+
+The builder's Preview menu opens either the public form or the review flow as a role. Both are UI only; the server still authorises every real action for the signed-in user.
+
+- **Submitter.** Opens `/<publicId>/use-case-form-intake?vwPreview=1&as=submitter` in a new tab. `PublicIntakeForm` shows a dismissible notice and nothing else changes: submitting still creates a real submission. Without `vwPreview=1` the page is unchanged.
+- **Admin, senior reviewer, standard reviewer.** Opens `/intake-forms/submissions?simulateRole=admin|senior|standard` in a new tab. The role lives only in the query string and only applies on the Submissions tab. A banner ("Previewing as <role>, simulation only") switches role in place or exits. The list's "Assigned to me" filter and the review modal follow the simulated role: `simulatedReviewGate` (`previewRole.ts`) runs the client copies of `entityLevel`, `laneOnRecord`, `canDecideLane` and `laneReviewerIdsFor` for a stand-in user who is the form's only reviewer of that kind. The modal reads the form's current routing with `getIntakeForm` when it opens; until that loads, or if it fails, the banner says so and no decision control shows. The blocked line names the form's reviewers for the simulated lane. Second-review actions follow one rule in the modal and the list (`simulatedCanSecondReview`): a second review is waiting and the role is a senior reviewer or an Admin. In the modal, Approve, Reject, Retry, Send to senior review, second-review actions and suggested-risk edits are turned off or hidden. Local edits (override, entity fields) still work and are never sent.
+
+The client copies of `laneFor`, `canDecideLane`, `laneReviewerIdsFor`, `laneAtDecision`, `laneOnRecord` and `entityLevel` are kept identical to the server's by a shared fixture, `Servers/services/intakeRouting/__fixtures__/routingRulesCases.json`. `Clients/src/application/utils/intakeRouting/__tests__/routingRules.test.ts` runs every case; on the server, `routingRules.mirror.test.ts` runs the lane cases and `controllers/__tests__/intakeForm.entityLevel.mirror.test.ts` runs the `entityLevel` cases through `getSubmissionPreview` (the function is private to the controller). Change a rule on the server and add a case there, and the client suite fails until the copy matches.
+
 ### Decision record
 
 Approve and reject both write `intake_submissions.decision_record` through `buildDecisionRecord`: `{ level, computedBand, bandInForce, bandChanged, overriddenBy, lane }`. `bandChanged` is true when the band in force at the decision differs from the computed one. Oversight reads it.
@@ -199,3 +210,5 @@ The migration adds `suggested_risks` and `notification_sent_at` and sets the def
 Server: `Servers/services/intakeScoring/__tests__/`, `Servers/utils/__tests__/intakeForm.assessment.utils.test.ts`, `Servers/controllers/__tests__/intakeForm.{assessmentEnqueue,review,approveRisks}.test.ts`. Client: `Clients/src/presentation/pages/IntakeFormBuilder/__tests__/{ScoreSection,SuggestedRisksSection,OverrideBandFloor,RiskTierChip}.test.tsx`.
 
 Routing and oversight: `Servers/services/intakeRouting/__tests__/` (`routingRules`, `routingService`, `decisionGate`, `oversight`). Client, in the same `__tests__` folder: `{RoutingSettingsSection,LaneSection,SecondReviewPanel,OversightTab,SubmissionPreviewModal.lane,laneFilter,IntakeFormsListPage.oversight}`.
+
+Preview as a role: `Servers/services/intakeRouting/__tests__/routingRules.mirror.test.ts`, `Servers/controllers/__tests__/intakeForm.entityLevel.mirror.test.ts`, `Clients/src/application/utils/intakeRouting/__tests__/`, `Clients/src/presentation/pages/IntakeFormBuilder/__tests__/{SubmissionPreviewModal.simulation,IntakeFormsListPage.simulation,PreviewMenu}.test.tsx`, `Clients/src/presentation/pages/PublicIntakeForm/__tests__/PublicIntakeForm.preview.test.tsx`.
