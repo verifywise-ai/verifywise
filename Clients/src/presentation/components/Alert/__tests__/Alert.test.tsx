@@ -61,6 +61,18 @@ describe("Alert Component", () => {
     expect(screen.getByText("No icon")).toBeInTheDocument();
   });
 
+  it("floats top-right by default, even when isToast is false", () => {
+    renderWithProviders(<Alert variant="success" body="Saved" isToast={false} />);
+
+    expect(screen.getByRole("alert")).toHaveStyle({ position: "fixed" });
+  });
+
+  it("renders in the page flow when inline is set", () => {
+    renderWithProviders(<Alert variant="error" body="Could not save" inline />);
+
+    expect(screen.getByRole("alert")).toHaveStyle({ position: "static" });
+  });
+
   it("renders title and body together", () => {
     renderWithProviders(<Alert variant="info" title="Notice" body="Check this out." />);
 
