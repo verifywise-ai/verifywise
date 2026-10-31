@@ -120,9 +120,18 @@ describe("AI app lifecycle", () => {
     expect((await api.post(`/api/v1/ai-app-lifecycle/${banned}/go-live`)).status).toBe(409);
     expect((await api.post(`/api/v1/ai-app-lifecycle/${restricted}/go-live`)).status).toBe(200);
 
+    expect((await api.get(`/api/v1/ai-app-lifecycle/${draft}`)).body.data.can_go_live).toBe(false);
+
     // Approving the draft lets it go live.
-    await setRow(draft, `status = 'approved'`);
+    await api.patch(`/api/ai-apps/${draft}/status`).send({ status: "approved" });
+    expect((await api.get(`/api/v1/ai-app-lifecycle/${draft}`)).body.data.can_go_live).toBe(true);
     expect((await api.post(`/api/v1/ai-app-lifecycle/${draft}/go-live`)).status).toBe(200);
+
+    // Setting a live app back to draft takes it out of Live.
+    expect((await api.patch(`/api/ai-apps/${draft}/status`).send({ status: "draft" })).status).toBe(
+      200,
+    );
+    expect((await row(draft)).lifecycle_stage).toBe("planned");
   });
 
   it("lets aiApp.edit holders and the owner act; never Auditors or other Reviewers", async () => {

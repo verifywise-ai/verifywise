@@ -6,15 +6,23 @@ import { AiAppStatus } from "../../../../domain/enums/aiApp.enum";
 const mockUseAiApps = vi.fn();
 
 vi.mock("../../../../application/hooks/useAiAppLifecycle", () => ({
-  useAiAppLifecycleSummary: () => ({
-    data: {
-      counts: { in_review: 1, planned: 4, live: 2, retired: 0 },
-      stale_ids: [1],
-      confirmation_interval_days: 90,
+  useAiAppStageCounts: () => ({
+    summary: {
+      data: {
+        counts: { in_review: 1, planned: 4, live: 2, retired: 0 },
+        stale_ids: [1],
+        confirmation_interval_days: 90,
+      },
+      isLoading: false,
     },
-    isLoading: false,
+    counts: {
+      in_review: 1 + ((mockPending.total as number) ?? 0),
+      planned: 4,
+      live: 2,
+      retired: 0,
+    },
+    pending: mockPending,
   }),
-  usePendingAiAppSubmissions: () => ({ data: mockPending }),
 }));
 
 const emptyPending = { total: 0, items: [], limit: 500 };

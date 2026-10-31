@@ -85,7 +85,7 @@ export const aiAppsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'On the app detail page, choose Mark as live and pick the go-live date (today or earlier), Confirm still live, or Retire. Only an app with status Approved or Restricted can be marked as live: approve a Draft app first. Admins, Editors and the app owner can change the lifecycle; Auditors cannot.',
+      text: 'On the app detail page, choose Mark as live and pick the go-live date (today or earlier), Confirm still live, or Retire. Only an app with status Approved or Restricted can be marked as live: approve a Draft app first. Setting a live app back to Draft returns it to Planned. Admins, Editors and the app owner can change the lifecycle; Auditors cannot.',
     },
     {
       type: 'paragraph',

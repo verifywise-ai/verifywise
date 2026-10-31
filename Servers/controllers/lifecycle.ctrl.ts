@@ -153,13 +153,16 @@ function actionHandler(entity: LifecycleEntityConfig, action: LifecycleAction) {
         transaction,
       );
       if (!updated) {
+        // Still planned after the refused UPDATE: the entity's own go-live
+        // rule failed (an AI app that is not approved), not the stage. Read
+        // again, since someone may have moved it since `current` was read.
+        const now =
+          action === "go_live" && messages.goLiveNotAllowed
+            ? await getLifecycleRow(entity, req.organizationId!, id, transaction)
+            : null;
         await transaction.rollback();
-        // Planned but refused: the entity's own go-live rule (an AI app
-        // that is not approved), not the stage.
         const message =
-          action === "go_live" &&
-          current.lifecycle_stage === LifecycleStage.PLANNED &&
-          messages.goLiveNotAllowed
+          now?.lifecycle_stage === LifecycleStage.PLANNED && messages.goLiveNotAllowed
             ? messages.goLiveNotAllowed
             : messages.conflict[action];
         return res.status(409).json(STATUS_CODE[409](req.t!(message)));

@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   confirmAiAppStillLive,
@@ -8,6 +9,8 @@ import {
   retireAiApp,
 } from "../repository/aiAppLifecycle.repository";
 import { aiAppQueryKeys } from "./useAiApps";
+import { PENDING_REQUESTS_QUERY_OPTIONS } from "./useUseCaseLifecycle";
+import { withPendingRequests } from "../utils/useCaseLifecycle";
 
 /**
  * AI app lifecycle queries (#5193). Keys sit under aiAppQueryKeys.all, so
@@ -28,19 +31,28 @@ export function useAiAppLifecycleSummary() {
   });
 }
 
-/**
- * Pending AI app intake requests. Always refetched on mount and on window
- * focus, like the use case list: coming back from deciding one on the review
- * screen must not show the old list.
- */
+/** Pending AI app intake requests, shown in the In review tab. */
 export function usePendingAiAppSubmissions() {
   return useQuery({
     queryKey: aiAppLifecycleKeys.pendingSubmissions(),
     queryFn: getPendingAiAppSubmissions,
-    staleTime: 0,
-    refetchOnMount: "always",
-    refetchOnWindowFocus: true,
+    ...PENDING_REQUESTS_QUERY_OPTIONS,
   });
+}
+
+/**
+ * The AI apps tab counts: the server counts per stage (the list is paged),
+ * with pending intake requests added to In review, as for use cases.
+ */
+export function useAiAppStageCounts() {
+  const summary = useAiAppLifecycleSummary();
+  const { data: pending } = usePendingAiAppSubmissions();
+  const pendingTotal = pending?.total ?? 0;
+  const counts = useMemo(
+    () => (summary.data ? withPendingRequests(summary.data.counts, pendingTotal) : undefined),
+    [summary.data, pendingTotal],
+  );
+  return { summary, counts, pending };
 }
 
 export function useAiAppLifecycle(id: number | null) {

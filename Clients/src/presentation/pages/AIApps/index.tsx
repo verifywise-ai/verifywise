@@ -21,11 +21,7 @@ import AIAppDetail from "./AIAppDetail";
 import { mainStackStyle, toolbarStyle, filterRowStyle } from "./style";
 import { STATUS_FILTER_OPTIONS } from "./utils";
 import LifecycleTabs from "../../components/LifecycleTabs";
-import {
-  useAiAppLifecycleSummary,
-  usePendingAiAppSubmissions,
-} from "../../../application/hooks/useAiAppLifecycle";
-import { withPendingRequests } from "../../../application/utils/useCaseLifecycle";
+import { useAiAppStageCounts } from "../../../application/hooks/useAiAppLifecycle";
 import PendingIntakeSubmissions from "../../components/LifecycleTabs/PendingIntakeSubmissions";
 import { LifecycleStage } from "../../../domain/enums/lifecycleStage.enum";
 import { useLifecycleTab } from "../../../application/hooks/useLifecycleTab";
@@ -75,18 +71,16 @@ export default function AIApps() {
   // Lifecycle tabs (#5193). The list is paged on the server, so the counts
   // and stale markers come from the lifecycle summary, not from the rows.
   const [stage, handleStageChange] = useLifecycleTab(STAGE_STORAGE_KEY);
-  const { data: lifecycleSummary, isLoading: isSummaryLoading } = useAiAppLifecycleSummary();
-  const staleIds = useMemo(() => new Set(lifecycleSummary?.stale_ids ?? []), [lifecycleSummary]);
-  const hasAnyApps = Object.values(lifecycleSummary?.counts ?? {}).some((n) => n > 0);
   // Pending AI app intake requests: no app exists until a reviewer approves
   // one, so they are counted in In review and listed above its table.
-  const { data: pendingSubmissions } = usePendingAiAppSubmissions();
+  const {
+    summary: { data: lifecycleSummary, isLoading: isSummaryLoading },
+    counts: stageCounts,
+    pending: pendingSubmissions,
+  } = useAiAppStageCounts();
   const pendingTotal = pendingSubmissions?.total ?? 0;
-  const stageCounts = useMemo(
-    () =>
-      lifecycleSummary ? withPendingRequests(lifecycleSummary.counts, pendingTotal) : undefined,
-    [lifecycleSummary, pendingTotal],
-  );
+  const staleIds = useMemo(() => new Set(lifecycleSummary?.stale_ids ?? []), [lifecycleSummary]);
+  const hasAnyApps = Object.values(lifecycleSummary?.counts ?? {}).some((n) => n > 0);
 
   // Each tab lists every app in its stage: the server filters, searches,
   // sorts and pages, so the tab count and the list always agree.
@@ -122,7 +116,7 @@ export default function AIApps() {
 
   // Distinguish a genuinely empty inventory from a search/filter that matched nothing,
   // so the explanatory placeholder only shows when there is no data at all.
-  const hasNoApps = apps.length === 0 && !hasAnyApps;
+  const hasNoApps = apps.length === 0 && !hasAnyApps && pendingTotal === 0;
   // Requests have no approval status, so a status filter hides them.
   const showRequests =
     stage === LifecycleStage.IN_REVIEW && statusFilter === "all" && pendingTotal > 0;
@@ -224,7 +218,7 @@ export default function AIApps() {
         {showRequests && (
           <PendingIntakeSubmissions
             pending={pendingSubmissions}
-            searchTerm={searchTerm}
+            searchTerm={debouncedSearch}
             description="Submitted through an intake form. The AI app is created when a reviewer approves the request."
           />
         )}

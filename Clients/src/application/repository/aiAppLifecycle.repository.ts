@@ -19,6 +19,8 @@ export interface AiAppLifecycleState {
   last_confirmed_at: string | null;
   last_confirmed_by: number | null;
   is_stale: boolean;
+  /** Its status allows going live (approved or restricted). */
+  can_go_live: boolean;
   confirmation_interval_days: number;
 }
 

@@ -62,6 +62,8 @@ export async function getAiAppLifecycleSummary(
 
 export interface AiAppLifecycleState extends Omit<LifecycleRow, "department"> {
   is_stale: boolean;
+  /** Whether its status allows going live (approved or restricted). */
+  can_go_live: boolean;
   confirmation_interval_days: number;
 }
 
@@ -73,11 +75,14 @@ export async function getAiAppLifecycleState(
   const rows = (await sequelize.query(
     `SELECT ${lifecycleColumnsSql(AI_APP)}, a.${AI_APP.ownerColumn} AS owner,
             ${staleSql("a", ORG_INTERVAL_SQL, AI_APP)} AS is_stale,
+            (${AI_APP.goLiveCondition!("a")}) AS can_go_live,
             ${ORG_INTERVAL_SQL} AS confirmation_interval_days
        FROM ai_apps a
       WHERE a.organization_id = :organizationId AND a.id = :id`,
     { replacements: { organizationId, id }, type: QueryTypes.SELECT },
-  )) as Array<LifecycleRow & { is_stale: boolean; confirmation_interval_days: number }>;
+  )) as Array<
+    LifecycleRow & { is_stale: boolean; can_go_live: boolean; confirmation_interval_days: number }
+  >;
   const row = rows[0];
   if (!row) return null;
   const { department: _department, ...lifecycle } = row;
@@ -85,6 +90,7 @@ export async function getAiAppLifecycleState(
     ...lifecycle,
     id: Number(lifecycle.id),
     is_stale: Boolean(row.is_stale),
+    can_go_live: Boolean(row.can_go_live),
     confirmation_interval_days: Number(row.confirmation_interval_days),
   };
 }

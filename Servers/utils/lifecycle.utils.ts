@@ -412,7 +412,8 @@ export async function moveLifecycleStage(
 /**
  * An AI app's approval status drives its stage where the meaning is clear
  * (#5193): under review → in review (from planned); leaving under review →
- * planned (if still in review); banned → retired (from anything else), which
+ * planned (if still in review); draft → planned (from in review or live: an
+ * unapproved app can't be live); banned → retired (from anything else), which
  * also ends its still-live checks. Approved and restricted otherwise leave
  * the stage alone: approval says an app may be used, not that it is.
  */
@@ -431,6 +432,19 @@ export async function syncAiAppStageWithStatus(
       id,
       [LifecycleStage.PLANNED],
       LifecycleStage.IN_REVIEW,
+      changedBy,
+      transaction,
+    );
+  }
+  if (status === AiAppStatus.DRAFT) {
+    // Only an approved app can be live (goLiveCondition): back to planned.
+    // From in review this is the usual "left under review" move.
+    return moveLifecycleStage(
+      entity,
+      organizationId,
+      id,
+      [LifecycleStage.IN_REVIEW, LifecycleStage.LIVE],
+      LifecycleStage.PLANNED,
       changedBy,
       transaction,
     );

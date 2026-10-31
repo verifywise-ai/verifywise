@@ -1,7 +1,6 @@
 import { screen, fireEvent, waitFor } from "@testing-library/react";
 import { renderWithProviders } from "../../../../../test/renderWithProviders";
 import AIAppLifecyclePanel from "../AIAppLifecyclePanel";
-import { AiAppStatus } from "../../../../../domain/enums/aiApp.enum";
 
 const mockConfirm = vi.fn();
 let mockState: Record<string, unknown> = {};
@@ -32,6 +31,7 @@ const state = (overrides: Record<string, unknown> = {}) => ({
   last_confirmed_at: null,
   last_confirmed_by: null,
   is_stale: true,
+  can_go_live: true,
   confirmation_interval_days: 90,
   ...overrides,
 });
@@ -46,7 +46,7 @@ describe("AIAppLifecyclePanel", () => {
   it("lets the owner confirm a stale live AI app", async () => {
     mockState = state();
     mockConfirm.mockResolvedValue(undefined);
-    renderWithProviders(<AIAppLifecyclePanel appId={3} status={AiAppStatus.APPROVED} />);
+    renderWithProviders(<AIAppLifecyclePanel appId={3} />);
 
     expect(await screen.findByText(/Nobody has confirmed this AI app/)).toBeInTheDocument();
     fireEvent.click(screen.getByTestId("lifecycle-confirm-btn"));
@@ -55,7 +55,7 @@ describe("AIAppLifecyclePanel", () => {
 
   it("hides the actions from a non-owner without aiApp.edit", async () => {
     mockState = state({ owner: 99, is_stale: false });
-    renderWithProviders(<AIAppLifecyclePanel appId={3} status={AiAppStatus.APPROVED} />);
+    renderWithProviders(<AIAppLifecyclePanel appId={3} />);
     expect(await screen.findByTestId("ai-app-lifecycle-panel")).toBeInTheDocument();
     expect(screen.queryByTestId("lifecycle-confirm-btn")).toBeNull();
   });
@@ -64,22 +64,29 @@ describe("AIAppLifecyclePanel", () => {
     mockRole = "Auditor";
     mockPermissions = ["aiApp.edit"];
     mockState = state({ lifecycle_stage: "planned" });
-    renderWithProviders(<AIAppLifecyclePanel appId={3} status={AiAppStatus.APPROVED} />);
+    renderWithProviders(<AIAppLifecyclePanel appId={3} />);
     expect(await screen.findByTestId("ai-app-lifecycle-panel")).toBeInTheDocument();
     expect(screen.queryByTestId("lifecycle-go-live-btn")).toBeNull();
   });
 
   it("keeps a planned app that is not approved from going live", async () => {
-    mockState = state({ lifecycle_stage: "planned", go_live_date: null, is_stale: false });
+    mockState = state({
+      lifecycle_stage: "planned",
+      go_live_date: null,
+      is_stale: false,
+      can_go_live: false,
+    });
     mockPermissions = ["aiApp.edit"];
-    const { rerender } = renderWithProviders(
-      <AIAppLifecyclePanel appId={3} status={AiAppStatus.DRAFT} />,
-    );
+    renderWithProviders(<AIAppLifecyclePanel appId={3} />);
     expect(await screen.findByTestId("lifecycle-go-live-btn")).toBeDisabled();
     expect(screen.getByText(/Approve this AI app before marking it as live/)).toBeInTheDocument();
+  });
 
-    rerender(<AIAppLifecyclePanel appId={3} status={AiAppStatus.RESTRICTED} />);
-    expect(screen.getByTestId("lifecycle-go-live-btn")).toBeEnabled();
+  it("lets a planned approved app go live", async () => {
+    mockState = state({ lifecycle_stage: "planned", go_live_date: null, is_stale: false });
+    mockPermissions = ["aiApp.edit"];
+    renderWithProviders(<AIAppLifecyclePanel appId={3} />);
+    expect(await screen.findByTestId("lifecycle-go-live-btn")).toBeEnabled();
     expect(screen.queryByText(/Approve this AI app before marking it as live/)).toBeNull();
   });
 });

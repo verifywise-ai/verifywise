@@ -31,19 +31,25 @@ export function useUseCaseLifecycleSummary() {
   });
 }
 
-/** Pending use case intake submissions, shown in the In review tab (#5188). */
 /**
- * Pending use case intake requests (#5188). Always refetched on mount and on
- * window focus: coming back from approving or rejecting one on the review
- * screen must not show the old list.
+ * Query options for pending intake requests (use cases, AI apps). Always
+ * refetched on mount and on window focus: coming back from approving or
+ * rejecting one on the review screen must not show the old list.
+ */
+export const PENDING_REQUESTS_QUERY_OPTIONS = {
+  staleTime: 0,
+  refetchOnMount: "always",
+  refetchOnWindowFocus: true,
+} as const;
+
+/**
+ * Pending use case intake requests (#5188), shown in the In review tab.
  */
 export function usePendingUseCaseSubmissions() {
   return useQuery({
     queryKey: useCaseLifecycleKeys.pendingSubmissions(),
     queryFn: getPendingUseCaseSubmissions,
-    staleTime: 0,
-    refetchOnMount: "always",
-    refetchOnWindowFocus: true,
+    ...PENDING_REQUESTS_QUERY_OPTIONS,
   });
 }
 

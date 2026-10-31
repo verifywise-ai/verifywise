@@ -72,7 +72,7 @@ export default function AIAppDetail() {
   return (
     <PageHeaderExtended title="AI app details" description="Approval center and governance">
       <Stack gap="24px">
-        <AIAppLifecyclePanel appId={app.id!} status={app.status} />
+        <AIAppLifecyclePanel appId={app.id!} />
 
         <Box sx={sectionCardStyle}>
           <AIAppApprovalCenter
