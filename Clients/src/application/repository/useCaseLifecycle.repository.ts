@@ -24,7 +24,16 @@ export interface LifecycleBreakdownRow {
   count: number;
 }
 
+/** Approved use case submissions: submitted → approved, last 12 months. */
+export interface ReviewTimeStats {
+  approved: number;
+  median_days: number | null;
+  average_days: number | null;
+  period_months: number;
+}
+
 export interface UseCaseLifecycleDashboard {
+  review_time: ReviewTimeStats;
   quarter: {
     start: string;
     end: string;
@@ -38,6 +47,24 @@ export interface UseCaseLifecycleDashboard {
   };
   stale: { total: number; items: LifecycleDashboardItem[] };
   confirmation_interval_days: number;
+}
+
+/** A use case intake submission waiting for a decision (#5188). */
+export interface PendingUseCaseSubmission {
+  id: number;
+  title: string | null;
+  form_name: string;
+  submitter_name: string | null;
+  /** When the first submission of its resubmission chain arrived. */
+  submitted_at: string;
+  days_in_review: number;
+}
+
+/** All pending requests are counted; only the oldest `limit` are listed. */
+export interface PendingUseCaseSubmissions {
+  total: number;
+  items: PendingUseCaseSubmission[];
+  limit: number;
 }
 
 export interface UseCaseLifecycleState {
@@ -67,6 +94,13 @@ export async function getUseCaseLifecycleSummary(): Promise<UseCaseLifecycleSumm
 
 export async function getUseCaseLifecycleDashboard(): Promise<UseCaseLifecycleDashboard> {
   const response = await apiServices.get<Envelope<UseCaseLifecycleDashboard>>(`${BASE}/dashboard`);
+  return response.data.data;
+}
+
+export async function getPendingUseCaseSubmissions(): Promise<PendingUseCaseSubmissions> {
+  const response = await apiServices.get<Envelope<PendingUseCaseSubmissions>>(
+    `${BASE}/intake-submissions`,
+  );
   return response.data.data;
 }
 

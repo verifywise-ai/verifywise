@@ -1,7 +1,10 @@
+import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { countLifecycleStages, withPendingRequests } from "../utils/useCaseLifecycle";
 import {
   confirmUseCaseStillLive,
   getLifecycleSettings,
+  getPendingUseCaseSubmissions,
   getUseCaseLifecycleDashboard,
   getUseCaseLifecycleSummary,
   markUseCaseLive,
@@ -16,6 +19,7 @@ export const useCaseLifecycleKeys = {
   all: ["useCaseLifecycle"] as const,
   summary: () => [...useCaseLifecycleKeys.all, "summary"] as const,
   dashboard: () => [...useCaseLifecycleKeys.all, "dashboard"] as const,
+  pendingSubmissions: () => [...useCaseLifecycleKeys.all, "pendingSubmissions"] as const,
   settings: ["lifecycleSettings"] as const,
 };
 
@@ -25,6 +29,37 @@ export function useUseCaseLifecycleSummary() {
     queryFn: getUseCaseLifecycleSummary,
     staleTime: 60 * 1000,
   });
+}
+
+/** Pending use case intake submissions, shown in the In review tab (#5188). */
+/**
+ * Pending use case intake requests (#5188). Always refetched on mount and on
+ * window focus: coming back from approving or rejecting one on the review
+ * screen must not show the old list.
+ */
+export function usePendingUseCaseSubmissions() {
+  return useQuery({
+    queryKey: useCaseLifecycleKeys.pendingSubmissions(),
+    queryFn: getPendingUseCaseSubmissions,
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
+  });
+}
+
+/**
+ * Use case counts per lifecycle stage, as both the Use cases tabs and the
+ * dashboard show them: the use cases list counted by stage, with pending
+ * intake requests added to In review.
+ */
+export function useUseCaseStageCounts(projects: Parameters<typeof countLifecycleStages>[0]) {
+  const { data: pending } = usePendingUseCaseSubmissions();
+  const pendingTotal = pending?.total ?? 0;
+  const counts = useMemo(
+    () => withPendingRequests(countLifecycleStages(projects), pendingTotal),
+    [projects, pendingTotal],
+  );
+  return { counts, pending };
 }
 
 export function useUseCaseLifecycleDashboard() {
