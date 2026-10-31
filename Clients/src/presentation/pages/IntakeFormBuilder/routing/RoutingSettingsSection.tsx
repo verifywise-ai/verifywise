@@ -5,7 +5,7 @@ import Checkbox from "../../../components/Inputs/Checkbox";
 import Field from "../../../components/Inputs/Field";
 import CustomizableMultiSelect from "../../../components/Inputs/Select/Multi";
 import type { FormRouting } from "../types";
-import RoutingFieldInfo, { type RoutingNumberKey } from "./RoutingFieldInfo";
+import RoutingFieldInfo from "./RoutingFieldInfo";
 
 export interface RoutingReviewer {
   _id: number;
@@ -21,7 +21,7 @@ interface RoutingSettingsSectionProps {
   reviewersLoaded?: boolean;
 }
 
-type NumberKey = RoutingNumberKey;
+export type NumberKey = "threshold" | "closeCallMargin" | "secondReviewRate";
 
 const DEFAULT_ROUTING: FormRouting = {
   enabled: true,
@@ -223,30 +223,20 @@ const RoutingSettingsSection = ({
 
           <Box sx={{ display: "flex", flexDirection: "column", gap: "8px" }}>
             {NUMBER_FIELDS.map(({ key, label, hint }) => (
-              <Box key={key}>
-                {/* Field's label is text only; this one carries the info button. */}
-                <Box sx={{ display: "flex", alignItems: "center", gap: "4px", height: "22px" }}>
-                  <Typography
-                    component="label"
-                    htmlFor={`routing-${key}`}
-                    sx={{ fontSize: "13px", fontWeight: 500, color: theme.palette.text.secondary }}
-                  >
-                    {label}
-                  </Typography>
-                  <RoutingFieldInfo field={key} />
-                </Box>
-                <Field
-                  id={`routing-${key}`}
-                  type="number"
-                  value={drafts[key] ?? String(current[key])}
-                  onChange={(e) => onNumber(key, e.target.value)}
-                  min={RANGES[key].min}
-                  max={RANGES[key].max}
-                  error={errors[key]}
-                  helperText={hint}
-                  disabled={!canEdit}
-                />
-              </Box>
+              <Field
+                key={key}
+                id={`routing-${key}`}
+                type="number"
+                label={label}
+                labelAdornment={<RoutingFieldInfo field={key} />}
+                value={drafts[key] ?? String(current[key])}
+                onChange={(e) => onNumber(key, e.target.value)}
+                min={RANGES[key].min}
+                max={RANGES[key].max}
+                error={errors[key]}
+                helperText={hint}
+                disabled={!canEdit}
+              />
             ))}
           </Box>
 

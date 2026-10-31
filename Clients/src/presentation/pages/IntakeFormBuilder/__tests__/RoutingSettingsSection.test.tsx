@@ -170,36 +170,58 @@ describe("RoutingSettingsSection", () => {
 });
 
 describe("RoutingSettingsSection number tooltips", () => {
-  it("gives each number a keyboard-focusable info button", () => {
+  it("gives each number a real info button outside its label", () => {
     renderWithProviders(<Harness initial={on()} />);
     for (const name of [
       "About the threshold",
       "About the close-call margin",
       "About the second review share",
     ]) {
-      expect(screen.getByRole("button", { name })).toHaveAttribute("tabindex", "0");
+      const trigger = screen.getByRole("button", { name });
+      expect(trigger.tagName).toBe("BUTTON");
+      expect(trigger.closest("label")).toBeNull();
     }
-    // The visible labels still name the inputs.
+    // The labels still name the inputs.
     expect(screen.getByLabelText("Threshold")).toHaveValue(50);
   });
 
-  it("explains the threshold with the 0-100 scale and every score band", async () => {
+  it("opens on click (tap, Enter, Space) and closes on a second click or Escape", async () => {
+    renderWithProviders(<Harness initial={on()} />);
+    const trigger = screen.getByRole("button", { name: "About the close-call margin" });
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+
+    fireEvent.click(trigger);
+    expect(await screen.findByTestId("routing-info-closeCallMargin")).toBeInTheDocument();
+    expect(trigger).toHaveAttribute("aria-expanded", "true");
+
+    fireEvent.keyDown(trigger, { key: "Escape" });
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+
+    fireEvent.click(trigger);
+    expect(trigger).toHaveAttribute("aria-expanded", "true");
+    fireEvent.click(trigger);
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("explains the threshold with the close-call exception, the 0-100 scale and every band", async () => {
     renderWithProviders(<Harness initial={on()} />);
     fireEvent.mouseOver(screen.getByRole("button", { name: "About the threshold" }));
     const info = await screen.findByTestId("routing-info-threshold");
     expect(info).toHaveTextContent("Scores at or above the threshold go to expert reviewers.");
+    expect(info).toHaveTextContent("unless they are within the close-call margin");
     expect(info).toHaveTextContent("Risk scores run from 0 to 100");
     for (const { band, min, max } of SCORE_BANDS) {
       expect(info).toHaveTextContent(`${band}: ${min}–${max}`);
     }
-    expect(info).toHaveTextContent("Prohibited practices and submissions without a score");
+    expect(info).toHaveTextContent("whose AI scoring failed, always go to expert reviewers");
   });
 
   it("explains the second review share without the score scale", async () => {
     renderWithProviders(<Harness initial={on()} />);
     fireEvent.mouseOver(screen.getByRole("button", { name: "About the second review share" }));
     const info = await screen.findByTestId("routing-info-secondReviewRate");
-    expect(info).toHaveTextContent("picked at random for a second review");
+    expect(info).toHaveTextContent("picked at random at this rate for a second review");
+    expect(info).toHaveTextContent("Rejections aren't picked.");
     expect(info).not.toHaveTextContent("Risk scores run from 0 to 100");
   });
 });
