@@ -18,7 +18,7 @@ export default function InlineFormCard({ title, description, children }: InlineF
     <Box
       sx={{
         border: 1,
-        borderColor: "border.light",
+        borderColor: "border.dark",
         borderRadius: "4px",
         bgcolor: "background.alt",
         p: "16px",
@@ -35,7 +35,10 @@ export default function InlineFormCard({ title, description, children }: InlineF
   );
 }
 
-/** Cancel, then the primary action, on the right: the order the modals use. */
+/**
+ * Cancel, then the primary action, on the right: the order of StandardModal and of every Linked
+ * risks form.
+ */
 export function InlineFormActions({ children }: { children: ReactNode }) {
   return (
     <Stack direction="row" spacing="8px" justifyContent="flex-end">

@@ -277,6 +277,21 @@ describe("VendorRiskLinksPanel link form", () => {
     ]);
   });
 
+  // The form is a titled card like the other forms of the tab, with Cancel before Link, the
+  // order of StandardModal's footer.
+  it("opens in a card with Cancel before Link", async () => {
+    mockUseVendorRiskLinks.mockReturnValue(queryResult([]));
+    renderPanel();
+
+    await userEvent.click(screen.getByRole("button", { name: "Link a project risk" }));
+
+    // The toolbar button has the same label as the card's title.
+    expect(screen.getAllByText("Link a project risk")).toHaveLength(2);
+    const labels = screen.getAllByRole("button").map((button) => button.textContent);
+    expect(labels.indexOf("Cancel")).toBeGreaterThan(-1);
+    expect(labels.indexOf("Cancel")).toBeLessThan(labels.indexOf("Link"));
+  });
+
   it("links the chosen project risk as a child of this vendor risk", async () => {
     mockUseVendorRiskLinks.mockReturnValue(queryResult([]));
     mockGetAllProjectRisks.mockResolvedValue({ data: [{ id: 12, risk_name: "Shared risk" }] });
@@ -479,6 +494,18 @@ describe("VendorRiskLinksPanel relate form", () => {
       "Other vendor riskGlobex",
       "Vendor risk 22",
     ]);
+  });
+
+  it("opens in a card with Cancel before Link", async () => {
+    mockUseVendorRiskLinks.mockReturnValue(queryResult([]));
+    renderPanel();
+
+    await userEvent.click(screen.getByRole("button", { name: "Relate a vendor risk" }));
+
+    expect(screen.getAllByText("Relate a vendor risk")).toHaveLength(2);
+    const labels = screen.getAllByRole("button").map((button) => button.textContent);
+    expect(labels.indexOf("Cancel")).toBeGreaterThan(-1);
+    expect(labels.indexOf("Cancel")).toBeLessThan(labels.indexOf("Link"));
   });
 
   it("relates the chosen vendor risk to this one", async () => {

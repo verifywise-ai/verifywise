@@ -231,7 +231,7 @@ export default function LinkRow({
       </Stack>
 
       {dismissing && (
-        <Box sx={{ mt: 4 }}>
+        <Box sx={{ mt: "8px" }}>
           <DismissReasonForm
             link={link}
             pending={statusPending}

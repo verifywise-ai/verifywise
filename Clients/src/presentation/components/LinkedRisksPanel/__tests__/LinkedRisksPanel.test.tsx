@@ -513,6 +513,26 @@ describe("LinkedRisksPanel dismissal reasons", () => {
     expect(mockMutateStatus).not.toHaveBeenCalled();
   });
 
+  // Cancel, then the primary action, on the right: the order of StandardModal's footer and of
+  // every other form of the panel.
+  it("puts Cancel before Dismiss in the form", async () => {
+    mockUseRiskLinks.mockReturnValue(queryResult([link({ status: "suggested" })]));
+    render(
+      <ThemeProvider theme={light}>
+        <QueryClientProvider client={new QueryClient()}>
+          <LinkedRisksPanel riskId={42} />
+        </QueryClientProvider>
+      </ThemeProvider>,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Dismiss" }));
+
+    expect(screen.getByText("Why dismiss this suggestion?")).toBeInTheDocument();
+    const labels = screen.getAllByRole("button").map((button) => button.textContent);
+    expect(labels.indexOf("Cancel")).toBeGreaterThan(-1);
+    expect(labels.indexOf("Cancel")).toBeLessThan(labels.indexOf("Dismiss"));
+  });
+
   it("offers the hierarchy vocabulary on an inherits_from row", async () => {
     mockUseRiskLinks.mockReturnValue(
       queryResult([
