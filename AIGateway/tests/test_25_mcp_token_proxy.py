@@ -99,6 +99,15 @@ class TestDiscoveryTokens:
         assert len(token_fetches) == 2
         assert [auth for m, auth in seen if m == "initialize"] == ["Bearer tok1", "Bearer tok2"]
 
+    async def test_retry_invalidates_the_cached_token_once(self, token_fetches, monkeypatch):
+        calls = []
+        monkeypatch.setattr(svc, "invalidate", lambda auth_type, cfg: calls.append((auth_type, cfg)))
+        cfg = oauth_cfg()
+
+        await svc.fetch_server_tools(SERVER_URL, "oauth", cfg, transport=upstream({1: 401}, []))
+
+        assert calls == [("oauth", cfg)]
+
     async def test_second_401_raises(self, token_fetches):
         with pytest.raises(httpx.HTTPStatusError):
             await svc.fetch_server_tools(
@@ -224,6 +233,35 @@ class TestNoteTokenOutcome:
         await tokens.note_token_outcome(1, 9, "bad key")
 
         assert record.await_count == 2
+
+
+class TestDiscoveryKeepsOutcomeMemoryInSync:
+    @staticmethod
+    def server():
+        return {"id": 9, "url": SERVER_URL, "auth_type": "oauth", "auth_config": oauth_cfg()}
+
+    async def test_discovery_success_then_same_error_writes_again(self, monkeypatch, token_fetches):
+        record = AsyncMock()
+        monkeypatch.setattr(mcp_servers_crud, "record_discovery_result", record)
+        monkeypatch.setattr(svc, "store_discovered_tools", AsyncMock(return_value=([{}], {})))
+
+        await tokens.note_token_outcome(1, 9, "bad key")
+        result = await svc.run_discovery(1, self.server(), 5, transport=upstream({}, []))
+        await tokens.note_token_outcome(1, 9, "bad key")
+
+        assert result["status"] == "success"
+        assert [c.args for c in record.await_args_list] == [(1, 9, "bad key"), (1, 9, None), (1, 9, "bad key")]
+
+    async def test_discovery_failure_then_healthy_call_writes_healthy(self, monkeypatch, token_fetches):
+        record = AsyncMock()
+        monkeypatch.setattr(mcp_servers_crud, "record_discovery_result", record)
+
+        await tokens.note_token_outcome(1, 9, None)
+        result = await svc.run_discovery(1, self.server(), 5, transport=upstream({1: 500}, []))
+        await tokens.note_token_outcome(1, 9, None)
+
+        assert result["status"] == "failed"
+        assert [c.args[2] for c in record.await_args_list] == [None, result["error"], None]
 
 
 # ─── Proxy handler ───────────────────────────────────────────────────────────

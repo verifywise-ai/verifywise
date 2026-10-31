@@ -18,7 +18,7 @@ from sqlalchemy import text
 import crud.mcp_servers as mcp_servers_crud
 from config import settings
 from database.db import get_db
-from services.mcp_token_service import TokenError, auth_headers_for, invalidate
+from services.mcp_token_service import TokenError, auth_headers_for, invalidate, remember_outcome
 from utils.mcp_credentials import TOKEN_AUTH_TYPES
 from utils.rate_limit import check_rate_limit
 from utils.safe_outbound_url import UnsafeOutboundUrlError, assert_safe_outbound_url
@@ -199,7 +199,12 @@ def _rpc_result(resp: httpx.Response) -> dict:
 
 async def _with_token_retry(auth_type: str, auth_config: dict, attempt):
     """Run ``attempt``; if a token-authenticated server answers 401, drop the
-    cached token and try exactly once more with a fresh one."""
+    cached token and try exactly once more with a fresh one.
+
+    Trade-off: for a tool call the retry re-sends tools/call. That can only
+    follow an upstream that already executed it if the upstream answers HTTP 401
+    after side effects; a server rejecting a token normally does so before
+    running anything."""
     try:
         return await attempt()
     except httpx.HTTPStatusError as exc:
@@ -451,6 +456,7 @@ async def run_discovery(
     async def record_failure(error: str) -> None:
         try:
             await mcp_servers_crud.record_discovery_result(org_id, server_id, error)
+            remember_outcome(org_id, server_id, error)
         except Exception:  # noqa: BLE001 — must not replace the returned result
             logger.exception("Could not record MCP discovery failure for server %s", server_id)
 
@@ -473,6 +479,7 @@ async def run_discovery(
     try:
         stored, changes = await store_discovered_tools(org_id, server["id"], tools)
         await mcp_servers_crud.record_discovery_result(org_id, server["id"], None)
+        remember_outcome(org_id, server["id"], None)
     except Exception:  # noqa: BLE001 — database or malformed-tool failure
         logger.exception("MCP discovery could not save tools for server %s", server_id)
         error = "Could not save the discovered tools"

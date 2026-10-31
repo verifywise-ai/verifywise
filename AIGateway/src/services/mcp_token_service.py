@@ -234,6 +234,12 @@ def _aws_error_message(exc: ClientError) -> str:
     return f"AWS Sign-In returned an error ({code})"
 
 
+def remember_outcome(org_id: int, server_id: int, error: Optional[str]) -> None:
+    """Note a health outcome written elsewhere (discovery), so the next
+    note_token_outcome compares against what is actually stored."""
+    _last_outcome[(org_id, server_id)] = error
+
+
 async def note_token_outcome(org_id: int, server_id: int, error: Optional[str]) -> None:
     """Record server health after a token-authenticated call, only when it changes.
 
@@ -249,4 +255,4 @@ async def note_token_outcome(org_id: int, server_id: int, error: Optional[str]) 
     except Exception as exc:  # noqa: BLE001 — health bookkeeping must not break the call
         logger.warning("Could not record MCP server health for server %s: %s", server_id, type(exc).__name__)
         return
-    _last_outcome[key] = error
+    remember_outcome(org_id, server_id, error)
