@@ -109,7 +109,7 @@ export const mcpServersContent: ArticleContent = {
         { bold: 'Client ID and Client secret', text: 'The credentials your identity provider gave you for this server.' },
         { bold: 'Scope (optional)', text: 'The scope to request, if the provider needs one.' },
         { bold: 'Token URL', text: 'Where the gateway requests tokens. Leave it blank and the gateway looks it up from the server address when you finish typing it. You can also click **Find token URL**. If nothing is found, enter the URL yourself.' },
-        { bold: 'Advanced', text: 'Client authentication (send the credentials in a Basic header or in the request body) and an optional resource value. The default is a Basic header.' },
+        { bold: 'Advanced', text: 'Client authentication (**Basic (header)** or **In request body**) and an optional resource value. The default is a Basic header.' },
       ],
     },
     {
@@ -130,10 +130,10 @@ export const mcpServersContent: ArticleContent = {
       type: 'ordered-list',
       items: [
         { text: 'Click **Add server** and enter a name.' },
-        { text: 'Enter the server address, for example `https://aws-mcp.us-east-1.api.aws/mcp`. The `eu-central-1` region has its own address.' },
+        { text: 'Enter the server address, for example `https://aws-mcp.us-east-1.api.aws/mcp`.' },
         { text: 'Set Authentication to **AWS IAM**.' },
         { text: 'Enter the Region (for example `us-east-1`), the Access key ID and the Secret access key.' },
-        { text: 'Click **Save**. The gateway requests a token and lists the server\'s tools.' },
+        { text: 'Click **Add server**. The gateway requests a token and lists the server\'s tools.' },
       ],
     },
     {
