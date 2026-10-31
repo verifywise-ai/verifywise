@@ -17,16 +17,18 @@ export const LOOKBACK_MONTHS: Record<ResearchCategory, number> = {
   certifications: 24,
   legal_regulatory: 36,
   ai_specific: 24,
+  availability: 12,
+  financial_health: 12,
 };
 
 /** The categories that read the vendor's own pages, so a run needs the vendor's domain for them. */
-const SITE_CATEGORIES: readonly ResearchCategory[] = ["certifications", "ai_specific"];
+export const SITE_CATEGORIES: readonly ResearchCategory[] = ["certifications", "ai_specific"];
 
 export const NO_DOMAIN_NOTE = "Vendor website is missing or not a valid domain";
 
 /**
- * The categories a run can research for the target, in category order: all four with a domain,
- * and without one only the two that search the news.
+ * The categories a run can research for the target, in category order: all six with a domain,
+ * and without one only the four that search the news.
  */
 export function researchableCategories(target: ResearchTarget): ResearchCategory[] {
   return RESEARCH_CATEGORIES.filter(

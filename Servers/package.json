@@ -9,6 +9,7 @@
     "test:ratelimit": "jest --config jest.config.js --testMatch=\"**/tests/integration/rate-limiting/**/*.test.ts\" --testPathIgnorePatterns=/helpers/ --testPathIgnorePatterns=limiter-wiring --runInBand --forceExit",
     "smoke:api-contract": "ts-node --transpile-only scripts/apiContractSmoke.ts",
     "generate:enum-manifest": "ts-node --transpile-only scripts/generateEnumManifest.ts",
+    "eval:vendor-research": "ts-node --transpile-only scripts/evalVendorResearch.ts",
     "check:enum-drift": "npm run generate:enum-manifest && ts-node --transpile-only scripts/checkEnumLabelDrift.ts",
     "test": "npm run test:unit",
     "test:watch": "jest --watch",

@@ -21,6 +21,7 @@ import {
   MAX_PER_RUN,
   applyCaps,
   confidenceCeiling,
+  newValidationReport,
   normaliseForQuote,
   sourceMentionsVendor,
   validateFindings,
@@ -53,6 +54,7 @@ function candidate(overrides: Partial<Candidate> = {}): Candidate {
     risk_severity: "Major",
     action_plan: "Ask the vendor for its incident report.",
     confidence: "high",
+    rationale: "The vendor confirmed the incident, and it holds our customer data.",
     evidence: [{ source_id: "S1", quote: "attackers copied customer records" }],
     ...overrides,
   };
@@ -107,6 +109,7 @@ function finding(
     risk_severity,
     risk_level: "High Risk",
     confidence: "low",
+    rationale: "Because of the evidence.",
     sources: [findingSource("https://news.example.com/a")],
     ...overrides,
   };
@@ -347,6 +350,55 @@ describe("sourceMentionsVendor", () => {
       expect(sourceMentionsVendor(page({ content: "Acme said so." }), target)).toBe(true);
     });
   });
+
+  // A list entry found by the vendor's stored LEI names the company as the list does, under a
+  // former name, a holding name or a transliteration: the LEI is what ties it to the vendor (M2
+  // final review, Important 2). An LEI is 20 characters with check digits, one per legal entity.
+  describe("by the vendor's stored LEI", () => {
+    const LEI = "TEST00ACMEANALYT0154";
+    const target: ResearchTarget = {
+      name: "Acme Analytics",
+      domain: "acmeanalytics.example",
+      provides: "",
+      identifiers: { lei: LEI },
+    };
+    const entry = (content: string) =>
+      page({
+        url: "https://data.europa.eu/data/datasets/consolidated?logicalId=9001",
+        title: "EU consolidated list of financial sanctions: NORTHWIND HOLDINGS",
+        content,
+      });
+
+    it("accepts an entry under another name whose text carries the vendor's LEI", () => {
+      expect(
+        sourceMentionsVendor(
+          entry(`Entry: "NORTHWIND HOLDINGS" (enterprise). Identification number: ${LEI}.`),
+          target,
+        ),
+      ).toBe(true);
+      expect(
+        sourceMentionsVendor(entry(`Identification number: ${LEI.toLowerCase()}.`), target),
+      ).toBe(true);
+    });
+
+    it("does not accept an entry that lacks the LEI, or carries another", () => {
+      expect(sourceMentionsVendor(entry(`Entry: "NORTHWIND HOLDINGS" (enterprise).`), target)).toBe(
+        false,
+      );
+      expect(
+        sourceMentionsVendor(entry("Identification number: TEST00OTHERENTITY0099."), target),
+      ).toBe(false);
+    });
+
+    it("does not accept a longer code that holds the LEI", () => {
+      expect(sourceMentionsVendor(entry(`Identification number: X${LEI}9.`), target)).toBe(false);
+    });
+
+    it("a vendor without a stored LEI is matched as before", () => {
+      const { identifiers: _none, ...plain } = target;
+      expect(sourceMentionsVendor(entry(`Identification number: ${LEI}.`), plain)).toBe(false);
+    });
+  });
 });
 
 describe("confidenceCeiling", () => {
@@ -398,29 +450,95 @@ describe("confidenceCeiling", () => {
     ).toBe("medium");
   });
 
-  it("is high for two distinct hostnames, whatever the marks", () => {
+  it("is high for two independent publishers when one of them is credible", () => {
+    // A news site and a major publisher.
     expect(
       confidenceCeiling(
-        [cited("https://news.example.com/a"), cited("https://other.example.org/b")],
+        [cited("https://news.example.com/a"), cited("https://www.reuters.com/b")],
         TARGET,
       ),
     ).toBe("high");
-    for (const [own, other] of [
-      [true, false],
-      [false, true],
-      [false, false],
-      [true, true],
-    ]) {
-      expect(
-        confidenceCeiling(
-          [cited("https://acme.com/trust", own), cited("https://news.example.com/a", other)],
-          TARGET,
-        ),
-      ).toBe("high");
-    }
+    // A regulator and a blog.
+    expect(
+      confidenceCeiling(
+        [cited("https://www.ftc.gov/news/a"), cited("https://blog.another.org/b")],
+        TARGET,
+      ),
+    ).toBe("high");
+    // Two major publishers.
+    expect(
+      confidenceCeiling(
+        [cited("https://www.reuters.com/a"), cited("https://apnews.com/b")],
+        TARGET,
+      ),
+    ).toBe("high");
   });
 
-  it("does not take www.x.test and x.test for two hostnames, nor two cases of one host", () => {
+  it("is high for the vendor's own statement next to an independent report, and only when the research marked the page", () => {
+    expect(
+      confidenceCeiling(
+        [cited("https://acme.com/trust", true), cited("https://news.example.com/a")],
+        TARGET,
+      ),
+    ).toBe("high");
+    // The same address that the research did not take for the vendor's own is a third party.
+    expect(
+      confidenceCeiling(
+        [cited("https://acme.com/trust", false), cited("https://news.example.com/a")],
+        TARGET,
+      ),
+    ).toBe("medium");
+  });
+
+  it("is medium, not high, for two independent publishers when neither is credible", () => {
+    expect(
+      confidenceCeiling(
+        [cited("https://news.example.com/a"), cited("https://blog.another.org/b")],
+        TARGET,
+      ),
+    ).toBe("medium");
+  });
+
+  it("takes one story on two domains of one publisher for one source", () => {
+    expect(
+      confidenceCeiling(
+        [cited("https://www.bbc.co.uk/news/a"), cited("https://www.bbc.com/news/a")],
+        TARGET,
+      ),
+    ).toBe("medium");
+  });
+
+  it("does not count an aggregator as a second publisher", () => {
+    expect(
+      confidenceCeiling(
+        [cited("https://www.reuters.com/a"), cited("https://finance.yahoo.com/news/a")],
+        TARGET,
+      ),
+    ).toBe("medium");
+    expect(
+      confidenceCeiling(
+        [cited("https://www.reuters.com/a"), cited("https://www.reddit.com/r/netsec/comments/a")],
+        TARGET,
+      ),
+    ).toBe("medium");
+    expect(
+      confidenceCeiling(
+        [cited("https://www.reddit.com/r/netsec/comments/a"), cited("https://medium.com/@x/a")],
+        TARGET,
+      ),
+    ).toBe("medium");
+  });
+
+  it("takes the pages of the vendor's own site for one source: the vendor says it once", () => {
+    expect(
+      confidenceCeiling(
+        [cited("https://acme.com/trust", true), cited("https://trust.acme.com/soc2", true)],
+        TARGET,
+      ),
+    ).toBe("medium");
+  });
+
+  it("does not take www.x.test and x.test for two sources, nor two cases of one host", () => {
     expect(
       confidenceCeiling([cited("https://www.x.test/a"), cited("https://x.test/b")], TARGET),
     ).toBe("medium");
@@ -463,6 +581,7 @@ describe("validateFindings", () => {
           risk_severity: "Major",
           risk_level: "High Risk",
           confidence: "low",
+          rationale: "The vendor confirmed the incident, and it holds our customer data.",
           sources: [
             {
               url: "https://news.example.com/acme-breach",
@@ -473,6 +592,44 @@ describe("validateFindings", () => {
           ],
         },
       ]);
+    });
+
+    describe("the rationale", () => {
+      it("is stored cleaned and without the whitespace around it", () => {
+        const [finding] = validate([
+          candidate({ rationale: "  The vendor\u0000 confirmed it.\n" }),
+        ]);
+
+        expect(finding.rationale).toBe("The vendor confirmed it.");
+      });
+
+      it("is null when the model gave none or a blank one, and the finding stays", () => {
+        const missing = { ...candidate(), rationale: undefined } as unknown as Candidate;
+
+        expect(validate([missing])[0].rationale).toBeNull();
+        expect(validate([candidate({ rationale: "   \n" })])[0].rationale).toBeNull();
+        expect(validate([candidate({ rationale: "\u0000\u0000" })])).toHaveLength(1);
+      });
+
+      it("is cut at 300 characters, so that a recording that skipped the schema cannot store more", () => {
+        const [finding] = validate([candidate({ rationale: "r".repeat(400) })]);
+
+        expect(finding.rationale).toHaveLength(300);
+      });
+
+      it("is not a reason to drop a finding, and is not read by any check", () => {
+        const report = newValidationReport();
+        const found = validateFindings(
+          { findings: [candidate({ rationale: "Totally unrelated words." })], category_notes: [] },
+          [source()],
+          TARGET,
+          ["security_incidents"],
+          report,
+        );
+
+        expect(found).toHaveLength(1);
+        expect(report.candidates).toEqual([]);
+      });
     });
 
     it("returns nothing for an answer without findings", () => {
@@ -527,7 +684,7 @@ describe("validateFindings", () => {
     });
 
     it("keeps a candidate with one valid and one invalid item, with only the valid source", () => {
-      const pack = [source(), source({ id: "S2", url: "https://other.example.org/b" })];
+      const pack = [source(), source({ id: "S2", url: "https://www.reuters.com/b" })];
 
       const [finding] = validate(
         [
@@ -556,7 +713,7 @@ describe("validateFindings", () => {
         source(),
         source({
           id: "S2",
-          url: "https://other.example.org/b",
+          url: "https://www.reuters.com/b",
           title: "Second",
           content: "Acme said the incident began in May.",
           publishedAt: null,
@@ -576,7 +733,7 @@ describe("validateFindings", () => {
       );
 
       expect(finding.sources.map((entry) => [entry.url, entry.published_at])).toEqual([
-        ["https://other.example.org/b", null],
+        ["https://www.reuters.com/b", null],
         ["https://news.example.com/acme-breach", "2026-03-01"],
       ]);
     });
@@ -593,7 +750,7 @@ describe("validateFindings", () => {
     it("checks a quote against its own source, not against another one in the pack", () => {
       const pack = [
         source(),
-        source({ id: "S2", url: "https://other.example.org/b", content: "Acme fixed the bug." }),
+        source({ id: "S2", url: "https://www.reuters.com/b", content: "Acme fixed the bug." }),
       ];
 
       expect(
@@ -964,7 +1121,7 @@ describe("validateFindings", () => {
 
   // The vendor's own name is in every source that mentions the vendor, so a quote of nothing but
   // that name always passes the substring test and the same-name guard. It says nothing about a
-  // risk, and with two hostnames it would lift a claim to `high`. This is not a minimum length
+  // risk, and with two publishers it would lift a claim to `high`. This is not a minimum length
   // (R16): "ISO 27001" is short and real. A quote counts when it holds a word that is no part of
   // the vendor's name or domain.
   describe("a quote that only repeats the vendor's name", () => {
@@ -1041,7 +1198,7 @@ describe("validateFindings", () => {
     it("keeps the other citations of a finding, and a later quote of a source whose first quote was refused", () => {
       const other = source({
         id: "S2",
-        url: "https://other.example.org/b",
+        url: "https://www.reuters.com/b",
         content: "Acme Analytics renewed its SOC 2 Type II report.",
       });
 
@@ -1109,7 +1266,7 @@ describe("validateFindings", () => {
       // The same second source for both halves: it names Acme, and it has the real sentence too.
       const ROUNDUP = source({
         id: "S2",
-        url: "https://other.example.org/b",
+        url: "https://www.reuters.com/b",
         title: "Industry roundup",
         content:
           "A roundup of the week mentions Acme. Acme told customers that attackers copied customer records.",
@@ -1129,7 +1286,7 @@ describe("validateFindings", () => {
           ],
         });
 
-      it("is not lifted to high by a second hostname whose only quote is the vendor's name", () => {
+      it("is not lifted to high by a second publisher whose only quote is the vendor's name", () => {
         const [found] = validate([claimed("Acme")], [NEWS, ROUNDUP]);
 
         expect(found.sources.map((entry) => entry.url)).toEqual(["https://news.example.com/a"]);
@@ -1142,7 +1299,7 @@ describe("validateFindings", () => {
 
         expect(found.sources.map((entry) => entry.url)).toEqual([
           "https://news.example.com/a",
-          "https://other.example.org/b",
+          "https://www.reuters.com/b",
         ]);
         expect(found.confidence).toBe("high");
       });
@@ -1160,7 +1317,7 @@ describe("validateFindings", () => {
         expect(real.confidence).toBe("high");
       });
 
-      it("is not lifted to high by a second hostname whose only quote is the domain written with www.", () => {
+      it("is not lifted to high by a second publisher whose only quote is the domain written with www.", () => {
         const news = source({
           id: "S1",
           url: "https://news.example.com/a",
@@ -1169,7 +1326,7 @@ describe("validateFindings", () => {
         });
         const roundup = source({
           id: "S2",
-          url: "https://other.example.org/b",
+          url: "https://www.reuters.com/b",
           title: "Industry roundup",
           content:
             "A roundup of the week: Acme Analytics (www.acme-analytics.com) told customers that " +
@@ -1341,7 +1498,7 @@ describe("validateFindings", () => {
     const THIRD_PARTY_A = source({ id: "S1", url: "https://news.example.com/a" });
     const THIRD_PARTY_B = source({
       id: "S2",
-      url: "https://other.example.org/b",
+      url: "https://www.reuters.com/b",
       content: "Acme told customers that attackers copied customer records.",
     });
     const SAME_HOST_B = source({
@@ -1365,12 +1522,55 @@ describe("validateFindings", () => {
       expect(finding.confidence).toBe("low");
     });
 
-    it("stays high when two distinct hostnames back a high claim", () => {
+    it("stays high when two independent publishers, one of them credible, back a high claim", () => {
       const [finding] = validate(
         [candidate({ confidence: "high", evidence: both })],
         [THIRD_PARTY_A, THIRD_PARTY_B],
       );
       expect(finding.confidence).toBe("high");
+    });
+
+    it("gives a candidate without a confidence the ceiling of its sources", () => {
+      const blog = source({ id: "S2", kind: "page", url: "https://blog.another.org/b" });
+      const { confidence: _confidence, ...withoutConfidence } = candidate({ evidence: both });
+
+      const [finding] = validateFindings(
+        { findings: [withoutConfidence], category_notes: [] },
+        [{ ...THIRD_PARTY_A, kind: "page" }, blog],
+        TARGET,
+        [...RESEARCH_CATEGORIES],
+      );
+
+      expect(finding.confidence).toBe("medium");
+    });
+
+    it("is lowered to medium when two independent publishers back a high claim and neither is credible", () => {
+      const blog = source({ id: "S2", url: "https://blog.another.org/b" });
+      const [finding] = validate(
+        [candidate({ confidence: "high", evidence: both })],
+        [THIRD_PARTY_A, blog],
+      );
+      expect(finding.confidence).toBe("medium");
+    });
+
+    it("is lowered to medium when the second source is a copy of the first on an aggregator", () => {
+      const original = source({ id: "S1", url: "https://www.reuters.com/a" });
+      const copy = source({ id: "S2", url: "https://finance.yahoo.com/news/a" });
+      const [finding] = validate(
+        [candidate({ confidence: "high", evidence: both })],
+        [original, copy],
+      );
+      expect(finding.confidence).toBe("medium");
+    });
+
+    it("is lowered to medium when the second source is the same story on another domain of the publisher", () => {
+      const uk = source({ id: "S1", url: "https://www.bbc.co.uk/news/a" });
+      const international = source({ id: "S2", url: "https://www.bbc.com/news/a" });
+      const [finding] = validate(
+        [candidate({ confidence: "high", evidence: both })],
+        [uk, international],
+      );
+      expect(finding.confidence).toBe("medium");
     });
 
     it("is lowered to medium when a single source on the vendor's own domain backs a high claim", () => {
@@ -1465,16 +1665,16 @@ describe("validateFindings", () => {
           withSeverity(risk_severity, `${category}-${risk_severity}`, { category }),
         ),
       );
-      expect(candidates).toHaveLength(16);
+      expect(candidates).toHaveLength(24);
 
       const findings = validate(candidates);
 
-      expect(findings).toHaveLength(16);
+      expect(findings).toHaveLength(24);
       expect(findings.map((found) => found.risk_severity)).toEqual([
-        ...Array(4).fill("Major"),
-        ...Array(4).fill("Moderate"),
-        ...Array(4).fill("Minor"),
-        ...Array(4).fill("Negligible"),
+        ...Array(6).fill("Major"),
+        ...Array(6).fill("Moderate"),
+        ...Array(6).fill("Minor"),
+        ...Array(6).fill("Negligible"),
       ]);
     });
 
@@ -1525,6 +1725,121 @@ describe("validateFindings", () => {
   });
 });
 
+describe("validateFindings report", () => {
+  /** Validates with a report and gives back both. */
+  function validated(
+    candidates: Candidate[],
+    pack: EvidenceSource[] = [source()],
+    categoriesInPack: ResearchCategory[] = [...RESEARCH_CATEGORIES],
+  ) {
+    const report = newValidationReport();
+    const findings = validateFindings(
+      { findings: candidates, category_notes: [] },
+      pack,
+      TARGET,
+      categoriesInPack,
+      report,
+    );
+    return { findings, report };
+  }
+
+  it("is empty when every candidate holds up", () => {
+    const { findings, report } = validated([candidate()]);
+
+    expect(findings).toHaveLength(1);
+    expect(report).toEqual({ candidates: [], citations: {} });
+  });
+
+  it("says that a category has no evidence in the pack", () => {
+    const { findings, report } = validated(
+      [candidate({ category: "legal_regulatory" })],
+      [source()],
+      ["security_incidents"],
+    );
+
+    expect(findings).toEqual([]);
+    expect(report.candidates).toEqual([
+      expect.objectContaining({ reason: "category_not_in_pack", category: "legal_regulatory" }),
+    ]);
+  });
+
+  it("says that a text is blank, and gives the start of the candidate to recognise it by", () => {
+    const { report } = validated([candidate({ risk_description: "   " })]);
+
+    expect(report.candidates).toEqual([
+      expect.objectContaining({ reason: "text_unusable", category: "security_incidents" }),
+    ]);
+  });
+
+  it("says that a candidate is left with no citation, and why each citation was removed", () => {
+    const { findings, report } = validated([
+      candidate({
+        evidence: [
+          { source_id: "S9", quote: "attackers copied customer records" },
+          { source_id: "S1", quote: "this sentence is nowhere in the source" },
+        ],
+      }),
+    ]);
+
+    expect(findings).toEqual([]);
+    expect(report.candidates).toEqual([
+      expect.objectContaining({
+        reason: "no_valid_citation",
+        text: expect.stringContaining("Attackers"),
+      }),
+    ]);
+    expect(report.citations).toEqual({ unknown_source: 1, quote_not_in_source: 1 });
+  });
+
+  it("counts a citation that is removed from a candidate that stays", () => {
+    const { findings, report } = validated(
+      [
+        candidate({
+          evidence: [
+            { source_id: "S1", quote: "attackers copied customer records" },
+            { source_id: "S2", quote: "Acme" },
+          ],
+        }),
+      ],
+      [
+        source(),
+        source({ id: "S2", url: "https://www.reuters.com/a", content: "Acme is a vendor." }),
+      ],
+    );
+
+    expect(findings).toHaveLength(1);
+    expect(report.candidates).toEqual([]);
+    expect(report.citations).toEqual({ quote_is_only_the_name: 1 });
+  });
+
+  it("tells a source that is not about the vendor from a quote that is not in it", () => {
+    const { report } = validated(
+      [candidate({ evidence: [{ source_id: "S1", quote: "attackers copied customer records" }] })],
+      [
+        source({
+          title: "Zed breach",
+          content: "Zed lost attackers copied customer records data.",
+        }),
+      ],
+    );
+
+    expect(report.citations).toEqual({ source_not_about_vendor: 1 });
+  });
+
+  it("says that a quote crosses the gap of an excerpt or is too long", () => {
+    const { report } = validated([
+      candidate({
+        evidence: [
+          { source_id: "S1", quote: "attackers […] records" },
+          { source_id: "S1", quote: "x".repeat(MAX_QUOTE_CHARS + 1) },
+        ],
+      }),
+    ]);
+
+    expect(report.citations).toEqual({ gap_mark: 1, quote_too_long: 1 });
+  });
+});
+
 describe("applyCaps", () => {
   const labels = (findings: NewFinding[]) => findings.map((found) => found.risk_description);
 
@@ -1540,19 +1855,21 @@ describe("applyCaps", () => {
     expect(labels(capped)).toEqual(["catastrophic", "major", "moderate"]);
   });
 
-  it("keeps eight of twelve findings over four categories, the most severe first", () => {
+  it("keeps eight of eighteen findings over six categories, the most severe first", () => {
     const severities: Record<ResearchCategory, Array<NewFinding["risk_severity"]>> = {
       security_incidents: ["Catastrophic", "Major", "Negligible"],
       certifications: ["Catastrophic", "Moderate", "Negligible"],
       legal_regulatory: ["Major", "Moderate", "Minor"],
       ai_specific: ["Major", "Moderate", "Minor"],
+      availability: ["Major", "Moderate", "Minor"],
+      financial_health: ["Minor", "Negligible", "Negligible"],
     };
     const findings = RESEARCH_CATEGORIES.flatMap((category) =>
       severities[category].map((risk_severity, index) =>
         finding(risk_severity, `${category}-${index}`, { category }),
       ),
     );
-    expect(findings).toHaveLength(12);
+    expect(findings).toHaveLength(18);
 
     const capped = applyCaps(findings);
 
@@ -1563,11 +1880,11 @@ describe("applyCaps", () => {
       "Major",
       "Major",
       "Major",
-      "Moderate",
+      "Major",
       "Moderate",
       "Moderate",
     ]);
-    // The four least severe findings are the ones that were cut, and findings of one severity
+    // The seven least severe findings are the ones that were cut, and findings of one severity
     // keep the order they were given in.
     expect(labels(capped)).toEqual([
       "security_incidents-0",
@@ -1575,9 +1892,9 @@ describe("applyCaps", () => {
       "security_incidents-1",
       "legal_regulatory-0",
       "ai_specific-0",
+      "availability-0",
       "certifications-1",
       "legal_regulatory-1",
-      "ai_specific-1",
     ]);
   });
 

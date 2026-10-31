@@ -2,7 +2,7 @@ import {
   EvidenceSource,
   ResearchCategory,
 } from "../../../domain.layer/interfaces/i.vendorResearch";
-import { MAX_EXCERPT_CHARS } from "../../webResearch/pageText";
+import { MAX_EXCERPT_CHARS, MAX_PAGE_CONTENT_CHARS } from "../../webResearch/pageText";
 import { LedgerEntry } from "../../webResearch/webSession";
 import {
   MAX_EVIDENCE_BYTES,
@@ -11,6 +11,8 @@ import {
   MAX_TITLE_CHARS,
   MAX_URL_CHARS,
   buildEvidencePack,
+  isBlockedEntry,
+  provenanceOf,
 } from "../evidence";
 
 type Entry = LedgerEntry<ResearchCategory>;
@@ -50,6 +52,12 @@ describe("constants", () => {
     expect(MAX_SNIPPET_CHARS).toBe(1500);
     expect(MAX_EXCERPT_CHARS).toBe(8000);
     expect(MAX_EVIDENCE_BYTES).toBe(100_000);
+  });
+
+  // A page source holds the first excerpt and up to two more parts, each behind a gap marker, so
+  // that the pack keeps what the model was shown.
+  it("limits the content of a page to its first excerpt and two parts, with their gap markers", () => {
+    expect(MAX_PAGE_CONTENT_CHARS).toBe(8000 * 3 + 5 * 2);
   });
 
   it("limits a title to 300 characters, a URL to 2,048 and a publication date to 64", () => {
@@ -217,22 +225,23 @@ describe("buildEvidencePack", () => {
       expect(pack[0].content).toBe("a".repeat(1500));
     });
 
-    it("keeps the excerpt of a page up to 8,000 characters and cuts a longer one there", () => {
+    it("keeps the content of a page up to the limit of a page source and cuts a longer one there", () => {
       const pack = buildEvidencePack([
         pageEntry("https://a.test/medium", { content: "m".repeat(5000) }),
-        pageEntry("https://a.test/exact", { content: "e".repeat(MAX_EXCERPT_CHARS) }),
-        pageEntry("https://a.test/long", { content: "l".repeat(9000) }),
+        // An excerpt and the parts that were read after it.
+        pageEntry("https://a.test/exact", { content: "e".repeat(MAX_PAGE_CONTENT_CHARS) }),
+        pageEntry("https://a.test/long", { content: "l".repeat(MAX_PAGE_CONTENT_CHARS + 1000) }),
         // The same text as a result is cut at the length of a snippet.
         entry("https://a.test/as-result", { content: "r".repeat(5000) }),
       ]);
 
       expect(pack.map((source) => source.content.length)).toEqual([
         5000,
-        MAX_EXCERPT_CHARS,
-        MAX_EXCERPT_CHARS,
+        MAX_PAGE_CONTENT_CHARS,
+        MAX_PAGE_CONTENT_CHARS,
         MAX_SNIPPET_CHARS,
       ]);
-      expect(pack[2].content).toBe("l".repeat(MAX_EXCERPT_CHARS));
+      expect(pack[2].content).toBe("l".repeat(MAX_PAGE_CONTENT_CHARS));
     });
 
     it("never splits a surrogate pair at the cut", () => {
@@ -241,14 +250,16 @@ describe("buildEvidencePack", () => {
         entry("https://a.test/split", { content: `${"a".repeat(1499)}😀tail` }),
         // The emoji ends exactly at 1500, so it fits.
         entry("https://a.test/fits", { content: `${"a".repeat(1498)}😀tail` }),
-        // The same at the end of an excerpt.
-        pageEntry("https://a.test/page", { content: `${"p".repeat(MAX_EXCERPT_CHARS - 1)}😀tail` }),
+        // The same at the end of a page source.
+        pageEntry("https://a.test/page", {
+          content: `${"p".repeat(MAX_PAGE_CONTENT_CHARS - 1)}😀tail`,
+        }),
       ]);
 
       expect(pack[0].content).toBe("a".repeat(1499));
       expect(pack[1].content).toBe(`${"a".repeat(1498)}😀`);
       expect(pack[1].content.length).toBe(1500);
-      expect(pack[2].content).toBe("p".repeat(MAX_EXCERPT_CHARS - 1));
+      expect(pack[2].content).toBe("p".repeat(MAX_PAGE_CONTENT_CHARS - 1));
       for (const source of pack) expect(hasLoneSurrogate(source.content)).toBe(false);
     });
 
@@ -256,12 +267,12 @@ describe("buildEvidencePack", () => {
       const pack = buildEvidencePack([
         entry("https://a.test/1", { content: `${"\u0000".repeat(200)}${"a".repeat(1500)}` }),
         pageEntry("https://a.test/2", {
-          content: `${"\u0000".repeat(200)}${"b".repeat(MAX_EXCERPT_CHARS)}`,
+          content: `${"\u0000".repeat(200)}${"b".repeat(MAX_PAGE_CONTENT_CHARS)}`,
         }),
       ]);
 
       expect(pack[0].content).toBe("a".repeat(1500));
-      expect(pack[1].content).toBe("b".repeat(MAX_EXCERPT_CHARS));
+      expect(pack[1].content).toBe("b".repeat(MAX_PAGE_CONTENT_CHARS));
     });
   });
 
@@ -658,24 +669,26 @@ describe("buildEvidencePack", () => {
         ["S3", "https://a.test/4"],
       ]);
       expect(pack[0].title).toBe("t".repeat(MAX_TITLE_CHARS));
-      expect(pack[0].content).toBe("c".repeat(MAX_EXCERPT_CHARS));
+      expect(pack[0].content).toBe("c".repeat(MAX_PAGE_CONTENT_CHARS));
       expect(pack[0].publishedAt).toBeNull();
     });
 
-    it("keeps even the largest source that one entry can make, which takes a fraction of the room", () => {
+    it("keeps even the largest source that one entry can make, which still leaves room in the pack", () => {
       // Every field at its limit, in three-byte characters: the most that one source can take.
       const url = `https://a.test/${"€".repeat(MAX_URL_CHARS - "https://a.test/".length)}`;
       const pack = buildEvidencePack([
         pageEntry(url, {
           title: "€".repeat(MAX_TITLE_CHARS),
-          content: "€".repeat(MAX_EXCERPT_CHARS),
+          content: "€".repeat(MAX_PAGE_CONTENT_CHARS),
           publishedAt: "€".repeat(MAX_PUBLISHED_AT_CHARS),
         }),
       ]);
 
       expect(pack).toHaveLength(1);
       expect(pack[0].url).toHaveLength(MAX_URL_CHARS);
-      expect(bytes(pack)).toBeLessThan(MAX_EVIDENCE_BYTES / 2);
+      // A page source with its extra parts, in three-byte characters, takes most of the room but
+      // never all of it.
+      expect(bytes(pack)).toBeLessThan(MAX_EVIDENCE_BYTES);
     });
   });
 
@@ -897,5 +910,116 @@ describe("buildEvidencePack", () => {
         ["S3", "https://a.test/3"],
       ]);
     });
+  });
+
+  // Spec D3.2: a source of a blocked host never enters the pack under the credibility rules.
+  describe("a source of a host the registry blocks", () => {
+    const PASTE = entry("https://pastebin.com/raw/abc");
+    const REDIRECTED = pageEntry("https://short.example/x", {
+      answeredUrl: "https://pastebin.com/xyz",
+    });
+    const NEWS = entry("https://news.example/acme");
+
+    it("is dropped when asked, by the address that answered, and the ids have no gap", () => {
+      const pack = buildEvidencePack([PASTE, NEWS, REDIRECTED], { dropBlocked: true });
+
+      expect(pack.map((source) => [source.id, source.url])).toEqual([
+        ["S1", "https://news.example/acme"],
+      ]);
+    });
+
+    it("stays when not asked, as under the confidence rules", () => {
+      expect(buildEvidencePack([PASTE, NEWS]).map((source) => source.url)).toEqual([
+        "https://pastebin.com/raw/abc",
+        "https://news.example/acme",
+      ]);
+    });
+
+    it("is never a record or a page of the vendor's own site", () => {
+      expect(isBlockedEntry(PASTE)).toBe(true);
+      expect(isBlockedEntry(REDIRECTED)).toBe(true);
+      expect(isBlockedEntry(NEWS)).toBe(false);
+      expect(isBlockedEntry({ ...PASTE, record: "hibp" })).toBe(false);
+      expect(isBlockedEntry({ ...PASTE, onVendorSite: true })).toBe(false);
+    });
+  });
+});
+
+describe("provenanceOf", () => {
+  it("maps a record's address to its database and a page's to the canonical address it claims", () => {
+    const provenance = provenanceOf([
+      pageEntry("https://db.example/kev/1", { record: "kev" }),
+      pageEntry("https://portal.example/copy", { canonicalUrl: "https://wire.example/original" }),
+    ]);
+
+    expect([...provenance]).toEqual([
+      ["https://db.example/kev/1", { record: "kev" }],
+      ["https://portal.example/copy", { canonicalUrl: "https://wire.example/original" }],
+    ]);
+  });
+
+  it("copies the VRDB meta and the answered address", () => {
+    const meta = {
+      recordId: 1,
+      sourceId: "kev",
+      sourceRecordId: "CVE-2026-1",
+      strength: "strong",
+      method: "kev_vendor",
+      matchedKey: "kev:acme",
+      status: "active",
+      asOf: "2026-10-30",
+      stale: false,
+    } as const;
+    const provenance = provenanceOf([
+      pageEntry("https://nvd.nist.gov/vuln/detail/CVE-2026-1", { record: "kev", vrdb: meta }),
+      pageEntry("https://t.co/abc", { answeredUrl: "https://www.reuters.com/world/x" }),
+    ]);
+
+    expect([...provenance]).toEqual([
+      ["https://nvd.nist.gov/vuln/detail/CVE-2026-1", { record: "kev", vrdb: meta }],
+      ["https://t.co/abc", { answeredUrl: "https://www.reuters.com/world/x" }],
+    ]);
+  });
+
+  it("ignores entries with neither, and a record id that is not a database's", () => {
+    const provenance = provenanceOf([
+      entry("https://news.example/a"),
+      pageEntry("https://db.example/other", { record: "gossip" }),
+    ]);
+
+    expect(provenance.size).toBe(0);
+  });
+
+  it("keeps the first entry of an address", () => {
+    const provenance = provenanceOf([
+      pageEntry("https://db.example/kev/1", { record: "kev" }),
+      pageEntry("https://db.example/kev/1", { record: "nvd" }),
+    ]);
+
+    expect(provenance.get("https://db.example/kev/1")).toEqual({ record: "kev" });
+  });
+
+  it("gives an address none when its first entry has none, as the pack keeps that entry", () => {
+    const provenance = provenanceOf([
+      entry("https://db.example/kev/1"),
+      pageEntry("https://db.example/kev/1", { record: "kev" }),
+    ]);
+
+    expect(provenance.has("https://db.example/kev/1")).toBe(false);
+  });
+
+  it("leaves the evidence pack as it was", () => {
+    const plain = [
+      pageEntry("https://db.example/kev/1"),
+      pageEntry("https://portal.example/copy"),
+      entry("https://news.example/a"),
+    ];
+    const withProvenance = [
+      { ...plain[0], record: "kev" },
+      { ...plain[1], canonicalUrl: "https://wire.example/original" },
+      plain[2],
+    ];
+
+    expect(buildEvidencePack(withProvenance)).toEqual(buildEvidencePack(plain));
   });
 });

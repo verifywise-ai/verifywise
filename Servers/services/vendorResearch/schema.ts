@@ -21,7 +21,7 @@ export const RESEARCH_CONFIDENCES = [
 // The bounds of the answer. The system prompt states these same numbers, written from the
 // constants, so what the model is told and what the schema accepts cannot drift apart.
 
-/** The longest risk description, impact description and action plan, in characters. */
+/** The longest risk description, impact description, action plan and rationale, in characters. */
 export const MAX_FINDING_TEXT_CHARS = 300;
 /** The longest quote of a citation, in characters. */
 export const MAX_QUOTE_CHARS = 300;
@@ -63,6 +63,8 @@ const findingSchema = z.object({
   risk_severity: z.enum(RESEARCH_SEVERITIES),
   action_plan: z.string().max(MAX_FINDING_TEXT_CHARS),
   confidence: z.enum(RESEARCH_CONFIDENCES),
+  /** One sentence: why this likelihood and this severity. Shown next to the rating. */
+  rationale: z.string().max(MAX_FINDING_TEXT_CHARS),
   evidence: z.array(evidenceItemSchema).min(1).max(MAX_EVIDENCE_PER_FINDING),
 });
 
@@ -83,3 +85,29 @@ export const researchOutputSchema = z.object({
 });
 
 export type ResearchOutput = z.infer<typeof researchOutputSchema>;
+
+/**
+ * Which rules the analysis runs under: the model's confidence, capped by the sources (vr-6), or no
+ * confidence at all, the credibility label being computed by code (since vr-9, see credibility.ts).
+ */
+export type ResearchRules = "confidence" | "credibility";
+
+/**
+ * The answer under the credibility rules: the same, with no `confidence` on a finding. It is not
+ * strict either, so a confidence that the model still gives is dropped by the parse.
+ */
+export const credibilityOutputSchema = researchOutputSchema.extend({
+  findings: z.array(findingSchema.omit({ confidence: true })).max(20),
+});
+
+export type CredibilityOutput = z.infer<typeof credibilityOutputSchema>;
+
+/** An answer under either rules. */
+export type AnyResearchOutput = ResearchOutput | CredibilityOutput;
+
+/** The schema the analysis asks the model to answer under `rules`. */
+export function outputSchemaFor(
+  rules: ResearchRules,
+): typeof researchOutputSchema | typeof credibilityOutputSchema {
+  return rules === "credibility" ? credibilityOutputSchema : researchOutputSchema;
+}

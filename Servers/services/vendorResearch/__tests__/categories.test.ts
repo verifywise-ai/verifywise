@@ -61,24 +61,30 @@ describe("LOOKBACK_MONTHS", () => {
       certifications: 24,
       legal_regulatory: 36,
       ai_specific: 24,
+      availability: 12,
+      financial_health: 12,
     });
   });
 });
 
 describe("researchableCategories", () => {
-  it("gives all four categories, in category order, for a target with a domain", () => {
+  it("gives all six categories, in category order, for a target with a domain", () => {
     expect(researchableCategories(target)).toEqual([
       "security_incidents",
       "certifications",
       "legal_regulatory",
       "ai_specific",
+      "availability",
+      "financial_health",
     ]);
   });
 
-  it.each([[null], [""]])("gives only the two news categories when the domain is %p", (domain) => {
+  it.each([[null], [""]])("gives only the four news categories when the domain is %p", (domain) => {
     expect(researchableCategories({ ...target, domain })).toEqual([
       "security_incidents",
       "legal_regulatory",
+      "availability",
+      "financial_health",
     ]);
   });
 });

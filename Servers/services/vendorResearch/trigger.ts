@@ -33,8 +33,8 @@ import {
   getActiveRunQuery,
   getLastRunCreatedAtQuery,
 } from "../../utils/vendorResearch.utils";
-import { enqueueVendorResearch } from "../automations/automationProducer";
 import { getVendorResearchConfig } from "./config";
+import { enqueueVendorResearch } from "./queue";
 
 const MINUTE_MS = 60_000;
 /**
@@ -197,6 +197,9 @@ export async function startVendorResearch(args: {
         pagesRead: 0,
         duplicatesDropped: 0,
         error: ENQUEUE_FAILED_NOTE,
+        trace: null,
+        coverage: null,
+        registryVersion: null,
       });
     } catch (finishError) {
       logger.error(

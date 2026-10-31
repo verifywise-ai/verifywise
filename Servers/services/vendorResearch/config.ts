@@ -12,10 +12,37 @@ export interface VendorResearchConfig {
   manualCooldownMinutes: number;
   /** Research runs one organization may start in a rolling 24 hours, automatic and manual. */
   dailyRunCap: number;
+  /** Research runs one worker process carries out at the same time. */
+  workerConcurrency: number;
+  /**
+   * Whether a page that only a script can build is opened in a headless browser. Off unless an
+   * operator turns it on: a browser is the heaviest thing the agent runs, and the host needs one.
+   */
+  headless: boolean;
+  /**
+   * Whether a run looks the vendor up in the public databases of exploited vulnerabilities,
+   * breaches and incident reports (see records/). On unless an operator turns it off, for a host
+   * that cannot reach cisa.gov, nist.gov, haveibeenpwned.com and sec.gov.
+   */
+  records: boolean;
+  /**
+   * Whether the vendor risk database is on (spec D4.11): the lists are mirrored on a schedule, a run
+   * looks the vendor up in the mirror instead of the per-run lookups of KEV and OFAC, and a
+   * finding gets a credibility computed from its sources. Off unless an operator sets it to true,
+   * until the golden set passes; `records` off stops it too. The backend reads it to register the
+   * schedulers, the worker to run the syncs and the research.
+   */
+  vrdb: boolean;
 }
 
 const DEFAULT_MANUAL_COOLDOWN_MINUTES = 10;
 const DEFAULT_DAILY_RUN_CAP = 50;
+/**
+ * A run spends nearly all its time waiting for the web and the model, so a process can carry
+ * several. The searches of a process go one at a time, a second apart, and a provider key has a
+ * rate limit, so more runs at once would mostly wait on each other's searches and calls.
+ */
+const DEFAULT_WORKER_CONCURRENCY = 5;
 
 /**
  * A whole number of at least `minimum`, or `fallback` for anything else. The text is checked
@@ -33,6 +60,9 @@ export function getVendorResearchConfig(
   env: NodeJS.ProcessEnv = process.env,
 ): VendorResearchConfig {
   const autoRun = (env.VENDOR_RESEARCH_AUTO_RUN ?? "").trim().toLowerCase();
+  const headless = (env.VENDOR_RESEARCH_HEADLESS ?? "").trim().toLowerCase();
+  const records = (env.VENDOR_RESEARCH_RECORDS ?? "").trim().toLowerCase();
+  const vrdb = (env.VENDOR_RESEARCH_VRDB ?? "").trim().toLowerCase();
 
   return {
     autoRun: autoRun !== "false",
@@ -42,5 +72,13 @@ export function getVendorResearchConfig(
       DEFAULT_MANUAL_COOLDOWN_MINUTES,
     ),
     dailyRunCap: parseWholeNumber(env.VENDOR_RESEARCH_DAILY_RUN_CAP, 1, DEFAULT_DAILY_RUN_CAP),
+    workerConcurrency: parseWholeNumber(
+      env.VENDOR_RESEARCH_WORKER_CONCURRENCY,
+      1,
+      DEFAULT_WORKER_CONCURRENCY,
+    ),
+    headless: headless === "true",
+    records: records !== "false",
+    vrdb: vrdb === "true",
   };
 }

@@ -63,6 +63,11 @@ const sharedTables: SharedTableEntry[] = [
     justification:
       "Framework structure/reference tables are global by convention; the wildcard matches all struct tables.",
   },
+  {
+    name: "vrdb_*",
+    justification:
+      "Public records mirrored from official sources (vendor risk database); no tenant data; written only by the sync job and the run-time lookup.",
+  },
 ];
 
 /**

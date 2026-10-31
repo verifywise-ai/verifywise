@@ -10,12 +10,18 @@
  */
 import {
   EvidenceSource,
+  RECORD_SOURCE_IDS,
   RESEARCH_CATEGORIES,
+  RecordSourceId,
+  RecordStatus,
   ResearchCategory,
 } from "../../domain.layer/interfaces/i.vendorResearch";
-import { MAX_EXCERPT_CHARS } from "../webResearch/pageText";
+import { MAX_PAGE_CONTENT_CHARS } from "../webResearch/pageText";
 import { LedgerEntry } from "../webResearch/webSession";
+import { classifySource } from "./sourceRegistry/classify";
+import type { ResearchTarget } from "./target";
 import { MAX_SNIPPET_CHARS, cleanText, cutAtCodePoint } from "./text";
+import type { VrdbRecordMeta } from "./vrdb/types";
 
 export { MAX_SNIPPET_CHARS };
 export const MAX_EVIDENCE_BYTES = 100_000;
@@ -155,6 +161,20 @@ function trimLargest(groups: SizedSource[][], excess: number): void {
   cuttable[0] = sizeOf({ ...source, content: cutToJsonBytes(source.content, budget) });
 }
 
+/** A vendor without a domain: whether a host is blocked does not depend on the vendor. */
+const ANY_VENDOR: ResearchTarget = { name: "", domain: null, provides: "" };
+
+/**
+ * True for a source of a host the source registry blocks (spec D3.2), by the address that
+ * answered it: under the credibility rules it never enters the pack. A record is classified by its
+ * database and a page of the vendor's own site is the vendor's word, so neither is blocked.
+ */
+export function isBlockedEntry(entry: LedgerEntry<ResearchCategory>): boolean {
+  if (entry.record !== undefined || entry.onVendorSite) return false;
+  const url = entry.answeredUrl ?? entry.url;
+  return classifySource({ url, onVendorSite: false }, ANY_VENDOR).blocked === true;
+}
+
 /** The sources of the groups in category order, numbered S1, S2, ... without gaps. */
 const numbered = (groups: SizedSource[][]): EvidenceSource[] =>
   groups.flat().map(({ source }, index) => ({ id: `S${index + 1}`, ...source }));
@@ -167,7 +187,7 @@ const numbered = (groups: SizedSource[][]): EvidenceSource[] =>
  * 1. An entry with an unusable URL is dropped. The title, the content and the publication date are
  *    cleaned.
  * 2. A URL seen before is dropped, so the first entry with it wins, across categories too.
- * 3. The title is cut to MAX_TITLE_CHARS, and the content of a page to MAX_EXCERPT_CHARS and of a
+ * 3. The title is cut to MAX_TITLE_CHARS, and the content of a page to MAX_PAGE_CONTENT_CHARS and of a
  *    result to MAX_SNIPPET_CHARS. A publication date that is empty or longer than
  *    MAX_PUBLISHED_AT_CHARS becomes null.
  * 4. Until the serialized pack is at most MAX_EVIDENCE_BYTES, the last source of the category that
@@ -181,18 +201,23 @@ const numbered = (groups: SizedSource[][]): EvidenceSource[] =>
  *    of S10 and up made it too big, step 4 goes on.
  *
  * The kind and the vendor's mark (`onVendorSite`) are the session's, as they are: whether a page is
- * the vendor's own was decided on the URL that answered, which the entry does not keep.
+ * the vendor's own was decided on the URL that answered. With `dropBlocked` (the credibility
+ * rules), a source of a blocked host is dropped before step 1 (`isBlockedEntry`).
  */
-export function buildEvidencePack(entries: LedgerEntry<ResearchCategory>[]): EvidenceSource[] {
+export function buildEvidencePack(
+  entries: LedgerEntry<ResearchCategory>[],
+  options: { dropBlocked?: boolean } = {},
+): EvidenceSource[] {
   const seenUrls = new Set<string>();
   // Category by category, so that the first entry of a URL wins in the order of the categories.
   const groups = RESEARCH_CATEGORIES.map((category) => {
     const sized: SizedSource[] = [];
     for (const entry of entries) {
       if (entry.category !== category) continue;
+      if (options.dropBlocked === true && isBlockedEntry(entry)) continue;
       if (!isUsableUrl(entry.url) || seenUrls.has(entry.url)) continue;
       seenUrls.add(entry.url);
-      const maxContentChars = entry.kind === "page" ? MAX_EXCERPT_CHARS : MAX_SNIPPET_CHARS;
+      const maxContentChars = entry.kind === "page" ? MAX_PAGE_CONTENT_CHARS : MAX_SNIPPET_CHARS;
       const source = {
         category: entry.category,
         kind: entry.kind,
@@ -222,4 +247,50 @@ export function buildEvidencePack(entries: LedgerEntry<ResearchCategory>[]): Evi
     excess = serializedBytes(pack) - MAX_EVIDENCE_BYTES;
   }
   return pack;
+}
+
+/**
+ * Where a source came from, beside what the pack shows of it: the database of a record, the
+ * address on another site that a page claims as its own, whether the database still stands by the
+ * record, what the vendor risk database knows of a record it offered, and the address a page
+ * answered from. The credibility of a finding reads it (see credibility.ts); the model never does.
+ */
+export interface SourceProvenance {
+  record?: RecordSourceId;
+  canonicalUrl?: string;
+  /** Absent means active; a record of the vendor risk database gives its own in `vrdb`. */
+  status?: RecordStatus;
+  vrdb?: VrdbRecordMeta;
+  answeredUrl?: string;
+}
+
+const isRecordSourceId = (value: string): value is RecordSourceId =>
+  (RECORD_SOURCE_IDS as readonly string[]).includes(value);
+
+/**
+ * The provenance of the ledger's sources, by address: the key is the address the ledger kept for
+ * the entry, which is the address the pack shows (see `buildEvidencePack`). A record id that is
+ * not one of a database is left out, and an entry with none of a record, a canonical address, a
+ * VRDB record and an answering address adds nothing. When two entries share an address, the first
+ * in the ledger's order wins.
+ */
+export function provenanceOf(
+  entries: readonly LedgerEntry<ResearchCategory>[],
+): ReadonlyMap<string, SourceProvenance> {
+  const provenance = new Map<string, SourceProvenance>();
+  const seen = new Set<string>();
+  for (const entry of entries) {
+    if (seen.has(entry.url)) continue;
+    seen.add(entry.url);
+    const found: SourceProvenance = {
+      ...(entry.record !== undefined && isRecordSourceId(entry.record)
+        ? { record: entry.record }
+        : {}),
+      ...(entry.canonicalUrl === undefined ? {} : { canonicalUrl: entry.canonicalUrl }),
+      ...(entry.vrdb === undefined ? {} : { vrdb: entry.vrdb }),
+      ...(entry.answeredUrl === undefined ? {} : { answeredUrl: entry.answeredUrl }),
+    };
+    if (Object.keys(found).length > 0) provenance.set(entry.url, found);
+  }
+  return provenance;
 }

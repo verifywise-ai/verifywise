@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  A fixture of the EU consolidated list of financial sanctions (file xmlFullSanctionsList_1_1),
+  with fictional names. No real list file was read.
+
+  UNVERIFIED: the XSD 1.1 could not be read (its address answered 403 without the token, and the
+  token is never copied, Q2). The names below are those the spec's D2.4 gives for the XSD 1.1
+  (logicalId, euReferenceNumber, unitedNationId, designationDate, delistingDate, nameAlias
+  wholeName, regulation programme, identification number and identificationTypeCode) and, from
+  public knowledge, the root `export` with `generationDate` and `subjectType` with
+  `classificationCode` (P for a person, E for an enterprise). That the dates are attributes of
+  sanctionEntity is a guess. The connector checks the root, so a wrong guess fails the sync:
+    /export@generationDate
+    /export/sanctionEntity@logicalId, @euReferenceNumber, @unitedNationId, @designationDate,
+      @delistingDate
+    /export/sanctionEntity/subjectType@classificationCode
+    /export/sanctionEntity/nameAlias@wholeName
+    /export/sanctionEntity/regulation@programme
+    /export/sanctionEntity/identification@number, @identificationTypeCode
+-->
+<export xmlns="http://eu.europa.ec/fpi/fsd/export" generationDate="2026-10-23T15:10:13.000+02:00" globalFileId="9001">
+  <sanctionEntity logicalId="1101" euReferenceNumber="EU.1101.01" unitedNationId="" designationDate="2025-03-12">
+    <regulation programme="CYB" publicationDate="2025-03-12" />
+    <subjectType code="enterprise" classificationCode="E" />
+    <nameAlias wholeName="Northwind Export Company" />
+    <nameAlias wholeName="Northwind Trading" />
+    <identification number="EX-4455" identificationTypeCode="regnumber" />
+  </sanctionEntity>
+  <sanctionEntity logicalId="1102" euReferenceNumber="EU.1102.02" designationDate="2026-02-02">
+    <regulation programme="RUS" />
+    <regulation programme="RUS" />
+    <subjectType code="enterprise" classificationCode="E" />
+    <nameAlias wholeName="Globex Holdings &amp; Partners" />
+  </sanctionEntity>
+  <sanctionEntity logicalId="1103" euReferenceNumber="EU.1103.03" designationDate="2024-05-01">
+    <regulation programme="CYB" />
+    <subjectType code="person" classificationCode="P" />
+    <nameAlias wholeName="Jane Doe" firstName="Jane" lastName="Doe" />
+  </sanctionEntity>
+  <sanctionEntity logicalId="1104" euReferenceNumber="EU.1104.04" designationDate="2022-01-10" delistingDate="2026-09-01">
+    <regulation programme="SYR" />
+    <subjectType code="enterprise" classificationCode="E" />
+    <nameAlias wholeName="Initech Overseas" />
+  </sanctionEntity>
+</export>

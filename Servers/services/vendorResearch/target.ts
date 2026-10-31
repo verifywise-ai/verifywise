@@ -1,17 +1,39 @@
 /**
- * Who a research run is about: the vendor's name, the domain of its website and what it provides.
+ * Who a research run is about: the vendor's name, the domain of its website, what it provides and
+ * the identifiers a person gave it.
  *
  * The domain is the identity anchor. A search for a common name finds other companies too, so the
  * two categories that read the vendor's own pages are tied to its domain, and a run without a
  * domain skips them.
  */
 import { IVendor } from "../../domain.layer/interfaces/i.vendor";
+import { parseOtherNames, withAliases } from "./aliases";
 
 export interface ResearchTarget {
   name: string;
   /** The vendor's host name in ASCII, without scheme, port, path or "www."; null when it has none. */
   domain: string | null;
   provides: string;
+  /**
+   * The other names the vendor is known by (a brand, a former name, the name the press uses): the
+   * ones a person gave, then the ones its home page gave itself (see aliases.ts). Absent when there
+   * are none.
+   */
+  aliases?: string[];
+  /** The identifiers a person gave the vendor (spec Q1); absent when it has none. */
+  identifiers?: VendorIdentifiers;
+}
+
+/**
+ * The identifiers of a vendor, as the vendor form stores them: the country it is registered in
+ * (ISO 3166-1 alpha-2, upper case), its company registration number, its LEI (ISO 17442) and its
+ * SEC CIK (ten digits). Each is absent when the vendor has none.
+ */
+export interface VendorIdentifiers {
+  country?: string;
+  registrationNumber?: string;
+  lei?: string;
+  secCik?: string;
 }
 
 /**
@@ -66,12 +88,37 @@ export function normaliseDomain(website: string | null | undefined): string | nu
   return isPublicDomainName(host) ? host : null;
 }
 
+/** The identifiers of a vendor record that hold a value; undefined when none does. */
+function identifiersOf(
+  vendor: Partial<Pick<IVendor, "country" | "registration_number" | "lei" | "sec_cik">>,
+): VendorIdentifiers | undefined {
+  const fields: Array<[keyof VendorIdentifiers, string | null | undefined]> = [
+    ["country", vendor.country],
+    ["registrationNumber", vendor.registration_number],
+    ["lei", vendor.lei],
+    ["secCik", vendor.sec_cik],
+  ];
+  const given = fields.flatMap(([field, value]) => {
+    const text = typeof value === "string" ? value.trim() : "";
+    return text === "" ? [] : [[field, text] as const];
+  });
+  return given.length === 0 ? undefined : Object.fromEntries(given);
+}
+
+/**
+ * The target of a vendor record: its name, its domain, what it provides and, when a person wrote
+ * any, the other names it is known by (see aliases.ts) and its identifiers.
+ */
 export function buildTarget(
-  vendor: Pick<IVendor, "vendor_name" | "website" | "vendor_provides">,
+  vendor: Pick<IVendor, "vendor_name" | "website" | "vendor_provides"> &
+    Partial<Pick<IVendor, "other_names" | "country" | "registration_number" | "lei" | "sec_cik">>,
 ): ResearchTarget {
-  return {
+  const identifiers = identifiersOf(vendor);
+  const target: ResearchTarget = {
     name: vendor.vendor_name.trim(),
     domain: normaliseDomain(vendor.website),
     provides: vendor.vendor_provides.trim(),
+    ...(identifiers === undefined ? {} : { identifiers }),
   };
+  return withAliases(target, parseOtherNames(vendor.other_names));
 }

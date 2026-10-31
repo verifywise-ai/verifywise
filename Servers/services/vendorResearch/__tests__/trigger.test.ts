@@ -11,7 +11,7 @@ jest.mock("../../../utils/vendorResearch.utils", () => ({
   getLastRunCreatedAtQuery: jest.fn(),
 }));
 // The real module opens a BullMQ queue as soon as it is imported.
-jest.mock("../../automations/automationProducer", () => ({ enqueueVendorResearch: jest.fn() }));
+jest.mock("../queue", () => ({ enqueueVendorResearch: jest.fn() }));
 jest.mock("../../../utils/logger/fileLogger", () => ({
   __esModule: true,
   default: { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() },
@@ -33,7 +33,7 @@ import {
   getActiveRunQuery,
   getLastRunCreatedAtQuery,
 } from "../../../utils/vendorResearch.utils";
-import { enqueueVendorResearch } from "../../automations/automationProducer";
+import { enqueueVendorResearch } from "../queue";
 import { VendorResearchConfig, getVendorResearchConfig } from "../config";
 import {
   ENQUEUE_TIMEOUT_MS,
@@ -61,6 +61,10 @@ const CONFIGURED: VendorResearchConfig = {
   autoRun: true,
   manualCooldownMinutes: 10,
   dailyRunCap: 50,
+  workerConcurrency: 5,
+  headless: false,
+  records: true,
+  vrdb: false,
 };
 
 const VENDOR_ROW = { id: VENDOR, vendor_name: "Acme" } as IVendor;
@@ -80,7 +84,10 @@ const makeRun = (overrides: Partial<IVendorResearchRun> = {}): IVendorResearchRu
   pages_read: 0,
   duplicates_dropped: 0,
   error: null,
+  progress: null,
   requested_by: REQUESTER,
+  coverage: null,
+  registry_version: null,
   created_at: NOW,
   started_at: null,
   finished_at: null,
@@ -346,6 +353,9 @@ describe("startVendorResearch", () => {
         pagesRead: 0,
         duplicatesDropped: 0,
         error: "could not enqueue",
+        trace: null,
+        coverage: null,
+        registryVersion: null,
       });
       expect(logger.error).toHaveBeenCalledWith(expect.stringContaining("Redis is down"));
     });
@@ -380,6 +390,9 @@ describe("startVendorResearch", () => {
       pagesRead: 0,
       duplicatesDropped: 0,
       error: "could not enqueue",
+      trace: null,
+      coverage: null,
+      registryVersion: null,
     };
 
     /**

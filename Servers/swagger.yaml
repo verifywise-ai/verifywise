@@ -656,6 +656,33 @@ components:
           type: integer
           nullable: true
           description: 'Computed risk score for the vendor'
+        other_names:
+          type: string
+          nullable: true
+          description: 'Other names the vendor is known by, separated by commas. The vendor research names the vendor by them as well.'
+          example: 'Facebook, Instagram'
+        country:
+          type: string
+          nullable: true
+          description: 'The two-letter ISO 3166-1 code of the country the vendor is registered in, in either case, stored in upper case. The vendor research takes the language and the regulator of its news searches from it.'
+          example: DE
+        registration_number:
+          type: string
+          nullable: true
+          maxLength: 64
+          description: 'The company registration number: at most 64 characters once inner white space is collapsed.'
+          example: 'HRB 12345'
+        lei:
+          type: string
+          nullable: true
+          description: 'The Legal Entity Identifier (ISO 17442): 18 letters or digits and 2 check digits that must match. White space is removed and letters are stored in upper case. A sanctions entry that carries the same LEI matches the vendor strongly.'
+          example: 5493001KJTIIGC8Y1R12
+        sec_cik:
+          type: string
+          nullable: true
+          pattern: '^[0-9]{1,10}$'
+          description: 'The Central Index Key of the vendor at the SEC: one to ten digits, stored padded with zeros to ten.'
+          example: '0000320193'
         created_at:
           type: string
           format: date-time
@@ -773,6 +800,23 @@ components:
         risk_score:
           type: integer
           description: 'Computed risk score'
+        other_names:
+          type: string
+          description: 'Other names the vendor is known by (optional): up to 8 names of 2 to 80 characters, separated by commas, semicolons or line breaks, 500 characters at most'
+        country:
+          type: string
+          description: 'The two-letter ISO 3166-1 code of the country the vendor is registered in, in either case, stored in upper case. The vendor research takes the language and the regulator of its news searches from it.'
+        registration_number:
+          type: string
+          maxLength: 64
+          description: 'The company registration number: at most 64 characters once inner white space is collapsed.'
+        lei:
+          type: string
+          description: 'The Legal Entity Identifier (ISO 17442): 18 letters or digits and 2 check digits that must match. White space is removed and letters are stored in upper case. A sanctions entry that carries the same LEI matches the vendor strongly.'
+        sec_cik:
+          type: string
+          pattern: '^[0-9]{1,10}$'
+          description: 'The Central Index Key of the vendor at the SEC: one to ten digits, stored padded with zeros to ten.'
     VendorUpdate:
       type: object
       description: 'All fields are optional. Only provided fields are updated. Review and scorecard fields can be set to null to clear them.'
@@ -852,6 +896,28 @@ components:
         risk_score:
           type: integer
           nullable: true
+        other_names:
+          type: string
+          nullable: true
+          description: 'Other names the vendor is known by. An empty text or null clears them.'
+        country:
+          type: string
+          nullable: true
+          description: 'The two-letter ISO 3166-1 code of the country the vendor is registered in, in either case, stored in upper case. The vendor research takes the language and the regulator of its news searches from it. An empty text or null clears it.'
+        registration_number:
+          type: string
+          nullable: true
+          maxLength: 64
+          description: 'The company registration number: at most 64 characters once inner white space is collapsed. An empty text or null clears it.'
+        lei:
+          type: string
+          nullable: true
+          description: 'The Legal Entity Identifier (ISO 17442): 18 letters or digits and 2 check digits that must match. White space is removed and letters are stored in upper case. A sanctions entry that carries the same LEI matches the vendor strongly. An empty text or null clears it.'
+        sec_cik:
+          type: string
+          nullable: true
+          pattern: '^[0-9]{1,10}$'
+          description: 'The Central Index Key of the vendor at the SEC: one to ten digits, stored padded with zeros to ten. An empty text or null clears it.'
     ModelInventoryStatus:
       type: string
       enum:
@@ -9201,6 +9267,20 @@ paths:
       security:
         -
           bearerAuth: []
+  '/vendors/{id}/research/runs/{runId}/trace':
+    get:
+      summary: 'Get Vendor Research Run Trace'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Vendors
+      operationId: getVendorResearchRunTrace
+      security:
+        -
+          bearerAuth: []
   '/vendors/{id}/research':
     post:
       summary: 'Start Vendor Research Run'
@@ -9226,6 +9306,47 @@ paths:
       tags:
         - 'Vendor Research'
       operationId: getResearchConfig
+      security:
+        -
+          bearerAuth: []
+  /vendor-research/decision-stats:
+    get:
+      summary: 'Get Decision Stats'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Vendor Research'
+      operationId: getDecisionStats
+      security:
+        -
+          bearerAuth: []
+  /vendor-research/settings:
+    get:
+      summary: 'Get Research Settings'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Vendor Research'
+      operationId: getResearchSettings
+      security:
+        -
+          bearerAuth: []
+    put:
+      summary: 'Save Research Settings'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Vendor Research'
+      operationId: saveResearchSettings
       security:
         -
           bearerAuth: []

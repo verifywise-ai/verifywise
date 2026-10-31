@@ -1,7 +1,11 @@
 /**
  * The queue job of one vendor research run: it runs the pipeline for the run, and after an
- * automatic run that stored findings it tells the vendor's assignee, if that is a user of the
- * vendor's organization.
+ * automatic or a scheduled run that stored findings it tells the vendor's assignee, if that is a
+ * user of the vendor's organization.
+ *
+ * While the flag of the vendor risk database is on (`VENDOR_RESEARCH_VRDB`), the run looks the
+ * vendor up in it in place of the per-run lookups of the CISA catalog and the OFAC list, and is
+ * researched and analysed under the credibility rules (see `PipelineDeps.rules`).
  *
  * Exactly-once: the pipeline ends the run itself, once, and does not throw for a failed search,
  * page read or model call. The only rejection that reaches this file is a failure to mark the run
@@ -16,7 +20,11 @@ import { getRunByIdQuery } from "../../utils/vendorResearch.utils";
 import { notifyAssigneeOfVendorResearch } from "../inAppNotification.service";
 import { isUserOfOrganization } from "./assignee";
 import { PipelineDeps, resolveOrgModel, runVendorResearch } from "./pipeline";
+import { sharedPageRenderer } from "./pageRenderer";
+import { sharedRecordsLookup } from "./records";
 import { createVendorResearcher } from "./researchAgent";
+import { sharedWebCache } from "./researchCache";
+import { sharedVrdbLookup } from "./vrdb/lookup";
 
 export interface VendorResearchJobData {
   organizationId: number;
@@ -78,18 +86,43 @@ export async function handleVendorResearchJob(data: VendorResearchJobData): Prom
     return;
   }
 
+  // The vendor's lookup in the vendor risk database, while its flag is on; the lookup of the
+  // process then asks only the databases that the VRDB does not keep.
+  const vrdb = sharedVrdbLookup({ organizationId, vendorId });
+  const underFlag = vrdb === undefined ? {} : { rules: "credibility" as const };
   const deps: PipelineDeps = {
     // A researcher of its own for each job, with the real web search, page reader and model call.
-    research: createVendorResearcher(),
+    // The jobs of the process share one cache of robots.txt files, pages and searches, and, when an
+    // operator has turned it on, one headless browser for the pages that a script builds. The code
+    // does the routine work (the news searches, the vendor's own pages) before the model's first
+    // step, and the model then researches each category in a loop of its own, all at once.
+    research: createVendorResearcher({
+      cache: sharedWebCache(),
+      render: sharedPageRenderer(),
+      records: sharedRecordsLookup(),
+      gather: true,
+      perCategory: true,
+      ...(vrdb === undefined ? {} : { vrdb, ...underFlag }),
+    }),
     resolveModel: resolveOrgModel,
     generate: generateObjectWithSelfCorrection,
     now: () => new Date(),
+    // One more model call over the findings that stay: a source about another company, a quote that
+    // does not say the claim and a matter older than its window are not stored.
+    verifier: true,
+    ...underFlag,
   };
   // Not caught, see the header: a rejection means the run is still queued.
-  const result = await runVendorResearch({ organizationId, vendorId, runId }, deps);
+  // The trigger goes along: a scheduled run analyses only the sources that are new.
+  const result = await runVendorResearch(
+    { organizationId, vendorId, runId, triggerType: run.trigger_type },
+    deps,
+  );
 
-  // A manual run is not announced: the person who started it is looking at the result.
-  if (result.outcome === "completed" && result.findingsCreated > 0 && run.trigger_type === "auto") {
+  // A manual run is not announced: the person who started it is looking at the result. A run that
+  // started by itself is, because nobody is looking at it.
+  const startedByItself = run.trigger_type === "auto" || run.trigger_type === "scheduled";
+  if (result.outcome === "completed" && result.findingsCreated > 0 && startedByItself) {
     await notifyAssignee(organizationId, vendorId, runId, result.findingsCreated);
   }
 }

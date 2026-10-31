@@ -1,5 +1,9 @@
 jest.mock("../pipeline", () => ({ runVendorResearch: jest.fn(), resolveOrgModel: jest.fn() }));
 jest.mock("../researchAgent", () => ({ createVendorResearcher: jest.fn() }));
+jest.mock("../researchCache", () => ({ sharedWebCache: jest.fn() }));
+jest.mock("../pageRenderer", () => ({ sharedPageRenderer: jest.fn() }));
+jest.mock("../records", () => ({ sharedRecordsLookup: jest.fn() }));
+jest.mock("../vrdb/lookup", () => ({ sharedVrdbLookup: jest.fn() }));
 // Replaced only to show that the job no longer reads it.
 jest.mock("../config", () => ({ getVendorResearchConfig: jest.fn() }));
 jest.mock("../../../advisor/llmSelfCorrect", () => ({
@@ -29,6 +33,10 @@ import { getVendorResearchConfig } from "../config";
 import { handleVendorResearchJob } from "../job";
 import { PipelineDeps, resolveOrgModel, runVendorResearch } from "../pipeline";
 import { VendorResearcher, createVendorResearcher } from "../researchAgent";
+import { sharedPageRenderer } from "../pageRenderer";
+import { sharedRecordsLookup } from "../records";
+import { sharedWebCache } from "../researchCache";
+import { sharedVrdbLookup } from "../vrdb/lookup";
 
 type AnyMock = jest.Mock<any, any[]>;
 const asMock = (fn: unknown): AnyMock => fn as AnyMock;
@@ -42,6 +50,10 @@ const DATA = { organizationId: ORG, vendorId: VENDOR, runId: RUN_ID };
 
 /** The researcher the job is given: a stand-in, since the pipeline that would call it is too. */
 const RESEARCHER: VendorResearcher = jest.fn();
+/** The cache of the process: a stand-in, so that no test opens a connection. */
+const CACHE = { get: jest.fn(), set: jest.fn() };
+/** The headless browser of the process: a stand-in, so that no test starts one. */
+const RENDERER = jest.fn();
 
 const makeRun = (overrides: Partial<IVendorResearchRun> = {}): IVendorResearchRun => ({
   id: RUN_ID,
@@ -58,7 +70,10 @@ const makeRun = (overrides: Partial<IVendorResearchRun> = {}): IVendorResearchRu
   pages_read: 0,
   duplicates_dropped: 0,
   error: null,
+  progress: null,
   requested_by: null,
+  coverage: null,
+  registry_version: null,
   created_at: new Date("2031-04-20T12:00:00Z"),
   started_at: null,
   finished_at: null,
@@ -71,6 +86,7 @@ const makeVendor = (overrides: Partial<IVendor> = {}): IVendor =>
 beforeEach(() => {
   jest.resetAllMocks();
   asMock(createVendorResearcher).mockReturnValue(RESEARCHER);
+  asMock(sharedWebCache).mockReturnValue(CACHE);
   asMock(getRunByIdQuery).mockResolvedValue(makeRun());
   asMock(getVendorByIdQuery).mockResolvedValue(makeVendor());
   // The assignee is a user of the organization: the lookup reports nobody missing.
@@ -96,18 +112,113 @@ describe("handleVendorResearchJob", () => {
 
     expect(runVendorResearch).toHaveBeenCalledTimes(1);
     const [args, deps] = asMock(runVendorResearch).mock.calls[0] as [typeof DATA, PipelineDeps];
-    expect(args).toEqual(DATA);
-    // The real researcher, with its real engine, page reader and generator.
+    expect(args).toEqual({ ...DATA, triggerType: "auto" });
+    // The real researcher, with its real engine, page reader and generator, on the cache that all
+    // the runs of the process share.
     expect(createVendorResearcher).toHaveBeenCalledTimes(1);
-    expect(createVendorResearcher).toHaveBeenCalledWith();
+    expect(createVendorResearcher).toHaveBeenCalledWith({
+      cache: CACHE,
+      gather: true,
+      perCategory: true,
+    });
     expect(deps.research).toBe(RESEARCHER);
     expect(deps.resolveModel).toBe(resolveOrgModel);
     expect(deps.generate).toBe(generateObjectWithSelfCorrection);
+    // The findings that stay are checked by the verifier before they are stored.
+    expect(deps.verifier).toBe(true);
     const before = Date.now();
     const now = deps.now();
     expect(now).toBeInstanceOf(Date);
     expect(now.getTime()).toBeGreaterThanOrEqual(before);
     expect(now.getTime()).toBeLessThanOrEqual(Date.now());
+  });
+
+  // A scheduled run analyses only the sources that earlier runs did not show to the model: the
+  // pipeline needs to know that the run is one.
+  it.each(["auto", "manual", "scheduled"] as const)(
+    "tells the pipeline that the run is %s",
+    async (trigger) => {
+      asMock(getRunByIdQuery).mockResolvedValue(makeRun({ trigger_type: trigger }));
+
+      await handleVendorResearchJob(DATA);
+
+      expect(asMock(runVendorResearch).mock.calls[0][0]).toEqual({ ...DATA, triggerType: trigger });
+    },
+  );
+
+  it("gives the researcher the headless browser of the process when there is one", async () => {
+    asMock(sharedPageRenderer).mockReturnValue(RENDERER);
+
+    await handleVendorResearchJob(DATA);
+
+    expect(createVendorResearcher).toHaveBeenCalledTimes(1);
+    expect(createVendorResearcher).toHaveBeenCalledWith({
+      cache: CACHE,
+      render: RENDERER,
+      records: undefined,
+      gather: true,
+      perCategory: true,
+    });
+  });
+
+  it("gives the researcher the lookup in the public databases of the process when there is one", async () => {
+    const lookup = jest.fn();
+    asMock(sharedRecordsLookup).mockReturnValue(lookup);
+
+    await handleVendorResearchJob(DATA);
+
+    expect(asMock(createVendorResearcher).mock.calls[0][0].records).toBe(lookup);
+  });
+
+  it("gives it none when an operator turned the records off", async () => {
+    asMock(sharedRecordsLookup).mockReturnValue(undefined);
+
+    await handleVendorResearchJob(DATA);
+
+    expect(asMock(createVendorResearcher).mock.calls[0][0].records).toBeUndefined();
+  });
+
+  describe("the flag of the vendor risk database", () => {
+    it("with the flag on gives the researcher the vendor's lookup in it and the credibility rules, and the pipeline the same rules", async () => {
+      const vrdb = jest.fn();
+      const records = jest.fn();
+      asMock(sharedVrdbLookup).mockReturnValue(vrdb);
+      asMock(sharedRecordsLookup).mockReturnValue(records);
+
+      await handleVendorResearchJob(DATA);
+
+      expect(sharedVrdbLookup).toHaveBeenCalledWith({ organizationId: ORG, vendorId: VENDOR });
+      expect(asMock(createVendorResearcher).mock.calls[0][0]).toMatchObject({
+        vrdb,
+        rules: "credibility",
+        // The lookup of the process, which then asks only what the VRDB does not keep.
+        records,
+      });
+      const [, deps] = asMock(runVendorResearch).mock.calls[0] as [typeof DATA, PipelineDeps];
+      expect(deps.rules).toBe("credibility");
+    });
+
+    it("with the flag off gives neither: the researcher asks KEV and OFAC itself, under the confidence rules", async () => {
+      asMock(sharedVrdbLookup).mockReturnValue(undefined);
+
+      await handleVendorResearchJob(DATA);
+
+      const researcherDeps = asMock(createVendorResearcher).mock.calls[0][0];
+      expect(researcherDeps).not.toHaveProperty("vrdb");
+      expect(researcherDeps).not.toHaveProperty("rules");
+      // The lookup of the process reads the flag itself: with it off, it asks every database.
+      expect(sharedRecordsLookup).toHaveBeenCalledWith();
+      const [, deps] = asMock(runVendorResearch).mock.calls[0] as [typeof DATA, PipelineDeps];
+      expect(deps).not.toHaveProperty("rules");
+    });
+  });
+
+  it("gives the researcher no browser when the process has none: a page that needs a script is reported as such", async () => {
+    asMock(sharedPageRenderer).mockReturnValue(undefined);
+
+    await handleVendorResearchJob(DATA);
+
+    expect(asMock(createVendorResearcher).mock.calls[0][0].render).toBeUndefined();
   });
 
   it("does not read the configuration and never ends the run itself: nothing has to be set up to search the web", async () => {
@@ -140,6 +251,30 @@ describe("handleVendorResearchJob", () => {
         RUN_ID,
         2,
       );
+    });
+
+    // Nobody is looking at a scan: it runs by itself, and a finding is of no use until someone reads it.
+    it("tells the assignee when a scheduled run stored findings", async () => {
+      asMock(getRunByIdQuery).mockResolvedValue(makeRun({ trigger_type: "scheduled" }));
+
+      await handleVendorResearchJob(DATA);
+
+      expect(notifyAssigneeOfVendorResearch).toHaveBeenCalledTimes(1);
+      expect(notifyAssigneeOfVendorResearch).toHaveBeenCalledWith(
+        ORG,
+        { id: VENDOR, name: "Acme", assignee: ASSIGNEE },
+        RUN_ID,
+        2,
+      );
+    });
+
+    it("says nothing after a scheduled run that stored no findings, which is most of them", async () => {
+      asMock(getRunByIdQuery).mockResolvedValue(makeRun({ trigger_type: "scheduled" }));
+      asMock(runVendorResearch).mockResolvedValue({ outcome: "completed", findingsCreated: 0 });
+
+      await handleVendorResearchJob(DATA);
+
+      expect(notifyAssigneeOfVendorResearch).not.toHaveBeenCalled();
     });
 
     it("says nothing after a manual run: the person who started it is looking at the result", async () => {

@@ -7,11 +7,17 @@ jest.mock("../../utils/llmKey.utils", () => ({ getLLMKeysQuery: jest.fn() }));
 jest.mock("../../utils/vendorResearch.utils", () => ({
   STALE_RUN_MINUTES: 15,
   failStaleRunsQuery: jest.fn(),
+  getDecisionCountsQuery: jest.fn(),
   getLatestRunQuery: jest.fn(),
+  getRunTraceQuery: jest.fn(),
+  getVendorResearchSettingsQuery: jest.fn(),
   listFindingsQuery: jest.fn(),
 }));
 // The real module opens a BullMQ queue when it is loaded.
 jest.mock("../../services/vendorResearch/trigger", () => ({ startVendorResearch: jest.fn() }));
+jest.mock("../../services/vendorResearch/settings.service", () => ({
+  saveVendorResearchSettings: jest.fn(),
+}));
 // The real service loads the create service, which loads the same queue.
 jest.mock("../../services/vendorResearch/findings.service", () => ({
   acceptFinding: jest.fn(),
@@ -29,18 +35,27 @@ jest.mock("../../utils/i18n.utils", () => ({
 import {
   acceptVendorRiskFinding,
   dismissVendorRiskFinding,
+  getDecisionStats,
   getLatestVendorResearch,
   getResearchConfig,
+  getResearchSettings,
+  getVendorResearchRunTrace,
   listVendorRiskFindings,
+  saveResearchSettings,
   startVendorResearchRun,
 } from "../vendorResearch.ctrl";
 import { getVendorByIdQuery } from "../../utils/vendor.utils";
 import { getLLMKeysQuery } from "../../utils/llmKey.utils";
 import {
   failStaleRunsQuery,
+  getDecisionCountsQuery,
   getLatestRunQuery,
+  getRunTraceQuery,
+  getVendorResearchSettingsQuery,
   listFindingsQuery,
 } from "../../utils/vendorResearch.utils";
+import { saveVendorResearchSettings } from "../../services/vendorResearch/settings.service";
+import { createTraceRecorder } from "../../services/vendorResearch/trace";
 import { startVendorResearch } from "../../services/vendorResearch/trigger";
 import { acceptFinding, dismissFinding } from "../../services/vendorResearch/findings.service";
 import {
@@ -60,7 +75,17 @@ const mockGetVendorByIdQuery = getVendorByIdQuery as jest.MockedFunction<typeof 
 const mockGetLLMKeysQuery = getLLMKeysQuery as jest.MockedFunction<typeof getLLMKeysQuery>;
 const mockFailStaleRunsQuery = failStaleRunsQuery as jest.MockedFunction<typeof failStaleRunsQuery>;
 const mockGetLatestRunQuery = getLatestRunQuery as jest.MockedFunction<typeof getLatestRunQuery>;
+const mockGetRunTraceQuery = getRunTraceQuery as jest.MockedFunction<typeof getRunTraceQuery>;
+const mockGetDecisionCountsQuery = getDecisionCountsQuery as jest.MockedFunction<
+  typeof getDecisionCountsQuery
+>;
 const mockListFindingsQuery = listFindingsQuery as jest.MockedFunction<typeof listFindingsQuery>;
+const mockGetSettingsQuery = getVendorResearchSettingsQuery as jest.MockedFunction<
+  typeof getVendorResearchSettingsQuery
+>;
+const mockSaveSettings = saveVendorResearchSettings as jest.MockedFunction<
+  typeof saveVendorResearchSettings
+>;
 const mockStartVendorResearch = startVendorResearch as jest.MockedFunction<
   typeof startVendorResearch
 >;
@@ -104,6 +129,7 @@ const RUN: IVendorResearchRun = {
   pages_read: 3,
   duplicates_dropped: 2,
   error: null,
+  progress: null,
   requested_by: USER,
   created_at: new Date("2026-10-10T10:00:00Z"),
   started_at: new Date("2026-10-10T10:00:05Z"),
@@ -118,10 +144,12 @@ const RUN_RESPONSE_FIELDS = [
   "trigger_type",
   "categories",
   "category_summary",
+  "coverage",
   "searches_used",
   "pages_read",
   "duplicates_dropped",
   "error",
+  "progress",
   "started_at",
   "finished_at",
   "created_at",
@@ -159,7 +187,9 @@ const FINDING: IVendorRiskFinding = {
   risk_severity: "Major",
   risk_level: "High Risk",
   confidence: "medium",
+  rationale: null,
   sources: [],
+  snippet_only: false,
   status: "pending",
   dismissed_reason: null,
   dismissed_note: null,
@@ -241,6 +271,17 @@ beforeEach(() => {
   mockGetLLMKeysQuery.mockResolvedValue([] as any);
   mockFailStaleRunsQuery.mockResolvedValue(0);
   mockGetLatestRunQuery.mockResolvedValue(null);
+  mockGetRunTraceQuery.mockResolvedValue(null);
+  mockGetDecisionCountsQuery.mockResolvedValue([]);
+  mockGetSettingsQuery.mockResolvedValue({
+    researchKeyId: null,
+    analysisKeyId: null,
+    scanIntervalDays: null,
+  });
+  mockSaveSettings.mockResolvedValue({
+    ok: true,
+    settings: { researchKeyId: null, analysisKeyId: null, scanIntervalDays: null },
+  });
   mockListFindingsQuery.mockResolvedValue({ rows: [], total: 0 });
   mockStartVendorResearch.mockResolvedValue({ ok: true, run: RUN, alreadyRunning: false });
   mockAcceptFinding.mockResolvedValue({ finding: ACCEPTED_FINDING, vendorRisk: CREATED_RISK });
@@ -441,6 +482,31 @@ describe("getLatestVendorResearch", () => {
     expectNoRunInternals(res);
   });
 
+  it("returns where a running run is, which every role may read", async () => {
+    const progress = {
+      phase: "researching" as const,
+      steps: 3,
+      action: "read" as const,
+      category: "certifications" as const,
+      searchesUsed: 2,
+      pagesRead: 1,
+      categories: ["security_incidents" as const, "certifications" as const],
+      updatedAt: "2026-10-10T10:00:20.000Z",
+    };
+    mockGetLatestRunQuery.mockResolvedValue({
+      ...RUN,
+      status: "running",
+      finished_at: null,
+      progress,
+    });
+    const res = createMockRes();
+
+    await getLatestVendorResearch(createMockReq(), res);
+
+    expect(bodyOf(res).data.progress).toEqual(progress);
+    expectNoRunInternals(res);
+  });
+
   it("answers 200 with null for a vendor that was never researched", async () => {
     const res = createMockRes();
 
@@ -455,6 +521,152 @@ describe("getLatestVendorResearch", () => {
     const res = createMockRes();
 
     await getLatestVendorResearch(createMockReq(), res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+  });
+});
+
+describe("getVendorResearchRunTrace", () => {
+  const RUN_ID = 11;
+  const traceReq = (params: Record<string, unknown> = {}) =>
+    createMockReq({ params: { id: String(VENDOR), runId: String(RUN_ID), ...params } });
+  const TRACE = (() => {
+    const recorder = createTraceRecorder();
+    recorder.step({ tool: "search", outcome: "ok", query: "Acme breach", results: 4 });
+    return recorder.snapshot();
+  })();
+
+  it.each(BAD_IDS)(
+    "answers 400 for a vendor id that is %s, and looks up nothing",
+    async (_name, id) => {
+      const res = createMockRes();
+
+      await getVendorResearchRunTrace(traceReq({ id }), res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(mockGetVendorByIdQuery).not.toHaveBeenCalled();
+      expect(mockGetRunTraceQuery).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(BAD_IDS)(
+    "answers 400 for a run id that is %s, and looks up nothing",
+    async (_name, runId) => {
+      const res = createMockRes();
+
+      await getVendorResearchRunTrace(traceReq({ runId }), res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(mockGetVendorByIdQuery).not.toHaveBeenCalled();
+      expect(mockGetRunTraceQuery).not.toHaveBeenCalled();
+    },
+  );
+
+  it("answers 404 for a vendor that is not in the organization, without reading a trace", async () => {
+    mockGetVendorByIdQuery.mockResolvedValue(null);
+    const res = createMockRes();
+
+    await getVendorResearchRunTrace(traceReq(), res);
+
+    expect(mockGetVendorByIdQuery).toHaveBeenCalledWith(VENDOR, ORG);
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(mockGetRunTraceQuery).not.toHaveBeenCalled();
+  });
+
+  it("answers 404 for a run that has no trace: unknown, another vendor's, unfinished or old", async () => {
+    mockGetRunTraceQuery.mockResolvedValue(null);
+    const res = createMockRes();
+
+    await getVendorResearchRunTrace(traceReq(), res);
+
+    expect(mockGetRunTraceQuery).toHaveBeenCalledWith(ORG, VENDOR, RUN_ID);
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(bodyOf(res).data).toBe("Research trace not found");
+  });
+
+  it("answers 200 with the trace of the run", async () => {
+    mockGetRunTraceQuery.mockResolvedValue(TRACE);
+    const res = createMockRes();
+
+    await getVendorResearchRunTrace(traceReq(), res);
+
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(bodyOf(res).data).toEqual(TRACE);
+  });
+
+  it("answers 500 when a query throws", async () => {
+    mockGetRunTraceQuery.mockRejectedValue(new Error("DB failure"));
+    const res = createMockRes();
+
+    await getVendorResearchRunTrace(traceReq(), res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+  });
+});
+
+describe("getDecisionStats", () => {
+  it("answers 200 with the decisions folded by prompt version and by category", async () => {
+    mockGetDecisionCountsQuery.mockResolvedValue([
+      {
+        prompt_version: "vr-2",
+        category: "security_incidents",
+        status: "accepted",
+        dismissed_reason: null,
+        count: 3,
+      },
+      {
+        prompt_version: "vr-2",
+        category: "security_incidents",
+        status: "dismissed",
+        dismissed_reason: "wrong_vendor",
+        count: 1,
+      },
+    ]);
+    const res = createMockRes();
+
+    await getDecisionStats(createMockReq({ params: {} }), res);
+
+    expect(mockGetDecisionCountsQuery).toHaveBeenCalledWith(ORG);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(bodyOf(res).data).toEqual({
+      byPromptVersion: [
+        {
+          promptVersion: "vr-2",
+          pending: 0,
+          accepted: 3,
+          dismissed: 1,
+          acceptanceRate: 0.75,
+          dismissedByReason: { wrong_vendor: 1 },
+        },
+      ],
+      byCategory: [
+        {
+          promptVersion: "vr-2",
+          category: "security_incidents",
+          pending: 0,
+          accepted: 3,
+          dismissed: 1,
+          acceptanceRate: 0.75,
+          dismissedByReason: { wrong_vendor: 1 },
+        },
+      ],
+    });
+  });
+
+  it("answers 200 with empty lists when nothing was decided", async () => {
+    const res = createMockRes();
+
+    await getDecisionStats(createMockReq({ params: {} }), res);
+
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(bodyOf(res).data).toEqual({ byPromptVersion: [], byCategory: [] });
+  });
+
+  it("answers 500 when the query throws", async () => {
+    mockGetDecisionCountsQuery.mockRejectedValue(new Error("DB failure"));
+    const res = createMockRes();
+
+    await getDecisionStats(createMockReq({ params: {} }), res);
 
     expect(res.status).toHaveBeenCalledWith(500);
   });
@@ -498,6 +710,204 @@ describe("getResearchConfig", () => {
   });
 });
 
+describe("getResearchSettings", () => {
+  it("answers which keys the organization chose, by id", async () => {
+    mockGetSettingsQuery.mockResolvedValue({
+      researchKeyId: 4,
+      analysisKeyId: 9,
+      scanIntervalDays: 14,
+    });
+    const res = createMockRes();
+
+    await getResearchSettings(createMockReq(), res);
+
+    expect(mockGetSettingsQuery).toHaveBeenCalledWith(ORG);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(bodyOf(res)).toEqual({
+      message: "OK",
+      data: { researchKeyId: 4, analysisKeyId: 9, scanIntervalDays: 14 },
+    });
+  });
+
+  it("answers null for a choice that was not made", async () => {
+    const res = createMockRes();
+
+    await getResearchSettings(createMockReq(), res);
+
+    expect(bodyOf(res).data).toEqual({
+      researchKeyId: null,
+      analysisKeyId: null,
+      scanIntervalDays: null,
+    });
+  });
+
+  it("answers 500 when the query throws", async () => {
+    mockGetSettingsQuery.mockRejectedValue(new Error("DB failure"));
+    const res = createMockRes();
+
+    await getResearchSettings(createMockReq(), res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+  });
+});
+
+describe("saveResearchSettings", () => {
+  const putReq = (body: unknown) => createMockReq({ body });
+
+  it("saves the two choices for the organization, as the user who made them", async () => {
+    mockSaveSettings.mockResolvedValue({
+      ok: true,
+      settings: { researchKeyId: 4, analysisKeyId: 9, scanIntervalDays: null },
+    });
+    const res = createMockRes();
+
+    await saveResearchSettings(putReq({ researchKeyId: 4, analysisKeyId: 9 }), res);
+
+    expect(mockSaveSettings).toHaveBeenCalledWith({
+      organizationId: ORG,
+      userId: USER,
+      researchKeyId: 4,
+      analysisKeyId: 9,
+    });
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(bodyOf(res)).toEqual({
+      message: "OK",
+      data: { researchKeyId: 4, analysisKeyId: 9, scanIntervalDays: null },
+    });
+  });
+
+  it("takes null for a choice that is given back to the default", async () => {
+    const res = createMockRes();
+
+    await saveResearchSettings(putReq({ researchKeyId: null, analysisKeyId: null }), res);
+
+    expect(mockSaveSettings).toHaveBeenCalledWith(
+      expect.objectContaining({ researchKeyId: null, analysisKeyId: null }),
+    );
+    expect(res.status).toHaveBeenCalledWith(200);
+  });
+
+  describe("how often the scan researches a vendor again", () => {
+    const savedWith = (scanIntervalDays: number | null) =>
+      mockSaveSettings.mockResolvedValue({
+        ok: true,
+        settings: { researchKeyId: null, analysisKeyId: null, scanIntervalDays },
+      });
+
+    it.each([7, 14, 30])(
+      "passes %i days on to the save, and answers what was saved",
+      async (days) => {
+        savedWith(days);
+        const res = createMockRes();
+
+        await saveResearchSettings(
+          putReq({ researchKeyId: null, analysisKeyId: null, scanIntervalDays: days }),
+          res,
+        );
+
+        expect(mockSaveSettings).toHaveBeenCalledWith(
+          expect.objectContaining({ organizationId: ORG, userId: USER, scanIntervalDays: days }),
+        );
+        expect(res.status).toHaveBeenCalledWith(200);
+        expect(bodyOf(res).data).toEqual({
+          researchKeyId: null,
+          analysisKeyId: null,
+          scanIntervalDays: days,
+        });
+      },
+    );
+
+    it("passes null on as null: the scan is off", async () => {
+      const res = createMockRes();
+
+      await saveResearchSettings(
+        putReq({ researchKeyId: null, analysisKeyId: null, scanIntervalDays: null }),
+        res,
+      );
+
+      expect(mockSaveSettings.mock.calls[0][0].scanIntervalDays).toBeNull();
+      expect(res.status).toHaveBeenCalledWith(200);
+    });
+
+    // A page that was loaded before the setting existed names the keys and nothing else.
+    it("passes nothing on when the body does not name it, so that the save keeps what is there", async () => {
+      const res = createMockRes();
+
+      await saveResearchSettings(putReq({ researchKeyId: null, analysisKeyId: null }), res);
+
+      expect(mockSaveSettings.mock.calls[0][0].scanIntervalDays).toBeUndefined();
+      expect(res.status).toHaveBeenCalledWith(200);
+    });
+
+    it.each([
+      ["a number of days that is not offered", 5],
+      ["a number that is too big", 31],
+      ["zero", 0],
+      ["a negative number", -7],
+      ["a fraction", 7.5],
+      ["text", "7"],
+      ["a boolean", true],
+      ["a list", [7]],
+      ["an object", { days: 7 }],
+    ])("refuses %s with 400, before it asks anything", async (_label, value) => {
+      const res = createMockRes();
+
+      await saveResearchSettings(
+        putReq({ researchKeyId: null, analysisKeyId: null, scanIntervalDays: value }),
+        res,
+      );
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(mockSaveSettings).not.toHaveBeenCalled();
+    });
+  });
+
+  it.each([
+    ["no body", undefined],
+    ["a body that is not an object", "4"],
+    ["an array", [4, 9]],
+    ["no research key", { analysisKeyId: null }],
+    ["no analysis key", { researchKeyId: null }],
+    ["a key id as text", { researchKeyId: "4", analysisKeyId: null }],
+    ["a key id of zero", { researchKeyId: 0, analysisKeyId: null }],
+    ["a negative key id", { researchKeyId: null, analysisKeyId: -3 }],
+    ["a key id with a fraction", { researchKeyId: 1.5, analysisKeyId: null }],
+    ["a key id that is a boolean", { researchKeyId: true, analysisKeyId: null }],
+    ["a key id that is a list", { researchKeyId: [4], analysisKeyId: null }],
+    ["a key id beyond the safe integers", { researchKeyId: 2 ** 60, analysisKeyId: null }],
+    [
+      "a key id that is not finite",
+      JSON.parse(`{"researchKeyId": ${"9".repeat(309)}, "analysisKeyId": null}`),
+    ],
+  ])("refuses %s with 400, before it asks anything", async (_label, body) => {
+    const res = createMockRes();
+
+    await saveResearchSettings(putReq(body), res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(mockSaveSettings).not.toHaveBeenCalled();
+  });
+
+  it("answers 404 when a key is not one of the organization's", async () => {
+    mockSaveSettings.mockResolvedValue({ ok: false, reason: "unknown_key" });
+    const res = createMockRes();
+
+    await saveResearchSettings(putReq({ researchKeyId: 99, analysisKeyId: null }), res);
+
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(bodyOf(res).data).toBe("LLM key not found");
+  });
+
+  it("answers 500 when the save throws, and says nothing of the error", async () => {
+    mockSaveSettings.mockRejectedValue(new Error("connect ECONNREFUSED 10.0.0.9:5432"));
+    const res = createMockRes();
+
+    await saveResearchSettings(putReq({ researchKeyId: 4, analysisKeyId: null }), res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+  });
+});
+
 describe("listVendorRiskFindings", () => {
   it("lists the pending findings of the organization, 50 at a time, by default", async () => {
     const page = { rows: [{ id: 1, vendor_name: "Acme" }], total: 1 };
@@ -513,7 +923,10 @@ describe("listVendorRiskFindings", () => {
       offset: 0,
     });
     expect(res.status).toHaveBeenCalledWith(200);
-    expect(bodyOf(res)).toEqual({ message: "OK", data: page });
+    expect(bodyOf(res)).toEqual({
+      message: "OK",
+      data: { rows: [{ id: 1, vendor_name: "Acme", credibility_rationale: null }], total: 1 },
+    });
   });
 
   it("passes the filters and the page through", async () => {
@@ -637,7 +1050,10 @@ describe("acceptVendorRiskFinding", () => {
     expect(res.status).toHaveBeenCalledWith(200);
     expect(bodyOf(res)).toEqual({
       message: "OK",
-      data: { finding: ACCEPTED_FINDING, vendorRisk: CREATED_RISK },
+      data: {
+        finding: { ...ACCEPTED_FINDING, credibility_rationale: null },
+        vendorRisk: CREATED_RISK,
+      },
     });
   });
 
@@ -654,8 +1070,86 @@ describe("acceptVendorRiskFinding", () => {
       organizationId: ORG,
       findingId: FINDING_ID,
       userId: USER,
+      edits: {},
     });
     expect(mockAcceptFinding.mock.calls[0][0].actionOwner).toBeUndefined();
+  });
+
+  describe("the edits of the person accepting", () => {
+    const EDITS = {
+      risk_description: "A clearer description",
+      impact_description: "Customers could be affected",
+      action_plan: "Review the controls every quarter",
+      likelihood: "Almost certain",
+      risk_severity: "Minor",
+      risk_level: "High risk",
+      frameworks: [3, 4],
+    };
+
+    it("hands the service the fields it may edit, and nothing else from the body", async () => {
+      const res = createMockRes();
+
+      await acceptVendorRiskFinding(
+        acceptReq({
+          ...EDITS,
+          action_owner: 12,
+          // The finding decides the vendor and its own state; none of these is an edit.
+          vendor_id: 99,
+          status: "dismissed",
+          accepted_vendor_risk_id: 5,
+          organization_id: 99,
+        }),
+        res,
+      );
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(mockAcceptFinding).toHaveBeenCalledWith({
+        organizationId: ORG,
+        findingId: FINDING_ID,
+        userId: USER,
+        actionOwner: 12,
+        edits: EDITS,
+      });
+      expect(Object.keys(mockAcceptFinding.mock.calls[0][0].edits ?? {}).sort()).toEqual(
+        Object.keys(EDITS).sort(),
+      );
+    });
+
+    it("hands the service only the fields that were sent", async () => {
+      const res = createMockRes();
+
+      await acceptVendorRiskFinding(acceptReq({ action_plan: "Another plan" }), res);
+
+      expect(mockAcceptFinding.mock.calls[0][0].edits).toStrictEqual({
+        action_plan: "Another plan",
+      });
+    });
+
+    it("leaves a value it cannot judge to the service, null included", async () => {
+      const res = createMockRes();
+
+      await acceptVendorRiskFinding(acceptReq({ risk_description: null, frameworks: "3" }), res);
+
+      expect(mockAcceptFinding.mock.calls[0][0].edits).toStrictEqual({
+        risk_description: null,
+        frameworks: "3",
+      });
+    });
+
+    it("answers 400 with the service's message for an edit it refuses", async () => {
+      mockAcceptFinding.mockRejectedValue(
+        new ValidationException("The risk description must be 1 to 500 characters"),
+      );
+      const res = createMockRes();
+
+      await acceptVendorRiskFinding(acceptReq({ risk_description: "" }), res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(bodyOf(res)).toEqual({
+        message: "Bad Request",
+        data: "The risk description must be 1 to 500 characters",
+      });
+    });
   });
 
   it.each<[string, unknown]>([
@@ -752,7 +1246,10 @@ describe("dismissVendorRiskFinding", () => {
     );
 
     expect(res.status).toHaveBeenCalledWith(200);
-    expect(bodyOf(res)).toEqual({ message: "OK", data: DISMISSED_FINDING });
+    expect(bodyOf(res)).toEqual({
+      message: "OK",
+      data: { ...DISMISSED_FINDING, credibility_rationale: null },
+    });
     expect(mockDismissFinding).toHaveBeenCalledTimes(1);
     expect(mockDismissFinding).toHaveBeenCalledWith({
       organizationId: ORG,

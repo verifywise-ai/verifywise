@@ -1,6 +1,8 @@
 export * from "../services/slack/slackProducer";
 
 import { scheduleDailyNotification } from "../services/slack/slackProducer";
+import { scheduleVendorResearchScan } from "../services/vendorResearch/queue";
+import { scheduleVendorRiskDatabaseSync } from "../services/vendorResearch/vrdb/queue";
 import logger from "../utils/logger/fileLogger";
 import {
   scheduleReportNotification,
@@ -65,6 +67,8 @@ export async function addAllJobs(): Promise<void> {
   await safeSchedule("evidence-freshness-sweep", scheduleEvidenceFreshnessSweep); // non-obliterating — safe to run after the obliterating schedulers
   await safeSchedule("deadline-escalation-sweep", scheduleDeadlineEscalationSweep); // non-obliterating — safe to run after the obliterating schedulers
   await safeSchedule("stale-inheritance-notify-sweep", scheduleStaleInheritanceNotifySweep); // non-obliterating — safe to run after the obliterating schedulers
+  await safeSchedule("vendor-research-scan", scheduleVendorResearchScan); // its own queue, which is never obliterated — the order does not matter
+  await safeSchedule("vendor-risk-database-sync", scheduleVendorRiskDatabaseSync); // its own queue, never obliterated; removes the schedulers while VENDOR_RESEARCH_VRDB is off
   await safeSchedule("ai-trust-index-sync", scheduleAiTrustIndexSync);
   // Ordering constraint: obliterate-using schedulers (e.g. vendor-review,
   // report-notification) must run BEFORE all non-obliterating ones, or they wipe

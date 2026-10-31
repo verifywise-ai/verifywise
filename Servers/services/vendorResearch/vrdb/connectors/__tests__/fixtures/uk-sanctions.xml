@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  A fixture of the UK Sanctions List, written from its schema (SanctionsListSchema-4.33.3.xsd, read
+  on 2026-10-30) and its format guide (published 22 December 2025), with fictional names. No real
+  list file was read.
+
+  The paths the connector reads, from the XSD (no namespace, every field an element):
+    /Designations                                    root
+    /Designations/DateGenerated                      the list's date (source version)
+    /Designations/Designation                        one designation, repeated
+      UniqueID, RegimeName, IndividualEntityShip, DateDesignated, LastUpdated
+      Names/Name/Name1 … Name6, Names/Name/NameType
+      Websites/Website
+      EntityDetails/Entity/TypeOfEntities/TypeOfEntity
+      EntityDetails/Entity/BusinessRegistrationNumbers/BusinessRegistrationNumber
+  UNVERIFIED: the values of IndividualEntityShip ("Individual", "Entity", "Ship") and of NameType
+  ("Primary Name", "Primary Name Variation", "Alias") are the format guide's words; the XSD lists
+  none, so the connector compares them without regard to case. The XSD gives no date format: both
+  dd/mm/yyyy and an ISO 8601 day are read.
+-->
+<Designations>
+  <DateGenerated>29/10/2026</DateGenerated>
+  <Designation>
+    <LastUpdated>15/09/2026</LastUpdated>
+    <DateDesignated>12/03/2025</DateDesignated>
+    <UniqueID>CYB0042</UniqueID>
+    <OFSIGroupID></OFSIGroupID>
+    <UNReferenceNumber></UNReferenceNumber>
+    <Names>
+      <Name>
+        <Name6>Northwind Export Company</Name6>
+        <NameType>Primary Name</NameType>
+      </Name>
+      <Name>
+        <Name6>Northwind Trading</Name6>
+        <NameType>Alias</NameType>
+      </Name>
+    </Names>
+    <RegimeName>Cyber</RegimeName>
+    <IndividualEntityShip>Entity</IndividualEntityShip>
+    <Websites>
+      <Website>www.Northwind-Export.example</Website>
+    </Websites>
+    <EntityDetails>
+      <Entity>
+        <TypeOfEntities>
+          <TypeOfEntity>Limited company</TypeOfEntity>
+        </TypeOfEntities>
+      </Entity>
+    </EntityDetails>
+  </Designation>
+  <Designation>
+    <LastUpdated>2026-10-01</LastUpdated>
+    <DateDesignated>2026-02-02</DateDesignated>
+    <UniqueID>RUS1234</UniqueID>
+    <Names>
+      <Name>
+        <Name6>Globex Holdings &amp; Partners LLC</Name6>
+        <NameType>Primary Name</NameType>
+      </Name>
+      <Name>
+        <Name6>Globeks Holdings</Name6>
+        <NameType>Primary Name Variation</NameType>
+      </Name>
+    </Names>
+    <RegimeName>Russia</RegimeName>
+    <IndividualEntityShip>Entity</IndividualEntityShip>
+    <EntityDetails>
+      <Entity>
+        <BusinessRegistrationNumbers>
+          <BusinessRegistrationNumber>1027700000000 (Example)</BusinessRegistrationNumber>
+        </BusinessRegistrationNumbers>
+      </Entity>
+    </EntityDetails>
+  </Designation>
+  <Designation>
+    <UniqueID>CYB0043</UniqueID>
+    <Names>
+      <Name>
+        <Name1>Jane</Name1>
+        <Name6>Doe</Name6>
+        <NameType>Primary Name</NameType>
+      </Name>
+    </Names>
+    <RegimeName>Cyber</RegimeName>
+    <IndividualEntityShip>Individual</IndividualEntityShip>
+  </Designation>
+  <Designation>
+    <UniqueID>RUS1235</UniqueID>
+    <Names>
+      <Name>
+        <Name6>Ocean Example</Name6>
+        <NameType>Primary Name</NameType>
+      </Name>
+    </Names>
+    <RegimeName>Russia</RegimeName>
+    <IndividualEntityShip>Ship</IndividualEntityShip>
+  </Designation>
+</Designations>

@@ -1,4 +1,5 @@
 import { buildTarget, normaliseDomain } from "../target";
+import { ACME_LEI } from "../vrdb/__tests__/helpers/lei";
 
 describe("normaliseDomain", () => {
   it.each([
@@ -181,5 +182,78 @@ describe("buildTarget", () => {
     };
 
     expect(Object.keys(buildTarget(vendor)).sort()).toEqual(["domain", "name", "provides"]);
+  });
+
+  describe("the identifiers of the vendor", () => {
+    const record = { vendor_name: "Acme", website: "acme.com", vendor_provides: "Cloud" };
+
+    it("the identifiers come from the vendor", () => {
+      expect(
+        buildTarget({
+          ...record,
+          country: "DE",
+          registration_number: "HRB 12345 B",
+          lei: ACME_LEI,
+          sec_cik: "0000320193",
+        }).identifiers,
+      ).toEqual({
+        country: "DE",
+        registrationNumber: "HRB 12345 B",
+        lei: ACME_LEI,
+        secCik: "0000320193",
+      });
+    });
+
+    it("holds only those the vendor has, and is no field of the target when it has none", () => {
+      expect(buildTarget({ ...record, country: "DE", lei: null, sec_cik: "" }).identifiers).toEqual(
+        { country: "DE" },
+      );
+      expect(
+        buildTarget({
+          ...record,
+          country: null,
+          registration_number: null,
+          lei: null,
+          sec_cik: null,
+        }),
+      ).not.toHaveProperty("identifiers");
+    });
+  });
+
+  describe("the other names of the vendor", () => {
+    const record = {
+      vendor_name: "Meta Platforms, Inc.",
+      website: "facebook.com",
+      vendor_provides: "Social media",
+    };
+
+    it("are the names a person wrote in the record, cleaned and without repeats", () => {
+      expect(
+        buildTarget({ ...record, other_names: " Facebook,  Instagram ;facebook\nWhatsApp " }),
+      ).toEqual({
+        name: "Meta Platforms, Inc.",
+        domain: "facebook.com",
+        provides: "Social media",
+        aliases: ["Facebook", "Instagram", "WhatsApp"],
+      });
+    });
+
+    it("leave out the name of the vendor itself, with or without its legal form", () => {
+      const target = buildTarget({
+        ...record,
+        other_names: "Meta Platforms, META PLATFORMS, Facebook",
+      });
+
+      expect(target.aliases).toEqual(["Facebook"]);
+    });
+
+    it.each([[undefined], [null], [""], ["  ,; "]])(
+      "are no field of the target when the record has %p",
+      (otherNames) => {
+        const target = buildTarget({ ...record, other_names: otherNames });
+
+        expect(target).not.toHaveProperty("aliases");
+      },
+    );
   });
 });

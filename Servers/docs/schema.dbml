@@ -989,6 +989,7 @@ Table vendors {
   past_issues varchar
   regulatory_exposure varchar
   risk_score integer
+  other_names text
 
   Note: 'Create a new vendor with comprehensive validation'
 }

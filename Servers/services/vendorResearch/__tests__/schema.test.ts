@@ -12,6 +12,8 @@ import {
   RESEARCH_LIKELIHOODS,
   RESEARCH_SEVERITIES,
   ResearchOutput,
+  credibilityOutputSchema,
+  outputSchemaFor,
   researchOutputSchema,
 } from "../schema";
 
@@ -23,6 +25,7 @@ const finding = (overrides: Record<string, unknown> = {}) => ({
   risk_severity: "Major",
   action_plan: "Ask the vendor for its incident report and the scope of the exposed data.",
   confidence: "medium",
+  rationale: "The vendor confirmed the attack and customer data was in scope, so it is possible.",
   evidence: [{ source_id: "S1", quote: "confirmed a ransomware attack" }],
   ...overrides,
 });
@@ -143,14 +146,14 @@ describe("researchOutputSchema", () => {
         quote: 300,
         note: 200,
         evidencePerFinding: 5,
-        categoryNotes: 4,
+        categoryNotes: 6,
         perCategory: 3,
       });
     });
   });
 
   describe("text lengths", () => {
-    it.each(["risk_description", "impact_description", "action_plan"])(
+    it.each(["risk_description", "impact_description", "action_plan", "rationale"])(
       "accepts 300 characters in %s and rejects 301",
       (field) => {
         expect(accepts(sample({ findings: [finding({ [field]: "x".repeat(300) })] }))).toBe(true);
@@ -214,12 +217,12 @@ describe("researchOutputSchema", () => {
       );
     });
 
-    it("accepts four notes and rejects five", () => {
+    it("accepts six notes, one for each category, and rejects seven", () => {
       const notes = (count: number) =>
         Array.from({ length: count }, () => ({ category: "ai_specific", note: "ok" }));
 
-      expect(accepts(sample({ category_notes: notes(4) }))).toBe(true);
-      expect(accepts(sample({ category_notes: notes(5) }))).toBe(false);
+      expect(accepts(sample({ category_notes: notes(6) }))).toBe(true);
+      expect(accepts(sample({ category_notes: notes(7) }))).toBe(false);
     });
   });
 
@@ -232,6 +235,7 @@ describe("researchOutputSchema", () => {
       "risk_severity",
       "action_plan",
       "confidence",
+      "rationale",
       "evidence",
     ])("rejects a finding without %s", (field) => {
       const incomplete: Record<string, unknown> = { ...finding() };
@@ -352,5 +356,41 @@ describe("researchOutputSchema", () => {
       expect(objects).toHaveLength(4);
       for (const object of objects) expect(object.additionalProperties).toBe(false);
     });
+  });
+});
+
+describe("credibilityOutputSchema", () => {
+  const acceptsUnderCredibility = (value: unknown) =>
+    credibilityOutputSchema.safeParse(value).success;
+
+  it("accepts a finding without confidence under the credibility schema, and drops one the model still gives", () => {
+    const { confidence: _confidence, ...withoutConfidence } = finding();
+
+    expect(credibilityOutputSchema.parse(sample()).findings).toEqual([withoutConfidence]);
+    expect(
+      credibilityOutputSchema.parse(sample({ findings: [withoutConfidence] })).findings,
+    ).toEqual([withoutConfidence]);
+    expect(accepts(sample({ findings: [withoutConfidence] }))).toBe(false);
+  });
+
+  it.each([
+    "category",
+    "risk_description",
+    "impact_description",
+    "likelihood",
+    "risk_severity",
+    "action_plan",
+    "rationale",
+    "evidence",
+  ])("still requires %s", (field) => {
+    const incomplete: Record<string, unknown> = { ...finding() };
+    delete incomplete[field];
+
+    expect(acceptsUnderCredibility(sample({ findings: [incomplete] }))).toBe(false);
+  });
+
+  it("is picked by the rules", () => {
+    expect(outputSchemaFor("confidence")).toBe(researchOutputSchema);
+    expect(outputSchemaFor("credibility")).toBe(credibilityOutputSchema);
   });
 });

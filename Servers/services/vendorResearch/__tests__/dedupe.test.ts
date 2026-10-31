@@ -3,7 +3,12 @@ import {
   IVendorRiskFinding,
   NewFinding,
 } from "../../../domain.layer/interfaces/i.vendorResearch";
-import { ACTIVE_RISK_THRESHOLD, PRIOR_FINDING_THRESHOLD, dropDuplicates } from "../dedupe";
+import {
+  ACTIVE_RISK_THRESHOLD,
+  DedupeReport,
+  PRIOR_FINDING_THRESHOLD,
+  dropDuplicates,
+} from "../dedupe";
 
 // The tokeniser keeps words of three or more letters or digits, so a text made of such words has
 // exactly those words as its tokens and the Jaccard score of two texts can be worked out by hand:
@@ -30,6 +35,7 @@ function candidate(
     risk_severity: "Major",
     risk_level: "High Risk",
     confidence: "medium",
+    rationale: null,
     sources: [cited(SOURCE_URL)],
     ...overrides,
   };
@@ -351,6 +357,124 @@ describe("dropDuplicates", () => {
     });
   });
 
+  describe("the events of the run", () => {
+    // Two sources of one event (E1), one of another (E2) and one that is in no event.
+    const EVENTS = new Map([
+      ["https://a.example/1", "E1"],
+      ["https://b.example/2", "E1"],
+      ["https://c.example/3", "E2"],
+    ]);
+    const citing = (...urls: string[]) => ({ sources: urls.map(cited) });
+    const run = (candidates: NewFinding[], report?: DedupeReport) =>
+      dropDuplicates(candidates, [], [], report, EVENTS);
+
+    it("drops a later candidate that cites only sources of an event a kept candidate cites, whatever its words and its category", () => {
+      const first = candidate(["alpha", "bravo"], citing("https://a.example/1"));
+      const second = candidate(["xray", "yankee"], {
+        category: "legal_regulatory",
+        ...citing("https://b.example/2"),
+      });
+
+      expect(run([first, second])).toEqual({ kept: [first], dropped: 1 });
+    });
+
+    it("keeps a candidate that cites a source in no event besides a source of a taken one", () => {
+      const first = candidate(["alpha", "bravo"], citing("https://a.example/1"));
+      const second = candidate(
+        ["xray", "yankee"],
+        citing("https://b.example/2", "https://elsewhere.example/9"),
+      );
+
+      expect(run([first, second]).kept).toEqual([first, second]);
+    });
+
+    it("keeps a candidate that cites a source of a new event besides a source of a taken one", () => {
+      const first = candidate(["alpha", "bravo"], citing("https://a.example/1"));
+      const second = candidate(
+        ["xray", "yankee"],
+        citing("https://b.example/2", "https://c.example/3"),
+      );
+
+      expect(run([first, second]).kept).toEqual([first, second]);
+    });
+
+    it("keeps a candidate of another event", () => {
+      const first = candidate(["alpha", "bravo"], citing("https://a.example/1"));
+      const second = candidate(["xray", "yankee"], citing("https://c.example/3"));
+
+      expect(run([first, second]).kept).toEqual([first, second]);
+    });
+
+    it("never drops a candidate whose sources are in no event", () => {
+      const first = candidate(["alpha", "bravo"], citing("https://elsewhere.example/1"));
+      const second = candidate(["xray", "yankee"], citing("https://elsewhere.example/2"));
+
+      expect(run([first, second]).kept).toEqual([first, second]);
+    });
+
+    it("counts every event a kept candidate cites as taken", () => {
+      const first = candidate(
+        ["alpha", "bravo"],
+        citing("https://a.example/1", "https://c.example/3"),
+      );
+      const second = candidate(["xray", "yankee"], citing("https://c.example/3"));
+      const third = candidate(["mike", "november"], citing("https://b.example/2"));
+
+      expect(run([first, second, third])).toEqual({ kept: [first], dropped: 2 });
+    });
+
+    it("does not count the events of a candidate that was dropped", () => {
+      const first = candidate(["alpha", "bravo", "charlie"], citing("https://a.example/1"));
+      // Dropped for its words (the same run), though it cites the other event.
+      const repeat = candidate(
+        ["alpha", "bravo", "charlie", "delta"],
+        citing("https://c.example/3"),
+      );
+      const third = candidate(["xray", "yankee"], citing("https://c.example/3"));
+
+      expect(run([first, repeat, third]).kept).toEqual([first, third]);
+    });
+
+    it("reports the candidate as a repeat of an event, and a repeat of the words as one of the run", () => {
+      const report: DedupeReport = { reasons: {} };
+      const first = candidate(["alpha", "bravo", "charlie"], citing("https://a.example/1"));
+      const sameWords = candidate(
+        ["alpha", "bravo", "charlie", "delta"],
+        citing("https://b.example/2"),
+      );
+      const sameEvent = candidate(["xray", "yankee"], citing("https://b.example/2"));
+
+      const { dropped } = run([first, sameWords, sameEvent], report);
+
+      expect(dropped).toBe(2);
+      expect(report.reasons).toEqual({ same_run: 1, same_event: 1 });
+    });
+
+    it("lets the register and the earlier findings decide first", () => {
+      const report: DedupeReport = { reasons: {} };
+      const first = candidate(["alpha", "bravo"], citing("https://a.example/1"));
+      const second = candidate(["golf", "hotel", "india"], citing("https://b.example/2"));
+
+      dropDuplicates([first, second], [risk(["golf", "hotel", "india"])], [], report, EVENTS);
+
+      expect(report.reasons).toEqual({ active_risk: 1 });
+    });
+
+    it("changes nothing when it is given no events", () => {
+      const first = candidate(["alpha", "bravo"], citing("https://a.example/1"));
+      const second = candidate(["xray", "yankee"], citing("https://b.example/2"));
+
+      expect(dropDuplicates([first, second], [], [])).toEqual({
+        kept: [first, second],
+        dropped: 0,
+      });
+      expect(dropDuplicates([first, second], [], [], undefined, new Map()).kept).toEqual([
+        first,
+        second,
+      ]);
+    });
+  });
+
   describe("the count of what was dropped", () => {
     it("counts every removal, whatever the reason, and keeps the rest in their order", () => {
       const first = candidate(["alpha", "bravo", "charlie"]);
@@ -391,5 +515,44 @@ describe("dropDuplicates", () => {
     const first = candidate(["alpha", "bravo"]);
 
     expect(dropDuplicates([first], [], []).kept[0]).toBe(first);
+  });
+});
+
+describe("dropDuplicates report", () => {
+  it("counts the candidates dropped, by what they repeat", () => {
+    const report: DedupeReport = { reasons: {} };
+    const candidates = [
+      candidate(["alpha", "bravo", "charlie"]),
+      candidate(["delta", "echo", "foxtrot"], {}, []),
+      candidate(["golf", "hotel", "india"], { sources: [cited("https://same.example.org/page")] }),
+      candidate(["juliet", "kilo", "lima"]),
+      candidate(["juliet", "kilo", "lima", "mike"]),
+    ];
+
+    const { dropped } = dropDuplicates(
+      candidates,
+      [risk(["alpha", "bravo", "charlie"])],
+      [
+        prior(["delta", "echo", "foxtrot"]),
+        prior(["zulu", "yankee"], { sources: [cited("https://same.example.org/page")] }),
+      ],
+      report,
+    );
+
+    expect(dropped).toBe(4);
+    expect(report.reasons).toEqual({
+      active_risk: 1,
+      earlier_finding: 1,
+      same_source: 1,
+      same_run: 1,
+    });
+  });
+
+  it("leaves the report empty when nothing is dropped", () => {
+    const report: DedupeReport = { reasons: {} };
+
+    dropDuplicates([candidate(["alpha", "bravo"])], [], [], report);
+
+    expect(report.reasons).toEqual({});
   });
 });

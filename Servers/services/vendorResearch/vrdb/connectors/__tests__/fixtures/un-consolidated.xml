@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  A fixture of the UN Security Council Consolidated List, with fictional names. No real list file
+  was read: the UN's pages refused automated readers, so the element names below are UNVERIFIED,
+  and a person checks them against the real XML before the gate (Q6) opens.
+
+  The paths the connector reads (UNVERIFIED, every field an element unless stated):
+    /CONSOLIDATED_LIST                     root, with the attribute dateGenerated (source version)
+    /CONSOLIDATED_LIST/INDIVIDUALS         skipped, never read
+    /CONSOLIDATED_LIST/ENTITIES/ENTITY     one entity, repeated
+      DATAID, FIRST_NAME (the entity's name), UN_LIST_TYPE, REFERENCE_NUMBER, LISTED_ON, COMMENTS1
+      ENTITY_ALIAS/QUALITY, ENTITY_ALIAS/ALIAS_NAME
+      ENTITY_ADDRESS/COUNTRY
+-->
+<CONSOLIDATED_LIST xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" dateGenerated="2026-10-30T00:00:01.123-04:00">
+  <INDIVIDUALS>
+    <INDIVIDUAL>
+      <DATAID>6908555</DATAID>
+      <VERSIONNUM>1</VERSIONNUM>
+      <FIRST_NAME>Northwind</FIRST_NAME>
+      <SECOND_NAME>Example</SECOND_NAME>
+      <UN_LIST_TYPE>Example Regime</UN_LIST_TYPE>
+      <REFERENCE_NUMBER>EXi.001</REFERENCE_NUMBER>
+      <LISTED_ON>2024-02-01</LISTED_ON>
+      <COMMENTS1>A person, never read.</COMMENTS1>
+      <INDIVIDUAL_ALIAS>
+        <QUALITY>Good</QUALITY>
+        <ALIAS_NAME>Northwind Example Holdings</ALIAS_NAME>
+      </INDIVIDUAL_ALIAS>
+    </INDIVIDUAL>
+  </INDIVIDUALS>
+  <ENTITIES>
+    <ENTITY>
+      <DATAID>110416</DATAID>
+      <VERSIONNUM>2</VERSIONNUM>
+      <FIRST_NAME>Contoso Shipping Agency</FIRST_NAME>
+      <UN_LIST_TYPE>Example Regime</UN_LIST_TYPE>
+      <REFERENCE_NUMBER>EXe.012</REFERENCE_NUMBER>
+      <LISTED_ON>2025-06-17</LISTED_ON>
+      <COMMENTS1>Operates vessels that carried prohibited goods (fictional).</COMMENTS1>
+      <LIST_TYPE>
+        <VALUE>UN List</VALUE>
+      </LIST_TYPE>
+      <LAST_DAY_UPDATED>
+        <VALUE>2026-08-03</VALUE>
+      </LAST_DAY_UPDATED>
+      <ENTITY_ALIAS>
+        <QUALITY>Good</QUALITY>
+        <ALIAS_NAME>Contoso Shipping Co. Ltd.</ALIAS_NAME>
+      </ENTITY_ALIAS>
+      <ENTITY_ALIAS>
+        <QUALITY>a.k.a.</QUALITY>
+        <ALIAS_NAME>CSA &amp; Partners</ALIAS_NAME>
+      </ENTITY_ALIAS>
+      <ENTITY_ALIAS>
+        <QUALITY>Low</QUALITY>
+        <ALIAS_NAME></ALIAS_NAME>
+      </ENTITY_ALIAS>
+      <ENTITY_ADDRESS>
+        <STREET>1 Harbour Road</STREET>
+        <CITY>Port Example</CITY>
+        <COUNTRY>Exampleland</COUNTRY>
+      </ENTITY_ADDRESS>
+      <ENTITY_ADDRESS>
+        <COUNTRY>Otherland</COUNTRY>
+      </ENTITY_ADDRESS>
+      <SORT_KEY/>
+      <SORT_KEY_LAST_MOD/>
+    </ENTITY>
+    <ENTITY>
+      <DATAID>110417</DATAID>
+      <VERSIONNUM>1</VERSIONNUM>
+      <FIRST_NAME>Fabrikam Trading Front</FIRST_NAME>
+      <UN_LIST_TYPE>Example Regime</UN_LIST_TYPE>
+      <REFERENCE_NUMBER>EXe.013</REFERENCE_NUMBER>
+      <LISTED_ON>2026-01-09</LISTED_ON>
+      <LIST_TYPE>
+        <VALUE>UN List</VALUE>
+      </LIST_TYPE>
+    </ENTITY>
+  </ENTITIES>
+</CONSOLIDATED_LIST>

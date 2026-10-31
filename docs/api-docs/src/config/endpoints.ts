@@ -11593,6 +11593,17 @@ export const vendorEndpoints: Endpoint[] = [
     tag: "Vendors",
   },
   {
+    method: 'GET',
+    path: '/vendors/{id}/research/runs/{runId}/trace',
+    summary: "Get Vendor Research Run Trace",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Vendors",
+  },
+  {
     method: 'POST',
     path: '/vendors/{id}/research',
     summary: "Start Vendor Research Run",
@@ -11611,6 +11622,39 @@ export const vendorResearchEndpoints: Endpoint[] = [
     method: 'GET',
     path: '/vendor-research/config',
     summary: "Get Research Config",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Vendor Research",
+  },
+  {
+    method: 'GET',
+    path: '/vendor-research/decision-stats',
+    summary: "Get Decision Stats",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Vendor Research",
+  },
+  {
+    method: 'GET',
+    path: '/vendor-research/settings',
+    summary: "Get Research Settings",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Vendor Research",
+  },
+  {
+    method: 'PUT',
+    path: '/vendor-research/settings',
+    summary: "Save Research Settings",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },

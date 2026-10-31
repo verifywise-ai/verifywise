@@ -23,6 +23,8 @@ jest.mock("../../vendors/vendorRiskCreate.service", () => ({
   createVendorRiskInTransaction: jest.fn(),
   runVendorRiskPostCommitEffects: jest.fn(),
 }));
+const findingDecided = jest.fn();
+jest.mock("../metrics", () => ({ researchMetrics: () => ({ findingDecided }) }));
 
 import { sequelize } from "../../../database/db";
 import {
@@ -47,7 +49,7 @@ import {
   createVendorRiskInTransaction,
   runVendorRiskPostCommitEffects,
 } from "../../vendors/vendorRiskCreate.service";
-import { acceptFinding, dismissFinding } from "../findings.service";
+import { acceptFinding, dismissFinding, type FindingEdits } from "../findings.service";
 
 type AnyMock = jest.Mock<any, any[]>;
 const asMock = (fn: unknown): AnyMock => fn as AnyMock;
@@ -74,6 +76,9 @@ const PENDING: IVendorRiskFinding = {
   risk_severity: "Major",
   risk_level: "High Risk",
   confidence: "medium",
+  credibility: null,
+  credibility_basis: null,
+  rationale: "The vendor confirmed the access, so the effect is serious.",
   sources: [
     {
       url: "https://example.com/breach-notice",
@@ -82,6 +87,7 @@ const PENDING: IVendorRiskFinding = {
       published_at: "2026-09-01",
     },
   ],
+  snippet_only: false,
   status: "pending",
   dismissed_reason: null,
   dismissed_note: null,
@@ -160,7 +166,7 @@ beforeEach(() => {
   asMock(markFindingDismissedQuery).mockResolvedValue(DISMISSED);
 });
 
-const accept = (extra: { actionOwner?: number | null } = {}) =>
+const accept = (extra: { actionOwner?: number | null; edits?: FindingEdits } = {}) =>
   acceptFinding({ organizationId: ORG, findingId: FINDING_ID, userId: USER, ...extra });
 
 const dismiss = (extra: { reason?: unknown; note?: string } = {}) =>
@@ -234,12 +240,263 @@ describe("acceptFinding", () => {
     expect(result).toEqual({ finding: ACCEPTED, vendorRisk: CREATED_RISK });
   });
 
-  it("never passes frameworks to the create service", async () => {
+  it("counts the decision after the commit, by the category of the finding", async () => {
+    await accept();
+
+    expect(findingDecided).toHaveBeenCalledTimes(1);
+    expect(findingDecided).toHaveBeenCalledWith({
+      decision: "accepted",
+      category: "security_incidents",
+    });
+  });
+
+  it("passes no frameworks to the create service when the caller names none", async () => {
     // A failed framework insert aborts the whole Postgres transaction, and a finding has none.
     await accept();
 
     const input = asMock(createVendorRiskInTransaction).mock.calls[0][0];
     expect(input).not.toHaveProperty("frameworks");
+  });
+
+  describe("edits made before the accept", () => {
+    const created = () => asMock(createVendorRiskInTransaction).mock.calls[0][0];
+
+    it("creates the risk from the values the caller sends, and takes the vendor from the finding", async () => {
+      await accept({
+        edits: {
+          risk_description: "A shorter, clearer description",
+          impact_description: "Customers could be affected",
+          action_plan: "Review the vendor's controls every quarter",
+          likelihood: "Almost certain",
+          risk_severity: "Minor",
+          risk_level: "High risk",
+          frameworks: [3, 4],
+        },
+      });
+
+      expect(createVendorRiskInTransaction).toHaveBeenCalledWith(
+        {
+          vendor_id: VENDOR,
+          risk_description: "A shorter, clearer description",
+          impact_description: "Customers could be affected",
+          likelihood: "Almost certain",
+          risk_severity: "Minor",
+          action_plan: "Review the vendor's controls every quarter",
+          action_owner: ASSIGNEE,
+          risk_level: "High risk",
+          frameworks: [3, 4],
+        },
+        USER,
+        ORG,
+        transaction,
+      );
+      // The decision is still one transaction: the risk and the finding commit together.
+      expect(events).toEqual([
+        "begin",
+        "find",
+        "vendor",
+        "owner",
+        "create",
+        "mark",
+        "commit",
+        "post-commit",
+      ]);
+    });
+
+    it("keeps the finding's value for every field the caller does not send", async () => {
+      await accept({ edits: { action_plan: "Ask for the audit report instead" } });
+
+      expect(created()).toEqual({
+        vendor_id: VENDOR,
+        risk_description: PENDING.risk_description,
+        impact_description: PENDING.impact_description,
+        likelihood: "Possible",
+        risk_severity: "Major",
+        action_plan: "Ask for the audit report instead",
+        action_owner: ASSIGNEE,
+        risk_level: "High Risk",
+      });
+    });
+
+    it("trims the texts and drops control characters from them", async () => {
+      await accept({ edits: { risk_description: "  Data was\u0000 exposed \u0007 \n" } });
+
+      expect(created().risk_description).toBe("Data was exposed");
+    });
+
+    it.each<[string, FindingEdits, string]>([
+      ["a likelihood", { likelihood: "Almost certain" }, "Very High Risk"],
+      ["a severity", { risk_severity: "Negligible" }, "Low Risk"],
+      ["both", { likelihood: "Rare", risk_severity: "Catastrophic" }, "Medium Risk"],
+    ])(
+      "works the level out from the pair when %s is edited and no level is sent",
+      async (_label, edits, level) => {
+        await accept({ edits });
+
+        expect(created().risk_level).toBe(level);
+      },
+    );
+
+    it("keeps the level of the finding when the pair is not edited", async () => {
+      await accept({ edits: { risk_description: "Another wording" } });
+
+      expect(created().risk_level).toBe("High Risk");
+    });
+
+    it("stores the level as the caller sends it, as the vendor risk form does", async () => {
+      await accept({ edits: { likelihood: "Almost certain", risk_level: "Medium risk" } });
+
+      expect(created().risk_level).toBe("Medium risk");
+    });
+
+    it("passes the frameworks once each, and none at all for an empty list", async () => {
+      await accept({ edits: { frameworks: [4, 3, 4] } });
+      expect(created().frameworks).toEqual([4, 3]);
+
+      asMock(createVendorRiskInTransaction).mockClear();
+      await accept({ edits: { frameworks: [] } });
+      expect(created()).not.toHaveProperty("frameworks");
+    });
+
+    it("still resolves the action owner from the caller or the vendor", async () => {
+      await accept({ actionOwner: OTHER_USER, edits: { action_plan: "Another plan" } });
+
+      expect(created().action_owner).toBe(OTHER_USER);
+    });
+
+    it("counts characters the way Postgres does, so 500 emoji fit a 500-character text", async () => {
+      // Each emoji is two UTF-16 units; only the unit count would refuse this.
+      const text = "\u{1F600}".repeat(500);
+
+      await accept({ edits: { risk_description: text } });
+
+      expect(created().risk_description).toBe(text);
+    });
+
+    it("takes the longest texts the register takes", async () => {
+      await accept({
+        edits: {
+          risk_description: "a".repeat(500),
+          impact_description: "b".repeat(500),
+          action_plan: "c".repeat(1000),
+          risk_level: "d".repeat(50),
+        },
+      });
+
+      expect(created().risk_description).toHaveLength(500);
+      expect(created().impact_description).toHaveLength(500);
+      expect(created().action_plan).toHaveLength(1000);
+      expect(created().risk_level).toHaveLength(50);
+    });
+
+    describe("an edit that is not valid", () => {
+      /** Refused before anything is locked, read or written. */
+      const expectRefusedOutright = async (edits: FindingEdits, field: string) => {
+        const error = await rejection(accept({ edits }));
+
+        expect(error).toBeInstanceOf(ValidationException);
+        expect((error as ValidationException).metadata.field).toBe(field);
+        // The text that was refused is not kept on the error: it can be megabytes long.
+        expect((error as ValidationException).metadata.value).toBeUndefined();
+        expect(sequelize.transaction).not.toHaveBeenCalled();
+        expect(getFindingByIdQuery).not.toHaveBeenCalled();
+        expectNothingCreated();
+      };
+
+      const notText: Array<[string, unknown]> = [
+        ["null", null],
+        ["a number", 5],
+        ["an object", { text: "x" }],
+        ["a list", ["x"]],
+        ["empty", ""],
+        ["blank", "   \n\t "],
+        ["nothing but control characters", "\u0000\u0001\u0002"],
+      ];
+
+      it.each(notText)("refuses a risk description that is %s", async (_label, value) => {
+        await expectRefusedOutright({ risk_description: value }, "risk_description");
+      });
+
+      it.each(notText)("refuses an impact description that is %s", async (_label, value) => {
+        await expectRefusedOutright({ impact_description: value }, "impact_description");
+      });
+
+      it.each(notText)("refuses an action plan that is %s", async (_label, value) => {
+        await expectRefusedOutright({ action_plan: value }, "action_plan");
+      });
+
+      it("refuses a risk description of 501 characters", async () => {
+        await expectRefusedOutright({ risk_description: "a".repeat(501) }, "risk_description");
+      });
+
+      it("refuses an impact description of 501 characters", async () => {
+        await expectRefusedOutright({ impact_description: "a".repeat(501) }, "impact_description");
+      });
+
+      it("refuses an action plan of 1001 characters", async () => {
+        await expectRefusedOutright({ action_plan: "a".repeat(1001) }, "action_plan");
+      });
+
+      it("measures the length after the text is cleaned and trimmed", async () => {
+        // 500 characters plus padding that goes: not too long.
+        await accept({ edits: { risk_description: ` ${"a".repeat(500)}\u0000 ` } });
+
+        expect(created().risk_description).toHaveLength(500);
+      });
+
+      it.each<[string, unknown]>([
+        ["capitalised as the form's list writes it", "Almost Certain"],
+        ["in lower case", "likely"],
+        ["unknown", "Certain"],
+        ["empty", ""],
+        ["a number", 3],
+        ["null", null],
+      ])("refuses a likelihood that is %s", async (_label, value) => {
+        await expectRefusedOutright({ likelihood: value }, "likelihood");
+      });
+
+      it.each<[string, unknown]>([
+        ["in lower case", "major"],
+        ["unknown", "Critical"],
+        ["empty", ""],
+        ["a number", 3],
+        ["null", null],
+      ])("refuses a severity that is %s", async (_label, value) => {
+        await expectRefusedOutright({ risk_severity: value }, "risk_severity");
+      });
+
+      it.each<[string, unknown]>([
+        ["null", null],
+        ["a number", 3],
+        ["empty", ""],
+        ["blank", "  "],
+        ["51 characters", "a".repeat(51)],
+      ])("refuses a risk level that is %s", async (_label, value) => {
+        await expectRefusedOutright({ risk_level: value }, "risk_level");
+      });
+
+      it.each<[string, unknown]>([
+        ["not a list", "3"],
+        ["null", null],
+        ["a list with a string", [3, "4"]],
+        ["a list with zero", [0]],
+        ["a list with a negative number", [-1]],
+        ["a list with a fraction", [1.5]],
+        ["a list with a number beyond the safe integers", [Number.MAX_SAFE_INTEGER + 2]],
+        ["a list with null", [null]],
+        ["a list of 101 frameworks", Array.from({ length: 101 }, (_, index) => index + 1)],
+      ])("refuses frameworks that are %s", async (_label, value) => {
+        await expectRefusedOutright({ frameworks: value }, "frameworks");
+      });
+
+      it("takes a list of 100 frameworks", async () => {
+        const frameworks = Array.from({ length: 100 }, (_, index) => index + 1);
+
+        await accept({ edits: { frameworks } });
+
+        expect(created().frameworks).toEqual(frameworks);
+      });
+    });
   });
 
   describe("the action owner", () => {
@@ -407,7 +664,7 @@ describe("acceptFinding", () => {
       });
 
     it.each<["parent" | "original"]>([["parent"], ["original"]])(
-      "is refused at once, as a decided finding is, when the lock is not available (reported as `%s`)",
+      "is refused at once with a conflict that asks to try again, when the lock is not available (reported as `%s`)",
       async (shape) => {
         asMock(getFindingByIdQuery).mockImplementation(async () => {
           events.push("find");
@@ -417,7 +674,9 @@ describe("acceptFinding", () => {
         const error = await rejection(accept());
 
         expect(error).toBeInstanceOf(ConflictException);
-        expect(error.message).toBe("This finding has already been accepted or dismissed");
+        // The holder may be the status job relabelling the finding, which stays pending: the
+        // finding is not said to be decided.
+        expect(error.message).toBe("This finding is being updated. Try again in a moment.");
         // It does not go on to the vendor, and the transaction ends without a commit.
         expect(events).toEqual(["begin", "find", "rollback"]);
         expect(getVendorByIdQuery).not.toHaveBeenCalled();
@@ -450,6 +709,14 @@ describe("acceptFinding", () => {
   });
 
   describe("when a step fails", () => {
+    it("counts nothing when the accept is rolled back", async () => {
+      asMock(createVendorRiskInTransaction).mockRejectedValue(new Error("insert failed"));
+
+      await expect(accept()).rejects.toThrow();
+
+      expect(findingDecided).not.toHaveBeenCalled();
+    });
+
     it("rolls back, does not mark the finding and runs no effects when the create rejects", async () => {
       const failure = new Error("insert failed");
       asMock(createVendorRiskInTransaction).mockRejectedValue(failure);
@@ -517,6 +784,30 @@ describe("dismissFinding", () => {
     // One conditional update decides it, so two decisions cannot both win: there is no read of
     // the finding first.
     expect(getFindingByIdQuery).not.toHaveBeenCalled();
+  });
+
+  it("has the two reasons that tell a wrong company or an old source from a wrong risk", () => {
+    expect(DISMISS_REASONS).toEqual(expect.arrayContaining(["wrong_vendor", "outdated"]));
+  });
+
+  it("counts the decision with the reason and the category of the finding", async () => {
+    await dismiss({ reason: "wrong_vendor" });
+
+    expect(findingDecided).toHaveBeenCalledTimes(1);
+    expect(findingDecided).toHaveBeenCalledWith({
+      decision: "dismissed",
+      category: "security_incidents",
+      reason: "wrong_vendor",
+    });
+  });
+
+  it("counts nothing for a dismissal that was refused", async () => {
+    await expect(dismiss({ reason: "nope" })).rejects.toBeInstanceOf(ValidationException);
+    asMock(markFindingDismissedQuery).mockResolvedValue(null);
+    asMock(getFindingByIdQuery).mockResolvedValue(ACCEPTED);
+    await expect(dismiss()).rejects.toBeInstanceOf(ConflictException);
+
+    expect(findingDecided).not.toHaveBeenCalled();
   });
 
   it.each(DISMISS_REASONS)("accepts the reason %s", async (reason) => {

@@ -1,0 +1,47 @@
+{
+  "title": "CISA Catalog of Known Exploited Vulnerabilities",
+  "catalogVersion": "2026.10.29",
+  "dateReleased": "2026-10-29T16:01:15.0000Z",
+  "count": 3,
+  "vulnerabilities": [
+    {
+      "cveID": "CVE-2026-31337",
+      "vendorProject": "Acme Analytics",
+      "product": "Insight Server",
+      "vulnerabilityName": "Acme Analytics Insight Server Authentication Bypass Vulnerability",
+      "dateAdded": "2026-09-14",
+      "shortDescription": "Acme Analytics Insight Server contains an authentication bypass that lets a remote attacker read reports.",
+      "requiredAction": "Apply mitigations per vendor instructions or discontinue use of the product if mitigations are unavailable.",
+      "dueDate": "2026-10-05",
+      "knownRansomwareCampaignUse": "Unknown",
+      "notes": "https://acme-analytics.example/security/advisory-1",
+      "cwes": ["CWE-287"]
+    },
+    {
+      "cveID": "CVE-2026-20001",
+      "vendorProject": "Globex",
+      "product": "Globex Gateway",
+      "vulnerabilityName": "Globex Gateway Command Injection Vulnerability",
+      "dateAdded": "2026-10-20",
+      "shortDescription": "Globex Gateway contains a command injection vulnerability in its web interface.",
+      "requiredAction": "Apply mitigations per vendor instructions.",
+      "dueDate": "2026-11-10",
+      "knownRansomwareCampaignUse": "Known",
+      "notes": "",
+      "cwes": ["CWE-78"]
+    },
+    {
+      "cveID": "CVE-2025-40001",
+      "vendorProject": "Initech",
+      "product": "TPS Reporter",
+      "vulnerabilityName": "Initech TPS Reporter Path Traversal Vulnerability",
+      "dateAdded": "2025-12-01",
+      "shortDescription": "Initech TPS Reporter contains a path traversal vulnerability.",
+      "requiredAction": "Apply updates per vendor instructions.",
+      "dueDate": "2025-12-22",
+      "knownRansomwareCampaignUse": "Unknown",
+      "notes": "",
+      "cwes": []
+    }
+  ]
+}

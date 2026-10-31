@@ -34,6 +34,11 @@ export const NOTES = {
   timeLimit: "Not researched: the time limit was reached",
   /** No call, because the loop ended for another reason first. */
   endedEarly: "Not researched: the research ended before this category was covered",
+  /**
+   * A scheduled run, which analyses only the sources that no earlier run showed to the model: the
+   * category was worked on and none of its sources is new.
+   */
+  noNewSources: "No new sources since the last run",
 } as const;
 
 export const findingsNote = (count: number): string =>
@@ -71,9 +76,11 @@ function modelNoteFor(
  *    search; once a page could not be read, the pages could not be read.
  * 5. Any other is `nothing_found`. If the model proposed a risk in it and none stayed, the note
  *    says that risks were possible but are not confirmed. Otherwise, when pages of it could not be
- *    read, the note counts them. Only then is the model's own note shown, or a plain sentence when
- *    it wrote none: a note that sits next to a risk that was dropped, or next to a page that could
- *    not be read, would describe what nobody could check.
+ *    read, the note counts them. In a scheduled run (`freshCategories` is given) a category that has
+ *    no new source says so: the model saw nothing of it, so a note of its own would describe
+ *    nothing. Only then is the model's own note shown, or a plain sentence when it wrote none: a
+ *    note that sits next to a risk that was dropped, or next to a page that could not be read, would
+ *    describe what nobody could check.
  */
 export function summariseCategories(input: {
   /** The categories that cannot be researched, for want of the vendor's domain. */
@@ -84,6 +91,11 @@ export function summariseCategories(input: {
   proposed: ReadonlySet<ResearchCategory>;
   modelNotes: ResearchOutput["category_notes"];
   stoppedBecause: StopReason;
+  /**
+   * For a scheduled run: the categories that have a source the model was shown. Absent for a run
+   * that analysed every source.
+   */
+  freshCategories?: ReadonlySet<ResearchCategory>;
 }): CategorySummaryEntry[] {
   return RESEARCH_CATEGORIES.map((category): CategorySummaryEntry => {
     if (input.skippedNoDomain.includes(category)) {
@@ -113,6 +125,9 @@ export function summariseCategories(input: {
         outcome: "nothing_found",
         note: pagesFailedNote(failedReads, reads.length),
       };
+    }
+    if (input.freshCategories !== undefined && !input.freshCategories.has(category)) {
+      return { category, outcome: "nothing_found", note: NOTES.noNewSources };
     }
     return {
       category,

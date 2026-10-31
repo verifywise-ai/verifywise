@@ -1,4 +1,4 @@
-import { type JobsOptions, Queue } from "bullmq";
+import { Queue } from "bullmq";
 import { REDIS_URL } from "../../database/redis";
 import logger from "../../utils/logger/fileLogger";
 
@@ -135,59 +135,6 @@ export async function enqueueRiskLinkDirection(organizationId: number, riskIds: 
       removeOnFail: true,
       attempts: 3,
       backoff: { type: "exponential", delay: 1000 },
-    },
-  );
-}
-
-/** The name of the job that carries out one vendor research run; the worker dispatches on it. */
-export const VENDOR_RESEARCH_JOB = "vendor_research";
-
-/**
- * The id of the queue job of one vendor research run.
- *
- * One id per RUN, not per vendor. BullMQ silently ignores an `add` whose jobId still exists (see
- * enqueueRiskLinkRecompute), and the job of an earlier run can still sit in Redis: the stale
- * sweep fails a run that waited too long, for example because the worker was down, and its job
- * stays in the queue. An id per vendor would then swallow the `add` of the vendor's next run, and
- * that run would never start. The partial unique index vendor_research_runs_active_uniq already
- * allows one active run per vendor, so an id per vendor would add no protection.
- *
- * The id has no colon: BullMQ 6.3.11 rejects a custom id with a colon unless it has exactly three
- * parts.
- */
-export const vendorResearchJobId = (
-  organizationId: number,
-  vendorId: number,
-  runId: number,
-): string => `vendor-research-${organizationId}-${vendorId}-${runId}`;
-
-/**
- * Two attempts, for the failures that make the job throw: those of Redis and the database before
- * the run is marked running, when the run is still queued and a retry can start it. The pipeline
- * catches a failing model call, and a web that cannot be reached at all, itself and ends the run as
- * failed; a search that fails or a page that cannot be read is a result inside the run. So a retry
- * never pays for the model calls or the searches twice. Settled jobs are removed, so no retained
- * job holds on to an id.
- */
-export const VENDOR_RESEARCH_JOB_OPTIONS: JobsOptions = {
-  attempts: 2,
-  backoff: { type: "exponential", delay: 5000 },
-  removeOnComplete: true,
-  removeOnFail: true,
-};
-
-/** Research one vendor in the background, for a run that was just created as queued. */
-export async function enqueueVendorResearch(
-  organizationId: number,
-  vendorId: number,
-  runId: number,
-) {
-  return automationQueue.add(
-    VENDOR_RESEARCH_JOB,
-    { organizationId, vendorId, runId },
-    {
-      jobId: vendorResearchJobId(organizationId, vendorId, runId),
-      ...VENDOR_RESEARCH_JOB_OPTIONS,
     },
   );
 }

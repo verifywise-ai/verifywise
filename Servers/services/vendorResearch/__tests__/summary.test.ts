@@ -68,6 +68,7 @@ const keptIn = (category: ResearchCategory): NewFinding => ({
   risk_severity: "Major",
   risk_level: "High Risk",
   confidence: "low",
+  rationale: null,
   sources: [{ url: "https://news.example.com/a", title: "A", quote: "q", published_at: null }],
 });
 
@@ -106,6 +107,7 @@ describe("the notes", () => {
       pagesUnreadable: "The pages could not be read",
       timeLimit: "Not researched: the time limit was reached",
       endedEarly: "Not researched: the research ended before this category was covered",
+      noNewSources: "No new sources since the last run",
     });
   });
 
@@ -240,6 +242,16 @@ describe("summariseCategories", () => {
           note: "Not researched: the time limit was reached",
         },
         { category: "ai_specific", outcome: "skipped", note: NO_DOMAIN_NOTE },
+        {
+          category: "availability",
+          outcome: "skipped",
+          note: "Not researched: the time limit was reached",
+        },
+        {
+          category: "financial_health",
+          outcome: "skipped",
+          note: "Not researched: the time limit was reached",
+        },
       ]);
     });
   });
@@ -364,6 +376,92 @@ describe("summariseCategories", () => {
 
       expect(entry.note).toBe(
         "Possible risks were found but could not be verified or are already recorded",
+      );
+    });
+  });
+
+  // A scheduled run shows the model only the sources that no earlier run showed to it. A category
+  // that has none of those did not become safe: nothing new was found, which is another sentence.
+  describe("a scheduled run, where only the new sources were analysed", () => {
+    const fresh = (...categories: ResearchCategory[]) => ({
+      freshCategories: new Set<ResearchCategory>(categories),
+    });
+
+    it("found nothing new in a category that was worked on and has no new source", () => {
+      expect(securityWith([searched("security_incidents")], fresh())).toEqual({
+        category: "security_incidents",
+        outcome: "nothing_found",
+        note: "No new sources since the last run",
+      });
+    });
+
+    it("says what it always says for a category that has a new source", () => {
+      expect(securityWith([searched("security_incidents")], fresh("security_incidents"))).toEqual({
+        category: "security_incidents",
+        outcome: "nothing_found",
+        note: "No risks found in the sources reviewed",
+      });
+    });
+
+    it("leaves the model's own note out for a category it saw no new source of", () => {
+      const entry = securityWith([searched("security_incidents")], {
+        ...fresh(),
+        modelNotes: [{ category: "security_incidents", note: "The press reported one incident." }],
+      });
+
+      expect(entry.note).toBe("No new sources since the last run");
+    });
+
+    it("keeps the model's own note for a category that has a new source", () => {
+      const entry = securityWith([searched("security_incidents")], {
+        ...fresh("security_incidents"),
+        modelNotes: [{ category: "security_incidents", note: "The press reported one incident." }],
+      });
+
+      expect(entry.note).toBe("The press reported one incident.");
+    });
+
+    it("still counts the pages that could not be read, which is more than 'nothing new'", () => {
+      const entry = securityWith(
+        [
+          searched("security_incidents"),
+          read("security_incidents"),
+          readFailed("security_incidents"),
+        ],
+        fresh(),
+      );
+
+      expect(entry.note).toBe("No risks found; 1 of 2 pages could not be read");
+    });
+
+    it("keeps the count of the findings, and the sentences of a category that was not researched or could not be", () => {
+      const summary = summarise({
+        calls: [searched("security_incidents"), searchFailed("certifications")],
+        kept: [keptIn("security_incidents")],
+        stoppedBecause: "time",
+        ...fresh("security_incidents"),
+      });
+
+      expect(entryFor(summary, "security_incidents")).toEqual({
+        category: "security_incidents",
+        outcome: "findings",
+        note: "1 potential risk found",
+      });
+      expect(entryFor(summary, "certifications")).toEqual({
+        category: "certifications",
+        outcome: "search_failed",
+        note: "The search was not available",
+      });
+      expect(entryFor(summary, "legal_regulatory")).toEqual({
+        category: "legal_regulatory",
+        outcome: "skipped",
+        note: "Not researched: the time limit was reached",
+      });
+    });
+
+    it("is the same as any other run when the run does not name the categories with new sources", () => {
+      expect(securityWith([searched("security_incidents")]).note).toBe(
+        "No risks found in the sources reviewed",
       );
     });
   });

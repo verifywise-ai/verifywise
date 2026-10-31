@@ -148,6 +148,106 @@ describe("llmSelfCorrect / buildCorrectionDirective", () => {
 });
 
 /* ------------------------------------------------------------------ */
+/* generateObjectWithSelfCorrection — token usage                     */
+/* ------------------------------------------------------------------ */
+
+describe("llmSelfCorrect / token usage", () => {
+  const noObject = (usage: Record<string, number>, cause?: Error) =>
+    new NoObjectGeneratedError({
+      message: "No object generated",
+      cause,
+      text: "",
+      response: { id: "r", timestamp: new Date(0), modelId: "m" },
+      usage: usage as never,
+      finishReason: "stop",
+    });
+
+  it("adds up the usage of every call, a failed attempt included, and reports each call", async () => {
+    let invocation = 0;
+    const mock: GenerateObjectImpl = (async () => {
+      invocation += 1;
+      if (invocation === 1) {
+        throw noObject(
+          { inputTokens: 100, outputTokens: 10, totalTokens: 110 },
+          makeZodError("name", "too short"),
+        );
+      }
+      return {
+        object: { name: "Bob", count: 2 },
+        usage: { inputTokens: 120, outputTokens: 20, totalTokens: 140 },
+      };
+    }) as unknown as GenerateObjectImpl;
+    const perCall: unknown[] = [];
+
+    const result = await generateObjectWithSelfCorrection<Sample>(
+      {
+        model: {},
+        schema: sampleSchema,
+        system: "s",
+        prompt: "p",
+        onUsage: (usage) => perCall.push(usage),
+      },
+      mock,
+    );
+
+    expect(result.usage).toEqual({ inputTokens: 220, outputTokens: 30, totalTokens: 250 });
+    expect(perCall).toEqual([
+      { inputTokens: 100, outputTokens: 10, totalTokens: 110 },
+      { inputTokens: 120, outputTokens: 20, totalTokens: 140 },
+    ]);
+  });
+
+  it("reports the usage of the calls before a failure that is thrown", async () => {
+    const mock: GenerateObjectImpl = (async () => {
+      throw noObject(
+        { inputTokens: 7, outputTokens: 1, totalTokens: 8 },
+        makeZodError("count", "must be a number"),
+      );
+    }) as unknown as GenerateObjectImpl;
+    const perCall: unknown[] = [];
+
+    await expect(
+      generateObjectWithSelfCorrection<Sample>(
+        {
+          model: {},
+          schema: sampleSchema,
+          system: "s",
+          prompt: "p",
+          maxSelfCorrectionAttempts: 1,
+          onUsage: (usage) => perCall.push(usage),
+        },
+        mock,
+      ),
+    ).rejects.toBeDefined();
+
+    expect(perCall).toHaveLength(2);
+    expect(perCall[0]).toEqual({ inputTokens: 7, outputTokens: 1, totalTokens: 8 });
+  });
+
+  it("counts zero tokens when the provider reports none, and works out a missing total", async () => {
+    const none: GenerateObjectImpl = (async () => ({
+      object: { name: "Alice", count: 1 },
+    })) as unknown as GenerateObjectImpl;
+    const partial: GenerateObjectImpl = (async () => ({
+      object: { name: "Alice", count: 1 },
+      usage: { inputTokens: 40, outputTokens: 2 },
+    })) as unknown as GenerateObjectImpl;
+    const params = { model: {}, schema: sampleSchema, system: "s", prompt: "p" };
+
+    expect((await generateObjectWithSelfCorrection<Sample>(params, none)).usage).toEqual({
+      inputTokens: 0,
+      outputTokens: 0,
+      totalTokens: 0,
+    });
+    expect((await generateObjectWithSelfCorrection<Sample>(params, partial)).usage).toEqual({
+      inputTokens: 40,
+      outputTokens: 2,
+      totalTokens: 42,
+    });
+  });
+});
+
+/* ------------------------------------------------------------------ */
 /* generateObjectWithSelfCorrection — happy path                      */
 /* ------------------------------------------------------------------ */
 

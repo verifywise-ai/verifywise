@@ -10,18 +10,29 @@ import {
   NewFinding,
   ResearchCategory,
   ResearchTrigger,
+  RunCoverage,
+  RunProgress,
+  SnapshotWrite,
+  StoredSnapshot,
+  VendorResearchSettings,
 } from "../domain.layer/interfaces/i.vendorResearch";
+import type { DecisionCountRow } from "../services/vendorResearch/decisionStats";
+import type { RunTrace } from "../services/vendorResearch/trace";
 
 /**
- * Queries for the vendor research agent: `vendor_research_runs` (one row per run)
- * and `vendor_risk_findings` (the risk candidates a run produced). Every
- * statement filters on `organization_id`; the vendor an id refers to must
- * already have been checked against the caller's organization.
+ * Queries for the vendor research agent: `vendor_research_runs` (one row per run),
+ * `vendor_risk_findings` (the risk candidates a run produced), `vendor_research_settings` (what an
+ * organization chose), `vendor_research_sources` (the documents a vendor's runs have shown to the
+ * model) and `vendor_research_snapshots` (the text of the pages where a vendor states its terms,
+ * as the last run read them). Every statement filters on `organization_id`, except `listScanOrganizationsQuery`, which
+ * the scheduled scan uses to find the organizations that turned the scan on; the vendor an id
+ * refers to must already have been checked against the caller's organization.
  */
 
 const RUN_COLUMNS = `id, organization_id, vendor_id, trigger_type, status, categories,
   category_summary, evidence, model, prompt_version, searches_used, pages_read,
-  duplicates_dropped, error, requested_by, created_at, started_at, finished_at`;
+  duplicates_dropped, error, progress, requested_by, coverage, registry_version, created_at,
+  started_at, finished_at`;
 
 const FINDING_COLUMN_NAMES: Array<keyof IVendorRiskFinding> = [
   "id",
@@ -36,7 +47,11 @@ const FINDING_COLUMN_NAMES: Array<keyof IVendorRiskFinding> = [
   "risk_severity",
   "risk_level",
   "confidence",
+  "credibility",
+  "credibility_basis",
+  "rationale",
   "sources",
+  "snippet_only",
   "status",
   "dismissed_reason",
   "dismissed_note",
@@ -96,7 +111,7 @@ export const failStaleRunsQuery = async (
 ): Promise<number> => {
   const failed = (await sequelize.query(
     `UPDATE vendor_research_runs
-     SET status = 'failed', error = 'timed out', finished_at = NOW()
+     SET status = 'failed', error = 'timed out', progress = NULL, finished_at = NOW()
      WHERE organization_id = :organizationId
        AND vendor_id = :vendorId
        AND status IN ('queued', 'running')
@@ -146,6 +161,25 @@ export const getRunByIdQuery = (
 ): Promise<IVendorResearchRun | null> => findRun("id = :runId", { organizationId, runId });
 
 /**
+ * The trace of a run of the vendor (see services/vendorResearch/trace.ts); null when the run does
+ * not exist, when it belongs to another vendor or organization, and when it has no trace: a run
+ * that has not finished, and a run from before traces were kept. It is a query of its own because
+ * the trace holds queries and addresses, so no column list that every role reads includes it.
+ */
+export const getRunTraceQuery = async (
+  organizationId: number,
+  vendorId: number,
+  runId: number,
+): Promise<RunTrace | null> => {
+  const rows = (await sequelize.query(
+    `SELECT trace FROM vendor_research_runs
+     WHERE organization_id = :organizationId AND vendor_id = :vendorId AND id = :runId`,
+    { replacements: { organizationId, vendorId, runId }, type: QueryTypes.SELECT },
+  )) as Array<{ trace: RunTrace | null }>;
+  return rows[0]?.trace ?? null;
+};
+
+/**
  * Moves a queued run to running. Returns false when the run is not queued (or not found), and when
  * it has been queued for longer than STALE_RUN_MINUTES.
  *
@@ -170,6 +204,27 @@ export const markRunRunningQuery = async (
   return started.length > 0;
 };
 
+/**
+ * Writes where a running run is (see `RunProgress`), replacing what it wrote before. It touches
+ * only a run that is running, in the organization it is given: a write that comes late, after the
+ * run ended (the queries that end a run empty the progress), finds no row and changes nothing, so
+ * it can never bring a finished run back to life. It reports nothing when it writes nothing.
+ */
+export const updateRunProgressQuery = async (
+  organizationId: number,
+  runId: number,
+  progress: RunProgress,
+): Promise<void> => {
+  await sequelize.query(
+    `UPDATE vendor_research_runs SET progress = CAST(:progress AS JSONB)
+     WHERE organization_id = :organizationId AND id = :runId AND status = 'running'`,
+    {
+      replacements: { organizationId, runId, progress: JSON.stringify(progress) },
+      type: QueryTypes.UPDATE,
+    },
+  );
+};
+
 export interface FinishRunInput {
   organizationId: number;
   runId: number;
@@ -183,6 +238,12 @@ export interface FinishRunInput {
   pagesRead: number;
   duplicatesDropped: number;
   error: string | null;
+  /** What the run did (see services/vendorResearch/trace.ts); null for a run that did nothing. */
+  trace: RunTrace | null;
+  /** What a run of the vendor risk database checked; null for a run without the flag. */
+  coverage: RunCoverage | null;
+  /** The version of the source registry that classified the sources; null as `coverage`. */
+  registryVersion: string | null;
 }
 
 /**
@@ -211,6 +272,10 @@ export const finishRunQuery = async (
          pages_read = :pagesRead,
          duplicates_dropped = :duplicatesDropped,
          error = LEFT(:error, ${ERROR_MAX_LENGTH}),
+         trace = CAST(:trace AS JSONB),
+         coverage = CAST(:coverage AS JSONB),
+         registry_version = :registryVersion,
+         progress = NULL,
          finished_at = NOW()
      WHERE organization_id = :organizationId AND id = :runId`,
     {
@@ -218,6 +283,8 @@ export const finishRunQuery = async (
         ...input,
         categorySummary: JSON.stringify(input.categorySummary),
         evidence: input.evidence === null ? null : JSON.stringify(input.evidence),
+        trace: input.trace ? JSON.stringify(input.trace) : null,
+        coverage: input.coverage === null ? null : JSON.stringify(input.coverage),
       },
       type: QueryTypes.UPDATE,
       transaction,
@@ -293,10 +360,12 @@ export const insertFindingsQuery = async (
     const rows = (await sequelize.query(
       `INSERT INTO vendor_risk_findings
          (organization_id, vendor_id, run_id, category, risk_description, impact_description,
-          action_plan, likelihood, risk_severity, risk_level, confidence, sources)
+          action_plan, likelihood, risk_severity, risk_level, confidence, credibility,
+          credibility_basis, rationale, sources, snippet_only)
        VALUES
          (:organizationId, :vendorId, :runId, :category, :riskDescription, :impactDescription,
-          :actionPlan, :likelihood, :riskSeverity, :riskLevel, :confidence, CAST(:sources AS JSONB))
+          :actionPlan, :likelihood, :riskSeverity, :riskLevel, :confidence, :credibility,
+          CAST(:credibilityBasis AS JSONB), :rationale, CAST(:sources AS JSONB), :snippetOnly)
        RETURNING ${FINDING_COLUMNS}`,
       {
         replacements: {
@@ -311,7 +380,13 @@ export const insertFindingsQuery = async (
           riskSeverity: finding.risk_severity,
           riskLevel: finding.risk_level,
           confidence: finding.confidence,
+          credibility: finding.credibility ?? null,
+          credibilityBasis: finding.credibility_basis
+            ? JSON.stringify(finding.credibility_basis)
+            : null,
+          rationale: finding.rationale ?? null,
           sources: JSON.stringify(finding.sources),
+          snippetOnly: finding.snippet_only === true,
         },
         type: QueryTypes.SELECT,
         transaction,
@@ -431,6 +506,22 @@ export const markFindingAcceptedQuery = async (
   return rows[0] ?? null;
 };
 
+/**
+ * How many findings of the organization are in each state, by the prompt version of the run that
+ * produced them, the category, and (for a dismissed one) the reason. The rows are folded by
+ * services/vendorResearch/decisionStats.ts into the rate of acceptance of each prompt version.
+ */
+export const getDecisionCountsQuery = async (organizationId: number): Promise<DecisionCountRow[]> =>
+  (await sequelize.query(
+    `SELECT r.prompt_version, f.category, f.status, f.dismissed_reason, COUNT(*)::int AS count
+     FROM vendor_risk_findings f
+     JOIN vendor_research_runs r
+       ON r.id = f.run_id AND r.organization_id = f.organization_id
+     WHERE f.organization_id = :organizationId
+     GROUP BY r.prompt_version, f.category, f.status, f.dismissed_reason`,
+    { replacements: { organizationId }, type: QueryTypes.SELECT },
+  )) as DecisionCountRow[];
+
 /** Marks a pending finding dismissed. Returns null when the finding is not pending (or not found). */
 export const markFindingDismissedQuery = async (
   input: {
@@ -451,4 +542,290 @@ export const markFindingDismissedQuery = async (
     { replacements: input, type: QueryTypes.SELECT, transaction },
   )) as IVendorRiskFinding[];
   return rows[0] ?? null;
+};
+
+// ---------------------------------------------------------------------------
+// Settings
+// ---------------------------------------------------------------------------
+
+interface SettingsRow {
+  research_llm_key_id: number | null;
+  analysis_llm_key_id: number | null;
+  scan_interval_days: number | null;
+}
+
+const settingsOf = (row: SettingsRow | undefined): VendorResearchSettings => ({
+  researchKeyId: row?.research_llm_key_id ?? null,
+  analysisKeyId: row?.analysis_llm_key_id ?? null,
+  scanIntervalDays: row?.scan_interval_days ?? null,
+});
+
+/** What the organization chose for its runs; nothing chosen (no row) is three nulls. */
+export const getVendorResearchSettingsQuery = async (
+  organizationId: number,
+): Promise<VendorResearchSettings> => {
+  const rows = (await sequelize.query(
+    `SELECT research_llm_key_id, analysis_llm_key_id, scan_interval_days
+     FROM vendor_research_settings
+     WHERE organization_id = :organizationId`,
+    { replacements: { organizationId }, type: QueryTypes.SELECT },
+  )) as SettingsRow[];
+  return settingsOf(rows[0]);
+};
+
+/**
+ * Stores the organization's choices, replacing the earlier ones. A key is stored only when it is
+ * one of the organization's own, even if the caller did not check (the sub-select turns another
+ * organization's key into null); the service checks first and says so to the user.
+ *
+ * The scan interval is replaced only when the input names it: `undefined` leaves what is stored (a
+ * page that does not know the setting saves the keys and must not turn the scan off), `null` turns
+ * the scan off.
+ */
+export const saveVendorResearchSettingsQuery = async (
+  input: {
+    organizationId: number;
+    userId: number;
+    researchKeyId: number | null;
+    analysisKeyId: number | null;
+    scanIntervalDays?: number | null;
+  },
+  transaction?: Transaction,
+): Promise<VendorResearchSettings> => {
+  const { scanIntervalDays, ...rest } = input;
+  const rows = (await sequelize.query(
+    `INSERT INTO vendor_research_settings
+       (organization_id, research_llm_key_id, analysis_llm_key_id, scan_interval_days,
+        updated_by, updated_at)
+     VALUES (
+       :organizationId,
+       (SELECT id FROM llm_keys WHERE organization_id = :organizationId AND id = :researchKeyId),
+       (SELECT id FROM llm_keys WHERE organization_id = :organizationId AND id = :analysisKeyId),
+       :scanIntervalDays,
+       :userId,
+       NOW()
+     )
+     ON CONFLICT (organization_id) DO UPDATE SET
+       research_llm_key_id = EXCLUDED.research_llm_key_id,
+       analysis_llm_key_id = EXCLUDED.analysis_llm_key_id,
+       scan_interval_days = CASE
+         WHEN :changesScanInterval THEN EXCLUDED.scan_interval_days
+         ELSE vendor_research_settings.scan_interval_days
+       END,
+       updated_by = EXCLUDED.updated_by,
+       updated_at = EXCLUDED.updated_at
+     RETURNING research_llm_key_id, analysis_llm_key_id, scan_interval_days`,
+    {
+      replacements: {
+        ...rest,
+        scanIntervalDays: scanIntervalDays ?? null,
+        changesScanInterval: scanIntervalDays !== undefined,
+      },
+      type: QueryTypes.SELECT,
+      transaction,
+    },
+  )) as SettingsRow[];
+  return settingsOf(rows[0]);
+};
+
+// ---------------------------------------------------------------------------
+// Sources
+// ---------------------------------------------------------------------------
+
+/**
+ * The keys (see `sourceKey` in services/webResearch/urlCanon.ts) of the documents that the runs of
+ * the vendor showed to the model. A scheduled run analyses the sources whose key is not among them.
+ */
+export const getKnownSourceKeysQuery = async (
+  organizationId: number,
+  vendorId: number,
+): Promise<Set<string>> => {
+  const rows = (await sequelize.query(
+    `SELECT source_key FROM vendor_research_sources
+     WHERE organization_id = :organizationId AND vendor_id = :vendorId`,
+    { replacements: { organizationId, vendorId }, type: QueryTypes.SELECT },
+  )) as Array<{ source_key: string }>;
+  return new Set(rows.map((row) => row.source_key));
+};
+
+/**
+ * Remembers the sources of a run. A key that is known keeps the run that first saw it and has its
+ * time of last sight moved. Nothing is written for a vendor that is not in the organization, and a
+ * run of another organization is not pointed at (the sub-select turns it into null). The same key
+ * twice in `keys` is one row.
+ */
+export const rememberSourcesQuery = async (
+  input: { organizationId: number; vendorId: number; runId: number; keys: readonly string[] },
+  transaction?: Transaction,
+): Promise<void> => {
+  if (input.keys.length === 0) return;
+  await sequelize.query(
+    `INSERT INTO vendor_research_sources (organization_id, vendor_id, source_key, first_seen_run_id)
+     SELECT v.organization_id, v.id, wanted.source_key,
+            (SELECT r.id FROM vendor_research_runs r
+             WHERE r.id = :runId AND r.organization_id = :organizationId)
+     FROM vendors v
+     CROSS JOIN (
+       SELECT DISTINCT source_key FROM unnest(ARRAY[:keys]::text[]) AS keys(source_key)
+     ) wanted
+     WHERE v.organization_id = :organizationId AND v.id = :vendorId
+     ON CONFLICT (organization_id, vendor_id, source_key) DO UPDATE SET last_seen_at = NOW()`,
+    { replacements: { ...input, keys: [...input.keys] }, type: QueryTypes.INSERT, transaction },
+  );
+};
+
+// ---------------------------------------------------------------------------
+// Snapshots of the pages where a vendor states its terms
+// ---------------------------------------------------------------------------
+
+/** A page that no run has read for this many days is forgotten: it moved, or it is gone. */
+const SNAPSHOT_FORGET_AFTER_DAYS = 365;
+
+/**
+ * The pages of the vendor that were kept, among those with the given keys (see `sourceKey` in
+ * services/webResearch/urlCanon.ts), by key: the hash and the lines of the text, and the last time
+ * a run read the page with that text.
+ */
+export const getSnapshotsQuery = async (
+  organizationId: number,
+  vendorId: number,
+  pageKeys: readonly string[],
+): Promise<Map<string, StoredSnapshot>> => {
+  if (pageKeys.length === 0) return new Map();
+  const rows = (await sequelize.query(
+    `SELECT page_key, text_hash, body, last_seen_at
+     FROM vendor_research_snapshots
+     WHERE organization_id = :organizationId AND vendor_id = :vendorId
+       AND page_key IN (:pageKeys)`,
+    {
+      replacements: { organizationId, vendorId, pageKeys: [...pageKeys] },
+      type: QueryTypes.SELECT,
+    },
+  )) as Array<{ page_key: string; text_hash: string; body: string; last_seen_at: Date }>;
+  return new Map(
+    rows.map((row) => [
+      row.page_key,
+      { hash: row.text_hash, body: row.body, lastSeenAt: row.last_seen_at },
+    ]),
+  );
+};
+
+/**
+ * Keeps the pages a completed run read, all or none. A page that is known has its time of last
+ * sight moved; when its text changed it also takes the new text, the run that read it, and the
+ * time of the change. Nothing is written for a vendor that is not in the organization, and a run of
+ * another organization is not pointed at (the sub-select turns it into null). Afterwards the pages
+ * of the vendor that no run has read for SNAPSHOT_FORGET_AFTER_DAYS are forgotten.
+ */
+export const saveSnapshotsQuery = async (
+  input: {
+    organizationId: number;
+    vendorId: number;
+    runId: number;
+    writes: readonly SnapshotWrite[];
+  },
+  transaction?: Transaction,
+): Promise<void> => {
+  const { organizationId, vendorId, runId, writes } = input;
+  if (writes.length === 0) return;
+  const saveAll = async (inside: Transaction) => {
+    for (const write of writes) {
+      await sequelize.query(
+        `INSERT INTO vendor_research_snapshots
+           (organization_id, vendor_id, page_key, url, kind, title, text_hash, body, captured_run_id)
+         SELECT v.organization_id, v.id, :pageKey, :url, :kind, :title, :hash, :body,
+                (SELECT r.id FROM vendor_research_runs r
+                 WHERE r.id = :runId AND r.organization_id = :organizationId)
+         FROM vendors v
+         WHERE v.organization_id = :organizationId AND v.id = :vendorId
+         ON CONFLICT (organization_id, vendor_id, page_key) DO UPDATE SET
+           url = EXCLUDED.url,
+           kind = EXCLUDED.kind,
+           title = EXCLUDED.title,
+           captured_run_id = CASE
+             WHEN vendor_research_snapshots.text_hash <> EXCLUDED.text_hash
+               THEN EXCLUDED.captured_run_id
+             ELSE vendor_research_snapshots.captured_run_id
+           END,
+           captured_at = CASE
+             WHEN vendor_research_snapshots.text_hash <> EXCLUDED.text_hash THEN NOW()
+             ELSE vendor_research_snapshots.captured_at
+           END,
+           body = EXCLUDED.body,
+           text_hash = EXCLUDED.text_hash,
+           last_seen_at = NOW()`,
+        {
+          replacements: { organizationId, vendorId, runId, ...write },
+          type: QueryTypes.INSERT,
+          transaction: inside,
+        },
+      );
+    }
+    await sequelize.query(
+      `DELETE FROM vendor_research_snapshots
+       WHERE organization_id = :organizationId AND vendor_id = :vendorId
+         AND last_seen_at < NOW() - (:days * INTERVAL '1 day')`,
+      {
+        replacements: { organizationId, vendorId, days: SNAPSHOT_FORGET_AFTER_DAYS },
+        type: QueryTypes.DELETE,
+        transaction: inside,
+      },
+    );
+  };
+  if (transaction) await saveAll(transaction);
+  else await sequelize.transaction(saveAll);
+};
+
+// ---------------------------------------------------------------------------
+// The scheduled scan
+// ---------------------------------------------------------------------------
+
+/**
+ * The organizations that turned the scheduled scan on, with the days between two scans of a
+ * vendor. The one query of this file that is not scoped to an organization: the scan has to find
+ * them first, and it reads two numbers.
+ */
+export const listScanOrganizationsQuery = async (): Promise<
+  Array<{ organizationId: number; intervalDays: number }>
+> => {
+  const rows = (await sequelize.query(
+    `SELECT organization_id, scan_interval_days FROM vendor_research_settings
+     WHERE scan_interval_days IS NOT NULL
+     ORDER BY organization_id`,
+    { type: QueryTypes.SELECT },
+  )) as Array<{ organization_id: number; scan_interval_days: number }>;
+  return rows.map((row) => ({
+    organizationId: row.organization_id,
+    intervalDays: row.scan_interval_days,
+  }));
+};
+
+/**
+ * The vendors of the organization whose scan is due, at most `limit` of them: the vendors with no
+ * run that counts (see `COUNTS_AS_A_RUN`) first, in the order they were added, then those whose
+ * newest run, of any trigger, is older than the interval, the one researched longest ago first.
+ * A demo vendor is never researched.
+ */
+export const listDueVendorsQuery = async (input: {
+  organizationId: number;
+  intervalDays: number;
+  limit: number;
+}): Promise<number[]> => {
+  const rows = (await sequelize.query(
+    `SELECT v.id
+     FROM vendors v
+     LEFT JOIN LATERAL (
+       SELECT MAX(r.created_at) AS last_at
+       FROM vendor_research_runs r
+       WHERE r.organization_id = v.organization_id AND r.vendor_id = v.id AND ${COUNTS_AS_A_RUN}
+     ) newest ON TRUE
+     WHERE v.organization_id = :organizationId
+       AND v.is_demo = false
+       AND (newest.last_at IS NULL
+            OR newest.last_at < NOW() - (:intervalDays * INTERVAL '1 day'))
+     ORDER BY newest.last_at ASC NULLS FIRST, v.id ASC
+     LIMIT :limit`,
+    { replacements: input, type: QueryTypes.SELECT },
+  )) as Array<{ id: number }>;
+  return rows.map((row) => row.id);
 };
