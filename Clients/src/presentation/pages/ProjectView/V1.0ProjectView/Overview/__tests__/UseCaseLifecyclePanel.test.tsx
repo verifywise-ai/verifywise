@@ -101,6 +101,8 @@ describe("UseCaseLifecyclePanel", () => {
       />,
     );
     expect(await screen.findByText(/Nobody has confirmed this use case/)).toBeInTheDocument();
+    // Shown inside the panel, not pinned to the corner like a toast.
+    expect(screen.getByRole("alert")).toHaveStyle({ position: "static" });
     fireEvent.click(screen.getByTestId("lifecycle-confirm-btn"));
     await waitFor(() => expect(mockConfirm).toHaveBeenCalledWith(7));
   });

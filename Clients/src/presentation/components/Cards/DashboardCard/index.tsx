@@ -45,12 +45,22 @@ export function DashboardCard({
       onClick={() => navigateTo && navigate(navigateTo)}
     >
       <CardContent sx={{ "p": "16px", "&:last-child": { pb: "16px" } }}>
-        <Stack direction="row" justifyContent="space-between" alignItems="center" mb="16px">
+        {/* A wide action (a toggle) wraps below the title on a narrow card
+            instead of squeezing the title to one word per line. */}
+        <Stack
+          direction="row"
+          justifyContent="space-between"
+          alignItems="center"
+          flexWrap="wrap"
+          gap="8px"
+          mb="16px"
+        >
           <Typography
             sx={{
               fontSize: 14,
               fontWeight: 600,
               color: "#1F2937",
+              whiteSpace: "nowrap",
               flex: actionPosition === "center" ? 1 : undefined,
             }}
           >
