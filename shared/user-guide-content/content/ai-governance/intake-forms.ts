@@ -89,7 +89,7 @@ export const intakeFormsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'An intake form of type AI app lets employees ask to use an AI tool. It starts with three mapped fields: the app name, a description and departments (several selections or comma-separated text). Approving a request creates the AI app as Approved and Planned, owned by the approver. An app name that already exists is refused, and the request stays pending. AI apps have no risk register yet, so AI app requests get no suggested risks.',
+      text: 'An intake form of type AI app lets employees ask to use an AI tool. It starts with three mapped fields: the app name, a description and departments (a multi-select, or text separated by commas). Approving a request creates the AI app as Approved and Planned, owned by the approver. If an app with that name already exists, the approval is refused and the request stays pending. AI apps have no risk register yet, so AI app requests get no suggested risks.',
     },
     {
       type: 'heading',
@@ -138,6 +138,12 @@ export const intakeFormsContent: ArticleContent = {
         { bold: 'Description', text: 'Optional context about what the form is for' },
         { bold: 'Entity type', text: 'Whether approved submissions create a **Use case**, an **AI app** or a **Model inventory** entry' },
       ],
+    },
+    {
+      type: 'image',
+      src: '/images/user-guide/intake-new-form-ai-app.png',
+      alt: 'Create new form dialog with the entity type choices Use case, AI app and Model inventory',
+      caption: 'AI app is a form type next to Use case and Model inventory.',
     },
     {
       type: 'paragraph',
