@@ -34,6 +34,7 @@
  * - healthCheckLimiter: 1000/min — probe endpoint
  * - intakeLiveChecksVisitorLimiter: 10/min, intakePrefillVisitorLimiter: 3/10min —
  *   public intake AI calls, keyed by IP plus resolved form id
+ * - intakeTierSuggestionVisitorLimiter: 20/min — suggested risk level (#5190)
  *
  * The strict auth/refresh limits apply by default. They are relaxed ONLY when
  * NODE_ENV is an explicit dev/test value, so a single developer hammering
@@ -172,6 +173,14 @@ export const buildRateLimitConfigs = (relaxed: boolean): Record<string, RateLimi
     windowMinutes: 10,
     maxRequests: 3,
     message: "Too many document uploads. Please try again in a few minutes.",
+    keyGenerator: intakeVisitorKey,
+  },
+  // Suggested risk level and its explanation (#5190): its own count, so moving
+  // between the risk step and the form never uses up the live checks.
+  intakeTierSuggestionVisitor: {
+    windowMinutes: 1,
+    maxRequests: 20,
+    message: "Too many risk level requests. Please try again in a minute.",
     keyGenerator: intakeVisitorKey,
   },
   // The OpenAI-compatible /v1 proxy for virtual keys. Mounted ahead of the
@@ -375,6 +384,11 @@ export const healthCheckLimiter = createRateLimiter(RATE_LIMIT_CONFIGS.healthChe
 /** Per visitor and form: 10 a minute on the public intake live-check endpoint. */
 export const intakeLiveChecksVisitorLimiter = createRateLimiter(
   RATE_LIMIT_CONFIGS.intakeLiveChecksVisitor,
+);
+
+/** Per visitor and form: 20 a minute on the suggested risk level endpoints. */
+export const intakeTierSuggestionVisitorLimiter = createRateLimiter(
+  RATE_LIMIT_CONFIGS.intakeTierSuggestionVisitor,
 );
 
 /** Per visitor and form: 3 per 10 minutes on the public intake prefill endpoint. */

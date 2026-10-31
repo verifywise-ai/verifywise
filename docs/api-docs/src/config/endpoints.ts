@@ -12176,6 +12176,87 @@ export const v1ChangeHistoryEndpoints: Endpoint[] = [
   },
 ];
 
+// v1: Intake Forms endpoints
+export const v1IntakeFormsEndpoints: Endpoint[] = [
+  {
+    method: 'POST',
+    path: '/v1/intake-tier-suggestion/public/by-id/{publicId}',
+    summary: "Post Public Tier Suggestion",
+    requiresAuth: false,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Intake Forms",
+  },
+  {
+    method: 'POST',
+    path: '/v1/intake-tier-suggestion/public/by-id/{publicId}/explain',
+    summary: "Post Public Tier Explanation",
+    requiresAuth: false,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Intake Forms",
+  },
+  {
+    method: 'POST',
+    path: '/v1/intake-tier-suggestion/public/by-id/{publicId}/submit',
+    summary: "Submit Public Form By Public Id",
+    requiresAuth: false,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Intake Forms",
+  },
+  {
+    method: 'POST',
+    path: '/v1/intake-tier-suggestion/public/{tenantSlug}/{formSlug}',
+    summary: "Post Public Tier Suggestion",
+    requiresAuth: false,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Intake Forms",
+  },
+  {
+    method: 'POST',
+    path: '/v1/intake-tier-suggestion/public/{tenantSlug}/{formSlug}/explain',
+    summary: "Post Public Tier Explanation",
+    requiresAuth: false,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Intake Forms",
+  },
+  {
+    method: 'POST',
+    path: '/v1/intake-tier-suggestion/public/{tenantSlug}/{formSlug}/submit',
+    summary: "Submit Public Form",
+    requiresAuth: false,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Intake Forms",
+  },
+  {
+    method: 'GET',
+    path: '/v1/intake-tier-suggestion/submissions/{id}',
+    summary: "Get Submission Tier Suggestion Response",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Intake Forms",
+  },
+];
+
 // Vendors endpoints
 export const vendorEndpoints: Endpoint[] = [
   {
@@ -12522,6 +12603,7 @@ export const allEndpoints = {
   training: trainingEndpoints,
   user: userEndpoints,
   v1ChangeHistory: v1ChangeHistoryEndpoints,
+  v1IntakeForms: v1IntakeFormsEndpoints,
   vendor: vendorEndpoints,
   vendorRisk: vendorRiskEndpoints,
   webhook: webhookEndpoints,

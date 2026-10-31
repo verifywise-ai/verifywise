@@ -552,6 +552,7 @@ export function deriveTag(basePath: string): string {
     "/api/ai-detection/repositories": "AI Detection",
     "/api/shadow-ai": "Shadow AI",
     "/api/v1/shadow-ai": "Shadow AI",
+    "/api/v1/intake-tier-suggestion": "Intake Forms",
     "/api/ai-incident-managements": "Incidents",
     "/api/approval-workflows": "Approval Workflows",
     "/api/approval-requests": "Approval Workflows",

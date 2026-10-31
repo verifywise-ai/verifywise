@@ -51,6 +51,7 @@ import {
   classificationRoles,
   normalizeHighRiskRoles,
 } from "../../../application/utils/highRiskRoles";
+import ApplicantTierResponse from "./ApplicantTierResponse";
 import EuAiActClassificationPanel, {
   type EuAiActClassificationData,
 } from "./EuAiActClassificationPanel";
@@ -968,6 +969,10 @@ function SubmissionPreviewModal({
               justification={euAiActJustification}
               onJustificationChange={setEuAiActJustification}
             />
+          )}
+
+          {euAiAct && submissionId !== null && (
+            <ApplicantTierResponse submissionId={submissionId} />
           )}
 
           {submissionId !== null && (assessmentV2 || previewData?.suggestedRisks) && (
