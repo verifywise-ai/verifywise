@@ -20,7 +20,8 @@ import { seedTwoTenantContexts } from "./tenant-isolation/tenantIsolation.harnes
 import type { TenantContext } from "./tenant-isolation/tenantIsolation.harness";
 import { createTestApp, testRequest } from "./setup";
 import { createTestVendor } from "../factories";
-import { automationQueue } from "../../services/automations/automationProducer";
+import { vendorResearchQueue } from "../../services/vendorResearch/queue";
+import { createTraceRecorder } from "../../services/vendorResearch/trace";
 import type { EvidenceSource, NewFinding } from "../../domain.layer/interfaces/i.vendorResearch";
 import {
   createRunQuery,
@@ -70,6 +71,7 @@ afterAll(() => {
 // ---------------------------------------------------------------------------
 
 const EVIDENCE_SENTINEL = "EVIDENCE-SENTINEL-4f2a";
+const TRACE_SENTINEL = "TRACE-SENTINEL-77ce";
 const MODEL_SENTINEL = "model-sentinel-91b0";
 const PROMPT_SENTINEL = "prompt-version-sentinel-c37d";
 
@@ -81,10 +83,12 @@ const RUN_RESPONSE_FIELDS = [
   "trigger_type",
   "categories",
   "category_summary",
+  "coverage",
   "searches_used",
   "pages_read",
   "duplicates_dropped",
   "error",
+  "progress",
   "started_at",
   "finished_at",
   "created_at",
@@ -99,6 +103,7 @@ const FINDING: NewFinding = {
   risk_severity: "Major",
   risk_level: "High Risk",
   confidence: "medium",
+  rationale: "Because of what the sources say.",
   sources: [
     {
       url: "https://example.com/breach-notice",
@@ -129,6 +134,28 @@ const EVIDENCE: EvidenceSource[] = [
   },
 ];
 
+/** What a run did, with a query that no response but the trace endpoint may carry. */
+const TRACE = (() => {
+  const recorder = createTraceRecorder();
+  recorder.step({
+    tool: "search",
+    category: "security_incidents",
+    kind: "news",
+    query: `Acme ${TRACE_SENTINEL}`,
+    outcome: "ok",
+    results: 4,
+  });
+  recorder.modelCall({
+    purpose: "analysis",
+    ms: 900,
+    inputTokens: 1200,
+    outputTokens: 80,
+    totalTokens: 1280,
+    ok: true,
+  });
+  return recorder.snapshot();
+})();
+
 const CATEGORY_SUMMARY = [
   { category: "security_incidents", outcome: "findings", note: "1 finding." },
 ] as const;
@@ -155,7 +182,7 @@ const runsOf = (vendorId: number) =>
 
 /** The research jobs queued so far, as [name, data, options]. */
 const researchJobs = () =>
-  (automationQueue.add as jest.Mock).mock.calls.filter(([name]) => name === "vendor_research");
+  (vendorResearchQueue.add as jest.Mock).mock.calls.filter(([name]) => name === "vendor_research");
 
 const seedLlmKey = (orgId: number) =>
   sequelize.query(
@@ -208,6 +235,9 @@ const seedFindings = async (
         pagesRead: 3,
         duplicatesDropped: 1,
         error: null,
+        trace: TRACE,
+        coverage: null,
+        registryVersion: null,
       },
       transaction,
     );
@@ -243,6 +273,7 @@ describe("POST /api/vendors/:id/research", () => {
       pages_read: 0,
       duplicates_dropped: 0,
       error: null,
+      progress: null,
       started_at: null,
       finished_at: null,
     });
@@ -494,7 +525,7 @@ describe("GET /api/vendors/:id/research/latest", () => {
       duplicates_dropped: 1,
       error: null,
     });
-    for (const sentinel of [EVIDENCE_SENTINEL, MODEL_SENTINEL, PROMPT_SENTINEL]) {
+    for (const sentinel of [EVIDENCE_SENTINEL, MODEL_SENTINEL, PROMPT_SENTINEL, TRACE_SENTINEL]) {
       expect(res.text).not.toContain(sentinel);
     }
     // The run does hold them: it is the response that leaves them out.
@@ -504,6 +535,122 @@ describe("GET /api/vendors/:id/research/latest", () => {
     );
     expect(stored.evidence).toContain(EVIDENCE_SENTINEL);
     expect(stored.model).toBe(MODEL_SENTINEL);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/vendors/:id/research/runs/:runId/trace
+// ---------------------------------------------------------------------------
+
+describe("GET /api/vendors/:id/research/runs/:runId/trace", () => {
+  it("gives an Admin the trace of a finished run", async () => {
+    const { owner } = await seedTwoTenantContexts(1);
+    const { vendorId, runId } = await seedFindings(owner, "Acme Corp");
+
+    const res = await owner.request.get(`/api/vendors/${vendorId}/research/runs/${runId}/trace`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data).toEqual(TRACE);
+    expect(res.text).toContain(TRACE_SENTINEL);
+  });
+
+  it("refuses the roles that do not manage the LLM key, with the trace untouched", async () => {
+    const { owner } = await seedTwoTenantContexts(1);
+    const { vendorId, runId } = await seedFindings(owner, "Acme Corp");
+
+    for (const role of ["Editor", "Reviewer", "Auditor"]) {
+      const request = await requestAs(role, owner);
+      const res = await request.get(`/api/vendors/${vendorId}/research/runs/${runId}/trace`);
+
+      expect(res.status).toBe(403);
+      expect(res.text).not.toContain(TRACE_SENTINEL);
+    }
+  });
+
+  it("does not let another organization read the trace, nor read it through another vendor", async () => {
+    const { owner, attacker } = await seedTwoTenantContexts(1);
+    const { vendorId, runId } = await seedFindings(owner, "Acme Corp");
+    const otherVendorId = await createTestVendor(owner.orgId, { vendor_name: "Other Corp" });
+
+    const fromAttacker = await attacker.request.get(
+      `/api/vendors/${vendorId}/research/runs/${runId}/trace`,
+    );
+    const throughOtherVendor = await owner.request.get(
+      `/api/vendors/${otherVendorId}/research/runs/${runId}/trace`,
+    );
+
+    expect(fromAttacker.status).toBe(404);
+    expect(throughOtherVendor.status).toBe(404);
+    expect(fromAttacker.text).not.toContain(TRACE_SENTINEL);
+    expect(throughOtherVendor.text).not.toContain(TRACE_SENTINEL);
+  });
+
+  it("answers 404 for a run that has no trace yet, and 400 for ids that are not ids", async () => {
+    const { owner } = await seedTwoTenantContexts(1);
+    const vendorId = await createTestVendor(owner.orgId);
+    const run = await createRunQuery({
+      organizationId: owner.orgId,
+      vendorId,
+      triggerType: "manual",
+      requestedBy: owner.userId,
+    });
+
+    const queued = await owner.request.get(
+      `/api/vendors/${vendorId}/research/runs/${run.id}/trace`,
+    );
+    const badRun = await owner.request.get(`/api/vendors/${vendorId}/research/runs/abc/trace`);
+    const badVendor = await owner.request.get(`/api/vendors/abc/research/runs/${run.id}/trace`);
+
+    expect(queued.status).toBe(404);
+    expect(badRun.status).toBe(400);
+    expect(badVendor.status).toBe(400);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/vendor-research/decision-stats
+// ---------------------------------------------------------------------------
+
+describe("GET /api/vendor-research/decision-stats", () => {
+  it("gives an Admin the decisions of the organization by prompt version, and only its own", async () => {
+    const { owner, attacker } = await seedTwoTenantContexts(1);
+    const { inserted } = await seedFindings(owner, "Acme Corp");
+    await seedFindings(attacker, "Other Corp");
+    await markFindingDismissedQuery({
+      organizationId: owner.orgId,
+      id: inserted[0].id,
+      reason: "wrong_vendor",
+      note: null,
+      userId: owner.userId,
+    });
+
+    const res = await owner.request.get("/api/vendor-research/decision-stats");
+
+    expect(res.status).toBe(200);
+    // The two findings of the owner's run: one dismissed as a wrong company, one still pending.
+    // The other organization's two pending findings are not in it.
+    expect(res.body.data.byPromptVersion).toEqual([
+      {
+        promptVersion: PROMPT_SENTINEL,
+        pending: 1,
+        accepted: 0,
+        dismissed: 1,
+        acceptanceRate: 0,
+        dismissedByReason: { wrong_vendor: 1 },
+      },
+    ]);
+    expect(res.body.data.byCategory).toHaveLength(2);
+  });
+
+  it("refuses the roles that do not manage the LLM key", async () => {
+    const { owner } = await seedTwoTenantContexts(1);
+    await seedFindings(owner, "Acme Corp");
+
+    for (const role of ["Editor", "Reviewer", "Auditor"]) {
+      const request = await requestAs(role, owner);
+      const res = await request.get("/api/vendor-research/decision-stats");
+      expect(res.status).toBe(403);
+    }
   });
 });
 
@@ -569,10 +716,27 @@ describe("GET /api/vendor-risk-findings", () => {
       risk_severity: "Major",
       risk_level: "High Risk",
       confidence: "medium",
+      rationale: "Because of what the sources say.",
       sources: FINDING.sources,
+      snippet_only: false,
       status: "pending",
       vendor_name: "Acme Corp",
     });
+  });
+
+  it("serves whether a finding rests on a snippet that nobody confirmed on a page", async () => {
+    const { owner } = await seedTwoTenantContexts(3);
+    const marked: NewFinding = { ...SECOND_FINDING, snippet_only: true };
+    await seedFindings(owner, "Acme Corp", [FINDING, marked]);
+
+    const res = await owner.request.get("/api/vendor-risk-findings");
+
+    expect(res.status).toBe(200);
+    // A finding that was never marked is stored as false, not as null.
+    expect(res.body.data.rows.map((row: { snippet_only: boolean }) => row.snippet_only)).toEqual([
+      false,
+      true,
+    ]);
   });
 
   it("filters by status and vendor, and returns one page of the list with the total of all of it", async () => {

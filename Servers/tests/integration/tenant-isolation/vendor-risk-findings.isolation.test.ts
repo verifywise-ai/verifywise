@@ -30,6 +30,7 @@ const FINDING: NewFinding = {
   risk_severity: "Major",
   risk_level: "High Risk",
   confidence: "medium",
+  rationale: "Because of what the sources say.",
   sources: [
     {
       url: "https://example.com/breach-notice",

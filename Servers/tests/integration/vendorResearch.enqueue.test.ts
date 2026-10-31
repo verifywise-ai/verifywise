@@ -1,26 +1,34 @@
 jest.setTimeout(30000);
 
 /**
- * The job of a research run against a real BullMQ queue and a real Redis.
+ * The job of a research run, and the worker that carries it out, against a real BullMQ queue and a
+ * real Redis.
  *
- * The unit spec of the producer mocks `bullmq`, so it cannot tell whether BullMQ accepts the job id
- * and the options. BullMQ validates a custom job id when the job is added (it rejects an integer
- * and a colon unless there are exactly three parts), and silently ignores an `add` whose id still
- * exists. This test adds a job with the id and the options of the producer and reads it back.
+ * The unit tests of the producer and the worker mock `bullmq`, so they cannot tell whether BullMQ
+ * accepts the job id and the options, or whether the worker gets the job the producer made.
+ * BullMQ validates a custom job id when the job is added (it rejects an integer and a colon unless
+ * there are exactly three parts), and silently ignores an `add` whose id still exists. The first
+ * test adds a job with the id and the options of the producer and reads it back; the second lets
+ * the worker of the research queue carry the job out.
  *
- * `./setup` is deliberately NOT imported: it replaces `bullmq` and the Redis client with mocks. The
- * job goes to a queue with a name of its own, not to "automation-actions", so that a worker of
- * that queue could never pick it up. Redis is the one that REDIS_URL names (the integration
- * wrapper points it at the throwaway instance).
+ * `./setup` is deliberately NOT imported: it replaces `bullmq` and the Redis client with mocks.
+ * The job goes to a queue with a name of its own, not to "vendor-research" or "automation-actions",
+ * so that the worker of a developer's backend could never pick it up. Redis is the one that
+ * REDIS_URL names (the integration wrapper points it at the throwaway instance). The pipeline is
+ * replaced by a function that notes what it was given: this is a test of the queue.
  */
+jest.mock("../../services/vendorResearch/job", () => ({ handleVendorResearchJob: jest.fn() }));
+
 import { Queue } from "bullmq";
 import redisClient, { REDIS_URL } from "../../database/redis";
+import { handleVendorResearchJob } from "../../services/vendorResearch/job";
 import {
   VENDOR_RESEARCH_JOB,
   VENDOR_RESEARCH_JOB_OPTIONS,
-  automationQueue,
   vendorResearchJobId,
-} from "../../services/automations/automationProducer";
+  vendorResearchQueue,
+} from "../../services/vendorResearch/queue";
+import { createVendorResearchWorker } from "../../services/vendorResearch/worker";
 
 const queue = new Queue(`vendor-research-enqueue-test-${process.pid}-${Date.now()}`, {
   connection: { url: REDIS_URL },
@@ -35,7 +43,7 @@ afterAll(async () => {
   await queue.obliterate({ force: true });
   await queue.close();
   // Importing the producer opened these two as well.
-  await automationQueue.close();
+  await vendorResearchQueue.close();
   await redisClient.quit();
 });
 
@@ -75,5 +83,34 @@ describe("the vendor research job on a real queue", () => {
     await second.remove();
     expect(await queue.getJob(vendorResearchJobId(1, 2, firstRun))).toBeUndefined();
     expect(await queue.getJob(vendorResearchJobId(1, 2, secondRun))).toBeUndefined();
+  });
+});
+
+describe("the worker of the research queue on a real queue", () => {
+  it("carries out the job that the producer makes, and the job is gone once it is done", async () => {
+    const runId = Date.now() + 2;
+    const data = { organizationId: 1, vendorId: 2, runId };
+    const jobId = vendorResearchJobId(1, 2, runId);
+    const handled = new Promise<unknown>((resolve) => {
+      (handleVendorResearchJob as jest.Mock).mockImplementation(async (received) =>
+        resolve(received),
+      );
+    });
+
+    const worker = createVendorResearchWorker(1, queue.name);
+    try {
+      await worker.waitUntilReady();
+      await queue.add(VENDOR_RESEARCH_JOB, data, { jobId, ...VENDOR_RESEARCH_JOB_OPTIONS });
+
+      await expect(handled).resolves.toEqual(data);
+
+      // removeOnComplete: a settled job must not keep its id, or BullMQ would ignore a new add.
+      for (let waited = 0; waited < 3000 && (await queue.getJob(jobId)); waited += 50) {
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
+      expect(await queue.getJob(jobId)).toBeUndefined();
+    } finally {
+      await worker.close();
+    }
   });
 });

@@ -24,7 +24,7 @@ import { createTestApp, testRequest } from "./setup";
 import { createTestVendor, createTestVendorRisk } from "../factories";
 import { notifyUserAssigned } from "../../services/inAppNotification.service";
 import { automationQueue } from "../../services/automations/automationProducer";
-import type { NewFinding } from "../../domain.layer/interfaces/i.vendorResearch";
+import { DISMISS_REASONS, type NewFinding } from "../../domain.layer/interfaces/i.vendorResearch";
 import * as researchUtils from "../../utils/vendorResearch.utils";
 import { createRunQuery, insertFindingsQuery } from "../../utils/vendorResearch.utils";
 
@@ -49,6 +49,7 @@ const FINDING: NewFinding = {
   risk_severity: "Major",
   risk_level: "High Risk",
   confidence: "medium",
+  rationale: "Because of what the sources say.",
   sources: [
     {
       url: "https://example.com/breach-notice",
@@ -473,6 +474,241 @@ describe("POST /api/vendor-risk-findings/:id/accept", () => {
     expect((await risksOf(owner.orgId))[0].action_owner).toBe(own);
   });
 
+  describe("with the values the person edited", () => {
+    /** The first two framework ids of the test database. */
+    const someFrameworks = async () =>
+      (await rows<{ id: number }>("SELECT id FROM frameworks ORDER BY id LIMIT 2")).map(
+        (framework) => framework.id,
+      );
+
+    it("creates the risk from the edited values, links the frameworks and marks the finding accepted", async () => {
+      const { owner } = await seedTwoTenantContexts(3);
+      const { vendorId, inserted } = await seedFindings(owner);
+      const [finding, bystander] = inserted;
+      const chosen = await addUser(owner.orgId);
+      const frameworkIds = await someFrameworks();
+      expect(frameworkIds).toHaveLength(2);
+
+      const res = await owner.request.post(acceptUrl(finding.id)).send({
+        action_owner: chosen,
+        // Padding and a NUL, which Postgres refuses in text, are cleaned the way a note is.
+        risk_description: "  Customer records were exposed in 2026 \u0000 ",
+        impact_description: "Customers' personal data may have been accessed.",
+        action_plan: "Ask for the incident report and review it with the DPO.",
+        likelihood: "Almost certain",
+        risk_severity: "Catastrophic",
+        risk_level: "Very high risk",
+        // A framework named twice is linked once: the link table's key would refuse it twice.
+        frameworks: [...frameworkIds, frameworkIds[0]],
+        // Not edits: the finding decides its vendor and its own state.
+        vendor_id: 987654321,
+        status: "dismissed",
+        accepted_vendor_risk_id: 5,
+      });
+
+      expect(res.status).toBe(200);
+      const { vendorRisk, finding: decided } = res.body.data;
+      expect(await risksOf(owner.orgId)).toEqual([
+        {
+          id: vendorRisk.id,
+          organization_id: owner.orgId,
+          vendor_id: vendorId,
+          risk_description: "Customer records were exposed in 2026",
+          impact_description: "Customers' personal data may have been accessed.",
+          likelihood: "Almost certain",
+          risk_severity: "Catastrophic",
+          action_plan: "Ask for the incident report and review it with the DPO.",
+          action_owner: chosen,
+          risk_level: "Very high risk",
+          is_deleted: false,
+          is_demo: false,
+        },
+      ]);
+      expect(vendorRisk).toMatchObject({
+        id: vendorRisk.id,
+        likelihood: "Almost certain",
+        risk_level: "Very high risk",
+      });
+      expect(decided).toMatchObject({
+        id: finding.id,
+        status: "accepted",
+        accepted_vendor_risk_id: vendorRisk.id,
+        decided_by: owner.userId,
+      });
+
+      // The finding keeps what the research wrote: the edits belong to the risk.
+      const [stored] = await rows<{ risk_description: string; likelihood: string }>(
+        "SELECT risk_description, likelihood FROM vendor_risk_findings WHERE id = :id",
+        { id: finding.id },
+      );
+      expect(stored).toEqual({
+        risk_description: FINDING.risk_description,
+        likelihood: FINDING.likelihood,
+      });
+      expect(await findingOf(bystander.id)).toEqual(PENDING);
+
+      const links = await rows(
+        "SELECT framework_id, organization_id FROM frameworks_vendorrisks WHERE vendorrisk_id = :id ORDER BY framework_id",
+        { id: vendorRisk.id },
+      );
+      expect(links).toEqual(
+        frameworkIds.map((frameworkId) => ({
+          framework_id: frameworkId,
+          organization_id: owner.orgId,
+        })),
+      );
+
+      // The change history and the notice carry the edited risk, not the finding.
+      const history = await rows<{ new_value: string }>(
+        "SELECT new_value FROM vendor_risk_change_history WHERE vendor_risk_id = :id",
+        { id: vendorRisk.id },
+      );
+      expect(history.map((entry) => entry.new_value)).toEqual(
+        expect.arrayContaining(["Customer records were exposed in 2026", "Very high risk"]),
+      );
+      expect(history.map((entry) => entry.new_value)).not.toContain(FINDING.risk_description);
+      expect(notifyUserAssigned).toHaveBeenCalledWith(
+        owner.orgId,
+        chosen,
+        expect.objectContaining({ entityName: "Customer records were exposed in 2026" }),
+        expect.any(String),
+        expect.any(String),
+        expect.objectContaining({
+          description: "Customers' personal data may have been accessed.",
+        }),
+      );
+      expect(recomputeJobs()).toHaveLength(1);
+    });
+
+    it("keeps the finding's values for what the caller leaves out, and links no frameworks", async () => {
+      const { owner } = await seedTwoTenantContexts(3);
+      const {
+        vendorId,
+        inserted: [finding],
+      } = await seedFindings(owner);
+
+      const res = await owner.request
+        .post(acceptUrl(finding.id))
+        .send({ action_plan: "Ask for the audit report instead." });
+
+      expect(res.status).toBe(200);
+      expect(await risksOf(owner.orgId)).toEqual([
+        {
+          id: res.body.data.vendorRisk.id,
+          organization_id: owner.orgId,
+          vendor_id: vendorId,
+          risk_description: FINDING.risk_description,
+          impact_description: FINDING.impact_description,
+          likelihood: FINDING.likelihood,
+          risk_severity: FINDING.risk_severity,
+          action_plan: "Ask for the audit report instead.",
+          action_owner: null,
+          risk_level: "High Risk",
+          is_deleted: false,
+          is_demo: false,
+        },
+      ]);
+      expect(await countAll("frameworks_vendorrisks")).toBe(0);
+    });
+
+    it("works the risk level out from the edited pair when the caller sends none", async () => {
+      const { owner } = await seedTwoTenantContexts(3);
+      const {
+        inserted: [finding],
+      } = await seedFindings(owner);
+
+      // The finding is Possible / Major (High); Almost certain / Major is Very High.
+      const res = await owner.request
+        .post(acceptUrl(finding.id))
+        .send({ likelihood: "Almost certain" });
+
+      expect(res.status).toBe(200);
+      const [risk] = await risksOf(owner.orgId);
+      expect(risk).toMatchObject({ likelihood: "Almost certain", risk_level: "Very High Risk" });
+    });
+
+    it("refuses an edit the register cannot take with 400, and creates nothing", async () => {
+      const { owner } = await seedTwoTenantContexts(3);
+      const {
+        inserted: [finding],
+      } = await seedFindings(owner);
+
+      const refused: Array<Record<string, unknown>> = [
+        { risk_description: "" },
+        { risk_description: "a".repeat(501) },
+        { impact_description: 5 },
+        { impact_description: "   " },
+        { action_plan: "a".repeat(1001) },
+        { likelihood: "Almost Certain" },
+        { likelihood: "Certain" },
+        { risk_severity: "Critical" },
+        { risk_level: "a".repeat(51) },
+        { risk_level: null },
+        { frameworks: "3" },
+        { frameworks: [0] },
+        { frameworks: [1, 1.5] },
+        { frameworks: Array.from({ length: 101 }, (_, index) => index + 1) },
+      ];
+      for (const edit of refused) {
+        const res = await owner.request.post(acceptUrl(finding.id)).send(edit);
+        expect({ edit: JSON.stringify(edit).slice(0, 80), status: res.status }).toEqual({
+          edit: JSON.stringify(edit).slice(0, 80),
+          status: 400,
+        });
+      }
+
+      expect(await findingOf(finding.id)).toEqual(PENDING);
+      await expectRegisterUntouched();
+
+      // Positive control: with valid edits the same finding is accepted.
+      const accepted = await owner.request
+        .post(acceptUrl(finding.id))
+        .send({ risk_description: "a".repeat(500), action_plan: "b".repeat(1000) });
+      expect(accepted.status).toBe(200);
+      const [risk] = await risksOf(owner.orgId);
+      expect(risk.risk_description).toHaveLength(500);
+      expect(risk.action_plan).toHaveLength(1000);
+    });
+
+    it("rolls the whole accept back when a framework does not exist, so that it can be tried again", async () => {
+      const { owner } = await seedTwoTenantContexts(3);
+      const {
+        inserted: [finding],
+      } = await seedFindings(owner);
+
+      const res = await owner.request
+        .post(acceptUrl(finding.id))
+        .send({ risk_description: "An edited description", frameworks: [987654321] });
+
+      // The failed link aborts the transaction: no risk, no history, the finding is still pending.
+      expect(res.status).toBe(500);
+      expect(await findingOf(finding.id)).toEqual(PENDING);
+      await expectRegisterUntouched();
+      expect(await countAll("frameworks_vendorrisks")).toBe(0);
+
+      const again = await owner.request
+        .post(acceptUrl(finding.id))
+        .send({ risk_description: "An edited description" });
+      expect(again.status).toBe(200);
+      expect((await risksOf(owner.orgId))[0].risk_description).toBe("An edited description");
+    });
+
+    it("does not let an edit reach a finding of another organization", async () => {
+      const { owner, attacker } = await seedTwoTenantContexts(3);
+      const {
+        inserted: [finding],
+      } = await seedFindings(owner);
+
+      const res = await attacker.request
+        .post(acceptUrl(finding.id))
+        .send({ risk_description: "Edited by a stranger" });
+
+      expect(res.status).toBe(404);
+      expect(await findingOf(finding.id)).toEqual(PENDING);
+      await expectRegisterUntouched();
+    });
+  });
+
   it("gives one answer 200 and the other 409 when two accepts arrive together, and creates one risk", async () => {
     const { owner } = await seedTwoTenantContexts(3);
     const {
@@ -839,7 +1075,8 @@ describe("POST /api/vendor-risk-findings/:id/dismiss", () => {
 
   it("takes every reason, and a note is optional", async () => {
     const { owner } = await seedTwoTenantContexts(3);
-    const reasons = ["not_applicable", "already_covered", "inaccurate", "accepted_risk", "other"];
+    // The list the service accepts is the list the CHECK constraint of the column must take.
+    const reasons = [...DISMISS_REASONS];
     const { inserted } = await seedFindings(
       owner,
       "Acme Corp",

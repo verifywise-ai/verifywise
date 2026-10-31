@@ -50,6 +50,9 @@ const finishOf = (
   pagesRead: 0,
   duplicatesDropped: 0,
   error: null,
+  trace: null,
+  coverage: null,
+  registryVersion: null,
   ...overrides,
 });
 

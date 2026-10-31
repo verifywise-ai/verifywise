@@ -201,6 +201,9 @@ describe("the notice of the research job", () => {
       pagesRead: 0,
       duplicatesDropped: 0,
       error: null,
+      trace: null,
+      coverage: null,
+      registryVersion: null,
     });
     return { outcome: "completed" as const, findingsCreated: 2 };
   };
