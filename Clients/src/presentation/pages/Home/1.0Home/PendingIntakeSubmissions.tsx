@@ -13,7 +13,7 @@ import { CustomizableButton } from "../../../components/button/customizable-butt
 import { singleTheme } from "../../../themes";
 import useNavigateSearch from "../../../../application/hooks/useNavigateSearch";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
-import type { PendingUseCaseSubmission } from "../../../../application/repository/useCaseLifecycle.repository";
+import type { PendingUseCaseSubmissions } from "../../../../application/repository/useCaseLifecycle.repository";
 
 const COLUMNS = ["Request", "Intake form", "Submitted by", "Submitted", "Days in review", ""];
 
@@ -24,11 +24,26 @@ const cellSx = { ...singleTheme.tableStyles.primary.body.cell, fontSize: "13px" 
  * tab (#5188). No use case exists yet: approving the submission creates it,
  * so each row opens the existing submission review screen.
  */
-const PendingIntakeSubmissions = ({ submissions }: { submissions: PendingUseCaseSubmission[] }) => {
+const PendingIntakeSubmissions = ({
+  pending,
+  searchTerm = "",
+}: {
+  pending: PendingUseCaseSubmissions | undefined;
+  /** The use cases search box; matches the title, form name and submitter. */
+  searchTerm?: string;
+}) => {
   const navigateSearch = useNavigateSearch();
   const formatDate = useFormattedDate();
 
-  if (submissions.length === 0) return null;
+  if (!pending || pending.total === 0) return null;
+
+  const term = searchTerm.trim().toLowerCase();
+  const submissions = term
+    ? pending.items.filter((s) =>
+        [s.title, s.form_name, s.submitter_name].some((v) => v?.toLowerCase().includes(term)),
+      )
+    : pending.items;
+  const isCapped = pending.total > pending.items.length;
 
   const openReview = (id: number) =>
     navigateSearch("/intake-forms/submissions", { submission: String(id) });
@@ -80,6 +95,23 @@ const PendingIntakeSubmissions = ({ submissions }: { submissions: PendingUseCase
           </TableBody>
         </Table>
       </TableContainer>
+      {submissions.length === 0 && (
+        <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
+          No intake requests match your search.
+        </Typography>
+      )}
+      {isCapped && (
+        <Typography
+          sx={{ fontSize: 13, color: "text.secondary" }}
+          data-testid="pending-intake-capped"
+        >
+          <span>Showing the oldest</span> <span>{pending.items.length}</span> <span>of</span>{" "}
+          <span>{pending.total}</span>
+        </Typography>
+      )}
+      <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
+        Intake requests are not included in the use case export.
+      </Typography>
     </Stack>
   );
 };

@@ -6,9 +6,11 @@ import { ButtonToggle } from "../../components/button-toggle";
 import StatusBadge from "../../components/StatusBadge";
 import useNavigateSearch from "../../../application/hooks/useNavigateSearch";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
-import { useUseCaseLifecycleDashboard } from "../../../application/hooks/useUseCaseLifecycle";
+import {
+  useUseCaseLifecycleDashboard,
+  useUseCaseStageCounts,
+} from "../../../application/hooks/useUseCaseLifecycle";
 import { useDashboard } from "../../../application/hooks/useDashboard";
-import { countLifecycleStages } from "../../../application/utils/useCaseLifecycle";
 import type {
   LifecycleBreakdownRow,
   LifecycleDashboardItem,
@@ -139,9 +141,11 @@ function ItemList({
 const UseCaseLifecycleWidgets = () => {
   const navigateSearch = useNavigateSearch();
   const { data, isError } = useUseCaseLifecycleDashboard();
-  // Stage counts come from the use cases list, as on the Use cases page.
+  // The same counts as the Use cases tabs: the use cases list by stage, with
+  // pending intake requests in In review (useUseCaseStageCounts).
   const { dashboard: overview } = useDashboard();
-  const counts = useMemo(() => countLifecycleStages(overview?.projects_list ?? []), [overview]);
+  const projects = useMemo(() => overview?.projects_list ?? [], [overview]);
+  const { counts } = useUseCaseStageCounts(projects);
   const [breakdown, setBreakdown] = useState<Breakdown>("department");
 
   if (isError || !data) return null;

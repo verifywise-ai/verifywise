@@ -2,6 +2,11 @@
 // Spread into ../translations.ts.
 
 export const de: Record<string, string> = {
+  "No intake requests match your search.": "Keine Intake-Anfragen entsprechen Ihrer Suche.",
+  "Showing the oldest": "Angezeigt werden die ältesten",
+  "of": "von",
+  "Intake requests are not included in the use case export.":
+    "Intake-Anfragen sind im Export der Anwendungsfälle nicht enthalten.",
   // In review tab and time in review (#5188)
   "Approved in the last 12 months": "In den letzten 12 Monaten freigegeben",
   "Average": "Durchschnitt",
@@ -90,6 +95,12 @@ export const de: Record<string, string> = {
 };
 
 export const fr: Record<string, string> = {
+  "No intake requests match your search.":
+    "Aucune demande d'intake ne correspond à votre recherche.",
+  "Showing the oldest": "Affichage des plus anciennes",
+  "of": "sur",
+  "Intake requests are not included in the use case export.":
+    "Les demandes d'intake ne sont pas incluses dans l'export des cas d'usage.",
   // In review tab and time in review (#5188)
   "Approved in the last 12 months": "Approuvées au cours des 12 derniers mois",
   "Average": "Moyenne",
@@ -179,6 +190,11 @@ export const fr: Record<string, string> = {
 };
 
 export const es: Record<string, string> = {
+  "No intake requests match your search.": "Ninguna solicitud de intake coincide con su búsqueda.",
+  "Showing the oldest": "Se muestran las más antiguas",
+  "of": "de",
+  "Intake requests are not included in the use case export.":
+    "Las solicitudes de intake no se incluyen en la exportación de casos de uso.",
   // In review tab and time in review (#5188)
   "Approved in the last 12 months": "Aprobadas en los últimos 12 meses",
   "Average": "Promedio",

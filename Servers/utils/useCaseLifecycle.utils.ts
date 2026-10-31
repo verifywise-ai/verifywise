@@ -8,7 +8,6 @@ import {
   staleSql,
 } from "./lifecycle.utils";
 import { projectVisibilitySql } from "./projectVisibility.utils";
-import { buildEntityDataFromSubmission } from "./intakeSubmissionData.utils";
 import { IntakeSubmissionStatus } from "../domain.layer/enums/intake-submission-status.enum";
 import { IntakeEntityType } from "../domain.layer/enums/intake-entity-type.enum";
 import type { IIntakeFormSchema } from "../domain.layer/interfaces/i.intakeForm";
@@ -121,7 +120,7 @@ export async function getUseCaseLifecycleDashboard(
     staleItems,
   ] = await Promise.all([
     getLifecycleOrgSettings(organizationId),
-    getUseCaseReviewTime(organizationId),
+    getUseCaseReviewTime(organizationId, viewer),
     run<{ start: string; end: string }>(
       `SELECT to_char(date_trunc('quarter', CURRENT_DATE), 'YYYY-MM-DD') AS "start",
                 to_char(date_trunc('quarter', CURRENT_DATE) + interval '3 months' - interval '1 day',
@@ -209,6 +208,30 @@ export async function getUseCaseLifecycleDashboard(
 // ─── Intake submissions in review (#5188) ───────────────────────────────────
 
 /**
+ * Resubmissions point at the submission they replace (original_submission_id),
+ * which may itself be a resubmission. Time in review counts from the FIRST
+ * submission of that chain. `leavesSql` must select `id`, `original_submission_id`
+ * and `created_at` of the rows to date; the CTE yields (leaf_id, first_at).
+ * Depth is capped so a corrupt cycle cannot loop.
+ */
+function firstSubmittedCte(leavesSql: string): string {
+  return `leaves AS (${leavesSql}),
+    chain AS (
+      SELECT l.id AS leaf_id, l.original_submission_id, l.created_at, 0 AS depth
+        FROM leaves l
+      UNION ALL
+      SELECT c.leaf_id, prev.original_submission_id, prev.created_at, c.depth + 1
+        FROM chain c
+        JOIN intake_submissions prev
+          ON prev.organization_id = :organizationId AND prev.id = c.original_submission_id
+       WHERE c.depth < 50
+    ),
+    firsts AS (
+      SELECT leaf_id, MIN(created_at) AS first_at FROM chain GROUP BY leaf_id
+    )`;
+}
+
+/**
  * A use case intake submission waiting for a decision. No project exists yet
  * (approval creates it), so the In review tab lists these next to the use
  * cases that wait on an approval request.
@@ -219,99 +242,161 @@ export interface PendingUseCaseSubmission {
   title: string | null;
   form_name: string;
   submitter_name: string | null;
-  risk_tier: string | null;
+  /** When the first submission of its resubmission chain arrived. */
   submitted_at: string;
-  /** Whole days since it was submitted. */
+  /** Whole days since then. */
   days_in_review: number;
 }
 
-const PENDING_LIMIT = 500;
+export interface PendingUseCaseSubmissions {
+  /** All pending use case submissions; the tab count. */
+  total: number;
+  /** The oldest `limit` of them. */
+  items: PendingUseCaseSubmission[];
+  limit: number;
+}
+
+export const PENDING_SUBMISSIONS_LIMIT = 500;
 
 /**
- * Pending use case submissions, oldest first. Approved, rejected and
- * superseded submissions never appear. Every signed-in member of the org can
- * already list submissions (GET /api/intake/submissions), so this applies no
- * further visibility rule.
+ * The field id each use case form maps to the use case title. Each form's
+ * schema is read once; rows then carry only that one answer.
  */
-export async function getPendingUseCaseSubmissions(
-  organizationId: number,
-): Promise<PendingUseCaseSubmission[]> {
-  const rows = (await sequelize.query(
-    `SELECT s.id, s.data, s.submitter_name, s.risk_tier, s.created_at,
-            f.name AS form_name, f.schema AS form_schema,
-            GREATEST(0, FLOOR(EXTRACT(EPOCH FROM (NOW() - s.created_at)) / 86400))::int AS days_in_review
-       FROM intake_submissions s
-       JOIN intake_forms f ON f.organization_id = s.organization_id AND f.id = s.form_id
-      WHERE s.organization_id = :organizationId
-        AND s.status = :pending
-        AND s.entity_type = :useCase
-      ORDER BY s.created_at ASC, s.id ASC
-      LIMIT :limit`,
+async function titleFieldIdsByForm(organizationId: number): Promise<Record<string, string>> {
+  const forms = (await sequelize.query(
+    `SELECT f.id, f.schema
+       FROM intake_forms f
+      WHERE f.organization_id = :organizationId
+        AND EXISTS (
+          SELECT 1 FROM intake_submissions s
+           WHERE s.organization_id = f.organization_id AND s.form_id = f.id
+             AND s.status = :pending AND s.entity_type = :useCase)`,
     {
       replacements: {
         organizationId,
         pending: IntakeSubmissionStatus.PENDING,
         useCase: IntakeEntityType.USE_CASE,
-        limit: PENDING_LIMIT,
       },
       type: QueryTypes.SELECT,
     },
-  )) as Array<{
-    id: number;
-    data: Record<string, unknown> | null;
-    submitter_name: string | null;
-    risk_tier: string | null;
-    created_at: Date | string;
-    form_name: string;
-    form_schema: IIntakeFormSchema | null;
-    days_in_review: number;
-  }>;
+  )) as { id: number; schema: IIntakeFormSchema | null }[];
+  const map: Record<string, string> = {};
+  for (const form of forms) {
+    const field = form.schema?.fields?.find((f) => f.entityFieldMapping === "project_title");
+    if (field) map[String(form.id)] = field.id;
+  }
+  return map;
+}
 
-  return rows.map((row) => {
-    const mapped =
-      row.form_schema && Array.isArray(row.form_schema.fields)
-        ? buildEntityDataFromSubmission(row.data ?? {}, row.form_schema)
-        : {};
-    const rawTitle = mapped.project_title;
-    const title = typeof rawTitle === "string" && rawTitle.trim() ? rawTitle.trim() : null;
-    return {
+/**
+ * Pending use case submissions, oldest first by first submission, plus the
+ * total. Approved, rejected and superseded submissions never appear. Every
+ * signed-in member of the org can already list submissions
+ * (GET /api/intake/submissions), so no further visibility rule applies.
+ */
+export async function getPendingUseCaseSubmissions(
+  organizationId: number,
+): Promise<PendingUseCaseSubmissions> {
+  const titleFields = await titleFieldIdsByForm(organizationId);
+  const replacements = {
+    organizationId,
+    pending: IntakeSubmissionStatus.PENDING,
+    useCase: IntakeEntityType.USE_CASE,
+    limit: PENDING_SUBMISSIONS_LIMIT,
+    titleFields: JSON.stringify(titleFields),
+  };
+  const pendingWhere = `s.organization_id = :organizationId
+        AND s.status = :pending AND s.entity_type = :useCase`;
+
+  const [totalRows, rows] = await Promise.all([
+    sequelize.query(
+      `SELECT COUNT(*)::int AS total FROM intake_submissions s WHERE ${pendingWhere}`,
+      { replacements, type: QueryTypes.SELECT },
+    ) as Promise<{ total: number }[]>,
+    sequelize.query(
+      `WITH RECURSIVE ${firstSubmittedCte(
+        `SELECT s.id, s.original_submission_id, s.created_at FROM intake_submissions s WHERE ${pendingWhere}`,
+      )}
+      SELECT s.id,
+             s.data ->> (CAST(:titleFields AS jsonb) ->> s.form_id::text) AS title,
+             f.name AS form_name,
+             s.submitter_name,
+             fi.first_at AS submitted_at,
+             GREATEST(0, FLOOR(EXTRACT(EPOCH FROM (NOW() - fi.first_at)) / 86400))::int AS days_in_review
+        FROM firsts fi
+        JOIN intake_submissions s ON s.organization_id = :organizationId AND s.id = fi.leaf_id
+        JOIN intake_forms f ON f.organization_id = s.organization_id AND f.id = s.form_id
+       ORDER BY fi.first_at ASC, s.id ASC
+       LIMIT :limit`,
+      { replacements, type: QueryTypes.SELECT },
+    ) as Promise<
+      Array<{
+        id: number;
+        title: string | null;
+        form_name: string;
+        submitter_name: string | null;
+        submitted_at: Date | string;
+        days_in_review: number;
+      }>
+    >,
+  ]);
+
+  return {
+    total: Number(totalRows[0]?.total ?? 0),
+    limit: PENDING_SUBMISSIONS_LIMIT,
+    items: rows.map((row) => ({
       id: Number(row.id),
-      title,
+      title: row.title && row.title.trim() ? row.title.trim() : null,
       form_name: row.form_name,
       submitter_name: row.submitter_name,
-      risk_tier: row.risk_tier,
-      submitted_at: new Date(row.created_at).toISOString(),
+      submitted_at: new Date(row.submitted_at).toISOString(),
       days_in_review: Number(row.days_in_review),
-    };
-  });
+    })),
+  };
 }
 
 const REVIEW_TIME_MONTHS = 12;
 
 /**
- * How long approved use case submissions spent in review (submitted →
- * approved) over the last 12 months. No comparison with an agreed review time
- * yet: that per-form setting comes with #5189.
+ * How long approved use case submissions spent in review over the last 12
+ * months, from the first submission of each resubmission chain to approval.
+ * Admins see every approved submission; others only those whose use case
+ * they can see (projectVisibilitySql on the created project). No comparison
+ * with an agreed review time yet: that per-form setting comes with #5189.
  */
-export async function getUseCaseReviewTime(organizationId: number): Promise<ReviewTimeStats> {
+export async function getUseCaseReviewTime(
+  organizationId: number,
+  viewer: Viewer,
+): Promise<ReviewTimeStats> {
+  const vis = projectVisibilitySql("p", viewer);
+  const visibleProject = vis.sql
+    ? ` AND EXISTS (SELECT 1 FROM projects p
+                     WHERE p.organization_id = :organizationId AND p.id = s.entity_id${vis.sql})`
+    : "";
   const rows = (await sequelize.query(
-    `SELECT COUNT(*)::int AS approved,
-            percentile_cont(0.5) WITHIN GROUP (
-              ORDER BY EXTRACT(EPOCH FROM (s.reviewed_at - s.created_at)) / 86400
-            ) AS median_days,
-            AVG(EXTRACT(EPOCH FROM (s.reviewed_at - s.created_at)) / 86400) AS average_days
-       FROM intake_submissions s
-      WHERE s.organization_id = :organizationId
-        AND s.status = :approved
-        AND s.entity_type = :useCase
-        AND s.reviewed_at IS NOT NULL
-        AND s.reviewed_at >= NOW() - make_interval(months => :months)`,
+    `WITH RECURSIVE ${firstSubmittedCte(
+      `SELECT s.id, s.original_submission_id, s.created_at
+         FROM intake_submissions s
+        WHERE s.organization_id = :organizationId
+          AND s.status = :approved
+          AND s.entity_type = :useCase
+          AND s.reviewed_at IS NOT NULL
+          AND s.reviewed_at >= NOW() - make_interval(months => :months)${visibleProject}`,
+    )}
+    SELECT COUNT(*)::int AS approved,
+           percentile_cont(0.5) WITHIN GROUP (
+             ORDER BY EXTRACT(EPOCH FROM (s.reviewed_at - fi.first_at)) / 86400
+           ) AS median_days,
+           AVG(EXTRACT(EPOCH FROM (s.reviewed_at - fi.first_at)) / 86400) AS average_days
+      FROM firsts fi
+      JOIN intake_submissions s ON s.organization_id = :organizationId AND s.id = fi.leaf_id`,
     {
       replacements: {
         organizationId,
         approved: IntakeSubmissionStatus.APPROVED,
         useCase: IntakeEntityType.USE_CASE,
         months: REVIEW_TIME_MONTHS,
+        ...vis.replacements,
       },
       type: QueryTypes.SELECT,
     },

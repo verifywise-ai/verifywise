@@ -1,4 +1,4 @@
-import { screen, fireEvent } from "@testing-library/react";
+import { screen, fireEvent, waitFor } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import UseCaseLifecycleWidgets from "../UseCaseLifecycleWidgets";
 
@@ -10,6 +10,7 @@ vi.mock("../../../../application/hooks/useNavigateSearch", () => ({
 const mockGetDashboard = vi.fn();
 vi.mock("../../../../application/repository/useCaseLifecycle.repository", () => ({
   getUseCaseLifecycleDashboard: (...args: unknown[]) => mockGetDashboard(...args),
+  getPendingUseCaseSubmissions: () => Promise.resolve({ total: 2, items: [], limit: 500 }),
 }));
 
 vi.mock("../../../../application/hooks/useDashboard", () => ({
@@ -57,6 +58,9 @@ describe("UseCaseLifecycleWidgets", () => {
     // Counted from the use cases list, organizational projects excluded.
     const plannedRow = screen.getByText("Planned").closest('[role="listitem"]') as HTMLElement;
     expect(plannedRow.textContent).toContain("2");
+    // In review counts the two pending intake requests, like the Use cases tab.
+    const inReviewRow = screen.getByText("In review").closest('[role="listitem"]') as HTMLElement;
+    await waitFor(() => expect(inReviewRow.textContent).toContain("2"));
     fireEvent.click(screen.getByText("Planned"));
     expect(mockNavigateSearch).toHaveBeenCalledWith("/overview", { stage: "planned" });
   });

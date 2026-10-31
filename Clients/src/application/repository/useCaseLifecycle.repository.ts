@@ -55,9 +55,16 @@ export interface PendingUseCaseSubmission {
   title: string | null;
   form_name: string;
   submitter_name: string | null;
-  risk_tier: string | null;
+  /** When the first submission of its resubmission chain arrived. */
   submitted_at: string;
   days_in_review: number;
+}
+
+/** All pending requests are counted; only the oldest `limit` are listed. */
+export interface PendingUseCaseSubmissions {
+  total: number;
+  items: PendingUseCaseSubmission[];
+  limit: number;
 }
 
 export interface UseCaseLifecycleState {
@@ -90,8 +97,8 @@ export async function getUseCaseLifecycleDashboard(): Promise<UseCaseLifecycleDa
   return response.data.data;
 }
 
-export async function getPendingUseCaseSubmissions(): Promise<PendingUseCaseSubmission[]> {
-  const response = await apiServices.get<Envelope<PendingUseCaseSubmission[]>>(
+export async function getPendingUseCaseSubmissions(): Promise<PendingUseCaseSubmissions> {
+  const response = await apiServices.get<Envelope<PendingUseCaseSubmissions>>(
     `${BASE}/intake-submissions`,
   );
   return response.data.data;

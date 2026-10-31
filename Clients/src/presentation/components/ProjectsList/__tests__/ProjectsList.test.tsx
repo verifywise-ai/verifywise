@@ -68,6 +68,19 @@ import ProjectList, { RISK_LEVEL_FILTER_OPTIONS } from "../ProjectsList";
 import { AiRiskClassification } from "../../../../domain/enums/aiRiskClassification.enum";
 
 describe("ProjectsList", () => {
+  it("renders the before-list slot with the search text, but not while loading (#5188)", () => {
+    const slot = vi.fn((term: string) => <div data-testid="before-list">{`term:${term}`}</div>);
+    const { rerender, queryByTestId, getByTestId } = renderWithProviders(
+      <ProjectList projects={[]} isLoading renderBeforeList={slot} />,
+    );
+    expect(queryByTestId("before-list")).toBeNull();
+
+    rerender(<ProjectList projects={[]} renderBeforeList={slot} />);
+    expect(getByTestId("before-list").textContent).toBe("term:");
+    // With no use cases and no override, the onboarding empty state stays.
+    expect(getByTestId("project-table-view")).toBeInTheDocument();
+  });
+
   it("renders without crashing with empty projects", () => {
     renderWithProviders(<ProjectList projects={[]} />);
     expect(document.body).toBeTruthy();
