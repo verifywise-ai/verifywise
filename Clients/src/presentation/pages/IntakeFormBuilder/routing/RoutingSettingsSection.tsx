@@ -5,6 +5,7 @@ import Checkbox from "../../../components/Inputs/Checkbox";
 import Field from "../../../components/Inputs/Field";
 import CustomizableMultiSelect from "../../../components/Inputs/Select/Multi";
 import type { FormRouting } from "../types";
+import RoutingFieldInfo from "./RoutingFieldInfo";
 
 export interface RoutingReviewer {
   _id: number;
@@ -20,7 +21,7 @@ interface RoutingSettingsSectionProps {
   reviewersLoaded?: boolean;
 }
 
-type NumberKey = "threshold" | "closeCallMargin" | "secondReviewRate";
+export type NumberKey = "threshold" | "closeCallMargin" | "secondReviewRate";
 
 const DEFAULT_ROUTING: FormRouting = {
   enabled: true,
@@ -227,6 +228,7 @@ const RoutingSettingsSection = ({
                 id={`routing-${key}`}
                 type="number"
                 label={label}
+                labelAdornment={<RoutingFieldInfo field={key} />}
                 value={drafts[key] ?? String(current[key])}
                 onChange={(e) => onNumber(key, e.target.value)}
                 min={RANGES[key].min}
