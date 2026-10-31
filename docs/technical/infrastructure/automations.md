@@ -86,7 +86,7 @@ export const slackQueue = new Queue("slack-notifications", {
 
 **Queue Name:** `vendor-research`
 
-Carries out the runs of the [vendor research agent](../domains/vendors.md#vendor-research-agent), one `vendor_research` job for each run.
+Carries out the runs of the [vendor research agent](../domains/vendors.md#vendor-research-agent), one `vendor_research` job for each run. The queue also holds the job scheduler of the [scheduled scan](../domains/vendors.md#the-scheduled-scan), `vendor_research_scan`, which `scheduleVendorResearchScan` upserts at the start of the backend (`jobs/producer.ts`) and which, like the rest of the queue, is never obliterated.
 
 ```typescript
 // File: Servers/services/vendorResearch/queue.ts
@@ -129,6 +129,9 @@ Recurring (cron) jobs only — see [On-Demand Jobs](#on-demand-jobs) below for j
 | `report_scheduler_tick` | `*/15 * * * *` | Every 15 minutes | Template-first scheduled report dispatch |
 | `extension_sync_tick` | `*/5 * * * *` | Every 5 minutes | Sync engine: queues one `extension_sync_run` per org whose schedule is due (interval and failure backoff) for every extension with a sync provider (see [Extensions → Scheduled sync](./extensions.md#scheduled-sync)). Retires the old `jira_assets_scheduled_sync_check` scheduler, whose name the worker still accepts for one release |
 | `slack-notification-policy` | `0 9 * * *` | Daily at 9 AM | Slack policy due notifications |
+| `approval_overdue_sweep` | `17 * * * *` | Every hour at minute 17 | Approval SLA escalation: the active step of each pending approval request whose `due_at` has passed is claimed once (`escalated_at`), and its escalation user is notified in-app and by email (`services/automations/actions/approvalOverdueSweep.ts`) |
+| `data_retention_prune` | `30 3 * * *` | Daily at 03:30 | Prunes each organization's audit records older than its `audit_retention_months`: the audit ledger from its oldest end (with checkpoints), then each audit table, in batches. Organizations without a period are skipped. See [Data retention](../domains/data-retention.md) |
+| `vendor_research_scan` (queue `vendor-research`) | `11 * * * *` (UTC) | Every hour at minute 11 | Scheduled vendor research: for each organization that chose a scan interval in Research settings, starts at most 5 due vendors while the runs of the last 24 hours are under half of the daily cap. See [Vendors → The scheduled scan](../domains/vendors.md#the-scheduled-scan) |
 | `vrdb_sync` (scheduler `vrdb_sync_kev`) | `23 * * * *` (UTC) | Every hour at minute 23 | Copy the CISA catalog of known exploited vulnerabilities (only with `VENDOR_RESEARCH_VRDB=true`) |
 | `vrdb_sync` (scheduler `vrdb_sync_ofac`) | `41 */6 * * *` (UTC) | Every 6 hours at minute 41 | Copy the OFAC SDN list (same) |
 | `vrdb_sync` (scheduler `vrdb_sync_uk_sanctions`) | `47 */6 * * *` (UTC) | Every 6 hours at minute 47 | Copy the UK Sanctions List (same) |
@@ -339,11 +342,11 @@ export const createAutomationWorker = () => {
 export const createVendorResearchWorker = (
   concurrency = getVendorResearchConfig().workerConcurrency,
   queueName = VENDOR_RESEARCH_QUEUE,
-) => new Worker(queueName, async (job) => { /* name check, then handleVendorResearchJob(job.data) */ },
+) => new Worker(queueName, async (job) => { /* name check, then handleVendorResearchJob(job.data) or runVendorResearchScan() */ },
   { connection: { url: REDIS_URL }, concurrency });
 ```
 
-It takes the jobs of `vendor-research` only, `VENDOR_RESEARCH_WORKER_CONCURRENCY` at a time for each worker process (5 unless set), and refuses a job with any name but `vendor_research`. A failure of the handler reaches BullMQ, which retries the job (`attempts: 2`); the pipeline itself ends a run that cannot be researched, so only Redis and database failures before the run is marked running come this far. It logs a completed job at debug level and a failed one as an error.
+It takes the jobs of `vendor-research` only, `VENDOR_RESEARCH_WORKER_CONCURRENCY` at a time for each worker process (5 unless set). It takes `vendor_research` (one run) and `vendor_research_scan` (the scan, which only starts runs and finishes in moments) and refuses any other name. A failure of the handler of a run reaches BullMQ, which retries the job (`attempts: 2`); the pipeline itself ends a run that cannot be researched, so only Redis and database failures before the run is marked running come this far. The job of the scan has a single attempt and is not kept: a scan that fails is logged, and the scan of the next hour does its work. It logs a completed job at debug level and a failed one as an error.
 
 ### Vendor Risk Database Worker
 
@@ -754,7 +757,7 @@ await queue.add(jobName, data, {
 | `Servers/jobs/worker.ts` | Worker initialization |
 | `Servers/services/automations/automationProducer.ts` | Automation queue producer |
 | `Servers/services/automations/automationWorker.ts` | Automation queue worker |
-| `Servers/services/vendorResearch/queue.ts` | Vendor research queue and producer |
+| `Servers/services/vendorResearch/queue.ts` | Vendor research queue and producer, and the scheduler of the hourly scan |
 | `Servers/services/vendorResearch/worker.ts` | Vendor research queue worker |
 | `Servers/services/vendorResearch/vrdb/queue.ts` | Vendor risk database queue and the schedulers of the syncs |
 | `Servers/services/vendorResearch/vrdb/worker.ts` | Vendor risk database queue worker |
