@@ -927,6 +927,7 @@
   "You are not a member of any organization": "You are not a member of any organization",
   "A super admin cannot join an organization": "A super admin cannot join an organization",
   "User is already a member of this organization": "User is already a member of this organization",
+  "User does not belong to the selected organization": "User does not belong to the selected organization",
   "This account signs in with Microsoft. Sign in with Microsoft on this organization's login page to join it.": "This account signs in with Microsoft. Sign in with Microsoft on this organization's login page to join it.",
   "This account signs in with Microsoft, and this organization has no Microsoft sign-in. Ask its administrator to add you.": "This account signs in with Microsoft, and this organization has no Microsoft sign-in. Ask its administrator to add you.",
   "Forbidden: Only the user can change their own name or email": "Forbidden: Only the user can change their own name or email",

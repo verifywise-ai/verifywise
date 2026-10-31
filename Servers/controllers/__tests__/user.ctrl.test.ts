@@ -116,7 +116,7 @@ jest.mock("../../utils/invitation.utils", () => ({
 }));
 jest.mock("../../utils/ssoConfig.utils", () => ({
   isSSOFeatureEnabled: jest.fn(() => true),
-  isAzureADLoginEnabledQuery: jest.fn(async () => true),
+  getSSOConfigQuery: jest.fn(async () => ({ is_enabled: true })),
   getAzureADConfigForLoginQuery: jest
     .fn()
     .mockResolvedValue({ client_id: "c", tenant_id: "t", client_secret: "s" }),
@@ -264,7 +264,7 @@ import {
   getPendingInvitationQuery,
   markInvitationAcceptedQuery,
 } from "../../utils/invitation.utils";
-import { isAzureADLoginEnabledQuery } from "../../utils/ssoConfig.utils";
+import { getSSOConfigQuery } from "../../utils/ssoConfig.utils";
 import { UniqueConstraintError } from "sequelize";
 import {
   addOrganizationMemberQuery,
@@ -1110,7 +1110,7 @@ describe("user.ctrl", () => {
     it("should tell an SSO-only account when the organization has no Microsoft sign-in", async () => {
       mockGetByEmail.mockResolvedValue(mockUser(buildUser({ password_hash: null })) as any);
       mockOrganizations.mockResolvedValueOnce([ACME]);
-      (isAzureADLoginEnabledQuery as jest.Mock).mockResolvedValueOnce(false as never);
+      (getSSOConfigQuery as jest.Mock).mockResolvedValueOnce(undefined as never);
       const res = acceptRes();
       await acceptInvitationAsExistingUser(acceptReq(), res);
       expect(res.status).toHaveBeenCalledWith(409);
@@ -1118,13 +1118,26 @@ describe("user.ctrl", () => {
         expect.objectContaining({ data: expect.stringContaining("no Microsoft sign-in") }),
       );
     });
-    it("should not send a passwordless pure super admin to Microsoft sign-in", async () => {
+    it("should refuse a passwordless pure super admin, not send them to Microsoft sign-in", async () => {
       mockGetByEmail.mockResolvedValue(mockUser(buildUser({ password_hash: null })) as any);
       mockOrganizations.mockResolvedValueOnce([]);
       const res = acceptRes();
       await acceptInvitationAsExistingUser(acceptReq(), res);
       expect(mockAddMember).not.toHaveBeenCalled();
-      expect(res.status).toHaveBeenCalledWith(401);
+      expect(res.status).toHaveBeenCalledWith(409);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({ data: "A super admin cannot join an organization" }),
+      );
+    });
+    it("should tell a passwordless member they are already a member", async () => {
+      mockGetByEmail.mockResolvedValue(mockUser(buildUser({ password_hash: null })) as any);
+      mockOrganizations.mockResolvedValueOnce([ACME, GLOBEX]);
+      const res = acceptRes();
+      await acceptInvitationAsExistingUser(acceptReq(), res);
+      expect(res.status).toHaveBeenCalledWith(409);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({ data: "User is already a member of this organization" }),
+      );
     });
     it("should answer a second submit at once (a double click) with 409, not 500", async () => {
       mockGetByEmail.mockResolvedValue(mockUser(buildUser()) as any);

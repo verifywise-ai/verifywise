@@ -84,7 +84,7 @@ import { getPendingInvitationQuery, markInvitationAcceptedQuery } from "../utils
 import { ConfidentialClientApplication } from "@azure/msal-node";
 import {
   getAzureADConfigForLoginQuery,
-  isAzureADLoginEnabledQuery,
+  getSSOConfigQuery,
   isSSOFeatureEnabled,
 } from "../utils/ssoConfig.utils";
 
@@ -647,10 +647,23 @@ async function acceptInvitationAsExistingUser(req: Request, res: Response): Prom
     const organizations = user ? await getUserOrganizationsQuery(user.id!) : [];
     // An account without a password signs in only through SSO, and accepts
     // the invitation there (loginUserWithMicrosoft). The link has already
-    // proven the address, so saying so reveals nothing to its holder. A pure
-    // super admin is refused below either way.
-    if (user && !user.password_hash && organizations.length > 0) {
-      const message = (await isAzureADLoginEnabledQuery(orgId))
+    // proven the address, so its holder gets the account's answers here: a
+    // pure super admin or a member is refused as below, anyone else is sent
+    // to Microsoft sign-in, when this organization offers it.
+    if (user && !user.password_hash) {
+      if (organizations.length === 0) {
+        return res
+          .status(409)
+          .json(STATUS_CODE[409](req.t!("A super admin cannot join an organization")));
+      }
+      if (organizations.some((o) => o.organization_id === orgId)) {
+        return res
+          .status(409)
+          .json(STATUS_CODE[409](req.t!("User is already a member of this organization")));
+      }
+      const microsoftSignIn =
+        isSSOFeatureEnabled() && !!(await getSSOConfigQuery(orgId, "AzureAD"))?.is_enabled;
+      const message = microsoftSignIn
         ? req.t!(
             "This account signs in with Microsoft. Sign in with Microsoft on this organization's login page to join it.",
           )
@@ -1107,7 +1120,7 @@ async function loginUserWithMicrosoft(req: Request, res: Response): Promise<any>
           await transaction.rollback();
           return res
             .status(403)
-            .json(STATUS_CODE[403]("User does not belong to the selected organization"));
+            .json(STATUS_CODE[403](req.t!("User does not belong to the selected organization")));
         };
         const sameIdentity =
           user.sso_provider === "AzureAD" && !!user.sso_user_id && user.sso_user_id === userInfo.id;
@@ -1140,9 +1153,10 @@ async function loginUserWithMicrosoft(req: Request, res: Response): Promise<any>
           );
           joinedThroughInvitation = true;
         }
-        // Read back, which also covers a second callback for the same sign-in:
-        // it waits on the first one's accept, finds the invitation taken, and
-        // then sees the membership the first one added.
+        // Read back the role the session carries. This also covers two
+        // sign-ins racing (each with its own code): the second waits on the
+        // first one's accept, finds the invitation taken, and then sees the
+        // membership the first one added.
         const joined = (await getUserOrganizationsQuery(user.id!, transaction)).find(
           (o) => o.organization_id === Number(organizationId),
         );

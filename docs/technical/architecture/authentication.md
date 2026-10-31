@@ -505,8 +505,10 @@ pure super admin (no membership), who never joins an organization
 (`inviteeRefusalQuery`). Two submits at once (a double click) get 409 for the
 second, not 500. An account without a password (SSO only) gets 409 telling it
 to sign in with Microsoft, which accepts the invitation there (see above), or
-that the organization has no Microsoft sign-in. Invitation emails match an
-account regardless of case (`getPendingInvitationQuery`).
+that the organization has no Microsoft sign-in. Only the identity the account
+was created with can join, so an SSO-only account cannot join an organization
+on another Microsoft tenant (its Graph id differs there); a super admin can add
+it from the console.
 
 The `/join` page (`pages/Authentication/JoinOrganization`) shows the invited
 email read-only and asks for the account's password. `customAxios` sends the

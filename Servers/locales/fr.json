@@ -927,6 +927,7 @@
   "You are not a member of any organization": "Vous n'êtes membre d'aucune organisation",
   "A super admin cannot join an organization": "Un super administrateur ne peut rejoindre aucune organisation",
   "User is already a member of this organization": "L'utilisateur est déjà membre de cette organisation",
+  "User does not belong to the selected organization": "L'utilisateur n'appartient pas à l'organisation sélectionnée",
   "This account signs in with Microsoft. Sign in with Microsoft on this organization's login page to join it.": "Ce compte se connecte avec Microsoft. Connectez-vous avec Microsoft sur la page de connexion de cette organisation pour la rejoindre.",
   "This account signs in with Microsoft, and this organization has no Microsoft sign-in. Ask its administrator to add you.": "Ce compte se connecte avec Microsoft, et cette organisation ne propose pas la connexion Microsoft. Demandez à son administrateur de vous ajouter.",
   "Forbidden: Only the user can change their own name or email": "Interdit : seul l'utilisateur peut modifier son propre nom ou son adresse e-mail",
