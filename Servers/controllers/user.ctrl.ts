@@ -64,7 +64,7 @@ import {
   BusinessLogicException,
   ConflictException,
 } from "../domain.layer/exceptions/custom.exception";
-import { ForeignKeyConstraintError, Transaction } from "sequelize";
+import { ForeignKeyConstraintError, Transaction, UniqueConstraintError } from "sequelize";
 import logger, { logStructured } from "../utils/logger/fileLogger";
 import { logEvent } from "../utils/logger/dbLogger";
 import { generateUserTokens } from "../utils/auth.utils";
@@ -80,7 +80,7 @@ import { SlackNotificationRoutingType } from "../domain.layer/enums/slack.enum";
 import { getRoleByIdQuery } from "../utils/role.utils";
 import { getRoleNameById } from "../utils/roleMap";
 import { uploadFile } from "../utils/fileUpload.utils";
-import { markInvitationAcceptedQuery } from "../utils/invitation.utils";
+import { getPendingInvitationQuery, markInvitationAcceptedQuery } from "../utils/invitation.utils";
 import { ConfidentialClientApplication } from "@azure/msal-node";
 import { getAzureADConfigForLoginQuery, isSSOFeatureEnabled } from "../utils/ssoConfig.utils";
 
@@ -640,6 +640,20 @@ async function acceptInvitationAsExistingUser(req: Request, res: Response): Prom
 
   try {
     const user = await getUserByEmailQuery(email);
+    // An account without a password signs in only through SSO, and accepts
+    // the invitation there (loginUserWithMicrosoft). The link has already
+    // proven the address, so saying so reveals nothing to its holder.
+    if (user && !user.password_hash) {
+      return res
+        .status(409)
+        .json(
+          STATUS_CODE[409](
+            req.t!(
+              "This account signs in with Microsoft. Sign in with Microsoft on this organization's login page to join it.",
+            ),
+          ),
+        );
+    }
     // The same answer for an unknown address and a wrong password.
     const passwordIsMatched =
       !!user?.password_hash && (await bcrypt.compare(String(password ?? ""), user.password_hash));
@@ -682,6 +696,14 @@ async function acceptInvitationAsExistingUser(req: Request, res: Response): Prom
       await transaction.commit();
     } catch (error) {
       await transaction.rollback();
+      // Two submits at once (a double click): both pass the membership check
+      // above, and the second insert hits the primary key once the first
+      // commits.
+      if (error instanceof UniqueConstraintError) {
+        return res
+          .status(409)
+          .json(STATUS_CODE[409](req.t!("User is already a member of this organization")));
+      }
       throw error;
     }
 
@@ -1047,6 +1069,7 @@ async function loginUserWithMicrosoft(req: Request, res: Response): Promise<any>
     const roleName = roleClaim && SSO_ROLE_MAP.has(roleClaim) ? roleClaim : "Editor";
     const roleId = SSO_ROLE_MAP.get(roleName)!;
 
+    let joinedThroughInvitation = false;
     let user = await getUserByEmailQuery(email);
     if (!user) {
       const userModel = await UserModel.createNewUser(
@@ -1065,17 +1088,40 @@ async function loginUserWithMicrosoft(req: Request, res: Response): Promise<any>
       );
     } else {
       // An existing account signs in through this organization's SSO only if
-      // it is already a member; joining takes an invitation.
+      // it is already a member, or holds a pending invitation to it: Microsoft
+      // has proven the address, which is how an account without a password
+      // (SSO only) accepts an invitation. It joins with the SSO role, like
+      // every sign-in below.
       const membership = (await getUserOrganizationsQuery(user.id!, transaction)).find(
         (o) => o.organization_id === Number(organizationId),
       );
       if (!membership) {
-        await transaction.rollback();
-        return res
-          .status(403)
-          .json(STATUS_CODE[403]("User does not belong to the selected organization"));
-      }
-      if (membership.role_id !== roleId) {
+        const invitation = await getPendingInvitationQuery(
+          Number(organizationId),
+          user.email,
+          transaction,
+        );
+        const accepted =
+          invitation && invitation.expires_at_ms > Date.now()
+            ? await markInvitationAcceptedQuery(
+                Number(organizationId),
+                {
+                  id: invitation.id,
+                  roleId: invitation.role_id,
+                  expiresAtMs: invitation.expires_at_ms,
+                },
+                transaction,
+              )
+            : 0;
+        if (accepted === 0) {
+          await transaction.rollback();
+          return res
+            .status(403)
+            .json(STATUS_CODE[403]("User does not belong to the selected organization"));
+        }
+        await addOrganizationMemberQuery(Number(organizationId), user.id!, roleId, transaction);
+        joinedThroughInvitation = true;
+      } else if (membership.role_id !== roleId) {
         await updateOrganizationMemberRoleQuery(
           Number(organizationId),
           user.id!,
@@ -1096,6 +1142,15 @@ async function loginUserWithMicrosoft(req: Request, res: Response): Promise<any>
     );
 
     await transaction.commit();
+
+    if (joinedThroughInvitation) {
+      await logEvent(
+        "Create",
+        `Existing user ${user.email} joined organization ${organizationId} through SSO`,
+        user.id!,
+        Number(organizationId),
+      );
+    }
 
     const electedSuperAdmin = await isUserSuperAdminUtil(user.id!);
 

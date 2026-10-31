@@ -36,7 +36,7 @@ const JoinOrganization: React.FC = () => {
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!inviteToken || !invitation) return;
+    if (!inviteToken || !invitation || isSubmitting) return;
     setIsSubmitting(true);
 
     try {
@@ -167,7 +167,7 @@ const JoinOrganization: React.FC = () => {
               disableRipple
               variant="contained"
               sx={singleTheme.buttons.primary.contained}
-              disabled={!isInvitationValid || !password}
+              disabled={!isInvitationValid || !password || isSubmitting}
             >
               Join organization
             </Button>

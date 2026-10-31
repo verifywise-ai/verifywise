@@ -47,16 +47,24 @@ const RemoveUserModal = ({
   onRemoved: () => void;
 }) => {
   const [removing, setRemoving] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleClose = () => {
+    setError("");
+    onClose();
+  };
 
   const handleSubmit = async () => {
     if (!target) return;
     setRemoving(true);
+    setError("");
     try {
       await removeOrgUser(target.organization_id, target.id);
-      onClose();
+      handleClose();
       onRemoved();
-    } catch (error) {
-      console.error("Failed to remove user:", error);
+    } catch (err: any) {
+      // Such as the organization's last Admin, which the server refuses.
+      setError(err?.message || "Failed to remove user");
     } finally {
       setRemoving(false);
     }
@@ -65,7 +73,7 @@ const RemoveUserModal = ({
   return (
     <StandardModal
       isOpen={!!target}
-      onClose={onClose}
+      onClose={handleClose}
       title="Remove user"
       description={`Remove "${target?.name} ${target?.surname || ""}" from ${target?.organization_name}?`}
       submitButtonText="Remove"
@@ -78,6 +86,7 @@ const RemoveUserModal = ({
         They lose access to this organization. If it is their only organization, their account is
         deleted too.
       </Typography>
+      {error && <Typography sx={{ fontSize: 13, color: "#D32F2F" }}>{error}</Typography>}
     </StandardModal>
   );
 };

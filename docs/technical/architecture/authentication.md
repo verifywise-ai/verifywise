@@ -477,8 +477,10 @@ is read per request.
 
 Microsoft SSO already knows the organization (from its SSO configuration), so
 it never shows the picker. An unknown email gets an account and a membership;
-an existing account that is not a member of that organization gets 403 (it
-needs an invitation). The IdP role claim is synced onto the membership.
+an existing account that is not a member of that organization joins it only
+with a pending, unexpired invitation (accepted in the same transaction),
+otherwise it gets 403. The IdP role claim is synced onto the membership,
+including on that join.
 
 ## Invitations to an existing account
 
@@ -497,7 +499,9 @@ POST /api/users/invitations/accept   Authorization: Bearer <invite token>
 
 An invitation is refused for an account that is already a member, and for a
 pure super admin (no membership), who never joins an organization
-(`inviteeRefusalQuery`).
+(`inviteeRefusalQuery`). Two submits at once (a double click) get 409 for the
+second, not 500. An account without a password (SSO only) gets 409 telling it
+to sign in with Microsoft, which accepts the invitation there (see above).
 
 The `/join` page (`pages/Authentication/JoinOrganization`) shows the invited
 email read-only and asks for the account's password. `customAxios` sends the
@@ -509,6 +513,10 @@ organization, or an organization with its first user, with an email that
 already has an account adds that account (no password needed; it keeps its
 own name and password), and a pure super admin is refused. The console's email
 check shows such an address as an existing account instead of blocking it.
+The console also keeps an Admin in every organization: removing a user from an
+organization, demoting them, or deleting their account is refused with 409
+when they are the last Admin of that organization (or of any of theirs), the
+same `isLastAdminQuery` check the organization's own user screens use.
 
 ## Token Refresh
 
@@ -521,7 +529,9 @@ response carries the session's `organizationId`: the refresh cookie is shared
 by every tab, so a tab learns that the session now belongs to another
 organization. When it differs from the tab's token, `customAxios` does not
 retry: it keeps the new token, empties the query cache, says "Organization
-changed", and reloads `/` in the new organization.
+changed", and reloads `/` in the new organization. It does the same, saying
+"Account changed", when the new token's user differs from the tab's: another
+user signed in to the same organization in another tab.
 
 Removing a user from an organization (`DELETE /api/users/:id` from the Team
 page, `DELETE /api/super-admin/organizations/:id/users/:userId` from the

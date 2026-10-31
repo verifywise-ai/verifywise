@@ -21,6 +21,7 @@ import {
   deleteUserAccountQuery,
   getUserByEmailQuery,
   getUserByIdQuery,
+  isLastAdminQuery,
   removeUserFromOrganizationQuery,
 } from "../utils/user.utils";
 import {
@@ -387,6 +388,10 @@ export async function updateUserDetails(
       );
     }
     if (roleChange) {
+      // The same rule as an Admin changing roles inside the organization.
+      if (await isLastAdminQuery(roleChange.organizationId, userId, transaction)) {
+        throw new ConflictException(t("The organization must keep at least one Admin"));
+      }
       await updateOrganizationMemberRoleQuery(
         roleChange.organizationId,
         userId,
@@ -421,6 +426,9 @@ export async function removeUserFromOrganization(
 ): Promise<{ removed: true; userId: number; accountDeleted: boolean }> {
   const transaction = await sequelize.transaction();
   try {
+    if (await isLastAdminQuery(organizationId, userId, transaction)) {
+      throw new ConflictException(t("The organization must keep at least one Admin"));
+    }
     const { removed, accountDeleted } = await removeUserFromOrganizationQuery(
       userId,
       organizationId,
@@ -454,8 +462,14 @@ export async function removeUserById(
     if (!user) {
       throw new NotFoundException(t("User not found"), "user", userId);
     }
-    if ((await getUserOrganizationsQuery(userId, transaction)).length === 0) {
+    const organizations = await getUserOrganizationsQuery(userId, transaction);
+    if (organizations.length === 0) {
       throw new ForbiddenException(t("Super-admin user cannot be deleted"));
+    }
+    for (const { organization_id } of organizations) {
+      if (await isLastAdminQuery(organization_id, userId, transaction)) {
+        throw new ConflictException(t("The organization must keep at least one Admin"));
+      }
     }
 
     await deleteUserAccountQuery(userId, transaction);

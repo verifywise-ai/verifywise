@@ -64,6 +64,7 @@ const Users = () => {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<OrgUser | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [removeError, setRemoveError] = useState("");
 
   const fetchUsers = useCallback(async () => {
     if (!orgId) return;
@@ -146,13 +147,15 @@ const Users = () => {
   const handleRemove = async () => {
     if (!deleteTarget || !orgId) return;
     setDeleting(true);
+    setRemoveError("");
     try {
       await removeOrgUser(parseInt(orgId), deleteTarget.id);
       setDeleteOpen(false);
       setDeleteTarget(null);
       await fetchUsers();
-    } catch (error) {
-      console.error("Failed to remove user:", error);
+    } catch (error: any) {
+      // Such as the organization's last Admin, which the server refuses.
+      setRemoveError(error?.message || "Failed to remove user");
     } finally {
       setDeleting(false);
     }
@@ -431,6 +434,7 @@ const Users = () => {
         onClose={() => {
           setDeleteOpen(false);
           setDeleteTarget(null);
+          setRemoveError("");
         }}
         title="Remove user"
         description={`Remove "${deleteTarget?.name} ${deleteTarget?.surname}" from this organization?`}
@@ -444,6 +448,9 @@ const Users = () => {
           They lose access to this organization. If it is their only organization, their account is
           deleted too.
         </Typography>
+        {removeError && (
+          <Typography sx={{ fontSize: 13, color: "#D32F2F" }}>{removeError}</Typography>
+        )}
       </StandardModal>
     </PageHeaderExtended>
   );

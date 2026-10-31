@@ -59,6 +59,9 @@ export const de: Record<string, string> = {
   "Organization changed": "Organisation gewechselt",
   "You logged in to another organization in another tab. Reloading.":
     "Sie haben sich in einem anderen Tab bei einer anderen Organisation angemeldet. Die Seite wird neu geladen.",
+  "Account changed": "Konto gewechselt",
+  "You signed in as another user in another tab. Reloading.":
+    "Sie haben sich in einem anderen Tab als anderer Benutzer angemeldet. Die Seite wird neu geladen.",
 };
 
 export const fr: Record<string, string> = {
@@ -119,6 +122,9 @@ export const fr: Record<string, string> = {
   "Organization changed": "Organisation modifiée",
   "You logged in to another organization in another tab. Reloading.":
     "Vous vous êtes connecté à une autre organisation dans un autre onglet. Rechargement.",
+  "Account changed": "Compte modifié",
+  "You signed in as another user in another tab. Reloading.":
+    "Vous vous êtes connecté avec un autre utilisateur dans un autre onglet. Rechargement.",
 };
 
 export const es: Record<string, string> = {
@@ -179,4 +185,7 @@ export const es: Record<string, string> = {
   "Organization changed": "Organización cambiada",
   "You logged in to another organization in another tab. Reloading.":
     "Iniciaste sesión en otra organización en otra pestaña. Recargando.",
+  "Account changed": "Cuenta cambiada",
+  "You signed in as another user in another tab. Reloading.":
+    "Iniciaste sesión con otro usuario en otra pestaña. Recargando.",
 };

@@ -327,6 +327,9 @@ export async function removeOrgUser(req: Request, res: Response) {
     if (error instanceof NotFoundException) {
       return res.status(404).json(STATUS_CODE[404](error.message));
     }
+    if (error instanceof ConflictException) {
+      return res.status(409).json(STATUS_CODE[409](error.message));
+    }
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
@@ -467,6 +470,9 @@ export async function updateUser(req: Request, res: Response) {
     if (error instanceof NotFoundException) {
       return res.status(404).json(STATUS_CODE[404](error.message));
     }
+    if (error instanceof ConflictException) {
+      return res.status(409).json(STATUS_CODE[409](error.message));
+    }
     if (error instanceof ForbiddenException) {
       return res.status(403).json(STATUS_CODE[403](error.message));
     }
@@ -489,6 +495,9 @@ export async function removeUser(req: Request, res: Response) {
   } catch (error) {
     if (error instanceof NotFoundException) {
       return res.status(404).json(STATUS_CODE[404](error.message));
+    }
+    if (error instanceof ConflictException) {
+      return res.status(409).json(STATUS_CODE[409](error.message));
     }
     if (error instanceof ForbiddenException) {
       return res.status(403).json(STATUS_CODE[403](error.message));

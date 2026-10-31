@@ -111,7 +111,22 @@ jest.mock("../../utils/role.utils", () => ({
   getRoleByIdQuery: jest.fn().mockResolvedValue({ name: "Admin" }),
 }));
 jest.mock("../../utils/invitation.utils", () => ({
+  getPendingInvitationQuery: jest.fn(),
   markInvitationAcceptedQuery: jest.fn().mockResolvedValue(1),
+}));
+jest.mock("../../utils/ssoConfig.utils", () => ({
+  isSSOFeatureEnabled: jest.fn(() => true),
+  getAzureADConfigForLoginQuery: jest
+    .fn()
+    .mockResolvedValue({ client_id: "c", tenant_id: "t", client_secret: "s" }),
+}));
+jest.mock("@azure/msal-node", () => ({
+  ConfidentialClientApplication: jest.fn().mockImplementation(() => ({
+    acquireTokenByCode: jest.fn().mockResolvedValue({
+      accessToken: "graph-token",
+      idTokenClaims: { roles: ["Reviewer"] },
+    } as never),
+  })),
 }));
 jest.mock("../../utils/organizationMember.utils", () => ({
   addOrganizationMemberQuery: jest.fn(),
@@ -229,6 +244,7 @@ import {
   deleteUserProfilePhoto,
   selectLoginOrganization,
   acceptInvitationAsExistingUser,
+  loginUserWithMicrosoft,
 } from "../user.ctrl";
 import {
   getAllUsersQuery,
@@ -243,7 +259,11 @@ import {
   deleteUserProfilePhotoQuery,
   isLastAdminQuery,
 } from "../../utils/user.utils";
-import { markInvitationAcceptedQuery } from "../../utils/invitation.utils";
+import {
+  getPendingInvitationQuery,
+  markInvitationAcceptedQuery,
+} from "../../utils/invitation.utils";
+import { UniqueConstraintError } from "sequelize";
 import {
   addOrganizationMemberQuery,
   getUserOrganizationsQuery,
@@ -1073,6 +1093,29 @@ describe("user.ctrl", () => {
       expect(mockAddMember).not.toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(409);
     });
+    it("should send an account without a password (SSO only) to Microsoft sign-in", async () => {
+      mockGetByEmail.mockResolvedValue(mockUser(buildUser({ password_hash: null })) as any);
+      const res = acceptRes();
+      await acceptInvitationAsExistingUser(acceptReq(), res);
+      expect(bcrypt.compare).not.toHaveBeenCalled();
+      expect(mockAddMember).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(409);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.stringContaining("Sign in with Microsoft") }),
+      );
+    });
+    it("should answer a second submit at once (a double click) with 409, not 500", async () => {
+      mockGetByEmail.mockResolvedValue(mockUser(buildUser()) as any);
+      mockOrganizations.mockResolvedValueOnce([ACME]);
+      mockAddMember.mockRejectedValueOnce(new UniqueConstraintError({}) as never);
+      const transaction = { commit: jest.fn(), rollback: jest.fn() };
+      (sequelize.transaction as jest.Mock).mockResolvedValueOnce(transaction as never);
+      const res = acceptRes();
+      await acceptInvitationAsExistingUser(acceptReq(), res);
+      expect(transaction.rollback).toHaveBeenCalled();
+      expect(generateUserTokens).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(409);
+    });
     it("should roll back the membership when the invitation cannot be marked accepted", async () => {
       mockGetByEmail.mockResolvedValue(mockUser(buildUser()) as any);
       mockOrganizations.mockResolvedValueOnce([ACME]);
@@ -1084,6 +1127,60 @@ describe("user.ctrl", () => {
       expect(transaction.rollback).toHaveBeenCalled();
       expect(transaction.commit).not.toHaveBeenCalled();
       expect(generateUserTokens).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(403);
+    });
+  });
+
+  describe("loginUserWithMicrosoft", () => {
+    const ssoReq = () =>
+      createReq({ body: { code: "code", organizationId: 2, redirectUri: "http://localhost" } });
+    const pending = (expiresInMs: number) => ({
+      id: 41,
+      role_id: 3,
+      expires_at_ms: Date.now() + expiresInMs,
+    });
+    let fetchSpy: jest.SpiedFunction<typeof fetch>;
+
+    beforeEach(() => {
+      fetchSpy = jest.spyOn(global, "fetch").mockResolvedValue({
+        ok: true,
+        json: async () => ({ id: "ms-1", mail: "a@b.com" }),
+      } as Response);
+    });
+    afterEach(() => fetchSpy.mockRestore());
+
+    it("should let an SSO-only account join through a pending invitation", async () => {
+      mockGetByEmail.mockResolvedValue(mockUser(buildUser({ password_hash: null })) as any);
+      mockOrganizations.mockResolvedValueOnce([ACME]);
+      (getPendingInvitationQuery as jest.Mock).mockResolvedValueOnce(pending(60_000) as never);
+      const res = createRes();
+      await loginUserWithMicrosoft(ssoReq(), res);
+      expect(markInvitationAcceptedQuery).toHaveBeenCalledWith(
+        2,
+        expect.objectContaining({ id: 41, roleId: 3 }),
+        expect.anything(),
+      );
+      // The SSO role (Reviewer, 2), as every SSO sign-in sets it.
+      expect(mockAddMember).toHaveBeenCalledWith(2, 1, 2, expect.anything());
+      expect(res.status).toHaveBeenCalledWith(202);
+    });
+    it("should refuse a non-member without a pending invitation", async () => {
+      mockGetByEmail.mockResolvedValue(mockUser(buildUser()) as any);
+      mockOrganizations.mockResolvedValueOnce([ACME]);
+      (getPendingInvitationQuery as jest.Mock).mockResolvedValueOnce(null as never);
+      const res = createRes();
+      await loginUserWithMicrosoft(ssoReq(), res);
+      expect(mockAddMember).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(403);
+    });
+    it("should refuse a non-member whose invitation has expired", async () => {
+      mockGetByEmail.mockResolvedValue(mockUser(buildUser()) as any);
+      mockOrganizations.mockResolvedValueOnce([ACME]);
+      (getPendingInvitationQuery as jest.Mock).mockResolvedValueOnce(pending(-1) as never);
+      const res = createRes();
+      await loginUserWithMicrosoft(ssoReq(), res);
+      expect(markInvitationAcceptedQuery).not.toHaveBeenCalled();
+      expect(mockAddMember).not.toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(403);
     });
   });

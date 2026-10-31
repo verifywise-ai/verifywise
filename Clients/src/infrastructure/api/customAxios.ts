@@ -59,6 +59,12 @@ const organizationOf = (token: string | null | undefined) => {
   return organizationId === null || organizationId === undefined ? null : Number(organizationId);
 };
 
+/** A token's user; null when the token cannot be read. */
+const userOf = (token: string | null | undefined) => {
+  const id = token ? extractUserToken(token)?.id : null;
+  return id === null || id === undefined ? null : Number(id);
+};
+
 /**
  * The auth middleware's 403 details that end the session, as the server
  * translates them (en, de, fr).
@@ -441,21 +447,27 @@ CustomAxios.interceptors.response.use(
         if (response.status === 200) {
           const newToken = response.data.data.token;
           // The refresh cookie is shared by every tab: a login in another tab
-          // moved this browser's session to another organization. This tab's
-          // screens and cache are the old organization's, so reload into the
-          // new one instead of retrying.
-          if (
-            organizationOf(store.getState().auth.authToken) !== response.data.data.organizationId
-          ) {
-            const switched = new Error("Session moved to another organization");
+          // moved this browser's session to another organization, or to
+          // another user. This tab's screens and cache are the old session's,
+          // so reload into the new one instead of retrying.
+          const currentToken = store.getState().auth.authToken;
+          const userChanged = userOf(currentToken) !== userOf(newToken);
+          if (userChanged || organizationOf(currentToken) !== response.data.data.organizationId) {
+            const switched = new Error(
+              userChanged
+                ? "Session moved to another account"
+                : "Session moved to another organization",
+            );
             processQueue(switched, null);
             if (claimLogout()) {
               startSession(store.dispatch, newToken);
               if (showAlertCallback) {
                 showAlertCallback({
                   variant: "info",
-                  title: "Organization changed",
-                  body: "You logged in to another organization in another tab. Reloading.",
+                  title: userChanged ? "Account changed" : "Organization changed",
+                  body: userChanged
+                    ? "You signed in as another user in another tab. Reloading."
+                    : "You logged in to another organization in another tab. Reloading.",
                 });
               }
               setTimeout(() => {

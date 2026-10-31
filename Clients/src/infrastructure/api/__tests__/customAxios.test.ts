@@ -673,8 +673,8 @@ describe("customAxios", () => {
 
     describe("refresh for another organization", () => {
       // Only the payload is read client-side.
-      const tokenFor = (organizationId: number | null) =>
-        `header.${btoa(JSON.stringify({ organizationId }))}.signature`;
+      const tokenFor = (organizationId: number | null, id = 7) =>
+        `header.${btoa(JSON.stringify({ id, organizationId }))}.signature`;
       const retried = vi.fn(async (config: any) => ({
         data: "retried",
         status: 200,
@@ -737,6 +737,30 @@ describe("customAxios", () => {
           expect.objectContaining({ title: "Organization changed" }),
         );
         expect(mockAssign).not.toHaveBeenCalled();
+        await vi.advanceTimersByTimeAsync(1500);
+        expect(mockAssign).toHaveBeenCalledWith("/");
+        setShowAlertCallback(null as any);
+      });
+
+      it("reloads as the new user after another user logs in to the same organization in another tab", async () => {
+        vi.useFakeTimers();
+        const alert = vi.fn();
+        setShowAlertCallback(alert);
+        const newToken = tokenFor(4, 8);
+        vi.spyOn(CustomAxios, "post").mockResolvedValueOnce({
+          status: 200,
+          data: { data: { token: newToken, organizationId: 4 } },
+        });
+
+        await expect(rejected(expiredRequest())).rejects.toThrow(
+          "Session moved to another account",
+        );
+
+        // The organization matches, but the screens and cache are the
+        // previous user's: no retry as someone else.
+        expect(retried).not.toHaveBeenCalled();
+        expect(queryClient.getQueryData(["projects"])).toBeUndefined();
+        expect(alert).toHaveBeenCalledWith(expect.objectContaining({ title: "Account changed" }));
         await vi.advanceTimersByTimeAsync(1500);
         expect(mockAssign).toHaveBeenCalledWith("/");
         setShowAlertCallback(null as any);

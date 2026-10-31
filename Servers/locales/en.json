@@ -927,6 +927,7 @@
   "You are not a member of any organization": "You are not a member of any organization",
   "A super admin cannot join an organization": "A super admin cannot join an organization",
   "User is already a member of this organization": "User is already a member of this organization",
+  "This account signs in with Microsoft. Sign in with Microsoft on this organization's login page to join it.": "This account signs in with Microsoft. Sign in with Microsoft on this organization's login page to join it.",
   "Forbidden: Only the user can change their own name or email": "Forbidden: Only the user can change their own name or email",
   "User is not a member of this organization": "User is not a member of this organization",
   "Join an organization on VerifyWise": "Join an organization on VerifyWise",
