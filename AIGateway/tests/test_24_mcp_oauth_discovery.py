@@ -64,7 +64,8 @@ async def test_well_known_fallback_paths():
             "authorization_servers": ["https://auth.example.com"]
         },
         ("GET", "https://auth.example.com/.well-known/oauth-authorization-server"): {
-            "token_endpoint": "https://auth.example.com/token"
+            "issuer": "https://auth.example.com/",
+            "token_endpoint": "https://auth.example.com/token",
         },
     })
     result = await discover_token_endpoint(SERVER, transport=transport)
@@ -77,6 +78,7 @@ async def test_oidc_fallback_for_cognito():
     transport = _transport({
         ("GET", "https://mcp.example.com/.well-known/oauth-protected-resource/mcp"): {"authorization_servers": [issuer]},
         ("GET", f"{issuer}/.well-known/openid-configuration"): {
+            "issuer": issuer,
             "token_endpoint": "https://pool.auth.us-east-1.amazoncognito.com/oauth2/token"
         },
     }, seen)
@@ -90,7 +92,7 @@ async def test_oidc_fallback_for_cognito():
 
 async def test_auth_method_post_when_basic_unsupported():
     def routes(methods):
-        meta = {"token_endpoint": "https://auth.example.com/token"}
+        meta = {"issuer": "https://auth.example.com", "token_endpoint": "https://auth.example.com/token"}
         if methods is not None:
             meta["token_endpoint_auth_methods_supported"] = methods
         return _transport({
@@ -123,11 +125,63 @@ async def test_unsafe_token_endpoint_rejected():
             "authorization_servers": ["https://auth.example.com"]
         },
         ("GET", "https://auth.example.com/.well-known/oauth-authorization-server"): {
+            "issuer": "https://auth.example.com",
             "token_endpoint": "http://169.254.169.254/token"
         },
     })
     with pytest.raises(OAuthDiscoveryError):
         await discover_token_endpoint(SERVER, transport=transport)
+
+
+async def test_unsafe_resource_metadata_url_is_skipped():
+    seen = []
+    transport = _transport({
+        ("POST", SERVER): httpx.Response(
+            401, headers={"WWW-Authenticate": 'Bearer resource_metadata="http://169.254.169.254/prm"'}
+        ),
+        ("GET", "https://mcp.example.com/.well-known/oauth-protected-resource/mcp"): {
+            "authorization_servers": ["https://auth.example.com"]
+        },
+        ("GET", "https://auth.example.com/.well-known/oauth-authorization-server"): {
+            "issuer": "https://auth.example.com",
+            "token_endpoint": "https://auth.example.com/token",
+        },
+    }, seen)
+    result = await discover_token_endpoint(SERVER, transport=transport)
+    assert result["token_url"] == "https://auth.example.com/token"
+    assert not any("169.254.169.254" in u for _, u in seen if _ == "GET")
+
+
+async def test_issuer_mismatch_skips_that_document():
+    issuer = "https://auth.example.com"
+    transport = _transport({
+        ("GET", "https://mcp.example.com/.well-known/oauth-protected-resource/mcp"): {"authorization_servers": [issuer]},
+        ("GET", f"{issuer}/.well-known/oauth-authorization-server"): {
+            "issuer": "https://evil.example.net",
+            "token_endpoint": "https://evil.example.net/token",
+        },
+        ("GET", f"{issuer}/.well-known/openid-configuration"): {
+            "issuer": f"{issuer}/",
+            "token_endpoint": "https://auth.example.com/real-token",
+        },
+    })
+    result = await discover_token_endpoint(SERVER, transport=transport)
+    assert result["token_url"] == "https://auth.example.com/real-token"
+
+
+async def test_issuer_mismatch_everywhere_is_not_found():
+    issuer = "https://auth.example.com"
+    transport = _transport({
+        ("GET", "https://mcp.example.com/.well-known/oauth-protected-resource/mcp"): {"authorization_servers": [issuer]},
+        ("GET", f"{issuer}/.well-known/oauth-authorization-server"): {
+            "issuer": "https://evil.example.net",
+            "token_endpoint": "https://evil.example.net/token",
+        },
+        ("GET", f"{issuer}/.well-known/openid-configuration"): {"token_endpoint": "https://auth.example.com/t"},
+    })
+    with pytest.raises(OAuthDiscoveryError) as exc:
+        await discover_token_endpoint(SERVER, transport=transport)
+    assert str(exc.value) == NOT_FOUND
 
 
 async def test_nothing_found_message():

@@ -74,7 +74,12 @@ async def _find_protected_resource(client: httpx.AsyncClient, server_url: str) -
     candidates = []
     advertised = await _resource_metadata_from_challenge(client, server_url)
     if advertised:
-        candidates.append(advertised)
+        try:
+            candidates.append(_safe(advertised))
+        except OAuthDiscoveryError:
+            # The server named an address we must not request: ignore it and
+            # fall back to the well-known paths.
+            logger.warning("Ignored an unsafe resource_metadata address in the server's 401 challenge")
     if path:
         candidates.append(f"{origin}/.well-known/oauth-protected-resource{path}")
     candidates.append(f"{origin}/.well-known/oauth-protected-resource")
@@ -95,7 +100,11 @@ async def _find_auth_server_metadata(client: httpx.AsyncClient, issuer: str) -> 
         f"{issuer.rstrip('/')}/.well-known/openid-configuration",
     ):
         doc = await _get_json(client, url)
-        if doc is not None and doc.get("token_endpoint"):
+        if doc is None or not doc.get("token_endpoint"):
+            continue
+        # RFC 8414 3.3: the document must name the issuer it was requested for.
+        claimed = doc.get("issuer")
+        if isinstance(claimed, str) and claimed.rstrip("/") == issuer.rstrip("/"):
             return doc
     return None
 
