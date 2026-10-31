@@ -217,7 +217,7 @@ describe("reading a run", () => {
   });
 });
 
-describe("GET /api/vendors/:id/research/latest", () => {
+describe("GET /api/v1/vendors/:id/research/latest", () => {
   /** A request agent for another role of the same organization and user. */
   async function requestAs(role: string, ctx: TenantContext) {
     const app: http.Server = await createTestApp({
@@ -234,7 +234,7 @@ describe("GET /api/vendors/:id/research/latest", () => {
 
     for (const role of ["Admin", "Editor", "Reviewer", "Auditor"]) {
       const request = await requestAs(role, seeded.owner);
-      const res = await request.get(`/api/vendors/${seeded.vendorId}/research/latest`);
+      const res = await request.get(`/api/v1/vendors/${seeded.vendorId}/research/latest`);
 
       expect(res.status).toBe(200);
       expect(res.body.data.status).toBe("running");
@@ -248,7 +248,9 @@ describe("GET /api/vendors/:id/research/latest", () => {
     await updateRunProgressQuery(seeded.owner.orgId, runId, progressOf());
     await finishRunQuery(finishInput(seeded.owner.orgId, runId, "completed"));
 
-    const res = await seeded.owner.request.get(`/api/vendors/${seeded.vendorId}/research/latest`);
+    const res = await seeded.owner.request.get(
+      `/api/v1/vendors/${seeded.vendorId}/research/latest`,
+    );
 
     expect(res.status).toBe(200);
     expect(res.body.data.status).toBe("completed");

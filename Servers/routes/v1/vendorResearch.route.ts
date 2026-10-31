@@ -6,10 +6,10 @@ import {
   getResearchConfig,
   getResearchSettings,
   saveResearchSettings,
-} from "../controllers/vendorResearch.ctrl";
+} from "../../controllers/vendorResearch.ctrl";
 
-import authenticateJWT from "../middleware/auth.middleware";
-import authorize from "../middleware/accessControl.middleware";
+import authenticateJWT from "../../middleware/auth.middleware";
+import authorize from "../../middleware/accessControl.middleware";
 
 // GET requests
 // What the vendor research button depends on. Any signed-in user may read it, and it holds no key.

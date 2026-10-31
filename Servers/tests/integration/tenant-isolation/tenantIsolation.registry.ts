@@ -169,35 +169,35 @@ export const tenantIsolationRegistry: IsolationEntity[] = [
   {
     name: "vendor_research_runs",
     tables: ["vendor_research_runs"],
-    baseRoute: "/api/vendors/:id/research",
+    baseRoute: "/api/v1/vendors/:id/research",
   },
   {
     name: "vendor_research_settings",
     tables: ["vendor_research_settings"],
-    baseRoute: "/api/vendor-research/settings",
+    baseRoute: "/api/v1/vendor-research/settings",
   },
   // No route of its own: the research pipeline writes it and the scheduled scan reads it.
   {
     name: "vendor_research_sources",
     tables: ["vendor_research_sources"],
-    baseRoute: "/api/vendors/:id/research",
+    baseRoute: "/api/v1/vendors/:id/research",
   },
   // No route of its own: the research pipeline writes it and reads it back at the next run.
   {
     name: "vendor_research_snapshots",
     tables: ["vendor_research_snapshots"],
-    baseRoute: "/api/vendors/:id/research",
+    baseRoute: "/api/v1/vendors/:id/research",
   },
   // No route of its own: the research pipeline writes it.
   {
     name: "vendor_vrdb_matches",
     tables: ["vendor_vrdb_matches"],
-    baseRoute: "/api/vendors/:id/research",
+    baseRoute: "/api/v1/vendors/:id/research",
   },
   {
     name: "vendor_risk_findings",
     tables: ["vendor_risk_findings"],
-    baseRoute: "/api/vendor-risk-findings",
+    baseRoute: "/api/v1/vendor-risk-findings",
   },
   {
     name: "file_change_history",

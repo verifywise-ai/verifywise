@@ -334,11 +334,11 @@ enum Likelihood {
 | GET | `/vendors/:id` | Get vendor by ID |
 | GET | `/vendors/project-id/:id` | Get vendors by project |
 | GET | `/vendors/:id/riskSuggestions` | Read-only vendor risk suggestions derived from the questionnaire |
-| POST | `/vendors/:id/research` | Start a research run for the vendor (`risks.edit`); see [Vendor Research Endpoints](#vendor-research-endpoints) |
-| GET | `/vendors/:id/research/latest` | Latest research run of the vendor, or `null` |
 | POST | `/vendors/` | Create vendor |
 | PATCH | `/vendors/:id` | Update vendor |
 | DELETE | `/vendors/:id` | Delete vendor |
+
+The research of a vendor (start a run, the latest run, the trace of a run) is served under `/api/v1/vendors/:id/research`, not here: see [Vendor Research Endpoints](#vendor-research-endpoints).
 
 ### Vendor Risk Endpoints
 
@@ -361,20 +361,20 @@ enum Likelihood {
 
 ### Vendor Research Endpoints
 
-Paths are under `/api`. A success body is `{ message, data }`. Every route needs a signed-in user; starting research and deciding a finding also need the `risks.edit` permission (Admin and Editor by default, custom roles as configured), so Reviewers and Auditors can read but get 403 on the three writes. The two routes about how the agent performs and the two routes of its settings need `llmKeys.admin` (the built-in Admin role): the first show queries, addresses and the way people decided, and the settings choose which LLM key the organization's data goes to, which the other roles do not need.
+The endpoints are served under `/api/v1` (ADR 0001: the research agent was added after the versioning policy), so the paths below, which are relative to `/api`, start with `/v1`. Vendor CRUD stays on the legacy `/api/vendors`. A success body is `{ message, data }`. Every route needs a signed-in user; starting research and deciding a finding also need the `risks.edit` permission (Admin and Editor by default, custom roles as configured), so Reviewers and Auditors can read but get 403 on the three writes. The two routes about how the agent performs and the two routes of its settings need `llmKeys.admin` (the built-in Admin role): the first show queries, addresses and the way people decided, and the settings choose which LLM key the organization's data goes to, which the other roles do not need.
 
 | Method | Endpoint | Access | Request | Success |
 |--------|----------|--------|---------|---------|
-| GET | `/vendor-research/config` | Any signed-in user | none | 200, `{ hasLlmKey, autoRunEnabled }` |
-| GET | `/vendor-risk-findings` | Any signed-in user | query: `status`, `vendorId`, `limit`, `offset` | 200, `{ rows, total }` |
-| POST | `/vendors/:id/research` | `risks.edit` | none | 202, `{ run, alreadyRunning }` |
-| GET | `/vendors/:id/research/latest` | Any signed-in user | none | 200, the run, or `null` |
-| POST | `/vendor-risk-findings/:id/accept` | `risks.edit` | body, all optional: `action_owner`, and the edits `risk_description`, `impact_description`, `action_plan`, `likelihood`, `risk_severity`, `risk_level`, `frameworks` | 200, `{ finding, vendorRisk }` |
-| POST | `/vendor-risk-findings/:id/dismiss` | `risks.edit` | body: `reason`, `note` (optional) | 200, the finding |
-| GET | `/vendors/:id/research/runs/:runId/trace` | `llmKeys.admin` | none | 200, the trace of the run |
-| GET | `/vendor-research/decision-stats` | `llmKeys.admin` | none | 200, `{ byPromptVersion, byCategory }` |
-| GET | `/vendor-research/settings` | `llmKeys.admin` | none | 200, `{ researchKeyId, analysisKeyId, scanIntervalDays }` (`null` where nothing is chosen) |
-| PUT | `/vendor-research/settings` | `llmKeys.admin` | body: `researchKeyId` and `analysisKeyId`, each a positive whole number or `null`; `scanIntervalDays` (optional), 7, 14, 30 or `null` | 200, what was kept, in the same shape |
+| GET | `/v1/vendor-research/config` | Any signed-in user | none | 200, `{ hasLlmKey, autoRunEnabled }` |
+| GET | `/v1/vendor-risk-findings` | Any signed-in user | query: `status`, `vendorId`, `limit`, `offset` | 200, `{ rows, total }` |
+| POST | `/v1/vendors/:id/research` | `risks.edit` | none | 202, `{ run, alreadyRunning }` |
+| GET | `/v1/vendors/:id/research/latest` | Any signed-in user | none | 200, the run, or `null` |
+| POST | `/v1/vendor-risk-findings/:id/accept` | `risks.edit` | body, all optional: `action_owner`, and the edits `risk_description`, `impact_description`, `action_plan`, `likelihood`, `risk_severity`, `risk_level`, `frameworks` | 200, `{ finding, vendorRisk }` |
+| POST | `/v1/vendor-risk-findings/:id/dismiss` | `risks.edit` | body: `reason`, `note` (optional) | 200, the finding |
+| GET | `/v1/vendors/:id/research/runs/:runId/trace` | `llmKeys.admin` | none | 200, the trace of the run |
+| GET | `/v1/vendor-research/decision-stats` | `llmKeys.admin` | none | 200, `{ byPromptVersion, byCategory }` |
+| GET | `/v1/vendor-research/settings` | `llmKeys.admin` | none | 200, `{ researchKeyId, analysisKeyId, scanIntervalDays }` (`null` where nothing is chosen) |
+| PUT | `/v1/vendor-research/settings` | `llmKeys.admin` | body: `researchKeyId` and `analysisKeyId`, each a positive whole number or `null`; `scanIntervalDays` (optional), 7, 14, 30 or `null` | 200, what was kept, in the same shape |
 
 **Config.** Booleans only, never a key. `hasLlmKey` is true when the organization has at least one LLM key, which is all that research needs to be set up; `autoRunEnabled` reflects `VENDOR_RESEARCH_AUTO_RUN`.
 
@@ -776,8 +776,8 @@ Not covered: researching all vendors at once on demand (the [scheduled scan](#th
 ### Flow
 
 ```
-POST /vendors  (VENDOR_RESEARCH_AUTO_RUN on)   POST /vendors/:id/research  (risks.edit)   hourly scan job (an interval is chosen)
-          └─────────────────────┬──────────────────────────┴────────────────────────────┘
+POST /vendors  (VENDOR_RESEARCH_AUTO_RUN on)   POST /v1/vendors/:id/research  (risks.edit)   hourly scan job (an interval is chosen)
+          └─────────────────────┬────────────────────────────┴─────────────────────────────┘
                                 ▼
             startVendorResearch: checks, then a vendor_research_runs row (queued)
                                 ▼
@@ -793,7 +793,7 @@ POST /vendors  (VENDOR_RESEARCH_AUTO_RUN on)   POST /vendors/:id/research  (risk
 **Triggers**
 
 - **Automatic.** `createVendor` calls `triggerAutoResearch` after the vendor is committed and does not wait for it, so it cannot fail the response. It starts nothing for a demo vendor or when `VENDOR_RESEARCH_AUTO_RUN` is `false`, and logs why. Otherwise it goes through `startVendorResearch`. Nothing returns early for a missing search setting, because there is none; when the start refuses for a missing LLM key or a reached daily cap, the reason is logged and no run is created. So in an organization with an LLM key every new vendor costs one run on that key, bounded by the daily cap (see [Limits](#limits)), and `VENDOR_RESEARCH_AUTO_RUN=false` turns the automatic part off.
-- **Manual.** `POST /vendors/:id/research`, from the **Research risks** button on the vendors table or **Research again** in the findings section.
+- **Manual.** `POST /v1/vendors/:id/research`, from the **Research risks** button on the vendors table or **Research again** in the findings section.
 - **Scheduled.** The hourly job of the scan starts the research of the vendors that are due, in each organization whose Admin chose an interval in **Research settings**. See [The scheduled scan](#the-scheduled-scan).
 
 All three go through `startVendorResearch` (`services/vendorResearch/trigger.ts`). Its checks, and so the 404, 409, 429 and 503 answers, are described under [Vendor Research Endpoints](#vendor-research-endpoints).
@@ -1271,15 +1271,16 @@ Vendors with `is_demo=true`:
 | `utils/vendor.utils.ts` | Vendor queries |
 | `utils/vendorRisk.utils.ts` | Risk queries |
 | `controllers/vendor.ctrl.ts` | Controller; `createVendor` starts the automatic research |
-| `routes/vendor.route.ts` | Routes, including `POST /:id/research` and `GET /:id/research/latest` |
+| `routes/vendor.route.ts` | Routes (vendor CRUD, legacy `/api/vendors`) |
 | `services/riskLinks/vendorReports.ts` | Exposure, duplicate and coverage reports |
 | `utils/vendorRiskReport.utils.ts` | Queries behind those reports |
 | `services/riskLinks/vendorCandidates.ts` | Vendor risk candidate notices |
 | `services/riskLinks/vendorRelated.ts` | Related vendor risk scoring and recompute |
 | `utils/vendorRiskLink.utils.ts` | Queries behind related vendor risk pairs |
 | `controllers/vendorResearch.ctrl.ts` | Research endpoints: start, latest run, config, findings list, accept, dismiss, the trace of a run, the decision statistics and the settings |
-| `routes/vendorResearch.route.ts` | `/vendor-research/config`, `/vendor-research/decision-stats` and `/vendor-research/settings` |
-| `routes/vendorRiskFindings.route.ts` | `/vendor-risk-findings` list, accept and dismiss |
+| `routes/v1/vendors.route.ts` | `/v1/vendors/:id/research`: start a run, the latest run and the trace of a run |
+| `routes/v1/vendorResearch.route.ts` | `/v1/vendor-research/config`, `/v1/vendor-research/decision-stats` and `/v1/vendor-research/settings` |
+| `routes/v1/vendorRiskFindings.route.ts` | `/v1/vendor-risk-findings` list, accept and dismiss |
 | `services/vendorResearch/trigger.ts` | `startVendorResearch` (checks, queued run, job) and `triggerAutoResearch` |
 | `services/vendorResearch/job.ts` | `handleVendorResearchJob`: runs the pipeline, then the assignee notice |
 | `services/vendorResearch/pipeline.ts` | `runVendorResearch`: one run from `queued` to `completed` or `failed` |

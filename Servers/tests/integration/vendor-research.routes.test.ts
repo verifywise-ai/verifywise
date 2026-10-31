@@ -247,16 +247,16 @@ const seedFindings = async (
 };
 
 // ---------------------------------------------------------------------------
-// POST /api/vendors/:id/research
+// POST /api/v1/vendors/:id/research
 // ---------------------------------------------------------------------------
 
-describe("POST /api/vendors/:id/research", () => {
+describe("POST /api/v1/vendors/:id/research", () => {
   it("starts a run for an Editor, and answers a second start with the run that is already active", async () => {
     const { owner } = await seedTwoTenantContexts(3);
     await seedLlmKey(owner.orgId);
     const vendorId = await createTestVendor(owner.orgId, { vendor_name: "Acme Corp" });
 
-    const first = await owner.request.post(`/api/vendors/${vendorId}/research`);
+    const first = await owner.request.post(`/api/v1/vendors/${vendorId}/research`);
 
     expect(first.status).toBe(202);
     expect(first.body.message).toBe("Accepted");
@@ -297,7 +297,7 @@ describe("POST /api/vendors/:id/research", () => {
     ]);
 
     // A second start right after returns the same run, and queues nothing more.
-    const second = await owner.request.post(`/api/vendors/${vendorId}/research`);
+    const second = await owner.request.post(`/api/v1/vendors/${vendorId}/research`);
 
     expect(second.status).toBe(202);
     expect(second.body.data.alreadyRunning).toBe(true);
@@ -317,23 +317,23 @@ describe("POST /api/vendors/:id/research", () => {
     // Positive control: an Editor of the same organization can start the run, so the 403 below
     // is not a missing route or a missing precondition.
     const editor = await requestAs("Editor", owner);
-    const started = await editor.post(`/api/vendors/${vendorId}/research`);
+    const started = await editor.post(`/api/v1/vendors/${vendorId}/research`);
     expect(started.status).toBe(202);
 
-    const denied = await owner.request.post(`/api/vendors/${vendorId}/research`);
+    const denied = await owner.request.post(`/api/v1/vendors/${vendorId}/research`);
 
     expect(denied.status).toBe(403);
     // Still the Editor's single run and single job.
     expect(await runsOf(vendorId)).toHaveLength(1);
     expect(researchJobs()).toHaveLength(1);
 
-    const latest = await owner.request.get(`/api/vendors/${vendorId}/research/latest`);
+    const latest = await owner.request.get(`/api/v1/vendors/${vendorId}/research/latest`);
     expect(latest.status).toBe(200);
     expect(latest.body.data).toMatchObject({ id: started.body.data.run.id, status: "queued" });
-    const config = await owner.request.get("/api/vendor-research/config");
+    const config = await owner.request.get("/api/v1/vendor-research/config");
     expect(config.status).toBe(200);
     expect(config.body.data).toEqual({ hasLlmKey: true, autoRunEnabled: true });
-    const findings = await owner.request.get("/api/vendor-risk-findings");
+    const findings = await owner.request.get("/api/v1/vendor-risk-findings");
     expect(findings.status).toBe(200);
     expect(findings.body.data).toEqual({ rows: [], total: 0 });
   });
@@ -346,14 +346,16 @@ describe("POST /api/vendors/:id/research", () => {
     const vendorId = await createTestVendor(owner.orgId, { vendor_name: "Acme Corp" });
 
     // Positive controls: the owner can start a run and read it back.
-    const started = await owner.request.post(`/api/vendors/${vendorId}/research`);
+    const started = await owner.request.post(`/api/v1/vendors/${vendorId}/research`);
     expect(started.status).toBe(202);
-    const latest = await owner.request.get(`/api/vendors/${vendorId}/research/latest`);
+    const latest = await owner.request.get(`/api/v1/vendors/${vendorId}/research/latest`);
     expect(latest.status).toBe(200);
     expect(latest.body.data.id).toBe(started.body.data.run.id);
 
-    const attackerStart = await attacker.request.post(`/api/vendors/${vendorId}/research`);
-    const attackerLatest = await attacker.request.get(`/api/vendors/${vendorId}/research/latest`);
+    const attackerStart = await attacker.request.post(`/api/v1/vendors/${vendorId}/research`);
+    const attackerLatest = await attacker.request.get(
+      `/api/v1/vendors/${vendorId}/research/latest`,
+    );
 
     expect(attackerStart.status).toBe(404);
     expect(attackerLatest.status).toBe(404);
@@ -366,7 +368,7 @@ describe("POST /api/vendors/:id/research", () => {
   it("refuses with 409 when the LLM key is missing, and with 429 and Retry-After during the cooldown", async () => {
     const { owner } = await seedTwoTenantContexts(3);
     const vendorId = await createTestVendor(owner.orgId);
-    const url = `/api/vendors/${vendorId}/research`;
+    const url = `/api/v1/vendors/${vendorId}/research`;
 
     // The organization has no LLM key.
     const noKey = await owner.request.post(url);
@@ -419,7 +421,7 @@ describe("POST /api/vendors/:id/research", () => {
     }
 
     // Positive control: two runs that are waiting for their jobs use up the cap of two.
-    const capped = await owner.request.post(`/api/vendors/${vendorId}/research`);
+    const capped = await owner.request.post(`/api/v1/vendors/${vendorId}/research`);
     expect(capped.status).toBe(429);
     expect(capped.body.data).toEqual({ code: "daily_cap" });
     expect(await runsOf(vendorId)).toEqual([]);
@@ -431,7 +433,7 @@ describe("POST /api/vendors/:id/research", () => {
        WHERE vendor_id IN (:lostVendors)`,
       { replacements: { lostVendors } },
     );
-    const started = await owner.request.post(`/api/vendors/${vendorId}/research`);
+    const started = await owner.request.post(`/api/v1/vendors/${vendorId}/research`);
 
     expect(started.status).toBe(202);
     expect(started.body.data.alreadyRunning).toBe(false);
@@ -447,23 +449,23 @@ describe("POST /api/vendors/:id/research", () => {
     const vendorId = await createTestVendor(owner.orgId);
     // Positive control: the same route works with a real id.
     await seedLlmKey(owner.orgId);
-    expect((await owner.request.post(`/api/vendors/${vendorId}/research`)).status).toBe(202);
+    expect((await owner.request.post(`/api/v1/vendors/${vendorId}/research`)).status).toBe(202);
 
-    expect((await owner.request.post("/api/vendors/abc/research")).status).toBe(400);
-    expect((await owner.request.get("/api/vendors/abc/research/latest")).status).toBe(400);
+    expect((await owner.request.post("/api/v1/vendors/abc/research")).status).toBe(400);
+    expect((await owner.request.get("/api/v1/vendors/abc/research/latest")).status).toBe(400);
   });
 });
 
 // ---------------------------------------------------------------------------
-// GET /api/vendors/:id/research/latest
+// GET /api/v1/vendors/:id/research/latest
 // ---------------------------------------------------------------------------
 
-describe("GET /api/vendors/:id/research/latest", () => {
+describe("GET /api/v1/vendors/:id/research/latest", () => {
   it("answers null for a vendor that was never researched", async () => {
     const { owner } = await seedTwoTenantContexts(3);
     const vendorId = await createTestVendor(owner.orgId);
 
-    const res = await owner.request.get(`/api/vendors/${vendorId}/research/latest`);
+    const res = await owner.request.get(`/api/v1/vendors/${vendorId}/research/latest`);
 
     expect(res.status).toBe(200);
     expect(res.body.data).toBeNull();
@@ -481,7 +483,7 @@ describe("GET /api/vendors/:id/research/latest", () => {
     await markRunRunningQuery(owner.orgId, run.id);
 
     // Positive control: a run that started a moment ago is still running.
-    const fresh = await owner.request.get(`/api/vendors/${vendorId}/research/latest`);
+    const fresh = await owner.request.get(`/api/v1/vendors/${vendorId}/research/latest`);
     expect(fresh.status).toBe(200);
     expect(fresh.body.data).toMatchObject({
       id: run.id,
@@ -494,7 +496,7 @@ describe("GET /api/vendors/:id/research/latest", () => {
       `UPDATE vendor_research_runs SET started_at = NOW() - INTERVAL '20 minutes' WHERE id = :runId`,
       { replacements: { runId: run.id } },
     );
-    const stale = await owner.request.get(`/api/vendors/${vendorId}/research/latest`);
+    const stale = await owner.request.get(`/api/v1/vendors/${vendorId}/research/latest`);
 
     expect(stale.status).toBe(200);
     expect(stale.body.data).toMatchObject({ id: run.id, status: "failed", error: "timed out" });
@@ -509,7 +511,7 @@ describe("GET /api/vendors/:id/research/latest", () => {
     const { owner } = await seedTwoTenantContexts(3);
     const { vendorId, runId } = await seedFindings(owner, "Acme Corp");
 
-    const res = await owner.request.get(`/api/vendors/${vendorId}/research/latest`);
+    const res = await owner.request.get(`/api/v1/vendors/${vendorId}/research/latest`);
 
     expect(res.status).toBe(200);
     expect(Object.keys(res.body.data).sort()).toEqual(RUN_RESPONSE_FIELDS);
@@ -539,15 +541,15 @@ describe("GET /api/vendors/:id/research/latest", () => {
 });
 
 // ---------------------------------------------------------------------------
-// GET /api/vendors/:id/research/runs/:runId/trace
+// GET /api/v1/vendors/:id/research/runs/:runId/trace
 // ---------------------------------------------------------------------------
 
-describe("GET /api/vendors/:id/research/runs/:runId/trace", () => {
+describe("GET /api/v1/vendors/:id/research/runs/:runId/trace", () => {
   it("gives an Admin the trace of a finished run", async () => {
     const { owner } = await seedTwoTenantContexts(1);
     const { vendorId, runId } = await seedFindings(owner, "Acme Corp");
 
-    const res = await owner.request.get(`/api/vendors/${vendorId}/research/runs/${runId}/trace`);
+    const res = await owner.request.get(`/api/v1/vendors/${vendorId}/research/runs/${runId}/trace`);
 
     expect(res.status).toBe(200);
     expect(res.body.data).toEqual(TRACE);
@@ -560,7 +562,7 @@ describe("GET /api/vendors/:id/research/runs/:runId/trace", () => {
 
     for (const role of ["Editor", "Reviewer", "Auditor"]) {
       const request = await requestAs(role, owner);
-      const res = await request.get(`/api/vendors/${vendorId}/research/runs/${runId}/trace`);
+      const res = await request.get(`/api/v1/vendors/${vendorId}/research/runs/${runId}/trace`);
 
       expect(res.status).toBe(403);
       expect(res.text).not.toContain(TRACE_SENTINEL);
@@ -573,10 +575,10 @@ describe("GET /api/vendors/:id/research/runs/:runId/trace", () => {
     const otherVendorId = await createTestVendor(owner.orgId, { vendor_name: "Other Corp" });
 
     const fromAttacker = await attacker.request.get(
-      `/api/vendors/${vendorId}/research/runs/${runId}/trace`,
+      `/api/v1/vendors/${vendorId}/research/runs/${runId}/trace`,
     );
     const throughOtherVendor = await owner.request.get(
-      `/api/vendors/${otherVendorId}/research/runs/${runId}/trace`,
+      `/api/v1/vendors/${otherVendorId}/research/runs/${runId}/trace`,
     );
 
     expect(fromAttacker.status).toBe(404);
@@ -596,10 +598,10 @@ describe("GET /api/vendors/:id/research/runs/:runId/trace", () => {
     });
 
     const queued = await owner.request.get(
-      `/api/vendors/${vendorId}/research/runs/${run.id}/trace`,
+      `/api/v1/vendors/${vendorId}/research/runs/${run.id}/trace`,
     );
-    const badRun = await owner.request.get(`/api/vendors/${vendorId}/research/runs/abc/trace`);
-    const badVendor = await owner.request.get(`/api/vendors/abc/research/runs/${run.id}/trace`);
+    const badRun = await owner.request.get(`/api/v1/vendors/${vendorId}/research/runs/abc/trace`);
+    const badVendor = await owner.request.get(`/api/v1/vendors/abc/research/runs/${run.id}/trace`);
 
     expect(queued.status).toBe(404);
     expect(badRun.status).toBe(400);
@@ -608,10 +610,10 @@ describe("GET /api/vendors/:id/research/runs/:runId/trace", () => {
 });
 
 // ---------------------------------------------------------------------------
-// GET /api/vendor-research/decision-stats
+// GET /api/v1/vendor-research/decision-stats
 // ---------------------------------------------------------------------------
 
-describe("GET /api/vendor-research/decision-stats", () => {
+describe("GET /api/v1/vendor-research/decision-stats", () => {
   it("gives an Admin the decisions of the organization by prompt version, and only its own", async () => {
     const { owner, attacker } = await seedTwoTenantContexts(1);
     const { inserted } = await seedFindings(owner, "Acme Corp");
@@ -624,7 +626,7 @@ describe("GET /api/vendor-research/decision-stats", () => {
       userId: owner.userId,
     });
 
-    const res = await owner.request.get("/api/vendor-research/decision-stats");
+    const res = await owner.request.get("/api/v1/vendor-research/decision-stats");
 
     expect(res.status).toBe(200);
     // The two findings of the owner's run: one dismissed as a wrong company, one still pending.
@@ -648,23 +650,23 @@ describe("GET /api/vendor-research/decision-stats", () => {
 
     for (const role of ["Editor", "Reviewer", "Auditor"]) {
       const request = await requestAs(role, owner);
-      const res = await request.get("/api/vendor-research/decision-stats");
+      const res = await request.get("/api/v1/vendor-research/decision-stats");
       expect(res.status).toBe(403);
     }
   });
 });
 
 // ---------------------------------------------------------------------------
-// GET /api/vendor-research/config
+// GET /api/v1/vendor-research/config
 // ---------------------------------------------------------------------------
 
-describe("GET /api/vendor-research/config", () => {
+describe("GET /api/v1/vendor-research/config", () => {
   it("tells each organization what is set up for it, and never returns a key", async () => {
     const { owner, attacker } = await seedTwoTenantContexts(3);
     await seedLlmKey(owner.orgId);
 
-    const ownerConfig = await owner.request.get("/api/vendor-research/config");
-    const attackerConfig = await attacker.request.get("/api/vendor-research/config");
+    const ownerConfig = await owner.request.get("/api/v1/vendor-research/config");
+    const attackerConfig = await attacker.request.get("/api/v1/vendor-research/config");
 
     expect(ownerConfig.status).toBe(200);
     expect(ownerConfig.body.data).toEqual({ hasLlmKey: true, autoRunEnabled: true });
@@ -678,10 +680,10 @@ describe("GET /api/vendor-research/config", () => {
 });
 
 // ---------------------------------------------------------------------------
-// GET /api/vendor-risk-findings
+// GET /api/v1/vendor-risk-findings
 // ---------------------------------------------------------------------------
 
-describe("GET /api/vendor-risk-findings", () => {
+describe("GET /api/v1/vendor-risk-findings", () => {
   it("lists the pending findings newest run first and in stored order inside a run, with the vendor name", async () => {
     const { owner } = await seedTwoTenantContexts(3);
     const acme = await seedFindings(owner, "Acme Corp");
@@ -689,7 +691,7 @@ describe("GET /api/vendor-risk-findings", () => {
     const [first, second] = acme.inserted;
     const [newest] = globex.inserted;
 
-    const res = await owner.request.get("/api/vendor-risk-findings");
+    const res = await owner.request.get("/api/v1/vendor-risk-findings");
 
     expect(res.status).toBe(200);
     expect(res.body.data.total).toBe(3);
@@ -729,7 +731,7 @@ describe("GET /api/vendor-risk-findings", () => {
     const marked: NewFinding = { ...SECOND_FINDING, snippet_only: true };
     await seedFindings(owner, "Acme Corp", [FINDING, marked]);
 
-    const res = await owner.request.get("/api/vendor-risk-findings");
+    const res = await owner.request.get("/api/v1/vendor-risk-findings");
 
     expect(res.status).toBe(200);
     // A finding that was never marked is stored as false, not as null.
@@ -756,11 +758,11 @@ describe("GET /api/vendor-risk-findings", () => {
       res.body.data.rows.map((row) => row.id);
 
     // Pending is the default.
-    const pending = await owner.request.get("/api/vendor-risk-findings");
+    const pending = await owner.request.get("/api/v1/vendor-risk-findings");
     expect(idsOf(pending)).toEqual([newest.id, second.id]);
     expect(pending.body.data.total).toBe(2);
 
-    const dismissed = await owner.request.get("/api/vendor-risk-findings?status=dismissed");
+    const dismissed = await owner.request.get("/api/v1/vendor-risk-findings?status=dismissed");
     expect(idsOf(dismissed)).toEqual([first.id]);
     expect(dismissed.body.data.rows[0]).toMatchObject({
       status: "dismissed",
@@ -768,21 +770,21 @@ describe("GET /api/vendor-risk-findings", () => {
       vendor_name: "Acme Corp",
     });
 
-    const accepted = await owner.request.get("/api/vendor-risk-findings?status=accepted");
+    const accepted = await owner.request.get("/api/v1/vendor-risk-findings?status=accepted");
     expect(accepted.body.data).toEqual({ rows: [], total: 0 });
 
     const ofAcme = await owner.request.get(
-      `/api/vendor-risk-findings?vendorId=${acme.vendorId}&status=dismissed`,
+      `/api/v1/vendor-risk-findings?vendorId=${acme.vendorId}&status=dismissed`,
     );
     expect(idsOf(ofAcme)).toEqual([first.id]);
 
-    const page = await owner.request.get("/api/vendor-risk-findings?limit=1&offset=1");
+    const page = await owner.request.get("/api/v1/vendor-risk-findings?limit=1&offset=1");
     expect(idsOf(page)).toEqual([second.id]);
     expect(page.body.data.total).toBe(2);
 
     // A bad parameter is the caller's mistake, not an empty list.
-    expect((await owner.request.get("/api/vendor-risk-findings?limit=abc")).status).toBe(400);
-    expect((await owner.request.get("/api/vendor-risk-findings?status=open")).status).toBe(400);
+    expect((await owner.request.get("/api/v1/vendor-risk-findings?limit=abc")).status).toBe(400);
+    expect((await owner.request.get("/api/v1/vendor-risk-findings?status=open")).status).toBe(400);
   });
 
   it("lists only the findings of the caller's organization, also when it names another organization's vendor", async () => {
@@ -791,13 +793,13 @@ describe("GET /api/vendor-risk-findings", () => {
     const globex = await seedFindings(attacker, "Globex", [FINDING]);
 
     // Positive controls: each organization sees its own findings.
-    const ownerList = await owner.request.get("/api/vendor-risk-findings");
+    const ownerList = await owner.request.get("/api/v1/vendor-risk-findings");
     expect(ownerList.status).toBe(200);
     expect(ownerList.body.data.rows.map((row: { id: number }) => row.id)).toEqual(
       acme.inserted.map((finding) => finding.id),
     );
 
-    const attackerList = await attacker.request.get("/api/vendor-risk-findings");
+    const attackerList = await attacker.request.get("/api/v1/vendor-risk-findings");
     expect(attackerList.status).toBe(200);
     expect(attackerList.body.data.rows.map((row: { id: number }) => row.id)).toEqual(
       globex.inserted.map((finding) => finding.id),
@@ -806,9 +808,73 @@ describe("GET /api/vendor-risk-findings", () => {
     expect(attackerList.text).not.toContain("Acme Corp");
 
     const named = await attacker.request.get(
-      `/api/vendor-risk-findings?vendorId=${acme.vendorId}&status=pending`,
+      `/api/v1/vendor-risk-findings?vendorId=${acme.vendorId}&status=pending`,
     );
     expect(named.status).toBe(200);
     expect(named.body.data).toEqual({ rows: [], total: 0 });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The versioned API (ADR 0001, section 11)
+// ---------------------------------------------------------------------------
+
+/**
+ * The ten endpoints of the research API, as [method, path]. The ids need not exist: the token is
+ * checked before anything looks at them.
+ */
+const RESEARCH_ENDPOINTS: Array<[method: "get" | "post" | "put", path: string]> = [
+  ["post", "/api/v1/vendors/1/research"],
+  ["get", "/api/v1/vendors/1/research/latest"],
+  ["get", "/api/v1/vendors/1/research/runs/1/trace"],
+  ["get", "/api/v1/vendor-research/config"],
+  ["get", "/api/v1/vendor-research/decision-stats"],
+  ["get", "/api/v1/vendor-research/settings"],
+  ["put", "/api/v1/vendor-research/settings"],
+  ["get", "/api/v1/vendor-risk-findings"],
+  ["post", "/api/v1/vendor-risk-findings/1/accept"],
+  ["post", "/api/v1/vendor-risk-findings/1/dismiss"],
+];
+
+describe("the research API is served under /api/v1", () => {
+  // The real authenticateJWT: no bypass, so the token decides.
+  let anonymous: ReturnType<typeof testRequest>;
+
+  beforeAll(async () => {
+    anonymous = testRequest(await createTestApp());
+  });
+
+  it.each(RESEARCH_ENDPOINTS)("%s %s: no token is a 400, Token not found", async (method, path) => {
+    const res = await anonymous[method](path);
+
+    expect(res.status).toBe(400);
+    expect(res.body.data.message).toBe("Token not found");
+  });
+
+  it.each(RESEARCH_ENDPOINTS)("%s %s: a token that is not valid is a 401", async (method, path) => {
+    const res = await anonymous[method](path).set("Authorization", "Bearer invalid");
+
+    expect(res.status).toBe(401);
+  });
+
+  it("has no copy on the unversioned paths", async () => {
+    const { owner } = await seedTwoTenantContexts(3);
+    await seedLlmKey(owner.orgId);
+    const vendorId = await createTestVendor(owner.orgId);
+    // Positive control: the same Editor reaches the versioned config. The vendor exists and the
+    // key is set, so a router that still served an unversioned call below would answer it 200 or
+    // 202, and a 404 can only mean that there is no route.
+    expect((await owner.request.get("/api/v1/vendor-research/config")).status).toBe(200);
+
+    const answers = [
+      await owner.request.get("/api/vendor-research/config"),
+      await owner.request.get("/api/vendor-risk-findings"),
+      await owner.request.post(`/api/vendors/${vendorId}/research`),
+      await owner.request.get(`/api/vendors/${vendorId}/research/latest`),
+    ];
+
+    expect(answers.map((res) => res.status)).toEqual([404, 404, 404, 404]);
+    expect(await runsOf(vendorId)).toEqual([]);
+    expect(researchJobs()).toEqual([]);
   });
 });

@@ -135,7 +135,7 @@ describe("the credibility of a finding, stored and served", () => {
       },
     ]);
 
-    const res = await owner.request.get("/api/vendor-risk-findings?status=pending");
+    const res = await owner.request.get("/api/v1/vendor-risk-findings?status=pending");
     expect(res.status).toBe(200);
     expect(res.body.data.rows).toHaveLength(1);
     expect(res.body.data.rows[0]).toMatchObject({
@@ -159,7 +159,7 @@ describe("the credibility of a finding, stored and served", () => {
     const { credibility: _label, credibility_basis: _basis, ...withoutLabel } = FINDING;
     await seedFindings(owner, [withoutLabel]);
 
-    const res = await owner.request.get("/api/vendor-risk-findings?status=pending");
+    const res = await owner.request.get("/api/v1/vendor-risk-findings?status=pending");
 
     expect(res.status).toBe(200);
     expect(res.body.data.rows[0]).toMatchObject({
@@ -178,7 +178,7 @@ describe("the credibility of a finding, stored and served", () => {
     })) as Array<{ id: number }>;
 
     const res = await owner.request
-      .post(`/api/vendor-risk-findings/${finding.id}/dismiss`)
+      .post(`/api/v1/vendor-risk-findings/${finding.id}/dismiss`)
       .send({ reason: "not_applicable" });
 
     expect(res.status).toBe(200);
@@ -219,7 +219,7 @@ describe("the coverage of a run, stored and served", () => {
     )) as Array<Record<string, unknown>>;
     expect(stored).toEqual([{ coverage: COVERAGE, registry_version: "sr-2" }]);
 
-    const res = await owner.request.get(`/api/vendors/${vendorId}/research/latest`);
+    const res = await owner.request.get(`/api/v1/vendors/${vendorId}/research/latest`);
     expect(res.status).toBe(200);
     expect(res.body.data.coverage).toEqual(COVERAGE);
   });
@@ -246,7 +246,7 @@ describe("the coverage of a run, stored and served", () => {
       registryVersion: null,
     });
 
-    const res = await owner.request.get(`/api/vendors/${vendorId}/research/latest`);
+    const res = await owner.request.get(`/api/v1/vendors/${vendorId}/research/latest`);
     expect(res.body.data.coverage).toBeNull();
   });
 });

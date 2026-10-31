@@ -20,6 +20,9 @@ import modelLifecycleChangeHistoryRoutes from "./modelLifecycleChangeHistory.rou
 import controlEUChangeHistoryRoutes from "./controlEUChangeHistory.route";
 import subcontrolEUChangeHistoryRoutes from "./subcontrolEUChangeHistory.route";
 import annexCategoryChangeHistoryRoutes from "./annexCategoryChangeHistory.route";
+import vendorsRoutes from "./vendors.route";
+import vendorResearchRoutes from "./vendorResearch.route";
+import vendorRiskFindingsRoutes from "./vendorRiskFindings.route";
 
 const router = express.Router();
 
@@ -34,5 +37,11 @@ router.use("/model-lifecycle-change-history", modelLifecycleChangeHistoryRoutes)
 router.use("/control-eu-change-history", controlEUChangeHistoryRoutes);
 router.use("/subcontrol-eu-change-history", subcontrolEUChangeHistoryRoutes);
 router.use("/annex-category-change-history", annexCategoryChangeHistoryRoutes);
+
+// Vendor research agent and its findings, added after ADR 0001. Vendor CRUD stays legacy
+// (/api/vendors), so /vendors holds the research sub-routes only.
+router.use("/vendors", vendorsRoutes);
+router.use("/vendor-research", vendorResearchRoutes);
+router.use("/vendor-risk-findings", vendorRiskFindingsRoutes);
 
 export default router;

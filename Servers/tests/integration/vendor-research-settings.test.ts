@@ -19,7 +19,7 @@ import { createTestApp, testRequest } from "./setup";
 import { getVendorResearchSettingsQuery } from "../../utils/vendorResearch.utils";
 import { resolveOrgModel } from "../../services/vendorResearch/pipeline";
 
-const SETTINGS = "/api/vendor-research/settings";
+const SETTINGS = "/api/v1/vendor-research/settings";
 
 afterEach(async () => {
   await cleanupDatabase();
@@ -59,7 +59,7 @@ const rowOf = async (orgId: number) =>
     )) as Array<Record<string, unknown>>
   )[0];
 
-describe("GET /api/vendor-research/settings", () => {
+describe("GET /api/v1/vendor-research/settings", () => {
   it("says that nothing is chosen for an organization that has chosen nothing", async () => {
     const { owner } = await seedTwoTenantContexts(1);
 
@@ -102,7 +102,7 @@ describe("GET /api/vendor-research/settings", () => {
   });
 });
 
-describe("PUT /api/vendor-research/settings", () => {
+describe("PUT /api/v1/vendor-research/settings", () => {
   it("saves the two keys for the organization and records who chose", async () => {
     const { owner } = await seedTwoTenantContexts(1);
     const research = await seedKey(owner.orgId, "gpt-fast");

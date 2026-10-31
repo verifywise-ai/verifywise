@@ -126,10 +126,11 @@ const getEnvelopeErrorMessage = (data: ApiErrorEnvelope): string | undefined => 
 // RegExp is tested against the whole URL and must not use the g or y flag,
 // which make test() depend on earlier calls. The vendor research screens show
 // their own messages for starting a run (a refusal is a normal answer) and for
-// polling the latest run, so exactly those two paths are listed.
+// polling the latest run, so exactly those two paths are listed (versioned:
+// the research API is served under /api/v1).
 const ENDPOINTS_WITH_CUSTOM_ERROR_UI: Array<string | RegExp> = [
   "/users/login",
-  /^\/vendors\/\d+\/research(\/latest)?$/,
+  /^\/v1\/vendors\/\d+\/research(\/latest)?$/,
 ];
 
 const hasCustomErrorUI = (url: string) =>

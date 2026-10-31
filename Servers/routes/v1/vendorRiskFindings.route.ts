@@ -5,10 +5,10 @@ import {
   acceptVendorRiskFinding,
   dismissVendorRiskFinding,
   listVendorRiskFindings,
-} from "../controllers/vendorResearch.ctrl";
+} from "../../controllers/vendorResearch.ctrl";
 
-import authenticateJWT from "../middleware/auth.middleware";
-import authorize from "../middleware/accessControl.middleware";
+import authenticateJWT from "../../middleware/auth.middleware";
+import authorize from "../../middleware/accessControl.middleware";
 
 // GET requests
 // Read-only, so authenticateJWT only: every role may see what research found.

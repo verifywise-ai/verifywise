@@ -420,13 +420,13 @@ describe("customAxios", () => {
       ],
       ["a server error (500)", 500, { message: "Internal Server Error", error: "boom" }],
     ])("shows no toast when starting research is refused with %s", async (_, status, data) => {
-      const toasts = await toastsFor(failed("/vendors/3/research", status, data));
+      const toasts = await toastsFor(failed("/v1/vendors/3/research", status, data));
 
       expect(toasts).not.toHaveBeenCalled();
     });
 
     it("shows no toast when starting research cannot reach the server", async () => {
-      const toasts = await toastsFor(unreachable("/vendors/3/research"));
+      const toasts = await toastsFor(unreachable("/v1/vendors/3/research"));
 
       expect(toasts).not.toHaveBeenCalled();
     });
@@ -435,13 +435,13 @@ describe("customAxios", () => {
       ["a server error", 500, { message: "Internal Server Error", error: "boom" }],
       ["a bad vendor id", 400, { message: "Bad Request", data: "Invalid vendor ID" }],
     ])("shows no toast when the latest run fails with %s", async (_, status, data) => {
-      const toasts = await toastsFor(failed("/vendors/3/research/latest", status, data));
+      const toasts = await toastsFor(failed("/v1/vendors/3/research/latest", status, data));
 
       expect(toasts).not.toHaveBeenCalled();
     });
 
     it("shows no toast when the latest run cannot be reached", async () => {
-      const toasts = await toastsFor(unreachable("/vendors/3/research/latest"));
+      const toasts = await toastsFor(unreachable("/v1/vendors/3/research/latest"));
 
       expect(toasts).not.toHaveBeenCalled();
     });
@@ -457,15 +457,15 @@ describe("customAxios", () => {
     // Only the two calls above are left to their screens. The rest of the research API, and
     // anything whose path merely looks like them, keeps the global toast.
     it.each([
-      ["the findings list", "/vendor-risk-findings?status=pending", 400],
-      ["the findings list", "/vendor-risk-findings", 500],
-      ["accepting a finding", "/vendor-risk-findings/9/accept", 409],
-      ["dismissing a finding", "/vendor-risk-findings/9/dismiss", 409],
-      ["the research settings", "/vendor-research/config", 500],
+      ["the findings list", "/v1/vendor-risk-findings?status=pending", 400],
+      ["the findings list", "/v1/vendor-risk-findings", 500],
+      ["accepting a finding", "/v1/vendor-risk-findings/9/accept", 409],
+      ["dismissing a finding", "/v1/vendor-risk-findings/9/dismiss", 409],
+      ["the research settings", "/v1/vendor-research/config", 500],
       ["a vendor", "/vendors/3", 500],
-      ["a path below the latest run", "/vendors/3/research/latest/details", 500],
-      ["a sibling of the research path", "/vendors/3/research-notes", 500],
-      ["a research path without a vendor id", "/vendors/all/research", 500],
+      ["a path below the latest run", "/v1/vendors/3/research/latest/details", 500],
+      ["a sibling of the research path", "/v1/vendors/3/research-notes", 500],
+      ["a research path without a vendor id", "/v1/vendors/all/research", 500],
     ])("still shows the toast when %s (%s) fails with %i", async (_, url, status) => {
       const toasts = await toastsFor(
         failed(url, status, { message: "Failure", data: "Something failed" }),

@@ -125,7 +125,7 @@ async function requestAs(role: string, ctx: TenantContext) {
   return testRequest(app);
 }
 
-const BASE = "/api/vendor-risk-findings";
+const BASE = "/api/v1/vendor-risk-findings";
 const acceptUrl = (findingId: number | string) => `${BASE}/${findingId}/accept`;
 const dismissUrl = (findingId: number | string) => `${BASE}/${findingId}/dismiss`;
 
@@ -268,10 +268,10 @@ const startDecision = async (findingId: number) => {
 };
 
 // ---------------------------------------------------------------------------
-// POST /api/vendor-risk-findings/:id/accept
+// POST /api/v1/vendor-risk-findings/:id/accept
 // ---------------------------------------------------------------------------
 
-describe("POST /api/vendor-risk-findings/:id/accept", () => {
+describe("POST /api/v1/vendor-risk-findings/:id/accept", () => {
   it("creates the risk, records its creation and marks the finding accepted", async () => {
     const { owner } = await seedTwoTenantContexts(3);
     const { vendorId, inserted } = await seedFindings(owner);
@@ -977,10 +977,10 @@ describe("POST /api/vendor-risk-findings/:id/accept", () => {
 });
 
 // ---------------------------------------------------------------------------
-// POST /api/vendor-risk-findings/:id/dismiss
+// POST /api/v1/vendor-risk-findings/:id/dismiss
 // ---------------------------------------------------------------------------
 
-describe("POST /api/vendor-risk-findings/:id/dismiss", () => {
+describe("POST /api/v1/vendor-risk-findings/:id/dismiss", () => {
   it("dismisses a pending finding with a reason and a note, and a second dismissal is 409", async () => {
     const { owner } = await seedTwoTenantContexts(3);
     const {

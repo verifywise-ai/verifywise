@@ -183,6 +183,12 @@ export default router;
     it("handles change-history paths", () => {
       expect(deriveTag("/api/project-change-history")).toBe("Change History");
     });
+
+    it("names the v1 vendor research routes after their resource, not their version prefix", () => {
+      expect(deriveTag("/api/v1/vendors")).toBe("Vendors");
+      expect(deriveTag("/api/v1/vendor-research")).toBe("Vendor Research");
+      expect(deriveTag("/api/v1/vendor-risk-findings")).toBe("Vendor Risk Findings");
+    });
   });
 
   describe("mergeSwagger", () => {

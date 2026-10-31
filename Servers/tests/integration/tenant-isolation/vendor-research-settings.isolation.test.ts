@@ -9,7 +9,7 @@ import {
   saveVendorResearchSettingsQuery,
 } from "../../../utils/vendorResearch.utils";
 
-const SETTINGS = "/api/vendor-research/settings";
+const SETTINGS = "/api/v1/vendor-research/settings";
 
 const seedKey = async (orgId: number, model: string): Promise<number> => {
   const rows = (await sequelize.query(

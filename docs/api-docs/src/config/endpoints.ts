@@ -12297,84 +12297,84 @@ export const vendorEndpoints: Endpoint[] = [
   },
   {
     method: 'GET',
-    path: '/vendors/{id}/research/latest',
+    path: '/v1/vendors/{id}/research/latest',
     summary: "Get Latest Vendor Research",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
       { status: 500, description: "Internal server error" },
     ],
-    tag: "Vendors",
+    tag: "v1: Vendors",
   },
   {
     method: 'GET',
-    path: '/vendors/{id}/research/runs/{runId}/trace',
+    path: '/v1/vendors/{id}/research/runs/{runId}/trace',
     summary: "Get Vendor Research Run Trace",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
       { status: 500, description: "Internal server error" },
     ],
-    tag: "Vendors",
+    tag: "v1: Vendors",
   },
   {
     method: 'POST',
-    path: '/vendors/{id}/research',
+    path: '/v1/vendors/{id}/research',
     summary: "Start Vendor Research Run",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
       { status: 500, description: "Internal server error" },
     ],
-    tag: "Vendors",
+    tag: "v1: Vendors",
   },
 ];
 
-// Vendor Research endpoints
+// v1: Vendor Research endpoints
 export const vendorResearchEndpoints: Endpoint[] = [
   {
     method: 'GET',
-    path: '/vendor-research/config',
+    path: '/v1/vendor-research/config',
     summary: "Get Research Config",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
       { status: 500, description: "Internal server error" },
     ],
-    tag: "Vendor Research",
+    tag: "v1: Vendor Research",
   },
   {
     method: 'GET',
-    path: '/vendor-research/decision-stats',
+    path: '/v1/vendor-research/decision-stats',
     summary: "Get Decision Stats",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
       { status: 500, description: "Internal server error" },
     ],
-    tag: "Vendor Research",
+    tag: "v1: Vendor Research",
   },
   {
     method: 'GET',
-    path: '/vendor-research/settings',
+    path: '/v1/vendor-research/settings',
     summary: "Get Research Settings",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
       { status: 500, description: "Internal server error" },
     ],
-    tag: "Vendor Research",
+    tag: "v1: Vendor Research",
   },
   {
     method: 'PUT',
-    path: '/vendor-research/settings',
+    path: '/v1/vendor-research/settings',
     summary: "Save Research Settings",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
       { status: 500, description: "Internal server error" },
     ],
-    tag: "Vendor Research",
+    tag: "v1: Vendor Research",
   },
 ];
 
@@ -12503,40 +12503,40 @@ export const vendorRiskEndpoints: Endpoint[] = [
   },
 ];
 
-// Vendor Risk Findings endpoints
+// v1: Vendor Risk Findings endpoints
 export const vendorRiskFindingsEndpoints: Endpoint[] = [
   {
     method: 'GET',
-    path: '/vendor-risk-findings',
+    path: '/v1/vendor-risk-findings',
     summary: "List Vendor Risk Findings",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
       { status: 500, description: "Internal server error" },
     ],
-    tag: "Vendor Risk Findings",
+    tag: "v1: Vendor Risk Findings",
   },
   {
     method: 'POST',
-    path: '/vendor-risk-findings/{id}/accept',
+    path: '/v1/vendor-risk-findings/{id}/accept',
     summary: "Accept Vendor Risk Finding",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
       { status: 500, description: "Internal server error" },
     ],
-    tag: "Vendor Risk Findings",
+    tag: "v1: Vendor Risk Findings",
   },
   {
     method: 'POST',
-    path: '/vendor-risk-findings/{id}/dismiss',
+    path: '/v1/vendor-risk-findings/{id}/dismiss',
     summary: "Dismiss Vendor Risk Finding",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
       { status: 500, description: "Internal server error" },
     ],
-    tag: "Vendor Risk Findings",
+    tag: "v1: Vendor Risk Findings",
   },
 ];
 

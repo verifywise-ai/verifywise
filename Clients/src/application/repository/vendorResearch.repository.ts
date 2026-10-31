@@ -31,7 +31,7 @@ function toAPIError(error: unknown, fallback: string): APIError {
 export async function getVendorResearchConfig(): Promise<VendorResearchConfig> {
   try {
     const response = await apiServices.get<{ message: string; data: VendorResearchConfig }>(
-      "/vendor-research/config",
+      "/v1/vendor-research/config",
     );
     return extractData<VendorResearchConfig>(response);
   } catch (error) {
@@ -43,7 +43,7 @@ export async function getVendorResearchConfig(): Promise<VendorResearchConfig> {
 export async function getVendorResearchSettings(): Promise<VendorResearchSettings> {
   try {
     const response = await apiServices.get<{ message: string; data: VendorResearchSettings }>(
-      "/vendor-research/settings",
+      "/v1/vendor-research/settings",
     );
     return extractData<VendorResearchSettings>(response);
   } catch (error) {
@@ -60,7 +60,7 @@ export async function saveVendorResearchSettings(
 ): Promise<VendorResearchSettings> {
   try {
     const response = await apiServices.put<{ message: string; data: VendorResearchSettings }>(
-      "/vendor-research/settings",
+      "/v1/vendor-research/settings",
       settings,
     );
     return extractData<VendorResearchSettings>(response);
@@ -87,7 +87,7 @@ export async function listVendorRiskFindings(params: {
     const response = await apiServices.get<{
       message: string;
       data: { rows: VendorRiskFinding[]; total: number };
-    }>(`/vendor-risk-findings${queryString ? `?${queryString}` : ""}`);
+    }>(`/v1/vendor-risk-findings${queryString ? `?${queryString}` : ""}`);
     return extractData<{ rows: VendorRiskFinding[]; total: number }>(response);
   } catch (error) {
     throw toAPIError(error, "Failed to fetch the research findings");
@@ -102,7 +102,7 @@ export async function startVendorResearch(
     const response = await apiServices.post<{
       message: string;
       data: { run: VendorResearchRun; alreadyRunning: boolean };
-    }>(`/vendors/${vendorId}/research`, {});
+    }>(`/v1/vendors/${vendorId}/research`, {});
     return extractData<{ run: VendorResearchRun; alreadyRunning: boolean }>(response);
   } catch (error) {
     throw toAPIError(error, "Failed to start the research");
@@ -113,7 +113,7 @@ export async function startVendorResearch(
 export async function getLatestVendorResearch(vendorId: number): Promise<VendorResearchRun | null> {
   try {
     const response = await apiServices.get<{ message: string; data: VendorResearchRun | null }>(
-      `/vendors/${vendorId}/research/latest`,
+      `/v1/vendors/${vendorId}/research/latest`,
     );
     return extractData<VendorResearchRun | null>(response) ?? null;
   } catch (error) {
@@ -135,7 +135,7 @@ export async function acceptVendorRiskFinding(
     const response = await apiServices.post<{
       message: string;
       data: { finding: VendorRiskFinding; vendorRisk: AcceptedVendorRisk };
-    }>(`/vendor-risk-findings/${id}/accept`, body);
+    }>(`/v1/vendor-risk-findings/${id}/accept`, body);
     return extractData<{ finding: VendorRiskFinding; vendorRisk: AcceptedVendorRisk }>(response);
   } catch (error) {
     throw toAPIError(error, "Failed to accept the finding");
@@ -148,7 +148,7 @@ export async function dismissVendorRiskFinding(
 ): Promise<VendorRiskFinding> {
   try {
     const response = await apiServices.post<{ message: string; data: VendorRiskFinding }>(
-      `/vendor-risk-findings/${id}/dismiss`,
+      `/v1/vendor-risk-findings/${id}/dismiss`,
       body,
     );
     return extractData<VendorRiskFinding>(response);

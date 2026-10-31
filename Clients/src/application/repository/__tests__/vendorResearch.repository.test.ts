@@ -119,35 +119,35 @@ const serverRefusal = (status: number, message: string, body: unknown) =>
 beforeEach(() => vi.clearAllMocks());
 
 describe("getVendorResearchConfig", () => {
-  it("reads /vendor-research/config and unwraps the data", async () => {
+  it("reads /v1/vendor-research/config and unwraps the data", async () => {
     const config = { hasLlmKey: false, autoRunEnabled: true };
     mockGet.mockResolvedValue(success(config));
 
     await expect(getVendorResearchConfig()).resolves.toEqual(config);
 
-    expect(mockGet).toHaveBeenCalledWith("/vendor-research/config");
+    expect(mockGet).toHaveBeenCalledWith("/v1/vendor-research/config");
   });
 });
 
 describe("getVendorResearchSettings", () => {
-  it("reads /vendor-research/settings and unwraps the choice", async () => {
+  it("reads /v1/vendor-research/settings and unwraps the choice", async () => {
     const settings = { researchKeyId: 4, analysisKeyId: null, scanIntervalDays: 14 };
     mockGet.mockResolvedValue(success(settings));
 
     await expect(getVendorResearchSettings()).resolves.toEqual(settings);
 
-    expect(mockGet).toHaveBeenCalledWith("/vendor-research/settings");
+    expect(mockGet).toHaveBeenCalledWith("/v1/vendor-research/settings");
   });
 });
 
 describe("saveVendorResearchSettings", () => {
-  it("puts the two keys and the scan interval to /vendor-research/settings and unwraps what the server kept", async () => {
+  it("puts the two keys and the scan interval to /v1/vendor-research/settings and unwraps what the server kept", async () => {
     const saved = { researchKeyId: 4, analysisKeyId: 9, scanIntervalDays: 7 };
     mockPut.mockResolvedValue(success(saved));
 
     await expect(saveVendorResearchSettings(saved)).resolves.toEqual(saved);
 
-    expect(mockPut).toHaveBeenCalledWith("/vendor-research/settings", saved);
+    expect(mockPut).toHaveBeenCalledWith("/v1/vendor-research/settings", saved);
   });
 
   it("sends null for a key that is left to the default and for a scan that is off, because the server wants all fields", async () => {
@@ -161,7 +161,7 @@ describe("saveVendorResearchSettings", () => {
       scanIntervalDays: null,
     });
 
-    expect(mockPut).toHaveBeenCalledWith("/vendor-research/settings", {
+    expect(mockPut).toHaveBeenCalledWith("/v1/vendor-research/settings", {
       researchKeyId: null,
       analysisKeyId: null,
       scanIntervalDays: null,
@@ -175,7 +175,7 @@ describe("listVendorRiskFindings", () => {
 
     await listVendorRiskFindings({ vendorId: 3, status: "pending" });
 
-    expect(mockGet).toHaveBeenCalledWith("/vendor-risk-findings?status=pending&vendorId=3");
+    expect(mockGet).toHaveBeenCalledWith("/v1/vendor-risk-findings?status=pending&vendorId=3");
   });
 
   it("asks for the whole list, without a stray question mark, when nothing is set", async () => {
@@ -183,7 +183,7 @@ describe("listVendorRiskFindings", () => {
 
     await listVendorRiskFindings({});
 
-    expect(mockGet).toHaveBeenCalledWith("/vendor-risk-findings");
+    expect(mockGet).toHaveBeenCalledWith("/v1/vendor-risk-findings");
   });
 
   it("sends an offset of zero, because zero is a value", async () => {
@@ -191,7 +191,7 @@ describe("listVendorRiskFindings", () => {
 
     await listVendorRiskFindings({ limit: 25, offset: 0 });
 
-    expect(mockGet).toHaveBeenCalledWith("/vendor-risk-findings?limit=25&offset=0");
+    expect(mockGet).toHaveBeenCalledWith("/v1/vendor-risk-findings?limit=25&offset=0");
   });
 
   it("returns the rows and the total", async () => {
@@ -203,23 +203,23 @@ describe("listVendorRiskFindings", () => {
 });
 
 describe("startVendorResearch", () => {
-  it("posts to /vendors/3/research and unwraps the run and the already-running flag", async () => {
+  it("posts to /v1/vendors/3/research and unwraps the run and the already-running flag", async () => {
     const started = { run: run({ status: "queued" }), alreadyRunning: true };
     mockPost.mockResolvedValue(success(started, 202));
 
     await expect(startVendorResearch(3)).resolves.toEqual(started);
 
-    expect(mockPost).toHaveBeenCalledWith("/vendors/3/research", {});
+    expect(mockPost).toHaveBeenCalledWith("/v1/vendors/3/research", {});
   });
 });
 
 describe("getLatestVendorResearch", () => {
-  it("reads /vendors/3/research/latest and unwraps the run", async () => {
+  it("reads /v1/vendors/3/research/latest and unwraps the run", async () => {
     mockGet.mockResolvedValue(success(run()));
 
     await expect(getLatestVendorResearch(3)).resolves.toEqual(run());
 
-    expect(mockGet).toHaveBeenCalledWith("/vendors/3/research/latest");
+    expect(mockGet).toHaveBeenCalledWith("/v1/vendors/3/research/latest");
   });
 
   it("returns null for a vendor that was never researched", async () => {
@@ -230,7 +230,7 @@ describe("getLatestVendorResearch", () => {
 });
 
 describe("acceptVendorRiskFinding", () => {
-  it("posts the body to /vendor-risk-findings/9/accept and unwraps the finding and the risk", async () => {
+  it("posts the body to /v1/vendor-risk-findings/9/accept and unwraps the finding and the risk", async () => {
     const accepted = {
       finding: finding({ status: "accepted", accepted_vendor_risk_id: 77 }),
       vendorRisk: acceptedRisk(),
@@ -239,7 +239,7 @@ describe("acceptVendorRiskFinding", () => {
 
     await expect(acceptVendorRiskFinding(9, { action_owner: 4 })).resolves.toEqual(accepted);
 
-    expect(mockPost).toHaveBeenCalledWith("/vendor-risk-findings/9/accept", { action_owner: 4 });
+    expect(mockPost).toHaveBeenCalledWith("/v1/vendor-risk-findings/9/accept", { action_owner: 4 });
   });
 
   it("keeps an absent owner (the vendor's assignee) apart from null (nobody)", async () => {
@@ -248,8 +248,8 @@ describe("acceptVendorRiskFinding", () => {
     await acceptVendorRiskFinding(9, {});
     await acceptVendorRiskFinding(9, { action_owner: null });
 
-    expect(mockPost).toHaveBeenNthCalledWith(1, "/vendor-risk-findings/9/accept", {});
-    expect(mockPost).toHaveBeenNthCalledWith(2, "/vendor-risk-findings/9/accept", {
+    expect(mockPost).toHaveBeenNthCalledWith(1, "/v1/vendor-risk-findings/9/accept", {});
+    expect(mockPost).toHaveBeenNthCalledWith(2, "/v1/vendor-risk-findings/9/accept", {
       action_owner: null,
     });
   });
@@ -269,14 +269,14 @@ describe("acceptVendorRiskFinding", () => {
 });
 
 describe("dismissVendorRiskFinding", () => {
-  it("posts the reason and note to /vendor-risk-findings/9/dismiss and unwraps the finding", async () => {
+  it("posts the reason and note to /v1/vendor-risk-findings/9/dismiss and unwraps the finding", async () => {
     const dismissed = finding({ status: "dismissed", dismissed_reason: "inaccurate" });
     mockPost.mockResolvedValue(success(dismissed));
     const body = { reason: "inaccurate" as const, note: "Wrong vendor" };
 
     await expect(dismissVendorRiskFinding(9, body)).resolves.toEqual(dismissed);
 
-    expect(mockPost).toHaveBeenCalledWith("/vendor-risk-findings/9/dismiss", body);
+    expect(mockPost).toHaveBeenCalledWith("/v1/vendor-risk-findings/9/dismiss", body);
   });
 });
 

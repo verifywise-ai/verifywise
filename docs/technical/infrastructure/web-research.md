@@ -436,7 +436,7 @@ The tokens come from the AI SDK's `usage` of each call. `generateObjectWithSelfC
 
 The trace is not the **live progress** of a run. While a run works, the pipeline hands the researcher a `progress` callback (`ResearchProgress`: the turns taken, the latest action and category, the searches and pages so far and the categories worked on), which the observer of the loop calls after every turn, and writes what it gets to `vendor_research_runs.progress` for the page that follows the run. It holds counts and closed words only (no query, address or thought, which is why every role may read it), it is emptied when the run ends, and a callback that throws changes nothing in the research. See [Vendors](../domains/vendors.md#live-progress).
 
-The trace holds queries and addresses, which the run summary that every role sees does not, so it is served to administrators only: `GET /api/vendors/:id/research/runs/:runId/trace`, gated by `llmKeys.admin` (the built-in Admin role). It answers 404 for a run without a trace and for a run of another organization. See [Vendors](../domains/vendors.md#vendor-research-endpoints).
+The trace holds queries and addresses, which the run summary that every role sees does not, so it is served to administrators only: `GET /api/v1/vendors/:id/research/runs/:runId/trace`, gated by `llmKeys.admin` (the built-in Admin role). It answers 404 for a run without a trace and for a run of another organization. See [Vendors](../domains/vendors.md#vendor-research-endpoints).
 
 ## Evaluating the agent
 
