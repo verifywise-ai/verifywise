@@ -56,6 +56,22 @@ export const intakeReviewerAssignmentContent: ArticleContent = {
       text: 'All three take whole numbers. Risk scores run from 0 to 100.',
     },
     {
+      type: 'image',
+      src: '/images/user-guide/intake-reviewer-assignment.png',
+      alt: 'Reviewer assignment settings with expert and regular reviewers, threshold, close-call margin and second review share, each with an info icon',
+      caption: 'Reviewer assignment in the form settings, with the summary line at the bottom.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Each of the three numbers has an info icon. It explains what the setting does, the 0 to 100 risk score scale and the score band for each risk level.',
+    },
+    {
+      type: 'image',
+      src: '/images/user-guide/intake-threshold-info.png',
+      alt: 'Info tooltip for the threshold explaining where scores go and listing the score bands Low 0 to 25, Medium 26 to 50, High 51 to 75 and Critical 76 to 100',
+      caption: 'The explanation behind the threshold info icon.',
+    },
+    {
       type: 'heading',
       id: 'assignment-rules',
       level: 2,

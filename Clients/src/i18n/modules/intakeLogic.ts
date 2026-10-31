@@ -35,8 +35,8 @@ export const de: Record<string, string> = {
   "About the second review share": "Über den Anteil der Zweitprüfungen",
   "Scores at or above the threshold go to expert reviewers. Lower scores go to regular reviewers, unless they are within the close-call margin.":
     "Werte ab dem Schwellenwert gehen an Expertenprüfer. Niedrigere Werte gehen an reguläre Prüfer, außer sie liegen innerhalb der Spanne für Grenzfälle.",
-  "Scores below the threshold but within this margin of it also go to expert reviewers.":
-    "Werte unter dem Schwellenwert, die innerhalb dieser Spanne liegen, gehen ebenfalls an Expertenprüfer.",
+  "Scores below the threshold by less than this margin also go to expert reviewers.":
+    "Werte, die weniger als diese Spanne unter dem Schwellenwert liegen, gehen ebenfalls an Expertenprüfer.",
   "Approvals in the regular lane by anyone who isn't an expert reviewer are picked at random at this rate for a second review. Rejections aren't picked.":
     "Genehmigungen in der regulären Spur von Personen, die keine Expertenprüfer sind, werden mit dieser Rate zufällig für eine Zweitprüfung ausgewählt. Ablehnungen werden nicht ausgewählt.",
   "Risk scores run from 0 to 100": "Risikowerte reichen von 0 bis 100",
@@ -79,8 +79,8 @@ export const fr: Record<string, string> = {
   "About the second review share": "À propos de la part de seconds examens",
   "Scores at or above the threshold go to expert reviewers. Lower scores go to regular reviewers, unless they are within the close-call margin.":
     "Les scores égaux ou supérieurs au seuil vont aux réviseurs experts. Les scores inférieurs vont aux réviseurs habituels, sauf s'ils sont dans la marge des cas limites.",
-  "Scores below the threshold but within this margin of it also go to expert reviewers.":
-    "Les scores sous le seuil mais dans cette marge vont aussi aux réviseurs experts.",
+  "Scores below the threshold by less than this margin also go to expert reviewers.":
+    "Les scores inférieurs au seuil de moins que cette marge vont aussi aux réviseurs experts.",
   "Approvals in the regular lane by anyone who isn't an expert reviewer are picked at random at this rate for a second review. Rejections aren't picked.":
     "Les approbations du circuit habituel faites par une personne qui n'est pas réviseur expert sont tirées au hasard à ce taux pour un second examen. Les refus ne sont pas tirés.",
   "Risk scores run from 0 to 100": "Les scores de risque vont de 0 à 100",
@@ -123,8 +123,8 @@ export const es: Record<string, string> = {
   "About the second review share": "Acerca de la proporción de segundas revisiones",
   "Scores at or above the threshold go to expert reviewers. Lower scores go to regular reviewers, unless they are within the close-call margin.":
     "Las puntuaciones iguales o superiores al umbral pasan a los revisores expertos. Las inferiores pasan a los revisores habituales, salvo que estén dentro del margen de casos límite.",
-  "Scores below the threshold but within this margin of it also go to expert reviewers.":
-    "Las puntuaciones por debajo del umbral pero dentro de este margen también pasan a los revisores expertos.",
+  "Scores below the threshold by less than this margin also go to expert reviewers.":
+    "Las puntuaciones inferiores al umbral por menos que este margen también pasan a los revisores expertos.",
   "Approvals in the regular lane by anyone who isn't an expert reviewer are picked at random at this rate for a second review. Rejections aren't picked.":
     "Las aprobaciones del circuito habitual hechas por alguien que no es revisor experto se eligen al azar con esta tasa para una segunda revisión. Los rechazos no se eligen.",
   "Risk scores run from 0 to 100": "Las puntuaciones de riesgo van de 0 a 100",

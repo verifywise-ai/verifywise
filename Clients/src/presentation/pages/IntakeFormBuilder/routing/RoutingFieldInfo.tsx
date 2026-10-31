@@ -11,7 +11,7 @@ const MEANING: Record<NumberKey, string> = {
   threshold:
     "Scores at or above the threshold go to expert reviewers. Lower scores go to regular reviewers, unless they are within the close-call margin.",
   closeCallMargin:
-    "Scores below the threshold but within this margin of it also go to expert reviewers.",
+    "Scores below the threshold by less than this margin also go to expert reviewers.",
   secondReviewRate:
     "Approvals in the regular lane by anyone who isn't an expert reviewer are picked at random at this rate for a second review. Rejections aren't picked.",
 };
