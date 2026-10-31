@@ -26,6 +26,7 @@ vi.mock("../../../../application/hooks/useDashboard", () => ({
 }));
 
 const dashboard = (overrides: Record<string, unknown> = {}) => ({
+  review_time: { approved: 3, median_days: 4, average_days: 5.5, period_months: 12 },
   quarter: {
     start: "2026-10-01",
     end: "2026-12-31",
@@ -83,11 +84,21 @@ describe("UseCaseLifecycleWidgets", () => {
     expect(mockNavigateSearch).toHaveBeenCalledWith("/project-view", { projectId: "12" });
   });
 
+  it("shows how long approved intake requests spent in review", async () => {
+    mockGetDashboard.mockResolvedValue(dashboard());
+    renderWithProviders(<UseCaseLifecycleWidgets />);
+    const card = await screen.findByTestId("use-case-review-time");
+    expect(card.textContent).toContain("Median4days");
+    expect(card.textContent).toContain("Average5.5days");
+    expect(card.textContent).toContain("Approved in the last 12 months3");
+  });
+
   it("shows the empty states when nothing is stale or changed this quarter", async () => {
     mockGetDashboard.mockResolvedValue(
       dashboard({
         quarter: { start: "2026-10-01", end: "2026-12-31", going_live: [], retired: [] },
         stale: { total: 0, items: [] },
+        review_time: { approved: 0, median_days: null, average_days: null, period_months: 12 },
       }),
     );
     renderWithProviders(<UseCaseLifecycleWidgets />);
@@ -96,5 +107,8 @@ describe("UseCaseLifecycleWidgets", () => {
       await screen.findByText("Nothing went live or was retired this quarter"),
     ).toBeInTheDocument();
     expect(screen.getByText("Every live use case was confirmed recently")).toBeInTheDocument();
+    expect(
+      screen.getByText("No intake requests were approved in the last 12 months"),
+    ).toBeInTheDocument();
   });
 });

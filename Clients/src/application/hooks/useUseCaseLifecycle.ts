@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   confirmUseCaseStillLive,
   getLifecycleSettings,
+  getPendingUseCaseSubmissions,
   getUseCaseLifecycleDashboard,
   getUseCaseLifecycleSummary,
   markUseCaseLive,
@@ -16,6 +17,7 @@ export const useCaseLifecycleKeys = {
   all: ["useCaseLifecycle"] as const,
   summary: () => [...useCaseLifecycleKeys.all, "summary"] as const,
   dashboard: () => [...useCaseLifecycleKeys.all, "dashboard"] as const,
+  pendingSubmissions: () => [...useCaseLifecycleKeys.all, "pendingSubmissions"] as const,
   settings: ["lifecycleSettings"] as const,
 };
 
@@ -23,6 +25,15 @@ export function useUseCaseLifecycleSummary() {
   return useQuery({
     queryKey: useCaseLifecycleKeys.summary(),
     queryFn: getUseCaseLifecycleSummary,
+    staleTime: 60 * 1000,
+  });
+}
+
+/** Pending use case intake submissions, shown in the In review tab (#5188). */
+export function usePendingUseCaseSubmissions() {
+  return useQuery({
+    queryKey: useCaseLifecycleKeys.pendingSubmissions(),
+    queryFn: getPendingUseCaseSubmissions,
     staleTime: 60 * 1000,
   });
 }

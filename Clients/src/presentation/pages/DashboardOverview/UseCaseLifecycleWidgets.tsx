@@ -21,10 +21,9 @@ import {
 /**
  * Use case lifecycle widgets (#5187): counts per stage, going live / retired
  * this quarter, live use cases by department, risk tier or regulation, and
- * stale entries.
- *
- * "Time in review against the agreed review time" is not here: it needs the
- * per-form review time setting from #5189 and is added with it.
+ * stale entries, plus time in review for approved use case intake requests
+ * (#5188). Time in review is shown on its own; comparing it with an agreed
+ * review time needs the per-form setting from #5189.
  */
 
 type Breakdown = "department" | "risk_tier" | "regulation";
@@ -84,6 +83,20 @@ function CountRows({
           </Typography>
         </Stack>
       ))}
+    </Stack>
+  );
+}
+
+function ReviewTimeRow({ label, days }: { label: string; days: number | null }) {
+  return (
+    <Stack direction="row" justifyContent="space-between" alignItems="baseline">
+      <Typography sx={mutedSx}>{label}</Typography>
+      <Stack direction="row" alignItems="baseline" sx={{ gap: "4px" }}>
+        <Typography sx={{ fontSize: 20, fontWeight: 600, color: "text.primary" }}>
+          {days ?? "-"}
+        </Typography>
+        <Typography sx={mutedSx}>days</Typography>
+      </Stack>
     </Stack>
   );
 }
@@ -151,7 +164,7 @@ const UseCaseLifecycleWidgets = () => {
   return (
     <Box
       data-testid="use-case-lifecycle-widgets"
-      sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", mb: "16px" }}
+      sx={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px", mb: "16px" }}
     >
       <DashboardCard title="Use case lifecycle" navigateTo="/overview">
         <CountRows rows={stageRows} onRowClick={openStage} />
@@ -178,33 +191,55 @@ const UseCaseLifecycleWidgets = () => {
         )}
       </DashboardCard>
 
-      <DashboardCard
-        title="Live use cases by"
-        action={
-          <ButtonToggle
-            options={[
-              { label: "Department", value: "department" },
-              { label: "Risk tier", value: "risk_tier" },
-              { label: "Regulation", value: "regulation" },
-            ]}
-            value={breakdown}
-            onChange={(value) => setBreakdown(value as Breakdown)}
-            height={30}
-          />
-        }
-      >
-        {breakdownRows.length === 0 ? (
-          <EmptyStateMessage
-            message={
-              breakdown === "regulation"
-                ? "No live use cases have a framework yet"
-                : "No live use cases yet"
-            }
-          />
+      <DashboardCard title="Time in review">
+        {data.review_time.approved === 0 ? (
+          <EmptyStateMessage message="No intake requests were approved in the last 12 months" />
         ) : (
-          <CountRows rows={breakdownRows} />
+          <Stack sx={{ gap: "12px" }} data-testid="use-case-review-time">
+            <ReviewTimeRow label="Median" days={data.review_time.median_days} />
+            <ReviewTimeRow label="Average" days={data.review_time.average_days} />
+            <Stack direction="row" justifyContent="space-between">
+              <Typography sx={mutedSx}>Approved in the last 12 months</Typography>
+              <Typography sx={{ ...rowTextSx, fontWeight: 600 }}>
+                {data.review_time.approved}
+              </Typography>
+            </Stack>
+            <Typography sx={mutedSx}>
+              From submission to approval of use case intake requests.
+            </Typography>
+          </Stack>
         )}
       </DashboardCard>
+
+      <Box sx={{ gridColumn: "span 2" }}>
+        <DashboardCard
+          title="Live use cases by"
+          action={
+            <ButtonToggle
+              options={[
+                { label: "Department", value: "department" },
+                { label: "Risk tier", value: "risk_tier" },
+                { label: "Regulation", value: "regulation" },
+              ]}
+              value={breakdown}
+              onChange={(value) => setBreakdown(value as Breakdown)}
+              height={30}
+            />
+          }
+        >
+          {breakdownRows.length === 0 ? (
+            <EmptyStateMessage
+              message={
+                breakdown === "regulation"
+                  ? "No live use cases have a framework yet"
+                  : "No live use cases yet"
+              }
+            />
+          ) : (
+            <CountRows rows={breakdownRows} />
+          )}
+        </DashboardCard>
+      </Box>
 
       <DashboardCard
         title="Stale use cases"

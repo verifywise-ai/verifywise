@@ -20,15 +20,17 @@ import LifecycleTabs from "../../../components/LifecycleTabs";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useCaseLifecycleKeys,
+  usePendingUseCaseSubmissions,
   useUseCaseLifecycleSummary,
 } from "../../../../application/hooks/useUseCaseLifecycle";
+import PendingIntakeSubmissions from "./PendingIntakeSubmissions";
 import { countLifecycleStages } from "../../../../application/utils/useCaseLifecycle";
 import { LIFECYCLE_STAGES, LifecycleStage } from "../../../../domain/enums/lifecycleStage.enum";
 
 const STAGE_STORAGE_KEY = "use-cases-lifecycle-tab";
 
 const STAGE_TOOLTIPS: Record<LifecycleStage, string> = {
-  [LifecycleStage.IN_REVIEW]: "Use cases waiting for an approval decision",
+  [LifecycleStage.IN_REVIEW]: "Intake requests and use cases waiting for an approval decision",
   [LifecycleStage.PLANNED]: "Use cases that are not live yet",
   [LifecycleStage.LIVE]: "Use cases in use today",
   [LifecycleStage.RETIRED]: "Use cases that are no longer in use",
@@ -88,9 +90,14 @@ const Home = () => {
     () => projects.filter((p) => (p.lifecycle_stage ?? LifecycleStage.PLANNED) === stage),
     [projects, stage],
   );
-  // #5188 extends the In review tab with pending intake submissions: pass
-  // their count as extraCounts={{ in_review: n }} and render them alongside
-  // stageProjects when stage === LifecycleStage.IN_REVIEW.
+  // Pending use case intake submissions belong in In review too (#5188).
+  // They are not projects yet, so they are listed and counted separately.
+  const { data: pendingSubmissions = [] } = usePendingUseCaseSubmissions();
+  const extraCounts = useMemo(
+    () => ({ [LifecycleStage.IN_REVIEW]: pendingSubmissions.length }),
+    [pendingSubmissions],
+  );
+  const inReviewWithRequests = stage === LifecycleStage.IN_REVIEW && pendingSubmissions.length > 0;
 
   const [runHomeTour, setRunHomeTour] = useState(false);
   const newProjectButtonRef = useRef<HTMLDivElement>(null);
@@ -151,16 +158,28 @@ const Home = () => {
         projects={stageProjects}
         isLoading={isPending}
         staleIds={staleIds}
-        emptyMessage={projects.length > 0 ? STAGE_EMPTY[stage] : undefined}
+        emptyMessage={
+          inReviewWithRequests
+            ? "No use cases are waiting for an approval decision."
+            : projects.length > 0 || pendingSubmissions.length > 0
+              ? STAGE_EMPTY[stage]
+              : undefined
+        }
         header={
-          <LifecycleTabs
-            value={stage}
-            onChange={handleStageChange}
-            counts={stageCounts}
-            isLoading={isPending}
-            tooltips={STAGE_TOOLTIPS}
-            dataJoyrideId="use-case-lifecycle-tabs"
-          />
+          <>
+            <LifecycleTabs
+              value={stage}
+              onChange={handleStageChange}
+              counts={stageCounts}
+              extraCounts={extraCounts}
+              isLoading={isPending}
+              tooltips={STAGE_TOOLTIPS}
+              dataJoyrideId="use-case-lifecycle-tabs"
+            />
+            {stage === LifecycleStage.IN_REVIEW && (
+              <PendingIntakeSubmissions submissions={pendingSubmissions} />
+            )}
+          </>
         }
         onProjectDeleted={refreshProjects}
         newProjectButton={

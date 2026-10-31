@@ -237,7 +237,7 @@ export const useCasesContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'In review', text: 'An approval request is open. Approved intake submissions skip this tab and arrive as planned.' },
+        { bold: 'In review', text: 'An approval request is open, or an intake request is waiting for a decision. Intake requests are listed above the use cases with a Review button that opens the submission; the use case is only created when the request is approved, and it then arrives as planned. Rejected and superseded requests are not shown.' },
         { bold: 'Planned', text: 'Approved, or created without an approval workflow, but not in use yet.' },
         { bold: 'Live', text: 'In use. The owner recorded a go-live date.' },
         { bold: 'Retired', text: 'No longer in use. It stays in the inventory with its history.' },
@@ -267,7 +267,7 @@ export const useCasesContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The dashboard shows the count per stage, what went live or was retired this quarter, live use cases by department, risk tier or regulation, and the stale entries.',
+      text: 'The dashboard shows the count per stage, what went live or was retired this quarter, live use cases by department, risk tier or regulation, the stale entries, and the median and average time approved intake requests spent in review over the last 12 months.',
     },
     {
       type: 'heading',
