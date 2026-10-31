@@ -137,7 +137,9 @@ const UseCaseLifecyclePanel = ({
             placeholder="For example, Finance"
             isOptional
           />
-          {error && <Alert variant="error" body={error} isToast={false} />}
+          {error && (
+            <Alert variant="error" body={error} isToast={false} sx={{ position: "static" }} />
+          )}
         </Stack>
       </StandardModal>
     </>

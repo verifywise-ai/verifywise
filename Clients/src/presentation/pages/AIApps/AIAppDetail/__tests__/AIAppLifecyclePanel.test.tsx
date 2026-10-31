@@ -80,6 +80,8 @@ describe("AIAppLifecyclePanel", () => {
     renderWithProviders(<AIAppLifecyclePanel appId={3} />);
     expect(await screen.findByTestId("lifecycle-go-live-btn")).toBeDisabled();
     expect(screen.getByText(/Approve this AI app before marking it as live/)).toBeInTheDocument();
+    // Shown inside the panel, not pinned to the corner like a toast.
+    expect(screen.getByRole("alert")).toHaveStyle({ position: "static" });
   });
 
   it("lets a planned approved app go live", async () => {
