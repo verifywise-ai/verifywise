@@ -47,7 +47,7 @@ export const intakeReviewerAssignmentContent: ArticleContent = {
       ],
       rows: [
         { setting: 'Threshold', what: 'The risk score that separates expert review from regular review.', range: '1 to 99', default: '50' },
-        { setting: 'Close-call margin', what: 'Scores this close to the threshold go to expert review even when they are below it.', range: '0 to 25', default: '10' },
+        { setting: 'Close-call margin', what: 'Scores below the threshold by less than this margin also go to expert review.', range: '0 to 25', default: '10' },
         { setting: 'Second review share %', what: 'The chance that an approval in regular review, by someone who isn\'t one of the form\'s expert reviewers, is picked for a second review. Approvals made before the submission had a review level are never picked.', range: '0 to 100', default: '10' },
       ],
     },
@@ -63,7 +63,7 @@ export const intakeReviewerAssignmentContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Each of the three numbers has an info icon. It explains what the setting does, the 0 to 100 risk score scale and the score band for each risk level.',
+      text: 'Each of the three numbers has an info icon that explains what the setting does. The threshold and close-call margin icons also show the 0 to 100 risk score scale and the score band for each risk level.',
     },
     {
       type: 'image',
