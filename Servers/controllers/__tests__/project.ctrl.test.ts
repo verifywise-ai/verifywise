@@ -587,7 +587,9 @@ describe("project.ctrl", () => {
       await updateProjectById(req, res);
       expect(res.status).toHaveBeenCalledWith(202);
       expect(mockGetPendingApproval).toHaveBeenCalledWith(1, "use_case", 1, expect.anything());
-      expect(mockWithdrawApproval).toHaveBeenCalledWith(77, 1, expect.anything());
+      expect(mockWithdrawApproval).toHaveBeenCalledWith(77, 1, expect.anything(), {
+        changedBy: 1,
+      });
       expect(mockCreateApproval).toHaveBeenCalled();
     });
     it("notifies the requester when the edit-time request is auto-approved", async () => {
@@ -644,8 +646,10 @@ describe("project.ctrl", () => {
       const res = createRes();
       await updateProjectById(req, res);
       expect(res.status).toHaveBeenCalledWith(202);
-      expect(mockWithdrawApproval).toHaveBeenCalledWith(77, 1, expect.anything());
-      expect(mockCreatePendingFrameworks).toHaveBeenCalledWith(1, 1, expect.anything());
+      expect(mockWithdrawApproval).toHaveBeenCalledWith(77, 1, expect.anything(), {
+        changedBy: 1,
+      });
+      expect(mockCreatePendingFrameworks).toHaveBeenCalledWith(1, 1, expect.anything(), 1);
       expect(mockCreateApproval).not.toHaveBeenCalled();
     });
     it("starts no request when the attached workflow is unchanged (#4904)", async () => {

@@ -3,8 +3,9 @@ import { ValidationException } from "../domain.layer/exceptions/custom.exception
 import { sequelize } from "../database/db";
 import { ProjectsMembersModel } from "../domain.layer/models/projectsMembers/projectsMembers.model";
 import { QueryTypes, Transaction } from "sequelize";
-import { LifecycleStage, isLifecycleStage } from "../domain.layer/enums/lifecycle-stage.enum";
-import { normalizeDepartment } from "./lifecycle.utils";
+import { LifecycleStage } from "../domain.layer/enums/lifecycle-stage.enum";
+import { parseDepartment } from "./lifecycle.utils";
+import { projectVisibilitySql } from "./projectVisibility.utils";
 import { VendorsProjectsModel } from "../domain.layer/models/vendorsProjects/vendorsProjects.model";
 import { RiskModel } from "../domain.layer/models/risks/risk.model";
 import { FileModel } from "../domain.layer/models/file/file.model";
@@ -101,23 +102,15 @@ export const getUserProjects = async (
   { userId, role, transaction }: GetUserProjectsOptions,
   organizationId: number,
 ) => {
-  const baseQueryParts: string[] = [`SELECT DISTINCT p.*`, `FROM projects p`];
+  const visibility = projectVisibilitySql("p", { userId, role });
+  const replacements: { [key: string]: any } = { organizationId, ...visibility.replacements };
 
-  const whereConditions: string[] = ["p.organization_id = :organizationId"];
-  const replacements: { [key: string]: any } = { organizationId };
-
-  if (role !== "Admin" && role !== "SuperAdmin") {
-    baseQueryParts.push(
-      `LEFT JOIN projects_members pm ON pm.project_id = p.id AND pm.organization_id = :organizationId`,
-    );
-    whereConditions.push("(p.owner = :userId OR pm.user_id = :userId)");
-    replacements.userId = userId;
-  }
-
-  baseQueryParts.push("WHERE " + whereConditions.join(" AND "));
-  baseQueryParts.push("ORDER BY p.created_at DESC, p.id ASC");
-
-  const finalQuery = baseQueryParts.join("\n");
+  const finalQuery = [
+    `SELECT DISTINCT p.*`,
+    `FROM projects p`,
+    `WHERE p.organization_id = :organizationId${visibility.sql}`,
+    "ORDER BY p.created_at DESC, p.id ASC",
+  ].join("\n");
 
   const projects = await sequelize.query(finalQuery, {
     replacements,
@@ -295,13 +288,15 @@ export const countAnswersByProjectId = async (
 };
 
 /**
- * Stage a new use case starts in (#5187): an explicit, valid stage from the
- * caller wins (intake approval passes planned); otherwise planned. A use case
- * moves to in review only when an approval request is actually opened for it
- * (services/projects/approvalRequest.service.ts).
+ * Server-decided fields of a new use case (#5187). Never read from the
+ * project object, which the legacy create endpoint fills from the request
+ * body: every new use case starts planned, and opening an approval request
+ * (services/projects/approvalRequest.service.ts) is what moves it to review.
  */
-export const initialLifecycleStage = (project: Partial<ProjectModel>): LifecycleStage =>
-  isLifecycleStage(project.lifecycle_stage) ? project.lifecycle_stage : LifecycleStage.PLANNED;
+export interface NewProjectServerFields {
+  /** Run through parseDepartment; an invalid value is a 400. */
+  department?: unknown;
+}
 
 export const createNewProjectQuery = async (
   project: Partial<ProjectModel> & { enable_ai_data_insertion?: boolean },
@@ -311,7 +306,14 @@ export const createNewProjectQuery = async (
   userId: number,
   transaction: Transaction,
   isDemo: boolean = false,
+  serverFields: NewProjectServerFields = {},
 ): Promise<ProjectModel> => {
+  const department = parseDepartment(serverFields.department);
+  if (!department.ok) {
+    throw new ValidationException("Invalid department", "department", serverFields.department, {
+      i18nKey: "Invalid department",
+    });
+  }
   await assertOwnerInOrganization(project.owner, organizationId, transaction);
   const memberIds = await normaliseMemberIds(members, organizationId, transaction);
   // Frameworks are optional for use cases; default to empty array
@@ -383,8 +385,8 @@ export const createNewProjectQuery = async (
         use_case_purpose: project.use_case_purpose || null,
         use_case_audience: project.use_case_audience || null,
         deployment_context: project.deployment_context || null,
-        lifecycle_stage: initialLifecycleStage(project),
-        department: normalizeDepartment(project.department),
+        lifecycle_stage: LifecycleStage.PLANNED,
+        department: department.department,
         ...roles.replacements,
       },
       mapToModel: true,

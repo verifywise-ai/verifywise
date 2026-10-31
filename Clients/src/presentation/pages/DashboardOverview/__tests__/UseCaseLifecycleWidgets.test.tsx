@@ -12,8 +12,20 @@ vi.mock("../../../../application/repository/useCaseLifecycle.repository", () => 
   getUseCaseLifecycleDashboard: (...args: unknown[]) => mockGetDashboard(...args),
 }));
 
+vi.mock("../../../../application/hooks/useDashboard", () => ({
+  useDashboard: () => ({
+    dashboard: {
+      projects_list: [
+        { id: 1, lifecycle_stage: "planned" },
+        { id: 2, lifecycle_stage: "planned" },
+        { id: 3, lifecycle_stage: "live" },
+        { id: 4, lifecycle_stage: "planned", is_organizational: true },
+      ],
+    },
+  }),
+}));
+
 const dashboard = (overrides: Record<string, unknown> = {}) => ({
-  counts: { in_review: 1, planned: 4, live: 3, retired: 2 },
   quarter: {
     start: "2026-10-01",
     end: "2026-12-31",
@@ -41,6 +53,9 @@ describe("UseCaseLifecycleWidgets", () => {
     renderWithProviders(<UseCaseLifecycleWidgets />);
 
     expect(await screen.findByText("Use case lifecycle")).toBeInTheDocument();
+    // Counted from the use cases list, organizational projects excluded.
+    const plannedRow = screen.getByText("Planned").closest('[role="listitem"]') as HTMLElement;
+    expect(plannedRow.textContent).toContain("2");
     fireEvent.click(screen.getByText("Planned"));
     expect(mockNavigateSearch).toHaveBeenCalledWith("/overview", { stage: "planned" });
   });

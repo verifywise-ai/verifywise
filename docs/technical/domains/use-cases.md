@@ -157,23 +157,23 @@ in_review → planned → live → retired
 | `confirmation_reminded_at` | Last reminder email; dedups the daily sweep to once per period |
 | `department` | Free text (there is no org-level department list) |
 
-Backfill (migration `20261031015101`): an open approval request or status `Under review` → `in_review`; `Closed` → `retired`; everything else → `planned` (`Completed` is not assumed to be live).
+Backfill (migration `20261031015101`): a pending approval request → `in_review` (status `Under review` alone is not enough: intake approval set it after the review); `Closed` → `retired`; everything else → `planned` (`Completed` is not assumed to be live).
 
 Transitions:
 
 | Trigger | Change |
 |---------|--------|
 | Approval request opened (`services/projects/approvalRequest.service.ts`) | `planned → in_review` |
-| Approval completed, auto-approved, or workflow cleared (`createPendingFrameworksForApprovedUseCase`) | `in_review → planned` |
-| Intake submission approved (`approveSubmission`) | created as `planned` |
+| Approval approved, auto-approved, rejected or withdrawn; workflow cleared or replaced (`releaseUseCaseFromReview`) | `in_review → planned` |
+| Use case created (any path, incl. intake approval) | `planned`; the request body never sets the stage |
 | `POST /api/v1/use-case-lifecycle/:id/go-live` | `planned → live`, sets `go_live_date`, resets the confirmation period |
 | `POST /api/v1/use-case-lifecycle/:id/confirm` | live only; sets `last_confirmed_*` |
 | `POST /api/v1/use-case-lifecycle/:id/retire` | `planned`/`live → retired`, sets `retired_at` |
 | `PATCH /api/v1/use-case-lifecycle/:id/department` | sets `department` |
 
-Writes are allowed for holders of `useCase.edit` and for the use case owner; Auditors never. The stage guard is part of the UPDATE, so a conflicting transition returns 409. Every change is recorded in `use_case_change_history`. A rejected approval leaves the use case in `in_review`.
+Writes are allowed for holders of `useCase.edit` and for the use case owner; Auditors never. The stage guard is part of the UPDATE, so a conflicting transition returns 409. Every change, including the automatic ones above, is recorded in `use_case_change_history`. Soft-deleting a workflow leaves its pending requests pending, so their use cases stay in review until the request is decided or withdrawn. Lifecycle columns are not accepted in legacy `POST/PATCH /api/projects` bodies; `department` on creation is only set by server code and goes through `parseDepartment`, the validator the PATCH endpoint uses.
 
-Read models: `GET /api/v1/use-case-lifecycle/summary` (stage counts and stale ids, with list visibility) and `GET /api/v1/use-case-lifecycle/dashboard` (counts, this quarter, live by department/risk tier/regulation, stale).
+Read models: `GET /api/v1/use-case-lifecycle/summary` (stale ids and the interval) and `GET /api/v1/use-case-lifecycle/dashboard` (went live / retired this quarter, live by department/risk tier/regulation, stale). Both use `projectVisibilitySql` (`utils/projectVisibility.utils.ts`), the rule behind the use cases list. Stage counts are computed on the client from the use cases list (`countLifecycleStages`) on both the Use cases page and the dashboard, so the two never disagree.
 
 **Still live? check.** `lifecycle_org_settings.confirmation_interval_days` (30/90/180, default 90; `GET/PATCH /api/v1/lifecycle-settings`, PATCH needs `organization.admin`). A live use case is stale when `COALESCE(last_confirmed_at, go_live_date)` is older than the interval (`staleSql` in `utils/lifecycle.utils.ts`). The `lifecycle_confirmation_sweep` BullMQ job (daily 06:30) emails each owner once per period (`lifecycle-confirmation-due.mjml`).
 

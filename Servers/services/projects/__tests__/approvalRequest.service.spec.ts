@@ -130,7 +130,7 @@ describe("createUseCaseApprovalRequest", () => {
     );
     expect(result).toEqual(expect.objectContaining({ workflowTitle: "Use case sign-off", steps }));
     // An open request puts a planned use case in review (#5187).
-    expect(moveUseCaseIntoReview).toHaveBeenCalledWith(1, 11, expect.anything());
+    expect(moveUseCaseIntoReview).toHaveBeenCalledWith(1, 11, 2, expect.anything());
   });
 
   it("creates no request when the workflow has no steps", async () => {

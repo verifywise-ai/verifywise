@@ -4,12 +4,13 @@ import { sequelize } from "../../database/db";
 import { cleanupDatabase, createTestOrganization, createTestUser } from "./helpers";
 import { createTestApp, testRequest } from "./setup";
 import { createTestProject } from "../factories/test-entities.factory";
+import { createNewProjectQuery } from "../../utils/project.utils";
 import {
   LIFECYCLE_ENTITIES,
   findConfirmationsDue,
   markConfirmationReminded,
   moveUseCaseIntoReview,
-  promoteUseCaseOutOfReview,
+  releaseUseCaseFromReview,
 } from "../../utils/lifecycle.utils";
 
 /**
@@ -179,6 +180,8 @@ describe("use case lifecycle", () => {
     const adminA = await userIn(orgA, "Admin");
     const adminB = await userIn(orgB, "Admin");
     const projectA = await createTestProject(orgA, adminA);
+    const staleA = await createTestProject(orgA, adminA);
+    await setRow(staleA, `lifecycle_stage = 'live', go_live_date = CURRENT_DATE - 100`);
 
     const apiB = await as(orgB, adminB, "Admin");
     for (const path of ["go-live", "retire", "confirm"]) {
@@ -193,7 +196,10 @@ describe("use case lifecycle", () => {
 
     const summary = await apiB.get("/api/v1/use-case-lifecycle/summary");
     expect(summary.status).toBe(200);
-    expect(summary.body.data.counts).toEqual({ in_review: 0, planned: 0, live: 0, retired: 0 });
+    expect(summary.body.data.stale_ids).toEqual([]);
+    const dashboard = await apiB.get("/api/v1/use-case-lifecycle/dashboard");
+    expect(dashboard.body.data.stale.total).toBe(0);
+    expect(dashboard.body.data.quarter.going_live).toEqual([]);
   });
 
   it("requires authentication", async () => {
@@ -212,7 +218,7 @@ describe("use case lifecycle", () => {
     expect([400, 401]).toContain(settings.status);
   });
 
-  it("summarises counts and stale entries with list visibility", async () => {
+  it("lists stale entries with the use cases list's visibility", async () => {
     const orgId = await createTestOrganization();
     const adminId = await userIn(orgId, "Admin");
     const editorId = await userIn(orgId, "Editor");
@@ -228,13 +234,14 @@ describe("use case lifecycle", () => {
       confirmedRecently,
       `lifecycle_stage = 'live', go_live_date = CURRENT_DATE - 400, last_confirmed_at = NOW() - interval '5 days'`,
     );
-    await setRow(mine, `lifecycle_stage = 'retired', retired_at = NOW()`);
+    await setRow(mine, `lifecycle_stage = 'live', go_live_date = CURRENT_DATE - 120`);
 
     const admin = await as(orgId, adminId, "Admin");
     const res = await admin.get("/api/v1/use-case-lifecycle/summary");
     expect(res.status).toBe(200);
-    expect(res.body.data.counts).toEqual({ in_review: 0, planned: 1, live: 3, retired: 1 });
-    expect(res.body.data.stale_ids).toEqual([stale]);
+    // Stage counts are not served: pages count the list they load.
+    expect(res.body.data).not.toHaveProperty("counts");
+    expect([...res.body.data.stale_ids].sort()).toEqual([stale, mine].sort());
     expect(res.body.data.confirmation_interval_days).toBe(90);
 
     // A tighter interval flags more entries.
@@ -243,16 +250,24 @@ describe("use case lifecycle", () => {
       { replacements: { orgId } },
     );
     const tight = await admin.get("/api/v1/use-case-lifecycle/summary");
-    expect(tight.body.data.stale_ids).toEqual([stale]);
+    expect(tight.body.data.confirmation_interval_days).toBe(30);
+    expect([...tight.body.data.stale_ids].sort()).toEqual([stale, mine].sort());
     await setRow(fresh, `go_live_date = CURRENT_DATE - 40`);
     const tighter = await admin.get("/api/v1/use-case-lifecycle/summary");
-    expect([...tighter.body.data.stale_ids].sort()).toEqual([fresh, stale].sort());
+    expect([...tighter.body.data.stale_ids].sort()).toEqual([fresh, stale, mine].sort());
 
     // An Editor who is not a member only sees their own use case.
     const editor = await as(orgId, editorId, "Editor");
     const scoped = await editor.get("/api/v1/use-case-lifecycle/summary");
-    expect(scoped.body.data.counts).toEqual({ in_review: 0, planned: 0, live: 0, retired: 1 });
-    expect(scoped.body.data.stale_ids).toEqual([]);
+    expect(scoped.body.data.stale_ids).toEqual([mine]);
+
+    // Membership makes another use case visible, as in the list.
+    await sequelize.query(
+      `INSERT INTO projects_members (organization_id, project_id, user_id) VALUES (:orgId, :stale, :editorId)`,
+      { replacements: { orgId, stale, editorId } },
+    );
+    const member = await editor.get("/api/v1/use-case-lifecycle/summary");
+    expect([...member.body.data.stale_ids].sort()).toEqual([stale, mine].sort());
   });
 
   it("builds the dashboard breakdowns from live use cases", async () => {
@@ -269,15 +284,19 @@ describe("use case lifecycle", () => {
       b,
       `lifecycle_stage = 'live', go_live_date = CURRENT_DATE - 200, department = 'Finance'`,
     );
-    await setRow(c, `lifecycle_stage = 'retired', retired_at = NOW(), department = 'HR'`);
+    // Went live this quarter and retired since: still counts as going live.
+    await setRow(
+      c,
+      `lifecycle_stage = 'retired', go_live_date = CURRENT_DATE, retired_at = NOW(), department = 'HR'`,
+    );
 
     const api = await as(orgId, adminId, "Admin");
     const res = await api.get("/api/v1/use-case-lifecycle/dashboard");
     expect(res.status).toBe(200);
     const d = res.body.data;
-    expect(d.counts.live).toBe(2);
+    expect(d).not.toHaveProperty("counts");
     expect(d.live_by.department).toEqual([{ label: "Finance", count: 2 }]);
-    expect(d.quarter.going_live.map((i: any) => i.id)).toEqual([a]);
+    expect(d.quarter.going_live.map((i: any) => i.id)).toEqual([a, c].sort((x, y) => x - y));
     expect(d.quarter.retired.map((i: any) => i.id)).toEqual([c]);
     expect(d.stale.total).toBe(1);
     expect(d.stale.items.map((i: any) => i.id)).toEqual([b]);
@@ -344,22 +363,170 @@ describe("use case lifecycle", () => {
     expect(await findConfirmationsDue(entity, orgId, 90)).toEqual([]);
   });
 
-  it("moves into review only from planned and back out on approval", async () => {
+  it("moves into review only from planned and back out again", async () => {
     const orgId = await createTestOrganization();
     const adminId = await userIn(orgId, "Admin");
     const planned = await createTestProject(orgId, adminId);
     const live = await createTestProject(orgId, adminId);
     await setRow(live, `lifecycle_stage = 'live', go_live_date = CURRENT_DATE`);
 
-    await moveUseCaseIntoReview(orgId, planned);
-    await moveUseCaseIntoReview(orgId, live);
+    expect(await moveUseCaseIntoReview(orgId, planned, adminId)).toBe(true);
+    expect(await moveUseCaseIntoReview(orgId, live, adminId)).toBe(false);
     expect((await stage(planned)).lifecycle_stage).toBe("in_review");
     expect((await stage(live)).lifecycle_stage).toBe("live");
 
-    await promoteUseCaseOutOfReview(orgId, planned);
-    await promoteUseCaseOutOfReview(orgId, live);
+    expect(await releaseUseCaseFromReview(orgId, planned, null)).toBe(true);
+    expect(await releaseUseCaseFromReview(orgId, live, null)).toBe(false);
     expect((await stage(planned)).lifecycle_stage).toBe("planned");
     expect((await stage(live)).lifecycle_stage).toBe("live");
+  });
+
+  describe("approval requests", () => {
+    async function setup() {
+      const orgId = await createTestOrganization();
+      const adminId = await userIn(orgId, "Admin");
+      const api = await as(orgId, adminId, "Admin");
+      const workflow = await api.post("/api/approval-workflows").send({
+        workflow_title: "Use case sign-off",
+        entity_type: "use_case",
+        steps: [{ step_name: "Review", approver_ids: [adminId], requires_all_approvers: false }],
+      });
+      expect(workflow.status).toBe(201);
+      const created = await api.post("/api/projects").send({
+        project_title: "Needs sign-off",
+        owner: adminId,
+        start_date: "2026-06-01",
+        geography: 1,
+        framework: [],
+        members: [],
+        approval_workflow_id: workflow.body.data.id,
+      });
+      expect(created.status).toBe(201);
+      const projectId = Number(created.body.data.project?.id ?? created.body.data.id);
+      const [rows] = await sequelize.query(
+        `SELECT id FROM approval_requests
+          WHERE entity_type = 'use_case' AND entity_id = :projectId AND status = 'Pending'`,
+        { replacements: { projectId } },
+      );
+      const requestId = Number((rows as any[])[0].id);
+      return { orgId, adminId, api, projectId, requestId };
+    }
+
+    async function stageHistory(projectId: number): Promise<string[]> {
+      const [rows] = await sequelize.query(
+        `SELECT old_value, new_value FROM use_case_change_history
+          WHERE use_case_id = :projectId AND field_name = 'lifecycle_stage' ORDER BY id`,
+        { replacements: { projectId } },
+      );
+      return (rows as any[]).map((r) => `${r.old_value}->${r.new_value}`);
+    }
+
+    it("opening a request puts the use case in review", async () => {
+      const { projectId } = await setup();
+      expect((await stage(projectId)).lifecycle_stage).toBe("in_review");
+      expect(await stageHistory(projectId)).toEqual(["Planned->In review"]);
+    });
+
+    it("a rejected request moves it back to planned", async () => {
+      const { api, projectId, requestId } = await setup();
+      const res = await api
+        .post(`/api/approval-requests/${requestId}/reject`)
+        .send({ comments: "Not now" });
+      expect(res.status).toBe(200);
+      expect((await stage(projectId)).lifecycle_stage).toBe("planned");
+      expect(await stageHistory(projectId)).toEqual(["Planned->In review", "In review->Planned"]);
+    });
+
+    it("a withdrawn request moves it back to planned", async () => {
+      const { api, projectId, requestId } = await setup();
+      const res = await api.post(`/api/approval-requests/${requestId}/withdraw`);
+      expect(res.status).toBe(200);
+      expect((await stage(projectId)).lifecycle_stage).toBe("planned");
+      expect(await stageHistory(projectId)).toEqual(["Planned->In review", "In review->Planned"]);
+    });
+
+    it("an approved request moves it to planned", async () => {
+      const { api, projectId, requestId } = await setup();
+      const res = await api
+        .post(`/api/approval-requests/${requestId}/approve`)
+        .send({ comments: "Fine" });
+      expect(res.status).toBe(200);
+      expect((await stage(projectId)).lifecycle_stage).toBe("planned");
+    });
+
+    it("clearing the workflow moves it to planned", async () => {
+      const { api, projectId } = await setup();
+      const res = await api
+        .patch(`/api/projects/${projectId}`)
+        .send({ approval_workflow_id: null });
+      expect(res.status).toBe(202);
+      expect((await stage(projectId)).lifecycle_stage).toBe("planned");
+      const [pending] = await sequelize.query(
+        `SELECT 1 FROM approval_requests WHERE entity_id = :projectId AND status = 'Pending'`,
+        { replacements: { projectId } },
+      );
+      expect(pending).toHaveLength(0);
+    });
+  });
+
+  it("ignores lifecycle fields in legacy create and update bodies", async () => {
+    const orgId = await createTestOrganization();
+    const adminId = await userIn(orgId, "Admin");
+    const api = await as(orgId, adminId, "Admin");
+    const created = await api.post("/api/projects").send({
+      project_title: "Body tries to go live",
+      owner: adminId,
+      start_date: "2026-06-01",
+      geography: 1,
+      framework: [],
+      members: [],
+      lifecycle_stage: "live",
+      go_live_date: "2026-01-01",
+      last_confirmed_at: "2026-01-02T00:00:00Z",
+      department: "Sneaky",
+    });
+    expect(created.status).toBe(201);
+    const projectId = Number(created.body.data.project?.id ?? created.body.data.id);
+    expect(await stage(projectId)).toMatchObject({
+      lifecycle_stage: "planned",
+      go_live_date: null,
+      last_confirmed_at: null,
+      department: null,
+    });
+
+    const updated = await api
+      .patch(`/api/projects/${projectId}`)
+      .send({ lifecycle_stage: "retired", retired_at: "2026-01-01T00:00:00Z", department: "X" });
+    expect(updated.status).toBe(202);
+    expect(await stage(projectId)).toMatchObject({
+      lifecycle_stage: "planned",
+      retired_at: null,
+      department: null,
+    });
+  });
+
+  it("validates a department passed to use case creation like the PATCH endpoint", async () => {
+    const orgId = await createTestOrganization();
+    const adminId = await userIn(orgId, "Admin");
+    const create = (department: unknown) =>
+      sequelize.transaction(async (transaction) =>
+        createNewProjectQuery(
+          { project_title: "Dept", owner: adminId, start_date: new Date(), geography: 1 } as any,
+          [],
+          [],
+          orgId,
+          adminId,
+          transaction,
+          false,
+          { department },
+        ),
+      );
+    await expect(create("x".repeat(256))).rejects.toThrow("Invalid department");
+    await expect(create(42)).rejects.toThrow("Invalid department");
+    const ok = await create("  Risk  ");
+    expect((await stage(ok.id!)).department).toBe("Risk");
+    const empty = await create("   ");
+    expect((await stage(empty.id!)).department).toBeNull();
   });
 
   it("only lets admins change the check interval", async () => {

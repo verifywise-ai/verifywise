@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Box, Stack, Typography } from "@mui/material";
 import { DashboardCard } from "../../components/Cards/DashboardCard";
 import { EmptyStateMessage } from "../../components/EmptyStateMessage";
@@ -7,6 +7,8 @@ import StatusBadge from "../../components/StatusBadge";
 import useNavigateSearch from "../../../application/hooks/useNavigateSearch";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import { useUseCaseLifecycleDashboard } from "../../../application/hooks/useUseCaseLifecycle";
+import { useDashboard } from "../../../application/hooks/useDashboard";
+import { countLifecycleStages } from "../../../application/utils/useCaseLifecycle";
 import type {
   LifecycleBreakdownRow,
   LifecycleDashboardItem,
@@ -124,6 +126,9 @@ function ItemList({
 const UseCaseLifecycleWidgets = () => {
   const navigateSearch = useNavigateSearch();
   const { data, isError } = useUseCaseLifecycleDashboard();
+  // Stage counts come from the use cases list, as on the Use cases page.
+  const { dashboard: overview } = useDashboard();
+  const counts = useMemo(() => countLifecycleStages(overview?.projects_list ?? []), [overview]);
   const [breakdown, setBreakdown] = useState<Breakdown>("department");
 
   if (isError || !data) return null;
@@ -134,7 +139,7 @@ const UseCaseLifecycleWidgets = () => {
   const stageRows = LIFECYCLE_STAGES.map((stage) => ({
     key: stage,
     label: LIFECYCLE_STAGE_LABELS[stage],
-    count: data.counts[stage] ?? 0,
+    count: counts[stage],
   }));
   const breakdownRows = (data.live_by[breakdown] as LifecycleBreakdownRow[]).map((row) => ({
     key: row.label || "__none__",

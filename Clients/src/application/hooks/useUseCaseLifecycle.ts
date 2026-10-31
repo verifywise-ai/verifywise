@@ -57,7 +57,7 @@ export function useUseCaseLifecycleActions(projectId: number) {
   };
 
   const goLive = useMutation({
-    mutationFn: (goLiveDate?: string) => markUseCaseLive(projectId, goLiveDate),
+    mutationFn: (goLiveDate: string) => markUseCaseLive(projectId, goLiveDate),
     onSuccess,
   });
   const retire = useMutation({ mutationFn: () => retireUseCase(projectId), onSuccess });

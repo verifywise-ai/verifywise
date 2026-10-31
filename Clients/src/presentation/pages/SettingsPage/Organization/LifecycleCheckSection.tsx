@@ -6,13 +6,13 @@ import {
   useLifecycleSettings,
   useUpdateLifecycleSettings,
 } from "../../../../application/hooks/useUseCaseLifecycle";
+import { useHasPermission } from "../../../../application/hooks/useMyPermissions";
 import {
   CONFIRMATION_INTERVAL_OPTIONS,
   ConfirmationIntervalDays,
 } from "../../../../domain/enums/lifecycleStage.enum";
 
 interface LifecycleCheckSectionProps {
-  isDisabled?: boolean;
   onError: (message: string) => void;
   onSuccess: (message: string) => void;
 }
@@ -25,9 +25,12 @@ const INTERVAL_ITEMS = CONFIRMATION_INTERVAL_OPTIONS.map((days) => ({
 /**
  * Org-wide "still live?" check interval (#5187). Owners of live use cases are
  * emailed when nobody confirmed them within this interval, and the entries are
- * marked stale. Admin only.
+ * marked stale. Needs organization.admin.
  */
-const LifecycleCheckSection = ({ isDisabled, onError, onSuccess }: LifecycleCheckSectionProps) => {
+const LifecycleCheckSection = ({ onError, onSuccess }: LifecycleCheckSectionProps) => {
+  // The permission the PATCH route checks, from the per-org matrix.
+  const canEdit = useHasPermission("organization.admin", { fallbackToAdmin: true });
+  const isDisabled = !canEdit;
   const { data: settings } = useLifecycleSettings();
   const update = useUpdateLifecycleSettings();
   // The saved value until the admin picks another one.

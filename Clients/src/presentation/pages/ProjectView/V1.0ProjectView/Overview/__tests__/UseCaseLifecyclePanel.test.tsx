@@ -27,6 +27,11 @@ vi.mock("../../../../../../application/repository/useCaseLifecycle.repository", 
   updateLifecycleSettings: vi.fn(),
 }));
 
+let mockPermissions: string[] | undefined = ["useCase.edit"];
+vi.mock("../../../../../../application/hooks/useMyPermissions", () => ({
+  useMyPermissions: () => ({ permissions: mockPermissions, isLoading: false, error: null }),
+}));
+
 let mockRole = "Editor";
 let mockUserId: number | null = 1;
 vi.mock("../../../../../../application/hooks/useAuth", () => ({
@@ -43,13 +48,14 @@ const project = (overrides: Partial<Project> = {}): Project =>
   }) as Project;
 
 describe("canManageUseCaseLifecycle", () => {
-  it("allows Admin, Editor and the owner; never Auditors", () => {
-    expect(canManageUseCaseLifecycle("Admin", 2, 1)).toBe(true);
-    expect(canManageUseCaseLifecycle("Editor", 2, 1)).toBe(true);
-    expect(canManageUseCaseLifecycle("Reviewer", 1, 1)).toBe(true);
-    expect(canManageUseCaseLifecycle("Reviewer", 2, 1)).toBe(false);
-    expect(canManageUseCaseLifecycle("Auditor", 1, 1)).toBe(false);
-    expect(canManageUseCaseLifecycle("", 1, 1)).toBe(false);
+  it("allows useCase.edit holders and the owner; never Auditors", () => {
+    expect(canManageUseCaseLifecycle("Admin", 2, 1, true)).toBe(true);
+    expect(canManageUseCaseLifecycle("Custom role", 2, 1, true)).toBe(true);
+    expect(canManageUseCaseLifecycle("Editor", 2, 1, false)).toBe(false);
+    expect(canManageUseCaseLifecycle("Reviewer", 1, 1, false)).toBe(true);
+    expect(canManageUseCaseLifecycle("Reviewer", 2, 1, false)).toBe(false);
+    expect(canManageUseCaseLifecycle("Auditor", 1, 1, true)).toBe(false);
+    expect(canManageUseCaseLifecycle("", 1, 1, true)).toBe(false);
   });
 });
 
@@ -58,6 +64,7 @@ describe("UseCaseLifecyclePanel", () => {
     mockRole = "Editor";
     mockUserId = 1;
     mockStaleIds = [];
+    mockPermissions = ["useCase.edit"];
     vi.clearAllMocks();
   });
 
@@ -74,7 +81,14 @@ describe("UseCaseLifecyclePanel", () => {
     fireEvent.click(submit[submit.length - 1]);
     await waitFor(() => expect(mockMarkLive).toHaveBeenCalledTimes(1));
     expect(mockMarkLive.mock.calls[0][0]).toBe(7);
-    expect(mockMarkLive.mock.calls[0][1]).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    // The user's local date (today by default), not a UTC conversion.
+    const now = new Date();
+    const localToday = [
+      now.getFullYear(),
+      String(now.getMonth() + 1).padStart(2, "0"),
+      String(now.getDate()).padStart(2, "0"),
+    ].join("-");
+    expect(mockMarkLive.mock.calls[0][1]).toBe(localToday);
     await waitFor(() => expect(onChanged).toHaveBeenCalled());
   });
 
@@ -97,6 +111,14 @@ describe("UseCaseLifecyclePanel", () => {
     expect(screen.queryByTestId("lifecycle-go-live-btn")).toBeNull();
     expect(screen.queryByTestId("lifecycle-retire-btn")).toBeNull();
     expect(screen.queryByTestId("lifecycle-edit-department")).toBeNull();
+  });
+
+  it("follows the per-org permission list, not the role name", () => {
+    mockRole = "Editor";
+    mockUserId = 2;
+    mockPermissions = [];
+    renderWithProviders(<UseCaseLifecyclePanel project={project()} />);
+    expect(screen.queryByTestId("lifecycle-go-live-btn")).toBeNull();
   });
 
   it("shows no actions on a retired use case", () => {

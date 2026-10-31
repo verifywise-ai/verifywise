@@ -17,12 +17,13 @@ import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtende
 import { brand } from "../../../themes/palette";
 import { testIds } from "../../../test-ids";
 import LifecycleTabs from "../../../components/LifecycleTabs";
-import { useUseCaseLifecycleSummary } from "../../../../application/hooks/useUseCaseLifecycle";
+import { useQueryClient } from "@tanstack/react-query";
 import {
-  LIFECYCLE_STAGES,
-  LifecycleStage,
-  LifecycleStageCounts,
-} from "../../../../domain/enums/lifecycleStage.enum";
+  useCaseLifecycleKeys,
+  useUseCaseLifecycleSummary,
+} from "../../../../application/hooks/useUseCaseLifecycle";
+import { countLifecycleStages } from "../../../../application/utils/useCaseLifecycle";
+import { LIFECYCLE_STAGES, LifecycleStage } from "../../../../domain/enums/lifecycleStage.enum";
 
 const STAGE_STORAGE_KEY = "use-cases-lifecycle-tab";
 
@@ -43,9 +44,8 @@ const STAGE_EMPTY: Record<LifecycleStage, string> = {
 const isStage = (value: string | null): value is LifecycleStage =>
   !!value && (LIFECYCLE_STAGES as readonly string[]).includes(value);
 
-/** Stage from ?stage=, else the last tab used, else Planned. */
-const initialStage = (param: string | null): LifecycleStage => {
-  if (isStage(param)) return param;
+/** The last tab used on this browser, else Planned. */
+const readStoredStage = (): LifecycleStage => {
   const stored = localStorage.getItem(STAGE_STORAGE_KEY);
   return isStage(stored) ? stored : LifecycleStage.PLANNED;
 };
@@ -70,22 +70,20 @@ const Home = () => {
   // so a tab count always equals the rows under it; stale markers come from
   // the server, which applies the org's "still live?" interval.
   const [searchParams, setSearchParams] = useSearchParams();
-  const stage = initialStage(searchParams.get("stage"));
+  // localStorage is read once; ?stage= (dashboard links) wins over it.
+  const [storedStage] = useState(readStoredStage);
+  const stageParam = searchParams.get("stage");
+  const stage = isStage(stageParam) ? stageParam : storedStage;
   const handleStageChange = (next: LifecycleStage) => {
     localStorage.setItem(STAGE_STORAGE_KEY, next);
     const params = new URLSearchParams(searchParams);
     params.set("stage", next);
     setSearchParams(params, { replace: true });
   };
-  const { data: lifecycleSummary, refetch: refetchLifecycleSummary } = useUseCaseLifecycleSummary();
+  const { data: lifecycleSummary } = useUseCaseLifecycleSummary();
   const staleIds = useMemo(() => new Set(lifecycleSummary?.stale_ids ?? []), [lifecycleSummary]);
-  const stageCounts = useMemo(() => {
-    const counts = Object.fromEntries(LIFECYCLE_STAGES.map((s) => [s, 0])) as LifecycleStageCounts;
-    for (const project of projects) {
-      counts[project.lifecycle_stage ?? LifecycleStage.PLANNED] += 1;
-    }
-    return counts;
-  }, [projects]);
+  // The same count the dashboard shows (countLifecycleStages over the list).
+  const stageCounts = useMemo(() => countLifecycleStages(projects), [projects]);
   const stageProjects = useMemo(
     () => projects.filter((p) => (p.lifecycle_stage ?? LifecycleStage.PLANNED) === stage),
     [projects, stage],
@@ -114,8 +112,15 @@ const Home = () => {
   useEffect(() => {
     void refreshUsers();
     void fetchDashboard();
-    void refetchLifecycleSummary();
-  }, [fetchDashboard, refreshProjectsFlag, refreshUsers, refetchLifecycleSummary]);
+  }, [fetchDashboard, refreshProjectsFlag, refreshUsers]);
+
+  // A create or delete changes the stale markers too. Invalidating here (not
+  // in the effect above) keeps the summary to one fetch on mount.
+  const queryClient = useQueryClient();
+  const refreshProjects = () => {
+    setRefreshProjectsFlag((prev) => !prev);
+    void queryClient.invalidateQueries({ queryKey: useCaseLifecycleKeys.all });
+  };
 
   const submitFormRef = useRef<(() => void) | undefined>(undefined);
 
@@ -131,7 +136,7 @@ const Home = () => {
 
   const handleProjectFormModalClose = () => {
     setIsProjectFormModalOpen(false);
-    setRefreshProjectsFlag((prev) => !prev);
+    refreshProjects();
   };
 
   return (
@@ -157,7 +162,7 @@ const Home = () => {
             dataJoyrideId="use-case-lifecycle-tabs"
           />
         }
-        onProjectDeleted={() => setRefreshProjectsFlag((prev) => !prev)}
+        onProjectDeleted={refreshProjects}
         newProjectButton={
           <div data-joyride-id="new-project-button" ref={newProjectButtonRef}>
             <CustomizableButton
@@ -180,7 +185,7 @@ const Home = () => {
         isOpen={isProjectFormModalOpen}
         onClose={async () => {
           setIsProjectFormModalOpen(false);
-          setRefreshProjectsFlag((prev) => !prev);
+          refreshProjects();
         }}
         title="Create new use case"
         description="Create a new use case by filling in the following details"

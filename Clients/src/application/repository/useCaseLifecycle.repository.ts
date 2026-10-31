@@ -2,13 +2,12 @@ import { apiServices } from "../../infrastructure/api/networkServices";
 import type {
   ConfirmationIntervalDays,
   LifecycleStage,
-  LifecycleStageCounts,
 } from "../../domain/enums/lifecycleStage.enum";
 
 /** Lifecycle API (#5187), all under /api/v1. */
 
+/** Stage counts are not served: pages count the use cases list they load. */
 export interface UseCaseLifecycleSummary {
-  counts: LifecycleStageCounts;
   stale_ids: number[];
   confirmation_interval_days: number;
 }
@@ -26,7 +25,6 @@ export interface LifecycleBreakdownRow {
 }
 
 export interface UseCaseLifecycleDashboard {
-  counts: LifecycleStageCounts;
   quarter: {
     start: string;
     end: string;
@@ -72,13 +70,14 @@ export async function getUseCaseLifecycleDashboard(): Promise<UseCaseLifecycleDa
   return response.data.data;
 }
 
+/** `goLiveDate` is the user's local calendar date, YYYY-MM-DD. */
 export async function markUseCaseLive(
   id: number,
-  goLiveDate?: string,
+  goLiveDate: string,
 ): Promise<UseCaseLifecycleState> {
   const response = await apiServices.post<Envelope<UseCaseLifecycleState>>(
     `${BASE}/${id}/go-live`,
-    goLiveDate ? { go_live_date: goLiveDate } : {},
+    { go_live_date: goLiveDate },
   );
   return response.data.data;
 }

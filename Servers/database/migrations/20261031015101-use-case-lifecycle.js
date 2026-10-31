@@ -18,9 +18,11 @@
  *                               emails once per period, not once per day
  *   - department                free text; there is no org-level department list
  *
- * Backfill from status, only where the meaning is unambiguous:
- *   - an open (Pending) approval request, or status 'Under review' → in_review
- *   - 'Closed' → retired (retired_at stays NULL: the real date is unknown)
+ * Backfill, only where the meaning is unambiguous:
+ *   - an open (Pending) approval request → in_review. Status 'Under review'
+ *     alone is not enough: intake approval has always created use cases with
+ *     that status after the review was done.
+ *   - status 'Closed' → retired (retired_at stays NULL: the real date is unknown)
  *   - everything else → planned. 'Completed' is NOT mapped to live: it can mean
  *     "delivery finished" as easily as "in production", and a backfilled live
  *     row with no go-live date would be flagged stale and emailed on day one.
@@ -69,8 +71,7 @@ module.exports = {
       await queryInterface.sequelize.query(
         `UPDATE verifywise.projects p
             SET lifecycle_stage = CASE
-              WHEN p.status::text = 'Under review'
-                OR EXISTS (
+              WHEN EXISTS (
                   SELECT 1 FROM verifywise.approval_requests ar
                    WHERE ar.organization_id = p.organization_id
                      AND ar.entity_type::text = 'use_case'

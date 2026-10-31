@@ -5,13 +5,12 @@ import { sequelize } from "../database/db";
 import { toId } from "../utils/validations/validation.utils";
 import { roleHasPermission } from "../utils/rolePermissions.utils";
 import {
-  DEPARTMENT_MAX_LENGTH,
   LIFECYCLE_ENTITIES,
   LifecycleAction,
   applyLifecycleAction,
   getLifecycleOrgSettings,
   getLifecycleRow,
-  normalizeDepartment,
+  parseDepartment,
   updateDepartment,
   upsertLifecycleOrgSettings,
 } from "../utils/lifecycle.utils";
@@ -19,7 +18,10 @@ import {
   getUseCaseLifecycleDashboard,
   getUseCaseLifecycleSummary,
 } from "../utils/useCaseLifecycle.utils";
-import { isConfirmationInterval } from "../domain.layer/enums/lifecycle-stage.enum";
+import {
+  LIFECYCLE_STAGE_LABELS,
+  isConfirmationInterval,
+} from "../domain.layer/enums/lifecycle-stage.enum";
 import { recordMultipleFieldChanges } from "../utils/changeHistory.base.utils";
 
 const FILE = "useCaseLifecycle.ctrl.ts";
@@ -56,22 +58,13 @@ export function parseIsoDate(value: unknown): string | null {
   return value;
 }
 
-const STAGE_LABEL: Record<string, string> = {
-  in_review: "In review",
-  planned: "Planned",
-  live: "Live",
-  retired: "Retired",
-};
-
 export async function getLifecycleSummaryHandler(req: Request, res: Response) {
   const fn = "getLifecycleSummaryHandler";
   try {
-    const settings = await getLifecycleOrgSettings(req.organizationId!);
-    const summary = await getUseCaseLifecycleSummary(
-      req.organizationId!,
-      { userId: req.userId!, role: req.role! },
-      settings.confirmation_interval_days,
-    );
+    const summary = await getUseCaseLifecycleSummary(req.organizationId!, {
+      userId: req.userId!,
+      role: req.role!,
+    });
     return res.status(200).json(STATUS_CODE[200](summary));
   } catch (error) {
     return serverError(req, res, fn, error);
@@ -81,12 +74,10 @@ export async function getLifecycleSummaryHandler(req: Request, res: Response) {
 export async function getLifecycleDashboardHandler(req: Request, res: Response) {
   const fn = "getLifecycleDashboardHandler";
   try {
-    const settings = await getLifecycleOrgSettings(req.organizationId!);
-    const dashboard = await getUseCaseLifecycleDashboard(
-      req.organizationId!,
-      { userId: req.userId!, role: req.role! },
-      settings.confirmation_interval_days,
-    );
+    const dashboard = await getUseCaseLifecycleDashboard(req.organizationId!, {
+      userId: req.userId!,
+      role: req.role!,
+    });
     return res.status(200).json(STATUS_CODE[200](dashboard));
   } catch (error) {
     return serverError(req, res, fn, error);
@@ -120,7 +111,7 @@ function lifecycleActionHandler(action: LifecycleAction) {
         if (parsed > latestAllowedGoLiveDate()) {
           return res
             .status(400)
-            .json(STATUS_CODE[400](req.t!("The go-live date cannot be in the future")));
+            .json(STATUS_CODE[400](req.t!("The go-live date can't be later than today")));
         }
         goLiveDate = parsed;
       }
@@ -155,8 +146,8 @@ function lifecycleActionHandler(action: LifecycleAction) {
       if (current.lifecycle_stage !== updated.lifecycle_stage) {
         changes.push({
           fieldName: "lifecycle_stage",
-          oldValue: STAGE_LABEL[current.lifecycle_stage] ?? current.lifecycle_stage,
-          newValue: STAGE_LABEL[updated.lifecycle_stage] ?? updated.lifecycle_stage,
+          oldValue: LIFECYCLE_STAGE_LABELS[current.lifecycle_stage] ?? current.lifecycle_stage,
+          newValue: LIFECYCLE_STAGE_LABELS[updated.lifecycle_stage] ?? updated.lifecycle_stage,
         });
       }
       if (action === "go_live") {
@@ -208,14 +199,15 @@ export async function updateDepartmentHandler(req: Request, res: Response) {
   if (isNaN(id) || id <= 0) {
     return res.status(400).json(STATUS_CODE[400](req.t!("Invalid project ID")));
   }
-  const raw = req.body?.department;
-  if (raw !== null && typeof raw !== "string") {
+  // The field is required here: clearing it is an explicit null or "".
+  if (req.body?.department === undefined) {
     return res.status(400).json(STATUS_CODE[400](req.t!("Invalid department")));
   }
-  const department = normalizeDepartment(raw);
-  if (department && department.length > DEPARTMENT_MAX_LENGTH) {
+  const parsed = parseDepartment(req.body.department);
+  if (!parsed.ok) {
     return res.status(400).json(STATUS_CODE[400](req.t!("Invalid department")));
   }
+  const department = parsed.department;
 
   const transaction = await sequelize.transaction();
   try {

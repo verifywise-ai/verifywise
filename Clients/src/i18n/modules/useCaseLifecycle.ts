@@ -41,7 +41,8 @@ export const de: Record<string, string> = {
   "No live use cases have a framework yet": "Noch kein aktiver Anwendungsfall hat ein Framework",
   "No live use cases yet": "Noch keine aktiven Anwendungsfälle",
   "The change could not be saved.": "Die Änderung konnte nicht gespeichert werden.",
-  "The go-live date cannot be in the future": "Das Go-live-Datum darf nicht in der Zukunft liegen",
+  "The go-live date can't be later than today":
+    "Das Go-live-Datum darf nicht nach dem heutigen Tag liegen",
   "Use cases waiting for an approval decision":
     "Anwendungsfälle, die auf eine Freigabeentscheidung warten",
   "Use cases that are not live yet": "Anwendungsfälle, die noch nicht live sind",
@@ -105,8 +106,8 @@ export const fr: Record<string, string> = {
     "Aucun cas d'usage en service n'a encore de référentiel",
   "No live use cases yet": "Aucun cas d'usage en service pour l'instant",
   "The change could not be saved.": "La modification n'a pas pu être enregistrée.",
-  "The go-live date cannot be in the future":
-    "La date de mise en service ne peut pas être dans le futur",
+  "The go-live date can't be later than today":
+    "La date de mise en service ne peut pas être postérieure à aujourd'hui",
   "Use cases waiting for an approval decision":
     "Cas d'usage en attente d'une décision d'approbation",
   "Use cases that are not live yet": "Cas d'usage pas encore en service",
@@ -169,8 +170,8 @@ export const es: Record<string, string> = {
   "No live use cases have a framework yet": "Ningún caso de uso en producción tiene aún un marco",
   "No live use cases yet": "Todavía no hay casos de uso en producción",
   "The change could not be saved.": "No se pudo guardar el cambio.",
-  "The go-live date cannot be in the future":
-    "La fecha de puesta en producción no puede ser futura",
+  "The go-live date can't be later than today":
+    "La fecha de puesta en producción no puede ser posterior a hoy",
   "Use cases waiting for an approval decision":
     "Casos de uso a la espera de una decisión de aprobación",
   "Use cases that are not live yet": "Casos de uso que aún no están en producción",

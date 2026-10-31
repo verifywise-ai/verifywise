@@ -2,6 +2,11 @@ import { screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { renderWithProviders } from "../../../../../test/renderWithProviders";
 import LifecycleCheckSection from "../LifecycleCheckSection";
 
+let mockPermissions: string[] | undefined = ["organization.admin"];
+vi.mock("../../../../../application/hooks/useMyPermissions", () => ({
+  useHasPermission: (key: string) => !!mockPermissions?.includes(key),
+}));
+
 const mockGetSettings = vi.fn();
 const mockUpdateSettings = vi.fn();
 
@@ -13,6 +18,7 @@ vi.mock("../../../../../application/repository/useCaseLifecycle.repository", () 
 describe("LifecycleCheckSection", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockPermissions = ["organization.admin"];
     mockGetSettings.mockResolvedValue({ organization_id: 1, confirmation_interval_days: 90 });
     mockUpdateSettings.mockImplementation((days: number) =>
       Promise.resolve({ organization_id: 1, confirmation_interval_days: days }),
@@ -35,8 +41,9 @@ describe("LifecycleCheckSection", () => {
     await waitFor(() => expect(onSuccess).toHaveBeenCalledWith("Live use case check saved"));
   });
 
-  it("is disabled for non-admins", async () => {
-    renderWithProviders(<LifecycleCheckSection isDisabled onError={vi.fn()} onSuccess={vi.fn()} />);
+  it("is disabled without organization.admin", async () => {
+    mockPermissions = [];
+    renderWithProviders(<LifecycleCheckSection onError={vi.fn()} onSuccess={vi.fn()} />);
     const button = screen.getByTestId("lifecycle-save-interval-btn");
     expect(button).toBeDisabled();
     fireEvent.click(button);

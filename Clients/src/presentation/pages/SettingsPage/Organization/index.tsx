@@ -551,7 +551,6 @@ const Organization = () => {
 
       {/* Org-wide "still live?" interval for use cases (#5187) */}
       <LifecycleCheckSection
-        isDisabled={isEditingDisabled}
         onError={(message) => showAlert("error", "Error", message)}
         onSuccess={(message) => showAlert("success", "Success", message)}
       />

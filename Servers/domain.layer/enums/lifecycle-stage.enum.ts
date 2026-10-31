@@ -18,6 +18,14 @@ export const LIFECYCLE_STAGES: readonly LifecycleStage[] = [
   LifecycleStage.RETIRED,
 ];
 
+/** Labels used in change history and emails. */
+export const LIFECYCLE_STAGE_LABELS: Record<LifecycleStage, string> = {
+  [LifecycleStage.IN_REVIEW]: "In review",
+  [LifecycleStage.PLANNED]: "Planned",
+  [LifecycleStage.LIVE]: "Live",
+  [LifecycleStage.RETIRED]: "Retired",
+};
+
 /** Allowed values for the org-wide "still live?" interval, in days. */
 export const CONFIRMATION_INTERVAL_OPTIONS = [30, 90, 180] as const;
 export type ConfirmationIntervalDays = (typeof CONFIRMATION_INTERVAL_OPTIONS)[number];

@@ -3,9 +3,11 @@ import { sequelize } from "../database/db";
 import {
   ConfirmationIntervalDays,
   DEFAULT_CONFIRMATION_INTERVAL_DAYS,
+  LIFECYCLE_STAGE_LABELS,
   LifecycleStage,
 } from "../domain.layer/enums/lifecycle-stage.enum";
 import { NotificationEntityType } from "../domain.layer/interfaces/i.notification";
+import { recordMultipleFieldChanges } from "./changeHistory.base.utils";
 
 /**
  * Lifecycle of inventory entries (#5187): in review → planned → live → retired,
@@ -51,11 +53,19 @@ export const LIFECYCLE_ENTITIES: Record<LifecycleEntityConfig["key"], LifecycleE
 
 export const DEPARTMENT_MAX_LENGTH = 255;
 
-/** Trim free-text department; empty means none. */
-export function normalizeDepartment(value: unknown): string | null {
-  if (typeof value !== "string") return null;
+export type DepartmentInput = { ok: true; department: string | null } | { ok: false };
+
+/**
+ * The one department validator (PATCH endpoint and use case creation):
+ * null/undefined → none, otherwise a string, trimmed, empty → none, at most
+ * DEPARTMENT_MAX_LENGTH characters.
+ */
+export function parseDepartment(value: unknown): DepartmentInput {
+  if (value === undefined || value === null) return { ok: true, department: null };
+  if (typeof value !== "string") return { ok: false };
   const trimmed = value.trim();
-  return trimmed ? trimmed : null;
+  if (trimmed.length > DEPARTMENT_MAX_LENGTH) return { ok: false };
+  return { ok: true, department: trimmed || null };
 }
 
 // ─── Org settings ───────────────────────────────────────────────────────────
@@ -119,10 +129,22 @@ export function confirmationBaselineSql(alias: string): string {
     ${alias}.last_updated, ${alias}.created_at::timestamptz)`;
 }
 
-/** SQL predicate: live, and not confirmed within :intervalDays days. */
-export function staleSql(alias: string): string {
+/**
+ * The org's "still live?" interval as an SQL expression (the default when the
+ * org has no settings row). Binds :organizationId.
+ */
+export const ORG_INTERVAL_SQL = `COALESCE((SELECT los.confirmation_interval_days
+    FROM lifecycle_org_settings los
+   WHERE los.organization_id = :organizationId), ${DEFAULT_CONFIRMATION_INTERVAL_DAYS})`;
+
+/**
+ * SQL predicate: live, and not confirmed within the interval. `intervalSql`
+ * defaults to the :intervalDays replacement; pass ORG_INTERVAL_SQL to read
+ * the org setting inside the same query.
+ */
+export function staleSql(alias: string, intervalSql = ":intervalDays"): string {
   return `(${alias}.lifecycle_stage = '${LifecycleStage.LIVE}'
-    AND ${confirmationBaselineSql(alias)} < NOW() - make_interval(days => :intervalDays))`;
+    AND ${confirmationBaselineSql(alias)} < NOW() - make_interval(days => ${intervalSql}))`;
 }
 
 function scopeSql(entity: LifecycleEntityConfig, alias: string): string {
@@ -289,21 +311,64 @@ export async function updateDepartment(
 }
 
 /**
- * When an approval ends (approved, or the workflow was cleared) a use case
- * that was waiting in review moves to planned. Other stages are left alone.
+ * Move a use case between in review and planned when its approval request
+ * opens or ends, and record the move in the use case change history. Only a
+ * row in `from` changes; anything else (live, retired) is left alone.
+ * `changedBy` null means the system made the change (auto-approval, a job).
  */
-export async function promoteUseCaseOutOfReview(
+async function moveUseCaseStage(
   organizationId: number,
   id: number,
+  from: LifecycleStage,
+  to: LifecycleStage,
+  changedBy: number | null,
   transaction?: Transaction,
-): Promise<void> {
-  await sequelize.query(
+): Promise<boolean> {
+  const rows = (await sequelize.query(
     `UPDATE projects
-        SET lifecycle_stage = '${LifecycleStage.PLANNED}'
+        SET lifecycle_stage = :to
       WHERE organization_id = :organizationId
         AND id = :id
-        AND lifecycle_stage = '${LifecycleStage.IN_REVIEW}'`,
-    { replacements: { organizationId, id }, transaction },
+        AND lifecycle_stage = :from
+      RETURNING id`,
+    { replacements: { organizationId, id, from, to }, type: QueryTypes.SELECT, transaction },
+  )) as { id: number }[];
+  if (rows.length === 0) return false;
+  await recordMultipleFieldChanges(
+    "use_case",
+    id,
+    changedBy,
+    organizationId,
+    [
+      {
+        fieldName: "lifecycle_stage",
+        oldValue: LIFECYCLE_STAGE_LABELS[from],
+        newValue: LIFECYCLE_STAGE_LABELS[to],
+      },
+    ],
+    transaction,
+    changedBy === null,
+  );
+  return true;
+}
+
+/**
+ * The approval request a use case waited on is over: approved, rejected,
+ * withdrawn, or the workflow was cleared. In review → planned.
+ */
+export async function releaseUseCaseFromReview(
+  organizationId: number,
+  id: number,
+  changedBy: number | null,
+  transaction?: Transaction,
+): Promise<boolean> {
+  return moveUseCaseStage(
+    organizationId,
+    id,
+    LifecycleStage.IN_REVIEW,
+    LifecycleStage.PLANNED,
+    changedBy,
+    transaction,
   );
 }
 
@@ -311,14 +376,15 @@ export async function promoteUseCaseOutOfReview(
 export async function moveUseCaseIntoReview(
   organizationId: number,
   id: number,
+  changedBy: number | null,
   transaction?: Transaction,
-): Promise<void> {
-  await sequelize.query(
-    `UPDATE projects
-        SET lifecycle_stage = '${LifecycleStage.IN_REVIEW}'
-      WHERE organization_id = :organizationId
-        AND id = :id
-        AND lifecycle_stage = '${LifecycleStage.PLANNED}'`,
-    { replacements: { organizationId, id }, transaction },
+): Promise<boolean> {
+  return moveUseCaseStage(
+    organizationId,
+    id,
+    LifecycleStage.PLANNED,
+    LifecycleStage.IN_REVIEW,
+    changedBy,
+    transaction,
   );
 }

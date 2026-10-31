@@ -112,7 +112,7 @@ export const createUseCaseApprovalRequest = async (
 
   // A planned use case with an open approval request is in review (#5187).
   // Approval (manual or automatic, below) moves it back to planned.
-  await moveUseCaseIntoReview(organizationId, project.id, transaction);
+  await moveUseCaseIntoReview(organizationId, project.id, requestedBy, transaction);
 
   // Risk-based auto-approval, evaluated from the project row (never the
   // client payload), inside the project-creation transaction

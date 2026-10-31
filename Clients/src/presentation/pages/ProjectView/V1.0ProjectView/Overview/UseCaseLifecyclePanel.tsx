@@ -10,7 +10,11 @@ import Field from "../../../../components/Inputs/Field";
 import Alert from "../../../../components/Alert";
 import { useAuth } from "../../../../../application/hooks/useAuth";
 import useFormattedDate from "../../../../../application/hooks/useFormattedDate";
-import { canManageUseCaseLifecycle } from "../../../../../application/utils/useCaseLifecycle";
+import {
+  canEditUseCasesByRole,
+  canManageUseCaseLifecycle,
+} from "../../../../../application/utils/useCaseLifecycle";
+import { useMyPermissions } from "../../../../../application/hooks/useMyPermissions";
 import {
   useUseCaseLifecycleActions,
   useUseCaseLifecycleSummary,
@@ -56,7 +60,13 @@ const UseCaseLifecyclePanel = ({
   const [error, setError] = useState<string | null>(null);
 
   const stage = project.lifecycle_stage ?? LifecycleStage.PLANNED;
-  const canManage = canManageUseCaseLifecycle(userRoleName, userId, project.owner);
+  // Same per-org permission matrix the server checks (custom roles included);
+  // the built-in role rule only stands in until the list has loaded.
+  const { permissions } = useMyPermissions();
+  const canEditUseCases = permissions
+    ? permissions.includes("useCase.edit")
+    : canEditUseCasesByRole(userRoleName);
+  const canManage = canManageUseCaseLifecycle(userRoleName, userId, project.owner, canEditUseCases);
   const isStale = stage === LifecycleStage.LIVE && !!summary?.stale_ids.includes(project.id);
   const busy = goLive.isPending || retire.isPending || confirm.isPending || setDepartment.isPending;
 
@@ -73,7 +83,7 @@ const UseCaseLifecyclePanel = ({
 
   const goLiveDateError =
     goLiveDate && goLiveDate.isAfter(dayjs(), "day")
-      ? "The go-live date cannot be in the future"
+      ? "The go-live date can't be later than today"
       : "";
 
   return (
@@ -218,7 +228,10 @@ const UseCaseLifecyclePanel = ({
         submitButtonText="Mark as live"
         isSubmitting={goLive.isPending}
         isSubmitDisabled={!goLiveDate || !!goLiveDateError}
-        onSubmit={() => run(() => goLive.mutateAsync(goLiveDate?.format("YYYY-MM-DD")))}
+        onSubmit={() => {
+          // The user's local calendar date, never a UTC conversion.
+          if (goLiveDate) void run(() => goLive.mutateAsync(goLiveDate.format("YYYY-MM-DD")));
+        }}
       >
         <Stack sx={{ gap: "16px" }}>
           <DatePicker
