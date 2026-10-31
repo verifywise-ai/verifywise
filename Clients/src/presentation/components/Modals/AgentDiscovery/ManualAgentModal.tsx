@@ -287,9 +287,7 @@ const ManualAgentModal: React.FC<ManualAgentModalProps> = ({
 
       {/* Form content */}
       <Stack sx={{ p: "24px", gap: "20px", flex: 1, overflow: "auto" }}>
-        {saveError && (
-          <Alert variant="error" body={saveError} hasIcon={false} sx={{ position: "static" }} />
-        )}
+        {saveError && <Alert variant="error" body={saveError} hasIcon={false} inline />}
         <Field
           id="display_name"
           label="Display name"

@@ -191,27 +191,17 @@ const LifecyclePanel = ({
 
       {canManage && goLiveBlockedReason && stage === LifecycleStage.PLANNED && (
         <Box sx={{ mt: "16px" }}>
-          <Alert
-            variant="info"
-            body={goLiveBlockedReason}
-            isToast={false}
-            sx={{ position: "static" }}
-          />
+          <Alert variant="info" body={goLiveBlockedReason} inline />
         </Box>
       )}
       {isStale && stage === LifecycleStage.LIVE && (
         <Box sx={{ mt: "16px" }}>
-          <Alert
-            variant="warning"
-            body={copy.staleMessage}
-            isToast={false}
-            sx={{ position: "static" }}
-          />
+          <Alert variant="warning" body={copy.staleMessage} inline />
         </Box>
       )}
       {error && !modal && (
         <Box sx={{ mt: "16px" }}>
-          <Alert variant="error" body={error} isToast={false} sx={{ position: "static" }} />
+          <Alert variant="error" body={error} inline />
         </Box>
       )}
 
@@ -236,9 +226,7 @@ const LifecyclePanel = ({
             handleDateChange={(value) => setGoLiveDate(value)}
             error={goLiveDateError}
           />
-          {error && (
-            <Alert variant="error" body={error} isToast={false} sx={{ position: "static" }} />
-          )}
+          {error && <Alert variant="error" body={error} inline />}
         </Stack>
       </StandardModal>
 
@@ -251,9 +239,7 @@ const LifecyclePanel = ({
         isSubmitting={retire.isPending}
         onSubmit={() => run(() => retire.mutateAsync())}
       >
-        {error ? (
-          <Alert variant="error" body={error} isToast={false} sx={{ position: "static" }} />
-        ) : null}
+        {error ? <Alert variant="error" body={error} inline /> : null}
       </StandardModal>
     </Box>
   );
