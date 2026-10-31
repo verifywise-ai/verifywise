@@ -245,15 +245,15 @@ export const useCasesContent: ArticleContent = {
     },
     {
       type: 'image',
-      src: '/images/user-guide/use-cases-lifecycle-tabs.png',
-      alt: 'Use cases page with the In review, Planned, Live and Retired tabs. The Live tab lists 4 use cases and one is marked Stale',
-      caption: 'The Live tab. Transaction fraud scoring is marked Stale because nobody has confirmed it recently.',
+      src: '/images/user-guide/use-cases-in-review-intake.png',
+      alt: 'In review tab with an Intake requests table above the use cases waiting for an approval decision',
+      caption: 'The In review tab. Intake requests are listed first, with the number of days each one has waited.',
     },
     {
       type: 'image',
-      src: '/images/user-guide/use-cases-in-review-intake.png',
-      alt: 'In review tab with an Intake requests table above the use cases waiting for an approval decision',
-      caption: 'Intake requests wait in the In review tab, with the number of days each one has waited.',
+      src: '/images/user-guide/use-cases-lifecycle-tabs.png',
+      alt: 'Use cases page with the In review, Planned, Live and Retired tabs. The Live tab lists 4 use cases and one is marked Stale',
+      caption: 'The Live tab. Transaction fraud scoring is marked Stale because nobody has confirmed it recently.',
     },
     {
       type: 'paragraph',
