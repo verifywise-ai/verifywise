@@ -29,7 +29,7 @@ export type RowAction = "accept" | "dismiss";
 
 interface FindingRowProps {
   finding: VendorRiskFinding;
-  /** Whether the user may decide (`risks.edit`). Without it the row is read-only. */
+  /** Whether the user may decide (`vendor.edit`). Without it the row is read-only. */
   canDecide: boolean;
   /** The decision in flight for this row, if any. It disables both buttons of the row. */
   busy: RowAction | null;

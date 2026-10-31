@@ -89,7 +89,7 @@ export default function VendorResearchFindings({
   onNotify,
 }: VendorResearchFindingsProps) {
   const { t } = useTranslation();
-  const canEdit = useHasPermission("risks.edit");
+  const canEdit = useHasPermission("vendor.edit");
   const isAdmin = useIsAdmin();
 
   // The vendor starts as the URL says. The link in a notification can also arrive while this

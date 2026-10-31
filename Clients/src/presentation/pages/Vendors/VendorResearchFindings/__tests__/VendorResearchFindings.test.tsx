@@ -42,7 +42,7 @@ vi.mock(
 
 const role = vi.hoisted(() => ({ canEdit: true, isAdmin: false }));
 vi.mock("../../../../../application/hooks/useMyPermissions", () => ({
-  useHasPermission: (key: string) => key === "risks.edit" && role.canEdit,
+  useHasPermission: (key: string) => key === "vendor.edit" && role.canEdit,
 }));
 vi.mock("../../../../../application/hooks/useIsAdmin", () => ({
   useIsAdmin: () => role.isAdmin,
@@ -1069,7 +1069,7 @@ describe("a label the backfill wrote (M3)", () => {
   });
 });
 
-describe("a role that cannot edit risks", () => {
+describe("a role that cannot edit vendors", () => {
   it("sees the findings and the run, but no Preview, Dismiss or Research again", async () => {
     role.canEdit = false;
     renderSection({ route: WITH_VENDOR_7 });

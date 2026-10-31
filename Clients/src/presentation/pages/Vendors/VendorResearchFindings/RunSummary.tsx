@@ -33,7 +33,7 @@ const coverageTextSx = { ...textStyles.bodySmall, color: "text.tertiary" };
 interface RunSummaryProps {
   vendorId: number;
   vendorName: string;
-  /** Whether the user may start a run (`risks.edit`). */
+  /** Whether the user may start a run (`vendor.edit`). */
   canStart: boolean;
   /** The organization has no LLM key yet. */
   notConfigured: boolean;

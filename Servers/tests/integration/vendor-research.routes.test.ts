@@ -12,7 +12,7 @@ jest.setTimeout(60000);
 
 import http from "http";
 import { QueryTypes } from "sequelize";
-import { cleanupDatabase } from "./helpers";
+import { cleanupDatabase, createTestUser } from "./helpers";
 import { sequelize } from "../../database/db";
 // The harness loads ./setup, which registers the mocks of BullMQ and Redis: keep it before the
 // modules that open a queue.
@@ -21,6 +21,8 @@ import type { TenantContext } from "./tenant-isolation/tenantIsolation.harness";
 import { createTestApp, testRequest } from "./setup";
 import { createTestVendor } from "../factories";
 import { vendorResearchQueue } from "../../services/vendorResearch/queue";
+import { invalidateRoleMapCache } from "../../utils/roleMap";
+import { invalidateRolePermissionsCache } from "../../utils/rolePermissions.utils";
 import { createTraceRecorder } from "../../services/vendorResearch/trace";
 import type { EvidenceSource, NewFinding } from "../../domain.layer/interfaces/i.vendorResearch";
 import {
@@ -195,6 +197,35 @@ async function requestAs(role: string, ctx: TenantContext) {
   const app: http.Server = await createTestApp({
     bypassAuth: true,
     mockUser: { userId: ctx.userId, organizationId: ctx.orgId, role },
+  });
+  return testRequest(app);
+}
+
+/**
+ * A request agent for a user of a custom role that the organization defined and that holds exactly
+ * `permissions`. The roles are written by SQL, behind the caches of the role map and of the role
+ * permissions, so both are cleared.
+ */
+async function requestAsCustomRole(orgId: number, roleName: string, permissions: string[]) {
+  const [{ id: roleId }] = await sequelize.query<{ id: number }>(
+    `INSERT INTO roles (name, description, organization_id, created_at)
+     VALUES (:roleName, 'Custom', :orgId, NOW()) RETURNING id`,
+    { replacements: { roleName, orgId }, type: QueryTypes.SELECT },
+  );
+  for (const permissionKey of permissions) {
+    await sequelize.query(
+      `INSERT INTO role_permissions (organization_id, role_id, permission_key, allowed)
+       VALUES (:orgId, :roleId, :permissionKey, TRUE)`,
+      { replacements: { orgId, roleId, permissionKey } },
+    );
+  }
+  invalidateRoleMapCache();
+  invalidateRolePermissionsCache(orgId, roleId);
+  const email = `${roleName.toLowerCase().replace(/\W+/g, "-")}-${Date.now()}@test.com`;
+  const userId = await createTestUser(orgId, roleId, email, "Password123!");
+  const app: http.Server = await createTestApp({
+    bypassAuth: true,
+    mockUser: { userId, organizationId: orgId, role: roleName },
   });
   return testRequest(app);
 }
@@ -876,5 +907,73 @@ describe("the research API is served under /api/v1", () => {
     expect(answers.map((res) => res.status)).toEqual([404, 404, 404, 404]);
     expect(await runsOf(vendorId)).toEqual([]);
     expect(researchJobs()).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The writes of the research API and the roles an organization defines
+// ---------------------------------------------------------------------------
+
+// Starting a run and deciding a finding are writes to the vendors' side of the register: accepting
+// a finding creates a vendor risk, and creating a vendor already starts a run. So they need
+// vendor.edit, the key of POST /vendorRisks and of createVendor. risks.edit is the key of the
+// project risks and does not stand in for it, whichever way a custom role is configured.
+describe("the research writes need vendor.edit, not risks.edit", () => {
+  it("lets a role with vendor.edit start a run and accept and dismiss findings", async () => {
+    const { owner } = await seedTwoTenantContexts(3);
+    await seedLlmKey(owner.orgId);
+    const fresh = await createTestVendor(owner.orgId, { vendor_name: "Fresh Corp" });
+    const { inserted } = await seedFindings(owner, "Acme Corp");
+    const vendorEditor = await requestAsCustomRole(owner.orgId, "Vendor editor", ["vendor.edit"]);
+
+    const started = await vendorEditor.post(`/api/v1/vendors/${fresh}/research`);
+    const accepted = await vendorEditor.post(
+      `/api/v1/vendor-risk-findings/${inserted[0].id}/accept`,
+    );
+    const dismissed = await vendorEditor
+      .post(`/api/v1/vendor-risk-findings/${inserted[1].id}/dismiss`)
+      .send({ reason: "not_applicable" });
+
+    expect(started.status).toBe(202);
+    expect(accepted.status).toBe(200);
+    expect(dismissed.status).toBe(200);
+    expect(await runsOf(fresh)).toHaveLength(1);
+    expect(accepted.body.data.finding.status).toBe("accepted");
+    expect(dismissed.body.data.status).toBe("dismissed");
+  });
+
+  it("refuses a role with risks.edit alone all three, and changes nothing", async () => {
+    const { owner } = await seedTwoTenantContexts(3);
+    await seedLlmKey(owner.orgId);
+    const fresh = await createTestVendor(owner.orgId, { vendor_name: "Fresh Corp" });
+    const { inserted } = await seedFindings(owner, "Acme Corp");
+    const riskEditor = await requestAsCustomRole(owner.orgId, "Risk editor", ["risks.edit"]);
+    // Positive control for the start (the test above does the same for the two decisions): a role
+    // with vendor.edit passes the same checks, so the 403s below are the permission and not a
+    // missing route, vendor or key.
+    const vendorEditor = await requestAsCustomRole(owner.orgId, "Vendor editor", ["vendor.edit"]);
+    expect((await vendorEditor.post(`/api/v1/vendors/${fresh}/research`)).status).toBe(202);
+    const jobsBefore = researchJobs().length;
+
+    const started = await riskEditor.post(`/api/v1/vendors/${fresh}/research`);
+    const accepted = await riskEditor.post(`/api/v1/vendor-risk-findings/${inserted[0].id}/accept`);
+    const dismissed = await riskEditor
+      .post(`/api/v1/vendor-risk-findings/${inserted[1].id}/dismiss`)
+      .send({ reason: "not_applicable" });
+
+    expect([started.status, accepted.status, dismissed.status]).toEqual([403, 403, 403]);
+    // Still the one run and job of the vendor editor, and both findings still wait for a decision.
+    expect(await runsOf(fresh)).toHaveLength(1);
+    expect(researchJobs()).toHaveLength(jobsBefore);
+    const stored = await rows<{ status: string }>(
+      "SELECT status FROM vendor_risk_findings WHERE id IN (:ids) ORDER BY id",
+      { ids: inserted.map((finding) => finding.id) },
+    );
+    expect(stored.map((row) => row.status)).toEqual(["pending", "pending"]);
+    expect(
+      await rows("SELECT id FROM vendorrisks WHERE organization_id = :orgId", {
+        orgId: owner.orgId,
+      }),
+    ).toEqual([]);
   });
 });

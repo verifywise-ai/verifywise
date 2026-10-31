@@ -61,7 +61,7 @@ vi.mock(
 
 const role = vi.hoisted(() => ({ canEdit: true, isAdmin: true }));
 vi.mock("../../../../../application/hooks/useMyPermissions", () => ({
-  useHasPermission: (key: string) => key === "risks.edit" && role.canEdit,
+  useHasPermission: (key: string) => key === "vendor.edit" && role.canEdit,
 }));
 vi.mock("../../../../../application/hooks/useIsAdmin", () => ({
   useIsAdmin: () => role.isAdmin,

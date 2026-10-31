@@ -2,8 +2,10 @@ import { describe, it, expect, jest } from "@jest/globals";
 
 // The vendor research routes follow the rule of coreWriteRoutes.permissions.test.ts: Reviewer and
 // Auditor are read-only, so every write carries a permission check, not only authentication.
-// What shows how the agent performs, or chooses the LLM key it uses, goes to those who manage the
-// organization's LLM keys. Everything else is read by any signed-in user.
+// Starting a run and deciding a finding write to the vendors' side of the register (accepting a
+// finding creates a vendor risk), so they need the key of the other vendor and vendor risk writes,
+// vendor.edit. What shows how the agent performs, or chooses the LLM key it uses, goes to those who
+// manage the organization's LLM keys. Everything else is read by any signed-in user.
 //
 // The routes are versioned (ADR 0001: added after the policy, so they live in routes/v1 and are
 // served under /api/v1). Vendor CRUD stays on the legacy router, which has no research route.
@@ -34,9 +36,9 @@ const permissionFor = (router: any, method: string, path: string) => {
 
 describe("vendor research write routes require a permission", () => {
   it.each([
-    ["start a run", "post", "/:id/research", "risks.edit", vendorRouter],
-    ["accept a finding", "post", "/:id/accept", "risks.edit", vendorRiskFindingsRouter],
-    ["dismiss a finding", "post", "/:id/dismiss", "risks.edit", vendorRiskFindingsRouter],
+    ["start a run", "post", "/:id/research", "vendor.edit", vendorRouter],
+    ["accept a finding", "post", "/:id/accept", "vendor.edit", vendorRiskFindingsRouter],
+    ["dismiss a finding", "post", "/:id/dismiss", "vendor.edit", vendorRiskFindingsRouter],
     ["save the settings", "put", "/settings", "llmKeys.admin", vendorResearchRouter],
   ])("%s: %s %s requires %s", (_label, method, path, key, router) => {
     expect(permissionFor(router, method, path)).toEqual([key]);

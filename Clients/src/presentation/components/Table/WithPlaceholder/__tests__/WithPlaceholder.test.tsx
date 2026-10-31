@@ -21,7 +21,7 @@ vi.mock(
 
 const role = vi.hoisted(() => ({ canEdit: true }));
 vi.mock("../../../../../application/hooks/useMyPermissions", () => ({
-  useHasPermission: (key: string) => key === "risks.edit" && role.canEdit,
+  useHasPermission: (key: string) => key === "vendor.edit" && role.canEdit,
 }));
 
 // The table's custom columns are not what these tests are about.
@@ -106,7 +106,7 @@ describe("the research action of a vendor row", () => {
     expect(mocks.config).not.toHaveBeenCalled();
   });
 
-  it("is left out for a user without risks.edit", () => {
+  it("is left out for a user without vendor.edit", () => {
     role.canEdit = false;
     renderTable();
 

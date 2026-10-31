@@ -30,7 +30,8 @@ router.get(
 );
 
 // POST requests
-// Starting research spends searches and model calls, so it needs the right to edit risks.
-router.post("/:id/research", authenticateJWT, authorize("risks.edit"), startVendorResearchRun);
+// Starting research spends searches and model calls, so it needs the right to edit vendors and
+// their risks: the key of POST /vendorRisks and of createVendor, which already starts a run.
+router.post("/:id/research", authenticateJWT, authorize("vendor.edit"), startVendorResearchRun);
 
 export default router;

@@ -198,7 +198,8 @@ export const ROLE_PERMISSIONS = {
   },
   "vendor.edit": {
     module: "Vendors",
-    description: "Create, update and delete vendors and vendor risks",
+    description:
+      "Create, update and delete vendors and vendor risks; start vendor research and accept or dismiss its findings",
     legacyRoles: EDITOR,
   },
   "model.edit": {

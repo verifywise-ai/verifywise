@@ -22,7 +22,7 @@ vi.mock("../../../../application/repository/vendorResearch.repository", async (i
 
 const role = vi.hoisted(() => ({ canEdit: true }));
 vi.mock("../../../../application/hooks/useMyPermissions", () => ({
-  useHasPermission: (key: string) => key === "risks.edit" && role.canEdit,
+  useHasPermission: (key: string) => key === "vendor.edit" && role.canEdit,
 }));
 
 import * as repository from "../../../../application/repository/vendorResearch.repository";
@@ -65,7 +65,7 @@ beforeEach(() => {
 });
 
 describe("who sees the button", () => {
-  it("is not shown without risks.edit, and the server is asked for nothing", () => {
+  it("is not shown without vendor.edit, and the server is asked for nothing", () => {
     role.canEdit = false;
     renderWithProviders(
       <VendorResearchButton vendorId={7} vendorName="Acme Cloud" onNotify={vi.fn()} />,

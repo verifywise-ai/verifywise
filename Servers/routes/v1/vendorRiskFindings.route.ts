@@ -16,8 +16,9 @@ router.get("/", authenticateJWT, listVendorRiskFindings);
 
 // POST requests
 // Deciding a finding changes the vendor risk register or the findings, so it needs the right to
-// edit risks.
-router.post("/:id/accept", authenticateJWT, authorize("risks.edit"), acceptVendorRiskFinding);
-router.post("/:id/dismiss", authenticateJWT, authorize("risks.edit"), dismissVendorRiskFinding);
+// edit vendors and their risks: the key of POST /vendorRisks, which accepting a finding writes
+// through, and of createVendor, which already starts a run.
+router.post("/:id/accept", authenticateJWT, authorize("vendor.edit"), acceptVendorRiskFinding);
+router.post("/:id/dismiss", authenticateJWT, authorize("vendor.edit"), dismissVendorRiskFinding);
 
 export default router;

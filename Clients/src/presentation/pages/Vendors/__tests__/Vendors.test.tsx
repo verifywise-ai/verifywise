@@ -114,7 +114,7 @@ vi.mock("../../../../application/repository/vendorResearch.repository", async (i
 }));
 
 vi.mock("../../../../application/hooks/useMyPermissions", () => ({
-  useHasPermission: (key: string) => key === "risks.edit",
+  useHasPermission: (key: string) => key === "vendor.edit",
 }));
 
 vi.mock("../../../../application/hooks/useRiskLinks", () => ({

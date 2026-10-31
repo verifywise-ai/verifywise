@@ -1,7 +1,7 @@
 /**
  * VendorResearchButton - Row action of the vendors table that starts a research run for a vendor
  *
- * Shown only to users who may edit risks (`risks.edit`). It is disabled while the research
+ * Shown only to users who may edit vendors (`vendor.edit`). It is disabled while the research
  * settings are on their way, and when they say research is not set up (the organization has no
  * LLM key), in which case its tooltip says so. If the request for the settings fails,
  * the button is enabled and the server decides: a start without them is refused with a 409.
@@ -114,7 +114,7 @@ const StartResearchButton: React.FC<VendorResearchButtonProps> = ({
 };
 
 const VendorResearchButton: React.FC<VendorResearchButtonProps> = (props) => {
-  const canEdit = useHasPermission("risks.edit");
+  const canEdit = useHasPermission("vendor.edit");
   return canEdit ? <StartResearchButton {...props} /> : null;
 };
 
