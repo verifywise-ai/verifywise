@@ -755,10 +755,15 @@ describe("customAxios", () => {
         expect(mockAssign).not.toHaveBeenCalled();
       });
 
-      it("leaves an expired organization-selection token to the login page", async () => {
+      it.each([
+        "/users/login/select-organization",
+        "/users/register",
+        "/users/reset-password",
+        "/users/invitations/accept",
+      ])("leaves a 406 from %s (its own token expired) to the page", async (url) => {
         const post = vi.spyOn(CustomAxios, "post");
         const error = {
-          config: { url: "/users/login/select-organization", headers: {}, adapter: retried },
+          config: { url, headers: {}, adapter: retried },
           response: { status: 406, data: { message: "Token expired" } },
           message: "Token expired",
         };

@@ -17,6 +17,7 @@ import { sequelize } from "../../../database/db";
 import { QueryTypes, Transaction } from "sequelize";
 import { cleanupDatabase, createTestOrganization, createTestUser } from "../helpers";
 import { removeUserFromOrganizationQuery } from "../../../utils/user.utils";
+import { inviteeRefusalQuery } from "../../../utils/organizationMember.utils";
 
 const APP_ROLE = "verifywise_app";
 
@@ -95,5 +96,53 @@ describe("organization_members under RLS: removing a user from one organization"
 
     expect(result).toEqual({ removed: true, accountDeleted: true });
     expect(await userExists(userId)).toBe(false);
+  });
+
+  it("keeps a super admin's account when their last membership is removed", async () => {
+    const orgA = await createTestOrganization(`RLS members sa ${Date.now()}`);
+    const userId = await createTestUser(
+      orgA,
+      1,
+      `rls-members-sa-${Date.now()}@test.com`,
+      "Pass123!",
+    );
+    await sequelize.query(`INSERT INTO super_admins (user_id) VALUES (:userId)`, {
+      replacements: { userId },
+    });
+
+    const result = await asAppRoleCommitted(orgA, (t) =>
+      removeUserFromOrganizationQuery(userId, orgA, t),
+    );
+
+    expect(result).toEqual({ removed: true, accountDeleted: false });
+    expect(await userExists(userId)).toBe(true);
+    expect(await membershipsOf(userId)).toEqual([]);
+  });
+
+  it("lets an organization invite a member of other organizations only", async () => {
+    const orgA = await createTestOrganization(`RLS invite A ${Date.now()}`);
+    const orgB = await createTestOrganization(`RLS invite B ${Date.now()}`);
+    const email = `rls-invite-${Date.now()}@test.com`;
+    await createTestUser(orgB, 3, email, "Pass123!");
+    const inA = `rls-invite-a-${Date.now()}@test.com`;
+    await createTestUser(orgA, 3, inA, "Pass123!");
+
+    const [other, member] = await asAppRoleCommitted(orgA, async (t) => [
+      await inviteeRefusalQuery(orgA, email, t),
+      await inviteeRefusalQuery(orgA, inA, t),
+    ]);
+
+    // Not "super_admin": org A cannot see the org B membership, the helper can.
+    expect(other).toBeNull();
+    expect(member).toBe("already_member");
+  });
+
+  it("does not let PUBLIC execute the cross-tenant membership helper", async () => {
+    const [row] = (await sequelize.query(
+      `SELECT has_function_privilege('public', 'verifywise.user_has_organization_membership(integer)', 'EXECUTE') AS public_can,
+              has_function_privilege('${APP_ROLE}', 'verifywise.user_has_organization_membership(integer)', 'EXECUTE') AS app_can`,
+      { type: QueryTypes.SELECT },
+    )) as { public_can: boolean; app_can: boolean }[];
+    expect(row).toEqual({ public_can: false, app_can: true });
   });
 });

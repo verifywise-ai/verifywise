@@ -74,17 +74,28 @@ export const updateOrganizationMemberRoleQuery = async (
 export const inviteeRefusalQuery = async (
   organizationId: number,
   email: string,
+  transaction: Transaction | null = null,
 ): Promise<"already_member" | "super_admin" | null> => {
+  // "Any membership" goes through the helper: under RLS enforcement a join on
+  // organization_members only sees the inviting organization's rows, so a
+  // member of other organizations only would look like a pure super admin.
   const rows = (await sequelize.query(
-    `SELECT om.organization_id
+    `SELECT verifywise.user_has_organization_membership(u.id) AS has_membership,
+            EXISTS (
+              SELECT 1 FROM organization_members om
+               WHERE om.user_id = u.id AND om.organization_id = :organizationId
+            ) AS in_organization
        FROM users u
-       LEFT JOIN organization_members om ON om.user_id = u.id
       WHERE LOWER(TRIM(u.email)) = LOWER(TRIM(:email))`,
-    { replacements: { email }, type: QueryTypes.SELECT },
-  )) as { organization_id: number | null }[];
+    {
+      replacements: { email, organizationId },
+      type: QueryTypes.SELECT,
+      ...(transaction ? { transaction } : {}),
+    },
+  )) as { has_membership: boolean; in_organization: boolean }[];
 
   if (rows.length === 0) return null;
-  if (rows.every((r) => r.organization_id === null)) return "super_admin";
-  if (rows.some((r) => r.organization_id === organizationId)) return "already_member";
+  if (rows.every((r) => !r.has_membership)) return "super_admin";
+  if (rows.some((r) => r.in_organization)) return "already_member";
   return null;
 };

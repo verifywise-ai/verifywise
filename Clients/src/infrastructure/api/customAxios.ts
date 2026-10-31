@@ -393,13 +393,15 @@ CustomAxios.interceptors.response.use(
     }
 
     // If error is 406 (Token Expired) and we haven't tried to refresh yet.
-    // Login's 406 is its own expired organization-selection token, not the
-    // session's: the login page handles it, and a refresh could start a
-    // session from another tab's cookie.
+    // A 406 from login (its organization-selection token) or from an emailed
+    // link (invitation, password reset) is that token expiring, not the
+    // session: the page handles it, and a refresh could start a session from
+    // another tab's cookie.
     if (
       error.response?.status === 406 &&
       !originalRequest._retry &&
-      !originalRequest.url?.includes("/users/login")
+      !originalRequest.url?.includes("/users/login") &&
+      !isLinkTokenEndpoint(originalRequest.url)
     ) {
       // If this is the refresh token request itself returning 406
       if (originalRequest.url === "/users/refresh-token") {

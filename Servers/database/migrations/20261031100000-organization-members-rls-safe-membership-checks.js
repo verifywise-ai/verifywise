@@ -15,7 +15,8 @@
  *   as the owner, who is not subject to RLS (no FORCE ROW LEVEL SECURITY).
  * - The two orphan trigger functions run as the owner for the same reason.
  *
- * All three set search_path so a caller cannot substitute objects.
+ * All three set search_path so a caller cannot substitute objects. Only the
+ * owner and verifywise_app may execute the helper.
  */
 const TRIGGER_FUNCTIONS = [
   "verifywise.check_orphan_user_has_superadmin()",
@@ -38,6 +39,18 @@ module.exports = {
           SELECT 1 FROM verifywise.organization_members WHERE user_id = p_user_id
         );
       $$;
+    `);
+    // Functions are executable by PUBLIC by default. This one answers across
+    // tenants, so only the runtime role may call it (the owner always can).
+    await sql.query(`
+      REVOKE EXECUTE ON FUNCTION verifywise.user_has_organization_membership(INTEGER) FROM PUBLIC;
+      DO $$
+      BEGIN
+        IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'verifywise_app') THEN
+          GRANT EXECUTE ON FUNCTION verifywise.user_has_organization_membership(INTEGER)
+            TO verifywise_app;
+        END IF;
+      END $$;
     `);
 
     for (const fn of TRIGGER_FUNCTIONS) {

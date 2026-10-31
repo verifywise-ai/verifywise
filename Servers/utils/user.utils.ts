@@ -442,7 +442,7 @@ const clearOrganizationReferencesToUser = async (
  * Removes a user from one organization: clears that organization's references
  * to them, revokes their refresh tokens for it, and deletes the membership.
  * When it was their last membership the account is deleted too, in the same
- * transaction.
+ * transaction, unless they are a super admin.
  *
  * @returns `removed` false when the user is not a member of the organization.
  */
@@ -465,11 +465,13 @@ export const removeUserFromOrganizationQuery = async (
   }
 
   // The helper sees every organization's memberships: under RLS enforcement a
-  // plain NOT EXISTS here only sees the current organization's rows.
+  // plain NOT EXISTS here only sees the current organization's rows. A super
+  // admin keeps their account as a pure super admin.
   const deleted = (await sequelize.query(
     `DELETE FROM users
      WHERE id = :id
        AND NOT verifywise.user_has_organization_membership(:id)
+       AND NOT EXISTS (SELECT 1 FROM super_admins WHERE user_id = :id)
      RETURNING id`,
     { replacements: { id }, type: QueryTypes.SELECT, transaction },
   )) as { id: number }[];
