@@ -1,6 +1,6 @@
 # Observability (Metrics + Logs via OpenTelemetry)
 
-> **Last Updated:** 2026-06-22
+> **Last Updated:** 2026-10-27
 
 VerifyWise deployments push **metrics** and **logs** to a central
 Grafana / Prometheus / Loki stack via OpenTelemetry, so operators get visibility
@@ -54,6 +54,10 @@ Config delivery per service:
 | `http_server_requests_total` | counter | `http_request_method`, `http_route`, `http_response_status_code`, `service_name`, `deployment` |
 | `http_server_request_duration_seconds` | histogram | same as above |
 | `browser_events_total`, `browser_web_vital` | counter/histogram | frontend telemetry |
+| `vendor_research_finding_decisions_total` | counter | `decision` (`accepted` or `dismissed`), `category`, `reason` (the dismissal reason, `none` for an accepted finding), `service_name`, `deployment` |
+| `vendor_research_searches_total` | counter | `kind` (`web` or `news`), `outcome` (`results`, `empty`, `refused` or `failed`), `service_name`, `deployment` |
+| `vendor_research_search_retries_total` | counter | `kind`, `service_name`, `deployment` |
+| `vendor_research_cache_total` | counter | `kind` (`robots`, `page` or `search`), `outcome` (`hit`, `miss` or `error`: the store failed or was too slow, a failed write included), `service_name`, `deployment` |
 
 Service names: `verifywise-backend`, `verifywise-eval-server`,
 `verifywise-ai-gateway`, `verifywise-frontend`.

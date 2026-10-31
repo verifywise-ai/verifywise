@@ -2,7 +2,7 @@
 
 ## Overview
 
-VerifyWise uses BullMQ with Redis for background job processing and scheduled tasks. The system supports recurring jobs (cron-based), event-triggered automations, and user-configured workflows. Two queues handle different concerns: general automations and Slack notifications. MLflow sync is not queued; it runs on demand when a user clicks **Sync**.
+VerifyWise uses BullMQ with Redis for background job processing and scheduled tasks. The system supports recurring jobs (cron-based), event-triggered automations, and user-configured workflows. Four queues handle different concerns: general automations, Slack notifications, vendor research runs and the syncs of the vendor risk database. MLflow sync is not queued; it runs on demand when a user clicks **Sync**.
 
 ## Architecture
 
@@ -82,6 +82,39 @@ export const slackQueue = new Queue("slack-notifications", {
 });
 ```
 
+### Vendor Research Queue
+
+**Queue Name:** `vendor-research`
+
+Carries out the runs of the [vendor research agent](../domains/vendors.md#vendor-research-agent), one `vendor_research` job for each run.
+
+```typescript
+// File: Servers/services/vendorResearch/queue.ts
+
+export const vendorResearchQueue = new Queue("vendor-research", {
+  connection: { url: REDIS_URL }
+});
+```
+
+A run has a queue and a worker of its own for three reasons. A run holds its place for minutes (up to about 7), while every other job on `automation-actions` is short, so on a shared queue a burst of runs kept the notifications, the recomputes and the reports waiting, and a long line of other jobs could leave a run queued past the 15 minutes after which it is not started. The automation queue is emptied each time the backend starts (`obliterate` in `scheduleVendorReviewDateNotification` and `scheduleReportNotification`), which lost the runs that were waiting. And the number of runs at once is a setting of research alone (`VENDOR_RESEARCH_WORKER_CONCURRENCY`). Nothing empties the research queue.
+
+### Vendor Risk Database Queue
+
+**Queue Name:** `vendor-risk-database`
+
+Carries out the syncs of the [vendor risk database](../domains/vendors.md#vendor-risk-database), one `vrdb_sync` job for each list and sync, and its status job, `vrdb_relabel`. A queue of its own, as the research has one: a sync downloads a list of tens of megabytes and must not hold the places of the automations. The queue is never emptied (`obliterate`) at start.
+
+```typescript
+// File: Servers/services/vendorResearch/vrdb/queue.ts
+
+export const VRDB_QUEUE = "vendor-risk-database";
+export const vrdbQueue = new Queue(VRDB_QUEUE, { connection: { url: REDIS_URL } });
+```
+
+Each list has a BullMQ job scheduler of its own (`vrdb_sync_<list>`, `vrdbSchedulerId`), at the list's own minute in UTC (`VRDB_SOURCES` in `vrdb/sources.ts`, see the table below). `scheduleVendorRiskDatabaseSync`, called by `addAllJobs` at the start of the backend (`jobs/producer.ts`), upserts the schedulers of the active lists (`activeMirrors`: four, while the gates of the CVE records, Q7, and of the UN list, Q6, are closed; `vrdb/gates.ts`) while `VENDOR_RESEARCH_VRDB` is `true` and `VENDOR_RESEARCH_RECORDS` is not `false` (`vrdbSyncsOn`), and removes them otherwise, so turning either off stops every download; a list behind a closed gate has no scheduler. An upsert by id changes nothing when the scheduler exists, so every start can call it. At the same start a first sync is queued for every active list that was never copied (job id `vrdb_sync_first_<list>`). A job has `attempts: 3`, an exponential back-off from one minute, and is removed when it completes or fails (`VRDB_SYNC_JOB_OPTIONS`).
+
+**The status job.** A sync, or an answer of a read-through source (the NVD), that changed the status of a record adds `vrdb_relabel` with `{ sourceId }` (`enqueueRelabel`), under the job id `vrdb_relabel_<list>` and the options of a sync (`VRDB_RELABEL_JOB_OPTIONS`). BullMQ adds nothing while a job of that id waits or runs, so one waits per list and the changes of several syncs are taken by one job. It relabels the pending findings of every organization that cite a changed record (`relabelSource` in `vrdb/relabel.ts`, see [Vendors](../domains/vendors.md#vendor-risk-database)). A failure to add it is logged with the error's name and leaves the copy or the answer as it is: the next change adds the job again. A read-through answer starts the addition and does not wait for it (`relabelAfterAnswer` in `vrdb/lookup.ts`), so a Redis that stalls never holds the vendor's run past its time limit.
+
 ## Scheduled Jobs
 
 ### Job Schedule Summary
@@ -95,6 +128,12 @@ Recurring (cron) jobs only — see [On-Demand Jobs](#on-demand-jobs) below for j
 | `pmm_hourly_check` | `0 * * * *` | Every hour | PMM cycle processing |
 | `report_scheduler_tick` | `*/15 * * * *` | Every 15 minutes | Template-first scheduled report dispatch |
 | `slack-notification-policy` | `0 9 * * *` | Daily at 9 AM | Slack policy due notifications |
+| `vrdb_sync` (scheduler `vrdb_sync_kev`) | `23 * * * *` (UTC) | Every hour at minute 23 | Copy the CISA catalog of known exploited vulnerabilities (only with `VENDOR_RESEARCH_VRDB=true`) |
+| `vrdb_sync` (scheduler `vrdb_sync_ofac`) | `41 */6 * * *` (UTC) | Every 6 hours at minute 41 | Copy the OFAC SDN list (same) |
+| `vrdb_sync` (scheduler `vrdb_sync_uk_sanctions`) | `47 */6 * * *` (UTC) | Every 6 hours at minute 47 | Copy the UK Sanctions List (same) |
+| `vrdb_sync` (scheduler `vrdb_sync_eu_fsf`) | `53 */6 * * *` (UTC) | Every 6 hours at minute 53 | Copy the EU consolidated list of financial sanctions (same) |
+| `vrdb_sync` (scheduler `vrdb_sync_cve`) | `29 2 * * *` (UTC) | Daily at 02:29 | Read the CVE Program's changes of the days since the last sync (same, and only once the gate Q7 is open) |
+| `vrdb_sync` (scheduler `vrdb_sync_un_sanctions`) | `59 */6 * * *` (UTC) | Every 6 hours at minute 59 | Copy the UN Security Council Consolidated List (same, and only once the gate Q6 is open) |
 
 ### Cron Pattern Reference
 
@@ -205,12 +244,12 @@ Handled in `automationWorker.ts` alongside the other automation job types.
 
 ### On-Demand Jobs
 
-Not every job on the `automation-actions` queue is scheduled. Some are enqueued once, on demand, in direct response to a user action — no `repeat` pattern, no cron.
+Not every job is scheduled. Some are enqueued once, on demand, in direct response to a user action — no `repeat` pattern, no cron. The `Queue` column says which queue and so which worker carries the job out.
 
 | Job Name | Queue | Enqueued By | Handler |
 |----------|-------|-------------|---------|
 | `generate_report_manual` | `automation-actions` | `generateReportsV2` / `generateReports` controller, when a user requests a manual report (see [Reporting Domain](../domains/reporting.md)) | `handleManualReportGeneration` → `executeManualRun` |
-| `vendor_research` | `automation-actions` | `enqueueVendorResearch` (`automationProducer.ts`), called by `startVendorResearch` in `services/vendorResearch/trigger.ts` when a vendor is created or a user starts research (see [Vendors](../domains/vendors.md#vendor-research-agent)) | `handleVendorResearchJob` → `runVendorResearch` |
+| `vendor_research` | `vendor-research` | `enqueueVendorResearch` (`services/vendorResearch/queue.ts`), called by `startVendorResearch` in `services/vendorResearch/trigger.ts` when a vendor is created or a user starts research (see [Vendors](../domains/vendors.md#vendor-research-agent)) | `handleVendorResearchJob` → `runVendorResearch`, in the [research worker](#vendor-research-worker) |
 
 **Processing Logic:**
 1. Controller creates a `report_runs` row (`status: "running"`) and enqueues `generate_report_manual` with `{ runId, request, userId, organizationId }`
@@ -224,7 +263,7 @@ This job only runs while a worker process (`npm run worker`) is up — with no w
 - **Job id:** `vendor-research-{org}-{vendor}-{run}`, one per run and without a colon (BullMQ rejects a custom id with a colon unless it has exactly three parts). An id per vendor would make BullMQ silently ignore the `add` of a vendor's next run while the job of an earlier, swept run still sat in Redis; the partial unique index `vendor_research_runs_active_uniq` already allows one active run per vendor.
 - **Options:** `attempts: 2`, exponential backoff with a 5000 ms delay, `removeOnComplete` and `removeOnFail` both `true`, so no retained job holds on to an id.
 - **Retries:** the pipeline itself catches a failing model call and a web that cannot be reached at all (not one search or read of the run was answered: "The run stopped because the web could not be reached") and ends the run as `failed`. A search that fails or a page that cannot be read is a result inside the run, not a failure: the run goes on without it. So a retry only covers Redis and database failures that happen before the run is marked `running`, while it is still `queued`. A retry never pays for the model calls or the searches twice.
-- **No worker:** the run stays `queued` until the 15-minute sweep fails it with `timed out`. The sweep runs when a new run is requested for the vendor and when its latest run is read, not in the background. A `queued` run older than the sweep limit stops counting toward the cooldown and the daily cap even before the sweep reaches it, because the backend empties the queue of waiting jobs each time it starts (`obliterate` in `scheduleVendorReviewDateNotification`), which can lose a job whose vendor nobody opens again.
+- **No worker:** the run stays `queued` until the 15-minute sweep fails it with `timed out`. The sweep runs when a new run is requested for the vendor and when its latest run is read, not in the background. A `queued` run older than the sweep limit stops counting toward the cooldown and the daily cap even before the sweep reaches it, because a job can be lost (for example when Redis is emptied) and nobody may open the vendor again. The backend's emptying of the `automation-actions` queue at start no longer reaches research jobs: they are on a queue of their own.
 - **Redis down:** `Queue.add` does not fail, BullMQ keeps the command in the offline queue of its client. `startVendorResearch` therefore waits at most 5 seconds (`ENQUEUE_TIMEOUT_MS`) for the `add`, then fails the run as `could not enqueue` and answers 503. A job that lands after that finds the run `failed` and is skipped without a search or a model call.
 
 ## Workers
@@ -288,6 +327,31 @@ export const createAutomationWorker = () => {
 };
 ```
 
+### Vendor Research Worker
+
+```typescript
+// File: Servers/services/vendorResearch/worker.ts
+
+export const createVendorResearchWorker = (
+  concurrency = getVendorResearchConfig().workerConcurrency,
+  queueName = VENDOR_RESEARCH_QUEUE,
+) => new Worker(queueName, async (job) => { /* name check, then handleVendorResearchJob(job.data) */ },
+  { connection: { url: REDIS_URL }, concurrency });
+```
+
+It takes the jobs of `vendor-research` only, `VENDOR_RESEARCH_WORKER_CONCURRENCY` at a time for each worker process (5 unless set), and refuses a job with any name but `vendor_research`. A failure of the handler reaches BullMQ, which retries the job (`attempts: 2`); the pipeline itself ends a run that cannot be researched, so only Redis and database failures before the run is marked running come this far. It logs a completed job at debug level and a failed one as an error.
+
+### Vendor Risk Database Worker
+
+```typescript
+// File: Servers/services/vendorResearch/vrdb/worker.ts
+
+export const createVrdbWorker = (concurrency = 1, queueName = VRDB_QUEUE) =>
+  new Worker(queueName, async (job) => processVrdbJob(job), { connection: { url: REDIS_URL }, concurrency });
+```
+
+It takes the jobs of `vendor-risk-database` one at a time (a list is tens of megabytes, and two syncs share no work). `processVrdbJob` refuses a job with any name but `vrdb_sync` and `vrdb_relabel` and one that names no list of the vendor risk database. A sync checks both flags and its list's gate again (an operator may turn either flag off after a scheduler fired) and runs `syncSource` (`vrdb/sync.ts`); one that changed the status of a record adds the status job of its list. The status job checks `VENDOR_RESEARCH_VRDB` and runs `relabelSource`, which throws for a failure of the database, so that BullMQ tries it again. A failed sync throws a fixed text with the list and the error code, never a message. One that failed on the way (`fetch_failed`, `unexpected`) throws `VrdbSyncFailed`, so BullMQ tries it again; one the list refused (`wrong_root`, `parse_errors`, `empty`, `shrank`, `too_large`, `feed_without_file`: a download a minute later gets the same file), or whose answer asked for a wait (`Retry-After`, which `syncSource` passes on as `retryAfterMs`), throws `VrdbSyncNotRetried`, a BullMQ `UnrecoverableError`, and the list's next scheduled sync asks again. Either way the sync has already stored the attempt in `vrdb_sync_runs` and left the copy as it was. It logs a completed job at debug level and a failed one as an error.
+
 ### Worker Initialization
 
 ```typescript
@@ -295,11 +359,15 @@ export const createAutomationWorker = () => {
 
 import { createNotificationWorker } from "../services/slack/slackWorker";
 import { createAutomationWorker } from "../services/automations/automationWorker";
+import { createVendorResearchWorker } from "../services/vendorResearch/worker";
+import { createVrdbWorker } from "../services/vendorResearch/vrdb/worker";
 
 const notificationWorker = createNotificationWorker();
 const automationWorker = createAutomationWorker();
+const vendorResearchWorker = createVendorResearchWorker();
+const vrdbWorker = createVrdbWorker(1);
 
-const workers: Worker[] = [notificationWorker, automationWorker];
+const workers: Worker[] = [notificationWorker, automationWorker, vendorResearchWorker, vrdbWorker];
 
 // Graceful shutdown
 process.on("SIGINT", async () => {
@@ -682,6 +750,10 @@ await queue.add(jobName, data, {
 | `Servers/jobs/worker.ts` | Worker initialization |
 | `Servers/services/automations/automationProducer.ts` | Automation queue producer |
 | `Servers/services/automations/automationWorker.ts` | Automation queue worker |
+| `Servers/services/vendorResearch/queue.ts` | Vendor research queue and producer |
+| `Servers/services/vendorResearch/worker.ts` | Vendor research queue worker |
+| `Servers/services/vendorResearch/vrdb/queue.ts` | Vendor risk database queue and the schedulers of the syncs |
+| `Servers/services/vendorResearch/vrdb/worker.ts` | Vendor risk database queue worker |
 | `Servers/services/automations/actions/sendEmail.ts` | Email action handler |
 | `Servers/services/postMarketMonitoring/pmmScheduler.ts` | PMM job processor |
 | `Servers/controllers/automations.ctrl.ts` | Automation API controller |

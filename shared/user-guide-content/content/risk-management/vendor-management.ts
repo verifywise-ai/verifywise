@@ -80,10 +80,24 @@ export const vendorManagementContent: ArticleContent = {
       type: 'ordered-list',
       items: [
         { bold: 'Vendor name', text: 'The official company or product name' },
+        { bold: 'Other names (optional)', text: 'Other names the vendor is known by, separated by commas, for example "Facebook" for "Meta Platforms". The web research looks for sources that use them too' },
         { bold: 'Vendor provides', text: 'Description of what the vendor supplies' },
         { bold: 'Assignee', text: 'Person responsible for managing this vendor relationship' },
         { bold: 'Website', text: 'Vendor\'s official website URL' },
         { bold: 'Vendor contact person', text: 'Primary contact at the vendor' },
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: 'Under **Identifiers** you can also give, each optional, the numbers that official lists use for companies. They let the research tie a record of such a list to your vendor by a number rather than by its name alone:',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { bold: 'Country', text: 'The two-letter code of the country the vendor is registered in, such as DE or GB. The form shows the name of the country. The research takes the vendor\'s market from it: for Germany, Austria, France, Italy, Spain, the Netherlands, Portugal and Brazil it also searches the news in the language of the country, and for the United States, the United Kingdom, Ireland and Australia it searches in English and names the country\'s regulator in the news about fines, whatever the website\'s domain or the legal form say' },
+        { bold: 'Registration number', text: 'The number in the company register, as the register writes it. A sanctions entry that carries it and the vendor\'s name is your vendor' },
+        { bold: 'LEI', text: 'The Legal Entity Identifier, 20 letters and digits. The form checks its check digits. A sanctions entry that carries it is your vendor' },
+        { bold: 'SEC CIK', text: 'The number of a company that files with the US Securities and Exchange Commission, up to 10 digits. The research asks the SEC about this company rather than one found by the vendor\'s name' },
       ],
     },
     {

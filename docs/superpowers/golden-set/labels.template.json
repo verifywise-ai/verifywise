@@ -1,0 +1,199 @@
+{
+  "organizationId": 0,
+  "labelledBy": "",
+  "labelledOn": "",
+  "vendors": [
+    {
+      "profile": 1,
+      "about": "Products in the KEV catalog: a network appliance",
+      "vendorIds": { "off": 0, "on": 0 },
+      "name": "",
+      "expected": [],
+      "traps": []
+    },
+    {
+      "profile": 2,
+      "about": "Products in the KEV catalog: file transfer",
+      "vendorIds": { "off": 0, "on": 0 },
+      "name": "",
+      "expected": [],
+      "traps": []
+    },
+    {
+      "profile": 3,
+      "about": "Products in the KEV catalog: IT management",
+      "vendorIds": { "off": 0, "on": 0 },
+      "name": "",
+      "expected": [],
+      "traps": []
+    },
+    {
+      "profile": 4,
+      "about": "Products in the KEV catalog: a VPN",
+      "vendorIds": { "off": 0, "on": 0 },
+      "name": "",
+      "expected": [],
+      "traps": []
+    },
+    {
+      "profile": 5,
+      "about": "A breach reported by several trusted publishers",
+      "vendorIds": { "off": 0, "on": 0 },
+      "name": "",
+      "expected": [],
+      "traps": []
+    },
+    {
+      "profile": 6,
+      "about": "A breach reported by several trusted publishers",
+      "vendorIds": { "off": 0, "on": 0 },
+      "name": "",
+      "expected": [],
+      "traps": []
+    },
+    {
+      "profile": 7,
+      "about": "Its own published incident notice",
+      "vendorIds": { "off": 0, "on": 0 },
+      "name": "",
+      "expected": [],
+      "traps": []
+    },
+    {
+      "profile": 8,
+      "about": "A data protection fine on a regulator's site",
+      "vendorIds": { "off": 0, "on": 0 },
+      "name": "",
+      "expected": [],
+      "traps": []
+    },
+    {
+      "profile": 9,
+      "about": "A US registrant with an 8-K Item 1.05 filing",
+      "vendorIds": { "off": 0, "on": 0 },
+      "name": "",
+      "expected": [],
+      "traps": []
+    },
+    {
+      "profile": 10,
+      "about": "A long outage on its status page",
+      "vendorIds": { "off": 0, "on": 0 },
+      "name": "",
+      "expected": [],
+      "traps": []
+    },
+    {
+      "profile": 11,
+      "about": "Layoffs, insolvency or a sale in the press",
+      "vendorIds": { "off": 0, "on": 0 },
+      "name": "",
+      "expected": [],
+      "traps": []
+    },
+    {
+      "profile": 12,
+      "about": "AI terms that allow training on customer data",
+      "vendorIds": { "off": 0, "on": 0 },
+      "name": "",
+      "expected": [],
+      "traps": []
+    },
+    {
+      "profile": 13,
+      "about": "Certifications only in its own claims",
+      "vendorIds": { "off": 0, "on": 0 },
+      "name": "",
+      "expected": [],
+      "traps": []
+    },
+    {
+      "profile": 14,
+      "about": "Its name, or nearly, on a sanctions list (a trap)",
+      "vendorIds": { "off": 0, "on": 0 },
+      "name": "",
+      "expected": [],
+      "traps": []
+    },
+    {
+      "profile": 15,
+      "about": "Its name, or nearly, on a sanctions list (a trap)",
+      "vendorIds": { "off": 0, "on": 0 },
+      "name": "",
+      "expected": [],
+      "traps": []
+    },
+    {
+      "profile": 16,
+      "about": "A rejected CVE in its products (a trap)",
+      "vendorIds": { "off": 0, "on": 0 },
+      "name": "",
+      "expected": [],
+      "traps": []
+    },
+    {
+      "profile": 17,
+      "about": "Coverage by unknown blogs only",
+      "vendorIds": { "off": 0, "on": 0 },
+      "name": "",
+      "expected": [],
+      "traps": []
+    },
+    {
+      "profile": 18,
+      "about": "A small vendor with nothing to find",
+      "vendorIds": { "off": 0, "on": 0 },
+      "name": "",
+      "expected": [],
+      "traps": []
+    },
+    {
+      "profile": 19,
+      "about": "No website domain",
+      "vendorIds": { "off": 0, "on": 0 },
+      "name": "",
+      "expected": [],
+      "traps": []
+    },
+    {
+      "profile": 20,
+      "about": "Press in German or French",
+      "vendorIds": { "off": 0, "on": 0 },
+      "name": "",
+      "expected": [],
+      "traps": []
+    },
+    {
+      "profile": 21,
+      "about": "A wire story copied on aggregators",
+      "vendorIds": { "off": 0, "on": 0 },
+      "name": "",
+      "expected": [],
+      "traps": []
+    },
+    {
+      "profile": 22,
+      "about": "Contributor or opinion pieces only",
+      "vendorIds": { "off": 0, "on": 0 },
+      "name": "",
+      "expected": [],
+      "traps": []
+    },
+    {
+      "profile": 23,
+      "about": "Law firms' investor alerts on wires (a trap)",
+      "vendorIds": { "off": 0, "on": 0 },
+      "name": "",
+      "expected": [],
+      "traps": []
+    },
+    {
+      "profile": 24,
+      "about": "A delisted sanctions entry (optional)",
+      "vendorIds": { "off": 0, "on": 0 },
+      "name": "",
+      "expected": [],
+      "traps": []
+    }
+  ]
+}

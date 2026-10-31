@@ -1,6 +1,6 @@
 # VerifyWise - Development Guide
 
-> **Last Updated:** 2026-10-13
+> **Last Updated:** 2026-10-31
 
 This document contains cross-cutting rules for the VerifyWise codebase. Directory-scoped guides load automatically when working in each area:
 
@@ -217,6 +217,7 @@ Read the relevant file BEFORE implementing changes in that area:
 | AI Detection | `docs/technical/domains/ai-detection.md` |
 | Risk management | `docs/technical/domains/risk-management.md` |
 | Vendors | `docs/technical/domains/vendors.md` |
+| Vendor risk database (VRDB): mirrored official lists, read-through databases, gated sources, the status job, credibility labels, the backfill of the label (maintainer script) | `docs/technical/domains/vendors.md` |
 | Policies | `docs/technical/domains/policies.md` |
 | Use cases / projects | `docs/technical/domains/use-cases.md` |
 | Models / model inventory | `docs/technical/domains/models.md` |
