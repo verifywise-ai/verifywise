@@ -465,6 +465,11 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
       status: "Status",
       framework: "Frameworks",
       monitored_regulations_and_standards: "Monitored regulations and standards",
+      // Lifecycle (#5187); recorded by controllers/useCaseLifecycle.ctrl.ts.
+      lifecycle_stage: "Lifecycle stage",
+      go_live_date: "Go-live date",
+      last_confirmed_at: "Confirmed still live",
+      department: "Department",
     },
     fieldFormatters: {
       owner: GENERIC_FORMATTERS.user,

@@ -20,6 +20,8 @@ import modelLifecycleChangeHistoryRoutes from "./modelLifecycleChangeHistory.rou
 import controlEUChangeHistoryRoutes from "./controlEUChangeHistory.route";
 import subcontrolEUChangeHistoryRoutes from "./subcontrolEUChangeHistory.route";
 import annexCategoryChangeHistoryRoutes from "./annexCategoryChangeHistory.route";
+import useCaseLifecycleRoutes from "./useCaseLifecycle.route";
+import lifecycleSettingsRoutes from "./lifecycleSettings.route";
 
 const router = express.Router();
 
@@ -34,5 +36,9 @@ router.use("/model-lifecycle-change-history", modelLifecycleChangeHistoryRoutes)
 router.use("/control-eu-change-history", controlEUChangeHistoryRoutes);
 router.use("/subcontrol-eu-change-history", subcontrolEUChangeHistoryRoutes);
 router.use("/annex-category-change-history", annexCategoryChangeHistoryRoutes);
+
+// Use case lifecycle and the org-wide "still live?" interval (#5187).
+router.use("/use-case-lifecycle", useCaseLifecycleRoutes);
+router.use("/lifecycle-settings", lifecycleSettingsRoutes);
 
 export default router;

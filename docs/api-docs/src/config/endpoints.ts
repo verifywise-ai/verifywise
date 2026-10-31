@@ -12176,6 +12176,102 @@ export const v1ChangeHistoryEndpoints: Endpoint[] = [
   },
 ];
 
+// v1: V1/Lifecycle Settings endpoints
+export const v1V1lifecycleSettingsEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/lifecycle-settings',
+    summary: "Get Lifecycle Settings Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Lifecycle Settings",
+  },
+  {
+    method: 'PATCH',
+    path: '/v1/lifecycle-settings',
+    summary: "Update Lifecycle Settings Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Lifecycle Settings",
+  },
+];
+
+// v1: V1/Use Case Lifecycle endpoints
+export const v1V1useCaseLifecycleEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/use-case-lifecycle/summary',
+    summary: "Get Lifecycle Summary Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Use Case Lifecycle",
+  },
+  {
+    method: 'GET',
+    path: '/v1/use-case-lifecycle/dashboard',
+    summary: "Get Lifecycle Dashboard Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Use Case Lifecycle",
+  },
+  {
+    method: 'POST',
+    path: '/v1/use-case-lifecycle/{id}/go-live',
+    summary: "Go Live Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Use Case Lifecycle",
+  },
+  {
+    method: 'POST',
+    path: '/v1/use-case-lifecycle/{id}/retire',
+    summary: "Retire Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Use Case Lifecycle",
+  },
+  {
+    method: 'POST',
+    path: '/v1/use-case-lifecycle/{id}/confirm',
+    summary: "Confirm Still Live Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Use Case Lifecycle",
+  },
+  {
+    method: 'PATCH',
+    path: '/v1/use-case-lifecycle/{id}/department',
+    summary: "Update Department Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Use Case Lifecycle",
+  },
+];
+
 // Vendors endpoints
 export const vendorEndpoints: Endpoint[] = [
   {
@@ -12522,6 +12618,8 @@ export const allEndpoints = {
   training: trainingEndpoints,
   user: userEndpoints,
   v1ChangeHistory: v1ChangeHistoryEndpoints,
+  v1V1lifecycleSettings: v1V1lifecycleSettingsEndpoints,
+  v1V1useCaseLifecycle: v1V1useCaseLifecycleEndpoints,
   vendor: vendorEndpoints,
   vendorRisk: vendorRiskEndpoints,
   webhook: webhookEndpoints,

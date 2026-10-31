@@ -7896,6 +7896,10 @@ tags:
     name: 'v1: Change History'
   -
     name: 'v1: Shadow AI'
+  -
+    name: 'v1: V1/Lifecycle Settings'
+  -
+    name: 'v1: V1/Use Case Lifecycle'
 paths:
   /webhooks/github:
     post:
@@ -27207,6 +27211,117 @@ paths:
       tags:
         - 'v1: Change History'
       operationId: getAnnexCategoryChangeHistoryById
+      security:
+        -
+          bearerAuth: []
+  /v1/use-case-lifecycle/summary:
+    get:
+      summary: 'Get Lifecycle Summary Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Use Case Lifecycle'
+      operationId: getLifecycleSummaryHandler
+      security:
+        -
+          bearerAuth: []
+  /v1/use-case-lifecycle/dashboard:
+    get:
+      summary: 'Get Lifecycle Dashboard Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Use Case Lifecycle'
+      operationId: getLifecycleDashboardHandler
+      security:
+        -
+          bearerAuth: []
+  '/v1/use-case-lifecycle/{id}/go-live':
+    post:
+      summary: 'Go Live Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Use Case Lifecycle'
+      operationId: goLiveHandler
+      security:
+        -
+          bearerAuth: []
+  '/v1/use-case-lifecycle/{id}/retire':
+    post:
+      summary: 'Retire Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Use Case Lifecycle'
+      operationId: retireHandler
+      security:
+        -
+          bearerAuth: []
+  '/v1/use-case-lifecycle/{id}/confirm':
+    post:
+      summary: 'Confirm Still Live Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Use Case Lifecycle'
+      operationId: confirmStillLiveHandler
+      security:
+        -
+          bearerAuth: []
+  '/v1/use-case-lifecycle/{id}/department':
+    patch:
+      summary: 'Update Department Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Use Case Lifecycle'
+      operationId: updateDepartmentHandler
+      security:
+        -
+          bearerAuth: []
+  /v1/lifecycle-settings:
+    get:
+      summary: 'Get Lifecycle Settings Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Lifecycle Settings'
+      operationId: getLifecycleSettingsHandler
+      security:
+        -
+          bearerAuth: []
+    patch:
+      summary: 'Update Lifecycle Settings Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Lifecycle Settings'
+      operationId: updateLifecycleSettingsHandler
       security:
         -
           bearerAuth: []

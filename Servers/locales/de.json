@@ -931,5 +931,12 @@
   "Invalid subcontrol ID": "Ungültige Unterkontroll-ID",
   "Invalid annex category ID": "Ungültige Anhangskategorie-ID",
   "Invalid evidence hub ID": "Ungültige Nachweis-ID",
-  "Invalid model ID": "Ungültige Modell-ID"
+  "Invalid model ID": "Ungültige Modell-ID",
+  "Invalid go-live date": "Ungültiges Go-live-Datum",
+  "Only a planned use case can go live": "Nur ein geplanter Anwendungsfall kann live gehen",
+  "Only a planned or live use case can be retired": "Nur ein geplanter oder aktiver Anwendungsfall kann außer Betrieb genommen werden",
+  "Only a live use case can be confirmed as still live": "Nur ein aktiver Anwendungsfall kann als weiterhin aktiv bestätigt werden",
+  "Invalid department": "Ungültige Abteilung",
+  "The check interval must be 30, 90 or 180 days": "Das Prüfintervall muss 30, 90 oder 180 Tage betragen",
+  "The go-live date can't be later than today": "Das Go-live-Datum darf nicht nach dem heutigen Tag liegen"
 }

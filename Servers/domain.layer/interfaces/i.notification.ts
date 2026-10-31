@@ -44,6 +44,9 @@ export enum NotificationType {
   FILE_UPLOADED = "file_uploaded",
   FILE_EXPIRING = "file_expiring",
 
+  // Inventory lifecycle notifications ("still live?" check, #5187)
+  LIFECYCLE_CONFIRMATION_DUE = "lifecycle_confirmation_due",
+
   // Collaboration notifications
   COMMENT_ADDED = "comment_added",
   MENTION = "mention",

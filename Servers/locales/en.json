@@ -931,5 +931,12 @@
   "Invalid subcontrol ID": "Invalid subcontrol ID",
   "Invalid annex category ID": "Invalid annex category ID",
   "Invalid evidence hub ID": "Invalid evidence hub ID",
-  "Invalid model ID": "Invalid model ID"
+  "Invalid model ID": "Invalid model ID",
+  "Invalid go-live date": "Invalid go-live date",
+  "Only a planned use case can go live": "Only a planned use case can go live",
+  "Only a planned or live use case can be retired": "Only a planned or live use case can be retired",
+  "Only a live use case can be confirmed as still live": "Only a live use case can be confirmed as still live",
+  "Invalid department": "Invalid department",
+  "The check interval must be 30, 90 or 180 days": "The check interval must be 30, 90 or 180 days",
+  "The go-live date can't be later than today": "The go-live date can't be later than today"
 }

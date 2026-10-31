@@ -33,6 +33,11 @@ vi.mock("../../../../application/utils/dateFormatter", () => ({
   formatRelativeDate: (d: string) => d,
 }));
 
+// Lifecycle widgets have their own tests (UseCaseLifecycleWidgets.test.tsx).
+vi.mock("../UseCaseLifecycleWidgets", () => ({
+  default: () => <div data-testid="use-case-lifecycle-widgets" />,
+}));
+
 // Mock child components that are complex
 vi.mock("../../../components/breadcrumbs/PageBreadcrumbs", () => ({
   PageBreadcrumbs: () => <div data-testid="breadcrumbs" />,

@@ -1,5 +1,5 @@
 import { useContext, useEffect, useState, useRef, useMemo } from "react";
-import { useLocation, useNavigate } from "react-router";
+import { useLocation, useNavigate, useSearchParams } from "react-router";
 import { VerifyWiseContext } from "../../../../application/contexts/VerifyWise.context";
 import { FrameworkTypeEnum } from "../../../components/Forms/ProjectForm/constants";
 import { ProjectForm } from "../../../components/Forms/ProjectForm";
@@ -16,6 +16,39 @@ import AiOrNotScreening from "../../../components/Modals/AiOrNotScreening";
 import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtended";
 import { brand } from "../../../themes/palette";
 import { testIds } from "../../../test-ids";
+import LifecycleTabs from "../../../components/LifecycleTabs";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  useCaseLifecycleKeys,
+  useUseCaseLifecycleSummary,
+} from "../../../../application/hooks/useUseCaseLifecycle";
+import { countLifecycleStages } from "../../../../application/utils/useCaseLifecycle";
+import { LIFECYCLE_STAGES, LifecycleStage } from "../../../../domain/enums/lifecycleStage.enum";
+
+const STAGE_STORAGE_KEY = "use-cases-lifecycle-tab";
+
+const STAGE_TOOLTIPS: Record<LifecycleStage, string> = {
+  [LifecycleStage.IN_REVIEW]: "Use cases waiting for an approval decision",
+  [LifecycleStage.PLANNED]: "Use cases that are not live yet",
+  [LifecycleStage.LIVE]: "Use cases in use today",
+  [LifecycleStage.RETIRED]: "Use cases that are no longer in use",
+};
+
+const STAGE_EMPTY: Record<LifecycleStage, string> = {
+  [LifecycleStage.IN_REVIEW]: "No use cases are waiting for review.",
+  [LifecycleStage.PLANNED]: "No planned use cases.",
+  [LifecycleStage.LIVE]: "No live use cases. Open a planned use case and mark it as live.",
+  [LifecycleStage.RETIRED]: "No retired use cases.",
+};
+
+const isStage = (value: string | null): value is LifecycleStage =>
+  !!value && (LIFECYCLE_STAGES as readonly string[]).includes(value);
+
+/** The last tab used on this browser, else Planned. */
+const readStoredStage = (): LifecycleStage => {
+  const stored = localStorage.getItem(STAGE_STORAGE_KEY);
+  return isStage(stored) ? stored : LifecycleStage.PLANNED;
+};
 
 const Home = () => {
   const location = useLocation();
@@ -32,6 +65,32 @@ const Home = () => {
     if (!dashboard) return [];
     return dashboard.projects_list.filter((p) => !p.is_organizational);
   }, [dashboard]);
+
+  // Lifecycle tabs (#5187). Counts come from the rows this page already shows,
+  // so a tab count always equals the rows under it; stale markers come from
+  // the server, which applies the org's "still live?" interval.
+  const [searchParams, setSearchParams] = useSearchParams();
+  // localStorage is read once; ?stage= (dashboard links) wins over it.
+  const [storedStage] = useState(readStoredStage);
+  const stageParam = searchParams.get("stage");
+  const stage = isStage(stageParam) ? stageParam : storedStage;
+  const handleStageChange = (next: LifecycleStage) => {
+    localStorage.setItem(STAGE_STORAGE_KEY, next);
+    const params = new URLSearchParams(searchParams);
+    params.set("stage", next);
+    setSearchParams(params, { replace: true });
+  };
+  const { data: lifecycleSummary } = useUseCaseLifecycleSummary();
+  const staleIds = useMemo(() => new Set(lifecycleSummary?.stale_ids ?? []), [lifecycleSummary]);
+  // The same count the dashboard shows (countLifecycleStages over the list).
+  const stageCounts = useMemo(() => countLifecycleStages(projects), [projects]);
+  const stageProjects = useMemo(
+    () => projects.filter((p) => (p.lifecycle_stage ?? LifecycleStage.PLANNED) === stage),
+    [projects, stage],
+  );
+  // #5188 extends the In review tab with pending intake submissions: pass
+  // their count as extraCounts={{ in_review: n }} and render them alongside
+  // stageProjects when stage === LifecycleStage.IN_REVIEW.
 
   const [runHomeTour, setRunHomeTour] = useState(false);
   const newProjectButtonRef = useRef<HTMLDivElement>(null);
@@ -55,6 +114,14 @@ const Home = () => {
     void fetchDashboard();
   }, [fetchDashboard, refreshProjectsFlag, refreshUsers]);
 
+  // A create or delete changes the stale markers too. Invalidating here (not
+  // in the effect above) keeps the summary to one fetch on mount.
+  const queryClient = useQueryClient();
+  const refreshProjects = () => {
+    setRefreshProjectsFlag((prev) => !prev);
+    void queryClient.invalidateQueries({ queryKey: useCaseLifecycleKeys.all });
+  };
+
   const submitFormRef = useRef<(() => void) | undefined>(undefined);
 
   // Auto-open create modal when navigating from "Add new..." dropdown
@@ -69,7 +136,7 @@ const Home = () => {
 
   const handleProjectFormModalClose = () => {
     setIsProjectFormModalOpen(false);
-    setRefreshProjectsFlag((prev) => !prev);
+    refreshProjects();
   };
 
   return (
@@ -81,9 +148,21 @@ const Home = () => {
     >
       {/* Projects List */}
       <ProjectList
-        projects={projects}
+        projects={stageProjects}
         isLoading={isPending}
-        onProjectDeleted={() => setRefreshProjectsFlag((prev) => !prev)}
+        staleIds={staleIds}
+        emptyMessage={projects.length > 0 ? STAGE_EMPTY[stage] : undefined}
+        header={
+          <LifecycleTabs
+            value={stage}
+            onChange={handleStageChange}
+            counts={stageCounts}
+            isLoading={isPending}
+            tooltips={STAGE_TOOLTIPS}
+            dataJoyrideId="use-case-lifecycle-tabs"
+          />
+        }
+        onProjectDeleted={refreshProjects}
         newProjectButton={
           <div data-joyride-id="new-project-button" ref={newProjectButtonRef}>
             <CustomizableButton
@@ -106,7 +185,7 @@ const Home = () => {
         isOpen={isProjectFormModalOpen}
         onClose={async () => {
           setIsProjectFormModalOpen(false);
-          setRefreshProjectsFlag((prev) => !prev);
+          refreshProjects();
         }}
         title="Create new use case"
         description="Create a new use case by filling in the following details"
