@@ -10,6 +10,7 @@ from services.mcp_proxy_service import (
     ON_SAVE_DISCOVERY_SECONDS,
     run_discovery,
 )
+from services.mcp_oauth_discovery import OAuthDiscoveryError, discover_token_endpoint
 from utils.notifications import config_event, notify_config_change
 from utils.safe_outbound_url import UnsafeOutboundUrlError, assert_safe_outbound_url
 import crud.mcp_servers as mcp_servers_crud
@@ -66,6 +67,20 @@ async def list_mcp_servers(request: Request) -> Any:
 
     servers = await mcp_servers_crud.get_all_mcp_servers(org_id)
     return {"servers": [_present(s, request) for s in servers]}
+
+
+@router.post("/discover-oauth")
+async def discover_oauth(request: Request) -> Any:
+    """Find the OAuth token URL for a server address (no secret is sent)."""
+    require_admin(request)
+    body = await request.json()
+    url = body.get("url") if isinstance(body, dict) else None
+    if not isinstance(url, str) or not url.strip():
+        raise HTTPException(status_code=400, detail="URL is required")
+    try:
+        return await discover_token_endpoint(url.strip())
+    except OAuthDiscoveryError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.get("/{server_id}")
