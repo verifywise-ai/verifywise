@@ -232,7 +232,7 @@ export const useCasesContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The Use cases page splits the inventory into four tabs, each with a count. The lifecycle stage is separate from the status field, which you keep using to track the work.',
+      text: 'The Use cases page splits the inventory into four tabs, each with a count. The lifecycle stage is separate from the status field. Keep using the status to track the work.',
     },
     {
       type: 'bullet-list',
@@ -244,8 +244,20 @@ export const useCasesContent: ArticleContent = {
       ],
     },
     {
+      type: 'image',
+      src: '/images/user-guide/use-cases-lifecycle-tabs.png',
+      alt: 'Use cases page with the In review, Planned, Live and Retired tabs. The Live tab lists 4 use cases and one is marked Stale',
+      caption: 'The Live tab. Transaction fraud scoring is marked Stale because nobody has confirmed it recently.',
+    },
+    {
       type: 'paragraph',
-      text: 'Open a use case to move it along. On the Overview tab, choose Mark as live and pick the go-live date (today or earlier), or choose Retire. A planned use case that never launches can be retired too. The same panel holds the department, which the dashboard uses to group live use cases.',
+      text: 'Open a use case to move it along. On the Overview tab, choose **Mark as live** and pick the go-live date (today or earlier), or choose **Retire**. A planned use case that never launches can be retired too. The same panel holds the department. The dashboard uses it to group live use cases.',
+    },
+    {
+      type: 'image',
+      src: '/images/user-guide/use-case-mark-as-live.png',
+      alt: 'Mark as live dialog with a go-live date picker',
+      caption: 'Marking a use case as live records the go-live date.',
     },
     {
       type: 'paragraph',
@@ -255,11 +267,17 @@ export const useCasesContent: ArticleContent = {
       type: 'heading',
       id: 'still-live-check',
       level: 3,
-      text: 'Still live? check',
+      text: 'Still-live check',
     },
     {
       type: 'paragraph',
-      text: 'Live use cases need a periodic confirmation that they are still in use. When nobody has confirmed a live use case within the check interval, it gets a Stale marker in the list and its owner gets one email asking them to confirm it or retire it. The email repeats once per interval until someone acts. Confirm with Confirm still live on the Overview tab.',
+      text: 'The owner of a live use case confirms from time to time that it is still in use. If nobody confirms it within the check interval, it gets a Stale marker in the list. Its owner gets an email asking them to confirm it or retire it, once per interval until someone acts. To confirm, choose **Confirm still live** on the Overview tab.',
+    },
+    {
+      type: 'image',
+      src: '/images/user-guide/use-case-stale.png',
+      alt: 'Overview tab of a live use case with a warning that nobody has confirmed it is still live, and Confirm still live and Retire buttons',
+      caption: 'A stale use case. The owner confirms it is still live or retires it.',
     },
     {
       type: 'paragraph',
@@ -267,7 +285,7 @@ export const useCasesContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The dashboard shows the count per stage, what went live or was retired this quarter, live use cases by department, risk tier or regulation, and the stale entries.',
+      text: 'The dashboard shows the count per stage and what went live or was retired this quarter. It also groups live use cases by department, risk tier or regulation. A separate card lists the stale entries.',
     },
     {
       type: 'heading',
