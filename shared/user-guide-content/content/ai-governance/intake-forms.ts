@@ -390,6 +390,22 @@ export const intakeFormsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
+      text: 'Each number has an info icon. It explains what the setting does, the 0 to 100 risk score scale and the score band for each risk level.',
+    },
+    {
+      type: 'image',
+      src: '/images/user-guide/intake-reviewer-assignment.png',
+      alt: 'Reviewer assignment settings with expert and regular reviewers, threshold, close-call margin and second review share, each with an info icon',
+      caption: 'Reviewer assignment in the form settings.',
+    },
+    {
+      type: 'image',
+      src: '/images/user-guide/intake-threshold-info.png',
+      alt: 'Info tooltip for the threshold explaining where scores go and listing the score bands Low 0 to 25, Medium 26 to 50, High 51 to 75 and Critical 76 to 100',
+      caption: 'The explanation behind the threshold info icon.',
+    },
+    {
+      type: 'paragraph',
       text: 'A submission goes to expert review if any of these is true, checked in this order. Otherwise it goes to regular review.',
     },
     {

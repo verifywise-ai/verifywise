@@ -11,7 +11,7 @@ const MEANING: Record<NumberKey, string> = {
   threshold:
     "Scores at or above the threshold go to expert reviewers. Lower scores go to regular reviewers, unless they are within the close-call margin.",
   closeCallMargin:
-    "Scores closer to the threshold than this margin also go to expert reviewers, even below it.",
+    "Scores below the threshold but within this margin of it also go to expert reviewers.",
   secondReviewRate:
     "Approvals in the regular lane by anyone who isn't an expert reviewer are picked at random at this rate for a second review. Rejections aren't picked.",
 };
@@ -24,7 +24,7 @@ const BUTTON_LABEL: Record<NumberKey, string> = {
 };
 
 const ALWAYS_EXPERT =
-  "Prohibited practices, and submissions without a score or whose AI scoring failed, always go to expert reviewers.";
+  "Prohibited practices always go to expert reviewers. So do submissions that have no score or whose AI scoring failed.";
 
 interface RoutingFieldInfoProps {
   field: NumberKey;
