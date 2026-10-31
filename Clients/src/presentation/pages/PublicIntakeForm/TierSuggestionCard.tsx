@@ -1,8 +1,11 @@
 import { useState, type ChangeEvent } from "react";
-import { Box, Collapse, Typography } from "@mui/material";
+import { Box, Collapse, Typography, useTheme } from "@mui/material";
 import { ChevronDown, Loader2, Sparkles } from "lucide-react";
 import { CustomizableButton } from "../../components/button/customizable-button";
-import type { TierSuggestion } from "../../../application/repository/intakeTierSuggestion.repository";
+import type {
+  TierExplanationPoint,
+  TierSuggestion,
+} from "../../../application/repository/intakeTierSuggestion.repository";
 
 export const MAX_TIER_CONTEXT_CHARS = 1000;
 
@@ -18,7 +21,7 @@ interface TierSuggestionCardProps {
   loading: boolean;
   /** True when the form may call AI (live checks on and a key set). */
   aiAvailable: boolean;
-  onExplain: () => Promise<string | null>;
+  onExplain: () => Promise<TierExplanationPoint[] | null>;
   response: TierResponseState;
   onResponseChange: (next: TierResponseState) => void;
 }
@@ -37,9 +40,13 @@ export function TierSuggestionCard({
   response,
   onResponseChange,
 }: TierSuggestionCardProps) {
+  const theme = useTheme();
+  const muted = theme.palette.text.secondary;
+  const body = theme.palette.text.primary;
+  const border = `1px solid ${theme.palette.border.dark}`;
   const [whyOpen, setWhyOpen] = useState(false);
   const [explaining, setExplaining] = useState(false);
-  const [explanation, setExplanation] = useState<string | null>(null);
+  const [explanation, setExplanation] = useState<TierExplanationPoint[] | null>(null);
   const [explainFailed, setExplainFailed] = useState(false);
 
   if (loading) {
@@ -49,7 +56,7 @@ export function TierSuggestionCard({
         sx={{ mb: "24px", display: "flex", alignItems: "center", gap: "8px" }}
       >
         <Loader2 size={14} strokeWidth={1.5} className="spin" />
-        <Typography sx={{ fontSize: "13px", color: "#475569" }}>
+        <Typography sx={{ fontSize: "13px", color: muted }}>
           Working out the suggested risk level
         </Typography>
       </Box>
@@ -61,9 +68,9 @@ export function TierSuggestionCard({
     setExplaining(true);
     setExplainFailed(false);
     try {
-      const text = await onExplain();
-      setExplanation(text);
-      setExplainFailed(text === null);
+      const points = await onExplain();
+      setExplanation(points);
+      setExplainFailed(points === null);
     } catch {
       setExplainFailed(true);
     } finally {
@@ -77,7 +84,7 @@ export function TierSuggestionCard({
       sx={{
         mb: "24px",
         p: "16px",
-        border: "1px solid #d0d5dd",
+        border,
         borderRadius: "4px",
         display: "flex",
         flexDirection: "column",
@@ -85,12 +92,12 @@ export function TierSuggestionCard({
       }}
     >
       <Box>
-        <Typography sx={{ fontSize: "13px", color: "#475569" }}>
+        <Typography sx={{ fontSize: "13px", color: muted }}>
           Suggested risk level from your answers
         </Typography>
         <Typography
           data-testid="tier-suggestion-level"
-          sx={{ fontSize: "16px", fontWeight: 600, color: "#1e293b" }}
+          sx={{ fontSize: "16px", fontWeight: 600, color: body }}
         >
           {suggestion.level}
         </Typography>
@@ -105,10 +112,10 @@ export function TierSuggestionCard({
             <Box
               component="li"
               key={`${reason.article}-${reason.text}`}
-              sx={{ fontSize: "13px", color: "#334155" }}
+              sx={{ fontSize: "13px", color: body }}
             >
               <span>{reason.text}</span>{" "}
-              <Box component="span" sx={{ color: "#64748b" }}>
+              <Box component="span" sx={{ color: muted }}>
                 ({reason.article})
               </Box>
             </Box>
@@ -132,7 +139,7 @@ export function TierSuggestionCard({
               background: "none",
               cursor: "pointer",
               fontSize: "13px",
-              color: "#334155",
+              color: body,
             }}
           >
             <ChevronDown
@@ -157,10 +164,10 @@ export function TierSuggestionCard({
                 <Box
                   component="li"
                   key={`${item.article}-${item.text}`}
-                  sx={{ fontSize: "13px", color: "#334155" }}
+                  sx={{ fontSize: "13px", color: body }}
                 >
                   <span>{item.text}</span>{" "}
-                  <Box component="span" sx={{ color: "#64748b" }}>
+                  <Box component="span" sx={{ color: muted }}>
                     ({item.article})
                   </Box>
                 </Box>
@@ -180,18 +187,29 @@ export function TierSuggestionCard({
             testId="tier-explain"
             startIcon={<Sparkles size={14} strokeWidth={1.5} />}
           />
-          <Typography sx={{ fontSize: "13px", color: "#64748b" }}>
+          <Typography sx={{ fontSize: "13px", color: muted }}>
             Sends your risk answers to AI.
           </Typography>
         </Box>
       )}
       {explanation && (
-        <Typography data-testid="tier-explanation" sx={{ fontSize: "13px", color: "#334155" }}>
-          {explanation}
-        </Typography>
+        <Box
+          component="ul"
+          data-testid="tier-explanation"
+          sx={{ m: 0, pl: "18px", display: "flex", flexDirection: "column", gap: "4px" }}
+        >
+          {explanation.map((point) => (
+            <Box component="li" key={point.text} sx={{ fontSize: "13px", color: body }}>
+              <span>{point.text}</span>{" "}
+              <Box component="span" sx={{ color: muted }}>
+                ({point.article})
+              </Box>
+            </Box>
+          ))}
+        </Box>
       )}
       {explainFailed && (
-        <Typography sx={{ fontSize: "13px", color: "#64748b" }}>
+        <Typography sx={{ fontSize: "13px", color: muted }}>
           An explanation isn't available right now. The reasons above still apply.
         </Typography>
       )}
@@ -213,7 +231,7 @@ export function TierSuggestionCard({
 
       {response.choice === "context" && (
         <Box component="label" sx={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-          <Typography component="span" sx={{ fontSize: "13px", fontWeight: 500, color: "#334155" }}>
+          <Typography component="span" sx={{ fontSize: "13px", fontWeight: 500, color: body }}>
             What should the reviewer know?
           </Typography>
           <Box
@@ -229,7 +247,7 @@ export function TierSuggestionCard({
               fontFamily: "inherit",
               fontSize: "13px",
               p: "8px",
-              border: "1px solid #d0d5dd",
+              border,
               borderRadius: "4px",
               resize: "vertical",
             }}
@@ -237,7 +255,7 @@ export function TierSuggestionCard({
         </Box>
       )}
 
-      <Typography sx={{ fontSize: "13px", color: "#64748b" }}>
+      <Typography sx={{ fontSize: "13px", color: muted }}>
         The governance team makes the final call.
       </Typography>
     </Box>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useParams, useSearchParams, useNavigate } from "react-router";
 import { useForm } from "react-hook-form";
 import { Box, Collapse, Typography, useMediaQuery } from "@mui/material";
@@ -235,22 +235,27 @@ export function PublicIntakeForm() {
   const aiOn = checksOn && liveChecks.aiAvailable;
 
   // Suggest a risk level once the risk step is done, from the answers it will
-  // submit. A changed level asks the applicant again; a failure shows nothing.
+  // submit. Changed answers drop the old suggestion and response at once, so a
+  // response can never be sent against a level the applicant hasn't seen.
+  // The same answers are not asked about again. A failure shows nothing.
   const prunedRiskAnswers = useMemo(
     () => (riskStep ? pruneHiddenAnswers(riskStep.questionnaire, riskAnswers) : null),
     [riskStep, riskAnswers],
   );
   const riskAnswersKey = prunedRiskAnswers ? JSON.stringify(prunedRiskAnswers) : "";
+  const suggestedForKey = useRef<string | null>(null);
   useEffect(() => {
     if (!prunedRiskAnswers || step !== "form") return;
+    if (suggestedForKey.current === riskAnswersKey) return;
+    suggestedForKey.current = null;
+    setTierSuggestion(null);
+    setTierResponse({ choice: null, context: "" });
     const controller = new AbortController();
     setTierLoading(true);
     postTierSuggestion(formRef, prunedRiskAnswers, controller.signal)
       .then((suggestion) => {
-        setTierSuggestion((prev) => {
-          if (prev?.level !== suggestion.level) setTierResponse({ choice: null, context: "" });
-          return suggestion;
-        });
+        suggestedForKey.current = riskAnswersKey;
+        setTierSuggestion(suggestion);
       })
       .catch(() => {
         if (!controller.signal.aborted) setTierSuggestion(null);
@@ -461,26 +466,25 @@ export function PublicIntakeForm() {
         captchaToken,
         captchaAnswer: captchaNum,
         resubmissionToken,
-        ...(riskStep
-          ? { euAiActRiskAnswers: pruneHiddenAnswers(riskStep.questionnaire, riskAnswers) }
-          : {}),
+        ...(riskStep ? { euAiActRiskAnswers: prunedRiskAnswers ?? {} } : {}),
       };
 
-      // With a response to the suggested level, submit through v1, which stores it.
-      const response =
-        tierSuggestion && tierResponse.choice
-          ? await submitPublicFormWithTierResponse(formRef, {
-              ...payload,
-              tierSuggestionResponse: {
-                accepted: tierResponse.choice === "accept",
-                ...(tierResponse.choice === "context" && tierResponse.context.trim()
-                  ? { context: tierResponse.context.trim() }
-                  : {}),
-              },
-            })
-          : isNewFormat
-            ? await submitPublicFormById(publicId!, payload)
-            : await submitPublicForm(tenantSlug!, formSlug!, payload);
+      // With a response to the suggested level, submit through v1, which
+      // stores it. "Add context" with nothing written is no response.
+      const context = tierResponse.context.trim();
+      const tierSuggestionResponse =
+        !tierSuggestion || tierLoading || !tierResponse.choice
+          ? null
+          : tierResponse.choice === "accept"
+            ? { accepted: true }
+            : context
+              ? { accepted: false, context }
+              : null;
+      const response = tierSuggestionResponse
+        ? await submitPublicFormWithTierResponse(formRef, { ...payload, tierSuggestionResponse })
+        : isNewFormat
+          ? await submitPublicFormById(publicId!, payload)
+          : await submitPublicForm(tenantSlug!, formSlug!, payload);
 
       if (response.data) {
         const successPath = isNewFormat

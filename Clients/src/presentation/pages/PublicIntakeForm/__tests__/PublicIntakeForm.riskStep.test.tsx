@@ -273,7 +273,9 @@ describe("PublicIntakeForm suggested risk level", () => {
   });
 
   it("explains on request when the form has AI", async () => {
-    tierRepo.postTierExplanation.mockResolvedValue("You said it ranks job candidates.");
+    tierRepo.postTierExplanation.mockResolvedValue([
+      { text: "You said it ranks job candidates.", article: "Annex III, point 4" },
+    ]);
     await openForm({ liveChecks: { enabled: true, aiAvailable: true } });
     await screen.findByTestId("tier-suggestion");
     expect(tierRepo.postTierExplanation).not.toHaveBeenCalled();
@@ -281,6 +283,37 @@ describe("PublicIntakeForm suggested risk level", () => {
     expect(await screen.findByTestId("tier-explanation")).toHaveTextContent(
       "You said it ranks job candidates.",
     );
+  });
+
+  it("sends no response when Add context is left empty", async () => {
+    await openForm();
+    fireEvent.click(await screen.findByTestId("tier-add-context"));
+    fireEvent.change(screen.getByTestId("tier-context"), { target: { value: "   " } });
+    await fillAndSubmit();
+    await waitFor(() => expect(repo.submitPublicFormById).toHaveBeenCalled());
+    expect(tierRepo.submitPublicFormWithTierResponse).not.toHaveBeenCalled();
+  });
+
+  it("drops the response when the answers change, and asks again", async () => {
+    await openForm();
+    fireEvent.click(await screen.findByTestId("tier-accept"));
+    fireEvent.click(screen.getByRole("button", { name: "Back to risk classification" }));
+    fireEvent.click(await screen.findByLabelText("Research"));
+    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+    await waitFor(() => expect(tierRepo.postTierSuggestion).toHaveBeenCalledTimes(2));
+    await screen.findByTestId("tier-suggestion");
+    await fillAndSubmit();
+    await waitFor(() => expect(repo.submitPublicFormById).toHaveBeenCalled());
+    expect(tierRepo.submitPublicFormWithTierResponse).not.toHaveBeenCalled();
+  });
+
+  it("does not ask again when the applicant returns with the same answers", async () => {
+    await openForm();
+    await screen.findByTestId("tier-suggestion");
+    fireEvent.click(screen.getByRole("button", { name: "Back to risk classification" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Continue" }));
+    await screen.findByTestId("tier-suggestion");
+    expect(tierRepo.postTierSuggestion).toHaveBeenCalledTimes(1);
   });
 
   it("shows nothing when the suggestion can't be made", async () => {

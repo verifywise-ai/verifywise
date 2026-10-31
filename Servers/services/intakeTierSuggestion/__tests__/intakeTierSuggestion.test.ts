@@ -5,7 +5,7 @@ jest.mock("../../../utils/logger/fileLogger", () => ({
   default: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
 }));
 
-import { explainTier, explanationIsGrounded, suggestTier, type TierSuggestion } from "..";
+import { explainTier, groundedPoints, suggestTier, type TierSuggestion } from "..";
 import { prepareIntakeRiskStep } from "../../euAiActClassification";
 
 // Limited risk (transparency): from the intake step tests.
@@ -35,10 +35,6 @@ const suggestionFor = (answers: object): TierSuggestion => {
   return outcome.suggestion;
 };
 
-/** A generate that answers with a fixed explanation, like the AI SDK's generateObject. */
-const generating = (explanation: string) =>
-  jest.fn<any>().mockResolvedValue({ object: { explanation } });
-
 describe("suggestTier", () => {
   it("returns exactly what a submission with these answers is scored as", () => {
     const suggestion = suggestionFor(HIGH);
@@ -58,32 +54,55 @@ describe("suggestTier", () => {
   });
 });
 
-describe("explanationIsGrounded", () => {
+describe("groundedPoints", () => {
   const high = () => suggestionFor(HIGH);
 
-  it("accepts plain words and the engine's own references", () => {
-    const article = high().reasons[0].article;
+  it("ties each point to the engine's own reference", () => {
+    const suggestion = high();
+    const points = groundedPoints(
+      [{ basis: 0, text: "You said it ranks job candidates." }],
+      suggestion,
+    );
+    expect(points).toEqual([
+      { text: "You said it ranks job candidates.", article: suggestion.reasons[0].article },
+    ]);
+  });
+
+  it("allows the engine's own wording, even when it names another level", () => {
     expect(
-      explanationIsGrounded(`You said it ranks job candidates, which ${article} covers.`, high()),
-    ).toBe(true);
-    expect(explanationIsGrounded("Your answers describe hiring decisions.", high())).toBe(true);
+      groundedPoints(
+        [{ basis: 0, text: "Your use is not high risk because it is narrow." }],
+        high(),
+      ),
+    ).not.toBeNull();
   });
 
-  it("rejects an article the engine did not cite", () => {
-    expect(explanationIsGrounded("Article 99 also applies to you.", high())).toBe(false);
+  it.each([
+    "Article 99 also applies to you.",
+    "Nach Artikel 99 gilt das auch.",
+    "Selon l'annexe I, cela s'applique.",
+    "Según el artículo 99 esto aplica.",
+    "Anhang IV verlangt Unterlagen.",
+    "See § 3 of the law.",
+  ])("rejects a point that cites anything itself: %s", (text) => {
+    expect(groundedPoints([{ basis: 0, text }], high())).toBeNull();
   });
 
-  it("rejects naming any level other than the suggested one", () => {
-    expect(explanationIsGrounded("This is probably Minimal risk.", high())).toBe(false);
-    expect(explanationIsGrounded("This is High risk because you rank people.", high())).toBe(true);
+  it("rejects a point tied to no engine reason", () => {
+    expect(groundedPoints([{ basis: 99, text: "Plain words." }], high())).toBeNull();
   });
 });
 
+/** A generate that answers with fixed points, like the AI SDK's generateObject. */
+const pointing = (points: Array<{ basis: number; text: string }>) =>
+  jest.fn<any>().mockResolvedValue({ object: { points } });
+
 describe("explainTier", () => {
-  it("returns a grounded explanation from one model call", async () => {
-    const generate = generating("You said the system ranks job candidates, so it is high risk.");
+  it("returns grounded points from one model call", async () => {
+    const suggestion = suggestionFor(HIGH);
+    const generate = pointing([{ basis: 0, text: "You said the system ranks job candidates." }]);
     const result = await explainTier({
-      suggestion: suggestionFor(HIGH),
+      suggestion,
       answers: HIGH,
       language: "en",
       model: {},
@@ -91,22 +110,28 @@ describe("explainTier", () => {
     });
     expect(result).toEqual({
       ok: true,
-      explanation: "You said the system ranks job candidates, so it is high risk.",
+      points: [
+        {
+          text: "You said the system ranks job candidates.",
+          article: suggestion.reasons[0].article,
+        },
+      ],
     });
     expect(generate).toHaveBeenCalledTimes(1);
-    // The answers reach the model as option labels inside the delimited data block.
     const call = generate.mock.calls[0][0] as { prompt: string; system: string };
-    expect(call.system).toMatch(/Never suggest a different level/);
+    expect(call.system).toMatch(/Never write article, annex/);
     expect(call.prompt).toMatch(/High risk/);
   });
 
-  it("discards an explanation that brings its own citation", async () => {
+  it("discards points that bring their own citation", async () => {
     const result = await explainTier({
       suggestion: suggestionFor(HIGH),
       answers: HIGH,
-      language: "en",
+      language: "de",
       model: {},
-      generate: generating("Under Article 52 you must also register it.") as any,
+      generate: pointing([
+        { basis: 0, text: "Nach Artikel 52 müssen Sie es registrieren." },
+      ]) as any,
     });
     expect(result.ok).toBe(false);
   });

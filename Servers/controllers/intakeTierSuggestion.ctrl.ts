@@ -3,13 +3,9 @@
 // under /api/v1 (ADR 0001). Public routes run behind resolvePublicIntakeForm,
 // which sets res.locals.intakeForm.
 import { NextFunction, Request, Response } from "express";
-import type { ResolvedIntakeForm } from "../middleware/intakePublicForm.middleware";
-import { createModelFromKey, LLMKeyRow } from "../advisor/llmModelFactory";
 import { explainTier, suggestTier } from "../services/intakeTierSuggestion";
 import { toLiveCheckLanguage } from "../services/intakeLiveChecks/aiChecks";
-import { formAiAvailable } from "../services/intakeLiveChecks/availability";
-import { consumeFormBudget, FORM_BUDGET_PER_HOUR } from "../services/intakeLiveChecks/formBudget";
-import { getLLMKeyWithKeyByIdQuery } from "../utils/llmKey.utils";
+import { loadFormModel, resolvedForm, spendFormBudget } from "./intakePublicAi";
 import { getTierSuggestionResponseQuery } from "../utils/intakeTierSuggestion.utils";
 import logger from "../utils/logger/fileLogger";
 import { translateRequest } from "../utils/i18n.utils";
@@ -17,11 +13,7 @@ import { STATUS_CODE } from "../utils/statusCode.utils";
 
 const NO_RISK_STEP_MESSAGE = "This form has no risk classification step";
 const BAD_RESPONSE_MESSAGE = "The response to the suggested risk level is invalid";
-const EXPLAIN_PAUSED_MESSAGE = "Explanations are paused for this form. Please try again later.";
 export const MAX_TIER_CONTEXT_CHARS = 1000;
-
-const resolvedForm = (res: Response): ResolvedIntakeForm =>
-  res.locals.intakeForm as ResolvedIntakeForm;
 
 /** Sent to res.locals by takeTierSuggestionResponse; read by the submit handlers. */
 export interface ApplicantTierResponse {
@@ -53,7 +45,7 @@ export async function postPublicTierSuggestion(req: Request, res: Response) {
  * The answers leave the server only here, when the applicant asks.
  */
 export async function postPublicTierExplanation(req: Request, res: Response) {
-  const { form, organizationId } = resolvedForm(res);
+  const { form } = resolvedForm(res);
   if (!form.euAiActRiskStepEnabled) {
     return res.status(404).json(STATUS_CODE[404](translateRequest(req, NO_RISK_STEP_MESSAGE)));
   }
@@ -70,24 +62,18 @@ export async function postPublicTierExplanation(req: Request, res: Response) {
     res.status(200).json(STATUS_CODE[200]({ explanation: null, error: "unavailable" }));
 
   try {
-    if (!(await formAiAvailable(form, organizationId))) return unavailable();
-    const row = await getLLMKeyWithKeyByIdQuery(form.llmKeyId!, organizationId);
-    if (!row) return unavailable();
-
-    if (!(await consumeFormBudget(form.id, "explain", FORM_BUDGET_PER_HOUR.explain))) {
-      const secondsToNextHour = 3600 - (Math.floor(Date.now() / 1000) % 3600);
-      res.set("Retry-After", String(secondsToNextHour));
-      return res.status(429).json(STATUS_CODE[429](translateRequest(req, EXPLAIN_PAUSED_MESSAGE)));
-    }
+    const model = await loadFormModel(resolvedForm(res));
+    if (!model) return unavailable();
+    if (!(await spendFormBudget(req, res, form.id, "explain"))) return res;
 
     const result = await explainTier({
       suggestion: outcome.suggestion,
       answers: (req.body.answers ?? {}) as Record<string, string | string[]>,
       language: toLiveCheckLanguage(req.body?.language),
-      model: createModelFromKey(row as unknown as LLMKeyRow),
+      model,
     });
     if (!result.ok) return unavailable();
-    return res.status(200).json(STATUS_CODE[200]({ explanation: result.explanation }));
+    return res.status(200).json(STATUS_CODE[200]({ explanation: result.points }));
   } catch (error) {
     // The message only: never the answers or the key.
     logger.error(

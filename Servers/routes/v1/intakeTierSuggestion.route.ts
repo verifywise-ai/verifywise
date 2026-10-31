@@ -3,7 +3,7 @@ const router = express.Router();
 import authenticateJWT from "../../middleware/auth.middleware";
 import {
   generalApiLimiter,
-  intakeLiveChecksVisitorLimiter,
+  intakeTierSuggestionVisitorLimiter,
 } from "../../middleware/rateLimit.middleware";
 import { resolvePublicIntakeForm } from "../../middleware/intakePublicForm.middleware";
 import {
@@ -17,7 +17,11 @@ import { submitPublicForm, submitPublicFormByPublicId } from "../../controllers/
 // Risk tier suggested to an applicant before they submit (#5190). The form is
 // resolved before the visitor limiter so it keys on the form, not the URL,
 // and the by-id routes come first: the slug routes would also match them.
-const publicGuards = [generalApiLimiter, resolvePublicIntakeForm, intakeLiveChecksVisitorLimiter];
+const publicGuards = [
+  generalApiLimiter,
+  resolvePublicIntakeForm,
+  intakeTierSuggestionVisitorLimiter,
+];
 
 router.post("/public/by-id/:publicId", ...publicGuards, postPublicTierSuggestion);
 router.post("/public/by-id/:publicId/explain", ...publicGuards, postPublicTierExplanation);

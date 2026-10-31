@@ -1,7 +1,7 @@
 import CustomAxios from "../../infrastructure/api/customAxios";
 import { apiServices } from "../../infrastructure/api/networkServices";
 import type { Answers, ClassificationResult } from "../../domain/types/euAiActClassification";
-import { submitPublicForm, type PublicFormRef } from "./intakeForm.repository";
+import { publicBase, submitPublicForm, type PublicFormRef } from "./intakeForm.repository";
 
 /** The risk tier suggested to an applicant from their risk step answers (#5190). */
 export interface TierSuggestion {
@@ -28,11 +28,7 @@ export interface StoredTierSuggestionResponse {
 
 const BASE = "/v1/intake-tier-suggestion";
 
-function publicBase(ref: PublicFormRef): string {
-  return "publicId" in ref
-    ? `${BASE}/public/by-id/${encodeURIComponent(ref.publicId)}`
-    : `${BASE}/public/${encodeURIComponent(ref.tenantSlug)}/${encodeURIComponent(ref.formSlug)}`;
-}
+const publicTierBase = (ref: PublicFormRef) => publicBase(ref, BASE);
 
 /** The rules engine's level and references for these answers. */
 export async function postTierSuggestion(
@@ -40,11 +36,17 @@ export async function postTierSuggestion(
   answers: Answers,
   signal?: AbortSignal,
 ): Promise<TierSuggestion> {
-  const response = await CustomAxios.post(publicBase(ref), { answers }, {
+  const response = await CustomAxios.post(publicTierBase(ref), { answers }, {
     signal,
     suppressGlobalErrorToast: true,
   } as Record<string, unknown>);
   return response.data.data as TierSuggestion;
+}
+
+/** One plain-language point, with the engine's reference for it (never the AI's). */
+export interface TierExplanationPoint {
+  text: string;
+  article: string;
 }
 
 /**
@@ -55,12 +57,15 @@ export async function postTierExplanation(
   ref: PublicFormRef,
   answers: Answers,
   language: string,
-): Promise<string | null> {
-  const response = await CustomAxios.post(`${publicBase(ref)}/explain`, { answers, language }, {
+): Promise<TierExplanationPoint[] | null> {
+  const response = await CustomAxios.post(`${publicTierBase(ref)}/explain`, { answers, language }, {
     suppressGlobalErrorToast: true,
   } as Record<string, unknown>);
   const explanation = (response.data?.data as { explanation?: unknown })?.explanation;
-  return typeof explanation === "string" && explanation ? explanation : null;
+  if (!Array.isArray(explanation) || explanation.length === 0) return null;
+  return explanation.filter(
+    (p): p is TierExplanationPoint => typeof p?.text === "string" && typeof p?.article === "string",
+  );
 }
 
 type PublicSubmitPayload = Parameters<typeof submitPublicForm>[2];
@@ -70,7 +75,7 @@ export async function submitPublicFormWithTierResponse(
   ref: PublicFormRef,
   data: PublicSubmitPayload & { tierSuggestionResponse: TierSuggestionResponseInput },
 ): Promise<Awaited<ReturnType<typeof submitPublicForm>>> {
-  const response = await apiServices.post(`${publicBase(ref)}/submit`, data);
+  const response = await apiServices.post(`${publicTierBase(ref)}/submit`, data);
   return response.data as Awaited<ReturnType<typeof submitPublicForm>>;
 }
 

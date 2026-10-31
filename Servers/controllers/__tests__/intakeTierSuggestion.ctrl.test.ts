@@ -1,8 +1,5 @@
 import { beforeEach, describe, expect, it, jest } from "@jest/globals";
 
-jest.mock("../../services/intakeLiveChecks/availability", () => ({
-  formAiAvailable: jest.fn<any>(),
-}));
 jest.mock("../../services/intakeLiveChecks/formBudget", () => ({
   consumeFormBudget: jest.fn<any>(),
   FORM_BUDGET_PER_HOUR: { checks: 300, prefill: 20, explain: 100 },
@@ -29,7 +26,6 @@ import {
   postPublicTierSuggestion,
   takeTierSuggestionResponse,
 } from "../intakeTierSuggestion.ctrl";
-import { formAiAvailable } from "../../services/intakeLiveChecks/availability";
 import { consumeFormBudget } from "../../services/intakeLiveChecks/formBudget";
 import { getLLMKeyWithKeyByIdQuery } from "../../utils/llmKey.utils";
 import { explainTier } from "../../services/intakeTierSuggestion";
@@ -48,7 +44,9 @@ const ANSWERS = {
   transparency: ["interacts"],
 };
 
-function createRes(form: object = { id: 7, euAiActRiskStepEnabled: true, llmKeyId: 3 }): any {
+const AI_FORM = { id: 7, euAiActRiskStepEnabled: true, liveChecksEnabled: true, llmKeyId: 3 };
+
+function createRes(form: object = AI_FORM): any {
   const res: any = { locals: { intakeForm: { form, organizationId: 2 } } };
   res.status = jest.fn<any>().mockReturnValue(res);
   res.json = jest.fn<any>().mockReturnValue(res);
@@ -89,8 +87,7 @@ describe("postPublicTierSuggestion", () => {
 
 describe("postPublicTierExplanation", () => {
   it("is unavailable, without a model call, when the form has no AI", async () => {
-    m(formAiAvailable).mockResolvedValue(false);
-    const res = createRes();
+    const res = createRes({ ...AI_FORM, liveChecksEnabled: false });
     await postPublicTierExplanation(req({ answers: ANSWERS }), res);
     expect(payload(res)).toEqual({ explanation: null, error: "unavailable" });
     expect(explainTier).not.toHaveBeenCalled();
@@ -98,26 +95,23 @@ describe("postPublicTierExplanation", () => {
   });
 
   it("answers 429 when the form's hourly budget is spent", async () => {
-    m(formAiAvailable).mockResolvedValue(true);
     m(getLLMKeyWithKeyByIdQuery).mockResolvedValue({ id: 3 });
     m(consumeFormBudget).mockResolvedValue(false);
     const res = createRes();
     await postPublicTierExplanation(req({ answers: ANSWERS }), res);
     expect(res.status).toHaveBeenCalledWith(429);
+    expect(res.set).toHaveBeenCalledWith("RateLimit-Reset", expect.any(String));
     expect(explainTier).not.toHaveBeenCalled();
   });
 
-  it("returns the explanation, or unavailable when it was not grounded", async () => {
-    m(formAiAvailable).mockResolvedValue(true);
+  it("returns the explanation points, or unavailable when they were not grounded", async () => {
     m(getLLMKeyWithKeyByIdQuery).mockResolvedValue({ id: 3 });
     m(consumeFormBudget).mockResolvedValue(true);
-    m(explainTier).mockResolvedValueOnce({
-      ok: true,
-      explanation: "You said it chats with people.",
-    });
+    const points = [{ text: "You said it chats with people.", article: "Article 50(1)" }];
+    m(explainTier).mockResolvedValueOnce({ ok: true, points });
     const ok = createRes();
     await postPublicTierExplanation(req({ answers: ANSWERS, language: "en" }), ok);
-    expect(payload(ok)).toEqual({ explanation: "You said it chats with people." });
+    expect(payload(ok)).toEqual({ explanation: points });
 
     m(explainTier).mockResolvedValueOnce({ ok: false, error: "not grounded" });
     const refused = createRes();
