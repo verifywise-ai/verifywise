@@ -18,7 +18,8 @@ from sqlalchemy import text
 import crud.mcp_servers as mcp_servers_crud
 from config import settings
 from database.db import get_db
-from utils.mcp_credentials import build_auth_headers
+from services.mcp_token_service import TokenError, auth_headers_for, invalidate
+from utils.mcp_credentials import TOKEN_AUTH_TYPES
 from utils.rate_limit import check_rate_limit
 from utils.safe_outbound_url import UnsafeOutboundUrlError, assert_safe_outbound_url
 
@@ -148,13 +149,6 @@ async def resolve_tool(org_id: int, tool_name: str) -> dict:
         return dict(row)
 
 
-# ─── Auth Header Builder ───────────────────────────────────────────────────
-
-def _build_auth_headers(auth_type: str, auth_config: dict) -> dict:
-    """Build authentication headers for backend MCP server requests."""
-    return build_auth_headers(auth_type, auth_config)
-
-
 # ─── SSE Response Parser ──────────────────────────────────────────────────
 
 def _parse_sse_response(text_body: str) -> dict:
@@ -203,6 +197,18 @@ def _rpc_result(resp: httpx.Response) -> dict:
     return data.get("result") or {}
 
 
+async def _with_token_retry(auth_type: str, auth_config: dict, attempt):
+    """Run ``attempt``; if a token-authenticated server answers 401, drop the
+    cached token and try exactly once more with a fresh one."""
+    try:
+        return await attempt()
+    except httpx.HTTPStatusError as exc:
+        if exc.response.status_code != 401 or auth_type not in TOKEN_AUTH_TYPES:
+            raise
+        invalidate(auth_type, auth_config)
+        return await attempt()
+
+
 async def fetch_server_tools(
     server_url: str,
     auth_type: str,
@@ -210,54 +216,57 @@ async def fetch_server_tools(
     transport: Optional[httpx.AsyncBaseTransport] = None,
 ) -> list[dict]:
     """Network phase of discovery: initialize, initialized, every tools/list page."""
-    server_url = assert_safe_outbound_url(server_url)
-    headers = {
-        "Content-Type": "application/json",
-        "Accept": "application/json, text/event-stream",
-        **_build_auth_headers(auth_type, auth_config),
-    }
-    tools: list[dict] = []
-    async with httpx.AsyncClient(timeout=MANUAL_DISCOVERY_SECONDS, transport=transport) as client:
-        init_resp = await client.post(
-            server_url,
-            json={
-                "jsonrpc": "2.0",
-                "id": 1,
-                "method": "initialize",
-                "params": {
-                    "protocolVersion": _PROTOCOL_VERSION,
-                    "capabilities": {},
-                    "clientInfo": {"name": "VerifyWise MCP Gateway", "version": "1.0.0"},
+    async def _attempt() -> list[dict]:
+        url = assert_safe_outbound_url(server_url)
+        headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json, text/event-stream",
+            **(await auth_headers_for(auth_type, auth_config)),
+        }
+        tools: list[dict] = []
+        async with httpx.AsyncClient(timeout=MANUAL_DISCOVERY_SECONDS, transport=transport) as client:
+            init_resp = await client.post(
+                url,
+                json={
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "method": "initialize",
+                    "params": {
+                        "protocolVersion": _PROTOCOL_VERSION,
+                        "capabilities": {},
+                        "clientInfo": {"name": "VerifyWise MCP Gateway", "version": "1.0.0"},
+                    },
                 },
-            },
-            headers=headers,
-        )
-        _rpc_result(init_resp)
-        session_id = init_resp.headers.get("mcp-session-id")
-        if session_id:
-            headers["Mcp-Session-Id"] = session_id
-
-        await client.post(
-            server_url,
-            json={"jsonrpc": "2.0", "method": "notifications/initialized"},
-            headers=headers,
-        )
-
-        cursor: Optional[str] = None
-        for page in range(MAX_TOOL_PAGES):
-            params = {"cursor": cursor} if cursor else {}
-            result = _rpc_result(
-                await client.post(
-                    server_url,
-                    json={"jsonrpc": "2.0", "id": 2 + page, "method": "tools/list", "params": params},
-                    headers=headers,
-                )
+                headers=headers,
             )
-            tools.extend(result.get("tools") or [])
-            cursor = result.get("nextCursor")
-            if not cursor:
-                break
-    return tools
+            _rpc_result(init_resp)
+            session_id = init_resp.headers.get("mcp-session-id")
+            if session_id:
+                headers["Mcp-Session-Id"] = session_id
+
+            await client.post(
+                url,
+                json={"jsonrpc": "2.0", "method": "notifications/initialized"},
+                headers=headers,
+            )
+
+            cursor: Optional[str] = None
+            for page in range(MAX_TOOL_PAGES):
+                params = {"cursor": cursor} if cursor else {}
+                result = _rpc_result(
+                    await client.post(
+                        url,
+                        json={"jsonrpc": "2.0", "id": 2 + page, "method": "tools/list", "params": params},
+                        headers=headers,
+                    )
+                )
+                tools.extend(result.get("tools") or [])
+                cursor = result.get("nextCursor")
+                if not cursor:
+                    break
+        return tools
+
+    return await _with_token_retry(auth_type, auth_config, _attempt)
 
 
 def _schema(value) -> dict:
@@ -415,6 +424,8 @@ def describe_discovery_error(exc: BaseException, budget_seconds) -> str:
         message = "Could not connect to the server address"
     elif isinstance(exc, McpRpcError):
         message = f"The server returned an error: {exc.message[:200]}"
+    elif isinstance(exc, TokenError):
+        message = str(exc)
     elif isinstance(exc, UnsafeOutboundUrlError):
         message = f"The server address is not allowed: {exc}"
     elif isinstance(exc, (ValueError, KeyError, TypeError)):
@@ -485,62 +496,66 @@ async def forward_tool_call(
     Initializes a session if no session_id is provided.
     Returns (result_dict, backend_session_id).
     """
-    server_url = assert_safe_outbound_url(server_url)
-    headers = {
-        "Content-Type": "application/json",
-        "Accept": "application/json, text/event-stream",
-        **_build_auth_headers(auth_type, auth_config),
-    }
-    new_session = None
+    async def _attempt() -> tuple[dict, Optional[str]]:
+        sid = session_id
+        url = assert_safe_outbound_url(server_url)
+        headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json, text/event-stream",
+            **(await auth_headers_for(auth_type, auth_config)),
+        }
+        new_session = None
 
-    async with httpx.AsyncClient(timeout=60) as client:
-        if not session_id:
-            init_resp = await client.post(
-                server_url,
+        async with httpx.AsyncClient(timeout=60) as client:
+            if not sid:
+                init_resp = await client.post(
+                    url,
+                    json={
+                        "jsonrpc": "2.0",
+                        "id": 0,
+                        "method": "initialize",
+                        "params": {
+                            "protocolVersion": "2025-03-26",
+                            "capabilities": {},
+                            "clientInfo": {"name": "VerifyWise MCP Gateway", "version": "1.0.0"},
+                        },
+                    },
+                    headers=headers,
+                )
+                init_resp.raise_for_status()
+                sid = init_resp.headers.get("mcp-session-id")
+                new_session = sid
+
+                if sid:
+                    headers["Mcp-Session-Id"] = sid
+
+                # notifications/initialized only after fresh handshake
+                await client.post(
+                    url,
+                    json={"jsonrpc": "2.0", "method": "notifications/initialized"},
+                    headers=headers,
+                )
+            else:
+                headers["Mcp-Session-Id"] = sid
+
+            resp = await client.post(
+                url,
                 json={
                     "jsonrpc": "2.0",
-                    "id": 0,
-                    "method": "initialize",
-                    "params": {
-                        "protocolVersion": "2025-03-26",
-                        "capabilities": {},
-                        "clientInfo": {"name": "VerifyWise MCP Gateway", "version": "1.0.0"},
-                    },
+                    "id": 1,
+                    "method": "tools/call",
+                    "params": {"name": tool_name, "arguments": arguments},
                 },
                 headers=headers,
             )
-            init_resp.raise_for_status()
-            session_id = init_resp.headers.get("mcp-session-id")
-            new_session = session_id
+            resp.raise_for_status()
+            data = _parse_response(resp)
 
-            if session_id:
-                headers["Mcp-Session-Id"] = session_id
+        if "error" in data:
+            error = data["error"]
+            message = error.get("message", str(error)) if isinstance(error, dict) else str(error)
+            raise ValueError(f"Tool call failed: {message}")
 
-            # notifications/initialized only after fresh handshake
-            await client.post(
-                server_url,
-                json={"jsonrpc": "2.0", "method": "notifications/initialized"},
-                headers=headers,
-            )
-        else:
-            headers["Mcp-Session-Id"] = session_id
+        return data.get("result", {}), new_session
 
-        resp = await client.post(
-            server_url,
-            json={
-                "jsonrpc": "2.0",
-                "id": 1,
-                "method": "tools/call",
-                "params": {"name": tool_name, "arguments": arguments},
-            },
-            headers=headers,
-        )
-        resp.raise_for_status()
-        data = _parse_response(resp)
-
-    if "error" in data:
-        error = data["error"]
-        message = error.get("message", str(error)) if isinstance(error, dict) else str(error)
-        raise ValueError(f"Tool call failed: {message}")
-
-    return data.get("result", {}), new_session
+    return await _with_token_retry(auth_type, auth_config, _attempt)

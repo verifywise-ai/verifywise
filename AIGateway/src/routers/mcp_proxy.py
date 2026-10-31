@@ -52,8 +52,10 @@ from services.mcp_proxy_service import (
     forward_tool_call,
     tool_acl_violation,
 )
+from services.mcp_token_service import TokenError, note_token_outcome
 from services.mcp_session import create_session, get_backend_session, set_backend_session
 from utils.acl import matches_acl
+from utils.mcp_credentials import TOKEN_AUTH_TYPES
 from utils.safe_outbound_url import UnsafeOutboundUrlError
 from utils.mcp_arguments import hash_arguments
 from utils.notifications import notify_approval_pending
@@ -292,6 +294,11 @@ async def mcp_jsonrpc(request: Request):
                     arguments=arguments,
                     session_id=backend_session,
                 )
+            except TokenError:
+                # No token, so nothing reached the upstream: not a transport
+                # failure, and not counted against the circuit breaker. The
+                # outer handler records it and answers generically.
+                raise
             except ValueError:
                 # A ValueError here is a tool-level error returned by a healthy
                 # upstream (e.g. bad arguments, "not found"). The transport
@@ -306,6 +313,8 @@ async def mcp_jsonrpc(request: Request):
                 raise
 
             await CircuitBreaker.record_success(server_id)
+            if tool.get("auth_type") in TOKEN_AUTH_TYPES:
+                await note_token_outcome(org_id, server_id, None)
 
             # Cache new backend session for next call
             if new_backend_session and gateway_session:
@@ -343,6 +352,12 @@ async def mcp_jsonrpc(request: Request):
                 content=_jsonrpc_error(msg_id, -32603, "This MCP server's address is not allowed"),
                 status_code=200,
             )
+        except TokenError as e:
+            # Admin-readable and secret-free: audited and stored as the server's
+            # health, but the agent only sees the generic error.
+            await _audit("error", str(e), True)
+            await note_token_outcome(org_id, tool["server_id"], str(e))
+            return JSONResponse(content=_jsonrpc_error(msg_id, -32603, "Internal error"), status_code=200)
         except ValueError as e:
             await _audit("error", str(e), True)
             # Return a generic JSON-RPC error message to avoid leaking internal

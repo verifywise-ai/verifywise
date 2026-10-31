@@ -27,6 +27,7 @@ from botocore.exceptions import (
     ReadTimeoutError,
 )
 
+import crud.mcp_servers as mcp_servers_crud
 from utils.mcp_credentials import (
     DEFAULT_AWS_MCP_RESOURCE,
     TOKEN_AUTH_TYPES,
@@ -50,6 +51,9 @@ _ERROR_CODE = re.compile(r"^[A-Za-z0-9_.\-]{1,64}$")
 # fingerprint -> (token, expires_at on the monotonic clock)
 _cache: dict[str, tuple[str, float]] = {}
 _locks: dict[str, asyncio.Lock] = {}
+# (org_id, server_id) -> last health outcome written by this process
+# (None means healthy). Absent means unknown, so the first outcome is written.
+_last_outcome: dict[tuple[int, int], Optional[str]] = {}
 
 
 class TokenError(Exception):
@@ -59,6 +63,10 @@ class TokenError(Exception):
 def _reset_cache() -> None:
     _cache.clear()
     _locks.clear()
+
+
+def _reset_outcomes() -> None:
+    _last_outcome.clear()
 
 
 def invalidate(auth_type: str, cfg: dict) -> None:
@@ -224,3 +232,21 @@ def _aws_error_message(exc: ClientError) -> str:
     if code == "AccessDeniedException":
         return "The IAM user is missing permission signin:CreateOAuth2Token"
     return f"AWS Sign-In returned an error ({code})"
+
+
+async def note_token_outcome(org_id: int, server_id: int, error: Optional[str]) -> None:
+    """Record server health after a token-authenticated call, only when it changes.
+
+    ``error`` is None for a working token. Database failures are logged (message
+    only) and swallowed so they never fail the tool call; the outcome is then not
+    remembered, so the next call tries the write again.
+    """
+    key = (org_id, server_id)
+    if key in _last_outcome and _last_outcome[key] == error:
+        return
+    try:
+        await mcp_servers_crud.record_discovery_result(org_id, server_id, error)
+    except Exception as exc:  # noqa: BLE001 — health bookkeeping must not break the call
+        logger.warning("Could not record MCP server health for server %s: %s", server_id, type(exc).__name__)
+        return
+    _last_outcome[key] = error
