@@ -825,7 +825,9 @@ export function IntakeFormBuilder() {
                       label={
                         form.entityType === IntakeEntityType.USE_CASE
                           ? "Type: AI use case"
-                          : "Type: Model inventory"
+                          : form.entityType === IntakeEntityType.AI_APP
+                            ? "Type: AI app"
+                            : "Type: Model inventory"
                       }
                       uppercase={false}
                       backgroundColor="#E3F2FD"
