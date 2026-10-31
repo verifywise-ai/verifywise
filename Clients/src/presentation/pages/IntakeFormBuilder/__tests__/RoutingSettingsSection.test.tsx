@@ -4,6 +4,7 @@ import { screen, fireEvent } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import RoutingSettingsSection, { getRoutingErrors } from "../routing/RoutingSettingsSection";
 import type { FormRouting } from "../types";
+import { SCORE_BANDS } from "../../../../application/utils/intakeScoring/scoreMath";
 
 const reviewers = [
   { _id: 1, name: "Ada Lovelace", email: "ada@example.com" },
@@ -165,5 +166,40 @@ describe("RoutingSettingsSection", () => {
     expect(screen.getByText("Scores of")).toBeInTheDocument();
     expect(screen.getByText("points from")).toBeInTheDocument();
     expect(screen.getByText("go to expert reviewers.")).toBeInTheDocument();
+  });
+});
+
+describe("RoutingSettingsSection number tooltips", () => {
+  it("gives each number a keyboard-focusable info button", () => {
+    renderWithProviders(<Harness initial={on()} />);
+    for (const name of [
+      "About the threshold",
+      "About the close-call margin",
+      "About the second review share",
+    ]) {
+      expect(screen.getByRole("button", { name })).toHaveAttribute("tabindex", "0");
+    }
+    // The visible labels still name the inputs.
+    expect(screen.getByLabelText("Threshold")).toHaveValue(50);
+  });
+
+  it("explains the threshold with the 0-100 scale and every score band", async () => {
+    renderWithProviders(<Harness initial={on()} />);
+    fireEvent.mouseOver(screen.getByRole("button", { name: "About the threshold" }));
+    const info = await screen.findByTestId("routing-info-threshold");
+    expect(info).toHaveTextContent("Scores at or above the threshold go to expert reviewers.");
+    expect(info).toHaveTextContent("Risk scores run from 0 to 100");
+    for (const { band, min, max } of SCORE_BANDS) {
+      expect(info).toHaveTextContent(`${band}: ${min}–${max}`);
+    }
+    expect(info).toHaveTextContent("Prohibited practices and submissions without a score");
+  });
+
+  it("explains the second review share without the score scale", async () => {
+    renderWithProviders(<Harness initial={on()} />);
+    fireEvent.mouseOver(screen.getByRole("button", { name: "About the second review share" }));
+    const info = await screen.findByTestId("routing-info-secondReviewRate");
+    expect(info).toHaveTextContent("picked at random for a second review");
+    expect(info).not.toHaveTextContent("Risk scores run from 0 to 100");
   });
 });
