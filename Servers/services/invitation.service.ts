@@ -12,6 +12,7 @@
 import { createInvitationQuery } from "../utils/invitation.utils";
 import { sendInviteEmail } from "../utils/inviteEmail.utils";
 import { inviteRoleRefusal, pendingInvitationToReplace } from "../utils/inviteRole.utils";
+import { inviteeRefusalQuery } from "../utils/organizationMember.utils";
 import { INVITATION_LIFETIME_MS } from "../utils/jwt.utils";
 import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper";
 import logger from "../utils/logger/fileLogger";
@@ -24,7 +25,11 @@ export type InviteRefusalCode =
   /** A pending invitation exists for a role above the inviter's ceiling. */
   | "cannot_replace"
   /** Another writer changed the pending invitation first. */
-  | "conflict";
+  | "conflict"
+  /** The email's account is already a member of this organization. */
+  | "already_member"
+  /** The email belongs to a pure super admin, who never joins an organization. */
+  | "super_admin";
 
 /** A refusal the caller is expected to report, not an unexpected failure. */
 export class InviteRefusalError extends Error {
@@ -85,6 +90,13 @@ export async function inviteUserToOrganization(input: InviteUserInput): Promise<
     }
     if (refusal === "exceeds_access") {
       throw new InviteRefusalError("exceeds_access");
+    }
+
+    // An existing account may be invited (it joins on accepting), unless it
+    // is already a member or is a pure super admin.
+    const inviteeRefusal = await inviteeRefusalQuery(organizationId, email);
+    if (inviteeRefusal) {
+      throw new InviteRefusalError(inviteeRefusal);
     }
 
     // A trusted caller may replace any pending invitation for this email.

@@ -8238,10 +8238,59 @@ paths:
         '500':
           description: 'Internal server error'
       operationId: createNewUser
+  /users/invitations/accept:
+    post:
+      summary: 'Accept an invitation as an existing user'
+      description: "For an invited email that already has an account. The invitation link's token goes in the Authorization header (checked as for /users/register); the user's own email and password confirm the account. The account joins the inviting organization with the invited role, the invitation is marked accepted, and the user is logged in to that organization. The account itself is not changed. Rate-limited like /users/login.\n"
+      tags:
+        - Users
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+                - roleId
+                - organizationId
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: priya@example.com
+                password:
+                  type: string
+                  format: password
+                roleId:
+                  type: integer
+                  description: 'Must match the invitation'
+                  example: 3
+                organizationId:
+                  type: integer
+                  description: 'Must match the invitation'
+                  example: 4
+      responses:
+        '202':
+          description: 'Joined and logged in to the organization; the same body as a single-organization login'
+        '401':
+          description: 'Invalid email or password, or an invalid invitation link'
+        '403':
+          description: 'The invitation was revoked, changed, or sent to a different email'
+        '406':
+          description: 'The invitation link has expired'
+        '409':
+          description: 'Already a member of this organization, or a super admin (who cannot join an organization)'
+        '429':
+          description: 'Too many attempts'
+        '500':
+          description: 'Internal server error'
+      operationId: acceptInvitationAsExistingUser
   /users/login:
     post:
       summary: 'Authenticate user'
-      description: "Validates email/password credentials via bcrypt. Returns a JWT access token\nin the response body and sets a refresh token in an HTTP-only cookie.\nRate-limited to 5 requests per minute per IP.\n"
+      description: "Validates email/password credentials via bcrypt. A user with one organization (or a super admin with none) gets a JWT access token\nin the response body and a refresh token in an HTTP-only cookie.\nA user with several organizations gets no session yet: the response lists the organizations and a short-lived selectionToken for POST /users/login/select-organization.\nRate-limited to 5 requests per minute per IP.\n"
       tags:
         - Users
       requestBody:
@@ -8276,7 +8325,7 @@ paths:
                 type: object
                 properties:
                   message: {type: string, example: Accepted}
-                  data: {type: object, properties: {token: {type: string, description: 'JWT access token'}, isSuperAdmin: {type: boolean, description: 'Only present when user is super-admin (role_id=5)'}, onboarding_status: {type: string, description: 'Organization onboarding status (not present for super-admin)', example: completed}, is_org_creator: {type: boolean, description: 'Whether user is the first admin of the org (not present for super-admin)'}}}
+                  data: {type: object, properties: {token: {type: string, description: 'JWT access token (absent when requiresOrganizationSelection)'}, isSuperAdmin: {type: boolean, description: 'Whether the user has a super_admins row'}, onboarding_status: {type: string, description: 'Organization onboarding status (not present for a pure super-admin)', example: completed}, is_org_creator: {type: boolean, description: 'Whether user is the first admin of the org (not present for a pure super-admin)'}, requiresOrganizationSelection: {type: boolean, description: 'Present and true when the user belongs to several organizations'}, organizations: {type: array, description: 'The organizations to choose from', items: {type: object, properties: {id: {type: integer}, name: {type: string}, role_name: {type: string}}}}, selectionToken: {type: string, description: 'Exchange at POST /users/login/select-organization; valid for 5 minutes'}}}
         '401':
           description: 'Invalid email or password'
           content:
@@ -8288,6 +8337,42 @@ paths:
         '500':
           description: 'Internal server error'
       operationId: loginUser
+  /users/login/select-organization:
+    post:
+      summary: 'Choose the organization to log in to'
+      description: "Second login step for a user who belongs to several organizations. Exchanges the short-lived selectionToken returned by /users/login for a session in the chosen organization. The organization is fixed for the session. Rate-limited like /users/login.\n"
+      tags:
+        - Users
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - selectionToken
+                - organizationId
+              properties:
+                selectionToken:
+                  type: string
+                  description: 'From the /users/login response; valid for 5 minutes'
+                organizationId:
+                  type: integer
+                  example: 4
+      responses:
+        '202':
+          description: 'Logged in; the same body as a single-organization login, and the refresh token cookie'
+        '401':
+          description: 'Not a valid selection token'
+        '403':
+          description: 'The user is not a member of that organization'
+        '406':
+          description: 'The selection token has expired'
+        '429':
+          description: 'Too many attempts'
+        '500':
+          description: 'Internal server error'
+      operationId: selectLoginOrganization
   /users/login-microsoft:
     post:
       summary: 'Login User With Microsoft'
@@ -26700,12 +26785,78 @@ paths:
           description: 'Forbidden - insufficient role'
         '500':
           description: 'Internal server error'
+  '/super-admin/organizations/{id}/users/{userId}':
+    delete:
+      summary: 'Remove a user from an organization'
+      description: 'Removes the user''s membership of this organization. The account is deleted only when this was the user''s last organization; a member of other organizations keeps it. Requires role: Super Admin'
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: 'Organization ID'
+        -
+          name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: 'User ID'
+      responses:
+        '200':
+          description: 'Removed; accountDeleted says whether the account was deleted too'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: {type: string, example: OK}
+                  data: {type: object, properties: {removed: {type: boolean}, userId: {type: integer}, accountDeleted: {type: boolean}}}
+        '400':
+          description: 'Invalid organization or user ID'
+        '404':
+          description: 'The user is not a member of this organization'
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Super Admin'
+      operationId: removeOrgUser
+      security:
+        -
+          bearerAuth: []
   '/super-admin/users/{id}':
     patch:
       summary: 'Update User'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                surname:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                roleId:
+                  type: integer
+                  description: 'The role in organizationId'
+                organizationId:
+                  type: integer
+                  description: 'Required with roleId: a role is per organization'
       responses:
         '200':
-          description: Success
+          description: 'The user, with every organization they belong to and their role in each'
+        '400':
+          description: 'Unknown role, or no fields to update'
+        '403':
+          description: 'A pure super admin, who has no organization role'
+        '404':
+          description: 'No such user, or not a member of organizationId'
         '500':
           description: 'Internal server error'
       tags:

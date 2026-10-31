@@ -89,8 +89,9 @@ export async function findDueScheduledReportsQuery(now: Date): Promise<any[]> {
   return sequelize.query(
     `SELECT sr.*, r.name AS owner_role
        FROM scheduled_reports sr
-       LEFT JOIN users u ON u.id = sr.owner_id
-       LEFT JOIN roles r ON r.id = u.role_id
+       LEFT JOIN organization_members om
+         ON om.user_id = sr.owner_id AND om.organization_id = sr.organization_id
+       LEFT JOIN roles r ON r.id = om.role_id
       WHERE sr.is_active = true AND sr.deleted_at IS NULL AND sr.next_run_at IS NOT NULL AND sr.next_run_at <= :now`,
     { replacements: { now }, type: QueryTypes.SELECT },
   );

@@ -45,7 +45,7 @@ const listUsers = async (
     limit,
   };
 
-  let whereClause = "users.organization_id = :organization_id";
+  let whereClause = "organization_members.organization_id = :organization_id";
   if (params.search && params.search.trim().length > 0) {
     replacements.search = `%${params.search.trim()}%`;
     whereClause += `
@@ -67,7 +67,8 @@ const listUsers = async (
         users.email,
         roles.name AS role
       FROM users
-      LEFT JOIN roles ON users.role_id = roles.id
+      JOIN organization_members ON organization_members.user_id = users.id
+      JOIN roles ON organization_members.role_id = roles.id
       WHERE ${whereClause}
       ORDER BY users.name ASC, users.surname ASC, users.id ASC
       LIMIT :limit

@@ -44,10 +44,10 @@ async function getAdminUserIds(
   transaction?: Transaction,
 ): Promise<number[]> {
   const rows = (await sequelize.query(
-    `SELECT u.id
-       FROM users u
-       JOIN roles r ON u.role_id = r.id
-      WHERE u.organization_id = :organizationId
+    `SELECT om.user_id AS id
+       FROM organization_members om
+       JOIN roles r ON om.role_id = r.id
+      WHERE om.organization_id = :organizationId
         AND r.name = 'Admin'`,
     {
       replacements: { organizationId },

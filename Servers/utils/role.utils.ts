@@ -57,10 +57,10 @@ export const getRoleByNameInOrganizationQuery = async (
   return result[0];
 };
 
-/** Number of users currently assigned to a role (delete guard, issue #4588). */
+/** Number of memberships currently holding a role (delete guard, issue #4588). */
 export const countUsersWithRoleQuery = async (roleId: number): Promise<number> => {
   const result = await sequelize.query<{ count: number }>(
-    "SELECT COUNT(*)::int AS count FROM users WHERE role_id = :roleId",
+    "SELECT COUNT(*)::int AS count FROM organization_members WHERE role_id = :roleId",
     {
       replacements: { roleId },
       type: QueryTypes.SELECT,

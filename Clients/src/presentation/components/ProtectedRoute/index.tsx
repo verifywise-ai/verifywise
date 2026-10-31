@@ -41,6 +41,7 @@ const ProtectedRoute = ({
   const publicRoutes = [
     "/login",
     "/user-reg",
+    "/join",
     "/forgot-password",
     "/reset-password",
     "/set-new-password",

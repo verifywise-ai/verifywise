@@ -80,10 +80,10 @@ async function fetchControlCoverage(orgId: number): Promise<ControlCoverage[]> {
 /** All Admin-role users for an organization (id only is consumed downstream). */
 async function getOrgAdmins(organizationId: number): Promise<Array<{ id: number }>> {
   const rows = (await sequelize.query(
-    `SELECT u.id
-       FROM users u
-      WHERE u.organization_id = :organizationId
-        AND u.role_id = 1`,
+    `SELECT om.user_id AS id
+       FROM organization_members om
+      WHERE om.organization_id = :organizationId
+        AND om.role_id = 1`,
     { replacements: { organizationId }, type: QueryTypes.SELECT },
   )) as Array<{ id: number }>;
   return rows.map((u) => ({ id: Number(u.id) }));

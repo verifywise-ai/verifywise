@@ -171,8 +171,8 @@ export const generateUserTokens = (user: UserModel, res: Response) => {
     email: user.email,
     name: user.name,
     surname: user.surname,
-    roleName: user.roleName!,
-    organizationId: user.organization_id!,
+    roleName: membership.role_name,          // The role in the chosen organization
+    organizationId: membership.organization_id, // null for a pure super admin
   };
 
   const accessToken = generateToken(payload);
@@ -222,20 +222,18 @@ export const authenticateJWT = async (
       return res.status(400).json({ message: "Invalid role" });
     }
 
-    // 5. Verify organization membership
-    const belongs = await doesUserBelongsToOrganizationQuery(
-      decoded.id,
-      decoded.organizationId
-    );
-    if (!belongs.belongs) {
+    // 5. Load the user as a member of the token's organization (role_id is
+    //    their role there). Not a member → 403; no account → 401. A token
+    //    without an organization must belong to a super_admins row.
+    const user = await getUserByIdQuery(decoded.id, null, decoded.organizationId);
+    if (!user) {
       return res.status(403).json({
         message: "User does not belong to this organization"
       });
     }
 
-    // 6. Verify role consistency with database
-    const user = await getUserByIdQuery(decoded.id);
-    if (user?.roleName !== decoded.roleName) {
+    // 6. Verify role consistency with the membership
+    if ((await getRoleNameById(user.role_id!)) !== decoded.roleName) {
       return res.status(403).json({
         message: "Role has changed, please re-authenticate"
       });
@@ -444,90 +442,112 @@ export const createNewUser = async (req: Request, res: Response) => {
 
 ## Login Flow
 
-```typescript
-// File: Servers/controllers/user.ctrl.ts
+A user can belong to several organizations, with a role in each (rows in
+`organization_members`). The organization is chosen once, at login, and is
+fixed for the session: it travels in the JWT as `organizationId`, so
+`req.organizationId` keeps its meaning everywhere. There is no in-session
+switch; another organization means logging out and in again.
 
-export const loginUser = async (req: Request, res: Response) => {
-  const { email, password } = req.body;
-
-  try {
-    // 1. Fetch user by email
-    const user = await getUserByEmailQuery(email);
-    if (!user) {
-      return res.status(401).json({ message: "Invalid credentials" });
-    }
-
-    // 2. Verify password
-    const isValidPassword = await user.comparePassword(password);
-    if (!isValidPassword) {
-      return res.status(401).json({ message: "Invalid credentials" });
-    }
-
-    // 3. Update last login
-    await user.updateLastLogin();
-
-    // 4. Generate tokens
-    const { accessToken } = generateUserTokens(user, res);
-
-    // 5. Get onboarding status
-    const org = await getOrganizationByIdQuery(user.organization_id!);
-
-    // 6. Check if user is org creator
-    const isOrgCreator = await isUserOrganizationCreatorQuery(
-      user.id!,
-      user.organization_id!
-    );
-
-    // 7. Return response
-    return res.status(202).json({
-      accessToken,
-      user: user.toSafeJSON(),
-      onboardingStatus: org?.onboarding_status,
-      isOrgCreator,
-    });
-  } catch (error) {
-    return res.status(500).json({ message: "Login failed" });
-  }
-};
 ```
+POST /api/users/login { email, password }      (loginUser, user.ctrl.ts)
+  password ✓ → memberships = getUserOrganizationsQuery(user)
+  ├─ 0 → super_admins row?  yes → token without an organization, roleName "SuperAdmin"
+  │                          no  → 403 "You are not a member of any organization"
+  ├─ 1 → session in that organization, with that membership's role
+  └─ 2+ → 202 { requiresOrganizationSelection: true, organizations: [{ id, name, role_name }],
+                selectionToken }                    ← no session, no cookie yet
+
+POST /api/users/login/select-organization { selectionToken, organizationId }
+  → session in the chosen organization          (selectLoginOrganization)
+```
+
+The `selectionToken` is signed with `JWT_SECRET`, lives 5 minutes and carries
+`type: "organization_selection"`. `authenticateJWT` rejects every typed token
+other than an API token, so it can never be used for access.
+
+On the client, the login page (`pages/Authentication/Login`) replaces the
+form with an organization select ("Name (Role)") when the response has
+`requiresOrganizationSelection`. An expired selection (406) returns to the
+form. Every password login ends in `useStartLoginSession`, which starts the
+session and opens `/` (or `/super-admin` for a token without an organization).
+
+Superadmin is the `super_admins` row, never "has no organization". An elected
+super admin has memberships and logs in like anyone else; `req.isSuperAdmin`
+is read per request.
+
+Microsoft SSO already knows the organization (from its SSO configuration), so
+it never shows the picker. An unknown email gets an account and a membership;
+an existing account that is not a member of that organization gets 403,
+with one exception: an SSO-only account (no password) joins with a pending,
+unexpired invitation, accepted in the same transaction, with the invited role.
+Only the Microsoft identity the account was created with (`sso_user_id` equals
+the Graph `id`) can do that. The address alone proves nothing, since the
+organization's admins configure its tenant. A pure super admin never joins.
+On later sign-ins the IdP role claim is synced onto the membership.
+
+## Invitations to an existing account
+
+The invitation email is chosen when it is sent (`sendInviteEmail`): a new
+address gets the sign-up link (`/user-reg`), an address that already has an
+account gets a join link (`/join`). The account accepts with its own
+credentials:
+
+```
+POST /api/users/invitations/accept   Authorization: Bearer <invite token>
+  { email, password, roleId, organizationId }
+  registerJWT checks the link exactly as for /users/register
+  → password ✓ → membership added + invitation accepted (one transaction)
+  → session in that organization
+```
+
+An invitation is refused for an account that is already a member, and for a
+pure super admin (no membership), who never joins an organization
+(`inviteeRefusalQuery`). Two submits at once (a double click) get 409 for the
+second, not 500. An account without a password (SSO only) gets 409 telling it
+to sign in with Microsoft, which accepts the invitation there (see above), or
+that the organization has no Microsoft sign-in. Only the identity the account
+was created with can join, so an SSO-only account cannot join an organization
+on another Microsoft tenant (its Graph id differs there); a super admin can add
+it from the console.
+
+The `/join` page (`pages/Authentication/JoinOrganization`) shows the invited
+email read-only and asks for the account's password. `customAxios` sends the
+invite token, not a session token, on this call (`LINK_TOKEN_ENDPOINTS`), with
+credentials so the refresh cookie is set.
+
+The super-admin console follows the same rule. Creating a user in an
+organization, or an organization with its first user, with an email that
+already has an account adds that account (no password needed; it keeps its
+own name and password), and a pure super admin is refused. The console's email
+check shows such an address as an existing account instead of blocking it.
+The console also keeps an Admin in every organization: removing a user from an
+organization, demoting them, or deleting their account is refused with 409
+when they are the last Admin of that organization (or of any of theirs), the
+same `isLastAdminQuery` check the organization's own user screens use.
 
 ## Token Refresh
 
-```typescript
-// File: Servers/controllers/user.ctrl.ts
+`refreshAccessToken` (user.ctrl.ts) rotates the refresh token within its
+family, and re-mints from the current membership rather than the old token's
+claims: a user removed from the organization gets 401 and the family is
+revoked; a role changed since login takes effect. A token without an
+organization is re-minted only while the `super_admins` row exists. The
+response carries the session's `organizationId`: the refresh cookie is shared
+by every tab, so a tab learns that the session now belongs to another
+organization. When it differs from the tab's token, `customAxios` does not
+retry: it keeps the new token, empties the query cache, says "Organization
+changed", and reloads `/` in the new organization. It does the same, saying
+"Account changed", when the new token's user differs from the tab's: another
+user signed in to the same organization in another tab.
 
-export const refreshToken = async (req: Request, res: Response) => {
-  // 1. Get refresh token from cookie
-  const refreshToken = req.cookies.refreshToken;
-  if (!refreshToken) {
-    return res.status(401).json({ message: "Refresh token required" });
-  }
-
-  try {
-    // 2. Verify refresh token
-    const decoded = getRefreshTokenPayload(refreshToken);
-
-    // 3. Check expiration
-    if (decoded.expire < Date.now()) {
-      return res.status(406).json({ message: "Refresh token expired" });
-    }
-
-    // 4. Generate new access token
-    const newAccessToken = generateToken({
-      id: decoded.id,
-      email: decoded.email,
-      name: decoded.name,
-      surname: decoded.surname,
-      roleName: decoded.roleName,
-      organizationId: decoded.organizationId,
-    });
-
-    return res.status(200).json({ accessToken: newAccessToken });
-  } catch (error) {
-    return res.status(401).json({ message: "Invalid refresh token" });
-  }
-};
-```
+Removing a user from an organization (`DELETE /api/users/:id` from the Team
+page, `DELETE /api/super-admin/organizations/:id/users/:userId` from the
+console) revokes their refresh tokens for that organization
+(`revokeUserOrganizationTokens`), and deletes the account only if it was their
+last organization. `DELETE /api/super-admin/users/:id` deletes the account
+from every organization; the access token stops working
+on the next request, because `authenticateJWT` loads the user as a member of
+the token's organization.
 
 ## Password Reset Flow
 

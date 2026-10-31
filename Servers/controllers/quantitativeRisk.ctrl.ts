@@ -197,7 +197,7 @@ export async function updateRiskAssessmentMode(req: Request, res: Response): Pro
   try {
     // Check if user is Admin
     const userResult = await sequelize.query<{ role_id: number }>(
-      `SELECT role_id FROM users WHERE id = :userId AND organization_id = :organizationId`,
+      `SELECT role_id FROM organization_members WHERE user_id = :userId AND organization_id = :organizationId`,
       {
         replacements: {
           userId: req.userId!,

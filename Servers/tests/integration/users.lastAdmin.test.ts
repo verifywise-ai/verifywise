@@ -39,10 +39,13 @@ describe("isLastAdminQuery", () => {
     // T1 demotes userA (seeing the other Admin), and holds its locks.
     const t1 = await sequelize.transaction();
     expect(await isLastAdminQuery(orgA, userA, t1)).toBe(false);
-    await sequelize.query(`UPDATE users SET role_id = 3 WHERE id = :id`, {
-      replacements: { id: userA },
-      transaction: t1,
-    });
+    await sequelize.query(
+      `UPDATE organization_members SET role_id = 3 WHERE organization_id = :orgId AND user_id = :id`,
+      {
+        replacements: { orgId: orgA, id: userA },
+        transaction: t1,
+      },
+    );
 
     // T2 checks the other Admin; it must wait for T1, then see it is the last.
     const t2 = await sequelize.transaction();

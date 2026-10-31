@@ -78,10 +78,13 @@ const CreateOrgModal = ({
 
   const userFieldsValid = useMemo(() => {
     if (!userForm.name.trim()) return false;
-    if (emailStatus !== "available") return false;
+    if (emailStatus !== "available" && emailStatus !== "existing") return false;
     if (userMode === "direct") {
       if (userForm.surname.trim().length < 2) return false;
-      if (!passwordValidation(userForm.password).isValid) return false;
+      // An existing account keeps its own password.
+      if (emailStatus === "available" && !passwordValidation(userForm.password).isValid) {
+        return false;
+      }
     }
     return true;
   }, [userMode, userForm, emailStatus]);
@@ -102,7 +105,9 @@ const CreateOrgModal = ({
             name: userForm.name.trim(),
             surname: userForm.surname.trim(),
             roleId: userForm.roleId,
-            ...(userMode === "direct" ? { password: userForm.password } : {}),
+            ...(userMode === "direct" && emailStatus === "available"
+              ? { password: userForm.password }
+              : {}),
           },
         });
       } else {

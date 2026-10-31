@@ -46,6 +46,22 @@ export const de: Record<string, string> = {
   "Select your organization": "Wählen Sie Ihre Organisation aus",
   "Completing sign in...": "Anmeldung wird abgeschlossen...",
   "Redirecting to login...": "Weiterleitung zur Anmeldung...",
+  "Back to sign in": "Zurück zur Anmeldung",
+  "Choose an organization": "Organisation auswählen",
+  "Join an organization": "Einer Organisation beitreten",
+  "Join organization": "Organisation beitreten",
+  "Log in with your existing account to accept the invitation.":
+    "Melden Sie sich mit Ihrem bestehenden Konto an, um die Einladung anzunehmen.",
+  "Your sign-in expired. Please sign in again.":
+    "Ihre Anmeldung ist abgelaufen. Bitte melden Sie sich erneut an.",
+  "Could not join the organization. Please try again.":
+    "Beitritt zur Organisation fehlgeschlagen. Bitte versuchen Sie es erneut.",
+  "Organization changed": "Organisation gewechselt",
+  "You logged in to another organization in another tab. Reloading.":
+    "Sie haben sich in einem anderen Tab bei einer anderen Organisation angemeldet. Die Seite wird neu geladen.",
+  "Account changed": "Konto gewechselt",
+  "You signed in as another user in another tab. Reloading.":
+    "Sie haben sich in einem anderen Tab als anderer Benutzer angemeldet. Die Seite wird neu geladen.",
 };
 
 export const fr: Record<string, string> = {
@@ -93,6 +109,22 @@ export const fr: Record<string, string> = {
   "Select your organization": "Sélectionnez votre organisation",
   "Completing sign in...": "Finalisation de la connexion...",
   "Redirecting to login...": "Redirection vers la page de connexion...",
+  "Back to sign in": "Retour à la connexion",
+  "Choose an organization": "Choisissez une organisation",
+  "Join an organization": "Rejoindre une organisation",
+  "Join organization": "Rejoindre l'organisation",
+  "Log in with your existing account to accept the invitation.":
+    "Connectez-vous avec votre compte existant pour accepter l'invitation.",
+  "Your sign-in expired. Please sign in again.":
+    "Votre connexion a expiré. Veuillez vous reconnecter.",
+  "Could not join the organization. Please try again.":
+    "Impossible de rejoindre l'organisation. Veuillez réessayer.",
+  "Organization changed": "Organisation modifiée",
+  "You logged in to another organization in another tab. Reloading.":
+    "Vous vous êtes connecté à une autre organisation dans un autre onglet. Rechargement.",
+  "Account changed": "Compte modifié",
+  "You signed in as another user in another tab. Reloading.":
+    "Vous vous êtes connecté avec un autre utilisateur dans un autre onglet. Rechargement.",
 };
 
 export const es: Record<string, string> = {
@@ -140,4 +172,20 @@ export const es: Record<string, string> = {
   "Select your organization": "Seleccione su organización",
   "Completing sign in...": "Completando el inicio de sesión...",
   "Redirecting to login...": "Redirigiendo al inicio de sesión...",
+  "Back to sign in": "Volver a iniciar sesión",
+  "Choose an organization": "Elige una organización",
+  "Join an organization": "Unirse a una organización",
+  "Join organization": "Unirse a la organización",
+  "Log in with your existing account to accept the invitation.":
+    "Inicia sesión con tu cuenta existente para aceptar la invitación.",
+  "Your sign-in expired. Please sign in again.":
+    "Tu inicio de sesión caducó. Vuelve a iniciar sesión.",
+  "Could not join the organization. Please try again.":
+    "No se pudo unir a la organización. Inténtalo de nuevo.",
+  "Organization changed": "Organización cambiada",
+  "You logged in to another organization in another tab. Reloading.":
+    "Iniciaste sesión en otra organización en otra pestaña. Recargando.",
+  "Account changed": "Cuenta cambiada",
+  "You signed in as another user in another tab. Reloading.":
+    "Iniciaste sesión con otro usuario en otra pestaña. Recargando.",
 };

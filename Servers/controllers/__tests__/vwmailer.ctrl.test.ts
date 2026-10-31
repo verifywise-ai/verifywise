@@ -1,6 +1,9 @@
 import { describe, it, expect, jest, beforeEach } from "@jest/globals";
 import { ALL_PERMISSION_KEYS, BUILTIN_ROLE_PERMISSIONS } from "../../config/rolePermissions.config";
 
+jest.mock("../../utils/organizationMember.utils", () => ({
+  inviteeRefusalQuery: jest.fn().mockResolvedValue(null),
+}));
 jest.mock("../../utils/inviteEmail.utils", () => ({
   sendInviteEmail: jest.fn(),
 }));
@@ -29,6 +32,7 @@ import { sendInviteEmail } from "../../utils/inviteEmail.utils";
 import { createInvitationQuery, getPendingInvitationQuery } from "../../utils/invitation.utils";
 import { getRoleByName } from "../../utils/roleMap";
 import { getRoleByIdQuery } from "../../utils/role.utils";
+import { inviteeRefusalQuery } from "../../utils/organizationMember.utils";
 import {
   getEffectivePermissions,
   loadCustomRolePermissions,
@@ -93,6 +97,8 @@ const body = (overrides: Record<string, unknown> = {}): any => ({
   ...overrides,
 });
 
+const mockInviteeRefusal = inviteeRefusalQuery as jest.MockedFunction<typeof inviteeRefusalQuery>;
+
 describe("vwmailer.ctrl invite", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -119,6 +125,24 @@ describe("vwmailer.ctrl invite", () => {
     } as any);
     mockCreate.mockResolvedValue({} as any);
     mockPending.mockResolvedValue(null);
+    mockInviteeRefusal.mockResolvedValue(null);
+  });
+
+  // An existing account may be invited; it joins on accepting. Not one that
+  // is already a member, nor a pure super admin.
+  it.each([
+    ["already_member", "User is already a member of this organization"],
+    ["super_admin", "A super admin cannot join an organization"],
+  ] as const)("answers 409 without saving for an invitee refused as %s", async (code, message) => {
+    mockInviteeRefusal.mockResolvedValue(code);
+    const res = createRes();
+    await invite(createReq(), res, body());
+
+    expect(mockInviteeRefusal).toHaveBeenCalledWith(42, "new@example.com");
+    expect(res.status).toHaveBeenCalledWith(409);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ data: message }));
+    expect(mockCreate).not.toHaveBeenCalled();
+    expect(mockSend).not.toHaveBeenCalled();
   });
 
   // Re-inviting an email rewrites its pending invitation and voids that link,

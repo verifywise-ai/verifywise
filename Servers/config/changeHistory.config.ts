@@ -229,9 +229,11 @@ export const GENERIC_FORMATTERS: { [key: string]: FieldFormatter } = {
       try {
         const scoped = context?.organizationId !== undefined;
         const users = await selectInSavepoint<UserQueryResult>(
-          `SELECT id, name, surname, email FROM users WHERE id = :userId${
-            scoped ? " AND organization_id = :organizationId" : ""
-          }`,
+          `SELECT u.id, u.name, u.surname, u.email FROM users u${
+            scoped
+              ? " JOIN organization_members om ON om.user_id = u.id AND om.organization_id = :organizationId"
+              : ""
+          } WHERE u.id = :userId`,
           { userId: value, organizationId: context?.organizationId ?? null },
           context?.transaction,
         );

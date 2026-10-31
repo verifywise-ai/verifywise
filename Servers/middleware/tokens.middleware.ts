@@ -8,7 +8,7 @@ export const validateTokenCreation = async (
   next: NextFunction,
 ): Promise<void | Response> => {
   // Org Admins, plus super admins. A pure super admin has no org role at all
-  // (role_id IS NULL), so the role check alone would lock them out of the only
+  // (no organization membership), so the role check alone would lock them out of the only
   // credential that can drive the super-admin API.
   if (req.role !== "Admin" && !req.isSuperAdmin) {
     return res
