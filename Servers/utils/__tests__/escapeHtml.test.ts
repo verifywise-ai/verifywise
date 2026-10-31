@@ -1,4 +1,4 @@
-import { escapeHtml } from "../escapeHtml";
+import { escapeHtml } from "../sanitization.utils";
 
 describe("escapeHtml", () => {
   it("escapes the five characters that open or close markup, in text and in a quoted attribute", () => {
@@ -32,8 +32,9 @@ describe("escapeHtml", () => {
     expect(escapeHtml("<<>>&&\"\"''")).toBe("&lt;&lt;&gt;&gt;&amp;&amp;&quot;&quot;&#39;&#39;");
   });
 
-  it("gives a string for a value that is not one, instead of throwing", () => {
-    expect(escapeHtml(undefined as unknown as string)).toBe("undefined");
-    expect(escapeHtml(42 as unknown as string)).toBe("42");
+  it("gives text for a value that is not a string, and nothing for a missing one, instead of throwing", () => {
+    expect(escapeHtml(undefined)).toBe("");
+    expect(escapeHtml(null)).toBe("");
+    expect(escapeHtml(42)).toBe("42");
   });
 });
