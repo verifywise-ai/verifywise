@@ -886,6 +886,36 @@ describe("MCPServersPage", () => {
       });
     });
 
+    it("keeps the region empty after the admin clears it", async () => {
+      mockPost.mockResolvedValue({ data: {} });
+      await openCreateForm("https://aws-mcp.eu-central-1.api.aws/mcp");
+      await chooseAuth("AWS IAM");
+      expect(screen.getByLabelText(/^Region/)).toHaveValue("eu-central-1");
+
+      fireEvent.change(screen.getByLabelText(/^Region/), { target: { value: "" } });
+      await new Promise((r) => setTimeout(r, 50));
+
+      expect(screen.getByLabelText(/^Region/)).toHaveValue("");
+    });
+
+    it("prefills the region again when the URL changes to another region, only if empty", async () => {
+      mockPost.mockResolvedValue({ data: {} });
+      await openCreateForm("https://aws-mcp.eu-central-1.api.aws/mcp");
+      await chooseAuth("AWS IAM");
+
+      // Filled region is left alone.
+      fireEvent.change(screen.getByLabelText(/^URL/), {
+        target: { value: "https://aws-mcp.us-west-2.api.aws/mcp" },
+      });
+      expect(screen.getByLabelText(/^Region/)).toHaveValue("eu-central-1");
+
+      fireEvent.change(screen.getByLabelText(/^Region/), { target: { value: "" } });
+      fireEvent.change(screen.getByLabelText(/^URL/), {
+        target: { value: "https://aws-mcp.ap-south-1.api.aws/mcp" },
+      });
+      expect(screen.getByLabelText(/^Region/)).toHaveValue("ap-south-1");
+    });
+
     it("keeps the stored secret when the field is left blank on edit", async () => {
       mockGet.mockResolvedValue({
         data: {
@@ -1022,6 +1052,28 @@ describe("MCPServersPage", () => {
         target: { value: "https://x.test/t" },
       });
 
+      expect(screen.queryByText(/Found at/)).not.toBeInTheDocument();
+    });
+
+    it("drops a discovery result when the admin typed a token URL meanwhile, with no note", async () => {
+      let resolveDiscovery: (v: unknown) => void = () => {};
+      mockPost.mockImplementation((url: string) => {
+        if (url !== "/ai-gateway/mcp/servers/discover-oauth") return Promise.resolve({ data: {} });
+        return new Promise((resolve) => (resolveDiscovery = resolve));
+      });
+      await openCreateForm("https://o.example.com");
+      await chooseAuth("OAuth (client credentials)");
+      await waitFor(() => expect(discoverCalls()).toHaveLength(1), { timeout: 3000 });
+
+      fireEvent.change(screen.getByLabelText(/^Token URL/), {
+        target: { value: "https://typed.example.com/token" },
+      });
+      resolveDiscovery({
+        data: { token_url: "https://auth.example.com/token", auth_method: "client_secret_basic" },
+      });
+      await new Promise((r) => setTimeout(r, 50));
+
+      expect(screen.getByLabelText(/^Token URL/)).toHaveValue("https://typed.example.com/token");
       expect(screen.queryByText(/Found at/)).not.toBeInTheDocument();
     });
 

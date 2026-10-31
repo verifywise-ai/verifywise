@@ -164,6 +164,8 @@ export default function MCPServersPage() {
   // The (OAuth, URL) pair discovery last ran for, so it fires once per URL.
   const discoveredFor = useRef("");
   const discoverySeq = useRef(0);
+  // The URL the AWS region was last prefilled for.
+  const prefilledFor = useRef("");
   // Read when a lookup answers, to drop it if the admin has moved on.
   const latestForm = useRef(form);
   latestForm.current = form;
@@ -273,16 +275,14 @@ export default function MCPServersPage() {
       } catch {
         // Show the raw value if it does not parse.
       }
-      setForm((p) => {
-        // Never overwrite a URL the admin typed while discovery ran.
-        if (!manual && p.oauth_token_url.trim()) return p;
-        return {
-          ...p,
-          oauth_token_url: found,
-          oauth_token_url_source: "discovered",
-          oauth_auth_method: res?.data?.auth_method || p.oauth_auth_method,
-        };
-      });
+      // Never overwrite a URL the admin typed while discovery ran, and say nothing about it.
+      if (!manual && latestForm.current.oauth_token_url.trim()) return;
+      setForm((p) => ({
+        ...p,
+        oauth_token_url: found,
+        oauth_token_url_source: "discovered",
+        oauth_auth_method: res?.data?.auth_method || p.oauth_auth_method,
+      }));
       setTokenUrlNote(
         fill(t("Found at {host}. Check this is your identity provider before saving."), { host }),
       );
@@ -320,12 +320,16 @@ export default function MCPServersPage() {
     if (form.oauth_token_url_source === "manual") setTokenUrlNote("");
   }, [form.oauth_token_url_source]);
 
-  // aws-mcp.<region>.api.aws URLs name their region; fill it when empty.
+  // aws-mcp.<region>.api.aws URLs name their region; fill it when empty. Only a
+  // changed URL prefills: an admin who clears the field keeps it empty.
   useEffect(() => {
-    if (form.auth_type !== "aws_iam" || form.aws_region) return;
-    const region = AWS_MCP_REGION_RE.exec(form.url.trim())?.[1];
+    if (form.auth_type !== "aws_iam") return;
+    const url = form.url.trim();
+    if (prefilledFor.current === url) return;
+    prefilledFor.current = url;
+    const region = AWS_MCP_REGION_RE.exec(url)?.[1];
     if (region) setForm((p) => (p.aws_region ? p : { ...p, aws_region: region }));
-  }, [form.auth_type, form.url, form.aws_region]);
+  }, [form.auth_type, form.url]);
 
   const handleNameChange = (value: string) => {
     setForm((p) => ({
@@ -338,6 +342,7 @@ export default function MCPServersPage() {
   const resetDiscovery = () => {
     discoverySeq.current++;
     discoveredFor.current = "";
+    prefilledFor.current = "";
     setTokenUrlNote("");
     setFindingTokenUrl(false);
   };
