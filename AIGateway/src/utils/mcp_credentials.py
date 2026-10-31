@@ -18,6 +18,7 @@ import hashlib
 import json
 import re
 from typing import Optional
+from urllib.parse import urlsplit
 
 from utils.encryption import decrypt, encrypt, mask_api_key
 from utils.safe_outbound_url import UnsafeOutboundUrlError, assert_safe_outbound_url
@@ -89,13 +90,24 @@ def config_fingerprint(auth_type: str, cfg: Optional[dict]) -> str:
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
+def _origin(url: str) -> tuple:
+    parts = urlsplit(url)
+    scheme = parts.scheme.lower()
+    try:
+        port = parts.port or {"https": 443, "http": 80}.get(scheme)
+    except ValueError:
+        port = None
+    return (scheme, (parts.hostname or "").lower(), port)
+
+
 def _normalize_token_type(auth_type: str, incoming: dict, stored: dict) -> dict:
     secret_field = _TOKEN_SECRET_FIELD[auth_type]
 
     def pick(name: str) -> str:
         return _clean(incoming.get(name)) or _clean(stored.get(name))
 
-    secret = _clean(incoming.get(secret_field[:-4])) or token_secret(auth_type, stored)
+    new_secret = _clean(incoming.get(secret_field[:-4]))
+    secret = new_secret or token_secret(auth_type, stored)
     if auth_type == "aws_iam":
         region = pick("region")
         if not _AWS_REGION.match(region):
@@ -120,7 +132,16 @@ def _normalize_token_type(auth_type: str, incoming: dict, stored: dict) -> dict:
         token_url = assert_safe_outbound_url(token_url)
     except UnsafeOutboundUrlError as exc:
         raise CredentialError(str(exc)) from exc
-    source = _clean(incoming.get("token_url_source")) or _clean(stored.get("token_url_source"))
+    stored_url = _clean(stored.get("token_url"))
+    if stored_url and token_url != stored_url:
+        if not new_secret and _origin(token_url) != _origin(stored_url):
+            # Never send a stored secret to a host the admin cannot read it back from.
+            raise CredentialError(
+                "Enter the client secret again: the token URL now points to a different host"
+            )
+        source = _clean(incoming.get("token_url_source"))
+    else:
+        source = _clean(incoming.get("token_url_source")) or _clean(stored.get("token_url_source"))
     method = _clean(incoming.get("auth_method")) or _clean(stored.get("auth_method"))
     cfg = {
         "client_id": client_id,

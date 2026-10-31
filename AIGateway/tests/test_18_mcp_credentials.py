@@ -260,3 +260,51 @@ class TestTokenTypes:
         cfg = {"a": 1}
         assert config_fingerprint("oauth", cfg) == config_fingerprint("oauth", {"a": 1})
         assert config_fingerprint("oauth", cfg) != config_fingerprint("aws_iam", cfg)
+
+
+class TestOauthOriginChange:
+    def _stored(self, **extra):
+        return normalize_auth_config("oauth", {**OAUTH_IN, **extra}, None)
+
+    def test_oauth_origin_change_requires_secret(self):
+        stored = self._stored()
+        with pytest.raises(CredentialError, match="different host"):
+            normalize_auth_config(
+                "oauth",
+                {"client_id": "app", "token_url": "https://evil.example.net/token"},
+                stored,
+            )
+
+    def test_oauth_same_origin_path_change_keeps_secret(self):
+        stored = self._stored(token_url="https://auth.example.com:443/oauth2/token")
+        edited = normalize_auth_config(
+            "oauth",
+            {"client_id": "app", "token_url": "https://auth.example.com/v2/token?x=1"},
+            stored,
+        )
+        assert decrypt(edited["client_secret_enc"]) == "s3cret"
+
+    def test_oauth_origin_change_with_new_secret_ok(self):
+        stored = self._stored()
+        edited = normalize_auth_config(
+            "oauth",
+            {
+                "client_id": "app",
+                "client_secret": "new-secret",
+                "token_url": "https://other.example.org/token",
+            },
+            stored,
+        )
+        assert decrypt(edited["client_secret_enc"]) == "new-secret"
+
+    def test_token_url_edit_without_source_becomes_manual(self):
+        stored = self._stored(token_url_source="discovered")
+        assert stored["token_url_source"] == "discovered"
+        edited = normalize_auth_config(
+            "oauth",
+            {"client_id": "app", "token_url": "https://auth.example.com/v2/token"},
+            stored,
+        )
+        assert edited["token_url_source"] == "manual"
+        same = normalize_auth_config("oauth", {"client_id": "app"}, stored)
+        assert same["token_url_source"] == "discovered"
