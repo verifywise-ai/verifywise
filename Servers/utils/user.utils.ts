@@ -464,10 +464,12 @@ export const removeUserFromOrganizationQuery = async (
     return { removed: false, accountDeleted: false };
   }
 
+  // The helper sees every organization's memberships: under RLS enforcement a
+  // plain NOT EXISTS here only sees the current organization's rows.
   const deleted = (await sequelize.query(
     `DELETE FROM users
      WHERE id = :id
-       AND NOT EXISTS (SELECT 1 FROM organization_members WHERE user_id = :id)
+       AND NOT verifywise.user_has_organization_membership(:id)
      RETURNING id`,
     { replacements: { id }, type: QueryTypes.SELECT, transaction },
   )) as { id: number }[];
@@ -717,10 +719,12 @@ export const deleteDemoUsersQuery = async (
      WHERE organization_id = :organizationId AND user_id IN (:userIds)`,
     { replacements: { organizationId, userIds }, transaction },
   );
+  // See removeUserFromOrganizationQuery: a plain NOT EXISTS is blind to other
+  // organizations under RLS enforcement.
   await sequelize.query(
     `DELETE FROM users u
      WHERE u.id IN (:userIds)
-       AND NOT EXISTS (SELECT 1 FROM organization_members om WHERE om.user_id = u.id)`,
+       AND NOT verifywise.user_has_organization_membership(u.id)`,
     { replacements: { userIds }, transaction },
   );
 };

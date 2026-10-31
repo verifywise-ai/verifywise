@@ -88,8 +88,9 @@ describe("user removal keeps agent primary owners consistent", () => {
     );
     const result = await removeUserFromOrganizationQuery(5, ORG_ID, tx);
     const del = indexOfCall(/DELETE FROM users/);
+    // The RLS-safe helper, not a NOT EXISTS that only sees the current org.
     expect(sqlOf(mockQuery.mock.calls[del])).toContain(
-      "NOT EXISTS (SELECT 1 FROM organization_members WHERE user_id = :id)",
+      "NOT verifywise.user_has_organization_membership(:id)",
     );
     expect(result).toEqual({ removed: true, accountDeleted: false });
   });
@@ -140,7 +141,9 @@ describe("user removal keeps agent primary owners consistent", () => {
     expect(membership).toBeGreaterThan(reassign);
     expect(del).toBeGreaterThan(membership);
     // Only demo users left with no other membership lose their account.
-    expect(sqlOf(mockQuery.mock.calls[del])).toContain("AND NOT EXISTS");
+    expect(sqlOf(mockQuery.mock.calls[del])).toContain(
+      "AND NOT verifywise.user_has_organization_membership(u.id)",
+    );
     expect((mockQuery.mock.calls[reassign][1] as any).replacements).toEqual(
       expect.objectContaining({ organizationId: ORG_ID, userIds: [11, 12] }),
     );

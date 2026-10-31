@@ -754,6 +754,23 @@ describe("customAxios", () => {
         expect(response.data).toBe("retried");
         expect(mockAssign).not.toHaveBeenCalled();
       });
+
+      it("leaves an expired organization-selection token to the login page", async () => {
+        const post = vi.spyOn(CustomAxios, "post");
+        const error = {
+          config: { url: "/users/login/select-organization", headers: {}, adapter: retried },
+          response: { status: 406, data: { message: "Token expired" } },
+          message: "Token expired",
+        };
+
+        // Another tab's refresh cookie must not start a session here.
+        await expect(rejected(error)).rejects.toBe(error);
+
+        expect(post).not.toHaveBeenCalled();
+        expect(retried).not.toHaveBeenCalled();
+        expect(mockStore.dispatch).not.toHaveBeenCalled();
+        expect(mockAssign).not.toHaveBeenCalled();
+      });
     });
   });
 
