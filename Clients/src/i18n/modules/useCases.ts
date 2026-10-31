@@ -22,6 +22,15 @@ export const de: Record<string, string> = {
   "View use case": "Anwendungsfall anzeigen",
   "No use cases match your search or filters.":
     "Keine Anwendungsfälle entsprechen Ihrer Suche oder Ihren Filtern.",
+  // Use case defaults (Settings → Organization)
+  "Defaults for new use cases": "Standardwerte für neue Anwendungsfälle",
+  "New use cases start with this region and these frameworks. People can change them on each use case.":
+    "Neue Anwendungsfälle beginnen mit dieser Region und diesen Frameworks. Sie lassen sich in jedem Anwendungsfall ändern.",
+  "No default frameworks": "Keine Standard-Frameworks",
+  "Save use case defaults": "Standardwerte speichern",
+  "Use case defaults saved": "Standardwerte für Anwendungsfälle gespeichert",
+  "Failed to save use case defaults":
+    "Standardwerte für Anwendungsfälle konnten nicht gespeichert werden",
 };
 
 export const fr: Record<string, string> = {
@@ -45,6 +54,15 @@ export const fr: Record<string, string> = {
   "View use case": "Voir le cas d'usage",
   "No use cases match your search or filters.":
     "Aucun cas d'usage ne correspond à votre recherche ou à vos filtres.",
+  // Use case defaults (Settings → Organization)
+  "Defaults for new use cases": "Valeurs par défaut des nouveaux cas d'usage",
+  "New use cases start with this region and these frameworks. People can change them on each use case.":
+    "Les nouveaux cas d'usage commencent avec cette région et ces cadres. Ils restent modifiables dans chaque cas d'usage.",
+  "No default frameworks": "Aucun cadre par défaut",
+  "Save use case defaults": "Enregistrer les valeurs par défaut",
+  "Use case defaults saved": "Valeurs par défaut des cas d'usage enregistrées",
+  "Failed to save use case defaults":
+    "Impossible d'enregistrer les valeurs par défaut des cas d'usage",
 };
 
 export const es: Record<string, string> = {
@@ -68,4 +86,13 @@ export const es: Record<string, string> = {
   "View use case": "Ver caso de uso",
   "No use cases match your search or filters.":
     "Ningún caso de uso coincide con su búsqueda o filtros.",
+  // Use case defaults (Settings → Organization)
+  "Defaults for new use cases": "Valores predeterminados para nuevos casos de uso",
+  "New use cases start with this region and these frameworks. People can change them on each use case.":
+    "Los nuevos casos de uso empiezan con esta región y estos marcos. Se pueden cambiar en cada caso de uso.",
+  "No default frameworks": "Sin marcos predeterminados",
+  "Save use case defaults": "Guardar valores predeterminados",
+  "Use case defaults saved": "Valores predeterminados de casos de uso guardados",
+  "Failed to save use case defaults":
+    "No se pudieron guardar los valores predeterminados de los casos de uso",
 };

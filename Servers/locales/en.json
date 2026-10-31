@@ -931,5 +931,9 @@
   "Invalid subcontrol ID": "Invalid subcontrol ID",
   "Invalid annex category ID": "Invalid annex category ID",
   "Invalid evidence hub ID": "Invalid evidence hub ID",
-  "Invalid model ID": "Invalid model ID"
+  "Invalid model ID": "Invalid model ID",
+  "No settings provided": "No settings provided",
+  "Invalid region": "Invalid region",
+  "Default frameworks must be a list of framework ids": "Default frameworks must be a list of framework ids",
+  "Only frameworks that apply to a single use case can be defaults": "Only frameworks that apply to a single use case can be defaults"
 }

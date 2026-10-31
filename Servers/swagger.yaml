@@ -7896,6 +7896,8 @@ tags:
     name: 'v1: Change History'
   -
     name: 'v1: Shadow AI'
+  -
+    name: 'v1: Use Case Settings'
 paths:
   /webhooks/github:
     post:
@@ -27210,3 +27212,31 @@ paths:
       security:
         -
           bearerAuth: []
+  /v1/use-case-org-settings:
+    get:
+      summary: 'Get Use Case Org Settings Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Use Case Settings'
+      operationId: getUseCaseOrgSettingsHandler
+      security:
+        -
+          bearerAuth: []
+    put:
+      summary: 'Update Use Case Org Settings Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Use Case Settings'
+      operationId: updateUseCaseOrgSettingsHandler
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin'

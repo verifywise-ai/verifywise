@@ -36,6 +36,8 @@ import {
 } from "../utils/intakeForm.utils";
 import { createNewModelInventoryQuery } from "../utils/modelInventory.utils";
 import { createNewProjectQuery } from "../utils/project.utils";
+import { addFrameworkToProjectQuery } from "../utils/framework.utils";
+import { getUseCaseOrgSettings } from "../utils/useCaseOrgSettings.utils";
 import { createEUFrameworkQuery } from "../utils/eu.utils";
 import { EU_AI_ACT_FRAMEWORK_ID } from "../utils/validations/projectValidation.utils";
 import { IntakeFormStatus } from "../domain.layer/enums/intake-form-status.enum";
@@ -2450,6 +2452,9 @@ export async function approveSubmission(req: Request, res: Response) {
       );
       entityId = createdModel.id!;
     } else if (submission.entityType === IntakeEntityType.USE_CASE) {
+      // The organization's defaults for a new use case (#5192): its region
+      // when the submission gave none, and its frameworks.
+      const useCaseDefaults = await getUseCaseOrgSettings(req.organizationId!, transaction);
       const createdProject = await createNewProjectQuery(
         {
           project_title: (entityData.project_title as string) || "",
@@ -2461,19 +2466,51 @@ export async function approveSubmission(req: Request, res: Response) {
           owner: req.userId!,
           ai_risk_classification: aiRiskClassification as any,
           high_risk_roles: highRiskRolesFromEntityData(entityData),
-          geography: entityData.geography ? Number(entityData.geography) : 1,
+          geography: entityData.geography
+            ? Number(entityData.geography)
+            : (useCaseDefaults.default_geography ?? 1),
           status: ProjectStatus.UNDER_REVIEW,
         },
         [],
         // Only a level that comes from the EU AI Act step (a scorable run)
-        // brings the EU AI Act framework along. Submissions without a run keep
-        // their mapped or reviewer level and get no framework.
+        // brings the EU AI Act framework along here. The organization's default
+        // frameworks are added below.
         classification ? [EU_AI_ACT_FRAMEWORK_ID] : [],
         req.organizationId!,
         req.userId!,
         transaction,
       );
       entityId = createdProject.id!;
+      // The organization's default frameworks, except the EU AI Act when the
+      // run above already brought it. Each is added in its own savepoint: one
+      // that no longer applies, or whose setup fails, is skipped and the
+      // approval goes ahead without it.
+      for (const frameworkId of useCaseDefaults.default_framework_ids) {
+        if (classification && frameworkId === EU_AI_ACT_FRAMEWORK_ID) continue;
+        const savepoint = await sequelize.transaction({ transaction });
+        let added = false;
+        try {
+          added = await addFrameworkToProjectQuery(
+            frameworkId,
+            entityId,
+            req.organizationId!,
+            savepoint,
+          );
+          await savepoint.commit();
+        } catch (error) {
+          await savepoint.rollback();
+          logger.error(
+            `Default framework ${frameworkId} failed to set up on use case ${entityId}: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+          );
+        }
+        if (!added) {
+          logger.warn(
+            `Default framework ${frameworkId} was not added to use case ${entityId} on intake approval`,
+          );
+        }
+      }
       if (classification) {
         await createEUFrameworkQuery(entityId, false, req.organizationId!, transaction);
         await insertClassificationRunQuery(
