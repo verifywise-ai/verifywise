@@ -12117,6 +12117,65 @@ export const userEndpoints: Endpoint[] = [
   },
 ];
 
+// v1: Change History endpoints
+export const v1ChangeHistoryEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/evidence-hub-change-history/{id}',
+    summary: "Get Evidence Hub Change History By Id",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Change History",
+  },
+  {
+    method: 'GET',
+    path: '/v1/model-lifecycle-change-history/{id}',
+    summary: "Get Model Lifecycle Change History By Id",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Change History",
+  },
+  {
+    method: 'GET',
+    path: '/v1/control-eu-change-history/{id}',
+    summary: "Get Control E U Change History By Id",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Change History",
+  },
+  {
+    method: 'GET',
+    path: '/v1/subcontrol-eu-change-history/{id}',
+    summary: "Get Subcontrol E U Change History By Id",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Change History",
+  },
+  {
+    method: 'GET',
+    path: '/v1/annex-category-change-history/{id}',
+    summary: "Get Annex Category Change History By Id",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Change History",
+  },
+];
+
 // Vendors endpoints
 export const vendorEndpoints: Endpoint[] = [
   {
@@ -12462,6 +12521,7 @@ export const allEndpoints = {
   telemetry: telemetryEndpoints,
   training: trainingEndpoints,
   user: userEndpoints,
+  v1ChangeHistory: v1ChangeHistoryEndpoints,
   vendor: vendorEndpoints,
   vendorRisk: vendorRiskEndpoints,
   webhook: webhookEndpoints,

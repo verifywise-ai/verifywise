@@ -507,6 +507,7 @@ export async function saveControls(req: RequestWithFile, res: Response): Promise
           filesToUnlink,
           req.organizationId!,
           transaction,
+          req.userId ?? null,
         );
         if (subcontrolToSave) {
           subControlResp.push(subcontrolToSave);
@@ -537,6 +538,7 @@ export async function saveControls(req: RequestWithFile, res: Response): Promise
       },
       req.organizationId!,
       transaction,
+      req.userId ?? null,
     );
 
     const response = {

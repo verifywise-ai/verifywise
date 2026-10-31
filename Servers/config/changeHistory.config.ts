@@ -38,6 +38,9 @@ export type EntityType =
   | "vendor"
   | "use_case"
   | "evidence_hub"
+  | "control_eu"
+  | "subcontrol_eu"
+  | "annex_category"
   | "risk"
   | "vendor_risk"
   | "policy"
@@ -66,44 +69,54 @@ export interface FormatterContext {
   transaction?: Transaction;
 }
 
-let lookupSavepointSeq = 0;
+let savepointSeq = 0;
 
 /**
- * Runs a formatter's lookup SELECT. On a caller's transaction it runs inside
- * its own SAVEPOINT: Postgres aborts the whole transaction on any error, so
- * without one a failed name lookup would make the caller's own write fail.
- * On success the savepoint is released; on failure it is rolled back to and
- * released, the error is rethrown for the formatter's id-label fallback, and
- * the caller's transaction goes on.
+ * Runs `work` on a caller's transaction inside its own SAVEPOINT: Postgres
+ * aborts the whole transaction on any error, so without one a failed history
+ * statement would make the caller's own write fail. On success the savepoint
+ * is released; on failure it is rolled back to and released, the error is
+ * rethrown, and the caller's transaction goes on. Without a transaction the
+ * work just runs.
  *
  * The SQL is issued explicitly because a sequelize v6 nested transaction
  * never releases its savepoint on commit.
  */
-const selectInSavepoint = async <T extends object>(
-  sql: string,
-  replacements: Record<string, unknown>,
+export const runInSavepoint = async <T>(
+  work: () => Promise<T>,
   transaction?: Transaction,
-): Promise<T[]> => {
-  if (!transaction) {
-    return sequelize.query<T>(sql, { replacements, type: QueryTypes.SELECT });
-  }
-  lookupSavepointSeq += 1;
-  const savepoint = `history_lookup_${lookupSavepointSeq}`;
+  name = "history_write",
+): Promise<T> => {
+  if (!transaction) return work();
+  savepointSeq += 1;
+  const savepoint = `${name}_${savepointSeq}`;
   await sequelize.query(`SAVEPOINT ${savepoint}`, { transaction });
   try {
-    const rows = await sequelize.query<T>(sql, {
-      replacements,
-      type: QueryTypes.SELECT,
-      transaction,
-    });
+    const result = await work();
     await sequelize.query(`RELEASE SAVEPOINT ${savepoint}`, { transaction });
-    return rows;
+    return result;
   } catch (error) {
     await sequelize.query(`ROLLBACK TO SAVEPOINT ${savepoint}`, { transaction });
     await sequelize.query(`RELEASE SAVEPOINT ${savepoint}`, { transaction });
     throw error;
   }
 };
+
+/**
+ * Runs a formatter's lookup SELECT, in a savepoint when on a caller's
+ * transaction, so a failed name lookup falls back to the id label instead of
+ * failing the caller's write.
+ */
+const selectInSavepoint = async <T extends object>(
+  sql: string,
+  replacements: Record<string, unknown>,
+  transaction?: Transaction,
+): Promise<T[]> =>
+  runInSavepoint(
+    () => sequelize.query<T>(sql, { replacements, type: QueryTypes.SELECT, transaction }),
+    transaction,
+    "history_lookup",
+  );
 
 /**
  * Formatter for an id that references a row by name: resolves `id` with
@@ -153,6 +166,10 @@ export const GENERIC_FORMATTERS: { [key: string]: FieldFormatter } = {
   // Boolean formatter
   boolean: async (value: unknown): Promise<string> => {
     if (value === null || value === undefined) return "-";
+    // Multipart form fields arrive as the strings "true"/"false".
+    if (typeof value === "string") {
+      return ["false", "0", "no", "off"].includes(value.trim().toLowerCase()) ? "No" : "Yes";
+    }
     return value ? "Yes" : "No";
   },
 
@@ -163,7 +180,11 @@ export const GENERIC_FORMATTERS: { [key: string]: FieldFormatter } = {
       return value.toISOString().split("T")[0];
     }
     if (typeof value === "string") {
-      return value.split("T")[0];
+      if (/^\d{4}-\d{2}-\d{2}/.test(value)) return value.slice(0, 10);
+      // Other date strings (e.g. dayjs toString()) are parsed, so the same day
+      // formats the same however the client sent it.
+      const parsed = new Date(value);
+      return Number.isNaN(parsed.getTime()) ? value : parsed.toISOString().slice(0, 10);
     }
     return String(value);
   },
@@ -465,6 +486,82 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
       evidence_name: "Name",
       evidence_type: "Type",
       description: "Description",
+    },
+  },
+
+  // EU AI Act controls and subcontrols (issue #4977). Edits arrive through
+  // PATCH /api/eu-ai-act/saveControls/:id, which bulk-updates one control and
+  // its subcontrols in one transaction.
+  control_eu: {
+    tableName: "control_eu_change_history",
+    foreignKeyField: "control_eu_id",
+    fieldsToTrack: ["status", "owner", "reviewer", "approver", "due_date", "risk_review"],
+    fieldLabels: {
+      status: "Status",
+      owner: "Owner",
+      reviewer: "Reviewer",
+      approver: "Approver",
+      due_date: "Due date",
+      risk_review: "Risk review",
+    },
+    fieldFormatters: {
+      owner: GENERIC_FORMATTERS.user,
+      reviewer: GENERIC_FORMATTERS.user,
+      approver: GENERIC_FORMATTERS.user,
+      due_date: GENERIC_FORMATTERS.date,
+    },
+  },
+
+  subcontrol_eu: {
+    tableName: "subcontrol_eu_change_history",
+    foreignKeyField: "subcontrol_eu_id",
+    fieldsToTrack: [
+      "status",
+      "implementation_details",
+      "evidence_description",
+      "feedback_description",
+    ],
+    fieldLabels: {
+      status: "Status",
+      implementation_details: "Implementation details",
+      evidence_description: "Evidence description",
+      feedback_description: "Feedback description",
+    },
+  },
+
+  // ISO 42001 annex categories (issue #4977). Edits arrive through
+  // PATCH /api/iso-42001/saveAnnexes/:id.
+  annex_category: {
+    tableName: "annex_category_change_history",
+    foreignKeyField: "annex_category_id",
+    fieldsToTrack: [
+      "is_applicable",
+      "justification_for_exclusion",
+      "implementation_description",
+      "status",
+      "owner",
+      "reviewer",
+      "approver",
+      "due_date",
+      "auditor_feedback",
+    ],
+    fieldLabels: {
+      is_applicable: "Applicable",
+      justification_for_exclusion: "Justification for exclusion",
+      implementation_description: "Implementation description",
+      status: "Status",
+      owner: "Owner",
+      reviewer: "Reviewer",
+      approver: "Approver",
+      due_date: "Due date",
+      auditor_feedback: "Auditor feedback",
+    },
+    fieldFormatters: {
+      is_applicable: GENERIC_FORMATTERS.boolean,
+      owner: GENERIC_FORMATTERS.user,
+      reviewer: GENERIC_FORMATTERS.user,
+      approver: GENERIC_FORMATTERS.user,
+      due_date: GENERIC_FORMATTERS.date,
     },
   },
 

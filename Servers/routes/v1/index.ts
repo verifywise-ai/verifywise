@@ -15,11 +15,24 @@
  */
 import express from "express";
 import shadowAiIngestionRoutes from "./shadowAiIngestion.route";
+import evidenceHubChangeHistoryRoutes from "./evidenceHubChangeHistory.route";
+import modelLifecycleChangeHistoryRoutes from "./modelLifecycleChangeHistory.route";
+import controlEUChangeHistoryRoutes from "./controlEUChangeHistory.route";
+import subcontrolEUChangeHistoryRoutes from "./subcontrolEUChangeHistory.route";
+import annexCategoryChangeHistoryRoutes from "./annexCategoryChangeHistory.route";
 
 const router = express.Router();
 
 // Machine-ingestion surface: X-API-Key auth handled inside the controller,
 // not JWT. See controllers/shadowAiIngestion.ctrl.ts.
 router.use("/shadow-ai", shadowAiIngestionRoutes);
+
+// Change history read paths added with #4977. Older entity types keep their
+// legacy /api/<entity>-change-history mounts.
+router.use("/evidence-hub-change-history", evidenceHubChangeHistoryRoutes);
+router.use("/model-lifecycle-change-history", modelLifecycleChangeHistoryRoutes);
+router.use("/control-eu-change-history", controlEUChangeHistoryRoutes);
+router.use("/subcontrol-eu-change-history", subcontrolEUChangeHistoryRoutes);
+router.use("/annex-category-change-history", annexCategoryChangeHistoryRoutes);
 
 export default router;

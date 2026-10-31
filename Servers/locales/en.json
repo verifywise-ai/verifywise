@@ -926,5 +926,10 @@
   "{name} must contain positive integer user ids": "{name} must contain positive integer user ids",
   "{key} must be a whole number from {min} to {max}": "{key} must be a whole number from {min} to {max}",
   "seniorReviewerIds and standardReviewerIds must each have at least one reviewer": "seniorReviewerIds and standardReviewerIds must each have at least one reviewer",
-  "Only an Admin can change reviewer assignment": "Only an Admin can change reviewer assignment"
+  "Only an Admin can change reviewer assignment": "Only an Admin can change reviewer assignment",
+  "Invalid control ID": "Invalid control ID",
+  "Invalid subcontrol ID": "Invalid subcontrol ID",
+  "Invalid annex category ID": "Invalid annex category ID",
+  "Invalid evidence hub ID": "Invalid evidence hub ID",
+  "Invalid model ID": "Invalid model ID"
 }

@@ -926,5 +926,10 @@
   "{name} must contain positive integer user ids": "{name} doit contenir des identifiants d'utilisateur entiers positifs",
   "{key} must be a whole number from {min} to {max}": "{key} doit être un nombre entier de {min} à {max}",
   "seniorReviewerIds and standardReviewerIds must each have at least one reviewer": "seniorReviewerIds et standardReviewerIds doivent chacun contenir au moins un relecteur",
-  "Only an Admin can change reviewer assignment": "Seul un administrateur peut modifier l'attribution des réviseurs"
+  "Only an Admin can change reviewer assignment": "Seul un administrateur peut modifier l'attribution des réviseurs",
+  "Invalid control ID": "ID de contrôle invalide",
+  "Invalid subcontrol ID": "ID de sous-contrôle invalide",
+  "Invalid annex category ID": "ID de catégorie d'annexe invalide",
+  "Invalid evidence hub ID": "ID de preuve invalide",
+  "Invalid model ID": "ID de modèle invalide"
 }

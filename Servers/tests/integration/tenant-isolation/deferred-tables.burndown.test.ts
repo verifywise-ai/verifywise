@@ -27,8 +27,16 @@ const AUDIT_SCRIPT_PATH = path.resolve(
 /**
  * Baseline captured 2026-10-20 from
  * scripts/auditTenantIsolationCoverage.ts @ chore/debora-one-fix-to-all.
+ *
+ * Re-baselined 2026-10-28 at 215: the framework control change-history
+ * tables added for #4977 (control_eu / subcontrol_eu / annex_category
+ * _change_history) join the deferred list under the same justification as
+ * the other change-history tables — they are written only via
+ * changeHistory.base.utils, which filters by organization_id — pending a
+ * dedicated isolation wave. Unlike a burndown drop, this bump is an
+ * intentional, documented addition, not drift.
  */
-const DEFERRED_BASELINE_CEILING = 212;
+const DEFERRED_BASELINE_CEILING = 215;
 
 function countDeferredScopedTables(): { count: number; names: string[] } {
   const source = fs.readFileSync(AUDIT_SCRIPT_PATH, "utf8");

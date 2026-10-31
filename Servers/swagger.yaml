@@ -7893,6 +7893,8 @@ tags:
   -
     name: Webhooks
   -
+    name: 'v1: Change History'
+  -
     name: 'v1: Shadow AI'
 paths:
   /webhooks/github:
@@ -27138,3 +27140,73 @@ paths:
       tags:
         - System
       operationId: healthCheck
+  '/v1/evidence-hub-change-history/{id}':
+    get:
+      summary: 'Get Evidence Hub Change History By Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Change History'
+      operationId: getEvidenceHubChangeHistoryById
+      security:
+        -
+          bearerAuth: []
+  '/v1/model-lifecycle-change-history/{id}':
+    get:
+      summary: 'Get Model Lifecycle Change History By Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Change History'
+      operationId: getModelLifecycleChangeHistoryById
+      security:
+        -
+          bearerAuth: []
+  '/v1/control-eu-change-history/{id}':
+    get:
+      summary: 'Get Control E U Change History By Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Change History'
+      operationId: getControlEUChangeHistoryById
+      security:
+        -
+          bearerAuth: []
+  '/v1/subcontrol-eu-change-history/{id}':
+    get:
+      summary: 'Get Subcontrol E U Change History By Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Change History'
+      operationId: getSubcontrolEUChangeHistoryById
+      security:
+        -
+          bearerAuth: []
+  '/v1/annex-category-change-history/{id}':
+    get:
+      summary: 'Get Annex Category Change History By Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Change History'
+      operationId: getAnnexCategoryChangeHistoryById
+      security:
+        -
+          bearerAuth: []
