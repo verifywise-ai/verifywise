@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { screen, fireEvent, act } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import ReviewTimeField, { getReviewDaysError } from "../ReviewTimeField";
@@ -9,7 +9,10 @@ let setFromOutside: (value: number) => void = () => {};
 
 const Harness = ({ initial = DEFAULT_REVIEW_DAYS }: { initial?: number }) => {
   const [value, setValue] = useState(initial);
-  setFromOutside = setValue;
+  // Lets a test change the value from outside, as a reload of the form would.
+  useEffect(() => {
+    setFromOutside = setValue;
+  }, []);
   return (
     <ReviewTimeField
       value={value}
