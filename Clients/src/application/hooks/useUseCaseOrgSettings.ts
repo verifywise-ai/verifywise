@@ -8,12 +8,13 @@ import {
 
 export const USE_CASE_ORG_SETTINGS_KEY = ["useCaseOrgSettings"] as const;
 
-/** The organization's defaults for a new use case. */
-export function useUseCaseOrgSettings() {
+/** The organization's defaults for a new use case; `enabled: false` skips the request. */
+export function useUseCaseOrgSettings({ enabled = true }: { enabled?: boolean } = {}) {
   return useQuery<UseCaseOrgSettings>({
     queryKey: USE_CASE_ORG_SETTINGS_KEY,
     queryFn: getUseCaseOrgSettings,
     staleTime: 5 * 60 * 1000,
+    enabled,
   });
 }
 

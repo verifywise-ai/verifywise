@@ -452,12 +452,21 @@ describe("approval with the EU AI Act step", () => {
       expect(projects.createNewProjectQuery.mock.calls[0][0].geography).toBe(5);
     });
 
-    it("leaves the defaults out when a run brings the EU AI Act", async () => {
+    it("adds the other defaults, not a second EU AI Act, when a run brings it", async () => {
       runs.getLatestRunForSubmissionQuery.mockResolvedValue(RUN);
       const r = await approve({ confirmedEntityData: { project_title: "P" } });
       expect(r.status).toHaveBeenCalledWith(200);
       expect(projects.createNewProjectQuery.mock.calls[0][2]).toEqual([1]);
-      expect(mockAddFramework).not.toHaveBeenCalled();
+      expect(mockAddFramework.mock.calls.map((c: unknown[]) => c[0])).toEqual([12]);
+    });
+
+    it("still approves when a default framework's setup throws", async () => {
+      runs.getLatestRunForSubmissionQuery.mockResolvedValue(null);
+      mockAddFramework.mockRejectedValueOnce(new Error("structure seed failed"));
+      const r = await approve({ confirmedEntityData: { project_title: "P" } });
+      expect(r.status).toHaveBeenCalledWith(200);
+      // The second default is still added after the first one failed.
+      expect(mockAddFramework).toHaveBeenCalledTimes(2);
     });
 
     it("still approves when a default framework can no longer be added", async () => {

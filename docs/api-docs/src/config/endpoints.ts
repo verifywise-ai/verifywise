@@ -12176,8 +12176,8 @@ export const v1ChangeHistoryEndpoints: Endpoint[] = [
   },
 ];
 
-// v1: V1/Use Case Org Settings endpoints
-export const v1V1useCaseOrgSettingsEndpoints: Endpoint[] = [
+// v1: Use Case Settings endpoints
+export const v1UseCaseSettingsEndpoints: Endpoint[] = [
   {
     method: 'GET',
     path: '/v1/use-case-org-settings',
@@ -12187,7 +12187,7 @@ export const v1V1useCaseOrgSettingsEndpoints: Endpoint[] = [
       { status: 200, description: "Success" },
       { status: 500, description: "Internal server error" },
     ],
-    tag: "v1: V1/Use Case Org Settings",
+    tag: "v1: Use Case Settings",
   },
   {
     method: 'PUT',
@@ -12199,7 +12199,7 @@ export const v1V1useCaseOrgSettingsEndpoints: Endpoint[] = [
       { status: 200, description: "Success" },
       { status: 500, description: "Internal server error" },
     ],
-    tag: "v1: V1/Use Case Org Settings",
+    tag: "v1: Use Case Settings",
   },
 ];
 
@@ -12549,7 +12549,7 @@ export const allEndpoints = {
   training: trainingEndpoints,
   user: userEndpoints,
   v1ChangeHistory: v1ChangeHistoryEndpoints,
-  v1V1useCaseOrgSettings: v1V1useCaseOrgSettingsEndpoints,
+  v1UseCaseSettings: v1UseCaseSettingsEndpoints,
   vendor: vendorEndpoints,
   vendorRisk: vendorRiskEndpoints,
   webhook: webhookEndpoints,

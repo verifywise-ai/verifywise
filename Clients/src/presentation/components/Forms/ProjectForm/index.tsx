@@ -124,7 +124,7 @@ export const ProjectForm = ({
     };
   });
   const { users } = useUsers();
-  const { allFrameworks } = useFrameworks({ listOfFrameworks: [] });
+  const { allFrameworks, loading: frameworksLoading } = useFrameworks({ listOfFrameworks: [] });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState<"details" | "custom-fields">("details");
   const customFieldsRef = useRef<CustomFieldsSectionHandle | null>(null);
@@ -302,10 +302,21 @@ export const ProjectForm = ({
   // A new use case starts with the organization's defaults (Settings →
   // Organization), once they and the framework list have loaded. Only fields
   // the user hasn't touched are filled, and only frameworks this form offers.
-  const { data: useCaseDefaults } = useUseCaseOrgSettings();
+  // Editing never reads them.
+  const { data: useCaseDefaults } = useUseCaseOrgSettings({ enabled: !projectToEdit });
   const defaultsApplied = useRef(false);
   useEffect(() => {
-    if (defaultsApplied.current || projectToEdit || !useCaseDefaults || !allFrameworks) return;
+    // useFrameworks hands out [] while loading: wait for the real list, or
+    // the default frameworks would be dropped for good.
+    if (
+      defaultsApplied.current ||
+      projectToEdit ||
+      !useCaseDefaults ||
+      frameworksLoading ||
+      allFrameworks.length === 0
+    ) {
+      return;
+    }
     defaultsApplied.current = true;
     if (values.framework_type !== FrameworkTypeEnum.ProjectBased) return;
     const offered = filteredFrameworks.filter((fw) =>
@@ -322,7 +333,14 @@ export const ProjectForm = ({
           ? offered
           : prev.monitored_regulations_and_standards,
     }));
-  }, [useCaseDefaults, allFrameworks, filteredFrameworks, projectToEdit, values.framework_type]);
+  }, [
+    useCaseDefaults,
+    allFrameworks,
+    frameworksLoading,
+    filteredFrameworks,
+    projectToEdit,
+    values.framework_type,
+  ]);
 
   const authState = useSelector(
     (state: { auth: { authToken: string; userExists: boolean } }) => state.auth,

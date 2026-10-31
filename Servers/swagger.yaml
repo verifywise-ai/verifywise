@@ -7897,7 +7897,7 @@ tags:
   -
     name: 'v1: Shadow AI'
   -
-    name: 'v1: V1/Use Case Org Settings'
+    name: 'v1: Use Case Settings'
 paths:
   /webhooks/github:
     post:
@@ -27221,7 +27221,7 @@ paths:
         '500':
           description: 'Internal server error'
       tags:
-        - 'v1: V1/Use Case Org Settings'
+        - 'v1: Use Case Settings'
       operationId: getUseCaseOrgSettingsHandler
       security:
         -
@@ -27234,7 +27234,7 @@ paths:
         '500':
           description: 'Internal server error'
       tags:
-        - 'v1: V1/Use Case Org Settings'
+        - 'v1: Use Case Settings'
       operationId: updateUseCaseOrgSettingsHandler
       security:
         -

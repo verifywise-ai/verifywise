@@ -82,6 +82,30 @@ describe("UseCaseDefaultsSection", () => {
     );
   });
 
+  it("clears a saved region with No default", async () => {
+    settings = { organization_id: 2, default_geography: 2, default_framework_ids: [1] };
+    renderWithProviders(<UseCaseDefaultsSection onError={vi.fn()} onSuccess={vi.fn()} />);
+
+    await pickRegion("No default");
+    fireEvent.click(screen.getByTestId("use-case-defaults-save-btn"));
+
+    await waitFor(() =>
+      expect(save).toHaveBeenCalledWith({ default_geography: null, default_framework_ids: [1] }),
+    );
+  });
+
+  it("never offers the frameworks placeholder as a choice", async () => {
+    renderWithProviders(<UseCaseDefaultsSection onError={vi.fn()} onSuccess={vi.fn()} />);
+    fireEvent.mouseDown(
+      within(screen.getByTestId("use-case-defaults-section")).getAllByRole("combobox")[1],
+    );
+    await screen.findByRole("option", { name: /EU AI Act/ });
+    // Rendered for the empty state, but hidden from the list.
+    const placeholder = document.querySelector(".select-placeholder");
+    expect(placeholder).not.toBeNull();
+    expect(placeholder).toHaveStyle({ display: "none" });
+  });
+
   it("is read-only for a non-Admin", () => {
     renderWithProviders(
       <UseCaseDefaultsSection isDisabled onError={vi.fn()} onSuccess={vi.fn()} />,

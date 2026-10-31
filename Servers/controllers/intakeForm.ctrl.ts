@@ -2453,8 +2453,7 @@ export async function approveSubmission(req: Request, res: Response) {
       entityId = createdModel.id!;
     } else if (submission.entityType === IntakeEntityType.USE_CASE) {
       // The organization's defaults for a new use case (#5192): its region
-      // when the submission gave none, its frameworks when there is no
-      // classification to choose one.
+      // when the submission gave none, and its frameworks.
       const useCaseDefaults = await getUseCaseOrgSettings(req.organizationId!, transaction);
       const createdProject = await createNewProjectQuery(
         {
@@ -2474,29 +2473,42 @@ export async function approveSubmission(req: Request, res: Response) {
         },
         [],
         // Only a level that comes from the EU AI Act step (a scorable run)
-        // brings the EU AI Act framework along. Submissions without a run get
-        // the organization's default frameworks, added below.
+        // brings the EU AI Act framework along here. The organization's default
+        // frameworks are added below.
         classification ? [EU_AI_ACT_FRAMEWORK_ID] : [],
         req.organizationId!,
         req.userId!,
         transaction,
       );
       entityId = createdProject.id!;
-      if (!classification) {
-        for (const frameworkId of useCaseDefaults.default_framework_ids) {
-          // Refuses a framework that no longer applies to a use case; the
-          // approval goes ahead without it.
-          const added = await addFrameworkToProjectQuery(
+      // The organization's default frameworks, except the EU AI Act when the
+      // run above already brought it. Each is added in its own savepoint: one
+      // that no longer applies, or whose setup fails, is skipped and the
+      // approval goes ahead without it.
+      for (const frameworkId of useCaseDefaults.default_framework_ids) {
+        if (classification && frameworkId === EU_AI_ACT_FRAMEWORK_ID) continue;
+        const savepoint = await sequelize.transaction({ transaction });
+        let added = false;
+        try {
+          added = await addFrameworkToProjectQuery(
             frameworkId,
             entityId,
             req.organizationId!,
-            transaction,
+            savepoint,
           );
-          if (!added) {
-            logger.warn(
-              `Default framework ${frameworkId} was not added to use case ${entityId} on intake approval`,
-            );
-          }
+          await savepoint.commit();
+        } catch (error) {
+          await savepoint.rollback();
+          logger.error(
+            `Default framework ${frameworkId} failed to set up on use case ${entityId}: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+          );
+        }
+        if (!added) {
+          logger.warn(
+            `Default framework ${frameworkId} was not added to use case ${entityId} on intake approval`,
+          );
         }
       }
       if (classification) {

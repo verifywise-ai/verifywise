@@ -11,6 +11,9 @@ import {
 import { EUROPE_GEOGRAPHY_ID, GEOGRAPHY_ITEMS } from "../../../../application/constants/geography";
 
 const EU_AI_ACT_FRAMEWORK_ID = 1;
+// The house Select has no empty option, so "no default region" is an item of its own.
+const NO_REGION = 0;
+const REGION_ITEMS = [{ _id: NO_REGION, name: "No default" }, ...GEOGRAPHY_ITEMS];
 
 interface UseCaseDefaultsSectionProps {
   isDisabled?: boolean;
@@ -20,8 +23,7 @@ interface UseCaseDefaultsSectionProps {
 
 /**
  * Region and frameworks a new use case starts with. People can still change
- * them on each use case; approved intake requests get the frameworks when
- * the EU AI Act questionnaire produced no classification.
+ * them on each use case; approved intake requests get them too.
  */
 const UseCaseDefaultsSection = ({
   isDisabled,
@@ -32,12 +34,12 @@ const UseCaseDefaultsSection = ({
   const { mutateAsync: save, isPending: saving } = useUpdateUseCaseOrgSettings();
   const { allFrameworks } = useFrameworks({ listOfFrameworks: [] });
 
-  const [region, setRegion] = useState<number | "">("");
+  const [region, setRegion] = useState<number>(NO_REGION);
   const [frameworkIds, setFrameworkIds] = useState<number[]>([]);
 
   useEffect(() => {
     if (!settings) return;
-    setRegion(settings.default_geography ?? "");
+    setRegion(settings.default_geography ?? NO_REGION);
     setFrameworkIds(settings.default_framework_ids);
   }, [settings]);
 
@@ -51,7 +53,7 @@ const UseCaseDefaultsSection = ({
   );
 
   const onRegion = (event: { target: { value: unknown } }) => {
-    const next = event.target.value === "" ? "" : Number(event.target.value);
+    const next = Number(event.target.value) || NO_REGION;
     setRegion(next);
     // Europe suggests the EU AI Act when nothing is picked yet; it can be removed.
     if (
@@ -65,13 +67,14 @@ const UseCaseDefaultsSection = ({
 
   const onFrameworks = (event: { target: { value: unknown } }) => {
     const value = event.target.value;
-    setFrameworkIds((Array.isArray(value) ? value : [value]).map(Number));
+    // The placeholder is hidden, but never let its "0" through as a framework.
+    setFrameworkIds((Array.isArray(value) ? value : [value]).map(Number).filter((id) => id > 0));
   };
 
   const handleSave = async () => {
     try {
       await save({
-        default_geography: region === "" ? null : region,
+        default_geography: region === NO_REGION ? null : region,
         default_framework_ids: frameworkIds,
       });
       onSuccess("Use case defaults saved");
@@ -102,7 +105,7 @@ const UseCaseDefaultsSection = ({
         <SelectComponent
           id="use-case-default-region"
           label="Region"
-          items={[...GEOGRAPHY_ITEMS]}
+          items={REGION_ITEMS}
           value={region}
           onChange={onRegion}
           placeholder="No default"
@@ -115,6 +118,7 @@ const UseCaseDefaultsSection = ({
           onChange={onFrameworks}
           items={frameworkItems}
           placeholder="No default frameworks"
+          isHidden
           disabled={isDisabled}
         />
       </Box>
