@@ -112,7 +112,7 @@ export const de: Record<string, string> = {
   "Why this matters": "Warum das wichtig ist",
   "Explain in plain words": "In einfachen Worten erklären",
   "Explaining": "Wird erklärt",
-  "Sends your risk answers to AI.": "Sendet Ihre Risikoantworten an die KI.",
+  "Sends your risk answers to an AI model.": "Sendet Ihre Risikoantworten an ein KI-Modell.",
   "An explanation isn't available right now. The reasons above still apply.":
     "Eine Erklärung ist gerade nicht verfügbar. Die obigen Gründe gelten weiterhin.",
   "Add context": "Kontext hinzufügen",
@@ -235,7 +235,8 @@ export const fr: Record<string, string> = {
   "Why this matters": "Pourquoi c'est important",
   "Explain in plain words": "Expliquer simplement",
   "Explaining": "Explication en cours",
-  "Sends your risk answers to AI.": "Envoie vos réponses sur les risques à l'IA.",
+  "Sends your risk answers to an AI model.":
+    "Envoie vos réponses sur les risques à un modèle d'IA.",
   "An explanation isn't available right now. The reasons above still apply.":
     "Aucune explication n'est disponible pour le moment. Les raisons ci-dessus restent valables.",
   "Add context": "Ajouter du contexte",
@@ -355,7 +356,8 @@ export const es: Record<string, string> = {
   "Why this matters": "Por qué es importante",
   "Explain in plain words": "Explicar con palabras sencillas",
   "Explaining": "Explicando",
-  "Sends your risk answers to AI.": "Envía sus respuestas sobre riesgos a la IA.",
+  "Sends your risk answers to an AI model.":
+    "Envía sus respuestas sobre riesgos a un modelo de IA.",
   "An explanation isn't available right now. The reasons above still apply.":
     "No hay una explicación disponible ahora. Los motivos anteriores siguen siendo válidos.",
   "Add context": "Añadir contexto",

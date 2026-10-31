@@ -188,7 +188,7 @@ export function TierSuggestionCard({
             startIcon={<Sparkles size={14} strokeWidth={1.5} />}
           />
           <Typography sx={{ fontSize: "13px", color: muted }}>
-            Sends your risk answers to AI.
+            Sends your risk answers to an AI model.
           </Typography>
         </Box>
       )}
