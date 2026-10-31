@@ -91,7 +91,7 @@ export const aiAppsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'On the app detail page, choose **Mark as live** and pick the go-live date (today or earlier). Live apps also have **Confirm still live** and **Retire**. Only an app with status Approved or Restricted can be marked as live, so approve a Draft app first. Setting a live app back to Draft returns it to Planned. Admins, Editors and the app owner can change the lifecycle. Auditors cannot.',
+      text: 'On the app detail page, choose **Mark as live** and pick the go-live date (today or earlier). Choose **Confirm still live** on a live app. **Retire** works on planned and live apps, so an app that never launches can be retired too. Only an app with status Approved or Restricted can be marked as live, so approve a Draft app first. Setting a live app back to Draft returns it to Planned. Admins, Editors and the app owner can change the lifecycle. Auditors cannot.',
     },
     {
       type: 'image',
