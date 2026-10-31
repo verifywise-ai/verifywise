@@ -72,6 +72,7 @@ import {
 } from "./modules/riskManagement";
 import { de as startHereDe, fr as startHereFr, es as startHereEs } from "./modules/startHere";
 import { de as superAdminDe, fr as superAdminFr, es as superAdminEs } from "./modules/superAdmin";
+import { de as mcpServersDe, fr as mcpServersFr, es as mcpServersEs } from "./modules/mcpServers";
 import { de as tasksDe, fr as tasksFr, es as tasksEs } from "./modules/tasks";
 import {
   de as intakeLiveChecksDe,
@@ -121,6 +122,7 @@ export const translations: Record<string, Record<string, string>> = {
     ...startHereDe,
     ...superAdminDe,
     ...tasksDe,
+    ...mcpServersDe,
     ...intakeLiveChecksDe,
     ...useCaseLifecycleDe,
     ...intakePreviewDe,
@@ -9595,6 +9597,7 @@ export const translations: Record<string, Record<string, string>> = {
     ...startHereFr,
     ...superAdminFr,
     ...tasksFr,
+    ...mcpServersFr,
     ...intakeLiveChecksFr,
     ...useCaseLifecycleFr,
     ...intakePreviewFr,
@@ -19009,6 +19012,7 @@ export const translations: Record<string, Record<string, string>> = {
     ...startHereEs,
     ...superAdminEs,
     ...tasksEs,
+    ...mcpServersEs,
     ...intakeLiveChecksEs,
     ...useCaseLifecycleEs,
     ...intakePreviewEs,
