@@ -577,10 +577,25 @@ export const intakeFormsContent: ArticleContent = {
         { text: 'All submitted field values' },
         { text: 'The risk score, with a **How this score is built** breakdown' },
         { text: 'The EU AI Act classification, when the form asks the questionnaire' },
+        { text: 'The applicant\'s response to the suggested risk level, when they gave one' },
         { text: 'Suggested risks to accept or dismiss' },
         { text: 'An entity data preview built from field mappings' },
         { text: 'Approve and Reject action buttons' },
       ],
+    },
+    {
+      type: 'heading',
+      id: 'suggested-risk-level',
+      level: 2,
+      text: 'Suggested risk level',
+    },
+    {
+      type: 'paragraph',
+      text: 'When the form asks the EU AI Act questionnaire, applicants see a suggested risk level as soon as they finish it, before they submit. The level and the articles behind it come from the same rules that classify the submission, so every reference is a real article. Applicants can **Accept** the suggestion or **Add context** for the reviewer. Either way, the governance team makes the final call in the review dialog.',
+    },
+    {
+      type: 'paragraph',
+      text: 'If the form has AI checks on and an LLM key, applicants can also ask for a plain-language explanation. Their risk answers go to AI only when they ask. The explanation can only describe the suggested level and its articles; one that names another level or cites another article is discarded.',
     },
     {
       type: 'heading',

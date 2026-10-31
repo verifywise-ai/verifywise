@@ -931,5 +931,8 @@
   "Invalid subcontrol ID": "Ungültige Unterkontroll-ID",
   "Invalid annex category ID": "Ungültige Anhangskategorie-ID",
   "Invalid evidence hub ID": "Ungültige Nachweis-ID",
-  "Invalid model ID": "Ungültige Modell-ID"
+  "Invalid model ID": "Ungültige Modell-ID",
+  "This form has no risk classification step": "Dieses Formular hat keinen Schritt zur Risikoeinstufung",
+  "The response to the suggested risk level is invalid": "Die Antwort auf die vorgeschlagene Risikostufe ist ungültig",
+  "Explanations are paused for this form. Please try again later.": "Erklärungen sind für dieses Formular pausiert. Bitte versuchen Sie es später erneut."
 }

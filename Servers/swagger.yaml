@@ -7895,6 +7895,8 @@ tags:
   -
     name: 'v1: Change History'
   -
+    name: 'v1: Intake Forms'
+  -
     name: 'v1: Shadow AI'
 paths:
   /webhooks/github:
@@ -27207,6 +27209,86 @@ paths:
       tags:
         - 'v1: Change History'
       operationId: getAnnexCategoryChangeHistoryById
+      security:
+        -
+          bearerAuth: []
+  '/v1/intake-tier-suggestion/public/by-id/{publicId}':
+    post:
+      summary: 'Post Public Tier Suggestion'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Intake Forms'
+      operationId: postPublicTierSuggestion
+  '/v1/intake-tier-suggestion/public/by-id/{publicId}/explain':
+    post:
+      summary: 'Post Public Tier Explanation'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Intake Forms'
+      operationId: postPublicTierExplanation
+  '/v1/intake-tier-suggestion/public/by-id/{publicId}/submit':
+    post:
+      summary: 'Submit Public Form By Public Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Intake Forms'
+      operationId: v1_intake_tier_suggestion_submitPublicFormByPublicId
+  '/v1/intake-tier-suggestion/public/{tenantSlug}/{formSlug}':
+    post:
+      summary: 'Post Public Tier Suggestion'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Intake Forms'
+      operationId: v1_intake_tier_suggestion_postPublicTierSuggestion
+  '/v1/intake-tier-suggestion/public/{tenantSlug}/{formSlug}/explain':
+    post:
+      summary: 'Post Public Tier Explanation'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Intake Forms'
+      operationId: v1_intake_tier_suggestion_postPublicTierExplanation
+  '/v1/intake-tier-suggestion/public/{tenantSlug}/{formSlug}/submit':
+    post:
+      summary: 'Submit Public Form'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Intake Forms'
+      operationId: v1_intake_tier_suggestion_submitPublicForm
+  '/v1/intake-tier-suggestion/submissions/{id}':
+    get:
+      summary: 'Get Submission Tier Suggestion Response'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Intake Forms'
+      operationId: getSubmissionTierSuggestionResponse
       security:
         -
           bearerAuth: []

@@ -13,6 +13,19 @@ const repo = vi.hoisted(() => ({
   submitPublicForm: vi.fn(),
 }));
 vi.mock("../../../../application/repository/intakeForm.repository", () => repo);
+const tierRepo = vi.hoisted(() => ({
+  postTierSuggestion: vi.fn(),
+  postTierExplanation: vi.fn(),
+  submitPublicFormWithTierResponse: vi.fn(),
+}));
+vi.mock("../../../../application/repository/intakeTierSuggestion.repository", () => tierRepo);
+
+const SUGGESTION = {
+  questionnaireVersion: 2,
+  level: "High risk",
+  reasons: [{ article: "Annex III, point 4", text: "It ranks job candidates." }],
+  obligations: [{ article: "Article 26", text: "Deployers must monitor the system." }],
+};
 
 const QUESTIONNAIRE = {
   version: 2,
@@ -68,6 +81,10 @@ beforeEach(() => {
   vi.clearAllMocks();
   repo.getCaptcha.mockResolvedValue({ data: { question: "2 + 2", token: "t" } });
   repo.submitPublicFormById.mockResolvedValue({
+    data: { submissionId: 1, resubmissionToken: "r", message: "ok" },
+  });
+  tierRepo.postTierSuggestion.mockResolvedValue(SUGGESTION);
+  tierRepo.submitPublicFormWithTierResponse.mockResolvedValue({
     data: { submissionId: 1, resubmissionToken: "r", message: "ok" },
   });
 });
@@ -191,5 +208,86 @@ describe("PublicIntakeForm risk step", () => {
     await fillAndSubmit();
     await waitFor(() => expect(repo.submitPublicFormById).toHaveBeenCalled());
     expect(repo.submitPublicFormById.mock.calls[0][1]).not.toHaveProperty("euAiActRiskAnswers");
+  });
+});
+
+describe("PublicIntakeForm suggested risk level", () => {
+  const openForm = async (extra: object = {}) => {
+    repo.getPublicFormById.mockResolvedValue(
+      formResponse({ euAiActRiskStep: { questionnaire: QUESTIONNAIRE }, ...extra }),
+    );
+    renderPage();
+    fireEvent.click(await screen.findByLabelText("In scope"));
+    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+  };
+
+  it("shows the level and its references after the risk step", async () => {
+    await openForm();
+    expect(await screen.findByTestId("tier-suggestion-level")).toHaveTextContent("High risk");
+    expect(screen.getByText("(Annex III, point 4)")).toBeInTheDocument();
+    expect(tierRepo.postTierSuggestion).toHaveBeenCalledWith(
+      { publicId: "abc" },
+      { scope: "in_scope" },
+      expect.anything(),
+    );
+  });
+
+  it("submits as before when the applicant gives no response", async () => {
+    await openForm();
+    await screen.findByTestId("tier-suggestion");
+    await fillAndSubmit();
+    await waitFor(() => expect(repo.submitPublicFormById).toHaveBeenCalled());
+    expect(tierRepo.submitPublicFormWithTierResponse).not.toHaveBeenCalled();
+  });
+
+  it("submits an accepted suggestion through v1", async () => {
+    await openForm();
+    fireEvent.click(await screen.findByTestId("tier-accept"));
+    await fillAndSubmit();
+    await waitFor(() => expect(tierRepo.submitPublicFormWithTierResponse).toHaveBeenCalled());
+    const [ref, payload] = tierRepo.submitPublicFormWithTierResponse.mock.calls[0];
+    expect(ref).toEqual({ publicId: "abc" });
+    expect(payload.tierSuggestionResponse).toEqual({ accepted: true });
+    expect(payload.euAiActRiskAnswers).toEqual({ scope: "in_scope" });
+    expect(repo.submitPublicFormById).not.toHaveBeenCalled();
+  });
+
+  it("submits the applicant's context", async () => {
+    await openForm();
+    fireEvent.click(await screen.findByTestId("tier-add-context"));
+    fireEvent.change(screen.getByTestId("tier-context"), {
+      target: { value: "  We only rank internal staff.  " },
+    });
+    await fillAndSubmit();
+    await waitFor(() => expect(tierRepo.submitPublicFormWithTierResponse).toHaveBeenCalled());
+    expect(
+      tierRepo.submitPublicFormWithTierResponse.mock.calls[0][1].tierSuggestionResponse,
+    ).toEqual({ accepted: false, context: "We only rank internal staff." });
+  });
+
+  it("offers an AI explanation only when the form has AI, and only on request", async () => {
+    await openForm();
+    await screen.findByTestId("tier-suggestion");
+    expect(screen.queryByTestId("tier-explain")).toBeNull();
+    expect(tierRepo.postTierExplanation).not.toHaveBeenCalled();
+  });
+
+  it("explains on request when the form has AI", async () => {
+    tierRepo.postTierExplanation.mockResolvedValue("You said it ranks job candidates.");
+    await openForm({ liveChecks: { enabled: true, aiAvailable: true } });
+    await screen.findByTestId("tier-suggestion");
+    expect(tierRepo.postTierExplanation).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByTestId("tier-explain"));
+    expect(await screen.findByTestId("tier-explanation")).toHaveTextContent(
+      "You said it ranks job candidates.",
+    );
+  });
+
+  it("shows nothing when the suggestion can't be made", async () => {
+    tierRepo.postTierSuggestion.mockRejectedValue(new Error("down"));
+    await openForm();
+    await screen.findByRole("button", { name: "Submit" });
+    await waitFor(() => expect(screen.queryByTestId("tier-suggestion-loading")).toBeNull());
+    expect(screen.queryByTestId("tier-suggestion")).toBeNull();
   });
 });

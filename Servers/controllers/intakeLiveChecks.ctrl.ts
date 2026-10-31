@@ -45,6 +45,7 @@ const DATA_NOT_OBJECT_MESSAGE = "Form data must be an object";
 const BUDGET_MESSAGES: Record<FormBudgetEndpoint, string> = {
   checks: "AI checks are paused for this form. Please try again later.",
   prefill: "Reading documents is paused for this form. Please try again later.",
+  explain: "Explanations are paused for this form. Please try again later.",
 };
 
 const resolvedForm = (res: Response): ResolvedIntakeForm =>

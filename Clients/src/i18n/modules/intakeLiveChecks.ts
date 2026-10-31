@@ -106,6 +106,23 @@ export const de: Record<string, string> = {
   "This answer may describe decisions made without human review. Under GDPR, people have the right not to be subject to a decision based solely on automated processing that significantly affects them.":
     "Diese Antwort beschreibt möglicherweise Entscheidungen ohne menschliche Prüfung. Nach der DSGVO haben Personen das Recht, keiner ausschließlich auf automatisierter Verarbeitung beruhenden Entscheidung unterworfen zu werden, die sie erheblich beeinträchtigt.",
   "GDPR, Article 22": "DSGVO, Artikel 22",
+  // Suggested risk level (#5190)
+  "Suggested risk level from your answers": "Vorgeschlagene Risikostufe anhand Ihrer Antworten",
+  "Working out the suggested risk level": "Vorgeschlagene Risikostufe wird ermittelt",
+  "Why this matters": "Warum das wichtig ist",
+  "Explain in plain words": "In einfachen Worten erklären",
+  "Explaining": "Wird erklärt",
+  "Sends your risk answers to AI.": "Sendet Ihre Risikoantworten an die KI.",
+  "An explanation isn't available right now. The reasons above still apply.":
+    "Eine Erklärung ist gerade nicht verfügbar. Die obigen Gründe gelten weiterhin.",
+  "Add context": "Kontext hinzufügen",
+  "What should the reviewer know?": "Was sollte der Prüfer wissen?",
+  "The governance team makes the final call.":
+    "Das Governance-Team trifft die endgültige Entscheidung.",
+  "Applicant's response to the suggested level":
+    "Antwort des Antragstellers auf die vorgeschlagene Stufe",
+  "Accepted the suggestion": "Vorschlag angenommen",
+  "Added context": "Kontext hinzugefügt",
 };
 
 export const fr: Record<string, string> = {
@@ -212,6 +229,21 @@ export const fr: Record<string, string> = {
   "This answer may describe decisions made without human review. Under GDPR, people have the right not to be subject to a decision based solely on automated processing that significantly affects them.":
     "Cette réponse peut décrire des décisions prises sans examen humain. Selon le RGPD, les personnes ont le droit de ne pas faire l'objet d'une décision fondée exclusivement sur un traitement automatisé qui les affecte de manière significative.",
   "GDPR, Article 22": "RGPD, article 22",
+  // Suggested risk level (#5190)
+  "Suggested risk level from your answers": "Niveau de risque proposé d'après vos réponses",
+  "Working out the suggested risk level": "Calcul du niveau de risque proposé",
+  "Why this matters": "Pourquoi c'est important",
+  "Explain in plain words": "Expliquer simplement",
+  "Explaining": "Explication en cours",
+  "Sends your risk answers to AI.": "Envoie vos réponses sur les risques à l'IA.",
+  "An explanation isn't available right now. The reasons above still apply.":
+    "Aucune explication n'est disponible pour le moment. Les raisons ci-dessus restent valables.",
+  "Add context": "Ajouter du contexte",
+  "What should the reviewer know?": "Que doit savoir le réviseur ?",
+  "The governance team makes the final call.": "L'équipe de gouvernance prend la décision finale.",
+  "Applicant's response to the suggested level": "Réponse du demandeur au niveau proposé",
+  "Accepted the suggestion": "Proposition acceptée",
+  "Added context": "Contexte ajouté",
 };
 
 export const es: Record<string, string> = {
@@ -317,4 +349,19 @@ export const es: Record<string, string> = {
   "This answer may describe decisions made without human review. Under GDPR, people have the right not to be subject to a decision based solely on automated processing that significantly affects them.":
     "Esta respuesta puede describir decisiones tomadas sin revisión humana. Según el RGPD, las personas tienen derecho a no ser objeto de una decisión basada únicamente en un tratamiento automatizado que les afecte de forma significativa.",
   "GDPR, Article 22": "RGPD, artículo 22",
+  // Suggested risk level (#5190)
+  "Suggested risk level from your answers": "Nivel de riesgo sugerido según sus respuestas",
+  "Working out the suggested risk level": "Calculando el nivel de riesgo sugerido",
+  "Why this matters": "Por qué es importante",
+  "Explain in plain words": "Explicar con palabras sencillas",
+  "Explaining": "Explicando",
+  "Sends your risk answers to AI.": "Envía sus respuestas sobre riesgos a la IA.",
+  "An explanation isn't available right now. The reasons above still apply.":
+    "No hay una explicación disponible ahora. Los motivos anteriores siguen siendo válidos.",
+  "Add context": "Añadir contexto",
+  "What should the reviewer know?": "¿Qué debe saber el revisor?",
+  "The governance team makes the final call.": "El equipo de gobernanza toma la decisión final.",
+  "Applicant's response to the suggested level": "Respuesta del solicitante al nivel sugerido",
+  "Accepted the suggestion": "Sugerencia aceptada",
+  "Added context": "Contexto añadido",
 };
