@@ -16,6 +16,12 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 import boto3
 import httpx
 import pytest
+from botocore.exceptions import (
+    ConnectTimeoutError,
+    EndpointConnectionError,
+    InvalidRegionError,
+    NoRegionError,
+)
 from botocore.stub import Stubber
 
 from services import mcp_token_service as svc
@@ -143,13 +149,86 @@ class TestOAuth:
         assert len(ep.requests) == 2
 
     async def test_concurrent_cold_calls_fetch_once(self):
-        ep = Endpoint()
+        calls = []
+
+        async def slow(request):
+            calls.append(request)
+            await asyncio.sleep(0.05)
+            return httpx.Response(200, json={"access_token": "tok", "expires_in": 3600})
+
         cfg = oauth_cfg()
         tokens = await asyncio.gather(
-            *[svc.get_access_token("oauth", cfg, transport=ep.transport) for _ in range(10)]
+            *[svc.get_access_token("oauth", cfg, transport=httpx.MockTransport(slow)) for _ in range(10)]
         )
         assert tokens == ["tok"] * 10
+        assert len(calls) == 1
+
+    async def test_failed_fetch_recovers(self):
+        cfg = oauth_cfg()
+        failing = Endpoint(httpx.Response(500))
+        with pytest.raises(TokenError):
+            await svc.get_access_token("oauth", cfg, transport=failing.transport)
+        assert svc._cache == {}
+        assert await svc.get_access_token("oauth", cfg, transport=Endpoint().transport) == "tok"
+
+    async def test_failed_leader_with_waiters_recovers(self):
+        calls = []
+
+        async def failing(request):
+            calls.append(request)
+            await asyncio.sleep(0.05)
+            return httpx.Response(500)
+
+        cfg = oauth_cfg()
+        results = await asyncio.gather(
+            *[svc.get_access_token("oauth", cfg, transport=httpx.MockTransport(failing)) for _ in range(5)],
+            return_exceptions=True,
+        )
+        assert all(isinstance(r, TokenError) for r in results)
+        assert svc._cache == {}
+        ok = await asyncio.wait_for(
+            svc.get_access_token("oauth", cfg, transport=Endpoint().transport), timeout=2
+        )
+        assert ok == "tok"
+
+    @pytest.mark.parametrize("expires_in, cached", [("30", False), ("3600", True), (3600.0, True)])
+    async def test_expires_in_string_is_parsed(self, expires_in, cached):
+        ep = Endpoint(httpx.Response(200, json={"access_token": "tok", "expires_in": expires_in}))
+        cfg = oauth_cfg()
+        await svc.get_access_token("oauth", cfg, transport=ep.transport)
+        await svc.get_access_token("oauth", cfg, transport=ep.transport)
+        assert len(ep.requests) == (1 if cached else 2)
+
+    @pytest.mark.parametrize("expires_in", ["soon", "nan", "inf", None, True])
+    async def test_unusable_expires_in_defaults_to_an_hour(self, expires_in):
+        ep = Endpoint(httpx.Response(200, json={"access_token": "tok", "expires_in": expires_in}))
+        cfg = oauth_cfg()
+        await svc.get_access_token("oauth", cfg, transport=ep.transport)
+        await svc.get_access_token("oauth", cfg, transport=ep.transport)
         assert len(ep.requests) == 1
+
+    async def test_unreadable_stored_secret(self):
+        cfg = oauth_cfg()
+        cfg["client_secret_enc"] = "garbage"
+        ep = Endpoint()
+        with pytest.raises(TokenError) as caught:
+            await svc.get_access_token("oauth", cfg, transport=ep.transport)
+        assert str(caught.value) == "The stored credentials can't be read. Enter them again."
+        assert ep.requests == []
+
+    async def test_unreadable_stored_aws_secret(self):
+        cfg = aws_cfg()
+        cfg["secret_access_key_enc"] = "aa:bb:cc"
+        with pytest.raises(TokenError, match="can't be read"):
+            await svc.get_access_token("aws_iam", cfg)
+
+    async def test_non_latin1_credentials_are_sent_as_utf8(self):
+        # httpx 0.28 encodes Basic credentials as UTF-8, so this never raises.
+        cfg = oauth_cfg(client_secret="s\u00e9cret\u2603")
+        ep = Endpoint()
+        assert await svc.get_access_token("oauth", cfg, transport=ep.transport) == "tok"
+        expected = base64.b64encode("app:s\u00e9cret\u2603".encode("utf-8")).decode()
+        assert ep.requests[0].headers["Authorization"] == f"Basic {expected}"
 
     @pytest.mark.parametrize(
         "response",
@@ -283,16 +362,39 @@ class TestAws:
         assert str(caught.value) == message
         assert "awssecret" not in str(caught.value)
 
-    async def test_connection_error(self, monkeypatch):
-        from botocore.exceptions import EndpointConnectionError
+    async def test_concurrent_cold_calls_fetch_once(self, monkeypatch):
+        calls = []
 
+        class Slow:
+            def create_oauth2_token_with_iam(self, **_):
+                calls.append(1)
+                time.sleep(0.05)
+                return {"accessToken": "tok", "tokenType": "Bearer", "expiresIn": 3600}
+
+        monkeypatch.setattr(svc, "_aws_client_factory", lambda *a: Slow())
+        cfg = aws_cfg()
+        tokens = await asyncio.gather(*[svc.get_access_token("aws_iam", cfg) for _ in range(10)])
+        assert tokens == ["tok"] * 10
+        assert len(calls) == 1
+
+    @pytest.mark.parametrize(
+        "error, message",
+        [
+            (EndpointConnectionError(endpoint_url="https://x"), "Could not connect to AWS Sign-In"),
+            (ConnectTimeoutError(endpoint_url="https://x"), "Could not connect to AWS Sign-In"),
+            (NoRegionError(), "AWS Sign-In rejected the request settings (check the region)"),
+            (InvalidRegionError(region_name="x y"), "AWS Sign-In rejected the request settings (check the region)"),
+        ],
+    )
+    async def test_botocore_error_mapping(self, monkeypatch, error, message):
         class Broken:
             def create_oauth2_token_with_iam(self, **_):
-                raise EndpointConnectionError(endpoint_url="https://x")
+                raise error
 
         monkeypatch.setattr(svc, "_aws_client_factory", lambda *a: Broken())
-        with pytest.raises(TokenError, match="Could not connect to AWS Sign-In"):
+        with pytest.raises(TokenError) as caught:
             await svc.get_access_token("aws_iam", aws_cfg())
+        assert str(caught.value) == message
 
     async def test_missing_access_token(self, monkeypatch):
         class Empty:

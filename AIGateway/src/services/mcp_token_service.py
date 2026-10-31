@@ -11,6 +11,7 @@ fetch. Every ``TokenError`` message is admin-readable and free of secrets.
 
 import asyncio
 import logging
+import math
 import re
 import time
 from typing import Optional
@@ -18,7 +19,13 @@ from typing import Optional
 import boto3
 import httpx
 from botocore.config import Config
-from botocore.exceptions import BotoCoreError, ClientError, EndpointConnectionError
+from botocore.exceptions import (
+    BotoCoreError,
+    ClientError,
+    ConnectTimeoutError,
+    EndpointConnectionError,
+    ReadTimeoutError,
+)
 
 from utils.mcp_credentials import (
     DEFAULT_AWS_MCP_RESOURCE,
@@ -67,9 +74,21 @@ def _cached(key: str) -> Optional[str]:
 
 
 def _expires_in(value) -> float:
-    if isinstance(value, bool) or not isinstance(value, (int, float)):
+    """Seconds until expiry; a missing or unusable value counts as an hour."""
+    if isinstance(value, bool):
         return DEFAULT_EXPIRES_IN
-    return float(value)
+    try:
+        seconds = float(value)
+    except (TypeError, ValueError):
+        return DEFAULT_EXPIRES_IN
+    return seconds if math.isfinite(seconds) else DEFAULT_EXPIRES_IN
+
+
+def _stored_secret(auth_type: str, cfg: dict) -> str:
+    try:
+        return token_secret(auth_type, cfg)
+    except Exception:
+        raise _fail("The stored credentials can't be read. Enter them again.") from None
 
 
 def _fail(message: str) -> TokenError:
@@ -119,7 +138,7 @@ async def _fetch_oauth(cfg: dict, transport) -> tuple[str, float]:
         if cfg.get(optional):
             form[optional] = cfg[optional]
     auth = None
-    client_id, secret = cfg.get("client_id", ""), token_secret("oauth", cfg)
+    client_id, secret = cfg.get("client_id", ""), _stored_secret("oauth", cfg)
     if cfg.get("auth_method") == "client_secret_post":
         form.update(client_id=client_id, client_secret=secret)
     else:
@@ -177,10 +196,9 @@ def _aws_client_factory(region: str, access_key_id: str, secret_access_key: str)
 
 
 async def _fetch_aws(cfg: dict) -> tuple[str, float]:
-    client = _aws_client_factory(
-        cfg.get("region", ""), cfg.get("access_key_id", ""), token_secret("aws_iam", cfg)
-    )
+    secret = _stored_secret("aws_iam", cfg)
     try:
+        client = _aws_client_factory(cfg.get("region", ""), cfg.get("access_key_id", ""), secret)
         result = await asyncio.to_thread(
             client.create_oauth2_token_with_iam,
             grantType="client_credentials",
@@ -188,8 +206,10 @@ async def _fetch_aws(cfg: dict) -> tuple[str, float]:
         )
     except ClientError as exc:
         raise _fail(_aws_error_message(exc)) from None
-    except (EndpointConnectionError, BotoCoreError):
+    except (EndpointConnectionError, ConnectTimeoutError, ReadTimeoutError):
         raise _fail("Could not connect to AWS Sign-In") from None
+    except BotoCoreError:
+        raise _fail("AWS Sign-In rejected the request settings (check the region)") from None
     access_token = result.get("accessToken")
     if not isinstance(access_token, str) or not access_token:
         raise _fail("AWS Sign-In did not return an access token")
