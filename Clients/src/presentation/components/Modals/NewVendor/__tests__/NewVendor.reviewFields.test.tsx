@@ -4,7 +4,7 @@
  * refuses, and shows no review date it does not have. A save that fails keeps what the person
  * typed.
  */
-import { screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { Dayjs } from "dayjs";
 import { vi } from "vitest";
@@ -88,6 +88,15 @@ const save = () => userEvent.click(screen.getByRole("button", { name: /^save$/i 
 const saved = () => updateVendor.mock.calls[0][0].data;
 const vendorName = () => screen.getByLabelText(/^vendor name/i);
 
+/**
+ * Sets a text field in one change, as a paste does. The text of a field that the test does not
+ * check goes in this way: typing it key by key re-renders the whole modal for every character,
+ * which is most of what these tests cost and what made them slow on a loaded machine. userEvent
+ * stays for the fields and the keystrokes the test is about.
+ */
+const setText = (label: RegExp, value: string) =>
+  fireEvent.change(screen.getByLabelText(label), { target: { value } });
+
 /** Opens the select with this label and picks the option. */
 async function choose(label: string, option: string) {
   const wrapper = screen.getAllByText(label)[0].closest(".select-wrapper") as HTMLElement;
@@ -155,16 +164,13 @@ describe("NewVendor: the review fields", () => {
     createVendor.mockRejectedValue(new Error(SERVER_ERROR));
     open();
 
-    await userEvent.type(vendorName(), "Pellmark Analytics Ltd");
+    setText(/^vendor name/i, "Pellmark Analytics Ltd");
     await userEvent.click(screen.getByPlaceholderText("Select use cases"));
     await userEvent.click(await screen.findByRole("option", { name: "Support bot" }));
-    await userEvent.type(screen.getByLabelText(/^website/i), "pellmarkanalytics.example");
-    await userEvent.type(screen.getByLabelText(/^vendor contact person/i), "Jane Doe");
+    setText(/^website/i, "pellmarkanalytics.example");
+    setText(/^vendor contact person/i, "Jane Doe");
     await choose("Assignee", "Ann Lee");
-    await userEvent.type(
-      screen.getByLabelText(/^what does the vendor provide/i),
-      "Supply chain analytics",
-    );
+    setText(/^what does the vendor provide/i, "Supply chain analytics");
     await save();
 
     expect(await screen.findByText(new RegExp(SERVER_ERROR))).toBeInTheDocument();

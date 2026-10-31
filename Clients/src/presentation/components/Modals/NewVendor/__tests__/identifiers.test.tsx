@@ -4,7 +4,7 @@
  * the server checks it, and is saved in the form the server stores it; an empty field saves null,
  * which clears it.
  */
-import { screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterAll, vi } from "vitest";
 
@@ -86,6 +86,15 @@ const group = (name = "Identifiers") => screen.getByRole("group", { name });
 const field = (name: RegExp) => within(group()).getByLabelText(name);
 const save = () => userEvent.click(screen.getByRole("button", { name: /^save$/i }));
 const saved = () => updateVendor.mock.calls[0][0].data;
+
+/**
+ * Sets a text field in one change, as a paste does. The text of a field that the test does not
+ * check goes in this way: typing it key by key re-renders the whole modal for every character,
+ * which is most of what these tests cost and what made them slow on a loaded machine. userEvent
+ * stays for the fields and the keystrokes the test is about.
+ */
+const setText = (label: RegExp, value: string) =>
+  fireEvent.change(screen.getByLabelText(label), { target: { value } });
 
 /** Opens the select with this label and picks the option. */
 async function choose(label: string, option: string) {
@@ -234,16 +243,14 @@ describe("NewVendor: the identifiers of the vendor", () => {
   it("a new vendor is saved with its identifiers, and null for those left empty", async () => {
     renderWithProviders(<AddNewVendor isOpen={true} setIsOpen={vi.fn()} onSuccess={vi.fn()} />);
 
-    await userEvent.type(screen.getByLabelText(/^vendor name/i), "Pellmark Analytics Ltd");
+    setText(/^vendor name/i, "Pellmark Analytics Ltd");
     await userEvent.click(screen.getByPlaceholderText("Select use cases"));
     await userEvent.click(await screen.findByRole("option", { name: "Support bot" }));
-    await userEvent.type(screen.getByLabelText(/^website/i), "pellmarkanalytics.example");
-    await userEvent.type(screen.getByLabelText(/^vendor contact person/i), "Jane Doe");
+    setText(/^website/i, "pellmarkanalytics.example");
+    setText(/^vendor contact person/i, "Jane Doe");
     await choose("Assignee", "Ann Lee");
-    await userEvent.type(
-      screen.getByLabelText(/^what does the vendor provide/i),
-      "Supply chain analytics",
-    );
+    setText(/^what does the vendor provide/i, "Supply chain analytics");
+    // The identifiers are what the test is about: their normalisation is typed in.
     await userEvent.type(field(/^country/i), "gb");
     await userEvent.type(field(/^registration number/i), "09876543");
     await save();
