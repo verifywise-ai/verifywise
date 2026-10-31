@@ -20,6 +20,7 @@ import modelLifecycleChangeHistoryRoutes from "./modelLifecycleChangeHistory.rou
 import controlEUChangeHistoryRoutes from "./controlEUChangeHistory.route";
 import subcontrolEUChangeHistoryRoutes from "./subcontrolEUChangeHistory.route";
 import annexCategoryChangeHistoryRoutes from "./annexCategoryChangeHistory.route";
+import useCaseOrgSettingsRoutes from "./useCaseOrgSettings.route";
 
 const router = express.Router();
 
@@ -34,5 +35,8 @@ router.use("/model-lifecycle-change-history", modelLifecycleChangeHistoryRoutes)
 router.use("/control-eu-change-history", controlEUChangeHistoryRoutes);
 router.use("/subcontrol-eu-change-history", subcontrolEUChangeHistoryRoutes);
 router.use("/annex-category-change-history", annexCategoryChangeHistoryRoutes);
+
+// Defaults a new use case starts with (#5192).
+router.use("/use-case-org-settings", useCaseOrgSettingsRoutes);
 
 export default router;

@@ -931,5 +931,9 @@
   "Invalid subcontrol ID": "Ungültige Unterkontroll-ID",
   "Invalid annex category ID": "Ungültige Anhangskategorie-ID",
   "Invalid evidence hub ID": "Ungültige Nachweis-ID",
-  "Invalid model ID": "Ungültige Modell-ID"
+  "Invalid model ID": "Ungültige Modell-ID",
+  "No settings provided": "Keine Einstellungen angegeben",
+  "Invalid region": "Ungültige Region",
+  "Default frameworks must be a list of framework ids": "Standard-Frameworks müssen eine Liste von Framework-IDs sein",
+  "Only frameworks that apply to a single use case can be defaults": "Nur Frameworks, die für einen einzelnen Anwendungsfall gelten, können Standard sein"
 }
