@@ -39,12 +39,13 @@ interface PairRow {
   source: string;
   score: number;
   reasons: { signal: string; weight: number; detail?: string }[];
+  last_computed_at: string | null;
 }
 
 const pairs = async (orgId: number): Promise<PairRow[]> =>
   (await sequelize.query(
     `SELECT id, source_risk_id, source_vendor_risk_id, target_vendor_risk_id, relation_type,
-            status, source, score::float AS score, reasons
+            status, source, score::float AS score, reasons, last_computed_at
        FROM risk_links
       WHERE organization_id = :orgId AND source_vendor_risk_id IS NOT NULL
       ORDER BY id`,
@@ -290,9 +291,13 @@ describe("recomputeVendorRiskLinks against Postgres", () => {
   });
 
   // A pair a person drew by hand has no score and no reasons of its own, so
-  // recompute must not write the machine's onto it: the upsert refreshes a
-  // derived row only.
-  it("leaves a pair a person drew by hand alone, even when the wording matches", async () => {
+  // recompute must not write the machine's onto it. Two guards keep it out, and
+  // each recompute reaches one of them: the upsert refreshes a derived row only
+  // (reached while the wording matches, because the scorer then keeps the
+  // pair), and the ownership query never returns a user pair (reached once the
+  // wording has drifted apart, because the rescore loop only visits pairs that
+  // are no longer keepers).
+  it("leaves a pair a person drew by hand alone, with the wording matching or drifted apart", async () => {
     const { owner } = await seedTwoTenantContexts();
     const { a, b } = await twoVendorsAlike(owner.orgId, owner.userId);
     await createUserVendorRiskLinkQuery({
@@ -302,11 +307,24 @@ describe("recomputeVendorRiskLinks against Postgres", () => {
       userId: owner.userId,
     });
 
+    // The wording matches, so the scorer wants the pair: the upsert must not take the row over.
+    await recomputeVendorRiskLinks(owner.orgId, a);
+    // The wording drifts apart: neither the rescore nor the prune may reach the row.
+    await sequelize.query(
+      `UPDATE vendorrisks SET risk_description = 'Quarterly invoice disputes' WHERE id = :a`,
+      { replacements: { a } },
+    );
     await recomputeVendorRiskLinks(owner.orgId, a);
 
     const rows = await pairs(owner.orgId);
     expect(rows).toHaveLength(1);
-    expect(rows[0]).toMatchObject({ status: "confirmed", source: "user", score: 0, reasons: [] });
+    expect(rows[0]).toMatchObject({
+      status: "confirmed",
+      source: "user",
+      score: 0,
+      reasons: [],
+      last_computed_at: null, // recompute never wrote it
+    });
   });
 
   it("ignores a soft-deleted vendor risk, and another organization's", async () => {
