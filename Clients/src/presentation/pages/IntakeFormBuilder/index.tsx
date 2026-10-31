@@ -75,6 +75,7 @@ import Select from "../../components/Inputs/Select";
 import Checkbox from "../../components/Inputs/Checkbox";
 import EuAiActStepToggle from "./EuAiActStepToggle";
 import LiveChecksToggle from "./LiveChecksToggle";
+import ReviewTimeField, { getReviewDaysError } from "./ReviewTimeField";
 import Chip from "../../components/Chip";
 import { PageBreadcrumbs } from "../../components/breadcrumbs/PageBreadcrumbs";
 
@@ -450,6 +451,14 @@ export function IntakeFormBuilder() {
       });
       return null;
     }
+    if (getReviewDaysError(form.reviewDays)) {
+      setSnackbar({
+        open: true,
+        message: "Fix the review time before saving",
+        severity: "error",
+      });
+      return null;
+    }
     // A draft may be saved with unfinished logic; a live form may not.
     const isLive = form.status === IntakeFormStatus.ACTIVE;
     if (logicErrors.length > 0 && isLive) {
@@ -527,6 +536,14 @@ export function IntakeFormBuilder() {
       setSnackbar({
         open: true,
         message: "Fix the reviewer assignment settings before publishing",
+        severity: "error",
+      });
+      return;
+    }
+    if (getReviewDaysError(form.reviewDays)) {
+      setSnackbar({
+        open: true,
+        message: "Fix the review time before publishing",
         severity: "error",
       });
       return;
@@ -1318,6 +1335,11 @@ export function IntakeFormBuilder() {
                             Submission responses will be emailed to selected recipients
                           </Typography>
                         </Box>
+
+                        <ReviewTimeField
+                          value={form.reviewDays}
+                          onChange={(reviewDays) => updateForm({ reviewDays })}
+                        />
 
                         <RoutingSettingsSection
                           value={form.routing ?? null}

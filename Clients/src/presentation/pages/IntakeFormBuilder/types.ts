@@ -185,6 +185,8 @@ export interface IntakeForm {
   liveChecksEnabled?: boolean;
   designSettings?: FormDesignSettings | null;
   routing?: FormRouting | null;
+  /** Agreed review time in business days (1–30), named in the submitter's confirmation email. */
+  reviewDays?: number;
   createdBy?: number;
   createdAt?: Date;
   updatedAt?: Date;
@@ -210,6 +212,7 @@ export interface CreateIntakeFormInput {
   liveChecksEnabled?: boolean;
   designSettings?: FormDesignSettings | null;
   routing?: FormRouting | null;
+  reviewDays?: number;
 }
 
 /**
@@ -231,6 +234,7 @@ export interface UpdateIntakeFormInput {
   liveChecksEnabled?: boolean;
   designSettings?: FormDesignSettings | null;
   routing?: FormRouting | null;
+  reviewDays?: number;
 }
 
 /**
@@ -885,6 +889,7 @@ export function createEmptyForm(entityType?: IntakeEntityType): IntakeForm {
     // old risk level and role questions of the template.
     euAiActRiskStepEnabled: type === IntakeEntityType.USE_CASE,
     liveChecksEnabled: true,
+    reviewDays: 3,
     designSettings: { ...DEFAULT_DESIGN_SETTINGS },
   };
 }

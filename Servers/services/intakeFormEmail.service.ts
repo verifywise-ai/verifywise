@@ -82,8 +82,16 @@ function buildResubmitLink(
   return buildFrontendUrl(`/intake-forms`);
 }
 
+/** The "who reviews and by when" block, escaped; empty without a sentence. */
+export function renderReviewHtml(reviewText: string | undefined): string {
+  if (!reviewText) return "";
+  return `<div class="box box-primary"><p class="box-subtitle">${escapeHtml(reviewText)}</p></div>`;
+}
+
 /**
- * Send confirmation email to submitter after form submission
+ * Send confirmation email to submitter after form submission. `reviewText`
+ * (already worded, see intakeConfirmation/reviewTime.ts) names who reviews
+ * the submission and by when.
  */
 export async function sendSubmissionReceivedEmail(
   submitterEmail: string,
@@ -95,6 +103,7 @@ export async function sendSubmissionReceivedEmail(
   tenantSlug?: string,
   formSlug?: string,
   lang?: string,
+  reviewText?: string,
 ): Promise<void> {
   try {
     const resubmitLink = buildResubmitLink(resubmissionToken, publicId, tenantSlug, formSlug);
@@ -109,6 +118,7 @@ export async function sendSubmissionReceivedEmail(
         formName,
         submissionId: String(submissionId),
         resubmitLink,
+        reviewHtml: renderReviewHtml(reviewText),
       },
     );
 

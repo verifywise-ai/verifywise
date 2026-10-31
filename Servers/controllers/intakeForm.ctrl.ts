@@ -74,13 +74,17 @@ import { sanitizeUserHtml } from "../utils/sanitization.utils";
 import logger from "../utils/logger/fileLogger";
 import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper";
 import {
-  sendSubmissionReceivedEmail,
   sendNewSubmissionAdminNotification,
   sendSubmissionApprovedEmail,
   sendSubmissionRejectedEmail,
   sendSecondReviewRequestEmail,
 } from "../services/intakeFormEmail.service";
 import { enqueueIntakeAssessment } from "../services/intakeScoring/enqueue";
+import {
+  reviewDueDateFor,
+  trySendSubmitterConfirmation,
+} from "../services/intakeConfirmation/confirmation";
+import { parseReviewDays } from "../services/intakeConfirmation/reviewTime";
 import { notificationAudience } from "../services/intakeScoring/assessmentJob";
 import { cleanSubmission, isEmptyAnswer, parseFormula } from "../services/intakeFormLogic";
 import { generateSuggestedQuestions, generateFieldGuidance } from "../services/intakeLLM.service";
@@ -145,6 +149,9 @@ import type {
 import { createSignedToken, verifySignedToken } from "../utils/signedToken.utils";
 import { formAiAvailable } from "../services/intakeLiveChecks/availability";
 import { recordSubmitLiveChecks } from "../services/intakeLiveChecks/submit";
+
+const REVIEW_DAYS_ERROR = "Review time must be a whole number of business days from 1 to 30";
+
 /** Safely extract a single string from req.params (which may be string | string[]). */
 const paramStr = (val: string | string[]): string => (Array.isArray(val) ? val[0] : val);
 
@@ -345,6 +352,8 @@ function startIntakeAssessment(params: {
       `Could not queue the assessment for submission ${submissionId}; emailing reviewers now:`,
       error,
     );
+    // No job will route it, so the submitter is told now: the governance team.
+    await trySendSubmitterConfirmation(organizationId, submissionId, lang, { fallback: true });
     try {
       // Same audience as the job's email: recipients plus the lane reviewers
       // (no lane is stored yet, so both lanes while routing is on). If that
@@ -1048,6 +1057,7 @@ export async function createIntakeForm(req: Request, res: Response) {
       euAiActRiskStepEnabled,
       liveChecksEnabled,
       designSettings,
+      reviewDays,
     } = req.body;
 
     if (!name || !entityType) {
@@ -1063,6 +1073,11 @@ export async function createIntakeForm(req: Request, res: Response) {
     if (status && !Object.values(IntakeFormStatus).includes(status)) {
       await transaction.rollback();
       return res.status(400).json(STATUS_CODE[400](req.t!("Invalid form status")));
+    }
+
+    if (reviewDays != null && parseReviewDays(reviewDays) === null) {
+      await transaction.rollback();
+      return res.status(400).json(STATUS_CODE[400](req.t!(REVIEW_DAYS_ERROR)));
     }
 
     // The rendered intake form is built entirely from this schema, so a field
@@ -1135,6 +1150,7 @@ export async function createIntakeForm(req: Request, res: Response) {
         liveChecksEnabled: liveChecksEnabled == null ? true : Boolean(liveChecksEnabled),
         designSettings,
         routing: routing.value,
+        reviewDays: reviewDays == null ? undefined : reviewDays,
         createdBy: req.userId!,
       },
       req.organizationId!,
@@ -1216,11 +1232,17 @@ export async function updateIntakeForm(req: Request, res: Response) {
       euAiActRiskStepEnabled,
       liveChecksEnabled,
       designSettings,
+      reviewDays,
     } = req.body;
 
     if (status && !Object.values(IntakeFormStatus).includes(status)) {
       await transaction.rollback();
       return res.status(400).json(STATUS_CODE[400](req.t!("Invalid form status")));
+    }
+
+    if (reviewDays != null && parseReviewDays(reviewDays) === null) {
+      await transaction.rollback();
+      return res.status(400).json(STATUS_CODE[400](req.t!(REVIEW_DAYS_ERROR)));
     }
 
     if (entityType && !Object.values(IntakeEntityType).includes(entityType)) {
@@ -1305,6 +1327,7 @@ export async function updateIntakeForm(req: Request, res: Response) {
         liveChecksEnabled: liveChecksEnabled == null ? undefined : Boolean(liveChecksEnabled),
         designSettings,
         routing: routing.value,
+        reviewDays: reviewDays == null ? undefined : reviewDays,
       },
       req.organizationId!,
       transaction,
@@ -1779,7 +1802,11 @@ export async function getSubmissionPreview(req: Request, res: Response) {
           entityType: form.entityType,
           schema: form.schema,
           riskTierSystem: form.riskTierSystem,
+          reviewDays: form.reviewDays,
         },
+        // When the agreed review time runs out ("YYYY-MM-DD"), for "time in
+        // review" against it; null for submissions made before it was stored.
+        reviewDueDate: submission.reviewDueDate ?? null,
         riskAssessment: submission.riskAssessment,
         riskTier: submission.riskTier,
         riskOverride: submission.riskOverride,
@@ -3211,6 +3238,7 @@ export async function submitPublicFormByPublicId(req: Request, res: Response) {
           entityType: form.entityType,
           originalSubmissionId,
           ipAddress: clientIp,
+          reviewDueDate: reviewDueDateFor(new Date(), fullFormForValidation?.reviewDays),
         },
         tenantInfo.orgId,
         transaction,
@@ -3240,20 +3268,12 @@ export async function submitPublicFormByPublicId(req: Request, res: Response) {
 
       const submissionName = resolvedName || "Anonymous";
 
-      // Send confirmation email to submitter (only if email present)
-      if (resolvedEmail) {
-        sendSubmissionReceivedEmail(
-          resolvedEmail,
-          submissionName,
-          form.name,
-          submission.id,
-          newResubmissionToken || "",
-          publicId,
-          undefined,
-          undefined,
-          req.lang,
-        ).catch((err) => logger.error("Failed to send submission received email:", err));
-      }
+      // The submitter's confirmation names the reviewers, so with routing on
+      // it waits for the lane (the assessment job or its 2-minute cap sends
+      // it); with nothing to wait for it goes now.
+      void trySendSubmitterConfirmation(tenantInfo.orgId, submission.id!, req.lang, {
+        fallback: false,
+      });
 
       // Get full form with recipients to send notifications
       const fullForm = await getIntakeFormByIdQuery(form.id, tenantInfo.orgId);
@@ -3565,6 +3585,7 @@ export async function submitPublicForm(req: Request, res: Response) {
           entityType: form.entityType,
           originalSubmissionId,
           ipAddress: clientIp,
+          reviewDueDate: reviewDueDateFor(new Date(), fullFormForValidation?.reviewDays),
         },
         tenantInfo.id,
         transaction,
@@ -3589,23 +3610,12 @@ export async function submitPublicForm(req: Request, res: Response) {
 
       const submissionName = resolvedName || "Anonymous";
 
-      // Use publicId for emails if available
-      const formPublicId = form.publicId;
-
-      // Send confirmation email to submitter (only if email present)
-      if (resolvedEmail) {
-        sendSubmissionReceivedEmail(
-          resolvedEmail,
-          submissionName,
-          form.name,
-          submission.id,
-          newResubmissionToken || "",
-          formPublicId || "",
-          tenantSlug,
-          formSlug,
-          req.lang,
-        ).catch((err) => logger.error("Failed to send submission received email:", err));
-      }
+      // The submitter's confirmation names the reviewers, so with routing on
+      // it waits for the lane (the assessment job or its 2-minute cap sends
+      // it); with nothing to wait for it goes now.
+      void trySendSubmitterConfirmation(tenantInfo.id, submission.id!, req.lang, {
+        fallback: false,
+      });
 
       // Use per-form recipients; this route falls back to org admins without them
       const fullForm = await getIntakeFormByIdQuery(form.id, tenantInfo.id);

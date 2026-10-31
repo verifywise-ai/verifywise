@@ -233,6 +233,13 @@ export const translations: Record<string, Record<string, string>> = {
       "Korrigieren Sie die Einstellungen der Prüferzuweisung vor dem Speichern",
     "Fix the reviewer assignment settings before publishing":
       "Korrigieren Sie die Einstellungen der Prüferzuweisung vor dem Veröffentlichen",
+    "Review time (business days)": "Prüfdauer (Werktage)",
+    "Sets the due date named in the confirmation email to the submitter":
+      "Legt das Fälligkeitsdatum in der Bestätigungs-E-Mail an den Einreichenden fest",
+    "Use a whole number from 1 to 30": "Verwenden Sie eine ganze Zahl von 1 bis 30",
+    "Fix the review time before saving": "Korrigieren Sie die Prüfdauer vor dem Speichern",
+    "Fix the review time before publishing":
+      "Korrigieren Sie die Prüfdauer vor dem Veröffentlichen",
     "No risk score was recorded for this submission.":
       "Für diese Einreichung wurde kein Risikowert erfasst.",
     "set to": "gesetzt auf",
@@ -9706,6 +9713,12 @@ export const translations: Record<string, Record<string, string>> = {
       "Corrigez les paramètres d'attribution des réviseurs avant d'enregistrer",
     "Fix the reviewer assignment settings before publishing":
       "Corrigez les paramètres d'attribution des réviseurs avant de publier",
+    "Review time (business days)": "Délai d'examen (jours ouvrés)",
+    "Sets the due date named in the confirmation email to the submitter":
+      "Définit l'échéance indiquée dans l'e-mail de confirmation envoyé au demandeur",
+    "Use a whole number from 1 to 30": "Utilisez un nombre entier de 1 à 30",
+    "Fix the review time before saving": "Corrigez le délai d'examen avant d'enregistrer",
+    "Fix the review time before publishing": "Corrigez le délai d'examen avant de publier",
     "No risk score was recorded for this submission.":
       "Aucun score de risque n'a été enregistré pour cette soumission.",
     "set to": "fixé à",
@@ -19119,6 +19132,12 @@ export const translations: Record<string, Record<string, string>> = {
       "Corrija la configuración de asignación de revisores antes de guardar",
     "Fix the reviewer assignment settings before publishing":
       "Corrija la configuración de asignación de revisores antes de publicar",
+    "Review time (business days)": "Plazo de revisión (días hábiles)",
+    "Sets the due date named in the confirmation email to the submitter":
+      "Define la fecha límite indicada en el correo de confirmación al solicitante",
+    "Use a whole number from 1 to 30": "Use un número entero del 1 al 30",
+    "Fix the review time before saving": "Corrija el plazo de revisión antes de guardar",
+    "Fix the review time before publishing": "Corrija el plazo de revisión antes de publicar",
     "No risk score was recorded for this submission.":
       "No se registró ninguna puntuación de riesgo para este envío.",
     "set to": "fijado en",

@@ -158,6 +158,14 @@ export class IntakeFormModel extends Model<IntakeFormModel> implements IIntakeFo
   @Column({
     type: DataType.INTEGER,
     allowNull: false,
+    defaultValue: 3,
+    field: "review_days",
+  })
+  reviewDays!: number;
+
+  @Column({
+    type: DataType.INTEGER,
+    allowNull: false,
     field: "created_by",
   })
   createdBy!: number;
@@ -288,6 +296,7 @@ export class IntakeFormModel extends Model<IntakeFormModel> implements IIntakeFo
       liveChecksEnabled: this.liveChecksEnabled,
       designSettings: this.designSettings,
       routing: this.routing,
+      reviewDays: this.reviewDays,
       createdBy: this.createdBy,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,

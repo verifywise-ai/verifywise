@@ -149,6 +149,78 @@ describe("intakeFormEmail.service", () => {
         sendSubmissionReceivedEmail("user@test.com", "John", "Form", 1, "token"),
       ).resolves.toBeUndefined();
     });
+
+    it("passes the review sentence as an escaped reviewHtml block", async () => {
+      mockSendEmailWithTemplate.mockResolvedValue(undefined);
+
+      await sendSubmissionReceivedEmail(
+        "user@test.com",
+        "John",
+        "Form",
+        1,
+        "token",
+        "pub-id-1",
+        undefined,
+        undefined,
+        "en",
+        "<b>Ann</b> will review your submission within 3 business days, by Friday.",
+      );
+
+      const data = mockSendEmailWithTemplate.mock.calls[0][3];
+      expect(data.reviewHtml).toBe(
+        '<div class="box box-primary"><p class="box-subtitle">&lt;b&gt;Ann&lt;/b&gt; will review your submission within 3 business days, by Friday.</p></div>',
+      );
+      expect(data.resubmitLink).toBe(
+        "https://app.example.com/pub-id-1/use-case-form-intake?token=token",
+      );
+    });
+
+    it("sends an empty reviewHtml without a sentence", async () => {
+      mockSendEmailWithTemplate.mockResolvedValue(undefined);
+
+      await sendSubmissionReceivedEmail("user@test.com", "John", "Form", 1, "token");
+
+      expect(mockSendEmailWithTemplate.mock.calls[0][3].reviewHtml).toBe("");
+    });
+  });
+
+  describe("intake-submission-received template", () => {
+    it("uses every variable the sender passes and renders the review block", async () => {
+      // Real template and compiler, so a renamed variable fails here.
+      const fs = jest.requireActual("fs") as typeof import("fs");
+      const path = jest.requireActual("path") as typeof import("path");
+      const { compileMjmlToHtml } = jest.requireActual("../../tools/mjmlCompiler") as {
+        compileMjmlToHtml: (t: string, d: Record<string, string>) => Promise<string>;
+      };
+      const template = fs.readFileSync(
+        path.join(__dirname, "../../templates/intake-submission-received.mjml"),
+        "utf8",
+      );
+      mockSendEmailWithTemplate.mockResolvedValue(undefined);
+      await sendSubmissionReceivedEmail(
+        "user@test.com",
+        "John",
+        "AI Model Intake",
+        42,
+        "token123",
+        "pub-id-1",
+        undefined,
+        undefined,
+        "en",
+        "Ann Lee will review your submission within 3 business days, by Thursday, November 5, 2026.",
+      );
+      const data = mockSendEmailWithTemplate.mock.calls[0][3];
+      for (const key of Object.keys(data)) {
+        expect(template).toContain(`{{${key}}}`);
+      }
+
+      const html = await compileMjmlToHtml(template, data);
+      expect(html).toContain(
+        "Ann Lee will review your submission within 3 business days, by Thursday, November 5, 2026.",
+      );
+      expect(html).toContain("pub-id-1/use-case-form-intake?token=token123");
+      expect(html).not.toMatch(/{{\w+}}/);
+    });
   });
 
   describe("sendNewSubmissionAdminNotification", () => {

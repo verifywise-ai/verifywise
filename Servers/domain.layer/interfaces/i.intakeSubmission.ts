@@ -183,6 +183,10 @@ export interface IIntakeSubmission {
   decisionRecord: IDecisionRecord | null;
   liveChecks: ILiveChecks | null;
   notificationSentAt: Date | null;
+  /** The day the form's review time runs out ("YYYY-MM-DD"), fixed at submit; null before #5189. */
+  reviewDueDate: string | null;
+  /** When the submitter's confirmation email was claimed; null while it is still to go. */
+  confirmationSentAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -198,6 +202,8 @@ export interface ICreateIntakeSubmissionInput {
   entityType: IntakeEntityType;
   originalSubmissionId?: number;
   ipAddress?: string;
+  /** "YYYY-MM-DD": when the form's review time runs out. */
+  reviewDueDate?: string | null;
 }
 
 /**

@@ -123,6 +123,7 @@ function harness(
     claimNotification: jest.fn(async () => claims.shift() ?? false),
     getEligibleIds: jest.fn(async (_org: number, ids?: number[]) => ids ?? []),
     sendNotification: jest.fn(async () => undefined),
+    confirmSubmitter: jest.fn(async () => undefined),
     generateImpl: fakeLlm(64),
     now: () => NOW,
     ...overrides,
@@ -342,6 +343,36 @@ describe("runIntakeAssessment", () => {
     await runIntakeAssessment(job({ notify: false }), h.deps);
     expect(routeSubmission).toHaveBeenCalledTimes(1);
     expect((routeSubmission.mock.calls[0] as any[])[0].riskAssessment.status).toBe("ai_failed");
+  });
+
+  it("confirms to the submitter once routing has run", async () => {
+    const order: string[] = [];
+    const routeSubmission = jest.fn(async () => {
+      order.push("route");
+      return null;
+    });
+    const confirmSubmitter = jest.fn(async () => {
+      order.push("confirm");
+    });
+    const h = harness(submission(), {
+      routeSubmission: routeSubmission as any,
+      confirmSubmitter,
+    });
+    await runIntakeAssessment(job({ lang: "de" }), h.deps);
+    expect(order).toEqual(["route", "confirm"]);
+    expect(confirmSubmitter).toHaveBeenCalledWith(ORG, 11, "de");
+  });
+
+  it("confirms to the submitter even when routing throws", async () => {
+    const confirmSubmitter = jest.fn(async () => undefined);
+    const h = harness(submission(), {
+      routeSubmission: jest.fn(async () => {
+        throw new Error("routing down");
+      }) as any,
+      confirmSubmitter,
+    });
+    await runIntakeAssessment(job(), h.deps);
+    expect(confirmSubmitter).toHaveBeenCalledTimes(1);
   });
 
   it("a suggestions-only job does not route", async () => {

@@ -74,6 +74,20 @@ Both public submit handlers call `startIntakeAssessment` after the transaction c
 - Forms opened through the legacy `/{tenantSlug}/{formSlug}` route email org admins when the form has no recipients (`adminFallback`). The public-id route skips them, as before.
 - On worker start, `backfillIntakeAssessments` queues the stages each pending submission still needs: legacy rows, missing blocks and stages pending for over 10 minutes. It never re-runs a settled stage. A submission whose email never went (`notification_sent_at` is NULL, so its job or cap was lost) is queued with `notify: true`, or emailed at once when both stages have settled. Only forms with recipients count, so a form without recipients (which never claims) isn't listed on every start. The direct send also waits until the submission is over 10 minutes old, so a live job keeps its own email and language. The submitter's language and the route's `adminFallback` aren't stored, so that email uses the default language and a form without recipients stays silent.
 
+## Submitter confirmation and review time
+
+`intake_forms.review_days` (1–30, default 3, CHECK constraint) is the agreed review time in business days, edited in the form builder (`ReviewTimeField`). At submit, the handler stores `intake_submissions.review_due_date` (DATE): that many weekdays after the submission's calendar day. Counting starts the next day, and holidays are not skipped. Organizations have no stored timezone, so the day is taken in UTC (`REVIEW_TIME_ZONE` in `services/intakeConfirmation/reviewTime.ts`; `addBusinessDays` takes the zone as a parameter). The due date is returned on submission rows and in the review preview (`reviewDueDate`), for "time in review against the agreed time".
+
+The submitter's "submission received" email names who reviews and by when, so it waits for routing. `sendSubmitterConfirmationOnce` (`services/intakeConfirmation/confirmation.ts`) sends it at most once per submission, claimed through `intake_submissions.confirmation_sent_at` (`claimSubmissionConfirmationQuery`, atomic, pending submissions only). It is called:
+
+- by the submit handler, without fallback. It sends at once when routing is off (naming the form's recipients who can still review) or when neither lane has a reviewer. Otherwise it waits.
+- by the assessment job, once `routeSettled` has run (or thrown), with fallback. It names the stored lane's reviewers, or the governance team if no lane was stored.
+- by `intake_notify_cap` at 2 minutes, with fallback, naming the governance team if routing has not picked a lane yet.
+- when the job can't be queued, at once, with fallback.
+- on worker start, `backfillSubmitterConfirmations` sends confirmations still unclaimed 10 minutes after submit, with fallback, in the default language.
+
+Up to three reviewers are named (first and last name), then "and N others". The resubmit link uses a freshly signed token. A failed reviewer lookup names the governance team, and a failed tenant slug lookup links to the generic page. The token is built before the claim, so a failure there leaves the claim for the next path. A resubmission is its own submission and gets its own email. The migration marks every existing submission as confirmed, because the old code emailed at submit.
+
 ## Review endpoints
 
 All new writes use `authorize("intakeForm.edit")`.
