@@ -159,7 +159,7 @@ New module `services/mcp_token_service.py`:
     out of shared storage; each worker fetching its own token once an hour is
     cheap.)
   - **aws_iam**: boto3 `signin` client with explicit credentials and region,
-    `create_o_auth2_token_with_iam(grantType="client_credentials",
+    `create_oauth2_token_with_iam(grantType="client_credentials",
     resource=cfg.resource)`, run in a thread (`asyncio.to_thread`) since boto3
     is synchronous. Region defaults from the server URL host
     (`aws-mcp.<region>.api.aws`) when the admin leaves it blank. The client

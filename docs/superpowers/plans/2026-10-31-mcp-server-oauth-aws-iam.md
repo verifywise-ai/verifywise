@@ -24,7 +24,7 @@ Worktree: `/Users/gorkemcetin/verifywise-mcp-oauth`, branch `feature/mcp-server-
 - `TokenError` subclasses `Exception`, **not** `ValueError` (the proxy maps `ValueError` to "Invalid params").
 - Token fetch failures: agent sees the generic `-32603 "Internal error"`; not counted by `CircuitBreaker`; server health written only when it changes.
 - Cache reuse until 60 s before expiry; `expires_in` missing → 3600; `expires_in <= 60` → use once, don't cache.
-- AWS token call: `signin.create_o_auth2_token_with_iam(grantType="client_credentials", resource=cfg["resource"])`, output `accessToken`, `expiresIn`.
+- AWS token call: `signin.create_oauth2_token_with_iam(grantType="client_credentials", resource=cfg["resource"])`, output `accessToken`, `expiresIn`.
 - UI: sentence case, house components, de/fr/es for every new string (`i18n:audit:strict`), 30px controls.
 - Gates before push: AIGateway pytest on the CI list; `cd Clients && npm run typecheck && npm run i18n:audit:strict && npm run format-check` and vitest on touched folders; /code-review; never `gh pr create` without the user asking.
 
@@ -108,7 +108,7 @@ Worktree: `/Users/gorkemcetin/verifywise-mcp-oauth`, branch `feature/mcp-server-
 - [ ] **Step 3: Implement** `mcp_token_service.py`:
   - Cache: `dict[str, tuple[str, float]]` keyed by `config_fingerprint`, value `(token, expires_at_monotonic)`; `dict[str, asyncio.Lock]` per key; reuse while `now < expires_at - 60`.
   - OAuth: `httpx.AsyncClient(timeout=TOKEN_TIMEOUT_SECONDS, transport=transport)`; re-check `assert_safe_outbound_url(token_url)`; parse JSON defensively.
-  - AWS: `await asyncio.to_thread(client.create_o_auth2_token_with_iam, grantType="client_credentials", resource=cfg.get("resource") or DEFAULT_AWS_MCP_RESOURCE)`; map `botocore.exceptions.ClientError` codes as tested; `EndpointConnectionError` → `"Could not connect to AWS Sign-In"`.
+  - AWS: `await asyncio.to_thread(client.create_oauth2_token_with_iam, grantType="client_credentials", resource=cfg.get("resource") or DEFAULT_AWS_MCP_RESOURCE)`; map `botocore.exceptions.ClientError` codes as tested; `EndpointConnectionError` → `"Could not connect to AWS Sign-In"`.
   - Log failures with `logger.warning("MCP token fetch failed: %s", message)` — message only.
 - [ ] **Step 4: Run** the test file → PASS.
 - [ ] **Step 5: Commit** `feat(ai-gateway): token service for OAuth and AWS IAM MCP servers` (include requirements.txt).
