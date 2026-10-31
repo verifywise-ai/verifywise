@@ -732,6 +732,26 @@ export async function scheduleFileExpirySweep() {
   );
 }
 
+export async function scheduleLifecycleConfirmationSweep() {
+  logger.info("Adding lifecycle confirmation sweep job to the queue...");
+  // Daily at 6:30 AM, a free slot. Emails owners of live use cases (and later
+  // AI apps) that nobody has confirmed within the org's "still live?" interval.
+  // Dedup is confirmation_reminded_at, so a re-run does not email twice.
+  // No obliterate here — the scheduler upsert is idempotent by scheduler id.
+  await automationQueue.upsertJobScheduler(
+    "lifecycle_confirmation_sweep",
+    { pattern: "30 6 * * *" },
+    {
+      name: "lifecycle_confirmation_sweep",
+      data: { type: "lifecycle_confirmation" },
+      opts: {
+        removeOnComplete: true,
+        removeOnFail: false,
+      },
+    },
+  );
+}
+
 export async function scheduleEvidenceFreshnessSweep() {
   logger.info("Adding evidence freshness sweep job to the queue...");
   // Daily at 5 AM -- 3 AM is the MRM retention prune and 4 AM the revalidation

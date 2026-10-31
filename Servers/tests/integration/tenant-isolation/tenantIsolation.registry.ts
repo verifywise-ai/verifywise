@@ -135,6 +135,12 @@ export const tenantIsolationRegistry: IsolationEntity[] = [
     testFile: "file-org-settings.isolation.test.ts",
   },
   {
+    name: "lifecycle_org_settings",
+    tables: ["lifecycle_org_settings"],
+    baseRoute: "/api/v1/lifecycle-settings",
+    testFile: "lifecycle-org-settings.isolation.test.ts",
+  },
+  {
     name: "data_retention",
     tables: [
       "data_retention_settings",

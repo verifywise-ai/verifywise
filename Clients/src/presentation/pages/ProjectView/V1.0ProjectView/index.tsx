@@ -311,7 +311,10 @@ const VWProjectView = () => {
               isJira ? (
                 <JiraUseCaseOverview project={project as any} />
               ) : (
-                <VWProjectOverview project={project} />
+                <VWProjectOverview
+                  project={project}
+                  onLifecycleChanged={() => setRefreshKey((key) => key + 1)}
+                />
               )
             ) : (
               <CustomizableSkeleton variant="rectangular" width="100%" height={400} />

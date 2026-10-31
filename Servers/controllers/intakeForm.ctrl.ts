@@ -2462,6 +2462,8 @@ export async function approveSubmission(req: Request, res: Response) {
           ai_risk_classification: aiRiskClassification as any,
           high_risk_roles: highRiskRolesFromEntityData(entityData),
           geography: entityData.geography ? Number(entityData.geography) : 1,
+          // The intake review already happened, so the use case starts
+          // planned (createNewProjectQuery's default), not in review (#5187).
           status: ProjectStatus.UNDER_REVIEW,
         },
         [],
