@@ -100,6 +100,18 @@ def _origin(url: str) -> tuple:
     return (scheme, (parts.hostname or "").lower(), port)
 
 
+def same_origin(url_a: str, url_b: str) -> bool:
+    """Same scheme, host and port (default ports normalised)."""
+    return _origin(url_a or "") == _origin(url_b or "")
+
+
+def supplies_token_secret(auth_type: str, incoming) -> bool:
+    """True when ``incoming`` carries a non-blank new client secret / secret access key."""
+    if auth_type not in TOKEN_AUTH_TYPES or not isinstance(incoming, dict):
+        return False
+    return bool(_clean(incoming.get(_TOKEN_SECRET_FIELD[auth_type][:-4])))
+
+
 def _normalize_token_type(auth_type: str, incoming: dict, stored: dict) -> dict:
     secret_field = _TOKEN_SECRET_FIELD[auth_type]
 

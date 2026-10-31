@@ -436,3 +436,81 @@ class TestOauthResubmit:
             9, _request({"name": "R", "auth_type": "api_key", "auth_config": {"header": "X-K"}})
         )
         assert fakes["discovery"] == []
+
+
+class TestUrlOriginChange:
+    """A token minted for one host must not be sent to another with the old secret."""
+
+    MESSAGE = "Enter the secret again: the server address now points to a different host"
+
+    @staticmethod
+    def _oauth_row():
+        cfg = normalize_auth_config(
+            "oauth",
+            {"client_id": "app", "client_secret": "s3cret", "token_url": "https://auth.example.com/t"},
+            None,
+        )
+        return _row(auth_type="oauth", auth_config=cfg, url="https://a.example.com/mcp")
+
+    @staticmethod
+    def _aws_row():
+        cfg = normalize_auth_config(
+            "aws_iam",
+            {"region": "us-east-1", "access_key_id": "AKIAEXAMPLE", "secret_access_key": "awssecret"},
+            None,
+        )
+        return _row(auth_type="aws_iam", auth_config=cfg, url="https://aws-mcp.us-east-1.api.aws/mcp")
+
+    @pytest.mark.parametrize("kind", ["oauth", "aws"])
+    async def test_other_host_without_a_new_secret_is_400(self, fakes, kind):
+        fakes["row"] = self._oauth_row() if kind == "oauth" else self._aws_row()
+        with pytest.raises(HTTPException) as e:
+            await router.update_mcp_server(9, _request({"url": "https://evil.example.net/mcp"}))
+        assert e.value.status_code == 400 and e.value.detail == self.MESSAGE
+        assert fakes["saved"] is None
+
+    async def test_other_port_or_scheme_is_a_different_origin(self, fakes):
+        fakes["row"] = self._oauth_row()
+        for url in ("https://a.example.com:8443/mcp", "http://a.example.com/mcp"):
+            with pytest.raises(HTTPException) as e:
+                await router.update_mcp_server(9, _request({"url": url}))
+            assert e.value.detail == self.MESSAGE
+
+    async def test_blank_secret_in_the_form_still_counts_as_missing(self, fakes):
+        fakes["row"] = self._oauth_row()
+        form = {"client_id": "app", "client_secret": "  ", "token_url": "https://auth.example.com/t"}
+        with pytest.raises(HTTPException) as e:
+            await router.update_mcp_server(
+                9, _request({"url": "https://evil.example.net/mcp", "auth_type": "oauth", "auth_config": form})
+            )
+        assert e.value.detail == self.MESSAGE
+
+    async def test_other_host_with_a_new_secret_is_saved(self, fakes):
+        fakes["row"] = self._oauth_row()
+        form = {"client_id": "app", "client_secret": "fresh", "token_url": "https://auth.example.com/t"}
+        await router.update_mcp_server(
+            9, _request({"url": "https://b.example.com/mcp", "auth_type": "oauth", "auth_config": form})
+        )
+        assert decrypt(fakes["saved"]["auth_config"]["client_secret_enc"]) == "fresh"
+
+    async def test_new_aws_secret_allows_a_host_change(self, fakes):
+        fakes["row"] = self._aws_row()
+        form = {"region": "us-east-1", "access_key_id": "AKIAEXAMPLE", "secret_access_key": "fresh"}
+        await router.update_mcp_server(
+            9, _request({"url": "https://other.example.com/mcp", "auth_type": "aws_iam", "auth_config": form})
+        )
+        assert decrypt(fakes["saved"]["auth_config"]["secret_access_key_enc"]) == "fresh"
+
+    async def test_same_origin_path_change_keeps_the_secret(self, fakes):
+        fakes["row"] = self._oauth_row()
+        await router.update_mcp_server(9, _request({"url": "https://a.example.com/other/path"}))
+        assert fakes["saved"]["url"] == "https://a.example.com/other/path"
+
+    async def test_default_port_is_normalised(self, fakes):
+        fakes["row"] = self._oauth_row()
+        await router.update_mcp_server(9, _request({"url": "https://A.example.com:443/mcp"}))
+        assert fakes["saved"] is not None
+
+    async def test_api_key_servers_are_unchanged(self, fakes):
+        await router.update_mcp_server(9, _request({"url": "https://b.example.com/mcp"}))
+        assert fakes["saved"]["url"] == "https://b.example.com/mcp"

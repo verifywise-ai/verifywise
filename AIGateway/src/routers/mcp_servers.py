@@ -4,7 +4,14 @@ from fastapi import APIRouter, HTTPException, Request
 from typing import Any, Optional
 
 from utils.auth import get_org_id, get_role, get_user_id, require_admin
-from utils.mcp_credentials import CredentialError, normalize_auth_config, public_auth_fields
+from utils.mcp_credentials import (
+    TOKEN_AUTH_TYPES,
+    CredentialError,
+    normalize_auth_config,
+    public_auth_fields,
+    same_origin,
+    supplies_token_secret,
+)
 from services.mcp_proxy_service import (
     MANUAL_DISCOVERY_SECONDS,
     ON_SAVE_DISCOVERY_SECONDS,
@@ -175,6 +182,18 @@ async def update_mcp_server(server_id: int, request: Request) -> Any:
 
     old_type = existing.get("auth_type") or "none"
     new_type = body.get("auth_type") or old_type
+    if (
+        new_type == old_type
+        and new_type in TOKEN_AUTH_TYPES
+        and "url" in body
+        and not same_origin(body["url"], existing.get("url") or "")
+        and not supplies_token_secret(new_type, body.get("auth_config"))
+    ):
+        # The stored secret would mint a token that is then sent to the new host.
+        raise HTTPException(
+            status_code=400,
+            detail="Enter the secret again: the server address now points to a different host",
+        )
     auth_changed = new_type != old_type
     if "auth_config" in body or new_type != old_type:
         stored = existing.get("auth_config") if new_type == old_type else None
