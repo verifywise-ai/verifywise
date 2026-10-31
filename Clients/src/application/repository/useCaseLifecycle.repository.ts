@@ -49,8 +49,8 @@ export interface UseCaseLifecycleDashboard {
   confirmation_interval_days: number;
 }
 
-/** A use case intake submission waiting for a decision (#5188). */
-export interface PendingUseCaseSubmission {
+/** An intake submission waiting for a decision (use cases #5188, AI apps #5193). */
+export interface PendingIntakeSubmission {
   id: number;
   title: string | null;
   form_name: string;
@@ -61,9 +61,9 @@ export interface PendingUseCaseSubmission {
 }
 
 /** All pending requests are counted; only the oldest `limit` are listed. */
-export interface PendingUseCaseSubmissions {
+export interface PendingIntakeSubmissions {
   total: number;
-  items: PendingUseCaseSubmission[];
+  items: PendingIntakeSubmission[];
   limit: number;
 }
 
@@ -97,8 +97,8 @@ export async function getUseCaseLifecycleDashboard(): Promise<UseCaseLifecycleDa
   return response.data.data;
 }
 
-export async function getPendingUseCaseSubmissions(): Promise<PendingUseCaseSubmissions> {
-  const response = await apiServices.get<Envelope<PendingUseCaseSubmissions>>(
+export async function getPendingUseCaseSubmissions(): Promise<PendingIntakeSubmissions> {
+  const response = await apiServices.get<Envelope<PendingIntakeSubmissions>>(
     `${BASE}/intake-submissions`,
   );
   return response.data.data;

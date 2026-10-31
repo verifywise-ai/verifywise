@@ -77,16 +77,31 @@ describe("runLifecycleConfirmationSweep", () => {
 });
 
 describe("runLifecycleConfirmationSweepAllOrgs", () => {
-  it("keeps going when one org fails", async () => {
+  it("sweeps every lifecycle entity in every org and keeps going when one fails", async () => {
     m(getAllOrganizationsQuery).mockResolvedValue([{ id: 1 }, { id: 2 }]);
-    m(findConfirmationsDue)
-      .mockRejectedValueOnce(new Error("boom"))
-      .mockResolvedValueOnce([{ id: 7, title: "X", owner: 1, baseline: "2026-01-01" }]);
+    m(findConfirmationsDue).mockImplementation(async (entity: any, orgId: number) => {
+      if (orgId === 1 && entity.key === "use_case") throw new Error("boom");
+      if (orgId === 2 && entity.key === "ai_app") {
+        return [{ id: 7, title: "Notes bot", owner: 1, baseline: "2026-01-01" }];
+      }
+      return [];
+    });
     m(notifyLifecycleConfirmationDue).mockResolvedValue(undefined);
 
     await runLifecycleConfirmationSweepAllOrgs();
 
-    expect(findConfirmationsDue).toHaveBeenCalledTimes(2);
-    expect(markConfirmationReminded).toHaveBeenCalledWith(LIFECYCLE_ENTITIES.use_case, 2, 7);
+    // Use cases and AI apps, for both orgs, even after org 1's use cases failed.
+    expect(m(findConfirmationsDue).mock.calls.map((c: any[]) => [c[0].key, c[1]])).toEqual([
+      ["use_case", 1],
+      ["ai_app", 1],
+      ["use_case", 2],
+      ["ai_app", 2],
+    ]);
+    expect(m(notifyLifecycleConfirmationDue).mock.calls[0][2]).toMatchObject({
+      noun: "AI app",
+      path: "/ai-apps/7",
+      entityType: "ai_app",
+    });
+    expect(markConfirmationReminded).toHaveBeenCalledWith(LIFECYCLE_ENTITIES.ai_app, 2, 7);
   });
 });

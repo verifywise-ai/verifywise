@@ -36,6 +36,12 @@ import {
 } from "../utils/intakeForm.utils";
 import { createNewModelInventoryQuery } from "../utils/modelInventory.utils";
 import { createNewProjectQuery } from "../utils/project.utils";
+import {
+  AI_APP_NAME_CONSTRAINT,
+  aiAppDepartmentsFrom,
+  createAiAppQuery,
+} from "../utils/aiApp.utils";
+import { AiAppDiscoveredSource, AiAppStatus } from "../domain.layer/enums/ai-app-status.enum";
 import { createEUFrameworkQuery } from "../utils/eu.utils";
 import { EU_AI_ACT_FRAMEWORK_ID } from "../utils/validations/projectValidation.utils";
 import { IntakeFormStatus } from "../domain.layer/enums/intake-form-status.enum";
@@ -68,7 +74,10 @@ import {
 } from "../utils/euAiActClassification.utils";
 import { recordMultipleFieldChanges } from "../utils/useCaseChangeHistory.utils";
 import { STATUS_CODE } from "../utils/statusCode.utils";
-import { NotFoundException } from "../domain.layer/exceptions/custom.exception";
+import {
+  NotFoundException,
+  ValidationException,
+} from "../domain.layer/exceptions/custom.exception";
 import { llmKeyExistsQuery } from "../utils/llmKey.utils";
 import { sanitizeUserHtml } from "../utils/sanitization.utils";
 import logger from "../utils/logger/fileLogger";
@@ -2511,6 +2520,41 @@ export async function approveSubmission(req: Request, res: Response) {
           transaction,
         );
       }
+    } else if (submission.entityType === IntakeEntityType.AI_APP) {
+      // An approved AI app request (#5193). The app starts planned, like a use
+      // case from intake; its approval status says it was approved.
+      try {
+        const createdApp = await createAiAppQuery(
+          {
+            name: typeof entityData.name === "string" ? entityData.name.trim() : "",
+            description:
+              typeof entityData.description === "string" ? entityData.description : undefined,
+            owner_id: req.userId!,
+            status: AiAppStatus.APPROVED,
+            discovered_source: AiAppDiscoveredSource.EMPLOYEE_REPORT,
+            departments: aiAppDepartmentsFrom(entityData.departments),
+          },
+          req.organizationId!,
+          transaction,
+          req.userId!,
+        );
+        entityId = createdApp.id!;
+      } catch (error) {
+        // A blank or too long name, or another invalid answer: say which.
+        if (error instanceof ValidationException) {
+          await transaction.rollback();
+          return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
+        }
+        // Only the per-org name constraint means the name is taken.
+        const pg = (error as { parent?: { code?: string; constraint?: string } })?.parent;
+        if (pg?.code === "23505" && pg.constraint === AI_APP_NAME_CONSTRAINT) {
+          await transaction.rollback();
+          return res
+            .status(409)
+            .json(STATUS_CODE[409](req.t!("An AI app with this name already exists")));
+        }
+        throw error;
+      }
     } else {
       await transaction.rollback();
       return res.status(400).json(STATUS_CODE[400](req.t!("Unsupported entity type")));
@@ -2520,6 +2564,18 @@ export async function approveSubmission(req: Request, res: Response) {
     // entity, in this transaction: any failure rolls the approval back. The
     // submission row is locked above, so no suggestion changes underneath.
     const approval = { approverId: req.userId!, approvedAt: new Date(), submissionId };
+    // AI apps have no risk register (#5193): their requests get no
+    // suggestions, and an accepted one from before that is refused rather than
+    // dropped or filed as a use case risk under the app's id.
+    if (
+      submission.entityType === IntakeEntityType.AI_APP &&
+      (submission.suggestedRisks?.items ?? []).some((s) => s.state === "accepted")
+    ) {
+      await transaction.rollback();
+      return res
+        .status(400)
+        .json(STATUS_CODE[400](req.t!("AI app requests cannot carry accepted risk suggestions")));
+    }
     for (const s of submission.suggestedRisks?.items ?? []) {
       if (s.state !== "accepted") continue;
       if (submission.entityType === IntakeEntityType.MODEL) {

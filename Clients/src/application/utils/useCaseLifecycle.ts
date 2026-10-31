@@ -7,21 +7,22 @@ import {
 import type { Project } from "../../domain/types/Project";
 
 /**
- * Who may change a use case's lifecycle: anyone holding useCase.edit, or the
- * owner. Auditors never. Mirrors canManageLifecycle in
- * Servers/controllers/useCaseLifecycle.ctrl.ts; `canEditUseCases` comes from
- * useHasPermission("useCase.edit"), the same per-org permission matrix the
- * server checks, so custom roles get the same answer as on the server.
+ * Who may change an entry's lifecycle (use cases, AI apps): anyone holding
+ * the entity's edit permission (useCase.edit, aiApp.edit), or the owner.
+ * Auditors never. Mirrors canManageLifecycle in
+ * Servers/controllers/lifecycle.ctrl.ts; `canEdit` comes from
+ * useMyPermissions, the same per-org matrix the server checks, so custom
+ * roles get the same answer as on the server.
  */
-export function canManageUseCaseLifecycle(
+export function canManageLifecycle(
   role: string,
   userId: number | null,
   ownerId: number | undefined,
-  canEditUseCases: boolean,
+  canEdit: boolean,
 ): boolean {
   if (!role || role === "Auditor") return false;
   if (userId !== null && ownerId !== undefined && Number(ownerId) === userId) return true;
-  return canEditUseCases;
+  return canEdit;
 }
 
 /** Built-in fallback while the permission list loads or fails. */

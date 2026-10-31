@@ -2,6 +2,57 @@
 // Spread into ../translations.ts.
 
 export const de: Record<string, string> = {
+  // AI app requests in In review, approval before going live (#5193)
+  "Intake requests and AI apps waiting for an approval decision":
+    "Intake-Anfragen und KI-Apps, die auf eine Freigabeentscheidung warten",
+  "No AI apps are waiting for an approval decision.":
+    "Keine KI-Apps warten auf eine Freigabeentscheidung.",
+  "Submitted through an intake form. The AI app is created when a reviewer approves the request.":
+    "Über ein Intake-Formular eingereicht. Die KI-App wird erstellt, wenn eine prüfende Person die Anfrage freigibt.",
+  "Approve this AI app before marking it as live. Change its status to Approved or Restricted below.":
+    "Geben Sie diese KI-App frei, bevor Sie sie als live markieren. Ändern Sie ihren Status unten auf „Freigegeben“ oder „Eingeschränkt“.",
+  // AI apps lifecycle and intake (#5193)
+  "AI app name": "Name der KI-App",
+  "Collect requests to use an AI app": "Anfragen zur Nutzung einer KI-App erfassen",
+  "Describe what you want to use the AI app for":
+    "Beschreiben Sie, wofür Sie die KI-App nutzen möchten",
+  "Enter the name of the AI app": "Geben Sie den Namen der KI-App ein",
+  "Name of the AI app": "Name der KI-App",
+  "Still-live check": "Prüfung auf weitere Nutzung",
+  "Teams that use the AI app (a multi-select, or text separated by commas)":
+    "Teams, die die KI-App nutzen (Mehrfachauswahl oder durch Kommas getrennter Text)",
+  "What the AI app is used for": "Wofür die KI-App genutzt wird",
+  "Use the product name people know it by, so reviewers can find it.":
+    "Verwenden Sie den bekannten Produktnamen, damit Prüfende die App finden.",
+  "Include the task, the data it will see and who will use it.":
+    "Nennen Sie die Aufgabe, die Daten, die sie sieht, und wer sie nutzt.",
+  "e.g. Sales, Support": "z. B. Vertrieb, Support",
+  "Separate several departments with commas.": "Trennen Sie mehrere Abteilungen durch Kommas.",
+  "Departments": "Abteilungen",
+  "AI app preview": "Vorschau der KI-App",
+  "Approve and create AI app": "Freigeben und KI-App erstellen",
+  "All AI app fields mapped": "Alle KI-App-Felder zugeordnet",
+  "How often owners confirm their live use cases and AI apps are still in use. Entries nobody confirms are marked stale and their owners get an email.":
+    "Wie oft Verantwortliche bestätigen, dass ihre aktiven Anwendungsfälle und KI-Apps noch genutzt werden. Unbestätigte Einträge werden als veraltet markiert und ihre Verantwortlichen erhalten eine E-Mail.",
+  "Still-live check saved": "Prüfung auf weitere Nutzung gespeichert",
+  "Failed to save the still-live check":
+    "Prüfung auf weitere Nutzung konnte nicht gespeichert werden",
+  "AI apps waiting for an approval decision": "KI-Apps, die auf eine Freigabeentscheidung warten",
+  "AI apps that are not live yet": "KI-Apps, die noch nicht live sind",
+  "AI apps in use today": "Derzeit genutzte KI-Apps",
+  "AI apps that are no longer in use": "Nicht mehr genutzte KI-Apps",
+  "No AI apps are waiting for review.": "Keine KI-Apps warten auf Prüfung.",
+  "No planned AI apps.": "Keine geplanten KI-Apps.",
+  "No live AI apps. Open a planned AI app and mark it as live.":
+    "Keine aktiven KI-Apps. Öffnen Sie eine geplante KI-App und markieren Sie sie als live.",
+  "No retired AI apps.": "Keine außer Betrieb genommenen KI-Apps.",
+  "Nobody has confirmed this AI app is still live within the check interval set for your organization. Confirm it, or retire it if it is no longer in use.":
+    "Niemand hat innerhalb des für Ihre Organisation festgelegten Prüfintervalls bestätigt, dass diese KI-App noch aktiv ist. Bestätigen Sie sie oder nehmen Sie sie außer Betrieb, wenn sie nicht mehr genutzt wird.",
+  "Record the date this AI app went into use. Owners are asked to confirm it is still live at the interval set in Settings.":
+    "Erfassen Sie das Datum, an dem diese KI-App in Betrieb ging. Verantwortliche werden im in den Einstellungen festgelegten Intervall um Bestätigung gebeten, dass sie noch aktiv ist.",
+  "Retire AI app": "KI-App außer Betrieb nehmen",
+  "A retired AI app stays in the inventory under Retired, with its history, but is no longer checked for being live.":
+    "Eine außer Betrieb genommene KI-App bleibt mit ihrem Verlauf unter „Außer Betrieb“ im Inventar, wird aber nicht mehr auf Aktivität geprüft.",
   "No intake requests match your search.": "Keine Intake-Anfragen entsprechen Ihrer Suche.",
   "Showing the oldest": "Angezeigt werden die ältesten",
   "of": "von",
@@ -95,6 +146,58 @@ export const de: Record<string, string> = {
 };
 
 export const fr: Record<string, string> = {
+  // AI app requests in In review, approval before going live (#5193)
+  "Intake requests and AI apps waiting for an approval decision":
+    "Demandes d'intake et applications IA en attente d'une décision d'approbation",
+  "No AI apps are waiting for an approval decision.":
+    "Aucune application IA n'attend de décision d'approbation.",
+  "Submitted through an intake form. The AI app is created when a reviewer approves the request.":
+    "Soumise via un formulaire d'intake. L'application IA est créée lorsqu'un examinateur approuve la demande.",
+  "Approve this AI app before marking it as live. Change its status to Approved or Restricted below.":
+    "Approuvez cette application IA avant de la marquer comme en service. Passez son statut à Approuvé ou Restreint ci-dessous.",
+  // AI apps lifecycle and intake (#5193)
+  "AI app name": "Nom de l'application IA",
+  "Collect requests to use an AI app": "Recueillir des demandes d'utilisation d'une application IA",
+  "Describe what you want to use the AI app for":
+    "Décrivez à quoi vous souhaitez utiliser l'application IA",
+  "Enter the name of the AI app": "Saisissez le nom de l'application IA",
+  "Name of the AI app": "Nom de l'application IA",
+  "Still-live check": "Vérification de mise en service",
+  "Teams that use the AI app (a multi-select, or text separated by commas)":
+    "Équipes qui utilisent l'application IA (plusieurs choix, ou texte séparé par des virgules)",
+  "What the AI app is used for": "À quoi sert l'application IA",
+  "Use the product name people know it by, so reviewers can find it.":
+    "Utilisez le nom de produit connu de tous, pour que les examinateurs la retrouvent.",
+  "Include the task, the data it will see and who will use it.":
+    "Indiquez la tâche, les données qu'elle verra et qui l'utilisera.",
+  "e.g. Sales, Support": "ex. Ventes, Support",
+  "Separate several departments with commas.": "Séparez plusieurs services par des virgules.",
+  "Departments": "Services",
+  "AI app preview": "Aperçu de l'application IA",
+  "Approve and create AI app": "Approuver et créer l'application IA",
+  "All AI app fields mapped": "Tous les champs de l'application IA sont associés",
+  "How often owners confirm their live use cases and AI apps are still in use. Entries nobody confirms are marked stale and their owners get an email.":
+    "Fréquence à laquelle les responsables confirment que leurs cas d'usage et applications IA en service sont toujours utilisés. Les entrées non confirmées sont marquées comme obsolètes et leurs responsables reçoivent un e-mail.",
+  "Still-live check saved": "Vérification de mise en service enregistrée",
+  "Failed to save the still-live check":
+    "Impossible d'enregistrer la vérification de mise en service",
+  "AI apps waiting for an approval decision":
+    "Applications IA en attente d'une décision d'approbation",
+  "AI apps that are not live yet": "Applications IA pas encore en service",
+  "AI apps in use today": "Applications IA utilisées aujourd'hui",
+  "AI apps that are no longer in use": "Applications IA qui ne sont plus utilisées",
+  "No AI apps are waiting for review.": "Aucune application IA n'attend d'examen.",
+  "No planned AI apps.": "Aucune application IA planifiée.",
+  "No live AI apps. Open a planned AI app and mark it as live.":
+    "Aucune application IA en service. Ouvrez une application IA planifiée et marquez-la comme en service.",
+  "No retired AI apps.": "Aucune application IA retirée.",
+  "Nobody has confirmed this AI app is still live within the check interval set for your organization. Confirm it, or retire it if it is no longer in use.":
+    "Personne n'a confirmé que cette application IA est toujours en service dans l'intervalle de vérification défini pour votre organisation. Confirmez-la, ou retirez-la si elle n'est plus utilisée.",
+  "Record the date this AI app went into use. Owners are asked to confirm it is still live at the interval set in Settings.":
+    "Indiquez la date de mise en service de cette application IA. Les responsables sont invités à confirmer qu'elle est toujours en service selon l'intervalle défini dans les paramètres.",
+  "Retire AI app": "Retirer l'application IA",
+  "A retired AI app stays in the inventory under Retired, with its history, but is no longer checked for being live.":
+    "Une application IA retirée reste dans l'inventaire sous Retiré, avec son historique, mais n'est plus vérifiée comme étant en service.",
   "No intake requests match your search.":
     "Aucune demande d'intake ne correspond à votre recherche.",
   "Showing the oldest": "Affichage des plus anciennes",
@@ -190,6 +293,56 @@ export const fr: Record<string, string> = {
 };
 
 export const es: Record<string, string> = {
+  // AI app requests in In review, approval before going live (#5193)
+  "Intake requests and AI apps waiting for an approval decision":
+    "Solicitudes de intake y apps de IA a la espera de una decisión de aprobación",
+  "No AI apps are waiting for an approval decision.":
+    "Ninguna app de IA espera una decisión de aprobación.",
+  "Submitted through an intake form. The AI app is created when a reviewer approves the request.":
+    "Enviada mediante un formulario de intake. La app de IA se crea cuando un revisor aprueba la solicitud.",
+  "Approve this AI app before marking it as live. Change its status to Approved or Restricted below.":
+    "Apruebe esta app de IA antes de marcarla como en producción. Cambie su estado a Aprobada o Restringida más abajo.",
+  // AI apps lifecycle and intake (#5193)
+  "AI app name": "Nombre de la app de IA",
+  "Collect requests to use an AI app": "Recopilar solicitudes para usar una app de IA",
+  "Describe what you want to use the AI app for": "Describa para qué quiere usar la app de IA",
+  "Enter the name of the AI app": "Introduzca el nombre de la app de IA",
+  "Name of the AI app": "Nombre de la app de IA",
+  "Still-live check": "Comprobación de uso continuado",
+  "Teams that use the AI app (a multi-select, or text separated by commas)":
+    "Equipos que usan la app de IA (varias opciones o texto separado por comas)",
+  "What the AI app is used for": "Para qué se usa la app de IA",
+  "Use the product name people know it by, so reviewers can find it.":
+    "Use el nombre de producto que la gente conoce, para que los revisores la encuentren.",
+  "Include the task, the data it will see and who will use it.":
+    "Indique la tarea, los datos que verá y quién la usará.",
+  "e.g. Sales, Support": "p. ej., Ventas, Soporte",
+  "Separate several departments with commas.": "Separe varios departamentos con comas.",
+  "Departments": "Departamentos",
+  "AI app preview": "Vista previa de la app de IA",
+  "Approve and create AI app": "Aprobar y crear la app de IA",
+  "All AI app fields mapped": "Todos los campos de la app de IA asignados",
+  "How often owners confirm their live use cases and AI apps are still in use. Entries nobody confirms are marked stale and their owners get an email.":
+    "Con qué frecuencia los responsables confirman que sus casos de uso y apps de IA en producción siguen en uso. Las entradas sin confirmar se marcan como obsoletas y sus responsables reciben un correo.",
+  "Still-live check saved": "Comprobación de uso continuado guardada",
+  "Failed to save the still-live check": "No se pudo guardar la comprobación de uso continuado",
+  "AI apps waiting for an approval decision":
+    "Apps de IA a la espera de una decisión de aprobación",
+  "AI apps that are not live yet": "Apps de IA que aún no están en producción",
+  "AI apps in use today": "Apps de IA en uso actualmente",
+  "AI apps that are no longer in use": "Apps de IA que ya no se usan",
+  "No AI apps are waiting for review.": "Ninguna app de IA espera revisión.",
+  "No planned AI apps.": "No hay apps de IA planificadas.",
+  "No live AI apps. Open a planned AI app and mark it as live.":
+    "No hay apps de IA en producción. Abra una app de IA planificada y márquela como en producción.",
+  "No retired AI apps.": "No hay apps de IA retiradas.",
+  "Nobody has confirmed this AI app is still live within the check interval set for your organization. Confirm it, or retire it if it is no longer in use.":
+    "Nadie ha confirmado que esta app de IA siga en producción dentro del intervalo de comprobación de su organización. Confírmela o retírela si ya no se usa.",
+  "Record the date this AI app went into use. Owners are asked to confirm it is still live at the interval set in Settings.":
+    "Registre la fecha en que esta app de IA entró en uso. Se pide a los responsables que confirmen que sigue en producción con el intervalo definido en Configuración.",
+  "Retire AI app": "Retirar la app de IA",
+  "A retired AI app stays in the inventory under Retired, with its history, but is no longer checked for being live.":
+    "Una app de IA retirada permanece en el inventario en Retirado, con su historial, pero ya no se comprueba si está en producción.",
   "No intake requests match your search.": "Ninguna solicitud de intake coincide con su búsqueda.",
   "Showing the oldest": "Se muestran las más antiguas",
   "of": "de",

@@ -12176,6 +12176,102 @@ export const v1ChangeHistoryEndpoints: Endpoint[] = [
   },
 ];
 
+// v1: V1/Ai App Lifecycle endpoints
+export const v1V1aiAppLifecycleEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/ai-app-lifecycle/summary',
+    summary: "Get Ai App Lifecycle Summary Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai App Lifecycle",
+  },
+  {
+    method: 'GET',
+    path: '/v1/ai-app-lifecycle/intake-submissions',
+    summary: "Get Pending Ai App Submissions Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai App Lifecycle",
+  },
+  {
+    method: 'GET',
+    path: '/v1/ai-app-lifecycle/{id}',
+    summary: "Get Ai App Lifecycle Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai App Lifecycle",
+  },
+  {
+    method: 'GET',
+    path: '/v1/ai-app-lifecycle/{id}/history',
+    summary: "Get Ai App History Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai App Lifecycle",
+  },
+  {
+    method: 'POST',
+    path: '/v1/ai-app-lifecycle/{id}/go-live',
+    summary: "Ai App Go Live Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai App Lifecycle",
+  },
+  {
+    method: 'POST',
+    path: '/v1/ai-app-lifecycle/{id}/retire',
+    summary: "Ai App Retire Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai App Lifecycle",
+  },
+  {
+    method: 'POST',
+    path: '/v1/ai-app-lifecycle/{id}/confirm',
+    summary: "Ai App Confirm Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai App Lifecycle",
+  },
+];
+
+// v1: V1/Ai Apps endpoints
+export const v1V1aiAppsEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/ai-apps',
+    summary: "Get All Ai Apps V1",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai Apps",
+  },
+];
+
 // v1: V1/Lifecycle Settings endpoints
 export const v1V1lifecycleSettingsEndpoints: Endpoint[] = [
   {
@@ -12629,6 +12725,8 @@ export const allEndpoints = {
   training: trainingEndpoints,
   user: userEndpoints,
   v1ChangeHistory: v1ChangeHistoryEndpoints,
+  v1V1aiAppLifecycle: v1V1aiAppLifecycleEndpoints,
+  v1V1aiApps: v1V1aiAppsEndpoints,
   v1V1lifecycleSettings: v1V1lifecycleSettingsEndpoints,
   v1V1useCaseLifecycle: v1V1useCaseLifecycleEndpoints,
   vendor: vendorEndpoints,

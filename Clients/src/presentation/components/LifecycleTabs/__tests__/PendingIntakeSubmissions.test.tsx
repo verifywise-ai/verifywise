@@ -1,9 +1,9 @@
 import { screen, fireEvent } from "@testing-library/react";
-import { renderWithProviders } from "../../../../../test/renderWithProviders";
+import { renderWithProviders } from "../../../../test/renderWithProviders";
 import PendingIntakeSubmissions from "../PendingIntakeSubmissions";
 
 const mockNavigateSearch = vi.fn();
-vi.mock("../../../../../application/hooks/useNavigateSearch", () => ({
+vi.mock("../../../../application/hooks/useNavigateSearch", () => ({
   default: () => mockNavigateSearch,
 }));
 
@@ -23,17 +23,24 @@ const pending = (items: ReturnType<typeof row>[], total = items.length) => ({
   limit: 500,
 });
 
+const copy = {
+  description:
+    "Submitted through an intake form. The use case is created when a reviewer approves the request.",
+  exportNote: "Intake requests are not included in the use case export.",
+};
+
 describe("PendingIntakeSubmissions", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("renders nothing when no request is pending", () => {
-    renderWithProviders(<PendingIntakeSubmissions pending={pending([])} />);
+    renderWithProviders(<PendingIntakeSubmissions {...copy} pending={pending([])} />);
     expect(screen.queryByTestId("pending-intake-submissions")).toBeNull();
   });
 
   it("lists each request, notes the export, and opens the submission review screen", () => {
     renderWithProviders(
       <PendingIntakeSubmissions
+        {...copy}
         pending={pending([row(), row({ id: 42, title: null, submitter_name: null })])}
       />,
     );
@@ -66,20 +73,20 @@ describe("PendingIntakeSubmissions", () => {
         .map((r) => r.querySelector("button")?.getAttribute("data-testid"));
 
     const { rerender } = renderWithProviders(
-      <PendingIntakeSubmissions pending={pending(items)} searchTerm="chat" />,
+      <PendingIntakeSubmissions {...copy} pending={pending(items)} searchTerm="chat" />,
     );
     expect(ids()).toEqual(["pending-intake-review-1"]);
-    rerender(<PendingIntakeSubmissions pending={pending(items)} searchTerm=" credit " />);
+    rerender(<PendingIntakeSubmissions {...copy} pending={pending(items)} searchTerm=" credit " />);
     expect(ids()).toEqual(["pending-intake-review-2"]);
-    rerender(<PendingIntakeSubmissions pending={pending(items)} searchTerm="cy" />);
+    rerender(<PendingIntakeSubmissions {...copy} pending={pending(items)} searchTerm="cy" />);
     expect(ids()).toEqual(["pending-intake-review-3"]);
-    rerender(<PendingIntakeSubmissions pending={pending(items)} searchTerm="zzz" />);
+    rerender(<PendingIntakeSubmissions {...copy} pending={pending(items)} searchTerm="zzz" />);
     expect(ids()).toEqual([]);
     expect(screen.getByText("No intake requests match your search.")).toBeInTheDocument();
   });
 
   it("says when only the oldest requests are listed", () => {
-    renderWithProviders(<PendingIntakeSubmissions pending={pending([row()], 812)} />);
+    renderWithProviders(<PendingIntakeSubmissions {...copy} pending={pending([row()], 812)} />);
     expect(screen.getByTestId("pending-intake-capped").textContent).toBe(
       "Showing the oldest 1 of 812",
     );

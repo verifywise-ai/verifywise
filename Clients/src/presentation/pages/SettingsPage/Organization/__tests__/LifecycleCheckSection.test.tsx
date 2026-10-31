@@ -38,7 +38,7 @@ describe("LifecycleCheckSection", () => {
 
     fireEvent.click(screen.getByTestId("lifecycle-save-interval-btn"));
     await waitFor(() => expect(mockUpdateSettings).toHaveBeenCalledWith(30));
-    await waitFor(() => expect(onSuccess).toHaveBeenCalledWith("Live use case check saved"));
+    await waitFor(() => expect(onSuccess).toHaveBeenCalledWith("Still-live check saved"));
   });
 
   it("is disabled without organization.admin", async () => {

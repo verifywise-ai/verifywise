@@ -34,6 +34,7 @@ import {
   Eye,
   Copy,
   FolderTree,
+  Bot,
   ListIcon,
   ChevronsUpDown,
   ClipboardList,
@@ -106,6 +107,7 @@ function formatIntakeDate(
 const ENTITY_LABELS: Record<string, string> = {
   [IntakeEntityType.MODEL]: "Model inventory",
   [IntakeEntityType.USE_CASE]: "Use case",
+  [IntakeEntityType.AI_APP]: "AI app",
 };
 
 // ============================================================================
@@ -1010,6 +1012,22 @@ export function IntakeFormsListPage() {
                   strokeWidth={1.5}
                   color={
                     selectedEntityType === IntakeEntityType.USE_CASE
+                      ? theme.palette.primary.main
+                      : theme.palette.other.icon
+                  }
+                />
+              ),
+            },
+            {
+              type: IntakeEntityType.AI_APP,
+              label: "AI app",
+              description: "Collect requests to use an AI app",
+              icon: (
+                <Bot
+                  size={20}
+                  strokeWidth={1.5}
+                  color={
+                    selectedEntityType === IntakeEntityType.AI_APP
                       ? theme.palette.primary.main
                       : theme.palette.other.icon
                   }
