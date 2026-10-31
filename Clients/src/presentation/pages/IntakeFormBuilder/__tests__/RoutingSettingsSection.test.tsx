@@ -213,7 +213,19 @@ describe("RoutingSettingsSection number tooltips", () => {
     for (const { band, min, max } of SCORE_BANDS) {
       expect(info).toHaveTextContent(`${band}: ${min}–${max}`);
     }
-    expect(info).toHaveTextContent("whose AI scoring failed, always go to expert reviewers");
+    expect(info).toHaveTextContent("Prohibited practices always go to expert reviewers.");
+    expect(info).toHaveTextContent(
+      "So do submissions that have no score or whose AI scoring failed.",
+    );
+  });
+
+  it("explains the close-call margin as a strict distance below the threshold", async () => {
+    renderWithProviders(<Harness initial={on()} />);
+    fireEvent.mouseOver(screen.getByRole("button", { name: "About the close-call margin" }));
+    const info = await screen.findByTestId("routing-info-closeCallMargin");
+    expect(info).toHaveTextContent(
+      "Scores below the threshold by less than this margin also go to expert reviewers.",
+    );
   });
 
   it("explains the second review share without the score scale", async () => {
