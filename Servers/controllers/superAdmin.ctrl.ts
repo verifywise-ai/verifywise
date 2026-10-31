@@ -4,27 +4,34 @@ import jwt from "jsonwebtoken";
 import { sequelize } from "../database/db";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import { createOrganizationQuery } from "../utils/organization.utils";
-import { deleteUserByIdQuery } from "../utils/user.utils";
 import { invite } from "./vwmailer.ctrl";
-import { createNewUserWrapper } from "./user.ctrl";
 import { OrganizationModel } from "../domain.layer/models/organization/organization.model";
 import { getMonitoringConfig, upsertMonitoringConfig } from "../utils/monitoringConfig.utils";
-import { getMcpServerStatus, installMcpServer, uninstallMcpServer } from "../utils/mcpServer.utils";
 import {
-  createInvitationQuery,
-  getInvitationsByOrganizationQuery,
-} from "../utils/invitation.utils";
+  createOrganizationWithUser,
+  createUserInOrganization,
+  deleteOrganization,
+  removeUserById,
+  updateOrganization,
+  updateUserDetails,
+} from "../services/superAdmin.service";
+import { getInvitationsByOrganizationQuery } from "../utils/invitation.utils";
 import { sendInviteEmail } from "../utils/inviteEmail.utils";
-import { INVITATION_LIFETIME_MS } from "../utils/jwt.utils";
-import { inviteRoleRefusal } from "../utils/inviteRole.utils";
 import {
   ConflictException,
+  ForbiddenException,
+  NotFoundException,
   ValidationException,
 } from "../domain.layer/exceptions/custom.exception";
 import {
   countSuperAdmins,
   grantSuperAdmin as grantSuperAdminUtil,
   isUserSuperAdmin,
+  listAllUsersQuery,
+  organizationExists,
+  listOrganizationUsersQuery,
+  listOrganizationsQuery,
+  userExistsByEmail,
   listSuperAdmins as listSuperAdminsUtil,
   revokeSuperAdmin as revokeSuperAdminUtil,
 } from "../utils/superAdmin.utils";
@@ -71,14 +78,7 @@ const parseRoleId = (value: unknown): number | null => {
  */
 export async function listOrganizations(_req: Request, res: Response) {
   try {
-    const organizations = await sequelize.query(
-      `SELECT o.id, o.name, o.logo, o.created_at, o.onboarding_status,
-              (SELECT COUNT(*) FROM users u WHERE u.organization_id = o.id) AS user_count
-       FROM organizations o
-       ORDER BY o.created_at DESC`,
-      { type: "SELECT" as any },
-    );
-    return res.status(200).json(STATUS_CODE[200](organizations));
+    return res.status(200).json(STATUS_CODE[200](await listOrganizationsQuery()));
   } catch (error) {
     return res.status(500).json(STATUS_CODE[500](translateError(_req, error)));
   }
@@ -161,51 +161,28 @@ export async function createOrgWithUser(req: Request, res: Response) {
       .json(STATUS_CODE[400]({ message: req.t!("Unknown role"), field: "roleId" }));
   }
 
-  const transaction = await sequelize.transaction();
   let orgId: number | undefined;
   // Invite mode stores this on the row and signs the emailed link for it.
-  const invitationExpiresAt = new Date(Date.now() + INVITATION_LIFETIME_MS);
+  let invitationExpiresAt: Date;
 
   try {
-    const orgModel = await OrganizationModel.createNewOrganization(orgName.trim(), logo);
-    const createdOrg = await createOrganizationQuery(orgModel, transaction);
-    orgId = createdOrg.id!;
-
-    // The same role check as an invite, for either mode: the new organization
-    // has no custom roles yet, so only a built-in role other than SuperAdmin
-    // passes.
-    if (await inviteRoleRefusal(orgId, null, roleId)) {
-      throw new ValidationException(req.t!("Unknown role"), "roleId");
-    }
-
-    if (mode === "direct") {
-      await createNewUserWrapper(
-        {
-          name: user.name,
-          surname: user.surname!,
-          email: user.email,
-          password: user.password!,
-          roleId,
-          organizationId: orgId,
-        },
-        transaction,
-      );
-    } else {
-      await createInvitationQuery(
-        orgId,
-        user.email,
-        user.name,
-        user.surname ?? "",
+    const created = await createOrganizationWithUser({
+      orgName,
+      logo,
+      mode,
+      user: {
+        email: user.email,
+        name: user.name,
+        surname: user.surname,
         roleId,
-        req.userId!,
-        invitationExpiresAt,
-        { transaction },
-      );
-    }
-
-    await transaction.commit();
+        password: user.password,
+      },
+      invitedBy: req.userId!,
+      t: req.t!,
+    });
+    orgId = created.organizationId;
+    invitationExpiresAt = created.invitationExpiresAt;
   } catch (error: any) {
-    await transaction.rollback();
     if (error instanceof ConflictException) {
       return res.status(409).json(STATUS_CODE[409](error.message));
     }
@@ -256,34 +233,15 @@ export async function createOrgWithUser(req: Request, res: Response) {
  * Delete an organization and all its data (cascade)
  */
 export async function deleteOrg(req: Request, res: Response) {
-  const transaction = await sequelize.transaction();
   try {
     const orgId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
     if (isNaN(orgId)) {
-      await transaction.rollback();
       return res.status(400).json(STATUS_CODE[400]({ message: req.t!("Invalid organization ID") }));
     }
 
-    // Delete all users in the org first (to clear FK references)
-    const users: any[] = await sequelize.query(
-      `SELECT id FROM users WHERE organization_id = :orgId`,
-      { replacements: { orgId }, type: "SELECT" as any, transaction },
-    );
-
-    for (const user of users) {
-      await deleteUserByIdQuery(user.id, orgId, transaction);
-    }
-
-    // Delete the organization (cascade will handle remaining references)
-    await sequelize.query(`DELETE FROM organizations WHERE id = :orgId`, {
-      replacements: { orgId },
-      transaction,
-    });
-
-    await transaction.commit();
-    return res.status(200).json(STATUS_CODE[200]({ deleted: true, usersRemoved: users.length }));
+    const { usersRemoved } = await deleteOrganization(orgId);
+    return res.status(200).json(STATUS_CODE[200]({ deleted: true, usersRemoved }));
   } catch (error) {
-    await transaction.rollback();
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
@@ -296,34 +254,12 @@ export async function updateOrg(req: Request, res: Response) {
     const orgId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
     const { name, logo } = req.body;
 
-    const updates: string[] = [];
-    const replacements: any = { orgId };
-
-    if (name !== undefined) {
-      updates.push("name = :name");
-      replacements.name = name;
-    }
-    if (logo !== undefined) {
-      updates.push("logo = :logo");
-      replacements.logo = logo;
-    }
-
-    if (updates.length === 0) {
-      return res.status(400).json(STATUS_CODE[400]({ message: req.t!("No fields to update") }));
-    }
-
-    await sequelize.query(
-      `UPDATE organizations SET ${updates.join(", ")}, updated_at = NOW() WHERE id = :orgId`,
-      { replacements },
-    );
-
-    const [updated] = await sequelize.query(`SELECT * FROM organizations WHERE id = :orgId`, {
-      replacements: { orgId },
-      type: "SELECT" as any,
-    });
-
+    const updated = await updateOrganization(orgId, { name, logo }, req.t!);
     return res.status(200).json(STATUS_CODE[200](updated));
   } catch (error) {
+    if (error instanceof ValidationException) {
+      return res.status(400).json(STATUS_CODE[400]({ message: error.message }));
+    }
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
@@ -348,18 +284,7 @@ export async function getUserCount(_req: Request, res: Response) {
  */
 export async function listAllUsers(_req: Request, res: Response) {
   try {
-    const users = await sequelize.query(
-      `SELECT u.id, u.name, u.surname, u.email, u.role_id, r.name as role_name,
-              u.organization_id, o.name as organization_name,
-              u.created_at, u.last_login
-       FROM users u
-       LEFT JOIN roles r ON u.role_id = r.id
-       LEFT JOIN organizations o ON u.organization_id = o.id
-       WHERE u.organization_id IS NOT NULL
-       ORDER BY u.created_at DESC`,
-      { type: "SELECT" as any },
-    );
-    return res.status(200).json(STATUS_CODE[200](users));
+    return res.status(200).json(STATUS_CODE[200](await listAllUsersQuery()));
   } catch (error) {
     return res.status(500).json(STATUS_CODE[500](translateError(_req, error)));
   }
@@ -372,17 +297,7 @@ export async function listOrgUsers(req: Request, res: Response) {
   try {
     const orgId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
 
-    const users = await sequelize.query(
-      `SELECT u.id, u.name, u.surname, u.email, u.role_id, r.name as role_name,
-              u.created_at, u.last_login
-       FROM users u
-       LEFT JOIN roles r ON u.role_id = r.id
-       WHERE u.organization_id = :orgId
-       ORDER BY u.created_at ASC`,
-      { replacements: { orgId }, type: "SELECT" as any },
-    );
-
-    return res.status(200).json(STATUS_CODE[200](users));
+    return res.status(200).json(STATUS_CODE[200](await listOrganizationUsersQuery(orgId)));
   } catch (error) {
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
@@ -422,20 +337,10 @@ export async function inviteUserToOrg(req: Request, res: Response) {
     return res.status(400).json(STATUS_CODE[400](req.t!("Invalid organization ID")));
   }
   try {
-    const organization: any[] = await sequelize.query(
-      `SELECT id FROM organizations WHERE id = :orgId`,
-      { replacements: { orgId }, type: "SELECT" as any },
-    );
-    if (organization.length === 0) {
+    if (!(await organizationExists(orgId))) {
       return res.status(404).json(STATUS_CODE[404](req.t!("Organization not found")));
     }
-
-    // Check if a user with this email already exists
-    const existing: any[] = await sequelize.query(`SELECT id FROM users WHERE email = :email`, {
-      replacements: { email },
-      type: "SELECT" as any,
-    });
-    if (existing.length > 0) {
+    if (await userExistsByEmail(email)) {
       return res
         .status(409)
         .json(STATUS_CODE[409](req.t!("A user with this email already exists")));
@@ -495,21 +400,18 @@ export async function createUserInOrg(req: Request, res: Response) {
       .json(STATUS_CODE[400]({ message: req.t!("Unknown role"), field: "roleId" }));
   }
 
-  const transaction = await sequelize.transaction();
   try {
-    // The same role check as an invite into this organization.
-    if (await inviteRoleRefusal(orgId, null, roleId)) {
-      throw new ValidationException(req.t!("Unknown role"), "roleId");
-    }
-    const user = await createNewUserWrapper(
-      { name, surname, email, password, roleId, organizationId: orgId },
-      transaction,
-    );
-    await transaction.commit();
-    const { password_hash, ...safeUser } = user.toJSON() as any;
+    const safeUser = await createUserInOrganization({
+      organizationId: orgId,
+      email,
+      name,
+      surname,
+      password,
+      roleId,
+      t: req.t!,
+    });
     return res.status(201).json(STATUS_CODE[201](safeUser));
   } catch (error: any) {
-    await transaction.rollback();
     if (error instanceof ConflictException) {
       return res.status(409).json(STATUS_CODE[409](error.message));
     }
@@ -530,78 +432,20 @@ export async function updateUser(req: Request, res: Response) {
     const userId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
     const { name, surname, email, roleId } = req.body;
 
-    const rows: any[] = await sequelize.query(
-      `SELECT id, role_id, organization_id FROM users WHERE id = :userId`,
-      { replacements: { userId }, type: "SELECT" as any },
-    );
-
-    if (rows.length === 0) {
-      return res.status(404).json(STATUS_CODE[404](req.t!("User not found")));
-    }
-
-    // Pure SuperAdmin (no role, no org) cannot be edited through the
-    // tenant user endpoint — they have no org role to change.
-    if (rows[0].role_id == null && rows[0].organization_id == null) {
-      return res.status(403).json(STATUS_CODE[403](req.t!("Super-admin user cannot be modified")));
-    }
-
-    const updates: string[] = [];
-    const replacements: any = { userId };
-
-    if (name !== undefined) {
-      updates.push("name = :name");
-      replacements.name = name;
-    }
-    if (surname !== undefined) {
-      updates.push("surname = :surname");
-      replacements.surname = surname;
-    }
-    if (email !== undefined) {
-      updates.push("email = :email");
-      replacements.email = email;
-    }
-    // The edit form sends the current role back, null included (users whose
-    // former SuperAdmin role was cleared); only a change is checked and saved.
-    const currentRoleId = rows[0].role_id ?? null;
-    const roleChanged =
-      roleId !== undefined &&
-      (roleId === null ? currentRoleId !== null : Number(roleId) !== currentRoleId);
-    if (roleChanged) {
-      // The same role check as an invite into the user's organization.
-      const checkedRoleId = parseRoleId(roleId);
-      if (
-        checkedRoleId === null ||
-        rows[0].organization_id == null ||
-        (await inviteRoleRefusal(rows[0].organization_id, null, checkedRoleId))
-      ) {
-        return res
-          .status(400)
-          .json(STATUS_CODE[400]({ message: req.t!("Unknown role"), field: "roleId" }));
-      }
-      updates.push("role_id = :roleId");
-      replacements.roleId = checkedRoleId;
-    }
-
-    if (updates.length === 0) {
-      return res.status(400).json(STATUS_CODE[400]({ message: req.t!("No fields to update") }));
-    }
-
-    const [updated] = await sequelize.query(
-      `WITH updated AS (
-        UPDATE users SET ${updates.join(", ")}, updated_at = NOW() WHERE id = :userId
-        RETURNING *
-      )
-      SELECT u.id, u.name, u.surname, u.email, u.role_id, r.name as role_name,
-             u.organization_id, o.name as organization_name,
-             u.created_at, u.last_login
-      FROM updated u
-      LEFT JOIN roles r ON u.role_id = r.id
-      LEFT JOIN organizations o ON u.organization_id = o.id`,
-      { replacements, type: "SELECT" as any },
-    );
-
+    const updated = await updateUserDetails(userId, { name, surname, email, roleId }, req.t!);
     return res.status(200).json(STATUS_CODE[200](updated));
   } catch (error) {
+    if (error instanceof NotFoundException) {
+      return res.status(404).json(STATUS_CODE[404](error.message));
+    }
+    if (error instanceof ForbiddenException) {
+      return res.status(403).json(STATUS_CODE[403](error.message));
+    }
+    if (error instanceof ValidationException) {
+      return res
+        .status(400)
+        .json(STATUS_CODE[400]({ message: error.message, field: error.metadata?.field }));
+    }
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
@@ -610,35 +454,16 @@ export async function updateUser(req: Request, res: Response) {
  * Remove a user from their organization
  */
 export async function removeUser(req: Request, res: Response) {
-  const transaction = await sequelize.transaction();
   try {
     const userId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
-
-    const rows: any[] = await sequelize.query(
-      `SELECT id, organization_id, role_id FROM users WHERE id = :userId`,
-      { replacements: { userId }, type: "SELECT" as any, transaction },
-    );
-    const user = rows[0];
-
-    if (!user) {
-      await transaction.rollback();
-      return res.status(404).json(STATUS_CODE[404](req.t!("User not found")));
-    }
-
-    // Pure SuperAdmin (no role, no org) is not deletable through this
-    // endpoint — the DB trigger would also block it since revoking their
-    // super_admins row would orphan them.
-    if (user.role_id == null && user.organization_id == null) {
-      await transaction.rollback();
-      return res.status(403).json(STATUS_CODE[403](req.t!("Super-admin user cannot be deleted")));
-    }
-
-    await deleteUserByIdQuery(userId, user.organization_id, transaction);
-    await transaction.commit();
-
-    return res.status(200).json(STATUS_CODE[200]({ deleted: true, userId }));
+    return res.status(200).json(STATUS_CODE[200](await removeUserById(userId, req.t!)));
   } catch (error) {
-    await transaction.rollback();
+    if (error instanceof NotFoundException) {
+      return res.status(404).json(STATUS_CODE[404](error.message));
+    }
+    if (error instanceof ForbiddenException) {
+      return res.status(403).json(STATUS_CODE[403](error.message));
+    }
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
@@ -841,42 +666,5 @@ export async function generateMonitoringToken(req: Request, res: Response) {
     return res.status(200).json(STATUS_CODE[200](redactMonitoringConfig(updated)));
   } catch (error) {
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
-  }
-}
-
-/**
- * Whether the MCP server is built and ready to register with a client.
- */
-export async function getMcpServer(req: Request, res: Response) {
-  try {
-    return res.status(200).json(STATUS_CODE[200](await getMcpServerStatus()));
-  } catch (error) {
-    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
-  }
-}
-
-/**
- * Build the MCP server so it can be registered with an MCP client.
- *
- * Runs npm install and the TypeScript build in MCPServer/. Takes a minute or
- * two on a cold install, so the request is held until it finishes rather than
- * reporting a success the caller would have to poll to confirm.
- */
-export async function installMcpServerHandler(_req: Request, res: Response) {
-  try {
-    return res.status(200).json(STATUS_CODE[200](await installMcpServer()));
-  } catch (error) {
-    return res.status(400).json(STATUS_CODE[400]({ message: (error as Error).message }));
-  }
-}
-
-/**
- * Remove the MCP server build, leaving the source in place.
- */
-export async function uninstallMcpServerHandler(_req: Request, res: Response) {
-  try {
-    return res.status(200).json(STATUS_CODE[200](await uninstallMcpServer()));
-  } catch (error) {
-    return res.status(400).json(STATUS_CODE[400]({ message: (error as Error).message }));
   }
 }

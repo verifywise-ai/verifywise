@@ -58,6 +58,9 @@ import {
   NotificationType,
   NotificationEntityType,
 } from "../../domain.layer/interfaces/i.notification";
+import fs from "fs";
+import path from "path";
+import { compileMjmlToHtml } from "../../tools/mjmlCompiler";
 
 // Cast mocks
 const mockRedisPublish = redisClient.publish as jest.MockedFunction<typeof redisClient.publish>;
@@ -360,6 +363,8 @@ describe("inAppNotification.service", () => {
   // The assignment email puts these values into an HTML template. The risk description of an
   // accepted vendor research finding (the entity name) and its impact description (the context
   // description) are written by a model that read a web page, so they are text, never markup.
+  // compileMjmlToHtml escapes every value whose key does not end in Html or _html, so the names go
+  // to it as written, and entity_context_html (the one raw-HTML slot) is built from escaped values.
   describe("notifyUserAssigned", () => {
     const HOSTILE_ENTITY_NAME = '<a href="https://attacker.example">Open the incident report</a>';
 
@@ -407,6 +412,13 @@ describe("inAppNotification.service", () => {
       };
     };
 
+    /** What the recipient gets: the real compiler over the real template, with these variables. */
+    const render = (template: string, variables: Record<string, string>) =>
+      compileMjmlToHtml(
+        fs.readFileSync(path.join(__dirname, "../../templates", template), "utf8"),
+        variables,
+      );
+
     it("passes plain names and a plain context through as they are", async () => {
       const { to, template, variables } = await assign({
         entityName: "Quarterly vendor review",
@@ -446,7 +458,7 @@ describe("inAppNotification.service", () => {
     });
 
     it("writes the names and the context into the email as text, not as markup", async () => {
-      const { variables } = await assign({
+      const { template, variables } = await assign({
         entityName: HOSTILE_ENTITY_NAME,
         assignerName: "<b>x</b>",
         recipientName: "<s>Ada</s>",
@@ -459,25 +471,62 @@ describe("inAppNotification.service", () => {
         },
       });
 
-      expect(variables.entity_name).toBe(
+      // The names go to the compiler as written: it escapes them, and escaping them here as well
+      // would show "&amp;" for "&".
+      expect(variables.entity_name).toBe(HOSTILE_ENTITY_NAME);
+      expect(variables.assigner_name).toBe("<b>x</b>");
+      expect(variables.recipient_name).toBe("<s>Ada</s>");
+      // The raw-HTML slot is built from escaped values.
+      const contextHtml = variables.entity_context_html;
+      expect(contextHtml).toContain("&lt;i&gt;f&lt;/i&gt;");
+      expect(contextHtml).toContain("A &amp; B");
+      expect(contextHtml).toContain("Annex:");
+      expect(contextHtml).toContain("&lt;u&gt;p&lt;/u&gt;");
+      expect(contextHtml).toContain("&lt;img src=x onerror=alert(1)&gt;");
+      // The rows are still a table: only the values were turned into text.
+      expect(contextHtml).toMatch(/^<table [^>]*>(<tr>.*<\/tr>)+<\/table>$/);
+
+      // What the recipient gets: text for every value, markup only where the template has it.
+      const html = await render(template, variables);
+      expect(html).toContain(
         "&lt;a href=&quot;https://attacker.example&quot;&gt;Open the incident report&lt;/a&gt;",
       );
-      expect(variables.assigner_name).toBe("&lt;b&gt;x&lt;/b&gt;");
-      expect(variables.recipient_name).toBe("&lt;s&gt;Ada&lt;/s&gt;");
-      const html = variables.entity_context_html;
+      expect(html).toContain("&lt;b&gt;x&lt;/b&gt;");
+      expect(html).toContain("&lt;s&gt;Ada&lt;/s&gt;");
       expect(html).toContain("&lt;i&gt;f&lt;/i&gt;");
-      expect(html).toContain("A &amp; B");
-      expect(html).toContain("Annex:");
       expect(html).toContain("&lt;u&gt;p&lt;/u&gt;");
       expect(html).toContain("&lt;img src=x onerror=alert(1)&gt;");
-      // The rows are still a table: only the values were turned into text.
-      expect(html).toMatch(/^<table [^>]*>(<tr>.*<\/tr>)+<\/table>$/);
-
-      // None of their tags is left in anything the template receives.
-      const everything = Object.values(variables).join("\n");
-      for (const raw of ["<a", "<img", "<i>", "<b>", "<u>", "<s>"]) {
-        expect(everything).not.toContain(raw);
+      expect(html).toContain("A &amp; B");
+      for (const raw of [
+        '<a href="https://attacker.example">',
+        "<b>x</b>",
+        "<s>Ada</s>",
+        "<i>f</i>",
+        "<u>p</u>",
+        "<img src=x",
+      ]) {
+        expect(html).not.toContain(raw);
       }
+      // Escaped once: no entity of the text is escaped a second time.
+      expect(html).not.toContain("&amp;lt;");
+      expect(html).not.toContain("&amp;quot;");
+      expect(html).not.toContain("&amp;amp;");
+    });
+
+    it("shows an ampersand in a name once, not escaped twice", async () => {
+      const { template, variables } = await assign({
+        entityName: "Terms & conditions review",
+        assignerName: "Grace & Ada",
+        recipientName: "Ada & Co",
+        context: { projectName: "R&D" },
+      });
+
+      const html = await render(template, variables);
+      expect(html).toContain("Terms &amp; conditions review");
+      expect(html).toContain("Grace &amp; Ada");
+      expect(html).toContain("Ada &amp; Co");
+      expect(html).toContain("R&amp;D");
+      expect(html).not.toContain("&amp;amp;");
     });
 
     it("leaves the subject and the in-app notification as the plain text that was written", async () => {

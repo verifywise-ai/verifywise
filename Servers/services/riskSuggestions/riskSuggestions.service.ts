@@ -8,7 +8,11 @@ import { PROJECT_RISK_CATEGORIES_SET } from "../../utils/risk.utils";
 import { AI_LIFECYCLE_PHASE_ENUM } from "../../utils/validations/riskValidation.utils";
 import { VENDOR_SUGGESTION_SUPPRESS_THRESHOLD } from "../vendors/riskSuggestions";
 import { rankCatalogCandidates } from "./candidates";
-import { buildRiskSuggestionSystemPrompt, buildRiskSuggestionUserPrompt } from "./prompts";
+import {
+  buildRiskSuggestionSystemPrompt,
+  buildRiskSuggestionUserPrompt,
+  MAX_USE_CASE_FIELD_CHARS,
+} from "./prompts";
 import { RiskSuggestionOutput, riskSuggestionOutputSchema } from "./schema";
 
 /**
@@ -56,7 +60,11 @@ export class RiskSuggestionError extends Error {
 export interface UseCaseInput {
   name: string;
   purpose?: string;
+  /** Free-text description; see resolvePurposeAndDescription for how it is used. */
+  description?: string;
   technology?: string;
+  /** Untrusted extra text (e.g. intake answers); fenced as data in the prompt. */
+  context?: string;
 }
 
 export interface MatchedCatalogRisk {
@@ -69,9 +77,13 @@ export interface MatchedCatalogRisk {
   /** Catalog strings, verbatim — NOT necessarily the likelihood/severity enums. */
   likelihood: string;
   severity: string;
-  /** The model's reason, sanitized; the only model-authored text kept. */
+  /** The model's reason, sanitized. */
   reason: string;
   ai_lifecycle_phase?: string;
+  /** Model-drafted for this use case; "" when the model omitted them. */
+  impact: string;
+  mitigation_plan: string;
+  implementation_strategy: string;
 }
 
 export interface SuggestedRisk {
@@ -85,6 +97,8 @@ export interface SuggestedRisk {
   severity: number;
   impact: string;
   mitigation_plan: string;
+  /** "" when the model omitted it. */
+  implementation_strategy: string;
 }
 
 export interface RiskSuggestionResult {
@@ -106,6 +120,33 @@ const sanitizeLlmText = (text: string, maxChars: number): string =>
     .replace(/[\x00-\x1F\x7F]/g, "")
     .trim()
     .slice(0, maxChars);
+
+/** Lowercase, punctuation-free form used only to spot a repeated text. */
+const comparable = (text: string): string =>
+  text
+    .toLowerCase()
+    .replace(/[^a-z0-9 ]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+/**
+ * Decide what the model sees as purpose and description:
+ * - no purpose: the description stands in as the purpose;
+ * - purpose and a different description: both are sent;
+ * - description that repeats the purpose (ignoring case and punctuation):
+ *   only the purpose is sent.
+ * Whitespace-only values count as missing.
+ */
+export function resolvePurposeAndDescription(useCase: UseCaseInput): {
+  purpose?: string;
+  description?: string;
+} {
+  const purpose = useCase.purpose?.trim() || undefined;
+  const description = useCase.description?.trim() || undefined;
+  if (!purpose) return { purpose: description };
+  if (!description || comparable(description) === comparable(purpose)) return { purpose };
+  return { purpose, description };
+}
 
 const clamp1to5 = (value: number): number => Math.min(5, Math.max(1, Math.round(value)));
 
@@ -192,6 +233,9 @@ export function hydrateMatched(matched: RiskSuggestionOutput["matched"]): Matche
       likelihood: entry.likelihood,
       severity: entry.riskSeverity,
       reason: sanitizeLlmText(match.reason, 300),
+      impact: sanitizeLlmText(match.impact ?? "", 1000),
+      mitigation_plan: sanitizeLlmText(match.mitigation_plan ?? "", 1000),
+      implementation_strategy: sanitizeLlmText(match.implementation_strategy ?? "", 1000),
     };
     if (match.ai_lifecycle_phase && AI_LIFECYCLE_PHASE_SET.has(match.ai_lifecycle_phase)) {
       result.ai_lifecycle_phase = match.ai_lifecycle_phase;
@@ -220,6 +264,7 @@ export function processSuggested(suggested: RiskSuggestionOutput["suggested"]): 
       severity: clamp1to5(risk.severity),
       impact: sanitizeLlmText(risk.impact, 1000),
       mitigation_plan: sanitizeLlmText(risk.mitigation_plan, 1000),
+      implementation_strategy: sanitizeLlmText(risk.implementation_strategy ?? "", 1000),
     };
     if (AI_LIFECYCLE_PHASE_SET.has(risk.ai_lifecycle_phase)) {
       result.ai_lifecycle_phase = risk.ai_lifecycle_phase;
@@ -239,9 +284,18 @@ export async function suggestRisksForUseCase(params: {
   /** Test seam forwarded to generateObjectWithSelfCorrection. */
   generateImpl?: GenerateObjectImpl;
 }): Promise<RiskSuggestionResult> {
-  const { model, useCase, existingRiskNames, generateImpl } = params;
+  const { model, existingRiskNames, generateImpl } = params;
+  const useCase: UseCaseInput = {
+    ...params.useCase,
+    ...resolvePurposeAndDescription(params.useCase),
+  };
 
-  const useCaseText = [useCase.name, useCase.purpose, useCase.technology].filter(Boolean).join(" ");
+  // Rank on what the model will actually read: the prompt truncates each
+  // field, so a long description must not steer the candidates past that cut.
+  const useCaseText = [useCase.name, useCase.purpose, useCase.description, useCase.technology]
+    .filter((value): value is string => Boolean(value))
+    .map((value) => value.slice(0, MAX_USE_CASE_FIELD_CHARS))
+    .join(" ");
   const mitCandidates = rankCatalogCandidates(MIT_RISK_CATALOG, useCaseText);
 
   let output: RiskSuggestionOutput;

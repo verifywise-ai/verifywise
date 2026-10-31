@@ -8,9 +8,8 @@ from crud.mcp_approvals import (
     get_approval_status,
     get_pending_approvals,
 )
-from middlewares.auth import verify_internal_key
 from utils.auth import get_org_id, get_user_id, require_admin
-from utils.notifications import notify_config_change
+from utils.notifications import config_event, notify_config_change
 
 router = APIRouter(prefix="/mcp/approvals", tags=["mcp-approvals"])
 
@@ -22,7 +21,6 @@ router = APIRouter(prefix="/mcp/approvals", tags=["mcp-approvals"])
 @router.get("", status_code=status.HTTP_200_OK)
 async def list_pending_approvals(request: Request):
     """List all pending approval requests for the organization."""
-    verify_internal_key(request)
     org_id = get_org_id(request)
 
     approvals = await get_pending_approvals(org_id)
@@ -40,7 +38,6 @@ async def list_approval_history(
     offset: int = 0,
 ):
     """List decided approval requests with pagination."""
-    verify_internal_key(request)
     org_id = get_org_id(request)
 
     if limit < 1 or limit > 200:
@@ -65,7 +62,6 @@ async def list_approval_history(
 @router.get("/{request_id}", status_code=status.HTTP_200_OK)
 async def get_single_approval(request_id: int, request: Request):
     """Get the status of a single approval request."""
-    verify_internal_key(request)
     org_id = get_org_id(request)
 
     approval = await get_approval_status(org_id, request_id)
@@ -85,7 +81,6 @@ async def get_single_approval(request_id: int, request: Request):
 @router.post("/{request_id}/approve", status_code=status.HTTP_200_OK)
 async def approve_request(request_id: int, request: Request):
     """Approve a pending tool execution request (admin only)."""
-    verify_internal_key(request)
     require_admin(request)
 
     org_id = get_org_id(request)
@@ -122,12 +117,7 @@ async def approve_request(request_id: int, request: Request):
     await notify_config_change(
         organization_id=org_id,
         changed_by_user_id=user_id,
-        event={
-            "action": "approved",
-            "entity_type": "mcp_approval",
-            "entity_id": str(request_id),
-            "entity_name": record.get("tool_name", ""),
-        },
+        event=config_event("mcp_approval", "approved", record.get("tool_name", ""), request_id),
     )
 
     return {"status": "success", "data": record}
@@ -140,7 +130,6 @@ async def approve_request(request_id: int, request: Request):
 @router.post("/{request_id}/deny", status_code=status.HTTP_200_OK)
 async def deny_request(request_id: int, request: Request):
     """Deny a pending tool execution request (admin only)."""
-    verify_internal_key(request)
     require_admin(request)
 
     org_id = get_org_id(request)
@@ -177,12 +166,7 @@ async def deny_request(request_id: int, request: Request):
     await notify_config_change(
         organization_id=org_id,
         changed_by_user_id=user_id,
-        event={
-            "action": "denied",
-            "entity_type": "mcp_approval",
-            "entity_id": str(request_id),
-            "entity_name": record.get("tool_name", ""),
-        },
+        event=config_event("mcp_approval", "denied", record.get("tool_name", ""), request_id),
     )
 
     return {"status": "success", "data": record}

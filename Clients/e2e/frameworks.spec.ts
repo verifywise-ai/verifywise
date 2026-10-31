@@ -81,10 +81,6 @@ test.describe("Frameworks", () => {
     }
 
     // Click the second tab
-    const firstTabText = await tabs
-      .nth(0)
-      .textContent()
-      .catch(() => "");
     await tabs.nth(1).click();
     await page.waitForTimeout(1000);
 

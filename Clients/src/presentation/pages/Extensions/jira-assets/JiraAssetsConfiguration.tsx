@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   Box,
   Typography,
@@ -17,11 +17,76 @@ import {
   Checkbox,
   Button,
   FormControlLabel,
+  useTheme,
 } from "@mui/material";
-import { RefreshCw, Download } from "lucide-react";
-import { VWField, VWSelect, VWToggle } from "./VWComponents";
+import { Download } from "lucide-react";
+import { VWField, VWSelect } from "../../../components/VWComponents";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
+import StandardModal from "../../../components/Modals/StandardModal";
+import { useAuth } from "../../../../application/hooks/useAuth";
+import { getApiErrorReason } from "../../../../application/utils/apiErrorReason";
+import { CustomizableButton } from "../../../components/button/customizable-button";
+import ExtensionSyncPanel from "../../../components/ExtensionSyncPanel";
+import {
+  useExtensionSyncStatus,
+  type ScheduleState,
+} from "../../../../application/hooks/useExtensionSync";
+import type { ExtensionRun } from "../../../../application/repository/extensionSync.repository";
+import {
+  BatchProgress,
+  deselectDone,
+  finishImport,
+  importInBatches,
+  keepShown,
+  appendPage,
+  createRequestGate,
+  loadPages,
+  PickerPage,
+  runPickerRequest,
+  PanelMessage,
+  removeInBatches,
+  summaryMessage,
+} from "./batching";
+
+/** A panel message: the text, then each count with its own label (each translatable). */
+function MessageBody({ message }: { message: PanelMessage }) {
+  return (
+    <>
+      <span>{message.text}</span>
+      {message.counts?.map((count) => (
+        <React.Fragment key={count.label}>
+          {" "}
+          <span>{count.label}</span> <span>{count.value}</span>
+        </React.Fragment>
+      ))}
+    </>
+  );
+}
+
+/** "Importing objects 101–200 / 250" while a batched run is going. */
+function BatchProgressLine({ label, progress }: { label: string; progress: BatchProgress }) {
+  return (
+    <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1 }}>
+      <span>{label}</span>{" "}
+      <span>
+        {progress.from}–{progress.to} / {progress.total}
+      </span>
+    </Typography>
+  );
+}
+
+const SELECTION_SAVE_FAILED = "Could not save the schema and object type. Try again.";
+const IMPORT_PROGRESS_LABEL = "Importing objects";
+const REMOVE_PROGRESS_LABEL = "Removing use cases";
+/** Desktop control height for the panel's action buttons. */
+const CONTROL_HEIGHT_SX = { height: 30, minHeight: 30 };
+/** The "Sync now" success line, as the page showed it before the shared panel. */
+function describeJiraSync(run: ExtensionRun): string {
+  return `Sync completed: ${run.counts.created ?? 0} created, ${run.counts.updated ?? 0} updated`;
+}
+const MISSING_EXPLAINER =
+  "Jira no longer returns these objects. Syncs keep their use cases; remove them here if they should go.";
 
 interface Schema {
   id: string;
@@ -53,10 +118,28 @@ interface ImportedUseCase {
   data: any;
   last_synced_at: string;
   sync_status: string;
+  /** Set by a sync that did not find the object in Jira; cleared when it reappears. */
+  missing_in_jira_since?: string | null;
 }
 
 export const JiraAssetsConfiguration: React.FC = () => {
+  const theme = useTheme();
   const formatDate = useFormattedDate();
+  // The settings page already redirects non-Admins; this keeps the sync
+  // controls read-only if the panel is ever shown to anyone else.
+  const { userRoleName } = useAuth();
+  const canManageSync = userRoleName === "Admin";
+  // The "Last sync" date in the Import & Sync header comes from the sync engine.
+  const syncStatus = useExtensionSyncStatus("jira-assets");
+  const lastSyncAt = syncStatus.data?.last_finished_run?.completed_at ?? null;
+  // Before the connection is saved, the panel's schedule is a draft sent with it.
+  const scheduleDraft = useRef({ sync_enabled: false, sync_interval_hours: 24 });
+  const handleScheduleDraft = useCallback((schedule: ScheduleState) => {
+    scheduleDraft.current = {
+      sync_enabled: schedule.enabled,
+      sync_interval_hours: schedule.interval_hours,
+    };
+  }, []);
   const pluginApiCall = useCallback(async (method: string, path: string, body?: any) => {
     const url = `/extensions/jira-assets${path.startsWith("/") ? path : `/${path}`}`;
     let response: any;
@@ -86,10 +169,11 @@ export const JiraAssetsConfiguration: React.FC = () => {
 
   const [localConfig, setLocalConfig] = useState<Record<string, any>>({
     deployment_type: "cloud",
-    sync_enabled: false,
-    sync_interval_hours: 24,
   });
   const [configLoaded, setConfigLoaded] = useState(false);
+  // A failed load leaves has_api_token false, which would turn schedule changes
+  // into an unsaved draft; the schedule stays locked instead.
+  const [configLoadFailed, setConfigLoadFailed] = useState(false);
 
   const [schemas, setSchemas] = useState<Schema[]>([]);
   const [objectTypes, setObjectTypes] = useState<ObjectType[]>([]);
@@ -107,22 +191,50 @@ export const JiraAssetsConfiguration: React.FC = () => {
 
   // Import state
   const [jiraObjects, setJiraObjects] = useState<JiraObject[]>([]);
-  const [selectedObjects, setSelectedObjects] = useState<Set<string>>(new Set());
+  const [storedSelection, setSelectedObjects] = useState<Set<string>>(new Set());
+  // The effective selection is derived at render: only ids the picker shows.
+  // A selected id is never invisible, not even for one frame.
+  const selectedObjects = useMemo(
+    () => keepShown(storedSelection, jiraObjects),
+    [storedSelection, jiraObjects],
+  );
   const [isLoadingObjects, setIsLoadingObjects] = useState(false);
+  // The picker loads one page at a time; "Load more" asks for the next.
+  const [jiraHasMore, setJiraHasMore] = useState(false);
+  const [jiraNextStartAt, setJiraNextStartAt] = useState(0);
   const [isImporting, setIsImporting] = useState(false);
-  const [importMessage, setImportMessage] = useState<{
-    type: "success" | "error";
-    text: string;
-  } | null>(null);
+  const [importMessage, setImportMessage] = useState<PanelMessage | null>(null);
+  const [importProgress, setImportProgress] = useState<BatchProgress | null>(null);
 
   // Imported use cases state
   const [importedUseCases, setImportedUseCases] = useState<ImportedUseCase[]>([]);
+  // Jira object ids already imported, set where the list is fetched
+  // (loadImportedUseCases) and read when a picker page arrives (not when it
+  // was requested), so a "Load more" that lands after an import never brings
+  // the just-imported objects back.
+  const importedIdsRef = useRef<Set<string>>(new Set());
+  // Generations of picker requests: stale responses are dropped.
+  const pickerGate = useRef(createRequestGate());
+  // How many pages the picker has loaded since the last reset; a refresh
+  // reloads that many.
+  const loadedPagesRef = useRef(0);
   const [, setIsLoadingUseCases] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [syncMessage, setSyncMessage] = useState<{
-    type: "success" | "error";
-    text: string;
-  } | null>(null);
+
+  // Unmount flag so a schema / object-type save that settles late does not
+  // update the page after it has gone.
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  // Schema / object-type saves: same ordering, latest response wins.
+  const selectionQueue = useRef<Promise<void>>(Promise.resolve());
+  const selectionSeq = useRef(0);
+  const [syncMessage, setSyncMessage] = useState<PanelMessage | null>(null);
+  const [removeProgress, setRemoveProgress] = useState<BatchProgress | null>(null);
 
   // Load config from plugin's own endpoint on mount (only once)
   useEffect(() => {
@@ -136,8 +248,10 @@ export const JiraAssetsConfiguration: React.FC = () => {
         if (data) {
           setLocalConfig((prev) => ({ ...prev, ...data }));
         }
+        setConfigLoadFailed(false);
       } catch (error) {
         console.error("Failed to load JIRA config:", error);
+        setConfigLoadFailed(true);
       } finally {
         setConfigLoaded(true);
       }
@@ -194,108 +308,203 @@ export const JiraAssetsConfiguration: React.FC = () => {
     [pluginApiCall],
   );
 
-  // Load JIRA objects for import
-  const loadJiraObjects = useCallback(async () => {
-    if (!localConfig.selected_object_type_id) return;
+  // Clear the import picker (list, paging, selection): its contents belong to
+  // one object type and one fetch.
+  const resetPicker = useCallback(() => {
+    // Any picker request still in flight belongs to the old picker; its
+    // loading state goes with it.
+    pickerGate.current.bump();
+    loadedPagesRef.current = 0;
+    setIsLoadingObjects(false);
+    setJiraObjects([]);
+    setJiraHasMore(false);
+    setJiraNextStartAt(0);
+    setSelectedObjects(new Set());
+  }, []);
 
-    setIsLoadingObjects(true);
-    setImportMessage(null);
-    try {
-      const response = await pluginApiCall(
-        "GET",
-        `/object-types/${localConfig.selected_object_type_id}/objects`,
-      );
-      if (response && Array.isArray(response)) {
-        // Filter out already imported objects
-        const importedIds = new Set(importedUseCases.map((uc) => uc.jira_object_id));
-        const newObjects = response.filter((obj: JiraObject) => !importedIds.has(obj.id));
-        setJiraObjects(newObjects);
-      }
-    } catch (error: any) {
-      setImportMessage({ type: "error", text: error.message || "Failed to load JIRA objects" });
-    } finally {
-      setIsLoadingObjects(false);
-    }
-  }, [pluginApiCall, localConfig.selected_object_type_id, importedUseCases]);
+  // Load JIRA objects for import, one page at a time (`append` = "Load more").
+  const loadJiraObjects = useCallback(
+    async (append = false) => {
+      if (!localConfig.selected_object_type_id) return;
+
+      const objectTypeId = localConfig.selected_object_type_id;
+      const fetchPage = async (startAt: number): Promise<PickerPage<JiraObject>> => {
+        const response = await pluginApiCall(
+          "GET",
+          `/object-types/${objectTypeId}/objects?startAt=${startAt}`,
+        );
+        const list: JiraObject[] = Array.isArray(response)
+          ? response
+          : Array.isArray(response?.objects)
+            ? response.objects
+            : [];
+        return {
+          objects: list,
+          hasMore: !!response?.hasMore,
+          nextStartAt: Number(response?.nextStartAt) || 0,
+        };
+      };
+      setImportMessage(null);
+      await runPickerRequest({
+        gate: pickerGate.current,
+        append,
+        setLoading: setIsLoadingObjects,
+        // "Load more" fetches the next page. A fresh load (refresh) reloads as
+        // many pages as were loaded before, so ticks on objects from "Load
+        // more" pages are kept as long as the objects are still there.
+        fetch: async () =>
+          append
+            ? { ...(await fetchPage(jiraNextStartAt)), pages: 1 }
+            : loadPages(fetchPage, loadedPagesRef.current),
+        onResult: (page) => {
+          // Leave out objects already imported, as known when the page lands.
+          if (append) {
+            setJiraObjects((prev) => appendPage(prev, page.objects, importedIdsRef.current));
+            loadedPagesRef.current += 1;
+          } else {
+            // The list is replaced by the same pages, reloaded: prune the
+            // stored selection to it in the same step, so a tick on an object
+            // that is gone does not come back later.
+            const next = appendPage([], page.objects, importedIdsRef.current);
+            setJiraObjects(next);
+            setSelectedObjects((prev) => keepShown(prev, next));
+            loadedPagesRef.current = page.pages;
+          }
+          setJiraHasMore(page.hasMore);
+          setJiraNextStartAt(page.nextStartAt);
+        },
+        onError: (error: any) => {
+          // A failed fresh load must not leave the previous list on screen.
+          if (!append) resetPicker();
+          setImportMessage({
+            type: "error",
+            text: getApiErrorReason(error) || error?.message || "Failed to load JIRA objects",
+          });
+        },
+      });
+    },
+    [pluginApiCall, localConfig.selected_object_type_id, jiraNextStartAt, resetPicker],
+  );
 
   // Load imported use cases
-  const loadImportedUseCases = useCallback(async () => {
+  /** Reload the imported use cases; returns the fresh list, or null if it could not be read. */
+  const loadImportedUseCases = useCallback(async (): Promise<ImportedUseCase[] | null> => {
     setIsLoadingUseCases(true);
     try {
       const response = await pluginApiCall("GET", "/use-cases");
       if (response && Array.isArray(response)) {
+        importedIdsRef.current = new Set(response.map((uc) => String(uc.jira_object_id)));
         setImportedUseCases(response);
+        return response;
       }
+      return null;
     } catch (error) {
       console.error("Failed to load imported use cases:", error);
+      return null;
     } finally {
       setIsLoadingUseCases(false);
     }
   }, [pluginApiCall]);
 
-  // Import selected objects
+  // Import the selected objects, 100 per request (the server limit), one
+  // request at a time; the first error stops the rest.
   const handleImport = async () => {
     if (selectedObjects.size === 0) return;
 
     setIsImporting(true);
     setImportMessage(null);
     try {
-      const response = await pluginApiCall("POST", "/import", {
-        object_ids: Array.from(selectedObjects),
-      });
-
-      if (response?.success) {
-        setImportMessage({
-          type: "success",
-          text: `Successfully imported ${response.imported} objects`,
-        });
-        setSelectedObjects(new Set());
-        // Reload both lists
-        await loadImportedUseCases();
-        await loadJiraObjects();
-      } else {
-        setImportMessage({ type: "error", text: response?.error || "Import failed" });
-      }
-    } catch (error: any) {
-      setImportMessage({ type: "error", text: error.message || "Import failed" });
+      const summary = await importInBatches(
+        Array.from(selectedObjects),
+        (batch) => pluginApiCall("POST", "/import", { object_ids: batch }),
+        setImportProgress,
+      );
+      // Reload the imported use cases, then apply finishImport's updaters with
+      // that fresh list (not the one this handler started with) to the latest
+      // state: imported objects leave the picker (pages already loaded, or
+      // loaded meanwhile, are kept) and handled ids leave the selection; the
+      // selection derived at render then drops any id the picker no longer
+      // shows. The outcome is set last and nothing after it clears it.
+      const fresh = await loadImportedUseCases();
+      const importedIds = fresh ? new Set(fresh.map((uc) => String(uc.jira_object_id))) : null;
+      const next = finishImport<JiraObject>(summary, importedIds);
+      setJiraObjects(next.objects);
+      setSelectedObjects(next.selected);
+      setImportMessage(next.message);
     } finally {
+      setImportProgress(null);
       setIsImporting(false);
     }
   };
 
-  // Sync now - fetch latest data from JIRA
-  const handleSyncNow = async () => {
-    setIsSyncing(true);
+  // Use cases a sync flagged as missing in Jira. Syncs never delete; an
+  // Admin removes them here, after confirming.
+  const missingUseCases = importedUseCases.filter((uc) => !!uc.missing_in_jira_since);
+  const [isRemoveMissingOpen, setIsRemoveMissingOpen] = useState(false);
+  const [isRemovingMissing, setIsRemovingMissing] = useState(false);
+  // Nothing is selected by default; the Admin ticks what should go.
+  const [selectedMissingIds, setSelectedMissingIds] = useState<Set<number>>(new Set());
+  const selectedMissing = missingUseCases.filter((uc) => selectedMissingIds.has(uc.id));
+  const projectOfMissing = new Map(missingUseCases.map((uc) => [uc.id, uc.project_id]));
+
+  // Drop selections for use cases that are no longer in the missing list
+  // (removed, or found in Jira again by a sync).
+  useEffect(() => {
+    setSelectedMissingIds((prev) => {
+      const stillMissing = new Set(
+        importedUseCases.filter((uc) => !!uc.missing_in_jira_since).map((uc) => uc.id),
+      );
+      const next = new Set([...prev].filter((id) => stillMissing.has(id)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [importedUseCases]);
+
+  const toggleMissingSelection = (id: number) => {
+    setSelectedMissingIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAllMissing = () => {
+    setSelectedMissingIds((prev) =>
+      prev.size === missingUseCases.length
+        ? new Set()
+        : new Set(missingUseCases.map((uc) => uc.id)),
+    );
+  };
+
+  // Remove the selected use cases, 100 per request (the server limit), one
+  // request at a time; the first error stops the rest. The list refreshes at
+  // the end. The server removes only those still flagged.
+  const handleRemoveMissing = async () => {
+    setIsRemovingMissing(true);
     setSyncMessage(null);
+    setIsRemoveMissingOpen(false);
     try {
-      const response = await pluginApiCall("POST", "/sync");
-      if (response?.success) {
-        setSyncMessage({
-          type: "success",
-          text: `Sync completed: ${response.objectsCreated || 0} created, ${response.objectsUpdated || 0} updated, ${response.objectsDeleted || 0} deleted`,
-        });
-        // Reload the imported use cases to show updated data
-        await loadImportedUseCases();
-        // Update last_sync_at in local config
-        setLocalConfig((prev) => ({
-          ...prev,
-          last_sync_at: new Date().toISOString(),
-          last_sync_status: "success",
-        }));
-      } else {
-        setSyncMessage({ type: "error", text: response?.error || "Sync failed" });
-      }
-    } catch (error: any) {
-      setSyncMessage({ type: "error", text: error.message || "Sync failed" });
+      const summary = await removeInBatches(
+        selectedMissing.map((uc) => uc.id),
+        (batch) => pluginApiCall("POST", "/use-cases/remove-missing", { use_case_ids: batch }),
+        setRemoveProgress,
+        // All links of one use case go in the same request.
+        (id) => projectOfMissing.get(id),
+      );
+      setSelectedMissingIds((prev) => deselectDone(prev, summary.doneIds));
+      await loadImportedUseCases();
+      setSyncMessage(summaryMessage(summary));
     } finally {
-      setIsSyncing(false);
+      setRemoveProgress(null);
+      setIsRemovingMissing(false);
     }
   };
 
   // Toggle object selection
   const toggleObjectSelection = (objectId: string) => {
     setSelectedObjects((prev) => {
-      const next = new Set(prev);
+      // Toggle on the pruned set: nothing hidden rides along.
+      const next = new Set(keepShown(prev, jiraObjects));
       if (next.has(objectId)) {
         next.delete(objectId);
       } else {
@@ -360,8 +569,9 @@ export const JiraAssetsConfiguration: React.FC = () => {
         deployment_type: localConfig.deployment_type || "cloud",
         selected_schema_id: localConfig.selected_schema_id || undefined,
         selected_object_type_id: localConfig.selected_object_type_id || undefined,
-        sync_enabled: localConfig.sync_enabled || false,
-        sync_interval_hours: localConfig.sync_interval_hours || 24,
+        // Before the first save the schedule has no connection to attach to,
+        // so the panel's draft travels with the connection, as it always did.
+        ...(localConfig.has_api_token ? {} : scheduleDraft.current),
       });
 
       const data = response.data?.data ?? response.data;
@@ -385,55 +595,44 @@ export const JiraAssetsConfiguration: React.FC = () => {
     }
   };
 
-  // Persist a partial config update to the plugin's /config endpoint
-  // without requiring the user to click "Save Configuration". We send
-  // only what changed alongside the previously-saved connection fields,
-  // so the existing api_token (already encrypted in the DB) is preserved
-  // by the backend's `hasExistingToken` branch.
-  const persistConfigPatch = useCallback(
-    async (patch: Record<string, any>) => {
-      if (!localConfig.has_api_token) return;
+  // Persist the schema / object-type pick at once (PATCH /config/selection,
+  // only those two fields), so users don't have to click Save Configuration
+  // to keep their picks. Saves run in order; only the newest one's failure is
+  // shown.
+  const persistSelection = (patch: {
+    selected_schema_id?: string | null;
+    selected_object_type_id?: string | null;
+  }) => {
+    if (!localConfig.has_api_token) return;
+    const seq = ++selectionSeq.current;
+    selectionQueue.current = selectionQueue.current.then(async () => {
       try {
-        await pluginApiCall("POST", "/config", {
-          jira_base_url: localConfig.jira_base_url,
-          workspace_id: localConfig.workspace_id,
-          email: localConfig.email,
-          deployment_type: localConfig.deployment_type || "cloud",
-          // Defaults so the backend doesn't null these out on partial saves
-          selected_schema_id: localConfig.selected_schema_id || undefined,
-          selected_object_type_id: localConfig.selected_object_type_id || undefined,
-          sync_enabled: localConfig.sync_enabled || false,
-          sync_interval_hours: localConfig.sync_interval_hours || 24,
-          ...patch,
-        });
-      } catch (err) {
-        // Best-effort; user can still hit the Save button explicitly.
-        console.warn("[JiraConfig] auto-save failed:", err);
+        await pluginApiCall("PATCH", "/config/selection", patch);
+      } catch (error) {
+        console.warn("[JiraConfig] selection save failed:", error);
+        if (seq === selectionSeq.current && mountedRef.current) {
+          setSaveMessage({ type: "error", text: SELECTION_SAVE_FAILED });
+        }
       }
-    },
-    [pluginApiCall, localConfig],
-  );
+    });
+  };
 
-  // Handle schema selection. Auto-persist so users don't have to click
-  // Save Configuration just to remember their picks across reloads.
   const handleSchemaChange = (schemaId: string) => {
+    resetPicker();
     handleChange("selected_schema_id", schemaId);
     handleChange("selected_object_type_id", "");
     setObjectTypes([]);
     if (schemaId) {
       loadObjectTypes(schemaId);
-      void persistConfigPatch({
-        selected_schema_id: schemaId,
-        selected_object_type_id: undefined,
-      });
+      persistSelection({ selected_schema_id: schemaId, selected_object_type_id: null });
     }
   };
 
-  // Handle object type selection. Auto-persist for the same reason.
   const handleObjectTypeChange = (objectTypeId: string) => {
+    resetPicker();
     handleChange("selected_object_type_id", objectTypeId);
     if (objectTypeId) {
-      void persistConfigPatch({ selected_object_type_id: objectTypeId });
+      persistSelection({ selected_object_type_id: objectTypeId });
     }
   };
 
@@ -480,14 +679,6 @@ export const JiraAssetsConfiguration: React.FC = () => {
       loadImportedUseCases();
     }
   }, [configLoaded, loadImportedUseCases]);
-
-  const syncIntervalOptions = [
-    { value: 1, label: "Every hour" },
-    { value: 6, label: "Every 6 hours" },
-    { value: 12, label: "Every 12 hours" },
-    { value: 24, label: "Every 24 hours" },
-    { value: 48, label: "Every 48 hours" },
-  ];
 
   return (
     <Box>
@@ -740,46 +931,29 @@ export const JiraAssetsConfiguration: React.FC = () => {
         Step 3: Sync Settings
       </Typography>
 
-      <Stack spacing={2.5}>
-        <Box>
-          <VWToggle
-            checked={localConfig.sync_enabled || false}
-            onChange={(e) => handleChange("sync_enabled", e.target.checked)}
-            label="Enable automatic sync"
-            description="Automatically sync data from JIRA on a schedule"
-          />
-        </Box>
-
-        {localConfig.sync_enabled && (
-          <Box>
-            <VWSelect
-              id="sync_interval_hours"
-              label="Sync Interval"
-              value={localConfig.sync_interval_hours || 24}
-              onChange={(e) => handleChange("sync_interval_hours", e.target.value)}
-              items={syncIntervalOptions.map((option) => ({
-                _id: option.value,
-                name: option.label,
-              }))}
-            />
-          </Box>
-        )}
-      </Stack>
-
-      {/* Last Sync Info */}
-      {localConfig.last_sync_at && (
-        <Box sx={{ mt: 2 }}>
-          <Alert
-            severity={localConfig.last_sync_status === "success" ? "success" : "warning"}
-            sx={{ fontSize: "13px" }}
-          >
-            Last sync: {formatDate(new Date(localConfig.last_sync_at), { includeTime: true })} -{" "}
-            {localConfig.last_sync_status === "success"
-              ? "Successful"
-              : localConfig.last_sync_message}
+      {configLoadFailed && (
+        <Box sx={{ mb: 2 }}>
+          <Alert severity="error" sx={{ fontSize: "13px" }}>
+            Could not load the saved Jira connection. Reload the page to change the sync settings.
           </Alert>
         </Box>
       )}
+
+      <ExtensionSyncPanel
+        extensionKey="jira-assets"
+        // Until GET /config answers, a schedule change could be kept as a draft by mistake.
+        canManage={canManageSync && configLoaded && !configLoadFailed}
+        scheduleDescription="Automatically sync data from JIRA on a schedule"
+        scheduleHelp="Automatic sync refreshes use cases you have imported. It does not import new objects or remove any."
+        persistSchedule={!!localConfig.has_api_token}
+        onScheduleChange={handleScheduleDraft}
+        showSyncNow={!!(localConfig.has_api_token && localConfig.selected_object_type_id)}
+        syncNowDisabled={importedUseCases.length === 0}
+        describeCompletedRun={describeJiraSync}
+        onRunCompleted={() => {
+          void loadImportedUseCases();
+        }}
+      />
 
       {/* Import Section - Only show if config is saved and object type is selected */}
       {localConfig.has_api_token && localConfig.selected_object_type_id && (
@@ -794,27 +968,11 @@ export const JiraAssetsConfiguration: React.FC = () => {
               </Typography>
               <Typography variant="body2" fontSize={12} color="text.secondary">
                 {importedUseCases.length} use cases imported
-                {localConfig.last_sync_at &&
-                  ` • Last sync: ${formatDate(new Date(localConfig.last_sync_at), { includeTime: true })}`}
+                {lastSyncAt &&
+                  ` • Last sync: ${formatDate(new Date(lastSyncAt), { includeTime: true })}`}
               </Typography>
             </Box>
             <Box sx={{ display: "flex", gap: 1 }}>
-              <Button
-                variant="outlined"
-                startIcon={isSyncing ? <CircularProgress size={14} /> : <RefreshCw size={14} />}
-                onClick={handleSyncNow}
-                disabled={isSyncing || importedUseCases.length === 0}
-                sx={{
-                  "borderColor": "#13715B",
-                  "color": "#13715B",
-                  "textTransform": "none",
-                  "fontSize": "13px",
-                  "&:hover": { borderColor: "#0F5A47", backgroundColor: "rgba(19, 113, 91, 0.04)" },
-                  "&:disabled": { borderColor: "#d0d5dd", color: "#98a2b3" },
-                }}
-              >
-                {isSyncing ? "Syncing..." : "Sync Now"}
-              </Button>
               <Button
                 variant="contained"
                 startIcon={
@@ -824,7 +982,7 @@ export const JiraAssetsConfiguration: React.FC = () => {
                     <Download size={14} />
                   )
                 }
-                onClick={loadJiraObjects}
+                onClick={() => loadJiraObjects()}
                 disabled={isImporting || isLoadingObjects}
                 sx={{
                   "backgroundColor": "#13715B",
@@ -846,7 +1004,7 @@ export const JiraAssetsConfiguration: React.FC = () => {
               sx={{ mt: 2, fontSize: "13px" }}
               onClose={() => setImportMessage(null)}
             >
-              {importMessage.text}
+              <MessageBody message={importMessage} />
             </Alert>
           )}
           {syncMessage && (
@@ -855,7 +1013,7 @@ export const JiraAssetsConfiguration: React.FC = () => {
               sx={{ mt: 2, fontSize: "13px" }}
               onClose={() => setSyncMessage(null)}
             >
-              {syncMessage.text}
+              <MessageBody message={syncMessage} />
             </Alert>
           )}
 
@@ -889,31 +1047,30 @@ export const JiraAssetsConfiguration: React.FC = () => {
                     </Typography>
                   }
                 />
-                <Button
+                <CustomizableButton
                   variant="contained"
                   onClick={handleImport}
-                  disabled={isImporting || selectedObjects.size === 0}
-                  startIcon={
-                    isImporting ? (
-                      <CircularProgress size={14} sx={{ color: "white" }} />
-                    ) : (
-                      <Download size={14} />
-                    )
-                  }
-                  sx={{
-                    "backgroundColor": "#13715B",
-                    "textTransform": "none",
-                    "fontSize": "13px",
-                    "&:hover": { backgroundColor: "#0F5A47" },
-                  }}
+                  isDisabled={isImporting || selectedObjects.size === 0}
+                  loading={isImporting}
+                  startIcon={<Download size={14} />}
+                  testId="jira-import-selected"
+                  sx={CONTROL_HEIGHT_SX}
                 >
-                  {isImporting ? "Importing..." : `Import ${selectedObjects.size} Selected`}
-                </Button>
+                  {isImporting ? "Importing..." : `Import ${selectedObjects.size} selected`}
+                </CustomizableButton>
               </Box>
+
+              {importProgress && (
+                <BatchProgressLine label={IMPORT_PROGRESS_LABEL} progress={importProgress} />
+              )}
 
               <TableContainer
                 component={Paper}
-                sx={{ maxHeight: 250, boxShadow: "none", border: "1px solid #e4e7ec" }}
+                sx={{
+                  maxHeight: 250,
+                  boxShadow: "none",
+                  border: `1px solid ${theme.palette.border.dark}`,
+                }}
               >
                 <Table size="small" stickyHeader>
                   <TableHead>
@@ -947,6 +1104,183 @@ export const JiraAssetsConfiguration: React.FC = () => {
             </Box>
           )}
 
+          {/* The picker shows one page; say so and offer the next. */}
+          {jiraHasMore && (
+            <Box
+              sx={{
+                mt: 1,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "8px",
+              }}
+            >
+              <Typography variant="caption" color="text.secondary">
+                More objects exist in Jira than are shown here.
+              </Typography>
+              <CustomizableButton
+                variant="text"
+                text="Load more"
+                onClick={() => loadJiraObjects(true)}
+                isDisabled={isLoadingObjects}
+                testId="jira-objects-load-more"
+                sx={CONTROL_HEIGHT_SX}
+              />
+            </Box>
+          )}
+
+          {/* Use cases flagged as missing in Jira: listed, removed only on request */}
+          {missingUseCases.length > 0 && (
+            <Box sx={{ mt: 3 }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  gap: "8px",
+                  mb: 1,
+                }}
+              >
+                <Typography variant="subtitle2" fontWeight={600} sx={{ color: "#344054" }}>
+                  <span>Missing in Jira</span> <span>({missingUseCases.length})</span>
+                </Typography>
+                <CustomizableButton
+                  variant="outlined"
+                  color="error"
+                  onClick={() => setIsRemoveMissingOpen(true)}
+                  isDisabled={!canManageSync || isRemovingMissing || selectedMissing.length === 0}
+                  testId="jira-remove-missing"
+                  sx={{
+                    ...CONTROL_HEIGHT_SX,
+                    "borderColor": theme.palette.status.error.text,
+                    "color": theme.palette.status.error.text,
+                    "&:hover": {
+                      borderColor: theme.palette.status.error.text,
+                      backgroundColor: theme.palette.status.error.bg,
+                    },
+                    "&.Mui-disabled": {
+                      borderColor: theme.palette.border.dark,
+                      color: theme.palette.text.disabled,
+                    },
+                  }}
+                >
+                  <span>Remove selected use cases</span>&nbsp;
+                  <span>({selectedMissing.length})</span>
+                </CustomizableButton>
+              </Box>
+              <Typography
+                variant="body2"
+                fontSize={12}
+                color="text.secondary"
+                sx={{ mb: 1.5, display: "block" }}
+              >
+                {MISSING_EXPLAINER}
+              </Typography>
+              {removeProgress && (
+                <BatchProgressLine label={REMOVE_PROGRESS_LABEL} progress={removeProgress} />
+              )}
+              <TableContainer
+                component={Paper}
+                sx={{
+                  maxHeight: 250,
+                  boxShadow: "none",
+                  border: `1px solid ${theme.palette.border.dark}`,
+                }}
+              >
+                <Table size="small" stickyHeader>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell padding="checkbox" sx={{ backgroundColor: "#f9fafb" }}>
+                        <Checkbox
+                          size="small"
+                          checked={
+                            missingUseCases.length > 0 &&
+                            selectedMissing.length === missingUseCases.length
+                          }
+                          indeterminate={
+                            selectedMissing.length > 0 &&
+                            selectedMissing.length < missingUseCases.length
+                          }
+                          onChange={toggleAllMissing}
+                          disabled={!canManageSync}
+                          inputProps={{ "aria-label": "Select all missing use cases" }}
+                        />
+                      </TableCell>
+                      <TableCell
+                        sx={{ fontWeight: 600, fontSize: "12px", backgroundColor: "#f9fafb" }}
+                      >
+                        Key
+                      </TableCell>
+                      <TableCell
+                        sx={{ fontWeight: 600, fontSize: "12px", backgroundColor: "#f9fafb" }}
+                      >
+                        Name
+                      </TableCell>
+                      <TableCell
+                        sx={{ fontWeight: 600, fontSize: "12px", backgroundColor: "#f9fafb" }}
+                      >
+                        Missing since
+                      </TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {missingUseCases.map((uc) => {
+                      const data = typeof uc.data === "string" ? JSON.parse(uc.data) : uc.data;
+                      return (
+                        <TableRow key={uc.id} selected={selectedMissingIds.has(uc.id)}>
+                          <TableCell padding="checkbox">
+                            <Checkbox
+                              size="small"
+                              checked={selectedMissingIds.has(uc.id)}
+                              onChange={() => toggleMissingSelection(uc.id)}
+                              disabled={!canManageSync}
+                            />
+                          </TableCell>
+                          <TableCell sx={{ fontSize: "13px", fontFamily: "monospace" }}>
+                            {data?.objectKey || "-"}
+                          </TableCell>
+                          <TableCell sx={{ fontSize: "13px" }}>
+                            {uc.name || data?.label || "-"}
+                          </TableCell>
+                          <TableCell sx={{ fontSize: "13px" }}>
+                            {formatDate(new Date(uc.missing_in_jira_since as string))}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Box>
+          )}
+
+          <StandardModal
+            isOpen={isRemoveMissingOpen}
+            onClose={() => setIsRemoveMissingOpen(false)}
+            title="Remove selected use cases"
+            description="These use cases and all their data in VerifyWise will be permanently deleted. This cannot be undone."
+            onSubmit={handleRemoveMissing}
+            submitButtonText="Remove"
+            submitButtonColor={theme.palette.status.error.text}
+            isSubmitting={isRemovingMissing}
+            fitContent
+          >
+            <Stack spacing={1}>
+              <Typography variant="body2" fontSize={13} fontWeight={600}>
+                <span>Use cases to remove:</span> <span>{selectedMissing.length}</span>
+              </Typography>
+              {selectedMissing.map((uc) => {
+                const data = typeof uc.data === "string" ? JSON.parse(uc.data) : uc.data;
+                return (
+                  <Typography key={uc.id} variant="body2" fontSize={13}>
+                    {data?.objectKey ? `${data.objectKey} · ` : ""}
+                    {uc.name || data?.label || "-"}
+                  </Typography>
+                );
+              })}
+            </Stack>
+          </StandardModal>
+
           {/* Imported Use Cases Table */}
           {importedUseCases.length > 0 && (
             <Box sx={{ mt: 3 }}>
@@ -955,7 +1289,11 @@ export const JiraAssetsConfiguration: React.FC = () => {
               </Typography>
               <TableContainer
                 component={Paper}
-                sx={{ maxHeight: 300, boxShadow: "none", border: "1px solid #e4e7ec" }}
+                sx={{
+                  maxHeight: 300,
+                  boxShadow: "none",
+                  border: `1px solid ${theme.palette.border.dark}`,
+                }}
               >
                 <Table size="small" stickyHeader>
                   <TableHead>

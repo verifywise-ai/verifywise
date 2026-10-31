@@ -313,6 +313,12 @@ For Framework Questions:
 - Use get_framework_analytics for framework adoption and coverage stats
 - Use fetch_frameworks to list all frameworks with project counts
 
+For NIST AI RMF Questions:
+- Organization-level questions (e.g. "How are we doing on NIST AI RMF?", "What's our NIST progress?") → call get_nist_org_progress directly. It discovers all NIST-linked projects and aggregates their progress — no project id needed.
+- Project-specific questions → resolve the project via list_projects (is_organizational=true marks the org-wide project where NIST AI RMF is tracked), then use get_nist_progress / get_nist_progress_by_function / get_nist_status_breakdown with that id.
+- EXCEPTION to the never-ask-clarifying-questions rule for read tools: if resolving the project via list_projects yields ZERO or MULTIPLE matches, ask ONE clarifying question naming the candidates (or stating none matched) instead of guessing a project id.
+- If a NIST tool returns the not-linked error or get_nist_org_progress returns status "not_configured", relay the setup steps in the message to the user — never present it as progress data.
+
 For Training Registry Questions:
 - Use get_training_analytics for status and department distributions
 - Use get_training_executive_summary for completion rates and coverage overview

@@ -1,0 +1,31 @@
+<mjml>
+<mj-include path="./partials/email-head.mjml" />
+  <mj-body background-color="{{colorPageBackground}}">
+    <mj-section padding="32px 20px 20px">
+      <mj-column width="100%">
+        <mj-text align="center" padding="0 0 24px 0">
+          <span style="color: {{colorBrandPrimary}}; font-size: 22px; font-weight: 600; letter-spacing: -0.5px;">VerifyWise</span>
+        </mj-text>
+      </mj-column>
+    </mj-section>
+    <mj-wrapper css-class="email-card" padding="40px">
+      <mj-section>
+        <mj-column width="100%">
+          <mj-text>
+                <h2 class="email-heading">Approval step overdue — escalated to you</h2><p class="email-body">Hi {{escalation_user_name}},</p><p class="email-body">The following approval step has passed its due time without a decision and has been escalated to you.</p><div class="box box-warning"><p class="box-title">{{request_name}}</p>
+                <p class="box-subtitle">Step {{step_number}}: {{step_name}}</p></div><table class="data-table">
+                <tr><td class="data-label">Due</td><td class="data-value">{{due_at}}</td></tr>
+                </table><p style="margin: 28px 0 24px 0;"><a href="{{approval_url}}" class="btn btn-primary">Review approval requests</a></p>
+          </mj-text>
+        </mj-column>
+      </mj-section>
+    </mj-wrapper>
+    <mj-section padding="32px 20px">
+      <mj-column width="100%">
+        <mj-text css-class="email-footer" align="center">
+          Sent with care from VerifyWise
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>

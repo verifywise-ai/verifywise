@@ -190,21 +190,7 @@ export const stepDetailsStack = {
 export const approverNameStyle = {
   fontWeight: 500,
   fontSize: 14,
-  mb: 2,
-  color: "#999999",
 };
-
-export const seeDetailsLinkStyle = (theme: Theme) => ({
-  "color": theme.palette.primary.main,
-  "fontSize": "13px",
-  "fontWeight": 500,
-  "textDecoration": "underline",
-  "cursor": "pointer",
-  "&:hover": {
-    color: theme.palette.primary.dark,
-  },
-  "alignSelf": "flex-start",
-});
 
 export const commentLabelStyle = {
   fontWeight: 600,
@@ -234,15 +220,7 @@ export const withdrawalBodyStyle = {
   fontSize: 13,
 };
 
-// StepDetailsModal styles
-export const stepDetailsContainerStack = {
-  spacing: 4,
-};
-
-export const stepDetailFieldStack = {
-  spacing: 1,
-};
-
+// DetailField styles
 export const stepDetailLabelStyle = {
   fontWeight: 600,
   fontSize: 14,

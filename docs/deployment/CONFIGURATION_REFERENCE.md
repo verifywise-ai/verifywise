@@ -248,6 +248,33 @@ SLACK_USER_OAUTH_TOKEN=xoxp-...
 SLACK_BOT_TOKEN=xoxb-...
 ```
 
+### AI Gateway
+
+The backend and the EvalServer call the AI Gateway's internal API with a shared key. Set the same value on the backend, the AI Gateway and the EvalServer, including any separate worker process or container (it runs the daily retention job). Both sides trim surrounding whitespace, and a whitespace-only value counts as not set.
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `AI_GATEWAY_URL` | Internal URL of the AI Gateway, used for every gateway call and the `/health` check | No (default `http://127.0.0.1:8100`) |
+| `AI_GATEWAY_INTERNAL_KEY` | Shared secret sent as `x-internal-key` from the backend and the EvalServer to the AI Gateway. Set the same value in `Servers/.env`, the AI Gateway's environment and the EvalServer's environment | Yes, when the AI Gateway runs; always for the EvalServer |
+| `MCP_AUDIT_RETENTION_DAYS` | Default number of days to keep Agent Control logs for organizations that have not set their own period in **Settings > Data retention**. Zero or less keeps logs indefinitely for those organizations | No (default `30`) |
+| `MCP_AUDIT_RETENTION_MIN_DAYS` | Shortest period an organization may set for Agent Control logs. Not applied to `MCP_AUDIT_RETENTION_DAYS` | No (default `7`) |
+| `GUARDRAILS_PRELOAD_PII` | Set on the AI Gateway. Loads the PII detection engine (Presidio and its spaCy model) in the background when the gateway starts, so the first PII guardrail scan does not wait for it. Set to `false` to load it on first use instead | No (default `true`) |
+
+The default is the IPv4 loopback address. If the AI Gateway listens only on the IPv6 loopback (`::1`), set `AI_GATEWAY_URL=http://[::1]:8100`.
+
+```bash
+# Generate once and set on the backend, the AI Gateway and the EvalServer
+AI_GATEWAY_INTERNAL_KEY=$(openssl rand -hex 32)
+```
+
+What happens when the key is missing or does not match:
+
+- **AI Gateway:** refuses to start when `AI_GATEWAY_INTERNAL_KEY` is empty or a placeholder.
+- **EvalServer:** refuses to start when `AI_GATEWAY_INTERNAL_KEY` is empty or a placeholder, because it runs every cloud model (tested models, judges, scorers, Arena, report summaries) through the AI Gateway. It also needs `AI_GATEWAY_URL` when the gateway is not on its own host, and `ENCRYPTION_KEY` (the backend's value) to read stored gateway keys for report summaries. On Helm with `secrets.existingSecret`, that Secret must contain both `AI_GATEWAY_INTERNAL_KEY` and `ENCRYPTION_KEY`, or the eval-server pod will not start.
+- **Every internal route:** the gateway checks this key on all `/internal/*` calls from the backend and fails closed. The key is checked before the request body is validated against the route's schema, but after the body is read and decoded as JSON, so a request whose body is not valid JSON gets 422 even without the key. A missing or wrong key gets 401 with code `internal_key_rejected`. With no key configured every internal route answers 503 with code `internal_key_not_configured`. That is defence in depth, since the gateway refuses to start without a key.
+- **Backend and worker:** each logs one startup warning when `AI_GATEWAY_INTERNAL_KEY` is not set and the gateway is in use: `AI_GATEWAY_URL` is set, or a gateway answers `/health` at the default address within 2 seconds. The daily retention job also logs a refusal once per run.
+- **Log retention:** when the gateway refuses the daily purge over the key, the retention job records the guardrail and spend log cleanups as failed, and **Settings > Data retention** shows "Purge refused: internal key not configured" (key missing on either side) or "Purge refused: internal key rejected" (keys differ) in the Last cleanup column. No logs are deleted until the key is fixed.
+
 ### BrandFetch (frontend)
 
 | Variable | Description | Required |
@@ -311,6 +338,29 @@ DB_NAME=verifywise
 BACKEND_URL=http://localhost:3000
 REDIS_URL=redis://localhost:6379/0
 ```
+
+---
+
+## Logging
+
+Configuration for server logging (self-hosted deployments only).
+
+| Variable | Description | Default | Required |
+|----------|-------------|---------|----------|
+| `LOG_RETENTION_DAYS` | Number of days to keep daily-rotated server log files | `14` | No |
+
+Server logs are rotated daily and stored in the tenant log directory. The `LOG_RETENTION_DAYS` setting controls how many days of log files are retained before older files are automatically deleted.
+
+```bash
+# Keep server logs for 30 days
+LOG_RETENTION_DAYS=30
+```
+
+**Notes:**
+- Must be a whole number >= 1
+- Invalid values (0, negative, decimals, non-numeric) fall back to the default of 14 days
+- Intended for self-hosted deployments, where you control the environment
+- Each daily file also rolls over to a new file when it reaches 10 MB; retention counts days, not files
 
 ---
 
@@ -447,6 +497,9 @@ Solution: Verify `DB_HOST` and `DB_PORT` are correct. Check if PostgreSQL is run
 Error: Redis connection to redis://localhost:6379 failed
 ```
 Solution: Verify Redis is running and `REDIS_URL` is correct.
+
+**Data retention shows "Purge refused: internal key not configured" or "...rejected":**
+The daily cleanup of AI Gateway guardrail and spend logs was refused by the gateway. Solution: set the same `AI_GATEWAY_INTERNAL_KEY` on the backend and the AI Gateway, then restart both. See [AI Gateway](#ai-gateway).
 
 **Email sending failed:**
 ```

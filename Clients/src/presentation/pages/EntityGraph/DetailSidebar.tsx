@@ -29,6 +29,10 @@ import { EntityType } from "./EntityNode";
 import { VWLink } from "../../components/Link";
 import { text } from "../../themes/palette";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
+import {
+  formatHighRiskRoles,
+  projectHighRiskRoles,
+} from "../../../application/utils/highRiskRoles";
 
 export interface EntityDetails {
   id: string;
@@ -275,11 +279,11 @@ const DetailSidebar: React.FC<DetailSidebarProps> = ({ entity, onClose, onNaviga
                   isChip
                 />
               )}
-              {Boolean(rawData.type_of_high_risk_role) && (
+              {projectHighRiskRoles(rawData).length > 0 && (
                 <DetailRow
                   icon={<User size={14} />}
-                  label="Role"
-                  value={String(rawData.type_of_high_risk_role).replace(/_/g, " ")}
+                  label="High-risk roles"
+                  value={formatHighRiskRoles(projectHighRiskRoles(rawData))}
                 />
               )}
               {Boolean(rawData.start_date) && (

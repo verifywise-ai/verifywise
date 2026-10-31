@@ -38,10 +38,12 @@ export async function getEntityById({
   routeUrl,
   signal,
   responseType = "json",
+  suppressGlobalErrorToast,
 }: GetRequestParams): Promise<any> {
   const response = await apiServices.get(routeUrl, {
     signal,
     responseType,
+    ...(suppressGlobalErrorToast ? { suppressGlobalErrorToast } : {}),
   });
   return response.data;
 }
@@ -53,9 +55,15 @@ export async function getEntityById({
  * @returns {Promise<any>} The updated entity data.
  * @throws Will throw an error if the update operation fails.
  */
-export async function updateEntityById({ routeUrl, body, headers }: RequestParams): Promise<any> {
+export async function updateEntityById({
+  routeUrl,
+  body,
+  headers,
+  suppressGlobalErrorToast,
+}: RequestParams): Promise<any> {
   const response = await apiServices.patch(routeUrl, body, {
     headers: { ...headers },
+    ...(suppressGlobalErrorToast ? { suppressGlobalErrorToast } : {}),
   });
   return response;
 }
@@ -82,10 +90,14 @@ export async function deleteEntityById({ routeUrl }: RequestParams): Promise<any
 export async function getAllEntities({
   routeUrl,
   params,
+  suppressGlobalErrorToast,
 }: RequestParams & { params?: Record<string, any> }): Promise<any> {
   // Deduped: list fetches (e.g. /projects) are requested by several dashboard
   // consumers at mount. Concurrent identical GETs share one in-flight request.
-  const response = await getDeduped(routeUrl, { params });
+  const response = await getDeduped(routeUrl, {
+    params,
+    ...(suppressGlobalErrorToast ? { suppressGlobalErrorToast } : {}),
+  });
   return response.data;
 }
 

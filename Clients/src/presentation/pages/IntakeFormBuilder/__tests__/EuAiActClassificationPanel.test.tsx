@@ -85,6 +85,18 @@ describe("EuAiActClassificationPanel", () => {
     expect(screen.queryByText("Hidden follow-up question")).toBeNull();
   });
 
+  it("shows both roles when the result has two", () => {
+    renderPanel({
+      classification: {
+        ...classification,
+        roles: ["Provider", "Deployer"],
+        current: { ...classification.current, roles: ["Provider", "Deployer"] },
+      },
+    });
+    expect(screen.getByText("Roles:")).toBeInTheDocument();
+    expect(screen.getByText("Provider, Deployer")).toBeInTheDocument();
+  });
+
   it("shows the updated notice only when changed since submission", () => {
     const { unmount } = renderPanel();
     expect(screen.queryByText("Updated since submission")).toBeNull();

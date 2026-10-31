@@ -194,7 +194,7 @@ export const VW_AI_SYSTEM_ATTRIBUTES: VwAiSystemAttribute[] = [
 
 /**
  * JIRA attribute rows are `{objectTypeAttributeId, objectAttributeValues: [{value, displayValue}]}`
- * with an optional pre-resolved `attrIdToName` map (populated by JiraAssetsClient.getObjects).
+ * with an optional pre-resolved `attrIdToName` map (populated by JiraAssetsClient.getAllObjects / getObjectsPage).
  * Flatten to `{ [attrName]: value | value[] }`.
  */
 export function transformAttributes(

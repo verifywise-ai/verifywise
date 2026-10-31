@@ -17,6 +17,7 @@ import useNavigateSearch from "../../../application/hooks/useNavigateSearch";
 import singleTheme from "../../themes/v1SingleTheme";
 import TablePaginationActions from "../../components/TablePagination";
 import { EmptyState } from "../EmptyState";
+import { AiRiskClassification } from "../../../domain/enums/aiRiskClassification.enum";
 import Chip from "../Chip";
 import ViewRelationshipsButton from "../ViewRelationshipsButton";
 import IconButton from "../IconButton";
@@ -28,6 +29,7 @@ import {
   PlusCircle,
   Target,
   Link2,
+  SearchX,
 } from "lucide-react";
 import EmptyStateTip from "../EmptyState/EmptyStateTip";
 import { TableEmptyStateLayout } from "../Table/TableEmptyStateLayout";
@@ -44,6 +46,11 @@ import useUsers from "../../../application/hooks/useUsers";
 import { useCustomFieldDefinitions } from "../../../application/hooks/useCustomFields";
 import { formatCustomFieldValue } from "../CustomFieldsSection/formatCustomFieldValue";
 import { pageOfLabel } from "../Table/pageOfLabel";
+import {
+  formatHighRiskRoles,
+  highRiskRolesSortKey,
+  projectHighRiskRoles,
+} from "../../../application/utils/highRiskRoles";
 
 const SelectorVertical = (props: React.SVGAttributes<SVGSVGElement>) => (
   <ChevronsUpDown size={16} {...props} />
@@ -53,6 +60,21 @@ const PROJECT_ROWS_PER_PAGE_KEY = "verifywise_project_rows_per_page";
 const PROJECT_SORTING_KEY = "verifywise_project_sorting";
 
 type SortDirection = "asc" | "desc" | null;
+
+/**
+ * Severity rank for sorting by AI risk level. Prohibited used to fall through
+ * to 0 and sort below Minimal risk; it is the most severe class.
+ */
+const RISK_SORT_RANK: Record<string, number> = {
+  [AiRiskClassification.PROHIBITED.toLowerCase()]: 4,
+  [AiRiskClassification.HIGH_RISK.toLowerCase()]: 3,
+  [AiRiskClassification.LIMITED_RISK.toLowerCase()]: 2,
+  [AiRiskClassification.MINIMAL_RISK.toLowerCase()]: 1,
+};
+
+export const getRiskSortValue = (risk: string | null | undefined): number =>
+  // GPAI, General risk, Out of scope and unknown values rank 0
+  RISK_SORT_RANK[(risk || "").toLowerCase().trim()] ?? 0;
 type SortConfig = {
   key: string;
   direction: SortDirection;
@@ -86,6 +108,21 @@ const SortableTableHeader: React.FC<{
         {columns.map((column) => (
           <TableCell
             key={column.id}
+            aria-sort={
+              column.sortable && sortConfig.key === column.id && sortConfig.direction
+                ? sortConfig.direction === "asc"
+                  ? "ascending"
+                  : "descending"
+                : undefined
+            }
+            tabIndex={column.sortable ? 0 : undefined}
+            onKeyDown={(event) => {
+              if (!column.sortable) return;
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                onSort(column.id);
+              }
+            }}
             sx={{
               ...singleTheme.tableStyles.primary.header.cell,
               minWidth: column.minWidth,
@@ -94,6 +131,10 @@ const SortableTableHeader: React.FC<{
                 "userSelect": "none",
                 "&:hover": {
                   backgroundColor: "rgba(0, 0, 0, 0.04)",
+                },
+                "&:focus-visible": {
+                  outline: `2px solid ${theme.palette.primary.main}`,
+                  outlineOffset: "-2px",
                 },
               }),
               ...(column.id === "ucId" && {
@@ -150,6 +191,7 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
   hidePagination = false,
   onProjectDeleted,
   visibleColumns,
+  emptyMessage,
 }) => {
   const formatUserDate = useFormattedDate();
   const theme = useTheme();
@@ -311,16 +353,6 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
     const sortableProjects = [...projects];
 
     return sortableProjects.sort((a: Project, b: Project) => {
-      // Risk level order: High > Limited > Minimal
-      // Handle various possible formats of risk levels
-      const getRiskValue = (risk: string | null | undefined) => {
-        const riskLower = (risk || "").toLowerCase().trim();
-        if (riskLower.includes("high")) return 3;
-        if (riskLower.includes("limited")) return 2;
-        if (riskLower.includes("minimal")) return 1;
-        return 0; // fallback for unknown risk levels
-      };
-
       let aValue: string | number;
       let bValue: string | number;
 
@@ -336,13 +368,13 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
           break;
 
         case "risk":
-          aValue = getRiskValue(a.ai_risk_classification);
-          bValue = getRiskValue(b.ai_risk_classification);
+          aValue = getRiskSortValue(a.ai_risk_classification);
+          bValue = getRiskSortValue(b.ai_risk_classification);
           break;
 
         case "role":
-          aValue = (a.type_of_high_risk_role || "").toLowerCase();
-          bValue = (b.type_of_high_risk_role || "").toLowerCase();
+          aValue = highRiskRolesSortKey(a);
+          bValue = highRiskRolesSortKey(b);
           break;
 
         case "startDate":
@@ -372,18 +404,29 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
     });
   }, [projects, sortConfig]);
 
+  // A search or filter can shrink the list while the table sits on a later
+  // page; clamp to the last page that has rows so the table never shows an
+  // empty page with no way to tell why.
+  const lastPage = Math.max(0, Math.ceil(sortedProjects.length / rowsPerPage) - 1);
+  // Store the clamp too, so clearing the search doesn't jump back to the old page.
+  // Adjusting state while rendering is React's pattern for state derived from props.
+  if (page > lastPage) setPage(lastPage);
+  const currentPage = Math.min(page, lastPage);
+
   const getRange = useMemo(() => {
-    const start = page * rowsPerPage + 1;
-    const end = Math.min(page * rowsPerPage + rowsPerPage, sortedProjects.length);
+    const start = currentPage * rowsPerPage + 1;
+    const end = Math.min(currentPage * rowsPerPage + rowsPerPage, sortedProjects.length);
     return `${start} - ${end}`;
-  }, [page, rowsPerPage, sortedProjects.length]);
+  }, [currentPage, rowsPerPage, sortedProjects.length]);
 
   const paginatedProjects = useMemo(() => {
     return sortedProjects.slice(
-      hidePagination ? 0 : page * rowsPerPage,
-      hidePagination ? Math.min(sortedProjects.length, 100) : page * rowsPerPage + rowsPerPage,
+      hidePagination ? 0 : currentPage * rowsPerPage,
+      hidePagination
+        ? Math.min(sortedProjects.length, 100)
+        : currentPage * rowsPerPage + rowsPerPage,
     );
-  }, [sortedProjects, page, rowsPerPage, hidePagination]);
+  }, [sortedProjects, currentPage, rowsPerPage, hidePagination]);
 
   if (!projects || projects.length === 0) {
     return (
@@ -396,26 +439,30 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
           />
         }
       >
-        <EmptyState
-          icon={Briefcase}
-          message="No use cases yet. A use case describes how an AI system is applied within your organization."
-        >
-          <EmptyStateTip
-            icon={PlusCircle}
-            title="Create a use case"
-            description="Define the AI system, its purpose, the data it processes, and the people it affects. This forms the basis for risk and compliance tracking."
-          />
-          <EmptyStateTip
-            icon={Target}
-            title="Scope and classify"
-            description="Each use case can be classified by risk level (high, limited, minimal) to determine which compliance controls apply."
-          />
-          <EmptyStateTip
-            icon={Link2}
-            title="Link to governance artifacts"
-            description="Connect use cases to risks, policies, models, and evidence. This creates full traceability from business need to compliance proof."
-          />
-        </EmptyState>
+        {emptyMessage ? (
+          <EmptyState icon={SearchX} message={emptyMessage} />
+        ) : (
+          <EmptyState
+            icon={Briefcase}
+            message="No use cases yet. A use case describes how an AI system is applied within your organization."
+          >
+            <EmptyStateTip
+              icon={PlusCircle}
+              title="Create a use case"
+              description="Define the AI system, its purpose, the data it processes, and the people it affects. This forms the basis for risk and compliance tracking."
+            />
+            <EmptyStateTip
+              icon={Target}
+              title="Scope and classify"
+              description="Each use case can be classified by risk level (high, limited, minimal) to determine which compliance controls apply."
+            />
+            <EmptyStateTip
+              icon={Link2}
+              title="Link to governance artifacts"
+              description="Connect use cases to risks, policies, models, and evidence. This creates full traceability from business need to compliance proof."
+            />
+          </EmptyState>
+        )}
       </TableEmptyStateLayout>
     );
   }
@@ -461,6 +508,12 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
                   },
                   "&:focus": {
                     outline: "none",
+                  },
+                  // Rows are keyboard-activated (role="button"), so keyboard
+                  // users need to see which one has focus.
+                  "&:focus-visible": {
+                    outline: `2px solid ${theme.palette.primary.main}`,
+                    outlineOffset: "-2px",
                   },
                 }}
               >
@@ -511,7 +564,7 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
                       backgroundColor: sortConfig.key === "role" ? "background.surface" : "inherit",
                     }}
                   >
-                    {project.type_of_high_risk_role?.replace(/_/g, " ") || "—"}
+                    {formatHighRiskRoles(projectHighRiskRoles(project)) || "—"}
                   </TableCell>
                 )}
 
@@ -555,7 +608,7 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
                         fontSize: "13px",
                       }}
                     >
-                      {formatCustomFieldValue(def, match?.value, users)}
+                      {formatCustomFieldValue(def, match?.value, users, formatUserDate)}
                     </TableCell>
                   );
                 })}
@@ -615,7 +668,7 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
                 </TableCell>
                 <TablePagination
                   count={sortedProjects.length}
-                  page={page}
+                  page={currentPage}
                   onPageChange={handleChangePage}
                   rowsPerPage={rowsPerPage}
                   rowsPerPageOptions={[5, 10, 15, 20, 25]}

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "@mui/material";
@@ -440,5 +440,36 @@ describe("LinkRiskForm shared-project ranking", () => {
     expect(options[0]).toHaveTextContent("Model drift");
     expect(options[1]).toHaveTextContent("Data quality");
     expect(options[1]).not.toHaveTextContent("Same project");
+  });
+});
+
+describe("LinkRiskForm radio groups", () => {
+  // A shared name makes the browser treat the options as one group: one tab
+  // stop, arrow keys move the selection.
+  it("gives each group one name, scoped to the risk", async () => {
+    wrap(<LinkRiskForm riskId={42} existingLinks={[]} onClose={vi.fn()} />);
+    await userEvent.click(screen.getByRole("radio", { name: "Inherits from" }));
+
+    const relation = screen.getByRole("radiogroup", { name: "How is this risk connected?" });
+    const parent = screen.getByRole("radiogroup", { name: "Where is the parent risk?" });
+    for (const [group, name] of [
+      [relation, "link-risk-relation-42"],
+      [parent, "link-risk-parent-42"],
+    ] as const) {
+      const radios = within(group).getAllByRole("radio");
+      expect(radios.length).toBeGreaterThan(1);
+      radios.forEach((radio) => expect(radio).toHaveAttribute("name", name));
+    }
+  });
+
+  it("keeps ids distinct when two forms are on screen", () => {
+    wrap(
+      <>
+        <LinkRiskForm riskId={42} existingLinks={[]} onClose={vi.fn()} />
+        <LinkRiskForm riskId={43} existingLinks={[]} onClose={vi.fn()} />
+      </>,
+    );
+    const ids = screen.getAllByRole("radio").map((radio) => radio.id);
+    expect(new Set(ids).size).toBe(ids.length);
   });
 });

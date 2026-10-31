@@ -12,7 +12,6 @@ from crud.cache import (
     get_global_cache_settings,
     update_global_cache_settings,
 )
-from middlewares.auth import verify_internal_key
 from utils.auth import get_org_id, require_admin
 
 router = APIRouter(prefix="/cache", tags=["cache"])
@@ -21,7 +20,6 @@ router = APIRouter(prefix="/cache", tags=["cache"])
 @router.get("/stats")
 async def cache_stats(request: Request):
     """Return cache statistics for the dashboard."""
-    verify_internal_key(request)
     org_id = get_org_id(request)
     stats = await get_cache_stats(org_id)
     return {"stats": stats}
@@ -30,7 +28,6 @@ async def cache_stats(request: Request):
 @router.get("/settings")
 async def get_settings(request: Request):
     """Return global cache settings."""
-    verify_internal_key(request)
     org_id = get_org_id(request)
     settings = await get_global_cache_settings(org_id)
     return {"settings": settings}
@@ -39,7 +36,6 @@ async def get_settings(request: Request):
 @router.put("/settings")
 async def save_settings(request: Request):
     """Update global cache settings (admin only)."""
-    verify_internal_key(request)
     require_admin(request)
     org_id = get_org_id(request)
     body = await request.json()
@@ -56,7 +52,6 @@ async def save_settings(request: Request):
 @router.post("/purge")
 async def purge_cache(request: Request):
     """Purge expired cache entries (admin only)."""
-    verify_internal_key(request)
     require_admin(request)
     org_id = get_org_id(request)
     deleted = await purge_expired_cache(org_id)
@@ -66,7 +61,6 @@ async def purge_cache(request: Request):
 @router.post("/purge-expired")
 async def purge_all_expired(request: Request):
     """System-level: purge all expired cache entries (called by BullMQ job)."""
-    verify_internal_key(request)
     deleted = await purge_expired_cache(organization_id=None)
     return {"purged": True, "deleted": deleted}
 
@@ -74,7 +68,6 @@ async def purge_all_expired(request: Request):
 @router.delete("/endpoint/{endpoint_id}")
 async def clear_endpoint(endpoint_id: int, request: Request):
     """Clear all cache entries for a specific endpoint (admin only)."""
-    verify_internal_key(request)
     require_admin(request)
     org_id = get_org_id(request)
     deleted = await clear_endpoint_cache(org_id, endpoint_id)

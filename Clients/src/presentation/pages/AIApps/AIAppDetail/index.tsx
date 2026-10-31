@@ -45,7 +45,7 @@ export default function AIAppDetail() {
       try {
         await updateStatusMutation.mutateAsync({ id: appId, status });
         setAlert({ variant: "success", body: "Status updated successfully" });
-      } catch (err) {
+      } catch {
         setAlert({ variant: "error", body: "Failed to update status" });
       }
     },

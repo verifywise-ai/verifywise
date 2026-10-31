@@ -1,5 +1,7 @@
 import { QueryTypes } from "sequelize";
 import { sequelize } from "../../database/db";
+import { appendToAuditLedger } from "../../utils/auditLedger.utils";
+import { GENERIC_FORMATTERS } from "../../config/changeHistory.config";
 
 /**
  * DB helpers for the model-lifecycle extension.
@@ -9,9 +11,12 @@ import { sequelize } from "../../database/db";
  * _item_people / _item_approvals / _change_history) are declared in the
  * extensions migration.
  *
- * Note on file cleanup: on phase/item delete the extension unlinks and
- * hard-deletes any `files` rows attached via item_files — otherwise the
- * cascade would orphan the file blobs.
+ * Note on files: the extension never deletes a `files` row. An attached file
+ * may be evidence or a policy document that other records point to, so
+ * detaching it (`detachFile`) or deleting its phase/item only removes the
+ * item_files link (phase/item delete via ON DELETE CASCADE through
+ * model_lifecycle_values). The file stays in the File Manager, which owns
+ * deleting it.
  */
 
 // ---------------------------------------------------------------------------
@@ -117,15 +122,6 @@ export async function updatePhase(
 }
 
 export async function deletePhase(organizationId: number, phaseId: number): Promise<void> {
-  await unlinkAndDeleteFiles(organizationId, {
-    linkedFilesQuery: `
-      SELECT DISTINCT lf.file_id
-        FROM model_lifecycle_item_files lf
-        JOIN model_lifecycle_values v ON lf.value_id = v.id
-        JOIN model_lifecycle_items i  ON v.item_id  = i.id
-       WHERE i.organization_id = :organizationId AND i.phase_id = :phaseId;`,
-    replacements: { organizationId, phaseId },
-  });
   await sequelize.query(
     `DELETE FROM model_lifecycle_phases
       WHERE organization_id = :organizationId AND id = :phaseId;`,
@@ -194,6 +190,66 @@ export async function createItem(
   return (rows[0] as any)[0];
 }
 
+// ---------------------------------------------------------------------------
+// Item change history (issue #4915)
+// ---------------------------------------------------------------------------
+
+// JSONB does not keep key order, so objects compare with sorted keys:
+// otherwise re-saving an unchanged config or value records a change.
+const canonical = (value: unknown): unknown =>
+  Array.isArray(value)
+    ? value.map(canonical)
+    : value !== null && typeof value === "object"
+      ? Object.fromEntries(
+          Object.keys(value as Record<string, unknown>)
+            .sort()
+            .map((k) => [k, canonical((value as Record<string, unknown>)[k])]),
+        )
+      : value;
+const normalize = (value: unknown): string | null =>
+  value === undefined || value === null
+    ? null
+    : typeof value === "object"
+      ? JSON.stringify(canonical(value))
+      : String(value);
+
+/**
+ * Record one row in model_lifecycle_change_history. The table has a bespoke
+ * schema (change_type + JSONB old/new snapshots), so it is written directly
+ * rather than through the generic change-history writer.
+ */
+async function recordItemChange(
+  organizationId: number,
+  itemId: number,
+  changeType: string,
+  changedBy: number | null,
+  oldValue: Record<string, unknown> | null,
+  newValue: Record<string, unknown> | null,
+  modelInventoryId?: number | null,
+): Promise<void> {
+  // model_inventory_id is only set for per-model changes (value edits); the
+  // column stays NULL for template item edits, as before.
+  const modelColumn = modelInventoryId != null ? ", model_inventory_id" : "";
+  const modelValue = modelInventoryId != null ? ", :modelInventoryId" : "";
+  await sequelize.query(
+    `INSERT INTO model_lifecycle_change_history
+       (organization_id, item_id, change_type, changed_by, old_value, new_value${modelColumn})
+     VALUES (:organizationId, :itemId, :changeType, :changedBy,
+             CAST(:oldValue AS JSONB), CAST(:newValue AS JSONB)${modelValue});`,
+    {
+      replacements: {
+        organizationId,
+        itemId,
+        changeType,
+        changedBy,
+        oldValue: oldValue ? JSON.stringify(oldValue) : null,
+        newValue: newValue ? JSON.stringify(newValue) : null,
+        modelInventoryId: modelInventoryId ?? null,
+      },
+    },
+  );
+}
+
 export async function updateItem(
   organizationId: number,
   itemId: number,
@@ -206,6 +262,7 @@ export async function updateItem(
     config: Record<string, unknown>;
     is_active: boolean;
   }>,
+  changedBy: number | null = null,
 ): Promise<any | null> {
   const set: string[] = [];
   const replacements: Record<string, unknown> = { organizationId, itemId };
@@ -240,24 +297,80 @@ export async function updateItem(
   if (set.length === 0) return null;
   set.push("updated_at = NOW()");
 
+  // Snapshot the patched fields for the change history before the update
+  // replaces them (#4915).
+  const beforeRows = (await sequelize.query(
+    `SELECT name, description, item_type, is_required, display_order, config, is_active
+       FROM model_lifecycle_items
+      WHERE organization_id = :organizationId AND id = :itemId;`,
+    { replacements: { organizationId, itemId }, type: QueryTypes.SELECT },
+  )) as any[];
+  const before = beforeRows[0] ?? null;
+
   const rows = (await sequelize.query(
     `UPDATE model_lifecycle_items SET ${set.join(", ")}
       WHERE organization_id = :organizationId AND id = :itemId
       RETURNING *;`,
     { replacements, type: QueryTypes.UPDATE },
   )) as unknown as [any[], number];
-  return (rows[0] as any)?.[0] ?? null;
+  const updated = (rows[0] as any)?.[0] ?? null;
+  if (updated && before) {
+    // Snapshot only the columns this function can actually write, normalized
+    // for comparison (review: raw req.body keys recorded phantom "changes"
+    // and mixed stringified/raw types). No row is written when nothing
+    // differs.
+    const TRACKED = [
+      "name",
+      "description",
+      "item_type",
+      "is_required",
+      "display_order",
+      "config",
+      "is_active",
+    ] as const;
+    const oldSnapshot: Record<string, unknown> = {};
+    const newSnapshot: Record<string, unknown> = {};
+    for (const key of TRACKED) {
+      if (!(key in patch)) continue;
+      const oldValue = (before as Record<string, unknown>)[key];
+      const newValue = (patch as Record<string, unknown>)[key];
+      if (normalize(oldValue) === normalize(newValue)) continue;
+      oldSnapshot[key] = oldValue ?? null;
+      newSnapshot[key] = newValue ?? null;
+    }
+
+    if (Object.keys(newSnapshot).length > 0) {
+      try {
+        await recordItemChange(
+          organizationId,
+          itemId,
+          "updated",
+          changedBy,
+          oldSnapshot,
+          newSnapshot,
+        );
+        // Same tamper-evident trail the generic change-history writer keeps.
+        appendToAuditLedger({
+          organizationId,
+          entryType: "change_history",
+          userId: changedBy,
+          entityType: "model_lifecycle_item",
+          entityId: itemId,
+          action: "updated",
+          description: `Model lifecycle item ${itemId} updated (${Object.keys(newSnapshot).join(", ")})`,
+        }).catch((error) => {
+          console.error("Failed to append model lifecycle change to the audit ledger:", error);
+        });
+      } catch (error) {
+        // History must never fail the edit.
+        console.error("Failed to record model lifecycle item change:", error);
+      }
+    }
+  }
+  return updated;
 }
 
 export async function deleteItem(organizationId: number, itemId: number): Promise<void> {
-  await unlinkAndDeleteFiles(organizationId, {
-    linkedFilesQuery: `
-      SELECT DISTINCT lf.file_id
-        FROM model_lifecycle_item_files lf
-        JOIN model_lifecycle_values v ON lf.value_id = v.id
-       WHERE v.organization_id = :organizationId AND v.item_id = :itemId;`,
-    replacements: { organizationId, itemId },
-  });
   await sequelize.query(
     `DELETE FROM model_lifecycle_items
       WHERE organization_id = :organizationId AND id = :itemId;`,
@@ -335,7 +448,7 @@ export async function getLifecycleForModel(
         `SELECT lf.id, lf.value_id, lf.file_id, lf.created_at,
                 f.filename, f.type AS mimetype
            FROM model_lifecycle_item_files lf
-           JOIN files f ON lf.file_id = f.id
+           JOIN files f ON lf.file_id = f.id AND f.organization_id = lf.organization_id
           WHERE lf.organization_id = :organizationId AND lf.value_id IN (:valueIds);`,
         {
           replacements: { organizationId, valueIds },
@@ -446,32 +559,150 @@ export async function upsertValue(
   userId: number,
   input: { value_text?: string | null; value_json?: unknown },
 ): Promise<any> {
-  const rows = (await sequelize.query(
-    `INSERT INTO model_lifecycle_values
-       (organization_id, model_inventory_id, item_id, value_text, value_json, updated_by)
-     VALUES (:organizationId, :modelId, :itemId, :valueText,
-             CASE WHEN :valueJson IS NULL THEN NULL ELSE CAST(:valueJson AS JSONB) END,
-             :userId)
-     ON CONFLICT (organization_id, model_inventory_id, item_id)
-     DO UPDATE SET
-       value_text = EXCLUDED.value_text,
-       value_json = EXCLUDED.value_json,
-       updated_by = EXCLUDED.updated_by,
-       updated_at = NOW()
-     RETURNING *;`,
-    {
-      replacements: {
+  const { before, upserted } = await sequelize.transaction(async (transaction) => {
+    // Make sure the row exists, then snapshot the current answer so the
+    // change history can store before/after values (#4977). FOR UPDATE holds
+    // the row until commit, so a concurrent save, even of a first answer,
+    // waits instead of reading the same "before". A row created here is
+    // empty, which counts as no answer below.
+    await sequelize.query(
+      `INSERT INTO model_lifecycle_values
+         (organization_id, model_inventory_id, item_id, updated_by)
+       VALUES (:organizationId, :modelId, :itemId, :userId)
+       ON CONFLICT (organization_id, model_inventory_id, item_id) DO NOTHING;`,
+      { replacements: { organizationId, modelId, itemId, userId }, transaction },
+    );
+    const beforeRows = (await sequelize.query(
+      `SELECT value_text, value_json
+         FROM model_lifecycle_values
+        WHERE organization_id = :organizationId AND model_inventory_id = :modelId AND item_id = :itemId
+          FOR UPDATE;`,
+      { replacements: { organizationId, modelId, itemId }, type: QueryTypes.SELECT, transaction },
+    )) as any[];
+
+    const rows = (await sequelize.query(
+      `INSERT INTO model_lifecycle_values
+         (organization_id, model_inventory_id, item_id, value_text, value_json, updated_by)
+       VALUES (:organizationId, :modelId, :itemId, :valueText,
+               CASE WHEN :valueJson IS NULL THEN NULL ELSE CAST(:valueJson AS JSONB) END,
+               :userId)
+       ON CONFLICT (organization_id, model_inventory_id, item_id)
+       DO UPDATE SET
+         value_text = EXCLUDED.value_text,
+         value_json = EXCLUDED.value_json,
+         updated_by = EXCLUDED.updated_by,
+         updated_at = NOW()
+       RETURNING *;`,
+      {
+        replacements: {
+          organizationId,
+          modelId,
+          itemId,
+          userId,
+          valueText: input.value_text ?? null,
+          valueJson: input.value_json !== undefined ? JSON.stringify(input.value_json) : null,
+        },
+        type: QueryTypes.INSERT,
+        transaction,
+      },
+    )) as unknown as [any[], number];
+    return { before: beforeRows[0] ?? null, upserted: (rows[0] as any)[0] };
+  });
+
+  if (upserted) {
+    const TRACKED = ["value_text", "value_json"] as const;
+    // A row created empty by a file, person or approver action has no answer
+    // yet, so the first real answer is recorded as created.
+    const hadAnswer =
+      !!before &&
+      TRACKED.some((key) => normalize((before as Record<string, unknown>)[key]) !== null);
+    const oldSnapshot: Record<string, unknown> = {};
+    const newSnapshot: Record<string, unknown> = {};
+    for (const key of TRACKED) {
+      const oldValue = before ? (before as Record<string, unknown>)[key] : null;
+      const newValue = (upserted as Record<string, unknown>)[key];
+      if (normalize(oldValue) === normalize(newValue)) continue;
+      oldSnapshot[key] = oldValue ?? null;
+      newSnapshot[key] = newValue ?? null;
+    }
+
+    if (Object.keys(newSnapshot).length > 0) {
+      await recordValueEvent(
         organizationId,
         modelId,
         itemId,
-        userId,
-        valueText: input.value_text ?? null,
-        valueJson: input.value_json !== undefined ? JSON.stringify(input.value_json) : null,
-      },
-      type: QueryTypes.INSERT,
-    },
-  )) as unknown as [any[], number];
-  return (rows[0] as any)[0];
+        userId ?? null,
+        hadAnswer ? "updated" : "created",
+        hadAnswer ? oldSnapshot : null,
+        newSnapshot,
+        Object.keys(newSnapshot).join(", "),
+      );
+    }
+  }
+
+  return upserted;
+}
+
+/** A user's display name, as every other history table shows it. */
+const userLabel = (organizationId: number, userId: number): Promise<string> =>
+  GENERIC_FORMATTERS.user(userId, { organizationId });
+
+/**
+ * File name of a file in the organization, or "File #id". A failed lookup
+ * also falls back to the id: history must never fail the edit.
+ */
+async function fileLabel(organizationId: number, fileId: number): Promise<string> {
+  try {
+    const rows = (await sequelize.query(
+      `SELECT filename FROM files WHERE id = :fileId AND organization_id = :organizationId;`,
+      { replacements: { fileId, organizationId }, type: QueryTypes.SELECT },
+    )) as Array<{ filename: string | null }>;
+    return rows[0]?.filename || `File #${fileId}`;
+  } catch {
+    return `File #${fileId}`;
+  }
+}
+
+/**
+ * Record a per-model lifecycle event (answer edit, file, person or approval
+ * change) in model_lifecycle_change_history and the audit ledger. History
+ * must never fail the edit: any error is logged and swallowed.
+ */
+async function recordValueEvent(
+  organizationId: number,
+  modelId: number,
+  itemId: number,
+  changedBy: number | null,
+  changeType: string,
+  oldValue: Record<string, unknown> | null,
+  newValue: Record<string, unknown> | null,
+  detail: string,
+): Promise<void> {
+  try {
+    await recordItemChange(
+      organizationId,
+      itemId,
+      changeType,
+      changedBy,
+      oldValue,
+      newValue,
+      modelId,
+    );
+    // Same tamper-evident trail the generic change-history writer keeps.
+    appendToAuditLedger({
+      organizationId,
+      entryType: "change_history",
+      userId: changedBy,
+      entityType: "model_lifecycle_value",
+      entityId: itemId,
+      action: changeType,
+      description: `Model lifecycle value for item ${itemId} ${changeType} (${detail})`,
+    }).catch((error) => {
+      console.error("Failed to append model lifecycle value change to the audit ledger:", error);
+    });
+  } catch (error) {
+    console.error("Failed to record model lifecycle value change:", error);
+  }
 }
 
 async function ensureValueRow(
@@ -499,13 +730,24 @@ async function ensureValueRow(
 // Files
 // ---------------------------------------------------------------------------
 
+/**
+ * Link a file to a lifecycle item. Returns null when the file is not in the
+ * caller's organization (the foreign key alone accepts any tenant's file), so
+ * the caller can answer 404 without revealing whether the id exists.
+ */
 export async function attachFile(
   organizationId: number,
   modelId: number,
   itemId: number,
   userId: number,
   fileId: number,
-): Promise<any> {
+): Promise<any | null> {
+  const owned = (await sequelize.query(
+    `SELECT 1 FROM files WHERE id = :fileId AND organization_id = :organizationId;`,
+    { replacements: { fileId, organizationId }, type: QueryTypes.SELECT },
+  )) as unknown[];
+  if (owned.length === 0) return null;
+
   const valueId = await ensureValueRow(organizationId, modelId, itemId, userId);
   const rows = (await sequelize.query(
     `INSERT INTO model_lifecycle_item_files (organization_id, value_id, file_id)
@@ -517,30 +759,73 @@ export async function attachFile(
       type: QueryTypes.INSERT,
     },
   )) as unknown as [any[], number];
-  return (rows[0] as any)?.[0] ?? { value_id: valueId, file_id: fileId };
+  const linked = (rows[0] as any)?.[0];
+  // Only a new link is history; ON CONFLICT DO NOTHING returns no row.
+  if (linked) {
+    const file = await fileLabel(organizationId, fileId);
+    await recordValueEvent(
+      organizationId,
+      modelId,
+      itemId,
+      userId ?? null,
+      "file_attached",
+      null,
+      {
+        file,
+      },
+      "file",
+    );
+  }
+  return linked ?? { value_id: valueId, file_id: fileId };
 }
 
+/**
+ * Remove the link between a lifecycle item and a file. Returns false when the
+ * item had no link to that file, so the caller can answer 404.
+ *
+ * The `files` row is deliberately left in place. Lifecycle uploads go through
+ * the File Manager, so the file is listed there, and `attachFile` accepts any
+ * file id in the organization: the file may be evidence or a policy document
+ * that other records point to, some of them without a foreign key. Deleting
+ * it belongs to the File Manager, which checks the caller's role and project
+ * access and clears folder mappings.
+ */
 export async function detachFile(
   organizationId: number,
   modelId: number,
   itemId: number,
   fileId: number,
-): Promise<void> {
-  await sequelize.query(
+  actorId: number | null = null,
+): Promise<boolean> {
+  const rows = (await sequelize.query(
     `DELETE FROM model_lifecycle_item_files
       WHERE organization_id = :organizationId AND file_id = :fileId
         AND value_id = (
           SELECT id FROM model_lifecycle_values
            WHERE organization_id = :organizationId
              AND model_inventory_id = :modelId AND item_id = :itemId
-        );`,
-    { replacements: { organizationId, fileId, modelId, itemId } },
-  );
-  // Hard-delete the file so we don't accumulate orphans.
-  await sequelize.query(
-    `DELETE FROM files WHERE organization_id = :organizationId AND id = :fileId;`,
-    { replacements: { organizationId, fileId } },
-  );
+        )
+      RETURNING id;`,
+    {
+      replacements: { organizationId, fileId, modelId, itemId },
+      type: QueryTypes.DELETE,
+    },
+  )) as unknown as Array<{ id: number }> | undefined;
+  const detached = Array.isArray(rows) && rows.length > 0;
+  if (detached) {
+    const file = await fileLabel(organizationId, fileId);
+    await recordValueEvent(
+      organizationId,
+      modelId,
+      itemId,
+      actorId,
+      "file_removed",
+      { file },
+      null,
+      "file",
+    );
+  }
+  return detached;
 }
 
 // ---------------------------------------------------------------------------
@@ -565,7 +850,23 @@ export async function addPerson(
       type: QueryTypes.INSERT,
     },
   )) as unknown as [any[], number];
-  return (rows[0] as any)?.[0] ?? { value_id: valueId, user_id: personUserId };
+  const added = (rows[0] as any)?.[0];
+  if (added) {
+    const person = await userLabel(organizationId, personUserId);
+    await recordValueEvent(
+      organizationId,
+      modelId,
+      itemId,
+      userId ?? null,
+      "person_added",
+      null,
+      {
+        person,
+      },
+      "person",
+    );
+  }
+  return added ?? { value_id: valueId, user_id: personUserId };
 }
 
 export async function removePerson(
@@ -573,17 +874,35 @@ export async function removePerson(
   modelId: number,
   itemId: number,
   personUserId: number,
+  actorId: number | null = null,
 ): Promise<void> {
-  await sequelize.query(
+  const rows = (await sequelize.query(
     `DELETE FROM model_lifecycle_item_people
       WHERE organization_id = :organizationId AND user_id = :personUserId
         AND value_id = (
           SELECT id FROM model_lifecycle_values
            WHERE organization_id = :organizationId
              AND model_inventory_id = :modelId AND item_id = :itemId
-        );`,
-    { replacements: { organizationId, personUserId, modelId, itemId } },
-  );
+        )
+      RETURNING id;`,
+    {
+      replacements: { organizationId, personUserId, modelId, itemId },
+      type: QueryTypes.DELETE,
+    },
+  )) as unknown as Array<{ id: number }> | undefined;
+  if (Array.isArray(rows) && rows.length > 0) {
+    const person = await userLabel(organizationId, personUserId);
+    await recordValueEvent(
+      organizationId,
+      modelId,
+      itemId,
+      actorId,
+      "person_removed",
+      { person },
+      null,
+      "person",
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -608,7 +927,23 @@ export async function addApprover(
       type: QueryTypes.INSERT,
     },
   )) as unknown as [any[], number];
-  return (rows[0] as any)?.[0] ?? { value_id: valueId, user_id: approverUserId, status: "pending" };
+  const added = (rows[0] as any)?.[0];
+  if (added) {
+    const approver = await userLabel(organizationId, approverUserId);
+    // The change-type constraint has no approver_added, so this is an update
+    // whose snapshot names the approver.
+    await recordValueEvent(
+      organizationId,
+      modelId,
+      itemId,
+      userId ?? null,
+      "updated",
+      null,
+      { approver, status: "pending" },
+      "approver",
+    );
+  }
+  return added ?? { value_id: valueId, user_id: approverUserId, status: "pending" };
 }
 
 export async function removeApprover(
@@ -616,17 +951,35 @@ export async function removeApprover(
   modelId: number,
   itemId: number,
   approverUserId: number,
+  actorId: number | null = null,
 ): Promise<void> {
-  await sequelize.query(
+  const rows = (await sequelize.query(
     `DELETE FROM model_lifecycle_item_approvals
       WHERE organization_id = :organizationId AND user_id = :approverUserId
         AND value_id = (
           SELECT id FROM model_lifecycle_values
            WHERE organization_id = :organizationId
              AND model_inventory_id = :modelId AND item_id = :itemId
-        );`,
-    { replacements: { organizationId, approverUserId, modelId, itemId } },
-  );
+        )
+      RETURNING status;`,
+    {
+      replacements: { organizationId, approverUserId, modelId, itemId },
+      type: QueryTypes.DELETE,
+    },
+  )) as unknown as Array<{ status: string }> | undefined;
+  if (Array.isArray(rows) && rows.length > 0) {
+    const approver = await userLabel(organizationId, approverUserId);
+    await recordValueEvent(
+      organizationId,
+      modelId,
+      itemId,
+      actorId,
+      "updated",
+      { approver, status: rows[0].status },
+      null,
+      "approver",
+    );
+  }
 }
 
 export type ApprovalStatus = "pending" | "approved" | "rejected";
@@ -637,44 +990,158 @@ export async function updateApprovalStatus(
   itemId: number,
   approverUserId: number,
   status: ApprovalStatus,
+  actorId: number | null = null,
 ): Promise<any | null> {
   // decided_at is NULL only when the reviewer walks the decision back to
-  // "pending"; otherwise we stamp NOW().
+  // "pending"; otherwise we stamp NOW(). The CTE locks the row and reads the
+  // previous status in the same statement, for the change history.
   const decidedAtSql = status === "pending" ? "NULL" : "NOW()";
   const rows = (await sequelize.query(
-    `UPDATE model_lifecycle_item_approvals
+    `WITH prev AS (
+       SELECT a.id, a.status
+         FROM model_lifecycle_item_approvals a
+        WHERE a.organization_id = :organizationId AND a.user_id = :approverUserId
+          AND a.value_id = (
+            SELECT id FROM model_lifecycle_values
+             WHERE organization_id = :organizationId
+               AND model_inventory_id = :modelId AND item_id = :itemId
+          )
+          FOR UPDATE
+     )
+     UPDATE model_lifecycle_item_approvals a
         SET status = :status, decided_at = ${decidedAtSql}
-      WHERE organization_id = :organizationId AND user_id = :approverUserId
-        AND value_id = (
-          SELECT id FROM model_lifecycle_values
-           WHERE organization_id = :organizationId
-             AND model_inventory_id = :modelId AND item_id = :itemId
-        )
-      RETURNING *;`,
+       FROM prev
+      WHERE a.id = prev.id
+      RETURNING a.*, prev.status AS previous_status;`,
     {
       replacements: { organizationId, status, approverUserId, modelId, itemId },
       type: QueryTypes.UPDATE,
     },
   )) as unknown as [any[], number];
-  return (rows[0] as any)?.[0] ?? null;
+  const row = (rows[0] as any)?.[0];
+  if (!row) return null;
+  const { previous_status: previousStatus, ...updated } = row;
+  if (previousStatus !== status) {
+    const approver = await userLabel(organizationId, approverUserId);
+    await recordValueEvent(
+      organizationId,
+      modelId,
+      itemId,
+      actorId,
+      status === "pending" ? "updated" : status,
+      { approver, status: previousStatus },
+      { approver, status },
+      "approval",
+    );
+  }
+  return updated;
 }
 
 // ---------------------------------------------------------------------------
-// Shared helper — unlink and hard-delete files attached under a subtree
+// Per-model change history (issue #4977)
 // ---------------------------------------------------------------------------
 
-async function unlinkAndDeleteFiles(
+interface LifecycleHistoryRow {
+  id: number;
+  item_id: number | null;
+  change_type: string;
+  changed_by: number | null;
+  old_value: Record<string, unknown> | null;
+  new_value: Record<string, unknown> | null;
+  created_at: string;
+  user_name: string | null;
+  user_surname: string | null;
+  user_email: string | null;
+  item_name: string | null;
+}
+
+const isBlank = (value: unknown): boolean => value === undefined || value === null || value === "";
+
+/**
+ * Flatten a JSONB snapshot for display: the answer text (and JSON value) for
+ * an answer edit, or the file, person or approver (with the approval status)
+ * for other events. A snapshot with nothing in it, such as a cleared answer,
+ * returns undefined, which the sidebar shows as "-".
+ */
+export function formatLifecycleSnapshot(
+  snapshot: Record<string, unknown> | null | undefined,
+): string | undefined {
+  if (!snapshot) return undefined;
+  const { value_text, value_json, file, person, approver, status } = snapshot;
+  const parts: string[] = [];
+  if (!isBlank(value_text)) parts.push(String(value_text));
+  if (!isBlank(value_json)) parts.push(JSON.stringify(value_json));
+  if (!isBlank(file)) parts.push(String(file));
+  if (!isBlank(person)) parts.push(String(person));
+  if (!isBlank(approver)) {
+    parts.push(isBlank(status) ? String(approver) : `${approver} (${status})`);
+  }
+  return parts.length > 0 ? parts.join(" ") : undefined;
+}
+
+/** What a history row is about, shown after the item name. */
+function lifecycleEventLabel(row: LifecycleHistoryRow): string | null {
+  const snapshot = { ...(row.old_value ?? {}), ...(row.new_value ?? {}) };
+  if ("file" in snapshot) return "File";
+  if ("person" in snapshot) return "Person";
+  if ("approver" in snapshot) return "Approval";
+  return null;
+}
+
+/**
+ * One page of a model's lifecycle history, newest first, mapped onto the
+ * generic change-history entry shape the HistorySidebar reads. The table
+ * keeps its own change types (file_attached, approved, ...); they are all
+ * shown as updates, since none of them creates or deletes the model.
+ */
+export async function getModelLifecycleHistory(
   organizationId: number,
-  params: { linkedFilesQuery: string; replacements: Record<string, unknown> },
-): Promise<void> {
-  const linked = (await sequelize.query(params.linkedFilesQuery, {
-    replacements: params.replacements,
-    type: QueryTypes.SELECT,
-  })) as Array<{ file_id: number }>;
-  if (linked.length === 0) return;
-  const fileIds = linked.map((r) => r.file_id);
-  await sequelize.query(
-    `DELETE FROM files WHERE organization_id = :organizationId AND id IN (:fileIds);`,
-    { replacements: { organizationId, fileIds } },
-  );
+  modelId: number,
+  limit: number,
+  offset: number,
+): Promise<{ data: any[]; hasMore: boolean; total: number }> {
+  const countRows = (await sequelize.query(
+    `SELECT COUNT(*)::int AS total
+       FROM model_lifecycle_change_history
+      WHERE organization_id = :organizationId AND model_inventory_id = :modelId;`,
+    { replacements: { organizationId, modelId }, type: QueryTypes.SELECT },
+  )) as Array<{ total: number }>;
+  const total = countRows[0]?.total ?? 0;
+
+  const rows = (await sequelize.query(
+    `SELECT ch.id, ch.item_id, ch.change_type, ch.changed_by,
+            ch.old_value, ch.new_value, ch.created_at,
+            u.name AS user_name, u.surname AS user_surname, u.email AS user_email,
+            i.name AS item_name
+       FROM model_lifecycle_change_history ch
+       LEFT JOIN users u ON u.id = ch.changed_by
+       LEFT JOIN model_lifecycle_items i
+         ON i.id = ch.item_id AND i.organization_id = ch.organization_id
+      WHERE ch.organization_id = :organizationId AND ch.model_inventory_id = :modelId
+      ORDER BY ch.created_at DESC, ch.id DESC
+      LIMIT :limit OFFSET :offset;`,
+    {
+      replacements: { organizationId, modelId, limit, offset },
+      type: QueryTypes.SELECT,
+    },
+  )) as LifecycleHistoryRow[];
+
+  const data = rows.map((row) => {
+    const item = row.item_name || (row.item_id ? `Lifecycle item #${row.item_id}` : "Lifecycle");
+    const event = lifecycleEventLabel(row);
+    return {
+      id: row.id,
+      action: "updated",
+      field_name: event ? `${item}: ${event.toLowerCase()}` : item,
+      old_value: formatLifecycleSnapshot(row.old_value),
+      new_value: formatLifecycleSnapshot(row.new_value),
+      changed_by_user_id: row.changed_by,
+      changed_at: row.created_at,
+      user_name: row.user_name ?? undefined,
+      user_surname: row.user_surname ?? undefined,
+      user_email: row.user_email ?? undefined,
+    };
+  });
+
+  return { data, hasMore: offset + data.length < total, total };
 }

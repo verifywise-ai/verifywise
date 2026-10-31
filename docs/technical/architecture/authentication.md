@@ -294,55 +294,50 @@ export class RoleModel extends Model<RoleModel> implements IRole {
 
 ### Authorization Middleware
 
-```typescript
-// File: Servers/middleware/accessControl.middleware.ts
+`authorize()` (`Servers/middleware/accessControl.middleware.ts`) takes a permission key from the catalog in `Servers/config/rolePermissions.config.ts`. Built-in roles resolve against a static matrix; custom organization roles resolve against the `role_permissions` table, and a missing row denies. A legacy role-name array (`authorize(["Admin"])`) is still accepted while old call sites migrate; new code must use keys.
 
-export const authorize = (allowedRoles: string[]) => {
-  return (
-    req: AuthenticatedRequest,
-    res: Response,
-    next: NextFunction
-  ) => {
-    if (!req.role) {
-      return res.status(401).json({ message: "Authentication required" });
-    }
+Each key sits in one tier, and the tier decides which built-in roles hold it:
 
-    if (!allowedRoles.includes(req.role)) {
-      return res.status(403).json({ message: "Access denied" });
-    }
+| Tier | Built-in roles | Examples |
+|------|----------------|----------|
+| Admin | Admin | `organization.admin`, `llmKeys.admin`, `auditLedger.admin`, `logs.admin`, `training.admin` |
+| Editor | Admin, Editor | `useCase.edit`, `vendor.edit`, `model.edit`, `risks.edit`, `policy.edit`, `task.edit`, `training.edit`, `intakeForm.edit` |
+| Contributor | Admin, Reviewer, Editor | `file.contribute`, `fileManager.contribute` |
+| Reader | all four | `aiDetection.read` |
+| Super | Admin, SuperAdmin | `auditLedger.super`, `invitation.super`, `user.deleteSuper` |
 
-    return next();
-  };
-};
-```
+### Core governance writes
+
+Reviewer and Auditor are read-only for core governance content, and the server enforces it (not only the UI):
+
+| Routes | Key |
+|--------|-----|
+| `POST /projects`, `PATCH /projects/:id`, `PATCH /projects/:id/status`, `DELETE /projects/:id` | `useCase.edit` |
+| Vendor and vendor risk create, update, delete | `vendor.edit` |
+| Model inventory and model risk create, update, delete | `model.edit` |
+| Risk create, update, delete, AI suggestions, quantitative benchmark and assessment mode; `DELETE /policy-linked/risk/:id/unlink-all` | `risks.edit` |
+| Policy create, update, delete, DOCX import, review request, linked objects | `policy.edit` |
+| `POST /tasks` | `task.edit` |
+| Training create, update | `training.edit` |
+| Training delete | `training.admin` |
+| `DELETE /policy-linked/evidence/:id/unlink-all` | `fileManager.contribute` |
+
+Some writes are decided by the record, not the role:
+
+- **Policy review approve/reject:** the policy must be in `pending_review`, and the caller must hold `organization.admin` or be an assigned reviewer of that policy (any role) other than its author (`canDecideReview` in `policy.ctrl.ts`).
+- **Tasks:** update, archive, restore and hard delete keep the ownership rules in `task.utils.ts` (creator, assignee or Admin), so an assignee of any role can still update their task's status.
+- **Approval requests:** any assigned approver of the current step can approve or reject, whatever their role.
+
+`Servers/routes/__tests__/coreWriteRoutes.permissions.test.ts` asserts the keys above are wired. Migration `20261020200000-grant-core-write-permissions-to-custom-roles.js` gave existing custom roles that held any `*.edit` key the editor keys above (and `training.admin` to those holding any `*.admin` key), since these routes used to need only a login.
 
 ### Usage in Routes
 
 ```typescript
-// File: Servers/routes/user.route.ts
-
-// Admin-only routes
-router.delete(
-  "/:id",
-  authenticateJWT,
-  authorize(["Admin"]),
-  deleteUserById
-);
-
-// Multiple roles allowed
-router.patch(
-  "/:id",
-  authenticateJWT,
-  authorize(["Admin", "Editor"]),
-  updateUserById
-);
+// Permission key (preferred)
+router.post("/", authenticateJWT, authorize("vendor.edit"), createVendor);
 
 // Any authenticated user
-router.get(
-  "/profile",
-  authenticateJWT,
-  getUserProfile
-);
+router.get("/", authenticateJWT, getAllVendors);
 ```
 
 ## Password Security

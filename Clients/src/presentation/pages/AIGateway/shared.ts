@@ -2,8 +2,18 @@ import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useTheme } from "@mui/material";
 import { PROVIDER_ICONS } from "../../components/ProviderIcons";
 import { apiServices } from "../../../infrastructure/api/networkServices";
+import palette from "../../themes/palette";
 
 export const sectionTitleSx = { fontWeight: 600, fontSize: 16 };
+
+/** Section label inside the agent-control drawers. */
+export const drawerLabelSx = {
+  fontSize: 11,
+  fontWeight: 600,
+  color: palette.text.tertiary,
+  letterSpacing: "0.5px",
+  mb: "6px",
+};
 
 /** Guardrail action colors — blocked (red) and masked (amber) */
 export const GUARDRAIL_ACTION_COLORS = { blocked: "#DC2626", masked: "#D97706" } as const;
@@ -21,9 +31,85 @@ export const MCP_STATUS_COLORS: Record<string, { bg: string; text: string }> = {
   pending: { bg: "#FFFBEB", text: "#92400E" },
   rate_limited: { bg: "#FFFBEB", text: "#92400E" },
   approval_required: { bg: "#F5F3FF", text: "#5B21B6" },
+  // Monitor-only keys: the call went through, so these use softer tones than
+  // the blocked / denied / approval colours above.
+  would_block: { bg: palette.status.warning.bg, text: palette.status.warning.text },
+  would_need_approval: { bg: palette.status.default.bg, text: palette.status.default.text },
 } as const;
 
 export const MCP_STATUS_FALLBACK = { bg: "#F3F4F6", text: "#374151" } as const;
+
+const MCP_STATUS_LABELS: Record<string, string> = {
+  would_block: "Would block",
+  would_need_approval: "Would need approval",
+};
+
+/** A stored tool-call status ("approval_required") as screen text ("approval required"). */
+export const formatMcpStatus = (status: string) =>
+  MCP_STATUS_LABELS[status] ?? status.replace(/_/g, " ");
+
+/**
+ * An events-timeline entry type as screen text: the monitor only outcomes use
+ * the same labels as the status chip; other types are shown as stored.
+ */
+export const formatMcpEventType = (type: string) => MCP_STATUS_LABELS[type] ?? type;
+
+/**
+ * Which check produced a monitor only outcome, as recorded by the gateway on
+ * each would_* event: a guardrail, a require_approval rule (native hook), the
+ * key's tool lists (MCP proxy, and native calls when the key opts in) or a
+ * tool's requires-approval flag (MCP proxy only).
+ */
+export type MonitorOutcomeSource =
+  "guardrail" | "approval_rule" | "tool_acl" | "tool_requires_approval";
+
+/**
+ * The decision-provenance line for an invocation: which rule blocked, paused,
+ * or (for a monitor-only key) would have blocked or paused the call. Returns
+ * an English template for `t()` plus the values to `fill()` it with, or null
+ * when there is nothing to show. A monitor row without a rule names the tool
+ * list or the tool's approval flag only when the gateway recorded that source.
+ */
+export function describeMcpDecision(
+  status: string,
+  ruleName: string | null | undefined,
+  source?: string | null,
+): { heading: string; template: string; values: Record<string, string> } | null {
+  const monitor = (template: string, values: Record<string, string> = {}) => ({
+    heading: "Monitor only",
+    template,
+    values,
+  });
+  if (status === "would_block") {
+    if (ruleName) return monitor("Would have been blocked by {rule}", { rule: ruleName });
+    return source === "tool_acl"
+      ? monitor("Would have been blocked by this key's tool list")
+      : monitor("Would have been blocked by a guardrail");
+  }
+  if (status === "would_need_approval") {
+    if (ruleName) return monitor("Would have needed approval: {rule}", { rule: ruleName });
+    return source === "tool_requires_approval"
+      ? monitor("Would have needed approval (tool requires approval)")
+      : monitor("Would have needed approval");
+  }
+  if (!ruleName) return null;
+  return {
+    heading: status === "approval_required" ? "Approval required by rule" : "Blocked by rule",
+    template: "{rule}",
+    values: { rule: ruleName },
+  };
+}
+
+/** How an agent key applies policy: "enforce" blocks and pauses, "monitor" only records. */
+export type EnforcementMode = "enforce" | "monitor";
+
+export const ENFORCEMENT_MODE_ITEMS: { _id: EnforcementMode; name: string }[] = [
+  { _id: "enforce", name: "Enforce" },
+  { _id: "monitor", name: "Monitor only" },
+];
+
+export const MONITOR_MODE_HELPER =
+  "Rules are checked and logged but never block or pause calls. Rate limits still apply.";
 
 export function useCardSx() {
   const theme = useTheme();
@@ -67,7 +153,43 @@ const GATEWAY_PROVIDER_MAP: Record<string, string> = {
   ai21: "Ai21",
   voyage: "Voyage",
   jina_ai: "Jina",
+  // LiteLLM provider strings that belong to a provider above.
+  vercel_ai_gateway: "Vercel",
+  v0: "Vercel",
+  vertex_ai: "Google",
+  google_pse: "Google",
+  sagemaker: "Aws",
+  amazon_nova: "Aws",
+  aws_polly: "Aws",
+  agentcore: "Aws",
+  transcribe: "Aws",
+  chatgpt: "OpenAI",
+  azure_text: "Microsoft",
+  microsoft_365_copilot: "Microsoft",
+  bing_grounding: "Microsoft",
+  cohere_chat: "Cohere",
+  codestral: "Mistral",
+  meta: "Meta",
+  anyscale: "Anyscale",
+  baseten: "Baseten",
+  stability: "Stability",
+  elevenlabs: "ElevenLabs",
+  assemblyai: "AssemblyAI",
+  vllm: "Vllm",
+  hosted_vllm: "Vllm",
 };
+
+/**
+ * Reduce a LiteLLM provider string to a key of GATEWAY_PROVIDER_MAP:
+ * "vertex_ai-anthropic_models" → "vertex_ai", "text-completion-openai" →
+ * "openai", "fireworks_ai-embedding-models" → "fireworks_ai".
+ */
+function normalizeProvider(provider: string): string {
+  const p = provider.toLowerCase().replace(/^text-completion-/, "");
+  if (p.startsWith("vertex_ai")) return "vertex_ai";
+  if (p.startsWith("bedrock")) return "bedrock";
+  return p.replace(/-[a-z0-9_-]*models$/, "");
+}
 
 /**
  * Get the provider icon component for a gateway provider ID.
@@ -76,18 +198,46 @@ const GATEWAY_PROVIDER_MAP: Record<string, string> = {
 export function getProviderIcon(
   provider: string,
 ): React.ComponentType<React.SVGProps<SVGSVGElement>> | null {
-  const key = GATEWAY_PROVIDER_MAP[provider.toLowerCase()];
+  const key = GATEWAY_PROVIDER_MAP[normalizeProvider(provider)];
   return key ? PROVIDER_ICONS[key] || null : null;
 }
 
 /**
- * Render a provider icon with fallback.
- * Returns the SVG icon element or null if no match.
+ * Render a provider icon. A provider without a logo gets a neutral tile
+ * with its initial, the same size as the logos, so rows line up.
  */
 export function ProviderIcon({ provider, size = 16 }: { provider: string; size?: number }) {
   const IconComponent = getProviderIcon(provider);
-  if (!IconComponent) return null;
-  return React.createElement(IconComponent, { width: size, height: size });
+  if (IconComponent) return React.createElement(IconComponent, { width: size, height: size });
+  const initial = provider
+    .replace(/[^a-z0-9]/gi, "")
+    .charAt(0)
+    .toUpperCase();
+  if (!initial) return null;
+  return React.createElement(
+    "span",
+    {
+      "aria-hidden": true,
+      "data-testid": "provider-icon-fallback",
+      "style": {
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexShrink: 0,
+        width: size,
+        height: size,
+        boxSizing: "border-box",
+        border: `1px solid ${palette.border.dark}`,
+        borderRadius: 4,
+        background: palette.background.alt,
+        color: palette.text.tertiary,
+        fontSize: Math.max(8, Math.round(size * 0.55)),
+        fontWeight: 600,
+        lineHeight: 1,
+      },
+    },
+    initial,
+  );
 }
 
 // ─── Shared constants ─────────────────────────────────────────────────────────
@@ -110,6 +260,9 @@ export const API_KEY_PROVIDERS = [
 ];
 
 const API_KEY_PROVIDER_IDS = new Set(API_KEY_PROVIDERS.map((p) => p._id));
+
+type ModelItem = { _id: string; name: string };
+const NO_MODEL_ITEMS: ModelItem[] = [];
 
 /**
  * Hook: fetch models from the AI Gateway (LiteLLM registry) and provide
@@ -163,14 +316,30 @@ export function useGatewayModels() {
     return () => ctrl.abort();
   }, [load]);
 
-  /** Get Select-compatible items for a given provider (memoized) */
+  /**
+   * Select-compatible items per provider, built once per load.
+   * LiteLLM lists some models with the provider prefix ("gemini/gemini-2.5-flash")
+   * and some without ("gpt-4o"), and a few both ways. The value is always
+   * "<provider>/<model>" exactly once, and each model appears once.
+   */
+  const itemsByProvider = useMemo(() => {
+    const result: Record<string, ModelItem[]> = {};
+    for (const [provider, models] of Object.entries(modelsByProvider)) {
+      const prefix = `${provider}/`;
+      const items = new Map<string, ModelItem>();
+      for (const m of models) {
+        const name = m.id.startsWith(prefix) ? m.id.slice(prefix.length) : m.id;
+        items.set(name, { _id: `${prefix}${name}`, name });
+      }
+      result[provider] = [...items.values()].sort((a, b) => a.name.localeCompare(b.name));
+    }
+    return result;
+  }, [modelsByProvider]);
+
+  /** Get Select-compatible items for a given provider (stable array identity) */
   const getModelsForProvider = useCallback(
-    (provider: string) =>
-      (modelsByProvider[provider] || []).map((m) => ({
-        _id: `${provider}/${m.id}`,
-        name: m.id,
-      })),
-    [modelsByProvider],
+    (provider: string) => itemsByProvider[provider] ?? NO_MODEL_ITEMS,
+    [itemsByProvider],
   );
 
   /** Get Select-compatible provider items (memoized) */
@@ -195,13 +364,26 @@ export function slugify(value: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
+/**
+ * Base URL users put in front of /v1 in their own code. An explicit backend URL
+ * wins (local development points at the backend on :3000). Otherwise it is the
+ * page's own origin, port included: deployments serve /v1 on the same host and
+ * port as the app, and the backend port itself is not reachable from outside.
+ */
+export function resolveGatewayUrl(
+  env: { VITE_APP_API_URL?: string; VITE_APP_API_BASE_URL?: string },
+  origin: string | undefined,
+): string {
+  const apiUrl = env.VITE_APP_API_URL || env.VITE_APP_API_BASE_URL;
+  if (apiUrl) return apiUrl.replace(/\/+$/, "").replace(/\/api$/, "");
+  return origin || "https://your-verifywise-host";
+}
+
 /** Gateway base URL for code examples */
-export const GATEWAY_URL = (() => {
-  const apiUrl = (import.meta as any)?.env?.VITE_APP_API_URL as string | undefined;
-  if (apiUrl) return apiUrl.replace(/\/api\/?$/, "");
-  if (typeof window !== "undefined") return window.location.origin.replace(/:\d+$/, ":3000");
-  return "https://your-verifywise-host";
-})();
+export const GATEWAY_URL = resolveGatewayUrl(
+  (import.meta as any)?.env ?? {},
+  typeof window !== "undefined" ? window.location.origin : undefined,
+);
 
 /** Color constants for code blocks and warning banners */
 export const CODE_BLOCK_BG = "#1E1E1E";
@@ -358,3 +540,9 @@ export async function streamPromptTest(
 
   return { content, tokens, cost, latency: Date.now() - startTime };
 }
+
+/** Navigation state the MCP servers page sends when it opens the tools catalog. */
+export const FROM_MCP_SERVERS = { from: "mcp-servers" } as const;
+
+export const cameFromMcpServers = (state: unknown): boolean =>
+  (state as { from?: unknown } | null)?.from === FROM_MCP_SERVERS.from;

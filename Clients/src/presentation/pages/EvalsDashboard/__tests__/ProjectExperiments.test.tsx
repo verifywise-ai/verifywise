@@ -277,6 +277,19 @@ describe("ProjectExperiments", () => {
       mockExperiments(
         makeExperiment({ id: "from-results", name: "From results" }),
         makeExperiment({
+          id: "from-attempted",
+          name: "From attempted",
+          // 30 prompts tried, 29 scored: the attempted count wins over both
+          config: { ...baseConfig, dataset: { count: 40 } },
+          results: { avg_scores: {}, total_prompts: 29, prompts_attempted: 30 },
+        }),
+        makeExperiment({
+          id: "from-total",
+          name: "From total",
+          config: { ...baseConfig, dataset: {} },
+          results: { avg_scores: {}, total_prompts: 29 },
+        }),
+        makeExperiment({
           id: "from-count",
           name: "From count",
           results: undefined,
@@ -298,6 +311,8 @@ describe("ProjectExperiments", () => {
       renderExperiments();
 
       expect((await screen.findByTestId("prompts-from-results")).textContent).toBe("3");
+      expect(screen.getByTestId("prompts-from-attempted").textContent).toBe("30");
+      expect(screen.getByTestId("prompts-from-total").textContent).toBe("29");
       expect(screen.getByTestId("prompts-from-count").textContent).toBe("10");
       expect(screen.getByTestId("prompts-from-prompts").textContent).toBe("4");
       expect(screen.getByTestId("prompts-from-nothing").textContent).toBe("0");

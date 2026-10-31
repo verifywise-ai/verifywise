@@ -33,6 +33,11 @@ spec:
       - name: frontend
         image: ghcr.io/verifywise-ai/verifywise-frontend:v2.5
         imagePullPolicy: IfNotPresent
+        env:
+        # Where nginx proxies /api and /v1 when they reach the frontend. A full
+        # DNS name: nginx's resolver does not use the pod's search domains.
+        - name: VW_BACKEND_URL
+          value: http://backend.verifywise.svc.cluster.local:3000
         ports:
         - containerPort: 80
           name: http
@@ -71,11 +76,12 @@ spec:
           limits:
             memory: "256Mi"
             cpu: "200m"
-        # Uncomment to override nginx configuration with custom ConfigMap
+        # Uncomment to override nginx configuration with custom ConfigMap.
+        # The image renders this template into conf.d/default.conf at startup.
         # volumeMounts:
         # - name: nginx-config
-        #   mountPath: /etc/nginx/conf.d/default.conf
-        #   subPath: default.conf
+        #   mountPath: /etc/nginx/templates/default.conf.template
+        #   subPath: default.conf.template
       # Uncomment to use custom nginx configuration
       # volumes:
       # - name: nginx-config

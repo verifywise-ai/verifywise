@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { FC, useState, useEffect, useMemo, Suspense, useCallback } from "react";
+import React, { FC, useState, useEffect, useMemo, Suspense, useCallback, useRef } from "react";
 import {
   Drawer,
   Stack,
@@ -24,6 +24,7 @@ import { Project } from "../../../../domain/types/Project";
 import { useModalKeyHandling } from "../../../../application/hooks/useModalKeyHandling";
 import { useFormValidation } from "../../../../application/hooks/useFormValidation";
 import { focusFormFieldById } from "../../../../application/utils/formValidationFocus";
+import { validateIncidentDescription } from "../../../../application/validations/incidentValidation";
 import {
   INCIDENT_FORM_FIELD_IDS,
   INCIDENT_FORM_FIELD_ORDER,
@@ -38,6 +39,8 @@ import {
 import { HistorySidebar } from "../../Common/HistorySidebar";
 import TabBar from "../../TabBar";
 import { TabContext } from "@mui/lab";
+import JiraIssueChip from "../../JiraIssueChip";
+import type { JiraIncidentLink } from "../../../../application/repository/jiraIncidents.repository";
 
 // To
 import Field from "../../Inputs/Field";
@@ -47,11 +50,20 @@ import SelectComponent from "../../Inputs/Select";
 interface SideDrawerIncidentProps {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
-  onSuccess?: (data: NewIncidentFormValues) => void;
+  /**
+   * Called on save. When editing (isEdit with initialData) it receives only
+   * the fields the user changed, plus expected_updated_at; when creating, the
+   * whole form. The drawer closes once this settles successfully. Resolving
+   * to `false` or rejecting means the save failed: the drawer stays open with
+   * the user's values.
+   */
+  onSuccess?: (data: Partial<NewIncidentFormValues>) => void | boolean | Promise<void | boolean>;
   initialData?: NewIncidentFormValues;
   isEdit?: boolean;
   mode?: string;
   incidentId?: number;
+  /** The incident's Jira issue (Jira incidents extension), shown next to the incident ID. */
+  jiraLink?: JiraIncidentLink;
 }
 
 export interface NewIncidentFormValues {
@@ -79,8 +91,14 @@ export interface NewIncidentFormValues {
   interim_report: boolean;
   approval_status: AIIncidentManagementApprovalStatus;
   approved_by?: string;
-  approval_date?: string;
+  /** YYYY-MM-DD, or empty/null when the incident has no approval date. */
+  approval_date?: string | null;
   approval_notes?: string;
+  /**
+   * The incident's updated_at when the drawer loaded it (edit only). Sent
+   * back so the server can refuse the save if someone changed it since.
+   */
+  expected_updated_at?: string;
 }
 
 const initialState: NewIncidentFormValues = {
@@ -107,6 +125,69 @@ const initialState: NewIncidentFormValues = {
   approval_date: "",
   approval_notes: "",
 };
+
+/** Normalise FK picker values ("" / null / numeric strings) to integer ids or null (issue #4583). */
+const toId = (v: unknown) => (v === undefined || v === null || v === "" ? null : Number(v));
+
+const FK_FIELDS = new Set<keyof NewIncidentFormValues>([
+  "project_id",
+  "model_inventory_id",
+  "assignee_id",
+]);
+
+/**
+ * Whether two form values are the same for change detection: "" / null /
+ * undefined are all empty, FK pickers compare as ids, harm categories compare
+ * as a set (ignoring order, items by their JSON), and other objects or lists
+ * by their JSON, in order.
+ */
+export const isSameFormValue = (
+  key: keyof NewIncidentFormValues,
+  a: unknown,
+  b: unknown,
+): boolean => {
+  const norm = (v: unknown) => {
+    if (FK_FIELDS.has(key)) return toId(v);
+    if (v === undefined || v === null) return "";
+    if (key === "categories_of_harm" && Array.isArray(v)) {
+      return JSON.stringify(v.map((item) => JSON.stringify(item)).sort());
+    }
+    return typeof v === "object" ? JSON.stringify(v) : String(v);
+  };
+  return norm(a) === norm(b);
+};
+
+/** The drawer's label for each editable field, as shown on the form. */
+export const INCIDENT_FIELD_LABELS: Partial<Record<keyof NewIncidentFormValues, string>> = {
+  ai_project: "AI use case or framework",
+  project_id: "AI use case or framework",
+  type: "Incident type",
+  severity: "Severity",
+  status: "Status",
+  model_inventory_id: "Affected model",
+  assignee_id: "Owner",
+  occurred_date: "Occurred date",
+  date_detected: "Detected date",
+  reporter: "Reporter",
+  model_system_version: "Model / system version",
+  categories_of_harm: "Categories of harm",
+  affected_persons_groups: "Affected persons / groups",
+  description: "Description",
+  relationship_causality: "Relationship / causality",
+  immediate_mitigations: "Immediate mitigations taken",
+  planned_corrective_actions: "Planned corrective actions",
+  approval_status: "Approval status",
+  approved_by: "Approved by",
+  approval_date: "Approval date",
+  approval_notes: "Approval notes / comments",
+  interim_report: "This incident has an interim report",
+};
+
+/** Fields the drawer never sends as edits: identity and the version token. */
+const NON_EDITABLE_FIELDS = new Set<keyof NewIncidentFormValues>([
+  "incident_id",
+  "expected_updated_at",
+]);
 
 const severityOptions = [
   { _id: Severity.MINOR, name: "Minor" },
@@ -144,6 +225,7 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
   isEdit = false,
   mode,
   incidentId,
+  jiraLink,
 }) => {
   const theme = useTheme();
   const [values, setValues] = useState<NewIncidentFormValues>(initialData || initialState);
@@ -151,6 +233,16 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
   const [, setIsLoadingUsers] = useState(false);
   const [modelInventories, setModelInventories] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState("details");
+  const [isSaving, setIsSaving] = useState(false);
+  // Refs so close handlers captured by other hooks (Esc) see the current state.
+  const isSavingRef = useRef(false);
+  // Bumped whenever a new draft starts (drawer opened or reset), so a save
+  // that resolves late cannot close or reset a newer draft.
+  const draftSeqRef = useRef(0);
+
+  // The initialData the form was last filled from: the baseline that tells the
+  // user's edits apart from untouched fields.
+  const baselineRef = useRef<NewIncidentFormValues | null>(null);
 
   const validators = useMemo(
     () => ({
@@ -162,13 +254,22 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
       },
       date_detected: (v: unknown) => (!v ? "Detected date is required." : ""),
       reporter: (v: unknown) => (!v ? "Reporter is required." : ""),
-      description: (v: unknown) => (!v ? "Description is required." : ""),
+      // In edit mode the description is validated only when it is one of the
+      // fields the user changed (the ones the save sends), so other fields of
+      // an older incident with a shorter description can still be edited.
+      description: (v: unknown) => {
+        const baseline = baselineRef.current;
+        if (isEdit && baseline && isSameFormValue("description", v, baseline.description)) {
+          return "";
+        }
+        return validateIncidentDescription(v);
+      },
       categories_of_harm: (v: unknown) => {
         const cats = v as string[];
         return !cats || cats.length < 1 ? "Please select at least one Category of Harm." : "";
       },
     }),
-    [],
+    [isEdit],
   );
 
   const { errors, validateAll, clearFieldError, resetErrors, getFirstInvalidField } =
@@ -176,6 +277,15 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
 
   // Use the useProjects hook to get approved projects only
   const { approvedProjects } = useProjects();
+
+  // A newly opened drawer is a new draft: forget any save still in flight.
+  useEffect(() => {
+    if (isOpen) {
+      draftSeqRef.current += 1;
+      isSavingRef.current = false;
+      setIsSaving(false);
+    }
+  }, [isOpen]);
 
   // Fetch Users
   useEffect(() => {
@@ -186,12 +296,23 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
   }, [isOpen]);
 
   useEffect(() => {
-    if (initialData) {
-      setValues((prev) => ({
-        ...prev,
-        ...initialData,
-      }));
+    if (!initialData) return;
+    const baseline = baselineRef.current;
+    baselineRef.current = initialData;
+    if (!baseline || baseline.incident_id !== initialData.incident_id) {
+      setValues((prev) => ({ ...prev, ...initialData }));
+      return;
     }
+    // A refreshed copy of the same incident (after an edit conflict): show the
+    // latest value for every field the user has not edited and keep their
+    // edits. expected_updated_at moves to the latest version this way too.
+    setValues((prev) => {
+      const next: Record<string, unknown> = { ...prev };
+      for (const key of Object.keys(initialData) as (keyof NewIncidentFormValues)[]) {
+        if (isSameFormValue(key, prev[key], baseline[key])) next[key] = initialData[key];
+      }
+      return next as unknown as NewIncidentFormValues;
+    });
   }, [initialData]);
 
   const fetchUsers = async () => {
@@ -319,25 +440,62 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
     [clearFieldError],
   );
 
-  const handleClose = () => {
+  const resetAndClose = () => {
+    draftSeqRef.current += 1;
     setIsOpen(false);
+    baselineRef.current = null;
     setValues(initialState);
     resetErrors();
     setActiveTab("details");
   };
 
-  const handleSaveIncident = (e?: React.FormEvent) => {
+  // Every user close path (Esc, Cancel, X, backdrop) goes through here and is
+  // ignored while a save is in flight.
+  const handleClose = () => {
+    if (isSavingRef.current) return;
+    resetAndClose();
+  };
+
+  const handleSaveIncident = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+    // In-flight guard: a second click while a save is pending does nothing.
+    if (isSavingRef.current) return;
     if (validateAll(values, INCIDENT_FORM_FIELD_ORDER)) {
-      // Normalize optional FK pickers to integer ids or null (issue #4583)
-      const toId = (v: unknown) => (v === undefined || v === null || v === "" ? null : Number(v));
-      onSuccess?.({
+      const formData: NewIncidentFormValues = {
         ...values,
         project_id: toId(values.project_id),
         model_inventory_id: toId(values.model_inventory_id),
         assignee_id: toId(values.assignee_id),
-      });
-      handleClose();
+      };
+      // When editing, send only what the user changed (plus the version), so
+      // a save never writes back stale copies of fields someone else changed.
+      const baseline = baselineRef.current;
+      let body: Partial<NewIncidentFormValues> = formData;
+      if (isEdit && baseline) {
+        const changed: Record<string, unknown> = {};
+        for (const key of Object.keys(formData) as (keyof NewIncidentFormValues)[]) {
+          if (NON_EDITABLE_FIELDS.has(key)) continue;
+          if (!isSameFormValue(key, formData[key], baseline[key])) changed[key] = formData[key];
+        }
+        if (values.expected_updated_at) changed.expected_updated_at = values.expected_updated_at;
+        body = changed as Partial<NewIncidentFormValues>;
+      }
+
+      const draftSeq = draftSeqRef.current;
+      isSavingRef.current = true;
+      setIsSaving(true);
+      let saved = false;
+      try {
+        saved = (await onSuccess?.(body)) !== false;
+      } catch {
+        // The caller reports the failure; keep the drawer open with the
+        // entered values so the user can correct and retry.
+      }
+      // A newer draft has started since this save began; leave it alone.
+      if (draftSeq !== draftSeqRef.current) return;
+      isSavingRef.current = false;
+      setIsSaving(false);
+      if (saved) resetAndClose();
       return;
     }
     // Validation failed — move focus to the first invalid field so the
@@ -398,6 +556,7 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
                     </Typography>
                   </Typography>
                 )}
+                {isEdit && jiraLink && <JiraIssueChip link={jiraLink} />}
               </Stack>
               <Box onClick={handleClose} sx={{ cursor: "pointer" }}>
                 <CloseIcon />
@@ -891,12 +1050,19 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
                 <CustomizableButton variant="contained" text="Close" onClick={handleClose} />
               ) : (
                 <>
-                  <CustomizableButton variant="outlined" text="Cancel" onClick={handleClose} />
+                  <CustomizableButton
+                    variant="outlined"
+                    text="Cancel"
+                    onClick={handleClose}
+                    isDisabled={isSaving}
+                  />
                   <CustomizableButton
                     variant="contained"
                     text={isEdit ? "Update incident" : "Save incident"}
                     icon={<SaveIconSVGWhite />}
                     onClick={handleSaveIncident as (event: unknown) => void}
+                    loading={isSaving}
+                    isDisabled={isSaving}
                     sx={{
                       backgroundColor: theme.palette.primary.main,
                       border: `1px solid ${theme.palette.primary.main}`,

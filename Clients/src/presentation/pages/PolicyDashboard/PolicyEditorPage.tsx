@@ -15,6 +15,8 @@ import {
 } from "../../../application/repository/policy.repository";
 import { useUpdatePolicy } from "../../../application/hooks/usePolicyMutations";
 import useUsers from "../../../application/hooks/useUsers";
+import { useAuth } from "../../../application/hooks/useAuth";
+import allowedRoles from "../../../application/constants/permissions";
 import { User } from "../../../domain/types/User";
 import { PolicyFormData, PolicyInput } from "../../types/interfaces/i.policy";
 import { PolicyManagerModel } from "../../../domain/models/Common/policy/policyManager.model";
@@ -37,6 +39,8 @@ export default function PolicyEditorPage() {
   const navigate = useNavigate();
   const { users } = useUsers();
   const updatePolicyMutation = useUpdatePolicy();
+  const { userRoleName } = useAuth();
+  const readOnly = !userRoleName || !allowedRoles.policies.edit.includes(userRoleName);
 
   const isNew = !id;
   const templateId = searchParams.get("templateId");
@@ -200,7 +204,7 @@ export default function PolicyEditorPage() {
           if (cancelled) return;
           setPolicy(fetchedPolicy);
         }
-      } catch (err: any) {
+      } catch {
         if (!cancelled) {
           setLoadError(id ? "Failed to load policy. It may not exist." : "Failed to load tags.");
         }
@@ -268,6 +272,11 @@ export default function PolicyEditorPage() {
   } = usePolicyEditorContent({ policy, template, setFormData });
 
   const findReplace = usePolicyFindReplace(editor);
+
+  // Reviewer and Auditor can read policies but not change them.
+  useEffect(() => {
+    editor?.setEditable(!readOnly);
+  }, [editor, readOnly]);
 
   // ── Save (validation, create/update, custom-fields flush, navigation) ──
   const {
@@ -456,10 +465,14 @@ export default function PolicyEditorPage() {
 
         <Stack
           sx={{
-            height: "calc(100vh - 100px)",
+            // Cap the editor area just below the viewport instead of assuming
+            // an exact chrome height; when space is tighter the area shrinks
+            // and scrolls rather than silently clipping the last lines (#3923).
+            height: "100%",
+            maxHeight: "calc(100vh - 100px)",
             display: "flex",
             flexDirection: "column",
-            overflow: "hidden",
+            overflow: "auto",
           }}
         >
           <PolicyHeader
@@ -496,6 +509,7 @@ export default function PolicyEditorPage() {
                     : "Save"
             }
             onSave={save}
+            readOnly={readOnly}
           />
 
           {/* ── Metadata form ────────────────────────────────────────── */}
@@ -509,6 +523,7 @@ export default function PolicyEditorPage() {
             customFieldsRef={customFieldsRef}
             entityId={isNew ? null : (policy?.id ?? null)}
             onPendingChange={customFieldsGate.onPendingChange}
+            readOnly={readOnly}
           />
 
           <PolicyContentEditor
@@ -523,6 +538,7 @@ export default function PolicyEditorPage() {
             onCloseLink={handleCloseLink}
             onInsertLink={handleInsertLink}
             findReplace={findReplace}
+            readOnly={readOnly}
           >
             <PolicyReviewPanel isOpen={isHistorySidebarOpen} isNew={isNew} policyId={policy?.id} />
           </PolicyContentEditor>

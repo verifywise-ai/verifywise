@@ -20,3 +20,11 @@ export const conditions = [
   { _id: 1, name: "All" },
   { _id: 2, name: "Any" },
 ];
+
+export const autoApproveRiskLevels = [
+  { _id: "", name: "None" },
+  { _id: "Minimal risk", name: "Minimal risk" },
+  { _id: "Limited risk", name: "Limited risk" },
+  { _id: "High risk", name: "High risk" },
+  { _id: "Prohibited", name: "Prohibited" },
+];

@@ -59,9 +59,11 @@ import { EvidenceHubModel } from "../../../domain/models/Common/evidenceHub/evid
 import NewEvidenceHub from "../../components/Modals/EvidenceHub";
 import { createEvidenceHub } from "../../../application/repository/evidenceHub.repository";
 import EvidenceHubTable from "./evidenceHubTable";
+import EvidenceCoveragePanel from "./EvidenceCoveragePanel";
 import FilePreviewPanel from "../FileManager/components/FilePreviewPanel";
 import { FileMetadata } from "../../../application/repository/file.repository";
 import { earliestFileExpiry } from "../../../application/utils/fileExpiry";
+import { replaceShareLink } from "../../../application/utils/replaceShareLink";
 import ModelEvaluationsTab from "./ModelEvaluationsTab";
 import ModelRiskManagementTab from "./mrm";
 import ShareButton from "../../components/ShareViewDropdown/ShareButton";
@@ -78,6 +80,7 @@ import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/us
 import { palette } from "../../themes/palette";
 
 import Alert from "../../components/Alert";
+import ListStateWrapper from "../../components/ListStateWrapper";
 
 // Constants
 const REDIRECT_DELAY_MS = 2000;
@@ -151,6 +154,7 @@ const ModelInventory: React.FC = () => {
   const hasProcessedUrlParam = useRef(false);
   const [modelInventoryData, setModelInventoryData] = useState<IModelInventory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [modelInventoryError, setModelInventoryError] = useState<string | null>(null);
   const [isNewModelInventoryModalOpen, setIsNewModelInventoryModalOpen] = useState(false);
   // Note: Lifecycle config is managed by the Model Lifecycle extension (pages/Extensions/model-lifecycle)
 
@@ -172,7 +176,7 @@ const ModelInventory: React.FC = () => {
   const [users, setUsers] = useState<any[]>([]);
   const [showAlert, setShowAlert] = useState(false);
 
-  const { userRoleName } = useAuth();
+  const { userRoleName, userId } = useAuth();
   const isCreatingDisabled = !userRoleName || !["Admin", "Editor"].includes(userRoleName);
   const theme = useTheme();
 
@@ -846,8 +850,13 @@ const ModelInventory: React.FC = () => {
     if (showLoading) {
       setIsLoading(true);
     }
+    setModelInventoryError(null);
     try {
-      const response = await getAllEntities({ routeUrl: "/modelInventory" });
+      const response = await getAllEntities({
+        routeUrl: "/modelInventory",
+        // The model list renders its own inline error state.
+        suppressGlobalErrorToast: true,
+      });
       if (response?.data) {
         setModelInventoryData(response.data);
         // Only force table re-render if we're not in an optimistic update scenario
@@ -861,11 +870,7 @@ const ModelInventory: React.FC = () => {
         type: "error",
         message: `Failed to fetch model inventory data: ${error}`,
       });
-      setAlert({
-        variant: "error",
-        body: "Failed to load model inventory data. Please try again later.",
-      });
-      setShowAlert(true);
+      setModelInventoryError("Failed to load model inventory data. Please try again later.");
     } finally {
       if (showLoading) {
         setIsLoading(false);
@@ -1391,34 +1396,48 @@ const ModelInventory: React.FC = () => {
 
   const handleConfirmReplace = async () => {
     setShowReplaceConfirmation(false);
+    // A link is already being created; replacing now would disable it.
+    if (isCreatingLink) {
+      setAlert({
+        variant: "info",
+        body: "A share link is still being created. Try again in a moment.",
+      });
+      return;
+    }
 
     try {
-      // Fetch ALL existing share links for this resource and disable them
       const existingLinksResponse: any = await getShareLinksForResource("model", 0);
-      const existingLinks = existingLinksResponse?.data?.data || [];
+      const existingLinks: { id: number; is_enabled: boolean; created_by: number }[] =
+        existingLinksResponse?.data?.data || [];
 
-      // Disable all existing links
-      let disabledCount = 0;
-      for (const link of existingLinks) {
-        if (link.is_enabled) {
-          try {
-            await updateShareMutation.mutateAsync({
-              id: link.id,
-              is_enabled: false,
-            });
-            disabledCount++;
-          } catch (updateError) {
-            throw updateError;
-          }
-        }
+      const result = await replaceShareLink({
+        existingLinks,
+        currentUserId: userId,
+        // Shows its own error and returns "" when creation fails.
+        createLink: () => generateShareableLink(shareSettings),
+        disableLink: (id) => updateShareMutation.mutateAsync({ id, is_enabled: false }),
+      });
+      if (!result.created) return;
+
+      if (result.failed > 0) {
+        console.error("Failed to disable previous share links:", result.errors);
+        setAlert({
+          variant: "warning",
+          body: "New share link created, but some of your previous links could not be disabled. Replace the link again to retry.",
+        });
+        return;
       }
-
-      // Create a new link
-      await generateShareableLink(shareSettings);
+      if (result.othersStillActive > 0) {
+        setAlert({
+          variant: "warning",
+          body: "New share link created. Links created by other users are still active; only they can disable them.",
+        });
+        return;
+      }
 
       setAlert({
         variant: "success",
-        body: `Share link replaced successfully! ${disabledCount} previous link(s) invalidated.`,
+        body: "Share link replaced. Previous links no longer work.",
       });
     } catch (error) {
       console.error("Error replacing share link:", error);
@@ -1434,7 +1453,7 @@ const ModelInventory: React.FC = () => {
   };
 
   const handleModelInventorySuccess = async (formData: any) => {
-    let modelId: number | null = null;
+    let modelId: number | null;
 
     if (selectedModelInventory) {
       // Update existing model inventory
@@ -2064,6 +2083,32 @@ const ModelInventory: React.FC = () => {
     [selectedRiskLevel],
   );
 
+  // GroupedTableView renders the table's own placeholder for an empty list, so the
+  // same element serves as the empty state and the table stays mounted (keeping
+  // its page and sort) when a search briefly matches nothing.
+  const modelInventoryList = (
+    <GroupedTableView
+      groupedData={groupedModelInventory}
+      ungroupedData={filteredData}
+      renderTable={(data, options) => (
+        <ModelInventoryTable
+          key={tableKey}
+          data={data}
+          isLoading={false}
+          onEdit={handleEditModelInventory}
+          onDelete={handleDeleteModelInventory}
+          onCheckModelHasRisks={handleCheckModelHasRisks}
+          onViewDetails={handleViewModelDetails}
+          deletingId={deletingId}
+          hidePagination={options?.hidePagination}
+          modelRisks={modelRisksData}
+          flashRowId={flashRowId}
+          visibleColumns={modelVisibleColumns}
+        />
+      )}
+    />
+  );
+
   return (
     <Stack className="vwhome" sx={mainStackStyle}>
       {/* Replace Share Link Confirmation Modal */}
@@ -2321,26 +2366,16 @@ const ModelInventory: React.FC = () => {
               </Stack>
             </Stack>
 
-            <GroupedTableView
-              groupedData={groupedModelInventory}
-              ungroupedData={filteredData}
-              renderTable={(data, options) => (
-                <ModelInventoryTable
-                  key={tableKey}
-                  data={data}
-                  isLoading={isLoading}
-                  onEdit={handleEditModelInventory}
-                  onDelete={handleDeleteModelInventory}
-                  onCheckModelHasRisks={handleCheckModelHasRisks}
-                  onViewDetails={handleViewModelDetails}
-                  deletingId={deletingId}
-                  hidePagination={options?.hidePagination}
-                  modelRisks={modelRisksData}
-                  flashRowId={flashRowId}
-                  visibleColumns={modelVisibleColumns}
-                />
-              )}
-            />
+            <ListStateWrapper
+              items={filteredData}
+              isLoading={isLoading}
+              loadingLabel="Loading model inventory"
+              // A failed silent refresh (after an edit or delete) keeps the loaded models on screen.
+              errorMessage={modelInventoryData.length ? null : modelInventoryError}
+              emptyState={modelInventoryList}
+            >
+              {modelInventoryList}
+            </ListStateWrapper>
           </>
         )}
 
@@ -2438,6 +2473,11 @@ const ModelInventory: React.FC = () => {
 
         {activeTab === "evidence-hub" && (
           <>
+            {/* Mounted once at the tab level (the table below is reused per
+                group and in modals), and above the empty state so coverage
+                shows even when there is no evidence yet (#4911). */}
+            <EvidenceCoveragePanel />
+
             <Stack
               direction="row"
               justifyContent="space-between"

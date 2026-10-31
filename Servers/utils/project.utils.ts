@@ -22,6 +22,11 @@ import {
   fetchCustomFieldsForEntities,
 } from "./customField.utils";
 import { findUsersNotInOrganization } from "./user.utils";
+import {
+  highRiskRolesArraySql,
+  normalizeHighRiskRoles,
+  withLegacyHighRiskRole,
+} from "./highRiskRoles.utils";
 
 /**
  * Turn a client member list into the ids to store. Clients send "7" for 7, and
@@ -112,13 +117,15 @@ export const getUserProjects = async (
 
   const finalQuery = baseQueryParts.join("\n");
 
-  return sequelize.query(finalQuery, {
+  const projects = await sequelize.query(finalQuery, {
     replacements,
     model: ProjectModel,
     mapToModel: true,
     type: QueryTypes.SELECT,
     transaction,
   });
+  projects.forEach((project) => withLegacyHighRiskRole(project));
+  return projects;
 };
 
 export const getAllProjectsQuery = async (
@@ -192,7 +199,7 @@ export const getProjectByIdQuery = async (
     },
   );
   if (result.length === 0) return null;
-  const project = result[0];
+  const project = withLegacyHighRiskRole(result[0]);
   const projectFramework = (await sequelize.query(
     `
       SELECT
@@ -326,14 +333,17 @@ export const createNewProjectQuery = async (
     ? project.enable_ai_data_insertion || false
     : false;
 
+  // Sequelize would turn [] into NULL, so the roles go in as an SQL fragment.
+  const roles = highRiskRolesArraySql(project.high_risk_roles, "high_risk_roles");
+
   const result = await sequelize.query(
     `INSERT INTO projects (
       organization_id, uc_id, project_title, owner, start_date, geography, target_industry, description, ai_risk_classification,
-      type_of_high_risk_role, goal, status, last_updated, last_updated_by, is_demo, is_organizational, approval_workflow_id,
+      high_risk_roles, goal, status, last_updated, last_updated_by, is_demo, is_organizational, approval_workflow_id,
       pending_frameworks, enable_ai_data_insertion, use_case_category, use_case_purpose, use_case_audience, deployment_context
     ) VALUES (
       :organization_id, :uc_id, :project_title, :owner, :start_date, :geography, :target_industry, :description, :ai_risk_classification,
-      :type_of_high_risk_role, :goal, :status, :last_updated, :last_updated_by, :is_demo, :is_organizational, :approval_workflow_id,
+      ${roles.sql}, :goal, :status, :last_updated, :last_updated_by, :is_demo, :is_organizational, :approval_workflow_id,
       :pending_frameworks, :enable_ai_data_insertion, :use_case_category, :use_case_purpose, :use_case_audience, :deployment_context
     ) RETURNING *`,
     {
@@ -345,7 +355,6 @@ export const createNewProjectQuery = async (
         start_date: project.start_date,
         geography: project.geography || 1,
         ai_risk_classification: project.ai_risk_classification || null,
-        type_of_high_risk_role: project.type_of_high_risk_role || null,
         goal: project.goal || null,
         target_industry: project.target_industry || null,
         description: project.description || null,
@@ -361,6 +370,7 @@ export const createNewProjectQuery = async (
         use_case_purpose: project.use_case_purpose || null,
         use_case_audience: project.use_case_audience || null,
         deployment_context: project.deployment_context || null,
+        ...roles.replacements,
       },
       mapToModel: true,
       model: ProjectModel,
@@ -368,6 +378,7 @@ export const createNewProjectQuery = async (
     },
   );
   const createdProject = result[0];
+  withLegacyHighRiskRole(createdProject);
   console.log("Project created with ID:", createdProject.id);
   console.log("createdProject.approval_workflow_id:", (createdProject as any).approval_workflow_id);
   (createdProject.dataValues as any)["members"] = [];
@@ -571,12 +582,11 @@ export const updateProjectByIdQuery = async (
   }
 
   const updateProject: Partial<Record<keyof ProjectModel, any>> & { organizationId?: number } = {};
-  const setClause = [
+  const setParts = [
     "project_title",
     "owner",
     "start_date",
     "ai_risk_classification",
-    "type_of_high_risk_role",
     "goal",
     "geography",
     "target_industry",
@@ -588,6 +598,9 @@ export const updateProjectByIdQuery = async (
     "use_case_purpose",
     "use_case_audience",
     "deployment_context",
+    // #4904: without this, attaching an approval workflow on edit was
+    // silently dropped (the INSERT list has it; the update list did not).
+    "approval_workflow_id",
   ]
     .filter((f) => {
       // Include fields that are explicitly provided, including null, 0, or empty string
@@ -597,8 +610,17 @@ export const updateProjectByIdQuery = async (
       }
       return false;
     })
-    .map((f) => `${f} = :${f}`)
-    .join(", ");
+    .map((f) => `${f} = :${f}`);
+  if (project.high_risk_roles !== undefined) {
+    // Sequelize would turn [] into NULL, so the roles go in as an SQL fragment.
+    const roles = highRiskRolesArraySql(
+      normalizeHighRiskRoles(project.high_risk_roles),
+      "high_risk_roles",
+    );
+    setParts.push(`high_risk_roles = ${roles.sql}`);
+    Object.assign(updateProject, roles.replacements);
+  }
+  const setClause = setParts.join(", ");
 
   // With no column to change (e.g. a members-only update), "UPDATE projects SET WHERE"
   // is invalid SQL; read the row instead so the caller still gets the project back.
@@ -620,6 +642,7 @@ export const updateProjectByIdQuery = async (
   // Row gone (e.g. deleted concurrently): let the caller send 404 rather than
   // failing below on updatedProject.dataValues.
   if (!updatedProject) return null;
+  withLegacyHighRiskRole(updatedProject);
   const updatedMembers = (await getCurrentProjectMembers(id, organizationId, transaction)).map(
     Number,
   );
@@ -773,11 +796,45 @@ export const deleteHelper = async (
   );
 };
 
+/**
+ * Lock a project row for deletion (SELECT ... FOR UPDATE) and say whether it
+ * exists in the organization. Every path that deletes a project calls this as
+ * the first statement of its transaction, before anything that touches rows
+ * referencing the project (approval requests, change history, children), so
+ * all of them take the project lock first and cannot deadlock with each
+ * other. Calling it again in the same transaction is a no-op that returns the
+ * same answer.
+ */
+export const lockProjectForDelete = async (
+  projectId: number,
+  organizationId: number,
+  transaction: Transaction,
+): Promise<boolean> => {
+  const rows = (await sequelize.query(
+    `SELECT id FROM projects WHERE id = :id AND organization_id = :organizationId FOR UPDATE;`,
+    { replacements: { id: projectId, organizationId }, type: QueryTypes.SELECT, transaction },
+  )) as Array<{ id: number }>;
+  return rows.length > 0;
+};
+
+/**
+ * Delete a project and everything that hangs off it. The project row is
+ * locked (FOR UPDATE) before any child row is touched. Pass
+ * `enqueueAutomationAfterCommit` when the caller's transaction may still roll
+ * back after this returns (for example a batch removal): the project_deleted
+ * automation is then queued only once the transaction commits, so it never
+ * fires for a project that survived a rollback. Without it the automation is
+ * queued right away, as before.
+ */
 export const deleteProjectByIdQuery = async (
   id: number,
   organizationId: number,
   transaction: Transaction,
+  options: { enqueueAutomationAfterCommit?: boolean } = {},
 ): Promise<boolean> => {
+  // The project lock comes before any child row. If the caller already holds
+  // it (deleteProjectWithSideEffects), this is a cheap no-op.
+  await lockProjectForDelete(id, organizationId, transaction);
   const frameworks = await sequelize.query(
     `SELECT framework_id FROM projects_frameworks WHERE organization_id = :organizationId AND project_id = :project_id`,
     {
@@ -877,10 +934,23 @@ export const deleteProjectByIdQuery = async (
           };
 
           // Enqueue with processed params
-          await enqueueAutomationAction(automation.action_key, {
-            ...processedParams,
-            organizationId,
-          });
+          const enqueue = () =>
+            enqueueAutomationAction(automation.action_key, {
+              ...processedParams,
+              organizationId,
+            });
+          if (options.enqueueAutomationAfterCommit) {
+            transaction.afterCommit(() => {
+              enqueue().catch((err) =>
+                console.warn(
+                  `[deleteProjectByIdQuery] Automation enqueue after commit failed for project ${id}:`,
+                  err instanceof Error ? err.message : err,
+                ),
+              );
+            });
+          } else {
+            await enqueue();
+          }
         } else {
           console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
         }

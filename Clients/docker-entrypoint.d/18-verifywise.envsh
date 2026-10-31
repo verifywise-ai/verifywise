@@ -1,0 +1,42 @@
+#!/bin/sh
+# Sourced by the nginx image's /docker-entrypoint.sh before it renders
+# /etc/nginx/templates (20-envsubst-on-templates.sh), so an exit here stops
+# the container and an exported value reaches the template.
+#
+# 1. VW_BACKEND_URL must be scheme://host[:port] with no path. nginx's
+#    proxy_pass with a variable sends any path in it in place of the request
+#    URI, so "http://backend:3000/" would turn every /api and /v1 call into "/".
+# 2. VW_TRUSTED_PROXIES (space-separated addresses or CIDRs) are the proxies
+#    whose X-Forwarded-For is believed for the client address. Empty disables it.
+
+vw_backend_url="${VW_BACKEND_URL:-}"
+while [ "${vw_backend_url%/}" != "$vw_backend_url" ]; do
+  vw_backend_url="${vw_backend_url%/}"
+done
+vw_backend_hostport="${vw_backend_url#*://}"
+case "$vw_backend_url" in
+  http://* | https://*) ;;
+  *)
+    entrypoint_log "18-verifywise.envsh: ERROR: VW_BACKEND_URL must start with http:// or https:// (got '${VW_BACKEND_URL:-}')"
+    exit 1
+    ;;
+esac
+case "$vw_backend_hostport" in
+  "" | */* | *: | :* | *\?* | *#*)
+    entrypoint_log "18-verifywise.envsh: ERROR: VW_BACKEND_URL must be scheme://host[:port] with no path or query (got '${VW_BACKEND_URL:-}')"
+    exit 1
+    ;;
+esac
+export VW_BACKEND_URL="$vw_backend_url"
+
+vw_realip_conf=/etc/nginx/conf.d/00-vw-realip.conf
+: >"$vw_realip_conf"
+set -f # split on spaces only; a "*" must not expand to file names
+for vw_proxy in ${VW_TRUSTED_PROXIES:-}; do
+  echo "set_real_ip_from $vw_proxy;" >>"$vw_realip_conf"
+done
+set +f
+if [ -s "$vw_realip_conf" ]; then
+  echo "real_ip_header X-Forwarded-For;" >>"$vw_realip_conf"
+fi
+unset vw_backend_url vw_backend_hostport vw_realip_conf vw_proxy

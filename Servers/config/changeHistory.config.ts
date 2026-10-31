@@ -6,9 +6,10 @@
  * database table using the migration template.
  */
 
-import { QueryTypes } from "sequelize";
+import { QueryTypes, Transaction } from "sequelize";
 import { sequelize } from "../database/db";
 import logger from "../utils/logger/fileLogger";
+import { formatHighRiskRoles } from "../utils/highRiskRoles.utils";
 
 /**
  * User query result type for formatters
@@ -36,15 +37,15 @@ export type EntityType =
   | "model_inventory"
   | "vendor"
   | "use_case"
-  | "project"
-  | "framework"
   | "evidence_hub"
+  | "control_eu"
+  | "subcontrol_eu"
+  | "annex_category"
   | "risk"
   | "vendor_risk"
   | "policy"
   | "incident"
   | "file"
-  | "model_lifecycle"
   | "task"
   | "training"
   | "model_risk"
@@ -55,7 +56,97 @@ export type EntityType =
 /**
  * Field formatter function type
  */
-export type FieldFormatter = (value: unknown) => Promise<string>;
+export type FieldFormatter = (value: unknown, context?: FormatterContext) => Promise<string>;
+
+/**
+ * What a formatter that looks rows up needs to stay inside one tenant and,
+ * while an update holds a row lock, on the update's own connection.
+ */
+export interface FormatterContext {
+  /** Lookups only resolve ids that belong to this organization. */
+  organizationId?: number;
+  /** Run lookups on this transaction instead of a separate pool connection. */
+  transaction?: Transaction;
+}
+
+let savepointSeq = 0;
+
+/**
+ * Runs `work` on a caller's transaction inside its own SAVEPOINT: Postgres
+ * aborts the whole transaction on any error, so without one a failed history
+ * statement would make the caller's own write fail. On success the savepoint
+ * is released; on failure it is rolled back to and released, the error is
+ * rethrown, and the caller's transaction goes on. Without a transaction the
+ * work just runs.
+ *
+ * The SQL is issued explicitly because a sequelize v6 nested transaction
+ * never releases its savepoint on commit.
+ */
+export const runInSavepoint = async <T>(
+  work: () => Promise<T>,
+  transaction?: Transaction,
+  name = "history_write",
+): Promise<T> => {
+  if (!transaction) return work();
+  savepointSeq += 1;
+  const savepoint = `${name}_${savepointSeq}`;
+  await sequelize.query(`SAVEPOINT ${savepoint}`, { transaction });
+  try {
+    const result = await work();
+    await sequelize.query(`RELEASE SAVEPOINT ${savepoint}`, { transaction });
+    return result;
+  } catch (error) {
+    await sequelize.query(`ROLLBACK TO SAVEPOINT ${savepoint}`, { transaction });
+    await sequelize.query(`RELEASE SAVEPOINT ${savepoint}`, { transaction });
+    throw error;
+  }
+};
+
+/**
+ * Runs a formatter's lookup SELECT, in a savepoint when on a caller's
+ * transaction, so a failed name lookup falls back to the id label instead of
+ * failing the caller's write.
+ */
+const selectInSavepoint = async <T extends object>(
+  sql: string,
+  replacements: Record<string, unknown>,
+  transaction?: Transaction,
+): Promise<T[]> =>
+  runInSavepoint(
+    () => sequelize.query<T>(sql, { replacements, type: QueryTypes.SELECT, transaction }),
+    transaction,
+    "history_lookup",
+  );
+
+/**
+ * Formatter for an id that references a row by name: resolves `id` with
+ * `sql` (selecting a `name` column, filtered by `:id` and `:organizationId`),
+ * or falls back to `${label} #id`. Used for incident foreign keys so history
+ * shows names, like the user formatter.
+ *
+ * The lookup is always tenant-scoped: without an organizationId in the
+ * context it does not query at all and shows the fallback, so a name from
+ * another organization can never be disclosed.
+ */
+const namedRowFormatter =
+  (sql: string, label: string): FieldFormatter =>
+  async (value: unknown, context?: FormatterContext): Promise<string> => {
+    if (value === null || value === undefined || value === "") return "-";
+    const id = Number(value);
+    if (!Number.isInteger(id)) return String(value);
+    if (context?.organizationId === undefined) return `${label} #${id}`;
+    try {
+      const rows = await selectInSavepoint<{ name: string | null }>(
+        sql,
+        { id, organizationId: context.organizationId },
+        context.transaction,
+      );
+      return rows[0]?.name || `${label} #${id}`;
+    } catch (error) {
+      logger.error(`Error fetching ${label} for ID ${id}: ${error}`);
+      return `${label} #${id}`;
+    }
+  };
 
 /**
  * Entity configuration interface
@@ -75,6 +166,10 @@ export const GENERIC_FORMATTERS: { [key: string]: FieldFormatter } = {
   // Boolean formatter
   boolean: async (value: unknown): Promise<string> => {
     if (value === null || value === undefined) return "-";
+    // Multipart form fields arrive as the strings "true"/"false".
+    if (typeof value === "string") {
+      return ["false", "0", "no", "off"].includes(value.trim().toLowerCase()) ? "No" : "Yes";
+    }
     return value ? "Yes" : "No";
   },
 
@@ -85,7 +180,11 @@ export const GENERIC_FORMATTERS: { [key: string]: FieldFormatter } = {
       return value.toISOString().split("T")[0];
     }
     if (typeof value === "string") {
-      return value.split("T")[0];
+      if (/^\d{4}-\d{2}-\d{2}/.test(value)) return value.slice(0, 10);
+      // Other date strings (e.g. dayjs toString()) are parsed, so the same day
+      // formats the same however the client sent it.
+      const parsed = new Date(value);
+      return Number.isNaN(parsed.getTime()) ? value : parsed.toISOString().slice(0, 10);
     }
     return String(value);
   },
@@ -121,16 +220,20 @@ export const GENERIC_FORMATTERS: { [key: string]: FieldFormatter } = {
   },
 
   // User lookup formatter (resolves user ID to name)
-  user: async (value: unknown): Promise<string> => {
+  // With an organizationId in the context the lookup is tenant-scoped and a
+  // user from another organization shows as "User #id". Callers that pass no
+  // context keep the previous unscoped lookup.
+  user: async (value: unknown, context?: FormatterContext): Promise<string> => {
     if (!value) return "-";
     if (typeof value === "number") {
       try {
-        const users = await sequelize.query<UserQueryResult>(
-          `SELECT id, name, surname, email FROM users WHERE id = :userId`,
-          {
-            replacements: { userId: value },
-            type: QueryTypes.SELECT,
-          },
+        const scoped = context?.organizationId !== undefined;
+        const users = await selectInSavepoint<UserQueryResult>(
+          `SELECT id, name, surname, email FROM users WHERE id = :userId${
+            scoped ? " AND organization_id = :organizationId" : ""
+          }`,
+          { userId: value, organizationId: context?.organizationId ?? null },
+          context?.transaction,
         );
 
         if (users && users.length > 0) {
@@ -350,7 +453,7 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
       "start_date",
       "geography",
       "ai_risk_classification",
-      "type_of_high_risk_role",
+      "high_risk_roles",
       "goal",
       "target_industry",
       "description",
@@ -365,7 +468,7 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
       start_date: "Start date",
       geography: "Geography",
       ai_risk_classification: "AI risk classification",
-      type_of_high_risk_role: "Type of high-risk role",
+      high_risk_roles: "High-risk roles",
       goal: "Goal",
       target_industry: "Target industry",
       description: "Description",
@@ -377,39 +480,98 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
       owner: GENERIC_FORMATTERS.user,
       members: GENERIC_FORMATTERS.userArray,
       start_date: GENERIC_FORMATTERS.date,
+      // Compared as a set: the formatter sorts Provider first, so a reorder
+      // formats the same and records nothing.
+      high_risk_roles: async (value: unknown): Promise<string> => formatHighRiskRoles(value) || "-",
       framework: GENERIC_FORMATTERS.frameworkArray,
       monitored_regulations_and_standards: GENERIC_FORMATTERS.array,
-    },
-  },
-
-  project: {
-    tableName: "project_change_history",
-    foreignKeyField: "project_id",
-    fieldsToTrack: ["name", "description"],
-    fieldLabels: {
-      name: "Name",
-      description: "Description",
-    },
-  },
-
-  framework: {
-    tableName: "framework_change_history",
-    foreignKeyField: "framework_id",
-    fieldsToTrack: ["name", "description"],
-    fieldLabels: {
-      name: "Name",
-      description: "Description",
     },
   },
 
   evidence_hub: {
     tableName: "evidence_hub_change_history",
     foreignKeyField: "evidence_hub_id",
-    fieldsToTrack: ["name", "type", "description"],
+    fieldsToTrack: ["evidence_name", "evidence_type", "description"],
     fieldLabels: {
-      name: "Name",
-      type: "Type",
+      evidence_name: "Name",
+      evidence_type: "Type",
       description: "Description",
+    },
+  },
+
+  // EU AI Act controls and subcontrols (issue #4977). Edits arrive through
+  // PATCH /api/eu-ai-act/saveControls/:id, which bulk-updates one control and
+  // its subcontrols in one transaction.
+  control_eu: {
+    tableName: "control_eu_change_history",
+    foreignKeyField: "control_eu_id",
+    fieldsToTrack: ["status", "owner", "reviewer", "approver", "due_date", "risk_review"],
+    fieldLabels: {
+      status: "Status",
+      owner: "Owner",
+      reviewer: "Reviewer",
+      approver: "Approver",
+      due_date: "Due date",
+      risk_review: "Risk review",
+    },
+    fieldFormatters: {
+      owner: GENERIC_FORMATTERS.user,
+      reviewer: GENERIC_FORMATTERS.user,
+      approver: GENERIC_FORMATTERS.user,
+      due_date: GENERIC_FORMATTERS.date,
+    },
+  },
+
+  subcontrol_eu: {
+    tableName: "subcontrol_eu_change_history",
+    foreignKeyField: "subcontrol_eu_id",
+    fieldsToTrack: [
+      "status",
+      "implementation_details",
+      "evidence_description",
+      "feedback_description",
+    ],
+    fieldLabels: {
+      status: "Status",
+      implementation_details: "Implementation details",
+      evidence_description: "Evidence description",
+      feedback_description: "Feedback description",
+    },
+  },
+
+  // ISO 42001 annex categories (issue #4977). Edits arrive through
+  // PATCH /api/iso-42001/saveAnnexes/:id.
+  annex_category: {
+    tableName: "annex_category_change_history",
+    foreignKeyField: "annex_category_id",
+    fieldsToTrack: [
+      "is_applicable",
+      "justification_for_exclusion",
+      "implementation_description",
+      "status",
+      "owner",
+      "reviewer",
+      "approver",
+      "due_date",
+      "auditor_feedback",
+    ],
+    fieldLabels: {
+      is_applicable: "Applicable",
+      justification_for_exclusion: "Justification for exclusion",
+      implementation_description: "Implementation description",
+      status: "Status",
+      owner: "Owner",
+      reviewer: "Reviewer",
+      approver: "Approver",
+      due_date: "Due date",
+      auditor_feedback: "Auditor feedback",
+    },
+    fieldFormatters: {
+      is_applicable: GENERIC_FORMATTERS.boolean,
+      owner: GENERIC_FORMATTERS.user,
+      reviewer: GENERIC_FORMATTERS.user,
+      approver: GENERIC_FORMATTERS.user,
+      due_date: GENERIC_FORMATTERS.date,
     },
   },
 
@@ -550,6 +712,9 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
       "approved_by",
       "approval_date",
       "approval_notes",
+      "model_inventory_id",
+      "project_id",
+      "assignee_id",
     ],
     fieldLabels: {
       ai_project: "AI use case or framework",
@@ -572,8 +737,21 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
       approved_by: "Approved by",
       approval_date: "Approval date",
       approval_notes: "Approval notes",
+      model_inventory_id: "Affected model",
+      project_id: "Linked use case",
+      assignee_id: "Owner",
     },
     fieldFormatters: {
+      model_inventory_id: namedRowFormatter(
+        "SELECT CONCAT_WS(' ', provider, model) AS name FROM model_inventories WHERE id = :id AND organization_id = :organizationId",
+        "Model",
+      ),
+      project_id: namedRowFormatter(
+        "SELECT project_title AS name FROM projects WHERE id = :id AND organization_id = :organizationId",
+        "Use case",
+      ),
+      assignee_id: async (value: unknown, context?: FormatterContext) =>
+        GENERIC_FORMATTERS.user(value === null || value === "" ? value : Number(value), context),
       occurred_date: GENERIC_FORMATTERS.date,
       date_detected: GENERIC_FORMATTERS.date,
       approval_date: GENERIC_FORMATTERS.date,
@@ -598,19 +776,6 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
     fieldFormatters: {
       tags: GENERIC_FORMATTERS.array,
       expiry_date: GENERIC_FORMATTERS.date,
-    },
-  },
-
-  model_lifecycle: {
-    tableName: "model_lifecycle_change_history",
-    foreignKeyField: "model_lifecycle_value_id",
-    fieldsToTrack: ["value_text", "value_json"],
-    fieldLabels: {
-      value_text: "Value",
-      value_json: "Value (structured)",
-    },
-    fieldFormatters: {
-      value_json: GENERIC_FORMATTERS.text,
     },
   },
 

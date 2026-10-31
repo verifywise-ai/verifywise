@@ -386,6 +386,8 @@ interface FormCanvasProps {
   collectContactInfo?: boolean;
   /** Shows the read-only EU AI Act risk step above the form's fields. */
   euAiActRiskStepEnabled?: boolean;
+  /** Fields the schema checks found a problem on. */
+  errorFieldIds?: Set<string>;
 }
 
 export interface FormCanvasHandle {
@@ -407,6 +409,7 @@ export const FormCanvas = forwardRef<FormCanvasHandle, FormCanvasProps>(function
     onDescriptionChange,
     collectContactInfo,
     euAiActRiskStepEnabled,
+    errorFieldIds,
   },
   ref,
 ) {
@@ -513,6 +516,8 @@ export const FormCanvas = forwardRef<FormCanvasHandle, FormCanvasProps>(function
                   onDuplicate={onDuplicateField}
                   onMoveUp={onMoveUp}
                   onMoveDown={onMoveDown}
+                  fields={fields}
+                  hasLogicError={errorFieldIds?.has(field.id) ?? false}
                 />
               ))}
             </Box>

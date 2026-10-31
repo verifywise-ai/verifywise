@@ -163,22 +163,24 @@ test.describe("Use Cases / Projects", () => {
       }
     }
 
-    // Select Type of high risk role if dropdown exists
-    const highRiskSelect = page
-      .getByText(/Type of high risk role/i)
+    // Pick a high-risk role in the multi-select if it is shown (EU AI Act selected)
+    const highRiskRoles = page
+      .getByText(/^High-risk roles/i)
       .locator("..")
       .getByRole("combobox");
     if (
-      await highRiskSelect
+      await highRiskRoles
         .first()
         .isVisible()
         .catch(() => false)
     ) {
-      await highRiskSelect.first().click();
-      const option = page.getByRole("option").first();
+      await highRiskRoles.first().click();
+      const option = page.getByRole("option", { name: "Deployer" });
       if (await option.isVisible({ timeout: 3_000 }).catch(() => false)) {
         await option.click();
       }
+      // A multi-select stays open after a pick; close it before submitting.
+      await page.keyboard.press("Escape");
     }
 
     // Submit and wait for redirect back to overview

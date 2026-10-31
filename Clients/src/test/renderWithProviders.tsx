@@ -10,7 +10,7 @@ import React, { type PropsWithChildren } from "react";
 import { render, type RenderOptions } from "@testing-library/react";
 import { configureStore, combineReducers } from "@reduxjs/toolkit";
 import { Provider } from "react-redux";
-import { MemoryRouter } from "react-router";
+import { MemoryRouter, parsePath } from "react-router";
 import { ThemeProvider } from "@mui/material/styles";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { light } from "../presentation/themes";
@@ -36,6 +36,8 @@ interface PreloadedAuthState {
 interface ExtendedRenderOptions extends Omit<RenderOptions, "queries"> {
   /** Initial route for MemoryRouter (default: "/") */
   route?: string;
+  /** History state for the initial route, as navigate(route, { state }) would set */
+  routeState?: unknown;
   /** Partial auth state to pre-populate */
   preloadedAuth?: PreloadedAuthState;
   /** Full preloaded state for the store */
@@ -87,6 +89,7 @@ export function renderWithProviders(
   ui: React.ReactElement,
   {
     route = "/",
+    routeState,
     preloadedAuth,
     queryClient = createTestQueryClient(),
     ...renderOptions
@@ -107,7 +110,13 @@ export function renderWithProviders(
                 which is the correct render for the default no-auth
                 test store. */}
             <ExtensionsProvider>
-              <MemoryRouter initialEntries={[route]}>{children}</MemoryRouter>
+              <MemoryRouter
+                initialEntries={[
+                  routeState === undefined ? route : { ...parsePath(route), state: routeState },
+                ]}
+              >
+                {children}
+              </MemoryRouter>
             </ExtensionsProvider>
           </ThemeProvider>
         </QueryClientProvider>

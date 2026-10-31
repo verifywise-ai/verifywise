@@ -79,7 +79,7 @@ export const validateApiResponse = (
   }
 
   // Handle different response structures
-  let extractedData: any[] = [];
+  let extractedData: any[];
 
   if (Array.isArray(response)) {
     extractedData = response;
@@ -100,14 +100,6 @@ export const validateApiResponse = (
       isValid: false,
       data: [],
       error: `Unexpected response structure for ${frameworkName} ${dataType}`,
-    };
-  }
-
-  if (!Array.isArray(extractedData)) {
-    return {
-      isValid: false,
-      data: [],
-      error: `Data is not an array for ${frameworkName} ${dataType}`,
     };
   }
 

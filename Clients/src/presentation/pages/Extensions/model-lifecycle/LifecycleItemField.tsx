@@ -23,6 +23,7 @@ import {
 import { Trash2, Upload, FileText, Check, X } from "lucide-react";
 import { LifecycleItem, LifecycleValue } from "./useModelLifecycle";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
+import type CustomException from "../../../../infrastructure/exceptions/customeException";
 
 // User type for dropdown
 interface User {
@@ -290,6 +291,9 @@ function DocumentsFieldRenderer({
 }) {
   const files = Array.isArray(value?.files) ? value.files : [];
   const [uploading, setUploading] = useState(false);
+  // Which action last failed; cleared when any action starts or succeeds so
+  // a stale message never outlives the thing it was about.
+  const [failedAction, setFailedAction] = useState<"upload" | "remove" | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = useCallback(
@@ -298,6 +302,8 @@ function DocumentsFieldRenderer({
       if (!selectedFiles || selectedFiles.length === 0) return;
 
       setUploading(true);
+      setFailedAction(null);
+      let attachedAny = false;
       try {
         for (const file of Array.from(selectedFiles)) {
           const formData = new FormData();
@@ -313,10 +319,13 @@ function DocumentsFieldRenderer({
             `/extensions/model-lifecycle/models/${modelId}/lifecycle/items/${item.id}/files`,
             { fileId },
           );
+          attachedAny = true;
         }
         onValueChanged?.();
       } catch {
-        /* upload failed */
+        // Show the files that did attach before the failure, and say so.
+        if (attachedAny) onValueChanged?.();
+        setFailedAction("upload");
       } finally {
         setUploading(false);
         if (fileInputRef.current) fileInputRef.current.value = "";
@@ -327,13 +336,21 @@ function DocumentsFieldRenderer({
 
   const handleRemoveFile = useCallback(
     async (fileId: number) => {
+      setFailedAction(null);
       try {
         await apiServices.delete(
           `/extensions/model-lifecycle/models/${modelId}/lifecycle/items/${item.id}/files/${fileId}`,
         );
         onValueChanged?.();
-      } catch {
-        /* retry */
+      } catch (error) {
+        // 404: the link is already gone (removed in another tab, or a double
+        // click), so refresh to drop the stale row. Anything else: keep the
+        // row and say so, so the user can retry.
+        if ((error as CustomException | undefined)?.status === 404) {
+          onValueChanged?.();
+        } else {
+          setFailedAction("remove");
+        }
       }
     },
     [modelId, item.id, onValueChanged],
@@ -378,6 +395,20 @@ function DocumentsFieldRenderer({
             </Stack>
           ))}
         </Stack>
+      )}
+      {failedAction && (
+        <Typography
+          role="alert"
+          sx={{
+            fontFamily: VW_TYPOGRAPHY.fontFamily,
+            fontSize: "13px",
+            color: VW_COLORS.error,
+          }}
+        >
+          {failedAction === "upload"
+            ? "Could not upload the file. Try again."
+            : "Could not remove the file. Try again."}
+        </Typography>
       )}
       <Box
         sx={{

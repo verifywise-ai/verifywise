@@ -2,9 +2,11 @@ import { createHash } from "crypto";
 import { sequelize } from "../database/db";
 import { QueryTypes, Transaction } from "sequelize";
 import { getFeatureSettingsQuery } from "./featureSettings.utils";
+import { getLatestLedgerCheckpoint } from "./auditLedgerRetention.utils";
+import { AUDIT_LEDGER_LOCK_NS, GENESIS_HASH } from "./auditLedgerConstants";
+import { redactSensitiveInfo } from "./logger/redact";
 
-/** SHA-256 of 64 zeroes — the "genesis" previous hash for the first entry */
-export const GENESIS_HASH = "0".repeat(64);
+export { AUDIT_LEDGER_LOCK_NS, GENESIS_HASH };
 
 interface AuditLedgerEntry {
   organizationId: number;
@@ -73,13 +75,6 @@ async function isAuditLedgerEnabled(organizationId: number): Promise<boolean> {
 }
 
 /**
- * Namespace key for `pg_advisory_xact_lock(AUDIT_LEDGER_LOCK_NS, organization_id)`.
- * Any fixed int works; using a project-unique value avoids collisions with
- * other code that might take advisory locks.
- */
-const AUDIT_LEDGER_LOCK_NS = 9001;
-
-/**
  * Append an entry to the audit_ledger.
  *
  * Concurrency: appends within a single organization are linearized by a
@@ -109,6 +104,13 @@ export async function appendToAuditLedger(entry: AuditLedgerEntry): Promise<void
 
   // Skip if audit ledger is disabled for this organization
   if (!(await isAuditLedgerEnabled(organizationId))) return;
+
+  // Redact before hashing, so the chain covers the stored text. Custom
+  // field and retention audits append descriptions directly, not through
+  // logEvent; for logEvent's already-redacted text this pass is a no-op.
+  // Field values are the entity's own history and are kept as given; the
+  // ledger readers (list, advisor tools) redact them on the way out.
+  const description = entry.description ? redactSensitiveInfo(entry.description) : null;
 
   const txn: Transaction = await sequelize.transaction();
 
@@ -150,7 +152,7 @@ export async function appendToAuditLedger(entry: AuditLedgerEntry): Promise<void
           field_name: entry.fieldName || null,
           old_value: entry.oldValue || null,
           new_value: entry.newValue || null,
-          description: entry.description || null,
+          description,
           sentinel,
           prev_hash: prevHash,
         },
@@ -182,7 +184,7 @@ export async function appendToAuditLedger(entry: AuditLedgerEntry): Promise<void
       field_name: entry.fieldName || null,
       old_value: entry.oldValue || null,
       new_value: entry.newValue || null,
-      description: entry.description || null,
+      description,
       prev_hash: prevHash,
     });
 
@@ -225,21 +227,67 @@ interface VerifyChainResult {
   brokenAtId?: number;
   expectedHash?: string;
   actualHash?: string;
+  /** Present when older rows were pruned; the walk starts after this id. */
+  prunedThrough?: { id: number; cutoff: string };
 }
 
 /**
- * Walk the entire audit chain and recompute every hash.
+ * Walk the audit chain and recompute every hash. After a retention prune the
+ * walk starts from the latest checkpoint: rows up to its pruned_through_id are
+ * gone, and the first remaining row must link to the checkpoint's anchor hash.
  * Returns the first broken link if any.
  */
 export async function verifyChain(
   organizationId: number,
   options?: VerifyChainOptions,
 ): Promise<VerifyChainResult> {
+  // One read-only snapshot for the checkpoint read and the whole walk, so a
+  // retention prune committing meanwhile can neither move the anchor under us
+  // nor remove rows mid-walk. No advisory lock: verification never blocks appends.
+  return sequelize.transaction(
+    { isolationLevel: Transaction.ISOLATION_LEVELS.REPEATABLE_READ, readOnly: true },
+    (transaction) => walkChain(organizationId, transaction, options),
+  );
+}
+
+async function walkChain(
+  organizationId: number,
+  transaction: Transaction,
+  options?: VerifyChainOptions,
+): Promise<VerifyChainResult> {
   const batchSize = options?.batchSize || 1000;
   const maxEntries = options?.maxEntries || 100000;
-  let offset = 0;
-  let prevHash = GENESIS_HASH;
+  const checkpoint = await getLatestLedgerCheckpoint(organizationId, transaction);
+  const prunedThroughId = checkpoint ? checkpoint.pruned_through_id : 0;
+  const prunedThrough = checkpoint
+    ? { id: checkpoint.pruned_through_id, cutoff: checkpoint.cutoff }
+    : undefined;
+  let prevHash = checkpoint ? checkpoint.anchor_hash : GENESIS_HASH;
+  let afterId: number | string = prunedThroughId;
   let totalEntries = 0;
+
+  // A legitimate prune deletes every row up to pruned_through_id, so a row
+  // still at or below it means the checkpoint was forged to hide a deletion
+  // from the middle of the chain.
+  if (checkpoint) {
+    const [leftover] = await sequelize.query<{ id: string | number | null }>(
+      `SELECT MIN(id) AS id FROM audit_ledger WHERE organization_id = :organizationId
+          AND id <= :prunedThroughId`,
+      {
+        replacements: { organizationId, prunedThroughId },
+        type: QueryTypes.SELECT,
+        transaction,
+      },
+    );
+    if (leftover && leftover.id !== null) {
+      return {
+        status: "compromised",
+        totalEntries: 0,
+        brokenAtId: Number(leftover.id),
+        prunedThrough,
+      };
+    }
+  }
 
   while (true) {
     const rows: any[] = await sequelize.query(
@@ -247,12 +295,13 @@ export async function verifyChain(
               entity_id, action, field_name, old_value, new_value, description,
               entry_hash, prev_hash
        FROM audit_ledger
-       WHERE organization_id = :organizationId
+       WHERE organization_id = :organizationId AND id > :afterId
        ORDER BY id ASC
-       LIMIT :batchSize OFFSET :offset`,
+       LIMIT :batchSize`,
       {
-        replacements: { organizationId, batchSize, offset },
+        replacements: { organizationId, afterId, batchSize },
         type: QueryTypes.SELECT,
+        transaction,
       },
     );
 
@@ -273,6 +322,7 @@ export async function verifyChain(
           brokenAtId: row.id,
           expectedHash: prevHash,
           actualHash: rowPrevHash,
+          prunedThrough,
         };
       }
 
@@ -302,6 +352,7 @@ export async function verifyChain(
           brokenAtId: row.id,
           expectedHash,
           actualHash: rowEntryHash,
+          prunedThrough,
         };
       }
 
@@ -310,15 +361,15 @@ export async function verifyChain(
 
     // Cap the number of entries verified to prevent unbounded CPU usage
     if (totalEntries >= maxEntries) {
-      return { status: "partial", totalEntries };
+      return { status: "partial", totalEntries, prunedThrough };
     }
 
-    offset += batchSize;
+    afterId = rows[rows.length - 1].id;
   }
 
   if (totalEntries === 0) {
-    return { status: "empty", totalEntries: 0 };
+    return { status: "empty", totalEntries: 0, prunedThrough };
   }
 
-  return { status: "intact", totalEntries };
+  return { status: "intact", totalEntries, prunedThrough };
 }

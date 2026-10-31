@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef, useContext } from "react";
 import { Box, Stack, Typography } from "@mui/material";
 import StandardModal from "../../Modals/StandardModal";
 import { CustomizableButton } from "../../button/customizable-button";
@@ -9,6 +9,8 @@ import { useGenerateReport, useReportRun } from "../../../../application/hooks/u
 import { downloadReportRun } from "../../../../application/repository/reporting.repository";
 import { showAlert } from "../../../../infrastructure/api/customAxios";
 import { useProjects } from "../../../../application/hooks/useProjects";
+import { VerifyWiseContext } from "../../../../application/contexts/VerifyWise.context";
+import { logEngine } from "../../../../application/tools/log.engine";
 import { useIsAdmin } from "../../../../application/hooks/useIsAdmin";
 import { useLLMKeyStatus } from "../../../../application/hooks/useLLMKeyStatus";
 import AIKeyBanner from "./AIKeyBanner";
@@ -38,7 +40,16 @@ const GenerateReportPopup: React.FC<IGenerateReportProps> = ({
   reportType,
 }) => {
   const [currentPage, setCurrentPage] = useState<ModalPage>("basic");
-  const { data: projects } = useProjects();
+  const {
+    data: projects,
+    dataUpdatedAt: projectsUpdatedAt,
+    isFetching: projectsFetching,
+    isStale: projectsStale,
+  } = useProjects();
+  // Read only to log it: the picker in GenerateReportFrom lists
+  // dashboardValues.projects while the guard below checks useProjects(). When
+  // they disagree, "Use case not found" is the symptom.
+  const { dashboardValues } = useContext(VerifyWiseContext);
   const isAdmin = useIsAdmin();
   const { hasKeys } = useLLMKeyStatus();
   const validateFormRef = useRef<(() => boolean) | null>(null);
@@ -60,8 +71,11 @@ const GenerateReportPopup: React.FC<IGenerateReportProps> = ({
   // Form values from Page 1
   const [basicFormValues, setBasicFormValues] = useState<BasicFormValues>({
     project: null,
-    framework: 1,
-    projectFrameworkId: 1,
+    // 0 until a use case is picked and GenerateReportFrom resolves its real
+    // pairing. These were 1/1, which is a live projects_frameworks id for
+    // some project and submits as a real selection if nothing overwrites it.
+    framework: 0,
+    projectFrameworkId: 0,
     reportName: "",
     format: "pdf",
     aiEnhanced: false,
@@ -113,6 +127,41 @@ const GenerateReportPopup: React.FC<IGenerateReportProps> = ({
     );
 
     if (!currentProject) {
+      const contextProjects = Array.isArray(dashboardValues?.projects)
+        ? dashboardValues.projects
+        : [];
+      logEngine({
+        type: "error",
+        // Template literal, not a quoted string: this is a developer
+        // diagnostic, never rendered, and a dynamic message cannot be a
+        // dictionary key — which is also why the i18n audit skips it.
+        message: `Report generation blocked: use case ${basicFormValues.project} missing from useProjects()`,
+        details: {
+          selectedProjectId: basicFormValues.project,
+          selectedProjectIdType: typeof basicFormValues.project,
+          // The guard's list. id is typed string | number, and the lookup
+          // below uses ===, so the runtime types matter as much as the values.
+          useProjectsIds: (projects ?? []).map((p) => p.id),
+          useProjectsIdTypes: [...new Set((projects ?? []).map((p) => typeof p.id))],
+          useProjectsCount: projects?.length ?? 0,
+          useProjectsUpdatedAt: new Date(projectsUpdatedAt).toISOString(),
+          useProjectsAgeSeconds: Math.round((Date.now() - projectsUpdatedAt) / 1000),
+          useProjectsIsFetching: projectsFetching,
+          useProjectsIsStale: projectsStale,
+          // The picker's list — what the user actually chose from.
+          contextIds: contextProjects.map((p: { id: unknown }) => p.id),
+          contextIdTypes: [...new Set(contextProjects.map((p: { id: unknown }) => typeof p.id))],
+          contextCount: contextProjects.length,
+          presentInContext: contextProjects.some(
+            (p: { id: unknown }) => p.id === basicFormValues.project,
+          ),
+          // True when only strict equality is in the way.
+          matchesLoosely: (projects ?? []).some(
+            // eslint-disable-next-line eqeqeq
+            (p) => p.id == basicFormValues.project,
+          ),
+        },
+      });
       toast("error", "Use case not found");
       return;
     }
@@ -133,10 +182,17 @@ const GenerateReportPopup: React.FC<IGenerateReportProps> = ({
       projectId: basicFormValues.project,
       reportType: selectedSections, // Array of section keys
       reportName: basicFormValues.reportName,
-      frameworkId: basicFormValues.framework,
-      projectFrameworkId: basicFormValues.projectFrameworkId,
       format: basicFormValues.format,
       aiEnhanced: basicFormValues.aiEnhanced,
+      // Omitted entirely for a use case with no framework — there is no
+      // pairing to name, and the route validates both as real ids when they
+      // are present.
+      ...(basicFormValues.framework > 0
+        ? {
+            frameworkId: basicFormValues.framework,
+            projectFrameworkId: basicFormValues.projectFrameworkId,
+          }
+        : {}),
     };
 
     generate.mutate(body, {

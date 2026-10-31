@@ -120,7 +120,7 @@ export default function RelateVendorRiskForm({
           <li {...props} key={option.id}>
             <Stack
               direction="row"
-              spacing={4}
+              spacing="8px"
               alignItems="center"
               sx={{ width: "100%", justifyContent: "space-between" }}
             >
@@ -138,7 +138,11 @@ export default function RelateVendorRiskForm({
         }}
       />
 
-      {error && <Alert severity="error">{error}</Alert>}
+      {error && (
+        <Alert severity="error" sx={{ fontSize: "13px" }}>
+          {error}
+        </Alert>
+      )}
 
       <InlineFormActions>
         <CustomizableButton size="small" variant="text" color="secondary" onClick={onClose}>

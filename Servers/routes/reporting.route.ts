@@ -10,7 +10,7 @@ import { listSections } from "../controllers/reportTemplate.ctrl";
 
 import authenticateJWT from "../middleware/auth.middleware";
 import authorize from "../middleware/accessControl.middleware";
-import { validateId } from "../domain.layer/validations/id.valid";
+import { validateId, validateOptionalId } from "../domain.layer/validations/id.valid";
 
 // POST, PUT, DELETE requests
 
@@ -31,8 +31,10 @@ router.post(
   authenticateJWT,
   authorize("reporting.admin"),
   validateId("projectId"),
-  validateId("frameworkId"),
-  validateId("projectFrameworkId"),
+  // Optional: a use case with no framework attached has no pairing to name,
+  // and the collector resolves the pairing from projects_frameworks anyway.
+  validateOptionalId("frameworkId"),
+  validateOptionalId("projectFrameworkId"),
   generateReportsV2,
 );
 
@@ -40,7 +42,14 @@ router.post(
 // Declared before the "/:id" route so the literal path is never captured as an id.
 router.get("/sections", authenticateJWT, listSections);
 
-router.delete("/:id", authenticateJWT, deleteGeneratedReportById);
+// Deleting a generated report - Admin only, like generating one
+router.delete(
+  "/:id",
+  authenticateJWT,
+  authorize("reporting.admin"),
+  validateId("id"),
+  deleteGeneratedReportById,
+);
 
 router.get("/generate-report", authenticateJWT, getAllGeneratedReports);
 

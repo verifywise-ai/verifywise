@@ -45,6 +45,7 @@ export const EMAIL_TEMPLATES = {
   APPROVAL_STEP_COMPLETED: "approval-step-completed.mjml",
   APPROVAL_COMPLETE: "approval-complete.mjml",
   APPROVAL_REJECTED: "approval-rejected.mjml",
+  APPROVAL_STEP_OVERDUE: "approval-step-overdue.mjml",
 
   // Training templates
   TRAINING_ASSIGNED: "training-assigned.mjml",
@@ -77,6 +78,7 @@ export const EMAIL_TEMPLATES = {
   INTAKE_SUBMISSION_APPROVED: "intake-submission-approved.mjml",
   INTAKE_SUBMISSION_REJECTED: "intake-submission-rejected.mjml",
   INTAKE_NEW_SUBMISSION_ADMIN: "intake-new-submission-admin.mjml",
+  INTAKE_SECOND_REVIEW: "intake-second-review.mjml",
 
   // Assignment notification template
   ASSIGNMENT_NOTIFICATION: "assignment-notification.mjml",

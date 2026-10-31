@@ -156,14 +156,15 @@ export default function ProjectScorers({ projectId, orgId }: ProjectScorersProps
           : typeof judgeModel === "string"
             ? judgeModel
             : scorerConfig.model || "";
-      const modelParams =
-        typeof judgeModel === "object" && judgeModel?.params
-          ? {
-              temperature: judgeModel.params.temperature ?? 0,
-              maxTokens: judgeModel.params.max_tokens ?? 256,
-              topP: judgeModel.params.top_p ?? 1,
-            }
-          : scorerConfig.modelParams || { temperature: 0, maxTokens: 256, topP: 1 };
+      // Older scorers kept only top_p under judgeModel.params and the rest in
+      // modelParams; merge them the way the runner does (judgeModel.params wins)
+      const saved = scorerConfig.modelParams;
+      const nested = typeof judgeModel === "object" ? judgeModel?.params : undefined;
+      const modelParams = {
+        temperature: nested?.temperature ?? saved?.temperature ?? 0,
+        maxTokens: nested?.max_tokens ?? saved?.maxTokens ?? 256,
+        topP: nested?.top_p ?? saved?.topP ?? 1,
+      };
       const endpointUrl = typeof judgeModel === "object" ? judgeModel?.endpointUrl : undefined;
       const apiKey = typeof judgeModel === "object" ? judgeModel?.apiKey : undefined;
 
@@ -283,6 +284,8 @@ export default function ProjectScorers({ projectId, orgId }: ProjectScorersProps
             name: config.model,
             provider: config.provider,
             params: {
+              temperature: config.modelParams.temperature,
+              max_tokens: config.modelParams.maxTokens,
               top_p: config.modelParams.topP,
             },
             ...(config.provider === "self-hosted" && config.endpointUrl
@@ -336,6 +339,8 @@ export default function ProjectScorers({ projectId, orgId }: ProjectScorersProps
             provider: config.provider,
             name: config.model,
             params: {
+              temperature: config.modelParams.temperature,
+              max_tokens: config.modelParams.maxTokens,
               top_p: config.modelParams.topP,
             },
             ...(config.provider === "self-hosted" && config.endpointUrl

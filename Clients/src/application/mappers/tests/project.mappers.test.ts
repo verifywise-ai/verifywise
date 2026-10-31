@@ -4,7 +4,7 @@ import { HighRiskRole } from "../../../domain/enums/highRiskRole.enum";
 import { ProjectModel } from "../../../domain/models/Common/project/project.model";
 import {
   mapCreateProjectFormToDTO,
-  mapHighRiskRole,
+  mapHighRiskRoles,
   mapProjectResponseDTOsToModels,
   mapProjectResponseDTOsToProjects,
   mapProjectResponseDTOToModel,
@@ -48,42 +48,26 @@ describe("Test project mappers functions", () => {
       expect(result).toBe(AiRiskClassification.MINIMAL_RISK);
     });
   });
-  describe("mapHighRiskRole", () => {
-    it("should receive a valid number and return the mapped value", () => {
-      let result = mapHighRiskRole(0);
-      expect(result).toBe(HighRiskRole.DEPLOYER);
-      result = mapHighRiskRole(1);
-      expect(result).toBe(HighRiskRole.PROVIDER);
+  describe("mapHighRiskRoles", () => {
+    it("maps a list, ordered Provider first", () => {
+      expect(mapHighRiskRoles(["Deployer", "Provider"])).toEqual([
+        HighRiskRole.PROVIDER,
+        HighRiskRole.DEPLOYER,
+      ]);
     });
-    it("should receive a valid string and return the mapped value", () => {
-      let result = mapHighRiskRole("Deployer");
-      expect(result).toBe(HighRiskRole.DEPLOYER);
-      result = mapHighRiskRole("Provider");
-      expect(result).toBe(HighRiskRole.PROVIDER);
+    it("maps legacy single values to a one-item list", () => {
+      expect(mapHighRiskRoles(1)).toEqual([HighRiskRole.PROVIDER]);
+      expect(mapHighRiskRoles(0)).toEqual([HighRiskRole.DEPLOYER]);
+      expect(mapHighRiskRoles("Deployer")).toEqual([HighRiskRole.DEPLOYER]);
+      expect(mapHighRiskRoles("not_applicable")).toEqual([HighRiskRole.DEPLOYER]);
+      expect(mapHighRiskRoles("Distributor")).toEqual([HighRiskRole.PROVIDER]);
     });
-    it("should collapse legacy provider-tier strings onto PROVIDER", () => {
-      // Pre-reduction values (Distributor/Importer/Product manufacturer/
-      // Authorized representative) now map to Provider.
-      expect(mapHighRiskRole("Distributor")).toBe(HighRiskRole.PROVIDER);
-      expect(mapHighRiskRole("Importer")).toBe(HighRiskRole.PROVIDER);
-      expect(mapHighRiskRole("Product Manufacturer")).toBe(HighRiskRole.PROVIDER);
-      expect(mapHighRiskRole("Authorized Representative")).toBe(HighRiskRole.PROVIDER);
-    });
-    it("should collapse legacy 'not_applicable' onto DEPLOYER", () => {
-      expect(mapHighRiskRole("not_applicable")).toBe(HighRiskRole.DEPLOYER);
-    });
-    it("should receive an invalid number and return DEPLOYER (anything but 1)", () => {
-      // Implementation: value === 1 ? PROVIDER : DEPLOYER
-      const result = mapHighRiskRole(99);
-      expect(result).toBe(HighRiskRole.DEPLOYER);
-    });
-    it("should receive an invalid string and return PROVIDER (non-matching fallback)", () => {
-      // Implementation: only "deployer" or "not_applicable" map to DEPLOYER;
-      // any other string (including unknown inputs) collapses onto PROVIDER.
-      const result = mapHighRiskRole("InvalidString");
-      expect(result).toBe(HighRiskRole.PROVIDER);
+    it("drops unknown values instead of defaulting to Provider", () => {
+      expect(mapHighRiskRoles("InvalidString")).toEqual([]);
+      expect(mapHighRiskRoles(99)).toEqual([]);
     });
   });
+
   describe("mapProjectResponseDTOToProject", () => {
     it("should receive a valid ProjectResponseDTO and return the mapped Project", () => {
       const dto = new ProjectDtoToProjectBuilder().build();
@@ -98,6 +82,7 @@ describe("Test project mappers functions", () => {
       );
       expect(project.ai_risk_classification).toBe(AiRiskClassification.LIMITED_RISK);
       expect(project.type_of_high_risk_role).toBe(HighRiskRole.PROVIDER);
+      expect(project.high_risk_roles).toEqual([HighRiskRole.PROVIDER]);
       expect(project.goal).toBe(dto.goal);
       expect(project.last_updated.toISOString()).toBe(
         new Date(dto.last_updated as string).toISOString(),
@@ -155,6 +140,7 @@ describe("Test project mappers functions", () => {
       expect(projectModel.start_date).toStrictEqual(new Date(dto.start_date));
       expect(projectModel.ai_risk_classification).toBe(AiRiskClassification.LIMITED_RISK);
       expect(projectModel.type_of_high_risk_role).toBe(HighRiskRole.PROVIDER);
+      expect(projectModel.high_risk_roles).toEqual([HighRiskRole.PROVIDER]);
       expect(projectModel.goal).toBe(dto.goal);
       expect(projectModel.last_updated).toStrictEqual(new Date(dto.last_updated));
       expect(projectModel.last_updated_by).toBe(dto.last_updated_by);
@@ -210,7 +196,7 @@ describe("Test project mappers functions", () => {
       });
       expect(result.start_date).toBe(form.start_date);
       expect(result.ai_risk_classification).toBe(form.ai_risk_classification);
-      expect(result.type_of_high_risk_role).toBe(form.type_of_high_risk_role);
+      expect(result.high_risk_roles).toEqual([HighRiskRole.PROVIDER, HighRiskRole.DEPLOYER]);
       expect(result.goal).toBe(form.goal);
     });
   });

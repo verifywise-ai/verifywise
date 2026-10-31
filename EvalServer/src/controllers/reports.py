@@ -25,12 +25,14 @@ if not ENCRYPTION_KEY:
     logger.warning("ENCRYPTION_KEY not set — report AI summaries requiring stored API keys will be unavailable")
 
 PREFERRED_PROVIDERS = ["openai", "anthropic", "google", "mistral", "xai"]
+# Small chat models for the report summary. AIGateway/tests/test_model_catalog_contract.py
+# checks each is a chat model in the gateway's pinned LiteLLM map.
 DEFAULT_MODELS = {
     "openai": "gpt-4o-mini",
-    "anthropic": "claude-3-5-haiku-20241022",
-    "google": "gemini-2.0-flash",
+    "anthropic": "claude-haiku-4-5",
+    "google": "gemini-2.5-flash",
     "mistral": "mistral-small-latest",
-    "xai": "grok-2",
+    "xai": "grok-4.20-non-reasoning",
 }
 
 

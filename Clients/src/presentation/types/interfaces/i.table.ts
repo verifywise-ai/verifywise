@@ -10,6 +10,7 @@ import { ITask } from "../../../domain/interfaces/i.task";
 import { IUser } from "../../../domain/interfaces/i.user";
 import { EventModel } from "../../../domain/models/Common/evenTracker/eventTracker.model";
 import { CustomSelectOptionWithIcon } from "../../../domain/types/widget.types";
+import type { JiraIncidentLink } from "../../../application/repository/jiraIncidents.repository";
 import { FileColumn } from "../../../application/hooks/useFileColumnVisibility";
 import type { ResearchAlert } from "../../../application/utils/vendorResearchAlerts";
 import { ApprovalWorkflowModel } from "src/domain/models/Common/approvalWorkflow/approvalWorkflow.model";
@@ -323,6 +324,8 @@ export interface IncidentTableProps {
   archivedId?: string | null;
   hidePagination?: boolean;
   visibleColumns?: Set<string>;
+  /** Jira issue links by incident id (Jira incidents extension); a chip shows next to the incident ID. */
+  jiraLinks?: Map<number, JiraIncidentLink>;
 }
 export interface ApprovalWorkflowTableProps {
   data: ApprovalWorkflowModel[];

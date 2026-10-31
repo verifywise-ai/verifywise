@@ -29,19 +29,6 @@ export const REPORTING_VALIDATION_LIMITS = {
 export const REPORT_TYPE_ENUM = Object.values(ReportType);
 
 /**
- * File source enum values (must match database enum_files_source)
- */
-export const FILE_SOURCE_ENUM = [
-  "Project risks report",
-  "Compliance tracker report",
-  "Assessment tracker report",
-  "Vendors and risks report",
-  "Clauses and annexes report",
-  "ISO 27001 report",
-  "All reports",
-] as const;
-
-/**
  * Validates project ID field
  */
 export const validateProjectId = (value: any): ValidationResult => {

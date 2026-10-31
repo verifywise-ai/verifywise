@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { accent } from "../../themes/palette";
 import {
   statusColorSchemes,
   getStatusColor,
@@ -14,6 +15,10 @@ describe("statusColorSchemes", () => {
     expect(statusColorSchemes).toHaveProperty("trainings");
     expect(statusColorSchemes).toHaveProperty("vendorRisks");
     expect(statusColorSchemes).toHaveProperty("incidents");
+  });
+
+  it("uses a palette token for model validation", () => {
+    expect(statusColorSchemes.models.validation).toBe(accent.purple.text);
   });
 });
 

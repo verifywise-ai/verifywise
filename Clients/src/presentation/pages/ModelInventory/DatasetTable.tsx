@@ -184,7 +184,7 @@ const DatasetTable: React.FC<DatasetTableProps> = ({
       if (aValue === null || aValue === undefined) return 1;
       if (bValue === null || bValue === undefined) return -1;
 
-      let comparison = 0;
+      let comparison: number;
       if (typeof aValue === "string" && typeof bValue === "string") {
         comparison = aValue.localeCompare(bValue);
       } else if (typeof aValue === "boolean" && typeof bValue === "boolean") {

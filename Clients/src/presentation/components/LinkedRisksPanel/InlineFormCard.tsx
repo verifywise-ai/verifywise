@@ -21,14 +21,14 @@ export default function InlineFormCard({ title, description, children }: InlineF
         borderColor: "border.light",
         borderRadius: "4px",
         bgcolor: "background.alt",
-        p: 8,
+        p: "16px",
       }}
     >
       <Typography sx={{ ...textStyles.subsectionTitle, color: "text.primary" }}>{title}</Typography>
       {description && (
         <Typography sx={{ ...textStyles.body, color: "text.tertiary" }}>{description}</Typography>
       )}
-      <Stack spacing={8} sx={{ mt: 6 }}>
+      <Stack spacing="16px" sx={{ mt: "12px" }}>
         {children}
       </Stack>
     </Box>
@@ -38,7 +38,7 @@ export default function InlineFormCard({ title, description, children }: InlineF
 /** Cancel, then the primary action, on the right: the order the modals use. */
 export function InlineFormActions({ children }: { children: ReactNode }) {
   return (
-    <Stack direction="row" spacing={4} justifyContent="flex-end">
+    <Stack direction="row" spacing="8px" justifyContent="flex-end">
       {children}
     </Stack>
   );

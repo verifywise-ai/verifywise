@@ -377,7 +377,7 @@ export const aiGatewayModelsContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'AI Gateway not running', text: 'The page shows "Failed to load model catalog. Is the AI Gateway running?" if it can\'t reach the gateway service. Make sure the AI Gateway is running on port 8100.' },
+        { bold: 'AI Gateway not running', text: 'The page shows "Failed to load model catalog. Is the AI Gateway running?" if it can\'t reach the gateway service. Make sure the AI Gateway service is running: in a Docker deployment that is the ai_gateway container, and in local development it listens on port 8100.' },
         { bold: 'Empty catalog', text: 'If the gateway is running but the catalog is empty, the LiteLLM model registry may not have loaded. Restart the AI Gateway service.' },
         { bold: 'Missing models', text: 'The catalog shows models from LiteLLM\'s built-in registry. Custom or self-hosted models won\'t appear here but can still be used in endpoints by entering the model name manually.' },
       ],

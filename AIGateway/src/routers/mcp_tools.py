@@ -4,7 +4,6 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Request, status
 
 from crud.mcp_tools import get_all_tools, get_tools_by_server, update_tool
-from middlewares.auth import verify_internal_key
 from utils.auth import get_org_id, require_admin
 
 logger = logging.getLogger(__name__)
@@ -21,7 +20,6 @@ VALID_RISK_LEVELS = {"low", "medium", "high"}
 @router.get("", status_code=status.HTTP_200_OK)
 async def list_tools(request: Request) -> Any:
     """List all active tools for the organization."""
-    verify_internal_key(request)
     org_id = get_org_id(request)
 
     tools = await get_all_tools(org_id)
@@ -35,7 +33,6 @@ async def list_tools(request: Request) -> Any:
 @router.get("/server/{server_id}", status_code=status.HTTP_200_OK)
 async def list_tools_by_server(server_id: int, request: Request) -> Any:
     """List all tools for a specific MCP server."""
-    verify_internal_key(request)
     org_id = get_org_id(request)
 
     tools = await get_tools_by_server(org_id, server_id)
@@ -49,7 +46,6 @@ async def list_tools_by_server(server_id: int, request: Request) -> Any:
 @router.patch("/{tool_id}", status_code=status.HTTP_200_OK)
 async def patch_tool(tool_id: int, request: Request) -> Any:
     """Update governance fields (risk_level, requires_approval) for a tool. Admin only."""
-    verify_internal_key(request)
     require_admin(request)
 
     org_id = get_org_id(request)

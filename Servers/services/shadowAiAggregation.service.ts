@@ -14,6 +14,7 @@ import { sequelize } from "../database/db";
 import logger from "../utils/logger/fileLogger";
 import { calculateRiskScoresForOrganization } from "./shadowAiRiskScoring.service";
 import { getSettingsQuery } from "../utils/shadowAiConfig.utils";
+import { safeRecordRetentionRun, type RetentionRecordType } from "../utils/dataRetention.utils";
 
 /**
  * Get all organization IDs that have shadow AI data.
@@ -114,10 +115,44 @@ export async function runMonthlyRollup(): Promise<void> {
   }
 }
 
+/** The three Shadow AI cleanups. Table and column names come only from this list. */
+const SHADOW_AI_PURGES: ReadonlyArray<{
+  recordType: RetentionRecordType;
+  setting:
+    "retention_events_days" | "retention_daily_rollups_days" | "retention_alert_history_days";
+  table: string;
+  timestampColumn: string;
+  label: string;
+}> = [
+  {
+    recordType: "shadow_ai_events",
+    setting: "retention_events_days",
+    table: "shadow_ai_events",
+    timestampColumn: "event_timestamp",
+    label: "events",
+  },
+  {
+    recordType: "shadow_ai_daily_rollups",
+    setting: "retention_daily_rollups_days",
+    table: "shadow_ai_daily_rollups",
+    timestampColumn: "rollup_date",
+    label: "daily rollups",
+  },
+  {
+    recordType: "shadow_ai_alert_history",
+    setting: "retention_alert_history_days",
+    table: "shadow_ai_alert_history",
+    timestampColumn: "fired_at",
+    label: "alert records",
+  },
+];
+
 /**
  * Purge old data based on per-organization retention settings.
  * Deletes raw events, daily rollups, and alert history older than configured days.
  * A value of 0 means keep data indefinitely (no purge).
+ * Each cleanup records its own run; a failing one records a failed run and
+ * the others still run.
  * Runs at 2:00 AM daily.
  */
 export async function purgeOldEvents(): Promise<void> {
@@ -125,55 +160,76 @@ export async function purgeOldEvents(): Promise<void> {
   logger.debug(`🔄 Running data retention cleanup for ${orgIds.length} organizations`);
 
   for (const organizationId of orgIds) {
+    let settings: Awaited<ReturnType<typeof getSettingsQuery>>;
     try {
-      const settings = await getSettingsQuery(organizationId);
-
-      // Purge raw events
-      if (settings.retention_events_days > 0) {
-        const [, eventCount] = await sequelize.query(
-          `DELETE FROM shadow_ai_events
-           WHERE organization_id = :organizationId
-             AND event_timestamp < NOW() - INTERVAL '1 day' * :days`,
-          { replacements: { organizationId, days: settings.retention_events_days } },
-        );
-        if ((eventCount as number) > 0) {
-          logger.debug(
-            `✅ Purged ${eventCount} events older than ${settings.retention_events_days}d for organization ${organizationId}`,
-          );
-        }
-      }
-
-      // Purge daily rollups
-      if (settings.retention_daily_rollups_days > 0) {
-        const [, rollupCount] = await sequelize.query(
-          `DELETE FROM shadow_ai_daily_rollups
-           WHERE organization_id = :organizationId
-             AND rollup_date < NOW() - INTERVAL '1 day' * :days`,
-          { replacements: { organizationId, days: settings.retention_daily_rollups_days } },
-        );
-        if ((rollupCount as number) > 0) {
-          logger.debug(
-            `✅ Purged ${rollupCount} daily rollups older than ${settings.retention_daily_rollups_days}d for organization ${organizationId}`,
-          );
-        }
-      }
-
-      // Purge alert history
-      if (settings.retention_alert_history_days > 0) {
-        const [, alertCount] = await sequelize.query(
-          `DELETE FROM shadow_ai_alert_history
-           WHERE organization_id = :organizationId
-             AND fired_at < NOW() - INTERVAL '1 day' * :days`,
-          { replacements: { organizationId, days: settings.retention_alert_history_days } },
-        );
-        if ((alertCount as number) > 0) {
-          logger.debug(
-            `✅ Purged ${alertCount} alert records older than ${settings.retention_alert_history_days}d for organization ${organizationId}`,
-          );
-        }
-      }
+      settings = await getSettingsQuery(organizationId);
     } catch (error) {
+      // Without the settings there are no periods: record a failed run (with
+      // no cutoff) for each cleanup so the failure shows on the settings page.
       logger.error(`❌ Data retention cleanup failed for organization ${organizationId}:`, error);
+      for (const purge of SHADOW_AI_PURGES) {
+        await safeRecordRetentionRun({
+          organizationId,
+          recordType: purge.recordType,
+          cutoff: null,
+          deletedCount: 0,
+          status: "failed",
+          error,
+        });
+      }
+      continue;
+    }
+
+    for (const purge of SHADOW_AI_PURGES) {
+      const days = settings[purge.setting];
+      if (!(days > 0)) continue;
+      try {
+        // The cutoff is computed once, in the database, and the run record
+        // stores exactly the value the DELETE used.
+        const [rows] = await sequelize.query(
+          `WITH params AS (
+             SELECT NOW() - INTERVAL '1 day' * :days AS cutoff
+           ),
+           removed AS (
+             DELETE FROM ${purge.table} t
+             USING params
+             WHERE t.organization_id = :organizationId
+               AND t.${purge.timestampColumn} < params.cutoff
+             RETURNING 1
+           )
+           SELECT (SELECT cutoff::text FROM params) AS cutoff,
+                  (SELECT COUNT(*) FROM removed)::int AS deleted_count`,
+          { replacements: { organizationId, days } },
+        );
+        const result = (rows as { cutoff: string; deleted_count: number }[])[0];
+        const deleted = Number(result?.deleted_count ?? 0);
+        await safeRecordRetentionRun({
+          organizationId,
+          recordType: purge.recordType,
+          cutoff: result?.cutoff ?? null,
+          deletedCount: deleted,
+          status: "success",
+        });
+        if (deleted > 0) {
+          logger.debug(
+            `✅ Purged ${deleted} ${purge.label} older than ${days}d for organization ${organizationId}`,
+          );
+        }
+      } catch (error) {
+        logger.error(
+          `❌ Data retention cleanup failed for organization ${organizationId} (${purge.table}):`,
+          error,
+        );
+        // The statement failed, so it produced no cutoff to record.
+        await safeRecordRetentionRun({
+          organizationId,
+          recordType: purge.recordType,
+          cutoff: null,
+          deletedCount: 0,
+          status: "failed",
+          error,
+        });
+      }
     }
   }
 }

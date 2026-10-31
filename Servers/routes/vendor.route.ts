@@ -39,10 +39,10 @@ router.get(
 );
 
 // POST, PUT, DELETE requests
-router.post("/", authenticateJWT, createVendor);
+router.post("/", authenticateJWT, authorize("vendor.edit"), createVendor);
 // Starting research spends searches and model calls, so it needs the right to edit risks.
 router.post("/:id/research", authenticateJWT, authorize("risks.edit"), startVendorResearchRun);
-router.patch("/:id", authenticateJWT, updateVendorById);
-router.delete("/:id", authenticateJWT, deleteVendorById);
+router.patch("/:id", authenticateJWT, authorize("vendor.edit"), updateVendorById);
+router.delete("/:id", authenticateJWT, authorize("vendor.edit"), deleteVendorById);
 
 export default router;

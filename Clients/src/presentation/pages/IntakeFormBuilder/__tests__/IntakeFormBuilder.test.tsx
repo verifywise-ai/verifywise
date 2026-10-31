@@ -31,6 +31,7 @@ vi.mock("../../../../application/repository/intakeForm.repository", () => ({
   getIntakeForm: vi.fn().mockResolvedValue({ data: null }),
   createIntakeForm: vi.fn().mockResolvedValue({ data: {} }),
   updateIntakeForm: vi.fn().mockResolvedValue({ data: {} }),
+  getEligibleReviewers: vi.fn().mockResolvedValue([]),
   IntakeFormStatus: {
     DRAFT: "draft",
     ACTIVE: "active",
@@ -103,6 +104,14 @@ describe("IntakeFormBuilder Page", () => {
     expect(container).toBeInTheDocument();
   });
 
+  it("shows the logic overview from the header toggle", () => {
+    renderWithProviders(<IntakeFormBuilder />, { route: "/intake-forms/new/edit" });
+    expect(screen.queryByTestId("logic-overview-panel")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Logic" }));
+    expect(screen.getByTestId("logic-overview-panel")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Logic" })).toHaveAttribute("aria-pressed", "true");
+  });
+
   it("lists the keys from the shared query cache without fetching them again", async () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false, staleTime: Infinity } },
@@ -153,7 +162,8 @@ describe("IntakeFormBuilder Page", () => {
         { route: "/intake-forms/5/edit" },
       );
 
-    const AI_SCORING = /Submissions will be scored using AI-enhanced risk analysis/;
+    // Only shown with a key; without one the helper says reviewers see rules only.
+    const AI_SCORING = /You can also generate suggested questions and field guidance text with AI/;
     const toggle = () => screen.queryByText("Suggested questions");
     // The breadcrumb shows the saved form name once it has loaded.
     const formLoaded = () => screen.findAllByText("Intake");
@@ -190,6 +200,73 @@ describe("IntakeFormBuilder Page", () => {
       );
     });
 
+    it("saves live checks off when the submitter-typing toggle is turned off", async () => {
+      mockGetLLMKeys.mockResolvedValue({ data: { data: [openAIKey] } });
+      vi.mocked(getIntakeForm).mockResolvedValue(savedForm(3) as never);
+      renderEditRoute();
+      await formLoaded();
+
+      fireEvent.click(await screen.findByText("Check answers while the submitter types"));
+      fireEvent.click(screen.getByRole("button", { name: "Save" }));
+      await waitFor(() => expect(updateIntakeForm).toHaveBeenCalled());
+      expect(
+        (vi.mocked(updateIntakeForm).mock.calls[0][1] as { liveChecksEnabled: unknown })
+          .liveChecksEnabled,
+      ).toBe(false);
+    });
+
+    // The reply carries the form as it was sent; an edit made while the
+    // request ran must survive it and keep the form unsaved.
+    it("keeps an edit made while a save is running", async () => {
+      mockGetLLMKeys.mockResolvedValue({ data: { data: [openAIKey] } });
+      vi.mocked(getIntakeForm).mockResolvedValue(savedForm(3) as never);
+      let reply: (value: unknown) => void = () => {};
+      vi.mocked(updateIntakeForm).mockImplementationOnce(
+        () => new Promise((resolve) => (reply = resolve)) as never,
+      );
+      renderEditRoute();
+      await formLoaded();
+
+      const liveChecks = await screen.findByText("Check answers while the submitter types");
+      fireEvent.click(liveChecks);
+      fireEvent.click(screen.getByRole("button", { name: "Save" }));
+      await waitFor(() => expect(updateIntakeForm).toHaveBeenCalledTimes(1));
+      // Turned back on while the save of "off" is still running.
+      fireEvent.click(liveChecks);
+      await act(async () => {
+        reply({ data: { ...savedForm(3).data, liveChecksEnabled: false, publicId: "abc" } });
+      });
+
+      const save = screen.getByRole("button", { name: "Save" });
+      await waitFor(() => expect(save).toBeEnabled());
+      expect(screen.getByText("Unsaved")).toBeInTheDocument();
+      fireEvent.click(save);
+      await waitFor(() => expect(updateIntakeForm).toHaveBeenCalledTimes(2));
+      const second = vi.mocked(updateIntakeForm).mock.calls[1][1] as {
+        liveChecksEnabled: unknown;
+        publicId: unknown;
+      };
+      expect(second.liveChecksEnabled).toBe(true);
+      expect(second.publicId).toBe("abc");
+    });
+
+    it("marks the form saved when nothing changed during the save", async () => {
+      mockGetLLMKeys.mockResolvedValue({ data: { data: [openAIKey] } });
+      vi.mocked(getIntakeForm).mockResolvedValue(savedForm(3) as never);
+      vi.mocked(updateIntakeForm).mockResolvedValueOnce({
+        data: { ...savedForm(3).data, liveChecksEnabled: false },
+      } as never);
+      renderEditRoute();
+      await formLoaded();
+
+      fireEvent.click(await screen.findByText("Check answers while the submitter types"));
+      fireEvent.click(screen.getByRole("button", { name: "Save" }));
+      await waitFor(() => expect(updateIntakeForm).toHaveBeenCalledTimes(1));
+      // "Unsaved" follows isDirty alone; Save is also disabled while saving.
+      await waitFor(() => expect(screen.queryByText("Unsaved")).not.toBeInTheDocument());
+      expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+    });
+
     it("still counts while the key list is loading", async () => {
       mockGetLLMKeys.mockReturnValue(new Promise(() => {}));
       vi.mocked(getIntakeForm).mockResolvedValue(savedForm(3, false) as never);
@@ -216,6 +293,92 @@ describe("IntakeFormBuilder Page", () => {
       expect(screen.getByText(AI_SCORING)).toBeInTheDocument();
       expect(toggle()).toBeInTheDocument();
       expect(await savedLlmKeyId()).toBe(3);
+    });
+
+    it("blocks saving a live form while a field has a logic problem", async () => {
+      mockGetLLMKeys.mockResolvedValue({ data: { data: [openAIKey] } });
+      vi.mocked(getIntakeForm).mockResolvedValue({
+        data: {
+          id: 5,
+          name: "Intake",
+          entityType: "use_case",
+          status: "active",
+          suggestedQuestionsEnabled: true,
+          llmKeyId: 3,
+          schema: {
+            version: "1.0",
+            fields: [
+              { id: "total", type: "calculated", label: "Total", order: 0, formula: "{total} + 1" },
+              { id: "later", type: "number", label: "Later", order: 1 },
+            ],
+          },
+        },
+      } as never);
+      renderEditRoute();
+      await formLoaded();
+      fireEvent.click(toggle()!);
+      fireEvent.click(screen.getByRole("button", { name: "Save" }));
+      expect(
+        await screen.findByText("Fix the highlighted fields before saving"),
+      ).toBeInTheDocument();
+      expect(updateIntakeForm).not.toHaveBeenCalled();
+    });
+
+    it("saves a draft with a logic problem and says what is left", async () => {
+      mockGetLLMKeys.mockResolvedValue({ data: { data: [openAIKey] } });
+      vi.mocked(getIntakeForm).mockResolvedValue({
+        data: {
+          id: 5,
+          name: "Intake",
+          entityType: "use_case",
+          status: "draft",
+          suggestedQuestionsEnabled: true,
+          llmKeyId: 3,
+          schema: {
+            version: "1.0",
+            fields: [
+              { id: "total", type: "calculated", label: "Total", order: 0, formula: "{total} + 1" },
+              { id: "later", type: "number", label: "Later", order: 1 },
+            ],
+          },
+        },
+      } as never);
+      renderEditRoute();
+      await formLoaded();
+      fireEvent.click(toggle()!);
+      fireEvent.click(screen.getByRole("button", { name: "Save" }));
+      expect(
+        await screen.findByText("Draft saved. Fix the highlighted fields before publishing"),
+      ).toBeInTheDocument();
+      expect(updateIntakeForm).toHaveBeenCalled();
+    });
+
+    it("blocks publishing while a field has a logic problem", async () => {
+      mockGetLLMKeys.mockResolvedValue({ data: { data: [openAIKey] } });
+      vi.mocked(getIntakeForm).mockResolvedValue({
+        data: {
+          id: 5,
+          name: "Intake",
+          entityType: "use_case",
+          status: "draft",
+          suggestedQuestionsEnabled: true,
+          llmKeyId: 3,
+          schema: {
+            version: "1.0",
+            fields: [
+              { id: "total", type: "calculated", label: "Total", order: 0, formula: "{total} + 1" },
+              { id: "later", type: "number", label: "Later", order: 1 },
+            ],
+          },
+        },
+      } as never);
+      renderEditRoute();
+      await formLoaded();
+      fireEvent.click(screen.getByRole("button", { name: "Publish" }));
+      expect(
+        await screen.findByText("Fix the highlighted fields before publishing"),
+      ).toBeInTheDocument();
+      expect(updateIntakeForm).not.toHaveBeenCalled();
     });
 
     it("shows the server's reason when the save is rejected with a 4xx", async () => {

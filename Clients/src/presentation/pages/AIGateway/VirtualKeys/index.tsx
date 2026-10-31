@@ -22,6 +22,7 @@ import Chip from "../../../components/Chip";
 import StandardModal from "../../../components/Modals/StandardModal";
 import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtended";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
+import { getGatewayErrorText } from "../../../../application/utils/apiErrorReason";
 import palette from "../../../themes/palette";
 import CustomizableSkeleton from "../../../components/Skeletons";
 import {
@@ -36,6 +37,8 @@ import {
   KEY_DISPLAY_BG,
 } from "../shared";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
+import { useTranslation } from "../../../../application/hooks/useTranslation";
+import { fill } from "../../../../i18n/fill";
 import dayjs from "dayjs";
 
 interface CreateVirtualKeyPayload {
@@ -49,15 +52,52 @@ interface CreateVirtualKeyPayload {
   blocked_providers?: string[];
 }
 
+const isExpired = (key: VirtualKey) => !!key.expires_at && new Date(key.expires_at) < new Date();
+
+/** A key's endpoint ids, once each and without nulls, in the key's order. */
+const endpointIds = (key: VirtualKey): number[] => [
+  ...new Set((key.allowed_endpoint_ids ?? []).filter((id): id is number => id != null)),
+];
+
+/** Deleting a key's last endpoint leaves its id so the key does not widen to
+ * every endpoint; when none of its ids names an endpoint, it can call nothing.
+ * Any non-empty list restricts the key at the gateway, nulls included, so a
+ * list of only nulls (e.g. {NULL} after deleting 9 from {9, NULL}) is one too. */
+const hasNoEndpoints = (key: VirtualKey) => {
+  const missing = new Set(key.missing_endpoint_ids ?? []);
+  return (
+    (key.allowed_endpoint_ids ?? []).length > 0 && endpointIds(key).every((id) => missing.has(id))
+  );
+};
+
+/** Whether the gateway would accept calls with this key at all. */
+const isKeyUsable = (key: VirtualKey) =>
+  key.is_active && !key.revoked_at && !isExpired(key) && !hasNoEndpoints(key);
+
+interface EndpointSummary {
+  is_active: boolean;
+}
+
+/** An endpoint a key may call, named by the gateway with the key. */
+interface AllowedEndpoint {
+  id: number;
+  name: string;
+  is_active: boolean;
+}
+
 interface VirtualKey {
   id: number;
   key_prefix: string;
   name: string;
-  allowed_endpoint_ids: number[];
-  allowed_models: string[];
-  blocked_models: string[];
-  allowed_providers: string[];
-  blocked_providers: string[];
+  /** May hold nulls from older writes; endpointIds() drops them. */
+  allowed_endpoint_ids: (number | null)[] | null;
+  allowed_endpoints?: AllowedEndpoint[];
+  /** Ids that name no endpoint (usually deleted): the key cannot call them. */
+  missing_endpoint_ids?: number[];
+  allowed_models: string[] | null;
+  blocked_models: string[] | null;
+  allowed_providers: string[] | null;
+  blocked_providers: string[] | null;
   max_budget_usd: number | null;
   current_spend_usd: number;
   rate_limit_rpm: number | null;
@@ -65,13 +105,14 @@ interface VirtualKey {
   expires_at: string | null;
   is_active: boolean;
   revoked_at: string | null;
-  created_by_name: string;
+  created_by_name: string | null;
   created_at: string;
 }
 
 export default function AIGatewayVirtualKeysPage({ embedded }: { embedded?: boolean } = {}) {
   const formatDate = useFormattedDate();
   const cardSx = useCardSx();
+  const { t: tr } = useTranslation();
   const [keys, setKeys] = useState<VirtualKey[]>([]);
   const [endpointCount, setEndpointCount] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -117,8 +158,8 @@ export default function AIGatewayVirtualKeysPage({ embedded }: { embedded?: bool
         apiServices.get<Record<string, any>>("/ai-gateway/endpoints").catch(() => null),
       ]);
       setKeys(keysRes?.data?.data || []);
-      const eps = endpointsRes?.data?.endpoints || [];
-      setEndpointCount(eps.filter((e: any) => e.is_active).length);
+      const eps: EndpointSummary[] = endpointsRes?.data?.endpoints || [];
+      setEndpointCount(eps.filter((e) => e.is_active).length);
     } catch {
       setLoadError("Failed to load virtual keys. Please try again.");
     } finally {
@@ -129,6 +170,36 @@ export default function AIGatewayVirtualKeysPage({ embedded }: { embedded?: bool
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // What a key is limited to. Empty lists mean "no limit" (the gateway skips
+  // the check), so a key with none of them can call any endpoint and model.
+  const restrictionLabels = (key: VirtualKey): string[] => {
+    // Endpoint ids decide whether a key is limited; names only describe it.
+    // An id naming no endpoint (usually a deleted one) is marked "not found".
+    // Any other id with no name is an endpoint the viewer may not see (or the
+    // gateway is too old to say), shown by id.
+    const named = new Map((key.allowed_endpoints ?? []).map((e) => [e.id, e]));
+    const missing = new Set(key.missing_endpoint_ids ?? []);
+    const endpoints = endpointIds(key).map((id) => {
+      if (missing.has(id)) return fill(tr("#{id} (not found)"), { id });
+      const e = named.get(id);
+      if (!e) return `#${id}`;
+      return e.is_active ? e.name : fill(tr("{name} (inactive)"), { name: e.name });
+    });
+    const lists: [string, string[] | null | undefined][] = [
+      [tr("Endpoints"), endpoints],
+      [tr("Allowed models"), key.allowed_models],
+      [tr("Blocked models"), key.blocked_models],
+      [tr("Allowed providers"), key.allowed_providers],
+      [tr("Blocked providers"), key.blocked_providers],
+    ];
+    const labels = lists.flatMap(([label, values]) =>
+      values?.length ? [`${label}: ${values.join("; ")}`] : [],
+    );
+    // A revoked, expired or inactive key calls nothing, so it is not "unlimited".
+    if (labels.length === 0 && isKeyUsable(key)) return [tr("Any endpoint or model")];
+    return labels;
+  };
 
   const handleCreate = async () => {
     if (!createForm.name.trim()) {
@@ -178,9 +249,7 @@ export default function AIGatewayVirtualKeysPage({ embedded }: { embedded?: bool
 
       await loadData();
     } catch (err: unknown) {
-      const errData = (err as { response?: { data?: { detail?: string; message?: string } } })
-        ?.response?.data;
-      setCreateError(errData?.detail || errData?.message || "Failed to create virtual key");
+      setCreateError(getGatewayErrorText(err, "Failed to create virtual key"));
     } finally {
       setCreateSubmitting(false);
     }
@@ -215,9 +284,10 @@ export default function AIGatewayVirtualKeysPage({ embedded }: { embedded?: bool
 
   const getStatusLabel = (key: VirtualKey): string => {
     if (key.revoked_at) return "Revoked";
-    if (key.expires_at && new Date(key.expires_at) < new Date()) return "Expired";
-    if (key.is_active) return "Active";
-    return "Inactive";
+    if (isExpired(key)) return "Expired";
+    if (!key.is_active) return "Inactive";
+    if (hasNoEndpoints(key)) return "No endpoints";
+    return "Active";
   };
 
   const createKeyButton = (
@@ -331,14 +401,29 @@ export default function AIGatewayVirtualKeysPage({ embedded }: { embedded?: bool
                   borderRadius: "4px",
                 }}
               >
-                <Stack direction="row" alignItems="center" gap="12px" flex={1}>
+                <Stack direction="row" alignItems="center" gap="12px" flex={1} minWidth={0}>
                   <KeyRound size={16} strokeWidth={1.5} color={palette.text.tertiary} />
-                  <Box flex={1}>
+                  <Box flex={1} minWidth={0}>
                     <Stack direction="row" alignItems="center" gap="8px">
-                      <Typography sx={{ fontSize: 13, fontWeight: 500 }}>{key.name}</Typography>
-                      <Chip label={status} size="small" uppercase={false} />
+                      <Typography sx={{ fontSize: 13, fontWeight: 500, overflowWrap: "anywhere" }}>
+                        {key.name}
+                      </Typography>
+                      <Chip
+                        label={tr(status)}
+                        size="small"
+                        uppercase={false}
+                        // A key that can call nothing needs attention, unlike one switched off.
+                        variant={status === "No endpoints" ? "warning" : undefined}
+                      />
                     </Stack>
-                    <Stack direction="row" gap="12px" alignItems="center" mt="2px">
+                    <Stack
+                      direction="row"
+                      flexWrap="wrap"
+                      columnGap="12px"
+                      rowGap="4px"
+                      alignItems="center"
+                      mt="2px"
+                    >
                       <Typography
                         sx={{
                           fontSize: 12,
@@ -354,41 +439,30 @@ export default function AIGatewayVirtualKeysPage({ embedded }: { embedded?: bool
                           {Number(key.max_budget_usd).toFixed(2)}
                         </Typography>
                       )}
-                      {key.rate_limit_rpm && (
+                      {key.rate_limit_rpm != null && key.rate_limit_rpm > 0 && (
                         <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
                           {key.rate_limit_rpm} RPM
                         </Typography>
                       )}
-                      {key.allowed_models?.length > 0 && (
-                        <Chip
-                          label={`models: ${key.allowed_models.join(", ")}`}
-                          size="small"
-                          uppercase={false}
-                        />
-                      )}
-                      {key.blocked_models?.length > 0 && (
-                        <Chip
-                          label={`blocked: ${key.blocked_models.join(", ")}`}
-                          size="small"
-                          uppercase={false}
-                        />
-                      )}
-                      {key.allowed_providers?.length > 0 && (
-                        <Chip
-                          label={`providers: ${key.allowed_providers.join(", ")}`}
-                          size="small"
-                          uppercase={false}
-                        />
-                      )}
-                      {key.blocked_providers?.length > 0 && (
-                        <Chip
-                          label={`blocked providers: ${key.blocked_providers.join(", ")}`}
-                          size="small"
-                          uppercase={false}
-                        />
-                      )}
+                      {restrictionLabels(key).map((label) => (
+                        <Typography
+                          key={label}
+                          sx={{
+                            fontSize: 12,
+                            color: palette.text.secondary,
+                            overflowWrap: "anywhere",
+                          }}
+                        >
+                          {label}
+                        </Typography>
+                      ))}
                       <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
-                        by {key.created_by_name} &middot; {formatDate(key.created_at)}
+                        {key.created_by_name
+                          ? fill(tr("By {name} · {date}"), {
+                              name: key.created_by_name,
+                              date: formatDate(key.created_at),
+                            })
+                          : formatDate(key.created_at)}
                       </Typography>
                     </Stack>
                     {budgetPct !== null && (

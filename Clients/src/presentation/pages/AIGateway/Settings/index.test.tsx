@@ -39,6 +39,7 @@ vi.mock("../VirtualKeys/index", () => ({
 }));
 
 import { apiServices } from "../../../../infrastructure/api/networkServices";
+import CustomException from "../../../../infrastructure/exceptions/customeException";
 import AIGatewaySettingsPage from "./index";
 
 const mockGet = apiServices.get as unknown as ReturnType<typeof vi.fn>;
@@ -309,8 +310,10 @@ describe("AIGateway - Settings", () => {
     });
   });
 
-  it("purges old guardrail logs", async () => {
+  it("asks for confirmation before purging guardrail logs and shows the deleted count", async () => {
     mockParams = { tab: "guardrails" };
+    mockLoad({ gs: { log_retention_days: 45 } });
+    mockPost.mockResolvedValue({ data: { purged: true, total_deleted: 7, retention_days: 45 } });
     renderWithProviders(<AIGatewaySettingsPage />);
     await waitFor(() => {
       expect(screen.getByText("Audit log retention")).toBeInTheDocument();
@@ -318,9 +321,283 @@ describe("AIGateway - Settings", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Purge old logs" }));
 
+    expect(
+      await screen.findByText("Permanently delete guardrail logs older than 45 days?"),
+    ).toBeInTheDocument();
+    expect(mockPost).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Purge logs" }));
+
     await waitFor(() => {
       expect(mockPost).toHaveBeenCalledWith("/ai-gateway/guardrails/logs/purge");
     });
+    expect(await screen.findByText("7 logs deleted")).toBeInTheDocument();
+  });
+
+  it("does not purge when the confirmation is cancelled", async () => {
+    mockParams = { tab: "guardrails" };
+    renderWithProviders(<AIGatewaySettingsPage />);
+    await waitFor(() => {
+      expect(screen.getByText("Audit log retention")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Purge old logs" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Cancel" }));
+
+    expect(mockPost).not.toHaveBeenCalled();
+  });
+
+  it("shows the error message when the purge fails", async () => {
+    mockParams = { tab: "guardrails" };
+    // networkServices moves a 4xx reason from the response envelope into the message.
+    mockPost.mockRejectedValue(new CustomException("Only admins can purge logs", 403, {}));
+    renderWithProviders(<AIGatewaySettingsPage />);
+    await waitFor(() => {
+      expect(screen.getByText("Audit log retention")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Purge old logs" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Purge logs" }));
+
+    expect(await screen.findByText("Only admins can purge logs")).toBeInTheDocument();
+  });
+
+  it("seeds and sends the spend log retention and automatic deletion settings", async () => {
+    mockParams = { tab: "guardrails" };
+    mockLoad({ gs: { spend_log_retention_days: 30, auto_purge_enabled: false } });
+    renderWithProviders(<AIGatewaySettingsPage />);
+    await waitFor(() => {
+      expect(screen.getByLabelText("Spend log retention (days)")).toHaveValue("30");
+    });
+
+    fireEvent.change(screen.getByLabelText("Spend log retention (days)"), {
+      target: { value: "14" },
+    });
+    fireEvent.click(screen.getByRole("switch", { name: "Delete automatically" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save settings" }));
+
+    // Turning automatic deletion on is confirmed first, naming both periods.
+    expect(
+      await screen.findByText(
+        "Guardrail logs older than 90 days and spend logs older than 14 days will be deleted permanently every day. Deleted logs cannot be restored.",
+      ),
+    ).toBeInTheDocument();
+    expect(mockPut).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Delete records" }));
+
+    await waitFor(() => {
+      expect(mockPut).toHaveBeenCalledWith(
+        "/ai-gateway/guardrails/settings",
+        expect.objectContaining({ spend_log_retention_days: 14, auto_purge_enabled: true }),
+      );
+    });
+  });
+
+  it("does not save when the automatic deletion confirmation is cancelled", async () => {
+    mockParams = { tab: "guardrails" };
+    renderWithProviders(<AIGatewaySettingsPage />);
+    await waitFor(() => {
+      expect(screen.getByLabelText("Spend log retention (days)")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("switch", { name: "Delete automatically" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save settings" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Cancel" }));
+
+    expect(mockPut).not.toHaveBeenCalled();
+  });
+
+  it("confirms shortening a period while automatic deletion is on", async () => {
+    mockParams = { tab: "guardrails" };
+    mockLoad({
+      gs: { log_retention_days: 60, spend_log_retention_days: 30, auto_purge_enabled: true },
+    });
+    renderWithProviders(<AIGatewaySettingsPage />);
+    await waitFor(() => {
+      expect(screen.getByLabelText("Retention period (days)")).toHaveValue("60");
+    });
+
+    fireEvent.change(screen.getByLabelText("Retention period (days)"), {
+      target: { value: "20" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save settings" }));
+
+    expect(
+      await screen.findByText(
+        "Guardrail logs older than 20 days and spend logs older than 30 days will be deleted permanently every day. Deleted logs cannot be restored.",
+      ),
+    ).toBeInTheDocument();
+    expect(mockPut).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Delete records" }));
+    await waitFor(() => {
+      expect(mockPut).toHaveBeenCalledWith(
+        "/ai-gateway/guardrails/settings",
+        expect.objectContaining({ log_retention_days: 20, auto_purge_enabled: true }),
+      );
+    });
+  });
+
+  it("saves a longer period without confirmation while automatic deletion is on", async () => {
+    mockParams = { tab: "guardrails" };
+    mockLoad({
+      gs: { log_retention_days: 60, spend_log_retention_days: 30, auto_purge_enabled: true },
+    });
+    renderWithProviders(<AIGatewaySettingsPage />);
+    await waitFor(() => {
+      expect(screen.getByLabelText("Spend log retention (days)")).toHaveValue("30");
+    });
+
+    fireEvent.change(screen.getByLabelText("Spend log retention (days)"), {
+      target: { value: "45" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save settings" }));
+
+    await waitFor(() => {
+      expect(mockPut).toHaveBeenCalledWith(
+        "/ai-gateway/guardrails/settings",
+        expect.objectContaining({ spend_log_retention_days: 45 }),
+      );
+    });
+    expect(screen.queryByText(/will be deleted permanently every day/)).not.toBeInTheDocument();
+  });
+
+  it("rejects more than 3650 days without calling the server", async () => {
+    mockParams = { tab: "guardrails" };
+    renderWithProviders(<AIGatewaySettingsPage />);
+    await waitFor(() => {
+      expect(screen.getByLabelText("Spend log retention (days)")).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByLabelText("Spend log retention (days)"), {
+      target: { value: "3651" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save settings" }));
+
+    expect(
+      await screen.findByText("Retention periods must be whole numbers from 1 to 3650 days"),
+    ).toBeInTheDocument();
+    expect(mockPut).not.toHaveBeenCalled();
+  });
+
+  it("defaults to 90 days and no automatic deletion when settings are missing", async () => {
+    mockParams = { tab: "guardrails" };
+    renderWithProviders(<AIGatewaySettingsPage />);
+    await waitFor(() => {
+      expect(screen.getByLabelText("Spend log retention (days)")).toHaveValue("90");
+    });
+    expect(screen.getByRole("switch", { name: "Delete automatically" })).not.toBeChecked();
+  });
+
+  it("rejects an invalid number of days without calling the server", async () => {
+    mockParams = { tab: "guardrails" };
+    renderWithProviders(<AIGatewaySettingsPage />);
+    await waitFor(() => {
+      expect(screen.getByLabelText("Spend log retention (days)")).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByLabelText("Spend log retention (days)"), {
+      target: { value: "0" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save settings" }));
+
+    expect(
+      await screen.findByText("Retention periods must be whole numbers from 1 to 3650 days"),
+    ).toBeInTheDocument();
+    expect(mockPut).not.toHaveBeenCalled();
+  });
+
+  it("shows the gateway detail from the error shape apiServices produces", async () => {
+    mockParams = { tab: "guardrails" };
+    // apiServices rejects with CustomException(message, status, rawBody)
+    mockPut.mockRejectedValue(
+      new CustomException("Request failed with status code 400", 400, {
+        detail: "spend_log_retention_days must be an integer >= 1",
+      }),
+    );
+    renderWithProviders(<AIGatewaySettingsPage />);
+    await waitFor(() => {
+      expect(screen.getByText("Error behavior")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Save settings" }));
+
+    expect(
+      await screen.findByText("spend_log_retention_days must be an integer >= 1"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Request failed with status code 400")).not.toBeInTheDocument();
+  });
+
+  it("shows the gateway's message from an object detail", async () => {
+    mockParams = { tab: "guardrails" };
+    mockPut.mockRejectedValue(
+      new CustomException("Request failed with status code 409", 409, {
+        detail: { message: "Settings were changed by someone else", code: "settings_conflict" },
+      }),
+    );
+    renderWithProviders(<AIGatewaySettingsPage />);
+    await waitFor(() => {
+      expect(screen.getByText("Error behavior")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Save settings" }));
+
+    expect(await screen.findByText("Settings were changed by someone else")).toBeInTheDocument();
+  });
+
+  it("hides the gateway's internal key error behind the generic message", async () => {
+    mockParams = { tab: "guardrails" };
+    mockPut.mockRejectedValue(
+      new CustomException("Request failed with status code 401", 401, {
+        detail: { message: "Invalid internal key", code: "internal_key_rejected" },
+      }),
+    );
+    renderWithProviders(<AIGatewaySettingsPage />);
+    await waitFor(() => {
+      expect(screen.getByText("Error behavior")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Save settings" }));
+
+    expect(await screen.findByText("Failed to save settings")).toBeInTheDocument();
+    expect(screen.queryByText("Invalid internal key")).not.toBeInTheDocument();
+  });
+
+  it.each([
+    [
+      "axios's generic message",
+      new CustomException("Request failed with status code 500", 500, {}),
+    ],
+    ["a server error's reason", new CustomException("database exploded", 500, { error: "x" })],
+    ["a network error", new Error("Network Error")],
+  ])("shows the translated fallback instead of %s", async (_case, err) => {
+    mockParams = { tab: "guardrails" };
+    mockPut.mockRejectedValue(err);
+    renderWithProviders(<AIGatewaySettingsPage />);
+    await waitFor(() => {
+      expect(screen.getByText("Error behavior")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Save settings" }));
+
+    expect(await screen.findByText("Failed to save settings")).toBeInTheDocument();
+    expect(screen.queryByText((err as Error).message)).not.toBeInTheDocument();
+  });
+
+  it("shows the server error when saving settings fails", async () => {
+    mockParams = { tab: "guardrails" };
+    mockPut.mockRejectedValue(
+      new CustomException("spend_log_retention_days must be at least 1", 400, {}),
+    );
+    renderWithProviders(<AIGatewaySettingsPage />);
+    await waitFor(() => {
+      expect(screen.getByText("Error behavior")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Save settings" }));
+
+    expect(
+      await screen.findByText("spend_log_retention_days must be at least 1"),
+    ).toBeInTheDocument();
   });
 
   it("purges old spend logs and shows the deleted count", async () => {

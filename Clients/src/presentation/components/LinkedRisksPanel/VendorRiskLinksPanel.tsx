@@ -19,6 +19,8 @@ import RelateVendorRiskForm from "./RelateVendorRiskForm";
 import LinkRow from "./LinkRow";
 import { GROUPING_WINDOW_MS, SCAN_WINDOW_MS } from "./polling";
 import { useWatchedLinks } from "./useWatchedLinks";
+import { useFormFocus } from "./useFormFocus";
+import { groupingNotice } from "./groupingNotice";
 
 interface VendorRiskLinksPanelProps {
   vendorRiskId: number;
@@ -51,6 +53,7 @@ export default function VendorRiskLinksPanel({ vendorRiskId }: VendorRiskLinksPa
   const [dismissing, setDismissing] = useState<RiskLink | null>(null);
   const isAdmin = useIsAdmin();
   const { t } = useTranslation();
+  const { formRef, openerRef } = useFormFocus(form);
 
   const { links, isLoading, isError, refetch, isWatching, watchForResult } = useWatchedLinks(
     useVendorRiskLinks,
@@ -62,9 +65,6 @@ export default function VendorRiskLinksPanel({ vendorRiskId }: VendorRiskLinksPa
   const suggestChildren = useSuggestVendorRiskHierarchy(vendorRiskId);
   const scan = useRecomputeVendorRiskLinks();
 
-  const toggleForm = (which: "child" | "related") =>
-    setForm((open) => (open === which ? null : which));
-
   const handleSuggestChildren = () => {
     setNotice(null);
     suggestChildren.mutate(undefined, {
@@ -75,19 +75,7 @@ export default function VendorRiskLinksPanel({ vendorRiskId }: VendorRiskLinksPa
           );
           return;
         }
-        setNotice(
-          fill(
-            t(
-              "Grouping {count} clusters of related risks. Suggestions appear here as they finish.",
-            ),
-            { count: result.enqueued },
-          ) +
-            (result.skipped > 0
-              ? ` ${fill(t("{count} clusters were too large to group in one pass."), {
-                  count: result.skipped,
-                })}`
-              : ""),
-        );
+        setNotice(groupingNotice(t, result));
         watchForResult(
           "Still grouping. Reopen this tab to check for new suggestions.",
           GROUPING_WINDOW_MS,
@@ -105,7 +93,9 @@ export default function VendorRiskLinksPanel({ vendorRiskId }: VendorRiskLinksPa
         setNotice(
           fill(
             t(
-              "Scanning {count} vendor risks. Related vendor risks appear here as the scan completes.",
+              result.enqueued === 1
+                ? "Scanning {count} vendor risk. Related vendor risks appear here as the scan completes."
+                : "Scanning {count} vendor risks. Related vendor risks appear here as the scan completes.",
             ),
             { count: result.enqueued },
           ),
@@ -151,6 +141,7 @@ export default function VendorRiskLinksPanel({ vendorRiskId }: VendorRiskLinksPa
     return (
       <Alert
         severity="error"
+        sx={{ fontSize: "13px" }}
         action={
           <CustomizableButton size="small" variant="text" onClick={() => void refetch()}>
             Retry
@@ -166,23 +157,31 @@ export default function VendorRiskLinksPanel({ vendorRiskId }: VendorRiskLinksPa
   const activeLinks = showDismissed ? [] : links;
 
   return (
-    <Stack spacing={8} sx={{ py: 8 }}>
+    <Stack spacing="16px" sx={{ py: "16px" }}>
       <Stack direction="row" justifyContent="space-between" alignItems="center">
-        <Stack direction="row" spacing={4} alignItems="center">
-          {/* Labels stay put while a form is open: the form has its own Cancel. */}
+        <Stack direction="row" spacing="8px" alignItems="center">
+          {/*
+            Each form has its own Cancel, so these buttons only open a form, and
+            stay in place (disabled while theirs is open) so nothing shifts
+            under the pointer. Same as the project risk panel.
+          */}
           <CustomizableButton
+            ref={openerRef("child")}
             size="small"
-            variant={form === "child" ? "outlined" : "text"}
+            variant="text"
             startIcon={<Link2 size={16} />}
-            onClick={() => toggleForm("child")}
+            onClick={() => setForm("child")}
+            isDisabled={form === "child"}
           >
             Link a project risk
           </CustomizableButton>
           <CustomizableButton
+            ref={openerRef("related")}
             size="small"
-            variant={form === "related" ? "outlined" : "text"}
+            variant="text"
             startIcon={<Plus size={16} />}
-            onClick={() => toggleForm("related")}
+            onClick={() => setForm("related")}
+            isDisabled={form === "related"}
           >
             Relate a vendor risk
           </CustomizableButton>
@@ -208,27 +207,34 @@ export default function VendorRiskLinksPanel({ vendorRiskId }: VendorRiskLinksPa
         </CustomizableButton>
       </Stack>
 
-      {form === "child" && (
-        <LinkChildRiskForm
-          vendorRiskId={vendorRiskId}
-          existingLinks={activeLinks}
-          onClose={() => setForm(null)}
-        />
-      )}
-      {form === "related" && (
-        <RelateVendorRiskForm
-          vendorRiskId={vendorRiskId}
-          existingLinks={activeLinks}
-          onClose={() => setForm(null)}
-        />
+      {form && (
+        <Box ref={formRef}>
+          {form === "child" ? (
+            <LinkChildRiskForm
+              vendorRiskId={vendorRiskId}
+              existingLinks={activeLinks}
+              onClose={() => setForm(null)}
+            />
+          ) : (
+            <RelateVendorRiskForm
+              vendorRiskId={vendorRiskId}
+              existingLinks={activeLinks}
+              onClose={() => setForm(null)}
+            />
+          )}
+        </Box>
       )}
 
-      {notice && <Alert severity="info">{notice}</Alert>}
+      {notice && (
+        <Alert severity="info" sx={{ fontSize: "13px" }}>
+          {notice}
+        </Alert>
+      )}
 
       {isLoading && <CircularProgress size={20} />}
 
       {!isLoading && links.length === 0 && (
-        <Stack spacing={4} alignItems="center">
+        <Stack spacing="8px" alignItems="center">
           <EmptyState icon={Network} message="No linked risks yet." showBorder={false} />
           <Typography sx={{ ...textStyles.caption, color: "text.accent" }}>
             Link a project risk that this vendor risk applies to, or relate another vendor risk.
@@ -257,7 +263,7 @@ export default function VendorRiskLinksPanel({ vendorRiskId }: VendorRiskLinksPa
         if (group.length === 0) return null;
         return (
           <Box key={title}>
-            <Stack direction="row" spacing={4} alignItems="baseline">
+            <Stack direction="row" spacing="8px" alignItems="baseline">
               <Typography sx={{ ...textStyles.subsectionTitle, color: "text.primary" }}>
                 {title}
               </Typography>
@@ -265,7 +271,7 @@ export default function VendorRiskLinksPanel({ vendorRiskId }: VendorRiskLinksPa
                 {group.length}
               </Typography>
             </Stack>
-            <Typography sx={{ ...textStyles.body, color: "text.tertiary", mb: 4 }}>
+            <Typography sx={{ ...textStyles.body, color: "text.tertiary", mb: "8px" }}>
               {caption}
             </Typography>
             {/* One bordered list per group, a divider between rows, so each
@@ -277,7 +283,7 @@ export default function VendorRiskLinksPanel({ vendorRiskId }: VendorRiskLinksPa
                 "borderColor": "border.light",
                 "borderRadius": "4px",
                 "bgcolor": "background.main",
-                "& > :not(hr)": { px: 7, py: 5 },
+                "& > :not(hr)": { px: "14px", py: "10px" },
               }}
             >
               {group.map((link) => (

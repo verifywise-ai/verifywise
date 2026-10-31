@@ -7,6 +7,7 @@ const tsJestTransformCfg = createDefaultPreset({
 /** @type {import("jest").Config} **/
 module.exports = {
   testEnvironment: "node",
+  globalSetup: "<rootDir>/tests/compileDesignTokens.js",
   setupFiles: ["<rootDir>/utils/localStoragePolyfill.ts"],
   transform: {
     ...tsJestTransformCfg,
@@ -24,7 +25,6 @@ module.exports = {
   moduleNameMapper: {
     "^http-proxy-middleware$": "<rootDir>/tests/integration/__mocks__/http-proxy-middleware.js",
     "^jsdom$": "<rootDir>/tests/integration/__mocks__/jsdom.js",
-    "^\.\/routes\/automation\.route\.js$": "<rootDir>/routes/automation.route.ts",
   },
   coverageDirectory: "coverage",
   coverageReporters: ["text", "html", "json-summary"],

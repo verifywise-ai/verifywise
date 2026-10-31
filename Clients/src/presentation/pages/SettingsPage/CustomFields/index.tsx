@@ -29,14 +29,29 @@ import {
   CUSTOM_FIELD_TYPE_LABELS,
   CustomFieldEntityType,
   CustomFieldType,
+  entityCountNoun,
+  formatScoredOption,
   ICustomFieldDefinition,
+  IScoredOptionInput,
+  roundScore,
+  scoredOptions,
+  stringOptions,
 } from "../../../../domain/interfaces/i.customField";
 import {
   useCreateCustomFieldDefinition,
   useCustomFieldDefinitions,
+  useCustomFieldUsage,
   useDeleteCustomFieldDefinition,
   useUpdateCustomFieldDefinition,
 } from "../../../../application/hooks/useCustomFields";
+import { useTranslation } from "../../../../application/hooks/useTranslation";
+import { fill } from "../../../../i18n/fill";
+import ScoredOptionsEditor, {
+  newScoredRow,
+  rowsFromOptions,
+  ScoredOptionRow,
+} from "./ScoredOptionsEditor";
+import MoveOptionAnswersModal, { OptionInUse } from "./MoveOptionAnswersModal";
 
 const TABLE_COLUMNS = [
   { id: "label", label: "LABEL" },
@@ -72,6 +87,41 @@ const CustomFieldsTab: React.FC = () => {
   const createMutation = useCreateCustomFieldDefinition();
   const updateMutation = useUpdateCustomFieldDefinition(entityType);
   const deleteMutation = useDeleteCustomFieldDefinition(entityType);
+  const { t } = useTranslation();
+  const [pendingMove, setPendingMove] = useState<PendingMove | null>(null);
+  // Per-option counts are shown only in the scored options editor.
+  const { data: editingUsage } = useCustomFieldUsage(
+    editing?.field_type === "scored_select" ? editing.id : null,
+  );
+  const { data: deleteUsage, isLoading: deleteUsageLoading } = useCustomFieldUsage(
+    confirmDelete?.id ?? null,
+  );
+
+  // A 409 options_in_use opens the move dialog, or reopens it with the new counts
+  // when another removed option gained answers before a resend. Moves already
+  // chosen are kept. Any other error shows on the edit form.
+  const handleUpdateError = (
+    err: any,
+    id: number,
+    body: PendingMove["body"],
+    moves: Record<string, string>,
+    removals: string[],
+  ) => {
+    const data = err?.response?.data;
+    if (err?.status === 409 && data?.code === "options_in_use") {
+      setPendingMove({
+        id,
+        body,
+        moves,
+        removals,
+        inUse: data.in_use as OptionInUse[],
+        entityType: data.entity_type as CustomFieldEntityType,
+      });
+      return;
+    }
+    setPendingMove(null);
+    setServerError(extractErrorMessage(err));
+  };
 
   if (!isAdmin) {
     return (
@@ -197,16 +247,18 @@ const CustomFieldsTab: React.FC = () => {
                     {def.required ? "Yes" : "No"}
                   </TableCell>
                   <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                    <Stack direction="row" spacing={0.5} flexWrap="wrap">
-                      {(def.options ?? []).map((o) => (
+                    <Stack direction="row" flexWrap="wrap" sx={{ gap: "4px" }}>
+                      {(def.field_type === "scored_select"
+                        ? scoredOptions(def).map((o) => ({
+                            key: o.id,
+                            text: formatScoredOption(o),
+                          }))
+                        : stringOptions(def).map((o) => ({ key: o, text: o }))
+                      ).map((chip) => (
                         <Chip
-                          key={o}
-                          label={o}
-                          sx={{
-                            fontSize: "11px",
-                            height: "20px",
-                            borderRadius: "4px",
-                          }}
+                          key={chip.key}
+                          label={chip.text}
+                          sx={{ fontSize: "11px", height: "20px", borderRadius: "4px" }}
                         />
                       ))}
                     </Stack>
@@ -269,6 +321,7 @@ const CustomFieldsTab: React.FC = () => {
           mode="edit"
           entityType={entityType}
           existing={editing}
+          usage={editingUsage?.by_option}
           serverError={serverError}
           isSubmitting={updateMutation.isPending}
           onClose={() => {
@@ -277,18 +330,51 @@ const CustomFieldsTab: React.FC = () => {
           }}
           onSubmit={(input) => {
             setServerError(null);
+            const body = {
+              label: input.label,
+              required: input.required,
+              options: input.options ?? null,
+            };
+            updateMutation.mutate(
+              { id: editing.id, body },
+              {
+                onSuccess: () => setEditing(null),
+                onError: (err: any) =>
+                  handleUpdateError(err, editing.id, body as PendingMove["body"], {}, []),
+              },
+            );
+          }}
+        />
+      )}
+
+      {pendingMove && (
+        <MoveOptionAnswersModal
+          key={pendingMove.inUse.map((o) => o.id).join(",")}
+          inUse={pendingMove.inUse}
+          entityType={pendingMove.entityType}
+          remaining={pendingMove.body.options}
+          required={pendingMove.body.required ?? false}
+          isSubmitting={updateMutation.isPending}
+          onCancel={() => setPendingMove(null)}
+          onConfirm={(moves, removals) => {
+            const allMoves = { ...pendingMove.moves, ...moves };
+            const allRemovals = [...new Set([...pendingMove.removals, ...removals])];
             updateMutation.mutate(
               {
-                id: editing.id,
+                id: pendingMove.id,
                 body: {
-                  label: input.label,
-                  required: input.required,
-                  options: input.options ?? null,
+                  ...pendingMove.body,
+                  option_moves: allMoves,
+                  option_removals: allRemovals,
                 },
               },
               {
-                onSuccess: () => setEditing(null),
-                onError: (err: any) => setServerError(extractErrorMessage(err)),
+                onSuccess: () => {
+                  setPendingMove(null);
+                  setEditing(null);
+                },
+                onError: (err: any) =>
+                  handleUpdateError(err, pendingMove.id, pendingMove.body, allMoves, allRemovals),
               },
             );
           }}
@@ -300,16 +386,27 @@ const CustomFieldsTab: React.FC = () => {
           isOpen={true}
           title="Delete custom field"
           body={
-            <Typography fontSize={13}>
-              This will permanently remove "{confirmDelete.label}" and all values stored on existing
-              records. This action cannot be undone.
-            </Typography>
+            <Stack sx={{ gap: "8px" }}>
+              <Typography fontSize={13}>
+                This will permanently remove "{confirmDelete.label}" and all values stored on
+                existing records. This action cannot be undone.
+              </Typography>
+              {(deleteUsage?.total ?? 0) > 0 && (
+                <Typography fontSize={13} fontWeight={500}>
+                  {fill(t("This field has a value on {count} {records}."), {
+                    count: deleteUsage!.total,
+                    records: t(entityCountNoun(confirmDelete.entity_type, deleteUsage!.total)),
+                  })}
+                </Typography>
+              )}
+            </Stack>
           }
           cancelText="Cancel"
           proceedText="Delete"
           proceedButtonColor="error"
           proceedButtonVariant="contained"
-          isLoading={deleteMutation.isPending}
+          // Wait for the record count, so the warning is shown before Delete is possible.
+          isLoading={deleteMutation.isPending || deleteUsageLoading}
           onCancel={() => setConfirmDelete(null)}
           onProceed={() => {
             deleteMutation.mutate(confirmDelete.id, {
@@ -322,10 +419,23 @@ const CustomFieldsTab: React.FC = () => {
   );
 };
 
+interface PendingMove {
+  id: number;
+  body: { label: string; required?: boolean; options: IScoredOptionInput[] | string[] };
+  /** Moves chosen in earlier rounds, resent with the next save. */
+  moves: Record<string, string>;
+  /** Options whose answers were chosen to be removed in earlier rounds. */
+  removals: string[];
+  inUse: OptionInUse[];
+  entityType: CustomFieldEntityType;
+}
+
 interface DefinitionFormModalProps {
   mode: "create" | "edit";
   entityType: CustomFieldEntityType;
   existing?: ICustomFieldDefinition;
+  /** Records using each scored option id, for the edit form. */
+  usage?: Record<string, number>;
   serverError: string | null;
   isSubmitting: boolean;
   onClose: () => void;
@@ -333,7 +443,7 @@ interface DefinitionFormModalProps {
     field_key: string;
     label: string;
     field_type: CustomFieldType;
-    options?: string[] | null;
+    options?: string[] | IScoredOptionInput[] | null;
     required?: boolean;
   }) => void;
 }
@@ -342,6 +452,7 @@ const DefinitionFormModal: React.FC<DefinitionFormModalProps> = ({
   mode,
   entityType,
   existing,
+  usage,
   serverError,
   isSubmitting,
   onClose,
@@ -351,10 +462,17 @@ const DefinitionFormModal: React.FC<DefinitionFormModalProps> = ({
   const [fieldKey, setFieldKey] = useState(existing?.field_key ?? "");
   const [fieldType, setFieldType] = useState<CustomFieldType>(existing?.field_type ?? "text");
   const [required, setRequired] = useState<boolean>(existing?.required ?? false);
-  const [optionsText, setOptionsText] = useState<string>((existing?.options ?? []).join("\n"));
+  const [optionsText, setOptionsText] = useState<string>(
+    existing ? stringOptions(existing).join("\n") : "",
+  );
+  // Starts with one empty row; the editor never removes the last row.
+  const [scoredRows, setScoredRows] = useState<ScoredOptionRow[]>(() =>
+    existing ? rowsFromOptions(scoredOptions(existing)) : [newScoredRow()],
+  );
   const [localError, setLocalError] = useState<string | null>(null);
 
   const needsOptions = fieldType === "select" || fieldType === "multiselect";
+  const isScored = fieldType === "scored_select";
 
   const parsedOptions = useMemo(
     () =>
@@ -381,11 +499,36 @@ const DefinitionFormModal: React.FC<DefinitionFormModalProps> = ({
       setLocalError("Add at least one option (one per line).");
       return;
     }
+    let scoredInput: IScoredOptionInput[] | null = null;
+    if (isScored) {
+      const filled = scoredRows.map((r) => ({ ...r, label: r.label.trim() }));
+      if (
+        filled.some(
+          (r) =>
+            r.label === "" ||
+            r.score.trim() === "" ||
+            !Number.isFinite(roundScore(Number(r.score))),
+        )
+      ) {
+        setLocalError("Every option needs a label and a score.");
+        return;
+      }
+      const lower = filled.map((r) => r.label.toLowerCase());
+      if (new Set(lower).size !== lower.length) {
+        setLocalError("Option labels must be unique.");
+        return;
+      }
+      scoredInput = filled.map((r) => ({
+        ...(r.id ? { id: r.id } : {}),
+        label: r.label,
+        score: roundScore(Number(r.score)),
+      }));
+    }
     onSubmit({
       field_key: fieldKey,
       label: label.trim(),
       field_type: fieldType,
-      options: needsOptions ? parsedOptions : null,
+      options: isScored ? scoredInput : needsOptions ? parsedOptions : null,
       required,
     });
   };
@@ -454,6 +597,10 @@ const DefinitionFormModal: React.FC<DefinitionFormModalProps> = ({
             value={optionsText}
             onChange={(e) => setOptionsText(e.target.value)}
           />
+        )}
+
+        {isScored && (
+          <ScoredOptionsEditor rows={scoredRows} onChange={setScoredRows} usage={usage} />
         )}
 
         <Stack direction="row" alignItems="center" spacing={4}>

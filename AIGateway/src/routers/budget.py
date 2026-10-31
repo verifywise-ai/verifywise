@@ -12,7 +12,6 @@ from sqlalchemy import text
 
 from crud.budget import get_budget, upsert_budget
 from database.db import get_db
-from middlewares.auth import verify_internal_key
 from utils.auth import get_org_id, require_admin
 
 logger = logging.getLogger("uvicorn")
@@ -23,7 +22,6 @@ router = APIRouter(prefix="/budget", tags=["Budget"])
 @router.get("")
 async def get_org_budget(request: Request):
     """Get the budget for the organization."""
-    verify_internal_key(request)
     org_id = get_org_id(request)
     budget = await get_budget(org_id)
     return {"data": budget}
@@ -32,7 +30,6 @@ async def get_org_budget(request: Request):
 @router.put("")
 async def upsert_org_budget(request: Request):
     """Create or update the organization budget."""
-    verify_internal_key(request)
     require_admin(request)
     org_id = get_org_id(request)
 
@@ -74,7 +71,6 @@ async def upsert_org_budget(request: Request):
 @router.post("/reset")
 async def reset_all_budgets(request: Request):
     """Reset current_spend_usd to 0 for all budgets. Called by BullMQ monthly job."""
-    verify_internal_key(request)
     async with get_db() as db:
         await db.execute(
             text("UPDATE ai_gateway_budgets SET current_spend_usd = 0, updated_at = NOW()")

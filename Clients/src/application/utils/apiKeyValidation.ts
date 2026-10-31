@@ -18,8 +18,8 @@ const PROVIDER_PATTERNS: Record<string, { pattern: RegExp; hint: string }> = {
     hint: "Anthropic keys start with sk-ant- followed by 20+ alphanumeric characters",
   },
   gemini: {
-    pattern: /^AIza[a-zA-Z0-9_-]{30,}$/,
-    hint: "Google Gemini keys start with AIza followed by 30+ characters",
+    pattern: /^(AIza|AQ\.)[a-zA-Z0-9_-]{30,}$/,
+    hint: "Google Gemini keys start with AIza or AQ. followed by 30+ characters",
   },
   xai: {
     pattern: /^xai-[a-zA-Z0-9_-]{20,}$/,

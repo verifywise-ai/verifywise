@@ -1,0 +1,166 @@
+name: Performance Nightly (k6)
+
+# (#4676, #4617-12) Nightly k6 performance suite against a real (migrated,
+# seeded) backend. REPORT-ONLY for now: the k6 step is continue-on-error so
+# threshold breaches are recorded and baselined without failing the repo.
+# Baseline policy and the path to a blocking gate live in
+# docs/deployment/k6-perf-baselines.md.
+
+permissions:
+  contents: read
+
+on:
+  schedule:
+    - cron: '0 3 * * *' # nightly, after the test-image build
+  workflow_dispatch:
+
+jobs:
+  k6-perf:
+    name: k6 API performance suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: verifywise_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DB_HOST: localhost
+      DB_PORT: "5432"
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: verifywise_test
+      SUPERADMIN_EMAIL: admin@verifywise-test.com
+      SUPERADMIN_PASSWORD: TestAdmin!Str0ng
+      JWT_SECRET: test-jwt-secret-for-perf
+      REFRESH_TOKEN_SECRET: test-refresh-secret-for-perf
+      ENCRYPTION_KEY: test-encryption-key-32chars!!
+      DB_APP_PASSWORD: test-app-role-password-for-ci
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: Servers/package-lock.json
+
+      # ---- Backend setup (mirrors e2e-tests.yml) ----
+      - name: Install backend dependencies
+        working-directory: Servers
+        run: npm ci --legacy-peer-deps
+
+      - name: Build backend
+        working-directory: Servers
+        run: npm run build
+
+      - name: Run migrations
+        working-directory: Servers
+        run: npx sequelize db:migrate
+
+      - name: Seed test data
+        working-directory: Servers
+        run: node dist/scripts/seedTestData.js
+
+      - name: Start backend
+        working-directory: Servers
+        env:
+          PORT: 3000
+          NODE_ENV: test
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+          MULTI_TENANCY_ENABLED: false
+          AI_GATEWAY_URL: http://localhost:8100
+          AI_GATEWAY_INTERNAL_KEY: test-ai-gateway-key-for-e2e
+        run: |
+          node dist/index.js > /tmp/backend-perf.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl -s http://localhost:3000/api/users/check/exists && break
+            sleep 1
+          done
+
+      - name: Set up k6
+        uses: grafana/setup-k6-action@v1
+
+      # Restore the previous baseline (if any) for the regression report.
+      - name: Download stored baseline
+        uses: actions/download-artifact@v8
+        with:
+          name: k6-summary-latest
+          path: /tmp/k6-baseline
+        continue-on-error: true
+
+      # TODO(#4676): REPORT-ONLY phase. Threshold breaches inside the k6
+      # script must not fail the workflow while baselines are being
+      # collected. Flip to blocking (remove continue-on-error) once the
+      # baseline policy in docs/deployment/k6-perf-baselines.md graduates
+      # from "collect" to "enforce".
+      - name: Run k6 performance suite
+        continue-on-error: true
+        run: >
+          k6 run
+          -e BASE_URL=http://localhost:3000
+          -e PERF_EMAIL="$SUPERADMIN_EMAIL"
+          -e PERF_PASSWORD="$SUPERADMIN_PASSWORD"
+          -e K6_SUMMARY_PATH=k6-results/k6-summary.json
+          Servers/tests/perf/api.k6.js
+
+      # Informational comparison against the stored baseline: warn (never
+      # fail) when p95 regresses >20% on any endpoint tag.
+      - name: Compare against baseline (informational)
+        if: always()
+        run: |
+          node Servers/tests/perf/compare-baseline.mjs \
+            /tmp/k6-baseline/k6-summary.json k6-results/k6-summary.json || true
+
+      - name: Upload k6 summary (versioned artifact)
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: k6-summary-${{ github.run_id }}-${{ github.run_attempt }}
+          path: k6-results/k6-summary.json
+          if-no-files-found: ignore
+          retention-days: 90
+
+      # Re-publish the latest summary under a stable name so the next run can
+      # download it as its baseline.
+      - name: Upload k6 summary (as next baseline)
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: k6-summary-latest
+          path: k6-results/k6-summary.json
+          if-no-files-found: ignore
+          retention-days: 90
+
+      - name: Upload backend logs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: backend-logs-perf
+          path: /tmp/backend-perf.log
+          if-no-files-found: ignore
+          retention-days: 7

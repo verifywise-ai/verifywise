@@ -190,6 +190,7 @@ export const routeMapping: Record<string, string> = {
   // Intake forms
   "/intake-forms": "Intake forms",
   "/intake-forms/submissions": "Submissions",
+  "/intake-forms/oversight": "Oversight",
 
   // Policies
   "/policies": "Policies",
@@ -313,6 +314,7 @@ export const routeIconMapping: Record<string, () => React.ReactNode> = {
   // Intake forms
   "/intake-forms": () => React.createElement(ClipboardList, { size: 14, strokeWidth: 1.5 }),
   "/intake-forms/submissions": () => React.createElement(Inbox, { size: 14, strokeWidth: 1.5 }),
+  "/intake-forms/oversight": () => React.createElement(BarChart3, { size: 14, strokeWidth: 1.5 }),
 
   // AI Gateway
   "/ai-gateway": () => React.createElement(Router, { size: 14, strokeWidth: 1.5 }),

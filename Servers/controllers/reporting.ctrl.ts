@@ -3,9 +3,9 @@ import { STATUS_CODE } from "../utils/statusCode.utils";
 import {
   deleteReportByIdQuery,
   getGeneratedReportsQuery,
-  getReportByIdQuery,
+  isReportFileSource,
+  ReportFileSource,
 } from "../utils/reporting.utils";
-import { sequelize } from "../database/db";
 import { getOrganizationByIdQuery } from "../utils/organization.utils";
 import { getUserByIdQuery } from "../utils/user.utils";
 import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper";
@@ -18,21 +18,11 @@ import { createRunQuery, updateRunStatusQuery } from "../utils/reportRun.utils";
 import { enqueueAutomationAction } from "../services/automations/automationProducer";
 import { MANUAL_REPORT_JOB } from "../services/reporting/reportJobConstants";
 
-export function mapReportTypeToFileSource(
-  reportType: string | string[],
-):
-  | "Project risks report"
-  | "Compliance tracker report"
-  | "Assessment tracker report"
-  | "Vendors and risks report"
-  | "Clauses and annexes report"
-  | "ISO 27001 report"
-  | "Models and risks report"
-  | "Training registry report"
-  | "Policy manager report"
-  | "All reports" {
-  // These values must match the enum_files_source in the database
-
+/**
+ * The `files.source` a generated report is saved under. Always one of
+ * REPORT_FILE_SOURCES, which the Reports list and the report delete filter on.
+ */
+export function mapReportTypeToFileSource(reportType: string | string[]): ReportFileSource {
   // Handle array of section keys (new frontend format)
   if (Array.isArray(reportType)) {
     if (reportType.length > 1) {
@@ -42,8 +32,8 @@ export function mapReportTypeToFileSource(
     reportType = reportType[0] || "all";
   }
 
-  // Map new backend section keys to FileSource enum values
-  const sectionKeyToFileSource: Record<string, string> = {
+  // Map new backend section keys to report file sources
+  const sectionKeyToFileSource: Record<string, ReportFileSource> = {
     projectRisks: "Project risks report",
     vendorRisks: "Vendors and risks report",
     modelRisks: "Models and risks report",
@@ -60,33 +50,12 @@ export function mapReportTypeToFileSource(
   };
 
   // Check new backend key format first
-  if (sectionKeyToFileSource[reportType]) {
-    return sectionKeyToFileSource[reportType] as ReturnType<typeof mapReportTypeToFileSource>;
+  if (Object.prototype.hasOwnProperty.call(sectionKeyToFileSource, reportType)) {
+    return sectionKeyToFileSource[reportType];
   }
 
-  // Legacy report type strings (for backward compatibility)
-  switch (reportType) {
-    case "Project risks report":
-      return "Project risks report";
-    case "Compliance tracker report":
-      return "Compliance tracker report";
-    case "Assessment tracker report":
-      return "Assessment tracker report";
-    case "Vendors and risks report":
-      return "Vendors and risks report";
-    case "All reports":
-      return "All reports";
-    case "Clauses and annexes report":
-      return "Clauses and annexes report";
-    case "Models and risks report":
-      return "Models and risks report";
-    case "Training registry report":
-      return "Training registry report";
-    case "Policy manager report":
-      return "Policy manager report";
-    default:
-      return "All reports";
-  }
+  // Legacy report type strings are the file sources themselves
+  return isReportFileSource(reportType) ? reportType : "All reports";
 }
 
 /**
@@ -157,7 +126,6 @@ export async function getAllGeneratedReports(req: Request, res: Response): Promi
 
 export async function deleteGeneratedReportById(req: Request, res: Response): Promise<any> {
   const reportId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
-  const transaction = await sequelize.transaction();
 
   logProcessing({
     description: `starting deleteGeneratedReportById for report ID ${reportId}`,
@@ -169,8 +137,10 @@ export async function deleteGeneratedReportById(req: Request, res: Response): Pr
   logger.debug(`🗑️ Deleting generated report ID ${reportId}`);
 
   try {
-    const report = await getReportByIdQuery(reportId, req.organizationId!); // get report detail
-    if (!report) {
+    // Only generated reports qualify: any other file in the organization
+    // answers 404, the same as a missing id.
+    const deleted = await deleteReportByIdQuery(reportId, req.organizationId!);
+    if (!deleted) {
       await logFailure({
         eventType: "Delete",
         description: `Report not found: ID ${reportId}`,
@@ -183,32 +153,16 @@ export async function deleteGeneratedReportById(req: Request, res: Response): Pr
       return res.status(404).json(STATUS_CODE[404](req.t!("Report not found")));
     }
 
-    const deletedReport = await deleteReportByIdQuery(reportId, req.organizationId!, transaction);
-    if (deletedReport) {
-      await transaction.commit();
-      await logSuccess({
-        eventType: "Delete",
-        description: `Successfully deleted generated report ID ${reportId}`,
-        functionName: "deleteGeneratedReportById",
-        fileName: "reporting.ctrl.ts",
-        userId: req.userId!,
-        organizationId: req.organizationId!,
-      });
-      return res.status(200).json(STATUS_CODE[200](deletedReport));
-    }
-
-    await transaction.rollback();
     await logSuccess({
       eventType: "Delete",
-      description: `No report to delete: ID ${reportId}`,
+      description: `Successfully deleted generated report ID ${reportId}`,
       functionName: "deleteGeneratedReportById",
       fileName: "reporting.ctrl.ts",
       userId: req.userId!,
       organizationId: req.organizationId!,
     });
-    return res.status(204).json(STATUS_CODE[204](deletedReport));
+    return res.status(200).json(STATUS_CODE[200](deleted));
   } catch (error) {
-    await transaction.rollback();
     await logFailure({
       eventType: "Delete",
       description: `Failed to delete generated report ID ${reportId}`,
@@ -239,8 +193,16 @@ export async function generateReportsV2(req: Request, res: Response): Promise<an
   } = req.body;
 
   const projectId = parseInt(projectIdRaw);
-  const frameworkId = parseInt(frameworkIdRaw);
-  const projectFrameworkId = parseInt(projectFrameworkIdRaw);
+  // A use case with no framework attached sends neither id. 0 rather than the
+  // NaN parseInt gives back: it is the value the collector already treats as
+  // "no pairing" (parseFrameworkSelection rejects 0, so no target resolves),
+  // and it serialises into config_snapshot as a number instead of null.
+  const toId = (raw: unknown) => {
+    const parsed = parseInt(raw as string);
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
+  const frameworkId = toId(frameworkIdRaw);
+  const projectFrameworkId = toId(projectFrameworkIdRaw);
   const userId = req.userId;
   const reportFormat: ReportFormat = format === "pdf" ? "pdf" : "docx";
 

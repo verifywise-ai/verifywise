@@ -75,6 +75,8 @@ export interface SelectCorProps {
      * translator leaves it alone, in the menu and as the selected value.
      */
     noTranslate?: boolean;
+    /** Shown but not selectable. */
+    disabled?: boolean;
   }[];
   /**
    * Accessible name for selects with no visible label. Without it the

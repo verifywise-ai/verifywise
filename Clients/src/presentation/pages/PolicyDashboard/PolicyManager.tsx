@@ -29,14 +29,15 @@ import PolicyStatusCard from "./PolicyStatusCard";
 import { ExportMenu } from "../../components/Table/ExportMenu";
 import useUsers from "../../../application/hooks/useUsers";
 import { useAuth } from "../../../application/hooks/useAuth";
+import allowedRoles from "../../../application/constants/permissions";
 import { GroupBy } from "../../components/Table/GroupBy";
 import { useTableGrouping, useGroupByState } from "../../../application/hooks/useTableGrouping";
 import { GroupedTableView } from "../../components/Table/GroupedTableView";
-import CustomizableSkeleton from "../../components/Skeletons";
 import { FilterBy, FilterColumn } from "../../components/Table/FilterBy";
 import { ColumnSelector } from "../../components/Table/ColumnSelector";
 import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/useColumnVisibility";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
+import ListStateWrapper from "../../components/ListStateWrapper";
 import LinkedPolicyModal from "../../components/Policies/LinkedPolicyModal";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import { useVirtualFolders } from "../../../application/hooks/useVirtualFolders";
@@ -72,11 +73,16 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { data: policies = [], isLoading } = usePolicies();
+  // The policy list renders its own inline error state.
+  const {
+    data: policies = [],
+    isLoading,
+    error: policiesError,
+  } = usePolicies({ suppressGlobalErrorToast: true });
   const deletePolicyMutation = useDeletePolicy();
   const [flashRowId, setFlashRowId] = useState<number | null>(null);
   const { userRoleName } = useAuth();
-  const canRunBulkActions = !!userRoleName && ["Admin", "Editor"].includes(userRoleName);
+  const canRunBulkActions = !!userRoleName && allowedRoles.policies.edit.includes(userRoleName);
 
   const [showLinkedObjectModal, setLinkedObjectsModalOpen] = useState(false);
   const [policyId, setSelectedPolicyId] = useState<number | null>(null);
@@ -615,19 +621,21 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
               filename="policy-manager"
               title="Policy Manager"
             />
-            <Box data-joyride-id="add-policy-button">
-              <CustomizableButton
-                variant="contained"
-                text="Add new policy"
-                sx={{
-                  backgroundColor: "brand.primary",
-                  border: "1px solid brand.primary",
-                  gap: 3,
-                }}
-                icon={<AddCircleOutlineIcon size={16} />}
-                onClick={handleAddNewPolicy}
-              />
-            </Box>
+            {canRunBulkActions && (
+              <Box data-joyride-id="add-policy-button">
+                <CustomizableButton
+                  variant="contained"
+                  text="Add new policy"
+                  sx={{
+                    backgroundColor: "brand.primary",
+                    border: "1px solid brand.primary",
+                    gap: 3,
+                  }}
+                  icon={<AddCircleOutlineIcon size={16} />}
+                  onClick={handleAddNewPolicy}
+                />
+              </Box>
+            )}
           </Stack>
         </Stack>
 
@@ -672,49 +680,58 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
 
           {/* Table / Empty state */}
           <Box sx={{ flex: 1, minWidth: 0 }}>
-            {isLoading ? (
-              <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
-            ) : filteredPolicies.length === 0 ? (
-              <TableEmptyStateLayout
-                header={
-                  <StandardTableHead
-                    columns={standardTableColumns}
-                    sortConfig={sortConfig}
-                    onSort={handleSort}
-                  />
-                }
-              >
-                <EmptyState
-                  icon={FileText}
-                  message={
-                    hasActiveFilters
-                      ? "No matching policies found."
-                      : "No policies yet. Policies define the rules your organization follows for AI governance."
+            <ListStateWrapper
+              items={filteredPolicies}
+              isLoading={isLoading}
+              loadingLabel="Loading policies"
+              errorMessage={
+                // A failed background refetch keeps the cached policies on screen.
+                policiesError && !policies.length
+                  ? "Failed to load policies. Please try again later."
+                  : null
+              }
+              emptyState={
+                <TableEmptyStateLayout
+                  header={
+                    <StandardTableHead
+                      columns={standardTableColumns}
+                      sortConfig={sortConfig}
+                      onSort={handleSort}
+                    />
                   }
-                  imageAlt="No policies available"
                 >
-                  {!hasActiveFilters && (
-                    <>
-                      <EmptyStateTip
-                        icon={Sparkles}
-                        title="Create from templates"
-                        description="Start with a blank policy or use one of the built-in templates. Fill in the details for your organization and publish when ready."
-                      />
-                      <EmptyStateTip
-                        icon={Shield}
-                        title="Link policies to controls"
-                        description="Each policy can be mapped to specific compliance controls, creating an audit trail showing which policies address which requirements."
-                      />
-                      <EmptyStateTip
-                        icon={Link2}
-                        title="Common policies to start with"
-                        description="AI Ethics Policy, Data Governance Policy, AI Risk Management Policy, Incident Response Policy, and Third-Party AI Vendor Policy."
-                      />
-                    </>
-                  )}
-                </EmptyState>
-              </TableEmptyStateLayout>
-            ) : (
+                  <EmptyState
+                    icon={FileText}
+                    message={
+                      hasActiveFilters
+                        ? "No matching policies found."
+                        : "No policies yet. Policies define the rules your organization follows for AI governance."
+                    }
+                    imageAlt="No policies available"
+                  >
+                    {!hasActiveFilters && (
+                      <>
+                        <EmptyStateTip
+                          icon={Sparkles}
+                          title="Create from templates"
+                          description="Start with a blank policy or use one of the built-in templates. Fill in the details for your organization and publish when ready."
+                        />
+                        <EmptyStateTip
+                          icon={Shield}
+                          title="Link policies to controls"
+                          description="Each policy can be mapped to specific compliance controls, creating an audit trail showing which policies address which requirements."
+                        />
+                        <EmptyStateTip
+                          icon={Link2}
+                          title="Common policies to start with"
+                          description="AI Ethics Policy, Data Governance Policy, AI Risk Management Policy, Incident Response Policy, and Third-Party AI Vendor Policy."
+                        />
+                      </>
+                    )}
+                  </EmptyState>
+                </TableEmptyStateLayout>
+              }
+            >
               <GroupedTableView
                 groupedData={groupedPolicies}
                 ungroupedData={filteredPolicies}
@@ -745,7 +762,7 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
                   />
                 )}
               />
-            )}
+            </ListStateWrapper>
           </Box>
         </Stack>
 

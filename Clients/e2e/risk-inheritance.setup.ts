@@ -1,6 +1,7 @@
 import { test as setup } from "@playwright/test";
 import { loginAs } from "./helpers/auth.helper";
 import { seedAdminInOrg, SeedOutput } from "./helpers/seedAdmin.helper";
+import { assertNotDeployed } from "./helpers/target.helper";
 import { createApiContext, projects, projectRisks, riskLinks } from "./factories/api.factory";
 
 /**
@@ -42,7 +43,7 @@ async function seedReportDataIfEmpty(admin: SeedOutput) {
       start_date: startDate,
       goal: "Risk inheritance report seed",
       ai_risk_classification: "Minimal risk",
-      type_of_high_risk_role: "Deployer",
+      high_risk_roles: ["Deployer"],
       framework: [1],
       enable_ai_data_insertion: false,
     });
@@ -90,6 +91,8 @@ async function seedReportDataIfEmpty(admin: SeedOutput) {
 }
 
 setup("authenticate as an admin of an organization that has risks", async ({ page }) => {
+  // Seeds an admin, projects and risks; never against staging or production
+  assertNotDeployed("risk-inheritance.setup");
   const admin = seedAdminInOrg(ORG_ID, [`--email=${REPORT_ADMIN_EMAIL}`]);
   await seedReportDataIfEmpty(admin);
 

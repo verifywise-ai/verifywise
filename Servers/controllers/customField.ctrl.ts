@@ -4,12 +4,15 @@ import { STATUS_CODE } from "../utils/statusCode.utils";
 import { sequelize } from "../database/db";
 import { logFailure, logProcessing, logSuccess } from "../utils/logger/logHelper";
 import { translateError } from "../utils/i18n.utils";
+import { ConflictException } from "../domain.layer/exceptions/custom.exception";
+import { OPTIONS_IN_USE } from "../utils/customFieldScoredSelect.utils";
 import {
   CustomFieldEntityType,
   createCustomFieldDefinitionQuery,
   deleteCustomFieldDefinitionQuery,
   deleteCustomFieldValueQuery,
   getCustomFieldDefinitionByIdQuery,
+  getCustomFieldUsageQuery,
   getCustomFieldValuesForEntityQuery,
   getMissingRequiredCustomFieldsQuery,
   listCustomFieldDefinitionsQuery,
@@ -27,6 +30,18 @@ const parseIntParam = (raw: unknown): number => {
 // Map our CustomException subclasses to HTTP status, mirroring the
 // aiDetectionRepository pattern. Falls back to 500 for unknown errors.
 const respondWithError = (req: Request, res: Response, error: unknown): Response => {
+  // A definition update that removes options still in use returns the counts,
+  // so the client can ask where to move those answers.
+  if (error instanceof ConflictException && error.metadata?.code === OPTIONS_IN_USE) {
+    return res.status(409).json(
+      STATUS_CODE[409]({
+        message: error.message,
+        code: OPTIONS_IN_USE,
+        in_use: error.metadata.in_use,
+        entity_type: error.metadata.entity_type,
+      }),
+    );
+  }
   const statusCode =
     error instanceof Error && "statusCode" in error
       ? (error as Error & { statusCode: number }).statusCode
@@ -115,6 +130,28 @@ export async function getCustomFieldDefinitionById(req: Request, res: Response):
   }
 }
 
+export async function getCustomFieldUsage(req: Request, res: Response): Promise<any> {
+  const id = parseIntParam(req.params.id);
+  try {
+    const usage = await getCustomFieldUsageQuery(id, req.organizationId!);
+    if (!usage) {
+      return res.status(404).json(STATUS_CODE[404]({}));
+    }
+    return res.status(200).json(STATUS_CODE[200](usage));
+  } catch (error) {
+    await logFailure({
+      eventType: "Read",
+      description: `Failed to read usage for custom field definition ${id}`,
+      functionName: "getCustomFieldUsage",
+      fileName: FILE_NAME,
+      error: error as Error,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+    return respondWithError(req, res, error);
+  }
+}
+
 export async function createCustomFieldDefinition(req: Request, res: Response): Promise<any> {
   logProcessing({
     description: "starting createCustomFieldDefinition",
@@ -161,7 +198,12 @@ export async function updateCustomFieldDefinition(req: Request, res: Response): 
   });
 
   try {
-    const def = await updateCustomFieldDefinitionQuery(id, req.organizationId!, req.body ?? {});
+    const def = await updateCustomFieldDefinitionQuery(
+      id,
+      req.organizationId!,
+      req.body ?? {},
+      req.userId!,
+    );
     await logSuccess({
       eventType: "Update",
       description: `Updated custom field definition ${id}`,
@@ -197,7 +239,7 @@ export async function deleteCustomFieldDefinition(req: Request, res: Response): 
   });
 
   try {
-    const deleted = await deleteCustomFieldDefinitionQuery(id, req.organizationId!);
+    const deleted = await deleteCustomFieldDefinitionQuery(id, req.organizationId!, req.userId!);
     if (!deleted) {
       return res.status(404).json(STATUS_CODE[404]({}));
     }

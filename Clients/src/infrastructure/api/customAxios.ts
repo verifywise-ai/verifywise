@@ -181,6 +181,14 @@ const showGlobalErrorAlert = (error: AxiosError) => {
   // Without this guard, switching tabs mid-request shows a bogus error toast.
   if (axios.isCancel(error) || error.code === "ERR_CANCELED") return;
 
+  // The caller shows its own message for this request (RequestParams
+  // suppressGlobalErrorToast), so a toast would be a duplicate.
+  if (
+    (error.config as { suppressGlobalErrorToast?: boolean } | undefined)?.suppressGlobalErrorToast
+  ) {
+    return;
+  }
+
   const requestUrl = error.config?.url ?? "";
   if (hasCustomErrorUI(requestUrl)) return;
 
@@ -200,6 +208,10 @@ const showGlobalErrorAlert = (error: AxiosError) => {
 
   if (isClientError) {
     const responseData = (error.response?.data ?? {}) as ApiErrorEnvelope;
+    // Removing custom field options that records use is a step in the flow, not
+    // a failure: the Settings page opens a dialog asking where to move answers.
+    const inner = responseData.data as { code?: unknown } | undefined;
+    if (status === 409 && inner?.code === "options_in_use") return;
     const detail = getEnvelopeErrorMessage(responseData);
     showAlert({
       variant: "error",
@@ -290,6 +302,18 @@ CustomAxios.interceptors.response.use(
   },
   async (error: AxiosError) => {
     const originalRequest = error.config as RetriableRequestConfig;
+    // A download request (responseType "blob") gets its JSON error body as a
+    // Blob; read it so session handling and error messages work as usual.
+    if (error.response && error.response.data instanceof Blob) {
+      const blob = error.response.data;
+      if (blob.type.includes("json")) {
+        try {
+          error.response.data = JSON.parse(await blob.text());
+        } catch {
+          // Not valid JSON: keep the Blob; the generic message applies.
+        }
+      }
+    }
     const responseData = (error.response?.data ?? {}) as ApiErrorEnvelope;
     // The standardized envelope carries the human-readable detail in `data`
     // for 4xx (top-level `message` is the HTTP reason phrase); legacy/raw

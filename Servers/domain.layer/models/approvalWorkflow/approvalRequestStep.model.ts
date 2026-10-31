@@ -11,6 +11,7 @@ import { IApprovalRequestStepAttributes } from "../../interfaces/i.approvalWorkf
 import { ApprovalStepStatus } from "../../enums/approval-workflow.enum";
 import { ApprovalRequestModel } from "./approvalRequest.model";
 import { ApprovalRequestStepApprovalModel } from "./approvalRequestStepApproval.model";
+import { UserModel } from "../user/user.model";
 
 @Table({
   tableName: "approval_request_steps",
@@ -55,6 +56,31 @@ export class ApprovalRequestStepModel
   status!: string;
 
   @Column({
+    type: DataType.INTEGER,
+    allowNull: true,
+  })
+  sla_hours?: number | null;
+
+  @ForeignKey(() => UserModel)
+  @Column({
+    type: DataType.INTEGER,
+    allowNull: true,
+  })
+  escalation_user_id?: number | null;
+
+  @Column({
+    type: DataType.DATE,
+    allowNull: true,
+  })
+  due_at?: Date | null;
+
+  @Column({
+    type: DataType.DATE,
+    allowNull: true,
+  })
+  escalated_at?: Date | null;
+
+  @Column({
     type: DataType.DATE,
     allowNull: false,
     defaultValue: DataType.NOW,
@@ -82,6 +108,9 @@ export class ApprovalRequestStepModel
 
   @BelongsTo(() => ApprovalRequestModel, "request_id")
   request?: ApprovalRequestModel;
+
+  @BelongsTo(() => UserModel, "escalation_user_id")
+  escalationUser?: UserModel;
 
   @HasMany(() => ApprovalRequestStepApprovalModel, "request_step_id")
   approvals?: ApprovalRequestStepApprovalModel[];

@@ -1,3 +1,4 @@
+import json
 import math
 
 import litellm
@@ -19,17 +20,49 @@ def _safe_cost(value: float) -> float:
     return value
 
 
+def tool_definitions(params: dict) -> Optional[list]:
+    """Tool and legacy function definitions in a request; both count as prompt tokens."""
+    defs = list(params.get("tools") or []) + list(params.get("functions") or [])
+    return defs or None
+
+
+def _approx_tokens(value) -> int:
+    """About one token per four characters of the JSON form."""
+    return len(json.dumps(value, default=str)) // 4
+
+
+def _count_prompt_tokens(model: str, messages: list[dict], tools: Optional[list[dict]]) -> int:
+    """Prompt tokens including tool definitions. Messages and tools come from
+    the caller, so input the counter cannot handle must not zero the estimate
+    (that would let the request through the budget check as free): fall back
+    to a size-based count for whatever the counter rejects."""
+    if tools:
+        try:
+            return litellm.token_counter(model=model, messages=messages, tools=tools)
+        except Exception:
+            pass
+    try:
+        message_tokens = litellm.token_counter(model=model, messages=messages)
+    except Exception:
+        message_tokens = _approx_tokens(messages)
+    return message_tokens + (_approx_tokens(tools) if tools else 0)
+
+
 def estimate_prompt_cost(
-    model: str, messages: list[dict], max_tokens: int = 4096
+    model: str, messages: list[dict], max_tokens: int = 4096,
+    tools: Optional[list[dict]] = None,
 ) -> float:
     """
     Estimate the maximum cost of a request BEFORE sending it.
     Used by Express for budget pre-reservation.
 
+    Tool definitions count as prompt tokens; a request with many large tool
+    schemas costs far more than its messages alone.
+
     Returns estimated max cost in USD (prompt cost + max possible completion cost).
     """
     try:
-        prompt_tokens = litellm.token_counter(model=model, messages=messages)
+        prompt_tokens = _count_prompt_tokens(model, messages, tools)
         prompt_cost, completion_cost = litellm.cost_per_token(
             model=model,
             prompt_tokens=prompt_tokens,
@@ -40,10 +73,21 @@ def estimate_prompt_cost(
         return 0.0
 
 
+def whole_tokens(value) -> Optional[int]:
+    """A token count as a non-negative int (12.0 counts as 12), or None when
+    it is missing or not a whole number."""
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, float) and value.is_integer():
+        value = int(value)
+    return value if isinstance(value, int) and value >= 0 else None
+
+
 def calculate_stream_cost(
     model: str,
     prompt_messages: list[dict],
     accumulated_text: str,
+    tools: Optional[list[dict]] = None,
 ) -> tuple[float, dict]:
     """
     Calculate cost after streaming completes, for providers that don't
@@ -51,25 +95,27 @@ def calculate_stream_cost(
 
     Returns (cost_usd, usage_dict).
     """
+    prompt_tokens = _count_prompt_tokens(model, prompt_messages, tools)
     try:
-        prompt_tokens = litellm.token_counter(model=model, messages=prompt_messages)
         completion_tokens = litellm.token_counter(model=model, text=accumulated_text)
+    except Exception:
+        completion_tokens = len(accumulated_text or "") // 4
+    usage = {
+        "prompt_tokens": prompt_tokens,
+        "completion_tokens": completion_tokens,
+        "total_tokens": prompt_tokens + completion_tokens,
+    }
+    # A model without a known price still used these tokens: keep the counts
+    # for the spend log and record the cost as 0.0.
+    try:
         prompt_cost, completion_cost = litellm.cost_per_token(
             model=model,
             prompt_tokens=prompt_tokens,
             completion_tokens=completion_tokens,
         )
-        return _safe_cost(prompt_cost + completion_cost), {
-            "prompt_tokens": prompt_tokens,
-            "completion_tokens": completion_tokens,
-            "total_tokens": prompt_tokens + completion_tokens,
-        }
+        return _safe_cost(prompt_cost + completion_cost), usage
     except Exception:
-        return 0.0, {
-            "prompt_tokens": 0,
-            "completion_tokens": 0,
-            "total_tokens": 0,
-        }
+        return 0.0, usage
 
 
 def validate_model(model: str) -> Optional[dict]:

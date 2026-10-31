@@ -44,6 +44,15 @@ export const RichTextRenderer: React.FC<RichTextRendererProps> = ({
 }) => {
   const { sanitizedHtml, wasStripped } = useRichTextSanitizer(html);
   const { t } = useTranslation();
+  const divRef = useRef<HTMLDivElement>(null);
+
+  // sanitizedHtml is produced by useRichTextSanitizer (DOMPurify allowlist + post-processing).
+  // Hooks stay above the early returns so the hook order never changes between renders.
+  useEffect(() => {
+    if (divRef.current) {
+      divRef.current.innerHTML = sanitizedHtml;
+    }
+  }, [sanitizedHtml, sandbox]);
 
   useEffect(() => {
     if (wasStripped && onStripped) {
@@ -71,13 +80,6 @@ export const RichTextRenderer: React.FC<RichTextRendererProps> = ({
     );
   }
 
-  // sanitizedHtml is produced by useRichTextSanitizer (DOMPurify allowlist + post-processing).
-  const divRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (divRef.current) {
-      divRef.current.innerHTML = sanitizedHtml;
-    }
-  }, [sanitizedHtml]);
   return <div ref={divRef} className={className} />;
 };
 

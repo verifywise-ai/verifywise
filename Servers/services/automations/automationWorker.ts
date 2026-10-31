@@ -1,6 +1,7 @@
 import { Worker, Job } from "bullmq";
 import { REDIS_URL } from "../../database/redis";
 import sendEmail from "./actions/sendEmail";
+import logger from "../../utils/logger/fileLogger";
 import { getAllOrganizationsQuery } from "../../utils/organization.utils";
 import { getAllVendorsQuery } from "../../utils/vendor.utils";
 import { sequelize } from "../../database/db";
@@ -29,9 +30,11 @@ import { processScheduledAiDetectionScans } from "../aiDetection/scheduledScanPr
 import { syncAiTrustIndex } from "./actions/syncAiTrustIndex";
 import { runRevalidationSweepAllOrgs } from "./actions/mrmRevalidationSweep";
 import { runRetentionPruneAllOrgs } from "./actions/mrmRetentionPrune";
+import { runDataRetentionPruneAllOrgs } from "./actions/dataRetentionPrune";
 import { runEvidenceFreshnessSweepAllOrgs } from "./actions/evidenceFreshnessSweep";
 import { runDeadlineEscalationSweepAllOrgs } from "./actions/deadlineEscalationSweep";
 import { runStaleInheritanceNotifySweepAllOrgs } from "./actions/staleInheritanceNotifySweep";
+import { runApprovalOverdueSweepAllOrgs } from "./actions/approvalOverdueSweep";
 import { recomputeRiskLinks, recomputeRiskLinksBatch } from "../riskLinks/recompute";
 import {
   recomputeVendorRiskLinks,
@@ -39,50 +42,41 @@ import {
 } from "../riskLinks/vendorRelated";
 import { suggestDirectionForComponent } from "../riskLinks/direction/direction.service";
 import { runFileExpirySweepAllOrgs } from "./actions/fileExpirySweep";
-// AI Gateway budget/risk jobs — call AIGateway HTTP endpoints via internal API
-const AI_GATEWAY_URL = process.env.AI_GATEWAY_URL || "http://127.0.0.1:8100";
-const AI_GATEWAY_KEY = process.env.AI_GATEWAY_INTERNAL_KEY || "";
+import { aiGatewayRequest } from "../../utils/aiGatewayInternal.utils";
+import { handleExtensionSyncJob, isExtensionSyncJob } from "../../extensions/sync-engine/jobs";
+import {
+  backfillIntakeAssessments,
+  runIntakeAssessment,
+  sendIntakeNotificationOnce,
+} from "../intakeScoring/assessmentJob";
+import type { IntakeAssessmentJobData } from "../intakeScoring/enqueue";
 
-async function callAIGateway(method: string, path: string, body?: object): Promise<any> {
-  const response = await fetch(`${AI_GATEWAY_URL}${path}`, {
-    method,
-    headers: {
-      "Content-Type": "application/json",
-      "x-internal-key": AI_GATEWAY_KEY,
-    },
-    body: body ? JSON.stringify(body) : undefined,
-    signal: AbortSignal.timeout(120_000),
-  });
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`AIGateway ${path} returned ${response.status}: ${text}`);
-  }
-  return response.json();
+// AI Gateway budget/risk/cleanup jobs call the gateway's internal API. These
+// can run for a while, so they get a longer timeout than request-path calls.
+const AI_GATEWAY_JOB_TIMEOUT_MS = 120_000;
+
+function callAIGatewayJob(method: string, path: string): Promise<any> {
+  return aiGatewayRequest(method, path, { timeoutMs: AI_GATEWAY_JOB_TIMEOUT_MS });
 }
 
 async function resetAllBudgets(): Promise<void> {
-  await callAIGateway("POST", "/internal/budget/reset");
+  await callAIGatewayJob("POST", "/internal/budget/reset");
 }
 
 async function resetVirtualKeyBudgets(): Promise<void> {
-  await callAIGateway("POST", "/internal/virtual-keys/reset-budgets");
+  await callAIGatewayJob("POST", "/internal/virtual-keys/reset-budgets");
 }
 
 async function runRiskDetection(): Promise<void> {
   // Get all org IDs with gateway data, then run detection for each
-  const orgs = await callAIGateway("GET", "/internal/risk/detection-orgs");
+  const orgs = await callAIGatewayJob("GET", "/internal/risk/detection-orgs");
   for (const orgId of orgs.data || []) {
     try {
-      await fetch(`${AI_GATEWAY_URL}/internal/risk/detect`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-internal-key": AI_GATEWAY_KEY,
-          "x-organization-id": String(orgId),
-          "x-user-id": "0",
-          "x-role": "Admin",
-        },
-        signal: AbortSignal.timeout(120_000),
+      await aiGatewayRequest("POST", "/internal/risk/detect", {
+        organizationId: orgId,
+        userId: 0,
+        role: "Admin",
+        timeoutMs: AI_GATEWAY_JOB_TIMEOUT_MS,
       });
     } catch (err) {
       console.error(`Risk detection failed for org ${orgId}:`, err);
@@ -679,6 +673,8 @@ export const createAutomationWorker = () => {
           await runAgentDiscoverySync();
         } else if (name === "ai_detection_scheduled_scan_check") {
           await processScheduledAiDetectionScans();
+        } else if (isExtensionSyncJob(name)) {
+          await handleExtensionSyncJob(name, job.data);
         } else if (name === "ai_gateway_budget_reset") {
           await resetAllBudgets();
           await resetVirtualKeyBudgets();
@@ -686,7 +682,7 @@ export const createAutomationWorker = () => {
           await runRiskDetection();
         } else if (name === "ai_gateway_cache_cleanup") {
           try {
-            const result = await callAIGateway("POST", "/internal/cache/purge-expired");
+            const result = await callAIGatewayJob("POST", "/internal/cache/purge-expired");
             console.log(`AI Gateway cache cleanup: ${result.deleted ?? 0} expired entries purged`);
           } catch (err) {
             console.error(`AI Gateway cache cleanup failed: ${err}`);
@@ -697,10 +693,14 @@ export const createAutomationWorker = () => {
           await runRevalidationSweepAllOrgs();
         } else if (name === "mrm_retention_prune") {
           await runRetentionPruneAllOrgs();
+        } else if (name === "data_retention_prune") {
+          await runDataRetentionPruneAllOrgs();
         } else if (name === "evidence_freshness_sweep") {
           await runEvidenceFreshnessSweepAllOrgs();
         } else if (name === "deadline_escalation_sweep") {
           await runDeadlineEscalationSweepAllOrgs();
+        } else if (name === "approval_overdue_sweep") {
+          await runApprovalOverdueSweepAllOrgs();
         } else if (name === "stale_inheritance_notify_sweep") {
           await runStaleInheritanceNotifySweepAllOrgs();
         } else if (name === "risk_link_recompute") {
@@ -736,13 +736,26 @@ export const createAutomationWorker = () => {
             riskIds: number[];
           };
           await suggestDirectionForComponent(organizationId, riskIds);
+        } else if (name === "intake_assessment") {
+          await runIntakeAssessment(job.data as IntakeAssessmentJobData);
+        } else if (name === "intake_notify_cap") {
+          const { organizationId, submissionId, lang, adminFallback } = job.data as {
+            organizationId: number;
+            submissionId: number;
+            lang?: string;
+            adminFallback?: boolean;
+          };
+          await sendIntakeNotificationOnce(organizationId, submissionId, lang, {
+            capReached: true,
+            adminFallback,
+          });
         } else if (name === "file_expiry_sweep") {
           await runFileExpirySweepAllOrgs();
         } else if (name === "mcp_audit_cleanup") {
           try {
             const [auditResult, approvalResult] = await Promise.all([
-              callAIGateway("POST", "/internal/mcp/audit/cleanup"),
-              callAIGateway("POST", "/internal/mcp/audit/cleanup-approvals"),
+              callAIGatewayJob("POST", "/internal/mcp/audit/cleanup"),
+              callAIGatewayJob("POST", "/internal/mcp/audit/cleanup-approvals"),
             ]);
             console.log(`MCP audit cleanup: ${auditResult.deleted ?? 0} expired logs purged`);
             console.log(
@@ -882,5 +895,17 @@ export const createAutomationWorker = () => {
   automationWorker.on("failed", (job, err) => {
     console.error(`Job ${job?.id} of type ${job?.name} has failed with error: ${err.message}`);
   });
+
+  // Once per worker start: queue intake assessments that never ran or were
+  // lost while pending (Redis flushed, worker down).
+  void (async () => {
+    try {
+      const queued = await backfillIntakeAssessments();
+      logger.info(`Intake assessment backfill: ${queued} submission(s) queued`);
+    } catch (error) {
+      logger.error("Intake assessment backfill failed:", error);
+    }
+  })();
+
   return automationWorker;
 };

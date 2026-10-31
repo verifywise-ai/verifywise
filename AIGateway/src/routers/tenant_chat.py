@@ -14,7 +14,6 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
-from middlewares.auth import verify_internal_key
 from routers.models import build_model_catalog, build_models_grouped
 from services.tenant_proxy import (
     tenant_chat_completion,
@@ -33,7 +32,6 @@ ROLE_NAME_TO_ID = {"Admin": 1, "Reviewer": 2, "Editor": 3, "Auditor": 4}
 @router.post("/chat")
 async def chat_completion(request: Request):
     """Proxy a chat completion for a JWT-authenticated user."""
-    verify_internal_key(request)
     org_id = get_org_id(request)
     user_id = get_user_id(request)
     role_id = get_role_id(request)
@@ -63,7 +61,6 @@ async def chat_completion(request: Request):
 @router.post("/chat/stream")
 async def chat_completion_stream(request: Request):
     """Proxy a streaming chat completion for a JWT-authenticated user."""
-    verify_internal_key(request)
     org_id = get_org_id(request)
     user_id = get_user_id(request)
     role_id = get_role_id(request)
@@ -93,7 +90,6 @@ async def chat_completion_stream(request: Request):
 @router.post("/embeddings")
 async def embedding_proxy(request: Request):
     """Proxy an embedding request for a JWT-authenticated user."""
-    verify_internal_key(request)
     org_id = get_org_id(request)
     user_id = get_user_id(request)
     role_id = get_role_id(request)
@@ -119,7 +115,6 @@ async def embedding_proxy(request: Request):
 @router.get("/providers")
 async def get_providers(request: Request):
     """Get available LLM providers and their models from LiteLLM cost DB."""
-    verify_internal_key(request)
 
     try:
         return {"data": build_models_grouped()}
@@ -137,7 +132,6 @@ async def get_model_catalog(request: Request):
     per-million prices, feature flags), which is the shape the Models page
     (catalog, cost calculator, comparison) is built on.
     """
-    verify_internal_key(request)
 
     try:
         models = build_model_catalog()

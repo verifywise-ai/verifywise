@@ -11,9 +11,10 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 import routers.models as models_router
 import routers.tenant_chat as tenant_chat
 
-# Fields the Models page (catalog, cost calculator, comparison) reads from
-# GET /api/ai-gateway/models/catalog — see ModelInfo in
-# Clients/src/presentation/pages/AIGateway/Models/index.tsx.
+# Fields served by GET /api/ai-gateway/models/catalog. The Models page (catalog, cost
+# calculator, comparison) reads most of them — see ModelInfo in
+# Clients/src/presentation/pages/AIGateway/Models/index.tsx. deprecation_date is for the
+# LLM Evals model picker.
 MODEL_INFO_FIELDS = {
     "id",
     "provider",
@@ -30,6 +31,7 @@ MODEL_INFO_FIELDS = {
     "supports_system_messages",
     "supports_tool_choice",
     "supports_parallel_function_calling",
+    "deprecation_date",
 }
 
 # A small, fixed stand-in for litellm.model_cost so the contract doesn't
@@ -44,6 +46,16 @@ FAKE_COST_MAP = {
         "max_input_tokens": 128000,
         "max_output_tokens": 16384,
         "supports_vision": True,
+    },
+    "gemini/retired-model": {
+        "litellm_provider": "gemini",
+        "mode": "chat",
+        "deprecation_date": "2001-02-03",
+    },
+    "gemini/bad-date-model": {
+        "litellm_provider": "gemini",
+        "mode": "chat",
+        "deprecation_date": "2026-6-1",
     },
     "text-embedding-3-small": {
         "litellm_provider": "openai",
@@ -63,7 +75,6 @@ def fake_cost_map(monkeypatch):
     monkeypatch.setattr(models_router.litellm, "model_cost", FAKE_COST_MAP)
     monkeypatch.setattr(models_router, "_cached_catalog", None)
     monkeypatch.setattr(models_router, "_cached_models", None)
-    monkeypatch.setattr(tenant_chat, "verify_internal_key", lambda _request: None)
 
 
 # Regression: the Express-proxied catalog returned {model, input_cost_per_token,
@@ -81,13 +92,37 @@ async def test_proxied_catalog_matches_models_page_contract(fake_cost_map):
     assert by_id["gpt-4o"]["output_cost_per_million"] == 10.0
 
 
+async def test_catalog_carries_the_deprecation_date(fake_cost_map):
+    # For the LLM Evals model picker; a date that isn't ISO is dropped, not passed on
+    response = await tenant_chat.get_model_catalog(MagicMock())
+    by_id = {m["id"]: m for m in response["data"]["models"]}
+    assert by_id["gemini/retired-model"]["deprecation_date"] == "2001-02-03"
+    assert by_id["gemini/bad-date-model"]["deprecation_date"] is None
+    assert by_id["gpt-4o"]["deprecation_date"] is None
+
+
+async def test_validate_reports_the_deprecation_date(fake_cost_map, monkeypatch):
+    monkeypatch.setattr(models_router, "validate_model", lambda model: {"mode": "chat"})
+    res = await models_router.validate_model_endpoint(MagicMock(), "gemini/retired-model")
+    assert res["info"]["deprecation_date"] == "2001-02-03"
+
+
+async def test_validate_reads_the_entry_litellm_resolved(fake_cost_map, monkeypatch):
+    # LiteLLM resolves a provider-prefixed id to the entry it is stored under
+    monkeypatch.setattr(
+        models_router, "validate_model", lambda model: {"mode": "chat", "key": "gemini/retired-model"}
+    )
+    res = await models_router.validate_model_endpoint(MagicMock(), "google/retired-model")
+    assert res["info"]["deprecation_date"] == "2001-02-03"
+
+
 async def test_catalog_skips_pricing_tiers_without_a_mode(fake_cost_map):
     response = await tenant_chat.get_model_catalog(MagicMock())
     ids = {m["id"] for m in response["data"]["models"]}
 
     assert "fireworks-ai-embedding-up-to-150m" not in ids
     assert "sample_spec" not in ids
-    assert ids == {"gpt-4o", "text-embedding-3-small"}
+    assert ids == {"gpt-4o", "gemini/retired-model", "gemini/bad-date-model", "text-embedding-3-small"}
 
 
 async def test_catalog_failure_is_an_error_not_an_empty_list(fake_cost_map, monkeypatch):
@@ -106,3 +141,46 @@ async def test_providers_reuse_the_grouped_models(fake_cost_map):
 
     assert data["providers"] == sorted(data["providers"])
     assert {m["id"] for m in data["models"]["openai"]} >= {"gpt-4o", "text-embedding-3-small"}
+
+
+def test_eval_report_summary_defaults_are_current_litellm_chat_models(monkeypatch):
+    """EvalServer's report-summary DEFAULT_MODELS must be chat models the pinned LiteLLM
+    knows; an unknown default can't be priced and may not be served.
+
+    Reads LiteLLM's bundled price map, not the live one it fetches at import, so the
+    result depends on the pinned version only. Retirement dates are not checked: LiteLLM
+    records Anthropic's "not sooner than" dates as retirements (claude-haiku-4-5 shows
+    2026-10-15 while Anthropic lists it as active).
+    """
+    import ast
+    import importlib.resources
+    import json
+    from pathlib import Path
+
+    repo = Path(__file__).resolve().parents[2]
+    reports = repo / "EvalServer" / "src" / "controllers" / "reports.py"
+    client = repo / "EvaluationModule" / "src"
+    if not reports.is_file() or not client.is_dir():
+        pytest.skip("EvalServer / EvaluationModule source not present")
+    monkeypatch.syspath_prepend(str(client))
+    from deepeval_engine.gateway_litellm_client import to_litellm_model
+
+    def constant(name):
+        return next(
+            ast.literal_eval(node.value)
+            for node in ast.parse(reports.read_text()).body
+            if isinstance(node, ast.Assign) and any(getattr(t, "id", None) == name for t in node.targets)
+        )
+
+    defaults = constant("DEFAULT_MODELS")
+    # Every provider the summary may pick has a default
+    assert set(defaults) == set(constant("PREFERRED_PROVIDERS"))
+    bundled = json.loads(
+        (importlib.resources.files("litellm") / "model_prices_and_context_window_backup.json").read_text()
+    )
+    for provider, model in defaults.items():
+        name = to_litellm_model(provider, model)
+        # OpenAI and Anthropic entries are keyed without the provider prefix
+        entry = bundled.get(name) or bundled.get(name.split("/", 1)[-1])
+        assert entry is not None, f"{name} is not in LiteLLM's price map"
+        assert entry.get("mode") == "chat", name

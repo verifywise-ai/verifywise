@@ -2,6 +2,8 @@ import redisClient from "../database/redis";
 import { sequelize } from "../database/db";
 import { QueryTypes } from "sequelize";
 import logger from "../utils/logger/fileLogger";
+import { escapeHtml } from "../utils/sanitization.utils";
+import { emailColorTokens } from "../tools/emailColors";
 import { createNotificationQuery, createBulkNotificationsQuery } from "../utils/notification.utils";
 import {
   ICreateNotification,
@@ -16,7 +18,6 @@ import { EMAIL_TEMPLATES } from "../constants/emailTemplates";
 import { translate, type SupportedLang } from "../utils/i18n.utils";
 import { getUserLanguage } from "../utils/userPreference.utils";
 import { deadlineNoticeKey } from "../utils/deadline.utils";
-import { escapeHtml } from "../utils/escapeHtml";
 
 /**
  * Build a frontend-compatible URL for a given entity type and id.
@@ -452,16 +453,17 @@ async function buildEntityLinksHtml(
       );
     }
 
+    // This table goes into a raw-HTML slot, so user text is escaped here.
     const nameHtml = url
-      ? `<a href="${url}" style="color: #13715B; text-decoration: none; font-weight: 500;">${displayName}</a>`
-      : `<span style="font-weight: 500;">${displayName}</span>`;
+      ? `<a href="${escapeHtml(url)}" style="color: ${emailColorTokens.colorBrandPrimary}; text-decoration: none; font-weight: 500;">${escapeHtml(displayName)}</a>`
+      : `<span style="font-weight: 500;">${escapeHtml(displayName)}</span>`;
 
     linkRows.push(
-      `<tr><td style="color: #667085; padding: 4px 0; font-size: 13px; vertical-align: top;">${typeLabel}:</td><td style="color: #344054; padding: 4px 0 4px 8px; font-size: 13px;">${nameHtml}</td></tr>`,
+      `<tr><td style="color: ${emailColorTokens.colorTextIcon}; padding: 4px 0; font-size: 13px; vertical-align: top;">${escapeHtml(typeLabel)}:</td><td style="color: ${emailColorTokens.colorTextSecondary}; padding: 4px 0 4px 8px; font-size: 13px;">${nameHtml}</td></tr>`,
     );
   }
 
-  return `<table style="width: 100%; margin: 16px 0;"><tr><td colspan="2" style="color: #344054; font-weight: 500; padding-bottom: 8px;">Items to complete:</td></tr>${linkRows.join("")}</table>`;
+  return `<table style="width: 100%; margin: 16px 0;"><tr><td colspan="2" style="color: ${emailColorTokens.colorTextSecondary}; font-weight: 500; padding-bottom: 8px;">Items to complete:</td></tr>${linkRows.join("")}</table>`;
 }
 
 /**
@@ -858,6 +860,108 @@ export const notifyApprovalComplete = async (
         use_case_name: useCase.name,
         total_steps: String(useCase.totalSteps),
         use_case_url: `${baseUrl}${url}`,
+      },
+    },
+  );
+};
+
+/**
+ * Notify requester that their request was auto-approved by risk level
+ */
+export const notifyApprovalAutoApproved = async (
+  organizationId: number,
+  requesterId: number,
+  useCase: {
+    id: number;
+    name: string;
+  },
+  riskLevel: string,
+  threshold: string,
+  baseUrl: string,
+): Promise<void> => {
+  const requester = await getUserById(requesterId);
+  const url = `/use-cases/${useCase.id}`;
+
+  await sendInAppNotification(
+    organizationId,
+    {
+      user_id: requesterId,
+      type: NotificationType.APPROVAL_AUTO_APPROVED,
+      title: "Use case auto-approved",
+      message: `Your use case "${useCase.name}" was auto-approved: risk level "${riskLevel}" is at or below the workflow threshold "${threshold}"`,
+      entity_type: NotificationEntityType.USE_CASE,
+      entity_id: useCase.id,
+      entity_name: useCase.name,
+      action_url: url,
+      metadata: { auto_approved: true, risk_level: riskLevel, threshold },
+    },
+    true,
+    {
+      template: EMAIL_TEMPLATES.APPROVAL_COMPLETE,
+      subject: `Approved: ${useCase.name}`,
+      variables: {
+        requester_name: requester ? `${requester.name}` : "User",
+        use_case_name: useCase.name,
+        total_steps: "0",
+        use_case_url: `${baseUrl}${url}`,
+      },
+    },
+  );
+};
+
+/**
+ * Notify the designated escalation user that an approval step is overdue
+ */
+export const notifyApprovalStepOverdueEscalation = async (
+  organizationId: number,
+  escalationUserId: number,
+  request: {
+    id: number;
+    name: string;
+    stepName: string;
+    stepNumber: number;
+    dueAt: Date;
+  },
+  baseUrl: string,
+): Promise<void> => {
+  const escalationUser = await getUserById(escalationUserId);
+  const dueText = request.dueAt.toLocaleString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "UTC",
+    timeZoneName: "short",
+  });
+
+  await sendInAppNotification(
+    organizationId,
+    {
+      user_id: escalationUserId,
+      type: NotificationType.APPROVAL_STEP_OVERDUE_ESCALATION,
+      title: "Approval step overdue",
+      message: `Step "${request.stepName}" of "${request.name}" was due ${dueText} and has been escalated to you`,
+      entity_type: NotificationEntityType.USE_CASE,
+      entity_id: request.id,
+      entity_name: request.name,
+      action_url: "/approval-workflows",
+      metadata: {
+        step_number: request.stepNumber,
+        due_at: request.dueAt.toISOString(),
+      },
+    },
+    true,
+    {
+      template: EMAIL_TEMPLATES.APPROVAL_STEP_OVERDUE,
+      subject: `Overdue approval escalated: ${request.name}`,
+      variables: {
+        escalation_user_name: escalationUser ? `${escalationUser.name}` : "there",
+        request_name: request.name,
+        step_name: request.stepName,
+        step_number: String(request.stepNumber),
+        due_at: dueText,
+        approval_url: `${baseUrl}/approval-workflows`,
       },
     },
   );
@@ -1610,25 +1714,25 @@ function buildEntityContextHtml(context?: AssignmentEntityContext): string {
 
   if (context.frameworkName) {
     rows.push(
-      `<tr><td style="padding: 4px 0; color: #667085; font-size: 13px; width: 110px;">Framework:</td><td style="padding: 4px 0; color: #344054; font-size: 13px;">${escapeHtml(context.frameworkName)}</td></tr>`,
+      `<tr><td style="padding: 4px 0; color: ${emailColorTokens.colorTextIcon}; font-size: 13px; width: 110px;">Framework:</td><td style="padding: 4px 0; color: ${emailColorTokens.colorTextSecondary}; font-size: 13px;">${escapeHtml(context.frameworkName)}</td></tr>`,
     );
   }
 
   if (context.projectName) {
     rows.push(
-      `<tr><td style="padding: 4px 0; color: #667085; font-size: 13px; width: 110px;">Project:</td><td style="padding: 4px 0; color: #344054; font-size: 13px;">${escapeHtml(context.projectName)}</td></tr>`,
+      `<tr><td style="padding: 4px 0; color: ${emailColorTokens.colorTextIcon}; font-size: 13px; width: 110px;">Project:</td><td style="padding: 4px 0; color: ${emailColorTokens.colorTextSecondary}; font-size: 13px;">${escapeHtml(context.projectName)}</td></tr>`,
     );
   }
 
   if (context.parentType && context.parentName) {
     rows.push(
-      `<tr><td style="padding: 4px 0; color: #667085; font-size: 13px; width: 110px;">${escapeHtml(context.parentType)}:</td><td style="padding: 4px 0; color: #344054; font-size: 13px;">${escapeHtml(context.parentName)}</td></tr>`,
+      `<tr><td style="padding: 4px 0; color: ${emailColorTokens.colorTextIcon}; font-size: 13px; width: 110px;">${escapeHtml(context.parentType)}:</td><td style="padding: 4px 0; color: ${emailColorTokens.colorTextSecondary}; font-size: 13px;">${escapeHtml(context.parentName)}</td></tr>`,
     );
   }
 
   if (context.description) {
     rows.push(
-      `<tr><td style="padding: 8px 0 4px 0; color: #667085; font-size: 13px; width: 110px; vertical-align: top;">About:</td><td style="padding: 8px 0 4px 0; color: #344054; font-size: 13px;">${escapeHtml(context.description)}</td></tr>`,
+      `<tr><td style="padding: 8px 0 4px 0; color: ${emailColorTokens.colorTextIcon}; font-size: 13px; width: 110px; vertical-align: top;">About:</td><td style="padding: 8px 0 4px 0; color: ${emailColorTokens.colorTextSecondary}; font-size: 13px;">${escapeHtml(context.description)}</td></tr>`,
     );
   }
 
@@ -1697,17 +1801,19 @@ export const notifyUserAssigned = async (
       {
         template: EMAIL_TEMPLATES.ASSIGNMENT_NOTIFICATION,
         subject: `You've been assigned as ${assignment.roleType}: ${assignment.entityName}`,
-        // The template is HTML and substitutes these as they are. The three names are text that a
-        // person, or a model that read a web page, wrote, so they are escaped; the subject and the
-        // in-app message above are plain text and keep what was written. The rest comes from
-        // constants (role, entity type, role description, date) or is a link built from ids that
-        // sits in an href (entity_url); entity_context_html is markup built above from escaped values.
+        // compileMjmlToHtml escapes every value whose key does not end in Html or _html, so the
+        // three names (text that a person, or a model that read a web page, wrote) are passed as
+        // written and show as typed; escaping them here too would show "&amp;" for "&". The subject
+        // and the in-app message above are plain text and keep what was written. The rest comes
+        // from constants (role, entity type, role description, date) or is a link built from ids
+        // that sits in an href (entity_url). entity_context_html is the one raw-HTML slot: markup
+        // built above from escaped values.
         variables: {
-          recipient_name: escapeHtml(assignee.name || "User"),
-          assigner_name: escapeHtml(assignerName),
+          recipient_name: assignee.name || "User",
+          assigner_name: assignerName,
           role_type: assignment.roleType,
           entity_type: displayEntityType,
-          entity_name: escapeHtml(assignment.entityName),
+          entity_name: assignment.entityName,
           entity_url: fullUrl,
           assignment_date: formatAssignmentDate(),
           role_description: getRoleDescription(assignment.roleType),

@@ -5,6 +5,10 @@ import { dashboardContent } from './getting-started/dashboard';
 import { quickStartContent } from './getting-started/quick-start';
 import { useCasesContent } from './ai-governance/use-cases';
 import { intakeFormsContent } from './ai-governance/intake-forms';
+import { intakeFormFieldsContent } from './ai-governance/intake-form-fields';
+import { intakeCalculatedValuesContent } from './ai-governance/intake-calculated-values';
+import { intakeConditionalFieldsContent } from './ai-governance/intake-conditional-fields';
+import { intakeReviewerAssignmentContent } from './ai-governance/intake-reviewer-assignment';
 import { modelInventoryContent } from './ai-governance/model-inventory';
 import { aiAppsContent } from './ai-governance/ai-apps';
 import { modelLifecycleContent } from './ai-governance/model-lifecycle';
@@ -101,6 +105,7 @@ import { developersOverviewContent } from './developers/overview';
 import { agentControlOverviewContent } from './developers/agent-control-overview';
 import { connectYourAgentContent } from './developers/connect-your-agent';
 import { connectAnyAgentContent } from './developers/connect-any-agent';
+import { connectPythonAgentsContent } from './developers/connect-python-agents';
 import { governingToolCallsContent } from './developers/governing-tool-calls';
 import { agentControlApiContent } from './developers/agent-control-api';
 import { platformRestApiContent } from './developers/platform-rest-api';
@@ -126,6 +131,10 @@ export const articleContentMap: Record<string, ArticleContent> = {
   // AI Governance
   'ai-governance/use-cases': useCasesContent,
   'ai-governance/intake-forms': intakeFormsContent,
+  'ai-governance/intake-form-fields': intakeFormFieldsContent,
+  'ai-governance/intake-calculated-values': intakeCalculatedValuesContent,
+  'ai-governance/intake-conditional-fields': intakeConditionalFieldsContent,
+  'ai-governance/intake-reviewer-assignment': intakeReviewerAssignmentContent,
   'ai-governance/model-inventory': modelInventoryContent,
   'ai-governance/ai-apps': aiAppsContent,
   'ai-governance/model-lifecycle': modelLifecycleContent,
@@ -234,6 +243,7 @@ export const articleContentMap: Record<string, ArticleContent> = {
   'developers/agent-control-overview': agentControlOverviewContent,
   'developers/connect-your-agent': connectYourAgentContent,
   'developers/connect-any-agent': connectAnyAgentContent,
+  'developers/connect-python-agents': connectPythonAgentsContent,
   'developers/governing-tool-calls': governingToolCallsContent,
   'developers/agent-control-api': agentControlApiContent,
   'developers/platform-rest-api': platformRestApiContent,

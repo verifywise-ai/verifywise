@@ -17,7 +17,13 @@ import { useAuth } from "../../../application/hooks/useAuth";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
 import { addNewIncidentButton, incidentFilterRow } from "./style";
 import IncidentTable from "./IncidentTable";
-import NewIncident from "../../components/Modals/NewIncident";
+import NewIncident, {
+  INCIDENT_FIELD_LABELS,
+  isSameFormValue,
+  NewIncidentFormValues,
+} from "../../components/Modals/NewIncident";
+import { useTranslation } from "../../../application/hooks/useTranslation";
+import { fill } from "../../../i18n/fill";
 import {
   IncidentManagementStatus,
   Severity,
@@ -37,6 +43,11 @@ import { ColumnSelector } from "../../components/Table/ColumnSelector";
 import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/useColumnVisibility";
 
 import Alert from "../../components/Alert";
+import { useJiraIncidentLinks } from "../../../application/hooks/useJiraIncidentLinks";
+import {
+  getApiValidationMessage,
+  UserFacingFieldErrors,
+} from "../../../application/utils/apiErrorReason";
 
 type IncidentColumnKey =
   | "incident_id"
@@ -63,13 +74,72 @@ const INCIDENT_TABLE_COLUMNS: ColumnConfig<IncidentColumnKey>[] = [
   { key: "actions", label: "Actions", defaultVisible: true, alwaysVisible: true },
 ];
 
+/**
+ * Server field errors that may appear in the save-failure toast. Reference
+ * fields name database columns, so they get a sentence instead.
+ */
+const INCIDENT_SAVE_ERROR_FIELDS: UserFacingFieldErrors = {
+  passThrough: ["description"],
+  replace: {
+    project_id: "The selected use case is no longer available.",
+    model_inventory_id: "The selected affected model is no longer available.",
+    assignee_id: "The selected owner is no longer available.",
+  },
+};
+
+/**
+ * The edit drawer's values for an incident. Used for the drawer's initialData
+ * and, after an edit conflict, to tell which of the user's edits the other
+ * editor also changed.
+ */
+const toDrawerValues = (incident: AIIncidentManagementModel): NewIncidentFormValues => ({
+  incident_id: incident.incident_id || "",
+  ai_project: incident.ai_project || "",
+  project_id: incident.project_id ?? "",
+  model_inventory_id: incident.model_inventory_id ?? "",
+  assignee_id: incident.assignee_id ?? "",
+  type: incident.type || "",
+  severity: incident.severity || "",
+  status: incident.status || "",
+  occurred_date: incident.occurred_date
+    ? new Date(incident.occurred_date).toISOString().split("T")[0]
+    : new Date().toISOString().split("T")[0],
+  date_detected: incident.date_detected
+    ? new Date(incident.date_detected).toISOString().split("T")[0]
+    : new Date().toISOString().split("T")[0],
+  reporter: incident.reporter,
+  categories_of_harm: incident.categories_of_harm || [],
+  description: incident.description,
+  affected_persons_groups: incident.affected_persons_groups || "",
+  relationship_causality: incident.relationship_causality || "",
+  immediate_mitigations: incident.immediate_mitigations || "",
+  planned_corrective_actions: incident.planned_corrective_actions || "",
+  model_system_version: incident.model_system_version,
+  interim_report: incident.interim_report || false,
+  approval_status: incident.approval_status,
+  approved_by: incident.approved_by,
+  // The stored approval date as a calendar date, or null when
+  // there is none: never invent one, or a save would look like
+  // an explicit approval change to the server.
+  approval_date: incident.approval_date
+    ? new Date(incident.approval_date).toISOString().split("T")[0]
+    : null,
+  approval_notes: incident.approval_notes,
+  expected_updated_at: incident.updated_at
+    ? new Date(incident.updated_at).toISOString()
+    : undefined,
+});
+
 const IncidentManagement: React.FC = () => {
+  const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const hasProcessedUrlParam = useRef(false);
   const [incidentsData, setIncidentsData] = useState<AIIncidentManagementModel[]>([]);
   const [selectedIncident, setSelectedIncident] = useState<AIIncidentManagementModel | null>(null);
+  const incidentIds = useMemo(() => incidentsData.map((i) => i.id), [incidentsData]);
+  const jiraLinks = useJiraIncidentLinks(incidentIds);
 
   const [isLoading, setIsLoading] = useState(true);
   const [, setIsModalLoading] = useState(false);
@@ -518,12 +588,19 @@ const IncidentManagement: React.FC = () => {
     setArchiveId(null);
   };
 
-  const handleIncidentSuccess = async (formData: any) => {
+  /**
+   * Saves the drawer. Resolves true to close it, false to keep it open with
+   * the user's edits. When editing, the drawer sends only the fields the user
+   * changed plus expected_updated_at.
+   */
+  const handleIncidentSuccess = async (formData: any): Promise<boolean> => {
     try {
       if (selectedIncident) {
         await updateEntityById({
           routeUrl: `/ai-incident-managements/${selectedIncident.id}`,
           body: formData,
+          // This page shows its own message for every failure.
+          suppressGlobalErrorToast: true,
         });
         setAlert({
           variant: "success",
@@ -538,13 +615,81 @@ const IncidentManagement: React.FC = () => {
       }
       await fetchIncidentsData();
       handleCloseModal();
-    } catch {
+      return true;
+    } catch (error) {
+      // Someone else saved this incident after the drawer loaded it. Load the
+      // latest version: the drawer shows it for every field the user has not
+      // edited, keeps their edits and takes the new expected_updated_at, so
+      // saving again applies only the user's edits on top of the other change.
+      if ((error as { status?: number })?.status === 409 && selectedIncident) {
+        let latestIncident: AIIncidentManagementModel | null = null;
+        try {
+          const latest = await getEntityById({
+            routeUrl: `/ai-incident-managements/${selectedIncident.id}`,
+            // This page reports a failed refresh itself.
+            suppressGlobalErrorToast: true,
+          });
+          if (latest?.data) latestIncident = new AIIncidentManagementModel(latest.data);
+        } catch {
+          latestIncident = null;
+        }
+        if (!latestIncident) {
+          setAlert({
+            variant: "error",
+            body: "This incident was changed by someone else since you opened it. Could not load the latest version; close and reopen the incident to continue.",
+          });
+          return false;
+        }
+
+        // The user's edits that the other editor also changed: saving again
+        // replaces their values with the user's, so name those fields.
+        const before = toDrawerValues(selectedIncident);
+        const after = toDrawerValues(latestIncident);
+        const overlapping = (Object.keys(formData) as (keyof NewIncidentFormValues)[]).filter(
+          (key) => key !== "expected_updated_at" && !isSameFormValue(key, before[key], after[key]),
+        );
+        const labels = Array.from(
+          new Set(overlapping.map((key) => t(INCIDENT_FIELD_LABELS[key] ?? key))),
+        );
+
+        setSelectedIncident(latestIncident);
+        await fetchIncidentsData(false);
+        const changedMessage = t(
+          "This incident was changed by someone else since you opened it. The form now shows their changes with your edits kept: save again to apply your edits.",
+        );
+        setAlert({
+          variant: "error",
+          body: labels.length
+            ? `${changedMessage} ${fill(
+                t(
+                  "Someone else also changed: {fields}. Saving again will replace their values with yours.",
+                ),
+                { fields: labels.join(", ") },
+              )}`
+            : changedMessage,
+        });
+        return false;
+      }
+      // Any other failure: keep the drawer open so nothing typed is lost.
       setAlert({
         variant: "error",
-        body: selectedIncident ? "Failed to update incident." : "Failed to add incident.",
+        body:
+          getApiValidationMessage(error, INCIDENT_SAVE_ERROR_FIELDS) ??
+          (selectedIncident ? "Failed to update incident." : "Failed to add incident."),
       });
+      return false;
     }
   };
+
+  /**
+   * The drawer's starting values for the selected incident. Memoised on the
+   * incident so unrelated re-renders (an alert, a refetch of the list) hand
+   * the drawer the same object and never reset what the user has typed.
+   */
+  const incidentInitialData = useMemo<NewIncidentFormValues | undefined>(
+    () => (selectedIncident ? toDrawerValues(selectedIncident) : undefined),
+    [selectedIncident],
+  );
 
   /** -------------------- EXPORT DATA -------------------- */
   const exportColumns = useMemo(() => {
@@ -757,6 +902,7 @@ const IncidentManagement: React.FC = () => {
               archivedId={archiveId}
               hidePagination={options?.hidePagination}
               visibleColumns={incidentVisibleColumns}
+              jiraLinks={jiraLinks}
             />
           )}
         />
@@ -766,44 +912,11 @@ const IncidentManagement: React.FC = () => {
         isOpen={isNewIncidentModalOpen}
         setIsOpen={handleCloseModal}
         onSuccess={handleIncidentSuccess}
-        initialData={
-          selectedIncident
-            ? {
-                incident_id: selectedIncident.incident_id || "",
-                ai_project: selectedIncident.ai_project || "",
-                project_id: selectedIncident.project_id ?? "",
-                model_inventory_id: selectedIncident.model_inventory_id ?? "",
-                assignee_id: selectedIncident.assignee_id ?? "",
-                type: selectedIncident.type || "",
-                severity: selectedIncident.severity || "",
-                status: selectedIncident.status || "",
-                occurred_date: selectedIncident.occurred_date
-                  ? new Date(selectedIncident.occurred_date).toISOString().split("T")[0]
-                  : new Date().toISOString().split("T")[0],
-                date_detected: selectedIncident.date_detected
-                  ? new Date(selectedIncident.date_detected).toISOString().split("T")[0]
-                  : new Date().toISOString().split("T")[0],
-                reporter: selectedIncident.reporter,
-                categories_of_harm: selectedIncident.categories_of_harm || [],
-                description: selectedIncident.description,
-                affected_persons_groups: selectedIncident.affected_persons_groups || "",
-                relationship_causality: selectedIncident.relationship_causality || "",
-                immediate_mitigations: selectedIncident.immediate_mitigations || "",
-                planned_corrective_actions: selectedIncident.planned_corrective_actions || "",
-                model_system_version: selectedIncident.model_system_version,
-                interim_report: selectedIncident.interim_report || false,
-                approval_status: selectedIncident.approval_status,
-                approved_by: selectedIncident.approved_by,
-                approval_date: selectedIncident.approval_date
-                  ? new Date(selectedIncident.approval_date).toISOString().split("T")[0]
-                  : new Date().toISOString().split("T")[0],
-                approval_notes: selectedIncident.approval_notes,
-              }
-            : undefined
-        }
+        initialData={incidentInitialData}
         isEdit={!!selectedIncident}
         mode={mode}
         incidentId={selectedIncident?.id}
+        jiraLink={selectedIncident ? jiraLinks.get(selectedIncident.id) : undefined}
       />
 
       <PageTour

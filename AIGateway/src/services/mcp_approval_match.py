@@ -60,8 +60,20 @@ def _matches(config: dict, text_in: str) -> bool:
     return bool(_run_regex_safe(compiled, text_in))
 
 
-async def check_require_approval(org_id: int, tool_name: str, arguments: dict) -> Optional[dict]:
-    """Return the first active require_approval rule matching the command, else None."""
+async def check_require_approval(
+    org_id: int,
+    tool_name: str,
+    arguments: dict,
+    *,
+    # Required, so no caller can forget it (see scan_tool_input).
+    agent_key_id: Optional[int],
+) -> Optional[dict]:
+    """Return the first active require_approval rule matching the command, else None.
+
+    A rule applies to this call only when its agent scope matches: agent_scope
+    'all' means every agent, 'selected' means the calling agent_key_id must be in
+    applies_to_agent_keys.
+    """
     input_text = _serialize(extract_scannable_content(tool_name, arguments))
     if not input_text.strip():
         return None
@@ -79,9 +91,13 @@ async def check_require_approval(org_id: int, tool_name: str, arguments: dict) -
                       OR array_length(applies_to_tools, 1) IS NULL
                       OR :tool_name = ANY(applies_to_tools)
                   )
+                  AND (
+                      agent_scope = 'all'
+                      OR :agent_key_id = ANY(applies_to_agent_keys)
+                  )
                 ORDER BY created_at
             """),
-            {"org_id": org_id, "tool_name": tool_name},
+            {"org_id": org_id, "tool_name": tool_name, "agent_key_id": agent_key_id},
         )
         rules = [dict(r) for r in result.mappings().fetchall()]
 

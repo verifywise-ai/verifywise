@@ -769,7 +769,7 @@ except TimeoutError:
 
 ## Inverted Metrics
 
-Metrics whose name contains `bias`, `toxicity`, or `hallucination` (case-insensitive) are treated as **inverted**: lower scores are better.
+The metrics named exactly `bias`, `toxicity`, or `hallucination` are treated as **inverted**: lower scores are better. Matching ignores case, spaces and underscores, so `Bias` also matches. A name that only contains one of these words, such as `bias_score` or `unbiasedTone`, is not inverted.
 
 For inverted metrics:
 - A score **passes** if `score <= threshold`

@@ -124,8 +124,11 @@ const ShareViewDropdown: React.FC<ShareViewDropdownProps> = ({
   };
 
   const handleRefreshLink = async () => {
+    // The parent confirms first and creates the new link itself; creating one
+    // here as well would leave an extra live link when the user cancels.
     if (onRefreshLink) {
       onRefreshLink();
+      return;
     }
     if (onGenerateLink) {
       const newLink = await onGenerateLink(settings);

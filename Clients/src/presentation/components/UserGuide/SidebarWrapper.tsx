@@ -269,7 +269,7 @@ const SidebarWrapper: React.FC<SidebarWrapperProps> = ({
 
   // Build breadcrumb items for dropdown
   const buildBreadcrumbs = () => {
-    let items: { label: string; onClick: () => void }[] = [];
+    let items: { label: string; onClick: () => void }[];
     switch (activeTab) {
       case "user-guide":
         items = [{ label: "User guide", onClick: handleHomeClick }];

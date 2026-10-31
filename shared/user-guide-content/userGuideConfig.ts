@@ -78,7 +78,7 @@ export const collections: Collection[] = [
     title: 'AI governance',
     description: 'Manage your AI models, track their lifecycle, and maintain comprehensive documentation.',
     icon: 'Brain',
-    articleCount: 19,
+    articleCount: 23,
     articles: [
       {
         id: 'use-cases',
@@ -91,6 +91,30 @@ export const collections: Collection[] = [
         title: 'Intake forms',
         description: 'Collect structured AI project requests through branded public forms with built-in risk scoring.',
         keywords: ['intake', 'form', 'submit', 'request', 'use case', 'model', 'public', 'external', 'onboarding', 'risk scoring', 'approval'],
+      },
+      {
+        id: 'intake-form-fields',
+        title: 'Intake form fields',
+        description: 'Every intake form field type, its settings and what is checked when a form is submitted.',
+        keywords: ['intake', 'field', 'field type', 'short text', 'long text', 'email', 'url', 'number', 'date', 'dropdown', 'multi-select', 'checkbox', 'calculated', 'validation', 'required', 'options', 'placeholder', 'help text', 'guidance', 'risk dimension'],
+      },
+      {
+        id: 'intake-calculated-values',
+        title: 'Calculated values',
+        description: 'Work out numbers from other answers on an intake form with formulas.',
+        keywords: ['intake', 'calculated', 'calculation', 'formula', 'arithmetic', 'decimals', 'rounding', 'prefix', 'suffix', 'total', 'cost'],
+      },
+      {
+        id: 'intake-conditional-fields',
+        title: 'Conditional fields',
+        description: 'Show an intake form field only when other answers match, with the conditions each field type supports.',
+        keywords: ['intake', 'conditional', 'condition', 'show', 'hide', 'visibility', 'logic', 'rule', 'operator', 'follow-up', 'required when shown'],
+      },
+      {
+        id: 'intake-reviewer-assignment',
+        title: 'Reviewer assignment',
+        description: 'Send intake submissions to expert or regular reviewers by risk score, and run second reviews.',
+        keywords: ['intake', 'reviewer', 'assignment', 'expert review', 'regular review', 'threshold', 'close call', 'second review', 'escalate', 'request expert review', 'review level', 'risk score'],
       },
       {
         id: 'model-inventory',
@@ -527,8 +551,8 @@ export const collections: Collection[] = [
       {
         id: 'extensions',
         title: 'Extensions',
-        description: 'Enable, configure and disable the built-in extensions: Slack, MLflow, Azure AI Foundry, Model Lifecycle, Risk Import, Jira Assets and Dataset Bulk Upload.',
-        keywords: ['extension', 'extensions', 'enable', 'disable', 'configure', 'integration', 'slack', 'mlflow', 'azure ai foundry', 'model lifecycle', 'risk import', 'excel', 'jira', 'jira assets', 'dataset bulk upload', 'bulk upload', 'plugin', 'marketplace'],
+        description: 'Enable, configure and disable the built-in extensions: Slack, MLflow, Azure AI Foundry, Model Lifecycle, Risk Import, Jira Assets, Jira incidents and Dataset Bulk Upload.',
+        keywords: ['extension', 'extensions', 'enable', 'disable', 'configure', 'integration', 'slack', 'mlflow', 'azure ai foundry', 'model lifecycle', 'risk import', 'excel', 'jira', 'jira assets', 'jira incidents', 'incident sync', 'dataset bulk upload', 'bulk upload', 'plugin', 'marketplace'],
       },
     ],
   },
@@ -742,7 +766,7 @@ export const collections: Collection[] = [
     title: 'Developer guide',
     description: 'Build on VerifyWise. The guide covers Agent Control (connect any terminal agent and govern its tool calls) and the platform REST API for reading and writing your governance data. More developer topics are coming.',
     icon: 'Plug',
-    articleCount: 13,
+    articleCount: 14,
     articles: [
       {
         id: 'overview',
@@ -767,6 +791,12 @@ export const collections: Collection[] = [
         title: 'Connect any agent',
         description: 'The generic contract and the MCP proxy path for any terminal agent, plus bring-your-own.',
         keywords: ['developer', 'generic', 'any agent', 'cursor', 'codex', 'aider', 'gemini cli', 'mcp proxy', 'hook contract', 'terminal agent', 'integration'],
+      },
+      {
+        id: 'connect-python-agents',
+        title: 'Connect Python agents',
+        description: 'Govern the tool calls of LangChain, CrewAI, Microsoft Agent Framework or plain Python agents with the Python package.',
+        keywords: ['developer', 'python', 'sdk', 'package', 'pip', 'langchain', 'crewai', 'agent framework', 'microsoft', 'middleware', 'decorator', 'governed', 'integration'],
       },
       {
         id: 'governing-tool-calls',
@@ -902,6 +932,12 @@ export const fastFinds: FastFind[] = [
     title: 'Running a bias audit for NYC LL144',
     collectionId: 'llm-evals',
     articleId: 'bias-audits',
+  },
+  {
+    id: 'ff-8',
+    title: 'Assigning intake reviewers by risk score',
+    collectionId: 'ai-governance',
+    articleId: 'intake-reviewer-assignment',
   },
 ];
 

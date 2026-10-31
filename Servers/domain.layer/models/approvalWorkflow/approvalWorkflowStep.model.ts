@@ -10,6 +10,7 @@ import {
 import { IApprovalWorkflowStepAttributes } from "../../interfaces/i.approvalWorkflow";
 import { ApprovalWorkflowModel } from "./approvalWorkflow.model";
 import { ApprovalStepApproversModel } from "./approvalStepApprovers.model";
+import { UserModel } from "../user/user.model";
 
 @Table({
   tableName: "approval_workflow_steps",
@@ -60,6 +61,19 @@ export class ApprovalWorkflowStepModel
   requires_all_approvers?: boolean;
 
   @Column({
+    type: DataType.INTEGER,
+    allowNull: true,
+  })
+  sla_hours?: number | null;
+
+  @ForeignKey(() => UserModel)
+  @Column({
+    type: DataType.INTEGER,
+    allowNull: true,
+  })
+  escalation_user_id?: number | null;
+
+  @Column({
     type: DataType.DATE,
     allowNull: false,
     defaultValue: DataType.NOW,
@@ -68,6 +82,9 @@ export class ApprovalWorkflowStepModel
 
   @BelongsTo(() => ApprovalWorkflowModel, "workflow_id")
   workflow?: ApprovalWorkflowModel;
+
+  @BelongsTo(() => UserModel, "escalation_user_id")
+  escalationUser?: UserModel;
 
   @HasMany(() => ApprovalStepApproversModel, "workflow_step_id")
   approvers?: ApprovalStepApproversModel[];

@@ -1,13 +1,12 @@
 import { FormValues } from "../components/Forms/ProjectForm/constants";
 import { MitigationFormValues, RiskFormValues } from "../components/AddNewRiskForm/interface";
-import { FormValues as VendorRiskFormValues } from "../../domain/interfaces/i.form";
 
 /** Visual tab order for ProjectForm fields that participate in validation. */
 export const PROJECT_FORM_FIELD_ORDER: (keyof FormValues)[] = [
   "project_title",
   "owner",
   "ai_risk_classification",
-  "type_of_high_risk_role",
+  "high_risk_roles",
   "start_date",
   "geography",
   "monitored_regulations_and_standards",
@@ -18,7 +17,7 @@ export const PROJECT_FORM_FIELD_IDS: Partial<Record<keyof FormValues, string>> =
   project_title: "project-title-input",
   owner: "owner-input",
   ai_risk_classification: "risk-classification-input",
-  type_of_high_risk_role: "type-of-high-risk-role-input",
+  high_risk_roles: "high-risk-roles-input",
   start_date: "project-start-date-input",
   geography: "geography-type-input",
   monitored_regulations_and_standards: "monitored-regulations-and-standards-input",
@@ -63,22 +62,6 @@ export const MITIGATION_FORM_FIELD_IDS: Partial<Record<keyof MitigationFormValue
   approver: "approver-input",
   approvalStatus: "approval-status-input",
   dateOfAssessment: "mitigation-assessment-date-input",
-};
-
-export const VENDOR_RISK_FORM_FIELD_ORDER: (keyof VendorRiskFormValues)[] = [
-  "vendorName",
-  "actionOwner",
-  "riskName",
-  "reviewDate",
-  "riskDescription",
-];
-
-export const VENDOR_RISK_FORM_FIELD_IDS: Partial<Record<keyof VendorRiskFormValues, string>> = {
-  vendorName: "vendor-name-input",
-  actionOwner: "action-owner-input",
-  riskName: "risk-name-input",
-  reviewDate: "vendor-review-date-input",
-  riskDescription: "risk-description-input",
 };
 
 /** Vendor modal (`Modals/NewVendor`): the add and edit form of a vendor. */

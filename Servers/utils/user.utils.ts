@@ -18,6 +18,7 @@
 
 import { UserModel } from "../domain.layer/models/user/user.model";
 import { sequelize } from "../database/db";
+import { withLegacyHighRiskRole } from "./highRiskRoles.utils";
 import { QueryTypes, Transaction } from "sequelize";
 import { ProjectModel } from "../domain.layer/models/project/project.model";
 import { VendorModel } from "../domain.layer/models/vendor/vendor.model";
@@ -503,6 +504,7 @@ export const getUserProjects = async (userId: number, organizationId: number) =>
       model: ProjectModel,
     },
   );
+  result.forEach((project) => withLegacyHighRiskRole(project));
   return result;
 };
 

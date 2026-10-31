@@ -1,0 +1,79 @@
+name: Warm E2E caches
+
+# E2E Tests runs only on pull requests, and GitHub shares a cache with other
+# branches only when it was saved on the base branch. So every PR started E2E
+# with empty npm, pip and Playwright caches, and paid ~1-2 minutes of setup
+# per shard. This job runs the same cache steps on develop and master, so PRs
+# into them start warm.
+#
+# The cache inputs below (node and Python versions, dependency paths, the
+# Playwright key) must stay identical to e2e-tests.yml, or the keys will not
+# match and the warm cache is never used.
+
+on:
+  push:
+    branches: [develop, master]
+    paths:
+      - "Servers/package-lock.json"
+      - "Clients/package-lock.json"
+      - "Clients/package.json"
+      - "AIGateway/requirements.txt"
+      - ".github/workflows/e2e-tests.yml"
+      - ".github/workflows/warm-e2e-caches.yml"
+  # GitHub evicts caches unused for 7 days. Scheduled runs use the default
+  # branch (develop).
+  schedule:
+    - cron: "0 5 * * 1,4"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  warm:
+    name: Warm E2E caches
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            Servers/package-lock.json
+            Clients/package-lock.json
+
+      # Only the npm download cache is saved, so lifecycle scripts are not needed.
+      - name: Fill the npm cache
+        run: |
+          (cd Servers && npm ci --legacy-peer-deps --ignore-scripts)
+          (cd Clients && npm ci --legacy-peer-deps --ignore-scripts)
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: AIGateway/requirements.txt
+
+      # Same install as e2e-tests.yml, so the cache holds the same wheels.
+      - name: Fill the pip cache
+        working-directory: AIGateway
+        run: |
+          grep -v '^presidio-anonymizer' requirements.txt > /tmp/requirements-install.txt
+          pip install -r /tmp/requirements-install.txt
+          pip install --no-deps "$(grep '^presidio-anonymizer' requirements.txt)"
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-browsers-${{ runner.os }}-${{ hashFiles('Clients/package-lock.json', 'Clients/package.json') }}
+
+      - name: Install Playwright browsers
+        working-directory: Clients
+        run: npx playwright install chromium

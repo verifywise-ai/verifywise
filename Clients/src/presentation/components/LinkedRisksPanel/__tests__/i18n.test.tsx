@@ -190,7 +190,7 @@ describe.each(LANGS)("linked risks panel in %s", (lang) => {
     for (const key of [
       "Parent risk",
       "Child risks",
-      "Relates to",
+      "Related risks",
       "Link a risk",
       "Suggest hierarchy",
       "Show dismissed",

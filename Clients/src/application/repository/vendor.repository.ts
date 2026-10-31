@@ -3,11 +3,15 @@ import { VendorModel } from "../../domain/models/Common/vendor/vendor.model";
 
 export async function getAllVendors({
   signal,
+  suppressGlobalErrorToast,
 }: {
   signal?: AbortSignal;
+  /** Skip the global error toast; the caller shows its own message. */
+  suppressGlobalErrorToast?: boolean;
 } = {}): Promise<any> {
   const response = await apiServices.get("/vendors", {
     signal,
+    ...(suppressGlobalErrorToast ? { suppressGlobalErrorToast } : {}),
   });
   return response.data;
 }
@@ -28,12 +32,16 @@ export async function getVendorById({
 export async function getVendorsByProjectId({
   projectId,
   signal,
+  suppressGlobalErrorToast,
 }: {
   projectId: number;
   signal?: AbortSignal;
+  /** Skip the global error toast; the caller shows its own message. */
+  suppressGlobalErrorToast?: boolean;
 }): Promise<any> {
   const response = await apiServices.get(`/vendors/project-id/${projectId}`, {
     signal,
+    ...(suppressGlobalErrorToast ? { suppressGlobalErrorToast } : {}),
   });
   return response.data;
 }

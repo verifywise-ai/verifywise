@@ -4,6 +4,9 @@ import Field from "../../components/Inputs/Field";
 import Select from "../../components/Inputs/Select";
 import Checkbox from "../../components/Inputs/Checkbox";
 import { FormField } from "../IntakeFormBuilder/types";
+import { isEmptyAnswer } from "../../../application/utils/intakeFormLogic";
+import { isWebUrl } from "../../../application/utils/webUrl";
+import { status } from "../../themes/palette";
 
 /**
  * Renders a field label.
@@ -16,7 +19,7 @@ import { FormField } from "../IntakeFormBuilder/types";
  * Pass `id` instead for a group of controls — a multiselect's option list —
  * where the label names the group via aria-labelledby rather than one input.
  */
-function FieldLabel({
+export function FieldLabel({
   label,
   required,
   htmlFor,
@@ -107,15 +110,26 @@ interface FormFieldRendererProps {
   field: FormField;
   control: Control<Record<string, unknown>>;
   errors: FieldErrors<Record<string, unknown>>;
+  /** Border color from live-check hints: red for a possible prohibited practice, amber for a regulated use or a conflict. */
+  tone?: "error" | "warning";
 }
 
 /**
  * Renders a single form field based on its type
  */
-export function FormFieldRenderer({ field, control, errors }: FormFieldRendererProps) {
+export function FormFieldRenderer({ field, control, errors, tone }: FormFieldRendererProps) {
   const error = errors[field.id];
   const errorMessage = error?.message as string | undefined;
   const isRequired = field.validation?.required;
+  // The server treats whitespace-only text and empty lists as missing; so must the form.
+  const notBlankWhenRequired = (value: unknown) =>
+    !isRequired || !isEmptyAnswer(value) || "This field is required";
+  // The browser's url check accepts any scheme and the preview submit skips it;
+  // this matches the server, which takes only http and https.
+  const webUrlWhenAnswered = (value: unknown) =>
+    isEmptyAnswer(value) ||
+    isWebUrl(value) ||
+    "Enter a full web address starting with http:// or https://";
   // Field/Select put this id on the rendered input, so the label can point at it.
   const controlId = `field-${field.id}`;
   const labelId = `${controlId}-label`;
@@ -134,6 +148,10 @@ export function FormFieldRenderer({ field, control, errors }: FormFieldRendererP
               defaultValue={field.defaultValue || ""}
               rules={{
                 required: isRequired ? "This field is required" : false,
+                validate:
+                  field.type === "url"
+                    ? { notBlank: notBlankWhenRequired, webUrl: webUrlWhenAnswered }
+                    : notBlankWhenRequired,
                 minLength: field.validation?.minLength
                   ? {
                       value: field.validation.minLength,
@@ -187,6 +205,7 @@ export function FormFieldRenderer({ field, control, errors }: FormFieldRendererP
               defaultValue={field.defaultValue || ""}
               rules={{
                 required: isRequired ? "This field is required" : false,
+                validate: notBlankWhenRequired,
                 minLength: field.validation?.minLength
                   ? {
                       value: field.validation.minLength,
@@ -229,6 +248,7 @@ export function FormFieldRenderer({ field, control, errors }: FormFieldRendererP
               defaultValue={field.defaultValue || ""}
               rules={{
                 required: isRequired ? "This field is required" : false,
+                validate: notBlankWhenRequired,
                 min:
                   field.validation?.min !== undefined
                     ? {
@@ -273,6 +293,7 @@ export function FormFieldRenderer({ field, control, errors }: FormFieldRendererP
               defaultValue={field.defaultValue || ""}
               rules={{
                 required: isRequired ? "This field is required" : false,
+                validate: notBlankWhenRequired,
               }}
               render={({ field: fieldProps }) => (
                 <>
@@ -302,6 +323,7 @@ export function FormFieldRenderer({ field, control, errors }: FormFieldRendererP
               defaultValue={field.defaultValue || ""}
               rules={{
                 required: isRequired ? "This field is required" : false,
+                validate: notBlankWhenRequired,
               }}
               render={({ field: fieldProps }) => (
                 <Box>
@@ -346,6 +368,7 @@ export function FormFieldRenderer({ field, control, errors }: FormFieldRendererP
               defaultValue={field.defaultValue || []}
               rules={{
                 required: isRequired ? "This field is required" : false,
+                validate: notBlankWhenRequired,
               }}
               render={({ field: fieldProps }) => {
                 const selectedArr = (fieldProps.value as string[]) || [];
@@ -466,6 +489,7 @@ export function FormFieldRenderer({ field, control, errors }: FormFieldRendererP
             defaultValue={field.defaultValue || false}
             rules={{
               required: isRequired ? "This field is required" : false,
+              validate: notBlankWhenRequired,
             }}
             render={({ field: fieldProps }) => (
               <Box>
@@ -488,7 +512,24 @@ export function FormFieldRenderer({ field, control, errors }: FormFieldRendererP
     }
   };
 
-  return <Box>{renderField()}</Box>;
+  const toneColor = tone ? status[tone].text : undefined;
+  return (
+    <Box
+      sx={
+        toneColor
+          ? {
+              // "&&&" repeats the class so this outranks the field's own border at
+              // rest and the page's hover border (getInputStyles, which scores
+              // 0,5,1). The page keeps its green focus border (!important).
+              "&&& .MuiOutlinedInput-root .MuiOutlinedInput-notchedOutline, &&& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline":
+                { borderColor: toneColor },
+            }
+          : undefined
+      }
+    >
+      {renderField()}
+    </Box>
+  );
 }
 
 export default FormFieldRenderer;

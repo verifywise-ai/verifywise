@@ -8,6 +8,7 @@ import Select from "../../components/Inputs/Select";
 import { AiRiskClassification } from "../../../domain/enums/aiRiskClassification.enum";
 import type { EuAiActClassificationPreview } from "../../../application/repository/intakeForm.repository";
 import { visibleQuestions } from "../../../application/utils/euAiActQuestionnaire";
+import { classificationRoles } from "../../../application/utils/highRiskRoles";
 
 export type EuAiActClassificationData = EuAiActClassificationPreview;
 
@@ -37,7 +38,8 @@ export default function EuAiActClassificationPanel({
   onJustificationChange,
 }: EuAiActClassificationPanelProps) {
   const theme = useTheme();
-  const { questionnaire, answers, role, current, changedSinceSubmission } = classification;
+  const { questionnaire, answers, current, changedSinceSubmission } = classification;
+  const roles = classificationRoles(current);
   const changed = selectedLevel !== current.level;
   const trimmedLength = justification.trim().length;
 
@@ -75,9 +77,9 @@ export default function EuAiActClassificationPanel({
 
       <Box sx={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
         <Chip label={current.level} />
-        {role && (
+        {roles.length > 0 && (
           <Typography sx={{ fontSize: "13px", color: theme.palette.text.tertiary }}>
-            <span>Role:</span> <span>{role}</span>
+            <span>{roles.length > 1 ? "Roles:" : "Role:"}</span> <span>{roles.join(", ")}</span>
           </Typography>
         )}
         {changedSinceSubmission && (

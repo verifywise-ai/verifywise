@@ -2,10 +2,31 @@ import { IntakeFormStatus } from "../enums/intake-form-status.enum";
 import { IntakeEntityType } from "../enums/intake-entity-type.enum";
 
 /**
+ * Per-form review routing settings (intake_forms.routing JSONB)
+ */
+export interface IFormRouting {
+  enabled: boolean;
+  seniorReviewerIds: number[];
+  standardReviewerIds: number[];
+  threshold: number;
+  closeCallMargin: number;
+  secondReviewRate: number;
+}
+
+/**
  * Field type options for intake form fields
  */
 export type IntakeFieldType =
-  "text" | "textarea" | "select" | "multiselect" | "checkbox" | "date" | "email" | "url" | "number";
+  | "text"
+  | "textarea"
+  | "select"
+  | "multiselect"
+  | "checkbox"
+  | "date"
+  | "email"
+  | "url"
+  | "number"
+  | "calculated";
 
 /**
  * Individual field definition in the form schema
@@ -29,6 +50,20 @@ export interface IIntakeFormField {
     max?: number;
     pattern?: string;
   };
+  /** Calculated fields: arithmetic over earlier number/calculated fields, e.g. "{cost} * 12". */
+  formula?: string;
+  /** Calculated fields: decimals to round and show, 0–6, default 2. */
+  decimals?: number;
+  /** Calculated fields: display-only text before / after the value, at most 10 characters. */
+  prefix?: string;
+  suffix?: string;
+  /** Show the field only when these conditions on earlier fields match. */
+  visibility?: {
+    match: "all" | "any";
+    conditions: Array<{ fieldId: string; operator: string; value?: string | number | string[] }>;
+  };
+  /** The risk dimension this field's answer feeds (see intakeRiskScoring.service.ts). */
+  riskDimension?: string;
 }
 
 /**
@@ -59,7 +94,9 @@ export interface IIntakeForm {
   llmKeyId: number | null;
   suggestedQuestionsEnabled: boolean;
   euAiActRiskStepEnabled: boolean;
+  liveChecksEnabled: boolean;
   designSettings: Record<string, unknown> | null;
+  routing: IFormRouting | null;
   createdBy: number;
   createdAt: Date;
   updatedAt: Date;
@@ -83,7 +120,9 @@ export interface ICreateIntakeFormInput {
   llmKeyId?: number | null;
   suggestedQuestionsEnabled?: boolean;
   euAiActRiskStepEnabled?: boolean;
+  liveChecksEnabled?: boolean;
   designSettings?: Record<string, unknown> | null;
+  routing?: IFormRouting | null;
   createdBy: number;
 }
 
@@ -105,7 +144,9 @@ export interface IUpdateIntakeFormInput {
   llmKeyId?: number | null;
   suggestedQuestionsEnabled?: boolean;
   euAiActRiskStepEnabled?: boolean;
+  liveChecksEnabled?: boolean;
   designSettings?: Record<string, unknown> | null;
+  routing?: IFormRouting | null;
 }
 
 /**
@@ -121,5 +162,6 @@ export interface IPublicIntakeForm {
   submitButtonText: string;
   publicId: string | null;
   euAiActRiskStepEnabled: boolean;
+  liveChecksEnabled: boolean;
   designSettings: Record<string, unknown> | null;
 }

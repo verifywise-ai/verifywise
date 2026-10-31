@@ -1,3 +1,4 @@
+import { HighRiskRole } from "../enums/highRiskRole.enum";
 // this model will be replaced by the one inside structures/new-mock-data/projects.mock.ts directory
 
 export type Project = {
@@ -8,14 +9,10 @@ export type Project = {
   members: string[];
   start_date: Date;
   ai_risk_classification: "high risk" | "limited risk" | "minimal risk" | null;
-  type_of_high_risk_role:
-    | "deployer"
-    | "provider"
-    | "distributor"
-    | "importer"
-    | "product manufacturer"
-    | "authorized representative"
-    | null;
+  /** EU AI Act roles, Provider first. Read it with projectHighRiskRoles(). */
+  high_risk_roles?: HighRiskRole[];
+  /** Deprecated single role derived by the server; read high_risk_roles instead. */
+  type_of_high_risk_role?: HighRiskRole | null;
   goal: string;
   last_updated: Date;
   last_updated_by: number;

@@ -3,10 +3,16 @@ import { Request, Response } from "express";
 jest.mock("../modelLifecycle.service", () => ({
   reorderPhases: jest.fn(async () => undefined),
   reorderItems: jest.fn(async () => undefined),
+  detachFile: jest.fn(),
 }));
 
 import * as svc from "../modelLifecycle.service";
-import { orderedIdsFrom, reorderItemsCtrl, reorderPhasesCtrl } from "../modelLifecycle.ctrl";
+import {
+  detachFileCtrl,
+  orderedIdsFrom,
+  reorderItemsCtrl,
+  reorderPhasesCtrl,
+} from "../modelLifecycle.ctrl";
 
 const request = (orderedIds: unknown) =>
   ({ body: { orderedIds }, params: { phaseId: "3" }, organizationId: 1 }) as unknown as Request;
@@ -62,6 +68,37 @@ describe("model lifecycle reorder", () => {
     await reorderItemsCtrl(request([2, 1]), res);
 
     expect(svc.reorderItems).toHaveBeenCalledWith(1, 3, [2, 1]);
+    expect(res.status).toHaveBeenCalledWith(200);
+  });
+});
+
+describe("model lifecycle detach file", () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  const detachRequest = () =>
+    ({
+      params: { id: "10", itemId: "20", fileId: "99" },
+      organizationId: 1,
+      userId: 7,
+      t: (key: string) => key,
+    }) as unknown as Request;
+
+  it("answers 404 when the item has no link to the file", async () => {
+    (svc.detachFile as jest.Mock).mockResolvedValueOnce(false);
+    const res = response();
+
+    await detachFileCtrl(detachRequest(), res);
+
+    expect(svc.detachFile).toHaveBeenCalledWith(1, 10, 20, 99, 7);
+    expect(res.status).toHaveBeenCalledWith(404);
+  });
+
+  it("answers 200 when the link was removed", async () => {
+    (svc.detachFile as jest.Mock).mockResolvedValueOnce(true);
+    const res = response();
+
+    await detachFileCtrl(detachRequest(), res);
+
     expect(res.status).toHaveBeenCalledWith(200);
   });
 });

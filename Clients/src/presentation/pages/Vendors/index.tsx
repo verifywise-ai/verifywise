@@ -55,6 +55,7 @@ import type { ResearchAlert } from "../../../application/utils/vendorResearchAle
 import VendorResearchFindings from "./VendorResearchFindings";
 import VendorRiskInsights from "./VendorRiskInsights";
 import { matchesHeatCell } from "./VendorRiskInsights/HeatMapSection";
+import ListStateWrapper from "../../components/ListStateWrapper";
 
 // Constants
 const REDIRECT_DELAY_MS = 2000;
@@ -163,10 +164,13 @@ const Vendors = () => {
   const {
     data: vendors = [],
     isLoading: isVendorsLoading,
+    error: vendorsError,
     refetch: refetchVendors,
-  } = useVendors({
-    projectId: selectedProjectId,
-  });
+  } = useVendors(
+    { projectId: selectedProjectId },
+    // The vendor list renders its own inline error state.
+    { suppressGlobalErrorToast: true },
+  );
   const { vendorRisksSummary, refetchVendorRisks, vendorRisks, loadingVendorRisks } =
     useVendorRisks({
       projectId: selectedProjectId?.toString(),
@@ -1045,6 +1049,28 @@ const Vendors = () => {
     });
   }, [vendorRisks, vendors, users]);
 
+  // GroupedTableView renders the table's own placeholder for an empty list, so the
+  // same element serves as the empty state and the table stays mounted (keeping
+  // its page and sort) when a search briefly matches nothing.
+  const vendorList = (
+    <GroupedTableView
+      groupedData={groupedVendors}
+      ungroupedData={filteredVendors}
+      renderTable={(data, options) => (
+        <TableWithPlaceholder
+          vendors={data}
+          users={users}
+          onDelete={handleDeleteVendor}
+          onEdit={handleEditVendor}
+          hidePagination={options?.hidePagination}
+          vendorRisks={vendorRisks}
+          visibleColumns={vendorVisibleColumns}
+          onNotify={handleResearchNotify}
+        />
+      )}
+    />
+  );
+
   return (
     <PageHeaderExtended
       title={value === "1" ? "Vendor list" : "Vendor risks list"}
@@ -1284,26 +1310,20 @@ const Vendors = () => {
         )}
 
         <TabPanel value="1" sx={tabPanelStyle}>
-          {isVendorsLoading ? (
-            <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
-          ) : (
-            <GroupedTableView
-              groupedData={groupedVendors}
-              ungroupedData={filteredVendors}
-              renderTable={(data, options) => (
-                <TableWithPlaceholder
-                  vendors={data}
-                  users={users}
-                  onDelete={handleDeleteVendor}
-                  onEdit={handleEditVendor}
-                  hidePagination={options?.hidePagination}
-                  vendorRisks={vendorRisks}
-                  visibleColumns={vendorVisibleColumns}
-                  onNotify={handleResearchNotify}
-                />
-              )}
-            />
-          )}
+          <ListStateWrapper
+            items={filteredVendors}
+            isLoading={isVendorsLoading}
+            loadingLabel="Loading vendors"
+            errorMessage={
+              // A failed background refetch keeps the cached vendors on screen.
+              vendorsError && !vendors.length
+                ? "Failed to load vendors. Please try again later."
+                : null
+            }
+            emptyState={vendorList}
+          >
+            {vendorList}
+          </ListStateWrapper>
         </TabPanel>
         <TabPanel value="2" sx={tabPanelStyle}>
           <Stack spacing={4}>

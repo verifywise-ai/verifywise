@@ -13,7 +13,19 @@ import type {
 import type {
   FieldType,
   FormDesignSettings,
+  FormRouting,
+  IntakeOversight,
+  SubmissionRouting,
 } from "../../presentation/pages/IntakeFormBuilder/types";
+import type {
+  ILiveChecks,
+  LiveCheckHint,
+  PrefillSuggestion,
+  PrefillSubmitEntry,
+} from "../../domain/types/intakeLiveChecks";
+import CustomAxios from "../../infrastructure/api/customAxios";
+import type { Visibility } from "../utils/intakeFormLogic";
+import type { ClassificationLevel, ScoreBand, ScoreSource } from "../utils/intakeScoring/scoreMath";
 
 // Re-export enums for convenience
 export { IntakeFormStatus, IntakeEntityType, IntakeSubmissionStatus };
@@ -23,6 +35,7 @@ export interface EuAiActClassificationPreview {
   questionnaire: Questionnaire;
   answers: Answers;
   role: ClassificationRole | null;
+  roles?: ClassificationRole[];
   current: ClassificationResult;
   changedSinceSubmission: boolean;
   submittedAt: string;
@@ -68,6 +81,17 @@ export interface FormField {
   options?: FieldOption[];
   defaultValue?: string | number | boolean | string[];
   entityFieldMapping?: string;
+  /** Calculated fields: arithmetic over earlier number/calculated fields, e.g. "{cost} * 12". */
+  formula?: string;
+  /** Calculated fields: decimals to round and show, 0–6, default 2. */
+  decimals?: number;
+  /** Calculated fields: display-only text before / after the value, at most 10 characters. */
+  prefix?: string;
+  suffix?: string;
+  /** Show the field only when these conditions on earlier fields match. */
+  visibility?: Visibility;
+  /** The risk dimension this field's answer feeds. */
+  riskDimension?: string;
   order: number;
 }
 
@@ -99,7 +123,9 @@ export interface IntakeForm {
   llmKeyId?: number | null;
   suggestedQuestionsEnabled?: boolean;
   euAiActRiskStepEnabled?: boolean;
+  liveChecksEnabled?: boolean;
   designSettings?: FormDesignSettings | null;
+  routing?: FormRouting | null;
   createdBy: number;
   createdAt: Date;
   updatedAt: Date;
@@ -128,6 +154,96 @@ export interface RiskAssessment {
   scoredAt: string;
 }
 
+/** A stage of the AI assessment (scoring, suggestions). */
+export type StageStatus = "pending" | "complete" | "ai_not_configured" | "ai_failed";
+
+/** A reason the AI gave, with the answer it quoted. */
+export interface AiReason {
+  text: string;
+  questionId: string;
+  excerpt: string;
+}
+
+/** The rule-floored, AI-assisted score (risk_assessment version 2). */
+export interface RiskAssessmentV2 {
+  version: 2;
+  status: StageStatus;
+  notRuleChecked: boolean;
+  classificationLevel: ClassificationLevel | null;
+  ruleMinimum: number | null;
+  ai: {
+    runs: number[];
+    failedRuns: number;
+    validRuns: number;
+    median: number | null;
+    min: number | null;
+    max: number | null;
+    reasons: AiReason[];
+  } | null;
+  finalScore: number | null;
+  source: ScoreSource | null;
+  rulesOnly: boolean;
+  overallScore: number | null;
+  tier: ScoreBand | null;
+  stageStartedAt: string;
+  scoredAt: string | null;
+  error?: string;
+}
+
+export type SuggestionLikelihood = "Rare" | "Unlikely" | "Possible" | "Likely" | "Almost Certain";
+export type SuggestionSeverity = "Negligible" | "Minor" | "Moderate" | "Major" | "Catastrophic";
+export type SuggestionState = "suggested" | "accepted" | "dismissed";
+
+/** A risk suggested for a submission; becomes a real risk only on approve. */
+export interface IntakeSuggestedRisk {
+  id: string;
+  source: "mit" | "ibm" | "ai";
+  name: string;
+  description: string;
+  categories: string[];
+  lifecyclePhase?: string;
+  likelihood: SuggestionLikelihood;
+  severity: SuggestionSeverity;
+  impact: string;
+  mitigationPlan: string;
+  implementationStrategy: string;
+  /** ISO date; null means approval + 90 days. */
+  deadline: string | null;
+  modelRiskCategory?: string;
+  modelRiskLevel?: string;
+  state: SuggestionState;
+  editedBy?: number;
+  editedAt?: string;
+  decidedBy?: number;
+  decidedAt?: string;
+}
+
+export interface SuggestedRisksBlock {
+  status: StageStatus;
+  items: IntakeSuggestedRisk[];
+  droppedCount: number;
+  stageStartedAt: string;
+  generatedAt: string | null;
+  error?: string;
+}
+
+/** The fields a reviewer may change on a suggestion. */
+export type SuggestedRiskPatch = Partial<
+  Pick<
+    IntakeSuggestedRisk,
+    | "state"
+    | "name"
+    | "description"
+    | "likelihood"
+    | "severity"
+    | "mitigationPlan"
+    | "implementationStrategy"
+    | "deadline"
+    | "modelRiskCategory"
+    | "modelRiskLevel"
+  >
+>;
+
 /**
  * Risk override data
  */
@@ -146,6 +262,8 @@ export interface IntakeSubmission {
   id: number;
   formId: number;
   formData: Record<string, unknown>;
+  /** The stored answers, as the server sends them. */
+  data?: Record<string, unknown>;
   submitterEmail: string;
   submitterName?: string;
   status: IntakeSubmissionStatus;
@@ -158,9 +276,18 @@ export interface IntakeSubmission {
   originalSubmissionId?: number | null;
   resubmissionCount: number;
   ipAddress?: string;
-  riskAssessment?: RiskAssessment | null;
+  riskAssessment?: RiskAssessment | RiskAssessmentV2 | null;
   riskTier?: string | null;
   riskOverride?: RiskOverride | null;
+  suggestedRisks?: SuggestedRisksBlock | null;
+  /** The lane decision, null until the submission is routed. */
+  routing?: SubmissionRouting | null;
+  /** Ids of the assigned lane's reviewers, from the list endpoint. */
+  laneReviewerIds?: number[];
+  /** Senior reviewers who can act on an open or unresolved-missed second review. */
+  secondReviewerIds?: number[];
+  /** Whether the submission's form routes by risk score. */
+  routingEnabled?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -224,7 +351,9 @@ export async function createIntakeForm(
     llmKeyId?: number | null;
     suggestedQuestionsEnabled?: boolean;
     euAiActRiskStepEnabled?: boolean;
+    liveChecksEnabled?: boolean;
     designSettings?: FormDesignSettings | null;
+    routing?: FormRouting | null;
   },
   signal?: AbortSignal,
 ): Promise<{ data: IntakeForm }> {
@@ -250,7 +379,9 @@ export async function updateIntakeForm(
     llmKeyId?: number | null;
     suggestedQuestionsEnabled?: boolean;
     euAiActRiskStepEnabled?: boolean;
+    liveChecksEnabled?: boolean;
     designSettings?: FormDesignSettings | null;
+    routing?: FormRouting | null;
   },
   signal?: AbortSignal,
 ): Promise<{ data: IntakeForm }> {
@@ -315,48 +446,87 @@ export async function getPendingSubmissions(
   };
 }
 
+/** What the review modal loads for one submission. */
+export interface SubmissionPreview {
+  submission: IntakeSubmission;
+  /** v1 keyword score or v2 AI score, as stored. */
+  riskAssessment: RiskAssessment | RiskAssessmentV2 | null;
+  entityPreview: Record<string, unknown>;
+  form: {
+    id: number;
+    name: string;
+    entityType: string;
+    schema: FormSchema;
+    riskTierSystem?: string;
+  };
+  riskTier?: string | null;
+  riskOverride?: RiskOverride | null;
+  euAiActClassification?: EuAiActClassificationPreview | null;
+  /** The v2 assessment, or null for v1 / none. */
+  assessment?: RiskAssessmentV2 | null;
+  suggestedRisks?: SuggestedRisksBlock | null;
+  /** The rule minimum under the current rules. */
+  ruleMinimumPreview?: number | null;
+  /** The level the AI was given when the score was computed. */
+  assessedLevel?: ClassificationLevel | null;
+  routing?: SubmissionRouting | null;
+  /** The live-check hints the submitter saw, or null for older submissions. */
+  liveChecks?: ILiveChecks | null;
+  routingEnabled?: boolean;
+  canDecide?: boolean;
+  decideBlockedReason?: string | null;
+  /** Reviewers of the assigned lane. */
+  laneReviewers?: Array<{ id: number; name: string }>;
+  isSeniorReviewer?: boolean;
+}
+
 /**
  * Get submission preview (risk assessment + entity preview) for approval flow
  */
 export async function getSubmissionPreview(
   submissionId: number,
   signal?: AbortSignal,
-): Promise<{
-  data: {
-    submission: IntakeSubmission;
-    riskAssessment: RiskAssessment | null;
-    entityPreview: Record<string, unknown>;
-    form: {
-      id: number;
-      name: string;
-      entityType: string;
-      schema: FormSchema;
-      riskTierSystem?: string;
-    };
-    riskTier?: string | null;
-    riskOverride?: RiskOverride | null;
-    euAiActClassification?: EuAiActClassificationPreview | null;
-  };
-}> {
+): Promise<{ data: SubmissionPreview }> {
   const response = await apiServices.get(`${BASE_URL}/submissions/${submissionId}/preview`, {
     signal,
   });
+  return response.data as { data: SubmissionPreview };
+}
+
+/** Re-run the assessment stages that failed or stalled. */
+export async function retrySubmissionAssessment(
+  submissionId: number,
+): Promise<{ data: { stages: string[] } }> {
+  const response = await apiServices.post(
+    `${BASE_URL}/submissions/${submissionId}/assessment/retry`,
+    {},
+  );
+  return response.data as { data: { stages: string[] } };
+}
+
+/** Edit, accept, dismiss or restore one suggested risk. Returns the updated item. */
+export async function updateSuggestedRisk(
+  submissionId: number,
+  suggestionId: string,
+  patch: SuggestedRiskPatch,
+): Promise<{ data: IntakeSuggestedRisk }> {
+  const response = await apiServices.patch(
+    `${BASE_URL}/submissions/${submissionId}/suggested-risks/${encodeURIComponent(suggestionId)}`,
+    patch,
+  );
+  return response.data as { data: IntakeSuggestedRisk };
+}
+
+/** Accept every suggestion still in "suggested" that has a mitigation plan. */
+export async function acceptAllSuggestedRisks(
+  submissionId: number,
+): Promise<{ data: { accepted: number; skipped: number; items: IntakeSuggestedRisk[] } }> {
+  const response = await apiServices.post(
+    `${BASE_URL}/submissions/${submissionId}/suggested-risks/accept-all`,
+    {},
+  );
   return response.data as {
-    data: {
-      submission: IntakeSubmission;
-      riskAssessment: RiskAssessment | null;
-      entityPreview: Record<string, unknown>;
-      form: {
-        id: number;
-        name: string;
-        entityType: string;
-        schema: FormSchema;
-        riskTierSystem?: string;
-      };
-      riskTier?: string | null;
-      riskOverride?: RiskOverride | null;
-      euAiActClassification?: EuAiActClassificationPreview | null;
-    };
+    data: { accepted: number; skipped: number; items: IntakeSuggestedRisk[] };
   };
 }
 
@@ -411,6 +581,11 @@ export interface IntakeSubmissionField {
   options: Array<{ label: string; value: string }> | null;
   entityFieldMapping: string | null;
   isMapped: boolean;
+  /** Whether the submission stored this field (a calculated field may be stored as null). */
+  answered?: boolean;
+  decimals?: number | null;
+  prefix?: string | null;
+  suffix?: string | null;
 }
 
 /**
@@ -424,6 +599,11 @@ export interface EntityIntakeSubmission {
   submittedAt: string;
   reviewedAt: string | null;
   riskTier: string | null;
+  /** Set for AI-scored (v2) submissions; null for older ones. */
+  /** riskTier is the override's band when a reviewer set one; band is the score's own. */
+  riskScore?: { finalScore: number | null; rulesOnly: boolean; band?: string | null } | null;
+  /** A reviewer's band override, if any. */
+  riskOverrideTier?: string | null;
   fields: IntakeSubmissionField[];
 }
 
@@ -537,6 +717,7 @@ export async function getPublicForm(
     previousSubmitterEmail?: string;
     euAiActRiskStep?: { questionnaire: Questionnaire } | null;
     previousRiskAnswers?: Answers;
+    liveChecks?: { enabled: boolean; aiAvailable: boolean };
   };
 }> {
   const queryParams = resubmissionToken ? `?token=${resubmissionToken}` : "";
@@ -561,6 +742,7 @@ export async function getPublicForm(
       previousSubmitterEmail?: string;
       euAiActRiskStep?: { questionnaire: Questionnaire } | null;
       previousRiskAnswers?: Answers;
+      liveChecks?: { enabled: boolean; aiAvailable: boolean };
     };
   };
 }
@@ -579,6 +761,7 @@ export async function submitPublicForm(
     captchaAnswer: number;
     resubmissionToken?: string;
     euAiActRiskAnswers?: Answers;
+    prefill?: Record<string, PrefillSubmitEntry>;
   },
 ): Promise<{
   data: {
@@ -617,6 +800,7 @@ export async function getPublicFormById(
     previousSubmitterEmail?: string;
     euAiActRiskStep?: { questionnaire: Questionnaire } | null;
     previousRiskAnswers?: Answers;
+    liveChecks?: { enabled: boolean; aiAvailable: boolean };
   };
 }> {
   const queryParams = resubmissionToken ? `?token=${resubmissionToken}` : "";
@@ -639,6 +823,7 @@ export async function getPublicFormById(
       previousSubmitterEmail?: string;
       euAiActRiskStep?: { questionnaire: Questionnaire } | null;
       previousRiskAnswers?: Answers;
+      liveChecks?: { enabled: boolean; aiAvailable: boolean };
     };
   };
 }
@@ -660,6 +845,7 @@ export async function submitPublicFormById(
     captchaAnswer: number;
     resubmissionToken?: string;
     euAiActRiskAnswers?: Answers;
+    prefill?: Record<string, PrefillSubmitEntry>;
   },
 ): Promise<{
   data: {
@@ -672,4 +858,196 @@ export async function submitPublicFormById(
   return response.data as {
     data: { submissionId: number; resubmissionToken: string; message: string };
   };
+}
+
+// ============================================================================
+// Review routing
+// ============================================================================
+
+/**
+ * Users who can be picked as senior or standard reviewers of a form
+ */
+export async function getEligibleReviewers(
+  signal?: AbortSignal,
+): Promise<Array<{ id: number; name: string; surname: string; email: string }>> {
+  const response = await apiServices.get(`${BASE_URL}/routing/eligible-reviewers`, { signal });
+  return response.data as Array<{ id: number; name: string; surname: string; email: string }>;
+}
+
+/**
+ * Send a pending submission to the senior lane
+ */
+export async function escalateSubmission(
+  submissionId: number,
+  reason: string,
+): Promise<{ data: SubmissionRouting }> {
+  const response = await apiServices.post(`${BASE_URL}/submissions/${submissionId}/escalate`, {
+    reason,
+  });
+  return response.data as { data: SubmissionRouting };
+}
+
+/**
+ * Record the outcome of a second review on a standard-lane decision
+ */
+export async function recordSecondReview(
+  submissionId: number,
+  outcome: "agreed" | "missed",
+  note?: string,
+): Promise<{ data: SubmissionRouting }> {
+  const response = await apiServices.post(`${BASE_URL}/submissions/${submissionId}/second-review`, {
+    outcome,
+    ...(note ? { note } : {}),
+  });
+  return response.data as { data: SubmissionRouting };
+}
+
+/**
+ * Close a missed second review with a resolution note
+ */
+export async function resolveSecondReviewMiss(
+  submissionId: number,
+  note: string,
+): Promise<{ data: SubmissionRouting }> {
+  const response = await apiServices.post(
+    `${BASE_URL}/submissions/${submissionId}/second-review/resolve`,
+    { note },
+  );
+  return response.data as { data: SubmissionRouting };
+}
+
+/**
+ * Routing and decision figures for the oversight tab
+ */
+export async function getIntakeOversight(
+  weeks: 4 | 8 | 12,
+  formId?: number,
+  signal?: AbortSignal,
+): Promise<{ data: IntakeOversight }> {
+  const params = new URLSearchParams({ weeks: String(weeks) });
+  if (formId !== undefined) params.append("formId", String(formId));
+  const response = await apiServices.get(`${BASE_URL}/oversight?${params}`, { signal });
+  return response.data as { data: IntakeOversight };
+}
+
+// ============================================================================
+// Public form live checks and document prefill
+// ============================================================================
+
+/** Which public form a live-check call is about: by public id or by tenant and form slug. */
+export type PublicFormRef = { publicId: string } | { tenantSlug: string; formSlug: string };
+
+/** Default pause, in seconds, when a 429 carries no usable RateLimit-Reset header. */
+export const DEFAULT_RATE_LIMIT_PAUSE_SECONDS = 300;
+
+/** A failed live-check or prefill call: the HTTP status (undefined for a network error), the server's message, and for a 429 the seconds until the limit resets. */
+export class LiveCheckRequestError extends Error {
+  readonly status: number | undefined;
+  readonly retryAfterSeconds: number | undefined;
+
+  constructor(message: string, status?: number, retryAfterSeconds?: number) {
+    super(message);
+    this.name = "LiveCheckRequestError";
+    this.status = status;
+    this.retryAfterSeconds = retryAfterSeconds;
+  }
+}
+
+function publicBase(ref: PublicFormRef): string {
+  return "publicId" in ref
+    ? `${BASE_URL}/public/by-id/${encodeURIComponent(ref.publicId)}`
+    : `${BASE_URL}/public/${encodeURIComponent(ref.tenantSlug)}/${encodeURIComponent(ref.formSlug)}`;
+}
+
+/**
+ * The server puts 4xx messages under `data` (repo response helpers) and the
+ * prefill 502 message under `error`; accept either, plus `message`.
+ */
+function serverMessage(body: unknown, fallback: string): string {
+  if (body && typeof body === "object") {
+    const { data, error, message } = body as Record<string, unknown>;
+    if (typeof data === "string" && data) return data;
+    if (typeof error === "string" && error) return error;
+    if (typeof message === "string" && message) return message;
+  }
+  return fallback;
+}
+
+function toRequestError(error: unknown): LiveCheckRequestError {
+  const err = error as {
+    message?: string;
+    response?: { status?: number; data?: unknown; headers?: Record<string, unknown> };
+  };
+  const status = err?.response?.status;
+  let retryAfter: number | undefined;
+  if (status === 429) {
+    const seconds = Number(err.response?.headers?.["ratelimit-reset"]);
+    retryAfter =
+      Number.isFinite(seconds) && seconds > 0
+        ? Math.ceil(seconds)
+        : DEFAULT_RATE_LIMIT_PAUSE_SECONDS;
+  }
+  return new LiveCheckRequestError(
+    serverMessage(err?.response?.data, err?.message ?? "Request failed"),
+    status,
+    retryAfter,
+  );
+}
+
+/** AI hints for the answers so far. Throws LiveCheckRequestError (429 carries retryAfterSeconds). */
+export async function postLiveChecks(
+  ref: PublicFormRef,
+  data: Record<string, unknown>,
+  language: string,
+  signal?: AbortSignal,
+): Promise<{ aiAvailable: boolean; hints: LiveCheckHint[]; error?: string }> {
+  try {
+    const response = await CustomAxios.post(`${publicBase(ref)}/live-checks`, { data, language }, {
+      signal,
+      suppressGlobalErrorToast: true,
+    } as Record<string, unknown>);
+    const body = (response.data?.data ?? {}) as {
+      aiAvailable?: boolean;
+      hints?: LiveCheckHint[];
+      error?: string;
+    };
+    return {
+      aiAvailable: body.aiAvailable === true,
+      hints: Array.isArray(body.hints) ? body.hints : [],
+      ...(typeof body.error === "string" ? { error: body.error } : {}),
+    };
+  } catch (error) {
+    throw toRequestError(error);
+  }
+}
+
+/** Suggested answers read from an uploaded vendor document (PDF or DOCX). */
+export async function postPrefill(
+  ref: PublicFormRef,
+  file: File,
+  data: Record<string, unknown>,
+  language: string,
+  signal?: AbortSignal,
+): Promise<{ fileName: string; suggestions: PrefillSuggestion[] }> {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("data", JSON.stringify(data));
+  formData.append("language", language);
+  try {
+    const response = await CustomAxios.post(`${publicBase(ref)}/prefill`, formData, {
+      signal,
+      headers: { "Content-Type": "multipart/form-data" },
+      suppressGlobalErrorToast: true,
+    } as Record<string, unknown>);
+    const body = (response.data?.data ?? {}) as {
+      fileName?: string;
+      suggestions?: PrefillSuggestion[];
+    };
+    return {
+      fileName: typeof body.fileName === "string" ? body.fileName : file.name,
+      suggestions: Array.isArray(body.suggestions) ? body.suggestions : [],
+    };
+  } catch (error) {
+    throw toRequestError(error);
+  }
 }

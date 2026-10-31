@@ -1,3 +1,4 @@
+import { HighRiskRole } from "../../../../domain/enums/highRiskRole.enum";
 import { ProjectResponseDTO } from "../../../../application/dtos";
 
 const projectDto: ProjectResponseDTO = {
@@ -109,7 +110,7 @@ export class ProjectFromBuilder {
     ],
     start_date: "2024-02-01",
     ai_risk_classification: 3,
-    type_of_high_risk_role: 2,
+    high_risk_roles: [HighRiskRole.DEPLOYER, HighRiskRole.PROVIDER],
     goal: "Create AI solution",
   };
 

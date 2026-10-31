@@ -2,10 +2,10 @@ import { getData, deleteDemoVendorsData } from "../../utils/autoDriver.utils";
 import { createEUFrameworkQuery } from "../../utils/eu.utils";
 import { createISOFrameworkQuery } from "../../utils/iso42001.utils";
 import { createISO27001FrameworkQuery } from "../../utils/iso27001.utils";
-import { createDataGovernanceFrameworkQuery } from "../../utils/frameworkRegistry.utils";
 import { createAiAppQuery } from "../../utils/aiApp.utils";
 import { sequelize } from "../../database/db";
-import { createNewProjectQuery, deleteProjectByIdQuery } from "../../utils/project.utils";
+import { createNewProjectQuery, lockProjectForDelete } from "../../utils/project.utils";
+import { deleteProjectWithSideEffects } from "../../utils/projectDeletion.utils";
 import { createRiskQuery } from "../../utils/risk.utils";
 import { createNewVendorQuery } from "../../utils/vendor.utils";
 import { createNewVendorRiskQuery } from "../../utils/vendorRisk.utils";
@@ -79,7 +79,7 @@ export async function insertMockData(
           description:
             "An AI-powered platform that automates candidate screening, resume parsing, and preliminary assessments for recruitment processes. The system uses machine learning to rank candidates based on job requirements and historical hiring data.",
           ai_risk_classification: AiRiskClassification.HIGH_RISK,
-          type_of_high_risk_role: HighRiskRole.DEPLOYER,
+          high_risk_roles: [HighRiskRole.DEPLOYER],
           goal: "To streamline recruitment while ensuring fair, unbiased, and transparent candidate evaluation in compliance with EU AI Act requirements for high-risk employment systems",
           last_updated: new Date(Date.now()),
           last_updated_by: userId,
@@ -118,9 +118,11 @@ export async function insertMockData(
         },
         [], // no additional members
         // Every organizational framework the demo covers: ISO/IEC 42001 (2),
-        // ISO/IEC 27001 (3), NIST AI RMF (4) and Data Governance (16). All four
-        // are is_organizational, so this is the only project they can hang off.
-        [2, 3, 4, 16],
+        // ISO/IEC 27001 (3) and NIST AI RMF (4). All three are
+        // is_organizational, so this is the only project they can hang off.
+        // Data Governance (16) is left out: it is a generic data checklist,
+        // not an AI framework, and on the demo dashboard it confused people.
+        [2, 3, 4],
         organizationId,
         userId,
         transaction,
@@ -136,13 +138,6 @@ export async function insertMockData(
       );
       // The Advisor's NIST tools fail unless a project has framework 4 linked.
       await createNISTAI_RMFFrameworkQuery(
-        isoOrgProject.id!,
-        true,
-        organizationId,
-        transaction,
-        true,
-      );
-      await createDataGovernanceFrameworkQuery(
         isoOrgProject.id!,
         true,
         organizationId,
@@ -610,7 +605,7 @@ export async function insertMockData(
           description:
             "An internally deployed AI pair-programming tool integrated into developer IDEs and CI pipelines. It suggests code, generates unit tests, and summarizes changes for reviewers. Access is restricted to authenticated employees; prompts and completions are logged for audit, and outputs are treated as suggestions requiring human review before merge.",
           ai_risk_classification: AiRiskClassification.LIMITED_RISK,
-          type_of_high_risk_role: HighRiskRole.DEPLOYER,
+          high_risk_roles: [HighRiskRole.DEPLOYER],
           goal: "Give engineers an LLM coding assistant for code completion, generation, refactoring and test writing across internal repositories, while keeping proprietary source and secrets within governed, audited boundaries.",
           last_updated: new Date(Date.now()),
           last_updated_by: userId,
@@ -640,7 +635,7 @@ export async function insertMockData(
           description:
             "A machine-learning demand-forecasting and inventory-optimization system that predicts SKU-level demand from historical sales, seasonality, promotions and external signals, then recommends purchase and replenishment quantities. Forecasts feed planning dashboards; automated ordering stays within human-approved thresholds, and model performance is monitored for drift.",
           ai_risk_classification: AiRiskClassification.LIMITED_RISK,
-          type_of_high_risk_role: HighRiskRole.DEPLOYER,
+          high_risk_roles: [HighRiskRole.DEPLOYER],
           goal: "Forecast product demand and optimize inventory and replenishment across the supply chain using ML models, reducing stockouts and overstock while improving service levels and working-capital efficiency.",
           last_updated: new Date(Date.now()),
           last_updated_by: userId,
@@ -1195,10 +1190,16 @@ export async function deleteMockData(organizationId: number) {
     // 9. Delete demo projects (this will also delete projects_frameworks, projects_members, files, etc.)
     const demoProjects = (await getData("projects", organizationId, transaction)) as ProjectModel[];
     for (let project of demoProjects) {
-      // Delete NIST AI RMF framework data first
+      // Lock the project first, like every other deletion path, then the
+      // NIST AI RMF framework data, then the project itself (no approval
+      // withdrawal or change history for demo data, as before).
+      await lockProjectForDelete(project.id!, organizationId, transaction);
       await deleteProjectFrameworkNISTQuery(project.id!, organizationId, transaction);
-      // Then delete the project
-      await deleteProjectByIdQuery(project.id!, organizationId, transaction);
+      await deleteProjectWithSideEffects(project.id!, organizationId, transaction, {
+        alreadyLocked: true,
+        withdrawApproval: false,
+        recordHistory: false,
+      });
     }
 
     // 10. Delete demo users (last, as they may be referenced by other entities)

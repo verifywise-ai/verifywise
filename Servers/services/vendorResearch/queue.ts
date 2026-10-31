@@ -82,11 +82,14 @@ export async function enqueueVendorResearch(
 }
 
 /**
- * Adds the repeating job of the scheduled scan: at 17 minutes past every hour, a minute at which no
- * other scheduler of the application starts its work. The scheduler id is the job name, and an upsert
- * by id changes nothing when it exists, so every start of the backend can call this. It does not
- * empty the queue, which holds the runs that are waiting. The job has a single attempt and is not
- * kept: a scan that fails is logged by the worker, and the scan of the next hour does its work.
+ * Adds the repeating job of the scheduled scan: at 17 minutes past every hour, off the slots where
+ * the other schedulers pile up (the top of the hour, every 5 minutes, every 15 minutes). The
+ * approval overdue sweep (automationProducer.ts) starts at the same minute, but it runs on the
+ * automation queue, which has a worker of its own, so the two never wait for each other. The
+ * scheduler id is the job name, and an upsert by id changes nothing when it exists, so every start
+ * of the backend can call this. It does not empty the queue, which holds the runs that are waiting.
+ * The job has a single attempt and is not kept: a scan that fails is logged by the worker, and the
+ * scan of the next hour does its work.
  */
 export async function scheduleVendorResearchScan(): Promise<void> {
   await vendorResearchQueue.upsertJobScheduler(

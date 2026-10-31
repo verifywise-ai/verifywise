@@ -1,3 +1,4 @@
+import { waitFor } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 
 // Mock hooks
@@ -42,6 +43,7 @@ vi.mock("../1.0ComplianceTracker/ComplianceSteps", () => ({
 }));
 
 import ComplianceTracker from "../1.0ComplianceTracker/index";
+import { getComplianceProgress } from "../../../../application/repository/control_eu_act.repository";
 
 const mockProject = {
   id: 1,
@@ -62,5 +64,18 @@ describe("ComplianceTracker", () => {
   it("renders without crashing", () => {
     const { container } = renderWithProviders(<ComplianceTracker project={mockProject as any} />);
     expect(container).toBeTruthy();
+  });
+
+  it("reloads when the roles change, not when the same roles come back", async () => {
+    const project = (roles: string[]) =>
+      ({ ...mockProject, ai_risk_classification: "High risk", high_risk_roles: roles }) as any;
+    const { rerender } = renderWithProviders(<ComplianceTracker project={project(["Provider"])} />);
+    await waitFor(() => expect(vi.mocked(getComplianceProgress)).toHaveBeenCalledTimes(1));
+
+    rerender(<ComplianceTracker project={project(["Provider"])} />);
+    expect(vi.mocked(getComplianceProgress)).toHaveBeenCalledTimes(1);
+
+    rerender(<ComplianceTracker project={project(["Deployer", "Provider"])} />);
+    await waitFor(() => expect(vi.mocked(getComplianceProgress)).toHaveBeenCalledTimes(2));
   });
 });

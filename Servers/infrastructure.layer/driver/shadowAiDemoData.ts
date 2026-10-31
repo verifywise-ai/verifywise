@@ -942,10 +942,12 @@ export async function deleteShadowAiDemoData(
     "shadow_ai_daily_rollups",
     "shadow_ai_events",
     "shadow_ai_tools",
-    // Also clean config/settings tables to leave zero artifacts
+    // Also clean config tables to leave zero artifacts
     "shadow_ai_api_keys",
     "shadow_ai_syslog_config",
-    "shadow_ai_settings",
+    // shadow_ai_settings is NOT deleted: the seeder never writes it, and the
+    // row holds the organization's own saved settings (retention periods,
+    // rate limit), created on its first save.
   ];
 
   for (const table of tables) {

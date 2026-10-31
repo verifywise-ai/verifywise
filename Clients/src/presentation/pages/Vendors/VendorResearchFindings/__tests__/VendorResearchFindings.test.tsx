@@ -1877,14 +1877,14 @@ describe("dismissing a finding", () => {
     mocks.dismiss.mockReturnValueOnce(earlier.promise);
     renderSection();
     await screen.findByText(FIRST);
-    let dialog = await openDismissal(FIRST);
+    const dialog = await openDismissal(FIRST);
     await choose(dialog, "Other");
     await userEvent.click(within(dialog).getByRole("button", { name: "Dismiss" }));
     await waitFor(() => expect(mocks.dismiss).toHaveBeenCalledTimes(1));
     // The modal does not hold the user while the request is on its way.
     await userEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
-    dialog = await openDismissal(SECOND);
+    await openDismissal(SECOND);
 
     mocks.list.mockResolvedValue({ rows: [secondFinding()], total: 1 });
     await act(async () => {

@@ -105,6 +105,20 @@ export async function roleHasPermission(
 
   const role = await getRoleByName(organizationId, roleName);
   if (!role) return false; // unknown role: deny (fail-closed, as before)
+  return roleInfoHasPermission(organizationId, role, permissionKey);
+}
+
+/**
+ * Whether an already-resolved role (built-in or custom) holds `permissionKey`
+ * in `organizationId`. Use it when the role is known by id, so a built-in is
+ * never mistaken for an org custom role with the same name.
+ */
+export async function roleInfoHasPermission(
+  organizationId: number | null,
+  role: RoleInfo,
+  permissionKey: PermissionKey,
+): Promise<boolean> {
+  assertValidPermissionKey(permissionKey);
 
   if (role.organizationId === null) {
     return BUILTIN_ROLE_PERMISSIONS[role.name]?.has(permissionKey) ?? false;

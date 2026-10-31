@@ -216,11 +216,12 @@ export class ConflictException extends CustomException {
       ...options.metadata,
     };
 
+    // metadata goes last so options.metadata cannot replace the merged object.
     super(message, {
       code: "CONFLICT",
       statusCode: 409,
-      metadata,
       ...options,
+      metadata,
     });
 
     Object.setPrototypeOf(this, ConflictException.prototype);

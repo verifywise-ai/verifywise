@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
-import { Box, Typography, Stack, IconButton, Tooltip } from "@mui/material";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { Box, Typography, Stack, IconButton, Tooltip, CircularProgress } from "@mui/material";
+import { useNavigate } from "react-router";
 import {
   CirclePlus,
   Server,
@@ -15,16 +16,25 @@ import { EmptyState } from "../../../components/EmptyState";
 import EmptyStateTip from "../../../components/EmptyState/EmptyStateTip";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import Chip from "../../../components/Chip";
+import Alert from "../../../components/Alert";
 import Field from "../../../components/Inputs/Field";
 import Select from "../../../components/Inputs/Select";
 import StandardModal from "../../../components/Modals/StandardModal";
 import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtended";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
+import {
+  getClientErrorReason,
+  getGatewayErrorDetail,
+  getGatewayErrorText,
+} from "../../../../application/utils/apiErrorReason";
 import palette from "../../../themes/palette";
-import { slugify } from "../shared";
+import { FROM_MCP_SERVERS, slugify } from "../shared";
 import MCPTable from "../MCPTable";
 import CustomizableSkeleton from "../../../components/Skeletons";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
+import { useTranslation } from "../../../../application/hooks/useTranslation";
+import { fill } from "../../../../i18n/fill";
+import { VWLink } from "../../../components/Link/VWLink";
 
 interface ServerForm {
   name: string;
@@ -64,12 +74,59 @@ interface MCPServer {
   is_active: boolean;
   health_status: string;
   tool_count: number;
+  last_discovery_error?: string | null;
+  auth_header?: string;
+  auth_secret_hint?: string;
   created_by_name: string;
   created_at: string;
 }
 
+type DiscoveryChanges = { added: number; removed: number; changed: number; unchanged: number };
+
+type Discovery = {
+  status: "success" | "failed" | "skipped";
+  tools_discovered: number;
+  changes?: DiscoveryChanges | null;
+  error: string | null;
+};
+
+type Translate = (key: string) => string;
+
+// Counts are filled into translated templates: the DOM translator only matches
+// whole strings, so "3 tools found" would otherwise stay in English.
+const toolsFound = (t: Translate, n: number) =>
+  n === 0
+    ? t("The server offered no tools")
+    : n === 1
+      ? t("One tool found")
+      : fill(t("{count} tools found"), { count: n });
+
+const hasChanges = (c: DiscoveryChanges) => c.added + c.removed + c.changed > 0;
+
+const changeSummary = (t: Translate, c: DiscoveryChanges) =>
+  [
+    c.added && fill(t("{count} new"), { count: c.added }),
+    c.removed && fill(t("{count} removed"), { count: c.removed }),
+    c.changed && fill(t("{count} changed"), { count: c.changed }),
+  ]
+    .filter(Boolean)
+    .join(", ");
+
+// One wording for every successful discovery, whether it ran on save or from
+// the Discover button. With no active tools stored before the run (a new
+// server, or one whose tools had all gone) there is nothing to compare, so
+// only the total means anything.
+const discoveryBody = (t: Translate, total: number, c?: DiscoveryChanges | null) =>
+  c && c.removed + c.changed + c.unchanged > 0 && hasChanges(c)
+    ? changeSummary(t, c)
+    : toolsFound(t, total);
+
+const toolsCatalogPath = (serverId: number) => `/ai-gateway/mcp/tools?server=${serverId}`;
+
 export default function MCPServersPage() {
   const formatDate = useFormattedDate();
+  const { t } = useTranslation();
+  const navigate = useNavigate();
   const [servers, setServers] = useState<MCPServer[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -81,23 +138,87 @@ export default function MCPServersPage() {
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
 
   const [form, setForm] = useState<ServerForm>({ ...EMPTY_FORM });
+  const [alert, setAlert] = useState<{
+    variant: "success" | "warning" | "error";
+    title: string;
+    body?: string;
+    action?: { label: string; onClick: () => void };
+  } | null>(null);
+  // Ids of servers with a discovery running; each row has its own spinner.
+  const [discoveringIds, setDiscoveringIds] = useState<ReadonlySet<number>>(new Set());
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
+  // Titles are fixed phrases the DOM translator matches; bodies with counts
+  // arrive already translated. One dismiss timer at a time: an older alert's timer must not close a newer one.
+  const alertTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const showAlert = (
+    variant: "success" | "warning" | "error",
+    title: string,
+    body?: string,
+    serverId?: number,
+  ) => {
+    if (alertTimer.current) clearTimeout(alertTimer.current);
+    const action =
+      serverId === undefined
+        ? undefined
+        : {
+            label: "View tools",
+            onClick: () => navigate(toolsCatalogPath(serverId), { state: FROM_MCP_SERVERS }),
+          };
+    setAlert({ variant, title, body, action });
+    alertTimer.current = setTimeout(() => setAlert(null), 6000);
+  };
+  useEffect(
+    () => () => {
+      if (alertTimer.current) clearTimeout(alertTimer.current);
+    },
+    [],
+  );
+
+  const reportDiscovery = (prefix: string, serverId: number | undefined, discovery?: Discovery) => {
+    if (!discovery || discovery.status === "skipped") {
+      showAlert("success", prefix);
+    } else if (discovery.status === "success") {
+      const total = discovery.tools_discovered;
+      showAlert(
+        "success",
+        prefix,
+        discoveryBody(t, total, discovery.changes),
+        total > 0 ? serverId : undefined,
+      );
+    } else {
+      // The server is saved either way; say so, or the admin may think the save failed.
+      showAlert("warning", `${prefix}, but discovery failed`, discovery.error || undefined);
+    }
+  };
+
+  // Reloads can overlap (two discoveries at once); only the latest one may
+  // write, or an older response could put stale tool counts back on screen.
+  const loadSeq = useRef(0);
+
+  // The skeleton is for the first load and retries; later reloads keep the table on screen.
+  const loadData = useCallback(async (showSkeleton = false) => {
+    const seq = ++loadSeq.current;
+    if (showSkeleton) setLoading(true);
     setLoadError(null);
     try {
       const res = await apiServices.get<Record<string, any>>("/ai-gateway/mcp/servers");
-      setServers(res?.data?.servers || []);
+      if (seq === loadSeq.current) setServers(res?.data?.servers || []);
     } catch {
-      setLoadError("Failed to load MCP servers. Please try again.");
+      if (seq === loadSeq.current) setLoadError("Failed to load MCP servers. Please try again.");
     } finally {
-      setLoading(false);
+      if (seq === loadSeq.current) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    loadData();
+    loadData(true);
   }, [loadData]);
+
+  const isEditing = editingId !== null;
+  const editingServer = servers.find((s) => s.id === editingId);
+  // The stored secret only carries over while the auth type is unchanged;
+  // switching type means a new secret is required and no "current" hint applies.
+  const keepsStoredSecret = isEditing && editingServer?.auth_type === form.auth_type;
 
   const handleNameChange = (value: string) => {
     setForm((p) => ({
@@ -122,7 +243,7 @@ export default function MCPServersPage() {
       url: srv.url || "",
       auth_type: srv.auth_type || "none",
       auth_token: "",
-      auth_header_name: "",
+      auth_header_name: srv.auth_header || "",
       auth_api_key: "",
       description: srv.description || "",
     });
@@ -152,29 +273,34 @@ export default function MCPServersPage() {
     // Build auth_config based on auth_type
     if (form.auth_type === "bearer" && form.auth_token.trim()) {
       payload.auth_config = { token: form.auth_token.trim() };
-    } else if (form.auth_type === "api_key" && form.auth_api_key.trim()) {
-      payload.auth_config = {
-        header_name: form.auth_header_name.trim() || "X-API-Key",
-        api_key: form.auth_api_key.trim(),
-      };
+    } else if (form.auth_type === "api_key") {
+      const header = form.auth_header_name.trim();
+      const key = form.auth_api_key.trim();
+      if (key) {
+        payload.auth_config = { header: header || "X-API-Key", key };
+      } else if (editingServer && header && header !== (editingServer.auth_header || "")) {
+        payload.auth_config = { header };
+      }
     }
 
     try {
+      let res: { data?: Record<string, any> } | undefined;
       if (editingId === null) {
         payload.slug = form.slug;
-        await apiServices.post("/ai-gateway/mcp/servers", payload);
+        res = await apiServices.post("/ai-gateway/mcp/servers", payload);
       } else {
-        await apiServices.patch(`/ai-gateway/mcp/servers/${editingId}`, payload);
+        res = await apiServices.patch(`/ai-gateway/mcp/servers/${editingId}`, payload);
       }
       setIsModalOpen(false);
       setForm({ ...EMPTY_FORM });
+      reportDiscovery(
+        "Server saved",
+        res?.data?.server?.id ?? editingId ?? undefined,
+        res?.data?.discovery,
+      );
       await loadData();
     } catch (err: any) {
-      setFormError(
-        err?.response?.data?.detail ||
-          err?.response?.data?.message ||
-          `Failed to ${editingId ? "update" : "create"} server`,
-      );
+      setFormError(getGatewayErrorText(err, `Failed to ${editingId ? "update" : "create"} server`));
     } finally {
       setIsSubmitting(false);
     }
@@ -191,9 +317,50 @@ export default function MCPServersPage() {
     }
   };
 
+  const handleDiscover = async (id: number) => {
+    setDiscoveringIds((prev) => new Set(prev).add(id));
+    try {
+      const res = await apiServices.post<Record<string, any>>(
+        `/ai-gateway/mcp/servers/${id}/discover`,
+      );
+      const total: number = res?.data?.tools_discovered ?? 0;
+      const changes: DiscoveryChanges | null | undefined = res?.data?.changes;
+      // A run that only removed tools leaves nothing to view.
+      const viewFor = total > 0 ? id : undefined;
+      if (!changes) {
+        // No change data to go on: report the total only.
+        showAlert("success", toolsFound(t, total), undefined, viewFor);
+      } else {
+        showAlert(
+          "success",
+          hasChanges(changes) ? "Tools updated" : "No changes",
+          discoveryBody(t, total, changes),
+          viewFor,
+        );
+      }
+    } catch (err: any) {
+      showAlert(
+        "error",
+        "Discovery failed",
+        getGatewayErrorDetail(err) ?? getClientErrorReason(err) ?? undefined,
+      );
+    } finally {
+      // Reload first so the spinner stays until the new tool count is on screen.
+      await loadData();
+      setDiscoveringIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }
+  };
+
   const handleToggleActive = async (id: number, isActive: boolean) => {
     try {
-      await apiServices.patch(`/ai-gateway/mcp/servers/${id}`, { is_active: !isActive });
+      const res = await apiServices.patch<Record<string, any>>(`/ai-gateway/mcp/servers/${id}`, {
+        is_active: !isActive,
+      });
+      if (!isActive) reportDiscovery("Server switched on", id, res?.data?.discovery);
       await loadData();
     } catch {
       // Silently handle
@@ -212,8 +379,6 @@ export default function MCPServersPage() {
     return "Unknown";
   };
 
-  const isEditing = editingId !== null;
-
   return (
     <PageHeaderExtended
       title="MCP Servers"
@@ -228,6 +393,16 @@ export default function MCPServersPage() {
         />
       }
     >
+      {alert && (
+        <Alert
+          variant={alert.variant}
+          title={alert.title}
+          body={alert.body ?? ""}
+          action={alert.action}
+          isToast
+          onClick={() => setAlert(null)}
+        />
+      )}
       {loading ? (
         <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
       ) : loadError ? (
@@ -236,7 +411,7 @@ export default function MCPServersPage() {
             variant="outlined"
             text="Retry"
             icon={<RotateCcw size={16} />}
-            onClick={loadData}
+            onClick={() => loadData(true)}
           />
         </EmptyState>
       ) : servers.length === 0 ? (
@@ -252,8 +427,8 @@ export default function MCPServersPage() {
           />
           <EmptyStateTip
             icon={Activity}
-            title="Health monitoring and tool discovery"
-            description="The gateway periodically checks server health and can discover available tools automatically. Unhealthy servers are temporarily bypassed to keep agents running."
+            title="Tool discovery"
+            description="Tools are discovered when you save a server, and you can run discovery again at any time from the server list."
           />
         </EmptyState>
       ) : (
@@ -277,15 +452,41 @@ export default function MCPServersPage() {
                 <Server size={14} strokeWidth={1.5} color={palette.text.tertiary} />
                 <Typography sx={{ fontSize: 13, fontWeight: 500 }}>{srv.name}</Typography>
               </Stack>,
-              <Chip
-                label={getHealthLabel(srv.health_status)}
-                variant={getHealthChipVariant(srv.health_status)}
-                size="small"
-                uppercase={false}
-              />,
-              <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
-                {srv.tool_count > 0 ? srv.tool_count : "—"}
-              </Typography>,
+              <Tooltip
+                title={
+                  srv.health_status === "unhealthy" && srv.last_discovery_error
+                    ? srv.last_discovery_error
+                    : ""
+                }
+                arrow
+              >
+                <span>
+                  <Chip
+                    label={getHealthLabel(srv.health_status)}
+                    variant={getHealthChipVariant(srv.health_status)}
+                    size="small"
+                    uppercase={false}
+                  />
+                </span>
+              </Tooltip>,
+              srv.tool_count > 0 ? (
+                <VWLink
+                  ariaLabel={
+                    srv.tool_count === 1
+                      ? t("View one tool")
+                      : fill(t("View {count} tools"), { count: srv.tool_count })
+                  }
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(toolsCatalogPath(srv.id), { state: FROM_MCP_SERVERS });
+                  }}
+                  sx={{ fontSize: 12 }}
+                >
+                  {srv.tool_count}
+                </VWLink>
+              ) : (
+                <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>—</Typography>
+              ),
               <Box>
                 <Typography sx={{ fontSize: 12, color: palette.text.secondary }}>
                   {srv.url}
@@ -316,10 +517,21 @@ export default function MCPServersPage() {
                 gap="2px"
                 onClick={(e) => e.stopPropagation()}
               >
-                <Tooltip title="Coming soon" arrow>
+                <Tooltip title="Discover tools" arrow>
                   <span>
-                    <IconButton size="small" disabled sx={{ p: 0.5 }} aria-label="Discover tools">
-                      <Search size={14} strokeWidth={1.5} color={palette.text.disabled} />
+                    <IconButton
+                      size="small"
+                      onClick={() => handleDiscover(srv.id)}
+                      disabled={discoveringIds.has(srv.id)}
+                      sx={{ p: 0.5 }}
+                      aria-label="Discover tools"
+                      aria-busy={discoveringIds.has(srv.id)}
+                    >
+                      {discoveringIds.has(srv.id) ? (
+                        <CircularProgress size={14} sx={{ color: palette.text.tertiary }} />
+                      ) : (
+                        <Search size={14} strokeWidth={1.5} color={palette.text.tertiary} />
+                      )}
                     </IconButton>
                   </span>
                 </Tooltip>
@@ -412,8 +624,13 @@ export default function MCPServersPage() {
               placeholder="Enter the bearer token"
               value={form.auth_token}
               onChange={(e) => setForm((p) => ({ ...p, auth_token: e.target.value }))}
-              isRequired
+              isRequired={!keepsStoredSecret}
             />
+          )}
+          {form.auth_type === "bearer" && keepsStoredSecret && editingServer?.auth_secret_hint && (
+            <Typography sx={{ fontSize: 11, color: palette.text.tertiary }}>
+              {`Current token: ${editingServer.auth_secret_hint}. Leave blank to keep it.`}
+            </Typography>
           )}
 
           {form.auth_type === "api_key" && (
@@ -429,8 +646,13 @@ export default function MCPServersPage() {
                 placeholder="Enter the API key value"
                 value={form.auth_api_key}
                 onChange={(e) => setForm((p) => ({ ...p, auth_api_key: e.target.value }))}
-                isRequired
+                isRequired={!keepsStoredSecret}
               />
+              {keepsStoredSecret && editingServer?.auth_secret_hint && (
+                <Typography sx={{ fontSize: 11, color: palette.text.tertiary }}>
+                  {`Current key: ${editingServer.auth_secret_hint}. Leave blank to keep it.`}
+                </Typography>
+              )}
             </>
           )}
 

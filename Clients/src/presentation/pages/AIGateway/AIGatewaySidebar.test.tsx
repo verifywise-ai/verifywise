@@ -108,9 +108,10 @@ describe("AIGatewaySidebar with SHOW_AI_GATEWAY_PROMPTS enabled", () => {
       <SidebarWithPrompts activeTab="prompts" onTabChange={vi.fn()} promptsCount={3} />,
     );
 
-    expect(screen.getByLabelText("Prompts")).toBeInTheDocument();
+    // The accessible name includes the visible count chip (WCAG 2.5.3).
+    expect(screen.getByLabelText("Prompts 3")).toBeInTheDocument();
     expect(screen.getByText("3")).toBeInTheDocument();
-    expect(screen.getByLabelText("Prompts").closest('[role="button"]')).toHaveClass(
+    expect(screen.getByLabelText("Prompts 3").closest('[role="button"]')).toHaveClass(
       "selected-path",
     );
   });

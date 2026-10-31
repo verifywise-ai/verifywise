@@ -1,4 +1,4 @@
-import { screen, fireEvent, waitFor } from "@testing-library/react";
+import { screen, fireEvent, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 
@@ -59,9 +59,26 @@ vi.mock("../IntakeSubmissionCard", () => ({
   default: () => <div data-testid="intake-submission-card" />,
 }));
 
-vi.mock("../../../components/CustomFieldsSection", () => ({
-  default: () => <div data-testid="custom-fields-section" />,
-}));
+const mockFlushCustomFields = vi.fn();
+vi.mock("../../../components/CustomFieldsSection", async () => {
+  const { forwardRef, useImperativeHandle } =
+    await vi.importActual<typeof import("react")>("react");
+  return {
+    default: forwardRef(({ onDirtyChange }: any, ref) => {
+      useImperativeHandle(ref, () => ({
+        flush: (...args: any[]) => mockFlushCustomFields(...args),
+        hasPendingValues: () => true,
+      }));
+      return (
+        <div data-testid="custom-fields-section">
+          <button type="button" onClick={() => onDirtyChange?.(true)}>
+            Change custom field
+          </button>
+        </div>
+      );
+    }),
+  };
+});
 
 vi.mock("../../../components/CustomFieldsSection/RequiredCustomFieldsGate", () => ({
   useRequiredCustomFieldsGate: () => ({ blocked: false, onPendingChange: vi.fn() }),
@@ -83,6 +100,21 @@ vi.mock("../RiskAnalysisModal", () => ({
         }
       >
         mock wizard save
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          updateClassification({
+            questionnaireVersion: 2,
+            level: "High risk",
+            role: "Provider",
+            roles: ["Provider", "Deployer"],
+            reasons: [],
+            obligations: [],
+          })
+        }
+      >
+        mock wizard save both
       </button>
       <button
         type="button"
@@ -114,7 +146,7 @@ const baseProject = {
   members: ["2"],
   start_date: "2024-05-01T00:00:00Z",
   ai_risk_classification: null,
-  type_of_high_risk_role: null,
+  high_risk_roles: [],
   geography: 1,
   target_industry: "",
   description: "",
@@ -127,6 +159,7 @@ const iso42001Framework = { id: 2, name: "ISO 42001", is_organizational: false }
 describe("ProjectSettings", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockFlushCustomFields.mockResolvedValue(undefined);
     mockUserRoleName = "Admin";
     mockUseProjectData.mockReturnValue({ project: baseProject });
     mockUseFrameworks.mockReturnValue({
@@ -142,7 +175,7 @@ describe("ProjectSettings", () => {
       expect(screen.getByDisplayValue("Chatbot Assistant")).toBeInTheDocument();
     });
     expect(screen.getByText("Use Case Overview")).toBeInTheDocument();
-    expect(screen.getByText("Project Details")).toBeInTheDocument();
+    expect(screen.getByText("Use case details")).toBeInTheDocument();
     expect(screen.getByText("Team & Compliance")).toBeInTheDocument();
     expect(screen.getByTestId("intake-submission-card")).toBeInTheDocument();
     expect(screen.getByTestId("custom-fields-section")).toBeInTheDocument();
@@ -222,6 +255,46 @@ describe("ProjectSettings", () => {
     });
   });
 
+  it("enables Save when only a custom field answer changes", async () => {
+    renderWithProviders(<ProjectSettings />);
+    await waitFor(() => expect(screen.getByDisplayValue("Chatbot Assistant")).toBeInTheDocument());
+    expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Change custom field" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Save" })).not.toBeDisabled();
+    });
+  });
+
+  it("saves only the custom field values when no project field changed", async () => {
+    mockFlushCustomFields.mockResolvedValue(undefined);
+    renderWithProviders(<ProjectSettings />);
+    await waitFor(() => expect(screen.getByDisplayValue("Chatbot Assistant")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole("button", { name: "Change custom field" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(mockFlushCustomFields).toHaveBeenCalledWith(5));
+    expect(mockUpdateProject).not.toHaveBeenCalled();
+    expect(await screen.findByText("Use case updated successfully")).toBeInTheDocument();
+  });
+
+  it("disables Save while a save is in progress", async () => {
+    let finish: () => void = () => {};
+    mockFlushCustomFields.mockReturnValue(new Promise<void>((resolve) => (finish = resolve)));
+    renderWithProviders(<ProjectSettings />);
+    await waitFor(() => expect(screen.getByDisplayValue("Chatbot Assistant")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole("button", { name: "Change custom field" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "Save" })).toBeDisabled());
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(mockFlushCustomFields).toHaveBeenCalledTimes(1);
+    finish();
+  });
+
   it("saves updated project details successfully", async () => {
     mockUpdateProject.mockResolvedValue({ status: 202 });
     renderWithProviders(<ProjectSettings />);
@@ -239,7 +312,7 @@ describe("ProjectSettings", () => {
       id: 5,
       body: expect.objectContaining({ project_title: "Renamed Assistant" }),
     });
-    expect(await screen.findByText("Project updated successfully")).toBeInTheDocument();
+    expect(await screen.findByText("Use case updated successfully")).toBeInTheDocument();
   });
 
   it("shows a server error message when saving fails with status 400", async () => {
@@ -291,7 +364,7 @@ describe("ProjectSettings", () => {
     renderWithProviders(<ProjectSettings />);
 
     expect(await screen.findByText("AI risk classification *")).toBeInTheDocument();
-    expect(screen.getByText("Type of high risk role *")).toBeInTheDocument();
+    expect(screen.getByText("High-risk roles *")).toBeInTheDocument();
   });
 
   it("opens the risk analysis modal from the classification helper link", async () => {
@@ -317,7 +390,7 @@ describe("ProjectSettings", () => {
   const euAiActProject = {
     ...baseProject,
     ai_risk_classification: "Minimal risk",
-    type_of_high_risk_role: "Deployer",
+    high_risk_roles: ["Deployer"],
     framework: [{ project_framework_id: 1, framework_id: 1, name: "EU AI Act" }],
   };
   const useEuAiAct = () => {
@@ -347,8 +420,54 @@ describe("ProjectSettings", () => {
     await waitFor(() => expect(mockUpdateProject).toHaveBeenCalled());
     expect(mockUpdateProject.mock.calls[0][0].body).toMatchObject({
       ai_risk_classification: "High risk",
-      type_of_high_risk_role: "Provider",
+      high_risk_roles: ["Provider"],
     });
+  });
+
+  it("takes both roles from the wizard without marking the form as changed", async () => {
+    useEuAiAct();
+    renderWithProviders(<ProjectSettings />);
+    await screen.findByText("AI risk classification *");
+    fireEvent.click(screen.getByText("mock wizard save both"));
+    await waitFor(() => expect(screen.getByText("Provider")).toBeInTheDocument());
+    expect(screen.getByText("Deployer")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+  });
+
+  it("saves a second role picked in the multi-select", async () => {
+    useEuAiAct();
+    mockUpdateProject.mockResolvedValue({ status: 202 });
+    renderWithProviders(<ProjectSettings />);
+    await screen.findByText("AI risk classification *");
+    fireEvent.keyDown(document.getElementById("high-risk-roles-input")!, { key: "ArrowDown" });
+    fireEvent.click(within(screen.getByRole("listbox")).getByText("Provider"));
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(mockUpdateProject).toHaveBeenCalled());
+    expect(mockUpdateProject.mock.calls[0][0].body).toMatchObject({
+      high_risk_roles: ["Provider", "Deployer"],
+    });
+    expect(mockUpdateProject.mock.calls[0][0].body).not.toHaveProperty("type_of_high_risk_role");
+  });
+
+  it("requires a role when EU AI Act is selected", async () => {
+    mockUseFrameworks.mockReturnValue({
+      filteredFrameworks: [euAiActFramework],
+      allFrameworks: [euAiActFramework, iso42001Framework],
+    });
+    mockUseProjectData.mockReturnValue({
+      project: { ...euAiActProject, high_risk_roles: [] },
+    });
+    renderWithProviders(<ProjectSettings />);
+    await screen.findByText("AI risk classification *");
+    fireEvent.change(screen.getByDisplayValue("Chatbot Assistant"), {
+      target: { value: "Renamed Assistant" },
+    });
+    await waitFor(() => expect(screen.getByRole("button", { name: "Save" })).not.toBeDisabled());
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(
+      await screen.findByText("Select at least one high-risk role when EU AI Act is selected."),
+    ).toBeInTheDocument();
+    expect(mockUpdateProject).not.toHaveBeenCalled();
   });
 
   it.each(["Reviewer", "Auditor"])("hides the classification wizard link from %s", async (role) => {
@@ -365,7 +484,8 @@ describe("ProjectSettings", () => {
     await waitFor(() => expect(screen.getByDisplayValue("Chatbot Assistant")).toBeInTheDocument());
 
     fireEvent.click(screen.getByRole("button", { name: "Delete use case" }));
-    expect(screen.getByText("Are you sure you want to delete the use case?")).toBeInTheDocument();
+    expect(screen.getByText("Delete this use case?")).toBeInTheDocument();
+    expect(screen.getByText(/This cannot be undone\./)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Delete" }));
 
@@ -386,7 +506,7 @@ describe("ProjectSettings", () => {
     fireEvent.click(screen.getByRole("button", { name: "Delete" }));
 
     expect(
-      await screen.findByText("Failed to delete project. Please try again."),
+      await screen.findByText("Failed to delete use case. Please try again."),
     ).toBeInTheDocument();
     expect(mockNavigate).not.toHaveBeenCalled();
   });

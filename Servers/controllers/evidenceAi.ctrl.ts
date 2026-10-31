@@ -7,6 +7,7 @@ import {
   getAnalysisByFileIdQuery,
   getQualityScoresQuery,
   getEvidenceGapsQuery,
+  getAdoptedEvidenceFrameworksQuery,
   getSuggestionsQuery,
   applySuggestionsQuery,
 } from "../utils/evidenceAi.utils";
@@ -436,7 +437,17 @@ export async function getGaps(req: Request, res: Response) {
       : undefined;
     const lowGrades = rawLowGrades && rawLowGrades.length > 0 ? rawLowGrades : undefined;
 
-    const gaps = await getEvidenceGapsQuery(req.organizationId!, frameworkType, lowGrades);
+    // Unfiltered, the view covers only the frameworks the organization uses:
+    // otherwise every control of an unused framework reads as a gap.
+    const gaps = frameworkType
+      ? await getEvidenceGapsQuery(req.organizationId!, frameworkType, lowGrades)
+      : await getEvidenceGapsQuery(
+          req.organizationId!,
+          undefined,
+          lowGrades,
+          undefined,
+          await getAdoptedEvidenceFrameworksQuery(req.organizationId!),
+        );
 
     const noEvidence = gaps.filter((g: any) => g.gap_type === "no_evidence");
     const lowQuality = gaps.filter((g: any) => g.gap_type === "low_quality");

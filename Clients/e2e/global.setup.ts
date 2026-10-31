@@ -1,5 +1,6 @@
 import { test as setup } from "@playwright/test";
 import { loginAs } from "./helpers/auth.helper";
+import { assertNotDeployed } from "./helpers/target.helper";
 import { seedAdminInOrg } from "./helpers/seedAdmin.helper";
 import { createApiContext, orgs, projects, projectRisks, tasks } from "./factories/api.factory";
 
@@ -27,6 +28,9 @@ const ADMIN_AUTH_STATE_PATH = "e2e/.auth/admin.json";
 const SETUP_ORG_NAME = "E2E Global Setup Org";
 
 setup("authenticate", async ({ page }) => {
+  // This setup deletes and recreates an organization; never against staging or production
+  assertNotDeployed("global.setup");
+
   // 1. Login as the default super-admin and save state.
   await loginAs(page, TEST_EMAIL, TEST_PASSWORD, /\/(super-admin)?$/);
   await page.context().storageState({ path: USER_AUTH_STATE_PATH });
@@ -59,7 +63,7 @@ setup("authenticate", async ({ page }) => {
     start_date: new Date().toISOString(),
     goal: "Global setup baseline project",
     ai_risk_classification: "Minimal risk",
-    type_of_high_risk_role: "Deployer",
+    high_risk_roles: ["Deployer"],
     members: [admin.userId],
     framework: [1],
     enable_ai_data_insertion: false,

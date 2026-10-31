@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
-import { useNavigate, useLocation } from "react-router";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useNavigate, useLocation, useSearchParams } from "react-router";
 import {
   Box,
   Typography,
@@ -44,12 +44,24 @@ import {
   deleteIntakeForm,
   archiveIntakeForm,
   getPendingSubmissions,
+  getSubmissionPreview,
   IntakeForm,
   IntakeSubmission,
   IntakeFormStatus,
   IntakeEntityType,
 } from "../../../application/repository/intakeForm.repository";
 import { SubmissionPreviewModal } from "./SubmissionPreviewModal";
+import RiskTierChip from "./assessment/RiskTierChip";
+import { LaneChip } from "./routing/LaneSection";
+import {
+  LANE_FILTER_ITEMS,
+  hasPendingSecondReview,
+  matchesLaneFilter,
+  type LaneFilter,
+} from "./routing/laneFilter";
+import { useAuth } from "../../../application/hooks/useAuth";
+import { useHasPermission } from "../../../application/hooks/useMyPermissions";
+import { OversightTab } from "./oversight/OversightTab";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import StandardModal from "../../components/Modals/StandardModal";
 import Chip from "../../components/Chip";
@@ -67,6 +79,16 @@ import {
   paginationSelectStyle,
 } from "../ModelInventory/style";
 import { pageOfLabel } from "../../components/Table/pageOfLabel";
+import { PreviewRoleBanner } from "./preview/PreviewRoleBanner";
+import {
+  parsePreviewRole,
+  PUBLIC_PREVIEW_QUERY,
+  SIMULATE_ROLE_PARAM,
+  SIMULATED_USER_ID,
+  simulatedLaneRow,
+  type PreviewRole,
+} from "../../../application/utils/intakeRouting/previewRole";
+import { usePollWhileVisible } from "../../../application/hooks/usePollWhileVisible";
 
 // ============================================================================
 // Helpers
@@ -87,21 +109,6 @@ const ENTITY_LABELS: Record<string, string> = {
 };
 
 // ============================================================================
-// Risk tier chip
-// ============================================================================
-
-function RiskTierChip({ submission }: { submission: IntakeSubmission }) {
-  const theme = useTheme();
-  if (!submission.riskTier && !submission.riskAssessment) {
-    return <CircularProgress size={14} sx={{ color: theme.palette.text.accent }} />;
-  }
-  const tier = (submission.riskTier || submission.riskAssessment?.tier || "").toLowerCase();
-  if (!tier) return <Chip label="Pending" />;
-  const label = tier.charAt(0).toUpperCase() + tier.slice(1);
-  return <Chip label={label} />;
-}
-
-// ============================================================================
 // Table header cell style
 // ============================================================================
 
@@ -112,6 +119,12 @@ function RiskTierChip({ submission }: { submission: IntakeSubmission }) {
 // ============================================================================
 
 const INTAKE_FORMS_ROWS_PER_PAGE_KEY = "verifywise_intake_forms_rows_per_page";
+
+// How long a reviewed submission row stays green, as on other tables
+const FLASH_DURATION_MS = 3000;
+
+// How often an open page checks for new submissions while the browser tab is visible
+const SUBMISSIONS_POLL_MS = 30_000;
 
 const SelectorVertical = (props: React.SVGAttributes<SVGSVGElement>) => (
   <ChevronsUpDown size={16} {...props} />
@@ -124,11 +137,18 @@ const SelectorVertical = (props: React.SVGAttributes<SVGSVGElement>) => (
 export function IntakeFormsListPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const theme = useTheme();
   const formatDate = useFormattedDate();
+  const { userId } = useAuth();
 
   // Main tab derived from URL path
-  const mainTab = location.pathname.includes("/intake-forms/submissions") ? "submissions" : "forms";
+  const canSeeOversight = useHasPermission("intakeForm.edit");
+  const mainTab = location.pathname.includes("/intake-forms/submissions")
+    ? "submissions"
+    : location.pathname.includes("/intake-forms/oversight") && canSeeOversight
+      ? "oversight"
+      : "forms";
 
   // --- Forms state ---
   const [forms, setForms] = useState<IntakeForm[]>([]);
@@ -164,8 +184,21 @@ export function IntakeFormsListPage() {
   const [isLoadingSubmissions, setIsLoadingSubmissions] = useState(false);
   const [submissionsSearch, setSubmissionsSearch] = useState("");
   const [submissionStatusFilter, setSubmissionStatusFilter] = useState<string>("all");
+  const [laneFilter, setLaneFilter] = useState<LaneFilter>("all");
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [oversightRefresh, setOversightRefresh] = useState(0);
   const [selectedSubmissionId, setSelectedSubmissionId] = useState<number | null>(null);
+  const [flashSubmissionId, setFlashSubmissionId] = useState<number | null>(null);
+
+  // Green row flash after a successful review. A new flash cancels the previous
+  // timer so it cannot cut the new one short.
+  const flashTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const flashSubmissionRow = useCallback((submissionId: number) => {
+    clearTimeout(flashTimerRef.current);
+    setFlashSubmissionId(submissionId);
+    flashTimerRef.current = setTimeout(() => setFlashSubmissionId(null), FLASH_DURATION_MS);
+  }, []);
+  useEffect(() => () => clearTimeout(flashTimerRef.current), []);
 
   // ============================================================================
   // Data loading
@@ -189,26 +222,101 @@ export function IntakeFormsListPage() {
     loadForms();
   }, [loadForms]);
 
-  const loadSubmissions = useCallback(async () => {
-    setIsLoadingSubmissions(true);
-    try {
-      const params: { status?: string } = {};
-      if (submissionStatusFilter !== "all") {
-        params.status = submissionStatusFilter;
+  // Only the latest request may set the list or clear the spinner, so a slow load
+  // can't overwrite a newer one, for example one for a changed status filter.
+  // A background refresh never replaces a load already in flight.
+  const submissionsRequestRef = useRef(0);
+  const submissionsInFlightRef = useRef(false);
+  const loadSubmissions = useCallback(
+    async ({ quiet = false }: { quiet?: boolean } = {}) => {
+      if (quiet && submissionsInFlightRef.current) return;
+      const requestId = ++submissionsRequestRef.current;
+      submissionsInFlightRef.current = true;
+      if (!quiet) setIsLoadingSubmissions(true);
+      try {
+        const params: { status?: string } = {};
+        if (submissionStatusFilter !== "all") {
+          params.status = submissionStatusFilter;
+        }
+        const response = await getPendingSubmissions(params);
+        if (requestId !== submissionsRequestRef.current) return;
+        setSubmissions(Array.isArray(response.data) ? response.data : []);
+      } catch {
+        // A failed background refresh keeps the list as it is; the next one retries.
+        if (!quiet && requestId === submissionsRequestRef.current) {
+          setSnackbar({ open: true, message: "Failed to load submissions", severity: "error" });
+        }
+      } finally {
+        if (requestId === submissionsRequestRef.current) {
+          submissionsInFlightRef.current = false;
+          setIsLoadingSubmissions(false);
+        }
       }
-      const response = await getPendingSubmissions(params);
-      setSubmissions(Array.isArray(response.data) ? response.data : []);
-    } catch {
-      setSnackbar({ open: true, message: "Failed to load submissions", severity: "error" });
-    } finally {
-      setIsLoadingSubmissions(false);
+    },
+    [submissionStatusFilter],
+  );
+
+  // The list chips and the Oversight tab both read what the review modal changes
+  const refreshAfterReview = () => {
+    loadSubmissions();
+    setOversightRefresh((n) => n + 1);
+  };
+
+  const handleSubmissionDecided = (message: string) => {
+    if (selectedSubmissionId !== null) flashSubmissionRow(selectedSubmissionId);
+    refreshAfterReview();
+    setSnackbar({ open: true, message, severity: "success" });
+  };
+
+  // Deep link from the second-review email: /intake-forms/submissions?submission=<id>.
+  // Opens that submission whatever the list filters show, then drops the param
+  // so a refresh or closing the modal does not reopen it.
+  const deepLinkParam = searchParams.get("submission");
+  useEffect(() => {
+    if (deepLinkParam === null) return;
+    const next = new URLSearchParams(searchParams);
+    next.delete("submission");
+    setSearchParams(next, { replace: true });
+    const id = Number(deepLinkParam);
+    if (!Number.isSafeInteger(id) || id <= 0 || !/^\d+$/.test(deepLinkParam)) {
+      setSnackbar({ open: true, message: "That submission could not be found", severity: "error" });
+      return;
     }
-  }, [submissionStatusFilter]);
+    getSubmissionPreview(id)
+      .then(() => {
+        setSelectedSubmissionId(id);
+        setPreviewOpen(true);
+      })
+      .catch(() => {
+        setSnackbar({
+          open: true,
+          message: "That submission could not be found",
+          severity: "error",
+        });
+      });
+    // Runs once per param value; searchParams is read to keep other params.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deepLinkParam]);
 
   // Always load submissions so the tab badge count is accurate
   useEffect(() => {
     loadSubmissions();
   }, [loadSubmissions]);
+
+  // New submissions from public forms show up without a reload. Paused while the
+  // review modal is open; closing the modal refreshes the list.
+  usePollWhileVisible(() => loadSubmissions({ quiet: true }), SUBMISSIONS_POLL_MS, !previewOpen);
+
+  // "Preview as" simulation, entered from the builder's Preview menu. It lives
+  // only in the URL and only on the Submissions tab, so it never carries over.
+  const simulatedRole =
+    mainTab === "submissions" ? parsePreviewRole(searchParams.get(SIMULATE_ROLE_PARAM)) : null;
+  const setSimulatedRole = (role: PreviewRole | null) => {
+    const next = new URLSearchParams(searchParams);
+    if (role) next.set(SIMULATE_ROLE_PARAM, role);
+    else next.delete(SIMULATE_ROLE_PARAM);
+    setSearchParams(next, { replace: true });
+  };
 
   // Filter forms by search query
   const filteredForms = forms.filter((form) => {
@@ -254,9 +362,12 @@ export function IntakeFormsListPage() {
   // Filter submissions by search
   const filteredSubmissions = submissions.filter(
     (s) =>
-      !submissionsSearch ||
-      (s.submitterName || "").toLowerCase().includes(submissionsSearch.toLowerCase()) ||
-      (s.submitterEmail || "").toLowerCase().includes(submissionsSearch.toLowerCase()),
+      (simulatedRole
+        ? matchesLaneFilter(simulatedLaneRow(s, simulatedRole), laneFilter, SIMULATED_USER_ID)
+        : matchesLaneFilter(s, laneFilter, userId)) &&
+      (!submissionsSearch ||
+        (s.submitterName || "").toLowerCase().includes(submissionsSearch.toLowerCase()) ||
+        (s.submitterEmail || "").toLowerCase().includes(submissionsSearch.toLowerCase())),
   );
 
   // ============================================================================
@@ -282,7 +393,10 @@ export function IntakeFormsListPage() {
 
   const handlePreview = () => {
     if (selectedForm?.publicId) {
-      window.open(`/${selectedForm.publicId}/use-case-form-intake`, "_blank");
+      window.open(
+        `/${selectedForm.publicId}/use-case-form-intake?${PUBLIC_PREVIEW_QUERY}`,
+        "_blank",
+      );
     } else {
       setSnackbar({
         open: true,
@@ -394,10 +508,19 @@ export function IntakeFormsListPage() {
               count: submissions.length,
               isLoading: isLoadingSubmissions,
             },
+            ...(canSeeOversight
+              ? [{ label: "Oversight", value: "oversight", icon: "Activity" as const }]
+              : []),
           ]}
           activeTab={mainTab}
           onChange={(_, value) =>
-            navigate(value === "submissions" ? "/intake-forms/submissions" : "/intake-forms")
+            navigate(
+              value === "submissions"
+                ? "/intake-forms/submissions"
+                : value === "oversight"
+                  ? "/intake-forms/oversight"
+                  : "/intake-forms",
+            )
           }
         />
       </TabContext>
@@ -588,8 +711,29 @@ export function IntakeFormsListPage() {
       {/* ================================================================ */}
       {/* Submissions tab                                                  */}
       {/* ================================================================ */}
+      {mainTab === "oversight" && (
+        <OversightTab
+          forms={forms}
+          refreshKey={oversightRefresh}
+          onOpenSubmission={(id) => {
+            setSelectedSubmissionId(id);
+            setPreviewOpen(true);
+          }}
+          onOpenForm={(id) => navigate(`/intake-forms/${id}/edit`)}
+        />
+      )}
+
       {mainTab === "submissions" && (
         <>
+          {simulatedRole && (
+            <Box sx={{ mb: "8px" }}>
+              <PreviewRoleBanner
+                role={simulatedRole}
+                onRoleChange={setSimulatedRole}
+                onExit={() => setSimulatedRole(null)}
+              />
+            </Box>
+          )}
           {/* Filter + Search */}
           <Stack
             direction="row"
@@ -597,19 +741,40 @@ export function IntakeFormsListPage() {
             alignItems="center"
             sx={{ mb: "8px" }}
           >
-            <Select
-              id="submission-status-filter"
-              value={submissionStatusFilter}
-              onChange={(e) => setSubmissionStatusFilter(e.target.value as string)}
-              items={[
-                { _id: "all", name: "All submissions" },
-                { _id: "pending", name: "Pending" },
-                { _id: "approved", name: "Approved" },
-                { _id: "rejected", name: "Rejected" },
-                { _id: "superseded", name: "Superseded" },
-              ]}
-              sx={{ width: 180, backgroundColor: theme.palette.background.main }}
-            />
+            <Stack direction="row" gap="8px">
+              <Select
+                id="submission-status-filter"
+                value={submissionStatusFilter}
+                onChange={(e) => setSubmissionStatusFilter(e.target.value as string)}
+                items={[
+                  { _id: "all", name: "All submissions" },
+                  { _id: "pending", name: "Pending" },
+                  { _id: "approved", name: "Approved" },
+                  { _id: "rejected", name: "Rejected" },
+                  { _id: "superseded", name: "Superseded" },
+                ]}
+                sx={{ width: 180, backgroundColor: theme.palette.background.main }}
+              />
+              <Select
+                id="submission-lane-filter"
+                value={laneFilter}
+                onChange={(e) => {
+                  const next = e.target.value as LaneFilter;
+                  setLaneFilter(next);
+                  // Second reviews sit on approved rows, so a pending-only,
+                  // rejected-only or superseded-only view would always be empty.
+                  if (
+                    next === "second_review" &&
+                    submissionStatusFilter !== "all" &&
+                    submissionStatusFilter !== "approved"
+                  ) {
+                    setSubmissionStatusFilter("all");
+                  }
+                }}
+                items={LANE_FILTER_ITEMS}
+                sx={{ width: 180, backgroundColor: theme.palette.background.main }}
+              />
+            </Stack>
             <SearchBox
               placeholder="Search submissions..."
               value={submissionsSearch}
@@ -643,6 +808,9 @@ export function IntakeFormsListPage() {
                       Risk tier
                     </TableCell>
                     <TableCell sx={singleTheme.tableStyles.primary.header.cell}>
+                      Review level
+                    </TableCell>
+                    <TableCell sx={singleTheme.tableStyles.primary.header.cell}>
                       Submitted
                     </TableCell>
                     <TableCell
@@ -667,6 +835,20 @@ export function IntakeFormsListPage() {
                         }}
                         sx={{
                           ...singleTheme.tableStyles.primary.body.row,
+                          // The base row stripes even rows and greys cells on hover,
+                          // so the flash overrides both selectors as well
+                          ...(flashSubmissionId === submission.id && {
+                            "backgroundColor": singleTheme.flashColors.background,
+                            "&:nth-of-type(even)": {
+                              backgroundColor: singleTheme.flashColors.background,
+                            },
+                            "&:hover": {
+                              backgroundColor: singleTheme.flashColors.backgroundHover,
+                            },
+                            "&:hover td": {
+                              backgroundColor: "transparent",
+                            },
+                          }),
                           cursor: submission.status === "superseded" ? "default" : "pointer",
                           ...(submission.status === "superseded" && { opacity: 0.5 }),
                         }}
@@ -697,10 +879,19 @@ export function IntakeFormsListPage() {
                             <Chip label={submission.status} />
                             {submission.resubmissionCount > 0 &&
                               submission.status !== "superseded" && <Chip label="resubmitted" />}
+                            {hasPendingSecondReview(submission) && (
+                              <Chip label="Second review" variant="info" uppercase={false} />
+                            )}
                           </Stack>
                         </TableCell>
                         <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
                           <RiskTierChip submission={submission} />
+                        </TableCell>
+                        <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                          <LaneChip
+                            routing={submission.routing}
+                            routingEnabled={submission.routingEnabled}
+                          />
                         </TableCell>
                         <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
                           <Typography sx={{ fontSize: "13px", color: theme.palette.text.accent }}>
@@ -924,11 +1115,15 @@ export function IntakeFormsListPage() {
         onClose={() => {
           setPreviewOpen(false);
           setSelectedSubmissionId(null);
+          loadSubmissions({ quiet: true });
         }}
         submissionId={selectedSubmissionId}
-        onApproved={() => {
-          loadSubmissions();
-        }}
+        onApproved={() => handleSubmissionDecided("Submission approved")}
+        onRejected={() => handleSubmissionDecided("Submission rejected")}
+        onChanged={refreshAfterReview}
+        simulatedRole={simulatedRole}
+        onSimulatedRoleChange={setSimulatedRole}
+        onExitSimulation={() => setSimulatedRole(null)}
       />
 
       {/* Snackbar */}

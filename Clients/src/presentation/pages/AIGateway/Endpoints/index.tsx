@@ -29,7 +29,17 @@ import { useCardSx, ProviderIcon, useGatewayModels, slugify } from "../shared";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import CustomizableSkeleton from "../../../components/Skeletons";
 import { SHOW_AI_GATEWAY_PROMPTS } from "../../../../application/config/featureFlags";
+import {
+  getClientErrorReason,
+  getGatewayErrorDetail,
+} from "../../../../application/utils/apiErrorReason";
 
+// The form and dialogs show their own errors; skip the global toast.
+const quietErrors = { suppressGlobalErrorToast: true };
+
+// The gateway's 4xx reason, else a client reason, else the fallback (as on Settings).
+const apiErrorText = (err: unknown, fallback: string): string =>
+  getGatewayErrorDetail(err) || getClientErrorReason(err) || fallback;
 interface EndpointForm {
   display_name: string;
   slug: string;
@@ -78,6 +88,8 @@ export default function EndpointsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
+  const [deleteError, setDeleteError] = useState("");
+  const [deleteSubmitting, setDeleteSubmitting] = useState(false);
 
   // Prompts is gated behind SHOW_AI_GATEWAY_PROMPTS. When the flag is off the
   // list stays empty, so the prompt-template picker and bound-prompt chip
@@ -191,19 +203,15 @@ export default function EndpointsPage() {
     try {
       if (editingId === null) {
         payload.slug = form.slug;
-        await apiServices.post("/ai-gateway/endpoints", payload);
+        await apiServices.post("/ai-gateway/endpoints", payload, quietErrors);
       } else {
-        await apiServices.patch(`/ai-gateway/endpoints/${editingId}`, payload);
+        await apiServices.patch(`/ai-gateway/endpoints/${editingId}`, payload, quietErrors);
       }
       setIsModalOpen(false);
       setForm({ ...EMPTY_FORM });
       await loadData();
-    } catch (err: any) {
-      setFormError(
-        err?.response?.data?.detail ||
-          err?.response?.data?.message ||
-          `Failed to ${editingId ? "update" : "create"} endpoint`,
-      );
+    } catch (err) {
+      setFormError(apiErrorText(err, `Failed to ${editingId ? "update" : "create"} endpoint`));
     } finally {
       setIsSubmitting(false);
     }
@@ -211,13 +219,23 @@ export default function EndpointsPage() {
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
+    setDeleteError("");
+    setDeleteSubmitting(true);
     try {
-      await apiServices.delete(`/ai-gateway/endpoints/${deleteTarget.id}`);
-      setDeleteTarget(null);
-      await loadData();
-    } catch {
-      // Silently handle
+      await apiServices.delete(`/ai-gateway/endpoints/${deleteTarget.id}`, quietErrors);
+    } catch (err) {
+      // The gateway's own 404 means another admin already deleted it: same
+      // outcome. Any other error (a generic 404 included) is shown.
+      const e = err as { status?: number; response?: { detail?: unknown } } | null;
+      if (!(e?.status === 404 && e.response?.detail === "Endpoint not found")) {
+        setDeleteError(apiErrorText(err, "Failed to delete endpoint"));
+        return;
+      }
+    } finally {
+      setDeleteSubmitting(false);
     }
+    setDeleteTarget(null);
+    await loadData();
   };
 
   const handleToggleActive = async (id: number, isActive: boolean) => {
@@ -371,7 +389,7 @@ export default function EndpointsPage() {
                         )}
                       </Stack>
                       <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
-                        {ep.provider} / {ep.model} &middot; {ep.api_key_name || "No key"}
+                        {ep.provider} / {ep.model} &middot; {ep.key_name || "No key"}
                         {ep.rate_limit_rpm > 0 && <span> &middot; {ep.rate_limit_rpm} RPM</span>}
                         {ep.fallback_endpoint_id && <span> &middot; has fallback</span>}
                         {activeGuardrailCount > 0 && (
@@ -635,17 +653,27 @@ export default function EndpointsPage() {
       {/* Delete confirmation modal */}
       <StandardModal
         isOpen={!!deleteTarget}
-        onClose={() => setDeleteTarget(null)}
+        onClose={() => {
+          if (deleteSubmitting) return; // the result belongs to this dialog
+          setDeleteTarget(null);
+          setDeleteError("");
+        }}
         title="Delete endpoint"
         description=""
         onSubmit={handleDelete}
         submitButtonText="Delete"
+        isSubmitting={deleteSubmitting}
         maxWidth="400px"
       >
         <Typography sx={{ fontSize: 13, color: palette.text.secondary }}>
           Are you sure you want to delete "{deleteTarget?.name}"? This will permanently remove the
           endpoint and any requests using its slug will fail.
         </Typography>
+        {deleteError && (
+          <Typography sx={{ fontSize: 12, color: palette.status.error.text, mt: "12px" }}>
+            {deleteError}
+          </Typography>
+        )}
       </StandardModal>
     </PageHeaderExtended>
   );

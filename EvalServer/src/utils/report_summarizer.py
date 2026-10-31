@@ -5,7 +5,6 @@ Uses the experiment's judge LLM to generate natural language summaries
 for individual metrics and an overall executive summary.
 """
 
-import os
 import logging
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -15,16 +14,6 @@ except ImportError:
     OpenAI = None
 
 logger = logging.getLogger("uvicorn")
-
-PROVIDER_CONFIG = {
-    "openai": {"env_var": "OPENAI_API_KEY", "base_url": None},
-    "anthropic": {"env_var": "ANTHROPIC_API_KEY", "base_url": "https://api.anthropic.com/v1"},
-    "mistral": {"env_var": "MISTRAL_API_KEY", "base_url": "https://api.mistral.ai/v1"},
-    "xai": {"env_var": "XAI_API_KEY", "base_url": "https://api.x.ai/v1"},
-    "google": {"env_var": "GEMINI_API_KEY", "base_url": "https://generativelanguage.googleapis.com/v1beta/openai"},
-    "gemini": {"env_var": "GEMINI_API_KEY", "base_url": "https://generativelanguage.googleapis.com/v1beta/openai"},
-    "openrouter": {"env_var": "OPENROUTER_API_KEY", "base_url": "https://openrouter.ai/api/v1"},
-}
 
 from utils.gateway_litellm_client import (
     gateway_chat_completion_sync,
@@ -38,26 +27,13 @@ from utils.metric_constants import (
 )
 
 
-def _get_client(provider: str, api_key: Optional[str] = None, endpoint_url: Optional[str] = None):
+def _self_hosted_client(api_key: Optional[str] = None, endpoint_url: Optional[str] = None):
+    """An OpenAI-compatible client for a self-hosted or Ollama server."""
     if OpenAI is None:
         raise RuntimeError("openai package not installed")
+    from utils.safe_outbound_url import openai_base_url, openai_compatible_client
 
-    provider = provider.lower()
-
-    if provider in ("self-hosted", "ollama"):
-        base = (endpoint_url or "http://localhost:11434").rstrip("/")
-        if not base.endswith("/v1"):
-            base += "/v1"
-        return OpenAI(api_key=api_key or "not-needed", base_url=base)
-
-    cfg = PROVIDER_CONFIG.get(provider, PROVIDER_CONFIG["openai"])
-    resolved_key = api_key or os.getenv(cfg["env_var"] or "", "")
-    if not resolved_key:
-        raise RuntimeError(f"No API key for provider '{provider}'")
-
-    if cfg["base_url"]:
-        return OpenAI(api_key=resolved_key, base_url=cfg["base_url"])
-    return OpenAI(api_key=resolved_key)
+    return openai_compatible_client(openai_base_url(endpoint_url or "http://localhost:11434"), api_key)
 
 
 def _call_llm(
@@ -70,45 +46,27 @@ def _call_llm(
     endpoint_url: Optional[str],
     max_tokens: int = 512,
 ) -> str:
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt},
+    ]
     p = (provider or "").lower()
     if p in ("self-hosted", "ollama"):
-        client = _get_client(provider, api_key, endpoint_url)
+        client = _self_hosted_client(api_key, endpoint_url)
         response = client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
-            temperature=0.4,
-            max_tokens=max_tokens,
+            model=model, messages=messages, temperature=0.4, max_tokens=max_tokens
         )
         return (response.choices[0].message.content or "").strip()
 
-    if gateway_mode_enabled() and api_key:
-        litellm_model = to_litellm_model(provider, model)
-        messages = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ]
-        return gateway_chat_completion_sync(
-            litellm_model,
-            messages,
-            api_key,
-            max_tokens=max_tokens,
-            temperature=0.4,
-        )
-
-    client = _get_client(provider, api_key, endpoint_url)
-    response = client.chat.completions.create(
-        model=model,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
-        temperature=0.4,
-        max_tokens=max_tokens,
+    # Cloud providers run only through the AI Gateway's LiteLLM
+    if not gateway_mode_enabled():
+        raise RuntimeError(f"Provider '{provider}' runs through the AI Gateway; set AI_GATEWAY_INTERNAL_KEY")
+    # Runs in the server process: only the org's key the caller passed, never the environment
+    if not api_key:
+        raise RuntimeError(f"No API key for provider '{provider}'")
+    return gateway_chat_completion_sync(
+        to_litellm_model(provider, model), messages, api_key, max_tokens=max_tokens, temperature=0.4
     )
-    return (response.choices[0].message.content or "").strip()
 
 
 METRIC_SYSTEM_PROMPT = (

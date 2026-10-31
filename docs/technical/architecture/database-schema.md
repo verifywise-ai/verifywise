@@ -173,7 +173,7 @@ CREATE TABLE projects (
   start_date DATE,
   geography INTEGER,
   ai_risk_classification ai_risk_classification_enum,
-  type_of_high_risk_role high_risk_role_enum,
+  high_risk_roles TEXT[] NOT NULL DEFAULT '{}', -- 'Provider', 'Deployer' (CHECK)
   goal TEXT,
   target_industry VARCHAR(255),
   description TEXT,
@@ -518,6 +518,68 @@ CREATE TABLE tasks (
 
 ---
 
+## Data Retention Tables
+
+See [Data retention](../domains/data-retention.md). Migrations `20261011150000`, `20261011150100`, `20261011150200`.
+
+### data_retention_settings
+
+One row per organization; a missing row or `NULL` period means audit records are kept indefinitely.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `organization_id` | INTEGER PK | FK `organizations(id)` ON DELETE CASCADE |
+| `audit_retention_months` | INTEGER NULL | CHECK in (12, 24, 36, 60, 84, 120) |
+| `updated_at` | TIMESTAMPTZ | default `now()` |
+| `updated_by` | INTEGER NULL | FK `users(id)` ON DELETE SET NULL |
+
+### data_retention_runs
+
+One row per organization and record type per cleanup run; read by the Data retention tab for "Last cleanup".
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | BIGSERIAL PK | |
+| `organization_id` | INTEGER NOT NULL | FK `organizations(id)` ON DELETE CASCADE |
+| `record_type` | VARCHAR(40) | `audit_records`, `ai_gateway_guardrail_logs`, `ai_gateway_spend_logs`, `mrm_metrics`, `shadow_ai_events`, `shadow_ai_daily_rollups`, `shadow_ai_alert_history` |
+| `ran_at` | TIMESTAMPTZ | default `now()` |
+| `cutoff` | TIMESTAMPTZ NULL | |
+| `deleted_count` | INTEGER | default 0 |
+| `status` | VARCHAR(10) | `success`, `capped` or `failed` |
+| `error` | TEXT NULL | |
+
+Index `idx_data_retention_runs_org_type_ran (organization_id, record_type, ran_at DESC)`.
+
+### audit_ledger_retention_checkpoints
+
+Append-only record of every audit ledger prune. UPDATE and DELETE are rejected by triggers (organization cascade excepted). `verifyChain` starts from the latest checkpoint.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | BIGSERIAL PK | |
+| `organization_id` | INTEGER NOT NULL | FK `organizations(id)` ON DELETE CASCADE |
+| `pruned_through_id` | BIGINT | highest `audit_ledger.id` deleted |
+| `anchor_hash` | CHAR(64) | `entry_hash` of that row |
+| `cutoff` | TIMESTAMPTZ | rows older than this were eligible |
+| `rows_deleted` | INTEGER | |
+| `created_at` | TIMESTAMPTZ | |
+| `created_txid` | BIGINT | `txid_current()`; the `audit_ledger` delete trigger requires a checkpoint from the same transaction |
+
+Index `idx_ledger_checkpoints_org_through (organization_id, pruned_through_id DESC)`. Migration `20261011150100` replaces `audit_ledger_prevent_delete()` so the retention job can delete covered rows; migration `20261011150200` adds `(organization_id, <timestamp>)` indexes on the audit tables the job prunes.
+
+### AI Gateway columns (Alembic `a0011`)
+
+Added to `ai_gateway_guardrail_settings`:
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `spend_log_retention_days` | INTEGER NOT NULL | default 90, CHECK >= 1 |
+| `auto_purge_enabled` | BOOLEAN NOT NULL | default false |
+
+Also indexes `(organization_id, changed_at)` on `ai_gateway_endpoint_change_history` and `ai_gateway_guardrail_change_history`.
+
+---
+
 ## Approval Workflow Tables
 
 ### Approval Workflows
@@ -668,6 +730,21 @@ CREATE TABLE post_market_monitoring_cycles (
 ---
 
 ## Key Constraints & Indexes
+
+### Badge status checks
+
+Free-text badge columns reject values outside the lists the UI renders. Nullable columns still allow NULL. Columns that already use a native enum are not duplicated here.
+
+| Table | Column | Allowed values |
+| ----- | ------ | -------------- |
+| `files` | `review_status` | `draft`, `pending_review`, `approved`, `rejected`, `expired`, `superseded` |
+| `policy_manager` | `status` | `Draft`, `Under Review`, `Approved`, `Published`, `Archived`, `Deprecated` |
+| `policy_manager` | `review_status` | `pending_review`, `approved`, `changes_requested` |
+| `ai_incident_managements` | `severity` | `Minor`, `Serious`, `Very serious` |
+| `ai_incident_managements` | `status` | `Open`, `Investigating`, `Mitigated`, `Closed`, `Suspended`, `Emergency action` |
+| `ai_incident_managements` | `approval_status` | `Pending`, `Approved`, `Rejected`, `Not required` |
+| `ai_detection_findings` | `severity` | `critical`, `high`, `medium`, `low` |
+| `ai_detection_findings` | `risk_level` | `high`, `medium`, `low` |
 
 ### Unique Constraints
 

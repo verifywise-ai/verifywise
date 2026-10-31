@@ -2,7 +2,7 @@ import json
 import secrets
 import hashlib
 from typing import Any, Optional
-from sqlalchemy import text
+from sqlalchemy import bindparam, text
 from database.db import get_db
 
 
@@ -15,6 +15,22 @@ def generate_agent_key() -> dict:
         "key_hash": key_hash,
         "prefix": prefix,
     }
+
+
+async def get_active_org_agent_key_ids(org_id: int, key_ids: list[int]) -> set[int]:
+    """The subset of key_ids that are active (not revoked) agent keys of this
+    organization."""
+    if not key_ids:
+        return set()
+    async with get_db() as db:
+        result = await db.execute(
+            text(
+                "SELECT id FROM ai_gateway_mcp_agent_keys "
+                "WHERE organization_id = :org_id AND is_active = true AND id IN :ids"
+            ).bindparams(bindparam("ids", expanding=True)),
+            {"org_id": org_id, "ids": list(key_ids)},
+        )
+        return {row[0] for row in result.fetchall()}
 
 
 async def get_all_agent_keys(org_id: int) -> list[dict]:
@@ -34,12 +50,18 @@ async def get_all_agent_keys(org_id: int) -> list[dict]:
                     ak.expires_at,
                     ak.is_active,
                     ak.revoked_at,
+                    ak.enforcement_mode,
+                    ak.enforcement_mode_changed_at,
+                    ak.enforcement_mode_changed_by,
+                    ak.apply_tool_lists_to_hook,
                     ak.created_by,
                     ak.created_at,
                     ak.updated_at,
-                    u.name AS created_by_name
+                    u.name AS created_by_name,
+                    mu.name AS enforcement_mode_changed_by_name
                 FROM ai_gateway_mcp_agent_keys ak
                 LEFT JOIN users u ON u.id = ak.created_by
+                LEFT JOIN users mu ON mu.id = ak.enforcement_mode_changed_by
                 WHERE ak.organization_id = :org_id
                 ORDER BY ak.created_at DESC
             """),
@@ -63,6 +85,11 @@ async def create_agent_key(org_id: int, data: dict) -> Optional[dict]:
     description = data.get("description")
     allowed_tools = data.get("allowed_tools") or []
     blocked_tools = data.get("blocked_tools") or []
+    enforcement_mode = data.get("enforcement_mode") or "enforce"
+    apply_tool_lists_to_hook = bool(data.get("apply_tool_lists_to_hook", False))
+    # A key created in a non-default mode records who chose it and when; a
+    # default key has no mode change to record.
+    mode_changed = enforcement_mode != "enforce"
 
     async with get_db() as db:
         result = await db.execute(
@@ -79,6 +106,10 @@ async def create_agent_key(org_id: int, data: dict) -> Optional[dict]:
                     rate_limit_rpm,
                     metadata,
                     expires_at,
+                    enforcement_mode,
+                    enforcement_mode_changed_at,
+                    enforcement_mode_changed_by,
+                    apply_tool_lists_to_hook,
                     created_by
                 ) VALUES (
                     :org_id,
@@ -92,6 +123,10 @@ async def create_agent_key(org_id: int, data: dict) -> Optional[dict]:
                     :rate_limit_rpm,
                     CAST(:metadata AS jsonb),
                     :expires_at,
+                    :enforcement_mode,
+                    CASE WHEN :mode_changed THEN NOW() ELSE NULL END,
+                    :enforcement_mode_changed_by,
+                    :apply_tool_lists_to_hook,
                     :created_by
                 )
                 RETURNING
@@ -107,6 +142,10 @@ async def create_agent_key(org_id: int, data: dict) -> Optional[dict]:
                     expires_at,
                     is_active,
                     revoked_at,
+                    enforcement_mode,
+                    enforcement_mode_changed_at,
+                    enforcement_mode_changed_by,
+                    apply_tool_lists_to_hook,
                     created_by,
                     created_at,
                     updated_at
@@ -123,6 +162,12 @@ async def create_agent_key(org_id: int, data: dict) -> Optional[dict]:
                 "rate_limit_rpm": rate_limit_rpm,
                 "metadata": metadata_json,
                 "expires_at": expires_at,
+                "enforcement_mode": enforcement_mode,
+                "mode_changed": mode_changed,
+                "enforcement_mode_changed_by": (
+                    data.get("enforcement_mode_changed_by") if mode_changed else None
+                ),
+                "apply_tool_lists_to_hook": apply_tool_lists_to_hook,
                 "created_by": created_by,
             },
         )
@@ -170,6 +215,26 @@ async def update_agent_key(org_id: int, key_id: int, data: dict) -> Optional[dic
         set_clauses.append("expires_at = :expires_at")
         params["expires_at"] = data["expires_at"]
 
+    if "enforcement_mode" in data:
+        # Compared with the stored value in the same statement (the right-hand
+        # side of SET sees the pre-update row), so the change is stamped only
+        # when the mode actually changes; a same-value PATCH keeps the stamps.
+        set_clauses.append("enforcement_mode = :enforcement_mode")
+        set_clauses.append(
+            "enforcement_mode_changed_at = CASE WHEN enforcement_mode IS DISTINCT FROM "
+            ":enforcement_mode THEN NOW() ELSE enforcement_mode_changed_at END"
+        )
+        set_clauses.append(
+            "enforcement_mode_changed_by = CASE WHEN enforcement_mode IS DISTINCT FROM "
+            ":enforcement_mode THEN :enforcement_mode_changed_by ELSE enforcement_mode_changed_by END"
+        )
+        params["enforcement_mode"] = data["enforcement_mode"]
+        params["enforcement_mode_changed_by"] = data.get("enforcement_mode_changed_by")
+
+    if "apply_tool_lists_to_hook" in data:
+        set_clauses.append("apply_tool_lists_to_hook = :apply_tool_lists_to_hook")
+        params["apply_tool_lists_to_hook"] = bool(data["apply_tool_lists_to_hook"])
+
     if not set_clauses:
         return None
 
@@ -193,6 +258,13 @@ async def update_agent_key(org_id: int, key_id: int, data: dict) -> Optional[dic
             expires_at,
             is_active,
             revoked_at,
+            enforcement_mode,
+            enforcement_mode_changed_at,
+            enforcement_mode_changed_by,
+            -- NOW() is the transaction start time, so this is true only when
+            -- this UPDATE stamped enforcement_mode_changed_at (the mode changed).
+            enforcement_mode_changed_at IS NOT DISTINCT FROM NOW() AS enforcement_mode_changed,
+            apply_tool_lists_to_hook,
             created_by,
             created_at,
             updated_at
@@ -210,7 +282,7 @@ async def update_agent_key(org_id: int, key_id: int, data: dict) -> Optional[dic
     return None
 
 
-async def revoke_agent_key(org_id: int, key_id: int) -> bool:
+async def revoke_agent_key(org_id: int, key_id: int) -> Optional[dict]:
     async with get_db() as db:
         result = await db.execute(
             text("""
@@ -219,17 +291,31 @@ async def revoke_agent_key(org_id: int, key_id: int) -> bool:
                 WHERE organization_id = :org_id
                   AND id = :key_id
                   AND is_active = true
-                RETURNING id
+                RETURNING id, name
             """),
             {"org_id": org_id, "key_id": key_id},
         )
-        await db.commit()
         row = result.first()
-        return row is not None
-    return False
+        if row is not None:
+            # A revoked key can never call again, so rules stop listing it. A
+            # rule left with no agents applies to none (agent_scope 'selected'
+            # matches only listed keys); it never widens to every agent.
+            await db.execute(
+                text("""
+                    UPDATE ai_gateway_mcp_guardrail_rules
+                    SET applies_to_agent_keys = array_remove(applies_to_agent_keys, :key_id),
+                        updated_at = NOW()
+                    WHERE organization_id = :org_id
+                      AND :key_id = ANY(applies_to_agent_keys)
+                """),
+                {"org_id": org_id, "key_id": key_id},
+            )
+        await db.commit()
+        return dict(row._mapping) if row is not None else None
+    return None
 
 
-async def delete_agent_key(org_id: int, key_id: int) -> bool:
+async def delete_agent_key(org_id: int, key_id: int) -> Optional[dict]:
     async with get_db() as db:
         result = await db.execute(
             text("""
@@ -237,11 +323,11 @@ async def delete_agent_key(org_id: int, key_id: int) -> bool:
                 WHERE organization_id = :org_id
                   AND id = :key_id
                   AND is_active = false
-                RETURNING id
+                RETURNING id, name
             """),
             {"org_id": org_id, "key_id": key_id},
         )
         await db.commit()
         row = result.first()
-        return row is not None
+        return dict(row._mapping) if row is not None else None
     return False

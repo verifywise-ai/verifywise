@@ -19,9 +19,72 @@ import {
   updateApprovalWorkflowQuery,
   deleteApprovalWorkflowQuery,
 } from "../utils/approvalWorkflow.utils";
-import { EntityType } from "../domain.layer/enums/approval-workflow.enum";
+import { doesUserBelongsToOrganizationQuery } from "../utils/user.utils";
+import {
+  EntityType,
+  AUTO_APPROVABLE_RISK_RANKS,
+} from "../domain.layer/enums/approval-workflow.enum";
 
 import { translateError } from "../utils/i18n.utils";
+
+/**
+ * Validate the risk-based auto-approval threshold against the explicit
+ * ordering in AUTO_APPROVABLE_RISK_RANKS. GPAI / General Risk / unknown
+ * values are rejected; the threshold only makes sense for use_case workflows.
+ * Returns an error message, or null when the value is absent/valid.
+ */
+function validateAutoApproveMaxRisk(
+  autoApproveMaxRisk: unknown,
+  entityType: EntityType,
+  t: (key: string, options?: any) => string,
+): string | null {
+  if (autoApproveMaxRisk === undefined || autoApproveMaxRisk === null) {
+    return null;
+  }
+  if (
+    typeof autoApproveMaxRisk !== "string" ||
+    !(autoApproveMaxRisk in AUTO_APPROVABLE_RISK_RANKS)
+  ) {
+    return t(
+      "auto_approve_max_risk must be one of: Minimal risk, Limited risk, High risk, Prohibited",
+    );
+  }
+  if (entityType !== EntityType.USE_CASE) {
+    return t("auto_approve_max_risk is only supported for use_case workflows");
+  }
+  return null;
+}
+
+/**
+ * Validate per-step SLA / escalation fields. Returns an error message, or
+ * null when all steps are valid.
+ */
+async function validateStepSlaAndEscalation(
+  steps: any[],
+  organizationId: number,
+  t: (key: string, options?: any) => string,
+): Promise<string | null> {
+  for (let i = 0; i < steps.length; i++) {
+    const step = steps[i];
+    if (step.sla_hours !== undefined && step.sla_hours !== null) {
+      if (!Number.isInteger(step.sla_hours) || step.sla_hours <= 0) {
+        return t("Step {n} sla_hours must be a positive integer", { n: i + 1 });
+      }
+    }
+    if (step.escalation_user_id !== undefined && step.escalation_user_id !== null) {
+      const { belongs } = await doesUserBelongsToOrganizationQuery(
+        step.escalation_user_id,
+        organizationId,
+      );
+      if (!belongs) {
+        return t("Step {n} escalation user does not exist in this organization", {
+          n: i + 1,
+        });
+      }
+    }
+  }
+  return null;
+}
 /**
  * Get all approval workflows
  * @route GET /api/approval-workflows
@@ -131,7 +194,7 @@ export async function createApprovalWorkflow(req: Request, res: Response): Promi
 
   try {
     const { userId, organizationId } = req;
-    const { workflow_title, entity_type, description, steps } = req.body;
+    const { workflow_title, entity_type, description, auto_approve_max_risk, steps } = req.body;
 
     if (!userId || !organizationId) {
       await transaction.rollback();
@@ -147,6 +210,12 @@ export async function createApprovalWorkflow(req: Request, res: Response): Promi
     if (!entity_type || !Object.values(EntityType).includes(entity_type)) {
       await transaction.rollback();
       return res.status(400).json(STATUS_CODE[400](req.t!("Valid entity type is required")));
+    }
+
+    const autoApproveError = validateAutoApproveMaxRisk(auto_approve_max_risk, entity_type, req.t!);
+    if (autoApproveError) {
+      await transaction.rollback();
+      return res.status(400).json(STATUS_CODE[400](autoApproveError));
     }
 
     if (!steps || !Array.isArray(steps) || steps.length === 0) {
@@ -181,11 +250,18 @@ export async function createApprovalWorkflow(req: Request, res: Response): Promi
       }
     }
 
+    const stepConfigError = await validateStepSlaAndEscalation(steps, organizationId, req.t!);
+    if (stepConfigError) {
+      await transaction.rollback();
+      return res.status(400).json(STATUS_CODE[400](stepConfigError));
+    }
+
     const workflow = await createApprovalWorkflowQuery(
       {
         workflow_title,
         entity_type,
         description,
+        auto_approve_max_risk: auto_approve_max_risk ?? null,
         created_by: userId,
         steps,
       },
@@ -237,7 +313,7 @@ export async function updateApprovalWorkflow(req: Request, res: Response): Promi
   try {
     const { organizationId } = req;
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-    const { workflow_title, description, steps } = req.body;
+    const { workflow_title, description, auto_approve_max_risk, steps } = req.body;
 
     if (!organizationId) {
       await transaction.rollback();
@@ -248,6 +324,29 @@ export async function updateApprovalWorkflow(req: Request, res: Response): Promi
     if (isNaN(workflowId)) {
       await transaction.rollback();
       return res.status(400).json(STATUS_CODE[400](req.t!("Invalid workflow ID")));
+    }
+
+    // The threshold is validated against the stored entity_type (updates
+    // cannot change it), so load the workflow when the key is present.
+    if (auto_approve_max_risk !== undefined) {
+      const existingWorkflow = await getApprovalWorkflowByIdQuery(
+        workflowId,
+        organizationId,
+        transaction,
+      );
+      if (!existingWorkflow) {
+        await transaction.rollback();
+        return res.status(404).json(STATUS_CODE[404](req.t!("Workflow not found")));
+      }
+      const autoApproveError = validateAutoApproveMaxRisk(
+        auto_approve_max_risk,
+        existingWorkflow.entity_type,
+        req.t!,
+      );
+      if (autoApproveError) {
+        await transaction.rollback();
+        return res.status(400).json(STATUS_CODE[400](autoApproveError));
+      }
     }
 
     // Validate steps if provided
@@ -274,11 +373,17 @@ export async function updateApprovalWorkflow(req: Request, res: Response): Promi
             );
         }
       }
+
+      const stepConfigError = await validateStepSlaAndEscalation(steps, organizationId, req.t!);
+      if (stepConfigError) {
+        await transaction.rollback();
+        return res.status(400).json(STATUS_CODE[400](stepConfigError));
+      }
     }
 
     const workflow = await updateApprovalWorkflowQuery(
       workflowId,
-      { workflow_title, description, steps },
+      { workflow_title, description, auto_approve_max_risk, steps },
       organizationId,
       transaction,
     );

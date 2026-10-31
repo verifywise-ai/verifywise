@@ -17,6 +17,7 @@ export interface NewApprovalWorkflowStepFormErrors {
   step_name?: string;
   approver?: string;
   conditions?: string;
+  sla_hours?: string;
 }
 
 export interface ICreateApprovalWorkflowProps {
@@ -26,12 +27,14 @@ export interface ICreateApprovalWorkflowProps {
     workflow_title: string;
     entity: number;
     steps: ApprovalWorkflowStepModel[];
+    auto_approve_max_risk?: string | null;
   };
   isEdit?: boolean;
   onSuccess?: (data: {
     workflow_title: string;
     entity: number;
     steps: ApprovalWorkflowStepModel[];
+    auto_approve_max_risk: string | null;
   }) => void;
 }
 
@@ -39,12 +42,6 @@ export interface DetailFieldProps {
   label: string;
   value: string | string[];
   withWrap?: boolean;
-}
-
-export interface IStepDetailsModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  stepDetails: IStepDetails | null;
 }
 
 export interface IRequestorApprovalProps {
@@ -58,21 +55,18 @@ export interface ITimelineStep {
   stepNumber: number;
   title: string;
   status: "completed" | "pending" | "rejected";
-  approverName?: string;
   date?: string;
-  comment?: string;
-  showDetailsLink?: boolean;
-  approvalResult?: "approved" | "rejected" | "pending";
+  approvers: ITimelineApprover[];
+  dueAt?: string | null;
+  escalatedAt?: string | null;
+  isOverdue?: boolean;
 }
 
-export interface IStepDetails {
-  stepId: number;
-  owner: string;
-  teamMembers: string[];
-  location: string;
-  startDate: string;
-  targetIndustry: string;
-  description: string;
+export interface ITimelineApprover {
+  id: number;
+  name: string;
+  result: "approved" | "rejected" | "pending";
+  comment?: string;
 }
 
 export interface IMenuGroupExtended {

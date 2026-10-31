@@ -63,7 +63,7 @@ const RiskCategories: React.FC<IRiskCategoriesProps> = ({ risks, selectedRisk, o
     const groups: { [key: string]: ICategoryGroup } = {};
 
     risks.forEach((risk) => {
-      let categories: string[] = [];
+      let categories: string[];
 
       if (viewMode === "category") {
         categories = risk.risk_category || [];

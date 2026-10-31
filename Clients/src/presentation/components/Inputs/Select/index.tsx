@@ -272,6 +272,7 @@ function Select({
               icon?: React.ComponentType<{ color?: string; size?: number }>;
               color?: string;
               noTranslate?: boolean;
+              disabled?: boolean;
             },
             index: number,
           ) => {
@@ -279,6 +280,7 @@ function Select({
               <MenuItem
                 value={getOptionValue ? getOptionValue(item) : item._id}
                 key={`${selectId}-${item._id}`}
+                disabled={item.disabled}
                 sx={{
                   display: "flex",
                   ...itemStyles,

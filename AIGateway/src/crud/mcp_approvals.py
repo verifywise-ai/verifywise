@@ -340,13 +340,17 @@ async def decide_approval(
     return None
 
 
-async def delete_expired_approval_requests(retention_days: int = 30, batch_size: int = 5000) -> int:
-    """Delete decided or expired approval requests older than retention_days in batches."""
-    from utils.batch_delete import batch_delete_expired
+async def delete_expired_approval_requests(
+    default_days: int, min_days: int, batch_size: int = 5000
+) -> int:
+    """Delete decided or expired approval requests older than each organization's
+    retention period, in batches."""
+    from utils.batch_delete import batch_delete_expired_per_org
 
-    return await batch_delete_expired(
+    return await batch_delete_expired_per_org(
         table="ai_gateway_mcp_approval_requests",
-        where_clause="(status != 'pending' OR expires_at < NOW())",
-        retention_days=retention_days,
+        where_clause="(l.status != 'pending' OR l.expires_at < NOW())",
+        default_days=default_days,
+        min_days=min_days,
         batch_size=batch_size,
     )

@@ -8,6 +8,8 @@ export class ProjectModel {
   owner!: number;
   start_date!: Date;
   ai_risk_classification?: AiRiskClassification | null;
+  high_risk_roles?: HighRiskRole[];
+  /** @deprecated derived single role */
   type_of_high_risk_role?: HighRiskRole | null;
   goal!: string;
   last_updated!: Date;
@@ -29,6 +31,7 @@ export class ProjectModel {
     this.owner = data.owner;
     this.start_date = data.start_date;
     this.ai_risk_classification = data.ai_risk_classification;
+    this.high_risk_roles = data.high_risk_roles;
     this.type_of_high_risk_role = data.type_of_high_risk_role;
     this.goal = data.goal;
     this.last_updated = data.last_updated;

@@ -1,6 +1,6 @@
 # EvalServer — Python LLM Evaluation Service
 
-> **Last Updated:** 2026-09-23
+> **Last Updated:** 2026-10-20
 
 ---
 
@@ -62,7 +62,9 @@ Both entry points (startup `check_and_run_migration()` and the CLI `migrate_to_s
 
 Key variables: `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `LLM_EVALS_PORT`, `ENCRYPTION_KEY`
 
-**AI Gateway (LiteLLM) — cloud LLM calls:** Set `AI_GATEWAY_URL` (default `http://127.0.0.1:8100`) and `AI_GATEWAY_INTERNAL_KEY` to match the Node backend. When the internal key is set, evaluations route provider calls through the gateway’s `/internal/v1/chat/completions` instead of direct vendor SDKs. Provider secrets are read from `verifywise.ai_gateway_api_keys` (same table as AI Gateway Settings).
+**AI Gateway (LiteLLM) — cloud LLM calls:** Set `AI_GATEWAY_URL` (default `http://127.0.0.1:8100`) and `AI_GATEWAY_INTERNAL_KEY` to match the Node backend. The key is required: EvalServer refuses to start without it, and every cloud model call (tested model, DeepEval judges, custom scorers, Arena, report summaries) goes through the gateway’s `/internal/v1/chat/completions`. There are no direct vendor SDKs (`anthropic`, `google-genai`, `mistralai` were removed). Only self-hosted/Ollama judges and scorers, `custom_api` tested models (`ModelRunner` provider `custom_api`, endpoint passed in, never the environment) and local HuggingFace/Ollama models call their endpoint directly. A self-hosted judge's endpoint travels in `G_EVAL_BASE_URL`/`G_EVAL_API_KEY`, cleared at the start of each run. The gateway reports sampling settings a model dropped (`dropped_params`); a run stores them in `results.dropped_params`. `top_p` is sent only when below 1, and alone for Anthropic. Provider secrets are read from `verifywise.ai_gateway_api_keys` (same table as AI Gateway Settings).
+
+The one gateway client is `EvaluationModule/src/deepeval_engine/gateway_litellm_client.py`; `src/utils/gateway_litellm_client.py` re-exports it. `gateway_completion_sync/async` return a `GatewayCompletion` (text, prompt/completion/total tokens, LiteLLM `cost_usd`), the tested model's calls store in each log's `token_count` and `cost` (0.0 from the gateway means LiteLLM could not price the model and is kept as unknown); custom scorer results carry their judge call's tokens and cost, returned by the scorer test endpoint. A provider failure comes back as HTTP 502 with `{"error": {"type", "status_code", "message"}}` (LiteLLM's exception class, the provider's status, a redacted message); the client raises `GatewayProviderError`, whose text `"<Type> (<status>): <message>"` `utils/error_detection.py` reads before its text patterns.
 
 **Note:** EvalServer may use a different database/port than the main server (e.g., port `5433` vs `5432`).
 

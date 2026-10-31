@@ -24,6 +24,14 @@ async def get_all_mcp_servers(org_id: int) -> list[dict]:
                     s.is_active,
                     s.health_status,
                     s.last_health_check_at,
+                    s.last_discovery_error,
+                    (
+                        SELECT COUNT(*)
+                        FROM ai_gateway_mcp_tools t
+                        WHERE t.organization_id = s.organization_id
+                          AND t.server_id = s.id
+                          AND t.is_active = true
+                    ) AS tool_count,
                     s.description,
                     s.metadata,
                     s.created_by,
@@ -69,6 +77,14 @@ async def get_mcp_server(org_id: int, server_id: int) -> Optional[dict]:
                     s.is_active,
                     s.health_status,
                     s.last_health_check_at,
+                    s.last_discovery_error,
+                    (
+                        SELECT COUNT(*)
+                        FROM ai_gateway_mcp_tools t
+                        WHERE t.organization_id = s.organization_id
+                          AND t.server_id = s.id
+                          AND t.is_active = true
+                    ) AS tool_count,
                     s.description,
                     s.metadata,
                     s.created_by,
@@ -113,6 +129,14 @@ async def get_mcp_server_by_slug(org_id: int, slug: str) -> Optional[dict]:
                     s.is_active,
                     s.health_status,
                     s.last_health_check_at,
+                    s.last_discovery_error,
+                    (
+                        SELECT COUNT(*)
+                        FROM ai_gateway_mcp_tools t
+                        WHERE t.organization_id = s.organization_id
+                          AND t.server_id = s.id
+                          AND t.is_active = true
+                    ) AS tool_count,
                     s.description,
                     s.metadata,
                     s.created_by,
@@ -289,15 +313,25 @@ async def delete_mcp_server(org_id: int, server_id: int) -> bool:
     return False
 
 
-async def update_server_health(server_id: int, status: str) -> None:
+async def record_discovery_result(
+    org_id: int, server_id: int, error: Optional[str]
+) -> None:
+    """Store the outcome of a discovery run: healthy when error is None."""
     async with get_db() as db:
         await db.execute(
             text("""
                 UPDATE ai_gateway_mcp_servers
                 SET health_status = :status,
+                    last_discovery_error = :error,
                     last_health_check_at = NOW()
-                WHERE id = :server_id
+                WHERE organization_id = :org_id
+                  AND id = :server_id
             """),
-            {"server_id": server_id, "status": status},
+            {
+                "org_id": org_id,
+                "server_id": server_id,
+                "status": "healthy" if error is None else "unhealthy",
+                "error": error,
+            },
         )
         await db.commit()

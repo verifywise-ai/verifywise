@@ -2,7 +2,6 @@
 - name: Update VerifyWise on all servers (images + compose + env)
   hosts: verifywise
   become: true
-  serial: 1  # one server at a time; remove for parallel
 
   tasks:
     - name: Detect available Compose command (v2 plugin or legacy binary)
@@ -61,12 +60,16 @@
       ansible.builtin.shell: "{{ compose_cmd }} -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.prod pull"
       args:
         chdir: "{{ install_dir }}"
+      environment:
+        IMAGE_TAG: "{{ image_tag | default('latest') }}"
       changed_when: true
 
     - name: Recreate containers with new images / config
       ansible.builtin.shell: "{{ compose_cmd }} -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.prod up -d"
       args:
         chdir: "{{ install_dir }}"
+      environment:
+        IMAGE_TAG: "{{ image_tag | default('latest') }}"
       register: compose_up
       changed_when: "'Recreated' in compose_up.stderr or 'Started' in compose_up.stderr"
 

@@ -85,12 +85,6 @@ test.describe("Super Admin", () => {
         await nameHeader.click();
         await page.waitForTimeout(500);
 
-        // Sort indicator should appear
-        const sortIndicator = page
-          .locator('[class*="sort" i]')
-          .or(page.locator("svg"))
-          .or(page.locator("[aria-sort]"));
-
         // Just verify the click didn't break anything
         await expect(page.locator("body")).not.toBeEmpty();
       }

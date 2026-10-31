@@ -100,3 +100,12 @@ export async function getMissingRequiredCustomFields({
   >(`/custom-fields/values/${entityType}/${entityId}/missing-required`, { signal });
   return response.data?.data ?? [];
 }
+
+export async function getCustomFieldUsage(
+  id: number,
+): Promise<{ total: number; by_option: Record<string, number> }> {
+  const response = await apiServices.get<
+    Envelope<{ total: number; by_option: Record<string, number> }>
+  >(`/custom-fields/definitions/by-id/${id}/usage`);
+  return response.data?.data ?? { total: 0, by_option: {} };
+}

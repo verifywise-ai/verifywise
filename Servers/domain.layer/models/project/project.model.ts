@@ -4,6 +4,7 @@ import { IProjectAttributes } from "../../interfaces/i.project";
 import { AiRiskClassification } from "../../enums/ai-risk-classification.enum";
 import { HighRiskRole } from "../../enums/high-risk-role.enum";
 import { ProjectStatus } from "../../enums/project-status.enum";
+import { legacyHighRiskRole, normalizeHighRiskRoles } from "../../../utils/highRiskRoles.utils";
 
 @Table({
   tableName: "projects",
@@ -51,11 +52,13 @@ export class ProjectModel extends Model<ProjectModel> implements IProjectAttribu
   })
   ai_risk_classification?: AiRiskClassification | null;
 
+  /** EU AI Act roles, normalised: no duplicates, Provider first. */
   @Column({
-    type: DataType.ENUM(...Object.values(HighRiskRole)),
-    allowNull: true,
+    type: DataType.ARRAY(DataType.TEXT),
+    allowNull: false,
+    defaultValue: [],
   })
-  type_of_high_risk_role?: HighRiskRole | null;
+  high_risk_roles!: HighRiskRole[];
 
   @Column({
     type: DataType.STRING,
@@ -190,7 +193,9 @@ export class ProjectModel extends Model<ProjectModel> implements IProjectAttribu
       start_date: this.start_date?.toISOString(),
       geography: this.geography,
       ai_risk_classification: this.ai_risk_classification,
-      type_of_high_risk_role: this.type_of_high_risk_role,
+      high_risk_roles: normalizeHighRiskRoles(this.high_risk_roles),
+      // Deprecated: the single role older API clients read (Provider when present).
+      type_of_high_risk_role: legacyHighRiskRole(this.high_risk_roles),
       use_case_category: this.use_case_category,
       use_case_purpose: this.use_case_purpose,
       use_case_audience: this.use_case_audience,
@@ -210,6 +215,7 @@ export class ProjectModel extends Model<ProjectModel> implements IProjectAttribu
       members: dataValues?.members,
       has_pending_approval: dataValues?.has_pending_approval,
       approval_status: dataValues?.approval_status,
+      custom_fields: dataValues?.custom_fields,
     };
   }
 

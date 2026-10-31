@@ -4,7 +4,7 @@ export const intakeFormsContent: ArticleContent = {
   blocks: [
     {
       type: 'time-estimate',
-      text: '12 min read',
+      text: '13 min read',
     },
     {
       type: 'heading',
@@ -225,6 +225,54 @@ export const intakeFormsContent: ArticleContent = {
     },
     {
       type: 'heading',
+      id: 'conditional-fields',
+      level: 2,
+      text: 'Conditional fields',
+    },
+    {
+      type: 'paragraph',
+      text: 'Open "Show this field only if…" in a field\'s settings to show it only when other answers match. Add one or more conditions and choose whether all or any must match. A condition can use any other field in the form, above or below. Until that question is answered, the field stays hidden.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Hidden fields are never required and their answers are not saved. Fields mapped to the use case name, the use case goal or the model name cannot have conditions, because those values are needed to create the entity.',
+    },
+    {
+      type: 'heading',
+      id: 'calculated-fields',
+      level: 2,
+      text: 'Calculated fields',
+    },
+    {
+      type: 'paragraph',
+      text: 'A calculated field shows a read-only result that updates as the submitter types, for example annual cost from a monthly cost. Add one from the Advanced section of the field palette. Formulas use + − × ÷ (typed as + - * /), parentheses and numbers, and refer to number or calculated fields anywhere in the form, so a total at the top can add up fields below it. Type { in the formula box to insert a field.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Set decimals (0 to 6) and an optional prefix or suffix, such as € or people. If an input is empty or hidden, the result shows a dash. The value is recalculated by VerifyWise when the form is submitted and is shown to reviewers. A form cannot be published while its formulas or conditions go round in a loop, for example two fields that each read the other. A draft can still be saved.',
+    },
+    {
+      type: 'heading',
+      id: 'logic-overview',
+      level: 2,
+      text: 'Logic overview',
+    },
+    {
+      type: 'paragraph',
+      text: 'Select **Logic** at the top of the form builder to see all the logic on the form in one list: every calculated field and its formula, every conditional field and the answers it depends on, risk dimension tags, and how reviewer assignment sends submissions to expert or regular reviewers. A row with a problem is outlined in red with the reason. Click a row to open that field in the editor.',
+    },
+    {
+      type: 'heading',
+      id: 'risk-dimension-tags',
+      level: 2,
+      text: 'Risk dimension tags',
+    },
+    {
+      type: 'paragraph',
+      text: 'Under "Risk scoring" in a text, dropdown or checkbox field\'s settings, choose the risk dimension its answer speaks to. The AI scorer sees the dimension next to each tagged answer, so it knows what the answer was meant to show. Tags don\'t produce scores of their own. For submissions scored with the earlier keyword method, tags decided which answers fed each dimension.',
+    },
+    {
+      type: 'heading',
       id: 'entity-field-mapping',
       level: 3,
       text: 'Entity field mapping',
@@ -242,7 +290,7 @@ export const intakeFormsContent: ArticleContent = {
         { text: '`owner`, responsible person' },
         { text: '`start_date`, planned start date' },
         { text: '`ai_risk_classification`, risk tier' },
-        { text: '`type_of_high_risk_role`, high-risk role category' },
+        { text: '`type_of_high_risk_role`, the use case\'s high-risk roles (Provider, Deployer or both). Map a select or multi-select question to it. Each selected option whose label or value is Provider or Deployer becomes a role; the review dialog lists any other selected option so you can correct the roles before approving.' },
       ],
     },
     {
@@ -319,27 +367,63 @@ export const intakeFormsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Select which team members receive an email when a new submission arrives. Recipients are chosen from your organization\'s user list. If no recipients are configured, submissions still appear in the review queue but no email alerts are sent.',
+      text: 'Select which team members get an email when a new submission arrives. Recipients come from your organization\'s user list. The email waits for the AI assessment and then shows the EU AI Act level, the risk score and the number of suggested risks. If the assessment takes longer than 2 minutes, the email goes out anyway and says scoring is still running. Each submission sends this email once. If no recipients are configured, submissions still appear in the review queue but no email is sent. Forms opened through the older /{organization}/{form} link email your organization\'s admins instead.',
+    },
+    {
+      type: 'heading',
+      id: 'review-routing',
+      level: 3,
+      text: 'Reviewer assignment',
+    },
+    {
+      type: 'paragraph',
+      text: 'Reviewer assignment is off by default. Only Admins can change it; other roles see the settings read-only. Turn on **Assign reviewers by risk score** in the form settings to send each scored submission to **expert** or **regular** reviewers. With reviewer assignment off, anyone who can edit intake forms can decide every submission.',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { text: '**Expert reviewers** and **Regular reviewers**: pick at least one of each. Only users whose role can edit intake forms are listed.' },
+        { text: '**Threshold**: the risk score that separates the review levels, from 1 to 99. The default is 50.' },
+        { text: '**Close-call margin**: how many points either side of the threshold count as a close call, from 0 to 25. The default is 10.' },
+        { text: '**Second review share %**: the share of regular review approvals that are checked again, from 0 to 100. The default is 10.' },
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: 'A submission goes to expert review if any of these is true, checked in this order. Otherwise it goes to regular review.',
+    },
+    {
+      type: 'ordered-list',
+      items: [
+        { text: 'The EU AI Act level is Prohibited.' },
+        { text: 'There is no usable score, for example because the AI scoring failed or the form has no LLM key and the rules give no minimum.' },
+        { text: 'The score is within the close-call margin of the threshold.' },
+        { text: 'The score is at or above the threshold.' },
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: 'Saving the form assigns its pending submissions again with the new settings. A reviewer who is removed from your organization or loses the right to edit intake forms stays in the list, shown as **Former user**, until you remove them. You can still save the form with them in the list, but you cannot add someone who cannot review, and a list you change needs at least one person who can currently review. Admins can still decide, and the Oversight tab flags the form under **No active reviewer**.',
     },
     {
       type: 'heading',
       id: 'risk-tier-system',
       level: 3,
-      text: 'Risk tier system',
+      text: 'Risk score bands',
     },
     {
       type: 'paragraph',
-      text: 'Submissions are classified using the EU AI Act risk tiers: **Minimal**, **Limited**, **High** and **Unacceptable**. The overall score maps to a tier with fixed thresholds: up to 25 is Minimal, up to 50 Limited, up to 75 High and above 75 Unacceptable.',
+      text: 'Scores run from 0 to 100. Every screen shows the score with its band: **Low** (0 to 25), **Medium** (26 to 50), **High** (51 to 75) or **Critical** (76 to 100). The band is separate from the EU AI Act level, which comes from the risk questionnaire. Submissions scored with the earlier keyword method keep their old tiers: Minimal, Limited, High and Unacceptable.',
     },
     {
       type: 'heading',
       id: 'llm-analysis',
       level: 3,
-      text: 'LLM-enhanced analysis',
+      text: 'LLM key',
     },
     {
       type: 'paragraph',
-      text: 'If you have an LLM key configured in your organization settings, you can connect it to the form. The LLM analyzes each submission and adds explanations to the risk scoring, not just numbers. Without an LLM key, risk scoring still runs but uses rule-based analysis only.',
+      text: 'Connect one of your organization\'s LLM keys to the form. VerifyWise uses it to score submissions and to suggest risks. Without a key, reviewers get the rule-based EU AI Act classification only. The score is then the rule minimum, shown as "at least 70 (rules only)", and no risks are suggested.',
     },
     {
       type: 'heading',
@@ -350,6 +434,16 @@ export const intakeFormsContent: ArticleContent = {
     {
       type: 'paragraph',
       text: 'Toggle on **Suggested questions** to show a panel of pre-built governance questions in the builder. They are organized by category (risks, compliance, operations, vendors, models) and you can add any of them to your form with one click. Each question comes with the field type, validation rules and guidance text already set up.',
+    },
+    {
+      type: 'heading',
+      id: 'live-checks-toggle',
+      level: 3,
+      text: 'Check answers while the submitter types',
+    },
+    {
+      type: 'paragraph',
+      text: 'This setting is on by default for every form. It shows hints under answers on the public form and stores them with the submission for the reviewer (see **Live checks** below). Rule checks work on every form. AI checks and vendor document prefill also need the form\'s LLM key. Every AI call they make uses that key. Turn the setting off to stop all three for this form.',
     },
     {
       type: 'heading',
@@ -439,13 +533,39 @@ export const intakeFormsContent: ArticleContent = {
     },
     {
       type: 'heading',
+      id: 'live-checks',
+      level: 3,
+      text: 'Live checks',
+    },
+    {
+      type: 'paragraph',
+      text: 'While someone fills in the form, hints appear under answers that may need a second look. An **Intake assistant** panel counts them, jumps to each question and runs AI checks on request. The hints never block submission.',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { bold: 'Rule checks', text: 'Run in the browser on every change. They flag placeholder or very short answers, answers that mention a practice prohibited under EU AI Act Article 5, uses listed as high-risk in Annex III and decisions made without human review (GDPR Article 22). The hint says what the answer mentions and why it may matter; it never says the system is prohibited. Rules match English answers; the hint text is shown in the submitter\'s language.' },
+        { bold: 'AI checks', text: 'With an LLM key, the panel has a **Check my answers** button. It asks the AI once about vague answers and answers that contradict each other. Answers go to the AI only when the submitter selects it, so typing never uses your key. After a check, the button stays off until an answer changes. A notice at the top of the form explains this.' },
+        { bold: 'Fill from a vendor document', text: 'With an LLM key, the submitter can upload a PDF or Word file of up to 10 MB. The AI suggests answers for empty questions. Each one is marked **AI-suggested** with the file and section it was read from. A **Confirm** button sits next to it. Suggestions never replace an answer the submitter already gave. The file is not stored.' },
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: 'AI calls are rate-limited per visitor and per form, so a busy or misused link cannot run up costs on your key. When a limit is reached, rule checks keep working and the panel shows that AI checks are paused for a few minutes.',
+    },
+    {
+      type: 'paragraph',
+      text: 'At submit, VerifyWise runs the checks again on the server and stores them with the submission; AI checks finish in the background. In the review modal, an **Intake checks** section counts the hints by kind. Each flagged answer shows its hints as chips (hover for the full text). Answers filled from a vendor document show the file, the section and whether the submitter confirmed them.',
+    },
+    {
+      type: 'heading',
       id: 'reviewing-submissions',
       level: 2,
       text: 'Reviewing submissions',
     },
     {
       type: 'paragraph',
-      text: 'All submissions appear in the **Submissions** tab on the intake forms page. Each row shows the submitter\'s name (if provided), the form name, submission status, risk tier and date.',
+      text: 'All submissions appear in the **Submissions** tab on the intake forms page. Each row shows the submitter\'s name (if provided), the form name, submission status, risk score and date.',
     },
     {
       type: 'paragraph',
@@ -455,7 +575,9 @@ export const intakeFormsContent: ArticleContent = {
       type: 'bullet-list',
       items: [
         { text: 'All submitted field values' },
-        { text: 'The calculated risk assessment with dimension-level scores' },
+        { text: 'The risk score, with a **How this score is built** breakdown' },
+        { text: 'The EU AI Act classification, when the form asks the questionnaire' },
+        { text: 'Suggested risks to accept or dismiss' },
         { text: 'An entity data preview built from field mappings' },
         { text: 'Approve and Reject action buttons' },
       ],
@@ -468,7 +590,60 @@ export const intakeFormsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Every submission is scored across multiple risk dimensions. Each dimension produces a score from 1 to 10, a weight and a set of signals (short explanations of what drove the score).',
+      text: 'VerifyWise scores each submission in the background after it arrives. The review dialog shows **Scoring…** until the result is in and refreshes on its own.',
+    },
+    {
+      type: 'paragraph',
+      text: 'The score has two parts. The EU AI Act level from the risk questionnaire sets a rule minimum. The form\'s LLM then scores the answers 5 times, independently, from 0 to 100. Each run explains its score with reasons that quote the submitter\'s answers. VerifyWise drops any reason whose quote is not in the answer. The median of the runs is the AI score, and at least 3 runs must succeed for it to count.',
+    },
+    {
+      type: 'table',
+      columns: [
+        { key: 'level', label: 'EU AI Act level', width: '50%' },
+        { key: 'minimum', label: 'Rule minimum', width: '50%' },
+      ],
+      rows: [
+        { level: 'Prohibited', minimum: '90' },
+        { level: 'High risk', minimum: '70' },
+        { level: 'Limited risk', minimum: '30' },
+        { level: 'Minimal risk', minimum: '0' },
+        { level: 'Out of scope', minimum: '0' },
+        { level: 'No questionnaire (step off, or a model)', minimum: 'None. The score is marked "not rule-checked"' },
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: 'The final score is the higher of the rule minimum and the AI median. The AI can raise the score but never lower it, so an answer written to talk the score down can\'t take it below what the rules require.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Without an AI score the dialog shows the rule minimum as "at least 70 (rules only)". This happens when the form has no LLM key or the AI scoring failed. With no AI score and a rule minimum of 0, it shows "No score yet". When a step failed, or has run for more than 10 minutes, the dialog offers **Retry**. Retry reruns only the steps that did not finish, so your decisions on suggested risks stay as they are.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Model inventory forms have no EU AI Act questionnaire. Their submissions are scored by the AI alone and marked "not rule-checked".',
+    },
+    {
+      type: 'paragraph',
+      text: 'The LLM sees the answers and the questionnaire result. It never sees the submitter\'s name, their email address or any email field on the form. Answers are passed as data, and the model is told to ignore any instructions written inside them.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Open **How this score is built** to see each input: the level with its articles, the rule minimum, all 5 AI scores with failed runs marked, the median, the range, the quoted reasons and any band override.',
+    },
+    {
+      type: 'paragraph',
+      text: 'If you pick a different EU AI Act level before approving, the score is recalculated for that level and marked "Minimum based on your level change". If the questionnaire rules changed after the submission was scored, the dialog says "Rules updated since this was scored".',
+    },
+    {
+      type: 'heading',
+      id: 'keyword-scores',
+      level: 3,
+      text: 'Submissions scored before AI scoring',
+    },
+    {
+      type: 'paragraph',
+      text: 'Submissions scored with the earlier keyword method keep that score. The dialog shows its 6 dimension scores:',
     },
     {
       type: 'table',
@@ -477,27 +652,53 @@ export const intakeFormsContent: ArticleContent = {
         { key: 'description', label: 'What it measures', width: '75%' },
       ],
       rows: [
-        { dimension: 'Impact', description: 'How severe the harm could be if the system fails or behaves incorrectly' },
-        { dimension: 'Likelihood', description: 'How probable a failure or unintended outcome is' },
-        { dimension: 'Scope', description: 'How many people or processes the system affects' },
-        { dimension: 'Reversibility', description: 'Whether the consequences of a mistake can be undone' },
-        { dimension: 'Contestability', description: 'Whether affected individuals can challenge the system\'s decisions' },
-        { dimension: 'Transparency', description: 'How explainable the system\'s behavior is to stakeholders' },
+        { dimension: 'Data sensitivity', description: 'Whether personal, financial, health or other sensitive data is involved (weight 20%)' },
+        { dimension: 'Autonomy level', description: 'How much the system decides without a person (weight 20%)' },
+        { dimension: 'Impact scope', description: 'How many people or how much of the organization it reaches (weight 15%)' },
+        { dimension: 'Transparency', description: 'Whether its behaviour can be explained and is documented (weight 15%)' },
+        { dimension: 'Human oversight', description: 'How closely people monitor and review it (weight 15%)' },
+        { dimension: 'Domain criticality', description: 'How critical the domain is, such as healthcare, hiring or finance (weight 15%)' },
       ],
     },
     {
       type: 'paragraph',
-      text: 'The weighted dimension scores produce an overall score that maps to an EU AI Act risk tier. With an LLM key connected, each dimension also gets a written explanation of what drove the score.',
+      text: 'The weighted dimension scores produced an overall score mapped to the old tiers.',
     },
     {
       type: 'heading',
       id: 'risk-override',
       level: 3,
-      text: 'Overriding the risk tier',
+      text: 'Overriding the score band',
     },
     {
       type: 'paragraph',
-      text: 'Reviewers can override the calculated risk tier during approval. You need to provide a justification, and the override is logged with your identity and timestamp. This matters when the automatic scoring misses context you have, like a system that scores "medium" but affects a protected population.',
+      text: 'Reviewers can override the score band during approval with a justification. The override changes the band, while the score stays as computed. It is logged with your identity and time. Use it when the scoring misses context you have, like a system that scores Medium but affects a protected population.',
+    },
+    {
+      type: 'paragraph',
+      text: 'The band can go up but not below the band that holds the rule minimum. A High risk submission (minimum 70) can\'t be set lower than High, and the lower bands are greyed out. To go lower, change the EU AI Act level itself, which needs its own justification.',
+    },
+    {
+      type: 'heading',
+      id: 'suggested-risks',
+      level: 2,
+      text: 'Suggested risks',
+    },
+    {
+      type: 'paragraph',
+      text: 'With the score, the form\'s LLM suggests up to 10 risks for each submission, highest rated first. Some come from the MIT and IBM risk catalogs. The rest are written for the submission. Each one names its source, likelihood and severity. It comes with a drafted impact, mitigation plan and implementation strategy. Model submissions also get a model risk category and level.',
+    },
+    {
+      type: 'paragraph',
+      text: 'For each suggestion you can accept, dismiss, edit or undo your choice. **Accept all** accepts every open suggestion that has a mitigation plan. A risk can\'t be accepted without a mitigation plan, because the risk register requires one. Your choices save as you make them, so closing the dialog keeps them.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Nothing is added to the register until you approve. On approval each accepted suggestion becomes a risk on the new use case. You own it, and it is due 90 days after approval unless you set a deadline. For model submissions it becomes a model risk with status Open. If adding any risk fails, the whole approval is rolled back. Rejecting a submission adds no risks.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Without an LLM key on the form there are no suggestions. When more than 10 risks fit, the list says how many lower-rated ones are not shown.',
     },
     {
       type: 'heading',
@@ -507,7 +708,7 @@ export const intakeFormsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Use case forms can ask the EU AI Act risk questionnaire before the form\'s own questions. Turn on **EU AI Act risk classification step** in the builder\'s settings panel and save the form. The toggle only appears on use case forms. Model inventory forms do not have it. New use case forms start with the step on, and their default questions no longer ask for a risk level or a high-risk role, because the step sets both. Forms you saved earlier keep their setting. While the step is on, the builder canvas shows it above the form\'s questions as a read-only card. Select **View questions** to open the questionnaire, read-only, in a sidebar.',
+      text: 'Use case forms can ask the EU AI Act risk questionnaire before the form\'s own questions. Turn on **EU AI Act risk classification step** in the builder\'s settings panel and save the form. The toggle only appears on use case forms. Model inventory forms do not have it. New use case forms start with the step on, and their default questions no longer ask for a risk level or a high-risk role, because the step sets both. Forms you saved earlier keep their setting. While the step is on, the builder canvas shows it above the form\'s questions as a read-only card. Select **View questions** to open the questionnaire, read-only, in a sidebar. While it is off, the builder shows a notice that submissions won\'t be rule-checked.',
     },
     {
       type: 'paragraph',
@@ -538,7 +739,7 @@ export const intakeFormsContent: ArticleContent = {
       items: [
         { text: 'The computed level: Prohibited, High risk, Limited risk, Minimal risk or Out of scope' },
         { text: 'The reasons, each with its article and, where one applies, the date it applies from' },
-        { text: 'The role (provider or deployer) the submitter chose' },
+        { text: 'The roles (provider, deployer or both) the submitter chose' },
         { text: 'Every question and the answer given' },
       ],
     },
@@ -548,7 +749,7 @@ export const intakeFormsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'You can pick a different level under **Classification for the new use case**. Only the five levels above are offered, and a change needs a justification of at least 10 characters. On approval the use case gets the chosen level and the role, the answers are copied to the use case, and its change history records the level together with the computed level and your justification when you changed it. Because the classification comes from the EU AI Act step, the new use case also gets the EU AI Act framework, with its assessment and controls. A submission without a classification from the step, for example from a form that does not use the step, gets no framework on approval. When the selected level is Prohibited, the panel warns that approving creates a use case classified as prohibited.',
+      text: 'You can pick a different level under **Classification for the new use case**. Only the five levels above are offered, and a change needs a justification of at least 10 characters. On approval the use case gets the chosen level and the roles, the answers are copied to the use case, and its change history records the level together with the computed level and your justification when you changed it. Because the classification comes from the EU AI Act step, the new use case also gets the EU AI Act framework, with its assessment and controls. A submission without a classification from the step, for example from a form that does not use the step, gets no framework on approval. When the selected level is Prohibited, the panel warns that approving creates a use case classified as prohibited.',
     },
     {
       type: 'callout',
@@ -569,8 +770,9 @@ export const intakeFormsContent: ArticleContent = {
       type: 'ordered-list',
       items: [
         { text: 'Review the entity data preview. These are the field values that will populate the new entity, and you can edit them before confirming.' },
-        { text: 'Optionally override the risk tier with a justification.' },
-        { text: 'Click **Approve**. VerifyWise creates the entity (use case or model inventory entry) with the confirmed data.' },
+        { text: 'Accept or dismiss the suggested risks.' },
+        { text: 'Optionally override the score band with a justification.' },
+        { text: 'Click **Approve**. VerifyWise creates the entity (use case or model inventory entry) with the confirmed data and adds the risks you accepted.' },
         { text: 'If the submitter provided an email, they receive an approval notification.' },
       ],
     },
@@ -608,7 +810,74 @@ export const intakeFormsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Resubmissions create a new submission record linked to the original. The original submission is preserved for audit purposes.',
+      text: 'Resubmissions create a new submission record linked to the original. The original submission is preserved for audit purposes. A resubmission is assigned on its own once it has been scored. Nothing is carried over from the original.',
+    },
+    {
+      type: 'heading',
+      id: 'lanes-and-second-review',
+      level: 2,
+      text: 'Review levels and second reviews',
+    },
+    {
+      type: 'paragraph',
+      text: 'When a form has reviewer assignment on, the review modal shows the review level and why the submission is at it, for example "Within 10 points of the threshold" or "Prohibited practice". A submission with no score yet shows "No score yet" instead of a number.',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { text: 'Only a reviewer of the right level, or an Admin, can approve or reject. Expert reviewers can decide at both levels. Others see which reviewers can decide.' },
+        { text: 'A regular reviewer can\'t approve a submission while setting a Prohibited level or a band that sends it to expert review.' },
+        { text: 'If you raise the score band with an override and the new band alone would send the submission to expert review, it moves there. A band override never moves a submission to regular review.' },
+        { text: 'Use **Request expert review** to hand a submission in regular review to the expert reviewers. You must give a reason. It stays in expert review afterwards.' },
+      ],
+    },
+    {
+      type: 'heading',
+      id: 'second-review',
+      level: 3,
+      text: 'Second review',
+    },
+    {
+      type: 'paragraph',
+      text: 'After a regular reviewer approves a submission, it is picked for a second review with a chance equal to the form\'s second review share. Approvals by expert reviewers, and approvals in expert review, are not picked. The expert reviewers get an email, and the review modal shows a Second review panel.',
+    },
+    {
+      type: 'paragraph',
+      text: 'The email you get when a second review is waiting opens the submission directly. You can also find these submissions in the submissions list: choose **Second review** in the review level filter to see every open one, or **Assigned to me** to see the ones you can review.',
+    },
+    {
+      type: 'ordered-list',
+      items: [
+        { text: 'An expert reviewer, or an Admin, opens the submission. The person who approved it can\'t do the second review.' },
+        { text: 'Click **Agree** if the approval was right, or **Missed something** and write a note saying what was missed. The note is required for a miss.' },
+        { text: 'For a miss, do the follow-up, then click **Mark resolved** and write what was done.' },
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: 'A second review does not change the approval or the use case or model it created.',
+    },
+    {
+      type: 'heading',
+      id: 'oversight',
+      level: 3,
+      text: 'Oversight tab',
+    },
+    {
+      type: 'paragraph',
+      text: 'The **Oversight** tab on the intake forms page is for users who can edit intake forms. Choose the last 4, 8 or 12 weeks, and one form or all forms. Weeks start on Monday, UTC.',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { text: '**Submissions**: how many came in, and how many went to each review level. Close calls, submissions not assigned yet and submissions on forms with reviewer assignment off are counted separately.' },
+        { text: '**Median time to decision**: from submission to approval or rejection, overall and per review level.' },
+        { text: '**Redlines caught**: submissions at the Prohibited or High risk level.' },
+        { text: '**Second reviews**: how many were missed out of those completed, and how many are still open.' },
+        { text: '**Reviewers**: decisions, how often each reviewer changed the score band, and median time. A **Check** flag appears for a reviewer with at least 10 decisions who never changed a band. It is a prompt to look, not a finding.' },
+        { text: '**Band kept**: the share of decisions where the band stayed as computed, overall and in expert review. **Suggested risks accepted** is the share of suggestions reviewers accepted.' },
+        { text: '**Needs attention**: up to 20 items. A second review open for more than 3 days, a missed second review not yet resolved, a pending Prohibited submission, a submission pending for more than 7 days, and a form with no active reviewer at a review level. Forms with no active reviewer are listed first.' },
+      ],
     },
     {
       type: 'heading',
@@ -629,7 +898,7 @@ export const intakeFormsContent: ArticleContent = {
       ],
       rows: [
         { event: 'Submission received', recipient: 'Submitter', contents: 'Confirmation with reference number and form name' },
-        { event: 'New submission alert', recipient: 'Form recipients', contents: 'Submitter name/email, form name, submission ID' },
+        { event: 'New submission alert', recipient: 'Form recipients', contents: 'Submitter name and email, form name, submission ID, EU AI Act level, risk score and number of suggested risks. Sent once the assessment finishes, or after 2 minutes.' },
         { event: 'Submission approved', recipient: 'Submitter', contents: 'Approval confirmation, entity type created' },
         { event: 'Submission rejected', recipient: 'Submitter', contents: 'Rejection reason and resubmission link (7-day expiry)' },
       ],
@@ -717,7 +986,7 @@ export const intakeFormsContent: ArticleContent = {
       type: 'bullet-list',
       items: [
         { text: 'Configure at least one notification recipient so submissions don\'t sit unreviewed.' },
-        { text: 'Connect an LLM key if you want richer risk explanations. The rule-based scoring still works without it, but the LLM adds reasoning context.' },
+        { text: 'Connect an LLM key to get an AI score and suggested risks. Without one, reviewers see the rule-based classification only.' },
         { text: 'When rejecting, be specific in the rejection reason. The submitter sees your text verbatim.' },
         { text: 'Review entity data before confirming approval. The field mapping builds a reasonable starting point, but a quick check prevents errors downstream.' },
       ],

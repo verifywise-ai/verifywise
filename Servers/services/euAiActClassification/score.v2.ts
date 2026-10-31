@@ -17,7 +17,7 @@ const DATES = {
   annexI: "2028-08-02",
 };
 
-const ARTICLE_5: Record<string, ClassificationReason> = {
+export const ARTICLE_5: Record<string, ClassificationReason> = {
   manipulation: {
     article: "Article 5(1)(a)",
     text: "Manipulative or deceptive techniques that materially distort behaviour and are likely to cause significant harm are prohibited.",
@@ -57,7 +57,7 @@ const OMNIBUS_BAN = {
   },
 };
 
-const ANNEX_III_ARTICLE: Record<string, string> = {
+export const ANNEX_III_ARTICLE: Record<string, string> = {
   biometrics_use: "Annex III, point 1",
   critical_infrastructure_use: "Annex III, point 2",
   education_use: "Annex III, point 3",
@@ -290,17 +290,20 @@ const ROUTE_ORDER: HighRiskRoute[] = ["annex_iii", "annex_iii_point_2", "section
 
 const highRiskObligations = (
   routes: Set<HighRiskRoute>,
-  role: ClassificationRole | null,
+  roles: ClassificationRole[],
 ): ClassificationReason[] => {
   const seen = new Set<string>();
   const obligations: ClassificationReason[] = [];
-  for (const route of ROUTE_ORDER.filter((r) => routes.has(r))) {
-    const list = role === "Provider" ? PROVIDER_OBLIGATIONS[route] : DEPLOYER_OBLIGATIONS[route];
-    for (const obligation of list) {
-      const key = `${obligation.article}|${obligation.text}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      obligations.push({ ...obligation, appliesFrom: ROUTE_DATES[route] });
+  // Provider first; a duty both roles share (same article and text) is listed once.
+  for (const role of roles) {
+    for (const route of ROUTE_ORDER.filter((r) => routes.has(r))) {
+      const list = role === "Provider" ? PROVIDER_OBLIGATIONS[route] : DEPLOYER_OBLIGATIONS[route];
+      for (const obligation of list) {
+        const key = `${obligation.article}|${obligation.text}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        obligations.push({ ...obligation, appliesFrom: ROUTE_DATES[route] });
+      }
     }
   }
   return obligations;
@@ -315,11 +318,20 @@ const AI_LITERACY: ClassificationReason = {
 const asList = (answer: string | string[] | undefined): string[] =>
   answer === undefined ? [] : Array.isArray(answer) ? answer : [answer];
 
-const toRole = (answer: string | string[] | undefined): ClassificationRole | null =>
-  answer === "provider" ? "Provider" : answer === "deployer" ? "Deployer" : null;
+const ROLE_ORDER: ClassificationRole[] = ["Provider", "Deployer"];
+const ROLE_BY_ANSWER: Record<string, ClassificationRole> = {
+  provider: "Provider",
+  deployer: "Deployer",
+};
+
+/** The roles an answer names, Provider first. A string is a saved single-role answer. */
+export const toRoles = (answer: string | string[] | undefined): ClassificationRole[] => {
+  const named = asList(answer).map((value) => ROLE_BY_ANSWER[value]);
+  return ROLE_ORDER.filter((role) => named.includes(role));
+};
 
 export const scoreV2 = (answers: Answers, now: Date = new Date()): ClassificationResult => {
-  const role = toRole(answers.role);
+  const roles = toRoles(answers.role);
   const result = (
     level: ClassificationLevel,
     reasons: ClassificationReason[],
@@ -327,7 +339,8 @@ export const scoreV2 = (answers: Answers, now: Date = new Date()): Classificatio
   ): ClassificationResult => ({
     questionnaireVersion: 2,
     level,
-    role,
+    role: roles[0] ?? null,
+    roles,
     reasons,
     obligations,
   });
@@ -468,12 +481,12 @@ export const scoreV2 = (answers: Answers, now: Date = new Date()): Classificatio
   const transparencyKeys = asList(answers.transparency).filter((t) => t !== "none");
   const transparencyReasons = transparencyKeys.map((t) => TRANSPARENCY[t].reason);
   const transparencyObligations = transparencyKeys
-    .filter((t) => role === null || TRANSPARENCY[t].role === role)
+    .filter((t) => roles.length === 0 || roles.includes(TRANSPARENCY[t].role))
     .map((t) => TRANSPARENCY[t].obligation);
 
   const level: ClassificationLevel =
     high.length > 0 ? "High risk" : transparencyKeys.length > 0 ? "Limited risk" : "Minimal risk";
-  const highObligations = level === "High risk" ? highRiskObligations(routes, role) : [];
+  const highObligations = level === "High risk" ? highRiskObligations(routes, roles) : [];
 
   return result(
     level,

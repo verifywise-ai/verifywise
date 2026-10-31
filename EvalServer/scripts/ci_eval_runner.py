@@ -26,7 +26,9 @@ except ImportError:
     print("ERROR: 'requests' package required. Install with: pip install requests")
     sys.exit(2)
 
-INVERTED_KEYWORDS = ("bias", "toxicity", "hallucination", "conversationsafety")
+# Lower is better (0 = none found). Matched by exact name, so a custom scorer such as
+# "unbiasedTone" is not inverted. Keep in sync with EvalServer/src/utils/metric_constants.py.
+INVERTED_METRICS = {"bias", "toxicity", "hallucination"}
 EM_DASH = "\u2014"
 CHECK = "\u2705"
 CROSS = "\u274C"
@@ -236,7 +238,7 @@ def fetch_baseline(
 
 
 def is_inverted(name: str) -> bool:
-    return any(k in name.lower() for k in INVERTED_KEYWORDS)
+    return name.lower().replace("_", "").replace(" ", "") in INVERTED_METRICS
 
 
 def parse_results(

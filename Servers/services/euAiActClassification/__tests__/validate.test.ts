@@ -18,7 +18,31 @@ describe("validateAnswers", () => {
   it("accepts a complete minimal-risk path", () => {
     const { errors, answers } = validateAnswers(QUESTIONNAIRE_V2, MINIMAL);
     expect(errors).toEqual([]);
-    expect(answers).toEqual(MINIMAL);
+    expect(answers).toEqual({ ...MINIMAL, role: ["deployer"] });
+  });
+
+  it("accepts a saved single-role answer and returns it as a one-item list", () => {
+    const { errors, answers } = validateAnswers(QUESTIONNAIRE_V2, { ...MINIMAL, role: "deployer" });
+    expect(errors).toEqual([]);
+    expect(answers.role).toEqual(["deployer"]);
+  });
+
+  it("accepts both roles", () => {
+    const { errors, answers } = validateAnswers(QUESTIONNAIRE_V2, {
+      ...MINIMAL,
+      role: ["provider", "deployer"],
+    });
+    expect(errors).toEqual([]);
+    expect(answers.role).toEqual(["provider", "deployer"]);
+  });
+
+  it("rejects a role given twice and an unanswered role", () => {
+    expect(
+      validateAnswers(QUESTIONNAIRE_V2, { ...MINIMAL, role: ["provider", "provider"] }).errors,
+    ).toEqual(['duplicate answer "provider" for question "role"']);
+    expect(validateAnswers(QUESTIONNAIRE_V2, { ...MINIMAL, role: [] }).errors).toEqual([
+      'question "role" is not answered',
+    ]);
   });
 
   it("rejects a value given twice in a multi-select answer", () => {

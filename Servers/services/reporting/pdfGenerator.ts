@@ -13,6 +13,7 @@ import {
   ReportGenerationResult,
 } from "../../domain.layer/interfaces/i.reportGeneration";
 import { ANALYSIS_LABELS } from "./analyzers/mapToSummaries";
+import { applyColorTokens } from "../../tools/emailColors";
 
 // Browser instance singleton for reuse
 let browserInstance: Browser | null = null;
@@ -56,9 +57,9 @@ async function renderTemplate(reportData: ReportData): Promise<string> {
 
   // Read CSS files
   const pdfCssPath = path.join(__dirname, "../../templates/reports/styles/pdf.css");
-  const pdfCss = fs.readFileSync(pdfCssPath, "utf-8");
+  const pdfCss = applyColorTokens(fs.readFileSync(pdfCssPath, "utf-8"));
 
-  const templateContent = fs.readFileSync(templatePath, "utf-8");
+  const templateContent = applyColorTokens(fs.readFileSync(templatePath, "utf-8"));
 
   // Render with EJS
   const html = ejs.render(templateContent, {

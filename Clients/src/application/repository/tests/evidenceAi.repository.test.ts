@@ -85,10 +85,10 @@ describe("evidenceAi.repository", () => {
     it("makes a get request with query params when provided", async () => {
       vi.mocked(apiServices.get).mockResolvedValue({ status: 200, statusText: "OK", data: [] });
 
-      await getEvidenceGaps({ framework_type: "iso42001", quality_threshold: 0.5 });
+      await getEvidenceGaps({ framework_type: "iso42001", low_grades: ["C", "D", "F"] });
 
       expect(apiServices.get).toHaveBeenCalledWith(
-        "/evidence-ai/gaps?framework_type=iso42001&quality_threshold=0.5",
+        "/evidence-ai/gaps?framework_type=iso42001&low_grades=C%2CD%2CF",
       );
     });
 

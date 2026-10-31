@@ -209,7 +209,7 @@ export default function RepositoriesPage() {
 
       prevScanningIdsRef.current = activeIds;
       setScanningRepoIds(activeIds);
-    } catch (err) {
+    } catch {
       setError("Failed to load repositories.");
     } finally {
       setIsLoading(false);

@@ -19,7 +19,7 @@ from sqlalchemy import text
 from config import settings
 from database.db import get_db
 from services.cost_service import _safe_cost
-from services.guardrail_service import scan_text
+from services.guardrail_service import scan_text_async
 from utils.encryption import decrypt as decrypt_api_key  # noqa: F401 — re-export
 from utils.redis import get_redis as _get_redis
 from utils.rate_limit import check_rate_limit
@@ -411,6 +411,21 @@ async def _log_guardrail_detection(
         logger.error(f"Failed to log guardrail detection: {e}")
 
 
+# "function" is the deprecated functions API's equivalent of a tool result.
+_SCANNED_ROLES = ("user", "tool", "function")
+
+# A detection's rule action ("block" | "mask") as stored in action_taken, the
+# values the guardrail stats count. A blocked message is never masked, so every
+# detection in it is stored as "blocked": its matched text was stopped with it.
+_ACTION_TAKEN = {"block": "blocked", "mask": "masked"}
+
+
+def _action_taken(action: str, message_blocked: bool) -> str:
+    if message_blocked:
+        return "blocked"
+    return _ACTION_TAKEN.get(action, action or "allowed")
+
+
 async def run_guardrails(
     organization_id: int,
     messages: list[dict],
@@ -418,8 +433,14 @@ async def run_guardrails(
     config: Optional[tuple] = None,
 ) -> list[dict]:
     """
-    Scan all user messages through guardrails. Returns possibly-masked messages.
-    Raises HTTPException(400) if any message is blocked.
+    Scan user messages and tool results through guardrails. Returns
+    possibly-masked messages. Raises HTTPException(400) if any message is blocked.
+
+    Tool results (role "tool", or "function" from the deprecated functions API)
+    are scanned because that is where an agent's tools bring customer data into
+    the conversation. Content may be a string or a list of content parts; each
+    text part is scanned. Assistant turns, including their tool_calls, are the
+    model's own output and pass through.
 
     `config` is an optional pre-fetched (rules, settings) tuple so the caller can
     avoid a redundant get_guardrail_config fetch.
@@ -428,20 +449,15 @@ async def run_guardrails(
     if not rules:
         return messages
 
-    updated = list(messages)
-    for i, msg in enumerate(updated):
-        if msg.get("role") != "user" or not isinstance(msg.get("content"), str):
-            continue
+    guardrail_rules = [
+        {"guardrail_type": r["guardrail_type"], "config": r["config"],
+         "action": r["action"], "is_active": True, "id": r["id"], "name": r["name"]}
+        for r in rules
+    ]
 
-        result = scan_text(
-            text=msg["content"],
-            guardrail_rules=[
-                {"guardrail_type": r["guardrail_type"], "config": r["config"],
-                 "action": r["action"], "is_active": True, "id": r["id"], "name": r["name"]}
-                for r in rules
-            ],
-            settings=guardrail_settings,
-        )
+    async def scan(text: str) -> str:
+        """Scan one text; log detections, raise on block, return the text to send."""
+        result = await scan_text_async(text=text, guardrail_rules=guardrail_rules, settings=guardrail_settings)
 
         for detection in (result.detections or []):
             await _log_guardrail_detection(
@@ -449,7 +465,7 @@ async def run_guardrails(
                 guardrail_id=getattr(detection, "guardrail_id", None),
                 endpoint_id=endpoint_id,
                 guardrail_type=getattr(detection, "guardrail_type", ""),
-                action_taken="blocked" if result.blocked else getattr(detection, "action", "allowed"),
+                action_taken=_action_taken(getattr(detection, "action", ""), result.blocked),
                 matched_text=getattr(detection, "matched_text", ""),
                 entity_type=getattr(detection, "entity_type", ""),
                 execution_time_ms=result.execution_time_ms or 0,
@@ -460,8 +476,26 @@ async def run_guardrails(
                 status_code=400,
                 detail=f"Request blocked by guardrail: {result.block_reason or 'policy violation'}",
             )
+        # An empty masked result is still a mask; never fall back to the original.
+        return result.masked_text if result.masked_text is not None else text
 
-        if result.masked_text:
-            updated[i] = {**msg, "content": result.masked_text}
+    updated = list(messages)
+    for i, msg in enumerate(updated):
+        if msg.get("role") not in _SCANNED_ROLES:
+            continue
+        content = msg.get("content")
+
+        if isinstance(content, str):
+            scanned = await scan(content)
+            if scanned != content:
+                updated[i] = {**msg, "content": scanned}
+        elif isinstance(content, list):
+            parts = []
+            for part in content:
+                if isinstance(part, dict) and part.get("type") == "text" and isinstance(part.get("text"), str):
+                    part = {**part, "text": await scan(part["text"])}
+                parts.append(part)
+            if parts != content:
+                updated[i] = {**msg, "content": parts}
 
     return updated

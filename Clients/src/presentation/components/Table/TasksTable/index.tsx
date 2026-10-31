@@ -523,7 +523,7 @@ const TasksTable: React.FC<ITasksTableProps> = ({
                 );
                 return (
                   <TableCell key={`cf_${def.id}`} sx={singleTheme.tableStyles.primary.body.cell}>
-                    {formatCustomFieldValue(def, match?.value, users)}
+                    {formatCustomFieldValue(def, match?.value, users, formatDate)}
                   </TableCell>
                 );
               })}

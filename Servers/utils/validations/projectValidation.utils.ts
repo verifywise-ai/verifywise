@@ -13,6 +13,7 @@ import {
   ValidationError,
 } from "./validation.utils";
 import { AiRiskClassification } from "../../domain.layer/enums/ai-risk-classification.enum";
+import { isHighRiskRole } from "../highRiskRoles.utils";
 import { HighRiskRole } from "../../domain.layer/enums/high-risk-role.enum";
 
 /**
@@ -136,42 +137,53 @@ export const validateAiRiskClassification = (
   return validateEnum(value, "AI risk classification", AI_RISK_CLASSIFICATION_ENUM, true);
 };
 
+/** Shown when EU AI Act is selected and no role is. Same text as the forms. */
+export const HIGH_RISK_ROLES_REQUIRED_MESSAGE =
+  "Select at least one high-risk role when EU AI Act is selected.";
+
 /**
- * Validates type of high risk role enum field
- * For organizational projects, this should be null
+ * Validates the high-risk role list. Only Provider and Deployer; duplicates
+ * are normalised away by the write path, not rejected here. With EU AI Act
+ * selected (non-organizational) at least one role is required; otherwise, and
+ * for organizational projects, the list must be empty.
  */
-export const validateTypeOfHighRiskRole = (
-  value: any,
+export const validateHighRiskRoles = (
+  value: unknown,
   isOrganizational?: boolean,
   frameworkIds?: number[],
 ): ValidationResult => {
+  const roles = value === undefined || value === null ? [] : value;
+  if (!Array.isArray(roles) || !roles.every(isHighRiskRole)) {
+    return {
+      isValid: false,
+      message: `High-risk roles must be a list of: ${HIGH_RISK_ROLE_ENUM.join(", ")}`,
+      code: "INVALID_ENUM",
+    };
+  }
+
   const ineligibility = aiRiskClassificationIneligibility(isOrganizational, frameworkIds);
-  // For organizational projects, type_of_high_risk_role should be null
   if (ineligibility === "ORGANIZATIONAL_PROJECT_AI_RISK_NOT_NULL") {
-    if (value !== null && value !== undefined) {
-      return {
-        isValid: false,
-        message: "Type of high risk role must be null for organizational projects",
-        code: "ORGANIZATIONAL_PROJECT_HIGH_RISK_ROLE_NOT_NULL",
-      };
-    }
-    return { isValid: true };
+    return roles.length === 0
+      ? { isValid: true }
+      : {
+          isValid: false,
+          message: "High-risk roles must be empty for organizational projects",
+          code: "ORGANIZATIONAL_PROJECT_HIGH_RISK_ROLE_NOT_NULL",
+        };
   }
-
-  // For non-organizational projects, high-risk role is only required when EU AI Act is selected
   if (ineligibility === "AI_RISK_WITHOUT_EU_AI_ACT") {
-    if (value !== null && value !== undefined && value !== "") {
-      return {
-        isValid: false,
-        message: "Type of high risk role must be null when EU AI Act is not selected",
-        code: "HIGH_RISK_ROLE_WITHOUT_EU_AI_ACT",
-      };
-    }
-    return { isValid: true };
+    return roles.length === 0
+      ? { isValid: true }
+      : {
+          isValid: false,
+          message: "High-risk roles must be empty when EU AI Act is not selected",
+          code: "HIGH_RISK_ROLE_WITHOUT_EU_AI_ACT",
+        };
   }
 
-  // EU AI Act is selected: validate the high-risk role
-  return validateEnum(value, "Type of high risk role", HIGH_RISK_ROLE_ENUM, true);
+  return roles.length > 0
+    ? { isValid: true }
+    : { isValid: false, message: HIGH_RISK_ROLES_REQUIRED_MESSAGE, code: "REQUIRED_FIELD" };
 };
 
 /**
@@ -355,7 +367,7 @@ export const validateProjectId = (value: any): ValidationResult => {
 
 /**
  * Validation schema for creating a new project
- * Note: ai_risk_classification and type_of_high_risk_role are validated conditionally
+ * Note: ai_risk_classification and high_risk_roles are validated conditionally
  * Note: status is optional (defaults to "Not started" if not provided)
  */
 export const createProjectSchema = {
@@ -373,7 +385,7 @@ export const createProjectSchema = {
 /**
  * Validation schema for updating a project
  * All fields are optional for updates
- * Note: ai_risk_classification and type_of_high_risk_role are validated conditionally
+ * Note: ai_risk_classification and high_risk_roles are validated conditionally
  */
 export const updateProjectSchema = {
   project_title: (value: any) =>
@@ -411,17 +423,17 @@ export const validateCompleteProject = (data: any): ValidationError[] => {
     });
   }
 
-  // Validate type_of_high_risk_role conditionally
-  const highRiskRoleValidation = validateTypeOfHighRiskRole(
-    data.type_of_high_risk_role,
+  // Validate high_risk_roles conditionally
+  const highRiskRolesValidation = validateHighRiskRoles(
+    data.high_risk_roles,
     isOrganizational,
     frameworkIds,
   );
-  if (!highRiskRoleValidation.isValid) {
+  if (!highRiskRolesValidation.isValid) {
     errors.push({
-      field: "type_of_high_risk_role",
-      message: highRiskRoleValidation.message || "Type of high risk role validation failed",
-      code: highRiskRoleValidation.code || "VALIDATION_FAILED",
+      field: "high_risk_roles",
+      message: highRiskRolesValidation.message || "High-risk roles validation failed",
+      code: highRiskRolesValidation.code || "VALIDATION_FAILED",
     });
   }
 
@@ -437,7 +449,7 @@ export const sanitizeProjectDataForOrganizational = (data: any): any => {
   if (data.is_organizational) {
     // For organizational projects, set AI risk fields to null
     sanitizedData.ai_risk_classification = null;
-    sanitizedData.type_of_high_risk_role = null;
+    sanitizedData.high_risk_roles = [];
   }
 
   return sanitizedData;
@@ -454,7 +466,7 @@ export const validateUpdateProject = (data: any, currentProject?: any): Validati
     "owner",
     "start_date",
     "ai_risk_classification",
-    "type_of_high_risk_role",
+    "high_risk_roles",
     "goal",
     "members",
     "enable_ai_data_insertion",
@@ -500,17 +512,17 @@ export const validateUpdateProject = (data: any, currentProject?: any): Validati
     }
   }
 
-  if (data.type_of_high_risk_role !== undefined) {
-    const highRiskRoleValidation = validateTypeOfHighRiskRole(
-      data.type_of_high_risk_role,
+  if (data.high_risk_roles !== undefined) {
+    const highRiskRolesValidation = validateHighRiskRoles(
+      data.high_risk_roles,
       isOrganizational,
       frameworkIds,
     );
-    if (!highRiskRoleValidation.isValid) {
+    if (!highRiskRolesValidation.isValid) {
       errors.push({
-        field: "type_of_high_risk_role",
-        message: highRiskRoleValidation.message || "Type of high risk role validation failed",
-        code: highRiskRoleValidation.code || "VALIDATION_FAILED",
+        field: "high_risk_roles",
+        message: highRiskRolesValidation.message || "High-risk roles validation failed",
+        code: highRiskRolesValidation.code || "VALIDATION_FAILED",
       });
     }
   }
@@ -661,24 +673,22 @@ export const validateOrganizationalFrameworkConsistency = (
 };
 
 /**
- * Validates that AI risk classification is consistent with high risk role
+ * Validates that AI risk classification is consistent with the high-risk roles
  */
 export const validateRiskClassificationConsistency = (
   aiRiskClassification: AiRiskClassification,
-  typeOfHighRiskRole: HighRiskRole,
+  highRiskRoles: readonly unknown[],
 ): ValidationResult => {
-  // Business rule: High-risk AI systems should have appropriate high-risk roles
-  // All defined HighRiskRole enum values are valid for high-risk systems
-  if (aiRiskClassification === AiRiskClassification.HIGH_RISK) {
-    // Any valid HighRiskRole is acceptable for high-risk systems
-    const validHighRiskRoles = Object.values(HighRiskRole);
-    if (!validHighRiskRoles.includes(typeOfHighRiskRole)) {
-      return {
-        isValid: false,
-        message: "High-risk AI classification requires a valid high-risk role designation",
-        code: "INCONSISTENT_RISK_CLASSIFICATION",
-      };
-    }
+  // Business rule: a high-risk system's roles must all be valid roles.
+  if (
+    aiRiskClassification === AiRiskClassification.HIGH_RISK &&
+    !highRiskRoles.every(isHighRiskRole)
+  ) {
+    return {
+      isValid: false,
+      message: "High-risk AI classification requires valid high-risk role designations",
+      code: "INCONSISTENT_RISK_CLASSIFICATION",
+    };
   }
 
   // For minimal/limited risk systems, we accept any role designation
@@ -755,14 +765,15 @@ export const validateCompleteProjectWithBusinessRules = (data: any): ValidationE
     }
 
     // Check risk classification consistency (only for non-organizational projects)
-    if (!data.is_organizational && data.ai_risk_classification && data.type_of_high_risk_role) {
+    const highRiskRoles = Array.isArray(data.high_risk_roles) ? data.high_risk_roles : [];
+    if (!data.is_organizational && data.ai_risk_classification && highRiskRoles.length > 0) {
       const consistencyCheck = validateRiskClassificationConsistency(
         data.ai_risk_classification,
-        data.type_of_high_risk_role,
+        highRiskRoles,
       );
       if (!consistencyCheck.isValid) {
         errors.push({
-          field: "type_of_high_risk_role",
+          field: "high_risk_roles",
           message: consistencyCheck.message || "Risk classification is inconsistent",
           code: consistencyCheck.code || "BUSINESS_RULE_VIOLATION",
         });
@@ -827,23 +838,24 @@ export const validateUpdateProjectWithBusinessRules = (
       data.ai_risk_classification !== undefined
         ? data.ai_risk_classification
         : currentProject.ai_risk_classification;
-    const newTypeOfHighRiskRole =
-      data.type_of_high_risk_role !== undefined
-        ? data.type_of_high_risk_role
-        : currentProject.type_of_high_risk_role;
+    const newHighRiskRoles: unknown[] =
+      data.high_risk_roles !== undefined
+        ? Array.isArray(data.high_risk_roles)
+          ? data.high_risk_roles
+          : []
+        : Array.isArray(currentProject.high_risk_roles)
+          ? currentProject.high_risk_roles
+          : [];
 
     // Only check risk classification consistency for non-organizational projects
-    if (!newIsOrganizational && newAiRiskClassification && newTypeOfHighRiskRole) {
+    if (!newIsOrganizational && newAiRiskClassification && newHighRiskRoles.length > 0) {
       const consistencyCheck = validateRiskClassificationConsistency(
         newAiRiskClassification,
-        newTypeOfHighRiskRole,
+        newHighRiskRoles,
       );
       if (!consistencyCheck.isValid) {
         errors.push({
-          field:
-            data.type_of_high_risk_role !== undefined
-              ? "type_of_high_risk_role"
-              : "ai_risk_classification",
+          field: data.high_risk_roles !== undefined ? "high_risk_roles" : "ai_risk_classification",
           message: consistencyCheck.message || "Risk classification is inconsistent",
           code: consistencyCheck.code || "BUSINESS_RULE_VIOLATION",
         });

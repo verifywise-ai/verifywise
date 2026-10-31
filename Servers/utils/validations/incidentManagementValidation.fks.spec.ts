@@ -40,13 +40,17 @@ describe("incident reference FK validation — issue #4583", () => {
   });
 
   describe("complete create/update validation", () => {
+    // Create payloads need a valid description; these cases are about FKs only.
+    const description = "Model output drifted after retraining.";
+
     it("passes when no FK fields are present (legacy payloads)", () => {
-      expect(validateCompleteIncidentCreation({ description: "x" })).toEqual([]);
-      expect(validateCompleteIncidentUpdate({ description: "x" })).toEqual([]);
+      expect(validateCompleteIncidentCreation({ description })).toEqual([]);
+      expect(validateCompleteIncidentUpdate({ description })).toEqual([]);
     });
 
     it("passes when all FK fields are valid", () => {
       const errors = validateCompleteIncidentCreation({
+        description,
         model_inventory_id: 1,
         project_id: 2,
         assignee_id: 3,
@@ -56,6 +60,7 @@ describe("incident reference FK validation — issue #4583", () => {
 
     it("flags every invalid FK field on create", () => {
       const errors = validateCompleteIncidentCreation({
+        description,
         model_inventory_id: 0,
         project_id: "nope",
         assignee_id: -1,

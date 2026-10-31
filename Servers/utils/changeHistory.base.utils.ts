@@ -18,7 +18,13 @@
 
 import { sequelize } from "../database/db";
 import { Transaction, QueryTypes } from "sequelize";
-import { EntityType, getEntityConfig, GENERIC_FORMATTERS } from "../config/changeHistory.config";
+import {
+  EntityType,
+  FormatterContext,
+  getEntityConfig,
+  GENERIC_FORMATTERS,
+  runInSavepoint,
+} from "../config/changeHistory.config";
 import { ValidationException } from "../domain.layer/exceptions/custom.exception";
 import logger from "./logger/fileLogger";
 import { appendToAuditLedger } from "./auditLedger.utils";
@@ -49,6 +55,11 @@ function escapePgName(ident: string): string {
  * @param oldValue - Optional previous value of the field
  * @param newValue - Optional new value of the field
  * @param transaction - Optional database transaction
+ * @param changedBySystem - True for a change made by an integration or job
+ *   rather than a person: the row is stored with a null actor and
+ *   changed_by_system = true (migration
+ *   20261005130617-change-history-changed-by-system; not the ai_gateway_*
+ *   tables). changedByUserId is ignored.
  */
 export const recordEntityChange = async (
   entityType: EntityType,
@@ -60,17 +71,23 @@ export const recordEntityChange = async (
   oldValue?: string,
   newValue?: string,
   transaction?: Transaction,
+  changedBySystem = false,
+  deferLedger?: (append: () => void) => void,
 ): Promise<void> => {
   try {
     const config = getEntityConfig(entityType);
 
     const tableName = escapePgName(config.tableName);
     const foreignKey = escapePgName(config.foreignKeyField);
+    const actorId = changedBySystem ? null : changedByUserId;
+    // Only name the column when it is set, so tables without it still work.
+    const systemColumn = changedBySystem ? ", changed_by_system" : "";
+    const systemValue = changedBySystem ? ", true" : "";
 
     await sequelize.query(
       `INSERT INTO ${tableName}
-       (organization_id, ${foreignKey}, action, field_name, old_value, new_value, changed_by_user_id, changed_at)
-       VALUES (:organization_id, :entity_id, :action, :field_name, :old_value, :new_value, :changed_by_user_id, NOW())`,
+       (organization_id, ${foreignKey}, action, field_name, old_value, new_value, changed_by_user_id${systemColumn}, changed_at)
+       VALUES (:organization_id, :entity_id, :action, :field_name, :old_value, :new_value, :changed_by_user_id${systemValue}, NOW())`,
       {
         replacements: {
           organization_id: organizationId,
@@ -79,7 +96,7 @@ export const recordEntityChange = async (
           field_name: fieldName || null,
           old_value: oldValue || null,
           new_value: newValue || null,
-          changed_by_user_id: changedByUserId,
+          changed_by_user_id: actorId,
         },
         transaction,
       },
@@ -93,7 +110,7 @@ export const recordEntityChange = async (
       appendToAuditLedger({
         organizationId,
         entryType: "change_history",
-        userId: changedByUserId,
+        userId: actorId,
         entityType,
         entityId,
         action,
@@ -101,7 +118,9 @@ export const recordEntityChange = async (
         oldValue: oldValue || null,
         newValue: newValue || null,
       }).catch((err) => logger.error(`[audit_ledger] write failed: ${err}`));
-    if (transaction) {
+    if (deferLedger) {
+      deferLedger(appendLedger);
+    } else if (transaction) {
       transaction.afterCommit(() => {
         appendLedger();
       });
@@ -123,14 +142,17 @@ export const recordEntityChange = async (
  * @param organizationId - Organization ID for tenant isolation
  * @param changes - Array of field changes to record
  * @param transaction - Optional database transaction
+ * @param changedBySystem - Record the changes as made by the system (see recordEntityChange)
  */
 export const recordMultipleFieldChanges = async (
   entityType: EntityType,
   entityId: number,
-  changedByUserId: number,
+  changedByUserId: number | null,
   organizationId: number,
   changes: Array<{ fieldName: string; oldValue: string; newValue: string }>,
   transaction?: Transaction,
+  changedBySystem = false,
+  deferLedger?: (append: () => void) => void,
 ): Promise<void> => {
   for (const change of changes) {
     await recordEntityChange(
@@ -143,6 +165,8 @@ export const recordMultipleFieldChanges = async (
       change.oldValue,
       change.newValue,
       transaction,
+      changedBySystem,
+      deferLedger,
     );
   }
 };
@@ -282,12 +306,15 @@ export const getEntityChangeHistory = async (
  * @param entityType - The type of entity
  * @param fieldName - The name of the field being formatted
  * @param value - The value to format
+ * @param context - Organization (tenant-scopes lookups) and transaction for
+ *   formatters that resolve ids to names
  * @returns Formatted string representation of the value
  */
 export const formatFieldValue = async (
   entityType: EntityType,
   fieldName: string,
   value: any,
+  context?: FormatterContext,
 ): Promise<string> => {
   if (value === null || value === undefined || value === "") {
     return "-";
@@ -298,7 +325,7 @@ export const formatFieldValue = async (
 
     // Check if entity has a custom formatter for this field
     if (config.fieldFormatters && config.fieldFormatters[fieldName]) {
-      return await config.fieldFormatters[fieldName](value);
+      return await config.fieldFormatters[fieldName](value, context);
     }
 
     // Default to text formatter
@@ -339,6 +366,7 @@ export const trackEntityChanges = async (
   entityType: EntityType,
   oldData: any,
   newData: any,
+  context?: FormatterContext,
 ): Promise<Array<{ fieldName: string; oldValue: string; newValue: string }>> => {
   const changes: Array<{
     fieldName: string;
@@ -355,8 +383,8 @@ export const trackEntityChanges = async (
     if (newValue === undefined) continue;
 
     // Format values for comparison
-    const oldValueStr = await formatFieldValue(entityType, field, oldValue);
-    const newValueStr = await formatFieldValue(entityType, field, newValue);
+    const oldValueStr = await formatFieldValue(entityType, field, oldValue, context);
+    const newValueStr = await formatFieldValue(entityType, field, newValue, context);
 
     // Record change if values differ
     if (oldValueStr !== newValueStr) {
@@ -372,24 +400,138 @@ export const trackEntityChanges = async (
 };
 
 /**
+ * The written values of the keys an UPDATE set, read back from its RETURNING
+ * row. Diffing these instead of the request values compares what the
+ * database stored on both sides: Postgres has already cast form strings such
+ * as "false" or a long date string to the column types, so an unchanged
+ * value never shows as a change. Accepts a plain row or a sequelize instance.
+ */
+export const writtenValues = (
+  returned: unknown,
+  updateValues: Record<string, unknown>,
+): Record<string, unknown> => {
+  if (!returned || typeof returned !== "object") return updateValues;
+  const row =
+    typeof (returned as { get?: unknown }).get === "function"
+      ? (returned as { get: (o: { plain: true }) => Record<string, unknown> }).get({ plain: true })
+      : (returned as Record<string, unknown>);
+  return Object.fromEntries(
+    Object.keys(updateValues)
+      .filter((key) => key in row)
+      .map((key) => [key, row[key]]),
+  );
+};
+
+/**
+ * Best-effort field-level history for an UPDATE already expressed as a
+ * set-values object (the values going into the SET clause). Callers snapshot
+ * the tracked columns before updating, pass the values they actually write,
+ * and this diffs, formats and records the changes on the same transaction.
+ *
+ * A caller that cannot name the acting user (e.g. an advisor write tool,
+ * which only receives an organization id) should omit `changedBy` entirely:
+ * the change is then recorded as made by the system rather than mislabeled as
+ * an anonymous user.
+ *
+ * History must never fail the underlying edit: on a transaction the work runs
+ * in a savepoint, and any error is logged and swallowed, matching the
+ * model-lifecycle extension's guarantee.
+ */
+export const recordUpdateChanges = async (
+  entityType: EntityType,
+  entityId: number,
+  before: Record<string, unknown> | null | undefined,
+  updateValues: Record<string, unknown>,
+  changedBy: number | null | undefined,
+  organizationId: number,
+  transaction?: Transaction,
+): Promise<void> => {
+  if (!before) return;
+  try {
+    // Name lookups already run in their own savepoints.
+    const changes = await trackEntityChanges(entityType, before, updateValues, {
+      organizationId,
+      transaction,
+    });
+    if (changes.length === 0) return;
+    const changedBySystem = changedBy === undefined;
+    // A savepoint keeps a failed history write from aborting the caller's
+    // transaction, which would fail the edit at its next statement. Ledger
+    // appends wait until every row is written: a rolled-back row must not
+    // leave an append-only ledger entry behind.
+    const ledgerAppends: Array<() => void> = [];
+    await runInSavepoint(
+      () =>
+        recordMultipleFieldChanges(
+          entityType,
+          entityId,
+          changedBy ?? null,
+          organizationId,
+          changes,
+          transaction,
+          changedBySystem,
+          (append) => ledgerAppends.push(append),
+        ),
+      transaction,
+    );
+    for (const append of ledgerAppends) {
+      if (transaction) transaction.afterCommit(() => append());
+      else append();
+    }
+  } catch (error) {
+    logger.error(`Error recording ${entityType} change history: ${error}`);
+  }
+};
+
+/**
+ * Build history entries for fields the caller has already decided changed
+ * (for example from the same diff that drives its UPDATE), so the history
+ * matches the write exactly. Unlike trackEntityChanges this does not compare
+ * values again; it only keeps tracked fields and formats old/new values.
+ * `context` tenant-scopes any id-to-name lookups and runs them on the given
+ * transaction.
+ */
+export const formatEntityFieldChanges = async (
+  entityType: EntityType,
+  oldData: Record<string, unknown>,
+  newData: Record<string, unknown>,
+  changedFields: string[],
+  context?: FormatterContext,
+): Promise<Array<{ fieldName: string; oldValue: string; newValue: string }>> => {
+  const config = getEntityConfig(entityType);
+  const changes: Array<{ fieldName: string; oldValue: string; newValue: string }> = [];
+  for (const field of config.fieldsToTrack) {
+    if (!changedFields.includes(field)) continue;
+    changes.push({
+      fieldName: getFieldLabel(entityType, field),
+      oldValue: await formatFieldValue(entityType, field, oldData[field], context),
+      newValue: await formatFieldValue(entityType, field, newData[field], context),
+    });
+  }
+  return changes;
+};
+
+/**
  * Record entity creation with initial field values
  *
  * Records each non-empty initial field as a 'created' change entry.
  *
  * @param entityType - The type of entity being created
  * @param entityId - The ID of the newly created entity
- * @param changedByUserId - ID of the user creating the entity
+ * @param changedByUserId - ID of the user creating the entity; null with changedBySystem
  * @param organizationId - Organization ID for tenant isolation
  * @param entityData - The initial entity data
  * @param transaction - Optional database transaction
+ * @param changedBySystem - True when an integration, not a user, creates the entity
  */
 export const recordEntityCreation = async (
   entityType: EntityType,
   entityId: number,
-  changedByUserId: number,
+  changedByUserId: number | null,
   organizationId: number,
   entityData: any,
   transaction?: Transaction,
+  changedBySystem = false,
 ): Promise<void> => {
   const config = getEntityConfig(entityType);
 
@@ -405,8 +547,10 @@ export const recordEntityCreation = async (
         organizationId,
         getFieldLabel(entityType, field),
         "-",
-        await formatFieldValue(entityType, field, value),
+        // Tenant-scoped name lookups, on the creating transaction.
+        await formatFieldValue(entityType, field, value, { organizationId, transaction }),
         transaction,
+        changedBySystem,
       );
     }
   }

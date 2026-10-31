@@ -5,59 +5,67 @@
     {
       "id": "claude-haiku-4-5-20251001",
       "name": "Claude Haiku 4.5 (Recommended)",
-      "description": "Best value for AI advisor tasks",
-      "inputCost": 0.8,
-      "outputCost": 4.0,
-      "recommended": true
+      "description": "Recommended for AI advisor tasks",
+      "inputCost": 1.0,
+      "outputCost": 5.0,
+      "recommended": true,
+      "contextWindow": 200000
     },
     {
-      "id": "claude-3-5-haiku-20241022",
-      "name": "Claude 3.5 Haiku",
-      "description": "Fast and cost-effective",
-      "inputCost": 0.8,
-      "outputCost": 4.0
+      "id": "claude-haiku-5-5",
+      "name": "Claude Haiku 5.5",
+      "description": "Lowest price in this list",
+      "inputCost": 0.1,
+      "outputCost": 0.5,
+      "contextWindow": 1000000
     },
     {
-      "id": "claude-sonnet-4-20250514",
-      "name": "Claude Sonnet 4",
-      "description": "Balanced speed and intelligence",
+      "id": "claude-sonnet-5-5",
+      "name": "Claude Sonnet 5.5",
+      "description": "Current Sonnet",
+      "inputCost": 2.0,
+      "outputCost": 10.0,
+      "contextWindow": 1000000
+    },
+    {
+      "id": "claude-opus-5-5",
+      "name": "Claude Opus 5.5",
+      "description": "Current Opus",
+      "inputCost": 4.0,
+      "outputCost": 20.0,
+      "contextWindow": 1000000
+    },
+    {
+      "id": "claude-fable-5-1",
+      "name": "Claude Fable 5.1",
+      "description": "Highest price in this list",
+      "inputCost": 10.0,
+      "outputCost": 50.0,
+      "contextWindow": 1000000
+    },
+    {
+      "id": "claude-sonnet-4-6",
+      "name": "Claude Sonnet 4.6",
+      "description": "Previous Sonnet",
       "inputCost": 3.0,
-      "outputCost": 15.0
+      "outputCost": 15.0,
+      "contextWindow": 1000000
     },
     {
       "id": "claude-sonnet-4-5-20250929",
       "name": "Claude Sonnet 4.5",
-      "description": "Best balance of speed and intelligence",
+      "description": "Older Sonnet",
       "inputCost": 3.0,
-      "outputCost": 15.0
-    },
-    {
-      "id": "claude-3-haiku-20240307",
-      "name": "Claude 3 Haiku",
-      "description": "Budget option, fastest",
-      "inputCost": 0.25,
-      "outputCost": 1.25
-    },
-    {
-      "id": "claude-opus-4-20250514",
-      "name": "Claude Opus 4",
-      "description": "Most capable, highest cost",
-      "inputCost": 15.0,
-      "outputCost": 75.0
-    },
-    {
-      "id": "claude-opus-4-1-20250805",
-      "name": "Claude Opus 4.1",
-      "description": "Previous Opus flagship",
-      "inputCost": 15.0,
-      "outputCost": 75.0
+      "outputCost": 15.0,
+      "contextWindow": 200000
     },
     {
       "id": "claude-opus-4-5-20251101",
       "name": "Claude Opus 4.5",
-      "description": "Most capable model",
-      "inputCost": 15.0,
-      "outputCost": 75.0
+      "description": "Previous Opus",
+      "inputCost": 5.0,
+      "outputCost": 25.0,
+      "contextWindow": 200000
     }
   ]
 }

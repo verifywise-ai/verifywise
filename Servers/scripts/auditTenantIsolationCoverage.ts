@@ -59,6 +59,21 @@ const sharedTables: SharedTableEntry[] = [
     justification: "Billing tier definitions shared across tenants.",
   },
   {
+    name: "shadow_ai_settings_dedup_backup",
+    justification:
+      "Migration backup of duplicate shadow_ai_settings rows removed by 20261012091252; no application code reads it, only that migration's down().",
+  },
+  {
+    name: "jira_assets_use_cases_fk_cleanup_backup",
+    justification:
+      "Migration backup of jira_assets_use_cases links whose project was missing or in another organization, removed by 20261012165625 when the composite FK was added; no application code reads it, only that migration's down().",
+  },
+  {
+    name: "intake_forms_alignment_backup",
+    justification:
+      "Migration record of the intake forms 20261024110000 moved from left to center (previous alignment only); rows cascade-delete with their form. No application code reads it, only that migration's down().",
+  },
+  {
     name: "*_struct_*",
     justification:
       "Framework structure/reference tables are global by convention; the wildcard matches all struct tables.",
@@ -134,12 +149,12 @@ const deferredScopedTables: SharedTableEntry[] = [
   {
     name: "jira_assets_sync_history",
     justification:
-      "Extension-owned table (jira-assets). Every query in Servers/extensions/jira-assets/jiraAssets.service.ts filters by organization_id. Deferred pending matrix coverage.",
+      "Extension-owned table (jira-assets), being replaced by the sync engine's extension_sync_runs (migration 20261013105301 copied every row with its organization_id). Every query on it filters by organization_id; once the engine tasks land it is no longer written or read. Kept for one release so a rollback restores the old behaviour; a follow-up migration drops it.",
   },
   {
     name: "jira_assets_use_cases",
     justification:
-      "Extension-owned table (jira-assets). Every query in Servers/extensions/jira-assets/jiraAssets.service.ts filters by organization_id. UNIQUE(organization_id, jira_object_id). Deferred pending matrix coverage.",
+      "Extension-owned table (jira-assets). Every query in Servers/extensions/jira-assets/jiraAssets.service.ts filters by organization_id. UNIQUE(organization_id, jira_object_id). project_id references projects through a composite FK (project_id, organization_id), so a link cannot point at another organization's project. Deferred pending matrix coverage.",
   },
   {
     name: "model_lifecycle_change_history",
@@ -1106,6 +1121,26 @@ const deferredScopedTables: SharedTableEntry[] = [
     name: "use_case_change_history",
     justification:
       "Deferred to a future isolation wave; not covered by the first-pass matrix. See runbook section 2.4.",
+  },
+  {
+    name: "evidence_hub_change_history",
+    justification:
+      "Deferred to a future isolation wave; not covered by the first-pass matrix. Written only via changeHistory.base.utils, which filters by organization_id. See runbook section 2.4.",
+  },
+  {
+    name: "control_eu_change_history",
+    justification:
+      "Deferred to a future isolation wave; not covered by the first-pass matrix. Written only via changeHistory.base.utils, which filters by organization_id. See runbook section 2.4.",
+  },
+  {
+    name: "subcontrol_eu_change_history",
+    justification:
+      "Deferred to a future isolation wave; not covered by the first-pass matrix. Written only via changeHistory.base.utils, which filters by organization_id. See runbook section 2.4.",
+  },
+  {
+    name: "annex_category_change_history",
+    justification:
+      "Deferred to a future isolation wave; not covered by the first-pass matrix. Written only via changeHistory.base.utils, which filters by organization_id. See runbook section 2.4.",
   },
   {
     name: "user_preferences",

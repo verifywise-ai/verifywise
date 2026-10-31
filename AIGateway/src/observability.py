@@ -61,11 +61,19 @@ def _fetch_config() -> dict:
     }
 
     backend_url = os.environ.get("BACKEND_URL")
-    internal_key = os.environ.get("AI_GATEWAY_INTERNAL_KEY")
-    if not backend_url or not internal_key:
+    if not backend_url:
         return fallback
 
     try:
+        # The trimmed key from settings, the same value the gateway checks and
+        # the backend expects. Inside the try: a settings error falls back to
+        # the environment config instead of blocking startup.
+        from config import settings
+
+        internal_key = settings.ai_gateway_internal_key
+        if not internal_key:
+            return fallback
+
         import httpx
 
         resp = httpx.get(

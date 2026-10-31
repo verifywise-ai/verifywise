@@ -81,7 +81,7 @@ unconditionally.
 ## Pruning
 
 The applicable control set is a moving target: changing a project's
-`ai_risk_classification` or `type_of_high_risk_role` changes what
+`ai_risk_classification` or `high_risk_roles` changes what
 `getVisibleEuCategoryIdsForProject` returns, and marking an ISO annex category
 `is_applicable = false` drops it. Each recalculation therefore ends with
 `pruneControlScoresQuery`, which deletes the scope's `control_readiness_scores`

@@ -10,19 +10,9 @@
  * OpenAPI spec drifts from these shapes in either direction.
  *
  * Casing mirrors the server exactly: camelCase for the deepeval router schemas
- * (evaluate/scorers/models), snake_case for the evaluation_logs models
+ * (scorers/models), snake_case for the evaluation_logs models
  * (experiments/metrics).
  */
-
-/** POST /deepeval/evaluate — EvaluateConfig (all optional, extra keys allowed) */
-export interface EvaluateConfig {
-  dataset?: Record<string, unknown>;
-  model?: Record<string, unknown>;
-  judgeLlm?: Record<string, unknown>;
-  metrics?: Record<string, unknown>;
-  metric_thresholds?: Record<string, unknown>;
-  selectedScorers?: string[];
-}
 
 /** POST /deepeval/scorers — CreateScorerRequest */
 export interface CreateScorerRequest {
@@ -113,10 +103,6 @@ export interface EvalServerRequestShape {
  * Keep in sync with the interfaces above and the EvalServer schemas.
  */
 export const EVAL_SERVER_REQUEST_SHAPES: Record<string, EvalServerRequestShape> = {
-  "POST /deepeval/evaluate": {
-    required: [],
-    properties: ["dataset", "model", "judgeLlm", "metrics", "metric_thresholds", "selectedScorers"],
-  },
   "POST /deepeval/scorers": {
     required: ["name", "metricKey"],
     properties: [

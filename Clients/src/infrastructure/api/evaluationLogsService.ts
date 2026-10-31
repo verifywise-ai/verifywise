@@ -160,14 +160,23 @@ export interface ModelValidationResult {
   has_api_key: boolean;
   has_openrouter_fallback: boolean;
   error_message: string | null;
+  /** The 1-token check with the saved key was refused (bad key, or model not served to it) */
+  probe_failed?: boolean;
+  /** What was refused: invalid_api_key, permission_denied, model_not_found or budget_exceeded */
+  probe_error_code?: string | null;
 }
 
 export const modelValidationService = {
-  // Validate that a model's API key is available
-  async validateModel(modelName: string, provider?: string): Promise<ModelValidationResult> {
+  // Validate that a model's API key is available; `probe` also asks the provider for one token
+  async validateModel(
+    modelName: string,
+    provider?: string,
+    probe = false,
+  ): Promise<ModelValidationResult> {
     const response = await CustomAxios.post("/deepeval/models/validate", {
       model_name: modelName,
       provider,
+      probe,
     });
     return response.data;
   },

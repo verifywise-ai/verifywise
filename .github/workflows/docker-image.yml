@@ -1,34 +1,37 @@
 name: Build and Push Images to GitHub Container Registry
 
+# Every image is built once per architecture on a native runner (arm64 on
+# ubuntu-24.04-arm, not under QEMU emulation), all in parallel. Each build is
+# pushed by digest only, with no tag. The publish job then joins the two
+# digests of an image into one multi-arch manifest and tags it, so no release
+# tag exists until every image has been built and scanned.
+
 on:
   release:
     types: [published]
 
+permissions:
+  contents: read
+
 jobs:
-  build-and-push:
+  preflight:
     runs-on: ubuntu-latest
-    environment: Build
-
-    permissions:
-      contents: write         # push chart tarballs to gh-pages branch
-      packages: write
-      security-events: write
-
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
-
       - name: Extract Tag Name
-        id: get_tag
-        run: echo "TAG=${GITHUB_REF##*/}" >> $GITHUB_ENV
+        id: tag
+        run: echo "tag=${GITHUB_REF##*/}" >> "$GITHUB_OUTPUT"
 
       # Fail fast if the developer forgot to bump the Helm chart's appVersion
       # to match the release tag. The chart's appVersion drives the image tag
       # rendered into every Deployment, so it must track the release.
       - name: Verify Helm chart appVersion matches release tag
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
         run: |
           CHART_FILE=kubernetes/helm/verifywise/Chart.yaml
           CHART_APPVERSION=$(grep '^appVersion:' "$CHART_FILE" | awk '{print $2}' | tr -d '"' | tr -d "'")
@@ -42,6 +45,75 @@ jobs:
           fi
           echo "Chart appVersion ($CHART_APPVERSION) matches release tag ($TAG)"
 
+  build:
+    needs: preflight
+    name: Build ${{ matrix.image.name }} (${{ matrix.arch }})
+    runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
+    environment: Build
+
+    permissions:
+      contents: read
+      packages: write
+      security-events: write
+
+    strategy:
+      fail-fast: true
+      matrix:
+        arch: [amd64, arm64]
+        image:
+          - name: frontend
+            context: .
+            file: ./Clients/Dockerfile
+            sarif-category: container-frontend
+          - name: backend
+            context: .
+            file: ./Servers/Dockerfile
+            sarif-category: container-backend
+          - name: eval-server
+            context: .
+            file: ./EvalServer/Dockerfile
+            sarif-category: container-evalserver
+          - name: ai-gateway
+            context: ./AIGateway
+            file: ./AIGateway/Dockerfile
+            sarif-category: container-aigateway
+
+    env:
+      TAG: ${{ needs.preflight.outputs.tag }}
+      IMAGE: ghcr.io/${{ github.repository_owner }}/verifywise-${{ matrix.image.name }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Copy version.json into Servers context
+        if: matrix.image.name == 'backend'
+        run: cp version.json Servers/version.json
+
+      - name: Remove unnecessary files
+        if: matrix.image.name == 'eval-server'
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+
+      # Only the frontend takes build args.
+      - name: Set build args
+        id: args
+        env:
+          SLACK_CLIENT_ID: ${{ secrets.SLACK_CLIENT_ID }}
+        run: |
+          {
+            echo "value<<EOF"
+            if [ "${{ matrix.image.name }}" = frontend ]; then
+              echo "VITE_SLACK_CLIENT_ID=$SLACK_CLIENT_ID"
+              echo "VITE_APP_VERSION=$TAG"
+            fi
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v4
         with:
@@ -49,206 +121,152 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Build Frontend image
-      - name: Build Clients image (for scanning)
+      # The amd64 image is scanned, as before. The push build below reuses
+      # this build's layers from the same builder.
+      - name: Build image for scanning
+        if: matrix.arch == 'amd64'
         uses: docker/build-push-action@v7
         with:
-          context: .
-          file: ./Clients/Dockerfile
+          context: ${{ matrix.image.context }}
+          file: ${{ matrix.image.file }}
           platforms: linux/amd64
           push: false
           load: true
-          tags: verifywise-frontend:scan
-          build-args: |
-            VITE_SLACK_CLIENT_ID=${{ secrets.SLACK_CLIENT_ID }}
-            VITE_APP_VERSION=${{ env.TAG }}
+          tags: verifywise-${{ matrix.image.name }}:scan
+          build-args: ${{ steps.args.outputs.value }}
 
-      - name: Scan Frontend image with Trivy
+      - name: Scan image with Trivy
+        if: matrix.arch == 'amd64'
         uses: aquasecurity/trivy-action@v0.36.0
         with:
-          image-ref: 'verifywise-frontend:scan'
+          image-ref: verifywise-${{ matrix.image.name }}:scan
           format: 'sarif'
-          output: 'frontend-trivy-results.sarif'
+          output: ${{ matrix.image.name }}-trivy-results.sarif
           severity: 'CRITICAL,HIGH'
           # Fail the release on fixable CRITICAL/HIGH vulnerabilities.
           exit-code: '1'
           ignore-unfixed: true
           limit-severities-for-sarif: 'true'
 
-      - name: Upload Frontend Trivy scan results to GitHub Security
+      - name: Upload Trivy scan results to GitHub Security
+        if: matrix.arch == 'amd64'
         uses: github/codeql-action/upload-sarif@v4
         with:
-          sarif_file: 'frontend-trivy-results.sarif'
-          category: 'container-frontend'
+          sarif_file: ${{ matrix.image.name }}-trivy-results.sarif
+          category: ${{ matrix.image.sarif-category }}
 
-      - name: Build and push Clients image
+      - name: Build and push by digest
+        id: build
         uses: docker/build-push-action@v7
         with:
-          context: .
-          file: ./Clients/Dockerfile
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: |
-            ghcr.io/${{ github.repository_owner }}/verifywise-frontend:${{ env.TAG }}
-            ghcr.io/${{ github.repository_owner }}/verifywise-frontend:latest
-          build-args: |
-            VITE_SLACK_CLIENT_ID=${{ secrets.SLACK_CLIENT_ID }}
-            VITE_APP_VERSION=${{ env.TAG }}
+          context: ${{ matrix.image.context }}
+          file: ${{ matrix.image.file }}
+          platforms: linux/${{ matrix.arch }}
+          build-args: ${{ steps.args.outputs.value }}
+          outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
 
-      # Build Backend image
-      - name: Copy version.json into Servers context
-        run: cp version.json Servers/version.json
-
-      - name: Build Servers image (for scanning)
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          file: ./Servers/Dockerfile
-          platforms: linux/amd64
-          push: false
-          load: true
-          tags: verifywise-backend:scan
-
-      - name: Scan Backend image with Trivy
-        uses: aquasecurity/trivy-action@v0.36.0
-        with:
-          image-ref: 'verifywise-backend:scan'
-          format: 'sarif'
-          output: 'backend-trivy-results.sarif'
-          severity: 'CRITICAL,HIGH'
-          # Fail the release on fixable CRITICAL/HIGH vulnerabilities.
-          exit-code: '1'
-          ignore-unfixed: true
-          limit-severities-for-sarif: 'true'
-
-      - name: Upload Backend Trivy scan results to GitHub Security
-        uses: github/codeql-action/upload-sarif@v4
-        with:
-          sarif_file: 'backend-trivy-results.sarif'
-          category: 'container-backend'
-
-      - name: Build and push Servers image
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          file: ./Servers/Dockerfile
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: |
-            ghcr.io/${{ github.repository_owner }}/verifywise-backend:${{ env.TAG }}
-            ghcr.io/${{ github.repository_owner }}/verifywise-backend:latest
-
-      - name: Clean up after Servers build
+      - name: Export digest
         run: |
-          docker system prune -f
-          docker builder prune -f
+          mkdir -p /tmp/digests
+          digest="${{ steps.build.outputs.digest }}"
+          touch "/tmp/digests/${digest#sha256:}"
 
-      - name: Check disk space
-        run: df . -h
+      - name: Upload digest
+        uses: actions/upload-artifact@v7
+        with:
+          name: digests-${{ matrix.image.name }}-${{ matrix.arch }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
 
-      - name: Remove unnecessary files
+  publish:
+    needs: [preflight, build]
+    name: Publish ${{ matrix.image }}
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+
+    strategy:
+      matrix:
+        image: [frontend, backend, eval-server, ai-gateway]
+
+    env:
+      TAG: ${{ needs.preflight.outputs.tag }}
+      IMAGE: ghcr.io/${{ github.repository_owner }}/verifywise-${{ matrix.image }}
+
+    steps:
+      - name: Download digests
+        uses: actions/download-artifact@v8
+        with:
+          path: /tmp/digests
+          pattern: digests-${{ matrix.image }}-*
+          merge-multiple: true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create multi-arch manifest and tag it
+        working-directory: /tmp/digests
         run: |
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          count=$(ls | wc -l)
+          if [ "$count" -ne 2 ]; then
+            echo "::error::Expected 2 digests (amd64, arm64) for $IMAGE, found $count"
+            exit 1
+          fi
+          docker buildx imagetools create \
+            -t "$IMAGE:$TAG" \
+            -t "$IMAGE:latest" \
+            $(printf "$IMAGE@sha256:%s " *)
 
-      # Build EvalServer image
-      - name: Build EvalServer image (for scanning)
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          file: ./EvalServer/Dockerfile
-          platforms: linux/amd64
-          push: false
-          load: true
-          tags: verifywise-eval-server:scan
-
-      - name: Scan EvalServer image with Trivy
-        uses: aquasecurity/trivy-action@v0.36.0
-        with:
-          image-ref: 'verifywise-eval-server:scan'
-          format: 'sarif'
-          output: 'evalserver-trivy-results.sarif'
-          severity: 'CRITICAL,HIGH'
-          # Fail the release on fixable CRITICAL/HIGH vulnerabilities.
-          exit-code: '1'
-          ignore-unfixed: true
-          limit-severities-for-sarif: 'true'
-
-      - name: Upload EvalServer Trivy scan results to GitHub Security
-        uses: github/codeql-action/upload-sarif@v4
-        with:
-          sarif_file: 'evalserver-trivy-results.sarif'
-          category: 'container-evalserver'
-
-      - name: Build and push EvalServer image
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          file: ./EvalServer/Dockerfile
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: |
-            ghcr.io/${{ github.repository_owner }}/verifywise-eval-server:${{ env.TAG }}
-            ghcr.io/${{ github.repository_owner }}/verifywise-eval-server:latest
-
-      - name: Clean up after EvalServer build
+      - name: Verify both architectures are in the tag
         run: |
-          docker system prune -f
-          docker builder prune -f
+          platforms=$(docker buildx imagetools inspect "$IMAGE:$TAG" --format '{{range .Manifest.Manifests}}{{.Platform.OS}}/{{.Platform.Architecture}} {{end}}')
+          echo "$IMAGE:$TAG platforms: $platforms"
+          for p in linux/amd64 linux/arm64; do
+            if ! grep -q "$p" <<< "$platforms"; then
+              echo "::error::$IMAGE:$TAG is missing $p"
+              exit 1
+            fi
+          done
 
-      # Build AIGateway image
-      - name: Build AIGateway image (for scanning)
-        uses: docker/build-push-action@v7
-        with:
-          context: ./AIGateway
-          platforms: linux/amd64
-          push: false
-          load: true
-          tags: verifywise-ai-gateway:scan
+  # ---- Helm chart publish (GitHub Pages) ---------------------------------
+  # Runs only after every image has been built, scanned, and pushed.
+  # Publishes the chart to the gh-pages branch, which GitHub Pages serves at
+  #   https://<owner>.github.io/<repo>/
+  # so users can install without pinning a version:
+  #   helm repo add verifywise https://verifywise-ai.github.io/verifywise
+  #   helm repo update
+  #   helm install verifywise verifywise/verifywise ...
+  # Traditional (HTTP) Helm repos auto-resolve the latest version when
+  # --version is omitted; OCI registries do not, which is why we're not
+  # publishing to GHCR here.
+  #
+  # One-time setup: enable GitHub Pages on the gh-pages branch in repo
+  # settings. The branch is created automatically by the first run of
+  # this step.
+  helm:
+    needs: [preflight, publish]
+    runs-on: ubuntu-latest
 
-      - name: Scan AIGateway image with Trivy
-        uses: aquasecurity/trivy-action@v0.36.0
-        with:
-          image-ref: 'verifywise-ai-gateway:scan'
-          format: 'sarif'
-          output: 'aigateway-trivy-results.sarif'
-          severity: 'CRITICAL,HIGH'
-          # Fail the release on fixable CRITICAL/HIGH vulnerabilities.
-          exit-code: '1'
-          ignore-unfixed: true
-          limit-severities-for-sarif: 'true'
+    permissions:
+      contents: write         # push chart tarballs to gh-pages branch
 
-      - name: Upload AIGateway Trivy scan results to GitHub Security
-        uses: github/codeql-action/upload-sarif@v4
-        with:
-          sarif_file: 'aigateway-trivy-results.sarif'
-          category: 'container-aigateway'
+    env:
+      TAG: ${{ needs.preflight.outputs.tag }}
 
-      - name: Build and push AIGateway image
-        uses: docker/build-push-action@v7
-        with:
-          context: ./AIGateway
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: |
-            ghcr.io/${{ github.repository_owner }}/verifywise-ai-gateway:${{ env.TAG }}
-            ghcr.io/${{ github.repository_owner }}/verifywise-ai-gateway:latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
 
-      # ---- Helm chart publish (GitHub Pages) ---------------------------------
-      # Runs only after every image has been built, scanned, and pushed.
-      # Publishes the chart to the gh-pages branch, which GitHub Pages serves at
-      #   https://<owner>.github.io/<repo>/
-      # so users can install without pinning a version:
-      #   helm repo add verifywise https://verifywise-ai.github.io/verifywise
-      #   helm repo update
-      #   helm install verifywise verifywise/verifywise ...
-      # Traditional (HTTP) Helm repos auto-resolve the latest version when
-      # --version is omitted; OCI registries do not, which is why we're not
-      # publishing to GHCR here.
-      #
-      # One-time setup: enable GitHub Pages on the gh-pages branch in repo
-      # settings. The branch is created automatically by the first run of
-      # this step.
       - name: Install Helm
         uses: azure/setup-helm@v5
 

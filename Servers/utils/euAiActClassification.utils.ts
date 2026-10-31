@@ -1,9 +1,14 @@
 import { QueryTypes, Transaction } from "sequelize";
 import { sequelize } from "../database/db";
 import {
+  highRiskRolesArraySql,
+  legacyHighRiskRole,
+  normalizeHighRiskRoles,
+} from "./highRiskRoles.utils";
+import {
   Answers,
-  ClassificationResult,
   ClassificationRole,
+  StoredClassificationResult,
 } from "../services/euAiActClassification";
 
 export interface ClassificationRun {
@@ -13,8 +18,9 @@ export interface ClassificationRun {
   intakeSubmissionId: number | null;
   questionnaireVersion: number;
   role: ClassificationRole | null;
+  roles: ClassificationRole[];
   answers: Answers;
-  result: ClassificationResult;
+  result: StoredClassificationResult;
   reviewerLevel: string | null;
   reviewerJustification: string | null;
   reviewedBy: number | null;
@@ -23,12 +29,16 @@ export interface ClassificationRun {
   createdAt: Date;
 }
 
-export type NewClassificationRun = Omit<ClassificationRun, "id" | "organizationId" | "createdAt">;
+/** The single role column is derived from roles on insert. */
+export type NewClassificationRun = Omit<
+  ClassificationRun,
+  "id" | "organizationId" | "createdAt" | "role"
+>;
 
 const RUN_COLUMNS = `
   id, organization_id AS "organizationId", use_case_id AS "useCaseId",
   intake_submission_id AS "intakeSubmissionId",
-  questionnaire_version AS "questionnaireVersion", role, answers, result,
+  questionnaire_version AS "questionnaireVersion", role, roles, answers, result,
   reviewer_level AS "reviewerLevel", reviewer_justification AS "reviewerJustification",
   reviewed_by AS "reviewedBy", source, created_by AS "createdBy", created_at AS "createdAt"
 `;
@@ -38,12 +48,13 @@ export const insertClassificationRunQuery = async (
   organizationId: number,
   transaction?: Transaction,
 ): Promise<ClassificationRun> => {
+  const roles = highRiskRolesArraySql(run.roles, "roles");
   const rows = (await sequelize.query(
     `INSERT INTO eu_ai_act_classifications
-       (organization_id, use_case_id, intake_submission_id, questionnaire_version, role,
+       (organization_id, use_case_id, intake_submission_id, questionnaire_version, role, roles,
         answers, result, reviewer_level, reviewer_justification, reviewed_by, source, created_by)
      VALUES
-       (:organizationId, :useCaseId, :intakeSubmissionId, :questionnaireVersion, :role,
+       (:organizationId, :useCaseId, :intakeSubmissionId, :questionnaireVersion, :role, ${roles.sql},
         :answers, :result, :reviewerLevel, :reviewerJustification, :reviewedBy, :source, :createdBy)
      RETURNING ${RUN_COLUMNS}`,
     {
@@ -52,7 +63,8 @@ export const insertClassificationRunQuery = async (
         useCaseId: run.useCaseId,
         intakeSubmissionId: run.intakeSubmissionId,
         questionnaireVersion: run.questionnaireVersion,
-        role: run.role,
+        role: legacyHighRiskRole(run.roles),
+        ...roles.replacements,
         answers: JSON.stringify(run.answers),
         result: JSON.stringify(run.result),
         reviewerLevel: run.reviewerLevel,
@@ -96,25 +108,31 @@ export const getLatestRunForSubmissionQuery = (
 ) => latestRun("intake_submission_id", submissionId, organizationId, transaction);
 
 /**
- * Set a use case's level (and role, when the questionnaire asked it) without
- * going through the general project update, which also rewrites members and
- * fires the project-updated automation.
+ * Set a use case's level, and its roles when the questionnaire named any,
+ * without going through the general project update, which also rewrites
+ * members and fires the project-updated automation. An empty role list leaves
+ * the stored roles unchanged (an Out of scope result names no role).
  */
 export const setUseCaseClassificationQuery = async (
   useCaseId: number,
   level: string,
-  role: ClassificationRole | null,
+  roles: readonly string[],
   userId: number,
   organizationId: number,
   transaction: Transaction,
 ): Promise<boolean> => {
+  const roleList = normalizeHighRiskRoles(roles);
+  const rolesWrite = highRiskRolesArraySql(roleList, "roles");
+  const rolesClause = roleList.length > 0 ? `high_risk_roles = ${rolesWrite.sql},` : "";
   const [rows] = (await sequelize.query(
-    `UPDATE projects SET ai_risk_classification = :level,
-       type_of_high_risk_role = COALESCE(:role, type_of_high_risk_role),
+    `UPDATE projects SET ai_risk_classification = :level, ${rolesClause}
        last_updated = NOW(), last_updated_by = :userId
      WHERE organization_id = :organizationId AND id = :useCaseId
      RETURNING id`,
-    { replacements: { level, role, userId, organizationId, useCaseId }, transaction },
+    {
+      replacements: { level, userId, organizationId, useCaseId, ...rolesWrite.replacements },
+      transaction,
+    },
   )) as [Array<{ id: number }>, number];
   return rows.length > 0;
 };

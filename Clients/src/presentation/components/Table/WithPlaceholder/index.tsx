@@ -238,8 +238,8 @@ const TableWithPlaceholder: React.FC<ITableWithPlaceholderProps> = ({
 
   const formatCfValue = useCallback(
     (def: { field_type: string; label?: string }, raw: unknown) =>
-      formatCustomFieldValue(def, raw, users),
-    [users],
+      formatCustomFieldValue(def, raw, users, formatDate),
+    [users, formatDate],
   );
 
   // Sorting handlers

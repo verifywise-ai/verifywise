@@ -37,7 +37,12 @@ jest.mock("../../utils/aiGatewayEvalKey.utils", () => ({
   getDecryptedAiGatewayKeyForProviderQuery: jest.fn(),
 }));
 
-import { injectApiKeys, toLiteLLMModel } from "../deepEvalRoutes.route";
+import {
+  gatewayDetailMessage,
+  gatewayErrorMessage,
+  injectApiKeys,
+  toLiteLLMModel,
+} from "../deepEvalRoutes.route";
 import { getDecryptedAiGatewayKeyForProviderQuery } from "../../utils/aiGatewayEvalKey.utils";
 
 const mockGetKey = getDecryptedAiGatewayKeyForProviderQuery as jest.MockedFunction<
@@ -514,5 +519,58 @@ describe("injectApiKeys error handling", () => {
 
     expect(req.body.config.model.apiKey).toBe("");
     expect(next).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("gatewayDetailMessage", () => {
+  it("returns a string detail as-is", () => {
+    expect(gatewayDetailMessage("Invalid internal key")).toBe("Invalid internal key");
+  });
+
+  it("returns the message of an object detail ({ message, code })", () => {
+    expect(
+      gatewayDetailMessage({ message: "Invalid internal key", code: "internal_key_rejected" }),
+    ).toBe("Invalid internal key");
+  });
+
+  it("joins a list-shaped 422 detail as field: msg without echoing input", () => {
+    const out = gatewayDetailMessage([
+      {
+        type: "missing",
+        loc: ["body", "model"],
+        msg: "Field required",
+        input: { secret: "s3cr3t" },
+      },
+      { type: "x", loc: ["body", "messages", 0], msg: "Bad value", input: "s3cr3t" },
+      { msg: "No loc" },
+    ]);
+    expect(out).toBe("model: Field required; messages.0: Bad value; No loc");
+    expect(out).not.toContain("s3cr3t");
+  });
+
+  it("returns null for anything else so the caller falls back", () => {
+    expect(gatewayDetailMessage({ code: "x" })).toBeNull();
+    expect(gatewayDetailMessage([{ type: "x" }])).toBeNull();
+    expect(gatewayDetailMessage("")).toBeNull();
+    expect(gatewayDetailMessage(undefined)).toBeNull();
+  });
+});
+
+describe("gatewayErrorMessage", () => {
+  it("uses the list-shaped 422 detail without the raw body", () => {
+    const raw = JSON.stringify({
+      detail: [{ loc: ["body", "model"], msg: "Field required", input: "s3cr3t" }],
+    });
+    const msg = gatewayErrorMessage(422, raw, JSON.parse(raw));
+    expect(msg).toBe("model: Field required");
+  });
+
+  it("uses a generic message for a JSON body with no recognised fields", () => {
+    const raw = JSON.stringify({ unexpected: "s3cr3t" });
+    expect(gatewayErrorMessage(500, raw, JSON.parse(raw))).toBe("Gateway error 500");
+  });
+
+  it("uses the raw text when the body is not JSON", () => {
+    expect(gatewayErrorMessage(502, "Bad Gateway", null)).toBe("Bad Gateway");
   });
 });

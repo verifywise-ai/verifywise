@@ -6,16 +6,29 @@ import {
   ICreateIntakeFormInput,
   IUpdateIntakeFormInput,
   IPublicIntakeForm,
+  IFormRouting,
 } from "../domain.layer/interfaces/i.intakeForm";
 import {
   IIntakeSubmission,
   ICreateIntakeSubmissionInput,
   IIntakeSubmissionStats,
   IRiskAssessment,
+  IRiskAssessmentV2,
   IRiskOverride,
+  ISuggestedRisksBlock,
+  ISecondReview,
+  ISubmissionRouting,
+  IDecisionRecord,
 } from "../domain.layer/interfaces/i.intakeSubmission";
+import type { ILiveChecks } from "../domain.layer/interfaces/i.intakeLiveChecks";
+import { getRoleById } from "./roleMap";
+import { roleInfoHasPermission } from "./rolePermissions.utils";
 import { IntakeFormStatus } from "../domain.layer/enums/intake-form-status.enum";
 import { IntakeSubmissionStatus } from "../domain.layer/enums/intake-submission-status.enum";
+import type {
+  IntakeSuggestedRisk,
+  SuggestionState,
+} from "../services/intakeScoring/intakeSuggestions";
 
 // ============================================================================
 // COLUMN LISTS (DRY)
@@ -30,7 +43,9 @@ const FORM_SELECT_COLUMNS = `
   llm_key_id as "llmKeyId",
   suggested_questions_enabled as "suggestedQuestionsEnabled",
   eu_ai_act_risk_step_enabled as "euAiActRiskStepEnabled",
+  live_checks_enabled as "liveChecksEnabled",
   design_settings as "designSettings",
+  routing,
   created_by as "createdBy",
   created_at as "createdAt", updated_at as "updatedAt"
 `;
@@ -44,6 +59,10 @@ const SUBMISSION_SELECT_COLUMNS = `
   resubmission_count as "resubmissionCount", ip_address as "ipAddress",
   risk_assessment as "riskAssessment", risk_tier as "riskTier",
   risk_override as "riskOverride",
+  suggested_risks as "suggestedRisks",
+  routing, decision_record as "decisionRecord",
+  live_checks AS "liveChecks",
+  notification_sent_at as "notificationSentAt",
   created_at as "createdAt", updated_at as "updatedAt"
 `;
 
@@ -119,6 +138,7 @@ export const getActivePublicFormQuery = async (
       schema, submit_button_text as "submitButtonText",
       public_id as "publicId",
       eu_ai_act_risk_step_enabled as "euAiActRiskStepEnabled",
+      live_checks_enabled AS "liveChecksEnabled",
       design_settings as "designSettings"
     FROM intake_forms
     WHERE organization_id = :organizationId
@@ -146,6 +166,7 @@ export const getFormByPublicIdQuery = async (
       schema, submit_button_text as "submitButtonText",
       public_id as "publicId",
       eu_ai_act_risk_step_enabled as "euAiActRiskStepEnabled",
+      live_checks_enabled AS "liveChecksEnabled",
       design_settings as "designSettings"
     FROM intake_forms
     WHERE organization_id = :organizationId
@@ -176,11 +197,11 @@ export const createIntakeFormQuery = async (
     `INSERT INTO intake_forms
       (organization_id, name, description, slug, entity_type, schema, submit_button_text, status,
        ttl_expires_at, public_id, recipients, risk_tier_system, risk_assessment_config,
-       llm_key_id, suggested_questions_enabled, eu_ai_act_risk_step_enabled, design_settings, created_by, created_at, updated_at)
+       llm_key_id, suggested_questions_enabled, eu_ai_act_risk_step_enabled, live_checks_enabled, design_settings, routing, created_by, created_at, updated_at)
     VALUES
       (:organizationId, :name, :description, :slug, :entityType, :schema, :submitButtonText, :status,
        :ttlExpiresAt, :publicId, :recipients, :riskTierSystem, :riskAssessmentConfig,
-       :llmKeyId, :suggestedQuestionsEnabled, :euAiActRiskStepEnabled, :designSettings, :createdBy, NOW(), NOW())
+       :llmKeyId, :suggestedQuestionsEnabled, :euAiActRiskStepEnabled, :liveChecksEnabled, :designSettings, :routing, :createdBy, NOW(), NOW())
     RETURNING ${FORM_SELECT_COLUMNS}`,
     {
       replacements: {
@@ -202,7 +223,9 @@ export const createIntakeFormQuery = async (
         llmKeyId: data.llmKeyId || null,
         suggestedQuestionsEnabled: data.suggestedQuestionsEnabled || false,
         euAiActRiskStepEnabled: data.euAiActRiskStepEnabled || false,
+        liveChecksEnabled: data.liveChecksEnabled ?? true,
         designSettings: data.designSettings ? JSON.stringify(data.designSettings) : null,
+        routing: data.routing ? JSON.stringify(data.routing) : null,
         createdBy: data.createdBy,
       },
       type: QueryTypes.SELECT,
@@ -282,9 +305,17 @@ export const updateIntakeFormQuery = async (
     updates.push("eu_ai_act_risk_step_enabled = :euAiActRiskStepEnabled");
     replacements.euAiActRiskStepEnabled = data.euAiActRiskStepEnabled;
   }
+  if (data.liveChecksEnabled !== undefined) {
+    updates.push("live_checks_enabled = :liveChecksEnabled");
+    replacements.liveChecksEnabled = data.liveChecksEnabled;
+  }
   if (data.designSettings !== undefined) {
     updates.push("design_settings = :designSettings");
     replacements.designSettings = data.designSettings ? JSON.stringify(data.designSettings) : null;
+  }
+  if (data.routing !== undefined) {
+    updates.push("routing = :routing");
+    replacements.routing = data.routing ? JSON.stringify(data.routing) : null;
   }
 
   if (updates.length === 0) {
@@ -417,7 +448,7 @@ export const getSubmissionsByFormIdQuery = async (
 export const getPendingSubmissionsQuery = async (
   organizationId: number,
   status?: IntakeSubmissionStatus,
-): Promise<IIntakeSubmission[]> => {
+): Promise<Array<IIntakeSubmission & { formRouting: IFormRouting | null }>> => {
   const statusFilter = status ? "AND s.status = :status" : "";
   const submissions = await sequelize.query(
     `SELECT
@@ -429,8 +460,13 @@ export const getPendingSubmissionsQuery = async (
       s.resubmission_count as "resubmissionCount", s.ip_address as "ipAddress",
       s.risk_assessment as "riskAssessment", s.risk_tier as "riskTier",
       s.risk_override as "riskOverride",
+      s.suggested_risks as "suggestedRisks",
+      s.routing, s.decision_record as "decisionRecord",
+      s.live_checks AS "liveChecks",
+      s.notification_sent_at as "notificationSentAt",
       s.created_at as "createdAt", s.updated_at as "updatedAt",
-      f.name as "formName", f.entity_type as "formEntityType"
+      f.name as "formName", f.entity_type as "formEntityType",
+      f.routing as "formRouting"
     FROM intake_submissions s
     JOIN intake_forms f ON s.organization_id = f.organization_id AND s.form_id = f.id
     WHERE s.organization_id = :organizationId
@@ -443,7 +479,7 @@ export const getPendingSubmissionsQuery = async (
     },
   );
 
-  return submissions as IIntakeSubmission[];
+  return submissions as Array<IIntakeSubmission & { formRouting: IFormRouting | null }>;
 };
 
 /**
@@ -623,6 +659,309 @@ export const updateSubmissionRiskQuery = async (
 };
 
 /**
+ * Store a v2 assessment on a pending submission. risk_tier mirrors the band
+ * (assessment.tier) unless a reviewer override set it. A job that finishes
+ * after approve or reject changes nothing.
+ */
+export const updateSubmissionAssessmentV2Query = async (
+  id: number,
+  assessment: IRiskAssessmentV2,
+  organizationId: number,
+  transaction?: Transaction,
+): Promise<void> => {
+  await sequelize.query(
+    `UPDATE intake_submissions
+    SET risk_assessment = :riskAssessment,
+        risk_tier = COALESCE(risk_override->>'tier', :riskTier),
+        updated_at = NOW()
+    WHERE organization_id = :organizationId AND id = :id AND status = :pending`,
+    {
+      replacements: {
+        organizationId,
+        id,
+        riskAssessment: JSON.stringify(assessment),
+        riskTier: assessment.tier,
+        pending: IntakeSubmissionStatus.PENDING,
+      },
+      type: QueryTypes.UPDATE,
+      transaction,
+    },
+  );
+};
+
+/**
+ * Replace the whole suggested-risks block (stage start / completion / failure)
+ * on a pending submission; a job that finishes after a decision changes nothing.
+ */
+export const updateSubmissionSuggestionsQuery = async (
+  id: number,
+  block: ISuggestedRisksBlock,
+  organizationId: number,
+  transaction?: Transaction,
+): Promise<void> => {
+  await sequelize.query(
+    `UPDATE intake_submissions
+    SET suggested_risks = :suggestedRisks, updated_at = NOW()
+    WHERE organization_id = :organizationId AND id = :id AND status = :pending`,
+    {
+      replacements: {
+        organizationId,
+        id,
+        suggestedRisks: JSON.stringify(block),
+        pending: IntakeSubmissionStatus.PENDING,
+      },
+      type: QueryTypes.UPDATE,
+      transaction,
+    },
+  );
+};
+
+/**
+ * Merge a patch into one suggested risk, atomically. A single UPDATE finds the
+ * element by id inside the row, so two reviewers acting on different (or the
+ * same) suggestions at once cannot overwrite each other's change with a stale
+ * copy of the block. Returns the updated item, or null if it was not found.
+ */
+export const updateSuggestedRiskItemQuery = async (
+  id: number,
+  suggestionId: string,
+  patch: Partial<IntakeSuggestedRisk>,
+  organizationId: number,
+): Promise<IntakeSuggestedRisk | null> => {
+  const rows = (await sequelize.query(
+    `UPDATE intake_submissions s
+    SET suggested_risks = jsonb_set(
+          s.suggested_risks,
+          ARRAY['items', (
+            SELECT (e.ord - 1)::text
+            FROM jsonb_array_elements(s.suggested_risks->'items') WITH ORDINALITY AS e(item, ord)
+            WHERE e.item->>'id' = :suggestionId
+            LIMIT 1
+          )],
+          (
+            SELECT e.item || :patch::jsonb
+            FROM jsonb_array_elements(s.suggested_risks->'items') WITH ORDINALITY AS e(item, ord)
+            WHERE e.item->>'id' = :suggestionId
+            LIMIT 1
+          )
+        ),
+        updated_at = NOW()
+    WHERE s.organization_id = :organizationId AND s.id = :id AND s.status = :pending
+      AND EXISTS (
+        SELECT 1
+        FROM jsonb_array_elements(s.suggested_risks->'items') AS e(item)
+        WHERE e.item->>'id' = :suggestionId
+          -- an accepted risk always keeps a mitigation plan (the register requires one)
+          AND (
+            COALESCE((e.item || :patch::jsonb)->>'state', '') <> 'accepted'
+            OR btrim(COALESCE((e.item || :patch::jsonb)->>'mitigationPlan', '')) <> ''
+          )
+      )
+    RETURNING (
+      SELECT e.item
+      FROM jsonb_array_elements(s.suggested_risks->'items') AS e(item)
+      WHERE e.item->>'id' = :suggestionId
+      LIMIT 1
+    ) AS item`,
+    {
+      replacements: {
+        organizationId,
+        id,
+        suggestionId,
+        patch: JSON.stringify(patch),
+        pending: IntakeSubmissionStatus.PENDING,
+      },
+      type: QueryTypes.SELECT,
+    },
+  )) as Array<{ item: IntakeSuggestedRisk }>;
+
+  return rows.length > 0 ? rows[0].item : null;
+};
+
+/**
+ * Move every suggestion in state `from` to state `to` (bulk accept / dismiss),
+ * in one statement, on a pending submission only. With
+ * `requireMitigationPlan`, items whose mitigation plan is blank are left as
+ * they are (the risk register requires one). Returns how many items changed.
+ */
+export const setAllSuggestionStatesQuery = async (
+  id: number,
+  from: SuggestionState,
+  to: SuggestionState,
+  userId: number,
+  organizationId: number,
+  opts: { requireMitigationPlan?: boolean } = {},
+): Promise<number> => {
+  const matches = opts.requireMitigationPlan
+    ? `e.item->>'state' = :from AND btrim(COALESCE(e.item->>'mitigationPlan', '')) <> ''`
+    : `e.item->>'state' = :from`;
+  const rows = (await sequelize.query(
+    `WITH target AS (
+      SELECT id,
+        (SELECT COUNT(*) FROM jsonb_array_elements(suggested_risks->'items') AS e(item)
+          WHERE ${matches}) AS n
+      FROM intake_submissions
+      WHERE organization_id = :organizationId AND id = :id AND suggested_risks IS NOT NULL
+        AND status = :pending
+      FOR UPDATE
+    )
+    UPDATE intake_submissions s
+    SET suggested_risks = jsonb_set(
+          s.suggested_risks,
+          '{items}',
+          (
+            SELECT COALESCE(jsonb_agg(
+              CASE WHEN ${matches}
+                THEN e.item || jsonb_build_object(
+                  'state', CAST(:to AS text),
+                  'decidedBy', CAST(:userId AS integer),
+                  'decidedAt', to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
+                )
+                ELSE e.item
+              END
+              ORDER BY e.ord
+            ), '[]'::jsonb)
+            FROM jsonb_array_elements(s.suggested_risks->'items') WITH ORDINALITY AS e(item, ord)
+          )
+        ),
+        updated_at = NOW()
+    FROM target t
+    WHERE s.organization_id = :organizationId AND s.id = t.id
+    RETURNING t.n AS count`,
+    {
+      replacements: {
+        organizationId,
+        id,
+        from,
+        to,
+        userId,
+        pending: IntakeSubmissionStatus.PENDING,
+      },
+      type: QueryTypes.SELECT,
+    },
+  )) as Array<{ count: string | number }>;
+
+  return rows.length > 0 ? Number(rows[0].count) : 0;
+};
+
+/**
+ * Claim the one-time "needs review" notification for a submission. True only
+ * for the caller that actually flipped notification_sent_at from NULL.
+ */
+export const claimSubmissionNotificationQuery = async (
+  id: number,
+  organizationId: number,
+): Promise<boolean> => {
+  const rows = await sequelize.query(
+    `UPDATE intake_submissions
+    SET notification_sent_at = NOW()
+    WHERE organization_id = :organizationId AND id = :id AND notification_sent_at IS NULL
+    RETURNING id`,
+    {
+      replacements: { organizationId, id },
+      type: QueryTypes.SELECT,
+    },
+  );
+
+  return rows.length > 0;
+};
+
+/**
+ * Pending submissions with a stage to (re)run or an email still to send,
+ * across organizations, for the worker-start backfill. Scoring is needed when
+ * the assessment is missing or
+ * pre-v2 (legacy / never queued); suggestions when the block is missing. Either
+ * is also needed when it has been "pending" for over 10 minutes (the job was
+ * lost). A completed or failed stage is never listed, so a backfill cannot
+ * regenerate it or wipe reviewer decisions on suggestions. emailUnclaimed:
+ * the new-submission email has not been claimed and the form has recipients,
+ * so a re-run sends it (the cap job's id keeps it to one). needsNotification:
+ * also over 10 minutes old (past the 2-minute cap, so the job or cap was
+ * lost), for a direct send when no stage needs re-running; a live job keeps
+ * its own email and language. A form without recipients, which never claims,
+ * is not listed again and again. needsLiveChecks: the AI live checks are
+ * still "pending" 10 minutes after the stage started (or after submit, when
+ * the stage never started). Listed whatever the submission's status,
+ * since that stage writes for decided submissions too; the other flags are
+ * for pending submissions only. A null live_checks (made before the feature,
+ * or checks off) is never listed.
+ */
+export const getSubmissionsNeedingAssessmentQuery = async (): Promise<
+  Array<{
+    id: number;
+    organizationId: number;
+    needsScoring: boolean;
+    needsSuggestions: boolean;
+    needsLiveChecks: boolean;
+    emailUnclaimed: boolean;
+    needsNotification: boolean;
+  }>
+> => {
+  const rows = await sequelize.query(
+    `SELECT id, "organizationId", "needsScoring", "needsSuggestions", "needsLiveChecks",
+      "emailUnclaimed",
+      ("emailUnclaimed" AND created_at < NOW() - interval '10 minutes') AS "needsNotification"
+    FROM (
+      SELECT id, organization_id AS "organizationId", created_at,
+        (
+          status = :status
+          AND notification_sent_at IS NULL
+          AND EXISTS (
+            SELECT 1 FROM intake_forms f
+            WHERE f.id = intake_submissions.form_id
+              AND f.organization_id = intake_submissions.organization_id
+              AND jsonb_typeof(f.recipients) = 'array'
+              AND f.recipients <> '[]'::jsonb
+          )
+        ) AS "emailUnclaimed",
+        status = :status AND COALESCE(
+          risk_assessment IS NULL
+          OR risk_assessment->>'version' IS NULL
+          OR (
+            risk_assessment->>'status' = 'pending'
+            AND (risk_assessment->>'stageStartedAt')::timestamptz < NOW() - interval '10 minutes'
+          ),
+          false
+        ) AS "needsScoring",
+        status = :status AND COALESCE(
+          suggested_risks IS NULL
+          OR (
+            suggested_risks->>'status' = 'pending'
+            AND (suggested_risks->>'stageStartedAt')::timestamptz < NOW() - interval '10 minutes'
+          ),
+          false
+        ) AS "needsSuggestions",
+        COALESCE(
+          live_checks->'ai'->>'status' = 'pending'
+          AND COALESCE((live_checks->'ai'->>'stageStartedAt')::timestamptz, created_at)
+            < NOW() - interval '10 minutes',
+          false
+        ) AS "needsLiveChecks"
+      FROM intake_submissions
+      WHERE status = :status OR live_checks->'ai'->>'status' = 'pending'
+    ) s
+    WHERE "needsScoring" OR "needsSuggestions"
+      OR ("emailUnclaimed" AND created_at < NOW() - interval '10 minutes')
+      OR "needsLiveChecks"
+    ORDER BY id`,
+    {
+      replacements: { status: IntakeSubmissionStatus.PENDING },
+      type: QueryTypes.SELECT,
+    },
+  );
+
+  return rows as Array<{
+    id: number;
+    organizationId: number;
+    needsScoring: boolean;
+    needsSuggestions: boolean;
+    needsLiveChecks: boolean;
+    emailUnclaimed: boolean;
+    needsNotification: boolean;
+  }>;
+};
+
+/**
  * Update submission risk override
  */
 export const updateSubmissionRiskOverrideQuery = async (
@@ -708,6 +1047,9 @@ export const getSubmissionByEntityQuery = async (
       s.resubmission_count as "resubmissionCount", s.ip_address as "ipAddress",
       s.risk_assessment as "riskAssessment", s.risk_tier as "riskTier",
       s.risk_override as "riskOverride",
+      s.suggested_risks as "suggestedRisks",
+      s.routing, s.decision_record as "decisionRecord",
+      s.notification_sent_at as "notificationSentAt",
       s.created_at as "createdAt", s.updated_at as "updatedAt",
       f.name as "formName",
       f.schema as "formSchema"
@@ -758,6 +1100,10 @@ export const getSubmissionByEntityQuery = async (
       riskAssessment: row.riskAssessment,
       riskTier: row.riskTier,
       riskOverride: row.riskOverride,
+      suggestedRisks: row.suggestedRisks,
+      routing: row.routing,
+      decisionRecord: row.decisionRecord,
+      notificationSentAt: row.notificationSentAt,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     } as IIntakeSubmission,
@@ -888,6 +1234,177 @@ export async function getTenantHashBySlug(
   const orgId = (result[0] as any).id;
   return { id: orgId, hash: "" };
 }
+
+/**
+ * Users of the organisation whose role holds intakeForm.edit (built-in or
+ * custom role). Pass `ids` to narrow to those users.
+ */
+export async function getEligibleReviewersQuery(
+  organizationId: number,
+  ids?: number[],
+): Promise<Array<{ id: number; name: string; surname: string; email: string }>> {
+  if (ids && ids.length === 0) return [];
+
+  const users = (await sequelize.query(
+    `SELECT id, name, surname, email, role_id
+    FROM users
+    WHERE organization_id = :organizationId${ids ? " AND id = ANY(ARRAY[:ids]::INTEGER[])" : ""}
+    ORDER BY name, surname, id`,
+    {
+      replacements: { organizationId, ids: ids ?? [] },
+      type: QueryTypes.SELECT,
+    },
+  )) as Array<{ id: number; name: string; surname: string; email: string; role_id: number }>;
+
+  const allowedByRole = new Map<number, boolean>();
+  for (const roleId of new Set(users.map((u) => u.role_id))) {
+    const role = await getRoleById(roleId);
+    allowedByRole.set(
+      roleId,
+      role ? await roleInfoHasPermission(organizationId, role, "intakeForm.edit") : false,
+    );
+  }
+
+  return users
+    .filter((u) => allowedByRole.get(u.role_id))
+    .map(({ id, name, surname, email }) => ({ id, name, surname, email }));
+}
+
+export async function getEligibleReviewerIdsQuery(
+  organizationId: number,
+  ids?: number[],
+): Promise<number[]> {
+  return (await getEligibleReviewersQuery(organizationId, ids)).map((u) => u.id);
+}
+
+/**
+ * Store the lane decision on a pending submission; a decided one is left alone.
+ * With `expected` (null meaning "no routing yet") the write only lands while the
+ * stored routing is still that value, so a concurrent escalation is not
+ * overwritten. Returns whether a row was updated.
+ */
+export const updateSubmissionRoutingQuery = async (
+  id: number,
+  routing: ISubmissionRouting | null,
+  organizationId: number,
+  transaction?: Transaction,
+  expected?: ISubmissionRouting | null,
+): Promise<boolean> => {
+  const guarded = expected !== undefined;
+  const result = await sequelize.query(
+    `UPDATE intake_submissions
+    SET routing = :routing, updated_at = NOW()
+    WHERE organization_id = :organizationId AND id = :id AND status = :pending
+      ${guarded ? "AND routing IS NOT DISTINCT FROM CAST(:expected AS jsonb)" : ""}`,
+    {
+      replacements: {
+        organizationId,
+        id,
+        routing: routing ? JSON.stringify(routing) : null,
+        pending: IntakeSubmissionStatus.PENDING,
+        ...(guarded ? { expected: expected ? JSON.stringify(expected) : null } : {}),
+      },
+      type: QueryTypes.UPDATE,
+      transaction,
+    },
+  );
+  return result[1] > 0;
+};
+
+/**
+ * Merge `patch` into an approved submission's second review, only while the
+ * review is still in the expected state (`unresolved`: no resolution stored
+ * yet). One statement, so two reviewers can't both win. Returns the new
+ * routing, or null when the state had moved on.
+ */
+export const updateSecondReviewQuery = async (
+  id: number,
+  organizationId: number,
+  expected: { status: "open" | "missed"; unresolved?: boolean },
+  patch: Partial<ISecondReview>,
+): Promise<ISubmissionRouting | null> => {
+  const rows = (await sequelize.query(
+    `UPDATE intake_submissions
+    SET routing = jsonb_set(routing, '{secondReview}', (routing->'secondReview') || CAST(:patch AS jsonb)),
+        updated_at = NOW()
+    WHERE organization_id = :organizationId AND id = :id AND status = :approved
+      AND routing->'secondReview'->>'status' = :expectedStatus
+      ${expected.unresolved ? "AND routing->'secondReview'->>'resolvedAt' IS NULL" : ""}
+    RETURNING routing`,
+    {
+      replacements: {
+        organizationId,
+        id,
+        approved: IntakeSubmissionStatus.APPROVED,
+        expectedStatus: expected.status,
+        patch: JSON.stringify(patch),
+      },
+      type: QueryTypes.SELECT,
+    },
+  )) as Array<{ routing: ISubmissionRouting }>;
+  return rows[0]?.routing ?? null;
+};
+
+/** Store what was in force when the submission was approved or rejected. */
+export const setDecisionRecordQuery = async (
+  id: number,
+  record: IDecisionRecord,
+  organizationId: number,
+  transaction: Transaction,
+): Promise<void> => {
+  await sequelize.query(
+    `UPDATE intake_submissions
+    SET decision_record = :record, updated_at = NOW()
+    WHERE organization_id = :organizationId AND id = :id`,
+    {
+      replacements: { organizationId, id, record: JSON.stringify(record) },
+      type: QueryTypes.UPDATE,
+      transaction,
+    },
+  );
+};
+
+/**
+ * Store the live checks a submitter saw on a submission.
+ */
+export const updateLiveChecksQuery = async (
+  submissionId: number,
+  organizationId: number,
+  liveChecks: ILiveChecks,
+  transaction?: Transaction,
+): Promise<void> => {
+  await sequelize.query(
+    `UPDATE intake_submissions
+    SET live_checks = :liveChecks, updated_at = NOW()
+    WHERE organization_id = :organizationId AND id = :submissionId`,
+    {
+      replacements: { organizationId, submissionId, liveChecks: JSON.stringify(liveChecks) },
+      type: QueryTypes.UPDATE,
+      transaction,
+    },
+  );
+};
+
+/**
+ * Replace only the `ai` block of a submission's live checks. A no-op when the
+ * submission has no live checks stored.
+ */
+export const setLiveChecksAiQuery = async (
+  submissionId: number,
+  organizationId: number,
+  ai: ILiveChecks["ai"],
+): Promise<void> => {
+  await sequelize.query(
+    `UPDATE intake_submissions
+    SET live_checks = jsonb_set(live_checks, '{ai}', :ai::jsonb), updated_at = NOW()
+    WHERE organization_id = :organizationId AND id = :submissionId
+      AND live_checks IS NOT NULL`,
+    {
+      replacements: { organizationId, submissionId, ai: JSON.stringify(ai) },
+      type: QueryTypes.UPDATE,
+    },
+  );
+};
 
 /**
  * Get users by IDs (for per-form recipients)

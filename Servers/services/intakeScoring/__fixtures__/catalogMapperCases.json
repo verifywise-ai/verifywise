@@ -1,0 +1,350 @@
+[
+  {
+    "source": "mit",
+    "kind": "likelihood",
+    "input": "Rare",
+    "expected": "Rare"
+  },
+  {
+    "source": "mit",
+    "kind": "likelihood",
+    "input": "RARE",
+    "expected": "Rare"
+  },
+  {
+    "source": "mit",
+    "kind": "likelihood",
+    "input": "rare",
+    "expected": "Rare"
+  },
+  {
+    "source": "mit",
+    "kind": "likelihood",
+    "input": "Unlikely",
+    "expected": "Unlikely"
+  },
+  {
+    "source": "mit",
+    "kind": "likelihood",
+    "input": "UNLIKELY",
+    "expected": "Unlikely"
+  },
+  {
+    "source": "mit",
+    "kind": "likelihood",
+    "input": "unlikely",
+    "expected": "Unlikely"
+  },
+  {
+    "source": "mit",
+    "kind": "likelihood",
+    "input": "Possible",
+    "expected": "Possible"
+  },
+  {
+    "source": "mit",
+    "kind": "likelihood",
+    "input": "POSSIBLE",
+    "expected": "Possible"
+  },
+  {
+    "source": "mit",
+    "kind": "likelihood",
+    "input": "possible",
+    "expected": "Possible"
+  },
+  {
+    "source": "mit",
+    "kind": "likelihood",
+    "input": "Likely",
+    "expected": "Likely"
+  },
+  {
+    "source": "mit",
+    "kind": "likelihood",
+    "input": "LIKELY",
+    "expected": "Likely"
+  },
+  {
+    "source": "mit",
+    "kind": "likelihood",
+    "input": "likely",
+    "expected": "Likely"
+  },
+  {
+    "source": "mit",
+    "kind": "likelihood",
+    "input": "Almost Certain",
+    "expected": "Almost Certain"
+  },
+  {
+    "source": "mit",
+    "kind": "likelihood",
+    "input": "ALMOST CERTAIN",
+    "expected": "Almost Certain"
+  },
+  {
+    "source": "mit",
+    "kind": "likelihood",
+    "input": "almost certain",
+    "expected": "Almost Certain"
+  },
+  {
+    "source": "mit",
+    "kind": "likelihood",
+    "input": "nonsense",
+    "expected": "Possible"
+  },
+  {
+    "source": "mit",
+    "kind": "likelihood",
+    "input": "",
+    "expected": "Possible"
+  },
+  {
+    "source": "mit",
+    "kind": "severity",
+    "input": "Negligible",
+    "expected": "Negligible"
+  },
+  {
+    "source": "mit",
+    "kind": "severity",
+    "input": "NEGLIGIBLE",
+    "expected": "Negligible"
+  },
+  {
+    "source": "mit",
+    "kind": "severity",
+    "input": "negligible",
+    "expected": "Negligible"
+  },
+  {
+    "source": "mit",
+    "kind": "severity",
+    "input": "Minor",
+    "expected": "Minor"
+  },
+  {
+    "source": "mit",
+    "kind": "severity",
+    "input": "MINOR",
+    "expected": "Minor"
+  },
+  {
+    "source": "mit",
+    "kind": "severity",
+    "input": "minor",
+    "expected": "Minor"
+  },
+  {
+    "source": "mit",
+    "kind": "severity",
+    "input": "Moderate",
+    "expected": "Moderate"
+  },
+  {
+    "source": "mit",
+    "kind": "severity",
+    "input": "MODERATE",
+    "expected": "Moderate"
+  },
+  {
+    "source": "mit",
+    "kind": "severity",
+    "input": "moderate",
+    "expected": "Moderate"
+  },
+  {
+    "source": "mit",
+    "kind": "severity",
+    "input": "Major",
+    "expected": "Major"
+  },
+  {
+    "source": "mit",
+    "kind": "severity",
+    "input": "MAJOR",
+    "expected": "Major"
+  },
+  {
+    "source": "mit",
+    "kind": "severity",
+    "input": "major",
+    "expected": "Major"
+  },
+  {
+    "source": "mit",
+    "kind": "severity",
+    "input": "Catastrophic",
+    "expected": "Catastrophic"
+  },
+  {
+    "source": "mit",
+    "kind": "severity",
+    "input": "CATASTROPHIC",
+    "expected": "Catastrophic"
+  },
+  {
+    "source": "mit",
+    "kind": "severity",
+    "input": "catastrophic",
+    "expected": "Catastrophic"
+  },
+  {
+    "source": "mit",
+    "kind": "severity",
+    "input": "nonsense",
+    "expected": "Moderate"
+  },
+  {
+    "source": "mit",
+    "kind": "severity",
+    "input": "",
+    "expected": "Moderate"
+  },
+  {
+    "source": "ibm",
+    "kind": "likelihood",
+    "input": "Unlikely",
+    "expected": "Unlikely"
+  },
+  {
+    "source": "ibm",
+    "kind": "likelihood",
+    "input": "UNLIKELY",
+    "expected": "Unlikely"
+  },
+  {
+    "source": "ibm",
+    "kind": "likelihood",
+    "input": "unlikely",
+    "expected": "Unlikely"
+  },
+  {
+    "source": "ibm",
+    "kind": "likelihood",
+    "input": "Possible",
+    "expected": "Possible"
+  },
+  {
+    "source": "ibm",
+    "kind": "likelihood",
+    "input": "POSSIBLE",
+    "expected": "Possible"
+  },
+  {
+    "source": "ibm",
+    "kind": "likelihood",
+    "input": "possible",
+    "expected": "Possible"
+  },
+  {
+    "source": "ibm",
+    "kind": "likelihood",
+    "input": "Likely",
+    "expected": "Likely"
+  },
+  {
+    "source": "ibm",
+    "kind": "likelihood",
+    "input": "LIKELY",
+    "expected": "Likely"
+  },
+  {
+    "source": "ibm",
+    "kind": "likelihood",
+    "input": "likely",
+    "expected": "Likely"
+  },
+  {
+    "source": "ibm",
+    "kind": "likelihood",
+    "input": "nonsense",
+    "expected": "Possible"
+  },
+  {
+    "source": "ibm",
+    "kind": "likelihood",
+    "input": "",
+    "expected": "Possible"
+  },
+  {
+    "source": "ibm",
+    "kind": "severity",
+    "input": "Minor",
+    "expected": "Minor"
+  },
+  {
+    "source": "ibm",
+    "kind": "severity",
+    "input": "MINOR",
+    "expected": "Minor"
+  },
+  {
+    "source": "ibm",
+    "kind": "severity",
+    "input": "minor",
+    "expected": "Minor"
+  },
+  {
+    "source": "ibm",
+    "kind": "severity",
+    "input": "Moderate",
+    "expected": "Moderate"
+  },
+  {
+    "source": "ibm",
+    "kind": "severity",
+    "input": "MODERATE",
+    "expected": "Moderate"
+  },
+  {
+    "source": "ibm",
+    "kind": "severity",
+    "input": "moderate",
+    "expected": "Moderate"
+  },
+  {
+    "source": "ibm",
+    "kind": "severity",
+    "input": "Major",
+    "expected": "Major"
+  },
+  {
+    "source": "ibm",
+    "kind": "severity",
+    "input": "MAJOR",
+    "expected": "Major"
+  },
+  {
+    "source": "ibm",
+    "kind": "severity",
+    "input": "major",
+    "expected": "Major"
+  },
+  {
+    "source": "ibm",
+    "kind": "severity",
+    "input": "nonsense",
+    "expected": "Moderate"
+  },
+  {
+    "source": "ibm",
+    "kind": "severity",
+    "input": "",
+    "expected": "Moderate"
+  },
+  {
+    "source": "ibm",
+    "kind": "likelihood",
+    "input": "Rare",
+    "expected": "Possible"
+  },
+  {
+    "source": "ibm",
+    "kind": "severity",
+    "input": "Catastrophic",
+    "expected": "Moderate"
+  }
+]

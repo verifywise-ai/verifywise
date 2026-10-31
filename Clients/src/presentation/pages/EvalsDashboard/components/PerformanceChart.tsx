@@ -17,6 +17,7 @@ import {
 import { vwTooltipStyle, ChartOutlineWrapper } from "../../../components/Charts/VWCharts";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import { displayFormattedTime } from "../../../tools/isoDateToString";
+import { lowerIsBetter } from "../metricScore";
 
 export type TimeRange = "7d" | "30d" | "100d" | "all";
 
@@ -77,6 +78,13 @@ const metricDefinitions: Record<string, { label: string }> = {
   safety: { label: "Safety" },
 };
 
+// Legend and tooltip label. Lower is better metrics (bias, toxicity, hallucination) share
+// the 0-100% axis with the rest, so say which way is good: 0% is the best score for them.
+export const metricLabel = (metricKey: string): string => {
+  const label = metricDefinitions[metricKey]?.label || formatMetricLabel(metricKey);
+  return lowerIsBetter(metricKey) ? `${label} (lower is better)` : label;
+};
+
 // Get color for a metric by index to ensure unique colors
 const getMetricColor = (index: number): string => {
   return CHART_COLORS[index % CHART_COLORS.length];
@@ -107,6 +115,8 @@ export default function PerformanceChart({ projectId, timeRange }: PerformanceCh
   const [data, setData] = useState<ChartPoint[]>([]);
   const [activeMetrics, setActiveMetrics] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  // Measured chart width, for the legend height estimate below
+  const [chartWidth, setChartWidth] = useState(900);
 
   // Get cutoff date based on time range
   const getCutoffDate = useCallback((range: TimeRange): Date | null => {
@@ -213,11 +223,15 @@ export default function PerformanceChart({ projectId, timeRange }: PerformanceCh
   const metricsToDisplay =
     activeMetrics.length > 0 ? activeMetrics : Object.keys(metricDefinitions);
 
-  // Calculate dynamic height based on number of legend items
-  // Estimate ~10 items per line, each line ~20px
-  const itemsPerLine = 10;
+  // Calculate dynamic height based on the legend's length against the measured chart
+  // width. Rough estimate: ~6.5px per character at 11px plus ~34px for each item's icon
+  // and gap; labels vary in length (e.g. "Hallucination (lower is better)").
   const legendLineHeight = 20;
-  const legendLines = Math.ceil(metricsToDisplay.length / itemsPerLine);
+  const legendWidth = metricsToDisplay.reduce(
+    (width, metricKey) => width + metricLabel(metricKey).length * 6.5 + 34,
+    0,
+  );
+  const legendLines = Math.max(1, Math.ceil(legendWidth / Math.max(chartWidth - 40, 200)));
   const baseChartHeight = 200; // Base height for chart area
   const legendHeight = legendLines * legendLineHeight + 12; // +12 for padding
   const dynamicHeight = baseChartHeight + legendHeight;
@@ -284,8 +298,7 @@ export default function PerformanceChart({ projectId, timeRange }: PerformanceCh
         </Typography>
         {validEntries.map((entry: TooltipEntry) => {
           const metricKey = entry.dataKey as string;
-          const metricDef = metricDefinitions[metricKey as keyof typeof metricDefinitions];
-          const metricLabel = metricDef?.label || formatMetricLabel(metricKey);
+          const label = metricLabel(metricKey);
           const color = metricColorMap[metricKey] || entry.color;
           // Use the actual value from the data point, not from entry.value (which can be interpolated)
           const rawValue = dataPoint[metricKey];
@@ -311,7 +324,7 @@ export default function PerformanceChart({ projectId, timeRange }: PerformanceCh
                 }}
               />
               <Typography sx={{ fontSize: "12px", color: "#374151" }}>
-                {metricLabel} : <span style={{ fontWeight: 600 }}>{value}%</span>
+                {label} : <span style={{ fontWeight: 600 }}>{value}%</span>
               </Typography>
             </Box>
           );
@@ -328,6 +341,7 @@ export default function PerformanceChart({ projectId, timeRange }: PerformanceCh
         height={Math.max(dynamicHeight, 220)}
         minWidth={0}
         debounce={1}
+        onResize={(width) => setChartWidth((prev) => (Math.abs(prev - width) > 1 ? width : prev))}
       >
         <LineChart data={data} margin={{ top: 5, right: 20, left: 10, bottom: 20 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
@@ -358,10 +372,7 @@ export default function PerformanceChart({ projectId, timeRange }: PerformanceCh
           <Tooltip content={<CustomTooltip />} />
           <Legend
             wrapperStyle={{ paddingTop: 12, fontSize: 11 }}
-            formatter={(value: string) => {
-              const metricDef = metricDefinitions[value as keyof typeof metricDefinitions];
-              return metricDef?.label || formatMetricLabel(value);
-            }}
+            formatter={(value: string) => metricLabel(value)}
           />
           {metricsToDisplay.map((metricKey, index) => {
             const color = getMetricColor(index);

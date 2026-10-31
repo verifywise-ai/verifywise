@@ -171,6 +171,31 @@ export const organizationSettingsContent: ArticleContent = {
     },
     {
       type: 'heading',
+      id: 'data-retention',
+      level: 2,
+      text: 'Data retention',
+    },
+    {
+      type: 'paragraph',
+      text: 'The Data retention tab in Settings shows how long each kind of record is kept, whether it is deleted automatically, and when the last cleanup ran. Only Admins can open it and change a period.',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { bold: 'Audit records', text: 'Includes the audit ledger, event log, change history, AI Advisor actions and file access logs. They are kept indefinitely until you pick a period of 1, 2, 3, 5, 7 or 10 years. A daily cleanup then removes older records.' },
+        { bold: 'AI Gateway logs', text: 'Guardrail and spend logs have their own periods. Turn on Delete automatically to remove old logs every day. It is off by default, and VerifyWise asks you to confirm before turning it on or shortening a period while it is on.' },
+        { bold: 'Evidence files', text: 'The default retention policy for new files is set here; each file can set its own. Evidence files are archived, not deleted, when their retention ends: they are marked as expired and stay available under Expired files in the file manager.' },
+        { bold: 'Agent Control logs', text: 'Tool-call logs and decided approvals use the deployment default period until you set your own. Turn off Use the deployment default and enter a whole number of days, from the deployment\'s minimum (7 by default) up to 3650. A daily cleanup removes older records, and VerifyWise asks you to confirm before shortening the period.' },
+        { bold: 'Other records', text: 'Model risk metrics and Shadow AI data can be changed here too. Server logs are set by your deployment and shown read only.' },
+      ],
+    },
+    {
+      type: 'callout',
+      variant: 'info',
+      text: 'Before you shorten the audit records period, VerifyWise shows how many records the next cleanup will delete. Deleted records can\'t be recovered, so export the audit ledger first if you need a copy. The audit ledger still verifies after cleanup, and its page notes the date before which records were removed.',
+    },
+    {
+      type: 'heading',
       id: 'faq-who-can-edit',
       level: 3,
       text: 'Who can modify organization settings?',

@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 
+import { resolveHighRiskRolesWrite } from "../utils/highRiskRoles.utils";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import {
   calculateProjectRisks,
@@ -7,7 +8,6 @@ import {
   countAnswersByProjectId,
   countSubControlsByProjectId,
   createNewProjectQuery,
-  deleteProjectByIdQuery,
   getAllProjectsQuery,
   getProjectByIdQuery,
   updateProjectByIdQuery,
@@ -25,6 +25,7 @@ import { IProjectAttributes } from "../domain.layer/interfaces/i.project";
 import { IControl } from "../domain.layer/interfaces/i.control";
 import { IControlCategory } from "../domain.layer/interfaces/i.controlCategory";
 import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper";
+import { logStructured } from "../utils/logger/fileLogger";
 import { createISO27001FrameworkQuery } from "../utils/iso27001.utils";
 import { createNISTAI_RMFFrameworkQuery } from "../utils/nistAiRmfCorrect.utils";
 import {
@@ -42,17 +43,22 @@ import {
   recordUseCaseCreation,
   trackUseCaseChanges,
   recordMultipleFieldChanges,
-  recordUseCaseDeletion,
 } from "../utils/useCaseChangeHistory.utils";
 import {
   hasPendingApprovalQuery,
   getPendingApprovalRequestIdQuery,
   withdrawApprovalRequestQuery,
+  createPendingFrameworksForApprovedUseCase,
 } from "../utils/approvalRequest.utils";
-// SSE notifications disabled for now - can be re-enabled later if needed
-// import { notifyStepApprovers } from "../services/notification.service";
-import { createUseCaseApprovalRequest } from "../services/projects/approvalRequest.service";
-import { notifyUserAssigned } from "../services/inAppNotification.service";
+import { deleteProjectWithSideEffects } from "../utils/projectDeletion.utils";
+import {
+  createUseCaseApprovalRequest,
+  notifyUseCaseApprovalRequested,
+} from "../services/projects/approvalRequest.service";
+import {
+  notifyUserAssigned,
+  notifyApprovalAutoApproved,
+} from "../services/inAppNotification.service";
 
 import { translateError } from "../utils/i18n.utils";
 export async function getAllProjects(req: Request, res: Response): Promise<any> {
@@ -215,11 +221,14 @@ export async function createProject(req: Request, res: Response): Promise<any> {
   });
 
   try {
+    // Either role field may be sent; store the resolved list only.
+    const highRiskRoles = resolveHighRiskRolesWrite(projectData, []) ?? [];
+    delete projectData.type_of_high_risk_role;
     const newProject: Partial<ProjectModel> & {
       members: number[] | undefined;
       framework: number[];
       enable_ai_data_insertion: boolean;
-    } = projectData;
+    } = { ...projectData, high_risk_roles: highRiskRoles };
 
     const createdProject = await createNewProjectQuery(
       newProject,
@@ -294,7 +303,10 @@ export async function createProject(req: Request, res: Response): Promise<any> {
             start_date: createdProject.start_date,
             geography: createdProject.geography,
             ai_risk_classification: createdProject.ai_risk_classification,
-            type_of_high_risk_role: createdProject.type_of_high_risk_role,
+            // An empty list is no value, so creation records no roles line.
+            high_risk_roles: createdProject.high_risk_roles?.length
+              ? createdProject.high_risk_roles
+              : undefined,
             goal: createdProject.goal,
             target_industry: createdProject.target_industry,
             description: createdProject.description,
@@ -305,7 +317,13 @@ export async function createProject(req: Request, res: Response): Promise<any> {
       }
 
       // Create approval request if an approval workflow is assigned to the use-case
-      await createUseCaseApprovalRequest(
+      logStructured(
+        "processing",
+        `use case ${createdProject.id} created with approval_workflow_id=${createdProject.approval_workflow_id ?? "none"} (body sent ${projectData.approval_workflow_id ?? "none"})`,
+        "createProject",
+        "project.ctrl.ts",
+      );
+      const approvalResult = await createUseCaseApprovalRequest(
         createdProject,
         req.userId!,
         req.organizationId!,
@@ -313,6 +331,25 @@ export async function createProject(req: Request, res: Response): Promise<any> {
       );
 
       await transaction.commit();
+
+      // Auto-approved requests skip approver notifications; tell the
+      // requester instead (fire-and-forget, after commit)
+      if (approvalResult?.autoApproved) {
+        const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+        notifyApprovalAutoApproved(
+          req.organizationId!,
+          req.userId!,
+          {
+            id: approvalResult.request.id!,
+            name: approvalResult.request.request_name,
+          },
+          approvalResult.riskLevel!,
+          approvalResult.threshold!,
+          baseUrl,
+        ).catch((notifyError) => {
+          console.error("Failed to send auto-approval notification:", notifyError);
+        });
+      }
 
       await logSuccess({
         eventType: "Create",
@@ -323,17 +360,27 @@ export async function createProject(req: Request, res: Response): Promise<any> {
         organizationId: req.organizationId!,
       });
 
-      // SSE notifications disabled for now - can be re-enabled later if needed
-      // if ((createdProject as any)._approvalRequestId) {
-      //   notifyStepApprovers(
-      //     req.organizationId!,
-      //     (createdProject as any)._approvalRequestId,
-      //     1, // Step 1
-      //     (createdProject as any)._approvalRequestName
-      //   ).catch(error => {
-      //     console.error("Error sending approval notification:", error);
-      //   });
-      // }
+      // #4905: step-1 approvers are told a request awaits them. Skipped for
+      // auto-approved requests (the requester is notified above instead).
+      // Fire-and-forget after commit; a failure never fails the creation.
+      if (approvalResult && !approvalResult.autoApproved) {
+        notifyUseCaseApprovalRequested(
+          createdProject,
+          approvalResult,
+          req.userId!,
+          req.organizationId!,
+        ).catch(async (notifyError) => {
+          await logFailure({
+            eventType: "Create",
+            description: "Failed to notify step 1 approvers of the use case approval request",
+            functionName: "createProject",
+            fileName: "project.ctrl.ts",
+            error: notifyError as Error,
+            userId: req.userId!,
+            organizationId: req.organizationId!,
+          });
+        });
+      }
 
       // Send project creation notification to admin (fire-and-forget, don't block response)
       sendProjectCreatedNotification({
@@ -512,6 +559,13 @@ export async function updateProjectById(req: Request, res: Response): Promise<an
     delete updatedProject.members;
     delete updatedProject.id;
 
+    // Either role field may be sent. Resolve them against the stored list, so a
+    // client that writes back the derived single role cannot drop the other one.
+    const highRiskRoles = resolveHighRiskRolesWrite(updateData, existingProject.high_risk_roles);
+    delete updateData.type_of_high_risk_role;
+    if (highRiskRoles === undefined) delete updatedProject.high_risk_roles;
+    else updatedProject.high_risk_roles = highRiskRoles;
+
     // if (!updatedProject.project_title || !updatedProject.owner) {
     //   return res.status(400).json(
     //     STATUS_CODE[400]({ message: req.t!("project_title and owner are required") })
@@ -565,7 +619,91 @@ export async function updateProjectById(req: Request, res: Response): Promise<an
         }
       }
 
+      // #4904: a workflow attached on edit (not set before) starts an approval
+      // request, exactly as create does. An inactive or wrong-entity workflow
+      // throws ValidationException, which rolls back and maps to 400.
+      const previousWorkflowId = existingProject.approval_workflow_id ?? null;
+      const submittedWorkflowId = (updatedProject.approval_workflow_id as number | null) ?? null;
+      // Only a body that carries the field changes the workflow. The update
+      // query leaves an omitted column as it is, so reading "absent" as
+      // "cleared" withdrew the request while the workflow stayed attached.
+      const workflowSubmitted = Object.prototype.hasOwnProperty.call(
+        updateData ?? {},
+        "approval_workflow_id",
+      );
+      let updateApprovalResult: Awaited<ReturnType<typeof createUseCaseApprovalRequest>> = null;
+      if (workflowSubmitted && submittedWorkflowId !== previousWorkflowId) {
+        // Replacing or clearing the workflow makes any pending request under
+        // the old workflow obsolete (review: A→B left A pending). Withdraw it
+        // in the same transaction so a use case never has two pending
+        // requests; approved/rejected history is untouched.
+        const staleRequestId = previousWorkflowId
+          ? await getPendingApprovalRequestIdQuery(
+              projectId,
+              "use_case",
+              req.organizationId!,
+              transaction,
+            )
+          : null;
+        if (staleRequestId) {
+          await withdrawApprovalRequestQuery(staleRequestId, req.organizationId!, transaction);
+        }
+        if (!submittedWorkflowId) {
+          // Cleared: the frameworks chosen at creation waited for an approval
+          // that no longer exists, so create them now rather than never.
+          await createPendingFrameworksForApprovedUseCase(
+            projectId,
+            req.organizationId!,
+            transaction,
+          );
+        } else {
+          updateApprovalResult = await createUseCaseApprovalRequest(
+            project as unknown as ProjectModel,
+            req.userId!,
+            req.organizationId!,
+            transaction,
+          );
+        }
+      }
+
       await transaction.commit();
+
+      if (updateApprovalResult && !updateApprovalResult.autoApproved) {
+        // #4905: tell the workflow's step-1 approvers a request awaits them.
+        // Fire-and-forget, as on create; a failure never fails the update.
+        notifyUseCaseApprovalRequested(
+          project as unknown as ProjectModel,
+          updateApprovalResult,
+          req.userId!,
+          req.organizationId!,
+        ).catch(async (notifyError) => {
+          await logFailure({
+            eventType: "Update",
+            description: "Failed to notify step 1 approvers of the use case approval request",
+            functionName: "updateProjectById",
+            fileName: "project.ctrl.ts",
+            error: notifyError as Error,
+            userId: req.userId!,
+            organizationId: req.organizationId!,
+          });
+        });
+      } else if (updateApprovalResult?.autoApproved) {
+        // Same courtesy as the create path: the requester learns the edit-time
+        // request was auto-approved.
+        notifyApprovalAutoApproved(
+          req.organizationId!,
+          req.userId!,
+          {
+            id: updateApprovalResult.request.id!,
+            name: updateApprovalResult.request.request_name,
+          },
+          updateApprovalResult.riskLevel!,
+          updateApprovalResult.threshold!,
+          process.env.FRONTEND_URL || "http://localhost:3000",
+        ).catch((error) => {
+          console.error("Error sending auto-approval notification:", error);
+        });
+      }
 
       await logSuccess({
         eventType: "Update",
@@ -750,48 +888,24 @@ export async function deleteProjectById(req: Request, res: Response): Promise<an
   });
 
   try {
-    // Check if project has a pending approval request and withdraw it
-    const pendingApprovalRequestId = await getPendingApprovalRequestIdQuery(
+    // Lock, withdraw a pending approval, record the deletion, delete: one
+    // shared order for every path that deletes a project.
+    const { deleted: deletedProject, withdrawnApprovalId } = await deleteProjectWithSideEffects(
       projectId,
-      "use_case",
       req.organizationId!,
       transaction,
+      { userId: req.userId ?? null },
     );
-
-    if (pendingApprovalRequestId) {
-      logProcessing({
-        description: `withdrawing approval request ${pendingApprovalRequestId} for project ${projectId} before deletion`,
-        functionName: "deleteProjectById",
-        fileName: "project.ctrl.ts",
-        userId: req.userId!,
-        organizationId: req.organizationId!,
-      });
-      await withdrawApprovalRequestQuery(
-        pendingApprovalRequestId,
-        req.organizationId!,
-        transaction,
-      );
+    if (withdrawnApprovalId) {
       await logSuccess({
         eventType: "Update",
-        description: `withdrew approval request ${pendingApprovalRequestId} for project ${projectId}`,
+        description: `withdrew approval request ${withdrawnApprovalId} for project ${projectId}`,
         functionName: "deleteProjectById",
         fileName: "project.ctrl.ts",
         userId: req.userId!,
         organizationId: req.organizationId!,
       });
     }
-
-    // Record deletion in change history BEFORE deleting the project
-    // (due to foreign key constraint on use_case_change_history table)
-    if (req.userId) {
-      await recordUseCaseDeletion(projectId, req.userId, req.organizationId!, transaction);
-    }
-
-    const deletedProject = await deleteProjectByIdQuery(
-      projectId,
-      req.organizationId!,
-      transaction,
-    );
 
     if (deletedProject) {
       await transaction.commit();

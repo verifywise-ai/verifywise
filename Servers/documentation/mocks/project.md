@@ -27,7 +27,7 @@ interface Project {
   users: string;
   start_date: Date;
   ai_risk_classification: string;
-  type_of_high_risk_role: string;
+  high_risk_roles: string[];
   goal: string;
   last_updated: Date;
   last_updated_by: number;
@@ -46,7 +46,7 @@ The file contains two predefined project records:
   users: "[1, 2, 3]",
   start_date: new Date("2023-01-15"),
   ai_risk_classification: "high risk",
-  type_of_high_risk_role: "deployer",
+  high_risk_roles: ["Deployer"],
   goal: "To ensure compliance with AI governance standards",
   last_updated: new Date("2024-10-30"),
   last_updated_by: 1

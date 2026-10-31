@@ -13,8 +13,14 @@ import {
   KEY_DISPLAY_BG,
   CODE_BLOCK_BG,
   CODE_BLOCK_TEXT,
+  drawerLabelSx as labelSx,
+  describeMcpDecision,
+  formatMcpEventType,
+  formatMcpStatus,
 } from "./shared";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
+import { useTranslation } from "../../../application/hooks/useTranslation";
+import { fill } from "../../../i18n/fill";
 
 interface InvocationDrawerProps {
   logId: number | null;
@@ -26,6 +32,8 @@ interface InvocationEvent {
   type: string;
   at: string;
   detail?: string;
+  /** would_* events only: which check produced the outcome. */
+  source?: string;
 }
 
 interface AuditLogDetail {
@@ -34,6 +42,8 @@ interface AuditLogDetail {
   agent_key_name?: string | null;
   result_status: string;
   result_summary: string | null;
+  matched_rule_id?: number | null;
+  matched_rule_name?: string | null;
   tool_use_id: string | null;
   session_id: string | null;
   arguments: Record<string, unknown> | null;
@@ -45,6 +55,7 @@ interface AuditLogDetail {
 
 export default function MCPInvocationDrawer({ logId, open, onClose }: InvocationDrawerProps) {
   const formatDate = useFormattedDate();
+  const { t: tr } = useTranslation();
   const [row, setRow] = useState<AuditLogDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
@@ -66,13 +77,15 @@ export default function MCPInvocationDrawer({ logId, open, onClose }: Invocation
   const colors = row
     ? MCP_STATUS_COLORS[row.result_status] || MCP_STATUS_FALLBACK
     : MCP_STATUS_FALLBACK;
-  const labelSx = {
-    fontSize: 11,
-    fontWeight: 600,
-    color: palette.text.tertiary,
-    letterSpacing: "0.5px",
-    mb: "6px",
-  };
+  // The row's status is the first outcome of its kind, so the first event of
+  // that type is the one the status and the matched rule came from.
+  const decision = row
+    ? describeMcpDecision(
+        row.result_status,
+        row.matched_rule_name,
+        (row.events || []).find((e) => e.type === row.result_status)?.source,
+      )
+    : null;
   const codeBlockSx = {
     fontSize: 12,
     fontFamily: "monospace",
@@ -122,7 +135,7 @@ export default function MCPInvocationDrawer({ logId, open, onClose }: Invocation
                   {row.tool_name}
                 </Typography>
                 <Chip
-                  label={row.result_status}
+                  label={formatMcpStatus(row.result_status)}
                   backgroundColor={colors.bg}
                   textColor={colors.text}
                 />
@@ -141,8 +154,28 @@ export default function MCPInvocationDrawer({ logId, open, onClose }: Invocation
 
           <Divider />
 
+          {/* Decision provenance — which rule produced a block / approval, or
+              for a monitor-only key, what would have happened. */}
+          {decision && (
+            <Box
+              sx={{
+                p: "12px",
+                borderRadius: "4px",
+                border: `1px solid ${palette.status.warning.border}`,
+                backgroundColor: palette.status.warning.bg,
+              }}
+            >
+              <Typography sx={labelSx}>{tr(decision.heading)}</Typography>
+              <Typography
+                sx={{ fontSize: 13, fontWeight: 600, color: palette.status.warning.text }}
+              >
+                {fill(tr(decision.template), decision.values)}
+              </Typography>
+            </Box>
+          )}
+
           <Box>
-            <Typography sx={labelSx}>TOOL USE ID</Typography>
+            <Typography sx={labelSx}>Tool use ID</Typography>
             <Typography sx={{ fontSize: 12, fontFamily: "monospace", wordBreak: "break-all" }}>
               {row.tool_use_id || "—"}
             </Typography>
@@ -151,7 +184,7 @@ export default function MCPInvocationDrawer({ logId, open, onClose }: Invocation
           <Divider />
 
           <Box>
-            <Typography sx={labelSx}>ARGUMENTS</Typography>
+            <Typography sx={labelSx}>Arguments</Typography>
             <Box component="pre" sx={{ ...codeBlockSx, maxHeight: 200 }}>
               {JSON.stringify(row.arguments ?? {}, null, 2)}
             </Box>
@@ -160,7 +193,7 @@ export default function MCPInvocationDrawer({ logId, open, onClose }: Invocation
           <Divider />
 
           <Box>
-            <Typography sx={labelSx}>RESULT</Typography>
+            <Typography sx={labelSx}>Result</Typography>
             {row.result_response ? (
               <Box component="pre" sx={{ ...codeBlockSx, maxHeight: 280 }}>
                 {JSON.stringify(row.result_response, null, 2)}
@@ -176,12 +209,12 @@ export default function MCPInvocationDrawer({ logId, open, onClose }: Invocation
           <Divider />
 
           <Box>
-            <Typography sx={labelSx}>EVENTS</Typography>
+            <Typography sx={labelSx}>Events</Typography>
             <Stack gap="6px">
               {(row.events || []).map((e: InvocationEvent, i: number) => (
                 <Stack key={i} direction="row" justifyContent="space-between" gap="12px">
                   <Typography sx={{ fontSize: 12 }}>
-                    {e.type}
+                    {tr(formatMcpEventType(e.type))}
                     {e.detail ? ` · ${e.detail}` : ""}
                   </Typography>
                   <Typography

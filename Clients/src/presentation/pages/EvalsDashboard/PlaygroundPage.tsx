@@ -302,12 +302,10 @@ export default function PlaygroundPage({ orgId, onNavigateToModels }: Playground
       });
       setMessages((prev) => [...prev, { role: "assistant", content: res.data?.content ?? "" }]);
     } catch (err: any) {
-      setError(
-        err?.response?.data?.error ||
-          err?.response?.data?.message ||
-          err?.message ||
-          "Something went wrong",
+      const reason = [err?.response?.data?.error, err?.response?.data?.message, err?.message].find(
+        (value) => typeof value === "string" && value,
       );
+      setError(reason || "Something went wrong");
     } finally {
       setLoading(false);
     }

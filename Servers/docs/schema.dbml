@@ -26,7 +26,7 @@ Table projects {
   start_date timestamp
   geography integer
   ai_risk_classification varchar
-  type_of_high_risk_role varchar
+  high_risk_roles "text[]" [not null, default: '{}']
   goal varchar
   target_industry varchar
   description varchar

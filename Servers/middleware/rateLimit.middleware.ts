@@ -7,7 +7,10 @@
  * Every limiter in the application is defined here and built through
  * `createRateLimiter`, so they all share one contract: draft-6 `RateLimit-*`
  * headers, no legacy `X-RateLimit-*`, and the canonical STATUS_CODE[429] body
- * `{ message: "Too Many Requests", data: <limiter message> }`. Defining a limiter
+ * `{ message: "Too Many Requests", data: <limiter message> }`. The one exception
+ * is the /v1 virtual key proxy, which answers `{ detail: <limiter message> }`
+ * (gatewayErrorBody) because its clients get the AI Gateway's error shape
+ * everywhere else. Defining a limiter
  * inline in a route file re-introduces express-rate-limit's defaults (legacy
  * headers, a non-standard body) and silently breaks that contract — see
  * tests/integration/rate-limiting/.
@@ -23,10 +26,14 @@
  * - riskSuggestionsAiLimiter: 10/hour, keyed by user — LLM-backed risk suggestions
  * - mrmIngestionLimiter: 5000/15min, keyed by token — machine-to-machine push
  * - webhookLimiter: 100/min — inbound signature-verified webhooks
+ * - virtualKeyProxyLimiter: 3000/min — the /v1 virtual key proxy, mounted ahead
+ *   of generalApiLimiter; the gateway enforces per-key RPM and budget
  * - passwordResetEmailLimiter / inviteEmailLimiter / invitationResendLimiter:
  *   5/min each — outbound email
  * - slackWebhookCreateLimiter / slackWorkspaceCreateLimiter: 10/hour each
  * - healthCheckLimiter: 1000/min — probe endpoint
+ * - intakeLiveChecksVisitorLimiter: 10/min, intakePrefillVisitorLimiter: 3/10min —
+ *   public intake AI calls, keyed by IP plus resolved form id
  *
  * The strict auth/refresh limits apply by default. They are relaxed ONLY when
  * NODE_ENV is an explicit dev/test value, so a single developer hammering
@@ -60,6 +67,12 @@ export interface RateLimitConfig {
   // ingestion) key by token so tenants behind a shared NAT don't share a budget.
   keyGenerator?: Options["keyGenerator"];
 }
+
+/** IP plus the resolved public intake form id (see intakePublicForm.middleware). */
+const intakeVisitorKey: Options["keyGenerator"] = (req, res) => {
+  const formId = (res.locals?.intakeForm as { form?: { id?: number } } | undefined)?.form?.id;
+  return `${ipKeyGenerator(req.ip ?? "")}:${formId ?? "unknown"}`;
+};
 
 /**
  * Builds the rate limit configurations for every endpoint type.
@@ -144,6 +157,33 @@ export const buildRateLimitConfigs = (relaxed: boolean): Record<string, RateLimi
       return tokenId !== undefined ? `mrm-token:${tokenId}` : ipKeyGenerator(req.ip ?? "");
     },
   },
+  // Public intake AI calls (live checks and vendor-document prefill) spend the
+  // form's LLM key, so they are not relaxed in dev/test. Keyed on IP plus the
+  // form id resolvePublicIntakeForm put on res.locals, so the by-id URL and the
+  // slug URL of one form share one budget. The per-form hourly caps across all
+  // visitors live in Redis (services/intakeLiveChecks/formBudget.ts).
+  intakeLiveChecksVisitor: {
+    windowMinutes: 1,
+    maxRequests: 10,
+    message: "Too many live check requests. Please try again in a minute.",
+    keyGenerator: intakeVisitorKey,
+  },
+  intakePrefillVisitor: {
+    windowMinutes: 10,
+    maxRequests: 3,
+    message: "Too many document uploads. Please try again in a few minutes.",
+    keyGenerator: intakeVisitorKey,
+  },
+  // The OpenAI-compatible /v1 proxy for virtual keys. Mounted ahead of the
+  // global ceiling because one customer app server sends all of its LLM
+  // traffic from one IP. The per-key RPM and budget the gateway enforces are
+  // the real controls; this per-IP cap only stops floods of requests with
+  // made-up keys before they reach the gateway.
+  virtualKeyProxy: {
+    windowMinutes: 1,
+    maxRequests: relaxed ? 100000 : 3000,
+    message: "Too many requests from this IP, please slow down and retry",
+  },
   webhook: {
     windowMinutes: 1,
     maxRequests: relaxed ? 100000 : 100,
@@ -202,16 +242,23 @@ export const buildRateLimitConfigs = (relaxed: boolean): Record<string, RateLimi
  */
 export const RATE_LIMIT_CONFIGS = buildRateLimitConfigs(isNonProduction);
 
+type RateLimitBody = (message: string) => unknown;
+
+/**
+ * The AI Gateway's error shape, used by the /v1 virtual key proxy's 429
+ */
+export const gatewayErrorBody: RateLimitBody = (message) => ({ detail: message });
+
 /**
  * Creates a standardized rate limit error handler
- * Responds with the canonical STATUS_CODE[429] envelope:
+ * Responds with the canonical STATUS_CODE[429] envelope by default:
  * { message: "Too Many Requests", data: <limiter-specific message> }
  */
-const createRateLimitHandler = (message: string) => {
+const createRateLimitHandler = (message: string, toBody: RateLimitBody = STATUS_CODE[429]) => {
   return (req: Request, res: Response) => {
     const clientIp = req.ip || req.socket?.remoteAddress || "unknown";
-    logger.warn(`Rate limit exceeded for IP ${clientIp} on ${req.path}: ${message}`);
-    res.status(429).json(STATUS_CODE[429](message));
+    logger.warn(`Rate limit exceeded for IP ${clientIp} on ${req.baseUrl}${req.path}: ${message}`);
+    res.status(429).json(toBody(message));
   };
 };
 
@@ -219,13 +266,14 @@ const createRateLimitHandler = (message: string) => {
  * Creates a rate limiter with the specified configuration
  * Uses express-rate-limit's built-in IP extraction and IPv6 normalization
  */
-export const createRateLimiter = (config: RateLimitConfig) => {
+export const createRateLimiter = (config: RateLimitConfig, toBody?: RateLimitBody) => {
+  const handler: Options["handler"] = createRateLimitHandler(config.message, toBody);
   const options: Partial<Options> = {
     windowMs: config.windowMinutes * 60 * 1000,
     max: config.maxRequests,
     standardHeaders: true, // Send rate limit info in RateLimit-* headers
     legacyHeaders: false, // Disable X-RateLimit-* headers
-    handler: createRateLimitHandler(config.message),
+    handler,
     // Let express-rate-limit handle IP extraction with IPv6 support
     // This automatically uses req.ip with proper IPv6 normalization
     ...(config.keyGenerator ? { keyGenerator: config.keyGenerator } : {}),
@@ -289,6 +337,15 @@ export const mrmIngestionLimiter = createRateLimiter(RATE_LIMIT_CONFIGS.mrmInges
 export const webhookLimiter = createRateLimiter(RATE_LIMIT_CONFIGS.webhook);
 
 /**
+ * Per-IP ceiling for the /v1 virtual key proxy (see the virtualKeyProxy config).
+ * Its 429 uses the AI Gateway's { detail } shape so /v1 clients see one format.
+ */
+export const virtualKeyProxyLimiter = createRateLimiter(
+  RATE_LIMIT_CONFIGS.virtualKeyProxy,
+  gatewayErrorBody,
+);
+
+/**
  * Brute-force limiter for POST /users/login and /users/login-microsoft.
  * Tighter window than authLimiter because credential stuffing is fast and a
  * one-minute lockout is cheap for a legitimate user who mistyped a password.
@@ -314,3 +371,13 @@ export const slackWorkspaceCreateLimiter = createRateLimiter(
 
 /** Generous limiter for the GET /health probe endpoint. */
 export const healthCheckLimiter = createRateLimiter(RATE_LIMIT_CONFIGS.healthCheck);
+
+/** Per visitor and form: 10 a minute on the public intake live-check endpoint. */
+export const intakeLiveChecksVisitorLimiter = createRateLimiter(
+  RATE_LIMIT_CONFIGS.intakeLiveChecksVisitor,
+);
+
+/** Per visitor and form: 3 per 10 minutes on the public intake prefill endpoint. */
+export const intakePrefillVisitorLimiter = createRateLimiter(
+  RATE_LIMIT_CONFIGS.intakePrefillVisitor,
+);

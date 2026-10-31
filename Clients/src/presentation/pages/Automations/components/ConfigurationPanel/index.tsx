@@ -540,7 +540,7 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
       { var: "{{project.owner}}", desc: "Project owner" },
       { var: "{{project.start_date}}", desc: "Project start date" },
       { var: "{{project.ai_risk_classification}}", desc: "AI risk classification" },
-      { var: "{{project.type_of_high_risk_role}}", desc: "Type of high-risk role" },
+      { var: "{{project.type_of_high_risk_role}}", desc: "High-risk roles" },
       { var: "{{project.status}}", desc: "Project status" },
     ];
 

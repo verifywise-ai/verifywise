@@ -10,9 +10,9 @@ from crud.virtual_keys import (
     revoke_virtual_key,
     update_virtual_key,
 )
-from middlewares.auth import verify_internal_key
-from utils.auth import get_org_id, get_user_id, require_admin
-from utils.notifications import notify_config_change
+from utils.auth import get_org_id, get_role_id, get_user_id, require_admin
+from utils.endpoint_model import normalize_acl_models
+from utils.notifications import config_event, notify_config_change
 
 router = APIRouter(prefix="/virtual-keys", tags=["virtual-keys"])
 
@@ -23,10 +23,9 @@ router = APIRouter(prefix="/virtual-keys", tags=["virtual-keys"])
 
 @router.get("", status_code=status.HTTP_200_OK)
 async def list_virtual_keys(request: Request):
-    verify_internal_key(request)
     org_id = get_org_id(request)
 
-    keys = await get_all_virtual_keys(org_id)
+    keys = await get_all_virtual_keys(org_id, role_id=get_role_id(request))
     return {"status": "success", "data": keys}
 
 
@@ -36,7 +35,6 @@ async def list_virtual_keys(request: Request):
 
 @router.post("", status_code=status.HTTP_201_CREATED)
 async def create_key(request: Request):
-    verify_internal_key(request)
     require_admin(request)
 
     body: dict[str, Any] = await request.json()
@@ -85,6 +83,8 @@ async def create_key(request: Request):
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=f"{field} must be an array of strings",
                 )
+            if field in ("allowed_models", "blocked_models"):
+                value = normalize_acl_models(value, blocked=field == "blocked_models")
             acl_fields[field] = value
 
     org_id = get_org_id(request)
@@ -114,12 +114,7 @@ async def create_key(request: Request):
     await notify_config_change(
         organization_id=org_id,
         changed_by_user_id=user_id,
-        event={
-            "action": "created",
-            "entity_type": "virtual_key",
-            "entity_id": str(record["id"]),
-            "entity_name": name,
-        },
+        event=config_event("virtual_key", "created", name, record["id"]),
     )
 
     return {
@@ -137,7 +132,6 @@ async def create_key(request: Request):
 
 @router.patch("/{key_id}", status_code=status.HTTP_200_OK)
 async def update_key(key_id: int, request: Request):
-    verify_internal_key(request)
     require_admin(request)
 
     body: dict[str, Any] = await request.json()
@@ -207,7 +201,10 @@ async def update_key(key_id: int, request: Request):
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=f"{field} must be an array of strings",
                 )
-            updates[field] = value if value is not None else []
+            value = value if value is not None else []
+            if field in ("allowed_models", "blocked_models"):
+                value = normalize_acl_models(value, blocked=field == "blocked_models")
+            updates[field] = value
 
     # metadata
     if "metadata" in body:
@@ -248,12 +245,7 @@ async def update_key(key_id: int, request: Request):
     await notify_config_change(
         organization_id=org_id,
         changed_by_user_id=user_id,
-        event={
-            "action": "updated",
-            "entity_type": "virtual_key",
-            "entity_id": str(key_id),
-            "entity_name": record.get("name", ""),
-        },
+        event=config_event("virtual_key", "updated", record.get("name", ""), key_id),
     )
 
     return {"status": "success", "data": record}
@@ -265,7 +257,6 @@ async def update_key(key_id: int, request: Request):
 
 @router.post("/{key_id}/revoke", status_code=status.HTTP_200_OK)
 async def revoke_key(key_id: int, request: Request):
-    verify_internal_key(request)
     require_admin(request)
 
     org_id = get_org_id(request)
@@ -281,11 +272,7 @@ async def revoke_key(key_id: int, request: Request):
     await notify_config_change(
         organization_id=org_id,
         changed_by_user_id=user_id,
-        event={
-            "action": "revoked",
-            "entity_type": "virtual_key",
-            "entity_id": str(key_id),
-        },
+        event=config_event("virtual_key", "revoked", revoked["name"], key_id),
     )
 
     return {"status": "success", "message": "Virtual key revoked"}
@@ -297,7 +284,6 @@ async def revoke_key(key_id: int, request: Request):
 
 @router.delete("/{key_id}", status_code=status.HTTP_200_OK)
 async def delete_key(key_id: int, request: Request):
-    verify_internal_key(request)
     require_admin(request)
 
     org_id = get_org_id(request)
@@ -313,11 +299,7 @@ async def delete_key(key_id: int, request: Request):
     await notify_config_change(
         organization_id=org_id,
         changed_by_user_id=user_id,
-        event={
-            "action": "deleted",
-            "entity_type": "virtual_key",
-            "entity_id": str(key_id),
-        },
+        event=config_event("virtual_key", "deleted", deleted["name"], key_id),
     )
 
     return {"status": "success", "message": "Virtual key deleted"}
@@ -333,7 +315,6 @@ async def reset_all_virtual_key_budgets(request: Request):
     from sqlalchemy import text
     from database.db import get_db
 
-    verify_internal_key(request)
     async with get_db() as db:
         await db.execute(
             text("UPDATE ai_gateway_virtual_keys SET current_spend_usd = 0, updated_at = NOW()")

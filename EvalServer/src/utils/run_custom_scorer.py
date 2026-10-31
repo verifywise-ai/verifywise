@@ -7,10 +7,11 @@ to actual execution using OpenAI or other LLM providers.
 Supports multiple providers: OpenAI, Anthropic, Mistral, xAI, Google (Gemini), etc.
 """
 
+import math
 import re
 import os
 import json
-from typing import Dict, Any, List, Optional, Tuple, Union
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple, Union
 from dataclasses import dataclass
 
 from utils.error_detection import redact_secrets
@@ -31,50 +32,40 @@ class ScorerResult:
     score: float
     raw_response: str
     passed: bool
+    # The pass line `passed` is decided against. Without a threshold every score passes,
+    # and this is the lowest score the scorer can return (0, or below on such a scale).
+    threshold: Optional[float] = None
     reason: Optional[str] = None
+    # Set when the judge could not be called; label, score and passed are placeholders then.
+    error: Optional[str] = None
     prompt_tokens: Optional[int] = None
     completion_tokens: Optional[int] = None
     total_tokens: Optional[int] = None
+    # LiteLLM's price for the judge call (gateway mode only)
+    cost_usd: Optional[float] = None
 
 
 _PLACEHOLDER_PATTERN = re.compile(r"{{\s*([a-zA-Z0-9_]+)\s*}}")
 
 
-# Provider detection and configuration
+# Env var holding each provider's key when the scorer config carries none. Cloud
+# providers run through the AI Gateway; only self-hosted calls its endpoint directly.
 PROVIDER_CONFIG = {
-    "openai": {
-        "env_var": "OPENAI_API_KEY",
-        "base_url": None,  # Use default
-    },
-    "anthropic": {
-        "env_var": "ANTHROPIC_API_KEY",
-        "base_url": "https://api.anthropic.com/v1",
-    },
-    "mistral": {
-        "env_var": "MISTRAL_API_KEY",
-        "base_url": "https://api.mistral.ai/v1",
-    },
-    "xai": {
-        "env_var": "XAI_API_KEY",
-        "base_url": "https://api.x.ai/v1",
-    },
-    "google": {
-        "env_var": "GEMINI_API_KEY",
-        "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
-    },
-    "gemini": {
-        "env_var": "GEMINI_API_KEY",
-        "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
-    },
-    "huggingface": {
-        "env_var": "HF_API_KEY",
-        "base_url": "https://api-inference.huggingface.co/v1",
-    },
-    "self-hosted": {
-        "env_var": None,
-        "base_url": None,
-    },
+    "openai": {"env_var": "OPENAI_API_KEY"},
+    "anthropic": {"env_var": "ANTHROPIC_API_KEY"},
+    "mistral": {"env_var": "MISTRAL_API_KEY"},
+    "xai": {"env_var": "XAI_API_KEY"},
+    # run_evaluation writes the org's Google key to GOOGLE_API_KEY
+    "google": {"env_var": "GOOGLE_API_KEY"},
+    "gemini": {"env_var": "GOOGLE_API_KEY"},
+    "openrouter": {"env_var": "OPENROUTER_API_KEY"},
+    "huggingface": {"env_var": "HF_API_KEY"},
+    "self-hosted": {"env_var": None},
+    "ollama": {"env_var": None},
 }
+
+# Providers whose judge is the user's own server, called directly (never the gateway)
+SELF_HOSTED_PROVIDERS = ("self-hosted", "ollama")
 
 def get_provider_from_config(judge_model_config: Any) -> Tuple[str, Optional[str], Optional[str]]:
     """
@@ -102,52 +93,55 @@ def get_provider_client(
     provider: str,
     endpoint_url: Optional[str] = None,
     api_key: Optional[str] = None,
+    env_fallback: bool = True,
 ) -> Tuple[Any, str]:
     """
-    Get the appropriate API client and key for a provider.
+    The client and key for a scorer's judge.
 
-    Args:
-        provider: Provider name (e.g., "openai", "mistral", "self-hosted")
-        endpoint_url: Optional base URL override (required for self-hosted)
-        api_key: Optional API key override from config
-
-    Returns:
-        Tuple of (OpenAI client, api_key)
+    Self-hosted gets an OpenAI-compatible client for its endpoint. A cloud provider gets
+    no client (None): it runs through the AI Gateway, which must be configured.
 
     Raises:
-        RuntimeError: If API key is not set for the provider
+        RuntimeError: missing endpoint, missing key, or no AI Gateway for a cloud provider
     """
-    if OpenAI is None:
-        raise RuntimeError("OpenAI package not installed")
-
-    if provider == "self-hosted":
+    if provider in SELF_HOSTED_PROVIDERS:
+        if OpenAI is None:
+            raise RuntimeError("OpenAI package not installed")
+        if not endpoint_url and provider == "ollama":
+            endpoint_url = "http://localhost:11434"
         if not endpoint_url:
             raise RuntimeError("Self-hosted provider requires 'endpointUrl' in judgeModel config")
-        # Ensure the base URL ends with /v1 for OpenAI-compatible APIs (e.g. Ollama)
-        base = endpoint_url.rstrip("/")
-        if not base.endswith("/v1"):
-            base += "/v1"
+        from utils.safe_outbound_url import (
+            UnsafeOutboundUrlError,
+            openai_base_url,
+            openai_compatible_client,
+        )
+
+        try:
+            base = openai_base_url(endpoint_url)
+        except UnsafeOutboundUrlError as e:
+            raise RuntimeError(f"Self-hosted endpoint refused: {e}") from None
         resolved_key = api_key or "not-needed"
-        client = OpenAI(api_key=resolved_key, base_url=base)
-        return client, resolved_key
+        return openai_compatible_client(base, resolved_key), resolved_key
 
-    config = PROVIDER_CONFIG.get(provider, PROVIDER_CONFIG["openai"])
-    env_var = config["env_var"]
-    base_url = config["base_url"]
+    from utils.gateway_litellm_client import gateway_mode_enabled
 
-    resolved_key = api_key or os.getenv(env_var)
+    if not gateway_mode_enabled():
+        raise RuntimeError(f"Provider '{provider}' runs through the AI Gateway; set AI_GATEWAY_INTERNAL_KEY")
+    env_var = PROVIDER_CONFIG.get(provider, PROVIDER_CONFIG["openai"])["env_var"]
+    # Inside a run the env holds that run's own keys; in the server process it must not be read
+    resolved_key = api_key or (os.getenv(env_var) if env_fallback else None)
     if not resolved_key:
+        if not env_fallback:
+            raise RuntimeError(
+                f"No saved API key for provider '{provider}'. "
+                f"Please save your {provider.upper()} API key in LLM Evals Settings."
+            )
         raise RuntimeError(
             f"No API key found for provider '{provider}' (expected env var: {env_var}). "
             f"Please save your {provider.upper()} API key in LLM Evals Settings."
         )
-
-    if base_url:
-        client = OpenAI(api_key=resolved_key, base_url=base_url)
-    else:
-        client = OpenAI(api_key=resolved_key)
-
-    return client, resolved_key
+    return None, resolved_key
 
 
 def render_template(template: str, values: Dict[str, str]) -> str:
@@ -245,12 +239,50 @@ def label_to_score(label: str, choice_scores: List[Dict[str, Any]]) -> float:
     return 0.0
 
 
+def _parse_threshold(value: Any, scorer_name: str) -> float:
+    """A scorer's defaultThreshold as a float, defaulting to 0.5.
+
+    A missing (None) threshold coalesces to 0.5 — the default the scorer UI,
+    the auto-provisioned judge scorer, and run_evaluation all use — so a judge's
+    explicit FAIL is never reported as passed (issue #4783).
+    Numeric strings are accepted. Any other invalid value falls back to 0.5 with a
+    warning, so the row is still judged instead of failing as a judge-model error.
+    """
+    if value is None:
+        return 0.5
+    if isinstance(value, (int, float, str)) and not isinstance(value, bool):
+        try:
+            number = float(value)
+            if math.isfinite(number):  # rejects NaN and infinity
+                return number
+        except (ValueError, OverflowError):
+            pass
+    print(f"⚠️  Scorer {str(scorer_name)[:80]} has an invalid threshold {repr(value)[:80]}; using 0.5")
+    return 0.5
+
+
+
+# The UI's modelParams are camelCase; judgeModel.params and the runner use snake_case
+_PARAM_ALIASES = {"maxTokens": "max_tokens", "topP": "top_p"}
+
+
+def _judge_params(*sources: Any) -> Dict[str, Any]:
+    """Judge sampling params from each source in turn, later ones winning."""
+    params: Dict[str, Any] = {}
+    for source in sources:
+        if isinstance(source, dict):
+            for key, value in source.items():
+                if value is not None:
+                    params[_PARAM_ALIASES.get(key, key)] = value
+    return params
+
 async def run_custom_scorer(
     scorer_config: Dict[str, Any],
     input_text: str,
     output_text: str,
     expected_text: str = "",
     metadata: Optional[Dict[str, Any]] = None,
+    key_resolver: Optional[Callable[[str], Awaitable[Optional[str]]]] = None,
 ) -> ScorerResult:
     """
     Execute a custom LLM judge scorer.
@@ -266,6 +298,8 @@ async def run_custom_scorer(
         output_text: The model's actual output to evaluate
         expected_text: Optional expected/reference output
         metadata: Optional additional context
+        key_resolver: For callers in the server process: returns the org's saved key for a
+            provider. When given, the server environment is never read for a key.
         
     Returns:
         ScorerResult with label, score, and pass/fail status
@@ -292,7 +326,9 @@ async def run_custom_scorer(
         judge_model_config: Dict[str, Any] = {
             "name": raw_judge_model.get("name") or config.get("model"),
             "provider": raw_judge_model.get("provider") or config.get("provider"),
-            "params": raw_judge_model.get("params") or config.get("modelParams") or {},
+            # The UI saved only top_p under judgeModel.params; temperature and max
+            # tokens live in modelParams, so merge both (nested wins)
+            "params": _judge_params(config.get("modelParams"), raw_judge_model.get("params")),
             "endpointUrl": raw_judge_model.get("endpointUrl") or config.get("endpointUrl"),
             "apiKey": raw_judge_model.get("apiKey") or config.get("apiKey"),
         }
@@ -300,7 +336,7 @@ async def run_custom_scorer(
         judge_model_config = {
             "name": raw_judge_model,
             "provider": config.get("provider"),
-            "params": config.get("modelParams") or {},
+            "params": _judge_params(config.get("modelParams")),
             "endpointUrl": config.get("endpointUrl"),
             "apiKey": config.get("apiKey"),
         }
@@ -308,7 +344,7 @@ async def run_custom_scorer(
         judge_model_config = {
             "name": config.get("model"),
             "provider": config.get("provider"),
-            "params": config.get("modelParams") or {},
+            "params": _judge_params(config.get("modelParams")),
             "endpointUrl": config.get("endpointUrl"),
             "apiKey": config.get("apiKey"),
         }
@@ -326,13 +362,17 @@ async def run_custom_scorer(
     provider, endpoint_url, config_api_key = get_provider_from_config(judge_model_config)
     print(f"   🔍 Using provider: {provider} for model: {model_name}")
     
-    # Get temperature and max_tokens from params, with defaults
+    # Get temperature, max_tokens and top_p from params, with defaults
     temperature = model_params.get("temperature", 0.0)
     max_tokens = model_params.get("max_tokens", 256)
+    top_p = model_params.get("top_p")
     
     messages_templates = config.get("messages", [])
     choice_scores = config.get("choiceScores", [])
-    threshold = scorer_config.get("defaultThreshold", 0.5)
+    threshold = _parse_threshold(scorer_config.get("defaultThreshold", 0.5), scorer_name)
+    # The pass line stored with every result. A scorer with no configured threshold
+    # is judged against the same 0.5 default used everywhere else.
+    pass_line = threshold
     
     if not messages_templates:
         raise ValueError(f"Scorer {scorer_name} has no message templates configured")
@@ -359,38 +399,49 @@ async def run_custom_scorer(
     
     # Get the appropriate client for this provider
     try:
-        client, api_key = get_provider_client(provider, endpoint_url=endpoint_url, api_key=config_api_key)
-        print(f"   ✅ Using {provider.upper()} API client")
+        if key_resolver is not None and not config_api_key and provider not in SELF_HOSTED_PROVIDERS:
+            config_api_key = await key_resolver(provider)
+        client, api_key = get_provider_client(
+            provider, endpoint_url=endpoint_url, api_key=config_api_key, env_fallback=key_resolver is None
+        )
+        print(f"   ✅ Judge provider ready: {provider}")
     except RuntimeError as e:
+        # Stored in the experiment's results, shown to the organization.
+        init_error = f"Failed to initialize model: {redact_secrets(str(e))}"
         return ScorerResult(
             scorer_id=scorer_id,
             scorer_name=scorer_name,
             label="ERROR",
             score=0.0,
-            # Stored in the experiment's results, shown to the organization.
-            raw_response=f"Failed to initialize model: {redact_secrets(str(e))}",
+            raw_response=init_error,
             passed=False,
+            threshold=pass_line,
+            error=init_error,
         )
     
     try:
-        from utils.gateway_litellm_client import gateway_chat_completion_sync, gateway_mode_enabled, to_litellm_model
+        from utils.gateway_litellm_client import gateway_completion_sync, to_litellm_model, top_p_to_send
 
-        if provider != "self-hosted" and gateway_mode_enabled():
+        if provider not in SELF_HOSTED_PROVIDERS:
             litellm_model = to_litellm_model(provider, model_name)
-            raw_response = gateway_chat_completion_sync(
+            completion = gateway_completion_sync(
                 litellm_model,
                 rendered_messages,
                 api_key,
                 max_tokens=max_tokens,
                 temperature=temperature,
-            ).strip()
-            usage = None
+                top_p=top_p,
+            )
+            raw_response = completion.text.strip()
+            # Same token attributes as the OpenAI SDK's usage object, plus LiteLLM's cost
+            usage = completion
         else:
             response = client.chat.completions.create(
                 model=model_name,
                 messages=rendered_messages,
                 temperature=temperature,
                 max_tokens=max_tokens,
+                **({"top_p": top_p} if top_p_to_send(top_p) is not None else {}),
             )
 
             raw_response = response.choices[0].message.content.strip()
@@ -414,7 +465,7 @@ async def run_custom_scorer(
         # Extract label and map to score
         label = json_label if json_label else extract_label(raw_response, choice_scores)
         score = label_to_score(label, choice_scores)
-        passed = score >= threshold if threshold is not None else True
+        passed = score >= threshold
 
         return ScorerResult(
             scorer_id=scorer_id,
@@ -423,21 +474,26 @@ async def run_custom_scorer(
             score=score,
             raw_response=raw_response,
             passed=passed,
+            threshold=pass_line,
             reason=extracted_reason,
             prompt_tokens=getattr(usage, "prompt_tokens", None),
             completion_tokens=getattr(usage, "completion_tokens", None),
             total_tokens=getattr(usage, "total_tokens", None),
+            cost_usd=getattr(usage, "cost_usd", None),
         )
-        
+
     except Exception as e:
         # Return a failed result on error
+        call_error = f"Error calling judge model ({provider}): {redact_secrets(str(e))}"
         return ScorerResult(
             scorer_id=scorer_id,
             scorer_name=scorer_name,
             label="ERROR",
             score=0.0,
-            raw_response=f"Error calling judge model ({provider}): {redact_secrets(str(e))}",
+            raw_response=call_error,
             passed=False,
+            threshold=pass_line,
+            error=call_error,
         )
 
 

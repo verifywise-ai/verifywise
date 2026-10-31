@@ -19,12 +19,12 @@ import StandardModal from "../Modals/StandardModal";
 import { SearchBox } from "../Search";
 import {
   RiskDatabaseModalProps,
-  SelectedRiskData,
   DEFAULT_VALUES,
   MODAL_CONFIG,
   TITLE_OF_COLUMNS,
   RiskData,
 } from "./types";
+import { RiskFormValues } from "../../../domain/types/riskForm.types";
 import { mapRiskCategories } from "../AddNewRiskForm/riskSuggestionMappers";
 import { filterRisks } from "./utils";
 
@@ -87,7 +87,7 @@ const RiskDatabaseModal = ({
     }
 
     try {
-      const mappedRiskData: SelectedRiskData = {
+      const mappedRiskData: RiskFormValues = {
         riskName: selectedRisk.Summary,
         actionOwner: DEFAULT_VALUES.ACTION_OWNER,
         aiLifecyclePhase: DEFAULT_VALUES.AI_LIFECYCLE_PHASE,

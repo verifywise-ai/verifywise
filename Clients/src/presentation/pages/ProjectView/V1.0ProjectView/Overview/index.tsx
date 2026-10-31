@@ -1,4 +1,4 @@
-import { Divider, Stack, Typography } from "@mui/material";
+import { Alert, Divider, Stack, Typography } from "@mui/material";
 import { columnStyle, rowStyle } from "./style";
 import { GroupStatsCard } from "../../../../components/Cards/GroupStatsCard";
 import { projectRiskSection, projectRiskSectionLink } from "../style";
@@ -23,8 +23,35 @@ import {
   Target as TargetIcon,
   Users as UsersIcon,
   Clock as ClockIcon,
+  Info as InfoIcon,
+  XCircle as XCircleIcon,
 } from "lucide-react";
 import { brand } from "../../../../themes/palette";
+import { singleTheme } from "../../../../themes";
+
+/**
+ * A use case whose approval request is pending or rejected has every tab in the
+ * view disabled, so the overview says why — otherwise the screen just looks
+ * broken. Keyed by the project's approval_status.
+ */
+const approvalNotices = {
+  pending: {
+    severity: "info" as const,
+    palette: singleTheme.alertStyles.info,
+    Icon: InfoIcon,
+    // One literal, not a concatenation: the i18n audit and the DOM translator
+    // both key off the whole sentence, and a split string hides the rest of it.
+    // prettier-ignore
+    message: "This use case is waiting for approval. You can read this overview, but the other tabs stay disabled until the request is approved or rejected, and the frameworks picked at creation are added only once it is approved. Follow the request under Approval requests in the header.",
+  },
+  rejected: {
+    severity: "error" as const,
+    palette: singleTheme.alertStyles.error,
+    Icon: XCircleIcon,
+    // prettier-ignore
+    message: "This use case was rejected, so it can no longer be used. The tabs stay disabled and the frameworks picked at creation were never added. See the rejection comment under Approval requests in the header.",
+  },
+};
 
 const VWProjectOverview = ({ project }: { project?: Project }) => {
   const formatDate = useFormattedDate();
@@ -239,8 +266,30 @@ const VWProjectOverview = ({ project }: { project?: Project }) => {
 
   const titleIso42001 = ["Clauses", "Annexes"];
 
+  const approvalNotice =
+    project.approval_status === "pending" || project.approval_status === "rejected"
+      ? approvalNotices[project.approval_status]
+      : null;
+
   return (
     <Stack sx={{ width: "100%" }}>
+      {approvalNotice && (
+        <Alert
+          severity={approvalNotice.severity}
+          icon={<approvalNotice.Icon size={20} color={approvalNotice.palette.text} />}
+          sx={{
+            width: "100%",
+            mb: 10,
+            alignItems: "center",
+            backgroundColor: approvalNotice.palette.bg,
+            border: `1px solid ${approvalNotice.palette.border}`,
+          }}
+        >
+          <Typography color={approvalNotice.palette.text} fontSize={13}>
+            {approvalNotice.message}
+          </Typography>
+        </Alert>
+      )}
       {/* Main Content */}
       <Stack className="vw-project-overview" sx={{ width: "100%" }}>
         <Stack className="vw-project-overview-row" sx={rowStyle}>
@@ -301,7 +350,7 @@ const VWProjectOverview = ({ project }: { project?: Project }) => {
             <>
               {projectFrameworkId && (
                 <Stack sx={columnStyle}>
-                  <Typography sx={projectRiskSection}>EU AI Act Completion Status</Typography>
+                  <Typography sx={projectRiskSection}>EU AI Act completion status</Typography>
                   <GroupStatsCard
                     completed={completedEuActNumbers}
                     total={totalEuActNumbers}
@@ -312,7 +361,7 @@ const VWProjectOverview = ({ project }: { project?: Project }) => {
               )}
               {projectFrameworkId2 && (
                 <Stack sx={columnStyle}>
-                  <Typography sx={projectRiskSection}>ISO 42001 Completion Status</Typography>
+                  <Typography sx={projectRiskSection}>ISO 42001 completion status</Typography>
                   <GroupStatsCard
                     completed={completedIso42001Numbers}
                     total={totalIso42001Numbers}
@@ -323,7 +372,7 @@ const VWProjectOverview = ({ project }: { project?: Project }) => {
               )}
               {genericFrameworkProgress.map((fw) => (
                 <Stack key={fw.framework_id} sx={columnStyle}>
-                  <Typography sx={projectRiskSection}>{`${fw.name} Completion Status`}</Typography>
+                  <Typography sx={projectRiskSection}>{`${fw.name} completion status`}</Typography>
                   <GroupStatsCard
                     completed={[fw.done]}
                     total={[fw.total]}

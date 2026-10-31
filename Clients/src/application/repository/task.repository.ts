@@ -24,8 +24,11 @@ export async function getAllTasks({
   sort_order = "DESC",
   page = "1",
   page_size = "25",
+  suppressGlobalErrorToast,
 }: {
   signal?: AbortSignal;
+  /** Skip the global error toast; the caller shows its own message. */
+  suppressGlobalErrorToast?: boolean;
   status?: TaskStatus[];
   priority?: TaskPriority[];
   category?: string[];
@@ -69,6 +72,7 @@ export async function getAllTasks({
 
   const response = await apiServices.get(url, {
     signal,
+    ...(suppressGlobalErrorToast ? { suppressGlobalErrorToast } : {}),
   });
 
   return response.data;

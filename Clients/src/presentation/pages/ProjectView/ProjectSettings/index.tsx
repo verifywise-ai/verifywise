@@ -48,6 +48,14 @@ import {
 import { useAuth } from "../../../../application/hooks/useAuth";
 import { AiRiskClassification } from "../../../../domain/enums/aiRiskClassification.enum";
 import { HighRiskRole } from "../../../../domain/enums/highRiskRole.enum";
+import HighRiskRolesField from "../../../components/Inputs/HighRiskRolesField";
+import {
+  classificationRoles,
+  formatHighRiskRoles,
+  highRiskRolesError,
+  highRiskRolesPayload,
+  projectHighRiskRoles,
+} from "../../../../application/utils/highRiskRoles";
 import RiskAnalysisModal from "../RiskAnalysisModal";
 import type { ClassificationResult } from "../../../../domain/types/euAiActClassification";
 import { getAutocompleteStyles } from "../../../utils/inputStyles";
@@ -68,11 +76,6 @@ const geographyItems = [
   { _id: 4, name: "South America" },
   { _id: 5, name: "Asia" },
   { _id: 6, name: "Africa" },
-];
-
-const highRiskRoleItems = [
-  { _id: 1, name: HighRiskRole.DEPLOYER },
-  { _id: 2, name: HighRiskRole.PROVIDER },
 ];
 
 const useCaseCategoryItems = [
@@ -137,7 +140,7 @@ interface FormValues {
   members: number[];
   startDate: string;
   riskClassification: number | null;
-  typeOfHighRiskRole: number | null;
+  highRiskRoles: HighRiskRole[];
   geography: number;
   targetIndustry: string;
   description: string;
@@ -161,7 +164,7 @@ interface FormErrors {
   startDate?: string;
   members?: string;
   riskClassification?: string;
-  typeOfHighRiskRole?: string;
+  highRiskRoles?: string;
   monitoredRegulationsAndStandards?: string;
   geography?: string;
   targetIndustry?: string;
@@ -180,7 +183,7 @@ const initialState: FormValues = {
   members: [],
   startDate: "",
   riskClassification: null,
-  typeOfHighRiskRole: null,
+  highRiskRoles: [],
   geography: 1,
   targetIndustry: "",
   description: "",
@@ -230,6 +233,10 @@ const ProjectSettings = React.memo(
     const [showCustomizableSkeleton, setShowCustomizableSkeleton] = useState<boolean>(false);
     const initialValuesRef = useRef<FormValues>({ ...initialState });
     const customFieldsRef = useRef<CustomFieldsSectionHandle | null>(null);
+    // Unsaved custom field values; Save writes them after the project itself.
+    const [customFieldsDirty, setCustomFieldsDirty] = useState(false);
+    // Set for the whole save, so a double-click cannot send it twice.
+    const [isSaving, setIsSaving] = useState(false);
     const isModified = useMemo(() => {
       if (!initialValuesRef.current.projectTitle) return false;
 
@@ -242,7 +249,8 @@ const ProjectSettings = React.memo(
         JSON.stringify(values.members) !== JSON.stringify(initialValuesRef.current.members) ||
         values.startDate !== initialValuesRef.current.startDate ||
         values.riskClassification !== initialValuesRef.current.riskClassification ||
-        values.typeOfHighRiskRole !== initialValuesRef.current.typeOfHighRiskRole ||
+        formatHighRiskRoles(values.highRiskRoles) !==
+          formatHighRiskRoles(initialValuesRef.current.highRiskRoles) ||
         values.geography !== initialValuesRef.current.geography ||
         values.targetIndustry !== initialValuesRef.current.targetIndustry ||
         values.description !== initialValuesRef.current.description ||
@@ -267,8 +275,9 @@ const ProjectSettings = React.memo(
 
     const isSaveDisabled = useMemo(() => {
       if (showCustomizableSkeleton) return true;
+      if (isSaving) return true;
       if (isFrameworkOperationInProgress) return true;
-      if (!isModified) return true;
+      if (!isModified && !customFieldsDirty) return true;
       if (customFieldsGate.blocked) return true;
 
       const hasErrors = Object.values(errors).some((error) => error && error.length > 0);
@@ -276,6 +285,8 @@ const ProjectSettings = React.memo(
       return hasErrors;
     }, [
       isModified,
+      customFieldsDirty,
+      isSaving,
       errors,
       showCustomizableSkeleton,
       isFrameworkOperationInProgress,
@@ -334,11 +345,7 @@ const ProjectSettings = React.memo(
               (item) =>
                 item.name.toLowerCase() === (project.ai_risk_classification || "").toLowerCase(),
             )?._id || null,
-          typeOfHighRiskRole:
-            highRiskRoleItems.find(
-              (item) =>
-                item.name.toLowerCase() === (project.type_of_high_risk_role || "").toLowerCase(),
-            )?._id || null,
+          highRiskRoles: projectHighRiskRoles(project),
           geography: project.geography ?? 1,
           targetIndustry: project.target_industry ?? "",
           description: project.description ?? "",
@@ -573,7 +580,7 @@ const ProjectSettings = React.memo(
         } else if (response.status === 404) {
           setAlert({
             variant: "error",
-            body: "Framework not found or could not be removed from the project",
+            body: "Framework not found or could not be removed from the use case",
             isToast: true,
             visible: true,
           });
@@ -646,9 +653,9 @@ const ProjectSettings = React.memo(
           newErrors.riskClassification =
             "AI risk classification is required when EU AI Act is selected.";
         }
-        if (!values.typeOfHighRiskRole) {
-          newErrors.typeOfHighRiskRole =
-            "Type of high risk role is required when EU AI Act is selected.";
+        const rolesError = highRiskRolesError(values.highRiskRoles, hasEuAiAct);
+        if (rolesError) {
+          newErrors.highRiskRoles = rolesError;
         }
       }
 
@@ -658,9 +665,20 @@ const ProjectSettings = React.memo(
 
     function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
       event.preventDefault();
-      if (customFieldsGate.blocked) return;
+      if (customFieldsGate.blocked || isSaving) return;
+      // Only custom field values changed: save them without re-sending the
+      // project, which would bump last_updated and require the project form
+      // to pass validation.
+      if (!isModified) {
+        if (customFieldsDirty) {
+          setIsSaving(true);
+          saveCustomFieldsOnly().finally(() => setIsSaving(false));
+        }
+        return;
+      }
       if (validateForm()) {
-        handleSaveConfirm();
+        setIsSaving(true);
+        handleSaveConfirm().finally(() => setIsSaving(false));
       } else {
         setAlert({
           variant: "error",
@@ -691,15 +709,31 @@ const ProjectSettings = React.memo(
     const handleCloseDeleteDialog = useCallback((): void => {
       setIsDeleteModalOpen(false);
     }, []);
+    const saveCustomFieldsOnly = useCallback(async () => {
+      const pid = Number(projectId);
+      if (!Number.isFinite(pid) || pid <= 0 || !customFieldsRef.current) return;
+      try {
+        await customFieldsRef.current.flush(pid);
+      } catch (cfError) {
+        // flush() shows the error inline in the custom fields card.
+        console.error("Custom field values failed to save:", cfError);
+        return;
+      }
+      setAlert({
+        variant: "success",
+        body: "Use case updated successfully",
+        isToast: true,
+        visible: true,
+      });
+      setTimeout(() => setAlert(null), 2000);
+    }, [projectId]);
+
     // saves the project
     const handleSaveConfirm = useCallback(async () => {
       const hasEuAiAct = values.monitoredRegulationsAndStandards.some((fw) => fw._id === 1);
       const selectedRiskClass = hasEuAiAct
         ? riskClassificationItems.find((item) => item._id === values.riskClassification)?.name ||
           null
-        : null;
-      const selectedHighRiskRole = hasEuAiAct
-        ? highRiskRoleItems.find((item) => item._id === values.typeOfHighRiskRole)?.name || null
         : null;
       const selectedStatus =
         projectStatusItems.find((item) => item._id === values.status)?.name || "";
@@ -717,7 +751,7 @@ const ProjectSettings = React.memo(
           members: values.members.map(String),
           start_date: values.startDate,
           ai_risk_classification: selectedRiskClass,
-          type_of_high_risk_role: selectedHighRiskRole,
+          high_risk_roles: highRiskRolesPayload(values.highRiskRoles, hasEuAiAct),
           goal: values.goal,
           geography: selectedGeography,
           target_industry: values.targetIndustry,
@@ -761,7 +795,7 @@ const ProjectSettings = React.memo(
 
           setAlert({
             variant: "success",
-            body: "Project updated successfully",
+            body: "Use case updated successfully",
             isToast: true,
             visible: true,
           });
@@ -794,8 +828,8 @@ const ProjectSettings = React.memo(
           variant: isError ? "error" : "success",
           title: isError ? "Error" : "Success",
           body: isError
-            ? "Failed to delete project. Please try again."
-            : "Project deleted successfully.",
+            ? "Failed to delete use case. Please try again."
+            : "Use case deleted successfully.",
           isToast: true,
           visible: true,
         });
@@ -820,7 +854,7 @@ const ProjectSettings = React.memo(
         setAlert({
           variant: "error",
           title: "Error",
-          body: "Failed to delete project. Please try again.",
+          body: "Failed to delete use case. Please try again.",
           isToast: true,
           visible: true,
         });
@@ -941,9 +975,9 @@ const ProjectSettings = React.memo(
                 </Box>
               </Box>
 
-              {/* Project Details Card */}
+              {/* Use case details card */}
               <Box sx={styles.card}>
-                <Typography sx={styles.sectionTitle}>Project Details</Typography>
+                <Typography sx={styles.sectionTitle}>Use case details</Typography>
                 <Box
                   sx={{
                     display: "grid",
@@ -1410,10 +1444,10 @@ const ProjectSettings = React.memo(
                         />
                       </Stack>
 
-                      {/* Type of high risk role Row */}
+                      {/* High-risk roles Row */}
                       <Box>
                         <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
-                          Type of high risk role *
+                          High-risk roles *
                         </Typography>
                         <Typography sx={{ fontSize: 12, color: "#888", whiteSpace: "nowrap" }}>
                           If you are not sure about the high risk role,&nbsp;
@@ -1425,17 +1459,16 @@ const ProjectSettings = React.memo(
                           </VWLink>
                         </Typography>
                       </Box>
-                      <Select
-                        id="risk-classification-input"
+                      <HighRiskRolesField
+                        id="high-risk-roles-input"
                         label=""
-                        value={values?.typeOfHighRiskRole || ""}
-                        onChange={handleOnSelectChange("typeOfHighRiskRole")}
-                        items={highRiskRoleItems}
-                        sx={{
-                          width: 400,
-                          backgroundColor: theme.palette.background.main,
+                        value={values.highRiskRoles}
+                        onChange={(roles) => {
+                          setValues((prev) => ({ ...prev, highRiskRoles: roles }));
+                          setErrors((prev) => ({ ...prev, highRiskRoles: "" }));
                         }}
-                        error={errors.typeOfHighRiskRole}
+                        error={errors.highRiskRoles}
+                        sx={{ width: 400 }}
                       />
                     </>
                   )}
@@ -1542,6 +1575,7 @@ const ProjectSettings = React.memo(
                   entityType="project"
                   entityId={parseInt(projectId, 10) || null}
                   onPendingChange={customFieldsGate.onPendingChange}
+                  onDirtyChange={setCustomFieldsDirty}
                 />
               </Box>
 
@@ -1609,9 +1643,12 @@ const ProjectSettings = React.memo(
 
         {isDeleteModalOpen && (
           <ConfirmationModal
-            title="Confirm delete"
+            title="Delete this use case?"
             body={
-              <Typography fontSize={13}>Are you sure you want to delete the use case?</Typography>
+              <Typography fontSize={13}>
+                This deletes the use case, its framework progress and its files. Its risks stay in
+                the risk register but are no longer linked to it. This cannot be undone.
+              </Typography>
             }
             cancelText="Cancel"
             proceedText="Delete"
@@ -1653,25 +1690,25 @@ const ProjectSettings = React.memo(
               console.error(`Unknown classification: ${result.level}`);
               return;
             }
-            // The server stored the level, and the role unless the result has
+            // The server stored the level, and the roles unless the result has
             // none, so both become the saved baseline and the form stays clean.
-            const role = highRiskRoleItems.find((item) => item.name === result.role);
+            const roles = classificationRoles(result);
             const saved = {
               riskClassification: level._id,
-              typeOfHighRiskRole: role?._id ?? initialValuesRef.current.typeOfHighRiskRole,
+              highRiskRoles: roles.length > 0 ? roles : initialValuesRef.current.highRiskRoles,
             };
             initialValuesRef.current = { ...initialValuesRef.current, ...saved };
-            // Same as picking them from the dropdowns: set the values and clear any
+            // Same as picking them in the form: set the values and clear any
             // earlier "required" error on those fields.
             setValues((prev) => ({
               ...prev,
               riskClassification: saved.riskClassification,
-              ...(role ? { typeOfHighRiskRole: role._id } : {}),
+              ...(roles.length > 0 ? { highRiskRoles: roles } : {}),
             }));
             setErrors((prevErrors) => ({
               ...prevErrors,
               riskClassification: "",
-              ...(role ? { typeOfHighRiskRole: "" } : {}),
+              ...(roles.length > 0 ? { highRiskRoles: "" } : {}),
             }));
             // Refresh the rest of the use case view (header, overview), as a normal Save does.
             triggerRefresh(true);

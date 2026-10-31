@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { triggerBrowserDownload, extractFilenameFromHeaders } from "../browserDownload.utils";
+import { triggerBrowserDownload, filenameFromContentDisposition } from "../browserDownload.utils";
 
 describe("triggerBrowserDownload", () => {
   beforeEach(() => {
@@ -51,28 +51,30 @@ describe("triggerBrowserDownload", () => {
   });
 });
 
-describe("extractFilenameFromHeaders", () => {
-  it("extracts filename from Content-Disposition header", () => {
-    const headers = new Headers({
-      "Content-Disposition": 'attachment; filename="report.pdf"',
-    });
-    expect(extractFilenameFromHeaders(headers)).toBe("report.pdf");
+describe("filenameFromContentDisposition", () => {
+  it("reads a quoted filename", () => {
+    expect(
+      filenameFromContentDisposition('attachment; filename="audit-ledger-2026-10-11.csv"', "x"),
+    ).toBe("audit-ledger-2026-10-11.csv");
   });
 
-  it("returns fallback when Content-Disposition header is missing", () => {
-    const headers = new Headers();
-    expect(extractFilenameFromHeaders(headers, "default.txt")).toBe("default.txt");
+  it("reads an unquoted filename", () => {
+    expect(filenameFromContentDisposition("attachment; filename=report.docx", "x")).toBe(
+      "report.docx",
+    );
   });
 
-  it("returns 'download' as default fallback", () => {
-    const headers = new Headers();
-    expect(extractFilenameFromHeaders(headers)).toBe("download");
+  it("prefers an RFC 5987 encoded filename", () => {
+    expect(
+      filenameFromContentDisposition(
+        "attachment; filename=\"r.csv\"; filename*=UTF-8''r%C3%A9sum%C3%A9.csv",
+        "x",
+      ),
+    ).toBe("résumé.csv");
   });
 
-  it("returns fallback when header has no quoted filename", () => {
-    const headers = new Headers({
-      "Content-Disposition": "attachment; filename=noQuotes",
-    });
-    expect(extractFilenameFromHeaders(headers, "fallback.txt")).toBe("fallback.txt");
+  it("returns the fallback when the header is missing or has no filename", () => {
+    expect(filenameFromContentDisposition(undefined, "fallback.csv")).toBe("fallback.csv");
+    expect(filenameFromContentDisposition("attachment", "fallback.csv")).toBe("fallback.csv");
   });
 });

@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { FormControlLabel, Radio, RadioGroup } from "@mui/material";
+import { Stack } from "@mui/material";
+import Radio from "../Inputs/Radio";
 import { CustomizableButton } from "../button/customizable-button";
 import Field from "../Inputs/Field";
 import { useTranslation } from "../../../application/hooks/useTranslation";
@@ -72,23 +73,29 @@ export default function DismissReasonForm({
         Named after the risk: several of these can be on screen at once in a
         long list, and "Other" alone is not a distinguishable label.
       */}
-      <RadioGroup
+      {/* useFlexGap: Stack's margin spacing would reset each Radio's -5px
+          margin, which offsets its hover padding. */}
+      <Stack
+        spacing="16px"
+        useFlexGap
+        role="radiogroup"
         aria-label={fill(t("Why are you dismissing {name}?"), {
           name: link.relatedRisk.name ?? fill(t("risk {id}"), { id: link.relatedRisk.id }),
         })}
-        value={reason}
-        onChange={(event) => setReason(event.target.value as DismissReason)}
       >
         {REASONS_BY_RELATION[link.relationType].map((value) => (
-          <FormControlLabel
+          <Radio
             key={value}
+            id={`dismiss-reason-${link.id}-${value}`}
+            name={`dismiss-reason-${link.id}`}
+            size="small"
             value={value}
-            control={<Radio size="small" />}
-            label={DISMISS_REASON_LABELS[value]}
-            sx={{ "& .MuiFormControlLabel-label": { fontSize: 13 } }}
+            checked={reason === value}
+            onChange={() => setReason(value)}
+            title={DISMISS_REASON_LABELS[value]}
           />
         ))}
-      </RadioGroup>
+      </Stack>
 
       {reason === "other" && (
         <Field

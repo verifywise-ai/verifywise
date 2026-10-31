@@ -130,6 +130,21 @@ const PRODUCTION = {
     maxRequests: 1000,
     message: "Too many health-check requests from this IP, please slow down",
   },
+  virtualKeyProxy: {
+    windowMinutes: 1,
+    maxRequests: 3000,
+    message: "Too many requests from this IP, please slow down and retry",
+  },
+  intakeLiveChecksVisitor: {
+    windowMinutes: 1,
+    maxRequests: 10,
+    message: "Too many live check requests. Please try again in a minute.",
+  },
+  intakePrefillVisitor: {
+    windowMinutes: 10,
+    maxRequests: 3,
+    message: "Too many document uploads. Please try again in a few minutes.",
+  },
 } as const;
 
 /** The relaxed ceilings, which apply ONLY under an explicit dev/test NODE_ENV. */
@@ -149,6 +164,9 @@ const RELAXED_MAX_REQUESTS: Record<string, number> = {
   slackWorkspaceCreate: 10, // deliberately not relaxed
   riskSuggestionsAi: 10, // deliberately not relaxed — every call is a paid LLM request
   healthCheck: 100000,
+  virtualKeyProxy: 100000,
+  intakeLiveChecksVisitor: 10, // deliberately not relaxed — every call can spend a customer's LLM key
+  intakePrefillVisitor: 3, // deliberately not relaxed — every call can spend a customer's LLM key
 };
 
 describe("production rate limit configuration", () => {
@@ -169,14 +187,20 @@ describe("production rate limit configuration", () => {
     expect(actual.message).toBe(expected.message);
   });
 
-  it("keys every limiter by IP except MRM ingestion and AI risk suggestions", () => {
+  it("keys every limiter by IP except MRM ingestion, AI risk suggestions and intake AI", () => {
     // A custom keyGenerator is a security-relevant choice: it decides who shares a
-    // budget. MRM ingestion keys by token on purpose (shared-NAT pipelines), and
+    // budget. MRM ingestion keys by token on purpose (shared-NAT pipelines),
     // riskSuggestionsAi keys by user on purpose (each request spends the org's own
-    // LLM budget). A keyGenerator appearing anywhere else is a change that needs
-    // review.
+    // LLM budget), and the public intake AI limiters key by IP plus the resolved
+    // form id (one form is reachable by two URLs). A keyGenerator appearing
+    // anywhere else is a change that needs review.
     const withCustomKey = Object.keys(configs).filter((key) => configs[key].keyGenerator);
-    expect(withCustomKey.sort()).toEqual(["mrmIngestion", "riskSuggestionsAi"]);
+    expect(withCustomKey.sort()).toEqual([
+      "intakeLiveChecksVisitor",
+      "intakePrefillVisitor",
+      "mrmIngestion",
+      "riskSuggestionsAi",
+    ]);
   });
 });
 
@@ -200,6 +224,8 @@ describe("dev/test relaxation surface", () => {
       "invitationResend",
       "slackWebhookCreate",
       "slackWorkspaceCreate",
+      "intakeLiveChecksVisitor",
+      "intakePrefillVisitor",
     ];
     for (const key of NEVER_RELAXED) {
       expect(relaxed[key].maxRequests).toBe(strict[key].maxRequests);
@@ -217,6 +243,7 @@ describe("dev/test relaxation surface", () => {
       "mrmIngestion",
       "webhook",
       "healthCheck",
+      "virtualKeyProxy",
     ]) {
       expect(relaxed[key].maxRequests).toBeGreaterThan(strict[key].maxRequests);
     }

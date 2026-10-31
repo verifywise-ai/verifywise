@@ -6,7 +6,10 @@ from database.db import get_db
 
 
 async def list_runs(org_id: int, limit: int = 50, offset: int = 0) -> dict:
-    """One row per agent_run_id with model/tool counts, denied count, totals."""
+    """One row per agent_run_id with model/tool counts, denied count, totals.
+
+    would_block_count / would_need_approval_count count monitor-only calls that
+    a policy would have stopped; they are not part of denied_count."""
     params = {"org_id": org_id, "limit": limit, "offset": offset}
 
     count_sql = """
@@ -25,6 +28,8 @@ async def list_runs(org_id: int, limit: int = 50, offset: int = 0) -> dict:
             SELECT agent_run_id,
                    COUNT(*) AS tool_count,
                    COUNT(*) FILTER (WHERE result_status = 'blocked') AS denied_count,
+                   COUNT(*) FILTER (WHERE result_status = 'would_block') AS would_block_count,
+                   COUNT(*) FILTER (WHERE result_status = 'would_need_approval') AS would_need_approval_count,
                    MIN(created_at) AS first_at,
                    MAX(created_at) AS last_at,
                    MAX(agent_key_id) AS agent_key_id
@@ -38,6 +43,8 @@ async def list_runs(org_id: int, limit: int = 50, offset: int = 0) -> dict:
                 COALESCE(m.model_count, 0) AS model_count,
                 COALESCE(t.tool_count, 0) AS tool_count,
                 COALESCE(t.denied_count, 0) AS denied_count,
+                COALESCE(t.would_block_count, 0) AS would_block_count,
+                COALESCE(t.would_need_approval_count, 0) AS would_need_approval_count,
                 COALESCE(m.tokens, 0) AS total_tokens,
                 COALESCE(m.cost, 0) AS total_cost,
                 t.agent_key_id AS agent_key_id,
@@ -65,6 +72,8 @@ async def list_runs(org_id: int, limit: int = 50, offset: int = 0) -> dict:
             SELECT agent_run_id,
                    COUNT(*) AS tool_count,
                    COUNT(*) FILTER (WHERE result_status = 'blocked') AS denied_count,
+                   COUNT(*) FILTER (WHERE result_status = 'would_block') AS would_block_count,
+                   COUNT(*) FILTER (WHERE result_status = 'would_need_approval') AS would_need_approval_count,
                    MIN(created_at) AS first_at,
                    MAX(created_at) AS last_at,
                    MAX(agent_key_id) AS agent_key_id
@@ -78,6 +87,8 @@ async def list_runs(org_id: int, limit: int = 50, offset: int = 0) -> dict:
                 COALESCE(m.model_count, 0) AS model_count,
                 COALESCE(t.tool_count, 0) AS tool_count,
                 COALESCE(t.denied_count, 0) AS denied_count,
+                COALESCE(t.would_block_count, 0) AS would_block_count,
+                COALESCE(t.would_need_approval_count, 0) AS would_need_approval_count,
                 COALESCE(m.tokens, 0) AS total_tokens,
                 COALESCE(m.cost, 0) AS total_cost,
                 t.agent_key_id AS agent_key_id,

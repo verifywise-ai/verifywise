@@ -112,7 +112,7 @@ const BulkImportModal: React.FC<BulkImportModalProps> = ({
 
         setParsedRows(rows);
         setParseError(null);
-      } catch (err) {
+      } catch {
         setParseError("Failed to parse CSV. Please check the format.");
       }
     };

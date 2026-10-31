@@ -1119,6 +1119,14 @@ export const createRoutes = (
           </Suspense>
         }
       />
+      <Route
+        path="oversight"
+        element={
+          <Suspense fallback={<LazyFallback />}>
+            <IntakeFormsListPage />
+          </Suspense>
+        }
+      />
     </Route>
     <Route
       path="/intake-forms/:formId/edit"

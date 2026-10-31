@@ -35,7 +35,7 @@ projects
 ├── start_date
 ├── geography
 ├── ai_risk_classification   # PROHIBITED, HIGH_RISK, LIMITED_RISK, MINIMAL_RISK
-├── type_of_high_risk_role   # DEPLOYER, PROVIDER, DISTRIBUTOR, etc.
+├── high_risk_roles          # text[]: Provider, Deployer or both (Provider first)
 ├── goal
 ├── target_industry
 ├── description
@@ -72,10 +72,6 @@ The EU AI Act questionnaire produces only Prohibited, High risk, Limited risk, M
 enum HighRiskRole {
   DEPLOYER = "Deployer"
   PROVIDER = "Provider"
-  DISTRIBUTOR = "Distributor"
-  IMPORTER = "Importer"
-  PRODUCT_MANUFACTURER = "Product manufacturer"
-  AUTHORIZED_REPRESENTATIVE = "Authorized representative"
 }
 ```
 
@@ -186,7 +182,7 @@ POST /projects
   framework: number[],             // Required, framework IDs
   start_date: Date,                // Required
   ai_risk_classification: string,  // Required
-  type_of_high_risk_role: string,  // Required
+  high_risk_roles?: ("Provider" | "Deployer")[], // replaces the list; or legacy type_of_high_risk_role
   goal: string,                    // Required
   geography?: number,
   target_industry?: string,
@@ -234,7 +230,7 @@ PATCH /projects/:id
   members?: number[],
   start_date?: Date,
   ai_risk_classification?: string,
-  type_of_high_risk_role?: string,
+  high_risk_roles?: ("Provider" | "Deployer")[] | null,
   goal?: string,
   geography?: number,
   target_industry?: string,
@@ -436,7 +432,7 @@ getProjectProgressData({routeUrl, signal?})
   members: ProjectMemberDTO[],
   start_date: string,
   ai_risk_classification: number,
-  type_of_high_risk_role: number,
+  high_risk_roles?: HighRiskRole[],
   goal: string,
   framework_type?: string,
   geography?: number,
@@ -461,9 +457,20 @@ getProjectProgressData({routeUrl, signal?})
 }
 ```
 
+## High-risk roles
+
+A use case holds its EU AI Act roles in `projects.high_risk_roles` (`TEXT[] NOT NULL DEFAULT '{}'`, CHECK: only `Provider` and `Deployer`). It is stored normalised: no duplicates, Provider first. All role logic lives in `Servers/utils/highRiskRoles.utils.ts` (frontend mirror: `Clients/src/application/utils/highRiskRoles.ts`).
+
+- **API read:** project responses carry `high_risk_roles` and the deprecated, derived `type_of_high_risk_role`: `Provider` when the list contains Provider, `Deployer` when it contains only Deployer, `null` when empty. Rows read with `SELECT *` go through `withLegacyHighRiskRole` so readers of the old name do not silently get `undefined`.
+- **API write:** `high_risk_roles` replaces the list. `type_of_high_risk_role: X` keeps the list when it already holds X (a client writing back the derived value cannot drop a role), otherwise sets `[X]`; `null` clears. Both fields present and disagreeing → 400.
+- **SQL:** arrays are bound with `highRiskRolesArraySql` — `ARRAY[:name]::text[]`, or the literal `'{}'::text[]` for an empty list (Sequelize would bind `[]` as `NULL`).
+- **Requirements filter:** `getVisibleEuCategoryIdsForProject` shows a High risk or GPAI category when its role is any of the use case's roles (`r.name = ANY(...)`); no roles shows none of those categories.
+- **Questionnaire:** the role question is a multi-select. Answers saved when it was single-select (`role: "deployer"`) still validate (`acceptsSingleValue`) and are read as a one-item list. Results carry `roles` and the derived `role`.
+- **Intake:** a select or multi-select question mapped to `type_of_high_risk_role` is matched option by option (label or value, case-insensitive); unmatched options are shown to the reviewer.
+
 ## EU AI Act classification
 
-A server-scored questionnaire that sets a use case's `ai_risk_classification` (and `type_of_high_risk_role` when the answers name a role). It is used by the use case risk wizard (`ProjectView/RiskAnalysisModal`) and by the optional risk step on use case intake forms. The client only renders the definition and decides which questions are visible; scoring always happens on the server.
+A server-scored questionnaire that sets a use case's `ai_risk_classification` (and `high_risk_roles` when the answers name a role). It is used by the use case risk wizard (`ProjectView/RiskAnalysisModal`) and by the optional risk step on use case intake forms. The client only renders the definition and decides which questions are visible; scoring always happens on the server.
 
 ### Module
 
@@ -558,3 +565,68 @@ Public intake submissions send `euAiActRiskAnswers` with the form data. When the
 - [Compliance Frameworks](./compliance-frameworks.md)
 - [Vendors](./vendors.md)
 - [Approvals](./approvals.md)
+
+## Intake form logic
+
+Intake forms support calculated fields, show/hide rules and risk dimension tags
+(spec: `docs/superpowers/specs/2026-10-13-intake-form-logic-design.md`).
+
+- **Logic module.** `Servers/services/intakeFormLogic/` (formula parser and
+  evaluator, conditions, `evaluateForm`, `cleanSubmission`,
+  `validateSchemaLogic`) is copied byte for byte to
+  `Clients/src/application/utils/intakeFormLogic/`. Change both together: a
+  Vitest test compares the files, and both Jest and Vitest run the cases in
+  `Servers/services/intakeFormLogic/__fixtures__/intakeFormLogic.cases.json`.
+- **Server is authoritative.** Both public submit handlers call
+  `cleanSubmission` before validation: answers to hidden fields and unknown
+  keys are dropped, calculated values are recomputed, and a visible calculated
+  field with no result is stored as `null` (hidden ones are left out).
+  The public form endpoints leave `riskDimension` out of the schema they
+  return, so submitters cannot see which answers feed which risk score.
+- **Save checks.** Create and update of a form that will be active reject
+  invalid formulas, conditions on fields that are not above, stale option
+  values, duplicate field ids, rules on fields mapped to required entity fields
+  (`REQUIRED_ENTITY_FIELDS`) and unknown risk dimensions. Drafts skip the check
+  so unfinished logic can be saved; publishing runs it. The builder runs the
+  same checks live.
+- **Risk scoring.** `intakeRiskScoring.service.ts` matches keywords at the start
+  of a word (plurals and compounds count, "renamed" does not hit "name") in text
+  answers, option labels and ticked checkbox labels. A dimension uses its tagged
+  answers when they match any keyword, and all answers otherwise; high-risk
+  keywords in any untagged answer set a floor the tagged score cannot go below.
+## Intake live checks
+
+Hints on the public intake form while the submitter types, plus vendor document
+prefill (spec: `docs/superpowers/specs/2026-10-28-intake-live-checks-design.md`).
+One per-form toggle, `intake_forms.live_checks_enabled` (default true), covers
+rules, AI and prefill.
+
+- **Rule checks.** `Servers/services/intakeLiveChecks/rules.ts`, mirrored line
+  for line in `Clients/src/application/utils/intakeLiveChecks/`. Both run the
+  same fixtures (`__fixtures__/ruleCases.json`, `ruleCopy.json`). Kinds in order:
+  `prohibited`, `regulation`, `contradiction`, `vague`. English keywords only.
+- **AI checks.** Only on request: the submitter selects **Check my answers** in
+  the intake assistant (`useIntakeLiveChecks.checkWithAi`). The button is off
+  while a check runs and until a text answer changes, so typing never calls the
+  model. `POST /api/intake/public/by-id/:publicId/live-checks` and
+  `/public/:tenantSlug/:formSlug/live-checks` (no JWT). Visible answers only,
+  capped by `buildScoringAnswers`; one model call, 15 s, at most 8 hints; output
+  quoting text that is not in the answer, or a quote under 15 characters (unless
+  the answer is shorter), is dropped. Errors answer 200 with
+  `error: "unavailable"`.
+- **Prefill.** `POST .../prefill`, multipart, PDF or DOCX up to 10 MB, held in
+  memory only. DOCX zip size and entry count are checked before extraction,
+  which has its own deadline. Each suggestion carries a signed token
+  (`utils/signedToken.utils.ts`); at submit only a verified token becomes
+  provenance.
+- **Rate limits.** Per visitor and form (in memory): live checks 10/min, prefill
+  3 per 10 min. Per form (Redis, hourly key, 300 ms timeout, fails closed):
+  live checks 300, prefill 20. The count is refused outright while Redis is
+  disconnected, so the client's offline queue never replays refused calls.
+- **Storage.** `intake_submissions.live_checks` (JSONB): server-run rule hints
+  and verified prefill at submit; AI hints from the `liveChecks` stage of the
+  assessment job (`ai.status` pending, done, failed or skipped). The review
+  preview returns it as `liveChecks`.
+- **Submit.** Submit waits at most 2 s for the live-check write. A slower
+  write carries on after the response and queues the `liveChecks` stage itself
+  once it has stored a pending status.

@@ -94,7 +94,7 @@ export const apiServices = {
    */
   async get<T>(endpoint: string, params: RequestParams = {}): Promise<ApiResponse<T>> {
     // Extract special config options that should not be query params
-    const { signal, responseType, ...queryParams } = params;
+    const { signal, responseType, suppressGlobalErrorToast, ...queryParams } = params;
 
     logRequest("get", endpoint, queryParams);
     try {
@@ -103,6 +103,8 @@ export const apiServices = {
         // Normalize the caller-supplied string to Axios's ResponseType union.
         responseType: (responseType ?? "json") as ResponseType,
         signal,
+        // A request option, not a query parameter (read by customAxios).
+        ...(suppressGlobalErrorToast ? { suppressGlobalErrorToast } : {}),
       });
 
       logResponse("get", endpoint, response);

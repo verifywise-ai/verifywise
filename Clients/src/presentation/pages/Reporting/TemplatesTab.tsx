@@ -127,7 +127,7 @@ export default function TemplatesTab({
   // template into an org-wide report carrying the original's name and
   // description — the silent widening the run/schedule 400-gates exist to stop.
   const handleDuplicate = async (t: any) => {
-    let source = t;
+    let source;
     try {
       source = await getTemplate(t.id);
     } catch {
@@ -157,7 +157,7 @@ export default function TemplatesTab({
   if (isLoading) {
     return (
       <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
-        <CircularProgress size={20} />
+        <CircularProgress size={20} aria-label="Loading" />
       </Box>
     );
   }

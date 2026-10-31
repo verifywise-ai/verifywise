@@ -29,6 +29,7 @@ vi.mock("../../../components/Layout/PageHeaderExtended", () => ({
 
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import PromptsPage from "./index";
+import CustomException from "../../../../infrastructure/exceptions/customeException";
 
 const mockGet = apiServices.get as unknown as ReturnType<typeof vi.fn>;
 const mockPost = apiServices.post as unknown as ReturnType<typeof vi.fn>;
@@ -194,7 +195,7 @@ describe("AIGateway - Prompts", () => {
 
   it("shows the API error message when create submission fails", async () => {
     mockLoad([]);
-    mockPost.mockRejectedValue({ response: { data: { detail: "Slug taken" } } });
+    mockPost.mockRejectedValue(new CustomException("Conflict", 409, { detail: "Slug taken" }));
     renderWithProviders(<PromptsPage />);
 
     await waitFor(() => {

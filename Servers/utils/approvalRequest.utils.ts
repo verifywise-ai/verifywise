@@ -2,12 +2,21 @@ import { Transaction } from "sequelize";
 import { sequelize } from "../database/db";
 import { ApprovalRequestModel } from "../domain.layer/models/approvalWorkflow/approvalRequest.model";
 import { ApprovalRequestStepModel } from "../domain.layer/models/approvalWorkflow/approvalRequestStep.model";
+import { ApprovalWorkflowModel } from "../domain.layer/models/approvalWorkflow/approvalWorkflow.model";
 import { ApprovalWorkflowStepModel } from "../domain.layer/models/approvalWorkflow/approvalWorkflowStep.model";
 import {
   ApprovalRequestStatus,
   ApprovalStepStatus,
   ApprovalResult,
+  EntityType,
+  AUTO_APPROVABLE_RISK_RANKS,
 } from "../domain.layer/enums/approval-workflow.enum";
+import {
+  ForbiddenException,
+  ValidationException,
+} from "../domain.layer/exceptions/custom.exception";
+import { logStructured } from "./logger/fileLogger";
+import { withLegacyHighRiskRole } from "./highRiskRoles.utils";
 import { executeAiAction } from "../advisor/aiActions";
 
 /**
@@ -65,12 +74,20 @@ export const createApprovalRequestQuery = async (
     },
   );
 
-  // Create request steps from workflow steps
+  // Create request steps from workflow steps. sla_hours / escalation_user_id
+  // are snapshotted from the template so later workflow edits don't disturb
+  // in-flight requests; due_at is set only for the step that is active now.
   for (const workflowStep of workflowSteps) {
+    const slaHours = (workflowStep as any).sla_hours ?? null;
+    const isCurrentStep = workflowStep.step_number === 1;
     const [requestStep] = await sequelize.query(
       `INSERT INTO approval_request_steps
-       (organization_id, request_id, step_number, step_name, status, date_assigned, created_at)
-       VALUES (:organizationId, :request_id, :step_number, :step_name, :status, NOW(), NOW())
+       (organization_id, request_id, step_number, step_name, status, sla_hours, escalation_user_id, due_at, date_assigned, created_at)
+       VALUES (:organizationId, :request_id, :step_number, :step_name, :status, :sla_hours, :escalation_user_id,
+               CASE WHEN :is_current_step AND :sla_hours IS NOT NULL
+                    THEN NOW() + make_interval(hours => :sla_hours)
+                    ELSE NULL END,
+               NOW(), NOW())
        RETURNING *`,
       {
         replacements: {
@@ -78,10 +95,10 @@ export const createApprovalRequestQuery = async (
           request_id: (request as any).id,
           step_number: workflowStep.step_number,
           step_name: workflowStep.step_name,
-          status:
-            workflowStep.step_number === 1
-              ? ApprovalStepStatus.PENDING
-              : ApprovalStepStatus.PENDING,
+          status: ApprovalStepStatus.PENDING,
+          sla_hours: slaHours,
+          escalation_user_id: (workflowStep as any).escalation_user_id ?? null,
+          is_current_step: isCurrentStep,
         },
         mapToModel: true,
         model: ApprovalRequestStepModel,
@@ -117,7 +134,287 @@ export const createApprovalRequestQuery = async (
 };
 
 /**
- * Get requests where user is an approver
+ * Decide whether a request may be auto-approved based on the workflow's
+ * configured risk threshold. Fails closed: anything other than a use_case
+ * whose server-side AI risk classification ranks at or below the threshold
+ * (per AUTO_APPROVABLE_RISK_RANKS) is ineligible. Missing, unsupported
+ * (GPAI / General Risk), or unrecognized classifications are never approved.
+ */
+export const evaluateAutoApproval = (
+  autoApproveMaxRisk: string | null | undefined,
+  entityType: string | null | undefined,
+  serverRiskClassification: string | null | undefined,
+): { eligible: boolean; reason: string } => {
+  if (!autoApproveMaxRisk) {
+    return { eligible: false, reason: "no auto-approval threshold configured" };
+  }
+  const thresholdRank = AUTO_APPROVABLE_RISK_RANKS[autoApproveMaxRisk];
+  if (thresholdRank === undefined) {
+    return {
+      eligible: false,
+      reason: `unsupported auto-approval threshold: ${autoApproveMaxRisk}`,
+    };
+  }
+  if (entityType !== EntityType.USE_CASE) {
+    return {
+      eligible: false,
+      reason: `entity type ${entityType ?? "unknown"} is not eligible for auto-approval`,
+    };
+  }
+  if (!serverRiskClassification) {
+    return { eligible: false, reason: "use case has no AI risk classification" };
+  }
+  const riskRank = AUTO_APPROVABLE_RISK_RANKS[serverRiskClassification];
+  if (riskRank === undefined) {
+    return {
+      eligible: false,
+      reason: `risk classification "${serverRiskClassification}" is not auto-approvable`,
+    };
+  }
+  if (riskRank > thresholdRank) {
+    return {
+      eligible: false,
+      reason: `risk classification "${serverRiskClassification}" is above threshold "${autoApproveMaxRisk}"`,
+    };
+  }
+  return {
+    eligible: true,
+    reason: `risk classification "${serverRiskClassification}" at or below threshold "${autoApproveMaxRisk}"`,
+  };
+};
+
+/**
+ * Create the compliance frameworks a use case had queued while awaiting
+ * approval. Shared by the manual final-step approval path, the risk-based
+ * auto-approval path, and an edit that clears the use case's workflow (the
+ * approval the frameworks waited for no longer exists).
+ */
+export const createPendingFrameworksForApprovedUseCase = async (
+  entityId: number,
+  organizationId: number,
+  transaction: Transaction,
+): Promise<void> => {
+  const [projectData] = await sequelize.query(
+    `SELECT id, pending_frameworks, enable_ai_data_insertion
+     FROM projects
+     WHERE organization_id = :organizationId AND id = :entityId`,
+    {
+      replacements: { organizationId, entityId },
+      type: "SELECT",
+      transaction,
+    },
+  );
+
+  if (!projectData || !(projectData as any).pending_frameworks) {
+    return;
+  }
+
+  const pendingFrameworks = (projectData as any).pending_frameworks as number[];
+  const enableAiDataInsertion = (projectData as any).enable_ai_data_insertion || false;
+
+  // Import framework creation utilities
+  const { createEUFrameworkQuery } = require("./eu.utils");
+  const { createISOFrameworkQuery } = require("./iso42001.utils");
+  const { createISO27001FrameworkQuery } = require("./iso27001.utils");
+  const { createNISTAI_RMFFrameworkQuery } = require("./nistAiRmfCorrect.utils");
+
+  // Create frameworks
+  for (const frameworkId of pendingFrameworks) {
+    // Create project_framework record FIRST (required by framework creation functions)
+    await sequelize.query(
+      `INSERT INTO projects_frameworks (organization_id, project_id, framework_id, is_demo)
+       VALUES (:organizationId, :project_id, :framework_id, false)`,
+      {
+        replacements: {
+          organizationId,
+          project_id: entityId,
+          framework_id: frameworkId,
+        },
+        transaction,
+      },
+    );
+
+    // Create framework-specific records
+    if (frameworkId === 1) {
+      await createEUFrameworkQuery(entityId, enableAiDataInsertion, organizationId, transaction);
+    } else if (frameworkId === 2) {
+      await createISOFrameworkQuery(entityId, enableAiDataInsertion, organizationId, transaction);
+    } else if (frameworkId === 3) {
+      await createISO27001FrameworkQuery(
+        entityId,
+        enableAiDataInsertion,
+        organizationId,
+        transaction,
+      );
+    } else if (frameworkId === 4) {
+      await createNISTAI_RMFFrameworkQuery(
+        entityId,
+        enableAiDataInsertion,
+        organizationId,
+        transaction,
+      );
+    }
+  }
+
+  // Clear pending frameworks after creation
+  await sequelize.query(
+    `UPDATE projects
+     SET pending_frameworks = NULL, enable_ai_data_insertion = FALSE
+     WHERE organization_id = :organizationId AND id = :entityId`,
+    {
+      replacements: { organizationId, entityId },
+      transaction,
+    },
+  );
+};
+
+/**
+ * Auto-approve a freshly created approval request when the workflow's
+ * risk threshold allows it. Runs inside the caller's creation transaction,
+ * so it is atomic with the request and idempotent by construction; the
+ * request-status guard additionally protects against concurrent decisions.
+ *
+ * The risk classification is always re-read from the projects table — the
+ * client-supplied entity_data is never trusted for this decision.
+ */
+export const tryAutoApproveRequestQuery = async (
+  requestId: number,
+  workflow: ApprovalWorkflowModel,
+  entityType: string | undefined,
+  entityId: number | undefined,
+  organizationId: number,
+  transaction: Transaction,
+): Promise<{ autoApproved: boolean; riskLevel?: string; threshold?: string }> => {
+  const threshold = (workflow as any).auto_approve_max_risk as string | null | undefined;
+
+  if (!threshold || entityType !== EntityType.USE_CASE || !entityId) {
+    return { autoApproved: false };
+  }
+
+  // Server-side risk re-read (client payloads are not authoritative)
+  const [project] = await sequelize.query(
+    `SELECT ai_risk_classification FROM projects
+     WHERE organization_id = :organizationId AND id = :entityId`,
+    {
+      replacements: { organizationId, entityId },
+      type: "SELECT",
+      transaction,
+    },
+  );
+  const riskLevel = ((project as any)?.ai_risk_classification ?? null) as string | null;
+
+  const decision = evaluateAutoApproval(threshold, entityType, riskLevel);
+  if (!decision.eligible) {
+    logStructured(
+      "processing",
+      `auto-approval skipped for request ${requestId}: ${decision.reason}`,
+      "tryAutoApproveRequestQuery",
+      "approvalRequest.utils.ts",
+    );
+    return { autoApproved: false };
+  }
+
+  // Approve the request first — the status guard means a concurrent manual
+  // decision wins and none of the step writes below happen for it
+  const approvedRows = (await sequelize.query(
+    `UPDATE approval_requests
+     SET status = :approvedStatus, auto_approved_at = NOW(),
+         auto_approval_risk_level = :riskLevel, updated_at = NOW()
+     WHERE organization_id = :organizationId
+       AND id = :requestId
+       AND status = :pendingStatus
+     RETURNING id`,
+    {
+      replacements: {
+        organizationId,
+        requestId,
+        riskLevel,
+        approvedStatus: ApprovalRequestStatus.APPROVED,
+        pendingStatus: ApprovalRequestStatus.PENDING,
+      },
+      type: "SELECT",
+      transaction,
+    },
+  )) as any[];
+
+  if (!approvedRows || approvedRows.length === 0) {
+    logStructured(
+      "processing",
+      `auto-approval aborted for request ${requestId}: request no longer pending`,
+      "tryAutoApproveRequestQuery",
+      "approvalRequest.utils.ts",
+    );
+    return { autoApproved: false };
+  }
+
+  // Complete every step with a system audit note
+  const stepDetails = JSON.stringify({
+    auto_approved: true,
+    actor: "system",
+    risk_level: riskLevel,
+    threshold,
+    reason: decision.reason,
+  });
+  await sequelize.query(
+    `UPDATE approval_request_steps
+     SET status = :completedStatus, date_completed = NOW(),
+         step_details = CAST(:stepDetails AS jsonb)
+     WHERE organization_id = :organizationId
+       AND request_id = :requestId
+       AND status = :pendingStatus`,
+    {
+      replacements: {
+        organizationId,
+        requestId,
+        stepDetails,
+        completedStatus: ApprovalStepStatus.COMPLETED,
+        pendingStatus: ApprovalStepStatus.PENDING,
+      },
+      transaction,
+    },
+  );
+
+  // Resolve the pre-created approver rows so no audit view shows them
+  // as perpetually awaiting a human decision
+  await sequelize.query(
+    `UPDATE approval_request_step_approvals
+     SET approval_result = :approvedResult, comments = :comments, approved_at = NOW()
+     WHERE organization_id = :organizationId
+       AND approval_result = :pendingResult
+       AND request_step_id IN (
+         SELECT id FROM approval_request_steps
+         WHERE organization_id = :organizationId AND request_id = :requestId
+       )`,
+    {
+      replacements: {
+        organizationId,
+        requestId,
+        approvedResult: ApprovalResult.APPROVED,
+        pendingResult: ApprovalResult.PENDING,
+        comments: `Auto-approved by system: ${decision.reason}`,
+      },
+      transaction,
+    },
+  );
+
+  // Same entity side effect as a manual final-step approval
+  await createPendingFrameworksForApprovedUseCase(entityId, organizationId, transaction);
+
+  logStructured(
+    "successful",
+    `auto-approved request ${requestId}: ${decision.reason}`,
+    "tryAutoApproveRequestQuery",
+    "approvalRequest.utils.ts",
+  );
+
+  return { autoApproved: true, riskLevel: riskLevel!, threshold };
+};
+
+/**
+ * Get requests waiting on this user's decision: they are an approver on the
+ * current step and have not responded yet. A step that needs every approver
+ * stays pending after this user approves, so without the result filter the
+ * request would stay in their list.
  */
 export const getPendingApprovalsQuery = async (
   userId: number,
@@ -141,6 +438,7 @@ export const getPendingApprovalsQuery = async (
      JOIN approval_request_step_approvals arsa ON ars.id = arsa.request_step_id AND ars.organization_id = arsa.organization_id
      WHERE ar.organization_id = :organizationId
        AND arsa.approver_id = :userId
+       AND arsa.approval_result = :pendingResult
        AND ars.step_number = ar.current_step
        AND ar.status = :status
      ORDER BY ar.created_at DESC`,
@@ -149,6 +447,7 @@ export const getPendingApprovalsQuery = async (
         organizationId,
         userId,
         status: ApprovalRequestStatus.PENDING,
+        pendingResult: ApprovalResult.PENDING,
       },
       type: "SELECT",
       ...(transaction && { transaction }),
@@ -204,7 +503,7 @@ export const getApprovalRequestByIdQuery = async (
       p.goal,
       p.target_industry,
       p.ai_risk_classification,
-      p.type_of_high_risk_role,
+      p.high_risk_roles,
       p.start_date,
       p.geography,
       owner_user.name as owner_name,
@@ -267,7 +566,7 @@ export const getApprovalRequestByIdQuery = async (
     return null;
   }
 
-  const request = requestData as any;
+  const request = withLegacyHighRiskRole(requestData as any);
 
   // Load steps
   const steps = await sequelize.query(
@@ -297,13 +596,79 @@ export const getApprovalRequestByIdQuery = async (
         ...(transaction && { transaction }),
       },
     );
-    (step as any).approvals = approvals;
+    // setDataValue (not a plain property assignment) so the field is part of
+    // dataValues and survives Model#toJSON() serialization to the HTTP response.
+    (step as any).setDataValue("approvals", approvals);
   }
 
   request.steps = steps;
 
   return request;
 };
+
+/**
+ * Only an assigned approver of the current step may decide, and only once.
+ * Without this, any user in the org could reject a request (the vote UPDATE
+ * matches no row but the rejection branch still runs).
+ */
+const assertPendingApprover = async (
+  requestId: number,
+  requestStepId: number,
+  userId: number,
+  organizationId: number,
+  transaction: Transaction,
+): Promise<void> => {
+  const [myApproval] = (await sequelize.query(
+    `SELECT approval_result
+     FROM approval_request_step_approvals
+     WHERE organization_id = :organizationId
+       AND request_step_id = :requestStepId
+       AND approver_id = :userId`,
+    {
+      replacements: { organizationId, requestStepId, userId },
+      type: "SELECT",
+      transaction,
+    },
+  )) as { approval_result: string }[];
+
+  if (!myApproval) {
+    // A retry or double submit after this user's vote moved the request to
+    // the next step lands here too. That is a repeat, not an outsider.
+    const [earlierVote] = await sequelize.query(
+      `SELECT 1
+       FROM approval_request_step_approvals arsa
+       JOIN approval_request_steps ars
+         ON ars.id = arsa.request_step_id AND ars.organization_id = arsa.organization_id
+       WHERE arsa.organization_id = :organizationId
+         AND ars.request_id = :requestId
+         AND arsa.approver_id = :userId
+         AND arsa.approval_result <> :pending
+       LIMIT 1`,
+      {
+        replacements: { organizationId, requestId, userId, pending: ApprovalResult.PENDING },
+        type: "SELECT",
+        transaction,
+      },
+    );
+    if (earlierVote) {
+      throw new ValidationException("You have already responded to this step");
+    }
+    throw new ForbiddenException("You are not an approver on the current step");
+  }
+  if (myApproval.approval_result !== ApprovalResult.PENDING) {
+    throw new ValidationException("You have already responded to this step");
+  }
+};
+
+/**
+ * An admin deciding a step they were not (or not only) assigned to, e.g. one
+ * stuck on an approver who left. The caller checks the permission;
+ * `stepNumber` is the step the admin meant, so a retry cannot carry the
+ * override on to the next step.
+ */
+export interface ApprovalOverride {
+  stepNumber: number;
+}
 
 /**
  * Approve or reject a request step
@@ -315,10 +680,16 @@ export const processApprovalQuery = async (
   comments: string | undefined,
   organizationId: number,
   transaction: Transaction,
+  override?: ApprovalOverride,
 ): Promise<NotificationInfo | null> => {
-  // Get current request
+  // Get current request. FOR UPDATE serialises every decision on this request:
+  // without it, two approvers on a requires-all step each lock only their own
+  // vote row, neither sees the other's uncommitted vote, and the step never
+  // completes. A waiting decision re-reads the row after the first commits.
   const [request] = await sequelize.query(
-    `SELECT * FROM approval_requests WHERE organization_id = :organizationId AND id = :requestId`,
+    `SELECT * FROM approval_requests
+     WHERE organization_id = :organizationId AND id = :requestId
+     FOR UPDATE`,
     {
       replacements: { organizationId, requestId },
       mapToModel: true,
@@ -329,6 +700,11 @@ export const processApprovalQuery = async (
 
   if (!request) {
     throw new Error("Request not found");
+  }
+
+  // Only a pending request may be acted on.
+  if ((request as any).status !== ApprovalRequestStatus.PENDING) {
+    throw new ValidationException("Request is no longer pending");
   }
 
   const currentStep = (request as any).current_step;
@@ -350,26 +726,109 @@ export const processApprovalQuery = async (
     throw new Error("Request step not found");
   }
 
-  // Update approval record
-  await sequelize.query(
-    `UPDATE approval_request_step_approvals
-     SET approval_result = :approvalResult,
-         comments = :comments,
-         approved_at = NOW()
-     WHERE organization_id = :organizationId
-       AND request_step_id = :requestStepId
-       AND approver_id = :userId`,
-    {
-      replacements: {
-        organizationId,
-        requestStepId: (requestStep as any).id,
-        userId,
-        approvalResult,
-        comments: comments || null,
+  if (override) {
+    if (override.stepNumber !== currentStep) {
+      throw new ValidationException("The request has moved to another step");
+    }
+    if (Number((request as any).requested_by) === userId) {
+      throw new ForbiddenException("You cannot override your own request");
+    }
+    // The validator already requires it; kept for callers that bypass it.
+    if (!comments?.trim()) {
+      throw new ValidationException("An override needs a comment explaining why");
+    }
+    const [myVote] = (await sequelize.query(
+      `SELECT approval_result
+       FROM approval_request_step_approvals
+       WHERE organization_id = :organizationId
+         AND request_step_id = :requestStepId
+         AND approver_id = :userId`,
+      {
+        replacements: { organizationId, requestStepId: (requestStep as any).id, userId },
+        type: "SELECT",
+        transaction,
       },
+    )) as { approval_result: string }[];
+
+    if (myVote && myVote.approval_result !== ApprovalResult.PENDING) {
+      // A vote already cast stays as cast: an override must not rewrite it.
+      if (myVote.approval_result !== approvalResult) {
+        throw new ValidationException("You have already responded to this step");
+      }
+    } else {
+      // The admin's vote goes on the step like any other, so the timeline
+      // shows who decided and why.
+      await sequelize.query(
+        `INSERT INTO approval_request_step_approvals
+           (organization_id, request_step_id, approver_id, approval_result, comments, approved_at)
+         VALUES (:organizationId, :requestStepId, :userId, :approvalResult, :comments, NOW())
+         ON CONFLICT (request_step_id, approver_id) DO UPDATE
+           SET approval_result = EXCLUDED.approval_result,
+               comments = EXCLUDED.comments,
+               approved_at = EXCLUDED.approved_at`,
+        {
+          replacements: {
+            organizationId,
+            requestStepId: (requestStep as any).id,
+            userId,
+            approvalResult,
+            comments,
+          },
+          transaction,
+        },
+      );
+    }
+
+    // Mark the step itself, so an override can be told apart from a normal
+    // decision and the reason survives even when the vote row was kept.
+    await sequelize.query(
+      `UPDATE approval_request_steps
+       SET step_details = COALESCE(step_details, '{}'::jsonb) || CAST(:stepDetails AS jsonb)
+       WHERE organization_id = :organizationId AND id = :requestStepId`,
+      {
+        replacements: {
+          organizationId,
+          requestStepId: (requestStep as any).id,
+          stepDetails: JSON.stringify({
+            admin_override: true,
+            actor_id: userId,
+            result: approvalResult,
+            reason: comments.trim(),
+          }),
+        },
+        transaction,
+      },
+    );
+  } else {
+    await assertPendingApprover(
+      requestId,
+      (requestStep as any).id,
+      userId,
+      organizationId,
       transaction,
-    },
-  );
+    );
+
+    // Update approval record
+    await sequelize.query(
+      `UPDATE approval_request_step_approvals
+       SET approval_result = :approvalResult,
+           comments = :comments,
+           approved_at = NOW()
+       WHERE organization_id = :organizationId
+         AND request_step_id = :requestStepId
+         AND approver_id = :userId`,
+      {
+        replacements: {
+          organizationId,
+          requestStepId: (requestStep as any).id,
+          userId,
+          approvalResult,
+          comments: comments || null,
+        },
+        transaction,
+      },
+    );
+  }
 
   // Get the workflow step to check requires_all_approvers
   const [workflowStep] = await sequelize.query(
@@ -422,10 +881,13 @@ export const processApprovalQuery = async (
   const hasPending = pendingCount > 0;
   const hasApproved = approvedCount > 0;
 
-  // Determine if step should be completed based on requires_all_approvers setting
-  const shouldComplete = requiresAllApprovers
-    ? !hasPending // All approvers must respond
-    : hasApproved; // At least one approver must approve
+  // Determine if step should be completed based on requires_all_approvers
+  // setting. An admin override completes it whoever is still pending.
+  const shouldComplete = override
+    ? true
+    : requiresAllApprovers
+      ? !hasPending // All approvers must respond
+      : hasApproved; // At least one approver must approve
 
   // If rejected, mark step and request as rejected
   if (approvalResult === ApprovalResult.REJECTED) {
@@ -527,6 +989,27 @@ export const processApprovalQuery = async (
         },
       );
 
+      // The next step becomes active now: start its SLA clock from the
+      // snapshotted sla_hours (date_assigned is set for all steps at
+      // creation, so it cannot be used for this)
+      await sequelize.query(
+        `UPDATE approval_request_steps
+         SET due_at = CASE WHEN sla_hours IS NOT NULL
+                           THEN NOW() + make_interval(hours => sla_hours)
+                           ELSE NULL END
+         WHERE organization_id = :organizationId
+           AND request_id = :requestId
+           AND step_number = :nextStep`,
+        {
+          replacements: {
+            organizationId,
+            requestId,
+            nextStep: currentStep + 1,
+          },
+          transaction,
+        },
+      );
+
       // Return notification info for next step approvers AND requester progress update
       return {
         type: "step_approvers",
@@ -569,87 +1052,7 @@ export const processApprovalQuery = async (
       const entityType = (request as any).entity_type;
 
       if (entityType === "use_case" && entityId) {
-        // Get project details with pending frameworks
-        const [projectData] = await sequelize.query(
-          `SELECT id, pending_frameworks, enable_ai_data_insertion
-           FROM projects
-           WHERE organization_id = :organizationId AND id = :entityId`,
-          {
-            replacements: { organizationId, entityId },
-            type: "SELECT",
-            transaction,
-          },
-        );
-
-        if (projectData && (projectData as any).pending_frameworks) {
-          const pendingFrameworks = (projectData as any).pending_frameworks as number[];
-          const enableAiDataInsertion = (projectData as any).enable_ai_data_insertion || false;
-
-          // Import framework creation utilities
-          const { createEUFrameworkQuery } = require("./eu.utils");
-          const { createISOFrameworkQuery } = require("./iso42001.utils");
-          const { createISO27001FrameworkQuery } = require("./iso27001.utils");
-          const { createNISTAI_RMFFrameworkQuery } = require("./nistAiRmfCorrect.utils");
-
-          // Create frameworks
-          for (const frameworkId of pendingFrameworks) {
-            // Create project_framework record FIRST (required by framework creation functions)
-            await sequelize.query(
-              `INSERT INTO projects_frameworks (organization_id, project_id, framework_id, is_demo)
-               VALUES (:organizationId, :project_id, :framework_id, false)`,
-              {
-                replacements: {
-                  organizationId,
-                  project_id: entityId,
-                  framework_id: frameworkId,
-                },
-                transaction,
-              },
-            );
-
-            // Create framework-specific records
-            if (frameworkId === 1) {
-              await createEUFrameworkQuery(
-                entityId,
-                enableAiDataInsertion,
-                organizationId,
-                transaction,
-              );
-            } else if (frameworkId === 2) {
-              await createISOFrameworkQuery(
-                entityId,
-                enableAiDataInsertion,
-                organizationId,
-                transaction,
-              );
-            } else if (frameworkId === 3) {
-              await createISO27001FrameworkQuery(
-                entityId,
-                enableAiDataInsertion,
-                organizationId,
-                transaction,
-              );
-            } else if (frameworkId === 4) {
-              await createNISTAI_RMFFrameworkQuery(
-                entityId,
-                enableAiDataInsertion,
-                organizationId,
-                transaction,
-              );
-            }
-          }
-
-          // Clear pending frameworks after creation
-          await sequelize.query(
-            `UPDATE projects
-             SET pending_frameworks = NULL, enable_ai_data_insertion = FALSE
-             WHERE organization_id = :organizationId AND id = :entityId`,
-            {
-              replacements: { organizationId, entityId },
-              transaction,
-            },
-          );
-        }
+        await createPendingFrameworksForApprovedUseCase(entityId, organizationId, transaction);
       }
 
       // ===== FILE STATUS UPDATE AFTER APPROVAL =====
@@ -928,4 +1331,91 @@ export const rejectApprovalRequestOnEntityDelete = async (
     console.error(`Failed to reject approval request ${approvalRequestId}:`, error);
     throw error;
   }
+};
+
+/**
+ * Row returned by getOverdueApprovalStepsQuery
+ */
+export interface OverdueApprovalStepRow {
+  request_step_id: number;
+  request_id: number;
+  step_number: number;
+  step_name: string;
+  due_at: Date;
+  escalation_user_id: number;
+  request_name: string;
+  entity_type: string | null;
+  entity_id: number | null;
+}
+
+/**
+ * Active steps of pending requests whose SLA has elapsed and that have not
+ * been escalated yet. Only the request's current step can be overdue — later
+ * steps are still Pending but have no due_at, and withdrawn/rejected requests
+ * are excluded via the request status join. Range comparison (due_at < NOW())
+ * so a missed sweep run catches up on the next one.
+ */
+export const getOverdueApprovalStepsQuery = async (
+  organizationId: number,
+  transaction: Transaction | null = null,
+): Promise<OverdueApprovalStepRow[]> => {
+  const rows = await sequelize.query(
+    `SELECT ars.id AS request_step_id,
+            ars.request_id,
+            ars.step_number,
+            ars.step_name,
+            ars.due_at,
+            ars.escalation_user_id,
+            ar.request_name,
+            ar.entity_type,
+            ar.entity_id
+     FROM approval_request_steps ars
+     JOIN approval_requests ar
+       ON ar.id = ars.request_id AND ar.organization_id = ars.organization_id
+     WHERE ars.organization_id = :organizationId
+       AND ar.status = :requestPending
+       AND ars.step_number = ar.current_step
+       AND ars.status = :stepPending
+       AND ars.due_at IS NOT NULL
+       AND ars.due_at < NOW()
+       AND ars.escalated_at IS NULL
+       AND ars.escalation_user_id IS NOT NULL
+     ORDER BY ars.due_at ASC`,
+    {
+      replacements: {
+        organizationId,
+        requestPending: ApprovalRequestStatus.PENDING,
+        stepPending: ApprovalStepStatus.PENDING,
+      },
+      type: "SELECT",
+      ...(transaction && { transaction }),
+    },
+  );
+
+  return rows as OverdueApprovalStepRow[];
+};
+
+/**
+ * Claim escalation of an overdue step. The conditional UPDATE returns the row
+ * only when escalated_at was still NULL, so exactly one caller wins under
+ * retries or concurrent sweep workers. Returns true when this call claimed it.
+ */
+export const markApprovalStepEscalatedQuery = async (
+  organizationId: number,
+  requestStepId: number,
+): Promise<boolean> => {
+  const rows = await sequelize.query(
+    `UPDATE approval_request_steps
+     SET escalated_at = NOW()
+     WHERE organization_id = :organizationId
+       AND id = :requestStepId
+       AND escalated_at IS NULL
+     RETURNING id`,
+    {
+      replacements: { organizationId, requestStepId },
+      type: "SELECT",
+    },
+  );
+
+  return Array.isArray(rows) && rows.length > 0;
 };

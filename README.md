@@ -1,4 +1,12 @@
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/bluewave-labs/verifywise)
+> [!NOTE]
+> **VerifyWise has a new license.** New releases are licensed under the [VerifyWise Community & Evaluation License (VCEL) 1.0](LICENSE.md), which replaces the Business Source License 1.1.
+>
+> - **Free** for personal use, schools and universities, public sector institutions and noncommercial research. Schools and public bodies can also run it in production for their own work.
+> - **Companies** can evaluate VerifyWise free for 60 days. Running it inside a company after that needs a commercial license.
+> - **Releases you already use** keep the license they were released under.
+>
+> Questions? See the [licensing FAQ](LICENSING-FAQ.md) or write to hello@verifywise.ai. Thank you for using and supporting VerifyWise.
+
 ![](https://img.shields.io/github/repo-size/bluewave-labs/verifywise)
 ![](https://img.shields.io/github/commit-activity/m/bluewave-labs/verifywise)
 ![](https://img.shields.io/github/last-commit/bluewave-labs/verifywise)
@@ -15,7 +23,7 @@ We are democratizing AI best practices with a solution that can be hosted on-pre
 ## Quick links
 
 - [Join our Discord channel](https://discord.com/invite/d3k3E4uEpR) to ask your questions and get the latest announcemnets.
-- [Need to talk to someone](https://verifywise.ai/contact)? Get with us to see the latest demo, or [click here](https://app.verifywise.ai) to experience the demo yourself.
+- [Need to talk to someone](https://verifywise.ai/contact)? Get with us to see the latest demo.
 - [Read our documentation](https://verifywise.ai/user-guide/) to understand features and capabilities
 
 ## Screenshots
@@ -55,7 +63,7 @@ We are democratizing AI best practices with a solution that can be hosted on-pre
 ![VerifyWise platform](https://github.com/user-attachments/assets/2d05cd1f-f67b-45d2-aca4-1fdcde287a44)
 
 - Option to host the application on-premises or in a private cloud
-- Source available license (BSL 1.1). Dual licensing is also available for enterprises
+- Source-available license ([VCEL 1.0](LICENSE.md)): free for personal, educational, public sector, noncommercial research and evaluation use. Commercial use needs a commercial license ([licensing FAQ](LICENSING-FAQ.md))
 - Faster audits using AI-generated answers for compliance and assessment questions
 - Full access to the source code for transparency, security audits, and customization
 - Docker and Kubernetes deployment (also deployable on render.com and similar platforms)

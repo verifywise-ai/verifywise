@@ -26,8 +26,8 @@ let mockDefsIsError = false;
 let mockValuesData: any = null;
 let mockValuesIsLoading = false;
 
-let mockUsers = [{ id: 1, name: "Alice", surname: "Smith", email: "alice@test.com" }];
-let mockUsersLoading = false;
+const mockUsers = [{ id: 1, name: "Alice", surname: "Smith", email: "alice@test.com" }];
+const mockUsersLoading = false;
 
 let mockSetCustomFieldValue = vi.fn().mockResolvedValue({});
 let mockDeleteCustomFieldValue = vi.fn().mockResolvedValue({});
@@ -89,7 +89,14 @@ vi.mock("../../Inputs/Field", () => ({
 
 vi.mock("../../Inputs/Select", () => ({
   default: ({ id, value, items, onChange, disabled, placeholder }: any) => (
-    <select id={id} data-testid="select" value={value} disabled={disabled} onChange={onChange}>
+    <select
+      id={id}
+      data-testid="select"
+      data-value={value}
+      value={value}
+      disabled={disabled}
+      onChange={onChange}
+    >
       <option value="">{placeholder}</option>
       {items.map((item: any) => (
         <option key={item._id} value={item._id}>
@@ -285,6 +292,54 @@ describe("CustomFieldsSection", () => {
     });
   });
 
+  describe("onDirtyChange", () => {
+    it("reports dirty after a value is typed and clean after flush", async () => {
+      const user = userEvent.setup();
+      const ref = createRef<CustomFieldsSectionHandle>();
+      const onDirtyChange = vi.fn();
+      renderWithProviders(
+        <CustomFieldsSection
+          ref={ref}
+          entityType="project"
+          entityId={1}
+          onDirtyChange={onDirtyChange}
+        />,
+      );
+      expect(onDirtyChange).toHaveBeenLastCalledWith(false);
+
+      await user.type(screen.getAllByTestId("field")[0], "x");
+      await waitFor(() => expect(onDirtyChange).toHaveBeenLastCalledWith(true));
+
+      await ref.current!.flush(1);
+      await waitFor(() => expect(onDirtyChange).toHaveBeenLastCalledWith(false));
+    });
+
+    it("reports a cleared required field to onPendingChange", async () => {
+      const user = userEvent.setup();
+      const onPendingChange = vi.fn();
+      renderWithProviders(
+        <CustomFieldsSection entityType="project" entityId={1} onPendingChange={onPendingChange} />,
+      );
+      // Department (required) is the first field with a stored value.
+      await user.click(screen.getAllByTitle("Clear value")[0]);
+      await waitFor(() =>
+        expect(onPendingChange).toHaveBeenLastCalledWith(new Set(), [
+          { id: 1, label: "Department" },
+        ]),
+      );
+    });
+
+    it("reports dirty when a stored value is cleared", async () => {
+      const user = userEvent.setup();
+      const onDirtyChange = vi.fn();
+      renderWithProviders(
+        <CustomFieldsSection entityType="project" entityId={1} onDirtyChange={onDirtyChange} />,
+      );
+      await user.click(screen.getAllByTitle("Clear value")[0]);
+      await waitFor(() => expect(onDirtyChange).toHaveBeenLastCalledWith(true));
+    });
+  });
+
   describe("flush error handling", () => {
     it("shows alert on flush failure", async () => {
       mockSetCustomFieldValue = vi.fn().mockRejectedValue(new Error("Network error"));
@@ -301,6 +356,46 @@ describe("CustomFieldsSection", () => {
       await waitFor(() => {
         expect(screen.getByText(/Custom field values could not be saved/)).toBeInTheDocument();
       });
+    });
+  });
+
+  describe("scored select", () => {
+    const scoredDef = {
+      id: 8,
+      label: "Feasibility",
+      field_type: "scored_select",
+      required: false,
+      options: [
+        { id: "opt_h", label: "High", score: 3 },
+        { id: "opt_m", label: "Medium", score: 2 },
+      ],
+    };
+
+    it("lists options with their scores and stages the option id", async () => {
+      mockDefsData = [scoredDef];
+      mockValuesData = [];
+      const ref = createRef<CustomFieldsSectionHandle>();
+      const user = userEvent.setup();
+      renderWithProviders(<CustomFieldsSection ref={ref} entityType="project" entityId={1} />);
+
+      const select = document.getElementById("cf-8") as HTMLSelectElement;
+      expect(select).toBeInTheDocument();
+      const options = Array.from(select.options).map((o) => o.text);
+      expect(options).toContain("High (3)");
+      expect(options).toContain("Medium (2)");
+
+      await user.selectOptions(select, "opt_m");
+      await ref.current!.flush(42);
+      expect(mockSetCustomFieldValue).toHaveBeenCalledWith(
+        expect.objectContaining({ definition_id: 8, entity_id: 42, value: "opt_m" }),
+      );
+    });
+
+    it("shows an empty selection when the stored id is no longer an option", () => {
+      mockDefsData = [scoredDef];
+      mockValuesData = [{ definition_id: 8, value: "opt_gone" }];
+      renderWithProviders(<CustomFieldsSection entityType="project" entityId={1} />);
+      expect(document.getElementById("cf-8")).toHaveAttribute("data-value", "");
     });
   });
 });

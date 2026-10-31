@@ -177,7 +177,7 @@ describe("MCPInvocationDrawer", () => {
       expect(screen.getByText("search_docs")).toBeInTheDocument();
     });
 
-    expect(screen.getByText("EVENTS")).toBeInTheDocument();
+    expect(screen.getByText("Events")).toBeInTheDocument();
     expect(screen.queryByText("queued")).not.toBeInTheDocument();
   });
 
@@ -198,6 +198,137 @@ describe("MCPInvocationDrawer", () => {
 
     await waitFor(() => {
       expect(mockGet).toHaveBeenCalledWith("/ai-gateway/mcp/audit/logs/99");
+    });
+  });
+
+  describe("monitor only rows", () => {
+    it("names the rule a call would have been blocked by", async () => {
+      mockGet.mockResolvedValue({
+        data: {
+          data: { ...baseDetail, result_status: "would_block", matched_rule_name: "No emails" },
+        },
+      });
+      renderWithProviders(<MCPInvocationDrawer logId={42} open onClose={vi.fn()} />);
+
+      expect(await screen.findByText("Would have been blocked by No emails")).toBeInTheDocument();
+      expect(screen.getByText("Would block")).toBeInTheDocument();
+    });
+
+    const wouldEvent = (type: string, source: string, detail = "matched") => ({
+      type,
+      at: "2025-01-01T10:00:01Z",
+      detail,
+      source,
+    });
+
+    it("names the key's tool list only when the event says it came from one", async () => {
+      mockGet.mockResolvedValue({
+        data: {
+          data: {
+            ...baseDetail,
+            result_status: "would_block",
+            matched_rule_name: null,
+            events: [wouldEvent("would_block", "tool_acl", "Agent key blocks tool: delete_repo")],
+          },
+        },
+      });
+      renderWithProviders(<MCPInvocationDrawer logId={42} open onClose={vi.fn()} />);
+
+      expect(
+        await screen.findByText("Would have been blocked by this key's tool list"),
+      ).toBeInTheDocument();
+    });
+
+    it("falls back to a guardrail when a would block row has no rule and no source", async () => {
+      mockGet.mockResolvedValue({
+        data: { data: { ...baseDetail, result_status: "would_block", matched_rule_name: null } },
+      });
+      renderWithProviders(<MCPInvocationDrawer logId={42} open onClose={vi.fn()} />);
+
+      expect(await screen.findByText("Would have been blocked by a guardrail")).toBeInTheDocument();
+      expect(
+        screen.queryByText("Would have been blocked by this key's tool list"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("explains a would need approval by rule, by tool flag and with neither", async () => {
+      mockGet.mockResolvedValue({
+        data: {
+          data: {
+            ...baseDetail,
+            result_status: "would_need_approval",
+            matched_rule_name: "Approve rm",
+          },
+        },
+      });
+      const first = renderWithProviders(<MCPInvocationDrawer logId={42} open onClose={vi.fn()} />);
+      expect(await screen.findByText("Would have needed approval: Approve rm")).toBeInTheDocument();
+      first.unmount();
+
+      mockGet.mockResolvedValue({
+        data: {
+          data: {
+            ...baseDetail,
+            result_status: "would_need_approval",
+            matched_rule_name: null,
+            events: [wouldEvent("would_need_approval", "tool_requires_approval")],
+          },
+        },
+      });
+      const second = renderWithProviders(<MCPInvocationDrawer logId={42} open onClose={vi.fn()} />);
+      expect(
+        await screen.findByText("Would have needed approval (tool requires approval)"),
+      ).toBeInTheDocument();
+      second.unmount();
+
+      mockGet.mockResolvedValue({
+        data: {
+          data: { ...baseDetail, result_status: "would_need_approval", matched_rule_name: null },
+        },
+      });
+      renderWithProviders(<MCPInvocationDrawer logId={42} open onClose={vi.fn()} />);
+      expect(await screen.findByText("Would have needed approval")).toBeInTheDocument();
+    });
+
+    it("labels would events in the timeline like the status chip", async () => {
+      mockGet.mockResolvedValue({
+        data: {
+          data: {
+            ...baseDetail,
+            result_status: "would_block",
+            matched_rule_name: "No emails",
+            events: [
+              { type: "received", at: "2025-01-01T10:00:00Z" },
+              wouldEvent("would_block", "guardrail", "PII detected"),
+              wouldEvent(
+                "would_need_approval",
+                "approval_rule",
+                "rule 'Approve rm' requires approval",
+              ),
+            ],
+          },
+        },
+      });
+      renderWithProviders(<MCPInvocationDrawer logId={42} open onClose={vi.fn()} />);
+
+      await screen.findByText("Would have been blocked by No emails");
+      expect(screen.getByText("Would block")).toBeInTheDocument(); // status chip
+      expect(screen.getByText("Would block · PII detected")).toBeInTheDocument();
+      expect(
+        screen.getByText("Would need approval · rule 'Approve rm' requires approval"),
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/would_block/)).not.toBeInTheDocument();
+      expect(screen.getByText("received")).toBeInTheDocument();
+    });
+
+    it("keeps the blocked by rule label for enforced rows", async () => {
+      mockGet.mockResolvedValue({
+        data: { data: { ...baseDetail, result_status: "blocked", matched_rule_name: "No emails" } },
+      });
+      renderWithProviders(<MCPInvocationDrawer logId={42} open onClose={vi.fn()} />);
+
+      expect(await screen.findByText("Blocked by rule")).toBeInTheDocument();
+      expect(screen.getByText("No emails")).toBeInTheDocument();
     });
   });
 });

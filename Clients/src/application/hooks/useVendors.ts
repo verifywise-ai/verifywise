@@ -22,17 +22,23 @@ export const vendorQueryKeys = {
 // Hook to fetch all vendors
 export const useVendors = (
   filters: { projectId?: string | number } = {},
+  options: {
+    /** Skip the global error toast; the caller shows its own message. */
+    suppressGlobalErrorToast?: boolean;
+  } = {},
 ): UseQueryResult<VendorModel[], Error> => {
+  const { suppressGlobalErrorToast } = options;
   return useQuery({
     queryKey: vendorQueryKeys.list(filters),
     queryFn: async () => {
       if (filters.projectId && filters.projectId !== "all") {
         const response = await getVendorsByProjectId({
           projectId: Number(filters.projectId),
+          suppressGlobalErrorToast,
         });
         return response?.data || [];
       } else {
-        const response = await getAllVendors();
+        const response = await getAllVendors({ suppressGlobalErrorToast });
         return response?.data || [];
       }
     },

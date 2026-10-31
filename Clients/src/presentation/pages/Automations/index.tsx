@@ -653,7 +653,7 @@ Project Details:
 • Owner: {{project.owner}}
 • Start Date: {{project.start_date}}
 • AI Risk Classification: {{project.ai_risk_classification}}
-• Type of High-Risk Role: {{project.type_of_high_risk_role}}
+• High-risk roles: {{project.type_of_high_risk_role}}
 • Status: {{project.status}}
 
 This notification was sent on {{date_and_time}}.`;
@@ -1131,7 +1131,7 @@ Project Details:
 • Owner: {{project.owner}}
 • Start Date: {{project.start_date}}
 • AI Risk Classification: {{project.ai_risk_classification}}
-• Type of High-Risk Role: {{project.type_of_high_risk_role}}
+• High-risk roles: {{project.type_of_high_risk_role}}
 • Status: {{project.status}}
 
 This notification was sent on {{date_and_time}}.`,

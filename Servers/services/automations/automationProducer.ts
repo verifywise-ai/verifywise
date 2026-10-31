@@ -325,6 +325,148 @@ export async function scheduleAiDetectionScanCheck() {
   );
 }
 
+/** The queue (Redis) did not answer in time, or refused the call. Controllers map it to 503. */
+export class BackgroundJobsUnavailableError extends Error {
+  constructor(cause?: unknown) {
+    super("Background jobs are unavailable");
+    this.name = "BackgroundJobsUnavailableError";
+    if (cause !== undefined) (this as { cause?: unknown }).cause = cause;
+  }
+}
+
+/** Upper bound for one queue call made on behalf of an HTTP request. */
+export const QUEUE_CALL_TIMEOUT_MS = 5000;
+
+/** Run a queue call with QUEUE_CALL_TIMEOUT_MS; any failure becomes BackgroundJobsUnavailableError. */
+async function withQueueTimeout<T>(op: () => Promise<T>): Promise<T> {
+  let timer: NodeJS.Timeout | undefined;
+  try {
+    return await Promise.race([
+      op(),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(
+          () => reject(new BackgroundJobsUnavailableError()),
+          QUEUE_CALL_TIMEOUT_MS,
+        );
+      }),
+    ]);
+  } catch (err) {
+    if (err instanceof BackgroundJobsUnavailableError) throw err;
+    throw new BackgroundJobsUnavailableError(err);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+const PENDING_JOB_STATES = new Set([
+  "waiting",
+  "delayed",
+  "active",
+  "prioritized",
+  "waiting-children",
+]);
+
+/**
+ * Add `name` under a fixed `jobId` unless one is already waiting or running
+ * (`queued: false`). A finished job left behind is removed first, because
+ * BullMQ ignores an add whose id still exists; if that removal fails, the job
+ * is looked up again: gone, the add goes ahead; now waiting, `queued: false`;
+ * still there and finished, a genuine queue failure. Throws
+ * BackgroundJobsUnavailableError past QUEUE_CALL_TIMEOUT_MS.
+ */
+async function addSingletonJob(
+  name: string,
+  jobId: string,
+  data: object,
+): Promise<{ jobId: string; queued: boolean }> {
+  return withQueueTimeout(async () => {
+    const existing = await automationQueue.getJob(jobId);
+    if (existing) {
+      if (PENDING_JOB_STATES.has(await existing.getState())) return { jobId, queued: false };
+      try {
+        await existing.remove();
+      } catch (err) {
+        const again = await automationQueue.getJob(jobId);
+        if (again) {
+          if (PENDING_JOB_STATES.has(await again.getState())) return { jobId, queued: false };
+          throw err;
+        }
+      }
+    }
+    await automationQueue.add(name, data, {
+      jobId,
+      attempts: 1,
+      removeOnComplete: true,
+      removeOnFail: true,
+    });
+    return { jobId, queued: true };
+  });
+}
+
+/** One sync-engine job per extension and org at a time: the job id is fixed per pair. */
+export function extensionSyncJobId(key: string, organizationId: number): string {
+  return `ext-sync-${key}-${organizationId}`;
+}
+
+/** Payload of an `extension_sync_run` job. */
+export interface ExtensionSyncJobData {
+  key: string;
+  orgId: number;
+  kind: string;
+  triggeredBy: number | null;
+  payload: unknown;
+}
+
+/** True when a sync-engine job for the extension and org is waiting or running. */
+export async function hasPendingExtensionSyncJob(
+  key: string,
+  organizationId: number,
+): Promise<boolean> {
+  return withQueueTimeout(async () => {
+    const job = await automationQueue.getJob(extensionSyncJobId(key, organizationId));
+    return !!job && PENDING_JOB_STATES.has(await job.getState());
+  });
+}
+
+/**
+ * Queue one sync-engine run for the worker, which claims it at pickup, so
+ * time spent waiting never counts against its heartbeat. A double click or
+ * overlapping ticks cannot queue two (`queued: false`). One attempt: a retry
+ * is the next tick or click.
+ */
+export async function enqueueExtensionSyncRun(
+  data: ExtensionSyncJobData,
+): Promise<{ jobId: string; queued: boolean }> {
+  return addSingletonJob("extension_sync_run", extensionSyncJobId(data.key, data.orgId), data);
+}
+
+/** The sync engine's tick: every 5 minutes, queue the due scheduled runs of every provider. */
+export async function scheduleExtensionSyncTick() {
+  logger.info("Adding extension sync tick job to the queue...");
+  // No obliterate here: the scheduler upsert is idempotent by scheduler id.
+  // The tick replaces the Jira-only check job. Its queued jobs still run (the
+  // worker routes the old names to the engine) for one release.
+  try {
+    await automationQueue.removeJobScheduler("jira_assets_scheduled_sync_check");
+  } catch (error) {
+    logger.warn(
+      `Could not remove the old Jira Assets check scheduler: ${(error as Error).message}`,
+    );
+  }
+  await automationQueue.upsertJobScheduler(
+    "extension_sync_tick",
+    { pattern: "*/5 * * * *" },
+    {
+      name: "extension_sync_tick",
+      data: {},
+      opts: {
+        removeOnComplete: true,
+        removeOnFail: false,
+      },
+    },
+  );
+}
+
 export async function scheduleAiGatewayRiskDetection() {
   logger.info("Adding AI Gateway risk detection jobs to the queue...");
   // Daily risk detection at 6 AM
@@ -551,6 +693,25 @@ export async function scheduleMrmRetentionPrune() {
   );
 }
 
+export async function scheduleDataRetentionPrune() {
+  logger.info("Adding audit record retention prune job to the queue...");
+  // Daily at 3:30 AM, after the 3 AM MRM metric prune. Deletes audit records
+  // past each org's retention period. No obliterate here -- the repeatable add
+  // is idempotent by repeat key.
+  await automationQueue.upsertJobScheduler(
+    "data_retention_prune",
+    { pattern: "30 3 * * *" },
+    {
+      name: "data_retention_prune",
+      data: { type: "data_retention" },
+      opts: {
+        removeOnComplete: true,
+        removeOnFail: false,
+      },
+    },
+  );
+}
+
 export async function scheduleFileExpirySweep() {
   logger.info("Adding file expiry sweep job to the queue...");
   // Daily at 4:30 AM (2/3/4 AM slots are taken by other jobs — kept distinct).
@@ -619,6 +780,26 @@ export async function scheduleStaleInheritanceNotifySweep() {
     { pattern: "30 5 * * *" },
     {
       name: "stale_inheritance_notify_sweep",
+      data: {},
+      opts: {
+        removeOnComplete: true,
+        removeOnFail: false,
+      },
+    },
+  );
+}
+
+export async function scheduleApprovalOverdueSweep() {
+  logger.info("Adding approval overdue sweep job to the queue...");
+  // Hourly at minute 17 -- off the congested slots (top of hour: PMM check;
+  // */5: AI detection scan; */15: report tick). Hourly matches the
+  // wall-clock-hour granularity of approval step SLAs. No obliterate here --
+  // the scheduler upsert is idempotent by scheduler id.
+  await automationQueue.upsertJobScheduler(
+    "approval_overdue_sweep",
+    { pattern: "17 * * * *" },
+    {
+      name: "approval_overdue_sweep",
       data: {},
       opts: {
         removeOnComplete: true,

@@ -17,6 +17,12 @@ import logger from "../../utils/logger/fileLogger";
 
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 
+/** Agent Control agent key enforcement modes, as shown to people. */
+const ENFORCEMENT_MODE_LABELS: Record<string, string> = {
+  enforce: "enforce",
+  monitor: "monitor only",
+};
+
 /**
  * Get all admin users for an organization (ID + name).
  */
@@ -250,14 +256,19 @@ export async function notifyApprovalPending(
  */
 export async function notifyConfigChange(
   organizationId: number,
-  changedByUserId: number,
+  changedByUserId: number | null,
+  // Built by the gateway's config_event(); every field is optional here so an
+  // incomplete event still produces a notification.
   event: {
-    entityType: string; // "Endpoint" | "API key" | "Guardrail rule"
-    entityName: string; // e.g., "prod-gpt4o" or "Block credit cards"
-    action: string; // "created" | "deleted" | "disabled" | "enabled" | "modified"
-    detail?: string; // e.g., "Provider: openai, Model: gpt-4o"
-    actionUrl: string; // link to the relevant page
-    actionLabel: string; // button text e.g., "View endpoints"
+    entityType?: string; // "Endpoint" | "API key" | "Agent key" | ...
+    entityName?: string; // e.g., "prod-gpt4o" or "Block credit cards"
+    action?: string; // "created" | "updated" | "deleted" | "revoked" | "approved" | ... | "enforcement_mode_changed"
+    detail?: string; // e.g., "Provider: openai"
+    actionUrl?: string; // link to the relevant page; a path ("/ai-gateway/...") is prefixed with FRONTEND_URL
+    actionLabel?: string; // button text e.g., "View endpoints"
+    oldMode?: string; // enforcement_mode_changed only: "enforce" | "monitor"
+    newMode?: string; // enforcement_mode_changed only: "enforce" | "monitor"
+    email?: boolean; // true = also email admins; absent or false = in-app only
   },
 ): Promise<void> {
   const admins = await getOrgAdmins(organizationId);
@@ -265,27 +276,64 @@ export async function notifyConfigChange(
   // Look up who made the change
   let changedByName = "A user";
   try {
-    const users = await sequelize.query(`SELECT name, surname FROM users WHERE id = :userId`, {
-      replacements: { userId: changedByUserId },
-      type: QueryTypes.SELECT,
-    });
+    const users = await sequelize.query(
+      `SELECT name, surname FROM users WHERE id = :userId AND organization_id = :organizationId`,
+      {
+        replacements: { userId: changedByUserId, organizationId },
+        type: QueryTypes.SELECT,
+      },
+    );
     const u = (users as any[])[0];
     if (u) changedByName = [u.name, u.surname].filter(Boolean).join(" ") || "A user";
   } catch {
     /* fallback to "A user" */
   }
 
+  // Older or malformed events must not throw here: a TypeError turns into a 500
+  // that the gateway only logs, and the notification is lost. Log what was
+  // missing so a gateway that sends the wrong shape is noticed.
+  const missing = (["entityType", "action", "actionUrl", "actionLabel"] as const).filter(
+    (field) => !event?.[field],
+  );
+  if (missing.length) {
+    logger.warn(
+      `AI Gateway config-change event is missing ${missing.join(", ")}; sending it with defaults`,
+    );
+  }
+  const entityType = event?.entityType || "Gateway setting";
+  const entityName = event?.entityName || "";
+  const action = event?.action || "modified";
+  const entityLower = entityType.toLowerCase();
+  const target = entityName ? `the ${entityLower} "${entityName}"` : `the ${entityLower}`;
+
   const descriptions: Record<string, string> = {
-    created: `${changedByName} created a new ${event.entityType.toLowerCase()}: "${event.entityName}".`,
-    deleted: `${changedByName} deleted the ${event.entityType.toLowerCase()} "${event.entityName}".`,
-    disabled: `${changedByName} disabled the ${event.entityType.toLowerCase()} "${event.entityName}".`,
-    enabled: `${changedByName} enabled the ${event.entityType.toLowerCase()} "${event.entityName}".`,
-    modified: `${changedByName} modified the ${event.entityType.toLowerCase()} "${event.entityName}".`,
+    created: entityName
+      ? `${changedByName} created a new ${entityLower}: "${entityName}".`
+      : `${changedByName} created a new ${entityLower}.`,
+    deleted: `${changedByName} deleted ${target}.`,
+    disabled: `${changedByName} disabled ${target}.`,
+    enabled: `${changedByName} enabled ${target}.`,
+    modified: `${changedByName} modified ${target}.`,
+    updated: `${changedByName} updated ${target}.`,
+    revoked: `${changedByName} revoked ${target}.`,
+    approved: `${changedByName} approved ${target}.`,
+    denied: `${changedByName} denied ${target}.`,
+    published: `${changedByName} published a new version of ${target}.`,
+    purged: `${changedByName} purged old ${entityLower}.`,
+    enforcement_mode_changed: `${entityName ? `${entityType} "${entityName}"` : entityType} switched to ${
+      ENFORCEMENT_MODE_LABELS[event?.newMode ?? ""] ?? "a different mode"
+    } by ${changedByName}.`,
   };
 
-  const changeDescription =
-    descriptions[event.action] ||
-    `${changedByName} changed ${event.entityType.toLowerCase()} "${event.entityName}".`;
+  const changeDescription = descriptions[action] || `${changedByName} changed ${target}.`;
+  // Wording for the title and email subject ("Agent key mode changed").
+  const actionText = action === "enforcement_mode_changed" ? "mode changed" : action;
+  const rawUrl = event?.actionUrl || "/ai-gateway";
+  const actionUrl = rawUrl.startsWith("/") ? `${FRONTEND_URL}${rawUrl}` : rawUrl;
+  const actionLabel = event?.actionLabel || "Open AI Gateway";
+  // The gateway marks the changes worth an email (keys revoked, monitor only
+  // switched, guardrails removed, ...); everything else is in-app only.
+  const sendEmail = event?.email === true;
 
   await Promise.allSettled(
     admins
@@ -296,25 +344,25 @@ export async function notifyConfigChange(
           {
             user_id: admin.id,
             type: NotificationType.AI_GATEWAY_CONFIG_CHANGE,
-            title: `${event.entityType} ${event.action}`,
+            title: `${entityType} ${actionText}`,
             message: changeDescription,
             entity_type: NotificationEntityType.AI_GATEWAY,
-            action_url: event.actionUrl,
+            action_url: actionUrl,
           },
-          true,
+          sendEmail,
           {
             template: EMAIL_TEMPLATES.AI_GATEWAY_CONFIG_CHANGE,
-            subject: `AI Gateway: ${event.entityType.toLowerCase()} ${event.action}`,
+            subject: `AI Gateway: ${entityLower} ${actionText}`,
             variables: {
               recipient_name: admin.name,
               change_description: changeDescription,
-              entity_type: event.entityType,
-              entity_name: event.entityName,
-              change_detail: event.detail || "",
+              entity_type: entityType,
+              entity_name: entityName,
+              change_detail: event?.detail || "",
               changed_by: changedByName,
               changed_at: new Date().toLocaleString(),
-              action_url: event.actionUrl,
-              action_label: event.actionLabel,
+              action_url: actionUrl,
+              action_label: actionLabel,
             },
           },
         ).catch((err) => logger.error(`Failed to send config change to admin ${admin.id}:`, err)),

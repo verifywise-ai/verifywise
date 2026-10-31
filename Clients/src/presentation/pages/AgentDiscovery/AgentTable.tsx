@@ -129,8 +129,8 @@ const AgentTable: React.FC<AgentTableProps> = ({
     if (!sortConfig.key || !sortConfig.direction) return agents;
 
     const sorted = [...agents].sort((a, b) => {
-      let aVal: string | null = null;
-      let bVal: string | null = null;
+      let aVal: string | null;
+      let bVal: string | null;
 
       switch (sortConfig.key) {
         case "NAME":

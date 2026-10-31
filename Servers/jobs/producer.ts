@@ -23,11 +23,14 @@ import {
   scheduleReportSchedulerTick,
   scheduleMrmRevalidationSweep,
   scheduleMrmRetentionPrune,
+  scheduleDataRetentionPrune,
   scheduleFileExpirySweep,
   scheduleAiTrustIndexSync,
   scheduleEvidenceFreshnessSweep,
   scheduleDeadlineEscalationSweep,
   scheduleStaleInheritanceNotifySweep,
+  scheduleExtensionSyncTick,
+  scheduleApprovalOverdueSweep,
 } from "../services/automations/automationProducer";
 
 async function safeSchedule(name: string, fn: () => Promise<void>): Promise<void> {
@@ -63,13 +66,16 @@ export async function addAllJobs(): Promise<void> {
   await safeSchedule("report-scheduler-tick", scheduleReportSchedulerTick);
   await safeSchedule("mrm-revalidation-sweep", scheduleMrmRevalidationSweep); // non-obliterating — safe to run after the obliterating schedulers
   await safeSchedule("mrm-retention-prune", scheduleMrmRetentionPrune); // non-obliterating — safe to run after the obliterating schedulers
+  await safeSchedule("data-retention-prune", scheduleDataRetentionPrune); // non-obliterating — safe to run after the obliterating schedulers
   await safeSchedule("file-expiry-sweep", scheduleFileExpirySweep); // non-obliterating — safe to run after the obliterating schedulers
   await safeSchedule("evidence-freshness-sweep", scheduleEvidenceFreshnessSweep); // non-obliterating — safe to run after the obliterating schedulers
   await safeSchedule("deadline-escalation-sweep", scheduleDeadlineEscalationSweep); // non-obliterating — safe to run after the obliterating schedulers
   await safeSchedule("stale-inheritance-notify-sweep", scheduleStaleInheritanceNotifySweep); // non-obliterating — safe to run after the obliterating schedulers
+  await safeSchedule("approval-overdue-sweep", scheduleApprovalOverdueSweep); // non-obliterating — safe to run after the obliterating schedulers
   await safeSchedule("vendor-research-scan", scheduleVendorResearchScan); // its own queue, which is never obliterated — the order does not matter
   await safeSchedule("vendor-risk-database-sync", scheduleVendorRiskDatabaseSync); // its own queue, never obliterated; removes the schedulers while VENDOR_RESEARCH_VRDB is off
   await safeSchedule("ai-trust-index-sync", scheduleAiTrustIndexSync);
+  await safeSchedule("extension-sync-tick", scheduleExtensionSyncTick); // non-obliterating — safe to run after the obliterating schedulers
   // Ordering constraint: obliterate-using schedulers (e.g. vendor-review,
   // report-notification) must run BEFORE all non-obliterating ones, or they wipe
   // jobs the non-obliterating schedulers already added. scheduleMrmRevalidationSweep

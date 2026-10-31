@@ -1,3 +1,9 @@
+import { formatHighRiskRoles } from "../highRiskRoles.utils";
+
+/** A project's roles as "Provider, Deployer"; rows from before the list fall back to the single role. */
+const rolesOf = (project: any): string =>
+  formatHighRiskRoles(project.high_risk_roles ?? project.type_of_high_risk_role);
+
 // Build replacement dict for project
 export function buildProjectReplacements(project: any): Record<string, any> {
   return {
@@ -9,7 +15,7 @@ export function buildProjectReplacements(project: any): Record<string, any> {
       ? new Date(project.start_date).toLocaleDateString("en-US", { dateStyle: "long" })
       : "",
     "project.ai_risk_classification": project.ai_risk_classification,
-    "project.type_of_high_risk_role": project.type_of_high_risk_role,
+    "project.type_of_high_risk_role": rolesOf(project),
     "project.status": project.status,
     date_and_time: new Date().toLocaleString("en-US", {
       dateStyle: "long",
@@ -68,12 +74,13 @@ export function buildProjectUpdateReplacements(
     changes.push(`• AI Risk Classification: ${newProject.ai_risk_classification}`);
   }
 
-  if (oldProject.type_of_high_risk_role !== newProject.type_of_high_risk_role) {
-    changes.push(
-      `• Type of High-Risk Role: ${oldProject.type_of_high_risk_role || "(empty)"} → ${newProject.type_of_high_risk_role || "(empty)"}`,
-    );
-  } else if (newProject.type_of_high_risk_role) {
-    changes.push(`• Type of High-Risk Role: ${newProject.type_of_high_risk_role}`);
+  // Compared as sets: rolesOf sorts Provider first, so a reorder is no change.
+  const oldRoles = rolesOf(oldProject);
+  const newRoles = rolesOf(newProject);
+  if (oldRoles !== newRoles) {
+    changes.push(`• High-risk roles: ${oldRoles || "(empty)"} → ${newRoles || "(empty)"}`);
+  } else if (newRoles) {
+    changes.push(`• High-risk roles: ${newRoles}`);
   }
 
   if (oldProject.status !== newProject.status) {
@@ -92,7 +99,7 @@ export function buildProjectUpdateReplacements(
     "project.owner": newOwner,
     "project.start_date": startDate,
     "project.ai_risk_classification": newProject.ai_risk_classification,
-    "project.type_of_high_risk_role": newProject.type_of_high_risk_role,
+    "project.type_of_high_risk_role": newRoles,
     "project.status": newProject.status,
 
     // Old project values
@@ -102,7 +109,7 @@ export function buildProjectUpdateReplacements(
     "old_project.owner": oldOwner,
     "old_project.start_date": oldStartDate,
     "old_project.ai_risk_classification": oldProject.ai_risk_classification,
-    "old_project.type_of_high_risk_role": oldProject.type_of_high_risk_role,
+    "old_project.type_of_high_risk_role": oldRoles,
     "old_project.status": oldProject.status,
 
     // Changes summary

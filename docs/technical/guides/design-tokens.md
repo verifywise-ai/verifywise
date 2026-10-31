@@ -7,9 +7,15 @@ This guide documents the design tokens, theme configuration, and visual standard
 ### File Structure
 
 ```
+shared/design-tokens/
+├── primitives.ts      # Color scale hex
+└── palette.ts         # Semantic tokens built from those scales
+
 Clients/src/presentation/themes/
 ├── index.ts           # Central export hub
 ├── light.ts           # Main MUI theme configuration
+├── palette.ts         # Re-exports shared/design-tokens/palette.ts
+├── typography.ts      # Font scale and textStyles
 ├── v1SingleTheme.ts   # Standardized patterns
 ├── theme.d.ts         # TypeScript type definitions
 ├── components.ts      # Reusable component styles
@@ -17,6 +23,8 @@ Clients/src/presentation/themes/
 ├── alerts.ts          # Alert status styles
 └── tables.ts          # Table-specific styles
 ```
+
+`shared/design-tokens/primitives.ts` holds the scale hex. `shared/design-tokens/palette.ts` builds brand, text, background, border, and status from those scales. The client `palette.ts` re-exports the shared palette, so existing screen imports stay valid. Email and PDF rendering can import the shared modules.
 
 ### Theme Provider Setup
 
@@ -38,87 +46,69 @@ function App() {
 
 ### Brand Colors
 
-| Token | Value | Usage |
-|-------|-------|-------|
-| `primary.main` | `#13715B` | Primary actions, links, emphasis |
-| `primary.dark` | `#0A4A3A` | Hover states, dark variants |
-| `primary.light` | `#E6F2EF` | Light backgrounds, highlights |
+| Token                            | Value     | Usage                            |
+| -------------------------------- | --------- | -------------------------------- |
+| `brand.primary` / `primary.main` | `#13715B` | Primary actions, links, emphasis |
+| `brand.primaryHover`             | `#0F5A47` | Hover state for primary          |
+| `brand.primaryLight`             | `#E6F0EC` | Light backgrounds, highlights    |
+| `brand.primaryDark`              | `#10614D` | Dark variant                     |
 
 ### Text Colors
 
-| Token | Value | Usage |
-|-------|-------|-------|
-| `text.primary` | `#1c2130` | Main body text, headings |
-| `text.secondary` | `#344054` | Secondary text, labels |
-| `text.tertiary` | `#475467` | Muted text, placeholders |
-| `text.disabled` | `#9CA3AF` | Disabled state text |
+| Token            | Value     | Usage                    |
+| ---------------- | --------- | ------------------------ |
+| `text.primary`   | `#1C2130` | Main body text, headings |
+| `text.secondary` | `#344054` | Secondary text, labels   |
+| `text.tertiary`  | `#475467` | Muted text, placeholders |
+| `text.accent`    | `#838C99` | Hints                    |
+| `text.disabled`  | `#9CA3AF` | Disabled state text      |
+| `text.icon`      | `#667085` | Default icon color       |
 
 ### Background Colors
 
-| Token | Value | Usage |
-|-------|-------|-------|
-| `background.main` | `#FFFFFF` | Main content areas |
-| `background.alt` | `#FCFCFD` | Alternate sections |
-| `background.fill` | `#F4F4F4` | Filled areas, inputs |
-| `background.accent` | `#f9fafb` | Subtle highlights |
-| `background.hover` | `#E5E7EB` | Hover states |
+| Token               | Value     | Usage                               |
+| ------------------- | --------- | ----------------------------------- |
+| `background.main`   | `#FFFFFF` | Main content areas                  |
+| `background.alt`    | `#F9FAFB` | Alternate sections                  |
+| `background.modal`  | `#F9FAFB` | Modal background                    |
+| `background.fill`   | `#E6F0EC` | Filled areas, selected tint         |
+| `background.accent` | `#F9FAFB` | Subtle highlights                   |
+| `background.hover`  | `#F3F4F6` | Hover states                        |
+| `secondary.main`    | `#F4F4F4` | Secondary button fill               |
+| `secondary.dark`    | `#e3e3e3` | Secondary button hover / other fill |
 
 ### Border Colors
 
-| Token | Value | Usage |
-|-------|-------|-------|
-| `border.dark` | `#d0d5dd` | Default borders |
-| `border.light` | `#eaecf0` | Subtle borders |
+| Token          | Value     | Usage           |
+| -------------- | --------- | --------------- |
+| `border.dark`  | `#D0D5DD` | Default borders |
+| `border.light` | `#E5E7EB` | Subtle borders  |
 
 ### Status Colors
 
 #### Severity Levels
 
-| Level | Color | Usage |
-|-------|-------|-------|
-| Critical | `#DC2626` | Critical risks, errors |
-| High | `#EF4444` | High priority items |
-| Medium | `#F59E0B` | Medium priority, warnings |
-| Low | `#10B981` | Low priority items |
-| Very Low | `#22C55E` | Minimal concern |
+| Level    | Text      | Background | Usage                     |
+| -------- | --------- | ---------- | ------------------------- |
+| Critical | `#D32F2F` | `#FFD6D6`  | Critical risks, errors    |
+| High     | `#E64A19` | `#FFE5D0`  | High priority items       |
+| Medium   | `#795548` | `#FFF8E1`  | Medium priority, warnings |
+| Low      | `#138A5E` | `#E6F4EA`  | Low priority items        |
+| Very low | `#00695C` | `#E0F7FA`  | Minimal concern           |
 
 #### Implementation Status
 
-| Status | Color | Usage |
-|--------|-------|-------|
-| Implemented | `#13715B` | Completed items |
-| Awaiting Review | `#3B82F6` | Pending review |
-| Awaiting Approval | `#8B5CF6` | Pending approval |
-| Needs Rework | `#EA580C` | Requires changes |
-| Not Started | `#9CA3AF` | Not begun |
+| Status  | Text      | Background | Usage                |
+| ------- | --------- | ---------- | -------------------- |
+| Success | `#138A5E` | `#E6F4EA`  | Completed, confirmed |
+| Error   | `#D32F2F` | `#FFD6D6`  | Failed, critical     |
+| Warning | `#795548` | `#FFF8E1`  | Needs attention      |
+| Info    | `#1565C0` | `#E3F2FD`  | Informational        |
+| Default | `#6B7280` | `#F9FAFB`  | Neutral              |
 
 #### Alert States
 
-```typescript
-// From themes/alerts.ts
-export const alertStyles = {
-  success: {
-    text: "#079455",
-    main: "#17b26a",
-    background: "#ecfdf3",
-  },
-  error: {
-    text: "#f04438",
-    main: "#d32f2f",
-    background: "#f9eced",
-  },
-  warning: {
-    text: "#DC6803",
-    main: "#fdb022",
-    background: "#fffcf5",
-  },
-  info: {
-    text: "#0288d1",
-    main: "#475467",
-    background: "#e5f6fd",
-  },
-};
-```
+Alert styles in `themes/alerts.ts` use the same status hexes: success `#138A5E` / `#E6F4EA`, error `#D32F2F` / `#FFD6D6`, warning `#795548` / `#FFF8E1`, info `#1565C0` / `#E3F2FD`.
 
 ## Typography
 
@@ -146,50 +136,50 @@ const monoFontFamily = [
 
 ### Font Sizes
 
-| Token | Size | Usage |
-|-------|------|-------|
+| Token       | Size | Usage                  |
+| ----------- | ---- | ---------------------- |
 | `xs` / `sm` | 12px | Small labels, captions |
-| `base` | 13px | Default body text |
-| `md` | 14px | Emphasized body text |
-| `lg` | 15px | Large body text |
-| `xl` | 16px | Small headings |
-| `2xl` | 20px | Section headings |
-| `3xl` | 22px | Page headings |
-| `4xl` | 26px | Large headings |
-| `5xl` | 30px | Display headings |
+| `base`      | 13px | Default body text      |
+| `md`        | 14px | Emphasized body text   |
+| `lg`        | 15px | Large body text        |
+| `xl`        | 16px | Small headings         |
+| `2xl`       | 20px | Section headings       |
+| `3xl`       | 22px | Page headings          |
+| `4xl`       | 26px | Large headings         |
+| `5xl`       | 30px | Display headings       |
 
 ### Font Weights
 
-| Token | Weight | Usage |
-|-------|--------|-------|
-| `normal` | 400 | Body text |
-| `medium` | 500 | Emphasized text, buttons |
-| `semibold` | 600 | Headings, labels |
-| `bold` | 700 | Strong emphasis |
+| Token      | Weight | Usage                    |
+| ---------- | ------ | ------------------------ |
+| `normal`   | 400    | Body text                |
+| `medium`   | 500    | Emphasized text, buttons |
+| `semibold` | 600    | Headings, labels         |
+| `bold`     | 700    | Strong emphasis          |
 
 ### Line Heights
 
-| Token | Value | Usage |
-|-------|-------|-------|
-| `tight` | 1.2 | Headings |
-| `snug` | 1.3 | Compact text |
-| `normal` | 1.4 | Default body |
-| `relaxed` | 1.5 | Readable paragraphs |
+| Token     | Value | Usage               |
+| --------- | ----- | ------------------- |
+| `tight`   | 1.2   | Headings            |
+| `snug`    | 1.3   | Compact text        |
+| `normal`  | 1.4   | Default body        |
+| `relaxed` | 1.5   | Readable paragraphs |
 
 ## Spacing
 
 ### Spacing Scale
 
-| Token | Size | Usage |
-|-------|------|-------|
-| `xs` | 4px | Tight spacing, icon gaps |
-| `sm` | 8px | Small gaps, padding |
-| `md` | 12px | Default spacing |
-| `lg` | 16px | Section spacing |
-| `xl` | 24px | Large gaps |
-| `2xl` | 32px | Section margins |
-| `3xl` | 40px | Page sections |
-| `4xl` | 48px | Major sections |
+| Token | Size | Usage                    |
+| ----- | ---- | ------------------------ |
+| `xs`  | 4px  | Tight spacing, icon gaps |
+| `sm`  | 8px  | Small gaps, padding      |
+| `md`  | 12px | Default spacing          |
+| `lg`  | 16px | Section spacing          |
+| `xl`  | 24px | Large gaps               |
+| `2xl` | 32px | Section margins          |
+| `3xl` | 40px | Page sections            |
+| `4xl` | 48px | Major sections           |
 
 ### Using Theme Spacing
 
@@ -206,11 +196,11 @@ sx={{
 
 ### Buttons
 
-| Size | Height | Font Size | Padding |
-|------|--------|-----------|---------|
-| Small | 28px | 12px | 8px 12px |
-| Medium | 34px | 13px | 10px 16px |
-| Large | 40px | 14px | 12px 20px |
+| Size   | Height | Font Size | Padding   |
+| ------ | ------ | --------- | --------- |
+| Small  | 28px   | 12px      | 8px 12px  |
+| Medium | 34px   | 13px      | 10px 16px |
+| Large  | 40px   | 14px      | 12px 20px |
 
 ```typescript
 // Standard button (medium)
@@ -228,19 +218,19 @@ sx={{
 
 ### Inputs
 
-| Size | Height | Usage |
-|------|--------|-------|
-| Small | 32px | Compact forms |
-| Medium | 40px | Default |
-| Large | 48px | Prominent inputs |
+| Size   | Height | Usage            |
+| ------ | ------ | ---------------- |
+| Small  | 32px   | Compact forms    |
+| Medium | 40px   | Default          |
+| Large  | 48px   | Prominent inputs |
 
 ### Cards
 
-| Padding | Size | Usage |
-|---------|------|-------|
-| Small | 12px | Compact cards |
-| Medium | 16px | Default cards |
-| Large | 24px | Prominent cards |
+| Padding | Size | Usage           |
+| ------- | ---- | --------------- |
+| Small   | 12px | Compact cards   |
+| Medium  | 16px | Default cards   |
+| Large   | 24px | Prominent cards |
 
 ## Shape & Borders
 
@@ -248,25 +238,25 @@ sx={{
 
 ```typescript
 // Standard border radius
-borderRadius: "4px"  // Primary standard
+borderRadius: "4px"; // Primary standard
 
 // Using theme
-borderRadius: theme.shape.borderRadius  // 4px
-borderRadius: theme.spacing(1.5)        // 12px for modals
+borderRadius: theme.shape.borderRadius; // 4px
+borderRadius: theme.spacing(1.5); // 12px for modals
 ```
 
 ### Border Styles
 
 ```typescript
 // Default border
-border: "1px solid #d0d5dd"
+border: "1px solid #d0d5dd";
 
 // Light border
-border: "1px solid #eaecf0"
+border: "1px solid #E5E7EB";
 
 // Using theme
-border: `1px solid ${theme.palette.border.dark}`
-border: `1px solid ${theme.palette.border.light}`
+border: `1px solid ${theme.palette.border.dark}`;
+border: `1px solid ${theme.palette.border.light}`;
 ```
 
 ## Shadows
@@ -274,7 +264,7 @@ border: `1px solid ${theme.palette.border.light}`
 ### Primary Shadow
 
 ```typescript
-boxShadow: "0px 4px 24px -4px rgba(16, 24, 40, 0.08), 0px 3px 3px -3px rgba(16, 24, 40, 0.03)"
+boxShadow: "0px 4px 24px -4px rgba(16, 24, 40, 0.08), 0px 3px 3px -3px rgba(16, 24, 40, 0.03)";
 ```
 
 ### No Shadow (Default)
@@ -282,7 +272,7 @@ boxShadow: "0px 4px 24px -4px rgba(16, 24, 40, 0.08), 0px 3px 3px -3px rgba(16, 
 Most components use no shadow by default:
 
 ```typescript
-boxShadow: "none"
+boxShadow: "none";
 ```
 
 ## Component Style Patterns
@@ -544,26 +534,29 @@ import { cardMixins, typographyMixins } from "../themes/mixins";
 
 ### Quick Reference
 
-| Purpose | Light | Dark/Emphasis |
-|---------|-------|---------------|
-| Brand | `#13715B` | `#0A4A3A` |
-| Text | `#1c2130` | `#344054` |
-| Border | `#eaecf0` | `#d0d5dd` |
-| Background | `#FFFFFF` | `#f9fafb` |
-| Success | `#17b26a` | `#079455` |
-| Error | `#f04438` | `#d32f2f` |
-| Warning | `#fdb022` | `#DC6803` |
+| Purpose    | Light     | Dark/Emphasis |
+| ---------- | --------- | ------------- |
+| Brand      | `#13715B` | `#0F5A47`     |
+| Text       | `#1C2130` | `#344054`     |
+| Border     | `#E5E7EB` | `#D0D5DD`     |
+| Background | `#FFFFFF` | `#F9FAFB`     |
+| Success    | `#E6F4EA` | `#138A5E`     |
+| Error      | `#FFD6D6` | `#D32F2F`     |
+| Warning    | `#FFF8E1` | `#795548`     |
 
 ## Key Files
 
-| File | Purpose |
-|------|---------|
-| `Clients/src/presentation/themes/light.ts` | Main MUI theme |
-| `Clients/src/presentation/themes/components.ts` | Reusable component styles |
-| `Clients/src/presentation/themes/mixins.ts` | Style mixins |
-| `Clients/src/presentation/themes/alerts.ts` | Alert status styles |
-| `Clients/src/presentation/themes/theme.d.ts` | TypeScript definitions |
-| `Clients/src/presentation/styles/colors.ts` | Color palette |
+| File                                            | Purpose                                 |
+| ----------------------------------------------- | --------------------------------------- |
+| `shared/design-tokens/primitives.ts`            | Color scale hex                         |
+| `shared/design-tokens/palette.ts`               | Semantic tokens built from those scales |
+| `Clients/src/presentation/themes/palette.ts`    | Re-exports the shared semantic palette  |
+| `Clients/src/presentation/themes/light.ts`      | Main MUI theme                          |
+| `Clients/src/presentation/themes/components.ts` | Reusable component styles               |
+| `Clients/src/presentation/themes/mixins.ts`     | Style mixins                            |
+| `Clients/src/presentation/themes/alerts.ts`     | Alert status styles                     |
+| `Clients/src/presentation/themes/theme.d.ts`    | TypeScript definitions                  |
+| `Clients/src/presentation/styles/colors.ts`     | Color palette                           |
 
 ## Related Documentation
 

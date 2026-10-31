@@ -46,9 +46,9 @@ describe("validateId", () => {
     expect(check).toHaveBeenCalledWith("userId");
   });
 
-  it("should call isInt with min 1", () => {
+  it("should call isInt with min 1 and the int4 maximum", () => {
     validateId();
-    expect(mockIsInt).toHaveBeenCalledWith({ min: 1 });
+    expect(mockIsInt).toHaveBeenCalledWith({ min: 1, max: 2147483647 });
   });
 
   it("should call next when validation passes", () => {

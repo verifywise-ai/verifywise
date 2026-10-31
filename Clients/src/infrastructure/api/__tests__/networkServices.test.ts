@@ -23,6 +23,21 @@ describe("apiServices", () => {
       expect(result.status).toBe(200);
     });
 
+    it("keeps suppressGlobalErrorToast as a request option, not a query parameter", async () => {
+      let requestedUrl = "";
+      server.use(
+        http.get("/api/ai-incident-managements/42", ({ request }) => {
+          requestedUrl = request.url;
+          return HttpResponse.json({ data: { id: 42 } });
+        }),
+      );
+      await apiServices.get("/ai-incident-managements/42", {
+        suppressGlobalErrorToast: true,
+        responseType: "json",
+      });
+      expect(requestedUrl).not.toContain("suppressGlobalErrorToast");
+    });
+
     it("throws CustomException on error", async () => {
       server.use(
         http.get("/api/fail", () =>

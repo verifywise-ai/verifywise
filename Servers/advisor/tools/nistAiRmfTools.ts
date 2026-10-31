@@ -111,6 +111,19 @@ export const toolsDefinition: any[] = [
   {
     type: "function",
     function: {
+      name: "get_nist_org_progress",
+      description:
+        "Get organization-wide NIST AI RMF compliance progress. Use this for organization-level NIST AI RMF questions (e.g. 'How are we doing on NIST AI RMF?') — it discovers every project in the organization that has NIST AI RMF linked and aggregates their progress, so no project ID is needed. For questions about a specific named project, use get_nist_progress instead. Returns a status field: 'ok' with per-project breakdown and summed totals (percentages recomputed from summed counts), or 'not_configured' when NIST AI RMF is not linked to any real project. When status is 'not_configured', relay the included setup message to the user — never present it as progress data. Demo projects are excluded from totals and listed under excludedDemoProjects. No parameters required.",
+      parameters: {
+        type: "object",
+        properties: {},
+        required: [],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "agent_update_nist_subcategory",
       description:
         "Update a NIST AI RMF subcategory implementation for a project. Requires user confirmation before executing. Updates status, implementation description, and auditor feedback.",

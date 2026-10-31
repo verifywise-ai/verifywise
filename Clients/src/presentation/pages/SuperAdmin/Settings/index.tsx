@@ -10,7 +10,7 @@ import Password from "../../SettingsPage/Password";
 import Monitoring from "./Monitoring";
 import SuperAdmins from "./SuperAdmins";
 import ApiKeys from "../../SettingsPage/ApiKeys";
-import McpServer from "./McpServer";
+import McpConnect from "./McpConnect";
 
 export default function SuperAdminSettings() {
   const navigate = useNavigate();
@@ -66,16 +66,16 @@ export default function SuperAdminSettings() {
               tooltip: "Elect other users as Super Admins",
             },
             {
+              label: "MCP",
+              value: "mcp",
+              icon: "Bot" as TabItem["icon"],
+              tooltip: "Connect Claude Code to this deployment",
+            },
+            {
               label: "API keys",
               value: "api-keys",
               icon: "KeyRound" as TabItem["icon"],
               tooltip: "Create API tokens for the super admin API",
-            },
-            {
-              label: "MCP server",
-              value: "mcp-server",
-              icon: "Bot" as TabItem["icon"],
-              tooltip: "Install the MCP server to manage organizations and users from Claude Code",
             },
           ]}
           activeTab={activeTab}
@@ -98,12 +98,12 @@ export default function SuperAdminSettings() {
           <SuperAdmins />
         </TabPanel>
 
-        <TabPanel sx={{ p: 0 }} value="api-keys">
-          <ApiKeys showLlmKeys={false} />
+        <TabPanel sx={{ p: 0 }} value="mcp">
+          <McpConnect />
         </TabPanel>
 
-        <TabPanel sx={{ p: 0 }} value="mcp-server">
-          <McpServer />
+        <TabPanel sx={{ p: 0 }} value="api-keys">
+          <ApiKeys showLlmKeys={false} />
         </TabPanel>
       </TabContext>
     </PageHeaderExtended>

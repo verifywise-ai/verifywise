@@ -376,6 +376,11 @@ function IconButton({
       return items;
     }
 
+    // Read-only roles keep the entry that opens the (view-only) record.
+    if (normalizedType === "model risk" && canDelete === false) {
+      return ["edit"];
+    }
+
     if (normalizedType === "vendor") {
       return canDelete ? ["edit", "remove"] : ["edit"];
     }
@@ -392,9 +397,12 @@ function IconButton({
 
     // Handle "policy" type dynamically to include assign_folder when available
     if (normalizedType === "policy") {
-      const items = ["edit", "link_objects"];
-      if (onAssignToFolder) items.push("assign_folder");
-      items.push("download_pdf", "download_docx", "remove");
+      // Read-only roles (canDelete === false) can open and download only.
+      const canModify = canDelete !== false;
+      const items = canModify ? ["edit", "link_objects"] : ["edit"];
+      if (onAssignToFolder && canModify) items.push("assign_folder");
+      items.push("download_pdf", "download_docx");
+      if (canModify) items.push("remove");
       return items;
     }
 

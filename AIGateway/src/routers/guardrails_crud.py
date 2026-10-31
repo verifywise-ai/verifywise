@@ -1,21 +1,21 @@
 """
 CRUD router for AI Gateway guardrail rules, settings, logs, and stats.
 Handles management operations (create/update/delete rules, settings, purge logs).
-NOTE: scan/test routes live in routers/guardrails.py — this file is guardrails_crud.py
-      to avoid a naming conflict.
+NOTE: the "Test guardrails" route lives in routers/guardrails.py — this file is
+      guardrails_crud.py to avoid a naming conflict.
 """
 
 import re
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-from fastapi import APIRouter, Query, Request
-from middlewares.auth import verify_internal_key
+from fastapi import APIRouter, HTTPException, Query, Request
 from utils.auth import get_org_id, get_user_id, require_admin
 from utils.change_history import record_guardrail_change
-from utils.notifications import notify_config_change
+from utils.notifications import config_event, notify_config_change
 
 from crud.guardrails import (
+    count_guardrail_logs,
     create_guardrail,
     delete_guardrail,
     get_active_guardrails,
@@ -27,12 +27,11 @@ from crud.guardrails import (
     get_guardrail_stats_by_type,
     purge_guardrail_logs,
     update_guardrail,
-    upsert_guardrail_settings,
+    upsert_guardrail_settings_with_previous,
 )
 
 router = APIRouter(prefix="/guardrails", tags=["guardrails-crud"])
 
-FRONTEND_URL = "http://localhost:5173"
 
 VALID_GUARDRAIL_TYPES = {"pii", "content_filter"}
 VALID_ACTIONS = {"block", "mask"}
@@ -71,7 +70,6 @@ def _validate_regex(pattern: str) -> bool:
 
 @router.get("")
 async def list_guardrails(request: Request):
-    verify_internal_key(request)
     org_id = get_org_id(request)
 
     rules = await get_all_guardrails(org_id)
@@ -85,7 +83,6 @@ async def list_guardrails(request: Request):
 
 @router.post("")
 async def create_guardrail_rule(request: Request):
-    verify_internal_key(request)
     org_id = get_org_id(request)
     user_id = get_user_id(request)
     require_admin(request)
@@ -95,8 +92,6 @@ async def create_guardrail_rule(request: Request):
     # Validate guardrail_type
     guardrail_type = body.get("guardrail_type", "")
     if guardrail_type not in VALID_GUARDRAIL_TYPES:
-        from fastapi import HTTPException
-
         raise HTTPException(
             status_code=400,
             detail=f"guardrail_type must be one of {sorted(VALID_GUARDRAIL_TYPES)}",
@@ -105,8 +100,6 @@ async def create_guardrail_rule(request: Request):
     # Validate action
     action = body.get("action", "block")
     if action not in VALID_ACTIONS:
-        from fastapi import HTTPException
-
         raise HTTPException(
             status_code=400,
             detail=f"action must be one of {sorted(VALID_ACTIONS)}",
@@ -117,8 +110,6 @@ async def create_guardrail_rule(request: Request):
         config = body.get("config", {})
         pattern = config.get("pattern") if isinstance(config, dict) else None
         if pattern and not _validate_regex(pattern):
-            from fastapi import HTTPException
-
             raise HTTPException(
                 status_code=400,
                 detail=f"Invalid regex pattern: {pattern!r}",
@@ -130,12 +121,9 @@ async def create_guardrail_rule(request: Request):
     )
 
     await notify_config_change(
-        org_id=org_id,
-        user_id=user_id,
-        entity="guardrail",
-        action="created",
-        detail={"rule_id": rule.get("id"), "name": rule.get("name")},
-        frontend_url=FRONTEND_URL,
+        org_id,
+        user_id,
+        config_event("guardrail", "created", rule.get("name"), rule.get("id")),
     )
 
     return {"rule": rule}
@@ -148,7 +136,6 @@ async def create_guardrail_rule(request: Request):
 
 @router.patch("/{rule_id}")
 async def update_guardrail_rule(rule_id: int, request: Request):
-    verify_internal_key(request)
     org_id = get_org_id(request)
     user_id = get_user_id(request)
     require_admin(request)
@@ -157,8 +144,6 @@ async def update_guardrail_rule(rule_id: int, request: Request):
 
     # Validate action if provided
     if "action" in body and body["action"] not in VALID_ACTIONS:
-        from fastapi import HTTPException
-
         raise HTTPException(
             status_code=400,
             detail=f"action must be one of {sorted(VALID_ACTIONS)}",
@@ -169,8 +154,6 @@ async def update_guardrail_rule(rule_id: int, request: Request):
     if isinstance(config, dict):
         pattern = config.get("pattern")
         if pattern and not _validate_regex(pattern):
-            from fastapi import HTTPException
-
             raise HTTPException(
                 status_code=400,
                 detail=f"Invalid regex pattern: {pattern!r}",
@@ -179,8 +162,6 @@ async def update_guardrail_rule(rule_id: int, request: Request):
     updated = await update_guardrail(org_id, rule_id, body)
 
     if updated is None:
-        from fastapi import HTTPException
-
         raise HTTPException(status_code=404, detail="Guardrail rule not found")
 
     # Record change history
@@ -195,12 +176,9 @@ async def update_guardrail_rule(rule_id: int, request: Request):
     if "is_active" in body:
         toggle_label = "enabled" if body["is_active"] else "disabled"
         await notify_config_change(
-            org_id=org_id,
-            user_id=user_id,
-            entity="guardrail",
-            action=toggle_label,
-            detail={"rule_id": rule_id, "name": updated.get("name")},
-            frontend_url=FRONTEND_URL,
+            org_id,
+            user_id,
+            config_event("guardrail", toggle_label, updated.get("name"), rule_id),
         )
 
     return {"rule": updated}
@@ -213,7 +191,6 @@ async def update_guardrail_rule(rule_id: int, request: Request):
 
 @router.delete("/{rule_id}")
 async def delete_guardrail_rule(rule_id: int, request: Request):
-    verify_internal_key(request)
     org_id = get_org_id(request)
     user_id = get_user_id(request)
     require_admin(request)
@@ -221,17 +198,12 @@ async def delete_guardrail_rule(rule_id: int, request: Request):
     deleted = await delete_guardrail(org_id, rule_id)
 
     if not deleted:
-        from fastapi import HTTPException
-
         raise HTTPException(status_code=404, detail="Guardrail rule not found")
 
     await notify_config_change(
-        org_id=org_id,
-        user_id=user_id,
-        entity="guardrail",
-        action="deleted",
-        detail={"rule_id": rule_id},
-        frontend_url=FRONTEND_URL,
+        org_id,
+        user_id,
+        config_event("guardrail", "deleted", deleted["name"], rule_id),
     )
 
     return {"deleted": True, "rule_id": rule_id}
@@ -244,7 +216,6 @@ async def delete_guardrail_rule(rule_id: int, request: Request):
 
 @router.get("/settings")
 async def read_guardrail_settings(request: Request):
-    verify_internal_key(request)
     org_id = get_org_id(request)
 
     settings = await get_guardrail_settings(org_id)
@@ -258,25 +229,25 @@ async def read_guardrail_settings(request: Request):
 
 @router.put("/settings")
 async def write_guardrail_settings(request: Request):
-    verify_internal_key(request)
     org_id = get_org_id(request)
     user_id = get_user_id(request)
     require_admin(request)
 
     body = await request.json()
 
-    settings = await upsert_guardrail_settings(org_id, body)
+    settings, previous = await upsert_guardrail_settings_with_previous(org_id, body)
 
     await notify_config_change(
-        org_id=org_id,
-        user_id=user_id,
-        entity="guardrail_settings",
-        action="updated",
-        detail={"settings": settings},
-        frontend_url=FRONTEND_URL,
+        org_id,
+        user_id,
+        config_event("guardrail_settings", "updated"),
     )
 
-    return {"settings": settings}
+    # previous_retention: the retention values this save replaced, read under
+    # a row lock in the save's transaction, so the caller can log the change
+    # without a separate, racy read. Never null: a missing row is created with
+    # the defaults first, so an organization with nothing saved reports them.
+    return {"settings": settings, "previous_retention": previous}
 
 
 # ---------------------------------------------------------------------------
@@ -290,11 +261,17 @@ async def read_guardrail_logs(
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
 ):
-    verify_internal_key(request)
     org_id = get_org_id(request)
 
-    logs = await get_guardrail_logs(org_id, limit=limit, offset=offset)
-    return {"logs": logs, "limit": limit, "offset": offset}
+    import asyncio
+
+    # The Logs page builds its pagination from total; without it the page only
+    # knew the rows on screen and never offered a second page.
+    logs, total = await asyncio.gather(
+        get_guardrail_logs(org_id, limit=limit, offset=offset),
+        count_guardrail_logs(org_id),
+    )
+    return {"logs": logs, "total": total, "limit": limit, "offset": offset}
 
 
 # ---------------------------------------------------------------------------
@@ -307,7 +284,6 @@ async def read_guardrail_stats(
     request: Request,
     period: str = Query(default="30d"),
 ):
-    verify_internal_key(request)
     org_id = get_org_id(request)
 
     start_date, end_date = get_date_range(period)
@@ -345,7 +321,6 @@ async def _gather_stats(
 
 @router.post("/logs/purge")
 async def purge_logs(request: Request):
-    verify_internal_key(request)
     org_id = get_org_id(request)
     user_id = get_user_id(request)
     require_admin(request)
@@ -356,15 +331,17 @@ async def purge_logs(request: Request):
     if settings and settings.get("log_retention_days") is not None:
         retention_days = int(settings["log_retention_days"])
 
-    total_deleted = await purge_guardrail_logs(org_id, retention_days)
+    purged = await purge_guardrail_logs(org_id, retention_days)
+    total_deleted = purged["deleted"]
 
     await notify_config_change(
-        org_id=org_id,
-        user_id=user_id,
-        entity="guardrail_logs",
-        action="purged",
-        detail={"total_deleted": total_deleted, "retention_days": retention_days},
-        frontend_url=FRONTEND_URL,
+        org_id,
+        user_id,
+        config_event(
+            "guardrail_logs",
+            "purged",
+            detail=f"{total_deleted} entries older than {retention_days} days",
+        ),
     )
 
     return {

@@ -8,6 +8,7 @@ import {
   createNewSubControlsQuery,
   deriveControlStatus,
   findUsersNotInOrganization,
+  getVisibleEuCategoryIdsForProject,
 } from "../eu.utils";
 import { sequelize } from "../../database/db";
 import { STATUSES_COMPLIANCE } from "../../types/status.type";
@@ -124,5 +125,47 @@ describe("createNewSubControlsQuery", () => {
 
     expect(replacementsOf(1)).toMatchObject({ implementation_details: "first" });
     expect(replacementsOf(2)).toMatchObject({ implementation_details: null });
+  });
+});
+
+describe("getVisibleEuCategoryIdsForProject role filter", () => {
+  beforeEach(() => {
+    mockQuery.mockReset();
+  });
+
+  const projectRead = () => mockQuery.mock.calls[0] as unknown as [string, any];
+  const categoriesRead = () => mockQuery.mock.calls[1] as unknown as [string, any];
+
+  it("reads the role list, not the removed single-role column", async () => {
+    mockQuery.mockResolvedValueOnce([[{ roles: ["Provider"], tier: "High risk" }], 0] as any);
+    mockQuery.mockResolvedValueOnce([[{ id: 3 }], 0] as any);
+    await getVisibleEuCategoryIdsForProject(10, 1);
+    expect(projectRead()[0]).toContain("p.high_risk_roles AS roles");
+    expect(projectRead()[0]).not.toContain("type_of_high_risk_role");
+  });
+
+  it("matches a role-filtered category for any of the use case's roles", async () => {
+    mockQuery.mockResolvedValueOnce([
+      [{ roles: ["Deployer", "Provider"], tier: "High risk" }],
+      0,
+    ] as any);
+    mockQuery.mockResolvedValueOnce([[{ id: 3 }, { id: 7 }], 0] as any);
+    await expect(getVisibleEuCategoryIdsForProject(10, 1)).resolves.toEqual([3, 7]);
+    const [sql, opts] = categoriesRead();
+    expect(sql).toContain("r.name = ANY(ARRAY[:roles]::text[])");
+    expect(opts.replacements).toMatchObject({
+      tier: "High risk",
+      applyRoleFilter: true,
+      roles: ["Provider", "Deployer"],
+    });
+  });
+
+  it("never binds an empty list: no roles matches no role-filtered category", async () => {
+    mockQuery.mockResolvedValueOnce([[{ roles: [], tier: "High risk" }], 0] as any);
+    mockQuery.mockResolvedValueOnce([[{ id: 3 }], 0] as any);
+    await getVisibleEuCategoryIdsForProject(10, 1);
+    const [sql, opts] = categoriesRead();
+    expect(sql).toContain("r.name = ANY('{}'::text[])");
+    expect(opts.replacements).not.toHaveProperty("roles");
   });
 });

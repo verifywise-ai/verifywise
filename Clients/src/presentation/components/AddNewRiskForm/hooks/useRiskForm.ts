@@ -100,7 +100,10 @@ export interface UseRiskFormReturn {
   customFieldsRef: React.MutableRefObject<CustomFieldsSectionHandle | null>;
   customFieldsGate: {
     blocked: boolean;
-    onPendingChange: (ids: ReadonlySet<number>) => void;
+    onPendingChange: (
+      ids: ReadonlySet<number>,
+      clearedRequired?: ReadonlyArray<{ id: number; label: string }>,
+    ) => void;
   };
   riskFormSubmitHandler: () => Promise<void>;
   /** True when both sections pass client-side validation (drives submit disabled state). */

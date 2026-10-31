@@ -7,7 +7,14 @@ import {
   buildIncidentUpdateReplacements,
 } from "./automation/incident.automation.utils";
 import { replaceTemplateVariables } from "./automation/automation.utils";
+import logger from "./logger/fileLogger";
 import { enqueueAutomationAction } from "../services/automations/automationProducer";
+import {
+  assertValidIncidentDescription,
+  INCIDENT_DATE_COLUMNS,
+  INCIDENT_FK_COLUMNS,
+  isSameIncidentValue,
+} from "./validations/incidentManagementValidation.utils";
 
 /**
  * Base SELECT for incident queries. LEFT JOINs resolve the issue #4583
@@ -66,14 +73,26 @@ export const getAllIncidentsQuery = async (
   return incidents;
 };
 
-export const getIncidentByIdQuery = async (id: number, organizationId: number) => {
+/**
+ * Loads one incident. With `lock` (requires `transaction`) the incident row
+ * is locked FOR UPDATE until the transaction ends, so a read-then-write
+ * update cannot interleave with another one. Only the incident row is locked,
+ * not the joined lookup rows.
+ */
+export const getIncidentByIdQuery = async (
+  id: number,
+  organizationId: number,
+  options: { transaction?: Transaction; lock?: boolean } = {},
+) => {
+  const lockClause = options.lock && options.transaction ? " FOR UPDATE OF i" : "";
   const incidents = await sequelize.query(
     `${INCIDENT_SELECT}
-     WHERE i.organization_id = :organizationId AND i.id = :id`,
+     WHERE i.organization_id = :organizationId AND i.id = :id${lockClause}`,
     {
       replacements: { organizationId, id },
       mapToModel: true,
       model: AIIncidentManagementModel,
+      transaction: options.transaction,
     },
   );
   if (!incidents.length) return null;
@@ -85,6 +104,7 @@ export const createNewIncidentQuery = async (
   organizationId: number,
   transaction: Transaction,
 ) => {
+  assertValidIncidentDescription(incident.description);
   const created_at = new Date();
   try {
     const result = await sequelize.query(
@@ -171,10 +191,13 @@ export const createNewIncidentQuery = async (
           automation_id: automation.automation_id,
         };
 
-        // Enqueue with processed params
-        await enqueueAutomationAction(automation.action_key, {
-          ...processedParams,
-          organizationId,
+        // After commit: a rolled-back create (an import that failed later in
+        // its transaction) must not send an "incident added" email.
+        transaction.afterCommit(() => {
+          enqueueAutomationAction(automation.action_key, {
+            ...processedParams,
+            organizationId,
+          }).catch((error) => logger.error(`[incident] incident_added enqueue failed: ${error}`));
         });
       } else {
         console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
@@ -187,134 +210,156 @@ export const createNewIncidentQuery = async (
   }
 };
 
+/** Columns an incident update may write. Anything else in an update is ignored. */
+export const UPDATABLE_INCIDENT_COLUMNS = [
+  "ai_project",
+  "model_inventory_id",
+  "project_id",
+  "assignee_id",
+  "type",
+  "severity",
+  "status",
+  "occurred_date",
+  "date_detected",
+  "reporter",
+  "approval_status",
+  "approved_by",
+  "categories_of_harm",
+  "affected_persons_groups",
+  "description",
+  "relationship_causality",
+  "immediate_mitigations",
+  "planned_corrective_actions",
+  "model_system_version",
+  "interim_report",
+  "archived",
+  "approval_date",
+  "approval_notes",
+] as const;
+
+export type IncidentColumn = (typeof UPDATABLE_INCIDENT_COLUMNS)[number];
+
+/**
+ * Normalises a value for writing: '' means "none" for FK and date columns,
+ * and archived is never NULL (empty means not archived).
+ */
+const toColumnValue = (column: IncidentColumn, value: unknown): unknown => {
+  if (column === "archived") return Boolean(value);
+  if ((INCIDENT_FK_COLUMNS.has(column) || INCIDENT_DATE_COLUMNS.has(column)) && value === "") {
+    return null;
+  }
+  return value ?? null;
+};
+
+/**
+ * The columns of `updates` whose value differs from `stored` (the row's
+ * current values), mapped to the normalised value to write. Keys that are
+ * not updatable columns, and undefined values, are ignored. Both the write
+ * and the change history are derived from this one diff.
+ */
+export const diffIncidentColumns = (
+  stored: Record<string, unknown>,
+  updates: Record<string, unknown>,
+): Partial<Record<IncidentColumn, unknown>> => {
+  const changed: Partial<Record<IncidentColumn, unknown>> = {};
+  for (const column of UPDATABLE_INCIDENT_COLUMNS) {
+    if (updates[column] === undefined) continue;
+    if (isSameIncidentValue(column, stored[column], updates[column])) continue;
+    changed[column] = toColumnValue(column, updates[column]);
+  }
+  return changed;
+};
+
+/**
+ * Writes `changed` (from diffIncidentColumns) plus updated_at and returns
+ * the re-read row. Callers lock the row first and only call this when
+ * something changed (see services/incidentManagement.service.ts).
+ */
 export const updateIncidentByIdQuery = async (
   id: number,
-  incident: AIIncidentManagementModel,
+  changed: Partial<Record<IncidentColumn, unknown>>,
   organizationId: number,
   transaction: Transaction,
 ) => {
-  const existingIncident = await getIncidentByIdQuery(id, organizationId);
-  const updated_at = new Date();
-  try {
-    await sequelize.query(
-      `UPDATE ai_incident_managements SET
-        ai_project = :ai_project,
-        model_inventory_id = :model_inventory_id,
-        project_id = :project_id,
-        assignee_id = :assignee_id,
-        type = :type,
-        severity = :severity,
-        status = :status,
-        occurred_date = :occurred_date,
-        date_detected = :date_detected,
-        reporter = :reporter,
-        approval_status = :approval_status,
-        approved_by = :approved_by,
-        categories_of_harm = :categories_of_harm,
-        affected_persons_groups = :affected_persons_groups,
-        description = :description,
-        relationship_causality = :relationship_causality,
-        immediate_mitigations = :immediate_mitigations,
-        planned_corrective_actions = :planned_corrective_actions,
-        model_system_version = :model_system_version,
-        interim_report = :interim_report,
-        archived = :archived,
-        updated_at = :updated_at,
-        approval_date = :approval_date,
-        approval_notes = :approval_notes
-      WHERE organization_id = :organizationId AND id = :id`,
-      {
-        replacements: {
-          organizationId,
-          id,
-          ai_project: incident.ai_project,
-          model_inventory_id: incident.model_inventory_id ?? null,
-          project_id: incident.project_id ?? null,
-          assignee_id: incident.assignee_id ?? null,
-          type: incident.type,
-          severity: incident.severity,
-          status: incident.status,
-          occurred_date: incident.occurred_date,
-          date_detected: incident.date_detected,
-          reporter: incident.reporter,
-          approval_status: incident.approval_status,
-          approved_by: incident.approved_by,
-          categories_of_harm: JSON.stringify(incident.categories_of_harm),
-          affected_persons_groups: incident.affected_persons_groups,
-          description: incident.description,
-          relationship_causality: incident.relationship_causality,
-          immediate_mitigations: incident.immediate_mitigations,
-          planned_corrective_actions: incident.planned_corrective_actions,
-          model_system_version: incident.model_system_version,
-          interim_report: incident.interim_report,
-          archived: incident.archived || false,
-          approval_date: incident.approval_date,
-          approval_notes: incident.approval_notes,
-          updated_at,
-        },
-        transaction,
-      },
-    );
-
-    const result = await sequelize.query(
-      `${INCIDENT_SELECT}
-       WHERE i.organization_id = :organizationId AND i.id = :id`,
-      {
-        replacements: { organizationId, id },
-        mapToModel: true,
-        model: AIIncidentManagementModel,
-        transaction,
-      },
-    );
-    const updatedIncident = result[0];
-    const automations = (await sequelize.query(
-      `SELECT
-              pat.key AS trigger_key,
-              paa.key AS action_key,
-              a.id AS automation_id,
-              aa.*
-            FROM automation_triggers pat JOIN automations a ON a.trigger_id = pat.id AND a.organization_id = :organizationId JOIN automation_actions_data aa ON a.id = aa.automation_id AND aa.organization_id = :organizationId JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'incident_updated' AND a.is_active ORDER BY aa."order" ASC;`,
-      { replacements: { organizationId }, transaction },
-    )) as [
-      (TenantAutomationActionModel & {
-        trigger_key: string;
-        action_key: string;
-        automation_id: number;
-      })[],
-      number,
-    ];
-    if (automations[0].length > 0) {
-      const automation = automations[0][0];
-      if (automation["trigger_key"] === "incident_updated") {
-        const params = automation.params!;
-
-        // Build replacements
-        const replacements = buildIncidentUpdateReplacements(existingIncident, {
-          ...updatedIncident.dataValues,
-        });
-
-        // Replace variables in subject and body
-        const processedParams = {
-          ...params,
-          subject: replaceTemplateVariables(params.subject || "", replacements),
-          body: replaceTemplateVariables(params.body || "", replacements),
-          automation_id: automation.automation_id,
-        };
-
-        // Enqueue with processed params
-        await enqueueAutomationAction(automation.action_key, {
-          ...processedParams,
-          organizationId,
-        });
-      } else {
-        console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
-      }
-    }
-    return updatedIncident;
-  } catch (error) {
-    console.error("Error updating incident:", error);
-    throw error;
+  // Backstop for any writer: a description that reaches the write must meet
+  // the length rule. The service has already validated changed descriptions
+  // against the locked row (validateIncidentUpdateBusinessRules).
+  if ("description" in changed) {
+    assertValidIncidentDescription(changed.description);
   }
+  const setClauses = ["updated_at = :updated_at"];
+  const replacements: Record<string, unknown> = { organizationId, id, updated_at: new Date() };
+  for (const column of UPDATABLE_INCIDENT_COLUMNS) {
+    if (!(column in changed)) continue;
+    const value = changed[column];
+    setClauses.push(`${column} = :${column}`);
+    replacements[column] =
+      column === "categories_of_harm" && value !== null ? JSON.stringify(value) : value;
+  }
+
+  await sequelize.query(
+    `UPDATE ai_incident_managements SET ${setClauses.join(", ")}
+    WHERE organization_id = :organizationId AND id = :id`,
+    { replacements, transaction },
+  );
+
+  const result = await sequelize.query(
+    `${INCIDENT_SELECT}
+     WHERE i.organization_id = :organizationId AND i.id = :id`,
+    {
+      replacements: { organizationId, id },
+      mapToModel: true,
+      model: AIIncidentManagementModel,
+      transaction,
+    },
+  );
+  return result[0];
+};
+
+/**
+ * Enqueues the organization's active `incident_updated` automation for an
+ * update from `oldIncident` to `newIncident`. Call it only after the update
+ * has committed, so an action is never sent for a change that rolled back.
+ */
+export const enqueueIncidentUpdatedAutomations = async (
+  organizationId: number,
+  oldIncident: AIIncidentManagementModel,
+  newIncident: AIIncidentManagementModel,
+) => {
+  const automations = (await sequelize.query(
+    `SELECT
+            pat.key AS trigger_key,
+            paa.key AS action_key,
+            a.id AS automation_id,
+            aa.*
+          FROM automation_triggers pat JOIN automations a ON a.trigger_id = pat.id AND a.organization_id = :organizationId JOIN automation_actions_data aa ON a.id = aa.automation_id AND aa.organization_id = :organizationId JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'incident_updated' AND a.is_active ORDER BY aa."order" ASC;`,
+    { replacements: { organizationId } },
+  )) as [
+    (TenantAutomationActionModel & {
+      trigger_key: string;
+      action_key: string;
+      automation_id: number;
+    })[],
+    number,
+  ];
+  if (automations[0].length === 0) return;
+
+  const automation = automations[0][0];
+  if (automation["trigger_key"] !== "incident_updated") {
+    console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
+    return;
+  }
+  const params = automation.params!;
+  const replacements = buildIncidentUpdateReplacements(oldIncident, {
+    ...newIncident.dataValues,
+  });
+  await enqueueAutomationAction(automation.action_key, {
+    ...params,
+    subject: replaceTemplateVariables(params.subject || "", replacements),
+    body: replaceTemplateVariables(params.body || "", replacements),
+    automation_id: automation.automation_id,
+    organizationId,
+  });
 };
 
 export const deleteIncidentByIdQuery = async (
@@ -323,6 +368,14 @@ export const deleteIncidentByIdQuery = async (
   transaction: Transaction,
 ) => {
   try {
+    // A Jira-imported incident keeps its link row, marked so the issue is
+    // never imported again (the FK then nulls incident_id).
+    await sequelize.query(
+      `UPDATE jira_incident_links
+          SET state = 'deleted_in_verifywise', state_reason = NULL, updated_at = now()
+        WHERE organization_id = :organizationId AND incident_id = :id`,
+      { replacements: { organizationId, id }, transaction },
+    );
     const result = (await sequelize.query(
       `DELETE FROM ai_incident_managements WHERE organization_id = :organizationId AND id = :id RETURNING *`,
       {
@@ -428,16 +481,17 @@ export const archiveIncidentByIdQuery = async (
  */
 export const validateIncidentReferences = async (
   refs: {
-    model_inventory_id?: number | null;
-    project_id?: number | null;
-    assignee_id?: number | null;
+    model_inventory_id?: unknown;
+    project_id?: unknown;
+    assignee_id?: unknown;
   },
   organizationId: number,
+  transaction?: Transaction,
 ): Promise<string[]> => {
   const invalidFields: string[] = [];
   const checks: Array<{
     field: string;
-    id: number | null | undefined;
+    id: unknown;
     table: string;
   }> = [
     { field: "model_inventory_id", id: refs.model_inventory_id, table: "model_inventories" },
@@ -446,10 +500,22 @@ export const validateIncidentReferences = async (
   ];
 
   for (const check of checks) {
-    if (check.id == null) continue;
+    // null / undefined / '' all mean "no reference": nothing to check.
+    if (check.id === null || check.id === undefined || check.id === "") continue;
+    // Anything that is not a positive integer id is invalid and never reaches SQL.
+    const id =
+      typeof check.id === "number"
+        ? check.id
+        : /^\d+$/.test(String(check.id).trim())
+          ? Number(String(check.id).trim())
+          : NaN;
+    if (!Number.isSafeInteger(id) || id <= 0) {
+      invalidFields.push(check.field);
+      continue;
+    }
     const result = (await sequelize.query(
       `SELECT id FROM ${check.table} WHERE id = :id AND organization_id = :organizationId`,
-      { replacements: { id: check.id, organizationId } },
+      { replacements: { id, organizationId }, transaction },
     )) as [Array<{ id: number }>, number];
     if (!result[0].length) invalidFields.push(check.field);
   }

@@ -98,8 +98,9 @@ describe("scheduleVendorResearchScan", () => {
     expect(VENDOR_RESEARCH_SCAN_JOB).not.toBe(VENDOR_RESEARCH_JOB);
   });
 
-  // Every hour, at a minute that no other scheduler of the application uses at the start of an hour.
-  // A failed or a removed job is not kept: the scan of the next hour does its work again.
+  // Every hour, at a minute off the slots where the other schedulers pile up. The approval overdue
+  // sweep shares it, on the automation queue. A failed or a removed job is not kept: the scan of the
+  // next hour does its work again.
   it("repeats one job of the scan on the research queue, at 17 minutes past every hour", async () => {
     await scheduleVendorResearchScan();
 

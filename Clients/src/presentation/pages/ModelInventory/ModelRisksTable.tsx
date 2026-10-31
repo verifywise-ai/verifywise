@@ -33,6 +33,8 @@ import { palette } from "../../themes/palette";
 import { useCustomFieldDefinitions } from "../../../application/hooks/useCustomFields";
 import { formatCustomFieldValue } from "../../components/CustomFieldsSection/formatCustomFieldValue";
 import { pageOfLabel } from "../../components/Table/pageOfLabel";
+import { useAuth } from "../../../application/hooks/useAuth";
+import allowedRoles from "../../../application/constants/permissions";
 
 // LocalStorage key for sorting
 const MODEL_RISKS_SORTING_KEY = "verifywise_model_risks_sorting";
@@ -65,6 +67,8 @@ const ModelRisksTable: React.FC<ModelRisksTableProps> = ({
   visibleColumns,
 }) => {
   const formatUserDate = useFormattedDate();
+  const { userRoleName } = useAuth();
+  const canDeleteRisks = allowedRoles.modelInventory.delete.includes(userRoleName);
   const theme = useTheme();
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
@@ -459,7 +463,7 @@ const ModelRisksTable: React.FC<ModelRisksTableProps> = ({
                   );
                   return (
                     <TableCell key={`cf_${def.id}`} sx={getCellStyle(row)}>
-                      {formatCustomFieldValue(def, match?.value, users)}
+                      {formatCustomFieldValue(def, match?.value, users, formatUserDate)}
                     </TableCell>
                   );
                 })}
@@ -477,6 +481,7 @@ const ModelRisksTable: React.FC<ModelRisksTableProps> = ({
                     warningTitle="Delete this model risk?"
                     warningMessage="This action is non-recoverable."
                     type="model risk"
+                    canDelete={canDeleteRisks}
                   />
                 </TableCell>
               </TableRow>
@@ -493,6 +498,7 @@ const ModelRisksTable: React.FC<ModelRisksTableProps> = ({
       getOwnerName,
       onEdit,
       onDelete,
+      canDeleteRisks,
       hidePagination,
       theme,
       isColVisible,
@@ -500,6 +506,7 @@ const ModelRisksTable: React.FC<ModelRisksTableProps> = ({
       customFieldDefs,
       users,
       formatDate,
+      formatUserDate,
     ],
   );
 

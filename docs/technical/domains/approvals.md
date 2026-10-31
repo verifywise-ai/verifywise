@@ -163,26 +163,69 @@ The `entity_type` columns are `VARCHAR(50)` with no CHECK constraint (dropped in
 
 ### Workflow Management
 
-| Method | Endpoint | Access | Description |
-|--------|----------|--------|-------------|
-| GET | `/approval-workflows` | Auth | List all workflows |
-| GET | `/approval-workflows/:id` | Auth | Get workflow details |
-| POST | `/approval-workflows` | Admin | Create workflow |
-| PUT | `/approval-workflows/:id` | Admin | Update workflow |
-| DELETE | `/approval-workflows/:id` | Admin | Soft delete workflow |
+| Method | Endpoint                  | Access | Description          |
+| ------ | ------------------------- | ------ | -------------------- |
+| GET    | `/approval-workflows`     | Auth   | List all workflows   |
+| GET    | `/approval-workflows/:id` | Auth   | Get workflow details |
+| POST   | `/approval-workflows`     | Admin  | Create workflow      |
+| PUT    | `/approval-workflows/:id` | Admin  | Update workflow      |
+| DELETE | `/approval-workflows/:id` | Admin  | Soft delete workflow |
 
 ### Request Management
 
-| Method | Endpoint | Access | Description |
-|--------|----------|--------|-------------|
-| POST | `/approval-requests` | Auth | Create request |
-| GET | `/approval-requests/my-requests` | Auth | User's requests |
-| GET | `/approval-requests/pending-approvals` | Auth | Awaiting user's approval |
-| GET | `/approval-requests/all` | Admin | All requests |
-| GET | `/approval-requests/:id` | Auth | Request details |
-| POST | `/approval-requests/:id/approve` | Approver | Approve step |
-| POST | `/approval-requests/:id/reject` | Approver | Reject request |
-| POST | `/approval-requests/:id/withdraw` | Requestor | Withdraw request |
+| Method | Endpoint                               | Access    | Description              |
+| ------ | -------------------------------------- | --------- | ------------------------ |
+| POST   | `/approval-requests`                   | Auth      | Create request           |
+| GET    | `/approval-requests/my-requests`       | Auth      | User's requests          |
+| GET    | `/approval-requests/pending-approvals` | Auth      | Awaiting user's approval |
+| GET    | `/approval-requests/all`               | Admin     | All requests             |
+| GET    | `/approval-requests/:id`               | Auth      | Request details          |
+| POST   | `/approval-requests/:id/approve`       | Approver  | Approve step             |
+| POST   | `/approval-requests/:id/reject`        | Approver  | Reject request           |
+| POST   | `/approval-requests/:id/withdraw`      | Requestor | Withdraw request         |
+
+`pending-approvals` lists a request only while the user is an approver on its
+current step **and** their own vote is still `Pending`. Once they approve a step
+that needs every approver, the request leaves their list even though the step
+stays pending for the others.
+
+Approve and reject are checked in `processApprovalQuery`, not by the route:
+
+| Caller                                  | Response |
+| --------------------------------------- | -------- |
+| Not an approver on the current step     | 403      |
+| Approver who already voted on this step | 409      |
+| Request no longer pending               | 409      |
+
+`processApprovalQuery` locks the `approval_requests` row (`FOR UPDATE`) before
+anything else, so decisions on one request run one at a time. Without the lock,
+two approvers on a step that needs every approver could vote at once, each
+still see the other as pending, and leave the step stuck.
+
+An admin (any role with the `approvalRequest.admin` permission) can decide a
+step they are not an approver on, e.g. one stuck on an approver who left. The
+override is explicit: the approve/reject body carries `override: true`,
+`step_number` (the step the admin means) and a non-empty `comments` reason.
+
+| Override refused because                          | Response |
+| ------------------------------------------------- | -------- |
+| No comment (checked by the validator)             | 400      |
+| Role lacks `approvalRequest.admin`                | 403      |
+| The admin made the request                        | 403      |
+| `step_number` is no longer the current step       | 409      |
+| The admin already voted the other way on the step | 409      |
+
+The admin's vote is written to the step; a vote they already cast the same
+way is kept as cast, not rewritten. The step's `step_details` gets
+`{ admin_override: true, actor_id, result, reason }`, so an override can be
+told apart from a normal decision. An approve completes the step whoever is
+still pending; a reject rejects the request as usual. The other approvers'
+rows on the step stay "Pending", as they do when one approver completes an
+any-approver step. The AI Advisor never overrides. There is no UI for it yet.
+
+The AI Advisor's approve/reject tools call the same function, so the same
+rules apply to them. They act as the user who confirmed the action and fail
+with an explicit error if no user id reaches them.
 
 ## Workflow Configuration
 
@@ -222,10 +265,10 @@ POST /approval-workflows
 
 ### Approval Requirements
 
-| Setting | Behavior |
-|---------|----------|
-| `requires_all_approvers: true` | All assigned approvers must approve |
-| `requires_all_approvers: false` | Any one approver can approve |
+| Setting                         | Behavior                            |
+| ------------------------------- | ----------------------------------- |
+| `requires_all_approvers: true`  | All assigned approvers must approve |
+| `requires_all_approvers: false` | Any one approver can approve        |
 
 ## Request Lifecycle
 
@@ -246,22 +289,59 @@ POST /approval-workflows
 ### Approval Logic
 
 **When Rejection Occurs:**
+
 1. Current step → Rejected
 2. Request → Rejected
 3. Notification sent to requestor
 
 **When Approval Occurs (requires_all_approvers = true):**
+
 1. Wait for all approvers
 2. If any rejects → Request rejected
 3. If all approve → Step completed
 
 **When Approval Occurs (requires_all_approvers = false):**
+
 1. One approval → Step completed
 
 **After Step Completion:**
+
 1. If more steps → Move to next step
 2. If last step → Request approved
 3. Notifications sent to next approvers
+
+### Who Gets Notified, and When
+
+Approvers are told it is their turn — they never have to discover the request by opening
+**Approval requests** themselves. Every notification below is in-app plus email; a failed email is
+logged and never blocks the in-app notification.
+
+| Moment                                    | Who is notified                                  | Sent by                                                                           |
+| ----------------------------------------- | ------------------------------------------------ | --------------------------------------------------------------------------------- |
+| Request created manually                  | Step 1 approvers                                 | `createApprovalRequest` (`approvalRequest.ctrl.ts`)                               |
+| Use case created with a workflow          | Step 1 approvers                                 | `notifyUseCaseApprovalRequested` (`services/projects/approvalRequest.service.ts`) |
+| Workflow attached to an existing use case | Step 1 approvers                                 | same helper, from `updateProjectById`                                             |
+| Step completed, request advances          | Next step's approvers, plus the requester        | `approveRequest` (`approvalRequest.ctrl.ts`)                                      |
+| Request auto-approved on creation         | The requester only — there is nothing to approve | `notifyApprovalAutoApproved`                                                      |
+| Request rejected / fully approved         | The requester                                    | `rejectRequest` / `approveRequest`                                                |
+
+All of them are sent **after** the transaction commits and are fire-and-forget: a mail or Redis
+failure is logged, never surfaced as a failed use case. The requester is skipped if they are also
+a step 1 approver — nobody is asked to approve their own request.
+
+### Which Workflows May Be Submitted
+
+`createUseCaseApprovalRequest` (`Servers/services/projects/approvalRequest.service.ts`) rejects a
+submitted `approval_workflow_id` with a `400` — rolling the use case back, so nothing is created —
+when the workflow is either:
+
+- **inactive.** Deleting a workflow is a soft delete (`is_active = false`,
+  `deleteApprovalWorkflowQuery`), so the row stays readable and a stale id would otherwise still
+  start a request.
+- **for another entity type.** Only `entity_type = 'use_case'` workflows govern use cases.
+
+A workflow with no steps is not an error: no request is created and the use case is saved without
+one.
 
 ## Framework Auto-Creation
 
@@ -276,11 +356,11 @@ Upon final approval of a use case:
 ```typescript
 // Pending frameworks array
 pending_frameworks: [
-  { framework_id: 1 },  // EU AI Act
-  { framework_id: 2 },  // ISO 42001
-  { framework_id: 3 },  // ISO 27001
-  { framework_id: 4 }   // NIST AI RMF
-]
+  { framework_id: 1 }, // EU AI Act
+  { framework_id: 2 }, // ISO 42001
+  { framework_id: 3 }, // ISO 27001
+  { framework_id: 4 }, // NIST AI RMF
+];
 ```
 
 ## Integration Points
@@ -313,8 +393,10 @@ ai_incident_managements
     ↓
 3. If workflow provided:
    ├── Fetch workflow and steps
+   ├── Reject it (400) if inactive or not a use_case workflow
    ├── Create approval request
-   └── Set entity_type to "use_case"
+   ├── Set entity_type to "use_case"
+   └── Notify the step 1 approvers (after commit)
     ↓
 4. Workflow progresses through steps
     ↓
@@ -325,66 +407,66 @@ ai_incident_managements
 
 ## Access Control
 
-| Role | Create Workflows | Create Requests | Approve | Withdraw |
-|------|-----------------|-----------------|---------|----------|
-| Admin | ✓ | ✓ | ✓ (if assigned) | ✓ (if requestor) |
-| Editor | - | ✓ | ✓ (if assigned) | ✓ (if requestor) |
-| Reviewer | - | ✓ | ✓ (if assigned) | ✓ (if requestor) |
-| Auditor | - | - | - | - |
+| Role     | Create Workflows | Create Requests | Approve         | Withdraw         |
+| -------- | ---------------- | --------------- | --------------- | ---------------- |
+| Admin    | ✓                | ✓               | ✓ (if assigned) | ✓ (if requestor) |
+| Editor   | -                | ✓               | ✓ (if assigned) | ✓ (if requestor) |
+| Reviewer | -                | ✓               | ✓ (if assigned) | ✓ (if requestor) |
+| Auditor  | -                | -               | -               | -                |
 
 ## Utility Functions
 
 ### Workflow Utils
 
 ```typescript
-getAllApprovalWorkflowsQuery(tenant)
-getApprovalWorkflowByIdQuery(id, tenant)
-getWorkflowStepsQuery(workflowId, tenant)
-createApprovalWorkflowQuery(data, tenant)
-updateApprovalWorkflowQuery(id, data, tenant)
-deleteApprovalWorkflowQuery(id, tenant)
+getAllApprovalWorkflowsQuery(tenant);
+getApprovalWorkflowByIdQuery(id, tenant);
+getWorkflowStepsQuery(workflowId, tenant);
+createApprovalWorkflowQuery(data, tenant);
+updateApprovalWorkflowQuery(id, data, tenant);
+deleteApprovalWorkflowQuery(id, tenant);
 ```
 
 ### Request Utils
 
 ```typescript
-createApprovalRequestQuery(data, tenant)
-getPendingApprovalsQuery(userId, tenant)
-getMyApprovalRequestsQuery(userId, tenant)
-getApprovalRequestByIdQuery(requestId, tenant)
-processApprovalQuery(requestId, userId, action, comments, tenant)
-withdrawApprovalRequestQuery(requestId, userId, tenant)
-hasPendingApprovalQuery(entityId, entityType, tenant)
-getApprovalStatusQuery(entityId, entityType, tenant)
+createApprovalRequestQuery(data, tenant);
+getPendingApprovalsQuery(userId, tenant);
+getMyApprovalRequestsQuery(userId, tenant);
+getApprovalRequestByIdQuery(requestId, tenant);
+processApprovalQuery(requestId, userId, action, comments, tenant);
+withdrawApprovalRequestQuery(requestId, userId, tenant);
+hasPendingApprovalQuery(entityId, entityType, tenant);
+getApprovalStatusQuery(entityId, entityType, tenant);
 ```
 
 ## Frontend Structure
 
 ### Components
 
-| Component | Purpose |
-|-----------|---------|
-| `ApprovalButton` | Action button for approvals |
-| `ApprovalWorkflowsTable` | Workflow management page |
+| Component                | Purpose                     |
+| ------------------------ | --------------------------- |
+| `ApprovalButton`         | Action button for approvals |
+| `ApprovalWorkflowsTable` | Workflow management page    |
 
 ### Repositories
 
 ```typescript
 // approvalWorkflow.repository.ts
-getAllApprovalWorkflows()
-getApprovalWorkflowById(id)
-createApprovalWorkflow(data)
-updateApprovalWorkflow(id, data)
-deleteApprovalWorkflow(id)
+getAllApprovalWorkflows();
+getApprovalWorkflowById(id);
+createApprovalWorkflow(data);
+updateApprovalWorkflow(id, data);
+deleteApprovalWorkflow(id);
 
 // approvalRequest.repository.ts
-createApprovalRequest(data)
-getMyApprovalRequests()
-getPendingApprovals()
-getApprovalRequestById(id)
-approveRequest(id, comments)
-rejectRequest(id, comments)
-withdrawRequest(id)
+createApprovalRequest(data);
+getMyApprovalRequests();
+getPendingApprovals();
+getApprovalRequestById(id);
+approveRequest(id, comments);
+rejectRequest(id, comments);
+withdrawRequest(id);
 ```
 
 ### Enums (Client)
@@ -431,24 +513,24 @@ CREATE INDEX idx_step_approvals_result ON approval_request_step_approvals(approv
 
 ### Backend
 
-| File | Purpose |
-|------|---------|
-| `domain.layer/enums/approval-workflow.enum.ts` | Enums |
-| `utils/approvalWorkflow.utils.ts` | Workflow queries |
-| `utils/approvalRequest.utils.ts` | Request queries |
-| `controllers/approvalWorkflow.ctrl.ts` | Workflow controller |
-| `controllers/approvalRequest.ctrl.ts` | Request controller |
-| `routes/approvalWorkflow.route.ts` | Workflow routes |
-| `routes/approvalRequest.route.ts` | Request routes |
+| File                                           | Purpose             |
+| ---------------------------------------------- | ------------------- |
+| `domain.layer/enums/approval-workflow.enum.ts` | Enums               |
+| `utils/approvalWorkflow.utils.ts`              | Workflow queries    |
+| `utils/approvalRequest.utils.ts`               | Request queries     |
+| `controllers/approvalWorkflow.ctrl.ts`         | Workflow controller |
+| `controllers/approvalRequest.ctrl.ts`          | Request controller  |
+| `routes/approvalWorkflow.route.ts`             | Workflow routes     |
+| `routes/approvalRequest.route.ts`              | Request routes      |
 
 ### Frontend
 
-| File | Purpose |
-|------|---------|
-| `domain/enums/aiApprovalWorkflow.enum.ts` | Client enums |
-| `repository/approvalWorkflow.repository.ts` | Workflow API |
-| `repository/approvalRequest.repository.ts` | Request API |
-| `components/Layout/ApprovalButton.tsx` | Action button |
+| File                                                 | Purpose         |
+| ---------------------------------------------------- | --------------- |
+| `domain/enums/aiApprovalWorkflow.enum.ts`            | Client enums    |
+| `repository/approvalWorkflow.repository.ts`          | Workflow API    |
+| `repository/approvalRequest.repository.ts`           | Request API     |
+| `components/Layout/ApprovalButton.tsx`               | Action button   |
 | `pages/ApprovalWorkflows/ApprovalWorkflowsTable.tsx` | Management page |
 
 ## Related Documentation

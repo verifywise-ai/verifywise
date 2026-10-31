@@ -136,6 +136,13 @@ sudo nano /etc/nginx/sites-available/verifywise
 ```
 
 ```nginx
+# "Connection: upgrade" only for WebSocket requests (the vw_ prefix avoids a
+# clash with a $connection_upgrade map another site may define)
+map $http_upgrade $vw_connection_upgrade {
+    default upgrade;
+    ''      close;
+}
+
 server {
     listen 80;
     server_name your-domain.com;
@@ -171,20 +178,115 @@ server {
     }
 
     # Backend API
-    location /api {
+    location ^~ /api/ {
         proxy_pass http://localhost:3000;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_connect_timeout 5s;
+        proxy_read_timeout 120s;
 
         # WebSocket support (if needed)
         proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
+        proxy_set_header Connection $vw_connection_upgrade;
+
+        # JSON errors, not nginx's HTML pages
+        error_page 502 503 = @api_unavailable;
+        error_page 504 = @api_timeout;
+    }
+
+    # AI Gateway API for virtual keys (OpenAI-compatible, base URL https://<host>/v1)
+    location ^~ /v1/ {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_connect_timeout 5s;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        # Stream responses as they arrive and allow slow model calls
+        proxy_buffering off;
+        proxy_read_timeout 300s;
+        client_max_body_size 10m;
+
+        # JSON errors, not nginx's HTML pages
+        error_page 413 = @v1_too_large;
+        error_page 502 503 = @v1_unavailable;
+        error_page 504 = @v1_timeout;
+    }
+
+    # A 504 with no connect time means the backend never accepted the
+    # connection: report it as unavailable, not as a slow request
+    location @api_unavailable {
+        default_type application/json;
+        return 503 '{"message":"VerifyWise is unavailable, please retry shortly"}';
+    }
+
+    location @api_timeout {
+        default_type application/json;
+        if ($upstream_connect_time ~ "^-(, -)*$") {
+            return 503 '{"message":"VerifyWise is unavailable, please retry shortly"}';
+        }
+        return 504 '{"message":"VerifyWise did not respond in time"}';
+    }
+
+    location @v1_too_large {
+        default_type application/json;
+        return 413 '{"detail":"Request body is larger than 10 MB"}';
+    }
+
+    location @v1_unavailable {
+        default_type application/json;
+        return 503 '{"detail":"VerifyWise is unavailable, please retry shortly"}';
+    }
+
+    location @v1_timeout {
+        default_type application/json;
+        if ($upstream_connect_time ~ "^-(, -)*$") {
+            return 503 '{"detail":"VerifyWise is unavailable, please retry shortly"}';
+        }
+        return 504 '{"detail":"The AI Gateway request timed out"}';
     }
 }
 ```
+
+If your proxy sends `/api` or `/v1` to the frontend instead (for example a single
+`location /`), the frontend container forwards them to the backend at
+`VW_BACKEND_URL`. The image default is `http://backend:3000`, and
+`docker-compose.yml` sets it from `BACKEND_PORT`. Set it on the frontend service
+if your backend has another name or port. Give scheme, host and port only, with
+no path: the container refuses to start otherwise.
+
+The frontend takes the client address from your proxy's `X-Forwarded-For` when
+the request comes from an address in `VW_TRUSTED_PROXIES` (space-separated
+addresses or CIDRs). The image leaves it empty, and `docker-compose.yml` sets it
+to private networks because the frontend port is only bound to `127.0.0.1`. If
+you publish the frontend port yourself, set it to your proxy's address only.
+Without it, every client behind your proxy shares the proxy's address for the
+backend's rate limits.
+
+If you edit the proxy config by hand, check these, because each one breaks
+something without an obvious error:
+
+- **No Referer or browser-only checks on `/api` or `/v1`.** MCP clients
+  (`/api/mcp`), webhooks (`/api/webhooks`), shadow AI ingestion
+  (`/api/v1/shadow-ai`) and SDKs send no browser `Referer`, and a header the
+  client sets is no access control.
+- **`/api` and `/v1` both send `X-Forwarded-For`, `X-Real-IP` and
+  `X-Forwarded-Proto`.** The backend trusts one proxy hop and rate-limits login
+  and password reset by client IP. Without these headers every user shares
+  one limit, and audit records show the proxy's address.
+- **`/v1` sets `proxy_http_version 1.1`**, or streamed model responses are
+  buffered.
+- **The TLS server sends `Strict-Transport-Security`.** The frontend container
+  leaves HSTS to this proxy.
+- **`/api` and `/v1` return JSON errors, not an HTML error page.** API
+  clients (SDKs, MCP clients, webhook senders) parse JSON. A server-level
+  `error_page ... /upgrade.html` applies to them too unless the location sets
+  its own, as in the sample above and the Ansible template
+  (`ansible/templates/verifywise-nginx.conf.j2`).
 
 **Enable and test:**
 
@@ -210,6 +312,10 @@ curl -I https://your-domain.com/api/users
 
 # Check frontend loads
 curl -I https://your-domain.com
+
+# Check the AI Gateway API is routed: expect 401 {"detail":"Virtual key not found"}.
+# A 503 or an HTML page means /v1 does not reach the backend.
+curl -s -w " %{http_code}\n" https://your-domain.com/v1/models -H "Authorization: Bearer sk-vw-invalid"
 
 # View logs for any errors
 docker compose logs -f --tail=100

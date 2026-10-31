@@ -1,11 +1,29 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams, useSearchParams, useNavigate } from "react-router";
 import { useForm } from "react-hook-form";
-import { Box, Typography } from "@mui/material";
-import { Send, Loader2, Info, AlertCircle } from "lucide-react";
+import { Box, Collapse, Typography, useMediaQuery } from "@mui/material";
+import { Send, Loader2, Info, AlertCircle, Sparkles, ChevronDown } from "lucide-react";
 import Field from "../../components/Inputs/Field";
 import { CustomizableButton } from "../../components/button/customizable-button";
-import { FormFieldRenderer, FormFieldHint } from "./FormFieldRenderer";
+import { FormFieldRenderer, FormFieldHint, FieldLabel } from "./FormFieldRenderer";
+import { CalculatedFieldDisplay } from "./CalculatedFieldDisplay";
+import { LiveCheckHints, fieldToneFor } from "./LiveCheckHints";
+import { IntakeAssistantPanel } from "./IntakeAssistantPanel";
+import { VendorPrefillCard } from "./VendorPrefillCard";
+import { PrefillLine } from "./PrefillLine";
+import { PreviewBanner } from "./PreviewBanner";
+import { PreviewSubmitMenu, TestSubmitPassed, type PreviewSubmitMode } from "./PreviewSubmitMenu";
+import { PUBLIC_PREVIEW_PARAM } from "../../../application/utils/intakeRouting/previewRole";
+import {
+  cleanSubmission,
+  evaluateForm,
+  firstMissingVisibleInput,
+  isEmptyAnswer,
+  sortFields,
+} from "../../../application/utils/intakeFormLogic";
+import { useIntakeLiveChecks } from "../../../application/hooks/useIntakeLiveChecks";
+import { getLanguage } from "../../../i18n/domTranslator";
+import type { PrefillSubmitEntry, PrefillSuggestion } from "../../../domain/types/intakeLiveChecks";
 import { MathCaptcha } from "./MathCaptcha";
 import EuAiActQuestionnaire from "../../components/EuAiActQuestionnaire";
 import { pruneHiddenAnswers } from "../../../application/utils/euAiActQuestionnaire";
@@ -15,8 +33,10 @@ import {
   getPublicFormById,
   submitPublicForm,
   submitPublicFormById,
+  postPrefill,
   FormSchema,
   IntakeEntityType,
+  type PublicFormRef,
 } from "../../../application/repository/intakeForm.repository";
 import { FormDesignSettings, DEFAULT_DESIGN_SETTINGS } from "../IntakeFormBuilder/types";
 import { brand } from "../../themes/palette";
@@ -34,6 +54,20 @@ interface PublicFormData {
   submitButtonText: string;
   designSettings?: FormDesignSettings;
 }
+
+/** An answer filled from the vendor document, with the file it came from. */
+interface PrefillEntry {
+  suggestion: PrefillSuggestion;
+  fileName: string;
+  confirmed: boolean;
+}
+
+const NO_LIVE_CHECKS = { enabled: false, aiAvailable: false };
+const EMPTY_SCHEMA: FormSchema = { version: "1.0", fields: [] };
+
+/** A prefilled answer stays the document's only while the field still holds the suggested value. */
+const stillPrefilled = (entry: PrefillEntry, value: unknown) =>
+  typeof value === "string" && value.trim() === entry.suggestion.value.trim();
 
 /**
  * Build a gradient from a hex color (darken by ~20% for the second stop)
@@ -134,6 +168,13 @@ export function PublicIntakeForm() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const resubmissionToken = searchParams.get("token") || undefined;
+  // A builder's preview adds a notice and asks, on Submit, whether to test
+  // (check the answers, send nothing) or submit for real. It unlocks nothing.
+  const isPreview = searchParams.get(PUBLIC_PREVIEW_PARAM) === "1";
+  const [previewDismissed, setPreviewDismissed] = useState(false);
+  const showPreviewBanner = isPreview && !previewDismissed;
+  const [submitMenuAnchor, setSubmitMenuAnchor] = useState<HTMLElement | null>(null);
+  const [testSubmitPassed, setTestSubmitPassed] = useState(false);
 
   // State
   const [formData, setFormData] = useState<PublicFormData | null>(null);
@@ -149,16 +190,106 @@ export function PublicIntakeForm() {
   const [riskStep, setRiskStep] = useState<{ questionnaire: Questionnaire } | null>(null);
   const [riskAnswers, setRiskAnswers] = useState<Answers>({});
   const [step, setStep] = useState<"risk" | "form">("form");
+  const [liveChecks, setLiveChecks] = useState(NO_LIVE_CHECKS);
+  const [prefill, setPrefill] = useState<Record<string, PrefillEntry>>({});
+  const wideScreen = useMediaQuery("(min-width:1100px)");
 
   // Form state
   const {
     control,
     handleSubmit,
     reset,
+    watch,
+    setValue,
+    getValues,
+    unregister,
     formState: { errors },
   } = useForm<Record<string, unknown>>({
     defaultValues: {},
   });
+
+  // Show/hide rules and calculated values, recomputed on every change.
+  const watchedValues = watch();
+  const evaluation = formData ? evaluateForm(formData.schema, watchedValues) : null;
+
+  const formRef = useMemo<PublicFormRef>(
+    () => (publicId ? { publicId } : { tenantSlug: tenantSlug ?? "", formSlug: formSlug ?? "" }),
+    [publicId, tenantSlug, formSlug],
+  );
+  // Checks run on the form step only; the EU AI Act risk step is unchanged.
+  const checksOn = Boolean(formData) && liveChecks.enabled && step === "form";
+  const aiOn = checksOn && liveChecks.aiAvailable;
+  const { hints, hintsFor, staleQuestionIds, aiPaused, checkWithAi, aiCheck } = useIntakeLiveChecks(
+    {
+      ref: formRef,
+      schema: formData?.schema ?? EMPTY_SCHEMA,
+      values: watchedValues,
+      enabled: checksOn,
+      aiAvailable: liveChecks.aiAvailable,
+    },
+  );
+
+  // Editing a prefilled answer makes it the submitter's own: drop its line.
+  const editedPrefillKey = Object.entries(prefill)
+    .filter(([id, entry]) => !stillPrefilled(entry, watchedValues[id]))
+    .map(([id]) => id)
+    .join("|");
+  useEffect(() => {
+    if (!editedPrefillKey) return;
+    const edited = new Set(editedPrefillKey.split("|"));
+    setPrefill((current) =>
+      Object.fromEntries(Object.entries(current).filter(([id]) => !edited.has(id))),
+    );
+  }, [editedPrefillKey]);
+
+  const unconfirmedCount = Object.values(prefill).filter((entry) => !entry.confirmed).length;
+
+  const handlePrefillUpload = async (file: File): Promise<number> => {
+    if (!formData) return 0;
+    const result = await postPrefill(formRef, file, getValues(), getLanguage());
+    const current = getValues();
+    const added: Record<string, PrefillEntry> = {};
+    for (const suggestion of result.suggestions) {
+      // A suggestion never overwrites an answer the submitter already gave.
+      if (!isEmptyAnswer(current[suggestion.questionId])) continue;
+      setValue(suggestion.questionId, suggestion.value, { shouldDirty: true });
+      added[suggestion.questionId] = { suggestion, fileName: result.fileName, confirmed: false };
+    }
+    setPrefill((existing) => ({ ...existing, ...added }));
+    return Object.keys(added).length;
+  };
+
+  const focusQuestion = (questionId: string) => {
+    const container = document.getElementById(`question-${questionId}`);
+    container?.scrollIntoView({ behavior: "smooth", block: "center" });
+    const control =
+      document.getElementById(`field-${questionId}`) ??
+      container?.querySelector<HTMLElement>("input, textarea, [role='combobox']");
+    control?.focus({ preventScroll: true });
+  };
+  const hiddenFieldKey = formData
+    ? formData.schema.fields
+        .filter((field) => !evaluation?.visibleIds.has(field.id))
+        .map((field) => field.id)
+        .join("|")
+    : "";
+
+  // Fields present when the form step first renders appear at once; only
+  // fields a rule reveals later animate in. Re-armed each time the form step
+  // is entered (it follows the EU AI Act risk step when that is on).
+  const [fieldsShown, setFieldsShown] = useState(false);
+  useEffect(() => {
+    setFieldsShown(Boolean(formData) && step === "form");
+  }, [formData, step]);
+
+  // A hidden field must not block submit: drop its validation but keep the
+  // typed value, so showing it again restores the answer.
+  useEffect(() => {
+    if (!hiddenFieldKey) return;
+    for (const id of hiddenFieldKey.split("|")) {
+      unregister(id, { keepValue: true, keepDefaultValue: true });
+    }
+  }, [hiddenFieldKey, unregister]);
 
   // Submitter info
   const [submitterEmail, setSubmitterEmail] = useState("");
@@ -178,6 +309,7 @@ export function PublicIntakeForm() {
         : await getPublicForm(tenantSlug!, formSlug!, resubmissionToken);
       if (response.data) {
         setFormData(response.data.form as PublicFormData);
+        setLiveChecks(response.data.liveChecks ?? NO_LIVE_CHECKS);
         const definition = response.data.euAiActRiskStep ?? null;
         setRiskStep(definition);
         setStep(definition ? "risk" : "form");
@@ -235,8 +367,9 @@ export function PublicIntakeForm() {
     return emailRegex.test(email);
   };
 
-  const onSubmit = async (data: Record<string, unknown>) => {
+  const onSubmit = async (data: Record<string, unknown>, mode: PreviewSubmitMode = "real") => {
     if (!formData) return;
+    setTestSubmitPassed(false);
     const isNewFormat = !!publicId;
     if (!isNewFormat && (!tenantSlug || !formSlug)) return;
 
@@ -260,12 +393,26 @@ export function PublicIntakeForm() {
       return;
     }
 
+    // Every check above has passed; a test stops here and sends nothing.
+    if (mode === "test") {
+      setTestSubmitPassed(true);
+      return;
+    }
+
     setIsSubmitting(true);
     setError(null);
 
     try {
+      // Only answers that still hold the document's value carry its provenance.
+      const prefillPayload: Record<string, PrefillSubmitEntry> = {};
+      for (const [id, entry] of Object.entries(prefill)) {
+        if (stillPrefilled(entry, data[id])) {
+          prefillPayload[id] = { token: entry.suggestion.token, confirmed: entry.confirmed };
+        }
+      }
       const payload = {
-        formData: data,
+        formData: cleanSubmission(formData.schema, data).data,
+        ...(Object.keys(prefillPayload).length > 0 ? { prefill: prefillPayload } : {}),
         submitterEmail: collectContactInfo ? submitterEmail || "" : "",
         submitterName: collectContactInfo ? submitterName || undefined : undefined,
         captchaToken,
@@ -394,10 +541,11 @@ export function PublicIntakeForm() {
     return null;
   }
 
-  const sortedFields = [...formData.schema.fields].sort((a, b) => a.order - b.order);
+  // Form order. Rules and formulas are settled in dependency order (evaluateForm).
+  const sortedFields = sortFields(formData.schema.fields);
 
-  // Resolve design settings
-  const ds = formData.designSettings ?? DEFAULT_DESIGN_SETTINGS;
+  // Resolve design settings; a key missing from the saved settings takes its default.
+  const ds = { ...DEFAULT_DESIGN_SETTINGS, ...formData.designSettings };
   const collectContactInfo = true;
   const maxWidth = ds.format === "wide" ? 820 : 620;
   const formMargin =
@@ -406,6 +554,22 @@ export function PublicIntakeForm() {
       : ds.alignment === "right"
         ? { ml: "auto", mr: 0 }
         : { mx: "auto" };
+
+  const labelById = new Map(formData.schema.fields.map((field) => [field.id, field.label]));
+  const assistantPanel = checksOn ? (
+    <IntakeAssistantPanel
+      hints={hints}
+      unconfirmedCount={unconfirmedCount}
+      aiPaused={aiOn && aiPaused}
+      ai={aiOn ? { ...aiCheck, onCheck: checkWithAi } : undefined}
+      questionLabel={(id) => labelById.get(id) ?? ""}
+      onSelect={focusQuestion}
+    />
+  ) : null;
+  // Beside the questions on wide screens; above the submit button otherwise.
+  const panelBeside = Boolean(assistantPanel) && wideScreen;
+  const PANEL_WIDTH = 280;
+  const PANEL_GAP = 24;
 
   return (
     <Box
@@ -419,267 +583,358 @@ export function PublicIntakeForm() {
         fontFamily: `'${ds.fontFamily}', sans-serif`,
       }}
     >
-      <Box sx={{ maxWidth, ...formMargin }}>
-        {/* Card with banner + form body */}
-        <Box
-          sx={{
-            borderRadius: "12px",
-            overflow: "hidden",
-            backgroundColor: "background.main",
-            border: "1px solid #d0d5dd",
-            boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
-          }}
-        >
-          {/* Banner */}
-          <GradientBanner height={160} colorTheme={ds.colorTheme} logoSrc={organizationLogo}>
-            <Typography
-              component="h1"
-              sx={{
-                color: "background.main",
-                fontSize: "28px",
-                fontWeight: 700,
-                lineHeight: 1.2,
-              }}
-            >
-              {formData.name}
-            </Typography>
-            {formData.description && (
+      <Box
+        sx={{
+          maxWidth: panelBeside ? maxWidth + PANEL_WIDTH + PANEL_GAP : maxWidth,
+          ...formMargin,
+        }}
+      >
+        {showPreviewBanner && <PreviewBanner onDismiss={() => setPreviewDismissed(true)} />}
+        <Box sx={{ display: "flex", gap: `${PANEL_GAP}px`, alignItems: "flex-start" }}>
+          {/* Card with banner + form body */}
+          <Box
+            sx={{
+              flex: 1,
+              minWidth: 0,
+              borderRadius: "12px",
+              overflow: "hidden",
+              backgroundColor: "background.main",
+              border: "1px solid #d0d5dd",
+              boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+            }}
+          >
+            {/* Banner */}
+            <GradientBanner height={160} colorTheme={ds.colorTheme} logoSrc={organizationLogo}>
               <Typography
+                component="h1"
                 sx={{
-                  color: "rgba(255, 255, 255, 0.85)",
-                  fontSize: "15px",
-                  lineHeight: 1.6,
-                  mt: "8px",
+                  color: "background.main",
+                  fontSize: "28px",
+                  fontWeight: 700,
+                  lineHeight: 1.2,
                 }}
               >
-                {formData.description}
+                {formData.name}
               </Typography>
-            )}
-          </GradientBanner>
-
-          {/* Risk classification step */}
-          {riskStep && step === "risk" && (
-            <Box sx={{ p: "32px" }}>
-              <Typography
-                component="h2"
-                sx={{ fontWeight: 600, color: "#1e293b", mb: "8px", fontSize: "16px" }}
-              >
-                Risk classification
-              </Typography>
-              <Typography sx={{ fontSize: "13px", color: "#475569", mb: "24px" }}>
-                Answer these questions about the AI system first. They follow the EU AI Act.
-              </Typography>
-              {error && (
-                <Box
+              {formData.description && (
+                <Typography
                   sx={{
-                    mb: "24px",
-                    p: "12px 16px",
-                    fontSize: "13px",
-                    borderRadius: "8px",
-                    border: "1px solid #fecaca",
-                    backgroundColor: "#fef2f2",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "10px",
+                    color: "rgba(255, 255, 255, 0.85)",
+                    fontSize: "15px",
+                    lineHeight: 1.6,
+                    mt: "8px",
                   }}
                 >
-                  <AlertCircle size={18} color="#ef4444" style={{ flexShrink: 0 }} />
-                  <Typography sx={{ fontSize: "13px", color: "#991b1b" }}>{error}</Typography>
-                </Box>
+                  {formData.description}
+                </Typography>
               )}
-              <EuAiActQuestionnaire
-                questionnaire={riskStep.questionnaire}
-                answers={riskAnswers}
-                onAnswersChange={setRiskAnswers}
-                onComplete={() => {
-                  setError(null);
-                  setStep("form");
-                }}
-                completeLabel="Continue"
-              />
-            </Box>
-          )}
+            </GradientBanner>
 
-          {/* Form body */}
-          {(!riskStep || step === "form") && (
-            <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ p: "32px" }}>
-              {/* Back to the risk step */}
-              {riskStep && (
-                <Box sx={{ mb: "16px" }}>
-                  <CustomizableButton
-                    variant="text"
-                    text="Back to risk classification"
-                    onClick={() => setStep("risk")}
-                  />
-                </Box>
-              )}
-
-              {/* Resubmission alert */}
-              {previousData && (
-                <Box
-                  sx={{
-                    mb: 3,
-                    p: "12px 16px",
-                    fontSize: "13px",
-                    borderRadius: "8px",
-                    border: "1px solid #bfdbfe",
-                    backgroundColor: "#eff6ff",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "10px",
-                  }}
+            {/* Risk classification step */}
+            {riskStep && step === "risk" && (
+              <Box sx={{ p: "32px" }}>
+                <Typography
+                  component="h2"
+                  sx={{ fontWeight: 600, color: "#1e293b", mb: "8px", fontSize: "16px" }}
                 >
-                  <Info size={18} color="#3b82f6" style={{ flexShrink: 0 }} />
-                  <Typography sx={{ fontSize: "13px", color: "#1e40af" }}>
-                    Your previous submission data has been pre-filled. You can update and resubmit.
-                  </Typography>
-                </Box>
-              )}
-
-              {/* Error alert */}
-              {error && (
-                <Box
-                  sx={{
-                    mb: 3,
-                    p: "12px 16px",
-                    fontSize: "13px",
-                    borderRadius: "8px",
-                    border: "1px solid #fecaca",
-                    backgroundColor: "#fef2f2",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "10px",
-                  }}
-                >
-                  <AlertCircle size={18} color="#ef4444" style={{ flexShrink: 0 }} />
-                  <Typography sx={{ fontSize: "13px", color: "#991b1b" }}>{error}</Typography>
-                </Box>
-              )}
-
-              {/* Contact info section */}
-              {collectContactInfo && (
-                <>
-                  <Typography
-                    component="h2"
+                  Risk classification
+                </Typography>
+                <Typography sx={{ fontSize: "13px", color: "#475569", mb: "24px" }}>
+                  Answer these questions about the AI system first. They follow the EU AI Act.
+                </Typography>
+                {error && (
+                  <Box
                     sx={{
-                      fontWeight: 600,
-                      color: "#1e293b",
-                      mb: 2,
-                      fontSize: "16px",
+                      mb: "24px",
+                      p: "12px 16px",
+                      fontSize: "13px",
+                      borderRadius: "8px",
+                      border: "1px solid #fecaca",
+                      backgroundColor: "#fef2f2",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "10px",
                     }}
                   >
-                    Your contact information
-                  </Typography>
-                  <Box sx={{ display: "flex", flexDirection: "column", gap: "20px", mb: 3 }}>
-                    <Field
-                      id="submitter-name"
-                      label="Name"
-                      placeholder="Your name"
-                      value={submitterName}
-                      onChange={(e) => setSubmitterName(e.target.value)}
-                      sx={{
-                        "& .MuiOutlinedInput-root": {
-                          "borderRadius": "8px",
-                          "fontSize": "15px",
-                          "& fieldset": { borderColor: "#e2e8f0" },
-                          "&:hover fieldset": { borderColor: "#cbd5e1" },
-                          "&.Mui-focused fieldset": { borderColor: ds.colorTheme },
-                        },
-                        "& .MuiOutlinedInput-input": {
-                          padding: "12px 14px",
-                        },
-                      }}
-                    />
-                    <Field
-                      id="submitter-email"
-                      label="Email"
-                      type="email"
-                      isRequired
-                      value={submitterEmail}
-                      onChange={(e) => {
-                        setSubmitterEmail(e.target.value);
-                        setEmailError(null);
-                      }}
-                      error={emailError || undefined}
-                      sx={{
-                        "& .MuiOutlinedInput-root": {
-                          "borderRadius": "8px",
-                          "fontSize": "15px",
-                          "& fieldset": { borderColor: emailError ? "#ef4444" : "#e2e8f0" },
-                          "&:hover fieldset": { borderColor: emailError ? "#ef4444" : "#cbd5e1" },
-                          "&.Mui-focused fieldset": {
-                            borderColor: emailError ? "#ef4444" : ds.colorTheme,
-                          },
-                        },
-                        "& .MuiOutlinedInput-input": {
-                          padding: "12px 14px",
-                        },
-                      }}
-                    />
-                    <FormFieldHint text="We'll send you updates about your submission" />
+                    <AlertCircle size={18} color="#ef4444" style={{ flexShrink: 0 }} />
+                    <Typography sx={{ fontSize: "13px", color: "#991b1b" }}>{error}</Typography>
                   </Box>
-
-                  <Box sx={{ my: 4, borderTop: "1px solid #e2e8f0" }} />
-                </>
-              )}
-
-              {/* Form fields */}
-              <Box sx={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-                {sortedFields.map((field) => (
-                  <FormFieldRenderer
-                    key={field.id}
-                    field={field}
-                    control={control}
-                    errors={errors}
-                  />
-                ))}
-              </Box>
-
-              {/* Captcha */}
-              <Box sx={{ mt: "32px", mb: "32px" }}>
-                <MathCaptcha
-                  value={captchaValue}
-                  onChange={handleCaptchaChange}
-                  error={captchaError || undefined}
-                  refreshTrigger={captchaRefreshTrigger}
+                )}
+                <EuAiActQuestionnaire
+                  questionnaire={riskStep.questionnaire}
+                  answers={riskAnswers}
+                  onAnswersChange={setRiskAnswers}
+                  onComplete={() => {
+                    setError(null);
+                    setStep("form");
+                  }}
+                  completeLabel="Continue"
                 />
               </Box>
+            )}
 
-              {/* Submit button */}
-              <CustomizableButton
-                type="submit"
-                variant="contained"
-                isDisabled={isSubmitting}
-                startIcon={
-                  isSubmitting ? (
-                    <Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} />
-                  ) : (
-                    <Send size={16} />
-                  )
-                }
-                text={isSubmitting ? "Submitting..." : formData.submitButtonText}
-                sx={{
-                  "width": "100%",
-                  "height": 48,
-                  "backgroundColor": ds.colorTheme,
-                  "fontSize": "15px",
-                  "fontWeight": 600,
-                  "borderRadius": "8px",
-                  "textTransform": "none",
-                  "boxShadow": "none",
-                  "&:hover": {
-                    backgroundColor: `${ds.colorTheme}dd`,
-                    boxShadow: `0 2px 8px ${ds.colorTheme}40`,
-                  },
-                  "&:disabled": {
-                    backgroundColor: "#cbd5e1",
-                    color: "background.main",
-                  },
-                  "& .MuiButton-startIcon": {
-                    marginRight: "8px",
-                  },
-                }}
-              />
+            {/* Form body */}
+            {(!riskStep || step === "form") && (
+              <Box
+                component="form"
+                // In a preview, Submit (and Enter, which clicks it) opens the
+                // test / real menu instead; a stray submit there only tests.
+                onSubmit={handleSubmit((data) => onSubmit(data, isPreview ? "test" : "real"))}
+                onChange={() => setTestSubmitPassed(false)}
+                sx={{ p: "32px" }}
+              >
+                {/* Back to the risk step */}
+                {riskStep && (
+                  <Box sx={{ mb: "16px" }}>
+                    <CustomizableButton
+                      variant="text"
+                      text="Back to risk classification"
+                      onClick={() => setStep("risk")}
+                    />
+                  </Box>
+                )}
+
+                {/* Answers leave the page before submit when AI checks are on: say so. */}
+                {aiOn && (
+                  <Box
+                    data-testid="live-checks-ai-notice"
+                    sx={{ mb: "24px", display: "flex", alignItems: "center", gap: "8px" }}
+                  >
+                    <Sparkles size={14} strokeWidth={1.5} style={{ flexShrink: 0 }} />
+                    <Typography sx={{ fontSize: "13px", color: "text.secondary" }}>
+                      AI can point out vague or conflicting answers when you select Check my
+                      answers. Your answers go to AI only when you ask.
+                    </Typography>
+                  </Box>
+                )}
+
+                {/* Resubmission alert */}
+                {previousData && (
+                  <Box
+                    sx={{
+                      mb: 3,
+                      p: "12px 16px",
+                      fontSize: "13px",
+                      borderRadius: "8px",
+                      border: "1px solid #bfdbfe",
+                      backgroundColor: "#eff6ff",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "10px",
+                    }}
+                  >
+                    <Info size={18} color="#3b82f6" style={{ flexShrink: 0 }} />
+                    <Typography sx={{ fontSize: "13px", color: "#1e40af" }}>
+                      Your previous submission data has been pre-filled. You can update and
+                      resubmit.
+                    </Typography>
+                  </Box>
+                )}
+
+                {/* Error alert */}
+                {error && (
+                  <Box
+                    sx={{
+                      mb: 3,
+                      p: "12px 16px",
+                      fontSize: "13px",
+                      borderRadius: "8px",
+                      border: "1px solid #fecaca",
+                      backgroundColor: "#fef2f2",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "10px",
+                    }}
+                  >
+                    <AlertCircle size={18} color="#ef4444" style={{ flexShrink: 0 }} />
+                    <Typography sx={{ fontSize: "13px", color: "#991b1b" }}>{error}</Typography>
+                  </Box>
+                )}
+
+                {/* Contact info section */}
+                {collectContactInfo && (
+                  <>
+                    <Typography
+                      component="h2"
+                      sx={{
+                        fontWeight: 600,
+                        color: "#1e293b",
+                        mb: 2,
+                        fontSize: "16px",
+                      }}
+                    >
+                      Your contact information
+                    </Typography>
+                    {/* Laid out like the question fields below: label, input, hint. */}
+                    <Box sx={{ display: "flex", flexDirection: "column", gap: "24px", mb: 3 }}>
+                      <Box>
+                        <FieldLabel label="Name" htmlFor="submitter-name" />
+                        <Field
+                          id="submitter-name"
+                          placeholder="Your name"
+                          value={submitterName}
+                          onChange={(e) => setSubmitterName(e.target.value)}
+                        />
+                      </Box>
+                      <Box>
+                        <FieldLabel label="Email" required htmlFor="submitter-email" />
+                        <Field
+                          id="submitter-email"
+                          type="email"
+                          value={submitterEmail}
+                          onChange={(e) => {
+                            setSubmitterEmail(e.target.value);
+                            setEmailError(null);
+                          }}
+                          error={emailError || undefined}
+                        />
+                        <FormFieldHint text="We'll send you updates about your submission" />
+                      </Box>
+                    </Box>
+
+                    <Box sx={{ my: 4, borderTop: "1px solid #e2e8f0" }} />
+                  </>
+                )}
+
+                {aiOn && <VendorPrefillCard onUpload={handlePrefillUpload} />}
+
+                {/* Form fields */}
+                <Box sx={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+                  {sortedFields.map((field) => {
+                    // A hidden field unmounts at once (react-hook-form re-registers a
+                    // mounted Controller with its rules on every render, so an exit
+                    // animation would keep a hidden required field blocking submit);
+                    // only showing a field is animated.
+                    if (evaluation && !evaluation.visibleIds.has(field.id)) return null;
+                    const fieldHints = checksOn ? hintsFor(field.id) : [];
+                    const prefillEntry = prefill[field.id];
+                    return (
+                      <Collapse
+                        key={field.id}
+                        id={`question-${field.id}`}
+                        in
+                        appear={fieldsShown}
+                        timeout={150}
+                      >
+                        {field.type === "calculated" ? (
+                          <CalculatedFieldDisplay
+                            field={field}
+                            value={evaluation?.calculated[field.id] ?? null}
+                            missingLabel={
+                              evaluation
+                                ? firstMissingVisibleInput(formData.schema, evaluation, field.id)
+                                : null
+                            }
+                          />
+                        ) : (
+                          <>
+                            <FormFieldRenderer
+                              field={field}
+                              control={control}
+                              errors={errors}
+                              tone={fieldToneFor(fieldHints)}
+                            />
+                            {prefillEntry &&
+                              stillPrefilled(prefillEntry, watchedValues[field.id]) && (
+                                <PrefillLine
+                                  suggestion={prefillEntry.suggestion}
+                                  fileName={prefillEntry.fileName}
+                                  confirmed={prefillEntry.confirmed}
+                                  onConfirm={() =>
+                                    setPrefill((current) => ({
+                                      ...current,
+                                      [field.id]: { ...prefillEntry, confirmed: true },
+                                    }))
+                                  }
+                                />
+                              )}
+                            <LiveCheckHints
+                              hints={fieldHints}
+                              staleQuestionIds={staleQuestionIds}
+                            />
+                          </>
+                        )}
+                      </Collapse>
+                    );
+                  })}
+                </Box>
+
+                {/* Captcha */}
+                <Box sx={{ mt: "32px", mb: "32px" }}>
+                  <MathCaptcha
+                    value={captchaValue}
+                    onChange={handleCaptchaChange}
+                    error={captchaError || undefined}
+                    refreshTrigger={captchaRefreshTrigger}
+                  />
+                </Box>
+
+                {assistantPanel && !panelBeside && <Box sx={{ mb: "24px" }}>{assistantPanel}</Box>}
+
+                {testSubmitPassed && <TestSubmitPassed />}
+
+                {/* Submit button. In a preview it opens the test / real choice. */}
+                <CustomizableButton
+                  type="submit"
+                  onClick={
+                    isPreview
+                      ? (event) => {
+                          event.preventDefault();
+                          setTestSubmitPassed(false);
+                          setSubmitMenuAnchor(event.currentTarget);
+                        }
+                      : undefined
+                  }
+                  endIcon={isPreview ? <ChevronDown size={16} /> : undefined}
+                  testId="public-form-submit"
+                  variant="contained"
+                  isDisabled={isSubmitting}
+                  startIcon={
+                    isSubmitting ? (
+                      <Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} />
+                    ) : (
+                      <Send size={16} />
+                    )
+                  }
+                  text={isSubmitting ? "Submitting..." : formData.submitButtonText}
+                  sx={{
+                    "width": "100%",
+                    "height": 48,
+                    "backgroundColor": ds.colorTheme,
+                    "fontSize": "15px",
+                    "fontWeight": 600,
+                    "borderRadius": "8px",
+                    "textTransform": "none",
+                    "boxShadow": "none",
+                    "&:hover": {
+                      backgroundColor: `${ds.colorTheme}dd`,
+                      boxShadow: `0 2px 8px ${ds.colorTheme}40`,
+                    },
+                    "&:disabled": {
+                      backgroundColor: "#cbd5e1",
+                      color: "background.main",
+                    },
+                    "& .MuiButton-startIcon": {
+                      marginRight: "8px",
+                    },
+                  }}
+                />
+                {isPreview && (
+                  <PreviewSubmitMenu
+                    anchor={submitMenuAnchor}
+                    onClose={() => setSubmitMenuAnchor(null)}
+                    onChoose={(mode) => {
+                      setSubmitMenuAnchor(null);
+                      void handleSubmit((data) => onSubmit(data, mode))();
+                    }}
+                  />
+                )}
+              </Box>
+            )}
+          </Box>
+          {panelBeside && (
+            <Box sx={{ width: PANEL_WIDTH, flexShrink: 0, position: "sticky", top: "24px" }}>
+              {assistantPanel}
             </Box>
           )}
         </Box>

@@ -23,43 +23,58 @@ async function resolveExtensionId(key: string): Promise<number | null> {
   return extension.id;
 }
 
-export function requireExtensionEnabled(extensionKey: string) {
-  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const organizationId = (req as any).organizationId;
-    if (!organizationId) {
-      res.status(401).json(STATUS_CODE[401](req.t!("User not authenticated")));
+async function checkEnabled(
+  extensionKey: string,
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  const organizationId = (req as any).organizationId;
+  if (!organizationId) {
+    res.status(401).json(STATUS_CODE[401](req.t!("User not authenticated")));
+    return;
+  }
+
+  try {
+    const extensionId = await resolveExtensionId(extensionKey);
+    if (extensionId === null) {
+      res
+        .status(404)
+        .json(STATUS_CODE[404](`Extension '${sanitizeForLog(extensionKey)}' not found in catalog`));
       return;
     }
 
-    try {
-      const extensionId = await resolveExtensionId(extensionKey);
-      if (extensionId === null) {
-        res
-          .status(404)
-          .json(
-            STATUS_CODE[404](`Extension '${sanitizeForLog(extensionKey)}' not found in catalog`),
-          );
-        return;
-      }
-
-      const enablement = await ExtensionEnablementModel.findByExtensionId(
-        extensionId,
-        organizationId,
-      );
-      if (!enablement || !enablement.enabled) {
-        res
-          .status(403)
-          .json(
-            STATUS_CODE[403](
-              `Extension '${sanitizeForLog(extensionKey)}' is not enabled for this organization`,
-            ),
-          );
-        return;
-      }
-
-      next();
-    } catch (err) {
-      res.status(500).json(STATUS_CODE[500]((err as Error).message));
+    const enablement = await ExtensionEnablementModel.findByExtensionId(
+      extensionId,
+      organizationId,
+    );
+    if (!enablement || !enablement.enabled) {
+      res
+        .status(403)
+        .json(
+          STATUS_CODE[403](
+            `Extension '${sanitizeForLog(extensionKey)}' is not enabled for this organization`,
+          ),
+        );
+      return;
     }
+
+    next();
+  } catch (err) {
+    res.status(500).json(STATUS_CODE[500]((err as Error).message));
+  }
+}
+
+export function requireExtensionEnabled(extensionKey: string) {
+  return (req: Request, res: Response, next: NextFunction): Promise<void> =>
+    checkEnabled(extensionKey, req, res, next);
+}
+
+/** The same gate with the key taken from a route parameter (for example /:key/runs). */
+export function requireExtensionEnabledFromParam(param = "key") {
+  return (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const raw = req.params[param];
+    const key = Array.isArray(raw) ? String(raw[0]) : String(raw ?? "");
+    return checkEnabled(key, req, res, next);
   };
 }

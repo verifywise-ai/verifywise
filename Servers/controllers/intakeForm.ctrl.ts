@@ -1,5 +1,4 @@
 import { Request, Response } from "express";
-import { createHmac, timingSafeEqual } from "crypto";
 import { Transaction } from "sequelize";
 import { sequelize } from "../database/db";
 import {
@@ -21,10 +20,19 @@ import {
   checkRateLimitQuery,
   getTenantHashBySlug,
   getTenantSlugById,
-  updateSubmissionRiskQuery,
   updateSubmissionRiskOverrideQuery,
+  claimSubmissionNotificationQuery,
+  updateSuggestedRiskItemQuery,
+  setAllSuggestionStatesQuery,
+  updateSubmissionAssessmentV2Query,
+  updateSubmissionSuggestionsQuery,
   getTenantByPublicId,
   getSubmissionByEntityQuery,
+  getEligibleReviewersQuery,
+  getEligibleReviewerIdsQuery,
+  setDecisionRecordQuery,
+  updateSubmissionRoutingQuery,
+  updateSecondReviewQuery,
 } from "../utils/intakeForm.utils";
 import { createNewModelInventoryQuery } from "../utils/modelInventory.utils";
 import { createNewProjectQuery } from "../utils/project.utils";
@@ -40,13 +48,14 @@ import { ModelInventoryModel } from "../domain.layer/models/modelInventory/model
 import { IIntakeFormSchema } from "../domain.layer/interfaces/i.intakeForm";
 import {
   validateIntakeFormSchemaLabels,
+  validateIntakeFormSchemaLogic,
   resolveEuAiActRiskStep,
+  defaultEuAiActRiskStepEnabled,
 } from "../utils/intakeFormSchema.validation";
 import {
   getQuestionnaire,
   CURRENT_QUESTIONNAIRE_VERSION,
   prepareIntakeRiskStep,
-  scoreClassification,
   validateAnswers,
   type Answers,
   type ClassificationResult,
@@ -69,22 +78,75 @@ import {
   sendNewSubmissionAdminNotification,
   sendSubmissionApprovedEmail,
   sendSubmissionRejectedEmail,
+  sendSecondReviewRequestEmail,
 } from "../services/intakeFormEmail.service";
-import { calculateSubmissionRisk } from "../services/intakeRiskScoring.service";
+import { enqueueIntakeAssessment } from "../services/intakeScoring/enqueue";
+import { notificationAudience } from "../services/intakeScoring/assessmentJob";
+import { cleanSubmission, isEmptyAnswer, parseFormula } from "../services/intakeFormLogic";
 import { generateSuggestedQuestions, generateFieldGuidance } from "../services/intakeLLM.service";
 import { getCompanyLogoQuery } from "../utils/aiTrustCentre.utils";
 
 import { translateError } from "../utils/i18n.utils";
+import { highRiskRolesFromEntityData, sameHighRiskRoles } from "../utils/highRiskRoles.utils";
+import {
+  buildEntityDataFromSubmission,
+  rescoreStoredRun,
+} from "../utils/intakeSubmissionData.utils";
 import { toId } from "../utils/validations/validation.utils";
 import { isEmail } from "../utils/validations/email.utils";
+import { isWebUrl } from "../utils/validations/url.utils";
+import {
+  isAssessmentV2,
+  type IIntakeSubmission,
+  type IRiskAssessmentV2,
+  type ISubmissionRouting,
+  type ReviewLane,
+  type RoutingReason,
+} from "../domain.layer/interfaces/i.intakeSubmission";
+import { ModelRiskCategory } from "../domain.layer/enums/model-risk-category.enum";
+import { ModelRiskLevel } from "../domain.layer/enums/model-risk-level.enum";
+import {
+  asBand,
+  isBandAllowed,
+  ruleMinimumFor,
+  SCORE_BANDS,
+  type ClassificationLevel,
+  type ScoreBand,
+} from "../services/intakeScoring/scoreMath";
+import {
+  buildModelRiskFromSuggestion,
+  buildUseCaseRiskFromSuggestion,
+  recomputeAssessmentForLevel,
+} from "../services/intakeScoring/approvalRisks";
+import { createRiskService } from "../services/risk.service";
+import { createNewModelRiskQuery } from "../utils/modelRisk.utils";
+import { LIKELIHOODS, SEVERITIES } from "../services/intakeScoring/riskMappers";
+import type { IntakeSuggestedRisk } from "../services/intakeScoring/intakeSuggestions";
+import { selectRetryStages } from "../services/intakeScoring/retry";
+import {
+  canDecideLane,
+  DEFAULT_ROUTING,
+  laneReviewerIdsFor,
+  validateRoutingSettings,
+} from "../services/intakeRouting/routingRules";
+import {
+  buildDecisionRecord,
+  laneAtDecision,
+  pickSecondReview,
+  laneOnRecord,
+} from "../services/intakeRouting/decisionGate";
+import { raiseForOverride, rerouteFormPending } from "../services/intakeRouting/routingService";
+import { getIntakeOversightQuery, OVERSIGHT_WEEKS } from "../services/intakeRouting/oversight";
+import type {
+  IFormRouting,
+  IIntakeForm,
+  IPublicIntakeForm,
+} from "../domain.layer/interfaces/i.intakeForm";
+import { createSignedToken, verifySignedToken } from "../utils/signedToken.utils";
+import { formAiAvailable } from "../services/intakeLiveChecks/availability";
+import { recordSubmitLiveChecks } from "../services/intakeLiveChecks/submit";
 /** Safely extract a single string from req.params (which may be string | string[]). */
 const paramStr = (val: string | string[]): string => (Array.isArray(val) ? val[0] : val);
-
-/** Secret key for signing CAPTCHA and resubmission tokens. */
-const TOKEN_SECRET = process.env.JWT_SECRET || process.env.ENCRYPTION_KEY;
-if (!TOKEN_SECRET) {
-  throw new Error("JWT_SECRET or ENCRYPTION_KEY must be set for intake form token signing");
-}
 
 /** Map lowercase form option values to valid AiRiskClassification enum values. */
 function mapToAiRiskClassification(value: string): AiRiskClassification | string {
@@ -101,30 +163,6 @@ function mapToAiRiskClassification(value: string): AiRiskClassification | string
     "out of scope": AiRiskClassification.OUT_OF_SCOPE,
   };
   return map[value?.toLowerCase()?.trim()] || value || "";
-}
-
-/** Create an HMAC-signed token from a payload object. */
-function createSignedToken(payload: Record<string, unknown>): string {
-  const data = JSON.stringify(payload);
-  const signature = createHmac("sha256", TOKEN_SECRET!).update(data).digest("hex");
-  return Buffer.from(JSON.stringify({ data, signature })).toString("base64");
-}
-
-/** Verify and decode an HMAC-signed token. Returns null if invalid. */
-function verifySignedToken<T = Record<string, unknown>>(token: string): T | null {
-  try {
-    const { data, signature } = JSON.parse(Buffer.from(token, "base64").toString());
-    const expectedSignature = createHmac("sha256", TOKEN_SECRET!).update(data).digest("hex");
-    // Use timing-safe comparison to prevent timing attacks
-    const sigBuf = Buffer.from(signature, "hex");
-    const expectedBuf = Buffer.from(expectedSignature, "hex");
-    if (sigBuf.length !== expectedBuf.length || !timingSafeEqual(sigBuf, expectedBuf)) {
-      return null;
-    }
-    return JSON.parse(data) as T;
-  } catch {
-    return null;
-  }
 }
 
 /** Parse and validate an integer ID parameter. Returns NaN for invalid values. */
@@ -186,43 +224,29 @@ async function handleLlmKeyRequest(
   }
 }
 
+/**
+ * What the public page needs to know about live checks before making any call.
+ * Reads the full form row for llmKeyId; the key id and provider are never sent.
+ */
+async function buildPublicLiveChecks(
+  form: IPublicIntakeForm,
+  organizationId: number,
+): Promise<{ enabled: boolean; aiAvailable: boolean }> {
+  const enabled = Boolean(form.liveChecksEnabled);
+  if (!enabled) return { enabled, aiAvailable: false };
+  try {
+    const full = await getIntakeFormByIdQuery(form.id, organizationId);
+    return { enabled, aiAvailable: full ? await formAiAvailable(full, organizationId) : false };
+  } catch (error) {
+    // Rules still run; only AI is withheld.
+    logger.error(`Error reading the LLM key of form ${form.id}`, error);
+    return { enabled, aiAvailable: false };
+  }
+}
+
 // ============================================================================
 // EU AI ACT RISK STEP HELPERS
 // ============================================================================
-
-/**
- * Scores a stored classification run again under its own questionnaire version.
- * Returns null when the version is unknown to this server or the stored answers
- * no longer validate against it (e.g. an option was removed), so callers treat
- * it as no run. The run is handed back with its questionnaire and result so a
- * caller branches on this one value; its answers are the validated ones, so
- * answers to questions now hidden are neither scored nor copied.
- */
-function rescoreStoredRun<
-  R extends { id?: number; questionnaireVersion: number; answers: Answers },
->(run: R): { run: R; questionnaire: Questionnaire; result: ClassificationResult } | null {
-  const questionnaire = getQuestionnaire(run.questionnaireVersion);
-  if (!questionnaire) return null;
-  const { errors, answers } = validateAnswers(questionnaire, run.answers);
-  if (errors.length > 0) {
-    logger.warn(
-      `EU AI Act classification run ${run.id} no longer validates; treating it as no run: ${errors.join("; ")}`,
-    );
-    return null;
-  }
-  try {
-    return {
-      run: { ...run, answers },
-      questionnaire,
-      result: scoreClassification(run.questionnaireVersion, answers),
-    };
-  } catch (error) {
-    logger.warn(
-      `EU AI Act classification run ${run.id} could not be re-scored; treating it as no run: ${(error as Error).message}`,
-    );
-    return null;
-  }
-}
 
 /** Stores the scored EU AI Act answers of a public submission as its classification run. */
 async function persistIntakeRiskRun(
@@ -236,7 +260,7 @@ async function persistIntakeRiskRun(
       useCaseId: null,
       intakeSubmissionId: submissionId,
       questionnaireVersion: prepared.questionnaireVersion,
-      role: prepared.result.role,
+      roles: prepared.result.roles,
       answers: prepared.answers,
       result: prepared.result,
       reviewerLevel: null,
@@ -283,6 +307,324 @@ async function buildPublicRiskStep(
   };
 }
 
+/**
+ * Queue a new public submission's AI assessment. The job emails the reviewers
+ * once results are in, or after two minutes. If it cannot be queued, they are
+ * emailed now without results, so a submission is never silent; the claim
+ * keeps it to one email even if part of the job did get queued. Not awaited by
+ * the handlers: a slow or unavailable queue never delays the submitter.
+ */
+function startIntakeAssessment(params: {
+  organizationId: number;
+  submissionId: number;
+  lang?: string;
+  /** The form as saved; its recipients and routing lanes decide who is emailed. */
+  form: IIntakeForm | null;
+  /** Email the organization's admins when the form has no recipients. */
+  adminFallback: boolean;
+  /** Also run the AI live checks (stored pending at submit). */
+  liveChecks: boolean;
+  formId: number;
+  formName: string;
+  submitterName: string;
+  submitterEmail: string;
+  entityType: IntakeEntityType;
+}): Promise<void> {
+  const { organizationId, submissionId, lang, form, adminFallback } = params;
+  return enqueueIntakeAssessment({
+    organizationId,
+    submissionId,
+    stages: params.liveChecks
+      ? ["scoring", "suggestions", "liveChecks"]
+      : ["scoring", "suggestions"],
+    notify: true,
+    lang,
+    adminFallback,
+  }).catch(async (error) => {
+    logger.error(
+      `Could not queue the assessment for submission ${submissionId}; emailing reviewers now:`,
+      error,
+    );
+    try {
+      // Same audience as the job's email: recipients plus the lane reviewers
+      // (no lane is stored yet, so both lanes while routing is on). If that
+      // lookup fails, still email the form's recipients.
+      let recipients: number[] = form?.recipients ?? [];
+      let laneText: string | undefined;
+      if (form) {
+        try {
+          ({ recipients, laneText } = await notificationAudience(
+            form,
+            { routing: null },
+            lang,
+            organizationId,
+          ));
+        } catch (err) {
+          logger.error(`Could not resolve reviewers for submission ${submissionId}:`, err);
+        }
+      }
+      if (recipients.length === 0 && !adminFallback) {
+        logger.warn(
+          `No recipients configured for form ${params.formId}, skipping admin notification`,
+        );
+        return;
+      }
+      if (!(await claimSubmissionNotificationQuery(submissionId, organizationId))) return;
+      await sendNewSubmissionAdminNotification(
+        recipients.length > 0 ? recipients : organizationId,
+        params.formName,
+        params.submitterName,
+        params.submitterEmail,
+        submissionId,
+        params.entityType,
+        lang,
+        undefined,
+        laneText,
+      );
+    } catch (err) {
+      logger.error("Failed to send admin notification:", err);
+    }
+  });
+}
+
+/**
+ * The EU AI Act level under the current questionnaire: the submission's stored
+ * run re-scored. Null when it has no run (step off, or a model).
+ */
+async function currentRulesLevel(
+  submissionId: number,
+  organizationId: number,
+  transaction?: Transaction,
+): Promise<ClassificationLevel | null> {
+  const run = await getLatestRunForSubmissionQuery(submissionId, organizationId, transaction);
+  const rescored = run ? rescoreStoredRun(run) : null;
+  return (rescored?.result.level ?? null) as ClassificationLevel | null;
+}
+
+/** The rule minimum under the current questionnaire. */
+async function currentRuleMinimum(
+  submissionId: number,
+  organizationId: number,
+  transaction?: Transaction,
+): Promise<number | null> {
+  return ruleMinimumFor(await currentRulesLevel(submissionId, organizationId, transaction));
+}
+
+/**
+ * On approve or reject, inside the decision's transaction: the job's writes
+ * are ignored once a submission is decided, so a stage still running is
+ * closed here (the score keeps the rule minimum, suggestions are marked
+ * failed). With `refloor`, a finished score is also re-floored under `level`.
+ * Returns the AI-assisted assessment as it now stands (null when there is none).
+ */
+async function settleAssessmentOnDecision(
+  submission: IIntakeSubmission,
+  level: ClassificationLevel | null,
+  organizationId: number,
+  transaction: Transaction,
+  opts: { refloor: boolean },
+): Promise<IRiskAssessmentV2 | null> {
+  let assessment = isAssessmentV2(submission.riskAssessment) ? submission.riskAssessment : null;
+  if (assessment && (opts.refloor || assessment.status === "pending")) {
+    const settled: IRiskAssessmentV2 =
+      assessment.status === "pending"
+        ? { ...assessment, status: "ai_failed", error: "Decided before AI scoring finished" }
+        : assessment;
+    assessment = recomputeAssessmentForLevel(settled, level);
+    await updateSubmissionAssessmentV2Query(submission.id, assessment, organizationId, transaction);
+  }
+  if (submission.suggestedRisks?.status === "pending") {
+    await updateSubmissionSuggestionsQuery(
+      submission.id,
+      {
+        ...submission.suggestedRisks,
+        status: "ai_failed",
+        error: "Decided before risk suggestions finished",
+      },
+      organizationId,
+      transaction,
+    );
+  }
+  return assessment;
+}
+
+/**
+ * Null when `tier` is a score band at or above the band of `ruleMinimum`;
+ * otherwise the (translated) reason it is refused. The risk override and
+ * approve, the two places a reviewer sets a band, both go through this.
+ */
+function bandFloorError(req: Request, tier: unknown, ruleMinimum: number | null): string | null {
+  if (!isScoreBand(tier)) {
+    return req.t!("Invalid risk band");
+  }
+  if (!isBandAllowed(tier, ruleMinimum)) {
+    return req.t!("The band can't be lower than the rule minimum allows");
+  }
+  return null;
+}
+
+function isScoreBand(tier: unknown): tier is ScoreBand {
+  return SCORE_BANDS.some((b) => b.band === tier);
+}
+
+/** A v2 score, or none yet: either way the reviewer sets a score band. */
+function usesScoreBands(submission: IIntakeSubmission): boolean {
+  return !submission.riskAssessment || isAssessmentV2(submission.riskAssessment);
+}
+
+/** bandFloorError against the rule minimum under the current rules. */
+async function checkBandAgainstFloor(
+  req: Request,
+  tier: unknown,
+  submissionId: number,
+): Promise<string | null> {
+  return bandFloorError(req, tier, await currentRuleMinimum(submissionId, req.organizationId!));
+}
+
+// ============================================================================
+// REVIEW LANES
+// ============================================================================
+
+function isAdminRequest(req: Request): boolean {
+  return req.role === "Admin";
+}
+
+/** Why a submission sits in its lane, as words for an error message. */
+function routingReasonText(req: Request, reason: RoutingReason | null): string {
+  switch (reason) {
+    case "prohibited":
+      return req.t!("prohibited practice");
+    case "no_score":
+      return req.t!("no usable score");
+    case "close_call":
+      return req.t!("the score is close to the threshold");
+    case "at_or_above_threshold":
+      return req.t!("the score is at or above the threshold");
+    case "override_raised":
+      return req.t!("a reviewer raised the band");
+    case "escalated":
+      return req.t!("a reviewer requested expert review");
+    default:
+      return req.t!("the score is below the threshold");
+  }
+}
+
+/**
+ * The EU AI Act level the approved entity will carry: the stored run's level
+ * (after a reviewer's change) when there is one, else the mapped level of a
+ * use case. Models carry none.
+ */
+function entityLevel(
+  entityType: IntakeEntityType,
+  runLevel: string | null,
+  entityData: Record<string, unknown>,
+): string | null {
+  if (runLevel !== null) return runLevel;
+  const mapped = entityData.ai_risk_classification;
+  if (entityType !== IntakeEntityType.USE_CASE || typeof mapped !== "string") return null;
+  return mapToAiRiskClassification(mapped) || null;
+}
+
+/**
+ * An Admin may decide in any lane; when the lane alone would not have let them,
+ * that is logged.
+ */
+async function logIfOutsideLane(
+  req: Request,
+  submissionId: number,
+  lane: ReviewLane | null,
+  cfg: IFormRouting | null,
+  functionName: string,
+): Promise<void> {
+  if (!isAdminRequest(req) || canDecideLane(lane, req.userId!, false, cfg)) return;
+  await logSuccess({
+    eventType: "Update",
+    description: `submission ${submissionId} decided outside their lane by an Admin (${lane} review)`,
+    functionName,
+    fileName: "intakeForm.ctrl.ts",
+    userId: req.userId!,
+    organizationId: req.organizationId!,
+  });
+}
+
+// ============================================================================
+// SUGGESTED RISK EDIT VALIDATION
+// ============================================================================
+
+const SUGGESTION_STATES: IntakeSuggestedRisk["state"][] = ["suggested", "accepted", "dismissed"];
+const SUGGESTION_TEXT_FIELDS = ["description", "mitigationPlan", "implementationStrategy"] as const;
+const MODEL_RISK_CATEGORIES = Object.values(ModelRiskCategory) as string[];
+const MODEL_RISK_LEVELS = Object.values(ModelRiskLevel) as string[];
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * The reviewer-editable part of a suggested risk, validated. Only these keys
+ * are read from the body, so ids, sources and audit stamps can't be patched.
+ * Returns the field that failed when the body is invalid.
+ */
+export function parseSuggestionPatch(
+  body: Record<string, unknown>,
+  today: string,
+): { patch: Partial<IntakeSuggestedRisk> } | { invalid: string } {
+  const patch: Partial<IntakeSuggestedRisk> = {};
+
+  if (body.state !== undefined) {
+    if (!SUGGESTION_STATES.includes(body.state as IntakeSuggestedRisk["state"])) {
+      return { invalid: "state" };
+    }
+    patch.state = body.state as IntakeSuggestedRisk["state"];
+  }
+  if (body.name !== undefined) {
+    if (typeof body.name !== "string" || !body.name.trim() || body.name.trim().length > 200) {
+      return { invalid: "name" };
+    }
+    patch.name = body.name.trim();
+  }
+  for (const field of SUGGESTION_TEXT_FIELDS) {
+    const value = body[field];
+    if (value === undefined) continue;
+    if (typeof value !== "string" || value.trim().length > 1000) return { invalid: field };
+    patch[field] = value.trim();
+  }
+  if (body.likelihood !== undefined) {
+    if (!LIKELIHOODS.includes(body.likelihood as IntakeSuggestedRisk["likelihood"])) {
+      return { invalid: "likelihood" };
+    }
+    patch.likelihood = body.likelihood as IntakeSuggestedRisk["likelihood"];
+  }
+  if (body.severity !== undefined) {
+    if (!SEVERITIES.includes(body.severity as IntakeSuggestedRisk["severity"])) {
+      return { invalid: "severity" };
+    }
+    patch.severity = body.severity as IntakeSuggestedRisk["severity"];
+  }
+  if (body.deadline !== undefined) {
+    const d = body.deadline;
+    const valid =
+      d === null ||
+      (typeof d === "string" &&
+        ISO_DATE.test(d) &&
+        !Number.isNaN(Date.parse(`${d}T00:00:00Z`)) &&
+        new Date(`${d}T00:00:00Z`).toISOString().slice(0, 10) === d &&
+        d >= today);
+    if (!valid) return { invalid: "deadline" };
+    patch.deadline = d as string | null;
+  }
+  if (body.modelRiskCategory !== undefined) {
+    if (!MODEL_RISK_CATEGORIES.includes(body.modelRiskCategory as string)) {
+      return { invalid: "modelRiskCategory" };
+    }
+    patch.modelRiskCategory = body.modelRiskCategory as ModelRiskCategory;
+  }
+  if (body.modelRiskLevel !== undefined) {
+    if (!MODEL_RISK_LEVELS.includes(body.modelRiskLevel as string)) {
+      return { invalid: "modelRiskLevel" };
+    }
+    patch.modelRiskLevel = body.modelRiskLevel as ModelRiskLevel;
+  }
+  return { patch };
+}
+
 // ============================================================================
 // SERVER-SIDE FORM DATA VALIDATION
 // ============================================================================
@@ -291,16 +633,25 @@ async function buildPublicRiskStep(
  * Validate submitted form data against the form schema.
  * Returns an array of error messages (empty if valid).
  */
-function validateFormData(formData: Record<string, unknown>, schema: IIntakeFormSchema): string[] {
+function validateFormData(
+  formData: Record<string, unknown>,
+  schema: IIntakeFormSchema,
+  visibleIds?: Set<string>,
+): string[] {
   const errors: string[] = [];
 
   for (const field of schema.fields) {
+    // Hidden fields are never required; calculated values come from the server.
+    if (visibleIds && !visibleIds.has(field.id)) continue;
+    if (field.type === "calculated") continue;
     const value = formData[field.id];
-    const isEmpty = value === undefined || value === null || value === "";
+    // Same notion of blank as the show/hide rules: whitespace and [] are empty.
+    const isEmpty = isEmptyAnswer(value);
 
     // Required check — field.required (backend interface) or field.validation.required (frontend schema)
     const isRequired = field.required || field.validation?.required;
-    if (isRequired && isEmpty) {
+    // A required checkbox must be checked, as the public form enforces.
+    if (isRequired && (isEmpty || (field.type === "checkbox" && value !== true))) {
       errors.push(`"${field.label}" is required`);
       continue;
     }
@@ -317,14 +668,8 @@ function validateFormData(formData: Record<string, unknown>, schema: IIntakeForm
         break;
       }
       case "url": {
-        if (typeof value !== "string") {
+        if (!isWebUrl(value)) {
           errors.push(`"${field.label}" must be a valid URL`);
-        } else {
-          try {
-            new URL(value);
-          } catch {
-            errors.push(`"${field.label}" must be a valid URL`);
-          }
         }
         break;
       }
@@ -409,27 +754,45 @@ function validateFormData(formData: Record<string, unknown>, schema: IIntakeForm
   return errors;
 }
 
+/**
+ * The schema as the public form gets it: risk dimension tags are internal
+ * scoring hints, so they are left out (a submitter could otherwise see which
+ * answers feed which risk score).
+ */
+function publicSchema(schema: IIntakeFormSchema): IIntakeFormSchema {
+  if (!schema || !Array.isArray(schema.fields)) return schema;
+  return {
+    ...schema,
+    fields: schema.fields.map((field) => {
+      const copy = { ...field };
+      delete copy.riskDimension;
+      return copy;
+    }),
+  };
+}
+
+/**
+ * Applies the form's show/hide rules and formulas to submitted answers. The
+ * browser is never trusted: answers to hidden fields and unknown keys are
+ * dropped and calculated values are recomputed here.
+ */
+function prepareSubmissionData(
+  formData: Record<string, unknown>,
+  schema: IIntakeFormSchema,
+): { data: Record<string, unknown>; visibleIds: Set<string> } {
+  for (const field of schema.fields ?? []) {
+    if (field.type === "calculated" && !parseFormula(field.formula ?? "").ok) {
+      logger.warn(
+        `Intake form field ${field.id} has a formula that does not parse; storing no value`,
+      );
+    }
+  }
+  return cleanSubmission(schema, formData);
+}
+
 // ============================================================================
 // ENTITY DATA MAPPING (fixes hardcoded mapper bug)
 // ============================================================================
-
-/**
- * Build entity data from submission using entityFieldMapping from schema fields.
- * This replaces the old mapSubmissionToProject / mapSubmissionToModelInventory
- * which used hardcoded keys like `data["project.project_title"]`.
- */
-function buildEntityDataFromSubmission(
-  submissionData: Record<string, unknown>,
-  formSchema: IIntakeFormSchema,
-): Record<string, unknown> {
-  const result: Record<string, unknown> = {};
-  for (const field of formSchema.fields) {
-    if (field.entityFieldMapping && submissionData[field.id] !== undefined) {
-      result[field.entityFieldMapping] = submissionData[field.id];
-    }
-  }
-  return result;
-}
 
 // ============================================================================
 // INTAKE FORM CONTROLLERS (Admin - Authenticated)
@@ -503,6 +866,156 @@ export async function getIntakeFormById(req: Request, res: Response) {
   }
 }
 
+const INELIGIBLE_REVIEWERS_MESSAGE = "Reviewers must be users who can review intake submissions";
+const EMPTY_LANE_MESSAGE =
+  "Each reviewer list needs at least one user who can currently review intake submissions";
+
+const sameIds = (a: number[], b: number[]) =>
+  a.length === b.length && a.every((id) => b.includes(id));
+
+const ROUTING_FORBIDDEN_MESSAGE = "Only an Admin can change reviewer assignment";
+
+/**
+ * Whether saving `next` changes the stored routing. Compared by value: id
+ * order does not matter, and a missing stored block is routing off with the
+ * default numbers. Null clears the block, which is a change only when one
+ * is stored.
+ */
+function routingChanged(next: IFormRouting | null, stored: IFormRouting | null | undefined) {
+  if (next === null) return !!stored;
+  const before: IFormRouting = stored ?? {
+    enabled: false,
+    seniorReviewerIds: [],
+    standardReviewerIds: [],
+    ...DEFAULT_ROUTING,
+  };
+  return (
+    before.enabled !== next.enabled ||
+    !sameIds(before.seniorReviewerIds, next.seniorReviewerIds) ||
+    !sameIds(before.standardReviewerIds, next.standardReviewerIds) ||
+    before.threshold !== next.threshold ||
+    before.closeCallMargin !== next.closeCallMargin ||
+    before.secondReviewRate !== next.secondReviewRate
+  );
+}
+
+/** Audit trail for a routing change: user ids and numbers only. */
+async function logRoutingChange(
+  req: Request,
+  formId: number | undefined,
+  before: IFormRouting | null | undefined,
+  after: IFormRouting | null,
+  functionName: string,
+) {
+  const brief = (r: IFormRouting | null | undefined) =>
+    r
+      ? {
+          enabled: r.enabled,
+          seniorReviewerIds: r.seniorReviewerIds,
+          standardReviewerIds: r.standardReviewerIds,
+          threshold: r.threshold,
+          closeCallMargin: r.closeCallMargin,
+          secondReviewRate: r.secondReviewRate,
+        }
+      : null;
+  await logSuccess({
+    eventType: "Update",
+    description: `review routing changed on intake form ${formId}: before ${JSON.stringify(brief(before))}, after ${JSON.stringify(brief(after))}`,
+    functionName,
+    fileName: "intakeForm.ctrl.ts",
+    userId: req.userId!,
+    organizationId: req.organizationId!,
+  });
+}
+
+/**
+ * Validate the routing block of a form body. `raw` is undefined when the
+ * body leaves routing alone and null when it clears it.
+ *
+ * `stored` is the form's current routing (null on create). A reviewer who
+ * has since lost the right to review stays in the stored lists and can
+ * still be kept on a save, because the editor cannot always show or remove
+ * them; only ids added by this request must be eligible. A list that
+ * changed, or any list when routing is being switched on, must keep at
+ * least one currently eligible reviewer so a lane is never left with
+ * nobody who can act.
+ */
+async function resolveFormRouting(
+  raw: unknown,
+  organizationId: number,
+  stored: IFormRouting | null | undefined,
+  t: (key: string, vars?: Record<string, string | number>) => string,
+  isAdmin: boolean,
+): Promise<
+  { value: IFormRouting | null | undefined; changed: boolean } | { error: string; status?: number }
+> {
+  if (raw === undefined) return { value: raw, changed: false };
+  if (raw === null) {
+    const changed = routingChanged(null, stored);
+    if (changed && !isAdmin) return { error: t(ROUTING_FORBIDDEN_MESSAGE), status: 403 };
+    return { value: raw, changed };
+  }
+  const parsed = validateRoutingSettings(raw);
+  if (!parsed.ok) return { error: t(parsed.i18nKey, parsed.i18nVars) };
+  const next = parsed.value;
+  const changed = routingChanged(next, stored);
+  if (changed && !isAdmin) return { error: t(ROUTING_FORBIDDEN_MESSAGE), status: 403 };
+
+  const ids = [...new Set([...next.seniorReviewerIds, ...next.standardReviewerIds])];
+  const storedIds = new Set([
+    ...(stored?.seniorReviewerIds ?? []),
+    ...(stored?.standardReviewerIds ?? []),
+  ]);
+  const eligible = new Set(await getEligibleReviewerIdsQuery(organizationId, ids));
+  if (ids.some((id) => !storedIds.has(id) && !eligible.has(id))) {
+    return { error: t(INELIGIBLE_REVIEWERS_MESSAGE) };
+  }
+
+  if (next.enabled) {
+    const turnedOn = !stored?.enabled;
+    const lanes: Array<[number[], number[] | undefined]> = [
+      [next.seniorReviewerIds, stored?.seniorReviewerIds],
+      [next.standardReviewerIds, stored?.standardReviewerIds],
+    ];
+    const emptyLane = lanes.some(
+      ([list, before]) =>
+        (turnedOn || !before || !sameIds(list, before)) && !list.some((id) => eligible.has(id)),
+    );
+    if (emptyLane) return { error: t(EMPTY_LANE_MESSAGE) };
+  }
+  return { value: next, changed };
+}
+
+/** The 403 (not allowed to change routing) or 400 (invalid settings) for a refused routing block. */
+function sendRoutingError(res: Response, routing: { error: string; status?: number }) {
+  return res
+    .status(routing.status ?? 400)
+    .json(
+      routing.status === 403 ? STATUS_CODE[403](routing.error) : STATUS_CODE[400](routing.error),
+    );
+}
+
+/**
+ * Users who can be picked as reviewers in a form's routing settings
+ */
+export async function getEligibleReviewers(req: Request, res: Response) {
+  try {
+    const reviewers = await getEligibleReviewersQuery(req.organizationId!);
+    return res.status(200).json(reviewers);
+  } catch (error) {
+    await logFailure({
+      eventType: "Read",
+      description: "failed to list eligible intake reviewers",
+      functionName: "getEligibleReviewers",
+      fileName: "intakeForm.ctrl.ts",
+      error: error as Error,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+  }
+}
+
 /**
  * Create new intake form
  */
@@ -533,6 +1046,7 @@ export async function createIntakeForm(req: Request, res: Response) {
       llmKeyId,
       suggestedQuestionsEnabled,
       euAiActRiskStepEnabled,
+      liveChecksEnabled,
       designSettings,
     } = req.body;
 
@@ -560,9 +1074,23 @@ export async function createIntakeForm(req: Request, res: Response) {
       return res.status(400).json(STATUS_CODE[400](schemaErrors.join("; ")));
     }
 
+    // Drafts may hold unfinished logic (a new calculated field starts with an
+    // empty formula); only a form that will be live must be valid.
+    const logicErrors =
+      (status ?? IntakeFormStatus.DRAFT) === IntakeFormStatus.ACTIVE
+        ? validateIntakeFormSchemaLogic(schema, entityType)
+        : [];
+    if (logicErrors.length > 0) {
+      await transaction.rollback();
+      return res.status(400).json(STATUS_CODE[400](logicErrors.join("; ")));
+    }
+
     const riskStep = resolveEuAiActRiskStep({
       entityType: entityType,
-      enabled: Boolean(euAiActRiskStepEnabled),
+      enabled:
+        euAiActRiskStepEnabled == null
+          ? defaultEuAiActRiskStepEnabled(entityType, schema)
+          : Boolean(euAiActRiskStepEnabled),
       schema: schema,
     });
     if (riskStep.errors.length > 0) {
@@ -574,6 +1102,18 @@ export async function createIntakeForm(req: Request, res: Response) {
     if ("error" in llmKey) {
       await transaction.rollback();
       return res.status(400).json(STATUS_CODE[400](llmKey.error));
+    }
+
+    const routing = await resolveFormRouting(
+      req.body.routing,
+      req.organizationId!,
+      null,
+      req.t!,
+      isAdminRequest(req),
+    );
+    if ("error" in routing) {
+      await transaction.rollback();
+      return sendRoutingError(res, routing);
     }
 
     const form = await createIntakeFormQuery(
@@ -592,7 +1132,9 @@ export async function createIntakeForm(req: Request, res: Response) {
         llmKeyId: llmKey.llmKeyId,
         suggestedQuestionsEnabled,
         euAiActRiskStepEnabled: riskStep.enabled,
+        liveChecksEnabled: liveChecksEnabled == null ? true : Boolean(liveChecksEnabled),
         designSettings,
+        routing: routing.value,
         createdBy: req.userId!,
       },
       req.organizationId!,
@@ -600,6 +1142,10 @@ export async function createIntakeForm(req: Request, res: Response) {
     );
 
     await transaction.commit();
+
+    if (routing.changed) {
+      await logRoutingChange(req, form.id, null, routing.value ?? null, "createIntakeForm");
+    }
 
     await logSuccess({
       eventType: "Create",
@@ -668,6 +1214,7 @@ export async function updateIntakeForm(req: Request, res: Response) {
       llmKeyId,
       suggestedQuestionsEnabled,
       euAiActRiskStepEnabled,
+      liveChecksEnabled,
       designSettings,
     } = req.body;
 
@@ -690,6 +1237,23 @@ export async function updateIntakeForm(req: Request, res: Response) {
       return res.status(400).json(STATUS_CODE[400](schemaErrors.join("; ")));
     }
 
+    // Drafts may hold unfinished logic; only a form that will be live after
+    // this update must be valid (publishing a draft sends status "active").
+    // An update that leaves the schema, entity type and status alone (e.g.
+    // recipients only) is not blocked by a problem it did not touch.
+    const touchesLogic = schema !== undefined || entityType !== undefined || status !== undefined;
+    const logicErrors =
+      touchesLogic && (status ?? existingForm.status) === IntakeFormStatus.ACTIVE
+        ? validateIntakeFormSchemaLogic(
+            schema ?? existingForm.schema,
+            entityType ?? existingForm.entityType,
+          )
+        : [];
+    if (logicErrors.length > 0) {
+      await transaction.rollback();
+      return res.status(400).json(STATUS_CODE[400](logicErrors.join("; ")));
+    }
+
     const riskStep = resolveEuAiActRiskStep({
       entityType: entityType ?? existingForm.entityType,
       enabled:
@@ -709,6 +1273,18 @@ export async function updateIntakeForm(req: Request, res: Response) {
       return res.status(400).json(STATUS_CODE[400](llmKey.error));
     }
 
+    const routing = await resolveFormRouting(
+      req.body.routing,
+      req.organizationId!,
+      existingForm.routing,
+      req.t!,
+      isAdminRequest(req),
+    );
+    if ("error" in routing) {
+      await transaction.rollback();
+      return sendRoutingError(res, routing);
+    }
+
     const form = await updateIntakeFormQuery(
       formId,
       {
@@ -726,13 +1302,25 @@ export async function updateIntakeForm(req: Request, res: Response) {
         llmKeyId: llmKey.llmKeyId,
         suggestedQuestionsEnabled,
         euAiActRiskStepEnabled: riskStep.enabled,
+        liveChecksEnabled: liveChecksEnabled == null ? undefined : Boolean(liveChecksEnabled),
         designSettings,
+        routing: routing.value,
       },
       req.organizationId!,
       transaction,
     );
 
     await transaction.commit();
+
+    if (routing.changed) {
+      await logRoutingChange(
+        req,
+        formId,
+        existingForm.routing,
+        routing.value ?? null,
+        "updateIntakeForm",
+      );
+    }
 
     await logSuccess({
       eventType: "Update",
@@ -742,6 +1330,24 @@ export async function updateIntakeForm(req: Request, res: Response) {
       userId: req.userId!,
       organizationId: req.organizationId!,
     });
+
+    // The save is committed; a failed re-route must not turn it into a 500.
+    // Switching routing off needs no pass: routeSubmission writes nothing then.
+    if (form && routing.changed && routing.value?.enabled) {
+      try {
+        await rerouteFormPending(form, req.organizationId!);
+      } catch (error) {
+        await logFailure({
+          eventType: "Update",
+          description: `failed to re-route pending submissions of intake form: ${formId}`,
+          functionName: "updateIntakeForm",
+          fileName: "intakeForm.ctrl.ts",
+          error: error as Error,
+          userId: req.userId!,
+          organizationId: req.organizationId!,
+        });
+      }
+    }
 
     return res.status(200).json(STATUS_CODE[200](form));
   } catch (error) {
@@ -894,7 +1500,35 @@ export async function getPendingSubmissions(req: Request, res: Response) {
 
   try {
     const status = req.query.status as IntakeSubmissionStatus | undefined;
-    const submissions = await getPendingSubmissionsQuery(req.organizationId!, status);
+    const rows = await getPendingSubmissionsQuery(req.organizationId!, status);
+    // The list shows who can decide each row's stored lane, not the form's whole routing.
+    // Senior reviewers who can still act on a second review that is open, or
+    // missed and not yet resolved, other than the approver. They stay senior
+    // reviewers of the form even when routing has since been turned off.
+    const needsSecondReview = (r: { routing?: ISubmissionRouting | null }) => {
+      const second = r.routing?.secondReview;
+      return (
+        !!second && (second.status === "open" || (second.status === "missed" && !second.resolvedAt))
+      );
+    };
+    const seniorIds = [
+      ...new Set(
+        rows.filter(needsSecondReview).flatMap((r) => r.formRouting?.seniorReviewerIds ?? []),
+      ),
+    ];
+    const eligible = new Set(
+      seniorIds.length > 0 ? await getEligibleReviewerIdsQuery(req.organizationId!, seniorIds) : [],
+    );
+    const submissions = rows.map(({ formRouting, ...row }) => ({
+      ...row,
+      routingEnabled: formRouting?.enabled ?? false,
+      laneReviewerIds: laneReviewerIdsFor(row.routing?.lane ?? null, formRouting ?? null),
+      secondReviewerIds: needsSecondReview(row)
+        ? (formRouting?.seniorReviewerIds ?? []).filter(
+            (id) => eligible.has(id) && id !== row.reviewedBy,
+          )
+        : [],
+    }));
     return res.status(200).json(STATUS_CODE[200](submissions));
   } catch (error) {
     await logFailure({
@@ -1014,6 +1648,54 @@ export async function getSubmissionStats(req: Request, res: Response) {
 }
 
 /**
+ * Oversight figures for the intake page: lanes, decision times, reviewers,
+ * second reviews and what needs attention over the last 4, 8 or 12 weeks.
+ */
+export async function getIntakeOversight(req: Request, res: Response) {
+  const weeksParam = req.query.weeks;
+  const weeks = weeksParam === undefined ? 8 : toId(weeksParam);
+  if (!OVERSIGHT_WEEKS.includes(weeks)) {
+    return res.status(400).json(STATUS_CODE[400](req.t!("Weeks must be 4, 8 or 12")));
+  }
+  const formIdParam = req.query.formId;
+  const hasFormId = formIdParam !== undefined && formIdParam !== "";
+  const formId = hasFormId ? toId(formIdParam) : undefined;
+  if (hasFormId && (formId === undefined || isNaN(formId) || formId <= 0)) {
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid form ID")));
+  }
+
+  logProcessing({
+    description: "fetching intake oversight figures",
+    functionName: "getIntakeOversight",
+    fileName: "intakeForm.ctrl.ts",
+    userId: req.userId!,
+    organizationId: req.organizationId!,
+  });
+
+  try {
+    if (formId !== undefined) {
+      const form = await getIntakeFormByIdQuery(formId, req.organizationId!);
+      if (!form) {
+        return res.status(404).json(STATUS_CODE[404](req.t!("Form not found")));
+      }
+    }
+    const oversight = await getIntakeOversightQuery(req.organizationId!, weeks, formId);
+    return res.status(200).json(STATUS_CODE[200](oversight));
+  } catch (error) {
+    await logFailure({
+      eventType: "Read",
+      description: "failed to retrieve intake oversight figures",
+      functionName: "getIntakeOversight",
+      fileName: "intakeForm.ctrl.ts",
+      error: error as Error,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+  }
+}
+
+/**
  * Get submission preview for approval flow
  */
 export async function getSubmissionPreview(req: Request, res: Response) {
@@ -1048,13 +1730,45 @@ export async function getSubmissionPreview(req: Request, res: Response) {
           questionnaire: rescored.questionnaire,
           answers: rescored.run.answers,
           role: rescored.result.role,
+          roles: rescored.result.roles,
           current: rescored.result,
           changedSinceSubmission:
             rescored.result.level !== rescored.run.result.level ||
-            (rescored.result.role ?? null) !== (rescored.run.result.role ?? null),
+            !sameHighRiskRoles(
+              rescored.result.roles,
+              rescored.run.result.roles ??
+                (rescored.run.result.role ? [rescored.run.result.role] : []),
+            ),
           submittedAt: rescored.run.createdAt,
         }
       : null;
+
+    const assessment = isAssessmentV2(submission.riskAssessment) ? submission.riskAssessment : null;
+
+    // Who may decide, by the stored lane (or, with none yet, the current
+    // values); approve re-checks it on what the decision would make true.
+    const routingCfg = form.routing ?? null;
+    const previewBand = asBand(submission.riskOverride?.tier);
+    const { lane } = laneOnRecord(submission.routing ?? null, routingCfg, {
+      level: entityLevel(submission.entityType, rescored?.result.level ?? null, entityData),
+      finalScore: assessment?.finalScore ?? null,
+      scoringStatus: assessment?.status ?? null,
+      bandInForce: usesScoreBands(submission) && isScoreBand(previewBand) ? previewBand : null,
+    });
+    const canDecide = canDecideLane(lane, req.userId!, isAdminRequest(req), routingCfg);
+    const laneReviewerIds = laneReviewerIdsFor(lane, routingCfg);
+    const laneReviewers =
+      laneReviewerIds.length > 0
+        ? (await getEligibleReviewersQuery(req.organizationId!, laneReviewerIds)).map((u) => ({
+            id: u.id,
+            name: [u.name, u.surname].filter(Boolean).join(" "),
+          }))
+        : [];
+    const decideBlockedReason = canDecide
+      ? null
+      : lane === "senior"
+        ? req.t!("This submission is assigned to expert reviewers")
+        : req.t!("This submission is assigned to the form's reviewers");
 
     return res.status(200).json(
       STATUS_CODE[200]({
@@ -1069,8 +1783,21 @@ export async function getSubmissionPreview(req: Request, res: Response) {
         riskAssessment: submission.riskAssessment,
         riskTier: submission.riskTier,
         riskOverride: submission.riskOverride,
+        liveChecks: submission.liveChecks ?? null,
         entityPreview: entityData,
         euAiActClassification,
+        assessment,
+        suggestedRisks: submission.suggestedRisks,
+        // The floor under the current rules; it differs from assessedLevel's
+        // when the questionnaire changed after scoring.
+        ruleMinimumPreview: ruleMinimumFor(rescored?.result.level ?? null),
+        assessedLevel: assessment?.classificationLevel ?? null,
+        routing: submission.routing ?? null,
+        routingEnabled: routingCfg?.enabled ?? false,
+        canDecide,
+        decideBlockedReason,
+        laneReviewers,
+        isSeniorReviewer: routingCfg?.seniorReviewerIds.includes(req.userId!) ?? false,
       }),
     );
   } catch (error) {
@@ -1116,7 +1843,7 @@ export async function getSubmissionByEntity(req: Request, res: Response) {
     }
 
     const { submission, formName, formSchema } = result;
-    const submissionData = submission.data as Record<string, unknown>;
+    const submissionData = (submission.data ?? {}) as Record<string, unknown>;
 
     // Build a structured fields array using the form schema for labels/types
     const schemaFields = (formSchema as any)?.fields || [];
@@ -1127,7 +1854,13 @@ export async function getSubmissionByEntity(req: Request, res: Response) {
         label: field.label,
         type: field.type,
         value: submissionData[field.id] ?? null,
+        // A visible calculated field without a result is stored as null; a
+        // hidden one, or a submission from before the field existed, has no key.
+        answered: Object.prototype.hasOwnProperty.call(submissionData, field.id),
         options: field.options || null,
+        decimals: field.decimals ?? null,
+        prefix: field.prefix ?? null,
+        suffix: field.suffix ?? null,
         entityFieldMapping: field.entityFieldMapping || null,
         isMapped: Boolean(field.entityFieldMapping),
       }));
@@ -1141,6 +1874,17 @@ export async function getSubmissionByEntity(req: Request, res: Response) {
         submittedAt: submission.createdAt,
         reviewedAt: submission.reviewedAt,
         riskTier: submission.riskTier,
+        // The AI-scored (v2) number behind riskTier, so the use case page can
+        // show "64 (High)" rather than a bare band.
+        riskScore: isAssessmentV2(submission.riskAssessment)
+          ? {
+              finalScore: submission.riskAssessment.finalScore,
+              rulesOnly: submission.riskAssessment.rulesOnly,
+              // the score's own band; riskTier holds an override's band if set
+              band: submission.riskAssessment.tier,
+            }
+          : null,
+        riskOverrideTier: submission.riskOverride?.tier ?? null,
         fields,
       }),
     );
@@ -1168,7 +1912,9 @@ export async function overrideSubmissionRisk(req: Request, res: Response) {
   }
 
   try {
-    const { tier, dimensionOverrides, justification } = req.body;
+    const { dimensionOverrides, justification } = req.body;
+    // A pre-v2 tier name is stored as its band, so every override is a band.
+    const tier = asBand(req.body.tier);
 
     if (!tier || !justification) {
       return res.status(400).json(STATUS_CODE[400](req.t!("Tier and justification are required")));
@@ -1178,10 +1924,23 @@ export async function overrideSubmissionRisk(req: Request, res: Response) {
     if (!submission) {
       return res.status(404).json(STATUS_CODE[404](req.t!("Submission not found")));
     }
+    if (submission.status !== IntakeSubmissionStatus.PENDING) {
+      return res
+        .status(409)
+        .json(STATUS_CODE[409](req.t!("Only pending submissions can be changed")));
+    }
+
+    // A v2 score has bands, not dimensions, and a floor no reviewer goes below.
+    // A submission not scored yet will be scored as v2.
+    const isV2 = usesScoreBands(submission);
+    if (isV2) {
+      const floorError = await checkBandAgainstFloor(req, tier, submissionId);
+      if (floorError) return res.status(400).json(STATUS_CODE[400](floorError));
+    }
 
     const override = {
       tier,
-      dimensionOverrides: dimensionOverrides || {},
+      dimensionOverrides: isV2 ? {} : dimensionOverrides || {},
       justification,
       overriddenBy: req.userId!,
       overriddenAt: new Date().toISOString(),
@@ -1198,11 +1957,218 @@ export async function overrideSubmissionRisk(req: Request, res: Response) {
       organizationId: req.organizationId!,
     });
 
+    // The override is saved; a failure to raise the lane must not undo that.
+    try {
+      const form = await getIntakeFormByIdQuery(submission.formId, req.organizationId!);
+      if (form) await raiseForOverride(submission, form, tier, req.organizationId!);
+    } catch (error) {
+      logger.error(`Error raising the lane after override of submission ${submissionId}:`, error);
+    }
+
     return res
       .status(200)
       .json(STATUS_CODE[200]({ message: req.t!("Risk override applied"), override }));
   } catch (error) {
     logger.error("Error in overrideSubmissionRisk:", error);
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+  }
+}
+
+/**
+ * Re-run the assessment stages that failed or were lost (pending for over 10
+ * minutes). Finished stages are never re-run. No email.
+ * POST /intake/submissions/:id/assessment/retry
+ */
+export async function retrySubmissionAssessment(req: Request, res: Response) {
+  const submissionId = parseId(req.params.id);
+  if (isNaN(submissionId)) {
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid submission ID")));
+  }
+
+  try {
+    const submission = await getSubmissionByIdQuery(submissionId, req.organizationId!);
+    if (!submission) {
+      return res.status(404).json(STATUS_CODE[404](req.t!("Submission not found")));
+    }
+    if (submission.status !== IntakeSubmissionStatus.PENDING) {
+      return res
+        .status(409)
+        .json(STATUS_CODE[409](req.t!("Only pending submissions can be changed")));
+    }
+
+    // The live checks stage reads the submitter's stored language, not this request's.
+    const stages = selectRetryStages(
+      submission.riskAssessment,
+      submission.suggestedRisks,
+      new Date(),
+      submission.liveChecks,
+    );
+    if (stages.length === 0) {
+      return res.status(409).json(STATUS_CODE[409](req.t!("Nothing to retry")));
+    }
+
+    await enqueueIntakeAssessment({
+      organizationId: req.organizationId!,
+      submissionId,
+      stages,
+      notify: false,
+      lang: req.lang,
+    });
+
+    await logSuccess({
+      eventType: "Update",
+      description: `assessment retry queued for submission ${submissionId}: ${stages.join(", ")}`,
+      functionName: "retrySubmissionAssessment",
+      fileName: "intakeForm.ctrl.ts",
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+
+    return res.status(202).json(STATUS_CODE[202]({ stages }));
+  } catch (error) {
+    logger.error("Error in retrySubmissionAssessment:", error);
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+  }
+}
+
+/**
+ * Edit, accept, dismiss or restore one suggested risk.
+ * PATCH /intake/submissions/:id/suggested-risks/:suggestionId
+ */
+export async function updateSuggestedRisk(req: Request, res: Response) {
+  const submissionId = parseId(req.params.id);
+  const suggestionId = paramStr(req.params.suggestionId);
+  if (isNaN(submissionId)) {
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid submission ID")));
+  }
+  if (!suggestionId || suggestionId.length > 100) {
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid suggestion ID")));
+  }
+
+  const parsed = parseSuggestionPatch(
+    (req.body ?? {}) as Record<string, unknown>,
+    new Date().toISOString().slice(0, 10),
+  );
+  if ("invalid" in parsed) {
+    return res
+      .status(400)
+      .json(STATUS_CODE[400](req.t!("Invalid value for {field}", { field: parsed.invalid })));
+  }
+  const { state, ...content } = parsed.patch;
+  if (state === undefined && Object.keys(content).length === 0) {
+    return res.status(400).json(STATUS_CODE[400](req.t!("Nothing to update")));
+  }
+
+  try {
+    const submission = await getSubmissionByIdQuery(submissionId, req.organizationId!);
+    if (!submission) {
+      return res.status(404).json(STATUS_CODE[404](req.t!("Submission not found")));
+    }
+    if (submission.status !== IntakeSubmissionStatus.PENDING) {
+      return res
+        .status(409)
+        .json(STATUS_CODE[409](req.t!("Only pending submissions can be changed")));
+    }
+    const current = submission.suggestedRisks?.items.find((i) => i.id === suggestionId);
+    if (!current) {
+      return res.status(404).json(STATUS_CODE[404](req.t!("Suggested risk not found")));
+    }
+    // The risk register requires a mitigation plan, so nothing is accepted
+    // without one, and an accepted risk can't have its plan cleared.
+    const resultingState = state ?? current.state;
+    if (
+      resultingState === "accepted" &&
+      !(content.mitigationPlan ?? current.mitigationPlan)?.trim()
+    ) {
+      return res
+        .status(400)
+        .json(STATUS_CODE[400](req.t!("Add a mitigation plan before accepting this risk")));
+    }
+
+    const now = new Date().toISOString();
+    const patch: Partial<IntakeSuggestedRisk> = {
+      ...content,
+      ...(Object.keys(content).length > 0 ? { editedBy: req.userId!, editedAt: now } : {}),
+      ...(state !== undefined ? { state, decidedBy: req.userId!, decidedAt: now } : {}),
+    };
+    const item = await updateSuggestedRiskItemQuery(
+      submissionId,
+      suggestionId,
+      patch,
+      req.organizationId!,
+    );
+    if (!item) {
+      // Decided, or changed by someone else (e.g. its plan cleared), between
+      // the read and the atomic write. Say which.
+      const latest = await getSubmissionByIdQuery(submissionId, req.organizationId!);
+      const message =
+        latest && latest.status !== IntakeSubmissionStatus.PENDING
+          ? "Only pending submissions can be changed"
+          : "This suggestion changed. Reload and try again.";
+      return res.status(409).json(STATUS_CODE[409](req.t!(message)));
+    }
+
+    return res.status(200).json(STATUS_CODE[200](item));
+  } catch (error) {
+    logger.error("Error in updateSuggestedRisk:", error);
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+  }
+}
+
+/**
+ * Accept every suggestion still in "suggested". Dismissed ones stay dismissed;
+ * ones without a mitigation plan are skipped and counted.
+ * POST /intake/submissions/:id/suggested-risks/accept-all
+ */
+export async function acceptAllSuggestedRisks(req: Request, res: Response) {
+  const submissionId = parseId(req.params.id);
+  if (isNaN(submissionId)) {
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid submission ID")));
+  }
+
+  try {
+    const submission = await getSubmissionByIdQuery(submissionId, req.organizationId!);
+    if (!submission) {
+      return res.status(404).json(STATUS_CODE[404](req.t!("Submission not found")));
+    }
+    if (submission.status !== IntakeSubmissionStatus.PENDING) {
+      return res
+        .status(409)
+        .json(STATUS_CODE[409](req.t!("Only pending submissions can be changed")));
+    }
+
+    const suggested = (submission.suggestedRisks?.items ?? []).filter(
+      (i) => i.state === "suggested",
+    ).length;
+    const accepted = await setAllSuggestionStatesQuery(
+      submissionId,
+      "suggested",
+      "accepted",
+      req.userId!,
+      req.organizationId!,
+      { requireMitigationPlan: true },
+    );
+    // The items as stored, so the client shows the server's states. A
+    // submission decided meanwhile accepted nothing, which is not "skipped".
+    const after = await getSubmissionByIdQuery(submissionId, req.organizationId!);
+    if (!after) {
+      return res.status(404).json(STATUS_CODE[404](req.t!("Submission not found")));
+    }
+    if (after.status !== IntakeSubmissionStatus.PENDING) {
+      return res
+        .status(409)
+        .json(STATUS_CODE[409](req.t!("Only pending submissions can be changed")));
+    }
+
+    return res.status(200).json(
+      STATUS_CODE[200]({
+        accepted,
+        skipped: Math.max(0, suggested - accepted),
+        items: after.suggestedRisks?.items ?? [],
+      }),
+    );
+  } catch (error) {
+    logger.error("Error in acceptAllSuggestedRisks:", error);
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
@@ -1269,7 +2235,7 @@ export async function approveSubmission(req: Request, res: Response) {
 
     // The EU AI Act step owns the use case's level: score the stored answers
     // again and apply a justified reviewer change; the dialog's level is
-    // ignored. The computed role replaces the dialog's role, which stays only
+    // ignored. The computed roles replace the dialog's roles, which stay only
     // when the result has no role (Out of scope). A run that can no longer be
     // scored is treated as no run.
     const storedRun =
@@ -1328,22 +2294,128 @@ export async function approveSubmission(req: Request, res: Response) {
       entityData = {
         ...entityData,
         ai_risk_classification: finalLevel,
-        ...(computed.role ? { type_of_high_risk_role: computed.role } : {}),
+        ...(computed.roles.length > 0 ? { high_risk_roles: computed.roles } : {}),
       };
     }
 
-    // Apply risk override if provided
-    if (riskOverride && riskOverride.tier && riskOverride.justification) {
+    // An AI-scored submission's score is re-floored under the level it is
+    // approved at, which a reviewer may have changed; running stages are
+    // closed. Risk_tier keeps an override's band (see the query).
+    const approvedLevel = (classification?.finalLevel ?? null) as ClassificationLevel | null;
+    const settledAssessment = await settleAssessmentOnDecision(
+      submission,
+      approvedLevel,
+      req.organizationId!,
+      transaction,
+      { refloor: true },
+    );
+
+    // The band override, from this request or saved earlier through
+    // PATCH /risk-override: on an AI-scored (or not yet scored) submission
+    // neither may sit below the approved level's rule minimum.
+    // A pre-v2 tier name counts as its band and is stored as it, on every
+    // submission, as PATCH /risk-override stores it.
+    const requestOverride = riskOverride && riskOverride.tier && riskOverride.justification;
+    const storedOverride = submission.riskOverride;
+    const bandToCheck = asBand(requestOverride ? riskOverride.tier : storedOverride?.tier);
+    const bandsApply = usesScoreBands(submission);
+    if (bandsApply && bandToCheck) {
+      const floorError = bandFloorError(req, bandToCheck, ruleMinimumFor(approvedLevel));
+      if (floorError) {
+        await transaction.rollback();
+        return res.status(400).json(STATUS_CODE[400](floorError));
+      }
+    }
+    if (requestOverride) {
       await updateSubmissionRiskOverrideQuery(
         submissionId,
         {
-          ...riskOverride,
+          tier: bandToCheck,
+          dimensionOverrides: bandsApply ? {} : riskOverride.dimensionOverrides || {},
+          justification: riskOverride.justification,
           overriddenBy: req.userId!,
           overriddenAt: new Date().toISOString(),
         },
         req.organizationId!,
         transaction,
       );
+    } else if (storedOverride?.tier && bandToCheck !== storedOverride.tier) {
+      await updateSubmissionRiskOverrideQuery(
+        submissionId,
+        { ...storedOverride, tier: bandToCheck },
+        req.organizationId!,
+        transaction,
+      );
+    }
+
+    // Who may approve depends on the lane this approval would make true: a
+    // standard reviewer can't approve while setting a Prohibited level or a
+    // band that routes to senior review.
+    const routingCfg = form.routing ?? null;
+    const storedRouting = submission.routing ?? null;
+    // Without a scorable run, the level is the one the entity gets.
+    const decidedLevel = entityLevel(submission.entityType, approvedLevel, entityData);
+    const decision = laneAtDecision(storedRouting, routingCfg, {
+      level: decidedLevel,
+      finalScore: settledAssessment?.finalScore ?? null,
+      scoringStatus: settledAssessment?.status ?? null,
+      bandInForce: bandsApply && isScoreBand(bandToCheck) ? bandToCheck : null,
+    });
+    if (!canDecideLane(decision.lane, req.userId!, isAdminRequest(req), routingCfg)) {
+      await transaction.rollback();
+      return res.status(403).json(
+        STATUS_CODE[403](
+          decision.lane === "senior"
+            ? req.t!("An expert reviewer has to decide this: {reason}", {
+                reason: routingReasonText(req, decision.reason),
+              })
+            : req.t!("This submission is assigned to the form's reviewers"),
+        ),
+      );
+    }
+
+    const overrideInForce = requestOverride
+      ? { tier: bandToCheck, overriddenBy: req.userId! }
+      : storedOverride?.tier
+        ? { tier: bandToCheck, overriddenBy: storedOverride.overriddenBy }
+        : null;
+    await setDecisionRecordQuery(
+      submissionId,
+      buildDecisionRecord({
+        level: decidedLevel,
+        assessment: settledAssessment,
+        override: overrideInForce,
+        lane: decision.lane,
+      }),
+      req.organizationId!,
+      transaction,
+    );
+
+    // A share of standard-lane approvals by non-seniors is sampled for a
+    // second review. The write only lands on the routing read above.
+    const pickedForSecondReview =
+      decision.lane === "standard" &&
+      storedRouting !== null &&
+      routingCfg !== null &&
+      !routingCfg.seniorReviewerIds.includes(req.userId!) &&
+      pickSecondReview(routingCfg.secondReviewRate);
+    if (pickedForSecondReview) {
+      const written = await updateSubmissionRoutingQuery(
+        submissionId,
+        {
+          ...storedRouting,
+          secondReview: { status: "open", selectedAt: new Date().toISOString() },
+        },
+        req.organizationId!,
+        transaction,
+        storedRouting,
+      );
+      if (!written) {
+        await transaction.rollback();
+        return res
+          .status(409)
+          .json(STATUS_CODE[409](req.t!("This submission changed. Reload and try again.")));
+      }
     }
 
     // Create the entity based on entity type
@@ -1388,7 +2460,7 @@ export async function approveSubmission(req: Request, res: Response) {
           goal: (entityData.goal as string) || (entityData.description as string) || "",
           owner: req.userId!,
           ai_risk_classification: aiRiskClassification as any,
-          type_of_high_risk_role: (entityData.type_of_high_risk_role as string as any) || undefined,
+          high_risk_roles: highRiskRolesFromEntityData(entityData),
           geography: entityData.geography ? Number(entityData.geography) : 1,
           status: ProjectStatus.UNDER_REVIEW,
         },
@@ -1409,7 +2481,7 @@ export async function approveSubmission(req: Request, res: Response) {
             useCaseId: entityId,
             intakeSubmissionId: null,
             questionnaireVersion: classification.questionnaireVersion,
-            role: classification.computed.role,
+            roles: classification.computed.roles,
             answers: classification.answers,
             result: classification.computed,
             reviewerLevel: classification.justification ? classification.finalLevel : null,
@@ -1442,6 +2514,27 @@ export async function approveSubmission(req: Request, res: Response) {
       return res.status(400).json(STATUS_CODE[400](req.t!("Unsupported entity type")));
     }
 
+    // The suggested risks reviewers accepted become real risks on the new
+    // entity, in this transaction: any failure rolls the approval back. The
+    // submission row is locked above, so no suggestion changes underneath.
+    const approval = { approverId: req.userId!, approvedAt: new Date(), submissionId };
+    for (const s of submission.suggestedRisks?.items ?? []) {
+      if (s.state !== "accepted") continue;
+      if (submission.entityType === IntakeEntityType.MODEL) {
+        await createNewModelRiskQuery(
+          buildModelRiskFromSuggestion(s, { ...approval, modelId: entityId }),
+          req.organizationId!,
+          transaction,
+        );
+      } else {
+        await createRiskService(
+          buildUseCaseRiskFromSuggestion(s, { ...approval, useCaseId: entityId }),
+          { userId: req.userId!, organizationId: req.organizationId! },
+          transaction,
+        );
+      }
+    }
+
     const updatedSubmission = await approveSubmissionQuery(
       submissionId,
       entityId,
@@ -1471,6 +2564,23 @@ export async function approveSubmission(req: Request, res: Response) {
       userId: req.userId!,
       organizationId: req.organizationId!,
     });
+    await logIfOutsideLane(req, submissionId, decision.lane, routingCfg, "approveSubmission");
+    if (pickedForSecondReview && routingCfg) {
+      sendSecondReviewRequestEmail(
+        req.organizationId!,
+        submissionId,
+        routingCfg.seniorReviewerIds,
+        req.lang,
+      ).catch((err) => logger.error("Failed to send second review request email:", err));
+      await logSuccess({
+        eventType: "Update",
+        description: `submission ${submissionId} picked for second review`,
+        functionName: "approveSubmission",
+        fileName: "intakeForm.ctrl.ts",
+        userId: req.userId!,
+        organizationId: req.organizationId!,
+      });
+    }
 
     return res.status(200).json(STATUS_CODE[200](updatedSubmission));
   } catch (error) {
@@ -1541,6 +2651,54 @@ export async function rejectSubmission(req: Request, res: Response) {
     const tenantSlug = await getTenantSlugById(req.organizationId!);
     const formSlug = form?.slug || "";
 
+    // Close any assessment stage still running; the job's later writes are
+    // ignored once the submission is decided.
+    const level = await currentRulesLevel(submissionId, req.organizationId!, transaction);
+    const settledAssessment = await settleAssessmentOnDecision(
+      submission,
+      level,
+      req.organizationId!,
+      transaction,
+      { refloor: false },
+    );
+    const storedOverride = submission.riskOverride;
+
+    // Rejecting creates nothing, so a stored lane is not re-checked; without
+    // one, the lane comes from the current values.
+    const routingCfg = form?.routing ?? null;
+    const storedBand = asBand(storedOverride?.tier);
+    const { lane } = laneOnRecord(submission.routing ?? null, routingCfg, {
+      level,
+      finalScore: settledAssessment?.finalScore ?? null,
+      scoringStatus: settledAssessment?.status ?? null,
+      bandInForce: usesScoreBands(submission) && isScoreBand(storedBand) ? storedBand : null,
+    });
+    if (!canDecideLane(lane, req.userId!, isAdminRequest(req), routingCfg)) {
+      await transaction.rollback();
+      return res
+        .status(403)
+        .json(
+          STATUS_CODE[403](
+            lane === "senior"
+              ? req.t!("This submission is assigned to expert reviewers")
+              : req.t!("This submission is assigned to the form's reviewers"),
+          ),
+        );
+    }
+    await setDecisionRecordQuery(
+      submissionId,
+      buildDecisionRecord({
+        level,
+        assessment: settledAssessment,
+        override: storedOverride?.tier
+          ? { tier: asBand(storedOverride.tier), overriddenBy: storedOverride.overriddenBy }
+          : null,
+        lane,
+      }),
+      req.organizationId!,
+      transaction,
+    );
+
     const updatedSubmission = await rejectSubmissionQuery(
       submissionId,
       rejectionReason,
@@ -1589,6 +2747,7 @@ export async function rejectSubmission(req: Request, res: Response) {
       userId: req.userId!,
       organizationId: req.organizationId!,
     });
+    await logIfOutsideLane(req, submissionId, lane, routingCfg, "rejectSubmission");
 
     return res.status(200).json(STATUS_CODE[200](updatedSubmission));
   } catch (error) {
@@ -1597,6 +2756,104 @@ export async function rejectSubmission(req: Request, res: Response) {
       eventType: "Update",
       description: `failed to reject submission: ${submissionId}`,
       functionName: "rejectSubmission",
+      fileName: "intakeForm.ctrl.ts",
+      error: error as Error,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+  }
+}
+
+/**
+ * Send a standard-lane submission to senior review by hand. Automatic
+ * re-routing leaves it alone afterwards.
+ * POST /intake/submissions/:id/escalate
+ */
+export async function escalateSubmission(req: Request, res: Response) {
+  const submissionId = parseId(req.params.id);
+  if (isNaN(submissionId)) {
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid submission ID")));
+  }
+  const reason = typeof req.body?.reason === "string" ? req.body.reason.trim() : "";
+  if (!reason || reason.length > 1000) {
+    return res
+      .status(400)
+      .json(STATUS_CODE[400](req.t!("A reason of 1 to 1000 characters is required")));
+  }
+
+  try {
+    const submission = await getSubmissionByIdQuery(submissionId, req.organizationId!);
+    if (!submission) {
+      return res.status(404).json(STATUS_CODE[404](req.t!("Submission not found")));
+    }
+    const form = await getIntakeFormByIdQuery(submission.formId, req.organizationId!);
+    if (!form) {
+      return res.status(404).json(STATUS_CODE[404](req.t!("Form not found")));
+    }
+
+    const cfg = form.routing;
+    const current = submission.routing;
+    if (
+      submission.status !== IntakeSubmissionStatus.PENDING ||
+      !cfg?.enabled ||
+      current?.lane !== "standard"
+    ) {
+      return res
+        .status(409)
+        .json(
+          STATUS_CODE[409](
+            req.t!("Expert review can only be requested for pending submissions in regular review"),
+          ),
+        );
+    }
+    const userId = req.userId!;
+    if (
+      !isAdminRequest(req) &&
+      !cfg.standardReviewerIds.includes(userId) &&
+      !cfg.seniorReviewerIds.includes(userId)
+    ) {
+      return res
+        .status(403)
+        .json(STATUS_CODE[403](req.t!("Only this form's reviewers can request expert review")));
+    }
+
+    const at = new Date().toISOString();
+    const routing: ISubmissionRouting = {
+      ...current,
+      lane: "senior",
+      reason: "escalated",
+      routedAt: at,
+      escalation: { by: userId, at, reason },
+    };
+    const written = await updateSubmissionRoutingQuery(
+      submissionId,
+      routing,
+      req.organizationId!,
+      undefined,
+      current,
+    );
+    if (!written) {
+      return res
+        .status(409)
+        .json(STATUS_CODE[409](req.t!("This submission changed. Reload and try again.")));
+    }
+
+    await logSuccess({
+      eventType: "Update",
+      description: `submission ${submissionId} escalated to expert review`,
+      functionName: "escalateSubmission",
+      fileName: "intakeForm.ctrl.ts",
+      userId,
+      organizationId: req.organizationId!,
+    });
+
+    return res.status(200).json(STATUS_CODE[200](routing));
+  } catch (error) {
+    await logFailure({
+      eventType: "Update",
+      description: `failed to escalate submission: ${submissionId}`,
+      functionName: "escalateSubmission",
       fileName: "intakeForm.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
@@ -1776,7 +3033,7 @@ export async function getPublicFormByPublicId(req: Request, res: Response) {
           description: form.description,
           slug: form.slug,
           entityType: form.entityType,
-          schema: form.schema,
+          schema: publicSchema(form.schema),
           submitButtonText: form.submitButtonText,
           publicId: form.publicId,
           designSettings: form.designSettings ?? null,
@@ -1786,6 +3043,7 @@ export async function getPublicFormByPublicId(req: Request, res: Response) {
         previousSubmitterName,
         previousSubmitterEmail,
         ...(await buildPublicRiskStep(form, previousSubmissionId, tenantInfo.orgId)),
+        liveChecks: await buildPublicLiveChecks(form, tenantInfo.orgId),
       }),
     );
   } catch (error) {
@@ -1853,9 +3111,16 @@ export async function submitPublicFormByPublicId(req: Request, res: Response) {
       return res.status(400).json(STATUS_CODE[400](req.t!("Form data must be an object")));
     }
 
-    // Validate form data against schema
+    // Apply show/hide rules and formulas, then validate what will be stored
+    let cleanedData: Record<string, unknown> = formData;
     if (fullFormForValidation?.schema) {
-      const validationErrors = validateFormData(formData, fullFormForValidation.schema);
+      const prepared = prepareSubmissionData(formData, fullFormForValidation.schema);
+      cleanedData = prepared.data;
+      const validationErrors = validateFormData(
+        cleanedData,
+        fullFormForValidation.schema,
+        prepared.visibleIds,
+      );
       if (validationErrors.length > 0) {
         return res.status(400).json(
           STATUS_CODE[400]({
@@ -1942,7 +3207,7 @@ export async function submitPublicFormByPublicId(req: Request, res: Response) {
           formId: form.id,
           submitterEmail: resolvedEmail,
           submitterName: resolvedName,
-          data: formData,
+          data: cleanedData,
           entityType: form.entityType,
           originalSubmissionId,
           ipAddress: clientIp,
@@ -1992,34 +3257,30 @@ export async function submitPublicFormByPublicId(req: Request, res: Response) {
 
       // Get full form with recipients to send notifications
       const fullForm = await getIntakeFormByIdQuery(form.id, tenantInfo.orgId);
-      const recipientIds = (fullForm?.recipients as number[]) || [];
 
-      if (recipientIds.length > 0) {
-        sendNewSubmissionAdminNotification(
-          recipientIds,
-          form.name,
-          submissionName,
-          resolvedEmail || "No email provided",
-          submission.id,
-          form.entityType,
-          req.lang,
-        ).catch((err) => logger.error("Failed to send admin notification:", err));
-      } else {
-        logger.warn(`No recipients configured for form ${form.id}, skipping admin notification`);
-      }
+      // After the commit and never thrown: a failed write leaves the submission as is.
+      const liveChecks = await recordSubmitLiveChecks({
+        form: fullFormForValidation,
+        organizationId: tenantInfo.orgId,
+        submissionId: submission.id!,
+        data: cleanedData,
+        prefill: req.body.prefill,
+        language: req.lang,
+      });
 
-      // Trigger async risk scoring
-      if (fullForm) {
-        calculateSubmissionRisk(
-          formData,
-          fullForm.schema,
-          fullForm.riskTierSystem || "eu_ai_act",
-          fullForm.llmKeyId,
-          tenantInfo.orgId,
-        )
-          .then((result) => updateSubmissionRiskQuery(submission.id, result, tenantInfo.orgId))
-          .catch((err) => logger.error("Risk scoring failed:", err));
-      }
+      void startIntakeAssessment({
+        organizationId: tenantInfo.orgId,
+        submissionId: submission.id!,
+        lang: req.lang,
+        liveChecks,
+        form: fullForm,
+        adminFallback: false,
+        formId: form.id,
+        formName: form.name,
+        submitterName: submissionName,
+        submitterEmail: resolvedEmail || "No email provided",
+        entityType: form.entityType,
+      });
 
       return res.status(201).json(
         STATUS_CODE[201]({
@@ -2123,7 +3384,7 @@ export async function getPublicForm(req: Request, res: Response) {
           description: form.description,
           slug: form.slug,
           entityType: form.entityType,
-          schema: form.schema,
+          schema: publicSchema(form.schema),
           submitButtonText: form.submitButtonText,
           publicId: form.publicId,
           designSettings: form.designSettings ?? null,
@@ -2133,6 +3394,7 @@ export async function getPublicForm(req: Request, res: Response) {
         previousSubmitterName,
         previousSubmitterEmail,
         ...(await buildPublicRiskStep(form, previousSubmissionId, tenantInfo.id)),
+        liveChecks: await buildPublicLiveChecks(form, tenantInfo.id),
       }),
     );
   } catch (error) {
@@ -2203,9 +3465,16 @@ export async function submitPublicForm(req: Request, res: Response) {
       return res.status(400).json(STATUS_CODE[400](req.t!("Form data must be an object")));
     }
 
-    // Validate form data against schema
+    // Apply show/hide rules and formulas, then validate what will be stored
+    let cleanedData: Record<string, unknown> = formData;
     if (fullFormForValidation?.schema) {
-      const validationErrors = validateFormData(formData, fullFormForValidation.schema);
+      const prepared = prepareSubmissionData(formData, fullFormForValidation.schema);
+      cleanedData = prepared.data;
+      const validationErrors = validateFormData(
+        cleanedData,
+        fullFormForValidation.schema,
+        prepared.visibleIds,
+      );
       if (validationErrors.length > 0) {
         return res.status(400).json(
           STATUS_CODE[400]({
@@ -2292,7 +3561,7 @@ export async function submitPublicForm(req: Request, res: Response) {
           formId: form.id,
           submitterEmail: resolvedEmail,
           submitterName: resolvedName,
-          data: formData,
+          data: cleanedData,
           entityType: form.entityType,
           originalSubmissionId,
           ipAddress: clientIp,
@@ -2338,45 +3607,32 @@ export async function submitPublicForm(req: Request, res: Response) {
         ).catch((err) => logger.error("Failed to send submission received email:", err));
       }
 
-      // Use per-form recipients
+      // Use per-form recipients; this route falls back to org admins without them
       const fullForm = await getIntakeFormByIdQuery(form.id, tenantInfo.id);
-      const recipientIds = (fullForm?.recipients as number[]) || [];
 
-      if (recipientIds.length > 0) {
-        sendNewSubmissionAdminNotification(
-          recipientIds,
-          form.name,
-          submissionName,
-          resolvedEmail || "No email provided",
-          submission.id,
-          form.entityType,
-          req.lang,
-        ).catch((err) => logger.error("Failed to send admin notification:", err));
-      } else {
-        // Fallback to org admins
-        sendNewSubmissionAdminNotification(
-          tenantInfo.id,
-          form.name,
-          submissionName,
-          resolvedEmail || "No email provided",
-          submission.id,
-          form.entityType,
-          req.lang,
-        ).catch((err) => logger.error("Failed to send admin notification:", err));
-      }
+      // After the commit and never thrown: a failed write leaves the submission as is.
+      const liveChecks = await recordSubmitLiveChecks({
+        form: fullFormForValidation,
+        organizationId: tenantInfo.id,
+        submissionId: submission.id!,
+        data: cleanedData,
+        prefill: req.body.prefill,
+        language: req.lang,
+      });
 
-      // Trigger async risk scoring
-      if (fullForm) {
-        calculateSubmissionRisk(
-          formData,
-          fullForm.schema,
-          fullForm.riskTierSystem || "eu_ai_act",
-          fullForm.llmKeyId,
-          tenantInfo.id,
-        )
-          .then((result) => updateSubmissionRiskQuery(submission.id, result, tenantInfo.id))
-          .catch((err) => logger.error("Risk scoring failed:", err));
-      }
+      void startIntakeAssessment({
+        organizationId: tenantInfo.id,
+        submissionId: submission.id!,
+        lang: req.lang,
+        liveChecks,
+        form: fullForm,
+        adminFallback: true,
+        formId: form.id,
+        formName: form.name,
+        submitterName: submissionName,
+        submitterEmail: resolvedEmail || "No email provided",
+        entityType: form.entityType,
+      });
 
       return res.status(201).json(
         STATUS_CODE[201]({
@@ -2426,4 +3682,175 @@ export async function getCaptcha(_req: Request, res: Response) {
   const token = createSignedToken({ answer, timestamp: Date.now() });
 
   return res.status(200).json(STATUS_CODE[200]({ question, token }));
+}
+
+const SECOND_REVIEW_NOTE_MAX = 2000;
+
+/**
+ * Load an approved submission with an open or missed second review and check
+ * the caller may act on it: a senior reviewer of the form or an Admin, never
+ * the person who approved it. Sends the error response and returns null when
+ * not; the caller still checks the review's state.
+ */
+async function loadSecondReview(req: Request, res: Response, submissionId: number) {
+  const submission = await getSubmissionByIdQuery(submissionId, req.organizationId!);
+  if (!submission) {
+    res.status(404).json(STATUS_CODE[404](req.t!("Submission not found")));
+    return null;
+  }
+  const form = await getIntakeFormByIdQuery(submission.formId, req.organizationId!);
+  const isSenior = form?.routing?.seniorReviewerIds.includes(req.userId!) ?? false;
+  if (!isSenior && !isAdminRequest(req)) {
+    res
+      .status(403)
+      .json(
+        STATUS_CODE[403](req.t!("Only an expert reviewer of this form can do a second review")),
+      );
+    return null;
+  }
+  if (submission.reviewedBy === req.userId) {
+    res.status(403).json(STATUS_CODE[403](req.t!("You can't second-review your own approval")));
+    return null;
+  }
+  return submission;
+}
+
+function secondReviewConflict(req: Request, res: Response) {
+  return res
+    .status(409)
+    .json(STATUS_CODE[409](req.t!("This second review changed. Reload and try again.")));
+}
+
+/** The trimmed note ("" when blank), or null when it is not a string or is too long. */
+function parseSecondReviewNote(raw: unknown): string | null {
+  if (typeof raw !== "string") return null;
+  const note = raw.trim();
+  return note.length <= SECOND_REVIEW_NOTE_MAX ? note : null;
+}
+
+/**
+ * A senior reviewer records the outcome of a sampled second review.
+ * Changes nothing about the approval itself.
+ * POST /intake/submissions/:id/second-review
+ */
+export async function recordSecondReview(req: Request, res: Response) {
+  const submissionId = parseId(req.params.id);
+  if (isNaN(submissionId)) {
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid submission ID")));
+  }
+  const outcome = req.body?.outcome;
+  if (outcome !== "agreed" && outcome !== "missed") {
+    return res.status(400).json(STATUS_CODE[400](req.t!("Outcome must be agreed or missed")));
+  }
+  const rawNote = req.body?.note;
+  const note = rawNote === undefined || rawNote === null ? "" : parseSecondReviewNote(rawNote);
+  if (note === null || (outcome === "missed" && note === "")) {
+    return res
+      .status(400)
+      .json(
+        STATUS_CODE[400](
+          outcome === "missed"
+            ? req.t!("A note of 1 to 2000 characters is required when something was missed")
+            : req.t!("A note can be at most 2000 characters"),
+        ),
+      );
+  }
+
+  try {
+    const submission = await loadSecondReview(req, res, submissionId);
+    if (!submission) return;
+    if (submission.routing?.secondReview?.status !== "open") {
+      return secondReviewConflict(req, res);
+    }
+
+    const routing = await updateSecondReviewQuery(
+      submissionId,
+      req.organizationId!,
+      { status: "open" },
+      {
+        status: outcome,
+        reviewedBy: req.userId!,
+        reviewedAt: new Date().toISOString(),
+        ...(note ? { note } : {}),
+      },
+    );
+    if (!routing) return secondReviewConflict(req, res);
+
+    await logSuccess({
+      eventType: "Update",
+      description: `submission ${submissionId} second review: ${outcome}`,
+      functionName: "recordSecondReview",
+      fileName: "intakeForm.ctrl.ts",
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+    return res.status(200).json(STATUS_CODE[200](routing));
+  } catch (error) {
+    await logFailure({
+      eventType: "Update",
+      description: `failed to record second review: ${submissionId}`,
+      functionName: "recordSecondReview",
+      fileName: "intakeForm.ctrl.ts",
+      error: error as Error,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+  }
+}
+
+/**
+ * Close a missed second review once the follow-up is done. Changes nothing
+ * about the approval or the entity it created.
+ * POST /intake/submissions/:id/second-review/resolve
+ */
+export async function resolveSecondReviewMiss(req: Request, res: Response) {
+  const submissionId = parseId(req.params.id);
+  if (isNaN(submissionId)) {
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid submission ID")));
+  }
+  const note = parseSecondReviewNote(req.body?.note);
+  if (!note) {
+    return res
+      .status(400)
+      .json(STATUS_CODE[400](req.t!("A note of 1 to 2000 characters is required")));
+  }
+
+  try {
+    const submission = await loadSecondReview(req, res, submissionId);
+    if (!submission) return;
+    const current = submission.routing?.secondReview;
+    if (current?.status !== "missed" || current.resolvedAt) {
+      return secondReviewConflict(req, res);
+    }
+
+    const routing = await updateSecondReviewQuery(
+      submissionId,
+      req.organizationId!,
+      { status: "missed", unresolved: true },
+      { resolvedBy: req.userId!, resolvedAt: new Date().toISOString(), resolutionNote: note },
+    );
+    if (!routing) return secondReviewConflict(req, res);
+
+    await logSuccess({
+      eventType: "Update",
+      description: `submission ${submissionId} missed second review resolved`,
+      functionName: "resolveSecondReviewMiss",
+      fileName: "intakeForm.ctrl.ts",
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+    return res.status(200).json(STATUS_CODE[200](routing));
+  } catch (error) {
+    await logFailure({
+      eventType: "Update",
+      description: `failed to resolve second review: ${submissionId}`,
+      functionName: "resolveSecondReviewMiss",
+      fileName: "intakeForm.ctrl.ts",
+      error: error as Error,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+  }
 }

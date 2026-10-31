@@ -31,6 +31,7 @@ import StandardModal from "../../../components/Modals/StandardModal";
 import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtended";
 import TablePaginationActions from "../../../components/TablePagination";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
+import { getGatewayErrorText } from "../../../../application/utils/apiErrorReason";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import {
   getPaginationRowCount,
@@ -131,9 +132,7 @@ export default function PromptsPage() {
       if (created?.id) navigate(`/ai-gateway/prompts/${created.id}`);
       else loadData();
     } catch (err: any) {
-      setFormError(
-        err?.response?.data?.detail || err?.response?.data?.message || "Failed to create prompt",
-      );
+      setFormError(getGatewayErrorText(err, "Failed to create prompt"));
     } finally {
       setIsSubmitting(false);
     }

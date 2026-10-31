@@ -212,5 +212,216 @@ describe("intakeRiskScoring.service", () => {
       // Should return original dimensions since JSON parsing fails
       expect(result).toEqual(dimensions);
     });
+
+    it("sends select answers to the LLM as option labels, as keyword scoring reads them", async () => {
+      mockGetLLMKeys.mockResolvedValue([{ id: 1, name: "openai", key: "sk-test", model: "gpt-4" }]);
+      const { createOpenAI } = require("@ai-sdk/openai");
+      (createOpenAI as jest.Mock).mockReturnValue(jest.fn().mockReturnValue("model-instance"));
+      mockGenerateText.mockResolvedValue({ text: "not valid json" } as any);
+      const schema = {
+        version: "1.0",
+        fields: [
+          {
+            id: "sector",
+            type: "select",
+            label: "Sector",
+            options: [{ value: "option3", label: "Healthcare" }],
+          },
+          {
+            id: "uses",
+            type: "multiselect",
+            label: "Uses",
+            options: [{ value: "option1", label: "Triage" }],
+          },
+          { id: "cost", type: "number", label: "Cost" },
+        ],
+      };
+      const data = { sector: "option3", uses: ["option1"], cost: 1200 };
+
+      await enhanceWithLLM(scoreSubmissionRuleBased(data, schema), data, schema, 1, 1);
+
+      const prompt = String(mockGenerateText.mock.calls[0][0].prompt);
+      expect(prompt).toContain('Sector: "Healthcare"');
+      expect(prompt).toContain('Uses: ["Triage"]');
+      expect(prompt).toContain("Cost: 1200");
+      expect(prompt).not.toContain("option3");
+    });
+  });
+
+  describe("answer selection and keyword matching", () => {
+    const dimension = (result: ReturnType<typeof scoreSubmissionRuleBased>, key: string) =>
+      result.find((d) => d.key === key)!;
+
+    it("matches whole words only", () => {
+      const schema = { version: "1.0", fields: [{ id: "notes", type: "text", label: "Notes" }] };
+      const result = scoreSubmissionRuleBased({ notes: "The file was renamed" }, schema);
+      expect(dimension(result, "data_sensitivity").score).toBe(50);
+    });
+
+    it("matches keywords at the start of a word, so plurals and compounds count", () => {
+      const schema = { version: "1.0", fields: [{ id: "notes", type: "text", label: "Notes" }] };
+      const plural = scoreSubmissionRuleBased({ notes: "facial biometrics at the border" }, schema);
+      expect(dimension(plural, "data_sensitivity").score).toBeGreaterThan(70);
+      const compound = scoreSubmissionRuleBased({ notes: "healthcare records" }, schema);
+      expect(dimension(compound, "data_sensitivity").score).toBeGreaterThan(70);
+      const inside = scoreSubmissionRuleBased({ notes: "the file was renamed" }, schema);
+      expect(dimension(inside, "data_sensitivity").score).toBe(50);
+    });
+
+    it.each(["telehealth", "telemedicine", "biomedical"])(
+      "scores the health compound %s as high risk despite word-start matching",
+      (word) => {
+        const schema = { version: "1.0", fields: [{ id: "notes", type: "text", label: "Notes" }] };
+        const result = scoreSubmissionRuleBased({ notes: `A ${word} triage tool` }, schema);
+        expect(dimension(result, "data_sensitivity").score).toBeGreaterThan(70);
+        expect(dimension(result, "domain_criticality").score).toBeGreaterThan(70);
+      },
+    );
+
+    it("matches multi-word keywords as phrases", () => {
+      const schema = { version: "1.0", fields: [{ id: "notes", type: "text", label: "Notes" }] };
+      const result = scoreSubmissionRuleBased({ notes: "There is no human in the loop" }, schema);
+      expect(dimension(result, "autonomy_level").score).toBeGreaterThanOrEqual(70);
+    });
+
+    const taggedSchema = {
+      version: "1.0",
+      fields: [
+        { id: "notes", type: "text", label: "Notes" },
+        { id: "purpose", type: "text", label: "Purpose", riskDimension: "data_sensitivity" },
+      ],
+    };
+
+    it("tagged answers decide over medium and low signals elsewhere", () => {
+      // Scored from all answers, "public" would pull this down to 15; the
+      // tagged medium-risk answer decides instead.
+      const result = scoreSubmissionRuleBased(
+        { notes: "a public dataset", purpose: "personal email addresses" },
+        taggedSchema,
+      );
+      expect(dimension(result, "data_sensitivity").score).toBe(55);
+    });
+
+    it("falls back to every answer when the tagged field has no answer", () => {
+      const result = scoreSubmissionRuleBased({ notes: "biometric" }, taggedSchema);
+      expect(dimension(result, "data_sensitivity").score).toBeGreaterThan(70);
+    });
+
+    it("falls back to every answer when the tagged answers match no keyword", () => {
+      const schema = {
+        version: "1.0",
+        fields: [
+          { id: "notes", type: "text", label: "Notes" },
+          {
+            id: "bio",
+            type: "checkbox",
+            label: "Uses face data",
+            riskDimension: "data_sensitivity",
+          },
+        ],
+      };
+      const unchecked = scoreSubmissionRuleBased({ notes: "biometric", bio: false }, schema);
+      expect(dimension(unchecked, "data_sensitivity").score).toBeGreaterThan(70);
+      const checked = scoreSubmissionRuleBased({ notes: "biometric", bio: true }, schema);
+      expect(dimension(checked, "data_sensitivity").score).toBeGreaterThan(70);
+    });
+
+    it("an untouched tagged multiselect or blank text is not a tagged answer", () => {
+      const schema = {
+        version: "1.0",
+        fields: [
+          { id: "notes", type: "text", label: "Notes" },
+          { id: "kinds", type: "multiselect", label: "Kinds", riskDimension: "data_sensitivity" },
+          { id: "why", type: "text", label: "Why", riskDimension: "data_sensitivity" },
+        ],
+      };
+      const result = scoreSubmissionRuleBased(
+        { notes: "biometric", kinds: [], why: "   " },
+        schema,
+      );
+      expect(dimension(result, "data_sensitivity").score).toBeGreaterThan(70);
+    });
+
+    it("a low-risk tagged answer cannot hide high-risk text elsewhere", () => {
+      const schema = {
+        version: "1.0",
+        fields: [
+          { id: "notes", type: "textarea", label: "Notes" },
+          { id: "purpose", type: "text", label: "Purpose", riskDimension: "data_sensitivity" },
+        ],
+      };
+      const result = scoreSubmissionRuleBased(
+        { notes: "we process biometric and health records", purpose: "public" },
+        schema,
+      );
+      const data = dimension(result, "data_sensitivity");
+      expect(data.score).toBe(80);
+      expect(data.signals).toContain('High-risk signal: "biometric" (Notes)');
+    });
+
+    it("tagging a field does not change that field's own score", () => {
+      const answer = { notes: "Aggregated, anonymous health statistics" };
+      const untagged = { version: "1.0", fields: [{ id: "notes", type: "text", label: "Notes" }] };
+      const tagged = {
+        version: "1.0",
+        fields: [{ id: "notes", type: "text", label: "Notes", riskDimension: "data_sensitivity" }],
+      };
+      const before = dimension(scoreSubmissionRuleBased(answer, untagged), "data_sensitivity");
+      const after = dimension(scoreSubmissionRuleBased(answer, tagged), "data_sensitivity");
+      expect(before.score).toBe(40);
+      expect(after.score).toBe(before.score);
+    });
+
+    it("scores select answers by option label", () => {
+      const schema = {
+        version: "1.0",
+        fields: [
+          {
+            id: "kind",
+            type: "select",
+            label: "Data kind",
+            options: [{ value: "option1", label: "Health records" }],
+          },
+        ],
+      };
+      const result = scoreSubmissionRuleBased({ kind: "option1" }, schema);
+      expect(dimension(result, "data_sensitivity").score).toBeGreaterThan(70);
+    });
+
+    it("scores a checked checkbox by its label and ignores an unchecked one", () => {
+      const schema = {
+        version: "1.0",
+        fields: [{ id: "bio", type: "checkbox", label: "Uses biometric data" }],
+      };
+      expect(
+        dimension(scoreSubmissionRuleBased({ bio: true }, schema), "data_sensitivity").score,
+      ).toBeGreaterThan(70);
+      expect(
+        dimension(scoreSubmissionRuleBased({ bio: false }, schema), "data_sensitivity").score,
+      ).toBe(50);
+    });
+
+    it("never scores number, date or calculated values", () => {
+      const schema = {
+        version: "1.0",
+        fields: [
+          { id: "n", type: "number", label: "N" },
+          { id: "d", type: "date", label: "D" },
+          { id: "c", type: "calculated", label: "C" },
+        ],
+      };
+      const result = scoreSubmissionRuleBased(
+        { n: "biometric", d: "biometric", c: "biometric" },
+        schema,
+      );
+      expect(dimension(result, "data_sensitivity").score).toBe(50);
+    });
+
+    it("names the field in signals", () => {
+      const result = scoreSubmissionRuleBased({ purpose: "biometric" }, taggedSchema);
+      expect(dimension(result, "data_sensitivity").signals).toContain(
+        'High-risk signal: "biometric" (Purpose)',
+      );
+    });
   });
 });

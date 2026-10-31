@@ -1,6 +1,4 @@
-import { Chip as MuiChip } from "@mui/material";
-import { status } from "../../themes/palette";
-import { fontSize } from "../../themes/typography";
+import StatusBadge from "../StatusBadge";
 
 interface DaysChipProps {
   /** The due date to calculate days from */
@@ -12,11 +10,11 @@ interface DaysChipProps {
 }
 
 /**
- * A chip component that displays the number of days until a due date.
+ * Displays the number of days until a due date.
  * - Shows "XD" for days remaining
  * - Shows "50+D" (or custom max) if more than maxDays
- * - Warning (amber) styling if within urgent threshold
- * - Info (blue) styling otherwise
+ * - Warning styling if within the urgent threshold
+ * - Info styling otherwise
  */
 export function DaysChip({ dueDate, maxDays = 50, urgentThreshold = 3 }: DaysChipProps) {
   const dueDateObj = new Date(typeof dueDate === "string" ? dueDate : dueDate.getTime());
@@ -28,18 +26,8 @@ export function DaysChip({ dueDate, maxDays = 50, urgentThreshold = 3 }: DaysChi
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   const daysLabel = diffDays > maxDays ? `${maxDays}+` : `${diffDays}`;
   const isUrgent = diffDays <= urgentThreshold;
-  const colors = isUrgent ? status.warning : status.info;
 
   return (
-    <MuiChip
-      label={`${daysLabel}D`}
-      size="small"
-      sx={{
-        fontSize: fontSize.caption,
-        backgroundColor: colors.bg,
-        color: colors.text,
-        borderRadius: "4px",
-      }}
-    />
+    <StatusBadge label={`${daysLabel}D`} variant={isUrgent ? "warning" : "info"} size="small" />
   );
 }

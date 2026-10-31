@@ -45,6 +45,8 @@ export interface ClassificationReason {
 export interface ClassificationResult {
   questionnaireVersion: number;
   level: ClassificationLevel;
+  /** The roles the answers name, Provider first. Results saved before the list lack it. */
+  roles?: ClassificationRole[];
   role: ClassificationRole | null;
   reasons: ClassificationReason[];
   obligations: ClassificationReason[];

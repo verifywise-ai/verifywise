@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 
 // Mock HelperIcon to avoid UserGuideSidebarProvider dependency
@@ -127,10 +127,12 @@ vi.mock("../../../components/TabBar", () => ({
 }));
 
 import Tasks from "../index";
+import { getAllTasks } from "../../../../application/repository/task.repository";
 
 describe("Tasks", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(getAllTasks).mockResolvedValue({ data: { tasks: [] } } as never);
     localStorage.clear();
     vi.spyOn(console, "error").mockImplementation(() => {});
   });
@@ -157,6 +159,21 @@ describe("Tasks", () => {
 
   it("shows loading state initially", () => {
     renderWithProviders(<Tasks />, { route: "/tasks" });
-    expect(document.querySelectorAll(".MuiSkeleton-root").length).toBeGreaterThan(0);
+    expect(screen.getByRole("status", { name: "Loading tasks" })).toBeInTheDocument();
+  });
+
+  it("shows a standardized error alert when tasks fail to load", async () => {
+    vi.mocked(getAllTasks).mockRejectedValue(new Error("network error"));
+    renderWithProviders(<Tasks />, { route: "/tasks" });
+
+    const wrapper = await screen.findByTestId("list-state-wrapper");
+    expect(await within(wrapper).findByRole("alert")).toHaveTextContent(
+      "Failed to load tasks. Please try again later.",
+    );
+    expect(within(wrapper).queryByTestId("tasks-table")).not.toBeInTheDocument();
+    // The inline alert replaces the global toast for this request only.
+    expect(getAllTasks).toHaveBeenCalledWith(
+      expect.objectContaining({ suppressGlobalErrorToast: true }),
+    );
   });
 });

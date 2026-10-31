@@ -26,7 +26,11 @@ export const validateAnswers = (
       errors.push(`question "${id}" takes one answer`);
       continue;
     }
-    if (question.inputType === "multi_select" && !Array.isArray(value)) {
+    if (
+      question.inputType === "multi_select" &&
+      !Array.isArray(value) &&
+      !(question.acceptsSingleValue && typeof value === "string")
+    ) {
       errors.push(`question "${id}" takes a list of answers`);
       continue;
     }
@@ -58,7 +62,10 @@ export const validateAnswers = (
     if (answer === undefined || (Array.isArray(answer) && answer.length === 0)) {
       errors.push(`question "${question.id}" is not answered`);
     } else {
-      answers[question.id] = answer;
+      // A saved single answer to a question that became multi-select is read
+      // as a one-item list, so it scores and pre-fills like a new answer.
+      answers[question.id] =
+        question.inputType === "multi_select" && !Array.isArray(answer) ? [answer] : answer;
     }
   }
   return errors.length > 0 ? { errors, answers: {} } : { errors, answers };

@@ -5,6 +5,7 @@ import logger from "../../utils/logger/fileLogger";
 import { createWriteToolFn } from "../confirmation/createWriteTool";
 import { sequelize } from "../../database/db";
 import { QueryTypes } from "sequelize";
+import { withLegacyHighRiskRole } from "../../utils/highRiskRoles.utils";
 
 export interface FetchUseCasesParams {
   status?: string;
@@ -221,7 +222,7 @@ const agentCreateUseCase = createWriteToolFn({
         },
       );
       await transaction.commit();
-      const created = (result as any)[0]?.[0] || (result as any)[0];
+      const created = withLegacyHighRiskRole((result as any)[0]?.[0] || (result as any)[0]);
       return { success: true, use_case: created };
     } catch (error) {
       await transaction.rollback();
@@ -269,7 +270,7 @@ const agentUpdateUseCase = createWriteToolFn({
       `UPDATE projects SET ${setClauses.join(", ")} WHERE organization_id = :organizationId AND id = :id RETURNING *`,
       { replacements },
     );
-    const updated = (result as any)[0]?.[0] || (result as any)[0];
+    const updated = withLegacyHighRiskRole((result as any)[0]?.[0] || (result as any)[0]);
     return { success: true, use_case: updated };
   },
 });
@@ -290,7 +291,7 @@ const agentUpdateUseCaseStatus = createWriteToolFn({
         },
       },
     );
-    const updated = (result as any)[0]?.[0] || (result as any)[0];
+    const updated = withLegacyHighRiskRole((result as any)[0]?.[0] || (result as any)[0]);
     return { success: true, use_case: updated };
   },
 });

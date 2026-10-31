@@ -3,6 +3,8 @@ import { createOpenAI } from "@ai-sdk/openai";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { getLLMKeysWithKeyQuery } from "../utils/llmKey.utils";
 import logger from "../utils/logger/fileLogger";
+import { isEmptyAnswer } from "./intakeFormLogic";
+import { escapeRegExp } from "../utils/regex.utils";
 
 // ============================================================================
 // TYPES
@@ -38,9 +40,10 @@ interface FormField {
   label: string;
   entityFieldMapping?: string;
   options?: Array<{ value: string; label: string }>;
+  riskDimension?: string;
 }
 
-interface FormSchema {
+export interface FormSchema {
   version: string;
   fields: FormField[];
 }
@@ -59,6 +62,9 @@ const DIMENSION_CONFIGS = [
         "biometric",
         "health",
         "medical",
+        "telehealth",
+        "telemedicine",
+        "biomedical",
         "genetic",
         "racial",
         "ethnic",
@@ -83,7 +89,6 @@ const DIMENSION_CONFIGS = [
       ],
       low: ["anonymous", "aggregated", "public", "synthetic", "no personal data", "non-personal"],
     },
-    fieldMappings: ["personal_data_type", "data_type", "data_sensitivity"],
   },
   {
     key: "autonomy_level",
@@ -116,7 +121,6 @@ const DIMENSION_CONFIGS = [
         "support only",
       ],
     },
-    fieldMappings: ["autonomy_level", "decision_making", "autonomous"],
   },
   {
     key: "impact_scope",
@@ -136,7 +140,6 @@ const DIMENSION_CONFIGS = [
       medium: ["department", "team", "hundreds", "regional", "business unit"],
       low: ["individual", "single user", "internal", "pilot", "prototype", "poc", "few users"],
     },
-    fieldMappings: ["user_count", "geographic_scope", "impact_scope"],
   },
   {
     key: "transparency",
@@ -162,7 +165,6 @@ const DIMENSION_CONFIGS = [
         "full documentation",
       ],
     },
-    fieldMappings: ["explainability", "transparency", "model_transparency"],
   },
   {
     key: "human_oversight",
@@ -179,7 +181,6 @@ const DIMENSION_CONFIGS = [
         "human approval required",
       ],
     },
-    fieldMappings: ["human_oversight", "human_in_the_loop", "oversight_level"],
   },
   {
     key: "domain_criticality",
@@ -189,6 +190,9 @@ const DIMENSION_CONFIGS = [
       high: [
         "healthcare",
         "medical",
+        "telehealth",
+        "telemedicine",
+        "biomedical",
         "legal",
         "judicial",
         "law enforcement",
@@ -224,7 +228,6 @@ const DIMENSION_CONFIGS = [
         "testing",
       ],
     },
-    fieldMappings: ["domain", "industry", "sector", "use_case_domain"],
   },
 ];
 
@@ -245,60 +248,155 @@ const TIER_THRESHOLDS: Record<string, Array<{ max: number; tier: string }>> = {
 // RULE-BASED SCORING
 // ============================================================================
 
-function scoreDimension(
-  config: (typeof DIMENSION_CONFIGS)[0],
+interface ScoringAnswer {
+  label: string;
+  text: string;
+  riskDimension?: string;
+}
+
+/** A select option's label for a stored value; the value itself when unknown. */
+function optionLabelOf(field: FormSchema["fields"][number], value: unknown): string {
+  return field.options?.find((option) => option.value === value)?.label ?? String(value);
+}
+
+/**
+ * The scorable text of one answered field (see answersForScoring). Shared with
+ * the AI scoring input so both read select answers the same way.
+ */
+export function answerTextOf(field: FormSchema["fields"][number], value: unknown): string {
+  const optionLabel = (v: unknown) => optionLabelOf(field, v);
+  switch (field.type) {
+    case "text":
+    case "textarea":
+    case "email":
+    case "url":
+      return typeof value === "string" ? value : "";
+    case "select":
+      return optionLabel(value);
+    case "multiselect":
+      return Array.isArray(value) ? value.map(optionLabel).join(", ") : "";
+    case "checkbox":
+      return value === true ? field.label : "";
+    default:
+      return "";
+  }
+}
+
+/**
+ * The text each answer contributes to keyword scoring. Selects contribute
+ * their option labels (stored values default to "option1", "option2", ...),
+ * a checked checkbox contributes its field label, and number, date and
+ * calculated values contribute nothing.
+ */
+export function answersForScoring(
   submissionData: Record<string, unknown>,
   schema: FormSchema,
-): { score: number; signals: string[] } {
-  const signals: string[] = [];
-  let score = 50; // Default neutral
-
-  // Collect all text from submission fields
-  const allText: string[] = [];
-  const mappedFieldValues: string[] = [];
-
+): ScoringAnswer[] {
+  const answers: ScoringAnswer[] = [];
   for (const field of schema.fields) {
     const value = submissionData[field.id];
-    if (value === undefined || value === null) continue;
-
-    const textValue = Array.isArray(value) ? value.join(" ") : String(value);
-    allText.push(textValue.toLowerCase());
-
-    // Check if this field is mapped to a relevant entity field
-    const fieldMapping = field.entityFieldMapping?.toLowerCase() || "";
-    if (config.fieldMappings.some((m) => fieldMapping.includes(m))) {
-      mappedFieldValues.push(textValue.toLowerCase());
-    }
+    // Same notion of blank as the show/hide rules: whitespace and [] are not answers.
+    if (isEmptyAnswer(value)) continue;
+    const text = answerTextOf(field, value);
+    // Every answered field is listed, even with no scorable text. One with no
+    // text (an unchecked checkbox) matches no keyword, so if it is a
+    // dimension's only tagged answer, that dimension falls back to all answers.
+    answers.push({ label: field.label, text, riskDimension: field.riskDimension });
   }
+  return answers;
+}
 
-  const combinedText = [...mappedFieldValues, ...allText].join(" ");
+/**
+ * Keywords match at the start of a word, so plurals and compounds count
+ * ("biometrics", "healthcare"), but a keyword inside a word does not
+ * ("name" in "renamed"). Compiled once per keyword.
+ */
+const KEYWORD_PATTERNS = new Map<string, RegExp>();
+const keywordPattern = (keyword: string): RegExp => {
+  let pattern = KEYWORD_PATTERNS.get(keyword);
+  if (!pattern) {
+    pattern = new RegExp(`\\b${escapeRegExp(keyword.toLowerCase())}`, "i");
+    KEYWORD_PATTERNS.set(keyword, pattern);
+  }
+  return pattern;
+};
 
-  // Score based on keyword matching
-  let highMatches = 0;
-  let mediumMatches = 0;
-  let lowMatches = 0;
+interface KeywordMatches {
+  highMatches: number;
+  mediumMatches: number;
+  lowMatches: number;
+  signals: string[];
+}
 
+function matchKeywords(
+  config: (typeof DIMENSION_CONFIGS)[0],
+  pool: ScoringAnswer[],
+): KeywordMatches {
+  const firstMatch = (keyword: string) => {
+    const pattern = keywordPattern(keyword);
+    return pool.find((answer) => pattern.test(answer.text));
+  };
+  const result: KeywordMatches = { highMatches: 0, mediumMatches: 0, lowMatches: 0, signals: [] };
   for (const keyword of config.keywords.high) {
-    if (combinedText.includes(keyword.toLowerCase())) {
-      highMatches++;
-      signals.push(`High-risk signal: "${keyword}"`);
+    const hit = firstMatch(keyword);
+    if (hit) {
+      result.highMatches++;
+      result.signals.push(`High-risk signal: "${keyword}" (${hit.label})`);
     }
   }
-
   for (const keyword of config.keywords.medium) {
-    if (combinedText.includes(keyword.toLowerCase())) {
-      mediumMatches++;
-    }
+    if (firstMatch(keyword)) result.mediumMatches++;
   }
-
   for (const keyword of config.keywords.low) {
-    if (combinedText.includes(keyword.toLowerCase())) {
-      lowMatches++;
-      signals.push(`Low-risk signal: "${keyword}"`);
+    const hit = firstMatch(keyword);
+    if (hit) {
+      result.lowMatches++;
+      result.signals.push(`Low-risk signal: "${keyword}" (${hit.label})`);
+    }
+  }
+  return result;
+}
+
+function scoreDimension(
+  config: (typeof DIMENSION_CONFIGS)[0],
+  answers: ScoringAnswer[],
+): { score: number; signals: string[] } {
+  // Tagged answers decide the dimension when they match any keyword; when
+  // nothing is tagged, or the tagged answers match nothing, every answer counts.
+  const tagged = answers.filter((answer) => answer.riskDimension === config.key);
+  const taggedMatches = tagged.length > 0 ? matchKeywords(config, tagged) : null;
+  const usesTagged =
+    taggedMatches !== null &&
+    taggedMatches.highMatches + taggedMatches.mediumMatches + taggedMatches.lowMatches > 0;
+  const matches = usesTagged ? taggedMatches! : matchKeywords(config, answers);
+  let { score } = scoreFromMatches(matches);
+  let signals = matches.signals;
+
+  // Tags refine a score but never hide risk found elsewhere: high-risk keywords
+  // in the untagged answers keep the dimension at least where those keywords
+  // alone would put it. The tagged answers' own keywords are already scored
+  // above, so tagging a field never changes that field's own score.
+  const otherMatches = usesTagged
+    ? matchKeywords(
+        config,
+        answers.filter((answer) => answer.riskDimension !== config.key),
+      )
+    : null;
+  if (otherMatches && otherMatches.highMatches > 0) {
+    const floor = scoreFromMatches({ ...otherMatches, mediumMatches: 0, lowMatches: 0 }).score;
+    if (score < floor) {
+      score = floor;
+      const highSignals = otherMatches.signals.filter((signal) => signal.startsWith("High-risk"));
+      signals = [...new Set([...highSignals, ...signals])];
     }
   }
 
-  // Calculate score based on match distribution
+  return { score, signals };
+}
+
+function scoreFromMatches(matches: KeywordMatches): { score: number } {
+  const { highMatches, mediumMatches, lowMatches } = matches;
+  let score = 50; // Default neutral
   if (highMatches > 0 && lowMatches === 0) {
     score = 70 + Math.min(highMatches * 5, 30);
   } else if (highMatches > 0 && lowMatches > 0) {
@@ -308,26 +406,17 @@ function scoreDimension(
   } else if (lowMatches > 0 && highMatches === 0) {
     score = 10 + Math.max(20 - lowMatches * 5, 0);
   }
-
-  // Clamp
-  score = Math.max(0, Math.min(100, score));
-
-  return { score, signals };
+  return { score: Math.max(0, Math.min(100, score)) };
 }
 
 export function scoreSubmissionRuleBased(
   submissionData: Record<string, unknown>,
   schema: FormSchema,
 ): RiskDimension[] {
+  const answers = answersForScoring(submissionData, schema);
   return DIMENSION_CONFIGS.map((config) => {
-    const { score, signals } = scoreDimension(config, submissionData, schema);
-    return {
-      key: config.key,
-      label: config.label,
-      weight: config.weight,
-      score,
-      signals,
-    };
+    const { score, signals } = scoreDimension(config, answers);
+    return { key: config.key, label: config.label, weight: config.weight, score, signals };
   });
 }
 
@@ -353,8 +442,19 @@ export async function enhanceWithLLM(
 
     // Build context from submission
     const fieldSummary = schema.fields
-      .filter((f) => submissionData[f.id] !== undefined)
-      .map((f) => `${f.label}: ${JSON.stringify(submissionData[f.id])}`)
+      // A calculated field stored as null had no result; leave it out.
+      .filter((f) => submissionData[f.id] !== undefined && submissionData[f.id] !== null)
+      // Selects show their option labels, as keyword scoring reads them.
+      .map((f) => {
+        const value = submissionData[f.id];
+        const shown =
+          f.type === "select"
+            ? optionLabelOf(f, value)
+            : f.type === "multiselect" && Array.isArray(value)
+              ? value.map((v) => optionLabelOf(f, v))
+              : value;
+        return `${f.label}: ${JSON.stringify(shown)}`;
+      })
       .join("\n");
 
     const dimensionSummary = dimensions

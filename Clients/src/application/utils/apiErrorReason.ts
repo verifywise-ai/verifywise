@@ -15,6 +15,44 @@ export function getApiErrorReason(error: unknown): string | null {
   return null;
 }
 
+/**
+ * The AI Gateway's reason for a failed request. The gateway (FastAPI) reports
+ * errors as { detail }: a string, { message, code }, or for a request that
+ * fails validation (422) a list of { msg }. The envelope readers above do not
+ * look at it; `apiServices` passes that body through as the error's
+ * `response`. Only for a rejected request (4xx), and not a 401: the gateway
+ * answers 401 when the backend's internal key is wrong, a deployment
+ * misconfiguration the user cannot act on. A 5xx detail can carry internal
+ * details, so it is never surfaced either.
+ */
+export function getGatewayErrorDetail(error: unknown): string | null {
+  if (!isClientError(error) || error.status === 401) return null;
+  const detail = (error as { response?: { detail?: unknown } } | null)?.response?.detail;
+  if (typeof detail === "string") return detail || null;
+  if (Array.isArray(detail)) {
+    const messages = detail
+      .map((entry) => (entry as { msg?: unknown } | null)?.msg)
+      .filter((msg): msg is string => typeof msg === "string" && msg.trim() !== "")
+      // Pydantic prefixes a validator's own message with "Value error, ".
+      .map((msg) => msg.replace(/^Value error, /, "").trim());
+    return messages.length > 0 ? [...new Set(messages)].join(" ") : null;
+  }
+  const message = (detail as { message?: unknown } | null)?.message;
+  return typeof message === "string" && message ? message : null;
+}
+
+/**
+ * The text to show for a failed AI Gateway request: the gateway's own
+ * { detail } reason, else the server's reason for a rejected request (4xx;
+ * generic status text is filtered out), else `fallback`. 5xx reasons are never
+ * shown.
+ */
+export function getGatewayErrorText(error: unknown, fallback: string): string {
+  // A 401 is the internal-key misconfiguration above, whatever its message.
+  if (isClientError(error) && error.status === 401) return fallback;
+  return getGatewayErrorDetail(error) || getClientErrorReason(error) || fallback;
+}
+
 /** The standard 4xx status phrases: a message that is only one of these says nothing. */
 const CLIENT_ERROR_PHRASES = new Set([
   "Bad Request",
@@ -76,4 +114,53 @@ export function getClientErrorReason(error: unknown): string | null {
     return null;
   }
   return message;
+}
+
+/** Which field errors of a validation response may be shown to the user, and how. */
+export interface UserFacingFieldErrors {
+  /** Fields whose server message is already user-facing; shown as sent. */
+  passThrough?: readonly string[];
+  /**
+   * Fields whose server message names internals (column names, ids); shown
+   * as this text instead.
+   */
+  replace?: Readonly<Record<string, string>>;
+}
+
+/**
+ * The message to show for a rejected (4xx) request.
+ *
+ * For a validation response (`{ data: { errors: [{ field, message, code }] } }`)
+ * only the fields listed in `fields` are surfaced: `passThrough` fields with
+ * the server's message, `replace` fields with the given text. Other field
+ * errors are skipped; if none are left, returns null so the caller shows its
+ * own generic text. Without field errors, falls back to the general 4xx reason
+ * (getClientErrorReason). Returns null for 5xx and non-API errors.
+ */
+export function getApiValidationMessage(
+  error: unknown,
+  fields: UserFacingFieldErrors,
+): string | null {
+  if (!isClientError(error)) return null;
+  const body = error.response as { data?: { errors?: unknown }; errors?: unknown } | undefined;
+  const errors = body?.data?.errors ?? body?.errors;
+  if (Array.isArray(errors) && errors.length > 0) {
+    const messages: string[] = [];
+    for (const entry of errors as Array<{ field?: unknown; message?: unknown } | null>) {
+      const field = typeof entry?.field === "string" ? entry.field : "";
+      const replacement = fields.replace?.[field];
+      if (replacement) {
+        messages.push(replacement);
+      } else if (
+        fields.passThrough?.includes(field) &&
+        typeof entry?.message === "string" &&
+        entry.message.trim()
+      ) {
+        messages.push(entry.message.trim());
+      }
+    }
+    const unique = [...new Set(messages)];
+    return unique.length > 0 ? unique.join(" ") : null;
+  }
+  return getClientErrorReason(error);
 }

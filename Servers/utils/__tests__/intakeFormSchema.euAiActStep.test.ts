@@ -1,5 +1,8 @@
 import { describe, it, expect } from "@jest/globals";
-import { resolveEuAiActRiskStep } from "../intakeFormSchema.validation";
+import {
+  resolveEuAiActRiskStep,
+  defaultEuAiActRiskStepEnabled,
+} from "../intakeFormSchema.validation";
 
 const field = (entityFieldMapping?: string) =>
   ({
@@ -51,5 +54,26 @@ describe("resolveEuAiActRiskStep", () => {
         schema: { version: "1.0", fields: [field("ai_risk_classification")] } as any,
       }),
     ).toEqual({ enabled: false, errors: [] });
+  });
+});
+
+describe("defaultEuAiActRiskStepEnabled", () => {
+  it("is on for a use case form without a risk mapping", () => {
+    expect(
+      defaultEuAiActRiskStepEnabled("use_case", { version: "1.0", fields: [field("goal")] } as any),
+    ).toBe(true);
+  });
+
+  it("is off for a use case form that maps a question to the AI risk classification", () => {
+    expect(
+      defaultEuAiActRiskStepEnabled("use_case", {
+        version: "1.0",
+        fields: [field("ai_risk_classification")],
+      } as any),
+    ).toBe(false);
+  });
+
+  it("is off for a model form", () => {
+    expect(defaultEuAiActRiskStepEnabled("model", null)).toBe(false);
   });
 });

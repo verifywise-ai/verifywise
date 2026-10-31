@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 
 // Mock HelperIcon to avoid UserGuideSidebarProvider dependency
@@ -103,10 +103,12 @@ vi.mock("../TrainingSteps", () => ({
 }));
 
 import Training from "../index";
+import { getAllEntities } from "../../../../application/repository/entity.repository";
 
 describe("TrainingRegistar", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(getAllEntities).mockResolvedValue({ data: [] } as never);
     vi.spyOn(console, "error").mockImplementation(() => {});
   });
 
@@ -134,5 +136,26 @@ describe("TrainingRegistar", () => {
   it("renders search box", () => {
     renderWithProviders(<Training />, { route: "/training" });
     expect(screen.getByPlaceholderText("Search trainings...")).toBeInTheDocument();
+  });
+
+  it("shows a standardized error alert when training records fail to load", async () => {
+    vi.mocked(getAllEntities).mockImplementation(({ routeUrl }) =>
+      routeUrl === "/training"
+        ? Promise.reject(new Error("network error"))
+        : Promise.resolve({ data: [] } as never),
+    );
+
+    renderWithProviders(<Training />, { route: "/training" });
+
+    const wrapper = await screen.findByTestId("list-state-wrapper");
+    expect(within(wrapper).getByRole("alert")).toHaveTextContent(
+      "Failed to load training data. Please try again later.",
+    );
+    expect(within(wrapper).queryByTestId("training-table")).not.toBeInTheDocument();
+    // The inline alert replaces the global toast for this request only.
+    expect(getAllEntities).toHaveBeenCalledWith({
+      routeUrl: "/training",
+      suppressGlobalErrorToast: true,
+    });
   });
 });

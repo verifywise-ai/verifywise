@@ -122,7 +122,7 @@ async function createFrameworkForProject(
   transaction: Transaction,
   is_mock_data: boolean,
 ): Promise<{ l2Rows: number; l3Rows: number }> {
-  const { tables, cols, demo } = getConfig(frameworkKey);
+  const { tables, cols } = getConfig(frameworkKey);
 
   const projectFramework = await getProjectFramework(
     frameworkId,
@@ -161,34 +161,6 @@ async function createFrameworkForProject(
     },
   );
   const l2Rows = (l2Res as Array<{ id: number }>).length;
-
-  // Demo narrative is applied as a second statement keyed by the struct title,
-  // so the insert above stays one generic statement for all 21 frameworks and a
-  // framework without demo text costs nothing.
-  if (is_mock_data && demo && Object.keys(demo).length > 0) {
-    const entries = Object.entries(demo);
-    const values = entries.map((_, i) => `(:title${i}, :impl${i}, :feedback${i})`).join(", ");
-    const replacements: Record<string, string | number> = {
-      orgId: organizationId,
-      pfId,
-    };
-    entries.forEach(([title, entry], i) => {
-      replacements[`title${i}`] = title;
-      replacements[`impl${i}`] = entry.implementation_description;
-      replacements[`feedback${i}`] = entry.auditor_feedback;
-    });
-    await sequelize.query(
-      `UPDATE ${tables.l2_impl} AS impl
-          SET implementation_description = d.implementation_description,
-              auditor_feedback = d.auditor_feedback
-         FROM ${tables.l2_struct} l2, (VALUES ${values}) AS d(title, implementation_description, auditor_feedback)
-        WHERE impl.organization_id = :orgId
-          AND impl.projects_frameworks_id = :pfId
-          AND impl.${cols.l2_impl_meta} = l2.id
-          AND l2.title = d.title;`,
-      { replacements, transaction },
-    );
-  }
 
   let l3Rows = 0;
   if (tables.l3_impl && tables.l3_struct && cols.l3_impl_meta && cols.l3_impl_parent) {

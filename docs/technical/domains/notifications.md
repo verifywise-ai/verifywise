@@ -225,11 +225,14 @@ const rateLimitConfig = {
 
 ### Assignment emails
 
-`notifyUserAssigned` (`services/inAppNotification.service.ts`) writes the in-app notification and sends the `ASSIGNMENT_NOTIFICATION` email. The template is HTML and `compileMjmlToHtml` substitutes the variables as they are, so the service escapes the text that someone else wrote before it gets there, with `escapeHtml` (`utils/escapeHtml.ts`: `&`, `<`, `>`, `"` and `'`):
+`notifyUserAssigned` (`services/inAppNotification.service.ts`) writes the in-app notification and sends the `ASSIGNMENT_NOTIFICATION` email. The template is HTML, and the text that someone else wrote reaches it in one of two ways, under the escaping rule of the [email service](../infrastructure/email-service.md#template-variable-replacement):
 
-- Escaped: the recipient's name, the assigner's name, the entity name (`recipient_name`, `assigner_name`, `entity_name`) and every value of the entity context box (framework, project, parent type, parent name, description). A name such as `Smith & Co` shows as typed, and text that a person or a model wrote cannot add a tag, a link or an image. An accepted vendor research finding is the case that matters most: its risk and impact text come from a model that read a web page.
-- Not escaped: the subject line and the in-app notification, which are plain text; `entity_url`, which is built from the front-end address and ids and sits in an `href`; and the values that come from constants (role, entity type, role description, date).
-- `compileMjmlToHtml` itself escapes nothing and uses `String.replace`, so `$&` and `$$` inside a value are read as replacement patterns. That garbles text and is not markup injection.
+- **Plain slots.** The recipient's name, the assigner's name and the entity name (`recipient_name`, `assigner_name`, `entity_name`) are passed as written. `compileMjmlToHtml` escapes every value whose key does not end in `Html` or `_html`, so the service must not escape them as well: `Smith & Co` would show as `Smith &amp; Co`. The same goes for `entity_url`, which is built from the front-end address and ids and sits in an `href` (an `&` in it becomes `&amp;`, which is right there), and for the values that come from constants (role, entity type, role description, date).
+- **The raw slot.** `entity_context_html` is a table that the service builds itself (`buildEntityContextHtml`) from the entity context box (framework, project, parent type, parent name, description). It is inserted as it is, so the service escapes each value with `escapeHtml` of `utils/sanitization.utils.ts` (`&`, `<`, `>`, `"` and `'`), and builds the colors of the markup from `emailColorTokens`.
+
+A name such as `Smith & Co` shows as typed, and text that a person or a model wrote cannot add a tag, a link or an image. An accepted vendor research finding is the case that matters most: its risk and impact text come from a model that read a web page. `services/tests/inAppNotification.service.spec.ts` renders the real template with such text to prove both slots.
+
+The subject line and the in-app notification are plain text, not HTML, and keep what was written; the app shows the notification as text.
 
 ### Queue Processing
 

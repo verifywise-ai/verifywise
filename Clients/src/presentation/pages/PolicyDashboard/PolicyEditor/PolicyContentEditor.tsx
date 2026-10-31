@@ -23,6 +23,8 @@ export interface PolicyContentEditorProps {
   findReplace: ReturnType<typeof usePolicyFindReplace>;
   /** Sidebar rendered next to the editor surface (e.g. PolicyReviewPanel). */
   children?: ReactNode;
+  /** Hides the formatting toolbar for roles that cannot edit policies. */
+  readOnly?: boolean;
 }
 
 /** TipTap editor region: toolbar, find/replace, link modal, editor surface. */
@@ -39,6 +41,7 @@ export function PolicyContentEditor({
   onInsertLink,
   findReplace,
   children,
+  readOnly = false,
 }: PolicyContentEditorProps) {
   const theme = useTheme();
 
@@ -59,13 +62,15 @@ export function PolicyContentEditor({
         onChange={onImageFileChange}
       />
 
-      <PolicyToolbar
-        editor={editor}
-        isUploadingImage={isUploadingImage}
-        onInsertImage={() => imageInputRef.current?.click()}
-        onOpenLink={onOpenLink}
-        onOpenFindReplace={findReplace.openFindReplace}
-      />
+      {!readOnly && (
+        <PolicyToolbar
+          editor={editor}
+          isUploadingImage={isUploadingImage}
+          onInsertImage={() => imageInputRef.current?.click()}
+          onOpenLink={onOpenLink}
+          onOpenFindReplace={findReplace.openFindReplace}
+        />
+      )}
 
       <FindReplacePopover
         anchorEl={findReplace.searchAnchorEl}
@@ -100,18 +105,19 @@ export function PolicyContentEditor({
           <GlobalStyles styles={policyEditorStyles} />
         </Box>
 
-        {contentError && (
-          <Typography
-            component="span"
-            color={theme.palette.status?.error?.text || theme.palette.error.main}
-            sx={{ opacity: 0.8, fontSize: 11, mt: 1 }}
-          >
-            {contentError}
-          </Typography>
-        )}
-
         {children}
       </Stack>
+
+      {/* Rendered below the editor row, not beside it (#3923). */}
+      {contentError && (
+        <Typography
+          component="span"
+          color={theme.palette.status?.error?.text || theme.palette.error.main}
+          sx={{ opacity: 0.8, fontSize: 11, mt: 1 }}
+        >
+          {contentError}
+        </Typography>
+      )}
     </>
   );
 }

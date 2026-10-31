@@ -13,7 +13,6 @@ from fastapi import APIRouter, HTTPException, Query, Request, status
 
 from crud import spend as spend_crud
 from database.db import get_db
-from middlewares.auth import verify_internal_key
 from utils.auth import get_org_id, require_admin
 
 router = APIRouter(prefix="/spend", tags=["spend"])
@@ -80,7 +79,6 @@ async def spend_summary(
     Sub-queries run sequentially: an AsyncSession does not allow concurrent
     operations, so asyncio.gather on one session fails intermittently.
     """
-    verify_internal_key(request)
     org_id = get_org_id(request)
     start_date, end_date = get_date_range(period)
 
@@ -117,7 +115,6 @@ async def spend_by_endpoint(
     period: str = Query("7d", description="Time period: 1d | 7d | 30d | 90d"),
 ):
     """Return cost/requests/tokens grouped by endpoint for the given period."""
-    verify_internal_key(request)
     org_id = get_org_id(request)
     start_date, end_date = get_date_range(period)
 
@@ -142,7 +139,6 @@ async def spend_by_user(
     period: str = Query("7d", description="Time period: 1d | 7d | 30d | 90d"),
 ):
     """Return cost/requests/tokens grouped by user for the given period."""
-    verify_internal_key(request)
     org_id = get_org_id(request)
     start_date, end_date = get_date_range(period)
 
@@ -171,7 +167,6 @@ async def spend_by_tag(
     Return cost/requests/tokens grouped by the value of a specific metadata
     tag key.  The tag key must match ^[a-zA-Z0-9_-]{1,64}$.
     """
-    verify_internal_key(request)
     _validate_tag_key(tag)
 
     org_id = get_org_id(request)
@@ -198,7 +193,6 @@ async def spend_by_tag(
 @router.get("/exists", summary="Whether the organisation has any spend logs")
 async def spend_logs_exist(request: Request):
     """Cheap first-time check for the dashboard (no count, no joins)."""
-    verify_internal_key(request)
     org_id = get_org_id(request)
 
     async with get_db() as db:
@@ -236,7 +230,6 @@ async def spend_logs(
     Return a paginated list of individual spend log entries with full JOIN
     context (endpoint, user, virtual key).
     """
-    verify_internal_key(request)
     org_id = get_org_id(request)
 
     # Validate enum-like fields
@@ -290,7 +283,6 @@ async def purge_spend_logs(
     settings.  Falls back to 90 days if not configured.
     Only accessible by Admin-role users.
     """
-    verify_internal_key(request)
     require_admin(request)
 
     org_id = get_org_id(request)

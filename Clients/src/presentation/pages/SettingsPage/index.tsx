@@ -10,8 +10,10 @@ import Preferences from "./Preferences/index";
 import Features from "./Features/index";
 import allowedRoles from "../../../application/constants/permissions";
 import { useAuth } from "../../../application/hooks/useAuth";
+import { useHasPermission, useMyPermissions } from "../../../application/hooks/useMyPermissions";
 import ApiKeys from "./ApiKeys";
 import AuditLedger from "./AuditLedger";
+import DataRetention from "./DataRetention";
 import EntraIdConfig from "./EntraIdConfig";
 import { useSsoFeatureEnabled } from "../../../application/hooks/useSsoFeatureEnabled";
 import CustomFieldsTab from "./CustomFields";
@@ -36,6 +38,7 @@ const BUILT_IN_TABS = [
   "features",
   "apikeys",
   "audit-ledger",
+  "data-retention",
   "sso",
   "custom-fields",
   ...(SHOW_AI_APPROVAL_RULES ? ["ai-approval-rules"] : []),
@@ -50,6 +53,14 @@ export default function ProfilePage() {
   const isApiKeysDisabled = !allowedRoles.apiKeys?.view?.includes(userRoleName);
   const isFeaturesDisabled = !allowedRoles.features?.manage?.includes(userRoleName);
   const isAuditLedgerDisabled = userRoleName !== "Admin";
+  // Data retention follows the organization.admin permission its routes
+  // authorize on, so a custom role granted it gets the tab too.
+  const canManageRetention = useHasPermission("organization.admin", { fallbackToAdmin: true });
+  // Resolved means the permissions arrived (or failed, when the Admin fallback
+  // applies). A disabled query (no user yet) is not resolved, even though
+  // React Query reports it as not loading.
+  const { permissions, error: permissionsError } = useMyPermissions();
+  const permissionsResolved = permissions !== undefined || Boolean(permissionsError);
   const isCustomFieldsDisabled = userRoleName !== "Admin";
 
   const { tab } = useParams<{ tab?: string }>();
@@ -76,6 +87,16 @@ export default function ProfilePage() {
       setActiveTab(defaultTab);
     }
   }, [tab, validTabs, navigate]);
+
+  // The Data retention panel only renders when permitted, so a direct link
+  // without the permission would show an empty page. Once permissions are
+  // known, fall back to the default tab instead.
+  useEffect(() => {
+    if (activeTab === "data-retention" && permissionsResolved && !canManageRetention) {
+      navigate("/settings", { replace: true });
+      setActiveTab(defaultTab);
+    }
+  }, [activeTab, permissionsResolved, canManageRetention, navigate]);
 
   // Handle navigation state from command palette
   useEffect(() => {
@@ -169,6 +190,16 @@ export default function ProfilePage() {
                   },
                 ]
               : []),
+            ...(canManageRetention
+              ? [
+                  {
+                    label: "Data retention",
+                    value: "data-retention",
+                    icon: "Archive" as TabItem["icon"],
+                    tooltip: "How long each kind of record is kept",
+                  },
+                ]
+              : []),
             ...(ssoFeatureEnabled
               ? [
                   {
@@ -238,6 +269,11 @@ export default function ProfilePage() {
         {!isAuditLedgerDisabled && (
           <TabPanel sx={{ p: 0 }} value="audit-ledger">
             <AuditLedger />
+          </TabPanel>
+        )}
+        {canManageRetention && (
+          <TabPanel sx={{ p: 0 }} value="data-retention">
+            <DataRetention />
           </TabPanel>
         )}
 

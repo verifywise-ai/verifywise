@@ -4,13 +4,13 @@ import TabPanel from "@mui/lab/TabPanel";
 import { SyntheticEvent, useState, useEffect, useMemo } from "react";
 import TabContext from "@mui/lab/TabContext";
 import VWProjectOverview from "./Overview";
-import { useSearchParams } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import CustomizableSkeleton from "../../../components/Skeletons";
 import VWProjectRisks from "./ProjectRisks";
 import LinkedModels from "./LinkedModels";
 import ProjectSettings from "../ProjectSettings";
 import useProjectData from "../../../../application/hooks/useProjectData";
-import ProjectFrameworks from "../ProjectFrameworks";
+import ProjectFrameworks, { FRAMEWORK_IDS } from "../ProjectFrameworks";
 import CustomizableToast from "../../../components/Toast";
 import CEMarking from "../CEMarking";
 import Activity from "../Activity";
@@ -21,7 +21,9 @@ import { PageBreadcrumbs } from "../../../components/breadcrumbs/PageBreadcrumbs
 import { useAuth } from "../../../../application/hooks/useAuth";
 import { BreadcrumbItem } from "../../../types/interfaces/i.breadcrumbs";
 import { getRouteIcon } from "../../../components/breadcrumbs/routeMapping";
-import { FileText as FileTextIcon } from "lucide-react";
+import { FileText as FileTextIcon, FileX as FileXIcon } from "lucide-react";
+import { EmptyState } from "../../../components/EmptyState";
+import { CustomizableButton } from "../../../components/button/customizable-button";
 import TabBar from "../../../components/TabBar";
 import { getAllProjectRisksByProjectId } from "../../../../application/repository/projectRisk.repository";
 import { getAllEntities } from "../../../../application/repository/entity.repository";
@@ -41,7 +43,15 @@ const VWProjectView = () => {
   const tabParam = searchParams.get("tab");
   const framework = searchParams.get("framework");
   const [refreshKey, setRefreshKey] = useState(0);
-  const { project } = useProjectData({ projectId, refreshKey });
+  const navigate = useNavigate();
+  const {
+    project,
+    error: projectError,
+    isLoading: isProjectLoading,
+  } = useProjectData({
+    projectId,
+    refreshKey,
+  });
   const { isEnabled } = useExtensions();
 
   const projectSource = (project as any)?._source;
@@ -167,6 +177,35 @@ const VWProjectView = () => {
     return "This tab is currently unavailable.";
   };
 
+  // A deleted use case, a stale link, a use case the user cannot access or a
+  // failed request used to leave the page on skeletons forever. Say so, and
+  // offer a retry and the way back.
+  if (!project && projectError && !isProjectLoading) {
+    return (
+      <Stack className="vw-project-view">
+        <PageBreadcrumbs items={breadcrumbItems} autoGenerate={false} showCurrentPage={true} />
+        <Stack sx={{ mt: "16px", gap: "16px", alignItems: "center" }}>
+          <EmptyState
+            icon={FileXIcon}
+            message="This use case could not be loaded. It may have been deleted, you may not have access to it, or the connection failed."
+          />
+          <Stack direction="row" sx={{ gap: "8px" }}>
+            <CustomizableButton
+              variant="outlined"
+              text="Try again"
+              onClick={() => setRefreshKey((key) => key + 1)}
+            />
+            <CustomizableButton
+              variant="contained"
+              text="Back to use cases"
+              onClick={() => navigate("/overview")}
+            />
+          </Stack>
+        </Stack>
+      </Stack>
+    );
+  }
+
   return (
     <Stack className="vw-project-view">
       <PageBreadcrumbs items={breadcrumbItems} autoGenerate={false} showCurrentPage={true} />
@@ -174,12 +213,12 @@ const VWProjectView = () => {
       <Stack className="vw-project-view-header" sx={{ mb: 10 }}>
         {project ? (
           <>
-            <Typography sx={projectViewHeaderTitle}>Use-case general view</Typography>
+            <Typography component="h1" sx={projectViewHeaderTitle}>
+              {project.uc_id ? `${project.uc_id}: ` : ""}
+              {project.project_title}
+            </Typography>
             <Typography sx={projectViewHeaderDesc}>
-              This use case includes all the governance process status of{" "}
-              <Typography component="span" sx={{ color: "brand.primary", fontSize: "inherit" }}>
-                {project.project_title}
-              </Typography>
+              Governance status, risks, frameworks and activity for this use case.
             </Typography>
           </>
         ) : (
@@ -226,7 +265,7 @@ const VWProjectView = () => {
                 tooltip: "Compliance frameworks applied to this use case",
               },
               {
-                label: "CE Marking",
+                label: "CE marking",
                 value: "ce-marking",
                 icon: "Award",
                 disabled: isApprovalBlocked,
@@ -300,15 +339,12 @@ const VWProjectView = () => {
               <ProjectFrameworks
                 project={project}
                 triggerRefresh={handleRefresh}
-                initialFrameworkId={
-                  framework === "iso-42001"
-                    ? 2
-                    : framework === "eu-ai-act"
-                      ? 1
-                      : project.framework && project.framework.length > 0
-                        ? project.framework[0].framework_id
-                        : 1
-                }
+                // Only the deep link. With no override ProjectFrameworks
+                // selects its own first framework, against the project's
+                // pairings intersected with the loaded framework list — a
+                // better list than project.framework, so picking one here too
+                // would be a second answer that can disagree with it.
+                initialFrameworkId={framework === "eu-ai-act" ? FRAMEWORK_IDS.EU_AI_ACT : undefined}
               />
             ) : (
               <CustomizableSkeleton variant="rectangular" width="100%" height={400} />

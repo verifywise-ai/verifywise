@@ -1,0 +1,90 @@
+{
+  "placeholder": {
+    "title": "Needs more detail",
+    "text": "This answer looks like a placeholder. Describe the task, what the output is and what happens with it."
+  },
+  "too_short": {
+    "title": "Needs more detail",
+    "text": "This answer is very short. Describe the task, what the output is and what happens with it."
+  },
+  "art5_manipulation": {
+    "title": "Possible prohibited practice",
+    "text": "This answer may describe a practice prohibited under the EU AI Act. Manipulative or deceptive techniques that materially distort behaviour and are likely to cause significant harm are prohibited.",
+    "ref": "EU AI Act, Article 5(1)(a)"
+  },
+  "art5_exploit_vulnerabilities": {
+    "title": "Possible prohibited practice",
+    "text": "This answer may describe a practice prohibited under the EU AI Act. Exploiting vulnerabilities due to age, disability or a social or economic situation is prohibited.",
+    "ref": "EU AI Act, Article 5(1)(b)"
+  },
+  "art5_social_scoring": {
+    "title": "Possible prohibited practice",
+    "text": "This answer may describe a practice prohibited under the EU AI Act. Social scoring that leads to unjustified or unrelated detrimental treatment is prohibited.",
+    "ref": "EU AI Act, Article 5(1)(c)"
+  },
+  "art5_crime_prediction": {
+    "title": "Possible prohibited practice",
+    "text": "This answer may describe a practice prohibited under the EU AI Act. Predicting criminal offences based solely on profiling or personality traits is prohibited.",
+    "ref": "EU AI Act, Article 5(1)(d)"
+  },
+  "art5_facial_scraping": {
+    "title": "Possible prohibited practice",
+    "text": "This answer may describe a practice prohibited under the EU AI Act. Building facial recognition databases through untargeted scraping is prohibited.",
+    "ref": "EU AI Act, Article 5(1)(e)"
+  },
+  "art5_emotion_workplace_education": {
+    "title": "Possible prohibited practice",
+    "text": "This answer may describe a practice prohibited under the EU AI Act. Emotion recognition at work or in education institutions, other than for medical or safety reasons, is prohibited.",
+    "ref": "EU AI Act, Article 5(1)(f)"
+  },
+  "art5_biometric_categorisation": {
+    "title": "Possible prohibited practice",
+    "text": "This answer may describe a practice prohibited under the EU AI Act. Biometric categorisation to infer sensitive characteristics is prohibited.",
+    "ref": "EU AI Act, Article 5(1)(g)"
+  },
+  "annex3_biometrics_use": {
+    "title": "Possible high-risk use",
+    "text": "This answer mentions biometrics. AI used in this area may be high-risk under the EU AI Act.",
+    "ref": "EU AI Act, Annex III, point 1"
+  },
+  "annex3_critical_infrastructure_use": {
+    "title": "Possible high-risk use",
+    "text": "This answer mentions critical infrastructure. AI used in this area may be high-risk under the EU AI Act.",
+    "ref": "EU AI Act, Annex III, point 2"
+  },
+  "annex3_education_use": {
+    "title": "Possible high-risk use",
+    "text": "This answer mentions education or vocational training. AI used in this area may be high-risk under the EU AI Act.",
+    "ref": "EU AI Act, Annex III, point 3"
+  },
+  "annex3_employment_use": {
+    "title": "Possible high-risk use",
+    "text": "This answer mentions employment or worker management. AI used in this area may be high-risk under the EU AI Act.",
+    "ref": "EU AI Act, Annex III, point 4"
+  },
+  "annex3_essential_services_use": {
+    "title": "Possible high-risk use",
+    "text": "This answer mentions access to essential private or public services. AI used in this area may be high-risk under the EU AI Act.",
+    "ref": "EU AI Act, Annex III, point 5"
+  },
+  "annex3_law_enforcement_use": {
+    "title": "Possible high-risk use",
+    "text": "This answer mentions law enforcement. AI used in this area may be high-risk under the EU AI Act.",
+    "ref": "EU AI Act, Annex III, point 6"
+  },
+  "annex3_migration_use": {
+    "title": "Possible high-risk use",
+    "text": "This answer mentions migration, asylum or border control. AI used in this area may be high-risk under the EU AI Act.",
+    "ref": "EU AI Act, Annex III, point 7"
+  },
+  "annex3_justice_democracy_use": {
+    "title": "Possible high-risk use",
+    "text": "This answer mentions the administration of justice or democratic processes. AI used in this area may be high-risk under the EU AI Act.",
+    "ref": "EU AI Act, Annex III, point 8"
+  },
+  "gdpr_art22": {
+    "title": "Decisions without human review",
+    "text": "This answer may describe decisions made without human review. Under GDPR, people have the right not to be subject to a decision based solely on automated processing that significantly affects them.",
+    "ref": "GDPR, Article 22"
+  }
+}

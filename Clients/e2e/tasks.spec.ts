@@ -317,9 +317,6 @@ test.describe("Tasks", () => {
 
     await expect(rowsPerPage.first()).toBeVisible({ timeout: 15_000 });
 
-    // Get initial row count
-    const initialRows = await page.getByRole("row").count();
-
     await rowsPerPage.first().click();
     await page.waitForTimeout(500);
 

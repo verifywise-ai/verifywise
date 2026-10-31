@@ -6,12 +6,13 @@ import { CustomizableButton } from "../../button/customizable-button";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import { AgentPrimitiveRow } from "../../../../domain/interfaces/i.agentDiscovery";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
-import LinkModelModal from "./LinkModelModal";
+import LinkAgentModal, { AgentLinkKind } from "./LinkAgentModal";
 import Alert from "../../Alert";
 import { getClientErrorReason } from "../../../../application/utils/apiErrorReason";
 import { useHasPermission } from "../../../../application/hooks/useMyPermissions";
 import {
   formatSourceLabel,
+  formatUseCaseLabel,
   getAgentOwnerIds,
   getReviewStatusDisplay,
 } from "../../../pages/AgentDiscovery/agentLabels";
@@ -36,7 +37,13 @@ const ReviewAgentModal: React.FC<ReviewAgentModalProps> = ({
 }) => {
   const formatUserDate = useFormattedDate();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
+  const [isLinkOpen, setIsLinkOpen] = useState(false);
+  // Set only when the link drawer opens, so it keeps its kind while it closes.
+  const [linkKind, setLinkKind] = useState<AgentLinkKind>("model");
+  const openLink = (kind: AgentLinkKind) => {
+    setLinkKind(kind);
+    setIsLinkOpen(true);
+  };
   const [actionError, setActionError] = useState<string | null>(null);
   // Review, link, unlink and edit need the agentDiscovery.admin permission
   // (Admins by default) on the server; everyone else gets a read-only view.
@@ -59,6 +66,7 @@ const ReviewAgentModal: React.FC<ReviewAgentModalProps> = ({
   const linkedModelName = agent.linked_model_inventory_id
     ? linkedModelLabel || `Model #${agent.linked_model_inventory_id}`
     : null;
+  const linkedUseCaseName = agent.linked_project_id ? formatUseCaseLabel(agent) : null;
   const reviewedByName = agent.reviewed_by ? formatUser(agent.reviewed_by) : null;
   const reviewStatus = getReviewStatusDisplay(agent.review_status);
 
@@ -77,18 +85,23 @@ const ReviewAgentModal: React.FC<ReviewAgentModalProps> = ({
     }
   };
 
-  const handleUnlink = async () => {
+  const handleUnlink = async (path: "unlink-model" | "unlink-use-case") => {
+    // One request at a time: a double click must not send a second unlink.
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     setActionError(null);
     try {
-      await apiServices.patch(`/agent-primitives/${agent.id}/unlink-model`);
+      await apiServices.patch(`/agent-primitives/${agent.id}/${path}`);
       onSuccess();
     } catch (error) {
       setActionError(getClientErrorReason(error) ?? "Could not update the agent. Try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleLinkSuccess = () => {
-    setIsLinkModalOpen(false);
+    setIsLinkOpen(false);
     onSuccess();
   };
 
@@ -219,32 +232,27 @@ const ReviewAgentModal: React.FC<ReviewAgentModalProps> = ({
             </>
           )}
 
-          {/* Model link */}
-          <Box>
-            <Typography fontSize={12} fontWeight={600} color="text.secondary" mb="8px">
-              Linked model
-            </Typography>
-            {agent.linked_model_inventory_id ? (
-              <Stack direction="row" alignItems="center" gap="8px">
-                <Typography fontSize={13}>{linkedModelName}</Typography>
-                {canManage && (
-                  <IconButton size="small" onClick={handleUnlink} title="Unlink model">
-                    <Unlink size={14} strokeWidth={1.5} />
-                  </IconButton>
-                )}
-              </Stack>
-            ) : !canManage ? (
-              <Typography fontSize={13}>Not linked</Typography>
-            ) : (
-              <CustomizableButton
-                variant="outlined"
-                sx={{ border: `1px solid ${palette.border.dark}` }}
-                icon={<LinkIcon size={14} strokeWidth={1.5} />}
-                text="Link to model"
-                onClick={() => setIsLinkModalOpen(true)}
-              />
-            )}
-          </Box>
+          {/* Links. These work for synced agents too, which cannot be edited. */}
+          <LinkSection
+            label="Linked use case"
+            linkedName={linkedUseCaseName}
+            canManage={canManage}
+            linkText="Link to use case"
+            unlinkTitle="Unlink use case"
+            disabled={isSubmitting}
+            onLink={() => openLink("useCase")}
+            onUnlink={() => handleUnlink("unlink-use-case")}
+          />
+          <LinkSection
+            label="Linked model"
+            linkedName={linkedModelName}
+            canManage={canManage}
+            linkText="Link to model"
+            unlinkTitle="Unlink model"
+            disabled={isSubmitting}
+            onLink={() => openLink("model")}
+            onUnlink={() => handleUnlink("unlink-model")}
+          />
 
           {/* Raw metadata — discovery-derived (region/project/etc). Hidden for
               manual agents, whose only metadata (notes) is shown above. */}
@@ -336,15 +344,61 @@ const ReviewAgentModal: React.FC<ReviewAgentModalProps> = ({
         </Stack>
       </Drawer>
 
-      <LinkModelModal
-        isOpen={isLinkModalOpen}
-        setIsOpen={setIsLinkModalOpen}
+      <LinkAgentModal
+        isOpen={isLinkOpen}
+        setIsOpen={setIsLinkOpen}
         agentId={agent.id}
+        kind={linkKind}
         onSuccess={handleLinkSuccess}
       />
     </>
   );
 };
+
+/** One link (use case or model): its name with unlink, or a link button. */
+const LinkSection: React.FC<{
+  label: string;
+  linkedName: string | null;
+  canManage: boolean;
+  linkText: string;
+  unlinkTitle: string;
+  disabled: boolean;
+  onLink: () => void;
+  onUnlink: () => void;
+}> = ({ label, linkedName, canManage, linkText, unlinkTitle, disabled, onLink, onUnlink }) => (
+  <Box>
+    <Typography fontSize={12} fontWeight={600} color="text.secondary" mb="8px">
+      {label}
+    </Typography>
+    {linkedName ? (
+      <Stack direction="row" alignItems="center" gap="8px">
+        <Typography fontSize={13}>{linkedName}</Typography>
+        {canManage && (
+          <IconButton
+            size="small"
+            onClick={onUnlink}
+            disabled={disabled}
+            title={unlinkTitle}
+            aria-label={unlinkTitle}
+          >
+            <Unlink size={14} strokeWidth={1.5} />
+          </IconButton>
+        )}
+      </Stack>
+    ) : !canManage ? (
+      <Typography fontSize={13}>Not linked</Typography>
+    ) : (
+      <CustomizableButton
+        variant="outlined"
+        sx={{ border: `1px solid ${palette.border.dark}` }}
+        icon={<LinkIcon size={14} strokeWidth={1.5} />}
+        text={linkText}
+        isDisabled={disabled}
+        onClick={onLink}
+      />
+    )}
+  </Box>
+);
 
 const DetailRow: React.FC<{
   label: string;

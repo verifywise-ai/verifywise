@@ -12,6 +12,7 @@ import {
 import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import NewExperimentModal from "../NewExperimentModal";
+import { REJECTED_SAVED_KEY_HINT } from "../NewExperiment/newExperimentConfig";
 
 const DEFAULT_TEMPLATE_PATH = "chatbot/chatbot_basic.json";
 
@@ -105,10 +106,11 @@ describe("NewExperimentModal", () => {
         "HuggingFace",
         "Ollama",
         "Custom / Self-hosted",
-        "Local",
       ]) {
         expect(screen.getByText(name)).toBeInTheDocument();
       }
+      // EvalServer does not run local model files; there is no bare "Local" provider
+      expect(screen.queryByText("Local")).not.toBeInTheDocument();
 
       // No saved models in the org yet → the "Saved Models" section stays hidden.
       expect(screen.queryByText("Saved Models")).not.toBeInTheDocument();
@@ -199,8 +201,8 @@ describe("NewExperimentModal", () => {
 
       fireEvent.click(screen.getByText("OpenAI"));
 
-      // Cloud provider renders a model Select + API key field
-      expect(await screen.findByText("Select a model")).toBeInTheDocument();
+      // Cloud provider renders the searchable model picker + API key field
+      expect(await screen.findByPlaceholderText("Search or type a model ID")).toBeInTheDocument();
       expect(screen.getByLabelText("API key")).toBeInTheDocument();
     });
 
@@ -218,6 +220,168 @@ describe("NewExperimentModal", () => {
         await screen.findByText("API key configured — will be saved for future experiments"),
       ).toBeInTheDocument();
       expect(screen.queryByLabelText("API key")).not.toBeInTheDocument();
+      expect(deepEvalMocks.verifySavedLlmApiKey).toHaveBeenCalledWith(1);
+    });
+
+    it("asks for a new key when the provider rejects the saved one", async () => {
+      deepEvalMocks.getAllLlmApiKeys.mockResolvedValue([
+        { id: 6, provider: "google", apiKey: "AIza-dead" },
+      ]);
+      deepEvalMocks.verifySavedLlmApiKey.mockResolvedValue({ valid: false });
+
+      renderModal();
+      await screen.findByText("Model provider");
+
+      fireEvent.click(screen.getByText("Gemini"));
+
+      expect(await screen.findByLabelText("API key")).toBeInTheDocument();
+      expect(screen.getByText(REJECTED_SAVED_KEY_HINT)).toBeInTheDocument();
+      expect(
+        screen.queryByText("API key configured — will be saved for future experiments"),
+      ).not.toBeInTheDocument();
+      expect(deepEvalMocks.verifySavedLlmApiKey).toHaveBeenCalledTimes(1);
+    });
+
+    it("checks the saved key again after the wizard is closed and reopened", async () => {
+      deepEvalMocks.getAllLlmApiKeys.mockResolvedValue([
+        { id: 6, provider: "google", apiKey: "AIza-fixed" },
+      ]);
+      deepEvalMocks.verifySavedLlmApiKey.mockResolvedValue({ valid: false });
+      const modal = (isOpen: boolean) => (
+        <NewExperimentModal
+          isOpen={isOpen}
+          onClose={vi.fn()}
+          projectId="proj-1"
+          orgId="org-1"
+          onSuccess={vi.fn()}
+          onStarted={vi.fn()}
+          useCase="chatbot"
+          existingExperimentNames={[]}
+        />
+      );
+
+      const { rerender } = renderWithProviders(modal(true));
+      fireEvent.click(await screen.findByText("Gemini"));
+      expect(await screen.findByText(REJECTED_SAVED_KEY_HINT)).toBeInTheDocument();
+
+      // The key is fixed in AI Gateway settings (same id) while the wizard is closed
+      deepEvalMocks.verifySavedLlmApiKey.mockResolvedValue({ valid: true });
+      rerender(modal(false));
+      rerender(modal(true));
+      fireEvent.click(await screen.findByText("Gemini"));
+
+      expect(
+        await screen.findByText("API key configured — will be saved for future experiments"),
+      ).toBeInTheDocument();
+      expect(screen.queryByText(REJECTED_SAVED_KEY_HINT)).not.toBeInTheDocument();
+      expect(deepEvalMocks.verifySavedLlmApiKey).toHaveBeenCalledTimes(2);
+    });
+
+    it("checks the last loaded keys again when the key list fails to load on reopen", async () => {
+      deepEvalMocks.getAllLlmApiKeys.mockResolvedValue([
+        { id: 6, provider: "google", apiKey: "AIza-dead" },
+      ]);
+      deepEvalMocks.verifySavedLlmApiKey.mockResolvedValue({ valid: false });
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const modal = (isOpen: boolean) => (
+        <NewExperimentModal
+          isOpen={isOpen}
+          onClose={vi.fn()}
+          projectId="proj-1"
+          orgId="org-1"
+          onSuccess={vi.fn()}
+          onStarted={vi.fn()}
+          useCase="chatbot"
+          existingExperimentNames={[]}
+        />
+      );
+
+      try {
+        const { rerender } = renderWithProviders(modal(true));
+        fireEvent.click(await screen.findByText("Gemini"));
+        expect(await screen.findByText(REJECTED_SAVED_KEY_HINT)).toBeInTheDocument();
+
+        deepEvalMocks.getAllLlmApiKeys.mockRejectedValue(new Error("502"));
+        rerender(modal(false));
+        rerender(modal(true));
+        fireEvent.click(await screen.findByText("Gemini"));
+
+        expect(await screen.findByText(REJECTED_SAVED_KEY_HINT)).toBeInTheDocument();
+        expect(deepEvalMocks.verifySavedLlmApiKey).toHaveBeenCalledTimes(2);
+      } finally {
+        warn.mockRestore();
+      }
+    });
+
+    it("keeps a refused key and does not check it again when orgId arrives late", async () => {
+      deepEvalMocks.getAllLlmApiKeys.mockResolvedValue([
+        { id: 6, provider: "google", apiKey: "AIza-dead" },
+      ]);
+      deepEvalMocks.verifySavedLlmApiKey.mockResolvedValue({ valid: false });
+      const modal = (orgId: string | null) => (
+        <NewExperimentModal
+          isOpen
+          onClose={vi.fn()}
+          projectId="proj-1"
+          orgId={orgId}
+          onSuccess={vi.fn()}
+          onStarted={vi.fn()}
+          useCase="chatbot"
+          existingExperimentNames={[]}
+        />
+      );
+
+      const { rerender } = renderWithProviders(modal(null));
+      fireEvent.click(await screen.findByText("Gemini"));
+      expect(await screen.findByText(REJECTED_SAVED_KEY_HINT)).toBeInTheDocument();
+
+      rerender(modal("org-1"));
+      // Only the saved models depend on orgId; let that reload settle before asserting
+      await waitFor(() => expect(deepEvalMocks.listModels).toHaveBeenLastCalledWith("org-1"));
+      await act(async () => {});
+
+      expect(screen.getByText(REJECTED_SAVED_KEY_HINT)).toBeInTheDocument();
+      expect(screen.getByLabelText("API key")).toBeInTheDocument();
+      expect(deepEvalMocks.getAllLlmApiKeys).toHaveBeenCalledTimes(1);
+      expect(deepEvalMocks.verifySavedLlmApiKey).toHaveBeenCalledTimes(1);
+    });
+
+    it("keeps the late orgId's saved models when the open's older list arrives after them", async () => {
+      const savedModel = (id: number, name: string) => ({
+        id,
+        name,
+        provider: "OpenAI",
+        endpointUrl: "",
+        updatedAt: "2025-01-01T00:00:00Z",
+      });
+      let resolveOrgless: (models: unknown[]) => void = () => {};
+      deepEvalMocks.listModels.mockImplementation((org?: string) =>
+        org
+          ? Promise.resolve([savedModel(2, "org-model")])
+          : new Promise((resolve) => {
+              resolveOrgless = resolve;
+            }),
+      );
+      const modal = (orgId: string | null) => (
+        <NewExperimentModal
+          isOpen
+          onClose={vi.fn()}
+          projectId="proj-1"
+          orgId={orgId}
+          onSuccess={vi.fn()}
+          onStarted={vi.fn()}
+          useCase="chatbot"
+          existingExperimentNames={[]}
+        />
+      );
+
+      const { rerender } = renderWithProviders(modal(null));
+      rerender(modal("org-1"));
+      await waitFor(() => expect(deepEvalMocks.listModels).toHaveBeenCalledWith("org-1"));
+      await act(async () => resolveOrgless([savedModel(1, "orgless-model")]));
+
+      expect(await screen.findByText("org-model")).toBeInTheDocument();
+      expect(screen.queryByText("orgless-model")).not.toBeInTheDocument();
     });
   });
 
@@ -388,13 +552,49 @@ describe("NewExperimentModal", () => {
       // First submit triggers model validation → warning
       fireEvent.click(screen.getByRole("button", { name: "Start Experiment" }));
       expect(await screen.findByText("API key may not be configured")).toBeInTheDocument();
-      expect(deepEvalMocks.validateModel).toHaveBeenCalledWith("gpt-4o", "openai");
+      expect(deepEvalMocks.validateModel).toHaveBeenCalledWith("gpt-4o", "openai", true);
       expect(deepEvalMocks.createExperiment).not.toHaveBeenCalled();
 
       // Second submit acknowledges the warning and creates the experiment
       fireEvent.click(screen.getByRole("button", { name: "Start Experiment" }));
       await waitFor(() => expect(deepEvalMocks.createExperiment).toHaveBeenCalled());
       expect(onStarted).toHaveBeenCalled();
+    });
+
+    it("says the provider refused the model when the live check fails", async () => {
+      deepEvalMocks.listModels.mockResolvedValue([
+        {
+          id: 1,
+          name: "gpt-4o",
+          provider: "OpenAI",
+          endpointUrl: "",
+          updatedAt: "2025-01-01T00:00:00Z",
+        },
+      ]);
+      deepEvalMocks.validateModel.mockResolvedValue({
+        valid: false,
+        probe_failed: true,
+        probe_error_code: "model_not_found",
+        error_message: "The model was not found or is not available to this API key.",
+        provider: "openai",
+      });
+      deepEvalMocks.readDataset.mockResolvedValue({ prompts: samplePrompts });
+      mockListDatasetsWith("chatbot", [DEFAULT_TEMPLATE_PATH]);
+
+      renderModal();
+      fireEvent.click(await screen.findByText("gpt-4o"));
+      await goToDatasetStep();
+      await waitFor(() =>
+        expect(deepEvalMocks.readDataset).toHaveBeenCalledWith(DEFAULT_TEMPLATE_PATH),
+      );
+      await goToScorerStep();
+      await selectLocalJudge();
+      await goToMetricsStep();
+
+      fireEvent.click(screen.getByRole("button", { name: "Start Experiment" }));
+      expect(await screen.findByText("The provider refused this model")).toBeInTheDocument();
+      expect(screen.getByText(/not available to this API key/)).toBeInTheDocument();
+      expect(deepEvalMocks.createExperiment).not.toHaveBeenCalled();
     });
   });
 

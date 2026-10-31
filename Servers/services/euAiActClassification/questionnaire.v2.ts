@@ -82,9 +82,10 @@ const QUESTIONS: Question[] = [
   },
   {
     id: "role",
-    text: "Are you the provider or the deployer of this AI system?",
+    text: "What is your role for this AI system? Select all that apply.",
     articleRef: "Article 3(3) and 3(4)",
-    inputType: "single_select",
+    inputType: "multi_select",
+    acceptsSingleValue: true,
     options: [
       {
         value: "provider",

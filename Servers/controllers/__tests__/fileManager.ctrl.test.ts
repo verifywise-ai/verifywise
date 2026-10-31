@@ -248,6 +248,18 @@ describe("fileManager.ctrl", () => {
       expect(res.status).toHaveBeenCalledWith(400);
     });
 
+    it.each(["All reports", "Project risks report"])(
+      "returns 400 and stores nothing when the source is the report source %s",
+      async (source) => {
+        mockValidateUpload.mockReturnValue({ valid: true });
+        const req = createReq({ file: makeFile(), body: { source } });
+        const res = createRes();
+        await uploadFile(req, res);
+        expect(res.status).toHaveBeenCalledWith(400);
+        expect(mockUploadOrgFile).not.toHaveBeenCalled();
+      },
+    );
+
     it("should return 201 on successful upload", async () => {
       mockValidateUpload.mockReturnValue({ valid: true });
       mockUploadOrgFile.mockResolvedValue({
@@ -821,6 +833,32 @@ describe("fileManager.ctrl", () => {
           1,
         );
       });
+    });
+
+    it("lets an Editor who is a project member change a file's retention policy", async () => {
+      const file = makeDbFile({ project_id: 9, uploaded_by: 99 });
+      mockGetFileById.mockResolvedValue(file as any);
+      mockGetUserProjects.mockResolvedValue([{ id: 9 }] as any);
+      mockGetProject.mockResolvedValue({ id: 9, owner: 99 } as any);
+      mockGetFileMeta.mockResolvedValue(file as any);
+      mockUpdateMeta.mockResolvedValue(
+        makeDbFile({ project_id: 9, retention_policy: "1_year" }) as any,
+      );
+
+      const req = createReq({
+        params: { id: "1" },
+        role: "Editor",
+        body: { retention_policy: "1_year" },
+      });
+      const res = createRes();
+      await updateMetadata(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(mockUpdateMeta).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({ retention_policy: "1_year" }),
+        1,
+      );
     });
 
     it("returns 400 when expiry_date is not in YYYY-MM-DD form", async () => {

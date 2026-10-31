@@ -169,6 +169,10 @@ export const incidentManagementContent: ArticleContent = {
       ],
     },
     {
+      type: 'paragraph',
+      text: 'You can move an incident between any of these statuses, including reopening a closed incident. To reopen one, edit the incident and change its status from Closed to the status that fits, such as Investigating. The status change is recorded in the incident\'s activity history.',
+    },
+    {
       type: 'heading',
       id: 'mitigation-actions',
       level: 2,
@@ -204,6 +208,10 @@ export const incidentManagementContent: ArticleContent = {
         'Approval date and timestamp',
         'Approval notes and conditions',
       ],
+    },
+    {
+      type: 'paragraph',
+      text: 'Because approval signs off the closure, reopening a closed incident that was approved sets its approval status back to Pending and clears the approver, approval date and approval notes. The previous values stay in the incident\'s activity history. Once the incident is resolved again, approve it again before closing it. If you change any approval field in the same save that reopens the incident, your approval values are kept instead.',
     },
     {
       type: 'heading',

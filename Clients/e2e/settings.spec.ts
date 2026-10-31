@@ -220,10 +220,6 @@ test.describe("Settings", () => {
       const emailField = page
         .getByPlaceholder(/email/i)
         .or(page.getByRole("textbox", { name: /email/i }));
-      const roleField = page
-        .getByRole("combobox", { name: /role/i })
-        .or(page.getByText(/select.*role/i))
-        .or(page.getByText(/role/i));
 
       if (
         await emailField

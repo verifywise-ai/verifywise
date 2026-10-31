@@ -172,6 +172,26 @@ describe("customAxios", () => {
       });
     });
 
+    it("reads the JSON error body of a download request (Blob) for the toast", async () => {
+      const callback = vi.fn();
+      setShowAlertCallback(callback);
+      const body = new Blob([JSON.stringify({ message: "Bad Request", data: "Bad filter" })], {
+        type: "application/json",
+      });
+      const error = {
+        config: { url: "/audit-ledger/export", responseType: "blob" },
+        response: { status: 400, data: body },
+        message: "Bad Request",
+      };
+
+      await expect(rejected(error)).rejects.toBeDefined();
+      expect(callback).toHaveBeenCalledWith({
+        variant: "error",
+        title: "Error",
+        body: "Bad filter",
+      });
+    });
+
     it("falls back to the top-level message for legacy raw 4xx bodies", async () => {
       const callback = vi.fn();
       setShowAlertCallback(callback);
@@ -188,6 +208,93 @@ describe("customAxios", () => {
         title: "Error",
         body: "Already exists",
       });
+    });
+
+    it("does not show a toast for the custom fields options_in_use 409 (the page asks where to move answers)", async () => {
+      const callback = vi.fn();
+      setShowAlertCallback(callback);
+
+      const error = {
+        config: { url: "/custom-fields/definitions/5" },
+        response: {
+          status: 409,
+          data: {
+            message: "Conflict",
+            data: { message: "Some removed options are in use.", code: "options_in_use" },
+          },
+        },
+        message: "Conflict",
+      };
+
+      await expect(rejected(error)).rejects.toEqual(error);
+      expect(callback).not.toHaveBeenCalled();
+    });
+
+    it("does not show a toast when the request opted out with suppressGlobalErrorToast", async () => {
+      const callback = vi.fn();
+      setShowAlertCallback(callback);
+
+      for (const status of [409, 400, 500]) {
+        const error = {
+          config: { url: "/ai-incident-managements/42", suppressGlobalErrorToast: true },
+          response: { status, data: { message: "Conflict", data: { code: "CONFLICT" } } },
+          message: "Failed",
+        };
+        await expect(rejected(error)).rejects.toEqual(error);
+      }
+      expect(callback).not.toHaveBeenCalled();
+    });
+
+    it.each(["/modelInventory", "/vendors", "/policies", "/tasks?page=1", "/training"])(
+      "still toasts a list GET %s that did not opt out (other screens rely on the toast)",
+      async (url) => {
+        const callback = vi.fn();
+        setShowAlertCallback(callback);
+
+        const error = {
+          config: { url, method: "get" },
+          response: { status: 500, data: { message: "Server error" } },
+          message: "Internal Server Error",
+        };
+
+        await expect(rejected(error)).rejects.toEqual(error);
+        expect(callback).toHaveBeenCalledWith({
+          variant: "error",
+          title: "Error",
+          body: "An error occurred. Please try again later",
+        });
+      },
+    );
+
+    it("does not toast a list GET that opted out with suppressGlobalErrorToast", async () => {
+      const callback = vi.fn();
+      setShowAlertCallback(callback);
+
+      const error = {
+        config: { url: "/vendors", method: "get", suppressGlobalErrorToast: true },
+        response: { status: 500, data: { message: "Server error" } },
+        message: "Internal Server Error",
+      };
+
+      await expect(rejected(error)).rejects.toEqual(error);
+      expect(callback).not.toHaveBeenCalled();
+    });
+
+    it("still toasts the same incident 409 when the request did not opt out", async () => {
+      const callback = vi.fn();
+      setShowAlertCallback(callback);
+
+      const error = {
+        config: { url: "/ai-incident-managements/42" },
+        response: {
+          status: 409,
+          data: { message: "Conflict", data: { message: "Changed", code: "CONFLICT" } },
+        },
+        message: "Conflict",
+      };
+
+      await expect(rejected(error)).rejects.toEqual(error);
+      expect(callback).toHaveBeenCalled();
     });
 
     it("does not show a toast for 404 (callers handle it as empty state)", async () => {

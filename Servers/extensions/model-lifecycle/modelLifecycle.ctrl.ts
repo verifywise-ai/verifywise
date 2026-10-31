@@ -109,7 +109,12 @@ export async function createItemCtrl(req: Request, res: Response): Promise<any> 
 
 export async function updateItemCtrl(req: Request, res: Response): Promise<any> {
   try {
-    const item = await svc.updateItem(orgId(req), intParam(req, "id"), req.body ?? {});
+    const item = await svc.updateItem(
+      orgId(req),
+      intParam(req, "id"),
+      req.body ?? {},
+      req.userId ?? null,
+    );
     if (item === null) {
       return res.status(400).json(STATUS_CODE[400](req.t!("No fields to update")));
     }
@@ -189,6 +194,9 @@ export async function attachFileCtrl(req: Request, res: Response): Promise<any> 
       uid(req),
       Number(fileId),
     );
+    if (!link) {
+      return res.status(404).json(STATUS_CODE[404](req.t!("File not found")));
+    }
     return res.status(201).json(STATUS_CODE[201](link));
   } catch (err) {
     return fail(res, err, req, "attachFile");
@@ -197,12 +205,16 @@ export async function attachFileCtrl(req: Request, res: Response): Promise<any> 
 
 export async function detachFileCtrl(req: Request, res: Response): Promise<any> {
   try {
-    await svc.detachFile(
+    const detached = await svc.detachFile(
       orgId(req),
       intParam(req, "id"),
       intParam(req, "itemId"),
       intParam(req, "fileId"),
+      uid(req),
     );
+    if (!detached) {
+      return res.status(404).json(STATUS_CODE[404](req.t!("File link not found")));
+    }
     return res.status(200).json(STATUS_CODE[200]({ success: true }));
   } catch (err) {
     return fail(res, err, req, "detachFile");
@@ -237,6 +249,7 @@ export async function removePersonCtrl(req: Request, res: Response): Promise<any
       intParam(req, "id"),
       intParam(req, "itemId"),
       intParam(req, "userId"),
+      uid(req),
     );
     return res.status(200).json(STATUS_CODE[200]({ success: true }));
   } catch (err) {
@@ -272,6 +285,7 @@ export async function removeApproverCtrl(req: Request, res: Response): Promise<a
       intParam(req, "id"),
       intParam(req, "itemId"),
       intParam(req, "userId"),
+      uid(req),
     );
     return res.status(200).json(STATUS_CODE[200]({ success: true }));
   } catch (err) {
@@ -293,6 +307,7 @@ export async function updateApprovalStatusCtrl(req: Request, res: Response): Pro
       intParam(req, "itemId"),
       intParam(req, "userId"),
       status as svc.ApprovalStatus,
+      uid(req),
     );
     if (!row) {
       return res.status(404).json(STATUS_CODE[404](req.t!("Approval record not found")));

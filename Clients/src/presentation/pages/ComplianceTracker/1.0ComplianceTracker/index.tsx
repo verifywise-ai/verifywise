@@ -13,6 +13,7 @@ import useMultipleOnScreen from "../../../../application/hooks/useMultipleOnScre
 import { VerifyWiseContext } from "../../../../application/contexts/VerifyWise.context";
 import { ComplianceData } from "../../../../domain/interfaces/i.compliance";
 import { Project } from "../../../../domain/types/Project";
+import { projectHighRiskRoles } from "../../../../application/utils/highRiskRoles";
 import {
   getComplianceProgress,
   getControlsByControlCategoryId,
@@ -132,6 +133,9 @@ const ComplianceTracker = ({
     }
   };
 
+  // A string key, so a re-fetched project with the same roles does not reload.
+  const highRiskRolesKey = projectHighRiskRoles(project).join(",");
+
   useEffect(() => {
     if (currentProjectId && currentProjectFramework) {
       fetchComplianceData();
@@ -140,14 +144,14 @@ const ComplianceTracker = ({
       // No EU AI Act framework - just stop loading
       setLoading(false);
     }
-    // Also re-fetch when the project's role or risk classification changes,
+    // Also re-fetch when the project's roles or risk classification changes,
     // because the server filters categories by those fields. Without this
     // dependency, editing the use-case settings wouldn't refresh the
     // visible list until the user navigates away and back.
   }, [
     currentProjectId,
     currentProjectFramework,
-    project?.type_of_high_risk_role,
+    highRiskRolesKey,
     project?.ai_risk_classification,
   ]);
 

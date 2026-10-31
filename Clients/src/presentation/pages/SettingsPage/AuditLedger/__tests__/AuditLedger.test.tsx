@@ -29,6 +29,16 @@ vi.mock("../hooks/useAuditLedger", () => ({
   useAuditLedger: () => mockHookState,
 }));
 
+const mockExportAuditLedger = vi.fn();
+vi.mock("../../../../../application/repository/auditLedger.repository", () => ({
+  exportAuditLedger: (...args: unknown[]) => mockExportAuditLedger(...args),
+}));
+
+const mockTriggerBrowserDownload = vi.fn();
+vi.mock("../../../../utils/browserDownload.utils", () => ({
+  triggerBrowserDownload: (...args: unknown[]) => mockTriggerBrowserDownload(...args),
+}));
+
 import AuditLedger from "../index";
 
 const buildEntry = (overrides: Partial<AuditLedgerEntry> = {}): AuditLedgerEntry => ({
@@ -120,6 +130,16 @@ describe("AuditLedger", () => {
     expect(screen.getByText("No audit ledger entries found.")).toBeInTheDocument();
   });
 
+  it("offers custom field changes as an entity type filter", () => {
+    renderWithProviders(<AuditLedger />);
+    const combobox = document
+      .getElementById("audit-entity-type")!
+      .closest(".MuiInputBase-root")!
+      .querySelector('[role="combobox"]') as HTMLElement;
+    fireEvent.mouseDown(combobox);
+    expect(screen.getByRole("option", { name: "Custom field" })).toBeInTheDocument();
+  });
+
   it("renders a table row for each entry", () => {
     renderWithProviders(<AuditLedger />);
     expect(screen.getByText("Jane Doe")).toBeInTheDocument();
@@ -167,6 +187,30 @@ describe("AuditLedger", () => {
     expect(screen.getByText(/hash chain integrity check failed/)).toBeInTheDocument();
   });
 
+  it("shows a retention note when the verified chain starts after pruned records", () => {
+    mockHookState = {
+      ...defaultHookState,
+      verifyResult: {
+        status: "intact",
+        totalEntries: 5,
+        prunedThrough: { id: 10, cutoff: "2025-03-15T00:00:00Z" },
+      },
+    };
+    renderWithProviders(<AuditLedger />);
+    expect(screen.getByTestId("ledger-pruned-note")).toHaveTextContent(
+      /Records before .*2025.* removed by retention policy/,
+    );
+  });
+
+  it("shows no retention note when nothing was pruned", () => {
+    mockHookState = {
+      ...defaultHookState,
+      verifyResult: { status: "intact", totalEntries: 5 },
+    };
+    renderWithProviders(<AuditLedger />);
+    expect(screen.queryByTestId("ledger-pruned-note")).not.toBeInTheDocument();
+  });
+
   it("calls verify when the Verify chain button is clicked", () => {
     renderWithProviders(<AuditLedger />);
     fireEvent.click(screen.getByText("Verify chain"));
@@ -183,5 +227,34 @@ describe("AuditLedger", () => {
     mockHookState = { ...defaultHookState, isVerifying: true };
     renderWithProviders(<AuditLedger />);
     expect(screen.getByText("Verifying...")).toBeInTheDocument();
+  });
+
+  it("exports the current filters and downloads the returned file", async () => {
+    const blob = new Blob(["a,b"], { type: "text/csv" });
+    mockExportAuditLedger.mockResolvedValue({ blob, filename: "audit-ledger-2026-10-11.csv" });
+    mockHookState = {
+      ...defaultHookState,
+      filters: { entity_type: "vendor", entry_type: "", searchUser: "" },
+    };
+    renderWithProviders(<AuditLedger />);
+    fireEvent.click(screen.getByText("Export CSV"));
+    await waitFor(() => {
+      expect(mockExportAuditLedger).toHaveBeenCalledWith(
+        { entity_type: "vendor", entry_type: undefined },
+        expect.any(AbortSignal),
+      );
+      expect(mockTriggerBrowserDownload).toHaveBeenCalledWith(blob, "audit-ledger-2026-10-11.csv");
+    });
+  });
+
+  it("re-enables the export button and downloads nothing when the export fails", async () => {
+    mockExportAuditLedger.mockRejectedValue(new Error("fail"));
+    renderWithProviders(<AuditLedger />);
+    fireEvent.click(screen.getByText("Export CSV"));
+    await waitFor(() => {
+      expect(mockExportAuditLedger).toHaveBeenCalled();
+      expect(screen.getByText("Export CSV").closest("button")).not.toBeDisabled();
+    });
+    expect(mockTriggerBrowserDownload).not.toHaveBeenCalled();
   });
 });

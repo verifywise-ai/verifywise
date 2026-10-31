@@ -17,6 +17,7 @@ import {
   clientFromConfig as jiraClientFromConfig,
   loadFullConfig as jiraLoadFullConfig,
 } from "../extensions/jira-assets/jiraAssets.service";
+import { testConnection as jiraIncidentsTestConnection } from "../extensions/jira-incidents/jiraIncidents.config";
 
 const fileName = "extension.ctrl.ts";
 
@@ -72,6 +73,10 @@ const TEST_CONNECTION_DISPATCH: Record<string, TestConnectionRunner> = {
       testedAt: new Date().toISOString(),
     };
   },
+  // Jira incidents keeps its connection in jira_incidents_config; the runner
+  // overlays the submitted fields on the stored ones and never throws.
+  "jira-incidents": (submitted, organizationId) =>
+    jiraIncidentsTestConnection(organizationId, submitted),
 };
 
 function extractKey(req: Request): string {

@@ -31,7 +31,7 @@ VerifyWise uses a multi-provider email service supporting MJML templates, multip
 │  │  (Templates)     │     │                  │                             │
 │  └────────┬─────────┘     └──────────────────┘                             │
 │           │                                                                 │
-│           │ 3. Variable replacement: {{key}} → value                        │
+│           │ 3. Variable replacement: {{key}} → escaped value                │
 │           ▼                                                                 │
 │  ┌──────────────────────────────────────────────────────────────────────┐  │
 │  │                      Email Provider Factory                           │  │
@@ -149,7 +149,7 @@ Templates are stored in `Servers/templates/` as `.mjml` files.
 
 | Template | Purpose | Key Variables |
 |----------|---------|---------------|
-| `account-creation-email.mjml` | New account invitation | `{{name}}`, `{{link}}` |
+| `account-creation-email.mjml` | New account invitation | `{{link}}`, plus translated copy (`{{heading}}`, `{{greeting}}`, `{{intro}}`, `{{instruction}}`, `{{button}}`, `{{ignore}}`, `{{thanks}}`, `{{footer}}`) |
 | `password-reset-email.mjml` | Password reset | `{{name}}`, `{{email}}`, `{{url}}` |
 | `project-created-admin.mjml` | New project notification | `{{admin_name}}`, `{{project_name}}`, `{{project_url}}` |
 | `user-added-project-admin.mjml` | Added as admin | `{{user_name}}`, `{{project_name}}`, `{{actor_name}}` |
@@ -164,69 +164,64 @@ Templates are stored in `Servers/templates/` as `.mjml` files.
 | `pmm-completed.mjml` | PMM completed | `{{completed_by_name}}`, `{{completed_at}}` |
 | `pmm-flagged-concern.mjml` | Concern flagged | `{{flagged_questions_html}}` |
 
+**Language.** `sendInviteEmail` fills the invitation copy from the backend dictionaries. A known recipient gets the language saved in Settings. An address with no user yet gets the inviter's language. Spanish is a frontend language, so a saved Spanish preference is sent in English, the same as other backend mail.
+
 **Link lifetimes.** An invitation link (`account-creation-email.mjml`) is valid for 30 days after it is sent or resent (`INVITATION_LIFETIME_MS` in `Servers/utils/jwt.utils.ts`). The same constant sets `invitations.expires_at`, which the Team page uses to show "Pending" or "Expired". Invitations sent before this was raised from 7 days keep their original 7-day link; resending issues a new 30-day one. Password-reset links last 1 hour.
 
 ### Template Structure
 
+Templates on the shared palette use one `<mj-head>` (fonts, default attributes and the CSS classes below) through `Servers/templates/partials/email-head.mjml`. Colors come from the shared palette as `{{color...}}` tokens, never as hex. Not every template is migrated yet: the account, access, approval, review and training emails are; others (for example `pmm-*`, `mrm-*`, `intake-*`, `task-*`) still carry their own head and hex colors until they move over.
+
 ```xml
-<!-- Example: pmm-initial-notification.mjml -->
+<!-- Illustrative template using the shared head -->
 <mjml>
-  <mj-head>
-    <mj-font name="Roboto" href="https://fonts.googleapis.com/css?family=Roboto:300,500" />
-    <mj-attributes>
-      <mj-all font-family="Roboto, Helvetica, sans-serif" />
-      <mj-text font-weight="300" font-size="14px" color="#616161" line-height="24px" />
-      <mj-section padding="0px" />
-    </mj-attributes>
-  </mj-head>
-  <mj-body>
-    <mj-section text-align="left" padding="0px">
-      <mj-column width="100%" vertical-align="top">
-        <mj-text align="left">
-          <h2 style="color: #2c3e50;">Post-market monitoring due for "{{use_case_title}}"</h2>
-          <p>Hi {{stakeholder_name}},</p>
-          <p>A new post-market monitoring cycle (#{{cycle_number}}) is due.</p>
-          <p><strong>Due date:</strong> {{due_date}} ({{days_remaining}} days remaining)</p>
-          <p style="margin: 20px 0;">
-            <a href="{{monitoring_link}}"
-               style="background-color: #13715B; color: white; padding: 12px 24px;
-                      text-decoration: none; border-radius: 4px; display: inline-block;">
-              Complete monitoring
-            </a>
-          </p>
-          <p style="color: #7f8c8d; font-size: 12px;">
-            Sent from VerifyWise on behalf of {{organization_name}}
-          </p>
-        </mj-text>
-      </mj-column>
-    </mj-section>
+<mj-include path="./partials/email-head.mjml" />
+  <mj-body background-color="{{colorPageBackground}}">
+    <mj-wrapper css-class="email-card" padding="40px">
+      <mj-section>
+        <mj-column width="100%">
+          <mj-text>
+            <h2 class="email-heading">Reminder: Post-market monitoring due soon</h2>
+            <p class="email-body">Hi {{stakeholder_name}},</p>
+            <p style="margin: 28px 0 24px 0;">
+              <a href="{{monitoring_link}}" class="btn btn-primary">Complete monitoring</a>
+            </p>
+          </mj-text>
+        </mj-column>
+      </mj-section>
+    </mj-wrapper>
   </mj-body>
 </mjml>
 ```
 
+### Template Colors
+
+`compileMjmlToHtml` first expands `<mj-include path="./partials/<name>.mjml" />` (only files in `templates/partials/`; a missing partial throws), then replaces every `{{colorX}}` token with its value from `emailColorTokens` in `Servers/tools/emailColors.ts`. Those values come from the shared palette in `shared/design-tokens`.
+
+- **Use the role tokens for page and buttons:** `colorPageBackground`, `colorButtonText`, `colorButtonPrimary`, `colorButtonSuccess`, `colorButtonError`, `colorButtonWarning`, `colorButtonInfo`. Their mapping to palette colors lives in one place, `emailColorTokens`.
+- **Use the CSS classes from the shared head** (`email-card`, `email-heading`, `email-body`, `box-*`, `btn btn-*`) instead of inline colors.
+- **Server-built HTML** inserted through a `*Html` / `*_html` key is not tokenized (it is inserted after the token step). Build its inline colors from `emailColorTokens` in TypeScript.
+- An unknown token is left in place and logged once. `Servers/services/tests/emailTemplates.palette.test.ts` fails on an unknown token and on any hex color in a template that uses tokens or the shared head.
+
 ### Template Variable Replacement
 
+`compileMjmlToHtml(template, data)` in `Servers/tools/mjmlCompiler.ts` fills every `{{key}}` in one pass:
+
+- **Values are HTML-escaped by default.** Names, titles, descriptions and other user-entered text can never inject markup, in element content or in attributes such as `href="{{url}}"`. Pass plain text; don't escape it yourself, or it will be escaped twice.
+- **Keys ending in `Html` or `_html` are inserted raw** (for example `downloadButtonHtml`, `entity_links_html`, `changedSectionHtml`). Use this suffix only for markup the server builds itself, and escape every piece of user text inside it with `escapeHtml` from `Servers/utils/sanitization.utils.ts`.
+- Values are inserted literally: a `$&` or `$'` in a value is not a replacement pattern, and a `{{key}}` inside a value is not substituted.
+- Placeholders with no matching key are left as they are.
+
 ```typescript
-// File: Servers/tools/mjmlCompiler.ts
+// Plain text: escaped automatically
+await compileMjmlToHtml(template, { use_case_title: title, url: link });
 
-const compileMjmlTemplate = (
-  templateContent: string,
-  data: Record<string, string>
-): string => {
-  // Replace {{key}} with values
-  let compiled = templateContent;
-  for (const [key, value] of Object.entries(data)) {
-    compiled = compiled.replace(
-      new RegExp(`{{${key}}}`, "g"),
-      value
-    );
-  }
-
-  // Convert MJML to HTML
-  const { html } = mjml2html(compiled);
-  return html;
-};
+// Server-built markup: suffix the key, escape the user text inside
+const rowsHtml = items.map((i) => `<tr><td>${escapeHtml(i.name)}</td></tr>`).join("");
+await compileMjmlToHtml(template, { items_html: rowsHtml });
 ```
+
+User-configured automation emails (the `send_email` action) don't use MJML. Their body is plain text from the automation's textarea, with `{{entity.field}}` values filled in by `replaceTemplateVariables`. `actions/sendEmail.ts` escapes the whole body, then turns line breaks into `<br>`.
 
 ### Template Constants
 
@@ -270,6 +265,8 @@ await sendEmail(
   }
 );
 ```
+
+`sendEmail` compiles its third argument as MJML source. Passing a file name such as `EMAIL_TEMPLATES.X` fails with "Parsing failed. Check your mjml." — to send by file name, use `notificationService.sendEmailWithTemplate` (below), which reads the file from `Servers/templates/`.
 
 ### Automation Email (HTML Body)
 

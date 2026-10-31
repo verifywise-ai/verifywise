@@ -4,6 +4,7 @@
  * Following VerifyWise clean architecture patterns
  */
 
+import { background, brand, risk, status, text } from "../../tools/design-tokens/palette";
 import {
   ReportData,
   ReportMetadata,
@@ -41,7 +42,7 @@ import {
   getClausesReportQueryISO27001,
   getAnnexesReportQueryISO27001,
 } from "../../utils/reporting.utils";
-import { FrameworkTarget, ReportScope } from "./reportScope";
+import { FrameworkTarget, ReportScope, resolveFrameworkTargets } from "./reportScope";
 import { parseFrameworkSelection, type ParsedFrameworkSelection } from "./frameworkSelection";
 import {
   mergeAssessment,
@@ -69,18 +70,18 @@ import { QueryTypes } from "sequelize";
  * without the suffix, and they share this map.
  */
 const RISK_LEVEL_COLORS: Record<string, string> = {
-  Critical: "#B42318",
-  "Very high risk": "#B42318",
-  "Very High": "#B42318",
-  "High risk": "#C4320A",
-  High: "#C4320A",
-  "Medium risk": "#B54708",
-  Medium: "#B54708",
-  "Low risk": "#027A48",
-  Low: "#027A48",
-  "Very low risk": "#026AA2",
-  "Very Low": "#026AA2",
-  "No risk": "#667085",
+  Critical: risk.critical.text,
+  "Very high risk": risk.critical.text,
+  "Very High": risk.critical.text,
+  "High risk": risk.high.text,
+  High: risk.high.text,
+  "Medium risk": risk.medium.text,
+  Medium: risk.medium.text,
+  "Low risk": risk.low.text,
+  Low: risk.low.text,
+  "Very low risk": risk.veryLow.text,
+  "Very Low": risk.veryLow.text,
+  "No risk": text.icon,
 };
 
 /**
@@ -105,18 +106,8 @@ export const isoDate = (value: unknown): string | undefined => {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 };
 
-// Status color mapping (for future use with charts)
-// const STATUS_COLORS: Record<string, string> = {
-//   Compliant: "#027A48",
-//   Complete: "#027A48",
-//   Completed: "#027A48",
-//   "In Progress": "#B54708",
-//   Partial: "#B54708",
-//   "Non-Compliant": "#B42318",
-//   Incomplete: "#B42318",
-//   "Not Applicable": "#344054",
-//   Draft: "#344054",
-// };
+// A future status chart should use status.success.text, status.warning.text,
+// status.error.text, and text.secondary from the shared palette.
 
 export class ReportDataCollector {
   private organizationId: number;
@@ -183,22 +174,36 @@ export class ReportDataCollector {
   }
 
   /**
-   * The pairings to collect framework sections from. The legacy path has no
-   * resolved set, so it stands in as a single synthetic target built from the
-   * ids it was constructed with.
+   * The pairings to collect framework sections from, resolved once and cached
+   * into this.targets.
+   *
+   * The scoped path arrives with its set already resolved off
+   * projects_frameworks. The legacy manual path names one pairing in its
+   * request body, and that naming cannot be taken on trust: the wizard
+   * submitted a hardcoded (framework 1, projects_frameworks 1) for any use
+   * case carrying no framework, and projects_frameworks id 1 is a live row
+   * belonging to whichever project holds it.
+   *
+   * Standing that up as a synthetic target made the run fail two different
+   * ways depending on whether the row existed. Where it did not,
+   * collectCompliance -> getVisibleEuCategoryIdsForProject dereferenced the
+   * missing row ("Cannot read properties of undefined (reading 'tier')").
+   * Where it did, compliance silently collected THAT project's requirements
+   * into this report and the run only died later in getAssessmentReportQuery
+   * ("Project framework id not found") — and with the assessment section
+   * deselected it would not have died at all, returning another project's
+   * data under this one's name.
+   *
+   * So the named pairing is looked up like any other. One that does not exist
+   * resolves to no targets, and the section-notice path reports the gap the
+   * way it does for every other unservable section.
    */
-  private frameworkTargets(): FrameworkTarget[] {
+  private async resolveTargets(): Promise<FrameworkTarget[]> {
     if (this.targets) return this.targets;
-    return [
-      {
-        projectId: this.projectId,
-        projectTitle: "",
-        isOrganizationalProject: false,
-        frameworkId: this.frameworkId,
-        frameworkName: "",
-        projectFrameworkId: this.projectFrameworkId,
-      },
-    ];
+    this.targets = await resolveFrameworkTargets("project", this.projectId, this.organizationId, [
+      `native:${this.frameworkId}`,
+    ]);
+    return this.targets;
   }
 
   /**
@@ -218,9 +223,9 @@ export class ReportDataCollector {
    * in scope carries a selected framework" — callers must skip the section, not
    * build `= ANY('{}')`, which hits Postgres empty-array type inference.
    */
-  private scopedProjectIds(): number[] | null {
+  private scopedProjectIds(targets: FrameworkTarget[]): number[] | null {
     if (!this.isFiltered()) return null;
-    return Array.from(new Set(this.frameworkTargets().map((t) => t.projectId)));
+    return Array.from(new Set(targets.map((t) => t.projectId)));
   }
 
   /**
@@ -290,11 +295,11 @@ export class ReportDataCollector {
     // scope does not reuse metadata.isOrganizational — that one still means
     // "projects.is_organizational", and docxGenerator renders off it.
     const orgWide = this.scope === "organization" || metadata.isOrganizational;
-    const targets = this.frameworkTargets();
+    const targets = await this.resolveTargets();
 
     const sectionData: ReportData["sections"] = {};
     const sectionNotices: SectionNotice[] = [];
-    const scopedProjectIds = this.scopedProjectIds();
+    const scopedProjectIds = this.scopedProjectIds(targets);
     const noticeReason = this.filterNoticeReason();
     // An empty scoped set means the filter matched no project at all. Every
     // section below that depends on a pairing has to report it rather than
@@ -646,8 +651,8 @@ export class ReportDataCollector {
     return {
       organizationName,
       organizationLogo,
-      primaryColor: "#13715B", // VerifyWise green
-      secondaryColor: "#1C2130",
+      primaryColor: brand.primary,
+      secondaryColor: text.primary,
     };
   }
 
@@ -690,11 +695,11 @@ export class ReportDataCollector {
     if (sections.assessment) {
       const { answeredQuestions, totalQuestions } = sections.assessment;
       chartData.assessmentStatus = [
-        { status: "Answered", count: answeredQuestions, color: "#027A48" },
+        { status: "Answered", count: answeredQuestions, color: status.success.text },
         {
           status: "Pending",
           count: Math.max(totalQuestions - answeredQuestions, 0),
-          color: "#F2F4F7",
+          color: background.hover,
         },
       ];
     }
@@ -727,7 +732,7 @@ export class ReportDataCollector {
       risksByLevel: Object.entries(risksByLevel).map(([level, count]) => ({
         level,
         count,
-        color: RISK_LEVEL_COLORS[level] || "#667085",
+        color: RISK_LEVEL_COLORS[level] || text.icon,
       })),
       risks: risks.map((risk) => ({
         id: risk.id,

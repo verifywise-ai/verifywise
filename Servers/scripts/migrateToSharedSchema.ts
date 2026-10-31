@@ -30,6 +30,7 @@ import {
   TARGET_TABLE_MAP,
   MIGRATION_KEY,
   BATCH_SIZE,
+  legacyProjectHighRiskRoles,
   getAllTablesInOrder,
   IdMapping,
   ValidationReport,
@@ -51,6 +52,7 @@ const POSTGRES_ARRAY_COLUMNS: Record<string, string[]> = {
   answers_eu: ["dropdown_options"],
   evidence_hub: ["mapped_model_ids"],
   policy_manager: ["tags"],
+  projects: ["high_risk_roles"],
   risks: ["risk_category"],
   shadow_ai_tools: ["domains"],
 };
@@ -247,12 +249,24 @@ async function migrateTable(
   const targetColumnSet = new Set(targetColumns);
   const commonColumns = sourceColumns.filter((col) => targetColumnSet.has(col));
 
+  // projects: the single type_of_high_risk_role column became high_risk_roles (text[]).
+  const mapLegacyRole =
+    tableName === "projects" &&
+    sourceColumns.includes("type_of_high_risk_role") &&
+    targetColumnSet.has("high_risk_roles") &&
+    !commonColumns.includes("high_risk_roles");
+  const insertColumns = mapLegacyRole ? [...commonColumns, "high_risk_roles"] : commonColumns;
+
   // Debug logging for column detection
-  if (sourceColumns.length !== commonColumns.length) {
-    const skippedCols = sourceColumns.filter((col) => !targetColumnSet.has(col));
-    console.log(
-      `    ℹ️  ${tableName}: skipping columns not in verifywise schema: ${skippedCols.join(", ")}`,
+  {
+    const skippedCols = sourceColumns.filter(
+      (col) => !targetColumnSet.has(col) && !(mapLegacyRole && col === "type_of_high_risk_role"),
     );
+    if (skippedCols.length > 0) {
+      console.log(
+        `    ℹ️  ${tableName}: skipping columns not in verifywise schema: ${skippedCols.join(", ")}`,
+      );
+    }
   }
 
   if (commonColumns.length === 0) {
@@ -349,8 +363,12 @@ async function migrateTable(
         }
       }
 
+      if (mapLegacyRole) {
+        insertData.high_risk_roles = legacyProjectHighRiskRoles(row.type_of_high_risk_role);
+      }
+
       // Build INSERT statement
-      const targetCols = hasOrgId ? ["organization_id", ...commonColumns] : commonColumns;
+      const targetCols = hasOrgId ? ["organization_id", ...insertColumns] : insertColumns;
 
       // Helper to serialize values based on column type
       // - PostgreSQL ARRAY columns: keep as JavaScript array
@@ -374,8 +392,8 @@ async function migrateTable(
       };
 
       const targetValues = hasOrgId
-        ? [orgId, ...commonColumns.map((c) => serializeValue(c, insertData[c]))]
-        : commonColumns.map((c) => serializeValue(c, insertData[c]));
+        ? [orgId, ...insertColumns.map((c) => serializeValue(c, insertData[c]))]
+        : insertColumns.map((c) => serializeValue(c, insertData[c]));
 
       const placeholders = targetValues.map((_, i) => `$${i + 1}`).join(", ");
       const columnList = targetCols.map((c) => `"${c}"`).join(", ");

@@ -1,5 +1,9 @@
 import { vi } from "vitest";
 
+const { useTableGroupingMock } = vi.hoisted(() => ({
+  useTableGroupingMock: vi.fn(() => ({ groups: new Map() })),
+}));
+
 vi.mock("../../Cards/ProjectCard", () => ({
   ProjectCard: () => <div data-testid="project-card" />,
 }));
@@ -25,7 +29,7 @@ vi.mock("../../Table/GroupBy", () => ({
   GroupBy: () => <div data-testid="group-by" />,
 }));
 vi.mock("../../../../application/hooks/useTableGrouping", () => ({
-  useTableGrouping: () => ({ groups: new Map() }),
+  useTableGrouping: useTableGroupingMock,
   useGroupByState: () => ({
     groupBy: null,
     groupSortOrder: "asc",
@@ -60,11 +64,26 @@ vi.mock("../../../../application/hooks/useColumnVisibility", () => ({
 }));
 
 import { renderWithProviders } from "../../../../test/renderWithProviders";
-import ProjectList from "../ProjectsList";
+import ProjectList, { RISK_LEVEL_FILTER_OPTIONS } from "../ProjectsList";
+import { AiRiskClassification } from "../../../../domain/enums/aiRiskClassification.enum";
 
 describe("ProjectsList", () => {
   it("renders without crashing with empty projects", () => {
     renderWithProviders(<ProjectList projects={[]} />);
     expect(document.body).toBeTruthy();
+  });
+
+  it("groups a use case under each of its high-risk roles", () => {
+    renderWithProviders(<ProjectList projects={[]} />);
+    const options = (useTableGroupingMock.mock.calls as any[][])[0][0];
+    const key = (roles: string[]) => options.getGroupKey({ high_risk_roles: roles }, "role");
+    expect(key(["Provider", "Deployer"])).toEqual(["Provider", "Deployer"]);
+    expect(key(["Deployer"])).toEqual(["Deployer"]);
+    expect(key([])).toBe("Unknown");
+  });
+
+  it("offers every AI risk classification in the risk level filter", () => {
+    const values = RISK_LEVEL_FILTER_OPTIONS.map((o) => o.value).sort();
+    expect(values).toEqual(Object.values(AiRiskClassification).sort());
   });
 });

@@ -32,6 +32,11 @@ spec:
       - name: frontend
         image: "{{ .Values.images.frontend }}:{{ include "verifywise.imageTag" . }}"
         imagePullPolicy: {{ .Values.images.pullPolicy }}
+        env:
+        # Where nginx proxies /api and /v1 when they reach the frontend. A full
+        # DNS name: nginx's resolver does not use the pod's search domains.
+        - name: VW_BACKEND_URL
+          value: "http://backend.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain | default "cluster.local" }}:3000"
         ports:
         - containerPort: 80
           name: http

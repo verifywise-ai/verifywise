@@ -76,8 +76,10 @@ function actionIcon(action: string): React.ReactElement {
     case "review_status_changed":
       return <CheckCircle size={size} strokeWidth={sw} color={palette.brand.primary} />;
     case "model_linked":
+    case "use_case_linked":
       return <Link2 size={size} strokeWidth={sw} color={palette.status.info.text} />;
     case "model_unlinked":
+    case "use_case_unlinked":
       return <Unlink size={size} strokeWidth={sw} color={palette.text.muted} />;
     case "field_updated":
       return <Pencil size={size} strokeWidth={sw} color={palette.text.icon} />;
@@ -97,6 +99,8 @@ const FIELD_UPDATE_TEXT: Record<string, { change: string; plain: string }> = {
   },
   owner_ids: { change: 'Updated owners: "{from}" → "{to}"', plain: "Updated owners" },
   metadata: { change: 'Updated details: "{from}" → "{to}"', plain: "Updated details" },
+  // A description can be long, so the sentence never quotes it.
+  description: { change: "Updated description", plain: "Updated description" },
 };
 
 // Fields whose values are owners: one (owner_id) or a list (owner_ids).
@@ -132,6 +136,10 @@ function describeAction(
       return t("Linked to a model in the inventory");
     case "model_unlinked":
       return t("Unlinked from its model");
+    case "use_case_linked":
+      return t("Linked to a use case");
+    case "use_case_unlinked":
+      return t("Unlinked from its use case");
     case "field_updated": {
       const fieldKey = entry.field_changed ?? "";
       const text = FIELD_UPDATE_TEXT[fieldKey] ?? {

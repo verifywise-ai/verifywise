@@ -660,10 +660,6 @@ components:
       enum:
         - Deployer
         - Provider
-        - Distributor
-        - Importer
-        - Product manufacturer
-        - Authorized representative
       description: Role of the organization under the EU AI Act for high-risk systems
 
     ProjectStatus:
@@ -707,8 +703,21 @@ components:
           example: 1
         ai_risk_classification:
           $ref: "#/components/schemas/AiRiskClassification"
+        high_risk_roles:
+          type: array
+          nullable: true
+          items:
+            $ref: "#/components/schemas/HighRiskRole"
+          description: "EU AI Act roles of the use case: Provider, Deployer or both. Replaces the stored list; duplicates are removed and the list is stored as Provider, Deployer. null or [] clears it."
+          example:
+            - Provider
+            - Deployer
         type_of_high_risk_role:
-          $ref: "#/components/schemas/HighRiskRole"
+          deprecated: true
+          nullable: true
+          description: "Deprecated: use high_risk_roles. A role already in the use case's list leaves the list unchanged; another role replaces the list with that one role; null clears it. Rejected with 400 when sent with a high_risk_roles list it does not match."
+          allOf:
+            - $ref: "#/components/schemas/HighRiskRole"
         goal:
           type: string
           nullable: true
@@ -782,8 +791,21 @@ components:
           description: Geography identifier
         ai_risk_classification:
           $ref: "#/components/schemas/AiRiskClassification"
+        high_risk_roles:
+          type: array
+          nullable: true
+          items:
+            $ref: "#/components/schemas/HighRiskRole"
+          description: "EU AI Act roles of the use case: Provider, Deployer or both. Replaces the stored list; duplicates are removed and the list is stored as Provider, Deployer. null or [] clears it."
+          example:
+            - Provider
+            - Deployer
         type_of_high_risk_role:
-          $ref: "#/components/schemas/HighRiskRole"
+          deprecated: true
+          nullable: true
+          description: "Deprecated: use high_risk_roles. A role already in the use case's list leaves the list unchanged; another role replaces the list with that one role; null clears it. Rejected with 400 when sent with a high_risk_roles list it does not match."
+          allOf:
+            - $ref: "#/components/schemas/HighRiskRole"
         goal:
           type: string
           nullable: true
@@ -852,8 +874,20 @@ components:
           example: 1
         ai_risk_classification:
           $ref: "#/components/schemas/AiRiskClassification"
+        high_risk_roles:
+          type: array
+          items:
+            $ref: "#/components/schemas/HighRiskRole"
+          description: "EU AI Act roles of the use case, Provider first. Empty when none is set."
+          example:
+            - Provider
+            - Deployer
         type_of_high_risk_role:
-          $ref: "#/components/schemas/HighRiskRole"
+          deprecated: true
+          description: "Deprecated, derived from high_risk_roles: Provider when the list contains Provider, Deployer when it contains only Deployer, null when empty."
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/HighRiskRole"
         goal:
           type: string
           nullable: true

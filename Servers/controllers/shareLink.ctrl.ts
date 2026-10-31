@@ -14,6 +14,7 @@ import {
 } from "../utils/security.utils";
 import { logProcessing, logSuccess } from "../utils/logger/logHelper";
 
+import { withLegacyHighRiskRole } from "../utils/highRiskRoles.utils";
 import { translateError } from "../utils/i18n.utils";
 /**
  * Create a new share link
@@ -797,7 +798,9 @@ export const getSharedDataByToken = async (req: Request, res: Response) => {
         );
       }
 
-      resourceData = resourceResult; // Return array of records for table view (can be empty)
+      // Project rows are SELECT *: add the derived single role for older readers.
+      resourceData =
+        resourceType === "project" ? resourceResult.map(withLegacyHighRiskRole) : resourceResult; // Array for table view (can be empty)
     } else {
       // Fetch single record
       resourceQuery = queries.singleRecord;
@@ -820,7 +823,8 @@ export const getSharedDataByToken = async (req: Request, res: Response) => {
         return res.status(404).json(STATUS_CODE[404]({ message: req.t!("Resource not found") }));
       }
 
-      resourceData = resourceResult[0]; // Return single record
+      resourceData =
+        resourceType === "project" ? withLegacyHighRiskRole(resourceResult[0]) : resourceResult[0]; // Single record
     }
 
     // Apply settings-based filtering

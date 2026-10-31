@@ -341,7 +341,7 @@ describe("ArenaPage", () => {
       let popover = document.querySelector(".MuiPopover-paper") as HTMLElement;
 
       // condition 1: status is Completed → matches battle-1
-      let comboboxes = within(popover).getAllByRole("combobox");
+      const comboboxes = within(popover).getAllByRole("combobox");
       fireEvent.mouseDown(comboboxes[2]);
       fireEvent.click(screen.getByRole("option", { name: "Completed" }));
 

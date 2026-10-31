@@ -1,9 +1,16 @@
+// Load .env before anything reads the environment, as the API entry does.
+import "dotenv/config";
 import { Worker } from "bullmq";
 import { createNotificationWorker } from "../services/slack/slackWorker";
 import { createAutomationWorker } from "../services/automations/automationWorker";
 import { createVrdbWorker } from "../services/vendorResearch/vrdb/worker";
 import { createVendorResearchWorker } from "../services/vendorResearch/worker";
 import logger from "../utils/logger/fileLogger";
+import { warnIfGatewayKeyMissing } from "../utils/aiGatewayKeyCheck";
+
+// The worker runs the daily retention job, which calls the AI Gateway. Same
+// rule as the API server; runs in the background.
+void warnIfGatewayKeyMissing(logger);
 
 const notificationWorker = createNotificationWorker();
 const automationWorker = createAutomationWorker();

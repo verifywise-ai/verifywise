@@ -47,6 +47,36 @@ export const getMrmOrgSettings = async (organizationId: number): Promise<MrmOrgS
 };
 
 /**
+ * Read the org's MRM settings inside `transaction`, holding a row lock until it
+ * ends, so a concurrent save cannot change them between this read and the
+ * caller's update. A missing row is first created with the column defaults,
+ * so there is always a row to lock (two first saves also serialize).
+ */
+export const lockMrmOrgSettings = async (
+  organizationId: number,
+  transaction: Transaction,
+): Promise<MrmOrgSettings> => {
+  await sequelize.query(
+    `INSERT INTO mrm_org_settings (organization_id)
+     VALUES (:organizationId)
+     ON CONFLICT (organization_id) DO NOTHING`,
+    { replacements: { organizationId }, transaction },
+  );
+  const rows = (await sequelize.query(
+    `SELECT organization_id, retention_months, alert_email_enabled, breach_auto_open_finding
+       FROM mrm_org_settings
+      WHERE organization_id = :organizationId
+      FOR UPDATE`,
+    {
+      replacements: { organizationId },
+      type: QueryTypes.SELECT,
+      transaction,
+    },
+  )) as MrmOrgSettings[];
+  return rows[0];
+};
+
+/**
  * Create-or-update the org's MRM settings row with PARTIAL semantics: only the
  * fields present in `update` change; absent fields keep their current value
  * (or the column default on first insert). Caller validates the values.
