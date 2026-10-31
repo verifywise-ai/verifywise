@@ -26,6 +26,7 @@ import {
   LINK_SCORE_THRESHOLD,
   MAX_LINKS_PER_RISK,
 } from "../../services/riskLinks/recompute";
+import { createUserRiskLinkQuery, updateRiskLinkStatusQuery } from "../../utils/riskLink.utils";
 
 afterEach(async () => {
   await cleanupDatabase();
@@ -42,11 +43,16 @@ const links = async (): Promise<any[]> =>
     { type: QueryTypes.SELECT },
   )) as any[];
 
-const setStatus = (id: number, status: string, source = "user") =>
-  sequelize.query(
-    `UPDATE risk_links SET status = :status, source = :source, decided_at = NOW() WHERE id = :id`,
-    { replacements: { id, status, source } },
-  );
+/**
+ * A person deciding on a suggestion, written by the query the PATCH endpoint
+ * uses. It moves `status` and the decision columns and leaves `source` alone:
+ * source and status are orthogonal (docs/technical/domains/risk-management.md),
+ * so a confirmed or dismissed suggestion is still `derived` and recompute still
+ * owns its score and reasons. Writing `source = 'user'` here would build a
+ * different row, a link someone drew by hand, which recompute never rescores.
+ */
+const decide = (orgId: number, userId: number, id: number, status: "confirmed" | "dismissed") =>
+  updateRiskLinkStatusQuery(id, orgId, status, userId, null, null);
 
 describe("recomputeRiskLinks against Postgres", () => {
   it("creates a canonical related_to suggestion for a shared category", async () => {
@@ -152,7 +158,7 @@ describe("recomputeRiskLinks against Postgres", () => {
 
     await recomputeRiskLinks(owner.orgId, a);
     const id = (await links())[0].id;
-    await setStatus(id, "confirmed");
+    await decide(owner.orgId, owner.userId, id, "confirmed");
 
     // The overlap disappears; the human decision must not.
     await sequelize.query(`UPDATE risks SET risk_category = NULL WHERE id = :a`, {
@@ -164,9 +170,43 @@ describe("recomputeRiskLinks against Postgres", () => {
     expect(rows).toHaveLength(1);
     expect(rows[0].id).toBe(id);
     expect(rows[0].status).toBe("confirmed");
-    expect(rows[0].source).toBe("user");
+    expect(rows[0].source).toBe("derived"); // deciding does not change who wrote the row
     expect(rows[0].score).toBe(0);
     expect(rows[0].reasons).toEqual([]);
+  });
+
+  // A link a person drew by hand has no score and no reasons of its own, so
+  // recompute must not write the machine's onto it: the upsert only refreshes a
+  // derived row, and the ownership query never returns a user one.
+  it("leaves a link a person drew by hand alone, with the overlap or without it", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const a = await createTestRisk(owner.orgId, { risk_category: [CATEGORY] });
+    const b = await createTestRisk(owner.orgId, { risk_category: [CATEGORY] });
+    await createUserRiskLinkQuery({
+      organizationId: owner.orgId,
+      sourceRiskId: Math.min(a, b),
+      target: { entityType: "risk", id: Math.max(a, b) },
+      relationType: "related_to",
+      userId: owner.userId,
+    });
+
+    // The pair overlaps, so the scorer wants it: the upsert must not take the row over.
+    await recomputeRiskLinks(owner.orgId, a);
+    // The overlap is gone: neither the rescore nor the prune may reach the row.
+    await sequelize.query(`UPDATE risks SET risk_category = NULL WHERE id = :a`, {
+      replacements: { a },
+    });
+    await recomputeRiskLinks(owner.orgId, a);
+
+    const rows = await links();
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      status: "confirmed",
+      source: "user",
+      score: 0,
+      reasons: [],
+      last_computed_at: null, // recompute never wrote it
+    });
   });
 
   it("never resurrects a dismissed suggestion, even when it still scores well", async () => {
@@ -176,7 +216,7 @@ describe("recomputeRiskLinks against Postgres", () => {
 
     await recomputeRiskLinks(owner.orgId, a);
     const id = (await links())[0].id;
-    await setStatus(id, "dismissed");
+    await decide(owner.orgId, owner.userId, id, "dismissed");
 
     await recomputeRiskLinks(owner.orgId, a);
     const rows = await links();
