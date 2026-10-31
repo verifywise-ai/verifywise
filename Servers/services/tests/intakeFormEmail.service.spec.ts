@@ -142,12 +142,20 @@ describe("intakeFormEmail.service", () => {
       );
     });
 
-    it("should not throw on send failure", async () => {
+    it("does not throw on send failure and reports it, so the caller can retry", async () => {
       mockSendEmailWithTemplate.mockRejectedValue(new Error("SMTP error"));
 
       await expect(
         sendSubmissionReceivedEmail("user@test.com", "John", "Form", 1, "token"),
-      ).resolves.toBeUndefined();
+      ).resolves.toBe(false);
+    });
+
+    it("reports a successful send", async () => {
+      mockSendEmailWithTemplate.mockResolvedValue(undefined);
+
+      await expect(
+        sendSubmissionReceivedEmail("user@test.com", "John", "Form", 1, "token"),
+      ).resolves.toBe(true);
     });
 
     it("passes the review sentence as an escaped reviewHtml block", async () => {

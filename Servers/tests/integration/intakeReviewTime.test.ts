@@ -1,7 +1,7 @@
 /**
- * #5189: the per-form review time, the review due date stored at submit, and
- * the one-time claim for the submitter's confirmation email, against a real
- * database (the claim's atomicity is the point).
+ * #5189: the per-form review time, the review time and due date stored at
+ * submit, and the one-time claim for the submitter's confirmation email,
+ * against a real database (the claim's atomicity is the point).
  */
 import { QueryTypes } from "sequelize";
 import { sequelize } from "../../database/db";
@@ -10,10 +10,13 @@ import {
   claimSubmissionConfirmationQuery,
   createIntakeFormQuery,
   createSubmissionQuery,
+  getFormReviewDaysQuery,
   getIntakeFormByIdQuery,
   getSubmissionByIdQuery,
+  getSubmissionForConfirmationQuery,
   getSubmissionsAwaitingConfirmationQuery,
-  updateIntakeFormQuery,
+  releaseSubmissionConfirmationQuery,
+  updateFormReviewDaysQuery,
 } from "../../utils/intakeForm.utils";
 import { cleanupDatabase, createTestOrganization, createTestUser } from "./helpers";
 
@@ -34,7 +37,13 @@ const setup = async () => {
     },
     orgId,
   );
-  const submit = (overrides: { reviewDueDate?: string | null; email?: string | null } = {}) =>
+  const submit = (
+    overrides: {
+      reviewDays?: number | null;
+      reviewDueDate?: string | null;
+      email?: string | null;
+    } = {},
+  ) =>
     createSubmissionQuery(
       {
         formId: form.id,
@@ -42,6 +51,7 @@ const setup = async () => {
         submitterName: "Jane",
         data: {},
         entityType: IntakeEntityType.USE_CASE,
+        reviewDays: overrides.reviewDays,
         reviewDueDate: overrides.reviewDueDate,
       },
       orgId,
@@ -57,70 +67,102 @@ const column = async (id: number, name: string) =>
     )
   )[0].value;
 
+const setCreatedAt = (ids: number[], interval: string) =>
+  sequelize.query(
+    `UPDATE intake_submissions SET created_at = NOW() - CAST(:interval AS interval) WHERE id IN (:ids)`,
+    { replacements: { ids, interval } },
+  );
+
 afterEach(cleanupDatabase);
 
 // Leave the schema as the migration left it, whatever a test did.
 afterAll(() => migration.up(queryInterface));
 
 describe("intake_forms.review_days", () => {
-  it("defaults to 3 and is stored on create and update", async () => {
+  it("defaults to 3 and is read and set through its own queries", async () => {
     const { orgId, form } = await setup();
-    expect(form.reviewDays).toBe(3);
+    expect(await getFormReviewDaysQuery(form.id, orgId)).toBe(3);
+    expect(await updateFormReviewDaysQuery(form.id, orgId, 10)).toBe(10);
+    expect(await getFormReviewDaysQuery(form.id, orgId)).toBe(10);
+  });
 
-    const updated = await updateIntakeFormQuery(form.id, { reviewDays: 10 }, orgId);
-    expect(updated?.reviewDays).toBe(10);
-    expect((await getIntakeFormByIdQuery(form.id, orgId))?.reviewDays).toBe(10);
+  it("is not part of the frozen legacy form contract", async () => {
+    const { orgId, form } = await setup();
+    const legacy = (await getIntakeFormByIdQuery(form.id, orgId)) as unknown as Record<
+      string,
+      unknown
+    >;
+    expect(legacy).not.toHaveProperty("reviewDays");
+  });
+
+  it("is scoped to the organization", async () => {
+    const { form } = await setup();
+    const other = await setup();
+    expect(await getFormReviewDaysQuery(form.id, other.orgId)).toBeNull();
+    expect(await updateFormReviewDaysQuery(form.id, other.orgId, 5)).toBeNull();
   });
 
   it("rejects values outside 1–30 in the database too", async () => {
     const { orgId, form } = await setup();
-    await expect(updateIntakeFormQuery(form.id, { reviewDays: 0 }, orgId)).rejects.toThrow();
-    await expect(updateIntakeFormQuery(form.id, { reviewDays: 31 }, orgId)).rejects.toThrow();
+    await expect(updateFormReviewDaysQuery(form.id, orgId, 0)).rejects.toThrow();
+    await expect(updateFormReviewDaysQuery(form.id, orgId, 31)).rejects.toThrow();
   });
 });
 
-describe("intake_submissions.review_due_date", () => {
-  it("is stored at submit and read back as a plain date", async () => {
-    const { orgId, submit } = await setup();
-    const created = await submit({ reviewDueDate: "2026-11-05" });
-    expect(created.reviewDueDate).toBe("2026-11-05");
-    const read = await getSubmissionByIdQuery(created.id, orgId);
-    expect(read?.reviewDueDate).toBe("2026-11-05");
-    expect(read?.confirmationSentAt).toBeNull();
+describe("review time stored at submit", () => {
+  it("keeps the days and due date of submit, whatever the form says later", async () => {
+    const { orgId, form, submit } = await setup();
+    const created = await submit({ reviewDays: 3, reviewDueDate: "2026-11-05" });
+    await updateFormReviewDaysQuery(form.id, orgId, 10);
+
+    const row = await getSubmissionForConfirmationQuery(created.id, orgId);
+    expect(row).toMatchObject({
+      reviewDays: 3,
+      reviewDueDate: "2026-11-05",
+      confirmationSentAt: null,
+      formExists: true,
+      formName: form.name,
+    });
+    // Not part of the frozen legacy submission contract.
+    const legacy = (await getSubmissionByIdQuery(created.id, orgId)) as unknown as Record<
+      string,
+      unknown
+    >;
+    expect(legacy).not.toHaveProperty("reviewDueDate");
+    expect(legacy).not.toHaveProperty("reviewDays");
   });
 });
 
 describe("claimSubmissionConfirmationQuery", () => {
   it("lets exactly one of several concurrent callers claim", async () => {
     const { orgId, submit } = await setup();
-    const { id } = await submit({ reviewDueDate: "2026-11-05" });
-
+    const { id } = await submit();
     const results = await Promise.all(
-      Array.from({ length: 5 }, () => claimSubmissionConfirmationQuery(id, orgId, "2026-12-01")),
+      Array.from({ length: 5 }, () => claimSubmissionConfirmationQuery(id, orgId)),
     );
     expect(results.filter(Boolean)).toHaveLength(1);
     expect(await column(id, "confirmation_sent_at")).not.toBeNull();
-    // A due date fixed at submit is kept.
-    expect(await column(id, "review_due_date")).toBe("2026-11-05");
   });
 
-  it("stores the due date when none was fixed at submit", async () => {
+  it("can be released after a failed send and claimed again", async () => {
     const { orgId, submit } = await setup();
-    const { id } = await submit({ reviewDueDate: null });
-    expect(await claimSubmissionConfirmationQuery(id, orgId, "2026-11-10")).toBe(true);
-    expect(await column(id, "review_due_date")).toBe("2026-11-10");
+    const { id } = await submit();
+    expect(await claimSubmissionConfirmationQuery(id, orgId)).toBe(true);
+    await releaseSubmissionConfirmationQuery(id, orgId);
+    expect(await column(id, "confirmation_sent_at")).toBeNull();
+    expect(await claimSubmissionConfirmationQuery(id, orgId)).toBe(true);
   });
 
   it("does not claim another organization's or a decided submission", async () => {
     const { orgId, submit } = await setup();
     const other = await setup();
     const { id } = await submit();
-    expect(await claimSubmissionConfirmationQuery(id, other.orgId, "2026-11-10")).toBe(false);
+    expect(await claimSubmissionConfirmationQuery(id, other.orgId)).toBe(false);
 
     await sequelize.query(`UPDATE intake_submissions SET status = 'approved' WHERE id = :id`, {
       replacements: { id },
     });
-    expect(await claimSubmissionConfirmationQuery(id, orgId, "2026-11-10")).toBe(false);
+    expect(await claimSubmissionConfirmationQuery(id, orgId)).toBe(false);
     expect(await column(id, "confirmation_sent_at")).toBeNull();
   });
 
@@ -128,30 +170,29 @@ describe("claimSubmissionConfirmationQuery", () => {
     const { orgId, submit } = await setup();
     const first = await submit();
     const second = await submit();
-    expect(await claimSubmissionConfirmationQuery(first.id, orgId, "2026-11-10")).toBe(true);
-    expect(await claimSubmissionConfirmationQuery(second.id, orgId, "2026-11-10")).toBe(true);
+    expect(await claimSubmissionConfirmationQuery(first.id, orgId)).toBe(true);
+    expect(await claimSubmissionConfirmationQuery(second.id, orgId)).toBe(true);
   });
 });
 
 describe("getSubmissionsAwaitingConfirmationQuery", () => {
-  it("lists pending, unclaimed submissions with an email, 10 minutes after submit", async () => {
+  it("lists pending, unclaimed submissions with an email, past 3 minutes and within 7 days", async () => {
     const { orgId, submit } = await setup();
-    const old = await submit();
+    const due = await submit();
     const fresh = await submit();
     const claimed = await submit();
     const noEmail = await submit({ email: null });
-    await sequelize.query(
-      `UPDATE intake_submissions SET created_at = NOW() - interval '11 minutes'
-       WHERE id IN (:ids)`,
-      { replacements: { ids: [old.id, claimed.id, noEmail.id] } },
-    );
-    await claimSubmissionConfirmationQuery(claimed.id, orgId, "2026-11-10");
+    const stale = await submit();
+    await setCreatedAt([due.id, claimed.id, noEmail.id], "4 minutes");
+    await setCreatedAt([stale.id], "8 days");
+    await claimSubmissionConfirmationQuery(claimed.id, orgId);
 
-    const ids = (await getSubmissionsAwaitingConfirmationQuery()).map((r) => r.id);
-    expect(ids).toContain(old.id);
+    const ids = (await getSubmissionsAwaitingConfirmationQuery(3, 7)).map((r) => r.id);
+    expect(ids).toContain(due.id);
     expect(ids).not.toContain(fresh.id);
     expect(ids).not.toContain(claimed.id);
     expect(ids).not.toContain(noEmail.id);
+    expect(ids).not.toContain(stale.id);
   });
 });
 
@@ -172,7 +213,7 @@ describe("migration 20261031120000", () => {
     await migration.up(queryInterface);
     // The existing submission already had its confirmation: never emailed again.
     expect(await column(id, "confirmation_sent_at")).not.toBeNull();
-    expect(await claimSubmissionConfirmationQuery(id, orgId, "2026-11-10")).toBe(false);
+    expect(await claimSubmissionConfirmationQuery(id, orgId)).toBe(false);
 
     // up() is safe to run twice.
     await migration.up(queryInterface);

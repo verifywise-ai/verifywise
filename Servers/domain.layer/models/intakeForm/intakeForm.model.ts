@@ -9,6 +9,7 @@ import {
   IPublicIntakeForm,
 } from "../../interfaces/i.intakeForm";
 import { ValidationException } from "../../exceptions/custom.exception";
+import { DEFAULT_REVIEW_DAYS } from "../../../constants/intakeReviewTime";
 
 @Table({
   tableName: "intake_forms",
@@ -158,7 +159,7 @@ export class IntakeFormModel extends Model<IntakeFormModel> implements IIntakeFo
   @Column({
     type: DataType.INTEGER,
     allowNull: false,
-    defaultValue: 3,
+    defaultValue: DEFAULT_REVIEW_DAYS,
     field: "review_days",
   })
   reviewDays!: number;
@@ -296,7 +297,6 @@ export class IntakeFormModel extends Model<IntakeFormModel> implements IIntakeFo
       liveChecksEnabled: this.liveChecksEnabled,
       designSettings: this.designSettings,
       routing: this.routing,
-      reviewDays: this.reviewDays,
       createdBy: this.createdBy,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,

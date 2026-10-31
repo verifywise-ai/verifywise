@@ -97,8 +97,6 @@ export interface IIntakeForm {
   liveChecksEnabled: boolean;
   designSettings: Record<string, unknown> | null;
   routing: IFormRouting | null;
-  /** Agreed review time in business days (1–30), named in the submitter's confirmation. */
-  reviewDays: number;
   createdBy: number;
   createdAt: Date;
   updatedAt: Date;
@@ -125,7 +123,6 @@ export interface ICreateIntakeFormInput {
   liveChecksEnabled?: boolean;
   designSettings?: Record<string, unknown> | null;
   routing?: IFormRouting | null;
-  reviewDays?: number;
   createdBy: number;
 }
 
@@ -150,7 +147,6 @@ export interface IUpdateIntakeFormInput {
   liveChecksEnabled?: boolean;
   designSettings?: Record<string, unknown> | null;
   routing?: IFormRouting | null;
-  reviewDays?: number;
 }
 
 /**

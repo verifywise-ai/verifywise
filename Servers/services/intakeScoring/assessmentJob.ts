@@ -48,6 +48,7 @@ import {
 } from "../intakeLiveChecks/aiChecks";
 import { visibleScoringAnswers } from "../intakeLiveChecks/answers";
 import { routeSubmission } from "../intakeRouting/routingService";
+import { laneAssigneeIds } from "../intakeRouting/routingRules";
 import { trySendSubmitterConfirmation } from "../intakeConfirmation/confirmation";
 import { ClassificationContext, runAiScoring } from "./aiScoring";
 import { AssessmentStage, enqueueIntakeAssessment, IntakeAssessmentJobData } from "./enqueue";
@@ -649,12 +650,7 @@ export async function notificationAudience(
   const cfg = form.routing;
   if (!cfg?.enabled) return { recipients: base };
   const lane = submission.routing?.lane;
-  const laneIds =
-    lane === "senior"
-      ? cfg.seniorReviewerIds
-      : lane === "standard"
-        ? cfg.standardReviewerIds
-        : [...cfg.seniorReviewerIds, ...cfg.standardReviewerIds];
+  const laneIds = laneAssigneeIds(cfg, lane);
   // Saved ids can go stale (user deleted, role lost intakeForm.edit); the
   // form's own recipients are left as configured.
   const reviewers = await d.getEligibleIds(organizationId, laneIds);

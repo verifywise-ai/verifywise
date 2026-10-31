@@ -19,13 +19,13 @@ import {
   ISecondReview,
   ISubmissionRouting,
   IDecisionRecord,
+  ISubmissionConfirmationRow,
 } from "../domain.layer/interfaces/i.intakeSubmission";
 import type { ILiveChecks } from "../domain.layer/interfaces/i.intakeLiveChecks";
 import { getRoleById } from "./roleMap";
 import { roleInfoHasPermission } from "./rolePermissions.utils";
 import { IntakeFormStatus } from "../domain.layer/enums/intake-form-status.enum";
 import { IntakeSubmissionStatus } from "../domain.layer/enums/intake-submission-status.enum";
-import { DEFAULT_REVIEW_DAYS } from "../services/intakeConfirmation/reviewTime";
 import type {
   IntakeSuggestedRisk,
   SuggestionState,
@@ -47,7 +47,6 @@ const FORM_SELECT_COLUMNS = `
   live_checks_enabled as "liveChecksEnabled",
   design_settings as "designSettings",
   routing,
-  review_days as "reviewDays",
   created_by as "createdBy",
   created_at as "createdAt", updated_at as "updatedAt"
 `;
@@ -65,8 +64,6 @@ const SUBMISSION_SELECT_COLUMNS = `
   routing, decision_record as "decisionRecord",
   live_checks AS "liveChecks",
   notification_sent_at as "notificationSentAt",
-  review_due_date::text as "reviewDueDate",
-  confirmation_sent_at as "confirmationSentAt",
   created_at as "createdAt", updated_at as "updatedAt"
 `;
 
@@ -201,11 +198,11 @@ export const createIntakeFormQuery = async (
     `INSERT INTO intake_forms
       (organization_id, name, description, slug, entity_type, schema, submit_button_text, status,
        ttl_expires_at, public_id, recipients, risk_tier_system, risk_assessment_config,
-       llm_key_id, suggested_questions_enabled, eu_ai_act_risk_step_enabled, live_checks_enabled, design_settings, routing, review_days, created_by, created_at, updated_at)
+       llm_key_id, suggested_questions_enabled, eu_ai_act_risk_step_enabled, live_checks_enabled, design_settings, routing, created_by, created_at, updated_at)
     VALUES
       (:organizationId, :name, :description, :slug, :entityType, :schema, :submitButtonText, :status,
        :ttlExpiresAt, :publicId, :recipients, :riskTierSystem, :riskAssessmentConfig,
-       :llmKeyId, :suggestedQuestionsEnabled, :euAiActRiskStepEnabled, :liveChecksEnabled, :designSettings, :routing, :reviewDays, :createdBy, NOW(), NOW())
+       :llmKeyId, :suggestedQuestionsEnabled, :euAiActRiskStepEnabled, :liveChecksEnabled, :designSettings, :routing, :createdBy, NOW(), NOW())
     RETURNING ${FORM_SELECT_COLUMNS}`,
     {
       replacements: {
@@ -230,7 +227,6 @@ export const createIntakeFormQuery = async (
         liveChecksEnabled: data.liveChecksEnabled ?? true,
         designSettings: data.designSettings ? JSON.stringify(data.designSettings) : null,
         routing: data.routing ? JSON.stringify(data.routing) : null,
-        reviewDays: data.reviewDays ?? DEFAULT_REVIEW_DAYS,
         createdBy: data.createdBy,
       },
       type: QueryTypes.SELECT,
@@ -321,10 +317,6 @@ export const updateIntakeFormQuery = async (
   if (data.routing !== undefined) {
     updates.push("routing = :routing");
     replacements.routing = data.routing ? JSON.stringify(data.routing) : null;
-  }
-  if (data.reviewDays !== undefined) {
-    updates.push("review_days = :reviewDays");
-    replacements.reviewDays = data.reviewDays;
   }
 
   if (updates.length === 0) {
@@ -473,8 +465,6 @@ export const getPendingSubmissionsQuery = async (
       s.routing, s.decision_record as "decisionRecord",
       s.live_checks AS "liveChecks",
       s.notification_sent_at as "notificationSentAt",
-      s.review_due_date::text as "reviewDueDate",
-      s.confirmation_sent_at as "confirmationSentAt",
       s.created_at as "createdAt", s.updated_at as "updatedAt",
       f.name as "formName", f.entity_type as "formEntityType",
       f.routing as "formRouting"
@@ -533,10 +523,10 @@ export const createSubmissionQuery = async (
   const result = await sequelize.query(
     `INSERT INTO intake_submissions
       (organization_id, form_id, submitter_email, submitter_name, data, entity_type, status,
-       original_submission_id, resubmission_count, ip_address, review_due_date, created_at, updated_at)
+       original_submission_id, resubmission_count, ip_address, review_days, review_due_date, created_at, updated_at)
     VALUES
       (:organizationId, :formId, :submitterEmail, :submitterName, :data, :entityType, :status,
-       :originalSubmissionId, ${resubmissionCountExpr}, :ipAddress, CAST(:reviewDueDate AS DATE), NOW(), NOW())
+       :originalSubmissionId, ${resubmissionCountExpr}, :ipAddress, :reviewDays, CAST(:reviewDueDate AS DATE), NOW(), NOW())
     RETURNING ${SUBMISSION_SELECT_COLUMNS}`,
     {
       replacements: {
@@ -549,6 +539,7 @@ export const createSubmissionQuery = async (
         status: IntakeSubmissionStatus.PENDING,
         originalSubmissionId: data.originalSubmissionId || null,
         ipAddress: data.ipAddress || null,
+        reviewDays: data.reviewDays ?? null,
         reviewDueDate: data.reviewDueDate ?? null,
       },
       type: QueryTypes.SELECT,
@@ -878,56 +869,119 @@ export const claimSubmissionNotificationQuery = async (
   return rows.length > 0;
 };
 
+// ============================================================================
+// REVIEW TIME AND SUBMITTER CONFIRMATION (#5189)
+// Kept out of the form and submission column lists: those feed the frozen
+// unversioned /api/intake responses (ADR 0001).
+// ============================================================================
+
+/** A form's review time in business days; null when the form does not exist. */
+export const getFormReviewDaysQuery = async (
+  formId: number,
+  organizationId: number,
+): Promise<number | null> => {
+  const rows = (await sequelize.query(
+    `SELECT review_days AS "reviewDays" FROM intake_forms
+    WHERE organization_id = :organizationId AND id = :formId`,
+    { replacements: { organizationId, formId }, type: QueryTypes.SELECT },
+  )) as Array<{ reviewDays: number }>;
+  return rows[0]?.reviewDays ?? null;
+};
+
+/** Set a form's review time; returns the stored value, or null when the form does not exist. */
+export const updateFormReviewDaysQuery = async (
+  formId: number,
+  organizationId: number,
+  reviewDays: number,
+): Promise<number | null> => {
+  const rows = (await sequelize.query(
+    `UPDATE intake_forms SET review_days = :reviewDays, updated_at = NOW()
+    WHERE organization_id = :organizationId AND id = :formId
+    RETURNING review_days AS "reviewDays"`,
+    { replacements: { organizationId, formId, reviewDays }, type: QueryTypes.SELECT },
+  )) as Array<{ reviewDays: number }>;
+  return rows[0]?.reviewDays ?? null;
+};
+
+/**
+ * What the submitter's confirmation needs: the submission's own review time
+ * and due date (fixed at submit), its claim, and its form (null fields when
+ * the form was deleted).
+ */
+export const getSubmissionForConfirmationQuery = async (
+  id: number,
+  organizationId: number,
+): Promise<ISubmissionConfirmationRow | null> => {
+  const rows = (await sequelize.query(
+    `SELECT s.id, s.form_id AS "formId", s.status,
+      s.submitter_email AS "submitterEmail", s.submitter_name AS "submitterName",
+      s.routing, s.review_days AS "reviewDays", s.review_due_date::text AS "reviewDueDate",
+      s.confirmation_sent_at AS "confirmationSentAt",
+      f.id IS NOT NULL AS "formExists", f.name AS "formName", f.slug AS "formSlug",
+      f.public_id AS "formPublicId", f.routing AS "formRouting", f.recipients AS "formRecipients"
+    FROM intake_submissions s
+    LEFT JOIN intake_forms f ON f.organization_id = s.organization_id AND f.id = s.form_id
+    WHERE s.organization_id = :organizationId AND s.id = :id`,
+    { replacements: { organizationId, id }, type: QueryTypes.SELECT },
+  )) as ISubmissionConfirmationRow[];
+  return rows[0] ?? null;
+};
+
 /**
  * Claim the one-time confirmation email to the submitter of a pending
- * submission, storing its review due date when none was fixed at submit.
- * True only for the caller that flipped confirmation_sent_at from NULL, so the
- * routing path, the 2-minute cap and the backfill never both send it.
+ * submission. True only for the caller that flipped confirmation_sent_at from
+ * NULL, so the submit handler, the job, the cap and the sweep never all send.
  */
 export const claimSubmissionConfirmationQuery = async (
   id: number,
   organizationId: number,
-  reviewDueDate: string,
 ): Promise<boolean> => {
   const rows = await sequelize.query(
-    `UPDATE intake_submissions
-    SET confirmation_sent_at = NOW(),
-      review_due_date = COALESCE(review_due_date, CAST(:reviewDueDate AS DATE))
+    `UPDATE intake_submissions SET confirmation_sent_at = NOW()
     WHERE organization_id = :organizationId AND id = :id
       AND status = :pending AND confirmation_sent_at IS NULL
     RETURNING id`,
     {
-      replacements: {
-        organizationId,
-        id,
-        reviewDueDate,
-        pending: IntakeSubmissionStatus.PENDING,
-      },
+      replacements: { organizationId, id, pending: IntakeSubmissionStatus.PENDING },
       type: QueryTypes.SELECT,
     },
   );
-
   return rows.length > 0;
+};
+
+/** Undo a claim whose email failed to send, so a later path retries it. */
+export const releaseSubmissionConfirmationQuery = async (
+  id: number,
+  organizationId: number,
+): Promise<void> => {
+  await sequelize.query(
+    `UPDATE intake_submissions SET confirmation_sent_at = NULL
+    WHERE organization_id = :organizationId AND id = :id`,
+    { replacements: { organizationId, id } },
+  );
 };
 
 /**
  * Pending submissions, across organizations, whose submitter confirmation is
- * still unclaimed 10 minutes after submit: past the 2-minute cap, so the job
- * or the cap was lost. The worker-start backfill sends them.
+ * still unclaimed `olderThanMinutes` after submit (past the 2-minute cap) and
+ * at most `withinDays` old, so a lost job or cap is caught up without old
+ * rows piling up. Read by the repeating sweep and at worker start.
  */
-export const getSubmissionsAwaitingConfirmationQuery = async (): Promise<
-  Array<{ id: number; organizationId: number }>
-> => {
+export const getSubmissionsAwaitingConfirmationQuery = async (
+  olderThanMinutes: number,
+  withinDays: number,
+): Promise<Array<{ id: number; organizationId: number }>> => {
   const rows = await sequelize.query(
     `SELECT id, organization_id AS "organizationId"
     FROM intake_submissions
     WHERE status = :pending
       AND confirmation_sent_at IS NULL
       AND COALESCE(submitter_email, '') <> ''
-      AND created_at < NOW() - interval '10 minutes'
+      AND created_at < NOW() - make_interval(mins => :olderThanMinutes)
+      AND created_at > NOW() - make_interval(days => :withinDays)
     ORDER BY id`,
     {
-      replacements: { pending: IntakeSubmissionStatus.PENDING },
+      replacements: { pending: IntakeSubmissionStatus.PENDING, olderThanMinutes, withinDays },
       type: QueryTypes.SELECT,
     },
   );
@@ -1118,8 +1172,6 @@ export const getSubmissionByEntityQuery = async (
       s.suggested_risks as "suggestedRisks",
       s.routing, s.decision_record as "decisionRecord",
       s.notification_sent_at as "notificationSentAt",
-      s.review_due_date::text as "reviewDueDate",
-      s.confirmation_sent_at as "confirmationSentAt",
       s.created_at as "createdAt", s.updated_at as "updatedAt",
       f.name as "formName",
       f.schema as "formSchema"
@@ -1174,8 +1226,6 @@ export const getSubmissionByEntityQuery = async (
       routing: row.routing,
       decisionRecord: row.decisionRecord,
       notificationSentAt: row.notificationSentAt,
-      reviewDueDate: row.reviewDueDate,
-      confirmationSentAt: row.confirmationSentAt,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     } as IIntakeSubmission,

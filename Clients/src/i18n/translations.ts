@@ -240,6 +240,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Fix the review time before saving": "Korrigieren Sie die Prüfdauer vor dem Speichern",
     "Fix the review time before publishing":
       "Korrigieren Sie die Prüfdauer vor dem Veröffentlichen",
+    "The form was saved, but the review time was not. Try saving again.":
+      "Das Formular wurde gespeichert, die Prüfdauer jedoch nicht. Speichern Sie erneut.",
     "No risk score was recorded for this submission.":
       "Für diese Einreichung wurde kein Risikowert erfasst.",
     "set to": "gesetzt auf",
@@ -9719,6 +9721,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Use a whole number from 1 to 30": "Utilisez un nombre entier de 1 à 30",
     "Fix the review time before saving": "Corrigez le délai d'examen avant d'enregistrer",
     "Fix the review time before publishing": "Corrigez le délai d'examen avant de publier",
+    "The form was saved, but the review time was not. Try saving again.":
+      "Le formulaire a été enregistré, mais pas le délai d'examen. Enregistrez à nouveau.",
     "No risk score was recorded for this submission.":
       "Aucun score de risque n'a été enregistré pour cette soumission.",
     "set to": "fixé à",
@@ -19138,6 +19142,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Use a whole number from 1 to 30": "Use un número entero del 1 al 30",
     "Fix the review time before saving": "Corrija el plazo de revisión antes de guardar",
     "Fix the review time before publishing": "Corrija el plazo de revisión antes de publicar",
+    "The form was saved, but the review time was not. Try saving again.":
+      "El formulario se guardó, pero el plazo de revisión no. Vuelva a guardar.",
     "No risk score was recorded for this submission.":
       "No se registró ninguna puntuación de riesgo para este envío.",
     "set to": "fijado en",

@@ -377,7 +377,7 @@ export const intakeFormsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Set **Review time (business days)** to the number of working days your team agrees to review a submission in: 1 to 30, 3 by default. The submitter\'s confirmation email names who will review it and the date it is due, for example "Ann Lee will review your submission within 3 business days, by Thursday, November 5, 2026." Business days are Monday to Friday, counted from the day after the submission in UTC. Public holidays are not skipped. The due date is fixed when the submission arrives, so changing the setting later does not move it.',
+      text: 'Set **Review time (business days)** to the number of working days your team agrees to review a submission in: 1 to 30, 3 by default. The submitter\'s confirmation email names who will review it and the date it is due, for example "Ann Lee will review your submission within 3 business days, by Thursday, November 5, 2026." Business days are Monday to Friday, counted from the day after the submission in UTC. Public holidays are not skipped. The review time and due date are fixed when the submission arrives, so changing the setting later does not change them. The review time is saved together with the form when you click **Save** or **Publish**.',
     },
     {
       type: 'heading',
@@ -522,7 +522,7 @@ export const intakeFormsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'After submission, the submitter sees a success page with their reference number. If contact information was collected, they also receive a confirmation email that names the reviewers and the review due date (see **Review time** above). With reviewer assignment on, it waits until the submission has a review level and names that level\'s reviewers, up to three by name and then "and N others". If that takes longer than 2 minutes, or the level has no reviewers, the email names "the governance team" instead. With reviewer assignment off, it goes at once and names the notification recipients. Each submission, including a resubmission, sends this email once.',
+      text: 'After submission, the submitter sees a success page with their reference number. If contact information was collected, they also receive a confirmation email that names the reviewers and the review due date (see **Review time** above). With reviewer assignment on, it waits until the submission has a review level and names that level\'s reviewers, up to three by name and then "and N others". If that takes longer than 2 minutes, or the level has no reviewers, the email names "the governance team" instead. With reviewer assignment off, it goes at once and names the notification recipients. Each submission, including a resubmission, sends this email once. If the email cannot be sent, VerifyWise tries again every 5 minutes for up to 7 days. An email sent after the due date has passed names the reviewers without the date.',
     },
     {
       type: 'heading',

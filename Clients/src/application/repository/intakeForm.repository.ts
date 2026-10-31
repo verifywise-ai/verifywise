@@ -126,8 +126,6 @@ export interface IntakeForm {
   liveChecksEnabled?: boolean;
   designSettings?: FormDesignSettings | null;
   routing?: FormRouting | null;
-  /** Agreed review time in business days (1–30). */
-  reviewDays?: number;
   createdBy: number;
   createdAt: Date;
   updatedAt: Date;
@@ -290,8 +288,6 @@ export interface IntakeSubmission {
   secondReviewerIds?: number[];
   /** Whether the submission's form routes by risk score. */
   routingEnabled?: boolean;
-  /** "YYYY-MM-DD": when the form's agreed review time runs out; null for older submissions. */
-  reviewDueDate?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -358,7 +354,6 @@ export async function createIntakeForm(
     liveChecksEnabled?: boolean;
     designSettings?: FormDesignSettings | null;
     routing?: FormRouting | null;
-    reviewDays?: number;
   },
   signal?: AbortSignal,
 ): Promise<{ data: IntakeForm }> {
@@ -387,7 +382,6 @@ export async function updateIntakeForm(
     liveChecksEnabled?: boolean;
     designSettings?: FormDesignSettings | null;
     routing?: FormRouting | null;
-    reviewDays?: number;
   },
   signal?: AbortSignal,
 ): Promise<{ data: IntakeForm }> {
@@ -464,7 +458,6 @@ export interface SubmissionPreview {
     entityType: string;
     schema: FormSchema;
     riskTierSystem?: string;
-    reviewDays?: number;
   };
   riskTier?: string | null;
   riskOverride?: RiskOverride | null;
@@ -480,8 +473,6 @@ export interface SubmissionPreview {
   /** The live-check hints the submitter saw, or null for older submissions. */
   liveChecks?: ILiveChecks | null;
   routingEnabled?: boolean;
-  /** "YYYY-MM-DD": when the form's agreed review time runs out; null for older submissions. */
-  reviewDueDate?: string | null;
   canDecide?: boolean;
   decideBlockedReason?: string | null;
   /** Reviewers of the assigned lane. */
@@ -867,6 +858,35 @@ export async function submitPublicFormById(
   return response.data as {
     data: { submissionId: number; resubmissionToken: string; message: string };
   };
+}
+
+// ============================================================================
+// Review time (v1 resource: the /intake form contracts are frozen, ADR 0001)
+// ============================================================================
+
+const REVIEW_TIME_URL = "/v1/intake-form-review-time";
+
+/** A form's agreed review time in business days. */
+export async function getIntakeFormReviewTime(
+  formId: number,
+  signal?: AbortSignal,
+): Promise<number> {
+  const response = await apiServices.get(`${REVIEW_TIME_URL}/${formId}`, { signal });
+  return (response.data as { data: { reviewDays: number } }).data.reviewDays;
+}
+
+/** Set a form's agreed review time; resolves to the stored value. */
+export async function updateIntakeFormReviewTime(
+  formId: number,
+  reviewDays: number,
+  signal?: AbortSignal,
+): Promise<number> {
+  const response = await apiServices.put(
+    `${REVIEW_TIME_URL}/${formId}`,
+    { reviewDays },
+    { signal },
+  );
+  return (response.data as { data: { reviewDays: number } }).data.reviewDays;
 }
 
 // ============================================================================

@@ -30,6 +30,8 @@ import {
   getIntakeForm,
   createIntakeForm,
   updateIntakeForm,
+  getIntakeFormReviewTime,
+  updateIntakeFormReviewTime,
   getEligibleReviewers,
   IntakeFormStatus,
   IntakeEntityType,
@@ -76,6 +78,7 @@ import Checkbox from "../../components/Inputs/Checkbox";
 import EuAiActStepToggle from "./EuAiActStepToggle";
 import LiveChecksToggle from "./LiveChecksToggle";
 import ReviewTimeField, { getReviewDaysError } from "./ReviewTimeField";
+import { DEFAULT_REVIEW_DAYS } from "../../../domain/intake/reviewTime";
 import Chip from "../../components/Chip";
 import { PageBreadcrumbs } from "../../components/breadcrumbs/PageBreadcrumbs";
 
@@ -146,6 +149,11 @@ export function IntakeFormBuilder() {
     Array<{ _id: number; name: string; email: string }>
   >([]);
   const [routingReviewersLoaded, setRoutingReviewersLoaded] = useState(false);
+  // The review time is its own v1 resource, saved after the form itself.
+  // savedReviewDaysRef is the value the server holds (or the default shown
+  // when it could not be read), so a save only sends a change.
+  const [reviewDays, setReviewDays] = useState(DEFAULT_REVIEW_DAYS);
+  const savedReviewDaysRef = useRef(DEFAULT_REVIEW_DAYS);
   const [fieldToDelete, setFieldToDelete] = useState<string | null>(null);
   const [deleteFieldModalOpen, setDeleteFieldModalOpen] = useState(false);
   const [snackbar, setSnackbar] = useState<{
@@ -173,9 +181,20 @@ export function IntakeFormBuilder() {
       return;
     }
     const load = ++loadCountRef.current;
+    setReviewDays(DEFAULT_REVIEW_DAYS);
+    savedReviewDaysRef.current = DEFAULT_REVIEW_DAYS;
     if (isEditing && formId) {
       setIsLoadingForm(true);
       setLoadFailed(false);
+      getIntakeFormReviewTime(parseInt(formId))
+        .then((days) => {
+          if (loadCountRef.current !== load) return;
+          setReviewDays(days);
+          savedReviewDaysRef.current = days;
+        })
+        .catch(() => {
+          // Shows the default; a save leaves the stored value alone unless it is changed.
+        });
       getIntakeForm(parseInt(formId))
         .then((response) => {
           // A later load opened another form: this reply is not for it.
@@ -451,7 +470,7 @@ export function IntakeFormBuilder() {
       });
       return null;
     }
-    if (getReviewDaysError(form.reviewDays)) {
+    if (getReviewDaysError(reviewDays)) {
       setSnackbar({
         open: true,
         message: "Fix the review time before saving",
@@ -489,6 +508,7 @@ export function IntakeFormBuilder() {
       if (isEditing && formId) {
         const response = await updateIntakeForm(parseInt(formId), formData);
         applySaved(response.data, editsAtStart, loadsAtStart);
+        if (!(await saveReviewTime(parseInt(formId), loadsAtStart))) return parseInt(formId);
         setSnackbar({
           open: true,
           message: savedMessage ?? "Form saved successfully",
@@ -499,16 +519,19 @@ export function IntakeFormBuilder() {
         const response = await createIntakeForm(formData);
         if (response.data?.id) {
           applySaved(response.data, editsAtStart, loadsAtStart);
+          const reviewTimeSaved = await saveReviewTime(response.data.id, loadsAtStart);
           // Only when the new form is still the one on screen.
           if (loadCountRef.current === loadsAtStart) {
             createdIdRef.current = response.data.id;
             navigate(`/intake-forms/${response.data.id}/edit`, { replace: true });
           }
-          setSnackbar({
-            open: true,
-            message: savedMessage ?? "Form created successfully",
-            severity: savedMessage ? "warning" : "success",
-          });
+          if (reviewTimeSaved) {
+            setSnackbar({
+              open: true,
+              message: savedMessage ?? "Form created successfully",
+              severity: savedMessage ? "warning" : "success",
+            });
+          }
           return response.data.id;
         }
       }
@@ -518,6 +541,27 @@ export function IntakeFormBuilder() {
       return null;
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  /**
+   * Save the review time of a saved form when it changed. Returns false (and
+   * says so) when it could not be saved; the form itself is already saved.
+   */
+  const saveReviewTime = async (savedFormId: number, loadsAtStart: number): Promise<boolean> => {
+    const days = reviewDays;
+    if (days === savedReviewDaysRef.current) return true;
+    try {
+      const stored = await updateIntakeFormReviewTime(savedFormId, days);
+      if (loadCountRef.current === loadsAtStart) savedReviewDaysRef.current = stored;
+      return true;
+    } catch {
+      setSnackbar({
+        open: true,
+        message: "The form was saved, but the review time was not. Try saving again.",
+        severity: "error",
+      });
+      return false;
     }
   };
 
@@ -540,7 +584,7 @@ export function IntakeFormBuilder() {
       });
       return;
     }
-    if (getReviewDaysError(form.reviewDays)) {
+    if (getReviewDaysError(reviewDays)) {
       setSnackbar({
         open: true,
         message: "Fix the review time before publishing",
@@ -578,6 +622,8 @@ export function IntakeFormBuilder() {
         }
       }
       applySaved(publishedData, editsAtStart, loadsAtStart, { status: IntakeFormStatus.ACTIVE });
+      const savedId = formIdNum ?? publishedData?.id;
+      if (savedId && !(await saveReviewTime(savedId, loadsAtStart))) return;
       setSnackbar({
         open: true,
         message: "Form published successfully",
@@ -1337,8 +1383,11 @@ export function IntakeFormBuilder() {
                         </Box>
 
                         <ReviewTimeField
-                          value={form.reviewDays}
-                          onChange={(reviewDays) => updateForm({ reviewDays })}
+                          value={reviewDays}
+                          onChange={(days) => {
+                            setReviewDays(days);
+                            markEdited();
+                          }}
                         />
 
                         <RoutingSettingsSection

@@ -180,6 +180,13 @@ export class IntakeSubmissionModel
   notificationSentAt!: Date | null;
 
   @Column({
+    type: DataType.INTEGER,
+    allowNull: true,
+    field: "review_days",
+  })
+  reviewDays!: number | null;
+
+  @Column({
     type: DataType.DATEONLY,
     allowNull: true,
     field: "review_due_date",
@@ -317,8 +324,6 @@ export class IntakeSubmissionModel
       decisionRecord: this.decisionRecord,
       liveChecks: this.liveChecks,
       notificationSentAt: this.notificationSentAt,
-      reviewDueDate: this.reviewDueDate,
-      confirmationSentAt: this.confirmationSentAt,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
     };

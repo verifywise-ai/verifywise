@@ -7,6 +7,7 @@ import type {
 } from "../../services/intakeScoring/scoreMath";
 import type { AiReason } from "../../services/intakeScoring/aiScoring";
 import type { ILiveChecks } from "./i.intakeLiveChecks";
+import type { IFormRouting } from "./i.intakeForm";
 import type { IntakeSuggestedRisk } from "../../services/intakeScoring/intakeSuggestions";
 
 /**
@@ -183,10 +184,6 @@ export interface IIntakeSubmission {
   decisionRecord: IDecisionRecord | null;
   liveChecks: ILiveChecks | null;
   notificationSentAt: Date | null;
-  /** The day the form's review time runs out ("YYYY-MM-DD"), fixed at submit; null before #5189. */
-  reviewDueDate: string | null;
-  /** When the submitter's confirmation email was claimed; null while it is still to go. */
-  confirmationSentAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -202,8 +199,33 @@ export interface ICreateIntakeSubmissionInput {
   entityType: IntakeEntityType;
   originalSubmissionId?: number;
   ipAddress?: string;
-  /** "YYYY-MM-DD": when the form's review time runs out. */
+  /** The form's review time in business days at submit. */
+  reviewDays?: number | null;
+  /** "YYYY-MM-DD": when that review time runs out. */
   reviewDueDate?: string | null;
+}
+
+/**
+ * What the submitter's confirmation email reads (getSubmissionForConfirmationQuery).
+ * Form fields are null when the form was deleted.
+ */
+export interface ISubmissionConfirmationRow {
+  id: number;
+  formId: number;
+  status: IntakeSubmissionStatus;
+  submitterEmail: string | null;
+  submitterName: string | null;
+  routing: ISubmissionRouting | null;
+  /** The review time and due date fixed at submit; null for older submissions. */
+  reviewDays: number | null;
+  reviewDueDate: string | null;
+  confirmationSentAt: Date | null;
+  formExists: boolean;
+  formName: string | null;
+  formSlug: string | null;
+  formPublicId: string | null;
+  formRouting: IFormRouting | null;
+  formRecipients: number[] | null;
 }
 
 /**

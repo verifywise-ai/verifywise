@@ -1,37 +1,50 @@
 // Servers/services/intakeConfirmation/confirmation.ts
 // The submitter's "submission received" email. It names who reviews the
 // submission and by when, so it waits until routing has picked the lane. It
-// goes at most once per submission: from the submit handler when there is no
-// lane to wait for, from the assessment job once routing has run, from the
-// 2-minute cap job, or from the worker-start backfill. The atomic claim on
-// confirmation_sent_at makes every later call a no-op.
+// goes at most once per submission, from whichever path gets there first: the
+// submit handler when there is no lane to wait for, the assessment job once
+// routing has run, the 2-minute cap job, and the repeating sweep (also run at
+// worker start). The atomic claim on confirmation_sent_at makes every later
+// call a no-op; a failed send releases the claim so the next path retries.
 import { IntakeSubmissionStatus } from "../../domain.layer/enums/intake-submission-status.enum";
-import type { IIntakeForm } from "../../domain.layer/interfaces/i.intakeForm";
-import type { IIntakeSubmission } from "../../domain.layer/interfaces/i.intakeSubmission";
+import type { IFormRouting } from "../../domain.layer/interfaces/i.intakeForm";
+import type {
+  ISubmissionConfirmationRow,
+  ISubmissionRouting,
+} from "../../domain.layer/interfaces/i.intakeSubmission";
+import { DEFAULT_REVIEW_DAYS } from "../../constants/intakeReviewTime";
 import {
   claimSubmissionConfirmationQuery,
   getEligibleReviewersQuery,
-  getIntakeFormByIdQuery,
-  getSubmissionByIdQuery,
+  getFormReviewDaysQuery,
+  getSubmissionForConfirmationQuery,
   getSubmissionsAwaitingConfirmationQuery,
   getTenantSlugById,
+  releaseSubmissionConfirmationQuery,
 } from "../../utils/intakeForm.utils";
 import logger from "../../utils/logger/fileLogger";
 import { sendSubmissionReceivedEmail } from "../intakeFormEmail.service";
+import { laneAssigneeIds } from "../intakeRouting/routingRules";
 import {
   addBusinessDays,
-  DEFAULT_REVIEW_DAYS,
+  isPastDue,
   REVIEW_TIME_ZONE,
   reviewerNamesText,
   reviewSentence,
 } from "./reviewTime";
 
+/** The sweep picks up confirmations still unclaimed this long after submit (past the 2-minute cap). */
+export const CONFIRMATION_SWEEP_AFTER_MINUTES = 3;
+/** Older submissions are left alone, so stale rows never pile up in the sweep. */
+export const CONFIRMATION_SWEEP_WITHIN_DAYS = 7;
+
 export interface ConfirmationDeps {
-  getSubmission: (id: number, organizationId: number) => Promise<IIntakeSubmission | null>;
-  getForm: (id: number, organizationId: number) => Promise<IIntakeForm | null>;
+  getSubmission: typeof getSubmissionForConfirmationQuery;
   getReviewers: typeof getEligibleReviewersQuery;
   getTenantSlug: typeof getTenantSlugById;
   claim: typeof claimSubmissionConfirmationQuery;
+  release: typeof releaseSubmissionConfirmationQuery;
+  /** Resolves true once the email was handed to the mail service. */
   send: typeof sendSubmissionReceivedEmail;
   listAwaiting: typeof getSubmissionsAwaitingConfirmationQuery;
   /** The signed resubmission token for the "Edit submission" link. */
@@ -41,11 +54,11 @@ export interface ConfirmationDeps {
 }
 
 const defaultDeps: ConfirmationDeps = {
-  getSubmission: (id, organizationId) => getSubmissionByIdQuery(id, organizationId),
-  getForm: getIntakeFormByIdQuery,
+  getSubmission: getSubmissionForConfirmationQuery,
   getReviewers: getEligibleReviewersQuery,
   getTenantSlug: getTenantSlugById,
   claim: claimSubmissionConfirmationQuery,
+  release: releaseSubmissionConfirmationQuery,
   send: sendSubmissionReceivedEmail,
   listAwaiting: getSubmissionsAwaitingConfirmationQuery,
   // Loaded on use: the module throws at import time without a signing secret,
@@ -59,13 +72,23 @@ const defaultDeps: ConfirmationDeps = {
 const errorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
 
-/** The review due date ("YYYY-MM-DD") of a submission made at `submittedAt`. */
-export function reviewDueDateFor(
-  submittedAt: Date,
-  reviewDays: number | null | undefined,
-  timeZone: string = REVIEW_TIME_ZONE,
-): string {
-  return addBusinessDays(submittedAt, reviewDays ?? DEFAULT_REVIEW_DAYS, timeZone);
+/**
+ * The review time a submission made now gets: the form's setting and the
+ * date it runs out. If the setting cannot be read the default is used, so a
+ * lookup failure never fails a submit.
+ */
+export async function reviewTimeAtSubmit(
+  formId: number,
+  organizationId: number,
+  now: Date = new Date(),
+): Promise<{ reviewDays: number; reviewDueDate: string }> {
+  let reviewDays = DEFAULT_REVIEW_DAYS;
+  try {
+    reviewDays = (await getFormReviewDaysQuery(formId, organizationId)) ?? DEFAULT_REVIEW_DAYS;
+  } catch (error) {
+    logger.error(`Could not read the review time of form ${formId}: ${errorMessage(error)}`);
+  }
+  return { reviewDays, reviewDueDate: addBusinessDays(now, reviewDays, REVIEW_TIME_ZONE) };
 }
 
 /**
@@ -76,26 +99,33 @@ export function reviewDueDateFor(
  * the people asked to review it. An empty list means "the governance team".
  */
 export function reviewerIdsFor(
-  form: Pick<IIntakeForm, "routing" | "recipients">,
-  submission: Pick<IIntakeSubmission, "routing">,
+  formRouting: IFormRouting | null,
+  formRecipients: number[] | null,
+  routing: ISubmissionRouting | null,
   fallback: boolean,
 ): number[] | "wait" {
-  const cfg = form.routing;
-  if (!cfg?.enabled) return form.recipients ?? [];
-  const lane = submission.routing?.lane;
-  if (lane === "senior") return cfg.seniorReviewerIds ?? [];
-  if (lane === "standard") return cfg.standardReviewerIds ?? [];
-  const anyReviewer =
-    (cfg.seniorReviewerIds?.length ?? 0) + (cfg.standardReviewerIds?.length ?? 0) > 0;
-  return fallback || !anyReviewer ? [] : "wait";
+  if (!formRouting?.enabled) return formRecipients ?? [];
+  const lane = routing?.lane;
+  if (lane) return laneAssigneeIds(formRouting, lane);
+  return fallback || laneAssigneeIds(formRouting, null).length === 0 ? [] : "wait";
+}
+
+/** The review time and date to name, or null when unknown or already past. */
+function dueToName(
+  row: Pick<ISubmissionConfirmationRow, "reviewDays" | "reviewDueDate">,
+  d: ConfirmationDeps,
+): { days: number; date: string } | null {
+  if (row.reviewDays == null || !row.reviewDueDate) return null;
+  if (isPastDue(row.reviewDueDate, d.now(), d.timeZone)) return null;
+  return { days: row.reviewDays, date: row.reviewDueDate };
 }
 
 /**
  * Send the submitter's confirmation unless it has gone already, the
  * submission was decided, it has no email, or (without `fallback`) routing
- * has not picked the lane yet. Returns whether this call sent it. Never throws
- * for a reviewer lookup or link failure: the email names the governance team
- * or links to the generic page instead.
+ * has not picked the lane yet. A deleted form marks the submission handled
+ * and sends nothing. A failed send releases the claim. Returns whether this
+ * call sent the email.
  */
 export async function sendSubmitterConfirmationOnce(
   organizationId: number,
@@ -105,19 +135,23 @@ export async function sendSubmitterConfirmationOnce(
   deps?: Partial<ConfirmationDeps>,
 ): Promise<boolean> {
   const d: ConfirmationDeps = { ...defaultDeps, ...deps };
-  const submission = await d.getSubmission(submissionId, organizationId);
+  const row = await d.getSubmission(submissionId, organizationId);
   if (
-    !submission ||
-    submission.status !== IntakeSubmissionStatus.PENDING ||
-    !submission.submitterEmail ||
-    submission.confirmationSentAt
+    !row ||
+    row.status !== IntakeSubmissionStatus.PENDING ||
+    !row.submitterEmail ||
+    row.confirmationSentAt
   ) {
     return false;
   }
-  const form = await d.getForm(submission.formId, organizationId);
-  if (!form) return false;
+  if (!row.formExists) {
+    // Nothing to name or link to: mark it handled so the sweep stops listing it.
+    await d.claim(submissionId, organizationId);
+    logger.warn(`Submission ${submissionId}'s form was deleted; no confirmation sent`);
+    return false;
+  }
 
-  const ids = reviewerIdsFor(form, submission, opts.fallback);
+  const ids = reviewerIdsFor(row.formRouting, row.formRecipients, row.routing, opts.fallback);
   if (ids === "wait") return false;
 
   let names: string[] = [];
@@ -132,44 +166,42 @@ export async function sendSubmitterConfirmationOnce(
     }
   }
 
-  const days = form.reviewDays ?? DEFAULT_REVIEW_DAYS;
-  const dueDate =
-    submission.reviewDueDate ??
-    reviewDueDateFor(new Date(submission.createdAt ?? d.now()), days, d.timeZone);
-
-  // Everything that can fail is built before the claim, so a failure leaves
-  // the confirmation unclaimed for the next path to send.
-  // Forms made before public ids keep the legacy tenant/slug link.
+  // Everything that can fail is built before the claim. Forms made before
+  // public ids keep the legacy tenant/slug link.
   let tenantSlug: string | undefined;
-  if (!form.publicId) {
+  if (!row.formPublicId) {
     try {
       tenantSlug = (await d.getTenantSlug(organizationId)) ?? undefined;
     } catch (error) {
       logger.error(`Could not load the tenant slug for a resubmit link: ${errorMessage(error)}`);
     }
   }
-  const email = submission.submitterEmail;
+  const email = row.submitterEmail;
   const token = await d.createToken({
     submissionId,
-    formId: form.id,
+    formId: row.formId,
     email,
     timestamp: d.now().getTime(),
   });
-  const sentence = reviewSentence(reviewerNamesText(names, lang), days, dueDate, lang);
+  const sentence = reviewSentence(reviewerNamesText(names), dueToName(row, d));
 
-  if (!(await d.claim(submissionId, organizationId, dueDate))) return false;
-  await d.send(
+  if (!(await d.claim(submissionId, organizationId))) return false;
+  const sent = await d.send(
     email,
-    submission.submitterName || email.split("@")[0],
-    form.name,
+    row.submitterName || email.split("@")[0],
+    row.formName ?? "",
     submissionId,
     token,
-    form.publicId ?? undefined,
+    row.formPublicId ?? undefined,
     tenantSlug,
-    form.slug,
+    row.formSlug ?? undefined,
     lang,
     sentence,
   );
+  if (!sent) {
+    await d.release(submissionId, organizationId);
+    return false;
+  }
   return true;
 }
 
@@ -194,16 +226,19 @@ export async function trySendSubmitterConfirmation(
 }
 
 /**
- * Worker-start backfill: confirmations still unclaimed 10 minutes after
- * submit (job and cap lost) go now, naming the lane if one was stored. The
- * submitter's language is not stored, so they go in the default language.
+ * The repeating sweep (every 5 minutes, and at worker start): confirmations
+ * still unclaimed a few minutes after submit, from the last week, go now,
+ * naming the lane's reviewers if routing finished or the governance team.
  * Returns how many were sent.
  */
-export async function backfillSubmitterConfirmations(
+export async function sweepSubmitterConfirmations(
   deps?: Partial<ConfirmationDeps>,
 ): Promise<number> {
   const d: ConfirmationDeps = { ...defaultDeps, ...deps };
-  const rows = await d.listAwaiting();
+  const rows = await d.listAwaiting(
+    CONFIRMATION_SWEEP_AFTER_MINUTES,
+    CONFIRMATION_SWEEP_WITHIN_DAYS,
+  );
   let sent = 0;
   for (const row of rows) {
     try {
@@ -220,7 +255,7 @@ export async function backfillSubmitterConfirmations(
       }
     } catch (error) {
       logger.error(
-        `Intake backfill could not confirm submission ${row.id}: ${errorMessage(error)}`,
+        `Intake confirmation sweep could not confirm submission ${row.id}: ${errorMessage(error)}`,
       );
     }
   }

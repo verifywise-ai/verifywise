@@ -932,12 +932,5 @@
   "Invalid annex category ID": "Ungültige Anhangskategorie-ID",
   "Invalid evidence hub ID": "Ungültige Nachweis-ID",
   "Invalid model ID": "Ungültige Modell-ID",
-  "1 other": "1 weitere Person",
-  "{count} others": "{count} weitere Personen",
-  "{rest} and {last}": "{rest} und {last}",
-  "The governance team will review your submission within 1 business day, by {date}.": "Das Governance-Team prüft Ihre Einreichung innerhalb von 1 Werktag, bis {date}.",
-  "The governance team will review your submission within {days} business days, by {date}.": "Das Governance-Team prüft Ihre Einreichung innerhalb von {days} Werktagen, bis {date}.",
-  "{reviewers} will review your submission within 1 business day, by {date}.": "Ihre Einreichung wird von {reviewers} innerhalb von 1 Werktag geprüft, bis {date}.",
-  "{reviewers} will review your submission within {days} business days, by {date}.": "Ihre Einreichung wird von {reviewers} innerhalb von {days} Werktagen geprüft, bis {date}.",
-  "Review time must be a whole number of business days from 1 to 30": "Die Prüfdauer muss eine ganze Zahl von Werktagen zwischen 1 und 30 sein"
+  "Review time must be a whole number of business days from {min} to {max}": "Die Prüfdauer muss eine ganze Zahl von Werktagen zwischen {min} und {max} sein"
 }

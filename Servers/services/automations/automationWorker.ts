@@ -51,7 +51,7 @@ import {
 } from "../intakeScoring/assessmentJob";
 import type { IntakeAssessmentJobData } from "../intakeScoring/enqueue";
 import {
-  backfillSubmitterConfirmations,
+  sweepSubmitterConfirmations,
   trySendSubmitterConfirmation,
 } from "../intakeConfirmation/confirmation";
 
@@ -758,6 +758,8 @@ export const createAutomationWorker = () => {
             capReached: true,
             adminFallback,
           });
+        } else if (name === "intake_confirmation_sweep") {
+          await sweepSubmitterConfirmations();
         } else if (name === "file_expiry_sweep") {
           await runFileExpirySweepAllOrgs();
         } else if (name === "mcp_audit_cleanup") {
@@ -915,10 +917,10 @@ export const createAutomationWorker = () => {
       logger.error("Intake assessment backfill failed:", error);
     }
     try {
-      const confirmed = await backfillSubmitterConfirmations();
-      logger.info(`Intake confirmation backfill: ${confirmed} submitter email(s) sent`);
+      const confirmed = await sweepSubmitterConfirmations();
+      logger.info(`Intake confirmation sweep at start: ${confirmed} submitter email(s) sent`);
     } catch (error) {
-      logger.error("Intake confirmation backfill failed:", error);
+      logger.error("Intake confirmation sweep at start failed:", error);
     }
   })();
 

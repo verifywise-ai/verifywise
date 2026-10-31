@@ -1,12 +1,9 @@
 // Servers/services/intakeConfirmation/reviewTime.ts
-// The agreed review time of an intake form: its range and default, the due
-// date in business days, and the wording the submitter's confirmation email
-// uses for it. Pure functions, so they are tested without a DB.
-import { isSupportedLang, translate } from "../../utils/i18n.utils";
-
-export const DEFAULT_REVIEW_DAYS = 3;
-export const MIN_REVIEW_DAYS = 1;
-export const MAX_REVIEW_DAYS = 30;
+// The agreed review time of an intake submission: the due date in business
+// days and the sentence the submitter's confirmation email uses for it. Pure
+// functions, so they are tested without a DB. The email body is English, so
+// the sentence is English too.
+import { MAX_REVIEW_DAYS, MIN_REVIEW_DAYS } from "../../constants/intakeReviewTime";
 
 /**
  * The timezone business days are counted in. Organizations have no stored
@@ -54,10 +51,15 @@ export function addBusinessDays(from: Date, days: number, timeZone: string): str
   return date.toISOString().slice(0, 10);
 }
 
-/** "Tuesday, November 3, 2026" (in the email's language) for a "YYYY-MM-DD" date. */
-export function formatReviewDate(isoDate: string, lang?: string): string {
+/** Whether a "YYYY-MM-DD" due date is before today in `timeZone`. */
+export function isPastDue(dueDate: string, now: Date, timeZone: string): boolean {
+  return dueDate < localDateIn(now, timeZone);
+}
+
+/** "Thursday, November 5, 2026" for a "YYYY-MM-DD" date. */
+export function formatReviewDate(isoDate: string): string {
   const [year, month, day] = isoDate.split("-").map(Number);
-  return new Intl.DateTimeFormat(isSupportedLang(lang) ? lang : "en", {
+  return new Intl.DateTimeFormat("en-US", {
     timeZone: "UTC",
     weekday: "long",
     year: "numeric",
@@ -67,58 +69,28 @@ export function formatReviewDate(isoDate: string, lang?: string): string {
 }
 
 /** "Ann Lee", "Ann Lee and Ben Ross", "A, B, C and 2 others"; null without names. */
-export function reviewerNamesText(names: string[], lang?: string): string | null {
+export function reviewerNamesText(names: string[]): string | null {
   const clean = names.map((n) => n.trim()).filter(Boolean);
   if (clean.length === 0) return null;
   const rest = clean.length - MAX_NAMED_REVIEWERS;
   const items =
     rest > 0
-      ? [
-          ...clean.slice(0, MAX_NAMED_REVIEWERS),
-          rest === 1
-            ? translate(lang, "1 other")
-            : translate(lang, "{count} others", { count: rest }),
-        ]
+      ? [...clean.slice(0, MAX_NAMED_REVIEWERS), rest === 1 ? "1 other" : `${rest} others`]
       : clean;
   if (items.length === 1) return items[0];
-  return translate(lang, "{rest} and {last}", {
-    rest: items.slice(0, -1).join(", "),
-    last: items[items.length - 1],
-  });
+  return `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
 }
 
 /**
- * The sentence naming who reviews and by when. Without reviewer names it
- * names the governance team.
+ * The sentence naming who reviews and, when `due` is given, by when. Without
+ * reviewer names it names the governance team.
  */
 export function reviewSentence(
   reviewers: string | null,
-  days: number,
-  dueDate: string,
-  lang?: string,
+  due: { days: number; date: string } | null,
 ): string {
-  const date = formatReviewDate(dueDate, lang);
-  if (!reviewers) {
-    return days === 1
-      ? translate(
-          lang,
-          "The governance team will review your submission within 1 business day, by {date}.",
-          { date },
-        )
-      : translate(
-          lang,
-          "The governance team will review your submission within {days} business days, by {date}.",
-          { days, date },
-        );
-  }
-  return days === 1
-    ? translate(lang, "{reviewers} will review your submission within 1 business day, by {date}.", {
-        reviewers,
-        date,
-      })
-    : translate(
-        lang,
-        "{reviewers} will review your submission within {days} business days, by {date}.",
-        { reviewers, days, date },
-      );
+  const who = reviewers ?? "The governance team";
+  if (!due) return `${who} will review your submission.`;
+  const span = due.days === 1 ? "1 business day" : `${due.days} business days`;
+  return `${who} will review your submission within ${span}, by ${formatReviewDate(due.date)}.`;
 }

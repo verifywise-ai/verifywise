@@ -76,7 +76,9 @@ Both public submit handlers call `startIntakeAssessment` after the transaction c
 
 ## Submitter confirmation and review time
 
-`intake_forms.review_days` (1–30, default 3, CHECK constraint) is the agreed review time in business days, edited in the form builder (`ReviewTimeField`). At submit, the handler stores `intake_submissions.review_due_date` (DATE): that many weekdays after the submission's calendar day. Counting starts the next day, and holidays are not skipped. Organizations have no stored timezone, so the day is taken in UTC (`REVIEW_TIME_ZONE` in `services/intakeConfirmation/reviewTime.ts`; `addBusinessDays` takes the zone as a parameter). The due date is returned on submission rows and in the review preview (`reviewDueDate`), for "time in review against the agreed time".
+`intake_forms.review_days` (1–30, default 3, CHECK constraint; constants in `Servers/constants/intakeReviewTime.ts`, mirrored in `Clients/src/domain/intake/reviewTime.ts`) is the agreed review time in business days. The unversioned `/api/intake` form and submission contracts are frozen (ADR 0001), so it is its own v1 resource: `GET /api/v1/intake-form-review-time/:formId` (same access as reading the form) and `PUT /api/v1/intake-form-review-time/:formId` with `{ reviewDays }` (needs `intakeForm.edit`). The form builder (`ReviewTimeField`) loads it with the form and saves it after the form itself, only when it changed. A new form gets the database default.
+
+At submit, `reviewTimeAtSubmit` stores the form's current `review_days` and the date it runs out on the submission (`intake_submissions.review_days`, `review_due_date`). The due date is that many weekdays after the submission's calendar day: counting starts the next day, and holidays are not skipped. Organizations have no stored timezone, so the day is taken in UTC (`REVIEW_TIME_ZONE` in `services/intakeConfirmation/reviewTime.ts`; `addBusinessDays` takes the zone as a parameter). Neither column is in the legacy submission responses; #5187/#5188 are to expose them under v1.
 
 The submitter's "submission received" email names who reviews and by when, so it waits for routing. `sendSubmitterConfirmationOnce` (`services/intakeConfirmation/confirmation.ts`) sends it at most once per submission, claimed through `intake_submissions.confirmation_sent_at` (`claimSubmissionConfirmationQuery`, atomic, pending submissions only). It is called:
 
@@ -84,9 +86,11 @@ The submitter's "submission received" email names who reviews and by when, so it
 - by the assessment job, once `routeSettled` has run (or thrown), with fallback. It names the stored lane's reviewers, or the governance team if no lane was stored.
 - by `intake_notify_cap` at 2 minutes, with fallback, naming the governance team if routing has not picked a lane yet.
 - when the job can't be queued, at once, with fallback.
-- on worker start, `backfillSubmitterConfirmations` sends confirmations still unclaimed 10 minutes after submit, with fallback, in the default language.
+- by `intake_confirmation_sweep`, a repeating BullMQ job every 5 minutes (also run once at worker start), with fallback. It covers submissions still unclaimed 3 minutes after submit and at most 7 days old, so confirmations do not depend on the assessment job or its cap surviving.
 
-Up to three reviewers are named (first and last name), then "and N others". The resubmit link uses a freshly signed token. A failed reviewer lookup names the governance team, and a failed tenant slug lookup links to the generic page. The token is built before the claim, so a failure there leaves the claim for the next path. A resubmission is its own submission and gets its own email. The migration marks every existing submission as confirmed, because the old code emailed at submit.
+The sentence is English, like the rest of the template body (the subject follows the submitter's language as before). It uses the review time and due date stored at submit, never the form's current setting. If the due date has already passed when the email goes (a late sweep), or none was stored, it names the reviewers only. Up to three reviewers are named (first and last name), then "and N others". The resubmit link uses a freshly signed token.
+
+`sendSubmissionReceivedEmail` resolves `false` when the mail service fails; the claim is then released (`releaseSubmissionConfirmationQuery`) so a later path, at worst the next sweep, sends it. The token is built before the claim, so a failure there leaves the claim free as well. A failed reviewer lookup names the governance team, and a failed tenant slug lookup links to the generic page. When the form was deleted, the claim is taken and nothing is sent, so the sweep stops listing the submission. A resubmission is its own submission and gets its own email. The migration marks every existing submission as confirmed, because the old code emailed at submit.
 
 ## Review endpoints
 

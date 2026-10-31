@@ -81,10 +81,9 @@ import {
 } from "../services/intakeFormEmail.service";
 import { enqueueIntakeAssessment } from "../services/intakeScoring/enqueue";
 import {
-  reviewDueDateFor,
+  reviewTimeAtSubmit,
   trySendSubmitterConfirmation,
 } from "../services/intakeConfirmation/confirmation";
-import { parseReviewDays } from "../services/intakeConfirmation/reviewTime";
 import { notificationAudience } from "../services/intakeScoring/assessmentJob";
 import { cleanSubmission, isEmptyAnswer, parseFormula } from "../services/intakeFormLogic";
 import { generateSuggestedQuestions, generateFieldGuidance } from "../services/intakeLLM.service";
@@ -149,8 +148,6 @@ import type {
 import { createSignedToken, verifySignedToken } from "../utils/signedToken.utils";
 import { formAiAvailable } from "../services/intakeLiveChecks/availability";
 import { recordSubmitLiveChecks } from "../services/intakeLiveChecks/submit";
-
-const REVIEW_DAYS_ERROR = "Review time must be a whole number of business days from 1 to 30";
 
 /** Safely extract a single string from req.params (which may be string | string[]). */
 const paramStr = (val: string | string[]): string => (Array.isArray(val) ? val[0] : val);
@@ -1057,7 +1054,6 @@ export async function createIntakeForm(req: Request, res: Response) {
       euAiActRiskStepEnabled,
       liveChecksEnabled,
       designSettings,
-      reviewDays,
     } = req.body;
 
     if (!name || !entityType) {
@@ -1073,11 +1069,6 @@ export async function createIntakeForm(req: Request, res: Response) {
     if (status && !Object.values(IntakeFormStatus).includes(status)) {
       await transaction.rollback();
       return res.status(400).json(STATUS_CODE[400](req.t!("Invalid form status")));
-    }
-
-    if (reviewDays != null && parseReviewDays(reviewDays) === null) {
-      await transaction.rollback();
-      return res.status(400).json(STATUS_CODE[400](req.t!(REVIEW_DAYS_ERROR)));
     }
 
     // The rendered intake form is built entirely from this schema, so a field
@@ -1150,7 +1141,6 @@ export async function createIntakeForm(req: Request, res: Response) {
         liveChecksEnabled: liveChecksEnabled == null ? true : Boolean(liveChecksEnabled),
         designSettings,
         routing: routing.value,
-        reviewDays: reviewDays == null ? undefined : reviewDays,
         createdBy: req.userId!,
       },
       req.organizationId!,
@@ -1232,17 +1222,11 @@ export async function updateIntakeForm(req: Request, res: Response) {
       euAiActRiskStepEnabled,
       liveChecksEnabled,
       designSettings,
-      reviewDays,
     } = req.body;
 
     if (status && !Object.values(IntakeFormStatus).includes(status)) {
       await transaction.rollback();
       return res.status(400).json(STATUS_CODE[400](req.t!("Invalid form status")));
-    }
-
-    if (reviewDays != null && parseReviewDays(reviewDays) === null) {
-      await transaction.rollback();
-      return res.status(400).json(STATUS_CODE[400](req.t!(REVIEW_DAYS_ERROR)));
     }
 
     if (entityType && !Object.values(IntakeEntityType).includes(entityType)) {
@@ -1327,7 +1311,6 @@ export async function updateIntakeForm(req: Request, res: Response) {
         liveChecksEnabled: liveChecksEnabled == null ? undefined : Boolean(liveChecksEnabled),
         designSettings,
         routing: routing.value,
-        reviewDays: reviewDays == null ? undefined : reviewDays,
       },
       req.organizationId!,
       transaction,
@@ -1802,11 +1785,7 @@ export async function getSubmissionPreview(req: Request, res: Response) {
           entityType: form.entityType,
           schema: form.schema,
           riskTierSystem: form.riskTierSystem,
-          reviewDays: form.reviewDays,
         },
-        // When the agreed review time runs out ("YYYY-MM-DD"), for "time in
-        // review" against it; null for submissions made before it was stored.
-        reviewDueDate: submission.reviewDueDate ?? null,
         riskAssessment: submission.riskAssessment,
         riskTier: submission.riskTier,
         riskOverride: submission.riskOverride,
@@ -3226,6 +3205,9 @@ export async function submitPublicFormByPublicId(req: Request, res: Response) {
       }
     }
 
+    // The review time in force now; the email and dashboards use this, not
+    // the form's later setting.
+    const reviewTime = await reviewTimeAtSubmit(form.id, tenantInfo.orgId);
     const transaction = await sequelize.transaction();
 
     try {
@@ -3238,7 +3220,7 @@ export async function submitPublicFormByPublicId(req: Request, res: Response) {
           entityType: form.entityType,
           originalSubmissionId,
           ipAddress: clientIp,
-          reviewDueDate: reviewDueDateFor(new Date(), fullFormForValidation?.reviewDays),
+          ...reviewTime,
         },
         tenantInfo.orgId,
         transaction,
@@ -3573,6 +3555,9 @@ export async function submitPublicForm(req: Request, res: Response) {
       }
     }
 
+    // The review time in force now; the email and dashboards use this, not
+    // the form's later setting.
+    const reviewTime = await reviewTimeAtSubmit(form.id, tenantInfo.id);
     const transaction = await sequelize.transaction();
 
     try {
@@ -3585,7 +3570,7 @@ export async function submitPublicForm(req: Request, res: Response) {
           entityType: form.entityType,
           originalSubmissionId,
           ipAddress: clientIp,
-          reviewDueDate: reviewDueDateFor(new Date(), fullFormForValidation?.reviewDays),
+          ...reviewTime,
         },
         tenantInfo.id,
         transaction,

@@ -1,6 +1,7 @@
 import {
   addBusinessDays,
   formatReviewDate,
+  isPastDue,
   localDateIn,
   parseReviewDays,
   reviewerNamesText,
@@ -62,13 +63,18 @@ describe("parseReviewDays", () => {
   });
 });
 
+describe("isPastDue", () => {
+  it("is past only from the day after the due date, in the zone", () => {
+    expect(isPastDue("2026-11-05", at("2026-11-05T23:00:00Z"), "UTC")).toBe(false);
+    expect(isPastDue("2026-11-05", at("2026-11-06T00:30:00Z"), "UTC")).toBe(true);
+    // Still 5 November in Los Angeles.
+    expect(isPastDue("2026-11-05", at("2026-11-06T00:30:00Z"), "America/Los_Angeles")).toBe(false);
+  });
+});
+
 describe("formatReviewDate", () => {
-  it("formats in the email's language, English by default", () => {
-    expect(formatReviewDate("2026-11-05", "en")).toBe("Thursday, November 5, 2026");
+  it("formats in English, like the rest of the email", () => {
     expect(formatReviewDate("2026-11-05")).toBe("Thursday, November 5, 2026");
-    expect(formatReviewDate("2026-11-05", "xx")).toBe("Thursday, November 5, 2026");
-    expect(formatReviewDate("2026-11-05", "de")).toBe("Donnerstag, 5. November 2026");
-    expect(formatReviewDate("2026-11-05", "fr")).toBe("jeudi 5 novembre 2026");
   });
 });
 
@@ -90,31 +96,26 @@ describe("reviewerNamesText", () => {
     expect(reviewerNamesText(names.slice(0, 4))).toBe("Ann Lee, Ben Ross, Cem Tan and 1 other");
     expect(reviewerNamesText(names)).toBe("Ann Lee, Ben Ross, Cem Tan and 2 others");
   });
-
-  it("translates the joins", () => {
-    expect(reviewerNamesText(names, "de")).toBe(
-      "Ann Lee, Ben Ross, Cem Tan und 2 weitere Personen",
-    );
-    expect(reviewerNamesText(names.slice(0, 2), "fr")).toBe("Ann Lee et Ben Ross");
-  });
 });
 
 describe("reviewSentence", () => {
   it("names the reviewers and the due date", () => {
-    expect(reviewSentence("Ann Lee", 3, "2026-11-05")).toBe(
+    expect(reviewSentence("Ann Lee", { days: 3, date: "2026-11-05" })).toBe(
       "Ann Lee will review your submission within 3 business days, by Thursday, November 5, 2026.",
     );
-    expect(reviewSentence("Ann Lee", 1, "2026-11-05")).toBe(
+    expect(reviewSentence("Ann Lee", { days: 1, date: "2026-11-05" })).toBe(
       "Ann Lee will review your submission within 1 business day, by Thursday, November 5, 2026.",
     );
   });
 
   it("names the governance team without reviewers", () => {
-    expect(reviewSentence(null, 3, "2026-11-05")).toBe(
+    expect(reviewSentence(null, { days: 3, date: "2026-11-05" })).toBe(
       "The governance team will review your submission within 3 business days, by Thursday, November 5, 2026.",
     );
-    expect(reviewSentence(null, 1, "2026-11-05", "de")).toBe(
-      "Das Governance-Team prüft Ihre Einreichung innerhalb von 1 Werktag, bis Donnerstag, 5. November 2026.",
-    );
+  });
+
+  it("leaves out the time and date without a due date", () => {
+    expect(reviewSentence("Ann Lee", null)).toBe("Ann Lee will review your submission.");
+    expect(reviewSentence(null, null)).toBe("The governance team will review your submission.");
   });
 });

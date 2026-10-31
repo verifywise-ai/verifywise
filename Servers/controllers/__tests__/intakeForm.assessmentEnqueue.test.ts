@@ -17,6 +17,7 @@ jest.mock("../../utils/intakeForm.utils", () => ({
   claimSubmissionNotificationQuery: jest.fn(),
   getEligibleReviewerIdsQuery: jest.fn(),
   updateLiveChecksQuery: jest.fn(),
+  getFormReviewDaysQuery: jest.fn(),
 }));
 jest.mock("../../utils/llmKey.utils", () => ({ llmKeyExistsQuery: jest.fn() }));
 jest.mock("../../utils/euAiActClassification.utils", () => ({
@@ -156,6 +157,7 @@ describe("public submit queues the assessment", () => {
     }));
     intake.createSubmissionQuery.mockResolvedValue({ id: 99 });
     intake.claimSubmissionNotificationQuery.mockResolvedValue(true);
+    intake.getFormReviewDaysQuery.mockResolvedValue(5);
     enqueueIntakeAssessment.mockResolvedValue(undefined);
   });
 
@@ -177,8 +179,9 @@ describe("public submit queues the assessment", () => {
       expect(emails.sendSubmissionReceivedEmail).not.toHaveBeenCalled();
       expect(trySendSubmitterConfirmation).toHaveBeenCalledTimes(1);
       expect(trySendSubmitterConfirmation).toHaveBeenCalledWith(5, 99, "de", { fallback: false });
-      // The review due date is fixed at submit, in business days.
+      // The review time in force at submit is stored with the submission.
       const created = intake.createSubmissionQuery.mock.calls[0][0];
+      expect(created.reviewDays).toBe(5);
       expect(created.reviewDueDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     },
   );

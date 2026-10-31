@@ -12176,6 +12176,32 @@ export const v1ChangeHistoryEndpoints: Endpoint[] = [
   },
 ];
 
+// v1: V1/Intake Form Review Time endpoints
+export const v1V1intakeFormReviewTimeEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/intake-form-review-time/{formId}',
+    summary: "Get Intake Form Review Time",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Intake Form Review Time",
+  },
+  {
+    method: 'PUT',
+    path: '/v1/intake-form-review-time/{formId}',
+    summary: "Update Intake Form Review Time",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Intake Form Review Time",
+  },
+];
+
 // Vendors endpoints
 export const vendorEndpoints: Endpoint[] = [
   {
@@ -12522,6 +12548,7 @@ export const allEndpoints = {
   training: trainingEndpoints,
   user: userEndpoints,
   v1ChangeHistory: v1ChangeHistoryEndpoints,
+  v1V1intakeFormReviewTime: v1V1intakeFormReviewTimeEndpoints,
   vendor: vendorEndpoints,
   vendorRisk: vendorRiskEndpoints,
   webhook: webhookEndpoints,

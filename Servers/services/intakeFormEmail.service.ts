@@ -91,7 +91,8 @@ export function renderReviewHtml(reviewText: string | undefined): string {
 /**
  * Send confirmation email to submitter after form submission. `reviewText`
  * (already worded, see intakeConfirmation/reviewTime.ts) names who reviews
- * the submission and by when.
+ * the submission and by when. Never throws: resolves false when the email
+ * could not be sent, so the caller can release its claim and retry later.
  */
 export async function sendSubmissionReceivedEmail(
   submitterEmail: string,
@@ -104,7 +105,7 @@ export async function sendSubmissionReceivedEmail(
   formSlug?: string,
   lang?: string,
   reviewText?: string,
-): Promise<void> {
+): Promise<boolean> {
   try {
     const resubmitLink = buildResubmitLink(resubmissionToken, publicId, tenantSlug, formSlug);
 
@@ -125,8 +126,10 @@ export async function sendSubmissionReceivedEmail(
     logger.info(
       `Submission received email sent to ${submitterEmail} for submission #${submissionId}`,
     );
+    return true;
   } catch (error) {
     logger.error("Failed to send submission received email:", error);
+    return false;
   }
 }
 
