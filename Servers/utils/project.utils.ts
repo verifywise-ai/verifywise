@@ -3,6 +3,8 @@ import { ValidationException } from "../domain.layer/exceptions/custom.exception
 import { sequelize } from "../database/db";
 import { ProjectsMembersModel } from "../domain.layer/models/projectsMembers/projectsMembers.model";
 import { QueryTypes, Transaction } from "sequelize";
+import { LifecycleStage, isLifecycleStage } from "../domain.layer/enums/lifecycle-stage.enum";
+import { normalizeDepartment } from "./lifecycle.utils";
 import { VendorsProjectsModel } from "../domain.layer/models/vendorsProjects/vendorsProjects.model";
 import { RiskModel } from "../domain.layer/models/risks/risk.model";
 import { FileModel } from "../domain.layer/models/file/file.model";
@@ -292,6 +294,15 @@ export const countAnswersByProjectId = async (
   };
 };
 
+/**
+ * Stage a new use case starts in (#5187): an explicit, valid stage from the
+ * caller wins (intake approval passes planned); otherwise planned. A use case
+ * moves to in review only when an approval request is actually opened for it
+ * (services/projects/approvalRequest.service.ts).
+ */
+export const initialLifecycleStage = (project: Partial<ProjectModel>): LifecycleStage =>
+  isLifecycleStage(project.lifecycle_stage) ? project.lifecycle_stage : LifecycleStage.PLANNED;
+
 export const createNewProjectQuery = async (
   project: Partial<ProjectModel> & { enable_ai_data_insertion?: boolean },
   members: number[],
@@ -340,11 +351,13 @@ export const createNewProjectQuery = async (
     `INSERT INTO projects (
       organization_id, uc_id, project_title, owner, start_date, geography, target_industry, description, ai_risk_classification,
       high_risk_roles, goal, status, last_updated, last_updated_by, is_demo, is_organizational, approval_workflow_id,
-      pending_frameworks, enable_ai_data_insertion, use_case_category, use_case_purpose, use_case_audience, deployment_context
+      pending_frameworks, enable_ai_data_insertion, use_case_category, use_case_purpose, use_case_audience, deployment_context,
+      lifecycle_stage, department
     ) VALUES (
       :organization_id, :uc_id, :project_title, :owner, :start_date, :geography, :target_industry, :description, :ai_risk_classification,
       ${roles.sql}, :goal, :status, :last_updated, :last_updated_by, :is_demo, :is_organizational, :approval_workflow_id,
-      :pending_frameworks, :enable_ai_data_insertion, :use_case_category, :use_case_purpose, :use_case_audience, :deployment_context
+      :pending_frameworks, :enable_ai_data_insertion, :use_case_category, :use_case_purpose, :use_case_audience, :deployment_context,
+      :lifecycle_stage, :department
     ) RETURNING *`,
     {
       replacements: {
@@ -370,6 +383,8 @@ export const createNewProjectQuery = async (
         use_case_purpose: project.use_case_purpose || null,
         use_case_audience: project.use_case_audience || null,
         deployment_context: project.deployment_context || null,
+        lifecycle_stage: initialLifecycleStage(project),
+        department: normalizeDepartment(project.department),
         ...roles.replacements,
       },
       mapToModel: true,

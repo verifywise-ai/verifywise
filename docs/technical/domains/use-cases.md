@@ -139,6 +139,46 @@ NOT_STARTED → IN_PROGRESS → UNDER_REVIEW → COMPLETED → CLOSED
 | ON_HOLD | IN_PROGRESS | Resumed |
 | COMPLETED | CLOSED | Archived |
 
+## Lifecycle (#5187)
+
+`projects.lifecycle_stage` is separate from `status` (a project-management state that keeps working unchanged):
+
+```
+in_review → planned → live → retired
+               └────────────────↑   (a planned use case can be retired before launch)
+```
+
+| Column | Meaning |
+|--------|---------|
+| `lifecycle_stage` | `in_review` / `planned` / `live` / `retired`, VARCHAR + CHECK, default `planned` |
+| `go_live_date` | DATE the use case went live (today or earlier) |
+| `retired_at` | When it was retired |
+| `last_confirmed_at`, `last_confirmed_by` | Last "still live?" confirmation |
+| `confirmation_reminded_at` | Last reminder email; dedups the daily sweep to once per period |
+| `department` | Free text (there is no org-level department list) |
+
+Backfill (migration `20261031015101`): an open approval request or status `Under review` → `in_review`; `Closed` → `retired`; everything else → `planned` (`Completed` is not assumed to be live).
+
+Transitions:
+
+| Trigger | Change |
+|---------|--------|
+| Approval request opened (`services/projects/approvalRequest.service.ts`) | `planned → in_review` |
+| Approval completed, auto-approved, or workflow cleared (`createPendingFrameworksForApprovedUseCase`) | `in_review → planned` |
+| Intake submission approved (`approveSubmission`) | created as `planned` |
+| `POST /api/v1/use-case-lifecycle/:id/go-live` | `planned → live`, sets `go_live_date`, resets the confirmation period |
+| `POST /api/v1/use-case-lifecycle/:id/confirm` | live only; sets `last_confirmed_*` |
+| `POST /api/v1/use-case-lifecycle/:id/retire` | `planned`/`live → retired`, sets `retired_at` |
+| `PATCH /api/v1/use-case-lifecycle/:id/department` | sets `department` |
+
+Writes are allowed for holders of `useCase.edit` and for the use case owner; Auditors never. The stage guard is part of the UPDATE, so a conflicting transition returns 409. Every change is recorded in `use_case_change_history`. A rejected approval leaves the use case in `in_review`.
+
+Read models: `GET /api/v1/use-case-lifecycle/summary` (stage counts and stale ids, with list visibility) and `GET /api/v1/use-case-lifecycle/dashboard` (counts, this quarter, live by department/risk tier/regulation, stale).
+
+**Still live? check.** `lifecycle_org_settings.confirmation_interval_days` (30/90/180, default 90; `GET/PATCH /api/v1/lifecycle-settings`, PATCH needs `organization.admin`). A live use case is stale when `COALESCE(last_confirmed_at, go_live_date)` is older than the interval (`staleSql` in `utils/lifecycle.utils.ts`). The `lifecycle_confirmation_sweep` BullMQ job (daily 06:30) emails each owner once per period (`lifecycle-confirmation-due.mjml`).
+
+**Reuse.** Everything is keyed by `LIFECYCLE_ENTITIES` in `utils/lifecycle.utils.ts`; AI apps add an entry and the same columns. The frontend `LifecycleTabs` takes `extraCounts` for rows that are not entities yet (pending intake submissions in In review, #5188).
+
 ## API Endpoints
 
 ### CRUD Operations

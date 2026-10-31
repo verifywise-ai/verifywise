@@ -28,6 +28,7 @@ import { useAuth } from "../../../../application/hooks/useAuth";
 import { useLogoFetch } from "../../../../application/hooks/useLogoFetch";
 import { OrganizationModel } from "../../../../domain/models/Common/organization/organization.model";
 import FileRetentionSection from "./FileRetentionSection";
+import LifecycleCheckSection from "./LifecycleCheckSection";
 
 interface AlertState {
   variant: "success" | "info" | "warning" | "error";
@@ -543,6 +544,13 @@ const Organization = () => {
 
       {/* Org-wide default file retention policy */}
       <FileRetentionSection
+        isDisabled={isEditingDisabled}
+        onError={(message) => showAlert("error", "Error", message)}
+        onSuccess={(message) => showAlert("success", "Success", message)}
+      />
+
+      {/* Org-wide "still live?" interval for use cases (#5187) */}
+      <LifecycleCheckSection
         isDisabled={isEditingDisabled}
         onError={(message) => showAlert("error", "Error", message)}
         onSuccess={(message) => showAlert("success", "Success", message)}

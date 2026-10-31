@@ -931,5 +931,12 @@
   "Invalid subcontrol ID": "ID de sous-contrôle invalide",
   "Invalid annex category ID": "ID de catégorie d'annexe invalide",
   "Invalid evidence hub ID": "ID de preuve invalide",
-  "Invalid model ID": "ID de modèle invalide"
+  "Invalid model ID": "ID de modèle invalide",
+  "Invalid go-live date": "Date de mise en service invalide",
+  "The go-live date cannot be in the future": "La date de mise en service ne peut pas être dans le futur",
+  "Only a planned use case can go live": "Seul un cas d'usage planifié peut être mis en service",
+  "Only a planned or live use case can be retired": "Seul un cas d'usage planifié ou en service peut être retiré",
+  "Only a live use case can be confirmed as still live": "Seul un cas d'usage en service peut être confirmé comme toujours en service",
+  "Invalid department": "Service invalide",
+  "The check interval must be 30, 90 or 180 days": "L'intervalle de vérification doit être de 30, 90 ou 180 jours"
 }

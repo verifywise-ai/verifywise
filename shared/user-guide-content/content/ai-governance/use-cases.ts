@@ -226,6 +226,51 @@ export const useCasesContent: ArticleContent = {
     },
     {
       type: 'heading',
+      id: 'lifecycle',
+      level: 2,
+      text: 'Lifecycle: in review, planned, live, retired',
+    },
+    {
+      type: 'paragraph',
+      text: 'The Use cases page splits the inventory into four tabs, each with a count. The lifecycle stage is separate from the status field, which you keep using to track the work.',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { bold: 'In review', text: 'An approval request is open. Approved intake submissions skip this tab and arrive as planned.' },
+        { bold: 'Planned', text: 'Approved, or created without an approval workflow, but not in use yet.' },
+        { bold: 'Live', text: 'In use. The owner recorded a go-live date.' },
+        { bold: 'Retired', text: 'No longer in use. It stays in the inventory with its history.' },
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: 'Open a use case to move it along. On the Overview tab, choose Mark as live and pick the go-live date (today or earlier), or choose Retire. A planned use case that never launches can be retired too. The same panel holds the department, which the dashboard uses to group live use cases.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Admins, Editors and the use case owner can change the lifecycle. Auditors cannot, even when they own the use case.',
+    },
+    {
+      type: 'heading',
+      id: 'still-live-check',
+      level: 3,
+      text: 'Still live? check',
+    },
+    {
+      type: 'paragraph',
+      text: 'Live use cases need a periodic confirmation that they are still in use. When nobody has confirmed a live use case within the check interval, it gets a Stale marker in the list and its owner gets one email asking them to confirm it or retire it. The email repeats once per interval until someone acts. Confirm with Confirm still live on the Overview tab.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Admins set the interval under Settings, Organization, Live use case check: every 30, 90 or 180 days. The default is 90 days.',
+    },
+    {
+      type: 'paragraph',
+      text: 'The dashboard shows the count per stage, what went live or was retired this quarter, live use cases by department, risk tier or regulation, and the stale entries.',
+    },
+    {
+      type: 'heading',
       id: 'list-view',
       level: 2,
       text: 'Working with the list',
@@ -306,6 +351,7 @@ export const useCasesContent: ArticleContent = {
         { text: 'You are added as a team member (email varies by role)' },
         { text: 'An approval request changes status' },
         { text: 'A new use case is created (Slack, if your organization has it connected)' },
+        { text: 'A live use case you own has not been confirmed within the check interval' },
       ],
     },
     {

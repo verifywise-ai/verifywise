@@ -1,4 +1,5 @@
 import { Transaction } from "sequelize";
+import { promoteUseCaseOutOfReview } from "./lifecycle.utils";
 import { sequelize } from "../database/db";
 import { ApprovalRequestModel } from "../domain.layer/models/approvalWorkflow/approvalRequest.model";
 import { ApprovalRequestStepModel } from "../domain.layer/models/approvalWorkflow/approvalRequestStep.model";
@@ -185,7 +186,7 @@ export const evaluateAutoApproval = (
 
 /**
  * Create the compliance frameworks a use case had queued while awaiting
- * approval. Shared by the manual final-step approval path, the risk-based
+ * approval, and move it from in review to planned. Shared by the manual final-step approval path, the risk-based
  * auto-approval path, and an edit that clears the use case's workflow (the
  * approval the frameworks waited for no longer exists).
  */
@@ -194,6 +195,9 @@ export const createPendingFrameworksForApprovedUseCase = async (
   organizationId: number,
   transaction: Transaction,
 ): Promise<void> => {
+  // The approval it waited on is over, so the use case leaves review (#5187).
+  await promoteUseCaseOutOfReview(organizationId, entityId, transaction);
+
   const [projectData] = await sequelize.query(
     `SELECT id, pending_frameworks, enable_ai_data_insertion
      FROM projects

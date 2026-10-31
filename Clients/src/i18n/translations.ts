@@ -79,6 +79,11 @@ import {
   es as intakeLiveChecksEs,
 } from "./modules/intakeLiveChecks";
 import {
+  de as useCaseLifecycleDe,
+  fr as useCaseLifecycleFr,
+  es as useCaseLifecycleEs,
+} from "./modules/useCaseLifecycle";
+import {
   de as intakePreviewDe,
   fr as intakePreviewFr,
   es as intakePreviewEs,
@@ -117,6 +122,7 @@ export const translations: Record<string, Record<string, string>> = {
     ...superAdminDe,
     ...tasksDe,
     ...intakeLiveChecksDe,
+    ...useCaseLifecycleDe,
     ...intakePreviewDe,
     ...intakeLogicDe,
     ...trainingDe,
@@ -9590,6 +9596,7 @@ export const translations: Record<string, Record<string, string>> = {
     ...superAdminFr,
     ...tasksFr,
     ...intakeLiveChecksFr,
+    ...useCaseLifecycleFr,
     ...intakePreviewFr,
     ...intakeLogicFr,
     ...trainingFr,
@@ -19003,6 +19010,7 @@ export const translations: Record<string, Record<string, string>> = {
     ...superAdminEs,
     ...tasksEs,
     ...intakeLiveChecksEs,
+    ...useCaseLifecycleEs,
     ...intakePreviewEs,
     ...intakeLogicEs,
     ...trainingEs,
