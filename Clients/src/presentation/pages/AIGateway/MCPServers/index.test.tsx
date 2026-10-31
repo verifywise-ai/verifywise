@@ -705,4 +705,242 @@ describe("MCPServersPage", () => {
 
     expect(await screen.findByText("Failed to create server")).toBeInTheDocument();
   });
+
+  describe("OAuth and AWS IAM authentication", () => {
+    async function openCreateForm(url: string) {
+      mockGet.mockResolvedValue({ data: { servers: [] } });
+      renderWithProviders(<MCPServersPage />, { route: "/ai-gateway/mcp/servers" });
+      await waitFor(() => {
+        expect(screen.getByText(/No MCP servers registered yet/)).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Add server" }));
+      fireEvent.change(screen.getByLabelText(/^Server name/), { target: { value: "Auth Srv" } });
+      fireEvent.change(screen.getByLabelText(/^URL/), { target: { value: url } });
+    }
+
+    async function chooseAuth(name: string) {
+      fireEvent.mouseDown(screen.getByRole("combobox"));
+      fireEvent.click(await screen.findByRole("option", { name }));
+    }
+
+    function submit() {
+      const submitButtons = screen.getAllByRole("button", { name: /^(Add server|Save changes)$/ });
+      fireEvent.click(submitButtons[submitButtons.length - 1]);
+    }
+
+    const discoverCalls = () =>
+      mockPost.mock.calls.filter((c) => c[0] === "/ai-gateway/mcp/servers/discover-oauth");
+
+    it("submits an OAuth server with client credentials", async () => {
+      mockPost.mockResolvedValue({ data: {} });
+      await openCreateForm("https://o.example.com");
+      await chooseAuth("OAuth (client credentials)");
+
+      fireEvent.change(screen.getByLabelText(/^Client ID/), { target: { value: "cid" } });
+      fireEvent.change(screen.getByLabelText(/^Client secret/), { target: { value: "csecret" } });
+      fireEvent.change(screen.getByLabelText(/^Scope \(optional\)/), { target: { value: "read" } });
+      fireEvent.change(screen.getByLabelText(/^Token URL/), {
+        target: { value: "https://auth.example.com/token" },
+      });
+      submit();
+
+      await waitFor(() => {
+        expect(mockPost).toHaveBeenCalledWith(
+          "/ai-gateway/mcp/servers",
+          expect.objectContaining({
+            auth_type: "oauth",
+            auth_config: {
+              client_id: "cid",
+              client_secret: "csecret",
+              token_url: "https://auth.example.com/token",
+              token_url_source: "manual",
+              scope: "read",
+              auth_method: "client_secret_basic",
+            },
+          }),
+        );
+      });
+    });
+
+    it("finds the token URL and marks it discovered", async () => {
+      mockPost.mockImplementation((url: string) =>
+        url === "/ai-gateway/mcp/servers/discover-oauth"
+          ? Promise.resolve({
+              data: {
+                token_url: "https://auth.example.com/token",
+                auth_method: "client_secret_post",
+                issuer: "https://auth.example.com",
+              },
+            })
+          : Promise.resolve({ data: {} }),
+      );
+      await openCreateForm("https://o.example.com");
+      await chooseAuth("OAuth (client credentials)");
+      fireEvent.change(screen.getByLabelText(/^Client ID/), { target: { value: "cid" } });
+      fireEvent.change(screen.getByLabelText(/^Client secret/), { target: { value: "csecret" } });
+
+      fireEvent.click(screen.getByText("Find token URL"));
+
+      await waitFor(() => {
+        expect(screen.getByLabelText(/^Token URL/)).toHaveValue("https://auth.example.com/token");
+      });
+      expect(screen.getByText(/Found at auth\.example\.com\./)).toBeInTheDocument();
+      expect(discoverCalls()[0][1]).toEqual({ url: "https://o.example.com" });
+
+      submit();
+      await waitFor(() => {
+        const call = mockPost.mock.calls.find((c) => c[0] === "/ai-gateway/mcp/servers");
+        expect(call?.[1].auth_config).toMatchObject({
+          token_url_source: "discovered",
+          auth_method: "client_secret_post",
+        });
+      });
+    });
+
+    it("marks the token URL manual again when it is edited after discovery", async () => {
+      mockPost.mockImplementation((url: string) =>
+        url === "/ai-gateway/mcp/servers/discover-oauth"
+          ? Promise.resolve({
+              data: {
+                token_url: "https://auth.example.com/token",
+                auth_method: "client_secret_post",
+              },
+            })
+          : Promise.resolve({ data: {} }),
+      );
+      await openCreateForm("https://o.example.com");
+      await chooseAuth("OAuth (client credentials)");
+      fireEvent.change(screen.getByLabelText(/^Client ID/), { target: { value: "cid" } });
+      fireEvent.change(screen.getByLabelText(/^Client secret/), { target: { value: "csecret" } });
+      fireEvent.click(screen.getByText("Find token URL"));
+      await waitFor(() => {
+        expect(screen.getByLabelText(/^Token URL/)).toHaveValue("https://auth.example.com/token");
+      });
+
+      fireEvent.change(screen.getByLabelText(/^Token URL/), {
+        target: { value: "https://auth.example.com/other" },
+      });
+      submit();
+
+      await waitFor(() => {
+        const call = mockPost.mock.calls.find((c) => c[0] === "/ai-gateway/mcp/servers");
+        expect(call?.[1].auth_config).toMatchObject({
+          token_url: "https://auth.example.com/other",
+          token_url_source: "manual",
+        });
+      });
+    });
+
+    it("shows the API message when finding the token URL fails", async () => {
+      mockPost.mockRejectedValue(
+        new CustomException("Bad Request", 400, { detail: "No OAuth metadata found" }),
+      );
+      await openCreateForm("https://o.example.com");
+      await chooseAuth("OAuth (client credentials)");
+
+      fireEvent.click(screen.getByText("Find token URL"));
+
+      expect(await screen.findByText("No OAuth metadata found")).toBeInTheDocument();
+    });
+
+    it("runs token URL discovery when OAuth is chosen and the URL is filled", async () => {
+      mockPost.mockResolvedValue({
+        data: { token_url: "https://auth.example.com/token", auth_method: "client_secret_basic" },
+      });
+      await openCreateForm("https://o.example.com");
+      await chooseAuth("OAuth (client credentials)");
+
+      await waitFor(() => expect(discoverCalls()).toHaveLength(1), { timeout: 3000 });
+      await waitFor(() =>
+        expect(screen.getByLabelText(/^Token URL/)).toHaveValue("https://auth.example.com/token"),
+      );
+      expect(discoverCalls()[0][1]).toEqual({ url: "https://o.example.com" });
+      // Settled: filling the token URL must not trigger a second lookup.
+      await new Promise((r) => setTimeout(r, 800));
+      expect(discoverCalls()).toHaveLength(1);
+    });
+
+    it("prefills the AWS region from an aws-mcp URL", async () => {
+      mockPost.mockResolvedValue({ data: {} });
+      await openCreateForm("https://aws-mcp.eu-central-1.api.aws/mcp");
+      await chooseAuth("AWS IAM");
+
+      expect(screen.getByLabelText(/^Region/)).toHaveValue("eu-central-1");
+      fireEvent.change(screen.getByLabelText(/^Access key ID/), { target: { value: "AKIA1" } });
+      fireEvent.change(screen.getByLabelText(/^Secret access key/), { target: { value: "sek" } });
+      submit();
+
+      await waitFor(() => {
+        expect(mockPost).toHaveBeenCalledWith(
+          "/ai-gateway/mcp/servers",
+          expect.objectContaining({
+            auth_type: "aws_iam",
+            auth_config: {
+              region: "eu-central-1",
+              access_key_id: "AKIA1",
+              secret_access_key: "sek",
+            },
+          }),
+        );
+      });
+    });
+
+    it("keeps the stored secret when the field is left blank on edit", async () => {
+      mockGet.mockResolvedValue({
+        data: {
+          servers: [
+            makeServer({
+              auth_type: "oauth",
+              oauth_client_id: "cid",
+              oauth_token_url: "https://auth.example.com/token",
+              oauth_token_url_source: "discovered",
+              oauth_scope: "read",
+              auth_secret_hint: "abcd...wxyz",
+            }),
+          ],
+        },
+      });
+      mockPatch.mockResolvedValue({
+        data: { server: makeServer(), discovery: { status: "skipped", tools_discovered: 0 } },
+      });
+      renderWithProviders(<MCPServersPage />, { route: "/ai-gateway/mcp/servers" });
+      await waitFor(() => expect(screen.getByText("Search Server")).toBeInTheDocument());
+
+      fireEvent.click(screen.getByRole("button", { name: "Edit server" }));
+
+      expect(screen.getByLabelText(/^Client ID/)).toHaveValue("cid");
+      expect(
+        screen.getByText("Current secret: abcd...wxyz. Leave blank to keep it."),
+      ).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+
+      await waitFor(() => {
+        const payload = mockPatch.mock.calls[0][1];
+        expect(payload.auth_config).toEqual({
+          client_id: "cid",
+          token_url: "https://auth.example.com/token",
+          token_url_source: "discovered",
+          scope: "read",
+        });
+        expect(payload.auth_config).not.toHaveProperty("client_secret");
+      });
+      // Editing a saved server never re-runs discovery on its own.
+      expect(discoverCalls()).toHaveLength(0);
+    });
+
+    it("labels OAuth and AWS IAM servers in the list", async () => {
+      mockGet.mockResolvedValue({
+        data: {
+          servers: [
+            makeServer({ id: 1, name: "Oauth Srv", auth_type: "oauth" }),
+            makeServer({ id: 2, name: "Aws Srv", auth_type: "aws_iam" }),
+          ],
+        },
+      });
+      renderWithProviders(<MCPServersPage />, { route: "/ai-gateway/mcp/servers" });
+
+      expect(await screen.findByText(/^OAuth · \/search-server$/)).toBeInTheDocument();
+      expect(screen.getByText(/^AWS IAM · \/search-server$/)).toBeInTheDocument();
+    });
+  });
 });
