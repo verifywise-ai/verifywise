@@ -91,12 +91,19 @@ export const getAllIntakeFormsQuery = async (organizationId: number): Promise<II
 /**
  * Get intake form by ID
  */
+/**
+ * Get an intake form by id. `withReviewDays` adds its review time (#5189) for
+ * the submit handlers; the default columns feed the frozen unversioned
+ * /api/intake responses (ADR 0001), so they never include it.
+ */
 export const getIntakeFormByIdQuery = async (
   id: number,
   organizationId: number,
-): Promise<IIntakeForm | null> => {
+  opts: { withReviewDays?: boolean } = {},
+): Promise<(IIntakeForm & { reviewDays?: number }) | null> => {
+  const extra = opts.withReviewDays ? `, review_days AS "reviewDays"` : "";
   const forms = await sequelize.query(
-    `SELECT ${FORM_SELECT_COLUMNS}
+    `SELECT ${FORM_SELECT_COLUMNS}${extra}
     FROM intake_forms
     WHERE organization_id = :organizationId AND id = :id`,
     {
@@ -917,6 +924,8 @@ export const getSubmissionForConfirmationQuery = async (
       s.submitter_email AS "submitterEmail", s.submitter_name AS "submitterName",
       s.routing, s.review_days AS "reviewDays", s.review_due_date::text AS "reviewDueDate",
       s.confirmation_sent_at AS "confirmationSentAt",
+      s.confirmation_attempts AS "confirmationAttempts",
+      s.confirmation_next_attempt_at AS "confirmationNextAttemptAt",
       f.id IS NOT NULL AS "formExists", f.name AS "formName", f.slug AS "formSlug",
       f.public_id AS "formPublicId", f.routing AS "formRouting", f.recipients AS "formRecipients"
     FROM intake_submissions s
@@ -949,27 +958,52 @@ export const claimSubmissionConfirmationQuery = async (
   return rows.length > 0;
 };
 
-/** Undo a claim whose email failed to send, so a later path retries it. */
+/**
+ * Undo a claim whose email failed to send, count the failure and schedule the
+ * next try `retryGapsMinutes[failures - 1]` minutes from now (no further try
+ * is scheduled once the gaps run out). Returns the number of failures so far.
+ */
 export const releaseSubmissionConfirmationQuery = async (
   id: number,
   organizationId: number,
-): Promise<void> => {
-  await sequelize.query(
-    `UPDATE intake_submissions SET confirmation_sent_at = NULL
-    WHERE organization_id = :organizationId AND id = :id`,
-    { replacements: { organizationId, id } },
-  );
+  retryGapsMinutes: number[],
+): Promise<number> => {
+  const rows = (await sequelize.query(
+    `UPDATE intake_submissions
+    SET confirmation_sent_at = NULL,
+      confirmation_attempts = confirmation_attempts + 1,
+      confirmation_next_attempt_at = CASE
+        WHEN confirmation_attempts + 1 <= :gapCount
+          THEN NOW() + make_interval(mins => (ARRAY[:gaps]::int[])[confirmation_attempts + 1])
+        ELSE NULL
+      END
+    WHERE organization_id = :organizationId AND id = :id
+    RETURNING confirmation_attempts AS "attempts"`,
+    {
+      replacements: {
+        organizationId,
+        id,
+        gaps: retryGapsMinutes,
+        gapCount: retryGapsMinutes.length,
+      },
+      type: QueryTypes.SELECT,
+    },
+  )) as Array<{ attempts: number }>;
+  return rows[0]?.attempts ?? 0;
 };
 
 /**
  * Pending submissions, across organizations, whose submitter confirmation is
  * still unclaimed `olderThanMinutes` after submit (past the 2-minute cap) and
  * at most `withinDays` old, so a lost job or cap is caught up without old
- * rows piling up. Read by the repeating sweep and at worker start.
+ * rows piling up. A submission whose send failed is listed again once its
+ * next try is due, until it has failed more than `maxFailures` times. Read
+ * by the repeating sweep and at worker start.
  */
 export const getSubmissionsAwaitingConfirmationQuery = async (
   olderThanMinutes: number,
   withinDays: number,
+  maxFailures: number,
 ): Promise<Array<{ id: number; organizationId: number }>> => {
   const rows = await sequelize.query(
     `SELECT id, organization_id AS "organizationId"
@@ -979,9 +1013,16 @@ export const getSubmissionsAwaitingConfirmationQuery = async (
       AND COALESCE(submitter_email, '') <> ''
       AND created_at < NOW() - make_interval(mins => :olderThanMinutes)
       AND created_at > NOW() - make_interval(days => :withinDays)
+      AND confirmation_attempts <= :maxFailures
+      AND (confirmation_next_attempt_at IS NULL OR confirmation_next_attempt_at <= NOW())
     ORDER BY id`,
     {
-      replacements: { pending: IntakeSubmissionStatus.PENDING, olderThanMinutes, withinDays },
+      replacements: {
+        pending: IntakeSubmissionStatus.PENDING,
+        olderThanMinutes,
+        withinDays,
+        maxFailures,
+      },
       type: QueryTypes.SELECT,
     },
   );

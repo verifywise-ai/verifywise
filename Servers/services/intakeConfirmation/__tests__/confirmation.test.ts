@@ -6,10 +6,6 @@ jest.mock("../../../utils/logger/fileLogger", () => ({
   __esModule: true,
   default: { error: jest.fn(), info: jest.fn(), warn: jest.fn(), debug: jest.fn() },
 }));
-jest.mock("../../../utils/intakeForm.utils", () => ({
-  ...(jest.requireActual("../../../utils/intakeForm.utils") as object),
-  getFormReviewDaysQuery: jest.fn(),
-}));
 
 import {
   ConfirmationDeps,
@@ -19,13 +15,15 @@ import {
   sweepSubmitterConfirmations,
   trySendSubmitterConfirmation,
 } from "../confirmation";
-import { getFormReviewDaysQuery } from "../../../utils/intakeForm.utils";
+import logger from "../../../utils/logger/fileLogger";
 import { IntakeSubmissionStatus } from "../../../domain.layer/enums/intake-submission-status.enum";
 import type { IFormRouting } from "../../../domain.layer/interfaces/i.intakeForm";
 import type {
   ISubmissionConfirmationRow,
   ISubmissionRouting,
 } from "../../../domain.layer/interfaces/i.intakeSubmission";
+
+beforeEach(() => jest.clearAllMocks());
 
 const ORG = 7;
 const NOW = new Date("2026-11-02T10:00:00Z"); // Monday
@@ -61,6 +59,8 @@ const row = (overrides: Partial<ISubmissionConfirmationRow> = {}): ISubmissionCo
   reviewDays: 3,
   reviewDueDate: "2026-11-05",
   confirmationSentAt: null,
+  confirmationAttempts: 0,
+  confirmationNextAttemptAt: null,
   formExists: true,
   formName: "AI intake",
   formSlug: "ai-intake",
@@ -91,14 +91,19 @@ function harness(rowsIn: ISubmissionConfirmationRow[], overrides: Partial<Confir
       r.confirmationSentAt = NOW;
       return true;
     }),
+    // Like the SQL: count the failure; the sweep's own schedule is checked
+    // by the integration test, so the next try is left due here.
     release: jest.fn(async (id: number) => {
       const r = rows.get(id);
-      if (r) r.confirmationSentAt = null;
+      if (!r) return 0;
+      r.confirmationSentAt = null;
+      r.confirmationAttempts += 1;
+      return r.confirmationAttempts;
     }),
     send: jest.fn(async () => true),
-    listAwaiting: jest.fn(async () =>
+    listAwaiting: jest.fn(async (_after: number, _days: number, maxFailures: number) =>
       [...rows.values()]
-        .filter((r) => !r.confirmationSentAt)
+        .filter((r) => !r.confirmationSentAt && r.confirmationAttempts <= maxFailures)
         .map((r) => ({ id: r.id, organizationId: ORG })),
     ),
     createToken: jest.fn(() => "signed-token"),
@@ -262,7 +267,8 @@ describe("sendSubmitterConfirmationOnce", () => {
     expect(await sendSubmitterConfirmationOnce(ORG, 11, "en", { fallback: true }, h.deps)).toBe(
       false,
     );
-    expect(h.deps.release).toHaveBeenCalledWith(11, ORG);
+    expect(h.deps.release).toHaveBeenCalledWith(11, ORG, [5, 15, 60, 360, 1440]);
+    expect(h.rows.get(11)?.confirmationAttempts).toBe(1);
     expect(h.rows.get(11)?.confirmationSentAt).toBeNull();
 
     expect(await sendSubmitterConfirmationOnce(ORG, 11, "en", { fallback: true }, h.deps)).toBe(
@@ -270,6 +276,30 @@ describe("sendSubmitterConfirmationOnce", () => {
     );
     expect(send).toHaveBeenCalledTimes(2);
     expect(h.rows.get(11)?.confirmationSentAt).toEqual(NOW);
+  });
+
+  it("waits for the scheduled retry after a failed send", async () => {
+    const later = new Date(NOW.getTime() + 5 * 60_000);
+    const h = harness([row({ confirmationAttempts: 1, confirmationNextAttemptAt: later })]);
+    expect(await sendSubmitterConfirmationOnce(ORG, 11, "en", { fallback: true }, h.deps)).toBe(
+      false,
+    );
+    expect(h.deps.claim).not.toHaveBeenCalled();
+  });
+
+  it("gives up after the last retry, logging it once", async () => {
+    const send = jest.fn(async () => false);
+    const h = harness([row()], { send });
+    for (let i = 0; i < 10; i += 1) {
+      await sendSubmitterConfirmationOnce(ORG, 11, "en", { fallback: true }, h.deps);
+    }
+    // The first send and 5 retries, then nothing more.
+    expect(send).toHaveBeenCalledTimes(6);
+    expect(h.rows.get(11)?.confirmationAttempts).toBe(6);
+    const giveUps = (logger.error as jest.Mock).mock.calls.filter((c) =>
+      String(c[0]).startsWith("Giving up on the confirmation for submission 11"),
+    );
+    expect(giveUps).toHaveLength(1);
   });
 
   it("marks a submission whose form was deleted as handled, sending nothing", async () => {
@@ -346,7 +376,7 @@ describe("sweepSubmitterConfirmations", () => {
   it("asks for submissions past 3 minutes and within 7 days", async () => {
     const h = harness([]);
     await sweepSubmitterConfirmations(h.deps);
-    expect(h.deps.listAwaiting).toHaveBeenCalledWith(3, 7);
+    expect(h.deps.listAwaiting).toHaveBeenCalledWith(3, 7, 5);
   });
 
   it("sends each awaiting confirmation with the fallback, once", async () => {
@@ -371,20 +401,16 @@ describe("sweepSubmitterConfirmations", () => {
 });
 
 describe("reviewTimeAtSubmit", () => {
-  const mockDays = getFormReviewDaysQuery as jest.MockedFunction<typeof getFormReviewDaysQuery>;
-
-  it("takes the form's setting and counts business days from now", async () => {
-    mockDays.mockResolvedValueOnce(2);
+  it("takes the form's setting and counts business days from now", () => {
     // Friday + 2 business days = Tuesday
-    expect(await reviewTimeAtSubmit(5, ORG, new Date("2026-11-06T16:00:00Z"))).toEqual({
+    expect(reviewTimeAtSubmit(2, new Date("2026-11-06T16:00:00Z"))).toEqual({
       reviewDays: 2,
       reviewDueDate: "2026-11-10",
     });
   });
 
-  it("falls back to the default when the setting cannot be read", async () => {
-    mockDays.mockRejectedValueOnce(new Error("db down"));
-    expect(await reviewTimeAtSubmit(5, ORG, NOW)).toEqual({
+  it("uses the default when the form has no setting", () => {
+    expect(reviewTimeAtSubmit(undefined, NOW)).toEqual({
       reviewDays: 3,
       reviewDueDate: "2026-11-05",
     });

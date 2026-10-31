@@ -541,7 +541,7 @@ describe("IntakeFormBuilder Page", () => {
         fireEvent.click(screen.getByRole("button", { name: "Save" }));
         expect(
           await screen.findByText(
-            "The form was saved, but the review time was not. Try saving again.",
+            "The form was saved, but the review time was not. Click Save to try again.",
           ),
         ).toBeInTheDocument();
       });

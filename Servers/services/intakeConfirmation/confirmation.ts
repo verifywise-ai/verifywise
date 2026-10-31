@@ -16,7 +16,6 @@ import { DEFAULT_REVIEW_DAYS } from "../../constants/intakeReviewTime";
 import {
   claimSubmissionConfirmationQuery,
   getEligibleReviewersQuery,
-  getFormReviewDaysQuery,
   getSubmissionForConfirmationQuery,
   getSubmissionsAwaitingConfirmationQuery,
   getTenantSlugById,
@@ -37,6 +36,12 @@ import {
 export const CONFIRMATION_SWEEP_AFTER_MINUTES = 3;
 /** Older submissions are left alone, so stale rows never pile up in the sweep. */
 export const CONFIRMATION_SWEEP_WITHIN_DAYS = 7;
+/**
+ * Minutes before each retry after a failed send: the sweep retries at most
+ * this many times, waiting longer each time, then gives up.
+ */
+export const CONFIRMATION_RETRY_GAPS_MINUTES = [5, 15, 60, 360, 1440];
+const MAX_RETRIES = CONFIRMATION_RETRY_GAPS_MINUTES.length;
 
 export interface ConfirmationDeps {
   getSubmission: typeof getSubmissionForConfirmationQuery;
@@ -73,21 +78,14 @@ const errorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
 
 /**
- * The review time a submission made now gets: the form's setting and the
- * date it runs out. If the setting cannot be read the default is used, so a
- * lookup failure never fails a submit.
+ * The review time a submission made now gets: the form's setting (read with
+ * the form at submit; the default when missing) and the date it runs out.
  */
-export async function reviewTimeAtSubmit(
-  formId: number,
-  organizationId: number,
+export function reviewTimeAtSubmit(
+  formReviewDays: number | null | undefined,
   now: Date = new Date(),
-): Promise<{ reviewDays: number; reviewDueDate: string }> {
-  let reviewDays = DEFAULT_REVIEW_DAYS;
-  try {
-    reviewDays = (await getFormReviewDaysQuery(formId, organizationId)) ?? DEFAULT_REVIEW_DAYS;
-  } catch (error) {
-    logger.error(`Could not read the review time of form ${formId}: ${errorMessage(error)}`);
-  }
+): { reviewDays: number; reviewDueDate: string } {
+  const reviewDays = formReviewDays ?? DEFAULT_REVIEW_DAYS;
   return { reviewDays, reviewDueDate: addBusinessDays(now, reviewDays, REVIEW_TIME_ZONE) };
 }
 
@@ -142,6 +140,12 @@ export async function sendSubmitterConfirmationOnce(
     !row.submitterEmail ||
     row.confirmationSentAt
   ) {
+    return false;
+  }
+  // After a failed send, only the scheduled retry may send it; after the last
+  // retry, nothing does.
+  if (row.confirmationAttempts > MAX_RETRIES) return false;
+  if (row.confirmationNextAttemptAt && new Date(row.confirmationNextAttemptAt) > d.now()) {
     return false;
   }
   if (!row.formExists) {
@@ -199,7 +203,15 @@ export async function sendSubmitterConfirmationOnce(
     sentence,
   );
   if (!sent) {
-    await d.release(submissionId, organizationId);
+    // Release the claim so a later sweep retries. Accepted risk: if the mail
+    // provider accepted the message but the call still failed (a timeout
+    // after delivery), the retry sends a duplicate.
+    const failures = await d.release(submissionId, organizationId, CONFIRMATION_RETRY_GAPS_MINUTES);
+    if (failures > MAX_RETRIES) {
+      logger.error(
+        `Giving up on the confirmation for submission ${submissionId} after ${failures} failed sends`,
+      );
+    }
     return false;
   }
   return true;
@@ -238,6 +250,7 @@ export async function sweepSubmitterConfirmations(
   const rows = await d.listAwaiting(
     CONFIRMATION_SWEEP_AFTER_MINUTES,
     CONFIRMATION_SWEEP_WITHIN_DAYS,
+    MAX_RETRIES,
   );
   let sent = 0;
   for (const row of rows) {

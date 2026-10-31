@@ -21,6 +21,7 @@ import {
 import { cleanupDatabase, createTestOrganization, createTestUser } from "./helpers";
 
 const migration = require("../../database/migrations/20261031120000-intake-review-time.js");
+const retryMigration = require("../../database/migrations/20261031130000-intake-confirmation-retry.js");
 
 const queryInterface = { sequelize };
 
@@ -76,7 +77,10 @@ const setCreatedAt = (ids: number[], interval: string) =>
 afterEach(cleanupDatabase);
 
 // Leave the schema as the migration left it, whatever a test did.
-afterAll(() => migration.up(queryInterface));
+afterAll(async () => {
+  await migration.up(queryInterface);
+  await retryMigration.up(queryInterface);
+});
 
 describe("intake_forms.review_days", () => {
   it("defaults to 3 and is read and set through its own queries", async () => {
@@ -86,13 +90,16 @@ describe("intake_forms.review_days", () => {
     expect(await getFormReviewDaysQuery(form.id, orgId)).toBe(10);
   });
 
-  it("is not part of the frozen legacy form contract", async () => {
+  it("is not part of the frozen legacy form contract, only read on request for submit", async () => {
     const { orgId, form } = await setup();
     const legacy = (await getIntakeFormByIdQuery(form.id, orgId)) as unknown as Record<
       string,
       unknown
     >;
     expect(legacy).not.toHaveProperty("reviewDays");
+    expect(
+      (await getIntakeFormByIdQuery(form.id, orgId, { withReviewDays: true }))?.reviewDays,
+    ).toBe(3);
   });
 
   it("is scoped to the organization", async () => {
@@ -144,13 +151,25 @@ describe("claimSubmissionConfirmationQuery", () => {
     expect(await column(id, "confirmation_sent_at")).not.toBeNull();
   });
 
-  it("can be released after a failed send and claimed again", async () => {
+  it("can be released after a failed send, counting it and scheduling the retry", async () => {
     const { orgId, submit } = await setup();
     const { id } = await submit();
     expect(await claimSubmissionConfirmationQuery(id, orgId)).toBe(true);
-    await releaseSubmissionConfirmationQuery(id, orgId);
+    expect(await releaseSubmissionConfirmationQuery(id, orgId, [5, 15])).toBe(1);
     expect(await column(id, "confirmation_sent_at")).toBeNull();
+    const [{ minutes }] = await sequelize.query<{ minutes: number }>(
+      `SELECT ROUND(EXTRACT(EPOCH FROM confirmation_next_attempt_at - NOW()) / 60)::int AS minutes
+       FROM intake_submissions WHERE id = :id`,
+      { replacements: { id }, type: QueryTypes.SELECT },
+    );
+    expect(minutes).toBe(5);
+
     expect(await claimSubmissionConfirmationQuery(id, orgId)).toBe(true);
+    expect(await releaseSubmissionConfirmationQuery(id, orgId, [5, 15])).toBe(2);
+    expect(await claimSubmissionConfirmationQuery(id, orgId)).toBe(true);
+    // Past the last gap: counted, with no further try scheduled.
+    expect(await releaseSubmissionConfirmationQuery(id, orgId, [5, 15])).toBe(3);
+    expect(await column(id, "confirmation_next_attempt_at")).toBeNull();
   });
 
   it("does not claim another organization's or a decided submission", async () => {
@@ -187,20 +206,56 @@ describe("getSubmissionsAwaitingConfirmationQuery", () => {
     await setCreatedAt([stale.id], "8 days");
     await claimSubmissionConfirmationQuery(claimed.id, orgId);
 
-    const ids = (await getSubmissionsAwaitingConfirmationQuery(3, 7)).map((r) => r.id);
+    const ids = (await getSubmissionsAwaitingConfirmationQuery(3, 7, 5)).map((r) => r.id);
     expect(ids).toContain(due.id);
     expect(ids).not.toContain(fresh.id);
     expect(ids).not.toContain(claimed.id);
     expect(ids).not.toContain(noEmail.id);
     expect(ids).not.toContain(stale.id);
   });
+
+  it("lists a failed send again only once its retry is due, and not after the last one", async () => {
+    const { submit } = await setup();
+    const waiting = await submit();
+    const retryDue = await submit();
+    const givenUp = await submit();
+    await setCreatedAt([waiting.id, retryDue.id, givenUp.id], "1 hour");
+    await sequelize.query(
+      `UPDATE intake_submissions SET confirmation_attempts = 1,
+         confirmation_next_attempt_at = NOW() + interval '10 minutes' WHERE id = :id`,
+      { replacements: { id: waiting.id } },
+    );
+    await sequelize.query(
+      `UPDATE intake_submissions SET confirmation_attempts = 2,
+         confirmation_next_attempt_at = NOW() - interval '1 minute' WHERE id = :id`,
+      { replacements: { id: retryDue.id } },
+    );
+    await sequelize.query(
+      `UPDATE intake_submissions SET confirmation_attempts = 6,
+         confirmation_next_attempt_at = NULL WHERE id = :id`,
+      { replacements: { id: givenUp.id } },
+    );
+
+    const ids = (await getSubmissionsAwaitingConfirmationQuery(3, 7, 5)).map((r) => r.id);
+    expect(ids).toContain(retryDue.id);
+    expect(ids).not.toContain(waiting.id);
+    expect(ids).not.toContain(givenUp.id);
+  });
 });
 
-describe("migration 20261031120000", () => {
-  it("marks submissions made before it as confirmed, and round-trips", async () => {
+describe("migrations 20261031120000 and 20261031130000", () => {
+  it("mark submissions made before them as confirmed, and round-trip", async () => {
     const { orgId, submit } = await setup();
     const { id } = await submit();
 
+    await retryMigration.down(queryInterface);
+    const retryCols = await sequelize.query<{ column_name: string }>(
+      `SELECT column_name FROM information_schema.columns
+       WHERE table_name = 'intake_submissions'
+         AND column_name IN ('review_days', 'confirmation_attempts', 'confirmation_next_attempt_at')`,
+      { type: QueryTypes.SELECT },
+    );
+    expect(retryCols).toHaveLength(0);
     await migration.down(queryInterface);
     const cols = await sequelize.query<{ column_name: string }>(
       `SELECT column_name FROM information_schema.columns
@@ -211,11 +266,14 @@ describe("migration 20261031120000", () => {
     expect(cols).toHaveLength(0);
 
     await migration.up(queryInterface);
+    await retryMigration.up(queryInterface);
     // The existing submission already had its confirmation: never emailed again.
     expect(await column(id, "confirmation_sent_at")).not.toBeNull();
+    expect(await column(id, "confirmation_attempts")).toBe("0");
     expect(await claimSubmissionConfirmationQuery(id, orgId)).toBe(false);
 
     // up() is safe to run twice.
     await migration.up(queryInterface);
+    await retryMigration.up(queryInterface);
   });
 });

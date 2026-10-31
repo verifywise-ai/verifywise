@@ -16,18 +16,26 @@ export function getReviewDaysError(value: number): string | undefined {
 /** The number a typed text stands for; NaN when empty. */
 const parseDraft = (text: string): number => (text.trim() === "" ? NaN : Number(text));
 
+/** Whether the stored review time has loaded. */
+export type ReviewTimeStatus = "loading" | "loaded" | "failed";
+
+const LOAD_ERROR = "Could not load the review time. Reload the page to change it.";
+
 interface ReviewTimeFieldProps {
   value: number;
+  /** Until loaded the field is empty and disabled, never showing the default as if stored. */
+  status?: ReviewTimeStatus;
   onChange: (value: number) => void;
 }
 
 /** Per-form review time, named with its due date in the submitter's confirmation email. */
-const ReviewTimeField = ({ value, onChange }: ReviewTimeFieldProps) => {
+const ReviewTimeField = ({ value, status = "loaded", onChange }: ReviewTimeFieldProps) => {
   // Text being typed, so the field can be emptied (or show "05") without
   // snapping back. It is shown only while it still stands for the current
   // value, so a value loaded or reset from outside replaces it.
   const [draft, setDraft] = useState<string | null>(null);
   const shown = draft !== null && Object.is(parseDraft(draft), value) ? draft : String(value);
+  const loaded = status === "loaded";
 
   return (
     <Box data-testid="review-time-field">
@@ -35,7 +43,7 @@ const ReviewTimeField = ({ value, onChange }: ReviewTimeFieldProps) => {
         id="review-days"
         type="number"
         label="Review time (business days)"
-        value={Number.isNaN(value) && draft === null ? "" : shown}
+        value={!loaded || (Number.isNaN(value) && draft === null) ? "" : shown}
         onChange={(e) => {
           const text = e.target.value;
           setDraft(text);
@@ -43,7 +51,8 @@ const ReviewTimeField = ({ value, onChange }: ReviewTimeFieldProps) => {
         }}
         min={MIN_REVIEW_DAYS}
         max={MAX_REVIEW_DAYS}
-        error={getReviewDaysError(value)}
+        disabled={!loaded}
+        error={status === "failed" ? LOAD_ERROR : loaded ? getReviewDaysError(value) : undefined}
         helperText="Sets the due date named in the confirmation email to the submitter"
       />
     </Box>

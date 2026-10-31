@@ -3100,7 +3100,10 @@ export async function submitPublicFormByPublicId(req: Request, res: Response) {
     } = req.body;
 
     // Validate contact info (always required)
-    const fullFormForValidation = await getIntakeFormByIdQuery(form.id, tenantInfo.orgId);
+    // With its review time, which the submission stores (#5189).
+    const fullFormForValidation = await getIntakeFormByIdQuery(form.id, tenantInfo.orgId, {
+      withReviewDays: true,
+    });
 
     if (!submitterEmail) {
       return res.status(400).json(STATUS_CODE[400](req.t!("Submitter email is required")));
@@ -3205,9 +3208,9 @@ export async function submitPublicFormByPublicId(req: Request, res: Response) {
       }
     }
 
-    // The review time in force now; the email and dashboards use this, not
-    // the form's later setting.
-    const reviewTime = await reviewTimeAtSubmit(form.id, tenantInfo.orgId);
+    // The review time in force now; the confirmation email uses this, not the
+    // form's later setting.
+    const reviewTime = reviewTimeAtSubmit(fullFormForValidation?.reviewDays);
     const transaction = await sequelize.transaction();
 
     try {
@@ -3450,7 +3453,10 @@ export async function submitPublicForm(req: Request, res: Response) {
     } = req.body;
 
     // Validate contact info (always required)
-    const fullFormForValidation = await getIntakeFormByIdQuery(form.id, tenantInfo.id);
+    // With its review time, which the submission stores (#5189).
+    const fullFormForValidation = await getIntakeFormByIdQuery(form.id, tenantInfo.id, {
+      withReviewDays: true,
+    });
 
     if (!submitterEmail) {
       return res.status(400).json(STATUS_CODE[400](req.t!("Submitter email is required")));
@@ -3555,9 +3561,9 @@ export async function submitPublicForm(req: Request, res: Response) {
       }
     }
 
-    // The review time in force now; the email and dashboards use this, not
-    // the form's later setting.
-    const reviewTime = await reviewTimeAtSubmit(form.id, tenantInfo.id);
+    // The review time in force now; the confirmation email uses this, not the
+    // form's later setting.
+    const reviewTime = reviewTimeAtSubmit(fullFormForValidation?.reviewDays);
     const transaction = await sequelize.transaction();
 
     try {

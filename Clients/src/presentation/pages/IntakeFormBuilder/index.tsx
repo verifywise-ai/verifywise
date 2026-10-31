@@ -77,7 +77,7 @@ import Select from "../../components/Inputs/Select";
 import Checkbox from "../../components/Inputs/Checkbox";
 import EuAiActStepToggle from "./EuAiActStepToggle";
 import LiveChecksToggle from "./LiveChecksToggle";
-import ReviewTimeField, { getReviewDaysError } from "./ReviewTimeField";
+import ReviewTimeField, { getReviewDaysError, type ReviewTimeStatus } from "./ReviewTimeField";
 import { DEFAULT_REVIEW_DAYS } from "../../../domain/intake/reviewTime";
 import Chip from "../../components/Chip";
 import { PageBreadcrumbs } from "../../components/breadcrumbs/PageBreadcrumbs";
@@ -104,6 +104,9 @@ function arrayMove<T>(arr: T[], from: number, to: number): T[] {
 // ============================================================================
 // Main component
 // ============================================================================
+
+const REVIEW_TIME_NOT_SAVED =
+  "The form was saved, but the review time was not. Click Save to try again.";
 
 export function IntakeFormBuilder() {
   const { formId } = useParams<{ formId?: string }>();
@@ -150,10 +153,18 @@ export function IntakeFormBuilder() {
   >([]);
   const [routingReviewersLoaded, setRoutingReviewersLoaded] = useState(false);
   // The review time is its own v1 resource, saved after the form itself.
-  // savedReviewDaysRef is the value the server holds (or the default shown
-  // when it could not be read), so a save only sends a change.
+  // savedReviewTimeRef is what the server holds, keyed by form, so a save
+  // only sends a change and a reply for another form never counts. Until it
+  // has loaded (or when it could not be), the field is disabled and never
+  // saved, so the default is never shown or sent as if stored.
   const [reviewDays, setReviewDays] = useState(DEFAULT_REVIEW_DAYS);
-  const savedReviewDaysRef = useRef(DEFAULT_REVIEW_DAYS);
+  const [reviewTimeStatus, setReviewTimeStatus] = useState<ReviewTimeStatus>("loaded");
+  const savedReviewTimeRef = useRef<{ formId: number | null; days: number }>({
+    formId: null,
+    days: DEFAULT_REVIEW_DAYS,
+  });
+  // Counts review-time edits, so a late load never overwrites a typed value.
+  const reviewEditsRef = useRef(0);
   const [fieldToDelete, setFieldToDelete] = useState<string | null>(null);
   const [deleteFieldModalOpen, setDeleteFieldModalOpen] = useState(false);
   const [snackbar, setSnackbar] = useState<{
@@ -182,18 +193,22 @@ export function IntakeFormBuilder() {
     }
     const load = ++loadCountRef.current;
     setReviewDays(DEFAULT_REVIEW_DAYS);
-    savedReviewDaysRef.current = DEFAULT_REVIEW_DAYS;
+    savedReviewTimeRef.current = { formId: null, days: DEFAULT_REVIEW_DAYS };
+    setReviewTimeStatus(isEditing && formId ? "loading" : "loaded");
     if (isEditing && formId) {
       setIsLoadingForm(true);
       setLoadFailed(false);
-      getIntakeFormReviewTime(parseInt(formId))
+      const id = parseInt(formId);
+      const reviewEditsAtStart = reviewEditsRef.current;
+      getIntakeFormReviewTime(id)
         .then((days) => {
           if (loadCountRef.current !== load) return;
-          setReviewDays(days);
-          savedReviewDaysRef.current = days;
+          savedReviewTimeRef.current = { formId: id, days };
+          if (reviewEditsRef.current === reviewEditsAtStart) setReviewDays(days);
+          setReviewTimeStatus("loaded");
         })
         .catch(() => {
-          // Shows the default; a save leaves the stored value alone unless it is changed.
+          if (loadCountRef.current === load) setReviewTimeStatus("failed");
         });
       getIntakeForm(parseInt(formId))
         .then((response) => {
@@ -470,7 +485,7 @@ export function IntakeFormBuilder() {
       });
       return null;
     }
-    if (getReviewDaysError(reviewDays)) {
+    if (reviewTimeStatus === "loaded" && getReviewDaysError(reviewDays)) {
       setSnackbar({
         open: true,
         message: "Fix the review time before saving",
@@ -492,6 +507,7 @@ export function IntakeFormBuilder() {
       logicErrors.length > 0 ? "Draft saved. Fix the highlighted fields before publishing" : null;
     const editsAtStart = editCountRef.current;
     const loadsAtStart = loadCountRef.current;
+    const days = reviewDays;
     setIsSaving(true);
     try {
       const formData = {
@@ -508,7 +524,10 @@ export function IntakeFormBuilder() {
       if (isEditing && formId) {
         const response = await updateIntakeForm(parseInt(formId), formData);
         applySaved(response.data, editsAtStart, loadsAtStart);
-        if (!(await saveReviewTime(parseInt(formId), loadsAtStart))) return parseInt(formId);
+        if (!(await saveReviewTime(parseInt(formId), days, loadsAtStart))) {
+          reviewTimeNotSaved(REVIEW_TIME_NOT_SAVED);
+          return parseInt(formId);
+        }
         setSnackbar({
           open: true,
           message: savedMessage ?? "Form saved successfully",
@@ -519,7 +538,9 @@ export function IntakeFormBuilder() {
         const response = await createIntakeForm(formData);
         if (response.data?.id) {
           applySaved(response.data, editsAtStart, loadsAtStart);
-          const reviewTimeSaved = await saveReviewTime(response.data.id, loadsAtStart);
+          // A new form starts with the database default.
+          savedReviewTimeRef.current = { formId: response.data.id, days: DEFAULT_REVIEW_DAYS };
+          const reviewTimeSaved = await saveReviewTime(response.data.id, days, loadsAtStart);
           // Only when the new form is still the one on screen.
           if (loadCountRef.current === loadsAtStart) {
             createdIdRef.current = response.data.id;
@@ -531,6 +552,8 @@ export function IntakeFormBuilder() {
               message: savedMessage ?? "Form created successfully",
               severity: savedMessage ? "warning" : "success",
             });
+          } else {
+            reviewTimeNotSaved(REVIEW_TIME_NOT_SAVED);
           }
           return response.data.id;
         }
@@ -544,25 +567,38 @@ export function IntakeFormBuilder() {
     }
   };
 
+  /** Whether `days` differs from what the server holds for this form. */
+  const reviewTimeChanged = (savedFormId: number | null, days: number) =>
+    reviewTimeStatus === "loaded" &&
+    !(
+      savedReviewTimeRef.current.formId === savedFormId && savedReviewTimeRef.current.days === days
+    );
+
   /**
-   * Save the review time of a saved form when it changed. Returns false (and
-   * says so) when it could not be saved; the form itself is already saved.
+   * Save the review time of a saved form when it changed. Resolves false when
+   * it could not be saved; the caller says so and keeps the form unsaved.
    */
-  const saveReviewTime = async (savedFormId: number, loadsAtStart: number): Promise<boolean> => {
-    const days = reviewDays;
-    if (days === savedReviewDaysRef.current) return true;
+  const saveReviewTime = async (
+    savedFormId: number,
+    days: number,
+    loadsAtStart: number,
+  ): Promise<boolean> => {
+    if (!reviewTimeChanged(savedFormId, days)) return true;
     try {
       const stored = await updateIntakeFormReviewTime(savedFormId, days);
-      if (loadCountRef.current === loadsAtStart) savedReviewDaysRef.current = stored;
+      if (loadCountRef.current === loadsAtStart) {
+        savedReviewTimeRef.current = { formId: savedFormId, days: stored };
+      }
       return true;
     } catch {
-      setSnackbar({
-        open: true,
-        message: "The form was saved, but the review time was not. Try saving again.",
-        severity: "error",
-      });
       return false;
     }
+  };
+
+  /** The review time did not save: say so and keep Save enabled and the leave-page guard on. */
+  const reviewTimeNotSaved = (message: string) => {
+    setSnackbar({ open: true, message, severity: "error" });
+    setIsDirty(true);
   };
 
   const doPublish = async () => {
@@ -584,7 +620,7 @@ export function IntakeFormBuilder() {
       });
       return;
     }
-    if (getReviewDaysError(reviewDays)) {
+    if (reviewTimeStatus === "loaded" && getReviewDaysError(reviewDays)) {
       setSnackbar({
         open: true,
         message: "Fix the review time before publishing",
@@ -594,6 +630,7 @@ export function IntakeFormBuilder() {
     }
     const editsAtStart = editCountRef.current;
     const loadsAtStart = loadCountRef.current;
+    const days = reviewDays;
     setIsSaving(true);
     try {
       const formData = {
@@ -611,19 +648,44 @@ export function IntakeFormBuilder() {
       const formIdNum = isEditing && formId ? parseInt(formId) : undefined;
       let publishedData;
       if (formIdNum) {
+        // The review time first: if it cannot be saved, nothing is published.
+        if (!(await saveReviewTime(formIdNum, days, loadsAtStart))) {
+          reviewTimeNotSaved(
+            "The review time could not be saved, so the form was not published. Click Publish to try again.",
+          );
+          return;
+        }
         const response = await updateIntakeForm(formIdNum, formData);
         publishedData = response.data;
       } else {
-        const response = await createIntakeForm(formData);
+        // A new form with a review time of its own is created as a draft,
+        // given its review time, and only then made active.
+        const needsReviewTime = days !== DEFAULT_REVIEW_DAYS && reviewTimeStatus === "loaded";
+        const response = await createIntakeForm(
+          needsReviewTime ? { ...formData, status: IntakeFormStatus.DRAFT } : formData,
+        );
         publishedData = response.data;
-        if (publishedData?.id && loadCountRef.current === loadsAtStart) {
-          createdIdRef.current = publishedData.id;
-          navigate(`/intake-forms/${publishedData.id}/edit`, { replace: true });
+        const newId = publishedData?.id;
+        if (newId && loadCountRef.current === loadsAtStart) {
+          createdIdRef.current = newId;
+          navigate(`/intake-forms/${newId}/edit`, { replace: true });
+        }
+        if (newId && needsReviewTime) {
+          savedReviewTimeRef.current = { formId: newId, days: DEFAULT_REVIEW_DAYS };
+          if (!(await saveReviewTime(newId, days, loadsAtStart))) {
+            applySaved(publishedData, editsAtStart, loadsAtStart, {
+              status: IntakeFormStatus.DRAFT,
+            });
+            reviewTimeNotSaved(
+              "The form was saved as a draft, but the review time was not. Click Publish to try again.",
+            );
+            return;
+          }
+          const activated = await updateIntakeForm(newId, formData);
+          publishedData = activated.data;
         }
       }
       applySaved(publishedData, editsAtStart, loadsAtStart, { status: IntakeFormStatus.ACTIVE });
-      const savedId = formIdNum ?? publishedData?.id;
-      if (savedId && !(await saveReviewTime(savedId, loadsAtStart))) return;
       setSnackbar({
         open: true,
         message: "Form published successfully",
@@ -1384,7 +1446,9 @@ export function IntakeFormBuilder() {
 
                         <ReviewTimeField
                           value={reviewDays}
+                          status={reviewTimeStatus}
                           onChange={(days) => {
+                            reviewEditsRef.current += 1;
                             setReviewDays(days);
                             markEdited();
                           }}

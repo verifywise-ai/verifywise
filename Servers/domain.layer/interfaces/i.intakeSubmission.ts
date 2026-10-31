@@ -220,6 +220,9 @@ export interface ISubmissionConfirmationRow {
   reviewDays: number | null;
   reviewDueDate: string | null;
   confirmationSentAt: Date | null;
+  /** Failed sends of the confirmation so far, and when the sweep may try again. */
+  confirmationAttempts: number;
+  confirmationNextAttemptAt: Date | null;
   formExists: boolean;
   formName: string | null;
   formSlug: string | null;

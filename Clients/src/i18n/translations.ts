@@ -240,8 +240,14 @@ export const translations: Record<string, Record<string, string>> = {
     "Fix the review time before saving": "Korrigieren Sie die Prüfdauer vor dem Speichern",
     "Fix the review time before publishing":
       "Korrigieren Sie die Prüfdauer vor dem Veröffentlichen",
-    "The form was saved, but the review time was not. Try saving again.":
-      "Das Formular wurde gespeichert, die Prüfdauer jedoch nicht. Speichern Sie erneut.",
+    "The form was saved, but the review time was not. Click Save to try again.":
+      "Das Formular wurde gespeichert, die Prüfdauer jedoch nicht. Klicken Sie erneut auf Speichern.",
+    "The review time could not be saved, so the form was not published. Click Publish to try again.":
+      "Die Prüfdauer konnte nicht gespeichert werden, daher wurde das Formular nicht veröffentlicht. Klicken Sie erneut auf Veröffentlichen.",
+    "The form was saved as a draft, but the review time was not. Click Publish to try again.":
+      "Das Formular wurde als Entwurf gespeichert, die Prüfdauer jedoch nicht. Klicken Sie erneut auf Veröffentlichen.",
+    "Could not load the review time. Reload the page to change it.":
+      "Die Prüfdauer konnte nicht geladen werden. Laden Sie die Seite neu, um sie zu ändern.",
     "No risk score was recorded for this submission.":
       "Für diese Einreichung wurde kein Risikowert erfasst.",
     "set to": "gesetzt auf",
@@ -9721,8 +9727,14 @@ export const translations: Record<string, Record<string, string>> = {
     "Use a whole number from 1 to 30": "Utilisez un nombre entier de 1 à 30",
     "Fix the review time before saving": "Corrigez le délai d'examen avant d'enregistrer",
     "Fix the review time before publishing": "Corrigez le délai d'examen avant de publier",
-    "The form was saved, but the review time was not. Try saving again.":
-      "Le formulaire a été enregistré, mais pas le délai d'examen. Enregistrez à nouveau.",
+    "The form was saved, but the review time was not. Click Save to try again.":
+      "Le formulaire a été enregistré, mais pas le délai d'examen. Cliquez à nouveau sur Enregistrer.",
+    "The review time could not be saved, so the form was not published. Click Publish to try again.":
+      "Le délai d'examen n'a pas pu être enregistré, le formulaire n'a donc pas été publié. Cliquez à nouveau sur Publier.",
+    "The form was saved as a draft, but the review time was not. Click Publish to try again.":
+      "Le formulaire a été enregistré comme brouillon, mais pas le délai d'examen. Cliquez à nouveau sur Publier.",
+    "Could not load the review time. Reload the page to change it.":
+      "Impossible de charger le délai d'examen. Rechargez la page pour le modifier.",
     "No risk score was recorded for this submission.":
       "Aucun score de risque n'a été enregistré pour cette soumission.",
     "set to": "fixé à",
@@ -19142,8 +19154,14 @@ export const translations: Record<string, Record<string, string>> = {
     "Use a whole number from 1 to 30": "Use un número entero del 1 al 30",
     "Fix the review time before saving": "Corrija el plazo de revisión antes de guardar",
     "Fix the review time before publishing": "Corrija el plazo de revisión antes de publicar",
-    "The form was saved, but the review time was not. Try saving again.":
-      "El formulario se guardó, pero el plazo de revisión no. Vuelva a guardar.",
+    "The form was saved, but the review time was not. Click Save to try again.":
+      "El formulario se guardó, pero el plazo de revisión no. Haga clic de nuevo en Guardar.",
+    "The review time could not be saved, so the form was not published. Click Publish to try again.":
+      "No se pudo guardar el plazo de revisión, así que el formulario no se publicó. Haga clic de nuevo en Publicar.",
+    "The form was saved as a draft, but the review time was not. Click Publish to try again.":
+      "El formulario se guardó como borrador, pero el plazo de revisión no. Haga clic de nuevo en Publicar.",
+    "Could not load the review time. Reload the page to change it.":
+      "No se pudo cargar el plazo de revisión. Vuelva a cargar la página para cambiarlo.",
     "No risk score was recorded for this submission.":
       "No se registró ninguna puntuación de riesgo para este envío.",
     "set to": "fijado en",
