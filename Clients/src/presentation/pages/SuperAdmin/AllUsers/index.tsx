@@ -86,7 +86,7 @@ const RemoveUserModal = ({
         They lose access to this organization. If it is their only organization, their account is
         deleted too.
       </Typography>
-      {error && <Typography sx={{ fontSize: 13, color: "#D32F2F" }}>{error}</Typography>}
+      {error && <Typography sx={{ fontSize: 13, color: "error.main" }}>{error}</Typography>}
     </StandardModal>
   );
 };

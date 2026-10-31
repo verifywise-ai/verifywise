@@ -928,6 +928,7 @@
   "A super admin cannot join an organization": "Ein Superadministrator kann keiner Organisation beitreten",
   "User is already a member of this organization": "Der Benutzer ist bereits Mitglied dieser Organisation",
   "This account signs in with Microsoft. Sign in with Microsoft on this organization's login page to join it.": "Dieses Konto meldet sich mit Microsoft an. Melden Sie sich auf der Anmeldeseite dieser Organisation mit Microsoft an, um ihr beizutreten.",
+  "This account signs in with Microsoft, and this organization has no Microsoft sign-in. Ask its administrator to add you.": "Dieses Konto meldet sich mit Microsoft an, und diese Organisation bietet keine Microsoft-Anmeldung. Bitten Sie ihren Administrator, Sie hinzuzufügen.",
   "Forbidden: Only the user can change their own name or email": "Verboten: Nur der Benutzer selbst kann seinen Namen oder seine E-Mail-Adresse ändern",
   "User is not a member of this organization": "Der Benutzer ist kein Mitglied dieser Organisation",
   "Join an organization on VerifyWise": "Treten Sie einer Organisation auf VerifyWise bei",

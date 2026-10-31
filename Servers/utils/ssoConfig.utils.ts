@@ -46,6 +46,17 @@ export const getSSOCapableOrganizationsQuery = async (
   return result[0].map((r) => ({ id: r.id, name: r.name, ssoEnabled: !!r.sso_enabled }));
 };
 
+/** Whether the organization's login page offers Microsoft sign-in. */
+export const isAzureADLoginEnabledQuery = async (organization_id: number): Promise<boolean> => {
+  const result = (await sequelize.query(
+    `SELECT 1 FROM sso_configurations
+       WHERE organization_id = :organization_id AND provider = 'AzureAD' AND is_enabled = TRUE
+       LIMIT 1`,
+    { replacements: { organization_id } },
+  )) as [unknown[], number];
+  return result[0].length > 0;
+};
+
 export const getAzureADConfigForLoginQuery = async (
   organization_id: number,
   transaction: Transaction | null = null,

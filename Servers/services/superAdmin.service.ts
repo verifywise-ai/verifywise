@@ -466,8 +466,11 @@ export async function removeUserById(
     if (organizations.length === 0) {
       throw new ForbiddenException(t("Super-admin user cannot be deleted"));
     }
-    for (const { organization_id } of organizations) {
-      if (await isLastAdminQuery(organization_id, userId, transaction)) {
+    // In organization id order, so the Admin row locks are always taken in
+    // the same order as any concurrent check.
+    const organizationIds = organizations.map((o) => o.organization_id).sort((a, b) => a - b);
+    for (const organizationId of organizationIds) {
+      if (await isLastAdminQuery(organizationId, userId, transaction)) {
         throw new ConflictException(t("The organization must keep at least one Admin"));
       }
     }

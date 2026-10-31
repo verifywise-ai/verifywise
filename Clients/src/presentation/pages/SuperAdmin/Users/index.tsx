@@ -449,7 +449,7 @@ const Users = () => {
           deleted too.
         </Typography>
         {removeError && (
-          <Typography sx={{ fontSize: 13, color: "#D32F2F" }}>{removeError}</Typography>
+          <Typography sx={{ fontSize: 13, color: "error.main" }}>{removeError}</Typography>
         )}
       </StandardModal>
     </PageHeaderExtended>

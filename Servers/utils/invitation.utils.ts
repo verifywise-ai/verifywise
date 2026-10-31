@@ -237,6 +237,8 @@ export const updateInvitationExpiryQuery = async (
 /**
  * The pending invitation for an email, with its expiry as epoch ms. The
  * column is TIMESTAMP (no zone) holding UTC, which EXTRACT(EPOCH) reads as UTC.
+ * The email matches regardless of case and surrounding spaces, as accounts do
+ * (getUserByEmailQuery): an invitation keeps the address as it was typed.
  */
 export const getPendingInvitationQuery = async (
   organizationId: number,
@@ -246,7 +248,9 @@ export const getPendingInvitationQuery = async (
   const result = (await sequelize.query(
     `SELECT id, role_id, ROUND(EXTRACT(EPOCH FROM expires_at) * 1000) AS expires_at_ms
      FROM invitations
-     WHERE organization_id = :organizationId AND email = :email AND status = 'pending'
+     WHERE organization_id = :organizationId
+       AND LOWER(TRIM(email)) = LOWER(TRIM(:email))
+       AND status = 'pending'
      ORDER BY id DESC
      LIMIT 1`,
     { replacements: { organizationId, email }, transaction },

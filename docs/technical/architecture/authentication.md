@@ -477,10 +477,13 @@ is read per request.
 
 Microsoft SSO already knows the organization (from its SSO configuration), so
 it never shows the picker. An unknown email gets an account and a membership;
-an existing account that is not a member of that organization joins it only
-with a pending, unexpired invitation (accepted in the same transaction),
-otherwise it gets 403. The IdP role claim is synced onto the membership,
-including on that join.
+an existing account that is not a member of that organization gets 403,
+with one exception: an SSO-only account (no password) joins with a pending,
+unexpired invitation, accepted in the same transaction, with the invited role.
+Only the Microsoft identity the account was created with (`sso_user_id` equals
+the Graph `id`) can do that. The address alone proves nothing, since the
+organization's admins configure its tenant. A pure super admin never joins.
+On later sign-ins the IdP role claim is synced onto the membership.
 
 ## Invitations to an existing account
 
@@ -501,7 +504,9 @@ An invitation is refused for an account that is already a member, and for a
 pure super admin (no membership), who never joins an organization
 (`inviteeRefusalQuery`). Two submits at once (a double click) get 409 for the
 second, not 500. An account without a password (SSO only) gets 409 telling it
-to sign in with Microsoft, which accepts the invitation there (see above).
+to sign in with Microsoft, which accepts the invitation there (see above), or
+that the organization has no Microsoft sign-in. Invitation emails match an
+account regardless of case (`getPendingInvitationQuery`).
 
 The `/join` page (`pages/Authentication/JoinOrganization`) shows the invited
 email read-only and asks for the account's password. `customAxios` sends the

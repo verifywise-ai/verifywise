@@ -82,7 +82,11 @@ import { getRoleNameById } from "../utils/roleMap";
 import { uploadFile } from "../utils/fileUpload.utils";
 import { getPendingInvitationQuery, markInvitationAcceptedQuery } from "../utils/invitation.utils";
 import { ConfidentialClientApplication } from "@azure/msal-node";
-import { getAzureADConfigForLoginQuery, isSSOFeatureEnabled } from "../utils/ssoConfig.utils";
+import {
+  getAzureADConfigForLoginQuery,
+  isAzureADLoginEnabledQuery,
+  isSSOFeatureEnabled,
+} from "../utils/ssoConfig.utils";
 
 import { translateError } from "../utils/i18n.utils";
 import {
@@ -640,19 +644,20 @@ async function acceptInvitationAsExistingUser(req: Request, res: Response): Prom
 
   try {
     const user = await getUserByEmailQuery(email);
+    const organizations = user ? await getUserOrganizationsQuery(user.id!) : [];
     // An account without a password signs in only through SSO, and accepts
     // the invitation there (loginUserWithMicrosoft). The link has already
-    // proven the address, so saying so reveals nothing to its holder.
-    if (user && !user.password_hash) {
-      return res
-        .status(409)
-        .json(
-          STATUS_CODE[409](
-            req.t!(
-              "This account signs in with Microsoft. Sign in with Microsoft on this organization's login page to join it.",
-            ),
-          ),
-        );
+    // proven the address, so saying so reveals nothing to its holder. A pure
+    // super admin is refused below either way.
+    if (user && !user.password_hash && organizations.length > 0) {
+      const message = (await isAzureADLoginEnabledQuery(orgId))
+        ? req.t!(
+            "This account signs in with Microsoft. Sign in with Microsoft on this organization's login page to join it.",
+          )
+        : req.t!(
+            "This account signs in with Microsoft, and this organization has no Microsoft sign-in. Ask its administrator to add you.",
+          );
+      return res.status(409).json(STATUS_CODE[409](message));
     }
     // The same answer for an unknown address and a wrong password.
     const passwordIsMatched =
@@ -661,7 +666,6 @@ async function acceptInvitationAsExistingUser(req: Request, res: Response): Prom
       return res.status(401).json(STATUS_CODE[401](req.t!("Invalid email or password")));
     }
 
-    const organizations = await getUserOrganizationsQuery(user.id!);
     // A pure SuperAdmin never joins an organization: that, and their account
     // never being deletable, keeps at least one SuperAdmin on the deployment.
     if (organizations.length === 0) {
@@ -1070,6 +1074,8 @@ async function loginUserWithMicrosoft(req: Request, res: Response): Promise<any>
     const roleId = SSO_ROLE_MAP.get(roleName)!;
 
     let joinedThroughInvitation = false;
+    // The role the session carries: the SSO role, except on a join.
+    let sessionRoleName = roleName;
     let user = await getUserByEmailQuery(email);
     if (!user) {
       const userModel = await UserModel.createNewUser(
@@ -1088,14 +1094,26 @@ async function loginUserWithMicrosoft(req: Request, res: Response): Promise<any>
       );
     } else {
       // An existing account signs in through this organization's SSO only if
-      // it is already a member, or holds a pending invitation to it: Microsoft
-      // has proven the address, which is how an account without a password
-      // (SSO only) accepts an invitation. It joins with the SSO role, like
-      // every sign-in below.
-      const membership = (await getUserOrganizationsQuery(user.id!, transaction)).find(
-        (o) => o.organization_id === Number(organizationId),
-      );
+      // it is already a member, or joins it with a pending invitation. The
+      // address alone does not prove the account: this organization's admins
+      // configure its Microsoft tenant and can give any user any address. So
+      // only the Microsoft identity the account was created with (SSO only,
+      // which has no password to accept with) joins here, never a pure super
+      // admin, and with the invited role.
+      const organizations = await getUserOrganizationsQuery(user.id!, transaction);
+      const membership = organizations.find((o) => o.organization_id === Number(organizationId));
       if (!membership) {
+        const refuse = async () => {
+          await transaction.rollback();
+          return res
+            .status(403)
+            .json(STATUS_CODE[403]("User does not belong to the selected organization"));
+        };
+        const sameIdentity =
+          user.sso_provider === "AzureAD" && !!user.sso_user_id && user.sso_user_id === userInfo.id;
+        if (organizations.length === 0 || !sameIdentity) {
+          return await refuse();
+        }
         const invitation = await getPendingInvitationQuery(
           Number(organizationId),
           user.email,
@@ -1113,14 +1131,25 @@ async function loginUserWithMicrosoft(req: Request, res: Response): Promise<any>
                 transaction,
               )
             : 0;
-        if (accepted === 0) {
-          await transaction.rollback();
-          return res
-            .status(403)
-            .json(STATUS_CODE[403]("User does not belong to the selected organization"));
+        if (accepted > 0) {
+          await addOrganizationMemberQuery(
+            Number(organizationId),
+            user.id!,
+            invitation!.role_id,
+            transaction,
+          );
+          joinedThroughInvitation = true;
         }
-        await addOrganizationMemberQuery(Number(organizationId), user.id!, roleId, transaction);
-        joinedThroughInvitation = true;
+        // Read back, which also covers a second callback for the same sign-in:
+        // it waits on the first one's accept, finds the invitation taken, and
+        // then sees the membership the first one added.
+        const joined = (await getUserOrganizationsQuery(user.id!, transaction)).find(
+          (o) => o.organization_id === Number(organizationId),
+        );
+        if (!joined) {
+          return await refuse();
+        }
+        sessionRoleName = joined.role_name;
       } else if (membership.role_id !== roleId) {
         await updateOrganizationMemberRoleQuery(
           Number(organizationId),
@@ -1135,7 +1164,7 @@ async function loginUserWithMicrosoft(req: Request, res: Response): Promise<any>
       {
         id: user.id!,
         email: user.email,
-        roleName,
+        roleName: sessionRoleName,
         organizationId: Number(organizationId),
       },
       res,
