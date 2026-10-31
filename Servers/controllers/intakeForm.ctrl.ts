@@ -36,6 +36,8 @@ import {
 } from "../utils/intakeForm.utils";
 import { createNewModelInventoryQuery } from "../utils/modelInventory.utils";
 import { createNewProjectQuery } from "../utils/project.utils";
+import { aiAppDepartmentsFrom, createAiAppQuery } from "../utils/aiApp.utils";
+import { AiAppDiscoveredSource, AiAppStatus } from "../domain.layer/enums/ai-app-status.enum";
 import { createEUFrameworkQuery } from "../utils/eu.utils";
 import { EU_AI_ACT_FRAMEWORK_ID } from "../utils/validations/projectValidation.utils";
 import { IntakeFormStatus } from "../domain.layer/enums/intake-form-status.enum";
@@ -2511,6 +2513,34 @@ export async function approveSubmission(req: Request, res: Response) {
           transaction,
         );
       }
+    } else if (submission.entityType === IntakeEntityType.AI_APP) {
+      // An approved AI app request (#5193). The app starts planned, like a use
+      // case from intake; its approval status says it was approved.
+      try {
+        const createdApp = await createAiAppQuery(
+          {
+            name: typeof entityData.name === "string" ? entityData.name.trim() : "",
+            description:
+              typeof entityData.description === "string" ? entityData.description : undefined,
+            owner_id: req.userId!,
+            status: AiAppStatus.APPROVED,
+            discovered_source: AiAppDiscoveredSource.EMPLOYEE_REPORT,
+            departments: aiAppDepartmentsFrom(entityData.departments),
+          },
+          req.organizationId!,
+          transaction,
+        );
+        entityId = createdApp.id!;
+      } catch (error) {
+        const pg = (error as { parent?: { code?: string } })?.parent;
+        if (pg?.code === "23505") {
+          await transaction.rollback();
+          return res
+            .status(409)
+            .json(STATUS_CODE[409](req.t!("An AI app with this name already exists")));
+        }
+        throw error;
+      }
     } else {
       await transaction.rollback();
       return res.status(400).json(STATUS_CODE[400](req.t!("Unsupported entity type")));
@@ -2520,7 +2550,13 @@ export async function approveSubmission(req: Request, res: Response) {
     // entity, in this transaction: any failure rolls the approval back. The
     // submission row is locked above, so no suggestion changes underneath.
     const approval = { approverId: req.userId!, approvedAt: new Date(), submissionId };
-    for (const s of submission.suggestedRisks?.items ?? []) {
+    // AI apps have no risk register yet, so their accepted suggestions stay on
+    // the submission instead of becoming use case risks under the app's id.
+    const acceptedSuggestions =
+      submission.entityType === IntakeEntityType.AI_APP
+        ? []
+        : (submission.suggestedRisks?.items ?? []);
+    for (const s of acceptedSuggestions) {
       if (s.state !== "accepted") continue;
       if (submission.entityType === IntakeEntityType.MODEL) {
         await createNewModelRiskQuery(

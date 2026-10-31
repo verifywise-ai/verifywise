@@ -8,6 +8,8 @@ import {
 } from "../domain.layer/enums/lifecycle-stage.enum";
 import { NotificationEntityType } from "../domain.layer/interfaces/i.notification";
 import { recordMultipleFieldChanges } from "./changeHistory.base.utils";
+import type { EntityType as ChangeHistoryEntityType } from "../config/changeHistory.config";
+import type { PermissionKey } from "../config/rolePermissions.config";
 
 /**
  * Lifecycle of inventory entries (#5187): in review → planned → live → retired,
@@ -22,7 +24,7 @@ import { recordMultipleFieldChanges } from "./changeHistory.base.utils";
 
 export interface LifecycleEntityConfig {
   /** Stable key, also used in logs and notification payloads. */
-  key: "use_case";
+  key: "use_case" | "ai_app";
   table: string;
   ownerColumn: string;
   titleColumn: string;
@@ -31,6 +33,17 @@ export interface LifecycleEntityConfig {
   /** In-app path to the entity, where the owner can confirm. */
   path: (id: number) => string;
   notificationEntityType: NotificationEntityType;
+  /** Change history entity the lifecycle actions write to. */
+  historyEntity: ChangeHistoryEntityType;
+  /** Permission that lets a non-owner change the lifecycle. */
+  editPermission: PermissionKey;
+  /**
+   * Last-resort timestamps (against the alias) for a live row with neither a
+   * confirmation nor a go-live date; the columns differ per table.
+   */
+  fallbackTimestampsSql: (alias: string) => string;
+  /** Whether the table has a free-text department column (AI apps use ai_apps_departments). */
+  hasDepartmentColumn: boolean;
   /**
    * Extra WHERE fragment (alias-free, against `table`) that limits which rows
    * have a lifecycle at all. Organizational projects are not use cases.
@@ -47,7 +60,25 @@ export const LIFECYCLE_ENTITIES: Record<LifecycleEntityConfig["key"], LifecycleE
     noun: "use case",
     path: (id) => `/project-view?projectId=${id}`,
     notificationEntityType: NotificationEntityType.USE_CASE,
+    historyEntity: "use_case",
+    editPermission: "useCase.edit",
+    fallbackTimestampsSql: (a) => `${a}.last_updated, ${a}.created_at::timestamptz`,
+    hasDepartmentColumn: true,
     scope: "is_organizational = false",
+  },
+  // AI apps (#5193): same stages, columns and "still live?" interval.
+  ai_app: {
+    key: "ai_app",
+    table: "ai_apps",
+    ownerColumn: "owner_id",
+    titleColumn: "name",
+    noun: "AI app",
+    path: (id) => `/ai-apps/${id}`,
+    notificationEntityType: NotificationEntityType.AI_APP,
+    historyEntity: "ai_app",
+    editPermission: "aiApp.edit",
+    fallbackTimestampsSql: (a) => `${a}.updated_at, ${a}.created_at`,
+    hasDepartmentColumn: false,
   },
 };
 
@@ -124,9 +155,12 @@ export async function upsertLifecycleOrgSettings(
  * confirmation, else the go-live date. last_updated/created_at are a last
  * resort for rows marked live without a date (not possible through the API).
  */
-export function confirmationBaselineSql(alias: string): string {
+export function confirmationBaselineSql(
+  alias: string,
+  entity: LifecycleEntityConfig = LIFECYCLE_ENTITIES.use_case,
+): string {
   return `COALESCE(${alias}.last_confirmed_at, ${alias}.go_live_date::timestamptz,
-    ${alias}.last_updated, ${alias}.created_at::timestamptz)`;
+    ${entity.fallbackTimestampsSql(alias)})`;
 }
 
 /**
@@ -142,9 +176,13 @@ export const ORG_INTERVAL_SQL = `COALESCE((SELECT los.confirmation_interval_days
  * defaults to the :intervalDays replacement; pass ORG_INTERVAL_SQL to read
  * the org setting inside the same query.
  */
-export function staleSql(alias: string, intervalSql = ":intervalDays"): string {
+export function staleSql(
+  alias: string,
+  intervalSql = ":intervalDays",
+  entity: LifecycleEntityConfig = LIFECYCLE_ENTITIES.use_case,
+): string {
   return `(${alias}.lifecycle_stage = '${LifecycleStage.LIVE}'
-    AND ${confirmationBaselineSql(alias)} < NOW() - make_interval(days => ${intervalSql}))`;
+    AND ${confirmationBaselineSql(alias, entity)} < NOW() - make_interval(days => ${intervalSql}))`;
 }
 
 function scopeSql(entity: LifecycleEntityConfig, alias: string): string {
@@ -172,14 +210,14 @@ export async function findConfirmationsDue(
     `SELECT e.id,
             e.${entity.titleColumn} AS title,
             e.${entity.ownerColumn} AS owner,
-            ${confirmationBaselineSql("e")} AS baseline
+            ${confirmationBaselineSql("e", entity)} AS baseline
        FROM ${entity.table} e
       WHERE e.organization_id = :organizationId
         AND e.${entity.ownerColumn} IS NOT NULL
-        AND ${staleSql("e")}${scopeSql(entity, "e")}
+        AND ${staleSql("e", ":intervalDays", entity)}${scopeSql(entity, "e")}
         AND (
           e.confirmation_reminded_at IS NULL
-          OR e.confirmation_reminded_at < ${confirmationBaselineSql("e")}
+          OR e.confirmation_reminded_at < ${confirmationBaselineSql("e", entity)}
           OR e.confirmation_reminded_at < NOW() - make_interval(days => :intervalDays)
         )
       ORDER BY e.id ASC`,
@@ -213,8 +251,11 @@ export interface LifecycleRow {
   department: string | null;
 }
 
-const RETURNING = `RETURNING id, lifecycle_stage, go_live_date, retired_at,
-  last_confirmed_at, last_confirmed_by, department`;
+/** The lifecycle columns of a row; department is NULL where the table has none. */
+function lifecycleColumnsSql(entity: LifecycleEntityConfig): string {
+  return `id, lifecycle_stage, go_live_date, retired_at, last_confirmed_at, last_confirmed_by,
+    ${entity.hasDepartmentColumn ? "department" : "NULL::varchar AS department"}`;
+}
 
 export async function getLifecycleRow(
   entity: LifecycleEntityConfig,
@@ -224,7 +265,8 @@ export async function getLifecycleRow(
 ): Promise<LifecycleRow | null> {
   const rows = (await sequelize.query(
     `SELECT id, ${entity.ownerColumn} AS owner, lifecycle_stage, go_live_date, retired_at,
-            last_confirmed_at, last_confirmed_by, department
+            last_confirmed_at, last_confirmed_by,
+            ${entity.hasDepartmentColumn ? "department" : "NULL::varchar AS department"}
        FROM ${entity.table} e
       WHERE e.organization_id = :organizationId AND e.id = :id${scopeSql(entity, "e")}`,
     { replacements: { organizationId, id }, type: QueryTypes.SELECT, transaction },
@@ -283,7 +325,7 @@ export async function applyLifecycleAction(
       WHERE e.organization_id = :organizationId
         AND e.id = :id
         AND e.lifecycle_stage IN (:allowed)${scopeSql(entity, "e")}
-      ${RETURNING}`,
+      RETURNING ${lifecycleColumnsSql(entity)}`,
     { replacements, type: QueryTypes.SELECT, transaction },
   )) as Omit<LifecycleRow, "owner">[];
   return rows[0] ?? null;
@@ -300,7 +342,7 @@ export async function updateDepartment(
     `UPDATE ${entity.table} e
         SET department = :department
       WHERE e.organization_id = :organizationId AND e.id = :id${scopeSql(entity, "e")}
-      ${RETURNING}`,
+      RETURNING ${lifecycleColumnsSql(entity)}`,
     {
       replacements: { organizationId, id, department },
       type: QueryTypes.SELECT,

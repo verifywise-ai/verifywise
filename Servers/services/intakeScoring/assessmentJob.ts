@@ -189,6 +189,9 @@ function useCaseInputFor(submission: IIntakeSubmission, form: IIntakeForm): UseC
       technology: technology || undefined,
     };
   }
+  if (submission.entityType === IntakeEntityType.AI_APP) {
+    return { name: text("name") ?? form.name, purpose: text("description") };
+  }
   return {
     name: text("project_title") ?? form.name,
     purpose: text("goal", "description"),

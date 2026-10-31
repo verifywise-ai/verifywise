@@ -212,3 +212,8 @@ Server: `Servers/services/intakeScoring/__tests__/`, `Servers/utils/__tests__/in
 Routing and oversight: `Servers/services/intakeRouting/__tests__/` (`routingRules`, `routingService`, `decisionGate`, `oversight`). Client, in the same `__tests__` folder: `{RoutingSettingsSection,LaneSection,SecondReviewPanel,OversightTab,SubmissionPreviewModal.lane,laneFilter,IntakeFormsListPage.oversight}`.
 
 Preview as a role: `Servers/services/intakeRouting/__tests__/routingRules.mirror.test.ts`, `Servers/controllers/__tests__/intakeForm.entityLevel.mirror.test.ts`, `Clients/src/application/utils/intakeRouting/__tests__/`, `Clients/src/presentation/pages/IntakeFormBuilder/__tests__/{SubmissionPreviewModal.simulation,IntakeFormsListPage.simulation,PreviewMenu}.test.tsx`, `Clients/src/presentation/pages/PublicIntakeForm/__tests__/PublicIntakeForm.preview.test.tsx`.
+
+## AI app requests (#5193)
+
+`IntakeEntityType.AI_APP` (`"ai_app"`). Approval (`approveSubmission`) creates an AI app through `createAiAppQuery`: name, description and departments from the mapped answers (`aiAppDepartmentsFrom` in `utils/aiApp.utils.ts` accepts a multi-select array or comma-separated text), owner = approver, status `approved`, `discovered_source` `employee_report`, lifecycle stage `planned`. A duplicate name returns 409 and leaves the submission pending. Accepted risk suggestions are not created for AI apps (no AI app risk register); the EU AI Act step and classification stay use case only.
+

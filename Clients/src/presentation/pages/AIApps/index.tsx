@@ -20,6 +20,26 @@ import AIAppsTable from "./AIAppsTable";
 import AIAppDetail from "./AIAppDetail";
 import { mainStackStyle, toolbarStyle, filterRowStyle } from "./style";
 import { STATUS_FILTER_OPTIONS } from "./utils";
+import LifecycleTabs from "../../components/LifecycleTabs";
+import { useAiAppLifecycleSummary } from "../../../application/hooks/useAiAppLifecycle";
+import { LifecycleStage } from "../../../domain/enums/lifecycleStage.enum";
+import { useLifecycleTab } from "../../../application/hooks/useLifecycleTab";
+
+const STAGE_STORAGE_KEY = "ai-apps-lifecycle-tab";
+
+const STAGE_TOOLTIPS: Record<LifecycleStage, string> = {
+  [LifecycleStage.IN_REVIEW]: "AI apps waiting for an approval decision",
+  [LifecycleStage.PLANNED]: "AI apps that are not live yet",
+  [LifecycleStage.LIVE]: "AI apps in use today",
+  [LifecycleStage.RETIRED]: "AI apps that are no longer in use",
+};
+
+const STAGE_EMPTY: Record<LifecycleStage, string> = {
+  [LifecycleStage.IN_REVIEW]: "No AI apps are waiting for review.",
+  [LifecycleStage.PLANNED]: "No planned AI apps.",
+  [LifecycleStage.LIVE]: "No live AI apps. Open a planned AI app and mark it as live.",
+  [LifecycleStage.RETIRED]: "No retired AI apps.",
+};
 
 export default function AIApps() {
   const navigate = useNavigate();
@@ -47,8 +67,16 @@ export default function AIApps() {
     return () => clearTimeout(timer);
   }, [alert]);
 
+  // Lifecycle tabs (#5193). The list is paged on the server, so the counts
+  // and stale markers come from the lifecycle summary, not from the rows.
+  const [stage, handleStageChange] = useLifecycleTab(STAGE_STORAGE_KEY);
+  const { data: lifecycleSummary, isLoading: isSummaryLoading } = useAiAppLifecycleSummary();
+  const staleIds = useMemo(() => new Set(lifecycleSummary?.stale_ids ?? []), [lifecycleSummary]);
+  const hasAnyApps = Object.values(lifecycleSummary?.counts ?? {}).some((n) => n > 0);
+
   const { data, isLoading, error } = useAiApps({
     status: statusFilter === "all" ? undefined : statusFilter,
+    lifecycleStage: stage,
   });
 
   const deleteAiAppMutation = useDeleteAiApp();
@@ -66,7 +94,7 @@ export default function AIApps() {
 
   // Distinguish a genuinely empty inventory from a search/filter that matched nothing,
   // so the explanatory placeholder only shows when there is no data at all.
-  const hasNoApps = (data?.ai_apps || []).length === 0;
+  const hasNoApps = (data?.ai_apps || []).length === 0 && !hasAnyApps;
 
   const handleNewApp = useCallback(() => {
     setEditingApp(null);
@@ -129,6 +157,14 @@ export default function AIApps() {
       helpArticlePath="ai-governance/ai-apps"
     >
       <Stack sx={mainStackStyle}>
+        <LifecycleTabs
+          value={stage}
+          onChange={handleStageChange}
+          counts={lifecycleSummary?.counts}
+          isLoading={isSummaryLoading}
+          tooltips={STAGE_TOOLTIPS}
+          dataJoyrideId="ai-app-lifecycle-tabs"
+        />
         <Box sx={toolbarStyle}>
           <Box sx={filterRowStyle}>
             <SearchBox
@@ -164,8 +200,13 @@ export default function AIApps() {
             onEditApp={handleEditApp}
             onViewApp={handleViewApp}
             onDeleteApp={handleRequestDelete}
+            staleIds={staleIds}
             emptyMessage={
-              hasNoApps ? undefined : "No AI apps match your search or filter criteria."
+              hasNoApps
+                ? undefined
+                : searchTerm.trim() || statusFilter !== "all"
+                  ? "No AI apps match your search or filter criteria."
+                  : STAGE_EMPTY[stage]
             }
             showEmptyTips={hasNoApps}
           />

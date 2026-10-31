@@ -203,8 +203,8 @@ export function IntakeFormBuilder() {
         });
     } else if (formId === "new") {
       const entityType =
-        entityTypeParam === IntakeEntityType.MODEL
-          ? IntakeEntityType.MODEL
+        entityTypeParam === IntakeEntityType.MODEL || entityTypeParam === IntakeEntityType.AI_APP
+          ? entityTypeParam
           : IntakeEntityType.USE_CASE;
       setLoadFailed(false);
       setForm(createEmptyForm(entityType));
@@ -1132,7 +1132,11 @@ export function IntakeFormBuilder() {
                             missingOptional.length === 0 &&
                             typeMismatches.length === 0;
                           const entityLabel =
-                            form.entityType === IntakeEntityType.USE_CASE ? "use case" : "model";
+                            form.entityType === IntakeEntityType.USE_CASE
+                              ? "use case"
+                              : form.entityType === IntakeEntityType.AI_APP
+                                ? "AI app"
+                                : "model";
                           const handleAddField = (m: (typeof missingRequired)[0]) => {
                             const newField = createFieldFromMapping(m, form.schema.fields.length);
                             setForm((prev) => ({

@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { isLifecycleStage } from "../domain.layer/enums/lifecycle-stage.enum";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import { sequelize } from "../database/db";
 import { logFailure, logProcessing, logSuccess } from "../utils/logger/logHelper";
@@ -39,6 +40,50 @@ function parseShadowAiToolIdParam(req: Request): number {
   return parsed;
 }
 
+/** List filters shared by GET /api/ai-apps and GET /api/v1/ai-apps. */
+function listOptionsFrom(req: Request) {
+  const parsedPage = req.query.page ? parseInt(req.query.page as string, 10) : NaN;
+  const parsedLimit = req.query.limit ? parseInt(req.query.limit as string, 10) : NaN;
+  return {
+    status: req.query.status as AiAppStatus | undefined,
+    vendorId: req.query.vendorId ? parseInt(req.query.vendorId as string, 10) : undefined,
+    page: Number.isNaN(parsedPage) || parsedPage < 1 ? undefined : parsedPage,
+    limit: Number.isNaN(parsedLimit) || parsedLimit < 1 ? undefined : parsedLimit,
+    sortBy: req.query.sortBy as string | undefined,
+    order: req.query.order as "asc" | "desc" | undefined,
+  };
+}
+
+/**
+ * GET /api/v1/ai-apps (#5193): the legacy list plus the lifecycle columns and
+ * an optional ?lifecycle_stage= filter. Same query and filters otherwise.
+ */
+export async function getAllAiAppsV1(req: Request, res: Response): Promise<any> {
+  const stage = req.query.lifecycle_stage;
+  if (stage !== undefined && !isLifecycleStage(stage)) {
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid lifecycle stage")));
+  }
+  try {
+    const result = await getAllAiAppsQuery(req.organizationId!, {
+      ...listOptionsFrom(req),
+      lifecycleStage: stage,
+      withLifecycle: true,
+    });
+    return res.status(200).json(STATUS_CODE[200](result));
+  } catch (error) {
+    await logFailure({
+      eventType: "Read",
+      description: "failed to list AI apps (v1)",
+      functionName: "getAllAiAppsV1",
+      fileName: "aiApp.ctrl.ts",
+      error: error as Error,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+  }
+}
+
 export async function getAllAiApps(req: Request, res: Response): Promise<any> {
   logProcessing({
     description: "starting getAllAiApps",
@@ -49,23 +94,7 @@ export async function getAllAiApps(req: Request, res: Response): Promise<any> {
   });
 
   try {
-    const status = req.query.status as AiAppStatus | undefined;
-    const vendorId = req.query.vendorId ? parseInt(req.query.vendorId as string, 10) : undefined;
-    const parsedPage = req.query.page ? parseInt(req.query.page as string, 10) : NaN;
-    const parsedLimit = req.query.limit ? parseInt(req.query.limit as string, 10) : NaN;
-    const page = Number.isNaN(parsedPage) || parsedPage < 1 ? undefined : parsedPage;
-    const limit = Number.isNaN(parsedLimit) || parsedLimit < 1 ? undefined : parsedLimit;
-    const sortBy = req.query.sortBy as string | undefined;
-    const order = req.query.order as "asc" | "desc" | undefined;
-
-    const result = await getAllAiAppsQuery(req.organizationId!, {
-      status,
-      vendorId,
-      page,
-      limit,
-      sortBy,
-      order,
-    });
+    const result = await getAllAiAppsQuery(req.organizationId!, listOptionsFrom(req));
 
     await logSuccess({
       eventType: "Read",

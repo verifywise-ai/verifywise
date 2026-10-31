@@ -669,7 +669,12 @@ function SubmissionPreviewModal({
   });
 
   // Derived: entity type label
-  const entityLabel = previewData?.entityType === "model" ? "model inventory" : "use case";
+  const entityLabel =
+    previewData?.entityType === "model"
+      ? "model inventory"
+      : previewData?.entityType === "ai_app"
+        ? "AI app"
+        : "use case";
 
   // ============================================================================
   // Render
@@ -1020,7 +1025,9 @@ function SubmissionPreviewModal({
               >
                 {previewData?.entityType === "model"
                   ? "Model inventory preview"
-                  : "Use case preview"}
+                  : previewData?.entityType === "ai_app"
+                    ? "AI app preview"
+                    : "Use case preview"}
               </Typography>
 
               {mappedFields.length === 0 ? (

@@ -12,6 +12,8 @@ import {
   IAIAppDetail,
   IAIAppUpdatePayload,
 } from "../domain.layer/interfaces/i.aiApp";
+import { LifecycleStage } from "../domain.layer/enums/lifecycle-stage.enum";
+import { parseDepartment } from "./lifecycle.utils";
 import {
   ValidationException,
   NotFoundException,
@@ -42,11 +44,26 @@ const POLICY_SUGGESTION_MAP: Record<string, string[]> = {
 
 interface GetAllAiAppsOptions {
   status?: AiAppStatus;
+  /** v1 only (#5193): filter by lifecycle stage. */
+  lifecycleStage?: LifecycleStage;
+  /** v1 only (#5193): add the lifecycle columns to each row. */
+  withLifecycle?: boolean;
   vendorId?: number;
   page?: number;
   limit?: number;
   sortBy?: string;
   order?: "asc" | "desc";
+}
+
+/** Lifecycle columns (#5193); the legacy /api/ai-apps response leaves them out. */
+function lifecycleFields(row: any) {
+  return {
+    lifecycle_stage: row.lifecycle_stage as LifecycleStage,
+    go_live_date: row.go_live_date ?? null,
+    retired_at: row.retired_at ?? null,
+    last_confirmed_at: row.last_confirmed_at ?? null,
+    last_confirmed_by: row.last_confirmed_by ?? null,
+  };
 }
 
 function parseAiAppRow(row: any): IAIApp {
@@ -85,6 +102,11 @@ export async function getAllAiAppsQuery(
   if (options.status) {
     whereConditions.push("ai_apps.status = :status");
     replacements.status = options.status;
+  }
+
+  if (options.lifecycleStage) {
+    whereConditions.push("ai_apps.lifecycle_stage = :lifecycleStage");
+    replacements.lifecycleStage = options.lifecycleStage;
   }
 
   if (options.vendorId) {
@@ -127,7 +149,11 @@ export async function getAllAiAppsQuery(
   );
 
   return {
-    ai_apps: (rows as any[]).map(parseAiAppRow),
+    ai_apps: (rows as any[]).map((row) =>
+      options.withLifecycle
+        ? { ...parseAiAppRow(row), ...lifecycleFields(row) }
+        : parseAiAppRow(row),
+    ),
     total: parseInt((countResult as any[])[0].total, 10),
   };
 }
@@ -605,4 +631,19 @@ export async function promoteFromShadowAiQuery(
   };
 
   return createAiAppQuery(payload, organizationId, transaction);
+}
+
+/**
+ * Departments from an AI app intake answer (#5193): a multi-select array or a
+ * comma-separated text answer. Trimmed, de-duplicated, and anything longer
+ * than the column allows is dropped.
+ */
+export function aiAppDepartmentsFrom(value: unknown): { department: string; user_count: number }[] {
+  const raw = Array.isArray(value) ? value : typeof value === "string" ? value.split(",") : [];
+  const names = new Set<string>();
+  for (const item of raw) {
+    const parsed = parseDepartment(item);
+    if (parsed.ok && parsed.department) names.add(parsed.department);
+  }
+  return [...names].map((department) => ({ department, user_count: 0 }));
 }

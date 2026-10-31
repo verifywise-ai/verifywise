@@ -1,3 +1,4 @@
+import type { LifecycleStage } from "../enums/lifecycleStage.enum";
 import { AiAppDiscoveredSource, AiAppPolicyStatus, AiAppStatus } from "../enums/aiApp.enum";
 
 export interface IAIApp {
@@ -16,6 +17,12 @@ export interface IAIApp {
   is_demo?: boolean;
   created_at?: string;
   updated_at?: string;
+  /** Lifecycle (#5193), returned by GET /api/v1/ai-apps. */
+  lifecycle_stage?: LifecycleStage;
+  go_live_date?: string | null;
+  retired_at?: string | null;
+  last_confirmed_at?: string | null;
+  last_confirmed_by?: number | null;
 }
 
 export interface IAIAppVendor {
@@ -113,6 +120,8 @@ export interface IPolicySuggestion {
 
 export interface IGetAiAppsFilters {
   status?: AiAppStatus;
+  /** Set to list one lifecycle stage; served by GET /api/v1/ai-apps. */
+  lifecycleStage?: LifecycleStage;
   vendorId?: number;
   page?: number;
   limit?: number;

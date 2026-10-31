@@ -202,3 +202,13 @@ describe("updateLifecycleSettingsHandler", () => {
     expect(r.status).toHaveBeenCalledWith(200);
   });
 });
+
+describe("canManageLifecycle for AI apps (#5193)", () => {
+  it("checks the entity's own permission for non-owners", async () => {
+    m(roleHasPermission).mockResolvedValue(true);
+    expect(await canManageLifecycle(req({ role: "Editor", userId: 2 }), 1, "aiApp.edit")).toBe(
+      true,
+    );
+    expect(roleHasPermission).toHaveBeenCalledWith(2, "Editor", "aiApp.edit");
+  });
+});

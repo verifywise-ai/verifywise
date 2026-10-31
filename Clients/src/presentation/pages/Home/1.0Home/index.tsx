@@ -1,5 +1,5 @@
 import { useContext, useEffect, useState, useRef, useMemo } from "react";
-import { useLocation, useNavigate, useSearchParams } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import { VerifyWiseContext } from "../../../../application/contexts/VerifyWise.context";
 import { FrameworkTypeEnum } from "../../../components/Forms/ProjectForm/constants";
 import { ProjectForm } from "../../../components/Forms/ProjectForm";
@@ -23,7 +23,8 @@ import {
   useUseCaseLifecycleSummary,
 } from "../../../../application/hooks/useUseCaseLifecycle";
 import { countLifecycleStages } from "../../../../application/utils/useCaseLifecycle";
-import { LIFECYCLE_STAGES, LifecycleStage } from "../../../../domain/enums/lifecycleStage.enum";
+import { LifecycleStage } from "../../../../domain/enums/lifecycleStage.enum";
+import { useLifecycleTab } from "../../../../application/hooks/useLifecycleTab";
 
 const STAGE_STORAGE_KEY = "use-cases-lifecycle-tab";
 
@@ -39,15 +40,6 @@ const STAGE_EMPTY: Record<LifecycleStage, string> = {
   [LifecycleStage.PLANNED]: "No planned use cases.",
   [LifecycleStage.LIVE]: "No live use cases. Open a planned use case and mark it as live.",
   [LifecycleStage.RETIRED]: "No retired use cases.",
-};
-
-const isStage = (value: string | null): value is LifecycleStage =>
-  !!value && (LIFECYCLE_STAGES as readonly string[]).includes(value);
-
-/** The last tab used on this browser, else Planned. */
-const readStoredStage = (): LifecycleStage => {
-  const stored = localStorage.getItem(STAGE_STORAGE_KEY);
-  return isStage(stored) ? stored : LifecycleStage.PLANNED;
 };
 
 const Home = () => {
@@ -69,17 +61,7 @@ const Home = () => {
   // Lifecycle tabs (#5187). Counts come from the rows this page already shows,
   // so a tab count always equals the rows under it; stale markers come from
   // the server, which applies the org's "still live?" interval.
-  const [searchParams, setSearchParams] = useSearchParams();
-  // localStorage is read once; ?stage= (dashboard links) wins over it.
-  const [storedStage] = useState(readStoredStage);
-  const stageParam = searchParams.get("stage");
-  const stage = isStage(stageParam) ? stageParam : storedStage;
-  const handleStageChange = (next: LifecycleStage) => {
-    localStorage.setItem(STAGE_STORAGE_KEY, next);
-    const params = new URLSearchParams(searchParams);
-    params.set("stage", next);
-    setSearchParams(params, { replace: true });
-  };
+  const [stage, handleStageChange] = useLifecycleTab(STAGE_STORAGE_KEY);
   const { data: lifecycleSummary } = useUseCaseLifecycleSummary();
   const staleIds = useMemo(() => new Set(lifecycleSummary?.stale_ids ?? []), [lifecycleSummary]);
   // The same count the dashboard shows (countLifecycleStages over the list).

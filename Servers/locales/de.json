@@ -938,5 +938,12 @@
   "Only a live use case can be confirmed as still live": "Nur ein aktiver Anwendungsfall kann als weiterhin aktiv bestätigt werden",
   "Invalid department": "Ungültige Abteilung",
   "The check interval must be 30, 90 or 180 days": "Das Prüfintervall muss 30, 90 oder 180 Tage betragen",
-  "The go-live date can't be later than today": "Das Go-live-Datum darf nicht nach dem heutigen Tag liegen"
+  "The go-live date can't be later than today": "Das Go-live-Datum darf nicht nach dem heutigen Tag liegen",
+  "Invalid AI app ID": "Ungültige KI-App-ID",
+  "AI app not found": "KI-App nicht gefunden",
+  "Only a planned AI app can go live": "Nur eine geplante KI-App kann live gehen",
+  "Only a planned or live AI app can be retired": "Nur eine geplante oder aktive KI-App kann außer Betrieb genommen werden",
+  "Only a live AI app can be confirmed as still live": "Nur eine aktive KI-App kann als weiterhin aktiv bestätigt werden",
+  "Invalid lifecycle stage": "Ungültige Lebenszyklusphase",
+  "An AI app with this name already exists": "Eine KI-App mit diesem Namen existiert bereits"
 }

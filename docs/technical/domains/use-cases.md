@@ -177,6 +177,8 @@ Read models: `GET /api/v1/use-case-lifecycle/summary` (stale ids and the interva
 
 **Still live? check.** `lifecycle_org_settings.confirmation_interval_days` (30/90/180, default 90; `GET/PATCH /api/v1/lifecycle-settings`, PATCH needs `organization.admin`). A live use case is stale when `COALESCE(last_confirmed_at, go_live_date)` is older than the interval (`staleSql` in `utils/lifecycle.utils.ts`). The `lifecycle_confirmation_sweep` BullMQ job (daily 06:30) emails each owner once per period (`lifecycle-confirmation-due.mjml`).
 
+**AI apps (#5193).** `LIFECYCLE_ENTITIES.ai_app` reuses the columns (no `department`; AI apps keep `ai_apps_departments`), the shared `lifecycle_org_settings` interval, the daily sweep and `controllers/lifecycle.ctrl.ts` (`lifecycleActionHandlers`). Routes: `GET /api/v1/ai-apps` (legacy list plus lifecycle columns and `?lifecycle_stage=`; `/api/ai-apps` is unchanged), `/api/v1/ai-app-lifecycle/summary` (server counts: the AI apps list is paged), `/:id`, `/:id/history` (`ai_app_change_history`), and `/:id/go-live|retire|confirm` (`aiApp.edit` or owner, never Auditors). Backfill: `under_review` → in review, `banned` → retired, else planned.
+
 **Reuse.** Everything is keyed by `LIFECYCLE_ENTITIES` in `utils/lifecycle.utils.ts`; AI apps add an entry and the same columns. The frontend `LifecycleTabs` takes `extraCounts` for rows that are not entities yet (pending intake submissions in In review, #5188).
 
 ## API Endpoints

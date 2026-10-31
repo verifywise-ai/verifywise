@@ -83,6 +83,16 @@ export const intakeFormsContent: ArticleContent = {
     },
     {
       type: 'heading',
+      id: 'ai-app-requests',
+      level: 3,
+      text: 'AI app requests',
+    },
+    {
+      type: 'paragraph',
+      text: 'An intake form of type AI app lets employees ask to use an AI tool. It starts with three mapped fields: the app name, a description and departments (several selections or comma-separated text). Approving a request creates the AI app as Approved and Planned, owned by the approver. An app name that already exists is refused, and the request stays pending. AI apps have no risk register yet, so risks suggested on the request are not copied to the app.',
+    },
+    {
+      type: 'heading',
       id: 'use-case-department-self-service',
       level: 3,
       text: 'Department self-service',
@@ -126,7 +136,7 @@ export const intakeFormsContent: ArticleContent = {
       items: [
         { bold: 'Form name', text: 'Descriptive title shown to submitters at the top of the form' },
         { bold: 'Description', text: 'Optional context about what the form is for' },
-        { bold: 'Entity type', text: 'Whether approved submissions create a **Use case** or a **Model inventory** entry' },
+        { bold: 'Entity type', text: 'Whether approved submissions create a **Use case**, an **AI app** or a **Model inventory** entry' },
       ],
     },
     {

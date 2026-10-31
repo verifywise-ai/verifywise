@@ -7897,6 +7897,10 @@ tags:
   -
     name: 'v1: Shadow AI'
   -
+    name: 'v1: V1/Ai App Lifecycle'
+  -
+    name: 'v1: V1/Ai Apps'
+  -
     name: 'v1: V1/Lifecycle Settings'
   -
     name: 'v1: V1/Use Case Lifecycle'
@@ -27322,6 +27326,104 @@ paths:
       tags:
         - 'v1: V1/Lifecycle Settings'
       operationId: updateLifecycleSettingsHandler
+      security:
+        -
+          bearerAuth: []
+  /v1/ai-apps:
+    get:
+      summary: 'Get All Ai Apps V1'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai Apps'
+      operationId: getAllAiAppsV1
+      security:
+        -
+          bearerAuth: []
+  /v1/ai-app-lifecycle/summary:
+    get:
+      summary: 'Get Ai App Lifecycle Summary Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai App Lifecycle'
+      operationId: getAiAppLifecycleSummaryHandler
+      security:
+        -
+          bearerAuth: []
+  '/v1/ai-app-lifecycle/{id}':
+    get:
+      summary: 'Get Ai App Lifecycle Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai App Lifecycle'
+      operationId: getAiAppLifecycleHandler
+      security:
+        -
+          bearerAuth: []
+  '/v1/ai-app-lifecycle/{id}/history':
+    get:
+      summary: 'Get Ai App History Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai App Lifecycle'
+      operationId: getAiAppHistoryHandler
+      security:
+        -
+          bearerAuth: []
+  '/v1/ai-app-lifecycle/{id}/go-live':
+    post:
+      summary: 'Ai App Go Live Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai App Lifecycle'
+      operationId: aiAppGoLiveHandler
+      security:
+        -
+          bearerAuth: []
+  '/v1/ai-app-lifecycle/{id}/retire':
+    post:
+      summary: 'Ai App Retire Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai App Lifecycle'
+      operationId: aiAppRetireHandler
+      security:
+        -
+          bearerAuth: []
+  '/v1/ai-app-lifecycle/{id}/confirm':
+    post:
+      summary: 'Ai App Confirm Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai App Lifecycle'
+      operationId: aiAppConfirmHandler
       security:
         -
           bearerAuth: []

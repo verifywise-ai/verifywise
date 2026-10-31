@@ -91,6 +91,7 @@ export enum NotificationEntityType {
   TRAINING = "training",
   FILE = "file",
   USE_CASE = "use_case",
+  AI_APP = "ai_app",
   RISK = "risk",
   ASSESSMENT = "assessment",
   COMMENT = "comment",

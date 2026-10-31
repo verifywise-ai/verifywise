@@ -75,6 +75,32 @@ export const aiAppsContent: ArticleContent = {
     },
     {
       type: 'heading',
+      id: 'lifecycle',
+      level: 2,
+      text: 'Lifecycle: in review, planned, live, retired',
+    },
+    {
+      type: 'paragraph',
+      text: 'Next to its status, every app has a lifecycle stage. The AI apps page splits the inventory into four tabs with counts: In review, Planned, Live and Retired. Status says whether an app may be used; the lifecycle says whether it is in use.',
+    },
+    {
+      type: 'paragraph',
+      text: 'On the app detail page, choose Mark as live and pick the go-live date (today or earlier), Confirm still live, or Retire. Admins, Editors and the app owner can change the lifecycle; Auditors cannot.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Live apps take part in the same still-live check as use cases: when nobody has confirmed a live app within the interval set under Settings, Organization, Still-live check (30, 90 or 180 days, default 90), it is marked Stale and its owner gets one email per interval asking them to confirm it or retire it.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Existing apps were placed as follows when the lifecycle arrived: Under review apps in In review, Banned apps in Retired, and every other app in Planned. Mark the ones in use as live.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Employees can also request an app through an intake form of type AI app. Approving the request creates the app as Approved and Planned, with the requester answers for name, description and departments, and the approver as owner.',
+    },
+    {
+      type: 'heading',
       id: 'detail-page',
       level: 2,
       text: 'The app detail page',

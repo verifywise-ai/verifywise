@@ -938,5 +938,12 @@
   "Only a live use case can be confirmed as still live": "Seul un cas d'usage en service peut être confirmé comme toujours en service",
   "Invalid department": "Service invalide",
   "The check interval must be 30, 90 or 180 days": "L'intervalle de vérification doit être de 30, 90 ou 180 jours",
-  "The go-live date can't be later than today": "La date de mise en service ne peut pas être postérieure à aujourd'hui"
+  "The go-live date can't be later than today": "La date de mise en service ne peut pas être postérieure à aujourd'hui",
+  "Invalid AI app ID": "ID d'application IA invalide",
+  "AI app not found": "Application IA introuvable",
+  "Only a planned AI app can go live": "Seule une application IA planifiée peut être mise en service",
+  "Only a planned or live AI app can be retired": "Seule une application IA planifiée ou en service peut être retirée",
+  "Only a live AI app can be confirmed as still live": "Seule une application IA en service peut être confirmée comme toujours en service",
+  "Invalid lifecycle stage": "Étape du cycle de vie invalide",
+  "An AI app with this name already exists": "Une application IA portant ce nom existe déjà"
 }

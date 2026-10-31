@@ -19,6 +19,7 @@ import StandardTablePagination from "../../components/Table/StandardTablePaginat
 import { useStandardTable } from "../../../application/hooks/useStandardTable";
 import type { StandardColumn } from "../../../domain/types/standardTable";
 import { statusToChipProps, formatDiscoveredSource } from "./utils";
+import StaleMarker from "../../components/LifecycleTabs/StaleMarker";
 import { TableEmptyStateLayout } from "../../components/Table/TableEmptyStateLayout";
 import { EmptyState } from "../../components/EmptyState";
 import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
@@ -30,6 +31,8 @@ interface AIAppsTableProps {
   onDeleteApp: (app: IAIApp) => void;
   emptyMessage?: string;
   showEmptyTips?: boolean;
+  /** Live apps nobody confirmed within the "still live?" interval (#5193). */
+  staleIds?: Set<number>;
 }
 
 const TABLE_COLUMNS: StandardColumn[] = [
@@ -48,6 +51,7 @@ export default function AIAppsTable({
   onDeleteApp,
   emptyMessage = "This is your inventory of the AI apps your teams use. Record who owns each one and how it was found, then manage it from here. Add your first AI app to get started.",
   showEmptyTips = false,
+  staleIds,
 }: AIAppsTableProps) {
   const sortComparator = useCallback((a: IAIApp, b: IAIApp, key: string): number => {
     switch (key) {
@@ -134,6 +138,7 @@ export default function AIAppsTable({
                     <Stack direction="row" alignItems="center" gap="8px">
                       <Bot size={16} strokeWidth={1.5} color={palette.text.secondary} />
                       {app.name}
+                      {app.id !== undefined && staleIds?.has(app.id) && <StaleMarker />}
                     </Stack>
                   </TableCell>
                   <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
