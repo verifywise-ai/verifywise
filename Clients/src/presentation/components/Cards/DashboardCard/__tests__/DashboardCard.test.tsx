@@ -1,4 +1,5 @@
 import { screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { renderWithProviders } from "../../../../../test/renderWithProviders";
 import { DashboardCard } from "../index";
 
@@ -14,22 +15,26 @@ describe("DashboardCard Component", () => {
     expect(screen.getByText("Card content here")).toBeInTheDocument();
   });
 
-  it("truncates a long title with the full text on hover", () => {
+  it("shows the full title on hover only when it is truncated", async () => {
     const longTitle = "Konformitätsbewertung nach der europäischen KI-Verordnung";
+    const user = userEvent.setup();
     renderWithProviders(
       <DashboardCard title={longTitle}>
         <p>Content</p>
       </DashboardCard>,
     );
-
     const heading = screen.getByText(longTitle);
+
+    // jsdom does no layout, so fake the measurements.
+    Object.defineProperty(heading, "clientWidth", { configurable: true, value: 100 });
+    Object.defineProperty(heading, "scrollWidth", { configurable: true, value: 100 });
+    await user.hover(heading);
+    expect(heading).not.toHaveAttribute("title", longTitle);
+
+    await user.unhover(heading);
+    Object.defineProperty(heading, "scrollWidth", { configurable: true, value: 300 });
+    await user.hover(heading);
     expect(heading).toHaveAttribute("title", longTitle);
-    expect(heading).toHaveStyle({
-      whiteSpace: "nowrap",
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-      minWidth: "0",
-    });
   });
 
   it("renders action element when provided", () => {

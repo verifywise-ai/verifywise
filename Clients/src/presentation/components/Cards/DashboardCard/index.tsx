@@ -56,17 +56,21 @@ export function DashboardCard({
           mb="16px"
         >
           {/* nowrap moves the action to the next line; a title too long for
-              the card on its own truncates, with the full text on hover. */}
+              the card on its own truncates, with the full text on hover.
+              overflow: clip (not hidden) keeps the flex item's automatic
+              minimum width, so the row still wraps before the title shrinks. */}
           <Typography
-            title={title}
+            onMouseEnter={(e) => {
+              const el = e.currentTarget;
+              el.title = el.scrollWidth > el.clientWidth ? title : "";
+            }}
             sx={{
               fontSize: 14,
               fontWeight: 600,
               color: "#1F2937",
               whiteSpace: "nowrap",
-              overflow: "hidden",
+              overflow: "clip",
               textOverflow: "ellipsis",
-              minWidth: 0,
               maxWidth: "100%",
               flex: actionPosition === "center" ? 1 : undefined,
             }}
