@@ -9,10 +9,11 @@
  * result URL passes the same policy as a URL the model chooses (`parsePublicUrl`), and a link back
  * to bing.com is never a result.
  */
-import { guardedFetch } from "./guardedFetch";
+import { FetchError, guardedFetch } from "./guardedFetch";
 import { decodeEntities } from "./pageText";
 import { isOnDomain, parsePublicUrl } from "./publicUrl";
 import { MAX_SNIPPET_CHARS, cleanText, cutAtCodePoint } from "../vendorResearch/text";
+import { WebCache, withSearchCache } from "./webCache";
 
 export type SearchKind = "web" | "news";
 
@@ -22,7 +23,11 @@ export interface SearchResult {
   url: string;
   /** At most MAX_SNIPPET_CHARS characters of plain text. */
   snippet: string;
-  /** ISO 8601, or null when the feed gives no date or one that is not an RFC 822 date. */
+  /**
+   * ISO 8601, or null when the feed gives no date or one that is not an RFC 822 date. For a result
+   * of the web feed this is the day the engine crawled the page, not the day it was published; the
+   * web session uses it only as an upper bound and does not keep it (see webSession.ts).
+   */
   publishedAt: string | null;
   /** The publisher's name, for news; null for web results. */
   source: string | null;
@@ -383,32 +388,89 @@ const defaultQueue = createSearchQueue();
  * Searches go through one queue, one at a time and a second apart. Whatever goes wrong comes out as
  * a SearchEngineError, and nothing is logged here: the query is never written anywhere.
  *
+ * A search that failed for a reason that passes is asked once more (see `isTransient`): a network
+ * error, a time-out, a 5xx, or a 429 that asks to wait only a few seconds. The second request goes
+ * through the queue like the first, so the gap between searches holds, and the caller sees one
+ * search: one answer or one error. Nothing else is asked again: a refusal, a page that is not a
+ * feed and a 429 that asks for a long wait would only fail again, or make the feed's answer worse.
+ *
  * @param deps.fetch Replaces `guardedFetch`, for tests.
  * @param deps.queue Replaces the queue the whole process shares, for tests.
+ * @param deps.sleep Replaces the wait before a request that follows a 429, for tests.
+ * @param deps.onRetry Told of each retry with the feed of the search, for a counter. It must not
+ *   throw; if it does, the search goes on as if it had not.
+ * @param deps.cache The cache shared by runs (see webCache.ts). A search that an earlier run asked
+ *   within 10 minutes is answered from it, with no request and no place in the queue; the answer of
+ *   one that was asked of the feed is kept. None by default.
  */
 export function createBingEngine(
-  deps: { fetch?: typeof guardedFetch; queue?: SearchQueue } = {},
+  deps: {
+    fetch?: typeof guardedFetch;
+    queue?: SearchQueue;
+    sleep?: (ms: number, signal?: AbortSignal) => Promise<void>;
+    onRetry?: (kind: SearchKind) => void;
+    cache?: WebCache;
+  } = {},
 ): SearchEngine {
   const fetch = deps.fetch ?? guardedFetch;
   const queue = deps.queue ?? defaultQueue;
-  return {
+  const sleep = deps.sleep ?? sleepUnlessAborted;
+
+  const request = async (query: string, kind: SearchKind, signal?: AbortSignal) => {
+    const answer = await queue(
+      () =>
+        fetch(buildBingUrl(query, kind), {
+          allowedContentTypes: FEED_CONTENT_TYPES,
+          maxBytes: SEARCH_FEED_MAX_BYTES,
+          headerTimeoutMs: FEED_TIMEOUT_MS,
+          totalTimeoutMs: FEED_TIMEOUT_MS,
+          signal,
+        }),
+      signal,
+    );
+    return parseBingRss(answer.body.toString("utf8"));
+  };
+
+  const engine: SearchEngine = {
     async search(query, kind, signal) {
       try {
-        const answer = await queue(
-          () =>
-            fetch(buildBingUrl(query, kind), {
-              allowedContentTypes: FEED_CONTENT_TYPES,
-              maxBytes: SEARCH_FEED_MAX_BYTES,
-              headerTimeoutMs: FEED_TIMEOUT_MS,
-              totalTimeoutMs: FEED_TIMEOUT_MS,
-              signal,
-            }),
-          signal,
-        );
-        return parseBingRss(answer.body.toString("utf8"));
+        try {
+          return await request(query, kind, signal);
+        } catch (error) {
+          if (signal?.aborted || !isTransient(error)) throw error;
+          // Only a failure by status can have asked for a wait, and only a short one is kept.
+          const wait = error instanceof FetchError ? error.retryAfterMs : undefined;
+          if (wait !== undefined && wait > 0) await sleep(wait, signal);
+          try {
+            deps.onRetry?.(kind);
+          } catch {
+            // A counter is not part of the search.
+          }
+          return await request(query, kind, signal);
+        }
       } catch {
         throw new SearchEngineError();
       }
     },
   };
+  return deps.cache === undefined ? engine : withSearchCache(engine, deps.cache);
+}
+
+/** The longest `Retry-After` that is waited for: a longer one is a feed that wants to be left alone. */
+const MAX_RETRY_AFTER_MS = 5000;
+
+/**
+ * Whether a failed request may be asked again: it did not fail because of what was asked or who
+ * asks. A network error, a time-out or an answer of 500 or more is the feed having a bad moment;
+ * a 429 is the feed asking for a pause, and is kept only when the pause is short. A 4xx other than
+ * that, a refusal of the URL policy or of robots.txt, and a body that is not a feed are not.
+ */
+function isTransient(error: unknown): boolean {
+  if (!(error instanceof FetchError)) return false;
+  if (error.reason === "unreachable") return error.status === undefined || error.status >= 500;
+  return (
+    error.status === 429 &&
+    error.retryAfterMs !== undefined &&
+    error.retryAfterMs <= MAX_RETRY_AFTER_MS
+  );
 }

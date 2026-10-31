@@ -5,7 +5,8 @@
  * (`parsePublicUrl`) and the caller's `beforeRequest` hook (robots.txt) before it is sent, and
  * the connection only goes to addresses that pass `isPublicAddress`: the check runs inside the
  * socket's own `lookup`, so the address that was checked is the address that is connected to.
- * The request names the bot and carries nothing else: no cookie, no credentials, no Referer.
+ * The request names the bot, or the contact a caller gives for a database that asks for one, and
+ * carries nothing else: no cookie, no credentials, no Referer.
  *
  * Whatever goes wrong comes out as a FetchError with a fixed message, except what the caller's own
  * `beforeRequest` throws, which comes out as it is. No message repeats the URL, because the URL
@@ -58,15 +59,49 @@ const MESSAGES: Record<FetchFailureReason, string> = {
   unreachable: "The page could not be reached.",
 };
 
+/** What a failure by status adds to its reason. */
+export interface FetchFailureDetail {
+  /** The status of the answer. */
+  status?: number;
+  /** How long the server asked the caller to wait before asking again, from its Retry-After. */
+  retryAfterMs?: number;
+}
+
 /** Thrown for every fetch that does not end in a readable 200 answer. */
 export class FetchError extends Error {
+  /** For a failure by status: the status of the answer. Absent for any other failure. */
+  readonly status?: number;
+  /** For a failure by status: the Retry-After of the answer in milliseconds, when it had one. */
+  readonly retryAfterMs?: number;
+
   constructor(
     readonly reason: FetchFailureReason,
     message?: string,
+    detail: FetchFailureDetail = {},
   ) {
     super(message ?? MESSAGES[reason]);
     this.name = "FetchError";
+    this.status = detail.status;
+    this.retryAfterMs = detail.retryAfterMs;
   }
+}
+
+const IMF_FIXDATE = /^[A-Za-z]{3}, \d{2} [A-Za-z]{3} \d{4} \d{2}:\d{2}:\d{2} GMT$/;
+
+/**
+ * A Retry-After header in milliseconds: whole seconds, or the HTTP date of the day and hour to ask
+ * again (a date that has passed is no wait). Anything else, and no header, gives undefined.
+ */
+export function retryAfterMsOf(
+  header: string | undefined,
+  now: number = Date.now(),
+): number | undefined {
+  const text = header?.trim();
+  if (text === undefined) return undefined;
+  if (/^\d{1,9}$/.test(text)) return Number(text) * 1000;
+  if (!IMF_FIXDATE.test(text)) return undefined;
+  const date = Date.parse(text);
+  return Number.isNaN(date) ? undefined : Math.max(0, date - now);
 }
 
 export interface GuardedFetchOptions {
@@ -78,6 +113,12 @@ export interface GuardedFetchOptions {
   allowedContentTypes?: readonly string[];
   /** The most bytes of the body, after decompression, that are read. Default MAX_BODY_BYTES. */
   maxBytes?: number;
+  /**
+   * The most bytes of the body for an answer of a media type (without parameters, in lower case),
+   * in place of `maxBytes`. The type is known from the header before the body is read, so a caller
+   * that reads a bigger file of one type (a PDF) does not read a bigger page of any other.
+   */
+  maxBytesByType?: Readonly<Record<string, number>>;
   /** Time to the response headers of one hop. Default 12,000 ms. */
   headerTimeoutMs?: number;
   /** Time for the whole fetch: every hop, every `beforeRequest` and the body. Default 20,000 ms. */
@@ -89,6 +130,11 @@ export interface GuardedFetchOptions {
    * a copy: whatever it does to that URL, the hop goes where the URL policy sent it.
    */
   beforeRequest?: (url: URL) => Promise<void>;
+  /**
+   * The User-Agent of every hop, in place of the bot's: a database that asks automated clients to
+   * name a contact gets one (the SEC, Q4). Default BOT_USER_AGENT.
+   */
+  userAgent?: string;
 }
 
 export interface GuardedResponse {
@@ -101,6 +147,20 @@ export interface GuardedResponse {
   /** True when the body was longer than the limit and was cut. */
   truncated: boolean;
 }
+
+/** The validators of a copy kept from an earlier answer, for a conditional GET. */
+export interface Validators {
+  etag?: string | null;
+  lastModified?: string | null;
+}
+
+/**
+ * What a conditional GET gives: the copy is current (a 304, at the address that answered after
+ * redirects), or a readable 200 answer with its own validators, null where it sent none.
+ */
+export type ConditionalResponse =
+  | { notModified: true; url: string }
+  | (GuardedResponse & { notModified: false; etag: string | null; lastModified: string | null });
 
 export interface TransportRequest {
   url: URL;
@@ -325,9 +385,15 @@ async function readAnswer(
   response: RawResponse,
   allowedTypes: readonly string[],
   maxBytes: number,
+  maxBytesByType: Readonly<Record<string, number>>,
   signal: AbortSignal,
 ): Promise<GuardedResponse> {
-  if (response.status !== 200) throw new FetchError(failureForStatus(response.status));
+  if (response.status !== 200) {
+    throw new FetchError(failureForStatus(response.status), undefined, {
+      status: response.status,
+      retryAfterMs: retryAfterMsOf(response.headers["retry-after"]),
+    });
+  }
   const contentType = response.headers["content-type"] ?? "";
   if (
     !allowedTypes.includes(ANY_CONTENT_TYPE) &&
@@ -335,32 +401,40 @@ async function readAnswer(
   ) {
     throw new FetchError("unsupported_type");
   }
-  const { body, truncated } = await readBody(response, maxBytes, signal);
+  // Only a type that the caller named has a limit of its own: a server can send `constructor` as
+  // its media type, and an object answers that with its own function, which limits nothing.
+  const type = mediaTypeOf(contentType);
+  const limit = Object.prototype.hasOwnProperty.call(maxBytesByType, type)
+    ? maxBytesByType[type]
+    : maxBytes;
+  const { body, truncated } = await readBody(response, limit, signal);
   return { url: url.href, status: 200, contentType, body, truncated };
 }
 
+/** What the last hop gave: an answer read, or a 304 to a conditional request. */
+type HopsOutcome =
+  | { notModified: true; url: URL }
+  | { notModified: false; response: GuardedResponse; headers: http.IncomingHttpHeaders };
+
 /**
- * A GET of a public web page, guarded as the module comment says.
- *
- * Redirects are followed by hand, at most `maxRedirects` of them, and each one is a new hop; a
- * redirect from https to http is refused. Only a 200 answer whose media type is allowed is read.
- * Failures: the URL policy or a non-public address gives `not_allowed`; 401, 403 and 429 give
- * `blocked_by_site`; 404 and 410 give `not_found`; a media type that is not allowed gives
- * `unsupported_type`; a FetchError from `beforeRequest` comes out as it is; everything else (any
- * other status, a network error, too many redirects, a time limit, the caller's abort) gives
- * `unreachable`.
+ * The hops of a guarded GET, as the module comment says: the first request and each redirect.
+ * `extraHeaders` go with every hop. A 304 on the last hop is an outcome only when
+ * `lastHopStatuses` holds it; every other answer there is read as `readAnswer` reads it.
  */
-export async function guardedFetch(
+async function fetchHops(
   rawUrl: string,
-  options: GuardedFetchOptions = {},
-  deps: GuardedFetchDeps = {},
-): Promise<GuardedResponse> {
+  options: GuardedFetchOptions,
+  deps: GuardedFetchDeps,
+  extraHeaders: Readonly<Record<string, string>>,
+  lastHopStatuses: readonly number[],
+): Promise<HopsOutcome> {
   const transport = deps.transport ?? nodeTransport;
   const lookup = createValidatingLookup(deps.dnsLookup);
   const allowedTypes = (options.allowedContentTypes ?? DEFAULT_CONTENT_TYPES).map((type) =>
     type.toLowerCase(),
   );
   const maxBytes = options.maxBytes ?? MAX_BODY_BYTES;
+  const maxBytesByType = options.maxBytesByType ?? {};
   const headerTimeoutMs = options.headerTimeoutMs ?? HEADER_TIMEOUT_MS;
   const maxRedirects = options.maxRedirects ?? MAX_REDIRECTS;
   // The low-priority wildcard keeps a strict server from answering 406 to a PDF link: the answer
@@ -370,10 +444,11 @@ export async function guardedFetch(
     ? allowedTypes
     : [...allowedTypes, "*/*;q=0.1"];
   const headers = {
-    "User-Agent": BOT_USER_AGENT,
+    "User-Agent": options.userAgent ?? BOT_USER_AGENT,
     Accept: accepted.join(", "),
     "Accept-Encoding": "gzip, br",
     "Accept-Language": "en",
+    ...extraHeaders,
   };
 
   const controller = new AbortController();
@@ -400,7 +475,18 @@ export async function guardedFetch(
       try {
         const location = response.headers.location;
         if (!REDIRECT_STATUSES.has(response.status) || !location) {
-          return await readAnswer(url, response, allowedTypes, maxBytes, signal);
+          if (response.status === 304 && lastHopStatuses.includes(304)) {
+            return { notModified: true, url };
+          }
+          const read = await readAnswer(
+            url,
+            response,
+            allowedTypes,
+            maxBytes,
+            maxBytesByType,
+            signal,
+          );
+          return { notModified: false, response: read, headers: response.headers };
         }
         if (redirects >= maxRedirects) throw new FetchError("unreachable");
         const next = toPublicUrl(location, url);
@@ -416,4 +502,66 @@ export async function guardedFetch(
     clearTimeout(totalTimer);
     options.signal?.removeEventListener("abort", abort);
   }
+}
+
+/**
+ * A GET of a public web page, guarded as the module comment says.
+ *
+ * Redirects are followed by hand, at most `maxRedirects` of them, and each one is a new hop; a
+ * redirect from https to http is refused. Only a 200 answer whose media type is allowed is read.
+ * Failures: the URL policy or a non-public address gives `not_allowed`; 401, 403 and 429 give
+ * `blocked_by_site`; 404 and 410 give `not_found`; a media type that is not allowed gives
+ * `unsupported_type`; a FetchError from `beforeRequest` comes out as it is; everything else (any
+ * other status, a network error, too many redirects, a time limit, the caller's abort) gives
+ * `unreachable`.
+ */
+export async function guardedFetch(
+  rawUrl: string,
+  options: GuardedFetchOptions = {},
+  deps: GuardedFetchDeps = {},
+): Promise<GuardedResponse> {
+  const outcome = await fetchHops(rawUrl, options, deps, {}, [200]);
+  // A 304 is read, and refused, as any other status when it is not asked for.
+  if (outcome.notModified) throw new FetchError("unreachable", undefined, { status: 304 });
+  return outcome.response;
+}
+
+/** The longest validator that is sent back: a longer one is no ETag or date a server gave. */
+const MAX_VALIDATOR_CHARS = 512;
+
+/** A validator that may go into a header: present, not too long, and without a control character. */
+function sendable(value: string | null | undefined): value is string {
+  if (typeof value !== "string" || value === "" || value.length > MAX_VALIDATOR_CHARS) return false;
+  for (let index = 0; index < value.length; index += 1) {
+    const code = value.charCodeAt(index);
+    if (code < 0x20 || code === 0x7f) return false;
+  }
+  return true;
+}
+
+/**
+ * A conditional GET of a public file, guarded as `guardedFetch` is, with every one of its checks:
+ * the validators of the copy kept from an earlier answer go out as If-None-Match and
+ * If-Modified-Since (each only when it is a value a header may hold), and a 304 on the last hop,
+ * after redirects too, says the copy is current. A 200 answer is read as `guardedFetch` reads it
+ * and carries its own ETag and Last-Modified for the next request.
+ */
+export async function guardedConditionalFetch(
+  url: string,
+  validators: Validators,
+  options: GuardedFetchOptions = {},
+  deps: GuardedFetchDeps = {},
+): Promise<ConditionalResponse> {
+  const extraHeaders: Record<string, string> = {};
+  if (sendable(validators.etag)) extraHeaders["If-None-Match"] = validators.etag;
+  if (sendable(validators.lastModified))
+    extraHeaders["If-Modified-Since"] = validators.lastModified;
+  const outcome = await fetchHops(url, options, deps, extraHeaders, [200, 304]);
+  if (outcome.notModified) return { notModified: true, url: outcome.url.href };
+  return {
+    ...outcome.response,
+    notModified: false,
+    etag: outcome.headers.etag ?? null,
+    lastModified: outcome.headers["last-modified"] ?? null,
+  };
 }

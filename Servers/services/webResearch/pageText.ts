@@ -27,6 +27,17 @@ import { MAX_URL_CHARS, isOnDomain } from "./publicUrl";
 export const MAX_EXCERPT_CHARS = 8000;
 /** Stands for the text an excerpt leaves out. The model is told that a quote cannot span it. */
 export const EXCERPT_GAP = "\n[…]\n";
+/** The most parts a page is cut into (about 320,000 characters); a longer page is not offered further. */
+export const MAX_PAGE_PARTS = 40;
+/**
+ * The parts of a page, besides its first excerpt, that its source can hold. The model is shown
+ * only what the evidence keeps, so that a quote it takes from a part is a quote the validation can
+ * find.
+ */
+export const MAX_EXTRA_PARTS = 2;
+/** The most text a page source holds: the first excerpt and the extra parts, each behind a gap marker. */
+export const MAX_PAGE_CONTENT_CHARS =
+  MAX_EXCERPT_CHARS * (1 + MAX_EXTRA_PARTS) + EXCERPT_GAP.length * MAX_EXTRA_PARTS;
 
 export interface PageLink {
   text: string;
@@ -39,6 +50,11 @@ export interface PageText {
   /** An ISO 8601 date (UTC) that the page itself states, or null. */
   publishedAt: string | null;
   links: PageLink[];
+  /**
+   * The address the page claims for itself (`<link rel="canonical">`, else `og:url`), resolved
+   * against the base URL, or null. It is the page's own word: whether to take it is for the caller.
+   */
+  canonicalUrl: string | null;
 }
 
 /** The same size as the fetch limit; a page that is longer is read as far as this. */
@@ -58,6 +74,7 @@ const INNER_TEXT_WINDOW = 1000;
 /** The attributes of a tag that is longer than this are not read. */
 const MAX_ATTRIBUTE_CHARS = 4096;
 const MAX_META_TAGS = 200;
+const MAX_LINK_TAGS = 50;
 const MAX_TIME_TAGS = 20;
 const MAX_HEADINGS = 3;
 const MAX_JSON_LD_DATES = 5;
@@ -70,7 +87,7 @@ const MIN_FOCUS_WORD_CHARS = 3;
 /** A page of at least this many characters of HTML ... */
 const SHELL_MIN_HTML_CHARS = 20_000;
 /** ... with fewer than this many characters of text is an empty shell for a script. */
-const SHELL_MAX_TEXT_CHARS = 500;
+export const SHELL_MAX_TEXT_CHARS = 500;
 
 const NAMED_ENTITIES = new Map([
   ["amp", "&"],
@@ -187,7 +204,7 @@ function nestingLimit(markup: string): number {
  * really has, whatever the markup is: an end tag in a comment, in an attribute value or in a
  * script is not one to the parser, and not to this count either.
  */
-function htmlToText(html: string): string {
+export function htmlToText(html: string): string {
   const markup = html.replace(BLOCK_TAG, "\n");
   const limit = nestingLimit(markup);
   let open = 0;
@@ -220,7 +237,7 @@ const ATTRIBUTE = /([^\s"'<>/=]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'<>=`]+)
 /** Any tag, or the start of one that is not closed, in a short stretch of text. */
 const TAG_IN_TEXT = /<[^<>]*>?/g;
 
-function parseAttributes(raw: string): Map<string, string> {
+export function parseAttributes(raw: string): Map<string, string> {
   const attributes = new Map<string, string>();
   if (raw.length > MAX_ATTRIBUTE_CHARS) return attributes;
   for (const match of raw.matchAll(ATTRIBUTE)) {
@@ -266,7 +283,7 @@ const ISO_DATE =
  * exist (30 February) is refused. Other forms ("March 4, 2026") are not read: what a parser makes
  * of them depends on its locale.
  */
-function toIsoDate(value: string): string | null {
+export function toIsoDate(value: string): string | null {
   const match = ISO_DATE.exec(value.trim());
   if (!match) return null;
   const [, year, month, day, hour, minute, second, offset] = match;
@@ -286,6 +303,7 @@ interface Markup {
   heading: string;
   publishedAt: string | null;
   links: PageLink[];
+  canonicalUrl: string | null;
 }
 
 /** The address a `href` leads to, resolved against the page and without a fragment; null if it is not http or https. */
@@ -307,9 +325,12 @@ function readMarkup(html: string, baseUrl: string): Markup {
   let heading = "";
   let headings = 0;
   let metas = 0;
+  let linkTags = 0;
   let times = 0;
   let anchors = 0;
   let timeDate: string | null = null;
+  let canonicalLink: string | null = null;
+  let ogUrl: string | null = null;
   const metaDates = new Map<string, string>();
   const links: PageLink[] = [];
   const seen = new Set<string>();
@@ -335,13 +356,29 @@ function readMarkup(html: string, baseUrl: string): Markup {
       if (metas < MAX_META_TAGS) {
         metas += 1;
         const attributes = parseAttributes(match[3]);
-        const date = toIsoDate(decodeEntities(attributes.get("content") ?? ""));
+        const content = attributes.get("content");
+        if (ogUrl === null && attributes.get("property")?.trim().toLowerCase() === "og:url") {
+          ogUrl = content?.trim() ? resolveHref(content, baseUrl) : null;
+        }
+        const date = toIsoDate(decodeEntities(content ?? ""));
         if (date !== null) {
           for (const field of ["property", "name", "itemprop"]) {
             const key = attributes.get(field)?.trim().toLowerCase();
             if (key !== undefined && DATE_META_NAMES.includes(key) && !metaDates.has(key)) {
               metaDates.set(key, date);
             }
+          }
+        }
+      }
+    } else if (name === "link") {
+      if (linkTags < MAX_LINK_TAGS) {
+        linkTags += 1;
+        if (canonicalLink === null) {
+          const attributes = parseAttributes(match[3]);
+          const href = attributes.get("href");
+          const relations = attributes.get("rel")?.toLowerCase().split(/\s+/);
+          if (relations?.includes("canonical") && href?.trim()) {
+            canonicalLink = resolveHref(href, baseUrl);
           }
         }
       }
@@ -378,6 +415,7 @@ function readMarkup(html: string, baseUrl: string): Markup {
     heading: cutAtCodePoint(heading, MAX_TITLE_CHARS),
     publishedAt: publishedAt ?? timeDate,
     links,
+    canonicalUrl: canonicalLink ?? ogUrl,
   };
 }
 
@@ -386,12 +424,14 @@ function readMarkup(html: string, baseUrl: string): Markup {
  * else an empty string), the date it states for itself (a meta tag, else JSON-LD, else a `<time>`
  * element, else null; a source with a value that cannot be read is passed over) and its links.
  * The links come from the whole page, the navigation and footer included, resolved against
- * `baseUrl`; they have no fragment, appear once, and are http or https only.
+ * `baseUrl`; they have no fragment, appear once, and are http or https only. The address the page
+ * claims for itself is read from the first `<link rel="canonical">` among the first 50 link tags,
+ * else from `og:url`.
  */
 export function extractPageText(html: string, baseUrl: string): PageText {
   const source = cutAtCodePoint(html, MAX_HTML_CHARS);
-  const { title, heading, publishedAt, links } = readMarkup(source, baseUrl);
-  return { title: title || heading, text: htmlToText(source), publishedAt, links };
+  const { title, heading, publishedAt, links, canonicalUrl } = readMarkup(source, baseUrl);
+  return { title: title || heading, text: htmlToText(source), publishedAt, links, canonicalUrl };
 }
 
 const TOPIC =
@@ -533,4 +573,42 @@ export function selectExcerpt(
     previousEnd = piece.end;
   }
   return { excerpt, truncated: true };
+}
+
+/**
+ * Where a window of text is cut: before its last blank line, else its last line break, else its
+ * last space, whichever is first in that order and lies past the middle of the window; else at the
+ * end of the window.
+ */
+function cutPoint(window: string): number {
+  const middle = window.length / 2;
+  for (const separator of ["\n\n", "\n", " "]) {
+    const at = window.lastIndexOf(separator);
+    if (at > middle) return at;
+  }
+  return window.length;
+}
+
+/**
+ * The text of a long page cut into parts of at most `maxChars` (default MAX_EXCERPT_CHARS), in the
+ * order of the page, so that a model can ask for the next one. The cuts fall at a paragraph, a
+ * line or a word (see `cutPoint`), never inside a surrogate pair, and the whitespace at a cut is
+ * dropped. A text that fits is one part, as it is. At most MAX_PAGE_PARTS parts are made; the rest
+ * of a longer page is left out.
+ */
+export function pageParts(text: string, maxChars: number = MAX_EXCERPT_CHARS): string[] {
+  if (text.length <= maxChars) return [text];
+  const parts: string[] = [];
+  let rest = text;
+  while (rest.length > 0 && parts.length < MAX_PAGE_PARTS) {
+    if (rest.length <= maxChars) {
+      parts.push(rest);
+      break;
+    }
+    const window = cutAtCodePoint(rest, maxChars);
+    const end = cutPoint(window);
+    parts.push(rest.slice(0, end).trimEnd());
+    rest = rest.slice(end).trimStart();
+  }
+  return parts;
 }

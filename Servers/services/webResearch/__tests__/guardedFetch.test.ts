@@ -15,6 +15,7 @@ import {
   Transport,
   TransportRequest,
   createValidatingLookup,
+  guardedConditionalFetch,
   guardedFetch,
   nodeTransport,
 } from "../guardedFetch";
@@ -107,6 +108,25 @@ describe("guardedFetch", () => {
     expect(headers).not.toHaveProperty("Cookie");
     expect(headers).not.toHaveProperty("Referer");
     expect(headers).not.toHaveProperty("Authorization");
+  });
+
+  it("a caller's User-Agent replaces the bot's", async () => {
+    const { transport, requests } = scriptedTransport([redirect(302, "/b"), page(), page()]);
+    const userAgent = "VerifyWise sec@company.example";
+
+    await guardedFetch("https://example.com/a", { userAgent }, { transport });
+    await guardedConditionalFetch(
+      "https://example.com/list.json",
+      {},
+      { userAgent },
+      { transport },
+    );
+
+    expect(requests.map((request) => request.headers["User-Agent"])).toEqual([
+      userAgent,
+      userAgent,
+      userAgent,
+    ]);
   });
 
   it("returns the body, the final URL and the content type of a 200 answer", async () => {
@@ -301,6 +321,81 @@ describe("guardedFetch", () => {
     expect(refused.body.destroyed).toBe(true);
   });
 
+  describe("what a failure by status tells the caller", () => {
+    const failWith = async (status: number, headers: http.IncomingHttpHeaders = {}) => {
+      const { transport } = scriptedTransport([answer(status, headers, "No")]);
+      return failureOf(guardedFetch("https://example.com/", {}, { transport }));
+    };
+
+    it.each([401, 403, 404, 410, 429, 500, 503, 204])("carries the status %d", async (status) => {
+      expect((await failWith(status)).status).toBe(status);
+    });
+
+    it("carries no status for a failure that is not an answer", async () => {
+      const failure = await failureOf(
+        guardedFetch(
+          "https://example.com/",
+          {},
+          {
+            transport: async () => {
+              throw new Error("connection reset");
+            },
+          },
+        ),
+      );
+
+      expect(failure.reason).toBe("unreachable");
+      expect(failure.status).toBeUndefined();
+    });
+
+    it.each([
+      ["2", 2000],
+      ["0", 0],
+      ["  7 ", 7000],
+    ])("reads Retry-After %j as seconds", async (header, ms) => {
+      expect((await failWith(429, { "retry-after": header })).retryAfterMs).toBe(ms);
+    });
+
+    it("reads a Retry-After date as the time from now to it", async () => {
+      const inFiveSeconds = new Date(Date.now() + 5000).toUTCString();
+
+      const { retryAfterMs } = await failWith(503, { "retry-after": inFiveSeconds });
+
+      expect(retryAfterMs).toBeGreaterThan(3000);
+      expect(retryAfterMs).toBeLessThanOrEqual(5000);
+    });
+
+    it("reads a Retry-After date that has passed as no wait", async () => {
+      const { retryAfterMs } = await failWith(503, {
+        "retry-after": new Date(Date.now() - 60_000).toUTCString(),
+      });
+
+      expect(retryAfterMs).toBe(0);
+    });
+
+    it.each(["soon", "-3", "1.5", "", "99999999999999999999"])(
+      "ignores a Retry-After of %j",
+      async (header) => {
+        expect((await failWith(429, { "retry-after": header })).retryAfterMs).toBeUndefined();
+      },
+    );
+
+    it("carries no Retry-After when the answer has none, or when the answer is not a failure by status", async () => {
+      expect((await failWith(429)).retryAfterMs).toBeUndefined();
+      const refused = answer(
+        200,
+        { "content-type": "application/pdf", "retry-after": "3" },
+        "%PDF",
+      );
+      const { transport } = scriptedTransport([refused]);
+
+      const failure = await failureOf(guardedFetch("https://example.com/", {}, { transport }));
+
+      expect(failure.reason).toBe("unsupported_type");
+      expect(failure.retryAfterMs).toBeUndefined();
+    });
+  });
+
   describe("content types", () => {
     it.each(["text/html; charset=iso-8859-1", "TEXT/HTML"])("accepts %s", async (contentType) => {
       const { transport } = scriptedTransport([page("<p>Hi</p>", { "content-type": contentType })]);
@@ -378,6 +473,82 @@ describe("guardedFetch", () => {
 
       expect(result.body.toString("utf8")).toBe("0123456789");
       expect(result.truncated).toBe(false);
+    });
+
+    // A PDF is bigger than a page of HTML, and what a fetch may read of it is a decision of the
+    // caller: the limit follows the type of the answer, which is known before the body is read.
+    describe("a limit of its own for a media type", () => {
+      const options = {
+        allowedContentTypes: ["text/html", "application/pdf"],
+        maxBytes: 10,
+        maxBytesByType: { "application/pdf": 100 },
+      };
+      const pdf = (body: Buffer, contentType = "application/pdf") =>
+        answer(200, { "content-type": contentType }, body);
+
+      it("reads a body of that type up to its own limit", async () => {
+        const { transport } = scriptedTransport([pdf(Buffer.alloc(100, "a"))]);
+
+        const result = await guardedFetch("https://example.com/a.pdf", options, { transport });
+
+        expect(result.body.length).toBe(100);
+        expect(result.truncated).toBe(false);
+      });
+
+      it("cuts a body of that type at its own limit and says it was truncated", async () => {
+        const { transport } = scriptedTransport([pdf(Buffer.alloc(150, "a"))]);
+
+        const result = await guardedFetch("https://example.com/a.pdf", options, { transport });
+
+        expect(result.body.length).toBe(100);
+        expect(result.truncated).toBe(true);
+      });
+
+      it("keeps maxBytes for every other type", async () => {
+        const { transport } = scriptedTransport([page(Buffer.alloc(50, "a"))]);
+
+        const result = await guardedFetch("https://example.com/", options, { transport });
+
+        expect(result.body.length).toBe(10);
+        expect(result.truncated).toBe(true);
+      });
+
+      it("keeps maxBytes for a type that is a property every object has", async () => {
+        for (const type of ["constructor", "__proto__"]) {
+          const { transport } = scriptedTransport([pdf(Buffer.alloc(50, "a"), type)]);
+
+          const result = await guardedFetch(
+            "https://example.com/",
+            { ...options, allowedContentTypes: [ANY_CONTENT_TYPE] },
+            { transport },
+          );
+
+          expect(result.body.length).toBe(10);
+          expect(result.truncated).toBe(true);
+        }
+      });
+
+      it("finds the type in the header however it is written", async () => {
+        const { transport } = scriptedTransport([
+          pdf(Buffer.alloc(50, "a"), "Application/PDF; charset=binary"),
+        ]);
+
+        const result = await guardedFetch("https://example.com/a.pdf", options, { transport });
+
+        expect(result.body.length).toBe(50);
+      });
+
+      it("counts the bytes after decompression, so that a compressed PDF cannot be a bomb", async () => {
+        const bomb = zlib.gzipSync(Buffer.alloc(10 * 1024 * 1024));
+        const { transport } = scriptedTransport([
+          answer(200, { "content-type": "application/pdf", "content-encoding": "gzip" }, bomb),
+        ]);
+
+        const result = await guardedFetch("https://example.com/a.pdf", options, { transport });
+
+        expect(result.body.length).toBe(100);
+        expect(result.truncated).toBe(true);
+      });
     });
 
     it("stops reading a gzip bomb at maxBytes", async () => {
@@ -668,5 +839,100 @@ describe("nodeTransport", () => {
     controller.abort();
 
     await expect(pending).rejects.toMatchObject({ name: "AbortError" });
+  });
+});
+
+describe("guardedConditionalFetch", () => {
+  const LIST = "https://example.com/list.json";
+  const VALIDATORS = { etag: '"abc"', lastModified: "Wed, 29 Oct 2026 10:00:00 GMT" };
+
+  it("sends If-None-Match and If-Modified-Since when given", async () => {
+    const { transport, requests } = scriptedTransport([page(), page()]);
+
+    await guardedConditionalFetch(LIST, VALIDATORS, {}, { transport });
+    await guardedConditionalFetch(LIST, {}, {}, { transport });
+
+    expect(requests[0].headers["If-None-Match"]).toBe('"abc"');
+    expect(requests[0].headers["If-Modified-Since"]).toBe("Wed, 29 Oct 2026 10:00:00 GMT");
+    expect(requests[1].headers).not.toHaveProperty("If-None-Match");
+    expect(requests[1].headers).not.toHaveProperty("If-Modified-Since");
+  });
+
+  it("a 304 answer resolves notModified", async () => {
+    const { transport } = scriptedTransport([answer(304)]);
+
+    await expect(guardedConditionalFetch(LIST, VALIDATORS, {}, { transport })).resolves.toEqual({
+      notModified: true,
+      url: LIST,
+    });
+  });
+
+  it("a 304 after a redirect resolves notModified", async () => {
+    const { transport, requests } = scriptedTransport([
+      redirect(302, "/v2/list.json"),
+      answer(304),
+    ]);
+
+    await expect(guardedConditionalFetch(LIST, VALIDATORS, {}, { transport })).resolves.toEqual({
+      notModified: true,
+      url: "https://example.com/v2/list.json",
+    });
+    expect(requests[1].headers["If-None-Match"]).toBe('"abc"');
+  });
+
+  it("a 200 answer carries the ETag and Last-Modified headers", async () => {
+    const { transport } = scriptedTransport([
+      page("<p>list</p>", { etag: '"v2"', "last-modified": "Thu, 30 Oct 2026 10:00:00 GMT" }),
+      page(),
+    ]);
+
+    const changed = await guardedConditionalFetch(LIST, VALIDATORS, {}, { transport });
+    const bare = await guardedConditionalFetch(LIST, {}, {}, { transport });
+
+    expect(changed).toMatchObject({
+      notModified: false,
+      url: LIST,
+      status: 200,
+      etag: '"v2"',
+      lastModified: "Thu, 30 Oct 2026 10:00:00 GMT",
+    });
+    expect(changed.notModified === false && changed.body.toString()).toBe("<p>list</p>");
+    expect(bare).toMatchObject({ notModified: false, etag: null, lastModified: null });
+  });
+
+  it("a validator with a line break or over 512 characters is not sent", async () => {
+    const { transport, requests } = scriptedTransport([page(), page()]);
+
+    await guardedConditionalFetch(
+      LIST,
+      { etag: '"a"\r\nX-Injected: 1', lastModified: "x".repeat(513) },
+      {},
+      { transport },
+    );
+    await guardedConditionalFetch(LIST, { etag: `"${"y".repeat(510)}"` }, {}, { transport });
+
+    expect(requests[0].headers).not.toHaveProperty("If-None-Match");
+    expect(requests[0].headers).not.toHaveProperty("If-Modified-Since");
+    expect(requests[1].headers["If-None-Match"]).toHaveLength(512);
+  });
+
+  it("guardedFetch still refuses a 304", async () => {
+    const { transport } = scriptedTransport([answer(304)]);
+
+    const error = await failureOf(guardedFetch(LIST, {}, { transport }));
+
+    expect(error.reason).toBe("unreachable");
+    expect(error.status).toBe(304);
+  });
+
+  it("keeps every guard of guardedFetch: the URL policy refuses an internal address", async () => {
+    const { transport, requests } = scriptedTransport([answer(304)]);
+
+    const error = await failureOf(
+      guardedConditionalFetch("http://127.0.0.1/list.json", VALIDATORS, {}, { transport }),
+    );
+
+    expect(error.reason).toBe("not_allowed");
+    expect(requests).toHaveLength(0);
   });
 });

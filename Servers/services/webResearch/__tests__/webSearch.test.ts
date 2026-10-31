@@ -22,6 +22,7 @@ import {
   createSearchQueue,
   parseBingRss,
 } from "../webSearch";
+import { memoryCache, settle } from "./helpers/memoryCache";
 
 const fixture = (name: string): string =>
   fs.readFileSync(path.join(__dirname, "__fixtures__", name), "utf8");
@@ -681,6 +682,27 @@ function fakeFeed(answer: { body?: string; contentType?: string } | Error) {
   return { fetch: fetch as unknown as typeof guardedFetch, calls, mock: fetch };
 }
 
+/** A stand-in for guardedFetch that answers each request in turn: a body, or an error to throw. */
+function scriptedFeed(steps: Array<string | Error>) {
+  const queue = [...steps];
+  const calls: string[] = [];
+  const fetch = jest.fn(async (url: string) => {
+    calls.push(url);
+    const step = queue.shift();
+    if (step === undefined) throw new Error("No scripted answer left");
+    if (step instanceof Error) throw step;
+    const response: GuardedResponse = {
+      url,
+      status: 200,
+      contentType: "text/xml; charset=utf-8",
+      body: Buffer.from(step),
+      truncated: false,
+    };
+    return response;
+  });
+  return { fetch: fetch as unknown as typeof guardedFetch, calls, mock: fetch };
+}
+
 /** The real guardedFetch over a transport that answers every request with one canned response. */
 function guardedFeed(status: number, headers: http.IncomingHttpHeaders, body: string) {
   const transport: Transport = async () => ({
@@ -828,6 +850,178 @@ describe("createBingEngine", () => {
     expect(error.message).toBe(FIXED_MESSAGE);
   });
 
+  describe("a search that failed once", () => {
+    const ANSWER = rss(item({ link: "https://example.com/a", title: "Answer" }));
+    const status = (code: number, retryAfterMs?: number) =>
+      new FetchError(code === 429 || code === 403 ? "blocked_by_site" : "unreachable", undefined, {
+        status: code,
+        retryAfterMs,
+      });
+
+    it.each<[string, Error]>([
+      ["a network error or a time-out", new FetchError("unreachable")],
+      ["a 500", status(500)],
+      ["a 503", status(503)],
+    ])("asks again after %s, and gives the second answer", async (_name, failure) => {
+      const feed = scriptedFeed([failure, ANSWER]);
+      const engine = createBingEngine({ fetch: feed.fetch, queue: passThrough });
+
+      const results = await engine.search("acme breach", "news");
+
+      expect(results.map((result) => result.title)).toEqual(["Answer"]);
+      expect(feed.calls).toEqual([
+        buildBingUrl("acme breach", "news"),
+        buildBingUrl("acme breach", "news"),
+      ]);
+    });
+
+    it.each<[string, Error]>([
+      ["a 400", status(400)],
+      ["a 403", status(403)],
+      ["a 404", new FetchError("not_found", undefined, { status: 404 })],
+      ["a 429 with no Retry-After", status(429)],
+      ["a 429 that says to wait a minute", status(429, 60_000)],
+      ["a type that is not allowed", new FetchError("unsupported_type")],
+      ["an address the policy refused", new FetchError("not_allowed")],
+      ["robots.txt", new FetchError("blocked_by_robots")],
+      ["an error of our own", new TypeError("broken")],
+    ])("does not ask again after %s", async (_name, failure) => {
+      const feed = scriptedFeed([failure, ANSWER]);
+      const engine = createBingEngine({ fetch: feed.fetch, queue: passThrough });
+
+      await expect(failureOf(engine.search(SECRET_QUERY, "web"))).resolves.toBeInstanceOf(
+        SearchEngineError,
+      );
+
+      expect(feed.mock).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not ask again for a body that is not a feed", async () => {
+      const feed = scriptedFeed([CONSENT_PAGE, ANSWER]);
+      const engine = createBingEngine({ fetch: feed.fetch, queue: passThrough });
+
+      await failureOf(engine.search(SECRET_QUERY, "web"));
+
+      expect(feed.mock).toHaveBeenCalledTimes(1);
+    });
+
+    it("asks again after a 429 that says to wait a few seconds, once it has waited that long", async () => {
+      const feed = scriptedFeed([status(429, 3000), ANSWER]);
+      const waits: number[] = [];
+      const engine = createBingEngine({
+        fetch: feed.fetch,
+        queue: passThrough,
+        sleep: async (ms) => {
+          waits.push(ms);
+        },
+      });
+
+      const results = await engine.search("acme breach", "web");
+
+      expect(waits).toEqual([3000]);
+      expect(results).toHaveLength(1);
+    });
+
+    it("asks again after a 5xx without waiting for anything but the queue", async () => {
+      const feed = scriptedFeed([status(502), ANSWER]);
+      const waits: number[] = [];
+      const engine = createBingEngine({
+        fetch: feed.fetch,
+        queue: passThrough,
+        sleep: async (ms) => {
+          waits.push(ms);
+        },
+      });
+
+      await engine.search("acme breach", "web");
+
+      expect(waits).toEqual([]);
+    });
+
+    it("gives up after the second failure, with the fixed error and two requests", async () => {
+      const feed = scriptedFeed([status(503), status(503), ANSWER]);
+      const engine = createBingEngine({ fetch: feed.fetch, queue: passThrough });
+
+      const error = await failureOf(engine.search(SECRET_QUERY, "web"));
+
+      expect(error.message).toBe(FIXED_MESSAGE);
+      expect(feed.mock).toHaveBeenCalledTimes(2);
+    });
+
+    it("sends each request through the queue, so the gap between searches holds for the second too", async () => {
+      const feed = scriptedFeed([status(503), ANSWER]);
+      const tasks: number[] = [];
+      const queue: SearchQueue = (task) => {
+        tasks.push(tasks.length + 1);
+        return task();
+      };
+      const engine = createBingEngine({ fetch: feed.fetch, queue });
+
+      await engine.search("acme breach", "web");
+
+      expect(tasks).toEqual([1, 2]);
+    });
+
+    it("does not ask again once the caller's signal has aborted", async () => {
+      const controller = new AbortController();
+      const feed = scriptedFeed([status(503), ANSWER]);
+      feed.mock.mockImplementationOnce(async () => {
+        controller.abort();
+        throw new FetchError("unreachable");
+      });
+      const engine = createBingEngine({ fetch: feed.fetch, queue: passThrough });
+
+      await failureOf(engine.search("acme breach", "web", controller.signal));
+
+      expect(feed.mock).toHaveBeenCalledTimes(1);
+    });
+
+    it("stops waiting for a 429 when the caller's signal aborts", async () => {
+      const controller = new AbortController();
+      const feed = scriptedFeed([status(429, 3000), ANSWER]);
+      const engine = createBingEngine({
+        fetch: feed.fetch,
+        queue: passThrough,
+        sleep: async () => {
+          controller.abort();
+          throw new Error("The search was cancelled");
+        },
+      });
+
+      await failureOf(engine.search("acme breach", "web", controller.signal));
+
+      expect(feed.mock).toHaveBeenCalledTimes(1);
+    });
+
+    it("tells onRetry the feed of the search, once for each retry", async () => {
+      const retries: string[] = [];
+      const feed = scriptedFeed([status(503), ANSWER, status(503), status(503)]);
+      const engine = createBingEngine({
+        fetch: feed.fetch,
+        queue: passThrough,
+        onRetry: (kind) => retries.push(kind),
+      });
+
+      await engine.search("one", "news");
+      await failureOf(engine.search("two", "web"));
+
+      expect(retries).toEqual(["news", "web"]);
+    });
+
+    it("does not let a failing onRetry change the search", async () => {
+      const feed = scriptedFeed([status(503), ANSWER]);
+      const engine = createBingEngine({
+        fetch: feed.fetch,
+        queue: passThrough,
+        onRetry: () => {
+          throw new Error("a counter broke");
+        },
+      });
+
+      await expect(engine.search("acme breach", "web")).resolves.toHaveLength(1);
+    });
+  });
+
   describe("through the real guardedFetch", () => {
     it("reads a feed served as text/xml", async () => {
       const fetch = guardedFeed(
@@ -876,6 +1070,69 @@ describe("createBingEngine", () => {
       const fetch = guardedFeed(200, { "content-type": "text/xml" }, rss(""));
       const engine = createBingEngine({ fetch, queue: passThrough });
       await expect(engine.search("nothing matches this", "web")).resolves.toEqual([]);
+    });
+  });
+
+  describe("with a cache shared by runs", () => {
+    it("answers a search that an earlier run asked from the cache: no request and no place in the queue", async () => {
+      const { cache } = memoryCache();
+      const feed = fakeFeed({ body: fixture("bing-news.xml") });
+      const queue: SearchQueue = jest.fn((task) => task());
+      const earlier = createBingEngine({ fetch: feed.fetch, queue, cache });
+      const answered = await earlier.search("Okta security breach", "news");
+      await settle();
+      (queue as jest.Mock).mockClear();
+      feed.mock.mockClear();
+
+      const later = createBingEngine({ fetch: feed.fetch, queue, cache });
+      const again = await later.search("okta  Security Breach", "news");
+
+      expect(again).toEqual(answered);
+      expect(again.length).toBeGreaterThan(0);
+      expect(feed.mock).not.toHaveBeenCalled();
+      expect(queue).not.toHaveBeenCalled();
+    });
+
+    it("keeps nothing of a search that failed", async () => {
+      const { cache, writes } = memoryCache();
+      const feed = fakeFeed(new FetchError("not_found"));
+      const engine = createBingEngine({ fetch: feed.fetch, queue: passThrough, cache });
+
+      await expect(engine.search("Okta data breach", "news")).rejects.toBeInstanceOf(
+        SearchEngineError,
+      );
+      await settle();
+
+      expect(writes).toEqual([]);
+    });
+
+    it("counts a retry once and keeps the answer of the second request", async () => {
+      const { cache, writes } = memoryCache();
+      const feed = scriptedFeed([new FetchError("unreachable"), fixture("bing-news.xml")]);
+      const onRetry = jest.fn();
+      const engine = createBingEngine({
+        fetch: feed.fetch,
+        queue: passThrough,
+        cache,
+        onRetry,
+      });
+
+      const results = await engine.search("Okta data breach", "news");
+      await settle();
+
+      expect(onRetry).toHaveBeenCalledTimes(1);
+      expect(writes).toHaveLength(1);
+      expect(JSON.parse(writes[0].value)).toEqual(results);
+    });
+
+    it("is the same engine without a cache: every search is a request", async () => {
+      const feed = fakeFeed({ body: fixture("bing-news.xml") });
+      const engine = createBingEngine({ fetch: feed.fetch, queue: passThrough });
+
+      await engine.search("Okta security breach", "news");
+      await engine.search("Okta security breach", "news");
+
+      expect(feed.calls).toHaveLength(2);
     });
   });
 

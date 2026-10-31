@@ -2,6 +2,7 @@ import http from "http";
 import { Readable } from "stream";
 import {
   ANY_CONTENT_TYPE,
+  DEFAULT_CONTENT_TYPES,
   DnsLookup,
   FetchError,
   FetchFailureReason,
@@ -10,7 +11,9 @@ import {
   Transport,
   guardedFetch,
 } from "../guardedFetch";
+import { MAX_PDF_BYTES, PdfDocument, PdfError } from "../pdfText";
 import { PageReadError, createPageReader, decodeBody } from "../readPage";
+import { memoryCache, settle } from "./helpers/memoryCache";
 
 type Answer = { contentType?: string; body?: string | Buffer; url?: string } | Error;
 
@@ -142,7 +145,46 @@ describe("createPageReader", () => {
           { text: "Pricing", url: "https://www.acme.com/pricing" },
           { text: "Privacy", url: "https://www.acme.com/privacy" },
         ],
+        canonicalUrl: null,
       });
+    });
+
+    it("keeps the markup of a sitemap, so that the addresses in it are not run together", async () => {
+      const sitemap =
+        '<?xml version="1.0"?><urlset><url><loc>https://acme.com/security</loc>' +
+        "<lastmod>2026-01-01</lastmod></url><url><loc>https://acme.com/privacy</loc></url></urlset>";
+      const { fetch } = fakeFetch({
+        "https://acme.com/sitemap.xml": { contentType: "application/xml", body: sitemap },
+      });
+
+      const page = await createPageReader({ fetch })("https://acme.com/sitemap.xml");
+
+      expect(page.text).toBe(sitemap);
+      expect(page.links).toEqual([]);
+    });
+
+    it("turns another XML answer into text as before", async () => {
+      const feed =
+        "<rss><channel><title>News</title><item><title>Hello</title></item></channel></rss>";
+      const { fetch } = fakeFetch({
+        "https://acme.com/feed.xml": { contentType: "application/xml", body: feed },
+      });
+
+      const page = await createPageReader({ fetch })("https://acme.com/feed.xml");
+
+      expect(page.text).not.toContain("<item>");
+    });
+
+    it("gives the address the page claims for itself, resolved against the URL that answered", async () => {
+      const { fetch } = fakeFetch({
+        [PAGE_URL]: {
+          url: "https://m.acme.com/trust/amp",
+          body: '<html><head><title>Trust</title><link rel="canonical" href="/trust"></head><body><p>Hello</p></body></html>',
+        },
+      });
+      expect((await createPageReader({ fetch })(PAGE_URL)).canonicalUrl).toBe(
+        "https://m.acme.com/trust",
+      );
     });
 
     it("decodes the page with the charset of the header", async () => {
@@ -170,6 +212,7 @@ describe("createPageReader", () => {
         publishedAt: null,
         text: "Security policy <b>\n\nWe keep <a href='/x'>data</a> safe.",
         links: [],
+        canonicalUrl: null,
       });
     });
 
@@ -200,6 +243,291 @@ describe("createPageReader", () => {
       const error = await failureOf(createPageReader({ fetch })(PAGE_URL));
       expect(error.reason).toBe("needs_javascript");
       expect(error.name).toBe("PageReadError");
+    });
+
+    describe("what the page says about itself", () => {
+      const embedded = (data: unknown) => JSON.stringify(data).replace(/</g, "\\u003c");
+      const IDENTIFIED = `<html><head><title>Acme</title><meta property="og:site_name" content="Acme"><script type="application/ld+json">${embedded(
+        {
+          "@graph": [
+            { "@type": "Organization", name: "Acme Analytics", legalName: "Acme Analytics Ltd" },
+            { "@type": "SoftwareApplication", name: "Acme Vault" },
+          ],
+        },
+      )}</script></head><body><h1>Welcome</h1><p>${"We build software for teams. ".repeat(5)}</p></body></html>`;
+
+      it("is carried by an HTML page: the names it gives itself and its products", async () => {
+        const { fetch } = fakeFetch({ [PAGE_URL]: { body: IDENTIFIED } });
+
+        const page = await createPageReader({ fetch })(PAGE_URL);
+
+        expect(page.identity).toEqual({
+          names: ["Acme", "Acme Analytics", "Acme Analytics Ltd"],
+          products: ["Acme Vault"],
+        });
+      });
+
+      it("is carried by a page that lists a product and gives no name", async () => {
+        const body = `<html><head><title>Vault</title><script type="application/ld+json">${embedded(
+          { "@type": "SoftwareApplication", name: "Acme Vault" },
+        )}</script></head><body><h1>Welcome</h1><p>${"We build software for teams. ".repeat(5)}</p></body></html>`;
+        const { fetch } = fakeFetch({ [PAGE_URL]: { body } });
+
+        const page = await createPageReader({ fetch })(PAGE_URL);
+
+        expect(page.identity).toEqual({ names: [], products: ["Acme Vault"] });
+      });
+
+      it("is not carried by a page that says nothing about itself", async () => {
+        const { fetch } = fakeFetch({ [PAGE_URL]: { body: HTML } });
+
+        const page = await createPageReader({ fetch })(PAGE_URL);
+
+        expect(page).not.toHaveProperty("identity");
+      });
+
+      it("is not carried by a page that is not HTML", async () => {
+        const { fetch } = fakeFetch({
+          "https://acme.com/humans.txt": {
+            contentType: "text/plain",
+            body: `<meta property="og:site_name" content="Acme">`,
+          },
+        });
+
+        const page = await createPageReader({ fetch })("https://acme.com/humans.txt");
+
+        expect(page).not.toHaveProperty("identity");
+      });
+
+      it("is carried by a page whose text is in its data", async () => {
+        const sentence = "Acme keeps the records of its customers safe and secure at all times.";
+        const body = `<html><head><title>Security</title><meta property="og:site_name" content="Acme"><script>${"var a=1;".repeat(3000)}</script></head><body><div id="__next"></div><script id="__NEXT_DATA__" type="application/json">${embedded(
+          { props: { pageProps: { text: sentence.repeat(8) } } },
+        )}</script></body></html>`;
+        const { fetch } = fakeFetch({ [PAGE_URL]: { body } });
+
+        const page = await createPageReader({ fetch })(PAGE_URL);
+
+        expect(page.text).toContain("Acme keeps the records");
+        expect(page.identity).toEqual({ names: ["Acme"], products: [] });
+      });
+
+      it("is the identity of the page as the browser built it", async () => {
+        const shell = `<html><head><title>Security</title><script>${"var a=1;".repeat(3000)}</script></head><body><div id="root"></div></body></html>`;
+        const built = `<html><head><title>Security</title><meta property="og:site_name" content="Built Name"></head><body><p>${"Acme keeps the records of its customers safe. ".repeat(20)}</p></body></html>`;
+        const { fetch } = fakeFetch({ [PAGE_URL]: { body: shell } });
+        const render = jest.fn(async () => ({ url: PAGE_URL, html: built }));
+
+        const page = await createPageReader({ fetch, render })(PAGE_URL);
+
+        expect(page.identity).toEqual({ names: ["Built Name"], products: [] });
+      });
+    });
+
+    describe("a page that a script builds", () => {
+      const PROSE = Array.from(
+        { length: 8 },
+        (_, n) =>
+          `Section ${n + 1} of the security statement says that Acme encrypts customer data and never uses it to train models.`,
+      );
+      const embedded = (data: unknown) => JSON.stringify(data).replace(/</g, "\\u003c");
+      /** A shell: more than 20,000 characters of script and a little visible text. */
+      const shell = (data: string, visible = "") =>
+        `<html><head><title>Security | Acme</title><script>${"var a=1;".repeat(3000)}</script></head><body>${visible}<div id="__next"></div>${data}</body></html>`;
+      const nextData = (pageProps: unknown) =>
+        `<script id="__NEXT_DATA__" type="application/json">${embedded({ props: { pageProps } })}</script>`;
+
+      it("is read from the data that the page carries", async () => {
+        const body = shell(nextData({ sections: PROSE }));
+        const { fetch } = fakeFetch({ [PAGE_URL]: { body } });
+
+        const page = await createPageReader({ fetch })(PAGE_URL);
+
+        expect(page.title).toBe("Security | Acme");
+        expect(page.text).toBe(PROSE.join("\n\n"));
+      });
+
+      it("keeps the text that the page shows, before the text of the data", async () => {
+        const body = shell(nextData({ sections: PROSE }), "<h1>Security at Acme</h1>");
+        const { fetch } = fakeFetch({ [PAGE_URL]: { body } });
+
+        const page = await createPageReader({ fetch })(PAGE_URL);
+
+        expect(page.text).toBe(`Security at Acme\n\n${PROSE.join("\n\n")}`);
+      });
+
+      it("is still a page that needs JavaScript when the data holds too little text", async () => {
+        const body = shell(nextData({ sections: PROSE.slice(0, 2) }));
+        const { fetch } = fakeFetch({ [PAGE_URL]: { body } });
+
+        const error = await failureOf(createPageReader({ fetch })(PAGE_URL));
+
+        expect(error.reason).toBe("needs_javascript");
+      });
+
+      it("is still a page that needs JavaScript when there is no data", async () => {
+        const { fetch } = fakeFetch({ [PAGE_URL]: { body: shell("") } });
+
+        const error = await failureOf(createPageReader({ fetch })(PAGE_URL));
+
+        expect(error.reason).toBe("needs_javascript");
+      });
+
+      describe("with a browser", () => {
+        const RENDERED_TEXT = PROSE.join("</p><p>");
+        const renderedPage = `<html><head><title>Security | Acme (rendered)</title></head><body><h1>Security</h1><p>${RENDERED_TEXT}</p><nav><a href="/privacy">Privacy</a></nav></body></html>`;
+        const renderer = (
+          result: { url: string; html: string } | null = {
+            url: PAGE_URL,
+            html: renderedPage,
+          },
+        ) => jest.fn(async () => result);
+
+        it("is read from the page as the browser built it, when the page carries no text of its own", async () => {
+          const body = shell("");
+          const { fetch } = fakeFetch({ [PAGE_URL]: { body } });
+          const render = renderer();
+
+          const page = await createPageReader({ fetch, render })(PAGE_URL);
+
+          expect(page.title).toBe("Security | Acme (rendered)");
+          expect(page.text).toBe(`Security\n\n${PROSE.join("\n\n")}`);
+          expect(page.links).toEqual([{ text: "Privacy", url: "https://acme.com/privacy" }]);
+          expect(page.url).toBe(PAGE_URL);
+        });
+
+        it("is given the document as it was read, the gate of robots.txt and the signal", async () => {
+          const body = shell("");
+          const { fetch } = fakeFetch({
+            [PAGE_URL]: {
+              body,
+              contentType: "text/html; charset=utf-8",
+              url: "https://acme.com/trust",
+            },
+          });
+          const render = renderer({ url: "https://acme.com/trust", html: renderedPage });
+          const controller = new AbortController();
+
+          const page = await createPageReader({ fetch, render })(PAGE_URL, controller.signal);
+
+          expect(render).toHaveBeenCalledTimes(1);
+          expect(render).toHaveBeenCalledWith({
+            url: "https://acme.com/trust",
+            body: Buffer.from(body),
+            contentType: "text/html; charset=utf-8",
+            beforeRequest: expect.any(Function),
+            signal: controller.signal,
+          });
+          expect(page.url).toBe("https://acme.com/trust");
+        });
+
+        it("is the page at the address the browser ended on", async () => {
+          const { fetch } = fakeFetch({ [PAGE_URL]: { body: shell("") } });
+          const render = renderer({ url: "https://acme.com/en/security", html: renderedPage });
+
+          const page = await createPageReader({ fetch, render })(PAGE_URL);
+
+          expect(page.url).toBe("https://acme.com/en/security");
+        });
+
+        it("has the address and the date that the built page states for itself", async () => {
+          const html = `<html><head><title>Security | Acme</title><link rel="canonical" href="https://acme.com/en/security"><meta property="article:published_time" content="2025-03-04T10:00:00Z"></head><body><p>${RENDERED_TEXT}</p></body></html>`;
+          const { fetch } = fakeFetch({ [PAGE_URL]: { body: shell("") } });
+          const render = renderer({ url: PAGE_URL, html });
+
+          const page = await createPageReader({ fetch, render })(PAGE_URL);
+
+          expect(page.canonicalUrl).toBe("https://acme.com/en/security");
+          expect(page.publishedAt).toBe("2025-03-04T10:00:00.000Z");
+        });
+
+        // The data is enough from 500 characters, which is also how much text a page must show.
+        it.each([
+          [499, true],
+          [500, false],
+        ])("is asked about a page whose data holds %i characters: %p", async (length, asked) => {
+          const text =
+            `${"Acme keeps every record of its customers safe. ".repeat(11)}`.slice(0, length - 1) +
+            "x";
+          const { fetch } = fakeFetch({ [PAGE_URL]: { body: shell(nextData({ text })) } });
+          const render = renderer();
+
+          await createPageReader({ fetch, render })(PAGE_URL);
+
+          expect(text).toHaveLength(length);
+          expect(render).toHaveBeenCalledTimes(asked ? 1 : 0);
+        });
+
+        it("is tried when the data holds too little text", async () => {
+          const body = shell(nextData({ sections: PROSE.slice(0, 2) }));
+          const { fetch } = fakeFetch({ [PAGE_URL]: { body } });
+          const render = renderer();
+
+          const page = await createPageReader({ fetch, render })(PAGE_URL);
+
+          expect(render).toHaveBeenCalledTimes(1);
+          expect(page.title).toBe("Security | Acme (rendered)");
+        });
+
+        it("is not asked when the data holds the text", async () => {
+          const body = shell(nextData({ sections: PROSE }));
+          const { fetch } = fakeFetch({ [PAGE_URL]: { body } });
+          const render = renderer();
+
+          const page = await createPageReader({ fetch, render })(PAGE_URL);
+
+          expect(render).not.toHaveBeenCalled();
+          expect(page.text).toBe(PROSE.join("\n\n"));
+        });
+
+        it("is not asked about a page that shows enough text itself", async () => {
+          const body = `<html><body><p>${"Word ".repeat(400)}</p><script>${"a".repeat(30_000)}</script></body></html>`;
+          const { fetch } = fakeFetch({ [PAGE_URL]: { body } });
+          const render = renderer();
+
+          await createPageReader({ fetch, render })(PAGE_URL);
+
+          expect(render).not.toHaveBeenCalled();
+        });
+
+        it.each([
+          ["the browser cannot render it", null],
+          ["the page is still a shell in the browser", { url: PAGE_URL, html: shell("") }],
+          [
+            "the page holds too little text in the browser",
+            { url: PAGE_URL, html: "<html><body><p>Hello.</p></body></html>" },
+          ],
+        ])("is still a page that needs JavaScript when %s", async (_name, result) => {
+          const { fetch } = fakeFetch({ [PAGE_URL]: { body: shell("") } });
+          const render = renderer(result);
+
+          const error = await failureOf(createPageReader({ fetch, render })(PAGE_URL));
+
+          expect(error.reason).toBe("needs_javascript");
+        });
+
+        it("is still a page that needs JavaScript when the browser fails in a way of its own", async () => {
+          const { fetch } = fakeFetch({ [PAGE_URL]: { body: shell("") } });
+          const render = jest.fn(async () => {
+            throw new TypeError("boom");
+          });
+
+          const error = await failureOf(createPageReader({ fetch, render })(PAGE_URL));
+
+          expect(error.reason).toBe("needs_javascript");
+        });
+      });
+
+      it("is not touched when the page shows enough text itself", async () => {
+        const visible = `<p>${"Word ".repeat(400)}</p>`;
+        const body = shell(nextData({ sections: PROSE }), visible);
+        const { fetch } = fakeFetch({ [PAGE_URL]: { body } });
+
+        const page = await createPageReader({ fetch })(PAGE_URL);
+
+        expect(page.text).not.toContain("Section 1 of the security statement");
+        expect(page.text.length).toBeGreaterThan(1000);
+      });
     });
 
     it("does not treat a large page with a fair amount of text as a shell", async () => {
@@ -251,6 +579,13 @@ describe("createPageReader", () => {
       expect(page?.options).toEqual({
         signal: controller.signal,
         beforeRequest: expect.any(Function),
+        allowedContentTypes: [...DEFAULT_CONTENT_TYPES, "application/pdf", "application/x-pdf"],
+        maxBytesByType: {
+          "application/pdf": MAX_PDF_BYTES,
+          "application/x-pdf": MAX_PDF_BYTES,
+          "application/octet-stream": MAX_PDF_BYTES,
+          "binary/octet-stream": MAX_PDF_BYTES,
+        },
       });
     });
   });
@@ -509,6 +844,358 @@ describe("createPageReader", () => {
       });
       const error = await failureOf(createPageReader({ fetch })("https://acme.com/café"));
       expect(error.reason).toBe("blocked_by_robots");
+    });
+  });
+  describe("a PDF", () => {
+    const PDF_URL = "https://acme.com/legal/dpa.pdf";
+    const PDF_BYTES = Buffer.from("%PDF-1.7\n1 0 obj\n<<>>\nendobj\n", "latin1");
+    const DOCUMENT: PdfDocument = {
+      title: "Acme DPA",
+      publishedAt: "2024-03-01T09:15:00.000Z",
+      text: "We never use customer content to train models.",
+      pages: 2,
+    };
+    const allowRobots: Answer = { contentType: "text/plain", body: "User-agent: *\nAllow: /" };
+
+    /** A reader of PDFs that answers with `result` (or fails with it) and remembers what it got. */
+    const pdfReader = (result: PdfDocument | Error = DOCUMENT) =>
+      jest.fn(async () => {
+        if (result instanceof Error) throw result;
+        return result;
+      });
+
+    it("becomes the text, title and date of the document, with no links", async () => {
+      const { fetch } = fakeFetch({
+        [ROBOTS]: allowRobots,
+        [PDF_URL]: { contentType: "application/pdf", body: PDF_BYTES },
+      });
+
+      const page = await createPageReader({ fetch, readPdf: pdfReader() })(PDF_URL);
+
+      expect(page).toEqual({
+        url: PDF_URL,
+        title: "Acme DPA",
+        publishedAt: "2024-03-01T09:15:00.000Z",
+        text: "We never use customer content to train models.",
+        links: [],
+        canonicalUrl: null,
+      });
+    });
+
+    it("is read from the bytes, with the address that answered and the signal of the read", async () => {
+      const { fetch } = fakeFetch({
+        [ROBOTS]: allowRobots,
+        [PDF_URL]: {
+          contentType: "application/pdf; charset=binary",
+          body: PDF_BYTES,
+          url: "https://cdn.acme.com/files/dpa-2024.pdf",
+        },
+      });
+      const readPdf = pdfReader();
+      const controller = new AbortController();
+
+      const page = await createPageReader({ fetch, readPdf })(PDF_URL, controller.signal);
+
+      expect(readPdf).toHaveBeenCalledTimes(1);
+      expect(readPdf).toHaveBeenCalledWith(PDF_BYTES, {
+        url: "https://cdn.acme.com/files/dpa-2024.pdf",
+        signal: controller.signal,
+      });
+      expect(page.url).toBe("https://cdn.acme.com/files/dpa-2024.pdf");
+    });
+
+    it("is not read as text: the bytes of a PDF are not decoded", async () => {
+      const { fetch } = fakeFetch({
+        [ROBOTS]: allowRobots,
+        [PDF_URL]: { contentType: "application/x-pdf", body: PDF_BYTES },
+      });
+      const readPdf = pdfReader({ ...DOCUMENT, text: "From the reader." });
+
+      const page = await createPageReader({ fetch, readPdf })(PDF_URL);
+
+      expect(page.text).toBe("From the reader.");
+    });
+
+    describe("the types an answer may have", () => {
+      const typesAskedFor = async (url: string) => {
+        const { fetch, calls } = fakeFetch({
+          [ROBOTS]: allowRobots,
+          [url]: { contentType: "application/pdf", body: PDF_BYTES },
+        });
+        await createPageReader({ fetch, readPdf: pdfReader() })(url);
+        return calls.find((call) => call.url === url)?.options?.allowedContentTypes;
+      };
+
+      it("are the pages and the PDFs for any address", async () => {
+        expect(await typesAskedFor(PAGE_URL)).toEqual([
+          ...DEFAULT_CONTENT_TYPES,
+          "application/pdf",
+          "application/x-pdf",
+        ]);
+      });
+
+      it("include a file of unknown type for an address that ends in .pdf", async () => {
+        expect(await typesAskedFor(PDF_URL)).toEqual([
+          ...DEFAULT_CONTENT_TYPES,
+          "application/pdf",
+          "application/x-pdf",
+          "application/octet-stream",
+          "binary/octet-stream",
+        ]);
+      });
+
+      it("look at the path of the address, in any case, and not at the query", async () => {
+        expect(await typesAskedFor("https://acme.com/files/DPA.PDF?download=1")).toContain(
+          "application/octet-stream",
+        );
+        expect(await typesAskedFor("https://acme.com/download?file=dpa.pdf")).not.toContain(
+          "application/octet-stream",
+        );
+      });
+    });
+
+    describe("a file of unknown type", () => {
+      it("is a PDF when it begins like one", async () => {
+        const { fetch } = fakeFetch({
+          [ROBOTS]: allowRobots,
+          [PDF_URL]: { contentType: "application/octet-stream", body: PDF_BYTES },
+        });
+        const readPdf = pdfReader();
+
+        const page = await createPageReader({ fetch, readPdf })(PDF_URL);
+
+        expect(readPdf).toHaveBeenCalledTimes(1);
+        expect(page.title).toBe("Acme DPA");
+      });
+
+      it("is not a page when it does not, and the reader of PDFs is not asked", async () => {
+        const { fetch } = fakeFetch({
+          [ROBOTS]: allowRobots,
+          [PDF_URL]: { contentType: "application/octet-stream", body: "MZ\u0090\u0000 an exe" },
+        });
+        const readPdf = pdfReader();
+
+        const error = await failureOf(createPageReader({ fetch, readPdf })(PDF_URL));
+
+        expect(error.reason).toBe("unsupported_type");
+        expect(readPdf).not.toHaveBeenCalled();
+      });
+    });
+
+    describe("a PDF that cannot be read", () => {
+      it.each(["not_a_pdf", "no_text", "too_slow", "too_big", "unreadable"] as const)(
+        "is a format that cannot be read when the reason is %s",
+        async (reason) => {
+          const { fetch } = fakeFetch({
+            [ROBOTS]: allowRobots,
+            [PDF_URL]: { contentType: "application/pdf", body: PDF_BYTES },
+          });
+
+          const error = await failureOf(
+            createPageReader({ fetch, readPdf: pdfReader(new PdfError(reason)) })(PDF_URL),
+          );
+
+          expect(error.reason).toBe("unsupported_type");
+          expect(error.message).toBe(new FetchError("unsupported_type").message);
+        },
+      );
+
+      it("is unreachable when the read was cancelled", async () => {
+        const { fetch } = fakeFetch({
+          [ROBOTS]: allowRobots,
+          [PDF_URL]: { contentType: "application/pdf", body: PDF_BYTES },
+        });
+
+        const error = await failureOf(
+          createPageReader({ fetch, readPdf: pdfReader(new PdfError("aborted")) })(PDF_URL),
+        );
+
+        expect(error.reason).toBe("unreachable");
+      });
+
+      it("is unreachable when the reader fails in a way of its own", async () => {
+        const { fetch } = fakeFetch({
+          [ROBOTS]: allowRobots,
+          [PDF_URL]: { contentType: "application/pdf", body: PDF_BYTES },
+        });
+
+        const error = await failureOf(
+          createPageReader({ fetch, readPdf: pdfReader(new TypeError("boom")) })(PDF_URL),
+        );
+
+        expect(error.reason).toBe("unreachable");
+      });
+    });
+
+    it("is kept for other runs like any page, and read once", async () => {
+      const { cache } = memoryCache();
+      const { fetch, requested } = fakeFetch({
+        [ROBOTS]: allowRobots,
+        [PDF_URL]: { contentType: "application/pdf", body: PDF_BYTES },
+      });
+      const readPdf = pdfReader();
+
+      await createPageReader({ fetch, cache, readPdf })(PDF_URL);
+      await settle();
+      const second = await createPageReader({ fetch, cache, readPdf })(PDF_URL);
+
+      expect(second.text).toBe(DOCUMENT.text);
+      expect(requested.filter((url) => url === PDF_URL)).toHaveLength(1);
+      expect(readPdf).toHaveBeenCalledTimes(1);
+    });
+
+    it("leaves a page of HTML as it was, and the reader of PDFs out of it", async () => {
+      const { fetch } = fakeFetch({ [ROBOTS]: allowRobots, [PAGE_URL]: { body: HTML } });
+      const readPdf = pdfReader();
+
+      const page = await createPageReader({ fetch, readPdf })(PAGE_URL);
+
+      expect(page.title).toBe("Trust center | Acme");
+      expect(readPdf).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("with a cache shared by runs", () => {
+    const robotsAnswer = (body: string): Answer => ({ contentType: "text/plain", body });
+
+    it("asks a site's robots.txt once for all the readers that share the cache", async () => {
+      const { cache } = memoryCache();
+      const { fetch, requested } = fakeFetch({
+        [ROBOTS]: robotsAnswer("User-agent: *\nDisallow: /private"),
+        [PAGE_URL]: { body: HTML },
+        "https://acme.com/other": { body: HTML },
+      });
+
+      await createPageReader({ fetch, cache })(PAGE_URL);
+      await settle();
+      await createPageReader({ fetch, cache })("https://acme.com/other");
+
+      expect(requested.filter((url) => url === ROBOTS)).toHaveLength(1);
+    });
+
+    it("applies the rules from the cache as it would the rules it fetched", async () => {
+      const { cache } = memoryCache();
+      const { fetch, requested } = fakeFetch({
+        [ROBOTS]: robotsAnswer("User-agent: *\nDisallow: /private"),
+        [PAGE_URL]: { body: HTML },
+        "https://acme.com/private/page": { body: HTML },
+      });
+      await createPageReader({ fetch, cache })(PAGE_URL);
+      await settle();
+
+      const error = await failureOf(
+        createPageReader({ fetch, cache })("https://acme.com/private/page"),
+      );
+
+      expect(error.reason).toBe("blocked_by_robots");
+      expect(requested).not.toContain("https://acme.com/private/page");
+    });
+
+    it("keeps the text of robots.txt for 24 hours, under the origin", async () => {
+      const { cache, writes } = memoryCache();
+      const { fetch } = fakeFetch({
+        [ROBOTS]: robotsAnswer("User-agent: *\nAllow: /"),
+        [PAGE_URL]: { body: HTML },
+      });
+
+      await createPageReader({ fetch, cache })(PAGE_URL);
+      await settle();
+
+      expect(writes.filter((write) => write.kind === "robots")).toEqual([
+        {
+          kind: "robots",
+          key: "https://acme.com",
+          value: JSON.stringify({ status: 200, text: "User-agent: *\nAllow: /" }),
+        },
+      ]);
+    });
+
+    it("keeps that a site has no robots.txt, but not that it refused to show it", async () => {
+      const missing = memoryCache();
+      const refused = memoryCache();
+      const answers = (reason: "not_found" | "blocked_by_site") =>
+        fakeFetch({ [ROBOTS]: new FetchError(reason), [PAGE_URL]: { body: HTML } });
+
+      await createPageReader({ fetch: answers("not_found").fetch, cache: missing.cache })(PAGE_URL);
+      await createPageReader({ fetch: answers("blocked_by_site").fetch, cache: refused.cache })(
+        PAGE_URL,
+      );
+      await settle();
+
+      expect(missing.writes.filter((write) => write.kind === "robots")).toEqual([
+        {
+          kind: "robots",
+          key: "https://acme.com",
+          value: JSON.stringify({ status: 404, text: "" }),
+        },
+      ]);
+      expect(refused.writes.filter((write) => write.kind === "robots")).toEqual([]);
+    });
+
+    it("keeps nothing of a robots.txt that could not be fetched, so that the next run asks again", async () => {
+      const { cache, writes } = memoryCache();
+      const { fetch } = fakeFetch({
+        [ROBOTS]: new FetchError("unreachable"),
+        [PAGE_URL]: { body: HTML },
+      });
+
+      await failureOf(createPageReader({ fetch, cache })(PAGE_URL));
+      await settle();
+
+      expect(writes).toEqual([]);
+    });
+
+    it("does not keep an origin that the address policy refused", async () => {
+      const { cache, writes } = memoryCache();
+      const { fetch } = fakeFetch({ [ROBOTS]: new FetchError("not_allowed") });
+
+      await failureOf(createPageReader({ fetch, cache })(PAGE_URL));
+      await settle();
+
+      expect(writes).toEqual([]);
+    });
+
+    it("reads a page once for all the readers that share the cache, and answers it whole", async () => {
+      const { cache } = memoryCache();
+      const { fetch, requested } = fakeFetch({
+        [ROBOTS]: robotsAnswer("User-agent: *\nAllow: /"),
+        [PAGE_URL]: { body: HTML },
+      });
+
+      const first = await createPageReader({ fetch, cache })(PAGE_URL);
+      await settle();
+      requested.length = 0;
+      const second = await createPageReader({ fetch, cache })(PAGE_URL);
+
+      expect(second).toEqual(first);
+      expect(second.title).toBe("Trust center | Acme");
+      expect(second.links.length).toBeGreaterThan(0);
+      expect(requested).toEqual([]);
+    });
+
+    it("does not keep a page that could not be read", async () => {
+      const { cache, writes } = memoryCache();
+      const { fetch } = fakeFetch({
+        [ROBOTS]: robotsAnswer("User-agent: *\nAllow: /"),
+        [PAGE_URL]: new FetchError("unreachable"),
+      });
+
+      await failureOf(createPageReader({ fetch, cache })(PAGE_URL));
+      await settle();
+
+      expect(writes.filter((write) => write.kind === "page")).toEqual([]);
+    });
+
+    it("is the same reader without a cache: nothing is asked of one and nothing is kept", async () => {
+      const { fetch, requested } = fakeFetch({
+        [ROBOTS]: robotsAnswer("User-agent: *\nAllow: /"),
+        [PAGE_URL]: { body: HTML },
+      });
+
+      await createPageReader({ fetch })(PAGE_URL);
+      await createPageReader({ fetch })(PAGE_URL);
+
+      expect(requested).toEqual([ROBOTS, PAGE_URL, ROBOTS, PAGE_URL]);
     });
   });
 });

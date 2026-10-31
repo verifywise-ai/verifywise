@@ -1,10 +1,14 @@
 import {
   EXCERPT_GAP,
   MAX_EXCERPT_CHARS,
+  MAX_EXTRA_PARTS,
+  MAX_PAGE_CONTENT_CHARS,
+  MAX_PAGE_PARTS,
   PageLink,
   decodeEntities,
   extractPageText,
   looksLikeJavaScriptShell,
+  pageParts,
   relevantLinks,
   selectExcerpt,
 } from "../pageText";
@@ -197,6 +201,7 @@ describe("extractPageText", () => {
       text: "",
       publishedAt: null,
       links: [],
+      canonicalUrl: null,
     });
   });
 
@@ -353,6 +358,73 @@ describe("extractPageText", () => {
     it("counts an anchor without a usable href among the 500 it scans", () => {
       const html = '<a name="x">n</a>'.repeat(500) + '<a href="/late">Late</a>';
       expect(links(html)).toEqual([]);
+    });
+  });
+
+  describe("the address the page claims for itself", () => {
+    const claimed = (head: string) => extractPageText(pageWith(head), BASE).canonicalUrl;
+
+    it("reads <link rel=canonical>, resolved against the base URL and without a fragment", () => {
+      expect(claimed('<link rel="canonical" href="https://www.acme.com/trust">')).toBe(
+        "https://www.acme.com/trust",
+      );
+      expect(claimed('<link rel="canonical" href="/trust/soc2#top">')).toBe(
+        "https://acme.com/trust/soc2",
+      );
+      expect(claimed('<link rel="canonical" href="../security">')).toBe(
+        "https://acme.com/security",
+      );
+    });
+
+    it("finds the link whatever the order and the quoting of its attributes and the case of its rel", () => {
+      expect(claimed("<link href=/a rel=canonical>")).toBe("https://acme.com/a");
+      expect(claimed('<LINK REL="Canonical" HREF="/b">')).toBe("https://acme.com/b");
+      expect(claimed("<link href='/c' rel='alternate canonical'>")).toBe("https://acme.com/c");
+      expect(claimed('<link rel="canonical" href="/d&amp;e=1">')).toBe("https://acme.com/d&e=1");
+    });
+
+    it("ignores the other links of the head", () => {
+      expect(
+        claimed(
+          '<link rel="stylesheet" href="/s.css"><link rel="alternate" href="/amp"><link rel="amphtml" href="/story/amp">',
+        ),
+      ).toBeNull();
+    });
+
+    it("falls back to og:url, and prefers the link when both are there", () => {
+      expect(claimed('<meta property="og:url" content="https://acme.com/og">')).toBe(
+        "https://acme.com/og",
+      );
+      expect(
+        claimed(
+          '<meta property="og:url" content="https://acme.com/og"><link rel="canonical" href="https://acme.com/link">',
+        ),
+      ).toBe("https://acme.com/link");
+      expect(claimed('<meta content="/relative" property="og:url">')).toBe(
+        "https://acme.com/relative",
+      );
+    });
+
+    it("takes the first claim of each kind", () => {
+      expect(
+        claimed('<link rel="canonical" href="/first"><link rel="canonical" href="/second">'),
+      ).toBe("https://acme.com/first");
+    });
+
+    it("does not take a claim that is not an http or https address, or is empty", () => {
+      expect(claimed('<link rel="canonical" href="javascript:alert(1)">')).toBeNull();
+      expect(claimed('<link rel="canonical" href="">')).toBeNull();
+      expect(claimed('<link rel="canonical">')).toBeNull();
+      expect(claimed('<meta property="og:url" content="mailto:a@acme.com">')).toBeNull();
+    });
+
+    it("is null for a page that claims nothing", () => {
+      expect(claimed("")).toBeNull();
+    });
+
+    it("looks at no more than 50 link tags", () => {
+      const filler = '<link rel="stylesheet" href="/s.css">'.repeat(50);
+      expect(claimed(`${filler}<link rel="canonical" href="/late">`)).toBeNull();
     });
   });
 });
@@ -604,6 +676,91 @@ describe("selectExcerpt", () => {
   });
 });
 
+describe("the parts of a long page", () => {
+  it("has the limits the loop is told about", () => {
+    expect(MAX_PAGE_PARTS).toBe(40);
+    expect(MAX_EXTRA_PARTS).toBe(2);
+    // The first excerpt and the extra parts, each with the gap marker that joins it to the rest.
+    expect(MAX_PAGE_CONTENT_CHARS).toBe(
+      MAX_EXCERPT_CHARS * (1 + MAX_EXTRA_PARTS) + EXCERPT_GAP.length * MAX_EXTRA_PARTS,
+    );
+  });
+
+  describe("pageParts", () => {
+    const paragraph = (n: number, chars: number) => `P${n} `.padEnd(chars, "x");
+
+    it("is one part, as it is, for a text that fits a part", () => {
+      expect(pageParts("short text")).toEqual(["short text"]);
+      const exact = "a".repeat(MAX_EXCERPT_CHARS);
+      expect(pageParts(exact)).toEqual([exact]);
+      expect(pageParts("")).toEqual([""]);
+    });
+
+    it("cuts a longer text at the last blank line of the window, when that is past the middle", () => {
+      const text = [paragraph(1, 3000), paragraph(2, 3000), paragraph(3, 3000), paragraph(4, 500)];
+
+      const parts = pageParts(text.join("\n\n"));
+
+      // The window holds the first two paragraphs and the start of the third; it is cut after the second.
+      expect(parts).toEqual([`${text[0]}\n\n${text[1]}`, `${text[2]}\n\n${text[3]}`]);
+    });
+
+    it("cuts at a line break when there is no blank line past the middle, and then at a space", () => {
+      const lines = pageParts(`${"a".repeat(5000)}\n${"b".repeat(5000)}`);
+      expect(lines).toEqual(["a".repeat(5000), "b".repeat(5000)]);
+
+      const words = pageParts(`${"a".repeat(5000)} ${"b".repeat(5000)}`);
+      expect(words).toEqual(["a".repeat(5000), "b".repeat(5000)]);
+    });
+
+    it("cuts a text with no break past the middle at the end of the window, never inside a surrogate pair", () => {
+      // The first letter moves the pairs by one unit, so the window of 8,000 units ends between the
+      // halves of an emoji.
+      const text = `a${"😀".repeat(MAX_EXCERPT_CHARS)}`;
+
+      const parts = pageParts(text);
+
+      expect(parts.length).toBeGreaterThan(1);
+      for (const part of parts) {
+        expect(part.length).toBeLessThanOrEqual(MAX_EXCERPT_CHARS);
+        expect(part).toMatch(/^a?(?:😀)+$/u);
+      }
+      expect(parts.join("")).toBe(text);
+    });
+
+    it("drops whitespace of any kind at a cut, not only the space or the line break it cut at", () => {
+      // The window ends in a tab: no space or line break is past the middle, so the cut is at the end.
+      const parts = pageParts(`${"a".repeat(MAX_EXCERPT_CHARS - 1)}\t${"b".repeat(100)}`);
+
+      expect(parts).toEqual(["a".repeat(MAX_EXCERPT_CHARS - 1), "b".repeat(100)]);
+    });
+
+    it("gives parts that neither start nor end with whitespace, hold all the text but the cuts, and are never longer than a window", () => {
+      const text = Array.from({ length: 30 }, (_, n) => paragraph(n, 1400)).join("\n\n");
+
+      const parts = pageParts(text);
+
+      expect(parts.length).toBeGreaterThan(3);
+      for (const part of parts) {
+        expect(part.length).toBeLessThanOrEqual(MAX_EXCERPT_CHARS);
+        expect(part).toBe(part.trim());
+      }
+      expect(parts.join("\n\n").replace(/\s+/g, "")).toBe(text.replace(/\s+/g, ""));
+    });
+
+    it("keeps the first MAX_PAGE_PARTS parts of a very long page and drops the rest", () => {
+      const parts = pageParts("a".repeat(MAX_EXCERPT_CHARS * (MAX_PAGE_PARTS + 3)));
+
+      expect(parts).toHaveLength(MAX_PAGE_PARTS);
+      expect(parts.every((part) => part.length === MAX_EXCERPT_CHARS)).toBe(true);
+    });
+
+    it("takes the size of a window from its argument", () => {
+      expect(pageParts("aaaa bbbb cccc", 9)).toEqual(["aaaa bbbb", "cccc"]);
+    });
+  });
+});
+
 describe("looksLikeJavaScriptShell", () => {
   it("is true for a large page with almost no text", () => {
     expect(looksLikeJavaScriptShell("x".repeat(50_000), "y".repeat(100))).toBe(true);
@@ -738,6 +895,7 @@ describe("extractPageText on hostile input", () => {
       text: "",
       publishedAt: null,
       links: [{ text: "x", url: "https://acme.com/x" }],
+      canonicalUrl: null,
     });
   });
 
