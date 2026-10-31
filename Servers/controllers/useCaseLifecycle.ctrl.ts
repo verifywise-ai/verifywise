@@ -12,6 +12,7 @@ import {
   upsertLifecycleOrgSettings,
 } from "../utils/lifecycle.utils";
 import {
+  getPendingUseCaseSubmissions,
   getUseCaseLifecycleDashboard,
   getUseCaseLifecycleSummary,
 } from "../utils/useCaseLifecycle.utils";
@@ -51,6 +52,17 @@ export async function getLifecycleDashboardHandler(req: Request, res: Response) 
       role: req.role!,
     });
     return res.status(200).json(STATUS_CODE[200](dashboard));
+  } catch (error) {
+    return serverError(req, res, fn, error);
+  }
+}
+
+/** Pending use case intake submissions for the In review tab (#5188). */
+export async function getPendingSubmissionsHandler(req: Request, res: Response) {
+  const fn = "getPendingSubmissionsHandler";
+  try {
+    const submissions = await getPendingUseCaseSubmissions(req.organizationId!);
+    return res.status(200).json(STATUS_CODE[200](submissions));
   } catch (error) {
     return serverError(req, res, fn, error);
   }

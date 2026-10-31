@@ -37,6 +37,17 @@ export function lifecycleTabCount(
   return (counts?.[stage] ?? 0) + (extraCounts?.[stage] ?? 0);
 }
 
+/** Stage counts with pending intake requests added to In review (#5188). */
+export function withPendingRequests(
+  counts: LifecycleStageCounts,
+  pendingRequests: number,
+): LifecycleStageCounts {
+  return {
+    ...counts,
+    [LifecycleStage.IN_REVIEW]: counts[LifecycleStage.IN_REVIEW] + pendingRequests,
+  };
+}
+
 /**
  * Use cases per lifecycle stage. The one way stage counts are computed: the
  * Use cases tabs and the dashboard both count the same use cases list.

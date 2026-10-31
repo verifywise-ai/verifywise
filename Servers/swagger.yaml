@@ -27427,3 +27427,17 @@ paths:
       security:
         -
           bearerAuth: []
+  /v1/use-case-lifecycle/intake-submissions:
+    get:
+      summary: 'Get Pending Submissions Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Use Case Lifecycle'
+      operationId: getPendingSubmissionsHandler
+      security:
+        -
+          bearerAuth: []

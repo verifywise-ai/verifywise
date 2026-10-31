@@ -55,6 +55,7 @@ const ProjectList = ({
   staleIds,
   emptyMessage,
   header,
+  renderBeforeList,
 }: IProjectListProps) => {
   const formatDate = useFormattedDate();
   const [searchTerm, setSearchTerm] = useState("");
@@ -422,6 +423,8 @@ const ProjectList = ({
           <ViewToggle viewMode={viewMode} onViewChange={setViewMode} />
         </Box>
       </Box>
+
+      {!isLoading && (renderBeforeList?.(searchTerm) as React.ReactNode)}
 
       {/* Projects List */}
       {renderProjects()}

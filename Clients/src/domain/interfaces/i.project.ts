@@ -19,8 +19,13 @@ export interface IProjectListProps {
   staleIds?: Set<number>;
   /** Shown when `projects` is empty but use cases exist in other lifecycle tabs. */
   emptyMessage?: string;
-  /** Rendered between the toolbar and the list, e.g. lifecycle tabs. */
+  /** Rendered above the toolbar, e.g. lifecycle tabs. */
   header?: unknown;
+  /**
+   * Rendered between the toolbar and the list once loading is done, given the
+   * search text (e.g. intake requests in the In review tab).
+   */
+  renderBeforeList?: (searchTerm: string) => unknown;
 }
 
 export interface IProjectTableViewProps {
