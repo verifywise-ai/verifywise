@@ -6,16 +6,22 @@ import {
   dismissVendorRiskFinding,
   getLatestVendorResearch,
   getVendorResearchConfig,
+  getVendorResearchSettings,
   listVendorRiskFindings,
+  saveVendorResearchSettings,
   startVendorResearch,
 } from "../repository/vendorResearch.repository";
 import { vendorRiskQueryKeys } from "./useVendorRisks";
 import { VENDOR_INSIGHTS_KEY } from "./useRiskLinks";
+import { invalidateLLMKeyQueries } from "./useLLMKeys";
+import type { APIError } from "../tools/error";
 import type {
+  AcceptFindingBody,
   DismissReason,
   FindingStatus,
   VendorResearchConfig,
   VendorResearchRun,
+  VendorResearchSettings,
   VendorRiskFinding,
 } from "../../domain/interfaces/i.vendorResearch";
 
@@ -74,6 +80,7 @@ interface FindingsFilter {
 }
 
 const configKey = () => [...VENDOR_RESEARCH_KEY, "config"] as const;
+const settingsKey = () => [...VENDOR_RESEARCH_KEY, "settings"] as const;
 const findingsKey = (filter: FindingsFilter) => [...FINDINGS_KEY, filter] as const;
 const latestKey = (vendorId: number | null) =>
   [...VENDOR_RESEARCH_KEY, "latest", vendorId] as const;
@@ -87,6 +94,37 @@ export function useVendorResearchConfig() {
   });
 }
 
+/**
+ * The keys an Admin chose for the research. Only an Admin can read them (the server answers
+ * everyone else with a 403), so the caller passes `enabled` as false for anyone else. Only the
+ * window that edits them reads this, and it is mounted when the person opens it: a failed read is
+ * asked again then, and a cached one is read again.
+ */
+export function useVendorResearchSettings(enabled = true) {
+  return useQuery<VendorResearchSettings>({
+    queryKey: settingsKey(),
+    queryFn: getVendorResearchSettings,
+    enabled,
+    staleTime: 0,
+  });
+}
+
+/**
+ * Saving puts the choice the server kept into the cache, so that the window opened next reads it
+ * at once. A 404 says a chosen key is gone (another Admin deleted it): the list of keys the
+ * person chose from is out of date, so it is read again.
+ */
+export function useSaveVendorResearchSettings() {
+  const queryClient = useQueryClient();
+  return useMutation<VendorResearchSettings, APIError, VendorResearchSettings>({
+    mutationFn: (settings) => saveVendorResearchSettings(settings),
+    onSuccess: (saved) => queryClient.setQueryData(settingsKey(), saved),
+    onError: (error) => {
+      if (error.status === 404) void invalidateLLMKeyQueries(queryClient);
+    },
+  });
+}
+
 /** One status at a time, and one vendor or all of them, as the API takes them. */
 export function useVendorRiskFindings(filter: FindingsFilter) {
   return useQuery<{ rows: VendorRiskFinding[]; total: number }>({
@@ -97,8 +135,8 @@ export function useVendorRiskFindings(filter: FindingsFilter) {
 
 const POLL_INTERVAL_MS = 3000;
 /**
- * How long one run is polled, counted from the moment this hook first sees it active, or from
- * `restartPolling()`.
+ * How long one run is polled, counted from the moment this hook first sees it active, from
+ * `restartPolling()`, or from the latest time its progress moved.
  */
 const POLL_WINDOW_MS = 2 * 60 * 1000;
 
@@ -115,9 +153,13 @@ const windowOf = (vendorId: number | null, runId: number) => `${vendorId}:${runI
  *
  * Polling stops after POLL_WINDOW_MS, so a run that never finishes (a stuck
  * worker) does not keep the tab fetching for ever; `pollingStopped` is then
- * true, and the screen should say the run is still going. It goes back to false
- * when the run is no longer active, when a different run shows up, when the
- * vendor changes, and when `restartPolling()` starts a fresh window. Pass null
+ * true, and the screen should say the run is still going. The window is counted
+ * from the latest sign of life: a running run writes its progress at every
+ * step, so one that is working keeps the window open and is followed to its
+ * end, and only one that has gone quiet for the whole window is given up on.
+ * `pollingStopped` goes back to false when the run is no longer active, when a
+ * different run shows up, when the vendor changes, when a read finds that the
+ * run has moved, and when `restartPolling()` starts a fresh window. Pass null
  * to leave the query off.
  *
  * Two things read the run again after the window: coming back to the tab (the
@@ -161,6 +203,10 @@ export function useLatestVendorResearch(
 
   const runId = activeRunId(query.data);
   const currentWindow = runId === null ? null : windowOf(vendorId, runId);
+  // When the server last wrote the run's progress. A run that keeps moving is not stuck, so each
+  // move starts the window again, and a read that finds a move after the window ran out (the tab
+  // came back, or "Check again") starts polling again.
+  const progressMark = query.data?.progress?.updatedAt ?? null;
 
   useEffect(() => {
     if (currentWindow === null) return;
@@ -169,7 +215,7 @@ export function useLatestVendorResearch(
       clearTimeout(timer);
       setEndedWindow(null);
     };
-  }, [currentWindow, restarts]);
+  }, [currentWindow, restarts, progressMark]);
 
   const { refetch } = query;
   const restartPolling = useCallback(() => {
@@ -226,7 +272,7 @@ export function useStartVendorResearch() {
 export function useAcceptFinding() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, body }: { id: number; body: { action_owner?: number | null } }) =>
+    mutationFn: ({ id, body }: { id: number; body: AcceptFindingBody }) =>
       acceptVendorRiskFinding(id, body),
     onSettled: () =>
       Promise.all([

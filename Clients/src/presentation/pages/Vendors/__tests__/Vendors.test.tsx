@@ -125,8 +125,11 @@ vi.mock("../../../components/Modals/NewVendor", () => ({
   default: () => <div data-testid="add-new-vendor-modal" />,
 }));
 
-vi.mock("../../../components/Modals/NewRisk", () => ({
-  default: () => <div data-testid="add-new-risk-modal" />,
+// The page's own editor is never opened here; the form the research section opens on a finding is
+// the stand-in that saves what it was opened with.
+vi.mock("../../../components/Modals/NewRisk", async () => ({
+  default: (await import("../VendorResearchFindings/__tests__/vendorRiskFormStub"))
+    .VendorRiskFormStub,
 }));
 
 vi.mock("../../../components/PageTour", () => ({
@@ -240,6 +243,13 @@ describe("Vendors, research findings on the Risks tab", () => {
   const NOTIFICATION_LINK = "/vendors/risks?findingsVendorId=7";
   const FIRST = finding().risk_description;
 
+  /** Opens the vendor risk form on the finding of a row and saves it: the way a finding is accepted. */
+  const addThroughTheForm = async (row: HTMLElement) => {
+    await userEvent.click(within(row).getByRole("button", { name: "Preview" }));
+    const dialog = await screen.findByRole("dialog", { name: "Review suggested risk" });
+    await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
     vendorsState.data = [{ id: 7, vendor_name: "Acme Cloud" }];
@@ -329,7 +339,7 @@ describe("Vendors, research findings on the Risks tab", () => {
     renderWithProviders(<Vendors />, { route: NOTIFICATION_LINK });
     const row = (await screen.findByText(FIRST)).closest("li") as HTMLElement;
 
-    await userEvent.click(within(row).getByRole("button", { name: "Accept" }));
+    await addThroughTheForm(row);
     await userEvent.click(await screen.findByRole("button", { name: "Open risk" }));
 
     await waitFor(() => expect(getVendorRiskById).toHaveBeenCalledWith({ id: 77 }));
@@ -367,7 +377,7 @@ describe("Vendors, research findings on the Risks tab", () => {
       renderWithProviders(<Vendors />, { route: NOTIFICATION_LINK });
       const row = (await screen.findByText(FIRST)).closest("li") as HTMLElement;
 
-      await userEvent.click(within(row).getByRole("button", { name: "Accept" }));
+      await addThroughTheForm(row);
 
       const toast = await screen.findByText("Risk added to the register");
       await waitFor(() => expect(toast).toBeVisible());

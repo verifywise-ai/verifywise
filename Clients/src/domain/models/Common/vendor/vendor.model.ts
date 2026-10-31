@@ -29,6 +29,19 @@ export class VendorModel {
   regulatory_exposure?: RegulatoryExposure;
   risk_score?: number;
 
+  /** Other names the vendor is known by, separated by commas; the research looks for them too. */
+  other_names?: string | null;
+
+  /**
+   * The identifiers of the vendor (spec Q1): the country it is registered in (ISO 3166-1 alpha-2),
+   * its company registration number, its LEI and its SEC CIK (ten digits). They turn a match of a
+   * public record by the vendor's name into a match by identifier.
+   */
+  country?: string | null;
+  registration_number?: string | null;
+  lei?: string | null;
+  sec_cik?: string | null;
+
   custom_fields?: Array<{
     definition_id: number;
     field_key: string;
@@ -57,6 +70,11 @@ export class VendorModel {
     this.past_issues = data.past_issues;
     this.regulatory_exposure = data.regulatory_exposure;
     this.risk_score = data.risk_score;
+    this.other_names = data.other_names;
+    this.country = data.country;
+    this.registration_number = data.registration_number;
+    this.lei = data.lei;
+    this.sec_cik = data.sec_cik;
     this.custom_fields = data.custom_fields;
   }
 

@@ -28,7 +28,15 @@ const vendorDto: VendorResponseDTO = {
   past_issues: "minor issues",
   regulatory_exposure: "gdpr (eu)",
   risk_score: 85,
+  other_names: "Facebook, Instagram",
+  country: "DE",
+  registration_number: "HRB 86891",
+  lei: "TEST00ACMEANALYT0154",
+  sec_cik: "0000098765",
 };
+
+/** The identifiers of a vendor (spec Q1), each as the server stores it, or none. */
+type Identifiers = Pick<VendorResponseDTO, "country" | "registration_number" | "lei" | "sec_cik">;
 
 export class VendorDTOBuilder {
   private readonly dto: VendorResponseDTO;
@@ -40,6 +48,16 @@ export class VendorDTOBuilder {
 
   withoutCreatedAt(): this {
     this.dto.created_at = undefined;
+    return this;
+  }
+
+  withOtherNames(otherNames: string | null | undefined): this {
+    this.dto.other_names = otherNames;
+    return this;
+  }
+
+  withIdentifiers(identifiers: Identifiers): this {
+    Object.assign(this.dto, identifiers);
     return this;
   }
 
@@ -68,6 +86,11 @@ const vendorModel: VendorModel = {
   past_issues: PastIssues.MajorIncident,
   regulatory_exposure: RegulatoryExposure.GDPR,
   risk_score: 85,
+  other_names: "Facebook, Instagram",
+  country: "DE",
+  registration_number: "HRB 86891",
+  lei: "TEST00ACMEANALYT0154",
+  sec_cik: "0000098765",
 };
 
 export class VendorModelBuilder {
@@ -80,6 +103,16 @@ export class VendorModelBuilder {
 
   withoutVendorName(): this {
     this.model.vendor_name = undefined;
+    return this;
+  }
+
+  withOtherNames(otherNames: string | null | undefined): this {
+    this.model.other_names = otherNames;
+    return this;
+  }
+
+  withIdentifiers(identifiers: Identifiers): this {
+    Object.assign(this.model, identifiers);
     return this;
   }
 

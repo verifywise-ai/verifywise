@@ -116,6 +116,11 @@ export function mapVendorResponseDTOToModel(dto: VendorResponseDTO): VendorModel
     past_issues: mapPastIssues(dto.past_issues),
     regulatory_exposure: mapRegulatoryExposure(dto.regulatory_exposure),
     risk_score: dto.risk_score,
+    other_names: dto.other_names,
+    country: dto.country,
+    registration_number: dto.registration_number,
+    lei: dto.lei,
+    sec_cik: dto.sec_cik,
   };
 
   return new VendorModel(vendorData);
@@ -153,6 +158,11 @@ export function mapVendorToCreateDTO(vendor: Partial<VendorModel>): CreateVendor
     business_criticality: vendor.business_criticality,
     past_issues: vendor.past_issues,
     regulatory_exposure: vendor.regulatory_exposure,
+    other_names: vendor.other_names ?? undefined,
+    country: vendor.country ?? undefined,
+    registration_number: vendor.registration_number ?? undefined,
+    lei: vendor.lei ?? undefined,
+    sec_cik: vendor.sec_cik ?? undefined,
   };
 }
 
@@ -178,5 +188,10 @@ export function mapVendorToUpdateDTO(vendor: Partial<VendorModel>): UpdateVendor
     business_criticality: vendor.business_criticality,
     past_issues: vendor.past_issues,
     regulatory_exposure: vendor.regulatory_exposure,
+    other_names: vendor.other_names,
+    country: vendor.country,
+    registration_number: vendor.registration_number,
+    lei: vendor.lei,
+    sec_cik: vendor.sec_cik,
   };
 }

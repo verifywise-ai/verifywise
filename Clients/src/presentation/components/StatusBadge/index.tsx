@@ -270,6 +270,7 @@ const StatusBadge: React.FC<IStatusBadgeProps> = ({
   uppercase = true,
   backgroundColor,
   textColor,
+  borderColor: customBorderColor,
   icon,
 }) => {
   const colors = getChipColors(label, variant, backgroundColor, textColor);
@@ -279,8 +280,8 @@ const StatusBadge: React.FC<IStatusBadgeProps> = ({
   const gradientTop = colors.backgroundColor;
   const gradientBottom = darkenColor(colors.backgroundColor, 3);
 
-  // Create border color (very slightly darker than background)
-  const borderColor = darkenColor(colors.backgroundColor, 6);
+  // Create border color (very slightly darker than background), unless one is given
+  const borderColor = customBorderColor ?? darkenColor(colors.backgroundColor, 6);
 
   return (
     <Box

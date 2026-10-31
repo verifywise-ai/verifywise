@@ -965,6 +965,35 @@ export const translations: Record<string, Record<string, string>> = {
     "Risk Level": "Risikostufe",
     "Vendor": "Anbieter",
     "Vendor name": "Anbietername",
+    "Other names": "Andere Namen",
+    "e.g. Facebook, Instagram": "z. B. Facebook, Instagram",
+    "Other names this vendor is known by, separated by commas. The research looks for them too.":
+      "Andere Namen, unter denen dieser Anbieter bekannt ist, durch Kommas getrennt. Die Recherche sucht auch nach ihnen.",
+    "Other names must be at most 500 characters":
+      "Andere Namen dürfen höchstens 500 Zeichen lang sein",
+    "Other names can list at most 8 names": "Es können höchstens 8 andere Namen angegeben werden",
+    "Each of the other names must be between 2 and 80 characters":
+      "Jeder der anderen Namen muss zwischen 2 und 80 Zeichen lang sein",
+    "Each of the other names must contain a letter or a digit":
+      "Jeder der anderen Namen muss einen Buchstaben oder eine Ziffer enthalten",
+    "Identifiers": "Kennungen",
+    "Turns a match by name into a match by identifier.":
+      "Macht aus einem Treffer über den Namen einen Treffer über eine Kennung.",
+    "Country": "Land",
+    "e.g. DE": "z. B. DE",
+    "Registration number": "Registernummer",
+    "As the company register writes it": "Wie im Handelsregister eingetragen",
+    "20 letters and digits": "20 Buchstaben und Ziffern",
+    "SEC CIK": "SEC-CIK",
+    "Up to 10 digits": "Bis zu 10 Ziffern",
+    "Country must be a two-letter ISO 3166-1 code, such as DE":
+      "Das Land muss ein zweibuchstabiger ISO-3166-1-Code sein, z. B. DE",
+    "Registration number must be at most 64 characters":
+      "Die Registernummer darf höchstens 64 Zeichen lang sein",
+    "LEI must be 18 letters or digits followed by 2 check digits":
+      "Die LEI muss aus 18 Buchstaben oder Ziffern und 2 Prüfziffern bestehen",
+    "LEI check digits do not match": "Die Prüfziffern der LEI stimmen nicht",
+    "SEC CIK must be one to ten digits": "Die SEC-CIK muss aus einer bis zehn Ziffern bestehen",
     "Vendor List": "Anbieterliste",
     "Vendor risks": "Anbieterrisiken",
     "Vendor Risks": "Anbieterrisiken",
@@ -2052,6 +2081,9 @@ export const translations: Record<string, Record<string, string>> = {
     "Accessed tools with highest risk": "Genutzte Tools mit höchstem Risiko",
     "Accuracy": "Genauigkeit",
     "Action plan": "Aktionsplan",
+    "Why this rating": "Warum diese Bewertung",
+    "Not confirmed on the page. The quotes come from search results.":
+      "Auf der Seite nicht bestätigt. Die Zitate stammen aus Suchergebnissen.",
     "Activity": "Aktivität",
     "Affected groups description": "Beschreibung der betroffenen Gruppen",
     "Advisor": "Berater",
@@ -10133,12 +10165,37 @@ export const translations: Record<string, Record<string, string>> = {
     "Vendor research is not set up.": "Die Anbieterrecherche ist nicht eingerichtet.",
     "Add an LLM key under Settings → API Keys, in the LLM Keys section.":
       "Fügen Sie unter Einstellungen → API-Schlüssel im Bereich LLM-Schlüssel einen LLM-Schlüssel hinzu.",
+    "Research settings": "Recherche-Einstellungen",
+    "Choose which LLM key runs the vendor research. The research key makes many small calls, so a fast, inexpensive model is enough. The analysis key writes the risks from what the research found, once per run, so a stronger model can help.":
+      "Wählen Sie, welcher LLM-Schlüssel die Anbieterrecherche ausführt. Der Recherche-Schlüssel führt viele kleine Aufrufe aus, daher genügt ein schnelles, günstiges Modell. Der Analyse-Schlüssel verfasst die Risiken aus den Ergebnissen der Recherche, einmal pro Durchlauf, daher kann ein stärkeres Modell helfen.",
+    "Research key": "Recherche-Schlüssel",
+    "Analysis key": "Analyse-Schlüssel",
+    "Newest key (default)": "Neuester Schlüssel (Standard)",
+    "Same as the research key (default)": "Wie der Recherche-Schlüssel (Standard)",
+    "Scheduled scan": "Geplanter Scan",
+    "Off": "Aus",
+    "Every week": "Jede Woche",
+    "Every 2 weeks": "Alle 2 Wochen",
+    "Every month": "Jeden Monat",
+    "A scheduled scan researches every vendor again on this schedule and tells its assignee when it finds something. It analyses only sources it has not seen before, and it uses the keys above.":
+      "Ein geplanter Scan recherchiert jeden Anbieter nach diesem Zeitplan erneut und benachrichtigt die zugewiesene Person, wenn er etwas findet. Er analysiert nur Quellen, die er noch nicht gesehen hat, und verwendet die oben gewählten Schlüssel.",
+    "Loading research settings": "Recherche-Einstellungen werden geladen",
+    "Could not load the research settings.":
+      "Die Recherche-Einstellungen konnten nicht geladen werden.",
+    "Research settings saved.": "Recherche-Einstellungen gespeichert.",
+    "One of the chosen LLM keys no longer exists. Choose the keys again.":
+      "Einer der gewählten LLM-Schlüssel existiert nicht mehr. Wählen Sie die Schlüssel erneut.",
     "No pending research findings.": "Keine ausstehenden Recherchebefunde.",
     "Showing {shown} of {total} pending findings. Choose a vendor to see the rest.":
       "{shown} von {total} ausstehenden Befunden werden angezeigt. Wählen Sie einen Anbieter, um den Rest zu sehen.",
     "Risk added to the register": "Risiko zum Risikoregister hinzugefügt",
     "Risk added to the register.": "Risiko zum Risikoregister hinzugefügt.",
     "Open risk": "Risiko öffnen",
+    "Review suggested risk": "Vorgeschlagenes Risiko prüfen",
+    "Suggested by the research agent from web sources. Check the details, change what is not right, then save to add this risk to the vendor risk register.":
+      "Vom Recherche-Agenten aus Webquellen vorgeschlagen. Prüfen Sie die Angaben, ändern Sie, was nicht stimmt, und speichern Sie dann, um dieses Risiko in das Anbieterrisikoregister aufzunehmen.",
+    "Risk added, but its custom field values could not be saved. Open the risk to try again.":
+      "Das Risiko wurde hinzugefügt, aber die Werte seiner benutzerdefinierten Felder konnten nicht gespeichert werden. Öffnen Sie das Risiko, um es erneut zu versuchen.",
     "Sources": "Quellen",
     "Unknown source": "Unbekannte Quelle",
     "Accept": "Akzeptieren",
@@ -10155,6 +10212,13 @@ export const translations: Record<string, Record<string, string>> = {
     "Researching…": "Recherche läuft…",
     "Still running. Check back later.": "Läuft noch. Schauen Sie später noch einmal vorbei.",
     "Research again": "Erneut recherchieren",
+    "Starting the research": "Die Recherche wird gestartet",
+    "Searching the web": "Das Web wird durchsucht",
+    "Searching the web: {category}": "Das Web wird durchsucht: {category}",
+    "Reading a page": "Eine Seite wird gelesen",
+    "Reading a page: {category}": "Eine Seite wird gelesen: {category}",
+    "Analysing what was found": "Die Ergebnisse werden analysiert",
+    "Researched so far: {categories}": "Bisher recherchiert: {categories}",
     "No research has run for this vendor yet.":
       "Für diesen Anbieter wurde noch keine Recherche durchgeführt.",
     "Could not load the latest research run.": "Die letzte Recherche konnte nicht geladen werden.",
@@ -10162,10 +10226,92 @@ export const translations: Record<string, Record<string, string>> = {
     "Searches: {searches}, pages read: {pages}": "Suchen: {searches}, gelesene Seiten: {pages}",
     "{category}: {outcome}": "{category}: {outcome}",
     "AI note (unverified)": "KI-Hinweis (ungeprüft)",
+    "Credibility": "Glaubwürdigkeit",
+    "Official": "Offiziell",
+    "Trusted press": "Vertrauenswürdige Presse",
+    "Unverified": "Ungeprüft",
+    "Withdrawn": "Zurückgezogen",
+    "Delisted": "Von der Liste gestrichen",
+    "Matched by name only: this may be another company.":
+      "Nur über den Namen zugeordnet: Es kann sich um ein anderes Unternehmen handeln.",
+    "Rated again with the current rule.": "Mit der aktuellen Regel neu bewertet.",
+    "Rated with the earlier confidence rule.": "Mit der früheren Konfidenzregel bewertet.",
+    "High: {operator} lists it ({record}), as of {date}.":
+      "Hoch: Verzeichnet ({operator}, {record}), Stand: {date}.",
+    "High: {operator} lists it ({record}).": "Hoch: Verzeichnet ({operator}, {record}).",
+    "High: {operator} lists it, as of {date}.": "Hoch: Verzeichnet ({operator}), Stand: {date}.",
+    "High: {operator} lists it.": "Hoch: Verzeichnet ({operator}).",
+    "High: an official source reports it ({host}).":
+      "Hoch: Eine offizielle Quelle berichtet darüber ({host}).",
+    "High: an official source reports it.": "Hoch: Eine offizielle Quelle berichtet darüber.",
+    "High: the vendor states it on its own pages ({host}).":
+      "Hoch: Der Anbieter gibt es auf seinen eigenen Seiten an ({host}).",
+    "High: the vendor states it on its own pages.":
+      "Hoch: Der Anbieter gibt es auf seinen eigenen Seiten an.",
+    "High: {count} independent trusted publishers report it ({publishers}).":
+      "Hoch: {count} unabhängige vertrauenswürdige Medien berichten darüber ({publishers}).",
+    "High: {count} independent trusted publishers report it.":
+      "Hoch: {count} unabhängige vertrauenswürdige Medien berichten darüber.",
+    "Medium: one trusted publisher reports it ({publisher}); no official source and no second independent publisher.":
+      "Mittel: Ein vertrauenswürdiges Medium berichtet darüber ({publisher}); keine offizielle Quelle und kein zweites unabhängiges Medium.",
+    "Medium: one trusted publisher reports it; no official source and no second independent publisher.":
+      "Mittel: Ein vertrauenswürdiges Medium berichtet darüber; keine offizielle Quelle und kein zweites unabhängiges Medium.",
+    "Medium: only search results show it; the pages could not be read.":
+      "Mittel: Nur Suchergebnisse zeigen es; die Seiten konnten nicht gelesen werden.",
+    "Low: the pages do not hold what the search results quoted.":
+      "Niedrig: Die Seiten enthalten nicht, was die Suchergebnisse zitiert haben.",
+    "Low: the {list} entry matches the vendor by name only.":
+      "Niedrig: Der Eintrag ({list}) stimmt nur dem Namen nach mit dem Anbieter überein.",
+    "Low: only unverified sources report it ({hosts}).":
+      "Niedrig: Nur ungeprüfte Quellen berichten darüber ({hosts}).",
+    "Low: only unverified sources report it.": "Niedrig: Nur ungeprüfte Quellen berichten darüber.",
+    "Low: only the vendor's own claims support it.":
+      "Niedrig: Nur die eigenen Angaben des Anbieters stützen es.",
+    "Low: {operator} withdrew the record on {date}.":
+      "Niedrig: Der Eintrag wurde am {date} zurückgezogen ({operator}).",
+    "Low: {operator} withdrew the record.":
+      "Niedrig: Der Eintrag wurde zurückgezogen ({operator}).",
+    "Low: {operator} rejected the record on {date}.":
+      "Niedrig: Der Eintrag wurde am {date} abgelehnt ({operator}).",
+    "Low: {operator} rejected the record.": "Niedrig: Der Eintrag wurde abgelehnt ({operator}).",
+    "Low: {operator} removed the record on {date}.":
+      "Niedrig: Der Eintrag wurde am {date} entfernt ({operator}).",
+    "Low: {operator} removed the record.": "Niedrig: Der Eintrag wurde entfernt ({operator}).",
+    "The source has not been updated since {date}.":
+      "Die Quelle wurde seit dem {date} nicht aktualisiert.",
+    "CISA Known Exploited Vulnerabilities": "CISA Known Exploited Vulnerabilities",
+    "OFAC Specially Designated Nationals list": "OFAC-Liste der Specially Designated Nationals",
+    "UK Sanctions List": "UK Sanctions List",
+    "EU consolidated list of financial sanctions": "Konsolidierte Liste der EU-Finanzsanktionen",
+    "the National Vulnerability Database": "National Vulnerability Database",
+    "SEC EDGAR": "SEC EDGAR",
+    "Have I Been Pwned": "Have I Been Pwned",
+    "the vendor's status page": "Statusseite des Anbieters",
+    "CISA KEV catalog": "CISA-KEV-Katalog",
+    "OFAC SDN list": "OFAC-SDN-Liste",
+    "EU financial sanctions list": "EU-Finanzsanktionsliste",
+    "National Vulnerability Database": "National Vulnerability Database",
+    "vendor's status page": "Statusseite des Anbieters",
+    "the CVE Program": "CVE-Programm",
+    "UN Security Council Consolidated List": "Konsolidierte Liste des UN-Sicherheitsrats",
+    "NVD": "NVD",
+    "SEC EDGAR filings": "SEC-EDGAR-Einreichungen",
+    "CVE List": "CVE-Liste",
+    "Checked: {sources}": "Geprüft: {sources}",
+    "Not checked: {sources}": "Nicht geprüft: {sources}",
+    "No records in {sources} as of {dates}": "Keine Einträge ({sources}), Stand: {dates}",
+    "{source}: last updated {date}, not up to date":
+      "{source}: zuletzt aktualisiert am {date}, nicht aktuell",
+    "Sources cited: {official} official, {press} trusted press, {vendor} vendor, {unverified} unverified":
+      "Zitierte Quellen: {official} offiziell, {press} vertrauenswürdige Presse, {vendor} Anbieter, {unverified} ungeprüft",
+    "Public databases turned off": "Öffentliche Datenbanken ausgeschaltet",
+    "Data sources: {attributions}": "Datenquellen: {attributions}",
     "Security incidents": "Sicherheitsvorfälle",
     "Certifications": "Zertifizierungen",
     "Legal and regulatory": "Recht und Regulierung",
     "AI-specific risks": "KI-spezifische Risiken",
+    "Availability": "Verfügbarkeit",
+    "Financial health": "Finanzielle Stabilität",
     "risks found": "Risiken gefunden",
     "nothing found": "nichts gefunden",
     "could not be researched": "Recherche nicht möglich",
@@ -10197,6 +10343,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Nicht recherchiert: Die Recherche endete, bevor diese Kategorie behandelt wurde.",
     "No risks were found in the sources reviewed.":
       "In den geprüften Quellen wurden keine Risiken gefunden.",
+    "No new sources were found since the last run.":
+      "Seit dem letzten Durchlauf wurden keine neuen Quellen gefunden.",
     "No risks were found. {failed} of {total} pages could not be read.":
       "Es wurden keine Risiken gefunden. {failed} von {total} Seiten konnten nicht gelesen werden.",
     "Possible risks were found but could not be verified, or are already recorded.":
@@ -10212,6 +10360,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Not applicable to this vendor": "Für diesen Anbieter nicht relevant",
     "Already covered by an existing risk": "Bereits durch ein vorhandenes Risiko abgedeckt",
     "Inaccurate or not supported by the sources": "Ungenau oder durch die Quellen nicht belegt",
+    "The sources are about another company": "Die Quellen betreffen ein anderes Unternehmen",
+    "The sources are out of date": "Die Quellen sind veraltet",
     "Up to 500 characters.": "Bis zu 500 Zeichen.",
     "Research started for {vendorName}. Findings appear on the Risks tab.":
       "Recherche für {vendorName} gestartet. Die Befunde erscheinen im Tab Risiken.",
@@ -11104,6 +11254,35 @@ export const translations: Record<string, Record<string, string>> = {
     "Risk level": "Niveau de risque",
     "Vendor": "Fournisseur",
     "Vendor name": "Nom du fournisseur",
+    "Other names": "Autres noms",
+    "e.g. Facebook, Instagram": "p. ex. Facebook, Instagram",
+    "Other names this vendor is known by, separated by commas. The research looks for them too.":
+      "Autres noms sous lesquels ce fournisseur est connu, séparés par des virgules. La recherche les prend aussi en compte.",
+    "Other names must be at most 500 characters":
+      "Les autres noms doivent contenir au plus 500 caractères",
+    "Other names can list at most 8 names": "Vous pouvez indiquer au plus 8 autres noms",
+    "Each of the other names must be between 2 and 80 characters":
+      "Chacun des autres noms doit comporter entre 2 et 80 caractères",
+    "Each of the other names must contain a letter or a digit":
+      "Chacun des autres noms doit contenir une lettre ou un chiffre",
+    "Identifiers": "Identifiants",
+    "Turns a match by name into a match by identifier.":
+      "Transforme une correspondance par le nom en correspondance par identifiant.",
+    "Country": "Pays",
+    "e.g. DE": "p. ex. DE",
+    "Registration number": "Numéro d'immatriculation",
+    "As the company register writes it": "Tel qu'inscrit au registre du commerce",
+    "20 letters and digits": "20 lettres et chiffres",
+    "SEC CIK": "CIK de la SEC",
+    "Up to 10 digits": "Jusqu'à 10 chiffres",
+    "Country must be a two-letter ISO 3166-1 code, such as DE":
+      "Le pays doit être un code ISO 3166-1 à deux lettres, par exemple DE",
+    "Registration number must be at most 64 characters":
+      "Le numéro d'immatriculation doit comporter au plus 64 caractères",
+    "LEI must be 18 letters or digits followed by 2 check digits":
+      "Le LEI doit comporter 18 lettres ou chiffres suivis de 2 chiffres de contrôle",
+    "LEI check digits do not match": "Les chiffres de contrôle du LEI ne correspondent pas",
+    "SEC CIK must be one to ten digits": "Le CIK de la SEC doit comporter de un à dix chiffres",
     "Vendor risks": "Risques fournisseurs",
     "Model": "Modèle",
     "Model name": "Nom du modèle",
@@ -12376,6 +12555,9 @@ export const translations: Record<string, Record<string, string>> = {
     "Accessed tools with highest risk": "Outils consultés au risque le plus élevé",
     "Accuracy": "Précision",
     "Action plan": "Plan d'action",
+    "Why this rating": "Pourquoi cette évaluation",
+    "Not confirmed on the page. The quotes come from search results.":
+      "Non confirmé sur la page. Les citations proviennent de résultats de recherche.",
     "Activity": "Activité",
     "Affected groups description": "Description des groupes affectés",
     "Advisor": "Conseiller",
@@ -20289,12 +20471,37 @@ export const translations: Record<string, Record<string, string>> = {
     "Vendor research is not set up.": "La recherche sur les fournisseurs n'est pas configurée.",
     "Add an LLM key under Settings → API Keys, in the LLM Keys section.":
       "Ajoutez une clé LLM sous Paramètres → Clés API, dans la section Clés LLM.",
+    "Research settings": "Paramètres de la recherche",
+    "Choose which LLM key runs the vendor research. The research key makes many small calls, so a fast, inexpensive model is enough. The analysis key writes the risks from what the research found, once per run, so a stronger model can help.":
+      "Choisissez la clé LLM qui exécute la recherche sur les fournisseurs. La clé de recherche effectue de nombreux petits appels, un modèle rapide et peu coûteux suffit donc. La clé d'analyse rédige les risques à partir de ce que la recherche a trouvé, une fois par exécution : un modèle plus puissant peut aider.",
+    "Research key": "Clé de recherche",
+    "Analysis key": "Clé d'analyse",
+    "Newest key (default)": "Clé la plus récente (par défaut)",
+    "Same as the research key (default)": "Identique à la clé de recherche (par défaut)",
+    "Scheduled scan": "Analyse planifiée",
+    "Off": "Désactivé",
+    "Every week": "Chaque semaine",
+    "Every 2 weeks": "Toutes les 2 semaines",
+    "Every month": "Chaque mois",
+    "A scheduled scan researches every vendor again on this schedule and tells its assignee when it finds something. It analyses only sources it has not seen before, and it uses the keys above.":
+      "Une analyse planifiée recherche de nouveau chaque fournisseur selon ce calendrier et prévient la personne assignée lorsqu'elle trouve quelque chose. Elle n'analyse que les sources qu'elle n'a pas encore vues et utilise les clés ci-dessus.",
+    "Loading research settings": "Chargement des paramètres de la recherche",
+    "Could not load the research settings.":
+      "Impossible de charger les paramètres de la recherche.",
+    "Research settings saved.": "Paramètres de la recherche enregistrés.",
+    "One of the chosen LLM keys no longer exists. Choose the keys again.":
+      "L'une des clés LLM choisies n'existe plus. Choisissez à nouveau les clés.",
     "No pending research findings.": "Aucun résultat de recherche en attente.",
     "Showing {shown} of {total} pending findings. Choose a vendor to see the rest.":
       "{shown} résultats en attente sur {total} affichés. Choisissez un fournisseur pour voir le reste.",
     "Risk added to the register": "Risque ajouté au registre des risques",
     "Risk added to the register.": "Risque ajouté au registre des risques.",
     "Open risk": "Ouvrir le risque",
+    "Review suggested risk": "Vérifier le risque suggéré",
+    "Suggested by the research agent from web sources. Check the details, change what is not right, then save to add this risk to the vendor risk register.":
+      "Suggéré par l'agent de recherche à partir de sources web. Vérifiez les détails, corrigez ce qui n'est pas exact, puis enregistrez pour ajouter ce risque au registre des risques fournisseurs.",
+    "Risk added, but its custom field values could not be saved. Open the risk to try again.":
+      "Le risque a été ajouté, mais les valeurs de ses champs personnalisés n'ont pas pu être enregistrées. Ouvrez le risque pour réessayer.",
     "Sources": "Sources",
     "Unknown source": "Source inconnue",
     "Accept": "Accepter",
@@ -20311,6 +20518,13 @@ export const translations: Record<string, Record<string, string>> = {
     "Researching…": "Recherche en cours…",
     "Still running. Check back later.": "Toujours en cours. Revenez plus tard.",
     "Research again": "Relancer la recherche",
+    "Starting the research": "Démarrage de la recherche",
+    "Searching the web": "Recherche sur le web",
+    "Searching the web: {category}": "Recherche sur le web : {category}",
+    "Reading a page": "Lecture d'une page",
+    "Reading a page: {category}": "Lecture d'une page : {category}",
+    "Analysing what was found": "Analyse des résultats",
+    "Researched so far: {categories}": "Déjà étudié : {categories}",
     "No research has run for this vendor yet.":
       "Aucune recherche n'a encore été effectuée pour ce fournisseur.",
     "Could not load the latest research run.": "Impossible de charger la dernière recherche.",
@@ -20318,10 +20532,96 @@ export const translations: Record<string, Record<string, string>> = {
     "Searches: {searches}, pages read: {pages}": "Recherches : {searches}, pages lues : {pages}",
     "{category}: {outcome}": "{category} : {outcome}",
     "AI note (unverified)": "Note de l'IA (non vérifiée)",
+    "Credibility": "Crédibilité",
+    "Official": "Officielle",
+    "Trusted press": "Presse fiable",
+    "Unverified": "Non vérifiée",
+    "Withdrawn": "Retiré",
+    "Delisted": "Radié de la liste",
+    "Matched by name only: this may be another company.":
+      "Correspondance par le nom uniquement : il peut s'agir d'une autre entreprise.",
+    "Rated again with the current rule.": "Réévalué avec la règle actuelle.",
+    "Rated with the earlier confidence rule.": "Évalué avec l'ancienne règle de confiance.",
+    "High: {operator} lists it ({record}), as of {date}.":
+      "Élevé : répertorié ({operator}, {record}), à la date du {date}.",
+    "High: {operator} lists it ({record}).": "Élevé : répertorié ({operator}, {record}).",
+    "High: {operator} lists it, as of {date}.":
+      "Élevé : répertorié ({operator}), à la date du {date}.",
+    "High: {operator} lists it.": "Élevé : répertorié ({operator}).",
+    "High: an official source reports it ({host}).":
+      "Élevé : une source officielle le signale ({host}).",
+    "High: an official source reports it.": "Élevé : une source officielle le signale.",
+    "High: the vendor states it on its own pages ({host}).":
+      "Élevé : le fournisseur l'indique sur ses propres pages ({host}).",
+    "High: the vendor states it on its own pages.":
+      "Élevé : le fournisseur l'indique sur ses propres pages.",
+    "High: {count} independent trusted publishers report it ({publishers}).":
+      "Élevé : {count} éditeurs fiables indépendants le signalent ({publishers}).",
+    "High: {count} independent trusted publishers report it.":
+      "Élevé : {count} éditeurs fiables indépendants le signalent.",
+    "Medium: one trusted publisher reports it ({publisher}); no official source and no second independent publisher.":
+      "Moyen : un éditeur fiable le signale ({publisher}) ; aucune source officielle ni second éditeur indépendant.",
+    "Medium: one trusted publisher reports it; no official source and no second independent publisher.":
+      "Moyen : un éditeur fiable le signale ; aucune source officielle ni second éditeur indépendant.",
+    "Medium: only search results show it; the pages could not be read.":
+      "Moyen : seuls des résultats de recherche le montrent ; les pages n'ont pas pu être lues.",
+    "Low: the pages do not hold what the search results quoted.":
+      "Faible : les pages ne contiennent pas ce que citaient les résultats de recherche.",
+    "Low: the {list} entry matches the vendor by name only.":
+      "Faible : l'entrée ({list}) ne correspond au fournisseur que par le nom.",
+    "Low: only unverified sources report it ({hosts}).":
+      "Faible : seules des sources non vérifiées le signalent ({hosts}).",
+    "Low: only unverified sources report it.":
+      "Faible : seules des sources non vérifiées le signalent.",
+    "Low: only the vendor's own claims support it.":
+      "Faible : seules les affirmations du fournisseur lui-même l'étayent.",
+    "Low: {operator} withdrew the record on {date}.":
+      "Faible : l'enregistrement a été retiré le {date} ({operator}).",
+    "Low: {operator} withdrew the record.": "Faible : l'enregistrement a été retiré ({operator}).",
+    "Low: {operator} rejected the record on {date}.":
+      "Faible : l'enregistrement a été rejeté le {date} ({operator}).",
+    "Low: {operator} rejected the record.": "Faible : l'enregistrement a été rejeté ({operator}).",
+    "Low: {operator} removed the record on {date}.":
+      "Faible : l'enregistrement a été supprimé le {date} ({operator}).",
+    "Low: {operator} removed the record.": "Faible : l'enregistrement a été supprimé ({operator}).",
+    "The source has not been updated since {date}.":
+      "La source n'a pas été mise à jour depuis le {date}.",
+    "CISA Known Exploited Vulnerabilities": "CISA Known Exploited Vulnerabilities",
+    "OFAC Specially Designated Nationals list":
+      "liste des Specially Designated Nationals de l'OFAC",
+    "UK Sanctions List": "UK Sanctions List",
+    "EU consolidated list of financial sanctions":
+      "liste consolidée des sanctions financières de l'UE",
+    "the National Vulnerability Database": "National Vulnerability Database",
+    "SEC EDGAR": "SEC EDGAR",
+    "Have I Been Pwned": "Have I Been Pwned",
+    "the vendor's status page": "page d'état du fournisseur",
+    "CISA KEV catalog": "catalogue KEV de la CISA",
+    "OFAC SDN list": "liste SDN de l'OFAC",
+    "EU financial sanctions list": "liste des sanctions financières de l'UE",
+    "National Vulnerability Database": "National Vulnerability Database",
+    "vendor's status page": "page d'état du fournisseur",
+    "the CVE Program": "programme CVE",
+    "UN Security Council Consolidated List": "liste récapitulative du Conseil de sécurité de l'ONU",
+    "NVD": "NVD",
+    "SEC EDGAR filings": "dépôts SEC EDGAR",
+    "CVE List": "liste CVE",
+    "Checked: {sources}": "Sources consultées : {sources}",
+    "Not checked: {sources}": "Sources non consultées : {sources}",
+    "No records in {sources} as of {dates}":
+      "Aucun enregistrement ({sources}) à la date du {dates}",
+    "{source}: last updated {date}, not up to date":
+      "{source} : dernière mise à jour le {date}, pas à jour",
+    "Sources cited: {official} official, {press} trusted press, {vendor} vendor, {unverified} unverified":
+      "Sources citées : {official} officielles, {press} presse fiable, {vendor} fournisseur, {unverified} non vérifiées",
+    "Public databases turned off": "Bases de données publiques désactivées",
+    "Data sources: {attributions}": "Sources des données : {attributions}",
     "Security incidents": "Incidents de sécurité",
     "Certifications": "Certifications",
     "Legal and regulatory": "Juridique et réglementaire",
     "AI-specific risks": "Risques propres à l'IA",
+    "Availability": "Disponibilité",
+    "Financial health": "Santé financière",
     "risks found": "risques trouvés",
     "nothing found": "rien trouvé",
     "could not be researched": "recherche impossible",
@@ -20352,6 +20652,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Non recherché : la recherche s'est terminée avant que cette catégorie ne soit couverte.",
     "No risks were found in the sources reviewed.":
       "Aucun risque n'a été trouvé dans les sources examinées.",
+    "No new sources were found since the last run.":
+      "Aucune nouvelle source n'a été trouvée depuis la dernière exécution.",
     "No risks were found. {failed} of {total} pages could not be read.":
       "Aucun risque n'a été trouvé. {failed} pages sur {total} n'ont pas pu être lues.",
     "Possible risks were found but could not be verified, or are already recorded.":
@@ -20367,6 +20669,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Not applicable to this vendor": "Non applicable à ce fournisseur",
     "Already covered by an existing risk": "Déjà couvert par un risque existant",
     "Inaccurate or not supported by the sources": "Inexact ou non étayé par les sources",
+    "The sources are about another company": "Les sources concernent une autre entreprise",
+    "The sources are out of date": "Les sources sont obsolètes",
     "Up to 500 characters.": "500 caractères maximum.",
     "Research started for {vendorName}. Findings appear on the Risks tab.":
       "Recherche lancée pour {vendorName}. Les résultats apparaissent dans l'onglet Risques.",
@@ -21098,6 +21402,35 @@ export const translations: Record<string, Record<string, string>> = {
     "Risk Level": "Nivel de riesgo",
     "Vendor": "Proveedor",
     "Vendor name": "Nombre del proveedor",
+    "Other names": "Otros nombres",
+    "e.g. Facebook, Instagram": "p. ej. Facebook, Instagram",
+    "Other names this vendor is known by, separated by commas. The research looks for them too.":
+      "Otros nombres con los que se conoce a este proveedor, separados por comas. La investigación también los busca.",
+    "Other names must be at most 500 characters":
+      "Los otros nombres deben tener como máximo 500 caracteres",
+    "Other names can list at most 8 names": "Se pueden indicar como máximo 8 otros nombres",
+    "Each of the other names must be between 2 and 80 characters":
+      "Cada uno de los otros nombres debe tener entre 2 y 80 caracteres",
+    "Each of the other names must contain a letter or a digit":
+      "Cada uno de los otros nombres debe contener una letra o un dígito",
+    "Identifiers": "Identificadores",
+    "Turns a match by name into a match by identifier.":
+      "Convierte una coincidencia por nombre en una coincidencia por identificador.",
+    "Country": "País",
+    "e.g. DE": "p. ej., DE",
+    "Registration number": "Número de registro",
+    "As the company register writes it": "Tal como figura en el registro mercantil",
+    "20 letters and digits": "20 letras y dígitos",
+    "SEC CIK": "CIK de la SEC",
+    "Up to 10 digits": "Hasta 10 dígitos",
+    "Country must be a two-letter ISO 3166-1 code, such as DE":
+      "El país debe ser un código ISO 3166-1 de dos letras, por ejemplo DE",
+    "Registration number must be at most 64 characters":
+      "El número de registro debe tener como máximo 64 caracteres",
+    "LEI must be 18 letters or digits followed by 2 check digits":
+      "El LEI debe tener 18 letras o dígitos seguidos de 2 dígitos de control",
+    "LEI check digits do not match": "Los dígitos de control del LEI no coinciden",
+    "SEC CIK must be one to ten digits": "El CIK de la SEC debe tener entre uno y diez dígitos",
     "Vendor List": "Lista de proveedores",
     "Vendor risks": "Riesgos del proveedor",
     "Vendor Risks": "Riesgos del proveedor",
@@ -21939,6 +22272,9 @@ export const translations: Record<string, Record<string, string>> = {
     "Accessed tools with highest risk": "Herramientas con mayor riesgo a las que se ha accedido",
     "Accuracy": "Precisión",
     "Action plan": "Plan de acción",
+    "Why this rating": "Por qué esta valoración",
+    "Not confirmed on the page. The quotes come from search results.":
+      "No confirmado en la página. Las citas proceden de resultados de búsqueda.",
     "Activity": "Actividad",
     "Affected groups description": "Descripción de los grupos afectados",
     "Advisor": "Asesor",
@@ -30361,12 +30697,37 @@ export const translations: Record<string, Record<string, string>> = {
     "Vendor research is not set up.": "La investigación de proveedores no está configurada.",
     "Add an LLM key under Settings → API Keys, in the LLM Keys section.":
       "Añada una clave de LLM en Configuración → Claves de API, en la sección Claves de LLM.",
+    "Research settings": "Ajustes de la investigación",
+    "Choose which LLM key runs the vendor research. The research key makes many small calls, so a fast, inexpensive model is enough. The analysis key writes the risks from what the research found, once per run, so a stronger model can help.":
+      "Elija qué clave de LLM ejecuta la investigación de proveedores. La clave de investigación hace muchas llamadas pequeñas, así que basta un modelo rápido y económico. La clave de análisis redacta los riesgos a partir de lo que encontró la investigación, una vez por ejecución, por lo que un modelo más potente puede ayudar.",
+    "Research key": "Clave de investigación",
+    "Analysis key": "Clave de análisis",
+    "Newest key (default)": "Clave más reciente (predeterminada)",
+    "Same as the research key (default)": "Igual que la clave de investigación (predeterminada)",
+    "Scheduled scan": "Análisis programado",
+    "Off": "Desactivado",
+    "Every week": "Cada semana",
+    "Every 2 weeks": "Cada 2 semanas",
+    "Every month": "Cada mes",
+    "A scheduled scan researches every vendor again on this schedule and tells its assignee when it finds something. It analyses only sources it has not seen before, and it uses the keys above.":
+      "Un análisis programado vuelve a investigar a cada proveedor con esta frecuencia y avisa a la persona asignada cuando encuentra algo. Solo analiza fuentes que no ha visto antes y usa las claves de arriba.",
+    "Loading research settings": "Cargando los ajustes de la investigación",
+    "Could not load the research settings.":
+      "No se pudieron cargar los ajustes de la investigación.",
+    "Research settings saved.": "Ajustes de la investigación guardados.",
+    "One of the chosen LLM keys no longer exists. Choose the keys again.":
+      "Una de las claves de LLM elegidas ya no existe. Elija las claves de nuevo.",
     "No pending research findings.": "No hay hallazgos de investigación pendientes.",
     "Showing {shown} of {total} pending findings. Choose a vendor to see the rest.":
       "Se muestran {shown} de {total} hallazgos pendientes. Elija un proveedor para ver el resto.",
     "Risk added to the register": "Riesgo añadido al registro de riesgos",
     "Risk added to the register.": "Riesgo añadido al registro de riesgos.",
     "Open risk": "Abrir riesgo",
+    "Review suggested risk": "Revisar el riesgo sugerido",
+    "Suggested by the research agent from web sources. Check the details, change what is not right, then save to add this risk to the vendor risk register.":
+      "Sugerido por el agente de investigación a partir de fuentes web. Revise los detalles, cambie lo que no sea correcto y guarde para añadir este riesgo al registro de riesgos de proveedores.",
+    "Risk added, but its custom field values could not be saved. Open the risk to try again.":
+      "El riesgo se añadió, pero los valores de sus campos personalizados no se pudieron guardar. Abra el riesgo para intentarlo de nuevo.",
     "Sources": "Fuentes",
     "Unknown source": "Fuente desconocida",
     "Accept": "Aceptar",
@@ -30383,6 +30744,13 @@ export const translations: Record<string, Record<string, string>> = {
     "Researching…": "Investigando…",
     "Still running. Check back later.": "Sigue en curso. Vuelva a mirar más tarde.",
     "Research again": "Investigar de nuevo",
+    "Starting the research": "Iniciando la investigación",
+    "Searching the web": "Buscando en la web",
+    "Searching the web: {category}": "Buscando en la web: {category}",
+    "Reading a page": "Leyendo una página",
+    "Reading a page: {category}": "Leyendo una página: {category}",
+    "Analysing what was found": "Analizando lo encontrado",
+    "Researched so far: {categories}": "Investigado hasta ahora: {categories}",
     "No research has run for this vendor yet.":
       "Todavía no se ha realizado ninguna investigación para este proveedor.",
     "Could not load the latest research run.": "No se pudo cargar la última investigación.",
@@ -30390,10 +30758,93 @@ export const translations: Record<string, Record<string, string>> = {
     "Searches: {searches}, pages read: {pages}": "Búsquedas: {searches}, páginas leídas: {pages}",
     "{category}: {outcome}": "{category}: {outcome}",
     "AI note (unverified)": "Nota de la IA (sin verificar)",
+    "Credibility": "Credibilidad",
+    "Official": "Oficial",
+    "Trusted press": "Prensa fiable",
+    "Unverified": "Sin verificar",
+    "Withdrawn": "Retirado",
+    "Delisted": "Excluido de la lista",
+    "Matched by name only: this may be another company.":
+      "Coincidencia solo por el nombre: puede tratarse de otra empresa.",
+    "Rated again with the current rule.": "Reevaluado con la regla actual.",
+    "Rated with the earlier confidence rule.": "Evaluado con la regla de confianza anterior.",
+    "High: {operator} lists it ({record}), as of {date}.":
+      "Alto: registrado ({operator}, {record}), a fecha de {date}.",
+    "High: {operator} lists it ({record}).": "Alto: registrado ({operator}, {record}).",
+    "High: {operator} lists it, as of {date}.": "Alto: registrado ({operator}), a fecha de {date}.",
+    "High: {operator} lists it.": "Alto: registrado ({operator}).",
+    "High: an official source reports it ({host}).":
+      "Alto: una fuente oficial lo informa ({host}).",
+    "High: an official source reports it.": "Alto: una fuente oficial lo informa.",
+    "High: the vendor states it on its own pages ({host}).":
+      "Alto: el proveedor lo indica en sus propias páginas ({host}).",
+    "High: the vendor states it on its own pages.":
+      "Alto: el proveedor lo indica en sus propias páginas.",
+    "High: {count} independent trusted publishers report it ({publishers}).":
+      "Alto: {count} medios fiables independientes lo informan ({publishers}).",
+    "High: {count} independent trusted publishers report it.":
+      "Alto: {count} medios fiables independientes lo informan.",
+    "Medium: one trusted publisher reports it ({publisher}); no official source and no second independent publisher.":
+      "Medio: un medio fiable lo informa ({publisher}); ninguna fuente oficial ni un segundo medio independiente.",
+    "Medium: one trusted publisher reports it; no official source and no second independent publisher.":
+      "Medio: un medio fiable lo informa; ninguna fuente oficial ni un segundo medio independiente.",
+    "Medium: only search results show it; the pages could not be read.":
+      "Medio: solo los resultados de búsqueda lo muestran; no se pudieron leer las páginas.",
+    "Low: the pages do not hold what the search results quoted.":
+      "Bajo: las páginas no contienen lo que citaban los resultados de búsqueda.",
+    "Low: the {list} entry matches the vendor by name only.":
+      "Bajo: la entrada ({list}) coincide con el proveedor solo por el nombre.",
+    "Low: only unverified sources report it ({hosts}).":
+      "Bajo: solo fuentes sin verificar lo informan ({hosts}).",
+    "Low: only unverified sources report it.": "Bajo: solo fuentes sin verificar lo informan.",
+    "Low: only the vendor's own claims support it.":
+      "Bajo: solo las afirmaciones del propio proveedor lo respaldan.",
+    "Low: {operator} withdrew the record on {date}.":
+      "Bajo: el registro se retiró el {date} ({operator}).",
+    "Low: {operator} withdrew the record.": "Bajo: el registro se retiró ({operator}).",
+    "Low: {operator} rejected the record on {date}.":
+      "Bajo: el registro se rechazó el {date} ({operator}).",
+    "Low: {operator} rejected the record.": "Bajo: el registro se rechazó ({operator}).",
+    "Low: {operator} removed the record on {date}.":
+      "Bajo: el registro se eliminó el {date} ({operator}).",
+    "Low: {operator} removed the record.": "Bajo: el registro se eliminó ({operator}).",
+    "The source has not been updated since {date}.":
+      "La fuente no se ha actualizado desde el {date}.",
+    "CISA Known Exploited Vulnerabilities": "CISA Known Exploited Vulnerabilities",
+    "OFAC Specially Designated Nationals list":
+      "lista de Specially Designated Nationals de la OFAC",
+    "UK Sanctions List": "UK Sanctions List",
+    "EU consolidated list of financial sanctions":
+      "lista consolidada de sanciones financieras de la UE",
+    "the National Vulnerability Database": "National Vulnerability Database",
+    "SEC EDGAR": "SEC EDGAR",
+    "Have I Been Pwned": "Have I Been Pwned",
+    "the vendor's status page": "página de estado del proveedor",
+    "CISA KEV catalog": "catálogo KEV de la CISA",
+    "OFAC SDN list": "lista SDN de la OFAC",
+    "EU financial sanctions list": "lista de sanciones financieras de la UE",
+    "National Vulnerability Database": "National Vulnerability Database",
+    "vendor's status page": "página de estado del proveedor",
+    "the CVE Program": "programa CVE",
+    "UN Security Council Consolidated List": "lista consolidada del Consejo de Seguridad de la ONU",
+    "NVD": "NVD",
+    "SEC EDGAR filings": "presentaciones en SEC EDGAR",
+    "CVE List": "lista CVE",
+    "Checked: {sources}": "Fuentes consultadas: {sources}",
+    "Not checked: {sources}": "Fuentes no consultadas: {sources}",
+    "No records in {sources} as of {dates}": "Ningún registro ({sources}) a fecha de {dates}",
+    "{source}: last updated {date}, not up to date":
+      "{source}: última actualización el {date}, no está al día",
+    "Sources cited: {official} official, {press} trusted press, {vendor} vendor, {unverified} unverified":
+      "Fuentes citadas: {official} oficiales, {press} prensa fiable, {vendor} proveedor, {unverified} sin verificar",
+    "Public databases turned off": "Bases de datos públicas desactivadas",
+    "Data sources: {attributions}": "Fuentes de datos: {attributions}",
     "Security incidents": "Incidentes de seguridad",
     "Certifications": "Certificaciones",
     "Legal and regulatory": "Legal y regulatorio",
     "AI-specific risks": "Riesgos específicos de la IA",
+    "Availability": "Disponibilidad",
+    "Financial health": "Salud financiera",
     "risks found": "riesgos encontrados",
     "nothing found": "no se encontró nada",
     "could not be researched": "no se pudo investigar",
@@ -30424,6 +30875,8 @@ export const translations: Record<string, Record<string, string>> = {
       "No investigado: la investigación terminó antes de cubrir esta categoría.",
     "No risks were found in the sources reviewed.":
       "No se encontraron riesgos en las fuentes revisadas.",
+    "No new sources were found since the last run.":
+      "No se encontraron fuentes nuevas desde la última ejecución.",
     "No risks were found. {failed} of {total} pages could not be read.":
       "No se encontraron riesgos. No se pudieron leer {failed} de {total} páginas.",
     "Possible risks were found but could not be verified, or are already recorded.":
@@ -30439,6 +30892,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Not applicable to this vendor": "No aplicable a este proveedor",
     "Already covered by an existing risk": "Ya cubierto por un riesgo existente",
     "Inaccurate or not supported by the sources": "Inexacto o no respaldado por las fuentes",
+    "The sources are about another company": "Las fuentes tratan de otra empresa",
+    "The sources are out of date": "Las fuentes están desactualizadas",
     "Up to 500 characters.": "Hasta 500 caracteres.",
     "Research started for {vendorName}. Findings appear on the Risks tab.":
       "Investigación iniciada para {vendorName}. Los hallazgos aparecen en la pestaña Riesgos.",

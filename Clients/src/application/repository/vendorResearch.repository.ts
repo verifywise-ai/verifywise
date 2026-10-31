@@ -1,11 +1,13 @@
 import { apiServices } from "../../infrastructure/api/networkServices";
 import { APIError } from "../tools/error";
 import {
+  AcceptFindingBody,
   AcceptedVendorRisk,
   DismissReason,
   FindingStatus,
   VendorResearchConfig,
   VendorResearchRun,
+  VendorResearchSettings,
   VendorRiskFinding,
 } from "../../domain/interfaces/i.vendorResearch";
 
@@ -34,6 +36,36 @@ export async function getVendorResearchConfig(): Promise<VendorResearchConfig> {
     return extractData<VendorResearchConfig>(response);
   } catch (error) {
     throw toAPIError(error, "Failed to fetch the vendor research settings");
+  }
+}
+
+/** The keys an Admin chose for the research, `null` where the default applies. Admin only. */
+export async function getVendorResearchSettings(): Promise<VendorResearchSettings> {
+  try {
+    const response = await apiServices.get<{ message: string; data: VendorResearchSettings }>(
+      "/vendor-research/settings",
+    );
+    return extractData<VendorResearchSettings>(response);
+  } catch (error) {
+    throw toAPIError(error, "Failed to fetch the research settings");
+  }
+}
+
+/**
+ * Both fields are always sent (the server takes a whole choice, and `null` is a choice), and the
+ * answer is what it kept. A key that is not the organization's is a 404.
+ */
+export async function saveVendorResearchSettings(
+  settings: VendorResearchSettings,
+): Promise<VendorResearchSettings> {
+  try {
+    const response = await apiServices.put<{ message: string; data: VendorResearchSettings }>(
+      "/vendor-research/settings",
+      settings,
+    );
+    return extractData<VendorResearchSettings>(response);
+  } catch (error) {
+    throw toAPIError(error, "Failed to save the research settings");
   }
 }
 
@@ -91,11 +123,13 @@ export async function getLatestVendorResearch(vendorId: number): Promise<VendorR
 
 /**
  * `action_owner` absent means the vendor's assignee, `null` means nobody, and a
- * number is that user. The body is sent as it is, so the three stay apart.
+ * number is that user. The body is sent as it is, so the three stay apart. The
+ * other fields are the person's edits (see AcceptFindingBody): the risk is
+ * created from them, and from the finding for the fields that are absent.
  */
 export async function acceptVendorRiskFinding(
   id: number,
-  body: { action_owner?: number | null },
+  body: AcceptFindingBody,
 ): Promise<{ finding: VendorRiskFinding; vendorRisk: AcceptedVendorRisk }> {
   try {
     const response = await apiServices.post<{

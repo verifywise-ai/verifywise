@@ -5,6 +5,8 @@ import React from "react";
 
 vi.mock("../../repository/vendorResearch.repository", () => ({
   getVendorResearchConfig: vi.fn(),
+  getVendorResearchSettings: vi.fn(),
+  saveVendorResearchSettings: vi.fn(),
   listVendorRiskFindings: vi.fn(),
   startVendorResearch: vi.fn(),
   getLatestVendorResearch: vi.fn(),
@@ -20,8 +22,10 @@ import {
   useDismissFinding,
   useFollowedResearchVendor,
   useLatestVendorResearch,
+  useSaveVendorResearchSettings,
   useStartVendorResearch,
   useVendorResearchConfig,
+  useVendorResearchSettings,
   useVendorRiskFindings,
 } from "../useVendorResearch";
 import { VENDOR_INSIGHTS_KEY } from "../useRiskLinks";
@@ -33,12 +37,16 @@ import {
   dismissVendorRiskFinding,
   getLatestVendorResearch,
   getVendorResearchConfig,
+  getVendorResearchSettings,
   listVendorRiskFindings,
+  saveVendorResearchSettings,
   startVendorResearch,
 } from "../../repository/vendorResearch.repository";
-import type { VendorResearchRun } from "../../../domain/interfaces/i.vendorResearch";
+import type { RunProgress, VendorResearchRun } from "../../../domain/interfaces/i.vendorResearch";
 
 const mockConfig = vi.mocked(getVendorResearchConfig);
+const mockSettings = vi.mocked(getVendorResearchSettings);
+const mockSaveSettings = vi.mocked(saveVendorResearchSettings);
 const mockList = vi.mocked(listVendorRiskFindings);
 const mockStart = vi.mocked(startVendorResearch);
 const mockLatest = vi.mocked(getLatestVendorResearch);
@@ -74,10 +82,23 @@ const run = (overrides: Partial<VendorResearchRun> = {}): VendorResearchRun => (
   searches_used: 0,
   pages_read: 0,
   error: null,
+  progress: null,
   started_at: null,
   finished_at: null,
   created_at: "2026-10-10T09:00:00.000Z",
   ...overrides,
+});
+
+/** Where a running run is; the mark says when it was written, so another mark is a run that moved. */
+const progressAt = (mark: number): RunProgress => ({
+  phase: "researching",
+  steps: mark,
+  action: "search",
+  category: "security_incidents",
+  searchesUsed: mark,
+  pagesRead: 0,
+  categories: ["security_incidents"],
+  updatedAt: new Date(Date.UTC(2026, 9, 10, 9, 0, mark)).toISOString(),
 });
 
 /** Moves the fake clock inside act, so React renders what the timers cause. */
@@ -123,6 +144,117 @@ describe("useVendorResearchConfig", () => {
     expect(mockConfig).toHaveBeenCalledTimes(1);
     expect(second.result.current.isError).toBe(true);
     expect(second.result.current.fetchStatus).toBe("idle");
+  });
+});
+
+describe("useVendorResearchSettings", () => {
+  it("exposes the keys and the scan interval an Admin chose", async () => {
+    const settings = { researchKeyId: 4, analysisKeyId: null, scanIntervalDays: 14 };
+    mockSettings.mockResolvedValue(settings);
+    const { wrapper } = createHarness();
+
+    const { result } = renderHook(() => useVendorResearchSettings(), { wrapper });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toEqual(settings);
+  });
+
+  it("asks for nothing while it is off, because the server answers an Admin only", async () => {
+    const { wrapper } = createHarness();
+
+    const { result } = renderHook(() => useVendorResearchSettings(false), { wrapper });
+
+    expect(result.current.fetchStatus).toBe("idle");
+    expect(mockSettings).not.toHaveBeenCalled();
+  });
+
+  it("asks again when it is mounted again after the request failed, so that closing and opening the window is a retry", async () => {
+    mockSettings.mockRejectedValueOnce(new APIError("Internal Server Error", 500));
+    mockSettings.mockResolvedValue({
+      researchKeyId: null,
+      analysisKeyId: null,
+      scanIntervalDays: null,
+    });
+    const { wrapper } = createHarness();
+    const first = renderHook(() => useVendorResearchSettings(), { wrapper });
+    await waitFor(() => expect(first.result.current.isError).toBe(true));
+    first.unmount();
+
+    const second = renderHook(() => useVendorResearchSettings(), { wrapper });
+
+    await waitFor(() => expect(second.result.current.isSuccess).toBe(true));
+    expect(mockSettings).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("useSaveVendorResearchSettings", () => {
+  const SETTINGS_KEY = [...VENDOR_RESEARCH_KEY, "settings"] as const;
+  const LLM_KEYS_KEY = ["llmKeys", 1] as const;
+
+  it("sends the choice and puts what the server kept in the cache, so that the next opening reads it at once", async () => {
+    mockSaveSettings.mockResolvedValue({ researchKeyId: 4, analysisKeyId: 9, scanIntervalDays: 7 });
+    const { queryClient, wrapper } = createHarness();
+    queryClient.setQueryData(SETTINGS_KEY, {
+      researchKeyId: null,
+      analysisKeyId: null,
+      scanIntervalDays: null,
+    });
+    const { result } = renderHook(() => useSaveVendorResearchSettings(), { wrapper });
+
+    await act(async () => {
+      await result.current.mutateAsync({ researchKeyId: 4, analysisKeyId: 9, scanIntervalDays: 7 });
+    });
+
+    expect(mockSaveSettings).toHaveBeenCalledWith({
+      researchKeyId: 4,
+      analysisKeyId: 9,
+      scanIntervalDays: 7,
+    });
+    expect(queryClient.getQueryData(SETTINGS_KEY)).toEqual({
+      researchKeyId: 4,
+      analysisKeyId: 9,
+      scanIntervalDays: 7,
+    });
+  });
+
+  it("rejects with the repository's error and leaves the cache as it was", async () => {
+    const refusal = new APIError("Internal Server Error", 500);
+    mockSaveSettings.mockRejectedValue(refusal);
+    const { queryClient, wrapper } = createHarness();
+    queryClient.setQueryData(SETTINGS_KEY, {
+      researchKeyId: 4,
+      analysisKeyId: null,
+      scanIntervalDays: null,
+    });
+    queryClient.setQueryData(LLM_KEYS_KEY, []);
+    const { result } = renderHook(() => useSaveVendorResearchSettings(), { wrapper });
+
+    act(() => {
+      result.current.mutate({ researchKeyId: null, analysisKeyId: null, scanIntervalDays: null });
+    });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.error).toBe(refusal);
+    expect(queryClient.getQueryData(SETTINGS_KEY)).toEqual({
+      researchKeyId: 4,
+      analysisKeyId: null,
+      scanIntervalDays: null,
+    });
+    expect(queryClient.getQueryState(LLM_KEYS_KEY)?.isInvalidated).toBe(false);
+  });
+
+  it("marks the list of LLM keys stale when a key is gone (404), because the list the person chose from is out of date", async () => {
+    mockSaveSettings.mockRejectedValue(new APIError("Not Found", 404));
+    const { queryClient, wrapper } = createHarness();
+    queryClient.setQueryData(LLM_KEYS_KEY, []);
+    const { result } = renderHook(() => useSaveVendorResearchSettings(), { wrapper });
+
+    act(() => {
+      result.current.mutate({ researchKeyId: 4, analysisKeyId: null, scanIntervalDays: null });
+    });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(queryClient.getQueryState(LLM_KEYS_KEY)?.isInvalidated).toBe(true);
   });
 });
 
@@ -261,6 +393,64 @@ describe("useLatestVendorResearch", () => {
       const callsWhenStopped = mockLatest.mock.calls.length;
       await advance(60_000);
       expect(mockLatest).toHaveBeenCalledTimes(callsWhenStopped);
+    });
+
+    it("polls a run for as long as its progress moves: the 120 seconds count from the latest move", async () => {
+      let mark = 0;
+      mockLatest.mockImplementation(async () =>
+        run({ id: 5, status: "running", progress: progressAt(mark) }),
+      );
+      const { wrapper } = createHarness();
+      const { result } = renderHook(() => useLatestVendorResearch(3), { wrapper });
+      await advance(0);
+
+      await advance(100_000);
+      expect(result.current.pollingStopped).toBe(false);
+      mark = 1; // the run moves, and the next poll reads it
+      await advance(3_000);
+      await settle();
+
+      // 203 seconds after the run was first seen, but 100 after it last moved.
+      await advance(100_000);
+      expect(result.current.pollingStopped).toBe(false);
+
+      // Nothing has moved for 125 seconds.
+      await advance(25_000);
+      expect(result.current.pollingStopped).toBe(true);
+    });
+
+    it("does not count a poll that finds the same progress as a move", async () => {
+      mockLatest.mockResolvedValue(run({ id: 5, status: "running", progress: progressAt(0) }));
+      const { wrapper } = createHarness();
+      const { result } = renderHook(() => useLatestVendorResearch(3), { wrapper });
+      await advance(0);
+
+      await advance(121_000);
+
+      expect(result.current.pollingStopped).toBe(true);
+    });
+
+    it("polls again when a read after the window shows that the run has moved", async () => {
+      let mark = 0;
+      mockLatest.mockImplementation(async () =>
+        run({ id: 5, status: "running", progress: progressAt(mark) }),
+      );
+      const { wrapper } = createHarness();
+      const { result } = renderHook(() => useLatestVendorResearch(3), { wrapper });
+      await advance(0);
+      await advance(121_000);
+      expect(result.current.pollingStopped).toBe(true);
+
+      mark = 7;
+      await act(async () => {
+        void result.current.refetch();
+        await vi.advanceTimersByTimeAsync(0);
+      });
+
+      expect(result.current.pollingStopped).toBe(false);
+      const callsWhenSeen = mockLatest.mock.calls.length;
+      await advance(3_000);
+      expect(mockLatest.mock.calls.length).toBeGreaterThan(callsWhenSeen);
     });
 
     it("clears pollingStopped when a check afterwards finds the run finished", async () => {

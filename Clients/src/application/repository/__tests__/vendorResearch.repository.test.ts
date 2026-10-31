@@ -7,8 +7,10 @@ import {
   dismissVendorRiskFinding,
   getLatestVendorResearch,
   getVendorResearchConfig,
+  getVendorResearchSettings,
   listVendorRiskFindings,
   readVendorResearchError,
+  saveVendorResearchSettings,
   startVendorResearch,
 } from "../vendorResearch.repository";
 import type {
@@ -18,11 +20,12 @@ import type {
 } from "../../../domain/interfaces/i.vendorResearch";
 
 vi.mock("../../../infrastructure/api/networkServices", () => ({
-  apiServices: { get: vi.fn(), post: vi.fn() },
+  apiServices: { get: vi.fn(), post: vi.fn(), put: vi.fn() },
 }));
 
 const mockGet = vi.mocked(apiServices.get);
 const mockPost = vi.mocked(apiServices.post);
+const mockPut = vi.mocked(apiServices.put);
 
 /** A success body as the server sends it: `{ message, data }`. */
 const success = (data: unknown, status = 200) => ({
@@ -48,6 +51,7 @@ const run = (overrides: Partial<VendorResearchRun> = {}): VendorResearchRun => (
   searches_used: 6,
   pages_read: 4,
   error: null,
+  progress: null,
   started_at: "2026-10-10T09:00:00.000Z",
   finished_at: "2026-10-10T09:01:00.000Z",
   created_at: "2026-10-10T08:59:00.000Z",
@@ -67,6 +71,7 @@ const finding = (overrides: Partial<VendorRiskFinding> = {}): VendorRiskFinding 
   risk_severity: "Major",
   risk_level: "High Risk",
   confidence: "medium",
+  rationale: "The vendor confirmed the breach.",
   sources: [
     {
       url: "https://example.com/breach",
@@ -121,6 +126,46 @@ describe("getVendorResearchConfig", () => {
     await expect(getVendorResearchConfig()).resolves.toEqual(config);
 
     expect(mockGet).toHaveBeenCalledWith("/vendor-research/config");
+  });
+});
+
+describe("getVendorResearchSettings", () => {
+  it("reads /vendor-research/settings and unwraps the choice", async () => {
+    const settings = { researchKeyId: 4, analysisKeyId: null, scanIntervalDays: 14 };
+    mockGet.mockResolvedValue(success(settings));
+
+    await expect(getVendorResearchSettings()).resolves.toEqual(settings);
+
+    expect(mockGet).toHaveBeenCalledWith("/vendor-research/settings");
+  });
+});
+
+describe("saveVendorResearchSettings", () => {
+  it("puts the two keys and the scan interval to /vendor-research/settings and unwraps what the server kept", async () => {
+    const saved = { researchKeyId: 4, analysisKeyId: 9, scanIntervalDays: 7 };
+    mockPut.mockResolvedValue(success(saved));
+
+    await expect(saveVendorResearchSettings(saved)).resolves.toEqual(saved);
+
+    expect(mockPut).toHaveBeenCalledWith("/vendor-research/settings", saved);
+  });
+
+  it("sends null for a key that is left to the default and for a scan that is off, because the server wants all fields", async () => {
+    mockPut.mockResolvedValue(
+      success({ researchKeyId: null, analysisKeyId: null, scanIntervalDays: null }),
+    );
+
+    await saveVendorResearchSettings({
+      researchKeyId: null,
+      analysisKeyId: null,
+      scanIntervalDays: null,
+    });
+
+    expect(mockPut).toHaveBeenCalledWith("/vendor-research/settings", {
+      researchKeyId: null,
+      analysisKeyId: null,
+      scanIntervalDays: null,
+    });
   });
 });
 
@@ -238,6 +283,16 @@ describe("dismissVendorRiskFinding", () => {
 describe("a failed call", () => {
   const calls: Array<[string, () => Promise<unknown>]> = [
     ["getVendorResearchConfig", () => getVendorResearchConfig()],
+    ["getVendorResearchSettings", () => getVendorResearchSettings()],
+    [
+      "saveVendorResearchSettings",
+      () =>
+        saveVendorResearchSettings({
+          researchKeyId: null,
+          analysisKeyId: null,
+          scanIntervalDays: null,
+        }),
+    ],
     ["listVendorRiskFindings", () => listVendorRiskFindings({})],
     ["startVendorResearch", () => startVendorResearch(3)],
     ["getLatestVendorResearch", () => getLatestVendorResearch(3)],
@@ -254,6 +309,7 @@ describe("a failed call", () => {
       });
       mockGet.mockRejectedValue(refusal);
       mockPost.mockRejectedValue(refusal);
+      mockPut.mockRejectedValue(refusal);
 
       const error = await call().catch((thrown: unknown) => thrown);
 

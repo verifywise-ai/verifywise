@@ -52,7 +52,11 @@ import CustomFieldsSection, { type CustomFieldsSectionHandle } from "../../Custo
 import { useRequiredCustomFieldsGate } from "../../CustomFieldsSection/RequiredCustomFieldsGate";
 import { useVendorRiskChangeHistory } from "../../../../application/hooks/useVendorRiskChangeHistory";
 import { VendorModel } from "../../../../domain/models/Common/vendor/vendor.model";
-import { ExistingRisk } from "../../../../domain/interfaces/i.vendor";
+import {
+  ExistingRisk,
+  VendorRiskFormDetails,
+  VendorRiskPreview,
+} from "../../../../domain/interfaces/i.vendor";
 import { Framework } from "../../../../domain/types/Framework";
 import RiskLevel from "../../RiskLevel";
 
@@ -63,9 +67,17 @@ interface AddNewRiskProps {
   handleChange?: (event: React.SyntheticEvent, newValue: string) => void;
   existingRisk?: ExistingRisk | null;
   onSuccess?: () => void;
-  vendors: VendorModel[];
+  /** The form lists these for the vendor field and reads nothing else of them. */
+  vendors: Array<Pick<VendorModel, "id" | "vendor_name">>;
   /** The tab an existing risk opens on, e.g. "linked-risks" from the table's reach link. */
   initialTab?: "details" | "linked-risks";
+  /**
+   * Opens the form on a risk that was drafted elsewhere, as a new risk (see VendorRiskPreview).
+   * Saving hands what is on screen to the preview's `onSave` instead of creating the risk here.
+   * The vendor is fixed, and the form does not check the role: whoever opens a preview has
+   * checked that the person may save it. Ignored when an existing risk is being edited.
+   */
+  preview?: VendorRiskPreview | null;
 }
 
 const initialState: VendorRiskModalFormValues = {
@@ -96,6 +108,30 @@ const RISK_SEVERITY_OPTIONS = [
   { _id: 5, name: RiskSeverity.Catastrophic },
 ] as const;
 
+/**
+ * The register spells its top likelihood "Almost certain", with a small c; the list above spells
+ * it with a capital C, as the project risks do. A name is turned into the register's before it is
+ * saved, and a register value is matched to its option without regard to case, so that a risk of
+ * this level can be shown and saved.
+ */
+const toRegisterLikelihood = (name: string): string =>
+  name === RiskLikelihood.AlmostCertain ? "Almost certain" : name;
+
+/** The id, as a string, of the option that a register value names. Case does not matter; "1" if none does. */
+const optionIdOf = (options: ReadonlyArray<{ _id: number | ""; name: string }>, value: string) =>
+  String(options.find((option) => option.name.toLowerCase() === value.toLowerCase())?._id ?? 1);
+
+/** The values a preview starts the form on. */
+const valuesOfPreview = (preview: VendorRiskPreview): VendorRiskModalFormValues => ({
+  vendor_id: preview.values.vendor_id,
+  action_owner: preview.values.action_owner === null ? "" : String(preview.values.action_owner),
+  risk_description: preview.values.risk_description,
+  impact_description: preview.values.impact_description,
+  action_plan: preview.values.action_plan,
+  likelihood: optionIdOf(LIKELIHOOD_OPTIONS, preview.values.likelihood),
+  risk_severity: optionIdOf(RISK_SEVERITY_OPTIONS, preview.values.risk_severity),
+});
+
 const AddNewRisk: React.FC<AddNewRiskProps> = ({
   isOpen,
   setIsOpen,
@@ -103,9 +139,12 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
   onSuccess = () => {},
   vendors,
   initialTab,
+  preview,
 }) => {
   const { userRoleName } = useAuth();
-  const isEditingDisabled = !allowedRoles.vendors.edit.includes(userRoleName);
+  // A preview is for a new risk: with an existing one the form edits that.
+  const draft = existingRisk ? null : (preview ?? null);
+  const isEditingDisabled = !draft && !allowedRoles.vendors.edit.includes(userRoleName);
   const VENDOR_OPTIONS =
     vendors?.length > 0
       ? vendors
@@ -212,9 +251,16 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
     }
   }, [isOpen, resetErrors, existingRisk?.id, initialTab]);
 
+  // The draft is read through a ref and identified by its key: the form starts from its values
+  // when it opens or another draft is opened, not whenever the page renders and hands over a new
+  // object, which would wipe what the person has typed.
+  const draftRef = useRef(draft);
+  draftRef.current = draft;
+  const draftKey = draft?.key;
+
   useEffect(() => {
     if (isOpen && !existingRisk) {
-      setValues(initialState);
+      setValues(draftRef.current ? valuesOfPreview(draftRef.current) : initialState);
       setSelectedFrameworks([]);
     } else if (existingRisk) {
       setValues((prevValues) => ({
@@ -222,12 +268,8 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
         risk_description: existingRisk.risk_description,
         impact_description: existingRisk.impact_description,
         action_owner: String(existingRisk.action_owner) || "",
-        risk_severity: Number(
-          RISK_SEVERITY_OPTIONS.find((r) => r.name === existingRisk.risk_severity)?._id ?? 1,
-        ).toString(),
-        likelihood: Number(
-          LIKELIHOOD_OPTIONS.find((r) => r.name === existingRisk.likelihood)?._id ?? 1,
-        ).toString(),
+        risk_severity: optionIdOf(RISK_SEVERITY_OPTIONS, existingRisk.risk_severity),
+        likelihood: optionIdOf(LIKELIHOOD_OPTIONS, existingRisk.likelihood),
         action_plan: existingRisk.action_plan,
         vendor_id: existingRisk.vendor_id,
       }));
@@ -235,7 +277,7 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
         Array.isArray(existingRisk.frameworks) ? existingRisk.frameworks.map(Number) : [],
       );
     }
-  }, [existingRisk, isOpen]);
+  }, [existingRisk, isOpen, draftKey]);
 
   const handleSave = () => {
     if (customFieldsGate.blocked) return;
@@ -286,7 +328,7 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
       selectedLikelihood.name as RiskLikelihood,
       selectedSeverity.name as RiskSeverity,
     );
-    const _riskDetails = {
+    const _riskDetails: VendorRiskFormDetails = {
       vendor_id: values.vendor_id,
       risk_description: values.risk_description,
       impact_description: values.impact_description,
@@ -295,13 +337,64 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
       action_plan: values.action_plan,
       risk_severity: selectedSeverity.name,
       risk_level: risk_risklevel.level,
-      likelihood: selectedLikelihood.name,
+      likelihood: toRegisterLikelihood(selectedLikelihood.name),
       frameworks: selectedFrameworks,
     };
     if (existingRisk) {
       await updateRisk(existingRisk.id!, _riskDetails);
+    } else if (draft) {
+      await savePreview(_riskDetails, draft);
     } else {
       await createRisk(_riskDetails);
+    }
+  };
+
+  /**
+   * Saves the risk the form was opened on through the owner of the draft, which decides what
+   * saving means (see VendorRiskPreview). It tells the person whether it worked, so the form adds
+   * no message of its own, and it reports a failure through the request layer. The form stays
+   * open with the values as they are, so that nothing the person edited is lost and they can save
+   * again.
+   *
+   * Once the risk exists the form closes, also when the custom field values could not be saved:
+   * saving again would try to add the risk a second time. The person is told, and can set the
+   * values on the risk.
+   */
+  const savePreview = async (riskDetails: VendorRiskFormDetails, owner: VendorRiskPreview) => {
+    setIsSubmitting(true);
+    try {
+      const newRiskId = await owner.onSave(riskDetails);
+
+      let cfFlushFailed = false;
+      if (newRiskId && customFieldsRef.current?.hasPendingValues()) {
+        try {
+          await customFieldsRef.current.flush(newRiskId);
+        } catch (cfError) {
+          cfFlushFailed = true;
+          logEngine({
+            type: "error",
+            message: `Vendor risk created, but custom field values failed to save: ${(cfError as Error).message}`,
+          });
+        }
+      }
+      onSuccess();
+      if (cfFlushFailed) {
+        setAlert({
+          variant: "warning",
+          body: "Risk added, but its custom field values could not be saved. Open the risk to try again.",
+        });
+        setTimeout(() => setAlert(null), 6000);
+      }
+      // The form can be closed while the request is on its way, and another draft opened: only
+      // close the form that is still on the draft that was just saved.
+      if (draftRef.current?.key === owner.key) setIsOpen();
+    } catch (error) {
+      logEngine({
+        type: "error",
+        message: `The suggested risk could not be saved: ${(error as Error).message}`,
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -464,7 +557,8 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
             error={errors.vendor_id}
             sx={{ width: "100%" }}
             isRequired
-            disabled={isEditingDisabled}
+            // The vendor of a draft belongs to what it was drafted from.
+            disabled={isEditingDisabled || draft !== null}
           />
         </Box>
         <Box flex={1}>
@@ -605,11 +699,13 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
           setActiveTab("details");
           setIsOpen();
         }}
-        title={existingRisk ? "Edit risk" : "Add a new vendor risk"}
+        title={draft ? draft.title : existingRisk ? "Edit risk" : "Add a new vendor risk"}
         description={
-          existingRisk
-            ? "Update risk details including description, impact assessment, and mitigation plan."
-            : "Document and assess a potential risk associated with your vendor. Provide details of the risk, its impact, and your mitigation plan."
+          draft
+            ? draft.description
+            : existingRisk
+              ? "Update risk details including description, impact assessment, and mitigation plan."
+              : "Document and assess a potential risk associated with your vendor. Provide details of the risk, its impact, and your mitigation plan."
         }
         // Neither tab edits the risk: links save on their own, and activity is read-only.
         onSubmit={activeTab === "activity" || activeTab === "linked-risks" ? undefined : handleSave}

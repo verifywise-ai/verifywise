@@ -136,15 +136,15 @@ const AddNewRiskForm: FC<AddNewRiskFormProps> = (props) => {
               disableRipple={disableRipple}
             />
             {popupStatus === "edit" && entityId && (
-              <Tab label="Activity" value="activity" sx={tabStyle} disableRipple={disableRipple} />
-            )}
-            {popupStatus === "edit" && entityId && (
               <Tab
                 label="Linked risks"
                 value="linked-risks"
                 sx={tabStyle}
                 disableRipple={disableRipple}
               />
+            )}
+            {popupStatus === "edit" && entityId && (
+              <Tab label="Activity" value="activity" sx={tabStyle} disableRipple={disableRipple} />
             )}
           </TabList>
         </Box>
@@ -217,13 +217,13 @@ const AddNewRiskForm: FC<AddNewRiskFormProps> = (props) => {
           />
         </TabPanel>
         {popupStatus === "edit" && entityId && (
-          <TabPanel value="activity" sx={{ p: 0 }}>
-            <HistorySidebar inline isOpen={true} entityType="risk" entityId={entityId} />
+          <TabPanel value="linked-risks" sx={{ p: 0 }}>
+            <LinkedRisksPanel riskId={entityId} />
           </TabPanel>
         )}
         {popupStatus === "edit" && entityId && (
-          <TabPanel value="linked-risks" sx={{ p: 0 }}>
-            <LinkedRisksPanel riskId={entityId} />
+          <TabPanel value="activity" sx={{ p: 0 }}>
+            <HistorySidebar inline isOpen={true} entityType="risk" entityId={entityId} />
           </TabPanel>
         )}
         {!onSubmitRef && (

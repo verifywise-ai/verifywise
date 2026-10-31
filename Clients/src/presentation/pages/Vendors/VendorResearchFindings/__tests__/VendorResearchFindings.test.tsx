@@ -6,10 +6,17 @@ import { useNavigate } from "react-router";
 import { renderWithProviders } from "../../../../../test/renderWithProviders";
 import {
   acceptedRisk,
+  ATTRIBUTIONS,
+  coverage,
+  credibleFinding,
   deferred,
   finding,
+  formEdits,
   FOUR_OUTCOMES,
+  KEV_RECORD,
+  listCopy,
   MODEL_NOTE,
+  progress,
   refusal,
   run,
   secondFinding,
@@ -23,6 +30,8 @@ vi.mock(
       typeof import("../../../../../application/repository/vendorResearch.repository")
     >()),
     getVendorResearchConfig: vi.fn(),
+    getVendorResearchSettings: vi.fn(),
+    saveVendorResearchSettings: vi.fn(),
     listVendorRiskFindings: vi.fn(),
     startVendorResearch: vi.fn(),
     getLatestVendorResearch: vi.fn(),
@@ -38,16 +47,42 @@ vi.mock("../../../../../application/hooks/useMyPermissions", () => ({
 vi.mock("../../../../../application/hooks/useIsAdmin", () => ({
   useIsAdmin: () => role.isAdmin,
 }));
+// The person who adds a risk is user 4; the users of the organization are 4 and 9.
+vi.mock("../../../../../application/hooks/useAuth", () => ({
+  useAuth: () => ({ userId: 4, userRoleName: "Admin" }),
+}));
+vi.mock("../../../../../application/hooks/useUsers", () => ({
+  default: () => ({ users: [{ id: 4 }, { id: 9 }] }),
+}));
+// The keys of the organization, which the research settings window offers.
+vi.mock("../../../../../application/hooks/useLLMKeys", () => ({
+  useLLMKeys: () => ({
+    keys: [
+      { id: 30, name: "OpenAI", model: "gpt-newest" },
+      { id: 20, name: "Anthropic", model: "claude-deep" },
+    ],
+    loading: false,
+  }),
+  invalidateLLMKeyQueries: vi.fn(),
+}));
+
+// The vendor risk form has its own tests: here the stand-in does what the form does with a preview.
+vi.mock("../../../../components/Modals/NewRisk", async () => ({
+  default: (await import("./vendorRiskFormStub")).VendorRiskFormStub,
+}));
 
 import * as repository from "../../../../../application/repository/vendorResearch.repository";
 import {
   VENDOR_RESEARCH_FOLLOW_KEY,
   followResearch,
 } from "../../../../../application/hooks/useVendorResearch";
+import { joinAttributions } from "../../../../../application/utils/vendorResearchText";
 import VendorResearchFindings from "..";
 
 const mocks = {
   config: vi.mocked(repository.getVendorResearchConfig),
+  settings: vi.mocked(repository.getVendorResearchSettings),
+  saveSettings: vi.mocked(repository.saveVendorResearchSettings),
   list: vi.mocked(repository.listVendorRiskFindings),
   start: vi.mocked(repository.startVendorResearch),
   latest: vi.mocked(repository.getLatestVendorResearch),
@@ -55,14 +90,19 @@ const mocks = {
   dismiss: vi.mocked(repository.dismissVendorRiskFinding),
 };
 
-const VENDORS = [
+interface TestVendor {
+  id: number;
+  vendor_name: string;
+  assignee?: number | null;
+}
+const VENDORS: TestVendor[] = [
   { id: 8, vendor_name: "Zeta Labs" },
   { id: 7, vendor_name: "Acme Cloud" },
 ];
 const WITH_VENDOR_7 = "/vendors/risks?findingsVendorId=7";
 
 const renderSection = (
-  options: { route?: string; vendors?: typeof VENDORS; queryClient?: QueryClient } = {},
+  options: { route?: string; vendors?: TestVendor[]; queryClient?: QueryClient } = {},
 ) => {
   const handlers = { onOpenRisk: vi.fn(), onNotify: vi.fn() };
   const view = renderWithProviders(
@@ -97,11 +137,36 @@ const choose = async (dialog: HTMLElement, reason: string) => {
 /** The first button of the row with this text, which is where focus goes when it takes a place. */
 const firstButtonOf = (text: string) => within(rowOf(text)).getAllByRole("button")[0];
 
+/** Opens the vendor risk form on the finding of the row with this text. */
+const openPreview = async (text = FIRST) => {
+  await userEvent.click(within(rowOf(text)).getByRole("button", { name: "Preview" }));
+  return screen.findByRole("dialog", { name: "Review suggested risk" });
+};
+const clickSave = (dialog: HTMLElement) =>
+  userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+/** Opens the form on the finding and saves it there: the way a finding is accepted. */
+const accept = async (text: string) => clickSave(await openPreview(text));
+const closeForm = (dialog: HTMLElement) =>
+  userEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+/** An accept that works: the finding leaves the server's list and the second one stays. */
+const acceptsAndLeavesOnlyTheSecond = () =>
+  mocks.accept.mockImplementation(async () => {
+    mocks.list.mockResolvedValue({ rows: [secondFinding()], total: 1 });
+    return { finding: finding({ status: "accepted" }), vendorRisk: acceptedRisk() };
+  });
+
 beforeEach(() => {
   vi.clearAllMocks();
   role.canEdit = true;
   role.isAdmin = false;
+  formEdits.current = {};
   mocks.config.mockResolvedValue({ hasLlmKey: true, autoRunEnabled: true });
+  mocks.settings.mockResolvedValue({
+    researchKeyId: null,
+    analysisKeyId: null,
+    scanIntervalDays: null,
+  });
+  mocks.saveSettings.mockImplementation(async (settings) => settings);
   mocks.list.mockResolvedValue({ rows: [finding(), secondFinding()], total: 2 });
   mocks.latest.mockResolvedValue(run({ category_summary: FOUR_OUTCOMES }));
 });
@@ -138,7 +203,7 @@ describe("the states of the section", () => {
     renderSection();
     await screen.findByText(FIRST);
 
-    await userEvent.click(within(rowOf(FIRST)).getByRole("button", { name: "Accept" }));
+    await accept(FIRST);
 
     expect(await screen.findByText("Could not load research findings.")).toBeInTheDocument();
     expect(screen.queryByText(SECOND)).not.toBeInTheDocument();
@@ -222,8 +287,8 @@ describe("the states of the section", () => {
     await waitFor(() => expect(againButton()).toBeDisabled());
     await userEvent.hover(againButton().parentElement as HTMLElement);
     expect(await screen.findByRole("tooltip")).toHaveTextContent("Vendor research is not set up.");
-    // Accepting what was found does not depend on the setup.
-    expect(within(rowOf(FIRST)).getByRole("button", { name: "Accept" })).toBeEnabled();
+    // Adding what was found does not depend on the setup.
+    expect(within(rowOf(FIRST)).getByRole("button", { name: "Preview" })).toBeEnabled();
   });
 });
 
@@ -395,11 +460,13 @@ describe("a finding", () => {
     // The action plan is copied into the register on accept: it is shown, and shown as text.
     const plan =
       '<img src=x onerror=alert(2)> javascript:alert(3) <a href="javascript:alert(4)">x</a>';
+    const why = "<script>alert(5)</script> because <i>it</i> is likely";
     mocks.list.mockResolvedValue({
       rows: [
         finding({
           risk_description: "<b>Bold claim</b>",
           action_plan: plan,
+          rationale: why,
           sources: [{ url: "https://news.example.com/a", title: "t", quote, published_at: null }],
         }),
       ],
@@ -410,9 +477,11 @@ describe("a finding", () => {
     expect(await screen.findByText(quote)).toBeInTheDocument();
     expect(screen.getByText("<b>Bold claim</b>")).toBeInTheDocument();
     expect(screen.getByText(plan)).toBeInTheDocument();
+    expect(screen.getByText(why)).toBeInTheDocument();
     expect(container.querySelector("img")).toBeNull();
     expect(document.body.querySelector("img")).toBeNull();
     expect(container.querySelector("b")).toBeNull();
+    expect(container.querySelector("i")).toBeNull();
     expect(container.querySelector("script")).toBeNull();
     // The only link in the row is the source's own.
     const row = rowOf("<b>Bold claim</b>");
@@ -452,6 +521,87 @@ describe("a finding", () => {
     expect(screen.queryByText("Action plan")).not.toBeInTheDocument();
   });
 
+  it("shows why the finding was rated as it was, under the ratings and before the sources", async () => {
+    mocks.list.mockResolvedValue({ rows: [finding(), secondFinding()], total: 2 });
+    renderSection();
+    await screen.findByText(FIRST);
+
+    const first = within(rowOf(FIRST));
+    const caption = first.getByText("Why this rating");
+    const why = first.getByText("The vendor confirmed the breach, and customer data was involved.");
+    const follows = (a: HTMLElement, b: HTMLElement) =>
+      Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+    // The ratings come first, then the reason for them, then where the finding comes from.
+    expect(follows(first.getByText("Confidence"), caption)).toBe(true);
+    expect(follows(caption, why)).toBe(true);
+    expect(follows(why, first.getByText("Sources"))).toBe(true);
+    // Each row has its own.
+    const second = within(rowOf(SECOND));
+    expect(second.getByText("Why this rating")).toBeInTheDocument();
+    expect(
+      second.getByText("A lapsed certificate is a gap in the audits, not an incident."),
+    ).toBeInTheDocument();
+  });
+
+  it.each([null, "", "   "])(
+    "shows no caption for a finding whose rationale is %j",
+    async (rationale) => {
+      mocks.list.mockResolvedValue({ rows: [finding({ rationale })], total: 1 });
+      renderSection();
+      await screen.findByText(FIRST);
+
+      expect(screen.queryByText("Why this rating")).not.toBeInTheDocument();
+    },
+  );
+
+  it("shows a finding that was stored before rationales existed", async () => {
+    // The API sends null for the rows of older runs; the property can be absent in a cached list.
+    const { rationale: _omitted, ...older } = finding();
+    mocks.list.mockResolvedValue({ rows: [older as ReturnType<typeof finding>], total: 1 });
+    renderSection();
+
+    expect(await screen.findByText(FIRST)).toBeInTheDocument();
+    expect(screen.queryByText("Why this rating")).not.toBeInTheDocument();
+  });
+
+  describe("a finding whose quotes no page confirmed", () => {
+    const NOTICE = "Not confirmed on the page. The quotes come from search results.";
+
+    it("says that the quotes come from search results, under the caption of the sources and before them", async () => {
+      mocks.list.mockResolvedValue({
+        rows: [finding({ snippet_only: true }), secondFinding()],
+        total: 2,
+      });
+      renderSection();
+      await screen.findByText(FIRST);
+
+      const first = within(rowOf(FIRST));
+      const follows = (a: HTMLElement, b: HTMLElement) =>
+        Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+      expect(follows(first.getByText("Sources"), first.getByText(NOTICE))).toBe(true);
+      expect(
+        follows(first.getByText(NOTICE), first.getByText("The vendor confirmed the incident.")),
+      ).toBe(true);
+      // The other finding rests on a page, or was not checked: it says nothing.
+      expect(within(rowOf(SECOND)).queryByText(NOTICE)).not.toBeInTheDocument();
+    });
+
+    it.each([false, undefined])(
+      "says nothing for a finding whose snippet_only is %s",
+      async (snippetOnly) => {
+        // The property can be absent in a list that was cached before it existed.
+        mocks.list.mockResolvedValue({
+          rows: [finding({ snippet_only: snippetOnly })],
+          total: 1,
+        });
+        renderSection();
+        await screen.findByText(FIRST);
+
+        expect(screen.queryByText(NOTICE)).not.toBeInTheDocument();
+      },
+    );
+  });
+
   it("says how many of the pending findings are shown when the server returned fewer", async () => {
     mocks.list.mockResolvedValue({ rows: [finding(), secondFinding()], total: 250 });
     renderSection();
@@ -478,34 +628,482 @@ describe("a finding", () => {
   });
 });
 
+describe("the credibility of a finding", () => {
+  const follows = (a: HTMLElement, b: HTMLElement) =>
+    Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+  const KEV_LINE =
+    "High: CISA Known Exploited Vulnerabilities lists it (CVE-2026-28001), as of 7 Oct 2026.";
+  const NOTE = "Matched by name only: this may be another company.";
+  /** A source the credibility rule put in a category, on a host of its own. */
+  const sourceIn = (
+    category: "official" | "trusted_press" | "vendor" | "unverified" | undefined,
+    host: string,
+    status?: "active" | "withdrawn" | "rejected" | "delisted",
+  ) => ({
+    url: `https://${host}/page`,
+    title: host,
+    quote: `A quote from ${host}`,
+    published_at: null,
+    ...(category === undefined ? {} : { category }),
+    ...(status === undefined
+      ? {}
+      : {
+          record: {
+            source_id: "kev" as const,
+            record_id: 41,
+            status,
+            match_strength: "strong" as const,
+          },
+        }),
+  });
+
+  it("shows the credibility chip, its rationale and no confidence chip", async () => {
+    mocks.list.mockResolvedValue({ rows: [credibleFinding(), secondFinding()], total: 2 });
+    renderSection();
+    await screen.findByText(FIRST);
+
+    const row = within(rowOf(FIRST));
+    const caption = row.getByText("Credibility");
+    const chip = row.getByText("High");
+    const line = row.getByText(KEV_LINE);
+    expect(follows(caption, chip)).toBe(true);
+    expect(follows(chip, line)).toBe(true);
+    // The line comes before the model's reason for the likelihood and the severity.
+    expect(follows(line, row.getByText("Why this rating"))).toBe(true);
+    expect(row.queryByText("Confidence")).not.toBeInTheDocument();
+    expect(row.queryByText("Medium")).not.toBeInTheDocument();
+    // The screen words the line itself, in the person's language: the server's line is not shown.
+    expect(row.queryByText("The server's own English line.")).not.toBeInTheDocument();
+    // A finding of a run without the vendor risk database keeps its confidence.
+    expect(within(rowOf(SECOND)).getByText("Confidence")).toBeInTheDocument();
+    expect(within(rowOf(SECOND)).queryByText("Credibility")).not.toBeInTheDocument();
+  });
+
+  it("says when the copy of the list that a finding cites was out of date", async () => {
+    mocks.list.mockResolvedValue({
+      rows: [
+        credibleFinding({
+          credibility_basis: {
+            rule: "official_record",
+            registry_version: "2026-10-29.1",
+            name_only: false,
+            sources: [{ ...KEV_RECORD, record: { ...KEV_RECORD.record!, stale: true } }],
+          },
+        }),
+      ],
+      total: 1,
+    });
+    renderSection();
+    await screen.findByText(FIRST);
+
+    expect(
+      within(rowOf(FIRST)).getByText(
+        `${KEV_LINE} The source has not been updated since 7 Oct 2026.`,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("shows the name-only note when the basis says so", async () => {
+    const ofac = {
+      ...KEV_RECORD,
+      url: "https://sanctionssearch.ofac.treas.gov/Details.aspx?id=29001",
+      publisher: "ofac",
+      record: {
+        source: "ofac" as const,
+        match: "weak" as const,
+        status: "active" as const,
+        source_record_id: "29001",
+        as_of: "2026-10-10",
+      },
+    };
+    mocks.list.mockResolvedValue({
+      rows: [
+        credibleFinding({
+          credibility: "low",
+          credibility_basis: {
+            rule: "name_only",
+            registry_version: "2026-10-29.1",
+            name_only: true,
+            sources: [ofac],
+          },
+        }),
+        secondFinding({
+          credibility: "high",
+          credibility_basis: {
+            rule: "official_record",
+            registry_version: "2026-10-29.1",
+            name_only: false,
+            sources: [KEV_RECORD],
+          },
+        }),
+      ],
+      total: 2,
+    });
+    renderSection();
+    await screen.findByText(FIRST);
+
+    const row = within(rowOf(FIRST));
+    expect(row.getByText("Low")).toBeInTheDocument();
+    const line = row.getByText("Low: the OFAC SDN list entry matches the vendor by name only.");
+    const note = row.getByText(NOTE);
+    expect(follows(line, note)).toBe(true);
+    expect(within(rowOf(SECOND)).queryByText(NOTE)).not.toBeInTheDocument();
+  });
+
+  it("a rejected CVE reads as rejected by the CVE Program", async () => {
+    mocks.list.mockResolvedValue({
+      rows: [
+        credibleFinding({
+          credibility: "low",
+          credibility_basis: {
+            rule: "inactive",
+            registry_version: "2026-10-29.1",
+            name_only: false,
+            sources: [
+              {
+                ...KEV_RECORD,
+                record: {
+                  ...KEV_RECORD.record!,
+                  status: "rejected",
+                  as_of: "2026-10-31",
+                  rejected_by: "cve",
+                },
+              },
+            ],
+          },
+        }),
+      ],
+      total: 1,
+    });
+    renderSection();
+    await screen.findByText(FIRST);
+
+    const row = within(rowOf(FIRST));
+    expect(row.getByText("Low")).toBeInTheDocument();
+    expect(
+      row.getByText("Low: the CVE Program rejected the record on 31 Oct 2026."),
+    ).toBeInTheDocument();
+    // The CISA catalog did not reject it: its entry only named a CVE the CVE Program rejected.
+    expect(row.queryByText(/CISA Known Exploited Vulnerabilities/)).not.toBeInTheDocument();
+  });
+
+  it("an identifier match has no name-only note", async () => {
+    // An entry of the UN list matched by the vendor's registration number: strong, not by name.
+    const un = {
+      ...KEV_RECORD,
+      url: "https://records.example/un_sanctions/EXe.012",
+      publisher: "un_sanctions",
+      record: {
+        source: "un_sanctions" as const,
+        match: "strong" as const,
+        status: "active" as const,
+        source_record_id: "EXe.012",
+        as_of: "2026-10-10",
+      },
+    };
+    mocks.list.mockResolvedValue({
+      rows: [
+        credibleFinding({
+          credibility_basis: {
+            rule: "official_record",
+            registry_version: "2026-10-29.1",
+            name_only: false,
+            sources: [un],
+          },
+        }),
+      ],
+      total: 1,
+    });
+    renderSection();
+    await screen.findByText(FIRST);
+
+    const row = within(rowOf(FIRST));
+    expect(row.getByText("High")).toBeInTheDocument();
+    expect(
+      row.getByText(
+        "High: UN Security Council Consolidated List lists it (EXe.012), as of 10 Oct 2026.",
+      ),
+    ).toBeInTheDocument();
+    expect(row.queryByText(NOTE)).not.toBeInTheDocument();
+  });
+
+  it("puts a badge before each source's host", async () => {
+    mocks.list.mockResolvedValue({
+      rows: [
+        credibleFinding({
+          sources: [
+            sourceIn("official", "sec.gov"),
+            sourceIn("trusted_press", "reuters.com"),
+            sourceIn("vendor", "status.acme.example"),
+            sourceIn("unverified", "forum.example"),
+            // A source the credibility rule did not see, as in a finding of an older run.
+            sourceIn(undefined, "news.example.com"),
+            sourceIn("mystery" as never, "odd.example"),
+          ],
+        }),
+      ],
+      total: 1,
+    });
+    renderSection();
+    await screen.findByText(FIRST);
+
+    const row = within(rowOf(FIRST));
+    for (const [badge, host] of [
+      ["Official", "sec.gov"],
+      ["Trusted press", "reuters.com"],
+      ["Vendor", "status.acme.example"],
+      ["Unverified", "forum.example"],
+    ]) {
+      // The badge is the element just before the host's link, in the line of the source.
+      expect(row.getByText(badge).nextElementSibling).toContainElement(
+        row.getByRole("link", { name: host }),
+      );
+    }
+    for (const host of ["news.example.com", "odd.example"]) {
+      const link = row.getByRole("link", { name: host });
+      expect(link.closest("[data-vw-no-translate]")?.previousElementSibling ?? null).toBeNull();
+    }
+  });
+
+  it("shows an inactive record's status", async () => {
+    mocks.list.mockResolvedValue({
+      rows: [
+        credibleFinding({
+          sources: [
+            sourceIn("official", "a.example", "withdrawn"),
+            sourceIn("official", "b.example", "rejected"),
+            sourceIn("official", "c.example", "delisted"),
+            sourceIn("official", "d.example", "active"),
+            sourceIn("official", "e.example", "revoked" as never),
+          ],
+        }),
+      ],
+      total: 1,
+    });
+    renderSection();
+    await screen.findByText(FIRST);
+
+    const row = within(rowOf(FIRST));
+    for (const [status, host] of [
+      ["Withdrawn", "a.example"],
+      ["Rejected", "b.example"],
+      ["Delisted", "c.example"],
+    ]) {
+      expect(follows(row.getByRole("link", { name: host }), row.getByText(status))).toBe(true);
+    }
+    expect(row.queryByText("Active")).not.toBeInTheDocument();
+    expect(row.queryByText("revoked")).not.toBeInTheDocument();
+  });
+
+  it("a finding without credibility keeps the confidence chip", async () => {
+    mocks.list.mockResolvedValue({
+      rows: [finding(), secondFinding({ credibility: null, credibility_basis: null })],
+      total: 2,
+    });
+    renderSection();
+    await screen.findByText(FIRST);
+
+    for (const [text, confidence] of [
+      [FIRST, "Medium"],
+      [SECOND, "High"],
+    ]) {
+      const row = within(rowOf(text));
+      expect(row.getByText("Confidence")).toBeInTheDocument();
+      expect(row.getByText(confidence)).toBeInTheDocument();
+      expect(row.queryByText("Credibility")).not.toBeInTheDocument();
+    }
+  });
+
+  it("keeps the confidence chip for a label it does not know", async () => {
+    mocks.list.mockResolvedValue({
+      rows: [credibleFinding({ credibility: "certain" as never })],
+      total: 1,
+    });
+    renderSection();
+    await screen.findByText(FIRST);
+
+    const row = within(rowOf(FIRST));
+    expect(row.getByText("Confidence")).toBeInTheDocument();
+    expect(row.queryByText("Credibility")).not.toBeInTheDocument();
+    expect(row.queryByText(KEV_LINE)).not.toBeInTheDocument();
+  });
+
+  it("shows the chip and no line for a rule it does not know", async () => {
+    mocks.list.mockResolvedValue({
+      rows: [
+        credibleFinding({
+          credibility_basis: {
+            rule: "mystery" as never,
+            registry_version: "2026-10-29.1",
+            name_only: false,
+            sources: [KEV_RECORD],
+          },
+        }),
+      ],
+      total: 1,
+    });
+    renderSection();
+    await screen.findByText(FIRST);
+
+    const row = within(rowOf(FIRST));
+    expect(row.getByText("Credibility")).toBeInTheDocument();
+    expect(row.getByText("High")).toBeInTheDocument();
+    expect(row.queryByText(/^High:/)).not.toBeInTheDocument();
+  });
+});
+
+describe("a label the backfill wrote (M3)", () => {
+  it("a finding rated with the earlier confidence rule shows its label and the note, and no source badge", async () => {
+    mocks.list.mockResolvedValue({
+      rows: [
+        finding({
+          status: "accepted",
+          credibility: "medium",
+          credibility_basis: { rule: "legacy_confidence" },
+        }),
+      ],
+      total: 1,
+    });
+    renderSection();
+    await screen.findByText(FIRST);
+
+    const row = within(rowOf(FIRST));
+    expect(row.getByText("Credibility")).toBeInTheDocument();
+    expect(row.getByText("Medium")).toBeInTheDocument();
+    expect(row.getByText("Rated with the earlier confidence rule.")).toBeInTheDocument();
+    expect(row.queryByText("Confidence")).not.toBeInTheDocument();
+    // Its sources are those of a run before the rule: none has a category.
+    for (const badge of ["Official", "Trusted press", "Vendor", "Unverified"]) {
+      expect(row.queryByText(badge)).not.toBeInTheDocument();
+    }
+  });
+
+  it("a finding the backfill rated again shows the rule's line, then the note", async () => {
+    mocks.list.mockResolvedValue({
+      rows: [
+        credibleFinding({
+          credibility_basis: {
+            rule: "backfill_official_record",
+            registry_version: "2026-10-29.1",
+            name_only: false,
+            sources: [KEV_RECORD],
+          },
+        }),
+      ],
+      total: 1,
+    });
+    renderSection();
+    await screen.findByText(FIRST);
+
+    expect(
+      within(rowOf(FIRST)).getByText(
+        "High: CISA Known Exploited Vulnerabilities lists it (CVE-2026-28001), as of 7 Oct 2026. Rated again with the current rule.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("a finding the backfill rated again shows each source's badge from its basis", async () => {
+    const NEWS = "https://www.reuters.com/technology/acme-breach";
+    mocks.list.mockResolvedValue({
+      rows: [
+        credibleFinding({
+          credibility_basis: {
+            rule: "backfill_official_record",
+            registry_version: "2026-10-29.1",
+            name_only: false,
+            sources: [
+              KEV_RECORD,
+              {
+                url: NEWS,
+                category: "trusted_press",
+                publisher: "reuters",
+                entry: "P1",
+                reviewed: true,
+                reading: "read",
+              },
+              {
+                url: "https://other.example/notice",
+                category: "official",
+                publisher: "other",
+                entry: null,
+                reviewed: false,
+                reading: "read",
+              },
+            ],
+          },
+          // The backfill writes the label and its basis only: the sources stay as the run stored them.
+          sources: [
+            {
+              url: KEV_RECORD.url,
+              title: "CVE-2026-28001",
+              quote: "LarkOS contains a command injection vulnerability.",
+              published_at: "2026-09-02",
+            },
+            { url: NEWS, title: "Acme breach", quote: "Acme was breached.", published_at: null },
+            // The basis holds another address at this place: no badge.
+            {
+              url: "https://forum.example/thread",
+              title: "A thread",
+              quote: "Acme lost data.",
+              published_at: null,
+            },
+          ],
+        }),
+      ],
+      total: 1,
+    });
+    renderSection();
+    await screen.findByText(FIRST);
+
+    const row = within(rowOf(FIRST));
+    for (const [badge, host] of [
+      ["Official", "www.cisa.gov"],
+      ["Trusted press", "www.reuters.com"],
+    ]) {
+      expect(row.getByText(badge).nextElementSibling).toContainElement(
+        row.getByRole("link", { name: host }),
+      );
+    }
+    const forum = row.getByRole("link", { name: "forum.example" });
+    expect(forum.closest("[data-vw-no-translate]")?.previousElementSibling ?? null).toBeNull();
+  });
+});
+
 describe("a role that cannot edit risks", () => {
-  it("sees the findings and the run, but no Accept, Dismiss or Research again", async () => {
+  it("sees the findings and the run, but no Preview, Dismiss or Research again", async () => {
     role.canEdit = false;
     renderSection({ route: WITH_VENDOR_7 });
 
     expect(await screen.findByText(FIRST)).toBeInTheDocument();
     expect(await screen.findByText("Security incidents: risks found")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Accept" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Preview" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Dismiss" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Research again" })).not.toBeInTheDocument();
   });
 });
 
 describe("accepting a finding", () => {
-  const acceptsAndLeavesOnlyTheSecond = () =>
-    mocks.accept.mockImplementation(async () => {
-      mocks.list.mockResolvedValue({ rows: [secondFinding()], total: 1 });
-      return { finding: finding({ status: "accepted" }), vendorRisk: acceptedRisk() };
-    });
-
-  it("sends the finding's id with an empty body, then says so and offers to open the risk", async () => {
+  it("sends the finding's id with what the form saved, then says so and offers to open the risk", async () => {
     acceptsAndLeavesOnlyTheSecond();
     const { onNotify, onOpenRisk } = renderSection();
     await screen.findByText(FIRST);
 
-    await userEvent.click(within(rowOf(FIRST)).getByRole("button", { name: "Accept" }));
+    await accept(FIRST);
 
-    await waitFor(() => expect(mocks.accept).toHaveBeenCalledWith(1, {}));
+    // The form saved the finding as it opened: the owner is the person adding the risk (the
+    // vendor has no assignee), the level is the form's own, and the vendor is not sent.
+    await waitFor(() =>
+      expect(mocks.accept).toHaveBeenCalledWith(1, {
+        action_owner: 4,
+        risk_description: "Customer data was exposed in a breach",
+        impact_description: "Personal data of our customers could be exposed",
+        action_plan: "Ask the vendor for its incident report",
+        likelihood: "Likely",
+        risk_severity: "Major",
+        risk_level: "High risk",
+        frameworks: [],
+      }),
+    );
     await waitFor(() =>
       expect(onNotify).toHaveBeenCalledWith({
         variant: "success",
@@ -523,7 +1121,7 @@ describe("accepting a finding", () => {
     acceptsAndLeavesOnlyTheSecond();
     renderSection();
     await screen.findByText(FIRST);
-    await userEvent.click(within(rowOf(FIRST)).getByRole("button", { name: "Accept" }));
+    await accept(FIRST);
     const notice = noticeOf(await screen.findByText("Risk added to the register."));
 
     await userEvent.click(within(notice).getByRole("button", { name: "Close" }));
@@ -535,7 +1133,7 @@ describe("accepting a finding", () => {
     acceptsAndLeavesOnlyTheSecond();
     renderSection();
     await screen.findByText(FIRST);
-    await userEvent.click(within(rowOf(FIRST)).getByRole("button", { name: "Accept" }));
+    await accept(FIRST);
     const notice = within(noticeOf(await screen.findByText("Risk added to the register.")));
 
     expect(notice.getByRole("button", { name: "Open risk" })).toHaveStyle({ height: "30px" });
@@ -554,7 +1152,7 @@ describe("accepting a finding", () => {
     renderSection();
     await screen.findByText(FIRST);
 
-    await userEvent.click(within(rowOf(FIRST)).getByRole("button", { name: "Accept" }));
+    await accept(FIRST);
 
     expect(await screen.findByText("Risk added to the register.")).toBeInTheDocument();
     expect(header()).toHaveAttribute("aria-expanded", "true");
@@ -573,9 +1171,9 @@ describe("accepting a finding", () => {
     });
     const { onOpenRisk } = renderSection();
     await screen.findByText(FIRST);
-    await userEvent.click(within(rowOf(FIRST)).getByRole("button", { name: "Accept" }));
+    await accept(FIRST);
     await screen.findByText("Risk added to the register.");
-    await userEvent.click(within(rowOf(SECOND)).getByRole("button", { name: "Accept" }));
+    await accept(SECOND);
     await waitFor(() => expect(screen.queryByText(SECOND)).not.toBeInTheDocument());
 
     await userEvent.click(screen.getByRole("button", { name: "Open risk" }));
@@ -588,7 +1186,7 @@ describe("accepting a finding", () => {
     acceptsAndLeavesOnlyTheSecond();
     renderSection();
     await screen.findByText(FIRST);
-    await userEvent.click(within(rowOf(FIRST)).getByRole("button", { name: "Accept" }));
+    await accept(FIRST);
     await screen.findByText("Risk added to the register.");
 
     await userEvent.click(screen.getByRole("combobox"));
@@ -604,7 +1202,7 @@ describe("accepting a finding", () => {
     mocks.dismiss.mockResolvedValue(secondFinding({ status: "dismissed" }));
     renderSection();
     await screen.findByText(FIRST);
-    await userEvent.click(within(rowOf(FIRST)).getByRole("button", { name: "Accept" }));
+    await accept(FIRST);
     await screen.findByText("Risk added to the register.");
 
     await userEvent.click(within(rowOf(SECOND)).getByRole("button", { name: "Dismiss" }));
@@ -630,10 +1228,10 @@ describe("accepting a finding", () => {
     });
     renderSection();
     await screen.findByText(FIRST);
-    await userEvent.click(within(rowOf(FIRST)).getByRole("button", { name: "Accept" }));
+    await accept(FIRST);
     await screen.findByText("Risk added to the register.");
 
-    await userEvent.click(within(rowOf(SECOND)).getByRole("button", { name: "Accept" }));
+    await accept(SECOND);
 
     // Gone as the request leaves, while it is still on its way...
     await waitFor(() => expect(mocks.accept).toHaveBeenCalledTimes(2));
@@ -643,7 +1241,7 @@ describe("accepting a finding", () => {
       second.reject(refusal(409, "Finding already accepted"));
     });
     await waitFor(() =>
-      expect(within(rowOf(SECOND)).getByRole("button", { name: "Accept" })).toBeEnabled(),
+      expect(within(rowOf(SECOND)).getByRole("button", { name: "Preview" })).toBeEnabled(),
     );
     expect(screen.queryByText("Risk added to the register.")).not.toBeInTheDocument();
   });
@@ -654,7 +1252,7 @@ describe("accepting a finding", () => {
     mocks.dismiss.mockReturnValue(pending.promise);
     renderSection();
     await screen.findByText(FIRST);
-    await userEvent.click(within(rowOf(FIRST)).getByRole("button", { name: "Accept" }));
+    await accept(FIRST);
     await screen.findByText("Risk added to the register.");
     await userEvent.click(within(rowOf(SECOND)).getByRole("button", { name: "Dismiss" }));
     const dialog = await screen.findByRole("dialog", { name: "Dismiss finding" });
@@ -681,12 +1279,12 @@ describe("accepting a finding", () => {
     const { onNotify } = renderSection();
     await screen.findByText(FIRST);
 
-    await userEvent.click(within(rowOf(FIRST)).getByRole("button", { name: "Accept" }));
+    await accept(FIRST);
 
     await waitFor(() => expect(mocks.accept).toHaveBeenCalled());
     // The row is usable again, and no notice or alert was made up.
     await waitFor(() =>
-      expect(within(rowOf(FIRST)).getByRole("button", { name: "Accept" })).toBeEnabled(),
+      expect(within(rowOf(FIRST)).getByRole("button", { name: "Preview" })).toBeEnabled(),
     );
     expect(onNotify).not.toHaveBeenCalled();
     expect(screen.queryByText("Risk added to the register.")).not.toBeInTheDocument();
@@ -701,13 +1299,13 @@ describe("accepting a finding", () => {
     renderSection();
     await screen.findByText(FIRST);
 
-    await userEvent.click(within(rowOf(FIRST)).getByRole("button", { name: "Accept" }));
+    await accept(FIRST);
 
     await waitFor(() =>
       expect(within(rowOf(FIRST)).getByRole("button", { name: "Dismiss" })).toBeDisabled(),
     );
-    expect(within(rowOf(FIRST)).getByRole("button", { name: "Accept" })).toBeDisabled();
-    expect(within(rowOf(SECOND)).getByRole("button", { name: "Accept" })).toBeEnabled();
+    expect(within(rowOf(FIRST)).getByRole("button", { name: "Preview" })).toBeDisabled();
+    expect(within(rowOf(SECOND)).getByRole("button", { name: "Preview" })).toBeEnabled();
     expect(within(rowOf(SECOND)).getByRole("button", { name: "Dismiss" })).toBeEnabled();
   });
 
@@ -724,8 +1322,12 @@ describe("accepting a finding", () => {
     renderSection();
     await screen.findByText(FIRST);
 
-    await userEvent.click(within(rowOf(FIRST)).getByRole("button", { name: "Accept" }));
-    await userEvent.click(within(rowOf(SECOND)).getByRole("button", { name: "Accept" }));
+    // The form does not hold the person while the request is on its way: closing it leaves the
+    // request running, and the next finding can be saved too.
+    const firstForm = await openPreview(FIRST);
+    await clickSave(firstForm);
+    await closeForm(firstForm);
+    await accept(SECOND);
     await waitFor(() => expect(mocks.accept).toHaveBeenCalledTimes(2));
 
     mocks.list.mockResolvedValue({ rows: [secondFinding()], total: 1 });
@@ -735,8 +1337,255 @@ describe("accepting a finding", () => {
 
     await waitFor(() => expect(screen.queryByText(FIRST)).not.toBeInTheDocument());
     // The second accept is still in flight, so its row is still busy.
-    expect(within(rowOf(SECOND)).getByRole("button", { name: "Accept" })).toBeDisabled();
+    expect(within(rowOf(SECOND)).getByRole("button", { name: "Preview" })).toBeDisabled();
     expect(within(rowOf(SECOND)).getByRole("button", { name: "Dismiss" })).toBeDisabled();
+  });
+});
+
+describe("previewing a finding", () => {
+  const valuesOf = (dialog: HTMLElement) =>
+    JSON.parse(within(dialog).getByLabelText("Values of the draft").textContent ?? "{}");
+
+  it("opens the vendor risk form on the finding and sends nothing until the form is saved", async () => {
+    const { onNotify } = renderSection();
+    await screen.findByText(FIRST);
+
+    const dialog = await openPreview();
+
+    expect(within(dialog).getByText("Review suggested risk")).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(
+        "Suggested by the research agent from web sources. Check the details, change what is not right, then save to add this risk to the vendor risk register.",
+      ),
+    ).toBeInTheDocument();
+    expect(valuesOf(dialog)).toEqual({
+      vendor_id: 7,
+      risk_description: "Customer data was exposed in a breach",
+      impact_description: "Personal data of our customers could be exposed",
+      action_plan: "Ask the vendor for its incident report",
+      likelihood: "Likely",
+      risk_severity: "Major",
+      action_owner: 4,
+    });
+    expect(mocks.accept).not.toHaveBeenCalled();
+    expect(mocks.dismiss).not.toHaveBeenCalled();
+    expect(onNotify).not.toHaveBeenCalled();
+  });
+
+  it("opens the form on the finding of the row that was clicked", async () => {
+    mocks.list.mockResolvedValue({ rows: [finding(), secondFinding({ vendor_id: 8 })], total: 2 });
+    renderSection();
+    await screen.findByText(FIRST);
+
+    const dialog = await openPreview(SECOND);
+
+    expect(valuesOf(dialog)).toMatchObject({
+      vendor_id: 8,
+      risk_description: "The ISO 27001 certificate has lapsed",
+      likelihood: "Possible",
+      risk_severity: "Moderate",
+    });
+  });
+
+  it("closes without adding anything, and the finding stays pending", async () => {
+    const { onNotify } = renderSection();
+    await screen.findByText(FIRST);
+    const dialog = await openPreview();
+
+    await closeForm(dialog);
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(mocks.accept).not.toHaveBeenCalled();
+    expect(onNotify).not.toHaveBeenCalled();
+    expect(screen.getByText(FIRST)).toBeInTheDocument();
+    expect(screen.queryByText("Risk added to the register.")).not.toBeInTheDocument();
+    expect(within(rowOf(FIRST)).getByRole("button", { name: "Preview" })).toBeEnabled();
+  });
+
+  it("keeps the notice of an earlier risk when a preview is closed without saving", async () => {
+    mocks.accept.mockImplementation(async () => {
+      mocks.list.mockResolvedValue({ rows: [secondFinding()], total: 1 });
+      return { finding: finding({ status: "accepted" }), vendorRisk: acceptedRisk() };
+    });
+    renderSection();
+    await screen.findByText(FIRST);
+    await accept(FIRST);
+    await screen.findByText("Risk added to the register.");
+
+    await closeForm(await openPreview(SECOND));
+
+    expect(screen.getByText("Risk added to the register.")).toBeInTheDocument();
+  });
+
+  describe("the owner the form starts on", () => {
+    it("is the vendor's assignee when that user belongs to the organization", async () => {
+      renderSection({ vendors: [{ id: 7, vendor_name: "Acme Cloud", assignee: 9 }] });
+      await screen.findByText(FIRST);
+
+      const dialog = await openPreview();
+
+      expect(valuesOf(dialog).action_owner).toBe(9);
+    });
+
+    it("is the person adding the risk when the assignee is not a user of the organization", async () => {
+      renderSection({ vendors: [{ id: 7, vendor_name: "Acme Cloud", assignee: 77 }] });
+      await screen.findByText(FIRST);
+
+      const dialog = await openPreview();
+
+      expect(valuesOf(dialog).action_owner).toBe(4);
+    });
+
+    it("is the person adding the risk when the finding's vendor is not in the page's list", async () => {
+      renderSection({ vendors: [{ id: 8, vendor_name: "Zeta Labs", assignee: 9 }] });
+      await screen.findByText(FIRST);
+
+      const dialog = await openPreview();
+
+      expect(valuesOf(dialog).action_owner).toBe(4);
+    });
+  });
+
+  describe("saving the form", () => {
+    it("accepts the finding with the values the person left on screen", async () => {
+      formEdits.current = {
+        risk_description: "A breach exposed customer records",
+        action_plan: "Review the vendor's controls every quarter",
+        likelihood: "Almost certain",
+        risk_severity: "Catastrophic",
+        risk_level: "Very high risk",
+        action_owner: "9",
+        frameworks: [11, 12],
+        // The form shows the vendor but does not change it; the server ignores it anyway.
+        vendor_id: 99,
+      };
+      acceptsAndLeavesOnlyTheSecond();
+      renderSection();
+      await screen.findByText(FIRST);
+
+      await accept(FIRST);
+
+      await waitFor(() => expect(mocks.accept).toHaveBeenCalledTimes(1));
+      expect(mocks.accept).toHaveBeenCalledWith(1, {
+        action_owner: 9,
+        risk_description: "A breach exposed customer records",
+        impact_description: "Personal data of our customers could be exposed",
+        action_plan: "Review the vendor's controls every quarter",
+        likelihood: "Almost certain",
+        risk_severity: "Catastrophic",
+        risk_level: "Very high risk",
+        frameworks: [11, 12],
+      });
+      expect(mocks.accept.mock.calls[0][1]).not.toHaveProperty("vendor_id");
+    });
+
+    it("closes the form, and the row is gone, once the risk is added", async () => {
+      acceptsAndLeavesOnlyTheSecond();
+      renderSection();
+      await screen.findByText(FIRST);
+
+      await accept(FIRST);
+
+      await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+      await waitFor(() => expect(screen.queryByText(FIRST)).not.toBeInTheDocument());
+      expect(screen.getByText(SECOND)).toBeInTheDocument();
+    });
+
+    it("keeps the form open, with its values, when the request fails, and the row can be used again", async () => {
+      mocks.accept.mockRejectedValueOnce(refusal(500));
+      const { onNotify } = renderSection();
+      await screen.findByText(FIRST);
+      const dialog = await openPreview();
+
+      await clickSave(dialog);
+
+      await waitFor(() => expect(mocks.accept).toHaveBeenCalledTimes(1));
+      await waitFor(() =>
+        expect(
+          within(rowOf(FIRST)).getByRole("button", { name: "Preview", hidden: true }),
+        ).toBeEnabled(),
+      );
+      // The global toast reports a 500; the section adds nothing, and the form is still there.
+      expect(onNotify).not.toHaveBeenCalled();
+      expect(screen.getByRole("dialog", { name: "Review suggested risk" })).toBeInTheDocument();
+      expect(valuesOf(dialog).risk_description).toBe("Customer data was exposed in a breach");
+
+      // The person can save again.
+      acceptsAndLeavesOnlyTheSecond();
+      await clickSave(dialog);
+      await waitFor(() => expect(mocks.accept).toHaveBeenCalledTimes(2));
+      await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    });
+
+    it("warns, and closes the form, when the finding no longer exists (404)", async () => {
+      mocks.accept.mockImplementation(async () => {
+        mocks.list.mockResolvedValue({ rows: [secondFinding()], total: 1 });
+        throw refusal(404, "Finding not found");
+      });
+      const { onNotify } = renderSection();
+      await screen.findByText(FIRST);
+
+      await accept(FIRST);
+
+      await waitFor(() =>
+        expect(onNotify).toHaveBeenCalledWith({
+          variant: "warning",
+          body: "This finding no longer exists.",
+        }),
+      );
+      await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+      await waitFor(() => expect(screen.queryByText(FIRST)).not.toBeInTheDocument());
+      await waitFor(() => expect(document.activeElement).toBe(firstButtonOf(SECOND)));
+    });
+
+    it("closes the form when a 409 says the finding was decided elsewhere and it has left the list", async () => {
+      mocks.accept.mockImplementation(async () => {
+        mocks.list.mockResolvedValue({ rows: [secondFinding()], total: 1 });
+        throw refusal(409, "This finding has already been accepted or dismissed");
+      });
+      const { onNotify } = renderSection();
+      await screen.findByText(FIRST);
+
+      await accept(FIRST);
+
+      await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+      // The global toast explains a 409; the section adds no message of its own.
+      expect(onNotify).not.toHaveBeenCalled();
+    });
+
+    it("keeps the form open when a 409 leaves the finding pending (another decision is in progress)", async () => {
+      mocks.accept.mockRejectedValueOnce(refusal(409, "refused"));
+      renderSection();
+      await screen.findByText(FIRST);
+      const dialog = await openPreview();
+
+      await clickSave(dialog);
+
+      await waitFor(() => expect(mocks.list).toHaveBeenCalledTimes(2));
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      });
+      expect(screen.getByRole("dialog", { name: "Review suggested risk" })).toBeInTheDocument();
+      expect(screen.getByText(FIRST)).toBeInTheDocument();
+    });
+
+    it("disables both buttons of the row while the request is on its way", async () => {
+      const pending = deferred<{
+        finding: ReturnType<typeof finding>;
+        vendorRisk: ReturnType<typeof acceptedRisk>;
+      }>();
+      mocks.accept.mockReturnValue(pending.promise);
+      renderSection();
+      await screen.findByText(FIRST);
+      const dialog = await openPreview();
+      await clickSave(dialog);
+
+      await waitFor(() => expect(mocks.accept).toHaveBeenCalledTimes(1));
+      // The form hides the rows from the accessibility tree while it is open.
+      const row = within(rowOf(FIRST));
+      expect(row.getByRole("button", { name: "Preview", hidden: true })).toBeDisabled();
+      expect(row.getByRole("button", { name: "Dismiss", hidden: true })).toBeDisabled();
+    });
   });
 });
 
@@ -754,8 +1603,6 @@ describe("keyboard and screen reader use of the rows", () => {
       listFromNowOn(remaining);
       return finding({ status: "dismissed" });
     });
-  const accept = (text: string) =>
-    userEvent.click(within(rowOf(text)).getByRole("button", { name: "Accept" }));
   const dismissWithReason = async (text: string) => {
     const dialog = await openDismissal(text);
     await choose(dialog, "Other");
@@ -763,13 +1610,13 @@ describe("keyboard and screen reader use of the rows", () => {
   };
   const heading = () => screen.getByText("Research findings");
 
-  it("describes the Accept and Dismiss buttons of a row by the risk they decide on", async () => {
+  it("describes the Preview and Dismiss buttons of a row by the risk they decide on", async () => {
     renderSection();
     await screen.findByText(FIRST);
 
     const ids: string[] = [];
     for (const text of [FIRST, SECOND]) {
-      for (const name of ["Dismiss", "Accept"]) {
+      for (const name of ["Dismiss", "Preview"]) {
         const button = within(rowOf(text)).getByRole("button", { name });
         // A screen reader reads the risk after the name of the button.
         expect(button).toHaveAccessibleDescription(text);
@@ -884,7 +1731,7 @@ describe("keyboard and screen reader use of the rows", () => {
     await accept(FIRST);
 
     await waitFor(() =>
-      expect(within(rowOf(FIRST)).getByRole("button", { name: "Accept" })).toBeEnabled(),
+      expect(within(rowOf(FIRST)).getByRole("button", { name: "Preview" })).toBeEnabled(),
     );
 
     expect(screen.getByText(FIRST)).toBeInTheDocument();
@@ -905,7 +1752,7 @@ describe("dismissing a finding", () => {
     expect(within(dialog).getByRole("button", { name: "Dismiss" })).toBeEnabled();
   });
 
-  it("offers the five reasons", async () => {
+  it("offers the seven reasons, the two that name what the agent got wrong among them", async () => {
     renderSection();
     await screen.findByText(FIRST);
     const dialog = await openDismissal();
@@ -917,8 +1764,25 @@ describe("dismissing a finding", () => {
       "Already covered by an existing risk",
       "Inaccurate or not supported by the sources",
       "Accepted risk",
+      "The sources are about another company",
+      "The sources are out of date",
       "Other",
     ]);
+  });
+
+  it.each([
+    ["The sources are about another company", "wrong_vendor"],
+    ["The sources are out of date", "outdated"],
+  ])("sends the reason of %s as %s", async (label, reason) => {
+    mocks.dismiss.mockResolvedValue(finding({ status: "dismissed" }));
+    renderSection();
+    await screen.findByText(FIRST);
+    const dialog = await openDismissal();
+
+    await choose(dialog, label);
+    await userEvent.click(within(dialog).getByRole("button", { name: "Dismiss" }));
+
+    await waitFor(() => expect(mocks.dismiss).toHaveBeenCalledWith(1, { reason }));
   });
 
   it("sends the reason and the trimmed note, and closes on success", async () => {
@@ -1004,8 +1868,8 @@ describe("dismissing a finding", () => {
     );
     // The modal hides the rows from the accessibility tree.
     expect(first.getByRole("button", { name: "Dismiss", hidden: true })).toBeDisabled();
-    expect(first.getByRole("button", { name: "Accept", hidden: true })).toBeDisabled();
-    expect(second.getByRole("button", { name: "Accept", hidden: true })).toBeEnabled();
+    expect(first.getByRole("button", { name: "Preview", hidden: true })).toBeDisabled();
+    expect(second.getByRole("button", { name: "Preview", hidden: true })).toBeEnabled();
   });
 
   it("leaves the modal of another finding open when an earlier dismissal finishes", async () => {
@@ -1134,7 +1998,7 @@ describe("a finding that is gone or was decided elsewhere", () => {
     const { onNotify } = renderSection();
     await screen.findByText(FIRST);
 
-    await userEvent.click(within(rowOf(FIRST)).getByRole("button", { name: "Accept" }));
+    await accept(FIRST);
 
     await waitFor(() =>
       expect(onNotify).toHaveBeenCalledWith({
@@ -1249,8 +2113,12 @@ describe("a finding that is gone or was decided elsewhere", () => {
           vendorRisk: ReturnType<typeof acceptedRisk>;
         }>();
         mocks.accept.mockReturnValueOnce(answer.promise);
-        await userEvent.click(within(rowOf(FIRST)).getByRole("button", { name: "Accept" }));
+        const saved = await openPreview(FIRST);
+        await clickSave(saved);
         await waitFor(() => expect(mocks.accept).toHaveBeenCalledTimes(1));
+        // As with a dismissal, the form is closed while the request is on its way.
+        await closeForm(saved);
+        await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
         return () =>
           answer.resolve({ finding: finding({ status: "accepted" }), vendorRisk: acceptedRisk() });
       }
@@ -1471,7 +2339,7 @@ describe("a link that arrives while the section is on screen", () => {
     });
     renderWithLink("/vendors/risks", "/vendors/risks?findingsVendorId=8");
     await screen.findByText(FIRST);
-    await userEvent.click(within(rowOf(FIRST)).getByRole("button", { name: "Accept" }));
+    await accept(FIRST);
     await screen.findByText("Risk added to the register.");
     await userEvent.click(header());
     expect(header()).toHaveAttribute("aria-expanded", "false");
@@ -1804,6 +2672,181 @@ describe("the latest run of the chosen vendor", () => {
   });
 });
 
+describe("the coverage of the latest run", () => {
+  const follows = (a: HTMLElement, b: HTMLElement) =>
+    Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+  const CHECKED =
+    "Checked: CISA Known Exploited Vulnerabilities (1), OFAC Specially Designated Nationals list (0), UK Sanctions List (0), EU consolidated list of financial sanctions (0), the National Vulnerability Database";
+
+  it("lists the checked sources and their counts", async () => {
+    mocks.latest.mockResolvedValue(
+      run({ category_summary: FOUR_OUTCOMES, coverage: coverage(), searches_used: 3 }),
+    );
+    renderSection({ route: WITH_VENDOR_7 });
+
+    const checked = await screen.findByText(CHECKED);
+    const cited = screen.getByText(
+      "Sources cited: 1 official, 0 trusted press, 0 vendor, 0 unverified",
+    );
+    // After the categories, before what the run did and when.
+    expect(follows(screen.getByText("AI-specific risks: skipped"), checked)).toBe(true);
+    expect(follows(checked, cited)).toBe(true);
+    expect(follows(cited, screen.getByText("Searches: 3, pages read: 0"))).toBe(true);
+    // The names are the screen's own: the server's are never shown.
+    expect(screen.queryByText(/The server's/)).not.toBeInTheDocument();
+  });
+
+  it("says No records in … as of …", async () => {
+    mocks.latest.mockResolvedValue(run({ coverage: coverage() }));
+    renderSection({ route: WITH_VENDOR_7 });
+
+    expect(
+      await screen.findByText(
+        "No records in OFAC Specially Designated Nationals list, UK Sanctions List, EU consolidated list of financial sanctions as of 10 Oct 2026",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("names a stale source", async () => {
+    mocks.latest.mockResolvedValue(
+      run({
+        coverage: coverage({
+          sources: [
+            listCopy("kev", {
+              outcome: "found",
+              strong: 1,
+              stale: true,
+              last_success_at: "2026-10-07T09:23:00.000Z",
+            }),
+            listCopy("ofac"),
+          ],
+        }),
+      }),
+    );
+    renderSection({ route: WITH_VENDOR_7 });
+
+    expect(
+      await screen.findByText(
+        "CISA Known Exploited Vulnerabilities: last updated 7 Oct 2026, not up to date",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/OFAC Specially Designated Nationals list: last updated/),
+    ).not.toBeInTheDocument();
+  });
+
+  it("names the sources the run could not check, after the ones it checked", async () => {
+    mocks.latest.mockResolvedValue(
+      run({
+        coverage: coverage({
+          sources: [
+            listCopy("kev", { outcome: "found", strong: 1 }),
+            // A list with no copy yet: the run could not screen against it.
+            listCopy("ofac", { checked: false, outcome: "failed", last_success_at: null }),
+          ],
+        }),
+      }),
+    );
+    renderSection({ route: WITH_VENDOR_7 });
+
+    const notChecked = await screen.findByText(
+      "Not checked: OFAC Specially Designated Nationals list, the vendor's status page",
+    );
+    expect(follows(screen.getByText(/^Checked:/), notChecked)).toBe(true);
+  });
+
+  it("says Public databases turned off", async () => {
+    mocks.latest.mockResolvedValue(
+      run({
+        coverage: coverage({
+          sources: (["kev", "ofac", "uk_sanctions", "eu_fsf"] as const).map((id) =>
+            listCopy(id, { checked: false, outcome: "off" }),
+          ),
+          lookups: [{ id: "nvd", outcome: "off" }],
+          cited: { official: 0, trusted_press: 0, vendor: 0, unverified: 0 },
+        }),
+      }),
+    );
+    renderSection({ route: WITH_VENDOR_7 });
+
+    expect(await screen.findByText("Public databases turned off")).toBeInTheDocument();
+    expect(screen.queryByText(/^Checked:/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Data sources:/)).not.toBeInTheDocument();
+  });
+
+  it("shows the data sources line", async () => {
+    mocks.latest.mockResolvedValue(run({ coverage: coverage() }));
+    renderSection({ route: WITH_VENDOR_7 });
+
+    const line = await screen.findByText(`Data sources: ${joinAttributions(ATTRIBUTIONS)}`);
+    // The UK statement's own full stop is not doubled by the semicolon that follows it.
+    expect(line.textContent).toContain("Licence v3.0; EU consolidated list");
+    // The words of a licence are never translated.
+    expect(line.closest("[data-vw-no-translate]")).not.toBeNull();
+  });
+
+  it("the NVD is checked as a database, with its notice in the data sources", async () => {
+    mocks.latest.mockResolvedValue(
+      run({
+        coverage: coverage({
+          sources: [
+            listCopy("kev", { outcome: "found", strong: 1 }),
+            listCopy("nvd", {
+              mode: "read_through",
+              outcome: "found",
+              strong: 2,
+              last_success_at: "2026-10-10T08:30:00.000Z",
+            }),
+            listCopy("ofac"),
+            listCopy("uk_sanctions"),
+            listCopy("eu_fsf"),
+          ],
+          // The M2 server asks the NVD through the vendor risk database: it is no lookup.
+          lookups: [
+            { id: "sec", outcome: "not_researched" },
+            { id: "hibp", outcome: "off" },
+            { id: "statuspage", outcome: "failed" },
+          ],
+        }),
+      }),
+    );
+    renderSection({ route: WITH_VENDOR_7 });
+
+    expect(
+      await screen.findByText(
+        "Checked: CISA Known Exploited Vulnerabilities (1), the National Vulnerability Database (2), OFAC Specially Designated Nationals list (0), UK Sanctions List (0), EU consolidated list of financial sanctions (0)",
+      ),
+    ).toBeInTheDocument();
+    const line = screen.getByText(
+      `Data sources: ${joinAttributions([
+        ATTRIBUTIONS[0],
+        "This product uses data from the NVD API but is not endorsed or certified by the NVD.",
+        ...ATTRIBUTIONS.slice(1),
+      ])}`,
+    );
+    expect(line.closest("[data-vw-no-translate]")).not.toBeNull();
+  });
+
+  it("a run without coverage shows no coverage block", async () => {
+    for (const latest of [run({ category_summary: FOUR_OUTCOMES }), run({ coverage: null })]) {
+      mocks.latest.mockResolvedValue(latest);
+      const view = renderSection({ route: WITH_VENDOR_7 });
+      expect(await screen.findByText("Last run: 10 Oct 2026")).toBeInTheDocument();
+      for (const start of [
+        /^Checked:/,
+        /^Not checked:/,
+        /^No records in/,
+        /^Sources cited:/,
+        /^Data sources:/,
+      ]) {
+        expect(screen.queryByText(start)).not.toBeInTheDocument();
+      }
+      expect(screen.queryByText("Public databases turned off")).not.toBeInTheDocument();
+      view.unmount();
+    }
+  });
+});
+
 describe("a run that is still active after the polling window", () => {
   const advance = (ms: number) =>
     act(async () => {
@@ -1926,6 +2969,124 @@ describe("a run that is still active after the polling window", () => {
   });
 });
 
+describe("a run that is going", () => {
+  const advance = (ms: number) =>
+    act(async () => {
+      await vi.advanceTimersByTimeAsync(ms);
+    });
+
+  it("shows what it is doing, the categories worked on so far and the counts, under Researching…", async () => {
+    mocks.latest.mockResolvedValue(run({ status: "running", progress: progress() }));
+    renderSection({ route: WITH_VENDOR_7 });
+
+    expect(await screen.findByText("Researching…")).toBeInTheDocument();
+    expect(screen.getByText("Reading a page: Certifications")).toBeInTheDocument();
+    expect(
+      screen.getByText("Researched so far: Security incidents, Certifications"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Searches: 2, pages read: 1")).toBeInTheDocument();
+  });
+
+  it.each([
+    [
+      "before the first turn",
+      { steps: 0, action: null, category: null, categories: [] },
+      "Starting the research",
+    ],
+    [
+      "a search",
+      { action: "search" as const, category: "legal_regulatory" as const },
+      "Searching the web: Legal and regulatory",
+    ],
+    [
+      "the analysis",
+      { phase: "analysing" as const, action: null, category: null },
+      "Analysing what was found",
+    ],
+  ])("says what a run is doing %s", async (_when, overrides, line) => {
+    mocks.latest.mockResolvedValue(run({ status: "running", progress: progress(overrides) }));
+    renderSection({ route: WITH_VENDOR_7 });
+
+    expect(await screen.findByText(line)).toBeInTheDocument();
+    expect(screen.getByText("Researching…")).toBeInTheDocument();
+  });
+
+  it("shows only Researching… for a run that has not written its progress yet", async () => {
+    mocks.latest.mockResolvedValue(run({ status: "queued", progress: null }));
+    renderSection({ route: WITH_VENDOR_7 });
+
+    expect(await screen.findByText("Researching…")).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Searching the web|Reading a page|Researched so far|Searches:/),
+    ).toBeNull();
+  });
+
+  it("follows the run as it moves, and shows the summary when it ends", async () => {
+    vi.useFakeTimers();
+    mocks.latest
+      .mockResolvedValueOnce(run({ status: "running", progress: progress() }))
+      .mockResolvedValueOnce(
+        run({
+          status: "running",
+          progress: progress({
+            steps: 5,
+            action: "search",
+            category: "legal_regulatory",
+            searchesUsed: 3,
+            categories: ["security_incidents", "certifications", "legal_regulatory"],
+            updatedAt: "2026-10-10T09:00:40.000Z",
+          }),
+        }),
+      )
+      .mockResolvedValue(run({ status: "completed", category_summary: FOUR_OUTCOMES }));
+    renderSection({ route: WITH_VENDOR_7 });
+
+    await advance(10);
+    expect(screen.getByText("Reading a page: Certifications")).toBeInTheDocument();
+
+    await advance(3_000);
+    expect(screen.getByText("Searching the web: Legal and regulatory")).toBeInTheDocument();
+    expect(screen.queryByText("Reading a page: Certifications")).not.toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Researched so far: Security incidents, Certifications, Legal and regulatory",
+      ),
+    ).toBeInTheDocument();
+
+    await advance(3_000);
+    expect(screen.queryByText("Researching…")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Searching the web|Researched so far/)).not.toBeInTheDocument();
+    expect(screen.getByText("Security incidents: risks found")).toBeInTheDocument();
+  });
+
+  it("is followed to its end for as long as it moves, beyond the two minutes of a quiet run", async () => {
+    vi.useFakeTimers();
+    let moved = 0;
+    mocks.latest.mockImplementation(async () =>
+      run({
+        status: "running",
+        progress: progress({
+          updatedAt: new Date(Date.UTC(2026, 9, 10, 9, 0, moved)).toISOString(),
+        }),
+      }),
+    );
+    renderSection({ route: WITH_VENDOR_7 });
+    await advance(10);
+
+    // Five minutes, with a move every minute.
+    for (let minute = 0; minute < 5; minute += 1) {
+      moved += 60;
+      await advance(60_000);
+    }
+    expect(screen.getByText("Researching…")).toBeInTheDocument();
+    expect(screen.queryByText("Still running. Check back later.")).not.toBeInTheDocument();
+
+    // Then nothing moves any more: after the two minutes the screen says it is still running.
+    await advance(125_000);
+    expect(screen.getByText("Still running. Check back later.")).toBeInTheDocument();
+  });
+});
+
 describe("Research again", () => {
   const click = async () =>
     userEvent.click(await screen.findByRole("button", { name: "Research again" }));
@@ -2027,5 +3188,106 @@ describe("Research again", () => {
       expect(screen.getByRole("button", { name: "Research again" })).toBeDisabled(),
     );
     expect(mocks.start).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("the research settings", () => {
+  const SETTINGS_BUTTON = { name: "Research settings" };
+
+  it("are offered to an Admin of an organization that has an LLM key, and open in a window", async () => {
+    role.isAdmin = true;
+    renderSection({ route: WITH_VENDOR_7 });
+
+    await userEvent.click(await screen.findByRole("button", SETTINGS_BUTTON));
+
+    const dialog = await screen.findByRole("dialog", { name: "Research settings" });
+    // The research key, the analysis key and the scheduled scan.
+    expect(await within(dialog).findAllByRole("combobox")).toHaveLength(3);
+  });
+
+  it("are not offered to anyone who is not an Admin, and the server is not asked for them", async () => {
+    role.isAdmin = false;
+    renderSection({ route: WITH_VENDOR_7 });
+    await screen.findByText(FIRST);
+
+    expect(screen.queryByRole("button", SETTINGS_BUTTON)).not.toBeInTheDocument();
+    expect(mocks.settings).not.toHaveBeenCalled();
+  });
+
+  it("are not offered while the organization has no LLM key, because there is nothing to choose from", async () => {
+    role.isAdmin = true;
+    mocks.config.mockResolvedValue({ hasLlmKey: false, autoRunEnabled: true });
+    renderSection({ route: WITH_VENDOR_7 });
+    await screen.findByText(FIRST);
+
+    expect(screen.queryByRole("button", SETTINGS_BUTTON)).not.toBeInTheDocument();
+  });
+
+  it("are not offered before it is known whether the organization has an LLM key", async () => {
+    role.isAdmin = true;
+    mocks.config.mockReturnValue(new Promise(() => {}));
+    renderSection({ route: WITH_VENDOR_7 });
+    await screen.findByText(FIRST);
+
+    expect(screen.queryByRole("button", SETTINGS_BUTTON)).not.toBeInTheDocument();
+  });
+
+  it("are not read from the server until the window is opened", async () => {
+    role.isAdmin = true;
+    renderSection({ route: WITH_VENDOR_7 });
+    const button = await screen.findByRole("button", SETTINGS_BUTTON);
+    expect(mocks.settings).not.toHaveBeenCalled();
+
+    await userEvent.click(button);
+
+    await screen.findByRole("dialog", { name: "Research settings" });
+    expect(mocks.settings).toHaveBeenCalledTimes(1);
+  });
+
+  it("tell the page when they were saved, and the window closes", async () => {
+    role.isAdmin = true;
+    const { onNotify } = renderSection({ route: WITH_VENDOR_7 });
+    await userEvent.click(await screen.findByRole("button", SETTINGS_BUTTON));
+    const dialog = await screen.findByRole("dialog", { name: "Research settings" });
+    await within(dialog).findAllByRole("combobox");
+
+    await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+
+    await waitFor(() =>
+      expect(onNotify).toHaveBeenCalledWith({
+        variant: "success",
+        body: "Research settings saved.",
+      }),
+    );
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog", { name: "Research settings" })).not.toBeInTheDocument(),
+    );
+  });
+
+  it("close on Cancel, and the next opening starts from what is saved", async () => {
+    role.isAdmin = true;
+    mocks.settings.mockResolvedValue({
+      researchKeyId: 20,
+      analysisKeyId: null,
+      scanIntervalDays: null,
+    });
+    renderSection({ route: WITH_VENDOR_7 });
+    await userEvent.click(await screen.findByRole("button", SETTINGS_BUTTON));
+    let dialog = await screen.findByRole("dialog", { name: "Research settings" });
+    const [research] = await within(dialog).findAllByRole("combobox");
+    await userEvent.click(research);
+    await userEvent.click(await screen.findByRole("option", { name: "OpenAI · gpt-newest" }));
+    expect(research).toHaveTextContent("OpenAI · gpt-newest");
+
+    await userEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog", { name: "Research settings" })).not.toBeInTheDocument(),
+    );
+    await userEvent.click(screen.getByRole("button", SETTINGS_BUTTON));
+
+    dialog = await screen.findByRole("dialog", { name: "Research settings" });
+    const [reopened] = await within(dialog).findAllByRole("combobox");
+    expect(reopened).toHaveTextContent("Anthropic · claude-deep");
+    expect(mocks.saveSettings).not.toHaveBeenCalled();
   });
 });

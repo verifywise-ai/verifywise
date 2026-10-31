@@ -17,6 +17,8 @@ const DISMISS_REASONS: DismissReason[] = [
   "already_covered",
   "inaccurate",
   "accepted_risk",
+  "wrong_vendor",
+  "outdated",
   "other",
 ];
 

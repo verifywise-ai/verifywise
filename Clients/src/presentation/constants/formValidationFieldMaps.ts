@@ -81,9 +81,65 @@ export const VENDOR_RISK_FORM_FIELD_IDS: Partial<Record<keyof VendorRiskFormValu
   riskDescription: "risk-description-input",
 };
 
+/** Vendor modal (`Modals/NewVendor`): the add and edit form of a vendor. */
+export interface VendorModalFormValues {
+  vendorName: string;
+  otherNames: string;
+  website: string;
+  projectIds: number[];
+  vendorProvides: string;
+  vendorContactPerson: string;
+  reviewStatus: string;
+  reviewer: number | null;
+  reviewResult: string;
+  assignee: number | null;
+  reviewDate: string;
+  dataSensitivity: string;
+  businessCriticality: string;
+  pastIssues: string;
+  regulatoryExposure: string;
+  /** The identifiers (spec Q1), as the person types them. */
+  country: string;
+  registrationNumber: string;
+  lei: string;
+  secCik: string;
+}
+
+/** The checked fields of the vendor modal in their visual order, the identifiers last. */
+export const VENDOR_MODAL_FIELD_ORDER: (keyof VendorModalFormValues)[] = [
+  "vendorName",
+  "projectIds",
+  "otherNames",
+  "website",
+  "vendorContactPerson",
+  "assignee",
+  "vendorProvides",
+  "reviewResult",
+  "country",
+  "registrationNumber",
+  "lei",
+  "secCik",
+];
+
+export const VENDOR_MODAL_FIELD_IDS = {
+  vendorName: "vendor-form-name-input",
+  projectIds: "projects-input",
+  otherNames: "vendor-form-other-names-input",
+  website: "vendor-form-website-input",
+  vendorContactPerson: "vendor-form-contact-person-input",
+  assignee: "vendor-form-assignee-input",
+  vendorProvides: "vendor-form-provides-input",
+  reviewResult: "vendor-form-review-result-input",
+  country: "vendor-form-country-input",
+  registrationNumber: "vendor-form-registration-number-input",
+  lei: "vendor-form-lei-input",
+  secCik: "vendor-form-sec-cik-input",
+} satisfies Partial<Record<keyof VendorModalFormValues, string>>;
+
 /** Vendor risk modal (`Modals/NewRisk`) — the form used on /vendors/risks. */
 export interface VendorRiskModalFormValues {
-  vendor_id: string;
+  /** A number once the vendor select has set it: the select's own values are the vendors' ids. */
+  vendor_id: string | number;
   action_owner: string;
   risk_description: string;
   action_plan: string;

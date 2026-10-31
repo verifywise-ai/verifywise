@@ -53,6 +53,8 @@ export interface IChipProps {
   backgroundColor?: string;
   /** Custom text color (overrides variant) */
   textColor?: string;
+  /** Custom border color (overrides the border computed from the background) */
+  borderColor?: string;
   /** Optional icon to display before the label */
   icon?: React.ReactNode;
 }

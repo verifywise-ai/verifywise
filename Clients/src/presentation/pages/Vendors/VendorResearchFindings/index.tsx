@@ -8,11 +8,12 @@ import {
   Typography,
 } from "@mui/material";
 import { useSearchParams } from "react-router";
-import { CheckCircle2, ChevronDown, Info, X } from "lucide-react";
+import { CheckCircle2, ChevronDown, Info, Settings2, X } from "lucide-react";
 import Chip from "../../../components/Chip";
 import Select from "../../../components/Inputs/Select";
 import CustomizableSkeleton from "../../../components/Skeletons";
 import { CustomizableButton } from "../../../components/button/customizable-button";
+import AddNewRisk from "../../../components/Modals/NewRisk";
 import { textStyles } from "../../../themes/typography";
 import {
   sectionSx,
@@ -22,6 +23,8 @@ import {
 } from "../../RiskInheritanceGraph/DismissalAnalytics/styles";
 import { alertTextSx, infoAlertSx, successAlertSx } from "../../RiskInheritanceGraph/reportStyles";
 import useTranslation from "../../../../application/hooks/useTranslation";
+import { useAuth } from "../../../../application/hooks/useAuth";
+import useUsers from "../../../../application/hooks/useUsers";
 import { useHasPermission } from "../../../../application/hooks/useMyPermissions";
 import { useIsAdmin } from "../../../../application/hooks/useIsAdmin";
 import {
@@ -33,12 +36,21 @@ import {
 } from "../../../../application/hooks/useVendorResearch";
 import { readVendorResearchError } from "../../../../application/repository/vendorResearch.repository";
 import type { ResearchAlert } from "../../../../application/utils/vendorResearchAlerts";
+import {
+  defaultActionOwner,
+  toAcceptBody,
+} from "../../../../application/utils/vendorResearchPreview";
+import type {
+  VendorRiskFormDetails,
+  VendorRiskPreview,
+} from "../../../../domain/interfaces/i.vendor";
 import type { VendorRiskFinding } from "../../../../domain/interfaces/i.vendorResearch";
 import { fill } from "../../../../i18n/fill";
 import DismissFindingModal, { type DismissalBody } from "./DismissFindingModal";
 import FindingRow, { type RowAction } from "./FindingRow";
 import InlineError from "./InlineError";
 import { parseVendorId } from "./parseVendorId";
+import ResearchSettingsModal from "./ResearchSettingsModal";
 import RunSummary from "./RunSummary";
 import { controlHeightSx, iconControlSx } from "./styles";
 
@@ -50,7 +62,8 @@ const FINDINGS_LIMIT = 200;
 const ALL_VENDORS = "all";
 
 interface VendorResearchFindingsProps {
-  vendors: Array<{ id?: number; vendor_name: string }>;
+  /** The vendor's assignee is the owner a preview starts on, when that user is in the organization. */
+  vendors: Array<{ id?: number; vendor_name: string; assignee?: number | null }>;
   /** Opens the vendor risk that accepting a finding created. */
   onOpenRisk: (vendorRiskId: number) => void;
   /** Hands a toast to the page. */
@@ -58,8 +71,12 @@ interface VendorResearchFindingsProps {
 }
 
 /**
- * The risks the research agent suggested for the vendors, waiting to be accepted into the
- * register or dismissed, and (for one vendor) what its latest research run did.
+ * The risks the research agent suggested for the vendors, waiting to be added to the register
+ * or dismissed, and (for one vendor) what its latest research run did.
+ *
+ * A finding is added through the vendor risk form: Preview opens the form on the finding, and
+ * saving there accepts it with what is on screen, in one request. Closing the form changes
+ * nothing, and the finding stays pending.
  *
  * Collapsible like the insights beside it: open by default when something is pending, a vendor
  * came from the URL, or a run was followed from the vendors table, closed to its header
@@ -89,6 +106,10 @@ export default function VendorResearchFindings({
   const [openByDefault, setOpenByDefault] = useState(initialVendorId !== null);
   const [lastAcceptedRiskId, setLastAcceptedRiskId] = useState<number | null>(null);
   const [dismissing, setDismissing] = useState<VendorRiskFinding | null>(null);
+  // The window where an Admin picks the LLM keys. It reads nothing until it is open.
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  // The finding the vendor risk form is open on. Nothing is written until the person saves there.
+  const [previewing, setPreviewing] = useState<VendorRiskFinding | null>(null);
   const [busy, setBusy] = useState<Record<number, RowAction>>({});
   // A decision has been answered (it worked, or it was refused) and the section waits for the
   // list to show what became of the finding. `around` are the rows next to it, nearest first.
@@ -115,6 +136,8 @@ export default function VendorResearchFindings({
   });
   const accept = useAcceptFinding();
   const dismiss = useDismissFinding();
+  const { userId } = useAuth();
+  const { users } = useUsers();
 
   const rows = findings.data?.rows ?? [];
   const total = findings.data?.total ?? 0;
@@ -124,6 +147,9 @@ export default function VendorResearchFindings({
   const expanded = openChoice ?? openByDefault;
 
   const notConfigured = config.data !== undefined && !config.data.hasLlmKey;
+  // Only an Admin chooses the keys (the server refuses everyone else), and there is nothing to
+  // choose from until the organization has one.
+  const canChooseKeys = isAdmin && config.data?.hasLlmKey === true;
 
   const vendorOptions = useMemo(() => {
     const named = vendors
@@ -171,25 +197,61 @@ export default function VendorResearchFindings({
   };
 
   // `mutateAsync`, not `mutate`: several rows can be in flight, and the hook's observer only
-  // keeps the callbacks of the latest `mutate` call. Any other failure needs no message here:
-  // the global error toast reports it, and the row is usable again.
-  const handleAccept = async (finding: VendorRiskFinding) => {
+  // keeps the callbacks of the latest `mutate` call. A failure is thrown on, so that the form
+  // stays open with what the person entered; it needs no message here, because the global error
+  // toast reports it, except a 404, which that toast skips (see `noteIfGone`).
+  const handlePreviewSave = async (
+    finding: VendorRiskFinding,
+    details: VendorRiskFormDetails,
+  ): Promise<number> => {
     // The notice is about an earlier accept: it goes when the next decision starts, not only
     // when that one succeeds, so a refused request does not leave the old notice standing.
     setLastAcceptedRiskId(null);
     setRowBusy(finding.id, "accept");
     const around = rowsAround(finding.id);
     try {
-      const { vendorRisk } = await accept.mutateAsync({ id: finding.id, body: {} });
+      const { vendorRisk } = await accept.mutateAsync({
+        id: finding.id,
+        body: toAcceptBody(details),
+      });
       setLastAcceptedRiskId(vendorRisk.id);
       onNotify({ variant: "success", body: t("Risk added to the register") });
+      return vendorRisk.id;
     } catch (error) {
       noteIfGone(error);
+      throw error;
     } finally {
       setRowBusy(finding.id, null);
       setAnswered({ id: finding.id, around });
     }
   };
+  // The form keeps the callback it was opened with, which would not see the rows that came in
+  // since: it calls through here.
+  const savePreview = useRef(handlePreviewSave);
+  savePreview.current = handlePreviewSave;
+
+  /** The finding as the vendor risk form opens on it. */
+  const previewOf = (finding: VendorRiskFinding): VendorRiskPreview => ({
+    key: finding.id,
+    title: t("Review suggested risk"),
+    description: t(
+      "Suggested by the research agent from web sources. Check the details, change what is not right, then save to add this risk to the vendor risk register.",
+    ),
+    values: {
+      vendor_id: finding.vendor_id,
+      risk_description: finding.risk_description,
+      impact_description: finding.impact_description,
+      action_plan: finding.action_plan,
+      likelihood: finding.likelihood,
+      risk_severity: finding.risk_severity,
+      action_owner: defaultActionOwner(
+        vendors.find((vendor) => vendor.id === finding.vendor_id)?.assignee,
+        users,
+        userId,
+      ),
+    },
+    onSave: (details) => savePreview.current(finding, details),
+  });
 
   const handleDismiss = async (body: DismissalBody) => {
     if (dismissing === null) return;
@@ -235,6 +297,16 @@ export default function VendorResearchFindings({
       setDismissing(null);
       return;
     }
+    // The same for the vendor risk form: a finding that someone else decided, or that was
+    // deleted, cannot be saved any more.
+    if (
+      previewing !== null &&
+      busy[previewing.id] === undefined &&
+      !rows.some((row) => row.id === previewing.id)
+    ) {
+      setPreviewing(null);
+      return;
+    }
     const { id, around } = answered;
     // Still pending: nothing more to settle.
     if (rows.some((row) => row.id === id)) {
@@ -252,7 +324,7 @@ export default function VendorResearchFindings({
       )
       .find((button): button is HTMLElement => button != null);
     (target ?? headingElement.current)?.focus();
-  }, [answered, findings.isFetching, rows, dismissing, busy]);
+  }, [answered, findings.isFetching, rows, dismissing, previewing, busy]);
 
   const renderFindings = () => {
     if (findings.isError) {
@@ -285,7 +357,7 @@ export default function VendorResearchFindings({
               finding={finding}
               canDecide={canEdit}
               busy={busy[finding.id] ?? null}
-              onAccept={(row) => void handleAccept(row)}
+              onPreview={setPreviewing}
               onDismiss={setDismissing}
               rowRef={(element) => {
                 if (element) rowElements.current.set(finding.id, element);
@@ -373,18 +445,38 @@ export default function VendorResearchFindings({
                 </Box>
               )}
 
-              <Select
-                id="research-findings-vendor"
-                label="Vendor"
-                value={vendorId ?? ALL_VENDORS}
-                items={vendorOptions}
-                sx={{ width: "260px" }}
-                onChange={(event) => {
-                  const next = event.target.value;
-                  setVendorId(next === ALL_VENDORS ? null : Number(next));
-                  setLastAcceptedRiskId(null);
+              <Stack
+                direction="row"
+                sx={{
+                  alignItems: "flex-end",
+                  justifyContent: "space-between",
+                  gap: "12px",
+                  flexWrap: "wrap",
                 }}
-              />
+              >
+                <Select
+                  id="research-findings-vendor"
+                  label="Vendor"
+                  value={vendorId ?? ALL_VENDORS}
+                  items={vendorOptions}
+                  sx={{ width: "260px" }}
+                  onChange={(event) => {
+                    const next = event.target.value;
+                    setVendorId(next === ALL_VENDORS ? null : Number(next));
+                    setLastAcceptedRiskId(null);
+                  }}
+                />
+                {canChooseKeys && (
+                  <CustomizableButton
+                    variant="outlined"
+                    startIcon={<Settings2 size={16} />}
+                    onClick={() => setSettingsOpen(true)}
+                    sx={controlHeightSx}
+                  >
+                    Research settings
+                  </CustomizableButton>
+                )}
+              </Stack>
 
               {vendorId !== null && (
                 <RunSummary
@@ -417,6 +509,10 @@ export default function VendorResearchFindings({
         </AccordionDetails>
       </Accordion>
 
+      {settingsOpen && canChooseKeys && (
+        <ResearchSettingsModal onClose={() => setSettingsOpen(false)} onNotify={onNotify} />
+      )}
+
       {dismissing !== null && (
         <DismissFindingModal
           finding={dismissing}
@@ -425,6 +521,15 @@ export default function VendorResearchFindings({
           onSubmit={(body) => void handleDismiss(body)}
         />
       )}
+
+      {/* Always mounted, like the page's own: a message it shows after it has closed (custom
+          field values that did not save) has to outlive the form. */}
+      <AddNewRisk
+        isOpen={previewing !== null}
+        setIsOpen={() => setPreviewing(null)}
+        vendors={vendors}
+        preview={previewing !== null ? previewOf(previewing) : null}
+      />
     </>
   );
 }

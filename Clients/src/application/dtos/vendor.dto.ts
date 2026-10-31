@@ -32,6 +32,15 @@ export interface VendorResponseDTO {
   past_issues?: string; // PastIssues enum as string
   regulatory_exposure?: string; // RegulatoryExposure enum as string
   risk_score?: number;
+
+  /** Other names the vendor is known by, separated by commas. */
+  other_names?: string | null;
+
+  /** The identifiers of the vendor (spec Q1), each as the server stores it, or null. */
+  country?: string | null;
+  registration_number?: string | null;
+  lei?: string | null;
+  sec_cik?: string | null;
 }
 
 /**
@@ -53,6 +62,11 @@ export interface CreateVendorDTO {
   business_criticality?: string;
   past_issues?: string;
   regulatory_exposure?: string;
+  other_names?: string;
+  country?: string | null;
+  registration_number?: string | null;
+  lei?: string | null;
+  sec_cik?: string | null;
 }
 
 /**
@@ -74,4 +88,11 @@ export interface UpdateVendorDTO {
   business_criticality?: string;
   past_issues?: string;
   regulatory_exposure?: string;
+  /** An empty text or null clears the other names. */
+  other_names?: string | null;
+  /** Null clears an identifier. */
+  country?: string | null;
+  registration_number?: string | null;
+  lei?: string | null;
+  sec_cik?: string | null;
 }

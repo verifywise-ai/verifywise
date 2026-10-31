@@ -45,6 +45,23 @@ describe("StatusBadge", () => {
     expect(screen.getByText("approved")).toBeInTheDocument();
   });
 
+  it("a border colour overrides the computed border", () => {
+    const { unmount } = renderWithTheme(
+      <StatusBadge
+        label="Official"
+        variant="default"
+        backgroundColor="#FFFFFF"
+        borderColor="#d0d5dd"
+      />,
+    );
+    expect(screen.getByText("Official")).toHaveStyle("border: 1px solid #d0d5dd");
+    unmount();
+
+    // Without one, the border is the background a little darker.
+    renderWithTheme(<StatusBadge label="Vendor" variant="default" backgroundColor="#FFFFFF" />);
+    expect(screen.getByText("Vendor")).toHaveStyle("border: 1px solid #efefef");
+  });
+
   it("does not throw when the label is null", () => {
     expect(() => renderWithTheme(<StatusBadge label={null as unknown as string} />)).not.toThrow();
   });
