@@ -934,5 +934,10 @@
   "An administrator has invited you to join their organization on the VerifyWise server.": "An administrator has invited you to join their organization on the VerifyWise server.",
   "Click the button below and log in with your existing account to join.": "Click the button below and log in with your existing account to join.",
   "Join organization": "Join organization",
-  "A super admin with no organization cannot be revoked": "A super admin with no organization cannot be revoked"
+  "A super admin with no organization cannot be revoked": "A super admin with no organization cannot be revoked",
+  "Invalid control ID": "Invalid control ID",
+  "Invalid subcontrol ID": "Invalid subcontrol ID",
+  "Invalid annex category ID": "Invalid annex category ID",
+  "Invalid evidence hub ID": "Invalid evidence hub ID",
+  "Invalid model ID": "Invalid model ID"
 }

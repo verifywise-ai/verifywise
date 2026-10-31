@@ -7,6 +7,12 @@ import request from "supertest";
 jest.mock("../../../utils/shadowAiApiKey.utils", () => ({
   validateApiKeyWithCache: jest.fn(),
 }));
+// The registry also mounts JWT routes (change history). Their auth middleware
+// needs token secrets at import time; shadow-ai ingestion does not use JWT.
+jest.mock("../../../middleware/auth.middleware", () => ({
+  __esModule: true,
+  default: (_req: unknown, res: any) => res.status(401).json({ message: "Unauthorized" }),
+}));
 
 import v1Routes from "../index";
 import { validateApiKeyWithCache } from "../../../utils/shadowAiApiKey.utils";

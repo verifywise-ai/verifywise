@@ -25,6 +25,7 @@ import { getEvidenceFilesForEntities } from "./files/evidenceFiles.utils";
 import { logStructured } from "./logger/fileLogger";
 import { demoDueDate } from "./demoSeedFields";
 import { highRiskRolesArraySql } from "./highRiskRoles.utils";
+import { recordUpdateChanges, writtenValues } from "./changeHistory.base.utils";
 
 const getDemoAnswers = (): string[] => {
   const answers = [];
@@ -1040,6 +1041,7 @@ export const updateControlEUByIdQuery = async (
   control: Partial<ControlEU>,
   organizationId: number,
   transaction: Transaction,
+  changedBy?: number | null,
 ): Promise<ControlEU> => {
   const updateControl: Partial<Record<keyof ControlEU, any>> & { organizationId?: number } = {};
   const setClause = ["status", "approver", "risk_review", "owner", "reviewer", "due_date"]
@@ -1056,6 +1058,17 @@ export const updateControlEUByIdQuery = async (
     return control as ControlEU;
   }
 
+  // Snapshot the tracked fields before the update so the change history can
+  // record field-level before/after values (#4977). FOR UPDATE holds the row
+  // until commit, so a concurrent save cannot change it in between.
+  const beforeRows = (await sequelize.query(
+    `SELECT status, approver, risk_review, owner, reviewer, due_date
+       FROM controls_eu WHERE organization_id = :organizationId AND id = :id
+          FOR UPDATE;`,
+    { replacements: { organizationId, id }, type: QueryTypes.SELECT, transaction },
+  )) as Array<Record<string, unknown>>;
+  const before = beforeRows[0] ?? null;
+
   const query = `UPDATE controls_eu SET ${setClause} WHERE organization_id = :organizationId AND id = :id RETURNING *;`;
 
   updateControl.organizationId = organizationId;
@@ -1069,6 +1082,16 @@ export const updateControlEUByIdQuery = async (
     transaction,
   });
   const controlResult = result[0];
+
+  await recordUpdateChanges(
+    "control_eu",
+    id,
+    before,
+    writtenValues(controlResult, updateControl),
+    changedBy,
+    organizationId,
+    transaction,
+  );
 
   return controlResult;
 };
@@ -1093,6 +1116,7 @@ export const updateSubcontrolEUByIdQuery = async (
   deletedFiles: number[] = [],
   organizationId: number,
   transaction: Transaction,
+  changedBy?: number | null,
 ): Promise<SubcontrolEU> => {
   // Build update for non-file fields only (files are managed via file_entity_links)
   const updateSubControl: Partial<Record<keyof SubcontrolEU, any>> & { organizationId?: number } =
@@ -1129,6 +1153,17 @@ export const updateSubcontrolEUByIdQuery = async (
     );
     subcontrolResult = existing[0];
   } else {
+    // Snapshot the tracked fields before the update so the change history can
+    // record field-level before/after values (#4977). FOR UPDATE holds the row
+    // until commit, so a concurrent save cannot change it in between.
+    const beforeRows = (await sequelize.query(
+      `SELECT status, implementation_details, evidence_description, feedback_description
+         FROM subcontrols_eu WHERE organization_id = :organizationId AND id = :id
+          FOR UPDATE;`,
+      { replacements: { organizationId, id }, type: QueryTypes.SELECT, transaction },
+    )) as Array<Record<string, unknown>>;
+    const before = beforeRows[0] ?? null;
+
     const query = `UPDATE subcontrols_eu SET ${setClause} WHERE organization_id = :organizationId AND id = :id RETURNING *;`;
 
     updateSubControl.organizationId = organizationId;
@@ -1142,6 +1177,16 @@ export const updateSubcontrolEUByIdQuery = async (
     });
 
     subcontrolResult = result[0] as any;
+
+    await recordUpdateChanges(
+      "subcontrol_eu",
+      id,
+      before,
+      writtenValues(subcontrolResult, updateSubControl),
+      changedBy,
+      organizationId,
+      transaction,
+    );
   }
 
   (subcontrolResult as any).risks = [];

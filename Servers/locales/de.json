@@ -934,5 +934,10 @@
   "An administrator has invited you to join their organization on the VerifyWise server.": "Ein Administrator hat Sie eingeladen, seiner Organisation auf dem VerifyWise-Server beizutreten.",
   "Click the button below and log in with your existing account to join.": "Klicken Sie auf die Schaltfläche unten und melden Sie sich mit Ihrem bestehenden Konto an, um beizutreten.",
   "Join organization": "Organisation beitreten",
-  "A super admin with no organization cannot be revoked": "Ein Super-Admin ohne Organisation kann nicht entzogen werden"
+  "A super admin with no organization cannot be revoked": "Ein Super-Admin ohne Organisation kann nicht entzogen werden",
+  "Invalid control ID": "Ungültige Kontroll-ID",
+  "Invalid subcontrol ID": "Ungültige Unterkontroll-ID",
+  "Invalid annex category ID": "Ungültige Anhangskategorie-ID",
+  "Invalid evidence hub ID": "Ungültige Nachweis-ID",
+  "Invalid model ID": "Ungültige Modell-ID"
 }
