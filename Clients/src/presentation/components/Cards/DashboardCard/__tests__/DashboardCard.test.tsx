@@ -14,6 +14,24 @@ describe("DashboardCard Component", () => {
     expect(screen.getByText("Card content here")).toBeInTheDocument();
   });
 
+  it("truncates a long title with the full text on hover", () => {
+    const longTitle = "Konformitätsbewertung nach der europäischen KI-Verordnung";
+    renderWithProviders(
+      <DashboardCard title={longTitle}>
+        <p>Content</p>
+      </DashboardCard>,
+    );
+
+    const heading = screen.getByText(longTitle);
+    expect(heading).toHaveAttribute("title", longTitle);
+    expect(heading).toHaveStyle({
+      whiteSpace: "nowrap",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      minWidth: "0",
+    });
+  });
+
   it("renders action element when provided", () => {
     renderWithProviders(
       <DashboardCard title="Stats" action={<button>View All</button>}>

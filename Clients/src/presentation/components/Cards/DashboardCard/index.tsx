@@ -55,12 +55,19 @@ export function DashboardCard({
           gap="8px"
           mb="16px"
         >
+          {/* nowrap moves the action to the next line; a title too long for
+              the card on its own truncates, with the full text on hover. */}
           <Typography
+            title={title}
             sx={{
               fontSize: 14,
               fontWeight: 600,
               color: "#1F2937",
               whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              minWidth: 0,
+              maxWidth: "100%",
               flex: actionPosition === "center" ? 1 : undefined,
             }}
           >

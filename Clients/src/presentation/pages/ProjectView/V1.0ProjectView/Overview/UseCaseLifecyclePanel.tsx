@@ -210,14 +210,13 @@ const UseCaseLifecyclePanel = ({
           <Alert
             variant="warning"
             body="Nobody has confirmed this use case is still live within the check interval set for your organization. Confirm it, or retire it if it is no longer in use."
-            isToast={false}
-            sx={{ position: "static" }}
+            inline
           />
         </Box>
       )}
       {error && !modal && (
         <Box sx={{ mt: "16px" }}>
-          <Alert variant="error" body={error} isToast={false} sx={{ position: "static" }} />
+          <Alert variant="error" body={error} inline />
         </Box>
       )}
 
@@ -242,9 +241,7 @@ const UseCaseLifecyclePanel = ({
             handleDateChange={(value) => setGoLiveDate(value)}
             error={goLiveDateError}
           />
-          {error && (
-            <Alert variant="error" body={error} isToast={false} sx={{ position: "static" }} />
-          )}
+          {error && <Alert variant="error" body={error} inline />}
         </Stack>
       </StandardModal>
 
@@ -257,9 +254,7 @@ const UseCaseLifecyclePanel = ({
         isSubmitting={retire.isPending}
         onSubmit={() => run(() => retire.mutateAsync())}
       >
-        {error ? (
-          <Alert variant="error" body={error} isToast={false} sx={{ position: "static" }} />
-        ) : null}
+        {error ? <Alert variant="error" body={error} inline /> : null}
       </StandardModal>
 
       <StandardModal
@@ -281,9 +276,7 @@ const UseCaseLifecyclePanel = ({
             placeholder="For example, Finance"
             isOptional
           />
-          {error && (
-            <Alert variant="error" body={error} isToast={false} sx={{ position: "static" }} />
-          )}
+          {error && <Alert variant="error" body={error} inline />}
         </Stack>
       </StandardModal>
     </Box>
