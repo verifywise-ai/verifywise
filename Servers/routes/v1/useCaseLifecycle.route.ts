@@ -5,6 +5,7 @@ import {
   confirmStillLiveHandler,
   getLifecycleDashboardHandler,
   getLifecycleSummaryHandler,
+  getPendingSubmissionsHandler,
   goLiveHandler,
   retireHandler,
   updateDepartmentHandler,
@@ -16,6 +17,9 @@ import {
 
 // Tab counts and stale markers for the use cases list.
 router.get("/summary", authenticateJWT, getLifecycleSummaryHandler);
+// Pending use case intake submissions, listed in the In review tab (#5188).
+// Read from intake_submissions; no project exists until approval.
+router.get("/intake-submissions", authenticateJWT, getPendingSubmissionsHandler);
 // Lifecycle widgets for the dashboard.
 router.get("/dashboard", authenticateJWT, getLifecycleDashboardHandler);
 

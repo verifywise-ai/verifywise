@@ -2,6 +2,35 @@
 // Spread into ../translations.ts.
 
 export const de: Record<string, string> = {
+  "No intake requests match your search.": "Keine Intake-Anfragen entsprechen Ihrer Suche.",
+  "Showing the oldest": "Angezeigt werden die ältesten",
+  "of": "von",
+  "Intake requests are not included in the use case export.":
+    "Intake-Anfragen sind im Export der Anwendungsfälle nicht enthalten.",
+  // In review tab and time in review (#5188)
+  "Approved in the last 12 months": "In den letzten 12 Monaten freigegeben",
+  "Average": "Durchschnitt",
+  "Median": "Median",
+  "days": "Tage",
+  "From submission to approval of use case intake requests.":
+    "Von der Einreichung bis zur Freigabe von Intake-Anfragen für Anwendungsfälle.",
+  "Intake requests": "Intake-Anfragen",
+  "No intake requests were approved in the last 12 months":
+    "In den letzten 12 Monaten wurden keine Intake-Anfragen freigegeben",
+  "Time in review": "Zeit in Prüfung",
+  "Untitled request": "Anfrage ohne Titel",
+  "Request": "Anfrage",
+  "Intake form": "Intake-Formular",
+  "Submitted by": "Eingereicht von",
+  "Submitted": "Eingereicht",
+  "Days in review": "Tage in Prüfung",
+  "Review": "Prüfen",
+  "Submitted through an intake form. The use case is created when a reviewer approves the request.":
+    "Über ein Intake-Formular eingereicht. Der Anwendungsfall wird erstellt, wenn eine prüfende Person die Anfrage freigibt.",
+  "No use cases are waiting for an approval decision.":
+    "Keine Anwendungsfälle warten auf eine Freigabeentscheidung.",
+  "Intake requests and use cases waiting for an approval decision":
+    "Intake-Anfragen und Anwendungsfälle, die auf eine Freigabeentscheidung warten",
   "Live": "Live",
   "Not set": "Nicht festgelegt",
   "Not yet": "Noch nicht",
@@ -66,6 +95,36 @@ export const de: Record<string, string> = {
 };
 
 export const fr: Record<string, string> = {
+  "No intake requests match your search.":
+    "Aucune demande d'intake ne correspond à votre recherche.",
+  "Showing the oldest": "Affichage des plus anciennes",
+  "of": "sur",
+  "Intake requests are not included in the use case export.":
+    "Les demandes d'intake ne sont pas incluses dans l'export des cas d'usage.",
+  // In review tab and time in review (#5188)
+  "Approved in the last 12 months": "Approuvées au cours des 12 derniers mois",
+  "Average": "Moyenne",
+  "Median": "Médiane",
+  "days": "jours",
+  "From submission to approval of use case intake requests.":
+    "De la soumission à l'approbation des demandes d'intake de cas d'usage.",
+  "Intake requests": "Demandes d'intake",
+  "No intake requests were approved in the last 12 months":
+    "Aucune demande d'intake approuvée au cours des 12 derniers mois",
+  "Time in review": "Temps en examen",
+  "Untitled request": "Demande sans titre",
+  "Request": "Demande",
+  "Intake form": "Formulaire d'intake",
+  "Submitted by": "Soumis par",
+  "Submitted": "Soumis",
+  "Days in review": "Jours en examen",
+  "Review": "Examiner",
+  "Submitted through an intake form. The use case is created when a reviewer approves the request.":
+    "Soumise via un formulaire d'intake. Le cas d'usage est créé lorsqu'un examinateur approuve la demande.",
+  "No use cases are waiting for an approval decision.":
+    "Aucun cas d'usage n'attend de décision d'approbation.",
+  "Intake requests and use cases waiting for an approval decision":
+    "Demandes d'intake et cas d'usage en attente d'une décision d'approbation",
   "Live": "En service",
   "Not set": "Non défini",
   "Not yet": "Pas encore",
@@ -131,6 +190,35 @@ export const fr: Record<string, string> = {
 };
 
 export const es: Record<string, string> = {
+  "No intake requests match your search.": "Ninguna solicitud de intake coincide con su búsqueda.",
+  "Showing the oldest": "Se muestran las más antiguas",
+  "of": "de",
+  "Intake requests are not included in the use case export.":
+    "Las solicitudes de intake no se incluyen en la exportación de casos de uso.",
+  // In review tab and time in review (#5188)
+  "Approved in the last 12 months": "Aprobadas en los últimos 12 meses",
+  "Average": "Promedio",
+  "Median": "Mediana",
+  "days": "días",
+  "From submission to approval of use case intake requests.":
+    "Desde el envío hasta la aprobación de las solicitudes de intake de casos de uso.",
+  "Intake requests": "Solicitudes de intake",
+  "No intake requests were approved in the last 12 months":
+    "No se aprobó ninguna solicitud de intake en los últimos 12 meses",
+  "Time in review": "Tiempo en revisión",
+  "Untitled request": "Solicitud sin título",
+  "Request": "Solicitud",
+  "Intake form": "Formulario de intake",
+  "Submitted by": "Enviado por",
+  "Submitted": "Enviado",
+  "Days in review": "Días en revisión",
+  "Review": "Revisar",
+  "Submitted through an intake form. The use case is created when a reviewer approves the request.":
+    "Enviada mediante un formulario de intake. El caso de uso se crea cuando un revisor aprueba la solicitud.",
+  "No use cases are waiting for an approval decision.":
+    "Ningún caso de uso espera una decisión de aprobación.",
+  "Intake requests and use cases waiting for an approval decision":
+    "Solicitudes de intake y casos de uso a la espera de una decisión de aprobación",
   "Live": "En producción",
   "Not set": "Sin definir",
   "Not yet": "Todavía no",

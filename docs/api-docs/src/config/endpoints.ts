@@ -12270,6 +12270,17 @@ export const v1V1useCaseLifecycleEndpoints: Endpoint[] = [
     ],
     tag: "v1: V1/Use Case Lifecycle",
   },
+  {
+    method: 'GET',
+    path: '/v1/use-case-lifecycle/intake-submissions',
+    summary: "Get Pending Submissions Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Use Case Lifecycle",
+  },
 ];
 
 // Vendors endpoints

@@ -237,11 +237,17 @@ export const useCasesContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'In review', text: 'An approval request is open. Approved intake submissions skip this tab and arrive as planned.' },
+        { bold: 'In review', text: 'An approval request is open, or an intake request is waiting for a decision. Intake requests are listed under the search bar, and **Review** opens the submission. The search covers them too, but the export leaves them out. The use case is created only when the request is approved. It then arrives as planned. Rejected and superseded requests are not shown. Days in review count from the first time a request was submitted.' },
         { bold: 'Planned', text: 'Approved, or created without an approval workflow, but not in use yet.' },
         { bold: 'Live', text: 'In use. The owner recorded a go-live date.' },
         { bold: 'Retired', text: 'No longer in use. It stays in the inventory with its history.' },
       ],
+    },
+    {
+      type: 'image',
+      src: '/images/user-guide/use-cases-in-review-intake.png',
+      alt: 'In review tab with an Intake requests table above the use cases waiting for an approval decision',
+      caption: 'The In review tab. Intake requests are listed first, with the number of days each one has waited.',
     },
     {
       type: 'image',
@@ -285,7 +291,13 @@ export const useCasesContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The dashboard shows the count per stage and what went live or was retired this quarter. It also groups live use cases by department, risk tier or regulation. A separate card lists the stale entries.',
+      text: 'The dashboard shows the count per stage and what went live or was retired this quarter. It also groups live use cases by department, risk tier or regulation. A separate card lists the stale entries. **Time in review** gives the median and average number of days approved intake requests waited for a decision over the last 12 months.',
+    },
+    {
+      type: 'image',
+      src: '/images/user-guide/use-case-lifecycle-dashboard.png',
+      alt: 'Dashboard cards for the use case lifecycle, this quarter, time in review, live use cases by department and stale use cases',
+      caption: 'The lifecycle cards on the dashboard.',
     },
     {
       type: 'heading',
