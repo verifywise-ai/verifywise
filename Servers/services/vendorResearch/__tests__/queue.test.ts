@@ -98,16 +98,17 @@ describe("scheduleVendorResearchScan", () => {
     expect(VENDOR_RESEARCH_SCAN_JOB).not.toBe(VENDOR_RESEARCH_JOB);
   });
 
-  // Every hour, at a minute off the slots where the other schedulers pile up. The approval overdue
-  // sweep shares it, on the automation queue. A failed or a removed job is not kept: the scan of the
-  // next hour does its work again.
-  it("repeats one job of the scan on the research queue, at 17 minutes past every hour", async () => {
+  // Every hour, at a minute that no other scheduler uses, and in UTC like the schedulers of the
+  // vendor risk database: a server in another time zone would otherwise run the scan at another
+  // minute of the hour, which may be the minute of one of them. A failed or a removed job is not
+  // kept: the scan of the next hour does its work again.
+  it("repeats one job of the scan on the research queue, at 11 minutes past every hour, in UTC", async () => {
     await scheduleVendorResearchScan();
 
     expect(mockUpsertJobScheduler).toHaveBeenCalledTimes(1);
     expect(mockUpsertJobScheduler).toHaveBeenCalledWith(
       "vendor_research_scan",
-      { pattern: "17 * * * *" },
+      { pattern: "11 * * * *", tz: "UTC" },
       {
         name: "vendor_research_scan",
         data: {},

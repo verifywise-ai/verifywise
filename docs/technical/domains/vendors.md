@@ -875,7 +875,7 @@ What the choice changes: the run's `model` column holds `<research model> / <ana
 
 An Admin can have the research done again on a schedule. In **Research settings** the **Scheduled scan** select takes **Off** (the default), **Every week**, **Every 2 weeks** and **Every month**, which are 7, 14 and 30 days in `vendor_research_settings.scan_interval_days`. An organization that never chooses sees no change.
 
-A repeating job of the `vendor-research` queue, `vendor_research_scan`, runs at 17 minutes past every hour. `jobs/producer.ts` registers it when the backend starts (`scheduleVendorResearchScan`, a BullMQ job scheduler named like the job: registering it again changes nothing, and it does not empty the queue, which holds the runs that are waiting). The worker of the queue tells it from the research of a run by its name and calls `runVendorResearchScan` (`scan.ts`). For each organization that chose an interval the scan:
+A repeating job of the `vendor-research` queue, `vendor_research_scan`, runs at 11 minutes past every hour (UTC). `jobs/producer.ts` registers it when the backend starts (`scheduleVendorResearchScan`, a BullMQ job scheduler named like the job: registering it again replaces its options, or changes nothing when they are the same, and it does not empty the queue, which holds the runs that are waiting). The worker of the queue tells it from the research of a run by its name and calls `runVendorResearchScan` (`scan.ts`). For each organization that chose an interval the scan:
 
 1. counts the runs of the last 24 hours, whoever started them, and works only while that is under **half of the daily cap** (25 with the default of 50), so that a person can always start a run by hand;
 2. asks for the vendors that are **due** (`listDueVendorsQuery`): not a demo vendor, and without a run that counts toward the limits (see [Limits](#limits)) created within the interval, whoever started that run, so a run by hand or the automatic one after the vendor was created puts the vendor back to the end of the line. The vendors researched longest ago, or never, come first, and no more are asked for than the room under half of the cap or **5** (`SCAN_BATCH_SIZE`), so that a large register is spread over the days and not started in one hour;
@@ -1048,7 +1048,7 @@ cd Servers && npx ts-node scripts/vendorResearchBackfillCredibility.ts          
 | Model call of the verifier | 30 seconds, retries included |
 | Findings kept | 3 per category, 8 per run |
 | Manual cooldown | `VENDOR_RESEARCH_MANUAL_COOLDOWN_MINUTES` (10), per vendor |
-| Scheduled scan | Once an hour, at minute 17; for each organization that chose an interval, at most 5 vendors and only while the runs of the last 24 hours are under half of the daily cap |
+| Scheduled scan | Once an hour, at minute 11 (UTC); for each organization that chose an interval, at most 5 vendors and only while the runs of the last 24 hours are under half of the daily cap |
 | Daily cap | `VENDOR_RESEARCH_DAILY_RUN_CAP` (50), per organization, rolling 24 hours, automatic and manual runs together |
 | A stuck run | 15 minutes |
 

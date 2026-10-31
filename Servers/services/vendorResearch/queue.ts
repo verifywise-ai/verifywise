@@ -82,19 +82,21 @@ export async function enqueueVendorResearch(
 }
 
 /**
- * Adds the repeating job of the scheduled scan: at 17 minutes past every hour, off the slots where
- * the other schedulers pile up (the top of the hour, every 5 minutes, every 15 minutes). The
- * approval overdue sweep (automationProducer.ts) starts at the same minute, but it runs on the
- * automation queue, which has a worker of its own, so the two never wait for each other. The
- * scheduler id is the job name, and an upsert by id changes nothing when it exists, so every start
- * of the backend can call this. It does not empty the queue, which holds the runs that are waiting.
- * The job has a single attempt and is not kept: a scan that fails is logged by the worker, and the
- * scan of the next hour does its work.
+ * Adds the repeating job of the scheduled scan: at 11 minutes past every hour (UTC), a minute no
+ * other scheduler uses (the top of the hour, every 5 and 15 minutes, the approval overdue sweep at
+ * 17, the vendor risk database syncs at 23, 29, 41, 47, 53 and 59), so the runs it starts end
+ * before the hourly KEV sync at 23. The time zone is pinned, as it is for the syncs of the vendor
+ * risk database: a server in another zone would otherwise run the scan at another minute of the
+ * hour, which may be the minute of one of them. The scheduler id is the job name, and an upsert by
+ * id replaces the scheduler's options, so a changed minute takes effect at the next start and an
+ * unchanged one changes nothing: every start of the backend can call this. It does not empty the
+ * queue, which holds the runs that are waiting. The job has a single attempt and is not kept: a
+ * scan that fails is logged by the worker, and the scan of the next hour does its work.
  */
 export async function scheduleVendorResearchScan(): Promise<void> {
   await vendorResearchQueue.upsertJobScheduler(
     VENDOR_RESEARCH_SCAN_JOB,
-    { pattern: "17 * * * *" },
+    { pattern: "11 * * * *", tz: "UTC" },
     {
       name: VENDOR_RESEARCH_SCAN_JOB,
       data: {},
