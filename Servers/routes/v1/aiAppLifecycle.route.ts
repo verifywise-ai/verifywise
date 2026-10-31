@@ -8,6 +8,7 @@ import {
   getAiAppHistoryHandler,
   getAiAppLifecycleHandler,
   getAiAppLifecycleSummaryHandler,
+  getPendingAiAppSubmissionsHandler,
 } from "../../controllers/aiAppLifecycle.ctrl";
 
 // AI app lifecycle (#5193). Writes are allowed for aiApp.edit holders and the
@@ -16,6 +17,9 @@ import {
 
 // Tab counts and stale markers for the AI apps page.
 router.get("/summary", authenticateJWT, getAiAppLifecycleSummaryHandler);
+// Pending AI app intake requests, listed in the In review tab. Read from
+// intake_submissions; no AI app exists until approval.
+router.get("/intake-submissions", authenticateJWT, getPendingAiAppSubmissionsHandler);
 router.get("/:id", authenticateJWT, getAiAppLifecycleHandler);
 router.get("/:id/history", authenticateJWT, getAiAppHistoryHandler);
 

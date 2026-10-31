@@ -14,7 +14,11 @@ vi.mock("../../../../application/hooks/useAiAppLifecycle", () => ({
     },
     isLoading: false,
   }),
+  usePendingAiAppSubmissions: () => ({ data: mockPending }),
 }));
+
+const emptyPending = { total: 0, items: [], limit: 500 };
+let mockPending: Record<string, unknown> = emptyPending;
 
 const listResult = {
   data: {
@@ -64,6 +68,7 @@ describe("AIApps page", () => {
     vi.clearAllMocks();
     localStorage.clear();
     mockUseAiApps.mockReturnValue(listResult);
+    mockPending = emptyPending;
   });
 
   it("renders the AI Apps catalog", () => {
@@ -92,5 +97,34 @@ describe("AIApps page", () => {
     );
     // ChatGPT (id 1) is in the stale list.
     expect(screen.getByTestId("lifecycle-stale-marker")).toBeInTheDocument();
+  });
+
+  it("counts and lists pending AI app intake requests in In review", () => {
+    mockPending = {
+      total: 2,
+      limit: 500,
+      items: [
+        {
+          id: 7,
+          title: "Meeting notes assistant",
+          form_name: "AI app request",
+          submitter_name: "Sam",
+          submitted_at: "2026-10-29T09:00:00.000Z",
+          days_in_review: 2,
+        },
+      ],
+    };
+    renderWithProviders(<AIApps />, { route: "/ai-apps?stage=in_review" });
+
+    // 1 AI app in review + 2 requests.
+    expect(screen.getAllByRole("tab")[0].textContent).toContain("3");
+    expect(screen.getByTestId("pending-intake-submissions")).toBeInTheDocument();
+    expect(screen.getByText("Meeting notes assistant")).toBeInTheDocument();
+  });
+
+  it("does not list requests outside In review", () => {
+    mockPending = { ...emptyPending, total: 1 };
+    renderWithProviders(<AIApps />, { route: "/ai-apps?stage=planned" });
+    expect(screen.queryByTestId("pending-intake-submissions")).toBeNull();
   });
 });

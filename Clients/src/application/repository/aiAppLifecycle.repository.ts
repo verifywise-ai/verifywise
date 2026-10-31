@@ -1,5 +1,6 @@
 import { apiServices } from "../../infrastructure/api/networkServices";
 import type { LifecycleStage, LifecycleStageCounts } from "../../domain/enums/lifecycleStage.enum";
+import type { PendingIntakeSubmissions } from "./useCaseLifecycle.repository";
 
 /** AI app lifecycle API (#5193), under /api/v1/ai-app-lifecycle. */
 
@@ -26,6 +27,14 @@ type Envelope<T> = { data: T };
 
 export async function getAiAppLifecycleSummary(): Promise<AiAppLifecycleSummary> {
   const response = await apiServices.get<Envelope<AiAppLifecycleSummary>>(`${BASE}/summary`);
+  return response.data.data;
+}
+
+/** Pending AI app intake requests, listed in the In review tab. */
+export async function getPendingAiAppSubmissions(): Promise<PendingIntakeSubmissions> {
+  const response = await apiServices.get<Envelope<PendingIntakeSubmissions>>(
+    `${BASE}/intake-submissions`,
+  );
   return response.data.data;
 }
 

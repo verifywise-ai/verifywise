@@ -3,6 +3,7 @@ import {
   confirmAiAppStillLive,
   getAiAppLifecycle,
   getAiAppLifecycleSummary,
+  getPendingAiAppSubmissions,
   markAiAppLive,
   retireAiApp,
 } from "../repository/aiAppLifecycle.repository";
@@ -16,6 +17,7 @@ export const aiAppLifecycleKeys = {
   all: aiAppQueryKeys.lifecycle(),
   summary: () => [...aiAppLifecycleKeys.all, "summary"] as const,
   detail: (id: number) => [...aiAppLifecycleKeys.all, "detail", id] as const,
+  pendingSubmissions: () => [...aiAppLifecycleKeys.all, "pendingSubmissions"] as const,
 };
 
 export function useAiAppLifecycleSummary() {
@@ -23,6 +25,21 @@ export function useAiAppLifecycleSummary() {
     queryKey: aiAppLifecycleKeys.summary(),
     queryFn: getAiAppLifecycleSummary,
     staleTime: 60 * 1000,
+  });
+}
+
+/**
+ * Pending AI app intake requests. Always refetched on mount and on window
+ * focus, like the use case list: coming back from deciding one on the review
+ * screen must not show the old list.
+ */
+export function usePendingAiAppSubmissions() {
+  return useQuery({
+    queryKey: aiAppLifecycleKeys.pendingSubmissions(),
+    queryFn: getPendingAiAppSubmissions,
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
   });
 }
 

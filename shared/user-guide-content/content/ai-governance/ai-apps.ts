@@ -85,7 +85,7 @@ export const aiAppsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'On the app detail page, choose Mark as live and pick the go-live date (today or earlier), Confirm still live, or Retire. Admins, Editors and the app owner can change the lifecycle; Auditors cannot.',
+      text: 'On the app detail page, choose Mark as live and pick the go-live date (today or earlier), Confirm still live, or Retire. Only an app with status Approved or Restricted can be marked as live: approve a Draft app first. Admins, Editors and the app owner can change the lifecycle; Auditors cannot.',
     },
     {
       type: 'paragraph',
@@ -97,7 +97,7 @@ export const aiAppsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Employees can also request an app through an intake form of type AI app. Approving the request creates the app as Approved and Planned, with the requester answers for name, description and departments, and the approver as owner.',
+      text: 'Employees can also request an app through an intake form of type AI app. Requests waiting for a decision are listed at the top of the In review tab and counted in it; Review opens the request. Approving the request creates the app as Approved and Planned, with the requester answers for name, description and departments, and the approver as owner.',
     },
     {
       type: 'heading',

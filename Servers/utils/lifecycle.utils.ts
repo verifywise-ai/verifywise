@@ -6,6 +6,7 @@ import {
   LIFECYCLE_STAGE_LABELS,
   LifecycleStage,
 } from "../domain.layer/enums/lifecycle-stage.enum";
+import { AiAppStatus } from "../domain.layer/enums/ai-app-status.enum";
 import { NotificationEntityType } from "../domain.layer/interfaces/i.notification";
 import { recordMultipleFieldChanges } from "./changeHistory.base.utils";
 import type { EntityType as ChangeHistoryEntityType } from "../config/changeHistory.config";
@@ -49,6 +50,11 @@ export interface LifecycleEntityConfig {
    * have a lifecycle at all. Organizational projects are not use cases.
    */
   scope?: string;
+  /**
+   * Extra condition (against the alias) a row must meet to go live, on top of
+   * being planned. AI apps must be approved first (#5193).
+   */
+  goLiveCondition?: (alias: string) => string;
 }
 
 export const LIFECYCLE_ENTITIES: Record<LifecycleEntityConfig["key"], LifecycleEntityConfig> = {
@@ -79,6 +85,9 @@ export const LIFECYCLE_ENTITIES: Record<LifecycleEntityConfig["key"], LifecycleE
     editPermission: "aiApp.edit",
     fallbackTimestampsSql: (a) => `${a}.updated_at, ${a}.created_at`,
     hasDepartmentColumn: false,
+    // A draft or banned app has not been approved for use, so it can't be live.
+    goLiveCondition: (a) =>
+      `${a}.status IN ('${AiAppStatus.APPROVED}', '${AiAppStatus.RESTRICTED}')`,
   },
 };
 
@@ -296,6 +305,7 @@ export async function applyLifecycleAction(
   transaction?: Transaction,
 ): Promise<Omit<LifecycleRow, "owner"> | null> {
   let set: string;
+  let condition = "";
   const replacements: Record<string, unknown> = {
     organizationId,
     id,
@@ -308,6 +318,7 @@ export async function applyLifecycleAction(
              retired_at = NULL, last_confirmed_at = NULL, last_confirmed_by = NULL,
              confirmation_reminded_at = NULL`;
       replacements.goLiveDate = params.goLiveDate;
+      if (entity.goLiveCondition) condition = ` AND ${entity.goLiveCondition("e")}`;
       break;
     case "retire":
       set = `lifecycle_stage = '${LifecycleStage.RETIRED}', retired_at = NOW()`;
@@ -322,7 +333,7 @@ export async function applyLifecycleAction(
         SET ${set}
       WHERE e.organization_id = :organizationId
         AND e.id = :id
-        AND e.lifecycle_stage IN (:allowed)${scopeSql(entity, "e")}
+        AND e.lifecycle_stage IN (:allowed)${scopeSql(entity, "e")}${condition}
       RETURNING ${lifecycleColumnsSql(entity)}`,
     { replacements, type: QueryTypes.SELECT, transaction },
   )) as Omit<LifecycleRow, "owner">[];

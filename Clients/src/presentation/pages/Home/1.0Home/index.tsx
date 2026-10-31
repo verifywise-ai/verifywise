@@ -25,7 +25,7 @@ import {
 } from "../../../../application/hooks/useUseCaseLifecycle";
 import { LifecycleStage } from "../../../../domain/enums/lifecycleStage.enum";
 import { useLifecycleTab } from "../../../../application/hooks/useLifecycleTab";
-import PendingIntakeSubmissions from "./PendingIntakeSubmissions";
+import PendingIntakeSubmissions from "../../../components/LifecycleTabs/PendingIntakeSubmissions";
 
 const STAGE_STORAGE_KEY = "use-cases-lifecycle-tab";
 
@@ -157,7 +157,12 @@ const Home = () => {
         }
         renderBeforeList={(searchTerm) =>
           stage === LifecycleStage.IN_REVIEW ? (
-            <PendingIntakeSubmissions pending={pendingSubmissions} searchTerm={searchTerm} />
+            <PendingIntakeSubmissions
+              pending={pendingSubmissions}
+              searchTerm={searchTerm}
+              description="Submitted through an intake form. The use case is created when a reviewer approves the request."
+              exportNote="Intake requests are not included in the use case export."
+            />
           ) : null
         }
         onProjectDeleted={refreshProjects}

@@ -942,6 +942,7 @@
   "Invalid AI app ID": "ID d'application IA invalide",
   "AI app not found": "Application IA introuvable",
   "Only a planned AI app can go live": "Seule une application IA planifiée peut être mise en service",
+  "Approve this AI app before marking it as live": "Approuvez cette application IA avant de la marquer comme en service",
   "Only a planned or live AI app can be retired": "Seule une application IA planifiée ou en service peut être retirée",
   "Only a live AI app can be confirmed as still live": "Seule une application IA en service peut être confirmée comme toujours en service",
   "Invalid lifecycle stage": "Étape du cycle de vie invalide",

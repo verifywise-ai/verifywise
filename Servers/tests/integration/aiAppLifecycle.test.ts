@@ -35,11 +35,18 @@ async function as(orgId: number, userId: number, role: RoleName) {
   );
 }
 
-async function aiApp(orgId: number, ownerId: number | null, name?: string): Promise<number> {
+/** An approved AI app (only approved or restricted apps can go live). */
+async function aiApp(
+  orgId: number,
+  ownerId: number | null,
+  name?: string,
+  status = "approved",
+): Promise<number> {
   counter += 1;
   const [rows] = await sequelize.query(
-    `INSERT INTO ai_apps (organization_id, name, owner_id) VALUES (:orgId, :name, :ownerId) RETURNING id`,
-    { replacements: { orgId, ownerId, name: name ?? `App ${Date.now()}-${counter}` } },
+    `INSERT INTO ai_apps (organization_id, name, owner_id, status)
+     VALUES (:orgId, :name, :ownerId, :status) RETURNING id`,
+    { replacements: { orgId, ownerId, status, name: name ?? `App ${Date.now()}-${counter}` } },
   );
   return Number((rows as any[])[0].id);
 }
@@ -94,6 +101,28 @@ describe("AI app lifecycle", () => {
     expect(fields).toEqual(
       expect.arrayContaining(["lifecycle_stage", "go_live_date", "last_confirmed_at"]),
     );
+  });
+
+  it("refuses to put a draft or banned app live; restricted may go live", async () => {
+    const orgId = await createTestOrganization();
+    const adminId = await userIn(orgId, "Admin");
+    const api = await as(orgId, adminId, "Admin");
+    const draft = await aiApp(orgId, adminId, undefined, "draft");
+    const banned = await aiApp(orgId, adminId, undefined, "banned");
+    const restricted = await aiApp(orgId, adminId, undefined, "restricted");
+    // Banned keeps its backfilled stage here; force planned to test the status rule alone.
+    await setRow(banned, `lifecycle_stage = 'planned'`);
+
+    const draftRes = await api.post(`/api/v1/ai-app-lifecycle/${draft}/go-live`);
+    expect(draftRes.status).toBe(409);
+    expect(draftRes.body.data).toBe("Approve this AI app before marking it as live");
+    expect((await row(draft)).lifecycle_stage).toBe("planned");
+    expect((await api.post(`/api/v1/ai-app-lifecycle/${banned}/go-live`)).status).toBe(409);
+    expect((await api.post(`/api/v1/ai-app-lifecycle/${restricted}/go-live`)).status).toBe(200);
+
+    // Approving the draft lets it go live.
+    await setRow(draft, `status = 'approved'`);
+    expect((await api.post(`/api/v1/ai-app-lifecycle/${draft}/go-live`)).status).toBe(200);
   });
 
   it("lets aiApp.edit holders and the owner act; never Auditors or other Reviewers", async () => {

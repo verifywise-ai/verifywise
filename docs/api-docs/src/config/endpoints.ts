@@ -12191,6 +12191,17 @@ export const v1V1aiAppLifecycleEndpoints: Endpoint[] = [
   },
   {
     method: 'GET',
+    path: '/v1/ai-app-lifecycle/intake-submissions',
+    summary: "Get Pending Ai App Submissions Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai App Lifecycle",
+  },
+  {
+    method: 'GET',
     path: '/v1/ai-app-lifecycle/{id}',
     summary: "Get Ai App Lifecycle Handler",
     requiresAuth: true,

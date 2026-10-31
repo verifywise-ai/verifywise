@@ -232,13 +232,13 @@ function firstSubmittedCte(leavesSql: string): string {
 }
 
 /**
- * A use case intake submission waiting for a decision. No project exists yet
- * (approval creates it), so the In review tab lists these next to the use
- * cases that wait on an approval request.
+ * An intake submission waiting for a decision. Nothing exists in the
+ * inventory yet (approval creates the use case or AI app), so the In review
+ * tab lists these next to the entries that wait on an approval request.
  */
-export interface PendingUseCaseSubmission {
+export interface PendingIntakeSubmission {
   id: number;
-  /** The answer mapped to the use case title, as approval would use it. */
+  /** The answer mapped to the entry's title or name, as approval would use it. */
   title: string | null;
   form_name: string;
   submitter_name: string | null;
@@ -248,21 +248,31 @@ export interface PendingUseCaseSubmission {
   days_in_review: number;
 }
 
-export interface PendingUseCaseSubmissions {
-  /** All pending use case submissions; the tab count. */
+export interface PendingIntakeSubmissions {
+  /** All pending submissions of the entity type; the tab count. */
   total: number;
   /** The oldest `limit` of them. */
-  items: PendingUseCaseSubmission[];
+  items: PendingIntakeSubmission[];
   limit: number;
 }
 
 export const PENDING_SUBMISSIONS_LIMIT = 500;
 
+/** Entity types with an In review tab, and the field approval names the entry from. */
+export type InReviewIntakeEntity = IntakeEntityType.USE_CASE | IntakeEntityType.AI_APP;
+const TITLE_MAPPING: Record<InReviewIntakeEntity, string> = {
+  [IntakeEntityType.USE_CASE]: "project_title",
+  [IntakeEntityType.AI_APP]: "name",
+};
+
 /**
- * The field id each use case form maps to the use case title. Each form's
- * schema is read once; rows then carry only that one answer.
+ * The field id each form maps to the entry's title. Each form's schema is
+ * read once; rows then carry only that one answer.
  */
-async function titleFieldIdsByForm(organizationId: number): Promise<Record<string, string>> {
+async function titleFieldIdsByForm(
+  organizationId: number,
+  entityType: InReviewIntakeEntity,
+): Promise<Record<string, string>> {
   const forms = (await sequelize.query(
     `SELECT f.id, f.schema
        FROM intake_forms f
@@ -270,43 +280,47 @@ async function titleFieldIdsByForm(organizationId: number): Promise<Record<strin
         AND EXISTS (
           SELECT 1 FROM intake_submissions s
            WHERE s.organization_id = f.organization_id AND s.form_id = f.id
-             AND s.status = :pending AND s.entity_type = :useCase)`,
+             AND s.status = :pending AND s.entity_type = :entityType)`,
     {
       replacements: {
         organizationId,
         pending: IntakeSubmissionStatus.PENDING,
-        useCase: IntakeEntityType.USE_CASE,
+        entityType,
       },
       type: QueryTypes.SELECT,
     },
   )) as { id: number; schema: IIntakeFormSchema | null }[];
   const map: Record<string, string> = {};
   for (const form of forms) {
-    const field = form.schema?.fields?.find((f) => f.entityFieldMapping === "project_title");
+    const field = form.schema?.fields?.find(
+      (f) => f.entityFieldMapping === TITLE_MAPPING[entityType],
+    );
     if (field) map[String(form.id)] = field.id;
   }
   return map;
 }
 
 /**
- * Pending use case submissions, oldest first by first submission, plus the
- * total. Approved, rejected and superseded submissions never appear. Every
- * signed-in member of the org can already list submissions
- * (GET /api/intake/submissions), so no further visibility rule applies.
+ * Pending submissions of one entity type (use cases #5188, AI apps #5193),
+ * oldest first by first submission, plus the total. Approved, rejected and
+ * superseded submissions never appear. Every signed-in member of the org can
+ * already list submissions (GET /api/intake/submissions), so no further
+ * visibility rule applies.
  */
-export async function getPendingUseCaseSubmissions(
+export async function getPendingIntakeSubmissions(
   organizationId: number,
-): Promise<PendingUseCaseSubmissions> {
-  const titleFields = await titleFieldIdsByForm(organizationId);
+  entityType: InReviewIntakeEntity,
+): Promise<PendingIntakeSubmissions> {
+  const titleFields = await titleFieldIdsByForm(organizationId, entityType);
   const replacements = {
     organizationId,
     pending: IntakeSubmissionStatus.PENDING,
-    useCase: IntakeEntityType.USE_CASE,
+    entityType,
     limit: PENDING_SUBMISSIONS_LIMIT,
     titleFields: JSON.stringify(titleFields),
   };
   const pendingWhere = `s.organization_id = :organizationId
-        AND s.status = :pending AND s.entity_type = :useCase`;
+        AND s.status = :pending AND s.entity_type = :entityType`;
 
   const [totalRows, rows] = await Promise.all([
     sequelize.query(

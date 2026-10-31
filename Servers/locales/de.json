@@ -942,6 +942,7 @@
   "Invalid AI app ID": "Ungültige KI-App-ID",
   "AI app not found": "KI-App nicht gefunden",
   "Only a planned AI app can go live": "Nur eine geplante KI-App kann live gehen",
+  "Approve this AI app before marking it as live": "Geben Sie diese KI-App frei, bevor Sie sie als live markieren",
   "Only a planned or live AI app can be retired": "Nur eine geplante oder aktive KI-App kann außer Betrieb genommen werden",
   "Only a live AI app can be confirmed as still live": "Nur eine aktive KI-App kann als weiterhin aktiv bestätigt werden",
   "Invalid lifecycle stage": "Ungültige Lebenszyklusphase",

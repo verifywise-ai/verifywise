@@ -12,10 +12,11 @@ import {
   upsertLifecycleOrgSettings,
 } from "../utils/lifecycle.utils";
 import {
-  getPendingUseCaseSubmissions,
+  getPendingIntakeSubmissions,
   getUseCaseLifecycleDashboard,
   getUseCaseLifecycleSummary,
 } from "../utils/useCaseLifecycle.utils";
+import { IntakeEntityType } from "../domain.layer/enums/intake-entity-type.enum";
 import { isConfirmationInterval } from "../domain.layer/enums/lifecycle-stage.enum";
 import { recordMultipleFieldChanges } from "../utils/changeHistory.base.utils";
 import {
@@ -61,7 +62,10 @@ export async function getLifecycleDashboardHandler(req: Request, res: Response) 
 export async function getPendingSubmissionsHandler(req: Request, res: Response) {
   const fn = "getPendingSubmissionsHandler";
   try {
-    const submissions = await getPendingUseCaseSubmissions(req.organizationId!);
+    const submissions = await getPendingIntakeSubmissions(
+      req.organizationId!,
+      IntakeEntityType.USE_CASE,
+    );
     return res.status(200).json(STATUS_CODE[200](submissions));
   } catch (error) {
     return serverError(req, res, fn, error);

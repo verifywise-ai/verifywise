@@ -1,6 +1,8 @@
 import { Request, Response } from "express";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import { getAiAppLifecycleState, getAiAppLifecycleSummary } from "../utils/aiAppLifecycle.utils";
+import { getPendingIntakeSubmissions } from "../utils/useCaseLifecycle.utils";
+import { IntakeEntityType } from "../domain.layer/enums/intake-entity-type.enum";
 import { getEntityChangeHistory } from "../utils/changeHistory.base.utils";
 import { lifecycleActionHandlers, lifecycleIdParam, serverError } from "./lifecycle.ctrl";
 import { createChangeHistoryHandler } from "./changeHistoryHandler";
@@ -20,6 +22,19 @@ export async function getAiAppLifecycleSummaryHandler(req: Request, res: Respons
     return res.status(200).json(STATUS_CODE[200](summary));
   } catch (error) {
     return serverError(req, res, "getAiAppLifecycleSummaryHandler", error, FILE);
+  }
+}
+
+/** Pending AI app intake requests, listed in the In review tab (#5193). */
+export async function getPendingAiAppSubmissionsHandler(req: Request, res: Response) {
+  try {
+    const submissions = await getPendingIntakeSubmissions(
+      req.organizationId!,
+      IntakeEntityType.AI_APP,
+    );
+    return res.status(200).json(STATUS_CODE[200](submissions));
+  } catch (error) {
+    return serverError(req, res, "getPendingAiAppSubmissionsHandler", error, FILE);
   }
 }
 

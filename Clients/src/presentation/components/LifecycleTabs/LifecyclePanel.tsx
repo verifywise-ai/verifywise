@@ -50,6 +50,8 @@ export interface LifecyclePanelProps {
   extraFields?: ReactNode;
   /** Disables the actions while the caller saves something else. */
   isBusy?: boolean;
+  /** Why a planned entry can't go live yet; disables "Mark as live" and is shown beside it. */
+  goLiveBlockedReason?: string;
 }
 
 /**
@@ -67,6 +69,7 @@ const LifecyclePanel = ({
   isStale,
   copy,
   goLive,
+  goLiveBlockedReason,
   retire,
   confirm,
   onChanged,
@@ -153,7 +156,7 @@ const LifecyclePanel = ({
                 variant="contained"
                 text="Mark as live"
                 testId="lifecycle-go-live-btn"
-                isDisabled={busy}
+                isDisabled={busy || !!goLiveBlockedReason}
                 onClick={() => {
                   setGoLiveDate(dayjs());
                   setError(null);
@@ -186,6 +189,11 @@ const LifecyclePanel = ({
         )}
       </Stack>
 
+      {canManage && goLiveBlockedReason && stage === LifecycleStage.PLANNED && (
+        <Box sx={{ mt: "16px" }}>
+          <Alert variant="info" body={goLiveBlockedReason} isToast={false} />
+        </Box>
+      )}
       {isStale && stage === LifecycleStage.LIVE && (
         <Box sx={{ mt: "16px" }}>
           <Alert variant="warning" body={copy.staleMessage} isToast={false} />

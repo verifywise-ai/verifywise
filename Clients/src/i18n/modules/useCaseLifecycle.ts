@@ -2,6 +2,15 @@
 // Spread into ../translations.ts.
 
 export const de: Record<string, string> = {
+  // AI app requests in In review, approval before going live (#5193)
+  "Intake requests and AI apps waiting for an approval decision":
+    "Intake-Anfragen und KI-Apps, die auf eine Freigabeentscheidung warten",
+  "No AI apps are waiting for an approval decision.":
+    "Keine KI-Apps warten auf eine Freigabeentscheidung.",
+  "Submitted through an intake form. The AI app is created when a reviewer approves the request.":
+    "Über ein Intake-Formular eingereicht. Die KI-App wird erstellt, wenn eine prüfende Person die Anfrage freigibt.",
+  "Approve this AI app before marking it as live. Change its status to Approved or Restricted below.":
+    "Geben Sie diese KI-App frei, bevor Sie sie als live markieren. Ändern Sie ihren Status unten auf „Freigegeben“ oder „Eingeschränkt“.",
   // AI apps lifecycle and intake (#5193)
   "AI app name": "Name der KI-App",
   "Collect requests to use an AI app": "Anfragen zur Nutzung einer KI-App erfassen",
@@ -137,6 +146,15 @@ export const de: Record<string, string> = {
 };
 
 export const fr: Record<string, string> = {
+  // AI app requests in In review, approval before going live (#5193)
+  "Intake requests and AI apps waiting for an approval decision":
+    "Demandes d'intake et applications IA en attente d'une décision d'approbation",
+  "No AI apps are waiting for an approval decision.":
+    "Aucune application IA n'attend de décision d'approbation.",
+  "Submitted through an intake form. The AI app is created when a reviewer approves the request.":
+    "Soumise via un formulaire d'intake. L'application IA est créée lorsqu'un examinateur approuve la demande.",
+  "Approve this AI app before marking it as live. Change its status to Approved or Restricted below.":
+    "Approuvez cette application IA avant de la marquer comme en service. Passez son statut à Approuvé ou Restreint ci-dessous.",
   // AI apps lifecycle and intake (#5193)
   "AI app name": "Nom de l'application IA",
   "Collect requests to use an AI app": "Recueillir des demandes d'utilisation d'une application IA",
@@ -275,6 +293,15 @@ export const fr: Record<string, string> = {
 };
 
 export const es: Record<string, string> = {
+  // AI app requests in In review, approval before going live (#5193)
+  "Intake requests and AI apps waiting for an approval decision":
+    "Solicitudes de intake y apps de IA a la espera de una decisión de aprobación",
+  "No AI apps are waiting for an approval decision.":
+    "Ninguna app de IA espera una decisión de aprobación.",
+  "Submitted through an intake form. The AI app is created when a reviewer approves the request.":
+    "Enviada mediante un formulario de intake. La app de IA se crea cuando un revisor aprueba la solicitud.",
+  "Approve this AI app before marking it as live. Change its status to Approved or Restricted below.":
+    "Apruebe esta app de IA antes de marcarla como en producción. Cambie su estado a Aprobada o Restringida más abajo.",
   // AI apps lifecycle and intake (#5193)
   "AI app name": "Nombre de la app de IA",
   "Collect requests to use an AI app": "Recopilar solicitudes para usar una app de IA",

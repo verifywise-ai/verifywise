@@ -942,6 +942,7 @@
   "Invalid AI app ID": "Invalid AI app ID",
   "AI app not found": "AI app not found",
   "Only a planned AI app can go live": "Only a planned AI app can go live",
+  "Approve this AI app before marking it as live": "Approve this AI app before marking it as live",
   "Only a planned or live AI app can be retired": "Only a planned or live AI app can be retired",
   "Only a live AI app can be confirmed as still live": "Only a live AI app can be confirmed as still live",
   "Invalid lifecycle stage": "Invalid lifecycle stage",

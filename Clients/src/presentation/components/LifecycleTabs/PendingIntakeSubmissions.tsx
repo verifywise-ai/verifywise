@@ -9,28 +9,34 @@ import {
   TableRow,
   Typography,
 } from "@mui/material";
-import { CustomizableButton } from "../../../components/button/customizable-button";
-import { singleTheme } from "../../../themes";
-import useNavigateSearch from "../../../../application/hooks/useNavigateSearch";
-import useFormattedDate from "../../../../application/hooks/useFormattedDate";
-import type { PendingUseCaseSubmissions } from "../../../../application/repository/useCaseLifecycle.repository";
+import { CustomizableButton } from "../button/customizable-button";
+import { singleTheme } from "../../themes";
+import useNavigateSearch from "../../../application/hooks/useNavigateSearch";
+import useFormattedDate from "../../../application/hooks/useFormattedDate";
+import type { PendingIntakeSubmissions as PendingRequests } from "../../../application/repository/useCaseLifecycle.repository";
 
 const COLUMNS = ["Request", "Intake form", "Submitted by", "Submitted", "Days in review", ""];
 
 const cellSx = { ...singleTheme.tableStyles.primary.body.cell, fontSize: "13px" };
 
 /**
- * Use case intake submissions waiting for a decision, shown in the In review
- * tab (#5188). No use case exists yet: approving the submission creates it,
- * so each row opens the existing submission review screen.
+ * Intake submissions waiting for a decision, shown in an In review tab (use
+ * cases #5188, AI apps #5193). Nothing exists in the inventory yet: approving
+ * the submission creates it, so each row opens the submission review screen.
  */
 const PendingIntakeSubmissions = ({
   pending,
   searchTerm = "",
+  description,
+  exportNote,
 }: {
-  pending: PendingUseCaseSubmissions | undefined;
-  /** The use cases search box; matches the title, form name and submitter. */
+  pending: PendingRequests | undefined;
+  /** The list's search box; matches the title, form name and submitter. */
   searchTerm?: string;
+  /** What approving a request creates. */
+  description: string;
+  /** Shown under the table when the page exports its list without the requests. */
+  exportNote?: string;
 }) => {
   const navigateSearch = useNavigateSearch();
   const formatDate = useFormattedDate();
@@ -52,10 +58,7 @@ const PendingIntakeSubmissions = ({
     <Stack sx={{ gap: "8px", mb: "24px" }} data-testid="pending-intake-submissions">
       <Box>
         <Typography sx={{ fontSize: 15, fontWeight: 600 }}>Intake requests</Typography>
-        <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
-          Submitted through an intake form. The use case is created when a reviewer approves the
-          request.
-        </Typography>
+        <Typography sx={{ fontSize: 13, color: "text.secondary" }}>{description}</Typography>
       </Box>
       <TableContainer>
         <Table sx={singleTheme.tableStyles.primary.frame}>
@@ -109,9 +112,9 @@ const PendingIntakeSubmissions = ({
           <span>{pending.total}</span>
         </Typography>
       )}
-      <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
-        Intake requests are not included in the use case export.
-      </Typography>
+      {exportNote && (
+        <Typography sx={{ fontSize: 13, color: "text.secondary" }}>{exportNote}</Typography>
+      )}
     </Stack>
   );
 };

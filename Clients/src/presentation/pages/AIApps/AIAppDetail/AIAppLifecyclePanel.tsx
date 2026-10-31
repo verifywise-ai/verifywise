@@ -6,6 +6,10 @@ import {
   useAiAppLifecycleActions,
 } from "../../../../application/hooks/useAiAppLifecycle";
 import { canManageLifecycle } from "../../../../application/utils/useCaseLifecycle";
+import { AiAppStatus } from "../../../../domain/enums/aiApp.enum";
+
+/** Only an app approved for use (with or without restrictions) can go live. */
+const CAN_GO_LIVE: AiAppStatus[] = [AiAppStatus.APPROVED, AiAppStatus.RESTRICTED];
 
 /** Built-in roles holding aiApp.edit; only stands in until permissions load. */
 const AI_APP_EDIT_ROLES = ["Admin", "Editor"];
@@ -14,7 +18,7 @@ const AI_APP_EDIT_ROLES = ["Admin", "Editor"];
  * Lifecycle strip on the AI app detail page (#5193): the shared
  * LifecyclePanel, fed by /api/v1/ai-app-lifecycle/:id.
  */
-const AIAppLifecyclePanel = ({ appId }: { appId: number }) => {
+const AIAppLifecyclePanel = ({ appId, status }: { appId: number; status: AiAppStatus }) => {
   const { userRoleName, userId } = useAuth();
   const { data: lifecycle } = useAiAppLifecycle(appId);
   const { goLive, retire, confirm } = useAiAppLifecycleActions(appId);
@@ -36,6 +40,11 @@ const AIAppLifecyclePanel = ({ appId }: { appId: number }) => {
       retiredAt={lifecycle.retired_at}
       canManage={canManage}
       isStale={lifecycle.is_stale}
+      goLiveBlockedReason={
+        CAN_GO_LIVE.includes(status)
+          ? undefined
+          : "Approve this AI app before marking it as live. Change its status to Approved or Restricted below."
+      }
       goLive={goLive}
       retire={retire}
       confirm={confirm}

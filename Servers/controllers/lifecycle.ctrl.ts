@@ -11,7 +11,7 @@ import {
   applyLifecycleAction,
   getLifecycleRow,
 } from "../utils/lifecycle.utils";
-import { LIFECYCLE_STAGE_LABELS } from "../domain.layer/enums/lifecycle-stage.enum";
+import { LIFECYCLE_STAGE_LABELS, LifecycleStage } from "../domain.layer/enums/lifecycle-stage.enum";
 import { recordMultipleFieldChanges } from "../utils/changeHistory.base.utils";
 import type { PermissionKey } from "../config/rolePermissions.config";
 
@@ -71,6 +71,8 @@ interface EntityMessages {
   invalidId: string;
   notFound: string;
   conflict: Record<LifecycleAction, string>;
+  /** A planned entry that fails the entity's goLiveCondition. */
+  goLiveNotAllowed?: string;
 }
 
 /** i18n keys (Servers/locales) per entity. */
@@ -92,6 +94,7 @@ const ENTITY_MESSAGES: Record<LifecycleEntityConfig["key"], EntityMessages> = {
       retire: "Only a planned or live AI app can be retired",
       confirm: "Only a live AI app can be confirmed as still live",
     },
+    goLiveNotAllowed: "Approve this AI app before marking it as live",
   },
 };
 
@@ -151,7 +154,15 @@ function actionHandler(entity: LifecycleEntityConfig, action: LifecycleAction) {
       );
       if (!updated) {
         await transaction.rollback();
-        return res.status(409).json(STATUS_CODE[409](req.t!(messages.conflict[action])));
+        // Planned but refused: the entity's own go-live rule (an AI app
+        // that is not approved), not the stage.
+        const message =
+          action === "go_live" &&
+          current.lifecycle_stage === LifecycleStage.PLANNED &&
+          messages.goLiveNotAllowed
+            ? messages.goLiveNotAllowed
+            : messages.conflict[action];
+        return res.status(409).json(STATUS_CODE[409](req.t!(message)));
       }
 
       const changes: Array<{ fieldName: string; oldValue: string; newValue: string }> = [];
