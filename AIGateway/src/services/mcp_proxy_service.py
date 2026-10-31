@@ -18,7 +18,7 @@ from sqlalchemy import text
 import crud.mcp_servers as mcp_servers_crud
 from config import settings
 from database.db import get_db
-from services.mcp_token_service import TokenError, auth_headers_for, invalidate, remember_outcome
+from services.mcp_token_service import TokenError, auth_headers_for, invalidate
 from utils.mcp_credentials import TOKEN_AUTH_TYPES
 from utils.rate_limit import check_rate_limit
 from utils.safe_outbound_url import UnsafeOutboundUrlError, assert_safe_outbound_url
@@ -130,7 +130,8 @@ async def resolve_tool(org_id: int, tool_name: str) -> dict:
             text("""
                 SELECT t.id, t.tool_name, t.description, t.input_schema, t.risk_level,
                        t.requires_approval, t.server_id,
-                       s.url, s.auth_type, s.auth_config, s.is_active AS server_active
+                       s.url, s.auth_type, s.auth_config, s.is_active AS server_active,
+                       s.health_status, s.last_discovery_error
                 FROM ai_gateway_mcp_tools t
                 JOIN ai_gateway_mcp_servers s ON t.server_id = s.id
                 WHERE t.organization_id = :org_id
@@ -456,7 +457,6 @@ async def run_discovery(
     async def record_failure(error: str) -> None:
         try:
             await mcp_servers_crud.record_discovery_result(org_id, server_id, error)
-            remember_outcome(org_id, server_id, error)
         except Exception:  # noqa: BLE001 — must not replace the returned result
             logger.exception("Could not record MCP discovery failure for server %s", server_id)
 
@@ -479,7 +479,6 @@ async def run_discovery(
     try:
         stored, changes = await store_discovered_tools(org_id, server["id"], tools)
         await mcp_servers_crud.record_discovery_result(org_id, server["id"], None)
-        remember_outcome(org_id, server["id"], None)
     except Exception:  # noqa: BLE001 — database or malformed-tool failure
         logger.exception("MCP discovery could not save tools for server %s", server_id)
         error = "Could not save the discovered tools"

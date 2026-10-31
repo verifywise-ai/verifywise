@@ -755,6 +755,7 @@ describe("MCPServersPage", () => {
               token_url: "https://auth.example.com/token",
               token_url_source: "manual",
               scope: "read",
+              resource: "",
               auth_method: "client_secret_basic",
             },
           }),
@@ -921,11 +922,44 @@ describe("MCPServersPage", () => {
           token_url: "https://auth.example.com/token",
           token_url_source: "discovered",
           scope: "read",
+          resource: "",
         });
         expect(payload.auth_config).not.toHaveProperty("client_secret");
       });
       // Editing a saved server never re-runs discovery on its own.
       expect(discoverCalls()).toHaveLength(0);
+    });
+
+    it("sends an empty scope and the stored resource so both can be cleared or kept", async () => {
+      mockGet.mockResolvedValue({
+        data: {
+          servers: [
+            makeServer({
+              auth_type: "oauth",
+              oauth_client_id: "cid",
+              oauth_token_url: "https://auth.example.com/token",
+              oauth_scope: "read",
+              oauth_resource: "https://mcp.example.com",
+              auth_secret_hint: "abcd...wxyz",
+            }),
+          ],
+        },
+      });
+      mockPatch.mockResolvedValue({
+        data: { server: makeServer(), discovery: { status: "skipped", tools_discovered: 0 } },
+      });
+      renderWithProviders(<MCPServersPage />, { route: "/ai-gateway/mcp/servers" });
+      await waitFor(() => expect(screen.getByText("Search Server")).toBeInTheDocument());
+
+      fireEvent.click(screen.getByRole("button", { name: "Edit server" }));
+      fireEvent.change(screen.getByLabelText(/^Scope \(optional\)/), { target: { value: "" } });
+      fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+
+      await waitFor(() => {
+        const config = mockPatch.mock.calls[0][1].auth_config;
+        expect(config.scope).toBe("");
+        expect(config.resource).toBe("https://mcp.example.com");
+      });
     });
 
     it("labels OAuth and AWS IAM servers in the list", async () => {

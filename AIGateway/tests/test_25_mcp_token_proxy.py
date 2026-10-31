@@ -41,10 +41,8 @@ def oauth_cfg():
 @pytest.fixture(autouse=True)
 def _clean_state():
     tokens._reset_cache()
-    tokens._reset_outcomes()
     yield
     tokens._reset_cache()
-    tokens._reset_outcomes()
 
 
 @pytest.fixture
@@ -207,61 +205,42 @@ class TestForwardTokens:
 
 
 class TestNoteTokenOutcome:
-    async def test_writes_on_change_only(self, monkeypatch):
+    async def test_writes_when_stored_health_differs(self, monkeypatch):
         record = AsyncMock()
         monkeypatch.setattr(mcp_servers_crud, "record_discovery_result", record)
 
-        for error in ("bad key", "bad key", "bad key", None, None):
-            await tokens.note_token_outcome(1, 9, error)
+        await tokens.note_token_outcome(1, 9, "bad key", ("healthy", None))
+        await tokens.note_token_outcome(1, 9, None, ("unhealthy", "bad key"))
+        await tokens.note_token_outcome(1, 9, None, ("unknown", None))
+        await tokens.note_token_outcome(1, 9, "new error", ("unhealthy", "bad key"))
 
-        assert [c.args for c in record.await_args_list] == [(1, 9, "bad key"), (1, 9, None)]
+        assert [c.args for c in record.await_args_list] == [
+            (1, 9, "bad key"), (1, 9, None), (1, 9, None), (1, 9, "new error"),
+        ]
 
-    async def test_servers_are_tracked_separately(self, monkeypatch):
+    async def test_skips_when_stored_health_matches(self, monkeypatch):
+        record = AsyncMock()
+        monkeypatch.setattr(mcp_servers_crud, "record_discovery_result", record)
+
+        await tokens.note_token_outcome(1, 9, None, ("healthy", None))
+        await tokens.note_token_outcome(1, 9, "bad key", ("unhealthy", "bad key"))
+
+        record.assert_not_awaited()
+
+    async def test_without_stored_health_always_writes(self, monkeypatch):
         record = AsyncMock()
         monkeypatch.setattr(mcp_servers_crud, "record_discovery_result", record)
 
         await tokens.note_token_outcome(1, 9, None)
-        await tokens.note_token_outcome(1, 10, None)
+        await tokens.note_token_outcome(1, 9, None)
 
         assert record.await_count == 2
 
-    async def test_database_error_is_swallowed_and_retried_next_time(self, monkeypatch):
-        record = AsyncMock(side_effect=[RuntimeError("db down"), None])
+    async def test_database_error_is_swallowed(self, monkeypatch):
+        record = AsyncMock(side_effect=RuntimeError("db down"))
         monkeypatch.setattr(mcp_servers_crud, "record_discovery_result", record)
 
-        await tokens.note_token_outcome(1, 9, "bad key")
-        await tokens.note_token_outcome(1, 9, "bad key")
-
-        assert record.await_count == 2
-
-
-class TestDiscoveryKeepsOutcomeMemoryInSync:
-    @staticmethod
-    def server():
-        return {"id": 9, "url": SERVER_URL, "auth_type": "oauth", "auth_config": oauth_cfg()}
-
-    async def test_discovery_success_then_same_error_writes_again(self, monkeypatch, token_fetches):
-        record = AsyncMock()
-        monkeypatch.setattr(mcp_servers_crud, "record_discovery_result", record)
-        monkeypatch.setattr(svc, "store_discovered_tools", AsyncMock(return_value=([{}], {})))
-
-        await tokens.note_token_outcome(1, 9, "bad key")
-        result = await svc.run_discovery(1, self.server(), 5, transport=upstream({}, []))
-        await tokens.note_token_outcome(1, 9, "bad key")
-
-        assert result["status"] == "success"
-        assert [c.args for c in record.await_args_list] == [(1, 9, "bad key"), (1, 9, None), (1, 9, "bad key")]
-
-    async def test_discovery_failure_then_healthy_call_writes_healthy(self, monkeypatch, token_fetches):
-        record = AsyncMock()
-        monkeypatch.setattr(mcp_servers_crud, "record_discovery_result", record)
-
-        await tokens.note_token_outcome(1, 9, None)
-        result = await svc.run_discovery(1, self.server(), 5, transport=upstream({1: 500}, []))
-        await tokens.note_token_outcome(1, 9, None)
-
-        assert result["status"] == "failed"
-        assert [c.args[2] for c in record.await_args_list] == [None, result["error"], None]
+        await tokens.note_token_outcome(1, 9, "bad key", ("healthy", None))
 
 
 # ─── Proxy handler ───────────────────────────────────────────────────────────
@@ -331,7 +310,7 @@ class TestProxyHandler:
         assert handler_fakes.audits[-1]["result_summary"] == AWS_MESSAGE
         assert handler_fakes.audits[-1]["is_error"] is True
         handler_fakes.breaker.record_failure.assert_not_awaited()
-        handler_fakes.note.assert_awaited_once_with(1, 9, AWS_MESSAGE)
+        handler_fakes.note.assert_awaited_once_with(1, 9, AWS_MESSAGE, (None, None))
 
     async def test_success_marks_token_server_healthy(self, handler_fakes):
         async def ok(**kwargs):
@@ -341,7 +320,7 @@ class TestProxyHandler:
 
         await proxy.mcp_jsonrpc(_call())
 
-        handler_fakes.note.assert_awaited_once_with(1, 9, None)
+        handler_fakes.note.assert_awaited_once_with(1, 9, None, (None, None))
 
     async def test_success_on_static_server_does_not_touch_health(self, handler_fakes, monkeypatch):
         monkeypatch.setattr(proxy, "resolve_tool", AsyncMock(return_value={**TOOL, "auth_type": "bearer"}))

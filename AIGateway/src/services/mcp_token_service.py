@@ -37,7 +37,7 @@ from utils.mcp_credentials import (
 )
 from utils.safe_outbound_url import UnsafeOutboundUrlError, assert_safe_outbound_url
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("uvicorn")
 
 TOKEN_TIMEOUT_SECONDS = 10
 DEFAULT_EXPIRES_IN = 3600
@@ -51,9 +51,11 @@ _ERROR_CODE = re.compile(r"^[A-Za-z0-9_.\-]{1,64}$")
 # fingerprint -> (token, expires_at on the monotonic clock)
 _cache: dict[str, tuple[str, float]] = {}
 _locks: dict[str, asyncio.Lock] = {}
-# (org_id, server_id) -> last health outcome written by this process
-# (None means healthy). Absent means unknown, so the first outcome is written.
-_last_outcome: dict[tuple[int, int], Optional[str]] = {}
+# fingerprint -> (TokenError message, failure expires_at on the monotonic clock).
+# While set, callers fail fast instead of each waiting out their own fetch
+# during an identity-provider outage.
+_failures: dict[str, tuple[str, float]] = {}
+FAILURE_COOLDOWN_SECONDS = 10
 
 
 class TokenError(Exception):
@@ -63,15 +65,14 @@ class TokenError(Exception):
 def _reset_cache() -> None:
     _cache.clear()
     _locks.clear()
-
-
-def _reset_outcomes() -> None:
-    _last_outcome.clear()
+    _failures.clear()
 
 
 def invalidate(auth_type: str, cfg: dict) -> None:
     """Forget the cached token for this config, e.g. after the server rejected it."""
-    _cache.pop(config_fingerprint(auth_type, cfg), None)
+    key = config_fingerprint(auth_type, cfg)
+    _cache.pop(key, None)
+    _failures.pop(key, None)
 
 
 def _cached(key: str) -> Optional[str]:
@@ -79,6 +80,15 @@ def _cached(key: str) -> Optional[str]:
     if entry and time.monotonic() < entry[1] - EXPIRY_MARGIN_SECONDS:
         return entry[0]
     return None
+
+
+def _raise_if_cooling_down(key: str) -> None:
+    entry = _failures.get(key)
+    if not entry:
+        return
+    if time.monotonic() < entry[1]:
+        raise TokenError(entry[0])
+    _failures.pop(key, None)
 
 
 def _expires_in(value) -> float:
@@ -114,14 +124,20 @@ async def get_access_token(
     token = _cached(key)
     if token:
         return token
+    _raise_if_cooling_down(key)
     async with _locks.setdefault(key, asyncio.Lock()):
         token = _cached(key)
         if token:
             return token
-        if auth_type == "oauth":
-            token, expires_in = await _fetch_oauth(cfg, transport)
-        else:
-            token, expires_in = await _fetch_aws(cfg)
+        _raise_if_cooling_down(key)
+        try:
+            if auth_type == "oauth":
+                token, expires_in = await _fetch_oauth(cfg, transport)
+            else:
+                token, expires_in = await _fetch_aws(cfg)
+        except TokenError as exc:
+            _failures[key] = (str(exc), time.monotonic() + FAILURE_COOLDOWN_SECONDS)
+            raise
         if expires_in > EXPIRY_MARGIN_SECONDS:
             _cache[key] = (token, time.monotonic() + expires_in)
         return token
@@ -234,25 +250,27 @@ def _aws_error_message(exc: ClientError) -> str:
     return f"AWS Sign-In returned an error ({code})"
 
 
-def remember_outcome(org_id: int, server_id: int, error: Optional[str]) -> None:
-    """Note a health outcome written elsewhere (discovery), so the next
-    note_token_outcome compares against what is actually stored."""
-    _last_outcome[(org_id, server_id)] = error
-
-
-async def note_token_outcome(org_id: int, server_id: int, error: Optional[str]) -> None:
+async def note_token_outcome(
+    org_id: int,
+    server_id: int,
+    error: Optional[str],
+    stored: Optional[tuple] = None,
+) -> None:
     """Record server health after a token-authenticated call, only when it changes.
 
-    ``error`` is None for a working token. Database failures are logged (message
-    only) and swallowed so they never fail the tool call; the outcome is then not
-    remembered, so the next call tries the write again.
+    ``error`` is None for a working token. ``stored`` is the row's
+    ``(health_status, last_discovery_error)`` as read when the call was resolved,
+    so every worker compares against what is actually in the database. Without
+    it the outcome is always written. Database failures are logged (message
+    only) and swallowed so they never fail the tool call; the next call retries.
     """
-    key = (org_id, server_id)
-    if key in _last_outcome and _last_outcome[key] == error:
-        return
+    if stored is not None:
+        status, last_error = stored
+        if error is None and status == "healthy":
+            return
+        if error is not None and status == "unhealthy" and last_error == error:
+            return
     try:
         await mcp_servers_crud.record_discovery_result(org_id, server_id, error)
     except Exception as exc:  # noqa: BLE001 — health bookkeeping must not break the call
         logger.warning("Could not record MCP server health for server %s: %s", server_id, type(exc).__name__)
-        return
-    remember_outcome(org_id, server_id, error)

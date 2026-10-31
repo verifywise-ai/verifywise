@@ -68,6 +68,11 @@ router = APIRouter()
 MONITORED_META_KEY = "verifywise.ai/monitored"
 
 
+def _stored_health(tool: dict) -> tuple:
+    """The server's health as stored when the tool was resolved."""
+    return (tool.get("health_status"), tool.get("last_discovery_error"))
+
+
 def _jsonrpc_error(id, code: int, message: str, data: dict | None = None) -> dict:
     error = {"code": code, "message": message}
     if data:
@@ -314,7 +319,7 @@ async def mcp_jsonrpc(request: Request):
 
             await CircuitBreaker.record_success(server_id)
             if tool.get("auth_type") in TOKEN_AUTH_TYPES:
-                await note_token_outcome(org_id, server_id, None)
+                await note_token_outcome(org_id, server_id, None, _stored_health(tool))
 
             # Cache new backend session for next call
             if new_backend_session and gateway_session:
@@ -356,7 +361,7 @@ async def mcp_jsonrpc(request: Request):
             # Admin-readable and secret-free: audited and stored as the server's
             # health, but the agent only sees the generic error.
             await _audit("error", str(e), True)
-            await note_token_outcome(org_id, tool["server_id"], str(e))
+            await note_token_outcome(org_id, tool["server_id"], str(e), _stored_health(tool))
             return JSONResponse(content=_jsonrpc_error(msg_id, -32603, "Internal error"), status_code=200)
         except ValueError as e:
             await _audit("error", str(e), True)

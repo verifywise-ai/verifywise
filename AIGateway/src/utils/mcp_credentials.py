@@ -106,8 +106,20 @@ def _normalize_token_type(auth_type: str, incoming: dict, stored: dict) -> dict:
     def pick(name: str) -> str:
         return _clean(incoming.get(name)) or _clean(stored.get(name))
 
+    def pick_clearable(name: str) -> str:
+        # A key present in the request wins even when empty (clears the value);
+        # an absent key keeps the stored one.
+        if name in incoming:
+            return _clean(incoming.get(name))
+        return _clean(stored.get(name))
+
     new_secret = _clean(incoming.get(secret_field[:-4]))
     secret = new_secret or token_secret(auth_type, stored)
+    # No new secret: keep the stored ciphertext as is. Re-encrypting would use a
+    # fresh GCM nonce and change the config fingerprint (dropping the cached token).
+    def secret_enc() -> str:
+        return encrypt(new_secret) if new_secret else stored.get(secret_field) or encrypt(secret)
+
     if auth_type == "aws_iam":
         region = pick("region")
         if not _AWS_REGION.match(region):
@@ -118,8 +130,8 @@ def _normalize_token_type(auth_type: str, incoming: dict, stored: dict) -> dict:
         return {
             "region": region,
             "access_key_id": access_key_id,
-            "secret_access_key_enc": encrypt(secret),
-            "resource": pick("resource") or DEFAULT_AWS_MCP_RESOURCE,
+            "secret_access_key_enc": secret_enc(),
+            "resource": pick_clearable("resource") or DEFAULT_AWS_MCP_RESOURCE,
         }
 
     client_id = pick("client_id")
@@ -145,14 +157,15 @@ def _normalize_token_type(auth_type: str, incoming: dict, stored: dict) -> dict:
     method = _clean(incoming.get("auth_method")) or _clean(stored.get("auth_method"))
     cfg = {
         "client_id": client_id,
-        "client_secret_enc": encrypt(secret),
+        "client_secret_enc": secret_enc(),
         "token_url": token_url,
         "token_url_source": source if source in _TOKEN_URL_SOURCES else "manual",
         "auth_method": method if method in _AUTH_METHODS else "client_secret_basic",
     }
     for optional in ("scope", "resource"):
-        if pick(optional):
-            cfg[optional] = pick(optional)
+        value = pick_clearable(optional)
+        if value:
+            cfg[optional] = value
     return cfg
 
 
@@ -172,11 +185,16 @@ def normalize_auth_config(
     stored = stored or {}
     if auth_type in TOKEN_AUTH_TYPES:
         return _normalize_token_type(auth_type, incoming, stored)
-    secret = _incoming_secret(auth_type, incoming) or get_secret(auth_type, stored)
+    new_secret = _incoming_secret(auth_type, incoming)
+    secret = new_secret or get_secret(auth_type, stored)
     if not secret:
         raise CredentialError("Enter the credentials for the new auth type")
     header = _header(incoming) or _header(stored)
-    return _stored_shape(auth_type, secret, header)
+    shape = _stored_shape(auth_type, secret, header)
+    kept = stored.get(f"{_SECRET_FIELD[auth_type]}_enc")
+    if not new_secret and kept:
+        shape[f"{_SECRET_FIELD[auth_type]}_enc"] = kept  # same ciphertext: nothing changed
+    return shape
 
 
 def migrate_stored_config(auth_type: str, cfg: Optional[dict]) -> dict:
@@ -256,6 +274,7 @@ def _public_token_fields(auth_type: str, cfg: dict) -> dict:
             "oauth_token_url": cfg.get("token_url", ""),
             "oauth_token_url_source": cfg.get("token_url_source", "manual"),
             "oauth_scope": cfg.get("scope", ""),
+            "oauth_resource": cfg.get("resource", ""),
         }
     secret = token_secret(auth_type, cfg)
     if secret:

@@ -97,6 +97,7 @@ interface MCPServer {
   oauth_token_url?: string;
   oauth_token_url_source?: "manual" | "discovered";
   oauth_scope?: string;
+  oauth_resource?: string;
   created_by_name: string;
   created_at: string;
 }
@@ -364,7 +365,7 @@ export default function MCPServersPage() {
       oauth_token_url: srv.oauth_token_url || "",
       oauth_token_url_source: srv.oauth_token_url_source || "manual",
       oauth_scope: srv.oauth_scope || "",
-      oauth_resource: "",
+      oauth_resource: srv.oauth_resource || "",
       oauth_auth_method: "",
       aws_region: srv.aws_region || "",
       aws_access_key_id: srv.aws_access_key_id || "",
@@ -415,8 +416,9 @@ export default function MCPServersPage() {
         ...(secret ? { client_secret: secret } : {}),
         token_url: form.oauth_token_url.trim(),
         token_url_source: form.oauth_token_url_source,
-        ...(scope ? { scope } : {}),
-        ...(resource ? { resource } : {}),
+        // Always sent, so clearing the field clears the stored value.
+        scope,
+        resource,
         ...(form.oauth_auth_method ? { auth_method: form.oauth_auth_method } : {}),
       };
     } else if (form.auth_type === "aws_iam") {

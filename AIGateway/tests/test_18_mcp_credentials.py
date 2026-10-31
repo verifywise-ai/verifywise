@@ -232,6 +232,7 @@ class TestTokenTypes:
         assert fields["oauth_token_url"] == "https://auth.example.com/oauth2/token"
         assert fields["oauth_token_url_source"] == "manual"
         assert fields["oauth_scope"] == "mcp"
+        assert fields["oauth_resource"] == ""
         assert fields["auth_secret_hint"] and "s3cret" not in fields["auth_secret_hint"]
         assert public_auth_fields("oauth", oauth, False) == {}
 
@@ -308,3 +309,25 @@ class TestOauthOriginChange:
         assert edited["token_url_source"] == "manual"
         same = normalize_auth_config("oauth", {"client_id": "app"}, stored)
         assert same["token_url_source"] == "discovered"
+
+
+class TestClearableTokenFields:
+    def test_empty_scope_and_resource_clear_oauth(self):
+        stored = normalize_auth_config("oauth", {**OAUTH_IN, "scope": "a", "resource": "https://r"}, None)
+        edited = normalize_auth_config("oauth", {"scope": "", "resource": ""}, stored)
+        assert "scope" not in edited and "resource" not in edited
+
+    def test_absent_scope_and_resource_keep_stored(self):
+        stored = normalize_auth_config("oauth", {**OAUTH_IN, "scope": "a", "resource": "https://r"}, None)
+        edited = normalize_auth_config("oauth", {}, stored)
+        assert edited["scope"] == "a" and edited["resource"] == "https://r"
+
+    def test_aws_empty_resource_falls_back_to_default(self):
+        aws_in = {"region": "us-east-1", "access_key_id": "AKIA", "secret_access_key": "s", "resource": "custom"}
+        stored = normalize_auth_config("aws_iam", aws_in, None)
+        edited = normalize_auth_config("aws_iam", {"resource": ""}, stored)
+        assert edited["resource"] == "aws-mcp.amazonaws.com"
+
+    def test_kept_secret_keeps_ciphertext(self):
+        stored = normalize_auth_config("oauth", OAUTH_IN, None)
+        assert normalize_auth_config("oauth", {"client_secret": ""}, stored) == stored

@@ -175,15 +175,16 @@ async def update_mcp_server(server_id: int, request: Request) -> Any:
 
     old_type = existing.get("auth_type") or "none"
     new_type = body.get("auth_type") or old_type
+    auth_changed = new_type != old_type
     if "auth_config" in body or new_type != old_type:
         stored = existing.get("auth_config") if new_type == old_type else None
         body["auth_type"] = new_type
         body["auth_config"] = _normalized(new_type, body.get("auth_config"), stored)
+        # A resubmitted, unchanged config (e.g. a rename) must not re-run discovery.
+        auth_changed = auth_changed or body["auth_config"] != (existing.get("auth_config") or {})
 
     connection_changed = (
-        ("url" in body and body["url"] != existing.get("url"))
-        or new_type != old_type
-        or "auth_config" in body
+        ("url" in body and body["url"] != existing.get("url")) or auth_changed
     )
     enabling = body.get("is_active") is True and not existing.get("is_active")
 

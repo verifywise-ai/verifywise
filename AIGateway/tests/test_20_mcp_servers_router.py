@@ -383,3 +383,56 @@ class TestUnsafeServerUrlOnToolCall:
         assert body["error"]["message"] == "This MCP server's address is not allowed"
         assert failures == []
         assert audits and audits[0]["result_status"] == "error" and audits[0]["is_error"] is True
+
+
+class TestOauthResubmit:
+    @staticmethod
+    def _oauth_row():
+        cfg = normalize_auth_config(
+            "oauth",
+            {"client_id": "app", "client_secret": "s3cret", "token_url": "https://auth.example.com/t",
+             "scope": "mcp"},
+            None,
+        )
+        return _row(auth_type="oauth", auth_config=cfg)
+
+    @staticmethod
+    def _form(**over):
+        form = {"client_id": "app", "client_secret": "", "token_url": "https://auth.example.com/t",
+                "scope": "mcp"}
+        form.update(over)
+        return form
+
+    async def test_rename_with_full_config_skips_discovery_and_keeps_ciphertext(self, fakes):
+        from utils.mcp_credentials import config_fingerprint
+
+        fakes["row"] = self._oauth_row()
+        before = dict(fakes["row"]["auth_config"])
+        out = await router.update_mcp_server(
+            9, _request({"name": "Renamed", "auth_type": "oauth", "auth_config": self._form()})
+        )
+        assert out["discovery"]["status"] == "skipped"
+        assert fakes["discovery"] == []
+        assert fakes["saved"]["auth_config"] == before
+        assert config_fingerprint("oauth", fakes["saved"]["auth_config"]) == config_fingerprint("oauth", before)
+
+    async def test_changed_scope_runs_discovery(self, fakes):
+        fakes["row"] = self._oauth_row()
+        out = await router.update_mcp_server(
+            9, _request({"auth_type": "oauth", "auth_config": self._form(scope="other")})
+        )
+        assert out["discovery"] == OK
+
+    async def test_empty_scope_clears_it(self, fakes):
+        fakes["row"] = self._oauth_row()
+        out = await router.update_mcp_server(
+            9, _request({"auth_type": "oauth", "auth_config": self._form(scope="")})
+        )
+        assert "scope" not in fakes["saved"]["auth_config"]
+        assert out["discovery"] == OK
+
+    async def test_api_key_rename_with_header_resubmitted_skips_discovery(self, fakes):
+        await router.update_mcp_server(
+            9, _request({"name": "R", "auth_type": "api_key", "auth_config": {"header": "X-K"}})
+        )
+        assert fakes["discovery"] == []

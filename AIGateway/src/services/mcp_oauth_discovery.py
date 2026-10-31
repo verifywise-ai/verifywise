@@ -26,7 +26,7 @@ import httpx
 from services.mcp_proxy_service import ON_SAVE_DISCOVERY_SECONDS
 from utils.safe_outbound_url import UnsafeOutboundUrlError, assert_safe_outbound_url
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("uvicorn")
 
 NOT_FOUND_MESSAGE = "Couldn't find the token URL from this server address. Enter it by hand."
 _RESOURCE_METADATA = re.compile(r'resource_metadata\s*=\s*"([^"]+)"', re.IGNORECASE)

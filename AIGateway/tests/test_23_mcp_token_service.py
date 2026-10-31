@@ -169,6 +169,7 @@ class TestOAuth:
         with pytest.raises(TokenError):
             await svc.get_access_token("oauth", cfg, transport=failing.transport)
         assert svc._cache == {}
+        svc.invalidate("oauth", cfg)  # or wait out the failure cooldown
         assert await svc.get_access_token("oauth", cfg, transport=Endpoint().transport) == "tok"
 
     async def test_failed_leader_with_waiters_recovers(self):
@@ -186,6 +187,8 @@ class TestOAuth:
         )
         assert all(isinstance(r, TokenError) for r in results)
         assert svc._cache == {}
+        assert len(calls) == 1
+        svc.invalidate("oauth", cfg)
         ok = await asyncio.wait_for(
             svc.get_access_token("oauth", cfg, transport=Endpoint().transport), timeout=2
         )
@@ -425,3 +428,41 @@ class TestHeadersAndInvalidate:
         svc.invalidate("oauth", cfg)
         await svc.get_access_token("oauth", cfg, transport=ep.transport)
         assert len(ep.requests) == 2
+
+
+class TestFailureCooldown:
+    async def test_concurrent_cold_calls_share_one_failed_fetch(self):
+        ep = Endpoint(httpx.Response(401, json={"error": "invalid_client"}))
+        cfg = oauth_cfg()
+
+        results = await asyncio.gather(
+            *[svc.get_access_token("oauth", cfg, transport=ep.transport) for _ in range(5)],
+            return_exceptions=True,
+        )
+
+        assert len(ep.requests) == 1
+        assert all(isinstance(r, TokenError) for r in results)
+        assert len({str(r) for r in results}) == 1
+
+    async def test_new_request_after_cooldown(self, monkeypatch):
+        ep = Endpoint(httpx.Response(401, json={"error": "invalid_client"}))
+        cfg = oauth_cfg()
+        with pytest.raises(TokenError):
+            await svc.get_access_token("oauth", cfg, transport=ep.transport)
+        with pytest.raises(TokenError):
+            await svc.get_access_token("oauth", cfg, transport=ep.transport)
+        assert len(ep.requests) == 1
+
+        real = time.monotonic()
+        monkeypatch.setattr(svc.time, "monotonic", lambda: real + svc.FAILURE_COOLDOWN_SECONDS + 1)
+        with pytest.raises(TokenError):
+            await svc.get_access_token("oauth", cfg, transport=ep.transport)
+        assert len(ep.requests) == 2
+
+    async def test_invalidate_clears_the_failure(self):
+        ep = Endpoint(httpx.Response(500), httpx.Response(200, json={"access_token": "tok"}))
+        cfg = oauth_cfg()
+        with pytest.raises(TokenError):
+            await svc.get_access_token("oauth", cfg, transport=ep.transport)
+        svc.invalidate("oauth", cfg)
+        assert await svc.get_access_token("oauth", cfg, transport=ep.transport) == "tok"
