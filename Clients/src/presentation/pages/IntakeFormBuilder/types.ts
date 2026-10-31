@@ -357,7 +357,7 @@ export const ENTITY_FIELD_MAPPINGS: Record<IntakeEntityType, EntityFieldMapping[
     {
       field: "departments",
       label: "Departments",
-      description: "Teams that use the AI app (several selections, or comma-separated text)",
+      description: "Teams that use the AI app (a multi-select, or text separated by commas)",
       requiredFieldType: ["multiselect", "text"],
     },
   ],
@@ -642,7 +642,7 @@ export const DEFAULT_AI_APP_FIELDS: FormField[] = [
     type: "textarea",
     label: "Description",
     placeholder: "Describe what you want to use the AI app for",
-    guidanceText: "Include the task, the data it will see, and who will use it.",
+    guidanceText: "Include the task, the data it will see and who will use it.",
     validation: { maxLength: 2000 },
     entityFieldMapping: "description",
     order: 1,

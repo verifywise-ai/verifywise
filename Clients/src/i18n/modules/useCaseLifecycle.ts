@@ -19,12 +19,12 @@ export const de: Record<string, string> = {
   "Enter the name of the AI app": "Geben Sie den Namen der KI-App ein",
   "Name of the AI app": "Name der KI-App",
   "Still-live check": "Prüfung auf weitere Nutzung",
-  "Teams that use the AI app (several selections, or comma-separated text)":
+  "Teams that use the AI app (a multi-select, or text separated by commas)":
     "Teams, die die KI-App nutzen (Mehrfachauswahl oder durch Kommas getrennter Text)",
   "What the AI app is used for": "Wofür die KI-App genutzt wird",
   "Use the product name people know it by, so reviewers can find it.":
     "Verwenden Sie den bekannten Produktnamen, damit Prüfende die App finden.",
-  "Include the task, the data it will see, and who will use it.":
+  "Include the task, the data it will see and who will use it.":
     "Nennen Sie die Aufgabe, die Daten, die sie sieht, und wer sie nutzt.",
   "e.g. Sales, Support": "z. B. Vertrieb, Support",
   "Separate several departments with commas.": "Trennen Sie mehrere Abteilungen durch Kommas.",
@@ -163,12 +163,12 @@ export const fr: Record<string, string> = {
   "Enter the name of the AI app": "Saisissez le nom de l'application IA",
   "Name of the AI app": "Nom de l'application IA",
   "Still-live check": "Vérification de mise en service",
-  "Teams that use the AI app (several selections, or comma-separated text)":
+  "Teams that use the AI app (a multi-select, or text separated by commas)":
     "Équipes qui utilisent l'application IA (plusieurs choix, ou texte séparé par des virgules)",
   "What the AI app is used for": "À quoi sert l'application IA",
   "Use the product name people know it by, so reviewers can find it.":
     "Utilisez le nom de produit connu de tous, pour que les examinateurs la retrouvent.",
-  "Include the task, the data it will see, and who will use it.":
+  "Include the task, the data it will see and who will use it.":
     "Indiquez la tâche, les données qu'elle verra et qui l'utilisera.",
   "e.g. Sales, Support": "ex. Ventes, Support",
   "Separate several departments with commas.": "Séparez plusieurs services par des virgules.",
@@ -309,12 +309,12 @@ export const es: Record<string, string> = {
   "Enter the name of the AI app": "Introduzca el nombre de la app de IA",
   "Name of the AI app": "Nombre de la app de IA",
   "Still-live check": "Comprobación de uso continuado",
-  "Teams that use the AI app (several selections, or comma-separated text)":
+  "Teams that use the AI app (a multi-select, or text separated by commas)":
     "Equipos que usan la app de IA (varias opciones o texto separado por comas)",
   "What the AI app is used for": "Para qué se usa la app de IA",
   "Use the product name people know it by, so reviewers can find it.":
     "Use el nombre de producto que la gente conoce, para que los revisores la encuentren.",
-  "Include the task, the data it will see, and who will use it.":
+  "Include the task, the data it will see and who will use it.":
     "Indique la tarea, los datos que verá y quién la usará.",
   "e.g. Sales, Support": "p. ej., Ventas, Soporte",
   "Separate several departments with commas.": "Separe varios departamentos con comas.",
