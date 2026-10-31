@@ -18,6 +18,8 @@ import {
   linkVendorToProject,
 } from "../factories";
 import { recomputeVendorRiskLinks } from "../../services/riskLinks/vendorRelated";
+import { updateRiskLinkStatusQuery } from "../../utils/riskLink.utils";
+import { createUserVendorRiskLinkQuery } from "../../utils/vendorRiskLink.utils";
 
 beforeAll(async () => {
   await seedFrameworks();
@@ -258,9 +260,16 @@ describe("recomputeVendorRiskLinks against Postgres", () => {
     const confirmed = before.find((row) =>
       [row.source_vendor_risk_id, row.target_vendor_risk_id].includes(c),
     )!;
-    await sequelize.query(
-      `UPDATE risk_links SET status = 'confirmed', source = 'user', decided_at = NOW() WHERE id = :id`,
-      { replacements: { id: confirmed.id } },
+    // Decided the way the PATCH endpoint decides: status and decision columns
+    // only, so the row stays `derived` and recompute still owns its score.
+    // `source = 'user'` would be a pair drawn by hand, which it never rescores.
+    await updateRiskLinkStatusQuery(
+      confirmed.id,
+      owner.orgId,
+      "confirmed",
+      owner.userId,
+      null,
+      null,
     );
 
     await sequelize.query(
@@ -271,8 +280,33 @@ describe("recomputeVendorRiskLinks against Postgres", () => {
 
     const after = await pairs(owner.orgId);
     expect(after).toHaveLength(1);
-    expect(after[0]).toMatchObject({ id: confirmed.id, status: "confirmed", score: 0 });
+    expect(after[0]).toMatchObject({
+      id: confirmed.id,
+      status: "confirmed",
+      source: "derived",
+      score: 0,
+    });
     expect(after[0].reasons).toEqual([]);
+  });
+
+  // A pair a person drew by hand has no score and no reasons of its own, so
+  // recompute must not write the machine's onto it: the upsert refreshes a
+  // derived row only.
+  it("leaves a pair a person drew by hand alone, even when the wording matches", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const { a, b } = await twoVendorsAlike(owner.orgId, owner.userId);
+    await createUserVendorRiskLinkQuery({
+      organizationId: owner.orgId,
+      sourceVendorRiskId: Math.min(a, b),
+      targetVendorRiskId: Math.max(a, b),
+      userId: owner.userId,
+    });
+
+    await recomputeVendorRiskLinks(owner.orgId, a);
+
+    const rows = await pairs(owner.orgId);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ status: "confirmed", source: "user", score: 0, reasons: [] });
   });
 
   it("ignores a soft-deleted vendor risk, and another organization's", async () => {
