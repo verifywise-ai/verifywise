@@ -942,5 +942,108 @@ describe("MCPServersPage", () => {
       expect(await screen.findByText(/^OAuth · \/search-server$/)).toBeInTheDocument();
       expect(screen.getByText(/^AWS IAM · \/search-server$/)).toBeInTheDocument();
     });
+
+    it("ignores a token URL found for a URL the admin has since changed", async () => {
+      const resolvers: Record<string, (v: unknown) => void> = {};
+      mockPost.mockImplementation((url: string, body: any) => {
+        if (url !== "/ai-gateway/mcp/servers/discover-oauth") return Promise.resolve({ data: {} });
+        return new Promise((resolve) => (resolvers[body.url] = resolve));
+      });
+      await openCreateForm("https://a.example.com");
+      await chooseAuth("OAuth (client credentials)");
+      await waitFor(() => expect(resolvers["https://a.example.com"]).toBeDefined(), {
+        timeout: 3000,
+      });
+
+      fireEvent.change(screen.getByLabelText(/^URL/), {
+        target: { value: "https://b.example.com" },
+      });
+      resolvers["https://a.example.com"]({
+        data: { token_url: "https://auth-a.example.com/token", auth_method: "client_secret_post" },
+      });
+      await new Promise((r) => setTimeout(r, 50));
+      expect(screen.getByLabelText(/^Token URL/)).toHaveValue("");
+
+      await waitFor(() => expect(resolvers["https://b.example.com"]).toBeDefined(), {
+        timeout: 3000,
+      });
+      resolvers["https://b.example.com"]({
+        data: { token_url: "https://auth-b.example.com/token", auth_method: "client_secret_basic" },
+      });
+      await waitFor(() =>
+        expect(screen.getByLabelText(/^Token URL/)).toHaveValue("https://auth-b.example.com/token"),
+      );
+    });
+
+    it("clears the found-at note when the token URL is edited by hand", async () => {
+      mockPost.mockResolvedValue({
+        data: { token_url: "https://auth.example.com/token", auth_method: "client_secret_basic" },
+      });
+      await openCreateForm("https://o.example.com");
+      await chooseAuth("OAuth (client credentials)");
+      fireEvent.click(screen.getByText("Find token URL"));
+      expect(await screen.findByText(/Found at auth\.example\.com\./)).toBeInTheDocument();
+
+      fireEvent.change(screen.getByLabelText(/^Token URL/), {
+        target: { value: "https://x.test/t" },
+      });
+
+      expect(screen.queryByText(/Found at/)).not.toBeInTheDocument();
+    });
+
+    it("says so when Find token URL returns nothing", async () => {
+      mockPost.mockResolvedValue({ data: {} });
+      await openCreateForm("https://o.example.com");
+      await chooseAuth("OAuth (client credentials)");
+
+      fireEvent.click(screen.getByText("Find token URL"));
+
+      expect(await screen.findByText("Could not find the token URL")).toBeInTheDocument();
+    });
+
+    it("exposes the Advanced toggle state", async () => {
+      mockPost.mockResolvedValue({ data: {} });
+      await openCreateForm("https://o.example.com");
+      await chooseAuth("OAuth (client credentials)");
+
+      const toggle = screen.getByRole("button", { name: "Advanced" });
+      expect(toggle).toHaveAttribute("aria-expanded", "false");
+      fireEvent.click(toggle);
+      expect(toggle).toHaveAttribute("aria-expanded", "true");
+      expect(screen.getByText("Resource (optional)")).toBeInTheDocument();
+    });
+
+    it("keeps the stored AWS key on edit and names it a key", async () => {
+      mockGet.mockResolvedValue({
+        data: {
+          servers: [
+            makeServer({
+              auth_type: "aws_iam",
+              aws_region: "us-east-1",
+              aws_access_key_id: "AKIA1",
+              auth_secret_hint: "abcd...wxyz",
+            }),
+          ],
+        },
+      });
+      mockPatch.mockResolvedValue({
+        data: { server: makeServer(), discovery: { status: "skipped", tools_discovered: 0 } },
+      });
+      renderWithProviders(<MCPServersPage />, { route: "/ai-gateway/mcp/servers" });
+      await waitFor(() => expect(screen.getByText("Search Server")).toBeInTheDocument());
+
+      fireEvent.click(screen.getByRole("button", { name: "Edit server" }));
+
+      expect(
+        screen.getByText("Current key: abcd...wxyz. Leave blank to keep it."),
+      ).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+      await waitFor(() => {
+        expect(mockPatch.mock.calls[0][1].auth_config).toEqual({
+          region: "us-east-1",
+          access_key_id: "AKIA1",
+        });
+      });
+    });
   });
 });

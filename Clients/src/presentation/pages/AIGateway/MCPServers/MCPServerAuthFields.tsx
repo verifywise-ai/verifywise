@@ -64,7 +64,10 @@ export default function MCPServerAuthFields({
   const { t } = useTranslation();
   const [showAdvanced, setShowAdvanced] = useState(false);
   const hint = keepsStoredSecret ? editingServer?.auth_secret_hint : undefined;
-  const keepHint = fill(t("Current secret: {hint}. Leave blank to keep it."), { hint: hint ?? "" });
+  const keepSecretHint = fill(t("Current secret: {hint}. Leave blank to keep it."), {
+    hint: hint ?? "",
+  });
+  const keepKeyHint = fill(t("Current key: {hint}. Leave blank to keep it."), { hint: hint ?? "" });
   const set = (patch: Partial<ServerForm>) => setForm((p) => ({ ...p, ...patch }));
 
   if (form.auth_type === "bearer") {
@@ -123,7 +126,7 @@ export default function MCPServerAuthFields({
           onChange={(e) => set({ oauth_client_secret: e.target.value })}
           isRequired={!keepsStoredSecret}
         />
-        {hint && <Typography sx={hintSx}>{keepHint}</Typography>}
+        {hint && <Typography sx={hintSx}>{keepSecretHint}</Typography>}
         <Field
           label="Scope (optional)"
           value={form.oauth_scope}
@@ -157,6 +160,7 @@ export default function MCPServerAuthFields({
             setShowAdvanced((v) => !v);
           }}
           showUnderline={false}
+          ariaExpanded={showAdvanced}
         >
           {t("Advanced")}
         </VWLink>
@@ -205,7 +209,7 @@ export default function MCPServerAuthFields({
           onChange={(e) => set({ aws_secret_access_key: e.target.value })}
           isRequired={!keepsStoredSecret}
         />
-        {hint && <Typography sx={hintSx}>{keepHint}</Typography>}
+        {hint && <Typography sx={hintSx}>{keepKeyHint}</Typography>}
         <Typography sx={hintSx}>
           Use the long-term access key of an IAM user with the AWSMCPSignInOAuthAccessPolicy policy.
           Tool calls run with that user's permissions.

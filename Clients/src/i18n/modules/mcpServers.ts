@@ -25,6 +25,8 @@ export const de: Record<string, string> = {
     "Verwenden Sie den langfristigen Zugriffsschlüssel eines IAM-Benutzers mit der Richtlinie AWSMCPSignInOAuthAccessPolicy. Tool-Aufrufe laufen mit den Berechtigungen dieses Benutzers.",
   "Current secret: {hint}. Leave blank to keep it.":
     "Aktuelles Geheimnis: {hint}. Leer lassen, um es beizubehalten.",
+  "Current key: {hint}. Leave blank to keep it.":
+    "Aktueller Schlüssel: {hint}. Leer lassen, um ihn beizubehalten.",
   "Enter the server URL first": "Geben Sie zuerst die Server-URL ein",
   "Could not find the token URL": "Die Token-URL konnte nicht gefunden werden",
 };
@@ -53,6 +55,8 @@ export const fr: Record<string, string> = {
     "Utilisez la clé d'accès à long terme d'un utilisateur IAM disposant de la stratégie AWSMCPSignInOAuthAccessPolicy. Les appels d'outils s'exécutent avec les autorisations de cet utilisateur.",
   "Current secret: {hint}. Leave blank to keep it.":
     "Secret actuel : {hint}. Laissez vide pour le conserver.",
+  "Current key: {hint}. Leave blank to keep it.":
+    "Clé actuelle : {hint}. Laissez vide pour la conserver.",
   "Enter the server URL first": "Saisissez d'abord l'URL du serveur",
   "Could not find the token URL": "Impossible de trouver l'URL du jeton",
 };
@@ -81,6 +85,8 @@ export const es: Record<string, string> = {
     "Usa la clave de acceso de larga duración de un usuario de IAM con la política AWSMCPSignInOAuthAccessPolicy. Las llamadas a herramientas se ejecutan con los permisos de ese usuario.",
   "Current secret: {hint}. Leave blank to keep it.":
     "Secreto actual: {hint}. Déjalo en blanco para conservarlo.",
+  "Current key: {hint}. Leave blank to keep it.":
+    "Clave actual: {hint}. Déjalo en blanco para conservarla.",
   "Enter the server URL first": "Introduce primero la URL del servidor",
   "Could not find the token URL": "No se pudo encontrar la URL del token",
 };

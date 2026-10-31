@@ -163,6 +163,9 @@ export default function MCPServersPage() {
   // The (OAuth, URL) pair discovery last ran for, so it fires once per URL.
   const discoveredFor = useRef("");
   const discoverySeq = useRef(0);
+  // Read when a lookup answers, to drop it if the admin has moved on.
+  const latestForm = useRef(form);
+  latestForm.current = form;
   const [alert, setAlert] = useState<{
     variant: "success" | "warning" | "error";
     title: string;
@@ -256,8 +259,13 @@ export default function MCPServersPage() {
         { url },
       );
       if (seq !== discoverySeq.current) return;
+      // The answer is for a URL the admin has since changed or left.
+      if (latestForm.current.auth_type !== "oauth" || latestForm.current.url.trim() !== url) return;
       const found: string | undefined = res?.data?.token_url;
-      if (!found) return;
+      if (!found) {
+        if (manual) setFormError("Could not find the token URL");
+        return;
+      }
       let host = found;
       try {
         host = new URL(found).host;
@@ -305,6 +313,11 @@ export default function MCPServersPage() {
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isModalOpen, form.auth_type, form.url, form.oauth_token_url]);
+
+  // A note about a discovered URL no longer applies once the admin edits it.
+  useEffect(() => {
+    if (form.oauth_token_url_source === "manual") setTokenUrlNote("");
+  }, [form.oauth_token_url_source]);
 
   // aws-mcp.<region>.api.aws URLs name their region; fill it when empty.
   useEffect(() => {
