@@ -10,11 +10,13 @@ fetch. Every ``TokenError`` message is admin-readable and free of secrets.
 """
 
 import asyncio
+import base64
 import logging
 import math
 import re
 import time
 from typing import Optional
+from urllib.parse import quote_plus
 
 import boto3
 import httpx
@@ -58,6 +60,32 @@ _failures: dict[str, tuple[str, float]] = {}
 FAILURE_COOLDOWN_SECONDS = 10
 
 
+UPSTREAM_REJECTED_MESSAGE = (
+    "The MCP server rejected the access token (HTTP 401). Check the scope or resource."
+)
+# Every TokenError message starts with one of these fixed prefixes. Keep this
+# next to the messages: discovery errors never start with them, so the proxy can
+# tell a token error from an unrelated stored discovery error.
+TOKEN_ERROR_PREFIXES = (
+    "The stored credentials can't be read",
+    "Auth type ",
+    "The token URL is not allowed",
+    "Could not connect to the token endpoint",
+    "The token endpoint ",
+    "Couldn't get an access token",
+    "AWS rejected the access key",
+    "AWS Sign-In ",
+    "Could not connect to AWS Sign-In",
+    "The IAM user is missing permission",
+    "The MCP server rejected the access token",
+)
+
+
+def is_token_error_message(message: Optional[str]) -> bool:
+    """True when ``message`` is one a TokenError can carry."""
+    return isinstance(message, str) and message.startswith(TOKEN_ERROR_PREFIXES)
+
+
 class TokenError(Exception):
     """A token could not be fetched; ``str(error)`` is safe to show an admin."""
 
@@ -73,6 +101,32 @@ def invalidate(auth_type: str, cfg: dict) -> None:
     key = config_fingerprint(auth_type, cfg)
     _cache.pop(key, None)
     _failures.pop(key, None)
+
+
+def _prune() -> None:
+    """Drop expired tokens and failures, and the locks nothing refers to.
+
+    Called on writes so fingerprints of edited or deleted servers don't pile up.
+    A lock that is held (someone is fetching or waiting) is always kept."""
+    now = time.monotonic()
+    for key in [k for k, (_, exp) in _cache.items() if now >= exp - EXPIRY_MARGIN_SECONDS]:
+        del _cache[key]
+    for key in [k for k, (_, exp) in _failures.items() if now >= exp]:
+        del _failures[key]
+    for key in [k for k, lock in _locks.items() if k not in _cache and k not in _failures and not lock.locked()]:
+        del _locks[key]
+
+
+def record_upstream_rejection(auth_type: str, cfg: dict) -> TokenError:
+    """The MCP server refused a freshly fetched token.
+
+    Starts the failure cooldown, so calls in the next few seconds fail fast
+    without hitting the identity provider, and returns the error to raise."""
+    key = config_fingerprint(auth_type, cfg)
+    _cache.pop(key, None)
+    _failures[key] = (UPSTREAM_REJECTED_MESSAGE, time.monotonic() + FAILURE_COOLDOWN_SECONDS)
+    _prune()
+    return _fail(UPSTREAM_REJECTED_MESSAGE)
 
 
 def _cached(key: str) -> Optional[str]:
@@ -110,7 +164,7 @@ def _stored_secret(auth_type: str, cfg: dict) -> str:
 
 
 def _fail(message: str) -> TokenError:
-    logger.warning("MCP token fetch failed: %s", message)
+    logger.warning("MCP upstream sign-in failed: %s", message)
     return TokenError(message)
 
 
@@ -137,9 +191,11 @@ async def get_access_token(
                 token, expires_in = await _fetch_aws(cfg)
         except TokenError as exc:
             _failures[key] = (str(exc), time.monotonic() + FAILURE_COOLDOWN_SECONDS)
+            _prune()
             raise
         if expires_in > EXPIRY_MARGIN_SECONDS:
             _cache[key] = (token, time.monotonic() + expires_in)
+        _prune()
         return token
 
 
@@ -161,16 +217,18 @@ async def _fetch_oauth(cfg: dict, transport) -> tuple[str, float]:
     for optional in ("scope", "resource"):
         if cfg.get(optional):
             form[optional] = cfg[optional]
-    auth = None
+    headers = None
     client_id, secret = cfg.get("client_id", ""), _stored_secret("oauth", cfg)
     if cfg.get("auth_method") == "client_secret_post":
         form.update(client_id=client_id, client_secret=secret)
     else:
-        auth = httpx.BasicAuth(client_id, secret)
+        # RFC 6749 2.3.1: form-urlencode each value before the Basic encoding.
+        pair = f"{quote_plus(client_id)}:{quote_plus(secret)}"
+        headers = {"Authorization": "Basic " + base64.b64encode(pair.encode("utf-8")).decode("ascii")}
 
     try:
         async with httpx.AsyncClient(timeout=TOKEN_TIMEOUT_SECONDS, transport=transport) as client:
-            response = await client.post(token_url, data=form, auth=auth)
+            response = await client.post(token_url, data=form, headers=headers)
     except httpx.HTTPError:
         raise _fail("Could not connect to the token endpoint") from None
 
@@ -219,14 +277,21 @@ def _aws_client_factory(region: str, access_key_id: str, secret_access_key: str)
     )
 
 
+def _aws_sign_in(region: str, access_key_id: str, secret: str, resource: str) -> dict:
+    """Blocking: boto3 loads its service model when the client is built."""
+    client = _aws_client_factory(region, access_key_id, secret)
+    return client.create_oauth2_token_with_iam(grantType="client_credentials", resource=resource)
+
+
 async def _fetch_aws(cfg: dict) -> tuple[str, float]:
     secret = _stored_secret("aws_iam", cfg)
     try:
-        client = _aws_client_factory(cfg.get("region", ""), cfg.get("access_key_id", ""), secret)
         result = await asyncio.to_thread(
-            client.create_oauth2_token_with_iam,
-            grantType="client_credentials",
-            resource=cfg.get("resource") or DEFAULT_AWS_MCP_RESOURCE,
+            _aws_sign_in,
+            cfg.get("region", ""),
+            cfg.get("access_key_id", ""),
+            secret,
+            cfg.get("resource") or DEFAULT_AWS_MCP_RESOURCE,
         )
     except ClientError as exc:
         raise _fail(_aws_error_message(exc)) from None

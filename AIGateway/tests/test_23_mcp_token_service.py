@@ -17,6 +17,7 @@ import boto3
 import httpx
 import pytest
 from botocore.exceptions import (
+    BotoCoreError,
     ConnectTimeoutError,
     EndpointConnectionError,
     InvalidRegionError,
@@ -230,7 +231,15 @@ class TestOAuth:
         cfg = oauth_cfg(client_secret="s\u00e9cret\u2603")
         ep = Endpoint()
         assert await svc.get_access_token("oauth", cfg, transport=ep.transport) == "tok"
-        expected = base64.b64encode("app:s\u00e9cret\u2603".encode("utf-8")).decode()
+        # RFC 6749 2.3.1: form-urlencode first (UTF-8 percent-escapes), then Basic.
+        expected = base64.b64encode(b"app:s%C3%A9cret%E2%98%83").decode()
+        assert ep.requests[0].headers["Authorization"] == f"Basic {expected}"
+
+    async def test_basic_credentials_are_form_urlencoded(self):
+        cfg = oauth_cfg(client_id="a b", client_secret="p+w%d:x")
+        ep = Endpoint()
+        assert await svc.get_access_token("oauth", cfg, transport=ep.transport) == "tok"
+        expected = base64.b64encode(b"a+b:p%2Bw%25d%3Ax").decode()
         assert ep.requests[0].headers["Authorization"] == f"Basic {expected}"
 
     @pytest.mark.parametrize(
@@ -466,3 +475,144 @@ class TestFailureCooldown:
             await svc.get_access_token("oauth", cfg, transport=ep.transport)
         svc.invalidate("oauth", cfg)
         assert await svc.get_access_token("oauth", cfg, transport=ep.transport) == "tok"
+
+
+class TestTokenErrorMessages:
+    async def test_recognises_token_errors_only(self):
+        assert svc.is_token_error_message("AWS rejected the access key (InvalidClientTokenId)")
+        assert svc.is_token_error_message(
+            "The MCP server rejected the access token (HTTP 401). Check the scope or resource."
+        )
+        assert not svc.is_token_error_message("The server returned an error: x")
+        assert not svc.is_token_error_message("Could not connect to the server address")
+        assert not svc.is_token_error_message("The server rejected the credentials (HTTP 401)")
+        assert not svc.is_token_error_message(None)
+        assert not svc.is_token_error_message("")
+
+    async def test_every_message_fail_can_produce_matches(self, monkeypatch):
+        produced = []
+        real_fail = svc._fail
+
+        def spy(message):
+            produced.append(message)
+            return real_fail(message)
+
+        monkeypatch.setattr(svc, "_fail", spy)
+
+        oauth_responses = [
+            httpx.Response(401, json={"error": "invalid_client"}),
+            httpx.Response(400, json={"error": "invalid_scope"}),
+            httpx.Response(500),
+            httpx.Response(200, json={"token_type": "bearer"}),
+            httpx.ConnectError("down"),
+        ]
+        for response in oauth_responses:
+            svc._reset_cache()
+            with pytest.raises(TokenError):
+                await svc.get_access_token("oauth", oauth_cfg(), transport=Endpoint(response).transport)
+        svc._reset_cache()
+        with pytest.raises(TokenError):
+            await svc.get_access_token("oauth", {**oauth_cfg(), "token_url": "file:///etc/passwd"})
+        with pytest.raises(TokenError):
+            await svc.get_access_token("oauth", {"client_id": "x", "client_secret_enc": "garbage"})
+        with pytest.raises(TokenError):
+            await svc.get_access_token("bearer", {})
+
+        for code in ("InvalidClientTokenId", "AccessDeniedException", "Other"):
+            svc._reset_cache()
+            install(
+                monkeypatch,
+                lambda s, code=code: s.add_client_error(
+                    "create_oauth2_token_with_iam", service_error_code=code, http_status_code=400
+                ),
+            )
+            with pytest.raises(TokenError):
+                await svc.get_access_token("aws_iam", aws_cfg())
+        for error in (
+            EndpointConnectionError(endpoint_url="https://x"),
+            BotoCoreError(),
+        ):
+            svc._reset_cache()
+            monkeypatch.setattr(svc, "_aws_client_factory", _raising_factory(error))
+            with pytest.raises(TokenError):
+                await svc.get_access_token("aws_iam", aws_cfg())
+        svc._reset_cache()
+
+        class Empty:
+            def create_oauth2_token_with_iam(self, **_):
+                return {"tokenType": "Bearer"}
+
+        monkeypatch.setattr(svc, "_aws_client_factory", lambda *a: Empty())
+        with pytest.raises(TokenError):
+            await svc.get_access_token("aws_iam", aws_cfg())
+        produced.append(svc.UPSTREAM_REJECTED_MESSAGE)
+
+        assert len(produced) >= 12
+        unmatched = [m for m in produced if not svc.is_token_error_message(m)]
+        assert unmatched == []
+
+
+def _raising_factory(error):
+    def factory(region, access_key_id, secret_access_key):
+        raise error
+
+    return factory
+
+
+class TestCachePruning:
+    async def test_expired_entries_and_locks_are_dropped_on_write(self, monkeypatch):
+        ep = Endpoint(httpx.Response(200, json={"access_token": "tok", "expires_in": 120}))
+        old = oauth_cfg(client_id="old")
+        await svc.get_access_token("oauth", old, transport=ep.transport)
+        old_key = svc.config_fingerprint("oauth", old)
+        assert old_key in svc._cache and old_key in svc._locks
+
+        real = time.monotonic()
+        monkeypatch.setattr(svc.time, "monotonic", lambda: real + 3600)
+        await svc.get_access_token("oauth", oauth_cfg(client_id="new"), transport=ep.transport)
+
+        assert old_key not in svc._cache
+        assert old_key not in svc._locks
+        assert len(svc._cache) == 1
+
+    async def test_expired_failures_are_dropped_on_write(self, monkeypatch):
+        bad = Endpoint(httpx.Response(401, json={"error": "invalid_client"}))
+        stale = oauth_cfg(client_id="stale")
+        with pytest.raises(TokenError):
+            await svc.get_access_token("oauth", stale, transport=bad.transport)
+        stale_key = svc.config_fingerprint("oauth", stale)
+        assert stale_key in svc._failures
+
+        real = time.monotonic()
+        monkeypatch.setattr(svc.time, "monotonic", lambda: real + svc.FAILURE_COOLDOWN_SECONDS + 1)
+        with pytest.raises(TokenError):
+            await svc.get_access_token("oauth", oauth_cfg(client_id="other"), transport=bad.transport)
+
+        assert stale_key not in svc._failures
+        assert stale_key not in svc._locks
+
+    async def test_a_held_lock_is_kept(self):
+        key = "held"
+        lock = svc._locks.setdefault(key, asyncio.Lock())
+        async with lock:
+            svc._prune()
+            assert svc._locks[key] is lock
+
+
+class TestAwsOffLoop:
+    async def test_client_is_built_off_the_event_loop(self, monkeypatch):
+        import threading
+
+        built_on = []
+
+        class Client:
+            def create_oauth2_token_with_iam(self, **kwargs):
+                return {"accessToken": "tok", "expiresIn": 3600}
+
+        def factory(region, access_key_id, secret_access_key):
+            built_on.append(threading.current_thread())
+            return Client()
+
+        monkeypatch.setattr(svc, "_aws_client_factory", factory)
+        assert await svc.get_access_token("aws_iam", aws_cfg()) == "tok"
+        assert built_on and built_on[0] is not threading.main_thread()

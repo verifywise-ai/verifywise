@@ -52,7 +52,7 @@ from services.mcp_proxy_service import (
     forward_tool_call,
     tool_acl_violation,
 )
-from services.mcp_token_service import TokenError, note_token_outcome
+from services.mcp_token_service import TokenError, is_token_error_message, note_token_outcome
 from services.mcp_session import create_session, get_backend_session, set_backend_session
 from utils.acl import matches_acl
 from utils.mcp_credentials import TOKEN_AUTH_TYPES
@@ -319,7 +319,11 @@ async def mcp_jsonrpc(request: Request):
 
             await CircuitBreaker.record_success(server_id)
             if tool.get("auth_type") in TOKEN_AUTH_TYPES:
-                await note_token_outcome(org_id, server_id, None, _stored_health(tool))
+                # A working call clears a stored token error, but must not wipe
+                # an unrelated discovery error (e.g. a broken tools/list).
+                stored_error = tool.get("last_discovery_error")
+                if not stored_error or is_token_error_message(stored_error):
+                    await note_token_outcome(org_id, server_id, None, _stored_health(tool))
 
             # Cache new backend session for next call
             if new_backend_session and gateway_session:

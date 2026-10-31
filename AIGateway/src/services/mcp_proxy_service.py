@@ -18,7 +18,7 @@ from sqlalchemy import text
 import crud.mcp_servers as mcp_servers_crud
 from config import settings
 from database.db import get_db
-from services.mcp_token_service import TokenError, auth_headers_for, invalidate
+from services.mcp_token_service import TokenError, auth_headers_for, invalidate, record_upstream_rejection
 from utils.mcp_credentials import TOKEN_AUTH_TYPES
 from utils.rate_limit import check_rate_limit
 from utils.safe_outbound_url import UnsafeOutboundUrlError, assert_safe_outbound_url
@@ -200,7 +200,8 @@ def _rpc_result(resp: httpx.Response) -> dict:
 
 async def _with_token_retry(auth_type: str, auth_config: dict, attempt):
     """Run ``attempt``; if a token-authenticated server answers 401, drop the
-    cached token and try exactly once more with a fresh one.
+    cached token and try exactly once more with a fresh one. A second 401
+    becomes a TokenError and starts the failure cooldown.
 
     Trade-off: for a tool call the retry re-sends tools/call. That can only
     follow an upstream that already executed it if the upstream answers HTTP 401
@@ -212,7 +213,15 @@ async def _with_token_retry(auth_type: str, auth_config: dict, attempt):
         if exc.response.status_code != 401 or auth_type not in TOKEN_AUTH_TYPES:
             raise
         invalidate(auth_type, auth_config)
-        return await attempt()
+        try:
+            return await attempt()
+        except httpx.HTTPStatusError as retry_exc:
+            if retry_exc.response.status_code != 401:
+                raise
+            # A fresh token was refused too: the scope or resource is wrong, not
+            # the token. Cool down (after the invalidate above, which would
+            # otherwise wipe it) and report a token error.
+            raise record_upstream_rejection(auth_type, auth_config) from None
 
 
 async def fetch_server_tools(

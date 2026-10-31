@@ -106,12 +106,58 @@ class TestDiscoveryTokens:
 
         assert calls == [("oauth", cfg)]
 
-    async def test_second_401_raises(self, token_fetches):
-        with pytest.raises(httpx.HTTPStatusError):
+    async def test_second_401_raises_token_error(self, token_fetches):
+        with pytest.raises(TokenError) as caught:
             await svc.fetch_server_tools(
                 SERVER_URL, "oauth", oauth_cfg(), transport=upstream({1: 401, 2: 401, 3: 401}, [])
             )
+        assert str(caught.value) == (
+            "The MCP server rejected the access token (HTTP 401). Check the scope or resource."
+        )
         assert len(token_fetches) == 2
+
+    async def test_second_401_starts_the_failure_cooldown(self, monkeypatch):
+        fetches = []
+
+        async def fetch(cfg, transport):
+            fetches.append(1)
+            return f"tok{len(fetches)}", 3600
+
+        monkeypatch.setattr(tokens, "_fetch_oauth", fetch)
+        cfg = oauth_cfg()
+
+        with pytest.raises(TokenError):
+            await svc.fetch_server_tools(
+                SERVER_URL, "oauth", cfg, transport=upstream({1: 401, 2: 401, 3: 401}, [])
+            )
+        assert len(fetches) == 2
+
+        # Within the cooldown the next call fails fast, without the identity provider.
+        with pytest.raises(TokenError, match="rejected the access token"):
+            await svc.fetch_server_tools(SERVER_URL, "oauth", cfg, transport=upstream({}, []))
+        assert len(fetches) == 2
+
+    async def test_discovery_shows_the_rejected_token_message(self, monkeypatch):
+        async def fake_get(auth_type, cfg, *, transport=None):
+            return "tok"
+
+        recorded = []
+
+        async def record(org_id, server_id, error):
+            recorded.append(error)
+
+        monkeypatch.setattr(tokens, "get_access_token", fake_get)
+        monkeypatch.setattr(mcp_servers_crud, "record_discovery_result", record)
+
+        result = await svc.run_discovery(
+            1,
+            {"id": 7, "url": SERVER_URL, "auth_type": "oauth", "auth_config": oauth_cfg()},
+            5,
+            transport=upstream({1: 401, 2: 401, 3: 401}, []),
+        )
+
+        assert result["error"] == tokens.UPSTREAM_REJECTED_MESSAGE
+        assert recorded == [tokens.UPSTREAM_REJECTED_MESSAGE]
 
     async def test_static_types_no_retry(self, token_fetches):
         seen = []
@@ -190,7 +236,7 @@ class TestForwardTokens:
     async def test_forward_second_401_raises(self, token_fetches, route_forward_through):
         route_forward_through(forward_upstream({1: 401, 2: 401, 3: 401}, []))
 
-        with pytest.raises(httpx.HTTPStatusError):
+        with pytest.raises(TokenError, match="rejected the access token"):
             await svc.forward_tool_call(SERVER_URL, "oauth", oauth_cfg(), "t", {})
         assert len(token_fetches) == 2
 
@@ -321,6 +367,36 @@ class TestProxyHandler:
         await proxy.mcp_jsonrpc(_call())
 
         handler_fakes.note.assert_awaited_once_with(1, 9, None, (None, None))
+
+    async def test_success_clears_a_stored_token_error(self, handler_fakes, monkeypatch):
+        stored = {**TOOL, "health_status": "unhealthy", "last_discovery_error": AWS_MESSAGE}
+        monkeypatch.setattr(proxy, "resolve_tool", AsyncMock(return_value=stored))
+
+        async def ok(**kwargs):
+            return {"content": []}, None
+
+        handler_fakes.forward = ok
+
+        await proxy.mcp_jsonrpc(_call())
+
+        handler_fakes.note.assert_awaited_once_with(1, 9, None, ("unhealthy", AWS_MESSAGE))
+
+    async def test_success_keeps_an_unrelated_discovery_error(self, handler_fakes, monkeypatch):
+        stored = {
+            **TOOL,
+            "health_status": "unhealthy",
+            "last_discovery_error": "The server returned an error: x",
+        }
+        monkeypatch.setattr(proxy, "resolve_tool", AsyncMock(return_value=stored))
+
+        async def ok(**kwargs):
+            return {"content": []}, None
+
+        handler_fakes.forward = ok
+
+        await proxy.mcp_jsonrpc(_call())
+
+        handler_fakes.note.assert_not_awaited()
 
     async def test_success_on_static_server_does_not_touch_health(self, handler_fakes, monkeypatch):
         monkeypatch.setattr(proxy, "resolve_tool", AsyncMock(return_value={**TOOL, "auth_type": "bearer"}))
