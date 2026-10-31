@@ -306,6 +306,11 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
       "past_issues",
       "regulatory_exposure",
       "risk_score",
+      "other_names",
+      "country",
+      "registration_number",
+      "lei",
+      "sec_cik",
     ],
     fieldLabels: {
       vendor_name: "Vendor name",
@@ -322,6 +327,11 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
       past_issues: "Past issues",
       regulatory_exposure: "Regulatory exposure",
       risk_score: "Risk score",
+      other_names: "Other names",
+      country: "Country",
+      registration_number: "Registration number",
+      lei: "LEI",
+      sec_cik: "SEC CIK",
     },
     fieldFormatters: {
       review_date: GENERIC_FORMATTERS.date,

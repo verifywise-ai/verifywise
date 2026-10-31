@@ -7,10 +7,15 @@ export interface IVendor {
   assignee: number; // won't get any values, will be filled by user
   website: string; // won't get any values, will be filled by user
   vendor_contact_person: string; // won't get any values, will be filled by user
+  other_names?: string | null; // optional: other names the vendor is known by, separated by commas
+  country?: string | null; // optional: ISO 3166-1 alpha-2 code of the country the vendor is registered in
+  registration_number?: string | null; // optional: company registration number, as the register writes it
+  lei?: string | null; // optional: Legal Entity Identifier (ISO 17442), 20 characters
+  sec_cik?: string | null; // optional: Central Index Key at the SEC, ten digits
   review_result?: string; // optional field, can be filled by user
-  review_status?: "Not started" | "In review" | "Reviewed" | "Requires follow-up"; // optional field, can be filled by user
+  review_status?: "Not started" | "In review" | "Reviewed" | "Requires follow-up" | null; // optional field, can be filled by user
   reviewer?: number | null; // optional field, can be filled by user
-  review_date?: Date; // optional field, can be filled by user
+  review_date?: Date | null; // optional field, can be filled by user
   created_at?: Date;
   updated_at?: Date;
   // Vendor scorecard fields - optional, will be filled by user
@@ -21,15 +26,18 @@ export interface IVendor {
     | "Financial data"
     | "Health data (e.g. HIPAA)"
     | "Model weights or AI assets"
-    | "Other sensitive data";
+    | "Other sensitive data"
+    | null;
   business_criticality?:
     | "Low (vendor supports non-core functions)"
     | "Medium (affects operations but is replaceable)"
-    | "High (critical to core services or products)";
+    | "High (critical to core services or products)"
+    | null;
   past_issues?:
     | "None"
     | "Minor incident (e.g. small delay, minor bug)"
-    | "Major incident (e.g. data breach, legal issue)";
+    | "Major incident (e.g. data breach, legal issue)"
+    | null;
   regulatory_exposure?:
     | "None"
     | "GDPR (EU)"
@@ -38,7 +46,8 @@ export interface IVendor {
     | "ISO 27001"
     | "EU AI act"
     | "CCPA (california)"
-    | "Other";
+    | "Other"
+    | null;
   risk_score?: number;
   custom_fields?: Array<{
     definition_id: number;
@@ -48,3 +57,9 @@ export interface IVendor {
     value: unknown;
   }>;
 }
+
+/** The identifiers of a vendor (spec Q1 of the vendor risk database), each optional. */
+export type IVendorIdentifiers = Pick<
+  IVendor,
+  "country" | "registration_number" | "lei" | "sec_cik"
+>;

@@ -12,6 +12,7 @@ import {
 } from "../controllers/vendor.ctrl";
 import {
   getLatestVendorResearch,
+  getVendorResearchRunTrace,
   startVendorResearchRun,
 } from "../controllers/vendorResearch.ctrl";
 
@@ -28,6 +29,14 @@ router.get("/:id/riskSuggestions", authenticateJWT, getVendorRiskSuggestions);
 // No ordering hazard either: /:id matches one segment and cannot swallow this path.
 // Read-only, so authenticateJWT only: every role may see the state of the research.
 router.get("/:id/research/latest", authenticateJWT, getLatestVendorResearch);
+// The trace holds the queries and addresses a run used and the tokens it spent, so it goes to those
+// who manage the organization's LLM key (built-in: Admin only).
+router.get(
+  "/:id/research/runs/:runId/trace",
+  authenticateJWT,
+  authorize("llmKeys.admin"),
+  getVendorResearchRunTrace,
+);
 
 // POST, PUT, DELETE requests
 router.post("/", authenticateJWT, createVendor);

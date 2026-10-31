@@ -307,7 +307,7 @@ export interface VendorExecutiveSummary {
     vendor_name: string;
     review_status: string;
     risk_score: number | undefined;
-    business_criticality: string | undefined;
+    business_criticality: string | null | undefined;
   }>;
   reviewProgress: {
     completed: number;

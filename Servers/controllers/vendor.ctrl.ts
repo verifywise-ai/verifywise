@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import { toId } from "../utils/validations/validation.utils";
+import { withNormalizedIdentifiers } from "../utils/validations/vendorValidation.utils";
 import {
   createNewVendorQuery,
   deleteVendorByIdQuery,
@@ -279,6 +280,13 @@ export async function createVendor(req: Request, res: Response): Promise<any> {
       vendorData.past_issues,
       vendorData.regulatory_exposure,
       vendorData.risk_score,
+      vendorData.other_names,
+      {
+        country: vendorData.country,
+        registration_number: vendorData.registration_number,
+        lei: vendorData.lei,
+        sec_cik: vendorData.sec_cik,
+      },
     );
 
     // Validate vendor data before saving
@@ -296,7 +304,7 @@ export async function createVendor(req: Request, res: Response): Promise<any> {
           createdVendor.id!,
           req.userId,
           req.organizationId!,
-          vendorData,
+          withNormalizedIdentifiers(vendorData),
           transaction,
         );
       }
@@ -483,8 +491,8 @@ export async function updateVendorById(req: Request, res: Response): Promise<any
     // Create VendorModel instance and update it
     const vendorModel = new VendorModel(existingVendor);
 
-    // Track changes before updating
-    const changes = await trackVendorChanges(vendorModel, updateData);
+    // Track changes before updating, with the identifiers in the form they are stored
+    const changes = await trackVendorChanges(vendorModel, withNormalizedIdentifiers(updateData));
 
     // Update vendor using the enhanced method
     await vendorModel.updateVendor({
@@ -504,6 +512,11 @@ export async function updateVendorById(req: Request, res: Response): Promise<any
       past_issues: updateData.past_issues,
       regulatory_exposure: updateData.regulatory_exposure,
       risk_score: updateData.risk_score,
+      other_names: updateData.other_names,
+      country: updateData.country,
+      registration_number: updateData.registration_number,
+      lei: updateData.lei,
+      sec_cik: updateData.sec_cik,
     });
 
     // Validate updated data

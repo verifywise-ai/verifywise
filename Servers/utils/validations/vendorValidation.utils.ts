@@ -23,6 +23,13 @@ export const VENDOR_VALIDATION_LIMITS = {
   WEBSITE: { MIN: 1, MAX: 255 },
   VENDOR_CONTACT_PERSON: { MIN: 1, MAX: 255 },
   REVIEW_RESULT: { MIN: 1, MAX: 1000 },
+  /**
+   * The other names a vendor is known by (see services/vendorResearch/aliases.ts, which reads the
+   * same limits): a text of names separated by commas, semicolons or line breaks.
+   */
+  OTHER_NAMES: { MAX_CHARS: 500, MAX_NAMES: 8, MIN_NAME_CHARS: 2, MAX_NAME_CHARS: 80 },
+  /** A company registration number, as a register writes it. */
+  REGISTRATION_NUMBER: { MAX: 64 },
 } as const;
 
 /**
@@ -147,6 +154,255 @@ export const validateReviewResult = (value: any): ValidationResult => {
     maxLength: VENDOR_VALIDATION_LIMITS.REVIEW_RESULT.MAX,
     trimWhitespace: true,
   });
+};
+
+/** A name for comparing: lower case, letters and digits only ("Face-Book" and "facebook" are one). */
+const nameKey = (name: string): string => name.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "");
+
+/** The names in a text, in the order written: split at commas, semicolons and line breaks, white space collapsed. */
+const namesIn = (text: string): string[] =>
+  text
+    .split(/[,;\n\r]+/)
+    .map((part) => part.replace(/\s+/g, " ").trim())
+    .filter((part) => part !== "");
+
+/** The names once each, however they are written; the first way a name was written stays. */
+const distinctNames = (names: readonly string[]): string[] => {
+  const seen = new Set<string>();
+  return names.filter((name) => {
+    const key = nameKey(name);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
+
+/**
+ * Validates the other names of a vendor: optional text of at most 500 characters that holds at most
+ * 8 names, each of 2 to 80 characters with a letter or a digit in it. A name that is written twice
+ * counts once.
+ */
+export const validateOtherNames = (value: any): ValidationResult => {
+  const limits = VENDOR_VALIDATION_LIMITS.OTHER_NAMES;
+  if (value === undefined || value === null) return { isValid: true };
+  if (typeof value !== "string") {
+    return { isValid: false, message: "Other names must be text", code: "INVALID_TYPE" };
+  }
+  const text = value.trim();
+  if (text.length > limits.MAX_CHARS) {
+    return {
+      isValid: false,
+      message: `Other names must be at most ${limits.MAX_CHARS} characters`,
+      code: "TOO_LONG",
+    };
+  }
+  const names = namesIn(text);
+  if (
+    names.some((name) => name.length < limits.MIN_NAME_CHARS || name.length > limits.MAX_NAME_CHARS)
+  ) {
+    return {
+      isValid: false,
+      message: `Each of the other names must be between ${limits.MIN_NAME_CHARS} and ${limits.MAX_NAME_CHARS} characters`,
+      code: "INVALID_NAME_LENGTH",
+    };
+  }
+  if (names.some((name) => nameKey(name) === "")) {
+    return {
+      isValid: false,
+      message: "Each of the other names must contain a letter or a digit",
+      code: "INVALID_NAME",
+    };
+  }
+  if (distinctNames(names).length > limits.MAX_NAMES) {
+    return {
+      isValid: false,
+      message: `Other names can list at most ${limits.MAX_NAMES} names`,
+      code: "TOO_MANY",
+    };
+  }
+  return { isValid: true };
+};
+
+/**
+ * The other names as they are stored: the names once each, joined by a comma and a space; null
+ * when there is none. The text is expected to be valid (see `validateOtherNames`).
+ */
+export const normalizeOtherNames = (value: unknown): string | null => {
+  if (typeof value !== "string") return null;
+  const names = distinctNames(namesIn(value));
+  return names.length === 0 ? null : names.join(", ");
+};
+
+/**
+ * The officially assigned codes of ISO 3166-1 alpha-2 (249). Not the regions a browser can also
+ * name (EU, UN, XK, ZZ), nor an old code that stands for another (UK for GB).
+ */
+export const ISO_COUNTRY_CODES: readonly string[] = [
+  "AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ",
+  "BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BV BW BY BZ",
+  "CA CC CD CF CG CH CI CK CL CM CN CO CR CU CV CW CX CY CZ",
+  "DE DJ DK DM DO DZ",
+  "EC EE EG EH ER ES ET",
+  "FI FJ FK FM FO FR",
+  "GA GB GD GE GF GG GH GI GL GM GN GP GQ GR GS GT GU GW GY",
+  "HK HM HN HR HT HU",
+  "ID IE IL IM IN IO IQ IR IS IT",
+  "JE JM JO JP",
+  "KE KG KH KI KM KN KP KR KW KY KZ",
+  "LA LB LC LI LK LR LS LT LU LV LY",
+  "MA MC MD ME MF MG MH MK ML MM MN MO MP MQ MR MS MT MU MV MW MX MY MZ",
+  "NA NC NE NF NG NI NL NO NP NR NU NZ",
+  "OM",
+  "PA PE PF PG PH PK PL PM PN PR PS PT PW PY",
+  "QA",
+  "RE RO RS RU RW",
+  "SA SB SC SD SE SG SH SI SJ SK SL SM SN SO SR SS ST SV SX SY SZ",
+  "TC TD TF TG TH TJ TK TL TM TN TO TR TT TV TW TZ",
+  "UA UG UM US UY UZ",
+  "VA VC VE VG VI VN VU",
+  "WF WS",
+  "YE YT",
+  "ZA ZM ZW",
+].flatMap((line) => line.split(" "));
+
+/** An identifier given as text, trimmed; undefined for a value that is not text. */
+const identifierText = (value: unknown): string | undefined =>
+  typeof value === "string" ? value.trim() : undefined;
+
+/** The result for an identifier that is not text, null or undefined. */
+const notText = (label: string): ValidationResult => ({
+  isValid: false,
+  message: `${label} must be text`,
+  code: "INVALID_TYPE",
+});
+
+/** The vendor's country: optional, an ISO 3166-1 alpha-2 code in either case. */
+export const validateCountry = (value: unknown): ValidationResult => {
+  if (value === undefined || value === null) return { isValid: true };
+  const text = identifierText(value);
+  if (text === undefined) return notText("Country");
+  if (text === "" || ISO_COUNTRY_CODES.includes(text.toUpperCase())) return { isValid: true };
+  return {
+    isValid: false,
+    message: "Country must be a two-letter ISO 3166-1 code, such as DE",
+    code: "INVALID_COUNTRY",
+  };
+};
+
+/** The country as it is stored: upper case; null when there is none. */
+export const normalizeCountry = (value: unknown): string | null => {
+  const text = identifierText(value);
+  return text ? text.toUpperCase() : null;
+};
+
+/** The registration number as it is checked and stored: trimmed, inner white space collapsed. */
+const registrationNumberOf = (text: string): string => text.replace(/\s+/g, " ");
+
+/** The vendor's company registration number: optional text of at most 64 characters. */
+export const validateRegistrationNumber = (value: unknown): ValidationResult => {
+  if (value === undefined || value === null) return { isValid: true };
+  const text = identifierText(value);
+  if (text === undefined) return notText("Registration number");
+  const max = VENDOR_VALIDATION_LIMITS.REGISTRATION_NUMBER.MAX;
+  if (registrationNumberOf(text).length > max) {
+    return {
+      isValid: false,
+      message: `Registration number must be at most ${max} characters`,
+      code: "TOO_LONG",
+    };
+  }
+  return { isValid: true };
+};
+
+/** The registration number as it is stored; null when there is none. */
+export const normalizeRegistrationNumber = (value: unknown): string | null => {
+  const text = identifierText(value);
+  return text ? registrationNumberOf(text) : null;
+};
+
+/** The LEI as it is checked and stored: without white space, in upper case. */
+const leiOf = (text: string): string => text.replace(/\s+/g, "").toUpperCase();
+
+/**
+ * True when an LEI's check digits match (ISO 17442, ISO 7064 MOD 97-10): read with its letters as
+ * 10 to 35, the whole number leaves 1 when divided by 97.
+ */
+const leiCheckDigitsMatch = (lei: string): boolean => {
+  let rest = 0;
+  for (const character of lei) {
+    const value = parseInt(character, 36);
+    rest = (rest * (value > 9 ? 100 : 10) + value) % 97;
+  }
+  return rest === 1;
+};
+
+/** True for an LEI in its stored form (no white space, upper case) whose check digits match. */
+export const isValidLei = (lei: string): boolean =>
+  /^[A-Z0-9]{18}[0-9]{2}$/.test(lei) && leiCheckDigitsMatch(lei);
+
+/** The vendor's Legal Entity Identifier: optional, 18 letters or digits and 2 check digits. */
+export const validateLei = (value: unknown): ValidationResult => {
+  if (value === undefined || value === null) return { isValid: true };
+  const text = identifierText(value);
+  if (text === undefined) return notText("LEI");
+  if (text === "") return { isValid: true };
+  const lei = leiOf(text);
+  if (!/^[A-Z0-9]{18}[0-9]{2}$/.test(lei)) {
+    return {
+      isValid: false,
+      message: "LEI must be 18 letters or digits followed by 2 check digits",
+      code: "INVALID_FORMAT",
+    };
+  }
+  if (!leiCheckDigitsMatch(lei)) {
+    return {
+      isValid: false,
+      message: "LEI check digits do not match",
+      code: "INVALID_CHECK_DIGITS",
+    };
+  }
+  return { isValid: true };
+};
+
+/** The LEI as it is stored; null when there is none. */
+export const normalizeLei = (value: unknown): string | null => {
+  const text = identifierText(value);
+  return text ? leiOf(text) : null;
+};
+
+/** The vendor's Central Index Key at the SEC: optional, one to ten digits. */
+export const validateSecCik = (value: unknown): ValidationResult => {
+  if (value === undefined || value === null) return { isValid: true };
+  const text = identifierText(value);
+  if (text === undefined) return notText("SEC CIK");
+  if (text === "" || /^[0-9]{1,10}$/.test(text)) return { isValid: true };
+  return { isValid: false, message: "SEC CIK must be one to ten digits", code: "INVALID_FORMAT" };
+};
+
+/** The CIK as it is stored: ten digits, padded with zeros; null when there is none. */
+export const normalizeSecCik = (value: unknown): string | null => {
+  const text = identifierText(value);
+  return text ? text.padStart(10, "0") : null;
+};
+
+/** The identifiers of a vendor, each with how it is stored. */
+const IDENTIFIER_NORMALIZERS = {
+  country: normalizeCountry,
+  registration_number: normalizeRegistrationNumber,
+  lei: normalizeLei,
+  sec_cik: normalizeSecCik,
+} as const;
+
+/**
+ * `data` with each identifier it gives in the form it is stored, and the other fields as they are:
+ * what the change history records.
+ */
+export const withNormalizedIdentifiers = <T extends Record<string, unknown>>(data: T): T => {
+  const normalized: Record<string, unknown> = { ...data };
+  for (const [field, normalize] of Object.entries(IDENTIFIER_NORMALIZERS)) {
+    if (data[field] !== undefined) normalized[field] = normalize(data[field]);
+  }
+  return normalized as T;
 };
 
 /**
@@ -286,6 +542,11 @@ export const createVendorSchema = {
   business_criticality: validateBusinessCriticality,
   past_issues: validatePastIssues,
   regulatory_exposure: validateRegulatoryExposure,
+  other_names: validateOtherNames,
+  country: validateCountry,
+  registration_number: validateRegistrationNumber,
+  lei: validateLei,
+  sec_cik: validateSecCik,
 };
 
 /**
@@ -317,6 +578,12 @@ export const updateVendorSchema = {
     value !== undefined ? validatePastIssues(value) : { isValid: true },
   regulatory_exposure: (value: any) =>
     value !== undefined ? validateRegulatoryExposure(value) : { isValid: true },
+  other_names: (value: any) =>
+    value !== undefined ? validateOtherNames(value) : { isValid: true },
+  country: validateCountry,
+  registration_number: validateRegistrationNumber,
+  lei: validateLei,
+  sec_cik: validateSecCik,
 };
 
 /**
@@ -346,6 +613,11 @@ export const validateUpdateVendor = (data: any): ValidationError[] => {
     "business_criticality",
     "past_issues",
     "regulatory_exposure",
+    "other_names",
+    "country",
+    "registration_number",
+    "lei",
+    "sec_cik",
   ];
 
   const hasUpdateField = updateFields.some((field) => data[field] !== undefined);
