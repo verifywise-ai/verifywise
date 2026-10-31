@@ -164,7 +164,9 @@ def _stored_secret(auth_type: str, cfg: dict) -> str:
 
 
 def _fail(message: str) -> TokenError:
-    logger.warning("MCP upstream sign-in failed: %s", message)
+    # The message is kept out of the log: it is recorded on the server's
+    # health and in the audit row, which is where an Admin reads it.
+    logger.warning("MCP upstream sign-in failed")
     return TokenError(message)
 
 

@@ -14,7 +14,6 @@ Rows written before migration a0013 hold plaintext ``token``, ``key`` or
 ``api_key`` and ``header`` or ``header_name``; every reader accepts both.
 """
 
-import hashlib
 import json
 import re
 from typing import Optional
@@ -85,9 +84,12 @@ def token_secret(auth_type: str, cfg: Optional[dict]) -> str:
 
 
 def config_fingerprint(auth_type: str, cfg: Optional[dict]) -> str:
-    """Stable hash of a stored config; a changed credential never reuses a cached token."""
-    payload = auth_type + json.dumps(cfg or {}, sort_keys=True)
-    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+    """Cache key for a stored config; a changed credential never reuses a cached token.
+
+    The canonical config itself (secrets are ciphertext), not a hash of it, so
+    no sensitive value goes through a hashing function.
+    """
+    return auth_type + ":" + json.dumps(cfg or {}, sort_keys=True)
 
 
 def _origin(url: str) -> tuple:
