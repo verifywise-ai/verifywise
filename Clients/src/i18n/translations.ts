@@ -9613,7 +9613,7 @@ export const translations: Record<string, Record<string, string>> = {
     // Vendor research: findings section, run summary and start messages
     "Research findings": "Recherchebefunde",
     "AI-suggested from web sources. Verify before accepting.":
-      "KI-Vorschläge aus Webquellen. Vor dem Akzeptieren prüfen.",
+      "KI-Vorschläge aus Webquellen. Vor dem Annehmen prüfen.",
     "Pending: {count}": "Ausstehend: {count}",
     "Loading research findings": "Recherchebefunde werden geladen",
     "Pending research findings": "Ausstehende Recherchebefunde",

@@ -857,7 +857,7 @@
   "Invalid limit": "Ungültiges Limit",
   "Invalid offset": "Ungültiger Offset",
   "Finding not found": "Befund nicht gefunden",
-  "This finding has already been accepted or dismissed": "Dieser Befund wurde bereits akzeptiert oder verworfen",
+  "This finding has already been accepted or dismissed": "Dieser Befund wurde bereits angenommen oder verworfen",
   "This finding is being updated. Try again in a moment.": "Dieser Befund wird gerade aktualisiert. Versuchen Sie es gleich noch einmal.",
   "Invalid action owner": "Ungültiger Aktionsverantwortlicher",
   "The action owner must be a user of your organization": "Der Aktionsverantwortliche muss ein Benutzer Ihrer Organisation sein",
