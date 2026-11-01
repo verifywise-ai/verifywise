@@ -4,17 +4,21 @@
  * address under the Open Government Licence v3.0. Its paths are those of the XSD 4.33.3 (see the
  * fixture's header comment), with no namespace.
  *
- * Only entities are read; individuals and ships are skipped. Each name of an entity is a name key
- * (a weak match), the host of each of its websites a domain key (a strong one, against the
- * vendor's verified domain), and each business registration number a `regno:` or `lei:` key
- * (keys.ts `identifierKeysOf`: strong beside the name, or alone for an LEI, Q1). The list has no
- * page per designation, so a record cites the list's page with its unique id (`?uid=`, Ruling 13
- * of the M1 plan).
+ * Only entities are read; individuals and ships are skipped, and a designation of any other kind,
+ * or of none, is one error, since it would otherwise be skipped unseen and the next sync would take
+ * its entity off the copy. Each name of an entity is a name key (a weak match), the host of each of
+ * its websites a domain key (a strong one, against the vendor's verified domain; an e-mail address
+ * typed into the field names a mailbox and gives none, keys.ts `hostsOf`), and each business
+ * registration number a `regno:` or `lei:` key (keys.ts `identifierKeysOf`: strong beside the name,
+ * or alone for an LEI, Q1). A designation the UN made carries its UN reference number, which is in
+ * the text and the identifiers and is never a key, since it names the UN's entry and not the
+ * vendor: the UN list itself is not copied (Q6). The list has no page per designation, so a record
+ * cites the list's page with its unique id (`?uid=`, Ruling 13 of the M1 plan).
  */
 import { joinSentences, sentence } from "../../records/sentence";
 import { isSharedHost } from "../../sharedHosts";
 import { cleanText } from "../../text";
-import { domainKey, identifierKeysOf, nameKeysOf } from "../keys";
+import { domainKey, hostsOf, identifierKeysOf, nameKeysOf } from "../keys";
 import { vrdbSourceOf } from "../sources";
 import type { ParsedRecord } from "../types";
 import { type XmlElement, childText, childTexts, scanElements } from "../xmlScan";
@@ -45,21 +49,6 @@ const aliasKindOf = (type: string): string => {
   return lower.includes("variation") ? "variation" : "alias";
 };
 
-/** The hosts of a website field, which may name a site without its scheme or more than one. */
-function hostsOf(field: string): string[] {
-  return field
-    .split(/[\s,;]+/)
-    .filter((part) => part !== "")
-    .flatMap((part) => {
-      try {
-        const url = new URL(/^[a-z][a-z0-9+.-]*:\/\//i.test(part) ? part : `https://${part}`);
-        return url.hostname.includes(".") ? [url.hostname] : [];
-      } catch {
-        return [];
-      }
-    });
-}
-
 /** The record of an entity; null for one without a unique id or a name, which is an error. */
 function recordOf(designation: XmlElement): ParsedRecord | null {
   const id = childText(designation, ["UniqueID"]);
@@ -81,6 +70,8 @@ function recordOf(designation: XmlElement): ParsedRecord | null {
   const aliases = shown.map((name) => `"${name.name}" (${aliasKindOf(name.type)})`).join(", ");
 
   const regime = childText(designation, ["RegimeName"]) ?? "";
+  // Only a designation the UN made has one; the element is absent from the others.
+  const unReference = childText(designation, ["UNReferenceNumber"]) ?? "";
   const entity = ["EntityDetails", "Entity"];
   const types = childTexts(designation, [...entity, "TypeOfEntities", "TypeOfEntity"]);
   const registrations = childTexts(designation, [
@@ -109,6 +100,7 @@ function recordOf(designation: XmlElement): ParsedRecord | null {
       `Entry: "${primary.name}" (entity).`,
       aliases === "" ? "" : `Also listed as: ${aliases}${rest > 0 ? `, and ${rest} more` : ""}.`,
       sentence("Regime", regime),
+      sentence("UN reference number", unReference),
       sentence("Type of entity", types.join(", ")),
       sentence("Date designated", designated ?? ""),
       sentence("Website", websites.join(", ")),
@@ -117,6 +109,7 @@ function recordOf(designation: XmlElement): ParsedRecord | null {
     url: `${LIST_PAGE}?uid=${encodeURIComponent(id)}`,
     identifiers: {
       ...(regime === "" ? {} : { regime }),
+      ...(unReference === "" ? {} : { unReferenceNumber: unReference }),
       ...(registrations.length === 0 ? {} : { businessRegistrationNumbers: registrations }),
     },
     matchKeys: [
@@ -132,8 +125,14 @@ function recordOf(designation: XmlElement): ParsedRecord | null {
 export const ukConnector: Connector = {
   id: "uk_sanctions",
   // 2: the business registration numbers became keys (M2); 3: they are in the text too (M2 final
-  // review), so a person and the model see what an entry matched by.
-  version: 3,
+  // review), so a person and the model see what an entry matched by; 4: an e-mail address in the
+  // website field gives no domain key (keys.ts `hostsOf`), a designation whose kind is missing or is
+  // none of individual, entity and ship is one error and no longer skipped unseen, and the UN
+  // reference number of a designation the UN made is in the text and the identifiers (Q6), since
+  // the UN list itself is not copied. Each changes what `parse` gives from the same file, and a new
+  // version makes the sync parse a downloaded file again though its bytes did not change
+  // (connectors/types.ts).
+  version: 4,
   async download(fetch, validators) {
     const response = await fetch(UK_LIST_URL, validators, {
       maxBytes: UK_MAX_BYTES,
@@ -154,7 +153,13 @@ export const ukConnector: Connector = {
     const records: ParsedRecord[] = [];
     let unreadable = 0;
     const scan = scanElements(xml, "Designation", (designation) => {
-      if (childText(designation, ["IndividualEntityShip"])?.toLowerCase() !== "entity") return;
+      const kind = childText(designation, ["IndividualEntityShip"])?.toLowerCase();
+      if (kind !== "entity") {
+        // The list's kinds are Individual, Entity and Ship; any other, or none, would be skipped
+        // unseen, and the next sync would take its entity off the copy.
+        if (kind !== "individual" && kind !== "ship") unreadable += 1;
+        return;
+      }
       const record = recordOf(designation);
       if (record === null) unreadable += 1;
       else records.push(record);

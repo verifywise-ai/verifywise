@@ -81,7 +81,7 @@ export interface TraceStep {
 }
 
 export interface TraceModelCall {
-  /** What the call was for: `loop`, `analysis`, `verifier`, `hints`. */
+  /** What the call was for: `loop`, `analysis`, `verifier`, `hints`, `search` (a search by a model). */
   purpose: string;
   /** The id of the model that was called, when the caller knows it. */
   model?: string;

@@ -157,7 +157,7 @@ export interface CliDeps {
 function describeFindings(run: CaseRun): string[] {
   if (run.kept.length === 0) return ["No finding stayed."];
   return run.kept.flatMap((finding, index) => [
-    `${index + 1}. [${finding.category}] ${finding.risk_level}, confidence ${finding.confidence}, ` +
+    `${index + 1}. [${finding.category}] ${finding.risk_level}, ` +
       `credibility ${run.credibility[index]?.label ?? "-"}: ${finding.risk_description}`,
     ...finding.sources.map((source) => `     ${source.url}`),
   ]);

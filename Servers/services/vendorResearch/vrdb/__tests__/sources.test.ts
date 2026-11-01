@@ -3,15 +3,25 @@
  * definition per VRDB id, with its schedule, its licence and when its copy is out of date; a list
  * behind a closed gate (gates.ts) is neither synced nor looked up.
  */
+import { createHash } from "crypto";
 import { VRDB_SOURCE_IDS } from "../../../../domain.layer/interfaces/i.vendorResearch";
 import { MAX_RECORDS, RECORD_CATEGORY } from "../../records/types";
 import { classifyRecord, recordMatchOf } from "../../sourceRegistry/classify";
-import { VRDB_GATES, type VrdbGate } from "../gates";
+import * as gatesModule from "../gates";
 import {
+  CVE_TERMS_APPROVED,
+  SEC_CONTACT,
+  UN_PERMISSION_GRANTED,
+  VRDB_GATES,
+  type VrdbGate,
+} from "../gates";
+import {
+  CVE_TERMS_LICENCE,
   VRDB_SOURCES,
   activeMirrors,
   activeReadThroughs,
   activeVrdbSources,
+  cveCopyrightOf,
   isMirror,
   isStale,
   vrdbSourceOf,
@@ -63,21 +73,47 @@ describe("the VRDB sources", () => {
   });
 
   it("a source behind a closed gate is not active", () => {
-    expect(VRDB_GATES).toEqual({ Q4: false, Q6: false, Q7: false });
+    // The SEC (Q4) and the CVE records (Q7) are open; the UN list (Q6) is the one that waits.
+    expect(VRDB_GATES).toEqual({ Q4: true, Q6: false, Q7: true });
     expect(vrdbSourceOf("cve").gate).toBe("Q7");
     expect(vrdbSourceOf("un_sanctions").gate).toBe("Q6");
     expect(vrdbSourceOf("sec").gate).toBe("Q4");
-    for (const gates of [undefined, CLOSED]) {
-      expect(idsOf(activeVrdbSources(gates))).toEqual([
-        "kev",
-        "nvd",
-        "ofac",
-        "uk_sanctions",
-        "eu_fsf",
-      ]);
-      expect(idsOf(activeMirrors(gates))).toEqual(["kev", "ofac", "uk_sanctions", "eu_fsf"]);
-      expect(idsOf(activeReadThroughs(gates))).toEqual(["nvd"]);
-    }
+    // By default: the SEC after the NVD and the CVE records after the EU list, in the order of the
+    // table, without the UN list.
+    expect(idsOf(activeVrdbSources())).toEqual([
+      "kev",
+      "nvd",
+      "sec",
+      "ofac",
+      "uk_sanctions",
+      "eu_fsf",
+      "cve",
+    ]);
+    expect(idsOf(activeMirrors())).toEqual(["kev", "ofac", "uk_sanctions", "eu_fsf", "cve"]);
+    expect(idsOf(activeReadThroughs())).toEqual(["nvd", "sec"]);
+    // With every gate closed, only the lists that have none are active.
+    expect(idsOf(activeVrdbSources(CLOSED))).toEqual([
+      "kev",
+      "nvd",
+      "ofac",
+      "uk_sanctions",
+      "eu_fsf",
+    ]);
+    expect(idsOf(activeMirrors(CLOSED))).toEqual(["kev", "ofac", "uk_sanctions", "eu_fsf"]);
+    expect(idsOf(activeReadThroughs(CLOSED))).toEqual(["nvd"]);
+  });
+
+  it("opens Q4 with the Technical Support address that verifywise.ai publishes (answered 2026-10-31)", () => {
+    // The address of a role, not of a person, on VerifyWise's own domain: the SEC writes to it
+    // before it limits or blocks the client.
+    expect(SEC_CONTACT).toBe("tech@verifywise.ai");
+    expect(SEC_CONTACT).toMatch(/^[^@\s]+@verifywise\.ai$/);
+    expect(VRDB_GATES.Q4).toBe(true);
+  });
+
+  it("opens Q7 once the product owner has accepted the CVE Terms of Use for this use (2026-10-31)", () => {
+    expect(CVE_TERMS_APPROVED).toBe(true);
+    expect(VRDB_GATES.Q7).toBe(CVE_TERMS_APPROVED);
   });
 
   it("opening a gate makes it active", () => {
@@ -194,23 +230,88 @@ describe("the VRDB sources", () => {
         mode: "mirror",
       },
     ]);
+    // The licence and the attribution of the cve row have a block of their own (the notice, Q7).
     expect(vrdbSourceOf("cve")).toMatchObject({
       name: "CVE Program records",
-      licence: "CVE Terms of Use",
-      attribution:
-        "CVE® records © The MITRE Corporation, under the CVE Terms of Use (https://www.cve.org/Legal/TermsOfUse)",
       documentationUrl: "https://github.com/CVEProject/cvelistV5",
     });
     expect(vrdbSourceOf("un_sanctions")).toMatchObject({
       name: "UN Security Council Consolidated List",
-      licence: "UNVERIFIED (Q6)",
+      licence: "UN terms of use: personal, non-commercial use only (Q6)",
       attribution: "United Nations Security Council Consolidated List",
       documentationUrl: "https://main.un.org/securitycouncil/en/content/un-sc-consolidated-list",
     });
     expect(vrdbSourceOf("uk_sanctions").attribution).toBe(
       "UK Sanctions List, FCDO. Contains public sector information licensed under the Open Government Licence v3.0.",
     );
-    expect(vrdbSourceOf("ofac").licence).toBe("None published (Q5)");
+    expect(vrdbSourceOf("ofac").licence).toBe(
+      "None published; a work of the US Government (17 U.S.C. §105); use accepted by the product owner on 2026-10-31 (Q5)",
+    );
+  });
+
+  describe("the notice of the CVE records (Q7)", () => {
+    const LEAD = "CVE Terms of Use (https://www.cve.org/Legal/TermsOfUse). CVE Usage: ";
+    const attributionIn = (year: number) =>
+      `CVE records Copyright © 1999-${year}, The MITRE Corporation, under the CVE Terms of Use (https://www.cve.org/Legal/TermsOfUse)`;
+
+    afterEach(() => {
+      jest.useRealTimers();
+      jest.restoreAllMocks();
+    });
+
+    it("keeps the CVE Usage paragraph of the Terms byte for byte", () => {
+      // The paragraph as cve.org prints it, with CVE™ and without a final newline. The Terms let a
+      // copy be made on one condition, that it reproduces MITRE's copyright designation and this
+      // licence, so a changed character is not a style fix.
+      expect(CVE_TERMS_LICENCE).toHaveLength(411);
+      expect(CVE_TERMS_LICENCE).toContain("(CVE™)");
+      expect(createHash("sha256").update(CVE_TERMS_LICENCE, "utf8").digest("hex")).toBe(
+        "0d3c13bf515180f5fb2789eb6c9e15a01090efa0820a357daaf47215c2fbf5f8",
+      );
+    });
+
+    it("puts the paragraph whole in the licence of the cve row", () => {
+      expect(vrdbSourceOf("cve").licence).toBe(LEAD + CVE_TERMS_LICENCE);
+    });
+
+    it("writes MITRE's copyright designation from a year", () => {
+      expect(cveCopyrightOf(2026)).toBe("Copyright © 1999-2026, The MITRE Corporation");
+      expect(cveCopyrightOf(2031)).toBe("Copyright © 1999-2031, The MITRE Corporation");
+    });
+
+    it("attributes the records to MITRE with the year of the day, and without a registered mark", () => {
+      jest.useFakeTimers({ now: new Date("2026-06-15T12:00:00Z") });
+      expect(vrdbSourceOf("cve").attribution).toBe(attributionIn(2026));
+      expect(vrdbSourceOf("cve").attribution).toContain(cveCopyrightOf(2026));
+      expect(vrdbSourceOf("cve").attribution).not.toContain("®");
+    });
+
+    it.each([
+      ["2026-12-31T23:30:00Z", 2026],
+      ["2027-01-01T00:30:00Z", 2027],
+    ])("at %s the attribution names %i, by the UTC clock and not the local one", (now, year) => {
+      jest.useFakeTimers({ now: new Date(now) });
+      // In whatever zone the process runs, the local year is 1999 here, so that only the UTC year can
+      // be right. Without it a process in UTC, or in a zone that shares New Year with it, would pass
+      // a notice that read the local clock.
+      jest.spyOn(Date.prototype, "getFullYear").mockReturnValue(1999);
+      expect(vrdbSourceOf("cve").attribution).toBe(attributionIn(year));
+    });
+
+    it("reads the year at each use, so a process that runs over New Year writes the new one", () => {
+      jest.useFakeTimers({ now: new Date("2026-12-31T23:59:59Z") });
+      const source = vrdbSourceOf("cve");
+      expect(source.attribution).toBe(attributionIn(2026));
+      jest.setSystemTime(new Date("2027-01-01T00:00:01Z"));
+      expect(source.attribution).toBe(attributionIn(2027));
+    });
+  });
+
+  it("keeps the UN gate shut until the UN gives its written permission (Q6)", () => {
+    expect(UN_PERMISSION_GRANTED).toBe(false);
+    expect(VRDB_GATES.Q6).toBe(UN_PERMISSION_GRANTED);
+    // The gate no longer waits for a person to read the terms, so the old name is gone.
+    expect(Object.keys(gatesModule)).not.toContain("UN_TERMS_READ");
   });
 
   it("reads the NVD through, keeping an answer six hours (Ruling 2 of the M2 plan)", () => {

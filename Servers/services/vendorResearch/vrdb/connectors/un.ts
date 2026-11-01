@@ -1,9 +1,12 @@
 /**
- * The UN Security Council Consolidated List (spec D2.4), behind Q6 (gates.ts): one XML file at a
- * static address, which the UN publishes for every sanctions regime of the Security Council. Its
- * pages refused automated readers, so the terms of use and the element names here are UNVERIFIED:
- * a person reads the terms and checks the names against the real XML before the gate opens (see
- * the fixture's header comment).
+ * The UN Security Council Consolidated List (spec D2.5), behind Q6 (gates.ts): one XML file at a
+ * static address, which the UN publishes for every sanctions regime of the Security Council and
+ * serves through a redirect to a time-limited address on unsolprodfiles.blob.core.windows.net.
+ * Its terms of use allow personal, non-commercial use only, so the gate stays closed unless the UN
+ * gives written permission (Q6, answered on 2026-10-31). The element names were checked against
+ * the real file on 2026-10-31, when this parser read its 274 entities with no error; one LISTED_ON
+ * there is a day with a time zone (YYYY-MM-DD-hh:mm), which dayOf does not read, so that record
+ * has no date.
  *
  * Only ENTITIES/ENTITY is read; INDIVIDUALS is skipped. Each name of an entity, its own and every
  * alias, is a name key (a weak match). The list has no page per entry that this code can name, so

@@ -54,6 +54,8 @@ const RESEARCHER: VendorResearcher = jest.fn();
 const CACHE = { get: jest.fn(), set: jest.fn() };
 /** The headless browser of the process: a stand-in, so that no test starts one. */
 const RENDERER = jest.fn();
+/** The lookup of the vendor risk database for the run's vendor: a stand-in, so that no test reaches it. */
+const VRDB = jest.fn();
 
 const makeRun = (overrides: Partial<IVendorResearchRun> = {}): IVendorResearchRun => ({
   id: RUN_ID,
@@ -87,6 +89,7 @@ beforeEach(() => {
   jest.resetAllMocks();
   asMock(createVendorResearcher).mockReturnValue(RESEARCHER);
   asMock(sharedWebCache).mockReturnValue(CACHE);
+  asMock(sharedVrdbLookup).mockReturnValue(VRDB);
   asMock(getRunByIdQuery).mockResolvedValue(makeRun());
   asMock(getVendorByIdQuery).mockResolvedValue(makeVendor());
   // The assignee is a user of the organization: the lookup reports nobody missing.
@@ -113,13 +116,14 @@ describe("handleVendorResearchJob", () => {
     expect(runVendorResearch).toHaveBeenCalledTimes(1);
     const [args, deps] = asMock(runVendorResearch).mock.calls[0] as [typeof DATA, PipelineDeps];
     expect(args).toEqual({ ...DATA, triggerType: "auto" });
-    // The real researcher, with its real engine, page reader and generator, on the cache that all
-    // the runs of the process share.
+    // The real researcher, with its real page reader and generator, on the cache that all the runs
+    // of the process share. It has no engine: each run builds its own from the key it researches with.
     expect(createVendorResearcher).toHaveBeenCalledTimes(1);
     expect(createVendorResearcher).toHaveBeenCalledWith({
       cache: CACHE,
       gather: true,
       perCategory: true,
+      vrdb: VRDB,
     });
     expect(deps.research).toBe(RESEARCHER);
     expect(deps.resolveModel).toBe(resolveOrgModel);
@@ -131,6 +135,14 @@ describe("handleVendorResearchJob", () => {
     expect(now).toBeInstanceOf(Date);
     expect(now.getTime()).toBeGreaterThanOrEqual(before);
     expect(now.getTime()).toBeLessThanOrEqual(Date.now());
+  });
+
+  it("gives the researcher no search engine, so that each run searches as the key of its organization says", async () => {
+    await handleVendorResearchJob(DATA);
+
+    // An engine given here would be the engine of every run, whatever the key it researches with:
+    // the researcher builds the engine of a run from the search that the pipeline hands over.
+    expect(asMock(createVendorResearcher).mock.calls[0][0]).not.toHaveProperty("engine");
   });
 
   // A scheduled run analyses only the sources that earlier runs did not show to the model: the
@@ -158,6 +170,7 @@ describe("handleVendorResearchJob", () => {
       records: undefined,
       gather: true,
       perCategory: true,
+      vrdb: VRDB,
     });
   });
 
@@ -178,8 +191,8 @@ describe("handleVendorResearchJob", () => {
     expect(asMock(createVendorResearcher).mock.calls[0][0].records).toBeUndefined();
   });
 
-  describe("the flag of the vendor risk database", () => {
-    it("with the flag on gives the researcher the vendor's lookup in it and the credibility rules, and the pipeline the same rules", async () => {
+  describe("the vendor risk database", () => {
+    it("is always the researcher's: it gets the vendor's lookup in it beside the lookup of the process, and the pipeline and the researcher get no rules", async () => {
       const vrdb = jest.fn();
       const records = jest.fn();
       asMock(sharedVrdbLookup).mockReturnValue(vrdb);
@@ -188,28 +201,24 @@ describe("handleVendorResearchJob", () => {
       await handleVendorResearchJob(DATA);
 
       expect(sharedVrdbLookup).toHaveBeenCalledWith({ organizationId: ORG, vendorId: VENDOR });
-      expect(asMock(createVendorResearcher).mock.calls[0][0]).toMatchObject({
-        vrdb,
-        rules: "credibility",
-        // The lookup of the process, which then asks only what the VRDB does not keep.
-        records,
-      });
-      const [, deps] = asMock(runVendorResearch).mock.calls[0] as [typeof DATA, PipelineDeps];
-      expect(deps.rules).toBe("credibility");
-    });
-
-    it("with the flag off gives neither: the researcher asks KEV and OFAC itself, under the confidence rules", async () => {
-      asMock(sharedVrdbLookup).mockReturnValue(undefined);
-
-      await handleVendorResearchJob(DATA);
-
       const researcherDeps = asMock(createVendorResearcher).mock.calls[0][0];
-      expect(researcherDeps).not.toHaveProperty("vrdb");
+      // The lookup of the process then asks only what the VRDB does not keep (records/).
+      expect(researcherDeps).toMatchObject({ vrdb, records });
+      // There is one set of rules, the credibility rules, so there is nothing to pass.
       expect(researcherDeps).not.toHaveProperty("rules");
-      // The lookup of the process reads the flag itself: with it off, it asks every database.
-      expect(sharedRecordsLookup).toHaveBeenCalledWith();
       const [, deps] = asMock(runVendorResearch).mock.calls[0] as [typeof DATA, PipelineDeps];
       expect(deps).not.toHaveProperty("rules");
+    });
+
+    it("asks for the lookup of the run's own vendor and organization, once for each job", async () => {
+      await handleVendorResearchJob({ organizationId: 8, vendorId: 9, runId: RUN_ID });
+      asMock(getRunByIdQuery).mockResolvedValue(makeRun({ organization_id: 4, vendor_id: 5 }));
+      await handleVendorResearchJob({ organizationId: 4, vendorId: 5, runId: RUN_ID });
+
+      expect(asMock(sharedVrdbLookup).mock.calls).toEqual([
+        [{ organizationId: 8, vendorId: 9 }],
+        [{ organizationId: 4, vendorId: 5 }],
+      ]);
     });
   });
 

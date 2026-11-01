@@ -9,8 +9,16 @@ jest.mock("../../../../utils/logger/fileLogger", () => ({
 }));
 const mockSaveAnswer = jest.fn();
 const mockEnqueueRelabel = jest.fn();
+// The queries of the lookup of the database (`databaseLookupStore`): a test of `sharedVrdbLookup`
+// sees whether the lookup read the stored lists or was off.
+const mockSourceStates = jest.fn();
+const mockFindRecords = jest.fn();
+const mockRecordMatches = jest.fn();
 jest.mock("../../../../utils/vrdb.utils", () => ({
   saveReadThroughAnswerQuery: (...args: unknown[]) => mockSaveAnswer(...args),
+  getVrdbSourceStatesQuery: (...args: unknown[]) => mockSourceStates(...args),
+  findVrdbRecordsByKeysQuery: (...args: unknown[]) => mockFindRecords(...args),
+  recordVendorVrdbMatchesQuery: (...args: unknown[]) => mockRecordMatches(...args),
 }));
 jest.mock("../queue", () => ({
   enqueueRelabel: (...args: unknown[]) => mockEnqueueRelabel(...args),
@@ -326,9 +334,16 @@ describe("offerRecords", () => {
         last_success_at: hoursAgo(1).toISOString(),
         stale: false,
       },
-      // No read-through answer: the run had no key to ask the NVD by.
+      // No read-through answer: the run had no key to ask the NVD or the SEC by.
       expect.objectContaining({
         id: "nvd",
+        mode: "read_through",
+        checked: false,
+        outcome: "not_researched",
+        last_success_at: null,
+      }),
+      expect.objectContaining({
+        id: "sec",
         mode: "read_through",
         checked: false,
         outcome: "not_researched",
@@ -349,6 +364,15 @@ describe("offerRecords", () => {
         last_success_at: null,
         stale: false,
       }),
+      // The CVE records were never copied (no baseline is loaded): failed, like a list that never synced.
+      expect.objectContaining({
+        id: "cve",
+        mode: "mirror",
+        checked: false,
+        outcome: "failed",
+        last_success_at: null,
+        stale: false,
+      }),
     ]);
     expect(both.outcome.records.map((entry) => entry.source)).toEqual([
       "kev",
@@ -358,9 +382,11 @@ describe("offerRecords", () => {
     expect(securityOnly.outcome.coverage.map((entry) => [entry.id, entry.outcome])).toEqual([
       ["kev", "found"],
       ["nvd", "not_researched"],
+      ["sec", "not_researched"],
       ["ofac", "not_researched"],
       ["uk_sanctions", "not_researched"],
       ["eu_fsf", "not_researched"],
+      ["cve", "failed"],
     ]);
     expect(securityOnly.outcome.records.map((entry) => entry.source)).toEqual(["kev"]);
   });
@@ -380,29 +406,49 @@ describe("offerRecords", () => {
     expect(recordsOf(result, "ofac")[0].vrdb.stale).toBe(true);
   });
 
-  it("covers no list behind a closed gate, even one with a copy and a match", () => {
+  it("covers no list behind a closed gate (the UN list), and offers the CVE records now that Q7 is open", () => {
     const result = offer(
       [
         row({ sourceId: "un_sanctions", sourceRecordId: "QDe.001" }),
-        row({ sourceId: "cve", sourceRecordId: "CVE-2026-0002", recordType: "vulnerability" }),
+        row({
+          sourceId: "cve",
+          sourceRecordId: "CVE-2026-0002",
+          recordType: "vulnerability",
+          matchKeys: ["cve:acmeanalytics"],
+        }),
       ],
       { states: [...ALL_SYNCED, state("cve", hoursAgo(1)), state("un_sanctions", hoursAgo(1))] },
     );
 
+    // The UN list has a copy and a match, and is not covered; the CVE records are, after the EU list.
     expect(result.outcome.coverage.map((entry) => entry.id)).toEqual([
       "kev",
       "nvd",
+      "sec",
       "ofac",
       "uk_sanctions",
       "eu_fsf",
+      "cve",
     ]);
     expect(result.outcome.records.map((entry) => entry.source)).toEqual([
       "kev",
       "ofac",
       "uk_sanctions",
       "eu_fsf",
+      "cve",
     ]);
-    expect(result.matches).toEqual([]);
+    expect(recordsOf(result, "cve").map((record) => record.vrdb.sourceRecordId)).toEqual([
+      "CVE-2026-0002",
+    ]);
+    // The only match is the CVE record's: a vendor of an affected product, a strong key.
+    expect(result.matches).toEqual([
+      {
+        recordId: 2,
+        method: "cve_affected_vendor",
+        strength: "strong",
+        matchedKey: "cve:acmeanalytics",
+      },
+    ]);
   });
 
   it("the off switch gives off for every source and no records", () => {
@@ -416,9 +462,11 @@ describe("offerRecords", () => {
     ).toEqual([
       ["kev", "off", false],
       ["nvd", "off", false],
+      ["sec", "off", false],
       ["ofac", "off", false],
       ["uk_sanctions", "off", false],
       ["eu_fsf", "off", false],
+      ["cve", "off", false],
     ]);
     expect(result.outcome.records).toEqual([]);
     expect(result.matches).toEqual([]);
@@ -633,9 +681,10 @@ describe("createVrdbLookup", () => {
 
     await lookup({ ...lookupInput(), researchable: ["security_incidents"] });
 
-    // The NVD's records are stored too; its state is the answer of its key, not a sync.
-    expect(store.sourceStates).toHaveBeenCalledWith(["kev"]);
-    expect(store.findRecords).toHaveBeenCalledWith(expect.any(Array), ["kev", "nvd"]);
+    // The records of the NVD and the SEC are stored too; their state is the answer of their key, not
+    // a sync.
+    expect(store.sourceStates).toHaveBeenCalledWith(["kev", "cve"]);
+    expect(store.findRecords).toHaveBeenCalledWith(expect.any(Array), ["kev", "nvd", "sec", "cve"]);
   });
 
   it("a vendor without a domain is looked up by its names", async () => {
@@ -705,9 +754,11 @@ describe("createVrdbLookup", () => {
     expect(outcome.coverage.map((entry) => [entry.id, entry.outcome])).toEqual([
       ["kev", "not_researched"],
       ["nvd", "not_researched"],
+      ["sec", "not_researched"],
       ["ofac", "failed"],
       ["uk_sanctions", "failed"],
       ["eu_fsf", "failed"],
+      ["cve", "not_researched"],
     ]);
     expect(store.recordMatches).not.toHaveBeenCalled();
   });
@@ -798,12 +849,15 @@ describe("createVrdbLookup", () => {
 
     const outcome = await lookup({ ...lookupInput(), researchable: ["security_incidents"] });
 
+    // The SEC has no connector in this test: it had no key to ask by, so it is not researched.
     expect(outcome.coverage.map((entry) => [entry.id, entry.outcome])).toEqual([
       ["kev", "failed"],
       ["nvd", "failed"],
+      ["sec", "not_researched"],
       ["ofac", "not_researched"],
       ["uk_sanctions", "not_researched"],
       ["eu_fsf", "not_researched"],
+      ["cve", "failed"],
     ]);
   });
 
@@ -820,22 +874,84 @@ describe("createVrdbLookup", () => {
 });
 
 describe("sharedVrdbLookup", () => {
-  const config = (overrides: Partial<VendorResearchConfig>): VendorResearchConfig => ({
+  const IDS = { organizationId: 1, vendorId: 2 };
+  const config = (overrides: Partial<VendorResearchConfig> = {}): VendorResearchConfig => ({
     autoRun: true,
     manualCooldownMinutes: 10,
     dailyRunCap: 50,
     workerConcurrency: 5,
     headless: false,
     records: true,
-    vrdb: false,
     ...overrides,
   });
+  /** No read-through source is asked here: no test reaches the NVD or the SEC. */
+  const NO_READ_THROUGH: ReadThroughDeps = {
+    store: databaseReadThroughStore,
+    connectors: {},
+    fetchJson: async () => {
+      throw new Error("no test reaches the NVD");
+    },
+    spacers: {},
+  };
 
-  it("is undefined while the VRDB flag is off, and a lookup while it is on", () => {
-    expect(sharedVrdbLookup({ organizationId: 1, vendorId: 2 }, config({}))).toBeUndefined();
-    expect(sharedVrdbLookup({ organizationId: 1, vendorId: 2 }, config({ vrdb: true }))).toEqual(
-      expect.any(Function),
-    );
+  beforeEach(() => {
+    mockSourceStates.mockReset().mockResolvedValue(ALL_SYNCED);
+    mockFindRecords.mockReset().mockResolvedValue([]);
+    mockRecordMatches.mockReset().mockResolvedValue(undefined);
+  });
+
+  it("is a lookup of the stored lists with no flag set: the database is on", async () => {
+    const lookup = sharedVrdbLookup(IDS, config(), NO_READ_THROUGH);
+
+    expect(lookup).toEqual(expect.any(Function));
+    const outcome = await lookup({ ...lookupInput(), researchable: ["legal_regulatory"] });
+
+    expect(mockSourceStates).toHaveBeenCalledTimes(1);
+    expect(mockFindRecords).toHaveBeenCalledTimes(1);
+    expect(outcome.coverage.map((entry) => entry.outcome)).toContain("none");
+    expect(outcome.coverage.every((entry) => entry.outcome !== "off")).toBe(true);
+  });
+
+  it("is off when the records are off: every list says so and nothing is read", async () => {
+    const lookup = sharedVrdbLookup(IDS, config({ records: false }), NO_READ_THROUGH);
+
+    const outcome = await lookup(lookupInput());
+
+    expect(outcome.coverage.length).toBeGreaterThan(0);
+    expect(outcome.coverage.every((entry) => entry.outcome === "off")).toBe(true);
+    expect(outcome.records).toEqual([]);
+    expect(mockSourceStates).not.toHaveBeenCalled();
+    expect(mockFindRecords).not.toHaveBeenCalled();
+    expect(mockRecordMatches).not.toHaveBeenCalled();
+  });
+
+  describe("reading the environment when it is given no settings", () => {
+    const realEnv = process.env;
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+      // A boolean, so that a failure cannot print the real environment.
+      expect(process.env === realEnv).toBe(true);
+    });
+
+    it.each([
+      ["nothing set", {}, true],
+      ["the variable of the earlier flag set to false", { VENDOR_RESEARCH_VRDB: "false" }, true],
+      ["the records turned off", { VENDOR_RESEARCH_RECORDS: "false" }, false],
+      [
+        "the records turned off beside the earlier flag",
+        { VENDOR_RESEARCH_RECORDS: "false", VENDOR_RESEARCH_VRDB: "true" },
+        false,
+      ],
+    ])("with %s", async (_label, env, reads) => {
+      jest.replaceProperty(process, "env", env);
+
+      const lookup = sharedVrdbLookup(IDS, undefined, NO_READ_THROUGH);
+      const outcome = await lookup({ ...lookupInput(), researchable: ["legal_regulatory"] });
+
+      expect(mockFindRecords).toHaveBeenCalledTimes(reads ? 1 : 0);
+      expect(outcome.coverage.every((entry) => entry.outcome === "off")).toBe(!reads);
+    });
   });
 });
 

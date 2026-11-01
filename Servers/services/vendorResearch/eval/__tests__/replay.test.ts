@@ -6,12 +6,7 @@ import { SearchResult } from "../../../webResearch/webSearch";
 import { hintsSchema } from "../../hints";
 import { verifierSchema } from "../../verifier";
 import { buildLoopTaskPrompt } from "../../prompts";
-import {
-  type CredibilityOutput,
-  type ResearchOutput,
-  credibilityOutputSchema,
-  researchOutputSchema,
-} from "../../schema";
+import { type CredibilityOutput, credibilityOutputSchema } from "../../schema";
 import {
   approximateTokens,
   createReplayEngine,
@@ -140,12 +135,12 @@ describe("createScriptedGenerate", () => {
 
     const answer = await generate({
       model: {},
-      schema: researchOutputSchema,
+      schema: credibilityOutputSchema,
       system: "s",
       prompt: "p",
     } as never);
 
-    expect((answer.object as ResearchOutput).category_notes).toEqual([
+    expect((answer.object as CredibilityOutput).category_notes).toEqual([
       { category: "security_incidents", note: "Nothing." },
     ]);
   });

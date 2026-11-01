@@ -55,6 +55,7 @@ import {
   listFindingsQuery,
 } from "../../utils/vendorResearch.utils";
 import { saveVendorResearchSettings } from "../../services/vendorResearch/settings.service";
+import { credibilityRationale } from "../../services/vendorResearch/credibilityText";
 import { createTraceRecorder } from "../../services/vendorResearch/trace";
 import { startVendorResearch } from "../../services/vendorResearch/trigger";
 import { acceptFinding, dismissFinding } from "../../services/vendorResearch/findings.service";
@@ -125,6 +126,7 @@ const RUN: IVendorResearchRun = {
   ],
   model: MODEL_SENTINEL,
   prompt_version: PROMPT_SENTINEL,
+  search_engine: "gdelt",
   searches_used: 5,
   pages_read: 3,
   duplicates_dropped: 2,
@@ -145,6 +147,7 @@ const RUN_RESPONSE_FIELDS = [
   "categories",
   "category_summary",
   "coverage",
+  "search_engine",
   "searches_used",
   "pages_read",
   "duplicates_dropped",
@@ -328,6 +331,26 @@ describe("startVendorResearchRun", () => {
       expect(Object.keys(bodyOf(res).data.run).sort()).toEqual(RUN_RESPONSE_FIELDS);
       expect(bodyOf(res).data.run).toMatchObject({ searches_used: 5, pages_read: 3 });
       expectNoRunInternals(res);
+    }
+  });
+
+  it("sends the search engine of the run, and null for a run that has none", async () => {
+    for (const [stored, sent] of [
+      ["anthropic", "anthropic"],
+      ["gdelt", "gdelt"],
+      [null, null],
+      [undefined, null],
+    ] as const) {
+      mockStartVendorResearch.mockResolvedValue({
+        ok: true,
+        run: { ...RUN, search_engine: stored },
+        alreadyRunning: false,
+      });
+      const res = createMockRes();
+
+      await startVendorResearchRun(createMockReq(), res);
+
+      expect(bodyOf(res).data.run.search_engine).toBe(sent);
     }
   });
 
@@ -929,6 +952,77 @@ describe("listVendorRiskFindings", () => {
     });
   });
 
+  describe("the line of a label that is the earlier confidence (M3, Part B1)", () => {
+    // What the findings query gives a finding of a run before the credibility rule: its confidence
+    // as the label, and this basis.
+    const LEGACY_LINE =
+      "Rated before the source rules; this is the earlier confidence level until the label is recomputed.";
+    const LEGACY_ROW = {
+      id: 1,
+      vendor_name: "Acme",
+      credibility: "medium",
+      credibility_basis: { rule: "legacy_confidence" },
+    };
+    const RATED_ROW = {
+      id: 2,
+      vendor_name: "Acme",
+      credibility: "high",
+      credibility_basis: {
+        rule: "official_page",
+        registry_version: "sr-5",
+        name_only: false,
+        sources: [
+          {
+            url: "https://ico.org.uk/action-weve-taken/enforcement/acme",
+            category: "official",
+            publisher: "ico",
+            entry: "ico",
+            reviewed: true,
+            reading: "read",
+          },
+        ],
+      },
+    };
+
+    it("is one fixed sentence", async () => {
+      mockListFindingsQuery.mockResolvedValue({ rows: [LEGACY_ROW], total: 1 } as any);
+      const res = createMockRes();
+
+      await listVendorRiskFindings(createMockReq(), res);
+
+      expect(bodyOf(res).data.rows[0]).toEqual({
+        ...LEGACY_ROW,
+        credibility_rationale: LEGACY_LINE,
+      });
+    });
+
+    it("leaves the line of a label a run gave as it was", async () => {
+      mockListFindingsQuery.mockResolvedValue({ rows: [LEGACY_ROW, RATED_ROW], total: 2 } as any);
+      const res = createMockRes();
+
+      await listVendorRiskFindings(createMockReq(), res);
+
+      const [, rated] = bodyOf(res).data.rows;
+      expect(rated.credibility_rationale).toBe(
+        credibilityRationale(RATED_ROW.credibility_basis as any),
+      );
+      expect(rated.credibility_rationale).not.toBe("");
+      expect(rated.credibility_rationale).not.toBe(LEGACY_LINE);
+    });
+
+    it("is null for a finding with no label at all", async () => {
+      mockListFindingsQuery.mockResolvedValue({
+        rows: [{ id: 3, credibility: null, credibility_basis: null }],
+        total: 1,
+      } as any);
+      const res = createMockRes();
+
+      await listVendorRiskFindings(createMockReq(), res);
+
+      expect(bodyOf(res).data.rows[0].credibility_rationale).toBeNull();
+    });
+  });
+
   it("passes the filters and the page through", async () => {
     const res = createMockRes();
 
@@ -1258,6 +1352,22 @@ describe("dismissVendorRiskFinding", () => {
       reason: "other",
       note: "Not relevant.",
     });
+  });
+
+  it("answers a finding that reads with the legacy rule with the fixed sentence", async () => {
+    mockDismissFinding.mockResolvedValue({
+      ...DISMISSED_FINDING,
+      credibility: "low",
+      credibility_basis: { rule: "legacy_confidence" },
+    } as any);
+    const res = createMockRes();
+
+    await dismissVendorRiskFinding(dismissReq({ reason: "other" }), res);
+
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(bodyOf(res).data.credibility_rationale).toBe(
+      "Rated before the source rules; this is the earlier confidence level until the label is recomputed.",
+    );
   });
 
   it("dismisses without a note", async () => {

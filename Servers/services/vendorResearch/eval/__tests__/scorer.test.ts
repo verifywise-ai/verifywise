@@ -7,7 +7,7 @@ import type { Credibility } from "../../credibility";
 import { buildTarget } from "../../target";
 import { createTraceRecorder } from "../../trace";
 import type { CaseRun } from "../runCase";
-import { type CaseScore, missedTargets, publisherKey, scoreRun } from "../scorer";
+import { type CaseScore, missedTargets, scoreRun } from "../scorer";
 import type { EvalCase } from "../types";
 
 const TARGET = buildTarget({
@@ -36,7 +36,6 @@ const finding = (partial: Partial<NewFinding> = {}): NewFinding => ({
   likelihood: "Possible",
   risk_severity: "Major",
   risk_level: "High Risk",
-  confidence: "medium",
   rationale: null,
   sources: [{ url: "https://news.example.com/a", title: "t", quote: "q", published_at: null }],
   ...partial,
@@ -302,25 +301,17 @@ describe("scoreRun", () => {
       });
     });
 
-    it("counts a finding of high confidence that two addresses of one publisher support", () => {
+    it("measures no overconfidence: a finding has no confidence to be too sure of (M3 Part B)", () => {
       const cite = (url: string) => ({ url, title: "", quote: "q", published_at: null });
       const score = scoreRun(
         fakeRun({
           kept: [
-            finding({
-              confidence: "high",
-              sources: [cite("https://www.bbc.co.uk/a"), cite("https://www.bbc.com/a")],
-            }),
-            finding({
-              confidence: "high",
-              sources: [cite("https://www.bbc.com/a"), cite("https://www.reuters.com/a")],
-            }),
-            finding({ confidence: "medium", sources: [cite("https://www.bbc.com/a")] }),
+            finding({ sources: [cite("https://www.bbc.co.uk/a"), cite("https://www.bbc.com/a")] }),
           ],
         }),
       );
 
-      expect(score.overconfident).toBe(1);
+      expect(score).not.toHaveProperty("overconfident");
     });
 
     it("counts the findings beyond the first about one event", () => {
@@ -482,23 +473,6 @@ describe("scoreRun", () => {
   });
 });
 
-describe("publisherKey", () => {
-  it.each([
-    ["https://www.bbc.co.uk/news/a", "bbc"],
-    ["https://www.bbc.com/news/a", "bbc"],
-    ["https://news.example.com/a", "example"],
-    ["https://legal.example.org/a", "example"],
-    ["https://acme.com/", "acme"],
-    ["https://localhost/", "localhost"],
-  ])("reads %s as %s", (url, key) => {
-    expect(publisherKey(url)).toBe(key);
-  });
-
-  it("is null for an address that is not one", () => {
-    expect(publisherKey("not a url")).toBeNull();
-  });
-});
-
 describe("missedTargets", () => {
   const score = (partial: Partial<CaseScore>): CaseScore =>
     ({
@@ -515,7 +489,6 @@ describe("missedTargets", () => {
       badUrls: 0,
       datedWebResults: 0,
       snippetOnlyFindings: 0,
-      overconfident: 0,
       mislabelled: 0,
       duplicateClusters: 0,
       sources: 0,

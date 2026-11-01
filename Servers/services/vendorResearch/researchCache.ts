@@ -2,9 +2,12 @@
  * The cache that vendor research runs share: the application's Redis behind the web cache of the
  * toolkit (see webResearch/webCache.ts), with every lookup counted and a store that fails noticed.
  *
- * The cache is public web content for all organizations, so nothing here knows an organization. It
- * connects on its first lookup, not when it is made: a process that never researches never needs
- * the client, and the tests that build a researcher open no connection.
+ * The cache is public web content for all organizations, so nothing here knows an organization. The
+ * one exception is the answer of a search that an organization paid for with its own key (Claude's
+ * web search), which the toolkit's cache keeps for that organization alone (see
+ * webResearch/webCache.ts `withSearchCache`); this module only counts the lookups. It connects on
+ * its first lookup, not when it is made: a process that never researches never needs the client,
+ * and the tests that build a researcher open no connection.
  */
 import logger from "../../utils/logger/fileLogger";
 import {

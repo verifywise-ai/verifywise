@@ -5,18 +5,20 @@
  * name of the vendor (records/sec.ts `registrantOf`), which is weak (Q3): a registrant of that name
  * may be another company. The answer is the vendor's Form 8-K filings under Item 1.05, the newest
  * three of any age (the lookback applies when they are offered), each with the text of its Item
- * 1.05 when the run's page reader can read the filing.
+ * 1.05 when the run reads pages and the filing can be read.
  *
- * Every request to the SEC's API names the contact of Q4 in its User-Agent, as the SEC asks of
- * automated access, and every request takes a turn of the SEC's limit, which all the workers share
+ * Every request to the SEC names the contact of Q4 in its User-Agent, as the SEC asks of automated
+ * access: those of its API, and those that read a filing, which the connector makes with a page
+ * reader of its own, since the reader of a run sends the bot's User-Agent, which has no address.
+ * Every request but robots.txt takes a turn of the SEC's limit, which all the workers share
  * (records/sharedSpacer.ts): the read-through takes the turn of the list of filings (readThrough.ts),
  * and the connector one for the tickers file and one for each filing it reads. A refused turn of
  * the tickers file finds no key, and one of a filing leaves its record without the text. The
  * tickers file and the text of a filing are kept a day in the memory of the connector, which is one
- * for the process (lookup.ts).
+ * for the process (lookup.ts). A run that reads no pages (it gives no reader) gets no text.
  */
-import { FetchError } from "../../../webResearch/guardedFetch";
-import { PageReadError, type PageReader } from "../../../webResearch/readPage";
+import { FetchError, guardedFetch } from "../../../webResearch/guardedFetch";
+import { PageReadError, type PageReader, createPageReader } from "../../../webResearch/readPage";
 import { nameKeys } from "../../records/match";
 import { createMemo } from "../../records/memo";
 import {
@@ -51,6 +53,8 @@ const CIK_PREFIX = "cik:";
 const CIK = /^\d{10}$/;
 /** The SEC updates its tickers file daily, and a filing never changes once it is filed. */
 const DAY_MS = 24 * 60 * 60_000;
+/** How long the connector's page reader is kept (see `readerOf`). */
+const READER_LIFETIME_MS = 60 * 60_000;
 
 /** The User-Agent the SEC asks of automated access: who asks, and an address to reach them (Q4). */
 export const secUserAgent = (contact: string): string => `VerifyWise ${contact}`;
@@ -63,6 +67,11 @@ export interface SecConnectorDeps {
   spacer?: Spacer;
   /** The time in milliseconds, for the memory of the tickers file and of the filings' text. */
   clock?: () => number;
+  /**
+   * The guarded fetch under the connector's own page reader, which reads the filings; the page
+   * guard's by default.
+   */
+  fetchPage?: typeof guardedFetch;
 }
 
 function recordOf(
@@ -96,6 +105,7 @@ export function secConnector(contact: string, deps: SecConnectorDeps = {}): Read
   const spacer =
     deps.spacer ?? createSharedSpacer(SEC_LIMITS, { redis: applicationRedis, key: SEC_SPACER_KEY });
   const clock = deps.clock ?? Date.now;
+  const fetchPage = deps.fetchPage ?? guardedFetch;
   const registrants = createMemo<Registrant[]>(DAY_MS, 1, clock);
   const excerpts = createMemo<string | null>(DAY_MS, 200, clock);
 
@@ -103,17 +113,43 @@ export function secConnector(contact: string, deps: SecConnectorDeps = {}): Read
     if (!(await spacer(signal))) throw new TurnRefused();
   };
 
-  /** The text of Item 1.05 of a filing; none when it cannot be read, which is no failure. */
+  /**
+   * The page reader that reads the filings: every request of it, robots.txt and the page, names the
+   * contact (the SEC asks for it of all automated access). One for the connector, kept an hour: a
+   * reader keeps the robots.txt of an origin for its life, and a robots.txt that could not be read
+   * once allows nothing, so a reader kept for the life of the process would leave the archive
+   * unread until a restart, and one kept a day would leave it unread for every run of that day,
+   * and with nothing in the log but the missing text.
+   */
+  let pages: { read: PageReader; since: number } | undefined;
+  const readerOf = (): PageReader => {
+    const now = clock();
+    if (pages === undefined || now - pages.since >= READER_LIFETIME_MS) {
+      pages = {
+        read: createPageReader({
+          fetch: (url, options) => fetchPage(url, { ...options, userAgent }),
+        }),
+        since: now,
+      };
+    }
+    return pages.read;
+  };
+
+  /**
+   * The text of Item 1.05 of a filing; none when it cannot be read, which is no failure, and none
+   * when the run reads no pages: the run's reader says that it does, and the connector reads with
+   * its own, whose User-Agent the SEC accepts.
+   */
   async function excerptOf(
     url: string,
     signal: AbortSignal,
-    readPage: PageReader | undefined,
+    runReadsPages: boolean,
   ): Promise<string | null> {
-    if (readPage === undefined) return null;
+    if (!runReadsPages) return null;
     try {
       return await excerpts.get(url, async () => {
         await turn(signal);
-        return item105Text((await readPage(url, signal)).text);
+        return item105Text((await readerOf()(url, signal)).text);
       });
     } catch (error) {
       if (error instanceof PageReadError || error instanceof TurnRefused) return null;
@@ -161,7 +197,7 @@ export function secConnector(contact: string, deps: SecConnectorDeps = {}): Read
             submissions,
             filing,
             key,
-            await excerptOf(filingUrl(submissions.cik, filing), signal, readPage),
+            await excerptOf(filingUrl(submissions.cik, filing), signal, readPage !== undefined),
           ),
         ),
       );

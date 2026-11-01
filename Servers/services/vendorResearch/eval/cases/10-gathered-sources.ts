@@ -165,7 +165,6 @@ export const GATHERED_SOURCES: EvalCase = {
           risk_severity: "Moderate",
           action_plan:
             "Ask the vendor whether our files were in the bucket and for its incident report.",
-          confidence: "medium",
           rationale:
             "Two publishers report it and the vendor has closed the bucket, but nobody says whether the files were read.",
           evidence: [
@@ -206,7 +205,6 @@ export const GATHERED_SOURCES: EvalCase = {
     maxBadUrls: 0,
     maxDatedWebResults: 0,
     maxSnippetOnlyFindings: 0,
-    maxOverconfident: 0,
     maxMislabelled: 0,
     maxDuplicateClusters: 0,
     maxCitationsRejected: 0,

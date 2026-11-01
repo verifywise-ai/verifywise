@@ -15,7 +15,6 @@ const SCORE: CaseScore = {
   badUrls: 0,
   datedWebResults: 0,
   snippetOnlyFindings: 0,
-  overconfident: 0,
   mislabelled: 0,
   duplicateClusters: 0,
   sources: 6,
@@ -67,10 +66,11 @@ describe("formatReport", () => {
     expect(text).toMatch(/tokens 3400/);
   });
 
-  it("writes the mislabelled count after overconfident", () => {
-    const text = formatReport([report({ score: { ...SCORE, overconfident: 2, mislabelled: 3 } })]);
+  it("writes the mislabelled count after the snippet-only count, and no overconfident one", () => {
+    const text = formatReport([report({ score: { ...SCORE, mislabelled: 3 } })]);
 
-    expect(text).toMatch(/snippet-only 0, overconfident 2, mislabelled 3, cluster repeats 0/);
+    expect(text).toMatch(/snippet-only 0, mislabelled 3, cluster repeats 0/);
+    expect(text).not.toMatch(/overconfident/);
   });
 
   it("writes a dash for a measure that is not defined", () => {

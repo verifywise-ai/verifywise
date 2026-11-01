@@ -115,7 +115,6 @@ export const SYNDICATED_COPIES: EvalCase = {
           risk_severity: "Major",
           action_plan:
             "Ask the vendor for its incident report and for the plan that keeps bookings running during an outage.",
-          confidence: "medium",
           rationale:
             "An agency story and a local report describe the attack, and the outage stopped bookings for days.",
           evidence: [

@@ -167,7 +167,6 @@ export const SEC_CYBERSECURITY_INCIDENT_REPORT: EvalCase = {
           risk_severity: "Major",
           action_plan:
             "Ask the vendor in writing whether our backups were in the affected environment, what data was accessed and when it will report its findings, and check what we can restore without its systems.",
-          confidence: "medium",
           rationale:
             "The vendor itself filed the report with a regulator, but the filing says the scope of the incident is not yet determined.",
           evidence: [
@@ -210,7 +209,6 @@ export const SEC_CYBERSECURITY_INCIDENT_REPORT: EvalCase = {
     maxBadUrls: 0,
     maxDatedWebResults: 0,
     maxSnippetOnlyFindings: 0,
-    maxOverconfident: 0,
     maxMislabelled: 0,
     maxDuplicateClusters: 0,
     maxCitationsRejected: 0,

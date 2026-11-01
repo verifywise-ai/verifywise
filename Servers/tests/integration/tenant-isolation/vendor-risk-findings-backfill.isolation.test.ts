@@ -41,7 +41,6 @@ const FINDING: NewFinding = {
   likelihood: "Possible",
   risk_severity: "Major",
   risk_level: "High Risk",
-  confidence: "medium",
   rationale: null,
   sources: [{ url: "https://news.example/acme", title: "", quote: "q", published_at: null }],
 };

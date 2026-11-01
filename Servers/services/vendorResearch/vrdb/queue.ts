@@ -6,12 +6,15 @@
  * automations, and this queue is never emptied.
  *
  * One BullMQ scheduler per active list, at the list's own minute (vrdb/sources.ts), in UTC. The
- * backend registers them at startup (jobs/producer.ts) while the VRDB flag and the records are
- * both on, and removes them otherwise, so turning either off stops every download; a list behind a
- * closed gate (gates.ts) has no scheduler either. An upsert by id changes nothing when the
- * scheduler exists, so every start can call it. An active list that was never copied gets a first
- * sync at once as well, so that turning the flag on does not leave the runs without it until its
- * scheduler's next minute, up to six hours later.
+ * backend registers them at startup (jobs/producer.ts) while the records are on
+ * (VENDOR_RESEARCH_RECORDS; the database has no switch of its own), and removes them otherwise, so
+ * turning the records off stops every download; a list behind a closed gate (gates.ts) has no
+ * scheduler either. An upsert by id changes nothing when the scheduler exists, so every start can
+ * call it. An active list that was never copied gets a first sync at once as well, so that a new
+ * deployment does not leave the runs without it until its scheduler's next minute, up to six hours
+ * later. A list read by its changes (the CVE records) gets none: its first copy is a baseline that
+ * an operator loads (scripts/vrdbCveBaseline.ts), and a sync before that is refused as
+ * `no_baseline`.
  */
 import { type JobsOptions, Queue } from "bullmq";
 import type { VrdbSourceId } from "../../../domain.layer/interfaces/i.vendorResearch";
@@ -77,8 +80,9 @@ export async function enqueueRelabel(
   );
 }
 
-/** Whether the lists are mirrored: the VRDB flag is on and the records are not off. */
-export const vrdbSyncsOn = (config: VendorResearchConfig): boolean => config.vrdb && config.records;
+/** Whether the lists are mirrored: unless the records are off, which is the only switch. */
+export const vrdbSyncsOn = (config: Pick<VendorResearchConfig, "records">): boolean =>
+  config.records;
 
 /** The name of an error, for a log line: its message can carry a query. */
 function errorName(error: unknown): string {
@@ -89,10 +93,10 @@ function errorName(error: unknown): string {
 
 /**
  * Upserts the scheduler of every active list while the syncs are on, and queues a first sync of
- * every active list that has no copy yet; removes the schedulers of the other lists, and of every
- * list while the syncs are off. A failure to read the lists' states is logged and queues nothing:
- * the schedulers sync them at their minutes. `config`, `queue` and `sourceStates` are for the
- * tests.
+ * every active list that has no copy yet and is copied whole, not read by its changes; removes the
+ * schedulers of the other lists, and of every list while the syncs are off. A failure to read the
+ * lists' states is logged and queues nothing: the schedulers sync them at their minutes. `config`,
+ * `queue` and `sourceStates` are for the tests.
  */
 export async function scheduleVendorRiskDatabaseSync(
   config: VendorResearchConfig = getVendorResearchConfig(),
@@ -126,6 +130,10 @@ export async function scheduleVendorRiskDatabaseSync(
     return;
   }
   for (const definition of active) {
+    // A list read by its changes gets its first copy from its baseline (scripts/vrdbCveBaseline.ts),
+    // which an operator loads once. Without a cursor a sync of it is refused as no_baseline, so a
+    // first sync would only record a failed sync at every start.
+    if (definition.missingStatus === null) continue;
     const copied = states.some(
       (state) => state.id === definition.id && state.lastSuccessAt !== null,
     );

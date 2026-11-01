@@ -17,14 +17,19 @@ import { cleanupDatabase } from "./helpers";
 import { sequelize } from "../../database/db";
 import * as vrdbStore from "../../utils/vrdb.utils";
 import { writeZip } from "../../services/vendorResearch/vrdb/__tests__/helpers/zipWriter";
-import { CVE_RELEASE_API, cveConnector } from "../../services/vendorResearch/vrdb/connectors/cve";
+import {
+  CVE_REFS_API,
+  CVE_RELEASE_API,
+  cveConnector,
+} from "../../services/vendorResearch/vrdb/connectors/cve";
 import type {
   Connector,
   ConnectorFetch,
   ParseResult,
   Snapshot,
 } from "../../services/vendorResearch/vrdb/connectors/types";
-import { vrdbSourceOf } from "../../services/vendorResearch/vrdb/sources";
+import { FetchError } from "../../services/webResearch/guardedFetch";
+import { CVE_TERMS_LICENCE, vrdbSourceOf } from "../../services/vendorResearch/vrdb/sources";
 import { syncSource } from "../../services/vendorResearch/vrdb/sync";
 import type { ParsedRecord } from "../../services/vendorResearch/vrdb/types";
 
@@ -240,6 +245,7 @@ function cveRecord(
   id: string,
   state: "PUBLISHED" | "REJECTED" = "PUBLISHED",
   vendor = "Example Corp",
+  baseScore = 9.8,
 ) {
   return state === "PUBLISHED"
     ? {
@@ -259,7 +265,15 @@ function cveRecord(
             affected: [
               { vendor, product: "Gateway", versions: [{ version: "1.0", status: "affected" }] },
             ],
-            metrics: [{ cvssV3_1: { version: "3.1", baseScore: 9.8, baseSeverity: "CRITICAL" } }],
+            metrics: [
+              {
+                cvssV3_1: {
+                  version: "3.1",
+                  baseScore,
+                  baseSeverity: baseScore >= 9 ? "CRITICAL" : "HIGH",
+                },
+              },
+            ],
           },
         },
       }
@@ -285,8 +299,24 @@ function cveRecord(
 const downloadOf = (day: string) =>
   `https://github.com/CVEProject/cvelistV5/releases/download/cve_${day}_at_end_of_day/${day}_delta_CVEs_at_end_of_day.zip`;
 
-/** The GitHub API and the downloads of the end-of-day releases of the days it is given. */
-function github(days: Record<string, unknown[]>): ConnectorFetch {
+const hourlyDownloadOf = (day: string, hour: string) =>
+  `https://github.com/CVEProject/cvelistV5/releases/download/cve_${day}_${hour}00Z/${day}_delta_CVEs_at_${hour}00Z.zip`;
+
+/** A day that has no end-of-day release: the hours of its hourly releases, and the changes of the last. */
+interface HourlyDay {
+  hours: string[];
+  changes: unknown[];
+}
+
+/**
+ * The GitHub API and the downloads of the end-of-day releases of the days it is given. A day of
+ * `hourly` has no end-of-day release (the API answers 404), the list of its tags is its hours, and
+ * only the release of its last hour can be read.
+ */
+function github(
+  days: Record<string, unknown[]>,
+  hourly: Record<string, HourlyDay> = {},
+): ConnectorFetch {
   return async (url) => {
     const respond = (body: Buffer, contentType: string) => ({
       notModified: false as const,
@@ -298,6 +328,43 @@ function github(days: Record<string, unknown[]>): ConnectorFetch {
       etag: null,
       lastModified: null,
     });
+    const zipOf = (records: unknown[]) =>
+      writeZip(
+        records.map((record) => ({
+          name: `deltaCves/${(record as { cveMetadata: { cveId: string } }).cveMetadata.cveId}.json`,
+          data: JSON.stringify(record),
+        })),
+      );
+
+    const gap = Object.keys(hourly).find(
+      (key) => url === `${CVE_RELEASE_API}cve_${key}_at_end_of_day`,
+    );
+    if (gap !== undefined) throw new FetchError("not_found");
+    const tagged = Object.keys(hourly).find((key) => url === `${CVE_REFS_API}cve_${key}_`);
+    if (tagged !== undefined) {
+      const refs = hourly[tagged].hours.map((hour) => ({
+        ref: `refs/tags/cve_${tagged}_${hour}00Z`,
+      }));
+      return respond(Buffer.from(JSON.stringify(refs)), "application/json");
+    }
+    for (const [key, { hours, changes }] of Object.entries(hourly)) {
+      const last = [...hours].sort()[hours.length - 1];
+      if (url === `${CVE_RELEASE_API}cve_${key}_${last}00Z`) {
+        const release = {
+          assets: [
+            {
+              name: `${key}_delta_CVEs_at_${last}00Z.zip`,
+              browser_download_url: hourlyDownloadOf(key, last),
+            },
+          ],
+        };
+        return respond(Buffer.from(JSON.stringify(release)), "application/json");
+      }
+      if (url === hourlyDownloadOf(key, last)) {
+        return respond(zipOf(changes), "application/octet-stream");
+      }
+    }
+
     const day = Object.keys(days).find(
       (key) => url === `${CVE_RELEASE_API}cve_${key}_at_end_of_day` || url === downloadOf(key),
     );
@@ -310,19 +377,14 @@ function github(days: Record<string, unknown[]>): ConnectorFetch {
       };
       return respond(Buffer.from(JSON.stringify(release)), "application/json");
     }
-    const zip = writeZip(
-      days[day].map((record) => ({
-        name: `deltaCves/${(record as { cveMetadata: { cveId: string } }).cveMetadata.cveId}.json`,
-        data: JSON.stringify(record),
-      })),
-    );
-    return respond(zip, "application/octet-stream");
+    return respond(zipOf(days[day]), "application/octet-stream");
   };
 }
 
 const cveRows = async () =>
   (await sequelize.query(
-    `SELECT source_record_id, status, status_changed_at, match_keys, title, summary
+    `SELECT source_record_id, status, status_changed_at, match_keys, title, summary, content_hash,
+            updated_at
      FROM vrdb_records WHERE source_id = 'cve' ORDER BY source_record_id`,
     { type: QueryTypes.SELECT },
   )) as Array<{
@@ -332,7 +394,21 @@ const cveRows = async () =>
     match_keys: string[];
     title: string;
     summary: string;
+    content_hash: string;
+    updated_at: Date;
   }>;
+
+/** The content hash of a record the copy retired: one that no content has. */
+const NO_CONTENT_HASH = "0".repeat(64);
+
+/** The records the CVE connector keeps of these records of the CVE record format. */
+const parsedCve = (...records: unknown[]): ParsedRecord[] =>
+  cveConnector.parse({
+    bodies: records.map((record) => JSON.stringify(record)),
+    etag: null,
+    lastModified: null,
+    bytes: 0,
+  }).records;
 
 const cveSource = async () =>
   (
@@ -496,5 +572,279 @@ describe("the sync of the CVE records, in the database", () => {
       last_outcome: "ok",
       last_success_at: at,
     });
+  });
+
+  it("a record re-scored below 9.0 loses its keys and is no longer found; it returns when it is critical again", async () => {
+    await vrdbStore.upsertVrdbSourceQuery(vrdbSourceOf("cve"), T0);
+    await sequelize.query(
+      `UPDATE vrdb_sources SET cursor = '{"day": "2026-10-28"}'::jsonb WHERE id = 'cve'`,
+    );
+    const syncDay = (days: Record<string, unknown[]>, at: Date) =>
+      syncSource("cve", {
+        store: vrdbStore,
+        connector: cveConnector,
+        fetch: github(days),
+        now: () => at,
+      });
+    const found = async () =>
+      (await vrdbStore.findVrdbRecordsByKeysQuery(["cve:examplecorp"], ["cve"])).map(
+        (row) => row.sourceRecordId,
+      );
+
+    // The copy holds the record as critical, and a run is offered it.
+    await syncDay({ "2026-10-29": [cveRecord("CVE-2026-4001")] }, new Date("2026-10-30T03:00:00Z"));
+    const [critical] = await cveRows();
+    expect(critical).toMatchObject({
+      status: "active",
+      match_keys: ["cve:examplecorp", "cve:example"],
+    });
+    expect(critical.content_hash).not.toBe(NO_CONTENT_HASH);
+    expect(await found()).toEqual(["CVE-2026-4001"]);
+
+    // The CVE Program re-scores it to 7.5, which the copy's filter leaves out.
+    const rescored = await syncDay(
+      { "2026-10-30": [cveRecord("CVE-2026-4001", "PUBLISHED", "Example Corp", 7.5)] },
+      new Date("2026-10-31T03:00:00Z"),
+    );
+
+    expect(rescored).toEqual({
+      outcome: "ok",
+      counts: { seen: 0, inserted: 0, updated: 1, statusChanged: 0 },
+    });
+    // It loses its keys and takes a hash that no content has; its content and status stay.
+    expect(await cveRows()).toEqual([
+      expect.objectContaining({
+        source_record_id: "CVE-2026-4001",
+        status: "active",
+        status_changed_at: null,
+        match_keys: [],
+        content_hash: NO_CONTENT_HASH,
+        title: critical.title,
+        summary: critical.summary,
+      }),
+    ]);
+    expect(await found()).toEqual([]);
+
+    // Critical again with the content it had: the hash of no content differs, so it is written
+    // again and gets its keys back.
+    const again = await syncDay(
+      { "2026-10-31": [cveRecord("CVE-2026-4001")] },
+      new Date("2026-11-01T03:00:00Z"),
+    );
+
+    expect(again).toEqual({
+      outcome: "ok",
+      counts: { seen: 1, inserted: 0, updated: 1, statusChanged: 0 },
+    });
+    expect(await cveRows()).toEqual([
+      expect.objectContaining({
+        match_keys: critical.match_keys,
+        content_hash: critical.content_hash,
+      }),
+    ]);
+    expect(await found()).toEqual(["CVE-2026-4001"]);
+  });
+
+  it("a stored rejection that the list publishes again below 9.0 becomes active, dated by the sync", async () => {
+    await vrdbStore.upsertVrdbSourceQuery(vrdbSourceOf("cve"), T0);
+    await vrdbStore.upsertVrdbSourceQuery(vrdbSourceOf("kev"), T0);
+    const apply = (
+      records: ParsedRecord[],
+      at: Date,
+      options: { retire?: string[]; cursor?: { day: string } } = {},
+    ) =>
+      vrdbStore.applyVrdbDeltaQuery({
+        sourceId: "cve",
+        records,
+        retire: options.retire ?? [],
+        cursor: options.cursor ?? null,
+        rawSnapshotHash: "a".repeat(64),
+        at,
+      });
+    // The copy held the record as critical, then the program rejected it: it keeps the keys it had.
+    await apply(parsedCve(cveRecord("CVE-2026-5001")), T0, { cursor: { day: "2026-10-29" } });
+    await apply(
+      parsedCve(cveRecord("CVE-2026-5001", "REJECTED")),
+      new Date(T0.getTime() + HOUR_MS),
+    );
+    // A rejected CVE is rejected on every list (Ruling 9): the KEV entry for it is hidden.
+    await vrdbStore.applyVrdbDeltaQuery({
+      sourceId: "kev",
+      records: [
+        {
+          sourceRecordId: "CVE-2026-5001",
+          recordType: "vulnerability",
+          title: "CVE-2026-5001: Example Corp Gateway",
+          summary: "Known to be exploited.",
+          url: "https://list.example/kev/CVE-2026-5001",
+          identifiers: { cveID: "CVE-2026-5001" },
+          matchKeys: ["kev:examplecorp"],
+          publishedAt: "2026-10-29",
+          sourceUpdatedAt: null,
+        },
+      ],
+      cursor: null,
+      rawSnapshotHash: "d".repeat(64),
+      at: T0,
+    });
+    const kevFound = async () =>
+      (await vrdbStore.findVrdbRecordsByKeysQuery(["kev:examplecorp"], ["kev"])).map(
+        (row) => row.sourceRecordId,
+      );
+    const [rejected] = await cveRows();
+    expect(rejected).toMatchObject({
+      status: "rejected",
+      status_changed_at: REJECTED_AT,
+      match_keys: ["cve:examplecorp", "cve:example"],
+    });
+    expect(await kevFound()).toEqual([]);
+    expect(await cveSource()).toMatchObject({ active_records: 0 });
+
+    // The program publishes the record again, re-scored below the cut.
+    const at = new Date(T0.getTime() + 2 * HOUR_MS);
+    const counts = await apply([], at, { retire: ["CVE-2026-5001"] });
+
+    expect(counts).toEqual({ seen: 0, inserted: 0, updated: 1, statusChanged: 1 });
+    expect(await cveRows()).toEqual([
+      expect.objectContaining({
+        source_record_id: "CVE-2026-5001",
+        status: "active",
+        // The sync dates it: the list says nothing of when the rejection ended.
+        status_changed_at: at,
+        match_keys: [],
+        content_hash: NO_CONTENT_HASH,
+        title: rejected.title,
+        summary: rejected.summary,
+      }),
+    ]);
+    // The stale rejection no longer hides the CVE on the other lists.
+    expect(await kevFound()).toEqual(["CVE-2026-5001"]);
+    expect(await cveSource()).toMatchObject({ active_records: 1 });
+  });
+
+  it("an id the copy does not hold, or one the same day keeps, is not retired; a retired record is not counted twice", async () => {
+    await vrdbStore.upsertVrdbSourceQuery(vrdbSourceOf("cve"), T0);
+    const held = parsedCve(
+      cveRecord("CVE-2026-6001"),
+      cveRecord("CVE-2026-6002", "PUBLISHED", "Other"),
+      cveRecord("CVE-2026-6003", "PUBLISHED", "Third"),
+    );
+    await vrdbStore.applyVrdbDeltaQuery({
+      sourceId: "cve",
+      records: held,
+      cursor: { day: "2026-10-29" },
+      rawSnapshotHash: "a".repeat(64),
+      at: T0,
+    });
+    // The next day writes the first with the keys of another vendor, and repeats the third as it
+    // was. It names all three among the records it leaves out, with the second twice, and an id
+    // that the copy never held.
+    const rewritten = parsedCve(cveRecord("CVE-2026-6001", "PUBLISHED", "Changed"));
+    const at = new Date(T0.getTime() + HOUR_MS);
+
+    const counts = await vrdbStore.applyVrdbDeltaQuery({
+      sourceId: "cve",
+      records: [...rewritten, held[2]],
+      retire: ["CVE-2026-6001", "CVE-2026-6002", "CVE-2026-6003", "CVE-2026-6002", "CVE-2026-6009"],
+      cursor: null,
+      rawSnapshotHash: "b".repeat(64),
+      at,
+    });
+
+    // The first is written, and the second retired: two changes, and the others none.
+    expect(counts).toEqual({ seen: 2, inserted: 0, updated: 2, statusChanged: 0 });
+    const rows = await cveRows();
+    // The id the copy never held is not created.
+    expect(rows.map((row) => row.source_record_id)).toEqual([
+      "CVE-2026-6001",
+      "CVE-2026-6002",
+      "CVE-2026-6003",
+    ]);
+    const [written, retired, repeated] = rows;
+    // A record the day writes wins over the same id among those it retires, whether the write
+    // changes it or not.
+    expect(written.match_keys).toEqual(rewritten[0].matchKeys);
+    expect(written.content_hash).not.toBe(NO_CONTENT_HASH);
+    expect(repeated.match_keys).toEqual(held[2].matchKeys);
+    expect(repeated.content_hash).not.toBe(NO_CONTENT_HASH);
+    expect(retired).toMatchObject({
+      status: "active",
+      match_keys: [],
+      content_hash: NO_CONTENT_HASH,
+      updated_at: at,
+    });
+
+    // Retired again, it has nothing left to lose: it is not counted, and its row is not written.
+    const again = await vrdbStore.applyVrdbDeltaQuery({
+      sourceId: "cve",
+      records: [],
+      retire: ["CVE-2026-6002"],
+      cursor: null,
+      rawSnapshotHash: "c".repeat(64),
+      at: new Date(at.getTime() + HOUR_MS),
+    });
+
+    expect(again).toEqual({ seen: 0, inserted: 0, updated: 0, statusChanged: 0 });
+    expect((await cveRows())[1].updated_at).toEqual(at);
+  });
+
+  it("a day without an end-of-day release is applied from its last hourly release, and the cursor moves past it", async () => {
+    await vrdbStore.upsertVrdbSourceQuery(vrdbSourceOf("cve"), T0);
+    await sequelize.query(
+      `UPDATE vrdb_sources SET cursor = '{"day": "2026-10-28"}'::jsonb WHERE id = 'cve'`,
+    );
+    const at = new Date("2026-10-31T03:00:00Z");
+    const fetch = github(
+      { "2026-10-30": [cveRecord("CVE-2026-7002")] },
+      // The hours come out of order: the day is read up to the greatest, whatever the list's order.
+      { "2026-10-29": { hours: ["09", "21", "00", "13"], changes: [cveRecord("CVE-2026-7001")] } },
+    );
+
+    const result = await syncSource("cve", {
+      store: vrdbStore,
+      connector: cveConnector,
+      fetch,
+      now: () => at,
+    });
+
+    // The record of the hourly day and the record of the day after it, both written.
+    expect(result).toEqual({
+      outcome: "ok",
+      counts: { seen: 2, inserted: 2, updated: 0, statusChanged: 0 },
+    });
+    expect((await cveRows()).map((row) => row.source_record_id)).toEqual([
+      "CVE-2026-7001",
+      "CVE-2026-7002",
+    ]);
+    expect(await cveSource()).toMatchObject({ cursor: { day: "2026-10-30" }, last_outcome: "ok" });
+    // The cursor is past the hourly day: the next sync has no day left to read.
+    expect(
+      await syncSource("cve", { store: vrdbStore, connector: cveConnector, fetch, now: () => at }),
+    ).toEqual({
+      outcome: "unchanged",
+    });
+  });
+
+  it("the row of the CVE records carries MITRE's copyright designation and the licence, whole", async () => {
+    const at = new Date("2026-12-31T23:30:00Z");
+    // The attribution is read when it is used, so it is read once here: the year does not change
+    // between the write and the comparison.
+    const definition = { ...vrdbSourceOf("cve") };
+
+    await vrdbStore.upsertVrdbSourceQuery(definition, at);
+
+    const [row] = (await sequelize.query(
+      `SELECT licence, attribution, length(licence) AS licence_length
+       FROM vrdb_sources WHERE id = 'cve'`,
+      { type: QueryTypes.SELECT },
+    )) as Array<{ licence: string; attribution: string; licence_length: number }>;
+    // The licence paragraph is reproduced as the Terms print it, with CVE™ and the symbol ©, which
+    // the database must keep as the characters they are.
+    expect(row.licence).toBe(definition.licence);
+    expect(row.licence).toContain(CVE_TERMS_LICENCE);
+    expect(row.licence).toContain("CVE™");
+    expect(row.licence_length).toBe(row.licence.length);
+    expect(row.attribution).toBe(definition.attribution);
+    expect(row.attribution).toMatch(/Copyright © 1999-\d{4}, The MITRE Corporation/);
   });
 });

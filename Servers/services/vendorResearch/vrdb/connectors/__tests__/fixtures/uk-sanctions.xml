@@ -1,31 +1,41 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   A fixture of the UK Sanctions List, written from its schema (SanctionsListSchema-4.33.3.xsd, read
-  on 2026-10-30) and its format guide (published 22 December 2025), with fictional names. No real
-  list file was read.
+  on 2026-10-30) and its format guide (published 22 December 2025), with fictional names, and in
+  the shape of the real file.
 
-  The paths the connector reads, from the XSD (no namespace, every field an element):
+  Checked against the real file on 2026-10-31 (generated 2026-10-30): the connector read its 1,667
+  entities with no error; IndividualEntityShip is Individual, Entity or Ship; NameType is Primary
+  Name, Primary Name Variation or Alias, also written in other cases (Primary name, ALias), hence
+  the comparison without regard to case; dates are dd/mm/yyyy; UNReferenceNumber appears only on
+  designations the UN made (269 entities, two written QDE.).
+
+  The paths the connector reads, from the XSD (every field an element):
     /Designations                                    root
     /Designations/DateGenerated                      the list's date (source version)
     /Designations/Designation                        one designation, repeated
-      UniqueID, RegimeName, IndividualEntityShip, DateDesignated, LastUpdated
+      UniqueID, RegimeName, IndividualEntityShip, UNReferenceNumber, DateDesignated, LastUpdated
       Names/Name/Name1 … Name6, Names/Name/NameType
       Websites/Website
       EntityDetails/Entity/TypeOfEntities/TypeOfEntity
       EntityDetails/Entity/BusinessRegistrationNumbers/BusinessRegistrationNumber
-  UNVERIFIED: the values of IndividualEntityShip ("Individual", "Entity", "Ship") and of NameType
-  ("Primary Name", "Primary Name Variation", "Alias") are the format guide's words; the XSD lists
-  none, so the connector compares them without regard to case. The XSD gives no date format: both
-  dd/mm/yyyy and an ISO 8601 day are read.
+
+  The shape of the real file, which the fixture keeps: the root declares the prefixes xsi and xsd
+  and no default namespace; a designation lists its fields in the real order; RegimeName is the
+  full title of the regulation; an entity's name is in Name6; UNReferenceNumber is there only on a
+  designation the UN made, which DesignationSource then calls UN or UK|UN; a business registration
+  number may hold two lines; a Website may be an address on a platform where many have pages, or an
+  e-mail address. The fields the connector does not read are left out, except OFSIGroupID and
+  DesignationSource. The XSD gives no date format, and the connector also reads an ISO 8601 day.
 -->
-<Designations>
+<Designations xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
   <DateGenerated>29/10/2026</DateGenerated>
   <Designation>
     <LastUpdated>15/09/2026</LastUpdated>
     <DateDesignated>12/03/2025</DateDesignated>
     <UniqueID>CYB0042</UniqueID>
-    <OFSIGroupID></OFSIGroupID>
-    <UNReferenceNumber></UNReferenceNumber>
+    <OFSIGroupID>99001</OFSIGroupID>
+    <UNReferenceNumber>EXe.001</UNReferenceNumber>
     <Names>
       <Name>
         <Name6>Northwind Export Company</Name6>
@@ -36,10 +46,13 @@
         <NameType>Alias</NameType>
       </Name>
     </Names>
-    <RegimeName>Cyber</RegimeName>
+    <RegimeName>The Cyber (Sanctions) (EU Exit) Regulations 2020</RegimeName>
     <IndividualEntityShip>Entity</IndividualEntityShip>
+    <DesignationSource>UK|UN</DesignationSource>
     <Websites>
       <Website>www.Northwind-Export.example</Website>
+      <Website>export@northwind-mail.example</Website>
+      <Website>https://vk.com/northwind_export</Website>
     </Websites>
     <EntityDetails>
       <Entity>
@@ -50,25 +63,32 @@
     </EntityDetails>
   </Designation>
   <Designation>
-    <LastUpdated>2026-10-01</LastUpdated>
-    <DateDesignated>2026-02-02</DateDesignated>
+    <LastUpdated>01/10/2026</LastUpdated>
+    <DateDesignated>02/02/2026</DateDesignated>
     <UniqueID>RUS1234</UniqueID>
     <Names>
-      <Name>
-        <Name6>Globex Holdings &amp; Partners LLC</Name6>
-        <NameType>Primary Name</NameType>
-      </Name>
       <Name>
         <Name6>Globeks Holdings</Name6>
         <NameType>Primary Name Variation</NameType>
       </Name>
+      <Name>
+        <Name6>Globex Holdings &amp; Partners LLC</Name6>
+        <NameType>Primary name</NameType>
+      </Name>
+      <Name>
+        <Name6>Globex Holding &amp; Partners</Name6>
+        <NameType>Primary name variation</NameType>
+      </Name>
     </Names>
-    <RegimeName>Russia</RegimeName>
+    <RegimeName>The Russia (Sanctions) (EU Exit) Regulations 2019</RegimeName>
     <IndividualEntityShip>Entity</IndividualEntityShip>
+    <DesignationSource>UK</DesignationSource>
     <EntityDetails>
       <Entity>
         <BusinessRegistrationNumbers>
           <BusinessRegistrationNumber>1027700000000 (Example)</BusinessRegistrationNumber>
+          <BusinessRegistrationNumber>Tax number: 7700000001
+Registration number: 1027700000001</BusinessRegistrationNumber>
         </BusinessRegistrationNumbers>
       </Entity>
     </EntityDetails>
@@ -82,8 +102,9 @@
         <NameType>Primary Name</NameType>
       </Name>
     </Names>
-    <RegimeName>Cyber</RegimeName>
+    <RegimeName>The Cyber (Sanctions) (EU Exit) Regulations 2020</RegimeName>
     <IndividualEntityShip>Individual</IndividualEntityShip>
+    <DesignationSource>UK</DesignationSource>
   </Designation>
   <Designation>
     <UniqueID>RUS1235</UniqueID>
@@ -93,7 +114,8 @@
         <NameType>Primary Name</NameType>
       </Name>
     </Names>
-    <RegimeName>Russia</RegimeName>
+    <RegimeName>The Russia (Sanctions) (EU Exit) Regulations 2019</RegimeName>
     <IndividualEntityShip>Ship</IndividualEntityShip>
+    <DesignationSource>UK</DesignationSource>
   </Designation>
 </Designations>

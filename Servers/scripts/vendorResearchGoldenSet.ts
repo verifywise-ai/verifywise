@@ -1,14 +1,20 @@
 #!/usr/bin/env ts-node
 /**
  * Scores the golden set of the vendor risk database (spec D6.4) against the runs stored for one
- * organization: for each vendor in the labels file, the first completed run of its row researched
- * with the VENDOR_RESEARCH_VRDB flag off (PROMPT_VERSION) and of its row researched with the flag
- * on (CREDIBILITY_PROMPT_VERSION), compared with what a person expects (see
- * docs/superpowers/golden-set/2026-10-30-golden-set.md). It only reads: every statement is a SELECT.
+ * organization: for each vendor in the labels file, the first completed run of its vendor row made
+ * with the credibility prompt (CREDIBILITY_PROMPT_VERSION), compared with what a person expects
+ * (see docs/superpowers/golden-set/2026-10-30-golden-set.md). It only reads: every statement is a
+ * SELECT.
  *
- * The runs are ordinary research runs that the labeller starts, after the copies of the lists have
- * synced: one with the flag off on one vendor row, and one with it on on another row of the same
- * vendor, since a run drops what repeats the findings and risks its row already has.
+ * There is one set of rules and so one run for each vendor. The runs are ordinary research runs
+ * that the labeller starts, after the copies of the lists have synced, one on a vendor row of its
+ * own for each vendor: a run drops what repeats the findings and risks its row already has. The
+ * labels give that row as `vendorId`; a file of the earlier shape, with a row for each flag
+ * (`vendorIds: { off, on }`), is read by its `on` row.
+ *
+ * The bars are precision of at least 0.9, label agreement of at least 80 %, no finding labelled
+ * High that the labeller rates Low, no sanctions match stated as a fact, and a coverage with no list
+ * that failed. Recall is reported and has no bar.
  *
  * Exit codes:
  *   0 - every bar is met
@@ -33,7 +39,7 @@ import {
   scoreGoldenSet,
 } from "../services/vendorResearch/golden/score";
 import type { GoldenRun } from "../services/vendorResearch/golden/types";
-import { CREDIBILITY_PROMPT_VERSION, PROMPT_VERSION } from "../services/vendorResearch/prompts";
+import { CREDIBILITY_PROMPT_VERSION } from "../services/vendorResearch/prompts";
 
 const USAGE = "Usage: npx ts-node scripts/vendorResearchGoldenSet.ts <labels.json>";
 
@@ -48,7 +54,7 @@ interface RunRow {
 
 type FindingRow = Pick<
   IVendorRiskFinding,
-  "run_id" | "category" | "risk_description" | "credibility" | "confidence"
+  "run_id" | "category" | "risk_description" | "credibility"
 > & { sources: FindingSource[] | null };
 
 /** The name of an error, never its message, which can hold the address of the database. */
@@ -58,10 +64,11 @@ const nameOf = (error: unknown): string => {
 };
 
 /**
- * The first completed run of each vendor row with one prompt version, with its findings, and how
- * many findings of other runs and active risks the row had when the run started: a run drops the
- * candidates that repeat them (dedupe.ts), so only a run that follows none of them is scored as it
- * found. Later runs of the row follow the first one, and are left out.
+ * The first completed run of each vendor row made with one prompt version, with its findings and
+ * the label the run's code gave each, and how many findings of other runs and active risks the row
+ * had when the run started: a run drops the candidates that repeat them (dedupe.ts), so only a run
+ * that follows none of them is scored as it found. Later runs of the row follow the first one, and
+ * are left out, and so is a row whose runs were made with another prompt version.
  */
 export async function loadGoldenRuns(
   organizationId: number,
@@ -96,7 +103,7 @@ export async function loadGoldenRuns(
   );
   if (runs.length === 0) return [];
   const findings = await sequelize.query<FindingRow>(
-    `SELECT run_id, category, risk_description, credibility, confidence, sources
+    `SELECT run_id, category, risk_description, credibility, sources
        FROM vendor_risk_findings
       WHERE organization_id = :organizationId
         AND run_id IN (:runIds)
@@ -117,7 +124,6 @@ export async function loadGoldenRuns(
         category: finding.category,
         risk_description: finding.risk_description,
         credibility: finding.credibility ?? null,
-        confidence: finding.confidence,
         sources: Array.isArray(finding.sources) ? finding.sources : [],
       })),
   }));
@@ -169,10 +175,8 @@ export async function main(
     return 2;
   }
 
-  // Each vendor has a row researched with the flag off and one researched with it on.
-  const rows = labels.vendors.flatMap((vendor) =>
-    (["off", "on"] as const).map((flag) => ({ id: vendor.vendorIds[flag], vendor })),
-  );
+  // Each vendor has one row, the one its run was made on.
+  const rows = labels.vendors.map((vendor) => ({ id: vendor.vendorId, vendor }));
   const names = await loadVendorNames(
     labels.organizationId,
     rows.map((row) => row.id),
@@ -197,17 +201,12 @@ export async function main(
     }
   }
 
-  const off = await loadGoldenRuns(
+  const runs = await loadGoldenRuns(
     labels.organizationId,
-    labels.vendors.map((vendor) => vendor.vendorIds.off),
-    PROMPT_VERSION,
-  );
-  const on = await loadGoldenRuns(
-    labels.organizationId,
-    labels.vendors.map((vendor) => vendor.vendorIds.on),
+    labels.vendors.map((vendor) => vendor.vendorId),
     CREDIBILITY_PROMPT_VERSION,
   );
-  const report = scoreGoldenSet(labels.vendors, off, on);
+  const report = scoreGoldenSet(labels.vendors, runs);
   const verdict = meetsBars(report);
   out(formatGoldenReport(report, verdict));
   return verdict.ok ? 0 : 1;

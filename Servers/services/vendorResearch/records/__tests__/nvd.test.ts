@@ -1,4 +1,4 @@
-import { Cve, nvdRecords, nvdUrl, nvdWindowStart, parseNvd } from "../nvd";
+import { Cve, nvdSourceOf, nvdUrl, nvdWindowStart, parseNvd } from "../nvd";
 
 const NOW = new Date("2026-10-28T12:00:00Z");
 
@@ -160,76 +160,30 @@ describe("parseNvd", () => {
   );
 });
 
-describe("nvdRecords", () => {
+describe("nvdSourceOf", () => {
   it("writes a CVE as a source: the scores and the description of the NVD, the page of the CVE", () => {
-    expect(nvdRecords([cve()], {})).toEqual({
-      records: [
-        {
-          url: "https://nvd.nist.gov/vuln/detail/CVE-2026-5001",
-          title: "CVE-2026-5001: critical vulnerability (CVSS 9.8)",
-          text:
-            "National Vulnerability Database (nvd.nist.gov). CVE: CVE-2026-5001. " +
-            "Published: 2026-10-01. CVSS base score: 9.8 (CRITICAL). " +
-            "Description: A flaw in Brise Gateway lets an attacker run code.",
-          publishedAt: "2026-10-01",
-        },
-      ],
-      omitted: {},
+    expect(nvdSourceOf(cve())).toEqual({
+      url: "https://nvd.nist.gov/vuln/detail/CVE-2026-5001",
+      title: "CVE-2026-5001: critical vulnerability (CVSS 9.8)",
+      text:
+        "National Vulnerability Database (nvd.nist.gov). CVE: CVE-2026-5001. " +
+        "Published: 2026-10-01. CVSS base score: 9.8 (CRITICAL). " +
+        "Description: A flaw in Brise Gateway lets an attacker run code.",
+      publishedAt: "2026-10-01",
     });
   });
 
   it("writes a score of nine as 9.0, and leaves out a severity it does not have", () => {
-    const { records } = nvdRecords([cve({ score: 9, severity: "", description: "" })], {});
+    const record = nvdSourceOf(cve({ score: 9, severity: "", description: "" }));
 
-    expect(records[0].text).toContain("CVSS base score: 9.0.");
-    expect(records[0].title).toBe("CVE-2026-5001: critical vulnerability (CVSS 9.0)");
-    expect(records[0].text).not.toContain("Description");
-  });
-
-  it("gives the highest score first, then the newest, and three at most, and counts the others", () => {
-    const { records, omitted } = nvdRecords(
-      [
-        cve({ id: "CVE-2026-0001", score: 9.1, published: "2026-10-20" }),
-        cve({ id: "CVE-2026-0002", score: 9.8, published: "2026-09-01" }),
-        cve({ id: "CVE-2026-0003", score: 9.8, published: "2026-10-01" }),
-        cve({ id: "CVE-2026-0004", score: 9.1, published: "2026-10-25" }),
-      ],
-      {},
-    );
-
-    expect(records.map((record) => record.url.slice(-13))).toEqual([
-      "CVE-2026-0003",
-      "CVE-2026-0002",
-      "CVE-2026-0004",
-    ]);
-    expect(omitted).toEqual({ more: 1 });
-  });
-
-  it("gives the greater CVE id first when the score and the day are the same, by its number", () => {
-    const { records } = nvdRecords([cve({ id: "CVE-2026-999" }), cve({ id: "CVE-2026-1001" })], {});
-
-    expect(records.map((record) => record.url.split("/").pop())).toEqual([
-      "CVE-2026-1001",
-      "CVE-2026-999",
-    ]);
+    expect(record.text).toContain("CVSS base score: 9.0.");
+    expect(record.title).toBe("CVE-2026-5001: critical vulnerability (CVSS 9.0)");
+    expect(record.text).not.toContain("Description");
   });
 
   it("cuts a long description at 1,200 characters", () => {
-    const { records } = nvdRecords([cve({ description: "x".repeat(3000) })], {});
+    const record = nvdSourceOf(cve({ description: "x".repeat(3000) }));
 
-    expect(records[0].text.endsWith(`Description: ${"x".repeat(1200)}.`)).toBe(true);
-  });
-
-  it("leaves out a CVE published before the cutoff and counts it, and keeps one published on the day", () => {
-    const { records, omitted } = nvdRecords(
-      [
-        cve({ id: "CVE-2026-0001", published: "2026-06-30" }),
-        cve({ id: "CVE-2026-0002", published: "2026-07-01" }),
-      ],
-      { cutoff: "2026-07-01" },
-    );
-
-    expect(records.map((record) => record.url.slice(-13))).toEqual(["CVE-2026-0002"]);
-    expect(omitted).toEqual({ old: 1 });
+    expect(record.text.endsWith(`Description: ${"x".repeat(1200)}.`)).toBe(true);
   });
 });

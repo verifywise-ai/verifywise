@@ -213,12 +213,20 @@ export interface VrdbSnapshotWrite {
 
 /**
  * What a sync of a list read by its changes writes for one day, all or nothing
- * (`applyVrdbDeltaQuery`): the records that changed, with their status. A stored record that is
- * not among them stays as it is.
+ * (`applyVrdbDeltaQuery`): the records that changed, with their status, and the ids of the records
+ * the copy stops offering. A stored record that is in neither stays as it is.
  */
 export interface VrdbDeltaWrite {
   sourceId: VrdbSourceId;
   records: readonly ParsedRecord[];
+  /**
+   * The ids of records the list still publishes but the copy's filter now leaves out (a CVE
+   * re-scored below the cut, or published before the window). A stored one loses its keys, so no
+   * run is offered it; it keeps its content, and it keeps its status, except that a stored
+   * rejection becomes active, because the list publishes the record again. An id also among
+   * `records` is left alone, so that the record wins; an id the copy does not hold is ignored.
+   */
+  retire?: readonly string[];
   /**
    * The day applied, kept as the list's cursor, and the list is marked synced. Null is a batch of a
    * baseline before its last: the stored cursor, the list's outcome and its last success stay as

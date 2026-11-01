@@ -13,6 +13,7 @@ import type {
   DismissReason,
   ResearchCategory,
 } from "../../domain.layer/interfaces/i.vendorResearch";
+import type { CacheKind, CacheOutcome } from "../webResearch/webCache";
 
 /** The name of the backend's meter, the one `observability/otel.ts` registers its instruments on. */
 const METER_NAME = "verifywise-backend";
@@ -37,14 +38,12 @@ export interface ResearchMetrics {
   /** The engine asked a feed a second time, after a failure that may pass. */
   searchRetried(search: { kind: "web" | "news" }): void;
   /**
-   * A lookup in the cache that research runs share: what was looked up (`robots`, `page` or
-   * `search`) and how it came out (`hit`, `miss`, or `error` when the store failed or was too slow).
-   * A write that failed is an `error` too.
+   * A lookup in the cache that research runs share: what was looked up (a `CacheKind`: `robots`,
+   * `page`, `search` or `gdelt`, the index of the news of the GDELT Project) and how it came out
+   * (`hit`, `miss`, or `error` when the store failed or was too slow). A write that failed is an
+   * `error` too. The kinds are the cache's own, so a kind it gains is counted without a change here.
    */
-  cacheLookup(lookup: {
-    kind: "robots" | "page" | "search";
-    outcome: "hit" | "miss" | "error";
-  }): void;
+  cacheLookup(lookup: { kind: CacheKind; outcome: CacheOutcome }): void;
 }
 
 export function createResearchMetrics(meter: Pick<Meter, "createCounter">): ResearchMetrics {

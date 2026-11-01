@@ -8,14 +8,13 @@ import {
   MAX_NOTE_CHARS,
   MAX_PER_CATEGORY,
   MAX_QUOTE_CHARS,
-  RESEARCH_CONFIDENCES,
   RESEARCH_LIKELIHOODS,
   RESEARCH_SEVERITIES,
   ResearchOutput,
   credibilityOutputSchema,
-  outputSchemaFor,
   researchOutputSchema,
 } from "../schema";
+import * as schemaModule from "../schema";
 
 const finding = (overrides: Record<string, unknown> = {}) => ({
   category: "security_incidents",
@@ -24,7 +23,6 @@ const finding = (overrides: Record<string, unknown> = {}) => ({
   likelihood: "Possible",
   risk_severity: "Major",
   action_plan: "Ask the vendor for its incident report and the scope of the exposed data.",
-  confidence: "medium",
   rationale: "The vendor confirmed the attack and customer data was in scope, so it is possible.",
   evidence: [{ source_id: "S1", quote: "confirmed a ransomware attack" }],
   ...overrides,
@@ -42,11 +40,28 @@ describe("researchOutputSchema", () => {
   it("accepts a valid answer and returns it unchanged", () => {
     const parsed: ResearchOutput = researchOutputSchema.parse(sample());
     // Checked by the compiler: the enum fields of a parsed finding fit the columns of a stored one.
-    const columns: Pick<NewFinding, "category" | "likelihood" | "risk_severity" | "confidence"> =
+    const columns: Pick<NewFinding, "category" | "likelihood" | "risk_severity"> =
       parsed.findings[0];
 
     expect(parsed).toEqual(sample());
-    expect(columns.confidence).toBe("medium");
+    expect(columns.likelihood).toBe("Possible");
+  });
+
+  it("asks for no confidence: the label is computed by the code from the sources (M3 Part B)", () => {
+    expect(finding()).not.toHaveProperty("confidence");
+    expect(schemaModule).not.toHaveProperty("RESEARCH_CONFIDENCES");
+    expect(accepts(sample())).toBe(true);
+  });
+
+  it("drops a confidence that the model still gives, and does not report it", () => {
+    for (const confidence of ["low", "medium", "high", "certain"]) {
+      const parsed = researchOutputSchema.safeParse(
+        sample({ findings: [finding({ confidence })] }),
+      );
+
+      expect(parsed.success).toBe(true);
+      expect(parsed.data?.findings[0]).not.toHaveProperty("confidence");
+    }
   });
 
   it("accepts an answer with no findings and no notes: nothing qualified", () => {
@@ -85,7 +100,7 @@ describe("researchOutputSchema", () => {
     });
   });
 
-  describe("likelihood, severity and confidence", () => {
+  describe("likelihood and severity", () => {
     it("uses exactly the values the vendor risk register accepts", () => {
       expect([...RESEARCH_LIKELIHOODS]).toEqual([
         "Rare",
@@ -101,18 +116,14 @@ describe("researchOutputSchema", () => {
         "Major",
         "Catastrophic",
       ]);
-      expect([...RESEARCH_CONFIDENCES]).toEqual(["low", "medium", "high"]);
     });
 
-    it("accepts every likelihood, severity and confidence value", () => {
+    it("accepts every likelihood and severity value", () => {
       for (const likelihood of RESEARCH_LIKELIHOODS) {
         expect(accepts(sample({ findings: [finding({ likelihood })] }))).toBe(true);
       }
       for (const risk_severity of RESEARCH_SEVERITIES) {
         expect(accepts(sample({ findings: [finding({ risk_severity })] }))).toBe(true);
-      }
-      for (const confidence of RESEARCH_CONFIDENCES) {
-        expect(accepts(sample({ findings: [finding({ confidence })] }))).toBe(true);
       }
     });
 
@@ -125,8 +136,6 @@ describe("researchOutputSchema", () => {
       ["likelihood", "almost certain"],
       ["risk_severity", "major"],
       ["risk_severity", "Severe"],
-      ["confidence", "certain"],
-      ["confidence", "High"],
     ])("rejects %s %p", (field, value) => {
       expect(accepts(sample({ findings: [finding({ [field]: value })] }))).toBe(false);
     });
@@ -234,7 +243,6 @@ describe("researchOutputSchema", () => {
       "likelihood",
       "risk_severity",
       "action_plan",
-      "confidence",
       "rationale",
       "evidence",
     ])("rejects a finding without %s", (field) => {
@@ -360,37 +368,11 @@ describe("researchOutputSchema", () => {
 });
 
 describe("credibilityOutputSchema", () => {
-  const acceptsUnderCredibility = (value: unknown) =>
-    credibilityOutputSchema.safeParse(value).success;
-
-  it("accepts a finding without confidence under the credibility schema, and drops one the model still gives", () => {
-    const { confidence: _confidence, ...withoutConfidence } = finding();
-
-    expect(credibilityOutputSchema.parse(sample()).findings).toEqual([withoutConfidence]);
-    expect(
-      credibilityOutputSchema.parse(sample({ findings: [withoutConfidence] })).findings,
-    ).toEqual([withoutConfidence]);
-    expect(accepts(sample({ findings: [withoutConfidence] }))).toBe(false);
+  it("is the schema the analysis asks for, under the name the recordings and the tests use", () => {
+    expect(credibilityOutputSchema).toBe(researchOutputSchema);
   });
 
-  it.each([
-    "category",
-    "risk_description",
-    "impact_description",
-    "likelihood",
-    "risk_severity",
-    "action_plan",
-    "rationale",
-    "evidence",
-  ])("still requires %s", (field) => {
-    const incomplete: Record<string, unknown> = { ...finding() };
-    delete incomplete[field];
-
-    expect(acceptsUnderCredibility(sample({ findings: [incomplete] }))).toBe(false);
-  });
-
-  it("is picked by the rules", () => {
-    expect(outputSchemaFor("confidence")).toBe(researchOutputSchema);
-    expect(outputSchemaFor("credibility")).toBe(credibilityOutputSchema);
+  it("is the one schema the analysis asks for: nothing picks a schema by rules any more", () => {
+    expect(schemaModule).not.toHaveProperty("outputSchemaFor");
   });
 });

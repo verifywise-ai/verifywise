@@ -75,7 +75,6 @@ const PENDING: IVendorRiskFinding = {
   likelihood: "Possible",
   risk_severity: "Major",
   risk_level: "High Risk",
-  confidence: "medium",
   credibility: null,
   credibility_basis: null,
   rationale: "The vendor confirmed the access, so the effect is serious.",

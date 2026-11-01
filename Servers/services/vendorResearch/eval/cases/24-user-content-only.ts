@@ -62,7 +62,6 @@ export const USER_CONTENT_ONLY: EvalCase = {
           likelihood: "Possible",
           risk_severity: "Moderate",
           action_plan: "Ask the vendor whether a database was left open and whose data it held.",
-          confidence: "low",
           rationale:
             "One post by an unknown author reports it, and the vendor has not confirmed it.",
           evidence: [

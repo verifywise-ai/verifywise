@@ -7,13 +7,30 @@ import { type LoopStep, createLoopStepSchema } from "../../../webResearch/resear
 import { hintsSchema } from "../../hints";
 import { verifierSchema } from "../../verifier";
 import { buildLoopTaskPrompt } from "../../prompts";
-import { researchOutputSchema } from "../../schema";
+import { credibilityOutputSchema } from "../../schema";
 import { createRecorder } from "../recorder";
 import type { Recording } from "../types";
 import { createReplayEngine, createReplayPageReader, createScriptedGenerate } from "../replay";
 import { runEvalCase } from "../runCase";
 import { BREACH_TWO_PUBLISHERS } from "../cases/01-breach-two-publishers";
 import { UNKNOWN_VENDOR_NOISE } from "../cases/02-unknown-vendor-noise";
+
+/**
+ * The answer of an analysis without the confidence of its findings: the schema of the analysis has
+ * none, so what the recorder keeps of a case that holds one is the answer without it.
+ */
+const withoutConfidence = (analysis: Recording["analysis"]) => ({
+  ...analysis,
+  findings: analysis.findings.map((finding) => {
+    const { confidence: _confidence, ...rest } = finding as typeof finding & {
+      confidence?: unknown;
+    };
+    return rest;
+  }),
+});
+
+/** What every engine declares (see SearchEngine). This one answers both kinds, with no limit on its news. */
+const ENGINE = { id: "replay", kinds: ["web", "news"], newsWindowMonths: null } as const;
 
 describe("createRecorder", () => {
   it("records, from a run of a case, a recording that gives the same run again", async () => {
@@ -38,7 +55,7 @@ describe("createRecorder", () => {
       expect(second.trace.steps.map((step) => step.tool)).toEqual(
         first.trace.steps.map((step) => step.tool),
       );
-      expect(recorded.analysis).toEqual(recording.analysis);
+      expect(recorded.analysis).toEqual(withoutConfidence(recording.analysis));
     }
   });
 
@@ -60,7 +77,7 @@ describe("createRecorder", () => {
 
   it("records a page that could not be read with the reason", async () => {
     const recorder = createRecorder({
-      engine: { search: async () => [] },
+      engine: { ...ENGINE, search: async () => [] },
       readPage: async () => {
         throw new PageReadError("blocked_by_robots");
       },
@@ -81,6 +98,7 @@ describe("createRecorder", () => {
   it("passes on a failure of the search and records nothing for it", async () => {
     const recorder = createRecorder({
       engine: {
+        ...ENGINE,
         search: async () => {
           throw new Error("the search is not available");
         },
@@ -107,7 +125,7 @@ describe("createRecorder", () => {
       },
     };
     const recorder = createRecorder({
-      engine: { search: async () => [] },
+      engine: { ...ENGINE, search: async () => [] },
       readPage: async () => {
         throw new Error("unused");
       },
@@ -116,7 +134,7 @@ describe("createRecorder", () => {
 
     await recorder.generate({
       model: {},
-      schema: researchOutputSchema,
+      schema: credibilityOutputSchema,
       system: "s",
       prompt: "p",
     } as never);
@@ -128,7 +146,7 @@ describe("createRecorder", () => {
   it("keeps the answer of the call for hints apart from the steps of the loop", async () => {
     const hints = { queries: [{ category: "legal_regulatory" as const, query: "Acme lawsuit" }] };
     const recorder = createRecorder({
-      engine: { search: async () => [] },
+      engine: { ...ENGINE, search: async () => [] },
       readPage: async () => {
         throw new Error("unused");
       },
@@ -152,7 +170,7 @@ describe("createRecorder", () => {
       ],
     };
     const recorder = createRecorder({
-      engine: { search: async () => [] },
+      engine: { ...ENGINE, search: async () => [] },
       readPage: async () => {
         throw new Error("unused");
       },
@@ -188,7 +206,7 @@ describe("createRecorder", () => {
     };
     const recorderOf = (loops: Recording["loops"]) =>
       createRecorder({
-        engine: { search: async () => [] },
+        engine: { ...ENGINE, search: async () => [] },
         readPage: async () => {
           throw new Error("unused");
         },
@@ -229,7 +247,7 @@ describe("createRecorder", () => {
 
   it("leaves the hints out of a recording whose run asked for none", () => {
     const recorder = createRecorder({
-      engine: { search: async () => [] },
+      engine: { ...ENGINE, search: async () => [] },
       readPage: async () => {
         throw new Error("unused");
       },

@@ -838,23 +838,6 @@ components:
         risk_score:
           type: integer
           description: 'Computed risk score'
-        other_names:
-          type: string
-          description: 'Other names the vendor is known by (optional): up to 8 names of 2 to 80 characters, separated by commas, semicolons or line breaks, 500 characters at most'
-        country:
-          type: string
-          description: 'The two-letter ISO 3166-1 code of the country the vendor is registered in, in either case, stored in upper case. The vendor research takes the language and the regulator of its news searches from it.'
-        registration_number:
-          type: string
-          maxLength: 64
-          description: 'The company registration number: at most 64 characters once inner white space is collapsed.'
-        lei:
-          type: string
-          description: 'The Legal Entity Identifier (ISO 17442): 18 letters or digits and 2 check digits that must match. White space is removed and letters are stored in upper case. A sanctions entry that carries the same LEI matches the vendor strongly.'
-        sec_cik:
-          type: string
-          pattern: '^[0-9]{1,10}$'
-          description: 'The Central Index Key of the vendor at the SEC: one to ten digits, stored padded with zeros to ten.'
     VendorUpdate:
       type: object
       description: 'All fields are optional. Only provided fields are updated. Review and scorecard fields can be set to null to clear them.'
@@ -934,28 +917,6 @@ components:
         risk_score:
           type: integer
           nullable: true
-        other_names:
-          type: string
-          nullable: true
-          description: 'Other names the vendor is known by. An empty text or null clears them.'
-        country:
-          type: string
-          nullable: true
-          description: 'The two-letter ISO 3166-1 code of the country the vendor is registered in, in either case, stored in upper case. The vendor research takes the language and the regulator of its news searches from it. An empty text or null clears it.'
-        registration_number:
-          type: string
-          nullable: true
-          maxLength: 64
-          description: 'The company registration number: at most 64 characters once inner white space is collapsed. An empty text or null clears it.'
-        lei:
-          type: string
-          nullable: true
-          description: 'The Legal Entity Identifier (ISO 17442): 18 letters or digits and 2 check digits that must match. White space is removed and letters are stored in upper case. A sanctions entry that carries the same LEI matches the vendor strongly. An empty text or null clears it.'
-        sec_cik:
-          type: string
-          nullable: true
-          pattern: '^[0-9]{1,10}$'
-          description: 'The Central Index Key of the vendor at the SEC: one to ten digits, stored padded with zeros to ten. An empty text or null clears it.'
     ModelInventoryStatus:
       type: string
       enum:
@@ -27418,6 +27379,34 @@ paths:
       tags:
         - 'v1: Vendor Risk Findings'
       operationId: dismissVendorRiskFinding
+      security:
+        -
+          bearerAuth: []
+  /v1/vendors:
+    post:
+      summary: 'Create Vendor V1'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Vendors'
+      operationId: createVendorV1
+      security:
+        -
+          bearerAuth: []
+  '/v1/vendors/{id}':
+    patch:
+      summary: 'Update Vendor By Id V1'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Vendors'
+      operationId: updateVendorByIdV1
       security:
         -
           bearerAuth: []

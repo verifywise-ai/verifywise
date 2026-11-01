@@ -2,8 +2,8 @@
  * The verifier: one batched model call over the findings that are about to be stored.
  *
  * The validation (see validation.ts) checks a finding with code: the quote is in the source, the
- * source names the vendor, the confidence is no higher than the evidence supports. What code cannot
- * read is meaning. A source can name the vendor and be about another company of the same name; a
+ * source names the vendor, the category has evidence in the pack. What code cannot read is
+ * meaning. A source can name the vendor and be about another company of the same name; a
  * quote can be in the source and say less than the claim states; a matter can be older than the
  * window of its category when the source has no date to show it. The verifier asks the model three
  * questions about every finding, in a prompt that holds the claim and the quotes it cites and no
@@ -27,6 +27,7 @@
 import { z } from "zod";
 import type { TokenUsage, generateObjectWithSelfCorrection } from "../../advisor/llmSelfCorrect";
 import type { NewFinding } from "../../domain.layer/interfaces/i.vendorResearch";
+import type { SourceProvenance } from "./evidence";
 import { buildVerifierSystemPrompt, buildVerifierUserPrompt } from "./prompts";
 import type { ResearchTarget } from "./target";
 import { cleanText, cutAtCodePoint } from "./text";
@@ -75,6 +76,11 @@ export interface VerifierInput {
   modelId?: string;
   generate: typeof generateObjectWithSelfCorrection;
   trace: TraceRecorder;
+  /**
+   * Where the sources came from, by address (see `provenanceOf`). The verifier reads only the
+   * database of a record: a cited entry of a public database is shown with its name.
+   */
+  provenance?: ReadonlyMap<string, SourceProvenance>;
 }
 
 /**
@@ -82,7 +88,7 @@ export interface VerifierInput {
  * `false` to a question; one with no verdict passes. Never rejects.
  */
 export async function verifierPasses(input: VerifierInput): Promise<boolean[]> {
-  const { target, findings, now, model, modelId, generate, trace } = input;
+  const { target, findings, now, model, modelId, generate, trace, provenance } = input;
   if (findings.length === 0) return [];
 
   const startedAt = Date.now();
@@ -95,7 +101,7 @@ export async function verifierPasses(input: VerifierInput): Promise<boolean[]> {
       model,
       schema: verifierSchema,
       system: buildVerifierSystemPrompt(now),
-      prompt: buildVerifierUserPrompt(target, findings),
+      prompt: buildVerifierUserPrompt(target, findings, (url) => provenance?.get(url)?.record),
       temperature: 0,
       innerMaxRetries: 1,
       maxSelfCorrectionAttempts: 1,

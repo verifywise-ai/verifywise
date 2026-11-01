@@ -29,7 +29,14 @@ import type { generateObjectWithSelfCorrection } from "../../advisor/llmSelfCorr
 import { cutAtCodePoint } from "../vendorResearch/text";
 import { MAX_EXTRA_PARTS, MAX_PAGE_PARTS } from "./pageText";
 import { escapeForPrompt, unescapeFromPrompt } from "./promptText";
-import { OmittedReason, PageView, ReadOutcome, SearchOutcome, WebSession } from "./webSession";
+import {
+  KIND_REFUSALS,
+  OmittedReason,
+  PageView,
+  ReadOutcome,
+  SearchOutcome,
+  WebSession,
+} from "./webSession";
 
 /** One thing the model asks for in a step. */
 export interface LoopAction<C extends string = string> {
@@ -244,13 +251,13 @@ const noSuchPart = (parts: number) =>
   `The page has ${parts} parts. Ask for a part from 1 to ${parts}.`;
 const COULD_NOT_READ = "The page could not be read: ";
 
-type SearchRefusal = Extract<SearchOutcome, { ok: false }>["reason"];
+type SearchRefusal = Exclude<Extract<SearchOutcome, { ok: false }>["reason"], "kind_unavailable">;
 type ReadRefusal = Exclude<Extract<ReadOutcome, { ok: false }>["reason"], "too_old">;
 
 const SEARCH_REFUSALS: Record<SearchRefusal, string> = {
   budget_exhausted: "No searches are left. Read pages or finish.",
-  repeated_query:
-    "That search repeats an earlier one. Use other words, use the other feed (web or news), or read a page.",
+  // No other feed is named: an engine may have one kind only, and the prompt of the run says which.
+  repeated_query: "That search repeats an earlier one. Use other words, or read a page.",
   search_unavailable: "The search is not available right now.",
 };
 
@@ -284,7 +291,11 @@ const dayOf = (date: string) => (/^\d{4}-\d{2}-\d{2}/.test(date) ? date.slice(0,
 const dateOrNone = (date: string | null) => (date === null ? "no date" : dayOf(date));
 
 function describeSearch(outcome: SearchOutcome): string {
-  if (!outcome.ok) return SEARCH_REFUSALS[outcome.reason];
+  if (!outcome.ok) {
+    return outcome.reason === "kind_unavailable"
+      ? KIND_REFUSALS[outcome.kind]
+      : SEARCH_REFUSALS[outcome.reason];
+  }
   const searched = outcome.query === undefined ? null : `Searched for: ${outcome.query}`;
   const listed =
     outcome.results.length === 0
@@ -542,6 +553,7 @@ type CheckedRead<C extends string> = Extract<Checked<C>, { kind: "read" }>;
 function checkAction<C extends string>(
   action: LoopAction<C>,
   researchable: readonly C[],
+  defaultKind: "web" | "news",
 ): Checked<C> {
   const invalid = (
     text: string,
@@ -554,7 +566,7 @@ function checkAction<C extends string>(
   });
   if (action.action === "search") {
     const query = fromModel(action.query);
-    const feed = action.kind ?? "web";
+    const feed = action.kind ?? defaultKind;
     const fields = { category: action.category, kind: feed, query };
     if (query.length < MIN_QUERY_CHARS || action.category === undefined) {
       return invalid(INVALID_SEARCH, "invalid_search", fields);
@@ -708,7 +720,7 @@ export async function runResearchLoop<C extends string>(
         finish = action;
         break;
       }
-      const checked = checkAction(action, input.researchable);
+      const checked = checkAction(action, input.researchable, session.defaultKind());
       if (checked.kind === "invalid") {
         calls.push({ action: describeAction(action), result: checked.text });
         tell({ ...checked.trace, ms: 0 });
@@ -732,7 +744,7 @@ export async function runResearchLoop<C extends string>(
           { asked: action, read: checked },
         ];
         for (let next = index + 1; next < planned.length && planned[next].action === "read";) {
-          const following = checkAction(planned[next], input.researchable);
+          const following = checkAction(planned[next], input.researchable, session.defaultKind());
           if (following.kind !== "read") break;
           group.push({ asked: planned[next], read: following });
           next += 1;

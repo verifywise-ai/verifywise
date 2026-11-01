@@ -84,7 +84,6 @@ export const TWO_TRUSTED_PUBLISHERS: EvalCase = {
           risk_severity: "Major",
           action_plan:
             "Ask the vendor whether our invoices were in the archive, and warn the accounts team about requests to change bank details.",
-          confidence: "high",
           rationale:
             "Two independent publishers report the breach, and stolen bank details are a direct route to fraud.",
           evidence: [

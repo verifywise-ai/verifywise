@@ -16,7 +16,7 @@ import {
 } from "../../domain.layer/interfaces/i.vendorResearch";
 import type { StopReason } from "../webResearch/researchLoop";
 import type { CallRecord } from "../webResearch/webSession";
-import { NO_DOMAIN_NOTE } from "./categories";
+import { NO_DOMAIN_NOTE, SITE_CATEGORIES } from "./categories";
 import { MAX_NOTE_CHARS, ResearchOutput } from "./schema";
 import { cleanText, cutAtCodePoint } from "./text";
 
@@ -47,6 +47,17 @@ export const findingsNote = (count: number): string =>
 export const pagesFailedNote = (failed: number, total: number): string =>
   `No risks found; ${failed} of ${total} pages could not be read`;
 
+export const searchesFailedNote = (failed: number, total: number): string =>
+  `No risks found; ${failed} of ${total} searches were not available`;
+
+export const searchesAndPagesFailedNote = (
+  failedSearches: number,
+  searches: number,
+  failedPages: number,
+  pages: number,
+): string =>
+  `No risks found; ${failedSearches} of ${searches} searches were not available and ${failedPages} of ${pages} pages could not be read`;
+
 /** The categories that at least one call was tagged with, in category order. */
 export function workedCategories(calls: CallRecord<ResearchCategory>[]): ResearchCategory[] {
   return RESEARCH_CATEGORIES.filter((category) => calls.some((call) => call.category === category));
@@ -74,13 +85,21 @@ function modelNoteFor(
  * 3. No call: `skipped`, because the time ran out or the loop ended before it got there.
  * 4. No call answered: `search_failed`. The search was not available when every call was a failed
  *    search; once a page could not be read, the pages could not be read.
- * 5. Any other is `nothing_found`. If the model proposed a risk in it and none stayed, the note
- *    says that risks were possible but are not confirmed. Otherwise, when pages of it could not be
- *    read, the note counts them. In a scheduled run (`freshCategories` is given) a category that has
- *    no new source says so: the model saw nothing of it, so a note of its own would describe
- *    nothing. Only then is the model's own note shown, or a plain sentence when it wrote none: a
- *    note that sits next to a risk that was dropped, or next to a page that could not be read, would
- *    describe what nobody could check.
+ * 5. A news category (one that is not in SITE_CATEGORIES: it rests on what the searches bring, not
+ *    on the vendor's site) that made searches, none of which was answered: `search_failed`, the
+ *    search was not available. Pages of it that were read do not make "no risks found" true for the
+ *    news that was never searched. A category of the vendor's site is not this rule: its pages
+ *    carry it, and its failed searches are counted by rule 7.
+ * 6. The model proposed a risk in it and none stayed: `nothing_found`, the possible risks were not
+ *    confirmed.
+ * 7. A search or a page of it failed: `nothing_found`, and the note counts them: the searches, the
+ *    pages, or both.
+ * 8. A scheduled run (`freshCategories` is given) and the category has no new source: `nothing_found`,
+ *    and the note says so, since the model saw nothing of it and a note of its own would describe
+ *    nothing.
+ * 9. Otherwise `nothing_found`, with the model's own note, or a plain sentence when it wrote none.
+ *    A note that sits next to a risk that was dropped, or next to a call that failed, would
+ *    describe what nobody could check, so it is shown only here.
  */
 export function summariseCategories(input: {
   /** The categories that cannot be researched, for want of the vendor's domain. */
@@ -111,20 +130,37 @@ export function summariseCategories(input: {
     }
     const reads = calls.filter((call) => call.tool === "read");
     const failedReads = reads.filter((call) => !call.answered).length;
+    const searches = calls.filter((call) => call.tool === "search");
+    const failedSearches = searches.filter((call) => !call.answered).length;
     if (calls.every((call) => !call.answered)) {
       const note = failedReads > 0 ? NOTES.pagesUnreadable : NOTES.searchUnavailable;
       return { category, outcome: "search_failed", note };
+    }
+    // The news of the category was not searched, whatever pages of it were read.
+    if (
+      !SITE_CATEGORIES.includes(category) &&
+      searches.length > 0 &&
+      failedSearches === searches.length
+    ) {
+      return { category, outcome: "search_failed", note: NOTES.searchUnavailable };
     }
 
     if (input.proposed.has(category)) {
       return { category, outcome: "nothing_found", note: NOTES.unconfirmed };
     }
-    if (failedReads > 0) {
-      return {
-        category,
-        outcome: "nothing_found",
-        note: pagesFailedNote(failedReads, reads.length),
-      };
+    if (failedSearches > 0 || failedReads > 0) {
+      const note =
+        failedSearches === 0
+          ? pagesFailedNote(failedReads, reads.length)
+          : failedReads === 0
+            ? searchesFailedNote(failedSearches, searches.length)
+            : searchesAndPagesFailedNote(
+                failedSearches,
+                searches.length,
+                failedReads,
+                reads.length,
+              );
+      return { category, outcome: "nothing_found", note };
     }
     if (input.freshCategories !== undefined && !input.freshCategories.has(category)) {
       return { category, outcome: "nothing_found", note: NOTES.noNewSources };

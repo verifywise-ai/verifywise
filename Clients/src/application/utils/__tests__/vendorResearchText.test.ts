@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { translations } from "../../../i18n/translations";
 import { LANGS, setLanguage } from "../../../test/i18nHelpers";
 import type {
@@ -14,9 +14,9 @@ import type {
   RunProgress,
   VrdbSourceId,
 } from "../../../domain/interfaces/i.vendorResearch";
+import * as vendorResearchText from "../vendorResearchText";
 import {
   categoryLabel,
-  confidenceLabel,
   coverageLines,
   credibilityLabel,
   credibilityRationale,
@@ -25,6 +25,7 @@ import {
   describeProgress,
   describeRunError,
   dismissReasonLabel,
+  earlierRatingNote,
   formatResearchDate,
   joinAttributions,
   nameOnlyNote,
@@ -94,6 +95,16 @@ const FIXED_NOTES: Array<[outcome: CategoryOutcome, stored: string, sentence: st
     "nothing_found",
     "No risks found; 2 of 5 pages could not be read",
     "No risks were found. 2 of 5 pages could not be read.",
+  ],
+  [
+    "nothing_found",
+    "No risks found; 2 of 5 searches were not available",
+    "No risks were found. 2 of 5 searches were not available.",
+  ],
+  [
+    "nothing_found",
+    "No risks found; 1 of 2 searches were not available and 2 of 5 pages could not be read",
+    "No risks were found. 1 of 2 searches were not available, and 2 of 5 pages could not be read.",
   ],
   [
     "nothing_found",
@@ -218,6 +229,54 @@ describe("describeCategoryNote", () => {
     ).toEqual({ kind: "fixed", text: "No risks were found. 12 of 120 pages could not be read." });
   });
 
+  it("maps the searches note of a nothing_found category", () => {
+    expect(
+      describeCategoryNote(
+        entry("nothing_found", "No risks found; 2 of 5 searches were not available"),
+      ),
+    ).toEqual({ kind: "fixed", text: "No risks were found. 2 of 5 searches were not available." });
+  });
+
+  it("maps the searches-and-pages note", () => {
+    expect(
+      describeCategoryNote(
+        entry(
+          "nothing_found",
+          "No risks found; 3 of 12 searches were not available and 7 of 40 pages could not be read",
+        ),
+      ),
+    ).toEqual({
+      kind: "fixed",
+      text: "No risks were found. 3 of 12 searches were not available, and 7 of 40 pages could not be read.",
+    });
+  });
+
+  it("rejects a searches note whose failed count is above its total", () => {
+    for (const odd of [
+      "No risks found; 6 of 5 searches were not available",
+      "No risks found; 1000 of 1200 searches were not available",
+      "No risks found; 6 of 5 searches were not available and 1 of 5 pages could not be read",
+      "No risks found; 1 of 5 searches were not available and 6 of 5 pages could not be read",
+    ]) {
+      expect(describeCategoryNote(entry("nothing_found", odd))).toEqual({
+        kind: "model",
+        text: odd,
+        label: "AI note (unverified)",
+      });
+    }
+  });
+
+  it("does not take the searches notes as fixed on another outcome", () => {
+    for (const note of [
+      "No risks found; 2 of 5 searches were not available",
+      "No risks found; 1 of 2 searches were not available and 2 of 5 pages could not be read",
+    ]) {
+      for (const other of ["search_failed", "findings", "skipped"] as const) {
+        expect(describeCategoryNote(entry(other, note))).toBeNull();
+      }
+    }
+  });
+
   it("does not take a page note that the server cannot have written as its own", () => {
     // More than three digits, more pages failed than were read, a sign, a gap, other words.
     for (const odd of [
@@ -333,7 +392,7 @@ describe("labels and the per-category line", () => {
     );
   });
 
-  it("labels the six categories, the four outcomes, the five dismissal reasons and the confidences", () => {
+  it("labels the six categories, the four outcomes and the dismissal reasons", () => {
     expect(categoryLabel("security_incidents")).toBe("Security incidents");
     expect(categoryLabel("certifications")).toBe("Certifications");
     expect(categoryLabel("legal_regulatory")).toBe("Legal and regulatory");
@@ -349,16 +408,16 @@ describe("labels and the per-category line", () => {
     expect(dismissReasonLabel("inaccurate")).toBe("Inaccurate or not supported by the sources");
     expect(dismissReasonLabel("accepted_risk")).toBe("Accepted risk");
     expect(dismissReasonLabel("other")).toBe("Other");
-    expect(confidenceLabel("low")).toBe("Low");
-    expect(confidenceLabel("medium")).toBe("Medium");
-    expect(confidenceLabel("high")).toBe("High");
+  });
+
+  it("has no label for a confidence: a finding has a credibility label only", () => {
+    expect(vendorResearchText).not.toHaveProperty("confidenceLabel");
   });
 
   it("does not render a value it does not know", () => {
     expect(categoryLabel("supply_chain" as never)).toBe("Other");
     expect(outcomeLabel("mystery" as never)).toBe("unknown");
     expect(dismissReasonLabel("mystery" as never)).toBe("Other");
-    expect(confidenceLabel("mystery" as never)).toBe("Unknown");
     expect(describeCategoryLine(null as never)).toBe("Other: unknown");
   });
 });
@@ -764,6 +823,10 @@ const RULE_SENTENCES: Array<[name: string, basis: CredibilityBasis, sentence: st
 
 const NAME_ONLY_NOTE = "Matched by name only: this may be another company.";
 
+/** The line the server gives a finding rated by its earlier confidence (controllers/vendorResearch.ctrl.ts). */
+const LEGACY_SENTENCE =
+  "Rated before the source rules; this is the earlier confidence level until the label is recomputed.";
+
 describe("credibilityRationale", () => {
   it.each(RULE_SENTENCES)("words %s as the server's line does", (_name, basis, sentence) => {
     expect(credibilityRationale(basis, english, "en")).toEqual({ sentence, stale: null });
@@ -968,9 +1031,9 @@ describe("nameOnlyNote", () => {
 });
 
 describe("the labels the backfill wrote (M3)", () => {
-  it("a label carried over from the confidence says so, and nothing else", () => {
+  it("a label carried over from the confidence says so in the server's words, and nothing else", () => {
     expect(credibilityRationale({ rule: "legacy_confidence" }, english, "en")).toEqual({
-      sentence: "Rated with the earlier confidence rule.",
+      sentence: LEGACY_SENTENCE,
       stale: null,
     });
   });
@@ -1018,6 +1081,35 @@ describe("the labels the backfill wrote (M3)", () => {
       ),
     ).toBe(NAME_ONLY_NOTE);
     expect(nameOnlyNote({ rule: "legacy_confidence" }, english)).toBeNull();
+  });
+});
+
+describe("earlierRatingNote", () => {
+  it("is the muted note of a label carried over from the confidence", () => {
+    expect(earlierRatingNote({ rule: "legacy_confidence" }, english)).toBe("Earlier rating");
+  });
+
+  it("is nothing for a label a rule decided, one the backfill decided again, or none", () => {
+    expect(earlierRatingNote(basisOf("official_record", [recordOf("kev")]), english)).toBeNull();
+    expect(
+      earlierRatingNote(
+        { ...basisOf("unverified", [cited()]), rule: "backfill_unverified" },
+        english,
+      ),
+    ).toBeNull();
+    expect(earlierRatingNote(null, english)).toBeNull();
+    expect(earlierRatingNote(undefined, english)).toBeNull();
+    // A rule nobody knows is no earlier rating.
+    expect(earlierRatingNote({ rule: "legacy_mystery" } as never, english)).toBeNull();
+  });
+
+  it("is looked up in the dictionary, so that it is shown in the language of the screen", () => {
+    const asked: string[] = [];
+    earlierRatingNote({ rule: "legacy_confidence" }, (key) => {
+      asked.push(key);
+      return key;
+    });
+    expect(asked).toEqual(["Earlier rating"]);
   });
 });
 
@@ -1225,9 +1317,15 @@ describe("coverageLines", () => {
     const NOTICES = {
       nvd: "This product uses data from the NVD API but is not endorsed or certified by the NVD.",
       sec: "SEC EDGAR, US Securities and Exchange Commission",
-      cve: "CVE® records © The MITRE Corporation, under the CVE Terms of Use (https://www.cve.org/Legal/TermsOfUse)",
       un_sanctions: "United Nations Security Council Consolidated List",
     };
+    /**
+     * The notice of the CVE records: MITRE's copyright designation up to the year of the day (Q7),
+     * and no registered mark. It is the string the server stores (vrdb/sources.ts), so a test sets
+     * the clock before it reads one.
+     */
+    const cveNotice = (year: number) =>
+      `CVE records Copyright © 1999-${year}, The MITRE Corporation, under the CVE Terms of Use (https://www.cve.org/Legal/TermsOfUse)`;
     /** A run of the M2 server: the NVD is a source of the vendor risk database, not a lookup. */
     const m2 = (overrides: Partial<RunCoverage> = {}) =>
       coverageOf({
@@ -1298,6 +1396,7 @@ describe("coverageLines", () => {
     });
 
     it("names the SEC, the CVE List and the UN list, with what their terms ask the screen to say", () => {
+      vi.setSystemTime(new Date("2026-10-31T12:00:00Z"));
       const lines = linesOf(
         m2({
           sources: [
@@ -1315,7 +1414,24 @@ describe("coverageLines", () => {
         "Checked: SEC EDGAR (1), the CVE Program (0), UN Security Council Consolidated List (1), Have I Been Pwned, the vendor's status page",
       );
       expect(lines.none).toBe("No records in the CVE Program as of 10 Oct 2026");
-      expect(lines.attributions).toEqual([NOTICES.sec, NOTICES.cve, NOTICES.un_sanctions]);
+      expect(lines.attributions).toEqual([NOTICES.sec, cveNotice(2026), NOTICES.un_sanctions]);
+    });
+
+    it("writes the year of the CVE notice from the UTC clock, at each call", () => {
+      const notice = () => linesOf(m2({ sources: [listCopy("cve")], lookups: [] })).attributions;
+      // In whatever zone the tests run, the local year is 1999 here, so that only the UTC year can be
+      // right: in UTC itself, or in a zone that shares New Year with it, a notice that read the local
+      // clock would otherwise pass.
+      const localYear = vi.spyOn(Date.prototype, "getFullYear").mockReturnValue(1999);
+      try {
+        // Either side of New Year in UTC.
+        vi.setSystemTime(new Date("2026-12-31T23:30:00Z"));
+        expect(notice()).toEqual([cveNotice(2026)]);
+        vi.setSystemTime(new Date("2027-01-01T00:30:00Z"));
+        expect(notice()).toEqual([cveNotice(2027)]);
+      } finally {
+        localYear.mockRestore();
+      }
     });
 
     it("turned off, the NVD is off with the lists", () => {
@@ -1433,12 +1549,10 @@ describe("translation", () => {
     ] as const) {
       dismissReasonLabel(reason, t);
     }
-    for (const confidence of ["low", "medium", "high"] as const) confidenceLabel(confidence, t);
     // What a value the client does not know is shown as.
     categoryLabel("mystery" as never, t);
     outcomeLabel("mystery" as never, t);
     dismissReasonLabel("mystery" as never, t);
-    confidenceLabel("mystery" as never, t);
     // Every sentence of the credibility rules, and the names of the databases they name.
     for (const [, basis] of RULE_SENTENCES) credibilityRationale(basis, t, "en");
     credibilityRationale(basisOf("official_record", [recordOf("kev", { stale: true })]), t, "en");
@@ -1451,6 +1565,14 @@ describe("translation", () => {
       );
     }
     nameOnlyNote(basisOf("name_only", [], true), t);
+    // The labels that were decided before the rules, or again by them.
+    credibilityRationale({ rule: "legacy_confidence" }, t, "en");
+    credibilityRationale(
+      { ...basisOf("unverified", [cited()]), rule: "backfill_unverified" },
+      t,
+      "en",
+    );
+    earlierRatingNote({ rule: "legacy_confidence" }, t);
     for (const label of ["low", "medium", "high"] as const) credibilityLabel(label, t);
     for (const category of ["official", "trusted_press", "vendor", "unverified"] as const) {
       sourceCategoryLabel(category, t);
@@ -1496,6 +1618,9 @@ describe("translation", () => {
         "Low: {operator} removed the record.",
         "The source has not been updated since {date}.",
         "Matched by name only: this may be another company.",
+        "Earlier rating",
+        LEGACY_SENTENCE,
+        "Rated again with the current rule.",
         "Trusted press",
         "Delisted",
         "the vendor's status page",

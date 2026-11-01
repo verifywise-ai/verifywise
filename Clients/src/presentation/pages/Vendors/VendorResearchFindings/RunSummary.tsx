@@ -1,5 +1,7 @@
+import type { ReactNode } from "react";
 import { Box, CircularProgress, Stack, Typography } from "@mui/material";
 import { AlertCircle } from "lucide-react";
+import { VWLink } from "../../../components/Link";
 import CustomizableSkeleton from "../../../components/Skeletons";
 import VWTooltip from "../../../components/VWTooltip";
 import { CustomizableButton } from "../../../components/button/customizable-button";
@@ -24,11 +26,76 @@ import {
   formatResearchDate,
   joinAttributions,
 } from "../../../../application/utils/vendorResearchText";
+import type { RunSearchEngine } from "../../../../domain/interfaces/i.vendorResearch";
 import { fill } from "../../../../i18n/fill";
 import InlineError from "./InlineError";
 import { controlHeightSx } from "./styles";
 
 const coverageTextSx = { ...textStyles.bodySmall, color: "text.tertiary" };
+const engineLineSx = { ...textStyles.caption, color: "text.accent" };
+
+/** The GDELT Project's own site. Its terms allow the news to be used if the project is cited with a link. */
+const GDELT_URL = "https://www.gdeltproject.org/";
+/** The project's name, which is the same in every language: a translation of the line keeps it. */
+const GDELT_NAME = "GDELT Project";
+
+/**
+ * The sentence that credits the GDELT Project, with the project's name turned into the link that
+ * its terms ask for. The name is found in the translation, so the words around it can be placed as
+ * the language needs. A translation that lost the name still gets the link, after the sentence: the
+ * credit must not depend on a translator.
+ */
+function creditedSentence(sentence: string): ReactNode {
+  const link = (
+    // A name, not text to translate. The link takes the size and weight of the line it is in.
+    <Box component="span" data-vw-no-translate="true">
+      <VWLink url={GDELT_URL} openInNewTab sx={{ fontSize: "inherit", fontWeight: "inherit" }}>
+        {GDELT_NAME}
+      </VWLink>
+    </Box>
+  );
+  const at = sentence.indexOf(GDELT_NAME);
+  if (at === -1) {
+    return (
+      <>
+        {sentence} {link}
+      </>
+    );
+  }
+  return (
+    <>
+      {sentence.slice(0, at)}
+      {link}
+      {sentence.slice(at + GDELT_NAME.length)}
+    </>
+  );
+}
+
+/**
+ * Which search the run used, under the line of what it did. A run from before the engine was
+ * recorded, a run that searched nothing and a run none of whose searches was answered have none
+ * and say nothing: the server records an engine only when a search was answered. `openai` is in the list of
+ * the table for an engine that no run uses yet, so it has no words either.
+ */
+function SearchEngineLine({
+  engine,
+  t,
+}: {
+  engine: RunSearchEngine | null | undefined;
+  t: (key: string) => string;
+}) {
+  if (engine === "anthropic") {
+    return <Typography sx={engineLineSx}>{t("Searched with Claude web search")}</Typography>;
+  }
+  if (engine === "gdelt") {
+    return (
+      <Typography sx={engineLineSx}>
+        {creditedSentence(t("News searched with the GDELT Project (last 3 months)"))}
+      </Typography>
+    );
+  }
+  return null;
+}
 
 interface RunSummaryProps {
   vendorId: number;
@@ -230,6 +297,8 @@ export default function RunSummary({
             })}
           </Typography>
         )}
+        {/* Which search it was, and the credit that the GDELT Project's terms ask for. */}
+        <SearchEngineLine engine={run.search_engine} t={t} />
         {lastRun !== null && (
           <Typography sx={{ ...textStyles.caption, color: "text.accent" }}>
             {fill(t("Last run: {date}"), { date: lastRun })}

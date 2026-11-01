@@ -170,6 +170,8 @@ interface WebSetup {
   isRelevant?: (result: { title: string; snippet: string; url: string }) => boolean;
   normalizeQuery?: (query: string, kind: SearchKind) => string;
   closedHosts?: readonly string[];
+  /** The kinds the fake engine answers; both by default. */
+  kinds?: SearchKind[];
 }
 
 /** A session on the domain acme.com, with a fake engine and a fake reader. */
@@ -201,7 +203,7 @@ function webSession(setup: WebSetup = {}) {
     return page(url, fields);
   });
   const session = createWebSession<Category>({
-    engine: { search },
+    engine: { id: "replay", kinds: setup.kinds ?? ["web", "news"], newsWindowMonths: null, search },
     readPage,
     domain: "acme.com",
     cutoffs: setup.cutoffs ?? {},
@@ -825,7 +827,7 @@ describe("runResearchLoop", () => {
         "a query that repeats an earlier one",
         [searchStep("Acme data breach"), searchStep("breach Acme data")],
         {},
-        "That search repeats an earlier one. Use other words, use the other feed (web or news), or read a page.",
+        "That search repeats an earlier one. Use other words, or read a page.",
       ],
       [
         "a spent read budget",
@@ -2274,5 +2276,124 @@ describe("createLoopStepSchema", () => {
     expect(schema.safeParse(actionsOf(0)).success).toBe(true);
     expect(schema.safeParse(actionsOf(MAX_ACTIONS_IN_ANSWER)).success).toBe(true);
     expect(schema.safeParse(actionsOf(MAX_ACTIONS_IN_ANSWER + 1)).success).toBe(false);
+  });
+});
+
+describe("runResearchLoop: the refusal of a query that repeats an earlier one", () => {
+  it.each<[string, SearchKind[], SearchKind]>([
+    ["an engine of the news only", ["news"], "news"],
+    ["an engine of the web only", ["web"], "web"],
+    ["an engine of both kinds", ["web", "news"], "news"],
+  ])(
+    "names no feed to turn to, for %s: only other words, or a read",
+    async (_name, kinds, kind) => {
+      const { calls } = await run({
+        script: [
+          searchStep("Acme data breach", "security_incidents", kind),
+          searchStep("breach Acme data", "security_incidents", kind),
+          finishStep,
+          finishStep,
+        ],
+        web: { kinds },
+        researchable: ["security_incidents"],
+      });
+
+      const told = lastResult(calls[2].prompt);
+      expect(told).toBe("That search repeats an earlier one. Use other words, or read a page.");
+      expect(told).not.toMatch(/feed|web|news/i);
+    },
+  );
+});
+
+describe("runResearchLoop: a kind that the engine does not answer", () => {
+  /** An engine of the news only, such as the news of the GDELT Project. */
+  const NEWS_ONLY: SearchKind[] = ["news"];
+  const askedWeb = searchStep("Acme data breach", "security_incidents", "web");
+  /** A search that names no kind. */
+  const askedNothing = stepOf("Search without a kind", {
+    action: "search",
+    category: "security_incidents",
+    query: "Acme data breach",
+  });
+
+  it("tells the model the fixed phrase, asks the engine nothing and uses no search", async () => {
+    const { calls, search, session } = await run({
+      script: [askedWeb, finishStep, finishStep],
+      web: { kinds: NEWS_ONLY },
+      researchable: ["security_incidents"],
+    });
+
+    expect(lastResult(calls[1].prompt)).toBe(
+      "Web search is not available in this run; search the news or read the vendor's pages",
+    );
+    expect(search).not.toHaveBeenCalled();
+    expect(session.budget().searchesLeft).toBe(8);
+  });
+
+  it("tells a model whose engine has the web but not the news the matching phrase", async () => {
+    const { calls, search } = await run({
+      script: [
+        searchStep("Acme data breach", "security_incidents", "news"),
+        finishStep,
+        finishStep,
+      ],
+      web: { kinds: ["web"] },
+      researchable: ["security_incidents"],
+    });
+
+    expect(lastResult(calls[1].prompt)).toBe(
+      "News search is not available in this run; search the web or read the vendor's pages",
+    );
+    expect(search).not.toHaveBeenCalled();
+  });
+
+  it("reports the refusal to the observer as refused, for its reason, with the kind that was asked", async () => {
+    const turns: LoopTurn<Category>[] = [];
+    await run({
+      script: [askedWeb, finishStep, finishStep],
+      web: { kinds: NEWS_ONLY },
+      researchable: ["security_incidents"],
+      observer: { turn: (turn) => turns.push(turn) },
+    });
+
+    expect(turns[0]).toMatchObject({
+      tool: "search",
+      kind: "web",
+      outcome: "refused",
+      reason: "kind_unavailable",
+    });
+  });
+
+  it("makes a search that names no kind a search of the news when the engine has no web", async () => {
+    const { search } = await run({
+      script: [askedNothing, finishStep, finishStep],
+      web: { kinds: NEWS_ONLY, searches: [[]] },
+      researchable: ["security_incidents"],
+    });
+
+    expect(search).toHaveBeenCalledTimes(1);
+    expect(search).toHaveBeenCalledWith("Acme data breach", "news", expect.anything());
+  });
+
+  it("still makes it a search of the web when the engine answers the web", async () => {
+    const { search } = await run({
+      script: [askedNothing, finishStep, finishStep],
+      web: { searches: [[]] },
+      researchable: ["security_incidents"],
+    });
+
+    expect(search).toHaveBeenCalledWith("Acme data breach", "web", expect.anything());
+  });
+
+  it("reports the kind that a search without one was made as", async () => {
+    const turns: LoopTurn<Category>[] = [];
+    await run({
+      script: [askedNothing, finishStep, finishStep],
+      web: { kinds: NEWS_ONLY, searches: [[]] },
+      researchable: ["security_incidents"],
+      observer: { turn: (turn) => turns.push(turn) },
+    });
+
+    expect(turns[0]).toMatchObject({ tool: "search", kind: "news", outcome: "empty" });
   });
 });

@@ -5,18 +5,29 @@
  * the operator's host and the path of the XML 1.1 file. Nothing it hands back holds an address.
  *
  * Only enterprises (classification code E) are read; persons (P) are skipped, and so is an entry
- * delisted on or before the day the file was generated. Each `wholeName` is a name key (a weak
- * match), and each identification number a `lei:` or `regno:` key (keys.ts `identifierKeysOf`:
- * strong alone for an LEI, beside the name for another number, Q1).
+ * delisted on or before the day the file was generated. Each alias (its `wholeName`, else its first,
+ * middle and last names) is a name key (a weak match), the host of each website in the entry's
+ * contact details (`address/contactInfo` with the key WEB) a domain key (a strong one, against the
+ * vendor's verified domain; an e-mail address typed into the field names a mailbox and gives none,
+ * keys.ts `hostsOf`), and each identification number a `lei:` or `regno:` key (keys.ts
+ * `identifierKeysOf`: strong alone for an LEI, beside the name for another number, Q1). The entry's
+ * UN reference number (`unitedNationId`, filled for few entries) is in the text and the
+ * identifiers and is never a key, since it names the UN's entry and not the vendor: the UN list
+ * itself is not copied (Q6).
  * The list has no page per entry, so a record cites the dataset's page with its logical id
- * (`?logicalId=`, Ruling 13 of the M1 plan). The XSD 1.1 could not be read, so the paths are
- * UNVERIFIED (see the fixture's header comment): the root is checked, so a wrong guess fails the
- * sync instead of mirroring nothing.
+ * (`?logicalId=`, Ruling 13 of the M1 plan). The paths are those of the XSD 1.1 (version 1.1, last
+ * modified 2017-10-12), checked on 2026-10-31 against the file generated on 2026-10-23: 6,269
+ * entries, 1,779 of them enterprises, every path this file reads declared in the XSD and present
+ * in the file, except `delistingDate`, which no entry carries (an entry that leaves the list
+ * leaves the file). The root is still checked, so a list that changes shape fails the sync instead
+ * of mirroring nothing. Every alias of the file is flagged `strong`, so no alias is marked as the
+ * main one: a record is titled by the first alias in English or in no language, else the first.
  */
 import { FetchError } from "../../../webResearch/guardedFetch";
 import { joinSentences, sentence } from "../../records/sentence";
+import { isSharedHost } from "../../sharedHosts";
 import { cleanText } from "../../text";
-import { identifierKeysOf, nameKeysOf } from "../keys";
+import { domainKey, hostsOf, identifierKeysOf, nameKeysOf } from "../keys";
 import { vrdbSourceOf } from "../sources";
 import type { ParsedRecord } from "../types";
 import { type XmlElement, childText, scanElements } from "../xmlScan";
@@ -83,11 +94,33 @@ const attributesOf = (entity: XmlElement, child: string, attribute: string): str
     .filter((element) => element.name === child)
     .map((element) => element.attributes[attribute] ?? "");
 
+/** The name of an alias: its whole name (optional in the XSD), else its first, middle and last names. */
+function aliasNameOf(alias: XmlElement): string {
+  const whole = (alias.attributes.wholeName ?? "").trim();
+  if (whole !== "") return whole;
+  return ["firstName", "middleName", "lastName"]
+    .map((attribute) => (alias.attributes[attribute] ?? "").trim())
+    .filter((part) => part !== "")
+    .join(" ");
+}
+
 /** An enterprise as read, with the day it was delisted; null when it cannot be read, an error. */
 function entryOf(entity: XmlElement): { record: ParsedRecord; delisted: string | null } | null {
   const id = entity.attributes.logicalId?.trim() ?? "";
-  const names = unique(attributesOf(entity, "nameAlias", "wholeName")).map(cleanText);
+  const aliasEntries = entity.children
+    .filter((element) => element.name === "nameAlias")
+    .map((alias) => ({
+      name: cleanText(aliasNameOf(alias)),
+      language: (alias.attributes.nameLanguage ?? "").trim().toUpperCase(),
+    }))
+    .filter((alias) => alias.name !== "");
+  const names = [...new Set(aliasEntries.map((alias) => alias.name))];
   if (id === "" || names.length === 0) return null;
+  // Every alias of the list is flagged `strong`, so none is the main one: the entry is named by its
+  // first alias in English or in no language, else by the first.
+  const primary =
+    aliasEntries.find((alias) => alias.language === "" || alias.language === "EN")?.name ??
+    names[0];
   const programmes = unique(attributesOf(entity, "regulation", "programme"));
   const euReferenceNumber = entity.attributes.euReferenceNumber?.trim() ?? "";
   const unitedNationId = entity.attributes.unitedNationId?.trim() ?? "";
@@ -99,7 +132,27 @@ function entryOf(entity: XmlElement): { record: ParsedRecord; delisted: string |
       type: (element.attributes.identificationTypeCode ?? "").trim(),
     }))
     .filter((identification) => identification.number !== "");
-  const others = names.slice(1);
+  const websites = unique(
+    entity.children
+      .filter((element) => element.name === "address")
+      .flatMap((address) => address.children)
+      .filter(
+        (contact) =>
+          contact.name === "contactInfo" &&
+          (contact.attributes.key ?? "").trim().toUpperCase() === "WEB",
+      )
+      .map((contact) => contact.attributes.value ?? ""),
+  );
+  // A page on a host where many have pages says nothing about who the entry is.
+  const domainKeys = [
+    ...new Set(
+      websites
+        .flatMap(hostsOf)
+        .filter((host) => !isSharedHost(host))
+        .map(domainKey),
+    ),
+  ];
+  const others = names.filter((name) => name !== primary);
   const shown = others.slice(0, MAX_SHOWN_ALIASES);
   const rest = others.length - shown.length;
   const aliases = shown.map((name) => `"${name}"`).join(", ");
@@ -109,14 +162,16 @@ function entryOf(entity: XmlElement): { record: ParsedRecord; delisted: string |
     record: {
       sourceRecordId: id,
       recordType: "sanctions_entity",
-      title: `${EU_RECORD_MARK}: ${names[0]}`,
+      title: `${EU_RECORD_MARK}: ${primary}`,
       summary: joinSentences([
         `${EU_RECORD_MARK} (European Commission).`,
-        `Entry: "${names[0]}" (enterprise).`,
+        `Entry: "${primary}" (enterprise).`,
         aliases === "" ? "" : `Also listed as: ${aliases}${rest > 0 ? `, and ${rest} more` : ""}.`,
         sentence("Programme", programmes.join(", ")),
         sentence("EU reference number", euReferenceNumber),
+        sentence("UN reference number", unitedNationId),
         sentence("Date designated", designated ?? ""),
+        sentence("Website", websites.join(", ")),
         sentence(
           "Identification number",
           identifications.map((identification) => identification.number).join(", "),
@@ -130,6 +185,7 @@ function entryOf(entity: XmlElement): { record: ParsedRecord; delisted: string |
       },
       matchKeys: [
         ...nameKeysOf(names),
+        ...domainKeys,
         ...identifierKeysOf(identifications.map((identification) => identification.number)),
       ],
       publishedAt: designated,
@@ -141,8 +197,13 @@ function entryOf(entity: XmlElement): { record: ParsedRecord; delisted: string |
 export const euConnector: Connector = {
   id: "eu_fsf",
   // 2: the identification numbers became keys (M2); 3: they are in the text too (M2 final
-  // review), so a person and the model see what an entry matched by.
-  version: 3,
+  // review), so a person and the model see what an entry matched by; 4: the websites of the
+  // contact details became domain keys, the entry is named by its first English alias, an alias
+  // without a whole name is read from its first, middle and last names (EU list check), and the
+  // UN reference number (unitedNationId, filled for few entries) is in the text too (Q6). Each
+  // changes what `parse` gives from the same file, and a new version makes the sync parse a
+  // downloaded file again though its bytes did not change (connectors/types.ts).
+  version: 4,
   async download(fetch, validators) {
     const feed = await fetch(EU_FEED_URL, {}, FEED_LIMITS);
     // Nothing was sent to make a 304 an answer; one is not the feed.

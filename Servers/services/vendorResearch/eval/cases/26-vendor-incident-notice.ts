@@ -63,7 +63,6 @@ export const VENDOR_INCIDENT_NOTICE: EvalCase = {
           risk_severity: "Major",
           action_plan:
             "Ask the vendor whether we are one of the 85 customers and how it now protects the sign-in of its support system.",
-          confidence: "medium",
           rationale:
             "The vendor reports the incident itself, and payslips hold personal and financial data.",
           evidence: [

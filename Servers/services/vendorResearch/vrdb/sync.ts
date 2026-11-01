@@ -12,10 +12,16 @@
  *
  * A list read by its changes (the CVE records, Ruling 8 of the M2 plan) keeps the last day it
  * applied as its cursor: the sync applies the changes of each later day in order, each day in a
- * transaction of its own that moves the cursor, and takes no record off the copy. A day that does
- * not parse fails the sync and keeps the cursor at the day before it. A sync of such a list without
+ * transaction of its own that moves the cursor, and delists no record. A day does retire stored
+ * copies (Q7): the records the list still publishes but the copy's filter leaves out lose their
+ * keys, so that no run is offered them, and their ids are hashed with the day's bodies. A day fails
+ * the sync only past what its connector tolerates. The few entries a connector leaves out because
+ * they do not parse are counted, and the sync logs how many; a day read from an hourly release,
+ * because the list published no end-of-day release for it, is logged too. A day that does not parse
+ * past that fails the sync and keeps the cursor at the day before it. A sync of such a list without
  * a cursor is refused as `no_baseline`: its lookback comes from a baseline that an operator loads
- * (scripts/vrdbCveBaseline.ts), and a copy of yesterday's changes alone would read as checked.
+ * (scripts/vrdbCveBaseline.ts), and a copy of yesterday's changes alone would read as checked; the
+ * log says so.
  */
 import { createHash } from "crypto";
 import type { VrdbSourceId } from "../../../domain.layer/interfaces/i.vendorResearch";
@@ -28,6 +34,7 @@ import {
   FeedWithoutFileError,
   type IncrementalConnector,
   NotTheListError,
+  type Snapshot,
 } from "./connectors/types";
 import { type MirrorSource, type VrdbSourceDefinition, vrdbSourceOf } from "./sources";
 import type {
@@ -96,6 +103,16 @@ function hashOf(version: number, bodies: readonly string[]): string {
   for (const body of bodies) hash.update(`${body.length}:${body}`);
   return hash.digest("hex");
 }
+
+/**
+ * The texts the download of a list read by its changes is hashed over: the bodies it keeps and,
+ * after them, the ids it retires as `retire:<id>`, which are no bodies. The same bodies with other
+ * ids are another day, so the hash of a day says what it retired.
+ */
+const hashedOf = (snapshot: Snapshot): string[] => [
+  ...snapshot.bodies,
+  ...(snapshot.retired ?? []).map((recordId) => `retire:${recordId}`),
+];
 
 function codeOf(error: unknown): SyncErrorCode {
   if (error instanceof BodyTooLargeError) return "too_large";
@@ -246,9 +263,30 @@ async function syncWhole(
 }
 
 /**
+ * What a day left behind, for the log: the entries its connector left out because they do not
+ * parse, and the hour of the hourly release it was read from when the list published no end-of-day
+ * release for it. The lines hold fixed phrases, the list's id, a day and an hour, never an entry.
+ */
+function logDay(id: VrdbSourceId, day: string, skipped: number, through?: string): void {
+  if (skipped > 0) {
+    logger.warn(
+      skipped === 1
+        ? `vendor risk database: ${id} left out 1 record of ${day} that does not parse`
+        : `vendor risk database: ${id} left out ${skipped} records of ${day} that do not parse`,
+    );
+  }
+  if (through !== undefined) {
+    logger.warn(
+      `vendor risk database: ${id} read ${day} up to ${through} from an hourly release: the list published no end-of-day release for that day`,
+    );
+  }
+}
+
+/**
  * The sync of a list read by its changes: the connector reads the days after the cursor, and each
- * day is checked and applied in order, moving the cursor. A day that does not parse fails the sync
- * after the days before it were applied; what they changed is the run's count.
+ * day is checked and applied in order, moving the cursor, with the ids it retires. A day that does
+ * not parse past what its connector tolerates fails the sync after the days before it were
+ * applied; what they changed is the run's count.
  */
 async function syncChanges(
   id: VrdbSourceId,
@@ -274,19 +312,20 @@ async function syncChanges(
       bytes: days.reduce((sum, { snapshot }) => sum + snapshot.bytes, 0),
       rawSnapshotHash: hashOf(
         connector.version,
-        days.flatMap(({ snapshot }) => snapshot.bodies),
+        days.flatMap(({ snapshot }) => hashedOf(snapshot)),
       ),
     };
 
-    for (const { day, snapshot } of days) {
+    for (const { day, snapshot, through } of days) {
       const parsed = connector.parse(snapshot);
       if (parsed.root === null) throw new Refused("wrong_root");
       if (parsed.errors > 0) throw new Refused("parse_errors");
       const counts = await store.applyVrdbDeltaQuery({
         sourceId: id,
         records: parsed.records,
+        retire: parsed.retired ?? [],
         cursor: { day },
-        rawSnapshotHash: hashOf(connector.version, snapshot.bodies),
+        rawSnapshotHash: hashOf(connector.version, hashedOf(snapshot)),
         at: now(),
       });
       applied = {
@@ -295,6 +334,7 @@ async function syncChanges(
         updated: (applied?.updated ?? 0) + counts.updated,
         statusChanged: (applied?.statusChanged ?? 0) + counts.statusChanged,
       };
+      logDay(id, day, parsed.skipped ?? 0, through);
     }
     const counts = applied ?? { seen: 0, inserted: 0, updated: 0, statusChanged: 0 };
     await attempt.finish({ outcome: "ok", ...download, counts });
@@ -305,6 +345,11 @@ async function syncChanges(
   } catch (error) {
     const errorCode = error instanceof Refused ? error.code : codeOf(error);
     logger.warn(`vendor risk database: the sync of ${id} failed (${errorCode})`);
+    if (errorCode === "no_baseline") {
+      logger.warn(
+        `vendor risk database: ${id} has no baseline yet; an operator loads one with scripts/vrdbCveBaseline.ts`,
+      );
+    }
     const counts = applied === undefined ? {} : { counts: applied };
     await attempt.finish(
       { outcome: "failed", errorCode, ...download, ...counts },

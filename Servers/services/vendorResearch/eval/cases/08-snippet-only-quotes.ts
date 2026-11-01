@@ -92,7 +92,6 @@ export const SNIPPET_ONLY_QUOTES: EvalCase = {
           risk_severity: "Moderate",
           action_plan:
             "Ask the vendor for its retention periods and compare them with our notices.",
-          confidence: "medium",
           rationale: "The lawsuit is reported by one source and its effect on us is limited.",
           evidence: [
             {

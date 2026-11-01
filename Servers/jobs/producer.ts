@@ -73,7 +73,7 @@ export async function addAllJobs(): Promise<void> {
   await safeSchedule("stale-inheritance-notify-sweep", scheduleStaleInheritanceNotifySweep); // non-obliterating — safe to run after the obliterating schedulers
   await safeSchedule("approval-overdue-sweep", scheduleApprovalOverdueSweep); // non-obliterating — safe to run after the obliterating schedulers
   await safeSchedule("vendor-research-scan", scheduleVendorResearchScan); // its own queue, which is never obliterated — the order does not matter
-  await safeSchedule("vendor-risk-database-sync", scheduleVendorRiskDatabaseSync); // its own queue, never obliterated; removes the schedulers while VENDOR_RESEARCH_VRDB is off
+  await safeSchedule("vendor-risk-database-sync", scheduleVendorRiskDatabaseSync); // its own queue, never obliterated; removes the schedulers while VENDOR_RESEARCH_RECORDS is false
   await safeSchedule("ai-trust-index-sync", scheduleAiTrustIndexSync);
   await safeSchedule("extension-sync-tick", scheduleExtensionSyncTick); // non-obliterating — safe to run after the obliterating schedulers
   // Ordering constraint: obliterate-using schedulers (e.g. vendor-review,

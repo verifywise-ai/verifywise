@@ -76,7 +76,6 @@ export const DELISTED_SANCTIONS_ENTRY: EvalCase = {
           risk_severity: "Major",
           action_plan:
             "Check the vendor's registration number, address and owners against the entry before any payment.",
-          confidence: "low",
           rationale: "The entry has the vendor's name, and nothing else ties it to the vendor.",
           evidence: [
             {

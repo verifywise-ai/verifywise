@@ -1,16 +1,14 @@
-import { nameKeys } from "../match";
+import { ofacSourceOf } from "../../vrdb/connectors/ofac";
 import {
   MAX_OFAC_REMARKS_CHARS,
+  NAME_ONLY_LOOKUP_NOTE,
   OFAC_ALT_URL,
   OFAC_SDN_URL,
+  type OfacList,
   ofacEntryUrl,
-  ofacRecords,
   parseCsv,
   parseOfac,
 } from "../ofac";
-import { MAX_RECORDS } from "../types";
-
-const NOW = new Date("2026-10-28T12:00:00Z");
 
 /** The files as the Treasury serves them: no header row, `-0- ` for a field with nothing in it. */
 const NIL = "-0- ";
@@ -54,9 +52,6 @@ const ALT = [
   altRow(9001, 5000, "fka", "OLD NORTHWIND TRADING"),
   altRow(9002, 5001, "aka", "JOHNNY NORTHWIND"),
 ].join("\n");
-
-const keysOf = (name: string, aliases: string[] = []) =>
-  nameKeys({ name, domain: null, provides: "Something", aliases });
 
 describe("parseCsv", () => {
   it("reads rows of fields, a quoted field holding commas, quotes and line breaks", () => {
@@ -140,129 +135,54 @@ describe("parseOfac", () => {
   });
 });
 
-describe("ofacRecords", () => {
+describe("ofacSourceOf", () => {
+  // The text of a record is what the model reads and quotes, word for word the list's. The
+  // connector of the vendor risk database builds it; the run no longer matches the list itself.
+  const sourceOf = (list: OfacList, id: number) => {
+    const entry = list.byId.get(id);
+    if (entry === undefined) throw new Error(`no entry ${id} in the list`);
+    return ofacSourceOf(entry);
+  };
   const list = parseOfac(SDN, ALT);
-  const recordsFor = (keys: string[]) => ofacRecords(list, { keys, now: NOW });
 
-  it("gives a record for the entity that has the name of the vendor, at the page of its entry", () => {
-    const { records, omitted } = recordsFor(keysOf("Northwind Trading"));
+  it("gives the entity as a source: the words of the list, at the page of its entry", () => {
+    const record = sourceOf(list, 9001);
 
-    expect(omitted).toEqual({});
-    expect(records).toEqual([
-      {
-        url: "https://sanctionssearch.ofac.treas.gov/Details.aspx?id=9001",
-        title: "OFAC SDN list: NORTHWIND TRADING LLC",
-        text: expect.stringContaining('Entry: "NORTHWIND TRADING LLC" (entity).'),
-        publishedAt: "2026-10-28",
-      },
-    ]);
-    expect(ofacEntryUrl(9001)).toBe(records[0].url);
+    expect(record).toEqual({
+      url: "https://sanctionssearch.ofac.treas.gov/Details.aspx?id=9001",
+      title: "OFAC SDN list: NORTHWIND TRADING LLC",
+      text: expect.stringContaining('Entry: "NORTHWIND TRADING LLC" (entity).'),
+    });
+    expect(ofacEntryUrl(9001)).toBe(record.url);
   });
 
-  it("begins the text with the name of the list, and says what the match is", () => {
-    const [record] = recordsFor(keysOf("Northwind Trading")).records;
+  it("begins the text with the name of the list", () => {
+    const { text } = sourceOf(list, 9001);
 
-    expect(
-      record.text.startsWith("OFAC Specially Designated Nationals and Blocked Persons List"),
-    ).toBe(true);
-    expect(record.text).toContain("(treasury.gov).");
-    expect(record.text).toContain("by name only");
-    expect(record.text).toContain("may be another company with the same name");
-    expect(record.text).toContain("On the list on 2026-10-28.");
+    expect(text.startsWith("OFAC Specially Designated Nationals and Blocked Persons List")).toBe(
+      true,
+    );
+    expect(text).toContain("(treasury.gov).");
+  });
+
+  it("says nothing of a match or of a day: the lookup adds the note and the day", () => {
+    const { text } = sourceOf(list, 9001);
+
+    expect(text).not.toMatch(/Lookup note|by name only|On the list on/);
   });
 
   it("tells the programs, the other names and the remarks of the entry, in the words of the list", () => {
-    const [record] = recordsFor(keysOf("Northwind Trading")).records;
+    const { text } = sourceOf(list, 9001);
 
-    expect(record.text).toContain("Programs: RUSSIA-EO14024, UKRAINE-EO13662.");
-    expect(record.text).toContain('Also listed as: "OLD NORTHWIND TRADING" (fka).');
-    expect(record.text).toContain(
+    expect(text).toContain("Programs: RUSSIA-EO14024, UKRAINE-EO13662.");
+    expect(text).toContain('Also listed as: "OLD NORTHWIND TRADING" (fka).');
+    expect(text).toContain(
       'Remarks: Website northwind-trading.example; Registration ID 1234; formerly "Old Northwind".',
     );
   });
 
   it("writes a name that ends with a full stop as the list has it", () => {
-    const [record] = recordsFor(keysOf("Cimex")).records;
-
-    expect(record.text).toContain('Entry: "CIMEX, S.A." (entity).');
-  });
-
-  it("matches the name with its legal form on either side, since the form is not part of a name", () => {
-    expect(recordsFor(keysOf("Cimex Corp")).records.map((r) => r.title)).toEqual([
-      "OFAC SDN list: CIMEX, S.A.",
-    ]);
-    expect(recordsFor(keysOf("Northwind Trading Inc.")).records).toHaveLength(1);
-  });
-
-  it("matches a name the entry is also listed under", () => {
-    expect(recordsFor(keysOf("Aero-Caribbean")).records.map((r) => r.url)).toEqual([
-      ofacEntryUrl(36),
-    ]);
-    expect(recordsFor(keysOf("Acme", ["Cimex Iberica"])).records.map((r) => r.url)).toEqual([
-      ofacEntryUrl(537),
-    ]);
-  });
-
-  it("does not match a name that only contains or begins with the name of an entry", () => {
-    expect(recordsFor(keysOf("Cimex Iberica Trading")).records).toEqual([]);
-    expect(recordsFor(keysOf("Banco Nacional")).records).toEqual([]);
-    expect(recordsFor(keysOf("Northwind")).records).toEqual([]);
-  });
-
-  it("does not match a person, a vessel or an aircraft that has the name", () => {
-    expect(recordsFor(keysOf("Northwind Star")).records).toEqual([]);
-    expect(recordsFor(keysOf("Northwind Air")).records).toEqual([]);
-    expect(recordsFor(keysOf("Johnny Northwind")).records).toEqual([]);
-  });
-
-  it("does not match a name of fewer than four letters and digits", () => {
-    const short = parseOfac(sdnRow(77, "ABC", NIL, "X"), "");
-
-    expect(ofacRecords(short, { keys: keysOf("ABC"), now: NOW }).records).toEqual([]);
-    const four = parseOfac(sdnRow(78, "ABCD", NIL, "X"), "");
-    expect(ofacRecords(four, { keys: keysOf("ABCD"), now: NOW }).records).toHaveLength(1);
-  });
-
-  it("matches without regard to case and punctuation", () => {
-    const named = parseOfac(sdnRow(5, "SOCIÉTÉ D'EXPORT-IMPORT", NIL, "X"), "");
-
-    expect(
-      ofacRecords(named, { keys: keysOf("société d'export import"), now: NOW }).records,
-    ).toHaveLength(1);
-  });
-
-  it("gives each entity once, whichever names of the vendor it matches, in the order of the numbers", () => {
-    const both = parseOfac(
-      [sdnRow(900, "ZEDCO CORP", NIL, "X"), sdnRow(100, "ZEDCO", NIL, "X")].join("\n"),
-      "",
-    );
-
-    const { records, omitted } = ofacRecords(both, {
-      keys: keysOf("Zedco Corp", ["Zedco"]),
-      now: NOW,
-    });
-
-    expect(records.map((r) => r.url)).toEqual([ofacEntryUrl(100), ofacEntryUrl(900)]);
-    expect(omitted).toEqual({});
-  });
-
-  it(`gives at most ${MAX_RECORDS.ofac} records and counts the others`, () => {
-    const many = parseOfac(
-      [1, 2, 3, 4].map((id) => sdnRow(id, "SAMENAME TRADING LLC", NIL, "X")).join("\n"),
-      "",
-    );
-
-    const { records, omitted } = ofacRecords(many, {
-      keys: keysOf("Samename Trading"),
-      now: NOW,
-    });
-
-    expect(records).toHaveLength(MAX_RECORDS.ofac);
-    expect(omitted).toEqual({ more: 4 - MAX_RECORDS.ofac });
-  });
-
-  it("gives nothing for a vendor with no name to look for", () => {
-    expect(recordsFor([]).records).toEqual([]);
+    expect(sourceOf(list, 537).text).toContain('Entry: "CIMEX, S.A." (entity).');
   });
 
   it("cuts the remarks and the other names", () => {
@@ -270,22 +190,24 @@ describe("ofacRecords", () => {
     const aliases = Array.from({ length: 12 }, (_, i) => altRow(40, i + 1, "aka", `ALIAS ${i}`));
     const big = parseOfac(sdnRow(40, "BIGNAME HOLDINGS", NIL, "X", longRemark), aliases.join("\n"));
 
-    const [record] = ofacRecords(big, { keys: keysOf("Bigname Holdings"), now: NOW }).records;
+    const { text } = sourceOf(big, 40);
 
-    expect(record.text).toContain(`Remarks: ${"x".repeat(MAX_OFAC_REMARKS_CHARS)}.`);
-    expect(record.text).not.toContain("x".repeat(MAX_OFAC_REMARKS_CHARS + 1));
-    expect(record.text).toContain('"ALIAS 5" (aka)');
-    expect(record.text).not.toContain('"ALIAS 6" (aka)');
+    // A remark with no ';' and no blank is cut hard, short of the marker, so that the remark and
+    // the marker that says it was shortened are 600 characters together.
+    const marker = " [shortened]";
+    const kept = "x".repeat(MAX_OFAC_REMARKS_CHARS - marker.length);
+    expect(text).toContain(`Remarks: ${kept}${marker}.`);
+    expect(text).not.toContain("x".repeat(kept.length + 1));
+    expect(text).toContain('"ALIAS 5" (aka)');
+    expect(text).not.toContain('"ALIAS 6" (aka)');
   });
+});
 
-  it("takes the day of the record from the clock it is given", () => {
-    const [record] = ofacRecords(list, {
-      keys: keysOf("Cimex"),
-      now: new Date("2031-01-02T23:59:59Z"),
-    }).records;
-
-    expect(record.publishedAt).toBe("2031-01-02");
-    expect(record.text).toContain("On the list on 2031-01-02.");
+describe("NAME_ONLY_LOOKUP_NOTE", () => {
+  it("says that the vendor was matched by name only and may be another company with the same name", () => {
+    expect(NAME_ONLY_LOOKUP_NOTE).toContain("by name only");
+    expect(NAME_ONLY_LOOKUP_NOTE).toContain("may be another company with the same name");
+    expect(NAME_ONLY_LOOKUP_NOTE.startsWith("Lookup note:")).toBe(true);
   });
 });
 

@@ -1,45 +1,98 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <!--
-  A fixture of the EU consolidated list of financial sanctions (file xmlFullSanctionsList_1_1),
-  with fictional names. No real list file was read.
+  A fixture of the EU consolidated list of financial sanctions (file xmlFullSanctionsList_1_1, XSD
+  1.1), with fictional names and hosts under .example, in the shape of the real file.
 
-  UNVERIFIED: the XSD 1.1 could not be read (its address answered 403 without the token, and the
-  token is never copied, Q2). The names below are those the spec's D2.4 gives for the XSD 1.1
-  (logicalId, euReferenceNumber, unitedNationId, designationDate, delistingDate, nameAlias
-  wholeName, regulation programme, identification number and identificationTypeCode) and, from
-  public knowledge, the root `export` with `generationDate` and `subjectType` with
-  `classificationCode` (P for a person, E for an enterprise). That the dates are attributes of
-  sanctionEntity is a guess. The connector checks the root, so a wrong guess fails the sync:
-    /export@generationDate
-    /export/sanctionEntity@logicalId, @euReferenceNumber, @unitedNationId, @designationDate,
-      @delistingDate
-    /export/sanctionEntity/subjectType@classificationCode
-    /export/sanctionEntity/nameAlias@wholeName
+  Checked against the real XML 1.1 and its XSD on 2026-10-31 (generated 2026-10-23: 6,269 entries,
+  1,779 of them enterprises): the connector read every enterprise with no error, and every path
+  below is declared in the XSD and present in the file, except sanctionEntity@delistingDate, which
+  no entry carries. An entry that leaves the list leaves the file, and the mirror marks it delisted
+  by its absence. Entry 1104 keeps a delistingDate all the same, as the XSD allows.
+
+  The paths the connector reads:
+    /export@generationDate                        the list's version (the root also has globalFileId)
+    /export/sanctionEntity@logicalId, @euReferenceNumber, @designationDate, @delistingDate,
+      @unitedNationId                             on every entry, filled on 23 of the enterprises
+    /export/sanctionEntity/subjectType@classificationCode      P for a person, E for an enterprise
+    /export/sanctionEntity/nameAlias@wholeName, @firstName, @middleName, @lastName, @nameLanguage
     /export/sanctionEntity/regulation@programme
+    /export/sanctionEntity/address/contactInfo@key, @value     only the key WEB
     /export/sanctionEntity/identification@number, @identificationTypeCode
+
+  The shape of the real file, which the fixture keeps:
+    - The root declares the namespace http://eu.europa.ec/fpi/fsd/export. An entry lists remark
+      (not always), regulation, subjectType, nameAlias (one or more), address and identification,
+      in that order.
+    - Every nameAlias carries strong="true", so none is the main one. Its nameLanguage is a
+      language code or empty (empty on 1,617 of the 14,327 aliases of enterprises), and 863 of the
+      1,779 enterprises list an alias in another language than English first: entry 1101 does.
+    - A name is in wholeName, and firstName, middleName and lastName are empty. The XSD makes
+      wholeName optional, and the file always has it: entry 1105 has none, to check the parts.
+    - Contact details are contactInfo children of an address, with the key EMAIL, PHONE, FAX or
+      WEB. A WEB value is a site with or without its scheme (118 of the 556 values of enterprises
+      are written without one), may hold several sites separated by white space, a comma or a
+      semicolon (64 do), and once holds an e-mail address typed into the field: entry 1101 has
+      both. Pages on platforms where many have pages (t.me, vk.com) are common.
+    - unitedNationId is on every entry and mostly empty: entry 1101 carries a UN reference number.
+    - Entry 1102 lists its regulation twice, which the XSD does not allow (one regulation per
+      entry) and the file never does. The connector tolerates it and lists the programme once.
+  Left out, as the connector reads none of it: the regulationSummary and publicationUrl elements;
+  the function, gender and title of an alias; most attributes of an address and of an
+  identification; and the citizenship and birthdate elements of a person.
 -->
 <export xmlns="http://eu.europa.ec/fpi/fsd/export" generationDate="2026-10-23T15:10:13.000+02:00" globalFileId="9001">
-  <sanctionEntity logicalId="1101" euReferenceNumber="EU.1101.01" unitedNationId="" designationDate="2025-03-12">
-    <regulation programme="CYB" publicationDate="2025-03-12" />
+  <sanctionEntity designationDate="2025-03-12" designationDetails="" unitedNationId="EXe.013" euReferenceNumber="EU.1101.01" logicalId="1101">
+    <remark>A fictional remark of the entry.</remark>
+    <regulation regulationType="amendment" organisationType="council" publicationDate="2025-03-12" entryIntoForceDate="2025-03-13" numberTitle="2025/0001 (OJ L 1, 12.3.2025, p. 1)" programme="CYB" logicalId="91001" />
     <subjectType code="enterprise" classificationCode="E" />
-    <nameAlias wholeName="Northwind Export Company" />
-    <nameAlias wholeName="Northwind Trading" />
-    <identification number="EX-4455" identificationTypeCode="regnumber" />
+    <nameAlias firstName="" middleName="" lastName="" wholeName="Nordwind Exportgesellschaft" nameLanguage="DE" strong="true" regulationLanguage="en" logicalId="91011" />
+    <nameAlias firstName="" middleName="" lastName="" wholeName="Northwind Export Company" nameLanguage="EN" strong="true" regulationLanguage="en" logicalId="91012" />
+    <address city="Port Example" street="1 Harbour Road" countryIso2Code="XX" countryDescription="EXAMPLELAND" regulationLanguage="en" logicalId="91021">
+      <contactInfo key="EMAIL" value="info@northwind-contact.example" />
+      <contactInfo key="PHONE" value="+00 000 0000" />
+      <contactInfo key="WEB" value="www.Northwind-Export.example; export@northwind-mail.example" />
+    </address>
+    <address city="Port Example" street="2 Quay Street" countryIso2Code="XX" countryDescription="EXAMPLELAND" regulationLanguage="en" logicalId="91022">
+      <contactInfo key="WEB" value="https://northwind-export.example/en/" />
+      <contactInfo key="WEB" value="https://t.me/northwind_export" />
+    </address>
+    <identification number="EX-4455" identificationTypeCode="regnumber" identificationTypeDescription="Registration number" countryIso2Code="XX" countryDescription="EXAMPLELAND" regulationLanguage="en" logicalId="91031" />
   </sanctionEntity>
-  <sanctionEntity logicalId="1102" euReferenceNumber="EU.1102.02" designationDate="2026-02-02">
-    <regulation programme="RUS" />
-    <regulation programme="RUS" />
+  <sanctionEntity designationDate="2026-02-02" designationDetails="" unitedNationId="" euReferenceNumber="EU.1102.02" logicalId="1102">
+    <regulation regulationType="regulation" organisationType="council" publicationDate="2026-02-02" entryIntoForceDate="2026-02-03" numberTitle="2026/0002 (OJ L 2, 2.2.2026, p. 1)" programme="RUS" logicalId="91002" />
+    <regulation regulationType="amendment" organisationType="council" publicationDate="2026-02-02" entryIntoForceDate="2026-02-03" numberTitle="2026/0002 (OJ L 2, 2.2.2026, p. 1)" programme="RUS" logicalId="91102" />
     <subjectType code="enterprise" classificationCode="E" />
-    <nameAlias wholeName="Globex Holdings &amp; Partners" />
+    <nameAlias firstName="" middleName="" lastName="" wholeName="Globex Holdings &amp; Partners" nameLanguage="" strong="true" regulationLanguage="en" logicalId="91014" />
   </sanctionEntity>
-  <sanctionEntity logicalId="1103" euReferenceNumber="EU.1103.03" designationDate="2024-05-01">
-    <regulation programme="CYB" />
+  <sanctionEntity designationDate="2024-05-01" designationDetails="" unitedNationId="" euReferenceNumber="EU.1103.03" logicalId="1103">
+    <regulation regulationType="amendment" organisationType="council" publicationDate="2024-05-01" entryIntoForceDate="2024-05-02" numberTitle="2024/0003 (OJ L 3, 1.5.2024, p. 1)" programme="CYB" logicalId="91003" />
     <subjectType code="person" classificationCode="P" />
-    <nameAlias wholeName="Jane Doe" firstName="Jane" lastName="Doe" />
+    <nameAlias firstName="Jane" middleName="" lastName="Doe" wholeName="Jane Doe" nameLanguage="EN" strong="true" regulationLanguage="en" logicalId="91015" />
+    <address city="Port Example" street="3 Dock Lane" countryIso2Code="XX" countryDescription="EXAMPLELAND" regulationLanguage="en" logicalId="91023">
+      <contactInfo key="WEB" value="https://jane-doe.example/" />
+    </address>
   </sanctionEntity>
-  <sanctionEntity logicalId="1104" euReferenceNumber="EU.1104.04" designationDate="2022-01-10" delistingDate="2026-09-01">
-    <regulation programme="SYR" />
+  <sanctionEntity designationDate="2022-01-10" delistingDate="2026-09-01" designationDetails="" unitedNationId="" euReferenceNumber="EU.1104.04" logicalId="1104">
+    <regulation regulationType="amendment" organisationType="council" publicationDate="2022-01-10" entryIntoForceDate="2022-01-11" numberTitle="2022/0004 (OJ L 4, 10.1.2022, p. 1)" programme="SYR" logicalId="91004" />
     <subjectType code="enterprise" classificationCode="E" />
-    <nameAlias wholeName="Initech Overseas" />
+    <nameAlias firstName="" middleName="" lastName="" wholeName="Initech Overseas" nameLanguage="EN" strong="true" regulationLanguage="en" logicalId="91016" />
+  </sanctionEntity>
+  <sanctionEntity designationDate="2025-09-15" designationDetails="" unitedNationId="" euReferenceNumber="EU.1105.05" logicalId="1105">
+    <regulation regulationType="amendment" organisationType="council" publicationDate="2025-09-15" entryIntoForceDate="2025-09-16" numberTitle="2025/0005 (OJ L 5, 15.9.2025, p. 1)" programme="UKR" logicalId="91005" />
+    <subjectType code="enterprise" classificationCode="E" />
+    <nameAlias firstName="Fabrikam" middleName="" lastName="Logistics" wholeName="" nameLanguage="EN" strong="true" regulationLanguage="en" logicalId="91017" />
+    <nameAlias firstName="Fabrikam" middleName="" lastName="Freight" wholeName="" nameLanguage="EN" strong="true" regulationLanguage="en" logicalId="91018" />
+    <address city="Port Example" street="4 Depot Row" countryIso2Code="XX" countryDescription="EXAMPLELAND" regulationLanguage="en" logicalId="91024">
+      <contactInfo key="EMAIL" value="info@fabrikam-logistics.example" />
+    </address>
+  </sanctionEntity>
+  <sanctionEntity designationDate="2024-11-20" designationDetails="" unitedNationId="" euReferenceNumber="EU.1106.06" logicalId="1106">
+    <regulation regulationType="amendment" organisationType="council" publicationDate="2024-11-20" entryIntoForceDate="2024-11-21" numberTitle="2024/0006 (OJ L 6, 20.11.2024, p. 1)" programme="BLR" logicalId="91006" />
+    <subjectType code="enterprise" classificationCode="E" />
+    <nameAlias firstName="" middleName="" lastName="" wholeName="Tailspin Imports" nameLanguage="EN" strong="true" regulationLanguage="en" logicalId="91019" />
+    <address city="Port Example" street="5 Wharf Court" countryIso2Code="XX" countryDescription="EXAMPLELAND" regulationLanguage="en" logicalId="91025">
+      <contactInfo key="PHONE" value="+00 000 0001" />
+      <contactInfo key="WEB" value="https://vk.com/tailspin_imports" />
+    </address>
   </sanctionEntity>
 </export>

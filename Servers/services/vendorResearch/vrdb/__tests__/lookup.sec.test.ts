@@ -1,21 +1,22 @@
 /**
- * The SEC in the lookup of the vendor risk database once Q4 is open (M2, Rulings 2 and 14 of the M2
- * plan): its filings are offered like a read-through source's records, by the CIK a person stored
+ * The SEC in the lookup of the vendor risk database now that Q4 is open (M2, Rulings 2 and 14 of the
+ * M2 plan): its filings are offered like a read-through source's records, by the CIK a person stored
  * (strong) or the one found by the vendor's name (weak, Q3), each on the day it was filed and inside
- * the lookback, and the read-through of a run asks it with one connector for the process. Q4 is
- * closed in the code; this file opens it.
+ * the lookback, and the read-through of a run asks it with one connector for the process, whose
+ * requests name the contact of Q4 (gates.ts). The gates are the real ones, not a mock: this file
+ * fails if Q4 is closed again.
  */
 jest.mock("../../../../utils/logger/fileLogger", () => ({
   __esModule: true,
   default: { debug: jest.fn(), error: jest.fn(), info: jest.fn(), warn: jest.fn() },
 }));
 jest.mock("../../../../utils/vrdb.utils", () => ({}));
-jest.mock("../gates", () => ({
-  ...jest.requireActual("../gates"),
-  SEC_CONTACT: "sec@company.example",
-  VRDB_GATES: { Q4: true, Q6: false, Q7: false },
-}));
+// The turns of the SEC are taken in the application's Redis: this one grants every turn at once.
+const mockRedis = { status: "ready", eval: jest.fn(async (): Promise<unknown> => 0) };
+jest.mock("../../../../database/redis", () => ({ __esModule: true, default: mockRedis }));
 
+import { SEC_TICKERS_URL } from "../../records/sec";
+import type { FetchJson } from "../../records/types";
 import type { ResearchTarget } from "../../target";
 import { offerRecords, runReadThrough } from "../lookup";
 import type { ReadThroughOutcome, VrdbRow } from "../types";
@@ -120,6 +121,33 @@ describe("the SEC in the lookup, once Q4 is open", () => {
     expect(deps.spacers.sec).toEqual(expect.any(Function));
     // The connector keeps the tickers file in its memory for a day: the runs share it.
     expect(runReadThrough().connectors.sec).toBe(deps.connectors.sec);
+  });
+
+  it("asks the SEC with the contact of Q4 by default, and takes its turns in Redis", async () => {
+    const asked: Array<{ url: string; userAgent?: string }> = [];
+    const fetchJson: FetchJson = async (url, { userAgent }) => {
+      asked.push({ url, userAgent });
+      return { "0": { cik_str: 1262039, ticker: "BRSE", title: "Brise Networks, Inc." } };
+    };
+
+    // No contact given: the one of gates.ts, which is VerifyWise's Technical Support address.
+    const found = await runReadThrough().connectors.sec?.keyOf(BRISE, {
+      signal: new AbortController().signal,
+      fetchJson,
+    });
+
+    expect(found).toEqual({ key: KEY, weak: true });
+    expect(asked).toEqual([{ url: SEC_TICKERS_URL, userAgent: "VerifyWise tech@verifywise.ai" }]);
+    expect(mockRedis.eval).toHaveBeenCalledTimes(1);
+    expect(mockRedis.eval).toHaveBeenCalledWith(
+      expect.any(String),
+      2,
+      "vrdb:spacer:sec",
+      "vrdb:spacer:sec:seq",
+      5,
+      1000,
+      2000,
+    );
   });
 
   it("asks no SEC without a contact", () => {

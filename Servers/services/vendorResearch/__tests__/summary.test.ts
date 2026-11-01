@@ -12,6 +12,8 @@ import {
   NOTES,
   findingsNote,
   pagesFailedNote,
+  searchesAndPagesFailedNote,
+  searchesFailedNote,
   summariseCategories,
   workedCategories,
 } from "../summary";
@@ -67,7 +69,6 @@ const keptIn = (category: ResearchCategory): NewFinding => ({
   likelihood: "Possible",
   risk_severity: "Major",
   risk_level: "High Risk",
-  confidence: "low",
   rationale: null,
   sources: [{ url: "https://news.example.com/a", title: "A", quote: "q", published_at: null }],
 });
@@ -118,6 +119,16 @@ describe("the notes", () => {
 
   it("count the pages that could not be read", () => {
     expect(pagesFailedNote(2, 5)).toBe("No risks found; 2 of 5 pages could not be read");
+  });
+
+  it("count the searches that were not available", () => {
+    expect(searchesFailedNote(1, 4)).toBe("No risks found; 1 of 4 searches were not available");
+  });
+
+  it("count the searches and the pages that failed together", () => {
+    expect(searchesAndPagesFailedNote(1, 4, 2, 5)).toBe(
+      "No risks found; 1 of 4 searches were not available and 2 of 5 pages could not be read",
+    );
   });
 });
 
@@ -305,6 +316,97 @@ describe("summariseCategories", () => {
     });
   });
 
+  // The news of a category is what its searches bring: pages that were read next to searches that
+  // failed do not make "no risks found" a true sentence for it.
+  describe("a news category whose search was not available", () => {
+    it("is search_failed when every search failed, though a page of it was read", () => {
+      expect(
+        securityWith([
+          searchFailed("security_incidents"),
+          searchFailed("security_incidents"),
+          read("security_incidents"),
+        ]),
+      ).toEqual({
+        category: "security_incidents",
+        outcome: "search_failed",
+        note: "The search was not available",
+      });
+    });
+
+    it("is search_failed also when the model proposed a risk in it", () => {
+      expect(
+        securityWith(
+          [
+            searchFailed("security_incidents"),
+            searchFailed("security_incidents"),
+            read("security_incidents"),
+          ],
+          { proposed: new Set<ResearchCategory>(["security_incidents"]) },
+        ),
+      ).toEqual({
+        category: "security_incidents",
+        outcome: "search_failed",
+        note: "The search was not available",
+      });
+    });
+
+    it("still counts its kept findings", () => {
+      expect(
+        securityWith(
+          [
+            searchFailed("security_incidents"),
+            searchFailed("security_incidents"),
+            read("security_incidents"),
+          ],
+          { kept: [keptIn("security_incidents")] },
+        ),
+      ).toEqual({
+        category: "security_incidents",
+        outcome: "findings",
+        note: "1 potential risk found",
+      });
+    });
+
+    it.each([
+      "security_incidents",
+      "legal_regulatory",
+      "availability",
+      "financial_health",
+    ] as const)("is the same for %s", (category) => {
+      const entry = entryFor(
+        summarise({ calls: [searchFailed(category), read(category)] }),
+        category,
+      );
+
+      expect(entry).toEqual({
+        category,
+        outcome: "search_failed",
+        note: "The search was not available",
+      });
+    });
+
+    it("is not this rule for a site category: certifications counts the searches", () => {
+      const entry = entryFor(
+        summarise({ calls: [searchFailed("certifications"), read("certifications")] }),
+        "certifications",
+      );
+
+      expect(entry).toEqual({
+        category: "certifications",
+        outcome: "nothing_found",
+        note: "No risks found; 1 of 1 searches were not available",
+      });
+    });
+
+    it("does not apply to a news category that made no search, only reads", () => {
+      expect(securityWith([read("security_incidents")])).toEqual({
+        category: "security_incidents",
+        outcome: "nothing_found",
+        note: "No risks found in the sources reviewed",
+      });
+    });
+  });
+
   describe("a category that the web answered", () => {
     it("found nothing when the model proposed nothing and wrote no note", () => {
       expect(securityWith([searched("security_incidents"), read("security_incidents")])).toEqual({
@@ -322,13 +424,13 @@ describe("summariseCategories", () => {
       });
     });
 
-    it("found nothing next to a failed search, as long as another call was answered", () => {
+    it("counts the searches that were not available next to an answered one", () => {
       expect(
         securityWith([searchFailed("security_incidents"), searched("security_incidents")]),
       ).toEqual({
         category: "security_incidents",
         outcome: "nothing_found",
-        note: "No risks found in the sources reviewed",
+        note: "No risks found; 1 of 2 searches were not available",
       });
     });
 
@@ -340,8 +442,7 @@ describe("summariseCategories", () => {
         read("security_incidents"),
         readFailed("security_incidents", "unreachable"),
         read("security_incidents"),
-        // A failed search is no page, and a page of another category is not counted.
-        searchFailed("security_incidents"),
+        // A page of another category is not counted.
         readFailed("legal_regulatory"),
       ]);
 
@@ -349,6 +450,40 @@ describe("summariseCategories", () => {
         category: "security_incidents",
         outcome: "nothing_found",
         note: "No risks found; 2 of 5 pages could not be read",
+      });
+    });
+
+    it("counts both the searches and the pages that failed", () => {
+      const entry = securityWith([
+        searched("security_incidents"),
+        read("security_incidents"),
+        readFailed("security_incidents", "blocked_by_site"),
+        read("security_incidents"),
+        readFailed("security_incidents", "unreachable"),
+        read("security_incidents"),
+        searchFailed("security_incidents"),
+        readFailed("legal_regulatory"),
+      ]);
+
+      expect(entry).toEqual({
+        category: "security_incidents",
+        outcome: "nothing_found",
+        note: "No risks found; 1 of 2 searches were not available and 2 of 5 pages could not be read",
+      });
+    });
+
+    it("says the possible risks were not confirmed even when a search of the category failed, as long as one answered", () => {
+      const entry = securityWith(
+        [searchFailed("security_incidents"), searched("security_incidents")],
+        {
+          proposed: new Set<ResearchCategory>(["security_incidents"]),
+        },
+      );
+
+      expect(entry).toEqual({
+        category: "security_incidents",
+        outcome: "nothing_found",
+        note: "Possible risks were found but could not be verified or are already recorded",
       });
     });
 
@@ -434,6 +569,15 @@ describe("summariseCategories", () => {
       expect(entry.note).toBe("No risks found; 1 of 2 pages could not be read");
     });
 
+    it("still counts the searches that were not available, which is more than 'nothing new'", () => {
+      const entry = securityWith(
+        [searchFailed("security_incidents"), searched("security_incidents")],
+        fresh(),
+      );
+
+      expect(entry.note).toBe("No risks found; 1 of 2 searches were not available");
+    });
+
     it("keeps the count of the findings, and the sentences of a category that was not researched or could not be", () => {
       const summary = summarise({
         calls: [searched("security_incidents"), searchFailed("certifications")],
@@ -513,6 +657,15 @@ describe("summariseCategories", () => {
       expect(entry.note).toBe("No risks found; 1 of 2 pages could not be read");
     });
 
+    it("is ignored next to a search that was not available", () => {
+      const entry = withNote("Nothing to see here.", [
+        searched("security_incidents"),
+        searchFailed("security_incidents"),
+      ]);
+
+      expect(entry.note).toBe("No risks found; 1 of 2 searches were not available");
+    });
+
     it("is ignored when the model proposed a risk in the category", () => {
       const entry = securityWith([searched("security_incidents")], {
         proposed: new Set<ResearchCategory>(["security_incidents"]),
@@ -546,7 +699,12 @@ describe("workedCategories", () => {
 
   it("leaves out a category whose calls the session refused, since a refusal is never a call", async () => {
     const session = createWebSession<ResearchCategory>({
-      engine: { search: async () => [] },
+      engine: {
+        id: "replay",
+        kinds: ["web", "news"],
+        newsWindowMonths: null,
+        search: async () => [],
+      },
       readPage: async () => {
         throw new Error("a refused read never reaches the reader");
       },

@@ -26,7 +26,6 @@ const CONFIG: VendorResearchConfig = {
   workerConcurrency: 5,
   headless: false,
   records: true,
-  vrdb: true,
 };
 
 const TARGET = { name: "Acme Analytics", domain: "acme-analytics.example", provides: "" };

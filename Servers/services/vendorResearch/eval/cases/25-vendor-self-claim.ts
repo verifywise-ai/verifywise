@@ -64,7 +64,6 @@ export const VENDOR_SELF_CLAIM: EvalCase = {
           risk_severity: "Moderate",
           action_plan:
             "Ask the vendor for its ISO 27001 certificate, the scope it covers and the name of the certification body.",
-          confidence: "medium",
           rationale: "The claim comes from the vendor alone, and nothing independent confirms it.",
           evidence: [
             {

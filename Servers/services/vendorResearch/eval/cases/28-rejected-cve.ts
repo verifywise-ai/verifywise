@@ -85,7 +85,6 @@ export const REJECTED_CVE: EvalCase = {
           risk_severity: "Major",
           action_plan:
             "Find out whether we run LarkOS gateways, apply the vendor's update and keep their web consoles off the internet.",
-          confidence: "medium",
           rationale:
             "The catalog lists only flaws that are exploited, but it concerns a product and nothing says our gateways are affected.",
           evidence: [

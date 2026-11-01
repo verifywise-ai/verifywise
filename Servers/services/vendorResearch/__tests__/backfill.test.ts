@@ -19,6 +19,7 @@ import {
 import { credibilityOf } from "../credibility";
 import { filingUrl } from "../records/sec";
 import { statusHostsOf } from "../records/statuspage";
+import { REGISTRY_VERSION } from "../sourceRegistry/entries";
 import type { ResearchTarget } from "../target";
 import type { TraceStep } from "../trace";
 import { ofacEntryUrl } from "../vrdb/connectors/ofac";
@@ -100,7 +101,11 @@ describe("backfillCredibilityOf", () => {
 
     expect(decided).toMatchObject({
       credibility: "high",
-      basis: { rule: "backfill_official_page", registry_version: "sr-4", name_only: false },
+      basis: {
+        rule: "backfill_official_page",
+        registry_version: REGISTRY_VERSION,
+        name_only: false,
+      },
     });
   });
 
@@ -176,10 +181,105 @@ describe("backfillCredibilityOf", () => {
       target: ACME_WITH_CIK,
     });
 
-    expect(live).toMatchObject({ label: "low", basis: { rule: "self_claim" } });
+    // Nobody told the rule who filed it (Q28), so it is the filer's document and unverified.
+    expect(live).toMatchObject({ label: "low", basis: { rule: "unverified" } });
     expect(backfill({ finding, evidence, target: ACME_WITH_CIK })).toMatchObject({
       credibility: "low",
-      basis: { rule: "backfill_self_claim", name_only: false },
+      basis: { rule: "backfill_unverified", name_only: false },
+    });
+  });
+
+  describe("a filing under the stored CIK that the research read as a page (Q28)", () => {
+    // The backfill makes no request, so it never learns who filed: such a filing is unverified.
+    // Another category than the lookup's, so that this is a page the research found itself.
+    const url = filing("320193");
+    const finding = legacy({ category: "legal_regulatory", cited: [url] });
+    const evidence: EvidenceSource[] = [{ ...packed(url), category: "legal_regulatory" }];
+
+    it("is unverified and downgraded, where a run that knew the vendor filed it says its statement", () => {
+      const known = credibilityOf({
+        finding,
+        pack: evidence,
+        provenance: new Map([[url, { edgarFiler: "vendor" as const }]]),
+        verdict: null,
+        target: ACME_WITH_CIK,
+      });
+      expect(known).toMatchObject({ label: "high", basis: { rule: "vendor_statement" } });
+
+      const decided = backfill({ finding, evidence, target: ACME_WITH_CIK });
+
+      expect(decided).toMatchObject({
+        credibility: "low",
+        basis: { rule: "backfill_unverified", name_only: false },
+      });
+      expect(
+        decided?.basis.rule !== "legacy_confidence" && decided?.basis.sources[0],
+      ).toMatchObject({
+        category: "unverified",
+        entry: "sec",
+        downgraded: true,
+        reading: "read",
+      });
+      expect(
+        decided?.basis.rule !== "legacy_confidence" && decided?.basis.sources[0],
+      ).not.toHaveProperty("record");
+    });
+
+    it("is the same for a filing the run read as a search result", () => {
+      const snippet: EvidenceSource[] = [
+        { ...packed(url, "result"), category: "legal_regulatory" },
+      ];
+
+      expect(backfill({ finding, evidence: snippet, target: ACME_WITH_CIK })).toMatchObject({
+        credibility: "low",
+        basis: { rule: "backfill_unverified" },
+      });
+    });
+
+    it("is the same through the viewers of the SEC", () => {
+      for (const viewed of [
+        "https://www.sec.gov/ix?doc=/Archives/edgar/data/320193/000032019326000001/acme-8k.htm",
+        "https://www.sec.gov/cgi-bin/viewer?action=view&cik=320193&accession_number=0000320193-26-000001",
+      ]) {
+        expect(
+          backfill({
+            finding: legacy({ category: "legal_regulatory", cited: [viewed] }),
+            evidence: [{ ...packed(viewed), category: "legal_regulatory" }],
+            target: ACME_WITH_CIK,
+          }),
+        ).toMatchObject({ credibility: "low", basis: { rule: "backfill_unverified" } });
+      }
+    });
+
+    it("keeps the strength of a per-run SEC record, which the lookup stored under its own category", () => {
+      // The same address, stored by the per-run lookup as a page of security incidents: a record
+      // of the vendor's CIK, strong (Q3). The backfill reads it as it always did.
+      const decided = backfill({
+        finding: legacy({ category: "security_incidents", cited: [url] }),
+        evidence: [packed(url)],
+        target: ACME_WITH_CIK,
+      });
+
+      expect(decided).toMatchObject({
+        credibility: "high",
+        basis: { rule: "backfill_official_record", name_only: false },
+      });
+      expect(
+        decided?.basis.rule !== "legacy_confidence" && decided?.basis.sources[0],
+      ).toMatchObject({
+        category: "official",
+        record: { source: "sec", match: "strong" },
+      });
+    });
+
+    it("keeps a per-run SEC record that was stored as no entry at all, by its address", () => {
+      expect(
+        backfill({
+          finding: legacy({ category: "security_incidents", cited: [url] }),
+          evidence: null,
+          target: ACME_WITH_CIK,
+        }),
+      ).toMatchObject({ credibility: "medium", basis: { rule: "backfill_capped_unconfirmed" } });
     });
   });
 

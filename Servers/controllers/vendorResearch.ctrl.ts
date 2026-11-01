@@ -45,6 +45,7 @@ import {
   FindingStatus,
   IVendorResearchRun,
   IVendorRiskFinding,
+  LEGACY_CONFIDENCE_RULE,
   SCAN_INTERVAL_DAYS,
 } from "../domain.layer/interfaces/i.vendorResearch";
 
@@ -82,6 +83,7 @@ type RunResponse = Pick<
   | "categories"
   | "category_summary"
   | "coverage"
+  | "search_engine"
   | "searches_used"
   | "pages_read"
   | "duplicates_dropped"
@@ -98,7 +100,8 @@ type RunResponse = Pick<
  * audit trail, not part of the API, so a field is added here on purpose or not at all. `progress`
  * is on purpose: it holds counts and closed words only (see `RunProgress`), and every role that
  * sees the run sees what it is doing. So is `coverage`: the lists the run checked, their names,
- * attributions and dates, and counts.
+ * attributions and dates, and counts. So is `search_engine`: one of three closed words, which the
+ * run summary words, and with which it credits the GDELT Project, as that project's terms ask.
  */
 const toRunResponse = (run: IVendorResearchRun): RunResponse => ({
   id: run.id,
@@ -108,6 +111,8 @@ const toRunResponse = (run: IVendorResearchRun): RunResponse => ({
   categories: run.categories,
   category_summary: run.category_summary,
   coverage: run.coverage,
+  // A run from before the column, and a row built by hand, have none.
+  search_engine: run.search_engine ?? null,
   searches_used: run.searches_used,
   pages_read: run.pages_read,
   duplicates_dropped: run.duplicates_dropped,
@@ -119,6 +124,15 @@ const toRunResponse = (run: IVendorResearchRun): RunResponse => ({
 });
 
 /**
+ * The line of a label that is the earlier confidence of a finding: a finding of a run before the
+ * credibility rule, which the findings queries give its confidence as the label and the basis
+ * `{ "rule": "legacy_confidence" }` (utils/vendorResearch.utils.ts), or which the backfill gave the
+ * same basis. No rule decided it, so it has no rule's sentence; every such finding gets this one.
+ */
+const LEGACY_RATIONALE =
+  "Rated before the source rules; this is the earlier confidence level until the label is recomputed.";
+
+/**
  * A finding as it leaves the server: its row, and the English line of its credibility label
  * (spec D5.5) for the clients that do not translate the basis; null for a finding without one.
  */
@@ -126,7 +140,12 @@ const withRationale = <T extends IVendorRiskFinding>(
   finding: T,
 ): T & { credibility_rationale: string | null } => {
   const basis = finding.credibility_basis ?? null;
-  const line = basis === null ? "" : credibilityRationale(basis);
+  const line =
+    basis === null
+      ? ""
+      : basis.rule === LEGACY_CONFIDENCE_RULE
+        ? LEGACY_RATIONALE
+        : credibilityRationale(basis);
   return { ...finding, credibility_rationale: line === "" ? null : line };
 };
 

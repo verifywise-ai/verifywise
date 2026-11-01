@@ -32,8 +32,9 @@ export type RecordSourceId = (typeof RECORD_SOURCE_IDS)[number];
 /**
  * The lists the vendor risk database mirrors, and the databases it reads through (the NVD, the
  * SEC), in services/vendorResearch/vrdb: their records are looked up in the database, not on the
- * web, when the VENDOR_RESEARCH_VRDB flag is on. A list behind a closed gate (vrdb/gates.ts: sec,
- * cve, un_sanctions) is neither copied nor looked up.
+ * web, unless an operator turned the records off (VENDOR_RESEARCH_RECORDS). A list behind a closed
+ * gate (vrdb/gates.ts) is neither copied nor looked up. Q4 (sec) and Q7 (cve) are open, so only
+ * un_sanctions waits for its gate, Q6.
  */
 export const VRDB_SOURCE_IDS = [
   "kev",
@@ -150,9 +151,9 @@ export interface EvidenceSource {
 }
 
 /**
- * A source a finding cites; stored in the finding's `sources` column. A run of the vendor risk
- * database (the VENDOR_RESEARCH_VRDB flag) also stores what the credibility rule found it to be;
- * a finding from another run has none of those fields.
+ * A source a finding cites; stored in the finding's `sources` column. A run also stores what the
+ * credibility rule found the source to be; a finding from a run before the rule has none of those
+ * fields.
  */
 export interface FindingSource {
   url: string;
@@ -175,6 +176,11 @@ export interface FindingSource {
   };
 }
 
+/**
+ * The level a finding of a run before the credibility label was given, which no run writes any
+ * more. It is kept to read (see `IVendorRiskFinding.confidence`) until the contract migration drops
+ * the column (M3, Part B2).
+ */
 export type FindingConfidence = "low" | "medium" | "high";
 export type FindingStatus = "pending" | "accepted" | "dismissed";
 
@@ -323,6 +329,16 @@ export interface RunProgress {
   updatedAt: string;
 }
 
+/**
+ * The search a run's searches went to, as the run records it: Claude's own web search
+ * (`anthropic`), the web search of OpenAI (`openai`, which no run uses yet: its keys search the
+ * news today), or the news of the GDELT Project (`gdelt`: the search of every key with no search of
+ * its own, and where a run of an Anthropic key goes once the key is refused a search). The CHECK
+ * constraint of `vendor_research_runs.search_engine` holds the same three words.
+ */
+export const RUN_SEARCH_ENGINES = ["anthropic", "openai", "gdelt"] as const;
+export type RunSearchEngine = (typeof RUN_SEARCH_ENGINES)[number];
+
 /** A row of `vendor_research_runs`. */
 export interface IVendorResearchRun {
   id: number;
@@ -352,11 +368,18 @@ export interface IVendorResearchRun {
   requested_by: number | null;
   /**
    * What a run of the vendor risk database checked and what its findings cite; null for a run
-   * without the flag, and for one that has not ended.
+   * from before the database, and for one that has not ended.
    */
   coverage: RunCoverage | null;
   /** The version of the source registry that classified the run's sources; null as `coverage`. */
   registry_version: string | null;
+  /**
+   * The search the run's searches went to; null for a run that searched nothing, one none of whose
+   * searches was answered (it received no news, so it claims no engine), one that has not ended,
+   * and one from before the column. The queries always give it. It is optional only so that
+   * a run built by hand, such as a fixture of a test, need not carry it.
+   */
+  search_engine?: RunSearchEngine | null;
   created_at: Date;
   started_at: Date | null;
   finished_at: Date | null;
@@ -376,10 +399,27 @@ export interface IVendorRiskFinding {
   risk_severity: IVendorRisk["risk_severity"];
   /** For example "High Risk". */
   risk_level: string;
-  confidence: FindingConfidence;
+  /**
+   * The level the finding was given before the credibility label, read-only: no run writes it any
+   * more (the column stays, nullable, until the contract migration), so a finding of a run since
+   * has null. It is read by the two callers that still need it:
+   *
+   * - the findings queries, which name the column so that the read-time fallback
+   *   (utils/vendorResearch.utils.ts: `COALESCE(credibility, confidence)`) and clients that have
+   *   not moved yet still get it;
+   * - the backfill (services/vendorResearch/backfill.ts and utils/vendorResearchBackfill.utils.ts),
+   *   which carries it over as the label of a finding a person decided.
+   *
+   * The golden set scores the label (`credibility`) of one run per vendor and reads no confidence.
+   *
+   * Optional, so that a finding built by hand need not carry it.
+   */
+  confidence?: FindingConfidence | null;
   /**
    * How well the cited sources establish the facts, computed by code (see `CredibilityLabel`), and
-   * why: null for a finding of a run without the vendor risk database flag.
+   * why. A finding of a run before the rule has neither in the table; the findings queries then
+   * give it its `confidence` as the label and `{ rule: "legacy_confidence" }` as the basis, so
+   * only a row with neither reads null.
    */
   credibility: CredibilityLabel | null;
   credibility_basis: StoredCredibilityBasis | null;
@@ -408,9 +448,10 @@ export interface IVendorRiskFinding {
 }
 
 /**
- * The columns of a finding that the model produces; the rest is set by the system. `snippet_only`
- * is set by the check after the analysis, and absent means false; the credibility label and its
- * basis are set by code under the vendor risk database flag, and absent means null.
+ * The columns of a finding that the model produces; the rest is set by the system. There is no
+ * confidence: nothing writes it any more. `snippet_only` is set by the check after the analysis,
+ * and absent means false; the credibility label and its basis are set by code, and absent means
+ * null.
  */
 export type NewFinding = Pick<
   IVendorRiskFinding,
@@ -421,7 +462,6 @@ export type NewFinding = Pick<
   | "likelihood"
   | "risk_severity"
   | "risk_level"
-  | "confidence"
   | "rationale"
   | "sources"
 > &

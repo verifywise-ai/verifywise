@@ -12,6 +12,34 @@
  * of M1 named: EDGAR's viewers, the portal's download host and CourtListener's document pages.
  * Version sr-4 (2026-10-31, M2) makes an EDGAR filing under the CIK a person stored for the vendor
  * the vendor's own word, in the archive and in the viewers (classify.ts, step 5).
+ * Version sr-5 (2026-10-31) answers Q8, the government domains: the pattern that took any `gov`,
+ * `govt`, `gouv`, `gob` or `gv` label before a country code for a government's is gone, since 87%
+ * of the 1,240 names it matched were ordinary registrations. A government domain is official only
+ * when a page of its registry, its regulator or its holder was read: `.mil` is now V, and
+ * gov-sld-q8, gov-de-facto-q8, gov-held and gov-co hold the names that were read. govt.nz, go.ke,
+ * go.ug, gov.ug and gov.ie have no entry, so their hosts are unknown until a person reads their
+ * rule.
+ * Version sr-5 also answers Q9, the trusted press, under a ruling on evidence (2026-10-31): a page
+ * counts as evidence only when its site's robots.txt does not bar Anthropic's agents. The entries
+ * bbc, theguardian, usatoday, cnbc, smh, bloomberg, washingtonpost, forbes, cbc, darkreading and
+ * scworld take the reason, the evidence and the paths to downgrade that Q9 gives them, except that
+ * the evidence of theguardian is its editorial code alone, since theguardian.com bars Claude-User.
+ * thehackernews is unverified: no standards or corrections page of it was seen. npr, cnn, cnet,
+ * axios and spiegel stay as sr-4 had them, whatever Q9 says, and so do the other 31 publishers
+ * carried over, with their review of 2026-10-29.
+ * Version sr-5 also widens rule V (2026-11-01), which says which pages of a vendor's own site are
+ * its statements: the section is now read after `intl` and a locale and after `company`, `about`,
+ * `about-us` or `corporate` (`/intl/en-us/legal`, `/company/trust`); `privacypolicy`,
+ * `termsofservice`, `termsofuse` and `website-terms` count as sections; and a page with a section
+ * of the newsroom (NEWSROOM_SECTIONS) is still never one.
+ * Version sr-5 also answers Q28 (recommendation accepted 2026-10-31): the folder of an EDGAR
+ * filing is every party's, so sr-4's rule is narrowed. A filing under the CIK a person stored for
+ * the vendor is the vendor's own word only when the header of the filing names that CIK as a
+ * filer, a filer on behalf of another or a reporting owner (edgarFiler.ts). A filing in which it is
+ * only the subject company or the issuer, one in which it does not appear, and one whose filer
+ * nobody asked or the SEC could not say, take the downgrade of the archive and the viewers that
+ * every other filing has (classify.ts, steps 5 and 6). The records of the SEC's database keep
+ * their strength (Q3), and the backfill, which makes no request, reads such a filing as unverified.
  *
  * An entry is added or changed only in a pull request that gives its reason, its evidence and a
  * review date, and every change gives the registry a new `REGISTRY_VERSION`, which a run stores so
@@ -25,7 +53,7 @@
  */
 import type { SourceCategory } from "../../../domain.layer/interfaces/i.vendorResearch";
 
-export const REGISTRY_VERSION = "sr-4";
+export const REGISTRY_VERSION = "sr-5";
 
 /**
  * G1: the path segments that hold opinion, paid content or press releases on any trusted press
@@ -69,9 +97,13 @@ export const GENERIC_DOWNGRADE_HOST_LABELS: readonly string[] = [
 
 /**
  * Rule V (spec D5.4): the sections of a vendor's site where it states what binds it or reports
- * about itself. A page is one when the first segment of its path, after a locale (`en`, `en-us`),
- * is one of these words, alone or followed by `-`, `_` or `.` (`/trust-center`, `/legal/ai-use`,
- * `/privacy.html`), or when the first label of its host is one of STATEMENT_HOST_LABELS.
+ * about itself. A page is one when its section is one of these words, alone or followed by `-`,
+ * `_` or `.` (`/trust-center`, `/legal/ai-use`, `/privacy.html`), or when the first label of its
+ * host is one of STATEMENT_HOST_LABELS. The section is the first segment of the path, after a
+ * locale (`en`, `en-us`) or `intl` and a locale, and after `company`, `about`, `about-us` or
+ * `corporate` when the path starts with one of them (`isStatementPage`, classify.ts).
+ * `privacypolicy`, `termsofservice`, `termsofuse` and `website-terms` (sr-5) are the run-together
+ * names that some sites give their policies and terms.
  */
 export const STATEMENT_SECTIONS: readonly string[] = [
   "trust",
@@ -79,7 +111,11 @@ export const STATEMENT_SECTIONS: readonly string[] = [
   "security",
   "legal",
   "privacy",
+  "privacypolicy",
   "terms",
+  "termsofservice",
+  "termsofuse",
+  "website-terms",
   "tos",
   "policy",
   "policies",
@@ -148,8 +184,6 @@ export interface RegistryEntry {
   hosts: readonly string[];
   /** The hosts are reviewed public suffixes, such as "gov.uk"; checked after every host entry. */
   suffix?: true;
-  /** Further suffixes by their shape; checked after every suffix. Only O9 has one. */
-  pattern?: RegExp;
   category: Exclude<SourceCategory, "vendor">;
   flags?: ReadonlyArray<"syndicated" | "blocked">;
   /**
@@ -185,6 +219,9 @@ const REVIEWED = "2026-10-29";
  */
 const REVIEWED_SR3 = "2026-10-31";
 
+/** The day the entries that sr-5 added or changed were reviewed. */
+const REVIEWED_SR5 = "2026-10-31";
+
 /** A trusted press entry whose publisher's pages could not be read: kept from today's list (Q9). */
 const carriedOver = (id: string, hosts: readonly string[], publisher?: string): RegistryEntry => ({
   id,
@@ -214,10 +251,15 @@ const OFFICIAL: readonly RegistryEntry[] = [
     hosts: ["mil"],
     suffix: true,
     category: "official",
-    reason: "US military; only the IANA record could be read",
-    status: "U",
-    evidence: ["https://www.iana.org/domains/root/db/mil.html"],
-    reviewed: REVIEWED,
+    reason:
+      "US Department of Defense: run by the DoD Network Information Center, and its names fall within DoD jurisdiction",
+    status: "V",
+    evidence: [
+      "https://www.iana.org/domains/root/db/mil.html",
+      "https://www.rfc-editor.org/rfc/rfc2146.txt",
+      "https://get.gov/",
+    ],
+    reviewed: REVIEWED_SR5,
   },
   {
     id: "int",
@@ -299,17 +341,97 @@ const OFFICIAL: readonly RegistryEntry[] = [
     ],
     reviewed: REVIEWED,
   },
+  // Q8 (sr-5): the four entries below replace gov-unverified, which took the carried-over hosts and
+  // every `gov`, `govt`, `gouv`, `gob` or `gv` label before a country code for a government's. A
+  // name is here only when a page of its registry, its regulator or its holder was read, and they
+  // are kept apart from gov-sld and gov-de-facto so that the review dates of those two are not
+  // reset. govt.nz, go.ke, go.ug, gov.ug and gov.ie are not here: nothing was read that states who
+  // may hold a name under them, so their hosts are unknown.
   {
-    id: "gov-unverified",
-    hosts: ["bund.de", "gc.ca", "govt.nz", "gov.br", "go.id", "go.th", "go.ke", "go.tz", "go.ug"],
+    // The registry's list for gov.br says federal institutions; the states' zones under it
+    // (sp.gov.br) are state governments, whose own rule was not read.
+    id: "gov-sld-q8",
+    hosts: [
+      "gov.br",
+      "go.id",
+      "go.th",
+      "go.tz",
+      "gov.sg",
+      "gov.my",
+      "gov.pk",
+      "gob.pk",
+      "gov.lk",
+      "gov.za",
+      "gov.pl",
+      "gov.hk",
+      "gob.gt",
+    ],
     suffix: true,
-    // The rest of today's rule: a government label before a country code (Q8).
-    pattern: /(?:^|\.)(?:gov|govt|gouv|gob|gv)\.[a-z]{2}$/,
     category: "official",
-    reason: "Carried over; the restriction could not be checked",
-    status: "U",
-    evidence: [],
-    reviewed: REVIEWED,
+    reason:
+      "Government second-level domains restricted by their registries or regulators: gov.br to federal institutions, go.id to state institutions, go.th to government agencies, go.tz to government entities, gov.sg to government bodies, gov.my to government organisations, gov.pk to the Federal Government of Pakistan, gob.pk to the Government of Balochistan, gov.lk to government organisations and departments, gov.za to government entities, gov.pl to public authorities (not municipalities), professional self-government bodies and units under the Prime Minister or ministers, gov.hk to bureaux and departments of the HKSAR Government, gob.gt to government agencies",
+    status: "V",
+    evidence: [
+      "https://registro.br/dominio/categorias/",
+      "https://www.cgi.br/resolucoes/documento/2017/031",
+      "https://pandi.id/public/files/2024/2/a-pm-232013-pengelolaan-nama-domain-1709175239.pdf",
+      "https://pandi.id/public/files/2024/2/a-pm-052015-registrar-nama-domain-instansi-penyelenggara-negara-1709175259.pdf",
+      "https://pandi.id/public/files/2024/10/kebijakan-pendaftaran-nama-domain-versi-9-0-bilingual-new-1729151599.pdf",
+      "https://www.thnic.co.th/gov",
+      "https://www.tcra.go.tz/faq",
+      "https://www.iana.org/domains/root/db/tz.html",
+      "https://www.sgnic.sg/domain-registration/sg-categories-rules",
+      "https://mynic.my/resources/domains/buying-a-domain",
+      "https://www.pknic.net.pk/gov-requirements.html",
+      "https://www.domains.lk/lk-domain-naming-structure/",
+      "https://zadna.org.za/nic-home",
+      "https://www.dns.pl/informacje_o_rejestracji_domen_gov_pl",
+      "https://www.hkirc.hk/en/our-services-support/domain-services/eligibility-required-documents/",
+      "https://www.gt/sitio/registration_policy.php?lang=en",
+    ],
+    reviewed: REVIEWED_SR5,
+  },
+  {
+    id: "gov-de-facto-q8",
+    hosts: ["gc.ca", "gov.de"],
+    suffix: true,
+    category: "official",
+    reason:
+      "Government domains held by the state itself: gc.ca is held by Shared Services Canada, and new subdomains go through the government's Central Domain Registry Service; gov.de is allocated under control to federal, state and local services by the federal digital ministry's Digitale Dachmarke",
+    status: "V",
+    evidence: [
+      "https://www.canada.ca/en/government/system/digital-government/policies-standards/enterprise-it-service-common-configurations/dns.html",
+      "https://rdap.ca.fury.ca/rdap/domain/gc.ca",
+      "https://design.canada.ca/specifications/mandatory-elements/domains-urls.html",
+      "https://dachmarke.gov.de/",
+    ],
+    reviewed: REVIEWED_SR5,
+  },
+  {
+    id: "gov-held",
+    hosts: ["bund.de", "gov.fi"],
+    suffix: true,
+    category: "official",
+    reason:
+      "Domains that a national government holds, with no rule on who gets names under them read: bund.de, whose portal is published by a federal ministry, and gov.fi, which the registry records as held by the Finnish Prime Minister's Office",
+    status: "P",
+    evidence: [
+      "https://verwaltung.bund.de/portal/EN/impressum",
+      "https://www.bund.de/",
+      "https://rdap.fi/rdap/rdap/domain/gov.fi",
+    ],
+    reviewed: REVIEWED_SR5,
+  },
+  {
+    id: "gov-co",
+    hosts: ["gov.co"],
+    suffix: true,
+    category: "official",
+    reason:
+      "Restricted .CO name for Colombian institutions, registered on supporting documents (operator Puntoco); government-only is not stated",
+    status: "P",
+    evidence: ["https://www.registrocolombia.co/"],
+    reviewed: REVIEWED_SR5,
   },
   {
     id: "ico",
@@ -490,7 +612,17 @@ const TRUSTED_PRESS: readonly RegistryEntry[] = [
     reviewed: REVIEWED,
   },
   carriedOver("apnews", ["apnews.com"], "AP"),
-  carriedOver("bbc", ["bbc.com", "bbc.co.uk"], "BBC"),
+  {
+    id: "bbc",
+    hosts: ["bbc.com", "bbc.co.uk"],
+    category: "trusted_press",
+    publisher: "BBC",
+    reason:
+      "News pages link to an editorial complaints route and the BBC's editorial guidelines, and name a publishing-principles page; the guidelines themselves could not be read",
+    status: "P",
+    evidence: ["https://www.bbc.co.uk/news/articles/c629pny4gl7o"],
+    reviewed: REVIEWED_SR5,
+  },
   carriedOver("nytimes", ["nytimes.com"]),
   carriedOver("wsj", ["wsj.com"]),
   carriedOver("ft", ["ft.com"]),
@@ -498,22 +630,45 @@ const TRUSTED_PRESS: readonly RegistryEntry[] = [
     id: "bloomberg",
     hosts: ["bloomberg.com"],
     category: "trusted_press",
-    reason: "A standards inbox for corrections; The Bloomberg Way guide for reporters and editors",
+    downgrade: [{ pathSegment: "sponsor" }, { pathSegment: "sponsors" }],
+    reason:
+      "A standards inbox for corrections; The Bloomberg Way guide for reporters and editors (search summary only)",
     status: "S",
-    evidence: ["https://www.bloomberg.com/help/question/submit-feedback-news-coverage/"],
-    reviewed: REVIEWED,
+    evidence: [
+      "https://www.bloomberg.com/help/question/submit-feedback-news-coverage/",
+      "https://www.bloomberg.com/robots.txt",
+    ],
+    reviewed: REVIEWED_SR5,
   },
   carriedOver("economist", ["economist.com"]),
-  carriedOver("theguardian", ["theguardian.com"]),
+  {
+    id: "theguardian",
+    hosts: ["theguardian.com"],
+    category: "trusted_press",
+    publisher: "The Guardian",
+    downgrade: [{ pathSegment: "commentisfree" }],
+    reason:
+      "GNM editorial code: significant errors are corrected promptly through the readers' editor, the code binds external contributors too, and commercial teams make paid content; Opinion sits under /commentisfree",
+    status: "V",
+    // The code only: theguardian.com bars Claude-User, so the article q9 cited is not evidence.
+    evidence: [
+      "https://uploads.guim.co.uk/2026/03/03/Editorial_Code_of_Practice_Guidelines_March2026.pdf",
+    ],
+    reviewed: REVIEWED_SR5,
+  },
   {
     id: "washingtonpost",
     hosts: ["washingtonpost.com"],
     category: "trusted_press",
+    downgrade: [{ pathSegment: "creativegroup" }],
     reason:
-      "Policies and standards: every error is corrected and the correction says what was wrong",
+      "Policies and standards: every error is corrected and the correction says what was wrong (search summary only)",
     status: "S",
-    evidence: ["https://www.washingtonpost.com/policies-and-standards/"],
-    reviewed: REVIEWED,
+    evidence: [
+      "https://www.washingtonpost.com/policies-and-standards/",
+      "https://www.washingtonpost.com/robots.txt",
+    ],
+    reviewed: REVIEWED_SR5,
   },
   {
     id: "cnn",
@@ -575,7 +730,17 @@ const TRUSTED_PRESS: readonly RegistryEntry[] = [
     evidence: ["https://www.pbs.org/standards/blogs/standards-memos/issuing-corrections/"],
     reviewed: REVIEWED,
   },
-  carriedOver("usatoday", ["usatoday.com"]),
+  {
+    id: "usatoday",
+    hosts: ["usatoday.com"],
+    category: "trusted_press",
+    publisher: "USA TODAY",
+    reason:
+      "USA TODAY NETWORK ethical principles for newsrooms: accuracy, fairness and independence; errors are corrected promptly and transparently; advertising is kept apart from editorial content",
+    status: "V",
+    evidence: ["https://cm.marconews.com/ethical-conduct/"],
+    reviewed: REVIEWED_SR5,
+  },
   carriedOver("latimes", ["latimes.com"]),
   {
     id: "time",
@@ -600,8 +765,21 @@ const TRUSTED_PRESS: readonly RegistryEntry[] = [
     reviewed: REVIEWED,
   },
   {
-    ...carriedOver("cnbc", ["cnbc.com"]),
-    reason: "Carried over (403 here; per-story correction notices seen)",
+    id: "cnbc",
+    hosts: ["cnbc.com"],
+    category: "trusted_press",
+    publisher: "CNBC",
+    downgrade: [{ pathSegment: "advertorial" }, { pathSegment: "guest-blog" }],
+    reason:
+      "Publishes correction notices under 'CNBC News Corrections', linked from every footer; advertorials are labelled paid posts made without the editorial staff",
+    status: "V",
+    evidence: [
+      "https://www.cnbc.com/correction-where-big-money-investors-are-putting-their-fixed-income-dollars/",
+      "https://www.cnbc.com/corrections/",
+      "https://www.cnbc.com/advertorial/2022/02/17/understanding-the-value-of-branded-content.html",
+      "https://www.cnbc.com/guest-blog/",
+    ],
+    reviewed: REVIEWED_SR5,
   },
   carriedOver("marketwatch", ["marketwatch.com"]),
   carriedOver("barrons", ["barrons.com"]),
@@ -612,16 +790,19 @@ const TRUSTED_PRESS: readonly RegistryEntry[] = [
     downgrade: [
       { pathPrefix: "sites", unless: "sites/forbesstaff" },
       { host: "councils.forbes.com" },
+      { pathSegment: "councils" },
+      { pathSegment: "advisor" },
+      { pathSegment: "vetted" },
     ],
     reason:
-      "Editorial values and standards cover corrections and the contributor network; its terms say non-staff contributors publish on the site; Forbes Councils articles are written by members",
-    status: "S",
+      "Editorial values and standards: corrections when warranted, fact-checking, rules binding staff and contributors; BrandVoice, Councils, Advisor and Vetted listed as partner content",
+    status: "V",
     evidence: [
       "https://www.forbes.com/sites/forbesstaff/article/forbes-editorial-values-and-standards/",
-      "https://www.forbes.com/terms/",
-      "https://councils.forbes.com/blog/how-to-get-your-next-article-published-a-guide",
+      "https://councils.forbes.com/",
+      "https://www.forbes.com/robots.txt",
     ],
-    reviewed: REVIEWED,
+    reviewed: REVIEWED_SR5,
   },
   {
     id: "fortune",
@@ -694,12 +875,13 @@ const TRUSTED_PRESS: readonly RegistryEntry[] = [
     id: "cbc",
     hosts: ["cbc.ca"],
     category: "trusted_press",
-    reason: "CBC/Radio-Canada journalistic standards on corrections",
-    status: "S",
+    reason:
+      "CBC/Radio-Canada Journalistic Standards and Practices: significant errors are corrected promptly, with an explanatory note on the story page online",
+    status: "V",
     evidence: [
       "https://cbc.radio-canada.ca/en/vision/governance/journalistic-standards-and-practices/corrections",
     ],
-    reviewed: REVIEWED,
+    reviewed: REVIEWED_SR5,
   },
   {
     id: "theglobeandmail",
@@ -726,7 +908,16 @@ const TRUSTED_PRESS: readonly RegistryEntry[] = [
     ],
     reviewed: REVIEWED,
   },
-  carriedOver("smh", ["smh.com.au"]),
+  {
+    id: "smh",
+    hosts: ["smh.com.au"],
+    category: "trusted_press",
+    reason:
+      "Nine's governance page: Nine observes the Charter of Editorial Independence for its mastheads, The Sydney Morning Herald among them, and its Metro Publishing business is a member of the Press Council of Australia",
+    status: "V",
+    evidence: ["https://www.nineforbrands.com.au/governance/"],
+    reviewed: REVIEWED_SR5,
+  },
   carriedOver("straitstimes", ["straitstimes.com"]),
   {
     id: "scmp",
@@ -887,20 +1078,30 @@ const TRUSTED_PRESS: readonly RegistryEntry[] = [
     id: "darkreading",
     hosts: ["darkreading.com"],
     category: "trusted_press",
-    reason: "Sponsored content is labelled; commentary is contributed",
-    status: "S",
-    evidence: ["https://www.darkreading.com/about-us"],
-    reviewed: REVIEWED,
+    reason:
+      "Owner Informa TechTarget's editorial page: its editorial content, Dark Reading's network included, is vendor-neutral and apart from business ties; corrections not stated",
+    status: "P",
+    evidence: [
+      "https://www.informatechtarget.com/editorial/",
+      "https://www.darkreading.com/about-us",
+    ],
+    reviewed: REVIEWED_SR5,
   },
   {
     id: "scworld",
     hosts: ["scworld.com"],
     category: "trusted_press",
     downgrade: [{ pathSegment: "perspective" }],
-    reason: "Outside contributors publish Perspectives",
-    status: "S",
-    evidence: ["https://www.scworld.com/contribute"],
-    reviewed: REVIEWED,
+    reason:
+      "Owner CyberRisk Alliance's editorial policy: errors are corrected promptly and openly, sponsored content is clearly identified; outside contributors write Perspectives",
+    status: "V",
+    evidence: [
+      "https://cyberriskalliance.com/editorial-policy",
+      "https://www.cyberriskalliance.com/why-cra",
+      "https://www.cyberriskalliance.com/",
+      "https://www.scworld.com/contribute",
+    ],
+    reviewed: REVIEWED_SR5,
   },
   {
     id: "cyberscoop",
@@ -921,16 +1122,6 @@ const TRUSTED_PRESS: readonly RegistryEntry[] = [
       "Independent since 1998; many contributors are industry leaders; corrections not stated",
     status: "P",
     evidence: ["https://www.helpnetsecurity.com/about-us/"],
-    reviewed: REVIEWED,
-  },
-  {
-    id: "thehackernews",
-    hosts: ["thehackernews.com"],
-    category: "trusted_press",
-    downgrade: [{ pathSegment: "expert-insights" }],
-    reason: "Partner-contributed Expert Insights and sponsored articles",
-    status: "S",
-    evidence: ["https://thehackernews.com/p/about-us.html"],
     reviewed: REVIEWED,
   },
   {
@@ -977,6 +1168,19 @@ const UNVERIFIED: readonly RegistryEntry[] = [
     status: "P",
     evidence: ["https://krebsonsecurity.com/about/"],
     reviewed: REVIEWED,
+  },
+  {
+    // Q9 (sr-5): moved here from the trusted press. No standards or corrections page was seen, and
+    // the site bars automated readers. An unverified entry has nothing to be lowered from, so the
+    // downgrade rule it had is gone.
+    id: "thehackernews",
+    hosts: ["thehackernews.com"],
+    category: "unverified",
+    reason:
+      "No standards or corrections page seen; a search summary shows partner-contributed and sponsored articles; the site blocks automated readers",
+    status: "S",
+    evidence: ["https://thehackernews.com/p/about-us.html", "https://thehackernews.com/robots.txt"],
+    reviewed: REVIEWED_SR5,
   },
   {
     id: "wires",

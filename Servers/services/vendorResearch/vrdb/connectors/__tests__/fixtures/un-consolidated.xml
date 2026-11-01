@@ -1,15 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  A fixture of the UN Security Council Consolidated List, with fictional names. No real list file
-  was read: the UN's pages refused automated readers, so the element names below are UNVERIFIED,
-  and a person checks them against the real XML before the gate (Q6) opens.
+  A fixture of the UN Security Council Consolidated List, with fictional names. Its paths were
+  checked against the real file on 2026-10-31 (generated 2026-10-30, 274 entities): the real
+  entities have every element below, and also NAME_ORIGINAL_SCRIPT, LAST_REVIEWED_ON,
+  HAS_INTERPOL_LINK and INTERPOL_LINK, which the connector does not read. An entity's alias has the
+  QUALITY a.k.a., f.k.a. or none (an alias without a name); Good and Low are the qualities of an
+  individual's alias.
 
-  The paths the connector reads (UNVERIFIED, every field an element unless stated):
+  The paths the connector reads (every field an element unless stated):
     /CONSOLIDATED_LIST                     root, with the attribute dateGenerated (source version)
     /CONSOLIDATED_LIST/INDIVIDUALS         skipped, never read
     /CONSOLIDATED_LIST/ENTITIES/ENTITY     one entity, repeated
       DATAID, FIRST_NAME (the entity's name), UN_LIST_TYPE, REFERENCE_NUMBER, LISTED_ON, COMMENTS1
-      ENTITY_ALIAS/QUALITY, ENTITY_ALIAS/ALIAS_NAME
+      ENTITY_ALIAS/ALIAS_NAME (ENTITY_ALIAS/QUALITY is in the file, and the connector ignores it)
       ENTITY_ADDRESS/COUNTRY
 -->
 <CONSOLIDATED_LIST xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" dateGenerated="2026-10-30T00:00:01.123-04:00">
@@ -45,7 +48,7 @@
         <VALUE>2026-08-03</VALUE>
       </LAST_DAY_UPDATED>
       <ENTITY_ALIAS>
-        <QUALITY>Good</QUALITY>
+        <QUALITY>f.k.a.</QUALITY>
         <ALIAS_NAME>Contoso Shipping Co. Ltd.</ALIAS_NAME>
       </ENTITY_ALIAS>
       <ENTITY_ALIAS>
@@ -53,7 +56,7 @@
         <ALIAS_NAME>CSA &amp; Partners</ALIAS_NAME>
       </ENTITY_ALIAS>
       <ENTITY_ALIAS>
-        <QUALITY>Low</QUALITY>
+        <QUALITY></QUALITY>
         <ALIAS_NAME></ALIAS_NAME>
       </ENTITY_ALIAS>
       <ENTITY_ADDRESS>

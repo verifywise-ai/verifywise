@@ -1,8 +1,8 @@
 /**
  * The worker of the vendor risk database (spec D4.7): it takes the sync jobs one at a time, checks
- * the flags again, and throws for a failed sync so that BullMQ retries it; a sync that changed a
- * status adds the status job of its list, which relabels the pending findings that cite it (Ruling
- * 12 of the M2 plan).
+ * the records switch again (the database has no flag of its own), and throws for a failed sync so
+ * that BullMQ retries it; a sync that changed a status adds the status job of its list, which
+ * relabels the pending findings that cite it (Ruling 12 of the M2 plan).
  */
 const mockWorkerOn = jest.fn();
 
@@ -32,7 +32,6 @@ const config = (overrides: Partial<VendorResearchConfig> = {}): VendorResearchCo
   workerConcurrency: 5,
   headless: false,
   records: true,
-  vrdb: true,
   ...overrides,
 });
 
@@ -43,19 +42,25 @@ const syncOf = (result: SyncResult) => jest.fn().mockResolvedValue(result);
 beforeEach(() => jest.clearAllMocks());
 
 describe("processVrdbJob", () => {
-  it.each([
-    ["the VRDB flag", { vrdb: false }],
-    ["the records", { records: false }],
-  ])("the job does nothing while a flag is off: %s", async (_label, overrides) => {
+  it("the job syncs with no flag set: the database is on unless the records are off", async () => {
     const sync = syncOf({ outcome: "ok" });
 
-    await expect(processVrdbJob(syncJob(), { config: config(overrides), sync })).resolves.toBe(
-      null,
-    );
+    await expect(processVrdbJob(syncJob(), { config: config(), sync })).resolves.toEqual({
+      outcome: "ok",
+    });
+    expect(sync).toHaveBeenCalledWith("kev");
+  });
+
+  it("the job does nothing while the records are off", async () => {
+    const sync = syncOf({ outcome: "ok" });
+
+    await expect(
+      processVrdbJob(syncJob(), { config: config({ records: false }), sync }),
+    ).resolves.toBe(null);
     expect(sync).not.toHaveBeenCalled();
   });
 
-  it.each([["cve"], ["un_sanctions"]])(
+  it.each([["un_sanctions"]])(
     "the job of a list behind a closed gate does nothing: %s",
     async (sourceId) => {
       const sync = syncOf({ outcome: "ok" });
@@ -66,6 +71,19 @@ describe("processVrdbJob", () => {
       expect(sync).not.toHaveBeenCalled();
     },
   );
+
+  it("the job of the CVE records syncs, now that Q7 is open", async () => {
+    const result: SyncResult = {
+      outcome: "ok",
+      counts: { seen: 393, inserted: 12, updated: 4, statusChanged: 0 },
+    };
+    const sync = syncOf(result);
+
+    await expect(
+      processVrdbJob(syncJob({ sourceId: "cve" }), { config: config(), sync }),
+    ).resolves.toEqual(result);
+    expect(sync).toHaveBeenCalledWith("cve");
+  });
 
   it("the job syncs its source", async () => {
     const result: SyncResult = {
@@ -241,15 +259,6 @@ describe("the status job", () => {
     await expect(
       processVrdbJob(relabelJob(), { config: config({ records: false }), relabel }),
     ).resolves.toEqual({ relabeled: 3 });
-  });
-
-  it("the relabel job does nothing while the VRDB flag is off", async () => {
-    const relabel = jest.fn().mockResolvedValue({ relabeled: 3 });
-
-    await expect(
-      processVrdbJob(relabelJob(), { config: config({ vrdb: false }), relabel }),
-    ).resolves.toBeNull();
-    expect(relabel).not.toHaveBeenCalled();
   });
 
   it.each([[{ sourceId: "hibp" }], [{}], [null]])(

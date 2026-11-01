@@ -8,8 +8,9 @@ import {
   selectExcerpt,
 } from "../pageText";
 import { FetchedPage, PageReadError } from "../readPage";
-import { SearchEngineError, SearchKind, SearchResult } from "../webSearch";
+import { SearchEngine, SearchEngineError, SearchKind, SearchResult } from "../webSearch";
 import {
+  KIND_REFUSALS,
   LedgerEntry,
   SESSION_LIMITS,
   SessionLimits,
@@ -66,9 +67,15 @@ interface Setup {
   normalizeQuery?: WebSessionOptions<Category>["normalizeQuery"];
   closedHosts?: WebSessionOptions<Category>["closedHosts"];
   aliasDomains?: WebSessionOptions<Category>["aliasDomains"];
+  /** The kinds the fake engine answers; both by default. */
+  kinds?: SearchKind[];
 }
 
-/** A session on the domain acme.com, with a fake engine and a reader that answers every URL. */
+/**
+ * A session on the domain acme.com, with a fake engine and a reader that answers every URL. The
+ * engine declares what a real one does. Its kinds are read from `engineState` whenever the session
+ * asks, so a test can change them the way a fallback does.
+ */
 function setup(options: Setup = {}) {
   const answers = [...(options.answers ?? [])];
   const search = jest.fn<Promise<SearchResult[]>, [string, SearchKind, AbortSignal?]>(async () => {
@@ -77,8 +84,17 @@ function setup(options: Setup = {}) {
     return answer;
   });
   const readPage = jest.fn<Promise<FetchedPage>, [string, AbortSignal?]>(async (url) => page(url));
+  const engineState = { kinds: options.kinds ?? (["web", "news"] as SearchKind[]) };
+  const engine: SearchEngine = {
+    id: "replay",
+    get kinds() {
+      return engineState.kinds;
+    },
+    newsWindowMonths: null,
+    search,
+  };
   const sessionOptions: WebSessionOptions<Category> = {
-    engine: { search },
+    engine,
     readPage,
     domain: options.domain === undefined ? "acme.com" : options.domain,
     cutoffs: options.cutoffs ?? {},
@@ -88,7 +104,7 @@ function setup(options: Setup = {}) {
     closedHosts: options.closedHosts,
     aliasDomains: options.aliasDomains,
   };
-  return { session: createWebSession(sessionOptions), search, readPage };
+  return { session: createWebSession(sessionOptions), search, readPage, engineState };
 }
 
 describe("createWebSession", () => {
@@ -394,6 +410,326 @@ describe("createWebSession", () => {
         { ok: false, reason: "budget_exhausted" },
       ]);
       expect(search).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("search: a kind that the engine does not answer", () => {
+    const NEWS_ONLY: SearchKind[] = ["news"];
+    const WEB_ONLY: SearchKind[] = ["web"];
+    const askWeb = (query = "Acme data breach", category: Category = "security_incidents") => ({
+      query,
+      kind: "web" as const,
+      category,
+    });
+    const askNews = (query = "Acme data breach", category: Category = "security_incidents") => ({
+      query,
+      kind: "news" as const,
+      category,
+    });
+
+    it("refuses a search of the web on an engine of the news only, naming the kind, without asking the engine", async () => {
+      const { session, search } = setup({ kinds: NEWS_ONLY });
+
+      expect(await session.search("Acme data breach", "web", "security_incidents")).toEqual({
+        ok: false,
+        reason: "kind_unavailable",
+        kind: "web",
+      });
+      expect(search).not.toHaveBeenCalled();
+    });
+
+    it("refuses a search of the news on an engine of the web only", async () => {
+      const { session, search } = setup({ kinds: WEB_ONLY });
+
+      expect(await session.search("Acme data breach", "news", "security_incidents")).toEqual({
+        ok: false,
+        reason: "kind_unavailable",
+        kind: "news",
+      });
+      expect(search).not.toHaveBeenCalled();
+    });
+
+    it("lets the kind that the engine answers through, whichever kind that is", async () => {
+      const news = setup({ kinds: NEWS_ONLY, answers: [[result("https://news.example/a")]] });
+      expect((await news.session.search("Acme data breach", "news", "security_incidents")).ok).toBe(
+        true,
+      );
+      expect(news.search).toHaveBeenCalledTimes(1);
+
+      const web = setup({ kinds: WEB_ONLY, answers: [[result("https://web.example/a")]] });
+      expect((await web.session.search("Acme data breach", "web", "security_incidents")).ok).toBe(
+        true,
+      );
+      expect(web.search).toHaveBeenCalledTimes(1);
+    });
+
+    it("is not work on a category: no unit of the budget, no record of a call, nothing in the ledger", async () => {
+      const { session } = setup({ kinds: NEWS_ONLY });
+
+      await session.search("Acme data breach", "web", "security_incidents");
+
+      expect(session.budget().searchesLeft).toBe(SESSION_LIMITS.maxSearches);
+      // The summary of a run reads these calls, so a category that was only refused is not worked.
+      expect(session.snapshot()).toEqual({ ledger: [], calls: [], searchesUsed: 0, pagesRead: 0 });
+    });
+
+    it("never runs the budget out: any number of refusals leaves every search to the kind that is answered", async () => {
+      const { session, search } = setup({ kinds: NEWS_ONLY });
+
+      for (let n = 0; n < SESSION_LIMITS.maxSearches + 3; n += 1) {
+        expect(await session.search(`Acme ${n}`, "web", "security_incidents")).toMatchObject({
+          reason: "kind_unavailable",
+        });
+      }
+
+      expect(session.budget().searchesLeft).toBe(SESSION_LIMITS.maxSearches);
+      expect((await session.search("Acme data breach", "news", "security_incidents")).ok).toBe(
+        true,
+      );
+      expect(search).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not remember the words of a refused search: they are not a repeat when asked as the kind the engine answers", async () => {
+      const { session, search } = setup({ kinds: NEWS_ONLY });
+      await session.search("Acme data breach", "web", "security_incidents");
+
+      const outcome = await session.search("Acme data breach", "news", "security_incidents");
+
+      expect(outcome.ok).toBe(true);
+      expect(search).toHaveBeenCalledTimes(1);
+      expect(search).toHaveBeenCalledWith("Acme data breach", "news", undefined);
+    });
+
+    it("does not take a refused search for an answered query: asked again as the same kind, it is answered once the engine answers it", async () => {
+      const { session, search, engineState } = setup({ kinds: NEWS_ONLY });
+      await session.search("Acme data breach", "web", "security_incidents");
+      engineState.kinds = ["web", "news"];
+
+      const outcome = await session.search("Acme data breach", "web", "security_incidents");
+
+      expect(outcome.ok).toBe(true);
+      expect(search).toHaveBeenCalledTimes(1);
+    });
+
+    it("reads the kinds of the engine at the time of each search, since a fallback changes them", async () => {
+      const { session, search, engineState } = setup();
+      expect((await session.search("Acme data breach", "web", "security_incidents")).ok).toBe(true);
+
+      // The engine fell back to one of the news only.
+      engineState.kinds = ["news"];
+      expect(await session.search("Acme lawsuit", "web", "legal_regulatory")).toEqual({
+        ok: false,
+        reason: "kind_unavailable",
+        kind: "web",
+      });
+      expect((await session.search("Acme lawsuit", "news", "legal_regulatory")).ok).toBe(true);
+
+      // Nothing is kept from the earlier reads.
+      engineState.kinds = ["web", "news"];
+      expect((await session.search("Acme fine", "web", "legal_regulatory")).ok).toBe(true);
+      expect(search).toHaveBeenCalledTimes(3);
+    });
+
+    it("judges the kind before a repeat: the words of an earlier web search, asked again once the engine has lost the web", async () => {
+      const { session, engineState } = setup();
+      await session.search("Acme data breach", "web", "security_incidents");
+      engineState.kinds = ["news"];
+
+      expect(await session.search("Acme data breach", "web", "security_incidents")).toEqual({
+        ok: false,
+        reason: "kind_unavailable",
+        kind: "web",
+      });
+    });
+
+    it("gives way to the budget: with no search left the answer is budget_exhausted", async () => {
+      const { session } = setup({ kinds: NEWS_ONLY, limits: { maxSearches: 1 } });
+      await session.search("Acme data breach", "news", "security_incidents");
+
+      expect(await session.search("Acme lawsuit", "web", "legal_regulatory")).toEqual({
+        ok: false,
+        reason: "budget_exhausted",
+      });
+    });
+
+    it("refuses an engine that answers no kind every search, and a list in a different order is the same list", async () => {
+      const none = setup({ kinds: [] });
+      expect(await none.session.search("Acme data breach", "news", "security_incidents")).toEqual({
+        ok: false,
+        reason: "kind_unavailable",
+        kind: "news",
+      });
+      expect(await none.session.search("Acme data breach", "web", "security_incidents")).toEqual({
+        ok: false,
+        reason: "kind_unavailable",
+        kind: "web",
+      });
+
+      const reversed = setup({ kinds: ["news", "web"] });
+      expect(
+        (await reversed.session.search("Acme data breach", "web", "security_incidents")).ok,
+      ).toBe(true);
+    });
+
+    it("takes an engine that declares no kinds to answer every kind, as every engine did before the field existed", async () => {
+      const search = jest.fn(async () => [] as SearchResult[]);
+      const session = createWebSession<Category>({
+        engine: { search } as unknown as SearchEngine,
+        readPage: jest.fn(),
+        domain: "acme.com",
+        cutoffs: {},
+      });
+
+      expect((await session.search("Acme data breach", "web", "security_incidents")).ok).toBe(true);
+      expect((await session.search("Acme data breach", "news", "security_incidents")).ok).toBe(
+        true,
+      );
+      expect(session.defaultKind()).toBe("web");
+    });
+
+    describe("in searchMany", () => {
+      it("refuses the search in its place and goes on with the others, in the order of the requests", async () => {
+        const a = result("https://news.example/a");
+        const b = result("https://law.example/b");
+        const { session, search } = setup({ kinds: NEWS_ONLY, answers: [[a], [b]] });
+
+        const responses = await session.searchMany([
+          askNews("Acme data breach"),
+          askWeb("Acme data breach"),
+          askNews("Acme lawsuit", "legal_regulatory"),
+        ]);
+
+        expect(responses.map((response) => response.outcome)).toEqual([
+          { ok: true, results: [a], omitted: {} },
+          { ok: false, reason: "kind_unavailable", kind: "web" },
+          { ok: true, results: [b], omitted: {} },
+        ]);
+        // A search that was turned away did not wait for anything.
+        expect(responses[1].ms).toBe(0);
+        expect(search).toHaveBeenCalledTimes(2);
+        expect(session.budget().searchesLeft).toBe(SESSION_LIMITS.maxSearches - 2);
+        expect(session.snapshot().calls).toHaveLength(2);
+      });
+
+      it("does not take the budget of the one search left from a refused search that came first", async () => {
+        const { session } = setup({ kinds: NEWS_ONLY, limits: { maxSearches: 1 } });
+
+        const responses = await session.searchMany([askWeb(), askNews()]);
+
+        expect(responses[0].outcome).toEqual({
+          ok: false,
+          reason: "kind_unavailable",
+          kind: "web",
+        });
+        expect(responses[1].outcome.ok).toBe(true);
+      });
+    });
+
+    describe("for a pool and for the code", () => {
+      it("is refused as it is for the model, and takes nothing of the budget of the pool", async () => {
+        const { session, search } = setup({ kinds: NEWS_ONLY });
+        const pool = session.pool({ searches: 2, reads: 0 });
+
+        expect(await pool.search("Acme data breach", "web", "security_incidents")).toEqual({
+          ok: false,
+          reason: "kind_unavailable",
+          kind: "web",
+        });
+        expect(
+          (await pool.searchMany([askWeb("Acme lawsuit", "legal_regulatory")]))[0].outcome,
+        ).toEqual({ ok: false, reason: "kind_unavailable", kind: "web" });
+
+        expect(pool.budget().searchesLeft).toBe(2);
+        expect(session.budget().searchesLeft).toBe(SESSION_LIMITS.maxSearches);
+        expect(search).not.toHaveBeenCalled();
+      });
+
+      it("is refused for the code as well, and the unit that was set aside for it stays", async () => {
+        const { session, search } = setup({ kinds: NEWS_ONLY });
+        session.setCodeBudget({ searches: 1 });
+        const byCode = (request: ReturnType<typeof askWeb> | ReturnType<typeof askNews>) => ({
+          ...request,
+          by: "code" as const,
+        });
+
+        const [refused] = await session.searchMany([byCode(askWeb())]);
+        expect(refused.outcome).toEqual({ ok: false, reason: "kind_unavailable", kind: "web" });
+
+        // The one unit of the code is still there for a search the engine can answer.
+        const [first] = await session.searchMany([byCode(askNews())]);
+        expect(first.outcome.ok).toBe(true);
+        const [second] = await session.searchMany([byCode(askNews("Acme lawsuit"))]);
+        expect(second.outcome).toEqual({ ok: false, reason: "budget_exhausted" });
+        expect(search).toHaveBeenCalledTimes(1);
+      });
+    });
+  });
+
+  describe("what the model is told of a kind that the engine does not answer", () => {
+    it("is a fixed phrase for the web, which points to the news and to the vendor's pages", () => {
+      expect(KIND_REFUSALS.web).toBe(
+        "Web search is not available in this run; search the news or read the vendor's pages",
+      );
+    });
+
+    it("is a matching phrase for the news, which points to the web and to the vendor's pages", () => {
+      expect(KIND_REFUSALS.news).toBe(
+        "News search is not available in this run; search the web or read the vendor's pages",
+      );
+    });
+
+    // A phrase takes only the kind, never the query, so it is the same for every query. It also
+    // holds none of the characters that a prompt escapes, so the loop shows it as it is written.
+    it("has one phrase for each kind, and none needs escaping in a prompt", () => {
+      expect(Object.keys(KIND_REFUSALS).sort()).toEqual(["news", "web"]);
+      for (const phrase of Object.values(KIND_REFUSALS)) {
+        expect(phrase).not.toMatch(/[<>&]/);
+      }
+    });
+  });
+
+  describe("defaultKind: the kind of a search whose asker named none", () => {
+    it("is the web, as it always was, for an engine that answers it", () => {
+      expect(setup({ kinds: ["web", "news"] }).session.defaultKind()).toBe("web");
+      expect(setup({ kinds: ["news", "web"] }).session.defaultKind()).toBe("web");
+      expect(setup({ kinds: ["web"] }).session.defaultKind()).toBe("web");
+    });
+
+    it("is the news when the engine does not answer the web", () => {
+      expect(setup({ kinds: ["news"] }).session.defaultKind()).toBe("news");
+      expect(setup({ kinds: [] }).session.defaultKind()).toBe("news");
+    });
+
+    it("is read when it is asked, since a fallback changes the kinds of the engine", () => {
+      const { session, engineState } = setup();
+      expect(session.defaultKind()).toBe("web");
+
+      engineState.kinds = ["news"];
+      expect(session.defaultKind()).toBe("news");
+
+      engineState.kinds = ["web", "news"];
+      expect(session.defaultKind()).toBe("web");
+    });
+
+    it("is the same for a pool, which shares the engine", () => {
+      const { session, engineState } = setup();
+      const pool = session.pool({ searches: 1, reads: 0 });
+      expect(pool.defaultKind()).toBe("web");
+
+      engineState.kinds = ["news"];
+      expect(pool.defaultKind()).toBe("news");
+    });
+
+    it("is a kind that the engine answers, so a search made with it is never refused for its kind", async () => {
+      for (const kinds of [["web", "news"], ["web"], ["news"]] as SearchKind[][]) {
+        const { session } = setup({ kinds });
+        const outcome = await session.search(
+          "Acme data breach",
+          session.defaultKind(),
+          "security_incidents",
+        );
+        expect(outcome.ok).toBe(true);
+      }
     });
   });
 

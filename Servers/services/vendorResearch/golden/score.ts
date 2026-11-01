@@ -1,13 +1,16 @@
 /**
- * Scores the golden set (spec D6.4): the runs of each labelled vendor with the VENDOR_RESEARCH_VRDB
- * flag off and on against what a person expects of it, and the bars the runs with the flag on must
- * meet before the flag is on by default.
+ * Scores the golden set (spec D6.4): the one run of each labelled vendor against what a person
+ * expects of it, and the bars the runs must meet before the golden set passes.
  *
  * A finding matches an expected risk as in the replay cases (eval/scorer.ts): the same category and
  * any of the risk's words in its risk description, case ignored. A finding that matches a trap is a
- * false positive, whatever else it matches. The label of a finding with the flag on is compared
- * with the labeller's only when the finding matched a risk, since an unmatched finding has no
- * label to be held to.
+ * false positive, whatever else it matches. The label of a finding is compared with the labeller's
+ * only when the finding matched a risk, since an unmatched finding has no label to be held to.
+ *
+ * The bars are precision, label agreement, no High that the labeller rates Low, no sanctions match
+ * stated as a fact, and a coverage with no list that failed. Recall is reported and has no bar:
+ * a run keeps at most three findings of a category and eight of a run, so it cannot recall every
+ * risk a careful analyst would raise.
  */
 import {
   CREDIBILITY_LABELS,
@@ -26,7 +29,7 @@ import type {
   RunTotals,
 } from "./types";
 
-/** The bars of D6.4 for turning the flag on by default, beside recall, which the flag-off run sets. */
+/** The bars of D6.4 that are a measure: precision and label agreement. Recall has none. */
 export const GOLDEN_BARS = { precision: 0.9, agreement: 0.8 } as const;
 
 /** The lists whose record matched by name may be another company (spec, risk A). */
@@ -118,23 +121,19 @@ const citesNameOnlySanctionsEntry = (finding: GoldenFinding): boolean =>
   );
 
 /**
- * Scores the runs of the labelled vendors: `off` holds the first completed run of each vendor row
- * with the flag off, `on` the one with it on; a vendor's run of a flag is the one of its row of that
- * flag (the first such run in each list counts).
+ * Scores the runs of the labelled vendors: a vendor's run is the one of its vendor row (the first
+ * such run in `runs` counts), and a vendor without one is listed.
  */
 export function scoreGoldenSet(
   labels: readonly GoldenVendor[],
-  off: readonly GoldenRun[],
-  on: readonly GoldenRun[],
+  runs: readonly GoldenRun[],
 ): GoldenReport {
   const report: GoldenReport = {
     vendors: labels.length,
-    off: totalsOf([]),
-    on: totalsOf([]),
+    totals: totalsOf([]),
     compared: 0,
     agreed: 0,
     agreement: null,
-    baselineAgreement: null,
     highRatedLow: [],
     sanctionsAsFact: [],
     coverageMissing: [],
@@ -143,55 +142,35 @@ export function scoreGoldenSet(
     afterEarlier: [],
     lines: [],
   };
-  const offScores: RunScore[] = [];
-  const onScores: RunScore[] = [];
-  let baselineCompared = 0;
-  let baselineAgreed = 0;
+  const scores: RunScore[] = [];
 
   for (const vendor of labels) {
-    const offRef = { vendorId: vendor.vendorIds.off, name: vendor.name };
-    const ref = { vendorId: vendor.vendorIds.on, name: vendor.name };
-    const offRun = off.find((run) => run.vendorId === vendor.vendorIds.off);
-    const onRun = on.find((run) => run.vendorId === vendor.vendorIds.on);
-    if (offRun === undefined) report.missingRuns.push({ ...offRef, flag: "off" });
-    if (onRun === undefined) report.missingRuns.push({ ...ref, flag: "on" });
-    for (const [flag, run, at] of [
-      ["off", offRun, offRef],
-      ["on", onRun, ref],
-    ] as const) {
-      if (run !== undefined && run.earlier > 0) {
-        report.afterEarlier.push({ ...at, flag, earlier: run.earlier });
-      }
-    }
-
-    const offScored = offRun === undefined ? null : scoreRun(vendor, offRun);
-    const onScored = onRun === undefined ? null : scoreRun(vendor, onRun);
+    const ref = { vendorId: vendor.vendorId, name: vendor.name };
+    const found = runs.find((candidate) => candidate.vendorId === vendor.vendorId);
+    let score: RunScore | null = null;
     let compared = 0;
     let agreed = 0;
 
-    if (offScored !== null) {
-      offScores.push(offScored.score);
-      for (const { finding, expected } of offScored.matches) {
-        baselineCompared += 1;
-        if (finding.confidence === expected.label) baselineAgreed += 1;
-      }
-    }
-
-    if (onRun !== undefined && onScored !== null) {
-      onScores.push(onScored.score);
-      for (const { finding, expected } of onScored.matches) {
+    if (found === undefined) {
+      report.missingRuns.push(ref);
+    } else {
+      if (found.earlier > 0) report.afterEarlier.push({ ...ref, earlier: found.earlier });
+      const scored = scoreRun(vendor, found);
+      score = scored.score;
+      scores.push(scored.score);
+      for (const { finding, expected } of scored.matches) {
         compared += 1;
         if (finding.credibility === expected.label) agreed += 1;
         if (finding.credibility === "high" && expected.label === "low") {
           report.highRatedLow.push({ ...ref, finding: finding.risk_description });
         }
       }
-      for (const finding of onRun.findings) {
+      for (const finding of found.findings) {
         if (citesNameOnlySanctionsEntry(finding) && !ENTITY_NAMED.test(finding.risk_description)) {
           report.sanctionsAsFact.push({ ...ref, finding: finding.risk_description });
         }
       }
-      const coverage = onRun.coverage;
+      const coverage = found.coverage;
       if (coverage === null || typeof coverage !== "object") {
         report.coverageMissing.push(ref);
       } else {
@@ -204,21 +183,11 @@ export function scoreGoldenSet(
 
     report.compared += compared;
     report.agreed += agreed;
-    report.lines.push({
-      vendorIds: vendor.vendorIds,
-      name: vendor.name,
-      profile: vendor.profile,
-      off: offScored?.score ?? null,
-      on: onScored?.score ?? null,
-      compared,
-      agreed,
-    });
+    report.lines.push({ ...ref, profile: vendor.profile, run: score, compared, agreed });
   }
 
-  report.off = totalsOf(offScores);
-  report.on = totalsOf(onScores);
+  report.totals = totalsOf(scores);
   report.agreement = ratio(report.agreed, report.compared);
-  report.baselineAgreement = ratio(baselineAgreed, baselineCompared);
   return report;
 }
 
@@ -228,40 +197,32 @@ const percent = (value: number) => `${Math.round(value * 100)} %`;
 const vendorsHave = (count: number) => (count === 1 ? "1 vendor has" : `${count} vendors have`);
 const namesOf = (refs: ReadonlyArray<{ name: string }>) => refs.map((ref) => ref.name).join(", ");
 
-/** The bars of D6.4: which the report misses, in words. */
+/**
+ * The bars of D6.4: which the report misses, in words. A vendor without a run, a run that
+ * followed earlier findings of its row and a run without coverage miss too, since the measures
+ * would not be those of a run of the vendor. Recall has no bar.
+ */
 export function meetsBars(report: GoldenReport): GoldenVerdict {
   if (report.vendors === 0) return { ok: false, reasons: ["no labelled vendor"] };
   const reasons: string[] = [];
 
-  for (const flag of ["off", "on"] as const) {
-    const missing = report.missingRuns.filter((run) => run.flag === flag);
-    if (missing.length > 0) {
-      reasons.push(
-        `${vendorsHave(missing.length)} no completed run with the flag ${flag} (${namesOf(missing)})`,
-      );
-    }
+  const missing = report.missingRuns;
+  if (missing.length > 0) {
+    reasons.push(`${vendorsHave(missing.length)} no completed run (${namesOf(missing)})`);
   }
   const afterEarlier = report.afterEarlier;
   if (afterEarlier.length > 0) {
-    const which = afterEarlier.map((ref) => `${ref.name}, flag ${ref.flag}`).join("; ");
     reasons.push(
-      `${afterEarlier.length === 1 ? "1 run was" : `${afterEarlier.length} runs were`} compared with earlier findings or risks of its vendor row, which hid what it found (${which}): research each flag on a fresh vendor row`,
+      `${afterEarlier.length === 1 ? "1 run was" : `${afterEarlier.length} runs were`} compared with earlier findings or risks of its vendor row, which hid what it found (${namesOf(afterEarlier)}): research each vendor on a fresh vendor row`,
     );
   }
-  const { precision, recall } = report.on;
+  const { precision } = report.totals;
   if (precision !== null && precision < GOLDEN_BARS.precision) {
-    reasons.push(
-      `precision ${fixed(precision)} with the flag on, below ${fixed(GOLDEN_BARS.precision)}`,
-    );
-  }
-  if (recall !== null && report.off.recall !== null && recall < report.off.recall) {
-    reasons.push(
-      `recall ${fixed(recall)} with the flag on, below ${fixed(report.off.recall)} with it off`,
-    );
+    reasons.push(`precision ${fixed(precision)}, below ${fixed(GOLDEN_BARS.precision)}`);
   }
   if (report.agreement === null) {
-    if (report.on.expected > 0) {
-      reasons.push("no finding with the flag on matched a labelled risk, so no label was compared");
+    if (report.totals.expected > 0) {
+      reasons.push("no finding matched a labelled risk, so no label was compared");
     }
   } else if (report.agreement < GOLDEN_BARS.agreement) {
     reasons.push(
@@ -286,7 +247,7 @@ export function meetsBars(report: GoldenReport): GoldenVerdict {
   }
   if (report.coverageMissing.length > 0) {
     reasons.push(
-      `${vendorsHave(report.coverageMissing.length)} no coverage with the flag on (${namesOf(report.coverageMissing)})`,
+      `${vendorsHave(report.coverageMissing.length)} no coverage (${namesOf(report.coverageMissing)})`,
     );
   }
   const failed = report.coverageFailed;
@@ -294,8 +255,8 @@ export function meetsBars(report: GoldenReport): GoldenVerdict {
     const which = failed.map((ref) => `${ref.name}: ${ref.sources.join(", ")}`).join("; ");
     reasons.push(
       failed.length === 1
-        ? `1 vendor's run with the flag on could not check every list (${which})`
-        : `${failed.length} vendors' runs with the flag on could not check every list (${which})`,
+        ? `1 vendor's run could not check every list (${which})`
+        : `${failed.length} vendors' runs could not check every list (${which})`,
     );
   }
   return { ok: reasons.length === 0, reasons };
@@ -309,20 +270,19 @@ function totalsLine(label: string, totals: RunTotals): string {
   return `${label}: precision ${orNone(totals.precision, fixed)}, recall ${orNone(totals.recall, fixed)} (${plural(totals.findings, "finding")}, ${totals.matched} matched, ${plural(totals.traps, "trap")})`;
 }
 
-function runPart(flag: "off" | "on", score: RunScore | null): string {
-  if (score === null) return `${flag} no run`;
+function runPart(score: RunScore | null): string {
+  if (score === null) return "no run";
   const traps = score.traps === 0 ? "" : `, ${plural(score.traps, "trap")}`;
-  return `${flag} ${score.matched}/${score.findings} matched, ${score.recalled}/${score.expected} recalled${traps}`;
+  return `${score.matched}/${score.findings} matched, ${score.recalled}/${score.expected} recalled${traps}`;
 }
 
 /** The report as text, for the command line. Names and findings are printed as they were stored. */
 export function formatGoldenReport(report: GoldenReport, verdict: GoldenVerdict): string {
   const lines = [
     `Golden set: ${plural(report.vendors, "vendor")}`,
-    totalsLine("Flag off", report.off),
-    totalsLine("Flag on", report.on),
+    totalsLine("Runs", report.totals),
+    "Recall is reported only: it has no bar.",
     `Label agreement: ${orNone(report.agreement, percent)} (${report.agreed} of ${report.compared})`,
-    `Confidence with the flag off, for the record: ${orNone(report.baselineAgreement, percent)}`,
   ];
   const listed = (title: string, items: string[]) =>
     lines.push(
@@ -338,29 +298,28 @@ export function formatGoldenReport(report: GoldenReport, verdict: GoldenVerdict)
     report.sanctionsAsFact.map((item) => `${item.name}: ${item.finding}`),
   );
   listed(
-    "No coverage with the flag on",
+    "No coverage",
     report.coverageMissing.map((item) => item.name),
   );
   listed(
-    "Lists not checked with the flag on",
+    "Lists not checked",
     report.coverageFailed.map((item) => `${item.name}: ${item.sources.join(", ")}`),
   );
   listed(
     "Missing runs",
-    report.missingRuns.map((item) => `${item.name}: flag ${item.flag}`),
+    report.missingRuns.map((item) => `${item.name} (vendor ${item.vendorId})`),
   );
   listed(
     "Runs after earlier findings or risks of their vendor row",
     report.afterEarlier.map(
-      (item) =>
-        `${item.name}: flag ${item.flag} (vendor ${item.vendorId}, ${item.earlier} earlier)`,
+      (item) => `${item.name} (vendor ${item.vendorId}, ${item.earlier} earlier)`,
     ),
   );
   lines.push("", "Vendors:");
   for (const line of report.lines) {
-    const agree = line.on === null ? "" : `, ${line.agreed}/${line.compared} labels agree`;
+    const agree = line.run === null ? "" : `, ${line.agreed}/${line.compared} labels agree`;
     lines.push(
-      `#${line.profile} ${line.name} (vendors ${line.vendorIds.off} off, ${line.vendorIds.on} on): ${runPart("off", line.off)}; ${runPart("on", line.on)}${agree}`,
+      `#${line.profile} ${line.name} (vendor ${line.vendorId}): ${runPart(line.run)}${agree}`,
     );
   }
   lines.push(
@@ -392,8 +351,22 @@ const CATEGORIES: ReadonlySet<unknown> = new Set(RESEARCH_CATEGORIES);
 const LABELS: ReadonlySet<unknown> = new Set(CREDIBILITY_LABELS);
 
 /**
+ * The vendor row a labelled vendor was researched on, and the field of the file it is read from:
+ * its `vendorId`, or, in a file of the earlier shape (a row for each flag), the `on` of its
+ * `vendorIds`, which is the row the run of the vendor risk database was made on. A `vendorId` that
+ * is there is never replaced by the earlier shape's. Null when the vendor names neither.
+ */
+function vendorRowOf(vendor: Record<string, unknown>): { field: string; value: unknown } | null {
+  if (vendor.vendorId !== undefined) return { field: "vendorId", value: vendor.vendorId };
+  if (isRecord(vendor.vendorIds)) return { field: "vendorIds.on", value: vendor.vendorIds.on };
+  return null;
+}
+
+/**
  * Checks a labels file as a person filled it in, and names every field that is missing or wrong;
- * `labels` is the file when nothing is.
+ * `labels` is the file when nothing is. A file of the earlier shape, with a vendor row for each
+ * flag, is read: the row researched with the flag on becomes the vendor's `vendorId`, the flag-off
+ * row is ignored, and `labels` holds no `vendorIds`.
  */
 export function checkGoldenLabels(value: unknown): {
   labels: GoldenLabels | null;
@@ -421,6 +394,7 @@ export function checkGoldenLabels(value: unknown): {
   }
 
   const seen = new Set<number>();
+  const vendors: unknown[] = [];
   value.vendors.forEach((vendor: unknown, index: number) => {
     const at = `vendors[${index}]`;
     if (!isRecord(vendor)) {
@@ -430,24 +404,15 @@ export function checkGoldenLabels(value: unknown): {
     if (!isWholeAbove(vendor.profile, 1) || vendor.profile > 24) {
       problems.push(`${at}.profile must be one of 1 to 24`);
     }
-    const ids = vendor.vendorIds;
-    if (!isRecord(ids)) {
-      problems.push(
-        `${at}.vendorIds must give the vendor row researched with the flag off and the one with it on`,
-      );
+    const row = vendorRowOf(vendor);
+    if (row === null) {
+      problems.push(`${at}.vendorId must give the vendor row that was researched`);
+    } else if (!isWholeAbove(row.value, 1)) {
+      problems.push(`${at}.${row.field} must be a positive whole number`);
+    } else if (seen.has(row.value)) {
+      problems.push(`${at}.${row.field} ${row.value} is labelled twice`);
     } else {
-      for (const flag of ["off", "on"] as const) {
-        const id = ids[flag];
-        if (!isWholeAbove(id, 1)) {
-          problems.push(`${at}.vendorIds.${flag} must be a positive whole number`);
-        } else if (flag === "on" && id === ids.off) {
-          problems.push(`${at}.vendorIds.on must be another vendor row than vendorIds.off`);
-        } else if (seen.has(id)) {
-          problems.push(`${at}.vendorIds.${flag} ${id} is labelled twice`);
-        } else {
-          seen.add(id);
-        }
-      }
+      seen.add(row.value);
     }
     if (typeof vendor.name !== "string" || vendor.name.trim() === "") {
       problems.push(`${at}.name must be the vendor's name`);
@@ -484,7 +449,14 @@ export function checkGoldenLabels(value: unknown): {
         if (!isWords(trap.anyOf)) problems.push(`${field}.anyOf must hold at least one word`);
       });
     }
+    // The shape that `GoldenVendor` has: the earlier shape's rows for the flags are not carried on.
+    const kept: Record<string, unknown> = { ...vendor, vendorId: row?.value };
+    delete kept.vendorIds;
+    vendors.push(kept);
   });
 
-  return { labels: problems.length === 0 ? (value as unknown as GoldenLabels) : null, problems };
+  return {
+    labels: problems.length === 0 ? ({ ...value, vendors } as unknown as GoldenLabels) : null,
+    problems,
+  };
 }

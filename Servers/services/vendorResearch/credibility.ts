@@ -8,7 +8,9 @@
  * Each cited source is described first:
  *
  * - its class, by the source registry (see sourceRegistry/): a record by its database, any other
- *   source by its address, the vendor's mark, its words and the canonical address it claims;
+ *   source by its address, the vendor's mark, its words and the canonical address it claims, and,
+ *   for an EDGAR filing under the CIK stored on the vendor, who filed it (`edgarFiler` of the
+ *   provenance, Q28): it is the vendor's word only when the vendor did, else the filer's document;
  * - its reading: a page is `read`; a search result is `read` when the snippet check found the
  *   quote on its page, `contradicted` when the page it read does not hold the quote, and
  *   `unconfirmed` otherwise, as is a cited address the pack does not hold;
@@ -129,6 +131,7 @@ function describeSource(
             onVendorSite: packed?.onVendorSite ?? false,
             ...(packed === undefined ? {} : { text: `${packed.title} ${packed.content}` }),
             ...(origin?.canonicalUrl === undefined ? {} : { canonicalUrl: origin.canonicalUrl }),
+            ...(origin?.edgarFiler === undefined ? {} : { edgarFiler: origin.edgarFiler }),
           },
           target,
         );

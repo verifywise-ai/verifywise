@@ -1,7 +1,7 @@
 /**
  * The keys by which a VRDB record is matched to a vendor (spec D4.4): a verified domain and a KEV
  * vendor are strong, an exact name is weak, and a name of three letters is too short to match a
- * sanctions list.
+ * sanctions list. The hosts of a list entry's website field are the domains it is matched by.
  */
 import type { ResearchTarget } from "../../target";
 import {
@@ -9,6 +9,7 @@ import {
   cpeKey,
   cveVendorKey,
   domainKey,
+  hostsOf,
   identifierKeysOf,
   isLei,
   kevKey,
@@ -142,6 +143,54 @@ describe("nameKeysOf", () => {
       "name:northwindexport",
       "name:nwltd",
     ]);
+  });
+});
+
+describe("hostsOf", () => {
+  it("reads the host of an address with a scheme, and of a site written without one", () => {
+    expect(hostsOf("https://a.example/x")).toEqual(["a.example"]);
+    expect(hostsOf("www.b.example")).toEqual(["www.b.example"]);
+  });
+
+  it("gives the host in lower case, without the port or the path", () => {
+    expect(hostsOf("HTTP://WWW.Acme-Analytics.example:8080/About?x=1")).toEqual([
+      "www.acme-analytics.example",
+    ]);
+  });
+
+  it("gives no host for an e-mail address: it names a mailbox, not a site", () => {
+    expect(hostsOf("info@c.example")).toEqual([]);
+    expect(hostsOf("Info.Desk@mail.c.example")).toEqual([]);
+  });
+
+  it("keeps the host of an address with a scheme that holds an @", () => {
+    expect(hostsOf("https://d.example/@name")).toEqual(["d.example"]);
+    expect(hostsOf("https://user@e.example/page")).toEqual(["e.example"]);
+  });
+
+  it("reads each of several sites separated by a comma, a semicolon or white space", () => {
+    expect(hostsOf("https://a.example/x, www.b.example")).toEqual(["a.example", "www.b.example"]);
+    expect(hostsOf("a.example;b.example")).toEqual(["a.example", "b.example"]);
+    expect(hostsOf("a.example\nb.example c.example")).toEqual([
+      "a.example",
+      "b.example",
+      "c.example",
+    ]);
+  });
+
+  it("reads the sites beside an e-mail address, and not the address", () => {
+    expect(hostsOf("www.b.example, info@c.example; https://a.example/x")).toEqual([
+      "www.b.example",
+      "a.example",
+    ]);
+  });
+
+  it("gives no host for a single label, for an empty field, or for a word that is no address", () => {
+    expect(hostsOf("localhost")).toEqual([]);
+    expect(hostsOf("https://intranet/home")).toEqual([]);
+    expect(hostsOf("")).toEqual([]);
+    expect(hostsOf(" , ; ")).toEqual([]);
+    expect(hostsOf("https://")).toEqual([]);
   });
 });
 

@@ -19,12 +19,21 @@ import {
   CACHE_TTL_SECONDS,
   CacheKind,
   CacheOutcome,
+  type GdeltArticle,
+  cacheGdeltIndex,
   createRedisWebCache,
+  readCachedGdeltIndex,
   withSearchCache,
 } from "../../services/webResearch/webCache";
 import type { SearchEngine, SearchResult } from "../../services/webResearch/webSearch";
 
 const written: string[] = [];
+
+/**
+ * The id of the engines the search test uses. It is one of the engines whose answers every
+ * organization shares, so the cache key needs no organization (see `searchKeyOf` in webCache.ts).
+ */
+const SHARED_ENGINE = "replay";
 
 /** The key the cache writes for a logical key, as the cache hashes it. */
 function redisKeyOf(kind: CacheKind, key: string): string {
@@ -66,7 +75,7 @@ describe("the web cache on a real Redis", () => {
     ]);
   });
 
-  it.each(["robots", "page", "search"] as const)(
+  it.each(["robots", "page", "search", "gdelt"] as const)(
     "lets a %s entry expire after the time of its kind",
     async (kind) => {
       const cache = createRedisWebCache(() => redisClient);
@@ -129,17 +138,61 @@ describe("the web cache on a real Redis", () => {
       },
     ];
     const query = unique("acme integration test");
-    redisKeyOf("search", `news\n${query}`);
-    const first: SearchEngine = { search: jest.fn(async () => results) };
-    const second: SearchEngine = { search: jest.fn(async () => []) };
+    // The key of a search of an engine that all organizations share: the engine, the kind of search
+    // and the words, in lower case. The cleanup below removes the entry under this key.
+    const searchRedisKey = redisKeyOf("search", `${SHARED_ENGINE}\nnews\n${query.toLowerCase()}`);
+    const first: SearchEngine = {
+      id: SHARED_ENGINE,
+      kinds: ["web", "news"],
+      newsWindowMonths: null,
+      search: jest.fn(async () => results),
+    };
+    const second: SearchEngine = {
+      id: SHARED_ENGINE,
+      kinds: ["web", "news"],
+      newsWindowMonths: null,
+      search: jest.fn(async () => []),
+    };
 
     const answered = await withSearchCache(first, cache).search(query, "news");
     // The write is not waited for by the search; give it a moment to reach Redis.
     await new Promise((resolve) => setTimeout(resolve, 100));
+    // The entry is where the cleanup below looks for it. A key that drifts from the one the cache
+    // builds would be left in Redis for the hour of its time to live.
+    expect(await redisClient.exists(searchRedisKey)).toBe(1);
     const again = await withSearchCache(second, cache).search(query.toUpperCase(), "news");
 
     expect(answered).toEqual(results);
     expect(again).toEqual(results);
     expect(second.search).not.toHaveBeenCalled();
+  });
+
+  it("keeps the index of GDELT and reads it back whole, titles in any script included", async () => {
+    const cache = createRedisWebCache(() => redisClient);
+    const requestUrl = unique("https://api.gdeltproject.org/api/v2/doc/doc?query=acme-integration");
+    redisKeyOf("gdelt", requestUrl);
+    const articles: GdeltArticle[] = [
+      {
+        url: "https://news.example.com/acme-breach",
+        title: "Acme confirms a breach of its support system",
+        publishedAt: "2026-10-25T10:00:00.000Z",
+        domain: "news.example.com",
+        language: "English",
+      },
+      {
+        url: "https://nachrichten.example.de/acme-datenleck",
+        title: "Acme meldet ein Datenleck bei Kunden für 5 € \u4e2d\u6587",
+        publishedAt: null,
+        domain: "",
+        language: "German",
+      },
+    ];
+
+    expect(await readCachedGdeltIndex(cache, requestUrl)).toBeNull();
+    cacheGdeltIndex(cache, requestUrl, articles);
+    // The write is not waited for by the caller; give it a moment to reach Redis.
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    expect(await readCachedGdeltIndex(cache, requestUrl)).toEqual(articles);
   });
 });

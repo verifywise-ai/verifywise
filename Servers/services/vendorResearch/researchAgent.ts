@@ -2,12 +2,20 @@
  * The vendor researcher: the research loop of the web research toolkit, set up for one vendor.
  *
  * Every run gets a web session of its own (budgets, provenance, the lookback window of each
- * category and the ledger) and a page reader of its own. With a cache (see webResearch/webCache.ts)
- * the reader and the engine of a run share the robots.txt of the sites, the pages and the searches
- * with the other runs; without one, the answers of robots.txt are kept for that run only. The loop is offered the categories that can be researched for the
- * vendor: all five with a domain, without one only the three that search the news. A run only
- * collects: it leaves the ledger, the calls that reached the web and how the loop ended, and the
- * analysis is made from them afterwards.
+ * category and the ledger), a page reader of its own and a search engine of its own. With a cache
+ * (see webResearch/webCache.ts) the reader and the engine of a run share the robots.txt of the
+ * sites, the pages, the news index of GDELT and the searches of a provider with the other runs;
+ * without one, the answers of robots.txt are kept for that run only. The loop is offered the
+ * categories that can be researched for the vendor: all five with a domain, without one only the
+ * three that search the news. A run only collects: it leaves the ledger, the calls that reached
+ * the web and how the loop ended, and the analysis is made from them afterwards.
+ *
+ * The engine of a run is built from the key the research uses (see searchEngineOf.ts and
+ * `createRunSearch`): the web search of the key's provider when it has one, with the news of the
+ * GDELT Project behind it for a key that is not allowed to search, and the news of the GDELT
+ * Project alone for every other key. The result says which engine the searches went to. The loops
+ * are told what that engine answers when they start (the kinds of search, and how far back its news
+ * reaches; see `buildLoopSystemPrompt`), and the session refuses a search of a kind it lacks.
  *
  * Before the loop starts, a run can have the routine work done by code (see gather.ts): the news
  * searches and the reads of the vendor's own pages, all at once. The model is told what that
@@ -17,7 +25,7 @@
  * budget of its own from the session, a few model turns, a task that names its category and a
  * briefing of what the code collected for that category only. The run ends as they end.
  */
-import { wrapLanguageModel } from "ai";
+import { type LanguageModel, wrapLanguageModel } from "ai";
 import {
   type TokenUsage,
   generateObjectWithSelfCorrection,
@@ -29,11 +37,13 @@ import {
   type RunCoverage,
   RunProgress,
 } from "../../domain.layer/interfaces/i.vendorResearch";
+import { createGdeltEngine } from "../webResearch/gdeltSearch";
+import { createProviderSearchEngine, withFallback } from "../webResearch/providerSearch";
 import { PageReader, createPageReader } from "../webResearch/readPage";
 import type { PageRenderer } from "../webResearch/renderPage";
 import { LoopObserver, StopReason, runResearchLoop } from "../webResearch/researchLoop";
-import type { WebCache } from "../webResearch/webCache";
-import { SearchEngine, createBingEngine } from "../webResearch/webSearch";
+import { type WebCache, withSearchCache } from "../webResearch/webCache";
+import type { SearchEngine, SearchEngineId } from "../webResearch/webSearch";
 import { CallRecord, LedgerEntry, WebSession, createWebSession } from "../webResearch/webSession";
 import { withAliases } from "./aliases";
 import {
@@ -53,6 +63,7 @@ import {
 import { requestHints } from "./hints";
 import { createVendorMatcher } from "./identity";
 import { CATEGORY_LOOP_STEPS, combineEndings, loopGrants } from "./loops";
+import { regulatorTopicsOf } from "./market";
 import { type ResearchMetrics, researchMetrics } from "./metrics";
 import {
   PREFLIGHT_TIMEOUT_MS,
@@ -66,9 +77,9 @@ import {
 } from "./preflight";
 import { buildLoopSystemPrompt, buildLoopTaskPrompt } from "./prompts";
 import { type PolicyPage, collectPolicyPages } from "./policySnapshots";
-import { normalizeQuery } from "./queries";
+import { NEWS_TOPIC_WORDS, normalizeQuery } from "./queries";
 import type { RecordsLookup } from "./records";
-import type { ResearchRules } from "./schema";
+import type { SearchSpec } from "./searchEngineOf";
 import { workedCategories } from "./summary";
 import { ResearchTarget } from "./target";
 import type { TraceRecorder } from "./trace";
@@ -116,6 +127,14 @@ export interface ResearchResult {
    * risk database gives it; the pipeline adds the version of the registry and the cited counts.
    */
   coverage?: Omit<RunCoverage, "cited" | "registry_version">;
+  /**
+   * The engine the searches of the run went to: `anthropic` (the web search of the key), `gdelt`
+   * (the news of the GDELT Project: the engine of every key with no search of its own, and where a
+   * run of an Anthropic key goes when the key is not allowed to search), or the id of the engine
+   * that was given to the researcher. null when the run searched nothing. The pipeline records it
+   * with the run. A researcher that does not say leaves it out.
+   */
+  searchEngine?: SearchEngineId | null;
 }
 
 /** The outcome of a search turn of the loop, as the counter of searches names it. */
@@ -153,6 +172,17 @@ export type VendorResearcher = (input: {
   model: unknown;
   /** The id of the model, for the trace; the researcher calls `model`, never this. */
   modelId?: string;
+  /**
+   * The organization the run is for. What a provider's search answers is bought with the key of
+   * this organization, so the cache keeps it under this id and serves it to no other. Without it
+   * a provider's answers are not cached at all.
+   */
+  organizationId?: number;
+  /**
+   * How the key of the research searches (see searchEngineOf.ts). Without it the run searches the
+   * news through the GDELT Project, which needs no key.
+   */
+  search?: SearchSpec;
   now: Date;
   /** Told about every turn of the loop and every model call of it; the run's trace. */
   trace?: TraceRecorder;
@@ -163,18 +193,135 @@ export type VendorResearcher = (input: {
   progress?: (progress: ResearchProgress) => void;
 }) => Promise<ResearchResult>;
 
+/** What a run searches with, and the means to say which engine its searches went to. */
+export interface RunSearch {
+  engine: SearchEngine;
+  /**
+   * The id of the engine the searches of the run have gone to: the engine of the key, or `gdelt`
+   * once a run has fallen back to it. null before the first search, so a run that searched nothing
+   * says so.
+   */
+  used(): SearchEngineId | null;
+}
+
+/**
+ * An engine that notes whether it was asked, to report the engine a run searched with. It is the
+ * engine itself in every other way: it reports its id, kinds and window as the engine does now.
+ */
+function noteUse(engine: SearchEngine): RunSearch {
+  let asked = false;
+  return {
+    engine: {
+      get id() {
+        return engine.id;
+      },
+      get kinds() {
+        return engine.kinds;
+      },
+      get newsWindowMonths() {
+        return engine.newsWindowMonths;
+      },
+      search(query, kind, signal) {
+        asked = true;
+        return engine.search(query, kind, signal);
+      },
+    },
+    used: () => (asked ? engine.id : null),
+  };
+}
+
+export interface RunSearchInput {
+  /** How the key of the research searches; the news of the GDELT Project when absent. */
+  search?: SearchSpec;
+  /**
+   * The model made from the key of the research. The search of Claude calls it, so that the call
+   * goes to the host of the key. Anything that is not an object cannot be called that way, and the
+   * run then searches the news.
+   */
+  model: unknown;
+  /** The id of the model, for the trace. */
+  modelId?: string;
+  /** The organization whose key pays for a provider's search; its answers are cached per organization. */
+  organizationId?: number;
+  /** The vendor, with all the names it is known by: the news is searched under every one of them. */
+  target: ResearchTarget;
+  /** The cache that runs share (see webResearch/webCache.ts). */
+  cache?: WebCache;
+  /** Told of every call that a provider's search makes to the model, with its tokens. */
+  trace?: TraceRecorder;
+  /**
+   * Told each time the GDELT engine asks its feed a second time, after a failure that passes. The
+   * researcher counts it as a retried search of the news.
+   */
+  onRetry?: () => void;
+}
+
+/**
+ * The search engine of one run, from the key it researches with.
+ *
+ * - **Claude's web search** for a key of Anthropic (`search.engine` is `anthropic`). Each search is
+ *   a call to the model of the key, and is told to the trace as a model call for the search. With a
+ *   cache and an organization the answers are kept for that organization (see `withSearchCache`),
+ *   and a key that is not allowed to search moves the run to the news of GDELT for that search and
+ *   every later one (see `withFallback`).
+ * - **The news of the GDELT Project** for every other key, a run that says nothing of its key, and
+ *   a model that cannot be called as Claude's search is. It is the engine behind Claude's too. Its
+ *   one request per run is made under the names of the vendor and the words of the news, and its
+ *   index is kept in the cache by the engine itself, so it is not put behind the cache of searches.
+ *
+ * The engine is made for this run alone: nothing of one run's engine, a switch to the fallback
+ * included, reaches the next.
+ */
+export function createRunSearch(input: RunSearchInput): RunSearch {
+  const gdelt = createGdeltEngine({
+    names: [input.target.name, ...(input.target.aliases ?? [])],
+    topics: [...NEWS_TOPIC_WORDS, ...regulatorTopicsOf(input.target)],
+    ...(input.cache === undefined ? {} : { cache: input.cache }),
+    ...(input.onRetry === undefined ? {} : { onRetry: input.onRetry }),
+  });
+  const { model } = input;
+  if (input.search?.engine !== "anthropic" || typeof model !== "object" || model === null) {
+    return noteUse(gdelt);
+  }
+  const claude = createProviderSearchEngine({
+    provider: "anthropic",
+    model: model as LanguageModel,
+    onCall: (call) =>
+      input.trace?.modelCall({
+        purpose: "search",
+        model: input.modelId,
+        ms: call.ms,
+        inputTokens: call.inputTokens,
+        outputTokens: call.outputTokens,
+        totalTokens: call.totalTokens,
+        ok: call.ok,
+      }),
+  });
+  // The cache goes around Claude's engine and the fallback around both: a cache around the
+  // fallback would file the answer of the search that made it fall back under Claude's key.
+  const kept =
+    input.cache === undefined
+      ? claude
+      : withSearchCache(claude, input.cache, { organizationId: input.organizationId });
+  const engine = withFallback(kept, gdelt);
+  return { engine, used: engine.usedId };
+}
+
 /**
  * A researcher that runs the loop once per call. It rejects only when the loop does, which is a bug
  * of the session (or of the routine work, which uses the session); every other ending, a model
  * error included, is a result.
  *
- * @param deps.engine Replaces the Bing engine, for tests.
+ * @param deps.engine Replaces the engine that each run builds from its key (see `createRunSearch`),
+ *   for tests and for the replay of a recording. It is used as it is, whatever the key says.
  * @param deps.readPage Replaces the page reader that each run builds, for tests.
  * @param deps.generate Replaces the self-correcting structured call, for tests.
- * @param deps.metrics Replaces the counters of the process (searches by outcome, retries), for tests.
+ * @param deps.metrics Replaces the counters of the process (searches by outcome), for tests.
  * @param deps.cache The cache that runs share. It is given to the engine and the page reader that
- *   the researcher builds; an engine or reader that is injected is used as it is. None by default,
- *   which is what a live evaluation wants: it measures the web, not the cache.
+ *   the researcher builds; an engine or reader that is injected is used as it is. The engine of a
+ *   provider's search keeps its answers in it per organization, and does so only for a run that is
+ *   told its organization. None by default, which is what a live evaluation wants: it measures the
+ *   web, not the cache.
  * @param deps.render The headless browser that the page reader of each run hands a page to when
  *   the page is a shell for a script and carries no text with it (see webResearch/renderPage.ts).
  *   It is given to the page reader that the researcher builds; a reader that is injected is used as
@@ -187,8 +334,6 @@ export type VendorResearcher = (input: {
  * @param deps.vrdb Looks the vendor up in the vendor risk database (see vrdb/) as part of the
  *   routine work, and gives the run its coverage. None by default, and without `gather` it is not
  *   used.
- * @param deps.rules The rules of the run, which order the news that the routine work reads (see
- *   gather.ts); the confidence rules by default.
  * @param deps.perCategory Runs one loop for each category at the same time instead of one loop for
  *   all of them (see loops.ts). Off by default, like `gather`, which it is meant to follow: each
  *   loop is told what the code collected for its category.
@@ -205,12 +350,11 @@ export function createVendorResearcher(
     perCategory?: boolean;
     records?: RecordsLookup;
     vrdb?: VrdbLookup;
-    rules?: ResearchRules;
   } = {},
 ): VendorResearcher {
   const generate = deps.generate ?? generateObjectWithSelfCorrection;
 
-  return async ({ target, model, modelId, now, trace, progress }) => {
+  return async ({ target, model, modelId, organizationId, search, now, trace, progress }) => {
     const researchable = researchableCategories(target);
     const cutoffs: Partial<Record<ResearchCategory, string>> = {};
     for (const category of RESEARCH_CATEGORIES) {
@@ -314,10 +458,23 @@ export function createVendorResearcher(
         (own): own is string => own !== null && own !== "",
       ),
     );
+    // The engine of this run: the one given, or the one the key of the research has, under all the
+    // names of the vendor now known. It says afterwards whether it was used, and which it was.
+    const searching =
+      deps.engine !== undefined
+        ? noteUse(deps.engine)
+        : createRunSearch({
+            search,
+            model,
+            modelId,
+            organizationId,
+            target: known,
+            cache: deps.cache,
+            trace,
+            onRetry: () => metrics.searchRetried({ kind: "news" }),
+          });
     const session = createWebSession<ResearchCategory>({
-      engine:
-        deps.engine ??
-        createBingEngine({ onRetry: (kind) => metrics.searchRetried({ kind }), cache: deps.cache }),
+      engine: searching.engine,
       readPage: policies.read,
       domain: target.domain,
       // A site the recorded domain moved to is the vendor's website too.
@@ -326,7 +483,7 @@ export function createVendorResearcher(
       closedHosts: closedHostsOf(website, target),
       cutoffs,
       isRelevant: ({ title, snippet, url }) => mentionsVendor({ title, content: snippet, url }),
-      // The feed answers a name and one to three topic words best, and does not understand
+      // The engines answer a name and one to three topic words best, and do not understand
       // operators, so whatever the model writes is made that.
       normalizeQuery: (query) => normalizeQuery(query, known),
     });
@@ -415,7 +572,6 @@ export function createVendorResearcher(
               hints: await hintsAsked,
               now,
               cutoffs,
-              ...(deps.rules === undefined ? {} : { rules: deps.rules }),
               signal: AbortSignal.timeout(GATHER_TIMEOUT_MS),
             },
             {
@@ -471,12 +627,19 @@ export function createVendorResearcher(
       return text === "" ? undefined : text;
     };
 
+    // The loops are told what the engine answers as they start: the routine work above may have
+    // moved a run of a key that is not allowed to search to the news of the GDELT Project, which
+    // cannot search the web and reaches back three months only. Read from the engine, not kept.
+    const system = buildLoopSystemPrompt({
+      kinds: searching.engine.kinds,
+      newsWindowMonths: searching.engine.newsWindowMonths,
+    });
     // Every loop is waited for, also when one of them breaks: none is left to run behind the run.
     const settled = await Promise.allSettled(
       plans.map((plan) =>
         runResearchLoop<ResearchCategory>(
           {
-            system: buildLoopSystemPrompt(),
+            system,
             task: buildLoopTaskPrompt({
               target: known,
               now,
@@ -519,6 +682,7 @@ export function createVendorResearcher(
       siteNames,
       readPage,
       policyPages: policies.pages(),
+      searchEngine: searching.used(),
       ...(gathered?.vrdb == null
         ? {}
         : { coverage: { sources: gathered.vrdb.coverage, lookups: gathered.lookups } }),

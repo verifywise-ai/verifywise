@@ -174,7 +174,6 @@ export const LOCAL_LANGUAGE_NEWS: EvalCase = {
           risk_severity: "Moderate",
           action_plan:
             "Ask the vendor whether our data was in the database and for its incident report.",
-          confidence: "medium",
           rationale:
             "Two French publishers report it and the vendor has confirmed it, but nobody says whether the data was copied.",
           evidence: [
@@ -200,7 +199,6 @@ export const LOCAL_LANGUAGE_NEWS: EvalCase = {
           risk_severity: "Minor",
           action_plan:
             "Ask the vendor what it changed after the fine and whether it has told its customers.",
-          confidence: "low",
           rationale:
             "One article reports the fine and the amount is stated, but it is not on the page of the authority.",
           evidence: [
@@ -233,7 +231,6 @@ export const LOCAL_LANGUAGE_NEWS: EvalCase = {
     maxBadUrls: 0,
     maxDatedWebResults: 0,
     maxSnippetOnlyFindings: 0,
-    maxOverconfident: 0,
     maxMislabelled: 0,
     maxDuplicateClusters: 0,
     maxCitationsRejected: 0,

@@ -51,8 +51,8 @@ function formatCase(report: CaseReport): string {
     `  precision ${number(score.precision)}, recall ${number(score.recall)}, kept ${score.kept}, ` +
       `sources ${score.sources}, irrelevant ${score.irrelevantSources}, duplicates ${score.duplicateSources}, ` +
       `bad urls ${score.badUrls}, dated web ${score.datedWebResults}`,
-    `  snippet-only ${score.snippetOnlyFindings}, overconfident ${score.overconfident}, ` +
-      `mislabelled ${score.mislabelled}, cluster repeats ${score.duplicateClusters}, ` +
+    `  snippet-only ${score.snippetOnlyFindings}, mislabelled ${score.mislabelled}, ` +
+      `cluster repeats ${score.duplicateClusters}, ` +
       `quotes rejected ${score.citationsRejected}, ` +
       `searches ${score.searches}, reads ${score.reads}, model calls ${score.modelCalls}, ` +
       `tokens ${score.tokens}, ms ${score.ms}`,

@@ -8,8 +8,8 @@ const NOTICE = "https://northwindpayroll.com/security-notice";
 /**
  * The control: a real breach that a publisher reports and the vendor confirms on its own site, and
  * a vendor whose other pages hold nothing to report. Two independent publishers, one of them
- * credible (the vendor's own word), so the agent should keep exactly one finding, with high
- * confidence. If this case fails, something that works has broken.
+ * credible (the vendor's own word), so the agent should keep exactly one finding, with a High
+ * label. If this case fails, something that works has broken.
  */
 export const BREACH_TWO_PUBLISHERS: EvalCase = {
   id: "breach-two-publishers",
@@ -104,7 +104,6 @@ export const BREACH_TWO_PUBLISHERS: EvalCase = {
           risk_severity: "Major",
           action_plan:
             "Ask the vendor whether our data was on the server and for its incident report.",
-          confidence: "high",
           rationale:
             "The vendor confirmed that employee records were copied, which is serious for a payroll provider.",
           evidence: [
@@ -144,7 +143,6 @@ export const BREACH_TWO_PUBLISHERS: EvalCase = {
     maxBadUrls: 0,
     maxDatedWebResults: 0,
     maxSnippetOnlyFindings: 0,
-    maxOverconfident: 0,
     maxMislabelled: 0,
     maxDuplicateClusters: 0,
     maxCitationsRejected: 0,

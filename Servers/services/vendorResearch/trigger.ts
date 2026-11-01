@@ -98,8 +98,10 @@ const isUniqueViolation = (error: unknown): boolean =>
  * only moves a queued run (one that has not waited past the stale limit) to running and answers
  * false for a failed one, so the pipeline returns "skipped" before it searches or calls a model.
  * This holds once the failed state is written. A job that lands in the few milliseconds before
- * that write could still start the run, because `finishRunQuery` has no status guard; the caller
- * was told "could not enqueue", tries again, and the vendor is researched twice at worst.
+ * that write can still start the run; the caller was told "could not enqueue", tries again, and the
+ * vendor is researched twice at worst. The finish of the job that started it is dropped: the
+ * finish has a status guard (`finishRunQuery` writes only a queued or running run), so once
+ * "could not enqueue" is written, nothing overwrites it.
  */
 async function enqueueWithTimeout(
   organizationId: number,

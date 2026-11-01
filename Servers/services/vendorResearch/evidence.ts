@@ -18,7 +18,7 @@ import {
 } from "../../domain.layer/interfaces/i.vendorResearch";
 import { MAX_PAGE_CONTENT_CHARS } from "../webResearch/pageText";
 import { LedgerEntry } from "../webResearch/webSession";
-import { classifySource } from "./sourceRegistry/classify";
+import { type EdgarFiler, classifySource } from "./sourceRegistry/classify";
 import type { ResearchTarget } from "./target";
 import { MAX_SNIPPET_CHARS, cleanText, cutAtCodePoint } from "./text";
 import type { VrdbRecordMeta } from "./vrdb/types";
@@ -252,8 +252,9 @@ export function buildEvidencePack(
 /**
  * Where a source came from, beside what the pack shows of it: the database of a record, the
  * address on another site that a page claims as its own, whether the database still stands by the
- * record, what the vendor risk database knows of a record it offered, and the address a page
- * answered from. The credibility of a finding reads it (see credibility.ts); the model never does.
+ * record, what the vendor risk database knows of a record it offered, the address a page answered
+ * from, and, for an EDGAR filing under the CIK stored on the vendor, who filed it. The credibility
+ * of a finding reads it (see credibility.ts); the model never does.
  */
 export interface SourceProvenance {
   record?: RecordSourceId;
@@ -262,6 +263,12 @@ export interface SourceProvenance {
   status?: RecordStatus;
   vrdb?: VrdbRecordMeta;
   answeredUrl?: string;
+  /**
+   * Who filed an EDGAR filing under the CIK stored on the vendor, as the header of the filing says
+   * (Q28, edgarFiler.ts). The analysis puts it there once the SEC has answered (analysis.ts);
+   * `provenanceOf` never does. Absent means nobody asked or the SEC could not say.
+   */
+  edgarFiler?: EdgarFiler;
 }
 
 const isRecordSourceId = (value: string): value is RecordSourceId =>

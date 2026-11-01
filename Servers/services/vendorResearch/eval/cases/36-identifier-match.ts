@@ -101,7 +101,6 @@ export const IDENTIFIER_MATCH: EvalCase = {
           risk_severity: "Major",
           action_plan:
             "Stop payments to the vendor and ask our legal team to confirm the designation against the vendor's registration.",
-          confidence: "high",
           rationale: "The entry has the vendor's name and its registration number.",
           evidence: [{ source_id: "S1", quote: "Regime: Russia" }],
         },

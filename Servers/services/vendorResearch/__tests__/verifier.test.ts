@@ -21,7 +21,6 @@ const finding = (overrides: Partial<NewFinding> = {}): NewFinding => ({
   likelihood: "Possible",
   risk_severity: "Major",
   risk_level: "High Risk",
-  confidence: "medium",
   rationale: null,
   sources: [
     {
@@ -128,6 +127,43 @@ describe("verifierPasses", () => {
     } finally {
       timeout.mockRestore();
     }
+  });
+
+  it("shows the database of a cited address that has a record in the provenance, and only that one", async () => {
+    const KEV = "https://www.cisa.gov/known-exploited-vulnerabilities-catalog?cve=CVE-2026-1";
+    const generate = answers([{ finding: 1, ...PASS }]);
+    const findings = [
+      finding({
+        sources: [
+          { url: KEV, title: "CVE-2026-1", quote: "q", published_at: "2026-09-30" },
+          {
+            url: "https://news.example.com/acme-breach",
+            title: "Acme confirms breach",
+            quote: "attackers copied customer records",
+            published_at: "2026-09-30",
+          },
+        ],
+      }),
+    ];
+
+    await verifierPasses({
+      target: TARGET,
+      findings,
+      now: NOW,
+      model: MODEL,
+      generate: generate as never,
+      trace: createTraceRecorder(),
+      provenance: new Map([[KEV, { record: "kev" }]]),
+    });
+
+    const prompt = (generate.mock.calls[0][0] as unknown as { prompt: string }).prompt;
+    expect(prompt).toContain(
+      `<source url="${KEV}" date="2026-09-30" database="CISA Known Exploited Vulnerabilities Catalog">`,
+    );
+    expect(prompt.match(/database=/g)).toHaveLength(1);
+    expect(prompt).toBe(
+      buildVerifierUserPrompt(TARGET, findings, (url) => (url === KEV ? "kev" : undefined)),
+    );
   });
 
   it("passes every finding when every verdict is true", async () => {

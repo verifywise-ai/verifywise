@@ -1,10 +1,10 @@
 import type { TokenUsage } from "../../../advisor/llmSelfCorrect";
 import type { EvidenceSource } from "../../../domain.layer/interfaces/i.vendorResearch";
 import { PageReadError, type PageReader } from "../../webResearch/readPage";
-import { analyse } from "../analysis";
+import { EDGAR_FILER_TIMEOUT_MS, analyse } from "../analysis";
 import { buildSystemPrompt } from "../prompts";
 import { REGISTRY_VERSION } from "../sourceRegistry/entries";
-import { credibilityOutputSchema, researchOutputSchema, type ResearchOutput } from "../schema";
+import { credibilityOutputSchema, type ResearchOutput } from "../schema";
 import { verifierSchema } from "../verifier";
 import { buildTarget } from "../target";
 import { createTraceRecorder } from "../trace";
@@ -37,7 +37,6 @@ const FINDING: ResearchOutput["findings"][number] = {
   likelihood: "Possible",
   risk_severity: "Major",
   action_plan: "Ask the vendor for its incident report.",
-  confidence: "medium",
   rationale: "Customer records were copied, which is serious, but only a test system is named.",
   evidence: [{ source_id: "S1", quote: QUOTE }],
 };
@@ -100,7 +99,7 @@ describe("analyse", () => {
     expect(generate).toHaveBeenCalledTimes(1);
     expect(generate).toHaveBeenCalledWith(
       expect.objectContaining({
-        schema: researchOutputSchema,
+        schema: credibilityOutputSchema,
         temperature: 0,
         innerMaxRetries: 2,
         maxSelfCorrectionAttempts: 2,
@@ -112,22 +111,14 @@ describe("analyse", () => {
     );
   });
 
-  it("asks with the schema and the prompt of the credibility rules when it is given them", async () => {
-    const { result, generate } = run({ rules: "credibility" });
-
-    await result;
-
-    expect(generate.mock.calls[0][0].schema).toBe(credibilityOutputSchema);
-    expect(generate.mock.calls[0][0].system).toBe(buildSystemPrompt(NOW, "credibility"));
-  });
-
-  it("asks as before when it is given no rules", async () => {
+  it("always asks under the credibility rules: the schema and the prompt without the confidence, given no rules", async () => {
     const { result, generate } = run();
 
     await result;
 
-    expect(generate.mock.calls[0][0].schema).toBe(researchOutputSchema);
+    expect(generate.mock.calls[0][0].schema).toBe(credibilityOutputSchema);
     expect(generate.mock.calls[0][0].system).toBe(buildSystemPrompt(NOW));
+    expect(generate.mock.calls[0][0].system).not.toMatch(/confidence/i);
   });
 
   describe("the materiality of the vendor", () => {
@@ -190,7 +181,6 @@ describe("analyse", () => {
       likelihood: "Unlikely",
       risk_severity: "Minor",
       action_plan: "Follow the decision of the authority.",
-      confidence: "low",
       rationale: "A fine is possible but not announced.",
       evidence: [{ source_id: "S2", quote: REGULATOR_QUOTE }],
     };
@@ -364,8 +354,8 @@ describe("analyse", () => {
     });
     const readerOf = (read: PageReader) => jest.fn(read);
 
-    // Two pages of two publishers: the most the evidence supports is `medium`, so that a confidence
-    // that is lowered here is lowered by the check and not by the ceiling of one page.
+    // Two pages of two publishers, so that a label that is lowered here is lowered by the check of
+    // the snippet and not because one page is all the finding rests on.
     const TWO_PACK: EvidenceSource[] = [
       PACK[0],
       {
@@ -378,14 +368,13 @@ describe("analyse", () => {
     ];
     const TWO_SOURCES = {
       ...FINDING,
-      confidence: "high" as const,
       evidence: [
         { source_id: "S1", quote: QUOTE },
         { source_id: "S2", quote: QUOTE },
       ],
     };
 
-    it("reads by the rules it is given: the registry category first under the credibility rules", async () => {
+    it("reads the page of the best source: the highest registry category first, not the vendor's own page", async () => {
       const VENDOR_AND_REGULATOR: EvidenceSource[] = [
         {
           ...PACK[0],
@@ -395,21 +384,16 @@ describe("analyse", () => {
         },
         { ...PACK[0], id: "S2", url: "https://ico.org.uk/action/acme", content: `ICO: ${QUOTE}.` },
       ];
-      const cited = { ...TWO_SOURCES, confidence: "medium" as const };
-      const firstRead = async (rules?: "credibility") => {
-        const readPage = readerOf(PAGE(`Acme said on Monday that ${QUOTE}.`));
-        await run({
-          pack: VENDOR_AND_REGULATOR,
-          readPage,
-          generate: answer([cited]) as never,
-          ...(rules === undefined ? {} : { rules }),
-        }).result;
-        return readPage.mock.calls.map(([url]) => url);
-      };
+      const readPage = readerOf(PAGE(`Acme said on Monday that ${QUOTE}.`));
 
-      // The vendor's own page is the best tier; an official source is the best category.
-      expect(await firstRead()).toEqual(["https://acme.com/security/notice"]);
-      expect(await firstRead("credibility")).toEqual(["https://ico.org.uk/action/acme"]);
+      await run({
+        pack: VENDOR_AND_REGULATOR,
+        readPage,
+        generate: answer([TWO_SOURCES]) as never,
+      }).result;
+
+      // An official source is the best category; the vendor's own page comes after it.
+      expect(readPage.mock.calls.map(([url]) => url)).toEqual(["https://ico.org.uk/action/acme"]);
     });
 
     it("reads the page of the source, and keeps the finding as it was when the page holds the quote", async () => {
@@ -431,7 +415,7 @@ describe("analyse", () => {
       ]);
     });
 
-    it("marks the finding as snippet only and lowers its confidence when the page does not hold the quote", async () => {
+    it("marks the finding as snippet only, and gives it no confidence, when the page does not hold the quote", async () => {
       const readPage = readerOf(PAGE("Acme said on Monday that it is looking into an incident."));
       const { result } = run({
         readPage,
@@ -442,10 +426,8 @@ describe("analyse", () => {
       const analysed = await result;
 
       expect(readPage).toHaveBeenCalledTimes(1);
-      expect(analysed.ok && analysed.kept[0]).toMatchObject({
-        snippet_only: true,
-        confidence: "low",
-      });
+      expect(analysed.ok && analysed.kept[0]).toMatchObject({ snippet_only: true });
+      expect(analysed.ok && analysed.kept[0]).not.toHaveProperty("confidence");
     });
 
     it("labels a finding whose page does not hold the quote as contradicted", async () => {
@@ -466,7 +448,7 @@ describe("analyse", () => {
       ]);
     });
 
-    it("marks the finding but keeps its confidence when the page cannot be read", async () => {
+    it("marks the finding as snippet only, and gives it no confidence, when the page cannot be read", async () => {
       const readPage = readerOf(async () => {
         throw new PageReadError("blocked_by_site");
       });
@@ -479,10 +461,8 @@ describe("analyse", () => {
       const analysed = await result;
 
       expect(readPage).toHaveBeenCalledTimes(2);
-      expect(analysed.ok && analysed.kept[0]).toMatchObject({
-        snippet_only: true,
-        confidence: "medium",
-      });
+      expect(analysed.ok && analysed.kept[0]).toMatchObject({ snippet_only: true });
+      expect(analysed.ok && analysed.kept[0]).not.toHaveProperty("confidence");
     });
 
     it("reads nothing when it is given no reader, and records no phase for it", async () => {
@@ -639,6 +619,22 @@ describe("analyse", () => {
         "analysis",
         "verifier",
       ]);
+    });
+
+    it("hands the provenance of the pack to the verifier, so that it sees the database of a record", async () => {
+      const generate = twoCalls([FINDING], [{ finding: 1, ...PASS }]);
+      const { result } = run({
+        generate: generate as never,
+        verifier: true,
+        provenance: new Map([[PACK[0].url, { record: "kev" }]]),
+      });
+
+      await result;
+
+      const verifierCall = generate.mock.calls[1][0] as unknown as { prompt: string };
+      expect(verifierCall.prompt).toContain(
+        `<source url="${PACK[0].url}" date="2026-09-30" database="CISA Known Exploited Vulnerabilities Catalog">`,
+      );
     });
 
     it("does not keep a finding it fails, says why in the trace, and still reports what the model proposed", async () => {
@@ -886,6 +882,501 @@ describe("analyse", () => {
       const analysed = await result;
 
       expect(analysed.ok && analysed.credibility).toEqual([]);
+    });
+  });
+
+  describe("who filed an EDGAR filing under the stored CIK (Q28)", () => {
+    const STORED = { ...TARGET, identifiers: { secCik: "0000320193" } };
+    const folder = (n: number) => `000032019326${String(n).padStart(6, "0")}`;
+    const filingUrl = (n: number, cik = "320193") =>
+      `https://www.sec.gov/Archives/edgar/data/${cik}/${folder(n)}/acme-8k-${n}.htm`;
+    const quoteOf = (n: number) => `report ${n} says attackers copied customer records`;
+    const filing = (n: number, over: Partial<EvidenceSource> = {}): EvidenceSource => ({
+      id: `S${n}`,
+      category: "security_incidents",
+      kind: "page",
+      onVendorSite: false,
+      url: filingUrl(n),
+      title: `Form 8-K report ${n}`,
+      content: `Item 1.05. Acme ${quoteOf(n)} from a test system.`,
+      publishedAt: null,
+      ...over,
+    });
+    const citing = (ids: number[], over: Partial<ResearchOutput["findings"][number]> = {}) => ({
+      ...FINDING,
+      evidence: ids.map((n) => ({ source_id: `S${n}`, quote: quoteOf(n) })),
+      ...over,
+    });
+    const SECOND = {
+      risk_description:
+        "Payroll files were exposed through a storage bucket that anyone could open.",
+      impact_description: "Salary data of our staff could be read by strangers.",
+    };
+
+    /**
+     * Answers by address; an address that is not in the table is answered `vendor`, and one that is
+     * keeps its answer, a `null` (the SEC does not know) and an error (the ask fails) included.
+     */
+    const answering = (table: Record<string, "vendor" | "other" | null | Error> = {}) =>
+      jest.fn<Promise<"vendor" | "other" | null>, [string, string, AbortSignal]>(async (url) => {
+        const answer = url in table ? table[url] : "vendor";
+        if (answer instanceof Error) throw answer;
+        return answer;
+      });
+
+    const credibilityOfRun = async (over: Partial<Parameters<typeof analyse>[0]>) => {
+      const analysed = await run({ target: STORED, ...over }).result;
+      if (!analysed.ok) throw new Error("the analysis failed");
+      return analysed;
+    };
+
+    it("labels a filing the vendor filed as the vendor's statement", async () => {
+      const edgarFilerOf = answering({ [filingUrl(1)]: "vendor" });
+
+      const analysed = await credibilityOfRun({
+        pack: [filing(1)],
+        generate: answer([citing([1])]) as never,
+        edgarFilerOf,
+      });
+
+      expect(analysed.credibility).toEqual([
+        expect.objectContaining({
+          label: "high",
+          basis: expect.objectContaining({
+            rule: "vendor_statement",
+            sources: [
+              expect.objectContaining({
+                url: filingUrl(1),
+                category: "vendor",
+                entry: "sec",
+                vendor_kind: "statement",
+                reading: "read",
+              }),
+            ],
+          }),
+        }),
+      ]);
+    });
+
+    const NOT_THE_VENDOR: Array<[string, () => Promise<"vendor" | "other" | null>]> = [
+      ["somebody else filed it", async () => "other"],
+      ["the SEC does not know", async () => null],
+      [
+        "the function fails",
+        async () => {
+          throw new Error("redis is down");
+        },
+      ],
+      ["the function answers with something else", async () => "yes" as never],
+    ];
+
+    it.each(NOT_THE_VENDOR)(
+      "labels a filing unverified and downgraded when %s",
+      async (_label, answerOf) => {
+        const analysed = await credibilityOfRun({
+          pack: [filing(1)],
+          generate: answer([citing([1])]) as never,
+          edgarFilerOf: jest.fn(answerOf),
+        });
+
+        expect(analysed.kept).toHaveLength(1);
+        expect(analysed.credibility).toEqual([
+          expect.objectContaining({
+            label: "low",
+            basis: expect.objectContaining({
+              rule: "unverified",
+              sources: [
+                expect.objectContaining({ category: "unverified", entry: "sec", downgraded: true }),
+              ],
+            }),
+          }),
+        ]);
+      },
+    );
+
+    it("asks nothing without a function for it, and the filing is unverified", async () => {
+      const analysed = await credibilityOfRun({
+        pack: [filing(1)],
+        generate: answer([citing([1])]) as never,
+      });
+
+      expect(analysed.credibility).toEqual([
+        expect.objectContaining({
+          label: "low",
+          basis: expect.objectContaining({ rule: "unverified" }),
+        }),
+      ]);
+    });
+
+    it("asks with the address, the stored CIK as ten digits and a signal that stops after a while", async () => {
+      const edgarFilerOf = answering();
+
+      await credibilityOfRun({
+        pack: [filing(1)],
+        generate: answer([citing([1])]) as never,
+        edgarFilerOf,
+      });
+
+      expect(edgarFilerOf).toHaveBeenCalledTimes(1);
+      expect(edgarFilerOf).toHaveBeenCalledWith(
+        filingUrl(1),
+        "0000320193",
+        expect.any(AbortSignal),
+      );
+      expect(edgarFilerOf.mock.calls[0][2].aborted).toBe(false);
+    });
+
+    it("gives all the asks one deadline, so that a slow answer does not hold the analysis", async () => {
+      // The signal of the asks is made by AbortSignal.timeout; keep what each one was made with.
+      const made: Array<{ ms: number; signal: AbortSignal }> = [];
+      const timeout = jest.spyOn(AbortSignal, "timeout").mockImplementation((ms) => {
+        const signal = new AbortController().signal;
+        made.push({ ms, signal });
+        return signal;
+      });
+      try {
+        const edgarFilerOf = answering();
+
+        await credibilityOfRun({
+          pack: [filing(1), filing(2)],
+          generate: answer([citing([1, 2])]) as never,
+          edgarFilerOf,
+        });
+
+        expect(edgarFilerOf).toHaveBeenCalledTimes(2);
+        const [first, second] = edgarFilerOf.mock.calls.map(([, , signal]) => signal);
+        expect(second).toBe(first);
+        expect(made.find(({ signal }) => signal === first)?.ms).toBe(EDGAR_FILER_TIMEOUT_MS);
+      } finally {
+        timeout.mockRestore();
+      }
+    });
+
+    it.each([
+      ["a vendor with no stored CIK", TARGET],
+      ["a stored CIK that is no CIK", { ...TARGET, identifiers: { secCik: "CIK 12" } }],
+      [
+        "a vendor with other identifiers only",
+        { ...TARGET, identifiers: { lei: "5493001KJTIIGC8Y1R12" } },
+      ],
+    ])("asks nothing for %s", async (_label, target) => {
+      const edgarFilerOf = answering();
+
+      const analysed = await credibilityOfRun({
+        target,
+        pack: [filing(1)],
+        generate: answer([citing([1])]) as never,
+        edgarFilerOf,
+      });
+
+      expect(edgarFilerOf).not.toHaveBeenCalled();
+      expect(analysed.credibility).toEqual([
+        expect.objectContaining({
+          label: "low",
+          basis: expect.objectContaining({ rule: "unverified" }),
+        }),
+      ]);
+    });
+
+    it.each([
+      ["a filing under another CIK", filingUrl(1, "789019"), undefined],
+      [
+        "a page of the SEC that is no filing",
+        "https://www.sec.gov/newsroom/press-releases/2026-1",
+        undefined,
+      ],
+      [
+        "a page on another host",
+        `https://www.example.com/Archives/edgar/data/320193/${folder(1)}/a.htm`,
+        undefined,
+      ],
+      ["a record of the SEC", filingUrl(1), { record: "sec" as const }],
+    ])("asks nothing about %s", async (_label, url, origin) => {
+      const edgarFilerOf = answering();
+
+      await credibilityOfRun({
+        pack: [filing(1, { url })],
+        provenance: origin === undefined ? undefined : new Map([[url, origin]]),
+        generate: answer([citing([1])]) as never,
+        edgarFilerOf,
+      });
+
+      expect(edgarFilerOf).not.toHaveBeenCalled();
+    });
+
+    it("asks about the address a page answered from, and labels the cited address by it", async () => {
+      const SHORT = "https://t.co/abc";
+      const edgarFilerOf = answering({ [filingUrl(1)]: "vendor" });
+
+      const analysed = await credibilityOfRun({
+        pack: [filing(1, { url: SHORT })],
+        provenance: new Map([[SHORT, { answeredUrl: filingUrl(1) }]]),
+        generate: answer([citing([1])]) as never,
+        edgarFilerOf,
+      });
+
+      expect(edgarFilerOf).toHaveBeenCalledTimes(1);
+      expect(edgarFilerOf.mock.calls[0][0]).toBe(filingUrl(1));
+      expect(analysed.credibility[0].basis.sources[0]).toMatchObject({
+        url: SHORT,
+        category: "vendor",
+        entry: "sec",
+      });
+    });
+
+    it("labels each source of a finding by the answer for it", async () => {
+      const edgarFilerOf = answering({ [filingUrl(1)]: "vendor", [filingUrl(2)]: "other" });
+
+      const analysed = await credibilityOfRun({
+        pack: [filing(1), filing(2)],
+        generate: answer([citing([1, 2])]) as never,
+        edgarFilerOf,
+      });
+
+      expect(analysed.credibility[0].basis.sources).toEqual([
+        expect.objectContaining({ url: filingUrl(1), category: "vendor" }),
+        expect.objectContaining({ url: filingUrl(2), category: "unverified", downgraded: true }),
+      ]);
+      expect(analysed.credibility[0]).toMatchObject({ label: "high" });
+    });
+
+    it("asks at most five times in a run, in the order of the sources, and leaves the rest unverified", async () => {
+      const edgarFilerOf = answering();
+
+      const analysed = await credibilityOfRun({
+        pack: [1, 2, 3, 4, 5, 6, 7].map((n) => filing(n)),
+        generate: answer([citing([1, 2, 3, 4, 5]), citing([6, 7], SECOND)]) as never,
+        edgarFilerOf,
+      });
+
+      expect(edgarFilerOf.mock.calls.map(([url]) => url)).toEqual(
+        [1, 2, 3, 4, 5].map((n) => filingUrl(n)),
+      );
+      expect(analysed.kept).toHaveLength(2);
+      expect(analysed.credibility[0]).toMatchObject({ label: "high" });
+      expect(analysed.credibility[1]).toMatchObject({
+        label: "low",
+        basis: { rule: "unverified" },
+      });
+      expect(analysed.credibility[1].basis.sources).toEqual([
+        expect.objectContaining({ url: filingUrl(6), category: "unverified", downgraded: true }),
+        expect.objectContaining({ url: filingUrl(7), category: "unverified", downgraded: true }),
+      ]);
+    });
+
+    it("counts the asks, not the answers: a failed one takes a place", async () => {
+      const edgarFilerOf = answering({ [filingUrl(1)]: null, [filingUrl(2)]: new Error("down") });
+
+      await credibilityOfRun({
+        pack: [1, 2, 3, 4, 5, 6].map((n) => filing(n)),
+        generate: answer([citing([1, 2, 3, 4, 5]), citing([6], SECOND)]) as never,
+        edgarFilerOf,
+      });
+
+      expect(edgarFilerOf).toHaveBeenCalledTimes(5);
+    });
+
+    describe("what the SEC can be asked", () => {
+      /** The full submission of a filing, in the folder of the CIK: it is a filing, but no header's. */
+      const submissionUrl = (n: number) =>
+        `https://www.sec.gov/Archives/edgar/data/320193/0000320193-26-${String(n).padStart(6, "0")}.txt`;
+      /** The second document of filing `n`: the exhibit that comes with its 8-K, in its folder. */
+      const exhibitUrl = (n: number) =>
+        `https://www.sec.gov/Archives/edgar/data/320193/${folder(n)}/acme-ex99-${n}.htm`;
+
+      it("asks nothing about an address the header of a filing cannot be named for, and it takes no place", async () => {
+        const edgarFilerOf = answering();
+        const submissions = [1, 2, 3, 4, 5].map((n) =>
+          filing(n, { id: `S${n}`, url: submissionUrl(n) }),
+        );
+
+        const analysed = await credibilityOfRun({
+          pack: [...submissions, filing(6)],
+          generate: answer([citing([1, 2, 3, 4, 5, 6])]) as never,
+          edgarFilerOf,
+        });
+
+        // The five full submissions come first in the pack and name no header; the 8-K is asked.
+        expect(edgarFilerOf.mock.calls.map(([url]) => url)).toEqual([filingUrl(6)]);
+        expect(
+          analysed.credibility[0].basis.sources.map(({ url, category }) => [url, category]),
+        ).toEqual([
+          ...[1, 2, 3, 4, 5].map((n) => [submissionUrl(n), "unverified"]),
+          [filingUrl(6), "vendor"],
+        ]);
+      });
+
+      it("asks once for the documents of one filing, and labels each of them by the answer", async () => {
+        const edgarFilerOf = answering({ [filingUrl(1)]: "other" });
+
+        const analysed = await credibilityOfRun({
+          pack: [filing(1), filing(1, { id: "S7", url: exhibitUrl(1) })],
+          generate: answer([
+            citing([1], {}),
+            { ...citing([7], SECOND), evidence: [{ source_id: "S7", quote: quoteOf(1) }] },
+          ]) as never,
+          edgarFilerOf,
+        });
+
+        expect(edgarFilerOf).toHaveBeenCalledTimes(1);
+        expect(edgarFilerOf.mock.calls[0][0]).toBe(filingUrl(1));
+        expect(analysed.kept).toHaveLength(2);
+        expect(analysed.credibility.map(({ label }) => label)).toEqual(["low", "low"]);
+        expect(
+          analysed.credibility.flatMap(({ basis }) => basis.sources.map(({ url }) => url)),
+        ).toEqual([filingUrl(1), exhibitUrl(1)]);
+      });
+
+      it("counts a filing once whatever the number of its documents: five filings are asked, not five documents", async () => {
+        const edgarFilerOf = answering();
+
+        await credibilityOfRun({
+          pack: [
+            filing(1),
+            filing(1, { id: "S7", url: exhibitUrl(1) }),
+            filing(2),
+            filing(3),
+            filing(4),
+            filing(5),
+            filing(6),
+          ],
+          generate: answer([
+            {
+              ...citing([1, 2, 3, 4, 5, 6]),
+              evidence: [1, 2, 3, 4, 5, 6].map((n) => ({ source_id: `S${n}`, quote: quoteOf(n) })),
+            },
+            { ...citing([7], SECOND), evidence: [{ source_id: "S7", quote: quoteOf(1) }] },
+          ]) as never,
+          edgarFilerOf,
+        });
+
+        expect(edgarFilerOf.mock.calls.map(([url]) => url)).toEqual(
+          [1, 2, 3, 4, 5].map((n) => filingUrl(n)),
+        );
+      });
+
+      it("labels a second document of a filing by the answer for the filing, also after the five places are taken", async () => {
+        const edgarFilerOf = answering({ [filingUrl(1)]: "vendor" });
+
+        const analysed = await credibilityOfRun({
+          pack: [
+            filing(1),
+            filing(2),
+            filing(3),
+            filing(4),
+            filing(5),
+            filing(6),
+            filing(1, { id: "S7", url: exhibitUrl(1) }),
+          ],
+          generate: answer([
+            citing([1, 2, 3, 4, 5, 6]),
+            { ...citing([7], SECOND), evidence: [{ source_id: "S7", quote: quoteOf(1) }] },
+          ]) as never,
+          edgarFilerOf,
+        });
+
+        // The sixth filing was not asked; the exhibit of the first shares its answer all the same.
+        expect(edgarFilerOf).toHaveBeenCalledTimes(5);
+        expect(analysed.credibility[1].basis.sources[0]).toMatchObject({
+          url: exhibitUrl(1),
+          category: "vendor",
+        });
+      });
+    });
+
+    it("asks only about the sources the findings that stay cite", async () => {
+      const edgarFilerOf = answering();
+
+      await credibilityOfRun({
+        pack: [filing(1), filing(2), filing(3)],
+        generate: answer([citing([2])]) as never,
+        edgarFilerOf,
+      });
+
+      expect(edgarFilerOf.mock.calls.map(([url]) => url)).toEqual([filingUrl(2)]);
+    });
+
+    it("asks nothing when no finding stays", async () => {
+      const edgarFilerOf = answering();
+
+      await credibilityOfRun({
+        pack: [filing(1)],
+        generate: answer([]) as never,
+        edgarFilerOf,
+      });
+
+      expect(edgarFilerOf).not.toHaveBeenCalled();
+    });
+
+    it("asks once for a source that two findings cite", async () => {
+      const edgarFilerOf = answering();
+
+      await credibilityOfRun({
+        pack: [filing(1)],
+        generate: answer([citing([1]), citing([1], SECOND)]) as never,
+        edgarFilerOf,
+      });
+
+      expect(edgarFilerOf).toHaveBeenCalledTimes(1);
+    });
+
+    it("asks after the check of the findings, and only for the findings that stay", async () => {
+      const PASS = { same_company: true, quote_supports_claim: true, source_in_window: true };
+      const generate = jest.fn(
+        async (params: { schema: unknown; onUsage?: (usage: TokenUsage) => void }) => {
+          const usage = { inputTokens: 100, outputTokens: 10, totalTokens: 110 };
+          params.onUsage?.(usage);
+          const object =
+            params.schema === verifierSchema
+              ? {
+                  verdicts: [
+                    { finding: 1, ...PASS, same_company: false },
+                    { finding: 2, ...PASS },
+                  ],
+                }
+              : ({
+                  findings: [citing([1]), citing([2], SECOND)],
+                  category_notes: [],
+                } satisfies ResearchOutput);
+          return { object, attempts: 1, selfCorrected: false, usage };
+        },
+      );
+      const edgarFilerOf = answering({ [filingUrl(2)]: "vendor" });
+
+      const analysed = await credibilityOfRun({
+        pack: [filing(1), filing(2)],
+        generate: generate as never,
+        verifier: true,
+        edgarFilerOf,
+      });
+
+      expect(analysed.kept).toHaveLength(1);
+      expect(edgarFilerOf.mock.calls.map(([url]) => url)).toEqual([filingUrl(2)]);
+      expect(analysed.credibility).toEqual([
+        expect.objectContaining({
+          label: "high",
+          basis: expect.objectContaining({
+            sources: [expect.objectContaining({ url: filingUrl(2), category: "vendor" })],
+          }),
+        }),
+      ]);
+    });
+
+    it("leaves the provenance it was given as it was, and keeps what else it says of a source", async () => {
+      const url = filingUrl(1);
+      const given: ReadonlyMap<string, { canonicalUrl?: string; answeredUrl?: string }> = new Map([
+        [url, { canonicalUrl: "https://www.example.com/canonical" }],
+      ]);
+
+      const analysed = await credibilityOfRun({
+        pack: [filing(1)],
+        provenance: given,
+        generate: answer([citing([1])]) as never,
+        edgarFilerOf: answering(),
+      });
+
+      expect([...given]).toEqual([[url, { canonicalUrl: "https://www.example.com/canonical" }]]);
+      expect(analysed.credibility[0].basis.sources[0]).toMatchObject({ category: "vendor" });
     });
   });
 

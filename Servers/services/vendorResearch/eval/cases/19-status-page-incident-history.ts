@@ -154,8 +154,7 @@ const records: RecordsOutcome[] = [
  * allows it) and gives the run the newest incidents of the lookback as records, with the updates in
  * the words of the vendor. A short delay is a record too, and a planned maintenance and an incident
  * from before the lookback are not. The record is a source that was read, so the finding that cites
- * it is no finding on a snippet; it is one page of a publisher that is not credible by itself, so
- * the confidence is low.
+ * it is no finding on a snippet.
  *
  * Under the credibility rule the label is High: the status page is the vendor's own statement of
  * its outage (rule V), and one is enough (spec D5.6 #3).
@@ -213,7 +212,6 @@ export const STATUS_PAGE_INCIDENT_HISTORY: EvalCase = {
           risk_severity: "Moderate",
           action_plan:
             "Ask the vendor for its report on the outage and the changes it made to prevent a failed network change from cutting off its storage nodes again, and check what our own systems do when storage is unavailable.",
-          confidence: "low",
           rationale:
             "The vendor's own status page reports the outage and its length, but it is the only source: no news confirms it and the page does not say how many customers were affected.",
           evidence: [
@@ -254,7 +252,6 @@ export const STATUS_PAGE_INCIDENT_HISTORY: EvalCase = {
     maxBadUrls: 0,
     maxDatedWebResults: 0,
     maxSnippetOnlyFindings: 0,
-    maxOverconfident: 0,
     maxMislabelled: 0,
     maxDuplicateClusters: 0,
     maxCitationsRejected: 0,

@@ -17,9 +17,8 @@ import type { Credibility } from "../credibility";
 import { buildEvidencePack, provenanceOf } from "../evidence";
 import { type ResearchResult, createVendorResearcher } from "../researchAgent";
 import { buildMateriality } from "../materiality";
-import type { ResearchRules } from "../schema";
 import { type ResearchTarget, buildTarget } from "../target";
-import { type RunTrace, createTraceRecorder } from "../trace";
+import { type RunTrace, type TraceRecorder, createTraceRecorder } from "../trace";
 import { offerRecords } from "../vrdb/lookup";
 import type { VrdbLookup, VrdbRow } from "../vrdb/types";
 import { createReplayEngine, createReplayPageReader, createScriptedGenerate } from "./replay";
@@ -77,8 +76,12 @@ export interface CaseDeps {
   generate?: typeof generateObjectWithSelfCorrection;
   /** The model the calls are made with; a replay has none. */
   model?: unknown;
-  /** The rules the analysis asks under; those of the pipeline (`confidence`) when absent. */
-  rules?: ResearchRules;
+  /**
+   * The trace the run writes into; a new one when absent. A live run passes its own because the
+   * search engine of the key is made before the run and writes the calls of its model into the
+   * trace (see researchAgent.ts, `createRunSearch`), which `--trace` then prints with the rest.
+   */
+  trace?: TraceRecorder;
 }
 
 export async function runEvalCase(evalCase: EvalCase, deps: CaseDeps = {}): Promise<CaseRun> {
@@ -116,11 +119,11 @@ export async function runEvalCase(evalCase: EvalCase, deps: CaseDeps = {}): Prom
     perCategory: evalCase.perCategory === true,
     // What the databases answered when the case was recorded: the run asks nobody.
     ...(recording.records === undefined ? {} : { records: async () => recording.records ?? [] }),
-    // What the copies of the lists held, offered whatever the rules of the analysis.
+    // What the copies of the lists held.
     ...(recording.vrdb === undefined ? {} : { vrdb: replayVrdb(recording.vrdb) }),
   });
 
-  const trace = createTraceRecorder();
+  const trace = deps.trace ?? createTraceRecorder();
   trace.startPhase("research");
   const found = await researcher({ target, model, now, trace });
   trace.stopped(found.stoppedBecause);
@@ -143,7 +146,6 @@ export async function runEvalCase(evalCase: EvalCase, deps: CaseDeps = {}): Prom
       // snippets, and the verifier, when the case has it on, checks them all.
       readPage: found.readPage,
       verifier: evalCase.verifier === true,
-      rules: deps.rules,
       loadKnown: async () => ({
         existingRisks: evalCase.known?.existingRisks ?? [],
         priorFindings: evalCase.known?.priorFindings ?? [],

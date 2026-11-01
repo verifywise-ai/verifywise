@@ -15,12 +15,13 @@ import {
   EvidenceSource,
   NewFinding,
   RESEARCH_CATEGORIES,
+  RecordSourceId,
   ResearchCategory,
 } from "../../domain.layer/interfaces/i.vendorResearch";
 import { EXCERPT_GAP, MAX_EXTRA_PARTS, MAX_PAGE_PARTS } from "../webResearch/pageText";
 import { escapeAttribute, escapeForPrompt, unescapeFromPrompt } from "../webResearch/promptText";
 import { MAX_ACTIONS_PER_STEP } from "../webResearch/researchLoop";
-import { MAX_RESULTS } from "../webResearch/webSearch";
+import { MAX_RESULTS, type SearchEngine, type SearchKind } from "../webResearch/webSearch";
 import { LOOKBACK_MONTHS, monthsBefore } from "./categories";
 import type { EventCluster } from "./clusters";
 import type { Materiality } from "./materiality";
@@ -36,46 +37,55 @@ import {
   MAX_NOTE_CHARS,
   MAX_PER_CATEGORY,
   MAX_QUOTE_CHARS,
-  RESEARCH_CONFIDENCES,
   RESEARCH_LIKELIHOODS,
   RESEARCH_SEVERITIES,
-  type ResearchRules,
 } from "./schema";
 import { ResearchTarget } from "./target";
 
 export { escapeForPrompt, unescapeFromPrompt };
 
 /**
- * Stored with every run. Change it whenever the wording of a prompt changes. `vr-3` wrote the
- * rule of a query (the name and at most three topic words) and the queries that work into the
- * research loop, and gave the analysis the rule of the confidence, the anchors of the likelihood
- * and the severity, and the rationale of a finding. `vr-4` (the architecture phase) lets a step of
- * the research loop hold up to four actions, tells the loop about the routine work of the code, and
- * adds the prompts of the call for hints and of the verifier. `vr-5` (the coverage phase) teaches
- * the loop to read a long page in parts, and the changes of wording of that phase are in this
- * version too. `vr-6` (the monitoring phase) teaches the analysis what a source that begins with
- * Page change is and what an entry of the sanctions list is, and the changes of wording of that
- * phase are in this version too. `vr-7` (the vendor risk database) drops the confidence from the
- * analysis; the credibility label is computed by code. `vr-8` also words the sanctions lists anew:
- * the UK and EU lists beside OFAC's, and an entry is a match by name only when its text has the
- * lookup note (a UK entry can match by the vendor's website). `vr-9` asks for the words "An entity
- * named … is on …" of an entry matched by name only, says that a match by website is one of the
- * vendor's verified website whose identifiers are still to be checked, and the briefing calls the
- * UK list's website the vendor's verified one. `vr-10` (M2 of the vendor risk database) names the
- * CVE Program among the databases and the UN list among the sanctions lists, and says that an
- * entry without the lookup note matched the vendor's verified website or one of its identifiers.
- * `vr-10` is `CREDIBILITY_PROMPT_VERSION`, the prompt of the credibility rules; `vr-7` was never
- * stored. This one stays the version of the confidence rules.
+ * The version of the prompts a run asks with, stored with it. Change it whenever the wording of a
+ * prompt changes. `vr-3` wrote the rule of a query (the name and at most three topic words) and
+ * the queries that work into the research loop, and gave the analysis the rule of the confidence,
+ * the anchors of the likelihood and the severity, and the rationale of a finding. `vr-4` (the
+ * architecture phase) lets a step of the research loop hold up to four actions, tells the loop
+ * about the routine work of the code, and adds the prompts of the call for hints and of the
+ * verifier. `vr-5` (the coverage phase) teaches the loop to read a long page in parts, and the
+ * changes of wording of that phase are in this version too. `vr-6` (the monitoring phase) teaches
+ * the analysis what a source that begins with Page change is and what an entry of the sanctions
+ * list is, and the changes of wording of that phase are in this version too. `vr-7` (the vendor
+ * risk database) drops the confidence from the analysis; the credibility label is computed by
+ * code. `vr-8` also words the sanctions lists anew: the UK and EU lists beside OFAC's, and an
+ * entry is a match by name only when its text has the lookup note (a UK entry can match by the
+ * vendor's website). `vr-9` asks for the words "An entity named … is on …" of an entry matched by
+ * name only, says that a match by website is one of the vendor's verified website whose
+ * identifiers are still to be checked, and the briefing calls the UK list's website the vendor's
+ * verified one. `vr-10` (M2 of the vendor risk database) names the CVE Program among the databases
+ * and the UN list among the sanctions lists, and says that an entry without the lookup note
+ * matched the vendor's verified website or one of its identifiers. Those `vr-7` to `vr-10` are the
+ * line of this constant; its `vr-7` was never stored.
+ *
+ * The next version put the search engine into the loop prompt. Bing, which answered both the web
+ * and the news, is removed, and the engine of a run depends on its research key: the web search of
+ * Claude, or the news of the GDELT Project, which cannot search the web and reaches back three
+ * months only. The loop prompt now describes only the kinds of search that the engine of the run
+ * answers, makes the news the default kind when the web is not one of them, and says how far back
+ * the news reaches (see `buildLoopSystemPrompt`). That is `vr-11`. For an engine of both kinds
+ * with no limit on its news the loop prompt reads as it did.
+ *
+ * There is one set of rules, the credibility rules, and so one analysis prompt: the vendor risk
+ * database has no flag, and the rules that rated a finding by the confidence of the model are gone
+ * with their prompt.
+ *
+ * The next version tells the verifier which public database a cited record is an entry of. On
+ * 2026-11-01 the first golden attempt saw the verifier reject all five claims that rested on entries
+ * of the CISA catalog, because one quote of an entry cannot hold both the name of the catalog and
+ * the description of the flaw, and the verifier saw neither the database nor the whole record. The
+ * verifier prompt now carries a `database` attribute on such a source and says that the entry
+ * being one of that database is part of what it says. That is `vr-12`.
  */
-export const PROMPT_VERSION = "vr-6";
-
-/** The version of the analysis prompt under the credibility rules (see `buildSystemPrompt`). */
-export const CREDIBILITY_PROMPT_VERSION = "vr-10";
-
-/** The version of the prompts a run asks with under `rules`. */
-export function promptVersionOf(rules: ResearchRules): string {
-  return rules === "credibility" ? CREDIBILITY_PROMPT_VERSION : PROMPT_VERSION;
-}
+export const CREDIBILITY_PROMPT_VERSION = "vr-12";
 
 const UNKNOWN_DOMAIN = "unknown";
 
@@ -117,12 +127,11 @@ function inWords(count: number): string {
 
 /**
  * The system prompt of the analysis call. It names today's date and the lookback window of each
- * category, so it is built for the moment of the run. Under the credibility rules it is the same
- * prompt without the confidence (its field, its values and its rule), and with the paragraph of
- * the sanctions lists of the vendor risk database in place of the one of OFAC's list.
+ * category, so it is built for the moment of the run. The model gives no confidence: the label of
+ * a finding is computed by code from its sources (credibility.ts). The paragraph of the sanctions
+ * lists is the one of the vendor risk database: OFAC's list beside the UK, EU and UN lists.
  */
-export function buildSystemPrompt(now: Date, rules: ResearchRules = "confidence"): string {
-  const withConfidence = rules === "confidence";
+export function buildSystemPrompt(now: Date): string {
   // The numbers of the prose come from the schema, so that the two cannot disagree. Counts are
   // written as words ("at most five") and character limits as digits ("at most 300 characters").
   const citations = inWords(MAX_EVIDENCE_PER_FINDING);
@@ -217,22 +226,12 @@ export function buildSystemPrompt(now: Date, rules: ResearchRules = "confidence"
     "- A source may be in another language than English. Quote it in its own language, exactly as it",
     "  is written, and write everything else in English.",
     "- A source whose text begins with the name of a public database (the CISA Known Exploited",
-    ...(withConfidence
-      ? [
-          "  Vulnerabilities Catalog, the National Vulnerability Database, Have I Been Pwned or SEC",
-          "  EDGAR) is a record of that database, matched to the vendor by its name or domain. A record",
-          "  of a vulnerability is about a flaw in a product and not about a breach of the vendor's own",
-          "  systems: write which it is. The CISA catalog lists only vulnerabilities that are exploited",
-          "  in the wild, and the NVD lists flaws, most of which are not. A record of SEC EDGAR is a",
-        ]
-      : [
-          "  Vulnerabilities Catalog, the National Vulnerability Database, the CVE Program, Have I Been",
-          "  Pwned or SEC EDGAR) is a record of that database, matched to the vendor by its name or",
-          "  domain. A record of a vulnerability is about a flaw in a product and not about a breach of",
-          "  the vendor's own systems: write which it is. The CISA catalog lists only vulnerabilities",
-          "  that are exploited in the wild, and the NVD and the CVE Program list flaws, most of which",
-          "  are not. A record of SEC EDGAR is a",
-        ]),
+    "  Vulnerabilities Catalog, the National Vulnerability Database, the CVE Program, Have I Been",
+    "  Pwned or SEC EDGAR) is a record of that database, matched to the vendor by its name or",
+    "  domain. A record of a vulnerability is about a flaw in a product and not about a breach of",
+    "  the vendor's own systems: write which it is. The CISA catalog lists only vulnerabilities",
+    "  that are exploited in the wild, and the NVD and the CVE Program list flaws, most of which",
+    "  are not. A record of SEC EDGAR is a",
     "  Form 8-K that the vendor itself filed under Item 1.05 to report a material cybersecurity",
     "  incident in its own systems: it is the vendor's own statement to its investors, filed with",
     "  a regulator. A source whose text begins with Status page is the incident history that the",
@@ -244,31 +243,20 @@ export function buildSystemPrompt(now: Date, rules: ResearchRules = "confidence"
     "  itself an adverse term, a new subprocessor or AI provider, a weaker commitment or a lost",
     "  certification. Rewording, a new date or a change of layout is not a risk. Quote a line",
     "  without its Added: or Removed: mark and without its dash.",
-    ...(withConfidence
-      ? [
-          `- A source whose text begins with ${OFAC_RECORD_MARK} is an entry of the sanctions list of the`,
-          "  United States Treasury that has the name of the vendor, and the name is all the match is: it",
-          "  may be another company. It shows that a company of that name is sanctioned, never that the",
-          "  vendor is. Raise at most one risk from it, in legal_regulatory, rate its likelihood Possible",
-          "  at most, and make the action plan a check of who the vendor is against the entry: its",
-          "  address, its country, its owners and the identifiers in the remarks.",
-        ]
-      : [
-          "- A source whose text begins with the name of a sanctions list is an entry of that list:",
-          `  ${OFAC_RECORD_MARK} (the United States Treasury),`,
-          `  ${UK_RECORD_MARK} (the United Kingdom), ${EU_RECORD_MARK} (the European`,
-          `  Union) or ${UN_RECORD_MARK} (the United Nations Security Council). When its text has a`,
-          "  Lookup note, the vendor was matched to the entry by its name only: it may be another",
-          "  company. It shows that an entity of that name is on the list,",
-          '  never that the vendor is: write the risk as "An entity named <the name of the entry> is on',
-          '  <the list>". Raise at most one risk from it, in legal_regulatory, rate its likelihood',
-          "  Possible at most, and make the action plan a check of who the vendor is against the entry:",
-          "  its address, its country, its owners and the identifiers it lists. An entry without a",
-          "  Lookup note matched the vendor's verified website or one of its identifiers (a",
-          "  registration number, an LEI): it is about the vendor unless the identifiers it lists say",
-          "  otherwise, so make the action plan a check of them, and a designation in force is a risk",
-          "  in legal_regulatory.",
-        ]),
+    "- A source whose text begins with the name of a sanctions list is an entry of that list:",
+    `  ${OFAC_RECORD_MARK} (the United States Treasury),`,
+    `  ${UK_RECORD_MARK} (the United Kingdom), ${EU_RECORD_MARK} (the European`,
+    `  Union) or ${UN_RECORD_MARK} (the United Nations Security Council). When its text has a`,
+    "  Lookup note, the vendor was matched to the entry by its name only: it may be another",
+    "  company. It shows that an entity of that name is on the list,",
+    '  never that the vendor is: write the risk as "An entity named <the name of the entry> is on',
+    '  <the list>". Raise at most one risk from it, in legal_regulatory, rate its likelihood',
+    "  Possible at most, and make the action plan a check of who the vendor is against the entry:",
+    "  its address, its country, its owners and the identifiers it lists. An entry without a",
+    "  Lookup note matched the vendor's verified website or one of its identifiers (a",
+    "  registration number, an LEI): it is about the vendor unless the identifiers it lists say",
+    "  otherwise, so make the action plan a check of them, and a designation in force is a risk",
+    "  in legal_regulatory.",
     "",
     "How to rate a risk:",
     "- Rate what the sources show for this vendor, not the worst case of its kind. The two ratings",
@@ -314,24 +302,12 @@ export function buildSystemPrompt(now: Date, rules: ResearchRules = "confidence"
     "  - likelihood: how likely it is that the company is affected.",
     "  - risk_severity: how serious the effect would be.",
     `  - action_plan: one concrete next step for the company, at most ${textChars} characters.`,
-    ...(withConfidence ? ["  - confidence: how strongly the evidence supports the risk."] : []),
     "  - rationale: one sentence that says why the likelihood and the severity are what they are,",
     `    at most ${textChars} characters.`,
     "  - evidence: the citations.",
     "- Use the exact values listed here, spelled the same way.",
     `  likelihood is one of: ${RESEARCH_LIKELIHOODS.join(", ")}.`,
     `  risk_severity is one of: ${RESEARCH_SEVERITIES.join(", ")}.`,
-    ...(withConfidence
-      ? [
-          `  confidence is one of: ${RESEARCH_CONFIDENCES.join(", ")}.`,
-          "- Give confidence high when at least two independent publishers back the risk and one of them",
-          "  is the vendor's own website, a regulator or a court, or a major news or trade publisher;",
-          "  medium when it rests on two different pages or on the vendor's own statement; low",
-          "  otherwise. One story on several sites of one publisher, a copy of a story on an aggregator",
-          "  or a social site, and several pages of the vendor's own website count as one publisher. A",
-          "  confidence that the sources do not support is lowered after you answer.",
-        ]
-      : []),
     "- Write the rationale from the sources: say what they show and what it would mean for the",
     "  company. Do not add a fact that is not in the sources.",
     "- One event is at most one finding. Never report the same event twice, in one category or in",
@@ -462,11 +438,72 @@ export function buildUserPrompt(
 }
 
 /**
+ * What the loop prompt says of how the run searches: what the search engine of the run answers (the
+ * fields of `SearchEngine` of the same names). Both may be left out.
+ */
+export type LoopSearch = Partial<Pick<SearchEngine, "kinds" | "newsWindowMonths">>;
+
+/** The kinds of search the loop prompt can describe. */
+const DESCRIBED_KINDS: readonly SearchKind[] = ["web", "news"];
+
+/**
+ * The kinds the loop prompt describes, and the months the news reaches back. A description that
+ * names no kind (none given, or an empty list) is the default, both kinds: the prompt has to tell
+ * the model something about searching, and the session refuses what the engine cannot answer. A
+ * limit is a whole number of months above zero, and means something only for an engine of the news.
+ */
+function describedSearch(search: LoopSearch): {
+  web: boolean;
+  news: boolean;
+  months: number | null;
+} {
+  const named = DESCRIBED_KINDS.filter((kind) => search.kinds?.includes(kind));
+  const kinds = named.length === 0 ? DESCRIBED_KINDS : named;
+  const months = search.newsWindowMonths;
+  return {
+    web: kinds.includes("web"),
+    news: kinds.includes("news"),
+    months:
+      kinds.includes("news") && typeof months === "number" && Number.isInteger(months) && months > 0
+        ? months
+        : null,
+  };
+}
+
+/**
  * The system prompt of the research loop: what to look for in each category, how to work, and the
  * format of a step. It names no vendor and no date; the task does. The limits of the fields are
  * those of the step schema (`createLoopStepSchema`), which the tests compare with this text.
+ *
+ * It describes only the kinds of search that the engine of the run answers (`search`, from the
+ * engine; both kinds when it is not told), makes the news the default kind of a search when the web
+ * is not one of them, and says how far back the news reaches when the engine has such a limit (the
+ * news of the GDELT Project reaches back three months). The default kind is the rule of
+ * `WebSession.defaultKind`: the web, unless the engine does not answer it. For an engine of both
+ * kinds with no limit the text is the one this prompt had before the engine was told to it.
  */
-export function buildLoopSystemPrompt(): string {
+export function buildLoopSystemPrompt(search: LoopSearch = {}): string {
+  const { web, news, months } = describedSearch(search);
+  const searchAdvice = news
+    ? [
+        '- For security_incidents, legal_regulatory, availability and financial_health, search the news (kind "news").',
+        ...(web ? ['  Search the whole web (kind "web") when the news has nothing.'] : []),
+        ...(months === null
+          ? []
+          : [
+              `  The news covers ${months === 1 ? "the last month" : `the last ${months} months`} ` +
+                "only, so an older event is not in it.",
+            ]),
+      ]
+    : [
+        '- For security_incidents, legal_regulatory, availability and financial_health, search the web (kind "web").',
+      ];
+  const searched = web && news ? "the web or the news" : news ? "the news" : "the web";
+  const kindValues = web && news ? '"news" or "web"' : news ? '"news"' : '"web"';
+  const defaultKind = web ? "web" : "news";
+  const example = news
+    ? { thought: "News about breaches", kind: "news" }
+    : { thought: "Pages about breaches", kind: "web" };
   return [
     "You are a research agent for an AI governance platform. A company is deciding whether to",
     "rely on a third-party vendor, and you collect public sources about that vendor on the web.",
@@ -493,8 +530,7 @@ export function buildLoopSystemPrompt(): string {
     "  category it is for.",
     "- For certifications and ai_specific, start on the vendor's own website: read its home page",
     "  or its trust, security, privacy and legal pages, and follow the links that its pages show.",
-    '- For security_incidents, legal_regulatory, availability and financial_health, search the news (kind "news").',
-    '  Search the whole web (kind "web") when the news has nothing.',
+    ...searchAdvice,
     "- Read the best sources instead of trusting a snippet: a snippet is short and can mislead,",
     "  and the page says what happened.",
     "- Prefer recent sources. Results older than the lookback window of their category are left",
@@ -533,7 +569,7 @@ export function buildLoopSystemPrompt(): string {
     "&amp;, &lt; and &gt;. You may copy an address from there as it is written.",
     "",
     "The actions:",
-    `- "search" searches the web or the news. You get up to ${inWords(MAX_RESULTS)} results, each ` +
+    `- "search" searches ${searched}. You get up to ${inWords(MAX_RESULTS)} results, each ` +
       "with a title, an",
     "  address, a date when there is one, and a snippet.",
     '- "read" reads one page and shows its text. You can read a page that a search of this run',
@@ -557,7 +593,7 @@ export function buildLoopSystemPrompt(): string {
     "  - category: the category the action is for. Needed for search and read.",
     "  - query: for search, the words to search for, in at least 3 characters and at most 200",
     "    characters.",
-    '  - kind: for search, "news" or "web". Without it the search is "web".',
+    `  - kind: for search, ${kindValues}. Without it the search is "${defaultKind}".`,
     "  - url: for read, the full address of the page, in at most 2048 characters.",
     "  - focus: for read, if you like, a few keywords, in at most 120 characters. The page is then",
     "    shown around them.",
@@ -567,8 +603,8 @@ export function buildLoopSystemPrompt(): string {
     "Leave out the fields that the action does not use.",
     "",
     "For example, a step of two actions, where Vendor stands for the name of the vendor:",
-    '{"thought":"News about breaches, and the trust page.","actions":[{"action":"search",' +
-      '"category":"security_incidents","kind":"news","query":"Vendor data breach"},' +
+    `{"thought":"${example.thought}, and the trust page.","actions":[{"action":"search",` +
+      `"category":"security_incidents","kind":"${example.kind}","query":"Vendor data breach"},` +
       '{"action":"read","category":"certifications","url":"https://vendor.example/trust"}]}',
   ].join("\n");
 }
@@ -710,7 +746,8 @@ export function buildVerifierSystemPrompt(now: Date): string {
   return [
     "You check findings about a software vendor before a person sees them. Another model wrote each",
     "finding from web sources. For every finding you see the claim, its impact and, for each source it",
-    "cites, the address, the date when it is known, the title and the quote.",
+    "cites, the address, the date when it is known, the title, the quote and, for an entry of a public",
+    "database, the name of that database.",
     "",
     "Answer three questions about every finding with true or false:",
     "- same_company: are the sources about the vendor in the vendor block, and not about another",
@@ -719,7 +756,11 @@ export function buildVerifierSystemPrompt(now: Date): string {
     "  about the vendor.",
     "- quote_supports_claim: does the quote, read on its own, say what the claim says? Answer false",
     "  when the quote says something else, says less than the claim states as a fact, or says the",
-    "  opposite. A quote may be in another language than English: judge it in that language.",
+    "  opposite. A quote may be in another language than English: judge it in that language. A source",
+    "  with a database is an entry of that public database that code looked up for the vendor, and",
+    "  that it is an entry of that database is part of what it says: an entry of the CISA Known",
+    "  Exploited Vulnerabilities Catalog says that the flaw is exploited in the wild, while an entry of",
+    "  the National Vulnerability Database or of the CVE Program says only that the flaw was published.",
     "- source_in_window: is the matter recent enough for its category? Use the date of the source,",
     "  and when it has none a date that its title or its quote states. Answer false only when a date",
     "  shows that the matter is older than the window of the category.",
@@ -737,6 +778,34 @@ export function buildVerifierSystemPrompt(now: Date): string {
   ].join("\n");
 }
 
+/**
+ * The public database that a record is an entry of, as the verifier is told it. The sanctions lists
+ * go by the marks their records start with.
+ */
+export const VERIFIER_DATABASE_NAMES: Readonly<Record<RecordSourceId, string>> = {
+  kev: "CISA Known Exploited Vulnerabilities Catalog",
+  nvd: "National Vulnerability Database",
+  cve: "CVE Program",
+  hibp: "Have I Been Pwned",
+  sec: "SEC EDGAR",
+  statuspage: "the vendor's status page",
+  ofac: OFAC_RECORD_MARK,
+  uk_sanctions: UK_RECORD_MARK,
+  eu_fsf: EU_RECORD_MARK,
+  un_sanctions: UN_RECORD_MARK,
+};
+
+/** ` database="…"` for a source whose address has a record, and nothing for any other. */
+function databaseAttributeOf(
+  url: string,
+  recordOf: ((url: string) => RecordSourceId | undefined) | undefined,
+): string {
+  const record = recordOf?.(url);
+  return record === undefined
+    ? ""
+    : ` database="${escapeAttribute(VERIFIER_DATABASE_NAMES[record])}"`;
+}
+
 /** What the verifier reads of a finding. */
 export type VerifierFinding = Pick<
   NewFinding,
@@ -751,6 +820,7 @@ export type VerifierFinding = Pick<
 export function buildVerifierUserPrompt(
   target: ResearchTarget,
   findings: readonly VerifierFinding[],
+  recordOf?: (url: string) => RecordSourceId | undefined,
 ): string {
   return [
     ...renderVendor(target),
@@ -763,7 +833,7 @@ export function buildVerifierUserPrompt(
       ...finding.sources.flatMap((source) => [
         `<source url="${escapeAttribute(source.url)}"${
           source.published_at ? ` date="${escapeAttribute(source.published_at)}"` : ""
-        }>`,
+        }${databaseAttributeOf(source.url, recordOf)}>`,
         ...(source.title ? [`<title>${escapeForPrompt(source.title)}</title>`] : []),
         `<quote>${escapeForPrompt(source.quote)}</quote>`,
         "</source>",

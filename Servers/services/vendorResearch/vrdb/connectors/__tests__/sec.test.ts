@@ -3,11 +3,13 @@
  * 2, 4 and 14 of the M2 plan): the vendor is asked by the CIK a person stored on it, a strong key,
  * or else by the CIK of the one registrant that has a name of the vendor, which is found by the name
  * and so is weak (Q3); every request names the contact in its User-Agent and takes a turn of the
- * SEC's limit; the records are the vendor's Form 8-K filings under Item 1.05. The answers are
- * written from the documented format, not copied from the API.
+ * SEC's limit; the records are the vendor's Form 8-K filings under Item 1.05, each with its text
+ * when the run reads pages, read by a page reader of the connector's own so that the requests that
+ * read a filing name the contact too. The answers are written from the documented format, not
+ * copied from the API.
  */
-import { FetchError } from "../../../../webResearch/guardedFetch";
-import { PageReadError, type PageReader } from "../../../../webResearch/readPage";
+import { FetchError, type guardedFetch } from "../../../../webResearch/guardedFetch";
+import type { PageReader } from "../../../../webResearch/readPage";
 import {
   SEC_SUBMISSIONS_MAX_BYTES,
   SEC_TICKERS_MAX_BYTES,
@@ -16,10 +18,12 @@ import {
 } from "../../../records/sec";
 import type { FetchJson } from "../../../records/types";
 import type { ResearchTarget } from "../../../target";
+import { SEC_CONTACT } from "../../gates";
 import { secConnector, secUserAgent } from "../sec";
 
 const NOW = new Date("2026-10-31T12:00:00Z");
 const DAY_MS = 24 * 60 * 60_000;
+const HOUR_MS = 60 * 60_000;
 const CONTACT = "sec@company.example";
 const USER_AGENT = "VerifyWise sec@company.example";
 const BRISE: ResearchTarget = {
@@ -90,15 +94,45 @@ function turns(grant = true) {
   return { spacer, taken: () => taken };
 }
 
-/** A page reader that answers every filing with one text, or fails with the error it is given. */
-function pages(answer: string | Error = TEXT) {
-  const asked: string[] = [];
-  const readPage: PageReader = async (url) => {
-    asked.push(url);
-    if (answer instanceof Error) throw answer;
-    return { url, title: "", publishedAt: null, text: answer, links: [] };
+const ROBOTS = "https://www.sec.gov/robots.txt";
+
+/**
+ * The page reader of a run. The connector reads a filing with a reader of its own, whose requests
+ * name the contact, so the run's is no more than the sign that the run reads pages: one that is
+ * called fails the test.
+ */
+const runReader: PageReader = async () => {
+  throw new Error("the connector reads a filing with a reader of its own");
+};
+
+/**
+ * The guarded fetch under the connector's own page reader, written from what the real one does: it
+ * calls `beforeRequest`, which is where the reader checks robots.txt, and only then sends the
+ * request, and it keeps the User-Agent of each request it sends. robots.txt is a missing file unless
+ * `state.robots` gives a text, and every filing is an HTML page holding `state.filing`; an Error in
+ * either is thrown.
+ */
+function archive() {
+  const state: { filing: string | Error; robots: string | Error } = {
+    filing: TEXT,
+    robots: new FetchError("not_found"),
   };
-  return { readPage, asked };
+  const asked: Array<{ url: string; userAgent?: string }> = [];
+  const fetchPage: typeof guardedFetch = async (url, options) => {
+    await options?.beforeRequest?.(new URL(url));
+    asked.push({ url, userAgent: options?.userAgent });
+    const isRobots = url === ROBOTS;
+    const answer = isRobots ? state.robots : state.filing;
+    if (answer instanceof Error) throw answer;
+    return {
+      url,
+      status: 200,
+      contentType: isRobots ? "text/plain" : "text/html; charset=utf-8",
+      body: Buffer.from(isRobots ? answer : `<html><body><p>${answer}</p></body></html>`),
+      truncated: false,
+    };
+  };
+  return { fetchPage, asked, state };
 }
 
 const signal = new AbortController().signal;
@@ -264,51 +298,182 @@ describe("secConnector", () => {
     ]);
   });
 
-  it("reads the Item 1.05 of a filing through the page reader, on a turn of the SEC", async () => {
+  it("reads the Item 1.05 of a filing with a page reader of its own, on a turn of the SEC", async () => {
     const { fetchJson } = answering({ [SUBMISSIONS]: submissions() });
-    const { readPage, asked } = pages();
+    const { fetchPage, asked } = archive();
     const { spacer, taken } = turns();
 
-    const { records } = await secConnector(CONTACT, { spacer }).fetch(
+    const { records } = await secConnector(CONTACT, { spacer, fetchPage }).fetch(
       KEY,
-      ctx(fetchJson, readPage),
+      ctx(fetchJson, runReader),
     );
 
     expect(records[0].summary).toContain(`Item 1.05: ${EXCERPT}`);
-    expect(asked).toEqual([FILING]);
+    // The robots.txt of the archive first, as a page reader always asks for it, then the filing.
+    expect(asked.map((request) => request.url)).toEqual([ROBOTS, FILING]);
     // The list of filings is asked on the read-through's turn (readThrough.ts); the filing on one of its own.
     expect(taken()).toBe(1);
   });
 
+  it("names the contact in the requests that read a filing, as in those of the API", async () => {
+    const { fetchJson } = answering({ [SUBMISSIONS]: submissions() });
+    const { fetchPage, asked } = archive();
+
+    await secConnector(CONTACT, { spacer: turns().spacer, fetchPage }).fetch(
+      KEY,
+      ctx(fetchJson, runReader),
+    );
+
+    // Neither the robots.txt of sec.gov nor the filing goes out with the bot's User-Agent, which has
+    // no address to write to.
+    expect(asked).toEqual([
+      { url: ROBOTS, userAgent: USER_AGENT },
+      { url: FILING, userAgent: USER_AGENT },
+    ]);
+  });
+
+  it("with the contact of Q4, every request names tech@verifywise.ai: the tickers, the filings and the text of a filing", async () => {
+    // The identity the SEC sees, in the form it asks for: the name of the company, then an e-mail address.
+    expect(SEC_CONTACT).toBe("tech@verifywise.ai");
+    const contact = SEC_CONTACT as string;
+    expect(secUserAgent(contact)).toBe("VerifyWise tech@verifywise.ai");
+    const api = answering({ [SEC_TICKERS_URL]: tickers, [SUBMISSIONS]: submissions() });
+    const files = archive();
+    const connector = secConnector(contact, { spacer: turns().spacer, fetchPage: files.fetchPage });
+
+    const found = await connector.keyOf(BRISE, { signal, fetchJson: api.fetchJson });
+    await connector.fetch(found!.key, ctx(api.fetchJson, runReader));
+
+    expect(
+      [...api.asked, ...files.asked].map((request) => [request.url, request.userAgent]),
+    ).toEqual([
+      [SEC_TICKERS_URL, "VerifyWise tech@verifywise.ai"],
+      [SUBMISSIONS, "VerifyWise tech@verifywise.ai"],
+      [ROBOTS, "VerifyWise tech@verifywise.ai"],
+      [FILING, "VerifyWise tech@verifywise.ai"],
+    ]);
+  });
+
+  it("reads no filing when the run reads no pages: no reader, no excerpt", async () => {
+    const { fetchJson } = answering({ [SUBMISSIONS]: submissions() });
+    const { fetchPage, asked } = archive();
+    const { spacer, taken } = turns();
+
+    const { records } = await secConnector(CONTACT, { spacer, fetchPage }).fetch(
+      KEY,
+      ctx(fetchJson),
+    );
+
+    expect(records[0].summary).not.toContain("Item 1.05:");
+    expect(asked).toEqual([]);
+    expect(taken()).toBe(0);
+  });
+
   it("keeps the text of a filing: its page is read once", async () => {
     const { fetchJson } = answering({ [SUBMISSIONS]: submissions() });
-    const { readPage, asked } = pages();
-    const connector = secConnector(CONTACT, { spacer: turns().spacer });
+    const { fetchPage, asked } = archive();
+    const connector = secConnector(CONTACT, { spacer: turns().spacer, fetchPage });
 
-    await connector.fetch(KEY, ctx(fetchJson, readPage));
-    const { records: again } = await connector.fetch(KEY, ctx(fetchJson, readPage));
+    await connector.fetch(KEY, ctx(fetchJson, runReader));
+    const { records: again } = await connector.fetch(KEY, ctx(fetchJson, runReader));
 
-    expect(asked).toHaveLength(1);
+    expect(asked.filter((request) => request.url === FILING)).toHaveLength(1);
     expect(again[0].summary).toContain(`Item 1.05: ${EXCERPT}`);
   });
 
-  it("gives the facts alone when the filing's turn is refused or its page cannot be read", async () => {
-    const { fetchJson } = answering({ [SUBMISSIONS]: submissions() });
-    const busy = pages();
-    const down = pages(new PageReadError("unreachable"));
+  it("asks for robots.txt once, whatever the number of filings it reads", async () => {
+    const second = row({
+      accessionNumber: "0001262039-26-000004",
+      filingDate: "2026-10-06",
+      primaryDocument: "brise-20261006.htm",
+    });
+    const { fetchJson } = answering({ [SUBMISSIONS]: submissions([row(), second]) });
+    const { fetchPage, asked } = archive();
 
-    const { records: refused } = await secConnector(CONTACT, { spacer: turns(false).spacer }).fetch(
+    const { records } = await secConnector(CONTACT, { spacer: turns().spacer, fetchPage }).fetch(
       KEY,
-      ctx(fetchJson, busy.readPage),
+      ctx(fetchJson, runReader),
     );
-    const { records: unread } = await secConnector(CONTACT, { spacer: turns().spacer }).fetch(
-      KEY,
-      ctx(fetchJson, down.readPage),
+
+    expect(records.every((record) => record.summary.includes("Item 1.05:"))).toBe(true);
+    expect(asked.filter((request) => request.url === ROBOTS)).toHaveLength(1);
+    expect(asked.map((request) => request.url).sort()).toEqual(
+      [
+        ROBOTS,
+        FILING,
+        "https://www.sec.gov/Archives/edgar/data/1262039/000126203926000004/brise-20261006.htm",
+      ].sort(),
     );
+  });
+
+  it("gives the facts alone when the turn of the filing is refused: nothing is asked", async () => {
+    const { fetchJson } = answering({ [SUBMISSIONS]: submissions() });
+    const busy = archive();
+
+    const { records } = await secConnector(CONTACT, {
+      spacer: turns(false).spacer,
+      fetchPage: busy.fetchPage,
+    }).fetch(KEY, ctx(fetchJson, runReader));
 
     expect(busy.asked).toEqual([]);
-    expect(refused[0].summary).not.toContain("Item 1.05:");
-    expect(unread[0].summary).not.toContain("Item 1.05:");
+    expect(records[0].summary).not.toContain("Item 1.05:");
+    expect(records[0].summary).toContain("Form: 8-K.");
+  });
+
+  it("gives the facts alone when the page of the filing cannot be read", async () => {
+    const { fetchJson } = answering({ [SUBMISSIONS]: submissions() });
+    const down = archive();
+    down.state.filing = new FetchError("unreachable");
+
+    const { records } = await secConnector(CONTACT, {
+      spacer: turns().spacer,
+      fetchPage: down.fetchPage,
+    }).fetch(KEY, ctx(fetchJson, runReader));
+
+    expect(records[0].summary).not.toContain("Item 1.05:");
+    expect(records[0].summary).toContain("Form: 8-K.");
+  });
+
+  it("leaves the filing unread when the robots.txt of the archive does not allow it", async () => {
+    const { fetchJson } = answering({ [SUBMISSIONS]: submissions() });
+    const closed = archive();
+    closed.state.robots = "User-agent: *\nDisallow: /Archives/";
+
+    const { records } = await secConnector(CONTACT, {
+      spacer: turns().spacer,
+      fetchPage: closed.fetchPage,
+    }).fetch(KEY, ctx(fetchJson, runReader));
+
+    expect(closed.asked.map((request) => request.url)).toEqual([ROBOTS]);
+    expect(records[0].summary).not.toContain("Item 1.05:");
+  });
+
+  it("asks for robots.txt again after an hour: one request that failed does not close the archive for long", async () => {
+    const { fetchJson } = answering({ [SUBMISSIONS]: submissions() });
+    const flaky = archive();
+    flaky.state.robots = new FetchError("unreachable");
+    let clock = 1_000_000;
+    const connector = secConnector(CONTACT, {
+      spacer: turns().spacer,
+      fetchPage: flaky.fetchPage,
+      clock: () => clock,
+    });
+
+    // A robots.txt that cannot be read allows nothing (RFC 9309), so the filing is left unread ...
+    const { records: first } = await connector.fetch(KEY, ctx(fetchJson, runReader));
+    flaky.state.robots = new FetchError("not_found");
+    // ... and it stays unread while the hour lasts: the reader keeps what it learned of robots.txt ...
+    clock += HOUR_MS - 1;
+    const { records: within } = await connector.fetch(KEY, ctx(fetchJson, runReader));
+    clock += 1;
+    const { records: later } = await connector.fetch(KEY, ctx(fetchJson, runReader));
+
+    expect(first[0].summary).not.toContain("Item 1.05:");
+    expect(within[0].summary).not.toContain("Item 1.05:");
+    // ... but an hour after the first request the connector asks again: a site with no robots.txt
+    // allows everything. A day would leave the archive unread for every run until then.
+    expect(later[0].summary).toContain(`Item 1.05: ${EXCERPT}`);
+    expect(flaky.asked.map((request) => request.url)).toEqual([ROBOTS, ROBOTS, FILING]);
   });
 
   it("asks nothing for a key that is not a CIK", async () => {

@@ -79,6 +79,8 @@ describe("createResearchMetrics", () => {
     ["robots", "hit"],
     ["page", "miss"],
     ["search", "error"],
+    ["gdelt", "hit"],
+    ["gdelt", "miss"],
   ] as const)("counts a %s lookup of the shared cache that came to a %s", (kind, outcome) => {
     const { meter, counters } = fakeMeter();
 

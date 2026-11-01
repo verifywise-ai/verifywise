@@ -3,9 +3,10 @@
  * automatic or a scheduled run that stored findings it tells the vendor's assignee, if that is a
  * user of the vendor's organization.
  *
- * While the flag of the vendor risk database is on (`VENDOR_RESEARCH_VRDB`), the run looks the
- * vendor up in it in place of the per-run lookups of the CISA catalog and the OFAC list, and is
- * researched and analysed under the credibility rules (see `PipelineDeps.rules`).
+ * The run looks the vendor up in the vendor risk database in place of the per-run lookups of the
+ * CISA catalog, the NVD and the OFAC list, and is researched and analysed under the credibility
+ * rules. The database has no flag: the records switch (`VENDOR_RESEARCH_RECORDS`) turns it off, and
+ * its lookup then says so in the coverage of the run.
  *
  * Exactly-once: the pipeline ends the run itself, once, and does not throw for a failed search,
  * page read or model call. The only rejection that reaches this file is a failure to mark the run
@@ -86,23 +87,25 @@ export async function handleVendorResearchJob(data: VendorResearchJobData): Prom
     return;
   }
 
-  // The vendor's lookup in the vendor risk database, while its flag is on; the lookup of the
-  // process then asks only the databases that the VRDB does not keep.
+  // The vendor's lookup in the vendor risk database; the lookup of the process asks only the
+  // databases that the VRDB does not keep.
   const vrdb = sharedVrdbLookup({ organizationId, vendorId });
-  const underFlag = vrdb === undefined ? {} : { rules: "credibility" as const };
   const deps: PipelineDeps = {
-    // A researcher of its own for each job, with the real web search, page reader and model call.
-    // The jobs of the process share one cache of robots.txt files, pages and searches, and, when an
-    // operator has turned it on, one headless browser for the pages that a script builds. The code
-    // does the routine work (the news searches, the vendor's own pages) before the model's first
-    // step, and the model then researches each category in a loop of its own, all at once.
+    // A researcher of its own for each job, with the real page reader and model call. It is given
+    // no search engine: each run builds its own from the key it researches with, which the pipeline
+    // hands over (the web search of Claude for a key of Anthropic, the news of the GDELT Project for
+    // every other key). The jobs of the process share one cache of robots.txt files, pages and
+    // searches, and, when an operator has turned it on, one headless browser for the pages that a
+    // script builds. The code does the routine work (the news searches, the vendor's own pages)
+    // before the model's first step, and the model then researches each category in a loop of its
+    // own, all at once.
     research: createVendorResearcher({
       cache: sharedWebCache(),
       render: sharedPageRenderer(),
       records: sharedRecordsLookup(),
       gather: true,
       perCategory: true,
-      ...(vrdb === undefined ? {} : { vrdb, ...underFlag }),
+      vrdb,
     }),
     resolveModel: resolveOrgModel,
     generate: generateObjectWithSelfCorrection,
@@ -110,7 +113,6 @@ export async function handleVendorResearchJob(data: VendorResearchJobData): Prom
     // One more model call over the findings that stay: a source about another company, a quote that
     // does not say the claim and a matter older than its window are not stored.
     verifier: true,
-    ...underFlag,
   };
   // Not caught, see the header: a rejection means the run is still queued.
   // The trigger goes along: a scheduled run analyses only the sources that are new.

@@ -5,6 +5,10 @@ jest.setTimeout(60000);
  * a finding keeps its label, its basis and the new fields of its sources, and the findings
  * endpoint adds the English line of the label; a run keeps its coverage and the version of the
  * source registry, and the run endpoint serves the coverage.
+ *
+ * A run writes no confidence any more (M3 Part B1): a finding of a run before the credibility rule,
+ * which has a confidence and no label, reads as the label of that confidence on the basis
+ * `legacy_confidence`, in every statement that returns findings, until the column is dropped (B2).
  */
 
 import { QueryTypes } from "sequelize";
@@ -61,7 +65,6 @@ const FINDING: NewFinding = {
   likelihood: "Likely",
   risk_severity: "Major",
   risk_level: "High Risk",
-  confidence: "low",
   rationale: "CISA lists the flaw as exploited.",
   sources: [
     {
@@ -126,12 +129,13 @@ describe("the credibility of a finding, stored and served", () => {
       `SELECT credibility, credibility_basis, sources, confidence FROM vendor_risk_findings`,
       { type: QueryTypes.SELECT },
     )) as Array<Record<string, unknown>>;
+    // A run writes the label and no confidence: the column stays, empty, until it is dropped.
     expect(stored).toEqual([
       {
         credibility: "high",
         credibility_basis: BASIS,
         sources: FINDING.sources,
-        confidence: "low",
+        confidence: null,
       },
     ]);
 
@@ -163,7 +167,7 @@ describe("the credibility of a finding, stored and served", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.data.rows[0]).toMatchObject({
-      confidence: "low",
+      confidence: null,
       credibility: null,
       credibility_basis: null,
       credibility_rationale: null,
@@ -186,6 +190,97 @@ describe("the credibility of a finding, stored and served", () => {
       credibility: "high",
       credibility_rationale:
         "High: CISA Known Exploited Vulnerabilities lists it (CVE-2026-31337), as of 28 Oct 2026.",
+    });
+  });
+});
+
+describe("a finding of a run before the credibility rule (M3 Part B1)", () => {
+  const LEGACY_RATIONALE =
+    "Rated before the source rules; this is the earlier confidence level until the label is recomputed.";
+  const { credibility: _label, credibility_basis: _basis, ...withoutLabel } = FINDING;
+
+  /** A finding as the runs before the rule stored it: a confidence, and no label. */
+  async function seedLegacy(context: TenantContext, confidence: string | null) {
+    await seedFindings(context, [withoutLabel]);
+    await sequelize.query(`UPDATE vendor_risk_findings SET confidence = :confidence`, {
+      replacements: { confidence },
+    });
+  }
+
+  it.each(["low", "medium", "high"])(
+    "reads a confidence of %s as the label of that level, on the basis legacy_confidence",
+    async (level) => {
+      const { owner } = await seedTwoTenantContexts(1);
+      await seedLegacy(owner, level);
+
+      const res = await owner.request.get("/api/v1/vendor-risk-findings?status=pending");
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.rows).toHaveLength(1);
+      expect(res.body.data.rows[0]).toMatchObject({
+        credibility: level,
+        credibility_basis: { rule: "legacy_confidence" },
+        credibility_rationale: LEGACY_RATIONALE,
+      });
+    },
+  );
+
+  it("leaves the stored row as it is: the fallback is made when the row is read", async () => {
+    const { owner } = await seedTwoTenantContexts(1);
+    await seedLegacy(owner, "medium");
+
+    await owner.request.get("/api/v1/vendor-risk-findings?status=pending");
+
+    const stored = (await sequelize.query(
+      `SELECT credibility, credibility_basis, confidence FROM vendor_risk_findings`,
+      { type: QueryTypes.SELECT },
+    )) as Array<Record<string, unknown>>;
+    expect(stored).toEqual([{ credibility: null, credibility_basis: null, confidence: "medium" }]);
+  });
+
+  it("reads the label of the rule, and not the confidence, for a finding that has both", async () => {
+    const { owner } = await seedTwoTenantContexts(1);
+    await seedFindings(owner, [FINDING]);
+    await sequelize.query(`UPDATE vendor_risk_findings SET confidence = 'low'`);
+
+    const res = await owner.request.get("/api/v1/vendor-risk-findings?status=pending");
+
+    expect(res.body.data.rows[0]).toMatchObject({
+      confidence: "low",
+      credibility: "high",
+      credibility_basis: BASIS,
+    });
+  });
+
+  it("reads null for a finding that has neither a label nor a confidence", async () => {
+    const { owner } = await seedTwoTenantContexts(1);
+    await seedLegacy(owner, null);
+
+    const res = await owner.request.get("/api/v1/vendor-risk-findings?status=pending");
+
+    expect(res.body.data.rows[0]).toMatchObject({
+      credibility: null,
+      credibility_basis: null,
+      credibility_rationale: null,
+    });
+  });
+
+  it("answers a decision on it with the label of its confidence too", async () => {
+    const { owner } = await seedTwoTenantContexts(1);
+    await seedLegacy(owner, "high");
+    const [finding] = (await sequelize.query(`SELECT id FROM vendor_risk_findings`, {
+      type: QueryTypes.SELECT,
+    })) as Array<{ id: number }>;
+
+    const res = await owner.request
+      .post(`/api/v1/vendor-risk-findings/${finding.id}/dismiss`)
+      .send({ reason: "not_applicable" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data).toMatchObject({
+      credibility: "high",
+      credibility_basis: { rule: "legacy_confidence" },
+      credibility_rationale: LEGACY_RATIONALE,
     });
   });
 });

@@ -30,6 +30,16 @@ export interface Snapshot {
   etag: string | null;
   lastModified: string | null;
   bytes: number;
+  /**
+   * The number of record entries the download read, of which `bodies` are the ones kept; absent
+   * where every entry is a body.
+   */
+  entries?: number;
+  /**
+   * For a list read by its changes, the ids of the records the day changed that the copy's filter
+   * leaves out. They are not bodies: the sync takes their keys off a copy that holds them.
+   */
+  retired?: string[];
 }
 
 /**
@@ -42,6 +52,13 @@ export interface Snapshot {
 export interface ParseResult {
   records: ParsedRecord[];
   errors: number;
+  /**
+   * Entries left out because they do not parse, within what the connector tolerates: the sync
+   * applies the rest and logs the number. A connector that tolerates none reports them as errors.
+   */
+  skipped?: number;
+  /** For a list read by its changes, the ids the snapshot retired (`Snapshot.retired`). */
+  retired?: string[];
   sourceVersion: string | null;
   root: string | null;
 }
@@ -72,13 +89,15 @@ export interface IncrementalConnector {
   version: number;
   /**
    * The changes of each day after the cursor, oldest first, or `unchanged` when there is no new
-   * day. `now` is the time of the sync: a day is read once it has ended.
+   * day. `now` is the time of the sync: a day is read once it has ended. `through` is the hour
+   * (HH00Z, UTC) up to which a day was read from an hourly release, because the list published no
+   * end-of-day release for that day.
    */
   download(
     fetch: ConnectorFetch,
     cursor: { day: string } | null,
     now: Date,
-  ): Promise<Array<{ day: string; snapshot: Snapshot }> | "unchanged">;
+  ): Promise<Array<{ day: string; snapshot: Snapshot; through?: string }> | "unchanged">;
   parse(snapshot: Snapshot): ParseResult;
 }
 

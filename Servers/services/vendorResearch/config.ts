@@ -20,19 +20,15 @@ export interface VendorResearchConfig {
    */
   headless: boolean;
   /**
-   * Whether a run looks the vendor up in the public databases of exploited vulnerabilities,
-   * breaches and incident reports (see records/). On unless an operator turns it off, for a host
-   * that cannot reach cisa.gov, nist.gov, haveibeenpwned.com and sec.gov.
+   * Whether the public databases are on. They are one switch: the vendor risk database, which
+   * mirrors the lists on a schedule and which a run looks the vendor up in, and the lookups a run
+   * still makes itself (breaches, incident reports, status pages). On unless an operator turns it
+   * off, for a host that cannot reach the lists, cisa.gov, nist.gov, haveibeenpwned.com and sec.gov.
+   * Off, nothing is downloaded and no run looks anything up; the coverage of a run then says that the
+   * databases are turned off. The backend reads it to register the schedulers, the worker to run
+   * the syncs and the research. The database has no switch of its own.
    */
   records: boolean;
-  /**
-   * Whether the vendor risk database is on (spec D4.11): the lists are mirrored on a schedule, a run
-   * looks the vendor up in the mirror instead of the per-run lookups of KEV and OFAC, and a
-   * finding gets a credibility computed from its sources. Off unless an operator sets it to true,
-   * until the golden set passes; `records` off stops it too. The backend reads it to register the
-   * schedulers, the worker to run the syncs and the research.
-   */
-  vrdb: boolean;
 }
 
 const DEFAULT_MANUAL_COOLDOWN_MINUTES = 10;
@@ -62,7 +58,6 @@ export function getVendorResearchConfig(
   const autoRun = (env.VENDOR_RESEARCH_AUTO_RUN ?? "").trim().toLowerCase();
   const headless = (env.VENDOR_RESEARCH_HEADLESS ?? "").trim().toLowerCase();
   const records = (env.VENDOR_RESEARCH_RECORDS ?? "").trim().toLowerCase();
-  const vrdb = (env.VENDOR_RESEARCH_VRDB ?? "").trim().toLowerCase();
 
   return {
     autoRun: autoRun !== "false",
@@ -79,6 +74,5 @@ export function getVendorResearchConfig(
     ),
     headless: headless === "true",
     records: records !== "false",
-    vrdb: vrdb === "true",
   };
 }

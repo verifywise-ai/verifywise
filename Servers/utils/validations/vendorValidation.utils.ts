@@ -406,6 +406,31 @@ export const withNormalizedIdentifiers = <T extends Record<string, unknown>>(dat
 };
 
 /**
+ * The request fields that only the /api/v1 vendor routes take: the other names and the four
+ * identifiers (ADR 0001, sections 2 and 5). The frozen legacy POST /vendors and PATCH /vendors/:id
+ * never had these fields, so the legacy entry points drop them with `withoutV1OnlyVendorFields`.
+ */
+export const VENDOR_V1_ONLY_FIELDS = [
+  "other_names",
+  "country",
+  "registration_number",
+  "lei",
+  "sec_cik",
+] as const;
+
+/**
+ * `body` without the fields that only /api/v1 takes, as a new object: `body` itself is never
+ * changed. A value that is not a plain object (null, a list, a text) comes back as it is, so that a
+ * malformed body fails where it always did.
+ */
+export const withoutV1OnlyVendorFields = <T>(body: T): T => {
+  if (typeof body !== "object" || body === null || Array.isArray(body)) return body;
+  const v1Only: readonly string[] = VENDOR_V1_ONLY_FIELDS;
+  // fromEntries defines each key as data, so a body key named __proto__ cannot reach the prototype.
+  return Object.fromEntries(Object.entries(body).filter(([field]) => !v1Only.includes(field))) as T;
+};
+
+/**
  * Validates review status enum field
  */
 export const validateReviewStatus = (value: any): ValidationResult => {

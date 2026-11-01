@@ -1,6 +1,7 @@
 import { RESEARCH_CATEGORIES } from "../../../domain.layer/interfaces/i.vendorResearch";
 import { REPEATED_QUERY_JACCARD, queryWords, similarity } from "../../webResearch/queryMatch";
-import { MAX_TOPIC_WORDS, normalizeQuery, suggestedQueries } from "../queries";
+import { regulatorTopicsOf } from "../market";
+import { MAX_TOPIC_WORDS, NEWS_TOPIC_WORDS, normalizeQuery, suggestedQueries } from "../queries";
 import { ResearchTarget } from "../target";
 
 const ACME: ResearchTarget = {
@@ -432,5 +433,51 @@ describe("suggestedQueries", () => {
         suggestedQueries(ACME, ["legal_regulatory"]),
       );
     });
+  });
+});
+
+describe("NEWS_TOPIC_WORDS", () => {
+  it("are the English words of what the news categories look for: single, lower case, each once", () => {
+    expect(NEWS_TOPIC_WORDS).toEqual([
+      "breach",
+      "incident",
+      "lawsuit",
+      "fined",
+      "outage",
+      "layoffs",
+      "bankruptcy",
+      "acquisition",
+    ]);
+    for (const word of NEWS_TOPIC_WORDS) expect(word).toMatch(/^[a-z]+$/);
+    expect(new Set(NEWS_TOPIC_WORDS).size).toBe(NEWS_TOPIC_WORDS.length);
+  });
+
+  it("leave out the words that name no topic by themselves: an article about a software vendor has them anyway", () => {
+    expect(NEWS_TOPIC_WORDS).not.toContain("data");
+    expect(NEWS_TOPIC_WORDS).not.toContain("security");
+  });
+
+  it("hold every word that a suggested query of the news categories adds to the name, bar those two and the regulators", () => {
+    const regulators = regulatorTopicsOf(ACME).flatMap((topic) => topic.toLowerCase().split(" "));
+    const added = Object.values(suggestedQueries(ACME, RESEARCH_CATEGORIES))
+      .flat()
+      .flatMap((query) =>
+        query
+          .replace(/^Acme Analytics /, "")
+          .toLowerCase()
+          .split(" "),
+      );
+
+    expect(added.length).toBeGreaterThan(NEWS_TOPIC_WORDS.length);
+    for (const word of added) {
+      if (word === "data" || word === "security" || regulators.includes(word)) continue;
+      expect(NEWS_TOPIC_WORDS).toContain(word);
+    }
+  });
+
+  it("are combined with the regulators of the vendor's jurisdiction by the caller, not repeated here", () => {
+    for (const topic of regulatorTopicsOf(ACME)) {
+      expect(NEWS_TOPIC_WORDS).not.toContain(topic.toLowerCase());
+    }
   });
 });

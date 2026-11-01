@@ -1,11 +1,12 @@
 import { hibpUrl } from "../../records/hibp";
 import { KEV_URL } from "../../records/kev";
 import { nvdUrl } from "../../records/nvd";
-import { OFAC_SDN_URL, ofacRecords, parseOfac } from "../../records/ofac";
-import { nameKeys } from "../../records/match";
+import { NAME_ONLY_LOOKUP_NOTE, OFAC_SDN_URL, parseOfac } from "../../records/ofac";
+import { joinSentences } from "../../records/sentence";
 import { SEC_TICKERS_URL } from "../../records/sec";
 import { statusFeedUrl } from "../../records/statuspage";
 import type { RecordsOutcome } from "../../records";
+import { ofacSourceOf } from "../../vrdb/connectors/ofac";
 import type { EvalCase } from "../types";
 import { NOW, finish, page } from "./builders";
 
@@ -39,10 +40,25 @@ const ALT = [
 ].join("\r\n");
 
 const list = parseOfac(SDN, ALT);
-const sanctions = ofacRecords(list, {
-  keys: nameKeys({ name: vendor.name, domain: null, provides: "Procurement software" }),
-  now: new Date(NOW),
-});
+// The entity that has the vendor's name, as a lookup by name writes it: the list's words, the note
+// that the match is by name only, and the day of the run, since the list dates no entry.
+const entity = list.byId.get(40001);
+if (entity === undefined) throw new Error("the list of this case holds the entity of the vendor");
+const day = NOW.slice(0, 10);
+const sanctions = {
+  records: [
+    {
+      ...ofacSourceOf(entity),
+      text: joinSentences([
+        ofacSourceOf(entity).text,
+        NAME_ONLY_LOOKUP_NOTE,
+        `On the list on ${day}.`,
+      ]),
+      publishedAt: day,
+    },
+  ],
+  omitted: {},
+};
 const NOW_DATE = new Date(NOW);
 
 const records: RecordsOutcome[] = [
@@ -83,8 +99,8 @@ const records: RecordsOutcome[] = [
  * programs and its remarks in the words of the list and a note that the match is by name only. The
  * vessel and the person with a similar name, and the entity of another name, are not records. The
  * record is a source that was read, so the finding that cites it is no finding on a snippet; it is
- * one page of a publisher that tells nothing of this vendor, so the confidence is low, the
- * likelihood is no more than possible, and the action is to find out who the vendor is.
+ * one page of a publisher that tells nothing of this vendor, so the likelihood is no more than
+ * possible, and the action is to find out who the vendor is.
  *
  * Under the credibility rule the label is Low, with the note that the record matched by name only:
  * the list is official, but it matches the vendor by its name alone, which may be another company's
@@ -142,7 +158,6 @@ export const SANCTIONS_LIST_NAME_MATCH: EvalCase = {
           risk_severity: "Major",
           action_plan:
             "Check the vendor's registered address, country and owners against the entry and its remarks on the sanctions list, and ask the vendor to confirm in writing that it is not the listed company before any contract or payment.",
-          confidence: "low",
           rationale:
             "The only source is the entry of the list, matched to the vendor by its name alone, and nothing in it ties it to this vendor.",
           evidence: [
@@ -184,7 +199,6 @@ export const SANCTIONS_LIST_NAME_MATCH: EvalCase = {
     maxBadUrls: 0,
     maxDatedWebResults: 0,
     maxSnippetOnlyFindings: 0,
-    maxOverconfident: 0,
     maxMislabelled: 0,
     maxDuplicateClusters: 0,
     maxCitationsRejected: 0,

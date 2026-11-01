@@ -11,11 +11,15 @@
  * 2. A page the research took for the vendor's own, for a vendor with a domain, is the vendor's,
  *    whatever its host: a vendor whose site is a registry host (Bloomberg on bloomberg.com) is
  *    still speaking for itself.
- * 3. The entry of the host: the longest host of a host entry, else the longest suffix, else a
- *    pattern. A host with no entry is unverified and unreviewed.
+ * 3. The entry of the host: the longest host of a host entry, else the longest suffix. A host with
+ *    no entry is unverified and unreviewed.
  * 4. A blocked entry is unverified, and marked so.
  * 5. An EDGAR filing under the CIK a person stored for the vendor is the vendor's, in the archive
- *    and in the SEC's viewers (Q26): the vendor filed it.
+ *    and in the SEC's viewers, when the vendor filed it (Q26, Q28). The address names the folder the
+ *    filing is shown under, which is every party's: a Schedule 13G about the vendor and a Form 4
+ *    for it are in the vendor's folder too. So the header of the filing says who filed it
+ *    (edgarFiler.ts), and the answer comes with the source (`edgarFiler`). Only "vendor" makes the
+ *    filing the vendor's; "other", and no answer, go on to step 6.
  * 6. A part of a site that is not its publisher's own word is unverified, and marked as
  *    downgraded: the entry's own rules on any entry (any other EDGAR filing on sec.gov, Q26), and
  *    the generic segments and host labels of G1 on a trusted press host only (Q11).
@@ -38,7 +42,7 @@ import type {
 } from "../../../domain.layer/interfaces/i.vendorResearch";
 import { isOnDomain } from "../../webResearch/publicUrl";
 import { storedCikOf } from "../records/sec";
-import { publisherKey } from "../sourceTiers";
+import { publisherKey } from "./publisher";
 import type { ResearchTarget } from "../target";
 import {
   type DowngradeRule,
@@ -53,6 +57,13 @@ import {
   USER_CONTENT_SECTIONS,
 } from "./entries";
 
+/**
+ * Who filed an EDGAR filing under the CIK stored on the vendor, as the header of the filing says
+ * (Q28, edgarFiler.ts): "vendor" when the stored CIK is a filer in it, "other" when it is only the
+ * subject company or the issuer, or does not appear.
+ */
+export type EdgarFiler = "vendor" | "other";
+
 /** What the classifier reads of a source. */
 export interface ClassifiableSource {
   url: string;
@@ -62,6 +73,11 @@ export interface ClassifiableSource {
   text?: string;
   /** The address on another site that the page claims as its own, as the session kept it. */
   canonicalUrl?: string;
+  /**
+   * For an EDGAR filing under the CIK stored on the vendor: who filed it (step 5). Absent when
+   * nobody asked, or the SEC could not say: the filing is then the filer's document, as any other.
+   */
+  edgarFiler?: EdgarFiler;
 }
 
 export interface SourceClass {
@@ -94,18 +110,22 @@ const VENDOR: SourceClass = {
   reviewed: true,
 };
 
-/** The id of the SEC's entry, whose EDGAR archive holds filings under their filer's CIK. */
+/** The id of the SEC's entry, whose EDGAR archive holds filings under their parties' CIKs. */
 const SEC_ENTRY = "sec";
 
-/** The path of a filing in EDGAR's archive, which names its filer's CIK. */
+/** The host of the SEC's entry, for an address read without the registry (`isStoredCikFiling`). */
+const SEC_HOST = "sec.gov";
+
+/** The path of a filing in EDGAR's archive, which names the CIK of the folder it is shown under. */
 const EDGAR_FILING_PATH = /^\/?Archives\/edgar\/data\/(\d{1,10})(?:\/|$)/;
 
 /**
- * The CIK of the filer of an EDGAR filing at an address of the SEC: the segment after
+ * The CIK of the folder an EDGAR filing is shown under at an address of the SEC: the segment after
  * /Archives/edgar/data/ in its path, in the `doc` parameter of a viewer (/ix, /ixviewer/ix.html),
- * or the `cik` parameter of /cgi-bin/viewer, as a number; null for any other address.
+ * or the `cik` parameter of /cgi-bin/viewer, as a number; null for any other address. It is a
+ * party's CIK, not always the filer's (Q28).
  */
-function edgarFilerOf(url: URL): number | null {
+function edgarFolderCikOf(url: URL): number | null {
   const fromPath = (path: string | null): number | null => {
     const match = path === null ? null : EDGAR_FILING_PATH.exec(path);
     return match === null ? null : Number(match[1]);
@@ -119,12 +139,39 @@ function edgarFilerOf(url: URL): number | null {
   return fromPath(url.pathname);
 }
 
-/** True when the address is an EDGAR filing under the CIK stored on the vendor (step 5). */
-function isVendorFiling(url: URL, target: ResearchTarget): boolean {
-  const stored = target.identifiers?.secCik;
-  if (stored === undefined) return false;
-  const filer = edgarFilerOf(url);
-  return filer !== null && filer === Number(stored);
+/** True when the address is an EDGAR filing in the folder of the CIK stored on the vendor. */
+function isInStoredFolder(url: URL, target: ResearchTarget): boolean {
+  const stored = storedCikOf(target);
+  if (stored === null) return false;
+  const folder = edgarFolderCikOf(url);
+  return folder !== null && folder === Number(stored);
+}
+
+/**
+ * True when the address is an EDGAR filing under the CIK stored on the vendor and the vendor filed
+ * it, as the header says (step 5, Q28): the folder alone is every party's.
+ */
+function isVendorFiling(
+  url: URL,
+  target: ResearchTarget,
+  edgarFiler: EdgarFiler | undefined,
+): boolean {
+  return edgarFiler === "vendor" && isInStoredFolder(url, target);
+}
+
+/**
+ * True when the address is an EDGAR filing, on the SEC's host, under the CIK stored on the vendor:
+ * a filing that step 5 asks the answer of `edgarFiler` for. The analysis asks the SEC who filed
+ * those, and no other (analysis.ts). False for an address that cannot be read.
+ */
+export function isStoredCikFiling(address: string, target: ResearchTarget): boolean {
+  let url: URL;
+  try {
+    url = new URL(address);
+  } catch {
+    return false;
+  }
+  return isOnDomain(normaliseHost(url.hostname), SEC_HOST) && isInStoredFolder(url, target);
 }
 
 /** A host as it is looked up: lower case, without a trailing dot and a leading "www.". */
@@ -258,6 +305,13 @@ const SECTION_SEPARATORS = "-_.";
 /** A segment of a path that is a locale: `en`, `en-us`, `pt_br`, `zh-hans`. */
 const LOCALE_SEGMENT = /^[a-z]{2}(?:[-_][a-z]{2,4})?$/;
 
+/**
+ * The segments that only name the vendor's own part of a site, whole and not as the start of a
+ * longer one: when a path starts with one (after its locale), its section is the segment after it
+ * (`/company/trust`, `/about-us/legal`).
+ */
+const COMPANY_SEGMENTS: readonly string[] = ["company", "about", "about-us", "corporate"];
+
 /** True when a segment is one of the words, alone or followed by a separator. */
 const isSection = (segment: string, words: readonly string[]): boolean =>
   words.some(
@@ -266,13 +320,33 @@ const isSection = (segment: string, words: readonly string[]): boolean =>
       (segment.length === word.length || SECTION_SEPARATORS.includes(segment[word.length])),
   );
 
+/** How many leading segments only name the locale: `/en-us/` is one, `/intl/en-us/` two. */
+function localeLength(segments: readonly string[]): number {
+  if (segments[0] === "intl" && LOCALE_SEGMENT.test(segments[1] ?? "")) return 2;
+  return LOCALE_SEGMENT.test(segments[0] ?? "") ? 1 : 0;
+}
+
+/**
+ * The section of a page of the vendor's site, from the segments of its path: the first one after
+ * the locale, or the one after that when the first is `company`, `about`, `about-us` or
+ * `corporate`; undefined when the path has none. It reads four segments at most, whatever the
+ * length of the path.
+ */
+function sectionOf(segments: readonly string[]): string | undefined {
+  const start = localeLength(segments);
+  const first = segments[start];
+  return first !== undefined && COMPANY_SEGMENTS.includes(first) ? segments[start + 1] : first;
+}
+
 /**
  * True when an address of the vendor's own site is a page where the vendor states what binds it
  * or reports about itself (rule V, spec D5.4): a trust, security, legal, privacy, terms, policy,
  * compliance, subprocessor or status section (STATEMENT_SECTIONS), or a trust, security or status
- * host. A page of the newsroom is never one (NEWSROOM_SECTIONS), and the title is not read: what a
- * vendor announces, and the tagline of its pages, are claims. False for an address that cannot be
- * read.
+ * host. The section is the first segment of the path, after a locale (`/en-us/`) or `intl` and a
+ * locale (`/intl/en-us/`); when that segment is `company`, `about`, `about-us` or `corporate`, the
+ * section is the one after it (`/company/trust`). A page of the newsroom is never one
+ * (NEWSROOM_SECTIONS), with a segment of it at any depth, and the title is not read: what a vendor
+ * announces, and the tagline of its pages, are claims. False for an address that cannot be read.
  */
 export function isStatementPage(address: string): boolean {
   let url: URL;
@@ -285,26 +359,23 @@ export function isStatementPage(address: string): boolean {
   if (segments.some((segment) => isSection(segment, NEWSROOM_SECTIONS))) return false;
   const host = normaliseHost(url.hostname);
   if (STATEMENT_HOST_LABELS.some((label) => host.startsWith(`${label}.`))) return true;
-  const first = LOCALE_SEGMENT.test(segments[0] ?? "") ? segments[1] : segments[0];
-  return first !== undefined && isSection(first, STATEMENT_SECTIONS);
+  const section = sectionOf(segments);
+  return section !== undefined && isSection(section, STATEMENT_SECTIONS);
 }
 
 /** A classifier over a registry; the index of its hosts is built once. */
 export function createSourceClassifier(registry: readonly RegistryEntry[]): SourceClassifier {
   const byHost = new Map<string, RegistryEntry>();
   const bySuffix = new Map<string, RegistryEntry>();
-  const patterned: RegistryEntry[] = [];
   for (const entry of registry) {
     for (const host of entry.hosts) (entry.suffix ? bySuffix : byHost).set(host, entry);
-    if (entry.pattern !== undefined) patterned.push(entry);
   }
 
-  /** The entry of a host, and whether a host entry (not a suffix or a pattern) decided. */
+  /** The entry of a host, and whether a host entry (not a suffix) decided. */
   const entryOf = (host: string): { entry: RegistryEntry; ofHost: boolean } | null => {
     const hosted = longestMatch(host, byHost);
     if (hosted !== undefined) return { entry: hosted, ofHost: true };
-    const suffixed =
-      longestMatch(host, bySuffix) ?? patterned.find((entry) => entry.pattern?.test(host));
+    const suffixed = longestMatch(host, bySuffix);
     return suffixed === undefined ? null : { entry: suffixed, ofHost: false };
   };
 
@@ -396,7 +467,7 @@ export function createSourceClassifier(registry: readonly RegistryEntry[]): Sour
       reviewed: true,
     };
     if (entry.flags?.includes("blocked")) return { category: "unverified", ...own, blocked: true };
-    if (entry.id === SEC_ENTRY && isVendorFiling(url, target))
+    if (entry.id === SEC_ENTRY && isVendorFiling(url, target, source.edgarFiler))
       return { ...VENDOR, entry: entry.id };
     if (isDowngraded(entry, host, url)) return { category: "unverified", ...own, downgraded: true };
     if (entry.syndicatedFrom === "canonical") {

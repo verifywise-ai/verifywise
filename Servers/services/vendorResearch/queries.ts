@@ -162,6 +162,28 @@ const NEWS_TOPICS: Partial<Record<ResearchCategory, string[]>> = {
 };
 
 /**
+ * Words of the topics above that name no topic by themselves: an article about a software vendor
+ * says "data" and "security" whatever it is about.
+ */
+const GENERIC_TOPIC_WORDS: ReadonlySet<string> = new Set(["data", "security"]);
+
+/**
+ * The English words that name what the news categories look for, as single lower-case words, each
+ * once ("breach", "lawsuit", "outage"). A news engine that answers from one index of the vendor's
+ * coverage (the GDELT engine) asks for the articles that name the vendor and any of these words.
+ * The caller adds the authorities of the vendor's jurisdiction, `regulatorTopicsOf` in market.ts,
+ * which depend on the vendor. The generic words are left out: an index of the best matches that
+ * they filled would hold few articles of a topic.
+ */
+export const NEWS_TOPIC_WORDS: readonly string[] = [
+  ...new Set(
+    Object.values(NEWS_TOPICS).flatMap((topics) =>
+      (topics ?? []).flatMap((topic) => topic.toLowerCase().split(" ")),
+    ),
+  ),
+].filter((word) => !GENERIC_TOPIC_WORDS.has(word));
+
+/**
  * Queries that work, for each of the categories that search the news. The categories that read
  * the vendor's own website (certifications, ai_specific) have none. A vendor with other names gets
  * one more query for each category: the first topic of the category, led by its first other name,

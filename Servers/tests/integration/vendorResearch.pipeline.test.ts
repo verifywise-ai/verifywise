@@ -28,17 +28,19 @@ import {
   ResearchTrigger,
 } from "../../domain.layer/interfaces/i.vendorResearch";
 import { sourceKey } from "../../services/webResearch/urlCanon";
+import type { SearchEngineId } from "../../services/webResearch/webSearch";
 import type { LedgerEntry } from "../../services/webResearch/webSession";
 import { MAX_EVIDENCE_BYTES } from "../../services/vendorResearch/evidence";
 import { PipelineDeps, runVendorResearch } from "../../services/vendorResearch/pipeline";
 import { type PolicyPage, hashOf, linesOf } from "../../services/vendorResearch/policySnapshots";
-import { PROMPT_VERSION } from "../../services/vendorResearch/prompts";
+import { CREDIBILITY_PROMPT_VERSION } from "../../services/vendorResearch/prompts";
 import type { ResearchResult } from "../../services/vendorResearch/researchAgent";
 import { ResearchOutput, researchOutputSchema } from "../../services/vendorResearch/schema";
 import { calculateRiskLevel } from "../../utils/validations/vendorRiskValidation.utils";
 import {
   STALE_RUN_MINUTES,
   createRunQuery,
+  finishRunQuery,
   getActiveRunQuery,
   getFindingsForVendorQuery,
   getRunByIdQuery,
@@ -85,7 +87,6 @@ const BREACH_FINDING: ModelFinding = {
   likelihood: "Almost certain",
   risk_severity: "Catastrophic",
   action_plan: "Ask the vendor for its incident report and for the data in the test system.",
-  confidence: "high",
   rationale: "The vendor confirmed that customer records were copied, so it is almost certain.",
   evidence: [{ source_id: "S1", quote: BREACH_QUOTE }],
 };
@@ -98,7 +99,6 @@ const LAWSUIT_FINDING: ModelFinding = {
   likelihood: "Possible",
   risk_severity: "Moderate",
   action_plan: "Ask the vendor how the case could change its prices or its service.",
-  confidence: "medium",
   rationale: "The case is settled, and only the price of the service could change.",
   evidence: [{ source_id: "S1", quote: LAWSUIT_QUOTE }],
 };
@@ -123,9 +123,14 @@ type HitsByCategory = Partial<Record<ResearchCategory, Hit[]>>;
 /**
  * A research loop that searched each category once, was answered every time, and
  * kept the hits of each category in its ledger as search results; a category without hits found
- * nothing.
+ * nothing. It says which engine its searches went to when it is told, and says nothing otherwise,
+ * like a researcher from before the engine was recorded.
  */
-function fakeResearch(hits: HitsByCategory, policyPages?: PolicyPage[]): PipelineDeps["research"] {
+function fakeResearch(
+  hits: HitsByCategory,
+  policyPages?: PolicyPage[],
+  searchEngine?: SearchEngineId | null,
+): PipelineDeps["research"] {
   return jest.fn(async ({ trace }): Promise<ResearchResult> => {
     for (const category of RESEARCH_CATEGORIES) {
       trace?.step({
@@ -158,6 +163,7 @@ function fakeResearch(hits: HitsByCategory, policyPages?: PolicyPage[]): Pipelin
       modelError: null,
       jsonObjectFallback: false,
       ...(policyPages === undefined ? {} : { policyPages }),
+      ...(searchEngine === undefined ? {} : { searchEngine }),
     };
   });
 }
@@ -180,9 +186,10 @@ function makeDeps(
   hits: HitsByCategory,
   generate: PipelineDeps["generate"],
   policyPages?: PolicyPage[],
+  searchEngine?: SearchEngineId | null,
 ): PipelineDeps {
   return {
-    research: fakeResearch(hits, policyPages),
+    research: fakeResearch(hits, policyPages, searchEngine),
     resolveModel: async () => ({ model: {}, modelId: "test-model" }),
     generate,
     now: () => NOW,
@@ -286,7 +293,7 @@ describe("runVendorResearch against the real tables", () => {
       pages_read: 0,
       duplicates_dropped: 0,
       model: "test-model",
-      prompt_version: PROMPT_VERSION,
+      prompt_version: CREDIBILITY_PROMPT_VERSION,
     });
     expect(run.started_at).toBeInstanceOf(Date);
     expect(run.finished_at).toBeInstanceOf(Date);
@@ -329,19 +336,51 @@ describe("runVendorResearch against the real tables", () => {
       likelihood: "Almost certain",
       risk_severity: "Catastrophic",
       risk_level: `${level} Risk`,
-      // The model said high, and one source of a third party supports no more than low.
-      confidence: "low",
+      // A run stores no confidence (M3 Part B1): the label is in the credibility column.
+      confidence: null,
+      credibility: expect.stringMatching(/^(low|medium|high)$/),
+      credibility_basis: { rule: expect.any(String) },
       // The sentence of the model about its rating comes back from its own column.
       rationale: BREACH_FINDING.rationale,
     });
+    // The queries fill the label in from the confidence of an old row. With no confidence stored, a
+    // label that is there was written by the run, on a rule of the registry.
+    expect(findings[0].credibility_basis?.rule).not.toBe("legacy_confidence");
     expect(findings[0].sources).toEqual([
       {
         url: BREACH_HIT.url,
         title: BREACH_HIT.title,
         quote: BREACH_QUOTE,
         published_at: BREACH_HIT.publishedAt,
+        // The registry classifies the source and names its publisher when the finding is stored.
+        category: "unverified",
+        publisher: "example",
       },
     ]);
+  });
+
+  it("research never writes confidence: the column of a finding of a run stays NULL", async () => {
+    const seed = await seedAcme();
+    // A model of the earlier prompt versions answered with a confidence of its own. The run drops
+    // it: the label of a finding is worked out from its sources, and the column is not written.
+    const withConfidence = { ...BREACH_FINDING, confidence: "high" } as ModelFinding;
+    const deps = makeDeps(
+      { security_incidents: [BREACH_HIT] },
+      fakeModelAnswering([withConfidence]),
+    );
+
+    const { result, run } = await researchAcme(seed, deps);
+
+    expect(result).toEqual({ outcome: "completed", findingsCreated: 1 });
+    // The table itself, not a query whose read-time fallback fills the label in from a confidence.
+    const rows = (await sequelize.query(
+      `SELECT confidence, credibility FROM vendor_risk_findings
+       WHERE organization_id = :orgId AND run_id = :runId`,
+      { replacements: { orgId: seed.orgId, runId: run.id }, type: QueryTypes.SELECT },
+    )) as Array<{ confidence: string | null; credibility: string | null }>;
+    expect(rows).toHaveLength(1);
+    expect(rows[0].confidence).toBeNull();
+    expect(rows[0].credibility).toMatch(/^(low|medium|high)$/);
   });
 
   it("stores the trace of the run, and serves it for the run's own vendor and organization only", async () => {
@@ -540,6 +579,169 @@ describe("runVendorResearch against the real tables", () => {
       error: null,
     });
     expect(await countFindings(seed.orgId)).toBe(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+
+/** The engine of a run as the column itself holds it, not as the select list of the queries has it. */
+async function storedEngine(orgId: number, runId: number): Promise<string | null> {
+  const [row] = (await sequelize.query(
+    `SELECT search_engine FROM vendor_research_runs
+     WHERE organization_id = :orgId AND id = :runId`,
+    { replacements: { orgId, runId }, type: QueryTypes.SELECT },
+  )) as Array<{ search_engine: string | null }>;
+  return row.search_engine;
+}
+
+describe("the search engine of a run against the real tables", () => {
+  afterEach(async () => {
+    await cleanupDatabase();
+  });
+
+  it("has no engine while the run is queued", async () => {
+    const seed = await seedAcme();
+
+    const queued = await createRunQuery({
+      organizationId: seed.orgId,
+      vendorId: seed.vendorId,
+      triggerType: "manual",
+      requestedBy: seed.userId,
+    });
+
+    expect(queued.search_engine).toBeNull();
+    expect(await storedEngine(seed.orgId, queued.id)).toBeNull();
+  });
+
+  it.each(["anthropic", "gdelt"] as const)(
+    "stores %s on a completed run, and reads it back with the run",
+    async (engine) => {
+      const seed = await seedAcme();
+      const deps = makeDeps(
+        { security_incidents: [BREACH_HIT] },
+        fakeModelAnswering([BREACH_FINDING]),
+        undefined,
+        engine,
+      );
+
+      const { result, run } = await researchAcme(seed, deps);
+
+      expect(result).toEqual({ outcome: "completed", findingsCreated: 1 });
+      expect(run).toMatchObject({ status: "completed", error: null, search_engine: engine });
+      expect(await storedEngine(seed.orgId, run.id)).toBe(engine);
+    },
+  );
+
+  it("stores no engine for a run that searched nothing", async () => {
+    const seed = await seedAcme();
+    const deps = makeDeps(
+      { security_incidents: [BREACH_HIT] },
+      fakeModelAnswering([BREACH_FINDING]),
+      undefined,
+      null,
+    );
+
+    const { run } = await researchAcme(seed, deps);
+
+    expect(run).toMatchObject({ status: "completed", search_engine: null });
+    expect(await storedEngine(seed.orgId, run.id)).toBeNull();
+  });
+
+  it("stores no engine for a run whose researcher does not say where it searched", async () => {
+    const seed = await seedAcme();
+    const deps = makeDeps(
+      { security_incidents: [BREACH_HIT] },
+      fakeModelAnswering([BREACH_FINDING]),
+    );
+
+    const { run } = await researchAcme(seed, deps);
+
+    expect(run).toMatchObject({ status: "completed", search_engine: null });
+    expect(await storedEngine(seed.orgId, run.id)).toBeNull();
+  });
+
+  it("keeps the engine on a run that failed after it searched", async () => {
+    const seed = await seedAcme();
+    const refused = Object.assign(new Error("refused"), { statusCode: 429 });
+    const deps = makeDeps(
+      { security_incidents: [BREACH_HIT] },
+      jest.fn().mockRejectedValue(refused) as unknown as PipelineDeps["generate"],
+      undefined,
+      "gdelt",
+    );
+
+    const { run } = await researchAcme(seed, deps);
+
+    expect(run).toMatchObject({
+      status: "failed",
+      error: "Model call failed: HTTP 429",
+      search_engine: "gdelt",
+    });
+    expect(await storedEngine(seed.orgId, run.id)).toBe("gdelt");
+  });
+
+  it("leaves the engine empty when a caller that does not know it ends the run", async () => {
+    const seed = await seedAcme();
+    const queued = await createRunQuery({
+      organizationId: seed.orgId,
+      vendorId: seed.vendorId,
+      triggerType: "auto",
+      requestedBy: null,
+    });
+
+    // The shape of a finish from before the column, as the callers that never searched send it.
+    await finishRunQuery({
+      organizationId: seed.orgId,
+      runId: queued.id,
+      status: "failed",
+      categories: [],
+      categorySummary: [],
+      evidence: null,
+      model: null,
+      promptVersion: null,
+      searchesUsed: 0,
+      pagesRead: 0,
+      duplicatesDropped: 0,
+      error: "The job could not be queued",
+      trace: null,
+      coverage: null,
+      registryVersion: null,
+    });
+
+    expect(await getRunByIdQuery(seed.orgId, queued.id)).toMatchObject({
+      status: "failed",
+      search_engine: null,
+    });
+  });
+
+  // The pipeline never writes anything else, but the table is the last word: a run that was given
+  // an engine nobody built (or the old Bing feed) would otherwise read back as one.
+  it("accepts the three engines and refuses every other word", async () => {
+    const seed = await seedAcme();
+    const queued = await createRunQuery({
+      organizationId: seed.orgId,
+      vendorId: seed.vendorId,
+      triggerType: "manual",
+      requestedBy: seed.userId,
+    });
+    const setEngine = (engine: string | null) =>
+      sequelize.query(
+        `UPDATE vendor_research_runs SET search_engine = :engine
+         WHERE organization_id = :orgId AND id = :runId`,
+        { replacements: { engine, orgId: seed.orgId, runId: queued.id } },
+      );
+
+    for (const engine of ["anthropic", "openai", "gdelt", null]) {
+      await setEngine(engine);
+      expect(await storedEngine(seed.orgId, queued.id)).toBe(engine);
+    }
+    for (const engine of ["bing", "replay", "", "GDELT", "gdelt "]) {
+      await expect(setEngine(engine)).rejects.toMatchObject({
+        parent: { code: "23514", constraint: "vendor_research_runs_search_engine_check" },
+      });
+    }
+    // The last accepted word is still there: a refused write changed nothing.
+    expect(await storedEngine(seed.orgId, queued.id)).toBeNull();
   });
 });
 
@@ -815,7 +1017,6 @@ const POLICY_FINDING: ModelFinding = {
   likelihood: "Likely",
   risk_severity: "Major",
   action_plan: "Ask the vendor to exclude our content from training, in writing.",
-  confidence: "high",
   rationale: "The vendor's own policy now says it may train on customer content.",
   evidence: [{ source_id: "S1", quote: TRAIN_NEW }],
 };

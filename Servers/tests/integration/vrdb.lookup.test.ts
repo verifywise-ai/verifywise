@@ -40,7 +40,6 @@ const CONFIG: VendorResearchConfig = {
   workerConcurrency: 5,
   headless: false,
   records: true,
-  vrdb: true,
 };
 
 const TARGET = { name: "Acme Analytics", domain: "acme-analytics.example", provides: "" };
@@ -145,12 +144,15 @@ describe("the lookup of a vendor, in the database", () => {
       ["UK1", "weak"],
     ]);
     expect(outcome.records[0].records[0].text).toMatch(/ As of 2026-10-30\.$/);
+    // The SEC has no connector here (NO_READ_THROUGH) and the CVE records no copy: no baseline is loaded.
     expect(outcome.coverage.map((entry) => [entry.id, entry.outcome])).toEqual([
       ["kev", "found"],
       ["nvd", "not_researched"],
+      ["sec", "not_researched"],
       ["ofac", "failed"],
       ["uk_sanctions", "found"],
       ["eu_fsf", "failed"],
+      ["cve", "failed"],
     ]);
     expect(await matchRows()).toEqual([
       expect.objectContaining({

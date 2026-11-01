@@ -24,21 +24,32 @@
  * whose change was not shown to the model.
  *
  * What the loop leaves decides how the run goes on. A model error of the loop fails the run when
- * no usable source was found, and so does a loop that never got an answer from the web: the model
- * never searched or read, or no call was answered. A loop whose calls were answered and found
+ * no usable source was found, and so does a loop that never got an answer from the web and left
+ * nothing to analyse: the model never searched or read, or no call was answered and the ledger
+ * holds no usable source. The records of the public databases, which the code looks up without the
+ * loop, enter the ledger without a call of their own, so a web that is down still leaves them to be
+ * analysed. A loop whose calls were answered and found
  * nothing completes the run without an analysis call. A loop that stopped early, for its time, its
  * steps or a model error, still hands what it found to the analysis.
  *
- * The queries that end a run (finishRunQuery) have no status guard, so a run is ended exactly once.
- * The code is built so that this can be seen:
+ * The query that ends a run (finishRunQuery) has a status guard: it writes only a run that is queued
+ * or running, and says whether it did. A run that has ended, for example one that the stale sweep
+ * failed, is never overwritten, and a run is still ended exactly once by this module. The code is
+ * built so that this can be seen:
  *
  * - `decide` does all the work up to the point of writing, and never rejects. It returns a decision:
  *   fail the run, or complete it with these findings. Any error inside it becomes a "fail".
  * - A "fail" is written by `recordFailure`, one best-effort call that never rejects.
  * - A "complete" is written by `completeRun`, the only caller of `sequelize.transaction`. The
  *   findings and the end of the run are saved in that one transaction. If it rejects, nothing was
- *   saved and the run is failed once, outside the transaction. Once it has resolved, the function
- *   returns: nothing after the commit can fail the run.
+ *   saved and the run is failed once, outside the transaction. If the finish wrote nothing, the
+ *   run had ended already (it timed out, or the sweep failed it): the transaction is rolled back,
+ *   so the findings are not saved, and no second end is written. Once it has resolved, the
+ *   function returns: nothing after the commit can fail the run.
+ * - No run runs longer than RUN_TIME_LIMIT_MINUTES: `runVendorResearch` races `decide` against a
+ *   timer and fails the run as timed out when the timer wins. `decide` writes nothing, so its late
+ *   decision is ignored. The sweep of running runs waits longer than that limit, so it can only
+ *   reach a run whose worker died.
  *
  * Only a failure to mark the run running is rethrown. The run is still queued then, so a retry of
  * the job can start it.
@@ -57,11 +68,17 @@
  * The message of any other error, such as a database error that names a host, a port or a query, is
  * logged but not stored: the run is served to every role, so it records a fixed phrase.
  *
- * Under the credibility rules (the flag of the vendor risk database; see `PipelineDeps.rules`) a
- * source of a host the registry blocks never reaches the evidence, each finding is stored with its
+ * A source of a host the registry blocks never reaches the evidence, each finding is stored with its
  * credibility label and basis and each of its sources with what the basis says of it, and the run
  * is ended with its coverage on every path: what the research checked in the public databases,
- * the categories of the sources its stored findings cite, and the version of the registry.
+ * the categories of the sources its stored findings cite, and the version of the registry. There
+ * are no other rules: the model is not asked for a confidence (see analysis.ts).
+ *
+ * While the gate of the SEC (Q4) is open, the analysis is also given the means to ask who filed an
+ * EDGAR filing that a finding cites under the CIK stored on the vendor (see `edgarFiler.ts`): the
+ * address of a filing is in the folder of every party, so only the header of the filing says
+ * whether the vendor's own word is in it. The resolver is one for the process, since it keeps the
+ * header of a filing for 24 hours for every run.
  */
 import { createModelFromKey, resolveModelId } from "../../advisor/llmModelFactory";
 import type { generateObjectWithSelfCorrection } from "../../advisor/llmSelfCorrect";
@@ -73,8 +90,10 @@ import {
   NewFinding,
   RESEARCH_CATEGORIES,
   ResearchCategory,
+  RUN_SEARCH_ENGINES,
   type RunCoverage,
   RunProgress,
+  type RunSearchEngine,
   ResearchTrigger,
   SOURCE_CATEGORIES,
   SnapshotWrite,
@@ -94,7 +113,9 @@ import {
   insertFindingsQuery,
   markRunRunningQuery,
   rememberSourcesQuery,
+  RUN_TIME_LIMIT_MINUTES,
   saveSnapshotsQuery,
+  TIMED_OUT_ERROR,
   updateRunProgressQuery,
 } from "../../utils/vendorResearch.utils";
 import { getVendorRisksByVendorIdQuery } from "../../utils/vendorRisk.utils";
@@ -103,20 +124,23 @@ import { withAliases } from "./aliases";
 import { analyse } from "./analysis";
 import { researchableCategories } from "./categories";
 import type { Credibility } from "./credibility";
+import { type EdgarFilerResolver, createEdgarFilerResolver } from "./edgarFiler";
 import { type SourceProvenance, buildEvidencePack, isBlockedEntry, provenanceOf } from "./evidence";
 import { selectKeys } from "./keySelection";
 import { buildMateriality } from "./materiality";
 import { type PolicyPage, comparePages } from "./policySnapshots";
-import { promptVersionOf } from "./prompts";
+import { CREDIBILITY_PROMPT_VERSION } from "./prompts";
 // Types only: the researcher is injected, so loading the pipeline loads no web module.
 import type { ResearchResult, VendorResearcher } from "./researchAgent";
-import { type ResearchRules, ResearchOutput } from "./schema";
+import type { AnyResearchOutput } from "./schema";
+import { type SearchSpec, searchEngineOf } from "./searchEngineOf";
 import { keysOfSources, splitKnownSources } from "./sourceMemory";
 import { REGISTRY_VERSION } from "./sourceRegistry/entries";
 import { summariseCategories, workedCategories } from "./summary";
 import { buildTarget } from "./target";
 import { cutAtCodePoint } from "./text";
 import { type TraceRecorder, createTraceRecorder } from "./trace";
+import { VRDB_GATES } from "./vrdb/gates";
 
 export interface PipelineDeps {
   /** Runs the research loop for a vendor: the web search and page reads. */
@@ -132,13 +156,25 @@ export interface PipelineDeps {
    */
   verifier?: boolean;
   /**
-   * The rules of the run: `confidence` (the default: vr-6, and the confidence is what a finding is
-   * rated by) or `credibility` (since vr-9: a blocked source is left out, each finding is stored
-   * with its credibility label and basis, and the run with its coverage). The job sets the second
-   * while the flag of the vendor risk database is on.
+   * Who filed an EDGAR filing under the CIK stored on the vendor (Q28; `createEdgarFilerResolver`
+   * in edgarFiler.ts). It is given to the analysis while the gate of the SEC (Q4) is open, and
+   * nothing is asked while it is closed. By default the resolver of the process, which every run
+   * shares; a test gives its own so that no test asks the SEC.
    */
-  rules?: ResearchRules;
+  edgarFilerOf?: EdgarFilerResolver;
+  /**
+   * The longest the run may run, in milliseconds; past it the pipeline fails the run as timed out.
+   * By default RUN_TIME_LIMIT_MINUTES. A test gives a short one.
+   */
+  runTimeLimitMs?: number;
 }
+
+/**
+ * The resolver of who filed an EDGAR filing, one for the process. It keeps the header of a filing
+ * for 24 hours, for every run, so a resolver of each run would forget it. Making it asks for
+ * nothing: the SEC is first asked when an analysis cites a filing under a vendor's stored CIK.
+ */
+const processEdgarFilerOf: EdgarFilerResolver = createEdgarFilerResolver();
 
 export interface PipelineResult {
   outcome: "completed" | "failed" | "skipped";
@@ -148,7 +184,7 @@ export interface PipelineResult {
 /** The id of the model is stored cut to this many characters, the size of its column. */
 const MODEL_MAX_CHARS = 255;
 
-/** What a run records when no call of the research loop was answered by the web. */
+/** What a run records when no call of the research loop was answered by the web and nothing is left to analyse. */
 const WEB_UNREACHABLE_NOTE = "The run stopped because the web could not be reached";
 /** What a run records when the model never asked for a search or a read that reached the web. */
 const NO_RESEARCH_ACTIONS_NOTE = "The model did not use the research actions";
@@ -207,6 +243,12 @@ export interface ResolvedModel {
  */
 export interface ResolvedModels extends ResolvedModel {
   analysis?: ResolvedModel;
+  /**
+   * How the research searches the web, told from the key of the research (see searchEngineOf.ts):
+   * with the web search of the key's provider, or with the news of the GDELT Project. The analysis
+   * searches nothing, so its model has none. Without it the researcher searches the news.
+   */
+  search?: SearchSpec;
 }
 
 /**
@@ -226,7 +268,9 @@ async function readChoice(organizationId: number): Promise<VendorResearchKeyChoi
 
 /**
  * The models for a run, from the keys the organization chose or, for a choice that was not made,
- * its newest key; null when the organization has no key. Never logs the key.
+ * its newest key; null when the organization has no key. The research model also says how the
+ * research searches, which depends on its key alone: only the name and the address of the key are
+ * looked at for that. Never logs the key.
  */
 export async function resolveOrgModel(organizationId: number): Promise<ResolvedModels | null> {
   const [keys, choice] = await Promise.all([
@@ -239,9 +283,15 @@ export async function resolveOrgModel(organizationId: number): Promise<ResolvedM
     model: createModelFromKey(key),
     modelId: resolveModelId(key),
   });
+  const research: ResolvedModels = {
+    ...modelOf(selected.research),
+    search: {
+      engine: searchEngineOf({ name: selected.research.name, url: selected.research.url }),
+    },
+  };
   return selected.analysis === null
-    ? modelOf(selected.research)
-    : { ...modelOf(selected.research), analysis: modelOf(selected.analysis) };
+    ? research
+    : { ...research, analysis: modelOf(selected.analysis) };
 }
 
 interface RunArgs {
@@ -269,14 +319,30 @@ interface Progress {
    * fails, and served to administrators only (see trace.ts).
    */
   trace: TraceRecorder;
-  /** The version of the prompts of the run's rules (see `promptVersionOf`). */
+  /** The version of the prompt of the run (`CREDIBILITY_PROMPT_VERSION`). */
   promptVersion: string;
+  /** What the run checked in the public databases and what its findings cite. */
+  coverage: RunCoverage;
   /**
-   * What the run checked in the public databases and what its findings cite, under the
-   * credibility rules; null under the confidence rules.
+   * The engine the run's searches went to, as the researcher reported it when it returned (see
+   * `recordedEngineOf`); null before that, for a run that searched nothing and for a run none of
+   * whose searches was answered.
    */
-  coverage: RunCoverage | null;
+  searchEngine: RunSearchEngine | null;
 }
+
+/** What a run knows before it has done anything. */
+const newProgress = (): Progress => ({
+  categories: [],
+  evidence: null,
+  model: null,
+  searchesUsed: 0,
+  pagesRead: 0,
+  trace: createTraceRecorder(),
+  promptVersion: CREDIBILITY_PROMPT_VERSION,
+  coverage: emptyCoverage(),
+  searchEngine: null,
+});
 
 type Decision =
   | { kind: "fail"; outcome: "failed" | "skipped"; payload: FinishRunInput }
@@ -391,8 +457,19 @@ function finishInput(
     error: end.error,
     trace: progress.trace.snapshot(),
     coverage: progress.coverage,
-    registryVersion: progress.coverage?.registry_version ?? null,
+    registryVersion: progress.coverage.registry_version,
+    searchEngine: progress.searchEngine,
   };
+}
+
+/**
+ * The engine a run records, from the id its researcher reports for the searches it made: one of the
+ * three that the table holds, or none. `replay`, the engine of the evaluation, is no search that a
+ * person ran, and an id that is none of the three would be refused by the table and cost the run
+ * its end, so both leave the run with none, like a researcher that does not say or searched nothing.
+ */
+function recordedEngineOf(reported: unknown): RunSearchEngine | null {
+  return RUN_SEARCH_ENGINES.find((engine) => engine === reported) ?? null;
 }
 
 /** No source cited, in each category. */
@@ -402,7 +479,7 @@ const noneCited = (): Record<SourceCategory, number> =>
     number
   >;
 
-/** The coverage of a run under the credibility rules before it has checked anything. */
+/** The coverage of a run before it has checked anything. */
 const emptyCoverage = (): RunCoverage => ({
   registry_version: REGISTRY_VERSION,
   sources: [],
@@ -655,6 +732,9 @@ async function research(args: RunArgs, deps: PipelineDeps, progress: Progress): 
       target,
       model: resolved.model,
       modelId: resolved.modelId,
+      // The answers of a provider's search are bought with the key of this organization.
+      organizationId,
+      search: resolved.search,
       now,
       trace,
       progress: (reported) => {
@@ -669,18 +749,25 @@ async function research(args: RunArgs, deps: PipelineDeps, progress: Progress): 
     return stop(UNEXPECTED_ERROR_NOTE);
   }
   trace.stopped(found.stoppedBecause);
-  if (progress.coverage !== null) {
-    progress.coverage = {
-      ...progress.coverage,
-      sources: found.coverage?.sources ?? [],
-      lookups: found.coverage?.lookups ?? [],
-    };
-  }
+  progress.coverage = {
+    ...progress.coverage,
+    sources: found.coverage?.sources ?? [],
+    lookups: found.coverage?.lookups ?? [],
+  };
   progress.categories = workedCategories(found.calls);
   progress.searchesUsed = found.searchesUsed;
   progress.pagesRead = found.pagesRead;
+  // Where the searches really went: a run of an Anthropic key that was refused a search is on the
+  // news of GDELT, whatever its key would have chosen. It is recorded only when a search was
+  // answered: the column is what the user is told ("News searched with ..."), and a run whose
+  // searches the web never answered received no news from any engine. Kept for every end of the run
+  // from here on; the engine of such a run is in the log line below.
+  const searchCalls = found.calls.filter((call) => call.tool === "search");
+  const answeredSearches = searchCalls.filter((call) => call.answered).length;
+  const reportedEngine = recordedEngineOf(found.searchEngine);
+  progress.searchEngine = answeredSearches > 0 ? reportedEngine : null;
   logger.info(
-    `${tag(args)}: the research loop stopped (${found.stoppedBecause}): ${found.searchesUsed} searches, ${found.pagesRead} pages read, ${found.entries.length} sources`,
+    `${tag(args)}: the research loop stopped (${found.stoppedBecause}): ${found.searchesUsed} searches, ${found.pagesRead} pages read, ${found.entries.length} sources, ${answeredSearches} of ${searchCalls.length} searches answered (engine ${reportedEngine ?? "none"})`,
   );
 
   // A scheduled run sets the sources apart that earlier runs showed to the model. The memory is
@@ -699,14 +786,10 @@ async function research(args: RunArgs, deps: PipelineDeps, progress: Progress): 
   // Built first: the failed-run rule asks whether anything usable is left, and an entry with an
   // unusable URL is not a source.
   const entries = [...policies.entries, ...(split === null ? found.entries : split.fresh)];
-  // Under the credibility rules a source of a host the registry blocks is never shown to the model.
-  const rules = deps.rules ?? "confidence";
-  const dropBlocked = rules === "credibility";
-  if (dropBlocked) {
-    const blocked = entries.filter(isBlockedEntry).length;
-    if (blocked > 0) trace.dropped("source.blocked", blocked);
-  }
-  const pack = buildEvidencePack(entries, { dropBlocked });
+  // A source of a host the registry blocks is never shown to the model.
+  const blocked = entries.filter(isBlockedEntry).length;
+  if (blocked > 0) trace.dropped("source.blocked", blocked);
+  const pack = buildEvidencePack(entries, { dropBlocked: true });
   const provenance = provenanceOf(entries);
   // What the model is shown is what the next scheduled run will not show it again, and a source
   // that was set apart is still there to be seen.
@@ -721,7 +804,7 @@ async function research(args: RunArgs, deps: PipelineDeps, progress: Progress): 
   const summaryOf = (
     kept: NewFinding[],
     proposed: ReadonlySet<ResearchCategory>,
-    modelNotes: ResearchOutput["category_notes"],
+    modelNotes: AnyResearchOutput["category_notes"],
   ) =>
     summariseCategories({
       skippedNoDomain,
@@ -742,8 +825,10 @@ async function research(args: RunArgs, deps: PipelineDeps, progress: Progress): 
   }
   // The model answered with prose or invalid steps until the loop ended.
   if (found.calls.length === 0) return stop(NO_RESEARCH_ACTIONS_NOTE);
-  // A blocked search is not "nothing found": the summary says which categories could not look.
-  if (found.calls.every((call) => !call.answered)) {
+  // A blocked search is not "nothing found": the summary says which categories could not look. The
+  // run fails only when nothing is left to analyse: records of the public databases are sources
+  // without a call of the loop, and are analysed even when the web did not answer.
+  if (found.calls.every((call) => !call.answered) && pack.length === 0) {
     return stop(WEB_UNREACHABLE_NOTE, summaryOf([], new Set(), []));
   }
 
@@ -776,6 +861,9 @@ async function research(args: RunArgs, deps: PipelineDeps, progress: Progress): 
     pack,
     // Where the sources came from, for the credibility labels the analysis returns.
     provenance,
+    // Who filed a filing under the stored CIK, for those labels: asked of the SEC only while its
+    // gate is open, since the request names the contact of Q4.
+    edgarFilerOf: VRDB_GATES.Q4 ? (deps.edgarFilerOf ?? processEdgarFilerOf) : undefined,
     model: analysisModel.model,
     modelId: analysisModel.modelId,
     // What the loop learned about a provider holds for the analysis only when it is the same model.
@@ -786,7 +874,6 @@ async function research(args: RunArgs, deps: PipelineDeps, progress: Progress): 
     // The reader of the research, so that a finding that rests on snippets has a page read.
     readPage: found.readPage,
     verifier: deps.verifier === true,
-    rules,
     loadKnown: async () => {
       const [existingRisks, priorFindings] = await Promise.all([
         // Only the active risks. The default of the query is the same, but the rule is said here.
@@ -801,17 +888,12 @@ async function research(args: RunArgs, deps: PipelineDeps, progress: Progress): 
   }
   const { kept, duplicatesDropped: dropped, output } = analysed;
   // Each label goes with its finding at once, so that nothing can part them later.
-  const findings =
-    rules === "credibility"
-      ? kept.map((finding, index) =>
-          withCredibility(finding, analysed.credibility[index], provenance),
-        )
-      : kept;
-  if (progress.coverage !== null) {
-    const cited = citedBy(findings, provenance);
-    trace.cited(cited.categories, cited.unreviewedHosts);
-    progress.coverage = { ...progress.coverage, cited: cited.categories };
-  }
+  const findings = kept.map((finding, index) =>
+    withCredibility(finding, analysed.credibility[index], provenance),
+  );
+  const cited = citedBy(findings, provenance);
+  trace.cited(cited.categories, cited.unreviewedHosts);
+  progress.coverage = { ...progress.coverage, cited: cited.categories };
 
   return complete(
     findings,
@@ -827,18 +909,7 @@ async function research(args: RunArgs, deps: PipelineDeps, progress: Progress): 
 }
 
 /** `research`, with every error turned into a decision to fail the run. It never rejects. */
-async function decide(args: RunArgs, deps: PipelineDeps): Promise<Decision> {
-  const rules = deps.rules ?? "confidence";
-  const progress: Progress = {
-    categories: [],
-    evidence: null,
-    model: null,
-    searchesUsed: 0,
-    pagesRead: 0,
-    trace: createTraceRecorder(),
-    promptVersion: promptVersionOf(rules),
-    coverage: rules === "credibility" ? emptyCoverage() : null,
-  };
+async function decide(args: RunArgs, deps: PipelineDeps, progress: Progress): Promise<Decision> {
   try {
     return await research(args, deps, progress);
   } catch (error) {
@@ -860,7 +931,11 @@ async function decide(args: RunArgs, deps: PipelineDeps): Promise<Decision> {
 /** Ends the run as failed, once. A failure to write it is logged and nothing else. */
 async function recordFailure(payload: FinishRunInput): Promise<void> {
   try {
-    await finishRunQuery(payload);
+    if (!(await finishRunQuery(payload))) {
+      logger.info(
+        `vendor research run ${payload.runId}: the run had already ended, so the failure was not written`,
+      );
+    }
   } catch (error) {
     logger.error(
       `vendor research run ${payload.runId}: could not record that it failed: ${describeError(error)}`,
@@ -869,8 +944,15 @@ async function recordFailure(payload: FinishRunInput): Promise<void> {
 }
 
 /**
+ * Thrown inside the transaction of `completeRun` when the finish wrote nothing: the run had ended
+ * before (it timed out, or the sweep failed it), so the findings are rolled back.
+ */
+class RunAlreadyEnded extends Error {}
+
+/**
  * Saves the findings and ends the run as completed, in one transaction. The only code that writes
- * a completed run. It never rejects.
+ * a completed run. It never rejects. When the run had ended already, the finish writes nothing and
+ * the transaction is rolled back: the findings are not saved and nothing is written over the end.
  */
 async function completeRun(
   args: RunArgs,
@@ -883,9 +965,13 @@ async function completeRun(
   try {
     await sequelize.transaction(async (transaction) => {
       await insertFindingsQuery({ organizationId, vendorId, runId, findings }, transaction);
-      await finishRunQuery(payload, transaction);
+      if (!(await finishRunQuery(payload, transaction))) throw new RunAlreadyEnded();
     });
   } catch (error) {
+    if (error instanceof RunAlreadyEnded) {
+      logger.warn(`${tag(args)}: the run had already ended, so its findings are not saved`);
+      return { outcome: "failed", findingsCreated: 0 };
+    }
     // The transaction was rolled back, so the run is still running. The failed payload holds
     // nothing the model wrote: if its text was the reason for the failure, it would fail again.
     // The run records a fixed phrase, so this line is the only place that has the message.
@@ -910,7 +996,9 @@ async function completeRun(
 /**
  * Researches one vendor for one queued run. The run ends once: completed, with its findings, or
  * failed. Failures of the web, of the model and of the database are not thrown; they end the run as
- * failed. A run that is not queued, that has waited in the queue for longer than the stale limit
+ * failed, and so does a run that reaches its time limit (RUN_TIME_LIMIT_MINUTES, or
+ * `deps.runTimeLimitMs`): it fails as timed out and what the abandoned work decides afterwards is
+ * ignored. A run that is not queued, that has waited in the queue for longer than the stale limit
  * (`markRunRunningQuery` does not start such a run), or whose vendor is missing, is skipped.
  */
 export async function runVendorResearch(
@@ -924,7 +1012,36 @@ export async function runVendorResearch(
     return { outcome: "skipped", findingsCreated: 0 };
   }
 
-  const decision = await decide(args, deps);
+  const progress = newProgress();
+  const decided = decide(args, deps, progress);
+  let timer: NodeJS.Timeout | undefined;
+  const limit = new Promise<"timed out">((resolve) => {
+    timer = setTimeout(
+      () => resolve("timed out"),
+      deps.runTimeLimitMs ?? RUN_TIME_LIMIT_MINUTES * 60_000,
+    );
+    timer.unref();
+  });
+  let decision: Decision | "timed out";
+  try {
+    decision = await Promise.race([decided, limit]);
+  } finally {
+    clearTimeout(timer);
+  }
+  if (decision === "timed out") {
+    // The late decision is ignored: `decide` writes nothing and never rejects.
+    decided.catch(() => undefined);
+    logger.warn(`${tag(args)}: stopped: the run reached its time limit`);
+    await recordFailure(
+      finishInput(args, progress, {
+        status: "failed",
+        categorySummary: [],
+        duplicatesDropped: 0,
+        error: TIMED_OUT_ERROR,
+      }),
+    );
+    return { outcome: "failed", findingsCreated: 0 };
+  }
   if (decision.kind === "fail") {
     logger.warn(`${tag(args)}: stopped: ${decision.payload.error}`);
     await recordFailure(decision.payload);

@@ -3,10 +3,6 @@ import { FetchError, GuardedResponse, guardedFetch } from "../../../webResearch/
 import { buildTarget } from "../../target";
 import { HIBP_MAX_BYTES } from "../hibp";
 import { createRecordsLookup, fetchJson } from "../index";
-import { KEV_MAX_BYTES } from "../kev";
-import { NVD_MAX_BYTES } from "../nvd";
-import { OFAC_ALT_MAX_BYTES, OFAC_SDN_MAX_BYTES } from "../ofac";
-import { SEC_SUBMISSIONS_MAX_BYTES, SEC_TICKERS_MAX_BYTES, SEC_TICKERS_URL } from "../sec";
 import { STATUS_FEED_MAX_BYTES } from "../statuspage";
 
 jest.mock("../../../webResearch/guardedFetch", () => ({
@@ -80,17 +76,9 @@ describe("the lookup with its own fetch", () => {
     guarded.mockImplementation(async (url) => {
       const address = String(url);
       if (address.includes("haveibeenpwned")) return answer("[]");
-      if (address === SEC_TICKERS_URL) {
-        return answer('{"0":{"cik_str":1262039,"ticker":"BRSE","title":"Brise Networks, Inc."}}');
-      }
-      if (address.startsWith("https://data.sec.gov/")) {
-        return answer(
-          '{"cik":"1262039","name":"Brise Networks, Inc.","filings":{"recent":{"accessionNumber":[],"filingDate":[],"form":[],"items":[],"primaryDocument":[]}}}',
-        );
-      }
       return answer('{"vulnerabilities":[]}');
     });
-    const lookup = createRecordsLookup({ nvdSpacer: async () => true });
+    const lookup = createRecordsLookup();
     const target = buildTarget({
       vendor_name: "Brise Networks, Inc.",
       website: "https://www.brisenetworks.example",
@@ -104,27 +92,19 @@ describe("the lookup with its own fetch", () => {
       signal,
     });
 
-    // The two files of the sanctions list are on one host, and each has a limit of its own.
-    const keyOf = (url: string): string => {
-      const { hostname, pathname } = new URL(url);
-      return hostname.startsWith("sanctionslistservice.")
-        ? `${hostname}${pathname.slice(pathname.lastIndexOf("/"))}`
-        : hostname;
-    };
+    // Only the two databases a run asks itself: the catalog, the NVD, the SEC and the sanctions
+    // lists are the vendor risk database's.
     const limits = Object.fromEntries(
-      guarded.mock.calls.map(([url, options]) => [keyOf(String(url)), options?.maxBytes]),
+      guarded.mock.calls.map(([url, options]) => [
+        new URL(String(url)).hostname,
+        options?.maxBytes,
+      ]),
     );
     expect(limits).toEqual({
-      "www.cisa.gov": KEV_MAX_BYTES,
-      "services.nvd.nist.gov": NVD_MAX_BYTES,
       "haveibeenpwned.com": HIBP_MAX_BYTES,
-      "www.sec.gov": SEC_TICKERS_MAX_BYTES,
-      "data.sec.gov": SEC_SUBMISSIONS_MAX_BYTES,
       "status.brisenetworks.example": STATUS_FEED_MAX_BYTES,
       "brisenetworks.statuspage.io": STATUS_FEED_MAX_BYTES,
       "brisenetworksstatus.com": STATUS_FEED_MAX_BYTES,
-      "sanctionslistservice.ofac.treas.gov/SDN.CSV": OFAC_SDN_MAX_BYTES,
-      "sanctionslistservice.ofac.treas.gov/ALT.CSV": OFAC_ALT_MAX_BYTES,
     });
   });
 });

@@ -36,7 +36,6 @@ import type {
   CredibilityRule,
   CredibilitySource,
   DismissReason,
-  FindingConfidence,
   RecordSourceId,
   RecordStatus,
   ResearchCategory,
@@ -87,12 +86,6 @@ const DISMISS_REASON_LABELS: Record<DismissReason, string> = {
   other: "Other",
 };
 
-const CONFIDENCE_LABELS: Record<FindingConfidence, string> = {
-  low: "Low",
-  medium: "Medium",
-  high: "High",
-};
-
 export const categoryLabel = (category: ResearchCategory, t: Translate = translateKey): string =>
   t(labelFor(CATEGORY_LABELS, category) ?? "Other");
 
@@ -103,11 +96,6 @@ export const outcomeLabel = (
 
 export const dismissReasonLabel = (reason: DismissReason, t: Translate = translateKey): string =>
   t(labelFor(DISMISS_REASON_LABELS, reason) ?? "Other");
-
-export const confidenceLabel = (
-  confidence: FindingConfidence,
-  t: Translate = translateKey,
-): string => t(labelFor(CONFIDENCE_LABELS, confidence) ?? "Unknown");
 
 /**
  * "Security incidents: nothing found". Built from the category and the outcome alone, never
@@ -297,6 +285,11 @@ const SEARCH_FAILED_NOTES = new Map<string, string>([
 
 /** The page note: only on a category where nothing was found. The counts are at most three digits. */
 const PAGES_NOT_READ = /^No risks found; (\d{1,3}) of (\d{1,3}) pages could not be read$/;
+/** The search notes: only on a category where nothing was found. The counts are at most three digits. */
+const SEARCHES_NOT_ANSWERED =
+  /^No risks found; (\d{1,3}) of (\d{1,3}) searches were not available$/;
+const SEARCHES_AND_PAGES_FAILED =
+  /^No risks found; (\d{1,3}) of (\d{1,3}) searches were not available and (\d{1,3}) of (\d{1,3}) pages could not be read$/;
 /** The count note: only on a category that has findings. */
 const POTENTIAL_RISKS = /^(\d{1,6}) potential risks? found$/;
 
@@ -329,15 +322,37 @@ function fixedCategoryNote(outcome: unknown, note: string, t: Translate): string
     case "nothing_found": {
       const sentence = fixedSentence(NOTHING_FOUND_NOTES, note, t);
       if (sentence !== null) return sentence;
+      // In every form, more failed than were counted: the server cannot have written this.
       const pages = PAGES_NOT_READ.exec(note);
-      if (!pages) return null;
-      // More pages failed than were read: the server cannot have written this.
-      const [failed, total] = [Number(pages[1]), Number(pages[2])];
-      return failed <= total
-        ? fill(t("No risks were found. {failed} of {total} pages could not be read."), {
-            failed,
-            total,
-          })
+      if (pages) {
+        const [failed, total] = [Number(pages[1]), Number(pages[2])];
+        return failed <= total
+          ? fill(t("No risks were found. {failed} of {total} pages could not be read."), {
+              failed,
+              total,
+            })
+          : null;
+      }
+      const searches = SEARCHES_NOT_ANSWERED.exec(note);
+      if (searches) {
+        const [failed, total] = [Number(searches[1]), Number(searches[2])];
+        return failed <= total
+          ? fill(t("No risks were found. {failed} of {total} searches were not available."), {
+              failed,
+              total,
+            })
+          : null;
+      }
+      const both = SEARCHES_AND_PAGES_FAILED.exec(note);
+      if (!both) return null;
+      const [searchesFailed, searchCount, pagesFailed, pageCount] = both.slice(1).map(Number);
+      return searchesFailed <= searchCount && pagesFailed <= pageCount
+        ? fill(
+            t(
+              "No risks were found. {searchesFailed} of {searches} searches were not available, and {pagesFailed} of {pages} pages could not be read.",
+            ),
+            { searchesFailed, searches: searchCount, pagesFailed, pages: pageCount },
+          )
         : null;
     }
     case "search_failed":
@@ -374,8 +389,11 @@ export function describeCategoryNote(
 
 // ── The credibility of a finding ─────────────────────────────────────────────
 
-/** The words of a credibility label are those of the confidence it takes the place of. */
-const CREDIBILITY_LABELS: Record<CredibilityLabel, string> = CONFIDENCE_LABELS;
+const CREDIBILITY_LABELS: Record<CredibilityLabel, string> = {
+  low: "Low",
+  medium: "Medium",
+  high: "High",
+};
 
 const SOURCE_CATEGORY_LABELS: Record<SourceCategory, string> = {
   official: "Official",
@@ -473,8 +491,16 @@ const NAME_ONLY_NOTE = "Matched by name only: this may be another company.";
 /** What a pending finding's label that the backfill decided says after its rule's sentence. */
 const BACKFILL_NOTE = "Rated again with the current rule.";
 
-/** What a decided finding's label carried over from its confidence says. */
-const LEGACY_NOTE = "Rated with the earlier confidence rule.";
+/**
+ * What a label that is the earlier confidence of a finding says: the server's own line for it
+ * (controllers/vendorResearch.ctrl.ts), so that the English screen says what the server says. No
+ * rule decided the label, so no rule's sentence goes with it.
+ */
+const LEGACY_NOTE =
+  "Rated before the source rules; this is the earlier confidence level until the label is recomputed.";
+
+/** The muted note beside a label that is the earlier confidence of a finding. */
+const EARLIER_RATING_NOTE = "Earlier rating";
 
 const BACKFILL_PREFIX = "backfill_";
 
@@ -722,8 +748,9 @@ export interface CredibilityWords {
  * note, which the screen shows on a line of its own (see `nameOnlyNote`).
  *
  * A label the backfill wrote says so: one it decided again by the rule reads the rule's sentence,
- * then that it was rated again; one it carried over from the confidence of a decided finding says
- * only that.
+ * then that it was rated again. A label that is the earlier confidence of a finding (the backfill
+ * carried it over from a decided finding, and the server reads it so for a finding of a run before
+ * the rule) says only that, in the server's words.
  */
 export function credibilityRationale(
   basis: StoredCredibilityBasis | null | undefined,
@@ -768,6 +795,20 @@ export function nameOnlyNote(
     : null;
 }
 
+/**
+ * The muted note that goes with a label which is the earlier confidence of a finding, whatever its
+ * level: the label was not decided by the source rules, and the person should not read it as if it
+ * were. Null for every other label, one the backfill decided again by the rule included.
+ */
+export function earlierRatingNote(
+  basis: StoredCredibilityBasis | null | undefined,
+  t: Translate = translateKey,
+): string | null {
+  return typeof basis === "object" && basis !== null && basis.rule === "legacy_confidence"
+    ? t(EARLIER_RATING_NOTE)
+    : null;
+}
+
 // ── The coverage of a run ────────────────────────────────────────────────────
 
 /** What the terms of each list ask a screen that shows its data to say. Never translated. */
@@ -779,7 +820,11 @@ const ATTRIBUTIONS: Record<VrdbSourceId, string> = {
   eu_fsf: "EU consolidated list of financial sanctions, © European Union",
   nvd: "This product uses data from the NVD API but is not endorsed or certified by the NVD.",
   sec: "SEC EDGAR, US Securities and Exchange Commission",
-  cve: "CVE® records © The MITRE Corporation, under the CVE Terms of Use (https://www.cve.org/Legal/TermsOfUse)",
+  // The string the server stores for the list (vrdb/sources.ts): MITRE's copyright designation up
+  // to the year of the day in UTC, and no registered mark (Q7). Read at each call, not once at load.
+  get cve(): string {
+    return `CVE records Copyright © 1999-${new Date().getUTCFullYear()}, The MITRE Corporation, under the CVE Terms of Use (https://www.cve.org/Legal/TermsOfUse)`;
+  },
   un_sanctions: "United Nations Security Council Consolidated List",
 };
 

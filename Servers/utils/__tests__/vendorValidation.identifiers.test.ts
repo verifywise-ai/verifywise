@@ -5,6 +5,7 @@
  */
 import {
   ISO_COUNTRY_CODES,
+  VENDOR_V1_ONLY_FIELDS,
   createVendorSchema,
   normalizeCountry,
   normalizeLei,
@@ -17,6 +18,7 @@ import {
   validateSecCik,
   validateUpdateVendor,
   withNormalizedIdentifiers,
+  withoutV1OnlyVendorFields,
 } from "../validations/vendorValidation.utils";
 
 /** The ISO 7064 MOD 97-10 check digits of the first 18 characters of an LEI (ISO 17442). */
@@ -149,5 +151,85 @@ describe("every identifier", () => {
       withNormalizedIdentifiers({ vendor_name: " Acme ", country: "de", sec_cik: "320193" }),
     ).toEqual({ vendor_name: " Acme ", country: "DE", sec_cik: "0000320193" });
     expect(withNormalizedIdentifiers({ lei: "" })).toEqual({ lei: null });
+  });
+});
+
+/**
+ * ADR 0001 (sections 1 and 2): the other names and the identifiers are request fields that the
+ * frozen legacy POST /api/vendors and PATCH /api/vendors/:id never had, so only the /api/v1 routes
+ * take them. The legacy entry points drop them from the body before anything reads it.
+ */
+describe("withoutV1OnlyVendorFields", () => {
+  const OTHERS = {
+    vendor_name: "Acme",
+    vendor_provides: "Payroll software",
+    review_status: "In review",
+    projects: [1, 2],
+  };
+
+  it("names the five fields, in this order", () => {
+    expect(VENDOR_V1_ONLY_FIELDS).toEqual([
+      "other_names",
+      "country",
+      "registration_number",
+      "lei",
+      "sec_cik",
+    ]);
+  });
+
+  it("drops them and keeps every other field", () => {
+    const body = {
+      ...OTHERS,
+      other_names: "Acme Analytics",
+      country: "de",
+      registration_number: "HRB 12345 B",
+      lei: LEI,
+      sec_cik: "320193",
+    };
+
+    // toStrictEqual: a key that is left behind with the value undefined is not dropped.
+    expect(withoutV1OnlyVendorFields(body)).toStrictEqual(OTHERS);
+  });
+
+  it("drops them when they are null or an empty text too, which would clear a stored value", () => {
+    const body = {
+      ...OTHERS,
+      other_names: "",
+      country: null,
+      registration_number: "   ",
+      lei: "",
+      sec_cik: null,
+    };
+
+    expect(withoutV1OnlyVendorFields(body)).toStrictEqual(OTHERS);
+  });
+
+  it("does not change the object it is given", () => {
+    const body = Object.freeze({ ...OTHERS, other_names: "Acme Analytics", country: "de" });
+    const before = { ...body };
+
+    const kept = withoutV1OnlyVendorFields(body);
+
+    expect(kept).not.toBe(body);
+    expect(body).toStrictEqual(before);
+  });
+
+  it("returns what is not an object as it is, so that a malformed body is refused as it always was", () => {
+    const list = [{ country: "de" }];
+
+    expect(withoutV1OnlyVendorFields(undefined)).toBe(undefined);
+    expect(withoutV1OnlyVendorFields(null)).toBe(null);
+    expect(withoutV1OnlyVendorFields("country")).toBe("country");
+    expect(withoutV1OnlyVendorFields(list)).toBe(list);
+  });
+
+  it("keeps a key named __proto__ as a key, and never makes it the prototype of the result", () => {
+    const body = JSON.parse('{"__proto__":{"polluted":true},"vendor_name":"Acme","country":"de"}');
+
+    const kept = withoutV1OnlyVendorFields(body);
+
+    expect(Object.getPrototypeOf(kept)).toBe(Object.prototype);
+    expect(kept.polluted).toBeUndefined();
+    expect(Object.keys(kept)).toEqual(["__proto__", "vendor_name"]);
   });
 });

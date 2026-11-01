@@ -9,9 +9,9 @@ import { textStyles } from "../../../themes/typography";
 import useTranslation from "../../../../application/hooks/useTranslation";
 import {
   categoryLabel,
-  confidenceLabel,
   credibilityLabel,
   credibilityRationale,
+  earlierRatingNote,
   formatResearchDate,
   nameOnlyNote,
   recordStatusLabel,
@@ -176,9 +176,10 @@ export default function FindingRow({
   const riskId = useId();
   // A list cached before the field existed has none; an empty sentence is no sentence.
   const rationale = finding.rationale?.trim() ?? "";
-  // A finding of a run of the vendor risk database shows its credibility instead of its confidence,
-  // with a line worded here from the basis; one of another run, or with a label this screen does
-  // not know, keeps its confidence.
+  // Every finding shows its credibility, with a line worded here from its basis. A finding of a run
+  // before the credibility rule has its earlier confidence as the label, on a basis of its own,
+  // and says so. One with no label (a list cached before the field existed), or with a label this
+  // screen does not know, shows no credibility: there is no other rating to show in its place.
   const credibility = credibilityLabel(finding.credibility, t);
   const basis = credibility === null ? null : (finding.credibility_basis ?? null);
   const credibilityWords = credibilityRationale(basis, t, lang);
@@ -186,6 +187,7 @@ export default function FindingRow({
     .filter((sentence) => sentence !== "")
     .join(" ");
   const note = nameOnlyNote(basis, t);
+  const earlierRating = earlierRatingNote(basis, t);
 
   return (
     <Box
@@ -266,22 +268,20 @@ export default function FindingRow({
             <Typography sx={captionSx}>Likelihood</Typography>
             <Chip label={finding.likelihood} uppercase={false} size="small" />
           </Stack>
-          {credibility === null ? (
-            <Stack sx={scaleSx}>
-              <Typography sx={captionSx}>Confidence</Typography>
-              {/* Not a risk colour: high confidence is not a high risk. */}
-              <Chip
-                label={confidenceLabel(finding.confidence, t)}
-                variant="default"
-                uppercase={false}
-                size="small"
-              />
-            </Stack>
-          ) : (
+          {credibility !== null && (
             <Stack sx={scaleSx}>
               <Typography sx={captionSx}>Credibility</Typography>
-              {/* Not a risk colour either: it says how well the sources establish the facts. */}
-              <Chip label={credibility} variant="default" uppercase={false} size="small" />
+              {/* Not a risk colour: it says how well the sources establish the facts. The quiet
+                  note beside the chip says when the label is the finding's earlier confidence,
+                  which the source rules did not decide. */}
+              <Stack direction="row" sx={{ alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                <Chip label={credibility} variant="default" uppercase={false} size="small" />
+                {earlierRating !== null && (
+                  <Typography sx={{ ...textStyles.caption, color: "text.tertiary" }}>
+                    {earlierRating}
+                  </Typography>
+                )}
+              </Stack>
             </Stack>
           )}
         </Stack>

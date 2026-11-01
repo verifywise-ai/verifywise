@@ -182,7 +182,6 @@ function citing(
     likelihood: "Possible",
     risk_severity: "Major",
     risk_level: "High Risk",
-    confidence: "high",
     credibility: "high",
     credibility_basis: basis,
     rationale: "The record names the vendor.",

@@ -12,11 +12,18 @@ jest.mock("../../../utils/vendorResearch.utils", () => ({
   rememberSourcesQuery: jest.fn(),
   saveSnapshotsQuery: jest.fn(),
   updateRunProgressQuery: jest.fn(),
+  // The two constants of the run's time limit, as the module defines them (the factory replaces
+  // the module, so its constants are given here).
+  RUN_TIME_LIMIT_MINUTES: 20,
+  TIMED_OUT_ERROR: "timed out",
 }));
 jest.mock("../../../utils/vendor.utils", () => ({ getVendorByIdQuery: jest.fn() }));
 jest.mock("../../../utils/vendorRisk.utils", () => ({ getVendorRisksByVendorIdQuery: jest.fn() }));
 jest.mock("../../../utils/llmKey.utils", () => ({ getLLMKeysWithKeyQuery: jest.fn() }));
+// Only the two functions that build a model are replaced: the engine of a key is told by the real
+// detectProvider, the rule that also picks the SDK of the model.
 jest.mock("../../../advisor/llmModelFactory", () => ({
+  ...jest.requireActual("../../../advisor/llmModelFactory"),
   createModelFromKey: jest.fn(),
   resolveModelId: jest.fn(),
 }));
@@ -24,6 +31,22 @@ jest.mock("../../../utils/logger/fileLogger", () => ({
   __esModule: true,
   default: { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() },
 }));
+// The pipeline makes its resolver of EDGAR filers once, when it loads, and the tests answer for it:
+// no test asks the SEC. `processFiler` is the resolver that stands in for the real one, and
+// `madeFilers()` counts how many resolvers were made, which the resets of the mocks do not touch.
+jest.mock("../edgarFiler", () => {
+  let made = 0;
+  const processFiler = jest.fn();
+  return {
+    ...jest.requireActual("../edgarFiler"),
+    createEdgarFilerResolver: jest.fn(() => {
+      made += 1;
+      return processFiler;
+    }),
+    processFiler,
+    madeFilers: () => made,
+  };
+});
 
 import { MockLanguageModelV4 } from "ai/test";
 import { createModelFromKey, resolveModelId } from "../../../advisor/llmModelFactory";
@@ -39,6 +62,8 @@ import {
   NewFinding,
   RESEARCH_CATEGORIES,
   ResearchCategory,
+  type RunCoverage,
+  type SourceCategory,
 } from "../../../domain.layer/interfaces/i.vendorResearch";
 import { getLLMKeysWithKeyQuery } from "../../../utils/llmKey.utils";
 import logger from "../../../utils/logger/fileLogger";
@@ -53,29 +78,30 @@ import {
   insertFindingsQuery,
   markRunRunningQuery,
   rememberSourcesQuery,
+  RUN_TIME_LIMIT_MINUTES,
   saveSnapshotsQuery,
+  TIMED_OUT_ERROR,
   updateRunProgressQuery,
 } from "../../../utils/vendorResearch.utils";
 import type { StopReason } from "../../webResearch/researchLoop";
+import type { SearchEngineId } from "../../webResearch/webSearch";
 import type { CallFailure, CallRecord, LedgerEntry } from "../../webResearch/webSession";
 import { NO_DOMAIN_NOTE } from "../categories";
-import {
-  CREDIBILITY_PROMPT_VERSION,
-  PROMPT_VERSION,
-  buildSystemPrompt,
-  buildUserPrompt,
-} from "../prompts";
+import { CREDIBILITY_PROMPT_VERSION, buildSystemPrompt, buildUserPrompt } from "../prompts";
 import * as analysisModule from "../analysis";
 import { PipelineDeps, resolveOrgModel, runVendorResearch } from "../pipeline";
+import * as searchEngineModule from "../searchEngineOf";
 import { type PolicyPage, type StoredSnapshot, hashOf, linesOf } from "../policySnapshots";
 import type { ResearchResult, VendorResearcher } from "../researchAgent";
-import { ResearchOutput, researchOutputSchema } from "../schema";
+import { type CredibilityOutput, credibilityOutputSchema } from "../schema";
 import { verifierSchema } from "../verifier";
 import { buildMateriality } from "../materiality";
 import type { RunTrace } from "../trace";
 import { withAliases } from "../aliases";
+import * as edgarFilerModule from "../edgarFiler";
 import { REGISTRY_VERSION } from "../sourceRegistry/entries";
 import { buildTarget } from "../target";
+import { VRDB_GATES } from "../vrdb/gates";
 import { vrdbSourceOf } from "../vrdb/sources";
 import type { VrdbRecordMeta } from "../vrdb/types";
 
@@ -94,6 +120,18 @@ const NOW = new Date("2031-04-20T12:00:00Z");
 const MODEL = { kind: "the model object" };
 const MODEL_ID = "fake-model-1";
 const ALL_CATEGORIES: ResearchCategory[] = [...RESEARCH_CATEGORIES];
+
+/**
+ * What a run records of the public databases and of the sources its findings cite, when the research
+ * checked none of the databases: the registry that labelled the sources, and the count of the
+ * sources the stored findings cite, by category.
+ */
+const coverageOf = (cited: Partial<Record<SourceCategory, number>> = {}): RunCoverage => ({
+  registry_version: REGISTRY_VERSION,
+  sources: [],
+  lookups: [],
+  cited: { official: 0, trusted_press: 0, vendor: 0, unverified: 0, ...cited },
+});
 
 const NOTHING_FOUND = "No risks found in the sources reviewed";
 const NO_NEW_SOURCES = "No new sources since the last run";
@@ -255,7 +293,7 @@ const STANDARD_PACK: EvidenceSource[] = [
   asSource("S4", PRIVACY),
 ];
 
-type ModelFinding = ResearchOutput["findings"][number];
+type ModelFinding = CredibilityOutput["findings"][number];
 
 const BREACH_QUOTE = "attackers copied customer records";
 
@@ -266,13 +304,15 @@ const breachFinding = (overrides: Partial<ModelFinding> = {}): ModelFinding => (
   likelihood: "Possible",
   risk_severity: "Major",
   action_plan: "Ask the vendor for its incident report and for the data in the test system.",
-  confidence: "high",
   rationale: "Customer records were copied, which is serious, but only a test system is named.",
   evidence: [{ source_id: "S1", quote: BREACH_QUOTE }],
   ...overrides,
 });
 
-/** The stored form of breachFinding(): one third-party source can only support a low confidence. */
+/**
+ * The stored form of breachFinding(): one third-party source supports a low credibility, under the
+ * rule of the unverified. The basis is checked where the rules are. A run stores no confidence.
+ */
 const EXPECTED_BREACH: NewFinding = {
   category: "security_incidents",
   risk_description: "Attackers copied customer records from a vendor test system.",
@@ -281,7 +321,8 @@ const EXPECTED_BREACH: NewFinding = {
   likelihood: "Possible",
   risk_severity: "Major",
   risk_level: "High Risk",
-  confidence: "low",
+  credibility: "low",
+  credibility_basis: expect.objectContaining({ rule: "unverified" }),
   rationale: "Customer records were copied, which is serious, but only a test system is named.",
   sources: [
     {
@@ -289,6 +330,8 @@ const EXPECTED_BREACH: NewFinding = {
       title: BREACH.title,
       quote: BREACH_QUOTE,
       published_at: "2026-02-03",
+      category: "unverified",
+      publisher: expect.any(String),
     },
   ],
 };
@@ -303,13 +346,16 @@ const auditFinding = (quote: string): ModelFinding =>
     evidence: [{ source_id: "S3", quote }],
   });
 
-const answer = (findings: ModelFinding[] = [], notes: ResearchOutput["category_notes"] = []) => ({
+const answer = (
+  findings: ModelFinding[] = [],
+  notes: CredibilityOutput["category_notes"] = [],
+) => ({
   object: { findings, category_notes: notes },
   attempts: 1,
   selfCorrected: false,
 });
 
-const STANDARD_NOTES: ResearchOutput["category_notes"] = [
+const STANDARD_NOTES: CredibilityOutput["category_notes"] = [
   { category: "security_incidents", note: "The press reported one incident." },
   { category: "certifications", note: "The audit is still in progress; no gap is shown." },
 ];
@@ -429,6 +475,8 @@ beforeEach(() => {
   });
   asMock(finishRunQuery).mockImplementation(async (input, transaction) => {
     events.push(`finish:${input.status}@${transaction ? transaction.id : "outside"}`);
+    // The finish wrote the run: it had not ended yet.
+    return true;
   });
   // The managed contract of Sequelize: the callback runs, a resolved callback commits, a rejected
   // one rolls back and the transaction call rejects with the same error.
@@ -517,14 +565,15 @@ describe("runVendorResearch", () => {
         ],
         evidence: STANDARD_PACK,
         model: MODEL_ID,
-        promptVersion: PROMPT_VERSION,
+        promptVersion: CREDIBILITY_PROMPT_VERSION,
         searchesUsed: 5,
         pagesRead: 1,
         duplicatesDropped: 0,
         error: null,
         trace: expect.objectContaining({ version: 1 }),
-        coverage: null,
-        registryVersion: null,
+        coverage: coverageOf({ unverified: 1 }),
+        registryVersion: REGISTRY_VERSION,
+        searchEngine: null,
       });
       // Both kinds of source, with the vendor's mark as the loop set it.
       expect(
@@ -567,9 +616,50 @@ describe("runVendorResearch", () => {
         target: buildTarget(VENDOR_ROW),
         model: MODEL,
         modelId: MODEL_ID,
+        organizationId: ORG,
         now: NOW,
         trace: expect.objectContaining({ snapshot: expect.any(Function) }),
         progress: expect.any(Function),
+      });
+    });
+
+    describe("how the research searches", () => {
+      it("is told which organization the run is for: what a provider's search costs is kept for it alone", async () => {
+        await run();
+
+        expect(research.mock.calls[0][0].organizationId).toBe(ORG);
+      });
+
+      it("is told how the key of the research searches, as the model of the organisation says", async () => {
+        resolveModel.mockResolvedValue({
+          model: MODEL,
+          modelId: MODEL_ID,
+          search: { engine: "anthropic" },
+        });
+
+        await run();
+
+        expect(research.mock.calls[0][0].search).toEqual({ engine: "anthropic" });
+      });
+
+      it("is told nothing of it when the model says nothing, and the researcher then searches the news", async () => {
+        await run();
+
+        expect(research.mock.calls[0][0].search).toBeUndefined();
+      });
+
+      it("is told the search of the model of the research, whatever the key of the analysis is", async () => {
+        resolveModel.mockResolvedValue({
+          model: MODEL,
+          modelId: MODEL_ID,
+          search: { engine: "gdelt" },
+          analysis: { model: { kind: "the analysis model" }, modelId: "analysis-model" },
+        });
+
+        await run();
+
+        expect(research.mock.calls[0][0].search).toEqual({ engine: "gdelt" });
+        expect(research.mock.calls[0][0].model).toBe(MODEL);
       });
     });
 
@@ -583,7 +673,7 @@ describe("runVendorResearch", () => {
         expect(generate).toHaveBeenCalledTimes(1);
         expect(generate).toHaveBeenCalledWith({
           model: MODEL,
-          schema: researchOutputSchema,
+          schema: credibilityOutputSchema,
           system: buildSystemPrompt(NOW),
           prompt: buildUserPrompt(buildTarget(VENDOR_ROW), STANDARD_PACK),
           temperature: 0,
@@ -625,7 +715,17 @@ describe("runVendorResearch", () => {
 
         await run();
 
-        expect(insertedFindings()).toEqual([{ ...EXPECTED_BREACH, snippet_only: true }]);
+        // The page contradicts the snippet, and the label says so.
+        expect(insertedFindings()).toEqual([
+          {
+            ...EXPECTED_BREACH,
+            snippet_only: true,
+            credibility_basis: expect.objectContaining({
+              rule: "contradicted",
+              sources: [expect.objectContaining({ reading: "contradicted" })],
+            }),
+          },
+        ]);
       });
 
       it("records the read in the trace of the run, in a phase of its own", async () => {
@@ -831,6 +931,249 @@ describe("runVendorResearch", () => {
     });
   });
 
+  describe("the search engine of the run", () => {
+    // The run records where its searches went as the researcher reports it, not what the key of the
+    // research would have chosen: a run of an Anthropic key that was refused a search finished on
+    // the news of GDELT, and says so. The column holds the three engines that run for a person; a
+    // run that searched nothing has none.
+    const searchKeyChoosing = (engine: "anthropic" | "gdelt") =>
+      resolveModel.mockResolvedValue({ model: MODEL, modelId: MODEL_ID, search: { engine } });
+    /** The id of an engine as the researcher reports it, when it is none of the type's. */
+    const unknownEngine = (id: string) => id as unknown as SearchEngineId;
+
+    it.each(["anthropic", "gdelt", "openai"] as const)(
+      "stores %s when the researcher says its searches went there",
+      async (engine) => {
+        research.mockResolvedValue(researched({ searchEngine: engine }));
+
+        await run();
+
+        expect(onlyFinish().input).toMatchObject({ status: "completed", searchEngine: engine });
+      },
+    );
+
+    it("stores the engine the searches went to, not the one the key of the research chooses", async () => {
+      // The key is Claude's, the search was refused, and the run finished on the news of GDELT.
+      searchKeyChoosing("anthropic");
+      research.mockResolvedValue(researched({ searchEngine: "gdelt" }));
+
+      await run();
+
+      expect(onlyFinish().input.searchEngine).toBe("gdelt");
+    });
+
+    it("stores no engine when the key chooses one but the run searched nothing", async () => {
+      searchKeyChoosing("anthropic");
+      research.mockResolvedValue(researched({ searchEngine: null }));
+
+      await run();
+
+      expect(onlyFinish().input.searchEngine).toBeNull();
+    });
+
+    it("stores no engine, as null and not as a missing field, when the researcher does not say", async () => {
+      searchKeyChoosing("anthropic");
+
+      await run();
+
+      const { input } = onlyFinish();
+      expect(input).toHaveProperty("searchEngine", null);
+    });
+
+    // `replay` is the engine of the evaluation, which no person ran. The others are not engines at
+    // all; the table would refuse them, and a refused write would cost the run its end.
+    it.each(["replay", "bing", "", "GDELT", "gdelt "])(
+      "stores no engine for the id %j: the table knows three",
+      async (id) => {
+        research.mockResolvedValue(researched({ searchEngine: unknownEngine(id) }));
+
+        const result = await run();
+
+        expect(result).toEqual({ outcome: "completed", findingsCreated: 1 });
+        expect(onlyFinish().input.searchEngine).toBeNull();
+      },
+    );
+
+    it("keeps the engine on a run that completes without an analysis call", async () => {
+      research.mockResolvedValue(researched({ entries: [], searchEngine: "gdelt" }));
+
+      const result = await run();
+
+      expect(result).toEqual({ outcome: "completed", findingsCreated: 0 });
+      expect(generate).not.toHaveBeenCalled();
+      expect(onlyFinish().input).toMatchObject({ status: "completed", searchEngine: "gdelt" });
+    });
+
+    it("keeps the engine on a run that fails after it searched", async () => {
+      research.mockResolvedValue(researched({ searchEngine: "anthropic" }));
+      generate.mockRejectedValue(
+        providerError("AI_APICallError", SECRET_MESSAGE, { statusCode: 500 }),
+      );
+
+      const result = await run();
+
+      expect(result).toEqual({ outcome: "failed", findingsCreated: 0 });
+      expect(onlyFinish().input).toMatchObject({
+        status: "failed",
+        error: "Model call failed: HTTP 500",
+        searchEngine: "anthropic",
+      });
+    });
+
+    // The column is what the user is told ("News searched with the GDELT Project"): a run whose
+    // searches the web never answered received no news, so it claims no engine.
+    it("stores no engine on a run none of whose searches was answered", async () => {
+      research.mockResolvedValue(
+        researched({
+          entries: [],
+          calls: [searchFailed("security_incidents"), searchFailed("legal_regulatory")],
+          searchEngine: "gdelt",
+        }),
+      );
+
+      await run();
+
+      expect(onlyFinish().input).toMatchObject({
+        status: "failed",
+        error: WEB_UNREACHABLE,
+        searchEngine: null,
+      });
+    });
+
+    it("keeps the engine when one search was answered and others failed", async () => {
+      research.mockResolvedValue(
+        researched({
+          calls: [
+            searchFailed("security_incidents"),
+            searched("legal_regulatory"),
+            searchFailed("availability"),
+          ],
+          searchEngine: "gdelt",
+        }),
+      );
+
+      await run();
+
+      expect(onlyFinish().input).toMatchObject({ status: "completed", searchEngine: "gdelt" });
+    });
+
+    it("stores no engine on a run whose only answered calls were pages", async () => {
+      research.mockResolvedValue(
+        researched({
+          calls: [searchFailed("security_incidents"), read("certifications")],
+          searchEngine: "anthropic",
+        }),
+      );
+
+      await run();
+
+      expect(onlyFinish().input.searchEngine).toBeNull();
+    });
+
+    it("keeps the engine on a run whose model failed in the loop before anything was found", async () => {
+      research.mockResolvedValue(
+        researched({
+          entries: [],
+          calls: [searched("security_incidents"), searchFailed("legal_regulatory")],
+          stoppedBecause: "model_error",
+          modelError: providerError("AI_APICallError", SECRET_MESSAGE, { statusCode: 500 }),
+          searchEngine: "anthropic",
+        }),
+      );
+
+      await run();
+
+      expect(onlyFinish().input).toMatchObject({
+        status: "failed",
+        error: "Model call failed: HTTP 500",
+        searchEngine: "anthropic",
+      });
+    });
+
+    it("stores no engine on a run whose model failed in the loop and whose searches all failed", async () => {
+      research.mockResolvedValue(
+        researched({
+          entries: [],
+          calls: [searchFailed("security_incidents")],
+          stoppedBecause: "model_error",
+          modelError: providerError("AI_APICallError", SECRET_MESSAGE, { statusCode: 500 }),
+          searchEngine: "anthropic",
+        }),
+      );
+
+      await run();
+
+      expect(onlyFinish().input).toMatchObject({
+        status: "failed",
+        error: "Model call failed: HTTP 500",
+        searchEngine: null,
+      });
+    });
+
+    it("logs how many searches were answered and the engine, also when none was", async () => {
+      research.mockResolvedValue(
+        researched({
+          entries: [],
+          calls: [searchFailed("security_incidents"), searchFailed("legal_regulatory")],
+          searchEngine: "gdelt",
+        }),
+      );
+
+      await run();
+
+      expect(loggedText()).toContain("0 of 2 searches answered (engine gdelt)");
+    });
+
+    it("logs the engine as none for a researcher that does not say", async () => {
+      await run();
+
+      expect(loggedText()).toContain("5 of 5 searches answered (engine none)");
+    });
+
+    it("keeps the engine on a run whose findings could not be saved", async () => {
+      research.mockResolvedValue(researched({ searchEngine: "anthropic" }));
+      asMock(insertFindingsQuery).mockRejectedValue(new Error("insert failed: disk full"));
+
+      const result = await run();
+
+      expect(result).toEqual({ outcome: "failed", findingsCreated: 0 });
+      expect(onlyFinish().input).toMatchObject({
+        status: "failed",
+        error: "Saving the findings failed",
+        searchEngine: "anthropic",
+      });
+    });
+
+    it("stores no engine on a run that fails before the research starts", async () => {
+      searchKeyChoosing("anthropic");
+
+      // The organisation has no key.
+      resolveModel.mockResolvedValue(null);
+      await run();
+      expect(onlyFinish().input).toMatchObject({ error: "No LLM key configured" });
+      expect(onlyFinish().input.searchEngine).toBeNull();
+
+      // The vendor is gone.
+      asMock(finishRunQuery).mockClear();
+      searchKeyChoosing("anthropic");
+      asMock(getVendorByIdQuery).mockResolvedValue(null);
+      await run();
+      expect(onlyFinish().input).toMatchObject({ error: "Vendor not found" });
+      expect(onlyFinish().input.searchEngine).toBeNull();
+      expect(research).not.toHaveBeenCalled();
+    });
+
+    it("stores no engine on a run whose researcher threw: nothing says where it searched", async () => {
+      searchKeyChoosing("anthropic");
+      research.mockRejectedValue(new Error("bug in the web session"));
+
+      await run();
+
+      expect(onlyFinish().input).toMatchObject({ status: "failed", error: "Unexpected error" });
+      expect(onlyFinish().input.searchEngine).toBeNull();
+    });
+  });
+
   describe("the provenance of the sources", () => {
     it("gives the analysis the provenance of the sources it shows", async () => {
       const KEV_RECORD = ledgerEntry({
@@ -857,7 +1200,7 @@ describe("runVendorResearch", () => {
     });
   });
 
-  describe("the rules of the vendor risk database", () => {
+  describe("the credibility rules", () => {
     const KEV_META: VrdbRecordMeta = {
       recordId: 41,
       sourceId: "kev",
@@ -904,29 +1247,23 @@ describe("runVendorResearch", () => {
     // S7 the privacy page.
     const ENTRIES = [KEV_RECORD, ...STANDARD_ENTRIES, PAID, FORUM];
 
-    /** A finding as the credibility rules (vr-8) ask for it: with no confidence. */
-    const vr8 = ({ confidence: _confidence, ...finding }: ModelFinding) => finding as ModelFinding;
-    const KEV_FINDING = vr8(
-      breachFinding({
-        risk_description: "An exploited flaw in Acme payroll is listed by CISA.",
-        impact_description: "Our payroll data could be reached through the flaw.",
-        risk_severity: "Catastrophic",
-        action_plan: "Ask the vendor whether the flaw is patched.",
-        rationale: "CISA lists the flaw as exploited.",
-        evidence: [
-          { source_id: "S1", quote: "CISA lists CVE-2031-0001 of Acme payroll as exploited" },
-        ],
-      }),
-    );
-    const BREACH_FINDING = vr8(
-      breachFinding({
-        evidence: [
-          { source_id: "S2", quote: BREACH_QUOTE },
-          { source_id: "S4", quote: BREACH_QUOTE },
-          { source_id: "S5", quote: BREACH_QUOTE },
-        ],
-      }),
-    );
+    const KEV_FINDING = breachFinding({
+      risk_description: "An exploited flaw in Acme payroll is listed by CISA.",
+      impact_description: "Our payroll data could be reached through the flaw.",
+      risk_severity: "Catastrophic",
+      action_plan: "Ask the vendor whether the flaw is patched.",
+      rationale: "CISA lists the flaw as exploited.",
+      evidence: [
+        { source_id: "S1", quote: "CISA lists CVE-2031-0001 of Acme payroll as exploited" },
+      ],
+    });
+    const BREACH_FINDING = breachFinding({
+      evidence: [
+        { source_id: "S2", quote: BREACH_QUOTE },
+        { source_id: "S4", quote: BREACH_QUOTE },
+        { source_id: "S5", quote: BREACH_QUOTE },
+      ],
+    });
     const listOf = (id: "kev" | "ofac", strong: number): CoverageSource => ({
       id,
       name: vrdbSourceOf(id).name,
@@ -955,31 +1292,19 @@ describe("runVendorResearch", () => {
       generate.mockResolvedValue(answer([KEV_FINDING, BREACH_FINDING], STANDARD_NOTES));
     });
 
-    it("with the flag off a run stores confidence and no label, writes no coverage and keeps vr-6", async () => {
-      research.mockResolvedValue(researched({ coverage: { sources: SOURCES, lookups: LOOKUPS } }));
-      generate.mockResolvedValue(answer([breachFinding()], STANDARD_NOTES));
+    it("has no other rules: a run whose deps still carry the setting of the confidence rules is labelled all the same", async () => {
+      await run({ rules: "confidence" } as never);
 
-      await run();
-
-      const [stored] = insertedFindings();
-      expect(stored.confidence).toBe("low");
-      expect(stored).not.toHaveProperty("credibility");
-      expect(stored).not.toHaveProperty("credibility_basis");
-      expect(Object.keys(stored.sources[0]).sort()).toEqual([
-        "published_at",
-        "quote",
-        "title",
-        "url",
-      ]);
-      const { input } = onlyFinish();
-      expect(input).toMatchObject({ promptVersion: PROMPT_VERSION, coverage: null });
-      expect(input.registryVersion).toBeNull();
-      expect(input.trace).not.toHaveProperty("cited");
-      expect(generate.mock.calls[0][0].system).toBe(buildSystemPrompt(NOW));
+      expect(insertedFindings().map((finding) => finding.credibility)).toEqual(["high", "low"]);
+      expect(onlyFinish().input).toMatchObject({
+        promptVersion: CREDIBILITY_PROMPT_VERSION,
+        registryVersion: REGISTRY_VERSION,
+      });
+      expect(generate.mock.calls[0][0].schema).toBe(credibilityOutputSchema);
     });
 
-    it("with the flag on each finding is stored with its label and basis, in order", async () => {
-      await run({ rules: "credibility" });
+    it("stores each finding with its label and basis, in order", async () => {
+      await run();
 
       expect(
         insertedFindings().map((finding) => [
@@ -992,12 +1317,12 @@ describe("runVendorResearch", () => {
         [KEV_FINDING.risk_description, "high", "official_record", [KEV_RECORD.url]],
         [BREACH_FINDING.risk_description, "low", "unverified", [BREACH.url, PAID.url, FORUM.url]],
       ]);
-      // The confidence is still written, until the contract of M3 drops it.
-      expect(insertedFindings().every((finding) => finding.confidence !== undefined)).toBe(true);
+      // A run writes no confidence (M3 Part B): the column stays, empty, until it is dropped.
+      for (const finding of insertedFindings()) expect(finding).not.toHaveProperty("confidence");
     });
 
-    it("with the flag on the stored sources carry their category, publisher, flags and record", async () => {
-      await run({ rules: "credibility" });
+    it("stores the sources with their category, publisher, flags and record", async () => {
+      await run();
 
       const [kev, breach] = insertedFindings();
       expect(kev.sources).toEqual([
@@ -1026,8 +1351,8 @@ describe("runVendorResearch", () => {
       }
     });
 
-    it("with the flag on a run records its coverage, with the cited counts and the registry version, also when it fails", async () => {
-      await run({ rules: "credibility" });
+    it("records the coverage of a run, with the cited counts and the registry version, also when it fails", async () => {
+      await run();
 
       expect(onlyFinish().input).toMatchObject({
         status: "completed",
@@ -1044,7 +1369,7 @@ describe("runVendorResearch", () => {
       // The analysis fails: what the research checked is kept, and nothing is cited.
       asMock(finishRunQuery).mockClear();
       generate.mockRejectedValue(providerError("APICallError", "boom"));
-      await run({ rules: "credibility" });
+      await run();
       expect(onlyFinish().input).toMatchObject({
         status: "failed",
         registryVersion: REGISTRY_VERSION,
@@ -1054,7 +1379,7 @@ describe("runVendorResearch", () => {
       // The run fails before the research: nothing was checked.
       asMock(finishRunQuery).mockClear();
       resolveModel.mockResolvedValue(null);
-      await run({ rules: "credibility" });
+      await run();
       expect(onlyFinish().input).toMatchObject({
         status: "failed",
         registryVersion: REGISTRY_VERSION,
@@ -1067,10 +1392,10 @@ describe("runVendorResearch", () => {
       });
     });
 
-    it("with the flag on a run whose findings could not be saved cites nothing", async () => {
+    it("cites nothing in a run whose findings could not be saved", async () => {
       asMock(insertFindingsQuery).mockRejectedValue(new Error("insert failed"));
 
-      await run({ rules: "credibility" });
+      await run();
 
       expect(onlyFinish().input).toMatchObject({
         status: "failed",
@@ -1078,40 +1403,192 @@ describe("runVendorResearch", () => {
       });
     });
 
-    it("with the flag on the prompt version is vr-10", async () => {
-      await run({ rules: "credibility" });
+    it("records the prompt version vr-12", async () => {
+      await run();
 
       expect(onlyFinish().input.promptVersion).toBe(CREDIBILITY_PROMPT_VERSION);
-      expect(CREDIBILITY_PROMPT_VERSION).toBe("vr-10");
-      expect(generate.mock.calls[0][0].system).toBe(buildSystemPrompt(NOW, "credibility"));
+      // vr-12 is vr-11 with the database of a record in the verifier prompt.
+      expect(CREDIBILITY_PROMPT_VERSION).toBe("vr-12");
+      expect(generate.mock.calls[0][0].system).toBe(buildSystemPrompt(NOW));
     });
 
-    it("with the flag on a blocked source never reaches the pack", async () => {
+    it("never lets a blocked source reach the pack", async () => {
       research.mockResolvedValue(researched({ entries: [...ENTRIES, BLOCKED] }));
 
-      await run({ rules: "credibility" });
+      await run();
 
       expect(generate.mock.calls[0][0].prompt).not.toContain(BLOCKED.url);
       const { input } = onlyFinish();
       expect(input.evidence.map((source: EvidenceSource) => source.url)).not.toContain(BLOCKED.url);
       expect((input.trace as RunTrace).dropped["source.blocked"]).toBe(1);
-
-      // Under the confidence rules it is a source like any other.
-      asMock(finishRunQuery).mockClear();
-      generate.mockClear();
-      await run();
-      expect(generate.mock.calls[0][0].prompt).toContain(BLOCKED.url);
-      expect((onlyFinish().input.trace as RunTrace).dropped).not.toHaveProperty("source.blocked");
     });
 
     it("the trace counts the cited sources per category and lists the unreviewed hosts", async () => {
-      await run({ rules: "credibility" });
+      await run();
 
       expect((onlyFinish().input.trace as RunTrace).cited).toEqual({
         categories: { official: 1, trusted_press: 0, vendor: 0, unverified: 3 },
         // The host of BREACH is in no entry of the registry; the others are.
         unreviewedHosts: ["news.example.com"],
       });
+    });
+  });
+
+  describe("who filed an EDGAR filing under the stored CIK (Q28)", () => {
+    // The address of a filing is in the folder of every party to it, so only the header of the filing
+    // says whether the vendor filed it. The analysis asks, for the filings its findings cite under
+    // the CIK stored on the vendor, and the pipeline gives it the means to ask: the resolver of the
+    // process, or the one a test injects, while the gate of the SEC (Q4) is open.
+    const STORED_CIK = "1900101";
+    const WITH_CIK: IVendor = { ...VENDOR_ROW, sec_cik: STORED_CIK };
+    const FILING = ledgerEntry({
+      category: "security_incidents",
+      kind: "page",
+      url: `https://www.sec.gov/Archives/edgar/data/${STORED_CIK}/000190010131000007/acme-8k.htm`,
+      title: "Acme Form 8-K",
+      content: "Item 1.05. Acme reports that attackers copied customer records from a test system.",
+      publishedAt: "2031-04-01",
+    });
+    /** The finding that cites the filing. */
+    const CITING_THE_FILING = breachFinding({
+      evidence: [{ source_id: "S1", quote: BREACH_QUOTE }],
+    });
+    const edgarFilerOf = jest.fn<
+      Promise<"vendor" | "other" | null>,
+      [string, string, AbortSignal]
+    >();
+
+    /** The gate of the SEC as a test needs it, put back by the `afterEach` below. */
+    let gate: { restore: () => void } | undefined;
+    const gateOfSec = (open: boolean) => {
+      gate?.restore();
+      gate = jest.replaceProperty(VRDB_GATES, "Q4", open);
+    };
+
+    beforeEach(() => {
+      gateOfSec(true);
+      asMock(getVendorByIdQuery).mockResolvedValue(WITH_CIK);
+      research.mockResolvedValue(researched({ entries: [FILING] }));
+      generate.mockResolvedValue(answer([CITING_THE_FILING], STANDARD_NOTES));
+      edgarFilerOf.mockResolvedValue("vendor");
+      (edgarFilerModule as unknown as { processFiler: jest.Mock }).processFiler.mockResolvedValue(
+        "vendor",
+      );
+    });
+
+    afterEach(() => {
+      gate?.restore();
+      gate = undefined;
+    });
+
+    it("asks who filed the filing a finding cites, with the stored CIK as ten digits and a signal", async () => {
+      await run({ edgarFilerOf });
+
+      expect(edgarFilerOf).toHaveBeenCalledTimes(1);
+      expect(edgarFilerOf).toHaveBeenCalledWith(FILING.url, "0001900101", expect.any(AbortSignal));
+    });
+
+    it("stores a filing the vendor filed as the vendor's statement", async () => {
+      await run({ edgarFilerOf });
+
+      const [stored] = insertedFindings();
+      expect(stored.credibility).toBe("high");
+      expect(stored.credibility_basis?.rule).toBe("vendor_statement");
+      expect(stored.sources[0]).toMatchObject({ url: FILING.url, category: "vendor" });
+    });
+
+    it.each([
+      ["somebody else filed it", async () => "other" as const],
+      ["the SEC cannot say who filed it", async () => null],
+      [
+        "the resolver fails",
+        async (): Promise<null> => {
+          throw new Error("redis is down");
+        },
+      ],
+    ])("stores a filing as unverified and downgraded when %s", async (_label, answerOf) => {
+      edgarFilerOf.mockImplementation(answerOf);
+
+      const result = await run({ edgarFilerOf });
+
+      expect(result).toEqual({ outcome: "completed", findingsCreated: 1 });
+      const [stored] = insertedFindings();
+      expect(stored.credibility).toBe("low");
+      expect(stored.credibility_basis?.rule).toBe("unverified");
+      expect(stored.sources[0]).toMatchObject({
+        url: FILING.url,
+        category: "unverified",
+        flags: ["downgraded"],
+      });
+    });
+
+    it("asks nothing for a vendor with no stored CIK, and the filing is unverified", async () => {
+      asMock(getVendorByIdQuery).mockResolvedValue(VENDOR_ROW);
+
+      await run({ edgarFilerOf });
+
+      expect(edgarFilerOf).not.toHaveBeenCalled();
+      const [stored] = insertedFindings();
+      expect(stored.credibility).toBe("low");
+      expect(stored.credibility_basis?.rule).toBe("unverified");
+    });
+
+    it("asks nothing for a filing no finding cites", async () => {
+      research.mockResolvedValue(researched({ entries: [FILING, BREACH] }));
+      generate.mockResolvedValue(
+        answer(
+          [
+            {
+              ...CITING_THE_FILING,
+              evidence: [{ source_id: "S2", quote: BREACH_QUOTE }],
+            },
+          ],
+          STANDARD_NOTES,
+        ),
+      );
+
+      await run({ edgarFilerOf });
+
+      expect(insertedFindings()).toHaveLength(1);
+      expect(edgarFilerOf).not.toHaveBeenCalled();
+    });
+
+    it("asks nothing while the gate of the SEC (Q4) is closed, and the filing is unverified", async () => {
+      gateOfSec(false);
+
+      await run({ edgarFilerOf });
+
+      expect(edgarFilerOf).not.toHaveBeenCalled();
+      expect(insertedFindings()[0].credibility_basis?.rule).toBe("unverified");
+    });
+
+    it("asks the resolver of the process when no other is given, and uses one for every run", async () => {
+      const processFiler = (edgarFilerModule as unknown as { processFiler: jest.Mock })
+        .processFiler;
+      const madeFilers = (edgarFilerModule as unknown as { madeFilers: () => number }).madeFilers;
+
+      await run();
+      await run();
+
+      expect(processFiler).toHaveBeenCalledTimes(2);
+      expect(processFiler).toHaveBeenCalledWith(FILING.url, "0001900101", expect.any(AbortSignal));
+      expect(insertedFindings().map((finding) => finding.credibility_basis?.rule)).toEqual([
+        "vendor_statement",
+        "vendor_statement",
+      ]);
+      // Made when the pipeline loaded and never again: a resolver of each run would lose the 24 hours
+      // that the header of a filing is remembered.
+      expect(madeFilers()).toBe(1);
+    });
+
+    it("asks the resolver that was given, and not the one of the process", async () => {
+      const processFiler = (edgarFilerModule as unknown as { processFiler: jest.Mock })
+        .processFiler;
+
+      await run({ edgarFilerOf });
+
+      expect(edgarFilerOf).toHaveBeenCalledTimes(1);
+      expect(processFiler).not.toHaveBeenCalled();
     });
   });
 
@@ -1245,14 +1722,15 @@ describe("runVendorResearch", () => {
         categorySummary: [],
         evidence: null,
         model: MODEL_ID,
-        promptVersion: PROMPT_VERSION,
+        promptVersion: CREDIBILITY_PROMPT_VERSION,
         searchesUsed: 1,
         pagesRead: 0,
         duplicatesDropped: 0,
         error: "Model call failed: HTTP 500",
         trace: expect.objectContaining({ version: 1 }),
-        coverage: null,
-        registryVersion: null,
+        coverage: coverageOf(),
+        registryVersion: REGISTRY_VERSION,
+        searchEngine: null,
       });
       // The name and the status only, never the message.
       const logged = loggedText();
@@ -1351,20 +1829,21 @@ describe("runVendorResearch", () => {
           categorySummary: [],
           evidence: null,
           model: MODEL_ID,
-          promptVersion: PROMPT_VERSION,
+          promptVersion: CREDIBILITY_PROMPT_VERSION,
           searchesUsed: 0,
           pagesRead: 0,
           duplicatesDropped: 0,
           error: NO_RESEARCH_ACTIONS,
           trace: expect.objectContaining({ version: 1 }),
-          coverage: null,
-          registryVersion: null,
+          coverage: coverageOf(),
+          registryVersion: REGISTRY_VERSION,
+          searchEngine: null,
         });
       },
     );
 
     // Review Focus 4: Bing answered 429 or a consent page, and the sites refused the pages.
-    it("fails the run, with a summary of every category, when the web answered none of the calls", async () => {
+    it("fails the run, with a summary of every category, when the web answered none of the calls and nothing is left to analyse", async () => {
       research.mockResolvedValue(
         researched({
           entries: [],
@@ -1428,14 +1907,83 @@ describe("runVendorResearch", () => {
         ],
         evidence: null,
         model: MODEL_ID,
-        promptVersion: PROMPT_VERSION,
+        promptVersion: CREDIBILITY_PROMPT_VERSION,
         searchesUsed: 6,
         pagesRead: 0,
         duplicatesDropped: 0,
         error: WEB_UNREACHABLE,
         trace: expect.objectContaining({ version: 1 }),
-        coverage: null,
-        registryVersion: null,
+        coverage: coverageOf(),
+        registryVersion: REGISTRY_VERSION,
+        searchEngine: null,
+      });
+    });
+
+    // The records of the public databases are looked up by the code, without the loop, and enter the
+    // ledger without a call of their own: a web that answers nothing leaves them as evidence.
+    describe("when the web answered no call but the ledger holds sources", () => {
+      const FAILED_CALLS = [
+        searchFailed("security_incidents"),
+        searchFailed("legal_regulatory"),
+        readFailed("security_incidents"),
+      ];
+
+      it("analyses the records when the web answered no call, and completes", async () => {
+        research.mockResolvedValue(researched({ calls: FAILED_CALLS }));
+
+        const result = await run();
+
+        expect(result).toEqual({ outcome: "completed", findingsCreated: 1 });
+        expect(generate).toHaveBeenCalledTimes(1);
+        const { input } = onlyFinish();
+        expect(input).toMatchObject({ status: "completed", error: null });
+        const summary: CategorySummaryEntry[] = input.categorySummary;
+        expect(summary.find((entry) => entry.category === "security_incidents")?.outcome).toBe(
+          "findings",
+        );
+        expect(summary.find((entry) => entry.category === "legal_regulatory")).toEqual({
+          category: "legal_regulatory",
+          outcome: "search_failed",
+          note: "The search was not available",
+        });
+      });
+
+      it("completes with the failures in its summary when the records give nothing to keep", async () => {
+        research.mockResolvedValue(researched({ calls: FAILED_CALLS }));
+        generate.mockResolvedValue(answer([], []));
+
+        const result = await run();
+
+        expect(result).toEqual({ outcome: "completed", findingsCreated: 0 });
+        const summary: CategorySummaryEntry[] = onlyFinish().input.categorySummary;
+        expect(summary.find((entry) => entry.category === "security_incidents")).toEqual({
+          category: "security_incidents",
+          outcome: "search_failed",
+          note: "The pages could not be read",
+        });
+        expect(summary.find((entry) => entry.category === "legal_regulatory")).toEqual({
+          category: "legal_regulatory",
+          outcome: "search_failed",
+          note: "The search was not available",
+        });
+      });
+
+      it("fails as unreachable for a scheduled run whose only records were shown before", async () => {
+        research.mockResolvedValue(researched({ calls: FAILED_CALLS }));
+        asMock(getKnownSourceKeysQuery).mockResolvedValue(
+          new Set([
+            "news.example.com/acme-breach",
+            "other.example.org/payroll-roundup",
+            "trust.acme.com/compliance",
+            "acme.com/privacy",
+          ]),
+        );
+
+        const result = await runVendorResearch({ ...ARGS, triggerType: "scheduled" }, makeDeps());
+
+        expect(result).toEqual({ outcome: "failed", findingsCreated: 0 });
+        expect(generate).not.toHaveBeenCalled();
+        expect(onlyFinish().input).toMatchObject({ status: "failed", error: WEB_UNREACHABLE });
       });
     });
 
@@ -1492,14 +2040,15 @@ describe("runVendorResearch", () => {
         })),
         evidence: null,
         model: MODEL_ID,
-        promptVersion: PROMPT_VERSION,
+        promptVersion: CREDIBILITY_PROMPT_VERSION,
         searchesUsed: 6,
         pagesRead: 0,
         duplicatesDropped: 0,
         error: null,
         trace: expect.objectContaining({ version: 1 }),
-        coverage: null,
-        registryVersion: null,
+        coverage: coverageOf(),
+        registryVersion: REGISTRY_VERSION,
+        searchEngine: null,
       });
     });
 
@@ -1848,14 +2397,15 @@ describe("runVendorResearch", () => {
         categorySummary: [],
         evidence: STANDARD_PACK,
         model: MODEL_ID,
-        promptVersion: PROMPT_VERSION,
+        promptVersion: CREDIBILITY_PROMPT_VERSION,
         searchesUsed: 5,
         pagesRead: 1,
         duplicatesDropped: 0,
         error: "Model call failed: HTTP 429",
         trace: expect.objectContaining({ version: 1 }),
-        coverage: null,
-        registryVersion: null,
+        coverage: coverageOf(),
+        registryVersion: REGISTRY_VERSION,
+        searchEngine: null,
       });
     });
 
@@ -1955,14 +2505,15 @@ describe("runVendorResearch", () => {
         categorySummary: [],
         evidence: null,
         model: null,
-        promptVersion: PROMPT_VERSION,
+        promptVersion: CREDIBILITY_PROMPT_VERSION,
         searchesUsed: 0,
         pagesRead: 0,
         duplicatesDropped: 0,
         error: "No LLM key configured",
         trace: expect.objectContaining({ version: 1 }),
-        coverage: null,
-        registryVersion: null,
+        coverage: coverageOf(),
+        registryVersion: REGISTRY_VERSION,
+        searchEngine: null,
       });
     });
 
@@ -2243,7 +2794,6 @@ describe("runVendorResearch", () => {
             impact_description: "All customer data is lost.",
             likelihood: "Almost certain",
             risk_severity: "Catastrophic",
-            confidence: "high",
             evidence: [
               { source_id: "S1", quote: "Acme suffered a catastrophic breach of all data" },
             ],
@@ -2895,14 +3445,15 @@ describe("runVendorResearch", () => {
         categorySummary: [],
         evidence: STANDARD_PACK,
         model: MODEL_ID,
-        promptVersion: PROMPT_VERSION,
+        promptVersion: CREDIBILITY_PROMPT_VERSION,
         searchesUsed: 5,
         pagesRead: 1,
         duplicatesDropped: 0,
         error: "Saving the findings failed",
         trace: expect.objectContaining({ version: 1 }),
-        coverage: null,
-        registryVersion: null,
+        coverage: coverageOf(),
+        registryVersion: REGISTRY_VERSION,
+        searchEngine: null,
       });
       expect(JSON.stringify(input)).not.toContain("A note by the model.");
       // The message of the database error is in the log, not in the run.
@@ -2930,6 +3481,39 @@ describe("runVendorResearch", () => {
       ]);
       expect(finishCalls("completed")).toHaveLength(1);
       expect(finishCalls("failed")).toHaveLength(1);
+    });
+
+    it("drops the findings of a run that ended while it ran", async () => {
+      // The sweep (or any other end) wrote the run first: the guarded finish writes no row.
+      asMock(finishRunQuery).mockImplementation(async (input, transaction) => {
+        events.push(`finish:${input.status}@${transaction ? transaction.id : "outside"}`);
+        return false;
+      });
+
+      const result = await run();
+
+      expect(result).toEqual({ outcome: "failed", findingsCreated: 0 });
+      // The finish was made once, inside the transaction, which rolled the findings back. No
+      // second failure was written over the run that had ended.
+      expect(events).toEqual(["begin#1", "insert:1@1", "finish:completed@1", "rollback#1"]);
+      expect(finishRunQuery).toHaveBeenCalledTimes(1);
+      expect(transactions).toEqual([{ id: 1, committed: false, rolledBack: true }]);
+      expect(rememberSourcesQuery).not.toHaveBeenCalled();
+      expect(saveSnapshotsQuery).not.toHaveBeenCalled();
+      expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining("had already ended"));
+    });
+
+    it("says in the log, and nothing more, when a failure is written to a run that had ended", async () => {
+      asMock(insertFindingsQuery).mockRejectedValue(new Error("insert failed"));
+      asMock(finishRunQuery).mockResolvedValue(false);
+
+      const result = await run();
+
+      expect(result).toEqual({ outcome: "failed", findingsCreated: 0 });
+      expect(finishRunQuery).toHaveBeenCalledTimes(1);
+      expect(logger.info).toHaveBeenCalledWith(
+        expect.stringContaining("the run had already ended, so the failure was not written"),
+      );
     });
 
     it("finishes a successful run once as completed and never as failed", async () => {
@@ -2991,6 +3575,92 @@ describe("runVendorResearch", () => {
       expect(result.outcome).toBe("failed");
       expect(finishCalls()).toHaveLength(1);
       expect(onlyFinish().input.error).toBe("Unexpected error");
+    });
+  });
+
+  // A run has a hard limit of its own (RUN_TIME_LIMIT_MINUTES): the pipeline fails it as timed out,
+  // so that the sweep, which waits longer, never fails a run that is still working.
+  describe("the time limit of a run", () => {
+    /** A researcher that answers when the test says so. */
+    function slowResearch(): { resolve: (result: ResearchResult) => void } {
+      let resolve!: (result: ResearchResult) => void;
+      research.mockReturnValue(
+        new Promise<ResearchResult>((done) => {
+          resolve = done;
+        }),
+      );
+      return { resolve };
+    }
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it("fails the run as timed out when it runs past its time limit", async () => {
+      slowResearch();
+
+      const result = await run({ runTimeLimitMs: 20 });
+
+      expect(result).toEqual({ outcome: "failed", findingsCreated: 0 });
+      expect(finishCalls()).toHaveLength(1);
+      expect(onlyFinish().input).toMatchObject({
+        status: "failed",
+        error: TIMED_OUT_ERROR,
+        categorySummary: [],
+        duplicatesDropped: 0,
+      });
+      expect(TIMED_OUT_ERROR).toBe("timed out");
+      expect(logger.warn).toHaveBeenCalledWith(
+        expect.stringContaining("stopped: the run reached its time limit"),
+      );
+    });
+
+    it("writes nothing when the research ends after the time limit", async () => {
+      const pending = slowResearch();
+      await run({ runTimeLimitMs: 20 });
+
+      pending.resolve(researched());
+      // Let the abandoned work run to its end.
+      for (let turn = 0; turn < 20; turn += 1) await Promise.resolve();
+      await new Promise((resolve) => setImmediate(resolve));
+
+      expect(finishCalls()).toHaveLength(1);
+      expect(insertFindingsQuery).not.toHaveBeenCalled();
+      expect(sequelize.transaction).not.toHaveBeenCalled();
+    });
+
+    it("leaves no timer behind when the run ends in time", async () => {
+      jest.useFakeTimers();
+
+      const result = await run();
+
+      expect(result.outcome).toBe("completed");
+      expect(jest.getTimerCount()).toBe(0);
+    });
+
+    it("leaves no timer behind when the run fails in time", async () => {
+      jest.useFakeTimers();
+      research.mockResolvedValue(researched({ entries: [], calls: [] }));
+
+      const result = await run();
+
+      expect(result.outcome).toBe("failed");
+      expect(jest.getTimerCount()).toBe(0);
+    });
+
+    it("uses RUN_TIME_LIMIT_MINUTES when no limit is given", async () => {
+      jest.useFakeTimers();
+      slowResearch();
+
+      const pending = run();
+      await jest.advanceTimersByTimeAsync(RUN_TIME_LIMIT_MINUTES * 60_000 - 1);
+      expect(finishRunQuery).not.toHaveBeenCalled();
+
+      await jest.advanceTimersByTimeAsync(1);
+      const result = await pending;
+
+      expect(result).toEqual({ outcome: "failed", findingsCreated: 0 });
+      expect(onlyFinish().input).toMatchObject({ status: "failed", error: TIMED_OUT_ERROR });
     });
   });
 
@@ -3465,7 +4135,7 @@ describe("runVendorResearch", () => {
         expect(content).not.toContain(RETENTION);
       });
 
-      it("lets a finding quote the change, which the vendor's own page supports with medium confidence", async () => {
+      it("lets a finding quote the change, which the vendor's own page supports", async () => {
         generate.mockResolvedValue(
           answer([
             breachFinding({
@@ -3482,13 +4152,15 @@ describe("runVendorResearch", () => {
 
         expect(result).toEqual({ outcome: "completed", findingsCreated: 1 });
         const [finding] = insertedFindings();
-        expect(finding.confidence).toBe("medium");
+        expect(finding).not.toHaveProperty("confidence");
         expect(finding.sources).toEqual([
           {
             url: changeSource()?.url,
             title: `Change to ${POLICY_TITLE}`,
             quote: CLAUSE_NEW,
             published_at: "2031-04-20",
+            category: "vendor",
+            publisher: "vendor",
           },
         ]);
       });
@@ -3739,17 +4411,84 @@ describe("resolveOrgModel", () => {
     asMock(createModelFromKey).mockReturnValue(MODEL);
     asMock(resolveModelId).mockReturnValue("gpt-x");
 
-    await expect(resolveOrgModel(ORG)).resolves.toEqual({ model: MODEL, modelId: "gpt-x" });
+    await expect(resolveOrgModel(ORG)).resolves.toEqual({
+      model: MODEL,
+      modelId: "gpt-x",
+      search: { engine: "gdelt" },
+    });
 
     expect(createModelFromKey).toHaveBeenCalledTimes(1);
     expect(createModelFromKey).toHaveBeenCalledWith(first);
     expect(resolveModelId).toHaveBeenCalledWith(first);
   });
 
+  describe("how the research searches", () => {
+    const CLAUDE_URL = "https://api.anthropic.com/v1";
+
+    it("is Claude's web search for a key of Anthropic on its own API", async () => {
+      asMock(getLLMKeysWithKeyQuery).mockResolvedValue([
+        keyRow({ name: "Anthropic", url: CLAUDE_URL, model: "claude-x" }),
+      ]);
+      asMock(createModelFromKey).mockReturnValue(MODEL);
+      asMock(resolveModelId).mockReturnValue("claude-x");
+
+      const resolved = await resolveOrgModel(ORG);
+
+      expect(resolved?.search).toEqual({ engine: "anthropic" });
+    });
+
+    it.each([
+      ["OpenAI", "https://api.openai.com/v1/"],
+      ["OpenRouter", "https://openrouter.ai/api/v1/"],
+      ["Custom", "https://api.deepseek.com/v1"],
+      ["Custom", "http://localhost:11434/v1"],
+      ["Anthropic", "https://gateway.example/anthropic"],
+    ])("is the news of the GDELT Project for a key of %s at %s", async (name, url) => {
+      asMock(getLLMKeysWithKeyQuery).mockResolvedValue([keyRow({ name, url })]);
+      asMock(createModelFromKey).mockReturnValue(MODEL);
+      asMock(resolveModelId).mockReturnValue("model-x");
+
+      const resolved = await resolveOrgModel(ORG);
+
+      expect(resolved?.search).toEqual({ engine: "gdelt" });
+    });
+
+    it("is told from the name and the address of the key alone: the key itself does not go in", async () => {
+      const told = jest.spyOn(searchEngineModule, "searchEngineOf");
+      try {
+        asMock(getLLMKeysWithKeyQuery).mockResolvedValue([
+          keyRow({ name: "Anthropic", url: CLAUDE_URL, key: "sk-ant-secret", model: "claude-x" }),
+        ]);
+        asMock(createModelFromKey).mockReturnValue(MODEL);
+        asMock(resolveModelId).mockReturnValue("claude-x");
+
+        await resolveOrgModel(ORG);
+
+        expect(told).toHaveBeenCalledTimes(1);
+        expect(told).toHaveBeenCalledWith({ name: "Anthropic", url: CLAUDE_URL });
+        expect(loggedText()).not.toContain("sk-ant-secret");
+      } finally {
+        told.mockRestore();
+      }
+    });
+  });
+
   describe("the keys an administrator chose", () => {
     const newest = keyRow({ id: 30, name: "OpenAI", model: "gpt-x" });
-    const middle = keyRow({ id: 20, name: "Anthropic", model: "claude-x", key: "sk-middle" });
-    const oldest = keyRow({ id: 10, name: "OpenRouter", model: "router-x", key: "sk-oldest" });
+    const middle = keyRow({
+      id: 20,
+      name: "Anthropic",
+      url: "https://api.anthropic.com/v1",
+      model: "claude-x",
+      key: "sk-middle",
+    });
+    const oldest = keyRow({
+      id: 10,
+      name: "OpenRouter",
+      url: "https://openrouter.ai/api/v1/",
+      model: "router-x",
+      key: "sk-oldest",
+    });
 
     beforeEach(() => {
       asMock(getLLMKeysWithKeyQuery).mockResolvedValue([newest, middle, oldest]);
@@ -3772,6 +4511,7 @@ describe("resolveOrgModel", () => {
       await expect(resolveOrgModel(ORG)).resolves.toEqual({
         model: { built: 20 },
         modelId: "claude-x",
+        search: { engine: "anthropic" },
       });
       expect(createModelFromKey).toHaveBeenCalledTimes(1);
     });
@@ -3785,9 +4525,30 @@ describe("resolveOrgModel", () => {
       await expect(resolveOrgModel(ORG)).resolves.toEqual({
         model: { built: 10 },
         modelId: "router-x",
+        search: { engine: "gdelt" },
         analysis: { model: { built: 30 }, modelId: "gpt-x" },
       });
       expect(createModelFromKey).toHaveBeenCalledTimes(2);
+    });
+
+    it("searches as the key chosen for the research does, whatever the key chosen for the analysis is", async () => {
+      asMock(getVendorResearchSettingsQuery).mockResolvedValue({
+        researchKeyId: 10,
+        analysisKeyId: 20,
+      });
+      const withClaudeForAnalysis = await resolveOrgModel(ORG);
+
+      asMock(getVendorResearchSettingsQuery).mockResolvedValue({
+        researchKeyId: 20,
+        analysisKeyId: 10,
+      });
+      const withClaudeForResearch = await resolveOrgModel(ORG);
+
+      expect(withClaudeForAnalysis?.search).toEqual({ engine: "gdelt" });
+      expect(withClaudeForResearch?.search).toEqual({ engine: "anthropic" });
+      // The analysis searches nothing: it has no search of its own to describe.
+      expect(withClaudeForAnalysis?.analysis).not.toHaveProperty("search");
+      expect(withClaudeForResearch?.analysis).not.toHaveProperty("search");
     });
 
     it("builds one model when the analysis is chosen the same key as the research", async () => {
@@ -3798,7 +4559,11 @@ describe("resolveOrgModel", () => {
 
       const resolved = await resolveOrgModel(ORG);
 
-      expect(resolved).toEqual({ model: { built: 20 }, modelId: "claude-x" });
+      expect(resolved).toEqual({
+        model: { built: 20 },
+        modelId: "claude-x",
+        search: { engine: "anthropic" },
+      });
       expect(resolved).not.toHaveProperty("analysis");
       expect(createModelFromKey).toHaveBeenCalledTimes(1);
     });
@@ -3812,6 +4577,7 @@ describe("resolveOrgModel", () => {
       await expect(resolveOrgModel(ORG)).resolves.toEqual({
         model: { built: 30 },
         modelId: "gpt-x",
+        search: { engine: "gdelt" },
       });
     });
 
@@ -3833,6 +4599,7 @@ describe("resolveOrgModel", () => {
       await expect(resolveOrgModel(ORG)).resolves.toEqual({
         model: { built: 30 },
         modelId: "gpt-x",
+        search: { engine: "gdelt" },
       });
       expect(logger.warn).toHaveBeenCalledTimes(1);
       expect(loggedText()).not.toContain("10.1.2.3");

@@ -88,7 +88,6 @@ export const STALE_SOURCE: EvalCase = {
           risk_severity: "Major",
           action_plan:
             "Ask the vendor whether our fleet runs a fixed TamsinOS, and keep the fleet API off the internet until it does.",
-          confidence: "medium",
           rationale:
             "The catalog lists only flaws that are exploited, and the flaw is in the software our robots run.",
           evidence: [

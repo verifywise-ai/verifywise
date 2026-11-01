@@ -365,13 +365,12 @@ describe("parseStatusFeed", () => {
         entry({ href: "https://status.acme.com/" }),
         entry({ href: "https://status.acme.com/incidents/" }),
         entry({ href: "https://status.acme.com/incidents/has space" }),
-        entry({ href: "https://status.acme.com/incidents/" + "a".repeat(41) }),
+        entry({ href: "https://status.acme.com/incidents/" + "a".repeat(65) }),
         entry({ href: "https://status.acme.com/incidents/../admin" }),
         entry({ href: "https://status.acme.com/incidents/abc123?x=1" }),
-        entry({ href: "https://status.acme.com/incidents/abc-123" }),
         entry({ href: "https://status.acme.com/incidents/abc_123" }),
         entry({ href: null }),
-        entry({ href: "https://status.acme.com/incidents/" + "a".repeat(40) }),
+        entry({ href: "https://status.acme.com/incidents/" + "a".repeat(64) }),
       ]),
     ) as StatusFeed;
 
@@ -384,8 +383,23 @@ describe("parseStatusFeed", () => {
       "abc123",
       null,
       null,
-      null,
-      "a".repeat(40),
+      "a".repeat(64),
+    ]);
+  });
+
+  it("takes the id of an incident with hyphens and 50 characters, and gives it a record", () => {
+    const id = "b3a1c2d4-5e6f-4a7b-8c9d-0e1f2a3b4c5d-incident-1701";
+    const feed = parseStatusFeed(
+      feedOf([entry({ href: `https://status.acme.com/incidents/${id}` })]),
+    ) as StatusFeed;
+
+    const { records } = statusRecords(feed, { host: "status.acme.com", cutoff: CUTOFF, now: NOW });
+
+    expect(id).toHaveLength(50);
+    expect(feed.entries[0].id).toBe(id);
+    expect(records.map((record) => record.url)).toEqual([
+      "https://status.acme.com/history",
+      `https://status.acme.com/incidents/${id}`,
     ]);
   });
 

@@ -51,6 +51,20 @@ export type VrdbSourceDefinition = MirrorSource | ReadThroughSource;
 
 const STALE_AFTER_HOURS = 48;
 
+/**
+ * The CVE Usage paragraph of the CVE Terms of Use (https://www.cve.org/Legal/TermsOfUse), word for
+ * word as the page prints it, with CVE™ and without a final newline (Q7). The Terms let anyone copy
+ * the CVE records on one condition: that every copy reproduces MITRE's copyright designation and
+ * this licence. So the cve row of vrdb_sources, which every record of the copy points to, holds the
+ * paragraph whole. It is 411 characters, and a test pins its UTF-8 sha256: do not change a character.
+ */
+export const CVE_TERMS_LICENCE =
+  "MITRE hereby grants you a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable copyright license to reproduce, prepare derivative works of, publicly display, publicly perform, sublicense, and distribute Common Vulnerabilities and Exposures (CVE™). Any copy you make for such purposes is authorized provided that you reproduce MITRE's copyright designation and this license in any such copy.";
+
+/** MITRE's copyright designation as cve.org prints it, to the given year (Q7). */
+export const cveCopyrightOf = (year: number): string =>
+  `Copyright © 1999-${year}, The MITRE Corporation`;
+
 export const VRDB_SOURCES: readonly VrdbSourceDefinition[] = [
   {
     id: "kev",
@@ -103,7 +117,8 @@ export const VRDB_SOURCES: readonly VrdbSourceDefinition[] = [
     mode: "mirror",
     schedule: "41 */6 * * *",
     staleAfterHours: STALE_AFTER_HOURS,
-    licence: "None published (Q5)",
+    licence:
+      "None published; a work of the US Government (17 U.S.C. §105); use accepted by the product owner on 2026-10-31 (Q5)",
     attribution: "OFAC Specially Designated Nationals list, US Department of the Treasury",
     documentationUrl: "https://sanctionslist.ofac.treas.gov/Home/static/sdn.html",
     missingStatus: "delisted",
@@ -147,9 +162,13 @@ export const VRDB_SOURCES: readonly VrdbSourceDefinition[] = [
     mode: "mirror",
     schedule: "29 2 * * *",
     staleAfterHours: STALE_AFTER_HOURS,
-    licence: "CVE Terms of Use",
-    attribution:
-      "CVE® records © The MITRE Corporation, under the CVE Terms of Use (https://www.cve.org/Legal/TermsOfUse)",
+    licence: `CVE Terms of Use (https://www.cve.org/Legal/TermsOfUse). CVE Usage: ${CVE_TERMS_LICENCE}`,
+    // Read at each use and not once at start-up, so a process that runs over New Year writes the new
+    // year at its next sync. cve.org writes the word mark as CVE™ and registers only the logo, so the
+    // attribution carries no registered-mark sign.
+    get attribution(): string {
+      return `CVE records ${cveCopyrightOf(new Date().getUTCFullYear())}, under the CVE Terms of Use (https://www.cve.org/Legal/TermsOfUse)`;
+    },
     documentationUrl: "https://github.com/CVEProject/cvelistV5",
     missingStatus: null,
     gate: "Q7",
@@ -163,7 +182,7 @@ export const VRDB_SOURCES: readonly VrdbSourceDefinition[] = [
     mode: "mirror",
     schedule: "59 */6 * * *",
     staleAfterHours: STALE_AFTER_HOURS,
-    licence: "UNVERIFIED (Q6)",
+    licence: "UN terms of use: personal, non-commercial use only (Q6)",
     attribution: "United Nations Security Council Consolidated List",
     documentationUrl: "https://main.un.org/securitycouncil/en/content/un-sc-consolidated-list",
     missingStatus: "delisted",

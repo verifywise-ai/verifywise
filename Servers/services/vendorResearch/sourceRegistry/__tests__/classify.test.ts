@@ -4,20 +4,15 @@
  */
 import type { ResearchTarget } from "../../target";
 import {
-  AGGREGATOR_DOMAINS,
-  GOVERNMENT_HOST,
-  MAJOR_PUBLISHER_DOMAINS,
-  REGULATOR_AND_COURT_DOMAINS,
-} from "../../sourceTiers";
-import {
   type ClassifiableSource,
   classifyRecord,
   classifySource,
   emailOnDomain,
   isStatementPage,
+  isStoredCikFiling,
   recordMatchOf,
 } from "../classify";
-import { REGISTRY } from "../entries";
+import { REGISTRY, STATEMENT_SECTIONS } from "../entries";
 
 const ACME: ResearchTarget = {
   name: "Acme Analytics",
@@ -57,14 +52,115 @@ describe("classifySource", () => {
   it.each([
     ["https://example.gov/x", "us-gov"],
     ["https://www.cisa.gov/x", "us-gov"],
+    ["https://x.mil/x", "us-mil"],
     ["https://www.gov.uk/x", "uk-gov"],
     ["https://x.gov.uk/x", "uk-gov"],
     ["https://who.int/x", "int"],
     ["https://ec.europa.eu/x", "europa"],
-    ["https://x.gob.ar/x", "gov-unverified"],
+    ["https://x.gov.sg/x", "gov-sld-q8"],
+    ["https://x.gc.ca/x", "gov-de-facto-q8"],
+    ["https://x.bund.de/x", "gov-held"],
+    ["https://x.gov.co/x", "gov-co"],
     ["https://ico.org.uk/x", "ico"],
   ])("classifies %s as official, entry %s", (url, entry) => {
     expect(at(url)).toMatchObject({ category: "official", entry, reviewed: true });
+  });
+
+  describe("the government domains of Q8 (sr-5)", () => {
+    // Every host of the entries that Q8 added or changed: the entry that takes it, and the status
+    // of the evidence that entry rests on (V: the rule was read; P: the holder or the operator's
+    // pages were read, but no rule that limits the names to a government).
+    it.each([
+      ["mil", "us-mil", "V"],
+      ["gov.br", "gov-sld-q8", "V"],
+      ["go.id", "gov-sld-q8", "V"],
+      ["go.th", "gov-sld-q8", "V"],
+      ["go.tz", "gov-sld-q8", "V"],
+      ["gov.sg", "gov-sld-q8", "V"],
+      ["gov.my", "gov-sld-q8", "V"],
+      ["gov.pk", "gov-sld-q8", "V"],
+      ["gob.pk", "gov-sld-q8", "V"],
+      ["gov.lk", "gov-sld-q8", "V"],
+      ["gov.za", "gov-sld-q8", "V"],
+      ["gov.pl", "gov-sld-q8", "V"],
+      ["gov.hk", "gov-sld-q8", "V"],
+      ["gob.gt", "gov-sld-q8", "V"],
+      ["gc.ca", "gov-de-facto-q8", "V"],
+      ["gov.de", "gov-de-facto-q8", "V"],
+      ["bund.de", "gov-held", "P"],
+      ["gov.fi", "gov-held", "P"],
+      ["gov.co", "gov-co", "P"],
+    ])(
+      "takes a page on x.%s for official, entry %s, evidence of status %s",
+      (host, entry, status) => {
+        expect(at(`https://x.${host}/x`)).toMatchObject({
+          category: "official",
+          entry,
+          reviewed: true,
+        });
+        expect(REGISTRY.find((candidate) => candidate.id === entry)?.status).toBe(status);
+      },
+    );
+
+    it.each([
+      // Dropped, since no page that states who may hold the name could be read.
+      "https://x.govt.nz/x",
+      "https://x.go.ke/x",
+      "https://x.go.ug/x",
+      "https://x.gov.ug/x",
+      "https://x.gov.ie/x",
+      // Registry suffixes of a government whose rule was not read: the old pattern made them
+      // official.
+      "https://x.gob.ar/x",
+      "https://x.gov.cn/x",
+      // Ordinary registrations that the old pattern took for a government's: a label such as gob
+      // or gv in front of a country code is no proof (gob.de is a software company's).
+      "https://gob.de/x",
+      "https://www.gob.de/x",
+      "https://x.gob.de/x",
+      "https://gouv.it/x",
+      "https://gv.uy/x",
+      "https://gob.nl/x",
+    ])("takes %s for a host that no one reviewed", (url) => {
+      expect(at(url)).toMatchObject({ category: "unverified", entry: null, reviewed: false });
+    });
+
+    it("takes a government label before a country code for a government's only for the 20 pairs the registry reviewed", () => {
+      const letters = "abcdefghijklmnopqrstuvwxyz";
+      const official: string[] = [];
+      for (const label of ["gov", "govt", "gouv", "gob", "gv"]) {
+        for (const first of letters) {
+          for (const second of letters) {
+            const pair = `${label}.${first}${second}`;
+            if (at(`https://x.${pair}/x`).category === "official") official.push(pair);
+          }
+        }
+      }
+      // The old pattern took all 3,380 of them. These are the pairs of the entries of Q8 and the
+      // pairs that the older entries (gov-sld, gov-de-facto, uk-gov, fr-gouv) name.
+      expect(official.sort()).toEqual([
+        "gob.es",
+        "gob.gt",
+        "gob.mx",
+        "gob.pk",
+        "gouv.fr",
+        "gov.au",
+        "gov.br",
+        "gov.co",
+        "gov.de",
+        "gov.fi",
+        "gov.hk",
+        "gov.in",
+        "gov.lk",
+        "gov.my",
+        "gov.pk",
+        "gov.pl",
+        "gov.sg",
+        "gov.uk",
+        "gov.za",
+        "gv.at",
+      ]);
+    });
   });
 
   it("names the publisher of a suffix entry by its host, so that two agencies are two publishers", () => {
@@ -160,6 +256,116 @@ describe("classifySource", () => {
     const found = at(url);
     expect(found.category).toBe(category);
     expect(found.downgraded).toBeUndefined();
+  });
+
+  describe("the trusted press of Q9 (sr-5)", () => {
+    it.each([
+      // The Guardian's opinion section.
+      ["https://www.theguardian.com/commentisfree/2026/oct/01/the-case-for-acme", "theguardian"],
+      // CNBC's paid posts and its guest posts.
+      [
+        "https://www.cnbc.com/advertorial/2022/02/17/understanding-the-value-of-branded-content.html",
+        "cnbc",
+      ],
+      [
+        "https://www.cnbc.com/guest-blog/2026/09/01/acme-analytics-and-data-protection.html",
+        "cnbc",
+      ],
+      // Forbes: Councils, Advisor and Vetted are partner content, beside the contributors' /sites/.
+      [
+        "https://www.forbes.com/councils/forbestechcouncil/2026/09/01/acme-analytics-and-data-protection/",
+        "forbes",
+      ],
+      ["https://www.forbes.com/advisor/business/software/best-analytics-software/", "forbes"],
+      ["https://www.forbes.com/vetted/best-laptops/", "forbes"],
+      ["https://www.bloomberg.com/sponsor/acme-analytics/the-future-of-analytics", "bloomberg"],
+      ["https://www.bloomberg.com/sponsors/acme-analytics", "bloomberg"],
+      [
+        "https://www.washingtonpost.com/creativegroup/acme-analytics/the-future-of-analytics/",
+        "washingtonpost",
+      ],
+      ["https://www.scworld.com/perspective/acme-analytics-and-data-protection", "scworld"],
+    ])("downgrades %s, a part of the %s entry that is not its own reporting", (url, entry) => {
+      expect(at(url)).toMatchObject({
+        category: "unverified",
+        entry,
+        reviewed: true,
+        downgraded: true,
+      });
+    });
+
+    it.each([
+      [
+        "https://www.theguardian.com/technology/2025/nov/18/cloudflare-outage-causes-error-messages-across-the-internet",
+        "theguardian",
+      ],
+      ["https://www.cnbc.com/2026/10/01/acme-analytics-breach.html", "cnbc"],
+      ["https://www.cnbc.com/corrections/", "cnbc"],
+      [
+        "https://www.forbes.com/sites/forbesstaff/article/forbes-editorial-values-and-standards/",
+        "forbes",
+      ],
+      // A slug that starts with a downgraded segment is not the segment.
+      [
+        "https://www.bloomberg.com/news/articles/2026-10-01/sponsorship-deal-for-acme-analytics",
+        "bloomberg",
+      ],
+      [
+        "https://www.washingtonpost.com/technology/2026/10/01/acme-analytics-breach/",
+        "washingtonpost",
+      ],
+      ["https://www.scworld.com/news/acme-analytics-breach", "scworld"],
+      ["https://www.bbc.co.uk/news/articles/c629pny4gl7o", "bbc"],
+      ["https://www.usatoday.com/story/tech/2026/10/01/acme-analytics-breach/1/", "usatoday"],
+      ["https://www.smh.com.au/technology/acme-analytics-breach-20261001-p5xyz.html", "smh"],
+      ["https://www.cbc.ca/news/business/acme-analytics-breach-1.1", "cbc"],
+      [
+        "https://www.darkreading.com/cyberattacks-data-breaches/acme-analytics-breach",
+        "darkreading",
+      ],
+    ])("does not downgrade %s, a page of the %s entry that is its own reporting", (url, entry) => {
+      const found = at(url);
+      expect(found).toMatchObject({ category: "trusted_press", entry, reviewed: true });
+      expect(found.downgraded).toBeUndefined();
+    });
+
+    it("takes a thehackernews.com page for unverified, with no rule left to lower it", () => {
+      for (const url of [
+        "https://thehackernews.com/2026/10/acme-analytics-breach.html",
+        "https://thehackernews.com/expert-insights/2026/10/acme-analytics-and-data-protection.html",
+      ]) {
+        const found = at(url);
+        expect(found).toMatchObject({
+          category: "unverified",
+          entry: "thehackernews",
+          reviewed: true,
+        });
+        expect(found.downgraded).toBeUndefined();
+      }
+    });
+
+    it("keeps a cnn.com, an npr.org and a cnet.com page as trusted press, as the ruling of 2026-10-31 leaves them", () => {
+      expect(
+        at("https://www.cnn.com/2026/10/01/tech/acme-analytics-breach/index.html"),
+      ).toMatchObject({ category: "trusted_press", entry: "cnn", reviewed: true });
+      expect(at("https://www.npr.org/2026/10/01/acme-analytics-breach")).toMatchObject({
+        category: "trusted_press",
+        entry: "npr",
+        reviewed: true,
+      });
+      expect(
+        at("https://www.cnet.com/tech/services-and-software/acme-analytics-breach/"),
+      ).toMatchObject({ category: "trusted_press", entry: "cnet", reviewed: true });
+    });
+
+    it("names the publisher of the entries that give a name, the two hosts of the BBC alike", () => {
+      const nameOf = (url: string) => at(url).publisherName;
+      expect(nameOf("https://www.bbc.co.uk/news/x")).toBe("BBC");
+      expect(nameOf("https://www.bbc.com/news/x")).toBe("BBC");
+      expect(nameOf("https://www.theguardian.com/technology/x")).toBe("The Guardian");
+      expect(nameOf("https://www.usatoday.com/story/x")).toBe("USA TODAY");
+      expect(nameOf("https://www.cnbc.com/2026/10/01/x.html")).toBe("CNBC");
+    });
   });
 
   describe("a syndicated copy", () => {
@@ -363,39 +569,186 @@ describe("user content, filings and wire releases (Q25–Q27)", () => {
     ).toMatchObject({ category: "official", entry: "sec" });
   });
 
-  it("an EDGAR filing under the vendor's stored CIK is the vendor's, in the archive and in a viewer", () => {
+  describe("an EDGAR filing under the vendor's stored CIK (Q26, Q28)", () => {
     const filer: ResearchTarget = { ...TARGET, identifiers: { secCik: "0000320193" } };
-    for (const url of [
+    const UNDER_STORED_CIK = [
       "https://www.sec.gov/Archives/edgar/data/320193/000032019326000001/form8-k.htm",
       "https://www.sec.gov/ix?doc=/Archives/edgar/data/320193/000032019326000001/form8-k.htm",
       "https://www.sec.gov/ixviewer/ix.html?doc=/Archives/edgar/data/0000320193/000032019326000001/form8-k.htm",
       "https://www.sec.gov/cgi-bin/viewer?action=view&cik=320193&accession_number=0000320193-26-000001",
-    ]) {
-      expect(of(url, {}, filer)).toMatchObject({
-        category: "vendor",
-        publisher: "vendor",
-        entry: "sec",
-      });
-    }
-  });
-
-  it("an EDGAR filing under another CIK stays unverified", () => {
-    const filer: ResearchTarget = { ...TARGET, identifiers: { secCik: "0000320193" } };
-    for (const url of [
+    ];
+    const UNDER_ANOTHER_CIK = [
       "https://www.sec.gov/Archives/edgar/data/1234567/000123456726000001/form8-k.htm",
       "https://www.sec.gov/ix?doc=/Archives/edgar/data/3201930/000123456726000001/form8-k.htm",
       "https://www.sec.gov/cgi-bin/viewer?action=view&cik=1234567&accession_number=0001234567-26-000001",
-    ]) {
-      expect(of(url, {}, filer)).toMatchObject({
-        category: "unverified",
-        downgraded: true,
-        entry: "sec",
+    ];
+
+    it.each(UNDER_STORED_CIK)(
+      "is the vendor's word when its header says the vendor filed it: %s",
+      (url) => {
+        expect(of(url, { edgarFiler: "vendor" }, filer)).toMatchObject({
+          category: "vendor",
+          publisher: "vendor",
+          entry: "sec",
+        });
+      },
+    );
+
+    it.each(UNDER_STORED_CIK)(
+      "is unverified and downgraded when its header says somebody else filed it: %s",
+      (url) => {
+        expect(of(url, { edgarFiler: "other" }, filer)).toMatchObject({
+          category: "unverified",
+          downgraded: true,
+          entry: "sec",
+        });
+      },
+    );
+
+    it.each(UNDER_STORED_CIK)(
+      "is unverified and downgraded when nobody knows who filed it: %s",
+      (url) => {
+        const found = of(url, {}, filer);
+
+        expect(found).toMatchObject({ category: "unverified", downgraded: true, entry: "sec" });
+        expect(found).not.toHaveProperty("userContent");
+        expect(of(url, { edgarFiler: undefined }, filer)).toEqual(found);
+      },
+    );
+
+    it.each(UNDER_ANOTHER_CIK)(
+      "stays unverified under another CIK, whoever the header names: %s",
+      (url) => {
+        for (const edgarFiler of [undefined, "other", "vendor"] as const) {
+          expect(of(url, { edgarFiler }, filer)).toMatchObject({
+            category: "unverified",
+            downgraded: true,
+            entry: "sec",
+          });
+        }
+      },
+    );
+
+    it("is the filer's document as before for a vendor with no stored CIK, whoever the header names", () => {
+      const url = UNDER_STORED_CIK[0];
+      const unstored: ResearchTarget = { ...TARGET, identifiers: { secCik: "CIK 12" } };
+
+      for (const target of [TARGET, unstored]) {
+        for (const edgarFiler of [undefined, "other", "vendor"] as const) {
+          expect(of(url, { edgarFiler }, target)).toMatchObject({
+            category: "unverified",
+            downgraded: true,
+            entry: "sec",
+          });
+        }
+      }
+    });
+
+    it("takes a stored CIK of digits only: a text that merely reads as a number is none", () => {
+      const url = UNDER_STORED_CIK[0];
+
+      for (const secCik of ["+320193", "320193.0", "320193e0", "3.20193e5", "0x4e2c1"]) {
+        const target: ResearchTarget = { ...TARGET, identifiers: { secCik } };
+
+        expect(of(url, { edgarFiler: "vendor" }, target)).toMatchObject({
+          category: "unverified",
+          downgraded: true,
+        });
+        expect(isStoredCikFiling(url, target)).toBe(false);
+      }
+    });
+
+    it("makes no page of the SEC the vendor's that is not a filing, whoever the header names", () => {
+      expect(
+        of("https://www.sec.gov/newsroom/press-releases/2026-1", { edgarFiler: "vendor" }, filer),
+      ).toMatchObject({ category: "official", entry: "sec" });
+      expect(
+        of(
+          "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=320193",
+          { edgarFiler: "vendor" },
+          filer,
+        ),
+      ).toMatchObject({ category: "official", entry: "sec" });
+    });
+
+    it("lets the answer change nothing for a viewer address that names no readable filing of the stored CIK", () => {
+      for (const url of [
+        "https://www.sec.gov/cgi-bin/viewer?action=view&accession_number=0000320193-26-000001",
+        "https://www.sec.gov/cgi-bin/viewer?action=view&cik=abc&accession_number=0000320193-26-000001",
+        "https://www.sec.gov/cgi-bin/viewer?action=view&cik=00032019300&accession_number=0000320193-26-000001",
+        "https://www.sec.gov/ix",
+        "https://www.sec.gov/ix?doc=/news/press-release.htm",
+      ]) {
+        const asked = of(url, { edgarFiler: "vendor" }, filer);
+
+        expect(asked).toEqual(of(url, {}, filer));
+        expect(asked.category).not.toBe("vendor");
+        expect(isStoredCikFiling(url, filer)).toBe(false);
+      }
+    });
+
+    it("lets the answer count on the SEC's pages only: another host stays what the registry says", () => {
+      expect(
+        of(
+          "https://www.example.com/Archives/edgar/data/320193/000032019326000001/f.htm",
+          { edgarFiler: "vendor" },
+          filer,
+        ),
+      ).toMatchObject({ category: "unverified", entry: null, reviewed: false });
+    });
+
+    it("keeps the class of a record of the SEC, which is its database's whoever filed", () => {
+      expect(classifyRecord("sec")).toEqual({
+        category: "official",
+        publisher: "sec",
+        entry: null,
+        reviewed: true,
       });
-    }
-    // A vendor without a stored CIK: every filing is the filer's document, as before.
-    expect(
-      of("https://www.sec.gov/Archives/edgar/data/320193/000032019326000001/form8-k.htm"),
-    ).toMatchObject({ category: "unverified", downgraded: true, entry: "sec" });
+      expect(recordMatchOf("sec", filer)).toBe("strong");
+    });
+
+    describe("isStoredCikFiling", () => {
+      it.each(UNDER_STORED_CIK)("is true for %s", (url) => {
+        expect(isStoredCikFiling(url, filer)).toBe(true);
+      });
+
+      it.each([...UNDER_ANOTHER_CIK, "https://www.sec.gov/newsroom/press-releases/2026-1"])(
+        "is false for %s",
+        (url) => {
+          expect(isStoredCikFiling(url, filer)).toBe(false);
+        },
+      );
+
+      it("is false for a vendor with no stored CIK, a host that is not the SEC's and an address that cannot be read", () => {
+        expect(isStoredCikFiling(UNDER_STORED_CIK[0], TARGET)).toBe(false);
+        expect(
+          isStoredCikFiling(UNDER_STORED_CIK[0], { ...TARGET, identifiers: { secCik: "CIK 12" } }),
+        ).toBe(false);
+        expect(
+          isStoredCikFiling(
+            "https://www.example.com/Archives/edgar/data/320193/000032019326000001/f.htm",
+            filer,
+          ),
+        ).toBe(false);
+        expect(
+          isStoredCikFiling(
+            "https://www.sec.gov.example/Archives/edgar/data/320193/000032019326000001/f.htm",
+            filer,
+          ),
+        ).toBe(false);
+        expect(isStoredCikFiling("not a url", filer)).toBe(false);
+        expect(isStoredCikFiling("", filer)).toBe(false);
+      });
+
+      it("reads the host as the classifier does: without www. and a trailing dot, in any case", () => {
+        expect(
+          isStoredCikFiling(
+            "https://SEC.gov./Archives/edgar/data/320193/000032019326000001/f.htm",
+            filer,
+          ),
+        ).toBe(true);
+      });
+    });
   });
 
   it("a file on the portal's download host is unverified: a comment's attachment looks like an agency's file", () => {
@@ -507,6 +860,136 @@ describe("isStatementPage", () => {
   ])("takes %s for no such page", (url) => {
     expect(isStatementPage(url)).toBe(false);
   });
+
+  // Rule V, widened in sr-5. The golden set cited statements of vendors on paths that the first
+  // reading took for the vendor's own claims: a locale under /intl/, a section under /company/ and
+  // its like, and the run-together names that some sites give their policies. Every section in
+  // these tests is a word of STATEMENT_SECTIONS.
+  describe("rule V, widened (sr-5)", () => {
+    it.each([
+      "https://acme-analytics.example/intl/en-us/legal",
+      "https://acme-analytics.example/intl/en-gb/trust/security",
+      "https://acme-analytics.example/intl/de-de/privacy/subprocessors",
+      "https://acme-analytics.example/intl/pt_br/terms",
+      "https://acme-analytics.example/intl/fr/policies/acceptable-use",
+      "https://acme-analytics.example/INTL/EN-US/Legal/Privacy",
+    ])("takes %s for a statement page, behind intl and a locale", (url) => {
+      expect(isStatementPage(url)).toBe(true);
+    });
+
+    it.each([
+      "https://acme-analytics.example/company/trust",
+      "https://acme-analytics.example/company/legal/ai-use",
+      "https://acme-analytics.example/about/security",
+      "https://acme-analytics.example/about/privacy.html",
+      "https://acme-analytics.example/about-us/legal",
+      "https://acme-analytics.example/about-us/compliance/soc-2",
+      "https://acme-analytics.example/corporate/privacypolicy",
+      "https://acme-analytics.example/corporate/subprocessors",
+      "https://acme-analytics.example/en/company/gdpr",
+      "https://acme-analytics.example/intl/en-us/company/legal",
+      "https://acme-analytics.example/Company/Trust",
+      "https://acme-analytics.example/company/legal/?ref=footer#top",
+    ])("takes %s for a statement page, behind company, about, about-us or corporate", (url) => {
+      expect(isStatementPage(url)).toBe(true);
+    });
+
+    it.each([
+      "https://acme-analytics.example/privacypolicy",
+      "https://acme-analytics.example/privacypolicy/",
+      "https://acme-analytics.example/privacypolicy.html",
+      "https://acme-analytics.example/termsofservice",
+      "https://acme-analytics.example/termsofuse",
+      "https://acme-analytics.example/en-us/termsofuse",
+      "https://acme-analytics.example/website-terms/",
+    ])("takes %s for a statement page, by its run-together name", (url) => {
+      expect(isStatementPage(url)).toBe(true);
+    });
+
+    it("takes every section of STATEMENT_SECTIONS, behind every prefix, for a statement", () => {
+      const prefixes = [
+        "",
+        "/en-us",
+        "/intl/en-us",
+        "/company",
+        "/about",
+        "/about-us",
+        "/corporate",
+        "/en/company",
+        "/intl/en-us/company",
+      ];
+      const missed = STATEMENT_SECTIONS.flatMap((section) =>
+        prefixes.map((prefix) => `https://acme-analytics.example${prefix}/${section}/x`),
+      ).filter((url) => !isStatementPage(url));
+      expect(missed).toEqual([]);
+    });
+
+    it.each([
+      // The company part of the site alone, or followed by what is no statement section.
+      "https://acme-analytics.example/company",
+      "https://acme-analytics.example/about",
+      "https://acme-analytics.example/about-us/",
+      "https://acme-analytics.example/company/leadership",
+      "https://acme-analytics.example/about-us/careers",
+      "https://acme-analytics.example/corporate/sustainability",
+      // Only the first segment is read past, and only once: not a segment deeper, not two.
+      "https://acme-analytics.example/product/company/security",
+      "https://acme-analytics.example/company/about-us/legal",
+      // The four words are the whole segment: a segment that only starts with one is no parent.
+      "https://acme-analytics.example/company-info/legal",
+      "https://acme-analytics.example/aboutus/legal",
+      // intl is skipped only before a locale.
+      "https://acme-analytics.example/intl",
+      "https://acme-analytics.example/intl/en-us",
+      "https://acme-analytics.example/intl/privacy",
+      // A run-together name is a section only as the first segment.
+      "https://acme-analytics.example/products/website-terms",
+      // The newsroom veto holds behind the prefixes and the company part.
+      "https://acme-analytics.example/about/newsroom/acme-achieves-soc-2",
+      "https://acme-analytics.example/company/blog/our-soc-2-journey",
+      "https://acme-analytics.example/company/security/blog/how-we-protect-your-data",
+      "https://acme-analytics.example/about-us/legal/press/acme-achieves-iso-27001",
+      "https://acme-analytics.example/intl/en-us/trust/news/acme-achieves-soc-2",
+    ])("takes %s for no statement page", (url) => {
+      expect(isStatementPage(url)).toBe(false);
+    });
+
+    it.each([
+      "https://acme-analytics.example/intl/en-us/trust/reports",
+      "https://acme-analytics.example/company/legal",
+      "https://acme-analytics.example/about-us/security",
+      "https://acme-analytics.example/corporate/privacypolicy",
+      "https://acme-analytics.example/termsofuse",
+      "https://acme-analytics.example/website-terms",
+    ])("takes %s of the vendor's own site for its word and for a statement", (url) => {
+      expect(at(url, { onVendorSite: true })).toEqual({
+        category: "vendor",
+        publisher: "vendor",
+        entry: null,
+        reviewed: true,
+      });
+      expect(isStatementPage(url)).toBe(true);
+    });
+
+    it.each([
+      "https://acme-analytics.example/about/newsroom/acme-achieves-soc-2",
+      "https://acme-analytics.example/company/blog/our-soc-2-journey",
+    ])("takes %s of the vendor's own site for its word, but for no statement", (url) => {
+      expect(at(url, { onVendorSite: true })).toMatchObject({ category: "vendor" });
+      expect(isStatementPage(url)).toBe(false);
+    });
+
+    // The work is a few index reads and the veto's one pass over the segments, so a hostile path
+    // costs milliseconds (2 to 40 ms measured); work quadratic in the segments, 10^10 steps here,
+    // could not fit in a second.
+    it("reads a path of 100,000 segments in under a second", () => {
+      const path = `/intl/en-us/company${"/en-us".repeat(100_000)}`;
+      const address = `https://acme-analytics.example${path}`;
+      const startedAt = performance.now();
+      expect(isStatementPage(address)).toBe(false);
+      expect(performance.now() - startedAt).toBeLessThan(1000);
+    });
+  });
 });
 
 describe("emailOnDomain", () => {
@@ -568,40 +1051,8 @@ describe("the records of public databases", () => {
   });
 });
 
-describe("parity with sourceTiers.ts", () => {
-  it("classifies every regulator and court as official", () => {
-    expect(
-      REGULATOR_AND_COURT_DOMAINS.filter((host) => at(`https://${host}/x`).category !== "official"),
-    ).toEqual([]);
-  });
-
-  it("classifies every major publisher as trusted press, except krebsonsecurity.com", () => {
-    expect(
-      MAJOR_PUBLISHER_DOMAINS.filter(
-        (host) => at(`https://${host}/x`).category !== "trusted_press",
-      ),
-    ).toEqual(["krebsonsecurity.com"]);
-    expect(at("https://krebsonsecurity.com/x").category).toBe("unverified");
-  });
-
-  it("classifies every aggregator as unverified when there is no text and no canonical", () => {
-    expect(
-      AGGREGATOR_DOMAINS.filter((host) => at(`https://${host}/x`).category !== "unverified"),
-    ).toEqual([]);
-  });
-
-  it("puts each of these hosts in exactly one entry", () => {
-    const hosts = [
-      ...REGULATOR_AND_COURT_DOMAINS,
-      ...MAJOR_PUBLISHER_DOMAINS,
-      ...AGGREGATOR_DOMAINS,
-    ];
-    expect(
-      hosts.filter((host) => REGISTRY.filter((entry) => entry.hosts.includes(host)).length !== 1),
-    ).toEqual([]);
-  });
-
-  it("classifies as official every sample government host", () => {
+describe("government hosts (Q8)", () => {
+  it("classifies as official every sample government host, and the four that Q8 dropped as unknown", () => {
     const SAMPLES = [
       "www.x.gov",
       "x.mil",
@@ -618,21 +1069,32 @@ describe("parity with sourceTiers.ts", () => {
       "x.go.kr",
       "x.go.id",
       "x.go.th",
-      "x.go.ke",
       "x.go.tz",
-      "x.go.ug",
-      "x.govt.nz",
       "x.gov.br",
       "x.gv.at",
-      "x.gob.ar",
       "ec.europa.eu",
       "x.admin.ch",
       "x.bund.de",
       "x.gc.ca",
       "x.canada.ca",
+      "x.gov.sg",
+      "x.gov.my",
+      "x.gov.pk",
+      "x.gob.pk",
+      "x.gov.lk",
+      "x.gov.za",
+      "x.gov.pl",
+      "x.gov.hk",
+      "x.gob.gt",
+      "x.gov.de",
+      "x.gov.fi",
+      "x.gov.co",
     ];
-    // Every sample is one that today's rule takes for a government's, so none is left out below.
-    expect(SAMPLES.filter((host) => !GOVERNMENT_HOST.test(host))).toEqual([]);
+    // Hosts that no page of a registry or a holder backs: the old pattern made them official, and
+    // now they are unknown hosts (Q8).
+    const DROPPED = ["x.go.ke", "x.go.ug", "x.govt.nz", "x.gob.ar"];
     expect(SAMPLES.filter((host) => at(`https://${host}/x`).category !== "official")).toEqual([]);
+    expect(DROPPED.filter((host) => at(`https://${host}/x`).category !== "unverified")).toEqual([]);
+    expect(DROPPED.filter((host) => at(`https://${host}/x`).reviewed)).toEqual([]);
   });
 });

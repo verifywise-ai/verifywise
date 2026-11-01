@@ -462,6 +462,97 @@ describe("credibilityOf", () => {
     });
   });
 
+  describe("an EDGAR filing under the stored CIK (Q28)", () => {
+    const STORED = { ...ACME, identifiers: { secCik: "0000000001" } };
+    const FILING = "https://www.sec.gov/Archives/edgar/data/1/000000000126000001/acme-8k.htm";
+
+    it("is the vendor's statement when its header says the vendor filed it", () => {
+      const rated = rate("security_incidents", [source(FILING)], {
+        provenance: { [FILING]: { edgarFiler: "vendor" } },
+        target: STORED,
+      });
+
+      expect(rated).toMatchObject({ label: "high", basis: { rule: "vendor_statement" } });
+      expect(rated.basis.sources[0]).toMatchObject({
+        category: "vendor",
+        entry: "sec",
+        vendor_kind: "statement",
+        reading: "read",
+      });
+      expect(rated.basis.sources[0]).not.toHaveProperty("downgraded");
+    });
+
+    it("is the vendor's own claim outside an event category, which is low", () => {
+      expect(
+        rate("certifications", [source(FILING, { category: "certifications" })], {
+          provenance: { [FILING]: { edgarFiler: "vendor" } },
+          target: STORED,
+        }),
+      ).toMatchObject({ label: "low", basis: { rule: "self_claim" } });
+    });
+
+    it.each([
+      ["somebody else filed it", { edgarFiler: "other" as const }],
+      ["nobody knows who filed it", {}],
+    ])("is unverified and downgraded when %s", (_label, provenance) => {
+      const rated = rate("security_incidents", [source(FILING)], {
+        provenance: { [FILING]: provenance },
+        target: STORED,
+      });
+
+      expect(rated).toMatchObject({ label: "low", basis: { rule: "unverified" } });
+      expect(rated.basis.sources[0]).toMatchObject({
+        category: "unverified",
+        entry: "sec",
+        downgraded: true,
+      });
+    });
+
+    it("is unverified when the run has no provenance for it at all", () => {
+      expect(rate("security_incidents", [source(FILING)], { target: STORED })).toMatchObject({
+        label: "low",
+        basis: { rule: "unverified" },
+      });
+    });
+
+    it("is unverified for a vendor with no stored CIK, whatever the answer", () => {
+      expect(
+        rate("security_incidents", [source(FILING)], {
+          provenance: { [FILING]: { edgarFiler: "vendor" } },
+        }),
+      ).toMatchObject({ label: "low", basis: { rule: "unverified" } });
+    });
+
+    it("reads the filing at the address that answered, and keeps the cited address", () => {
+      const SHORT = "https://t.co/abc";
+      const rated = rate("security_incidents", [source(SHORT)], {
+        provenance: { [SHORT]: { answeredUrl: FILING, edgarFiler: "vendor" } },
+        target: STORED,
+      });
+
+      expect(rated).toMatchObject({ label: "high", basis: { rule: "vendor_statement" } });
+      expect(rated.basis.sources[0]).toMatchObject({
+        url: SHORT,
+        category: "vendor",
+        entry: "sec",
+      });
+    });
+
+    it("leaves a SEC record to its database: the answer does not change its class or its strength", () => {
+      for (const edgarFiler of [undefined, "other", "vendor"] as const) {
+        const provenance = { [FILING]: { record: "sec" as const, edgarFiler } };
+
+        expect(
+          rate("security_incidents", [source(FILING)], { provenance, target: STORED }),
+        ).toMatchObject({ label: "high", basis: { rule: "official_record", name_only: false } });
+        expect(rate("security_incidents", [source(FILING)], { provenance })).toMatchObject({
+          label: "low",
+          basis: { rule: "name_only", name_only: true },
+        });
+      }
+    });
+  });
+
   describe("the vendor's own pages outside an event category (rule V)", () => {
     it.each([
       "/press-releases/acme-achieves-iso-27001",
@@ -527,6 +618,46 @@ describe("credibilityOf", () => {
           ),
         ]),
       ).toMatchObject({ label: "low", basis: { rule: "unverified" } });
+    });
+  });
+
+  describe("the trusted press under the evidence ruling (Q9, sr-5)", () => {
+    const HACKER_NEWS = "https://thehackernews.com/2026/10/acme-analytics-breach.html";
+    const GUARDIAN_NEWS =
+      "https://www.theguardian.com/technology/2026/oct/01/acme-analytics-breach";
+
+    it("a story on thehackernews.com alone is low: no standards page was seen, so it is unverified", () => {
+      expect(rate("security_incidents", [source(HACKER_NEWS)])).toMatchObject({
+        label: "low",
+        basis: { rule: "unverified", name_only: false },
+      });
+    });
+
+    it("Reuters and thehackernews.com reporting the same breach is medium: the second is no trusted publisher", () => {
+      expect(rate("security_incidents", [source(REUTERS), source(HACKER_NEWS)])).toMatchObject({
+        label: "medium",
+        basis: { rule: "trusted_press_one", name_only: false },
+      });
+    });
+
+    it("Reuters and a news story of The Guardian reporting the same breach is high", () => {
+      expect(rate("security_incidents", [source(REUTERS), source(GUARDIAN_NEWS)])).toMatchObject({
+        label: "high",
+        basis: { rule: "trusted_press_two", name_only: false },
+      });
+    });
+
+    it.each([
+      "https://www.theguardian.com/commentisfree/2026/oct/01/the-case-for-acme",
+      "https://www.cnbc.com/advertorial/2022/02/17/understanding-the-value-of-branded-content.html",
+      "https://www.cnbc.com/guest-blog/2026/09/01/acme-analytics-and-data-protection.html",
+      "https://www.forbes.com/councils/forbestechcouncil/2026/09/01/acme-analytics-and-data-protection/",
+      "https://www.forbes.com/advisor/business/software/best-analytics-software/",
+      "https://www.forbes.com/vetted/best-laptops/",
+    ])("%s is low: it is not the publisher's own reporting", (url) => {
+      const rated = rate("security_incidents", [source(url)]);
+      expect(rated).toMatchObject({ label: "low", basis: { rule: "unverified" } });
+      expect(rated.basis.sources[0]).toMatchObject({ downgraded: true });
     });
   });
 

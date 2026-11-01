@@ -434,7 +434,7 @@ describe("planNewsReads", () => {
   const urls = (ledger: LedgerEntry<ResearchCategory>[], researchable = ALL) =>
     planNewsReads({ ledger, target, researchable }).map((read) => read.url);
 
-  it("news reads are ordered by registry category under the credibility rules", () => {
+  it("news reads are ordered by registry category: official, trusted press, the vendor, unverified", () => {
     const ledger = [
       entry("https://blog.example.net/acme"),
       entry("https://acme.com/blog/incident", { onVendorSite: true }),
@@ -442,17 +442,16 @@ describe("planNewsReads", () => {
       entry("https://ico.org.uk/action/acme"),
     ];
 
-    // Under the tiers the vendor's own page and the regulator are both the best.
+    // The vendor's own post is not the best: a regulator and a trusted publisher come before it.
     expect(urls(ledger)).toEqual([
-      "https://acme.com/blog/incident",
       "https://ico.org.uk/action/acme",
+      "https://www.reuters.com/technology/acme",
     ]);
-    // Under the credibility rules: official, trusted press, the vendor, unverified.
-    expect(
-      planNewsReads({ ledger, target, researchable: ALL, rules: "credibility" }).map(
-        (read) => read.url,
-      ),
-    ).toEqual(["https://ico.org.uk/action/acme", "https://www.reuters.com/technology/acme"]);
+    // With the regulator and the publisher out, the vendor comes before the unverified.
+    expect(urls(ledger.slice(0, 2))).toEqual([
+      "https://acme.com/blog/incident",
+      "https://blog.example.net/acme",
+    ]);
   });
 
   it("reads the best two results of each news category, the categories in their order", () => {
@@ -503,7 +502,7 @@ describe("planNewsReads", () => {
     expect(urls(ledger)).toEqual(["https://b.example/named", "https://c.example/named"]);
   });
 
-  it("prefers a regulator or a major publisher to a site nobody knows, and that to an aggregator", () => {
+  it("prefers a regulator or a major publisher to a site nobody knows or an aggregator", () => {
     const ledger = [
       entry("https://www.reddit.com/r/security/acme"),
       entry("https://blog.example/acme"),
@@ -515,9 +514,10 @@ describe("planNewsReads", () => {
       "https://www.sec.gov/acme-8k",
       "https://www.reuters.com/acme-breach",
     ]);
+    // An aggregator and a site nobody knows are both unverified: the order of the search decides.
     expect(urls(ledger.slice(0, 2))).toEqual([
-      "https://blog.example/acme",
       "https://www.reddit.com/r/security/acme",
+      "https://blog.example/acme",
     ]);
   });
 
@@ -541,14 +541,17 @@ describe("planNewsReads", () => {
     expect(urls(ledger)).toEqual(["https://www.reuters.com/old", "https://other.example/newer"]);
   });
 
-  it("ranks the vendor's own notice with the best", () => {
+  it("ranks the vendor's own notice after a trusted publisher and before a site nobody knows", () => {
     const ledger = [
       entry("https://blog.example/acme"),
-      entry("https://www.reuters.com/acme-breach"),
       entry("https://acme.com/security-notice", { onVendorSite: true }),
+      entry("https://www.reuters.com/acme-breach"),
     ];
 
-    expect(urls(ledger)[0]).toBe("https://acme.com/security-notice");
+    expect(urls(ledger)).toEqual([
+      "https://www.reuters.com/acme-breach",
+      "https://acme.com/security-notice",
+    ]);
   });
 
   it("prefers the more recent of two equal results, and puts an undated one last", () => {
@@ -1145,7 +1148,7 @@ describe("gatherSources", () => {
     });
     const matcher = createVendorMatcher(options.vendor ?? target);
     const session = createWebSession<ResearchCategory>({
-      engine: { search },
+      engine: { id: "replay", kinds: ["web", "news"], newsWindowMonths: null, search },
       readPage,
       domain: options.domain === undefined ? "acme.com" : options.domain,
       aliasDomains: options.aliasDomains,
@@ -1415,7 +1418,7 @@ describe("gatherSources", () => {
           "- UK Sanctions List of the FCDO (entities that have the name or the verified website of the vendor): no records",
         );
         expect(result.digest).toContain(
-          "- EU consolidated list of financial sanctions (entities that have the name of the vendor): the database could not be reached",
+          "- EU consolidated list of financial sanctions (entities that have the name or the verified website of the vendor): the database could not be reached",
         );
         expect(result.digest).toMatch(
           /OFAC SDN list: ACME LLC - https:\/\/sanctions\.example\/\?id=901 - 2031-04-19 \(record\)/,
@@ -1455,7 +1458,7 @@ describe("gatherSources", () => {
         );
       });
 
-      it("says what each database asked beside it answered, and not the NVD, which it reads through", async () => {
+      it("says what each database asked beside it answered, and not the NVD or the SEC, which it reads through", async () => {
         const nvd: RecordsOutcome = {
           source: "nvd",
           url: "https://db.example/nvd.json",
@@ -1486,25 +1489,21 @@ describe("gatherSources", () => {
           vrdb: jest.fn(async () => OUTCOME),
         });
 
+        // The SEC is read through by the database now that Q4 is open, so it is no lookup beside it.
         expect(result.lookups).toEqual([
           { id: "hibp", outcome: "not_researched" },
-          { id: "sec", outcome: "not_researched" },
           { id: "statuspage", outcome: "failed" },
         ]);
       });
 
-      it("leaves the SEC to the vendor risk database once Q4 is open", () => {
-        const ids = (gates?: Record<"Q4" | "Q6" | "Q7", boolean>) =>
-          coverageOfLookups([], gates).map((lookup) => lookup.id);
-
-        expect(ids()).toEqual(["hibp", "sec", "statuspage"]);
-        expect(ids({ Q4: true, Q6: false, Q7: false })).toEqual(["hibp", "statuspage"]);
+      it("names Have I Been Pwned and the status page: the databases the run asks beside the vendor risk database", () => {
+        expect(coverageOfLookups([]).map((lookup) => lookup.id)).toEqual(["hibp", "statuspage"]);
       });
 
       it("says the databases beside it are off without the lookup of records", async () => {
         const result = await withVrdb(setup(), { vrdb: jest.fn(async () => OUTCOME) });
 
-        expect(result.lookups.map((lookup) => lookup.outcome)).toEqual(["off", "off", "off"]);
+        expect(result.lookups.map((lookup) => lookup.outcome)).toEqual(["off", "off"]);
       });
 
       it("is none without the lookup of the vendor risk database", async () => {
@@ -1574,7 +1573,7 @@ describe("gatherSources", () => {
       ]);
     });
 
-    it("gives the lookup the vendor, the categories that are researched with their cutoffs, the day, the signal and the page reader of the run", async () => {
+    it("gives the lookup the vendor, the categories that are researched with their cutoffs, the day and the signal of the run, and no page reader", async () => {
       const environment = setup();
       const lookup = jest.fn(async () => []);
       const signal = new AbortController().signal;
@@ -1582,13 +1581,14 @@ describe("gatherSources", () => {
       await withRecords(environment, lookup, { signal });
 
       expect(lookup).toHaveBeenCalledTimes(1);
+      // The lookup reads no document that a record points to any more (the filings of the SEC are
+      // read through the vendor risk database), so it is given no reader.
       expect(lookup).toHaveBeenCalledWith({
         target,
         researchable: ALL,
         cutoffs: NOW_CUTOFFS,
         now: NOW,
         signal,
-        readPage: environment.readPage,
       });
     });
 

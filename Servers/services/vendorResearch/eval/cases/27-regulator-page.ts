@@ -88,7 +88,6 @@ export const REGULATOR_PAGE: EvalCase = {
           risk_severity: "Moderate",
           action_plan:
             "Ask the vendor how long it now keeps CVs, and to confirm that ours are deleted on time.",
-          confidence: "high",
           rationale: "The regulator's own page records the fine.",
           evidence: [
             {

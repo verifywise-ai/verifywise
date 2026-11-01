@@ -13,6 +13,7 @@ import { createTestVendor } from "../factories";
 import type {
   CredibilityBasis,
   EvidenceSource,
+  FindingConfidence,
   NewFinding,
 } from "../../domain.layer/interfaces/i.vendorResearch";
 import type { RunTrace } from "../../services/vendorResearch/trace";
@@ -58,7 +59,13 @@ const BACKFILLED = {
   rule: "backfill_official_page" as const,
 };
 
-const finding = (over: Partial<NewFinding> = {}): NewFinding => ({
+/**
+ * A finding as the runs before the credibility rule stored it: a confidence beside the finding. The
+ * insert writes no confidence any more (M3 Part B1), so `seed` sets it on the row afterwards.
+ */
+type LegacyFinding = NewFinding & { confidence?: FindingConfidence };
+
+const finding = (over: Partial<LegacyFinding> = {}): LegacyFinding => ({
   category: "legal_regulatory",
   risk_description: "Acme Analytics was fined by the ICO.",
   impact_description: "Our data may be handled against the law.",
@@ -72,8 +79,8 @@ const finding = (over: Partial<NewFinding> = {}): NewFinding => ({
   ...over,
 });
 
-/** An organization, its vendor, a run and the run's findings. */
-async function seed(name: string, findings: NewFinding[]) {
+/** An organization, its vendor, a run and the run's findings, with the confidence they had. */
+async function seed(name: string, findings: LegacyFinding[]) {
   const organizationId = await createTestOrganization(name);
   const vendorId = await createTestVendor(organizationId, {
     vendor_name: "Acme Analytics",
@@ -89,6 +96,20 @@ async function seed(name: string, findings: NewFinding[]) {
   const inserted = await sequelize.transaction((transaction) =>
     insertFindingsQuery({ organizationId, vendorId, runId: run.id, findings }, transaction),
   );
+  // The insert leaves the confidence empty: the findings of the runs before the rule had one.
+  for (const [index, row] of inserted.entries()) {
+    await sequelize.query(
+      `UPDATE vendor_risk_findings SET confidence = :confidence
+       WHERE organization_id = :organizationId AND id = :id`,
+      {
+        replacements: {
+          confidence: findings[index].confidence ?? null,
+          organizationId,
+          id: row.id,
+        },
+      },
+    );
+  }
   return { organizationId, vendorId, runId: run.id, ids: inserted.map((row) => row.id) };
 }
 
@@ -397,7 +418,7 @@ describe("the backfill script, end to end", () => {
     const seeded = await allRows();
     const out: string[] = [];
     const err: string[] = [];
-    const deps = { ...defaultDeps, flagOn: () => true };
+    const deps = defaultDeps;
 
     await expect(
       main(
@@ -458,10 +479,9 @@ describe("the backfill script, end to end", () => {
 
   it("a finding decided mid-run is skipped, and the next run labels it legacy", async () => {
     const a = await seed("Backfill A", [finding({ confidence: "medium" })]);
-    const flagOn = { ...defaultDeps, flagOn: () => true };
     // A person accepts the finding after the script read it as pending, before its write.
     const deciding = {
-      ...flagOn,
+      ...defaultDeps,
       writeBackfillQuery: async (input: Parameters<typeof writeBackfillQuery>[0]) => {
         await sequelize.query(
           `UPDATE vendor_risk_findings SET status = 'accepted' WHERE organization_id = :organizationId AND id = :id`,
@@ -497,7 +517,7 @@ describe("the backfill script, end to end", () => {
         ["--apply"],
         (text) => out.push(text),
         () => undefined,
-        flagOn,
+        defaultDeps,
       ),
     ).resolves.toBe(0);
 
@@ -514,7 +534,7 @@ describe("the backfill script, end to end", () => {
   it("--organization limits --apply and --undo to that organization, end to end", async () => {
     const a = await seed("Backfill A", [finding()]);
     const b = await seed("Backfill B", [finding()]);
-    const deps = { ...defaultDeps, flagOn: () => true };
+    const deps = defaultDeps;
     const out: string[] = [];
 
     await expect(

@@ -7,7 +7,6 @@ const DEFAULTS = {
   workerConcurrency: 5,
   headless: false,
   records: true,
-  vrdb: false,
 };
 
 describe("getVendorResearchConfig", () => {
@@ -119,18 +118,36 @@ describe("getVendorResearchConfig", () => {
     );
   });
 
-  describe("the vendor risk database", () => {
-    // Off until the golden set passes (spec D4.11): only a clear "true" turns it on.
-    it.each([["true"], ["TRUE"], [" True "]])("only true turns the VRDB on: %p", (value) => {
-      expect(getVendorResearchConfig({ VENDOR_RESEARCH_VRDB: value }).vrdb).toBe(true);
+  describe("the vendor risk database is always on", () => {
+    // It has no switch of its own: it is on whenever the records are (VENDOR_RESEARCH_RECORDS, above),
+    // and the variable of the earlier versions, VENDOR_RESEARCH_VRDB, is read by nothing: no flag is
+    // read (M3 Part B1).
+    it.each([
+      ["true"],
+      ["TRUE"],
+      [" True "],
+      ["false"],
+      ["1"],
+      ["yes"],
+      [""],
+      ["   "],
+      [undefined],
+    ])("ignores VENDOR_RESEARCH_VRDB, whatever it holds: %p", (value) => {
+      const config = getVendorResearchConfig({ VENDOR_RESEARCH_VRDB: value });
+
+      expect(config).toEqual(DEFAULTS);
+      expect(config).not.toHaveProperty("vrdb");
     });
 
-    it.each([["false"], ["1"], ["yes"], ["on"], [""], ["   "], [undefined]])(
-      "stays off for %p",
-      (value) => {
-        expect(getVendorResearchConfig({ VENDOR_RESEARCH_VRDB: value }).vrdb).toBe(false);
-      },
-    );
+    it("is on with no variable set, and off only when the records are", () => {
+      expect(getVendorResearchConfig({}).records).toBe(true);
+      expect(getVendorResearchConfig({ VENDOR_RESEARCH_VRDB: "false" }).records).toBe(true);
+      expect(getVendorResearchConfig({ VENDOR_RESEARCH_RECORDS: "false" }).records).toBe(false);
+      expect(
+        getVendorResearchConfig({ VENDOR_RESEARCH_RECORDS: "false", VENDOR_RESEARCH_VRDB: "true" })
+          .records,
+      ).toBe(false);
+    });
   });
 
   describe("worker concurrency", () => {
@@ -188,7 +205,6 @@ describe("reading process.env when called with no arguments", () => {
       workerConcurrency: 2,
       headless: true,
       records: true,
-      vrdb: false,
     });
   });
 

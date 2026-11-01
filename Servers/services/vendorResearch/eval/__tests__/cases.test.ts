@@ -22,7 +22,6 @@ import { type CaseRun, runEvalCase } from "../runCase";
 import type { EvalCase } from "../types";
 import { credibilityRationale } from "../../credibilityText";
 import { NAME_ONLY_LOOKUP_NOTE } from "../../records/ofac";
-import type { ResearchOutput } from "../../schema";
 import { nvdConnector } from "../../vrdb/connectors/nvd";
 
 /** The ideas of the roadmap are numbered 1 to 39. */
@@ -108,13 +107,15 @@ describe("the evaluation cases", () => {
     const breach = reportCase(breachRun);
     const clean = reportCase(await runEvalCase(byId("clean-record")));
 
-    expect(breach.score).toMatchObject({ kept: 1, precision: 1, recall: 1, overconfident: 0 });
+    expect(breach.score).toMatchObject({ kept: 1, precision: 1, recall: 1 });
+    expect(breach.score).not.toHaveProperty("overconfident");
     expect(clean.score).toMatchObject({ kept: 0, irrelevantSources: 0, citationsRejected: 0 });
     expect(breach.missed).toEqual([]);
     expect(clean.missed).toEqual([]);
     // A publisher and the vendor's own notice are two independent publishers, one of them credible:
-    // the finding keeps the confidence the model gave it.
-    expect(breachRun.kept.map((finding) => finding.confidence)).toEqual(["high"]);
+    // the sources support a high label. A finding has no confidence of its own (M3 Part B).
+    expect(breachRun.credibility.map((credibility) => credibility.label)).toEqual(["high"]);
+    expect(breachRun.kept[0]).not.toHaveProperty("confidence");
   });
 
   it("keep one finding for the event of the three-finding case: the most severe, with its trace", async () => {
@@ -136,7 +137,7 @@ describe("the evaluation cases", () => {
 
     expect(run.kept).toHaveLength(1);
     expect(run.kept[0].snippet_only).toBeUndefined();
-    expect(run.kept[0].confidence).toBe("medium");
+    expect(run.kept[0]).not.toHaveProperty("confidence");
     expect(run.trace.steps.filter((step) => step.by === "verification")).toEqual([
       expect.objectContaining({
         tool: "read",
@@ -151,13 +152,14 @@ describe("the evaluation cases", () => {
 
     const run = await runEvalCase(evalCase);
 
-    // The model said medium and two publishers back it; the page says otherwise. The case runs
-    // under the confidence rules, so the answer has the model's confidence.
-    expect(run.analysed?.ok && (run.analysed.output as ResearchOutput).findings[0].confidence).toBe(
-      "medium",
-    );
+    // Two publishers back the finding; the page says otherwise. The model is asked for no
+    // confidence, so its answer has none, the check gives the finding none, and the label is what
+    // the sources support: low, because the page contradicts the quote.
+    expect(run.analysed?.ok && run.analysed.output.findings[0]).not.toHaveProperty("confidence");
     expect(run.kept).toHaveLength(1);
-    expect(run.kept[0]).toMatchObject({ snippet_only: true, confidence: "low" });
+    expect(run.kept[0]).toMatchObject({ snippet_only: true });
+    expect(run.kept[0]).not.toHaveProperty("confidence");
+    expect(run.credibility[0]).toMatchObject({ label: "low", basis: { rule: "contradicted" } });
     expect(run.trace.steps.filter((step) => step.by === "verification")).toEqual([
       expect.objectContaining({
         tool: "read",
@@ -228,8 +230,8 @@ describe("the evaluation cases", () => {
     expect(run.found.searchesUsed).toBe(12);
     expect(run.found.pagesRead).toBe(6);
     expect(run.trace.modelCalls.map((call) => call.purpose)).toEqual(["hints", "loop", "analysis"]);
-    // Two publishers back the finding, neither of them credible by itself: medium, not high.
-    expect(run.kept.map((finding) => finding.confidence)).toEqual(["medium"]);
+    // Two publishers back the finding, neither of them known to the registry: low, not high.
+    expect(run.credibility.map((credibility) => credibility.label)).toEqual(["low"]);
   });
 
   it("find a vendor under the name the press uses: the one its home page gives, or the one a person wrote", async () => {
@@ -449,9 +451,9 @@ describe("the evaluation cases", () => {
     );
     expect(run.pack[1].content).toContain("Customers could not read or write objects");
     expect(run.pack[0].content).toContain("Scheduled maintenance: 1");
-    expect(run.kept.map((finding) => [finding.category, finding.confidence])).toEqual([
-      ["availability", "low"],
-    ]);
+    expect(
+      run.kept.map((finding, index) => [finding.category, run.credibility[index]?.label]),
+    ).toEqual([["availability", "high"]]);
     // A finding on a record is no finding on a snippet: nothing was read again to check it.
     expect(run.trace.steps.filter((step) => step.by === "verification")).toEqual([]);
     // The lookup is a step of the code with the address of the feed and the number of records, no
@@ -501,7 +503,11 @@ describe("the evaluation cases", () => {
     // The analysis is told, in the record itself, that the match is by name only.
     expect(run.pack[0].content).toContain("by name only");
     expect(
-      run.kept.map((finding) => [finding.category, finding.confidence, finding.likelihood]),
+      run.kept.map((finding, index) => [
+        finding.category,
+        run.credibility[index]?.label,
+        finding.likelihood,
+      ]),
     ).toEqual([["legal_regulatory", "low", "Possible"]]);
     // A finding on a record is no finding on a snippet: nothing was read again to check it.
     expect(run.trace.steps.filter((step) => step.by === "verification")).toEqual([]);
@@ -547,11 +553,15 @@ describe("the evaluation cases", () => {
       ["S1", "page", "financial_health"],
       ["S2", "page", "financial_health"],
     ]);
-    // Two publishers, neither credible by itself: medium. Both were read, so nothing is checked
+    // Two publishers, neither known to the registry: low. Both were read, so nothing is checked
     // again by reading.
     expect(
-      run.kept.map((finding) => [finding.category, finding.confidence, finding.likelihood]),
-    ).toEqual([["financial_health", "medium", "Possible"]]);
+      run.kept.map((finding, index) => [
+        finding.category,
+        run.credibility[index]?.label,
+        finding.likelihood,
+      ]),
+    ).toEqual([["financial_health", "low", "Possible"]]);
     expect(run.trace.steps.filter((step) => step.by === "verification")).toEqual([]);
 
     // Without the searches about the finances the run has nothing: no other search holds the news.
@@ -816,8 +826,9 @@ describe("the evaluation cases", () => {
       expect(run.pack.map((source) => source.url)).not.toContain(entry.url);
       expect(run.kept).toEqual([]);
       expect(coverageOf(run, "kev")).toMatchObject({ checked: true, outcome: "none", strong: 0 });
-      // The CVE records wait behind their gate (Q7): no run shows them.
-      expect(coverageOf(run, "cve")).toBeUndefined();
+      // The CVE records are covered now that their gate (Q7) is open: the rejected record is
+      // checked, and not offered.
+      expect(coverageOf(run, "cve")).toMatchObject({ checked: true, outcome: "none", strong: 0 });
 
       // A rejection the NVD answered keeps the entry out too: the CVE is rejected on every list.
       const byNvd = await runEvalCase({

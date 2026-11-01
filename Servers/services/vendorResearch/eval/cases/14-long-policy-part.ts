@@ -69,7 +69,6 @@ export const LONG_POLICY_PART: EvalCase = {
           likelihood: "Likely",
           risk_severity: "Major",
           action_plan: "Ask the vendor for an opt-out, or a contract term that forbids the use.",
-          confidence: "low",
           rationale: "The vendor's own privacy policy says so; no other source was read.",
           evidence: [
             {
@@ -97,7 +96,6 @@ export const LONG_POLICY_PART: EvalCase = {
     maxBadUrls: 0,
     maxDatedWebResults: 0,
     maxSnippetOnlyFindings: 0,
-    maxOverconfident: 0,
     maxMislabelled: 0,
     maxDuplicateClusters: 0,
     maxCitationsRejected: 0,

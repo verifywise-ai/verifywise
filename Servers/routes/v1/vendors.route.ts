@@ -1,13 +1,18 @@
 /**
- * The research routes of a vendor: the state of its research, the trace of a run and starting a run.
+ * The vendor routes under /api/v1: the create and the update of a vendor, and the research routes
+ * of a vendor (the state of its research, the trace of a run and starting a run).
  *
- * The vendor research agent came after ADR 0001, so its endpoints are versioned. This router holds
- * the research sub-routes only: vendor CRUD stays on the legacy /api/vendors (routes/vendor.route.ts),
- * because ADR 0001 section 5 forbids a v1 copy of a contract that did not change.
+ * The vendor research agent came after ADR 0001, so its endpoints are versioned. The create and the
+ * update take the other names and the identifiers of a vendor, which the frozen legacy contract
+ * never had (ADR 0001 sections 1, 2 and 5), so they are served here too, as thin adapters over the
+ * legacy controller. The code of the reads and the delete did not change: they stay on the legacy
+ * /api/vendors (routes/vendor.route.ts) only, because ADR 0001 section 5 forbids a v1 copy of a
+ * contract that did not change. Their responses carry the five nullable columns of the new fields.
  */
 import express from "express";
 const router = express.Router();
 
+import { createVendorV1, updateVendorByIdV1 } from "../../controllers/vendor.ctrl";
 import {
   getLatestVendorResearch,
   getVendorResearchRunTrace,
@@ -29,9 +34,14 @@ router.get(
   getVendorResearchRunTrace,
 );
 
-// POST requests
+// POST and PATCH requests
 // Starting research spends searches and model calls, so it needs the right to edit vendors and
 // their risks: the key of POST /vendorRisks and of createVendor, which already starts a run.
 router.post("/:id/research", authenticateJWT, authorize("vendor.edit"), startVendorResearchRun);
+// The create and the update take the other names and the identifiers, which the frozen legacy
+// contract never had (ADR 0001 sections 1, 2 and 5). Thin adapters over the legacy controller, with
+// vendor.edit as on the legacy routes.
+router.post("/", authenticateJWT, authorize("vendor.edit"), createVendorV1);
+router.patch("/:id", authenticateJWT, authorize("vendor.edit"), updateVendorByIdV1);
 
 export default router;

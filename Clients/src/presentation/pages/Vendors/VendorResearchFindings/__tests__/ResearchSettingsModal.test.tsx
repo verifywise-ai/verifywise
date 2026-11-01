@@ -1,7 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterAll } from "vitest";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders } from "../../../../../test/renderWithProviders";
+import { LANGS, resetAudit, setLanguage, tr } from "../../../../../test/i18nHelpers";
+import { translations } from "../../../../../i18n/translations";
 import { LLMKeysModel } from "../../../../../domain/models/Common/llmKeys/llmKeys.model";
 import { deferred, refusal } from "./fixtures";
 
@@ -49,6 +51,9 @@ const SCAN_OFF = "Off";
 const SCAN_WEEKLY = "Every week";
 const SCAN_BIWEEKLY = "Every 2 weeks";
 const SCAN_MONTHLY = "Every month";
+/** What the window says under the research key about the search that each kind of key gets. */
+const SEARCH_HELP =
+  "Anthropic keys search with Claude's own web search, billed by Anthropic at about $10 per 1,000 searches (about 20 to 30 a run). Other keys search the news of the last 3 months through the GDELT Project at no charge.";
 
 type SavedSettings = {
   researchKeyId: number | null;
@@ -109,6 +114,46 @@ describe("what the window shows", () => {
     expect(dialog).toHaveTextContent("Choose which LLM key runs the vendor research.");
     expect(dialog).toHaveTextContent("The research key makes many small calls");
     expect(dialog).toHaveTextContent("The analysis key writes the risks");
+  });
+
+  describe("the search that the research key gives", () => {
+    const follows = (a: HTMLElement, b: HTMLElement) =>
+      Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+
+    it("says which search each kind of key gets, and what it costs", async () => {
+      renderModal();
+      const dialog = await openWindow();
+
+      // The whole text is one paragraph, word for word.
+      expect(within(dialog).getByText(SEARCH_HELP)).toBeInTheDocument();
+      expect(SEARCH_HELP).toContain("$10 per 1,000 searches (about 20 to 30 a run)");
+      expect(SEARCH_HELP).toContain("last 3 months through the GDELT Project at no charge");
+    });
+
+    it("puts it under the research key and above the analysis key", async () => {
+      renderModal();
+      const dialog = await openWindow();
+      const { research, analysis, scan } = selectsOf(dialog);
+
+      const help = within(dialog).getByText(SEARCH_HELP);
+
+      expect(follows(research, help)).toBe(true);
+      expect(follows(help, analysis)).toBe(true);
+      expect(follows(help, scan)).toBe(true);
+      // The text of the scan is still its own, under the scan.
+      expect(
+        within(dialog).getByText(/^A scheduled scan researches every vendor again/),
+      ).toBeInTheDocument();
+    });
+
+    it("says the same whichever key is chosen: it describes the kinds of key, not the chosen one", async () => {
+      renderModal();
+      const dialog = await openWindow();
+
+      await choose(selectsOf(dialog).research, FAST);
+
+      expect(within(dialog).getByText(SEARCH_HELP)).toBeInTheDocument();
+    });
   });
 
   it("shows the keys that were chosen, by provider and model", async () => {
@@ -453,5 +498,34 @@ describe("closing", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
     expect(mocks.save).not.toHaveBeenCalled();
     expect(onNotify).not.toHaveBeenCalled();
+  });
+});
+
+describe("the search text in German, French and Spanish", () => {
+  afterAll(async () => {
+    await setLanguage("en");
+  });
+
+  it.each(LANGS)("is said in %s, in place of the English", async (lang) => {
+    resetAudit();
+    await setLanguage(lang);
+    renderModal();
+    const dialog = await screen.findByRole("dialog");
+    await within(dialog).findAllByRole("combobox");
+
+    expect(within(dialog).getByText(tr(lang, SEARCH_HELP))).toBeInTheDocument();
+    expect(within(dialog).queryByText(SEARCH_HELP)).not.toBeInTheDocument();
+  });
+
+  // What a person reads the cost from has to survive a translation: the names of the two searches,
+  // and the figures (the thousands may be written with a point, a space or nothing).
+  it.each(LANGS)("has a translation in %s that keeps the names and the figures", (lang) => {
+    const text = translations[lang][SEARCH_HELP];
+
+    expect(text).toEqual(expect.any(String));
+    expect(text).not.toBe(SEARCH_HELP);
+    for (const name of ["Anthropic", "Claude", "GDELT Project"]) expect(text).toContain(name);
+    for (const figure of ["10", "20", "30", "3"]) expect(text).toContain(figure);
+    expect(text).toMatch(/1[.,\s]?000/);
   });
 });

@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
 import { renderWithProviders } from "../../../../../test/renderWithProviders";
+import { text as textColor } from "../../../../themes/palette";
 import {
   acceptedRisk,
   ATTRIBUTIONS,
@@ -361,7 +362,7 @@ describe("opening and closing the section", () => {
 });
 
 describe("a finding", () => {
-  it("shows its category, vendor, texts, level, severity, likelihood and confidence", async () => {
+  it("shows its category, vendor, texts, level, severity, likelihood and credibility", async () => {
     renderSection();
     await screen.findByText(FIRST);
 
@@ -373,9 +374,11 @@ describe("a finding", () => {
     expect(row.getByText("Major")).toBeInTheDocument();
     expect(row.getByText("Likely")).toBeInTheDocument();
     expect(row.getByText("Medium")).toBeInTheDocument();
-    for (const caption of ["Risk level", "Severity", "Likelihood", "Confidence"]) {
+    for (const caption of ["Risk level", "Severity", "Likelihood", "Credibility"]) {
       expect(row.getByText(caption)).toBeInTheDocument();
     }
+    // A finding has no confidence: its label says how well the sources establish it.
+    expect(row.queryByText("Confidence")).not.toBeInTheDocument();
   });
 
   it("lists each source by hostname, with a link, its date and its quote", async () => {
@@ -532,7 +535,7 @@ describe("a finding", () => {
     const follows = (a: HTMLElement, b: HTMLElement) =>
       Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
     // The ratings come first, then the reason for them, then where the finding comes from.
-    expect(follows(first.getByText("Confidence"), caption)).toBe(true);
+    expect(follows(first.getByText("Credibility"), caption)).toBe(true);
     expect(follows(caption, why)).toBe(true);
     expect(follows(why, first.getByText("Sources"))).toBe(true);
     // Each row has its own.
@@ -674,9 +677,12 @@ describe("the credibility of a finding", () => {
     expect(row.queryByText("Medium")).not.toBeInTheDocument();
     // The screen words the line itself, in the person's language: the server's line is not shown.
     expect(row.queryByText("The server's own English line.")).not.toBeInTheDocument();
-    // A finding of a run without the vendor risk database keeps its confidence.
-    expect(within(rowOf(SECOND)).getByText("Confidence")).toBeInTheDocument();
-    expect(within(rowOf(SECOND)).queryByText("Credibility")).not.toBeInTheDocument();
+    // Every finding has its label, and none a confidence.
+    const second = within(rowOf(SECOND));
+    expect(second.getByText("Credibility")).toBeInTheDocument();
+    expect(second.getByText("High")).toBeInTheDocument();
+    expect(second.queryByText("Confidence")).not.toBeInTheDocument();
+    expect(screen.queryByText("Confidence")).not.toBeInTheDocument();
   });
 
   it("says when the copy of the list that a finding cites was out of date", async () => {
@@ -895,26 +901,28 @@ describe("the credibility of a finding", () => {
     expect(row.queryByText("revoked")).not.toBeInTheDocument();
   });
 
-  it("a finding without credibility keeps the confidence chip", async () => {
+  it("a finding without a label shows no credibility, and no confidence in its place", async () => {
+    // The API sends a label for every finding; a list cached before the field existed has none.
     mocks.list.mockResolvedValue({
-      rows: [finding(), secondFinding({ credibility: null, credibility_basis: null })],
+      rows: [
+        finding({ credibility: null, credibility_basis: null }),
+        secondFinding({ credibility: undefined, credibility_basis: undefined }),
+      ],
       total: 2,
     });
     renderSection();
     await screen.findByText(FIRST);
 
-    for (const [text, confidence] of [
-      [FIRST, "Medium"],
-      [SECOND, "High"],
-    ]) {
+    for (const text of [FIRST, SECOND]) {
       const row = within(rowOf(text));
-      expect(row.getByText("Confidence")).toBeInTheDocument();
-      expect(row.getByText(confidence)).toBeInTheDocument();
       expect(row.queryByText("Credibility")).not.toBeInTheDocument();
+      expect(row.queryByText("Confidence")).not.toBeInTheDocument();
+      // The ratings of the register are still there.
+      expect(row.getByText("Likelihood")).toBeInTheDocument();
     }
   });
 
-  it("keeps the confidence chip for a label it does not know", async () => {
+  it("shows no credibility for a label it does not know, and no confidence in its place", async () => {
     mocks.list.mockResolvedValue({
       rows: [credibleFinding({ credibility: "certain" as never })],
       total: 1,
@@ -923,8 +931,8 @@ describe("the credibility of a finding", () => {
     await screen.findByText(FIRST);
 
     const row = within(rowOf(FIRST));
-    expect(row.getByText("Confidence")).toBeInTheDocument();
     expect(row.queryByText("Credibility")).not.toBeInTheDocument();
+    expect(row.queryByText("Confidence")).not.toBeInTheDocument();
     expect(row.queryByText(KEV_LINE)).not.toBeInTheDocument();
   });
 
@@ -953,13 +961,19 @@ describe("the credibility of a finding", () => {
 });
 
 describe("a label the backfill wrote (M3)", () => {
-  it("a finding rated with the earlier confidence rule shows its label and the note, and no source badge", async () => {
+  /** What the server says of a label that is the earlier confidence of a finding. */
+  const EARLIER_LINE =
+    "Rated before the source rules; this is the earlier confidence level until the label is recomputed.";
+  const follows = (a: HTMLElement, b: HTMLElement) =>
+    Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+
+  it("a finding rated by its earlier confidence shows its label, the server's line and a muted note, and no source badge", async () => {
     mocks.list.mockResolvedValue({
       rows: [
         finding({
-          status: "accepted",
           credibility: "medium",
           credibility_basis: { rule: "legacy_confidence" },
+          credibility_rationale: EARLIER_LINE,
         }),
       ],
       total: 1,
@@ -968,14 +982,49 @@ describe("a label the backfill wrote (M3)", () => {
     await screen.findByText(FIRST);
 
     const row = within(rowOf(FIRST));
-    expect(row.getByText("Credibility")).toBeInTheDocument();
-    expect(row.getByText("Medium")).toBeInTheDocument();
-    expect(row.getByText("Rated with the earlier confidence rule.")).toBeInTheDocument();
+    const caption = row.getByText("Credibility");
+    const chip = row.getByText("Medium");
+    const note = row.getByText("Earlier rating");
+    const line = row.getByText(EARLIER_LINE);
+    // The label, then the note that it is an earlier rating, then the line under the ratings.
+    expect(follows(caption, chip)).toBe(true);
+    expect(follows(chip, note)).toBe(true);
+    expect(follows(note, line)).toBe(true);
+    expect(follows(line, row.getByText("Why this rating"))).toBe(true);
+    // The note is quiet: the colour of secondary text, and no icon of its own.
+    expect(note).toHaveStyle({ color: textColor.tertiary });
+    expect(note.querySelector("svg")).toBeNull();
+    // It is the label that was shown, and no confidence.
     expect(row.queryByText("Confidence")).not.toBeInTheDocument();
     // Its sources are those of a run before the rule: none has a category.
     for (const badge of ["Official", "Trusted press", "Vendor", "Unverified"]) {
       expect(row.queryByText(badge)).not.toBeInTheDocument();
     }
+  });
+
+  it.each(["low", "medium", "high"] as const)(
+    "a finding whose earlier confidence was %s shows that label",
+    async (level) => {
+      mocks.list.mockResolvedValue({
+        rows: [finding({ credibility: level, credibility_basis: { rule: "legacy_confidence" } })],
+        total: 1,
+      });
+      renderSection();
+      await screen.findByText(FIRST);
+
+      const row = within(rowOf(FIRST));
+      expect(row.getByText(level[0].toUpperCase() + level.slice(1))).toBeInTheDocument();
+      expect(row.getByText("Earlier rating")).toBeInTheDocument();
+    },
+  );
+
+  it("a finding with a label a rule decided has no note of an earlier rating", async () => {
+    mocks.list.mockResolvedValue({ rows: [credibleFinding(), secondFinding()], total: 2 });
+    renderSection();
+    await screen.findByText(FIRST);
+
+    expect(screen.queryByText("Earlier rating")).not.toBeInTheDocument();
+    expect(screen.queryByText(EARLIER_LINE)).not.toBeInTheDocument();
   });
 
   it("a finding the backfill rated again shows the rule's line, then the note", async () => {
@@ -1000,6 +1049,8 @@ describe("a label the backfill wrote (M3)", () => {
         "High: CISA Known Exploited Vulnerabilities lists it (CVE-2026-28001), as of 7 Oct 2026. Rated again with the current rule.",
       ),
     ).toBeInTheDocument();
+    // It was rated by a rule, only again: it is not an earlier rating.
+    expect(within(rowOf(FIRST)).queryByText("Earlier rating")).not.toBeInTheDocument();
   });
 
   it("a finding the backfill rated again shows each source's badge from its basis", async () => {

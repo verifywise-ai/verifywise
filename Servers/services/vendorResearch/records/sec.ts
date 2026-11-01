@@ -11,6 +11,9 @@
  * domain: a registrant of the same name that is another company would give its filings to the
  * wrong vendor, and a vendor that is not found gets no record, which is no harm. A CIK a person
  * stored on the vendor names its registrant, and then no name is tried.
+ *
+ * The vendor risk database reads the SEC through (vrdb/connectors/sec.ts), which takes everything
+ * from here. The run no longer asks the SEC itself (M3 Part B), now that Q4 is open.
  */
 import { shortName } from "../identity";
 import type { ResearchTarget } from "../target";

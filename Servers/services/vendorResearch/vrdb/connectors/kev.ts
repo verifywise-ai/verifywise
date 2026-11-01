@@ -16,7 +16,10 @@ import { type Connector, bodyText } from "./types";
 
 export const KEV_URL =
   "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json";
-/** The file is 1.8 MB today and grows by a tenth a year. */
+/**
+ * The file is 1.8 MB today (1,766 entries of about 1 KB each) and gains about a fifth of its
+ * entries a year; the limit holds some 8,000 entries.
+ */
 export const KEV_MAX_BYTES = 8 * 1024 * 1024;
 const KEV_TYPES = ["application/json"];
 const KEV_TOTAL_TIMEOUT_MS = 60_000;
@@ -38,17 +41,22 @@ const DAY = /^\d{4}-\d{2}-\d{2}$/;
 
 const textOf = (value: unknown): string => (typeof value === "string" ? value : "");
 
+/** A free-text field of an entry, without the white space the catalog pads some of them with. */
+const fieldOf = (value: unknown): string => textOf(value).trim();
+
 /**
  * The entries of the catalog that can be used, and how many of its entries could not be: one
- * whose id is no CVE id, whose date is no day, or that names no vendor. Null when the body is not
- * the catalog (no list of vulnerabilities). Fields it does not know are left out.
+ * whose id is no CVE id, whose date is no day, or that names no vendor, and one more when the
+ * catalog's own count is not the length of its list (the file is not whole). Null when the body is
+ * not the catalog (no list of vulnerabilities). Fields it does not know are left out.
  */
 function readCatalog(body: unknown): { entries: KevEntry[]; errors: number } | null {
   if (typeof body !== "object" || body === null) return null;
   const list = (body as { vulnerabilities?: unknown }).vulnerabilities;
   if (!Array.isArray(list)) return null;
   const entries: KevEntry[] = [];
-  let errors = 0;
+  const declared = (body as { count?: unknown }).count;
+  let errors = typeof declared === "number" && declared !== list.length ? 1 : 0;
   for (const item of list) {
     if (typeof item !== "object" || item === null) {
       errors += 1;
@@ -57,7 +65,7 @@ function readCatalog(body: unknown): { entries: KevEntry[]; errors: number } | n
     const fields = item as Record<string, unknown>;
     const cveID = textOf(fields.cveID);
     const dateAdded = textOf(fields.dateAdded);
-    const vendorProject = textOf(fields.vendorProject).trim();
+    const vendorProject = fieldOf(fields.vendorProject);
     if (!CVE_ID.test(cveID) || !DAY.test(dateAdded) || vendorProject === "") {
       errors += 1;
       continue;
@@ -65,13 +73,13 @@ function readCatalog(body: unknown): { entries: KevEntry[]; errors: number } | n
     entries.push({
       cveID,
       vendorProject,
-      product: textOf(fields.product),
-      vulnerabilityName: textOf(fields.vulnerabilityName),
+      product: fieldOf(fields.product),
+      vulnerabilityName: fieldOf(fields.vulnerabilityName),
       dateAdded,
-      shortDescription: textOf(fields.shortDescription),
-      requiredAction: textOf(fields.requiredAction),
-      dueDate: textOf(fields.dueDate),
-      knownRansomwareCampaignUse: textOf(fields.knownRansomwareCampaignUse),
+      shortDescription: fieldOf(fields.shortDescription),
+      requiredAction: fieldOf(fields.requiredAction),
+      dueDate: fieldOf(fields.dueDate),
+      knownRansomwareCampaignUse: fieldOf(fields.knownRansomwareCampaignUse),
     });
   }
   return { entries, errors };
@@ -128,7 +136,11 @@ function recordOf(entry: KevEntry): ParsedRecord {
 
 export const kevConnector: Connector = {
   id: "kev",
-  version: 1,
+  // 2: the free-text fields come out trimmed (the real catalog pads some products and names, which
+  // reached the identifiers and the titles), and a catalog whose count is not the length of its
+  // list is one error. Both change what `parse` gives from the same file, and a new version makes
+  // the sync parse a downloaded file again though its bytes did not change (connectors/types.ts).
+  version: 2,
   async download(fetch, validators) {
     const response = await fetch(KEV_URL, validators, {
       maxBytes: KEV_MAX_BYTES,

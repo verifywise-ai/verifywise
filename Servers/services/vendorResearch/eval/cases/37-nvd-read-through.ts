@@ -106,7 +106,6 @@ export const NVD_READ_THROUGH: EvalCase = {
           risk_severity: "Major",
           action_plan:
             "Ask the vendor whether our switches run a fixed FernOS, and keep their management API off the internet until they do.",
-          confidence: "medium",
           rationale:
             "The NVD lists the flaw in the software our switches run; nothing says it is exploited.",
           evidence: [

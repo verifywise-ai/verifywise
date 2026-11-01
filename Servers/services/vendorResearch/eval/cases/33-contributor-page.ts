@@ -65,7 +65,6 @@ export const CONTRIBUTOR_PAGE: EvalCase = {
           likelihood: "Possible",
           risk_severity: "Major",
           action_plan: "Ask the vendor whether a server was left open and whose profiles it held.",
-          confidence: "medium",
           rationale: "One article reports it, and the vendor did not answer.",
           evidence: [
             { source_id: "S1", quote: "left a storage server open for two weeks in September" },

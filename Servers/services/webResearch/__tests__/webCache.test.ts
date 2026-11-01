@@ -4,16 +4,26 @@ import {
   CACHE_TTL_SECONDS,
   CacheKind,
   CacheOutcome,
+  type GdeltArticle,
   MAX_ENTRY_BYTES,
   type RedisLike,
   type RobotsAnswer,
+  cacheGdeltIndex,
   cacheRobots,
   createRedisWebCache,
+  readCachedGdeltIndex,
   readCachedRobots,
   withPageCache,
   withSearchCache,
 } from "../webCache";
-import { MAX_RESULTS, type SearchEngine, type SearchResult } from "../webSearch";
+import { SearchUnavailableError, withFallback } from "../providerSearch";
+import {
+  MAX_RESULTS,
+  type SearchEngine,
+  type SearchEngineId,
+  type SearchKind,
+  type SearchResult,
+} from "../webSearch";
 import { memoryCache, settle } from "./helpers/memoryCache";
 
 /** A Redis that keeps its data in a map and remembers the commands it was given. */
@@ -67,6 +77,26 @@ const RESULTS: SearchResult[] = [
   },
 ];
 
+const GDELT_URL =
+  "https://api.gdeltproject.org/api/v2/doc/doc?query=%22Acme%22%20AND%20breach&mode=artlist&format=json&maxrecords=250";
+
+const ARTICLES: GdeltArticle[] = [
+  {
+    url: "https://news.example.com/acme-confirms-breach",
+    title: "Acme confirms a breach of its support system",
+    publishedAt: "2026-10-25T10:00:00.000Z",
+    domain: "news.example.com",
+    language: "English",
+  },
+  {
+    url: "https://nachrichten.example.de/acme-datenleck",
+    title: "Acme meldet ein Datenleck",
+    publishedAt: null,
+    domain: "",
+    language: "German",
+  },
+];
+
 describe("createRedisWebCache", () => {
   it("answers what was stored, and counts a hit", async () => {
     const { redis } = fakeRedis();
@@ -102,6 +132,16 @@ describe("createRedisWebCache", () => {
     expect(sets[0].key).not.toBe(sets[1].key);
   });
 
+  it("keeps the request address of a GDELT index out of Redis too, under the kind gdelt", async () => {
+    const { redis, sets } = fakeRedis();
+    const cache = createRedisWebCache(() => redis);
+
+    await cache.set("gdelt", GDELT_URL, "[]");
+
+    expect(sets[0].key).toMatch(/^vr:web:v1:gdelt:[0-9a-f]{64}$/);
+    expect(sets[0].key).not.toContain("gdeltproject");
+  });
+
   it("names no organization in a key: what it holds is public and shared by all of them", async () => {
     const { redis, sets } = fakeRedis();
     const cache = createRedisWebCache(() => redis);
@@ -115,6 +155,7 @@ describe("createRedisWebCache", () => {
     ["robots", 86_400],
     ["page", 900],
     ["search", 600],
+    ["gdelt", 3_600],
   ] as const)("lets a %s entry live for %i seconds", async (kind, seconds) => {
     const { redis, sets } = fakeRedis();
     const cache = createRedisWebCache(() => redis);
@@ -134,6 +175,18 @@ describe("createRedisWebCache", () => {
 
     expect(sets).toHaveLength(1);
     expect(sets[0].value).toHaveLength(MAX_ENTRY_BYTES.search);
+  });
+
+  it("lets a GDELT index take 262,144 bytes, four times what a search answer may take", async () => {
+    const { redis, sets } = fakeRedis();
+    const cache = createRedisWebCache(() => redis);
+
+    await cache.set("gdelt", "too big", "x".repeat(MAX_ENTRY_BYTES.gdelt + 1));
+    await cache.set("gdelt", "just fits", "x".repeat(MAX_ENTRY_BYTES.gdelt));
+
+    expect(MAX_ENTRY_BYTES.gdelt).toBe(262_144);
+    expect(sets).toHaveLength(1);
+    expect(sets[0].value).toHaveLength(MAX_ENTRY_BYTES.gdelt);
   });
 
   it("measures a value in bytes, not in characters", async () => {
@@ -270,13 +323,71 @@ describe("createRedisWebCache", () => {
 });
 
 describe("withSearchCache", () => {
-  function engineAnswering(results: SearchResult[] | Error) {
+  function engineAnswering(results: SearchResult[] | Error, id: SearchEngineId = "replay") {
     const search = jest.fn(async (): Promise<SearchResult[]> => {
       if (results instanceof Error) throw results;
       return results;
     });
-    return { engine: { search } as SearchEngine, search };
+    const engine: SearchEngine = {
+      id,
+      kinds: ["web", "news"],
+      newsWindowMonths: null,
+      search,
+    };
+    return { engine, search };
   }
+
+  /** The key of an answer that is public: the engine, the kind of search and the words. */
+  const publicKey = (id: SearchEngineId, kind: SearchKind, words: string) =>
+    `${id}\n${kind}\n${words}`;
+  /** The key of an answer bought with the key of an organization. */
+  const boughtKey = (id: SearchEngineId, organizationId: number, kind: SearchKind, words: string) =>
+    `${id}\norg:${organizationId}\n${kind}\n${words}`;
+
+  it("reports the id, the kinds and the news window of the engine it wraps", () => {
+    const { cache } = memoryCache();
+    const engine: SearchEngine = {
+      id: "gdelt",
+      kinds: ["news"],
+      newsWindowMonths: 3,
+      search: async () => [],
+    };
+
+    const cached = withSearchCache(engine, cache);
+
+    expect(cached.id).toBe("gdelt");
+    expect(cached.kinds).toEqual(["news"]);
+    expect(cached.newsWindowMonths).toBe(3);
+  });
+
+  it("reports them as the engine reports them now: a wrapper that falls back changes its kinds", () => {
+    const { cache } = memoryCache();
+    let live: Pick<SearchEngine, "id" | "kinds" | "newsWindowMonths"> = {
+      id: "anthropic",
+      kinds: ["web", "news"],
+      newsWindowMonths: null,
+    };
+    const engine: SearchEngine = {
+      get id() {
+        return live.id;
+      },
+      get kinds() {
+        return live.kinds;
+      },
+      get newsWindowMonths() {
+        return live.newsWindowMonths;
+      },
+      search: async () => [],
+    };
+    const cached = withSearchCache(engine, cache);
+    expect(cached.kinds).toEqual(["web", "news"]);
+
+    live = { id: "gdelt", kinds: ["news"], newsWindowMonths: 3 };
+
+    expect(cached.id).toBe("gdelt");
+    expect(cached.kinds).toEqual(["news"]);
+    expect(cached.newsWindowMonths).toBe(3);
+  });
 
   it("asks the engine once and answers the same query from the cache the second time", async () => {
     const { cache } = memoryCache();
@@ -371,7 +482,7 @@ describe("withSearchCache", () => {
     ],
   ])("asks the engine again for an entry that holds %s", async (_name, entry) => {
     const { cache, seed, store } = memoryCache();
-    seed("search", "news\nacme data breach", entry);
+    seed("search", publicKey("replay", "news", "acme data breach"), entry);
     const { engine, search } = engineAnswering(RESULTS);
 
     const answer = await withSearchCache(engine, cache).search("Acme data breach", "news");
@@ -380,13 +491,15 @@ describe("withSearchCache", () => {
     expect(answer).toEqual(RESULTS);
     expect(search).toHaveBeenCalledTimes(1);
     // The bad entry is replaced by the answer.
-    expect(JSON.parse(store.get("search\nnews\nacme data breach") as string)).toEqual(RESULTS);
+    expect(
+      JSON.parse(store.get(`search\n${publicKey("replay", "news", "acme data breach")}`) as string),
+    ).toEqual(RESULTS);
   });
 
   it("keeps a list as long as the engine can answer", async () => {
     const { cache, seed } = memoryCache();
     const full = Array(MAX_RESULTS).fill(RESULTS[0]);
-    seed("search", "web\nacme", JSON.stringify(full));
+    seed("search", publicKey("replay", "web", "acme"), JSON.stringify(full));
     const { engine, search } = engineAnswering([]);
 
     expect(await withSearchCache(engine, cache).search("Acme", "web")).toEqual(full);
@@ -425,6 +538,270 @@ describe("withSearchCache", () => {
 
     await expect(withSearchCache(engine, broken).search("Acme", "web")).resolves.toEqual(RESULTS);
     await settle();
+  });
+
+  describe("whose answer it is", () => {
+    const OTHER_RESULTS: SearchResult[] = [
+      {
+        title: "Acme named in a roundup",
+        url: "https://other.example.org/roundup",
+        snippet: "",
+        publishedAt: null,
+        source: null,
+      },
+    ];
+    const QUERY = "Acme data breach";
+    const WORDS = "acme data breach";
+
+    it("puts the engine in the key, so that the answers of two engines never mix", async () => {
+      const { cache, writes } = memoryCache();
+      const gdelt = engineAnswering(RESULTS, "gdelt");
+      const replay = engineAnswering(OTHER_RESULTS, "replay");
+
+      await withSearchCache(gdelt.engine, cache).search(QUERY, "news");
+      await settle();
+      const answer = await withSearchCache(replay.engine, cache).search(QUERY, "news");
+      await settle();
+
+      expect(answer).toEqual(OTHER_RESULTS);
+      expect(replay.search).toHaveBeenCalledTimes(1);
+      expect(writes.map((write) => write.key)).toEqual([
+        publicKey("gdelt", "news", WORDS),
+        publicKey("replay", "news", WORDS),
+      ]);
+    });
+
+    it("lets the engines of one id share an answer, as the runs of a process do", async () => {
+      const { cache } = memoryCache();
+      const earlier = engineAnswering(RESULTS, "gdelt");
+      const later = engineAnswering(OTHER_RESULTS, "gdelt");
+
+      await withSearchCache(earlier.engine, cache).search(QUERY, "news");
+      await settle();
+      const answer = await withSearchCache(later.engine, cache).search(QUERY, "news");
+
+      expect(answer).toEqual(RESULTS);
+      expect(later.search).not.toHaveBeenCalled();
+    });
+
+    it("keeps the answer of a search bought with the key of an organization under that organization", async () => {
+      const { cache, writes } = memoryCache();
+      const { engine } = engineAnswering(RESULTS, "anthropic");
+
+      await withSearchCache(engine, cache, { organizationId: 7 }).search(QUERY, "news");
+      await settle();
+
+      expect(writes.map((write) => write.key)).toEqual([boughtKey("anthropic", 7, "news", WORDS)]);
+    });
+
+    it("serves that answer to the same organization again, and to no other", async () => {
+      const { cache } = memoryCache();
+      const bought = engineAnswering(RESULTS, "anthropic");
+      await withSearchCache(bought.engine, cache, { organizationId: 7 }).search(QUERY, "news");
+      await settle();
+
+      const again = engineAnswering([], "anthropic");
+      const sameOrganization = await withSearchCache(again.engine, cache, {
+        organizationId: 7,
+      }).search(QUERY, "news");
+      const another = engineAnswering(OTHER_RESULTS, "anthropic");
+      const otherOrganization = await withSearchCache(another.engine, cache, {
+        organizationId: 8,
+      }).search(QUERY, "news");
+
+      expect(sameOrganization).toEqual(RESULTS);
+      expect(again.search).not.toHaveBeenCalled();
+      // The other organization did not pay for it: its own key is asked.
+      expect(otherOrganization).toEqual(OTHER_RESULTS);
+      expect(another.search).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not serve the answer of an organization to a search that has no organization", async () => {
+      const { cache } = memoryCache();
+      const bought = engineAnswering(RESULTS, "anthropic");
+      await withSearchCache(bought.engine, cache, { organizationId: 7 }).search(QUERY, "news");
+      await settle();
+      const unscoped = engineAnswering(OTHER_RESULTS, "anthropic");
+
+      const answer = await withSearchCache(unscoped.engine, cache).search(QUERY, "news");
+
+      expect(answer).toEqual(OTHER_RESULTS);
+      expect(unscoped.search).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not serve it to the public engine that has the same words either", async () => {
+      const { cache } = memoryCache();
+      const bought = engineAnswering(RESULTS, "anthropic");
+      await withSearchCache(bought.engine, cache, { organizationId: 7 }).search(QUERY, "news");
+      await settle();
+      const gdelt = engineAnswering(OTHER_RESULTS, "gdelt");
+
+      const answer = await withSearchCache(gdelt.engine, cache, { organizationId: 7 }).search(
+        QUERY,
+        "news",
+      );
+
+      expect(answer).toEqual(OTHER_RESULTS);
+    });
+
+    it("scopes the search of OpenAI the same way", async () => {
+      const { cache, writes } = memoryCache();
+      const { engine } = engineAnswering(RESULTS, "openai");
+
+      await withSearchCache(engine, cache, { organizationId: 12 }).search(QUERY, "web");
+      await settle();
+
+      expect(writes.map((write) => write.key)).toEqual([boughtKey("openai", 12, "web", WORDS)]);
+    });
+
+    it("keeps a provider's answer for the web apart from its answer for the news, in one organization", async () => {
+      const { cache } = memoryCache();
+      const { engine, search } = engineAnswering(RESULTS, "anthropic");
+      const cached = withSearchCache(engine, cache, { organizationId: 7 });
+
+      await cached.search(QUERY, "news");
+      await settle();
+      await cached.search(QUERY, "web");
+
+      expect(search).toHaveBeenCalledTimes(2);
+    });
+
+    it("does not read or write the cache for a provider's search when it is told no organization", async () => {
+      // A key with no owner would be shared by all of them, which is what the scope exists to stop.
+      const { cache, reads, writes } = memoryCache();
+      const { engine, search } = engineAnswering(RESULTS, "anthropic");
+      const cached = withSearchCache(engine, cache);
+
+      await cached.search(QUERY, "news");
+      await settle();
+      await cached.search(QUERY, "news");
+      await settle();
+
+      expect(search).toHaveBeenCalledTimes(2);
+      expect(reads).toEqual([]);
+      expect(writes).toEqual([]);
+    });
+
+    it.each([
+      ["zero", 0],
+      ["a negative number", -3],
+      ["a fraction", 1.5],
+      ["not a number", Number.NaN],
+      ["infinite", Number.POSITIVE_INFINITY],
+      ["a text", "7"],
+      ["null", null],
+    ])("takes an organization id that is %s for none", async (_name, organizationId) => {
+      const { cache, reads, writes } = memoryCache();
+      const { engine, search } = engineAnswering(RESULTS, "anthropic");
+
+      await withSearchCache(engine, cache, { organizationId: organizationId as never }).search(
+        QUERY,
+        "news",
+      );
+      await settle();
+
+      expect(search).toHaveBeenCalledTimes(1);
+      expect(reads).toEqual([]);
+      expect(writes).toEqual([]);
+    });
+
+    it("leaves the organization out of the key of an engine whose answers are public", async () => {
+      const { cache, writes } = memoryCache();
+      const one = engineAnswering(RESULTS, "gdelt");
+      const another = engineAnswering(OTHER_RESULTS, "gdelt");
+
+      await withSearchCache(one.engine, cache, { organizationId: 7 }).search(QUERY, "news");
+      await settle();
+      const answer = await withSearchCache(another.engine, cache, { organizationId: 8 }).search(
+        QUERY,
+        "news",
+      );
+
+      expect(writes.map((write) => write.key)).toEqual([publicKey("gdelt", "news", WORDS)]);
+      expect(answer).toEqual(RESULTS);
+      expect(another.search).not.toHaveBeenCalled();
+    });
+
+    it("keeps the spelling of the query out of the key of a provider's answer, as for any engine", async () => {
+      const { cache } = memoryCache();
+      const { engine, search } = engineAnswering(RESULTS, "anthropic");
+      const cached = withSearchCache(engine, cache, { organizationId: 7 });
+
+      await cached.search("Acme  Data Breach", "news");
+      await settle();
+      await cached.search("  acme data breach ", "news");
+
+      expect(search).toHaveBeenCalledTimes(1);
+    });
+
+    describe("an engine that changes while the cache is in front of it", () => {
+      /** An engine whose id changes when its search is under way, as a wrapper does when it falls back. */
+      function switching(from: SearchEngineId, to: SearchEngineId, results: SearchResult[]) {
+        let live: SearchEngineId = from;
+        const search = jest.fn(async (): Promise<SearchResult[]> => {
+          live = to;
+          return results;
+        });
+        const engine: SearchEngine = {
+          get id() {
+            return live;
+          },
+          kinds: ["web", "news"],
+          newsWindowMonths: null,
+          search,
+        };
+        return { engine, search };
+      }
+
+      it("does not keep the answer of the engine that took over under the key of the engine that was asked", async () => {
+        const { cache, writes } = memoryCache();
+        const { engine } = switching("anthropic", "gdelt", OTHER_RESULTS);
+
+        await withSearchCache(engine, cache, { organizationId: 7 }).search(QUERY, "news");
+        await settle();
+
+        // Neither under the organization's key, where it would be served as the provider's answer,
+        // nor under the key of the engine that answered, which this search did not look up.
+        expect(writes).toEqual([]);
+      });
+
+      it("looks up and keeps under the id of the engine that answers now", async () => {
+        const { cache, writes } = memoryCache();
+        const { engine } = switching("anthropic", "gdelt", OTHER_RESULTS);
+        const cached = withSearchCache(engine, cache, { organizationId: 7 });
+        await cached.search(QUERY, "news");
+
+        await cached.search("Acme lawsuit", "news");
+        await settle();
+
+        expect(writes.map((write) => write.key)).toEqual([
+          publicKey("gdelt", "news", "acme lawsuit"),
+        ]);
+      });
+
+      it("keeps nothing for the search that made a real wrapper fall back, so the fallback's answer is not filed under the organization", async () => {
+        const { cache, writes } = memoryCache();
+        const refused = engineAnswering(new SearchUnavailableError(), "anthropic");
+        const fallback: SearchEngine = {
+          id: "gdelt",
+          kinds: ["news"],
+          newsWindowMonths: 3,
+          search: jest.fn(async () => OTHER_RESULTS),
+        };
+        const cached = withSearchCache(withFallback(refused.engine, fallback), cache, {
+          organizationId: 7,
+        });
+
+        const answer = await cached.search(QUERY, "news");
+        await settle();
+
+        expect(answer).toEqual(OTHER_RESULTS);
+        // The key was built for the provider before the search, and the search was answered by the
+        // fallback: nothing is kept, rather than the fallback's answer under the provider's key.
+        expect(writes).toEqual([]);
+        expect(cached.id).toBe("gdelt");
+      });
+    });
   });
 });
 
@@ -673,5 +1050,112 @@ describe("the answers of robots.txt", () => {
     seed("robots", "https://acme.com", entry);
 
     expect(await readCachedRobots(cache, "https://acme.com")).toBeNull();
+  });
+});
+
+describe("the index of GDELT", () => {
+  it("is kept as the list of its articles, under the address of the request, for the kind gdelt", async () => {
+    const { cache, writes } = memoryCache();
+
+    cacheGdeltIndex(cache, GDELT_URL, ARTICLES);
+    await settle();
+
+    expect(writes).toEqual([{ kind: "gdelt", key: GDELT_URL, value: JSON.stringify(ARTICLES) }]);
+  });
+
+  it.each<[string, GdeltArticle[]]>([
+    ["articles", ARTICLES],
+    ["no articles, which is an answer too", []],
+  ])("is read back as it was kept: %s", async (_name, articles) => {
+    const { cache } = memoryCache();
+    cacheGdeltIndex(cache, GDELT_URL, articles);
+    await settle();
+
+    expect(await readCachedGdeltIndex(cache, GDELT_URL)).toEqual(articles);
+  });
+
+  it("is null when nothing is kept, and for the address of another request", async () => {
+    const { cache } = memoryCache();
+    expect(await readCachedGdeltIndex(cache, GDELT_URL)).toBeNull();
+
+    cacheGdeltIndex(cache, GDELT_URL, ARTICLES);
+    await settle();
+
+    expect(await readCachedGdeltIndex(cache, `${GDELT_URL}&other=1`)).toBeNull();
+  });
+
+  it("is rebuilt from the known fields of each article only", async () => {
+    const { cache, seed } = memoryCache();
+    seed("gdelt", GDELT_URL, JSON.stringify([{ ...ARTICLES[0], injected: "x", socialimage: "y" }]));
+
+    const [article] = (await readCachedGdeltIndex(cache, GDELT_URL)) as GdeltArticle[];
+
+    expect(article).toStrictEqual(ARTICLES[0]);
+  });
+
+  it("holds as many articles as the request asks for: 250", async () => {
+    const { cache } = memoryCache();
+    const full = Array.from({ length: 250 }, (_, i) => ({
+      ...ARTICLES[0],
+      url: `https://news.example.com/story-${i}`,
+    }));
+    cacheGdeltIndex(cache, GDELT_URL, full);
+    await settle();
+
+    expect(await readCachedGdeltIndex(cache, GDELT_URL)).toEqual(full);
+  });
+
+  it.each([
+    ["text that is not JSON", "<html>"],
+    ["JSON that is not a list", JSON.stringify({ articles: [] })],
+    ["more articles than the request asks for", JSON.stringify(Array(251).fill(ARTICLES[0]))],
+    ["an item that is not an article", JSON.stringify([1])],
+    ["an article without a title", JSON.stringify([{ ...ARTICLES[0], title: undefined }])],
+    [
+      "an article whose address is not public",
+      JSON.stringify([{ ...ARTICLES[0], url: "http://169.254.169.254/latest/meta-data" }]),
+    ],
+    [
+      "an article whose address is not an address",
+      JSON.stringify([{ ...ARTICLES[0], url: "nope" }]),
+    ],
+    [
+      "an article with a date that is not a date or null",
+      JSON.stringify([{ ...ARTICLES[0], publishedAt: 5 }]),
+    ],
+    [
+      "an article with a domain that is not a text",
+      JSON.stringify([{ ...ARTICLES[0], domain: 7 }]),
+    ],
+    [
+      "an article with a language that is not a text",
+      JSON.stringify([{ ...ARTICLES[0], language: null }]),
+    ],
+  ])("is null for an entry that holds %s, which the next write replaces", async (_name, entry) => {
+    const { cache, seed } = memoryCache();
+    seed("gdelt", GDELT_URL, entry);
+
+    expect(await readCachedGdeltIndex(cache, GDELT_URL)).toBeNull();
+  });
+
+  it("is null when the cache rejects", async () => {
+    const broken = {
+      get: async (): Promise<string | null> => {
+        throw new Error("broken");
+      },
+      set: async (): Promise<void> => {
+        throw new Error("broken");
+      },
+    };
+
+    expect(await readCachedGdeltIndex(broken, GDELT_URL)).toBeNull();
+    expect(() => cacheGdeltIndex(broken, GDELT_URL, ARTICLES)).not.toThrow();
+    await settle();
+  });
+
+  it("is kept without waiting for the store", () => {
+    const never = { get: async () => null, set: () => new Promise<void>(() => {}) };
+
+    expect(cacheGdeltIndex(never, GDELT_URL, ARTICLES)).toBeUndefined();
   });
 });

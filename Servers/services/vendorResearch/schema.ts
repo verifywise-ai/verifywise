@@ -1,8 +1,5 @@
 import { z } from "zod";
-import {
-  FindingConfidence,
-  RESEARCH_CATEGORIES,
-} from "../../domain.layer/interfaces/i.vendorResearch";
+import { RESEARCH_CATEGORIES } from "../../domain.layer/interfaces/i.vendorResearch";
 import { VENDOR_RISK_ENUMS } from "../../utils/validations/validation.utils";
 
 /**
@@ -12,11 +9,6 @@ import { VENDOR_RISK_ENUMS } from "../../utils/validations/validation.utils";
  */
 export const RESEARCH_LIKELIHOODS = VENDOR_RISK_ENUMS.LIKELIHOOD;
 export const RESEARCH_SEVERITIES = VENDOR_RISK_ENUMS.RISK_SEVERITY;
-export const RESEARCH_CONFIDENCES = [
-  "low",
-  "medium",
-  "high",
-] as const satisfies readonly FindingConfidence[];
 
 // The bounds of the answer. The system prompt states these same numbers, written from the
 // constants, so what the model is told and what the schema accepts cannot drift apart.
@@ -62,7 +54,6 @@ const findingSchema = z.object({
   likelihood: z.enum(RESEARCH_LIKELIHOODS),
   risk_severity: z.enum(RESEARCH_SEVERITIES),
   action_plan: z.string().max(MAX_FINDING_TEXT_CHARS),
-  confidence: z.enum(RESEARCH_CONFIDENCES),
   /** One sentence: why this likelihood and this severity. Shown next to the rating. */
   rationale: z.string().max(MAX_FINDING_TEXT_CHARS),
   evidence: z.array(evidenceItemSchema).min(1).max(MAX_EVIDENCE_PER_FINDING),
@@ -75,9 +66,13 @@ const categoryNoteSchema = z.object({
 });
 
 /**
- * The whole answer of the model. An empty `findings` array is valid and expected: it is what the
- * model returns when no evidence shows a risk. The bounds guard against runaway output; the real
- * limits (MAX_PER_CATEGORY per category, eight per run) are applied after validation.
+ * The answer the analysis asks the model for. A finding has no confidence: the credibility label
+ * is computed by code from the sources (see credibility.ts), and the model is not asked for one
+ * (M3 Part B). The objects are not strict either, so a confidence that a model still gives, from
+ * an old recording of the evaluation or from a model that remembers the earlier prompt, is dropped
+ * by the parse. An empty `findings` array is valid and expected: it is what the model returns when
+ * no evidence shows a risk. The bounds guard against runaway output; the real limits
+ * (MAX_PER_CATEGORY per category, eight per run) are applied after validation.
  */
 export const researchOutputSchema = z.object({
   findings: z.array(findingSchema).max(20),
@@ -87,27 +82,9 @@ export const researchOutputSchema = z.object({
 export type ResearchOutput = z.infer<typeof researchOutputSchema>;
 
 /**
- * Which rules the analysis runs under: the model's confidence, capped by the sources (vr-6), or no
- * confidence at all, the credibility label being computed by code (since vr-9, see credibility.ts).
+ * The same schema and type under the names the analysis, the recordings of the evaluation and the
+ * tests use. They were a second schema while the answer could carry a confidence.
  */
-export type ResearchRules = "confidence" | "credibility";
-
-/**
- * The answer under the credibility rules: the same, with no `confidence` on a finding. It is not
- * strict either, so a confidence that the model still gives is dropped by the parse.
- */
-export const credibilityOutputSchema = researchOutputSchema.extend({
-  findings: z.array(findingSchema.omit({ confidence: true })).max(20),
-});
-
-export type CredibilityOutput = z.infer<typeof credibilityOutputSchema>;
-
-/** An answer under either rules. */
-export type AnyResearchOutput = ResearchOutput | CredibilityOutput;
-
-/** The schema the analysis asks the model to answer under `rules`. */
-export function outputSchemaFor(
-  rules: ResearchRules,
-): typeof researchOutputSchema | typeof credibilityOutputSchema {
-  return rules === "credibility" ? credibilityOutputSchema : researchOutputSchema;
-}
+export const credibilityOutputSchema = researchOutputSchema;
+export type CredibilityOutput = ResearchOutput;
+export type AnyResearchOutput = ResearchOutput;

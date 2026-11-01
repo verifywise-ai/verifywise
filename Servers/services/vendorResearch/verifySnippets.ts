@@ -7,24 +7,24 @@
  * are all search results, none of them a page that the research read, is checked once more before
  * it is stored: the page of its best source is read, and the quote has to be on it.
  *
- * - The best source is the most credible one, and of equals the one the model cited first: by the
- *   tier of sourceTiers.ts under the confidence rules, and by the registry category (official,
- *   trusted press, the vendor, unverified; see sourceRegistry/) under the credibility rules. When its page cannot be read (the site refuses, the page is gone, the time
- *   is up), the next is tried, up to VERIFY_READS_PER_FINDING pages for a finding. The first page
- *   that can be read gives the verdict.
+ * - The best source is the most credible one, and of equals the one the model cited first: by its
+ *   registry category (official, trusted press, the vendor, unverified; see sourceRegistry/).
+ *   When its page cannot be read (the site refuses, the page is gone, the time is up), the next is
+ *   tried, up to VERIFY_READS_PER_FINDING pages for a finding. The first page that can be read
+ *   gives the verdict.
  * - A page that holds the quote confirms the finding, which is then kept exactly as it was.
- * - A page that does not hold it lowers the finding: `snippet_only`, and its confidence is `low`.
- *   The search result said something the page does not, so the claim is the engine's and not the
- *   publisher's.
- * - When no page can be read the finding is marked `snippet_only` and its confidence stays: nothing
- *   was found against it, but nobody has seen the page either, and the person who reads the finding
- *   is told so.
+ * - A page that does not hold it marks the finding `snippet_only`, and the verdict `not_on_page`
+ *   goes to the credibility rule, which calls the source contradicted (credibility.ts). The search
+ *   result said something the page does not, so the claim is the engine's and not the publisher's.
+ * - When no page can be read the finding is marked `snippet_only` and the verdict is `unread`:
+ *   nothing was found against it, but nobody has seen the page either, and the person who reads the
+ *   finding is told so.
  *
  * Only the findings that stay are checked (at most MAX_PER_RUN, see validation.ts), so the check
  * costs at most two reads for each. It uses the page reader of the run, which keeps to robots.txt
  * and the rules of the guarded fetch, and a deadline of VERIFY_TIMEOUT_MS for all the reads. It
- * never rejects and never drops a finding: it can only mark one and lower its confidence, never
- * raise it.
+ * never rejects and never drops a finding: it can only mark one, and the label is worked out
+ * afterwards from the verdict.
  */
 import {
   type EvidenceSource,
@@ -32,9 +32,7 @@ import {
   SOURCE_CATEGORIES,
 } from "../../domain.layer/interfaces/i.vendorResearch";
 import { PageReadError, type PageReader } from "../webResearch/readPage";
-import type { ResearchRules } from "./schema";
 import { classifySource } from "./sourceRegistry/classify";
-import { SOURCE_TIERS, tierOf } from "./sourceTiers";
 import type { ResearchTarget } from "./target";
 import type { TraceRecorder } from "./trace";
 import { normaliseForQuote } from "./validation";
@@ -78,8 +76,6 @@ export interface VerifyInput {
   signal?: AbortSignal;
   /** Told about each page that is read. */
   trace?: TraceRecorder;
-  /** Which order picks the best source (see the header); the confidence rules by default. */
-  rules?: ResearchRules;
 }
 
 /** What a read of a page came to: its text, or the reason it could not be read. */
@@ -143,9 +139,6 @@ export async function checkSnippetFindings(input: VerifyInput): Promise<SnippetC
 
     const credibility = ({ citation, source }: (typeof cited)[number]) => {
       const onVendorSite = source?.onVendorSite ?? false;
-      if (input.rules !== "credibility") {
-        return SOURCE_TIERS.indexOf(tierOf({ url: citation.url, onVendorSite }, target));
-      }
       const text = source === undefined ? {} : { text: `${source.title} ${source.content}` };
       return SOURCE_CATEGORIES.indexOf(
         classifySource({ url: citation.url, onVendorSite, ...text }, target).category,
@@ -172,7 +165,7 @@ export async function checkSnippetFindings(input: VerifyInput): Promise<SnippetC
       }
       trace?.step({ ...step, outcome: "not_on_page", ms: page.ms });
       return {
-        finding: { ...finding, snippet_only: true, confidence: "low" },
+        finding: { ...finding, snippet_only: true },
         verdict: { outcome: "not_on_page", url: citation.url },
       };
     }

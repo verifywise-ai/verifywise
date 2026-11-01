@@ -161,7 +161,6 @@ export const OTHER_NAMES: EvalCase = {
           risk_severity: "Moderate",
           action_plan:
             "Ask the vendor whether our users were among the 40,000 and for its incident report.",
-          confidence: "medium",
           rationale:
             "Two publishers report it and the vendor has confirmed it, but nobody says whether the messages were read.",
           evidence: [
@@ -198,7 +197,6 @@ export const OTHER_NAMES: EvalCase = {
     maxBadUrls: 0,
     maxDatedWebResults: 0,
     maxSnippetOnlyFindings: 0,
-    maxOverconfident: 0,
     maxMislabelled: 0,
     maxDuplicateClusters: 0,
     maxCitationsRejected: 0,

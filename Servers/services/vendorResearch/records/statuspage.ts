@@ -202,7 +202,8 @@ function dayOf(value: string | null): string | null {
   return Number.isNaN(time) ? null : new Date(time).toISOString().slice(0, 10);
 }
 
-const INCIDENT_PATH = /\/incidents\/([A-Za-z0-9]{1,40})\/?$/;
+// An incident id is letters, digits and hyphens, up to 64: real ones carry hyphens and pass 40.
+const INCIDENT_PATH = /\/incidents\/([A-Za-z0-9-]{1,64})\/?$/;
 
 /** The id of an incident in the address of its page; null for any other address. */
 function incidentIdOf(href: string | null): string | null {

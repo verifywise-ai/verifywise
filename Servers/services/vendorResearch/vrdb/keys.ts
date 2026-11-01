@@ -92,6 +92,29 @@ export function domainKey(host: string): string {
 }
 
 /**
+ * The hosts of a website field of a list entry, which may name one site or several (separated by
+ * white space, a comma or a semicolon), each with its scheme or without. A part without a scheme
+ * that holds an `@` is an e-mail address: it names a mailbox, not a site, and gives no host. A
+ * part with a scheme keeps its host whatever its path holds (`https://host/@name`). A name of one
+ * label (`localhost`) is no site on the web and gives none. In the order of the field, lower case.
+ */
+export function hostsOf(field: string): string[] {
+  return field
+    .split(/[\s,;]+/)
+    .filter((part) => part !== "")
+    .flatMap((part) => {
+      const hasScheme = /^[a-z][a-z0-9+.-]*:\/\//i.test(part);
+      if (!hasScheme && part.includes("@")) return [];
+      try {
+        const url = new URL(hasScheme ? part : `https://${part}`);
+        return url.hostname.includes(".") ? [url.hostname] : [];
+      } catch {
+        return [];
+      }
+    });
+}
+
+/**
  * The keys of a vendor: each of its names and the brand of its domain as a KEV vendor and as the
  * vendor of a CVE record's affected product; the vendor part of its CPE names (records/match.ts
  * `cpeVendorOf`); each of its names, when long enough, as a name (a sanctions list is matched by

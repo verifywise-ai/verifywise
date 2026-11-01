@@ -5,11 +5,14 @@
  * vendor: the vendor part of a CPE name (`cpe:2.3:a:fortinet:...`) is matched whole by the API, so
  * a vendor that is not the one the token names finds nothing. The NVD is a work of the United
  * States government and free to use.
+ *
+ * The vendor risk database reads the NVD through (vrdb/connectors/nvd.ts), which takes the address,
+ * the parser and the text of a record from here. The run no longer asks the NVD itself (M3 Part B).
  */
 import { cleanText } from "../text";
 import { cvePageOf } from "./kev";
 import { joinSentences, sentence } from "./sentence";
-import { MAX_RECORDS, type SourceRecord } from "./types";
+import type { SourceRecord } from "./types";
 
 export const NVD_MAX_BYTES = 2 * 1024 * 1024;
 /** The API refuses a window longer than 120 days. */
@@ -115,29 +118,5 @@ export function nvdSourceOf(cve: Cve): SourceRecord {
     title: `${cve.id}: critical vulnerability (CVSS ${cve.score.toFixed(1)})`,
     text,
     publishedAt: cve.published,
-  };
-}
-
-/**
- * The critical CVEs as sources: those published since `cutoff`, the highest score first, then the
- * newest, at most MAX_RECORDS.nvd of them. What was left out is counted.
- */
-export function nvdRecords(
-  cves: readonly Cve[],
-  input: { cutoff?: string },
-): { records: SourceRecord[]; omitted: { old?: number; more?: number } } {
-  const recent = cves.filter((cve) => input.cutoff === undefined || cve.published >= input.cutoff);
-  recent.sort(
-    (a, b) =>
-      b.score - a.score ||
-      b.published.localeCompare(a.published) ||
-      b.id.localeCompare(a.id, "en", { numeric: true }),
-  );
-  const kept = recent.slice(0, MAX_RECORDS.nvd);
-  const old = cves.length - recent.length;
-  const more = recent.length - kept.length;
-  return {
-    records: kept.map(nvdSourceOf),
-    omitted: { ...(old > 0 ? { old } : {}), ...(more > 0 ? { more } : {}) },
   };
 }

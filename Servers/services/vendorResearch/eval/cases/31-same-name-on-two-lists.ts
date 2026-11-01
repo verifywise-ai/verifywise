@@ -110,7 +110,6 @@ export const SAME_NAME_ON_TWO_LISTS: EvalCase = {
           risk_severity: "Major",
           action_plan:
             "Check the vendor's registration number, address and owners against both entries before any payment.",
-          confidence: "low",
           rationale:
             "Both entries have the vendor's name, and nothing else ties them to the vendor.",
           evidence: [

@@ -14,6 +14,7 @@
       "requiredAction": "Apply mitigations per vendor instructions or discontinue use of the product if mitigations are unavailable.",
       "dueDate": "2026-10-05",
       "knownRansomwareCampaignUse": "Unknown",
+      "forensicTriage": "Yes",
       "notes": "https://acme-analytics.example/security/advisory-1",
       "cwes": ["CWE-287"]
     },

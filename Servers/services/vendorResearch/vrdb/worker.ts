@@ -1,11 +1,12 @@
 /**
  * The worker of the vendor risk database's queue (queue.ts), in the process of the other workers
  * (jobs/worker.ts): it takes one job at a time, since a list is tens of megabytes and two syncs
- * share no work. A job checks the flags and its list's gate again, as an operator may turn either
- * flag off after its scheduler fired, and a sync that failed on the way throws so that BullMQ tries
- * it again (VRDB_SYNC_JOB_OPTIONS). A sync the list refused, or whose answer asked for a wait, is
- * not tried again: its list's next scheduled sync is. A sync that changed the status of a record
- * adds the status job of its list (relabel.ts), which the worker takes as it takes a sync.
+ * share no work. A sync job checks the records switch and its list's gate again, as an operator may
+ * turn the records off after its scheduler fired (the database has no flag of its own), and a sync
+ * that failed on the way throws so that BullMQ tries it again (VRDB_SYNC_JOB_OPTIONS). A sync the
+ * list refused, or whose answer asked for a wait, is not tried again: its list's next scheduled
+ * sync is. A sync that changed the status of a record adds the status job of its list
+ * (relabel.ts), which the worker takes as it takes a sync.
  */
 import { type Job, UnrecoverableError, Worker } from "bullmq";
 import { REDIS_URL } from "../../../database/redis";
@@ -30,8 +31,10 @@ import { activeMirrors } from "./sources";
 import { type SyncErrorCode, type SyncResult, syncSource } from "./sync";
 
 /**
- * The connector of each list the job copies. A list behind a closed gate (the CVE records, Q7; the
- * UN list, Q6) has its connector here, and no job of it runs until the gate opens (`processVrdbJob`).
+ * The connector of each list the job copies. A list behind a closed gate (the UN list, Q6) has its
+ * connector here, and no job of it runs until the gate opens (`processVrdbJob`). The gate of the
+ * CVE records (Q7) is open: their job reads the changes since the baseline that an operator loads
+ * (scripts/vrdbCveBaseline.ts), and is refused as `no_baseline` until then.
  */
 const CONNECTORS: Partial<Record<VrdbSourceId, Connector | IncrementalConnector>> = {
   kev: kevConnector,
@@ -127,14 +130,14 @@ const isVrdbSourceId = (value: unknown): value is VrdbSourceId =>
 
 /**
  * Carries out one job of the queue, for the list it names: its sync, or its status job. A sync
- * gives its result, or null while a flag is off or the list's gate is closed, and adds the status
- * job of its list when it changed a status, a failed sync of a list read by its changes included
- * (the days it applied stay applied). The status job gives what it relabeled, or null while the
- * VRDB flag is off; it reads the stored copies only, so the records flag and the gates do not stop
- * it. It throws for another job, for a list that is not the database's, and for a failed sync,
- * with a fixed text: VrdbSyncFailed for one that failed on the way, which BullMQ tries again, and
- * VrdbSyncNotRetried for one the list refused or whose answer asked for a wait (Retry-After),
- * which a retry a minute later would not help or would send too soon.
+ * gives its result, or null while the records are off or the list's gate is closed, and adds the
+ * status job of its list when it changed a status, a failed sync of a list read by its changes
+ * included (the days it applied stay applied). The status job gives what it relabeled; it reads
+ * the stored copies only, so neither the records switch nor the gates stop it. It throws for
+ * another job, for a list that is not the database's, and for a failed sync, with a fixed text:
+ * VrdbSyncFailed for one that failed on the way, which BullMQ tries again, and VrdbSyncNotRetried
+ * for one the list refused or whose answer asked for a wait (Retry-After), which a retry a minute
+ * later would not help or would send too soon.
  */
 export async function processVrdbJob(
   job: Pick<Job, "name" | "data">,
@@ -149,11 +152,8 @@ export async function processVrdbJob(
   if (!isVrdbSourceId(sourceId)) {
     throw new Error("The job names no list of the vendor risk database");
   }
+  if (job.name === VRDB_RELABEL_JOB) return (deps.relabel ?? relabelSource)(sourceId);
   const config = deps.config ?? getVendorResearchConfig();
-  if (job.name === VRDB_RELABEL_JOB) {
-    if (!config.vrdb) return null;
-    return (deps.relabel ?? relabelSource)(sourceId);
-  }
   if (!vrdbSyncsOn(config)) return null;
   if (!activeMirrors().some((definition) => definition.id === sourceId)) return null;
   const result = await (deps.sync ?? syncWithDatabase)(sourceId);

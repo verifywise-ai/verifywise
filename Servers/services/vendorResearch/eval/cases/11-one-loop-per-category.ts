@@ -192,7 +192,6 @@ export const ONE_LOOP_PER_CATEGORY: EvalCase = {
           risk_severity: "Moderate",
           action_plan:
             "Ask the vendor whether our invoices were copied and for its incident report.",
-          confidence: "medium",
           rationale:
             "Two publishers report the attack and the vendor confirms it, but nobody says whether the invoices were copied.",
           evidence: [
@@ -216,7 +215,6 @@ export const ONE_LOOP_PER_CATEGORY: EvalCase = {
           likelihood: "Possible",
           risk_severity: "Minor",
           action_plan: "Ask the vendor for the full report and how it closed the exception.",
-          confidence: "medium",
           rationale:
             "The vendor states the exception itself, but the summary does not say what it was.",
           evidence: [
@@ -236,7 +234,6 @@ export const ONE_LOOP_PER_CATEGORY: EvalCase = {
           risk_severity: "Moderate",
           action_plan:
             "Ask the vendor who the provider is and whether our data can be kept out of it.",
-          confidence: "medium",
           rationale: "The vendor states it on its own site and says the provider does not train.",
           evidence: [
             {
@@ -265,7 +262,6 @@ export const ONE_LOOP_PER_CATEGORY: EvalCase = {
     maxBadUrls: 0,
     maxDatedWebResults: 0,
     maxSnippetOnlyFindings: 0,
-    maxOverconfident: 0,
     maxMislabelled: 0,
     maxDuplicateClusters: 0,
     maxCitationsRejected: 0,

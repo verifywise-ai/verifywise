@@ -70,7 +70,6 @@ const finding = (overrides: Partial<VendorRiskFinding> = {}): VendorRiskFinding 
   likelihood: "Possible",
   risk_severity: "Major",
   risk_level: "High Risk",
-  confidence: "medium",
   rationale: "The vendor confirmed the breach.",
   sources: [
     {

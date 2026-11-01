@@ -1,9 +1,10 @@
 /**
- * The golden set of the vendor risk database (spec D6.4): 24 real vendors, one per profile, that a
- * person labels by hand, and the two research runs of each, one with the VENDOR_RESEARCH_VRDB flag
- * off and one with it on, each on a vendor row of its own: a run is compared with every earlier
- * finding and risk of its vendor row and drops what repeats them, so two runs on one row would
- * measure that, not the flag. The person's labels are a file (see
+ * The golden set of the vendor risk database (spec D6.4): a vendor for each profile (24 profiles),
+ * that a person labels by hand, and one research run of each, made with the credibility prompt on
+ * a vendor row of its own: a run is compared with every earlier finding and risk of its vendor row
+ * and drops what repeats them, so a row that was researched before would measure that, not the
+ * run. There is one set of rules and so one run for each vendor; the runs with the flag off and
+ * on that the set once compared are gone with the flag. The person's labels are a file (see
  * docs/superpowers/golden-set/labels.template.json); the runs are ordinary runs of the
  * organization, read from the database by scripts/vendorResearchGoldenSet.ts.
  */
@@ -41,8 +42,12 @@ export interface GoldenVendor {
   profile: number;
   /** The profile in words, for the person who labels; the scorer does not read it. */
   about?: string;
-  /** The vendor's two rows in the labelled organization: one researched with each flag. */
-  vendorIds: { off: number; on: number };
+  /**
+   * The vendor's row in the labelled organization: the row its one research run was made on. A
+   * file of the earlier shape gave a row for each flag (`vendorIds: { off, on }`); the check of
+   * the labels (`checkGoldenLabels`) reads its `on` as this row and drops the rest.
+   */
+  vendorId: number;
   name: string;
   expected: GoldenExpectation[];
   traps: GoldenTrap[];
@@ -58,12 +63,13 @@ export interface GoldenLabels {
   vendors: GoldenVendor[];
 }
 
+/** What the scorer reads of a stored finding: the label is the one the run's code gave it. */
 export type GoldenFinding = Pick<
   IVendorRiskFinding,
-  "category" | "risk_description" | "credibility" | "confidence" | "sources"
+  "category" | "risk_description" | "credibility" | "sources"
 >;
 
-/** The first completed run of a vendor row with one prompt version, and its findings. */
+/** The first completed run of a vendor row made with one prompt version, and its findings. */
 export interface GoldenRun {
   vendorId: number;
   /**
@@ -73,11 +79,11 @@ export interface GoldenRun {
   earlier: number;
   promptVersion: string;
   findings: GoldenFinding[];
-  /** What a run of the vendor risk database checked; null for any other run. */
+  /** What the run checked in the vendor risk database; null when the run stored none. */
   coverage: RunCoverage | null;
 }
 
-/** What one run, or the runs of one flag, found against the labels. */
+/** What one run found against the labels. */
 export interface RunScore {
   findings: number;
   /** Findings that match an expected risk and no trap. */
@@ -97,13 +103,12 @@ export interface RunTotals extends RunScore {
 }
 
 export interface GoldenVendorLine {
-  vendorIds: { off: number; on: number };
+  vendorId: number;
   name: string;
   profile: number;
-  /** Null when the vendor has no run with that flag. */
-  off: RunScore | null;
-  on: RunScore | null;
-  /** The matched findings of the run with the flag on, and those whose label is the labeller's. */
+  /** Null when the vendor has no completed run. */
+  run: RunScore | null;
+  /** The matched findings of the run, and those whose label is the labeller's. */
   compared: number;
   agreed: number;
 }
@@ -123,33 +128,30 @@ export interface VendorRef {
 export interface GoldenReport {
   /** The labelled vendors. */
   vendors: number;
-  /** The runs with the flag off and on, summed over the vendors that have one. */
-  off: RunTotals;
-  on: RunTotals;
-  /** The matched findings of the runs with the flag on, and how many have the labeller's label. */
+  /** The runs, summed over the vendors that have one. Recall is reported and has no bar. */
+  totals: RunTotals;
+  /** The matched findings of the runs, and how many have the labeller's label. */
   compared: number;
   agreed: number;
   /** agreed over compared; null when no finding was matched. */
   agreement: number | null;
-  /** The same for the confidence of the runs with the flag off, for the record only. */
-  baselineAgreement: number | null;
-  /** Findings of the runs with the flag on labelled High that the labeller rates Low. */
+  /** Findings labelled High that the labeller rates Low. */
   highRatedLow: VendorFinding[];
   /**
-   * Findings of the runs with the flag on that cite the entry of a sanctions list matched by name
-   * only and do not say "An entity named … is on …", the words the credibility prompt asks for
-   * since vr-9 (spec, risk A). A match by the vendor's verified website or one of its identifiers
-   * is about the vendor and is not checked.
+   * Findings that cite the entry of a sanctions list matched by name only and do not say "An
+   * entity named … is on …", the words the credibility prompt asks for since vr-9 (spec, risk A).
+   * A match by the vendor's verified website or one of its identifiers is about the vendor and is
+   * not checked.
    */
   sanctionsAsFact: VendorFinding[];
-  /** Vendors whose run with the flag on has no coverage. */
+  /** Vendors whose run has no coverage. */
   coverageMissing: VendorRef[];
-  /** Vendors whose run with the flag on could not check a list: its lookup or its copy failed. */
+  /** Vendors whose run could not check a list: its lookup or its copy failed. */
   coverageFailed: Array<VendorRef & { sources: VrdbSourceId[] }>;
-  /** Vendors without a completed run with a flag, by the row of that flag. */
-  missingRuns: Array<VendorRef & { flag: "off" | "on" }>;
+  /** Vendors without a completed run of the prompt, by their row. */
+  missingRuns: VendorRef[];
   /** Runs that started after findings or risks of their vendor row, which their deduplication hid. */
-  afterEarlier: Array<VendorRef & { flag: "off" | "on"; earlier: number }>;
+  afterEarlier: Array<VendorRef & { earlier: number }>;
   lines: GoldenVendorLine[];
 }
 

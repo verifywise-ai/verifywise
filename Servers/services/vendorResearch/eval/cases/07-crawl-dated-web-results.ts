@@ -75,7 +75,6 @@ export const CRAWL_DATED_WEB_RESULTS: EvalCase = {
           likelihood: "Unlikely",
           risk_severity: "Major",
           action_plan: "Ask the vendor for its incident history.",
-          confidence: "low",
           rationale:
             "The only source is old, so a new effect is unlikely, though the exposure was large.",
           evidence: [{ source_id: "S1", quote: "attackers copied 5 million customer records" }],

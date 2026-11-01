@@ -70,7 +70,10 @@ interface StoredRun {
  * content, one that returns is active again, one the list no longer holds takes the missing
  * status, and a success notes its version, validators and number of active records. The changes
  * of a list read by its changes are upserted with their status, never delisting, a record that
- * comes without keys keeps its own, and the success notes the cursor.
+ * comes without keys keeps its own, and the success notes the cursor. The ids a day retires lose
+ * their keys and keep their content (a stored rejection becomes active), unless the same day
+ * writes them; one the copy does not hold, and one that has no keys and is active already, are
+ * left alone.
  */
 function memoryStore() {
   const sources = new Map<VrdbSourceId, VrdbSourceState & { lastError: string | null }>();
@@ -188,6 +191,16 @@ function memoryStore() {
           if (before.status !== status) counts.statusChanged += 1;
         }
         records.set(key, { record: kept, status });
+      }
+      for (const id of new Set(input.retire ?? [])) {
+        if (listed.has(id)) continue;
+        const key = keyOf(input.sourceId, id);
+        const before = records.get(key);
+        if (before === undefined) continue;
+        if (before.record.matchKeys.length === 0 && before.status === "active") continue;
+        counts.updated += 1;
+        if (before.status !== "active") counts.statusChanged += 1;
+        records.set(key, { record: { ...before.record, matchKeys: [] }, status: "active" });
       }
       const state = sources.get(input.sourceId);
       if (!state) throw new Error("no source row");
@@ -708,11 +721,19 @@ describe("syncSource", () => {
   });
 });
 
-type Days = Array<{ day: string; result: Partial<ParseResult> }>;
+type Days = Array<{
+  day: string;
+  result: Partial<ParseResult>;
+  /** The ids of the records the day leaves out, as the snapshot carries them (`Snapshot.retired`). */
+  retired?: string[];
+  /** The hour (HH00Z) up to which the day was read from an hourly release. */
+  through?: string;
+}>;
 
 /**
  * A connector of a list read by its changes that hands out the days it is given, one list of days
- * per sync, and parses bodyOf's JSON; it notes the cursor of each sync.
+ * per sync, and parses bodyOf's JSON; it notes the cursor of each sync. As the CVE connector does,
+ * it gives back in its parse the ids that the snapshot retires.
  */
 function fakeChanges(downloads: Array<Days | "unchanged" | Error>, id: VrdbSourceId = "cve") {
   const cursors: Array<{ day: string } | null> = [];
@@ -726,10 +747,15 @@ function fakeChanges(downloads: Array<Days | "unchanged" | Error>, id: VrdbSourc
       if (next === undefined) throw new Error("no download left");
       if (next instanceof Error) throw next;
       if (next === "unchanged") return next;
-      return next.map(({ day, result }) => ({ day, snapshot: snapshotOf(result) }));
+      return next.map(({ day, result, retired, through }) => ({
+        day,
+        snapshot: { ...snapshotOf(result), ...(retired === undefined ? {} : { retired }) },
+        ...(through === undefined ? {} : { through }),
+      }));
     },
     parse(snapshot) {
-      return JSON.parse(snapshot.bodies[0]) as ParseResult;
+      const parsed = JSON.parse(snapshot.bodies[0]) as ParseResult;
+      return snapshot.retired === undefined ? parsed : { ...parsed, retired: snapshot.retired };
     },
   };
   return { connector, cursors };
@@ -827,6 +853,32 @@ describe("syncSource, a list read by its changes", () => {
     expect(memory.runs.map((run) => run.result)).toEqual([
       { outcome: "failed", errorCode: "no_baseline" },
     ]);
+
+    // The log tells an operator what ends it.
+    expect(logger.warn).toHaveBeenCalledWith(
+      "vendor risk database: the sync of cve failed (no_baseline)",
+    );
+    expect(logger.warn).toHaveBeenCalledWith(
+      "vendor risk database: cve has no baseline yet; an operator loads one with scripts/vrdbCveBaseline.ts",
+    );
+  });
+
+  it("a failure that is not a missing baseline does not tell the operator to load one", async () => {
+    const memory = memoryStore();
+    withCursor(memory, "2026-10-27");
+    const { connector } = fakeChanges([
+      [{ day: "2026-10-28", result: { records: [cveOf("CVE-2026-0001")], errors: 11 } }],
+    ]);
+
+    expect(await sync("cve", memory, connector)).toEqual({
+      outcome: "failed",
+      errorCode: "parse_errors",
+    });
+
+    expect(logger.warn).toHaveBeenCalledTimes(1);
+    expect(logger.warn).toHaveBeenCalledWith(
+      "vendor risk database: the sync of cve failed (parse_errors)",
+    );
   });
 
   it("a delta that does not parse keeps the cursor", async () => {
@@ -894,6 +946,162 @@ describe("syncSource, a list read by its changes", () => {
     });
     expect(memory.sources.get("cve")?.cursor).toEqual({ day: "2026-10-30" });
     expect(memory.snapshots).toEqual([]);
+  });
+
+  it("a day with a few records that do not parse is applied, and the sync logs how many it left out", async () => {
+    const memory = memoryStore();
+    withCursor(memory, "2026-10-27");
+    const { connector } = fakeChanges([
+      [
+        { day: "2026-10-28", result: { records: [cveOf("CVE-2026-0001")], skipped: 1 } },
+        { day: "2026-10-29", result: { records: [cveOf("CVE-2026-0002")], skipped: 3 } },
+        { day: "2026-10-30", result: { records: [cveOf("CVE-2026-0003")], skipped: 0 } },
+      ],
+    ]);
+
+    const result = await sync("cve", memory, connector);
+
+    // What the days could read is applied, and the cursor moves past the entries they left out.
+    expect(result).toEqual({
+      outcome: "ok",
+      counts: { seen: 3, inserted: 3, updated: 0, statusChanged: 0 },
+    });
+    expect(memory.sources.get("cve")).toMatchObject({
+      lastOutcome: "ok",
+      cursor: { day: "2026-10-30" },
+    });
+    expect(activeIds(memory, "cve")).toEqual(["CVE-2026-0001", "CVE-2026-0002", "CVE-2026-0003"]);
+    // One line for each day that left entries out, in the singular for one, and none for a day
+    // that left none.
+    expect(logger.warn).toHaveBeenCalledTimes(2);
+    expect(logger.warn).toHaveBeenNthCalledWith(
+      1,
+      "vendor risk database: cve left out 1 record of 2026-10-28 that does not parse",
+    );
+    expect(logger.warn).toHaveBeenNthCalledWith(
+      2,
+      "vendor risk database: cve left out 3 records of 2026-10-29 that do not parse",
+    );
+  });
+
+  it("hands the store the ids a day leaves out, and hashes them with the day", async () => {
+    const left = ["CVE-2026-0007", "CVE-2026-0008"];
+    const first = { day: "2026-10-28", result: { records: [cveOf("CVE-2026-0001")] } };
+    const second = { day: "2026-10-29", result: { records: [cveOf("CVE-2026-0002")] } };
+    const run = async (days: Days) => {
+      const memory = memoryStore();
+      withCursor(memory, "2026-10-27");
+      await sync("cve", memory, fakeChanges([days]).connector);
+      return memory;
+    };
+    // The version of the connector goes first, then each text with its length.
+    const hashOver = (texts: string[]) => {
+      const hash = createHash("sha256").update("v1\n");
+      for (const text of texts) hash.update(`${text.length}:${text}`);
+      return hash.digest("hex");
+    };
+    const [bodyOfFirst, bodyOfSecond] = [first, second].map(
+      ({ result }) => snapshotOf(result).bodies[0],
+    );
+    const retireTexts = left.map((id) => `retire:${id}`);
+
+    const leaving = await run([{ ...first, retired: left }, second]);
+    const alone = await run([first, second]);
+
+    expect(leaving.deltas.map((delta) => delta.retire)).toEqual([left, []]);
+    expect(alone.deltas.map((delta) => delta.retire)).toEqual([[], []]);
+    // The same bodies make another day once it retires ids: the day's hash and the run's.
+    expect(alone.deltas.map((delta) => delta.rawSnapshotHash)).toEqual([
+      hashOver([bodyOfFirst]),
+      hashOver([bodyOfSecond]),
+    ]);
+    expect(leaving.deltas.map((delta) => delta.rawSnapshotHash)).toEqual([
+      hashOver([bodyOfFirst, ...retireTexts]),
+      hashOver([bodyOfSecond]),
+    ]);
+    expect(alone.runs[0].result?.rawSnapshotHash).toBe(hashOver([bodyOfFirst, bodyOfSecond]));
+    expect(leaving.runs[0].result?.rawSnapshotHash).toBe(
+      hashOver([bodyOfFirst, ...retireTexts, bodyOfSecond]),
+    );
+  });
+
+  it("a record a day leaves out loses its keys and keeps its status; a stored rejection the list publishes again becomes active", async () => {
+    const memory = memoryStore();
+    withCursor(memory, "2026-10-26");
+    const { connector } = fakeChanges([
+      [
+        {
+          day: "2026-10-27",
+          result: {
+            records: [cveOf("CVE-2026-0001"), cveOf("CVE-2026-0002"), cveOf("CVE-2026-0003")],
+          },
+        },
+        // A rejected record names no product: it keeps the keys it had.
+        { day: "2026-10-28", result: { records: [cveOf("CVE-2026-0002", "rejected")] } },
+      ],
+      [
+        {
+          day: "2026-10-29",
+          result: { records: [] },
+          // Re-scored below the cut: one that is active, one rejected until now, one never held.
+          retired: ["CVE-2026-0001", "CVE-2026-0002", "CVE-2026-0009"],
+        },
+      ],
+    ]);
+    await sync("cve", memory, connector);
+    const stored = (id: string) => memory.records.get(`cve/${id}`);
+    const [active, rejected, untouched] = ["CVE-2026-0001", "CVE-2026-0002", "CVE-2026-0003"].map(
+      (id) => stored(id),
+    );
+    expect(active).toMatchObject({ status: "active", record: { matchKeys: ["cve:vendor1"] } });
+    expect(rejected).toMatchObject({ status: "rejected", record: { matchKeys: ["cve:vendor2"] } });
+
+    const result = await sync("cve", memory, connector);
+
+    expect(result).toEqual({
+      outcome: "ok",
+      counts: { seen: 0, inserted: 0, updated: 2, statusChanged: 1 },
+    });
+    expect(memory.deltas[2].retire).toEqual(["CVE-2026-0001", "CVE-2026-0002", "CVE-2026-0009"]);
+    // Both lose their keys and keep their content; the rejection is lifted, and nothing is added.
+    expect(stored("CVE-2026-0001")).toEqual({
+      status: "active",
+      record: { ...active?.record, matchKeys: [] },
+    });
+    expect(stored("CVE-2026-0002")).toEqual({
+      status: "active",
+      record: { ...rejected?.record, matchKeys: [] },
+    });
+    expect(stored("CVE-2026-0003")).toEqual(untouched);
+    expect(stored("CVE-2026-0009")).toBeUndefined();
+    expect(memory.sources.get("cve")).toMatchObject({
+      cursor: { day: "2026-10-29" },
+      activeRecords: 3,
+    });
+  });
+
+  it("a day read from an hourly release moves the cursor, and the sync says so in the log", async () => {
+    const memory = memoryStore();
+    withCursor(memory, "2026-10-27");
+    const { connector } = fakeChanges([
+      [
+        { day: "2026-10-28", result: { records: [cveOf("CVE-2026-0001")] }, through: "2300Z" },
+        { day: "2026-10-29", result: { records: [cveOf("CVE-2026-0002")] } },
+      ],
+    ]);
+
+    const result = await sync("cve", memory, connector);
+
+    expect(result).toEqual({
+      outcome: "ok",
+      counts: { seen: 2, inserted: 2, updated: 0, statusChanged: 0 },
+    });
+    expect(memory.sources.get("cve")?.cursor).toEqual({ day: "2026-10-29" });
+    // Only the day without an end-of-day release is named.
+    expect(logger.warn).toHaveBeenCalledTimes(1);
+    expect(logger.warn).toHaveBeenCalledWith(
+      "vendor risk database: cve read 2026-10-28 up to 2300Z from an hourly release: the list published no end-of-day release for that day",
+    );
   });
 
   it("answers unchanged when there is no new day, and keeps the cursor", async () => {

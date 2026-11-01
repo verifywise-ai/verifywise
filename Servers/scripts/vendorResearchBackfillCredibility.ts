@@ -1,33 +1,33 @@
 #!/usr/bin/env ts-node
 /**
  * Gives the findings of the runs before the credibility rule a label (spec D4.6, Rulings 2 to 8 of
- * the M3 plan), for the maintainer of a deployment: once, before the old path is removed (Part B
- * of the M3 plan). Nothing runs it at startup or in a migration. It walks the organizations one at
- * a time, in id order, and reads the findings without a label of one organization in batches of
- * 500 (utils/vendorResearchBackfill.utils.ts):
+ * the M3 plan), for the maintainer of a deployment: once, before the column of the confidence is
+ * dropped (B2 of Part B of the M3 plan). Until then a finding without a label reads as its
+ * confidence, on the basis `legacy_confidence` (utils/vendorResearch.utils.ts); this script gives
+ * it the label of the rule where the rule can tell. Nothing runs it at startup or in a migration.
+ * It walks the organizations one at a time, in id order, and reads the findings without a label of
+ * one organization in batches of 500 (utils/vendorResearchBackfill.utils.ts):
  *
  * - a pending finding gets the label the rule gives it now, from what its run stored, under the
  *   rule's backfill name (services/vendorResearch/backfill.ts);
  * - an accepted or dismissed finding keeps its confidence as a label carried over
  *   (`legacy_confidence`).
  *
- * The default is a dry run: it writes nothing and prints what it would write. `--apply` writes,
- * and refuses while VENDOR_RESEARCH_VRDB is off, before it reads anything: labels of the new rule
- * beside the confidence chips of the old one would mix two rules. A finding decided, or labelled by
- * a live run, between the read and the write is left as it is and counted as skipped; a later run
- * of the script gives one decided meanwhile its carried-over label. `--undo` clears what the
- * backfill wrote, whatever the flag, but for the label of a finding a person accepted or dismissed
- * since, which is what they decided it by: that one is kept and counted. The script prints
- * organization ids and counts only: never a finding's text, an address or the message of an error.
+ * The default is a dry run: it writes nothing and prints what it would write. `--apply` writes; the
+ * credibility rule is always in force (M3 Part B), so there is no flag to turn on first. A finding
+ * decided, or labelled by a live run, between the read and the write is left as it is and counted
+ * as skipped; a later run of the script gives one decided meanwhile its carried-over label.
+ * `--undo` clears what the backfill wrote, but for the label of a finding a person accepted or
+ * dismissed since, which is what they decided it by: that one is kept and counted. The script
+ * prints organization ids and counts only: never a finding's text, an address or the message of an
+ * error.
  *
  * Exit codes:
  *   0 - done: a dry run, an apply or an undo
  *   1 - the database could not be read or written
- *   2 - an argument is not one of the options, the organization does not exist, or --apply was
- *       refused because the flag is off
+ *   2 - an argument is not one of the options, or the organization does not exist
  *
- * Usage, in the backend's container (the image has no npx; its environment holds the flag the
- * servers read, so --apply refuses exactly when they run with the flag off):
+ * Usage, in the backend's container (the image has no npx):
  *   docker compose exec backend node dist/scripts/vendorResearchBackfillCredibility.js [--apply | --undo] [--organization N]
  * and from a checkout:
  *   cd Servers && npx ts-node scripts/vendorResearchBackfillCredibility.ts [--apply | --undo] [--organization N]
@@ -35,7 +35,6 @@
 import { sequelize } from "../database/db";
 import type { CredibilityLabel } from "../domain.layer/interfaces/i.vendorResearch";
 import { backfillCredibilityOf } from "../services/vendorResearch/backfill";
-import { getVendorResearchConfig } from "../services/vendorResearch/config";
 import { type ResearchTarget, buildTarget } from "../services/vendorResearch/target";
 import {
   type RunForBackfill,
@@ -58,9 +57,8 @@ const BATCH = 500;
 /** Why `--undo` kept a label: a person decided its finding with it in front of them. */
 const DECIDED_AFTER = " (decided after the backfill)";
 
-/** The queries the script runs, and whether the vendor risk database flag is on. */
+/** The queries the script runs. */
 export interface BackfillDeps {
-  flagOn(): boolean;
   listOrganizationIdsQuery: typeof listOrganizationIdsQuery;
   findFindingsToBackfillQuery: typeof findFindingsToBackfillQuery;
   getRunForBackfillQuery: typeof getRunForBackfillQuery;
@@ -70,7 +68,6 @@ export interface BackfillDeps {
 }
 
 export const defaultDeps: BackfillDeps = {
-  flagOn: () => getVendorResearchConfig().vrdb,
   listOrganizationIdsQuery,
   findFindingsToBackfillQuery,
   getRunForBackfillQuery,
@@ -215,10 +212,6 @@ export async function main(
     return 2;
   }
   const { mode, organization } = options;
-  if (mode === "apply" && !deps.flagOn()) {
-    err("VENDOR_RESEARCH_VRDB is off: --apply needs the flag");
-    return 2;
-  }
 
   try {
     const ids = await deps.listOrganizationIdsQuery();

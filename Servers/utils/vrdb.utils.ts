@@ -40,6 +40,12 @@ import type {
 /** Records sent in one statement: about a megabyte of JSON. */
 const BATCH_SIZE = 500;
 
+/**
+ * The content hash of a record the copy retired: one that no content has, so that the record is
+ * written again, keys and all, when its list gives it a content the copy keeps.
+ */
+const RETIRED_CONTENT_HASH = "0".repeat(64);
+
 const NUL = 0;
 const isHighSurrogate = (code: number) => code >= 0xd800 && code <= 0xdbff;
 const isLowSurrogate = (code: number) => code >= 0xdc00 && code <= 0xdfff;
@@ -537,7 +543,17 @@ export const applyVrdbSnapshotQuery = async (
  * - a new record is inserted with its status; a stored one takes its content and status, and a
  *   record that comes without keys (a rejected CVE names no product) keeps those it had;
  * - a change of status, and a new record that is not active, is dated `at`;
- * - a stored record that is not among the changes stays as it is: nothing leaves the copy.
+ * - a stored record that is not among the changes stays as it is: nothing leaves the copy, but for
+ *   the ids in `retire`;
+ * - the stored copy of a record in `retire` (the list still publishes it, but the copy's filter now
+ *   leaves it out: a CVE re-scored below 9.0) loses all its keys, so that no run is offered it, and
+ *   takes a content hash that no content has, so that it is written again if it returns. Its
+ *   content stays, and so does its status, except that a stored rejection becomes active, dated
+ *   `at`: the list publishes the record again, and a stale rejection would hide the CVE on every
+ *   list (Ruling 9 of the M2 plan). A retired copy counts as updated, and a rejection that became
+ *   active as a change of status. An id that the same apply writes as a record is not retired (the
+ *   record wins); neither is one the copy does not hold, or one that has no keys and is active
+ *   already, so that a retired record is not counted twice.
  * A null cursor keeps the stored one (a batch of a baseline). The same id twice is one record, the
  * first.
  */
@@ -638,6 +654,42 @@ export const applyVrdbDeltaQuery = async (
           transaction: inside,
         },
       );
+    }
+
+    // The records the list still publishes but the copy's filter leaves out. A record this apply
+    // writes is not among them: it wins. A stored copy with keys, or not active, loses its keys
+    // and takes the hash of no content; one with no keys that is active has nothing to lose, so
+    // it is not written again and a retired record is not counted twice. A stored rejection
+    // becomes active, dated `at`. Retiring is no change of status unless it lifts a rejection.
+    const retiring = [...new Set((input.retire ?? []).map(storable))].filter(
+      (recordId) => !changed.has(recordId),
+    );
+    for (const batch of batches(retiring)) {
+      const retired = (await sequelize.query(
+        `WITH target AS (
+           SELECT id, status FROM vrdb_records
+           WHERE source_id = :sourceId AND source_record_id IN (:ids)
+             AND (cardinality(match_keys) > 0 OR status <> 'active')
+           FOR UPDATE
+         )
+         UPDATE vrdb_records AS v SET
+           match_keys = '{}',
+           content_hash = :retiredHash,
+           status = 'active',
+           status_changed_at = CASE WHEN target.status <> 'active'
+                                    THEN CAST(:at AS timestamptz) ELSE v.status_changed_at END,
+           updated_at = :at
+         FROM target
+         WHERE v.id = target.id
+         RETURNING target.status AS was`,
+        {
+          replacements: { sourceId, ids: batch, retiredHash: RETIRED_CONTENT_HASH, at },
+          type: QueryTypes.SELECT,
+          transaction: inside,
+        },
+      )) as Array<{ was: RecordStatus }>;
+      updated += retired.length;
+      statusChanged += retired.filter((row) => row.was !== "active").length;
     }
 
     // A batch of a baseline before its last (no day) leaves the outcome and the last success.

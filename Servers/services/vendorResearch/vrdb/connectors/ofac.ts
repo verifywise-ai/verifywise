@@ -13,7 +13,7 @@
  */
 import { FetchError } from "../../../webResearch/guardedFetch";
 import { joinSentences, sentence } from "../../records/sentence";
-import { cleanText } from "../../text";
+import { cleanText, cutAtCodePoint } from "../../text";
 import { compactNamesOf } from "../keys";
 import type { ParsedRecord } from "../types";
 import { type Connector, bodyText } from "./types";
@@ -33,10 +33,17 @@ export const OFAC_RECORD_MARK = "OFAC Specially Designated Nationals and Blocked
 
 /** A name of fewer letters and digits is not looked up: "ABC" would find any company called ABC. */
 export const MIN_OFAC_NAME_CHARS = 4;
+/** The longest remark of an entry as its record keeps it, the marker of a shortened one included. */
 export const MAX_OFAC_REMARKS_CHARS = 600;
-/** The other names an entry shows in its record, and the most that are read for one entry. */
+/** What a remark that was cut ends with, so that nobody takes the part kept for the whole. */
+const SHORTENED = " [shortened]";
+/** The other names an entry shows in its record. */
 const MAX_SHOWN_ALIASES = 6;
-const MAX_READ_ALIASES = 100;
+/**
+ * The most other names that are read for one entry. The entry with the most has 95 in the file of
+ * 2026-10-31; a name past the cap is dropped without a word, so the cap leaves room.
+ */
+const MAX_READ_ALIASES = 250;
 /** The files have 20,000 rows each today; a file past this is not the list. */
 const MAX_ROWS = 400_000;
 /** The fields of a row of SDN.CSV and of ALT.CSV (spec D2.2). */
@@ -131,6 +138,7 @@ export interface OfacEntry {
   id: number;
   name: string;
   programs: string[];
+  /** The list's remarks, or the front of them ending in the marker when they are long. */
   remarks: string;
   aliases: Array<{ type: string; name: string }>;
 }
@@ -165,6 +173,37 @@ const programsOf = (field: string | undefined): string[] =>
     .map((program) => program.trim())
     .filter((program) => program !== "");
 
+const BLANK = /\s/;
+
+/** The last blank (a space, a tab or a line break) of `text` at or before the index `limit`, or -1. */
+function lastBlankUpTo(text: string, limit: number): number {
+  for (let at = Math.min(limit, text.length - 1); at >= 0; at -= 1) {
+    if (BLANK.test(text.charAt(at))) return at;
+  }
+  return -1;
+}
+
+/**
+ * The remarks of an entry as its record keeps them: as they are when they are no longer than
+ * MAX_OFAC_REMARKS_CHARS, else cut so that the text and the marker that says it was shortened are
+ * that long together. The list writes the identifiers, websites and dates of an entry as items
+ * between ';' (the longest item of the file of 2026-10-31 has 335 characters), so the cut is at the
+ * last ';' that leaves room for the marker, else at the last blank, else hard, never between the
+ * halves of a surrogate pair. The item before a cut at ';' is whole: a number or a website that
+ * was half written is not shown as the list's. The ';' or blank itself is not kept, and a cut that
+ * would keep nothing is not taken. Only the first MAX_OFAC_REMARKS_CHARS characters are searched.
+ */
+function shortenRemarks(remarks: string): string {
+  if (remarks.length <= MAX_OFAC_REMARKS_CHARS) return remarks;
+  const room = MAX_OFAC_REMARKS_CHARS - SHORTENED.length;
+  // A separator right behind the last character that fits ends an item that fits: look that far.
+  for (const at of [remarks.lastIndexOf(";", room), lastBlankUpTo(remarks, room)]) {
+    const kept = at > 0 ? remarks.slice(0, at).trimEnd() : "";
+    if (kept !== "") return `${kept}${SHORTENED}`;
+  }
+  return `${cutAtCodePoint(remarks, room)}${SHORTENED}`;
+}
+
 /**
  * The entities of the files and the other names they are listed under, how many entries of any
  * type were read, and the errors: a row of the wrong number of fields, a row whose first field is
@@ -198,7 +237,7 @@ function readEntities(
       id,
       name,
       programs: programsOf(row[3]),
-      remarks: valueOf(row[11]).slice(0, MAX_OFAC_REMARKS_CHARS),
+      remarks: shortenRemarks(valueOf(row[11])),
       aliases: [],
     });
   }
@@ -253,8 +292,9 @@ export const ofacEntryUrl = (id: number): string =>
   `https://sanctionssearch.ofac.treas.gov/Details.aspx?id=${id}`;
 
 /**
- * An entity as a source: its page, its name, and its text, word for word the list's. The text
- * holds no lookup note and no day: whoever offers the record to a run adds both.
+ * An entity as a source: its page, its name, and its text, word for word the list's except for a
+ * long remark, which is cut and says so (see `shortenRemarks`). The text holds no lookup note and
+ * no day: whoever offers the record to a run adds both.
  */
 export function ofacSourceOf(entry: OfacEntry): { url: string; title: string; text: string } {
   const shown = entry.aliases.slice(0, MAX_SHOWN_ALIASES);
@@ -299,7 +339,12 @@ const limitsOf = (maxBytes: number) => ({
 
 export const ofacConnector: Connector = {
   id: "ofac",
-  version: 1,
+  // 2: a remark of more than 600 characters is cut between two of its items and ends in
+  // "[shortened]" (it was cut at 600 characters, often in the middle of a number, and said nothing),
+  // and an entry keeps up to 250 other names (it kept 100). Both change what `parse` gives from the
+  // same files, and a new version makes the sync parse them again though their bytes did not
+  // change (connectors/types.ts).
+  version: 2,
   // Two files and one pair of validators: a 304 on SDN.CSV would say nothing of ALT.CSV, so both
   // are asked in full and the sync's hash of the two tells an unchanged list.
   async download(fetch) {

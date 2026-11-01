@@ -13,7 +13,7 @@ import type { SearchEngine } from "../../webResearch/webSearch";
 import { type Hints, hintsSchema } from "../hints";
 import { type Verdicts, verifierSchema } from "../verifier";
 import { loopScopeOf } from "../prompts";
-import { researchOutputSchema } from "../schema";
+import { credibilityOutputSchema } from "../schema";
 import type { Recording } from "./types";
 
 export interface Recorder {
@@ -40,7 +40,7 @@ export function createRecorder(real: {
       params,
       ...rest,
     );
-    if (params.schema === researchOutputSchema) {
+    if (params.schema === credibilityOutputSchema) {
       recording.analysis = answer.object as Recording["analysis"];
     } else if (params.schema === hintsSchema) {
       recording.hints = answer.object as Hints;
@@ -58,6 +58,17 @@ export function createRecorder(real: {
 
   return {
     engine: {
+      // What the engine is, read from it each time: an engine that falls back to another one (the
+      // search of a key that is not allowed to search) changes its kinds, and the session reads them.
+      get id() {
+        return real.engine.id;
+      },
+      get kinds() {
+        return real.engine.kinds;
+      },
+      get newsWindowMonths() {
+        return real.engine.newsWindowMonths;
+      },
       async search(query, kind, signal) {
         const results = await real.engine.search(query, kind, signal);
         recording.searches.push({ kind, query, results: results.map((result) => ({ ...result })) });

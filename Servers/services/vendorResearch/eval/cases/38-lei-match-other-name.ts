@@ -81,7 +81,6 @@ export const LEI_MATCH_OTHER_NAME: EvalCase = {
           risk_severity: "Major",
           action_plan:
             "Stop payments to the vendor and ask our legal team to confirm the designation against the vendor's LEI.",
-          confidence: "high",
           rationale: "The entry carries the vendor's LEI.",
           evidence: [{ source_id: "S1", quote: `Identification number: ${LEI}` }],
         },

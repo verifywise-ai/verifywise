@@ -6,7 +6,7 @@ const COM = "https://www.bbc.com/news/technology-harbor-analytics";
 
 /**
  * One story, on the British and on the international site of one broadcaster. The two are two
- * hostnames but one publisher, so a finding that cites both must not get `high` confidence.
+ * hostnames but one publisher, so a finding that cites both must not get a High label.
  */
 export const SAME_STORY_TWO_DOMAINS: EvalCase = {
   id: "same-story-two-domains",
@@ -78,7 +78,6 @@ export const SAME_STORY_TWO_DOMAINS: EvalCase = {
           likelihood: "Possible",
           risk_severity: "Moderate",
           action_plan: "Ask the vendor which of our contacts were in the stolen lists.",
-          confidence: "high",
           rationale: "Contact lists were stolen, so the exposure is limited to contact data.",
           evidence: [
             {
@@ -103,7 +102,6 @@ export const SAME_STORY_TWO_DOMAINS: EvalCase = {
     minRecall: 1,
     maxKept: 1,
     maxDuplicateSources: 0,
-    maxOverconfident: 0,
     maxMislabelled: 0,
   },
   gaps: {},

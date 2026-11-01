@@ -1,4 +1,4 @@
-import { researchOutputSchema } from "../../schema";
+import { credibilityOutputSchema } from "../../schema";
 import { verifierSchema } from "../../verifier";
 import { createScriptedGenerate } from "../replay";
 import { runEvalCase } from "../runCase";
@@ -52,7 +52,6 @@ const BASE: EvalCase = {
           likelihood: "Possible",
           risk_severity: "Major",
           action_plan: "Ask the vendor for its incident report.",
-          confidence: "medium",
           rationale: "Customer records were copied, so the effect is serious.",
           evidence: [{ source_id: "S1", quote: QUOTE }],
         },
@@ -71,7 +70,7 @@ describe("runEvalCase", () => {
     const asked: Array<{ analysis: boolean; text: string }> = [];
     const generate = (async (params: { schema: unknown; system: string; prompt: string }) => {
       asked.push({
-        analysis: params.schema === researchOutputSchema,
+        analysis: params.schema === credibilityOutputSchema,
         text: `${params.system}\n${params.prompt}`,
       });
       return scripted(params as never);
@@ -102,7 +101,7 @@ describe("runEvalCase", () => {
     const scripted = createScriptedGenerate(BASE.recording);
     const prompts: string[] = [];
     const generate = (async (params: { schema: unknown; prompt: string }) => {
-      if (params.schema === researchOutputSchema) prompts.push(params.prompt);
+      if (params.schema === credibilityOutputSchema) prompts.push(params.prompt);
       return scripted(params as never);
     }) as typeof scripted;
 

@@ -1,7 +1,7 @@
 /**
  * The queue of the vendor risk database (spec D4.7): one queue of its own, one job name, and one
- * scheduler per mirrored list, upserted only while both the VRDB flag and the records are on and
- * the list's gate is open (gates.ts).
+ * scheduler per mirrored list, upserted while the records are on (the database has no flag of its
+ * own) and the list's gate is open (gates.ts).
  */
 const mockUpsertJobScheduler = jest.fn();
 const mockRemoveJobScheduler = jest.fn();
@@ -35,13 +35,18 @@ import {
   enqueueRelabel,
   scheduleVendorRiskDatabaseSync,
   vrdbSchedulerId,
+  vrdbSyncsOn,
 } from "../queue";
 import { activeMirrors } from "../sources";
 import type { VrdbSourceState } from "../types";
 
-/** The lists whose gates are open by default, and every mirrored list. */
-const ACTIVE = ["kev", "ofac", "uk_sanctions", "eu_fsf"] as const;
-const MIRRORS = [...ACTIVE, "cve", "un_sanctions"] as const;
+/**
+ * The mirrored lists whose gates are open by default (the CVE records, Q7, are; the UN list, Q6,
+ * is not), those of them that are copied whole, and every mirrored list.
+ */
+const ACTIVE = ["kev", "ofac", "uk_sanctions", "eu_fsf", "cve"] as const;
+const WHOLE = ["kev", "ofac", "uk_sanctions", "eu_fsf"] as const;
+const MIRRORS = [...ACTIVE, "un_sanctions"] as const;
 
 const config = (overrides: Partial<VendorResearchConfig> = {}): VendorResearchConfig => ({
   autoRun: true,
@@ -50,7 +55,6 @@ const config = (overrides: Partial<VendorResearchConfig> = {}): VendorResearchCo
   workerConcurrency: 5,
   headless: false,
   records: true,
-  vrdb: true,
   ...overrides,
 });
 
@@ -134,8 +138,17 @@ describe("enqueueRelabel", () => {
   });
 });
 
+describe("vrdbSyncsOn", () => {
+  it("is the records switch and nothing else: the lists are mirrored unless the records are off", () => {
+    expect(vrdbSyncsOn(config())).toBe(true);
+    expect(vrdbSyncsOn({ records: true })).toBe(true);
+    expect(vrdbSyncsOn(config({ records: false }))).toBe(false);
+    expect(vrdbSyncsOn({ records: false })).toBe(false);
+  });
+});
+
 describe("scheduleVendorRiskDatabaseSync", () => {
-  it("upserts one scheduler per active mirrored source when both flags are on", async () => {
+  it("upserts one scheduler per active mirrored source while the records are on, with no other flag", async () => {
     const queue = fakeQueue();
 
     await scheduleVendorRiskDatabaseSync(config(), queue);
@@ -159,23 +172,34 @@ describe("scheduleVendorRiskDatabaseSync", () => {
     expect(queue.upsertJobScheduler.mock.calls.map(([id]) => id)).toEqual(
       ACTIVE.map((id) => `vrdb_sync_${id}`),
     );
-    expect(queue.removeJobScheduler.mock.calls).toEqual([
-      ["vrdb_sync_cve"],
-      ["vrdb_sync_un_sanctions"],
-    ]);
+    // Only the UN list (Q6) waits behind a closed gate now.
+    expect(queue.removeJobScheduler.mock.calls).toEqual([["vrdb_sync_un_sanctions"]]);
     expect(states).toHaveBeenCalledWith([...ACTIVE]);
+    // A first sync of each list that is copied whole; the CVE records are copied from a baseline.
     expect(queue.add.mock.calls.map(([, , opts]) => opts.jobId)).toEqual(
-      ACTIVE.map((id) => `vrdb_sync_first_${id}`),
+      WHOLE.map((id) => `vrdb_sync_first_${id}`),
     );
   });
 
-  it("removes the schedulers of every mirrored list when the VRDB flag is off", async () => {
+  it("a list read by its changes gets its scheduler but no first sync: its first copy is a baseline", async () => {
     const queue = fakeQueue();
+    // The CVE records have a row that never saw a success; the other lists have no row at all.
+    const states = jest.fn(async () => [state("cve", null)]);
 
-    await scheduleVendorRiskDatabaseSync(config({ vrdb: false }), queue);
+    await scheduleVendorRiskDatabaseSync(config(), queue, states);
 
-    expect(queue.upsertJobScheduler).not.toHaveBeenCalled();
-    expect(queue.removeJobScheduler.mock.calls).toEqual(MIRRORS.map((id) => [`vrdb_sync_${id}`]));
+    // The CVE records have their scheduler (their gate, Q7, is open), and their state is read as
+    // the others' are ...
+    expect(queue.upsertJobScheduler.mock.calls.map(([id]) => id)).toEqual(
+      ACTIVE.map((id) => `vrdb_sync_${id}`),
+    );
+    expect(queue.removeJobScheduler.mock.calls).toEqual([["vrdb_sync_un_sanctions"]]);
+    expect(states).toHaveBeenCalledWith([...ACTIVE]);
+    // ... but no first sync: a sync without a cursor would be refused as no_baseline, and the
+    // first copy of the list is the baseline an operator loads (scripts/vrdbCveBaseline.ts).
+    expect(queue.add.mock.calls.map(([, data, opts]) => [data.sourceId, opts.jobId])).toEqual(
+      WHOLE.map((id) => [id, `vrdb_sync_first_${id}`]),
+    );
   });
 
   it("removes the schedulers of every mirrored list when the records are off", async () => {
@@ -213,7 +237,7 @@ describe("scheduleVendorRiskDatabaseSync", () => {
     const queue = fakeQueue();
     const states = jest.fn(async () => [state("kev", null)]);
 
-    await scheduleVendorRiskDatabaseSync(config({ vrdb: false }), queue, states);
+    await scheduleVendorRiskDatabaseSync(config({ records: false }), queue, states);
 
     expect(states).not.toHaveBeenCalled();
     expect(queue.add).not.toHaveBeenCalled();
@@ -233,7 +257,7 @@ describe("scheduleVendorRiskDatabaseSync", () => {
 
   it("never empties the queue", async () => {
     await scheduleVendorRiskDatabaseSync(config(), fakeQueue());
-    await scheduleVendorRiskDatabaseSync(config({ vrdb: false }), fakeQueue());
+    await scheduleVendorRiskDatabaseSync(config({ records: false }), fakeQueue());
 
     expect(mockObliterate).not.toHaveBeenCalled();
   });

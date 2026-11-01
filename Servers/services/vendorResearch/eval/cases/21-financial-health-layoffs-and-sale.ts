@@ -13,14 +13,14 @@ const SALE = "https://www.fintechbrief.example/tessellate-billing-explores-a-sal
  * vendor whose continuity was at risk as a clean one. The code makes the three searches about the
  * finances (`<name> layoffs`, `bankruptcy` and `acquisition`) with the others, reads the best
  * articles, and the model raises one finding in the category: a possible risk to the continuity of
- * the service, on two publishers that are not credible by themselves, so of medium confidence.
+ * the service, on two publishers that are not credible by themselves.
  *
  * Under the credibility rule both publishers are unknown to the registry, so the label is Low (spec
  * D5.6 #4).
  *
  * If this case fails, the finances are no longer searched, the category is lost on the way to the
- * evidence or the validation, or a finding about a vendor in trouble is raised with a confidence
- * that two ordinary articles do not support.
+ * evidence or the validation, or a finding about a vendor in trouble is raised with a label that
+ * two ordinary articles do not support.
  */
 export const FINANCIAL_HEALTH_LAYOFFS_AND_SALE: EvalCase = {
   id: "financial-health-layoffs-and-sale",
@@ -110,7 +110,6 @@ export const FINANCIAL_HEALTH_LAYOFFS_AND_SALE: EvalCase = {
           risk_severity: "Major",
           action_plan:
             "Ask the vendor for its continuity plan, check that our contract lets us export our data and end it if the vendor is sold, and find out how we would replace the service.",
-          confidence: "medium",
           rationale:
             "Two publishers report the layoffs and the search for a buyer, and the company confirmed the layoffs; nobody says that the service is about to stop.",
           evidence: [
@@ -150,7 +149,6 @@ export const FINANCIAL_HEALTH_LAYOFFS_AND_SALE: EvalCase = {
     maxBadUrls: 0,
     maxDatedWebResults: 0,
     maxSnippetOnlyFindings: 0,
-    maxOverconfident: 0,
     maxMislabelled: 0,
     maxDuplicateClusters: 0,
     maxCitationsRejected: 0,

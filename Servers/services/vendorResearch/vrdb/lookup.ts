@@ -3,8 +3,9 @@
  * (readThrough.ts) for the keys whose stored answer expired, then the vendor's keys (keys.ts) with
  * the read-through keys against the stored records, in two queries, then the records a run is
  * offered as sources and the coverage of every list. It takes the place of the per-run lookups of
- * KEV, the NVD and OFAC while the VRDB flag is on, and of the SEC's once Q4 is open; only a
- * read-through source reaches the web.
+ * KEV, the NVD and OFAC, and of the SEC's once Q4 is open; only a read-through source reaches the
+ * web. It has no flag: with the records off (VENDOR_RESEARCH_RECORDS=false) it asks nothing and
+ * every list says `off`.
  *
  * `offerRecords` decides, with no I/O: only active records that share a key with the vendor; the
  * strong matches first, then the newest; a vulnerability or a filing older than the category's
@@ -399,15 +400,16 @@ export function runReadThrough(contact: string | null = SEC_CONTACT): ReadThroug
 }
 
 /**
- * The lookup of a vendor's run in the database, or undefined while the VRDB flag is off (the run
- * then asks the per-run lookups, as before). `config` and `readThroughDeps` are for the tests.
+ * The lookup of a vendor's run in the database. It is always there: the records switch
+ * (VENDOR_RESEARCH_RECORDS) decides whether it asks anything, and a lookup that is switched off
+ * says `off` for every list, which the run keeps in its coverage. `config` and `readThroughDeps`
+ * are for the tests.
  */
 export function sharedVrdbLookup(
   ids: { organizationId: number; vendorId: number },
-  config: VendorResearchConfig = getVendorResearchConfig(),
+  config: Pick<VendorResearchConfig, "records"> = getVendorResearchConfig(),
   readThroughDeps: ReadThroughDeps = runReadThrough(),
-): VrdbLookup | undefined {
-  if (!config.vrdb) return undefined;
+): VrdbLookup {
   return createVrdbLookup({
     store: databaseLookupStore,
     ...ids,

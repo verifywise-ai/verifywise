@@ -8,7 +8,9 @@ import type { TenantContext } from "./tenantIsolation.harness";
 import { createTestVendor } from "../../factories";
 import type { ResearchTrigger } from "../../../domain.layer/interfaces/i.vendorResearch";
 import {
+  RUN_TIME_LIMIT_MINUTES,
   STALE_RUN_MINUTES,
+  STALE_RUNNING_RUN_MINUTES,
   countRunsSinceQuery,
   createRunQuery,
   failStaleRunsQuery,
@@ -159,8 +161,19 @@ describe("vendor_research_runs tenant isolation", () => {
     expect(await markRunRunningQuery(owner.orgId, started.id)).toBe(true);
     await ageBy20Minutes(started.id, "created_at");
     expect(await failStaleRunsQuery(owner.orgId, vendorId, 15)).toBe(0);
+    // A running run is not swept at the queued limit: 20 minutes since its start is not stale.
     await ageBy20Minutes(started.id, "started_at");
+    expect(await failStaleRunsQuery(owner.orgId, vendorId, 15)).toBe(0);
+    expect((await getRunByIdQuery(owner.orgId, started.id))?.status).toBe("running");
+    await sequelize.query(
+      `UPDATE vendor_research_runs SET started_at = NOW() - (:minutes * INTERVAL '1 minute') WHERE id = :runId`,
+      { replacements: { runId: started.id, minutes: STALE_RUNNING_RUN_MINUTES + 1 } },
+    );
     expect(await failStaleRunsQuery(owner.orgId, vendorId, 15)).toBe(1);
+    expect(await getRunByIdQuery(owner.orgId, started.id)).toMatchObject({
+      status: "failed",
+      error: "timed out",
+    });
 
     // None of that touched the other vendor's run.
     expect((await getRunByIdQuery(owner.orgId, otherVendorsRun.id))?.status).toBe("queued");
@@ -173,7 +186,7 @@ describe("vendor_research_runs tenant isolation", () => {
 
     // The attacker names the owner's run id directly.
     expect(await markRunRunningQuery(attacker.orgId, run.id)).toBe(false);
-    await finishRunQuery(finishOf(attacker.orgId, run.id));
+    expect(await finishRunQuery(finishOf(attacker.orgId, run.id))).toBe(false);
     expect(await getRunByIdQuery(owner.orgId, run.id)).toMatchObject({
       status: "queued",
       started_at: null,
@@ -182,7 +195,7 @@ describe("vendor_research_runs tenant isolation", () => {
 
     // Positive controls: the same calls work for the owner.
     expect(await markRunRunningQuery(owner.orgId, run.id)).toBe(true);
-    await finishRunQuery(finishOf(owner.orgId, run.id));
+    expect(await finishRunQuery(finishOf(owner.orgId, run.id))).toBe(true);
     expect((await getRunByIdQuery(owner.orgId, run.id))?.status).toBe("completed");
   });
 
@@ -245,7 +258,7 @@ describe("vendor_research_runs tenant isolation", () => {
     });
   });
 
-  it("keeps the run counters and no search provider column", async () => {
+  it("keeps the run counters and the search engine of the run, and no search provider column", async () => {
     const columns = (await sequelize.query(
       `SELECT column_name FROM information_schema.columns
        WHERE table_schema = 'verifywise' AND table_name = 'vendor_research_runs'`,
@@ -253,7 +266,7 @@ describe("vendor_research_runs tenant isolation", () => {
     )) as Array<{ column_name: string }>;
     const names = columns.map((column) => column.column_name);
 
-    expect(names).toEqual(expect.arrayContaining(["searches_used", "pages_read"]));
+    expect(names).toEqual(expect.arrayContaining(["searches_used", "pages_read", "search_engine"]));
     expect(names).not.toContain("search_provider");
   });
 
@@ -538,5 +551,98 @@ describe("vendor_research_runs tenant isolation", () => {
     await finishRunQuery(finishOf(owner.orgId, run.id));
     expect(await markRunRunningQuery(owner.orgId, run.id)).toBe(false);
     expect((await getRunByIdQuery(owner.orgId, run.id))?.status).toBe("completed");
+  });
+
+  // A live run is never swept, and the end of a run is never overwritten: the pipeline fails a run
+  // at RUN_TIME_LIMIT_MINUTES itself, the sweep of a running run waits longer, and a finish writes
+  // only a run that has not ended.
+  describe("the end of a run and the sweep", () => {
+    /** Starts a new run of `vendorId` and moves its start back by `minutes`. */
+    async function runningSince(ctx: TenantContext, vendorId: number, minutes: number) {
+      const run = await createRunQuery(newRun(ctx, vendorId, "auto"));
+      expect(await markRunRunningQuery(ctx.orgId, run.id)).toBe(true);
+      await sequelize.query(
+        `UPDATE vendor_research_runs SET started_at = NOW() - (:minutes * INTERVAL '1 minute') WHERE id = :runId`,
+        { replacements: { runId: run.id, minutes } },
+      );
+      return run;
+    }
+
+    it("the sweep waits for a running run longer than the run's own time limit", async () => {
+      const { owner } = await seedTwoTenantContexts();
+      const vendorId = await createTestVendor(owner.orgId);
+      expect(STALE_RUNNING_RUN_MINUTES).toBeGreaterThan(RUN_TIME_LIMIT_MINUTES);
+      const run = await runningSince(owner, vendorId, RUN_TIME_LIMIT_MINUTES + 1);
+
+      expect(await failStaleRunsQuery(owner.orgId, vendorId)).toBe(0);
+
+      expect((await getRunByIdQuery(owner.orgId, run.id))?.status).toBe("running");
+    });
+
+    it("a finish does not overwrite a run the sweep failed", async () => {
+      const { owner } = await seedTwoTenantContexts();
+      const vendorId = await createTestVendor(owner.orgId);
+      const run = await runningSince(owner, vendorId, STALE_RUNNING_RUN_MINUTES + 1);
+      expect(await failStaleRunsQuery(owner.orgId, vendorId)).toBe(1);
+
+      expect(await finishRunQuery(finishOf(owner.orgId, run.id))).toBe(false);
+
+      expect(await getRunByIdQuery(owner.orgId, run.id)).toMatchObject({
+        status: "failed",
+        error: "timed out",
+      });
+    });
+
+    it("a finish writes a queued or a running run and says so", async () => {
+      const { owner } = await seedTwoTenantContexts();
+      const queuedVendorId = await createTestVendor(owner.orgId);
+      const runningVendorId = await createTestVendor(owner.orgId);
+      const queued = await createRunQuery(newRun(owner, queuedVendorId, "auto"));
+      const running = await runningSince(owner, runningVendorId, 1);
+
+      expect(
+        await finishRunQuery(
+          finishOf(owner.orgId, queued.id, { status: "failed", error: "could not enqueue" }),
+        ),
+      ).toBe(true);
+      expect(await finishRunQuery(finishOf(owner.orgId, running.id))).toBe(true);
+
+      expect(await getRunByIdQuery(owner.orgId, queued.id)).toMatchObject({
+        status: "failed",
+        error: "could not enqueue",
+      });
+      expect((await getRunByIdQuery(owner.orgId, running.id))?.status).toBe("completed");
+    });
+
+    it("a second finish of an ended run changes nothing", async () => {
+      const { owner } = await seedTwoTenantContexts();
+      const vendorId = await createTestVendor(owner.orgId);
+      const run = await runningSince(owner, vendorId, 1);
+      expect(await finishRunQuery(finishOf(owner.orgId, run.id))).toBe(true);
+      const before = await getRunByIdQuery(owner.orgId, run.id);
+
+      expect(
+        await finishRunQuery(finishOf(owner.orgId, run.id, { status: "failed", error: "late" })),
+      ).toBe(false);
+
+      expect(await getRunByIdQuery(owner.orgId, run.id)).toEqual(before);
+      expect(before?.status).toBe("completed");
+    });
+
+    it("a job whose run is no longer queued is not started", async () => {
+      const { owner } = await seedTwoTenantContexts();
+      const vendorId = await createTestVendor(owner.orgId);
+      const run = await createRunQuery(newRun(owner, vendorId, "auto"));
+      await finishRunQuery(
+        finishOf(owner.orgId, run.id, { status: "failed", error: "could not enqueue" }),
+      );
+
+      expect(await markRunRunningQuery(owner.orgId, run.id)).toBe(false);
+
+      expect(await getRunByIdQuery(owner.orgId, run.id)).toMatchObject({
+        status: "failed",
+        started_at: null,
+      });
+    });
   });
 });

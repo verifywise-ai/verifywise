@@ -19,8 +19,9 @@
  *   they are checked and stored: a NUL and a lone surrogate would make a run fail to save. So half
  *   of a surrogate pair, which would match the first half of a pair in the page, no longer does: it
  *   has become U+FFFD.
- * - The confidence is the lower of what the model says and what the evidence supports (see
- *   `confidenceCeiling`: independent publishers, and the tier of the sources). It is never raised.
+ * - A finding has no confidence. The model is not asked for one, and one that a recording made
+ *   before still holds is ignored: the credibility label of a finding is worked out from its cited
+ *   sources by credibility.ts, after the checks here.
  * - The findings come back with the most severe first, so that of two similar ones the more severe
  *   is the one that the de-duplication keeps. `applyCaps` then keeps at most MAX_PER_CATEGORY for a
  *   category and MAX_PER_RUN for a run. The caller applies it after the de-duplication: findings
@@ -32,7 +33,6 @@
  */
 import {
   EvidenceSource,
-  FindingConfidence,
   FindingSource,
   NewFinding,
   ResearchCategory,
@@ -44,14 +44,12 @@ import {
   MAX_FINDING_TEXT_CHARS,
   MAX_PER_CATEGORY,
   MAX_QUOTE_CHARS,
-  RESEARCH_CONFIDENCES,
   RESEARCH_LIKELIHOODS,
   RESEARCH_SEVERITIES,
   type AnyResearchOutput,
   ResearchOutput,
 } from "./schema";
 import { createVendorMatcher } from "./identity";
-import { corroborationOf } from "./sourceTiers";
 import { ResearchTarget } from "./target";
 import { cleanText, cutAtCodePoint } from "./text";
 
@@ -60,11 +58,10 @@ export { MAX_PER_CATEGORY };
 export const MAX_PER_RUN = 8;
 
 /**
- * A finding as the model answered it. Under the credibility rules (since vr-9) it has no
- * confidence, and the stored one is then the ceiling of its sources.
+ * A finding as the model answered it. It has no confidence: the model is not asked for one, and
+ * the parse of the answer (schema.ts) drops one that an older recording holds.
  */
-type Candidate = Omit<ResearchOutput["findings"][number], "confidence"> &
-  Partial<Pick<ResearchOutput["findings"][number], "confidence">>;
+type Candidate = ResearchOutput["findings"][number];
 
 // ---------------------------------------------------------------------------
 // The report: why candidates and citations were turned away
@@ -164,15 +161,6 @@ function vendorOwnWords(target: ResearchTarget): Set<string> {
 // Does the source mention the vendor?
 // ---------------------------------------------------------------------------
 
-/** The lower-case host name of a URL, or null when the URL cannot be read. */
-function hostOf(url: string): string | null {
-  try {
-    return new URL(url).hostname.toLowerCase().replace(/\.$/, "");
-  } catch {
-    return null;
-  }
-}
-
 /**
  * True when the source is the vendor's own page: the research marked it as on the vendor's website
  * (`onVendorSite`) and the vendor has a domain. The mark is the research's decision, taken on the
@@ -223,43 +211,6 @@ export function sourceMentionsVendor(source: EvidenceSource, target: ResearchTar
 }
 
 // ---------------------------------------------------------------------------
-// Confidence
-// ---------------------------------------------------------------------------
-
-const CONFIDENCE_RANK: Record<FindingConfidence, number> = { low: 0, medium: 1, high: 2 };
-
-function lowerOf(a: FindingConfidence, b: FindingConfidence): FindingConfidence {
-  return CONFIDENCE_RANK[a] <= CONFIDENCE_RANK[b] ? a : b;
-}
-
-/** What the confidence ceiling reads of a cited source: its URL and whether it is the vendor's own. */
-export type CitedPage = Pick<EvidenceSource, "url" | "onVendorSite">;
-
-/**
- * The most confidence the cited sources support. `high` needs two independent publishers, one of
- * them in a credible tier (sourceTiers.ts: the vendor's own site, a regulator or a court, a major
- * publisher). One story on two domains of a publisher, a story and its copy on an aggregator, and
- * the pages of the vendor's own site are one publisher each. `medium` needs two different pages or
- * one page that is the vendor's own (see `isVendorsOwnPage`: the research's mark, not the host of
- * the URL), and anything less is `low`. A URL that cannot be read is not a source.
- */
-export function confidenceCeiling(sources: CitedPage[], target: ResearchTarget): FindingConfidence {
-  const pages = new Set<string>();
-  let ownPage = false;
-
-  for (const source of sources) {
-    if (hostOf(source.url) === null) continue;
-    pages.add(source.url);
-    if (isVendorsOwnPage(source, target)) ownPage = true;
-  }
-
-  const { publishers, credible } = corroborationOf(sources, target);
-  if (publishers >= 2 && credible) return "high";
-  if (pages.size >= 2 || ownPage) return "medium";
-  return "low";
-}
-
-// ---------------------------------------------------------------------------
 // Candidates
 // ---------------------------------------------------------------------------
 
@@ -282,8 +233,8 @@ interface HeldCitation {
  * A quote holds up when it is in the source, the source mentions the vendor, and the quote has a
  * word that is no part of the vendor's name or domain (see `vendorOwnWords` for what counts as
  * that). The last rule is what keeps a second publisher with the quote "Acme" or "www.acme.com"
- * from lifting a claim to `high` (see `confidenceCeiling`). It is not a minimum length: "ISO
- * 27001" is short and real.
+ * from counting as a source of the claim, which the credibility rule would count (credibility.ts).
+ * It is not a minimum length: "ISO 27001" is short and real.
  */
 function validCitations(
   candidate: Candidate,
@@ -394,8 +345,7 @@ function toFinding(
   }
   if (
     !isOneOf(RESEARCH_LIKELIHOODS, candidate.likelihood) ||
-    !isOneOf(RESEARCH_SEVERITIES, candidate.risk_severity) ||
-    (candidate.confidence !== undefined && !isOneOf(RESEARCH_CONFIDENCES, candidate.confidence))
+    !isOneOf(RESEARCH_SEVERITIES, candidate.risk_severity)
   ) {
     return refuse("invalid_value");
   }
@@ -412,12 +362,6 @@ function toFinding(
     MAX_FINDING_TEXT_CHARS,
   ).trim();
 
-  // What the sources support. A model that gave no confidence (the credibility rules) gets this.
-  const ceiling = confidenceCeiling(
-    citations.map((citation) => citation.from),
-    target,
-  );
-
   return {
     category: candidate.category,
     risk_description: riskDescription.trim(),
@@ -426,8 +370,6 @@ function toFinding(
     likelihood: candidate.likelihood,
     risk_severity: candidate.risk_severity,
     risk_level: `${level} Risk`,
-    confidence:
-      candidate.confidence === undefined ? ceiling : lowerOf(candidate.confidence, ceiling),
     rationale: rationale === "" ? null : rationale,
     sources: citations.map((citation) => citation.stored),
   };

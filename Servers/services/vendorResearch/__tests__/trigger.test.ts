@@ -64,7 +64,6 @@ const CONFIGURED: VendorResearchConfig = {
   workerConcurrency: 5,
   headless: false,
   records: true,
-  vrdb: false,
 };
 
 const VENDOR_ROW = { id: VENDOR, vendor_name: "Acme" } as IVendor;

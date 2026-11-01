@@ -47,8 +47,9 @@ interface ResearchSettingsModalProps {
  * Where an Admin picks the LLM keys the vendor research uses: one for the research loop, which
  * makes many small calls, and one for the analysis that writes the risks, which makes one large
  * call. Each can be left to the default (the newest key for the research, the research key for
- * the analysis). The same window sets how often the scheduled scan researches every vendor again
- * (off, weekly, every two weeks or monthly; off until an Admin chooses).
+ * the analysis). Under the research key it says which search each kind of key gets and what a
+ * provider's search costs. The same window sets how often the scheduled scan researches every
+ * vendor again (off, weekly, every two weeks or monthly; off until an Admin chooses).
  *
  * The parent mounts it only while it is open, so each opening starts from what is saved. Nothing
  * is offered before the saved choice and the keys are there, and what the person changes is kept
@@ -136,15 +137,23 @@ export default function ResearchSettingsModal({ onClose, onNotify }: ResearchSet
     }
     return (
       <Stack sx={{ gap: "16px" }}>
-        <Select
-          id="research-settings-research-key"
-          label="Research key"
-          value={research}
-          items={[{ _id: DEFAULT_KEY, name: t("Newest key (default)") }, ...keyOptions]}
-          onChange={(event) =>
-            setChanges((current) => ({ ...current, research: toChoice(event.target.value) }))
-          }
-        />
+        <Stack sx={{ gap: "8px" }}>
+          <Select
+            id="research-settings-research-key"
+            label="Research key"
+            value={research}
+            items={[{ _id: DEFAULT_KEY, name: t("Newest key (default)") }, ...keyOptions]}
+            onChange={(event) =>
+              setChanges((current) => ({ ...current, research: toChoice(event.target.value) }))
+            }
+          />
+          {/* The search a run gets depends on the kind of key it researches with. */}
+          <Typography sx={{ ...textStyles.bodySmall, color: "text.tertiary" }}>
+            {t(
+              "Anthropic keys search with Claude's own web search, billed by Anthropic at about $10 per 1,000 searches (about 20 to 30 a run). Other keys search the news of the last 3 months through the GDELT Project at no charge.",
+            )}
+          </Typography>
+        </Stack>
         <Select
           id="research-settings-analysis-key"
           label="Analysis key"

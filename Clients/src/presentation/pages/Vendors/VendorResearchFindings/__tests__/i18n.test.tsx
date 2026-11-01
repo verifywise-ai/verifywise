@@ -135,8 +135,12 @@ const REGISTER_WORDS = {
   likelihood: ["Rare", "Unlikely", "Possible", "Likely", "Almost certain"],
   severity: ["Negligible", "Minor", "Moderate", "Major", "Catastrophic"],
   level: ["Very Low Risk", "Low Risk", "Medium Risk", "High Risk", "Very High Risk"],
-  confidence: ["Low", "Medium", "High"],
+  credibility: ["Low", "Medium", "High"],
 };
+
+/** What the server says of a label that is the earlier confidence of a finding. */
+const EARLIER_LINE =
+  "Rated before the source rules; this is the earlier confidence level until the label is recomputed.";
 
 /** A cited source as the credibility rule saw it: a page of a host nobody reviewed, by default. */
 const citedSource = (overrides: Partial<CredibilitySource> = {}): CredibilitySource => ({
@@ -621,7 +625,7 @@ describe.each(LANGS)("research findings in %s", (lang) => {
       "Risk level",
       "Severity",
       "Likelihood",
-      "Confidence",
+      "Credibility",
       "Action plan",
       "Why this rating",
       "Sources",
@@ -728,7 +732,7 @@ describe.each(LANGS)("research findings in %s", (lang) => {
           likelihood: "Almost certain",
           risk_severity: "Catastrophic",
           risk_level: "Very High Risk",
-          confidence: "high",
+          credibility: "high",
         }),
         finding({
           id: 2,
@@ -736,7 +740,7 @@ describe.each(LANGS)("research findings in %s", (lang) => {
           likelihood: "Rare",
           risk_severity: "Negligible",
           risk_level: "Very Low Risk",
-          confidence: "low",
+          credibility: "low",
         }),
         finding({
           id: 3,
@@ -915,7 +919,7 @@ describe.each(LANGS)("research findings in %s", (lang) => {
     expectNoUntranslatedText(lang, FIXTURES);
   });
 
-  it("translates the notes of a label the backfill wrote", async () => {
+  it("translates the notes of a label the backfill wrote, and the line and note of an earlier rating", async () => {
     mocks.list.mockResolvedValue({
       rows: [
         finding({ credibility: "medium", credibility_basis: { rule: "legacy_confidence" } }),
@@ -934,13 +938,17 @@ describe.each(LANGS)("research findings in %s", (lang) => {
     renderSection();
 
     const legacy = within((await screen.findByText(finding().risk_description)).closest("li")!);
-    expect(
-      legacy.getByText(tr(lang, "Rated with the earlier confidence rule.")),
-    ).toBeInTheDocument();
+    expect(legacy.getByText(tr(lang, EARLIER_LINE))).toBeInTheDocument();
+    expect(legacy.getByText(tr(lang, "Earlier rating"))).toBeInTheDocument();
+    expect(legacy.getByText(tr(lang, "Credibility"))).toBeInTheDocument();
+    expect(legacy.getByText(tr(lang, "Medium"))).toBeInTheDocument();
+    expect(legacy.queryByText(tr(lang, "Confidence"))).not.toBeInTheDocument();
     const backfilled = within(screen.getByText(secondFinding().risk_description).closest("li")!);
     const sentence = tr(lang, "Low: only the vendor's own claims support it.");
     const note = tr(lang, "Rated again with the current rule.");
     expect(backfilled.getByText(plain(`${sentence} ${note}`))).toBeInTheDocument();
+    // Only the earlier rating says so.
+    expect(backfilled.queryByText(tr(lang, "Earlier rating"))).not.toBeInTheDocument();
 
     expectNoUntranslatedText(lang, FIXTURES);
   });
@@ -1030,6 +1038,8 @@ describe.each(LANGS)("research findings in %s", (lang) => {
   });
 
   it("translates the coverage of a run that read the NVD through, and checked the CVE and UN lists", async () => {
+    // The notice of the CVE records names the year of the day: stand the clock still at 2026.
+    vi.setSystemTime(new Date("2026-10-31T12:00:00Z"));
     mocks.latest.mockResolvedValue(
       run({
         category_summary: FOUR_OUTCOMES,
@@ -1088,7 +1098,7 @@ describe.each(LANGS)("research findings in %s", (lang) => {
         tr(lang, "Data sources: {attributions}", {
           attributions: joinAttributions([
             "This product uses data from the NVD API but is not endorsed or certified by the NVD.",
-            "CVE® records © The MITRE Corporation, under the CVE Terms of Use (https://www.cve.org/Legal/TermsOfUse)",
+            "CVE records Copyright © 1999-2026, The MITRE Corporation, under the CVE Terms of Use (https://www.cve.org/Legal/TermsOfUse)",
             "United Nations Security Council Consolidated List",
           ]),
         }),
@@ -1221,6 +1231,51 @@ describe.each(LANGS)("research findings in %s", (lang) => {
     ).toBeInTheDocument();
 
     expectNoUntranslatedText(lang, FIXTURES);
+  });
+
+  it("translates the notes that count the searches that were not available", async () => {
+    mocks.latest.mockResolvedValue(
+      run({
+        category_summary: [
+          {
+            category: "security_incidents",
+            outcome: "nothing_found",
+            note: "No risks found; 3 of 9 searches were not available",
+          },
+          {
+            category: "legal_regulatory",
+            outcome: "nothing_found",
+            note: "No risks found; 1 of 2 searches were not available and 2 of 5 pages could not be read",
+          },
+        ],
+      }),
+    );
+    renderSection();
+
+    expect(
+      await screen.findByText(
+        tr(lang, "No risks were found. {failed} of {total} searches were not available.", {
+          failed: 3,
+          total: 9,
+        }),
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        tr(
+          lang,
+          "No risks were found. {searchesFailed} of {searches} searches were not available, and {pagesFailed} of {pages} pages could not be read.",
+          { searchesFailed: 1, searches: 2, pagesFailed: 2, pages: 5 },
+        ),
+      ),
+    ).toBeInTheDocument();
+    // Translated, not the English key shown as it is.
+    expect(
+      tr(lang, "No risks were found. {failed} of {total} searches were not available.", {
+        failed: 3,
+        total: 9,
+      }),
+    ).not.toContain("searches were not available");
   });
 
   it("translates the fixed notes of a run summary", async () => {

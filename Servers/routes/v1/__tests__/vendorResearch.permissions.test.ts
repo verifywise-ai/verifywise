@@ -8,7 +8,10 @@ import { describe, it, expect, jest } from "@jest/globals";
 // manage the organization's LLM keys. Everything else is read by any signed-in user.
 //
 // The routes are versioned (ADR 0001: added after the policy, so they live in routes/v1 and are
-// served under /api/v1). Vendor CRUD stays on the legacy router, which has no research route.
+// served under /api/v1). The vendor reads and the delete stay on the legacy router, which has no
+// research route. The create and the update of a vendor, which take the other names and the
+// identifiers that the frozen legacy contract lacked (ADR 0001 sections 1, 2 and 5), are versioned
+// here too, as thin adapters with the key of the legacy writes.
 
 jest.mock("../../../middleware/auth.middleware", () => ({
   __esModule: true,
@@ -60,6 +63,37 @@ describe("vendor research read routes", () => {
     ["the findings", "get", "/", vendorRiskFindingsRouter],
   ])("%s: %s %s has no role permission", (_label, method, path, router) => {
     expect(permissionFor(router, method, path)).toEqual([]);
+  });
+});
+
+describe("the vendor writes under /api/v1 need vendor.edit, as on legacy", () => {
+  it.each([
+    ["create a vendor", "post", "/"],
+    ["update a vendor", "patch", "/:id"],
+  ])("%s: %s %s requires vendor.edit", (_label, method, path) => {
+    expect(permissionFor(vendorRouter, method, path)).toEqual(["vendor.edit"]);
+    // The same key as the legacy write it adapts.
+    expect(permissionFor(legacyVendorRouter, method, path)).toEqual(["vendor.edit"]);
+  });
+});
+
+describe("the v1 vendor router", () => {
+  it("copies only the writes whose body changed", () => {
+    const routes = (vendorRouter as any).stack
+      .filter((layer: any) => layer.route)
+      .flatMap((layer: any) =>
+        Object.keys(layer.route.methods).map((method) => `${method} ${layer.route.path}`),
+      )
+      .sort();
+
+    // No read, and no delete: their contract did not change (ADR 0001 section 5).
+    expect(routes).toEqual([
+      "get /:id/research/latest",
+      "get /:id/research/runs/:runId/trace",
+      "patch /:id",
+      "post /",
+      "post /:id/research",
+    ]);
   });
 });
 

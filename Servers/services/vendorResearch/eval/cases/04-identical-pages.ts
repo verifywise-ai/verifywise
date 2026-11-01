@@ -81,7 +81,6 @@ export const IDENTICAL_PAGES: EvalCase = {
           likelihood: "Possible",
           risk_severity: "Moderate",
           action_plan: "Check our invoices for plan changes we did not order.",
-          confidence: "medium",
           rationale: "The case is still open, but its effect on the service we buy is limited.",
           evidence: [
             {

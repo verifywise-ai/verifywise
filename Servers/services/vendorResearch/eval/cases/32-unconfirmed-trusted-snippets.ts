@@ -67,7 +67,6 @@ export const UNCONFIRMED_TRUSTED_SNIPPETS: EvalCase = {
           risk_severity: "Major",
           action_plan:
             "Ask the vendor whether our tickets were read, and change any password that was ever sent in a ticket.",
-          confidence: "high",
           rationale: "Two independent publishers report the breach.",
           evidence: [
             {

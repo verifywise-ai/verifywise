@@ -1,8 +1,8 @@
 /**
- * The backfill script (Task 5 of the M3 plan, spec D4.6): a dry run by default, `--apply` only
- * with the flag on, `--undo` always, one organization at a time, counts only. The queries are
- * fakes here; the integration test (tests/integration/vendorResearch.backfill.test.ts) runs the
- * real ones end to end.
+ * The backfill script (Task 5 of the M3 plan, spec D4.6): a dry run by default, `--apply` and
+ * `--undo` when asked, with no flag to turn on first (M3 Part B), one organization at a time,
+ * counts only. The queries are fakes here; the integration test
+ * (tests/integration/vendorResearch.backfill.test.ts) runs the real ones end to end.
  */
 jest.mock("../../database/db", () => ({ sequelize: { close: jest.fn(), query: jest.fn() } }));
 
@@ -11,7 +11,7 @@ import type {
   FindingConfidence,
 } from "../../domain.layer/interfaces/i.vendorResearch";
 import type { FindingToBackfill } from "../../utils/vendorResearchBackfill.utils";
-import { type BackfillDeps, main } from "../vendorResearchBackfillCredibility";
+import { type BackfillDeps, defaultDeps, main } from "../vendorResearchBackfillCredibility";
 
 const ICO = "https://ico.org.uk/action-weve-taken/enforcement/acme";
 const OFAC = "https://sanctionssearch.ofac.treas.gov/Details.aspx?id=36001";
@@ -62,7 +62,6 @@ function fakeDeps(over: Partial<BackfillDeps> = {}): BackfillDeps & {
   [K in keyof BackfillDeps]: jest.Mock;
 } {
   return {
-    flagOn: jest.fn(() => true),
     listOrganizationIdsQuery: jest.fn(async () => [1, 2]),
     findFindingsToBackfillQuery: jest.fn(async (organizationId: number, afterId: number) =>
       (FINDINGS[organizationId] ?? []).filter((finding) => finding.id > afterId),
@@ -108,23 +107,41 @@ describe("vendorResearchBackfillCredibility", () => {
     expect(deps.getRunForBackfillQuery).toHaveBeenCalledWith(1, 5);
   });
 
-  it("apply refuses while the flag is off", async () => {
-    const deps = fakeDeps({ flagOn: jest.fn(() => false) });
+  it("apply runs with no flag: nothing asks for one, and the queries are the only dependencies", async () => {
+    const deps = fakeDeps();
     const lines = printed();
 
-    await expect(main(["--apply"], lines.write, lines.error, deps)).resolves.toBe(2);
+    await expect(main(["--apply"], lines.write, lines.error, deps)).resolves.toBe(0);
 
-    expect(lines.err).toEqual(["VENDOR_RESEARCH_VRDB is off: --apply needs the flag"]);
-    expect(lines.out).toEqual([]);
-    for (const query of [
-      deps.listOrganizationIdsQuery,
-      deps.findFindingsToBackfillQuery,
-      deps.getRunForBackfillQuery,
-      deps.getVendorForBackfillQuery,
-      deps.writeBackfillQuery,
-      deps.undoBackfillQuery,
-    ]) {
-      expect(query).not.toHaveBeenCalled();
+    expect(lines.err).toEqual([]);
+    expect(lines.out[lines.out.length - 1]).toMatch(
+      /^total: 3 pending, 2 decided; written 5, skipped 0/,
+    );
+    expect(deps.writeBackfillQuery).toHaveBeenCalledTimes(5);
+    // The default dependencies hold the queries and nothing else: no flag and no setting.
+    expect(Object.keys(defaultDeps).sort()).toEqual([
+      "findFindingsToBackfillQuery",
+      "getRunForBackfillQuery",
+      "getVendorForBackfillQuery",
+      "listOrganizationIdsQuery",
+      "undoBackfillQuery",
+      "writeBackfillQuery",
+    ]);
+  });
+
+  it("apply does not read the environment for the flag the vendor risk database used to have", async () => {
+    const real = process.env;
+    jest.replaceProperty(process, "env", { VENDOR_RESEARCH_VRDB: "false" });
+    try {
+      const deps = fakeDeps();
+      const lines = printed();
+
+      await expect(main(["--apply"], lines.write, lines.error, deps)).resolves.toBe(0);
+
+      expect(lines.err).toEqual([]);
+      expect(deps.writeBackfillQuery).toHaveBeenCalled();
+    } finally {
+      jest.replaceProperty(process, "env", real);
     }
   });
 
@@ -161,7 +178,7 @@ describe("vendorResearchBackfillCredibility", () => {
   });
 
   it("undo clears and counts per organization, with the labels it kept", async () => {
-    const deps = fakeDeps({ flagOn: jest.fn(() => false) });
+    const deps = fakeDeps();
     const lines = printed();
 
     await expect(main(["--undo"], lines.write, lines.error, deps)).resolves.toBe(0);

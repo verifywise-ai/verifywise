@@ -1,7 +1,6 @@
-import fs from "node:fs";
-import path from "node:path";
 import {
   EvidenceSource,
+  RECORD_SOURCE_IDS,
   RESEARCH_CATEGORIES,
   ResearchCategory,
 } from "../../../domain.layer/interfaces/i.vendorResearch";
@@ -15,7 +14,8 @@ import { MAX_EXTRA_PARTS } from "../../webResearch/pageText";
 import { MAX_RESULTS } from "../../webResearch/webSearch";
 import { LOOKBACK_MONTHS, monthsBefore } from "../categories";
 import {
-  PROMPT_VERSION,
+  CREDIBILITY_PROMPT_VERSION,
+  type LoopSearch,
   buildHintsSystemPrompt,
   buildHintsTaskPrompt,
   buildLoopSystemPrompt,
@@ -24,18 +24,19 @@ import {
   buildUserPrompt,
   buildVerifierSystemPrompt,
   buildVerifierUserPrompt,
+  VERIFIER_DATABASE_NAMES,
   escapeForPrompt,
   loopScopeOf,
-  promptVersionOf,
   unescapeFromPrompt,
 } from "../prompts";
+import * as promptsModule from "../prompts";
 import { CHANGE_MARK } from "../policySnapshots";
 import { NAME_ONLY_LOOKUP_NOTE, OFAC_RECORD_MARK } from "../records/ofac";
 import { EU_RECORD_MARK } from "../vrdb/connectors/eu";
 import { UK_RECORD_MARK } from "../vrdb/connectors/uk";
 import { UN_RECORD_MARK } from "../vrdb/connectors/un";
 import { MAX_TOPIC_WORDS } from "../queries";
-import { MAX_FINDING_TEXT_CHARS, MAX_PER_CATEGORY, researchOutputSchema } from "../schema";
+import { MAX_FINDING_TEXT_CHARS, MAX_PER_CATEGORY, credibilityOutputSchema } from "../schema";
 import { ResearchTarget } from "../target";
 
 const target: ResearchTarget = { name: "Acme", domain: "acme.com", provides: "Cloud hosting" };
@@ -92,9 +93,22 @@ function expectIntactStructure(prompt: string, sources: number) {
   });
 }
 
-describe("PROMPT_VERSION", () => {
-  it("is vr-6", () => {
-    expect(PROMPT_VERSION).toBe("vr-6");
+describe("the versions of the prompts", () => {
+  // The loop prompt names the search engine and its kinds: that change moved the version from vr-10
+  // to vr-11; the verifier prompt naming the database of a record moved it to vr-12. A stored run
+  // says which prompt it asked with.
+  it("names the version of the analysis prompt that every run asks with", () => {
+    expect(CREDIBILITY_PROMPT_VERSION).toBe("vr-12");
+  });
+
+  it("has no version of the confidence rules, which no run asks with any more", () => {
+    // The runs made before the confidence rules were removed keep the version they stored: the
+    // code no longer names it, and nothing reads it (M3 Part B1: PROMPT_VERSION is retired).
+    expect(promptsModule).not.toHaveProperty("PROMPT_VERSION");
+  });
+
+  it("has one set of rules, so no function picks a version by them", () => {
+    expect(promptsModule).not.toHaveProperty("promptVersionOf");
   });
 });
 
@@ -180,7 +194,7 @@ describe("buildSystemPrompt", () => {
 
   it("tells the model what a record of a public database is, and that a vulnerability is about a product", () => {
     expect(prompt).toContain(
-      "A source whose text begins with the name of a public database (the CISA Known Exploited Vulnerabilities Catalog, the National Vulnerability Database, Have I Been Pwned or SEC EDGAR) is a record of that database, matched to the vendor by its name or domain. A record of a vulnerability is about a flaw in a product and not about a breach of the vendor's own systems: write which it is. The CISA catalog lists only vulnerabilities that are exploited in the wild, and the NVD lists flaws, most of which are not. A record of SEC EDGAR is a Form 8-K that the vendor itself filed under Item 1.05 to report a material cybersecurity incident in its own systems: it is the vendor's own statement to its investors, filed with a regulator.",
+      "A source whose text begins with the name of a public database (the CISA Known Exploited Vulnerabilities Catalog, the National Vulnerability Database, the CVE Program, Have I Been Pwned or SEC EDGAR) is a record of that database, matched to the vendor by its name or domain. A record of a vulnerability is about a flaw in a product and not about a breach of the vendor's own systems: write which it is. The CISA catalog lists only vulnerabilities that are exploited in the wild, and the NVD and the CVE Program list flaws, most of which are not. A record of SEC EDGAR is a Form 8-K that the vendor itself filed under Item 1.05 to report a material cybersecurity incident in its own systems: it is the vendor's own statement to its investors, filed with a regulator.",
     );
   });
 
@@ -214,9 +228,9 @@ describe("buildSystemPrompt", () => {
     );
   });
 
-  it("tells the model what a record of the sanctions list is: a match by name only, at most one risk, and a check of who the vendor is", () => {
+  it("tells the model what a record of a sanctions list is: a match by name only, at most one risk, and a check of who the vendor is", () => {
     expect(prompt).toContain(
-      `A source whose text begins with ${OFAC_RECORD_MARK} is an entry of the sanctions list of the United States Treasury that has the name of the vendor, and the name is all the match is: it may be another company. It shows that a company of that name is sanctioned, never that the vendor is. Raise at most one risk from it, in legal_regulatory, rate its likelihood Possible at most, and make the action plan a check of who the vendor is against the entry: its address, its country, its owners and the identifiers in the remarks.`,
+      `A source whose text begins with the name of a sanctions list is an entry of that list: ${OFAC_RECORD_MARK} (the United States Treasury), ${UK_RECORD_MARK} (the United Kingdom), ${EU_RECORD_MARK} (the European Union) or ${UN_RECORD_MARK} (the United Nations Security Council). When its text has a Lookup note, the vendor was matched to the entry by its name only: it may be another company. It shows that an entity of that name is on the list, never that the vendor is: write the risk as "An entity named <the name of the entry> is on <the list>". Raise at most one risk from it, in legal_regulatory, rate its likelihood Possible at most, and make the action plan a check of who the vendor is against the entry: its address, its country, its owners and the identifiers it lists.`,
     );
   });
 
@@ -348,21 +362,13 @@ describe("buildSystemPrompt", () => {
     for (const value of ["Negligible", "Minor", "Moderate", "Major", "Catastrophic"]) {
       expect(prompt).toContain(value);
     }
-    for (const value of ["low", "medium", "high"]) expect(prompt).toContain(value);
     expect(prompt).toMatch(/exact values/i);
   });
 
-  it("says what confidence needs: independent publishers, one of them credible, and what counts as one", () => {
-    expect(prompt).toContain("high when at least two independent publishers back the risk");
-    expect(prompt).toContain("the vendor's own website");
-    expect(prompt).toContain("a regulator or a court");
-    expect(prompt).toContain("major news or trade publisher");
-    expect(prompt).toContain("medium when it rests on two different pages");
-    // What is one publisher, and that code lowers a confidence the sources do not support.
-    expect(prompt).toContain("several sites of one publisher");
-    expect(prompt).toContain("aggregator");
-    expect(prompt).toContain("several pages of the vendor's own website count as one publisher");
-    expect(prompt).toMatch(/lowered after you answer/);
+  it("asks for no confidence: the credibility label is computed by code from the sources", () => {
+    expect(prompt).not.toMatch(/confidence/i);
+    expect(prompt).not.toContain("independent publishers");
+    expect(prompt).not.toMatch(/lowered after you answer/);
   });
 
   it("states the size limits, the plain English rule and what the category notes are for", () => {
@@ -445,13 +451,14 @@ describe("buildSystemPrompt", () => {
   });
 
   describe("the rationale", () => {
-    it("lists the field among the fields of a finding, after the confidence and before the evidence", () => {
+    it("lists the field among the fields of a finding, after the action plan and before the evidence", () => {
       const fields = [...buildSystemPrompt(NOW).matchAll(/^ {2}- (\w+):/gm)].map(
         (match) => match[1],
       );
 
       expect(fields).toContain("rationale");
-      expect(fields.indexOf("rationale")).toBeGreaterThan(fields.indexOf("confidence"));
+      expect(fields).not.toContain("confidence");
+      expect(fields.indexOf("rationale")).toBeGreaterThan(fields.indexOf("action_plan"));
       expect(fields.indexOf("rationale")).toBeLessThan(fields.indexOf("evidence"));
     });
 
@@ -514,7 +521,6 @@ describe("the bounds that the system prompt states", () => {
     likelihood: "Possible",
     risk_severity: "Major",
     action_plan: "a",
-    confidence: "medium",
     rationale: "w",
     evidence: [{ source_id: "S1", quote: "q" }],
     ...overrides,
@@ -523,7 +529,7 @@ describe("the bounds that the system prompt states", () => {
     findings: [finding(overrides)],
     category_notes: [],
   });
-  const accepts = (answer: unknown) => researchOutputSchema.safeParse(answer).success;
+  const accepts = (answer: unknown) => credibilityOutputSchema.safeParse(answer).success;
 
   // Each row: what the prompt says, and an answer whose relevant size is the one given.
   const bounds: Array<[string, RegExp, (size: number) => unknown]> = [
@@ -603,14 +609,14 @@ describe("the bounds that the system prompt states", () => {
     expect(stated(/category: one of the (\w+) above/)).toBe(RESEARCH_CATEGORIES.length);
   });
 
-  // The analysis text of PROMPT_VERSION "vr-2" has these lines, with counts as words and limits as
-  // digits; "vr-3" to "vr-6" left these lines as they were. Writing their numbers from the
+  // The analysis text of the prompt version "vr-2" has these lines, with counts as words and limits
+  // as digits; "vr-3" to "vr-12" left these lines as they were. Writing their numbers from the
   // constants must not change a character of them, line breaks included, or the stored version
   // would no longer describe the prompt.
   it("writes the lines that hold a number exactly as the vr-2 text has them", () => {
     const lines = buildSystemPrompt(NOW).split("\n");
 
-    expect(PROMPT_VERSION).toBe("vr-6");
+    expect(CREDIBILITY_PROMPT_VERSION).toBe("vr-12");
     for (const line of [
       "- Every risk cites at least one source and at most five. Each citation is a source id and a",
       "  at most 300 characters. Do not quote the title, the URL or the vendor block.",
@@ -1214,6 +1220,210 @@ describe("buildLoopSystemPrompt", () => {
   });
 });
 
+describe("buildLoopSystemPrompt: the engine of the run", () => {
+  const BOTH = buildLoopSystemPrompt();
+  const GDELT: LoopSearch = { kinds: ["news"], newsWindowMonths: 3 };
+
+  // The lines that speak of the kinds of search, as the prompt of both kinds has them.
+  const WEB_FALLBACK = '  Search the whole web (kind "web") when the news has nothing.';
+  const SEARCH_ACTION =
+    '- "search" searches the web or the news. You get up to ten results, each with a title, an';
+  const KIND_FIELD = '  - kind: for search, "news" or "web". Without it the search is "web".';
+
+  /** The lines of `prompt` that `other` does not have, and the lines of `other` that it lacks. */
+  function differences(prompt: string, other: string) {
+    const lines = prompt.split("\n");
+    const otherLines = other.split("\n");
+    return {
+      removed: lines.filter((line) => !otherLines.includes(line)),
+      added: otherLines.filter((line) => !lines.includes(line)),
+    };
+  }
+
+  const exampleOf = (prompt: string) =>
+    JSON.parse(prompt.split("\n").find((line) => line.startsWith('{"thought"')) ?? "{}");
+
+  describe("when it is told nothing of the engine, or that the engine answers both kinds", () => {
+    it("is the prompt of both kinds, with the lines it has always had", () => {
+      expect(BOTH).toContain(WEB_FALLBACK);
+      expect(BOTH).toContain(SEARCH_ACTION);
+      expect(BOTH).toContain(KIND_FIELD);
+      expect(BOTH).toContain(
+        '- For security_incidents, legal_regulatory, availability and financial_health, search the news (kind "news").',
+      );
+      expect(BOTH).not.toMatch(/covers the last/);
+    });
+
+    it.each<[string, LoopSearch]>([
+      ["an empty description", {}],
+      ["both kinds and no window", { kinds: ["web", "news"], newsWindowMonths: null }],
+      ["both kinds in the other order", { kinds: ["news", "web"], newsWindowMonths: null }],
+      ["kinds that are left out", { newsWindowMonths: null }],
+      [
+        "a list that names no kind, since the prompt has to say something about searching",
+        { kinds: [] },
+      ],
+    ])("is the same prompt for %s", (_name, search) => {
+      expect(buildLoopSystemPrompt(search)).toBe(BOTH);
+    });
+  });
+
+  describe("for an engine of the news only, such as the news of the GDELT Project", () => {
+    const prompt = buildLoopSystemPrompt(GDELT);
+
+    it("differs from the prompt of both kinds in the three places that speak of the web, and in no other", () => {
+      expect(differences(BOTH, prompt)).toEqual({
+        removed: [WEB_FALLBACK, SEARCH_ACTION, KIND_FIELD],
+        added: [
+          "  The news covers the last 3 months only, so an older event is not in it.",
+          '- "search" searches the news. You get up to ten results, each with a title, an',
+          '  - kind: for search, "news". Without it the search is "news".',
+        ],
+      });
+    });
+
+    it("describes only the news: the web is not a kind, not a fallback and not what a search searches", () => {
+      expect(prompt).toContain(
+        '- For security_incidents, legal_regulatory, availability and financial_health, search the news (kind "news").',
+      );
+      for (const web of [
+        '(kind "web")',
+        '"news" or "web"',
+        "the whole web",
+        "searches the web",
+        'kind":"web"',
+        'search is "web"',
+      ]) {
+        expect(prompt).not.toContain(web);
+      }
+    });
+
+    it("makes the news the default kind, since the web is missing", () => {
+      expect(prompt).toContain('  - kind: for search, "news". Without it the search is "news".');
+    });
+
+    it("says how far back the news reaches", () => {
+      expect(prompt).toContain(
+        "The news covers the last 3 months only, so an older event is not in it.",
+      );
+    });
+
+    it("keeps a sentence for the window next to the advice to search the news, before the next rule", () => {
+      const lines = prompt.split("\n");
+      const advice = lines.findIndex((line) => line.endsWith('search the news (kind "news").'));
+
+      expect(lines[advice + 1]).toMatch(/^ {2}The news covers the last 3 months only/);
+      expect(lines[advice + 2]).toMatch(/^- Read the best sources/);
+    });
+  });
+
+  describe("the window of the news", () => {
+    const sentence = (search: LoopSearch) =>
+      buildLoopSystemPrompt(search)
+        .split("\n")
+        .find((line) => line.includes("The news covers"));
+
+    it("is whatever the engine says, in months", () => {
+      expect(sentence({ kinds: ["news"], newsWindowMonths: 6 })).toBe(
+        "  The news covers the last 6 months only, so an older event is not in it.",
+      );
+      expect(sentence({ kinds: ["news"], newsWindowMonths: 12 })).toBe(
+        "  The news covers the last 12 months only, so an older event is not in it.",
+      );
+    });
+
+    it("is said in the singular for one month", () => {
+      expect(sentence({ kinds: ["news"], newsWindowMonths: 1 })).toBe(
+        "  The news covers the last month only, so an older event is not in it.",
+      );
+    });
+
+    it.each([null, undefined, 0, -3, 2.5, Number.NaN, Number.POSITIVE_INFINITY])(
+      "is not said for %s: an engine with no limit has no sentence",
+      (months) => {
+        expect(sentence({ kinds: ["news"], newsWindowMonths: months })).toBeUndefined();
+        expect(sentence({ kinds: ["web", "news"], newsWindowMonths: months })).toBeUndefined();
+      },
+    );
+
+    it("is said beside the advice to search the web, for an engine of both kinds that has one", () => {
+      const prompt = buildLoopSystemPrompt({ kinds: ["web", "news"], newsWindowMonths: 3 });
+
+      expect(prompt).toContain(WEB_FALLBACK);
+      expect(prompt).toContain("The news covers the last 3 months only");
+      expect(prompt).toContain(KIND_FIELD);
+    });
+
+    it("is not said for an engine that has no news: there is no news to limit", () => {
+      expect(buildLoopSystemPrompt({ kinds: ["web"], newsWindowMonths: 3 })).toBe(
+        buildLoopSystemPrompt({ kinds: ["web"], newsWindowMonths: null }),
+      );
+    });
+  });
+
+  describe("for an engine of the web only", () => {
+    const prompt = buildLoopSystemPrompt({ kinds: ["web"], newsWindowMonths: null });
+
+    it("describes only the web, which is the default kind", () => {
+      expect(prompt).toContain(
+        '- For security_incidents, legal_regulatory, availability and financial_health, search the web (kind "web").',
+      );
+      expect(prompt).toContain('- "search" searches the web. You get up to ten results');
+      expect(prompt).toContain('  - kind: for search, "web". Without it the search is "web".');
+      for (const news of ['kind "news"', '"news" or "web"', "searches the news", "the whole web"]) {
+        expect(prompt).not.toContain(news);
+      }
+    });
+
+    it("gives an example of a search of the web", () => {
+      expect(exampleOf(prompt).actions[0]).toMatchObject({ action: "search", kind: "web" });
+    });
+  });
+
+  describe("whatever the engine", () => {
+    const engines: Array<[string, LoopSearch]> = [
+      ["both kinds", {}],
+      ["the news with a window", GDELT],
+      ["the news with no window", { kinds: ["news"], newsWindowMonths: null }],
+      ["the web", { kinds: ["web"] }],
+    ];
+
+    it.each(engines)("names no search engine of a company: %s", (_name, search) => {
+      expect(buildLoopSystemPrompt(search)).not.toMatch(/bing|google|gdelt|anthropic|claude/i);
+    });
+
+    it.each(engines)(
+      "gives an example step that the schema accepts and that searches a kind the engine answers: %s",
+      (_name, search) => {
+        const example = exampleOf(buildLoopSystemPrompt(search));
+        const parsed = createLoopStepSchema(RESEARCH_CATEGORIES).safeParse(example);
+        const answers = search.kinds ?? ["web", "news"];
+
+        expect(parsed.success).toBe(true);
+        const searched = parsed.data?.actions.find((action) => action.action === "search");
+        expect(answers).toContain(searched?.kind);
+      },
+    );
+
+    it.each(engines)("still describes every field of an action: %s", (_name, search) => {
+      const prompt = buildLoopSystemPrompt(search);
+
+      for (const field of ["action", "category", "query", "kind", "url", "focus", "part"]) {
+        expect(prompt).toMatch(new RegExp(`^  - ${field}:`, "m"));
+      }
+    });
+
+    it.each(engines)("states the default kind of a search that names none: %s", (_name, search) => {
+      const prompt = buildLoopSystemPrompt(search);
+      const kinds = search.kinds ?? ["web", "news"];
+      const stated = prompt.match(/Without it the search is "(web|news)"/)?.[1];
+
+      // The web, as it always was, unless the engine does not answer it: the rule of the session.
+      expect(stated).toBe(kinds.includes("web") ? "web" : "news");
+    });
+  });
+});
+
 describe("buildLoopTaskPrompt", () => {
   const ALL: readonly ResearchCategory[] = RESEARCH_CATEGORIES;
   const NEWS_ONLY: readonly ResearchCategory[] = ["security_incidents", "legal_regulatory"];
@@ -1629,12 +1839,87 @@ describe("the prompts of the verifier", () => {
       expect(words).toMatch(/Do not use what you remember/);
     });
 
+    it("names the database of an entry among what it shows of each source", () => {
+      expect(words).toContain(
+        "the title, the quote and, for an entry of a public database, the name of that database",
+      );
+    });
+
+    it("says that an entry of a public database is part of what the quote says: the catalog of exploited flaws against the databases that only publish", () => {
+      expect(words).toContain(
+        "A source with a database is an entry of that public database that code looked up for the vendor, and that it is an entry of that database is part of what it says: an entry of the CISA Known Exploited Vulnerabilities Catalog says that the flaw is exploited in the wild, while an entry of the National Vulnerability Database or of the CVE Program says only that the flaw was published.",
+      );
+    });
+
     it("names no vendor", () => {
       expect(prompt).not.toContain("Acme");
     });
   });
 
-  describe("buildVerifierUserPrompt", () => {
+  describe("VERIFIER_DATABASE_NAMES", () => {
+    it("names every database of a record, and the four sanctions lists by their marks", () => {
+      expect(VERIFIER_DATABASE_NAMES).toEqual({
+        kev: "CISA Known Exploited Vulnerabilities Catalog",
+        nvd: "National Vulnerability Database",
+        cve: "CVE Program",
+        hibp: "Have I Been Pwned",
+        sec: "SEC EDGAR",
+        statuspage: "the vendor's status page",
+        ofac: OFAC_RECORD_MARK,
+        uk_sanctions: UK_RECORD_MARK,
+        eu_fsf: EU_RECORD_MARK,
+        un_sanctions: UN_RECORD_MARK,
+      });
+      expect(Object.keys(VERIFIER_DATABASE_NAMES).sort()).toEqual([...RECORD_SOURCE_IDS].sort());
+    });
+  });
+
+  describe("buildVerifierUserPrompt: the database of a record", () => {
+    const KEV_URL = "https://www.cisa.gov/known-exploited-vulnerabilities-catalog?cve=CVE-2031-1";
+
+    it("gives a source whose address has a record the name of its database, after its url and date", () => {
+      const prompt = buildVerifierUserPrompt(
+        target,
+        [
+          finding({
+            sources: [{ url: KEV_URL, title: "t", quote: "q", published_at: "2031-03-02" }],
+          }),
+        ],
+        (url) => (url === KEV_URL ? "kev" : undefined),
+      );
+
+      expect(prompt).toContain(
+        `<source url="${KEV_URL}" date="2031-03-02" database="CISA Known Exploited Vulnerabilities Catalog">`,
+      );
+    });
+
+    it("gives the database after the url when the source has no date", () => {
+      const prompt = buildVerifierUserPrompt(
+        target,
+        [finding({ sources: [{ url: KEV_URL, title: "t", quote: "q", published_at: null }] })],
+        () => "nvd",
+      );
+
+      expect(prompt).toContain(
+        `<source url="${KEV_URL}" database="National Vulnerability Database">`,
+      );
+    });
+
+    it("writes the name of a database inside double quotes, as it is", () => {
+      const prompt = buildVerifierUserPrompt(target, [finding()], () => "statuspage");
+
+      expect(prompt).toContain(`" database="the vendor's status page">`);
+    });
+
+    it("writes no database for a source with no record, nor without a lookup function", () => {
+      const withLookup = buildVerifierUserPrompt(target, [finding()], () => undefined);
+      const without = buildVerifierUserPrompt(target, [finding()]);
+
+      expect(withLookup).not.toContain("database=");
+      expect(without).not.toContain("database=");
+      expect(withLookup).toBe(without);
+    });
+
     it("carries the vendor", () => {
       const prompt = buildVerifierUserPrompt(target, [finding()]);
 
@@ -1725,94 +2010,31 @@ describe("the prompts of the verifier", () => {
 });
 
 describe("the prompt of the credibility rules", () => {
-  /** The paragraph of the sanctions list in the confidence prompt (vr-6), which vr-8 and later word anew. */
-  const VR6_SANCTIONS = [
-    `- A source whose text begins with ${OFAC_RECORD_MARK} is an entry of the sanctions list of the`,
-    "  United States Treasury that has the name of the vendor, and the name is all the match is: it",
-    "  may be another company. It shows that a company of that name is sanctioned, never that the",
-    "  vendor is. Raise at most one risk from it, in legal_regulatory, rate its likelihood Possible",
-    "  at most, and make the action plan a check of who the vendor is against the entry: its",
-    "  address, its country, its owners and the identifiers in the remarks.",
-  ];
-  /** The lines of the paragraph of the databases in vr-6 that vr-10 words anew, to name the CVE Program. */
-  const VR6_DATABASES = [
-    "  Vulnerabilities Catalog, the National Vulnerability Database, Have I Been Pwned or SEC",
-    "  EDGAR) is a record of that database, matched to the vendor by its name or domain. A record",
-    "  of a vulnerability is about a flaw in a product and not about a breach of the vendor's own",
-    "  systems: write which it is. The CISA catalog lists only vulnerabilities that are exploited",
-    "  in the wild, and the NVD lists flaws, most of which are not. A record of SEC EDGAR is a",
-  ];
-  const CONFIDENCE = [
-    "  - confidence: how strongly the evidence supports the risk.",
-    "  confidence is one of: low, medium, high.",
-    "- Give confidence high when at least two independent publishers back the risk and one of them",
-    "  is the vendor's own website, a regulator or a court, or a major news or trade publisher;",
-    "  medium when it rests on two different pages or on the vendor's own statement; low",
-    "  otherwise. One story on several sites of one publisher, a copy of a story on an aggregator",
-    "  or a social site, and several pages of the vendor's own website count as one publisher. A",
-    "  confidence that the sources do not support is lowered after you answer.",
-  ];
+  // The only rules there are: the model gives no confidence, the label is computed by code, and
+  // the databases and the sanctions lists of the vendor risk database are worded as they are.
+  const prompt = buildSystemPrompt(NOW).replace(/\n +/g, " ");
 
-  it("the credibility prompt names the UK, EU and UN marks and the lookup note, and the confidence prompt is unchanged", () => {
-    // A copy of vr-6 taken before the vendor risk database changed the prompts.
-    const copy = fs.readFileSync(
-      path.join(__dirname, "fixtures", "analysisSystemPrompt.vr-6.txt"),
-      "utf8",
-    );
-    expect(buildSystemPrompt(NOW)).toBe(copy);
-
-    const prompt = buildSystemPrompt(NOW, "credibility");
+  it("names the OFAC, UK, EU and UN marks and the lookup note", () => {
     for (const mark of [OFAC_RECORD_MARK, UK_RECORD_MARK, EU_RECORD_MARK, UN_RECORD_MARK]) {
-      expect(prompt).toContain(mark);
+      expect(buildSystemPrompt(NOW)).toContain(mark);
     }
-    expect(copy).not.toContain(UN_RECORD_MARK);
-    expect(copy).not.toContain("CVE Program");
     expect(NAME_ONLY_LOOKUP_NOTE).toMatch(/^Lookup note: /);
-    expect(prompt.replace(/\n +/g, " ")).toContain(
+    expect(prompt).toContain(
       "When its text has a Lookup note, the vendor was matched to the entry by its name only: it may be another company.",
     );
-    expect(copy).not.toContain(UK_RECORD_MARK);
   });
 
-  it("leaves the confidence out of the credibility prompt and words the databases and the sanctions lists anew, and nothing else", () => {
-    const vr6 = buildSystemPrompt(NOW).split("\n");
-    const vr10 = buildSystemPrompt(NOW, "credibility").split("\n");
-    const removed = vr6.filter((line) => !vr10.includes(line));
-    const added = vr10.filter((line) => !vr6.includes(line));
-
-    expect(removed).toEqual([...VR6_DATABASES, ...VR6_SANCTIONS, ...CONFIDENCE]);
-    // The two new paragraphs, as vr10 adds them: the databases come first.
-    const cut = added.findIndex((line) =>
-      line.startsWith("- A source whose text begins with the name of a sanctions list"),
-    );
-    const databases = added.slice(0, cut);
-    const sanctions = added.slice(cut);
-    expect(databases.join(" ")).toContain("the CVE Program");
-    // vr6 with each new paragraph where its old one stood, and without the confidence, is vr10.
-    const rebuilt = vr6
-      .join("\n")
-      .replace(VR6_DATABASES.join("\n"), databases.join("\n"))
-      .replace(VR6_SANCTIONS.join("\n"), sanctions.join("\n"))
-      .split("\n")
-      .filter((line) => !CONFIDENCE.includes(line));
-    expect(rebuilt).toEqual(vr10);
-    expect(vr10.join("\n")).not.toMatch(/confidence/i);
+  it("leaves the confidence out: no field, no values and no rule for it", () => {
+    expect(buildSystemPrompt(NOW)).not.toMatch(/confidence/i);
   });
-
-  it("builds the confidence prompt when it is given no rules", () =>
-    expect(buildSystemPrompt(NOW)).toBe(buildSystemPrompt(NOW, "confidence")));
 
   it("asks for an entry matched by name only to be written as an entity of that name on the list", () => {
-    const prompt = buildSystemPrompt(NOW, "credibility").replace(/\n +/g, " ");
-
     expect(prompt).toContain(
       'It shows that an entity of that name is on the list, never that the vendor is: write the risk as "An entity named <the name of the entry> is on <the list>".',
     );
   });
 
   it("calls a match by website or identifier one of the vendor's own, and asks for the identifiers to be checked", () => {
-    const prompt = buildSystemPrompt(NOW, "credibility").replace(/\n +/g, " ");
-
     expect(prompt).toContain(
       "An entry without a Lookup note matched the vendor's verified website or one of its identifiers (a registration number, an LEI): it is about the vendor unless the identifiers it lists say otherwise, so make the action plan a check of them, and a designation in force is a risk in legal_regulatory.",
     );
@@ -1820,8 +2042,6 @@ describe("the prompt of the credibility rules", () => {
   });
 
   it("names the UN list among the sanctions lists, and the CVE Program among the databases", () => {
-    const prompt = buildSystemPrompt(NOW, "credibility").replace(/\n +/g, " ");
-
     expect(prompt).toContain(
       `- A source whose text begins with the name of a sanctions list is an entry of that list: ${OFAC_RECORD_MARK} (the United States Treasury), ${UK_RECORD_MARK} (the United Kingdom), ${EU_RECORD_MARK} (the European Union) or ${UN_RECORD_MARK} (the United Nations Security Council).`,
     );
@@ -1831,11 +2051,5 @@ describe("the prompt of the credibility rules", () => {
     expect(prompt).toContain(
       "The CISA catalog lists only vulnerabilities that are exploited in the wild, and the NVD and the CVE Program list flaws, most of which are not.",
     );
-  });
-
-  it("names the version of each prompt", () => {
-    expect(PROMPT_VERSION).toBe("vr-6");
-    expect(promptVersionOf("confidence")).toBe("vr-6");
-    expect(promptVersionOf("credibility")).toBe("vr-10");
   });
 });

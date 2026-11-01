@@ -16,7 +16,7 @@ import { PageReadError, type PageReader } from "../../webResearch/readPage";
 import type { SearchEngine, SearchKind, SearchResult } from "../../webResearch/webSearch";
 import { hintsSchema } from "../hints";
 import { loopScopeOf } from "../prompts";
-import { credibilityOutputSchema, researchOutputSchema } from "../schema";
+import { credibilityOutputSchema } from "../schema";
 import { verifierSchema } from "../verifier";
 import type { Recording } from "./types";
 
@@ -31,6 +31,10 @@ export interface ReplayEngine extends SearchEngine {
 export function createReplayEngine(searches: Recording["searches"]): ReplayEngine {
   const feeds = new Map<string, SearchKind>();
   return {
+    // A recording holds searches of both kinds, and has no window for the news of its own.
+    id: "replay",
+    kinds: ["web", "news"],
+    newsWindowMonths: null,
     async search(query, kind) {
       const wanted = normalised(query);
       const recorded = searches.find(
@@ -62,14 +66,13 @@ export const approximateTokens = (text: string): number => Math.ceil(text.length
 /**
  * A stand-in for `generateObjectWithSelfCorrection`. The analysis, the call for hints and the
  * verifier (each recognised by its schema) get the recorded answer, the hints and the verifier none
- * (nobody is failed) when the recording has none; the analysis under the credibility rules gets the
- * recorded answer too, whose confidence its schema drops;
- * every other call is a step of a loop and gets the next recorded step, and when they run out the
- * model finishes. The loop of one category (its task names the category, see `loopScopeOf`) has its
- * own list of steps, `loops`, and the loop of all the categories has `steps`; loops that run at
- * once cannot be answered in one order, which is why each has a list. Each answer is held to the
- * schema it was asked for, as the real call holds the model's, so a case that is written wrongly
- * fails where it is wrong.
+ * (nobody is failed) when the recording has none. The schema of the analysis has no confidence, so
+ * a recording made before it, which holds one, is answered without it. Every other call is a step
+ * of a loop and gets the next recorded step, and when they run out the model finishes. The loop of
+ * one category (its task names the category, see `loopScopeOf`) has its own list of steps, `loops`,
+ * and the loop of all the categories has `steps`; loops that run at once cannot be answered in one
+ * order, which is why each has a list. Each answer is held to the schema it was asked for, as the
+ * real call holds the model's, so a case that is written wrongly fails where it is wrong.
  */
 export function createScriptedGenerate(
   recording: Pick<Recording, "steps" | "analysis" | "hints" | "loops" | "verifier">,
@@ -92,7 +95,7 @@ export function createScriptedGenerate(
   }) => {
     const schema = params.schema as unknown;
     const raw =
-      schema === researchOutputSchema || schema === credibilityOutputSchema
+      schema === credibilityOutputSchema
         ? recording.analysis
         : schema === hintsSchema
           ? (recording.hints ?? { queries: [] })

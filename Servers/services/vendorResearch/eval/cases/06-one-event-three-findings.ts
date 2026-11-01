@@ -88,7 +88,6 @@ export const ONE_EVENT_THREE_FINDINGS: EvalCase = {
           likelihood: "Possible",
           risk_severity: "Moderate",
           action_plan: "Ask for the vendor's recovery targets and test our own offline copies.",
-          confidence: "medium",
           rationale: "The outage is confirmed and could block our month-end close.",
           evidence: [
             {
@@ -108,7 +107,6 @@ export const ONE_EVENT_THREE_FINDINGS: EvalCase = {
           risk_severity: "Major",
           action_plan:
             "Ask whether our uploads were among the files, and rotate shared credentials.",
-          confidence: "low",
           rationale: "The incident touched customer data, so the effect is serious.",
           evidence: [{ source_id: "S1", quote: "some customer files may have been copied" }],
         },
@@ -122,7 +120,6 @@ export const ONE_EVENT_THREE_FINDINGS: EvalCase = {
           risk_severity: "Minor",
           action_plan:
             "Follow the authority's decision and review the vendor's breach duties in our contract.",
-          confidence: "low",
           rationale: "A fine is possible but not announced, and its effect would be small.",
           evidence: [{ source_id: "S3", quote: "could face questions about how quickly it acted" }],
         },

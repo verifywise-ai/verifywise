@@ -64,14 +64,12 @@ import {
 } from "./records";
 import { RECORD_CATEGORY } from "./records/types";
 import { suggestedQueries } from "./queries";
-import type { ResearchRules } from "./schema";
 import { classifySource } from "./sourceRegistry/classify";
-import { type SourceTier, publisherKey, tierOf } from "./sourceTiers";
+import { publisherKey } from "./sourceRegistry/publisher";
 import { ResearchTarget } from "./target";
 import { cutAtCodePoint } from "./text";
 import { type WebsiteCheck, verifiedDomainsOf } from "./preflight";
 import type { TraceStep } from "./trace";
-import type { VrdbGate } from "./vrdb/gates";
 import { vrdbSourceOf } from "./vrdb/sources";
 import type { VrdbLookup, VrdbOutcome } from "./vrdb/types";
 
@@ -416,15 +414,6 @@ export function planSearches(
   return [...baseline, ...hints];
 }
 
-/** How much a source is worth reading, by its tier: the lower the better. */
-const TIER_RANK: Record<SourceTier, number> = {
-  official: 0,
-  regulator_or_court: 0,
-  major_publisher: 1,
-  other: 2,
-  aggregator: 3,
-};
-
 export interface NewsRead {
   category: ResearchCategory;
   url: string;
@@ -435,25 +424,21 @@ export interface NewsRead {
  * the best two of each category (`MAX_NEWS_READS_PER_CATEGORY`), the categories in their order.
  * A result is better when its title names the vendor (the article is about it, not passing by),
  * then when its source is more credible, then when it is more recent (an undated one last), and
- * last by its place in the search. The credibility is the tier under the confidence rules (the
- * vendor's own notice, a regulator or a court, a major publisher, a site nobody knows, an
- * aggregator) and the registry category under the credibility rules (official, trusted press,
- * the vendor, unverified; see sourceRegistry/). Results of different publishers come before a second one of the same
- * publisher, since two independent publishers are what a confident finding needs. The pages that
- * were already read, and the categories that read the vendor's site, are no candidates.
+ * last by its place in the search. The credibility is the registry category of the source:
+ * official, trusted press, the vendor, unverified (see sourceRegistry/). Results of different
+ * publishers come before a second one of the same publisher, since two independent publishers are
+ * what a confident finding needs. The pages that were already read, and the categories that read
+ * the vendor's site, are no candidates.
  */
 export function planNewsReads(input: {
   ledger: readonly LedgerEntry<ResearchCategory>[];
   target: ResearchTarget;
   researchable: readonly ResearchCategory[];
-  /** The rules of the run, which say how a source's credibility is ranked; confidence by default. */
-  rules?: ResearchRules;
 }): NewsRead[] {
   const { ledger, target, researchable } = input;
   const namesVendor = createVendorMatcher(target);
   const credibilityOf = (entry: LedgerEntry<ResearchCategory>): number => {
     const source = { url: entry.url, onVendorSite: entry.onVendorSite };
-    if (input.rules !== "credibility") return TIER_RANK[tierOf(source, target)];
     const text = `${entry.title} ${entry.content}`;
     return SOURCE_CATEGORIES.indexOf(classifySource({ ...source, text }, target).category);
   };
@@ -550,7 +535,8 @@ const RECORD_SOURCE_NAMES: Record<RecordSourceId, string> = {
   ofac: "OFAC sanctions list of the US Treasury (entities that have the name of the vendor)",
   uk_sanctions:
     "UK Sanctions List of the FCDO (entities that have the name or the verified website of the vendor)",
-  eu_fsf: "EU consolidated list of financial sanctions (entities that have the name of the vendor)",
+  eu_fsf:
+    "EU consolidated list of financial sanctions (entities that have the name or the verified website of the vendor)",
   cve: "CVE Program records (critical vulnerabilities of the vendor's products)",
   un_sanctions: "UN Security Council Consolidated List (entities that have the name of the vendor)",
 };
@@ -743,17 +729,14 @@ const COVERAGE_OF_OUTCOME: Record<RecordsOutcome["outcome"], CoverageOutcome> = 
 };
 
 /**
- * What each database asked beside the vendor risk database answered (`sourcesBesideVrdb`; the NVD,
- * and the SEC once Q4 is open, are read through by the VRDB and in its coverage). All of them are
- * `off` without the lookup, which is how an operator turns the records off; one that the run did
- * not ask, because the run does not research its category or the vendor has nothing to ask it by
- * (a domain, a name, a CIK), is `not_researched`. `gates` is for the tests.
+ * What each database asked beside the vendor risk database answered (`sourcesBesideVrdb`: Have I
+ * Been Pwned and the status page; the catalog, the NVD, the SEC and the sanctions lists are the
+ * VRDB's and in its coverage). All of them are `off` without the lookup, which is how an operator
+ * turns the records off; one that the run did not ask, because the run does not research its
+ * category or the vendor has nothing to ask it by (a domain), is `not_researched`.
  */
-export function coverageOfLookups(
-  found: readonly RecordsOutcome[] | null,
-  gates?: Readonly<Record<VrdbGate, boolean>>,
-): CoverageLookup[] {
-  return sourcesBesideVrdb(gates).map((id): CoverageLookup => {
+export function coverageOfLookups(found: readonly RecordsOutcome[] | null): CoverageLookup[] {
+  return sourcesBesideVrdb().map((id): CoverageLookup => {
     if (found === null) return { id, outcome: "off" };
     const asked = found.find((outcome) => outcome.source === id);
     return {
@@ -775,8 +758,6 @@ export interface GatherInput {
   now?: Date;
   /** The earliest day a source may have, by category (the lookback). */
   cutoffs?: Partial<Record<ResearchCategory, string>>;
-  /** The rules of the run, for the order of the news reads; confidence by default. */
-  rules?: ResearchRules;
   signal: AbortSignal;
 }
 
@@ -830,7 +811,6 @@ export async function gatherSources(input: GatherInput, deps: GatherDeps): Promi
           cutoffs: input.cutoffs,
           now,
           signal,
-          readPage,
         })
       : Promise.resolve([]);
   lookedUp.catch(() => undefined);
@@ -913,7 +893,6 @@ export async function gatherSources(input: GatherInput, deps: GatherDeps): Promi
     ledger: session.snapshot().ledger,
     target,
     researchable,
-    rules: input.rules,
   });
   session.setCodeBudget({ reads: articles.length });
   const focus = [target.name, ...(target.aliases ?? [])].map(shortName).join(" ");

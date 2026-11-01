@@ -48,7 +48,6 @@ const FINDING: NewFinding = {
   likelihood: "Possible",
   risk_severity: "Major",
   risk_level: "High Risk",
-  confidence: "medium",
   rationale: "Because of what the sources say.",
   sources: [
     {
@@ -69,14 +68,12 @@ const SECOND_FINDING: NewFinding = {
   likelihood: "Likely",
   risk_severity: "Moderate",
   risk_level: "Medium Risk",
-  confidence: "high",
 };
 
 const THIRD_FINDING: NewFinding = {
   ...FINDING,
   category: "ai_specific",
   risk_description: "The vendor trains its models on customer data.",
-  confidence: "low",
 };
 
 const rows = async <T = Record<string, unknown>>(
@@ -920,9 +917,9 @@ describe("POST /api/v1/vendor-risk-findings/:id/accept", () => {
     const [stray] = await rows<{ id: number }>(
       `INSERT INTO vendor_risk_findings
          (organization_id, vendor_id, run_id, category, risk_description, impact_description,
-          action_plan, likelihood, risk_severity, risk_level, confidence, sources)
+          action_plan, likelihood, risk_severity, risk_level, sources)
        SELECT :organizationId, vendor_id, run_id, category, risk_description, impact_description,
-              action_plan, likelihood, risk_severity, risk_level, confidence, sources
+              action_plan, likelihood, risk_severity, risk_level, sources
        FROM vendor_risk_findings WHERE id = :findingId
        RETURNING id`,
       { organizationId: attacker.orgId, findingId: finding.id },

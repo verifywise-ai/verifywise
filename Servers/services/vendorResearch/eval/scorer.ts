@@ -5,11 +5,10 @@
  * match with the expectation has a name that says what it counts, and a threshold in the case's
  * targets (see types.ts); the roadmap idea that is meant to fix it is in the case's gaps.
  *
- * The measures are independent of the code they check: the publisher of an address, for example,
- * is worked out here from the host, not by the module that gives confidence to a finding, so a
- * change to that module cannot change what it is measured by. The credibility label is computed by
- * the code it checks (see credibility.ts), so it is held to the label that a person wrote into the
- * case for the expected finding it matches.
+ * The measures are independent of the code they check. The credibility label is computed by the
+ * code it checks (see credibility.ts), so it is held to the label that a person wrote into the
+ * case for the expected finding it matches. A finding has no confidence of its own (M3 Part B), so
+ * there is no measure of a confidence that its sources do not support.
  */
 import type { FindingSource, NewFinding } from "../../../domain.layer/interfaces/i.vendorResearch";
 import { withAliases } from "../aliases";
@@ -43,7 +42,6 @@ export interface CaseScore {
    * page, and no page that the run read, after the analysis too, holds a quote they cite.
    */
   snippetOnlyFindings: number;
-  overconfident: number;
   /**
    * Kept findings whose credibility label, or name-only note, is not the one of the first expected
    * finding that they match and that gives a label.
@@ -72,35 +70,6 @@ const comparable = (text: string) => text.toLowerCase().replace(/\s+/g, " ").tri
 
 /** An address that ends in an encoded quotation mark: a curly or a straight one, in UTF-8 or ASCII. */
 const ENDS_IN_ENCODED_QUOTE = /%(?:E2%80%(?:9C|9D|98|99)|22|27)\/?$/i;
-
-/** The labels in front of a top-level domain that are not a name: bbc.co.uk and bbc.com are one. */
-const SECOND_LEVEL_LABELS: ReadonlySet<string> = new Set([
-  "co",
-  "com",
-  "org",
-  "net",
-  "gov",
-  "ac",
-  "edu",
-]);
-
-/**
- * The publisher behind an address: the name label of its host, without "www.", the top-level domain
- * and a second-level label such as "co" or "com". It is null for text that is not an address.
- */
-export function publisherKey(url: string): string | null {
-  let host: string;
-  try {
-    host = new URL(url).hostname.toLowerCase().replace(/^www\./, "");
-  } catch {
-    return null;
-  }
-  const labels = host.split(".");
-  if (labels.length < 2) return host;
-  labels.pop();
-  if (labels.length > 1 && SECOND_LEVEL_LABELS.has(labels[labels.length - 1])) labels.pop();
-  return labels[labels.length - 1];
-}
 
 export function scoreRun(run: CaseRun): CaseScore {
   const { evalCase, pack, kept, trace } = run;
@@ -132,14 +101,6 @@ export function scoreRun(run: CaseRun): CaseScore {
       finding.sources.length > 0 &&
       finding.sources.every((cited) => !pageUrls.has(cited.url) && !confirmedOnPage(cited)),
   );
-  const overconfident = kept.filter((finding) => {
-    if (finding.confidence !== "high") return false;
-    const publishers = new Set(
-      finding.sources.map((cited) => publisherKey(cited.url)).filter((key) => key !== null),
-    );
-    return publishers.size < 2;
-  });
-
   const mislabelled = kept.filter((finding, keptIndex) => {
     const expected = expectedFindings.find(
       (candidate, index) => candidate.credibility !== undefined && matches(finding, index),
@@ -191,7 +152,6 @@ export function scoreRun(run: CaseRun): CaseScore {
         source.kind === "result" && source.publishedAt !== null && run.feedOf(source.url) === "web",
     ).length,
     snippetOnlyFindings: snippetOnly.length,
-    overconfident: overconfident.length,
     mislabelled: mislabelled.length,
     duplicateClusters,
     sources: pack.length,
@@ -216,7 +176,6 @@ const TARGET_MEASURES: Record<
   maxBadUrls: { measure: "badUrls", kind: "ceiling" },
   maxDatedWebResults: { measure: "datedWebResults", kind: "ceiling" },
   maxSnippetOnlyFindings: { measure: "snippetOnlyFindings", kind: "ceiling" },
-  maxOverconfident: { measure: "overconfident", kind: "ceiling" },
   maxMislabelled: { measure: "mislabelled", kind: "ceiling" },
   maxDuplicateClusters: { measure: "duplicateClusters", kind: "ceiling" },
   maxCitationsRejected: { measure: "citationsRejected", kind: "ceiling" },

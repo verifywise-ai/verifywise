@@ -85,7 +85,6 @@ export const PLATFORM_WEBSITE: EvalCase = {
           likelihood: "Likely",
           risk_severity: "Major",
           action_plan: "Stop payments to the vendor until the designation is checked.",
-          confidence: "high",
           rationale: "The entry gives the vendor's website.",
           evidence: [{ source_id: "S1", quote: "Regime: Russia" }],
         },

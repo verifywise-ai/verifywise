@@ -28,6 +28,12 @@ jest.mock("../../../controllers/vendorResearch.ctrl", () => ({
   acceptVendorRiskFinding: jest.fn(),
   dismissVendorRiskFinding: jest.fn(),
 }));
+// The registry also mounts the create and the update of a vendor. They run the vendor controller,
+// which reaches the database and the queues for the same reason, and this test reads layers only.
+jest.mock("../../../controllers/vendor.ctrl", () => ({
+  createVendorV1: jest.fn(),
+  updateVendorByIdV1: jest.fn(),
+}));
 jest.mock("../../../middleware/accessControl.middleware", () => ({
   __esModule: true,
   default: () => (_req: unknown, _res: unknown, next: () => void) => next(),
@@ -114,7 +120,8 @@ describe("v1 registry — registration convention", () => {
     expect(layerFor("/shadow-ai/events")).toBeDefined();
   });
 
-  // Added after ADR 0001, so they are versioned; vendor CRUD stays on the legacy /api/vendors.
+  // Added after ADR 0001, so they are versioned. The vendor reads and the delete stay on the legacy
+  // /api/vendors; the create and the update are under /api/v1/vendors too, with the research routes.
   it.each([
     ["the research routes of a vendor", "/vendors/1/research"],
     ["the research config and settings", "/vendor-research/config"],

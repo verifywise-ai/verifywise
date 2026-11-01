@@ -15,6 +15,16 @@
  * A query that is the same as one the engine has answered (the same words in any order, case and
  * plural, with at most a fifth of them added or changed) is refused without using budget.
  *
+ * A search of a kind that the engine does not answer (`SearchEngine.kinds`: the news of the GDELT
+ * Project cannot search the web) is refused as `kind_unavailable` before it reaches the engine. It
+ * is judged after the budget and before the repeat of a query, by the kinds the engine has when
+ * the search is made, because an engine that falls back to another changes them (see
+ * providerSearch.ts). Like every call that the rules turn away before the web it uses no budget and
+ * is not recorded, so it is not work on a category and the summary of a run does not count it. What
+ * the model is told is `KIND_REFUSALS`, a fixed phrase. `defaultKind` is the kind of a search whose
+ * asker named none: the web, as it always was, unless the engine does not answer it. An engine that
+ * declares no kinds is taken to answer all of them.
+ *
  * A result that is not about what is being researched (the caller's `isRelevant`) never enters the
  * ledger and cannot be read, so the evidence is not filled with the answers of an engine that does
  * not know the name.
@@ -150,7 +160,23 @@ export type SearchOutcome =
       /** The query the engine was given, when it is not the one that was asked for. */
       query?: string;
     }
-  | { ok: false; reason: "budget_exhausted" | "repeated_query" | "search_unavailable" };
+  | { ok: false; reason: "budget_exhausted" | "repeated_query" | "search_unavailable" }
+  | {
+      ok: false;
+      /** The engine does not answer searches of this kind (see `SearchEngine.kinds`). */
+      reason: "kind_unavailable";
+      /** The kind that was asked for; the model is told `KIND_REFUSALS[kind]`. */
+      kind: SearchKind;
+    };
+
+/**
+ * What the model is told when a search is refused as `kind_unavailable`: a fixed phrase for each
+ * kind that points to the kind and the pages that are left. It repeats nothing of the query.
+ */
+export const KIND_REFUSALS: Readonly<Record<SearchKind, string>> = {
+  web: "Web search is not available in this run; search the news or read the vendor's pages",
+  news: "News search is not available in this run; search the web or read the vendor's pages",
+};
 
 /** A page as the loop shows it to the model. `url` is the address that was asked for. */
 export interface PageView {
@@ -254,6 +280,12 @@ export interface WebSession<C extends string> {
     category: C,
     signal?: AbortSignal,
   ): Promise<SearchOutcome>;
+  /**
+   * The kind of a search whose asker named none: the web, as it always was, unless the engine of
+   * the run does not answer it, and then the news. Read it when the search is made: an engine that
+   * falls back to another changes the kinds it answers.
+   */
+  defaultKind(): SearchKind;
   read(url: string, category: C, focus?: string, signal?: AbortSignal): Promise<ReadOutcome>;
   /** The reads of `requests` at once; one result for each, in the order of the requests. */
   readMany(requests: readonly ReadRequest<C>[], signal?: AbortSignal): Promise<ReadResult[]>;
@@ -355,6 +387,9 @@ function hostOf(url: string): string {
     return "";
   }
 }
+
+/** Every kind of search: what an engine that declares none is taken to answer. */
+const ALL_KINDS: readonly SearchKind[] = ["web", "news"];
 
 /** A page of fewer characters than this is not compared with another: two error pages are two answers. */
 const MIN_COMPARED_PAGE_CHARS = 80;
@@ -563,6 +598,14 @@ export function createWebSession<C extends string>(options: WebSessionOptions<C>
     ownDomains.find((own) => isOnDomain(host, own));
   const isOwnHost = (host: string): boolean => ownDomainOf(host) !== undefined;
 
+  /**
+   * The kinds the engine answers now. An engine that falls back to another (see providerSearch.ts)
+   * changes them, so they are read whenever a search is made and never kept. An engine that
+   * declares none (one written before the field existed) answers every kind.
+   */
+  const kindsNow = (): readonly SearchKind[] => engine.kinds ?? ALL_KINDS;
+  const defaultKind = (): SearchKind => (kindsNow().includes("web") ? "web" : "news");
+
   /** The checks of a search, before any `await`; a search that passes has its unit of the budget. */
   const prepareSearch = (
     request: SearchRequest<C>,
@@ -572,6 +615,13 @@ export function createWebSession<C extends string>(options: WebSessionOptions<C>
     const pool = poolOf(request.by, through);
     if (pool.searchesLeft <= 0) {
       return { refusal: { ok: false, reason: "budget_exhausted" } };
+    }
+    // A kind the engine does not answer cannot be searched, whatever the words. It costs nothing
+    // and is no call that reached the web. It comes before the repeat of a query: the words of an
+    // earlier web search, asked again once a fallback has taken the web away, are a lost kind and
+    // not a repeat.
+    if (!kindsNow().includes(kind)) {
+      return { refusal: { ok: false, reason: "kind_unavailable", kind } };
     }
     // A query that the engine has answered once gives the same answer again, so it costs
     // nothing and is not a call that reached the web. One that is being asked now counts too.
@@ -1006,6 +1056,8 @@ export function createWebSession<C extends string>(options: WebSessionOptions<C>
 
     searchMany: (requests, signal) => searchMany(requests, signal),
 
+    defaultKind,
+
     addRecords(records, category, source) {
       const omitted: Partial<Record<OmittedReason, number>> = {};
       const leaveOut = (reason: OmittedReason) => {
@@ -1066,6 +1118,7 @@ export function createWebSession<C extends string>(options: WebSessionOptions<C>
           return search.outcome;
         },
         searchMany: (requests, signal) => searchMany(requests, signal, own),
+        defaultKind,
         read: async (rawUrl, category, focus, signal) => {
           const [read] = await readMany([{ url: rawUrl, category, focus }], signal, own);
           return read.outcome;

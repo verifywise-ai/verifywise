@@ -1,10 +1,5 @@
-import type {
-  EvidenceSource,
-  FindingConfidence,
-  NewFinding,
-} from "../../../domain.layer/interfaces/i.vendorResearch";
+import type { EvidenceSource, NewFinding } from "../../../domain.layer/interfaces/i.vendorResearch";
 import { type FetchedPage, PageReadError, type PageReader } from "../../webResearch/readPage";
-import type { ResearchRules } from "../schema";
 import { buildTarget } from "../target";
 import { createTraceRecorder } from "../trace";
 import {
@@ -56,7 +51,6 @@ function finding(urls: string[], overrides: Partial<NewFinding> = {}): NewFindin
     likelihood: "Possible",
     risk_severity: "Major",
     risk_level: "High Risk",
-    confidence: "medium",
     rationale: null,
     sources: urls.map((url) => ({
       url,
@@ -92,7 +86,6 @@ const verify = (
   extra: {
     signal?: AbortSignal;
     trace?: ReturnType<typeof createTraceRecorder>;
-    rules?: ResearchRules;
   } = {},
 ) => verifySnippetFindings({ findings, pack, target: TARGET, readPage, ...extra });
 
@@ -158,7 +151,7 @@ describe("verifySnippetFindings", () => {
 
   it("keeps a finding as it is when the page of its best source holds the quote", async () => {
     const readPage = readerOf({ [OTHER]: HOLDING });
-    const kept = [finding([OTHER], { confidence: "high" })];
+    const kept = [finding([OTHER])];
 
     const [result] = await verify(kept, [source(OTHER)], readPage);
 
@@ -167,80 +160,48 @@ describe("verifySnippetFindings", () => {
     expect(readPage).toHaveBeenCalledTimes(1);
   });
 
-  it.each<[FindingConfidence, FindingConfidence]>([
-    ["high", "low"],
-    ["medium", "low"],
-    ["low", "low"],
-  ])(
-    "marks a finding as snippet only and lowers a %s confidence to %s when the page does not hold the quote",
-    async (given, lowered) => {
-      const readPage = readerOf({ [OTHER]: NOT_HOLDING });
+  it("marks a finding as snippet only, and gives it no confidence, when the page does not hold the quote", async () => {
+    const readPage = readerOf({ [OTHER]: NOT_HOLDING });
 
-      const [result] = await verify(
-        [finding([OTHER], { confidence: given })],
-        [source(OTHER)],
-        readPage,
-      );
+    const [result] = await verify([finding([OTHER])], [source(OTHER)], readPage);
 
-      expect(result.snippet_only).toBe(true);
-      expect(result.confidence).toBe(lowered);
-    },
-  );
+    expect(result.snippet_only).toBe(true);
+    expect(result).not.toHaveProperty("confidence");
+  });
 
   it("changes nothing else of a finding that it marks", async () => {
     const readPage = readerOf({ [OTHER]: NOT_HOLDING });
-    const given = finding([OTHER], { confidence: "high", rationale: "Because." });
+    const given = finding([OTHER], { rationale: "Because." });
 
     const [result] = await verify([given], [source(OTHER)], readPage);
 
-    expect(result).toEqual({ ...given, confidence: "low", snippet_only: true });
+    expect(result).toEqual({ ...given, snippet_only: true });
   });
 
-  it("reads the most credible source first, and in the order of the citations among equals", async () => {
-    const pack = [OTHER, AGGREGATOR, PUBLISHER, REGULATOR, OWN].map((url) =>
-      source(url, { onVendorSite: url === OWN }),
-    );
-    const readPage = readerOf({ [OWN]: HOLDING });
-
-    await verify([finding([OTHER, AGGREGATOR, PUBLISHER, REGULATOR, OWN])], pack, readPage);
-    expect(readPage.mock.calls.map(([url]) => url)).toEqual([OWN]);
-
-    const second = readerOf({ [REGULATOR]: HOLDING });
-    await verify([finding([OTHER, AGGREGATOR, PUBLISHER, REGULATOR])], pack.slice(0, 4), second);
-    expect(second.mock.calls.map(([url]) => url)).toEqual([REGULATOR]);
-
-    const third = readerOf({ [PUBLISHER]: HOLDING });
-    await verify([finding([OTHER, AGGREGATOR, PUBLISHER])], pack.slice(0, 3), third);
-    expect(third.mock.calls.map(([url]) => url)).toEqual([PUBLISHER]);
-
-    const fourth = readerOf({ [AGGREGATOR]: HOLDING });
-    await verify([finding([OTHER, AGGREGATOR])], pack.slice(0, 2), fourth);
-    expect(fourth.mock.calls.map(([url]) => url)).toEqual([AGGREGATOR]);
-
-    const other = "https://elsewhere.example.org/story";
-    const fifth = readerOf({ [OTHER]: HOLDING, [other]: HOLDING });
-    await verify([finding([OTHER, other])], [source(OTHER), source(other)], fifth);
-    expect(fifth.mock.calls.map(([url]) => url)).toEqual([OTHER]);
-  });
-
-  it("under the credibility rules the best source is the highest registry category", async () => {
+  it("reads the most credible source first, by its registry category, and in the order of the citations among equals", async () => {
     const pack = [OTHER, AGGREGATOR, OWN, PUBLISHER, REGULATOR].map((url) =>
       source(url, { onVendorSite: url === OWN }),
     );
     const firstRead = async (urls: string[], holding: string) => {
       const readPage = readerOf({ [holding]: HOLDING });
-      await verify([finding(urls)], pack, readPage, { rules: "credibility" });
+      await verify([finding(urls)], pack, readPage);
       return readPage.mock.calls.map(([url]) => url);
     };
 
-    // Official, then trusted press, then the vendor (first under the tiers), then the unverified,
-    // which are equals (an aggregator came before another site under the tiers).
+    // Official, then trusted press, then the vendor, then the unverified, which are equals: an
+    // aggregator is no better than another site.
     expect(await firstRead([OTHER, AGGREGATOR, OWN, PUBLISHER, REGULATOR], REGULATOR)).toEqual([
       REGULATOR,
     ]);
     expect(await firstRead([OTHER, AGGREGATOR, OWN, PUBLISHER], PUBLISHER)).toEqual([PUBLISHER]);
     expect(await firstRead([OTHER, AGGREGATOR, OWN], OWN)).toEqual([OWN]);
     expect(await firstRead([OTHER, AGGREGATOR], OTHER)).toEqual([OTHER]);
+    expect(await firstRead([AGGREGATOR, OTHER], AGGREGATOR)).toEqual([AGGREGATOR]);
+
+    const other = "https://elsewhere.example.org/story";
+    const second = readerOf({ [OTHER]: HOLDING, [other]: HOLDING });
+    await verify([finding([OTHER, other])], [source(OTHER), source(other)], second);
+    expect(second.mock.calls.map(([url]) => url)).toEqual([OTHER]);
   });
 
   it("goes by the verdict of the first source that can be read", async () => {
@@ -250,14 +211,13 @@ describe("verifySnippetFindings", () => {
     });
 
     const [result] = await verify(
-      [finding([OTHER, PUBLISHER], { confidence: "high" })],
+      [finding([OTHER, PUBLISHER])],
       [source(OTHER), source(PUBLISHER)],
       readPage,
     );
 
     expect(readPage.mock.calls.map(([url]) => url)).toEqual([PUBLISHER, OTHER]);
     expect(result.snippet_only).toBeUndefined();
-    expect(result.confidence).toBe("high");
   });
 
   it("does not read a second page once the first has given its verdict", async () => {
@@ -271,23 +231,21 @@ describe("verifySnippetFindings", () => {
 
     expect(readPage).toHaveBeenCalledTimes(1);
     expect(result.snippet_only).toBe(true);
-    expect(result.confidence).toBe("low");
   });
 
-  it("marks a finding as snippet only but keeps its confidence when no page can be read", async () => {
+  it("marks a finding as snippet only when no page can be read", async () => {
     const readPage = readerOf({
       [PUBLISHER]: new PageReadError("blocked_by_site"),
       [OTHER]: new PageReadError("unreachable"),
     });
 
     const [result] = await verify(
-      [finding([OTHER, PUBLISHER], { confidence: "high" })],
+      [finding([OTHER, PUBLISHER])],
       [source(OTHER), source(PUBLISHER)],
       readPage,
     );
 
     expect(result.snippet_only).toBe(true);
-    expect(result.confidence).toBe("high");
   });
 
   it("reads two pages at most for a finding", async () => {
@@ -319,14 +277,9 @@ describe("verifySnippetFindings", () => {
   it("holds a reader that throws anything but a page error for a page that cannot be read", async () => {
     const readPage = readerOf({ [OTHER]: new TypeError("boom") });
 
-    const [result] = await verify(
-      [finding([OTHER], { confidence: "medium" })],
-      [source(OTHER)],
-      readPage,
-    );
+    const [result] = await verify([finding([OTHER])], [source(OTHER)], readPage);
 
     expect(result.snippet_only).toBe(true);
-    expect(result.confidence).toBe("medium");
   });
 
   it("gives the reader the signal it was given", async () => {
@@ -338,21 +291,17 @@ describe("verifySnippetFindings", () => {
     expect(readPage).toHaveBeenCalledWith(OTHER, signal);
   });
 
-  it("reads nothing once its signal is aborted, and marks the finding without lowering it", async () => {
+  it("reads nothing once its signal is aborted, and marks the finding", async () => {
     const readPage = readerOf({ [OTHER]: HOLDING });
     const controller = new AbortController();
     controller.abort();
 
-    const [result] = await verify(
-      [finding([OTHER], { confidence: "high" })],
-      [source(OTHER)],
-      readPage,
-      { signal: controller.signal },
-    );
+    const [result] = await verify([finding([OTHER])], [source(OTHER)], readPage, {
+      signal: controller.signal,
+    });
 
     expect(readPage).not.toHaveBeenCalled();
     expect(result.snippet_only).toBe(true);
-    expect(result.confidence).toBe("high");
   });
 
   it("treats every finding on its own and keeps their order", async () => {
@@ -372,7 +321,7 @@ describe("verifySnippetFindings", () => {
 
   it("does not change the findings it is given", async () => {
     const readPage = readerOf({ [OTHER]: NOT_HOLDING });
-    const kept = [finding([OTHER], { confidence: "high" })];
+    const kept = [finding([OTHER])];
     const before = JSON.stringify(kept);
 
     await verify(kept, [source(OTHER)], readPage);
@@ -500,7 +449,7 @@ describe("checkSnippetFindings", () => {
 
   it("says not_on_page with the address of the page that was read", async () => {
     // The most credible source cannot be read, so the next one gives the verdict.
-    const given = finding([OTHER, PUBLISHER], { confidence: "high" });
+    const given = finding([OTHER, PUBLISHER]);
 
     const [result] = await check(
       [given],
@@ -509,13 +458,13 @@ describe("checkSnippetFindings", () => {
     );
 
     expect(result).toEqual({
-      finding: { ...given, confidence: "low", snippet_only: true },
+      finding: { ...given, snippet_only: true },
       verdict: { outcome: "not_on_page", url: OTHER },
     });
   });
 
   it("says unread when no page can be read", async () => {
-    const given = finding([OTHER, PUBLISHER], { confidence: "high" });
+    const given = finding([OTHER, PUBLISHER]);
 
     const [result] = await check(
       [given],

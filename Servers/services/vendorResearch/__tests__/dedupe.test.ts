@@ -34,7 +34,6 @@ function candidate(
     likelihood: "Possible",
     risk_severity: "Major",
     risk_level: "High Risk",
-    confidence: "medium",
     rationale: null,
     sources: [cited(SOURCE_URL)],
     ...overrides,

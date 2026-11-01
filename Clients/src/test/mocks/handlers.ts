@@ -253,6 +253,17 @@ export const handlers = [
     if (!vendor) return new HttpResponse(null, { status: 404 });
     return HttpResponse.json({ data: { ...vendor, ...body } });
   }),
+  // The create and the update are served under /api/v1 as well (ADR 0001), and the client calls those.
+  http.post("/api/v1/vendors", async ({ request }) => {
+    const body = (await request.json()) as Record<string, unknown>;
+    return HttpResponse.json({ data: createMockVendor(body as any) }, { status: 201 });
+  }),
+  http.patch("/api/v1/vendors/:id", async ({ params, request }) => {
+    const body = (await request.json()) as Record<string, unknown>;
+    const vendor = mockVendors.find((v) => String(v.id) === params.id);
+    if (!vendor) return new HttpResponse(null, { status: 404 });
+    return HttpResponse.json({ data: { ...vendor, ...body } });
+  }),
   http.delete("/api/vendors/:id", ({ params }) => {
     const vendor = mockVendors.find((v) => String(v.id) === params.id);
     if (!vendor) return new HttpResponse(null, { status: 404 });

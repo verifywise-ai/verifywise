@@ -205,6 +205,25 @@ export const de: Record<string, string> = {
   "Search vendor risks": "Anbieterrisiken suchen",
   "Why are you dismissing {name}?": "Warum verwerfen Sie {name}?",
   "What happened?": "Was ist passiert?",
+  // Linked risks forms and the new risk form, used with vendor risks
+  "The project risk becomes a child of this vendor risk and is flagged for review when its level changes.":
+    "Das Projektrisiko wird diesem Anbieterrisiko untergeordnet und zur Prüfung markiert, wenn sich dessen Stufe ändert.",
+  "Risks of this vendor are listed first.": "Risiken dieses Anbieters werden zuerst aufgeführt.",
+  "Why dismiss this suggestion?": "Warum wird dieser Vorschlag verworfen?",
+  "Optional. A reason helps tune the next suggestions.":
+    "Optional. Ein Grund hilft, die nächsten Vorschläge zu verbessern.",
+  "The risk level is calculated from the likelihood and the severity you select.":
+    "Die Risikostufe wird aus der gewählten Wahrscheinlichkeit und dem gewählten Schweregrad berechnet.",
+  // Risk scale labels used by the vendor research review
+  "Rare": "Selten",
+  "Unlikely": "Unwahrscheinlich",
+  "Possible": "Möglich",
+  "Likely": "Wahrscheinlich",
+  "Almost certain": "Nahezu sicher",
+  "Very High Risk": "Sehr hohes Risiko",
+  "Medium Risk": "Mittleres Risiko",
+  "Low Risk": "Geringes Risiko",
+  "Very Low Risk": "Sehr geringes Risiko",
 };
 
 export const fr: Record<string, string> = {
@@ -407,6 +426,26 @@ export const fr: Record<string, string> = {
   "Search vendor risks": "Rechercher des risques fournisseurs",
   "Why are you dismissing {name}?": "Pourquoi rejetez-vous {name} ?",
   "What happened?": "Que s'est-il passé ?",
+  // Linked risks forms and the new risk form, used with vendor risks
+  "The project risk becomes a child of this vendor risk and is flagged for review when its level changes.":
+    "Le risque de projet devient un enfant de ce risque fournisseur et est signalé pour révision lorsque son niveau change.",
+  "Risks of this vendor are listed first.":
+    "Les risques de ce fournisseur apparaissent en premier.",
+  "Why dismiss this suggestion?": "Pourquoi rejeter cette suggestion ?",
+  "Optional. A reason helps tune the next suggestions.":
+    "Facultatif. Une raison aide à affiner les prochaines suggestions.",
+  "The risk level is calculated from the likelihood and the severity you select.":
+    "Le niveau de risque est calculé à partir de la probabilité et de la gravité que vous sélectionnez.",
+  // Risk scale labels used by the vendor research review
+  "Rare": "Rare",
+  "Unlikely": "Peu probable",
+  "Possible": "Possible",
+  "Likely": "Probable",
+  "Almost certain": "Presque certain",
+  "Very High Risk": "Risque très élevé",
+  "Medium Risk": "Risque moyen",
+  "Low Risk": "Risque faible",
+  "Very Low Risk": "Risque très faible",
 };
 
 export const es: Record<string, string> = {
@@ -609,4 +648,23 @@ export const es: Record<string, string> = {
   "Search vendor risks": "Buscar riesgos de proveedor",
   "Why are you dismissing {name}?": "¿Por qué descartas {name}?",
   "What happened?": "¿Qué ocurrió?",
+  // Linked risks forms and the new risk form, used with vendor risks
+  "The project risk becomes a child of this vendor risk and is flagged for review when its level changes.":
+    "El riesgo de proyecto pasa a depender de este riesgo de proveedor y se marca para revisión cuando cambia su nivel.",
+  "Risks of this vendor are listed first.": "Los riesgos de este proveedor aparecen primero.",
+  "Why dismiss this suggestion?": "¿Por qué descartar esta sugerencia?",
+  "Optional. A reason helps tune the next suggestions.":
+    "Opcional. Un motivo ayuda a ajustar las próximas sugerencias.",
+  "The risk level is calculated from the likelihood and the severity you select.":
+    "El nivel de riesgo se calcula a partir de la probabilidad y la gravedad que selecciones.",
+  // Risk scale labels used by the vendor research review
+  "Rare": "Raro",
+  "Unlikely": "Improbable",
+  "Possible": "Posible",
+  "Likely": "Probable",
+  "Almost certain": "Casi seguro",
+  "Very High Risk": "Riesgo muy alto",
+  "Medium Risk": "Riesgo medio",
+  "Low Risk": "Riesgo bajo",
+  "Very Low Risk": "Riesgo muy bajo",
 };

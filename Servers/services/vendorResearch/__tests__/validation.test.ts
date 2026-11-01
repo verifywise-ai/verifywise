@@ -10,24 +10,22 @@ import {
   MAX_FINDING_TEXT_CHARS,
   MAX_PER_CATEGORY as SCHEMA_MAX_PER_CATEGORY,
   MAX_QUOTE_CHARS,
+  type CredibilityOutput,
   RESEARCH_LIKELIHOODS,
   RESEARCH_SEVERITIES,
-  ResearchOutput,
 } from "../schema";
 import { ResearchTarget } from "../target";
 import {
-  CitedPage,
   MAX_PER_CATEGORY,
   MAX_PER_RUN,
   applyCaps,
-  confidenceCeiling,
   newValidationReport,
   normaliseForQuote,
   sourceMentionsVendor,
   validateFindings,
 } from "../validation";
 
-type Candidate = ResearchOutput["findings"][number];
+type Candidate = CredibilityOutput["findings"][number];
 
 const TARGET: ResearchTarget = { name: "Acme", domain: "acme.com", provides: "Payroll software" };
 
@@ -53,7 +51,6 @@ function candidate(overrides: Partial<Candidate> = {}): Candidate {
     likelihood: "Possible",
     risk_severity: "Major",
     action_plan: "Ask the vendor for its incident report.",
-    confidence: "high",
     rationale: "The vendor confirmed the incident, and it holds our customer data.",
     evidence: [{ source_id: "S1", quote: "attackers copied customer records" }],
     ...overrides,
@@ -79,15 +76,6 @@ function findingSource(url: string): FindingSource {
   return { url, title: "Title", quote: "quote", published_at: null };
 }
 
-/**
- * A cited source, for the tests of the confidence ceiling: the URL it was requested at, and
- * whether the research took the page that answered for the vendor's own. Off the vendor's site
- * unless `onVendorSite`.
- */
-function cited(url: string, onVendorSite = false): CitedPage {
-  return { url, onVendorSite };
-}
-
 // Built from char codes, so that no control character or lone surrogate sits in this file.
 const NUL = String.fromCharCode(0);
 const REPLACEMENT = String.fromCharCode(0xfffd);
@@ -108,7 +96,6 @@ function finding(
     likelihood: "Possible",
     risk_severity,
     risk_level: "High Risk",
-    confidence: "low",
     rationale: "Because of the evidence.",
     sources: [findingSource("https://news.example.com/a")],
     ...overrides,
@@ -401,174 +388,9 @@ describe("sourceMentionsVendor", () => {
   });
 });
 
-describe("confidenceCeiling", () => {
-  it("is low for no source and for one source of a third party", () => {
-    expect(confidenceCeiling([], TARGET)).toBe("low");
-    expect(confidenceCeiling([cited("https://news.example.com/a")], TARGET)).toBe("low");
-  });
-
-  it("is medium for one source that the research took for the vendor's own page", () => {
-    expect(confidenceCeiling([cited("https://acme.com/trust", true)], TARGET)).toBe("medium");
-    expect(confidenceCeiling([cited("https://trust.acme.com/soc2", true)], TARGET)).toBe("medium");
-    expect(confidenceCeiling([cited("https://WWW.ACME.COM/", true)], TARGET)).toBe("medium");
-  });
-
-  it("goes by the page that answered, not by the host that was asked for", () => {
-    // A page asked for on the vendor's domain that redirected off it is not the vendor's own...
-    expect(confidenceCeiling([cited("https://acme.com/trust", false)], TARGET)).toBe("low");
-    expect(confidenceCeiling([cited("https://trust.acme.com/soc2", false)], TARGET)).toBe("low");
-    // ...and one asked for elsewhere that answered from the vendor's site is.
-    expect(confidenceCeiling([cited("https://news.example.com/moved", true)], TARGET)).toBe(
-      "medium",
-    );
-  });
-
-  it("does not count any host as the vendor's own when the vendor has no domain, whatever the mark", () => {
-    const noDomain: ResearchTarget = { name: "Acme", domain: null, provides: "" };
-    expect(confidenceCeiling([cited("https://acme.com/trust", false)], noDomain)).toBe("low");
-    expect(confidenceCeiling([cited("https://acme.com/trust", true)], noDomain)).toBe("low");
-    expect(confidenceCeiling([cited("https://news.example.com/a", true)], noDomain)).toBe("low");
-  });
-
-  it("is medium for two sources on one hostname, whatever the mark", () => {
-    for (const marked of [false, true]) {
-      expect(
-        confidenceCeiling(
-          [
-            cited("https://news.example.com/a", marked),
-            cited("https://news.example.com/b", marked),
-          ],
-          TARGET,
-        ),
-      ).toBe("medium");
-    }
-    expect(
-      confidenceCeiling(
-        [cited("https://acme.com/a", false), cited("https://acme.com/b", false)],
-        TARGET,
-      ),
-    ).toBe("medium");
-  });
-
-  it("is high for two independent publishers when one of them is credible", () => {
-    // A news site and a major publisher.
-    expect(
-      confidenceCeiling(
-        [cited("https://news.example.com/a"), cited("https://www.reuters.com/b")],
-        TARGET,
-      ),
-    ).toBe("high");
-    // A regulator and a blog.
-    expect(
-      confidenceCeiling(
-        [cited("https://www.ftc.gov/news/a"), cited("https://blog.another.org/b")],
-        TARGET,
-      ),
-    ).toBe("high");
-    // Two major publishers.
-    expect(
-      confidenceCeiling(
-        [cited("https://www.reuters.com/a"), cited("https://apnews.com/b")],
-        TARGET,
-      ),
-    ).toBe("high");
-  });
-
-  it("is high for the vendor's own statement next to an independent report, and only when the research marked the page", () => {
-    expect(
-      confidenceCeiling(
-        [cited("https://acme.com/trust", true), cited("https://news.example.com/a")],
-        TARGET,
-      ),
-    ).toBe("high");
-    // The same address that the research did not take for the vendor's own is a third party.
-    expect(
-      confidenceCeiling(
-        [cited("https://acme.com/trust", false), cited("https://news.example.com/a")],
-        TARGET,
-      ),
-    ).toBe("medium");
-  });
-
-  it("is medium, not high, for two independent publishers when neither is credible", () => {
-    expect(
-      confidenceCeiling(
-        [cited("https://news.example.com/a"), cited("https://blog.another.org/b")],
-        TARGET,
-      ),
-    ).toBe("medium");
-  });
-
-  it("takes one story on two domains of one publisher for one source", () => {
-    expect(
-      confidenceCeiling(
-        [cited("https://www.bbc.co.uk/news/a"), cited("https://www.bbc.com/news/a")],
-        TARGET,
-      ),
-    ).toBe("medium");
-  });
-
-  it("does not count an aggregator as a second publisher", () => {
-    expect(
-      confidenceCeiling(
-        [cited("https://www.reuters.com/a"), cited("https://finance.yahoo.com/news/a")],
-        TARGET,
-      ),
-    ).toBe("medium");
-    expect(
-      confidenceCeiling(
-        [cited("https://www.reuters.com/a"), cited("https://www.reddit.com/r/netsec/comments/a")],
-        TARGET,
-      ),
-    ).toBe("medium");
-    expect(
-      confidenceCeiling(
-        [cited("https://www.reddit.com/r/netsec/comments/a"), cited("https://medium.com/@x/a")],
-        TARGET,
-      ),
-    ).toBe("medium");
-  });
-
-  it("takes the pages of the vendor's own site for one source: the vendor says it once", () => {
-    expect(
-      confidenceCeiling(
-        [cited("https://acme.com/trust", true), cited("https://trust.acme.com/soc2", true)],
-        TARGET,
-      ),
-    ).toBe("medium");
-  });
-
-  it("does not take www.x.test and x.test for two sources, nor two cases of one host", () => {
-    expect(
-      confidenceCeiling([cited("https://www.x.test/a"), cited("https://x.test/b")], TARGET),
-    ).toBe("medium");
-    expect(confidenceCeiling([cited("https://X.test/a"), cited("https://x.TEST/b")], TARGET)).toBe(
-      "medium",
-    );
-  });
-
-  it("does not take one URL cited twice for two sources", () => {
-    expect(
-      confidenceCeiling(
-        [cited("https://news.example.com/a"), cited("https://news.example.com/a")],
-        TARGET,
-      ),
-    ).toBe("low");
-  });
-
-  it("does not count a URL it cannot read as a source, and does not throw", () => {
-    expect(
-      confidenceCeiling([cited("not a url"), cited("https://news.example.com/a")], TARGET),
-    ).toBe("low");
-    expect(confidenceCeiling([cited("not a url")], TARGET)).toBe("low");
-    // Marked as the vendor's own, it is still not a source: there is no page to count.
-    expect(confidenceCeiling([cited("not a url", true)], TARGET)).toBe("low");
-  });
-});
-
 describe("validateFindings", () => {
   describe("a candidate that is fine", () => {
-    it("becomes a finding with the level, the sources and a confidence the evidence supports", () => {
+    it("becomes a finding with the level and the sources, and no confidence", () => {
       const findings = validate([candidate()]);
 
       expect(findings).toEqual([
@@ -580,7 +402,6 @@ describe("validateFindings", () => {
           likelihood: "Possible",
           risk_severity: "Major",
           risk_level: "High Risk",
-          confidence: "low",
           rationale: "The vendor confirmed the incident, and it holds our customer data.",
           sources: [
             {
@@ -653,7 +474,7 @@ describe("validateFindings", () => {
     });
 
     it("does not change the answer or the pack it is given", () => {
-      const output: ResearchOutput = {
+      const output: CredibilityOutput = {
         findings: [candidate(), candidate({ category: "legal_regulatory" })],
         category_notes: [{ category: "security_incidents", note: "A note." }],
       };
@@ -809,20 +630,6 @@ describe("validateFindings", () => {
 
       expect(finding.sources).toHaveLength(1);
       expect(finding.sources[0].quote).toBe("attackers copied customer records");
-    });
-
-    it("lets a repeated citation of one source add nothing to the confidence", () => {
-      const [finding] = validate([
-        candidate({
-          confidence: "high",
-          evidence: [
-            { source_id: "S1", quote: "attackers copied customer records" },
-            { source_id: "S1", quote: "Acme confirmed on Monday" },
-          ],
-        }),
-      ]);
-
-      expect(finding.confidence).toBe("low");
     });
 
     it("removes an item whose quote is longer than the schema allows", () => {
@@ -1261,7 +1068,7 @@ describe("validateFindings", () => {
       expect(quoting("Acme confirmed the incident", noName)).toHaveLength(1);
     });
 
-    describe("the confidence", () => {
+    describe("a second source", () => {
       const NEWS = source({ id: "S1", url: "https://news.example.com/a" });
       // The same second source for both halves: it names Acme, and it has the real sentence too.
       const ROUNDUP = source({
@@ -1279,32 +1086,28 @@ describe("validateFindings", () => {
       });
       const claimed = (secondQuote: string) =>
         candidate({
-          confidence: "high",
           evidence: [
             { source_id: "S1", quote: "attackers copied customer records" },
             { source_id: "S2", quote: secondQuote },
           ],
         });
 
-      it("is not lifted to high by a second publisher whose only quote is the vendor's name", () => {
+      it("is not cited when its only quote is the vendor's name", () => {
         const [found] = validate([claimed("Acme")], [NEWS, ROUNDUP]);
 
         expect(found.sources.map((entry) => entry.url)).toEqual(["https://news.example.com/a"]);
-        // One page of a third party is `low`.
-        expect(found.confidence).toBe("low");
       });
 
-      it("stays high when the second quote is real (the same sources)", () => {
+      it("is cited when its quote is real (the same sources)", () => {
         const [found] = validate([claimed("attackers copied customer records")], [NEWS, ROUNDUP]);
 
         expect(found.sources.map((entry) => entry.url)).toEqual([
           "https://news.example.com/a",
           "https://www.reuters.com/b",
         ]);
-        expect(found.confidence).toBe("high");
       });
 
-      it("is at most medium when the one real source is the vendor's own site and the other quote is only its name", () => {
+      it("is cited only for a real quote when the first source is the vendor's own site", () => {
         const [refused] = validate([claimed("Acme")], [OWN_SITE, ROUNDUP]);
         const [real] = validate(
           [claimed("attackers copied customer records")],
@@ -1312,12 +1115,10 @@ describe("validateFindings", () => {
         );
 
         expect(refused.sources).toHaveLength(1);
-        expect(refused.confidence).toBe("medium");
         expect(real.sources).toHaveLength(2);
-        expect(real.confidence).toBe("high");
       });
 
-      it("is not lifted to high by a second publisher whose only quote is the domain written with www.", () => {
+      it("is not cited when its only quote is the domain written with www.", () => {
         const news = source({
           id: "S1",
           url: "https://news.example.com/a",
@@ -1334,7 +1135,6 @@ describe("validateFindings", () => {
         });
         const claimedOf = (secondQuote: string) =>
           candidate({
-            confidence: "high",
             evidence: [
               { source_id: "S1", quote: "attackers copied customer records" },
               { source_id: "S2", quote: secondQuote },
@@ -1357,11 +1157,8 @@ describe("validateFindings", () => {
         );
 
         expect(refused.sources.map((entry) => entry.url)).toEqual(["https://news.example.com/a"]);
-        // One page of a third party is `low`.
-        expect(refused.confidence).toBe("low");
-        // The same sources with a real second quote stay `high`.
+        // The same sources with a real second quote are both cited.
         expect(real.sources).toHaveLength(2);
-        expect(real.confidence).toBe("high");
       });
     });
   });
@@ -1428,7 +1225,6 @@ describe("validateFindings", () => {
       ["an unknown severity", { risk_severity: "Huge" }],
       ["a likelihood in the wrong case", { likelihood: "possible" }],
       ["a severity that is the impact scale's", { risk_severity: "Critical" }],
-      ["an unknown confidence", { confidence: "certain" }],
       // The matrix of risk levels is a plain object, which has a "constructor" with a "name".
       [
         "a severity and a likelihood that are names of properties of every object",
@@ -1494,146 +1290,62 @@ describe("validateFindings", () => {
     });
   });
 
-  describe("the confidence", () => {
+  describe("no confidence", () => {
+    // The model is not asked for a confidence, and the label of a finding is worked out from its
+    // sources by credibility.ts. A recording made before holds one, and nothing reads it.
     const THIRD_PARTY_A = source({ id: "S1", url: "https://news.example.com/a" });
     const THIRD_PARTY_B = source({
       id: "S2",
       url: "https://www.reuters.com/b",
       content: "Acme told customers that attackers copied customer records.",
     });
-    const SAME_HOST_B = source({
-      id: "S2",
-      url: "https://news.example.com/b",
-      content: "Acme told customers that attackers copied customer records.",
-    });
-    const OWN_SITE = source({
-      id: "S1",
-      onVendorSite: true,
-      url: "https://trust.acme.com/incident",
-      content: "We found that attackers copied customer records.",
-    });
     const both = [
       { source_id: "S1", quote: "attackers copied customer records" },
       { source_id: "S2", quote: "attackers copied customer records" },
     ];
+    const withConfidence = (confidence: unknown, over: Partial<Candidate> = {}) =>
+      ({ ...candidate(over), confidence }) as unknown as Candidate;
 
-    it("is lowered to low when a single third-party source backs a high claim", () => {
-      const [finding] = validate([candidate({ confidence: "high" })], [THIRD_PARTY_A]);
-      expect(finding.confidence).toBe("low");
+    it("gives a finding none, whatever its sources", () => {
+      const one = validate([candidate()], [THIRD_PARTY_A]);
+      const two = validate([candidate({ evidence: both })], [THIRD_PARTY_A, THIRD_PARTY_B]);
+
+      expect(one).toHaveLength(1);
+      expect(two).toHaveLength(1);
+      expect(one[0]).not.toHaveProperty("confidence");
+      expect(two[0]).not.toHaveProperty("confidence");
     });
 
-    it("stays high when two independent publishers, one of them credible, back a high claim", () => {
-      const [finding] = validate(
-        [candidate({ confidence: "high", evidence: both })],
-        [THIRD_PARTY_A, THIRD_PARTY_B],
-      );
-      expect(finding.confidence).toBe("high");
+    it.each(["low", "medium", "high"])(
+      "does not carry over the %s of a recording made before",
+      (confidence) => {
+        const [found] = validate([withConfidence(confidence)], [THIRD_PARTY_A]);
+
+        expect(found).not.toHaveProperty("confidence");
+      },
+    );
+
+    it("does not drop a candidate for a confidence it should not have, even an unknown one", () => {
+      const found = validate([withConfidence("certain")], [THIRD_PARTY_A]);
+
+      expect(found).toHaveLength(1);
+      expect(found[0]).not.toHaveProperty("confidence");
+      expect(found[0].risk_level).toBe("High Risk");
     });
 
-    it("gives a candidate without a confidence the ceiling of its sources", () => {
-      const blog = source({ id: "S2", kind: "page", url: "https://blog.another.org/b" });
-      const { confidence: _confidence, ...withoutConfidence } = candidate({ evidence: both });
+    it("reports no rejection for it", () => {
+      const report = newValidationReport();
 
-      const [finding] = validateFindings(
-        { findings: [withoutConfidence], category_notes: [] },
-        [{ ...THIRD_PARTY_A, kind: "page" }, blog],
+      validateFindings(
+        { findings: [withConfidence("certain")], category_notes: [] },
+        [THIRD_PARTY_A],
         TARGET,
         [...RESEARCH_CATEGORIES],
+        report,
       );
 
-      expect(finding.confidence).toBe("medium");
-    });
-
-    it("is lowered to medium when two independent publishers back a high claim and neither is credible", () => {
-      const blog = source({ id: "S2", url: "https://blog.another.org/b" });
-      const [finding] = validate(
-        [candidate({ confidence: "high", evidence: both })],
-        [THIRD_PARTY_A, blog],
-      );
-      expect(finding.confidence).toBe("medium");
-    });
-
-    it("is lowered to medium when the second source is a copy of the first on an aggregator", () => {
-      const original = source({ id: "S1", url: "https://www.reuters.com/a" });
-      const copy = source({ id: "S2", url: "https://finance.yahoo.com/news/a" });
-      const [finding] = validate(
-        [candidate({ confidence: "high", evidence: both })],
-        [original, copy],
-      );
-      expect(finding.confidence).toBe("medium");
-    });
-
-    it("is lowered to medium when the second source is the same story on another domain of the publisher", () => {
-      const uk = source({ id: "S1", url: "https://www.bbc.co.uk/news/a" });
-      const international = source({ id: "S2", url: "https://www.bbc.com/news/a" });
-      const [finding] = validate(
-        [candidate({ confidence: "high", evidence: both })],
-        [uk, international],
-      );
-      expect(finding.confidence).toBe("medium");
-    });
-
-    it("is lowered to medium when a single source on the vendor's own domain backs a high claim", () => {
-      const [finding] = validate([candidate({ confidence: "high" })], [OWN_SITE]);
-      expect(finding.confidence).toBe("medium");
-    });
-
-    it("is lowered to low when the page on the vendor's domain answered from somewhere else", () => {
-      // The page names the vendor, so it passes the mention check; it is not the vendor's own page.
-      const redirected = source({ ...OWN_SITE, onVendorSite: false, title: "Acme incident" });
-      const [finding] = validate([candidate({ confidence: "high" })], [redirected]);
-      expect(finding.confidence).toBe("low");
-    });
-
-    it("is lowered to medium when the page the research took for the vendor's own was asked for elsewhere", () => {
-      const moved = source({ ...OWN_SITE, url: "https://news.example.com/moved" });
-      const [finding] = validate([candidate({ confidence: "high" })], [moved]);
-      expect(finding.confidence).toBe("medium");
-    });
-
-    it("is lowered to medium when two sources on one hostname back a high claim", () => {
-      const [finding] = validate(
-        [candidate({ confidence: "high", evidence: both })],
-        [THIRD_PARTY_A, SAME_HOST_B],
-      );
-      expect(finding.confidence).toBe("medium");
-    });
-
-    it("is never raised: a low claim stays low whatever the evidence", () => {
-      const [finding] = validate(
-        [candidate({ confidence: "low", evidence: both })],
-        [THIRD_PARTY_A, THIRD_PARTY_B],
-      );
-      expect(finding.confidence).toBe("low");
-    });
-
-    it("is never raised: a medium claim stays medium with the strongest evidence, and falls to low with the weakest", () => {
-      const strong = validate(
-        [candidate({ confidence: "medium", evidence: both })],
-        [THIRD_PARTY_A, THIRD_PARTY_B],
-      );
-      const weak = validate([candidate({ confidence: "medium" })], [THIRD_PARTY_A]);
-
-      expect(strong[0].confidence).toBe("medium");
-      expect(weak[0].confidence).toBe("low");
-    });
-
-    it("is worked out from the evidence that remains, not from what the model cited", () => {
-      const [finding] = validate(
-        [
-          candidate({
-            confidence: "high",
-            evidence: [
-              { source_id: "S1", quote: "attackers copied customer records" },
-              { source_id: "S2", quote: "this sentence is not on the page" },
-            ],
-          }),
-        ],
-        [THIRD_PARTY_A, THIRD_PARTY_B],
-      );
-
-      expect(finding.sources).toHaveLength(1);
-      expect(finding.confidence).toBe("low");
+      expect(report.candidates).toEqual([]);
+      expect(report.citations).toEqual({});
     });
   });
 

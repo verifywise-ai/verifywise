@@ -23,7 +23,7 @@ import type { KnownRisk, PriorFinding } from "../dedupe";
 import type { Hints } from "../hints";
 import type { RecordsOutcome } from "../records";
 import type { Verdicts } from "../verifier";
-import type { ResearchOutput } from "../schema";
+import type { AnyResearchOutput } from "../schema";
 import type { VendorIdentifiers } from "../target";
 import type { ReadThroughOutcome, VrdbRow, VrdbSourceState } from "../vrdb/types";
 
@@ -62,8 +62,11 @@ export interface Recording {
   searches: Array<{ kind: SearchKind; query: string; results: SearchResult[] }>;
   /** What each page read answered: the page, or why it could not be read. */
   pages: Array<{ url: string; page: FetchedPage } | { url: string; failure: ReadFailureReason }>;
-  /** The answer of the analysis call. */
-  analysis: ResearchOutput;
+  /**
+   * The answer of the analysis call. It has no confidence since the model is not asked for one; a
+   * recording made before that holds one, and the schema of the analysis drops it on replay.
+   */
+  analysis: AnyResearchOutput;
   /**
    * The answer of the call for hints (see hints.ts), made by a run that does the routine work.
    * Absent when the model gave none.
@@ -133,8 +136,6 @@ export interface Targets {
   maxDatedWebResults?: number;
   /** Findings that cite snippets only, no page that was read. */
   maxSnippetOnlyFindings?: number;
-  /** Findings of `high` confidence without two different publishers behind them. */
-  maxOverconfident?: number;
   /** Kept findings whose credibility label, or name-only note, is not their expected finding's. */
   maxMislabelled?: number;
   /** Findings beyond the first about one event. */

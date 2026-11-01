@@ -99,7 +99,6 @@ export const VERIFIER_DROPS_FINDINGS: EvalCase = {
           likelihood: "Possible",
           risk_severity: "Moderate",
           action_plan: "Ask the vendor whether our records were on those systems.",
-          confidence: "medium",
           rationale: "A ransomware attack is reported, and its reach is not stated.",
           evidence: [
             {
@@ -116,7 +115,6 @@ export const VERIFIER_DROPS_FINDINGS: EvalCase = {
           likelihood: "Possible",
           risk_severity: "Moderate",
           action_plan: "Ask the vendor which reports were lost and whether they can be restored.",
-          confidence: "medium",
           rationale: "An outage is reported by the trade press.",
           evidence: [{ source_id: "S2", quote: "customer dashboards were unavailable for a day" }],
         },
@@ -127,7 +125,6 @@ export const VERIFIER_DROPS_FINDINGS: EvalCase = {
           likelihood: "Unlikely",
           risk_severity: "Moderate",
           action_plan: "Ask the vendor how it controls the export of client lists.",
-          confidence: "low",
           rationale: "One story reports it.",
           evidence: [
             {
@@ -145,7 +142,6 @@ export const VERIFIER_DROPS_FINDINGS: EvalCase = {
           likelihood: "Likely",
           risk_severity: "Moderate",
           action_plan: "Ask the vendor for its processor contracts and what it changed.",
-          confidence: "medium",
           rationale: "The decision of the regulator is reported and not appealed.",
           evidence: [
             {
@@ -178,7 +174,6 @@ export const VERIFIER_DROPS_FINDINGS: EvalCase = {
     maxBadUrls: 0,
     maxDatedWebResults: 0,
     maxSnippetOnlyFindings: 0,
-    maxOverconfident: 0,
     maxMislabelled: 0,
     maxDuplicateClusters: 0,
     maxCitationsRejected: 0,

@@ -14,6 +14,12 @@
  *   lacks reads as unconfirmed, so a run that kept no evidence gives no High. The rule is stored
  *   under the backfill's name (`backfill_official_record`), and the status job never decides it
  *   again (vrdb/relabel.ts).
+ *
+ * The backfill stays offline. Who filed an EDGAR filing is read from its header (edgarFiler.ts,
+ * Q28), which a run asks the SEC for and the backfill does not, so a filing that a run read as a
+ * page under the stored CIK becomes unverified here, since no filer is known: the run that had the
+ * answer said the vendor's statement only when the vendor filed it. A per-run SEC record keeps the
+ * strength it was stored with (Q3), which the address of its filing and the stored CIK give.
  */
 import {
   type BackfilledCredibilityBasis,

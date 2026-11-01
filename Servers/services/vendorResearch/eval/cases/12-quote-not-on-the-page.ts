@@ -8,12 +8,12 @@ const REPEAT = "https://www.fintechbrief.example/heron-pay-regulator";
  * The finding quotes two snippets, and the page of its best source does not say what its snippet
  * did: the engine's summary of the page joins words of two paragraphs into a fine, and the page
  * tells that the regulator has only opened an investigation. The second publisher repeats the
- * summary, so the evidence looks like two sources and supports a medium confidence.
+ * summary, so the evidence looks like two sources.
  *
  * After the analysis the page of the best source is read (see verifySnippets.ts). It does not hold
- * the quote, so the finding is kept, marked as snippet only, with its confidence lowered to low:
- * the person who reads it is told that nobody confirmed it on a page. (A finding whose page holds
- * the quote is the case of the snippets, `snippet-only-quotes`.)
+ * the quote, so the finding is kept, marked as snippet only, and its label is Low, since the page
+ * contradicts the quote: the person who reads it is told that nobody confirmed it on a page. (A
+ * finding whose page holds the quote is the case of the snippets, `snippet-only-quotes`.)
  *
  * If this case fails, a finding that the page contradicts is shown as if the page backed it.
  */
@@ -73,7 +73,6 @@ export const QUOTE_NOT_ON_THE_PAGE: EvalCase = {
           likelihood: "Possible",
           risk_severity: "Moderate",
           action_plan: "Ask the vendor what the regulator found and what it has changed.",
-          confidence: "medium",
           rationale: "Two publishers report the fine, and the regulator is the source of both.",
           evidence: [
             {
@@ -100,7 +99,6 @@ export const QUOTE_NOT_ON_THE_PAGE: EvalCase = {
     maxDatedWebResults: 0,
     // The finding stays, marked: it is the one that is still resting on a snippet.
     maxSnippetOnlyFindings: 1,
-    maxOverconfident: 0,
     maxMislabelled: 0,
     maxDuplicateClusters: 0,
     maxCitationsRejected: 0,

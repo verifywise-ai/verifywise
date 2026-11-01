@@ -38,8 +38,10 @@ router.use("/control-eu-change-history", controlEUChangeHistoryRoutes);
 router.use("/subcontrol-eu-change-history", subcontrolEUChangeHistoryRoutes);
 router.use("/annex-category-change-history", annexCategoryChangeHistoryRoutes);
 
-// Vendor research agent and its findings, added after ADR 0001. Vendor CRUD stays legacy
-// (/api/vendors), so /vendors holds the research sub-routes only.
+// Vendor research agent and its findings, added after ADR 0001. /vendors holds the research
+// sub-routes and the create and the update of a vendor, which take the other names and the
+// identifiers (ADR 0001 sections 2 and 5). The code of the vendor reads and the delete did not
+// change, so they stay on the legacy /api/vendors; they return the five nullable columns.
 router.use("/vendors", vendorsRoutes);
 router.use("/vendor-research", vendorResearchRoutes);
 router.use("/vendor-risk-findings", vendorRiskFindingsRoutes);

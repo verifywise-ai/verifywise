@@ -7,11 +7,13 @@ import {
   FindingStatus,
   IVendorResearchRun,
   IVendorRiskFinding,
+  LEGACY_CONFIDENCE_RULE,
   NewFinding,
   ResearchCategory,
   ResearchTrigger,
   RunCoverage,
   RunProgress,
+  RunSearchEngine,
   SnapshotWrite,
   StoredSnapshot,
   VendorResearchSettings,
@@ -31,8 +33,8 @@ import type { RunTrace } from "../services/vendorResearch/trace";
 
 const RUN_COLUMNS = `id, organization_id, vendor_id, trigger_type, status, categories,
   category_summary, evidence, model, prompt_version, searches_used, pages_read,
-  duplicates_dropped, error, progress, requested_by, coverage, registry_version, created_at,
-  started_at, finished_at`;
+  duplicates_dropped, error, progress, requested_by, coverage, registry_version, search_engine,
+  created_at, started_at, finished_at`;
 
 const FINDING_COLUMN_NAMES: Array<keyof IVendorRiskFinding> = [
   "id",
@@ -60,9 +62,37 @@ const FINDING_COLUMN_NAMES: Array<keyof IVendorRiskFinding> = [
   "decided_at",
   "created_at",
 ];
-const FINDING_COLUMNS = FINDING_COLUMN_NAMES.join(", ");
+
+/** The basis of a finding with only a confidence: the rule that says so, and nothing else. */
+const LEGACY_BASIS = `'{"rule":"${LEGACY_CONFIDENCE_RULE}"}'::jsonb`;
+
+/**
+ * A column of a finding as the queries read it. `confidence` is still read, but no run writes it
+ * any more (M3, Part B1), and the label and its basis come with the legacy fallback: a finding of a
+ * run before the credibility rule has a `confidence` and no `credibility`, and reads as a label of
+ * that level on the basis `{ "rule": "legacy_confidence" }` until the backfill gives it its own.
+ * A finding with a label reads as stored, and a row with neither reads null. `table` is the alias
+ * a query joins the table under, with its dot.
+ */
+function findingColumn(column: keyof IVendorRiskFinding, table = ""): string {
+  const own = (name: string) => `${table}${name}`;
+  if (column === "credibility") {
+    return `COALESCE(${own("credibility")}, ${own("confidence")}) AS credibility`;
+  }
+  if (column === "credibility_basis") {
+    return (
+      `CASE WHEN ${own("credibility")} IS NULL AND ${own("confidence")} IS NOT NULL ` +
+      `THEN ${LEGACY_BASIS} ELSE ${own("credibility_basis")} END AS credibility_basis`
+    );
+  }
+  return own(column);
+}
+
+const FINDING_COLUMNS = FINDING_COLUMN_NAMES.map((column) => findingColumn(column)).join(", ");
 /** For queries that join `vendors`, where `id`, `organization_id` and `created_at` are ambiguous. */
-const FINDING_COLUMNS_QUALIFIED = FINDING_COLUMN_NAMES.map((column) => `f.${column}`).join(", ");
+const FINDING_COLUMNS_QUALIFIED = FINDING_COLUMN_NAMES.map((column) =>
+  findingColumn(column, "f."),
+).join(", ");
 
 /** The error of a failed run is cut to this many characters. */
 const ERROR_MAX_LENGTH = 500;
@@ -92,32 +122,63 @@ export const createRunQuery = async (input: {
 };
 
 /**
- * Minutes after which a queued or running run counts as lost; pass it to `failStaleRunsQuery`. A
- * queued run older than this also stops counting toward the cooldown and the daily cap (see
- * `COUNTS_AS_A_RUN`) and is no longer started by a worker (see `markRunRunningQuery`), which is why
- * there is one number and not two.
+ * Minutes after which a **queued** run counts as lost; pass it to `failStaleRunsQuery` as the
+ * queued limit. A queued run older than this also stops counting toward the cooldown and the daily
+ * cap (see `COUNTS_AS_A_RUN`) and is no longer started by a worker (see `markRunRunningQuery`),
+ * which is why the start, the cooldown, the cap and the sweep of queued runs share this one number.
+ * A running run has a limit of its own (`STALE_RUNNING_RUN_MINUTES`).
  */
 export const STALE_RUN_MINUTES = 15;
 
+/** The longest a run may run: the pipeline fails it as timed out at this age (see runVendorResearch). */
+export const RUN_TIME_LIMIT_MINUTES = 20;
+
+/** Room for the pipeline to write that failure before the sweep would. */
+export const RUN_SWEEP_GRACE_MINUTES = 5;
+
 /**
- * Fails the vendor's queued or running runs whose age, counted from the start
- * (or from creation when they never started), exceeds the limit.
- * Returns the number of runs failed.
+ * The age at which the sweep fails a **running** run: derived from the run's own limit, never
+ * written as a number of its own, so the sweep can only reach a run that is already past its limit.
+ */
+export const STALE_RUNNING_RUN_MINUTES = RUN_TIME_LIMIT_MINUTES + RUN_SWEEP_GRACE_MINUTES;
+
+/** The error of a run that ran or waited too long; the sweep and the pipeline write the same phrase. */
+export const TIMED_OUT_ERROR = "timed out";
+
+/**
+ * Fails the vendor's lost runs, counted from the start (or from creation when they never started):
+ * a queued run older than `queuedOlderThanMinutes` (its job was lost) and a running run older than
+ * `runningOlderThanMinutes` (its worker died; a live run ends itself at RUN_TIME_LIMIT_MINUTES,
+ * well before). Returns the number of runs failed.
  */
 export const failStaleRunsQuery = async (
   organizationId: number,
   vendorId: number,
-  olderThanMinutes: number,
+  queuedOlderThanMinutes: number = STALE_RUN_MINUTES,
+  runningOlderThanMinutes: number = STALE_RUNNING_RUN_MINUTES,
 ): Promise<number> => {
   const failed = (await sequelize.query(
     `UPDATE vendor_research_runs
-     SET status = 'failed', error = 'timed out', progress = NULL, finished_at = NOW()
+     SET status = 'failed', error = :timedOut, progress = NULL, finished_at = NOW()
      WHERE organization_id = :organizationId
        AND vendor_id = :vendorId
-       AND status IN ('queued', 'running')
-       AND COALESCE(started_at, created_at) < NOW() - (:olderThanMinutes * INTERVAL '1 minute')
+       AND (
+         (status = 'queued'
+           AND COALESCE(started_at, created_at) < NOW() - (:queuedOlderThanMinutes * INTERVAL '1 minute'))
+         OR (status = 'running'
+           AND COALESCE(started_at, created_at) < NOW() - (:runningOlderThanMinutes * INTERVAL '1 minute'))
+       )
      RETURNING id`,
-    { replacements: { organizationId, vendorId, olderThanMinutes }, type: QueryTypes.SELECT },
+    {
+      replacements: {
+        organizationId,
+        vendorId,
+        queuedOlderThanMinutes,
+        runningOlderThanMinutes,
+        timedOut: TIMED_OUT_ERROR,
+      },
+      type: QueryTypes.SELECT,
+    },
   )) as Array<{ id: number }>;
   return failed.length;
 };
@@ -240,27 +301,35 @@ export interface FinishRunInput {
   error: string | null;
   /** What the run did (see services/vendorResearch/trace.ts); null for a run that did nothing. */
   trace: RunTrace | null;
-  /** What a run of the vendor risk database checked; null for a run without the flag. */
+  /** What a run of the vendor risk database checked; null for a run that has no coverage. */
   coverage: RunCoverage | null;
   /** The version of the source registry that classified the sources; null as `coverage`. */
   registryVersion: string | null;
+  /**
+   * The search the run's searches went to (see `RunSearchEngine`); null, or left out, for a run
+   * that searched nothing and for a run none of whose searches was answered. A caller that never searched, such as the start that could not queue its
+   * job, leaves it out.
+   */
+  searchEngine?: RunSearchEngine | null;
 }
 
 /**
  * Records how a run ended. `error` is cut to 500 characters.
  *
- * There is no status guard: a late finish can overwrite a run that the stale sweep
- * (`failStaleRunsQuery`) already failed, and a `failed` finish can overwrite a
- * `completed` one, so callers must finish a run exactly once.
+ * It ends only a run that has not ended: a queued or running run. A run that is completed or
+ * failed, including one that the stale sweep (`failStaleRunsQuery`) failed, is never overwritten,
+ * so the first end of a run stands and a late finish changes nothing. It returns true when it
+ * wrote the run and false when it wrote nothing, because the run had ended, belongs to another
+ * organization or does not exist; a caller that saves findings with the finish rolls them back on
+ * false (see `completeRun`).
  *
- * It matches on organization and run id only. When either does not match, it
- * updates nothing and reports nothing: a silent no-op.
+ * It matches on organization and run id.
  */
 export const finishRunQuery = async (
   input: FinishRunInput,
   transaction?: Transaction,
-): Promise<void> => {
-  await sequelize.query(
+): Promise<boolean> => {
+  const written = (await sequelize.query(
     `UPDATE vendor_research_runs
      SET status = :status,
          categories = ARRAY[:categories]::text[],
@@ -275,9 +344,11 @@ export const finishRunQuery = async (
          trace = CAST(:trace AS JSONB),
          coverage = CAST(:coverage AS JSONB),
          registry_version = :registryVersion,
+         search_engine = :searchEngine,
          progress = NULL,
          finished_at = NOW()
-     WHERE organization_id = :organizationId AND id = :runId`,
+     WHERE organization_id = :organizationId AND id = :runId AND status IN ('queued', 'running')
+     RETURNING id`,
     {
       replacements: {
         ...input,
@@ -285,11 +356,14 @@ export const finishRunQuery = async (
         evidence: input.evidence === null ? null : JSON.stringify(input.evidence),
         trace: input.trace ? JSON.stringify(input.trace) : null,
         coverage: input.coverage === null ? null : JSON.stringify(input.coverage),
+        // Always named, or a caller that leaves it out would leave the replacement without a value.
+        searchEngine: input.searchEngine ?? null,
       },
-      type: QueryTypes.UPDATE,
+      type: QueryTypes.SELECT,
       transaction,
     },
-  );
+  )) as Array<{ id: number }>;
+  return written.length > 0;
 };
 
 /**
@@ -349,7 +423,11 @@ export const countRunsSinceQuery = async (organizationId: number, since: Date): 
 // Findings
 // ---------------------------------------------------------------------------
 
-/** Stores a run's findings as pending, in input order. Run it in the transaction that finishes the run. */
+/**
+ * Stores a run's findings as pending, in input order. Run it in the transaction that finishes the
+ * run. It writes no confidence: the column stays, nullable, until the contract migration (M3, Part
+ * B2), and the rows it writes leave it null.
+ */
 export const insertFindingsQuery = async (
   input: { organizationId: number; vendorId: number; runId: number; findings: NewFinding[] },
   transaction: Transaction,
@@ -360,11 +438,11 @@ export const insertFindingsQuery = async (
     const rows = (await sequelize.query(
       `INSERT INTO vendor_risk_findings
          (organization_id, vendor_id, run_id, category, risk_description, impact_description,
-          action_plan, likelihood, risk_severity, risk_level, confidence, credibility,
+          action_plan, likelihood, risk_severity, risk_level, credibility,
           credibility_basis, rationale, sources, snippet_only)
        VALUES
          (:organizationId, :vendorId, :runId, :category, :riskDescription, :impactDescription,
-          :actionPlan, :likelihood, :riskSeverity, :riskLevel, :confidence, :credibility,
+          :actionPlan, :likelihood, :riskSeverity, :riskLevel, :credibility,
           CAST(:credibilityBasis AS JSONB), :rationale, CAST(:sources AS JSONB), :snippetOnly)
        RETURNING ${FINDING_COLUMNS}`,
       {
@@ -379,7 +457,6 @@ export const insertFindingsQuery = async (
           likelihood: finding.likelihood,
           riskSeverity: finding.risk_severity,
           riskLevel: finding.risk_level,
-          confidence: finding.confidence,
           credibility: finding.credibility ?? null,
           credibilityBasis: finding.credibility_basis
             ? JSON.stringify(finding.credibility_basis)

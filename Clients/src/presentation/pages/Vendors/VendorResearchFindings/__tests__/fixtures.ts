@@ -13,6 +13,11 @@ import type {
   VrdbSourceId,
 } from "../../../../../domain/interfaces/i.vendorResearch";
 
+/**
+ * A finding as the API sends it: every finding has a credibility label (a finding of a run before
+ * the credibility rule reads its earlier confidence as the label). This one has the label and no
+ * basis, so that its row shows the chip and no line; `credibleFinding` has the basis of a rule.
+ */
 export const finding = (overrides: Partial<VendorRiskFinding> = {}): VendorRiskFinding => ({
   id: 1,
   organization_id: 1,
@@ -25,7 +30,8 @@ export const finding = (overrides: Partial<VendorRiskFinding> = {}): VendorRiskF
   likelihood: "Likely",
   risk_severity: "Major",
   risk_level: "High Risk",
-  confidence: "medium",
+  credibility: "medium",
+  credibility_basis: null,
   rationale: "The vendor confirmed the breach, and customer data was involved.",
   sources: [
     {
@@ -104,7 +110,8 @@ export const secondFinding = (overrides: Partial<VendorRiskFinding> = {}) =>
     likelihood: "Possible",
     risk_severity: "Moderate",
     risk_level: "Medium Risk",
-    confidence: "high",
+    credibility: "high",
+    credibility_basis: null,
     rationale: "A lapsed certificate is a gap in the audits, not an incident.",
     sources: [
       {

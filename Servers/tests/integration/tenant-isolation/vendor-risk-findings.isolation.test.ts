@@ -29,7 +29,6 @@ const FINDING: NewFinding = {
   likelihood: "Possible",
   risk_severity: "Major",
   risk_level: "High Risk",
-  confidence: "medium",
   rationale: "Because of what the sources say.",
   sources: [
     {
@@ -45,7 +44,6 @@ const SECOND_FINDING: NewFinding = {
   ...FINDING,
   category: "certifications",
   risk_description: "The vendor's SOC 2 report has lapsed.",
-  confidence: "high",
 };
 
 /** A vendor in `ctx`'s organization with a run that produced these findings, all pending. */
@@ -384,9 +382,9 @@ describe("vendor_risk_findings tenant isolation", () => {
     const [stray] = (await sequelize.query(
       `INSERT INTO vendor_risk_findings
          (organization_id, vendor_id, run_id, category, risk_description, impact_description,
-          action_plan, likelihood, risk_severity, risk_level, confidence, sources)
+          action_plan, likelihood, risk_severity, risk_level, sources)
        SELECT :organizationId, vendor_id, run_id, category, risk_description, impact_description,
-              action_plan, likelihood, risk_severity, risk_level, confidence, sources
+              action_plan, likelihood, risk_severity, risk_level, sources
        FROM vendor_risk_findings WHERE id = :findingId
        RETURNING id`,
       {

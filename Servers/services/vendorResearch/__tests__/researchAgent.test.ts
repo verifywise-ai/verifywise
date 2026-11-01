@@ -11,14 +11,23 @@ import {
   ResearchCategory,
   type VrdbSourceId,
 } from "../../../domain.layer/interfaces/i.vendorResearch";
+import * as gdeltSearchModule from "../../webResearch/gdeltSearch";
 import * as guardedFetchModule from "../../webResearch/guardedFetch";
+import * as providerSearchModule from "../../webResearch/providerSearch";
+import { SearchUnavailableError } from "../../webResearch/providerSearch";
 import * as readPageModule from "../../webResearch/readPage";
 import { FetchedPage, PageReadError } from "../../webResearch/readPage";
 import { LoopAction, LoopStep } from "../../webResearch/researchLoop";
-import * as webSearchModule from "../../webResearch/webSearch";
-import { SearchEngineError, SearchKind, SearchResult } from "../../webResearch/webSearch";
-import { memoryCache } from "../../webResearch/__tests__/helpers/memoryCache";
+import {
+  SearchEngineError,
+  type SearchEngine,
+  SearchKind,
+  SearchResult,
+} from "../../webResearch/webSearch";
+import type { WebCache } from "../../webResearch/webCache";
+import { memoryCache, settle } from "../../webResearch/__tests__/helpers/memoryCache";
 import type { Hints } from "../hints";
+import { regulatorTopicsOf } from "../market";
 import {
   buildHintsSystemPrompt,
   buildLoopSystemPrompt,
@@ -26,8 +35,12 @@ import {
   loopScopeOf,
 } from "../prompts";
 import type { ResearchMetrics } from "../metrics";
-import type { RecordsOutcome } from "../records";
+import { NEWS_TOPIC_WORDS } from "../queries";
+import { type RecordsOutcome, sourcesBesideVrdb } from "../records";
+import { EVAL_CASES } from "../eval/cases";
+import { runEvalCase } from "../eval/runCase";
 import { createVendorResearcher } from "../researchAgent";
+import type { SearchSpec } from "../searchEngineOf";
 import { ResearchTarget } from "../target";
 import { createTraceRecorder } from "../trace";
 import { vrdbSourceOf } from "../vrdb/sources";
@@ -126,6 +139,9 @@ function scriptedModel(answers: Answer[], fellBack: boolean[] = []) {
   return { generate: mock as unknown as typeof generateObjectWithSelfCorrection, calls, mock };
 }
 
+/** What every engine declares about itself: the fakes of these tests answer both kinds, with no window for the news. */
+const ENGINE_FIELDS = { id: "replay", kinds: ["web", "news"], newsWindowMonths: null } as const;
+
 /** A fake engine that answers the searches in turn, and a fake reader that reads any page. */
 function fakeWeb(searches: SearchResult[][] = []) {
   const queue = [...searches];
@@ -139,7 +155,7 @@ function fakeWeb(searches: SearchResult[][] = []) {
     text: `Text of ${url}`,
     links: [],
   }));
-  return { engine: { search }, readPage, search };
+  return { engine: { ...ENGINE_FIELDS, search }, readPage, search };
 }
 
 /** The text of the last `<result>` element of a prompt: what the latest step got. */
@@ -357,6 +373,8 @@ describe("createVendorResearcher", () => {
       modelError: failure,
       jsonObjectFallback: false,
       readPage: web.readPage,
+      // The engine the run was given answered its search.
+      searchEngine: "replay",
     });
     expect(outcome.modelError).toBe(failure);
   });
@@ -405,6 +423,8 @@ describe("createVendorResearcher", () => {
       modelError: null,
       jsonObjectFallback: false,
       readPage: web.readPage,
+      // This run searched nothing, however many searches the first one made.
+      searchEngine: null,
     });
     // The only reads are the check of each run, which is outside the session.
     expect(web.readPage.mock.calls.map(([url]) => url)).toEqual([
@@ -1082,27 +1102,6 @@ describe("createVendorResearcher", () => {
       expect(outcome.stoppedBecause).toBe("finished");
       expect(outcome.searchesUsed).toBe(1);
     });
-
-    it("counts a retry of the Bing engine it builds, by the feed", async () => {
-      const counted = fakeMetrics();
-      const created = jest
-        .spyOn(webSearchModule, "createBingEngine")
-        .mockReturnValue({ search: jest.fn(async () => []) });
-      const model = scriptedModel([finishStep, finishStep]);
-      const research = createVendorResearcher({
-        generate: model.generate,
-        readPage: fakeWeb().readPage,
-        metrics: counted.metrics,
-      });
-
-      await research({ target: WITHOUT_DOMAIN, model: MODEL, now: NOW });
-      const { onRetry } = created.mock.calls[0][0] ?? {};
-      onRetry?.("news");
-
-      expect(onRetry).toEqual(expect.any(Function));
-      expect(counted.retries).toEqual([{ kind: "news" }]);
-      created.mockRestore();
-    });
   });
 
   describe("the progress", () => {
@@ -1308,35 +1307,22 @@ describe("createVendorResearcher", () => {
       expect(outcome.stoppedBecause).toBe("finished");
     });
 
-    it("reads the news by the registry category under the credibility rules, and by the tier otherwise", async () => {
+    it("reads the news by the registry category: a regulator and a trusted publisher before the vendor's own post", async () => {
       // The first search is the first of security incidents; the vendor's own post, a regulator
-      // and a major publisher all name it.
-      const results = () => [
+      // and a major publisher all name it. No setting of the researcher changes the order.
+      const results = [
         result("https://acme.com/blog/incident"),
         result("https://www.reuters.com/technology/acme"),
         result("https://ico.org.uk/action/acme"),
       ];
-      const readUnder = async (rules?: "credibility") => {
-        const web = namedWeb([results()]);
-        const model = scriptedModel([NO_HINTS, finishStep, finishStep]);
-        const research = createVendorResearcher({
-          ...web,
-          generate: model.generate,
-          gather: true,
-          ...(rules === undefined ? {} : { rules }),
-        });
-        await research({ target: WITH_DOMAIN, model: MODEL, now: NOW });
-        const read = web.readPage.mock.calls.map(([url]) => url);
-        return results()
-          .map((it) => it.url)
-          .filter((url) => read.includes(url));
-      };
+      const web = namedWeb([results]);
+      const model = scriptedModel([NO_HINTS, finishStep, finishStep]);
+      const research = createVendorResearcher({ ...web, generate: model.generate, gather: true });
 
-      expect(await readUnder()).toEqual([
-        "https://acme.com/blog/incident",
-        "https://ico.org.uk/action/acme",
-      ]);
-      expect(await readUnder("credibility")).toEqual([
+      await research({ target: WITH_DOMAIN, model: MODEL, now: NOW });
+
+      const read = web.readPage.mock.calls.map(([url]) => url);
+      expect(results.map((it) => it.url).filter((url) => read.includes(url))).toEqual([
         "https://www.reuters.com/technology/acme",
         "https://ico.org.uk/action/acme",
       ]);
@@ -1503,14 +1489,17 @@ describe("createVendorResearcher", () => {
           const outcome = await research({ target: WITH_DOMAIN, model: MODEL, now: NOW });
 
           expect(vrdb).toHaveBeenCalledTimes(1);
+          // Which databases are asked beside the VRDB depends on the gates (the SEC is one until
+          // Q4 opens), so the ids come from the code. The status page must be among them: the
+          // stubbed lookup answers for it alone, with a failure, which the coverage has to carry.
+          expect(sourcesBesideVrdb()).toContain("statuspage");
           expect(outcome.coverage).toEqual({
             sources: VRDB.coverage,
             // The NVD is read through by the VRDB: its coverage is among the lists'.
-            lookups: [
-              { id: "hibp", outcome: "not_researched" },
-              { id: "sec", outcome: "not_researched" },
-              { id: "statuspage", outcome: "failed" },
-            ],
+            lookups: sourcesBesideVrdb().map((id) => ({
+              id,
+              outcome: id === "statuspage" ? "failed" : "not_researched",
+            })),
           });
         });
 
@@ -1526,11 +1515,10 @@ describe("createVendorResearcher", () => {
 
           const outcome = await research({ target: WITH_DOMAIN, model: MODEL, now: NOW });
 
-          expect(outcome.coverage?.lookups.map((lookup) => lookup.outcome)).toEqual([
-            "off",
-            "off",
-            "off",
-          ]);
+          // One "off" for each database asked beside the VRDB, however many the gates leave.
+          expect(outcome.coverage?.lookups.map((lookup) => lookup.outcome)).toEqual(
+            sourcesBesideVrdb().map(() => "off"),
+          );
         });
 
         it("gives no coverage without it, and asks it nothing unless the routine work is on", async () => {
@@ -2497,12 +2485,13 @@ describe("createVendorResearcher", () => {
         fetch: jest
           .spyOn(guardedFetchModule, "guardedFetch")
           .mockRejectedValue(new Error("A unit test makes no request.")),
-        createBingEngine: jest.spyOn(webSearchModule, "createBingEngine"),
+        createGdeltEngine: jest.spyOn(gdeltSearchModule, "createGdeltEngine"),
+        createProviderSearchEngine: jest.spyOn(providerSearchModule, "createProviderSearchEngine"),
         createPageReader: jest.spyOn(readPageModule, "createPageReader"),
       };
     }
 
-    it("builds the Bing engine and a new page reader for every run, and makes no request but those of the check", async () => {
+    it("builds the GDELT engine and a new page reader for every run, and makes no request but those of the check", async () => {
       const spies = spyOnTheWeb();
       const model = scriptedModel([finishStep, finishStep, finishStep, finishStep]);
       const research = createVendorResearcher({ generate: model.generate });
@@ -2513,9 +2502,10 @@ describe("createVendorResearcher", () => {
       expect(first.stoppedBecause).toBe("finished");
       expect(second.stoppedBecause).toBe("finished");
       // An engine and a reader per run: every run has a robots.txt cache of its own, and the engines
-      // share the search queue of the process.
-      expect(spies.createBingEngine).toHaveBeenCalledTimes(2);
-      expect(spies.createBingEngine).toHaveBeenCalledWith({ onRetry: expect.any(Function) });
+      // share the search queue of the process. A run that says nothing of its key searches the
+      // news, and builds no search of a provider.
+      expect(spies.createGdeltEngine).toHaveBeenCalledTimes(2);
+      expect(spies.createProviderSearchEngine).not.toHaveBeenCalled();
       expect(spies.createPageReader).toHaveBeenCalledTimes(2);
       // The requests of a run are the two attempts of the check of the home page (the bare domain,
       // then its www form), through the guarded fetch; they fail here, which closes the site.
@@ -2553,12 +2543,13 @@ describe("createVendorResearcher", () => {
         now: NOW,
       });
 
-      expect(spies.createBingEngine).toHaveBeenNthCalledWith(1, {
-        onRetry: expect.any(Function),
-        cache,
-      });
+      // The engine keeps its index of the news and the robots.txt of its host in the cache.
+      expect(spies.createGdeltEngine).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({ cache }),
+      );
       expect(spies.createPageReader).toHaveBeenNthCalledWith(1, { cache });
-      expect(spies.createBingEngine.mock.calls[1][0]).not.toHaveProperty(
+      expect(spies.createGdeltEngine.mock.calls[1][0]).not.toHaveProperty(
         "cache",
         expect.anything(),
       );
@@ -2660,16 +2651,818 @@ describe("createVendorResearcher", () => {
         modelError: null,
         jsonObjectFallback: false,
         readPage: expect.any(Function),
+        // Nothing was searched, so no engine was used.
+        searchEngine: null,
       });
       // The first finish is answered with a reminder, the second one ends the loop.
       expect(model.doGenerateCalls).toHaveLength(2);
-      expect(spies.createBingEngine).toHaveBeenCalled();
+      expect(spies.createGdeltEngine).toHaveBeenCalled();
       expect(spies.createPageReader).toHaveBeenCalled();
       expect(spies.fetch.mock.calls.map(([url]) => url)).toEqual([
         "https://acme.com/",
         "https://www.acme.com/",
       ]);
     });
+  });
+});
+
+describe("createVendorResearcher: the search engine of each run", () => {
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  const CLAUDE: SearchSpec = { engine: "anthropic" };
+  const GDELT: SearchSpec = { engine: "gdelt" };
+
+  /** A result that names the vendor, so that the session keeps it. */
+  const HIT = result("https://news.example/acme-breach");
+
+  /** An engine of the kind a researcher builds for a key, with its searches written down. */
+  function engineOf(
+    id: "anthropic" | "gdelt",
+    answer: (query: string) => SearchResult[] = () => [HIT],
+  ) {
+    const search = jest.fn<Promise<SearchResult[]>, [string, SearchKind, AbortSignal?]>(
+      async (query) => answer(query),
+    );
+    const engine: SearchEngine =
+      id === "gdelt"
+        ? { id, kinds: ["news"], newsWindowMonths: 3, search }
+        : { id, kinds: ["web", "news"], newsWindowMonths: null, search };
+    return { engine, search };
+  }
+
+  /** An engine of Claude that is refused: the key is not allowed to search. */
+  const refusedClaude = () =>
+    engineOf("anthropic", () => {
+      throw new SearchUnavailableError();
+    });
+
+  /**
+   * Puts stand-ins in the place of the two builders: each call hands out the engine of `claude` or
+   * of `gdelt`, and the calls are kept. The real builders have tests of their own.
+   */
+  function builders(claude = engineOf("anthropic"), gdelt = engineOf("gdelt")) {
+    return {
+      claude,
+      gdelt,
+      createGdeltEngine: jest
+        .spyOn(gdeltSearchModule, "createGdeltEngine")
+        .mockImplementation(() => gdelt.engine),
+      createProviderSearchEngine: jest
+        .spyOn(providerSearchModule, "createProviderSearchEngine")
+        .mockImplementation(() => claude.engine),
+    };
+  }
+
+  /** A researcher that builds its engine and reads pages from a fake reader. */
+  const researcherOf = (
+    model: ReturnType<typeof scriptedModel>,
+    deps: Parameters<typeof createVendorResearcher>[0] = {},
+  ) => createVendorResearcher({ readPage: fakeWeb().readPage, generate: model.generate, ...deps });
+
+  /** A model that makes one search of the news, and then finishes. */
+  const searchOnce = () =>
+    scriptedModel([searchStep("Acme data breach", "security_incidents"), finishStep, finishStep]);
+  /** A model that makes two searches of the news, and then finishes. */
+  const searchTwice = () =>
+    scriptedModel([
+      searchStep("Acme data breach", "security_incidents"),
+      searchStep("Acme lawsuit", "legal_regulatory"),
+      finishStep,
+      finishStep,
+    ]);
+  const searchedQueries = (engine: { search: jest.Mock }) =>
+    engine.search.mock.calls.map(([query]) => query);
+
+  describe("an engine that is given", () => {
+    it("is the engine of the run, as it is: no engine is built, whatever the key says", async () => {
+      const spies = builders();
+      const web = fakeWeb([[HIT]]);
+      const research = createVendorResearcher({ ...web, generate: searchOnce().generate });
+
+      const outcome = await research({
+        target: WITHOUT_DOMAIN,
+        model: MODEL,
+        now: NOW,
+        search: CLAUDE,
+      });
+
+      expect(spies.createGdeltEngine).not.toHaveBeenCalled();
+      expect(spies.createProviderSearchEngine).not.toHaveBeenCalled();
+      expect(web.search).toHaveBeenCalledTimes(1);
+      expect(outcome.entries.map((entry) => entry.url)).toEqual([HIT.url]);
+    });
+
+    it("is the engine that the result reports once the run has searched", async () => {
+      const research = createVendorResearcher({
+        ...fakeWeb([[HIT]]),
+        generate: searchOnce().generate,
+      });
+
+      const outcome = await research({ target: WITHOUT_DOMAIN, model: MODEL, now: NOW });
+
+      expect(outcome.searchEngine).toBe("replay");
+    });
+
+    it("is not reported by a run that searched nothing", async () => {
+      const model = scriptedModel([finishStep, finishStep]);
+      const research = createVendorResearcher({ ...fakeWeb(), generate: model.generate });
+
+      const outcome = await research({ target: WITHOUT_DOMAIN, model: MODEL, now: NOW });
+
+      expect(outcome.searchEngine).toBeNull();
+    });
+
+    it("is read as it is when the run searches: an engine that changes its id is reported as it ends", async () => {
+      let live = "anthropic" as SearchEngine["id"];
+      const web = fakeWeb([[HIT]]);
+      const engine: SearchEngine = {
+        get id() {
+          return live;
+        },
+        kinds: ["web", "news"],
+        newsWindowMonths: null,
+        search: async (query, kind, signal) => {
+          live = "gdelt";
+          return web.search(query, kind, signal);
+        },
+      };
+      const research = createVendorResearcher({
+        readPage: web.readPage,
+        engine,
+        generate: searchOnce().generate,
+      });
+
+      const outcome = await research({ target: WITHOUT_DOMAIN, model: MODEL, now: NOW });
+
+      expect(outcome.searchEngine).toBe("gdelt");
+    });
+  });
+
+  describe("with no engine given and no word of the key", () => {
+    it.each([
+      ["says nothing of its search", undefined],
+      ["says gdelt", GDELT],
+    ])("searches the news with the GDELT engine, as a run that %s does", async (_name, search) => {
+      const spies = builders();
+      const model = searchOnce();
+
+      const outcome = await researcherOf(model)({
+        target: WITHOUT_DOMAIN,
+        model: MODEL,
+        now: NOW,
+        ...(search === undefined ? {} : { search }),
+      });
+
+      expect(spies.createProviderSearchEngine).not.toHaveBeenCalled();
+      expect(spies.createGdeltEngine).toHaveBeenCalledTimes(1);
+      expect(searchedQueries(spies.gdelt)).toEqual(["Acme data breach"]);
+      expect(spies.gdelt.search.mock.calls[0][1]).toBe("news");
+      expect(outcome.entries.map((entry) => entry.url)).toEqual([HIT.url]);
+      expect(outcome.searchEngine).toBe("gdelt");
+    });
+
+    it("reports no engine for a run that searched nothing", async () => {
+      builders();
+      const model = scriptedModel([finishStep, finishStep]);
+
+      const outcome = await researcherOf(model)({
+        target: WITHOUT_DOMAIN,
+        model: MODEL,
+        now: NOW,
+        search: GDELT,
+      });
+
+      expect(outcome.searchEngine).toBeNull();
+    });
+
+    it("builds the engine of every run for itself", async () => {
+      const spies = builders();
+      const model = scriptedModel([finishStep, finishStep, finishStep, finishStep]);
+      const research = researcherOf(model);
+
+      await research({ target: WITHOUT_DOMAIN, model: MODEL, now: NOW });
+      await research({ target: WITHOUT_DOMAIN, model: MODEL, now: NOW });
+
+      expect(spies.createGdeltEngine).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe("the GDELT engine", () => {
+    const depsOf = (spies: ReturnType<typeof builders>) => spies.createGdeltEngine.mock.calls[0][0];
+
+    it("is told the names of the vendor and the words of the news it looks for", async () => {
+      const spies = builders();
+
+      await researcherOf(scriptedModel([finishStep, finishStep]))({
+        target: { ...WITHOUT_DOMAIN, aliases: ["Initech"] },
+        model: MODEL,
+        now: NOW,
+      });
+
+      expect(depsOf(spies).names).toEqual(["Acme", "Initech"]);
+      expect(depsOf(spies).topics).toEqual([...NEWS_TOPIC_WORDS, "FTC", "settlement"]);
+      expect(depsOf(spies).topics).toEqual(expect.arrayContaining(["breach", "lawsuit", "outage"]));
+    });
+
+    it("is told the names the home page gave the vendor too, after the ones a person wrote", async () => {
+      const spies = builders();
+      const web = fakeWeb();
+      web.readPage.mockImplementation(async (url) => ({
+        url,
+        title: "Acme Cloud",
+        publishedAt: null,
+        text: "Acme Cloud hosting for teams.",
+        links: [],
+        identity: { names: ["AcmeAI"], products: ["Acme Vault"] },
+      }));
+
+      await createVendorResearcher({
+        readPage: web.readPage,
+        generate: scriptedModel([finishStep, finishStep]).generate,
+      })({
+        target: { ...WITH_DOMAIN, aliases: ["Initech"] },
+        model: MODEL,
+        now: NOW,
+      });
+
+      expect(depsOf(spies).names).toEqual(["Acme", "Initech", "AcmeAI"]);
+    });
+
+    it.each([
+      ["a vendor with no country on record", WITHOUT_DOMAIN, ["FTC", "settlement"]],
+      [
+        "a vendor in the United Kingdom",
+        { ...WITHOUT_DOMAIN, identifiers: { country: "GB" } },
+        ["ICO fine", "settlement"],
+      ],
+      [
+        "a vendor in a market of another language, whose authority is asked for in its language",
+        { ...WITHOUT_DOMAIN, identifiers: { country: "DE" } },
+        [],
+      ],
+    ])("is told the authorities of the jurisdiction of %s", async (_name, target, regulators) => {
+      const spies = builders();
+
+      await researcherOf(scriptedModel([finishStep, finishStep]))({
+        target,
+        model: MODEL,
+        now: NOW,
+      });
+
+      expect(regulatorTopicsOf(target)).toEqual(regulators);
+      expect(depsOf(spies).topics).toEqual([...NEWS_TOPIC_WORDS, ...regulators]);
+    });
+
+    it("is the engine of a key of Claude too, behind the search of Claude", async () => {
+      const spies = builders();
+
+      await researcherOf(scriptedModel([finishStep, finishStep]))({
+        target: WITHOUT_DOMAIN,
+        model: MODEL,
+        now: NOW,
+        search: CLAUDE,
+      });
+
+      expect(spies.createGdeltEngine).toHaveBeenCalledTimes(1);
+      expect(depsOf(spies).names).toEqual(["Acme"]);
+    });
+
+    describe("the retries it makes", () => {
+      function countingMetrics() {
+        const retries: Array<{ kind: string }> = [];
+        const metrics: ResearchMetrics = {
+          findingDecided: jest.fn(),
+          searchFinished: jest.fn(),
+          searchRetried: (search) => retries.push(search),
+          cacheLookup: jest.fn(),
+        };
+        return { metrics, retries };
+      }
+
+      it.each([
+        ["a key with no search of its own", undefined],
+        ["a key of Claude, whose fallback it is", CLAUDE],
+      ])("are counted as retried searches of the news for %s", async (_name, search) => {
+        const spies = builders();
+        const counted = countingMetrics();
+
+        await researcherOf(scriptedModel([finishStep, finishStep]), { metrics: counted.metrics })({
+          target: WITHOUT_DOMAIN,
+          model: MODEL,
+          now: NOW,
+          search,
+        });
+        // Nothing was asked a second time during the run: the counter has not moved.
+        expect(counted.retries).toEqual([]);
+        // The engine tells the hook each time it asks again; the hook counts it.
+        expect(depsOf(spies).onRetry).toBeInstanceOf(Function);
+        depsOf(spies).onRetry?.();
+        depsOf(spies).onRetry?.();
+
+        expect(counted.retries).toEqual([{ kind: "news" }, { kind: "news" }]);
+      });
+
+      it("go to the counters of the researcher that was given, not to those of another", async () => {
+        const spies = builders();
+        const first = countingMetrics();
+        const second = countingMetrics();
+
+        await researcherOf(scriptedModel([finishStep, finishStep]), { metrics: first.metrics })({
+          target: WITHOUT_DOMAIN,
+          model: MODEL,
+          now: NOW,
+        });
+        await researcherOf(scriptedModel([finishStep, finishStep]), { metrics: second.metrics })({
+          target: WITHOUT_DOMAIN,
+          model: MODEL,
+          now: NOW,
+        });
+        spies.createGdeltEngine.mock.calls[1][0].onRetry?.();
+
+        expect(first.retries).toEqual([]);
+        expect(second.retries).toEqual([{ kind: "news" }]);
+      });
+    });
+  });
+
+  describe("for a key of Claude", () => {
+    it("searches with Claude on the model of the run, and reports it", async () => {
+      const spies = builders();
+
+      const outcome = await researcherOf(searchOnce())({
+        target: WITHOUT_DOMAIN,
+        model: MODEL,
+        modelId: "claude-x",
+        now: NOW,
+        search: CLAUDE,
+      });
+
+      expect(spies.createProviderSearchEngine).toHaveBeenCalledTimes(1);
+      expect(spies.createProviderSearchEngine).toHaveBeenCalledWith(
+        expect.objectContaining({
+          provider: "anthropic",
+          model: MODEL,
+          onCall: expect.any(Function),
+        }),
+      );
+      expect(searchedQueries(spies.claude)).toEqual(["Acme data breach"]);
+      expect(spies.claude.search.mock.calls[0][1]).toBe("news");
+      expect(spies.gdelt.search).not.toHaveBeenCalled();
+      expect(outcome.entries.map((entry) => entry.url)).toEqual([HIT.url]);
+      expect(outcome.searchEngine).toBe("anthropic");
+    });
+
+    it("moves the run to GDELT when the key is not allowed to search: that search and the later ones", async () => {
+      const spies = builders(refusedClaude());
+
+      const outcome = await researcherOf(searchTwice())({
+        target: WITHOUT_DOMAIN,
+        model: MODEL,
+        now: NOW,
+        search: CLAUDE,
+      });
+
+      expect(spies.claude.search).toHaveBeenCalledTimes(1);
+      expect(searchedQueries(spies.gdelt)).toEqual(["Acme data breach", "Acme lawsuit"]);
+      expect(outcome.entries.map((entry) => entry.url)).toEqual([HIT.url]);
+    });
+
+    it("reports gdelt for a run that fell back, and counts the search that made it fall back", async () => {
+      builders(refusedClaude());
+
+      const outcome = await researcherOf(searchTwice())({
+        target: WITHOUT_DOMAIN,
+        model: MODEL,
+        now: NOW,
+        search: CLAUDE,
+      });
+
+      expect(outcome.searchEngine).toBe("gdelt");
+      // Both searches were answered, the first by the engine that took over.
+      expect(outcome.searchesUsed).toBe(2);
+      expect(outcome.calls).toEqual([
+        { category: "security_incidents", tool: "search", answered: true, failure: null },
+        { category: "legal_regulatory", tool: "search", answered: true, failure: null },
+      ]);
+    });
+
+    it("does not move the run for a search that merely failed: the next search asks Claude again", async () => {
+      const claude = engineOf("anthropic");
+      claude.search.mockRejectedValueOnce(new SearchEngineError());
+      const spies = builders(claude);
+
+      const outcome = await researcherOf(searchTwice())({
+        target: WITHOUT_DOMAIN,
+        model: MODEL,
+        now: NOW,
+        search: CLAUDE,
+      });
+
+      expect(searchedQueries(spies.claude)).toEqual(["Acme data breach", "Acme lawsuit"]);
+      expect(spies.gdelt.search).not.toHaveBeenCalled();
+      expect(outcome.searchEngine).toBe("anthropic");
+      expect(outcome.calls.map((call) => call.answered)).toEqual([false, true]);
+    });
+
+    it("builds the engine of every run for itself: a key that was refused once is asked again by the next run", async () => {
+      const refused = refusedClaude();
+      const healthy = engineOf("anthropic");
+      const gdelt = engineOf("gdelt");
+      jest.spyOn(gdeltSearchModule, "createGdeltEngine").mockImplementation(() => gdelt.engine);
+      const createClaude = jest
+        .spyOn(providerSearchModule, "createProviderSearchEngine")
+        .mockImplementationOnce(() => refused.engine)
+        .mockImplementationOnce(() => healthy.engine);
+      const research = researcherOf(
+        scriptedModel([
+          searchStep("Acme data breach", "security_incidents"),
+          finishStep,
+          finishStep,
+          searchStep("Acme data breach", "security_incidents"),
+          finishStep,
+          finishStep,
+        ]),
+      );
+
+      const first = await research({
+        target: WITHOUT_DOMAIN,
+        model: MODEL,
+        now: NOW,
+        search: CLAUDE,
+      });
+      const second = await research({
+        target: WITHOUT_DOMAIN,
+        model: MODEL,
+        now: NOW,
+        search: CLAUDE,
+      });
+
+      expect(createClaude).toHaveBeenCalledTimes(2);
+      expect(first.searchEngine).toBe("gdelt");
+      expect(second.searchEngine).toBe("anthropic");
+      expect(healthy.search).toHaveBeenCalledTimes(1);
+    });
+
+    it("reports no engine for a run that searched nothing", async () => {
+      builders();
+
+      const outcome = await researcherOf(scriptedModel([finishStep, finishStep]))({
+        target: WITHOUT_DOMAIN,
+        model: MODEL,
+        now: NOW,
+        search: CLAUDE,
+      });
+
+      expect(outcome.searchEngine).toBeNull();
+    });
+
+    it("searches the news with GDELT, and builds no search of Claude, when the model is not an object it could call", async () => {
+      const spies = builders();
+
+      const outcome = await researcherOf(searchOnce())({
+        target: WITHOUT_DOMAIN,
+        model: "claude-x",
+        now: NOW,
+        search: CLAUDE,
+      });
+
+      expect(spies.createProviderSearchEngine).not.toHaveBeenCalled();
+      expect(searchedQueries(spies.gdelt)).toEqual(["Acme data breach"]);
+      expect(outcome.searchEngine).toBe("gdelt");
+    });
+
+    describe("in the trace", () => {
+      const call = { inputTokens: 900, outputTokens: 12, totalTokens: 912, ms: 340, ok: true };
+
+      it("writes each call that the search made as a model call for the search, with its tokens", async () => {
+        const spies = builders();
+        const trace = createTraceRecorder({ now: () => 0 });
+        await researcherOf(scriptedModel([finishStep, finishStep]))({
+          target: WITHOUT_DOMAIN,
+          model: MODEL,
+          modelId: "claude-x",
+          now: NOW,
+          search: CLAUDE,
+          trace,
+        });
+        const { onCall } = spies.createProviderSearchEngine.mock.calls[0][0];
+
+        onCall?.(call);
+        onCall?.({ inputTokens: 0, outputTokens: 0, totalTokens: 0, ms: 15, ok: false });
+
+        const searches = trace.snapshot().modelCalls.filter(({ purpose }) => purpose === "search");
+        expect(searches).toEqual([
+          {
+            purpose: "search",
+            model: "claude-x",
+            ms: 340,
+            inputTokens: 900,
+            outputTokens: 12,
+            totalTokens: 912,
+            ok: true,
+          },
+          {
+            purpose: "search",
+            model: "claude-x",
+            ms: 15,
+            inputTokens: 0,
+            outputTokens: 0,
+            totalTokens: 0,
+            ok: false,
+          },
+        ]);
+      });
+
+      it("counts the tokens of the searches among the tokens of the run", async () => {
+        const spies = builders();
+        const trace = createTraceRecorder({ now: () => 0 });
+        await researcherOf(scriptedModel([finishStep, finishStep]))({
+          target: WITHOUT_DOMAIN,
+          model: MODEL,
+          now: NOW,
+          search: CLAUDE,
+          trace,
+        });
+        const before = trace.snapshot().totals;
+
+        spies.createProviderSearchEngine.mock.calls[0][0].onCall?.(call);
+
+        const after = trace.snapshot().totals;
+        expect(after.modelCalls).toBe(before.modelCalls + 1);
+        expect(after.totalTokens).toBe(before.totalTokens + 912);
+      });
+
+      it("has no model call for a run that searched with GDELT: the news costs no tokens", async () => {
+        builders();
+        const trace = createTraceRecorder({ now: () => 0 });
+
+        await researcherOf(searchOnce())({
+          target: WITHOUT_DOMAIN,
+          model: MODEL,
+          now: NOW,
+          trace,
+        });
+
+        expect(trace.snapshot().modelCalls.filter(({ purpose }) => purpose === "search")).toEqual(
+          [],
+        );
+      });
+
+      it("is not needed: a run without a trace takes the calls of the search without a word", async () => {
+        const spies = builders();
+        await researcherOf(scriptedModel([finishStep, finishStep]))({
+          target: WITHOUT_DOMAIN,
+          model: MODEL,
+          now: NOW,
+          search: CLAUDE,
+        });
+        const { onCall } = spies.createProviderSearchEngine.mock.calls[0][0];
+
+        expect(() => onCall?.(call)).not.toThrow();
+      });
+    });
+  });
+
+  describe("with the cache that runs share", () => {
+    /** A run of the vendor for an organization (or for none) that makes one search. */
+    async function searchedFor(organizationId: number | undefined, cache: WebCache) {
+      const outcome = await researcherOf(searchOnce(), { cache })({
+        target: WITHOUT_DOMAIN,
+        model: MODEL,
+        now: NOW,
+        search: CLAUDE,
+        ...(organizationId === undefined ? {} : { organizationId }),
+      });
+      await settle();
+      return outcome;
+    }
+
+    it("serves a search that an earlier run of the same organization paid for, and asks Claude again for another organization", async () => {
+      const { cache } = memoryCache();
+      const spies = builders();
+
+      await searchedFor(7, cache);
+      const again = await searchedFor(7, cache);
+      expect(spies.claude.search).toHaveBeenCalledTimes(1);
+      // What came from the cache is the same answer, and the run still searched with Claude.
+      expect(again.entries.map((entry) => entry.url)).toEqual([HIT.url]);
+      expect(again.searchEngine).toBe("anthropic");
+
+      await searchedFor(8, cache);
+      expect(spies.claude.search).toHaveBeenCalledTimes(2);
+    });
+
+    it("keeps nothing of Claude's answers for a run that is not told its organization: the answers would have no owner", async () => {
+      const { cache, writes } = memoryCache();
+      const spies = builders();
+
+      await searchedFor(undefined, cache);
+      await searchedFor(undefined, cache);
+
+      expect(spies.claude.search).toHaveBeenCalledTimes(2);
+      expect(writes.filter(({ kind }) => kind === "search")).toEqual([]);
+    });
+
+    it("keeps Claude's answers in the cache of searches, under the organization", async () => {
+      const { cache, writes } = memoryCache();
+      builders();
+
+      await searchedFor(7, cache);
+
+      const kept = writes.filter(({ kind }) => kind === "search");
+      expect(kept).toHaveLength(1);
+      expect(kept[0].key).toContain("org:7");
+      expect(kept[0].key).toContain("anthropic");
+    });
+
+    it("gives the cache to GDELT for its index and keeps GDELT out of the cache of searches", async () => {
+      const { cache, writes, reads } = memoryCache();
+      const spies = builders();
+
+      const outcome = await researcherOf(searchOnce(), { cache })({
+        target: WITHOUT_DOMAIN,
+        model: MODEL,
+        now: NOW,
+        organizationId: 7,
+      });
+      await settle();
+
+      expect(spies.createGdeltEngine).toHaveBeenCalledWith(expect.objectContaining({ cache }));
+      expect(outcome.searchEngine).toBe("gdelt");
+      expect([...reads, ...writes].filter(({ kind }) => kind === "search")).toEqual([]);
+    });
+
+    it("keeps nothing in the cache of searches for the search that fell back: GDELT's answer is not Claude's", async () => {
+      const { cache, writes } = memoryCache();
+      builders(refusedClaude());
+
+      const outcome = await searchedFor(7, cache);
+
+      expect(outcome.searchEngine).toBe("gdelt");
+      expect(writes.filter(({ kind }) => kind === "search")).toEqual([]);
+    });
+  });
+
+  describe("the prompt of the loop", () => {
+    const NEWS_ONLY_PROMPT = buildLoopSystemPrompt({ kinds: ["news"], newsWindowMonths: 3 });
+
+    it("describes what the engine of the run answers: the news only, and how far back it reaches", async () => {
+      const model = scriptedModel([finishStep, finishStep]);
+      const research = createVendorResearcher({
+        engine: engineOf("gdelt").engine,
+        readPage: fakeWeb().readPage,
+        generate: model.generate,
+      });
+
+      await research({ target: WITHOUT_DOMAIN, model: MODEL, now: NOW });
+
+      expect(model.calls[0].system).toBe(NEWS_ONLY_PROMPT);
+      expect(model.calls[0].system).toContain("The news covers the last 3 months only");
+      expect(model.calls[0].system).not.toContain('(kind "web")');
+    });
+
+    it("is the prompt it always was for an engine that answers both kinds with no limit on its news", async () => {
+      const model = scriptedModel([finishStep, finishStep]);
+      const research = createVendorResearcher({
+        engine: engineOf("anthropic").engine,
+        readPage: fakeWeb().readPage,
+        generate: model.generate,
+      });
+
+      await research({ target: WITHOUT_DOMAIN, model: MODEL, now: NOW });
+
+      expect(model.calls[0].system).toBe(buildLoopSystemPrompt());
+      expect(model.calls[0].system).toContain(
+        'Search the whole web (kind "web") when the news has nothing.',
+      );
+      expect(model.calls[0].system).not.toContain("covers the last");
+    });
+
+    it("is the prompt of the news for a key with no search of its own: the engine built for it is GDELT's", async () => {
+      builders();
+      const model = scriptedModel([finishStep, finishStep]);
+
+      await researcherOf(model)({ target: WITHOUT_DOMAIN, model: MODEL, now: NOW, search: GDELT });
+
+      expect(model.calls[0].system).toBe(NEWS_ONLY_PROMPT);
+    });
+
+    it("is the prompt of both kinds for a key of Claude, whose search answers both", async () => {
+      builders();
+      const model = scriptedModel([finishStep, finishStep]);
+
+      await researcherOf(model)({ target: WITHOUT_DOMAIN, model: MODEL, now: NOW, search: CLAUDE });
+
+      expect(model.calls[0].system).toBe(buildLoopSystemPrompt());
+    });
+
+    it("is the same for every loop of a run with one loop for each category", async () => {
+      builders();
+      const model = categoryModel();
+      const research = createVendorResearcher({
+        readPage: namedWeb().readPage,
+        generate: model.generate,
+        perCategory: true,
+        gather: true,
+      });
+
+      await research({ target: WITH_DOMAIN, model: MODEL, now: NOW, search: GDELT });
+
+      expect(model.loopCalls().length).toBeGreaterThan(1);
+      for (const call of model.loopCalls()) expect(call.system).toBe(NEWS_ONLY_PROMPT);
+    });
+
+    it("is built when the loop starts, from what the engine answers by then", async () => {
+      // The engine loses the web while the site is checked, which is before the loop: the way a
+      // key that is refused moves the run to the news, once the routine work has searched.
+      const state = { kinds: ["web", "news"] as SearchKind[], months: null as number | null };
+      const engine: SearchEngine = {
+        id: "anthropic",
+        get kinds() {
+          return state.kinds;
+        },
+        get newsWindowMonths() {
+          return state.months;
+        },
+        search: async () => [],
+      };
+      const readPage = jest.fn(async (url: string) => {
+        state.kinds = ["news"];
+        state.months = 3;
+        return { url, title: "Acme", publishedAt: null, text: "Acme", links: [] };
+      });
+      const model = scriptedModel([finishStep, finishStep]);
+      const research = createVendorResearcher({ engine, readPage, generate: model.generate });
+
+      await research({ target: WITH_DOMAIN, model: MODEL, now: NOW });
+
+      expect(readPage).toHaveBeenCalled();
+      expect(model.calls[0].system).toBe(NEWS_ONLY_PROMPT);
+    });
+
+    it("tells the loop of a key of Claude that was refused during the routine work that it can search the news only", async () => {
+      const spies = builders(refusedClaude());
+      const model = scriptedModel([NO_HINTS, finishStep, finishStep]);
+
+      const outcome = await researcherOf(model, { gather: true })({
+        target: WITH_DOMAIN,
+        model: MODEL,
+        now: NOW,
+        search: CLAUDE,
+      });
+
+      // The first call of the model is the call for hints; the first step of the loop is the second.
+      expect(spies.gdelt.search).toHaveBeenCalled();
+      expect(outcome.searchEngine).toBe("gdelt");
+      expect(model.calls[0].system).toBe(buildHintsSystemPrompt());
+      expect(model.calls[1].system).toBe(NEWS_ONLY_PROMPT);
+    });
+
+    it("tells the loop of a key of Claude that was not refused that it can search the web too", async () => {
+      builders();
+      const model = scriptedModel([NO_HINTS, finishStep, finishStep]);
+
+      await researcherOf(model, { gather: true })({
+        target: WITH_DOMAIN,
+        model: MODEL,
+        now: NOW,
+        search: CLAUDE,
+      });
+
+      expect(model.calls[1].system).toBe(buildLoopSystemPrompt());
+    });
+  });
+});
+
+describe("runEvalCase: the trace of a run", () => {
+  it("is the trace that the caller gives, so that what its engine wrote there before the run is kept", async () => {
+    // A live run builds the engine of the key of the organization, whose search writes its calls
+    // into the trace of the run, and so it must make the trace before the run does.
+    const trace = createTraceRecorder({ now: () => 0 });
+    trace.modelCall({ purpose: "search", model: "claude-x", ms: 7, totalTokens: 100, ok: true });
+
+    const run = await runEvalCase(EVAL_CASES[0], { trace });
+
+    expect(run.trace.modelCalls[0]).toEqual({
+      purpose: "search",
+      model: "claude-x",
+      ms: 7,
+      totalTokens: 100,
+      ok: true,
+    });
+    // The run wrote its own steps into the same trace.
+    expect(run.trace.steps.length).toBeGreaterThan(0);
+    expect(run.trace.phases.map((phase) => phase.name)).toContain("research");
+  });
+
+  it("is a new one for each run when the caller gives none", async () => {
+    const first = await runEvalCase(EVAL_CASES[0]);
+    const second = await runEvalCase(EVAL_CASES[0]);
+
+    expect(second.trace.modelCalls).toHaveLength(first.trace.modelCalls.length);
+    expect(second.trace.steps).toHaveLength(first.trace.steps.length);
   });
 });
 

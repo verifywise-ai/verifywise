@@ -31,6 +31,8 @@ import {
   insertFindingsQuery,
   markFindingDismissedQuery,
   markRunRunningQuery,
+  RUN_TIME_LIMIT_MINUTES,
+  STALE_RUNNING_RUN_MINUTES,
 } from "../../utils/vendorResearch.utils";
 
 // ---------------------------------------------------------------------------
@@ -86,6 +88,7 @@ const RUN_RESPONSE_FIELDS = [
   "categories",
   "category_summary",
   "coverage",
+  "search_engine",
   "searches_used",
   "pages_read",
   "duplicates_dropped",
@@ -104,7 +107,6 @@ const FINDING: NewFinding = {
   likelihood: "Possible",
   risk_severity: "Major",
   risk_level: "High Risk",
-  confidence: "medium",
   rationale: "Because of what the sources say.",
   sources: [
     {
@@ -120,7 +122,6 @@ const SECOND_FINDING: NewFinding = {
   ...FINDING,
   category: "certifications",
   risk_description: "The vendor's SOC 2 report has lapsed.",
-  confidence: "high",
 };
 
 const EVIDENCE: EvidenceSource[] = [
@@ -262,6 +263,7 @@ const seedFindings = async (
         evidence: EVIDENCE,
         model: MODEL_SENTINEL,
         promptVersion: PROMPT_SENTINEL,
+        searchEngine: "gdelt",
         searchesUsed: 4,
         pagesRead: 3,
         duplicatesDropped: 1,
@@ -502,7 +504,7 @@ describe("GET /api/v1/vendors/:id/research/latest", () => {
     expect(res.body.data).toBeNull();
   });
 
-  it("fails a run that has been running for 20 minutes and says so", async () => {
+  it("fails a run that has been running past its limit and the grace of the sweep, and says so", async () => {
     const { owner } = await seedTwoTenantContexts(3);
     const vendorId = await createTestVendor(owner.orgId);
     const run = await createRunQuery({
@@ -523,10 +525,17 @@ describe("GET /api/v1/vendors/:id/research/latest", () => {
       finished_at: null,
     });
 
-    await sequelize.query(
-      `UPDATE vendor_research_runs SET started_at = NOW() - INTERVAL '20 minutes' WHERE id = :runId`,
-      { replacements: { runId: run.id } },
-    );
+    // A run that runs for as long as its own limit is still working: the read does not fail it.
+    const ageStart = (minutes: number) =>
+      sequelize.query(
+        `UPDATE vendor_research_runs SET started_at = NOW() - (:minutes * INTERVAL '1 minute') WHERE id = :runId`,
+        { replacements: { runId: run.id, minutes } },
+      );
+    await ageStart(RUN_TIME_LIMIT_MINUTES);
+    const working = await owner.request.get(`/api/v1/vendors/${vendorId}/research/latest`);
+    expect(working.body.data).toMatchObject({ id: run.id, status: "running", error: null });
+
+    await ageStart(STALE_RUNNING_RUN_MINUTES + 1);
     const stale = await owner.request.get(`/api/v1/vendors/${vendorId}/research/latest`);
 
     expect(stale.status).toBe(200);
@@ -553,6 +562,8 @@ describe("GET /api/v1/vendors/:id/research/latest", () => {
       trigger_type: "auto",
       categories: ["security_incidents"],
       category_summary: CATEGORY_SUMMARY,
+      // The engine the run searched with is sent: the run summary words it, and credits GDELT with it.
+      search_engine: "gdelt",
       searches_used: 4,
       pages_read: 3,
       duplicates_dropped: 1,
@@ -748,7 +759,8 @@ describe("GET /api/v1/vendor-risk-findings", () => {
       likelihood: "Possible",
       risk_severity: "Major",
       risk_level: "High Risk",
-      confidence: "medium",
+      // A run stores no confidence (M3 Part B1).
+      confidence: null,
       rationale: "Because of what the sources say.",
       sources: FINDING.sources,
       snippet_only: false,

@@ -2,7 +2,10 @@ import { Request, Response } from "express";
 
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import { toId } from "../utils/validations/validation.utils";
-import { withNormalizedIdentifiers } from "../utils/validations/vendorValidation.utils";
+import {
+  withNormalizedIdentifiers,
+  withoutV1OnlyVendorFields,
+} from "../utils/validations/vendorValidation.utils";
 import {
   createNewVendorQuery,
   deleteVendorByIdQuery,
@@ -248,9 +251,25 @@ export async function getVendorRiskSuggestions(req: Request, res: Response): Pro
   }
 }
 
+/**
+ * POST /vendors, the legacy create: the frozen legacy contract, which never had the other names and
+ * the identifiers (ADR 0001, sections 1 and 2), so it ignores them. They are dropped here, before
+ * anything reads the body.
+ */
 export async function createVendor(req: Request, res: Response): Promise<any> {
+  return createVendorFrom(req, res, withoutV1OnlyVendorFields(req.body));
+}
+
+/**
+ * POST /v1/vendors: the same create, which also takes the other names and the identifiers (ADR
+ * 0001, sections 2 and 5).
+ */
+export async function createVendorV1(req: Request, res: Response): Promise<any> {
+  return createVendorFrom(req, res, req.body);
+}
+
+async function createVendorFrom(req: Request, res: Response, vendorData: Request["body"]) {
   const transaction = await sequelize.transaction();
-  const vendorData = req.body;
 
   logProcessing({
     description: "starting createVendor",
@@ -443,10 +462,26 @@ export async function createVendor(req: Request, res: Response): Promise<any> {
   }
 }
 
+/**
+ * PATCH /vendors/:id, the legacy update: the frozen legacy contract, which never had the other names
+ * and the identifiers (ADR 0001, sections 1 and 2), so it ignores them. They are dropped here,
+ * before anything reads the body.
+ */
 export async function updateVendorById(req: Request, res: Response): Promise<any> {
+  return updateVendorByIdFrom(req, res, withoutV1OnlyVendorFields(req.body));
+}
+
+/**
+ * PATCH /v1/vendors/:id: the same update, which also takes the other names and the identifiers (ADR
+ * 0001, sections 2 and 5).
+ */
+export async function updateVendorByIdV1(req: Request, res: Response): Promise<any> {
+  return updateVendorByIdFrom(req, res, req.body);
+}
+
+async function updateVendorByIdFrom(req: Request, res: Response, updateData: Request["body"]) {
   const transaction = await sequelize.transaction();
   const vendorId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
-  const updateData = req.body;
 
   logProcessing({
     description: `starting updateVendorById for ID ${vendorId}`,

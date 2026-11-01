@@ -1,7 +1,8 @@
 /**
- * The UN connector (spec D2.4, M2 Task 9): the entities of the UN Security Council Consolidated
+ * The UN connector (spec D2.5, M2 Task 9): the entities of the UN Security Council Consolidated
  * List as records of the vendor risk database, behind Q6. The fixture is written with fictional
- * names, and its element names are UNVERIFIED (see its header comment).
+ * names, and its element names were checked against the real file on 2026-10-31 (see its header
+ * comment).
  */
 import fs from "fs";
 import path from "path";

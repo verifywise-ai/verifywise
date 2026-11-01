@@ -5,7 +5,7 @@
  * over recorded sources, so what is measured is what ships.
  *
  * The order is fixed: ask the model, validate its candidates against the pack (quotes, sources,
- * confidence), look up what the vendor already has (that read comes after the validation, so a
+ * categories), look up what the vendor already has (that read comes after the validation, so a
  * model that failed costs no query), drop the candidates that repeat something (an active risk, an
  * earlier finding, another candidate, or an event another candidate is about already), and cap
  * what is left, in that order. The caps come last: before the de-duplication, the risks that are already
@@ -13,16 +13,28 @@
  * the new ones would be gone.
  *
  * Two more steps work on what the caps left, at the same time. With a page reader, a finding that
- * rests on snippets alone has the page of its best source read, and is marked (and its confidence
- * lowered) when the page does not hold the quote (see verifySnippets.ts). With the verifier on, one
- * more model call asks of every finding whether its sources are about the vendor, whether its quote
- * says what the claim says and whether the matter is inside the window, and a finding it fails is
- * not kept (see verifier.ts). Both come last and only for the findings that stay.
+ * rests on snippets alone has the page of its best source read, and is marked when the page does
+ * not hold the quote (see verifySnippets.ts), which the credibility label takes into account. With
+ * the verifier on, one more model call asks of every finding whether its sources are about the
+ * vendor, whether its quote says what the claim says and whether the matter is inside the window,
+ * and a finding it fails is not kept (see verifier.ts). Both come last and only for the findings
+ * that stay.
  *
  * Every finding that stays gets a credibility label, computed by code from the sources it cites,
  * their provenance and what the check of its snippets found (see credibility.ts). The labels come
- * back beside the findings, one for each in their order, and nothing stores them yet: the run
- * keeps the confidence of the model as before.
+ * back beside the findings, one for each in their order, and the pipeline stores each with its
+ * finding. The model is not asked for a confidence: there is one set of rules, the credibility
+ * rules.
+ *
+ * One more thing is asked before the labels, when the analysis is given the means (`edgarFilerOf`):
+ * who filed each EDGAR filing that the findings that stay cite under the CIK stored on the vendor
+ * (Q28; see edgarFiler.ts). The address of a filing is in the folder of every party, so only the
+ * header of the filing says whether the vendor filed it or somebody filed it about the vendor. The
+ * answer goes into the provenance that the labels read: a filing the vendor filed is the vendor's
+ * word, and any other, or one whose filer the SEC could not say, is the filer's document and
+ * unverified (classify.ts, step 5). At most five filings are asked about in a run, in the order of
+ * the pack, a filing once however many of its documents are cited; the rest stay unverified.
+ * Without the means nothing is asked.
  *
  * A failure of the model call is a result (`ok: false`), because the pipeline words it for the run.
  * A failure of the look-up is not a model failure and is thrown.
@@ -42,10 +54,13 @@ import type { PageReader } from "../webResearch/readPage";
 import { clusterSources, eventIdsByUrl } from "./clusters";
 import { type Credibility, credibilityOf } from "./credibility";
 import { type DedupeReport, type KnownRisk, type PriorFinding, dropDuplicates } from "./dedupe";
+import { accessionOfFiling } from "./edgarFiler";
 import type { SourceProvenance } from "./evidence";
 import type { Materiality } from "./materiality";
 import { buildSystemPrompt, buildUserPrompt } from "./prompts";
-import { type AnyResearchOutput, type ResearchRules, outputSchemaFor } from "./schema";
+import { storedCikOf } from "./records/sec";
+import { type AnyResearchOutput, credibilityOutputSchema } from "./schema";
+import { type EdgarFiler, isStoredCikFiling } from "./sourceRegistry/classify";
 import { ResearchTarget } from "./target";
 import type { TraceRecorder } from "./trace";
 import { verifierPasses } from "./verifier";
@@ -54,6 +69,11 @@ import { type SnippetCheck, checkSnippetFindings } from "./verifySnippets";
 
 /** One deadline for the model call, retries and self-correction included. */
 export const MODEL_TIMEOUT_MS = 120_000;
+
+/** The most filings of a run that the SEC is asked the filer of (Q28); the rest stay unverified. */
+export const MAX_EDGAR_FILER_ASKS = 5;
+/** One deadline for all the asks of a run, whatever the SEC does. */
+export const EDGAR_FILER_TIMEOUT_MS = 30_000;
 
 export interface AnalysisInput {
   target: ResearchTarget;
@@ -70,6 +90,15 @@ export interface AnalysisInput {
    * absent.
    */
   provenance?: ReadonlyMap<string, SourceProvenance>;
+  /**
+   * Who filed an EDGAR filing, as its header says (Q28; `createEdgarFilerResolver` in
+   * edgarFiler.ts): `vendor` when the CIK is a filer in it, `other` when it is not, null when that
+   * is not known. It is asked about the sources that the findings that stay cite and that are
+   * filings under the CIK stored on the vendor, in the order of the pack, at most
+   * MAX_EDGAR_FILER_ASKS in a run; the answers go into the provenance the labels read. It should
+   * not throw, and if it does the filer is not known. Without it nothing is asked.
+   */
+  edgarFilerOf?: (url: string, cik: string, signal: AbortSignal) => Promise<EdgarFiler | null>;
   model: unknown;
   /** The id of the model, for the trace. */
   modelId?: string;
@@ -98,13 +127,6 @@ export interface AnalysisInput {
    * default: a replay of recorded model answers should see only the calls that the case holds.
    */
   verifier?: boolean;
-  /**
-   * The rules the model is asked under: `confidence` (vr-6, the default) or `credibility` (since
-   * vr-9, with no confidence; see schema.ts). The pipeline sets the second while the vendor risk
-   * database flag is on. It also picks the order in which the snippet check reads (see
-   * verifySnippets.ts).
-   */
-  rules?: ResearchRules;
 }
 
 export type Analysed =
@@ -120,6 +142,68 @@ export type Analysed =
       output: AnyResearchOutput;
     }
   | { ok: false; error: unknown };
+
+/**
+ * The provenance of the run with the filer of each filing the findings cite that the vendor's
+ * stored CIK is in the folder of (Q28), asked of `edgarFilerOf`. Those are the sources of the pack
+ * that a finding cites, that are not a record (a record is classified by its database), and whose
+ * address, the one that answered when the page answered from another, is an EDGAR filing under the
+ * stored CIK (classify.ts `isStoredCikFiling`) of which the SEC keeps a header: an address that
+ * names no accession, such as the full submission file or the folder of the CIK, is not asked, and
+ * takes no place. A filing is asked once, however many of its documents are cited (an 8-K and its
+ * exhibit have one header), and the answer labels each of them; the first MAX_EDGAR_FILER_ASKS
+ * filings in the order of the pack are asked. They are asked together, and a failure or an answer
+ * that is not one leaves the filing as nobody had asked. The map it was given is not changed. Never
+ * throws.
+ */
+async function withFilers(
+  findings: readonly NewFinding[],
+  input: AnalysisInput,
+): Promise<ReadonlyMap<string, SourceProvenance>> {
+  const provenance = input.provenance ?? new Map<string, SourceProvenance>();
+  const ask = input.edgarFilerOf;
+  const cik = storedCikOf(input.target);
+  if (ask === undefined || cik === null) return provenance;
+
+  const cited = new Set(findings.flatMap((finding) => finding.sources.map(({ url }) => url)));
+  // The filings to ask about, by accession: the address to ask with, and the sources it labels.
+  const filings = new Map<string, { address: string; urls: string[] }>();
+  for (const { url } of input.pack) {
+    if (!cited.has(url)) continue;
+    const origin = provenance.get(url);
+    const address = origin?.answeredUrl ?? url;
+    if (origin?.record !== undefined || !isStoredCikFiling(address, input.target)) continue;
+    const accession = accessionOfFiling(address);
+    if (accession === null) continue;
+    const filing = filings.get(accession);
+    if (filing === undefined) {
+      if (filings.size < MAX_EDGAR_FILER_ASKS) filings.set(accession, { address, urls: [url] });
+    } else if (!filing.urls.includes(url)) {
+      filing.urls.push(url);
+    }
+  }
+  if (filings.size === 0) return provenance;
+
+  const signal = AbortSignal.timeout(EDGAR_FILER_TIMEOUT_MS);
+  const asked = [...filings.values()];
+  const answers = await Promise.all(
+    asked.map(async ({ address }): Promise<EdgarFiler | null> => {
+      try {
+        const answer = await ask(address, cik, signal);
+        return answer === "vendor" || answer === "other" ? answer : null;
+      } catch {
+        return null;
+      }
+    }),
+  );
+  const answered = new Map(provenance);
+  asked.forEach(({ urls }, index) => {
+    const edgarFiler = answers[index];
+    if (edgarFiler === null) return;
+    for (const url of urls) answered.set(url, { ...provenance.get(url), edgarFiler });
+  });
+  return answered;
+}
 
 export async function analyse(input: AnalysisInput): Promise<Analysed> {
   const { target, pack, now, trace } = input;
@@ -139,13 +223,12 @@ export async function analyse(input: AnalysisInput): Promise<Analysed> {
   // What the call used, counted as the call reports it, so that a call that ends by throwing still
   // says what it cost.
   const used: TokenUsage = { inputTokens: 0, outputTokens: 0, totalTokens: 0 };
-  const rules = input.rules ?? "confidence";
   let output: AnyResearchOutput;
   try {
     const result = await input.generate({
       model,
-      schema: outputSchemaFor(rules),
-      system: buildSystemPrompt(now, rules),
+      schema: credibilityOutputSchema,
+      system: buildSystemPrompt(now),
       prompt: buildUserPrompt(target, pack, input.materiality ?? null, events),
       temperature: 0,
       innerMaxRetries: 2,
@@ -206,8 +289,10 @@ export async function analyse(input: AnalysisInput): Promise<Analysed> {
   const capped = applyCaps(notRepeated);
   if (capped.length < notRepeated.length) trace.dropped("cap", notRepeated.length - capped.length);
 
-  const provenance = input.provenance ?? new Map<string, SourceProvenance>();
-  const labelled = (checks: readonly SnippetCheck[]): Credibility[] =>
+  const labelled = (
+    checks: readonly SnippetCheck[],
+    provenance: ReadonlyMap<string, SourceProvenance>,
+  ): Credibility[] =>
     checks.map(({ finding, verdict }) =>
       credibilityOf({ finding, pack, provenance, verdict, target }),
     );
@@ -218,7 +303,7 @@ export async function analyse(input: AnalysisInput): Promise<Analysed> {
     return {
       ok: true,
       kept: capped,
-      credibility: labelled(unchecked(capped)),
+      credibility: labelled(unchecked(capped), await withFilers(capped, input)),
       duplicatesDropped: dropped,
       output,
     };
@@ -234,7 +319,6 @@ export async function analyse(input: AnalysisInput): Promise<Analysed> {
           target,
           readPage: input.readPage,
           trace,
-          rules,
         }),
     input.verifier === true
       ? verifierPasses({
@@ -245,17 +329,19 @@ export async function analyse(input: AnalysisInput): Promise<Analysed> {
           modelId: input.modelId,
           generate: input.generate,
           trace,
+          provenance: input.provenance,
         })
       : capped.map(() => true),
   ]);
   trace.endPhase();
   // The verdicts of the verifier filter the checks, so that each label stays with its finding.
   const passed = checks.filter((_check, index) => passes[index]);
+  const kept = passed.map(({ finding }) => finding);
 
   return {
     ok: true,
-    kept: passed.map(({ finding }) => finding),
-    credibility: labelled(passed),
+    kept,
+    credibility: labelled(passed, await withFilers(kept, input)),
     duplicatesDropped: dropped,
     output,
   };

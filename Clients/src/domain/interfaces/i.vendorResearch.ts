@@ -127,6 +127,12 @@ export interface RunCoverage {
 }
 
 /**
+ * The search a run's searches went to: Claude's own web search, the web search of OpenAI (no run
+ * uses it yet: its keys search the news today), or the news of the GDELT Project.
+ */
+export type RunSearchEngine = "anthropic" | "openai" | "gdelt";
+
+/**
  * One research run, as the API sends it: an allowlist. The counters are in it;
  * the evidence pack, the model and the prompt version stay on the server.
  */
@@ -153,6 +159,11 @@ export interface VendorResearchRun {
    * without it and for one that has not ended; absent in a run cached before the field existed.
    */
   coverage?: RunCoverage | null;
+  /**
+   * The search the run used. Null for a run that searched nothing, for one none of whose searches
+   * was answered, and for one from before the field; absent in a run cached before the field existed.
+   */
+  search_engine?: RunSearchEngine | null;
   started_at: string | null;
   finished_at: string | null;
   created_at: string;
@@ -180,8 +191,6 @@ export interface FindingSource {
     match_strength: "strong" | "weak" | null;
   };
 }
-
-export type FindingConfidence = "low" | "medium" | "high";
 
 /**
  * How well the cited sources of a finding establish its facts, computed by the server's code and
@@ -263,12 +272,17 @@ export interface BackfilledCredibilityBasis extends Omit<CredibilityBasis, "rule
   rule: BackfillRule;
 }
 
-/** The basis the backfill stored for an accepted or dismissed finding: its confidence, as it was. */
+/**
+ * The basis of a label that is the earlier confidence of a finding, as it was: a finding of a run
+ * before the credibility rule has no label of its own, and the server reads its confidence as the
+ * label on this basis (the backfill writes the same basis for a finding a person decided). No rule
+ * decided the label and it has no sources to word a sentence from.
+ */
 export interface LegacyCredibilityBasis {
   rule: "legacy_confidence";
 }
 
-/** A basis as the server stores it: the rule's, or one the backfill wrote. */
+/** A basis as the server sends it: the rule's, one the backfill wrote, or the earlier confidence's. */
 export type StoredCredibilityBasis =
   CredibilityBasis | BackfilledCredibilityBasis | LegacyCredibilityBasis;
 export type FindingStatus = "pending" | "accepted" | "dismissed";
@@ -295,11 +309,11 @@ export interface VendorRiskFinding {
   risk_severity: VendorRisk["risk_severity"];
   /** For example "High Risk". */
   risk_level: string;
-  confidence: FindingConfidence;
   /**
-   * The credibility label and why it is what it is, for a finding of a run of the vendor risk
-   * database; null for the findings of other runs, and absent in a list cached before they existed.
-   * The screen shows the label instead of the confidence when it has one.
+   * The credibility label and why it is what it is. Every finding has them: a finding of a run
+   * before the credibility rule has its earlier confidence level as the label, on the basis
+   * `legacy_confidence`. The server sends null only for a finding with neither, and a list cached
+   * before the fields existed has none. The finding has no confidence of its own to show.
    */
   credibility?: CredibilityLabel | null;
   credibility_basis?: StoredCredibilityBasis | null;

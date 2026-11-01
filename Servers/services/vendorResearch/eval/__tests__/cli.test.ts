@@ -265,7 +265,7 @@ describe("main", () => {
       expect(output.lines.join("\n")).toContain("clean-record");
     });
 
-    it("prints the confidence and the credibility of each finding that stayed", async () => {
+    it("prints the credibility of each finding that stayed, and no confidence", async () => {
       const output = io();
       const { runEvalCase } = await import("../runCase");
       const run = await runEvalCase(EVAL_CASES[0]);
@@ -273,9 +273,9 @@ describe("main", () => {
 
       await main(LIVE, { ...output, runLive });
 
-      expect(output.lines.join("\n")).toMatch(
-        /^1\. \[security_incidents\] .+, confidence high, credibility high: /m,
-      );
+      const text = output.lines.join("\n");
+      expect(text).toMatch(/^1\. \[security_incidents\] .+, credibility high: /m);
+      expect(text).not.toMatch(/confidence/i);
     });
 
     it("writes the recording to the file that was asked for", async () => {
