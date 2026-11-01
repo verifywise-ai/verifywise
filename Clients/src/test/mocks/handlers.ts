@@ -68,6 +68,13 @@ export const handlers = [
     HttpResponse.json({ data: { response: null } }),
   ),
 
+  // Use case defaults (Settings → Organization, use case form): none set.
+  http.get("/api/v1/use-case-org-settings", () =>
+    HttpResponse.json({
+      data: { organization_id: 1, default_geography: null, default_framework_ids: [] },
+    }),
+  ),
+
   // ==================== Auth / Users ====================
 
   // Specific auth routes (must precede /api/users/:id)

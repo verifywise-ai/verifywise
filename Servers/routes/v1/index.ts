@@ -21,6 +21,7 @@ import controlEUChangeHistoryRoutes from "./controlEUChangeHistory.route";
 import subcontrolEUChangeHistoryRoutes from "./subcontrolEUChangeHistory.route";
 import annexCategoryChangeHistoryRoutes from "./annexCategoryChangeHistory.route";
 import intakeTierSuggestionRoutes from "./intakeTierSuggestion.route";
+import useCaseOrgSettingsRoutes from "./useCaseOrgSettings.route";
 import useCaseLifecycleRoutes from "./useCaseLifecycle.route";
 import lifecycleSettingsRoutes from "./lifecycleSettings.route";
 import aiAppsRoutes from "./aiApps.route";
@@ -42,6 +43,9 @@ router.use("/annex-category-change-history", annexCategoryChangeHistoryRoutes);
 
 // Risk tier suggested to an intake applicant, and their response (#5190).
 router.use("/intake-tier-suggestion", intakeTierSuggestionRoutes);
+
+// Defaults a new use case starts with (#5192).
+router.use("/use-case-org-settings", useCaseOrgSettingsRoutes);
 
 // Use case lifecycle and the org-wide "still live?" interval (#5187).
 router.use("/use-case-lifecycle", useCaseLifecycleRoutes);

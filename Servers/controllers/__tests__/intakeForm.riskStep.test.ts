@@ -27,6 +27,22 @@ jest.mock("../../utils/euAiActClassification.utils", () => ({
   getLatestRunForSubmissionQuery: jest.fn(),
 }));
 jest.mock("../../utils/project.utils", () => ({ createNewProjectQuery: jest.fn() }));
+// Approving a use case reads the org's use case defaults (#5192): none set
+// unless a test sets mockUseCaseDefaults.
+let mockUseCaseDefaults: { default_geography: number | null; default_framework_ids: number[] } = {
+  default_geography: null,
+  default_framework_ids: [],
+};
+const mockAddFramework = jest.fn<any>();
+jest.mock("../../utils/useCaseOrgSettings.utils", () => ({
+  getUseCaseOrgSettings: async (organizationId: number) => ({
+    organization_id: organizationId,
+    ...mockUseCaseDefaults,
+  }),
+}));
+jest.mock("../../utils/framework.utils", () => ({
+  addFrameworkToProjectQuery: (...args: unknown[]) => mockAddFramework(...args),
+}));
 jest.mock("../../utils/eu.utils", () => ({ createEUFrameworkQuery: jest.fn() }));
 jest.mock("../../utils/modelInventory.utils", () => ({ createNewModelInventoryQuery: jest.fn() }));
 jest.mock("../../utils/useCaseChangeHistory.utils", () => ({
@@ -445,6 +461,60 @@ describe("approval with the EU AI Act step", () => {
     expect(r.status).toHaveBeenCalledWith(200);
     expect(projects.createNewProjectQuery.mock.calls[0][2]).toEqual([]);
     expect(euFramework.createEUFrameworkQuery).not.toHaveBeenCalled();
+    expect(mockAddFramework).not.toHaveBeenCalled();
+  });
+
+  describe("with the organization's use case defaults", () => {
+    beforeEach(() => {
+      mockUseCaseDefaults = { default_geography: 2, default_framework_ids: [1, 12] };
+      mockAddFramework.mockResolvedValue(true);
+    });
+    afterEach(() => {
+      mockUseCaseDefaults = { default_geography: null, default_framework_ids: [] };
+    });
+
+    it("attaches the default frameworks and region when there is no run", async () => {
+      runs.getLatestRunForSubmissionQuery.mockResolvedValue(null);
+      const r = await approve({ confirmedEntityData: { project_title: "P" } });
+      expect(r.status).toHaveBeenCalledWith(200);
+      expect(projects.createNewProjectQuery.mock.calls[0][0].geography).toBe(2);
+      expect(projects.createNewProjectQuery.mock.calls[0][2]).toEqual([]);
+      expect(mockAddFramework.mock.calls.map((c: unknown[]) => [c[0], c[1]])).toEqual([
+        [1, 50],
+        [12, 50],
+      ]);
+    });
+
+    it("keeps the submission's own region", async () => {
+      runs.getLatestRunForSubmissionQuery.mockResolvedValue(null);
+      await approve({ confirmedEntityData: { project_title: "P", geography: "5" } });
+      expect(projects.createNewProjectQuery.mock.calls[0][0].geography).toBe(5);
+    });
+
+    it("adds the other defaults, not a second EU AI Act, when a run brings it", async () => {
+      runs.getLatestRunForSubmissionQuery.mockResolvedValue(RUN);
+      const r = await approve({ confirmedEntityData: { project_title: "P" } });
+      expect(r.status).toHaveBeenCalledWith(200);
+      expect(projects.createNewProjectQuery.mock.calls[0][2]).toEqual([1]);
+      expect(mockAddFramework.mock.calls.map((c: unknown[]) => c[0])).toEqual([12]);
+    });
+
+    it("still approves when a default framework's setup throws", async () => {
+      runs.getLatestRunForSubmissionQuery.mockResolvedValue(null);
+      mockAddFramework.mockRejectedValueOnce(new Error("structure seed failed"));
+      const r = await approve({ confirmedEntityData: { project_title: "P" } });
+      expect(r.status).toHaveBeenCalledWith(200);
+      // The second default is still added after the first one failed.
+      expect(mockAddFramework).toHaveBeenCalledTimes(2);
+    });
+
+    it("still approves when a default framework can no longer be added", async () => {
+      runs.getLatestRunForSubmissionQuery.mockResolvedValue(null);
+      mockAddFramework.mockResolvedValueOnce(false);
+      const r = await approve({ confirmedEntityData: { project_title: "P" } });
+      expect(r.status).toHaveBeenCalledWith(200);
+      expect(mockAddFramework).toHaveBeenCalledTimes(2);
+    });
   });
 
   // Answers to questions hidden by the scope answer: validation drops them.

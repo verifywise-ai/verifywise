@@ -4,6 +4,7 @@ import { screen, fireEvent } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import RoutingSettingsSection, { getRoutingErrors } from "../routing/RoutingSettingsSection";
 import type { FormRouting } from "../types";
+import { SCORE_BANDS } from "../../../../application/utils/intakeScoring/scoreMath";
 
 const reviewers = [
   { _id: 1, name: "Ada Lovelace", email: "ada@example.com" },
@@ -165,5 +166,74 @@ describe("RoutingSettingsSection", () => {
     expect(screen.getByText("Scores of")).toBeInTheDocument();
     expect(screen.getByText("points from")).toBeInTheDocument();
     expect(screen.getByText("go to expert reviewers.")).toBeInTheDocument();
+  });
+});
+
+describe("RoutingSettingsSection number tooltips", () => {
+  it("gives each number a real info button outside its label", () => {
+    renderWithProviders(<Harness initial={on()} />);
+    for (const name of [
+      "About the threshold",
+      "About the close-call margin",
+      "About the second review share",
+    ]) {
+      const trigger = screen.getByRole("button", { name });
+      expect(trigger.tagName).toBe("BUTTON");
+      expect(trigger.closest("label")).toBeNull();
+    }
+    // The labels still name the inputs.
+    expect(screen.getByLabelText("Threshold")).toHaveValue(50);
+  });
+
+  it("opens on click (tap, Enter, Space) and closes on a second click or Escape", async () => {
+    renderWithProviders(<Harness initial={on()} />);
+    const trigger = screen.getByRole("button", { name: "About the close-call margin" });
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+
+    fireEvent.click(trigger);
+    expect(await screen.findByTestId("routing-info-closeCallMargin")).toBeInTheDocument();
+    expect(trigger).toHaveAttribute("aria-expanded", "true");
+
+    fireEvent.keyDown(trigger, { key: "Escape" });
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+
+    fireEvent.click(trigger);
+    expect(trigger).toHaveAttribute("aria-expanded", "true");
+    fireEvent.click(trigger);
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("explains the threshold with the close-call exception, the 0-100 scale and every band", async () => {
+    renderWithProviders(<Harness initial={on()} />);
+    fireEvent.mouseOver(screen.getByRole("button", { name: "About the threshold" }));
+    const info = await screen.findByTestId("routing-info-threshold");
+    expect(info).toHaveTextContent("Scores at or above the threshold go to expert reviewers.");
+    expect(info).toHaveTextContent("unless they are within the close-call margin");
+    expect(info).toHaveTextContent("Risk scores run from 0 to 100");
+    for (const { band, min, max } of SCORE_BANDS) {
+      expect(info).toHaveTextContent(`${band}: ${min}–${max}`);
+    }
+    expect(info).toHaveTextContent("Prohibited practices always go to expert reviewers.");
+    expect(info).toHaveTextContent(
+      "So do submissions that have no score or whose AI scoring failed.",
+    );
+  });
+
+  it("explains the close-call margin as a strict distance below the threshold", async () => {
+    renderWithProviders(<Harness initial={on()} />);
+    fireEvent.mouseOver(screen.getByRole("button", { name: "About the close-call margin" }));
+    const info = await screen.findByTestId("routing-info-closeCallMargin");
+    expect(info).toHaveTextContent(
+      "Scores below the threshold by less than this margin also go to expert reviewers.",
+    );
+  });
+
+  it("explains the second review share without the score scale", async () => {
+    renderWithProviders(<Harness initial={on()} />);
+    fireEvent.mouseOver(screen.getByRole("button", { name: "About the second review share" }));
+    const info = await screen.findByTestId("routing-info-secondReviewRate");
+    expect(info).toHaveTextContent("picked at random at this rate for a second review");
+    expect(info).toHaveTextContent("Rejections aren't picked.");
+    expect(info).not.toHaveTextContent("Risk scores run from 0 to 100");
   });
 });
