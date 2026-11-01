@@ -51,6 +51,7 @@ import {
   classificationRoles,
   normalizeHighRiskRoles,
 } from "../../../application/utils/highRiskRoles";
+import ApplicantTierResponse from "./ApplicantTierResponse";
 import EuAiActClassificationPanel, {
   type EuAiActClassificationData,
 } from "./EuAiActClassificationPanel";
@@ -973,6 +974,10 @@ function SubmissionPreviewModal({
               justification={euAiActJustification}
               onJustificationChange={setEuAiActJustification}
             />
+          )}
+
+          {euAiAct && submissionId !== null && (
+            <ApplicantTierResponse submissionId={submissionId} />
           )}
 
           {/* AI app requests get no risk suggestions (no AI app risk register). */}

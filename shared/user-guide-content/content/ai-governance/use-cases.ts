@@ -81,6 +81,28 @@ export const useCasesContent: ArticleContent = {
     },
     {
       type: 'heading',
+      id: 'use-case-defaults',
+      level: 3,
+      text: 'Default region and frameworks',
+    },
+    {
+      type: 'paragraph',
+      text: 'Admins can set a default region and default frameworks under Settings, Organization, **Defaults for new use cases**. A new project-based use case opens with them filled in, for example Europe with the EU AI Act. People can still change both before they save. The defaults fill only fields nobody has touched yet. They never change existing use cases.',
+    },
+    {
+      type: 'image',
+      src: '/images/user-guide/use-case-defaults-settings.png',
+      alt: 'Defaults for new use cases section in organization settings with a region and default frameworks selected',
+      caption: 'The defaults in organization settings.',
+    },
+    {
+      type: 'image',
+      src: '/images/user-guide/new-use-case-prefilled.png',
+      alt: 'New use case form with the region and applicable regulations already filled in from the defaults',
+      caption: 'A new use case with the region and frameworks already filled in.',
+    },
+    {
+      type: 'heading',
       id: 'use-case-view',
       level: 2,
       text: 'Inside a use case',

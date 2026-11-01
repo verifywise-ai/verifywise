@@ -145,6 +145,11 @@ const PRODUCTION = {
     maxRequests: 3,
     message: "Too many document uploads. Please try again in a few minutes.",
   },
+  intakeTierSuggestionVisitor: {
+    windowMinutes: 1,
+    maxRequests: 20,
+    message: "Too many risk level requests. Please try again in a minute.",
+  },
 } as const;
 
 /** The relaxed ceilings, which apply ONLY under an explicit dev/test NODE_ENV. */
@@ -167,12 +172,13 @@ const RELAXED_MAX_REQUESTS: Record<string, number> = {
   virtualKeyProxy: 100000,
   intakeLiveChecksVisitor: 10, // deliberately not relaxed — every call can spend a customer's LLM key
   intakePrefillVisitor: 3, // deliberately not relaxed — every call can spend a customer's LLM key
+  intakeTierSuggestionVisitor: 20, // deliberately not relaxed — the explanation can spend a customer's LLM key
 };
 
 describe("production rate limit configuration", () => {
   const configs = buildRateLimitConfigs(false);
 
-  it("defines exactly the seven known limiters", () => {
+  it("defines exactly the known limiters", () => {
     // An eighth limiter must be added to this table (and to the Phase 1 contract
     // table) before it can ship, so no limiter reaches production untested.
     expect(Object.keys(configs).sort()).toEqual(Object.keys(PRODUCTION).sort());
@@ -198,6 +204,7 @@ describe("production rate limit configuration", () => {
     expect(withCustomKey.sort()).toEqual([
       "intakeLiveChecksVisitor",
       "intakePrefillVisitor",
+      "intakeTierSuggestionVisitor",
       "mrmIngestion",
       "riskSuggestionsAi",
     ]);
@@ -226,6 +233,7 @@ describe("dev/test relaxation surface", () => {
       "slackWorkspaceCreate",
       "intakeLiveChecksVisitor",
       "intakePrefillVisitor",
+      "intakeTierSuggestionVisitor",
     ];
     for (const key of NEVER_RELAXED) {
       expect(relaxed[key].maxRequests).toBe(strict[key].maxRequests);

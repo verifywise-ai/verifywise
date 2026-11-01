@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useParams, useSearchParams, useNavigate } from "react-router";
 import { useForm } from "react-hook-form";
 import { Box, Collapse, Typography, useMediaQuery } from "@mui/material";
@@ -10,6 +10,13 @@ import { CalculatedFieldDisplay } from "./CalculatedFieldDisplay";
 import { LiveCheckHints, fieldToneFor } from "./LiveCheckHints";
 import { IntakeAssistantPanel } from "./IntakeAssistantPanel";
 import { VendorPrefillCard } from "./VendorPrefillCard";
+import { TierSuggestionCard, type TierResponseState } from "./TierSuggestionCard";
+import {
+  postTierExplanation,
+  postTierSuggestion,
+  submitPublicFormWithTierResponse,
+  type TierSuggestion,
+} from "../../../application/repository/intakeTierSuggestion.repository";
 import { PrefillLine } from "./PrefillLine";
 import { PreviewBanner } from "./PreviewBanner";
 import { PreviewSubmitMenu, TestSubmitPassed, type PreviewSubmitMode } from "./PreviewSubmitMenu";
@@ -190,6 +197,13 @@ export function PublicIntakeForm() {
   const [riskStep, setRiskStep] = useState<{ questionnaire: Questionnaire } | null>(null);
   const [riskAnswers, setRiskAnswers] = useState<Answers>({});
   const [step, setStep] = useState<"risk" | "form">("form");
+  // The risk level suggested from the risk step answers, and the applicant's response (#5190).
+  const [tierSuggestion, setTierSuggestion] = useState<TierSuggestion | null>(null);
+  const [tierLoading, setTierLoading] = useState(false);
+  const [tierResponse, setTierResponse] = useState<TierResponseState>({
+    choice: null,
+    context: "",
+  });
   const [liveChecks, setLiveChecks] = useState(NO_LIVE_CHECKS);
   const [prefill, setPrefill] = useState<Record<string, PrefillEntry>>({});
   const wideScreen = useMediaQuery("(min-width:1100px)");
@@ -219,6 +233,40 @@ export function PublicIntakeForm() {
   // Checks run on the form step only; the EU AI Act risk step is unchanged.
   const checksOn = Boolean(formData) && liveChecks.enabled && step === "form";
   const aiOn = checksOn && liveChecks.aiAvailable;
+
+  // Suggest a risk level once the risk step is done, from the answers it will
+  // submit. Changed answers drop the old suggestion and response at once, so a
+  // response can never be sent against a level the applicant hasn't seen.
+  // The same answers are not asked about again. A failure shows nothing.
+  const prunedRiskAnswers = useMemo(
+    () => (riskStep ? pruneHiddenAnswers(riskStep.questionnaire, riskAnswers) : null),
+    [riskStep, riskAnswers],
+  );
+  const riskAnswersKey = prunedRiskAnswers ? JSON.stringify(prunedRiskAnswers) : "";
+  const suggestedForKey = useRef<string | null>(null);
+  useEffect(() => {
+    if (!prunedRiskAnswers || step !== "form") return;
+    if (suggestedForKey.current === riskAnswersKey) return;
+    suggestedForKey.current = null;
+    setTierSuggestion(null);
+    setTierResponse({ choice: null, context: "" });
+    const controller = new AbortController();
+    setTierLoading(true);
+    postTierSuggestion(formRef, prunedRiskAnswers, controller.signal)
+      .then((suggestion) => {
+        suggestedForKey.current = riskAnswersKey;
+        setTierSuggestion(suggestion);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setTierSuggestion(null);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setTierLoading(false);
+      });
+    return () => controller.abort();
+    // riskAnswersKey stands for prunedRiskAnswers' content.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [riskAnswersKey, step, formRef]);
   const { hints, hintsFor, staleQuestionIds, aiPaused, checkWithAi, aiCheck } = useIntakeLiveChecks(
     {
       ref: formRef,
@@ -418,14 +466,25 @@ export function PublicIntakeForm() {
         captchaToken,
         captchaAnswer: captchaNum,
         resubmissionToken,
-        ...(riskStep
-          ? { euAiActRiskAnswers: pruneHiddenAnswers(riskStep.questionnaire, riskAnswers) }
-          : {}),
+        ...(riskStep ? { euAiActRiskAnswers: prunedRiskAnswers ?? {} } : {}),
       };
 
-      const response = isNewFormat
-        ? await submitPublicFormById(publicId!, payload)
-        : await submitPublicForm(tenantSlug!, formSlug!, payload);
+      // With a response to the suggested level, submit through v1, which
+      // stores it. "Add context" with nothing written is no response.
+      const context = tierResponse.context.trim();
+      const tierSuggestionResponse =
+        !tierSuggestion || tierLoading || !tierResponse.choice
+          ? null
+          : tierResponse.choice === "accept"
+            ? { accepted: true }
+            : context
+              ? { accepted: false, context }
+              : null;
+      const response = tierSuggestionResponse
+        ? await submitPublicFormWithTierResponse(formRef, { ...payload, tierSuggestionResponse })
+        : isNewFormat
+          ? await submitPublicFormById(publicId!, payload)
+          : await submitPublicForm(tenantSlug!, formSlug!, payload);
 
       if (response.data) {
         const successPath = isNewFormat
@@ -692,6 +751,19 @@ export function PublicIntakeForm() {
                       onClick={() => setStep("risk")}
                     />
                   </Box>
+                )}
+
+                {riskStep && (
+                  <TierSuggestionCard
+                    suggestion={tierSuggestion}
+                    loading={tierLoading}
+                    aiAvailable={Boolean(formData) && liveChecks.enabled && liveChecks.aiAvailable}
+                    onExplain={() =>
+                      postTierExplanation(formRef, prunedRiskAnswers ?? {}, getLanguage())
+                    }
+                    response={tierResponse}
+                    onResponseChange={setTierResponse}
+                  />
                 )}
 
                 {/* Answers leave the page before submit when AI checks are on: say so. */}

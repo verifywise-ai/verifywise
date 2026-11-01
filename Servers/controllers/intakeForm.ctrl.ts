@@ -36,6 +36,10 @@ import {
 } from "../utils/intakeForm.utils";
 import { createNewModelInventoryQuery } from "../utils/modelInventory.utils";
 import { createNewProjectQuery } from "../utils/project.utils";
+import { setTierSuggestionResponseQuery } from "../utils/intakeTierSuggestion.utils";
+import type { ApplicantTierResponse } from "./intakeTierSuggestion.ctrl";
+import { addFrameworkToProjectQuery } from "../utils/framework.utils";
+import { getUseCaseOrgSettings } from "../utils/useCaseOrgSettings.utils";
 import {
   AI_APP_NAME_CONSTRAINT,
   aiAppDepartmentsFrom,
@@ -261,13 +265,33 @@ async function buildPublicLiveChecks(
 // EU AI ACT RISK STEP HELPERS
 // ============================================================================
 
-/** Stores the scored EU AI Act answers of a public submission as its classification run. */
+/**
+ * Stores the scored EU AI Act answers of a public submission as its
+ * classification run, and the applicant's response to the tier suggested from
+ * them when the v1 submit route passed one (#5190). The stored level is the
+ * one scored here, never a value the page sent.
+ */
 async function persistIntakeRiskRun(
   submissionId: number,
   prepared: PreparedRun,
   organizationId: number,
   transaction: Transaction,
+  applicantResponse?: ApplicantTierResponse,
 ): Promise<void> {
+  if (applicantResponse) {
+    await setTierSuggestionResponseQuery(
+      submissionId,
+      organizationId,
+      {
+        suggestedLevel: prepared.result.level,
+        questionnaireVersion: prepared.questionnaireVersion,
+        accepted: applicantResponse.accepted,
+        context: applicantResponse.context,
+        respondedAt: new Date().toISOString(),
+      },
+      transaction,
+    );
+  }
   await insertClassificationRunQuery(
     {
       useCaseId: null,
@@ -2465,6 +2489,9 @@ export async function approveSubmission(req: Request, res: Response) {
       );
       entityId = createdModel.id!;
     } else if (submission.entityType === IntakeEntityType.USE_CASE) {
+      // The organization's defaults for a new use case (#5192): its region
+      // when the submission gave none, and its frameworks.
+      const useCaseDefaults = await getUseCaseOrgSettings(req.organizationId!, transaction);
       const createdProject = await createNewProjectQuery(
         {
           project_title: (entityData.project_title as string) || "",
@@ -2476,21 +2503,53 @@ export async function approveSubmission(req: Request, res: Response) {
           owner: req.userId!,
           ai_risk_classification: aiRiskClassification as any,
           high_risk_roles: highRiskRolesFromEntityData(entityData),
-          geography: entityData.geography ? Number(entityData.geography) : 1,
+          geography: entityData.geography
+            ? Number(entityData.geography)
+            : (useCaseDefaults.default_geography ?? 1),
           // The intake review already happened, so the use case starts
           // planned (createNewProjectQuery's default), not in review (#5187).
           status: ProjectStatus.UNDER_REVIEW,
         },
         [],
         // Only a level that comes from the EU AI Act step (a scorable run)
-        // brings the EU AI Act framework along. Submissions without a run keep
-        // their mapped or reviewer level and get no framework.
+        // brings the EU AI Act framework along here. The organization's default
+        // frameworks are added below.
         classification ? [EU_AI_ACT_FRAMEWORK_ID] : [],
         req.organizationId!,
         req.userId!,
         transaction,
       );
       entityId = createdProject.id!;
+      // The organization's default frameworks, except the EU AI Act when the
+      // run above already brought it. Each is added in its own savepoint: one
+      // that no longer applies, or whose setup fails, is skipped and the
+      // approval goes ahead without it.
+      for (const frameworkId of useCaseDefaults.default_framework_ids) {
+        if (classification && frameworkId === EU_AI_ACT_FRAMEWORK_ID) continue;
+        const savepoint = await sequelize.transaction({ transaction });
+        let added = false;
+        try {
+          added = await addFrameworkToProjectQuery(
+            frameworkId,
+            entityId,
+            req.organizationId!,
+            savepoint,
+          );
+          await savepoint.commit();
+        } catch (error) {
+          await savepoint.rollback();
+          logger.error(
+            `Default framework ${frameworkId} failed to set up on use case ${entityId}: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+          );
+        }
+        if (!added) {
+          logger.warn(
+            `Default framework ${frameworkId} was not added to use case ${entityId} on intake approval`,
+          );
+        }
+      }
       if (classification) {
         await createEUFrameworkQuery(entityId, false, req.organizationId!, transaction);
         await insertClassificationRunQuery(
@@ -3293,6 +3352,7 @@ export async function submitPublicFormByPublicId(req: Request, res: Response) {
           riskStep.prepared,
           tenantInfo.orgId,
           transaction,
+          res.locals?.tierSuggestionResponse,
         );
       }
 
@@ -3641,7 +3701,13 @@ export async function submitPublicForm(req: Request, res: Response) {
       );
 
       if (riskStep.prepared) {
-        await persistIntakeRiskRun(submission.id!, riskStep.prepared, tenantInfo.id, transaction);
+        await persistIntakeRiskRun(
+          submission.id!,
+          riskStep.prepared,
+          tenantInfo.id,
+          transaction,
+          res.locals?.tierSuggestionResponse,
+        );
       }
 
       await transaction.commit();

@@ -982,10 +982,11 @@ export class LiveCheckRequestError extends Error {
   }
 }
 
-function publicBase(ref: PublicFormRef): string {
+/** The public route of a form under `base`: by public id, or by tenant and form slug. */
+export function publicBase(ref: PublicFormRef, base: string = BASE_URL): string {
   return "publicId" in ref
-    ? `${BASE_URL}/public/by-id/${encodeURIComponent(ref.publicId)}`
-    : `${BASE_URL}/public/${encodeURIComponent(ref.tenantSlug)}/${encodeURIComponent(ref.formSlug)}`;
+    ? `${base}/public/by-id/${encodeURIComponent(ref.publicId)}`
+    : `${base}/public/${encodeURIComponent(ref.tenantSlug)}/${encodeURIComponent(ref.formSlug)}`;
 }
 
 /**
