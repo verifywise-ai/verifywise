@@ -5436,6 +5436,8 @@ export const translations: Record<string, Record<string, string>> = {
     "AI Gateway, Policy Radar, and CI/CD scanning": "AI Gateway, Policy Radar und CI/CD-Scanning",
     "Risk inheritance, evidence retention, and security hardening":
       "Risikovererbung, Aufbewahrung von Nachweisen und Sicherheitshärtung",
+    "Use case and AI app lifecycles, intake form logic and MCP server auth":
+      "Lebenszyklen für Anwendungsfälle und KI-Apps, Logik für Aufnahmeformulare und MCP-Server-Authentifizierung",
     "Built-in frameworks, Model Risk Management, and Extensions":
       "Integrierte Frameworks, Model Risk Management und Extensions",
     "AI Trust Index, AI Apps inventory, and Agent Control":
@@ -14869,6 +14871,8 @@ export const translations: Record<string, Record<string, string>> = {
     "AI Gateway, Policy Radar, and CI/CD scanning": "AI Gateway, Policy Radar et analyse CI/CD",
     "Risk inheritance, evidence retention, and security hardening":
       "Héritage des risques, conservation des preuves et renforcement de la sécurité",
+    "Use case and AI app lifecycles, intake form logic and MCP server auth":
+      "Cycles de vie des cas d'usage et des applications d'IA, logique des formulaires d'intake et authentification des serveurs MCP",
     "Built-in frameworks, Model Risk Management, and Extensions":
       "Référentiels intégrés, Model Risk Management et Extensions",
     "AI Trust Index, AI Apps inventory, and Agent Control":
@@ -22494,6 +22498,8 @@ export const translations: Record<string, Record<string, string>> = {
     "AI Gateway, Policy Radar, and CI/CD scanning": "AI Gateway, Policy Radar y análisis de CI/CD",
     "Risk inheritance, evidence retention, and security hardening":
       "Herencia de riesgos, retención de evidencias y refuerzo de la seguridad",
+    "Use case and AI app lifecycles, intake form logic and MCP server auth":
+      "Ciclos de vida de casos de uso y aplicaciones de IA, lógica de formularios de solicitud y autenticación de servidores MCP",
     "Built-in frameworks, Model Risk Management, and Extensions":
       "Marcos integrados, Model Risk Management y Extensions",
     "AI Trust Index, AI Apps inventory, and Agent Control":
