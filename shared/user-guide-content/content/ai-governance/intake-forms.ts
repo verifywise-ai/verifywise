@@ -83,6 +83,16 @@ export const intakeFormsContent: ArticleContent = {
     },
     {
       type: 'heading',
+      id: 'ai-app-requests',
+      level: 3,
+      text: 'AI app requests',
+    },
+    {
+      type: 'paragraph',
+      text: 'An intake form of type AI app lets employees ask to use an AI tool. It starts with three mapped fields: the app name, a description and departments (a multi-select, or text separated by commas). Approving a request creates the AI app as Approved and Planned, owned by the approver. If an app with that name already exists, the approval is refused and the request stays pending. AI apps have no risk register yet, so AI app requests get no suggested risks.',
+    },
+    {
+      type: 'heading',
       id: 'use-case-department-self-service',
       level: 3,
       text: 'Department self-service',
@@ -126,8 +136,14 @@ export const intakeFormsContent: ArticleContent = {
       items: [
         { bold: 'Form name', text: 'Descriptive title shown to submitters at the top of the form' },
         { bold: 'Description', text: 'Optional context about what the form is for' },
-        { bold: 'Entity type', text: 'Whether approved submissions create a **Use case** or a **Model inventory** entry' },
+        { bold: 'Entity type', text: 'Whether approved submissions create a **Use case**, an **AI app** or a **Model inventory** entry' },
       ],
+    },
+    {
+      type: 'image',
+      src: '/images/user-guide/intake-new-form-ai-app.png',
+      alt: 'Create new form dialog with the entity type choices Use case, AI app and Model inventory',
+      caption: 'AI app is a form type next to Use case and Model inventory.',
     },
     {
       type: 'paragraph',
@@ -231,7 +247,7 @@ export const intakeFormsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Open "Show this field only if…" in a field\'s settings to show it only when answers above it match. Add one or more conditions and choose whether all or any must match. A condition can only use fields above the one you are editing. Until the earlier question is answered, the field stays hidden.',
+      text: 'Open "Show this field only if…" in a field\'s settings to show it only when other answers match. Add one or more conditions and choose whether all or any must match. A condition can use any other field in the form, above or below. Until that question is answered, the field stays hidden.',
     },
     {
       type: 'paragraph',
@@ -245,11 +261,21 @@ export const intakeFormsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'A calculated field shows a read-only result that updates as the submitter types, for example annual cost from a monthly cost. Add one from the Advanced section of the field palette. Formulas use + − × ÷ (typed as + - * /), parentheses and numbers, and refer to number or calculated fields above the field. Type { in the formula box to insert a field.',
+      text: 'A calculated field shows a read-only result that updates as the submitter types, for example annual cost from a monthly cost. Add one from the Advanced section of the field palette. Formulas use + − × ÷ (typed as + - * /), parentheses and numbers, and refer to number or calculated fields anywhere in the form, so a total at the top can add up fields below it. Type { in the formula box to insert a field.',
     },
     {
       type: 'paragraph',
-      text: 'Set decimals (0 to 6) and an optional prefix or suffix, such as € or people. If an input is empty or hidden, the result shows a dash. The value is recalculated by VerifyWise when the form is submitted and is shown to reviewers.',
+      text: 'Set decimals (0 to 6) and an optional prefix or suffix, such as € or people. If an input is empty or hidden, the result shows a dash. The value is recalculated by VerifyWise when the form is submitted and is shown to reviewers. A form cannot be published while its formulas or conditions go round in a loop, for example two fields that each read the other. A draft can still be saved.',
+    },
+    {
+      type: 'heading',
+      id: 'logic-overview',
+      level: 2,
+      text: 'Logic overview',
+    },
+    {
+      type: 'paragraph',
+      text: 'Select **Logic** at the top of the form builder to see all the logic on the form in one list: every calculated field and its formula, every conditional field and the answers it depends on, risk dimension tags, and how reviewer assignment sends submissions to expert or regular reviewers. A row with a problem is outlined in red with the reason. Click a row to open that field in the editor.',
     },
     {
       type: 'heading',
@@ -361,26 +387,42 @@ export const intakeFormsContent: ArticleContent = {
     },
     {
       type: 'heading',
-      id: 'review-routing',
+      id: 'review-time',
       level: 3,
-      text: 'Review routing',
+      text: 'Review time',
     },
     {
       type: 'paragraph',
-      text: 'Review routing is off by default. Only Admins can change review routing; other roles see the settings read-only. Turn it on in the form settings to send each scored submission to a **senior** or **standard** review lane. With routing off, anyone who can edit intake forms can decide every submission.',
+      text: 'Set **Review time (business days)** to the number of working days your team has to review a submission: 1 to 30, 3 by default. The submitter\'s confirmation email names the reviewers and the due date, for example "Ann Lee will review your submission within 3 business days, by Thursday, November 5, 2026." Business days are Monday to Friday, counted in UTC from the day after the submission. Public holidays are not skipped. The review time and due date are fixed when a submission arrives. Changing the setting later does not affect earlier submissions. The review time is saved with the form when you click **Save** or **Publish**.',
+    },
+    {
+      type: 'image',
+      src: '/images/user-guide/intake-review-time.png',
+      alt: 'Review time (business days) field in the form builder set to 3',
+      caption: 'Each form has its own review time.',
+    },
+    {
+      type: 'heading',
+      id: 'review-routing',
+      level: 3,
+      text: 'Reviewer assignment',
+    },
+    {
+      type: 'paragraph',
+      text: 'Reviewer assignment is off by default. Only Admins can change it; other roles see the settings read-only. Turn on **Assign reviewers by risk score** in the form settings to send each scored submission to **expert** or **regular** reviewers. With reviewer assignment off, anyone who can edit intake forms can decide every submission.',
     },
     {
       type: 'bullet-list',
       items: [
-        { text: '**Senior reviewers** and **Standard reviewers**: pick at least one of each. Only users whose role can edit intake forms are listed.' },
-        { text: '**Threshold**: the risk score that separates the lanes, from 1 to 99. The default is 50.' },
+        { text: '**Expert reviewers** and **Regular reviewers**: pick at least one of each. Only users whose role can edit intake forms are listed.' },
+        { text: '**Threshold**: the risk score that separates the review levels, from 1 to 99. The default is 50.' },
         { text: '**Close-call margin**: how many points either side of the threshold count as a close call, from 0 to 25. The default is 10.' },
-        { text: '**Second review share %**: the share of standard approvals that are checked again, from 0 to 100. The default is 10.' },
+        { text: '**Second review share %**: the share of regular review approvals that are checked again, from 0 to 100. The default is 10.' },
       ],
     },
     {
       type: 'paragraph',
-      text: 'A submission goes to the senior lane if any of these is true, checked in this order. Otherwise it goes to the standard lane.',
+      text: 'A submission goes to expert review if any of these is true, checked in this order. Otherwise it goes to regular review.',
     },
     {
       type: 'ordered-list',
@@ -393,7 +435,7 @@ export const intakeFormsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Saving the form routes its pending submissions again with the new settings. A reviewer who is removed from your organization or loses the right to edit intake forms stays in the list, shown as **Former user**, until you remove them. You can still save the form with them in the list, but you cannot add someone who cannot review, and a list you change needs at least one person who can currently review. Admins can still decide, and the Oversight tab flags the form under **No active reviewer**.',
+      text: 'Saving the form assigns its pending submissions again with the new settings. A reviewer who is removed from your organization or loses the right to edit intake forms stays in the list, shown as **Former user**, until you remove them. You can still save the form with them in the list, but you cannot add someone who cannot review, and a list you change needs at least one person who can currently review. Admins can still decide, and the Oversight tab flags the form under **No active reviewer**.',
     },
     {
       type: 'heading',
@@ -502,7 +544,24 @@ export const intakeFormsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'After submission, the submitter sees a success page with their reference number. If contact information was collected, they also receive a confirmation email.',
+      text: 'After submission, the submitter sees a success page with their reference number. If they gave contact details, they also get a confirmation email that names the reviewers and the review due date (see **Review time** above).',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { bold: 'Reviewer assignment on', text: 'The email waits until the submission has a review level. It names that level\'s reviewers, up to three by name and then "and N others". If that takes longer than 2 minutes, or the level has no reviewers, it names "the governance team" instead.' },
+        { bold: 'Reviewer assignment off', text: 'The email goes out at once and names the notification recipients.' },
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: 'Each submission sends this email once, and so does each resubmission. If the email can\'t be sent, VerifyWise tries again up to 5 times, waiting longer each time (from 5 minutes up to a day). An email sent after the due date names the reviewers without the date.',
+    },
+    {
+      type: 'image',
+      src: '/images/user-guide/intake-confirmation-email.png',
+      alt: 'Submission received email naming the reviewer and the date the review is due',
+      caption: 'The confirmation email the submitter receives.',
     },
     {
       type: 'heading',
@@ -567,10 +626,41 @@ export const intakeFormsContent: ArticleContent = {
         { text: 'All submitted field values' },
         { text: 'The risk score, with a **How this score is built** breakdown' },
         { text: 'The EU AI Act classification, when the form asks the questionnaire' },
+        { text: 'The applicant\'s response to the suggested risk level, when they gave one' },
         { text: 'Suggested risks to accept or dismiss' },
         { text: 'An entity data preview built from field mappings' },
         { text: 'Approve and Reject action buttons' },
       ],
+    },
+    {
+      type: 'heading',
+      id: 'suggested-risk-level',
+      level: 2,
+      text: 'Suggested risk level',
+    },
+    {
+      type: 'paragraph',
+      text: 'When the form includes the EU AI Act questionnaire, applicants see a suggested risk level as soon as they finish it, before they submit. The level and the articles behind it come from the same rules that classify the submission, so every reference is a real article.',
+    },
+    {
+      type: 'image',
+      src: '/images/user-guide/intake-suggested-risk-level.png',
+      alt: 'Suggested risk level card showing High risk with a reason that cites Annex III, point 5',
+      caption: 'A credit scoring tool gets High risk, with the Annex III reference.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Applicants can **Accept** the suggestion or **Add context** for the reviewer. When the level comes with duties, **Why this matters** lists what the EU AI Act asks at that level, for the applicant\'s role as provider or deployer. Either way, the governance team makes the final call in the review dialog and sees how the applicant responded.',
+    },
+    {
+      type: 'image',
+      src: '/images/user-guide/intake-suggested-risk-context.png',
+      alt: 'Suggested risk level card with Why this matters expanded to list deployer duties under Article 26, and a context note for the reviewer',
+      caption: 'Why this matters lists the deployer duties. This applicant added context for the reviewer.',
+    },
+    {
+      type: 'paragraph',
+      text: 'If the form has AI checks on and an LLM key, applicants can also ask for a plain-language explanation. Their risk answers go to an AI model only when they ask. The explanation may describe only the suggested level and its articles. An explanation that names another level or cites another article is discarded.',
     },
     {
       type: 'heading',
@@ -800,25 +890,25 @@ export const intakeFormsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Resubmissions create a new submission record linked to the original. The original submission is preserved for audit purposes. A resubmission is routed on its own once it has been scored. Nothing is carried over from the original.',
+      text: 'Resubmissions create a new submission record linked to the original. The original submission is preserved for audit purposes. A resubmission is assigned on its own once it has been scored. Nothing is carried over from the original.',
     },
     {
       type: 'heading',
       id: 'lanes-and-second-review',
       level: 2,
-      text: 'Lanes and second reviews',
+      text: 'Review levels and second reviews',
     },
     {
       type: 'paragraph',
-      text: 'When a form has review routing on, the review modal shows the lane and why the submission is in it, for example "Within 10 points of the threshold" or "Prohibited practice". A submission with no score yet shows "No score yet" instead of a number.',
+      text: 'When a form has reviewer assignment on, the review modal shows the review level and why the submission is at it, for example "Within 10 points of the threshold" or "Prohibited practice". A submission with no score yet shows "No score yet" instead of a number.',
     },
     {
       type: 'bullet-list',
       items: [
-        { text: 'Only a reviewer of the right lane, or an Admin, can approve or reject. Senior reviewers can decide in both lanes. Others see which reviewers can decide.' },
-        { text: 'A standard reviewer can\'t approve a submission while setting a Prohibited level or a band that sends it to the senior lane.' },
-        { text: 'If you raise the score band with an override and the new band alone would send the submission to the senior lane, it moves there. A band override never moves a submission to the standard lane.' },
-        { text: 'Use **Send to senior review** to hand a standard submission to the senior lane. You must give a reason. It stays in the senior lane afterwards.' },
+        { text: 'Only a reviewer of the right level, or an Admin, can approve or reject. Expert reviewers can decide at both levels. Others see which reviewers can decide.' },
+        { text: 'A regular reviewer can\'t approve a submission while setting a Prohibited level or a band that sends it to expert review.' },
+        { text: 'If you raise the score band with an override and the new band alone would send the submission to expert review, it moves there. A band override never moves a submission to regular review.' },
+        { text: 'Use **Request expert review** to hand a submission in regular review to the expert reviewers. You must give a reason. It stays in expert review afterwards.' },
       ],
     },
     {
@@ -829,16 +919,16 @@ export const intakeFormsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'After a standard reviewer approves a submission, it is picked for a second review with a chance equal to the form\'s second review share. Approvals by senior reviewers, and approvals in the senior lane, are not picked. The senior reviewers get an email, and the review modal shows a Second review panel.',
+      text: 'After a regular reviewer approves a submission, it is picked for a second review with a chance equal to the form\'s second review share. Approvals by expert reviewers, and approvals in expert review, are not picked. The expert reviewers get an email, and the review modal shows a Second review panel.',
     },
     {
       type: 'paragraph',
-      text: 'The email you get when a second review is waiting opens the submission directly. You can also find these submissions in the submissions list: choose **Second review** in the lane filter to see every open one, or **Assigned to me** to see the ones you can review.',
+      text: 'The email you get when a second review is waiting opens the submission directly. You can also find these submissions in the submissions list: choose **Second review** in the review level filter to see every open one, or **Assigned to me** to see the ones you can review.',
     },
     {
       type: 'ordered-list',
       items: [
-        { text: 'A senior reviewer, or an Admin, opens the submission. The person who approved it can\'t do the second review.' },
+        { text: 'An expert reviewer, or an Admin, opens the submission. The person who approved it can\'t do the second review.' },
         { text: 'Click **Agree** if the approval was right, or **Missed something** and write a note saying what was missed. The note is required for a miss.' },
         { text: 'For a miss, do the follow-up, then click **Mark resolved** and write what was done.' },
       ],
@@ -860,13 +950,13 @@ export const intakeFormsContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { text: '**Submissions**: how many came in, and how many went to each lane. Close calls, submissions not routed yet and submissions on forms with routing off are counted separately.' },
-        { text: '**Median time to decision**: from submission to approval or rejection, overall and per lane.' },
+        { text: '**Submissions**: how many came in, and how many went to each review level. Close calls, submissions not assigned yet and submissions on forms with reviewer assignment off are counted separately.' },
+        { text: '**Median time to decision**: from submission to approval or rejection, overall and per review level.' },
         { text: '**Redlines caught**: submissions at the Prohibited or High risk level.' },
         { text: '**Second reviews**: how many were missed out of those completed, and how many are still open.' },
         { text: '**Reviewers**: decisions, how often each reviewer changed the score band, and median time. A **Check** flag appears for a reviewer with at least 10 decisions who never changed a band. It is a prompt to look, not a finding.' },
-        { text: '**Band kept**: the share of decisions where the band stayed as computed, overall and in the senior lane. **Suggested risks accepted** is the share of suggestions reviewers accepted.' },
-        { text: '**Needs attention**: up to 20 items. A second review open for more than 3 days, a missed second review not yet resolved, a pending Prohibited submission, a submission pending for more than 7 days, and a form with no active reviewer in a lane. Forms with no active reviewer are listed first.' },
+        { text: '**Band kept**: the share of decisions where the band stayed as computed, overall and in expert review. **Suggested risks accepted** is the share of suggestions reviewers accepted.' },
+        { text: '**Needs attention**: up to 20 items. A second review open for more than 3 days, a missed second review not yet resolved, a pending Prohibited submission, a submission pending for more than 7 days, and a form with no active reviewer at a review level. Forms with no active reviewer are listed first.' },
       ],
     },
     {

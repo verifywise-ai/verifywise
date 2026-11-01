@@ -1,7 +1,7 @@
 openapi: 3.0.0
 info:
   title: 'VerifyWise API'
-  description: 'AI Governance Platform API'
+  description: "AI Governance Platform API.\n\n**Versioning (ADR 0001):** paths under `/v1/...` (relative to the `/api`\nserver — e.g. `/v1/shadow-ai/events` is served at `/api/v1/shadow-ai/events`)\nare the versioned API surface. All other paths are the legacy, unversioned\nsurface: backward-compatible, frozen for bug fixes only, and deprecated\nthrough the process in `docs/technical/adr/0001-api-versioning.md`. New\nendpoints and changed contracts are introduced under `/api/v1`.\n\n**Tags:** versioned operations are tagged `v1: <Resource>`; legacy\noperations keep their historical tags."
   version: 2.0.0
 servers:
   -
@@ -7892,6 +7892,24 @@ tags:
     name: Vendors
   -
     name: Webhooks
+  -
+    name: 'v1: Change History'
+  -
+    name: 'v1: Intake Forms'
+  -
+    name: 'v1: Shadow AI'
+  -
+    name: 'v1: Use Case Settings'
+  -
+    name: 'v1: V1/Ai App Lifecycle'
+  -
+    name: 'v1: V1/Ai Apps'
+  -
+    name: 'v1: V1/Intake Form Review Time'
+  -
+    name: 'v1: V1/Lifecycle Settings'
+  -
+    name: 'v1: V1/Use Case Lifecycle'
 paths:
   /webhooks/github:
     post:
@@ -10807,7 +10825,7 @@ paths:
       tags:
         - Files
       summary: 'Get User Files Meta Data'
-      operationId: files_getAllFolders
+      operationId: getAllFolders
       security:
         -
           bearerAuth: []
@@ -10822,7 +10840,7 @@ paths:
       tags:
         - Files
       summary: 'Post File Content'
-      operationId: files_createFolder
+      operationId: createFolder
       security:
         -
           bearerAuth: []
@@ -10974,7 +10992,7 @@ paths:
       tags:
         - Files
       summary: 'Get File Content By Id'
-      operationId: files_getFolderById
+      operationId: getFolderById
       security:
         -
           bearerAuth: []
@@ -10999,7 +11017,7 @@ paths:
       tags:
         - Files
       summary: 'Update Folder'
-      operationId: files_updateFolder
+      operationId: updateFolder
       security:
         -
           bearerAuth: []
@@ -11026,7 +11044,7 @@ paths:
       tags:
         - Files
       summary: 'Delete Folder'
-      operationId: files_deleteFolder
+      operationId: deleteFolder
       security:
         -
           bearerAuth: []
@@ -22711,7 +22729,7 @@ paths:
       tags:
         - Files
       summary: 'Get All Folders'
-      operationId: getAllFolders
+      operationId: virtual_folders_getAllFolders
       security:
         -
           bearerAuth: []
@@ -22726,7 +22744,7 @@ paths:
       tags:
         - Files
       summary: 'Create Folder'
-      operationId: createFolder
+      operationId: virtual_folders_createFolder
       security:
         -
           bearerAuth: []
@@ -22779,7 +22797,7 @@ paths:
       tags:
         - Files
       summary: 'Get Folder By Id'
-      operationId: getFolderById
+      operationId: virtual_folders_getFolderById
       security:
         -
           bearerAuth: []
@@ -22801,7 +22819,7 @@ paths:
       tags:
         - Files
       summary: 'Update Folder'
-      operationId: updateFolder
+      operationId: virtual_folders_updateFolder
       security:
         -
           bearerAuth: []
@@ -22828,7 +22846,7 @@ paths:
       tags:
         - Files
       summary: 'Delete Folder'
-      operationId: deleteFolder
+      operationId: virtual_folders_deleteFolder
       security:
         -
           bearerAuth: []
@@ -23621,7 +23639,7 @@ paths:
   /v1/shadow-ai/events:
     post:
       tags:
-        - 'Shadow AI'
+        - 'v1: Shadow AI'
       summary: 'Ingest Events'
       operationId: ingestEvents
       requestBody:
@@ -27136,3 +27154,445 @@ paths:
       tags:
         - System
       operationId: healthCheck
+  '/v1/evidence-hub-change-history/{id}':
+    get:
+      summary: 'Get Evidence Hub Change History By Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Change History'
+      operationId: getEvidenceHubChangeHistoryById
+      security:
+        -
+          bearerAuth: []
+  '/v1/model-lifecycle-change-history/{id}':
+    get:
+      summary: 'Get Model Lifecycle Change History By Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Change History'
+      operationId: getModelLifecycleChangeHistoryById
+      security:
+        -
+          bearerAuth: []
+  '/v1/control-eu-change-history/{id}':
+    get:
+      summary: 'Get Control E U Change History By Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Change History'
+      operationId: getControlEUChangeHistoryById
+      security:
+        -
+          bearerAuth: []
+  '/v1/subcontrol-eu-change-history/{id}':
+    get:
+      summary: 'Get Subcontrol E U Change History By Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Change History'
+      operationId: getSubcontrolEUChangeHistoryById
+      security:
+        -
+          bearerAuth: []
+  '/v1/annex-category-change-history/{id}':
+    get:
+      summary: 'Get Annex Category Change History By Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Change History'
+      operationId: getAnnexCategoryChangeHistoryById
+      security:
+        -
+          bearerAuth: []
+  /v1/use-case-lifecycle/summary:
+    get:
+      summary: 'Get Lifecycle Summary Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Use Case Lifecycle'
+      operationId: getLifecycleSummaryHandler
+      security:
+        -
+          bearerAuth: []
+  /v1/use-case-lifecycle/dashboard:
+    get:
+      summary: 'Get Lifecycle Dashboard Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Use Case Lifecycle'
+      operationId: getLifecycleDashboardHandler
+      security:
+        -
+          bearerAuth: []
+  '/v1/use-case-lifecycle/{id}/go-live':
+    post:
+      summary: 'Go Live Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Use Case Lifecycle'
+      operationId: goLiveHandler
+      security:
+        -
+          bearerAuth: []
+  '/v1/use-case-lifecycle/{id}/retire':
+    post:
+      summary: 'Retire Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Use Case Lifecycle'
+      operationId: retireHandler
+      security:
+        -
+          bearerAuth: []
+  '/v1/use-case-lifecycle/{id}/confirm':
+    post:
+      summary: 'Confirm Still Live Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Use Case Lifecycle'
+      operationId: confirmStillLiveHandler
+      security:
+        -
+          bearerAuth: []
+  '/v1/use-case-lifecycle/{id}/department':
+    patch:
+      summary: 'Update Department Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Use Case Lifecycle'
+      operationId: updateDepartmentHandler
+      security:
+        -
+          bearerAuth: []
+  /v1/lifecycle-settings:
+    get:
+      summary: 'Get Lifecycle Settings Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Lifecycle Settings'
+      operationId: getLifecycleSettingsHandler
+      security:
+        -
+          bearerAuth: []
+    patch:
+      summary: 'Update Lifecycle Settings Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Lifecycle Settings'
+      operationId: updateLifecycleSettingsHandler
+      security:
+        -
+          bearerAuth: []
+  /v1/ai-apps:
+    get:
+      summary: 'Get All Ai Apps V1'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai Apps'
+      operationId: getAllAiAppsV1
+      security:
+        -
+          bearerAuth: []
+  /v1/ai-app-lifecycle/summary:
+    get:
+      summary: 'Get Ai App Lifecycle Summary Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai App Lifecycle'
+      operationId: getAiAppLifecycleSummaryHandler
+      security:
+        -
+          bearerAuth: []
+  '/v1/ai-app-lifecycle/{id}':
+    get:
+      summary: 'Get Ai App Lifecycle Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai App Lifecycle'
+      operationId: getAiAppLifecycleHandler
+      security:
+        -
+          bearerAuth: []
+  '/v1/ai-app-lifecycle/{id}/history':
+    get:
+      summary: 'Get Ai App History Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai App Lifecycle'
+      operationId: getAiAppHistoryHandler
+      security:
+        -
+          bearerAuth: []
+  '/v1/ai-app-lifecycle/{id}/go-live':
+    post:
+      summary: 'Ai App Go Live Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai App Lifecycle'
+      operationId: aiAppGoLiveHandler
+      security:
+        -
+          bearerAuth: []
+  '/v1/ai-app-lifecycle/{id}/retire':
+    post:
+      summary: 'Ai App Retire Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai App Lifecycle'
+      operationId: aiAppRetireHandler
+      security:
+        -
+          bearerAuth: []
+  '/v1/ai-app-lifecycle/{id}/confirm':
+    post:
+      summary: 'Ai App Confirm Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai App Lifecycle'
+      operationId: aiAppConfirmHandler
+      security:
+        -
+          bearerAuth: []
+  /v1/use-case-lifecycle/intake-submissions:
+    get:
+      summary: 'Get Pending Submissions Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Use Case Lifecycle'
+      operationId: getPendingSubmissionsHandler
+      security:
+        -
+          bearerAuth: []
+  /v1/ai-app-lifecycle/intake-submissions:
+    get:
+      summary: 'Get Pending Ai App Submissions Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai App Lifecycle'
+      operationId: getPendingAiAppSubmissionsHandler
+      security:
+        -
+          bearerAuth: []
+  /v1/use-case-org-settings:
+    get:
+      summary: 'Get Use Case Org Settings Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Use Case Settings'
+      operationId: getUseCaseOrgSettingsHandler
+      security:
+        -
+          bearerAuth: []
+    put:
+      summary: 'Update Use Case Org Settings Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Use Case Settings'
+      operationId: updateUseCaseOrgSettingsHandler
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin'
+  '/v1/intake-tier-suggestion/public/by-id/{publicId}':
+    post:
+      summary: 'Post Public Tier Suggestion'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Intake Forms'
+      operationId: postPublicTierSuggestion
+  '/v1/intake-tier-suggestion/public/by-id/{publicId}/explain':
+    post:
+      summary: 'Post Public Tier Explanation'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Intake Forms'
+      operationId: postPublicTierExplanation
+  '/v1/intake-tier-suggestion/public/by-id/{publicId}/submit':
+    post:
+      summary: 'Submit Public Form By Public Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Intake Forms'
+      operationId: v1_intake_tier_suggestion_submitPublicFormByPublicId
+  '/v1/intake-tier-suggestion/public/{tenantSlug}/{formSlug}':
+    post:
+      summary: 'Post Public Tier Suggestion'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Intake Forms'
+      operationId: v1_intake_tier_suggestion_postPublicTierSuggestion
+  '/v1/intake-tier-suggestion/public/{tenantSlug}/{formSlug}/explain':
+    post:
+      summary: 'Post Public Tier Explanation'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Intake Forms'
+      operationId: v1_intake_tier_suggestion_postPublicTierExplanation
+  '/v1/intake-tier-suggestion/public/{tenantSlug}/{formSlug}/submit':
+    post:
+      summary: 'Submit Public Form'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Intake Forms'
+      operationId: v1_intake_tier_suggestion_submitPublicForm
+  '/v1/intake-tier-suggestion/submissions/{id}':
+    get:
+      summary: 'Get Submission Tier Suggestion Response'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Intake Forms'
+      operationId: getSubmissionTierSuggestionResponse
+      security:
+        -
+          bearerAuth: []
+  '/v1/intake-form-review-time/{formId}':
+    get:
+      summary: 'Get Intake Form Review Time'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Intake Form Review Time'
+      operationId: getIntakeFormReviewTime
+      security:
+        -
+          bearerAuth: []
+    put:
+      summary: 'Update Intake Form Review Time'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Intake Form Review Time'
+      operationId: updateIntakeFormReviewTime
+      security:
+        -
+          bearerAuth: []

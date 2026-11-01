@@ -72,14 +72,31 @@ import {
 } from "./modules/riskManagement";
 import { de as startHereDe, fr as startHereFr, es as startHereEs } from "./modules/startHere";
 import { de as superAdminDe, fr as superAdminFr, es as superAdminEs } from "./modules/superAdmin";
+import { de as mcpServersDe, fr as mcpServersFr, es as mcpServersEs } from "./modules/mcpServers";
 import { de as tasksDe, fr as tasksFr, es as tasksEs } from "./modules/tasks";
 import {
   de as intakeLiveChecksDe,
   fr as intakeLiveChecksFr,
   es as intakeLiveChecksEs,
 } from "./modules/intakeLiveChecks";
+import {
+  de as useCaseLifecycleDe,
+  fr as useCaseLifecycleFr,
+  es as useCaseLifecycleEs,
+} from "./modules/useCaseLifecycle";
+import {
+  de as intakePreviewDe,
+  fr as intakePreviewFr,
+  es as intakePreviewEs,
+} from "./modules/intakePreview";
+import {
+  de as intakeLogicDe,
+  fr as intakeLogicFr,
+  es as intakeLogicEs,
+} from "./modules/intakeLogic";
 import { de as trainingDe, fr as trainingFr, es as trainingEs } from "./modules/training";
 import { de as vendorsDe, fr as vendorsFr, es as vendorsEs } from "./modules/vendors";
+import { de as useCasesDe, fr as useCasesFr, es as useCasesEs } from "./modules/useCases";
 
 export type Lang = "en" | "de" | "fr" | "es";
 
@@ -105,14 +122,19 @@ export const translations: Record<string, Record<string, string>> = {
     ...startHereDe,
     ...superAdminDe,
     ...tasksDe,
+    ...mcpServersDe,
     ...intakeLiveChecksDe,
+    ...useCaseLifecycleDe,
+    ...intakePreviewDe,
+    ...intakeLogicDe,
     ...trainingDe,
     ...vendorsDe,
-    "senior": "leitend",
-    "standard": "Standard",
+    ...useCasesDe,
+    "expert": "in Expertenprüfung",
+    "regular": "in regulärer Prüfung",
     "close calls": "Grenzfälle",
-    "not routed": "nicht zugewiesen",
-    "routing off": "Weiterleitung aus",
+    "not assigned": "nicht zugewiesen",
+    "assignment off": "Zuweisung aus",
     "days": "Tage",
     "missed of completed": "übersehen von abgeschlossen",
     "open": "offen",
@@ -126,12 +148,12 @@ export const translations: Record<string, Record<string, string>> = {
     "No active reviewer": "Kein aktiver Prüfer",
     "Former user": "Ehemaliger Benutzer",
     "That submission could not be found": "Diese Einreichung wurde nicht gefunden",
-    "Only an Admin can change review routing.":
-      "Nur ein Administrator kann die Prüfungszuweisung ändern.",
+    "Only an Admin can change reviewer assignment.":
+      "Nur ein Administrator kann die Prüferzuweisung ändern.",
     "All forms": "Alle Formulare",
     "Band changed": "Stufe geändert",
     "Band kept": "Stufe beibehalten",
-    "Band kept, senior lane": "Stufe beibehalten, leitender Bereich",
+    "Band kept, expert review": "Stufe beibehalten, Expertenprüfung",
     "Check": "Prüfen",
     "Close call": "Grenzfall",
     "Counts the band in force at decision": "Zählt die Stufe, die bei der Entscheidung galt",
@@ -150,33 +172,33 @@ export const translations: Record<string, Record<string, string>> = {
     "Oversight": "Aufsicht",
     "Redlines caught": "Erkannte rote Linien",
     "Second reviews": "Zweitprüfungen",
-    "Submissions by lane": "Einreichungen nach Bereich",
+    "Submissions by review level": "Einreichungen nach Prüfstufe",
     "Suggested risks accepted": "Übernommene Risikovorschläge",
-    "Routing off": "Weiterleitung aus",
-    "Failed to send to senior review. Please try again.":
-      "Übergabe an die leitende Prüfung fehlgeschlagen. Bitte versuchen Sie es erneut.",
+    "Assignment off": "Zuweisung aus",
+    "Failed to request expert review. Please try again.":
+      "Anfordern der Expertenprüfung fehlgeschlagen. Bitte versuchen Sie es erneut.",
     "Failed to save the second review. Please try again.":
       "Die Zweitprüfung konnte nicht gespeichert werden. Bitte versuchen Sie es erneut.",
-    "Within": "Innerhalb von",
-    "points of the threshold": "Punkten um den Schwellenwert",
+    "Less than": "Weniger als",
+    "points from the threshold": "Punkte vom Schwellenwert entfernt",
     "Prohibited practice": "Verbotene Praktik",
     "No usable score": "Keine verwertbare Bewertung",
     "threshold": "Schwellenwert",
     "below": "unter",
     "Band raised by a reviewer": "Stufe von einem Prüfer erhöht",
-    "Sent to senior review:": "An die leitende Prüfung übergeben:",
-    "Senior review": "Prüfung durch leitende Prüfer",
-    "Standard review": "Standardprüfung",
-    "Not routed yet": "Noch nicht zugewiesen",
+    "Expert review requested:": "Expertenprüfung angefordert:",
+    "Expert review": "Expertenprüfung",
+    "Regular review": "Reguläre Prüfung",
+    "Not assigned yet": "Noch nicht zugewiesen",
     "Only": "Nur",
     "can decide this submission.": "können über diese Einreichung entscheiden.",
-    "Send to senior review": "An leitende Prüfer übergeben",
-    "Senior reviewers will decide this submission. Say why it needs a closer look.":
-      "Leitende Prüfer entscheiden über diese Einreichung. Nennen Sie den Grund für eine genauere Prüfung.",
-    "Why does this need a senior reviewer?": "Warum braucht dies einen leitenden Prüfer?",
+    "Request expert review": "Expertenprüfung anfordern",
+    "Expert reviewers will decide this submission. Say why it needs a closer look.":
+      "Expertenprüfer entscheiden über diese Einreichung. Nennen Sie den Grund für eine genauere Prüfung.",
+    "Why does this need an expert reviewer?": "Warum braucht dies einen Expertenprüfer?",
     "Second review": "Zweitprüfung",
-    "A senior reviewer will check this approval.":
-      "Ein leitender Prüfer wird diese Genehmigung prüfen.",
+    "An expert reviewer will check this approval.":
+      "Ein Expertenprüfer wird diese Genehmigung prüfen.",
     "Required when something was missed": "Erforderlich, wenn etwas übersehen wurde",
     "Agree": "Zustimmen",
     "Missed something": "Etwas übersehen",
@@ -187,37 +209,53 @@ export const translations: Record<string, Record<string, string>> = {
     "Resolution note": "Hinweis zur Lösung",
     "What was done about it?": "Was wurde dagegen unternommen?",
     "Mark resolved": "Als gelöst markieren",
-    "Lane": "Bereich",
-    "Senior": "Leitend",
-    "Not routed": "Nicht zugewiesen",
+    "Review level": "Prüfstufe",
+    "All review levels": "Alle Prüfstufen",
+    "Expert": "Experten",
+    "Not assigned": "Nicht zugewiesen",
     "Assigned to me": "Mir zugewiesen",
     "Scores of": "Bewertungen ab",
-    "or more, prohibited practices and scores within":
-      "oder mehr, verbotene Praktiken und Bewertungen innerhalb von",
-    "points of": "Punkten um",
-    "go to senior reviewers.": "gehen an leitende Prüfer.",
-    "Route by risk score": "Nach Risikobewertung weiterleiten",
-    "Send submissions to senior or standard reviewers based on their risk score.":
-      "Einreichungen anhand ihrer Risikobewertung an leitende oder Standard-Prüfer weiterleiten.",
-    "Senior reviewers": "Leitende Prüfer",
-    "Standard reviewers": "Standard-Prüfer",
-    "Select senior reviewers": "Leitende Prüfer auswählen",
-    "Select standard reviewers": "Standard-Prüfer auswählen",
-    "Pick at least one senior reviewer": "Wählen Sie mindestens einen leitenden Prüfer",
-    "Pick at least one standard reviewer": "Wählen Sie mindestens einen Standard-Prüfer",
+    "or more, prohibited practices and scores less than":
+      "oder mehr, verbotene Praktiken und Bewertungen mit weniger als",
+    "points from": "Punkten Abstand zu",
+    "go to expert reviewers.": "gehen an Expertenprüfer.",
+    "Assign reviewers by risk score": "Prüfer nach Risikobewertung zuweisen",
+    "Send submissions to expert or regular reviewers based on their risk score.":
+      "Einreichungen anhand ihrer Risikobewertung an Expertenprüfer oder reguläre Prüfer senden.",
+    "Expert reviewers": "Expertenprüfer",
+    "Regular reviewers": "Reguläre Prüfer",
+    "Select expert reviewers": "Expertenprüfer auswählen",
+    "Select regular reviewers": "Reguläre Prüfer auswählen",
+    "Pick at least one expert reviewer": "Wählen Sie mindestens einen Expertenprüfer",
+    "Pick at least one regular reviewer": "Wählen Sie mindestens einen regulären Prüfer",
     "Close-call margin": "Spanne für Grenzfälle",
     "Second review share %": "Anteil der Zweitprüfungen in %",
-    "Risk score that separates the lanes": "Risikobewertung, die die Bereiche trennt",
+    "Risk score that separates the review levels": "Risikobewertung, die die Prüfstufen trennt",
     "Points either side of the threshold": "Punkte auf beiden Seiten des Schwellenwerts",
-    "Share of standard decisions checked again":
-      "Anteil der Standardentscheidungen, die erneut geprüft werden",
+    "Share of regular review decisions checked again":
+      "Anteil der Entscheidungen in der regulären Prüfung, die erneut geprüft werden",
     "Use a number from 1 to 99": "Verwenden Sie eine Zahl von 1 bis 99",
     "Use a number from 0 to 25": "Verwenden Sie eine Zahl von 0 bis 25",
     "Use a number from 0 to 100": "Verwenden Sie eine Zahl von 0 bis 100",
-    "Fix the routing settings before saving":
-      "Korrigieren Sie die Weiterleitungseinstellungen vor dem Speichern",
-    "Fix the routing settings before publishing":
-      "Korrigieren Sie die Weiterleitungseinstellungen vor dem Veröffentlichen",
+    "Fix the reviewer assignment settings before saving":
+      "Korrigieren Sie die Einstellungen der Prüferzuweisung vor dem Speichern",
+    "Fix the reviewer assignment settings before publishing":
+      "Korrigieren Sie die Einstellungen der Prüferzuweisung vor dem Veröffentlichen",
+    "Review time (business days)": "Prüfdauer (Werktage)",
+    "Sets the due date named in the confirmation email to the submitter":
+      "Legt das Fälligkeitsdatum in der Bestätigungs-E-Mail an den Einreichenden fest",
+    "Use a whole number from 1 to 30": "Verwenden Sie eine ganze Zahl von 1 bis 30",
+    "Fix the review time before saving": "Korrigieren Sie die Prüfdauer vor dem Speichern",
+    "Fix the review time before publishing":
+      "Korrigieren Sie die Prüfdauer vor dem Veröffentlichen",
+    "The form was saved, but the review time was not. Click Save to try again.":
+      "Das Formular wurde gespeichert, die Prüfdauer jedoch nicht. Klicken Sie erneut auf Speichern.",
+    "The review time could not be saved, so the form was not published. Click Publish to try again.":
+      "Die Prüfdauer konnte nicht gespeichert werden, daher wurde das Formular nicht veröffentlicht. Klicken Sie erneut auf Veröffentlichen.",
+    "The form was saved as a draft, but the review time was not. Click Publish to try again.":
+      "Das Formular wurde als Entwurf gespeichert, die Prüfdauer jedoch nicht. Klicken Sie erneut auf Veröffentlichen.",
+    "Could not load the review time. Reload the page to change it.":
+      "Die Prüfdauer konnte nicht geladen werden. Laden Sie die Seite neu, um sie zu ändern.",
     "No risk score was recorded for this submission.":
       "Für diese Einreichung wurde kein Risikowert erfasst.",
     "set to": "gesetzt auf",
@@ -1270,6 +1308,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Use case & framework risks": "Anwendungsfall- und Rahmenwerksrisiken",
     "Recent activity": "Letzte Aktivität",
     "Recent use cases": "Letzte Anwendungsfälle",
+    "This subcontrol": "Diese Unterkontrolle",
+    "Control": "Kontrolle",
     "Executive view": "Executive-Ansicht",
     "Operations view": "Betriebsansicht",
     "Analytics": "Analyse",
@@ -4632,7 +4672,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Field": "Feld",
     "Field mapping": "Feldzuordnung",
     "Field settings": "Feldeinstellungen",
-    "Choose a field above this one": "Wählen Sie ein Feld darüber",
+    "Choose a field": "Wählen Sie ein Feld",
     "Show this field only if…": "Dieses Feld nur anzeigen, wenn…",
     "Always shown": "Immer angezeigt",
     "Shown when all conditions match": "Angezeigt, wenn alle Bedingungen zutreffen",
@@ -4650,8 +4690,13 @@ export const translations: Record<string, Record<string, string>> = {
     "is not empty": "ist nicht leer",
     "Required when shown": "Erforderlich, wenn angezeigt",
     "Type { to insert a field": "Geben Sie { ein, um ein Feld einzufügen",
-    "Add a field above this one to create a rule":
-      "Fügen Sie darüber ein Feld hinzu, um eine Regel zu erstellen",
+    "Field:": "Feld:",
+    "Missing field": "Fehlendes Feld",
+    "Not usable in this formula": "In dieser Formel nicht verwendbar",
+    "Unnamed field": "Unbenanntes Feld",
+    "The problem is just after": "Das Problem liegt direkt nach",
+    "Add another field to create a rule":
+      "Fügen Sie ein weiteres Feld hinzu, um eine Regel zu erstellen",
     "Add condition": "Bedingung hinzufügen",
     "All conditions": "Alle Bedingungen",
     "Any condition": "Eine beliebige Bedingung",
@@ -4663,7 +4708,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Impact scope": "Auswirkungsbereich",
     "Remove condition": "Bedingung entfernen",
     "Risk dimension": "Risikodimension",
-    "Add a number field above this one first": "Fügen Sie zuerst darüber ein Zahlenfeld hinzu",
+    "Add a number field first": "Fügen Sie zuerst ein Zahlenfeld hinzu",
     "Advanced": "Erweitert",
     "Calculated": "Berechnet",
     "Other answers": "Weitere Antworten",
@@ -4675,6 +4720,7 @@ export const translations: Record<string, Record<string, string>> = {
       "Entwurf gespeichert. Korrigieren Sie die markierten Felder vor dem Veröffentlichen",
     "Additional answers": "Zusätzliche Antworten",
     "Calculation": "Berechnung",
+    "Calculated value": "Berechneter Wert",
     "Decimals": "Dezimalstellen",
     "Formula": "Formel",
     "Read-only result of a formula": "Schreibgeschütztes Ergebnis einer Formel",
@@ -5165,8 +5211,10 @@ export const translations: Record<string, Record<string, string>> = {
     "Shareable link": "Teilbarer Link",
     "Show AI-suggested questions while building the form":
       "KI-vorgeschlagene Fragen beim Erstellen des Formulars anzeigen",
-    "Shown as a tooltip next to the field label on the public form":
-      "Wird als Tooltip neben dem Feldlabel im öffentlichen Formular angezeigt",
+    "Enter a full web address starting with http:// or https://":
+      "Geben Sie eine vollständige Webadresse ein, die mit http:// oder https:// beginnt",
+    "Shown under the field on the public form":
+      "Wird im öffentlichen Formular unter dem Feld angezeigt",
     "Sign in": "Anmelden",
     "Signatory": "Unterzeichner",
     "Simulated Conversations": "Simulierte Konversationen",
@@ -5388,6 +5436,8 @@ export const translations: Record<string, Record<string, string>> = {
     "AI Gateway, Policy Radar, and CI/CD scanning": "AI Gateway, Policy Radar und CI/CD-Scanning",
     "Risk inheritance, evidence retention, and security hardening":
       "Risikovererbung, Aufbewahrung von Nachweisen und Sicherheitshärtung",
+    "Use case and AI app lifecycles, intake form logic and MCP server auth":
+      "Lebenszyklen für Anwendungsfälle und KI-Apps, Logik für Aufnahmeformulare und MCP-Server-Authentifizierung",
     "Built-in frameworks, Model Risk Management, and Extensions":
       "Integrierte Frameworks, Model Risk Management und Extensions",
     "AI Trust Index, AI Apps inventory, and Agent Control":
@@ -9564,14 +9614,19 @@ export const translations: Record<string, Record<string, string>> = {
     ...startHereFr,
     ...superAdminFr,
     ...tasksFr,
+    ...mcpServersFr,
     ...intakeLiveChecksFr,
+    ...useCaseLifecycleFr,
+    ...intakePreviewFr,
+    ...intakeLogicFr,
     ...trainingFr,
     ...vendorsFr,
-    "senior": "senior",
-    "standard": "standard",
+    ...useCasesFr,
+    "expert": "expert",
+    "regular": "habituel",
     "close calls": "cas limites",
-    "not routed": "non attribué",
-    "routing off": "acheminement désactivé",
+    "not assigned": "non attribué",
+    "assignment off": "attribution désactivée",
     "days": "jours",
     "missed of completed": "manquées sur terminées",
     "open": "ouvertes",
@@ -9585,12 +9640,12 @@ export const translations: Record<string, Record<string, string>> = {
     "No active reviewer": "Aucun relecteur actif",
     "Former user": "Ancien utilisateur",
     "That submission could not be found": "Cette soumission est introuvable",
-    "Only an Admin can change review routing.":
-      "Seul un administrateur peut modifier l'acheminement des révisions.",
+    "Only an Admin can change reviewer assignment.":
+      "Seul un administrateur peut modifier l'attribution des réviseurs.",
     "All forms": "Tous les formulaires",
     "Band changed": "Niveau modifié",
     "Band kept": "Niveau conservé",
-    "Band kept, senior lane": "Niveau conservé, voie senior",
+    "Band kept, expert review": "Niveau conservé, revue experte",
     "Check": "À vérifier",
     "Close call": "Cas limite",
     "Counts the band in force at decision": "Compte le niveau en vigueur au moment de la décision",
@@ -9608,33 +9663,33 @@ export const translations: Record<string, Record<string, string>> = {
     "Oversight": "Supervision",
     "Redlines caught": "Lignes rouges détectées",
     "Second reviews": "Secondes revues",
-    "Submissions by lane": "Soumissions par voie",
+    "Submissions by review level": "Soumissions par niveau de revue",
     "Suggested risks accepted": "Risques suggérés acceptés",
-    "Routing off": "Acheminement désactivé",
-    "Failed to send to senior review. Please try again.":
-      "Échec de l'envoi à la revue senior. Veuillez réessayer.",
+    "Assignment off": "Attribution désactivée",
+    "Failed to request expert review. Please try again.":
+      "Échec de la demande de revue experte. Veuillez réessayer.",
     "Failed to save the second review. Please try again.":
       "Échec de l'enregistrement de la seconde revue. Veuillez réessayer.",
-    "Within": "À moins de",
-    "points of the threshold": "points du seuil",
+    "Less than": "À moins de",
+    "points from the threshold": "points du seuil",
     "Prohibited practice": "Pratique interdite",
     "No usable score": "Aucun score exploitable",
     "threshold": "seuil",
     "below": "inférieur à",
     "Band raised by a reviewer": "Niveau relevé par un réviseur",
-    "Sent to senior review:": "Envoyé à la revue senior :",
-    "Senior review": "Revue senior",
-    "Standard review": "Revue standard",
-    "Not routed yet": "Pas encore acheminé",
+    "Expert review requested:": "Revue experte demandée :",
+    "Expert review": "Revue experte",
+    "Regular review": "Revue habituelle",
+    "Not assigned yet": "Pas encore attribué",
     "Only": "Seuls",
     "can decide this submission.": "peuvent décider de cette soumission.",
-    "Send to senior review": "Envoyer à la revue senior",
-    "Senior reviewers will decide this submission. Say why it needs a closer look.":
-      "Les réviseurs seniors décideront de cette soumission. Indiquez pourquoi elle demande un examen plus approfondi.",
-    "Why does this need a senior reviewer?": "Pourquoi faut-il un réviseur senior ?",
+    "Request expert review": "Demander une revue experte",
+    "Expert reviewers will decide this submission. Say why it needs a closer look.":
+      "Les réviseurs experts décideront de cette soumission. Indiquez pourquoi elle demande un examen plus approfondi.",
+    "Why does this need an expert reviewer?": "Pourquoi faut-il un réviseur expert ?",
     "Second review": "Seconde revue",
-    "A senior reviewer will check this approval.":
-      "Un réviseur senior vérifiera cette approbation.",
+    "An expert reviewer will check this approval.":
+      "Un réviseur expert vérifiera cette approbation.",
     "Required when something was missed": "Obligatoire si un point a été manqué",
     "Agree": "D'accord",
     "Missed something": "Point manqué",
@@ -9645,36 +9700,53 @@ export const translations: Record<string, Record<string, string>> = {
     "Resolution note": "Note de résolution",
     "What was done about it?": "Qu'a-t-on fait à ce sujet ?",
     "Mark resolved": "Marquer comme résolu",
-    "Lane": "Voie",
-    "Senior": "Senior",
-    "Not routed": "Non acheminé",
+    "Review level": "Niveau de revue",
+    "All review levels": "Tous les niveaux de revue",
+    "Expert": "Expert",
+    "Not assigned": "Non attribué",
     "Assigned to me": "Assignées à moi",
     "Scores of": "Les scores de",
-    "or more, prohibited practices and scores within":
+    "or more, prohibited practices and scores less than":
       "ou plus, les pratiques interdites et les scores à moins de",
-    "points of": "points de",
-    "go to senior reviewers.": "vont aux réviseurs seniors.",
-    "Route by risk score": "Acheminer selon le score de risque",
-    "Send submissions to senior or standard reviewers based on their risk score.":
-      "Envoyer les soumissions aux réviseurs seniors ou standard selon leur score de risque.",
-    "Senior reviewers": "Réviseurs seniors",
-    "Standard reviewers": "Réviseurs standard",
-    "Select senior reviewers": "Sélectionner les réviseurs seniors",
-    "Select standard reviewers": "Sélectionner les réviseurs standard",
-    "Pick at least one senior reviewer": "Choisissez au moins un réviseur senior",
-    "Pick at least one standard reviewer": "Choisissez au moins un réviseur standard",
+    "points from": "points de",
+    "go to expert reviewers.": "vont aux réviseurs experts.",
+    "Assign reviewers by risk score": "Attribuer les réviseurs selon le score de risque",
+    "Send submissions to expert or regular reviewers based on their risk score.":
+      "Envoyer les soumissions aux réviseurs experts ou habituels selon leur score de risque.",
+    "Expert reviewers": "Réviseurs experts",
+    "Regular reviewers": "Réviseurs habituels",
+    "Select expert reviewers": "Sélectionner les réviseurs experts",
+    "Select regular reviewers": "Sélectionner les réviseurs habituels",
+    "Pick at least one expert reviewer": "Choisissez au moins un réviseur expert",
+    "Pick at least one regular reviewer": "Choisissez au moins un réviseur habituel",
     "Close-call margin": "Marge des cas limites",
     "Second review share %": "Part des secondes révisions en %",
-    "Risk score that separates the lanes": "Score de risque qui sépare les filières",
+    "Risk score that separates the review levels":
+      "Score de risque qui sépare les niveaux de revue",
     "Points either side of the threshold": "Points de part et d'autre du seuil",
-    "Share of standard decisions checked again": "Part des décisions standard revérifiées",
+    "Share of regular review decisions checked again":
+      "Part des décisions en revue habituelle revérifiées",
     "Use a number from 1 to 99": "Utilisez un nombre de 1 à 99",
     "Use a number from 0 to 25": "Utilisez un nombre de 0 à 25",
     "Use a number from 0 to 100": "Utilisez un nombre de 0 à 100",
-    "Fix the routing settings before saving":
-      "Corrigez les paramètres d'acheminement avant d'enregistrer",
-    "Fix the routing settings before publishing":
-      "Corrigez les paramètres d'acheminement avant de publier",
+    "Fix the reviewer assignment settings before saving":
+      "Corrigez les paramètres d'attribution des réviseurs avant d'enregistrer",
+    "Fix the reviewer assignment settings before publishing":
+      "Corrigez les paramètres d'attribution des réviseurs avant de publier",
+    "Review time (business days)": "Délai d'examen (jours ouvrés)",
+    "Sets the due date named in the confirmation email to the submitter":
+      "Définit l'échéance indiquée dans l'e-mail de confirmation envoyé au demandeur",
+    "Use a whole number from 1 to 30": "Utilisez un nombre entier de 1 à 30",
+    "Fix the review time before saving": "Corrigez le délai d'examen avant d'enregistrer",
+    "Fix the review time before publishing": "Corrigez le délai d'examen avant de publier",
+    "The form was saved, but the review time was not. Click Save to try again.":
+      "Le formulaire a été enregistré, mais pas le délai d'examen. Cliquez à nouveau sur Enregistrer.",
+    "The review time could not be saved, so the form was not published. Click Publish to try again.":
+      "Le délai d'examen n'a pas pu être enregistré, le formulaire n'a donc pas été publié. Cliquez à nouveau sur Publier.",
+    "The form was saved as a draft, but the review time was not. Click Publish to try again.":
+      "Le formulaire a été enregistré comme brouillon, mais pas le délai d'examen. Cliquez à nouveau sur Publier.",
+    "Could not load the review time. Reload the page to change it.":
+      "Impossible de charger le délai d'examen. Rechargez la page pour le modifier.",
     "No risk score was recorded for this submission.":
       "Aucun score de risque n'a été enregistré pour cette soumission.",
     "set to": "fixé à",
@@ -10616,6 +10688,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Use case & framework risks": "Risques cas d'usage et référentiels",
     "Recent activity": "Activité récente",
     "Recent use cases": "Cas d'usage récents",
+    "This subcontrol": "Ce sous-contrôle",
+    "Control": "Contrôle",
     "Executive view": "Vue direction",
     "Analytics": "Analytique",
 
@@ -14035,7 +14109,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Field": "Champ",
     "Field mapping": "Mappage des champs",
     "Field settings": "Paramètres du champ",
-    "Choose a field above this one": "Choisissez un champ au-dessus",
+    "Choose a field": "Choisissez un champ",
     "Show this field only if…": "Afficher ce champ uniquement si…",
     "Always shown": "Toujours affiché",
     "Shown when all conditions match": "Affiché lorsque toutes les conditions sont remplies",
@@ -14053,8 +14127,12 @@ export const translations: Record<string, Record<string, string>> = {
     "is not empty": "n'est pas vide",
     "Required when shown": "Requis lorsqu'il est affiché",
     "Type { to insert a field": "Tapez { pour insérer un champ",
-    "Add a field above this one to create a rule":
-      "Ajoutez un champ au-dessus pour créer une règle",
+    "Field:": "Champ :",
+    "Missing field": "Champ manquant",
+    "Not usable in this formula": "Non utilisable dans cette formule",
+    "Unnamed field": "Champ sans nom",
+    "The problem is just after": "Le problème se trouve juste après",
+    "Add another field to create a rule": "Ajoutez un autre champ pour créer une règle",
     "Add condition": "Ajouter une condition",
     "All conditions": "Toutes les conditions",
     "Any condition": "N'importe quelle condition",
@@ -14066,7 +14144,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Impact scope": "Portée de l'impact",
     "Remove condition": "Supprimer la condition",
     "Risk dimension": "Dimension de risque",
-    "Add a number field above this one first": "Ajoutez d'abord un champ numérique au-dessus",
+    "Add a number field first": "Ajoutez d'abord un champ numérique",
     "Advanced": "Avancé",
     "Calculated": "Calculé",
     "Other answers": "Autres réponses",
@@ -14078,6 +14156,7 @@ export const translations: Record<string, Record<string, string>> = {
       "Brouillon enregistré. Corrigez les champs en surbrillance avant de publier",
     "Additional answers": "Réponses supplémentaires",
     "Calculation": "Calcul",
+    "Calculated value": "Valeur calculée",
     "Decimals": "Décimales",
     "Formula": "Formule",
     "Read-only result of a formula": "Résultat en lecture seule d'une formule",
@@ -14568,8 +14647,9 @@ export const translations: Record<string, Record<string, string>> = {
     "Shareable link": "Lien partageable",
     "Show AI-suggested questions while building the form":
       "Afficher les questions suggérées par l'IA lors de la création du formulaire",
-    "Shown as a tooltip next to the field label on the public form":
-      "Affiché en info-bulle à côté du libellé du champ sur le formulaire public",
+    "Enter a full web address starting with http:// or https://":
+      "Saisissez une adresse web complète commençant par http:// ou https://",
+    "Shown under the field on the public form": "Affiché sous le champ sur le formulaire public",
     "Sign in": "Se connecter",
     "Signatory": "Signataire",
     "Simulated Conversations": "Conversations simulées",
@@ -14791,6 +14871,8 @@ export const translations: Record<string, Record<string, string>> = {
     "AI Gateway, Policy Radar, and CI/CD scanning": "AI Gateway, Policy Radar et analyse CI/CD",
     "Risk inheritance, evidence retention, and security hardening":
       "Héritage des risques, conservation des preuves et renforcement de la sécurité",
+    "Use case and AI app lifecycles, intake form logic and MCP server auth":
+      "Cycles de vie des cas d'usage et des applications d'IA, logique des formulaires d'intake et authentification des serveurs MCP",
     "Built-in frameworks, Model Risk Management, and Extensions":
       "Référentiels intégrés, Model Risk Management et Extensions",
     "AI Trust Index, AI Apps inventory, and Agent Control":
@@ -18963,14 +19045,19 @@ export const translations: Record<string, Record<string, string>> = {
     ...startHereEs,
     ...superAdminEs,
     ...tasksEs,
+    ...mcpServersEs,
     ...intakeLiveChecksEs,
+    ...useCaseLifecycleEs,
+    ...intakePreviewEs,
+    ...intakeLogicEs,
     ...trainingEs,
     ...vendorsEs,
-    "senior": "sénior",
-    "standard": "estándar",
+    ...useCasesEs,
+    "expert": "experto",
+    "regular": "habitual",
     "close calls": "casos límite",
-    "not routed": "sin asignar",
-    "routing off": "enrutamiento desactivado",
+    "not assigned": "sin asignar",
+    "assignment off": "asignación desactivada",
     "days": "días",
     "missed of completed": "omitidas de completadas",
     "open": "abiertas",
@@ -18984,12 +19071,12 @@ export const translations: Record<string, Record<string, string>> = {
     "No active reviewer": "Ningún revisor activo",
     "Former user": "Usuario anterior",
     "That submission could not be found": "No se encontró ese envío",
-    "Only an Admin can change review routing.":
-      "Solo un administrador puede cambiar la asignación de revisiones.",
+    "Only an Admin can change reviewer assignment.":
+      "Solo un administrador puede cambiar la asignación de revisores.",
     "All forms": "Todos los formularios",
     "Band changed": "Nivel cambiado",
     "Band kept": "Nivel mantenido",
-    "Band kept, senior lane": "Nivel mantenido, vía sénior",
+    "Band kept, expert review": "Nivel mantenido, revisión experta",
     "Check": "Revisar",
     "Close call": "Caso límite",
     "Counts the band in force at decision": "Cuenta el nivel vigente en el momento de la decisión",
@@ -19007,32 +19094,33 @@ export const translations: Record<string, Record<string, string>> = {
     "Oversight": "Supervisión",
     "Redlines caught": "Líneas rojas detectadas",
     "Second reviews": "Segundas revisiones",
-    "Submissions by lane": "Envíos por vía",
+    "Submissions by review level": "Envíos por nivel de revisión",
     "Suggested risks accepted": "Riesgos sugeridos aceptados",
-    "Routing off": "Enrutamiento desactivado",
-    "Failed to send to senior review. Please try again.":
-      "No se pudo enviar a revisión sénior. Inténtelo de nuevo.",
+    "Assignment off": "Asignación desactivada",
+    "Failed to request expert review. Please try again.":
+      "No se pudo solicitar la revisión experta. Inténtelo de nuevo.",
     "Failed to save the second review. Please try again.":
       "No se pudo guardar la segunda revisión. Inténtelo de nuevo.",
-    "Within": "A menos de",
-    "points of the threshold": "puntos del umbral",
+    "Less than": "A menos de",
+    "points from the threshold": "puntos del umbral",
     "Prohibited practice": "Práctica prohibida",
     "No usable score": "Sin puntuación utilizable",
     "threshold": "umbral",
     "below": "por debajo de",
     "Band raised by a reviewer": "Nivel elevado por un revisor",
-    "Sent to senior review:": "Enviado a revisión sénior:",
-    "Senior review": "Revisión sénior",
-    "Standard review": "Revisión estándar",
-    "Not routed yet": "Aún sin enrutar",
+    "Expert review requested:": "Revisión experta solicitada:",
+    "Expert review": "Revisión experta",
+    "Regular review": "Revisión habitual",
+    "Not assigned yet": "Aún sin asignar",
     "Only": "Solo",
     "can decide this submission.": "pueden decidir sobre este envío.",
-    "Send to senior review": "Enviar a revisión sénior",
-    "Senior reviewers will decide this submission. Say why it needs a closer look.":
-      "Los revisores sénior decidirán sobre este envío. Indique por qué requiere un examen más detallado.",
-    "Why does this need a senior reviewer?": "¿Por qué necesita un revisor sénior?",
+    "Request expert review": "Solicitar revisión experta",
+    "Expert reviewers will decide this submission. Say why it needs a closer look.":
+      "Los revisores expertos decidirán sobre este envío. Indique por qué requiere un examen más detallado.",
+    "Why does this need an expert reviewer?": "¿Por qué necesita un revisor experto?",
     "Second review": "Segunda revisión",
-    "A senior reviewer will check this approval.": "Un revisor sénior comprobará esta aprobación.",
+    "An expert reviewer will check this approval.":
+      "Un revisor experto comprobará esta aprobación.",
     "Required when something was missed": "Obligatoria si se pasó algo por alto",
     "Agree": "De acuerdo",
     "Missed something": "Se pasó algo por alto",
@@ -19043,37 +19131,53 @@ export const translations: Record<string, Record<string, string>> = {
     "Resolution note": "Nota de resolución",
     "What was done about it?": "¿Qué se hizo al respecto?",
     "Mark resolved": "Marcar como resuelto",
-    "Lane": "Carril",
-    "Senior": "Sénior",
-    "Not routed": "Sin enrutar",
+    "Review level": "Nivel de revisión",
+    "All review levels": "Todos los niveles de revisión",
+    "Expert": "Experto",
+    "Not assigned": "Sin asignar",
     "Assigned to me": "Asignados a mí",
     "Scores of": "Las puntuaciones de",
-    "or more, prohibited practices and scores within":
+    "or more, prohibited practices and scores less than":
       "o más, las prácticas prohibidas y las puntuaciones a menos de",
-    "points of": "puntos de",
-    "go to senior reviewers.": "pasan a los revisores sénior.",
-    "Route by risk score": "Enrutar según la puntuación de riesgo",
-    "Send submissions to senior or standard reviewers based on their risk score.":
-      "Enviar los envíos a revisores sénior o estándar según su puntuación de riesgo.",
-    "Senior reviewers": "Revisores sénior",
-    "Standard reviewers": "Revisores estándar",
-    "Select senior reviewers": "Seleccionar revisores sénior",
-    "Select standard reviewers": "Seleccionar revisores estándar",
-    "Pick at least one senior reviewer": "Elija al menos un revisor sénior",
-    "Pick at least one standard reviewer": "Elija al menos un revisor estándar",
+    "points from": "puntos de",
+    "go to expert reviewers.": "pasan a los revisores expertos.",
+    "Assign reviewers by risk score": "Asignar revisores según la puntuación de riesgo",
+    "Send submissions to expert or regular reviewers based on their risk score.":
+      "Enviar los envíos a revisores expertos o habituales según su puntuación de riesgo.",
+    "Expert reviewers": "Revisores expertos",
+    "Regular reviewers": "Revisores habituales",
+    "Select expert reviewers": "Seleccionar revisores expertos",
+    "Select regular reviewers": "Seleccionar revisores habituales",
+    "Pick at least one expert reviewer": "Elija al menos un revisor experto",
+    "Pick at least one regular reviewer": "Elija al menos un revisor habitual",
     "Close-call margin": "Margen de casos límite",
     "Second review share %": "Porcentaje de segundas revisiones",
-    "Risk score that separates the lanes": "Puntuación de riesgo que separa los carriles",
+    "Risk score that separates the review levels":
+      "Puntuación de riesgo que separa los niveles de revisión",
     "Points either side of the threshold": "Puntos a cada lado del umbral",
-    "Share of standard decisions checked again":
-      "Porcentaje de decisiones estándar que se revisan de nuevo",
+    "Share of regular review decisions checked again":
+      "Porcentaje de decisiones de revisión habitual que se revisan de nuevo",
     "Use a number from 1 to 99": "Use un número del 1 al 99",
     "Use a number from 0 to 25": "Use un número del 0 al 25",
     "Use a number from 0 to 100": "Use un número del 0 al 100",
-    "Fix the routing settings before saving":
-      "Corrija la configuración de enrutamiento antes de guardar",
-    "Fix the routing settings before publishing":
-      "Corrija la configuración de enrutamiento antes de publicar",
+    "Fix the reviewer assignment settings before saving":
+      "Corrija la configuración de asignación de revisores antes de guardar",
+    "Fix the reviewer assignment settings before publishing":
+      "Corrija la configuración de asignación de revisores antes de publicar",
+    "Review time (business days)": "Plazo de revisión (días hábiles)",
+    "Sets the due date named in the confirmation email to the submitter":
+      "Define la fecha límite indicada en el correo de confirmación al solicitante",
+    "Use a whole number from 1 to 30": "Use un número entero del 1 al 30",
+    "Fix the review time before saving": "Corrija el plazo de revisión antes de guardar",
+    "Fix the review time before publishing": "Corrija el plazo de revisión antes de publicar",
+    "The form was saved, but the review time was not. Click Save to try again.":
+      "El formulario se guardó, pero el plazo de revisión no. Haga clic de nuevo en Guardar.",
+    "The review time could not be saved, so the form was not published. Click Publish to try again.":
+      "No se pudo guardar el plazo de revisión, así que el formulario no se publicó. Haga clic de nuevo en Publicar.",
+    "The form was saved as a draft, but the review time was not. Click Publish to try again.":
+      "El formulario se guardó como borrador, pero el plazo de revisión no. Haga clic de nuevo en Publicar.",
+    "Could not load the review time. Reload the page to change it.":
+      "No se pudo cargar el plazo de revisión. Vuelva a cargar la página para cambiarlo.",
     "No risk score was recorded for this submission.":
       "No se registró ninguna puntuación de riesgo para este envío.",
     "set to": "fijado en",
@@ -19866,6 +19970,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Use case & framework risks": "Riesgos de casos de uso y marcos",
     "Recent activity": "Actividad reciente",
     "Recent use cases": "Casos de uso recientes",
+    "This subcontrol": "Este subcontrol",
+    "Control": "Control",
     "Executive view": "Vista ejecutiva",
     "Operations view": "Vista de operaciones",
     "Analytics": "Analíticas",
@@ -21912,7 +22018,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Field": "Campo",
     "Field mapping": "Asignación de campos",
     "Field settings": "Configuración del campo",
-    "Choose a field above this one": "Elija un campo encima",
+    "Choose a field": "Elija un campo",
     "Show this field only if…": "Mostrar este campo solo si…",
     "Always shown": "Siempre visible",
     "Shown when all conditions match": "Visible cuando se cumplen todas las condiciones",
@@ -21930,7 +22036,12 @@ export const translations: Record<string, Record<string, string>> = {
     "is not empty": "no está vacío",
     "Required when shown": "Obligatorio cuando se muestra",
     "Type { to insert a field": "Escriba { para insertar un campo",
-    "Add a field above this one to create a rule": "Agregue un campo encima para crear una regla",
+    "Field:": "Campo:",
+    "Missing field": "Campo faltante",
+    "Not usable in this formula": "No se puede usar en esta fórmula",
+    "Unnamed field": "Campo sin nombre",
+    "The problem is just after": "El problema está justo después de",
+    "Add another field to create a rule": "Agregue otro campo para crear una regla",
     "Add condition": "Agregar condición",
     "All conditions": "Todas las condiciones",
     "Any condition": "Cualquier condición",
@@ -21941,7 +22052,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Impact scope": "Alcance del impacto",
     "Remove condition": "Eliminar condición",
     "Risk dimension": "Dimensión de riesgo",
-    "Add a number field above this one first": "Primero agregue un campo numérico encima",
+    "Add a number field first": "Primero agregue un campo numérico",
     "Advanced": "Avanzado",
     "Calculated": "Calculado",
     "Other answers": "Otras respuestas",
@@ -21953,6 +22064,7 @@ export const translations: Record<string, Record<string, string>> = {
       "Borrador guardado. Corrija los campos resaltados antes de publicar",
     "Additional answers": "Respuestas adicionales",
     "Calculation": "Cálculo",
+    "Calculated value": "Valor calculado",
     "Decimals": "Decimales",
     "Formula": "Fórmula",
     "Read-only result of a formula": "Resultado de solo lectura de una fórmula",
@@ -22386,6 +22498,8 @@ export const translations: Record<string, Record<string, string>> = {
     "AI Gateway, Policy Radar, and CI/CD scanning": "AI Gateway, Policy Radar y análisis de CI/CD",
     "Risk inheritance, evidence retention, and security hardening":
       "Herencia de riesgos, retención de evidencias y refuerzo de la seguridad",
+    "Use case and AI app lifecycles, intake form logic and MCP server auth":
+      "Ciclos de vida de casos de uso y aplicaciones de IA, lógica de formularios de solicitud y autenticación de servidores MCP",
     "Built-in frameworks, Model Risk Management, and Extensions":
       "Marcos integrados, Model Risk Management y Extensions",
     "AI Trust Index, AI Apps inventory, and Agent Control":
@@ -25279,8 +25393,10 @@ export const translations: Record<string, Record<string, string>> = {
       "Establezca un límite de gasto mensual. Cuando el límite estricto está activado, las solicitudes se rechazan una vez superado.",
     "Show AI-suggested questions while building the form":
       "Mostrar preguntas sugeridas por IA mientras se crea el formulario",
-    "Shown as a tooltip next to the field label on the public form":
-      "Se muestra como información sobre herramientas junto a la etiqueta del campo en el formulario público",
+    "Enter a full web address starting with http:// or https://":
+      "Introduzca una dirección web completa que empiece por http:// o https://",
+    "Shown under the field on the public form":
+      "Se muestra debajo del campo en el formulario público",
     "Some actions completed successfully, but others failed":
       "Algunas acciones se completaron correctamente, pero otras fallaron",
     "Submission responses will be emailed to selected recipients":

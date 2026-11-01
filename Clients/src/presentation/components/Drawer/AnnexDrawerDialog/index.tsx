@@ -44,6 +44,8 @@ import { getEntityById } from "../../../../application/repository/entity.reposit
 import { attachFilesToEntity } from "../../../../application/repository/file.repository";
 import { useInvalidateEvidenceGaps } from "../../../../application/hooks/useEvidenceAi";
 import allowedRoles from "../../../../application/constants/permissions";
+import { HistorySidebar } from "../../Common/HistorySidebar";
+import { useQueryClient } from "@tanstack/react-query";
 
 const FRAMEWORK_TYPE = "iso_42001";
 const ENTITY_TYPE = "annex_category";
@@ -92,6 +94,7 @@ const TABS: DrawerTab[] = [
   { label: "Evidence", value: "evidence", icon: "FolderOpen" },
   { label: "Cross mappings", value: "cross-mappings", icon: "Link" },
   { label: "Notes", value: "notes", icon: "MessageSquare" },
+  { label: "Activity", value: "activity", icon: "History" },
 ];
 
 const VWISO42001AnnexDrawerDialog = ({
@@ -110,6 +113,7 @@ const VWISO42001AnnexDrawerDialog = ({
   const [isLoading, setIsLoading] = useState(false);
   const [alert, setAlert] = useState<AlertProps | null>(null);
   const invalidateEvidenceGaps = useInvalidateEvidenceGaps();
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("details");
   const [fetchedAnnex, setFetchedAnnex] = useState<AnnexCategoryISO>();
   const [date, setDate] = useState<Dayjs | null>(null);
@@ -252,7 +256,9 @@ const VWISO42001AnnexDrawerDialog = ({
       formDataToSend.append("reviewer", formData.reviewer);
       formDataToSend.append("approver", formData.approver);
       formDataToSend.append("auditor_feedback", formData.auditor_feedback);
-      if (date) formDataToSend.append("due_date", date.toString());
+      // A plain calendar date: toString() is a UTC timestamp, which the DATE
+      // column truncates to the previous day for users east of UTC.
+      if (date) formDataToSend.append("due_date", date.format("YYYY-MM-DD"));
       formDataToSend.append("user_id", userId?.toString() || "1");
       formDataToSend.append("project_id", project_id.toString());
       formDataToSend.append("delete", JSON.stringify(evidence.deletedFileIds));
@@ -299,6 +305,9 @@ const VWISO42001AnnexDrawerDialog = ({
 
         // Evidence attached here feeds framework coverage, which is cached
         invalidateEvidenceGaps();
+        queryClient.invalidateQueries({
+          queryKey: ["changeHistory", "annex_category", fetchedAnnex.id],
+        });
 
         handleAlert({ variant: "success", body: "Annex category saved successfully" });
         onSaveSuccess?.(true, "Annex category saved successfully");
@@ -477,6 +486,15 @@ const VWISO42001AnnexDrawerDialog = ({
           <NotesTab
             attachedTo={NOTES_ATTACHED_TO}
             attachedToId={fetchedAnnex?.id?.toString() || ""}
+          />
+        </TabPanel>
+
+        <TabPanel value="activity" sx={{ padding: "15px 20px" }}>
+          <HistorySidebar
+            inline
+            isOpen={activeTab === "activity"}
+            entityType="annex_category"
+            entityId={fetchedAnnex?.id}
           />
         </TabPanel>
       </DrawerFrame>

@@ -28,6 +28,15 @@ jest.mock("../../utils/intakeSubmissionData.utils", () => ({
   rescoreStoredRun: jest.fn(),
 }));
 jest.mock("../../utils/project.utils", () => ({ createNewProjectQuery: jest.fn() }));
+// Approving a use case reads the org's use case defaults (#5192): none set.
+jest.mock("../../utils/useCaseOrgSettings.utils", () => ({
+  getUseCaseOrgSettings: async (organizationId: number) => ({
+    organization_id: organizationId,
+    default_geography: null,
+    default_framework_ids: [],
+  }),
+}));
+jest.mock("../../utils/framework.utils", () => ({ addFrameworkToProjectQuery: async () => true }));
 jest.mock("../../utils/eu.utils", () => ({ createEUFrameworkQuery: jest.fn() }));
 jest.mock("../../utils/modelInventory.utils", () => ({ createNewModelInventoryQuery: jest.fn() }));
 jest.mock("../../domain.layer/models/modelInventory/modelInventory.model", () => ({
@@ -207,7 +216,7 @@ describe("approve: who may decide", () => {
   it("a standard reviewer can't approve while setting the level to Prohibited", async () => {
     const r = await approve(STANDARD, PROHIBITED);
     expect(r.status).toBe(403);
-    expect(r.body.data).toBe("A senior reviewer has to decide this: prohibited practice");
+    expect(r.body.data).toBe("An expert reviewer has to decide this: prohibited practice");
     expect(tx.rollback).toHaveBeenCalled();
     expect(tx.commit).not.toHaveBeenCalled();
     expect(intake.approveSubmissionQuery).not.toHaveBeenCalled();
@@ -219,7 +228,7 @@ describe("approve: who may decide", () => {
     });
     expect(r.status).toBe(403);
     expect(r.body.data).toBe(
-      "A senior reviewer has to decide this: the score is at or above the threshold",
+      "An expert reviewer has to decide this: the score is at or above the threshold",
     );
   });
 
@@ -239,7 +248,7 @@ describe("approve: who may decide", () => {
     const r = await approve(STANDARD);
     expect(r.status).toBe(403);
     expect(r.body.data).toBe(
-      "A senior reviewer has to decide this: the score is at or above the threshold",
+      "An expert reviewer has to decide this: the score is at or above the threshold",
     );
   });
 
@@ -276,7 +285,7 @@ describe("routing on, no lane stored yet", () => {
     intake.getSubmissionByIdQuery.mockResolvedValue(unrouted({ riskAssessment: PENDING_SCORE }));
     const r = await approve(STANDARD);
     expect(r.status).toBe(403);
-    expect(r.body.data).toBe("A senior reviewer has to decide this: no usable score");
+    expect(r.body.data).toBe("An expert reviewer has to decide this: no usable score");
     expect(intake.approveSubmissionQuery).not.toHaveBeenCalled();
   });
 
@@ -291,7 +300,7 @@ describe("routing on, no lane stored yet", () => {
     intake.getSubmissionByIdQuery.mockResolvedValue(unrouted({ riskAssessment: PENDING_SCORE }));
     const r = await reject(STANDARD);
     expect(r.status).toBe(403);
-    expect(r.body.data).toBe("This submission is assigned to senior reviewers");
+    expect(r.body.data).toBe("This submission is assigned to expert reviewers");
     expect(tx.rollback).toHaveBeenCalled();
     expect(intake.rejectSubmissionQuery).not.toHaveBeenCalled();
   });
@@ -311,7 +320,7 @@ describe("routing on, no lane stored yet", () => {
     expect(r.body.data).toMatchObject({
       routing: null,
       canDecide: false,
-      decideBlockedReason: "This submission is assigned to senior reviewers",
+      decideBlockedReason: "This submission is assigned to expert reviewers",
       laneReviewers: [{ id: SENIOR, name: "Sam Senior" }],
     });
   });
@@ -350,7 +359,7 @@ describe("approve: a use case without a stored EU AI Act run", () => {
   it("a standard reviewer can't create it at Prohibited on the standard lane", async () => {
     const r = await approve(STANDARD, prohibitedEntity);
     expect(r.status).toBe(403);
-    expect(r.body.data).toBe("A senior reviewer has to decide this: prohibited practice");
+    expect(r.body.data).toBe("An expert reviewer has to decide this: prohibited practice");
     expect(projects.createNewProjectQuery).not.toHaveBeenCalled();
   });
 
@@ -492,7 +501,7 @@ describe("reject: who may decide", () => {
     intake.getSubmissionByIdQuery.mockResolvedValue(submission({ routing: SENIOR_LANE }));
     const r = await reject(STANDARD);
     expect(r.status).toBe(403);
-    expect(r.body.data).toBe("This submission is assigned to senior reviewers");
+    expect(r.body.data).toBe("This submission is assigned to expert reviewers");
     expect(tx.rollback).toHaveBeenCalled();
     expect(intake.rejectSubmissionQuery).not.toHaveBeenCalled();
   });
@@ -532,7 +541,7 @@ describe("getSubmissionPreview: lane", () => {
     expect(r.body.data).toMatchObject({
       routing: SENIOR_LANE,
       canDecide: false,
-      decideBlockedReason: "This submission is assigned to senior reviewers",
+      decideBlockedReason: "This submission is assigned to expert reviewers",
       laneReviewers: [{ id: SENIOR, name: "Sam Senior" }],
       isSeniorReviewer: false,
     });

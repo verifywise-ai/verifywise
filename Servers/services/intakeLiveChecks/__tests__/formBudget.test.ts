@@ -74,7 +74,7 @@ describe("formBudgetKey", () => {
 
 describe("consumeFormBudget", () => {
   it("exports the per-form hourly caps and the Redis time limit", () => {
-    expect(FORM_BUDGET_PER_HOUR).toEqual({ checks: 300, prefill: 20 });
+    expect(FORM_BUDGET_PER_HOUR).toEqual({ checks: 300, prefill: 20, explain: 100 });
     expect(REDIS_TIMEOUT_MS).toBe(300);
   });
 

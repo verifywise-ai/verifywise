@@ -15,6 +15,17 @@ export interface IProjectListProps {
   isLoading?: boolean;
   onFilterChange?: (filteredProjects: Project[], filters: any) => void;
   onProjectDeleted?: () => void;
+  /** Live use cases nobody confirmed within the "still live?" interval (#5187). */
+  staleIds?: Set<number>;
+  /** Shown when `projects` is empty but use cases exist in other lifecycle tabs. */
+  emptyMessage?: string;
+  /** Rendered above the toolbar, e.g. lifecycle tabs. */
+  header?: unknown;
+  /**
+   * Rendered between the toolbar and the list once loading is done, given the
+   * search text (e.g. intake requests in the In review tab).
+   */
+  renderBeforeList?: (searchTerm: string) => unknown;
 }
 
 export interface IProjectTableViewProps {
@@ -22,6 +33,13 @@ export interface IProjectTableViewProps {
   hidePagination?: boolean;
   onProjectDeleted?: () => void;
   visibleColumns?: Set<string>;
+  /**
+   * Shown instead of the "no use cases yet" guidance when the list is empty
+   * because a search or filter hid every row, not because none exist.
+   */
+  emptyMessage?: string;
+  /** Live use cases nobody confirmed within the "still live?" interval (#5187). */
+  staleIds?: Set<number>;
 }
 
 export interface IProjectRiskMitigationProps {

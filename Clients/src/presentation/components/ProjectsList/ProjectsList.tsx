@@ -26,12 +26,36 @@ import {
   formatHighRiskRoles,
   projectHighRiskRoles,
 } from "../../../application/utils/highRiskRoles";
+import { AiRiskClassification } from "../../../domain/enums/aiRiskClassification.enum";
+
+/**
+ * Every classification a use case can carry, in severity order. The filter used
+ * to list only High, Limited and Minimal risk plus Out of scope, so Prohibited,
+ * GPAI and General risk use cases could not be filtered at all. Matching is
+ * case-insensitive (useFilterBy), so the label can be sentence case while the
+ * value stays the stored enum string.
+ */
+export const RISK_LEVEL_FILTER_OPTIONS = [
+  { value: AiRiskClassification.PROHIBITED, label: "Prohibited" },
+  { value: AiRiskClassification.HIGH_RISK, label: "High risk" },
+  { value: AiRiskClassification.LIMITED_RISK, label: "Limited risk" },
+  { value: AiRiskClassification.MINIMAL_RISK, label: "Minimal risk" },
+  { value: AiRiskClassification.GPAI, label: "GPAI" },
+  { value: AiRiskClassification.GENERAL_RISK, label: "General risk" },
+  { value: AiRiskClassification.OUT_OF_SCOPE, label: "Out of scope" },
+];
+
+const NO_MATCHES_MESSAGE = "No use cases match your search or filters.";
 
 const ProjectList = ({
   projects,
   newProjectButton,
   onProjectDeleted,
   isLoading = false,
+  staleIds,
+  emptyMessage,
+  header,
+  renderBeforeList,
 }: IProjectListProps) => {
   const formatDate = useFormattedDate();
   const [searchTerm, setSearchTerm] = useState("");
@@ -134,12 +158,7 @@ const ProjectList = ({
         id: "ai_risk_classification",
         label: "Risk level",
         type: "select" as const,
-        options: [
-          { value: "High Risk", label: "High risk" },
-          { value: "Limited Risk", label: "Limited risk" },
-          { value: "Minimal Risk", label: "Minimal risk" },
-          { value: "Out of scope", label: "Out of scope" },
-        ],
+        options: RISK_LEVEL_FILTER_OPTIONS,
       },
       {
         id: "owner",
@@ -193,12 +212,14 @@ const ProjectList = ({
     let result = filterProjectData(projects);
 
     // Apply search filter last
-    // Search by project title or uc_id
-    if (searchTerm) {
+    // Search by project title or uc_id. Trimmed so a stray space from a paste
+    // does not hide every row.
+    const term = searchTerm.trim().toLowerCase();
+    if (term) {
       result = result.filter(
         (p) =>
-          p.project_title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (p.uc_id && p.uc_id.toLowerCase().includes(searchTerm.toLowerCase())),
+          (p.project_title || "").toLowerCase().includes(term) ||
+          (p.uc_id && p.uc_id.toLowerCase().includes(term)),
       );
     }
 
@@ -244,6 +265,16 @@ const ProjectList = ({
       );
     }
 
+    if ((!projects || projects.length === 0) && emptyMessage) {
+      return viewMode === "table" ? (
+        <ProjectTableView projects={[]} emptyMessage={emptyMessage} />
+      ) : (
+        <Typography variant="body1" sx={noProjectsTextStyle}>
+          {emptyMessage}
+        </Typography>
+      );
+    }
+
     if (!projects || projects.length === 0) {
       return viewMode === "table" ? (
         <ProjectTableView projects={[]} />
@@ -254,10 +285,10 @@ const ProjectList = ({
 
     if (filteredProjects.length === 0) {
       return viewMode === "table" ? (
-        <ProjectTableView projects={[]} />
+        <ProjectTableView projects={[]} emptyMessage={NO_MATCHES_MESSAGE} />
       ) : (
         <Typography variant="body1" sx={noProjectsTextStyle}>
-          No use cases found. Try another search term or create a new use case.
+          {NO_MATCHES_MESSAGE}
         </Typography>
       );
     }
@@ -273,6 +304,7 @@ const ProjectList = ({
               hidePagination={options?.hidePagination}
               onProjectDeleted={onProjectDeleted}
               visibleColumns={visibleColumns}
+              staleIds={staleIds}
             />
           )}
         />
@@ -283,7 +315,7 @@ const ProjectList = ({
       return (
         <Box sx={projectWrapperStyle(filteredProjects.length)}>
           {filteredProjects.map((project) => (
-            <ProjectCard key={project.id} project={project} />
+            <ProjectCard key={project.id} project={project} isStale={staleIds?.has(project.id)} />
           ))}
         </Box>
       );
@@ -293,7 +325,7 @@ const ProjectList = ({
       <Box sx={vwhomeBodyProjectsGrid}>
         {filteredProjects.map((project) => (
           <Box key={project.id} sx={{ gridColumn: "span 1" }}>
-            <ProjectCard project={project} />
+            <ProjectCard project={project} isStale={staleIds?.has(project.id)} />
           </Box>
         ))}
       </Box>
@@ -303,12 +335,12 @@ const ProjectList = ({
   // Export columns and data for use cases
   const exportColumns = useMemo(() => {
     return [
-      { id: "uc_id", label: "Use Case ID" },
-      { id: "project_title", label: "Use Case Title" },
-      { id: "ai_risk_classification", label: "AI Risk Level" },
+      { id: "uc_id", label: "Use case ID" },
+      { id: "project_title", label: "Use case title" },
+      { id: "ai_risk_classification", label: "AI risk level" },
       { id: "high_risk_roles", label: "High-risk roles" },
-      { id: "start_date", label: "Start Date" },
-      { id: "last_updated", label: "Last Updated" },
+      { id: "start_date", label: "Start date" },
+      { id: "last_updated", label: "Last updated" },
       { id: "owner", label: "Owner" },
       { id: "status", label: "Status" },
     ];
@@ -333,6 +365,7 @@ const ProjectList = ({
 
   return (
     <Box sx={{ width: "100%" }}>
+      {header as React.ReactNode}
       <Box
         sx={{
           display: "flex",
@@ -384,12 +417,14 @@ const ProjectList = ({
             data={exportData}
             columns={exportColumns}
             filename="use-cases"
-            title="Use Cases"
+            title="Use cases"
           />
           {newProjectButton as React.ReactNode}
           <ViewToggle viewMode={viewMode} onViewChange={setViewMode} />
         </Box>
       </Box>
+
+      {!isLoading && (renderBeforeList?.(searchTerm) as React.ReactNode)}
 
       {/* Projects List */}
       {renderProjects()}

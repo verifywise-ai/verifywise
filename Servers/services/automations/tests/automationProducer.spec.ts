@@ -50,6 +50,7 @@ import {
   scheduleAiGatewayCacheCleanup,
   scheduleMcpGatewayCleanup,
   scheduleFileExpirySweep,
+  scheduleIntakeConfirmationSweep,
   scheduleDataRetentionPrune,
   BackgroundJobsUnavailableError,
   QUEUE_CALL_TIMEOUT_MS,
@@ -228,6 +229,19 @@ describe("automationProducer", () => {
 
       expect(mockObliterate).not.toHaveBeenCalled();
       expectSchedulerCall("file_expiry_sweep", { type: "file_expiry" }, "30 4 * * *");
+    });
+  });
+
+  describe("scheduleIntakeConfirmationSweep", () => {
+    it("should add a repeating job every 5 minutes without obliterating", async () => {
+      await scheduleIntakeConfirmationSweep();
+
+      expect(mockObliterate).not.toHaveBeenCalled();
+      expectSchedulerCall(
+        "intake_confirmation_sweep",
+        { type: "intake_confirmation" },
+        "*/5 * * * *",
+      );
     });
   });
 

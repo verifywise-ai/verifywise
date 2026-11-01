@@ -8,7 +8,9 @@ import { IntakeFormBuilder } from "../index";
 import CustomException from "../../../../infrastructure/exceptions/customeException";
 import {
   getIntakeForm,
+  getIntakeFormReviewTime,
   updateIntakeForm,
+  updateIntakeFormReviewTime,
 } from "../../../../application/repository/intakeForm.repository";
 
 // The key list is cached per organization; give the page one.
@@ -32,6 +34,10 @@ vi.mock("../../../../application/repository/intakeForm.repository", () => ({
   createIntakeForm: vi.fn().mockResolvedValue({ data: {} }),
   updateIntakeForm: vi.fn().mockResolvedValue({ data: {} }),
   getEligibleReviewers: vi.fn().mockResolvedValue([]),
+  getIntakeFormReviewTime: vi.fn().mockResolvedValue(3),
+  updateIntakeFormReviewTime: vi
+    .fn()
+    .mockImplementation((_id: number, days: number) => Promise.resolve(days)),
   IntakeFormStatus: {
     DRAFT: "draft",
     ACTIVE: "active",
@@ -40,6 +46,7 @@ vi.mock("../../../../application/repository/intakeForm.repository", () => ({
   IntakeEntityType: {
     USE_CASE: "use_case",
     MODEL: "model",
+    AI_APP: "ai_app",
   },
 }));
 
@@ -86,6 +93,10 @@ describe("IntakeFormBuilder Page", () => {
     vi.mocked(updateIntakeForm)
       .mockReset()
       .mockResolvedValue({ data: {} } as never);
+    vi.mocked(getIntakeFormReviewTime).mockReset().mockResolvedValue(3);
+    vi.mocked(updateIntakeFormReviewTime)
+      .mockReset()
+      .mockImplementation((_id: number, days: number) => Promise.resolve(days));
   });
 
   const llmKeyPicker = () =>
@@ -102,6 +113,28 @@ describe("IntakeFormBuilder Page", () => {
     });
 
     expect(container).toBeInTheDocument();
+  });
+
+  it.each([
+    ["use_case", "Type: AI use case"],
+    ["ai_app", "Type: AI app"],
+    ["model", "Type: Model inventory"],
+  ])("labels a new %s form with its type", async (entityType, label) => {
+    renderWithProviders(
+      <Routes>
+        <Route path="/intake-forms/:formId/edit" element={<IntakeFormBuilder />} />
+      </Routes>,
+      { route: `/intake-forms/new/edit?entityType=${entityType}` },
+    );
+    expect(await screen.findByText(label)).toBeInTheDocument();
+  });
+
+  it("shows the logic overview from the header toggle", () => {
+    renderWithProviders(<IntakeFormBuilder />, { route: "/intake-forms/new/edit" });
+    expect(screen.queryByTestId("logic-overview-panel")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Logic" }));
+    expect(screen.getByTestId("logic-overview-panel")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Logic" })).toHaveAttribute("aria-pressed", "true");
   });
 
   it("lists the keys from the shared query cache without fetching them again", async () => {
@@ -207,6 +240,58 @@ describe("IntakeFormBuilder Page", () => {
       ).toBe(false);
     });
 
+    // The reply carries the form as it was sent; an edit made while the
+    // request ran must survive it and keep the form unsaved.
+    it("keeps an edit made while a save is running", async () => {
+      mockGetLLMKeys.mockResolvedValue({ data: { data: [openAIKey] } });
+      vi.mocked(getIntakeForm).mockResolvedValue(savedForm(3) as never);
+      let reply: (value: unknown) => void = () => {};
+      vi.mocked(updateIntakeForm).mockImplementationOnce(
+        () => new Promise((resolve) => (reply = resolve)) as never,
+      );
+      renderEditRoute();
+      await formLoaded();
+
+      const liveChecks = await screen.findByText("Check answers while the submitter types");
+      fireEvent.click(liveChecks);
+      fireEvent.click(screen.getByRole("button", { name: "Save" }));
+      await waitFor(() => expect(updateIntakeForm).toHaveBeenCalledTimes(1));
+      // Turned back on while the save of "off" is still running.
+      fireEvent.click(liveChecks);
+      await act(async () => {
+        reply({ data: { ...savedForm(3).data, liveChecksEnabled: false, publicId: "abc" } });
+      });
+
+      const save = screen.getByRole("button", { name: "Save" });
+      await waitFor(() => expect(save).toBeEnabled());
+      expect(screen.getByText("Unsaved")).toBeInTheDocument();
+      fireEvent.click(save);
+      await waitFor(() => expect(updateIntakeForm).toHaveBeenCalledTimes(2));
+      const second = vi.mocked(updateIntakeForm).mock.calls[1][1] as {
+        liveChecksEnabled: unknown;
+        publicId: unknown;
+      };
+      expect(second.liveChecksEnabled).toBe(true);
+      expect(second.publicId).toBe("abc");
+    });
+
+    it("marks the form saved when nothing changed during the save", async () => {
+      mockGetLLMKeys.mockResolvedValue({ data: { data: [openAIKey] } });
+      vi.mocked(getIntakeForm).mockResolvedValue(savedForm(3) as never);
+      vi.mocked(updateIntakeForm).mockResolvedValueOnce({
+        data: { ...savedForm(3).data, liveChecksEnabled: false },
+      } as never);
+      renderEditRoute();
+      await formLoaded();
+
+      fireEvent.click(await screen.findByText("Check answers while the submitter types"));
+      fireEvent.click(screen.getByRole("button", { name: "Save" }));
+      await waitFor(() => expect(updateIntakeForm).toHaveBeenCalledTimes(1));
+      // "Unsaved" follows isDirty alone; Save is also disabled while saving.
+      await waitFor(() => expect(screen.queryByText("Unsaved")).not.toBeInTheDocument());
+      expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+    });
+
     it("still counts while the key list is loading", async () => {
       mockGetLLMKeys.mockReturnValue(new Promise(() => {}));
       vi.mocked(getIntakeForm).mockResolvedValue(savedForm(3, false) as never);
@@ -248,7 +333,7 @@ describe("IntakeFormBuilder Page", () => {
           schema: {
             version: "1.0",
             fields: [
-              { id: "total", type: "calculated", label: "Total", order: 0, formula: "{later} + 1" },
+              { id: "total", type: "calculated", label: "Total", order: 0, formula: "{total} + 1" },
               { id: "later", type: "number", label: "Later", order: 1 },
             ],
           },
@@ -277,7 +362,7 @@ describe("IntakeFormBuilder Page", () => {
           schema: {
             version: "1.0",
             fields: [
-              { id: "total", type: "calculated", label: "Total", order: 0, formula: "{later} + 1" },
+              { id: "total", type: "calculated", label: "Total", order: 0, formula: "{total} + 1" },
               { id: "later", type: "number", label: "Later", order: 1 },
             ],
           },
@@ -306,7 +391,7 @@ describe("IntakeFormBuilder Page", () => {
           schema: {
             version: "1.0",
             fields: [
-              { id: "total", type: "calculated", label: "Total", order: 0, formula: "{later} + 1" },
+              { id: "total", type: "calculated", label: "Total", order: 0, formula: "{total} + 1" },
               { id: "later", type: "number", label: "Later", order: 1 },
             ],
           },
@@ -409,6 +494,72 @@ describe("IntakeFormBuilder Page", () => {
 
       expect(screen.getByTestId("suggested-questions")).toBeInTheDocument();
       expect(toggle()).toBeInTheDocument();
+    });
+
+    describe("review time", () => {
+      const reviewTime = () => screen.getByLabelText("Review time (business days)");
+
+      it("shows the stored review time", async () => {
+        vi.mocked(getIntakeForm).mockResolvedValue(savedForm(null) as never);
+        vi.mocked(getIntakeFormReviewTime).mockResolvedValue(7);
+        renderEditRoute();
+        await formLoaded();
+        await waitFor(() => expect(reviewTime()).toHaveValue(7));
+        expect(getIntakeFormReviewTime).toHaveBeenCalledWith(5);
+      });
+
+      it("saves a changed review time through its own endpoint, after the form", async () => {
+        vi.mocked(getIntakeForm).mockResolvedValue(savedForm(null) as never);
+        renderEditRoute();
+        await formLoaded();
+        await waitFor(() => expect(reviewTime()).toHaveValue(3));
+
+        fireEvent.change(reviewTime(), { target: { value: "10" } });
+        fireEvent.click(screen.getByRole("button", { name: "Save" }));
+        await waitFor(() => expect(updateIntakeFormReviewTime).toHaveBeenCalledWith(5, 10));
+        // The frozen form contract never carries it.
+        expect(vi.mocked(updateIntakeForm).mock.calls[0][1]).not.toHaveProperty("reviewDays");
+        expect(vi.mocked(updateIntakeForm).mock.invocationCallOrder[0]).toBeLessThan(
+          vi.mocked(updateIntakeFormReviewTime).mock.invocationCallOrder[0],
+        );
+      });
+
+      it("does not send an unchanged review time", async () => {
+        vi.mocked(getIntakeForm).mockResolvedValue(savedForm(null) as never);
+        renderEditRoute();
+        await formLoaded();
+
+        fireEvent.click(await screen.findByText("Check answers while the submitter types"));
+        fireEvent.click(screen.getByRole("button", { name: "Save" }));
+        await waitFor(() => expect(updateIntakeForm).toHaveBeenCalled());
+        expect(updateIntakeFormReviewTime).not.toHaveBeenCalled();
+      });
+
+      it("blocks a save while the review time is out of range", async () => {
+        vi.mocked(getIntakeForm).mockResolvedValue(savedForm(null) as never);
+        renderEditRoute();
+        await formLoaded();
+
+        fireEvent.change(reviewTime(), { target: { value: "31" } });
+        fireEvent.click(screen.getByRole("button", { name: "Save" }));
+        expect(await screen.findByText("Fix the review time before saving")).toBeInTheDocument();
+        expect(updateIntakeForm).not.toHaveBeenCalled();
+      });
+
+      it("says so when the review time could not be saved", async () => {
+        vi.mocked(getIntakeForm).mockResolvedValue(savedForm(null) as never);
+        vi.mocked(updateIntakeFormReviewTime).mockRejectedValue(new Error("down"));
+        renderEditRoute();
+        await formLoaded();
+
+        fireEvent.change(reviewTime(), { target: { value: "4" } });
+        fireEvent.click(screen.getByRole("button", { name: "Save" }));
+        expect(
+          await screen.findByText(
+            "The form was saved, but the review time was not. Click Save to try again.",
+          ),
+        ).toBeInTheDocument();
+      });
     });
 
     it("hides the toggle when there is no key and the panel is off", async () => {

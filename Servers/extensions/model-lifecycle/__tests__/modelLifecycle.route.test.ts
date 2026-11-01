@@ -56,7 +56,7 @@ describe("DELETE .../lifecycle/items/:itemId/files/:fileId validation", () => {
     const res = await request(app).delete(detachPath("10", "20", "99"));
 
     expect(res.status).toBe(200);
-    expect(svc.detachFile).toHaveBeenCalledWith(42, 10, 20, 99);
+    expect(svc.detachFile).toHaveBeenCalledWith(42, 10, 20, 99, 9);
   });
 });
 
