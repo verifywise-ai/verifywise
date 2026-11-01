@@ -189,6 +189,9 @@ function useCaseInputFor(submission: IIntakeSubmission, form: IIntakeForm): UseC
       technology: technology || undefined,
     };
   }
+  if (submission.entityType === IntakeEntityType.AI_APP) {
+    return { name: text("name") ?? form.name, purpose: text("description") };
+  }
   return {
     name: text("project_title") ?? form.name,
     purpose: text("goal", "description"),
@@ -257,6 +260,20 @@ async function runSuggestionsStage(
   deps: AssessmentDeps,
 ): Promise<void> {
   const { model, submission, form, answers, classification, submissionId, organizationId } = ctx;
+  // AI apps have no risk register, so their requests get no suggestions
+  // (#5193). The stage is stored as settled so nothing waits on it.
+  if (submission.entityType === IntakeEntityType.AI_APP) {
+    await deps.saveSuggestions(
+      submissionId,
+      {
+        ...pendingSuggestions(startedAt),
+        status: "complete",
+        generatedAt: deps.now().toISOString(),
+      },
+      organizationId,
+    );
+    return;
+  }
   if (!model) {
     await deps.saveSuggestions(
       submissionId,

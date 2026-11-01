@@ -27,6 +27,8 @@ function getEntityTypeDisplayName(entityType: IntakeEntityType): string {
       return "Model";
     case IntakeEntityType.USE_CASE:
       return "Use Case";
+    case IntakeEntityType.AI_APP:
+      return "AI App";
     default:
       return entityType;
   }

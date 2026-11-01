@@ -226,6 +226,87 @@ export const useCasesContent: ArticleContent = {
     },
     {
       type: 'heading',
+      id: 'lifecycle',
+      level: 2,
+      text: 'Lifecycle: in review, planned, live, retired',
+    },
+    {
+      type: 'paragraph',
+      text: 'The Use cases page splits the inventory into four tabs, each with a count. The lifecycle stage is separate from the status field. Keep using the status to track the work.',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { bold: 'In review', text: 'An approval request is open, or an intake request is waiting for a decision. Intake requests are listed under the search bar, and **Review** opens the submission. The search covers them too, but the export leaves them out. The use case is created only when the request is approved. It then arrives as planned. Rejected and superseded requests are not shown. Days in review count from the first time a request was submitted.' },
+        { bold: 'Planned', text: 'Approved, or created without an approval workflow, but not in use yet.' },
+        { bold: 'Live', text: 'In use. The owner recorded a go-live date.' },
+        { bold: 'Retired', text: 'No longer in use. It stays in the inventory with its history.' },
+      ],
+    },
+    {
+      type: 'image',
+      src: '/images/user-guide/use-cases-in-review-intake.png',
+      alt: 'In review tab with an Intake requests table above the use cases waiting for an approval decision',
+      caption: 'The In review tab. Intake requests are listed first, with the number of days each one has waited.',
+    },
+    {
+      type: 'image',
+      src: '/images/user-guide/use-cases-lifecycle-tabs.png',
+      alt: 'Use cases page with the In review, Planned, Live and Retired tabs. The Live tab lists 4 use cases and one is marked Stale',
+      caption: 'The Live tab. Transaction fraud scoring is marked Stale because nobody has confirmed it recently.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Open a use case to move it along. On the Overview tab, choose **Mark as live** and pick the go-live date (today or earlier), or choose **Retire**. A planned use case that never launches can be retired too. The same panel holds the department. The dashboard uses it to group live use cases.',
+    },
+    {
+      type: 'image',
+      src: '/images/user-guide/use-case-mark-as-live.png',
+      alt: 'Mark as live dialog with a go-live date picker',
+      caption: 'Marking a use case as live records the go-live date.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Admins, Editors and the use case owner can change the lifecycle. Auditors cannot, even when they own the use case.',
+    },
+    {
+      type: 'heading',
+      id: 'still-live-check',
+      level: 3,
+      text: 'Still-live check',
+    },
+    {
+      type: 'paragraph',
+      text: 'The owner of a live use case confirms from time to time that it is still in use. If nobody confirms it within the check interval, it gets a Stale marker in the list. Its owner gets an email asking them to confirm it or retire it, once per interval until someone acts. To confirm, choose **Confirm still live** on the Overview tab.',
+    },
+    {
+      type: 'image',
+      src: '/images/user-guide/use-case-stale.png',
+      alt: 'Overview tab of a live use case with a warning that nobody has confirmed it is still live, and Confirm still live and Retire buttons',
+      caption: 'A stale use case. The owner confirms it is still live or retires it.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Admins set the interval under Settings, Organization, Still-live check: every 30, 90 or 180 days. The default is 90 days. The same setting covers AI apps.',
+    },
+    {
+      type: 'image',
+      src: '/images/user-guide/still-live-check-settings.png',
+      alt: 'Still-live check section in organization settings with the Ask owners to confirm dropdown set to every 90 days',
+      caption: 'One interval for the whole organization.',
+    },
+    {
+      type: 'paragraph',
+      text: 'The dashboard shows the count per stage and what went live or was retired this quarter. It also groups live use cases by department, risk tier or regulation. A separate card lists the stale entries. **Time in review** gives the median and average number of days approved intake requests waited for a decision over the last 12 months.',
+    },
+    {
+      type: 'image',
+      src: '/images/user-guide/use-case-lifecycle-dashboard.png',
+      alt: 'Dashboard cards for the use case lifecycle, this quarter, time in review, live use cases by department and stale use cases',
+      caption: 'The lifecycle cards on the dashboard.',
+    },
+    {
+      type: 'heading',
       id: 'list-view',
       level: 2,
       text: 'Working with the list',
@@ -306,6 +387,7 @@ export const useCasesContent: ArticleContent = {
         { text: 'You are added as a team member (email varies by role)' },
         { text: 'An approval request changes status' },
         { text: 'A new use case is created (Slack, if your organization has it connected)' },
+        { text: 'A live use case you own has not been confirmed within the check interval' },
       ],
     },
     {

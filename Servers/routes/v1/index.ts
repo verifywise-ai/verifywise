@@ -20,6 +20,10 @@ import modelLifecycleChangeHistoryRoutes from "./modelLifecycleChangeHistory.rou
 import controlEUChangeHistoryRoutes from "./controlEUChangeHistory.route";
 import subcontrolEUChangeHistoryRoutes from "./subcontrolEUChangeHistory.route";
 import annexCategoryChangeHistoryRoutes from "./annexCategoryChangeHistory.route";
+import useCaseLifecycleRoutes from "./useCaseLifecycle.route";
+import lifecycleSettingsRoutes from "./lifecycleSettings.route";
+import aiAppsRoutes from "./aiApps.route";
+import aiAppLifecycleRoutes from "./aiAppLifecycle.route";
 
 const router = express.Router();
 
@@ -34,5 +38,13 @@ router.use("/model-lifecycle-change-history", modelLifecycleChangeHistoryRoutes)
 router.use("/control-eu-change-history", controlEUChangeHistoryRoutes);
 router.use("/subcontrol-eu-change-history", subcontrolEUChangeHistoryRoutes);
 router.use("/annex-category-change-history", annexCategoryChangeHistoryRoutes);
+
+// Use case lifecycle and the org-wide "still live?" interval (#5187).
+router.use("/use-case-lifecycle", useCaseLifecycleRoutes);
+router.use("/lifecycle-settings", lifecycleSettingsRoutes);
+
+// AI apps with their lifecycle (#5193).
+router.use("/ai-apps", aiAppsRoutes);
+router.use("/ai-app-lifecycle", aiAppLifecycleRoutes);
 
 export default router;
