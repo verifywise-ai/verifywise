@@ -135,6 +135,18 @@ export const tenantIsolationRegistry: IsolationEntity[] = [
     testFile: "file-org-settings.isolation.test.ts",
   },
   {
+    name: "use_case_org_settings",
+    tables: ["use_case_org_settings"],
+    baseRoute: "/api/v1/use-case-org-settings",
+    testFile: "use-case-org-settings.isolation.test.ts",
+  },
+  {
+    name: "lifecycle_org_settings",
+    tables: ["lifecycle_org_settings"],
+    baseRoute: "/api/v1/lifecycle-settings",
+    testFile: "lifecycle-org-settings.isolation.test.ts",
+  },
+  {
     name: "data_retention",
     tables: [
       "data_retention_settings",
@@ -203,6 +215,11 @@ export const tenantIsolationRegistry: IsolationEntity[] = [
     name: "file_change_history",
     tables: ["file_change_history"],
     baseRoute: "/api/file-change-history",
+  },
+  {
+    name: "ai_app_change_history",
+    tables: ["ai_app_change_history"],
+    baseRoute: "/api/v1/ai-app-lifecycle",
   },
   {
     name: "mrm_validations",

@@ -1,0 +1,75 @@
+import { useMemo } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  confirmAiAppStillLive,
+  getAiAppLifecycle,
+  getAiAppLifecycleSummary,
+  getPendingAiAppSubmissions,
+  markAiAppLive,
+  retireAiApp,
+} from "../repository/aiAppLifecycle.repository";
+import { aiAppQueryKeys } from "./useAiApps";
+import { PENDING_REQUESTS_QUERY_OPTIONS } from "./useUseCaseLifecycle";
+import { withPendingRequests } from "../utils/useCaseLifecycle";
+
+/**
+ * AI app lifecycle queries (#5193). Keys sit under aiAppQueryKeys.all, so
+ * creating, editing or deleting an AI app refreshes the counts too.
+ */
+export const aiAppLifecycleKeys = {
+  all: aiAppQueryKeys.lifecycle(),
+  summary: () => [...aiAppLifecycleKeys.all, "summary"] as const,
+  detail: (id: number) => [...aiAppLifecycleKeys.all, "detail", id] as const,
+  pendingSubmissions: () => [...aiAppLifecycleKeys.all, "pendingSubmissions"] as const,
+};
+
+export function useAiAppLifecycleSummary() {
+  return useQuery({
+    queryKey: aiAppLifecycleKeys.summary(),
+    queryFn: getAiAppLifecycleSummary,
+    staleTime: 60 * 1000,
+  });
+}
+
+/** Pending AI app intake requests, shown in the In review tab. */
+export function usePendingAiAppSubmissions() {
+  return useQuery({
+    queryKey: aiAppLifecycleKeys.pendingSubmissions(),
+    queryFn: getPendingAiAppSubmissions,
+    ...PENDING_REQUESTS_QUERY_OPTIONS,
+  });
+}
+
+/**
+ * The AI apps tab counts: the server counts per stage (the list is paged),
+ * with pending intake requests added to In review, as for use cases.
+ */
+export function useAiAppStageCounts() {
+  const summary = useAiAppLifecycleSummary();
+  const { data: pending } = usePendingAiAppSubmissions();
+  const pendingTotal = pending?.total ?? 0;
+  const counts = useMemo(
+    () => (summary.data ? withPendingRequests(summary.data.counts, pendingTotal) : undefined),
+    [summary.data, pendingTotal],
+  );
+  return { summary, counts, pending };
+}
+
+export function useAiAppLifecycle(id: number | null) {
+  return useQuery({
+    queryKey: aiAppLifecycleKeys.detail(id ?? 0),
+    queryFn: () => getAiAppLifecycle(id!),
+    enabled: id !== null && id > 0,
+  });
+}
+
+/** Go live, retire and confirm for one AI app; each refreshes every AI app query. */
+export function useAiAppLifecycleActions(id: number) {
+  const queryClient = useQueryClient();
+  const onSuccess = () => queryClient.invalidateQueries({ queryKey: aiAppQueryKeys.all });
+  return {
+    goLive: useMutation({ mutationFn: (date: string) => markAiAppLive(id, date), onSuccess }),
+    retire: useMutation({ mutationFn: () => retireAiApp(id), onSuccess }),
+    confirm: useMutation({ mutationFn: () => confirmAiAppStillLive(id), onSuccess }),
+  };
+}

@@ -12176,6 +12176,343 @@ export const v1ChangeHistoryEndpoints: Endpoint[] = [
   },
 ];
 
+// v1: Intake Forms endpoints
+export const v1IntakeFormsEndpoints: Endpoint[] = [
+  {
+    method: 'POST',
+    path: '/v1/intake-tier-suggestion/public/by-id/{publicId}',
+    summary: "Post Public Tier Suggestion",
+    requiresAuth: false,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Intake Forms",
+  },
+  {
+    method: 'POST',
+    path: '/v1/intake-tier-suggestion/public/by-id/{publicId}/explain',
+    summary: "Post Public Tier Explanation",
+    requiresAuth: false,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Intake Forms",
+  },
+  {
+    method: 'POST',
+    path: '/v1/intake-tier-suggestion/public/by-id/{publicId}/submit',
+    summary: "Submit Public Form By Public Id",
+    requiresAuth: false,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Intake Forms",
+  },
+  {
+    method: 'POST',
+    path: '/v1/intake-tier-suggestion/public/{tenantSlug}/{formSlug}',
+    summary: "Post Public Tier Suggestion",
+    requiresAuth: false,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Intake Forms",
+  },
+  {
+    method: 'POST',
+    path: '/v1/intake-tier-suggestion/public/{tenantSlug}/{formSlug}/explain',
+    summary: "Post Public Tier Explanation",
+    requiresAuth: false,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Intake Forms",
+  },
+  {
+    method: 'POST',
+    path: '/v1/intake-tier-suggestion/public/{tenantSlug}/{formSlug}/submit',
+    summary: "Submit Public Form",
+    requiresAuth: false,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Intake Forms",
+  },
+  {
+    method: 'GET',
+    path: '/v1/intake-tier-suggestion/submissions/{id}',
+    summary: "Get Submission Tier Suggestion Response",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Intake Forms",
+  },
+];
+
+// v1: Use Case Settings endpoints
+export const v1UseCaseSettingsEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/use-case-org-settings',
+    summary: "Get Use Case Org Settings Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Use Case Settings",
+  },
+  {
+    method: 'PUT',
+    path: '/v1/use-case-org-settings',
+    summary: "Update Use Case Org Settings Handler",
+    description: "Requires role: Admin",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Use Case Settings",
+  },
+];
+
+// v1: V1/Ai App Lifecycle endpoints
+export const v1V1aiAppLifecycleEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/ai-app-lifecycle/summary',
+    summary: "Get Ai App Lifecycle Summary Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai App Lifecycle",
+  },
+  {
+    method: 'GET',
+    path: '/v1/ai-app-lifecycle/{id}',
+    summary: "Get Ai App Lifecycle Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai App Lifecycle",
+  },
+  {
+    method: 'GET',
+    path: '/v1/ai-app-lifecycle/{id}/history',
+    summary: "Get Ai App History Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai App Lifecycle",
+  },
+  {
+    method: 'POST',
+    path: '/v1/ai-app-lifecycle/{id}/go-live',
+    summary: "Ai App Go Live Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai App Lifecycle",
+  },
+  {
+    method: 'POST',
+    path: '/v1/ai-app-lifecycle/{id}/retire',
+    summary: "Ai App Retire Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai App Lifecycle",
+  },
+  {
+    method: 'POST',
+    path: '/v1/ai-app-lifecycle/{id}/confirm',
+    summary: "Ai App Confirm Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai App Lifecycle",
+  },
+  {
+    method: 'GET',
+    path: '/v1/ai-app-lifecycle/intake-submissions',
+    summary: "Get Pending Ai App Submissions Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai App Lifecycle",
+  },
+];
+
+// v1: V1/Ai Apps endpoints
+export const v1V1aiAppsEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/ai-apps',
+    summary: "Get All Ai Apps V1",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai Apps",
+  },
+];
+
+// v1: V1/Intake Form Review Time endpoints
+export const v1V1intakeFormReviewTimeEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/intake-form-review-time/{formId}',
+    summary: "Get Intake Form Review Time",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Intake Form Review Time",
+  },
+  {
+    method: 'PUT',
+    path: '/v1/intake-form-review-time/{formId}',
+    summary: "Update Intake Form Review Time",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Intake Form Review Time",
+  },
+];
+
+// v1: V1/Lifecycle Settings endpoints
+export const v1V1lifecycleSettingsEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/lifecycle-settings',
+    summary: "Get Lifecycle Settings Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Lifecycle Settings",
+  },
+  {
+    method: 'PATCH',
+    path: '/v1/lifecycle-settings',
+    summary: "Update Lifecycle Settings Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Lifecycle Settings",
+  },
+];
+
+// v1: V1/Use Case Lifecycle endpoints
+export const v1V1useCaseLifecycleEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/use-case-lifecycle/summary',
+    summary: "Get Lifecycle Summary Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Use Case Lifecycle",
+  },
+  {
+    method: 'GET',
+    path: '/v1/use-case-lifecycle/dashboard',
+    summary: "Get Lifecycle Dashboard Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Use Case Lifecycle",
+  },
+  {
+    method: 'POST',
+    path: '/v1/use-case-lifecycle/{id}/go-live',
+    summary: "Go Live Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Use Case Lifecycle",
+  },
+  {
+    method: 'POST',
+    path: '/v1/use-case-lifecycle/{id}/retire',
+    summary: "Retire Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Use Case Lifecycle",
+  },
+  {
+    method: 'POST',
+    path: '/v1/use-case-lifecycle/{id}/confirm',
+    summary: "Confirm Still Live Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Use Case Lifecycle",
+  },
+  {
+    method: 'PATCH',
+    path: '/v1/use-case-lifecycle/{id}/department',
+    summary: "Update Department Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Use Case Lifecycle",
+  },
+  {
+    method: 'GET',
+    path: '/v1/use-case-lifecycle/intake-submissions',
+    summary: "Get Pending Submissions Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Use Case Lifecycle",
+  },
+];
+
 // Vendors endpoints
 export const vendorEndpoints: Endpoint[] = [
   {
@@ -12662,6 +12999,13 @@ export const allEndpoints = {
   training: trainingEndpoints,
   user: userEndpoints,
   v1ChangeHistory: v1ChangeHistoryEndpoints,
+  v1IntakeForms: v1IntakeFormsEndpoints,
+  v1UseCaseSettings: v1UseCaseSettingsEndpoints,
+  v1V1aiAppLifecycle: v1V1aiAppLifecycleEndpoints,
+  v1V1aiApps: v1V1aiAppsEndpoints,
+  v1V1intakeFormReviewTime: v1V1intakeFormReviewTimeEndpoints,
+  v1V1lifecycleSettings: v1V1lifecycleSettingsEndpoints,
+  v1V1useCaseLifecycle: v1V1useCaseLifecycleEndpoints,
   vendor: vendorEndpoints,
   vendorResearch: vendorResearchEndpoints,
   vendorRisk: vendorRiskEndpoints,

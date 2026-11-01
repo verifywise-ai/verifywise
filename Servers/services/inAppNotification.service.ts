@@ -1497,6 +1497,56 @@ export const notifyFileExpiring = async (
 };
 
 /**
+ * Ask an owner to confirm a live inventory entry is still live (#5187). Sent
+ * once per "still live?" period by the daily lifecycle confirmation sweep.
+ * `noun` and `path` come from the entity's LifecycleEntityConfig, so AI apps
+ * reuse this unchanged.
+ */
+export const notifyLifecycleConfirmationDue = async (
+  organizationId: number,
+  recipientId: number,
+  entry: {
+    id: number;
+    title: string;
+    noun: string;
+    path: string;
+    entityType: NotificationEntityType;
+    since: string;
+    intervalDays: number;
+  },
+  baseUrl: string,
+): Promise<void> => {
+  const recipient = await getUserById(recipientId);
+
+  await sendInAppNotification(
+    organizationId,
+    {
+      user_id: recipientId,
+      type: NotificationType.LIFECYCLE_CONFIRMATION_DUE,
+      title: `Is this ${entry.noun} still live?`,
+      message: `"${entry.title}" has not been confirmed as live since ${entry.since}. Confirm it, or retire it if it is no longer in use.`,
+      entity_type: entry.entityType,
+      entity_id: entry.id,
+      entity_name: entry.title,
+      action_url: entry.path,
+    },
+    true,
+    {
+      template: EMAIL_TEMPLATES.LIFECYCLE_CONFIRMATION_DUE,
+      subject: `Is "${entry.title}" still live?`,
+      variables: {
+        recipient_name: recipient ? `${recipient.name}` : "there",
+        entry_noun: entry.noun,
+        entry_title: entry.title,
+        since: entry.since,
+        interval_days: String(entry.intervalDays),
+        entry_url: `${baseUrl}${entry.path}`,
+      },
+    },
+  );
+};
+
+/**
  * Notify training assigned
  */
 export const notifyTrainingAssigned = async (

@@ -29,6 +29,19 @@ export const de: Record<string, string> = {
   "Other submissions go to regular reviewers.": "Andere Einreichungen gehen an reguläre Prüfer.",
   "Expert reviewers:": "Expertenprüfer:",
   "Regular reviewers:": "Reguläre Prüfer:",
+  // Routing number tooltips
+  "About the threshold": "Über den Schwellenwert",
+  "About the close-call margin": "Über die Spanne für Grenzfälle",
+  "About the second review share": "Über den Anteil der Zweitprüfungen",
+  "Scores at or above the threshold go to expert reviewers. Lower scores go to regular reviewers, unless they are within the close-call margin.":
+    "Werte ab dem Schwellenwert gehen an Expertenprüfer. Niedrigere Werte gehen an reguläre Prüfer, außer sie liegen innerhalb der Spanne für Grenzfälle.",
+  "Scores below the threshold by less than this margin also go to expert reviewers.":
+    "Werte, die weniger als diese Spanne unter dem Schwellenwert liegen, gehen ebenfalls an Expertenprüfer.",
+  "Approvals in the regular lane by anyone who isn't an expert reviewer are picked at random at this rate for a second review. Rejections aren't picked.":
+    "Genehmigungen in der regulären Spur von Personen, die keine Expertenprüfer sind, werden mit dieser Rate zufällig für eine Zweitprüfung ausgewählt. Ablehnungen werden nicht ausgewählt.",
+  "Risk scores run from 0 to 100": "Risikowerte reichen von 0 bis 100",
+  "Prohibited practices always go to expert reviewers. So do submissions that have no score or whose AI scoring failed.":
+    "Verbotene Praktiken gehen immer an Expertenprüfer. Das gilt auch für Einreichungen ohne Wert oder mit fehlgeschlagener KI-Bewertung.",
 };
 
 export const fr: Record<string, string> = {
@@ -60,6 +73,19 @@ export const fr: Record<string, string> = {
     "Les autres soumissions vont aux réviseurs habituels.",
   "Expert reviewers:": "Réviseurs experts :",
   "Regular reviewers:": "Réviseurs habituels :",
+  // Routing number tooltips
+  "About the threshold": "À propos du seuil",
+  "About the close-call margin": "À propos de la marge des cas limites",
+  "About the second review share": "À propos de la part de seconds examens",
+  "Scores at or above the threshold go to expert reviewers. Lower scores go to regular reviewers, unless they are within the close-call margin.":
+    "Les scores égaux ou supérieurs au seuil vont aux réviseurs experts. Les scores inférieurs vont aux réviseurs habituels, sauf s'ils sont dans la marge des cas limites.",
+  "Scores below the threshold by less than this margin also go to expert reviewers.":
+    "Les scores inférieurs au seuil de moins que cette marge vont aussi aux réviseurs experts.",
+  "Approvals in the regular lane by anyone who isn't an expert reviewer are picked at random at this rate for a second review. Rejections aren't picked.":
+    "Les approbations du circuit habituel faites par une personne qui n'est pas réviseur expert sont tirées au hasard à ce taux pour un second examen. Les refus ne sont pas tirés.",
+  "Risk scores run from 0 to 100": "Les scores de risque vont de 0 à 100",
+  "Prohibited practices always go to expert reviewers. So do submissions that have no score or whose AI scoring failed.":
+    "Les pratiques interdites vont toujours aux réviseurs experts. Les soumissions sans score ou dont l'évaluation par IA a échoué aussi.",
 };
 
 export const es: Record<string, string> = {
@@ -91,4 +117,17 @@ export const es: Record<string, string> = {
     "Los demás envíos pasan a los revisores habituales.",
   "Expert reviewers:": "Revisores expertos:",
   "Regular reviewers:": "Revisores habituales:",
+  // Routing number tooltips
+  "About the threshold": "Acerca del umbral",
+  "About the close-call margin": "Acerca del margen de casos límite",
+  "About the second review share": "Acerca de la proporción de segundas revisiones",
+  "Scores at or above the threshold go to expert reviewers. Lower scores go to regular reviewers, unless they are within the close-call margin.":
+    "Las puntuaciones iguales o superiores al umbral pasan a los revisores expertos. Las inferiores pasan a los revisores habituales, salvo que estén dentro del margen de casos límite.",
+  "Scores below the threshold by less than this margin also go to expert reviewers.":
+    "Las puntuaciones inferiores al umbral por menos que este margen también pasan a los revisores expertos.",
+  "Approvals in the regular lane by anyone who isn't an expert reviewer are picked at random at this rate for a second review. Rejections aren't picked.":
+    "Las aprobaciones del circuito habitual hechas por alguien que no es revisor experto se eligen al azar con esta tasa para una segunda revisión. Los rechazos no se eligen.",
+  "Risk scores run from 0 to 100": "Las puntuaciones de riesgo van de 0 a 100",
+  "Prohibited practices always go to expert reviewers. So do submissions that have no score or whose AI scoring failed.":
+    "Las prácticas prohibidas siempre pasan a los revisores expertos. También los envíos sin puntuación o cuya evaluación por IA falló.",
 };

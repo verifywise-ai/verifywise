@@ -11,6 +11,26 @@ interface ChangelogEntry {
 
 const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "v2.6.6",
+    date: "November 1, 2026",
+    title: "Use case and AI app lifecycles, intake form logic and MCP server auth",
+    summary:
+      "Use cases and AI apps now move through lifecycle stages from planned to retired. Each has a go-live step, followed by periodic still-live checks. The intake form builder gets a Logic overview, readable formulas, a preview for each role and threshold tooltips. Applicants see a suggested risk level before they submit, and the AI Gateway can connect to MCP servers that use OAuth client credentials or AWS IAM.",
+    items: [
+      "Use case lifecycle: lifecycle stages, go-live and retirement, plus a regular still-live check with an org-wide interval of 30, 90 or 180 days",
+      "Existing records after the upgrade: use cases with an open approval and AI apps under review start in review, closed use cases and banned AI apps start as retired, and everything else starts as planned until its owner marks it live",
+      "Use cases: pending intake requests appear in the In review tab, and Admins can set a default region and frameworks for new use cases",
+      "AI apps: lifecycle tabs, an intake flow and a retirement flow, with each lifecycle change recorded in the change history",
+      "Intake form builder: formulas and show/hide rules show field names and can read any field in the form. A Logic overview lists the form's rules, and you can preview the form and review flow as each role",
+      "Intake routing: thresholds have info tooltips, and routing and lane labels use plain terms",
+      "Intake submissions: applicants see a suggested risk level before they submit, the confirmation email names the reviewer and the review time, and the submissions list refreshes while the tab is open",
+      "AI Gateway: MCP servers can authenticate with OAuth client credentials or AWS IAM",
+      "Change history: framework controls, lifecycle values and read paths are now covered",
+      "Fixes: form builder edits made during a save are kept, Save is enabled on the first edit, generated guidance goes on the right field, and URL checks, empty answers and placeholders are handled",
+      "Security: follow-redirects and pyasn1 updated, fixing GHSA-mrwp-f3q8-3g9p and 4 high-severity pyasn1 CVEs",
+    ],
+  },
+  {
     version: "v2.6",
     date: "October 7, 2026",
     title: "Risk inheritance, evidence retention, and security hardening",

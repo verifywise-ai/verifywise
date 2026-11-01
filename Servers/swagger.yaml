@@ -694,33 +694,6 @@ components:
           type: integer
           nullable: true
           description: 'Computed risk score for the vendor'
-        other_names:
-          type: string
-          nullable: true
-          description: 'Other names the vendor is known by, separated by commas. The vendor research names the vendor by them as well.'
-          example: 'Facebook, Instagram'
-        country:
-          type: string
-          nullable: true
-          description: 'The two-letter ISO 3166-1 code of the country the vendor is registered in, in either case, stored in upper case. The vendor research takes the language and the regulator of its news searches from it.'
-          example: DE
-        registration_number:
-          type: string
-          nullable: true
-          maxLength: 64
-          description: 'The company registration number: at most 64 characters once inner white space is collapsed.'
-          example: 'HRB 12345'
-        lei:
-          type: string
-          nullable: true
-          description: 'The Legal Entity Identifier (ISO 17442): 18 letters or digits and 2 check digits that must match. White space is removed and letters are stored in upper case. A sanctions entry that carries the same LEI matches the vendor strongly.'
-          example: 5493001KJTIIGC8Y1R12
-        sec_cik:
-          type: string
-          nullable: true
-          pattern: '^[0-9]{1,10}$'
-          description: 'The Central Index Key of the vendor at the SEC: one to ten digits, stored padded with zeros to ten.'
-          example: '0000320193'
         created_at:
           type: string
           format: date-time
@@ -7922,7 +7895,21 @@ tags:
   -
     name: 'v1: Change History'
   -
+    name: 'v1: Intake Forms'
+  -
     name: 'v1: Shadow AI'
+  -
+    name: 'v1: Use Case Settings'
+  -
+    name: 'v1: V1/Ai App Lifecycle'
+  -
+    name: 'v1: V1/Ai Apps'
+  -
+    name: 'v1: V1/Intake Form Review Time'
+  -
+    name: 'v1: V1/Lifecycle Settings'
+  -
+    name: 'v1: V1/Use Case Lifecycle'
   -
     name: 'v1: Vendor Research'
   -
@@ -27243,6 +27230,378 @@ paths:
       security:
         -
           bearerAuth: []
+  /v1/use-case-lifecycle/summary:
+    get:
+      summary: 'Get Lifecycle Summary Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Use Case Lifecycle'
+      operationId: getLifecycleSummaryHandler
+      security:
+        -
+          bearerAuth: []
+  /v1/use-case-lifecycle/dashboard:
+    get:
+      summary: 'Get Lifecycle Dashboard Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Use Case Lifecycle'
+      operationId: getLifecycleDashboardHandler
+      security:
+        -
+          bearerAuth: []
+  '/v1/use-case-lifecycle/{id}/go-live':
+    post:
+      summary: 'Go Live Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Use Case Lifecycle'
+      operationId: goLiveHandler
+      security:
+        -
+          bearerAuth: []
+  '/v1/use-case-lifecycle/{id}/retire':
+    post:
+      summary: 'Retire Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Use Case Lifecycle'
+      operationId: retireHandler
+      security:
+        -
+          bearerAuth: []
+  '/v1/use-case-lifecycle/{id}/confirm':
+    post:
+      summary: 'Confirm Still Live Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Use Case Lifecycle'
+      operationId: confirmStillLiveHandler
+      security:
+        -
+          bearerAuth: []
+  '/v1/use-case-lifecycle/{id}/department':
+    patch:
+      summary: 'Update Department Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Use Case Lifecycle'
+      operationId: updateDepartmentHandler
+      security:
+        -
+          bearerAuth: []
+  /v1/lifecycle-settings:
+    get:
+      summary: 'Get Lifecycle Settings Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Lifecycle Settings'
+      operationId: getLifecycleSettingsHandler
+      security:
+        -
+          bearerAuth: []
+    patch:
+      summary: 'Update Lifecycle Settings Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Lifecycle Settings'
+      operationId: updateLifecycleSettingsHandler
+      security:
+        -
+          bearerAuth: []
+  /v1/ai-apps:
+    get:
+      summary: 'Get All Ai Apps V1'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai Apps'
+      operationId: getAllAiAppsV1
+      security:
+        -
+          bearerAuth: []
+  /v1/ai-app-lifecycle/summary:
+    get:
+      summary: 'Get Ai App Lifecycle Summary Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai App Lifecycle'
+      operationId: getAiAppLifecycleSummaryHandler
+      security:
+        -
+          bearerAuth: []
+  '/v1/ai-app-lifecycle/{id}':
+    get:
+      summary: 'Get Ai App Lifecycle Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai App Lifecycle'
+      operationId: getAiAppLifecycleHandler
+      security:
+        -
+          bearerAuth: []
+  '/v1/ai-app-lifecycle/{id}/history':
+    get:
+      summary: 'Get Ai App History Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai App Lifecycle'
+      operationId: getAiAppHistoryHandler
+      security:
+        -
+          bearerAuth: []
+  '/v1/ai-app-lifecycle/{id}/go-live':
+    post:
+      summary: 'Ai App Go Live Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai App Lifecycle'
+      operationId: aiAppGoLiveHandler
+      security:
+        -
+          bearerAuth: []
+  '/v1/ai-app-lifecycle/{id}/retire':
+    post:
+      summary: 'Ai App Retire Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai App Lifecycle'
+      operationId: aiAppRetireHandler
+      security:
+        -
+          bearerAuth: []
+  '/v1/ai-app-lifecycle/{id}/confirm':
+    post:
+      summary: 'Ai App Confirm Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai App Lifecycle'
+      operationId: aiAppConfirmHandler
+      security:
+        -
+          bearerAuth: []
+  /v1/use-case-lifecycle/intake-submissions:
+    get:
+      summary: 'Get Pending Submissions Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Use Case Lifecycle'
+      operationId: getPendingSubmissionsHandler
+      security:
+        -
+          bearerAuth: []
+  /v1/ai-app-lifecycle/intake-submissions:
+    get:
+      summary: 'Get Pending Ai App Submissions Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai App Lifecycle'
+      operationId: getPendingAiAppSubmissionsHandler
+      security:
+        -
+          bearerAuth: []
+  /v1/use-case-org-settings:
+    get:
+      summary: 'Get Use Case Org Settings Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Use Case Settings'
+      operationId: getUseCaseOrgSettingsHandler
+      security:
+        -
+          bearerAuth: []
+    put:
+      summary: 'Update Use Case Org Settings Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Use Case Settings'
+      operationId: updateUseCaseOrgSettingsHandler
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin'
+  '/v1/intake-tier-suggestion/public/by-id/{publicId}':
+    post:
+      summary: 'Post Public Tier Suggestion'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Intake Forms'
+      operationId: postPublicTierSuggestion
+  '/v1/intake-tier-suggestion/public/by-id/{publicId}/explain':
+    post:
+      summary: 'Post Public Tier Explanation'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Intake Forms'
+      operationId: postPublicTierExplanation
+  '/v1/intake-tier-suggestion/public/by-id/{publicId}/submit':
+    post:
+      summary: 'Submit Public Form By Public Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Intake Forms'
+      operationId: v1_intake_tier_suggestion_submitPublicFormByPublicId
+  '/v1/intake-tier-suggestion/public/{tenantSlug}/{formSlug}':
+    post:
+      summary: 'Post Public Tier Suggestion'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Intake Forms'
+      operationId: v1_intake_tier_suggestion_postPublicTierSuggestion
+  '/v1/intake-tier-suggestion/public/{tenantSlug}/{formSlug}/explain':
+    post:
+      summary: 'Post Public Tier Explanation'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Intake Forms'
+      operationId: v1_intake_tier_suggestion_postPublicTierExplanation
+  '/v1/intake-tier-suggestion/public/{tenantSlug}/{formSlug}/submit':
+    post:
+      summary: 'Submit Public Form'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Intake Forms'
+      operationId: v1_intake_tier_suggestion_submitPublicForm
+  '/v1/intake-tier-suggestion/submissions/{id}':
+    get:
+      summary: 'Get Submission Tier Suggestion Response'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Intake Forms'
+      operationId: getSubmissionTierSuggestionResponse
+      security:
+        -
+          bearerAuth: []
+  '/v1/intake-form-review-time/{formId}':
+    get:
+      summary: 'Get Intake Form Review Time'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Intake Form Review Time'
+      operationId: getIntakeFormReviewTime
+      security:
+        -
+          bearerAuth: []
+    put:
+      summary: 'Update Intake Form Review Time'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Intake Form Review Time'
+      operationId: updateIntakeFormReviewTime
+      security:
+        -
+          bearerAuth: []
   '/v1/vendors/{id}/research/latest':
     get:
       summary: 'Get Latest Vendor Research'
@@ -27282,6 +27641,34 @@ paths:
       tags:
         - 'v1: Vendors'
       operationId: startVendorResearchRun
+      security:
+        -
+          bearerAuth: []
+  /v1/vendors:
+    post:
+      summary: 'Create Vendor V1'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Vendors'
+      operationId: createVendorV1
+      security:
+        -
+          bearerAuth: []
+  '/v1/vendors/{id}':
+    patch:
+      summary: 'Update Vendor By Id V1'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Vendors'
+      operationId: updateVendorByIdV1
       security:
         -
           bearerAuth: []
@@ -27379,34 +27766,6 @@ paths:
       tags:
         - 'v1: Vendor Risk Findings'
       operationId: dismissVendorRiskFinding
-      security:
-        -
-          bearerAuth: []
-  /v1/vendors:
-    post:
-      summary: 'Create Vendor V1'
-      responses:
-        '200':
-          description: Success
-        '500':
-          description: 'Internal server error'
-      tags:
-        - 'v1: Vendors'
-      operationId: createVendorV1
-      security:
-        -
-          bearerAuth: []
-  '/v1/vendors/{id}':
-    patch:
-      summary: 'Update Vendor By Id V1'
-      responses:
-        '200':
-          description: Success
-        '500':
-          description: 'Internal server error'
-      tags:
-        - 'v1: Vendors'
-      operationId: updateVendorByIdV1
       security:
         -
           bearerAuth: []

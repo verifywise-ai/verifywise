@@ -23,6 +23,13 @@ import annexCategoryChangeHistoryRoutes from "./annexCategoryChangeHistory.route
 import vendorsRoutes from "./vendors.route";
 import vendorResearchRoutes from "./vendorResearch.route";
 import vendorRiskFindingsRoutes from "./vendorRiskFindings.route";
+import intakeFormReviewTimeRoutes from "./intakeFormReviewTime.route";
+import intakeTierSuggestionRoutes from "./intakeTierSuggestion.route";
+import useCaseOrgSettingsRoutes from "./useCaseOrgSettings.route";
+import useCaseLifecycleRoutes from "./useCaseLifecycle.route";
+import lifecycleSettingsRoutes from "./lifecycleSettings.route";
+import aiAppsRoutes from "./aiApps.route";
+import aiAppLifecycleRoutes from "./aiAppLifecycle.route";
 
 const router = express.Router();
 
@@ -45,5 +52,23 @@ router.use("/annex-category-change-history", annexCategoryChangeHistoryRoutes);
 router.use("/vendors", vendorsRoutes);
 router.use("/vendor-research", vendorResearchRoutes);
 router.use("/vendor-risk-findings", vendorRiskFindingsRoutes);
+
+// An intake form's agreed review time (#5189); the legacy /api/intake form
+// contracts are frozen, so it is its own resource.
+router.use("/intake-form-review-time", intakeFormReviewTimeRoutes);
+
+// Risk tier suggested to an intake applicant, and their response (#5190).
+router.use("/intake-tier-suggestion", intakeTierSuggestionRoutes);
+
+// Defaults a new use case starts with (#5192).
+router.use("/use-case-org-settings", useCaseOrgSettingsRoutes);
+
+// Use case lifecycle and the org-wide "still live?" interval (#5187).
+router.use("/use-case-lifecycle", useCaseLifecycleRoutes);
+router.use("/lifecycle-settings", lifecycleSettingsRoutes);
+
+// AI apps with their lifecycle (#5193).
+router.use("/ai-apps", aiAppsRoutes);
+router.use("/ai-app-lifecycle", aiAppLifecycleRoutes);
 
 export default router;

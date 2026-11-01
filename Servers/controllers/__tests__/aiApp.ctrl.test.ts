@@ -187,7 +187,8 @@ describe("aiApp.ctrl", () => {
 
       await updateAiAppById(req, res);
 
-      expect(mockUpdate).toHaveBeenCalledWith(1, { name: "Claude" }, 1, expect.any(Object));
+      // The caller is passed on for the lifecycle change history (#5193).
+      expect(mockUpdate).toHaveBeenCalledWith(1, { name: "Claude" }, 1, expect.any(Object), 1);
       expect(res.status).toHaveBeenCalledWith(200);
     });
   });

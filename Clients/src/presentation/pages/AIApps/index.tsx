@@ -20,6 +20,27 @@ import AIAppsTable from "./AIAppsTable";
 import AIAppDetail from "./AIAppDetail";
 import { mainStackStyle, toolbarStyle, filterRowStyle } from "./style";
 import { STATUS_FILTER_OPTIONS } from "./utils";
+import LifecycleTabs from "../../components/LifecycleTabs";
+import { useAiAppStageCounts } from "../../../application/hooks/useAiAppLifecycle";
+import PendingIntakeSubmissions from "../../components/LifecycleTabs/PendingIntakeSubmissions";
+import { LifecycleStage } from "../../../domain/enums/lifecycleStage.enum";
+import { useLifecycleTab } from "../../../application/hooks/useLifecycleTab";
+
+const STAGE_STORAGE_KEY = "ai-apps-lifecycle-tab";
+
+const STAGE_TOOLTIPS: Record<LifecycleStage, string> = {
+  [LifecycleStage.IN_REVIEW]: "Intake requests and AI apps waiting for an approval decision",
+  [LifecycleStage.PLANNED]: "AI apps that are not live yet",
+  [LifecycleStage.LIVE]: "AI apps in use today",
+  [LifecycleStage.RETIRED]: "AI apps that are no longer in use",
+};
+
+const STAGE_EMPTY: Record<LifecycleStage, string> = {
+  [LifecycleStage.IN_REVIEW]: "No AI apps are waiting for review.",
+  [LifecycleStage.PLANNED]: "No planned AI apps.",
+  [LifecycleStage.LIVE]: "No live AI apps. Open a planned AI app and mark it as live.",
+  [LifecycleStage.RETIRED]: "No retired AI apps.",
+};
 
 export default function AIApps() {
   const navigate = useNavigate();
@@ -47,26 +68,58 @@ export default function AIApps() {
     return () => clearTimeout(timer);
   }, [alert]);
 
+  // Lifecycle tabs (#5193). The list is paged on the server, so the counts
+  // and stale markers come from the lifecycle summary, not from the rows.
+  const [stage, handleStageChange] = useLifecycleTab(STAGE_STORAGE_KEY);
+  // Pending AI app intake requests: no app exists until a reviewer approves
+  // one, so they are counted in In review and listed above its table.
+  const {
+    summary: { data: lifecycleSummary, isLoading: isSummaryLoading },
+    counts: stageCounts,
+    pending: pendingSubmissions,
+  } = useAiAppStageCounts();
+  const pendingTotal = pendingSubmissions?.total ?? 0;
+  const staleIds = useMemo(() => new Set(lifecycleSummary?.stale_ids ?? []), [lifecycleSummary]);
+  const hasAnyApps = Object.values(lifecycleSummary?.counts ?? {}).some((n) => n > 0);
+
+  // Each tab lists every app in its stage: the server filters, searches,
+  // sorts and pages, so the tab count and the list always agree.
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [sort, setSort] = useState<{ sortBy?: string; order?: "asc" | "desc" }>({});
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchTerm.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+  // A new tab, filter, search or sort starts again on the first page: the
+  // page is remembered only for the filters it was chosen under.
+  const filterKey = [stage, statusFilter, debouncedSearch, sort.sortBy, sort.order].join("|");
+  const [paging, setPaging] = useState({ key: filterKey, page: 0 });
+  const page = paging.key === filterKey ? paging.page : 0;
+  const setPage = (next: number) => setPaging({ key: filterKey, page: next });
+  const handleSortChange = useCallback((key: string, direction: "asc" | "desc" | null) => {
+    setSort(key && direction ? { sortBy: key, order: direction } : {});
+  }, []);
+
   const { data, isLoading, error } = useAiApps({
     status: statusFilter === "all" ? undefined : statusFilter,
+    lifecycleStage: stage,
+    search: debouncedSearch || undefined,
+    page: page + 1,
+    limit: rowsPerPage,
+    ...sort,
   });
 
   const deleteAiAppMutation = useDeleteAiApp();
 
-  const filteredApps = useMemo(() => {
-    const apps = data?.ai_apps || [];
-    if (!searchTerm.trim()) return apps;
-    const term = searchTerm.toLowerCase();
-    return apps.filter(
-      (app) =>
-        app.name.toLowerCase().includes(term) ||
-        (app.description && app.description.toLowerCase().includes(term)),
-    );
-  }, [data, searchTerm]);
+  const apps = data?.ai_apps ?? [];
 
   // Distinguish a genuinely empty inventory from a search/filter that matched nothing,
   // so the explanatory placeholder only shows when there is no data at all.
-  const hasNoApps = (data?.ai_apps || []).length === 0;
+  const hasNoApps = apps.length === 0 && !hasAnyApps && pendingTotal === 0;
+  // Requests have no approval status, so a status filter hides them.
+  const showRequests =
+    stage === LifecycleStage.IN_REVIEW && statusFilter === "all" && pendingTotal > 0;
 
   const handleNewApp = useCallback(() => {
     setEditingApp(null);
@@ -129,6 +182,14 @@ export default function AIApps() {
       helpArticlePath="ai-governance/ai-apps"
     >
       <Stack sx={mainStackStyle}>
+        <LifecycleTabs
+          value={stage}
+          onChange={handleStageChange}
+          counts={stageCounts}
+          isLoading={isSummaryLoading}
+          tooltips={STAGE_TOOLTIPS}
+          dataJoyrideId="ai-app-lifecycle-tabs"
+        />
         <Box sx={toolbarStyle}>
           <Box sx={filterRowStyle}>
             <SearchBox
@@ -154,18 +215,44 @@ export default function AIApps() {
           />
         </Box>
 
+        {showRequests && (
+          <PendingIntakeSubmissions
+            pending={pendingSubmissions}
+            searchTerm={debouncedSearch}
+            description="Submitted through an intake form. The AI app is created when a reviewer approves the request."
+          />
+        )}
+
         {isLoading ? (
           <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
         ) : error ? (
           <EmptyState message="Failed to load AI apps. Please try again." showBorder />
         ) : (
           <AIAppsTable
-            apps={filteredApps}
+            apps={apps}
+            serverPaging={{
+              total: data?.total ?? 0,
+              page,
+              rowsPerPage,
+              onPageChange: setPage,
+              onRowsPerPageChange: (next) => {
+                setRowsPerPage(next);
+                setPage(0);
+              },
+              onSortChange: handleSortChange,
+            }}
             onEditApp={handleEditApp}
             onViewApp={handleViewApp}
             onDeleteApp={handleRequestDelete}
+            staleIds={staleIds}
             emptyMessage={
-              hasNoApps ? undefined : "No AI apps match your search or filter criteria."
+              hasNoApps
+                ? undefined
+                : searchTerm.trim() || statusFilter !== "all"
+                  ? "No AI apps match your search or filter criteria."
+                  : showRequests
+                    ? "No AI apps are waiting for an approval decision."
+                    : STAGE_EMPTY[stage]
             }
             showEmptyTips={hasNoApps}
           />

@@ -83,6 +83,16 @@ export const intakeFormsContent: ArticleContent = {
     },
     {
       type: 'heading',
+      id: 'ai-app-requests',
+      level: 3,
+      text: 'AI app requests',
+    },
+    {
+      type: 'paragraph',
+      text: 'An intake form of type AI app lets employees ask to use an AI tool. It starts with three mapped fields: the app name, a description and departments (a multi-select, or text separated by commas). Approving a request creates the AI app as Approved and Planned, owned by the approver. If an app with that name already exists, the approval is refused and the request stays pending. AI apps have no risk register yet, so AI app requests get no suggested risks.',
+    },
+    {
+      type: 'heading',
       id: 'use-case-department-self-service',
       level: 3,
       text: 'Department self-service',
@@ -126,8 +136,14 @@ export const intakeFormsContent: ArticleContent = {
       items: [
         { bold: 'Form name', text: 'Descriptive title shown to submitters at the top of the form' },
         { bold: 'Description', text: 'Optional context about what the form is for' },
-        { bold: 'Entity type', text: 'Whether approved submissions create a **Use case** or a **Model inventory** entry' },
+        { bold: 'Entity type', text: 'Whether approved submissions create a **Use case**, an **AI app** or a **Model inventory** entry' },
       ],
+    },
+    {
+      type: 'image',
+      src: '/images/user-guide/intake-new-form-ai-app.png',
+      alt: 'Create new form dialog with the entity type choices Use case, AI app and Model inventory',
+      caption: 'AI app is a form type next to Use case and Model inventory.',
     },
     {
       type: 'paragraph',
@@ -371,6 +387,22 @@ export const intakeFormsContent: ArticleContent = {
     },
     {
       type: 'heading',
+      id: 'review-time',
+      level: 3,
+      text: 'Review time',
+    },
+    {
+      type: 'paragraph',
+      text: 'Set **Review time (business days)** to the number of working days your team has to review a submission: 1 to 30, 3 by default. The submitter\'s confirmation email names the reviewers and the due date, for example "Ann Lee will review your submission within 3 business days, by Thursday, November 5, 2026." Business days are Monday to Friday, counted in UTC from the day after the submission. Public holidays are not skipped. The review time and due date are fixed when a submission arrives. Changing the setting later does not affect earlier submissions. The review time is saved with the form when you click **Save** or **Publish**.',
+    },
+    {
+      type: 'image',
+      src: '/images/user-guide/intake-review-time.png',
+      alt: 'Review time (business days) field in the form builder set to 3',
+      caption: 'Each form has its own review time.',
+    },
+    {
+      type: 'heading',
       id: 'review-routing',
       level: 3,
       text: 'Reviewer assignment',
@@ -512,7 +544,24 @@ export const intakeFormsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'After submission, the submitter sees a success page with their reference number. If contact information was collected, they also receive a confirmation email.',
+      text: 'After submission, the submitter sees a success page with their reference number. If they gave contact details, they also get a confirmation email that names the reviewers and the review due date (see **Review time** above).',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { bold: 'Reviewer assignment on', text: 'The email waits until the submission has a review level. It names that level\'s reviewers, up to three by name and then "and N others". If that takes longer than 2 minutes, or the level has no reviewers, it names "the governance team" instead.' },
+        { bold: 'Reviewer assignment off', text: 'The email goes out at once and names the notification recipients.' },
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: 'Each submission sends this email once, and so does each resubmission. If the email can\'t be sent, VerifyWise tries again up to 5 times, waiting longer each time (from 5 minutes up to a day). An email sent after the due date names the reviewers without the date.',
+    },
+    {
+      type: 'image',
+      src: '/images/user-guide/intake-confirmation-email.png',
+      alt: 'Submission received email naming the reviewer and the date the review is due',
+      caption: 'The confirmation email the submitter receives.',
     },
     {
       type: 'heading',
@@ -577,10 +626,41 @@ export const intakeFormsContent: ArticleContent = {
         { text: 'All submitted field values' },
         { text: 'The risk score, with a **How this score is built** breakdown' },
         { text: 'The EU AI Act classification, when the form asks the questionnaire' },
+        { text: 'The applicant\'s response to the suggested risk level, when they gave one' },
         { text: 'Suggested risks to accept or dismiss' },
         { text: 'An entity data preview built from field mappings' },
         { text: 'Approve and Reject action buttons' },
       ],
+    },
+    {
+      type: 'heading',
+      id: 'suggested-risk-level',
+      level: 2,
+      text: 'Suggested risk level',
+    },
+    {
+      type: 'paragraph',
+      text: 'When the form includes the EU AI Act questionnaire, applicants see a suggested risk level as soon as they finish it, before they submit. The level and the articles behind it come from the same rules that classify the submission, so every reference is a real article.',
+    },
+    {
+      type: 'image',
+      src: '/images/user-guide/intake-suggested-risk-level.png',
+      alt: 'Suggested risk level card showing High risk with a reason that cites Annex III, point 5',
+      caption: 'A credit scoring tool gets High risk, with the Annex III reference.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Applicants can **Accept** the suggestion or **Add context** for the reviewer. When the level comes with duties, **Why this matters** lists what the EU AI Act asks at that level, for the applicant\'s role as provider or deployer. Either way, the governance team makes the final call in the review dialog and sees how the applicant responded.',
+    },
+    {
+      type: 'image',
+      src: '/images/user-guide/intake-suggested-risk-context.png',
+      alt: 'Suggested risk level card with Why this matters expanded to list deployer duties under Article 26, and a context note for the reviewer',
+      caption: 'Why this matters lists the deployer duties. This applicant added context for the reviewer.',
+    },
+    {
+      type: 'paragraph',
+      text: 'If the form has AI checks on and an LLM key, applicants can also ask for a plain-language explanation. Their risk answers go to an AI model only when they ask. The explanation may describe only the suggested level and its articles. An explanation that names another level or cites another article is discarded.',
     },
     {
       type: 'heading',

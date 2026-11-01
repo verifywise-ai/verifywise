@@ -51,6 +51,7 @@ import {
   classificationRoles,
   normalizeHighRiskRoles,
 } from "../../../application/utils/highRiskRoles";
+import ApplicantTierResponse from "./ApplicantTierResponse";
 import EuAiActClassificationPanel, {
   type EuAiActClassificationData,
 } from "./EuAiActClassificationPanel";
@@ -669,7 +670,12 @@ function SubmissionPreviewModal({
   });
 
   // Derived: entity type label
-  const entityLabel = previewData?.entityType === "model" ? "model inventory" : "use case";
+  const entityLabel =
+    previewData?.entityType === "model"
+      ? "model inventory"
+      : previewData?.entityType === "ai_app"
+        ? "AI app"
+        : "use case";
 
   // ============================================================================
   // Render
@@ -970,39 +976,46 @@ function SubmissionPreviewModal({
             />
           )}
 
-          {submissionId !== null && (assessmentV2 || previewData?.suggestedRisks) && (
-            <Box
-              sx={{
-                border: `1px solid ${theme.palette.border.dark}`,
-                borderRadius: "4px",
-                p: "20px",
-              }}
-            >
-              <Typography
+          {euAiAct && submissionId !== null && (
+            <ApplicantTierResponse submissionId={submissionId} />
+          )}
+
+          {/* AI app requests get no risk suggestions (no AI app risk register). */}
+          {submissionId !== null &&
+            previewData?.entityType !== "ai_app" &&
+            (assessmentV2 || previewData?.suggestedRisks) && (
+              <Box
                 sx={{
-                  fontSize: "14px",
-                  fontWeight: 600,
-                  color: theme.palette.text.primary,
-                  mb: "12px",
+                  border: `1px solid ${theme.palette.border.dark}`,
+                  borderRadius: "4px",
+                  p: "20px",
                 }}
               >
-                Suggested risks
-              </Typography>
-              <SuggestedRisksSection
-                submissionId={submissionId}
-                block={previewData?.suggestedRisks ?? null}
-                isModel={isModel}
-                readOnly={!isPending || simulating}
-                onChange={(update) =>
-                  setPreviewData((prev) =>
-                    prev?.suggestedRisks
-                      ? { ...prev, suggestedRisks: update(prev.suggestedRisks) }
-                      : prev,
-                  )
-                }
-              />
-            </Box>
-          )}
+                <Typography
+                  sx={{
+                    fontSize: "14px",
+                    fontWeight: 600,
+                    color: theme.palette.text.primary,
+                    mb: "12px",
+                  }}
+                >
+                  Suggested risks
+                </Typography>
+                <SuggestedRisksSection
+                  submissionId={submissionId}
+                  block={previewData?.suggestedRisks ?? null}
+                  isModel={isModel}
+                  readOnly={!isPending || simulating}
+                  onChange={(update) =>
+                    setPreviewData((prev) =>
+                      prev?.suggestedRisks
+                        ? { ...prev, suggestedRisks: update(prev.suggestedRisks) }
+                        : prev,
+                    )
+                  }
+                />
+              </Box>
+            )}
 
           {/* ------------------------------------------------------------------ */}
           {/* Section 2: Entity preview (editable for pending, read-only otherwise) */}
@@ -1020,7 +1033,9 @@ function SubmissionPreviewModal({
               >
                 {previewData?.entityType === "model"
                   ? "Model inventory preview"
-                  : "Use case preview"}
+                  : previewData?.entityType === "ai_app"
+                    ? "AI app preview"
+                    : "Use case preview"}
               </Typography>
 
               {mappedFields.length === 0 ? (

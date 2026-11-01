@@ -42,6 +42,7 @@ import {
 } from "../riskLinks/vendorRelated";
 import { suggestDirectionForComponent } from "../riskLinks/direction/direction.service";
 import { runFileExpirySweepAllOrgs } from "./actions/fileExpirySweep";
+import { runLifecycleConfirmationSweepAllOrgs } from "./actions/lifecycleConfirmationSweep";
 import { aiGatewayRequest } from "../../utils/aiGatewayInternal.utils";
 import { handleExtensionSyncJob, isExtensionSyncJob } from "../../extensions/sync-engine/jobs";
 import {
@@ -50,6 +51,10 @@ import {
   sendIntakeNotificationOnce,
 } from "../intakeScoring/assessmentJob";
 import type { IntakeAssessmentJobData } from "../intakeScoring/enqueue";
+import {
+  sweepSubmitterConfirmations,
+  trySendSubmitterConfirmation,
+} from "../intakeConfirmation/confirmation";
 
 // AI Gateway budget/risk/cleanup jobs call the gateway's internal API. These
 // can run for a while, so they get a longer timeout than request-path calls.
@@ -745,12 +750,21 @@ export const createAutomationWorker = () => {
             lang?: string;
             adminFallback?: boolean;
           };
+          // The submitter's confirmation goes too, naming "the governance
+          // team" when routing has not picked a lane in time.
+          await trySendSubmitterConfirmation(organizationId, submissionId, lang, {
+            fallback: true,
+          });
           await sendIntakeNotificationOnce(organizationId, submissionId, lang, {
             capReached: true,
             adminFallback,
           });
+        } else if (name === "intake_confirmation_sweep") {
+          await sweepSubmitterConfirmations();
         } else if (name === "file_expiry_sweep") {
           await runFileExpirySweepAllOrgs();
+        } else if (name === "lifecycle_confirmation_sweep") {
+          await runLifecycleConfirmationSweepAllOrgs();
         } else if (name === "mcp_audit_cleanup") {
           try {
             const [auditResult, approvalResult] = await Promise.all([
@@ -904,6 +918,12 @@ export const createAutomationWorker = () => {
       logger.info(`Intake assessment backfill: ${queued} submission(s) queued`);
     } catch (error) {
       logger.error("Intake assessment backfill failed:", error);
+    }
+    try {
+      const confirmed = await sweepSubmitterConfirmations();
+      logger.info(`Intake confirmation sweep at start: ${confirmed} submitter email(s) sent`);
+    } catch (error) {
+      logger.error("Intake confirmation sweep at start failed:", error);
     }
   })();
 

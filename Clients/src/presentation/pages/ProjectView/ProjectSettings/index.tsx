@@ -60,6 +60,7 @@ import RiskAnalysisModal from "../RiskAnalysisModal";
 import type { ClassificationResult } from "../../../../domain/types/euAiActClassification";
 import { getAutocompleteStyles } from "../../../utils/inputStyles";
 import { useStyles } from "./styles";
+import { GEOGRAPHY_ITEMS } from "../../../../application/constants/geography";
 
 const riskClassificationItems = [
   { _id: 1, name: AiRiskClassification.PROHIBITED },
@@ -69,14 +70,7 @@ const riskClassificationItems = [
   { _id: 5, name: AiRiskClassification.OUT_OF_SCOPE },
 ];
 
-const geographyItems = [
-  { _id: 1, name: "Global" },
-  { _id: 2, name: "Europe" },
-  { _id: 3, name: "North America" },
-  { _id: 4, name: "South America" },
-  { _id: 5, name: "Asia" },
-  { _id: 6, name: "Africa" },
-];
+const geographyItems = [...GEOGRAPHY_ITEMS];
 
 const useCaseCategoryItems = [
   { _id: 1, name: "Generative AI" },
