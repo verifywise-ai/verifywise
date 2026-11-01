@@ -178,6 +178,11 @@ export const tenantIsolationRegistry: IsolationEntity[] = [
     baseRoute: "/api/file-change-history",
   },
   {
+    name: "ai_app_change_history",
+    tables: ["ai_app_change_history"],
+    baseRoute: "/api/v1/ai-app-lifecycle",
+  },
+  {
     name: "mrm_validations",
     tables: ["mrm_validations"],
     baseRoute: "/api/mrm/validations",

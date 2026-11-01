@@ -32,12 +32,16 @@ async function seedOrg(role: "Admin" | "Reviewer" = "Admin") {
   return { orgId, userId, formId, api: await appFor(orgId, userId, role) };
 }
 
-/** A use case form whose title answer lives in `titleFieldId` (null: no title mapping). */
+/**
+ * A form whose title answer lives in `titleFieldId` (null: no title mapping).
+ * Use case forms map it to project_title, AI app forms to name.
+ */
 async function form(
   orgId: number,
   userId: number,
   name: string,
   titleFieldId: string | null,
+  entityType: "use_case" | "ai_app" = "use_case",
 ): Promise<number> {
   counter += 1;
   const fields = [{ id: "f_goal", type: "text", label: "Goal" }] as Record<string, unknown>[];
@@ -46,17 +50,18 @@ async function form(
       id: titleFieldId,
       type: "text",
       label: "Name",
-      entityFieldMapping: "project_title",
+      entityFieldMapping: entityType === "ai_app" ? "name" : "project_title",
     });
   }
   const [rows] = await sequelize.query(
     `INSERT INTO intake_forms (organization_id, name, description, slug, entity_type, schema, created_by)
-     VALUES (:orgId, :name, 'd', :slug, 'use_case', :schema, :userId) RETURNING id`,
+     VALUES (:orgId, :name, 'd', :slug, :entityType, :schema, :userId) RETURNING id`,
     {
       replacements: {
         orgId,
         userId,
         name,
+        entityType,
         slug: `form-${Date.now()}-${counter}`,
         schema: JSON.stringify({ version: "1.0", fields }),
       },
@@ -142,6 +147,37 @@ describe("intake submissions in the In review tab", () => {
     });
     expect(items[1]).toMatchObject({ title: null, form_name: "No title form" });
     expect(items[2]).toMatchObject({ title: "Chatbot", days_in_review: 1 });
+  });
+
+  it("lists pending AI app requests on their own endpoint, named by the AI app name answer", async () => {
+    const { orgId, userId, formId, api } = await seedOrg("Reviewer");
+    const aiForm = await form(orgId, userId, "AI app request", "f_app", "ai_app");
+    const app = await submission(orgId, aiForm, {
+      data: { f_app: "Meeting notes assistant" },
+      entityType: "ai_app",
+      createdAgo: "2 days",
+    });
+    await submission(orgId, aiForm, {
+      data: { f_app: "Approved app" },
+      entityType: "ai_app",
+      status: "approved",
+    });
+    const useCase = await submission(orgId, formId, { data: { f_title: "Chatbot" } });
+
+    const ai = await api.get("/api/v1/ai-app-lifecycle/intake-submissions");
+    expect(ai.status).toBe(200);
+    expect(ai.body.data.total).toBe(1);
+    expect(ai.body.data.items).toEqual([
+      expect.objectContaining({
+        id: app,
+        title: "Meeting notes assistant",
+        form_name: "AI app request",
+        days_in_review: 2,
+      }),
+    ]);
+
+    const uc = await api.get("/api/v1/use-case-lifecycle/intake-submissions");
+    expect(uc.body.data.items.map((r: any) => r.id)).toEqual([useCase]);
   });
 
   it("dates a resubmission from the first submission of its chain", async () => {

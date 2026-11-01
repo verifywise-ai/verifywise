@@ -1,7 +1,7 @@
 import { screen, fireEvent, waitFor } from "@testing-library/react";
 import { renderWithProviders } from "../../../../../../test/renderWithProviders";
 import UseCaseLifecyclePanel from "../UseCaseLifecyclePanel";
-import { canManageUseCaseLifecycle } from "../../../../../../application/utils/useCaseLifecycle";
+import { canManageLifecycle } from "../../../../../../application/utils/useCaseLifecycle";
 import { LifecycleStage } from "../../../../../../domain/enums/lifecycleStage.enum";
 import type { Project } from "../../../../../../domain/types/Project";
 
@@ -47,15 +47,15 @@ const project = (overrides: Partial<Project> = {}): Project =>
     ...overrides,
   }) as Project;
 
-describe("canManageUseCaseLifecycle", () => {
+describe("canManageLifecycle", () => {
   it("allows useCase.edit holders and the owner; never Auditors", () => {
-    expect(canManageUseCaseLifecycle("Admin", 2, 1, true)).toBe(true);
-    expect(canManageUseCaseLifecycle("Custom role", 2, 1, true)).toBe(true);
-    expect(canManageUseCaseLifecycle("Editor", 2, 1, false)).toBe(false);
-    expect(canManageUseCaseLifecycle("Reviewer", 1, 1, false)).toBe(true);
-    expect(canManageUseCaseLifecycle("Reviewer", 2, 1, false)).toBe(false);
-    expect(canManageUseCaseLifecycle("Auditor", 1, 1, true)).toBe(false);
-    expect(canManageUseCaseLifecycle("", 1, 1, true)).toBe(false);
+    expect(canManageLifecycle("Admin", 2, 1, true)).toBe(true);
+    expect(canManageLifecycle("Custom role", 2, 1, true)).toBe(true);
+    expect(canManageLifecycle("Editor", 2, 1, false)).toBe(false);
+    expect(canManageLifecycle("Reviewer", 1, 1, false)).toBe(true);
+    expect(canManageLifecycle("Reviewer", 2, 1, false)).toBe(false);
+    expect(canManageLifecycle("Auditor", 1, 1, true)).toBe(false);
+    expect(canManageLifecycle("", 1, 1, true)).toBe(false);
   });
 });
 

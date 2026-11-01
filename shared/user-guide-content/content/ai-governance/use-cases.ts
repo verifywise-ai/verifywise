@@ -287,7 +287,13 @@ export const useCasesContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Admins set the interval under Settings, Organization, Live use case check: every 30, 90 or 180 days. The default is 90 days.',
+      text: 'Admins set the interval under Settings, Organization, Still-live check: every 30, 90 or 180 days. The default is 90 days. The same setting covers AI apps.',
+    },
+    {
+      type: 'image',
+      src: '/images/user-guide/still-live-check-settings.png',
+      alt: 'Still-live check section in organization settings with the Ask owners to confirm dropdown set to every 90 days',
+      caption: 'One interval for the whole organization.',
     },
     {
       type: 'paragraph',

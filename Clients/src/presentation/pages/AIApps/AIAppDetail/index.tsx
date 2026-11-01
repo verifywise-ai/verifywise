@@ -13,6 +13,7 @@ import AIAppApprovalCenter from "./AIAppApprovalCenter";
 import AIAppPolicyMapping from "./AIAppPolicyMapping";
 import AIAppModelDependencies from "./AIAppModelDependencies";
 import AIAppRiskAssessment from "./AIAppRiskAssessment";
+import AIAppLifecyclePanel from "./AIAppLifecyclePanel";
 
 const sectionCardStyle = {
   border: `1px solid ${palette.border.dark}`,
@@ -71,6 +72,8 @@ export default function AIAppDetail() {
   return (
     <PageHeaderExtended title="AI app details" description="Approval center and governance">
       <Stack gap="24px">
+        <AIAppLifecyclePanel appId={app.id!} />
+
         <Box sx={sectionCardStyle}>
           <AIAppApprovalCenter
             app={app}

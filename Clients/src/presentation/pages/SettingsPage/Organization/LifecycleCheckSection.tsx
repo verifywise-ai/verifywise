@@ -40,18 +40,18 @@ const LifecycleCheckSection = ({ onError, onSuccess }: LifecycleCheckSectionProp
   const handleSave = async () => {
     try {
       await update.mutateAsync(days);
-      onSuccess("Live use case check saved");
+      onSuccess("Still-live check saved");
     } catch (error) {
-      onError((error as { message?: string })?.message || "Failed to save the live use case check");
+      onError((error as { message?: string })?.message || "Failed to save the still-live check");
     }
   };
 
   return (
     <Box sx={{ mt: "48px" }} data-testid="lifecycle-check-section">
-      <Typography sx={{ fontSize: 15, fontWeight: 600, mb: "8px" }}>Live use case check</Typography>
+      <Typography sx={{ fontSize: 15, fontWeight: 600, mb: "8px" }}>Still-live check</Typography>
       <Typography sx={{ fontSize: 13, color: "text.secondary", mb: "24px", maxWidth: 560 }}>
-        How often owners confirm their live use cases are still in use. Unconfirmed use cases are
-        marked stale and their owners get an email.
+        How often owners confirm their live use cases and AI apps are still in use. Entries nobody
+        confirms are marked stale and their owners get an email.
       </Typography>
 
       <Box sx={{ maxWidth: "360px", mb: "24px" }}>
