@@ -81,6 +81,8 @@ export interface VerifierInput {
    * database of a record: a cited entry of a public database is shown with its name.
    */
   provenance?: ReadonlyMap<string, SourceProvenance>;
+  /** Aborted when the run is abandoned: no call is started and the one in flight is aborted. */
+  signal?: AbortSignal;
 }
 
 /**
@@ -90,6 +92,8 @@ export interface VerifierInput {
 export async function verifierPasses(input: VerifierInput): Promise<boolean[]> {
   const { target, findings, now, model, modelId, generate, trace, provenance } = input;
   if (findings.length === 0) return [];
+  // The run is abandoned: nothing is asked, and the answer is ignored.
+  if (input.signal?.aborted) return findings.map(() => true);
 
   const startedAt = Date.now();
   // What the call used, counted as the call reports it, so that a call that ends by throwing still
@@ -110,7 +114,12 @@ export async function verifierPasses(input: VerifierInput): Promise<boolean[]> {
         used.outputTokens += usage.outputTokens;
         used.totalTokens += usage.totalTokens;
       },
-      extra: { abortSignal: AbortSignal.timeout(VERIFIER_TIMEOUT_MS) },
+      extra: {
+        abortSignal:
+          input.signal === undefined
+            ? AbortSignal.timeout(VERIFIER_TIMEOUT_MS)
+            : AbortSignal.any([AbortSignal.timeout(VERIFIER_TIMEOUT_MS), input.signal]),
+      },
     });
     verdicts = result.object.verdicts;
     trace.modelCall({

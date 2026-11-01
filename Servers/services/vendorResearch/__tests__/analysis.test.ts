@@ -1380,6 +1380,139 @@ describe("analyse", () => {
     });
   });
 
+  describe("an abandoned run", () => {
+    const abandoned = () => {
+      const controller = new AbortController();
+      controller.abort();
+      return controller.signal;
+    };
+    const failedAs = async (result: ReturnType<typeof run>["result"]) => {
+      const analysed = await result;
+      expect(analysed.ok).toBe(false);
+      if (analysed.ok) throw new Error("the analysis was not abandoned");
+      expect(analysed.error).toMatchObject({ name: "AnalysisAbandoned" });
+    };
+
+    it("asks no model when the run is abandoned before the analysis", async () => {
+      const { result, generate } = run({ signal: abandoned() });
+
+      await failedAs(result);
+      expect(generate).not.toHaveBeenCalled();
+    });
+
+    it("gives the model call a signal that aborts with the run", async () => {
+      const controller = new AbortController();
+      let received: AbortSignal | undefined;
+      const generate = jest.fn(
+        (params: { extra?: { abortSignal?: AbortSignal } }) =>
+          new Promise<never>(() => {
+            received = params.extra?.abortSignal;
+          }),
+      );
+      run({ signal: controller.signal, generate: generate as never });
+
+      expect(received?.aborted).toBe(false);
+      controller.abort();
+      expect(received?.aborted).toBe(true);
+    });
+
+    it("looks nothing up and reads no page when the run is abandoned during the analysis", async () => {
+      const controller = new AbortController();
+      const readPage = jest.fn();
+      const generate = jest.fn(async () => {
+        controller.abort();
+        return {
+          object: { findings: [FINDING], category_notes: [] } satisfies ResearchOutput,
+          attempts: 1,
+          selfCorrected: false,
+        };
+      });
+      const loadKnown = jest.fn(NOTHING_KNOWN);
+
+      const { result } = run({
+        signal: controller.signal,
+        generate: generate as never,
+        loadKnown,
+        readPage: readPage as never,
+        verifier: true,
+      });
+
+      await failedAs(result);
+      expect(generate).toHaveBeenCalledTimes(1);
+      expect(loadKnown).not.toHaveBeenCalled();
+      expect(readPage).not.toHaveBeenCalled();
+    });
+
+    it("asks the verifier nothing when the run is abandoned while the look-up of the earlier findings runs", async () => {
+      const controller = new AbortController();
+      const generate = answer([FINDING]);
+      const { result } = run({
+        signal: controller.signal,
+        generate: generate as never,
+        verifier: true,
+        loadKnown: async () => {
+          controller.abort();
+          return { existingRisks: [], priorFindings: [] };
+        },
+      });
+
+      await failedAs(result);
+      expect(generate).toHaveBeenCalledTimes(1);
+    });
+
+    it("asks the SEC nothing when the run is abandoned while the verifier runs", async () => {
+      const controller = new AbortController();
+      const generate = jest.fn(async (params: { schema: unknown }) => {
+        if (params.schema === verifierSchema) controller.abort();
+        return {
+          object:
+            params.schema === verifierSchema
+              ? { verdicts: [] }
+              : ({ findings: [FINDING], category_notes: [] } satisfies ResearchOutput),
+          attempts: 1,
+          selfCorrected: false,
+        };
+      });
+      const edgarFilerOf = jest.fn();
+
+      const { result } = run({
+        signal: controller.signal,
+        generate: generate as never,
+        verifier: true,
+        edgarFilerOf,
+      });
+
+      await failedAs(result);
+      expect(edgarFilerOf).not.toHaveBeenCalled();
+    });
+
+    it("gives the verifier a signal that aborts with the run, and asks it nothing once aborted", async () => {
+      const controller = new AbortController();
+      const seen: Array<AbortSignal | undefined> = [];
+      const generate = jest.fn(
+        async (params: { schema: unknown; extra?: { abortSignal?: AbortSignal } }) => {
+          if (params.schema === verifierSchema) {
+            seen.push(params.extra?.abortSignal);
+            controller.abort();
+            expect(params.extra?.abortSignal?.aborted).toBe(true);
+          }
+          return {
+            object:
+              params.schema === verifierSchema
+                ? { verdicts: [] }
+                : ({ findings: [FINDING], category_notes: [] } satisfies ResearchOutput),
+            attempts: 1,
+            selfCorrected: false,
+          };
+        },
+      );
+
+      await run({ signal: controller.signal, generate: generate as never, verifier: true }).result;
+
+      expect(seen).toHaveLength(1);
+    });
+  });
+
   it("lets a failure of the look-up through: it is not a model failure", async () => {
     const { result } = run({
       loadKnown: async () => {

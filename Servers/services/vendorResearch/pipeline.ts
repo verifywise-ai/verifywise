@@ -48,7 +48,10 @@
  *   function returns: nothing after the commit can fail the run.
  * - No run runs longer than RUN_TIME_LIMIT_MINUTES: `runVendorResearch` races `decide` against a
  *   timer and fails the run as timed out when the timer wins. `decide` writes nothing, so its late
- *   decision is ignored. The sweep of running runs waits longer than that limit, so it can only
+ *   decision is ignored, and the timer also aborts `progress.abandoned`: the work left running starts
+ *   no analysis, verifier call, page read or EDGAR lookup after that, and the calls in flight are
+ *   aborted, so a run reported as failed spends no more of the organization's tokens. (The research
+ *   loop itself ends by its own caps.) The sweep of running runs waits longer than that limit, so it can only
  *   reach a run whose worker died.
  *
  * Only a failure to mark the run running is rethrown. The run is still queued then, so a retry of
@@ -329,6 +332,13 @@ interface Progress {
    * whose searches was answered.
    */
   searchEngine: RunSearchEngine | null;
+  /**
+   * Aborted when the run reached its time limit and was failed as timed out. The work that is
+   * left running checks it, before the analysis, the verifier and the EDGAR lookups, and stops
+   * with a decision that writes nothing: a run the product reported as failed spends no more of
+   * the organization's tokens.
+   */
+  abandoned: AbortController;
 }
 
 /** What a run knows before it has done anything. */
@@ -342,6 +352,7 @@ const newProgress = (): Progress => ({
   promptVersion: CREDIBILITY_PROMPT_VERSION,
   coverage: emptyCoverage(),
   searchEngine: null,
+  abandoned: new AbortController(),
 });
 
 type Decision =
@@ -703,6 +714,7 @@ async function research(args: RunArgs, deps: PipelineDeps, progress: Progress): 
   // Before the research, so that an organisation without a key does not spend a search.
   const resolved = await deps.resolveModel(organizationId);
   if (!resolved) return stop("No LLM key configured");
+  if (progress.abandoned.signal.aborted) return stop(TIMED_OUT_ERROR);
 
   const target = buildTarget(vendor);
   // One clock for the loop and the analysis, so that both hold a source to the same window.
@@ -748,6 +760,8 @@ async function research(args: RunArgs, deps: PipelineDeps, progress: Progress): 
     logger.error(`${tag(args)}: the research failed (error ${errorName(error)})`);
     return stop(UNEXPECTED_ERROR_NOTE);
   }
+  // The run timed out while the research was going: nothing more is spent on it.
+  if (progress.abandoned.signal.aborted) return stop(TIMED_OUT_ERROR);
   trace.stopped(found.stoppedBecause);
   progress.coverage = {
     ...progress.coverage,
@@ -849,6 +863,8 @@ async function research(args: RunArgs, deps: PipelineDeps, progress: Progress): 
     categories: progress.categories,
   });
 
+  if (progress.abandoned.signal.aborted) return stop(TIMED_OUT_ERROR);
+
   // The model of the analysis is the model of the research unless the organization chose another.
   const analysisModel = resolved.analysis ?? resolved;
   const analysed = await analyse({
@@ -874,6 +890,8 @@ async function research(args: RunArgs, deps: PipelineDeps, progress: Progress): 
     // The reader of the research, so that a finding that rests on snippets has a page read.
     readPage: found.readPage,
     verifier: deps.verifier === true,
+    // Aborted when the run timed out: the analysis, the verifier and the EDGAR lookups stop.
+    signal: progress.abandoned.signal,
     loadKnown: async () => {
       const [existingRisks, priorFindings] = await Promise.all([
         // Only the active risks. The default of the query is the same, but the rule is said here.
@@ -1029,7 +1047,9 @@ export async function runVendorResearch(
     clearTimeout(timer);
   }
   if (decision === "timed out") {
-    // The late decision is ignored: `decide` writes nothing and never rejects.
+    // The late decision is ignored: `decide` writes nothing and never rejects. The work behind it
+    // is told to stop, so that it asks no model and no EDGAR lookup for a run that has failed.
+    progress.abandoned.abort();
     decided.catch(() => undefined);
     logger.warn(`${tag(args)}: stopped: the run reached its time limit`);
     await recordFailure(

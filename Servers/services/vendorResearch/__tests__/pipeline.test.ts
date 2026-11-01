@@ -3629,6 +3629,61 @@ describe("runVendorResearch", () => {
       expect(sequelize.transaction).not.toHaveBeenCalled();
     });
 
+    /** Lets the abandoned work run to its end. */
+    const settle = async () => {
+      for (let turn = 0; turn < 20; turn += 1) await Promise.resolve();
+      await new Promise((resolve) => setImmediate(resolve));
+    };
+
+    it("asks no model once the research ends after the time limit", async () => {
+      const pending = slowResearch();
+      await run({ runTimeLimitMs: 20 });
+
+      pending.resolve(researched());
+      await settle();
+
+      expect(generate).not.toHaveBeenCalled();
+      expect(getVendorRisksByVendorIdQuery).not.toHaveBeenCalled();
+    });
+
+    it("does not ask the verifier or read a page once the analysis ends after the time limit", async () => {
+      let answerLate!: (value: unknown) => void;
+      generate.mockReturnValue(
+        new Promise((done) => {
+          answerLate = done;
+        }),
+      );
+      const readPage = jest.fn();
+      research.mockResolvedValue(researched({ readPage }));
+      await run({ runTimeLimitMs: 20, verifier: true });
+      expect(generate).toHaveBeenCalledTimes(1);
+
+      answerLate({
+        object: answer([breachFinding()], STANDARD_NOTES).object,
+        attempts: 1,
+        selfCorrected: false,
+      });
+      await settle();
+
+      expect(generate).toHaveBeenCalledTimes(1);
+      expect(readPage).not.toHaveBeenCalled();
+      expect(insertFindingsQuery).not.toHaveBeenCalled();
+    });
+
+    it("aborts the model call that is in flight when the time limit is reached", async () => {
+      let received: AbortSignal | undefined;
+      generate.mockImplementation(
+        (params: { extra?: { abortSignal?: AbortSignal } }) =>
+          new Promise(() => {
+            received = params.extra?.abortSignal;
+          }),
+      );
+
+      await run({ runTimeLimitMs: 20 });
+
+      expect(received?.aborted).toBe(true);
+    });
+
     it("leaves no timer behind when the run ends in time", async () => {
       jest.useFakeTimers();
 

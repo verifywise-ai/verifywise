@@ -127,6 +127,12 @@ export interface AnalysisInput {
    * default: a replay of recorded model answers should see only the calls that the case holds.
    */
   verifier?: boolean;
+  /**
+   * Aborted when the run is abandoned (it reached its time limit and was failed). From then on no
+   * model call, page read or EDGAR lookup is started, the ones in flight are aborted, and the
+   * analysis answers `ok: false`: the pipeline ignores the answer of an abandoned run.
+   */
+  signal?: AbortSignal;
 }
 
 export type Analysed =
@@ -163,7 +169,7 @@ async function withFilers(
   const provenance = input.provenance ?? new Map<string, SourceProvenance>();
   const ask = input.edgarFilerOf;
   const cik = storedCikOf(input.target);
-  if (ask === undefined || cik === null) return provenance;
+  if (ask === undefined || cik === null || input.signal?.aborted) return provenance;
 
   const cited = new Set(findings.flatMap((finding) => finding.sources.map(({ url }) => url)));
   // The filings to ask about, by accession: the address to ask with, and the sources it labels.
@@ -184,7 +190,7 @@ async function withFilers(
   }
   if (filings.size === 0) return provenance;
 
-  const signal = AbortSignal.timeout(EDGAR_FILER_TIMEOUT_MS);
+  const signal = anyOf(AbortSignal.timeout(EDGAR_FILER_TIMEOUT_MS), input.signal);
   const asked = [...filings.values()];
   const answers = await Promise.all(
     asked.map(async ({ address }): Promise<EdgarFiler | null> => {
@@ -205,6 +211,18 @@ async function withFilers(
   return answered;
 }
 
+/** The signal that aborts when either does; `other` may be missing. */
+const anyOf = (own: AbortSignal, other: AbortSignal | undefined): AbortSignal =>
+  other === undefined ? own : AbortSignal.any([own, other]);
+
+/** What `analyse` answers once the run is abandoned. */
+class AnalysisAbandoned extends Error {
+  constructor() {
+    super("the run was abandoned");
+    this.name = "AnalysisAbandoned";
+  }
+}
+
 export async function analyse(input: AnalysisInput): Promise<Analysed> {
   const { target, pack, now, trace } = input;
 
@@ -217,6 +235,8 @@ export async function analyse(input: AnalysisInput): Promise<Analysed> {
 
   // The sources that report one event: shown to the model together, and an event is one finding.
   const events = clusterSources(pack);
+
+  if (input.signal?.aborted) return { ok: false, error: new AnalysisAbandoned() };
 
   trace.startPhase("analysis");
   const startedAt = Date.now();
@@ -238,7 +258,7 @@ export async function analyse(input: AnalysisInput): Promise<Analysed> {
         used.outputTokens += usage.outputTokens;
         used.totalTokens += usage.totalTokens;
       },
-      extra: { abortSignal: AbortSignal.timeout(MODEL_TIMEOUT_MS) },
+      extra: { abortSignal: anyOf(AbortSignal.timeout(MODEL_TIMEOUT_MS), input.signal) },
     });
     output = result.object;
     trace.modelCall({
@@ -259,6 +279,7 @@ export async function analyse(input: AnalysisInput): Promise<Analysed> {
     });
     return { ok: false, error };
   }
+  if (input.signal?.aborted) return { ok: false, error: new AnalysisAbandoned() };
 
   // The categories with a source in the pack: a finding of any other has no evidence of its own.
   const inPack = RESEARCH_CATEGORIES.filter((category) =>
@@ -275,6 +296,7 @@ export async function analyse(input: AnalysisInput): Promise<Analysed> {
   }
 
   const { existingRisks, priorFindings } = await input.loadKnown();
+  if (input.signal?.aborted) return { ok: false, error: new AnalysisAbandoned() };
   const repeats: DedupeReport = { reasons: {} };
   const { kept: notRepeated, dropped } = dropDuplicates(
     candidates,
@@ -308,6 +330,7 @@ export async function analyse(input: AnalysisInput): Promise<Analysed> {
       output,
     };
   }
+  if (input.signal?.aborted) return { ok: false, error: new AnalysisAbandoned() };
   trace.startPhase("verification");
   // At the same time: reading a page takes seconds, and so does the verifier.
   const [checks, passes] = await Promise.all([
@@ -330,10 +353,12 @@ export async function analyse(input: AnalysisInput): Promise<Analysed> {
           generate: input.generate,
           trace,
           provenance: input.provenance,
+          signal: input.signal,
         })
       : capped.map(() => true),
   ]);
   trace.endPhase();
+  if (input.signal?.aborted) return { ok: false, error: new AnalysisAbandoned() };
   // The verdicts of the verifier filter the checks, so that each label stays with its finding.
   const passed = checks.filter((_check, index) => passes[index]);
   const kept = passed.map(({ finding }) => finding);
