@@ -32,6 +32,7 @@ export const AUDIT_RECORD_TABLES: ReadonlyArray<{ table: string; timestampColumn
   { table: "project_change_history", timestampColumn: "changed_at" },
   { table: "framework_change_history", timestampColumn: "changed_at" },
   { table: "evidence_hub_change_history", timestampColumn: "changed_at" },
+  { table: "ai_app_change_history", timestampColumn: "changed_at" },
   { table: "control_eu_change_history", timestampColumn: "changed_at" },
   { table: "subcontrol_eu_change_history", timestampColumn: "changed_at" },
   { table: "annex_category_change_history", timestampColumn: "changed_at" },

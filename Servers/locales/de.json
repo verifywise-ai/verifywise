@@ -932,5 +932,21 @@
   "Invalid annex category ID": "Ungültige Anhangskategorie-ID",
   "Invalid evidence hub ID": "Ungültige Nachweis-ID",
   "Invalid model ID": "Ungültige Modell-ID",
-  "Review time must be a whole number of business days from {min} to {max}": "Die Prüfdauer muss eine ganze Zahl von Werktagen zwischen {min} und {max} sein"
+  "Review time must be a whole number of business days from {min} to {max}": "Die Prüfdauer muss eine ganze Zahl von Werktagen zwischen {min} und {max} sein",
+  "Invalid go-live date": "Ungültiges Go-live-Datum",
+  "Only a planned use case can go live": "Nur ein geplanter Anwendungsfall kann live gehen",
+  "Only a planned or live use case can be retired": "Nur ein geplanter oder aktiver Anwendungsfall kann außer Betrieb genommen werden",
+  "Only a live use case can be confirmed as still live": "Nur ein aktiver Anwendungsfall kann als weiterhin aktiv bestätigt werden",
+  "Invalid department": "Ungültige Abteilung",
+  "The check interval must be 30, 90 or 180 days": "Das Prüfintervall muss 30, 90 oder 180 Tage betragen",
+  "The go-live date can't be later than today": "Das Go-live-Datum darf nicht nach dem heutigen Tag liegen",
+  "Invalid AI app ID": "Ungültige KI-App-ID",
+  "AI app not found": "KI-App nicht gefunden",
+  "Only a planned AI app can go live": "Nur eine geplante KI-App kann live gehen",
+  "Approve this AI app before marking it as live": "Geben Sie diese KI-App frei, bevor Sie sie als live markieren",
+  "Only a planned or live AI app can be retired": "Nur eine geplante oder aktive KI-App kann außer Betrieb genommen werden",
+  "Only a live AI app can be confirmed as still live": "Nur eine aktive KI-App kann als weiterhin aktiv bestätigt werden",
+  "Invalid lifecycle stage": "Ungültige Lebenszyklusphase",
+  "An AI app with this name already exists": "Eine KI-App mit diesem Namen existiert bereits",
+  "AI app requests cannot carry accepted risk suggestions": "KI-App-Anfragen können keine angenommenen Risikovorschläge enthalten"
 }

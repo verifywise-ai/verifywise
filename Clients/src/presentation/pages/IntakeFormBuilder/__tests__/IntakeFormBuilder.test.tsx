@@ -46,6 +46,7 @@ vi.mock("../../../../application/repository/intakeForm.repository", () => ({
   IntakeEntityType: {
     USE_CASE: "use_case",
     MODEL: "model",
+    AI_APP: "ai_app",
   },
 }));
 
@@ -112,6 +113,20 @@ describe("IntakeFormBuilder Page", () => {
     });
 
     expect(container).toBeInTheDocument();
+  });
+
+  it.each([
+    ["use_case", "Type: AI use case"],
+    ["ai_app", "Type: AI app"],
+    ["model", "Type: Model inventory"],
+  ])("labels a new %s form with its type", async (entityType, label) => {
+    renderWithProviders(
+      <Routes>
+        <Route path="/intake-forms/:formId/edit" element={<IntakeFormBuilder />} />
+      </Routes>,
+      { route: `/intake-forms/new/edit?entityType=${entityType}` },
+    );
+    expect(await screen.findByText(label)).toBeInTheDocument();
   });
 
   it("shows the logic overview from the header toggle", () => {

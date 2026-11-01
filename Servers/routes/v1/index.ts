@@ -21,6 +21,10 @@ import controlEUChangeHistoryRoutes from "./controlEUChangeHistory.route";
 import subcontrolEUChangeHistoryRoutes from "./subcontrolEUChangeHistory.route";
 import annexCategoryChangeHistoryRoutes from "./annexCategoryChangeHistory.route";
 import intakeFormReviewTimeRoutes from "./intakeFormReviewTime.route";
+import useCaseLifecycleRoutes from "./useCaseLifecycle.route";
+import lifecycleSettingsRoutes from "./lifecycleSettings.route";
+import aiAppsRoutes from "./aiApps.route";
+import aiAppLifecycleRoutes from "./aiAppLifecycle.route";
 
 const router = express.Router();
 
@@ -39,5 +43,13 @@ router.use("/annex-category-change-history", annexCategoryChangeHistoryRoutes);
 // An intake form's agreed review time (#5189); the legacy /api/intake form
 // contracts are frozen, so it is its own resource.
 router.use("/intake-form-review-time", intakeFormReviewTimeRoutes);
+
+// Use case lifecycle and the org-wide "still live?" interval (#5187).
+router.use("/use-case-lifecycle", useCaseLifecycleRoutes);
+router.use("/lifecycle-settings", lifecycleSettingsRoutes);
+
+// AI apps with their lifecycle (#5193).
+router.use("/ai-apps", aiAppsRoutes);
+router.use("/ai-app-lifecycle", aiAppLifecycleRoutes);
 
 export default router;
