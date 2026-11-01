@@ -4,12 +4,20 @@ from fastapi import APIRouter, HTTPException, Request
 from typing import Any, Optional
 
 from utils.auth import get_org_id, get_role, get_user_id, require_admin
-from utils.mcp_credentials import CredentialError, normalize_auth_config, public_auth_fields
+from utils.mcp_credentials import (
+    TOKEN_AUTH_TYPES,
+    CredentialError,
+    normalize_auth_config,
+    public_auth_fields,
+    same_origin,
+    supplies_token_secret,
+)
 from services.mcp_proxy_service import (
     MANUAL_DISCOVERY_SECONDS,
     ON_SAVE_DISCOVERY_SECONDS,
     run_discovery,
 )
+from services.mcp_oauth_discovery import OAuthDiscoveryError, discover_token_endpoint
 from utils.notifications import config_event, notify_config_change
 from utils.safe_outbound_url import UnsafeOutboundUrlError, assert_safe_outbound_url
 import crud.mcp_servers as mcp_servers_crud
@@ -66,6 +74,20 @@ async def list_mcp_servers(request: Request) -> Any:
 
     servers = await mcp_servers_crud.get_all_mcp_servers(org_id)
     return {"servers": [_present(s, request) for s in servers]}
+
+
+@router.post("/discover-oauth")
+async def discover_oauth(request: Request) -> Any:
+    """Find the OAuth token URL for a server address (no secret is sent)."""
+    require_admin(request)
+    body = await request.json()
+    url = body.get("url") if isinstance(body, dict) else None
+    if not isinstance(url, str) or not url.strip():
+        raise HTTPException(status_code=400, detail="URL is required")
+    try:
+        return await discover_token_endpoint(url.strip())
+    except OAuthDiscoveryError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.get("/{server_id}")
@@ -160,15 +182,28 @@ async def update_mcp_server(server_id: int, request: Request) -> Any:
 
     old_type = existing.get("auth_type") or "none"
     new_type = body.get("auth_type") or old_type
+    if (
+        new_type == old_type
+        and new_type in TOKEN_AUTH_TYPES
+        and "url" in body
+        and not same_origin(body["url"], existing.get("url") or "")
+        and not supplies_token_secret(new_type, body.get("auth_config"))
+    ):
+        # The stored secret would mint a token that is then sent to the new host.
+        raise HTTPException(
+            status_code=400,
+            detail="Enter the secret again: the server address now points to a different host",
+        )
+    auth_changed = new_type != old_type
     if "auth_config" in body or new_type != old_type:
         stored = existing.get("auth_config") if new_type == old_type else None
         body["auth_type"] = new_type
         body["auth_config"] = _normalized(new_type, body.get("auth_config"), stored)
+        # A resubmitted, unchanged config (e.g. a rename) must not re-run discovery.
+        auth_changed = auth_changed or body["auth_config"] != (existing.get("auth_config") or {})
 
     connection_changed = (
-        ("url" in body and body["url"] != existing.get("url"))
-        or new_type != old_type
-        or "auth_config" in body
+        ("url" in body and body["url"] != existing.get("url")) or auth_changed
     )
     enabling = body.get("is_active") is True and not existing.get("is_active")
 

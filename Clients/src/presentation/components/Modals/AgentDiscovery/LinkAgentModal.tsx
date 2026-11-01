@@ -157,9 +157,7 @@ const LinkAgentModal: React.FC<LinkAgentModalProps> = ({
           onChange={(_e, option) => setSelected(option ?? null)}
         />
 
-        {error && (
-          <Alert variant="error" body={error} hasIcon={false} sx={{ position: "static" }} />
-        )}
+        {error && <Alert variant="error" body={error} hasIcon={false} inline />}
       </Stack>
 
       {/* Footer */}

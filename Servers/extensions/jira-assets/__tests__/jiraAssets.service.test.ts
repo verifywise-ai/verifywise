@@ -871,7 +871,7 @@ describe("removeMissingUseCases", () => {
     expect(result).toMatchObject({ removed: 1, unlinked: 1, skipped: 0 });
     expect(mockPendingApproval).toHaveBeenCalledTimes(1);
     expect(mockPendingApproval).toHaveBeenCalledWith(111, "use_case", 5, FAKE_TX);
-    expect(mockWithdrawApproval).toHaveBeenCalledWith(900, 5, FAKE_TX);
+    expect(mockWithdrawApproval).toHaveBeenCalledWith(900, 5, FAKE_TX, { releaseUseCase: false });
     expect(mockDeleteProject).toHaveBeenCalledTimes(1);
     expect(mockRecordDeletion).toHaveBeenCalledTimes(1);
     expect(sqlCalls("DELETE FROM jira_assets_use_cases")[0][1].replacements).toMatchObject({

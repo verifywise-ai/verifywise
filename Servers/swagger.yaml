@@ -7898,6 +7898,14 @@ tags:
     name: 'v1: Intake Forms'
   -
     name: 'v1: Shadow AI'
+  -
+    name: 'v1: V1/Ai App Lifecycle'
+  -
+    name: 'v1: V1/Ai Apps'
+  -
+    name: 'v1: V1/Lifecycle Settings'
+  -
+    name: 'v1: V1/Use Case Lifecycle'
 paths:
   /webhooks/github:
     post:
@@ -27209,6 +27217,243 @@ paths:
       tags:
         - 'v1: Change History'
       operationId: getAnnexCategoryChangeHistoryById
+      security:
+        -
+          bearerAuth: []
+  /v1/use-case-lifecycle/summary:
+    get:
+      summary: 'Get Lifecycle Summary Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Use Case Lifecycle'
+      operationId: getLifecycleSummaryHandler
+      security:
+        -
+          bearerAuth: []
+  /v1/use-case-lifecycle/dashboard:
+    get:
+      summary: 'Get Lifecycle Dashboard Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Use Case Lifecycle'
+      operationId: getLifecycleDashboardHandler
+      security:
+        -
+          bearerAuth: []
+  '/v1/use-case-lifecycle/{id}/go-live':
+    post:
+      summary: 'Go Live Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Use Case Lifecycle'
+      operationId: goLiveHandler
+      security:
+        -
+          bearerAuth: []
+  '/v1/use-case-lifecycle/{id}/retire':
+    post:
+      summary: 'Retire Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Use Case Lifecycle'
+      operationId: retireHandler
+      security:
+        -
+          bearerAuth: []
+  '/v1/use-case-lifecycle/{id}/confirm':
+    post:
+      summary: 'Confirm Still Live Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Use Case Lifecycle'
+      operationId: confirmStillLiveHandler
+      security:
+        -
+          bearerAuth: []
+  '/v1/use-case-lifecycle/{id}/department':
+    patch:
+      summary: 'Update Department Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Use Case Lifecycle'
+      operationId: updateDepartmentHandler
+      security:
+        -
+          bearerAuth: []
+  /v1/lifecycle-settings:
+    get:
+      summary: 'Get Lifecycle Settings Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Lifecycle Settings'
+      operationId: getLifecycleSettingsHandler
+      security:
+        -
+          bearerAuth: []
+    patch:
+      summary: 'Update Lifecycle Settings Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Lifecycle Settings'
+      operationId: updateLifecycleSettingsHandler
+      security:
+        -
+          bearerAuth: []
+  /v1/ai-apps:
+    get:
+      summary: 'Get All Ai Apps V1'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai Apps'
+      operationId: getAllAiAppsV1
+      security:
+        -
+          bearerAuth: []
+  /v1/ai-app-lifecycle/summary:
+    get:
+      summary: 'Get Ai App Lifecycle Summary Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai App Lifecycle'
+      operationId: getAiAppLifecycleSummaryHandler
+      security:
+        -
+          bearerAuth: []
+  '/v1/ai-app-lifecycle/{id}':
+    get:
+      summary: 'Get Ai App Lifecycle Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai App Lifecycle'
+      operationId: getAiAppLifecycleHandler
+      security:
+        -
+          bearerAuth: []
+  '/v1/ai-app-lifecycle/{id}/history':
+    get:
+      summary: 'Get Ai App History Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai App Lifecycle'
+      operationId: getAiAppHistoryHandler
+      security:
+        -
+          bearerAuth: []
+  '/v1/ai-app-lifecycle/{id}/go-live':
+    post:
+      summary: 'Ai App Go Live Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai App Lifecycle'
+      operationId: aiAppGoLiveHandler
+      security:
+        -
+          bearerAuth: []
+  '/v1/ai-app-lifecycle/{id}/retire':
+    post:
+      summary: 'Ai App Retire Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai App Lifecycle'
+      operationId: aiAppRetireHandler
+      security:
+        -
+          bearerAuth: []
+  '/v1/ai-app-lifecycle/{id}/confirm':
+    post:
+      summary: 'Ai App Confirm Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai App Lifecycle'
+      operationId: aiAppConfirmHandler
+      security:
+        -
+          bearerAuth: []
+  /v1/use-case-lifecycle/intake-submissions:
+    get:
+      summary: 'Get Pending Submissions Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Use Case Lifecycle'
+      operationId: getPendingSubmissionsHandler
+      security:
+        -
+          bearerAuth: []
+  /v1/ai-app-lifecycle/intake-submissions:
+    get:
+      summary: 'Get Pending Ai App Submissions Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai App Lifecycle'
+      operationId: getPendingAiAppSubmissionsHandler
       security:
         -
           bearerAuth: []
