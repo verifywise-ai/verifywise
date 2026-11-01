@@ -7905,6 +7905,8 @@ tags:
   -
     name: 'v1: V1/Ai Apps'
   -
+    name: 'v1: V1/Intake Form Review Time'
+  -
     name: 'v1: V1/Lifecycle Settings'
   -
     name: 'v1: V1/Use Case Lifecycle'
@@ -27564,6 +27566,33 @@ paths:
       tags:
         - 'v1: Intake Forms'
       operationId: getSubmissionTierSuggestionResponse
+      security:
+        -
+          bearerAuth: []
+  '/v1/intake-form-review-time/{formId}':
+    get:
+      summary: 'Get Intake Form Review Time'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Intake Form Review Time'
+      operationId: getIntakeFormReviewTime
+      security:
+        -
+          bearerAuth: []
+    put:
+      summary: 'Update Intake Form Review Time'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Intake Form Review Time'
+      operationId: updateIntakeFormReviewTime
       security:
         -
           bearerAuth: []

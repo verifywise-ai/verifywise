@@ -732,6 +732,26 @@ export async function scheduleFileExpirySweep() {
   );
 }
 
+export async function scheduleIntakeConfirmationSweep() {
+  logger.info("Adding intake confirmation sweep job to the queue...");
+  // Every 5 minutes: intake submitter confirmations whose job and 2-minute
+  // cap were lost go out naming the governance team (or the lane's reviewers
+  // if routing finished). The claim on confirmation_sent_at keeps it to one
+  // email. No obliterate here -- the scheduler upsert is idempotent by id.
+  await automationQueue.upsertJobScheduler(
+    "intake_confirmation_sweep",
+    { pattern: "*/5 * * * *" },
+    {
+      name: "intake_confirmation_sweep",
+      data: { type: "intake_confirmation" },
+      opts: {
+        removeOnComplete: true,
+        removeOnFail: false,
+      },
+    },
+  );
+}
+
 export async function scheduleLifecycleConfirmationSweep() {
   logger.info("Adding lifecycle confirmation sweep job to the queue...");
   // Daily at 6:30 AM, a free slot. Emails owners of live use cases (and later

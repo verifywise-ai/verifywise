@@ -8,7 +8,9 @@ import { IntakeFormBuilder } from "../index";
 import CustomException from "../../../../infrastructure/exceptions/customeException";
 import {
   getIntakeForm,
+  getIntakeFormReviewTime,
   updateIntakeForm,
+  updateIntakeFormReviewTime,
 } from "../../../../application/repository/intakeForm.repository";
 
 // The key list is cached per organization; give the page one.
@@ -32,6 +34,10 @@ vi.mock("../../../../application/repository/intakeForm.repository", () => ({
   createIntakeForm: vi.fn().mockResolvedValue({ data: {} }),
   updateIntakeForm: vi.fn().mockResolvedValue({ data: {} }),
   getEligibleReviewers: vi.fn().mockResolvedValue([]),
+  getIntakeFormReviewTime: vi.fn().mockResolvedValue(3),
+  updateIntakeFormReviewTime: vi
+    .fn()
+    .mockImplementation((_id: number, days: number) => Promise.resolve(days)),
   IntakeFormStatus: {
     DRAFT: "draft",
     ACTIVE: "active",
@@ -87,6 +93,10 @@ describe("IntakeFormBuilder Page", () => {
     vi.mocked(updateIntakeForm)
       .mockReset()
       .mockResolvedValue({ data: {} } as never);
+    vi.mocked(getIntakeFormReviewTime).mockReset().mockResolvedValue(3);
+    vi.mocked(updateIntakeFormReviewTime)
+      .mockReset()
+      .mockImplementation((_id: number, days: number) => Promise.resolve(days));
   });
 
   const llmKeyPicker = () =>
@@ -484,6 +494,72 @@ describe("IntakeFormBuilder Page", () => {
 
       expect(screen.getByTestId("suggested-questions")).toBeInTheDocument();
       expect(toggle()).toBeInTheDocument();
+    });
+
+    describe("review time", () => {
+      const reviewTime = () => screen.getByLabelText("Review time (business days)");
+
+      it("shows the stored review time", async () => {
+        vi.mocked(getIntakeForm).mockResolvedValue(savedForm(null) as never);
+        vi.mocked(getIntakeFormReviewTime).mockResolvedValue(7);
+        renderEditRoute();
+        await formLoaded();
+        await waitFor(() => expect(reviewTime()).toHaveValue(7));
+        expect(getIntakeFormReviewTime).toHaveBeenCalledWith(5);
+      });
+
+      it("saves a changed review time through its own endpoint, after the form", async () => {
+        vi.mocked(getIntakeForm).mockResolvedValue(savedForm(null) as never);
+        renderEditRoute();
+        await formLoaded();
+        await waitFor(() => expect(reviewTime()).toHaveValue(3));
+
+        fireEvent.change(reviewTime(), { target: { value: "10" } });
+        fireEvent.click(screen.getByRole("button", { name: "Save" }));
+        await waitFor(() => expect(updateIntakeFormReviewTime).toHaveBeenCalledWith(5, 10));
+        // The frozen form contract never carries it.
+        expect(vi.mocked(updateIntakeForm).mock.calls[0][1]).not.toHaveProperty("reviewDays");
+        expect(vi.mocked(updateIntakeForm).mock.invocationCallOrder[0]).toBeLessThan(
+          vi.mocked(updateIntakeFormReviewTime).mock.invocationCallOrder[0],
+        );
+      });
+
+      it("does not send an unchanged review time", async () => {
+        vi.mocked(getIntakeForm).mockResolvedValue(savedForm(null) as never);
+        renderEditRoute();
+        await formLoaded();
+
+        fireEvent.click(await screen.findByText("Check answers while the submitter types"));
+        fireEvent.click(screen.getByRole("button", { name: "Save" }));
+        await waitFor(() => expect(updateIntakeForm).toHaveBeenCalled());
+        expect(updateIntakeFormReviewTime).not.toHaveBeenCalled();
+      });
+
+      it("blocks a save while the review time is out of range", async () => {
+        vi.mocked(getIntakeForm).mockResolvedValue(savedForm(null) as never);
+        renderEditRoute();
+        await formLoaded();
+
+        fireEvent.change(reviewTime(), { target: { value: "31" } });
+        fireEvent.click(screen.getByRole("button", { name: "Save" }));
+        expect(await screen.findByText("Fix the review time before saving")).toBeInTheDocument();
+        expect(updateIntakeForm).not.toHaveBeenCalled();
+      });
+
+      it("says so when the review time could not be saved", async () => {
+        vi.mocked(getIntakeForm).mockResolvedValue(savedForm(null) as never);
+        vi.mocked(updateIntakeFormReviewTime).mockRejectedValue(new Error("down"));
+        renderEditRoute();
+        await formLoaded();
+
+        fireEvent.change(reviewTime(), { target: { value: "4" } });
+        fireEvent.click(screen.getByRole("button", { name: "Save" }));
+        expect(
+          await screen.findByText(
+            "The form was saved, but the review time was not. Click Save to try again.",
+          ),
+        ).toBeInTheDocument();
+      });
     });
 
     it("hides the toggle when there is no key and the panel is off", async () => {

@@ -129,3 +129,20 @@ export function laneReviewerIdsFor(lane: ReviewLane | null, cfg: IFormRouting | 
   if (lane === "senior") return cfg.seniorReviewerIds;
   return [...new Set([...cfg.standardReviewerIds, ...cfg.seniorReviewerIds])];
 }
+
+/**
+ * The reviewers a lane is assigned to, for emails: that lane's own list, or
+ * both lists while no lane is stored yet. Senior reviewers are not added to
+ * the standard lane here (unlike laneReviewerIdsFor, which is about who may
+ * decide).
+ */
+export function laneAssigneeIds(
+  cfg: Pick<IFormRouting, "seniorReviewerIds" | "standardReviewerIds">,
+  lane: ReviewLane | null | undefined,
+): number[] {
+  const senior = cfg.seniorReviewerIds ?? [];
+  const standard = cfg.standardReviewerIds ?? [];
+  if (lane === "senior") return senior;
+  if (lane === "standard") return standard;
+  return [...senior, ...standard];
+}

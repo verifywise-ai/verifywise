@@ -87,13 +87,16 @@ import { sanitizeUserHtml } from "../utils/sanitization.utils";
 import logger from "../utils/logger/fileLogger";
 import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper";
 import {
-  sendSubmissionReceivedEmail,
   sendNewSubmissionAdminNotification,
   sendSubmissionApprovedEmail,
   sendSubmissionRejectedEmail,
   sendSecondReviewRequestEmail,
 } from "../services/intakeFormEmail.service";
 import { enqueueIntakeAssessment } from "../services/intakeScoring/enqueue";
+import {
+  reviewTimeAtSubmit,
+  trySendSubmitterConfirmation,
+} from "../services/intakeConfirmation/confirmation";
 import { notificationAudience } from "../services/intakeScoring/assessmentJob";
 import { cleanSubmission, isEmptyAnswer, parseFormula } from "../services/intakeFormLogic";
 import { generateSuggestedQuestions, generateFieldGuidance } from "../services/intakeLLM.service";
@@ -158,6 +161,7 @@ import type {
 import { createSignedToken, verifySignedToken } from "../utils/signedToken.utils";
 import { formAiAvailable } from "../services/intakeLiveChecks/availability";
 import { recordSubmitLiveChecks } from "../services/intakeLiveChecks/submit";
+
 /** Safely extract a single string from req.params (which may be string | string[]). */
 const paramStr = (val: string | string[]): string => (Array.isArray(val) ? val[0] : val);
 
@@ -378,6 +382,8 @@ function startIntakeAssessment(params: {
       `Could not queue the assessment for submission ${submissionId}; emailing reviewers now:`,
       error,
     );
+    // No job will route it, so the submitter is told now: the governance team.
+    await trySendSubmitterConfirmation(organizationId, submissionId, lang, { fallback: true });
     try {
       // Same audience as the job's email: recipients plus the lane reviewers
       // (no lane is stored yet, so both lanes while routing is on). If that
@@ -3211,7 +3217,10 @@ export async function submitPublicFormByPublicId(req: Request, res: Response) {
     } = req.body;
 
     // Validate contact info (always required)
-    const fullFormForValidation = await getIntakeFormByIdQuery(form.id, tenantInfo.orgId);
+    // With its review time, which the submission stores (#5189).
+    const fullFormForValidation = await getIntakeFormByIdQuery(form.id, tenantInfo.orgId, {
+      withReviewDays: true,
+    });
 
     if (!submitterEmail) {
       return res.status(400).json(STATUS_CODE[400](req.t!("Submitter email is required")));
@@ -3316,6 +3325,9 @@ export async function submitPublicFormByPublicId(req: Request, res: Response) {
       }
     }
 
+    // The review time in force now; the confirmation email uses this, not the
+    // form's later setting.
+    const reviewTime = reviewTimeAtSubmit(fullFormForValidation?.reviewDays);
     const transaction = await sequelize.transaction();
 
     try {
@@ -3328,6 +3340,7 @@ export async function submitPublicFormByPublicId(req: Request, res: Response) {
           entityType: form.entityType,
           originalSubmissionId,
           ipAddress: clientIp,
+          ...reviewTime,
         },
         tenantInfo.orgId,
         transaction,
@@ -3358,20 +3371,12 @@ export async function submitPublicFormByPublicId(req: Request, res: Response) {
 
       const submissionName = resolvedName || "Anonymous";
 
-      // Send confirmation email to submitter (only if email present)
-      if (resolvedEmail) {
-        sendSubmissionReceivedEmail(
-          resolvedEmail,
-          submissionName,
-          form.name,
-          submission.id,
-          newResubmissionToken || "",
-          publicId,
-          undefined,
-          undefined,
-          req.lang,
-        ).catch((err) => logger.error("Failed to send submission received email:", err));
-      }
+      // The submitter's confirmation names the reviewers, so with routing on
+      // it waits for the lane (the assessment job or its 2-minute cap sends
+      // it); with nothing to wait for it goes now.
+      void trySendSubmitterConfirmation(tenantInfo.orgId, submission.id!, req.lang, {
+        fallback: false,
+      });
 
       // Get full form with recipients to send notifications
       const fullForm = await getIntakeFormByIdQuery(form.id, tenantInfo.orgId);
@@ -3566,7 +3571,10 @@ export async function submitPublicForm(req: Request, res: Response) {
     } = req.body;
 
     // Validate contact info (always required)
-    const fullFormForValidation = await getIntakeFormByIdQuery(form.id, tenantInfo.id);
+    // With its review time, which the submission stores (#5189).
+    const fullFormForValidation = await getIntakeFormByIdQuery(form.id, tenantInfo.id, {
+      withReviewDays: true,
+    });
 
     if (!submitterEmail) {
       return res.status(400).json(STATUS_CODE[400](req.t!("Submitter email is required")));
@@ -3671,6 +3679,9 @@ export async function submitPublicForm(req: Request, res: Response) {
       }
     }
 
+    // The review time in force now; the confirmation email uses this, not the
+    // form's later setting.
+    const reviewTime = reviewTimeAtSubmit(fullFormForValidation?.reviewDays);
     const transaction = await sequelize.transaction();
 
     try {
@@ -3683,6 +3694,7 @@ export async function submitPublicForm(req: Request, res: Response) {
           entityType: form.entityType,
           originalSubmissionId,
           ipAddress: clientIp,
+          ...reviewTime,
         },
         tenantInfo.id,
         transaction,
@@ -3713,23 +3725,12 @@ export async function submitPublicForm(req: Request, res: Response) {
 
       const submissionName = resolvedName || "Anonymous";
 
-      // Use publicId for emails if available
-      const formPublicId = form.publicId;
-
-      // Send confirmation email to submitter (only if email present)
-      if (resolvedEmail) {
-        sendSubmissionReceivedEmail(
-          resolvedEmail,
-          submissionName,
-          form.name,
-          submission.id,
-          newResubmissionToken || "",
-          formPublicId || "",
-          tenantSlug,
-          formSlug,
-          req.lang,
-        ).catch((err) => logger.error("Failed to send submission received email:", err));
-      }
+      // The submitter's confirmation names the reviewers, so with routing on
+      // it waits for the lane (the assessment job or its 2-minute cap sends
+      // it); with nothing to wait for it goes now.
+      void trySendSubmitterConfirmation(tenantInfo.id, submission.id!, req.lang, {
+        fallback: false,
+      });
 
       // Use per-form recipients; this route falls back to org admins without them
       const fullForm = await getIntakeFormByIdQuery(form.id, tenantInfo.id);
