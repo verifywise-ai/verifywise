@@ -56,8 +56,8 @@ Config delivery per service:
 | `browser_events_total`, `browser_web_vital` | counter/histogram | frontend telemetry |
 | `vendor_research_finding_decisions_total` | counter | `decision` (`accepted` or `dismissed`), `category`, `reason` (the dismissal reason, `none` for an accepted finding), `service_name`, `deployment` |
 | `vendor_research_searches_total` | counter | `kind` (`web` or `news`), `outcome` (`results`, `empty`, `refused` or `failed`), `service_name`, `deployment` |
-| `vendor_research_search_retries_total` | counter | `kind`, `service_name`, `deployment` |
-| `vendor_research_cache_total` | counter | `kind` (`robots`, `page` or `search`), `outcome` (`hit`, `miss` or `error`: the store failed or was too slow, a failed write included), `service_name`, `deployment` |
+| `vendor_research_search_retries_total` | counter | `kind` (`web` or `news`; today only `news`, a GDELT request asked again after a 429), `service_name`, `deployment` |
+| `vendor_research_cache_total` | counter | `kind` (`robots`, `page`, `search` or `gdelt`, the news index of the GDELT Project), `outcome` (`hit`, `miss` or `error`: the store failed or was too slow, a failed write included), `service_name`, `deployment` |
 
 Service names: `verifywise-backend`, `verifywise-eval-server`,
 `verifywise-ai-gateway`, `verifywise-frontend`.

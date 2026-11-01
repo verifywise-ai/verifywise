@@ -128,11 +128,12 @@ export interface ResearchResult {
    */
   coverage?: Omit<RunCoverage, "cited" | "registry_version">;
   /**
-   * The engine the searches of the run went to: `anthropic` (the web search of the key), `gdelt`
-   * (the news of the GDELT Project: the engine of every key with no search of its own, and where a
-   * run of an Anthropic key goes when the key is not allowed to search), or the id of the engine
-   * that was given to the researcher. null when the run searched nothing. The pipeline records it
-   * with the run. A researcher that does not say leaves it out.
+   * The engine whose answers are in the run: `anthropic` (the web search of the key), `gdelt` (the
+   * news of the GDELT Project: the engine of every key with no search of its own, and the credit of
+   * a run of an Anthropic key whose fallback to it answered a search), or the id of the engine that
+   * was given to the researcher. null when no search was answered, which includes a run that
+   * searched nothing and one whose searches all failed. The pipeline records it with the run. A
+   * researcher that does not say leaves it out.
    */
   searchEngine?: SearchEngineId | null;
 }
@@ -197,9 +198,10 @@ export type VendorResearcher = (input: {
 export interface RunSearch {
   engine: SearchEngine;
   /**
-   * The id of the engine the searches of the run have gone to: the engine of the key, or `gdelt`
-   * once a run has fallen back to it. null before the first search, so a run that searched nothing
-   * says so.
+   * The id of the engine whose answers are in the run: for a key of Anthropic, `gdelt` when the
+   * fallback answered a search, else `anthropic` when Claude's search answered one, else null (see
+   * `withFallback`), which includes a run whose searches all failed; for the news of GDELT alone,
+   * `gdelt` once it was asked.
    */
   used(): SearchEngineId | null;
 }

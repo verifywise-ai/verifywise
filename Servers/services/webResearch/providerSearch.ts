@@ -347,12 +347,14 @@ export function createProviderSearchEngine(deps: ProviderSearchDeps): SearchEngi
   };
 }
 
-/** An engine with another behind it, which also says which of the two the searches went to. */
+/** An engine with another behind it, which also says which of the two the run is credited to. */
 export interface FallbackEngine extends SearchEngine {
   /**
-   * The id of the engine the searches of the run have gone to: the first engine's until it reports
-   * that its key cannot search, the second's from then on. null before the first search, which is
-   * what a run record shows for a run that searched nothing.
+   * The id of the engine whose answers are in the run: the second engine's when it answered at
+   * least one search (its news is then in the run, and its credit must be shown), else the first
+   * engine's when it answered at least one search, else null. A search that failed answered
+   * nothing, so null is also what a run shows that searched nothing or whose searches all failed.
+   * This is not the live engine: `id`, `kinds` and `newsWindowMonths` follow the live one.
    */
   usedId(): SearchEngineId | null;
 }
@@ -365,7 +367,9 @@ export interface FallbackEngine extends SearchEngine {
  *
  * The wrapper reports the engine that answers now: its id, its kinds and its news window are those
  * of `primary` until the switch and those of `fallback` after it, so read them when a search is
- * made, not when the wrapper is made. The search that triggers the switch is handed to `fallback`
+ * made, not when the wrapper is made. `usedId()` is another question, the engine the run is credited
+ * to: the `fallback` once it has answered a search, else `primary` once it has answered one, else
+ * none (a failed search answers nothing). The search that triggers the switch is handed to `fallback`
  * as it was asked, whatever its kind; a `fallback` that lacks the kind fails it, like any search it
  * cannot answer, and the later searches of that kind are refused by the session before they get here.
  *
@@ -381,7 +385,8 @@ export interface FallbackEngine extends SearchEngine {
  */
 export function withFallback(primary: SearchEngine, fallback: SearchEngine): FallbackEngine {
   let primaryUnavailable = false;
-  let searched = false;
+  let primaryAnswered = false;
+  let fallbackAnswered = false;
   const live = (): SearchEngine => (primaryUnavailable ? fallback : primary);
 
   return {
@@ -395,17 +400,20 @@ export function withFallback(primary: SearchEngine, fallback: SearchEngine): Fal
       return live().newsWindowMonths;
     },
     async search(query, kind, signal) {
-      searched = true;
       if (!primaryUnavailable) {
         try {
-          return await primary.search(query, kind, signal);
+          const results = await primary.search(query, kind, signal);
+          primaryAnswered = true;
+          return results;
         } catch (error) {
           if (!(error instanceof SearchUnavailableError)) throw error;
           primaryUnavailable = true;
         }
       }
-      return fallback.search(query, kind, signal);
+      const results = await fallback.search(query, kind, signal);
+      fallbackAnswered = true;
+      return results;
     },
-    usedId: () => (searched ? live().id : null),
+    usedId: () => (fallbackAnswered ? fallback.id : primaryAnswered ? primary.id : null),
   };
 }

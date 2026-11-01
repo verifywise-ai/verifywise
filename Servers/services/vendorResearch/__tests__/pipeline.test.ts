@@ -221,7 +221,7 @@ const searched = (category: ResearchCategory): Call => ({
   answered: true,
   failure: null,
 });
-/** A search that failed: Bing answered 429, a consent page, or nothing at all. */
+/** A search that failed: the engine answered 429, a consent page, or nothing at all. */
 const searchFailed = (category: ResearchCategory): Call => ({
   category,
   tool: "search",
@@ -1842,7 +1842,7 @@ describe("runVendorResearch", () => {
       },
     );
 
-    // Review Focus 4: Bing answered 429 or a consent page, and the sites refused the pages.
+    // Review Focus 4: the engine answered 429 or a consent page, and the sites refused the pages.
     it("fails the run, with a summary of every category, when the web answered none of the calls and nothing is left to analyse", async () => {
       research.mockResolvedValue(
         researched({

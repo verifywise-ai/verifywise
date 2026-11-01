@@ -1346,12 +1346,12 @@ describe("withFallback", () => {
       expect(wrapper.newsWindowMonths).toBeNull();
     });
 
-    it("says the first engine was used when its only search failed: it is the one that was tried", async () => {
+    it("credits no engine when the only search failed: nothing was answered, so nothing is in the run", async () => {
       const { wrapper } = setUp(apiError(429));
 
       await failureOf(wrapper.search("Acme breach", "web"));
 
-      expect(wrapper.usedId()).toBe("anthropic");
+      expect(wrapper.usedId()).toBeNull();
     });
 
     it("says that no engine was used before the first search, and the first engine after it", async () => {
@@ -1361,6 +1361,50 @@ describe("withFallback", () => {
       await wrapper.search("Acme breach", "web");
 
       expect(wrapper.usedId()).toBe("anthropic");
+    });
+  });
+
+  describe("which engine the run is credited to", () => {
+    it("credits the second engine when it answered after the first had answered", async () => {
+      const { wrapper } = setUp([answered(PRIMARY_ANSWER), apiError(400)]);
+
+      await wrapper.search("Acme breach", "news");
+      await wrapper.search("Acme lawsuit", "news");
+
+      expect(wrapper.id).toBe("gdelt");
+      expect(wrapper.usedId()).toBe("gdelt");
+    });
+
+    it("credits the first engine when it answered and the second then failed every search", async () => {
+      const { wrapper, fallback } = setUp(
+        [answered(PRIMARY_ANSWER), apiError(400)],
+        [new SearchEngineError()],
+      );
+
+      await wrapper.search("Acme breach", "news");
+      await failureOf(wrapper.search("Acme lawsuit", "news"));
+      await failureOf(wrapper.search("Acme fine", "news"));
+
+      expect(fallback.calls).toHaveLength(2);
+      // The live engine is still the second one, which steers the searches that follow.
+      expect(wrapper.id).toBe("gdelt");
+      expect(wrapper.usedId()).toBe("anthropic");
+    });
+
+    it("credits no engine when the first was unavailable at once and the second failed", async () => {
+      const { wrapper } = setUp(apiError(400), [new SearchEngineError()]);
+
+      await failureOf(wrapper.search("Acme breach", "news"));
+      await failureOf(wrapper.search("Acme lawsuit", "news"));
+
+      expect(wrapper.id).toBe("gdelt");
+      expect(wrapper.usedId()).toBeNull();
+    });
+
+    it("credits no engine when nothing was searched", () => {
+      const { wrapper } = setUp(answered(PRIMARY_ANSWER));
+
+      expect(wrapper.usedId()).toBeNull();
     });
   });
 
@@ -1496,7 +1540,7 @@ describe("withFallback", () => {
       expect(error).toBeInstanceOf(SearchEngineError);
       expect(primary.requests).toHaveLength(0);
       expect(fallback.calls).toHaveLength(0);
-      expect(wrapper.usedId()).toBe("anthropic");
+      expect(wrapper.usedId()).toBeNull();
     });
 
     it("passes on an error that is not a failed search, for the session to see as the bug it is", async () => {

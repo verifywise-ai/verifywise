@@ -63,7 +63,7 @@ The facts below come from the titles and summaries of search results, not from r
 Label before you look at the runs, from public sources, as a careful analyst would. Copy [labels.template.json](labels.template.json) to a private place (it will hold the ids of your organization's vendors) and fill it in:
 
 - `organizationId`: the organization whose vendors are researched. `labelledBy`: your name. `labelledOn`: the day, `YYYY-MM-DD`.
-- For each vendor: `profile` (1 to 24), `vendorId` (the id of the vendor's row in that organization, the one that is researched) and `name`. A labels file of the earlier shape, with `vendorIds: { off, on }`, is still read, by its `on` row. `about` is for you; the scorer ignores it.
+- For each vendor: `profile` (1 to 24), `vendorIds` and `name`. [labels.template.json](labels.template.json) gives `vendorIds` as `{ "off": 0, "on": 0 }`, and the scorer reads its `on` value, the id of the vendor's row in that organization that is researched (the row that is scored); `off` is unused, because the VRDB flag is gone, and may stay 0. A plain `vendorId` is read too, and wins when a vendor has both. `about` is for you; the scorer ignores it.
 - `expected`: each risk a careful analyst would raise inside the category's lookback, with its `category` (`security_incidents`, `certifications`, `legal_regulatory`, `ai_specific`, `availability`, `financial_health`), a few words of which any one identifies it in a finding's risk description (`anyOf`, case ignored), and the `label` you would give it under the credibility rules (`low`, `medium`, `high`; the rules are in D5 of the spec and in the user guide's "Credibility labels and the vendor risk database").
 - `traps`: findings that must not appear (another company of the same name, a delisted entry, a rejected CVE, an old event), each with `anyOf` words and, if you like, a `category`. A finding that matches a trap counts as a false positive, even if it matches an expected risk too.
 
@@ -73,7 +73,7 @@ For example:
 {
   "profile": 5,
   "about": "A breach reported by several trusted publishers",
-  "vendorId": 42,
+  "vendorIds": { "off": 0, "on": 42 },
   "name": "Salesloft",
   "expected": [
     { "category": "security_incidents", "anyOf": ["Drift", "OAuth"], "label": "high" }

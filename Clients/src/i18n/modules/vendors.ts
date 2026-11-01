@@ -147,8 +147,8 @@ export const de: Record<string, string> = {
   "Searched with Claude web search": "Mit der Websuche von Claude gesucht",
   "News searched with the GDELT Project (last 3 months)":
     "Nachrichten mit dem GDELT Project durchsucht (letzte 3 Monate)",
-  "Anthropic keys search with Claude's own web search, billed by Anthropic at about $10 per 1,000 searches (about 20 to 30 a run). Other keys search the news of the last 3 months through the GDELT Project at no charge.":
-    "Anthropic-Schlüssel suchen mit der eigenen Websuche von Claude, die Anthropic mit etwa 10 $ pro 1.000 Suchen berechnet (etwa 20 bis 30 pro Ausführung). Andere Schlüssel durchsuchen die Nachrichten der letzten 3 Monate über das GDELT Project, kostenlos.",
+  "Anthropic keys search with Claude's own web search, billed by Anthropic at about $10 per 1,000 searches (about 20 to 30 a run); the search results also count as input tokens of the research model. Other keys search the news of the last 3 months through the GDELT Project at no charge.":
+    "Anthropic-Schlüssel suchen mit der eigenen Websuche von Claude, die Anthropic mit etwa 10 $ pro 1.000 Suchen berechnet (etwa 20 bis 30 pro Ausführung); die Suchergebnisse zählen außerdem als Eingabe-Token des Recherchemodells. Andere Schlüssel durchsuchen die Nachrichten der letzten 3 Monate über das GDELT Project, kostenlos.",
   "{category}: {outcome}": "{category}: {outcome}",
   "AI note (unverified)": "KI-Hinweis (ungeprüft)",
   "Credibility": "Glaubwürdigkeit",
@@ -455,8 +455,8 @@ export const fr: Record<string, string> = {
   "Searched with Claude web search": "Recherche effectuée avec la recherche web de Claude",
   "News searched with the GDELT Project (last 3 months)":
     "Actualités recherchées avec le GDELT Project (3 derniers mois)",
-  "Anthropic keys search with Claude's own web search, billed by Anthropic at about $10 per 1,000 searches (about 20 to 30 a run). Other keys search the news of the last 3 months through the GDELT Project at no charge.":
-    "Les clés Anthropic effectuent leurs recherches avec la recherche web propre à Claude, facturée par Anthropic à environ 10 $ les 1 000 recherches (environ 20 à 30 par exécution). Les autres clés recherchent dans les actualités des 3 derniers mois via le GDELT Project, sans frais.",
+  "Anthropic keys search with Claude's own web search, billed by Anthropic at about $10 per 1,000 searches (about 20 to 30 a run); the search results also count as input tokens of the research model. Other keys search the news of the last 3 months through the GDELT Project at no charge.":
+    "Les clés Anthropic effectuent leurs recherches avec la recherche web propre à Claude, facturée par Anthropic à environ 10 $ les 1 000 recherches (environ 20 à 30 par exécution) ; les résultats de recherche comptent aussi comme jetons d'entrée du modèle de recherche. Les autres clés recherchent dans les actualités des 3 derniers mois via le GDELT Project, sans frais.",
   "{category}: {outcome}": "{category} : {outcome}",
   "AI note (unverified)": "Note de l'IA (non vérifiée)",
   "Credibility": "Crédibilité",
@@ -766,8 +766,8 @@ export const es: Record<string, string> = {
   "Searched with Claude web search": "Búsqueda realizada con la búsqueda web de Claude",
   "News searched with the GDELT Project (last 3 months)":
     "Noticias buscadas con el GDELT Project (últimos 3 meses)",
-  "Anthropic keys search with Claude's own web search, billed by Anthropic at about $10 per 1,000 searches (about 20 to 30 a run). Other keys search the news of the last 3 months through the GDELT Project at no charge.":
-    "Las claves de Anthropic buscan con la búsqueda web propia de Claude, que Anthropic factura a unos 10 $ por cada 1000 búsquedas (entre 20 y 30 por ejecución). Las demás claves buscan en las noticias de los últimos 3 meses mediante el GDELT Project, sin coste.",
+  "Anthropic keys search with Claude's own web search, billed by Anthropic at about $10 per 1,000 searches (about 20 to 30 a run); the search results also count as input tokens of the research model. Other keys search the news of the last 3 months through the GDELT Project at no charge.":
+    "Las claves de Anthropic buscan con la búsqueda web propia de Claude, que Anthropic factura a unos 10 $ por cada 1000 búsquedas (entre 20 y 30 por ejecución); los resultados de búsqueda también cuentan como tokens de entrada del modelo de investigación. Las demás claves buscan en las noticias de los últimos 3 meses mediante el GDELT Project, sin coste.",
   "{category}: {outcome}": "{category}: {outcome}",
   "AI note (unverified)": "Nota de la IA (sin verificar)",
   "Credibility": "Credibilidad",

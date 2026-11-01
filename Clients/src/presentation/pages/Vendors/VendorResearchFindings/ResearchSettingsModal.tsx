@@ -150,7 +150,7 @@ export default function ResearchSettingsModal({ onClose, onNotify }: ResearchSet
           {/* The search a run gets depends on the kind of key it researches with. */}
           <Typography sx={{ ...textStyles.bodySmall, color: "text.tertiary" }}>
             {t(
-              "Anthropic keys search with Claude's own web search, billed by Anthropic at about $10 per 1,000 searches (about 20 to 30 a run). Other keys search the news of the last 3 months through the GDELT Project at no charge.",
+              "Anthropic keys search with Claude's own web search, billed by Anthropic at about $10 per 1,000 searches (about 20 to 30 a run); the search results also count as input tokens of the research model. Other keys search the news of the last 3 months through the GDELT Project at no charge.",
             )}
           </Typography>
         </Stack>

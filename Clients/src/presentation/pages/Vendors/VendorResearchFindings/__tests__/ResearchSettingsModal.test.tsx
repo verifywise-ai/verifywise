@@ -53,7 +53,7 @@ const SCAN_BIWEEKLY = "Every 2 weeks";
 const SCAN_MONTHLY = "Every month";
 /** What the window says under the research key about the search that each kind of key gets. */
 const SEARCH_HELP =
-  "Anthropic keys search with Claude's own web search, billed by Anthropic at about $10 per 1,000 searches (about 20 to 30 a run). Other keys search the news of the last 3 months through the GDELT Project at no charge.";
+  "Anthropic keys search with Claude's own web search, billed by Anthropic at about $10 per 1,000 searches (about 20 to 30 a run); the search results also count as input tokens of the research model. Other keys search the news of the last 3 months through the GDELT Project at no charge.";
 
 type SavedSettings = {
   researchKeyId: number | null;

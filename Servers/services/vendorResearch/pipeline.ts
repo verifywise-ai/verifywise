@@ -771,11 +771,14 @@ async function research(args: RunArgs, deps: PipelineDeps, progress: Progress): 
   progress.categories = workedCategories(found.calls);
   progress.searchesUsed = found.searchesUsed;
   progress.pagesRead = found.pagesRead;
-  // Where the searches really went: a run of an Anthropic key that was refused a search is on the
-  // news of GDELT, whatever its key would have chosen. It is recorded only when a search was
-  // answered: the column is what the user is told ("News searched with ..."), and a run whose
-  // searches the web never answered received no news from any engine. Kept for every end of the run
-  // from here on; the engine of such a run is in the log line below.
+  // Where the answers came from: the engine whose search resolved. A run of an Anthropic key that
+  // was refused a search and then had GDELT answer is credited to GDELT, whose news is in the run;
+  // one whose fallback answered nothing keeps the credit of the key's own engine for the searches
+  // it did answer. It is recorded only when a search was answered: the column is what the user is
+  // told ("News searched with ..."), and a run whose searches the web never answered received no
+  // news from any engine. Kept for every end of the run from here on; the log line below gives the
+  // counts of such a run and the engine the researcher reported, which is none for a key's own
+  // engine and its fallback when neither answered a search.
   const searchCalls = found.calls.filter((call) => call.tool === "search");
   const answeredSearches = searchCalls.filter((call) => call.answered).length;
   const reportedEngine = recordedEngineOf(found.searchEngine);

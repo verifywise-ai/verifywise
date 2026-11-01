@@ -128,6 +128,43 @@ Tokens are obtained via `/api/users/login` and refreshed via `/api/users/refresh
 | PATCH | `/:id` | Update vendor | JWT |
 | DELETE | `/:id` | Delete vendor | JWT |
 
+The legacy `POST /api/vendors` and `PATCH /api/vendors/:id` are frozen (ADR 0001): they ignore the identifier fields below, so a client that sends them there loses them silently. Their responses carry the five columns (null when unset). Use the `/api/v1` routes to write the fields.
+
+---
+
+## Vendors (v1)
+
+**Base Path:** `/api/v1/vendors`
+
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| POST | `/` | Create vendor; also takes `other_names`, `country`, `registration_number`, `lei` and `sec_cik` | JWT, `vendor.edit` |
+| PATCH | `/:id` | Update vendor; also takes the same five fields | JWT, `vendor.edit` |
+| POST | `/:id/research` | Start a research run for the vendor | JWT, `vendor.edit` |
+| GET | `/:id/research/latest` | State of the latest research run of the vendor | JWT (any role) |
+| GET | `/:id/research/runs/:runId/trace` | Trace of a run (queries, addresses, tokens) | JWT, `llmKeys.admin` |
+
+## Vendor research (v1)
+
+**Base Path:** `/api/v1/vendor-research`
+
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| GET | `/config` | What the research button depends on (no key is returned) | JWT (any role) |
+| GET | `/decision-stats` | Rate of acceptance by prompt version | JWT, `llmKeys.admin` |
+| GET | `/settings` | Research and analysis keys, scheduled scan | JWT, `llmKeys.admin` |
+| PUT | `/settings` | Save the research settings | JWT, `llmKeys.admin` |
+
+## Vendor risk findings (v1)
+
+**Base Path:** `/api/v1/vendor-risk-findings`
+
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| GET | `/` | List the findings of the research | JWT (any role) |
+| POST | `/:id/accept` | Accept a finding into the vendor risk register | JWT, `vendor.edit` |
+| POST | `/:id/dismiss` | Dismiss a finding, with a reason | JWT, `vendor.edit` |
+
 ---
 
 ## Vendor Risks
@@ -753,7 +790,7 @@ All change history endpoints follow the same pattern:
 | Dashboard | `/api/dashboard` | `/` |
 | Projects/Use Cases | `/api/projects` | `/project-view` |
 | Risk Management | `/api/projectRisks` | `/risk-management` |
-| Vendors | `/api/vendors`, `/api/vendorRisks` | `/vendors` |
+| Vendors | `/api/vendors`, `/api/v1/vendors`, `/api/v1/vendor-research`, `/api/v1/vendor-risk-findings`, `/api/vendorRisks` | `/vendors` |
 | Model Inventory | `/api/modelInventory`, `/api/modelRisks` | `/model-inventory` |
 | Datasets | `/api/datasets` | `/datasets` |
 | Policies | `/api/policies` | `/policies` |
