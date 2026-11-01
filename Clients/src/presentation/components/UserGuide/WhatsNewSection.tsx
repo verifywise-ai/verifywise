@@ -12,7 +12,7 @@ interface ChangelogEntry {
 const CHANGELOG: ChangelogEntry[] = [
   {
     version: "v2.6.6",
-    date: "October 31, 2026",
+    date: "November 1, 2026",
     title: "Use case and AI app lifecycles, intake form logic and MCP server auth",
     summary:
       "Use cases and AI apps now move through lifecycle stages from planned to retired. Each has a go-live step, followed by periodic still-live checks. The intake form builder gets a Logic overview, readable formulas, a preview for each role and threshold tooltips. Applicants see a suggested risk level before they submit, and the AI Gateway can connect to MCP servers that use OAuth client credentials or AWS IAM.",
