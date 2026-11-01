@@ -28,6 +28,12 @@ vi.mock("../../../../../application/repository/aiTrustCentre.repository", () => 
   deleteAITrustCentreLogo: (...args: any[]) => mockDeleteAITrustCentreLogo(...args),
 }));
 
+vi.mock("../../../../../application/repository/useCaseLifecycle.repository", () => ({
+  getLifecycleSettings: () =>
+    Promise.resolve({ organization_id: 1, confirmation_interval_days: 90 }),
+  updateLifecycleSettings: vi.fn(),
+}));
+
 // --- Auth mock with mutable role ---
 let mockUserRoleName = "Admin";
 

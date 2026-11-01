@@ -19,6 +19,7 @@ import TablePaginationActions from "../../components/TablePagination";
 import { EmptyState } from "../EmptyState";
 import { AiRiskClassification } from "../../../domain/enums/aiRiskClassification.enum";
 import Chip from "../Chip";
+import StaleMarker from "../LifecycleTabs/StaleMarker";
 import ViewRelationshipsButton from "../ViewRelationshipsButton";
 import IconButton from "../IconButton";
 import {
@@ -192,6 +193,7 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
   onProjectDeleted,
   visibleColumns,
   emptyMessage,
+  staleIds,
 }) => {
   const formatUserDate = useFormattedDate();
   const theme = useTheme();
@@ -541,6 +543,7 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
                     }}
                   >
                     {project.project_title}
+                    {staleIds?.has(project.id) && <StaleMarker />}
                   </TableCell>
                 )}
 

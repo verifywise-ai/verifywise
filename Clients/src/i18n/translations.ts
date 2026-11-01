@@ -72,12 +72,18 @@ import {
 } from "./modules/riskManagement";
 import { de as startHereDe, fr as startHereFr, es as startHereEs } from "./modules/startHere";
 import { de as superAdminDe, fr as superAdminFr, es as superAdminEs } from "./modules/superAdmin";
+import { de as mcpServersDe, fr as mcpServersFr, es as mcpServersEs } from "./modules/mcpServers";
 import { de as tasksDe, fr as tasksFr, es as tasksEs } from "./modules/tasks";
 import {
   de as intakeLiveChecksDe,
   fr as intakeLiveChecksFr,
   es as intakeLiveChecksEs,
 } from "./modules/intakeLiveChecks";
+import {
+  de as useCaseLifecycleDe,
+  fr as useCaseLifecycleFr,
+  es as useCaseLifecycleEs,
+} from "./modules/useCaseLifecycle";
 import {
   de as intakePreviewDe,
   fr as intakePreviewFr,
@@ -116,7 +122,9 @@ export const translations: Record<string, Record<string, string>> = {
     ...startHereDe,
     ...superAdminDe,
     ...tasksDe,
+    ...mcpServersDe,
     ...intakeLiveChecksDe,
+    ...useCaseLifecycleDe,
     ...intakePreviewDe,
     ...intakeLogicDe,
     ...trainingDe,
@@ -9589,7 +9597,9 @@ export const translations: Record<string, Record<string, string>> = {
     ...startHereFr,
     ...superAdminFr,
     ...tasksFr,
+    ...mcpServersFr,
     ...intakeLiveChecksFr,
+    ...useCaseLifecycleFr,
     ...intakePreviewFr,
     ...intakeLogicFr,
     ...trainingFr,
@@ -19002,7 +19012,9 @@ export const translations: Record<string, Record<string, string>> = {
     ...startHereEs,
     ...superAdminEs,
     ...tasksEs,
+    ...mcpServersEs,
     ...intakeLiveChecksEs,
+    ...useCaseLifecycleEs,
     ...intakePreviewEs,
     ...intakeLogicEs,
     ...trainingEs,

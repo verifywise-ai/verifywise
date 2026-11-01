@@ -23,6 +23,7 @@ import {
   scheduleMrmRetentionPrune,
   scheduleDataRetentionPrune,
   scheduleFileExpirySweep,
+  scheduleLifecycleConfirmationSweep,
   scheduleAiTrustIndexSync,
   scheduleEvidenceFreshnessSweep,
   scheduleDeadlineEscalationSweep,
@@ -66,6 +67,7 @@ export async function addAllJobs(): Promise<void> {
   await safeSchedule("mrm-retention-prune", scheduleMrmRetentionPrune); // non-obliterating — safe to run after the obliterating schedulers
   await safeSchedule("data-retention-prune", scheduleDataRetentionPrune); // non-obliterating — safe to run after the obliterating schedulers
   await safeSchedule("file-expiry-sweep", scheduleFileExpirySweep); // non-obliterating — safe to run after the obliterating schedulers
+  await safeSchedule("lifecycle-confirmation-sweep", scheduleLifecycleConfirmationSweep); // non-obliterating — safe to run after the obliterating schedulers
   await safeSchedule("evidence-freshness-sweep", scheduleEvidenceFreshnessSweep); // non-obliterating — safe to run after the obliterating schedulers
   await safeSchedule("deadline-escalation-sweep", scheduleDeadlineEscalationSweep); // non-obliterating — safe to run after the obliterating schedulers
   await safeSchedule("stale-inheritance-notify-sweep", scheduleStaleInheritanceNotifySweep); // non-obliterating — safe to run after the obliterating schedulers

@@ -30,6 +30,10 @@ jest.mock("../../../utils/approvalRequest.utils", () => ({
   tryAutoApproveRequestQuery: jest.fn(),
 }));
 
+jest.mock("../../../utils/lifecycle.utils", () => ({
+  moveUseCaseIntoReview: jest.fn(),
+}));
+
 import {
   createUseCaseApprovalRequest,
   notifyUseCaseApprovalRequested,
@@ -39,6 +43,7 @@ import { notifyApprovalRequested } from "../../inAppNotification.service";
 import { getUserByIdQuery } from "../../../utils/user.utils";
 import { getApprovalWorkflowByIdQuery } from "../../../utils/approvalWorkflow.utils";
 import { ValidationException } from "../../../domain.layer/exceptions/custom.exception";
+import { moveUseCaseIntoReview } from "../../../utils/lifecycle.utils";
 import {
   createApprovalRequestQuery,
   tryAutoApproveRequestQuery,
@@ -124,6 +129,8 @@ describe("createUseCaseApprovalRequest", () => {
       expect.anything(),
     );
     expect(result).toEqual(expect.objectContaining({ workflowTitle: "Use case sign-off", steps }));
+    // An open request puts a planned use case in review (#5187).
+    expect(moveUseCaseIntoReview).toHaveBeenCalledWith(1, 11, 2, expect.anything());
   });
 
   it("creates no request when the workflow has no steps", async () => {
@@ -131,6 +138,8 @@ describe("createUseCaseApprovalRequest", () => {
 
     expect(await createUseCaseApprovalRequest(useCase, 2, 1, {} as any)).toBeNull();
     expect(mockCreateRequest).not.toHaveBeenCalled();
+    // No request, so the use case must not be stranded in review.
+    expect(moveUseCaseIntoReview).not.toHaveBeenCalled();
   });
 
   it("rejects a workflow that has been deleted", async () => {

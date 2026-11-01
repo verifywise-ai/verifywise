@@ -67,7 +67,10 @@ export async function deleteProjectWithSideEffects(
       transaction,
     );
     if (withdrawnApprovalId) {
-      await withdrawApprovalRequestQuery(withdrawnApprovalId, organizationId, transaction);
+      await withdrawApprovalRequestQuery(withdrawnApprovalId, organizationId, transaction, {
+        // The use case is being deleted; there is no stage to move.
+        releaseUseCase: false,
+      });
     }
   }
 

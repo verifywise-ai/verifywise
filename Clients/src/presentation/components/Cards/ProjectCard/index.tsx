@@ -26,6 +26,7 @@ import {
   AssessmentProgress,
   ComplianceProgress,
 } from "../../../../application/interfaces/iprogress";
+import StaleMarker from "../../LifecycleTabs/StaleMarker";
 
 function ProjectCardSkeleton() {
   return (
@@ -62,6 +63,8 @@ interface ClausesProgress {
 interface ProjectCardProps {
   project: Project;
   isLoading?: boolean;
+  /** Live, but not confirmed within the "still live?" interval (#5187). */
+  isStale?: boolean;
 }
 
 // Helper to fetch progress data
@@ -147,6 +150,7 @@ function FrameworkButton({
 export const ProjectCard = React.memo(function ProjectCard({
   project,
   isLoading = false,
+  isStale = false,
 }: ProjectCardProps) {
   const formatDate = useFormattedDate();
   const navigate = useNavigateSearch();
@@ -202,6 +206,7 @@ export const ProjectCard = React.memo(function ProjectCard({
           <Typography className="project-card-title" sx={projectCardTitleStyle}>
             {project.uc_id ? `${project.uc_id}: ` : ""}
             {project.project_title}
+            {isStale && <StaleMarker />}
           </Typography>
           <Stack direction="row" spacing={8} sx={{ ml: 2 }}>
             <Stack className="project-card-spec-tile" alignItems="flex-end">

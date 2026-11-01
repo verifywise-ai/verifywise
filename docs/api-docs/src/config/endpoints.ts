@@ -12203,6 +12203,209 @@ export const v1UseCaseSettingsEndpoints: Endpoint[] = [
   },
 ];
 
+// v1: V1/Ai App Lifecycle endpoints
+export const v1V1aiAppLifecycleEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/ai-app-lifecycle/summary',
+    summary: "Get Ai App Lifecycle Summary Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai App Lifecycle",
+  },
+  {
+    method: 'GET',
+    path: '/v1/ai-app-lifecycle/{id}',
+    summary: "Get Ai App Lifecycle Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai App Lifecycle",
+  },
+  {
+    method: 'GET',
+    path: '/v1/ai-app-lifecycle/{id}/history',
+    summary: "Get Ai App History Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai App Lifecycle",
+  },
+  {
+    method: 'POST',
+    path: '/v1/ai-app-lifecycle/{id}/go-live',
+    summary: "Ai App Go Live Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai App Lifecycle",
+  },
+  {
+    method: 'POST',
+    path: '/v1/ai-app-lifecycle/{id}/retire',
+    summary: "Ai App Retire Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai App Lifecycle",
+  },
+  {
+    method: 'POST',
+    path: '/v1/ai-app-lifecycle/{id}/confirm',
+    summary: "Ai App Confirm Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai App Lifecycle",
+  },
+  {
+    method: 'GET',
+    path: '/v1/ai-app-lifecycle/intake-submissions',
+    summary: "Get Pending Ai App Submissions Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai App Lifecycle",
+  },
+];
+
+// v1: V1/Ai Apps endpoints
+export const v1V1aiAppsEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/ai-apps',
+    summary: "Get All Ai Apps V1",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai Apps",
+  },
+];
+
+// v1: V1/Lifecycle Settings endpoints
+export const v1V1lifecycleSettingsEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/lifecycle-settings',
+    summary: "Get Lifecycle Settings Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Lifecycle Settings",
+  },
+  {
+    method: 'PATCH',
+    path: '/v1/lifecycle-settings',
+    summary: "Update Lifecycle Settings Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Lifecycle Settings",
+  },
+];
+
+// v1: V1/Use Case Lifecycle endpoints
+export const v1V1useCaseLifecycleEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/use-case-lifecycle/summary',
+    summary: "Get Lifecycle Summary Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Use Case Lifecycle",
+  },
+  {
+    method: 'GET',
+    path: '/v1/use-case-lifecycle/dashboard',
+    summary: "Get Lifecycle Dashboard Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Use Case Lifecycle",
+  },
+  {
+    method: 'POST',
+    path: '/v1/use-case-lifecycle/{id}/go-live',
+    summary: "Go Live Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Use Case Lifecycle",
+  },
+  {
+    method: 'POST',
+    path: '/v1/use-case-lifecycle/{id}/retire',
+    summary: "Retire Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Use Case Lifecycle",
+  },
+  {
+    method: 'POST',
+    path: '/v1/use-case-lifecycle/{id}/confirm',
+    summary: "Confirm Still Live Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Use Case Lifecycle",
+  },
+  {
+    method: 'PATCH',
+    path: '/v1/use-case-lifecycle/{id}/department',
+    summary: "Update Department Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Use Case Lifecycle",
+  },
+  {
+    method: 'GET',
+    path: '/v1/use-case-lifecycle/intake-submissions',
+    summary: "Get Pending Submissions Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Use Case Lifecycle",
+  },
+];
+
 // Vendors endpoints
 export const vendorEndpoints: Endpoint[] = [
   {
@@ -12550,6 +12753,10 @@ export const allEndpoints = {
   user: userEndpoints,
   v1ChangeHistory: v1ChangeHistoryEndpoints,
   v1UseCaseSettings: v1UseCaseSettingsEndpoints,
+  v1V1aiAppLifecycle: v1V1aiAppLifecycleEndpoints,
+  v1V1aiApps: v1V1aiAppsEndpoints,
+  v1V1lifecycleSettings: v1V1lifecycleSettingsEndpoints,
+  v1V1useCaseLifecycle: v1V1useCaseLifecycleEndpoints,
   vendor: vendorEndpoints,
   vendorRisk: vendorRiskEndpoints,
   webhook: webhookEndpoints,

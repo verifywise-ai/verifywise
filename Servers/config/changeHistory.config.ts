@@ -37,6 +37,7 @@ export type EntityType =
   | "model_inventory"
   | "vendor"
   | "use_case"
+  | "ai_app"
   | "evidence_hub"
   | "control_eu"
   | "subcontrol_eu"
@@ -465,6 +466,11 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
       status: "Status",
       framework: "Frameworks",
       monitored_regulations_and_standards: "Monitored regulations and standards",
+      // Lifecycle (#5187); recorded by controllers/useCaseLifecycle.ctrl.ts.
+      lifecycle_stage: "Lifecycle stage",
+      go_live_date: "Go-live date",
+      last_confirmed_at: "Confirmed still live",
+      department: "Department",
     },
     fieldFormatters: {
       owner: GENERIC_FORMATTERS.user,
@@ -475,6 +481,19 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
       high_risk_roles: async (value: unknown): Promise<string> => formatHighRiskRoles(value) || "-",
       framework: GENERIC_FORMATTERS.frameworkArray,
       monitored_regulations_and_standards: GENERIC_FORMATTERS.array,
+    },
+  },
+
+  // AI apps (#5193). Written by the lifecycle actions
+  // (controllers/lifecycle.ctrl.ts); other AI app edits are not tracked yet.
+  ai_app: {
+    tableName: "ai_app_change_history",
+    foreignKeyField: "ai_app_id",
+    fieldsToTrack: ["lifecycle_stage", "go_live_date", "last_confirmed_at"],
+    fieldLabels: {
+      lifecycle_stage: "Lifecycle stage",
+      go_live_date: "Go-live date",
+      last_confirmed_at: "Confirmed still live",
     },
   },
 

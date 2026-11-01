@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { brand } from "../../../../themes/palette";
 import { singleTheme } from "../../../../themes";
+import UseCaseLifecyclePanel from "./UseCaseLifecyclePanel";
 
 /**
  * A use case whose approval request is pending or rejected has every tab in the
@@ -53,7 +54,13 @@ const approvalNotices = {
   },
 };
 
-const VWProjectOverview = ({ project }: { project?: Project }) => {
+const VWProjectOverview = ({
+  project,
+  onLifecycleChanged,
+}: {
+  project?: Project;
+  onLifecycleChanged?: () => void;
+}) => {
   const formatDate = useFormattedDate();
   const [projectFrameworkId, setProjectFrameworkId] = useState<number | null>(null);
   const [projectFrameworkId2, setProjectFrameworkId2] = useState<number | null>(null);
@@ -289,6 +296,9 @@ const VWProjectOverview = ({ project }: { project?: Project }) => {
             {approvalNotice.message}
           </Typography>
         </Alert>
+      )}
+      {project && !project.is_organizational && (
+        <UseCaseLifecyclePanel project={project} onChanged={onLifecycleChanged} />
       )}
       {/* Main Content */}
       <Stack className="vw-project-overview" sx={{ width: "100%" }}>

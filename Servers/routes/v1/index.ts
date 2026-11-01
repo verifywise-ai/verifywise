@@ -21,6 +21,10 @@ import controlEUChangeHistoryRoutes from "./controlEUChangeHistory.route";
 import subcontrolEUChangeHistoryRoutes from "./subcontrolEUChangeHistory.route";
 import annexCategoryChangeHistoryRoutes from "./annexCategoryChangeHistory.route";
 import useCaseOrgSettingsRoutes from "./useCaseOrgSettings.route";
+import useCaseLifecycleRoutes from "./useCaseLifecycle.route";
+import lifecycleSettingsRoutes from "./lifecycleSettings.route";
+import aiAppsRoutes from "./aiApps.route";
+import aiAppLifecycleRoutes from "./aiAppLifecycle.route";
 
 const router = express.Router();
 
@@ -38,5 +42,13 @@ router.use("/annex-category-change-history", annexCategoryChangeHistoryRoutes);
 
 // Defaults a new use case starts with (#5192).
 router.use("/use-case-org-settings", useCaseOrgSettingsRoutes);
+
+// Use case lifecycle and the org-wide "still live?" interval (#5187).
+router.use("/use-case-lifecycle", useCaseLifecycleRoutes);
+router.use("/lifecycle-settings", lifecycleSettingsRoutes);
+
+// AI apps with their lifecycle (#5193).
+router.use("/ai-apps", aiAppsRoutes);
+router.use("/ai-app-lifecycle", aiAppLifecycleRoutes);
 
 export default router;

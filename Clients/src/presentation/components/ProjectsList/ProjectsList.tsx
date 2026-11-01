@@ -52,6 +52,10 @@ const ProjectList = ({
   newProjectButton,
   onProjectDeleted,
   isLoading = false,
+  staleIds,
+  emptyMessage,
+  header,
+  renderBeforeList,
 }: IProjectListProps) => {
   const formatDate = useFormattedDate();
   const [searchTerm, setSearchTerm] = useState("");
@@ -261,6 +265,16 @@ const ProjectList = ({
       );
     }
 
+    if ((!projects || projects.length === 0) && emptyMessage) {
+      return viewMode === "table" ? (
+        <ProjectTableView projects={[]} emptyMessage={emptyMessage} />
+      ) : (
+        <Typography variant="body1" sx={noProjectsTextStyle}>
+          {emptyMessage}
+        </Typography>
+      );
+    }
+
     if (!projects || projects.length === 0) {
       return viewMode === "table" ? (
         <ProjectTableView projects={[]} />
@@ -290,6 +304,7 @@ const ProjectList = ({
               hidePagination={options?.hidePagination}
               onProjectDeleted={onProjectDeleted}
               visibleColumns={visibleColumns}
+              staleIds={staleIds}
             />
           )}
         />
@@ -300,7 +315,7 @@ const ProjectList = ({
       return (
         <Box sx={projectWrapperStyle(filteredProjects.length)}>
           {filteredProjects.map((project) => (
-            <ProjectCard key={project.id} project={project} />
+            <ProjectCard key={project.id} project={project} isStale={staleIds?.has(project.id)} />
           ))}
         </Box>
       );
@@ -310,7 +325,7 @@ const ProjectList = ({
       <Box sx={vwhomeBodyProjectsGrid}>
         {filteredProjects.map((project) => (
           <Box key={project.id} sx={{ gridColumn: "span 1" }}>
-            <ProjectCard project={project} />
+            <ProjectCard project={project} isStale={staleIds?.has(project.id)} />
           </Box>
         ))}
       </Box>
@@ -350,6 +365,7 @@ const ProjectList = ({
 
   return (
     <Box sx={{ width: "100%" }}>
+      {header as React.ReactNode}
       <Box
         sx={{
           display: "flex",
@@ -407,6 +423,8 @@ const ProjectList = ({
           <ViewToggle viewMode={viewMode} onViewChange={setViewMode} />
         </Box>
       </Box>
+
+      {!isLoading && (renderBeforeList?.(searchTerm) as React.ReactNode)}
 
       {/* Projects List */}
       {renderProjects()}

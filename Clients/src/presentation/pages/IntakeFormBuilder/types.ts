@@ -340,6 +340,28 @@ export const ENTITY_FIELD_MAPPINGS: Record<IntakeEntityType, EntityFieldMapping[
       requiredFieldType: ["select"],
     },
   ],
+  // AI apps (#5193): what approval copies onto the new AI app.
+  [IntakeEntityType.AI_APP]: [
+    {
+      field: "name",
+      label: "AI app name",
+      description: "Name of the AI app",
+      requiredFieldType: ["text"],
+      entityRequired: true,
+    },
+    {
+      field: "description",
+      label: "Description",
+      description: "What the AI app is used for",
+      requiredFieldType: ["textarea", "text"],
+    },
+    {
+      field: "departments",
+      label: "Departments",
+      description: "Teams that use the AI app (a multi-select, or text separated by commas)",
+      requiredFieldType: ["multiselect", "text"],
+    },
+  ],
 };
 
 /**
@@ -598,6 +620,38 @@ export const DEFAULT_USE_CASE_FIELDS: FormField[] = [
 /**
  * Default model inventory fields pre-populated for new forms
  */
+export const DEFAULT_AI_APP_FIELDS: FormField[] = [
+  {
+    id: generateFieldId(),
+    type: "text",
+    label: "AI app name",
+    placeholder: "Enter the name of the AI app",
+    guidanceText: "Use the product name people know it by, so reviewers can find it.",
+    validation: { required: true, maxLength: 255 },
+    entityFieldMapping: "name",
+    order: 0,
+  },
+  {
+    id: generateFieldId(),
+    type: "textarea",
+    label: "Description",
+    placeholder: "Describe what you want to use the AI app for",
+    guidanceText: "Include the task, the data it will see and who will use it.",
+    validation: { maxLength: 2000 },
+    entityFieldMapping: "description",
+    order: 1,
+  },
+  {
+    id: generateFieldId(),
+    type: "text",
+    label: "Departments",
+    placeholder: "e.g. Sales, Support",
+    guidanceText: "Separate several departments with commas.",
+    entityFieldMapping: "departments",
+    order: 2,
+  },
+];
+
 export const DEFAULT_MODEL_FIELDS: FormField[] = [
   {
     id: generateFieldId(),
@@ -866,7 +920,9 @@ export function createEmptyForm(entityType?: IntakeEntityType): IntakeForm {
           ? DEFAULT_USE_CASE_FIELDS.map((f, i) => ({ ...f, id: generateFieldId(), order: i }))
           : type === IntakeEntityType.MODEL
             ? DEFAULT_MODEL_FIELDS.map((f, i) => ({ ...f, id: generateFieldId(), order: i }))
-            : [],
+            : type === IntakeEntityType.AI_APP
+              ? DEFAULT_AI_APP_FIELDS.map((f, i) => ({ ...f, id: generateFieldId(), order: i }))
+              : [],
     },
     submitButtonText: "Submit",
     status: IntakeFormStatus.DRAFT,
