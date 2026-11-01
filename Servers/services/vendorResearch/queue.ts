@@ -13,7 +13,8 @@
  *
  * The queue also carries the repeating job of the scheduled scan (see scan.ts): one job an hour that
  * starts the runs of the vendors that are due. It is a scheduler of BullMQ, which the backend
- * registers at startup in jobs/producer.ts; registering it again changes nothing.
+ * registers at startup in jobs/producer.ts; registering it again replaces its options (a changed
+ * minute takes effect at the next start), or changes nothing when they are the same.
  */
 import { type JobsOptions, Queue } from "bullmq";
 import { REDIS_URL } from "../../database/redis";
