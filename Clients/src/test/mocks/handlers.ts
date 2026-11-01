@@ -63,6 +63,11 @@ export const handlers = [
   // Health check
   http.get("/api/health", () => HttpResponse.json({ status: "ok" })),
 
+  // Applicant's response to the suggested risk level (submission review): none given.
+  http.get("/api/v1/intake-tier-suggestion/submissions/:id", () =>
+    HttpResponse.json({ data: { response: null } }),
+  ),
+
   // Use case defaults (Settings → Organization, use case form): none set.
   http.get("/api/v1/use-case-org-settings", () =>
     HttpResponse.json({

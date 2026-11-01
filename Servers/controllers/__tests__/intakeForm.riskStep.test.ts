@@ -84,6 +84,9 @@ jest.mock("../../utils/statusCode.utils", () => ({
     500: (d: any) => ({ message: "Internal Server Error", data: d }),
   },
 }));
+jest.mock("../../utils/intakeTierSuggestion.utils", () => ({
+  setTierSuggestionResponseQuery: jest.fn<any>().mockResolvedValue(undefined),
+}));
 jest.mock("../../database/db", () => ({
   sequelize: {
     transaction: jest.fn<any>().mockResolvedValue({ commit: jest.fn(), rollback: jest.fn() }),
@@ -94,6 +97,7 @@ jest.mock("../../database/db", () => ({
 const ctrl = require("../intakeForm.ctrl") as typeof import("../intakeForm.ctrl");
 const intake = require("../../utils/intakeForm.utils");
 const runs = require("../../utils/euAiActClassification.utils");
+const tierResponses = require("../../utils/intakeTierSuggestion.utils");
 const projects = require("../../utils/project.utils");
 const euFramework = require("../../utils/eu.utils");
 const history = require("../../utils/useCaseChangeHistory.utils");
@@ -218,6 +222,41 @@ describe("public submit with the EU AI Act step", () => {
       const data = r.json.mock.calls[0][0].data;
       expect(data).not.toHaveProperty("result");
       expect(data).not.toHaveProperty("level");
+    },
+  );
+
+  it.each(["byId", "bySlug"] as const)(
+    "%s: stores the applicant's response with the server-scored level, not the page's",
+    async (route) => {
+      const r = res();
+      r.locals = { tierSuggestionResponse: { accepted: false, context: "Internal staff only" } };
+      await ROUTES[route].handler(
+        req({
+          params: ROUTES[route].params,
+          body: submitBody({ euAiActRiskAnswers: ANSWERS }),
+        }) as any,
+        r,
+      );
+      expect(r.status).toHaveBeenCalledWith(201);
+      const [submissionId, organizationId, stored] =
+        tierResponses.setTierSuggestionResponseQuery.mock.calls[0];
+      expect(submissionId).toBe(99);
+      expect(organizationId).toBe(5);
+      expect(stored).toMatchObject({
+        suggestedLevel: "Limited risk",
+        questionnaireVersion: 2,
+        accepted: false,
+        context: "Internal staff only",
+      });
+    },
+  );
+
+  it.each(["byId", "bySlug"] as const)(
+    "%s: stores no response through the legacy route",
+    async (route) => {
+      const r = await submit(route, submitBody({ euAiActRiskAnswers: ANSWERS }));
+      expect(r.status).toHaveBeenCalledWith(201);
+      expect(tierResponses.setTierSuggestionResponseQuery).not.toHaveBeenCalled();
     },
   );
 

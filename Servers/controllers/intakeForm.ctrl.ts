@@ -36,6 +36,8 @@ import {
 } from "../utils/intakeForm.utils";
 import { createNewModelInventoryQuery } from "../utils/modelInventory.utils";
 import { createNewProjectQuery } from "../utils/project.utils";
+import { setTierSuggestionResponseQuery } from "../utils/intakeTierSuggestion.utils";
+import type { ApplicantTierResponse } from "./intakeTierSuggestion.ctrl";
 import { addFrameworkToProjectQuery } from "../utils/framework.utils";
 import { getUseCaseOrgSettings } from "../utils/useCaseOrgSettings.utils";
 import {
@@ -259,13 +261,33 @@ async function buildPublicLiveChecks(
 // EU AI ACT RISK STEP HELPERS
 // ============================================================================
 
-/** Stores the scored EU AI Act answers of a public submission as its classification run. */
+/**
+ * Stores the scored EU AI Act answers of a public submission as its
+ * classification run, and the applicant's response to the tier suggested from
+ * them when the v1 submit route passed one (#5190). The stored level is the
+ * one scored here, never a value the page sent.
+ */
 async function persistIntakeRiskRun(
   submissionId: number,
   prepared: PreparedRun,
   organizationId: number,
   transaction: Transaction,
+  applicantResponse?: ApplicantTierResponse,
 ): Promise<void> {
+  if (applicantResponse) {
+    await setTierSuggestionResponseQuery(
+      submissionId,
+      organizationId,
+      {
+        suggestedLevel: prepared.result.level,
+        questionnaireVersion: prepared.questionnaireVersion,
+        accepted: applicantResponse.accepted,
+        context: applicantResponse.context,
+        respondedAt: new Date().toISOString(),
+      },
+      transaction,
+    );
+  }
   await insertClassificationRunQuery(
     {
       useCaseId: null,
@@ -3317,6 +3339,7 @@ export async function submitPublicFormByPublicId(req: Request, res: Response) {
           riskStep.prepared,
           tenantInfo.orgId,
           transaction,
+          res.locals?.tierSuggestionResponse,
         );
       }
 
@@ -3666,7 +3689,13 @@ export async function submitPublicForm(req: Request, res: Response) {
       );
 
       if (riskStep.prepared) {
-        await persistIntakeRiskRun(submission.id!, riskStep.prepared, tenantInfo.id, transaction);
+        await persistIntakeRiskRun(
+          submission.id!,
+          riskStep.prepared,
+          tenantInfo.id,
+          transaction,
+          res.locals?.tierSuggestionResponse,
+        );
       }
 
       await transaction.commit();

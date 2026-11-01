@@ -593,10 +593,41 @@ export const intakeFormsContent: ArticleContent = {
         { text: 'All submitted field values' },
         { text: 'The risk score, with a **How this score is built** breakdown' },
         { text: 'The EU AI Act classification, when the form asks the questionnaire' },
+        { text: 'The applicant\'s response to the suggested risk level, when they gave one' },
         { text: 'Suggested risks to accept or dismiss' },
         { text: 'An entity data preview built from field mappings' },
         { text: 'Approve and Reject action buttons' },
       ],
+    },
+    {
+      type: 'heading',
+      id: 'suggested-risk-level',
+      level: 2,
+      text: 'Suggested risk level',
+    },
+    {
+      type: 'paragraph',
+      text: 'When the form includes the EU AI Act questionnaire, applicants see a suggested risk level as soon as they finish it, before they submit. The level and the articles behind it come from the same rules that classify the submission, so every reference is a real article.',
+    },
+    {
+      type: 'image',
+      src: '/images/user-guide/intake-suggested-risk-level.png',
+      alt: 'Suggested risk level card showing High risk with a reason that cites Annex III, point 5',
+      caption: 'A credit scoring tool gets High risk, with the Annex III reference.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Applicants can **Accept** the suggestion or **Add context** for the reviewer. When the level comes with duties, **Why this matters** lists what the EU AI Act asks at that level, for the applicant\'s role as provider or deployer. Either way, the governance team makes the final call in the review dialog and sees how the applicant responded.',
+    },
+    {
+      type: 'image',
+      src: '/images/user-guide/intake-suggested-risk-context.png',
+      alt: 'Suggested risk level card with Why this matters expanded to list deployer duties under Article 26, and a context note for the reviewer',
+      caption: 'Why this matters lists the deployer duties. This applicant added context for the reviewer.',
+    },
+    {
+      type: 'paragraph',
+      text: 'If the form has AI checks on and an LLM key, applicants can also ask for a plain-language explanation. Their risk answers go to an AI model only when they ask. The explanation may describe only the suggested level and its articles. An explanation that names another level or cites another article is discarded.',
     },
     {
       type: 'heading',

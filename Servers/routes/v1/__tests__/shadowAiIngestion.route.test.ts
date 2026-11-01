@@ -13,6 +13,12 @@ jest.mock("../../../middleware/auth.middleware", () => ({
   __esModule: true,
   default: (_req: unknown, res: any) => res.status(401).json({ message: "Unauthorized" }),
 }));
+// The intake tier suggestion routes reuse the public intake submit handlers,
+// which need signing secrets at import time; shadow-ai ingestion uses none.
+jest.mock("../intakeTierSuggestion.route", () => {
+  const { Router } = jest.requireActual<typeof import("express")>("express");
+  return { __esModule: true, default: Router() };
+});
 
 import v1Routes from "../index";
 import { validateApiKeyWithCache } from "../../../utils/shadowAiApiKey.utils";
