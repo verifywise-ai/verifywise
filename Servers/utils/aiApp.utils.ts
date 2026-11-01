@@ -196,8 +196,9 @@ export async function getAiAppByIdQuery(
   );
 
   const [ownerRows] = await sequelize.query(
-    `SELECT id, name, surname, email FROM users
-     WHERE id = :ownerId AND organization_id = :organizationId`,
+    `SELECT u.id, u.name, u.surname, u.email FROM users u
+     JOIN organization_members om ON om.user_id = u.id AND om.organization_id = :organizationId
+     WHERE u.id = :ownerId`,
     { replacements: { ownerId: app.owner_id, organizationId }, transaction },
   );
 

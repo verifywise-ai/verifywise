@@ -37,7 +37,7 @@ export const createApiToken = async (req: Request, res: Response) => {
   );
   logger.debug(`🛠️ Creating API token: ${name} (expires in ${expiryDays} days)`);
   try {
-    const user = await getUserByIdQuery(req.userId!, transaction);
+    const user = await getUserByIdQuery(req.userId!, transaction, organizationId ?? undefined);
     logStructured(
       "processing",
       `fetched user ${user.id} for API token creation`,
@@ -52,10 +52,10 @@ export const createApiToken = async (req: Request, res: Response) => {
     // demotion. Role name is sourced from the cached live role map so newly
     // added roles work without a code change.
     //
-    // A pure super admin has no org role (role_id IS NULL) and so is not in the
-    // role map. Their token carries the same "SuperAdmin" name loginUser mints;
-    // the auth middleware skips the role comparison when role_id is NULL.
-    const isOrglessSuperAdmin = user.role_id === null || user.role_id === undefined;
+    // A pure super admin has no organization and so no org role. Their token
+    // carries the same "SuperAdmin" name loginUser mints; the auth middleware
+    // checks a token without an organization against super_admins instead.
+    const isOrglessSuperAdmin = organizationId === null;
     const roleName = isOrglessSuperAdmin ? "SuperAdmin" : await getRoleNameById(user.role_id!);
     if (!roleName) {
       throw new ValidationException("Unable to resolve the creating user's role.");

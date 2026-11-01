@@ -24,21 +24,18 @@ async function seedTestData() {
   try {
     console.log("Seeding test data...");
 
-    // 0. Ensure the E2E super-admin exists. Post-2026-08-13, SuperAdmin is
-    // an overlay: bootstrap users have role_id = NULL, organization_id =
-    // NULL, plus a row in super_admins. Upsert on email (which is unique)
-    // and make sure the mapping row exists.
+    // 0. Ensure the E2E super-admin exists. A bootstrap (pure) super-admin
+    // is a row in super_admins with no organization membership. Upsert on
+    // email (which is unique) and make sure the mapping row exists.
     const superAdminEmail = process.env.SUPERADMIN_EMAIL;
     const superAdminPassword = process.env.SUPERADMIN_PASSWORD;
     if (superAdminEmail && superAdminPassword) {
       const superAdminHash = await bcrypt.hash(superAdminPassword, SALT_ROUNDS);
       await sequelize.query(
-        `INSERT INTO users (name, surname, email, password_hash, role_id, organization_id, created_at, last_login, is_demo)
-         VALUES ('Super', 'Admin', :email, :passwordHash, NULL, NULL, NOW(), NOW(), false)
+        `INSERT INTO users (name, surname, email, password_hash, created_at, last_login, is_demo)
+         VALUES ('Super', 'Admin', :email, :passwordHash, NOW(), NOW(), false)
          ON CONFLICT (email) DO UPDATE
            SET password_hash = :passwordHash,
-               role_id = NULL,
-               organization_id = NULL,
                updated_at = NOW()`,
         {
           replacements: { email: superAdminEmail, passwordHash: superAdminHash },
@@ -49,6 +46,12 @@ async function seedTestData() {
         `INSERT INTO super_admins (user_id)
          SELECT id FROM users WHERE email = :email
          ON CONFLICT (user_id) DO NOTHING`,
+        { replacements: { email: superAdminEmail }, transaction },
+      );
+      // A pure super-admin belongs to no organization.
+      await sequelize.query(
+        `DELETE FROM organization_members
+         WHERE user_id = (SELECT id FROM users WHERE email = :email)`,
         { replacements: { email: superAdminEmail }, transaction },
       );
       console.log(`  Super-admin ensured: ${superAdminEmail}`);
@@ -78,12 +81,25 @@ async function seedTestData() {
 
     // 2. Create test user
     const hashedPassword = await bcrypt.hash("Verifywise#1", SALT_ROUNDS);
-    await sequelize.query(
-      `INSERT INTO users (name, surname, email, password_hash, role_id, organization_id, created_at)
-       VALUES ('Test', 'User', 'verifywise@email.com', :password, 1, :orgId, NOW())
-       ON CONFLICT (email) DO UPDATE SET password_hash = :password`,
+    const [testUserRows] = await sequelize.query(
+      `INSERT INTO users (name, surname, email, password_hash, created_at)
+       VALUES ('Test', 'User', 'verifywise@email.com', :password, NOW())
+       ON CONFLICT (email) DO UPDATE SET password_hash = :password
+       RETURNING id`,
       {
-        replacements: { password: hashedPassword, orgId },
+        replacements: { password: hashedPassword },
+        transaction,
+      },
+    );
+    const testUserId = (testUserRows as { id: number }[])[0].id;
+    // A new user joins the organization as Admin; an existing one keeps the
+    // organizations it already has.
+    await sequelize.query(
+      `INSERT INTO organization_members (organization_id, user_id, role_id)
+       SELECT :orgId, :userId, 1
+       WHERE NOT EXISTS (SELECT 1 FROM organization_members WHERE user_id = :userId)`,
+      {
+        replacements: { orgId, userId: testUserId },
         transaction,
       },
     );

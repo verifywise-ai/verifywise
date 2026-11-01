@@ -633,18 +633,16 @@ export class ReportDataCollector {
    * Collect organization branding
    */
   private async collectBranding(): Promise<ReportBranding> {
-    const user = await getUserByIdQuery(this.userId);
+    // Branding is the organization the report is generated in.
     let organizationName = "VerifyWise";
     let organizationLogo: string | undefined;
 
-    if (user?.organization_id) {
-      const organization = await getOrganizationByIdQuery(user.organization_id);
-      if (organization) {
-        organizationName = organization.name || "VerifyWise";
-        // Fetch organization logo if available
-        if (organization.logo) {
-          organizationLogo = organization.logo;
-        }
+    const organization = await getOrganizationByIdQuery(this.organizationId);
+    if (organization) {
+      organizationName = organization.name || "VerifyWise";
+      // Fetch organization logo if available
+      if (organization.logo) {
+        organizationLogo = organization.logo;
       }
     }
 
@@ -928,14 +926,14 @@ export class ReportDataCollector {
    *
    * Controls carry a numeric `owner` FK, not a name (eu.utils.ts:482).
    *
-   * `users` is tenant-scoped, so this filters on the caller's organization
+   * Only members of the caller's organization resolve
    * (docs/technical/security/tenant-isolation.md §2.1, §4.4). getUserByIdQuery
-   * is `SELECT * FROM users WHERE id = :id` with no org filter, and the names
-   * it returns reach the rendered report, the facts block sent to the tenant's
-   * LLM provider, collectAllowedOwners, and the persisted audit_metadata — an
-   * id pointing at another tenant must resolve to nothing, not to a name. Users
-   * with a NULL organization_id (SuperAdmin/seed, §2.2) are dropped for the
-   * same reason.
+   * without an organization is `SELECT * FROM users WHERE id = :id`, and the
+   * names returned here reach the rendered report, the facts block sent to the
+   * tenant's LLM provider, collectAllowedOwners, and the persisted
+   * audit_metadata — an id pointing at someone outside this organization must
+   * resolve to nothing, not to a name. Users with no membership here
+   * (SuperAdmin/seed, §2.2) are dropped for the same reason.
    *
    * One query for the whole set, so this is also not N sequential round-trips.
    * `IN (:ids)` rather than `= ANY(:ids)`: sequelize expands an array
@@ -952,8 +950,11 @@ export class ReportDataCollector {
 
     try {
       const users = (await sequelize.query(
-        `SELECT id, name, surname FROM users
-         WHERE organization_id = :organizationId AND id IN (:ids)`,
+        `SELECT u.id, u.name, u.surname
+           FROM users u
+           JOIN organization_members om
+             ON om.user_id = u.id AND om.organization_id = :organizationId
+          WHERE u.id IN (:ids)`,
         {
           replacements: { organizationId: this.organizationId, ids: distinct },
           type: QueryTypes.SELECT,

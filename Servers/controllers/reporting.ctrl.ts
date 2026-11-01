@@ -231,7 +231,7 @@ export async function generateReportsV2(req: Request, res: Response): Promise<an
       return res.status(404).json(STATUS_CODE[404](req.t!("User not found")));
     }
 
-    const organization = await getOrganizationByIdQuery(user.organization_id!);
+    const organization = await getOrganizationByIdQuery(req.organizationId!);
     const organizationName = organization?.name || "VerifyWise";
 
     const request = {

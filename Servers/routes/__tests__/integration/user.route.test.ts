@@ -5,12 +5,16 @@ import request from "supertest";
 jest.mock("../../../controllers/user.ctrl", () => ({
   checkUserExists: jest.fn((_req: any, res: any) => res.status(200).json({ exists: true })),
   createNewUser: jest.fn((_req: any, res: any) => res.status(201).json({ id: 1 })),
+  acceptInvitationAsExistingUser: jest.fn((_req: any, res: any) =>
+    res.status(202).json({ token: "jwt" }),
+  ),
   deleteUserById: jest.fn((_req: any, res: any) => res.status(204).send()),
   getAllUsers: jest.fn((_req: any, res: any) =>
     res.status(200).json([{ id: 1, email: "a@b.com" }]),
   ),
   getUserById: jest.fn((_req: any, res: any) => res.status(200).json({ id: 1, email: "a@b.com" })),
   loginUser: jest.fn((_req: any, res: any) => res.status(200).json({ token: "jwt" })),
+  selectLoginOrganization: jest.fn((_req: any, res: any) => res.status(202).json({ token: "jwt" })),
   loginUserWithMicrosoft: jest.fn((_req: any, res: any) => res.status(200).json({ token: "jwt" })),
   updateUserById: jest.fn((_req: any, res: any) => res.status(200).json({ updated: true })),
   calculateProgress: jest.fn((_req: any, res: any) => res.status(200).json({ progress: 50 })),

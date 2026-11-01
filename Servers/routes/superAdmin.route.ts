@@ -13,6 +13,7 @@ import {
   listOrgInvitations,
   inviteUserToOrg,
   createUserInOrg,
+  removeOrgUser,
   emailExists,
   updateUser,
   removeUser,
@@ -41,6 +42,7 @@ router.get("/organizations/:id/users", listOrgUsers);
 router.get("/organizations/:id/invitations", listOrgInvitations);
 router.post("/organizations/:id/invite", inviteUserToOrg);
 router.post("/organizations/:id/users", createUserInOrg);
+router.delete("/organizations/:id/users/:userId", removeOrgUser);
 router.patch("/users/:id", updateUser);
 router.delete("/users/:id", removeUser);
 

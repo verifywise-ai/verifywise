@@ -25,7 +25,13 @@ import axios, { AxiosError } from "axios";
 import { store } from "../../application/redux/store";
 import { ENV_VARs } from "../../../env.vars";
 import { setAuthToken } from "../../application/redux/auth/authSlice";
-import { clearSession, endSessionAndReload } from "../../application/utils/clearSession";
+import {
+  clearSession,
+  endSessionAndReload,
+  reloadSession,
+  startSession,
+} from "../../application/utils/clearSession";
+import { extractUserToken } from "../../application/tools/extractToken";
 import { storageService } from "../storage";
 import { AlertProps } from "../../presentation/types/alert.types";
 import { translateKey } from "../../i18n/domTranslator";
@@ -47,6 +53,18 @@ const SESSION_ENDED_STATUSES = [400, 401, 406];
 /** How long the "Session Expired" message stays up before the reload. */
 const SESSION_EXPIRED_RELOAD_DELAY_MS = 1500;
 
+/** A token's organization; null for a pure super admin. */
+const organizationOf = (token: string | null | undefined) => {
+  const organizationId = token ? extractUserToken(token)?.organizationId : null;
+  return organizationId === null || organizationId === undefined ? null : Number(organizationId);
+};
+
+/** A token's user; null when the token cannot be read. */
+const userOf = (token: string | null | undefined) => {
+  const id = token ? extractUserToken(token)?.id : null;
+  return id === null || id === undefined ? null : Number(id);
+};
+
 /**
  * The auth middleware's 403 details that end the session, as the server
  * translates them (en, de, fr).
@@ -59,6 +77,13 @@ const SESSION_DENIED_DETAILS = [
   "Zugriff nicht erlaubt",
   "Accès non autorisé",
 ];
+
+/**
+ * The auth middleware's 401 detail (en, de, fr) for a session token it no
+ * longer accepts, as when the account was deleted (removed from its last
+ * organization). It ends the session like the 403s above.
+ */
+const SESSION_UNAUTHORIZED_DETAILS = ["Unauthorized **", "Nicht autorisiert **", "Non autorisé **"];
 
 // Several requests can fail at once: end the session (and alert) once.
 let isLoggingOut = false;
@@ -80,6 +105,14 @@ export const isSessionEnding = () => isLoggingOut;
 const performLogout = async () => {
   try {
     await endSessionAndReload(store.dispatch);
+  } finally {
+    isLoggingOut = false;
+  }
+};
+
+const performReload = async () => {
+  try {
+    await reloadSession();
   } finally {
     isLoggingOut = false;
   }
@@ -123,11 +156,15 @@ const getEnvelopeErrorMessage = (data: ApiErrorEnvelope): string | undefined => 
 // Endpoints whose UI already renders its own error message (e.g. the login
 // page shows an inline alert). Skip the global toast for these so users don't
 // see duplicate notifications.
-const ENDPOINTS_WITH_CUSTOM_ERROR_UI = ["/users/login"];
+const ENDPOINTS_WITH_CUSTOM_ERROR_UI = ["/users/login", "/users/invitations/accept"];
 
 // Endpoints authorized by the token in an emailed link (invitation, password
 // reset), which the page sends itself, not by the session token.
-const LINK_TOKEN_ENDPOINTS = ["/users/reset-password", "/users/register"];
+const LINK_TOKEN_ENDPOINTS = [
+  "/users/reset-password",
+  "/users/register",
+  "/users/invitations/accept",
+];
 
 const isLinkTokenEndpoint = (url: string | undefined) =>
   LINK_TOKEN_ENDPOINTS.some((path) => url?.includes(path) ?? false);
@@ -260,7 +297,11 @@ CustomAxios.interceptors.request.use(
     }
 
     // Enable credentials for auth-related endpoints
-    if (config.url?.includes("/users/login") || config.url?.includes("/users/refresh-token")) {
+    if (
+      config.url?.includes("/users/login") ||
+      config.url?.includes("/users/refresh-token") ||
+      config.url?.includes("/users/invitations/accept")
+    ) {
       config.withCredentials = true;
     }
 
@@ -315,9 +356,11 @@ CustomAxios.interceptors.response.use(
     // }
 
     if (
-      error.response?.status === 403 &&
       errorDetail !== undefined &&
-      SESSION_DENIED_DETAILS.includes(errorDetail)
+      ((error.response?.status === 403 && SESSION_DENIED_DETAILS.includes(errorDetail)) ||
+        (error.response?.status === 401 &&
+          originalRequest?._sentWithSession &&
+          SESSION_UNAUTHORIZED_DETAILS.includes(errorDetail)))
     ) {
       if (claimLogout()) {
         if (showAlertCallback) {
@@ -355,8 +398,17 @@ CustomAxios.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    // If error is 406 (Token Expired) and we haven't tried to refresh yet
-    if (error.response?.status === 406 && !originalRequest._retry) {
+    // If error is 406 (Token Expired) and we haven't tried to refresh yet.
+    // A 406 from login (its organization-selection token) or from an emailed
+    // link (invitation, password reset) is that token expiring, not the
+    // session: the page handles it, and a refresh could start a session from
+    // another tab's cookie.
+    if (
+      error.response?.status === 406 &&
+      !originalRequest._retry &&
+      !originalRequest.url?.includes("/users/login") &&
+      !isLinkTokenEndpoint(originalRequest.url)
+    ) {
       // If this is the refresh token request itself returning 406
       if (originalRequest.url === "/users/refresh-token") {
         // Show alert using the callback
@@ -394,6 +446,36 @@ CustomAxios.interceptors.response.use(
 
         if (response.status === 200) {
           const newToken = response.data.data.token;
+          // The refresh cookie is shared by every tab: a login in another tab
+          // moved this browser's session to another organization, or to
+          // another user. This tab's screens and cache are the old session's,
+          // so reload into the new one instead of retrying.
+          const currentToken = store.getState().auth.authToken;
+          const userChanged = userOf(currentToken) !== userOf(newToken);
+          if (userChanged || organizationOf(currentToken) !== response.data.data.organizationId) {
+            const switched = new Error(
+              userChanged
+                ? "Session moved to another account"
+                : "Session moved to another organization",
+            );
+            processQueue(switched, null);
+            if (claimLogout()) {
+              startSession(store.dispatch, newToken);
+              if (showAlertCallback) {
+                showAlertCallback({
+                  variant: "info",
+                  title: userChanged ? "Account changed" : "Organization changed",
+                  body: userChanged
+                    ? "You signed in as another user in another tab. Reloading."
+                    : "You logged in to another organization in another tab. Reloading.",
+                });
+              }
+              setTimeout(() => {
+                void performReload();
+              }, SESSION_EXPIRED_RELOAD_DELAY_MS);
+            }
+            return Promise.reject(switched);
+          }
           store.dispatch(setAuthToken(newToken));
           originalRequest.headers.Authorization = `Bearer ${newToken}`;
           processQueue(null, newToken);

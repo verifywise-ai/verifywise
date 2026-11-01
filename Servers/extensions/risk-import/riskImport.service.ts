@@ -36,10 +36,10 @@ interface OrgUser {
 async function fetchOrgUsers(organizationId: number): Promise<OrgUser[]> {
   try {
     return (await sequelize.query(
-      `SELECT id, name, surname, email
-         FROM users
-        WHERE organization_id = :organizationId
-        ORDER BY surname, name;`,
+      `SELECT u.id, u.name, u.surname, u.email
+         FROM users u
+         JOIN organization_members om ON om.user_id = u.id AND om.organization_id = :organizationId
+        ORDER BY u.surname, u.name;`,
       { replacements: { organizationId }, type: QueryTypes.SELECT },
     )) as OrgUser[];
   } catch (err) {

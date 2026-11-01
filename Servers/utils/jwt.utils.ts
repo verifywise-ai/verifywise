@@ -111,6 +111,7 @@ const getRefreshTokenPayload = (token: any): any => {
 
 // Token expiration constants
 const ONE_HOUR_MS = 1 * 3600 * 1000;
+const ORGANIZATION_SELECTION_LIFETIME_MS = 5 * 60 * 1000;
 const THIRTY_DAYS_MS = 1 * 3600 * 1000 * 24 * 30;
 /**
  * How long an invitation link (and its stored expires_at) stays valid. Its own
@@ -205,8 +206,25 @@ const generateApiToken = (payload: object, expiresInDays?: number) => {
   );
 };
 
+/**
+ * Generates the short-lived token a user with several organizations holds
+ * between the password check and choosing an organization.
+ *
+ * It carries a `type: "organization_selection"` claim. The auth middleware
+ * rejects every typed token other than an API token, so this one can only be
+ * exchanged at the organization-selection endpoint, never used for access.
+ */
+const generateOrganizationSelectionToken = (payload: { id: number; email: string }) => {
+  return signToken(
+    { ...payload, type: "organization_selection" },
+    ORGANIZATION_SELECTION_LIFETIME_MS,
+    process.env.JWT_SECRET as string,
+  );
+};
+
 export {
   getTokenPayload,
+  generateOrganizationSelectionToken,
   generateToken,
   generateInviteToken,
   generateInviteTokenUntil,

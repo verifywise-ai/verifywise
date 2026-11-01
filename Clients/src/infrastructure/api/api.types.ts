@@ -40,6 +40,8 @@ export interface ApiErrorEnvelope {
  */
 export interface RefreshTokenResponse {
   token: string;
+  /** The organization the token is for; null for a pure super admin. */
+  organizationId: number | null;
 }
 
 /**

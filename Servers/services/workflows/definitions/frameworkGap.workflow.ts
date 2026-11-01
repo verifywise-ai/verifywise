@@ -29,7 +29,7 @@ interface FrameworkScore {
  */
 async function getOrgAdmins(organizationId: number): Promise<Array<{ id: number }>> {
   const rows = (await sequelize.query(
-    `SELECT id FROM users WHERE organization_id = :orgId AND role_id = 1`,
+    `SELECT user_id AS id FROM organization_members WHERE organization_id = :orgId AND role_id = 1`,
     {
       replacements: { orgId: organizationId },
       type: QueryTypes.SELECT,
