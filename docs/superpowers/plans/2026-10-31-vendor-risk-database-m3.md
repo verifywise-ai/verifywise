@@ -1,8 +1,10 @@
 # Vendor risk database M3 (contract) Implementation Plan
 
+**Status (2026-11-01): Part A is done. Task B1 is done on `feature/vendor-agents-and-risk-page`, with four differences from the text below (see "What B1 did differently" under Part B). Task B2 is on its own branch, `feature/vendor-finding-drop-confidence`, for release N+1. The golden-set result of B1 is PENDING.** The rest of this plan is as it was written on 2026-10-31.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Prepare the contract of the vendor risk database: give every finding made before the credibility rule a label (the backfill of D4.6), show those labels to people, and re-check the watched sources. Part A does this now, all of it reversible. Part B removes `confidence`, the old path and the flag. It is written here and runs only after the user approves the flag.
+**Goal:** Prepare the contract of the vendor risk database: give every finding made before the credibility rule a label (the backfill of D4.6), show those labels to people, and re-check the watched sources. Part A does this now, all of it reversible. Part B removes `confidence`, the old path and the flag. B1 (the old path and the flag) is done on this branch; B2 (`confidence`) is on `feature/vendor-finding-drop-confidence` for release N+1.
 
 **Architecture:** The backfill is a maintainer script. It works one organization at a time, and every statement filters on `organization_id`.
 - **Pending finding:** decided again by the credibility rule's own parts (`describeSources` and `decideCredibility`). The inputs are what the run stored: the evidence pack the analysis read, the trace of the snippet check, and the addresses of the per-run records.
@@ -359,10 +361,19 @@ Nothing runs at startup or in a migration.
 
 ---
 
-## Part B (held: do not execute without the user's approval of the flag)
+## Part B (B1 done on this branch, B2 on its follow-up branch)
+
+**Where it stands (2026-11-01).** Task B1 is in the working tree of this branch: the flag, the old path and the writes of `confidence` are gone, and the database is always on, with `VENDOR_RESEARCH_RECORDS=false` as its only switch. Task B2 (the migration that drops `confidence`) is on `feature/vendor-finding-drop-confidence`, so that it ships in release N+1, after a release that contains B1 has run on every server and worker. The preconditions and the task lists below are the plan as written; the next subsection says what B1 did differently.
+
+### What B1 did differently
+
+1. **The flag was removed, not flipped.** The plan held B1 until the user approved turning `VENDOR_RESEARCH_VRDB` on by default. Instead the flag was deleted: there is one rule and no setting for it. `VENDOR_RESEARCH_RECORDS=false` turns off every public database and the downloads of the lists, and the status job needs no switch.
+2. **The per-run SEC lookup was removed too.** The plan kept it "while Q4 is closed". Q4 was decided on 2026-10-31 (`tech@verifywise.ai`), so the SEC is read through the database like the NVD, and only Have I Been Pwned and the status page remain per-run lookups.
+3. **Reads use a legacy fallback.** The plan expected the backfill to have run before B1. Instead, a finding with no `credibility` is read with its `confidence` as a legacy label until the backfill gives it a real one, so a deployment can take B1 before it runs the script (`vendors.md`, "The backfill"). B2's migration still copies `confidence` into `credibility` and `credibility_basis.legacy_confidence` as a backstop.
+4. **The golden set has one run per vendor.** The off and on rows are gone, and the scorer reads one completed run per vendor (see the golden-set document). Its result is PENDING: the first pass of 2026-11-01 was void and the second is running.
 
 **Preconditions, all of them:**
-1. The user approved turning `VENDOR_RESEARCH_VRDB` on by default (the D8 M1 gate: the golden set run with the flag off and on, Q5 and Q9 answered).
+1. The user approved turning `VENDOR_RESEARCH_VRDB` on by default (the D8 M1 gate: the golden set run with the flag off and on, Q5 and Q9 answered). *Replaced for B1 by the removal of the flag (difference 1); Q5 and Q9 were decided on 2026-10-31.*
 2. The backfill has been applied with `--apply` on every deployment, and its dry run there reports nothing left.
 3. For Task B2: one release that contains Task B1 has run on every server and worker. The workers do not migrate, and an old worker's INSERT names `confidence`.
 
@@ -371,7 +382,7 @@ Re-verify every file and line named below against the code at that time. They we
 ### Task B1: One rule, no flag (release N)
 
 - **Keep:**
-  - The per-run SEC lookup, while Q4 is closed (`vrdb/gates.ts`), and HIBP and the status page.
+  - HIBP and the status page. *(The plan also kept the per-run SEC lookup while Q4 is closed; Q4 is open, so it was removed, difference 2.)*
   - The shared spacers, `NVD_LIMITS`, `fetchJson` and the NVD parts the connector imports.
   - `storedCikOf`, `mergeSameAddress`, `NAME_ONLY_LOOKUP_NOTE` and `cvePageOf`.
   - `publisherKey`, moved to `sourceRegistry/publisher.ts`.
@@ -391,7 +402,7 @@ Re-verify every file and line named below against the code at that time. They we
   - Update every test the inventory lists for `confidence` and the flag.
   - Add `"research never writes confidence"`: an integration run, then the row's `confidence` is NULL.
   - Add `"the vendor risk database is always on"`: no flag is read.
-- **Gate:** as Task 8, plus the golden set run once.
+- **Gate:** as Task 8, plus the golden set run once. *Done for B1 except the golden set, whose result is PENDING.*
 
 ### Task B2: The contract migration (release N+1)
 
@@ -411,4 +422,4 @@ Re-verify every file and line named below against the code at that time. They we
 
 ### Task B3: Review
 
-- Final review on the most capable model, one fix pass, and the human list (the EU AI Act database after 2 December 2027; Q4 for the per-run SEC lookup's removal).
+- Final review on the most capable model, one fix pass, and the human list (the EU AI Act database after 2 December 2027). Q4, which the plan listed for the per-run SEC lookup's removal, is decided.

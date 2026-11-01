@@ -12328,6 +12328,28 @@ export const vendorEndpoints: Endpoint[] = [
     ],
     tag: "v1: Vendors",
   },
+  {
+    method: 'POST',
+    path: '/v1/vendors',
+    summary: "Create Vendor V1",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Vendors",
+  },
+  {
+    method: 'PATCH',
+    path: '/v1/vendors/{id}',
+    summary: "Update Vendor By Id V1",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Vendors",
+  },
 ];
 
 // v1: Vendor Research endpoints

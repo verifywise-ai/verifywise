@@ -1,6 +1,6 @@
 # Vendor Research Agent Performance Roadmap
 
-> **Last Updated:** 2026-10-29
+> **Last Updated:** 2026-11-01
 
 **Goal:** Make the vendor research web agent measurably better: findings a person accepts more often, runs that finish in about a minute, fewer wasted model calls, and coverage of the sources that matter. The ideas are numbered 1 to 39 as in the conversation of 2026-10-27; the order below is the one the product owner approved.
 
@@ -44,7 +44,7 @@ So the web feed is for finding a vendor's own pages, not for topics; news is the
 | R3 | Of 15 and 16, build 15 (several actions per step) and 17 (one loop per category, in parallel). 16 (plan, execute, review) is not built. | 13 already does the planning in code; 16 would be a second planner. | A later 16 can sit on top. |
 | R4 | Of the two forms of 29, build the verifier call (one batched call), not per-category parallel analysis. | One extra call instead of four, and it checks what matters (same company, quote supports claim, in the window). | None. |
 | R5 | Idea 31's regulator `site:` searches become regulator-named news queries. SEC EDGAR full-text search is a direct API source. | `site:` is not supported (R2). | Fewer regulator hits. |
-| R6 | Idea 36 (licence of the Bing feed) stays a product decision, not an engineering one. The release gate in `docs/technical/infrastructure/web-research.md` is unchanged. | It is a legal and business decision. | A feature that cannot ship. |
+| R6 | Idea 36 (licence of the Bing feed) stays a product decision, not an engineering one. The release gate in `docs/technical/infrastructure/web-research.md` is unchanged. **Superseded on 2026-10-31 (Q21 of the vendor risk database design):** the decision was taken. The Bing feed was removed, the gate is closed, and a run searches with Claude web search for an Anthropic key and with the GDELT news index for every other key (GDELT: news only, the last 3 months, one request per 5 seconds per address, 429 answers seen on 2026-10-31; Claude web search: about $10 per 1,000 searches). | It is a legal and business decision. | A feature that cannot ship. |
 | R7 | New categories are `availability` (status pages, 32) and `financial_health` (39). Sanctions matches go under `legal_regulatory`. One migration adds both. | Fewer UI and prompt changes than three categories. | A third category later. |
 | R8 | Inside a phase the items are done in dependency order, not number order (the trace first; URL clean-up before the relevance filter). | Later items report into the trace and rely on the clean URLs. | None. |
 | R9 | Idea 7 does not rewrite `m.` and `amp.` hosts or a path that ends in `/amp` by guess. The page's own `rel=canonical` (or `og:url`) is followed after the read, and only when it is the same document on the same site. | A guess can name another site (`m.media-amazon.com`) or another page (a product called Amp); a page can claim anything, so a claim on another site or another page of the site is not taken. | Some amp pages stay as two entries until their text is compared (the same-text rule gives the read back). |
@@ -99,6 +99,7 @@ Status: `[ ]` open, `[x]` done and verified (unit tests, type check on the touch
 - [x] **12.** Preflight: one guarded read of the home page before the loop (reachable? names the vendor?); the answer is in a briefing block next to the task (R12), and an unreachable site is not read ten times (`closedHosts`).
 - [x] **18.** Budgets re-tuned from the trace of the first phase (R13): five live runs, the failed reads given back, the loop told to move on after two empty searches.
 - [x] **35.** One retry of a search that failed (network error, 5xx, 429 with a short `Retry-After`), counters for searches by outcome.
+- [x] **36.** The licence of the Bing feed: decided on 2026-10-31 (Q21), superseding R6. Bing is removed; the engine is picked from the research key (Claude web search for Anthropic keys, the GDELT news index for every other key). (`webResearch/webSearch.ts`, `webResearch/providerSearch.ts`, `webResearch/gdeltSearch.ts`, `vendorResearch/searchEngineOf.ts`; see `docs/technical/infrastructure/web-research.md`.) The query shaping of R2 and R5 was tuned on Bing and stays as it is until it is measured on the new engines.
 - [x] **23.** Redis caches shared by runs: `robots.txt` 24 hours (RFC 9309), page text 15 minutes, a search answer 10 minutes. A cache hit costs no network and no queue slot. (`webResearch/webCache.ts`, `vendorResearch/researchCache.ts`; R14.)
 - [x] **25.** `vendorResearch/sourceTiers.ts`: official, regulator or court, major publisher, aggregator, other; a publisher key that merges `bbc.co.uk` and `bbc.com`; `high` confidence needs two publishers and one credible tier; an aggregator never counts as a second publisher. (R15; the case of one story on two domains passes, so its gap line is gone.)
 - [x] **26.** Anchored severity and likelihood definitions in the analysis prompt and a one-sentence `rationale` per finding (migration `20261027153057-vendor-finding-rationale.js`, shown in the finding row under "Why this rating"; R16).
@@ -141,4 +142,4 @@ Status: `[ ]` open, `[x]` done and verified (unit tests, type check on the touch
 
 ## Not in this roadmap
 
-Idea 36 (the licence of the Bing feed). Until it is decided the feature is for development and evaluation only.
+Nothing is left out of the ideas now: idea 36 (the licence of the Bing feed) was decided on 2026-10-31 by removing the feed (see its item above).

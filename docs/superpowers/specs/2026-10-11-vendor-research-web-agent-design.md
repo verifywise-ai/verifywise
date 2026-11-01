@@ -4,7 +4,9 @@
 
 This document changes [the 2026-10-10 design](2026-10-10-vendor-research-agent-design.md). Where the two disagree, this one wins. Sections that are not mentioned here stay as they were: the findings and runs tables (apart from §11), the triggers, the cooldown and daily cap, accept and dismiss, the notification and the findings section of the UI.
 
-**Later design.** The copies of official lists (the CISA catalog of known exploited vulnerabilities and the OFAC, UK and EU sanctions lists) and the credibility label that the code gives each finding from its sources are designed in [the vendor risk database design](2026-10-29-vendor-risk-database-design.md) of 2026-10-29, behind the `VENDOR_RESEARCH_VRDB` flag. Where that design changes how the records of public databases are read or what a finding's confidence means, it wins over this one.
+**Update, 2026-10-31.** The Bing feed described below was removed (Q21 of that design). A run now searches with the engine of its research key: Claude web search for an Anthropic key and the GDELT news index for every other key. §2, §4, §6, §14 and §20 say so where they speak of Bing; the rest of this document is as of 2026-10-11.
+
+**Later design.** The copies of official lists (the CISA catalog of known exploited vulnerabilities and the OFAC, UK and EU sanctions lists) and the credibility label that the code gives each finding from its sources are designed in [the vendor risk database design](2026-10-29-vendor-risk-database-design.md) of 2026-10-29, and, since 2026-10-31, always on (the flag was removed). Where that design changes how the records of public databases are read or what a finding's confidence means, it wins over this one.
 
 ## 1. Why this changes
 
@@ -18,9 +20,9 @@ So the research stage becomes a real agent: a loop in which the organisation's o
 
 | Decision | Choice |
 |---|---|
-| Search provider | None. No Tavily, no provider API, no search key, no search environment variable. |
+| Search provider | None of our own: no Tavily, no provider API of ours, no search key, no search environment variable. **Since 2026-10-31 (Q21):** the search of the research key's own provider when it has one that is built (Claude web search for an Anthropic key, about $10 per 1,000 searches), else the GDELT Project's news index (the news of the last 3 months, free, with the project credited). Bing is removed. |
 | Which models | Any model the app can already call for structured output (`generateObjectWithSelfCorrection`: OpenAI, Anthropic, DeepSeek, Custom endpoints, local models). The loop asks the model for its next step as JSON, so it does **not** need function calling. A model that cannot answer in JSON fails the run with a clear message. Checked on 2026-10-11 with a Custom key that points at DeepSeek. |
-| Web access | Two actions written in our code: `search` (general web and news, through a search engine's public results feed) and `read` (any public page). §6. |
+| Web access | Two actions written in our code: `search` (the news for most keys, the web and the news for an Anthropic key, through the engine of the research key) and `read` (any public page). §6. |
 | What can be cited | Only text that an action returned in this run: result snippets and page excerpts. The model's own knowledge is never evidence. The "model knowledge, unverified" lane considered earlier is dropped, and with it a `basis` column. |
 | "Not set up" | Only when the organisation has no LLM key. |
 | Auto-run | Unchanged: on by default, `VENDOR_RESEARCH_AUTO_RUN=false` turns it off. It no longer waits for a search setup, so every new vendor in an organisation with an LLM key costs one run on that key, bounded by the daily cap (§15). |
@@ -40,17 +42,17 @@ There is no web search without a search engine, so the question is which engine 
 
 | Source | Result | Used? |
 |---|---|---|
-| Bing web search RSS (`/search?q=…&format=rss`) | 200 for an identified client. About 10 results with title, direct URL and snippet. | **Yes**, `search` (web) |
-| Bing News RSS (`/news/search?…&format=rss`) | 200. Items also carry `pubDate`; the link wraps the publisher URL in an `apiclick.aspx?…&url=` parameter. | **Yes**, `search` (news) |
+| Bing web search RSS (`/search?q=…&format=rss`) | 200 for an identified client. About 10 results with title, direct URL and snippet. | Used until 2026-10-31, then removed (§14) |
+| Bing News RSS (`/news/search?…&format=rss`) | 200. Items also carry `pubDate`; the link wraps the publisher URL in an `apiclick.aspx?…&url=` parameter. | Used until 2026-10-31, then removed (§14) |
 | DuckDuckGo (HTML and lite) | Challenge page (HTTP 202, no results) for an identified client and for a "compatible" bot User-Agent. It answers only browser-like clients; imitating one is bot-detection evasion. | No |
 | Brave | One 200, then 429 on the next request. Too unreliable. | No |
 | Yahoo, Ecosia, Startpage, Mojeek, Marginalia | 500, 403, no results, 403, time-out. | No |
 | Google News RSS | Article links are JavaScript redirect pages that cannot be read or cited. | No |
-| GDELT DOC API | 12 to 17 seconds and no articles for two test queries. | No |
+| GDELT DOC API | 12 to 17 seconds and no articles for two test queries on 2026-10-11. | No then; **yes since 2026-10-31** (§6): one request per run, news only, 3 months |
 | Vendor pages, `security.txt`, Wikipedia, publisher articles | Read fine. | Yes, `read` |
 | Some publishers (BleepingComputer: Cloudflare 403) | Blocked. | "Blocked" is a normal outcome (§10) |
 
-Facts to be honest about: Bing's `robots.txt` disallows `/search` (it does not mention `/news/search`), and Bing's terms do not give automated access to result pages. Worse, every feed carries a copyright notice that limits its results to personal, non-commercial display in an RSS reader and asks for Microsoft's written permission for any other use. Using the feed inside a commercial product and passing the results to an LLM provider is outside that notice. That is why the engine sits behind `SearchEngine`, and why §14 has a release gate. See §14 and §20.
+Facts to be honest about: Bing's `robots.txt` disallows `/search` (it does not mention `/news/search`), and Bing's terms do not give automated access to result pages. Worse, every feed carries a copyright notice that limits its results to personal, non-commercial display in an RSS reader and asks for Microsoft's written permission for any other use. Using the feed inside a commercial product and passing the results to an LLM provider is outside that notice. That is why the engine sat behind `SearchEngine`, and why §14 had a release gate. **Resolved on 2026-10-31 (Q21): the feed was removed.** See §14 and §20.
 
 ## 5. Architecture
 
@@ -62,7 +64,7 @@ Vendor created (auto) ─┐
    1. mark running · target (name, domain, provides) · the organisation's model             [unchanged]
    2. RESEARCH LOOP, at most 24 steps and 5 minutes                                         [new]
         ask the model for the next step as JSON ── search | read | finish
-        run it in code ── search: Bing public RSS feed · read: guarded GET of a public page
+        run it in code ── search: the engine of the research key (Claude web search or GDELT news) · read: guarded GET of a public page
         show the result back, repeat
         every snippet and excerpt goes to a ledger, tagged with a category
    3. evidence pack from the ledger (S1…Sn, at most 100 KB)                                 [changed]
@@ -78,7 +80,7 @@ The loop only collects. It never writes findings. The analysis step sees a fixed
 
 Code layout:
 
-- `Servers/services/webResearch/` is a small reusable toolkit, so that later vendor agents can browse too: `publicUrl.ts` (URL and address policy), `guardedFetch.ts`, `robots.ts`, `pageText.ts`, `readPage.ts` (robots check, guarded fetch and page text in one reader), `webSearch.ts` (the `SearchEngine` interface and the Bing implementation), `webSession.ts` (budgets, provenance, lookback and the ledger), `promptText.ts` (escaping for prompts), `researchLoop.ts` (the generic loop).
+- `Servers/services/webResearch/` is a small reusable toolkit, so that later vendor agents can browse too: `publicUrl.ts` (URL and address policy), `guardedFetch.ts`, `robots.ts`, `pageText.ts`, `readPage.ts` (robots check, guarded fetch and page text in one reader), `webSearch.ts` (the `SearchEngine` interface, with `id`, `kinds` and `newsWindowMonths`, and the engine that falls back from one to another), `providerSearch.ts` (Claude web search) and `gdeltSearch.ts` (the GDELT news index), `webSession.ts` (budgets, provenance, lookback and the ledger), `promptText.ts` (escaping for prompts), `researchLoop.ts` (the generic loop).
 - `Servers/services/vendorResearch/prompts.ts` holds the vendor-specific loop and analysis prompts; `pipeline.ts` replaces the search step with the loop.
 - `PipelineDeps` loses `searchProvider` and gains `research` (injectable, so pipeline tests need no model and no network). The loop takes the model call (`generate`) and the web session as parameters, so its tests need neither.
 
@@ -99,12 +101,12 @@ Code layout:
 
 **`search({ query, category, kind })`**
 
-- `kind: "web"` (default) calls `https://www.bing.com/search?q=<query>&format=rss&setlang=en-US`; `kind: "news"` calls `https://www.bing.com/news/search?q=<query>&format=rss&setlang=en-US`. Identified User-Agent, 12 seconds, at most 1 MB.
-- Parsed by a small scanner for the RSS `item` elements (CDATA and character references handled; no XML library is needed): `title`, `description` (the snippet), `link`, and for news `pubDate` (stored as an ISO date) with the publisher URL taken from the `url` parameter of the `apiclick.aspx` link. At most 10 results. A result with an unusable URL, a `bing.com` URL or a URL already in the ledger is dropped.
+- **The engine is the research key's** (since 2026-10-31, Q21; the engines are described in [Web research toolkit](../../technical/infrastructure/web-research.md#search-engines-q21-decided-2026-10-31)). For an Anthropic key, `search` calls Claude's `web_search_20250305` server tool of the key's own provider, one search per call, four at the same time at most, and returns up to 10 sources with their titles and addresses (about $10 per 1,000 searches). For every other key it reads the news of the last 3 months from the GDELT DOC 2.0 API: one request for the run, asked from the one index for every later search of the run, at least 5 seconds after any other request of the process, since GDELT allows one request every 5 seconds from an address, and left alone for 60 seconds after a 429 (GDELT answered 429 to requests from a development machine on 2026-10-31 and 2026-11-01 at a rate well below its stated limit).
+- `kind: "web"` (default) and `kind: "news"` are accepted by an engine that can answer them. GDELT answers `news` only, and a search of another kind is refused before it reaches the engine, with no request and no unit of the budget, and the model is told "Web search is not available in this run; search the news or read the vendor's pages" (`kind_unavailable` in the trace).
 - **Lookback in code.** A result with a known date older than the window of its category is dropped and counted: 24 months for `security_incidents`, `certifications` and `ai_specific`, 36 for `legal_regulatory`. The model is told how many were omitted. Pages carry a date only when their metadata has one (§6, `read`); undated results are kept, and the prompts ask for recent sources.
-- A body that is not RSS, an HTTP status other than 200, a time-out or a network error is a failed search, reported to the model as "The search is not available right now".
-- Behind a `SearchEngine` interface (`search(query, kind, signal)`), so that a self-hosted SearXNG or an API provider can replace Bing later without touching the loop.
-- Process-wide: one search at a time, at least one second apart.
+- A reply with no search in it, an HTTP status other than 200, a body that is not what the engine returns, a time-out or a network error is a failed search, reported to the model as "The search is not available right now".
+- Behind a `SearchEngine` interface (`search(query, kind, signal)`, plus `id`, `kinds` and `newsWindowMonths`), so that an engine can be replaced without touching the loop. The run records the engine in `vendor_research_runs.search_engine`.
+- GDELT is process-wide: one request at a time, at least 5 seconds apart. Claude's search has no process-wide limit beyond four at once.
 
 **`read({ url, category, focus? })`**
 
@@ -207,8 +209,8 @@ The deployment branch `chore/deploy-vendor-research-settings` is trimmed to thes
 
 ## 14. Security and privacy
 
-- **Egress.** The customer's server now talks to the public internet during a run: `www.bing.com` (queries with the vendor name and topic words), the vendor's site, and the sites of articles. Every request names the bot. The LLM provider receives the vendor name, domain, the "what it provides" text and the page text. An air-gapped installation cannot use the feature: runs fail with "the web could not be reached".
-- **The search feed: `robots.txt`, the feed's own notice, and a release gate.** Bing's `robots.txt` disallows `/search`, and each feed's copyright notice limits its results to personal, non-commercial display in an RSS reader and asks for Microsoft's written permission for any other use. Querying it from a commercial product and passing the results to an LLM provider is outside that notice. The feature queries the public feed the way a feed reader would (one identified request at a time, at least a second apart, at most 8 a run). That is enough for development and evaluation, but it is a legal and business risk, not a guarantee: Microsoft can change the feed, throttle a server's address or object. **Release gate:** before this ships to customers, the product owner decides whether to ask Microsoft for permission or to put another engine behind `SearchEngine` (a self-hosted SearXNG, an API provider, or the model provider's own search for the keys that have one). If a search fails, the run says so (§10) and invents nothing. Pages are different: `robots.txt` is obeyed (§7.5).
+- **Egress.** The customer's server now talks to the public internet during a run: `api.gdeltproject.org` (queries with the vendor name and topic words; the search of Claude goes to the LLM provider of the key instead), the vendor's site, and the sites of articles. Every request names the bot. The LLM provider receives the vendor name, domain, the "what it provides" text and the page text. An air-gapped installation cannot use the feature: runs fail with "the web could not be reached".
+- **The search: the release gate is closed (2026-10-31).** The Bing feed of the first version was removed: its `robots.txt` disallows `/search`, each feed's copyright notice limits the results to personal, non-commercial display in an RSS reader and asks for Microsoft's written permission for any other use, the Microsoft Services Agreement bars it, and the licensed route was retired on 2025-08-11. A run now searches with Claude web search (an Anthropic key; the provider is the processor of the queries, as it is of the rest of the run) or with the GDELT news index (every other key; commercial use is free if the project is cited, and the run summary cites it). If a search fails, the run says so (§10) and invents nothing. Pages are different: `robots.txt` is obeyed (§7.5).
 - **Prompt injection.** The loop has no tools of its own: the model can only name a search or a URL, and code decides. GET only; public addresses only (§7.2); provenance (§7.6); no secrets or organisation data in its context; hard budgets; the analysis has no actions and its output is schema-bound and checked against the text; nothing reaches the register without a person accepting.
 - **Stored third-party text.** Page excerpts and snippets are kept in `vendor_research_runs.evidence` as an audit trail (up to 100 KB per run). The UI shows only the quotes (300 characters) and links. Pruning old evidence stays out of scope.
 - **Tenant isolation.** Unchanged: every query and job payload carries `organization_id`.
@@ -227,7 +229,7 @@ No unit test touches the network or a model.
 - **Guarded fetch** (local HTTP server with an injectable address policy): a host that resolves to a private address, a redirect to a private address, a redirect loop, a https→http redirect, a body over the cap, a gzip bomb, a wrong content type, a slow response.
 - **robots parser:** group choice, longest match, `Allow` over `Disallow`, wildcard and `$`, 404 and 500.
 - **Page text:** boilerplate removed, title, date from the three sources, `focus` excerpt with gap markers, links only for vendor pages, JavaScript-only page detected.
-- **Search:** parsing from fixtures saved from real Bing responses (web and news), `apiclick` URL decoding, lookback filtering by category, a non-RSS body, 429, time-out, de-duplication.
+- **Search:** no test reaches the network: the engines are tested with fakes (the GDELT index and the Claude search reply, built in the tests), lookback filtering by category, a body that is not what the engine returns, 429 and its pause, time-out, de-duplication. (The Bing fixtures of the first version were removed with the engine.)
 - **Web session:** budgets, provenance rule, snippet replaced by excerpt, category tags, unusable URLs.
 - **Research loop:** driven by a scripted `generate` (search, read, read a refused URL, an invalid step, finish with an empty ledger and the reminder, step limit, time limit, model error with and without entries, observation cutting). A test that runs the real `generateObjectWithSelfCorrection` against an AI SDK mock model checks the step schema.
 - **Pipeline:** outcomes of §10 for every row, partial ledger, the failed-run rule, the evidence cap, a quote from a snippet and from a page excerpt, an excerpt with a gap marker.
@@ -263,7 +265,7 @@ Update `docs/technical/domains/vendors.md`, `docs/deployment/CONFIGURATION_REFER
 
 ## 20. Things to know
 
-1. **How search works, and a release gate.** The agent uses Bing's public RSS results feed from the customer's server: no account, no key, nothing to configure, and it works with any LLM key. It is not an official API, and the feed's own notice limits it to personal, non-commercial use (§14). That is fine for development and evaluation. Before the feature ships to customers the product owner has to decide how to license it; the engine is one replaceable module for that reason. If Bing throttles or changes the feed, searches fail and runs say so; they never invent findings.
+1. **How search works.** The engine is picked from the research key (§6): Claude web search for an Anthropic key, the GDELT news index for every other key. Nothing to configure, and it works with any LLM key. The release gate of the first version, the licence of the Bing feed, closed on 2026-10-31 when the feed was removed. A GDELT search finds news of the last 3 months and not the whole web; if an engine throttles or changes, searches fail and runs say so; they never invent findings.
 2. **Auto-run stays on by default,** so each new vendor costs a run on the organisation's own key (§15).
 3. **Pages obey `robots.txt`** and the bot says who it is. Some sites will refuse it; those pages are reported as blocked, not as clean.
 4. **The model-knowledge lane is dropped** (§2). It can come back later as a clearly labelled lane if wanted.
