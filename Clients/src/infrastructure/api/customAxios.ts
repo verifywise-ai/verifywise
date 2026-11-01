@@ -122,21 +122,8 @@ const getEnvelopeErrorMessage = (data: ApiErrorEnvelope): string | undefined => 
 
 // Endpoints whose UI already renders its own error message (e.g. the login
 // page shows an inline alert). Skip the global toast for these so users don't
-// see duplicate notifications. A string matches any URL that contains it; a
-// RegExp is tested against the whole URL and must not use the g or y flag,
-// which make test() depend on earlier calls. The vendor research screens show
-// their own messages for starting a run (a refusal is a normal answer) and for
-// polling the latest run, so exactly those two paths are listed (versioned:
-// the research API is served under /api/v1).
-const ENDPOINTS_WITH_CUSTOM_ERROR_UI: Array<string | RegExp> = [
-  "/users/login",
-  /^\/v1\/vendors\/\d+\/research(\/latest)?$/,
-];
-
-const hasCustomErrorUI = (url: string) =>
-  ENDPOINTS_WITH_CUSTOM_ERROR_UI.some((endpoint) =>
-    typeof endpoint === "string" ? url.includes(endpoint) : endpoint.test(url),
-  );
+// see duplicate notifications.
+const ENDPOINTS_WITH_CUSTOM_ERROR_UI = ["/users/login"];
 
 // Endpoints authorized by the token in an emailed link (invitation, password
 // reset), which the page sends itself, not by the session token.
@@ -191,7 +178,7 @@ const showGlobalErrorAlert = (error: AxiosError) => {
   }
 
   const requestUrl = error.config?.url ?? "";
-  if (hasCustomErrorUI(requestUrl)) return;
+  if (ENDPOINTS_WITH_CUSTOM_ERROR_UI.some((path) => requestUrl.includes(path))) return;
 
   const status = error.response?.status;
   const isServerError = status != null && status >= 500;

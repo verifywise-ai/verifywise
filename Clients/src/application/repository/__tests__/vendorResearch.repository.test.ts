@@ -203,23 +203,34 @@ describe("listVendorRiskFindings", () => {
 });
 
 describe("startVendorResearch", () => {
-  it("posts to /v1/vendors/3/research and unwraps the run and the already-running flag", async () => {
+  // A refused start (409, 429, 503) is a normal answer that the screen words itself, so the call
+  // asks the global error interceptor for no toast (RequestParams.suppressGlobalErrorToast). Every
+  // other call in this file keeps the toast: their expectations pin that they send no such flag.
+  it("posts to /v1/vendors/3/research with the global error toast off and unwraps the run and the already-running flag", async () => {
     const started = { run: run({ status: "queued" }), alreadyRunning: true };
     mockPost.mockResolvedValue(success(started, 202));
 
     await expect(startVendorResearch(3)).resolves.toEqual(started);
 
-    expect(mockPost).toHaveBeenCalledWith("/v1/vendors/3/research", {});
+    expect(mockPost).toHaveBeenCalledWith(
+      "/v1/vendors/3/research",
+      {},
+      { suppressGlobalErrorToast: true },
+    );
   });
 });
 
 describe("getLatestVendorResearch", () => {
-  it("reads /v1/vendors/3/research/latest and unwraps the run", async () => {
+  // The latest run is polled while a run is active, so a failing poll would raise the global
+  // toast again on every tick; the screen shows the failure in place.
+  it("reads /v1/vendors/3/research/latest with the global error toast off and unwraps the run", async () => {
     mockGet.mockResolvedValue(success(run()));
 
     await expect(getLatestVendorResearch(3)).resolves.toEqual(run());
 
-    expect(mockGet).toHaveBeenCalledWith("/v1/vendors/3/research/latest");
+    expect(mockGet).toHaveBeenCalledWith("/v1/vendors/3/research/latest", {
+      suppressGlobalErrorToast: true,
+    });
   });
 
   it("returns null for a vendor that was never researched", async () => {

@@ -94,7 +94,12 @@ export async function listVendorRiskFindings(params: {
   }
 }
 
-/** `alreadyRunning` is true when the vendor has an active run, which is returned instead. */
+/**
+ * `alreadyRunning` is true when the vendor has an active run, which is returned instead.
+ *
+ * A refused start (409, 429, 503) is a normal answer, and the screen words every failure of this
+ * call itself (see `alertForStartFailure`), so the global error toast is off for it.
+ */
 export async function startVendorResearch(
   vendorId: number,
 ): Promise<{ run: VendorResearchRun; alreadyRunning: boolean }> {
@@ -102,18 +107,24 @@ export async function startVendorResearch(
     const response = await apiServices.post<{
       message: string;
       data: { run: VendorResearchRun; alreadyRunning: boolean };
-    }>(`/v1/vendors/${vendorId}/research`, {});
+    }>(`/v1/vendors/${vendorId}/research`, {}, { suppressGlobalErrorToast: true });
     return extractData<{ run: VendorResearchRun; alreadyRunning: boolean }>(response);
   } catch (error) {
     throw toAPIError(error, "Failed to start the research");
   }
 }
 
-/** `null` for a vendor that has never been researched. */
+/**
+ * `null` for a vendor that has never been researched.
+ *
+ * The latest run is polled while a run is active, and a failed read shows in place with a retry,
+ * so the global error toast is off for this call: it would repeat on every failed poll.
+ */
 export async function getLatestVendorResearch(vendorId: number): Promise<VendorResearchRun | null> {
   try {
     const response = await apiServices.get<{ message: string; data: VendorResearchRun | null }>(
       `/v1/vendors/${vendorId}/research/latest`,
+      { suppressGlobalErrorToast: true },
     );
     return extractData<VendorResearchRun | null>(response) ?? null;
   } catch (error) {
