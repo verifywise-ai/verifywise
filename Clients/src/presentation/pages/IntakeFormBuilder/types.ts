@@ -1,6 +1,7 @@
 import type { FormRouting } from "../../../domain/types/intakeRouting";
 import { IntakeFormStatus, IntakeEntityType } from "../../../domain/intake/enums";
 import { brand } from "../../themes/palette";
+import { GEOGRAPHY_ITEMS } from "../../../application/constants/geography";
 import {
   RISK_DIMENSIONS,
   sortFields,
@@ -584,14 +585,7 @@ export const DEFAULT_USE_CASE_FIELDS: FormField[] = [
     type: "select",
     label: "Geography",
     guidanceText: "The geographic scope affects which regulations apply to this use case.",
-    options: [
-      { label: "Global", value: "1" },
-      { label: "Europe", value: "2" },
-      { label: "North America", value: "3" },
-      { label: "South America", value: "4" },
-      { label: "Asia", value: "5" },
-      { label: "Africa", value: "6" },
-    ],
+    options: GEOGRAPHY_ITEMS.map(({ _id, name }) => ({ label: name, value: String(_id) })),
     entityFieldMapping: "geography",
     order: 3,
   },

@@ -20,6 +20,7 @@ import modelLifecycleChangeHistoryRoutes from "./modelLifecycleChangeHistory.rou
 import controlEUChangeHistoryRoutes from "./controlEUChangeHistory.route";
 import subcontrolEUChangeHistoryRoutes from "./subcontrolEUChangeHistory.route";
 import annexCategoryChangeHistoryRoutes from "./annexCategoryChangeHistory.route";
+import useCaseOrgSettingsRoutes from "./useCaseOrgSettings.route";
 import useCaseLifecycleRoutes from "./useCaseLifecycle.route";
 import lifecycleSettingsRoutes from "./lifecycleSettings.route";
 import aiAppsRoutes from "./aiApps.route";
@@ -38,6 +39,9 @@ router.use("/model-lifecycle-change-history", modelLifecycleChangeHistoryRoutes)
 router.use("/control-eu-change-history", controlEUChangeHistoryRoutes);
 router.use("/subcontrol-eu-change-history", subcontrolEUChangeHistoryRoutes);
 router.use("/annex-category-change-history", annexCategoryChangeHistoryRoutes);
+
+// Defaults a new use case starts with (#5192).
+router.use("/use-case-org-settings", useCaseOrgSettingsRoutes);
 
 // Use case lifecycle and the org-wide "still live?" interval (#5187).
 router.use("/use-case-lifecycle", useCaseLifecycleRoutes);

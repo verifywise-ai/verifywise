@@ -12176,6 +12176,33 @@ export const v1ChangeHistoryEndpoints: Endpoint[] = [
   },
 ];
 
+// v1: Use Case Settings endpoints
+export const v1UseCaseSettingsEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/use-case-org-settings',
+    summary: "Get Use Case Org Settings Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Use Case Settings",
+  },
+  {
+    method: 'PUT',
+    path: '/v1/use-case-org-settings',
+    summary: "Update Use Case Org Settings Handler",
+    description: "Requires role: Admin",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Use Case Settings",
+  },
+];
+
 // v1: V1/Ai App Lifecycle endpoints
 export const v1V1aiAppLifecycleEndpoints: Endpoint[] = [
   {
@@ -12725,6 +12752,7 @@ export const allEndpoints = {
   training: trainingEndpoints,
   user: userEndpoints,
   v1ChangeHistory: v1ChangeHistoryEndpoints,
+  v1UseCaseSettings: v1UseCaseSettingsEndpoints,
   v1V1aiAppLifecycle: v1V1aiAppLifecycleEndpoints,
   v1V1aiApps: v1V1aiAppsEndpoints,
   v1V1lifecycleSettings: v1V1lifecycleSettingsEndpoints,
