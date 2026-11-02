@@ -37,6 +37,7 @@ export async function getInsightsSummaryQuery(
        (SELECT COUNT(DISTINCT user_email)
         FROM shadow_ai_events
         WHERE organization_id = :organizationId
+          AND detected_tool_id IS NOT NULL
           AND event_timestamp > NOW() - INTERVAL '1 day' * :periodDays) as total_ai_users,
        (SELECT COUNT(DISTINCT department)
         FROM shadow_ai_events
@@ -236,8 +237,10 @@ export async function getUserActivityQuery(
   const limit = options?.limit || 20;
   const offset = (page - 1) * limit;
 
+  // Only events matched to a known AI tool count; unmatched proxy traffic
+  // (detected_tool_id IS NULL) must not make a user appear in this list.
   let whereClause =
-    "WHERE e.organization_id = :organizationId AND e.event_timestamp > NOW() - INTERVAL '30 days'";
+    "WHERE e.organization_id = :organizationId AND e.event_timestamp > NOW() - INTERVAL '30 days' AND e.detected_tool_id IS NOT NULL";
   const replacements: Record<string, any> = { organizationId, limit, offset };
 
   if (options?.department) {
