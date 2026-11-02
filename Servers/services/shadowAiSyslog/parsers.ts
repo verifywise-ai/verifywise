@@ -44,8 +44,38 @@ function unescapeValue(raw: string): string {
   return raw.replace(/\\(.)/g, "$1");
 }
 
+// CEF header: `CEF:0|Vendor|Product|Version|SignatureId|Name|Severity|`. The
+// extension (key=value pairs) follows the seventh pipe. Header fields escape a
+// literal pipe as `\|`.
+const CEF_HEADER_RE = /^CEF:\d+(?:\|(?:[^|\\]|\\.)*){6}\|/;
+// A CEF extension key sits at the start or after whitespace and ends at `=`.
+const CEF_KEY_RE = /(?:^|\s)([A-Za-z_][\w.-]*)=/g;
+
+/**
+ * CEF extension pairs. Unlike plain key=value, a CEF value may contain
+ * spaces (only `=` and `\` are escaped), so a value runs until the next
+ * ` key=`. Quotes have no meaning in CEF and are kept as written.
+ */
+function parseCefExtension(extension: string): Fields | null {
+  const fields: Fields = {};
+  const keys = [...extension.matchAll(CEF_KEY_RE)];
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i][1];
+    const valueStart = keys[i].index! + keys[i][0].length;
+    const valueEnd = i + 1 < keys.length ? keys[i + 1].index! : extension.length;
+    if (key in fields) {
+      if (IDENTITY_KEYS.has(key)) return null;
+      continue;
+    }
+    fields[key] = unescapeValue(extension.slice(valueStart, valueEnd).trimEnd());
+  }
+  return fields;
+}
+
 /** Key=value pairs, or null when an identity key appears more than once. */
-function parseKeyValues(body: string): Fields | null {
+function parseKeyValues(body: string, cef = false): Fields | null {
+  const header = cef ? CEF_HEADER_RE.exec(body) : null;
+  if (header) return parseCefExtension(body.slice(header[0].length));
   const fields: Fields = {};
   for (const m of body.matchAll(KV_PAIR_RE)) {
     const key = m[1];
@@ -209,7 +239,7 @@ function parseGenericKv(
   headerTimestamp: string | undefined,
   receivedAt: Date,
 ): ParseResult {
-  const f = parseKeyValues(body);
+  const f = parseKeyValues(body, true);
   if (!f || Object.keys(f).length === 0) return { ok: false, reason: "unparseable" };
   const request = f.request ? hostAndPath(f.request) : null;
   return buildEvent(

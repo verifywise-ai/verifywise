@@ -96,6 +96,12 @@ never ends the process.
 | Squid | native access.log fields: 1 epoch time, 4 result code, 6 method, 7 URL, 8 user | result code (`*_DENIED` is blocked, anything else allowed) |
 | Generic key-value | `suser`, `dhost` (or host of `request`), `request`, `requestMethod`, `act`, `department`, `timestamp` | `act` |
 
+In generic key-value lines that start with a CEF header (`CEF:0|...|`), the
+extension is parsed the CEF way: a value may contain spaces and runs until the
+next ` key=`, and quotes are not special. Other lines split values on
+whitespace, with double quotes to keep spaces. A repeated identity key rejects
+the line in both modes.
+
 Squid access logs have no allowed or blocked field, so the Squid parser reads
 the result code (field 4): a code containing `DENIED` (`TCP_DENIED`,
 `TCP_DENIED_REPLY`) is blocked and every other code is allowed. For the other parsers, an action starting with `block`, `deny`,

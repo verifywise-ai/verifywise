@@ -272,6 +272,45 @@ describe("parseLine", () => {
       });
     });
 
+    it("keeps spaces inside a CEF extension value", () => {
+      const r = parseLine(
+        "generic_kv",
+        "CEF:0|V|P|1|100|Web|3|suser=a@b.co dhost=x.com department=Sales Ops act=blocked",
+      );
+      expect(r).toEqual({
+        ok: true,
+        event: expect.objectContaining({ department: "Sales Ops", action: "blocked" }),
+      });
+    });
+
+    it("keeps an escaped pipe in the CEF header from ending it early", () => {
+      const r = parseLine(
+        "generic_kv",
+        "CEF:0|V\\|X|P|1|100|Web|3|suser=a@b.co dhost=x.com department=R and D",
+      );
+      expect(r).toEqual({
+        ok: true,
+        event: expect.objectContaining({ department: "R and D" }),
+      });
+    });
+
+    it("rejects a CEF line that repeats an identity key inside a value", () => {
+      expect(
+        parseLine(
+          "generic_kv",
+          "CEF:0|V|P|1|100|Web|3|suser=a@b.co dhost=x.com department=Ops suser=evil@x.co",
+        ),
+      ).toEqual({ ok: false, reason: "unparseable" });
+    });
+
+    it("splits plain key=value on whitespace outside CEF", () => {
+      const r = parseLine("generic_kv", "suser=a@b.co dhost=x.com department=Sales Ops");
+      expect(r).toEqual({
+        ok: true,
+        event: expect.objectContaining({ department: "Sales" }),
+      });
+    });
+
     it("drops a missing user", () => {
       expect(parseLine("generic_kv", "dhost=chat.openai.com")).toEqual({
         ok: false,

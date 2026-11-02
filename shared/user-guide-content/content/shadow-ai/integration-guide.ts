@@ -339,7 +339,7 @@ export const integrationGuideContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Use this parser for firewalls, DLP systems and custom forwarders that write `key=value` pairs or CEF extensions. It reads these fields:',
+      text: 'Use this parser for firewalls, DLP systems and custom forwarders that write `key=value` pairs or CEF extensions. In a CEF line a value can contain spaces (`department=Sales Ops`) and runs until the next `key=`; in plain `key=value` lines a value ends at the first space unless you put it in double quotes. It reads these fields:',
     },
     {
       type: 'table',
