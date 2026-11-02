@@ -41,7 +41,7 @@ import { NEWS_TOPIC_WORDS } from "../queries";
 import { type RecordsOutcome, sourcesBesideVrdb } from "../records";
 import { EVAL_CASES } from "../eval/cases";
 import { runEvalCase } from "../eval/runCase";
-import { createVendorResearcher } from "../researchAgent";
+import { type RunHooks, createVendorResearcher } from "../researchAgent";
 import type { SearchSpec } from "../searchEngineOf";
 import { ResearchTarget } from "../target";
 import { createTraceRecorder } from "../trace";
@@ -3623,6 +3623,72 @@ describe("runEvalCase: the trace of a run", () => {
 
     expect(second.trace.modelCalls).toHaveLength(first.trace.modelCalls.length);
     expect(second.trace.steps).toHaveLength(first.trace.steps.length);
+  });
+});
+
+describe("runEvalCase: an engine that is given", () => {
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  /** An engine of the kind a live evaluation builds before the run, whose search tells its hooks. */
+  function liveLikeEngine(onSearch: () => void): SearchEngine {
+    return {
+      id: "gdelt",
+      kinds: ["news"],
+      newsWindowMonths: 3,
+      search: async () => {
+        onSearch();
+        return [];
+      },
+    };
+  }
+
+  const GATHERING_CASE = EVAL_CASES.find((evalCase) => evalCase.gather === true);
+
+  it("is handed the hooks of the run, so that its pause moves the clock of the gather", async () => {
+    expect(GATHERING_CASE).toBeDefined();
+    const extend = jest.fn();
+    const stop = jest.fn();
+    jest.spyOn(gatherModule, "createGatherClock").mockImplementation(() => ({
+      signal: new AbortController().signal,
+      extend,
+      stop,
+    }));
+    let hooks: RunHooks | undefined;
+    const engine = liveLikeEngine(() => hooks?.onPause(60_000));
+
+    await runEvalCase(GATHERING_CASE as NonNullable<typeof GATHERING_CASE>, {
+      engine,
+      bindHooks: (given) => {
+        hooks = given;
+      },
+    });
+
+    expect(extend).toHaveBeenCalled();
+    expect(extend.mock.calls.every(([ms]) => ms === 60_000 + GDELT_ASK_MS)).toBe(true);
+    expect(stop).toHaveBeenCalledTimes(1);
+  });
+
+  it("is handed the hooks that count a refusal and write it to the trace of the run", async () => {
+    let hooks: RunHooks | undefined;
+    let told = false;
+    const engine = liveLikeEngine(() => {
+      if (told) return;
+      told = true;
+      hooks?.onRefused({ final: false });
+    });
+
+    const run = await runEvalCase(GATHERING_CASE as NonNullable<typeof GATHERING_CASE>, {
+      engine,
+      bindHooks: (given) => {
+        hooks = given;
+      },
+    });
+
+    expect(run.trace.steps.map((step) => ("reason" in step ? step.reason : undefined))).toContain(
+      "gdelt_refused",
+    );
   });
 });
 

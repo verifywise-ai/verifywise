@@ -395,6 +395,10 @@ class Unwanted extends Error {
   }
 }
 
+/** Whether an error is the end of a wait, a turn in the queue or a sleep by an abort signal. */
+const isAbortError = (error: unknown): boolean =>
+  error instanceof Error && error.name === "AbortError";
+
 /** Rejects with a SearchEngineError as soon as `signal` aborts, whatever the work does after that. */
 function untilAborted<T>(work: Promise<T>, signal: AbortSignal | undefined): Promise<T> {
   if (signal === undefined) return work;
@@ -515,7 +519,9 @@ export interface GdeltEngineDeps {
    * Told, with the wait in ms, each time this run's ask starts to wait out a pause: one that its
    * own 429 began or one that another run of the process began, once for each pause. It is told
    * nothing else, so a caller can give the clock of its own work more time. One that throws
-   * changes nothing.
+   * changes nothing. It is also told of a pause when the load was given up while its request was
+   * in flight and that request came back as a 429: the load does not wait then (its wait ends at
+   * once, since the load is aborted), and the clock of a caller that nobody waits for is over.
    */
   onPause?: (waitMs: number) => void;
   /**
@@ -535,12 +541,18 @@ export interface GdeltEngineDeps {
  * run, which may carry the signals of different loops, so one signal's abort ends that search at
  * once and cancels nothing for the others. The request is bounded by its own time-outs.
  *
- * A failure of the request is the answer of every search of the run, with one exception: the
- * process is leaving GDELT alone, or GDELT has just refused with a 429. The request then waits out
- * the pause and is asked again, for every search that waits for it, until GDELT_MAX_ASKS refusals:
- * the last one is the answer of the run. A request that failed for a reason that passes (a network
- * error, a time-out, a 5xx) is asked once more through the queue, so that the gap holds for it too.
- * The load is given up, before its request is made, once no search waits for it.
+ * A failure of the request is the answer of every search of the run, with three exceptions, none
+ * of which is a failure of GDELT that the run should keep:
+ *
+ * - the process is leaving GDELT alone, or GDELT has just refused with a 429. The request then
+ *   waits out the pause and is asked again, for every search that waits for it, until
+ *   GDELT_MAX_ASKS refusals: the last one is the answer of the run;
+ * - a request that failed for a reason that passes (a network error, a time-out, a 5xx) is asked
+ *   once more through the queue, so that the gap holds for it too;
+ * - a load that no search waits for any more is given up, before its request is made, and the next
+ *   search starts a new one: that load has no answer to keep. A real failure of GDELT that comes
+ *   back after every search has left (a 403, a refusal of robots.txt, a type that is not JSON) is
+ *   still the answer of the run.
  */
 export function createGdeltEngine(deps: GdeltEngineDeps): SearchEngine {
   const fetch = deps.fetch ?? guardedFetch;
@@ -579,9 +591,12 @@ export function createGdeltEngine(deps: GdeltEngineDeps): SearchEngine {
   };
 
   /**
-   * One request, once the queue has a place for it. A 429 starts the pause of the process; the
-   * third refusal of the run is the answer of the run, not a pause, so no search asks again. A
-   * pause that began while the ask sat in the queue turns it away before the request.
+   * One request, once the queue has a place for it. A 429 starts the pause of the process, for
+   * everyone: it is waited out and asked again, until the run has been refused GDELT_MAX_ASKS
+   * times. The last refusal is the answer of the run, so no search of the run asks again, and it
+   * is thrown as a SearchEngineError and not as a pause to wait out (the process still leaves
+   * GDELT alone for the 60 seconds, as after any 429). A pause that began while the ask sat in the
+   * queue turns it away before the request.
    */
   const request = async (url: string): Promise<GdeltArticle[]> => {
     if (now() < pausedUntil) throw new Paused();
@@ -612,7 +627,13 @@ export function createGdeltEngine(deps: GdeltEngineDeps): SearchEngine {
 
   /**
    * The request, and the one more that a failure which passes earns. Both wait for the queue, and
-   * both leave it, as the wait for a 5xx does, when `until` aborts.
+   * both leave it, as the wait for a 5xx does, when `until` aborts. The retry looks at the pause
+   * before it takes its turn: a pause that another run began while the sleep went on would turn
+   * the turn away at the start check, and a turn that makes no request would still set the gap of
+   * the queue (the next ask would wait for a request that was not made). The pause is waited out
+   * by the load, which asks again, so this is a pause and not a failure. A turn that was already
+   * queued when the pause began cannot be taken back: the queue is shared with other engines and
+   * is not changed for this.
    */
   const fetchIndex = async (url: string, until: AbortSignal): Promise<GdeltArticle[]> => {
     try {
@@ -621,6 +642,7 @@ export function createGdeltEngine(deps: GdeltEngineDeps): SearchEngine {
       const wait = retryWaitOf(error);
       if (wait === null) throw error;
       if (wait > 0) await sleep(wait, until);
+      if (now() < pausedUntil) throw new Paused();
       try {
         deps.onRetry?.();
       } catch {
@@ -633,9 +655,11 @@ export function createGdeltEngine(deps: GdeltEngineDeps): SearchEngine {
   /**
    * The index of the run: from the cache, or from the ask. While the process leaves GDELT alone
    * the ask waits out the pause and then goes on, so a refusal costs the run a wait and not its
-   * news. Every pass either waits or makes a request, and a 429 counts towards the cap of
-   * GDELT_MAX_ASKS, whose last refusal ends the loop with the answer of the run. When `until`
-   * aborts, which is when no search waits for the load any more, the load ends as Unwanted.
+   * news. Every pass either waits or makes a request (a retry that meets a pause goes back to
+   * wait), and a 429 counts towards the cap of GDELT_MAX_ASKS, whose last refusal ends the loop
+   * with the answer of the run. When `until` aborts, which is when no search waits for the load
+   * any more, the wait, the turn in the queue or the sleep that it ends is Unwanted: the load is
+   * given up and the next search starts a new one. Any other failure is the answer of the run.
    */
   const loadIndex = async (url: string, until: AbortSignal): Promise<Indexed[]> => {
     const kept = cache === undefined ? null : await readCachedGdeltIndex(cache, url);
@@ -660,8 +684,11 @@ export function createGdeltEngine(deps: GdeltEngineDeps): SearchEngine {
         }
       }
     } catch (error) {
-      // What an abort of the load made of the wait, the queue or the sleep is not a failure of GDELT.
-      if (until.aborted && !(error instanceof SearchEngineError)) throw new Unwanted();
+      // The abort of the load ends the wait, the turn in the queue or the sleep with an AbortError,
+      // and that is no failure of GDELT. Whatever else the request came to after the last search
+      // left (the request itself is not cancelled) is the answer of GDELT, and it stays the
+      // answer of the run: the next search must not ask again for it.
+      if (until.aborted && isAbortError(error)) throw new Unwanted();
       throw error;
     }
     if (cache !== undefined) cacheGdeltIndex(cache, url, articles);

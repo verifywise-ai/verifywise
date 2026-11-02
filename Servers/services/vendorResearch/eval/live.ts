@@ -17,7 +17,7 @@
 import { generateObjectWithSelfCorrection } from "../../../advisor/llmSelfCorrect";
 import { createPageReader } from "../../webResearch/readPage";
 import { resolveOrgModel } from "../pipeline";
-import { createRunSearch } from "../researchAgent";
+import { type RunHooks, createRunSearch } from "../researchAgent";
 import { buildTarget } from "../target";
 import { createTraceRecorder } from "../trace";
 import type { LiveOptions } from "./cli";
@@ -34,6 +34,9 @@ export async function runLive(
 
   // The search of the key writes its calls to the model into this trace, before the run starts it.
   const trace = createTraceRecorder();
+  // The run hands its hooks over when it starts (see `bindHooks` below), after the engine is built:
+  // until then, and for an engine that is never told, they do nothing.
+  let hooks: RunHooks | null = null;
   const live = {
     // The engine of the key of the organization; GDELT when it says none.
     engine: createRunSearch({
@@ -46,6 +49,9 @@ export async function runLive(
         vendor_provides: options.provides,
       }),
       trace,
+      onRetry: () => hooks?.onRetry(),
+      onPause: (waitMs) => hooks?.onPause(waitMs),
+      onRefused: (refusal) => hooks?.onRefused(refusal),
     }).engine,
     readPage: createPageReader(),
     generate: generateObjectWithSelfCorrection,
@@ -82,6 +88,11 @@ export async function runLive(
     ...(recorder ?? live),
     model: resolved.model,
     trace,
+    // As in the product, a wait of the news engine for a pause of GDELT moves the clock of the
+    // routine work, and a refusal is counted and traced.
+    bindHooks: (given) => {
+      hooks = given;
+    },
   });
   return { run, recording: recorder?.recording() ?? null };
 }

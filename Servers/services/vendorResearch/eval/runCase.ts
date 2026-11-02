@@ -15,7 +15,7 @@ import { withAliases } from "../aliases";
 import { type Analysed, analyse } from "../analysis";
 import type { Credibility } from "../credibility";
 import { buildEvidencePack, provenanceOf } from "../evidence";
-import { type ResearchResult, createVendorResearcher } from "../researchAgent";
+import { type ResearchResult, type RunHooks, createVendorResearcher } from "../researchAgent";
 import { buildMateriality } from "../materiality";
 import { type ResearchTarget, buildTarget } from "../target";
 import { type RunTrace, type TraceRecorder, createTraceRecorder } from "../trace";
@@ -72,6 +72,12 @@ export interface CaseRun {
 
 export interface CaseDeps {
   engine?: SearchEngine & { feedOf?: (url: string) => SearchKind | undefined };
+  /**
+   * Told of the hooks of the run before it searches (see `RunHooks` in researchAgent.ts). A live
+   * run builds its engine before the run, so this is how the engine learns to move the clock of
+   * the routine work during a pause of GDELT, and to count and trace a refusal, as the product's.
+   */
+  bindHooks?: (hooks: RunHooks) => void;
   readPage?: PageReader;
   generate?: typeof generateObjectWithSelfCorrection;
   /** The model the calls are made with; a replay has none. */
@@ -113,6 +119,7 @@ export async function runEvalCase(evalCase: EvalCase, deps: CaseDeps = {}): Prom
   };
   const researcher = createVendorResearcher({
     engine,
+    ...(deps.bindHooks === undefined ? {} : { bindHooks: deps.bindHooks }),
     readPage,
     generate,
     gather: evalCase.gather === true,

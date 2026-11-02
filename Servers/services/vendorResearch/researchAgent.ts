@@ -326,6 +326,19 @@ export function createRunSearch(input: RunSearchInput): RunSearch {
 }
 
 /**
+ * What a run offers to the engine that searches for it, to be told of what happens to the news:
+ * a retried request, a wait for a pause of GDELT (which moves the clock of the routine work), and a
+ * refusal (which is counted and written to the trace). `createRunSearch` takes them one by one;
+ * an engine that was built before the run, as a live evaluation builds it, is handed them through
+ * `bindHooks` (see `createVendorResearcher`).
+ */
+export interface RunHooks {
+  onRetry(): void;
+  onPause(waitMs: number): void;
+  onRefused(refusal: { final: boolean }): void;
+}
+
+/**
  * Writes one step to the run's trace for a 429 of GDELT, so that a person who opens the run can
  * tell why it lost its news: the counter of the refusals does nothing unless monitoring is on and
  * names no run. The step has fixed words only (`gdelt_refused`, or `gdelt_refused_final` for the
@@ -353,6 +366,11 @@ function traceGdeltRefusal(trace: TraceRecorder | undefined, refusal: { final: b
  *
  * @param deps.engine Replaces the engine that each run builds from its key (see `createRunSearch`),
  *   for tests and for the replay of a recording. It is used as it is, whatever the key says.
+ * @param deps.bindHooks Told, at the start of each run that searches with `deps.engine`, of the hooks
+ *   that the run gives its own engine (see `RunHooks`). An engine that is given is used as it is,
+ *   and so it would never move the clock of the routine work, count a refusal or write it to the
+ *   trace; the live evaluation builds its engine before the run and passes the hooks on through
+ *   this. Nothing is told when the run builds its engine itself.
  * @param deps.readPage Replaces the page reader that each run builds, for tests.
  * @param deps.generate Replaces the self-correcting structured call, for tests.
  * @param deps.metrics Replaces the counters of the process (searches by outcome), for tests.
@@ -380,6 +398,7 @@ function traceGdeltRefusal(trace: TraceRecorder | undefined, refusal: { final: b
 export function createVendorResearcher(
   deps: {
     engine?: SearchEngine;
+    bindHooks?: (hooks: RunHooks) => void;
     readPage?: PageReader;
     generate?: typeof generateObjectWithSelfCorrection;
     metrics?: ResearchMetrics;
@@ -502,24 +521,30 @@ export function createVendorResearcher(
     let gatherClock: GatherClock | null = null;
     // The engine of this run: the one given, or the one the key of the research has, under all the
     // names of the vendor now known. It says afterwards whether it was used, and which it was.
-    const searching =
-      deps.engine !== undefined
-        ? noteUse(deps.engine)
-        : createRunSearch({
-            search,
-            model,
-            modelId,
-            organizationId,
-            target: known,
-            cache: deps.cache,
-            trace,
-            onRetry: () => metrics.searchRetried({ kind: "news" }),
-            onPause: (waitMs) => gatherClock?.extend(waitMs + GDELT_ASK_MS),
-            onRefused: (refusal) => {
-              metrics.gdeltRefused(refusal);
-              traceGdeltRefusal(trace, refusal);
-            },
-          });
+    const hooks: RunHooks = {
+      onRetry: () => metrics.searchRetried({ kind: "news" }),
+      onPause: (waitMs) => gatherClock?.extend(waitMs + GDELT_ASK_MS),
+      onRefused: (refusal) => {
+        metrics.gdeltRefused(refusal);
+        traceGdeltRefusal(trace, refusal);
+      },
+    };
+    let searching: RunSearch;
+    if (deps.engine !== undefined) {
+      deps.bindHooks?.(hooks);
+      searching = noteUse(deps.engine);
+    } else {
+      searching = createRunSearch({
+        search,
+        model,
+        modelId,
+        organizationId,
+        target: known,
+        cache: deps.cache,
+        trace,
+        ...hooks,
+      });
+    }
     const session = createWebSession<ResearchCategory>({
       engine: searching.engine,
       readPage: policies.read,

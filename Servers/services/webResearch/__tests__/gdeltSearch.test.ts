@@ -2096,6 +2096,81 @@ describe("the engine", () => {
       expect(apiRequests()).toBe(2);
     });
 
+    it("keeps a real failure of GDELT that lands after every search has left as the answer of the run", async () => {
+      const { process, engine } = setUp();
+      const held = deferred<GuardedResponse>();
+      let asked = 0;
+      // The request is in flight when the last search leaves; it is not cancelled, and it fails.
+      const fetch = jest.fn(async (url: string): Promise<GuardedResponse> => {
+        asked += 1;
+        return asked === 1 ? held.promise : response(url, bodyOf([raw()]));
+      });
+      const run = engine("Acme", undefined, undefined, {
+        fetch: fetch as unknown as typeof guardedFetch,
+        robots: allowAll,
+      });
+      const controller = new AbortController();
+
+      const leaving = run.search("Acme breach", "news", controller.signal);
+      await flush();
+      expect(fetch).toHaveBeenCalledTimes(1);
+      controller.abort();
+      await expect(leaving).rejects.toBeInstanceOf(process.SearchEngineError);
+      held.reject(new process.FetchError("blocked_by_site", undefined, { status: 403 }));
+      await flush();
+
+      // A 403 is the answer of GDELT, not the abort of the load: the next search does not ask again.
+      await expect(run.search("Acme support", "news")).rejects.toBeInstanceOf(
+        process.SearchEngineError,
+      );
+      expect(fetch).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not take a turn in the queue for a retry once another run has paused the process", async () => {
+      const { process, engine, script, hold, release, waiting } = setUp();
+      script("limit", "index");
+      hold();
+      let asked = 0;
+      const fetch = jest.fn(async (url: string): Promise<GuardedResponse> => {
+        asked += 1;
+        if (asked === 1) {
+          throw new process.FetchError("unreachable", undefined, {
+            status: 503,
+            retryAfterMs: 1000,
+          });
+        }
+        return response(url, bodyOf([raw()]));
+      });
+      let turns = 0;
+      const countingQueue: SearchQueue = (task) => {
+        turns += 1;
+        return task();
+      };
+      let other: Promise<unknown> | undefined;
+      // While this run sleeps before its retry, another run is refused and pauses the process.
+      const sleep = jest.fn(async () => {
+        other = engine("Globex").search("Globex breach", "news");
+        await waiting(1);
+      });
+      const run = engine("Acme", undefined, undefined, {
+        fetch: fetch as unknown as typeof guardedFetch,
+        robots: allowAll,
+        queue: countingQueue,
+        sleep,
+      });
+
+      const search = run.search("Acme breach", "news");
+      await waiting(2);
+
+      // The retry waits for the pause instead of taking a turn that would be turned away: a turn
+      // sets the gap of the queue, and the next ask would wait for a request that was not made.
+      expect(turns).toBe(1);
+      release();
+      await expect(search).resolves.toHaveLength(1);
+      await expect(other).resolves.toHaveLength(1);
+      expect(fetch).toHaveBeenCalledTimes(2);
+    });
+
     it("lets the process ask again once the pause is over, without waiting", async () => {
       const { engine, script, apiRequests, waitForPause, pauseTheProcess, advance } = setUp();
       script("limit", "index");

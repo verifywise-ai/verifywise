@@ -2259,6 +2259,138 @@ describe("gatherSources", () => {
     });
   });
 
+  describe("after a 429 of the news engine, on the real clock", () => {
+    /** Two copies of the engine and the session: the pause and the queue of the process are ours. */
+    function freshWeb() {
+      let gdelt!: typeof import("../../webResearch/gdeltSearch");
+      let guarded!: typeof import("../../webResearch/guardedFetch");
+      let web!: typeof import("../../webResearch/webSession");
+      jest.isolateModules(() => {
+        gdelt = jest.requireActual("../../webResearch/gdeltSearch");
+        guarded = jest.requireActual("../../webResearch/guardedFetch");
+        web = jest.requireActual("../../webResearch/webSession");
+      });
+      return { gdelt, guarded, web };
+    }
+
+    const article = {
+      url: NEWS_BREACH.url,
+      title: NEWS_BREACH.title,
+      seendate: "20310301T080000Z",
+      domain: "news.example",
+      language: "English",
+    };
+
+    /**
+     * The gather of pass 2 of the golden run, on fake time: the engine has its own wait for the
+     * pause (the default, a timer) and its own queue (the shared one, 5 seconds apart); the
+     * clock is the real one; and the first request is refused after `refusedAfterMs`. `wired` says
+     * whether the pause is told to the clock, as `createVendorResearcher` tells it.
+     */
+    async function gatherAfterARefusal(refusedAfterMs: number, wired: boolean) {
+      const { gdelt, guarded, web } = freshWeb();
+      const requestedAt: number[] = [];
+      const started = Date.now();
+      const fetch = jest.fn(
+        (url: string) =>
+          new Promise<GuardedResponse>((resolve, reject) => {
+            requestedAt.push(Date.now() - started);
+            const first = requestedAt.length === 1;
+            setTimeout(
+              () => {
+                if (first) {
+                  reject(new guarded.FetchError("blocked_by_site", undefined, { status: 429 }));
+                  return;
+                }
+                resolve({
+                  url,
+                  status: 200,
+                  contentType: "application/json",
+                  body: Buffer.from(JSON.stringify({ articles: [article] })),
+                  truncated: false,
+                });
+              },
+              first ? refusedAfterMs : 3_000,
+            );
+          }),
+      );
+      const clock = createGatherClock();
+      const engine = gdelt.createGdeltEngine({
+        names: ["Acme"],
+        topics: ["breach", "lawsuit", "outage", "incident"],
+        fetch: fetch as unknown as typeof guarded.guardedFetch,
+        robots: { isAllowed: async () => true },
+        ...(wired ? { onPause: (ms: number) => clock.extend(ms + GDELT_ASK_MS) } : {}),
+      });
+      const matcher = createVendorMatcher(target);
+      const session = web.createWebSession<ResearchCategory>({
+        engine,
+        readPage: async (url: string): Promise<FetchedPage> => ({
+          url,
+          title: `Page at ${url}`,
+          publishedAt: null,
+          text: `Text of ${url} about Acme`,
+          links: [],
+        }),
+        domain: "acme.com",
+        cutoffs: NOW_CUTOFFS,
+        isRelevant: ({ title, snippet, url }) => matcher({ title, content: snippet, url }),
+      });
+      const readPage = jest.fn(async (): Promise<FetchedPage> => {
+        throw new PageReadError("not_found");
+      });
+      const gathered = gatherSources(
+        { target, researchable: NEWS_ONLY, website: readable(), signal: clock.signal },
+        { session, readPage },
+      ).finally(() => clock.stop());
+      await jest.advanceTimersByTimeAsync(GATHER_TIMEOUT_MS + GATHER_MAX_PAUSE_MS + 60_000);
+      return { result: await gathered, requestedAt };
+    }
+
+    beforeEach(() => {
+      jest.useFakeTimers();
+      jest.setSystemTime(new Date("2031-04-20T10:00:00Z"));
+    });
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it.each([
+      ["quickly", 1_000],
+      ["after a slow handshake", 25_000],
+    ])(
+      "keeps the news of a run whose first ask is refused %s: the clock outlasts the pause of 60 s",
+      async (_when, refusedAfterMs) => {
+        const { result, requestedAt } = await gatherAfterARefusal(refusedAfterMs, true);
+
+        const searches = result.actions.filter((action) => action.tool === "search");
+        expect(searches.some((action) => action.outcome === "failed")).toBe(false);
+        expect(searches.some((action) => action.outcome === "ok")).toBe(true);
+        // The second ask came after the pause, past the 30 s that the clock had at the start.
+        expect(requestedAt).toHaveLength(2);
+        expect(requestedAt[1] - requestedAt[0]).toBeGreaterThanOrEqual(GDELT_COOL_DOWN_MS);
+        expect(requestedAt[1]).toBeGreaterThan(GATHER_TIMEOUT_MS);
+        const articles = result.actions.filter(
+          (action) => action.tool === "read" && action.url === NEWS_BREACH.url,
+        );
+        expect(articles[0]).toMatchObject({ outcome: "ok" });
+        // The pause timer, the clock and the queue left nothing behind.
+        expect(jest.getTimerCount()).toBe(0);
+      },
+    );
+
+    it("loses the news of that run when nothing tells the clock of the pause", async () => {
+      const { result, requestedAt } = await gatherAfterARefusal(1_000, false);
+
+      // This is what the golden run met: the clock ended at 30 s, before the pause was over.
+      expect(requestedAt).toHaveLength(1);
+      expect(
+        result.actions.some((action) => action.tool === "read" && action.outcome === "ok"),
+      ).toBe(false);
+      expect(jest.getTimerCount()).toBe(0);
+    });
+  });
+
   describe("createGatherClock", () => {
     beforeEach(() => jest.useFakeTimers());
     afterEach(() => jest.useRealTimers());
