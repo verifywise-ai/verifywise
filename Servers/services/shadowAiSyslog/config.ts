@@ -40,3 +40,30 @@ export function readSyslogListenerConfig(
     multiTenancy: flag(env.MULTI_TENANCY_ENABLED),
   };
 }
+
+/**
+ * Throw a descriptive error when the listener cannot start safely. The message
+ * names the environment variables to change and never includes file contents.
+ */
+export function assertStartableConfig(cfg: SyslogListenerConfig): void {
+  if (cfg.tlsCertFile && !cfg.tlsKeyFile) {
+    throw new Error(
+      "Shadow AI syslog listener not started: SHADOW_AI_SYSLOG_TLS_CERT_FILE is set but SHADOW_AI_SYSLOG_TLS_KEY_FILE is not.",
+    );
+  }
+  if (cfg.tlsKeyFile && !cfg.tlsCertFile) {
+    throw new Error(
+      "Shadow AI syslog listener not started: SHADOW_AI_SYSLOG_TLS_KEY_FILE is set but SHADOW_AI_SYSLOG_TLS_CERT_FILE is not.",
+    );
+  }
+  if (!cfg.tlsCertFile && !cfg.allowPlaintext) {
+    throw new Error(
+      "Shadow AI syslog listener not started: set SHADOW_AI_SYSLOG_TLS_CERT_FILE and SHADOW_AI_SYSLOG_TLS_KEY_FILE for TLS, or SHADOW_AI_SYSLOG_ALLOW_PLAINTEXT=true.",
+    );
+  }
+  if (cfg.allowIpOnly && cfg.multiTenancy) {
+    throw new Error(
+      "Shadow AI syslog listener not started: SHADOW_AI_SYSLOG_ALLOW_IP_ONLY cannot be used when MULTI_TENANCY_ENABLED=true.",
+    );
+  }
+}

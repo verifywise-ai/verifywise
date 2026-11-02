@@ -1,4 +1,48 @@
-import { readSyslogListenerConfig } from "../config";
+import { readSyslogListenerConfig, assertStartableConfig, SyslogListenerConfig } from "../config";
+
+describe("assertStartableConfig", () => {
+  const base: SyslogListenerConfig = {
+    enabled: true,
+    port: 6514,
+    allowPlaintext: false,
+    allowIpOnly: false,
+    multiTenancy: false,
+  };
+
+  it("refuses when neither TLS files nor plaintext are configured", () => {
+    expect(() => assertStartableConfig(base)).toThrow(/TLS.*PLAINTEXT/s);
+  });
+
+  it("refuses when only one of the TLS files is set", () => {
+    expect(() => assertStartableConfig({ ...base, tlsCertFile: "/c.pem" })).toThrow(
+      /SHADOW_AI_SYSLOG_TLS_KEY_FILE/,
+    );
+    expect(() =>
+      assertStartableConfig({ ...base, allowPlaintext: true, tlsKeyFile: "/k.pem" }),
+    ).toThrow(/SHADOW_AI_SYSLOG_TLS_CERT_FILE/);
+  });
+
+  it("refuses IP-only mode when multi-tenancy is on", () => {
+    expect(() =>
+      assertStartableConfig({
+        ...base,
+        allowPlaintext: true,
+        allowIpOnly: true,
+        multiTenancy: true,
+      }),
+    ).toThrow(/SHADOW_AI_SYSLOG_ALLOW_IP_ONLY.*MULTI_TENANCY_ENABLED/s);
+  });
+
+  it("accepts plaintext only, TLS only, and IP-only on a single-tenant server", () => {
+    expect(() => assertStartableConfig({ ...base, allowPlaintext: true })).not.toThrow();
+    expect(() =>
+      assertStartableConfig({ ...base, tlsCertFile: "/c.pem", tlsKeyFile: "/k.pem" }),
+    ).not.toThrow();
+    expect(() =>
+      assertStartableConfig({ ...base, allowPlaintext: true, allowIpOnly: true }),
+    ).not.toThrow();
+  });
+});
 
 describe("readSyslogListenerConfig", () => {
   it("defaults to disabled on port 6514", () => {

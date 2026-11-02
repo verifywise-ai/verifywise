@@ -19,6 +19,7 @@ import {
 import { warnIfGatewayKeyMissing } from "./utils/aiGatewayKeyCheck";
 import { warnIfLocalOverrideIgnored } from "./extensions/jira-incidents/siteUrl";
 import logger from "./utils/logger/fileLogger";
+import { startSyslogListener, SyslogListenerHandle } from "./services/shadowAiSyslog/listener";
 
 const DEFAULT_PORT = "3000";
 const DEFAULT_HOST = "localhost";
@@ -119,11 +120,28 @@ try {
     console.log(`Server running on port http://${host}:${port}/`);
   });
 
+  // Shadow AI syslog listener (off unless SHADOW_AI_SYSLOG_ENABLED=true). A
+  // listener that cannot start is logged; the HTTP backend keeps running.
+  let syslogListener: SyslogListenerHandle | null = null;
+  startSyslogListener()
+    .then((handle) => {
+      syslogListener = handle;
+    })
+    .catch((error: unknown) => {
+      logger.error((error as Error)?.message ?? "Shadow AI syslog listener failed to start");
+    });
+
   async function shutdown(signal: string): Promise<void> {
     console.log(`\n${signal} received — shutting down gracefully`);
 
     server.close(async () => {
       console.log("HTTP server closed");
+
+      try {
+        await syslogListener?.close();
+      } catch (err: unknown) {
+        console.error("Error closing Shadow AI syslog listener:", err);
+      }
 
       stopAiDetectionProgressCleanup();
 
