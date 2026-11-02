@@ -13,6 +13,7 @@ export {
   background,
   border,
   brand,
+  button,
   editor,
   userTextColors,
   palette,

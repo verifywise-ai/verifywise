@@ -24,7 +24,7 @@ Clients/src/presentation/themes/
 └── tables.ts          # Table-specific styles
 ```
 
-`shared/design-tokens/primitives.ts` holds the scale hex. `shared/design-tokens/palette.ts` builds brand, text, icon, background, border, and status from those scales. The client `palette.ts` re-exports the shared palette, so existing screen imports stay valid. Email and PDF rendering can import the shared modules.
+`shared/design-tokens/primitives.ts` holds the scale hex. `shared/design-tokens/palette.ts` builds brand, button, text, icon, background, border, and status from those scales. The client `palette.ts` re-exports the shared palette, so existing screen imports stay valid. Email and PDF rendering can import the shared modules.
 
 ### Theme Provider Setup
 
@@ -52,6 +52,32 @@ function App() {
 | `brand.primaryHover`             | `#0F5A47` | Hover state for primary          |
 | `brand.primaryLight`             | `#E6F0EC` | Light backgrounds, highlights    |
 | `brand.primaryDark`              | `#10614D` | Dark variant                     |
+
+### Button Colors
+
+`button` tokens are for `CustomizableButton`. Shape: `button.<intent>.<variant>.<slot>.<state>`. Intents in this group today: `primary`, `secondary`. Variants: `contained`, `outlined`, `text`. Slots: `bg`, `text`, `border`. States: `default`, `hover`, `disabled`. Pressed is not tokenized yet; hover applies while pressed.
+
+Values reference primitives (`green`, `grey`) directly, not `brand`. `green[700]` is the same hex as `brand.primary`, but the tokens can change independently.
+
+Disabled values are their own tokens so they can change without touching `border.light` or `text.disabled`.
+
+`v1SingleTheme.ts` reads these for `buttons.primary` and `buttons.secondary`. Success, warning, error, and info still use the local `colors` object in that file.
+
+`theme.palette.secondary` (`#F4F4F4`) is the MUI light fill. It is not `CustomizableButton` secondary.
+
+| Token                                       | Value     | Usage                                  |
+| ------------------------------------------- | --------- | -------------------------------------- |
+| `button.primary.contained.bg.default`       | `#13715B` | Primary filled background              |
+| `button.primary.contained.bg.hover`         | `#10614D` | Primary filled hover                   |
+| `button.primary.contained.bg.disabled`      | `#E5E7EB` | Primary filled disabled background     |
+| `button.primary.contained.text.default`     | `#FFFFFF` | Label on a filled primary button       |
+| `button.primary.contained.text.disabled`    | `#9CA3AF` | Label on a disabled filled button      |
+| `button.primary.outlined.text.default`      | `#13715B` | Primary outlined label                 |
+| `button.primary.outlined.border.default`    | `#13715B` | Primary outlined border                |
+| `button.primary.text.text.default`          | `#13715B` | Primary text-variant label             |
+| `button.secondary.contained.bg.default`     | `#6B7280` | Secondary filled background            |
+| `button.secondary.contained.bg.hover`       | `#475467` | Secondary filled hover                 |
+| `button.secondary.outlined.text.default`    | `#6B7280` | Secondary outlined / text label        |
 
 ### Text Colors
 
@@ -83,8 +109,8 @@ Icon strokes. They read the color scales directly and do not alias text tokens.
 | `background.fill`   | `#E6F0EC` | Filled areas, selected tint         |
 | `background.accent` | `#F9FAFB` | Subtle highlights                   |
 | `background.hover`  | `#F3F4F6` | Hover states                        |
-| `secondary.main`    | `#F4F4F4` | Secondary button fill               |
-| `secondary.dark`    | `#e3e3e3` | Secondary button hover / other fill |
+| `secondary.main`    | `#F4F4F4` | MUI secondary fill (not CustomizableButton) |
+| `secondary.dark`    | `#e3e3e3` | MUI secondary hover                         |
 
 ### Border Colors
 
