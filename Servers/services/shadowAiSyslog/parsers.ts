@@ -9,6 +9,7 @@
 import net from "net";
 import { isEmail } from "../../utils/validations/email.utils";
 import { SHADOW_AI_EVENT_LIMITS } from "../../utils/shadowAiEventLimits";
+import { normalizeIp } from "./ip";
 import { ParseResult, ParserType, SyslogEvent } from "./types";
 
 type Fields = Record<string, string>;
@@ -117,12 +118,12 @@ function parseCefExtension(extension: string, eventKeys: Set<string>): Fields | 
 }
 
 /**
- * Key=value pairs, or null when an event key appears more than once. `cef` is
- * the generic parser: it accepts a CEF header and reads the CEF time keys.
+ * Key=value pairs, or null when an event key appears more than once. The
+ * generic parser accepts a CEF header and also reads the CEF time keys.
  */
-function parseKeyValues(body: string, cef = false): Fields | null {
-  const eventKeys = cef ? GENERIC_EVENT_KEYS : EVENT_KEYS;
-  const header = cef ? CEF_HEADER_RE.exec(body) : null;
+function parseKeyValues(body: string, generic = false): Fields | null {
+  const eventKeys = generic ? GENERIC_EVENT_KEYS : EVENT_KEYS;
+  const header = generic ? CEF_HEADER_RE.exec(body) : null;
   if (header) return parseCefExtension(body.slice(header[0].length), eventKeys);
   const fields: Fields = Object.create(null);
   for (const m of body.matchAll(KV_PAIR_RE)) {
@@ -148,9 +149,13 @@ const isDotted = (host: string): boolean => host.includes(".") || host.includes(
 /** Host and path of a URL, or of a bare `host[:port][/path]` string. */
 function hostAndPath(raw: string): { host: string; path?: string } | null {
   const hasScheme = SCHEME_RE.test(raw);
-  // A bare IP address is kept as written: the URL parser would reject an
-  // unbracketed IPv6 address and rewrite `::ffff:1.2.3.4` as hex.
-  if (!hasScheme && net.isIP(raw)) return { host: raw.toLowerCase() };
+  // A bare IPv6 address (`2001:db8::1`) is not a valid URL host without
+  // brackets. It is compressed and lowercased, and `::ffff:1.2.3.4` becomes
+  // 1.2.3.4. `::` and zone IDs (`fe80::1%eth0`) are not destinations.
+  if (!hasScheme && net.isIPv6(raw)) {
+    const ip = raw.includes("%") ? null : normalizeIp(raw);
+    return ip && ip !== "::" ? { host: ip } : null;
+  }
   try {
     const url = new URL(hasScheme ? raw : `http://${raw}`);
     const host = url.hostname.replace(/^\[|\]$/g, "").replace(/\.$/, "");
@@ -357,7 +362,12 @@ function parseDateText(text: string): number {
   if (statesZone(bare)) return Date.parse(`${head}${bare}`);
   // Without a listed name, a zone only inside brackets (`(IST)`, `(India
   // Standard Time)`) is one the parser cannot read: unreadable, not UTC.
-  if (!zone && statesZone(tail.replace(/[()]/g, " "))) return NaN;
+  if (!zone && statesZone(tail.replace(/[()]/g, " "))) {
+    // A zone only inside brackets: Date.parse reads `(UTC)`, `(GMT)` and
+    // `(+05:30)` once the brackets go, but not `(IST)` or `(India Standard
+    // Time)`, which leave the time unreadable rather than read as UTC.
+    return Date.parse(`${head}${tail.replace(/[()]/g, " ")}`);
+  }
   const utc = Date.parse(`${head}${bare} UTC`);
   return zone ? utc - zone.minutes * 60 * 1000 : utc;
 }
@@ -386,7 +396,8 @@ interface Candidate {
   method?: unknown;
   action?: unknown;
   department?: unknown;
-  timestamp?: unknown;
+  /** Payload times, in order of preference; the first in range is used. */
+  timestamps?: unknown[];
 }
 
 /** Shared tail of every parser: validate, apply timestamp fallbacks, build. */
@@ -407,7 +418,11 @@ function buildEvent(
   const event: SyslogEvent = {
     user_email: user,
     destination: host,
-    timestamp: pickTimestamp(receivedAt, parseTimestamp(c.timestamp), headerTimestamp),
+    timestamp: pickTimestamp(
+      receivedAt,
+      ...(c.timestamps ?? []).map(parseTimestamp),
+      headerTimestamp,
+    ),
   };
   const path = c.path ? stripNul(c.path) : undefined;
   if (path && charLength(path) <= MAX_URI_PATH_CHARS) event.uri_path = path;
@@ -436,7 +451,7 @@ function parseZscaler(
       method: f.method,
       action: f.action,
       department: f.department,
-      timestamp: f.timestamp,
+      timestamps: [f.timestamp],
     },
     headerTimestamp,
     receivedAt,
@@ -459,9 +474,9 @@ function parseGenericKv(
       method: f.requestMethod,
       action: f.act,
       department: f.department,
-      // CEF names the event time `rt` (receipt), `end` or `start`. The first
-      // that reads as a time is used, so an empty `timestamp=` does not hide `rt`.
-      timestamp: [f.timestamp, f.rt, f.end, f.start].find((t) => parseTimestamp(t) !== undefined),
+      // CEF names the event time `rt` (receipt), `end` or `start`. An empty,
+      // unreadable or out-of-range `timestamp` does not hide them.
+      timestamps: [f.timestamp, f.rt, f.end, f.start],
     },
     headerTimestamp,
     receivedAt,
@@ -469,12 +484,12 @@ function parseGenericKv(
 }
 
 // A JSON object may follow a prefix and be followed by trailing text. It
-// starts at the first `{` followed by a key or `}`, so a brace in the prefix
-// (`host{1}`) is passed over. Only that one start is tried: falling through
-// to a later `{` when the object is broken (a relay cut the line) could pick
-// a nested object as the event. Try the slice ending at each closing brace,
+// starts at the first `{` followed by a key (with only JSON whitespace
+// between), so a brace in the prefix (`host{1}`, `{}`) is passed over. Only
+// that one start is tried: falling through to a later `{` when the object is
+// broken (a relay cut the line) could pick a nested object as the event. Try the slice ending at each closing brace,
 // last first, a bounded number of times.
-const JSON_OBJECT_START_RE = /\{\s*["}]/;
+const JSON_OBJECT_START_RE = /\{[ \t\r\n]*"/;
 const MAX_JSON_END_ATTEMPTS = 8;
 
 function extractJsonObject(body: string): Record<string, unknown> | null {
@@ -527,7 +542,7 @@ function parseNetskope(
       // when there is no `action`, for senders that followed an older guide.
       action: netskopeVerdict(j.action ?? j.activity),
       department: j.department,
-      timestamp: j.timestamp,
+      timestamps: [j.timestamp],
     },
     headerTimestamp,
     receivedAt,
@@ -572,7 +587,7 @@ function parseSquid(
       path: method?.toUpperCase() === "CONNECT" ? undefined : target?.path,
       method,
       action,
-      timestamp,
+      timestamps: [timestamp],
     },
     headerTimestamp,
     receivedAt,

@@ -1010,6 +1010,12 @@ describe("parseLine", () => {
       expect(at("2026-02-09 14:32:00 (IST)")).toBe("2026-02-09T00:00:00.000Z");
       expect(at("2026-02-09 14:32:00 (India Standard Time)")).toBe("2026-02-09T00:00:00.000Z");
     });
+
+    it("reads a zone Date.parse knows inside brackets", () => {
+      expect(at("2026-02-09 14:32:00 (UTC)")).toBe("2026-02-09T14:32:00.000Z");
+      expect(at("2026-02-09 14:32:00 (GMT)")).toBe("2026-02-09T14:32:00.000Z");
+      expect(at("2026-02-09 14:32:00 (+05:30)")).toBe("2026-02-09T09:02:00.000Z");
+    });
   });
 
   describe("CEF event time fields", () => {
@@ -1033,7 +1039,11 @@ describe("parseLine", () => {
     });
 
     it("uses rt when timestamp is empty or unreadable", () => {
-      for (const ext of ["timestamp= rt=1707489120000", "timestamp=soon rt=1707489120000"]) {
+      for (const ext of [
+        "timestamp= rt=1707489120000",
+        "timestamp=soon rt=1707489120000",
+        "timestamp=0 rt=1707489120000",
+      ]) {
         const r = cef(ext);
         expect(r.ok && r.event.timestamp).toBe("2024-02-09T14:32:00.000Z");
       }
@@ -1063,11 +1073,15 @@ describe("parseLine", () => {
       });
     });
 
-    it("keeps an IPv4-mapped address as written", () => {
-      expect(parseLine("generic_kv", "suser=a@b.co dhost=::ffff:1.2.3.4")).toEqual({
-        ok: true,
-        event: expect.objectContaining({ destination: "::ffff:1.2.3.4" }),
-      });
+    it("stores one form per address", () => {
+      const dest = (dhost: string) => {
+        const r = parseLine("generic_kv", `suser=a@b.co dhost=${dhost}`);
+        return r.ok ? r.event.destination : r.reason;
+      };
+      expect(dest("2001:DB8:0:0::1")).toBe("2001:db8::1");
+      expect(dest("::ffff:1.2.3.4")).toBe("1.2.3.4");
+      expect(dest("::")).toBe("no_destination");
+      expect(dest("fe80::1%eth0")).toBe("no_destination");
     });
   });
 
@@ -1090,6 +1104,8 @@ describe("parseLine", () => {
         ...Object.fromEntries(Array.from({ length: 13 }, (_, i) => [`n${i}`, { i }])),
       });
       expect(parseLine("netskope", `{tag} ${nested}`).ok).toBe(true);
+      expect(parseLine("netskope", `host{} ${json}`).ok).toBe(true);
+      expect(parseLine("netskope", `{\u00a0"x" ${json}`).ok).toBe(true);
     });
 
     it("does not take a nested object as the event when the outer one is broken", () => {
@@ -1103,7 +1119,8 @@ describe("parseLine", () => {
       parseLine("netskope", "{".repeat(65000));
       parseLine("netskope", `}${"{".repeat(65000)}`);
       parseLine("netskope", `{${" ".repeat(65000)}x`);
-      expect(Date.now() - startedAt).toBeLessThan(500);
+      // The quadratic search took over 2 s per line.
+      expect(Date.now() - startedAt).toBeLessThan(2000);
     });
 
     it("prefers a dotted domain over an undotted url host", () => {

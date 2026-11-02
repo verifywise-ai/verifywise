@@ -92,7 +92,7 @@ never ends the process.
 | Parser | Reads | Action |
 |--------|-------|--------|
 | Zscaler | `key=value`: `user`, `dst` (or host of `uri`), `uri`, `method`, `action`, `department`, `timestamp` | `action` |
-| Netskope | JSON object (from the first `{` followed by a key or `}`, so a brace in a prefix is passed over; a later `{` is never tried, so a broken object is not replaced by a nested one): `user`, `url` (else `domain`, then `site` when host-shaped; an undotted `url` host such as `localhost` is used only when neither is; never `hostname`, which is the user's device), `method`, `action`, `department`, `timestamp` | `action` (Netskope's policy verdict, e.g. `allow` or `block`). `activity` is what the user did (`Upload`, `Login Attempt`) and is read only when there is no `action`. `alert`, `useralert` and `bypass` count as allowed (the request went through); `restrictToView`, `restrictAccess` and `disableDownload` count as blocked |
+| Netskope | JSON object (from the first `{` followed by a key, so a brace in a prefix is passed over; a later `{` is never tried, so a broken object is not replaced by a nested one): `user`, `url` (else `domain`, then `site` when host-shaped; an undotted `url` host such as `localhost` is used only when neither is; never `hostname`, which is the user's device), `method`, `action`, `department`, `timestamp` | `action` (Netskope's policy verdict, e.g. `allow` or `block`). `activity` is what the user did (`Upload`, `Login Attempt`) and is read only when there is no `action`. `alert`, `useralert` and `bypass` count as allowed (the request went through); `restrictToView`, `restrictAccess` and `disableDownload` count as blocked |
 | Squid | native access.log fields: 1 epoch time, 4 result code, 6 method, 7 URL, 8 user | result code (`*_DENIED` is blocked, anything else allowed). `NONE` in the method field (aborted connections) is not stored as a method. |
 | Generic key-value | `suser`, `dhost` (or host of `request`), `request`, `requestMethod`, `act`, `department`, `timestamp` (else CEF `rt`, `end`, `start`) | `act` |
 
@@ -123,7 +123,7 @@ or `start`) makes the line ambiguous and it is dropped as `unparseable`. Repeats
 ignored.
 
 Timestamp order: the payload `timestamp` (Squid: field 1; generic key-value
-uses the first of `timestamp`, `rt`, `end`, `start` that reads as a time), then the syslog
+uses the first of `timestamp`, `rt`, `end`, `start` that reads as a time in range), then the syslog
 header, then the receive time. A payload or header timestamp more than a year
 before the receive time, or more than 24 hours after it, is skipped. A payload timestamp that carries a time but
 no zone (`2026-11-02 10:00:00`, `Mon Jun 20 15:29:11 2022`) is read as UTC, like
@@ -135,12 +135,12 @@ is cut out and applied as an offset in minutes; brackets are removed because
 Date.parse treats them as comments. A numeric offset wins over a name that
 disagrees with it. ISO dates with `T`, a comma before the fraction, or AM/PM
 are accepted. A zone name the parser does not know (such as IST, bare or in
-brackets) makes the payload time unreadable and the header or receive time is used. Send an offset
+brackets; `(UTC)` and `(GMT)` are read) makes the payload time unreadable and the header or receive time is used. Send an offset
 or `Z` if the source logs in another zone.
 
 Destination values must look like a host: a dotted name, or an IPv4 or IPv6
-address (bare `2001:db8::1` or bracketed; a bare IP is stored as written), or a
-URL with a scheme. Placeholders such as `-`, `N/A`, `none` and
+address (bare `2001:db8::1` or bracketed; a bare IPv6 address is compressed and
+lowercased, and `::ffff:1.2.3.4` is stored as `1.2.3.4`), or a URL with a scheme. Placeholders such as `-`, `N/A`, `none` and
 `null` are skipped and the next field (`uri`, `request`, Netskope `domain`) is
 used instead.
 
