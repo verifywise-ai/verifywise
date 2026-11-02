@@ -115,7 +115,7 @@ is dropped as `unparseable`.
 
 Timestamp order: the payload `timestamp` (Squid: field 1), then the syslog
 header, then the receive time. A payload or header timestamp more than a year
-from the receive time is skipped. A payload timestamp that carries a time but
+before the receive time, or more than 24 hours after it, is skipped. A payload timestamp that carries a time but
 no zone (`2026-11-02 10:00:00`, `Mon Jun 20 15:29:11 2022`) is read as UTC, like
 the RFC 3164 header, never as the server's local time. Send an offset or `Z`
 if the source logs in another zone.

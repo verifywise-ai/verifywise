@@ -538,6 +538,39 @@ describe("parseLine", () => {
       });
     });
 
+    it("allows a timestamp up to a day ahead and no further", () => {
+      const at = (ts: string) =>
+        parseLine("generic_kv", `suser=a@b.co dhost=x.com timestamp=${ts}`, undefined, RECEIVED);
+      expect(at("2026-02-10T23:59:00Z")).toEqual({
+        ok: true,
+        event: expect.objectContaining({ timestamp: "2026-02-10T23:59:00.000Z" }),
+      });
+      expect(at("2026-02-11T00:00:00Z")).toEqual({
+        ok: true,
+        event: expect.objectContaining({ timestamp: "2026-02-11T00:00:00.000Z" }),
+      });
+      expect(at("2026-02-11T00:00:01Z")).toEqual({
+        ok: true,
+        event: expect.objectContaining({ timestamp: RECEIVED.toISOString() }),
+      });
+      expect(at("2027-01-01T00:00:00Z")).toEqual({
+        ok: true,
+        event: expect.objectContaining({ timestamp: RECEIVED.toISOString() }),
+      });
+    });
+
+    it("keeps a header timestamp a day ahead but not further", () => {
+      const line = "suser=a@b.co dhost=x.com";
+      expect(parseLine("generic_kv", line, "2026-02-10T12:00:00.000Z", RECEIVED)).toEqual({
+        ok: true,
+        event: expect.objectContaining({ timestamp: "2026-02-10T12:00:00.000Z" }),
+      });
+      expect(parseLine("generic_kv", line, "2026-02-12T00:00:00.000Z", RECEIVED)).toEqual({
+        ok: true,
+        event: expect.objectContaining({ timestamp: RECEIVED.toISOString() }),
+      });
+    });
+
     it("keeps a timestamp just inside a year of the receive time", () => {
       const line = "suser=a@b.co dhost=x.com timestamp=2025-02-11T00:00:00.000Z";
       expect(parseLine("generic_kv", line, undefined, RECEIVED)).toEqual({

@@ -126,9 +126,11 @@ const MAX_DEPARTMENT_CHARS = SHADOW_AI_EVENT_LIMITS.department;
 const MAX_METHOD_CHARS = SHADOW_AI_EVENT_LIMITS.http_method;
 // TEXT column; a longer path is left out (it is optional) to keep rows small.
 const MAX_URI_PATH_CHARS = SHADOW_AI_EVENT_LIMITS.uri_path;
-// Payload and header timestamps further than this from the receive time are
-// ignored (a far-future epoch would otherwise be stored as year +275760).
-const MAX_TIMESTAMP_SKEW_MS = 365 * 24 * 60 * 60 * 1000;
+// Payload and header timestamps are ignored when they are more than a year
+// before the receive time, or more than a day after it (clock skew only; a
+// far-future epoch would otherwise be stored as year +275760).
+const MAX_TIMESTAMP_AGE_MS = 365 * 24 * 60 * 60 * 1000;
+const MAX_TIMESTAMP_AHEAD_MS = 24 * 60 * 60 * 1000;
 
 const charLength = (value: string): number => [...value].length;
 
@@ -147,14 +149,17 @@ function nonEmpty(raw: unknown): string | undefined {
   return value || undefined;
 }
 
-/** The first timestamp within a year of the receive time, else the receive time. */
+/**
+ * The first timestamp from up to a year before to a day after the receive
+ * time, else the receive time.
+ */
 function pickTimestamp(receivedAt: Date, ...candidates: (string | undefined)[]): string {
   for (const candidate of candidates) {
     if (!candidate) continue;
     const ms = Date.parse(candidate);
-    if (!Number.isNaN(ms) && Math.abs(ms - receivedAt.getTime()) <= MAX_TIMESTAMP_SKEW_MS) {
-      return candidate;
-    }
+    if (Number.isNaN(ms)) continue;
+    const offset = ms - receivedAt.getTime();
+    if (offset >= -MAX_TIMESTAMP_AGE_MS && offset <= MAX_TIMESTAMP_AHEAD_MS) return candidate;
   }
   return receivedAt.toISOString();
 }
