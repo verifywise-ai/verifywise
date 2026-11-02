@@ -9,6 +9,7 @@
 import { Request, Response } from "express";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import logger from "../utils/logger/fileLogger";
+import { logRollbackFailure } from "../utils/logger/logHelper";
 import { validateApiKeyWithCache } from "../utils/shadowAiApiKey.utils";
 import {
   checkShadowAiRateLimit,
@@ -103,7 +104,17 @@ export async function ingestEvents(req: Request, res: Response) {
   }
 
   try {
-    const { ingested, toolsMatched } = await ingestShadowAiEvents(organizationId, body.events);
+    const { ingested, toolsMatched } = await ingestShadowAiEvents(organizationId, body.events, {
+      onRollbackFailure: (originalError, rollbackError) =>
+        logRollbackFailure({
+          req,
+          functionName: "ingestEvents",
+          fileName: "shadowAiIngestion.ctrl.ts",
+          eventType: "Create",
+          originalError,
+          rollbackError,
+        }),
+    });
 
     return res.status(200).json(
       STATUS_CODE[200]({

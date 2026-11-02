@@ -168,7 +168,15 @@ export async function checkShadowAiRateLimit(
 export async function ingestShadowAiEvents(
   organizationId: number,
   events: ShadowAiIngestionRequest["events"],
-  options?: { transaction?: Transaction; skipInvalidRows?: boolean },
+  options?: {
+    transaction?: Transaction;
+    skipInvalidRows?: boolean;
+    /**
+     * Called when rolling back the service's own transaction fails. The REST
+     * controller uses it for the audit log entry, which needs `req`.
+     */
+    onRollbackFailure?: (originalError: unknown, rollbackError: unknown) => Promise<void>;
+  },
 ): Promise<{ ingested: number; toolsMatched: number; skipped: number }> {
   const externalTransaction = options?.transaction;
   const transaction = externalTransaction ?? (await sequelize.transaction());
@@ -355,6 +363,11 @@ export async function ingestShadowAiEvents(
         await transaction.rollback();
       } catch (rollbackError) {
         logger.error("❌ Shadow AI ingestion rollback failed:", rollbackError);
+        try {
+          await options?.onRollbackFailure?.(error, rollbackError);
+        } catch {
+          // The original error below is what the caller needs.
+        }
       }
     }
     throw error;
