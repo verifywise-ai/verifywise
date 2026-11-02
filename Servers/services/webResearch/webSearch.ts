@@ -83,8 +83,17 @@ function abortError(): Error {
   return error;
 }
 
-/** setTimeout as a promise that rejects with an AbortError, and frees its timer, on abort. */
-export function sleepUnlessAborted(ms: number, signal?: AbortSignal): Promise<void> {
+/**
+ * setTimeout as a promise that rejects with an AbortError, and frees its timer, on abort. With
+ * `unref` the timer does not keep the process alive: it is for a wait that is only worth having
+ * while something else does keep the process up (the pause that GDELT asks for, in a worker that
+ * holds Redis and BullMQ handles).
+ */
+export function sleepUnlessAborted(
+  ms: number,
+  signal?: AbortSignal,
+  options?: { unref?: boolean },
+): Promise<void> {
   return new Promise<void>((resolve, reject) => {
     if (signal?.aborted) {
       reject(abortError());
@@ -98,6 +107,7 @@ export function sleepUnlessAborted(ms: number, signal?: AbortSignal): Promise<vo
       signal?.removeEventListener("abort", onAbort);
       resolve();
     }, ms);
+    if (options?.unref === true) timer.unref();
     signal?.addEventListener("abort", onAbort, { once: true });
   });
 }

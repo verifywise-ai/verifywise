@@ -19,7 +19,10 @@
  *
  * Before the loop starts, a run can have the routine work done by code (see gather.ts): the news
  * searches and the reads of the vendor's own pages, all at once. The model is told what that
- * collected and spends its steps on what is missing.
+ * collected and spends its steps on what is missing. The time limit of that work (30 seconds)
+ * stops while the news engine waits out a pause of GDELT: each wait it tells of, plus one ask, is
+ * added to it, up to GATHER_MAX_PAUSE_MS, and the clock stops with the work, so a wait of a later
+ * loop moves nothing.
  *
  * The loop can run as one loop for each category, all at the same time (see loops.ts): each gets a
  * budget of its own from the session, a few model turns, a task that names its category and a
@@ -37,7 +40,7 @@ import {
   type RunCoverage,
   RunProgress,
 } from "../../domain.layer/interfaces/i.vendorResearch";
-import { createGdeltEngine } from "../webResearch/gdeltSearch";
+import { GDELT_ASK_MS, createGdeltEngine } from "../webResearch/gdeltSearch";
 import { createProviderSearchEngine, withFallback } from "../webResearch/providerSearch";
 import { PageReader, createPageReader } from "../webResearch/readPage";
 import type { PageRenderer } from "../webResearch/renderPage";
@@ -53,8 +56,9 @@ import {
   researchableCategories,
 } from "./categories";
 import {
-  GATHER_TIMEOUT_MS,
+  type GatherClock,
   type GatheredAction,
+  createGatherClock,
   describeGathered,
   gatherSources,
   traceStepOfRecords,
@@ -256,6 +260,16 @@ export interface RunSearchInput {
    * researcher counts it as a retried search of the news.
    */
   onRetry?: () => void;
+  /**
+   * Told, with the wait in ms, each time the GDELT engine starts to wait out a pause of GDELT (see
+   * `GdeltEngineDeps.onPause`). The researcher moves the clock of the routine work by it.
+   */
+  onPause?: (waitMs: number) => void;
+  /**
+   * Told of each 429 that GDELT answered a request of this run with, `final` on the one that is the
+   * answer of the run (see `GdeltEngineDeps.onRefused`). The researcher counts it.
+   */
+  onRefused?: (refusal: { final: boolean }) => void;
 }
 
 /**
@@ -280,6 +294,8 @@ export function createRunSearch(input: RunSearchInput): RunSearch {
     topics: [...NEWS_TOPIC_WORDS, ...regulatorTopicsOf(input.target)],
     ...(input.cache === undefined ? {} : { cache: input.cache }),
     ...(input.onRetry === undefined ? {} : { onRetry: input.onRetry }),
+    ...(input.onPause === undefined ? {} : { onPause: input.onPause }),
+    ...(input.onRefused === undefined ? {} : { onRefused: input.onRefused }),
   });
   const { model } = input;
   if (input.search?.engine !== "anthropic" || typeof model !== "object" || model === null) {
@@ -460,6 +476,9 @@ export function createVendorResearcher(
         (own): own is string => own !== null && own !== "",
       ),
     );
+    // The clock of the routine work while it runs, so that the waits of the news engine for a pause
+    // of GDELT move it (see gather.ts); none before and after.
+    let gatherClock: GatherClock | null = null;
     // The engine of this run: the one given, or the one the key of the research has, under all the
     // names of the vendor now known. It says afterwards whether it was used, and which it was.
     const searching =
@@ -474,6 +493,8 @@ export function createVendorResearcher(
             cache: deps.cache,
             trace,
             onRetry: () => metrics.searchRetried({ kind: "news" }),
+            onPause: (waitMs) => gatherClock?.extend(waitMs + GDELT_ASK_MS),
+            onRefused: (refusal) => metrics.gdeltRefused(refusal),
           });
     const session = createWebSession<ResearchCategory>({
       engine: searching.engine,
@@ -566,23 +587,33 @@ export function createVendorResearcher(
     // the progress, which are not part of the research: one of them that throws changes nothing.
     const gathered =
       hintsAsked !== null
-        ? await gatherSources(
-            {
-              target: known,
-              researchable,
-              website,
-              hints: await hintsAsked,
-              now,
-              cutoffs,
-              signal: AbortSignal.timeout(GATHER_TIMEOUT_MS),
-            },
-            {
-              session,
-              readPage,
-              records: deps.records,
-              ...(deps.vrdb === undefined ? {} : { vrdb: deps.vrdb }),
-            },
-          )
+        ? await (async () => {
+            const hints = await hintsAsked;
+            const clock = createGatherClock();
+            gatherClock = clock;
+            try {
+              return await gatherSources(
+                {
+                  target: known,
+                  researchable,
+                  website,
+                  hints,
+                  now,
+                  cutoffs,
+                  signal: clock.signal,
+                },
+                {
+                  session,
+                  readPage,
+                  records: deps.records,
+                  ...(deps.vrdb === undefined ? {} : { vrdb: deps.vrdb }),
+                },
+              );
+            } finally {
+              clock.stop();
+              gatherClock = null;
+            }
+          })()
         : null;
     if (gathered !== null) {
       const quietly = (work: () => void) => {

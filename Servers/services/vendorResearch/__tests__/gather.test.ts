@@ -5,10 +5,13 @@ import {
   ResearchCategory,
   type VrdbSourceId,
 } from "../../../domain.layer/interfaces/i.vendorResearch";
+import { GDELT_ASK_MS, GDELT_COOL_DOWN_MS, GDELT_MAX_ASKS } from "../../webResearch/gdeltSearch";
+import type { GuardedResponse } from "../../webResearch/guardedFetch";
 import { FetchedPage, PageReadError } from "../../webResearch/readPage";
 import { SearchKind, SearchResult } from "../../webResearch/webSearch";
 import { type LedgerEntry, SESSION_LIMITS, createWebSession } from "../../webResearch/webSession";
 import {
+  GATHER_MAX_PAUSE_MS,
   GATHER_TIMEOUT_MS,
   GatheredAction,
   MAX_NEWS_READS_PER_CATEGORY,
@@ -16,6 +19,7 @@ import {
   MIN_CANDIDATES_BEFORE_GUESSING,
   classifySitePage,
   coverageOfLookups,
+  createGatherClock,
   describeGathered,
   gatherSources,
   planNewsReads,
@@ -2164,6 +2168,161 @@ describe("gatherSources", () => {
         [],
       );
       expect(environment.readPage).not.toHaveBeenCalledWith(NEWS_BREACH.url, expect.anything());
+    });
+  });
+
+  describe("after a 429 of the news engine", () => {
+    /** A copy of the engine and the session of the web, so that the pause of the process is ours. */
+    function freshWeb() {
+      let gdelt!: typeof import("../../webResearch/gdeltSearch");
+      let guarded!: typeof import("../../webResearch/guardedFetch");
+      let web!: typeof import("../../webResearch/webSession");
+      jest.isolateModules(() => {
+        gdelt = jest.requireActual("../../webResearch/gdeltSearch");
+        guarded = jest.requireActual("../../webResearch/guardedFetch");
+        web = jest.requireActual("../../webResearch/webSession");
+      });
+      return { gdelt, guarded, web };
+    }
+
+    it("answers the code's news searches from the ask after a 429, and reads the best results", async () => {
+      const { gdelt, guarded, web } = freshWeb();
+      const article = {
+        url: NEWS_BREACH.url,
+        title: NEWS_BREACH.title,
+        seendate: "20310301T080000Z",
+        domain: "news.example",
+        language: "English",
+      };
+      let asked = 0;
+      let time = 1_000_000;
+      const fetch = jest.fn(async (url: string): Promise<GuardedResponse> => {
+        asked += 1;
+        if (asked === 1) {
+          throw new guarded.FetchError("blocked_by_site", undefined, { status: 429 });
+        }
+        return {
+          url,
+          status: 200,
+          contentType: "application/json",
+          body: Buffer.from(JSON.stringify({ articles: [article] })),
+          truncated: false,
+        };
+      });
+      const engine = gdelt.createGdeltEngine({
+        names: ["Acme"],
+        topics: ["breach", "lawsuit", "outage", "incident"],
+        fetch: fetch as unknown as typeof guarded.guardedFetch,
+        queue: (task) => task(),
+        robots: { isAllowed: async () => true },
+        now: () => time,
+        waitForPause: async (ms) => {
+          time += ms;
+        },
+      });
+      const matcher = createVendorMatcher(target);
+      const session = web.createWebSession<ResearchCategory>({
+        engine,
+        readPage: async (url: string): Promise<FetchedPage> => ({
+          url,
+          title: `Page at ${url}`,
+          publishedAt: null,
+          text: `Text of ${url} about Acme`,
+          links: [],
+        }),
+        domain: "acme.com",
+        cutoffs: NOW_CUTOFFS,
+        isRelevant: ({ title, snippet, url }) => matcher({ title, content: snippet, url }),
+      });
+      const readPage = jest.fn(async (): Promise<FetchedPage> => {
+        throw new PageReadError("not_found");
+      });
+      const signal = new AbortController().signal;
+
+      const result = await gatherSources(
+        { target, researchable: NEWS_ONLY, website: readable(), signal },
+        { session, readPage },
+      );
+
+      const searches = result.actions.filter((action) => action.tool === "search");
+      expect(searches.length).toBeGreaterThan(0);
+      // Some of the searches find nothing in the index, which is an answer; none of them fails.
+      expect(searches.some((action) => action.outcome === "failed")).toBe(false);
+      expect(searches.some((action) => action.outcome === "ok")).toBe(true);
+      // One refused ask, one answered: the news of the run came from the second.
+      expect(fetch).toHaveBeenCalledTimes(2);
+      const articles = result.actions.filter(
+        (action) => action.tool === "read" && action.url === NEWS_BREACH.url,
+      );
+      expect(articles.length).toBeGreaterThan(0);
+      expect(articles[0]).toMatchObject({ outcome: "ok" });
+    });
+  });
+
+  describe("createGatherClock", () => {
+    beforeEach(() => jest.useFakeTimers());
+    afterEach(() => jest.useRealTimers());
+
+    it("keeps the limits of a run that never waits: GATHER_TIMEOUT_MS, and 170 seconds to move it", () => {
+      expect(GATHER_MAX_PAUSE_MS).toBe((GDELT_MAX_ASKS - 1) * (GDELT_COOL_DOWN_MS + GDELT_ASK_MS));
+      expect(GATHER_MAX_PAUSE_MS).toBe(170_000);
+    });
+
+    it("aborts at GATHER_TIMEOUT_MS, and not a millisecond before", async () => {
+      const clock = createGatherClock();
+
+      await jest.advanceTimersByTimeAsync(GATHER_TIMEOUT_MS - 1);
+      expect(clock.signal.aborted).toBe(false);
+      await jest.advanceTimersByTimeAsync(1);
+
+      expect(clock.signal.aborted).toBe(true);
+    });
+
+    it("moves the abort by the wait it is told of", async () => {
+      const clock = createGatherClock();
+
+      clock.extend(85_000);
+      await jest.advanceTimersByTimeAsync(GATHER_TIMEOUT_MS + 85_000 - 1);
+      expect(clock.signal.aborted).toBe(false);
+      await jest.advanceTimersByTimeAsync(1);
+
+      expect(clock.signal.aborted).toBe(true);
+    });
+
+    it("moves the abort by GATHER_MAX_PAUSE_MS at most, however many waits it is told of", async () => {
+      const clock = createGatherClock();
+
+      clock.extend(150_000);
+      clock.extend(150_000);
+      clock.extend(150_000);
+      await jest.advanceTimersByTimeAsync(GATHER_TIMEOUT_MS + GATHER_MAX_PAUSE_MS - 1);
+      expect(clock.signal.aborted).toBe(false);
+      await jest.advanceTimersByTimeAsync(1);
+
+      expect(GATHER_TIMEOUT_MS + GATHER_MAX_PAUSE_MS).toBe(200_000);
+      expect(clock.signal.aborted).toBe(true);
+    });
+
+    it("leaves no timer behind once it is stopped, and never aborts", async () => {
+      const clock = createGatherClock();
+
+      clock.stop();
+
+      expect(jest.getTimerCount()).toBe(0);
+      await jest.advanceTimersByTimeAsync(GATHER_TIMEOUT_MS * 10);
+      expect(clock.signal.aborted).toBe(false);
+      clock.extend(1_000);
+      expect(jest.getTimerCount()).toBe(0);
+    });
+
+    it("does nothing when it is told of a wait after it has aborted", async () => {
+      const clock = createGatherClock();
+      await jest.advanceTimersByTimeAsync(GATHER_TIMEOUT_MS);
+      expect(clock.signal.aborted).toBe(true);
+
+      clock.extend(60_000);
+
+      expect(jest.getTimerCount()).toBe(0);
     });
   });
 

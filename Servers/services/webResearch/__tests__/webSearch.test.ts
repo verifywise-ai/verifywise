@@ -6,6 +6,7 @@ import {
   type SearchEngineId,
   SearchEngineError,
   createSearchQueue,
+  sleepUnlessAborted,
 } from "../webSearch";
 
 /** A clock that only moves when the queue sleeps or a task works. */
@@ -247,6 +248,50 @@ describe("createSearchQueue", () => {
       expect(jest.getTimerCount()).toBe(0);
       expect(task).not.toHaveBeenCalled();
     });
+  });
+});
+
+describe("sleepUnlessAborted", () => {
+  beforeEach(() => jest.useFakeTimers());
+  afterEach(() => {
+    jest.restoreAllMocks();
+    jest.useRealTimers();
+  });
+
+  it("frees the process with unref when asked, and only then", async () => {
+    const unrefs: jest.Mock[] = [];
+    const real = global.setTimeout;
+    jest.spyOn(global, "setTimeout").mockImplementation(((
+      ...args: Parameters<typeof setTimeout>
+    ) => {
+      const timer = real(...args);
+      const unref = jest.fn(() => timer);
+      (timer as unknown as { unref: () => unknown }).unref = unref;
+      unrefs.push(unref);
+      return timer;
+    }) as typeof setTimeout);
+
+    const plain = sleepUnlessAborted(1000);
+    const freed = sleepUnlessAborted(1000, undefined, { unref: true });
+    await jest.advanceTimersByTimeAsync(1000);
+    await Promise.all([plain, freed]);
+
+    expect(unrefs).toHaveLength(2);
+    expect(unrefs[0]).not.toHaveBeenCalled();
+    expect(unrefs[1]).toHaveBeenCalledTimes(1);
+  });
+
+  it("is unchanged for its other callers: it waits, and an abort frees its timer", async () => {
+    const controller = new AbortController();
+    const waiting = sleepUnlessAborted(5000, controller.signal, { unref: true }).catch(
+      (error: Error) => error,
+    );
+    expect(jest.getTimerCount()).toBe(1);
+
+    controller.abort();
+
+    expect(((await waiting) as Error).name).toBe("AbortError");
+    expect(jest.getTimerCount()).toBe(0);
   });
 });
 

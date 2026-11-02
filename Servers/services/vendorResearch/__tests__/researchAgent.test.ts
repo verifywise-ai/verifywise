@@ -12,6 +12,7 @@ import {
   type VrdbSourceId,
 } from "../../../domain.layer/interfaces/i.vendorResearch";
 import * as gdeltSearchModule from "../../webResearch/gdeltSearch";
+import { GDELT_ASK_MS } from "../../webResearch/gdeltSearch";
 import * as guardedFetchModule from "../../webResearch/guardedFetch";
 import * as providerSearchModule from "../../webResearch/providerSearch";
 import { SearchUnavailableError } from "../../webResearch/providerSearch";
@@ -26,6 +27,7 @@ import {
 } from "../../webResearch/webSearch";
 import type { WebCache } from "../../webResearch/webCache";
 import { memoryCache, settle } from "../../webResearch/__tests__/helpers/memoryCache";
+import * as gatherModule from "../gather";
 import type { Hints } from "../hints";
 import { regulatorTopicsOf } from "../market";
 import {
@@ -1000,6 +1002,7 @@ describe("createVendorResearcher", () => {
         searchFinished: (search) => searches.push(search),
         searchRetried: (search) => retries.push(search),
         cacheLookup: jest.fn(),
+        gdeltRefused: jest.fn(),
       };
       return { metrics, searches, retries };
     }
@@ -1094,6 +1097,7 @@ describe("createVendorResearcher", () => {
           },
           searchRetried: jest.fn(),
           cacheLookup: jest.fn(),
+          gdeltRefused: jest.fn(),
         },
       });
 
@@ -1608,6 +1612,7 @@ describe("createVendorResearcher", () => {
         searchFinished: jest.fn(),
         searchRetried: jest.fn(),
         cacheLookup: jest.fn(),
+        gdeltRefused: jest.fn(),
       } as unknown as ResearchMetrics;
       const reports: Array<{ steps: number; searchesUsed: number }> = [];
       const web = namedWeb([[result("https://news.example/acme-breach")]]);
@@ -2929,6 +2934,103 @@ describe("createVendorResearcher: the search engine of each run", () => {
       expect(depsOf(spies).names).toEqual(["Acme"]);
     });
 
+    describe("the pauses it waits out", () => {
+      /** The deps the engine is built with, and an engine whose search tells `onPause` first. */
+      function pausing(waitMs: number) {
+        let deps: Parameters<typeof gdeltSearchModule.createGdeltEngine>[0] | undefined;
+        const gdelt = engineOf("gdelt", () => {
+          deps?.onPause?.(waitMs);
+          return [HIT];
+        });
+        const spies = builders(undefined, gdelt);
+        spies.createGdeltEngine.mockImplementation((given) => {
+          deps = given;
+          return gdelt.engine;
+        });
+        return spies;
+      }
+
+      it("moves the clock of the gather by each wait plus one ask, and stops it before the loop", async () => {
+        pausing(60_000);
+        const extend = jest.fn();
+        let modelCallsAtStop = -1;
+        const model = scriptedModel([NO_HINTS, finishStep, finishStep]);
+        const stop = jest.fn(() => {
+          modelCallsAtStop = model.calls.length;
+        });
+        const created = jest.spyOn(gatherModule, "createGatherClock").mockImplementation(() => ({
+          signal: new AbortController().signal,
+          extend,
+          stop,
+        }));
+
+        await researcherOf(model, { gather: true })({
+          target: WITH_DOMAIN,
+          model: MODEL,
+          now: NOW,
+        });
+
+        expect(created).toHaveBeenCalledTimes(1);
+        expect(extend).toHaveBeenCalled();
+        expect(extend.mock.calls.every(([ms]) => ms === 60_000 + GDELT_ASK_MS)).toBe(true);
+        expect(stop).toHaveBeenCalledTimes(1);
+        // Only the call for the hints had been made when the clock stopped: the loop had not begun.
+        expect(modelCallsAtStop).toBe(1);
+      });
+
+      it("moves nothing once the gather is over: a wait of a later loop is the loop's own", async () => {
+        const spies = pausing(60_000);
+        const extend = jest.fn();
+        jest.spyOn(gatherModule, "createGatherClock").mockImplementation(() => ({
+          signal: new AbortController().signal,
+          extend,
+          stop: jest.fn(),
+        }));
+
+        await researcherOf(scriptedModel([NO_HINTS, finishStep, finishStep]), { gather: true })({
+          target: WITH_DOMAIN,
+          model: MODEL,
+          now: NOW,
+        });
+        extend.mockClear();
+        depsOf(spies).onPause?.(60_000);
+
+        expect(extend).not.toHaveBeenCalled();
+      });
+    });
+
+    describe("the refusals it meets", () => {
+      it.each([
+        ["a key with no search of its own", undefined],
+        ["a key of Claude, whose fallback it is", CLAUDE],
+      ])(
+        "are counted by the outcome only, with nothing of the vendor or the query, for %s",
+        async (_name, search) => {
+          const spies = builders();
+          const gdeltRefused = jest.fn();
+          const metrics = {
+            findingDecided: jest.fn(),
+            searchFinished: jest.fn(),
+            searchRetried: jest.fn(),
+            cacheLookup: jest.fn(),
+            gdeltRefused,
+          } as unknown as ResearchMetrics;
+
+          await researcherOf(scriptedModel([finishStep, finishStep]), { metrics })({
+            target: WITHOUT_DOMAIN,
+            model: MODEL,
+            now: NOW,
+            search,
+          });
+          expect(gdeltRefused).not.toHaveBeenCalled();
+          depsOf(spies).onRefused?.({ final: true });
+
+          expect(gdeltRefused).toHaveBeenCalledTimes(1);
+          expect(gdeltRefused.mock.calls[0]).toEqual([{ final: true }]);
+        },
+      );
+    });
+
     describe("the retries it makes", () => {
       function countingMetrics() {
         const retries: Array<{ kind: string }> = [];
@@ -2937,6 +3039,7 @@ describe("createVendorResearcher: the search engine of each run", () => {
           searchFinished: jest.fn(),
           searchRetried: (search) => retries.push(search),
           cacheLookup: jest.fn(),
+          gdeltRefused: jest.fn(),
         };
         return { metrics, retries };
       }

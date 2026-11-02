@@ -91,6 +91,19 @@ describe("createResearchMetrics", () => {
     ]);
   });
 
+  it("counts a GDELT refusal by outcome, with nothing else", () => {
+    const { meter, counters } = fakeMeter();
+    const research = createResearchMetrics(meter as never);
+
+    research.gdeltRefused({ final: false });
+    research.gdeltRefused({ final: true });
+
+    expect(counters.get("vendor_research.gdelt.refusals")).toEqual([
+      { value: 1, attributes: { outcome: "paused" } },
+      { value: 1, attributes: { outcome: "gave_up" } },
+    ]);
+  });
+
   it("never lets a failing counter break the decision or the search it counts", () => {
     const meter = {
       createCounter: () => ({
@@ -107,5 +120,6 @@ describe("createResearchMetrics", () => {
     expect(() => research.searchFinished({ kind: "web", outcome: "results" })).not.toThrow();
     expect(() => research.searchRetried({ kind: "news" })).not.toThrow();
     expect(() => research.cacheLookup({ kind: "page", outcome: "hit" })).not.toThrow();
+    expect(() => research.gdeltRefused({ final: true })).not.toThrow();
   });
 });

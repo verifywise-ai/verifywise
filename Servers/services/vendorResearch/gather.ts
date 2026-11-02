@@ -21,6 +21,10 @@
  * pages are read for each category. Nothing here is a guess about the vendor: the pages are the
  * vendor's own, and a page that does not exist is a failed read like any other.
  *
+ * The time limit of all of it stops while the news engine waits out a pause of GDELT (see
+ * `createGatherClock`): the 30 seconds are for the work, and a wait of the engine that the work
+ * depends on is added to them, up to GATHER_MAX_PAUSE_MS.
+ *
  * The work goes through the run's web session, so that every rule of the session applies to it
  * (the address policy, `robots.txt`, the lookback window, relevance, one entry for one page), but
  * it is paid for apart: the code sets aside what it is about to do (`setCodeBudget`) and its calls
@@ -47,6 +51,7 @@ import {
   ResearchCategory,
   SOURCE_CATEGORIES,
 } from "../../domain.layer/interfaces/i.vendorResearch";
+import { GDELT_ASK_MS, GDELT_COOL_DOWN_MS, GDELT_MAX_ASKS } from "../webResearch/gdeltSearch";
 import type { PageLink } from "../webResearch/pageText";
 import { isOnDomain } from "../webResearch/publicUrl";
 import { PageReadError, PageReader } from "../webResearch/readPage";
@@ -73,8 +78,78 @@ import type { TraceStep } from "./trace";
 import { vrdbSourceOf } from "./vrdb/sources";
 import type { VrdbLookup, VrdbOutcome } from "./vrdb/types";
 
-/** How long all of it may take: the sitemap, the searches and the reads. */
+/**
+ * How long all of it may take: the sitemap, the searches and the reads. The clock stops while the
+ * news engine waits out a pause of GDELT (see `createGatherClock`): each such wait, plus the ask
+ * that follows it, is added to this, up to GATHER_MAX_PAUSE_MS. A run that never waits has exactly
+ * this.
+ */
 export const GATHER_TIMEOUT_MS = 30_000;
+/**
+ * The most that the waits of the news engine add to the clock of the gather: one pause and one ask
+ * for each refusal of the run but the last (GDELT_MAX_ASKS - 1), 170 seconds. The last refusal is
+ * the answer of the run and is not waited out. A pause that another run began is charged to the
+ * same cap.
+ */
+export const GATHER_MAX_PAUSE_MS = (GDELT_MAX_ASKS - 1) * (GDELT_COOL_DOWN_MS + GDELT_ASK_MS);
+
+/**
+ * The time limit of the gather, as a signal whose deadline can be moved. The news engine tells how
+ * long it waits for a pause of GDELT, and `extend` moves the deadline by that much, so the gather
+ * keeps its 30 seconds for its own work. `stop` frees the timer when the gather is over.
+ */
+export interface GatherClock {
+  readonly signal: AbortSignal;
+  /** Moves the deadline by `ms`, within the cap; does nothing once the clock has run out or stopped. */
+  extend(ms: number): void;
+  stop(): void;
+}
+
+/**
+ * A clock for the gather: it aborts its signal `timeoutMs` after it was made, later by every
+ * `extend`, which in all moves it by `maxExtraMs` at most. Its timer does not keep the process
+ * alive.
+ */
+export function createGatherClock(
+  timeoutMs = GATHER_TIMEOUT_MS,
+  maxExtraMs = GATHER_MAX_PAUSE_MS,
+): GatherClock {
+  const controller = new AbortController();
+  let deadline = Date.now() + timeoutMs;
+  let extra = 0;
+  let timer: NodeJS.Timeout | undefined;
+  let over = false;
+  const arm = () => {
+    timer = setTimeout(
+      () => {
+        over = true;
+        timer = undefined;
+        controller.abort();
+      },
+      Math.max(0, deadline - Date.now()),
+    );
+    timer.unref();
+  };
+  arm();
+  return {
+    signal: controller.signal,
+    extend(ms) {
+      if (over || controller.signal.aborted) return;
+      const added = Math.min(ms, maxExtraMs - extra);
+      if (!(added > 0)) return;
+      extra += added;
+      deadline += added;
+      if (timer === undefined) return;
+      clearTimeout(timer);
+      arm();
+    },
+    stop() {
+      over = true;
+      if (timer !== undefined) clearTimeout(timer);
+      timer = undefined;
+    },
+  };
+}
 /** The pages of the vendor's own site that the code reads for each category that reads the site. */
 export const MAX_SITE_READS_PER_CATEGORY = 3;
 /** A category that the links and the sitemap leave with fewer pages than this gets the usual ones. */

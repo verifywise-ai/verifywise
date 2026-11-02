@@ -1,6 +1,6 @@
 # Observability (Metrics + Logs via OpenTelemetry)
 
-> **Last Updated:** 2026-10-27
+> **Last Updated:** 2026-11-02
 
 VerifyWise deployments push **metrics** and **logs** to a central
 Grafana / Prometheus / Loki stack via OpenTelemetry, so operators get visibility
@@ -56,7 +56,8 @@ Config delivery per service:
 | `browser_events_total`, `browser_web_vital` | counter/histogram | frontend telemetry |
 | `vendor_research_finding_decisions_total` | counter | `decision` (`accepted` or `dismissed`), `category`, `reason` (the dismissal reason, `none` for an accepted finding), `service_name`, `deployment` |
 | `vendor_research_searches_total` | counter | `kind` (`web` or `news`), `outcome` (`results`, `empty`, `refused` or `failed`), `service_name`, `deployment` |
-| `vendor_research_search_retries_total` | counter | `kind` (`web` or `news`; today only `news`, a GDELT request asked again after a 429), `service_name`, `deployment` |
+| `vendor_research_search_retries_total` | counter | `kind` (`web` or `news`; today only `news`, a GDELT request asked again after a network error, a time-out or a 5xx, never a 429), `service_name`, `deployment` |
+| `vendor_research_gdelt_refusals_total` | counter | `outcome` (`paused`: a 429 that the run waits out and asks again; `gave_up`: the run's last refusal, after which its news is lost), `service_name`, `deployment` |
 | `vendor_research_cache_total` | counter | `kind` (`robots`, `page`, `search` or `gdelt`, the news index of the GDELT Project), `outcome` (`hit`, `miss` or `error`: the store failed or was too slow, a failed write included), `service_name`, `deployment` |
 
 Service names: `verifywise-backend`, `verifywise-eval-server`,

@@ -206,12 +206,15 @@ function freshProcess() {
   let gdelt!: typeof import("../gdeltSearch");
   let search!: typeof import("../webSearch");
   let guarded!: typeof import("../guardedFetch");
+  let session!: typeof import("../webSession");
   jest.isolateModules(() => {
     gdelt = jest.requireActual("../gdeltSearch");
     search = jest.requireActual("../webSearch");
     guarded = jest.requireActual("../guardedFetch");
+    session = jest.requireActual("../webSession");
   });
   return {
+    createWebSession: session.createWebSession,
     createGdeltEngine: gdelt.createGdeltEngine,
     SearchEngineError: search.SearchEngineError,
     createSearchQueue: search.createSearchQueue,
@@ -1802,18 +1805,23 @@ describe("the engine", () => {
       await failureOf(make(fetch).search("Acme breach", "news"));
     });
 
-    it("fails a 429 with a plain text body and no Retry-After, and does not ask again", async () => {
+    it("fails a 429 with a plain text body and no Retry-After once it has asked GDELT_MAX_ASKS times", async () => {
       const process = freshProcess();
       const { fetch, requests } = overTransport(process.guardedFetch, (url) =>
         url.pathname === "/robots.txt"
           ? NOT_FOUND
           : { status: 429, headers: { "content-type": "text/plain" }, body: RATE_LIMIT_TEXT },
       );
+      let time = 1_000_000;
       const engine = process.createGdeltEngine({
         names: ["Acme"],
         topics: ["breach"],
         fetch,
         queue: passThrough,
+        now: () => time,
+        waitForPause: async (ms) => {
+          time += ms;
+        },
       });
 
       const error = await failureOf(
@@ -1822,7 +1830,9 @@ describe("the engine", () => {
       );
 
       expect(error.message).toBe(FIXED_MESSAGE);
-      expect(requests.filter((request) => request.url.pathname !== "/robots.txt")).toHaveLength(1);
+      expect(requests.filter((request) => request.url.pathname !== "/robots.txt")).toHaveLength(
+        GDELT_MAX_ASKS,
+      );
     });
 
     it.each([500, 502, 503, 504])(
@@ -1865,19 +1875,76 @@ describe("the engine", () => {
       url.pathname === "/robots.txt"
         ? NOT_FOUND
         : { status: 429, headers: { "content-type": "text/plain" }, body: RATE_LIMIT_TEXT };
+    const indexed = (url: URL) =>
+      url.pathname === "/robots.txt" ? NOT_FOUND : JSON_OK(bodyOf([raw()]));
+
+    function abortError(): Error {
+      const error = new Error("The search was cancelled");
+      error.name = "AbortError";
+      return error;
+    }
+
+    type Options = Parameters<ReturnType<typeof freshProcess>["createGdeltEngine"]>[0];
 
     function setUp() {
       const process = freshProcess();
       const fails = (promise: Promise<unknown>) => failureOf(promise, process.SearchEngineError);
       let time = 1_000_000;
       const answers = { api: rateLimited as (url: URL) => ReturnType<typeof rateLimited> };
+      /** Answers each request of the API with the next reply: a 429 for "limit", else an index. */
+      const script = (...replies: Array<"limit" | "index">) => {
+        const left = [...replies];
+        answers.api = (url) => {
+          if (url.pathname === "/robots.txt") return NOT_FOUND;
+          const reply = left.shift();
+          if (reply === undefined) throw new Error("No scripted answer left");
+          return reply === "limit" ? rateLimited(url) : indexed(url);
+        };
+      };
       const { fetch, requests } = overTransport(process.guardedFetch, (url) => answers.api(url));
       const apiRequests = () =>
         requests.filter((request) => request.url.pathname !== "/robots.txt").length;
+
+      // The wait of the pause: at once by default (it moves the clock by the wait), or held until
+      // `release` while `hold` is on. Either way it honours the signal it is given.
+      let holding = false;
+      const pending: Array<{ until: number; resolve: () => void }> = [];
+      const waitForPause = jest.fn((ms: number, signal: AbortSignal): Promise<void> => {
+        if (signal.aborted) return Promise.reject(abortError());
+        if (!holding) {
+          time += ms;
+          return Promise.resolve();
+        }
+        return new Promise<void>((resolve, reject) => {
+          const entry = { until: time + ms, resolve };
+          pending.push(entry);
+          signal.addEventListener(
+            "abort",
+            () => {
+              pending.splice(pending.indexOf(entry), 1);
+              reject(abortError());
+            },
+            { once: true },
+          );
+        });
+      });
+      const release = () => {
+        for (const entry of pending.splice(0)) {
+          time = Math.max(time, entry.until);
+          entry.resolve();
+        }
+      };
+      /** Lets the event loop run until `count` waits are held. */
+      const waiting = async (count = 1) => {
+        for (let turn = 0; turn < 200 && pending.length < count; turn += 1) await flush();
+        if (pending.length < count) throw new Error("The engine never waited for the pause");
+      };
+
       const engine = (
         name = "Acme",
-        cache?: Parameters<typeof process.createGdeltEngine>[0]["cache"],
+        cache?: Options["cache"],
         onRetry?: () => void,
+        extra: Partial<Options> = {},
       ) =>
         process.createGdeltEngine({
           names: [name],
@@ -1885,82 +1952,64 @@ describe("the engine", () => {
           fetch,
           queue: passThrough,
           now: () => time,
+          waitForPause,
           cache,
           onRetry,
+          ...extra,
         });
+
+      /**
+       * Starts the pause of the process and leaves it running: a search of a run asks, is refused,
+       * and is cancelled while it waits, so that nothing but the pause is left.
+       */
+      const pauseTheProcess = async (name = "Acme") => {
+        holding = true;
+        const controller = new AbortController();
+        const search = engine(name)
+          .search(`${name} breach`, "news", controller.signal)
+          .catch((e: unknown) => e);
+        await waiting();
+        controller.abort();
+        expect(await search).toBeInstanceOf(process.SearchEngineError);
+        await flush();
+      };
+
       return {
         process,
         fails,
         engine,
         answers,
+        script,
         apiRequests,
+        waitForPause,
+        hold: () => {
+          holding = true;
+        },
+        release,
+        waiting,
+        pauseTheProcess,
+        now: () => time,
         advance: (ms: number) => {
           time += ms;
         },
       };
     }
 
-    it("stops every engine of the process from asking GDELT for 60 seconds, and answers their searches at once", async () => {
-      const { process, fails, engine, apiRequests, advance } = setUp();
+    it("waits out the pause after its own 429 and is answered by the second ask", async () => {
+      const { engine, script, apiRequests, waitForPause } = setUp();
+      script("limit", "index");
 
-      await fails(engine("Acme").search("Acme breach", "news"));
-      expect(apiRequests()).toBe(1);
+      await expect(engine("Acme").search("Acme breach", "news")).resolves.toHaveLength(1);
 
-      // Another run, another engine, another vendor: the process is the one that was told to wait.
-      const other = engine("Globex");
-      advance(GDELT_COOL_DOWN_MS - 1);
-      const error = await other.search("Globex breach", "news").catch((e: unknown) => e);
-
-      expect(error).toBeInstanceOf(process.SearchEngineError);
-      expect(apiRequests()).toBe(1);
-    });
-
-    it("lets the process ask again once the 60 seconds are over", async () => {
-      const { fails, answers, engine, apiRequests, advance } = setUp();
-      await fails(engine("Acme").search("Acme breach", "news"));
-
-      advance(GDELT_COOL_DOWN_MS);
-      answers.api = (url) =>
-        url.pathname === "/robots.txt" ? NOT_FOUND : JSON_OK(bodyOf([raw()]));
-
-      await expect(engine("Globex").search("Globex breach", "news")).resolves.toHaveLength(1);
       expect(apiRequests()).toBe(2);
+      expect(waitForPause).toHaveBeenCalledTimes(1);
+      expect(waitForPause).toHaveBeenCalledWith(GDELT_COOL_DOWN_MS, expect.any(AbortSignal));
     });
 
-    it("does not make the pause the answer of the run: the search that follows it asks again", async () => {
-      const { fails, answers, engine, apiRequests, advance } = setUp();
+    it("answers the later searches of the run from the one index, with no other request", async () => {
+      const { engine, script, apiRequests } = setUp();
+      script("limit", "index");
       const run = engine("Acme");
-      await fails(run.search("Acme breach", "news"));
-      await fails(run.search("Acme lawsuit", "news"));
-      expect(apiRequests()).toBe(1);
-
-      advance(GDELT_COOL_DOWN_MS);
-      answers.api = (url) =>
-        url.pathname === "/robots.txt" ? NOT_FOUND : JSON_OK(bodyOf([raw()]));
-
-      await expect(run.search("Acme breach", "news")).resolves.toHaveLength(1);
-      expect(apiRequests()).toBe(2);
-    });
-
-    it("fails a search of the same run at once during the cool-down, and makes no request", async () => {
-      const { fails, engine, apiRequests, advance } = setUp();
-      const run = engine("Acme");
-      await fails(run.search("Acme breach", "news"));
-      expect(apiRequests()).toBe(1);
-
-      advance(GDELT_COOL_DOWN_MS - 1);
-      await fails(run.search("Acme lawsuit", "news"));
-
-      expect(apiRequests()).toBe(1);
-    });
-
-    it("asks the refused request again in the first search after the cool-down, and answers that search and the later ones from the one index", async () => {
-      const { fails, answers, engine, apiRequests, advance } = setUp();
-      const run = engine("Acme");
-      await fails(run.search("Acme breach", "news"));
-      advance(GDELT_COOL_DOWN_MS);
-      answers.api = (url) =>
-        url.pathname === "/robots.txt" ? NOT_FOUND : JSON_OK(bodyOf([raw()]));
 
       await expect(run.search("Acme breach", "news")).resolves.toHaveLength(1);
       await expect(run.search("Acme support", "news")).resolves.toHaveLength(1);
@@ -1969,23 +2018,40 @@ describe("the engine", () => {
       expect(apiRequests()).toBe(2);
     });
 
-    it("asks at most GDELT_MAX_ASKS times in a run: after the third refusal no search asks again, even after another cool-down", async () => {
-      const { fails, answers, engine, apiRequests, advance } = setUp();
+    it("answers every search that waited from one ask: one request per ask", async () => {
+      const { engine, script, apiRequests, waitForPause, hold, release, waiting } = setUp();
+      script("limit", "index");
+      hold();
       const run = engine("Acme");
-      expect(GDELT_MAX_ASKS).toBe(3);
 
-      await fails(run.search("Acme breach", "news"));
-      advance(GDELT_COOL_DOWN_MS);
-      await fails(run.search("Acme breach", "news"));
-      advance(GDELT_COOL_DOWN_MS);
+      const searches = [
+        run.search("Acme breach", "news"),
+        run.search("Acme support", "news"),
+        run.search("Acme system", "news"),
+      ];
+      await waiting();
+      expect(apiRequests()).toBe(1);
+      release();
+
+      const answers = await Promise.all(searches);
+      expect(answers.map((answer) => answer.length)).toEqual([1, 1, 1]);
+      expect(apiRequests()).toBe(2);
+      expect(waitForPause).toHaveBeenCalledTimes(1);
+    });
+
+    it("gives up on the GDELT_MAX_ASKS-th refusal: that is the answer of the run", async () => {
+      const { fails, engine, script, apiRequests, waitForPause, advance } = setUp();
+      expect(GDELT_MAX_ASKS).toBe(3);
+      script("limit", "limit", "limit", "index", "index");
+      const run = engine("Acme");
+
       await fails(run.search("Acme breach", "news"));
       expect(apiRequests()).toBe(3);
+      expect(waitForPause).toHaveBeenCalledTimes(2);
 
-      advance(GDELT_COOL_DOWN_MS * 2);
-      answers.api = (url) =>
-        url.pathname === "/robots.txt" ? NOT_FOUND : JSON_OK(bodyOf([raw()]));
+      advance(GDELT_COOL_DOWN_MS * 3);
       await fails(run.search("Acme breach", "news"));
-      await fails(run.search("Acme lawsuit", "news"));
+      await fails(run.search("Acme support", "news"));
 
       expect(apiRequests()).toBe(3);
       // The limit is the run's: another run of the process still asks.
@@ -1993,16 +2059,151 @@ describe("the engine", () => {
       expect(apiRequests()).toBe(4);
     });
 
-    it("never keeps a refusal in the cache, and keeps the answer that follows it", async () => {
-      const { fails, answers, engine, apiRequests, advance } = setUp();
-      const { cache } = memoryCache();
-      const run = engine("Acme", cache);
-      await fails(run.search("Acme breach", "news"));
-      await settle();
+    it("lets a search whose signal aborts during the wait leave at once, and still answers the others", async () => {
+      const { process, engine, script, apiRequests, hold, release, waiting } = setUp();
+      script("limit", "index");
+      hold();
+      const run = engine("Acme");
+      const controller = new AbortController();
+
+      const leaving = run.search("Acme breach", "news", controller.signal);
+      const staying = run.search("Acme support", "news");
+      await waiting();
+      controller.abort();
+
+      // A leaves while the wait is still held.
+      await expect(leaving).rejects.toBeInstanceOf(process.SearchEngineError);
+      expect(apiRequests()).toBe(1);
+      release();
+
+      await expect(staying).resolves.toHaveLength(1);
+      expect(apiRequests()).toBe(2);
+    });
+
+    it("makes no request for a load that no search waits for any more, and starts a new one for the next search", async () => {
+      const { engine, script, apiRequests, waitForPause, pauseTheProcess, advance } = setUp();
+      script("limit", "index");
+      const run = engine("Acme");
+      await pauseTheProcess("Acme");
+
+      // The load was given up: its wait was told to stop, and nothing asks after it.
+      expect(waitForPause.mock.calls[0][1].aborted).toBe(true);
+      await flush();
+      expect(apiRequests()).toBe(1);
+
       advance(GDELT_COOL_DOWN_MS);
-      answers.api = (url) =>
-        url.pathname === "/robots.txt" ? NOT_FOUND : JSON_OK(bodyOf([raw()]));
       await expect(run.search("Acme breach", "news")).resolves.toHaveLength(1);
+      expect(apiRequests()).toBe(2);
+    });
+
+    it("lets the process ask again once the pause is over, without waiting", async () => {
+      const { engine, script, apiRequests, waitForPause, pauseTheProcess, advance } = setUp();
+      script("limit", "index");
+      await pauseTheProcess("Acme");
+      waitForPause.mockClear();
+
+      advance(GDELT_COOL_DOWN_MS);
+
+      await expect(engine("Globex").search("Globex breach", "news")).resolves.toHaveLength(1);
+      expect(apiRequests()).toBe(2);
+      expect(waitForPause).not.toHaveBeenCalled();
+    });
+
+    it("holds the searches of every engine of the process until the pause is over", async () => {
+      const { engine, script, apiRequests, pauseTheProcess, release, waiting } = setUp();
+      script("limit", "index");
+      await pauseTheProcess("Acme");
+      expect(apiRequests()).toBe(1);
+
+      // Another run, another engine, another vendor: the process is the one that was told to wait.
+      const other = engine("Globex").search("Globex breach", "news");
+      await waiting();
+      expect(apiRequests()).toBe(1);
+      release();
+
+      await expect(other).resolves.toHaveLength(1);
+      expect(apiRequests()).toBe(2);
+    });
+
+    it("waits out a pause another run began, without counting it as its own refusal", async () => {
+      const { engine, script, apiRequests, hold, release, waiting } = setUp();
+      script("limit", "index", "index");
+      hold();
+      const refusedA = jest.fn();
+      const refusedB = jest.fn();
+
+      const first = engine("Acme", undefined, undefined, { onRefused: refusedA }).search(
+        "Acme breach",
+        "news",
+      );
+      await waiting(1);
+      const second = engine("Globex", undefined, undefined, { onRefused: refusedB }).search(
+        "Globex breach",
+        "news",
+      );
+      await waiting(2);
+      release();
+
+      await expect(first).resolves.toHaveLength(1);
+      await expect(second).resolves.toHaveLength(1);
+      expect(apiRequests()).toBe(3);
+      expect(refusedA).toHaveBeenCalledTimes(1);
+      expect(refusedB).not.toHaveBeenCalled();
+    });
+
+    it("tells onRefused of each 429, final on the last, and nothing else", async () => {
+      const { fails, engine, script } = setUp();
+      script("limit", "limit", "limit");
+      const onRefused = jest.fn();
+
+      await fails(engine("Acme", undefined, undefined, { onRefused }).search(SECRET_QUERY, "news"));
+
+      expect(onRefused.mock.calls).toEqual([
+        [{ final: false }],
+        [{ final: false }],
+        [{ final: true }],
+      ]);
+      expect(JSON.stringify(onRefused.mock.calls)).not.toContain("Zorblax");
+    });
+
+    it("tells onPause once per pause, with the wait", async () => {
+      const { engine, script, hold, release, waiting } = setUp();
+      script("limit", "index");
+      hold();
+      const onPause = jest.fn();
+      const run = engine("Acme", undefined, undefined, { onPause });
+
+      const first = run.search("Acme breach", "news");
+      await waiting();
+      // A second search joins the wait that is already held.
+      const second = run.search("Acme support", "news");
+      await flush();
+      release();
+      await Promise.all([first, second]);
+
+      expect(onPause.mock.calls).toEqual([[GDELT_COOL_DOWN_MS]]);
+    });
+
+    it("is not broken by hooks that throw", async () => {
+      const { engine, script } = setUp();
+      script("limit", "index");
+      const boom = () => {
+        throw new Error(SECRET_QUERY);
+      };
+
+      await expect(
+        engine("Acme", undefined, undefined, { onRefused: boom, onPause: boom }).search(
+          "Acme breach",
+          "news",
+        ),
+      ).resolves.toHaveLength(1);
+    });
+
+    it("never keeps a refusal in the cache, and keeps the answer that follows it", async () => {
+      const { engine, script, apiRequests } = setUp();
+      const { cache } = memoryCache();
+      script("limit", "index");
+      await expect(engine("Acme", cache).search("Acme breach", "news")).resolves.toHaveLength(1);
       await settle();
 
       await expect(engine("Acme", cache).search("Acme breach", "news")).resolves.toHaveLength(1);
@@ -2022,44 +2223,51 @@ describe("the engine", () => {
       expect(apiRequests()).toBe(2);
 
       advance(GDELT_COOL_DOWN_MS * 3);
-      await failureOf(run.search("Acme lawsuit", "news"), process.SearchEngineError);
+      await failureOf(run.search("Acme support", "news"), process.SearchEngineError);
 
       expect(apiRequests()).toBe(2);
     });
 
-    it("does not retry the request that was refused", async () => {
-      const { fails, engine, apiRequests } = setUp();
-
-      await fails(engine("Acme").search("Acme breach", "news"));
-
-      expect(apiRequests()).toBe(1);
-    });
-
-    it("does not tell the hook of a second request for the request that was refused: none is made", async () => {
-      const { fails, engine, apiRequests } = setUp();
+    it("does not retry the refused request within the ask, and does not tell the hook of a second request", async () => {
+      const { engine, script, apiRequests, hold, release, waiting } = setUp();
+      script("limit", "index");
+      hold();
       const onRetry = jest.fn();
 
-      await fails(engine("Acme", undefined, onRetry).search("Acme breach", "news"));
-
+      const search = engine("Acme", undefined, onRetry).search("Acme breach", "news");
+      await waiting();
       expect(apiRequests()).toBe(1);
+      release();
+
+      await expect(search).resolves.toHaveLength(1);
+      expect(apiRequests()).toBe(2);
       expect(onRetry).not.toHaveBeenCalled();
     });
 
     it("asks again for a 429 that comes after the pause: the pause starts over", async () => {
-      const { fails, engine, apiRequests, advance } = setUp();
-      await fails(engine("Acme").search("Acme breach", "news"));
+      const { engine, script, apiRequests, pauseTheProcess, advance, hold, release, waiting } =
+        setUp();
+      script("limit", "limit", "index");
+      await pauseTheProcess("Acme");
       advance(GDELT_COOL_DOWN_MS);
 
-      await fails(engine("Globex").search("Globex breach", "news"));
+      // The pause is over, so Globex asks, is refused, and the pause starts over.
+      await pauseTheProcess("Globex");
       expect(apiRequests()).toBe(2);
 
       advance(GDELT_COOL_DOWN_MS - 1);
-      await fails(engine("Initech").search("Initech breach", "news"));
+      hold();
+      const initech = engine("Initech").search("Initech breach", "news");
+      await waiting();
       expect(apiRequests()).toBe(2);
+      release();
+
+      await expect(initech).resolves.toHaveLength(1);
+      expect(apiRequests()).toBe(3);
     });
 
     it("lets a search be answered from the cache during the pause: it costs no request", async () => {
-      const { process, fails, engine, apiRequests, advance } = setUp();
+      const { process, script, apiRequests, pauseTheProcess, now } = setUp();
       const { cache } = memoryCache();
       const earlier = process.createGdeltEngine({
         names: ["Acme"],
@@ -2071,8 +2279,8 @@ describe("the engine", () => {
       });
       await earlier.search("Acme breach", "news");
       await settle();
-      await fails(engine("Globex").search("Globex breach", "news"));
-      advance(1_000);
+      script("limit");
+      await pauseTheProcess("Globex");
 
       const again = process.createGdeltEngine({
         names: ["Acme"],
@@ -2083,14 +2291,17 @@ describe("the engine", () => {
         queue: passThrough,
         robots: allowAll,
         cache,
-        now: () => 1_000_000 + 1_000,
+        now: () => now() + 1_000,
+        waitForPause: async () => {
+          throw new Error("no wait during the pause");
+        },
       });
 
       await expect(again.search("Acme breach", "news")).resolves.toHaveLength(1);
       expect(apiRequests()).toBe(1);
     });
 
-    it("stops a request that is waiting in the queue when the pause begins before its turn", async () => {
+    it("holds a request that is waiting in the queue when the pause begins, and asks once the pause is over", async () => {
       const process = freshProcess();
       const shared = process.createSearchQueue({ minGapMs: 0 });
       let time = 1_000_000;
@@ -2099,13 +2310,21 @@ describe("the engine", () => {
         headers: http.IncomingHttpHeaders;
         body: string;
       }>();
+      const held = deferred();
       let apiRequests = 0;
       const transport: Transport = async ({ url }) => {
         if (url.pathname === "/robots.txt") {
           return { status: 404, headers: {}, body: Readable.from([Buffer.from("")]) };
         }
         apiRequests += 1;
-        const reply = await release.promise;
+        const reply =
+          apiRequests === 1
+            ? await release.promise
+            : {
+                status: 200,
+                headers: { "content-type": JSON_TYPE },
+                body: bodyOf([raw()]),
+              };
         return {
           status: reply.status,
           headers: reply.headers,
@@ -2114,6 +2333,10 @@ describe("the engine", () => {
       };
       const fetch = ((url: string, options?: GuardedFetchOptions) =>
         process.guardedFetch(url, options, { transport })) as typeof guardedFetch;
+      const waitForPause = jest.fn(async (ms: number) => {
+        await held.promise;
+        time += ms;
+      });
       const make = (name: string) =>
         process.createGdeltEngine({
           names: [name],
@@ -2121,14 +2344,11 @@ describe("the engine", () => {
           fetch,
           queue: shared,
           now: () => time,
+          waitForPause,
         });
 
-      const first = make("Acme")
-        .search("Acme breach", "news")
-        .catch((e: unknown) => e);
-      const second = make("Globex")
-        .search("Globex breach", "news")
-        .catch((e: unknown) => e);
+      const first = make("Acme").search("Acme breach", "news");
+      const second = make("Globex").search("Globex breach", "news");
       await flush();
       await flush();
       expect(apiRequests).toBe(1);
@@ -2137,11 +2357,94 @@ describe("the engine", () => {
         headers: { "content-type": "text/plain" },
         body: RATE_LIMIT_TEXT,
       });
+      for (let turn = 0; turn < 200 && waitForPause.mock.calls.length < 2; turn += 1) {
+        await flush();
+      }
 
-      expect(await first).toBeInstanceOf(process.SearchEngineError);
-      expect(await second).toBeInstanceOf(process.SearchEngineError);
-      time += 10;
+      // The second request met the pause at its turn: it made no request and waits with the first.
+      expect(waitForPause).toHaveBeenCalledTimes(2);
       expect(apiRequests).toBe(1);
+      held.resolve();
+
+      await expect(first).resolves.toHaveLength(1);
+      await expect(second).resolves.toHaveLength(1);
+      // Each run asks for its own index once the pause is over.
+      expect(apiRequests).toBe(3);
+    });
+  });
+
+  describe("in a web session", () => {
+    it("spends a model search made during the pause on an answer", async () => {
+      const process = freshProcess();
+      let time = 1_000_000;
+      const pending: Array<() => void> = [];
+      const waitForPause = jest.fn(
+        (ms: number) =>
+          new Promise<void>((resolve) => {
+            pending.push(() => {
+              time += ms;
+              resolve();
+            });
+          }),
+      );
+      let asked = 0;
+      const { fetch } = overTransport(process.guardedFetch, (url) => {
+        if (url.pathname === "/robots.txt") return NOT_FOUND;
+        asked += 1;
+        if (asked === 1) {
+          return { status: 429, headers: { "content-type": "text/plain" }, body: RATE_LIMIT_TEXT };
+        }
+        return JSON_OK(
+          bodyOf([
+            raw(),
+            raw({
+              url: "https://news.example.com/acme-sued",
+              title: "Acme sued in a class action lawsuit",
+            }),
+          ]),
+        );
+      });
+      const engine = process.createGdeltEngine({
+        names: ["Acme"],
+        topics: ["breach", "lawsuit"],
+        fetch,
+        queue: passThrough,
+        now: () => time,
+        waitForPause,
+      });
+      const session = process.createWebSession<"security_incidents">({
+        engine,
+        readPage: async () => {
+          throw new Error("no page is read");
+        },
+        domain: null,
+        cutoffs: {},
+      });
+      session.setCodeBudget({ searches: 1 });
+      const before = session.budget().searchesLeft;
+
+      const code = session.searchMany(
+        [{ query: "Acme breach", kind: "news", category: "security_incidents", by: "code" }],
+        new AbortController().signal,
+      );
+      for (let turn = 0; turn < 200 && pending.length === 0; turn += 1) await flush();
+      const model = session.search(
+        "Acme lawsuit",
+        "news",
+        "security_incidents",
+        new AbortController().signal,
+      );
+      await flush();
+      pending.splice(0).forEach((open) => open());
+
+      const outcome = await model;
+      await code;
+
+      expect(outcome.ok).toBe(true);
+      expect(session.snapshot().calls.some((call) => call.failure === "search_unavailable")).toBe(
+        false,
+      );
+      expect(session.budget().searchesLeft).toBe(before - 1);
     });
   });
 

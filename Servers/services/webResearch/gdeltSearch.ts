@@ -16,14 +16,18 @@
  * - It asks for one request every 5 seconds. A faster client gets a 429 with a plain-text body and
  *   no Retry-After, and kept getting it 25 and 50 seconds after a burst. So all the engines of the
  *   process share one queue that spaces requests 5 seconds apart, and after a 429 the process leaves
- *   GDELT alone for 60 seconds: a search that would need a request in that time fails at once. The
- *   refused request is not given up for the rest of the run, though: the first search of the run
- *   that needs it after the cool-down asks it again, until GDELT has refused the run's asks
- *   GDELT_MAX_ASKS (3) times, after which its searches fail at once. Only a 429 is asked again
- *   this way, and only a 429 counts towards that cap. On 2026-11-01 GDELT refused 11 of 12
- *   requests from the golden machine, at intervals of minutes, and in one probe refused a request
- *   and answered the next one 6 seconds later, so the refusals do not come from our own rate, and
- *   a single 429 must not cost a run all of its news. A refusal is never cached; an answer is.
+ *   GDELT alone for 60 seconds. A run does not give up its news for that: the run's one ask waits
+ *   out the pause and then asks again, and every search that needs the index waits for that same
+ *   ask, each on its own signal, so a single 429 costs the run a wait and not its news. This goes
+ *   on until GDELT has refused the run's asks GDELT_MAX_ASKS (3) times, and that last refusal is
+ *   the answer of the run: its searches fail at once. A search leaves the wait at once when its own
+ *   signal aborts, and the ask is given up, before its request is made, when no search waits for it
+ *   any more. Only a 429 is waited out and asked again this way, and only a 429 counts towards the
+ *   cap. On 2026-11-01 GDELT refused 11 of 12 requests from the golden machine, at intervals of
+ *   minutes, and in one probe refused a request and answered the next one 6 seconds later, so the
+ *   refusals do not come from our own rate. A refusal is never cached; an answer is. The engine
+ *   tells `onRefused` of each 429 and `onPause` of each pause it waits out, and neither hears the
+ *   query or the vendor.
  * - It reaches back 3 months, gives titles and no snippets, and has no way to ask for the news of
  *   one topic cheaply. A run makes 18 to 28 searches, so the engine does not make one request for
  *   each. It makes ONE request for the run, the first search's: the articles that name the vendor
@@ -94,6 +98,11 @@ const GDELT_DOC_URL = "https://api.gdeltproject.org/api/v2/doc/doc";
 const MAX_RECORDS = 250;
 const MAX_BODY_BYTES = 1_048_576;
 const REQUEST_TIMEOUT_MS = 20_000;
+/**
+ * The longest one ask takes once the pause is over: its turn in the queue (the gap of 5 seconds),
+ * then the request itself (20 seconds). A caller that waits for the pause adds it to the wait.
+ */
+export const GDELT_ASK_MS = GDELT_MIN_GAP_MS + REQUEST_TIMEOUT_MS;
 const ROBOTS_MAX_BYTES = 65_536;
 /** The longest `Retry-After` of a 5xx that is waited for: a longer one is a service that wants to be left alone. */
 const MAX_RETRY_AFTER_MS = 5_000;
@@ -365,13 +374,24 @@ let pausedUntil = Number.NEGATIVE_INFINITY;
 
 /**
  * GDELT is to be left alone for a while: the request was refused with a 429, or the process is
- * waiting out an earlier one. It is not the answer of the run: the run may ask again when the
- * pause is over.
+ * waiting out an earlier one. It is not the answer of the run and it never leaves the load of the
+ * index: the load waits out the pause and asks again.
  */
 class Paused extends Error {
   constructor() {
     super("GDELT is paused");
     this.name = "Paused";
+  }
+}
+
+/**
+ * The load of the index was given up because no search waited for it any more. It is no answer of
+ * the run: the next search starts a new load.
+ */
+class Unwanted extends Error {
+  constructor() {
+    super("No search waits for the index");
+    this.name = "Unwanted";
   }
 }
 
@@ -486,6 +506,24 @@ export interface GdeltEngineDeps {
    * not the address, not the error. It serves a counter, so one that throws changes nothing.
    */
   onRetry?: () => void;
+  /**
+   * Replaces the wait out of the pause after a 429, for tests: it resolves when `ms` have passed,
+   * and rejects when `signal` aborts. The default is a timer that does not keep the process alive.
+   */
+  waitForPause?: (ms: number, signal: AbortSignal) => Promise<void>;
+  /**
+   * Told, with the wait in ms, each time this run's ask starts to wait out a pause: one that its
+   * own 429 began or one that another run of the process began, once for each pause. It is told
+   * nothing else, so a caller can give the clock of its own work more time. One that throws
+   * changes nothing.
+   */
+  onPause?: (waitMs: number) => void;
+  /**
+   * Told of each 429 that this run's ask met, `final` on the GDELT_MAX_ASKS-th, which is the
+   * answer of the run. Not told of a pause that another run began. It is told nothing else: not
+   * the query, not the vendor. It serves a counter, so one that throws changes nothing.
+   */
+  onRefused?: (refusal: { final: boolean }) => void;
 }
 
 /**
@@ -497,16 +535,20 @@ export interface GdeltEngineDeps {
  * run, which may carry the signals of different loops, so one signal's abort ends that search at
  * once and cancels nothing for the others. The request is bounded by its own time-outs.
  *
- * A failure of the request is the answer of every search of the run, with two exceptions that leave
- * the run free to ask again: the process is leaving GDELT alone, or GDELT has just refused with a
- * 429 (until GDELT_MAX_ASKS refusals: the last one is the answer of the run). A request
- * that failed for a reason that passes (a network error, a time-out, a 5xx) is asked once more
- * through the queue, so that the gap holds for it too.
+ * A failure of the request is the answer of every search of the run, with one exception: the
+ * process is leaving GDELT alone, or GDELT has just refused with a 429. The request then waits out
+ * the pause and is asked again, for every search that waits for it, until GDELT_MAX_ASKS refusals:
+ * the last one is the answer of the run. A request that failed for a reason that passes (a network
+ * error, a time-out, a 5xx) is asked once more through the queue, so that the gap holds for it too.
+ * The load is given up, before its request is made, once no search waits for it.
  */
 export function createGdeltEngine(deps: GdeltEngineDeps): SearchEngine {
   const fetch = deps.fetch ?? guardedFetch;
   const queue = deps.queue ?? gdeltQueue;
   const sleep = deps.sleep ?? sleepUnlessAborted;
+  const waitForPause =
+    deps.waitForPause ??
+    ((ms: number, signal: AbortSignal) => sleepUnlessAborted(ms, signal, { unref: true }));
   const now = deps.now ?? Date.now;
   const { cache } = deps;
   const robots = deps.robots ?? robotsOf(fetch, cache);
@@ -524,10 +566,22 @@ export function createGdeltEngine(deps: GdeltEngineDeps): SearchEngine {
 
   /** How many asks of this run GDELT has refused with a 429. */
   let refusals = 0;
+  /** The pause that `onPause` was last told of, so that it hears of each pause once. */
+  let toldUntil = Number.NEGATIVE_INFINITY;
+
+  /** Tells a hook, which serves a counter or a clock and is not part of the search. */
+  const tell = <T>(hook: ((value: T) => void) | undefined, value: T): void => {
+    try {
+      hook?.(value);
+    } catch {
+      // Not part of the search.
+    }
+  };
 
   /**
    * One request, once the queue has a place for it. A 429 starts the pause of the process; the
-   * third refusal of the run is the answer of the run, not a pause, so no search asks again.
+   * third refusal of the run is the answer of the run, not a pause, so no search asks again. A
+   * pause that began while the ask sat in the queue turns it away before the request.
    */
   const request = async (url: string): Promise<GdeltArticle[]> => {
     if (now() < pausedUntil) throw new Paused();
@@ -544,7 +598,9 @@ export function createGdeltEngine(deps: GdeltEngineDeps): SearchEngine {
       if (error instanceof FetchError && error.status === 429) {
         pausedUntil = now() + GDELT_COOL_DOWN_MS;
         refusals += 1;
-        if (refusals >= GDELT_MAX_ASKS) throw new SearchEngineError();
+        const final = refusals >= GDELT_MAX_ASKS;
+        tell(deps.onRefused, { final });
+        if (final) throw new SearchEngineError();
         throw new Paused();
       }
       throw error;
@@ -554,45 +610,129 @@ export function createGdeltEngine(deps: GdeltEngineDeps): SearchEngine {
     return parseGdeltBody(answer.body.toString("utf8"));
   };
 
-  /** The request, and the one more that a failure which passes earns. Both wait for the queue. */
-  const fetchIndex = async (url: string): Promise<GdeltArticle[]> => {
+  /**
+   * The request, and the one more that a failure which passes earns. Both wait for the queue, and
+   * both leave it, as the wait for a 5xx does, when `until` aborts.
+   */
+  const fetchIndex = async (url: string, until: AbortSignal): Promise<GdeltArticle[]> => {
     try {
-      return await queue(() => request(url));
+      return await queue(() => request(url), until);
     } catch (error) {
       const wait = retryWaitOf(error);
       if (wait === null) throw error;
-      if (wait > 0) await sleep(wait);
+      if (wait > 0) await sleep(wait, until);
       try {
         deps.onRetry?.();
       } catch {
         // A counter is not part of the search.
       }
-      return await queue(() => request(url));
+      return await queue(() => request(url), until);
     }
   };
 
-  const loadIndex = async (url: string): Promise<Indexed[]> => {
+  /**
+   * The index of the run: from the cache, or from the ask. While the process leaves GDELT alone
+   * the ask waits out the pause and then goes on, so a refusal costs the run a wait and not its
+   * news. Every pass either waits or makes a request, and a 429 counts towards the cap of
+   * GDELT_MAX_ASKS, whose last refusal ends the loop with the answer of the run. When `until`
+   * aborts, which is when no search waits for the load any more, the load ends as Unwanted.
+   */
+  const loadIndex = async (url: string, until: AbortSignal): Promise<Indexed[]> => {
     const kept = cache === undefined ? null : await readCachedGdeltIndex(cache, url);
     if (kept !== null) return prepare(kept);
-    if (now() < pausedUntil) throw new Paused();
-    const articles = await fetchIndex(url);
+    let articles: GdeltArticle[];
+    try {
+      for (;;) {
+        const wait = pausedUntil - now();
+        if (wait > 0) {
+          if (pausedUntil !== toldUntil) {
+            toldUntil = pausedUntil;
+            tell(deps.onPause, wait);
+          }
+          await waitForPause(wait, until);
+        }
+        try {
+          articles = await fetchIndex(url, until);
+          break;
+        } catch (error) {
+          // A refusal with asks left, or a pause that began while the ask sat in the queue: wait.
+          if (!(error instanceof Paused)) throw error;
+        }
+      }
+    } catch (error) {
+      // What an abort of the load made of the wait, the queue or the sleep is not a failure of GDELT.
+      if (until.aborted && !(error instanceof SearchEngineError)) throw new Unwanted();
+      throw error;
+    }
     if (cache !== undefined) cacheGdeltIndex(cache, url, articles);
     return prepare(articles);
   };
 
-  /** The index of the run: loaded by the first search that needs it, shared by the rest. */
-  let loaded: Promise<Indexed[]> | undefined;
-  const indexOnce = (url: string): Promise<Indexed[]> => {
-    if (loaded === undefined) {
-      const loading = loadIndex(url);
-      loaded = loading;
-      // A pause is not the answer of the run, so the next search asks again. This also handles the
-      // rejection, so that a load nobody waits for any more is no unhandled one.
-      loading.catch((error: unknown) => {
-        if (error instanceof Paused && loaded === loading) loaded = undefined;
-      });
+  /** The load of the index that the searches of the run share, and who still waits for it. */
+  interface Load {
+    promise: Promise<Indexed[]>;
+    controller: AbortController;
+    waiters: number;
+    settled: boolean;
+  }
+  let current: Load | undefined;
+
+  /**
+   * Joins the load of the index, or starts it: the first search that needs it makes it, the rest
+   * share it. `leave` is called by a search that has stopped waiting, whatever the reason; the last
+   * one to leave a load that has not settled gives it up. A failure of the load is the answer of
+   * the run and stays, except that of a load nobody wanted, which the next search starts again.
+   */
+  const joinLoad = (url: string): { promise: Promise<Indexed[]>; leave(): void } => {
+    if (current === undefined) {
+      const controller = new AbortController();
+      const load: Load = {
+        promise: loadIndex(url, controller.signal),
+        controller,
+        waiters: 0,
+        settled: false,
+      };
+      // This also handles the rejection, so that no load is an unhandled one.
+      load.promise.then(
+        () => {
+          load.settled = true;
+        },
+        (error: unknown) => {
+          load.settled = true;
+          if (error instanceof Unwanted && current === load) current = undefined;
+        },
+      );
+      current = load;
     }
-    return loaded;
+    const load = current;
+    load.waiters += 1;
+    let left = false;
+    return {
+      promise: load.promise,
+      leave() {
+        if (left) return;
+        left = true;
+        load.waiters -= 1;
+        if (load.waiters === 0 && !load.settled) load.controller.abort();
+      },
+    };
+  };
+
+  /**
+   * The index for one search, on the signal of that search. A load that was given up just as this
+   * search joined it is not this search's answer: the search joins the load that follows.
+   */
+  const indexFor = async (url: string, signal: AbortSignal | undefined): Promise<Indexed[]> => {
+    for (;;) {
+      const load = joinLoad(url);
+      try {
+        return await untilAborted(load.promise, signal);
+      } catch (error) {
+        if (!(error instanceof Unwanted)) throw error;
+      } finally {
+        load.leave();
+      }
+    }
   };
 
   /** The words of a query that are not words of the vendor's names. */
@@ -615,7 +755,7 @@ export function createGdeltEngine(deps: GdeltEngineDeps): SearchEngine {
         if (kind !== "news" || requestUrl === null || signal?.aborted) {
           throw new SearchEngineError();
         }
-        const index = await untilAborted(indexOnce(requestUrl), signal);
+        const index = await indexFor(requestUrl, signal);
         const topicWords = topicWordsOf(query);
         const results: SearchResult[] = [];
         for (const entry of index) {

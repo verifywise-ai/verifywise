@@ -5,8 +5,8 @@
  * is a no-op.
  *
  * Every attribute value comes from a closed set (a decision, a category, a dismissal reason, a
- * feed, a search outcome, a kind of cache and its outcome), so the number of series stays small and nothing a third party or the
- * model wrote leaves the server.
+ * feed, a search outcome, a kind of cache and its outcome, a GDELT refusal), so the number of series stays small and nothing a
+ * third party or the model wrote leaves the server.
  */
 import { metrics, type Meter } from "@opentelemetry/api";
 import type {
@@ -44,6 +44,12 @@ export interface ResearchMetrics {
    * `error` too. The kinds are the cache's own, so a kind it gains is counted without a change here.
    */
   cacheLookup(lookup: { kind: CacheKind; outcome: CacheOutcome }): void;
+  /**
+   * GDELT refused a request of a run with a 429: `paused` when the run waits out the pause and
+   * asks again, `gave_up` on the refusal that is the run's answer (the news of the run is lost).
+   * It carries neither the vendor nor the query.
+   */
+  gdeltRefused(refusal: { final: boolean }): void;
 }
 
 export function createResearchMetrics(meter: Pick<Meter, "createCounter">): ResearchMetrics {
@@ -60,6 +66,9 @@ export function createResearchMetrics(meter: Pick<Meter, "createCounter">): Rese
   const cache = meter.createCounter("vendor_research.cache", {
     description:
       "Lookups in the cache that vendor research runs share, by what was looked up and the outcome",
+  });
+  const refusals = meter.createCounter("vendor_research.gdelt.refusals", {
+    description: "GDELT requests of the vendor research agent refused with a 429",
   });
 
   return {
@@ -89,6 +98,13 @@ export function createResearchMetrics(meter: Pick<Meter, "createCounter">): Rese
         cache.add(1, { kind, outcome });
       } catch {
         // Nor the lookup.
+      }
+    },
+    gdeltRefused({ final }) {
+      try {
+        refusals.add(1, { outcome: final ? "gave_up" : "paused" });
+      } catch {
+        // Nor the wait.
       }
     },
   };
