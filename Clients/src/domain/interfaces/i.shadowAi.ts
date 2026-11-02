@@ -107,6 +107,10 @@ export interface IShadowAiSyslogListenerStatus {
   tls: boolean;
   plaintext: boolean;
   ipOnly: boolean;
+  /** Whether the listener is actually bound in the server process. */
+  running: boolean;
+  /** Why the last start attempt failed, if it did. */
+  startError: { code: string; message: string } | null;
 }
 
 // ─── Insights ────────────────────────────────────────────────────────

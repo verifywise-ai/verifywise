@@ -995,7 +995,15 @@ export const handlers = [
   }),
   http.get("/api/shadow-ai/config/syslog/status", () =>
     HttpResponse.json({
-      data: { enabled: true, port: 6514, tls: true, plaintext: false, ipOnly: false },
+      data: {
+        enabled: true,
+        port: 6514,
+        tls: true,
+        plaintext: false,
+        ipOnly: false,
+        running: true,
+        startError: null,
+      },
     }),
   ),
   http.post("/api/shadow-ai/config/syslog/:id/regenerate-key", ({ params }) =>

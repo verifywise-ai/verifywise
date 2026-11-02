@@ -1598,7 +1598,15 @@ describe("shadowAi.repository", () => {
 
   describe("getSyslogListenerStatus", () => {
     it("should GET /shadow-ai/config/syslog/status", async () => {
-      const status = { enabled: true, port: 6514, tls: true, plaintext: false, ipOnly: false };
+      const status = {
+        enabled: true,
+        port: 6514,
+        tls: true,
+        plaintext: false,
+        ipOnly: false,
+        running: true,
+        startError: null,
+      };
       vi.mocked(apiServices.get).mockResolvedValue({
         data: { data: status },
         status: 200,

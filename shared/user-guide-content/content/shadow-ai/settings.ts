@@ -72,7 +72,7 @@ export const settingsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'A line above the table shows whether the syslog listener is on and where to send logs (port 6514 by default, over TLS or plain TCP). The listener is off until the server operator sets `SHADOW_AI_SYSLOG_ENABLED=true`. The hosted service does not offer syslog yet.',
+      text: 'A line above the table shows whether the syslog listener is on and where to send logs (port 6514 by default, over TLS or plain TCP). The listener is off until the server operator sets `SHADOW_AI_SYSLOG_ENABLED=true`. If it is turned on but could not start, the line says so; the server log has the reason. The hosted service does not offer syslog yet.',
     },
     {
       type: 'heading',

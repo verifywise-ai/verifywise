@@ -22,7 +22,11 @@ import {
 } from "../../utils/shadowAiConfig.utils";
 import { invalidateSourceCache } from "../../services/shadowAiSyslog/sourceCache";
 import { hashSourceKey } from "../../services/shadowAiSyslog/sourceKey";
-import { startSyslogListener, SyslogListenerHandle } from "../../services/shadowAiSyslog/listener";
+import {
+  getSyslogListenerState,
+  startSyslogListener,
+  SyslogListenerHandle,
+} from "../../services/shadowAiSyslog/listener";
 import { SyslogListenerConfig } from "../../services/shadowAiSyslog/config";
 import { evaluateRulesForBatch } from "../../services/shadowAiAlertNotification.service";
 
@@ -189,6 +193,43 @@ describe("Shadow AI syslog listener", () => {
 
   it("returns null when disabled", async () => {
     expect(await startSyslogListener({ ...baseConfig, enabled: false })).toBeNull();
+  });
+
+  describe("running state", () => {
+    it("is started while bound and not after close", async () => {
+      const h = await start();
+      expect(getSyslogListenerState()).toEqual({ started: true, lastStartError: null });
+      await h.close();
+      handle = null;
+      expect(getSyslogListenerState().started).toBe(false);
+    });
+
+    it("records the error code when the port is taken", async () => {
+      const h = await start();
+      await expect(startSyslogListener({ ...baseConfig, port: h.port })).rejects.toThrow();
+      expect(getSyslogListenerState()).toEqual({
+        started: false,
+        lastStartError: { code: "EADDRINUSE", message: expect.stringContaining("EADDRINUSE") },
+      });
+    });
+
+    it("records an invalid configuration without starting", async () => {
+      await expect(startSyslogListener({ ...baseConfig, allowPlaintext: false })).rejects.toThrow();
+      expect(getSyslogListenerState()).toEqual({
+        started: false,
+        lastStartError: { code: "INVALID_CONFIG", message: expect.stringContaining("TLS") },
+      });
+    });
+
+    it("records a TLS file that cannot be read, without its path", async () => {
+      const missing = path.join(tlsDir, "missing.pem");
+      await expect(
+        startSyslogListener({ ...baseConfig, tlsCertFile: missing, tlsKeyFile: missing }),
+      ).rejects.toThrow();
+      const { lastStartError } = getSyslogListenerState();
+      expect(lastStartError?.code).toBe("TLS_LOAD_FAILED");
+      expect(lastStartError?.message).not.toContain(tlsDir);
+    });
   });
 
   it("refuses IP-only mode when multi-tenancy is on", async () => {

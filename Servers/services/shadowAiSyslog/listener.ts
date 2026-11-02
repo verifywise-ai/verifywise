@@ -56,11 +56,49 @@ export function getRefusedLineCount(): number {
 
 const onOff = (on: boolean) => (on ? "on" : "off");
 
+export interface SyslogListenerState {
+  /** True while this process has the listener bound and accepting. */
+  started: boolean;
+  /** Why the last start attempt failed; never carries secrets or file contents. */
+  lastStartError: { code: string; message: string } | null;
+}
+
+let state: SyslogListenerState = { started: false, lastStartError: null };
+
+/** Whether the listener is running in this process, for the status endpoint. */
+export function getSyslogListenerState(): SyslogListenerState {
+  return { ...state, lastStartError: state.lastStartError && { ...state.lastStartError } };
+}
+
 export async function startSyslogListener(
   cfg: SyslogListenerConfig = readSyslogListenerConfig(),
 ): Promise<SyslogListenerHandle | null> {
   if (!cfg.enabled) return null;
-  assertStartableConfig(cfg);
+  try {
+    const handle = await bindSyslogListener(cfg);
+    state = { started: true, lastStartError: null };
+    return handle;
+  } catch (error) {
+    const err = error as NodeJS.ErrnoException;
+    state = {
+      started: false,
+      lastStartError: {
+        code: typeof err?.code === "string" ? err.code : "START_FAILED",
+        // Config, TLS and bind errors name env variables, errno codes and the
+        // port only: the TLS error deliberately omits paths and file contents.
+        message: err?.message ?? "unknown error",
+      },
+    };
+    throw error;
+  }
+}
+
+async function bindSyslogListener(cfg: SyslogListenerConfig): Promise<SyslogListenerHandle> {
+  try {
+    assertStartableConfig(cfg);
+  } catch (error) {
+    throw Object.assign(error as Error, { code: "INVALID_CONFIG" });
+  }
 
   let secureContext: tls.SecureContext | null = null;
   if (cfg.tlsCertFile && cfg.tlsKeyFile) {
@@ -71,8 +109,11 @@ export async function startSyslogListener(
         minVersion: "TLSv1.2",
       });
     } catch (error) {
-      throw new Error(
-        `Shadow AI syslog listener not started: could not load the TLS certificate or key (${(error as NodeJS.ErrnoException)?.code ?? "invalid file"}).`,
+      throw Object.assign(
+        new Error(
+          `Shadow AI syslog listener not started: could not load the TLS certificate or key (${(error as NodeJS.ErrnoException)?.code ?? "invalid file"}).`,
+        ),
+        { code: "TLS_LOAD_FAILED" },
       );
     }
   }
@@ -128,6 +169,7 @@ export async function startSyslogListener(
     },
     close() {
       if (!closing) {
+        state = { ...state, started: false };
         closing = (async () => {
           const closed = new Promise<void>((resolve) => server.close(() => resolve()));
           for (const destroy of [...connections]) destroy();

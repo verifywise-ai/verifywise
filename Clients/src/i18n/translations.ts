@@ -127,6 +127,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Von einer IP gesendet, die nicht zulässig ist oder mit einer anderen Quelle geteilt wird",
     "Over the hourly event limit": "Stündliches Ereignislimit überschritten",
     "Unknown reason": "Unbekannter Grund",
+    "Syslog listener failed to start. Check the server log.":
+      "Der Syslog-Listener konnte nicht starten. Prüfen Sie das Server-Log.",
     "Syslog listener is off. Set SHADOW_AI_SYSLOG_ENABLED=true on the server to turn it on.":
       "Der Syslog-Listener ist aus. Setzen Sie SHADOW_AI_SYSLOG_ENABLED=true auf dem Server, um ihn einzuschalten.",
     "Syslog listener is on. Send to {host}:{port} over TLS.":
@@ -9670,6 +9672,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Envoyé depuis une IP non autorisée ou partagée avec une autre source",
     "Over the hourly event limit": "Limite horaire d'événements dépassée",
     "Unknown reason": "Motif inconnu",
+    "Syslog listener failed to start. Check the server log.":
+      "Le listener syslog n'a pas pu démarrer. Consultez le journal du serveur.",
     "Syslog listener is off. Set SHADOW_AI_SYSLOG_ENABLED=true on the server to turn it on.":
       "L'écouteur Syslog est désactivé. Définissez SHADOW_AI_SYSLOG_ENABLED=true sur le serveur pour l'activer.",
     "Syslog listener is on. Send to {host}:{port} over TLS.":
@@ -19148,6 +19152,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Enviado desde una IP no permitida o compartida con otra fuente",
     "Over the hourly event limit": "Límite de eventos por hora superado",
     "Unknown reason": "Motivo desconocido",
+    "Syslog listener failed to start. Check the server log.":
+      "El listener de syslog no pudo iniciarse. Revise el registro del servidor.",
     "Syslog listener is off. Set SHADOW_AI_SYSLOG_ENABLED=true on the server to turn it on.":
       "El receptor de Syslog está desactivado. Defina SHADOW_AI_SYSLOG_ENABLED=true en el servidor para activarlo.",
     "Syslog listener is on. Send to {host}:{port} over TLS.":

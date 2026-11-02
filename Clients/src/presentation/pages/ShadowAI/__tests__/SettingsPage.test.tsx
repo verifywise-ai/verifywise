@@ -79,7 +79,15 @@ const syslogConfigs: IShadowAiSyslogConfig[] = [
   },
 ];
 
-const listenerOn = { enabled: true, port: 6514, tls: true, plaintext: false, ipOnly: false };
+const listenerOn = {
+  enabled: true,
+  port: 6514,
+  tls: true,
+  plaintext: false,
+  ipOnly: false,
+  running: true,
+  startError: null,
+};
 
 const settings: IShadowAiSettings = {
   id: 1,
@@ -562,6 +570,41 @@ describe("ShadowAI - SettingsPage", () => {
         });
       });
     });
+  });
+
+  it("says the listener failed when it is enabled but not running", async () => {
+    mockGetSyslogListenerStatus.mockResolvedValue({
+      ...listenerOn,
+      running: false,
+      startError: { code: "EADDRINUSE", message: "listen EADDRINUSE" },
+    });
+    renderWithProviders(<SettingsPage />);
+
+    expect(await screen.findByTestId("syslog-listener-status")).toHaveTextContent(
+      "Syslog listener failed to start. Check the server log.",
+    );
+    expect(screen.queryByText(/Syslog listener is on/)).not.toBeInTheDocument();
+  });
+
+  it("says the listener is on when it is running", async () => {
+    renderWithProviders(<SettingsPage />);
+
+    expect(await screen.findByTestId("syslog-listener-status")).toHaveTextContent(
+      /Syslog listener is on\. Send to .*:6514 over TLS\./,
+    );
+  });
+
+  it("says the listener is off when it is disabled, not that it failed", async () => {
+    mockGetSyslogListenerStatus.mockResolvedValue({
+      ...listenerOn,
+      enabled: false,
+      running: false,
+    });
+    renderWithProviders(<SettingsPage />);
+
+    expect(await screen.findByTestId("syslog-listener-status")).toHaveTextContent(
+      /Syslog listener is off/,
+    );
   });
 
   it("explains IP matching in IP-only mode", async () => {

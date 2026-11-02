@@ -162,6 +162,18 @@ a TCP load balancer on port 6514 in front of the backend, then
 `SHADOW_AI_SYSLOG_ENABLED=true`. Until the operator does that, customers on the
 hosted service should use the REST API.
 
+## Status endpoint
+
+`GET /api/shadow-ai/config/syslog/status` (Admin) returns the configuration
+(`enabled`, `port`, `tls`, `plaintext`, `ipOnly`) and the state of the
+listener in the process that answers: `running` (bound and accepting) and
+`startError` (`{ code, message }` from the last failed start, else null).
+Codes are `INVALID_CONFIG`, `TLS_LOAD_FAILED`, an errno code such as
+`EADDRINUSE`, or `START_FAILED`; messages name variables and errno codes, never
+paths or file contents. Settings shows "Syslog listener failed to start. Check
+the server log." when `enabled` is true and `running` is false. With several
+backend replicas, each answers for its own listener.
+
 ## Verifying
 
 1. In Settings, add a source and copy the key (shown once).

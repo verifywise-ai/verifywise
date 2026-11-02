@@ -225,6 +225,9 @@ describe("Shadow AI syslog source keys and status", () => {
         tls: false,
         plaintext: false,
         ipOnly: false,
+        // The test process never starts the listener.
+        running: false,
+        startError: null,
       });
     });
 
@@ -244,6 +247,9 @@ describe("Shadow AI syslog source keys and status", () => {
         tls: true,
         plaintext: true,
         ipOnly: true,
+        // The test process never starts the listener.
+        running: false,
+        startError: null,
       });
     });
 

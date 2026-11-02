@@ -211,7 +211,7 @@ export const integrationGuideContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Open Shadow AI → Settings → Syslog sources. A line above the table shows the state. When it is on, it reads "Syslog listener is on. Send to host:6514 over TLS." (or "over plain TCP"). When it is off, it reads "Syslog listener is off. Set SHADOW_AI_SYSLOG_ENABLED=true on the server to turn it on."',
+      text: 'Open Shadow AI → Settings → Syslog sources. A line above the table shows the state. When it is on, it reads "Syslog listener is on. Send to host:6514 over TLS." (or "over plain TCP"). When it is off, it reads "Syslog listener is off. Set SHADOW_AI_SYSLOG_ENABLED=true on the server to turn it on." If it is turned on but could not start, it reads "Syslog listener failed to start. Check the server log."',
     },
     {
       type: 'paragraph',
@@ -473,8 +473,13 @@ export const integrationGuideContent: ArticleContent = {
         },
         {
           symptom: 'Syslog listener is off in Settings',
-          cause: 'SHADOW_AI_SYSLOG_ENABLED is not set to true, or the listener could not start',
-          fix: 'Set SHADOW_AI_SYSLOG_ENABLED=true, add a TLS certificate and key (or SHADOW_AI_SYSLOG_ALLOW_PLAINTEXT=true) and restart. The server log names the variable that blocked the start. The hosted service does not offer syslog yet.',
+          cause: 'SHADOW_AI_SYSLOG_ENABLED is not set to true',
+          fix: 'Set SHADOW_AI_SYSLOG_ENABLED=true, add a TLS certificate and key (or SHADOW_AI_SYSLOG_ALLOW_PLAINTEXT=true) and restart. The hosted service does not offer syslog yet.',
+        },
+        {
+          symptom: 'Syslog listener failed to start in Settings',
+          cause: 'The listener is turned on but could not start: the port is in use, the TLS certificate or key cannot be read, or the settings conflict',
+          fix: 'Check the server log. It names the variable or the error that blocked the start. Fix it and restart the server.',
         },
         {
           symptom: 'Risk scores are all zero',

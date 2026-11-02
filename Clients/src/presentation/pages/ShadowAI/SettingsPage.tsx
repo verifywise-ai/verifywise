@@ -660,6 +660,10 @@ function SyslogConfigSection() {
     }
   };
 
+  // Enabled in configuration but not bound (port taken, bad TLS files, ...).
+  // `running` is compared to false so a status without the field reads as running.
+  const listenerFailed = !!listenerStatus?.enabled && listenerStatus.running === false;
+
   const statusText = (() => {
     if (!listenerStatus) return "";
     if (!listenerStatus.enabled) {
@@ -667,6 +671,7 @@ function SyslogConfigSection() {
         "Syslog listener is off. Set SHADOW_AI_SYSLOG_ENABLED=true on the server to turn it on.",
       );
     }
+    if (listenerFailed) return t("Syslog listener failed to start. Check the server log.");
     const template = listenerStatus.tls
       ? "Syslog listener is on. Send to {host}:{port} over TLS."
       : "Syslog listener is on. Send to {host}:{port} over plain TCP.";
@@ -738,9 +743,11 @@ function SyslogConfigSection() {
             sx={{
               ...wrapSx,
               fontSize: 13,
-              color: listenerStatus?.enabled
-                ? palette.status.success.text
-                : palette.status.default.text,
+              color: listenerFailed
+                ? palette.status.error.text
+                : listenerStatus?.enabled
+                  ? palette.status.success.text
+                  : palette.status.default.text,
             }}
           >
             {statusText}

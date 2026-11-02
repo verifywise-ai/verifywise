@@ -56,6 +56,7 @@ import { ShadowAiToolStatus } from "../domain.layer/interfaces/i.shadowAi";
 import { translateError } from "../utils/i18n.utils";
 import { normalizeIp } from "../services/shadowAiSyslog/ip";
 import { readSyslogListenerConfig } from "../services/shadowAiSyslog/config";
+import { getSyslogListenerState } from "../services/shadowAiSyslog/listener";
 import { invalidateSourceCache } from "../services/shadowAiSyslog/sourceCache";
 import {
   appendRetentionChangeToLedger,
@@ -1392,6 +1393,8 @@ export async function getSyslogStatus(req: Request, res: Response) {
     }
 
     const config = readSyslogListenerConfig();
+    // Configuration says what should run; the listener state says what does.
+    const listener = getSyslogListenerState();
     return res.status(200).json(
       STATUS_CODE[200]({
         enabled: config.enabled,
@@ -1399,6 +1402,8 @@ export async function getSyslogStatus(req: Request, res: Response) {
         tls: Boolean(config.tlsCertFile && config.tlsKeyFile),
         plaintext: config.allowPlaintext,
         ipOnly: config.allowIpOnly,
+        running: listener.started,
+        startError: listener.lastStartError,
       }),
     );
   } catch (error) {

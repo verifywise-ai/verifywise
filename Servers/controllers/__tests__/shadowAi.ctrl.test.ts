@@ -34,6 +34,12 @@ jest.mock("../../utils/shadowAiConfig.utils", () => ({
   lockShadowAiSettings: jest.fn(),
   updateSettingsQuery: jest.fn(),
 }));
+jest.mock("../../services/shadowAiSyslog/listener", () => ({
+  getSyslogListenerState: jest.fn(),
+}));
+jest.mock("../../services/shadowAiSyslog/config", () => ({
+  readSyslogListenerConfig: jest.fn(),
+}));
 jest.mock("../../utils/logger/logHelper", () => ({
   logProcessing: jest.fn(),
   logSuccess: jest.fn<any>().mockResolvedValue(undefined),
@@ -71,6 +77,8 @@ jest.mock("../../database/db", () => ({
 }));
 
 import { sequelize } from "../../database/db";
+import { getSyslogListenerState } from "../../services/shadowAiSyslog/listener";
+import { readSyslogListenerConfig } from "../../services/shadowAiSyslog/config";
 import { appendRetentionChangeToLedger } from "../../utils/retentionAudit.utils";
 import {
   createSyslogConfigQuery,
@@ -117,6 +125,7 @@ import {
   getRules,
   getSettings,
   getSyslogConfigs,
+  getSyslogStatus,
   getToolById,
   getTools,
   getToolsByEvents,
@@ -841,6 +850,57 @@ describe("shadowAi.ctrl", () => {
       const res = createRes();
       await getAlertHistory(req, res);
       expect(res.status).toHaveBeenCalledWith(500);
+    });
+  });
+
+  describe("getSyslogStatus", () => {
+    const mockState = getSyslogListenerState as jest.MockedFunction<any>;
+    const mockConfig = readSyslogListenerConfig as jest.MockedFunction<any>;
+    beforeEach(() => {
+      mockConfig.mockReturnValue({
+        enabled: true,
+        port: 6514,
+        tlsCertFile: "/c.pem",
+        tlsKeyFile: "/k.pem",
+        allowPlaintext: false,
+        allowIpOnly: false,
+        multiTenancy: false,
+      });
+    });
+
+    it("reports a running listener", async () => {
+      mockState.mockReturnValue({ started: true, lastStartError: null });
+      const res = createRes();
+      await getSyslogStatus(createReq(), res);
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json.mock.calls[0][0].data).toEqual({
+        enabled: true,
+        port: 6514,
+        tls: true,
+        plaintext: false,
+        ipOnly: false,
+        running: true,
+        startError: null,
+      });
+    });
+
+    it("reports an enabled listener that failed to start, with the reason", async () => {
+      const startError = {
+        code: "EADDRINUSE",
+        message: "listen EADDRINUSE: address already in use",
+      };
+      mockState.mockReturnValue({ started: false, lastStartError: startError });
+      const res = createRes();
+      await getSyslogStatus(createReq(), res);
+      expect(res.json.mock.calls[0][0].data).toEqual(
+        expect.objectContaining({ enabled: true, running: false, startError }),
+      );
+    });
+
+    it("returns 403 for non-admin", async () => {
+      const res = createRes();
+      await getSyslogStatus(createReq({ role: "Editor" }), res);
+      expect(res.status).toHaveBeenCalledWith(403);
     });
   });
 
