@@ -168,7 +168,10 @@ describe("parseLine", () => {
     });
 
     it("reads the destination from domain when there is no url", () => {
-      const r = parseLine("netskope", '{"user":"a@b.co","domain":"Chat.OpenAI.com","hostname":"LAPTOP-7"}');
+      const r = parseLine(
+        "netskope",
+        '{"user":"a@b.co","domain":"Chat.OpenAI.com","hostname":"LAPTOP-7"}',
+      );
       expect(r.ok && r.event.destination).toBe("chat.openai.com");
     });
 
@@ -453,12 +456,17 @@ describe("parseLine", () => {
       expect(action(value)).toBe(expected);
     });
 
-    it.each(["password_reset", "dropbox-upload", "passthrough", "resetpw", "acceptance_test", "", "Upload"])(
-      "leaves %j unset",
-      (value) => {
-        expect(action(value)).toBeUndefined();
-      },
-    );
+    it.each([
+      "password_reset",
+      "dropbox-upload",
+      "passthrough",
+      "resetpw",
+      "acceptance_test",
+      "",
+      "Upload",
+    ])("leaves %j unset", (value) => {
+      expect(action(value)).toBeUndefined();
+    });
   });
 
   describe("timestamp fallback", () => {
@@ -706,7 +714,10 @@ describe("parseLine", () => {
     it.each([
       ["zscaler", "user=a@b.co dst=x.com department=Sales department=Admin"],
       ["zscaler", "user=a@b.co dst=x.com method=GET method=POST"],
-      ["zscaler", "user=a@b.co dst=x.com timestamp=2026-02-09T00:00:00Z timestamp=2026-02-09T01:00:00Z"],
+      [
+        "zscaler",
+        "user=a@b.co dst=x.com timestamp=2026-02-09T00:00:00Z timestamp=2026-02-09T01:00:00Z",
+      ],
       ["generic_kv", "suser=a@b.co dhost=x.com requestMethod=GET requestMethod=POST"],
       ["generic_kv", "CEF:0|V|P|1|100|Web|3|suser=a@b.co dhost=x.com department=A department=B"],
     ])("rejects a repeated non-identity key (%s: %s)", (parser, line) => {
