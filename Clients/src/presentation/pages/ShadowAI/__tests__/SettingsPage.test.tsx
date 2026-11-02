@@ -1,4 +1,4 @@
-import { screen, waitFor, fireEvent, within } from "@testing-library/react";
+import { act, screen, waitFor, fireEvent, within } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import {
   IShadowAiApiKey,
@@ -472,8 +472,12 @@ describe("ShadowAI - SettingsPage", () => {
     renderWithProviders(<SettingsPage />);
 
     const button = await screen.findByRole("button", { name: "Generate key" });
-    fireEvent.click(button);
-    fireEvent.click(button);
+    // Both clicks land inside one act(), before React re-renders the button
+    // as disabled, so only the ref guard can stop the second request.
+    act(() => {
+      fireEvent.click(button);
+      fireEvent.click(button);
+    });
 
     expect(await screen.findByText("vw_source=vwsl_one")).toBeInTheDocument();
     expect(mockRegenerateSyslogKey).toHaveBeenCalledTimes(1);
@@ -490,8 +494,10 @@ describe("ShadowAI - SettingsPage", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "Regenerate key" }));
     const confirm = await screen.findByRole("button", { name: "Regenerate" });
-    fireEvent.click(confirm);
-    fireEvent.click(confirm);
+    act(() => {
+      fireEvent.click(confirm);
+      fireEvent.click(confirm);
+    });
 
     expect(await screen.findByText("vw_source=vwsl_two")).toBeInTheDocument();
     expect(mockRegenerateSyslogKey).toHaveBeenCalledTimes(1);

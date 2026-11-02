@@ -897,7 +897,7 @@ function SyslogConfigSection() {
           <Stack gap="16px">
             <Select
               id="parser-type-select"
-              label="Parser type"
+              label={t("Parser type")}
               value={formParser}
               onChange={(e) => setFormParser(e.target.value as SyslogParser)}
               items={parserItems}
@@ -911,7 +911,7 @@ function SyslogConfigSection() {
               }}
               error={formError}
               helperText={ipOnlyHint}
-              placeholder="e.g., 203.0.113.7"
+              placeholder={t("e.g., 203.0.113.7")}
             />
           </Stack>
         </StandardModal>
@@ -930,7 +930,7 @@ function SyslogConfigSection() {
           <Stack gap="16px">
             <Select
               id="edit-parser-type-select"
-              label="Parser type"
+              label={t("Parser type")}
               value={editParser}
               onChange={(e) => setEditParser(e.target.value as SyslogParser)}
               items={parserItems}
@@ -944,7 +944,7 @@ function SyslogConfigSection() {
               }}
               error={editError}
               helperText={ipOnlyHint}
-              placeholder="e.g., 203.0.113.7"
+              placeholder={t("e.g., 203.0.113.7")}
             />
           </Stack>
         </StandardModal>
@@ -1046,7 +1046,7 @@ function SyslogConfigSection() {
           maxWidth="400px"
         >
           <Typography variant="body2" sx={{ color: "text.secondary" }}>
-            This will stop processing events from this source.
+            {t("This will stop processing events from this source.")}
           </Typography>
         </StandardModal>
       </Stack>

@@ -102,6 +102,7 @@ export type Lang = "en" | "de" | "fr" | "es";
 
 export const translations: Record<string, Record<string, string>> = {
   de: {
+    "e.g., 203.0.113.7": "z. B. 203.0.113.7",
     "In IP-only mode, log lines without a key are matched by this IP.":
       "Im Nur-IP-Modus werden Logzeilen ohne Schlüssel über diese IP zugeordnet.",
     "Could not copy. Select the key and copy it by hand.":
@@ -9643,6 +9644,7 @@ export const translations: Record<string, Record<string, string>> = {
   },
 
   fr: {
+    "e.g., 203.0.113.7": "p. ex. 203.0.113.7",
     "In IP-only mode, log lines without a key are matched by this IP.":
       "En mode IP seule, les lignes de journal sans clé sont associées via cette IP.",
     "Could not copy. Select the key and copy it by hand.":
@@ -19119,6 +19121,7 @@ export const translations: Record<string, Record<string, string>> = {
     "180 days": "180 jours",
   },
   es: {
+    "e.g., 203.0.113.7": "p. ej., 203.0.113.7",
     "In IP-only mode, log lines without a key are matched by this IP.":
       "En modo solo IP, las líneas de registro sin clave se asocian mediante esta IP.",
     "Could not copy. Select the key and copy it by hand.":
