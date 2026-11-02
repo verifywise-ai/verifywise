@@ -76,11 +76,16 @@ rotate them (including a Kubernetes Secret), restart the backend. TCP only: ther
 | Source cache | 60 seconds |
 
 The source cache holds every active source. The replica that serves a create,
-edit, delete or key change reloads it at once. Other replicas pick the change
-up within 60 seconds, so a regenerated or deleted key can keep working on them
-for up to a minute. The batch flush also applies the organisation's hourly
-Shadow AI rate limit (Settings, Rate limiting); events over it are dropped as
-`rate_limited`.
+edit, delete or key change drops it as soon as the change commits (with RLS
+enforcement, when the response finishes), so the next lookup reloads it.
+Other replicas pick the change up within 60 seconds, so a regenerated or
+deleted key can keep working on them for up to a minute. The batch flush also
+applies the organisation's hourly Shadow AI rate limit (Settings, Rate
+limiting); events over it are dropped as `rate_limited`. The flush reuses the
+limit it read up to 30 seconds earlier. Events that are counted but not
+stored (the write rolled back, or a row did not fit) are given back to the
+hour's quota. A flush that fails is logged and its events are discarded; it
+never ends the process.
 
 ## Parsers
 
