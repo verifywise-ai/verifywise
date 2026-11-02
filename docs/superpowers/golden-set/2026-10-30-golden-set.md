@@ -115,4 +115,13 @@ Every labelled vendor also needs a completed run on its row, not after findings 
 **PENDING.** No result is recorded yet.
 
 - The first pass, on 2026-11-01, is void: GDELT refused the requests of the machine it ran on (so the runs had no news), and the verifier rejected claims that rest on records of the CISA catalog of known exploited vulnerabilities, which it had not been told were a database of the code. Both were addressed afterwards (the engine, its pause after a 429 and its three asks per run are described in [Web research toolkit](../../technical/infrastructure/web-research.md#search-engines-q21-decided-2026-10-31); the verifier's `database` attribute, prompt `vr-12`).
-- The second pass is running. Its numbers go here, with the bars above, when it ends. Until they do, nothing in this repository says the bars are met.
+- The second pass, from 2026-11-01T23:05:15Z (first start) to 2026-11-02T07:08:03Z (last start), is blocked by the environment and scored nothing. Details are in the next section. Nothing in this repository says the bars are met.
+
+### Pass 2 (2026-11-01 to 2026-11-02): BLOCKED-ENV, nothing scored
+
+- **Setup:** 21 fresh vendor rows in a new database; the lists (`kev`, `ofac`, `uk_sanctions`, `eu_fsf`, `cve`) synced; prompt version `vr-12`; engine GDELT.
+- **Result:** only Citrix was run, 4 runs (one row each). 0 of 94 news searches were answered (24 + 23 + 22 + 25), and every run was void for lack of news. The driver stopped by its own rule after four unclean attempts in a row. The other 20 vendors were never started, so the scorer had nothing to score.
+- **Gate finding:** before each start the gate made one data request to GDELT, and it passed 30 seconds before each of the four starts. The run's own request was refused right after, and the next gate check, two minutes later, was refused every time. GDELT seems to answer one data request from this address and refuse the next ones for several minutes, so the gate's own data probe seemed to use up the allowance the run needed. The gate does not predict the run.
+- **Product finding FR2:** when the first ask got a 429, every search of the run failed at once during the 60 s pause, and none asked again, because all of a run's news searches happen in its first seconds. The fix is in `e0d1d21ff` (the run waits out the pause, asks again, and the gather's clock moves to allow it) and `2c5889479` (a fixed-text step in the run trace for each 429 of GDELT, from the review).
+- **Void runs and the engine:** a run in which no search was answered stores no search engine, so a void run cannot show "GDELT" as its engine.
+- **What pass 3 changes:** the run is its own probe and no data probe is made; the runs are spaced apart; and the driver backs off after a void run. Only Citrix needs a fresh row; rows 2 to 21 have no run yet.
