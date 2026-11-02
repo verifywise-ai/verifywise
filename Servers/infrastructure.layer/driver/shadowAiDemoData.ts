@@ -593,7 +593,7 @@ export async function insertShadowAiDemoData(
     batch.forEach((evt, idx) => {
       const prefix = `e${insertedEvents + idx}`;
       valuePlaceholders.push(
-        `(:organizationId, :${prefix}_ue, :${prefix}_dest, :${prefix}_uri, :${prefix}_hm, :${prefix}_act, :${prefix}_tid, :${prefix}_ts, NOW(), :${prefix}_dept, :${prefix}_jt, :${prefix}_me, :${prefix}_ai)`,
+        `(:organizationId, :${prefix}_ue, :${prefix}_dest, :${prefix}_uri, :${prefix}_hm, :${prefix}_act, :${prefix}_tid, :${prefix}_ts, NOW(), :${prefix}_dept, :${prefix}_jt, :${prefix}_me)`,
       );
       flatReplacements[`${prefix}_ue`] = evt.user_email;
       flatReplacements[`${prefix}_dest`] = evt.destination;
@@ -605,13 +605,12 @@ export async function insertShadowAiDemoData(
       flatReplacements[`${prefix}_dept`] = evt.department;
       flatReplacements[`${prefix}_jt`] = evt.job_title;
       flatReplacements[`${prefix}_me`] = evt.manager_email;
-      flatReplacements[`${prefix}_ai`] = evt.detected_tool_id != null;
     });
 
     await sequelize.query(
       `INSERT INTO shadow_ai_events
         (organization_id, user_email, destination, uri_path, http_method, action, detected_tool_id,
-         event_timestamp, ingested_at, department, job_title, manager_email, is_ai_tool)
+         event_timestamp, ingested_at, department, job_title, manager_email)
        VALUES ${valuePlaceholders.join(", ")}`,
       { replacements: flatReplacements, transaction },
     );

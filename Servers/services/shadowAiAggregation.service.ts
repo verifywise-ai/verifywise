@@ -12,6 +12,7 @@
 
 import { sequelize } from "../database/db";
 import logger from "../utils/logger/fileLogger";
+import { aiUsageEvent } from "../utils/shadowAiUsage.utils";
 import { calculateRiskScoresForOrganization } from "./shadowAiRiskScoring.service";
 import { getSettingsQuery } from "../utils/shadowAiConfig.utils";
 import { safeRecordRetentionRun, type RetentionRecordType } from "../utils/dataRetention.utils";
@@ -54,6 +55,7 @@ export async function runDailyRollup(): Promise<void> {
           COUNT(CASE WHEN action = 'blocked' THEN 1 END) as blocked_events
         FROM shadow_ai_events
         WHERE organization_id = :organizationId
+          AND ${aiUsageEvent()}
           AND DATE(event_timestamp) = CURRENT_DATE - INTERVAL '1 day'
         GROUP BY DATE(event_timestamp), user_email, detected_tool_id, department
         ON CONFLICT (organization_id, rollup_date, user_email, tool_id) DO UPDATE SET

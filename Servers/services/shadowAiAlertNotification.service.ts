@@ -18,7 +18,7 @@ import {
   getRecentAlertKeys,
 } from "../utils/shadowAiRules.utils";
 import { sequelize } from "../database/db";
-import { aiUsageEvent } from "../utils/shadowAiInsights.utils";
+import { aiUsageEvent } from "../utils/shadowAiUsage.utils";
 import logger from "../utils/logger/fileLogger";
 
 const TRIGGER_LABELS: Record<ShadowAiTriggerType, string> = {
@@ -179,6 +179,8 @@ export interface BatchContext {
   blockedAttempts: { toolId: number; toolName: string; userEmail: string }[];
   allDepartments: Set<string>;
   allEmails: Set<string>;
+  /** Lowest shadow_ai_events id inserted by this batch (null if none). */
+  firstEventId: number | null;
 }
 
 /**
@@ -229,26 +231,27 @@ export async function evaluateRulesForBatch(
   }
 
   // Pre-fetch existing user emails for new_user_detected (single batch query).
-  // A user exists once they have AI usage; earlier unmatched traffic does
-  // not count, so their first AI tool use still raises the alert.
+  // A user exists once they have AI usage before this batch (ids below the
+  // batch's first inserted id); earlier unmatched traffic does not count, so
+  // their first AI tool use still raises the alert.
   const batchEmails = [...batch.allEmails];
   const existingEmails = new Set<string>();
-  if (batchEmails.length > 0) {
+  if (batchEmails.length > 0 && batch.firstEventId == null) {
+    // Without the batch boundary, prior usage cannot be told apart from this
+    // batch: treat everyone as existing (no false alerts).
+    for (const e of batchEmails) existingEmails.add(e);
+  } else if (batchEmails.length > 0) {
     try {
       const [userRows] = await sequelize.query(
         `SELECT DISTINCT user_email FROM shadow_ai_events
          WHERE organization_id = :organizationId AND user_email IN (:emails)
          AND ${aiUsageEvent()}
-         AND id NOT IN (
-           SELECT id FROM shadow_ai_events
-           WHERE organization_id = :organizationId
-           ORDER BY id DESC LIMIT :recentLimit
-         )`,
+         AND id < :firstEventId`,
         {
           replacements: {
             organizationId,
             emails: batchEmails,
-            recentLimit: batchEmails.length * 10,
+            firstEventId: batch.firstEventId,
           },
         },
       );

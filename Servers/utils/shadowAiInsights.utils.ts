@@ -15,6 +15,7 @@ import {
   ShadowAiUserActivity,
   ShadowAiDepartmentActivity,
 } from "../domain.layer/interfaces/i.shadowAi";
+import { aiUsageEvent } from "./shadowAiUsage.utils";
 
 // Hard caps on row counts for aggregate dashboards. These are defensive
 // upper bounds — real-world cardinality is much lower (departments ~50,
@@ -23,20 +24,6 @@ import {
 const MAX_DEPARTMENTS = 200;
 const MAX_TREND_POINTS = 731; // ~2 years of daily data
 const MAX_USER_TOOL_DETAIL_ROWS = 200;
-
-/**
- * The one definition of AI usage for Shadow AI counts: an event counts when
- * it matched an AI tool at ingestion. Proxy traffic that matched no tool is
- * stored but is not AI usage, so it must not add users, events, prompts or
- * departments to any count.
- *
- * It reads the is_ai_tool flag, not detected_tool_id: that foreign key is
- * ON DELETE SET NULL, so filtering on it would drop a deleted tool's users
- * from past counts. Pass the table alias when the query uses one.
- */
-export function aiUsageEvent(alias?: string): string {
-  return `${alias ? `${alias}.` : ""}is_ai_tool = TRUE`;
-}
 
 /**
  * Get summary stats for the insights dashboard.
@@ -368,20 +355,25 @@ export async function getUserDetailQuery(
   Array<{
     tool_name: string;
     event_count: number;
+    /** POST requests, counted the same way as total_prompts in the user list. */
+    prompt_count: number;
     last_used: string;
   }>
 > {
   const [rows] = await sequelize.query(
     `SELECT
-       t.name as tool_name,
+       COALESCE(t.name, 'Unknown') as tool_name,
        COUNT(*) as event_count,
+       COUNT(CASE WHEN e.http_method = 'POST' THEN 1 END) as prompt_count,
        MAX(e.event_timestamp) as last_used
      FROM shadow_ai_events e
-     JOIN shadow_ai_tools t ON e.organization_id = t.organization_id AND e.detected_tool_id = t.id
+     -- LEFT, as in the user list: a deleted tool's events still count.
+     LEFT JOIN shadow_ai_tools t ON e.organization_id = t.organization_id AND e.detected_tool_id = t.id
      WHERE e.organization_id = :organizationId
        AND e.user_email = :userEmail
+       AND ${aiUsageEvent("e")}
        AND e.event_timestamp > NOW() - INTERVAL '1 day' * :periodDays
-     GROUP BY t.name
+     GROUP BY COALESCE(t.name, 'Unknown')
      ORDER BY event_count DESC, tool_name ASC
      LIMIT :maxRows`,
     {

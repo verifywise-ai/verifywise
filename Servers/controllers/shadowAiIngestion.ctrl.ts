@@ -214,11 +214,10 @@ export async function ingestEvents(req: Request, res: Response) {
 
       let detectedToolId: number | undefined;
 
-      if (normalized.department) allDepartments.add(normalized.department);
-
       if (registryMatch) {
-        // Only AI usage makes someone a user (new_user_detected rule).
+        // Only AI usage counts for the user and department rules.
         allEmails.add(normalized.user_email);
+        if (normalized.department) allDepartments.add(normalized.department);
         const { id: toolId, isNew } = await ensureTenantTool(
           organizationId,
           registryMatch,
@@ -271,7 +270,11 @@ export async function ingestEvents(req: Request, res: Response) {
     }
 
     // Batch insert all events
-    const insertedCount = await insertEventsQuery(organizationId, processedEvents, transaction);
+    const { inserted: insertedCount, firstEventId } = await insertEventsQuery(
+      organizationId,
+      processedEvents,
+      transaction,
+    );
 
     // Update tool counters
     for (const [toolId, count] of toolEventCounts.entries()) {
@@ -300,6 +303,7 @@ export async function ingestEvents(req: Request, res: Response) {
       blockedAttempts,
       allDepartments,
       allEmails,
+      firstEventId,
     }).catch((err) => {
       logger.error("Rule evaluation failed:", err);
     });

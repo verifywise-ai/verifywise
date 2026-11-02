@@ -17,6 +17,8 @@ const INSERT_CHUNK_SIZE = 500;
 /**
  * Insert a batch of events into the shadow_ai_events table.
  * Large batches are automatically chunked to prevent oversized SQL statements.
+ * Returns the count and the lowest id inserted, which marks where this batch
+ * starts (rule evaluation uses it to tell prior usage from this batch).
  */
 export async function insertEventsQuery(
   organizationId: number,
@@ -34,16 +36,20 @@ export async function insertEventsQuery(
     manager_email?: string;
   }>,
   transaction?: Transaction,
-): Promise<number> {
-  if (events.length === 0) return 0;
+): Promise<{ inserted: number; firstEventId: number | null }> {
+  if (events.length === 0) return { inserted: 0, firstEventId: null };
 
   // Process in chunks to avoid oversized SQL statements
+  let firstEventId = Number.MAX_SAFE_INTEGER;
   for (let start = 0; start < events.length; start += INSERT_CHUNK_SIZE) {
     const chunk = events.slice(start, start + INSERT_CHUNK_SIZE);
-    await insertEventChunk(organizationId, chunk, transaction);
+    firstEventId = Math.min(
+      firstEventId,
+      await insertEventChunk(organizationId, chunk, transaction),
+    );
   }
 
-  return events.length;
+  return { inserted: events.length, firstEventId };
 }
 
 async function insertEventChunk(
@@ -62,7 +68,7 @@ async function insertEventChunk(
     manager_email?: string;
   }>,
   transaction?: Transaction,
-): Promise<void> {
+): Promise<number> {
   const values: string[] = [];
   const replacements: Record<string, any> = { organizationId };
 
@@ -70,8 +76,7 @@ async function insertEventChunk(
     values.push(
       `(:organizationId, :user_email_${i}, :destination_${i}, :uri_path_${i}, :http_method_${i},
         :action_${i}, :detected_tool_id_${i}, :detected_model_${i},
-        :event_timestamp_${i}, :department_${i}, :job_title_${i}, :manager_email_${i},
-        :is_ai_tool_${i})`,
+        :event_timestamp_${i}, :department_${i}, :job_title_${i}, :manager_email_${i})`,
     );
     replacements[`user_email_${i}`] = evt.user_email;
     replacements[`destination_${i}`] = evt.destination;
@@ -79,9 +84,6 @@ async function insertEventChunk(
     replacements[`http_method_${i}`] = evt.http_method || null;
     replacements[`action_${i}`] = evt.action || "allowed";
     replacements[`detected_tool_id_${i}`] = evt.detected_tool_id || null;
-    // Matched an AI tool at ingestion. Stored on the event so the usage still
-    // counts after the tool is deleted and detected_tool_id is set to NULL.
-    replacements[`is_ai_tool_${i}`] = evt.detected_tool_id != null;
     replacements[`detected_model_${i}`] = evt.detected_model || null;
     replacements[`event_timestamp_${i}`] = evt.event_timestamp;
     replacements[`department_${i}`] = evt.department || null;
@@ -93,14 +95,17 @@ async function insertEventChunk(
     INSERT INTO shadow_ai_events
       (organization_id, user_email, destination, uri_path, http_method, action,
        detected_tool_id, detected_model, event_timestamp,
-       department, job_title, manager_email, is_ai_tool)
+       department, job_title, manager_email)
     VALUES ${values.join(",\n")}
+    RETURNING id
   `;
+  // is_ai_tool is set by a database trigger from detected_tool_id.
 
-  await sequelize.query(sql, {
+  const [rows] = await sequelize.query(sql, {
     replacements,
     ...(transaction ? { transaction } : {}),
   });
+  return Math.min(...(rows as Array<{ id: string | number }>).map((r) => Number(r.id)));
 }
 
 /**

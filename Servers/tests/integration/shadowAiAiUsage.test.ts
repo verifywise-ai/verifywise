@@ -6,17 +6,24 @@
  * Insights queries, so every count is checked against the same data:
  * - unmatched proxy traffic adds no users, events, prompts or departments;
  * - deleting the matched tool keeps the past usage counted;
- * - the new_user_detected rule ignores users with only unmatched traffic;
- * - migration 20261102063837 backfills is_ai_tool from detected_tool_id.
+ * - the user detail drawer agrees with the user list;
+ * - the new_user_detected and sensitive_department rules ignore unmatched
+ *   traffic, and a new user's first AI event alerts in any batch size;
+ * - a database trigger sets is_ai_tool, and migration 20261102063837
+ *   backfills it from detected_tool_id.
  */
+jest.setTimeout(60000);
+
 import { QueryTypes } from "sequelize";
 import { sequelize } from "../../database/db";
 import { cleanupDatabase, createTestOrganization, createTestUser } from "./helpers";
 import { ingestEvents } from "../../controllers/shadowAiIngestion.ctrl";
 import { validateApiKeyWithCache } from "../../utils/shadowAiApiKey.utils";
 import { evaluateRulesForBatch } from "../../services/shadowAiAlertNotification.service";
+import { getUserDetail } from "../../controllers/shadowAi.ctrl";
 import {
   getDepartmentActivityQuery,
+  getUserDetailQuery,
   getInsightsSummaryQuery,
   getTrendQuery,
   getUserActivityQuery,
@@ -77,13 +84,16 @@ const NOT_AI = "example.com";
 // One timestamp for every event keeps the trend in a single bucket.
 const EVENT_TIME = new Date(Date.now() - 60 * 60 * 1000).toISOString();
 
-type Evt = { user: string; destination: string; method?: string; department?: string };
+type Evt = {
+  user: string;
+  destination: string;
+  method?: string;
+  department?: string;
+  at?: string;
+};
 
-const ingest = async (orgId: number, events: Evt[]) => {
-  (validateApiKeyWithCache as jest.Mock).mockResolvedValue(orgId);
-  const evaluate = evaluateRulesForBatch as jest.Mock;
-  const callsBefore = evaluate.mock.results.length;
-  const res: { statusCode?: number; body?: unknown } & Record<string, any> = {
+const fakeRes = () => {
+  const res: { statusCode?: number; body?: any } & Record<string, any> = {
     status(code: number) {
       res.statusCode = code;
       return res;
@@ -93,6 +103,14 @@ const ingest = async (orgId: number, events: Evt[]) => {
       return res;
     },
   };
+  return res;
+};
+
+const ingest = async (orgId: number, events: Evt[]) => {
+  (validateApiKeyWithCache as jest.Mock).mockResolvedValue(orgId);
+  const evaluate = evaluateRulesForBatch as jest.Mock;
+  const callsBefore = evaluate.mock.results.length;
+  const res = fakeRes();
   await ingestEvents(
     {
       headers: { "x-api-key": "test-key" },
@@ -102,7 +120,7 @@ const ingest = async (orgId: number, events: Evt[]) => {
           destination: e.destination,
           http_method: e.method ?? "POST",
           department: e.department,
-          timestamp: EVENT_TIME,
+          timestamp: e.at ?? EVENT_TIME,
         })),
       },
       t: (s: string) => s,
@@ -204,26 +222,66 @@ describe("Shadow AI Insights count only AI usage", () => {
   });
 });
 
-describe("new_user_detected alert counts only AI usage", () => {
-  const alertedEmails = async (orgId: number) =>
-    (
-      await sequelize.query<{ email: string }>(
-        `SELECT trigger_data->>'user_email' AS email FROM shadow_ai_alert_history
-          WHERE organization_id = :orgId AND trigger_type = 'new_user_detected'
-          ORDER BY email`,
-        { replacements: { orgId }, type: QueryTypes.SELECT },
-      )
-    ).map((r) => r.email);
+describe("user detail agrees with the user list", () => {
+  it("counts only AI usage, keeps a deleted tool's events and counts prompts as POSTs", async () => {
+    const orgId = await createTestOrganization(`Detail ${Date.now()}`);
+    const earlier = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+    // henry: AI usage from Legal, then later unmatched traffic from Marketing.
+    await ingest(orgId, [
+      { user: "henry@test.com", destination: AI, department: "Legal", at: earlier },
+      { user: "henry@test.com", destination: AI, method: "GET", department: "Legal", at: earlier },
+      ...times(4, { user: "henry@test.com", destination: NOT_AI, department: "Marketing" }),
+    ]);
+    await sequelize.query(`DELETE FROM shadow_ai_tools WHERE organization_id = :orgId`, {
+      replacements: { orgId },
+    });
 
-  const setup = async () => {
+    const tools = await getUserDetailQuery(orgId, "henry@test.com", 30);
+    expect(tools.map((t) => [t.tool_name, Number(t.event_count), Number(t.prompt_count)])).toEqual([
+      ["Unknown", 2, 1],
+    ]);
+
+    const res = fakeRes();
+    await getUserDetail(
+      {
+        userId: 1,
+        organizationId: orgId,
+        params: { email: "henry@test.com" },
+        query: { period: "30d" },
+      } as any,
+      res as any,
+    );
+    expect(res.statusCode).toBe(200);
+    expect(res.body.data).toMatchObject({ department: "Legal", total_prompts: 1 });
+
+    const list = await getUserActivityQuery(orgId);
+    expect(list.users).toEqual([
+      expect.objectContaining({ user_email: "henry@test.com", total_prompts: 1 }),
+    ]);
+  });
+});
+
+describe("alert rules count only AI usage", () => {
+  const alerted = async (orgId: number, triggerType: string, field: string) =>
+    (
+      await sequelize.query<{ v: string }>(
+        `SELECT trigger_data->>:field AS v FROM shadow_ai_alert_history
+          WHERE organization_id = :orgId AND trigger_type = :triggerType
+          ORDER BY v`,
+        { replacements: { orgId, triggerType, field }, type: QueryTypes.SELECT },
+      )
+    ).map((r) => r.v);
+  const alertedEmails = (orgId: number) => alerted(orgId, "new_user_detected", "user_email");
+
+  const setup = async (triggerType = "new_user_detected", config: object = {}) => {
     const orgId = await createTestOrganization(`AI alerts ${Date.now()}`);
     const userId = await createTestUser(orgId, 1, `admin-${Date.now()}@test.com`, "Password123!");
     // No notification recipients: the alert is only recorded in history.
     await sequelize.query(
       `INSERT INTO shadow_ai_rules
          (organization_id, name, is_active, trigger_type, trigger_config, actions, cooldown_minutes, created_by)
-       VALUES (:orgId, 'New AI user', true, 'new_user_detected', '{}', '[]', 1440, :userId)`,
-      { replacements: { orgId, userId } },
+       VALUES (:orgId, 'Rule', true, :triggerType, :config, '[]', 1440, :userId)`,
+      { replacements: { orgId, userId, triggerType, config: JSON.stringify(config) } },
     );
     return orgId;
   };
@@ -237,41 +295,118 @@ describe("new_user_detected alert counts only AI usage", () => {
     expect(await alertedEmails(orgId)).toEqual(["dave@test.com"]);
   });
 
+  it("alerts for a new user's AI event even when the batch has many unmatched events", async () => {
+    const orgId = await setup();
+    // A size-based "recent rows" window would leave gina's event outside it
+    // and read it as prior usage.
+    await ingest(orgId, [
+      { user: "gina@test.com", destination: AI },
+      ...times(30, { user: "ivan@test.com", destination: NOT_AI }),
+    ]);
+    expect(await alertedEmails(orgId)).toEqual(["gina@test.com"]);
+  });
+
   it("alerts on a user's first AI use even after earlier unmatched traffic", async () => {
     const orgId = await setup();
-    // More unmatched rows than the lookup's recent-row window (10 per email),
-    // so they would have marked frank as an existing user.
     await ingest(orgId, times(15, { user: "frank@test.com", destination: NOT_AI }));
     expect(await alertedEmails(orgId)).toEqual([]);
 
     await ingest(orgId, [{ user: "frank@test.com", destination: AI }]);
     expect(await alertedEmails(orgId)).toEqual(["frank@test.com"]);
+
+    // Now an existing AI user: no second alert (cooldown aside).
+    await sequelize.query(`DELETE FROM shadow_ai_alert_history WHERE organization_id = :orgId`, {
+      replacements: { orgId },
+    });
+    await ingest(orgId, [{ user: "frank@test.com", destination: AI }]);
+    expect(await alertedEmails(orgId)).toEqual([]);
+  });
+
+  it("sensitive_department fires only for a department's AI usage", async () => {
+    const orgId = await setup("sensitive_department", { departments: ["Finance", "Legal"] });
+    await ingest(orgId, [
+      { user: "jack@test.com", destination: NOT_AI, department: "Finance" },
+      { user: "kate@test.com", destination: AI, department: "Legal" },
+    ]);
+    expect(await alerted(orgId, "sensitive_department", "department")).toEqual(["Legal"]);
+  });
+});
+
+describe("is_ai_tool is set by the database", () => {
+  const insertEvent = async (orgId: number, toolId: number | null, flag?: boolean) => {
+    const [[row]] = (await sequelize.query(
+      flag === undefined
+        ? `INSERT INTO shadow_ai_events (organization_id, user_email, detected_tool_id, event_timestamp)
+           VALUES (:orgId, 'x@test.com', :toolId, NOW()) RETURNING id, is_ai_tool`
+        : `INSERT INTO shadow_ai_events (organization_id, user_email, detected_tool_id, event_timestamp, is_ai_tool)
+           VALUES (:orgId, 'x@test.com', :toolId, NOW(), :flag) RETURNING id, is_ai_tool`,
+      { replacements: { orgId, toolId, flag: flag ?? null } },
+    )) as [Array<{ id: string; is_ai_tool: boolean }>, unknown];
+    return row;
+  };
+
+  it("sets it from detected_tool_id on insert and keeps it when the tool is deleted", async () => {
+    const orgId = await createTestOrganization(`Trigger ${Date.now()}`);
+    const [[tool]] = (await sequelize.query(
+      `INSERT INTO shadow_ai_tools (organization_id, name, domains, status)
+       VALUES (:orgId, 'ChatGPT', '{chatgpt.com}', 'detected') RETURNING id`,
+      { replacements: { orgId } },
+    )) as [Array<{ id: number }>, unknown];
+
+    expect((await insertEvent(orgId, tool.id)).is_ai_tool).toBe(true);
+    expect((await insertEvent(orgId, tool.id, false)).is_ai_tool).toBe(true);
+    expect((await insertEvent(orgId, null)).is_ai_tool).toBe(false);
+
+    await sequelize.query(`DELETE FROM shadow_ai_tools WHERE id = :id`, {
+      replacements: { id: tool.id },
+    });
+    const flags = await sequelize.query<{ is_ai_tool: boolean; detected_tool_id: number | null }>(
+      `SELECT is_ai_tool, detected_tool_id FROM shadow_ai_events
+        WHERE organization_id = :orgId ORDER BY id`,
+      { replacements: { orgId }, type: QueryTypes.SELECT },
+    );
+    expect(flags).toEqual([
+      { is_ai_tool: true, detected_tool_id: null },
+      { is_ai_tool: true, detected_tool_id: null },
+      { is_ai_tool: false, detected_tool_id: null },
+    ]);
   });
 });
 
 describe("migration 20261102063837: backfill is_ai_tool", () => {
-  it("sets is_ai_tool = (detected_tool_id IS NOT NULL) across batches and keeps existing flags", async () => {
+  it("sets is_ai_tool = (detected_tool_id IS NOT NULL) over sparse ids and keeps existing flags", async () => {
     const orgId = await createTestOrganization(`Backfill ${Date.now()}`);
     const [[tool]] = (await sequelize.query(
       `INSERT INTO shadow_ai_tools (organization_id, name, domains, status)
-       VALUES (:orgId, 'ChatGPT', '{chatgpt.com}', 'detected')
-       RETURNING id`,
+       VALUES (:orgId, 'ChatGPT', '{chatgpt.com}', 'detected') RETURNING id`,
       { replacements: { orgId } },
     )) as [Array<{ id: number }>, unknown];
 
-    // 25,000 rows span three 10,000-id batches; even rows matched a tool.
+    // Rows written before the trigger existed: simulate by disabling it.
     await sequelize.query(
-      `INSERT INTO shadow_ai_events (organization_id, user_email, detected_tool_id, event_timestamp, is_ai_tool)
-       SELECT :orgId, 'u' || g || '@test.com', CASE WHEN g % 2 = 0 THEN :toolId END, NOW(), false
-         FROM generate_series(1, 25000) g`,
-      { replacements: { orgId, toolId: tool.id } },
+      `ALTER TABLE shadow_ai_events DISABLE TRIGGER trg_shadow_ai_events_is_ai_tool`,
     );
-    // Already flagged, tool since deleted: the backfill must not clear it.
-    await sequelize.query(
-      `INSERT INTO shadow_ai_events (organization_id, user_email, detected_tool_id, event_timestamp, is_ai_tool)
-       VALUES (:orgId, 'kept@test.com', NULL, NOW(), true)`,
-      { replacements: { orgId } },
-    );
+    try {
+      // 25,000 rows with ids spread 1,000 apart (sparse, like a pruned
+      // table) span three batches; even rows matched a tool.
+      await sequelize.query(
+        `INSERT INTO shadow_ai_events (id, organization_id, user_email, detected_tool_id, event_timestamp, is_ai_tool)
+         SELECT 1000000 + g * 1000, :orgId, 'u' || g || '@test.com',
+                CASE WHEN g % 2 = 0 THEN :toolId END, NOW(), false
+           FROM generate_series(1, 25000) g`,
+        { replacements: { orgId, toolId: tool.id } },
+      );
+      // Already flagged, tool since deleted: the backfill must not clear it.
+      await sequelize.query(
+        `INSERT INTO shadow_ai_events (organization_id, user_email, detected_tool_id, event_timestamp, is_ai_tool)
+         VALUES (:orgId, 'kept@test.com', NULL, NOW(), true)`,
+        { replacements: { orgId } },
+      );
+    } finally {
+      await sequelize.query(
+        `ALTER TABLE shadow_ai_events ENABLE TRIGGER trg_shadow_ai_events_is_ai_tool`,
+      );
+    }
 
     await backfill.up({ sequelize });
 
