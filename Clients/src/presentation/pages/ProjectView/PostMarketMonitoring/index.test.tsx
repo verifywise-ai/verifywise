@@ -1,5 +1,5 @@
 import { screen, fireEvent, waitFor } from "@testing-library/react";
-import { Routes, Route } from "react-router";
+import { Routes, Route, useLocation } from "react-router";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 
 const mockGetConfigByProjectId = vi.fn();
@@ -29,7 +29,7 @@ vi.mock("../../../../application/hooks/useUsers", () => ({
 }));
 
 vi.mock("../../../../application/hooks/useProjectData", () => ({
-  default: () => ({ project: { project_title: "Chatbot Assistant" } }),
+  default: () => ({ project: { id: 5, project_title: "Chatbot Assistant" } }),
 }));
 
 let mockUserRoleName = "Admin";
@@ -38,6 +38,11 @@ vi.mock("../../../../application/hooks/useAuth", () => ({
 }));
 
 import PostMarketMonitoring from "./index";
+
+const LocationProbe = () => {
+  const location = useLocation();
+  return <div data-testid="location-probe">{`${location.pathname}${location.search}`}</div>;
+};
 
 const baseConfig = {
   id: 1,
@@ -105,14 +110,16 @@ describe("PostMarketMonitoring", () => {
     renderWithProviders(
       <Routes>
         <Route path="/project-view" element={<PostMarketMonitoring />} />
-        <Route path="/monitoring/reports" element={<div>Reports archive page</div>} />
+        <Route path="/monitoring/reports" element={<LocationProbe />} />
       </Routes>,
       { route: "/project-view?projectId=5" },
     );
 
     fireEvent.click(await screen.findByText("View reports"));
 
-    expect(await screen.findByText("Reports archive page")).toBeInTheDocument();
+    expect(await screen.findByTestId("location-probe")).toHaveTextContent(
+      "/monitoring/reports?projectId=5",
+    );
   });
 
   it("does not fetch questions when no config exists yet (404)", async () => {

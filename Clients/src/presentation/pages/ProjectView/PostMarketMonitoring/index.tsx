@@ -540,14 +540,16 @@ const PostMarketMonitoring: React.FC = () => {
             </Typography>
           </Stack>
           <Stack direction="row" alignItems="center" gap="16px">
-            <CustomizableButton
-              variant="outlined"
-              text="View reports"
-              startIcon={<FileText size={14} strokeWidth={1.5} />}
-              onClick={() => navigate(`/monitoring/reports?projectId=${projectId}`)}
-              testId="pmm-view-reports"
-              sx={{ height: "30px" }}
-            />
+            {project?.id && (
+              <CustomizableButton
+                variant="outlined"
+                text="View reports"
+                startIcon={<FileText size={14} strokeWidth={1.5} />}
+                onClick={() => navigate(`/monitoring/reports?projectId=${project.id}`)}
+                testId="pmm-view-reports"
+                sx={{ height: "30px" }}
+              />
+            )}
             <Toggle checked={isActive} onChange={handleToggleActive} disabled={!canEdit} />
           </Stack>
         </Stack>

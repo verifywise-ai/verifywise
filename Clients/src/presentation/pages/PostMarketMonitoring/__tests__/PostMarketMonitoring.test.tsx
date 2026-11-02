@@ -1,4 +1,4 @@
-import { screen, fireEvent, waitFor } from "@testing-library/react";
+import { screen, fireEvent, waitFor, act } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 
 const mockGetReports = vi.fn();
@@ -9,6 +9,12 @@ vi.mock("../../../../infrastructure/api/postMarketMonitoringService", () => ({
     getReports: (...args: any[]) => mockGetReports(...args),
     downloadReport: vi.fn(),
   },
+}));
+
+vi.mock("../../../../application/hooks/useProjectData", () => ({
+  default: ({ projectId }: { projectId: string }) => ({
+    project: projectId === "7" ? { id: 7, project_title: "Credit scoring" } : null,
+  }),
 }));
 
 // Mock child components
@@ -57,7 +63,9 @@ describe("PostMarketMonitoring - ReportsArchive", () => {
     await waitFor(() =>
       expect(mockGetReports).toHaveBeenCalledWith(expect.objectContaining({ project_id: 7 })),
     );
-    expect(await screen.findByText("Showing reports for Credit scoring")).toBeInTheDocument();
+    expect(await screen.findByTestId("pmm-reports-scope")).toHaveTextContent("Credit scoring");
+    // The header names the use case, so the per-row column is dropped
+    expect(screen.queryByRole("columnheader", { name: "Use case" })).not.toBeInTheDocument();
   });
 
   it("ignores a projectId that is not a positive integer", async () => {
@@ -66,6 +74,30 @@ describe("PostMarketMonitoring - ReportsArchive", () => {
     await waitFor(() => expect(mockGetReports).toHaveBeenCalled());
     expect(mockGetReports.mock.calls[0][0].project_id).toBeUndefined();
     expect(screen.queryByText("Show all use cases")).not.toBeInTheDocument();
+  });
+
+  it("ignores a slow scoped response that lands after 'Show all use cases'", async () => {
+    let resolveScoped: (value: unknown) => void = () => {};
+    const otherReport = { ...report, id: 12, project_id: 8, project_title: "Hiring screener" };
+    mockGetReports.mockImplementation((filters: { project_id?: number }) =>
+      filters.project_id
+        ? new Promise((resolve) => {
+            resolveScoped = resolve;
+          })
+        : Promise.resolve({ reports: [report, otherReport], total: 2 }),
+    );
+    renderWithProviders(<ReportsArchive />, { route: "/monitoring/reports?projectId=7" });
+
+    fireEvent.click(await screen.findByText("Show all use cases"));
+    expect(await screen.findByText("Hiring screener")).toBeInTheDocument();
+
+    // The scoped request from the first render finishes last
+    await act(async () => {
+      resolveScoped({ reports: [report], total: 1 });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(screen.getByText("Hiring screener")).toBeInTheDocument();
   });
 
   it("drops the use case scope when 'Show all use cases' is clicked", async () => {
