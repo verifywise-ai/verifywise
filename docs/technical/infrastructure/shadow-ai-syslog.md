@@ -98,11 +98,10 @@ never ends the process.
 
 In generic key-value lines that start with a CEF header (`CEF:0|...|`, optionally
 after a forwarder prefix of at most two tokens without `=` or quotes, such as a
-host name and tag). A header deeper in the line is not recognised, the
-extension after the header is parsed the CEF way: a value may contain spaces and runs until the
+host name and tag), the extension after the header is parsed the CEF way: a value may contain spaces and runs until the
 next ` key=`, and quotes are not special. Other lines split values on
 whitespace, with double quotes to keep spaces. A repeated event key rejects
-the line in both modes.
+the line in both modes. A CEF header deeper in the line is not recognised.
 
 Squid access logs have no allowed or blocked field, so the Squid parser reads
 the result code (field 4): a code containing `DENIED` (`TCP_DENIED`,
