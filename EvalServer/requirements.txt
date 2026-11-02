@@ -82,7 +82,7 @@ reportlab==4.4.10
 requests==2.33.0
 rich==14.2.0
 rsa==4.9.1
-safetensors==0.6.2
+safetensors==0.8.0
 setuptools==84.1.0
 shellingham==1.5.4
 six==1.17.0
