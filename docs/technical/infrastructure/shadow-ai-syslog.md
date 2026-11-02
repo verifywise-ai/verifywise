@@ -3,9 +3,12 @@
 A TCP listener inside the backend process that receives proxy logs for Shadow
 AI. It is off by default. Code: `Servers/services/shadowAiSyslog/`. Startup and
 shutdown are in `Servers/index.ts`. The Settings page is
-`Clients/src/presentation/pages/ShadowAI/SettingsPage.tsx`. The routes are
-under `/api/shadow-ai/config/syslog` in `Servers/routes/shadowAi.route.ts`.
-Source management is Admin only.
+`Clients/src/presentation/pages/ShadowAI/SettingsPage.tsx`. Source list,
+create, edit and delete are under `/api/shadow-ai/config/syslog` in
+`Servers/routes/shadowAi.route.ts`. The listener status and key regeneration
+are on the versioned API, `/api/v1/shadow-ai-syslog`
+(`Servers/routes/v1/shadowAiSyslog.route.ts`): `GET /status` and
+`POST /sources/:id/regenerate-key`. Source management is Admin only.
 
 ## How a line is routed
 
@@ -164,7 +167,7 @@ hosted service should use the REST API.
 
 ## Status endpoint
 
-`GET /api/shadow-ai/config/syslog/status` (Admin) returns the configuration
+`GET /api/v1/shadow-ai-syslog/status` (Admin) returns the configuration
 (`enabled`, `port`, `tls`, `plaintext`, `ipOnly`) and the state of the
 listener in the process that answers: `running` (bound and accepting) and
 `startError` (`{ code, message }` from the last failed start, else null).

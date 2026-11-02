@@ -27596,7 +27596,7 @@ paths:
       security:
         -
           bearerAuth: []
-  /shadow-ai/config/syslog/status:
+  /v1/shadow-ai-syslog/status:
     get:
       summary: 'Get Syslog Status'
       responses:
@@ -27605,12 +27605,12 @@ paths:
         '500':
           description: 'Internal server error'
       tags:
-        - 'Shadow AI'
+        - 'v1: Shadow AI'
       operationId: getSyslogStatus
       security:
         -
           bearerAuth: []
-  '/shadow-ai/config/syslog/{id}/regenerate-key':
+  '/v1/shadow-ai-syslog/sources/{id}/regenerate-key':
     post:
       summary: 'Regenerate Syslog Key'
       responses:
@@ -27619,7 +27619,7 @@ paths:
         '500':
           description: 'Internal server error'
       tags:
-        - 'Shadow AI'
+        - 'v1: Shadow AI'
       operationId: regenerateSyslogKey
       security:
         -

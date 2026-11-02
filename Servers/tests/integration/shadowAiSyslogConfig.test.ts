@@ -12,6 +12,7 @@ import { SOURCE_KEY_RE, hashSourceKey } from "../../services/shadowAiSyslog/sour
 import { listActiveSyslogSourcesQuery } from "../../utils/shadowAiConfig.utils";
 
 const BASE = "/api/shadow-ai/config/syslog";
+const V1 = "/api/v1/shadow-ai-syslog";
 
 /**
  * Syslog sources carry a secret key and listener stats. Covers the Admin API
@@ -91,7 +92,7 @@ describe("Shadow AI syslog source keys and status", () => {
     const created = await create(orgA, { source_identifier: "10.0.0.5" });
     const { id, key: oldKey } = created.body.data;
     const api = await as(orgA);
-    const res = await api.post(`${BASE}/${id}/regenerate-key`);
+    const res = await api.post(`${V1}/sources/${id}/regenerate-key`);
     expect(res.status).toBe(200);
     expect(res.body.data.key).toMatch(SOURCE_KEY_RE);
     expect(res.body.data.key).not.toBe(oldKey);
@@ -106,7 +107,7 @@ describe("Shadow AI syslog source keys and status", () => {
     const created = await create(orgA, { source_identifier: "10.0.0.5" });
     const { id } = created.body.data;
     const api = await as(orgB);
-    const res = await api.post(`${BASE}/${id}/regenerate-key`);
+    const res = await api.post(`${V1}/sources/${id}/regenerate-key`);
     expect(res.status).toBe(404);
     const row = await rowFor(id);
     expect(row.key_hash).toBe(hashSourceKey(created.body.data.key));
@@ -181,7 +182,7 @@ describe("Shadow AI syslog source keys and status", () => {
 
     it("can mint a key through regenerate", async () => {
       const api = await as(orgA);
-      const res = await api.post(`${BASE}/${legacyId}/regenerate-key`);
+      const res = await api.post(`${V1}/sources/${legacyId}/regenerate-key`);
       expect(res.status).toBe(200);
       expect(res.body.data.key).toMatch(SOURCE_KEY_RE);
     });
@@ -199,25 +200,43 @@ describe("Shadow AI syslog source keys and status", () => {
     expect((rows as { n: number }[])[0].n).toBe(2);
   });
 
+  it("no longer serves status or regenerate-key on the legacy surface", async () => {
+    const created = await create(orgA, { source_identifier: "10.0.0.5" });
+    const { id, key } = created.body.data;
+    const api = await as(orgA);
+    expect((await api.get(`${BASE}/status`)).status).toBe(404);
+    expect((await api.post(`${BASE}/${id}/regenerate-key`)).status).toBe(404);
+    expect((await rowFor(id)).key_hash).toBe(hashSourceKey(key));
+  });
+
+  it("refuses the v1 routes without a valid token", async () => {
+    const api = testRequest(await createTestApp());
+    const bad = { Authorization: "Bearer not-a-token" };
+    expect((await api.get(`${V1}/status`).set(bad)).status).toBe(401);
+    expect((await api.post(`${V1}/sources/1/regenerate-key`).set(bad)).status).toBe(401);
+    // No token at all: the shared JWT middleware answers 400 "Token not found".
+    expect((await api.get(`${V1}/status`)).status).toBe(400);
+  });
+
   it.each(["Editor", "Reviewer", "Auditor"])("returns 403 on all routes for %s", async (role) => {
     const created = await create(orgA, { source_identifier: "10.0.0.5" });
     const { id } = created.body.data;
     const api = await as(orgA, role);
     expect((await api.get(BASE)).status).toBe(403);
     expect((await api.post(BASE).send({ parser_type: "squid" })).status).toBe(403);
-    expect((await api.post(`${BASE}/${id}/regenerate-key`)).status).toBe(403);
-    expect((await api.get(`${BASE}/status`)).status).toBe(403);
+    expect((await api.post(`${V1}/sources/${id}/regenerate-key`)).status).toBe(403);
+    expect((await api.get(`${V1}/status`)).status).toBe(403);
     expect((await api.patch(`${BASE}/${id}`).send({ is_active: false })).status).toBe(403);
     expect((await api.delete(`${BASE}/${id}`)).status).toBe(403);
   });
 
-  describe("GET /config/syslog/status", () => {
+  describe("GET /api/v1/shadow-ai-syslog/status", () => {
     it("reports defaults when nothing is configured", async () => {
       for (const k of Object.keys(process.env)) {
         if (k.startsWith("SHADOW_AI_SYSLOG_")) delete process.env[k];
       }
       const api = await as(orgA);
-      const res = await api.get(`${BASE}/status`);
+      const res = await api.get(`${V1}/status`);
       expect(res.status).toBe(200);
       expect(res.body.data).toEqual({
         enabled: false,
@@ -239,7 +258,7 @@ describe("Shadow AI syslog source keys and status", () => {
       process.env.SHADOW_AI_SYSLOG_ALLOW_PLAINTEXT = "true";
       process.env.SHADOW_AI_SYSLOG_ALLOW_IP_ONLY = "true";
       const api = await as(orgA);
-      const res = await api.get(`${BASE}/status`);
+      const res = await api.get(`${V1}/status`);
       expect(res.status).toBe(200);
       expect(res.body.data).toEqual({
         enabled: true,
@@ -257,7 +276,7 @@ describe("Shadow AI syslog source keys and status", () => {
       process.env.SHADOW_AI_SYSLOG_TLS_CERT_FILE = "/etc/cert.pem";
       delete process.env.SHADOW_AI_SYSLOG_TLS_KEY_FILE;
       const api = await as(orgA);
-      const res = await api.get(`${BASE}/status`);
+      const res = await api.get(`${V1}/status`);
       expect(res.body.data.tls).toBe(false);
     });
   });

@@ -1571,7 +1571,7 @@ describe("shadowAi.repository", () => {
   // ============================================================================
 
   describe("regenerateSyslogKey", () => {
-    it("should POST to /shadow-ai/config/syslog/:id/regenerate-key and return the key", async () => {
+    it("should POST to /v1/shadow-ai-syslog/sources/:id/regenerate-key and return the key", async () => {
       const created = { id: 4, parser_type: "squid", is_active: true, key: "vwsl_secret" };
       vi.mocked(apiServices.post).mockResolvedValue({
         data: { data: created },
@@ -1582,7 +1582,7 @@ describe("shadowAi.repository", () => {
       const result = await regenerateSyslogKey(4);
 
       expect(apiServices.post).toHaveBeenCalledWith(
-        "/shadow-ai/config/syslog/4/regenerate-key",
+        "/v1/shadow-ai-syslog/sources/4/regenerate-key",
         {},
       );
       expect(result).toEqual(created);
@@ -1597,7 +1597,7 @@ describe("shadowAi.repository", () => {
   });
 
   describe("getSyslogListenerStatus", () => {
-    it("should GET /shadow-ai/config/syslog/status", async () => {
+    it("should GET /v1/shadow-ai-syslog/status", async () => {
       const status = {
         enabled: true,
         port: 6514,
@@ -1615,7 +1615,7 @@ describe("shadowAi.repository", () => {
 
       const result = await getSyslogListenerStatus();
 
-      expect(apiServices.get).toHaveBeenCalledWith("/shadow-ai/config/syslog/status");
+      expect(apiServices.get).toHaveBeenCalledWith("/v1/shadow-ai-syslog/status");
       expect(result).toEqual(status);
     });
 

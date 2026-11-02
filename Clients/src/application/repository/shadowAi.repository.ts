@@ -28,6 +28,8 @@ import {
 } from "../../domain/interfaces/i.shadowAi";
 
 const BASE_URL = "/shadow-ai";
+// Syslog listener status and key regeneration live on the versioned API.
+const SYSLOG_V1_URL = "/v1/shadow-ai-syslog";
 
 // ============================================================================
 // API Keys
@@ -345,7 +347,7 @@ export async function deleteSyslogConfig(id: number): Promise<void> {
 /** Issues a new source key and invalidates the old one. The key is in the response only. */
 export async function regenerateSyslogKey(id: number): Promise<IShadowAiSyslogConfigWithKey> {
   const response = await apiServices.post<{ data: IShadowAiSyslogConfigWithKey }>(
-    `${BASE_URL}/config/syslog/${id}/regenerate-key`,
+    `${SYSLOG_V1_URL}/sources/${id}/regenerate-key`,
     {},
   );
   return response.data.data;
@@ -353,7 +355,7 @@ export async function regenerateSyslogKey(id: number): Promise<IShadowAiSyslogCo
 
 export async function getSyslogListenerStatus(): Promise<IShadowAiSyslogListenerStatus> {
   const response = await apiServices.get<{ data: IShadowAiSyslogListenerStatus }>(
-    `${BASE_URL}/config/syslog/status`,
+    `${SYSLOG_V1_URL}/status`,
   );
   return response.data.data;
 }

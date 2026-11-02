@@ -39,8 +39,6 @@ import {
   createSyslogConfig,
   updateSyslogConfig,
   deleteSyslogConfig,
-  regenerateSyslogKey,
-  getSyslogStatus,
   getSettings,
   updateSettings,
 } from "../controllers/shadowAi.ctrl";
@@ -83,16 +81,9 @@ router.get("/rules/alert-history", authenticateJWT, getAlertHistory);
 
 // ─── Configuration ──────────────────────────────────────────────────────
 router.get("/config/syslog", authenticateJWT, getSyslogConfigs);
-router.get("/config/syslog/status", authenticateJWT, getSyslogStatus);
 router.post("/config/syslog", authenticateJWT, validateCreateSyslogConfig, createSyslogConfig);
 router.patch("/config/syslog/:id", authenticateJWT, validateUpdateSyslogConfig, updateSyslogConfig);
 router.delete("/config/syslog/:id", authenticateJWT, validateShadowAiIdParam, deleteSyslogConfig);
-router.post(
-  "/config/syslog/:id/regenerate-key",
-  authenticateJWT,
-  validateShadowAiIdParam,
-  regenerateSyslogKey,
-);
 
 // ─── Settings (Rate Limiting & Data Retention) ─────────────────────────
 router.get("/settings", authenticateJWT, getSettings);

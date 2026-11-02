@@ -993,7 +993,7 @@ export const handlers = [
     const body = (await request.json()) as Record<string, unknown>;
     return HttpResponse.json({ data: { id: 3, ...body, key: "vwsl_mockkey" } }, { status: 201 });
   }),
-  http.get("/api/shadow-ai/config/syslog/status", () =>
+  http.get("/api/v1/shadow-ai-syslog/status", () =>
     HttpResponse.json({
       data: {
         enabled: true,
@@ -1006,7 +1006,7 @@ export const handlers = [
       },
     }),
   ),
-  http.post("/api/shadow-ai/config/syslog/:id/regenerate-key", ({ params }) =>
+  http.post("/api/v1/shadow-ai-syslog/sources/:id/regenerate-key", ({ params }) =>
     HttpResponse.json({
       data: { ...mockSyslogConfigs[0], id: Number(params.id), key: "vwsl_mockkey" },
     }),
