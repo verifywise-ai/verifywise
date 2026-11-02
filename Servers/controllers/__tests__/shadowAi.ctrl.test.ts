@@ -889,8 +889,8 @@ describe("shadowAi.ctrl", () => {
       expect(res.status).toHaveBeenCalledWith(403);
     });
 
-    it("should return 400 when required fields missing", async () => {
-      const req = createReq({ body: { source_identifier: "fw-01" } });
+    it("should return 400 when parser_type is missing", async () => {
+      const req = createReq({ body: { source_identifier: "10.0.0.5" } });
       const res = createRes();
       await createSyslogConfig(req, res);
       expect(res.status).toHaveBeenCalledWith(400);
@@ -905,16 +905,45 @@ describe("shadowAi.ctrl", () => {
 
     it("should return 201 on success", async () => {
       mockCreateSyslogConfig.mockResolvedValue({
-        id: 1,
-        source_identifier: "fw-01",
-        parser_type: "zscaler",
+        config: { id: 1, source_identifier: "10.0.0.5", parser_type: "zscaler" },
+        key: "vwsl_1_key",
       });
       const req = createReq({
-        body: { source_identifier: "fw-01", parser_type: "zscaler", is_active: true },
+        body: { source_identifier: "10.0.0.5", parser_type: "zscaler", is_active: true },
       });
       const res = createRes();
       await createSyslogConfig(req, res);
       expect(mockCreateSyslogConfig).toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(201);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ id: 1, key: "vwsl_1_key" }),
+        }),
+      );
+    });
+
+    it("should store the sender IP normalised", async () => {
+      mockCreateSyslogConfig.mockResolvedValue({ config: { id: 1 }, key: "k" });
+      const req = createReq({
+        body: { source_identifier: "::ffff:10.0.0.9", parser_type: "squid" },
+      });
+      await createSyslogConfig(req, createRes());
+      expect(mockCreateSyslogConfig).toHaveBeenCalledWith(1, {
+        source_identifier: "10.0.0.9",
+        parser_type: "squid",
+        is_active: true,
+      });
+    });
+
+    it("should create a source without a sender IP", async () => {
+      mockCreateSyslogConfig.mockResolvedValue({ config: { id: 1 }, key: "k" });
+      const req = createReq({ body: { parser_type: "squid" } });
+      const res = createRes();
+      await createSyslogConfig(req, res);
+      expect(mockCreateSyslogConfig).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({ source_identifier: null }),
+      );
       expect(res.status).toHaveBeenCalledWith(201);
     });
 
@@ -954,21 +983,31 @@ describe("shadowAi.ctrl", () => {
 
     it("should return 404 when config not found", async () => {
       mockUpdateSyslogConfig.mockResolvedValue(null);
-      const req = createReq({ params: { id: "1" }, body: { source_identifier: "fw-01" } });
+      const req = createReq({ params: { id: "1" }, body: { source_identifier: "10.0.0.5" } });
       const res = createRes();
       await updateSyslogConfig(req, res);
       expect(res.status).toHaveBeenCalledWith(404);
     });
 
     it("should return 200 on success", async () => {
-      mockUpdateSyslogConfig.mockResolvedValue({ id: 1, source_identifier: "fw-01-updated" });
-      const req = createReq({ params: { id: "1" }, body: { source_identifier: "fw-01-updated" } });
+      mockUpdateSyslogConfig.mockResolvedValue({ id: 1, source_identifier: "10.0.0.7" });
+      const req = createReq({
+        params: { id: "1" },
+        body: { source_identifier: " ::ffff:10.0.0.7 " },
+      });
       const res = createRes();
       await updateSyslogConfig(req, res);
       expect(mockUpdateSyslogConfig).toHaveBeenCalledWith(1, 1, {
-        source_identifier: "fw-01-updated",
+        source_identifier: "10.0.0.7",
       });
       expect(res.status).toHaveBeenCalledWith(200);
+    });
+
+    it("should clear the sender IP with an empty string", async () => {
+      mockUpdateSyslogConfig.mockResolvedValue({ id: 1, source_identifier: null });
+      const req = createReq({ params: { id: "1" }, body: { source_identifier: "" } });
+      await updateSyslogConfig(req, createRes());
+      expect(mockUpdateSyslogConfig).toHaveBeenCalledWith(1, 1, { source_identifier: null });
     });
 
     it("should return 500 on error", async () => {
