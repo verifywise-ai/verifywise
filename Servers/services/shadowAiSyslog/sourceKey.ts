@@ -36,9 +36,11 @@ export function orgIdFromKey(key: string): number | null {
 }
 
 // "vw_source":"<value>" inside JSON.
-const JSON_FIELD_RE = /"vw_source"\s*:\s*"([^"]*)"/;
-// vw_source=<value> or vw_source="<value>" as a key=value pair.
-const KV_FIELD_RE = /(?<![\w-])vw_source=(?:"([^"]*)"|([^\s"]*))/;
+const JSON_FIELD_RE = /"vw_source"\s*:\s*"([^"]*)"/g;
+// vw_source=<value> or vw_source="<value>" as a standalone key=value pair:
+// only at the start of the line or after whitespace or `|`, so a `?vw_source=`
+// inside a URL never counts.
+const KV_FIELD_RE = /(?<=^|[\s|])vw_source=(?:"([^"]*)"|([^\s"]*))/g;
 
 /** Remove body[start, end) plus one adjacent separator. */
 function removeKvSpan(body: string, start: number, end: number): string {
@@ -59,26 +61,32 @@ function removeJsonSpan(body: string, start: number, end: number): string {
 
 /**
  * Find the source key field, validate it and remove it from the line so it is
- * never stored. A malformed key yields `key: null` and leaves the line alone.
+ * never stored. Every candidate is scanned and the first valid one wins, so
+ * decoy `vw_source` text placed earlier in the line cannot hide the real key.
+ * No valid candidate yields `key: null` and leaves the line alone.
  */
 export function extractSourceKey(body: string): {
   key: string | null;
   rest: string;
 } {
-  const json = JSON_FIELD_RE.exec(body);
-  if (json) {
-    if (!SOURCE_KEY_RE.test(json[1])) return { key: null, rest: body };
-    const end = json.index + json[0].length;
-    return { key: json[1], rest: removeJsonSpan(body, json.index, end) };
+  const candidates: { index: number; end: number; value: string; json: boolean }[] = [];
+  for (const m of body.matchAll(JSON_FIELD_RE)) {
+    candidates.push({ index: m.index, end: m.index + m[0].length, value: m[1], json: true });
   }
-
-  const kv = KV_FIELD_RE.exec(body);
-  if (kv) {
-    const value = kv[1] ?? kv[2] ?? "";
-    if (!SOURCE_KEY_RE.test(value)) return { key: null, rest: body };
-    const end = kv.index + kv[0].length;
-    return { key: value, rest: removeKvSpan(body, kv.index, end) };
+  for (const m of body.matchAll(KV_FIELD_RE)) {
+    candidates.push({
+      index: m.index,
+      end: m.index + m[0].length,
+      value: m[1] ?? m[2] ?? "",
+      json: false,
+    });
   }
+  candidates.sort((a, b) => a.index - b.index);
 
+  for (const c of candidates) {
+    if (!SOURCE_KEY_RE.test(c.value)) continue;
+    const rest = c.json ? removeJsonSpan(body, c.index, c.end) : removeKvSpan(body, c.index, c.end);
+    return { key: c.value, rest };
+  }
   return { key: null, rest: body };
 }

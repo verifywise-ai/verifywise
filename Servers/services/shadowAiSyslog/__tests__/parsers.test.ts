@@ -255,4 +255,52 @@ describe("parseLine", () => {
       });
     });
   });
+
+  describe("kv field injection", () => {
+    it("rejects duplicate user keys", () => {
+      expect(
+        parseLine("zscaler", "ua=Mozilla user=victim@x.co dst=evil.com user=me@x.co dst=real.com"),
+      ).toEqual({ ok: false, reason: "unparseable" });
+    });
+
+    it("rejects duplicate destination aliases of the same key", () => {
+      expect(parseLine("generic_kv", "suser=a@b.co dhost=a.com dhost=b.com")).toEqual({
+        ok: false,
+        reason: "unparseable",
+      });
+    });
+
+    it("rejects duplicate action keys", () => {
+      expect(parseLine("zscaler", "user=a@b.co dst=x.com action=allowed action=blocked")).toEqual({
+        ok: false,
+        reason: "unparseable",
+      });
+    });
+
+    it("does not read fields out of an escaped quote inside a quoted value", () => {
+      expect(parseLine("zscaler", 'ua="a \\" user=victim@x.co \\"" dst=x.com')).toEqual({
+        ok: false,
+        reason: "no_user",
+      });
+    });
+
+    it("unescapes a quoted value", () => {
+      expect(parseLine("zscaler", 'user="a@b.co" dst=x.com department="R\\"D"')).toEqual({
+        ok: true,
+        event: expect.objectContaining({ department: 'R"D' }),
+      });
+    });
+
+    it("parses a CEF line with escaped equals", () => {
+      expect(
+        parseLine(
+          "generic_kv",
+          "CEF:0|V|P|1|100|Web|3|suser=a@b.co dhost=chat.openai.com requestMethod=GET act=Allowed cs1=a\\=b",
+        ),
+      ).toEqual({
+        ok: true,
+        event: expect.objectContaining({ user_email: "a@b.co", destination: "chat.openai.com" }),
+      });
+    });
+  });
 });

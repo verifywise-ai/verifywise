@@ -11,16 +11,32 @@ import { ParseResult, ParserType, SyslogEvent } from "./types";
 
 type Fields = Record<string, string>;
 
-const KV_PAIR_RE = /(?<=^|[\s|])([A-Za-z_][\w.-]*)=(?:"([^"]*)"|(\S*))/g;
+// Quoted values honour backslash escapes; unquoted values may contain `\=` and
+// other escaped characters (CEF).
+const KV_PAIR_RE = /(?<=^|[\s|])([A-Za-z_][\w.-]*)=(?:"((?:[^"\\]|\\.)*)"|((?:[^\s\\]|\\.)*))/g;
 const SCHEME_RE = /^[a-z][a-z0-9+.-]*:\/\//i;
 
 const BLOCKED_ACTIONS = ["block", "deny", "denied", "drop", "reset", "reject"];
 const ALLOWED_ACTIONS = ["allow", "permit", "pass", "accept"];
 
-function parseKeyValues(body: string): Fields {
+// Keys that decide who, where or what. A line repeating one of them is
+// ambiguous (an attacker can append a second value), so it is rejected.
+const IDENTITY_KEYS = new Set(["user", "suser", "dst", "dhost", "uri", "request", "action", "act"]);
+
+function unescapeValue(raw: string): string {
+  return raw.replace(/\\(.)/g, "$1");
+}
+
+/** Key=value pairs, or null when an identity key appears more than once. */
+function parseKeyValues(body: string): Fields | null {
   const fields: Fields = {};
   for (const m of body.matchAll(KV_PAIR_RE)) {
-    if (!(m[1] in fields)) fields[m[1]] = m[2] ?? m[3] ?? "";
+    const key = m[1];
+    if (key in fields) {
+      if (IDENTITY_KEYS.has(key)) return null;
+      continue;
+    }
+    fields[key] = unescapeValue(m[2] ?? m[3] ?? "");
   }
   return fields;
 }
@@ -116,7 +132,7 @@ function parseZscaler(
   receivedAt: Date,
 ): ParseResult {
   const f = parseKeyValues(body);
-  if (Object.keys(f).length === 0) return { ok: false, reason: "unparseable" };
+  if (!f || Object.keys(f).length === 0) return { ok: false, reason: "unparseable" };
   const uri = f.uri ? hostAndPath(f.uri) : null;
   return buildEvent(
     {
@@ -139,7 +155,7 @@ function parseGenericKv(
   receivedAt: Date,
 ): ParseResult {
   const f = parseKeyValues(body);
-  if (Object.keys(f).length === 0) return { ok: false, reason: "unparseable" };
+  if (!f || Object.keys(f).length === 0) return { ok: false, reason: "unparseable" };
   const request = f.request ? hostAndPath(f.request) : null;
   return buildEvent(
     {

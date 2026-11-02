@@ -108,4 +108,36 @@ describe("normalizeIp", () => {
     expect(normalizeIp("")).toBeNull();
     expect(normalizeIp("999.1.1.1")).toBeNull();
   });
+
+  describe("extractSourceKey evasion resistance", () => {
+    it("skips an invalid vw_source in a URL query before the real field", () => {
+      const line = `uri=https://chat.openai.com/?vw_source=x user=a@b.co dst=chat.openai.com vw_source=${KEY}`;
+      const out = extractSourceKey(line);
+      expect(out.key).toBe(KEY);
+      expect(out.rest).toBe(
+        "uri=https://chat.openai.com/?vw_source=x user=a@b.co dst=chat.openai.com",
+      );
+    });
+
+    it("skips a JSON-looking fragment in a user agent before the real KV field", () => {
+      const line = `ua=Mozilla "vw_source":"y" user=a@b.co dst=x.com vw_source=${KEY}`;
+      const out = extractSourceKey(line);
+      expect(out.key).toBe(KEY);
+      expect(out.rest).toBe('ua=Mozilla "vw_source":"y" user=a@b.co dst=x.com');
+    });
+
+    it("skips an invalid JSON field before a valid one", () => {
+      const line = `{"vw_source":"bad","user":"a@b.co","vw_source":"${KEY}"}`;
+      expect(extractSourceKey(line).key).toBe(KEY);
+    });
+
+    it("still returns null when no candidate is valid", () => {
+      const line = "user=a@b.co vw_source=nope ?vw_source=other";
+      expect(extractSourceKey(line)).toEqual({ key: null, rest: line });
+    });
+
+    it("accepts a standalone field after a pipe", () => {
+      expect(extractSourceKey(`CEF:0|a|b|1|x|y|1|vw_source=${KEY}`).key).toBe(KEY);
+    });
+  });
 });

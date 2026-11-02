@@ -9,7 +9,9 @@ const RFC5424_RE =
   /^<\d{1,3}>\d{1,2} (\S+) \S+ \S+ \S+ \S+ (?:-|(?:\[(?:[^\]\\]|\\.)*\])+) ?([\s\S]*)$/;
 // <PRI>Mmm dd hh:mm:ss HOST TAG: MSG
 const RFC3164_RE = /^<\d{1,3}>([A-Z][a-z]{2} [ \d]\d \d\d:\d\d:\d\d) \S+ ([\s\S]*)$/;
-const RFC3164_TAG_RE = /^[^\s:[\]]+(?:\[\d+\])?: ?/;
+// Conservative tag: a letter-led token (no `=`, `{` or quotes) and a colon
+// followed by whitespace. Anything else is a tag-less body and stays intact.
+const RFC3164_TAG_RE = /^[A-Za-z][\w./-]*(?:\[\d+\])?:\s+/;
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 

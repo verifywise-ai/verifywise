@@ -46,4 +46,22 @@ describe("stripSyslogHeader", () => {
     const line = "1707489120.000 200 10.0.0.1 TCP_MISS/200 1024 GET x";
     expect(stripSyslogHeader(line)).toEqual({ body: line });
   });
+
+  describe("tag-less RFC 3164 bodies", () => {
+    it("keeps a JSON body", () => {
+      expect(stripSyslogHeader('<34>Feb  9 14:32:00 host {"user":"a@b.co"}').body).toBe(
+        '{"user":"a@b.co"}',
+      );
+    });
+
+    it("keeps a KV body that starts with a URL-valued field", () => {
+      expect(
+        stripSyslogHeader("<34>Feb  9 14:32:00 host uri=https://x.com/p user=a@b.co").body,
+      ).toBe("uri=https://x.com/p user=a@b.co");
+    });
+
+    it("still strips a tag with a path-like name and pid", () => {
+      expect(stripSyslogHeader("<34>Feb  9 14:32:00 host squid-1.2/x[99]: body").body).toBe("body");
+    });
+  });
 });
