@@ -20,6 +20,22 @@ const SCHEME_RE = /^[a-z][a-z0-9+.-]*:\/\//i;
 const BLOCKED_ACTIONS = ["block", "deny", "denied", "drop", "reset", "reject"];
 const ALLOWED_ACTIONS = ["allow", "permit", "pass", "accept"];
 
+// Netskope verdicts outside allow/block. Alerts and bypassed coaching let the
+// request through; the restrict actions stopped what the user tried to do.
+const NETSKOPE_VERDICTS: Record<string, "allow" | "block"> = {
+  alert: "allow",
+  useralert: "allow",
+  bypass: "allow",
+  restricttoview: "block",
+  restrictaccess: "block",
+  disabledownload: "block",
+};
+
+function netskopeVerdict(raw: unknown): unknown {
+  if (typeof raw !== "string") return raw;
+  return NETSKOPE_VERDICTS[raw.trim().toLowerCase()] ?? raw;
+}
+
 // Keys that decide who, where or what. A line repeating one of them is
 // ambiguous (an attacker can append a second value), so it is rejected.
 const IDENTITY_KEYS = new Set(["user", "suser", "dst", "dhost", "uri", "request", "action", "act"]);
@@ -242,7 +258,7 @@ function parseNetskope(
       // `action` is Netskope's policy verdict (allow, block, ...); `activity`
       // is what the user did (Upload, Login, ...). `activity` is read only
       // when there is no `action`, for senders that followed an older guide.
-      action: j.action ?? j.activity,
+      action: netskopeVerdict(j.action ?? j.activity),
       department: j.department,
       timestamp: j.timestamp,
     },

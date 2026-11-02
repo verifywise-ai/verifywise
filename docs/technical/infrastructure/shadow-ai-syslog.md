@@ -92,7 +92,7 @@ never ends the process.
 | Parser | Reads | Action |
 |--------|-------|--------|
 | Zscaler | `key=value`: `user`, `dst` (or host of `uri`), `uri`, `method`, `action`, `department`, `timestamp` | `action` |
-| Netskope | JSON object: `user`, `url`, `method`, `action`, `department`, `timestamp` | `action` (Netskope's policy verdict, e.g. `allow` or `block`). `activity` is what the user did (`Upload`, `Login Attempt`) and is read only when there is no `action` |
+| Netskope | JSON object: `user`, `url`, `method`, `action`, `department`, `timestamp` | `action` (Netskope's policy verdict, e.g. `allow` or `block`). `activity` is what the user did (`Upload`, `Login Attempt`) and is read only when there is no `action`. `alert`, `useralert` and `bypass` count as allowed (the request went through); `restrictToView`, `restrictAccess` and `disableDownload` count as blocked |
 | Squid | native access.log fields: 1 epoch time, 6 method, 7 URL, 8 user | none |
 | Generic key-value | `suser`, `dhost` (or host of `request`), `request`, `requestMethod`, `act`, `department`, `timestamp` | `act` |
 

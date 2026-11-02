@@ -107,6 +107,21 @@ describe("parseLine", () => {
       expect(r.ok && r.event.action).toBe("blocked");
     });
 
+    it.each([
+      ["alert", "allowed"],
+      ["useralert", "allowed"],
+      ["bypass", "allowed"],
+      ["restrictToView", "blocked"],
+      ["restrictAccess", "blocked"],
+      ["disableDownload", "blocked"],
+    ])("maps the Netskope verdict %s to %s", (verdict, expected) => {
+      const r = parseLine(
+        "netskope",
+        `{"user":"a@b.co","url":"https://x.com","action":"${verdict}"}`,
+      );
+      expect(r.ok && r.event.action).toBe(expected);
+    });
+
     it("leaves the action out for an activity that is not a verdict", () => {
       const r = parseLine(
         "netskope",
