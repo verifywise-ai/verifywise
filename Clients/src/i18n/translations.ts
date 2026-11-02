@@ -102,6 +102,11 @@ export type Lang = "en" | "de" | "fr" | "es";
 
 export const translations: Record<string, Record<string, string>> = {
   de: {
+    "In IP-only mode, log lines without a key are matched by this IP.":
+      "Im Nur-IP-Modus werden Logzeilen ohne Schlüssel über diese IP zugeordnet.",
+    "Could not copy. Select the key and copy it by hand.":
+      "Kopieren nicht möglich. Markieren Sie den Schlüssel und kopieren Sie ihn manuell.",
+    'Remove "{name}"?': "„{name}“ entfernen?",
     // Shadow AI syslog sources
     "Allowed sender IP (optional)": "Zulässige Absender-IP (optional)",
     "Allowed sender IP": "Zulässige Absender-IP",
@@ -9638,6 +9643,11 @@ export const translations: Record<string, Record<string, string>> = {
   },
 
   fr: {
+    "In IP-only mode, log lines without a key are matched by this IP.":
+      "En mode IP seule, les lignes de journal sans clé sont associées via cette IP.",
+    "Could not copy. Select the key and copy it by hand.":
+      "Copie impossible. Sélectionnez la clé et copiez-la manuellement.",
+    'Remove "{name}"?': "Supprimer « {name} » ?",
     // Shadow AI syslog sources
     "Allowed sender IP (optional)": "IP d'expéditeur autorisée (facultatif)",
     "Allowed sender IP": "IP d'expéditeur autorisée",
@@ -19109,6 +19119,11 @@ export const translations: Record<string, Record<string, string>> = {
     "180 days": "180 jours",
   },
   es: {
+    "In IP-only mode, log lines without a key are matched by this IP.":
+      "En modo solo IP, las líneas de registro sin clave se asocian mediante esta IP.",
+    "Could not copy. Select the key and copy it by hand.":
+      "No se pudo copiar. Seleccione la clave y cópiela a mano.",
+    'Remove "{name}"?': "¿Eliminar «{name}»?",
     // Shadow AI syslog sources
     "Allowed sender IP (optional)": "IP de origen permitida (opcional)",
     "Allowed sender IP": "IP de origen permitida",

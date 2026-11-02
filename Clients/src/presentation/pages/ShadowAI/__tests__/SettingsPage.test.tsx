@@ -461,6 +461,141 @@ describe("ShadowAI - SettingsPage", () => {
     });
   });
 
+  it("issues only one key when Generate key is clicked twice quickly", async () => {
+    mockGetSyslogConfigs.mockResolvedValue([{ ...syslogConfigs[0], key_prefix: null }]);
+    mockRegenerateSyslogKey.mockImplementation(
+      () =>
+        new Promise((resolve) =>
+          setTimeout(() => resolve({ ...syslogConfigs[0], key: "vwsl_one" }), 20),
+        ),
+    );
+    renderWithProviders(<SettingsPage />);
+
+    const button = await screen.findByRole("button", { name: "Generate key" });
+    fireEvent.click(button);
+    fireEvent.click(button);
+
+    expect(await screen.findByText("vw_source=vwsl_one")).toBeInTheDocument();
+    expect(mockRegenerateSyslogKey).toHaveBeenCalledTimes(1);
+  });
+
+  it("issues only one key when Regenerate is confirmed twice quickly", async () => {
+    mockRegenerateSyslogKey.mockImplementation(
+      () =>
+        new Promise((resolve) =>
+          setTimeout(() => resolve({ ...syslogConfigs[0], key: "vwsl_two" }), 20),
+        ),
+    );
+    renderWithProviders(<SettingsPage />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Regenerate key" }));
+    const confirm = await screen.findByRole("button", { name: "Regenerate" });
+    fireEvent.click(confirm);
+    fireEvent.click(confirm);
+
+    expect(await screen.findByText("vw_source=vwsl_two")).toBeInTheDocument();
+    expect(mockRegenerateSyslogKey).toHaveBeenCalledTimes(1);
+  });
+
+  describe("legacy source identifier", () => {
+    const legacy = { ...syslogConfigs[0], source_identifier: "proxy-01.corp.com" };
+
+    it("removes the row", async () => {
+      mockGetSyslogConfigs.mockResolvedValueOnce([legacy]).mockResolvedValue([]);
+      mockDeleteSyslogConfig.mockResolvedValue(undefined);
+      renderWithProviders(<SettingsPage />);
+
+      await screen.findByText("proxy-01.corp.com");
+      fireEvent.click(screen.getByRole("button", { name: "Remove source" }));
+      fireEvent.click(await screen.findByRole("button", { name: "Remove" }));
+
+      await waitFor(() => {
+        expect(mockDeleteSyslogConfig).toHaveBeenCalledWith(1);
+      });
+      await waitFor(() => {
+        expect(screen.queryByText("proxy-01.corp.com")).not.toBeInTheDocument();
+      });
+    });
+
+    it("blocks Save until the field is a valid IP, then saves it", async () => {
+      mockGetSyslogConfigs.mockResolvedValue([legacy]);
+      mockUpdateSyslogConfig.mockResolvedValue({});
+      renderWithProviders(<SettingsPage />);
+
+      fireEvent.click(await screen.findByText("proxy-01.corp.com"));
+      fireEvent.click(await screen.findByRole("button", { name: "Save" }));
+      expect(await screen.findByText("Enter an IPv4 or IPv6 address.")).toBeInTheDocument();
+      expect(mockUpdateSyslogConfig).not.toHaveBeenCalled();
+
+      fireEvent.change(screen.getByLabelText("Allowed sender IP (optional)"), {
+        target: { value: "198.51.100.9" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Save" }));
+      await waitFor(() => {
+        expect(mockUpdateSyslogConfig).toHaveBeenCalledWith(1, {
+          source_identifier: "198.51.100.9",
+          parser_type: "zscaler",
+        });
+      });
+    });
+
+    it("clears the identifier by sending null", async () => {
+      mockGetSyslogConfigs.mockResolvedValue([legacy]);
+      mockUpdateSyslogConfig.mockResolvedValue({});
+      renderWithProviders(<SettingsPage />);
+
+      fireEvent.click(await screen.findByText("proxy-01.corp.com"));
+      fireEvent.change(await screen.findByLabelText("Allowed sender IP (optional)"), {
+        target: { value: "" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Save" }));
+      await waitFor(() => {
+        expect(mockUpdateSyslogConfig).toHaveBeenCalledWith(1, {
+          source_identifier: null,
+          parser_type: "zscaler",
+        });
+      });
+    });
+  });
+
+  it("explains IP matching in IP-only mode", async () => {
+    mockGetSyslogListenerStatus.mockResolvedValue({ ...listenerOn, ipOnly: true });
+    renderWithProviders(<SettingsPage />);
+
+    await screen.findByText("203.0.113.7");
+    await screen.findByTestId("syslog-listener-status");
+    fireEvent.click(screen.getByText("Add source"));
+    expect(
+      await screen.findByText("In IP-only mode, log lines without a key are matched by this IP."),
+    ).toBeInTheDocument();
+  });
+
+  it("does not show the IP-only hint outside IP-only mode", async () => {
+    renderWithProviders(<SettingsPage />);
+
+    await screen.findByTestId("syslog-listener-status");
+    fireEvent.click(screen.getByText("Add source"));
+    await screen.findByLabelText("Allowed sender IP (optional)");
+    expect(screen.queryByText(/IP-only mode/)).not.toBeInTheDocument();
+  });
+
+  it("tells the user when copying fails", async () => {
+    mockCreateSyslogConfig.mockResolvedValue({ ...syslogConfigs[0], key: "vwsl_copyfail" });
+    const writeText = navigator.clipboard.writeText as ReturnType<typeof vi.fn>;
+    writeText.mockRejectedValueOnce(new Error("denied"));
+    renderWithProviders(<SettingsPage />);
+
+    await screen.findByText("203.0.113.7");
+    fireEvent.click(screen.getByText("Add source"));
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+    await screen.findByText("vw_source=vwsl_copyfail");
+    fireEvent.click(screen.getByRole("button", { name: "Copy key" }));
+
+    expect(
+      await screen.findByText("Could not copy. Select the key and copy it by hand."),
+    ).toBeInTheDocument();
+  });
+
   // ─── Data formats ───────────────────────────────────────────────────
 
   it("renders the REST API schema reference and syslog format examples", async () => {

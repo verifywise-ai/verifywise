@@ -501,6 +501,9 @@ function SyslogConfigSection() {
   // The full key lives here only while the dialog is open. Never persisted or logged.
   const [revealedKey, setRevealedKey] = useState<string | null>(null);
   const [copiedField, setCopiedField] = useState<"key" | "line" | null>(null);
+  const [copyFailed, setCopyFailed] = useState(false);
+  // Ref, not state: a second click can land before a state update re-renders.
+  const generatingRef = useRef(false);
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(
@@ -547,14 +550,18 @@ function SyslogConfigSection() {
   const closeKeyDialog = () => {
     setRevealedKey(null);
     setCopiedField(null);
+    setCopyFailed(false);
   };
 
   const handleCopy = async (field: "key" | "line", text: string) => {
     try {
       await navigator.clipboard.writeText(text);
     } catch {
+      setCopiedField(null);
+      setCopyFailed(true);
       return;
     }
+    setCopyFailed(false);
     setCopiedField(field);
     if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
     copyTimerRef.current = setTimeout(() => setCopiedField(null), 2000);
@@ -635,6 +642,8 @@ function SyslogConfigSection() {
   };
 
   const handleGenerateKey = async (config: IShadowAiSyslogConfig) => {
+    if (generatingRef.current) return;
+    generatingRef.current = true;
     setRegenerating(true);
     setActionError("");
     try {
@@ -646,6 +655,7 @@ function SyslogConfigSection() {
       setRegenTarget(null);
       setActionError(t("Could not generate a key. Try again."));
     } finally {
+      generatingRef.current = false;
       setRegenerating(false);
     }
   };
@@ -664,6 +674,10 @@ function SyslogConfigSection() {
       .replace("{host}", window.location.hostname)
       .replace("{port}", String(listenerStatus.port));
   })();
+
+  const ipOnlyHint = listenerStatus?.ipOnly
+    ? t("In IP-only mode, log lines without a key are matched by this IP.")
+    : undefined;
 
   const columns = [
     "Allowed sender IP",
@@ -764,7 +778,7 @@ function SyslogConfigSection() {
                       key={h || `actions-${index}`}
                       sx={singleTheme.tableStyles.primary.header.cell}
                     >
-                      {h}
+                      {t(h)}
                     </TableCell>
                   ))}
                 </TableRow>
@@ -792,7 +806,7 @@ function SyslogConfigSection() {
                               color: palette.status.warning.text,
                             }}
                           >
-                            Not an IP address. Clear it or enter the sender's IP.
+                            {t("Not an IP address. Clear it or enter the sender's IP.")}
                           </Typography>
                         )}
                       </TableCell>
@@ -806,11 +820,12 @@ function SyslogConfigSection() {
                               fontFamily: c.key_prefix ? "monospace" : "inherit",
                             }}
                           >
-                            {c.key_prefix ? `${c.key_prefix}...` : "No key yet"}
+                            {c.key_prefix ? `${c.key_prefix}...` : t("No key yet")}
                           </Typography>
                           <CustomizableButton
-                            text={c.key_prefix ? "Regenerate key" : "Generate key"}
+                            text={t(c.key_prefix ? "Regenerate key" : "Generate key")}
                             variant="outlined"
+                            disabled={regenerating}
                             testId={`syslog-key-action-${c.id}`}
                             sx={{ height: 30, fontSize: 13 }}
                             onClick={() =>
@@ -820,7 +835,7 @@ function SyslogConfigSection() {
                         </Stack>
                       </TableCell>
                       <TableCell sx={cellSx}>
-                        {c.last_event_at ? formatRelativeDate(c.last_event_at) : "Never"}
+                        {c.last_event_at ? formatRelativeDate(c.last_event_at) : t("Never")}
                       </TableCell>
                       <TableCell sx={cellSx}>
                         {numberFormatter.format(Number(c.events_accepted ?? 0))}
@@ -832,7 +847,7 @@ function SyslogConfigSection() {
                         {renderDropReason(c.last_drop_reason)}
                       </TableCell>
                       <TableCell sx={cellSx}>
-                        <Chip label={c.is_active ? "Active" : "Inactive"} size="small" />
+                        <Chip label={t(c.is_active ? "Active" : "Inactive")} size="small" />
                       </TableCell>
                       <TableCell align="right" sx={cellSx}>
                         <Stack direction="row" gap="4px" justifyContent="flex-end">
@@ -872,9 +887,9 @@ function SyslogConfigSection() {
         <StandardModal
           isOpen={createModalOpen}
           onClose={resetCreateForm}
-          title="Add syslog source"
+          title={t("Add syslog source")}
           description=""
-          submitButtonText="Add"
+          submitButtonText={t("Add")}
           onSubmit={handleCreate}
           isSubmitting={creating}
           maxWidth="400px"
@@ -888,13 +903,14 @@ function SyslogConfigSection() {
               items={parserItems}
             />
             <Field
-              label="Allowed sender IP (optional)"
+              label={t("Allowed sender IP (optional)")}
               value={formSource}
               onChange={(e) => {
                 setFormSource(e.target.value);
                 setFormError("");
               }}
               error={formError}
+              helperText={ipOnlyHint}
               placeholder="e.g., 203.0.113.7"
             />
           </Stack>
@@ -904,9 +920,9 @@ function SyslogConfigSection() {
         <StandardModal
           isOpen={!!editTarget}
           onClose={() => setEditTarget(null)}
-          title="Edit syslog source"
+          title={t("Edit syslog source")}
           description=""
-          submitButtonText="Save"
+          submitButtonText={t("Save")}
           onSubmit={handleEdit}
           isSubmitting={editing}
           maxWidth="400px"
@@ -920,13 +936,14 @@ function SyslogConfigSection() {
               items={parserItems}
             />
             <Field
-              label="Allowed sender IP (optional)"
+              label={t("Allowed sender IP (optional)")}
               value={editSource}
               onChange={(e) => {
                 setEditSource(e.target.value);
                 setEditError("");
               }}
               error={editError}
+              helperText={ipOnlyHint}
               placeholder="e.g., 203.0.113.7"
             />
           </Stack>
@@ -936,16 +953,16 @@ function SyslogConfigSection() {
         <StandardModal
           isOpen={revealedKey !== null}
           onClose={closeKeyDialog}
-          title="Your source key"
+          title={t("Your source key")}
           description={t("Copy this key now. You won't be able to see it again.")}
-          submitButtonText="Done"
+          submitButtonText={t("Done")}
           onSubmit={closeKeyDialog}
           showCancelButton={false}
           maxWidth="520px"
         >
           <Stack gap="16px">
             <Stack gap="4px">
-              <Typography sx={{ fontSize: 13, fontWeight: 600 }}>Key</Typography>
+              <Typography sx={{ fontSize: 13, fontWeight: 600 }}>{t("Key")}</Typography>
               <Stack direction="row" alignItems="center" gap="8px">
                 <Box sx={keyBoxSx}>{revealedKey}</Box>
                 <IconButton
@@ -986,6 +1003,11 @@ function SyslogConfigSection() {
             >
               {copiedField ? t("Copied") : ""}
             </Typography>
+            {copyFailed && (
+              <Typography role="alert" sx={{ fontSize: 13, color: palette.status.error.text }}>
+                {t("Could not copy. Select the key and copy it by hand.")}
+              </Typography>
+            )}
           </Stack>
         </StandardModal>
 
@@ -998,7 +1020,7 @@ function SyslogConfigSection() {
             regenTarget ? sourceName(regenTarget) : "",
           )}
           description=""
-          submitButtonText="Regenerate"
+          submitButtonText={t("Regenerate")}
           onSubmit={() => regenTarget && handleGenerateKey(regenTarget)}
           isSubmitting={regenerating}
           maxWidth="400px"
@@ -1013,9 +1035,12 @@ function SyslogConfigSection() {
         <StandardModal
           isOpen={!!deleteTarget}
           onClose={() => setDeleteTarget(null)}
-          title={`Remove "${deleteTarget ? sourceName(deleteTarget) : ""}"?`}
+          title={t('Remove "{name}"?').replace(
+            "{name}",
+            deleteTarget ? sourceName(deleteTarget) : "",
+          )}
           description=""
-          submitButtonText="Remove"
+          submitButtonText={t("Remove")}
           onSubmit={handleDelete}
           submitButtonColor={palette.status.error.text}
           maxWidth="400px"
