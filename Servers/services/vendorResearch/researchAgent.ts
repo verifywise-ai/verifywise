@@ -326,6 +326,27 @@ export function createRunSearch(input: RunSearchInput): RunSearch {
 }
 
 /**
+ * Writes one step to the run's trace for a 429 of GDELT, so that a person who opens the run can
+ * tell why it lost its news: the counter of the refusals does nothing unless monitoring is on and
+ * names no run. The step has fixed words only (`gdelt_refused`, or `gdelt_refused_final` for the
+ * refusal that is the answer of the run), with no query, no address and nothing of the vendor. The
+ * trace is no part of the research, so a failure of it is let go.
+ */
+function traceGdeltRefusal(trace: TraceRecorder | undefined, refusal: { final: boolean }): void {
+  try {
+    trace?.step({
+      by: "code",
+      tool: "search",
+      kind: "news",
+      outcome: "failed",
+      reason: refusal.final ? "gdelt_refused_final" : "gdelt_refused",
+    });
+  } catch {
+    // Not part of the research.
+  }
+}
+
+/**
  * A researcher that runs the loop once per call. It rejects only when the loop does, which is a bug
  * of the session (or of the routine work, which uses the session); every other ending, a model
  * error included, is a result.
@@ -494,7 +515,10 @@ export function createVendorResearcher(
             trace,
             onRetry: () => metrics.searchRetried({ kind: "news" }),
             onPause: (waitMs) => gatherClock?.extend(waitMs + GDELT_ASK_MS),
-            onRefused: (refusal) => metrics.gdeltRefused(refusal),
+            onRefused: (refusal) => {
+              metrics.gdeltRefused(refusal);
+              traceGdeltRefusal(trace, refusal);
+            },
           });
     const session = createWebSession<ResearchCategory>({
       engine: searching.engine,

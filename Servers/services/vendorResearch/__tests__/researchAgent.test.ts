@@ -3029,6 +3029,63 @@ describe("createVendorResearcher: the search engine of each run", () => {
           expect(gdeltRefused.mock.calls[0]).toEqual([{ final: true }]);
         },
       );
+
+      it("writes a fixed-text step to the trace for each, so the run shows why it lost its news", async () => {
+        const spies = builders();
+        const trace = createTraceRecorder();
+
+        await researcherOf(scriptedModel([finishStep, finishStep]))({
+          target: WITHOUT_DOMAIN,
+          model: MODEL,
+          now: NOW,
+          trace,
+        });
+        const before = trace.snapshot().steps.length;
+        depsOf(spies).onRefused?.({ final: false });
+        depsOf(spies).onRefused?.({ final: true });
+
+        const added = trace.snapshot().steps.slice(before);
+        expect(added).toHaveLength(2);
+        expect(
+          added.map(({ by, tool, kind, outcome, reason }) => ({ by, tool, kind, outcome, reason })),
+        ).toEqual([
+          { by: "code", tool: "search", kind: "news", outcome: "failed", reason: "gdelt_refused" },
+          {
+            by: "code",
+            tool: "search",
+            kind: "news",
+            outcome: "failed",
+            reason: "gdelt_refused_final",
+          },
+        ]);
+        // Nothing of the vendor or the query is in it.
+        for (const step of added) {
+          expect(step.query).toBeUndefined();
+          expect(step.usedQuery).toBeUndefined();
+          expect(step.url).toBeUndefined();
+        }
+      });
+
+      it("still counts the refusal when the run keeps no trace", async () => {
+        const spies = builders();
+        const gdeltRefused = jest.fn();
+        const metrics = {
+          findingDecided: jest.fn(),
+          searchFinished: jest.fn(),
+          searchRetried: jest.fn(),
+          cacheLookup: jest.fn(),
+          gdeltRefused,
+        } as unknown as ResearchMetrics;
+
+        await researcherOf(scriptedModel([finishStep, finishStep]), { metrics })({
+          target: WITHOUT_DOMAIN,
+          model: MODEL,
+          now: NOW,
+        });
+
+        expect(() => depsOf(spies).onRefused?.({ final: false })).not.toThrow();
+        expect(gdeltRefused).toHaveBeenCalledTimes(1);
+      });
     });
 
     describe("the retries it makes", () => {
