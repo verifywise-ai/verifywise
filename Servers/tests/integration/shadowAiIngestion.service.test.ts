@@ -74,6 +74,21 @@ describe("ingestShadowAiEvents with an external transaction", () => {
       expect(await eventCount()).toBe(2);
     });
 
+    it("keeps a row whose uri_path is over-long in both modes, with the path left out", async () => {
+      const longPath = { ...good(3), uri_path: `/${"a".repeat(2999)}` };
+      expect(await ingestShadowAiEvents(orgId, [longPath])).toEqual(
+        expect.objectContaining({ ingested: 1, skipped: 0 }),
+      );
+      expect(await ingestShadowAiEvents(orgId, [longPath], { skipInvalidRows: true })).toEqual(
+        expect.objectContaining({ ingested: 1, skipped: 0 }),
+      );
+      const [rows] = await sequelize.query(
+        "SELECT uri_path FROM shadow_ai_events WHERE organization_id = :orgId",
+        { replacements: { orgId } },
+      );
+      expect(rows).toEqual([{ uri_path: null }, { uri_path: null }]);
+    });
+
     it("refuses the batch without skipInvalidRows and writes nothing", async () => {
       await expect(ingestShadowAiEvents(orgId, [good(1), bad])).rejects.toThrow(/too long/);
       expect(await eventCount()).toBe(0);

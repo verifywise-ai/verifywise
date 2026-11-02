@@ -73,6 +73,28 @@ describe("POST /api/v1/shadow-ai/events", () => {
     expect(await count("shadow_ai_tools", orgB)).toBe(0);
   });
 
+  it("stores an event with an over-long uri_path, leaving the path out", async () => {
+    const app = await createTestApp();
+    const long = { ...event("example.com"), uri_path: `/${"a".repeat(2999)}` };
+    const res = await testRequest(app)
+      .post("/api/v1/shadow-ai/events")
+      .set("X-API-Key", keyA)
+      .send({ events: [{ ...event("chat.openai.com"), uri_path: "/c/1" }, long] });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.ingested).toBe(2);
+
+    const [rows] = await sequelize.query(
+      `SELECT destination, uri_path FROM shadow_ai_events
+       WHERE organization_id = :org ORDER BY destination`,
+      { replacements: { org: orgA } },
+    );
+    expect(rows).toEqual([
+      { destination: "chat.openai.com", uri_path: "/c/1" },
+      { destination: "example.com", uri_path: null },
+    ]);
+  });
+
   it("returns 200 with ingested 0 for an empty batch", async () => {
     const app = await createTestApp();
     const res = await testRequest(app)

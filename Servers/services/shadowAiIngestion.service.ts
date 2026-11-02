@@ -11,7 +11,7 @@ import { Transaction } from "sequelize";
 import { sequelize } from "../database/db";
 import logger from "../utils/logger/fileLogger";
 import { normalizeEvent, insertEventsQuery } from "../utils/shadowAiIngestion.utils";
-import { eventRowFitsColumns } from "../utils/shadowAiEventLimits";
+import { eventRowFitsColumns, SHADOW_AI_EVENT_LIMITS } from "../utils/shadowAiEventLimits";
 import { matchDomain, ensureTenantTool, updateToolCounters } from "./shadowAiToolMatcher.service";
 import { extractModel } from "./shadowAiModelExtractor.service";
 import { evaluateRulesForBatch } from "./shadowAiAlertNotification.service";
@@ -87,6 +87,9 @@ export async function checkShadowAiRateLimit(
  * transaction the caller owns commit/rollback and rule evaluation is deferred
  * to `afterCommit`, so rules never see uncommitted rows.
  *
+ * A uri_path longer than SHADOW_AI_EVENT_LIMITS.uri_path is left out (stored
+ * as null) on both paths; the row itself is kept.
+ *
  * Every row is checked against the column widths before anything is written,
  * because one row that does not fit fails the whole multi-row INSERT. With
  * `options.skipInvalidRows` (the syslog listener) such rows are left out and
@@ -117,8 +120,19 @@ export async function ingestShadowAiEvents(
     const allDepartments = new Set<string>();
     const allEmails = new Set<string>();
 
-    // Normalize all events first
-    const allNormalized = events.map(normalizeEvent);
+    // Normalize all events first. uri_path is a TEXT column with no width:
+    // an over-long one is left out, as the syslog parser does, rather than
+    // costing the row.
+    const allNormalized = events.map((event) => {
+      const normalized = normalizeEvent(event);
+      if (
+        normalized.uri_path !== undefined &&
+        [...normalized.uri_path].length > SHADOW_AI_EVENT_LIMITS.uri_path
+      ) {
+        normalized.uri_path = undefined;
+      }
+      return normalized;
+    });
 
     // Step 1: Parallelize domain matching and model extraction
     // matchDomain and extractModel are read-only lookups (no DB writes)
