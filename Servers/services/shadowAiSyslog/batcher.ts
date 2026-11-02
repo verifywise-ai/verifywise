@@ -113,14 +113,18 @@ export class SourceBatcher {
 
   private async runLimited(fn: () => Promise<void>): Promise<void> {
     if (this.runningFlushes >= MAX_CONCURRENT_FLUSHES) {
+      // A finishing flush hands its slot straight to us, so runningFlushes
+      // already counts this one and no new flush can take it meanwhile.
       await new Promise<void>((resolve) => this.waiting.push(resolve));
+    } else {
+      this.runningFlushes++;
     }
-    this.runningFlushes++;
     try {
       await fn();
     } finally {
-      this.runningFlushes--;
-      this.waiting.shift()?.();
+      const next = this.waiting.shift();
+      if (next) next();
+      else this.runningFlushes--;
     }
   }
 

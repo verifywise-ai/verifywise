@@ -18,7 +18,7 @@ import { sequelize } from "../../../database/db";
 import { checkShadowAiRateLimit, ingestShadowAiEvents } from "../../shadowAiIngestion.service";
 import { revalidateSource } from "../sourceCache";
 import { recordSyslogSourceStatsQuery } from "../../../utils/shadowAiConfig.utils";
-import { FLUSH_MAX_EVENTS, SourceBatcher } from "../batcher";
+import { FLUSH_MAX_EVENTS, MAX_CONCURRENT_FLUSHES, SourceBatcher } from "../batcher";
 import type { CachedSource } from "../sourceCache";
 import type { SyslogEvent } from "../types";
 
@@ -62,6 +62,51 @@ describe("SourceBatcher", () => {
     transaction.mockResolvedValue({
       commit: jest.fn().mockResolvedValue(undefined),
       rollback: jest.fn().mockResolvedValue(undefined),
+    });
+  });
+
+  describe("the concurrent flush cap", () => {
+    type Limited = {
+      runLimited: (fn: () => Promise<void>) => Promise<void>;
+      waiting: (() => void)[];
+    };
+
+    it(`never runs more than ${MAX_CONCURRENT_FLUSHES} flushes, even when one starts as a slot is handed over`, async () => {
+      const b = new SourceBatcher() as unknown as Limited;
+      let running = 0;
+      let peak = 0;
+      const releases: (() => void)[] = [];
+      const job = () => async () => {
+        running++;
+        peak = Math.max(peak, running);
+        await new Promise<void>((resolve) => releases.push(resolve));
+        running--;
+      };
+
+      // Fill every slot, then queue one waiter.
+      const runs = Array.from({ length: MAX_CONCURRENT_FLUSHES + 1 }, () => b.runLimited(job()));
+      await Promise.resolve();
+      expect(running).toBe(MAX_CONCURRENT_FLUSHES);
+
+      // The moment a finishing flush resumes the waiter, before the waiter
+      // runs, a new flush arrives: it must queue, not take the slot.
+      const resumeWaiter = b.waiting[0];
+      let late: Promise<void> | undefined;
+      b.waiting[0] = () => {
+        resumeWaiter();
+        late = b.runLimited(job());
+      };
+
+      releases.shift()!();
+      for (let i = 0; i < 10; i++) await Promise.resolve();
+      expect(peak).toBe(MAX_CONCURRENT_FLUSHES);
+
+      while (releases.length > 0 || running > 0) {
+        releases.shift()?.();
+        await new Promise((resolve) => setImmediate(resolve));
+      }
+      await Promise.all([...runs, late]);
+      expect(peak).toBe(MAX_CONCURRENT_FLUSHES);
     });
   });
 
