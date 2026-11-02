@@ -17,6 +17,8 @@ const INSERT_CHUNK_SIZE = 500;
 /**
  * Insert a batch of events into the shadow_ai_events table.
  * Large batches are automatically chunked to prevent oversized SQL statements.
+ * Returns the count and the lowest id inserted, which marks where this batch
+ * starts (rule evaluation uses it to tell prior usage from this batch).
  */
 export async function insertEventsQuery(
   organizationId: number,
@@ -34,16 +36,20 @@ export async function insertEventsQuery(
     manager_email?: string;
   }>,
   transaction?: Transaction,
-): Promise<number> {
-  if (events.length === 0) return 0;
+): Promise<{ inserted: number; firstEventId: number | null }> {
+  if (events.length === 0) return { inserted: 0, firstEventId: null };
 
   // Process in chunks to avoid oversized SQL statements
+  let firstEventId: number | null = null;
   for (let start = 0; start < events.length; start += INSERT_CHUNK_SIZE) {
     const chunk = events.slice(start, start + INSERT_CHUNK_SIZE);
-    await insertEventChunk(organizationId, chunk, transaction);
+    const chunkFirst = await insertEventChunk(organizationId, chunk, transaction);
+    if (chunkFirst !== null && (firstEventId === null || chunkFirst < firstEventId)) {
+      firstEventId = chunkFirst;
+    }
   }
 
-  return events.length;
+  return { inserted: events.length, firstEventId };
 }
 
 async function insertEventChunk(
@@ -62,7 +68,7 @@ async function insertEventChunk(
     manager_email?: string;
   }>,
   transaction?: Transaction,
-): Promise<void> {
+): Promise<number | null> {
   const values: string[] = [];
   const replacements: Record<string, any> = { organizationId };
 
@@ -91,12 +97,16 @@ async function insertEventChunk(
        detected_tool_id, detected_model, event_timestamp,
        department, job_title, manager_email)
     VALUES ${values.join(",\n")}
+    RETURNING id
   `;
+  // is_ai_tool is set by a database trigger from detected_tool_id.
 
-  await sequelize.query(sql, {
+  const [rows] = await sequelize.query(sql, {
     replacements,
     ...(transaction ? { transaction } : {}),
   });
+  const ids = (rows as Array<{ id: string | number }>).map((r) => Number(r.id));
+  return ids.length > 0 ? Math.min(...ids) : null;
 }
 
 /**

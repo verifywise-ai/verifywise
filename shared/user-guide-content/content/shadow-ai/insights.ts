@@ -32,6 +32,11 @@ export const insightsContent: ArticleContent = {
       ],
     },
     {
+      type: 'callout',
+      variant: 'info',
+      text: 'User, department and activity counts include only traffic that matched an AI tool when it was ingested. Your proxy may send other web traffic too. It is stored but does not count as AI usage, so someone who only visited other sites is not an AI user.',
+    },
+    {
       type: 'heading',
       id: 'risk-rankings',
       level: 2,
@@ -54,7 +59,7 @@ export const insightsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'A pie chart showing how AI tool usage is distributed across departments. This helps identify which parts of the organization are most actively using AI tools and may need additional oversight or training.',
+      text: 'A pie chart showing how many AI users each department has, counting only traffic matched to an AI tool. This helps identify which parts of the organization are most actively using AI tools and may need additional oversight or training.',
     },
     {
       type: 'heading',

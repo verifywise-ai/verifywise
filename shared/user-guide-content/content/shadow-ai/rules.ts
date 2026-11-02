@@ -86,7 +86,7 @@ export const rulesContent: ArticleContent = {
       type: 'bullet-list',
       items: [
         { bold: 'Risk score exceeded', text: 'Fires when a tool\'s nightly risk score meets or exceeds the minimum threshold you set (1-100).' },
-        { bold: 'New user detected', text: 'Fires when a previously unseen user is observed accessing any AI tool.' },
+        { bold: 'New user detected', text: 'Fires the first time a user is observed accessing any AI tool. Earlier traffic from that user that matched no AI tool does not count, so it does not stop the alert.' },
       ],
     },
     {

@@ -10,6 +10,8 @@ export interface IShadowAiEvent {
   http_method?: string;
   action: "allowed" | "blocked";
   detected_tool_id?: number;
+  /** Matched an AI tool at ingestion; kept when the tool is later deleted. */
+  is_ai_tool?: boolean;
   detected_model?: string;
   event_timestamp: Date;
   ingested_at?: Date;

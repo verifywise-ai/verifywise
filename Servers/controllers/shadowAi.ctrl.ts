@@ -25,6 +25,7 @@ import {
   getUserDetailQuery,
   getDepartmentActivityQuery,
 } from "../utils/shadowAiInsights.utils";
+import { aiUsageEvent } from "../utils/shadowAiUsage.utils";
 import {
   getAllToolsQuery,
   getToolByIdQuery,
@@ -346,13 +347,18 @@ export async function getUserDetail(req: Request, res: Response) {
   try {
     const period = parsePeriod(req.query.period as string);
     const tools = await getUserDetailQuery(organizationId, email, period);
-    const totalPrompts = tools.reduce((sum, t) => sum + parseInt(String(t.event_count), 10), 0);
+    // Prompts are POST requests, as in the user activity list.
+    const totalPrompts = tools.reduce(
+      (sum, t) => sum + (parseInt(String(t.prompt_count), 10) || 0),
+      0,
+    );
 
-    // Get department from latest event for this user
+    // Department from the user's latest AI usage event
     const [deptRows] = await sequelize.query(
       `SELECT COALESCE(department, 'Unknown') as department
        FROM shadow_ai_events
        WHERE organization_id = :organizationId AND user_email = :email
+         AND ${aiUsageEvent()}
        ORDER BY event_timestamp DESC LIMIT 1`,
       { replacements: { organizationId, email } },
     );
