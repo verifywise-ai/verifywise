@@ -93,11 +93,12 @@ never ends the process.
 |--------|-------|--------|
 | Zscaler | `key=value`: `user`, `dst` (or host of `uri`), `uri`, `method`, `action`, `department`, `timestamp` | `action` |
 | Netskope | JSON object: `user`, `url` (else `domain`, then `site` when host-shaped; never `hostname`, which is the user's device), `method`, `action`, `department`, `timestamp` | `action` (Netskope's policy verdict, e.g. `allow` or `block`). `activity` is what the user did (`Upload`, `Login Attempt`) and is read only when there is no `action`. `alert`, `useralert` and `bypass` count as allowed (the request went through); `restrictToView`, `restrictAccess` and `disableDownload` count as blocked |
-| Squid | native access.log fields: 1 epoch time, 4 result code, 6 method, 7 URL, 8 user | result code (`*_DENIED` is blocked, anything else allowed) |
+| Squid | native access.log fields: 1 epoch time, 4 result code, 6 method, 7 URL, 8 user | result code (`*_DENIED` is blocked, anything else allowed). `NONE` in the method field (aborted connections) is not stored as a method |
 | Generic key-value | `suser`, `dhost` (or host of `request`), `request`, `requestMethod`, `act`, `department`, `timestamp` | `act` |
 
-In generic key-value lines that start with a CEF header (`CEF:0|...|`), the
-extension is parsed the CEF way: a value may contain spaces and runs until the
+In generic key-value lines that contain a CEF header (`CEF:0|...|`, after any
+forwarder prefix such as a host name), the
+extension after the header is parsed the CEF way: a value may contain spaces and runs until the
 next ` key=`, and quotes are not special. Other lines split values on
 whitespace, with double quotes to keep spaces. A repeated event key rejects
 the line in both modes.
@@ -108,7 +109,9 @@ the result code (field 4): a code containing `DENIED` (`TCP_DENIED`,
 the action value (the first run of letters) decides: `block`, `blocked`, `deny`,
 `denied`, `drop`, `dropped`, `reset`, `reject` or `rejected` is stored as
 blocked, and `allow`, `allowed`, `permit`, `permitted`, `pass`, `passed`,
-`accept` or `accepted` as allowed, so `Blocked by policy` is blocked. A word
+`accept` or `accepted` as allowed, so `Blocked by policy` is blocked. A
+negated allow (`Not allowed`, `not_permitted`, `unallowed`, `disallowed`) is
+blocked. A word
 that only begins with one of these (`password_reset`, `dropbox-upload`) and any
 other value is left unset. Netskope's `alert`, `useralert`, `bypass` and the
 `restrict*` / `disableDownload` verdicts are mapped before this step.
@@ -122,8 +125,17 @@ Timestamp order: the payload `timestamp` (Squid: field 1), then the syslog
 header, then the receive time. A payload or header timestamp more than a year
 before the receive time, or more than 24 hours after it, is skipped. A payload timestamp that carries a time but
 no zone (`2026-11-02 10:00:00`, `Mon Jun 20 15:29:11 2022`) is read as UTC, like
-the RFC 3164 header, never as the server's local time. Send an offset or `Z`
-if the source logs in another zone.
+the RFC 3164 header, never as the server's local time. A zone stated anywhere after the time is honoured: `Z`, an offset
+(`+02:00`), `GMT+0200 (CEST)`, `PST 2022`, or one of CET, CEST, WET, WEST, BST,
+EET, EEST, MSK, JST, KST, AEST, AEDT, ACST, AWST, NZST, NZDT. A zone name the
+parser does not know (such as IST) makes the payload time unreadable and the
+header or receive time is used. Send an offset or `Z` if the source logs in
+another zone.
+
+Destination values must look like a host: a dotted name, or an IPv4 or IPv6
+address (or a URL with a scheme). Placeholders such as `-`, `N/A`, `none` and
+`null` are skipped and the next field (`uri`, `request`, Netskope `domain`) is
+used instead.
 
 Every field is bounded to its `shadow_ai_events` column, because one value
 over its column would fail the multi-row insert and lose the whole batch: an

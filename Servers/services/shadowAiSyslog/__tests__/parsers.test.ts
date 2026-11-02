@@ -538,6 +538,183 @@ describe("parseLine", () => {
     });
   });
 
+  describe("zones inside or after the timestamp text", () => {
+    const at = (timestamp: string) => {
+      const r = parseLine(
+        "generic_kv",
+        `suser=a@b.co dhost=x.com timestamp=${timestamp}`,
+        "2026-02-09T00:00:00.000Z",
+        RECEIVED,
+      );
+      return r.ok ? r.event.timestamp : r;
+    };
+    const originalTz = process.env.TZ;
+    afterEach(() => {
+      if (originalTz === undefined) delete process.env.TZ;
+      else process.env.TZ = originalTz;
+    });
+
+    it.each(["America/New_York", "Asia/Tokyo", "UTC"])("honours a stated zone in %s", (tz) => {
+      process.env.TZ = tz;
+      // Zone in the middle of the text, before the year.
+      expect(at('"Mon Feb 09 14:32:00 PST 2026"')).toBe("2026-02-09T22:32:00.000Z");
+      expect(at('"Mon Feb 09 2026 14:32:00 GMT+0200 (CEST)"')).toBe("2026-02-09T12:32:00.000Z");
+      expect(at('"Mon Feb 09 14:32:00 2026 +0200"')).toBe("2026-02-09T12:32:00.000Z");
+      // Abbreviations Date.parse cannot read, before and after the year.
+      expect(at('"Mon Feb 09 14:32:00 CET 2026"')).toBe("2026-02-09T13:32:00.000Z");
+      expect(at('"2026-02-09 14:32:00 CEST"')).toBe("2026-02-09T12:32:00.000Z");
+      expect(at('"2026-02-09 14:32:00 JST"')).toBe("2026-02-09T05:32:00.000Z");
+      expect(at('"2026-02-09 14:32:00 AEDT"')).toBe("2026-02-09T03:32:00.000Z");
+      expect(at('"2026-02-09 14:32:00 BST"')).toBe("2026-02-09T13:32:00.000Z");
+    });
+
+    it("falls back to the header time when the abbreviation is unknown", () => {
+      expect(at('"2026-02-09 14:32:00 IST"')).toBe("2026-02-09T00:00:00.000Z");
+    });
+
+    it("still reads a time with AM/PM and no zone as UTC", () => {
+      expect(at('"Mon Feb 09 2026 02:32:00 PM"')).toBe("2026-02-09T14:32:00.000Z");
+    });
+  });
+
+  describe("placeholders and fallbacks", () => {
+    it.each(["-", "N/A", "none", "null", "unknown"])(
+      "uses uri when dst is the placeholder %s",
+      (dst) => {
+        expect(
+          parseLine("zscaler", `user=a@b.co dst=${dst} uri=https://chat.openai.com/c/1`),
+        ).toEqual({
+          ok: true,
+          event: expect.objectContaining({ destination: "chat.openai.com", uri_path: "/c/1" }),
+        });
+      },
+    );
+
+    it("uses a bare uri host when uri is the placeholder -", () => {
+      expect(parseLine("zscaler", "user=a@b.co dst=openai.com uri=-")).toEqual({
+        ok: true,
+        event: expect.objectContaining({ destination: "openai.com" }),
+      });
+    });
+
+    it("drops a line whose only destination is a placeholder", () => {
+      expect(parseLine("zscaler", "user=a@b.co dst=- uri=-")).toEqual({
+        ok: false,
+        reason: "no_destination",
+      });
+    });
+
+    it("keeps an IP literal destination", () => {
+      expect(parseLine("zscaler", "user=a@b.co dst=203.0.113.9")).toEqual({
+        ok: true,
+        event: expect.objectContaining({ destination: "203.0.113.9" }),
+      });
+    });
+
+    it("falls back to the Netskope domain when url is N/A", () => {
+      expect(parseLine("netskope", '{"user":"a@b.co","url":"N/A","domain":"openai.com"}')).toEqual({
+        ok: true,
+        event: expect.objectContaining({ destination: "openai.com" }),
+      });
+    });
+
+    it("uses the CEF request when dhost is a placeholder", () => {
+      expect(
+        parseLine("generic_kv", "suser=a@b.co dhost=N/A request=https://claude.ai/chat/1"),
+      ).toEqual({
+        ok: true,
+        event: expect.objectContaining({ destination: "claude.ai" }),
+      });
+    });
+  });
+
+  describe("CEF with a forwarder prefix", () => {
+    it("parses the extension after a prefix", () => {
+      expect(
+        parseLine(
+          "generic_kv",
+          "fw01 CEF:0|V|P|1|100|Web|3|suser=a@b.co dhost=chat.openai.com act=Allowed msg=hello world user=x",
+        ),
+      ).toEqual({
+        ok: true,
+        event: expect.objectContaining({ user_email: "a@b.co", action: "allowed" }),
+      });
+    });
+
+    it("keeps spaces in CEF values after a prefix", () => {
+      const r = parseLine(
+        "generic_kv",
+        "fw01 CEF:0|V|P|1|100|Web|3|msg=hello world suser=a@b.co dhost=x.com department=Customer Success",
+      );
+      expect(r.ok && r.event.department).toBe("Customer Success");
+    });
+  });
+
+  describe("prototype keys", () => {
+    it("treats a body made only of constructor=x as a key=value line", () => {
+      expect(parseLine("zscaler", "constructor=x")).toEqual({ ok: false, reason: "no_user" });
+      expect(parseLine("generic_kv", "CEF:0|V|P|1|100|Web|3|toString=x")).toEqual({
+        ok: false,
+        reason: "no_user",
+      });
+    });
+
+    it("is not confused by __proto__ and constructor keys", () => {
+      expect(parseLine("zscaler", "constructor=x __proto__=y user=a@b.co dst=openai.com")).toEqual({
+        ok: true,
+        event: expect.objectContaining({ destination: "openai.com" }),
+      });
+    });
+  });
+
+  describe("negated verdicts", () => {
+    it.each(["Not allowed", "not_permitted", "unallowed", "disallowed"])(
+      "stores %s as blocked",
+      (action) => {
+        expect(parseLine("zscaler", `user=a@b.co dst=x.com action="${action}"`)).toEqual({
+          ok: true,
+          event: expect.objectContaining({ action: "blocked" }),
+        });
+      },
+    );
+
+    it("leaves other unknown words unset", () => {
+      const r = parseLine("zscaler", "user=a@b.co dst=x.com action=notify");
+      expect(r.ok && r.event.action).toBeUndefined();
+    });
+  });
+
+  describe("squid result codes", () => {
+    const line = (code: string, method: string, url: string) =>
+      `1707489120.123 50 10.0.0.1 ${code} 0 ${method} ${url} alice@corp.com DIRECT/1.2.3.4 -`;
+
+    it("does not store NONE as the method", () => {
+      const r = parseLine("squid", line("TCP_MISS_ABORTED/000", "NONE", "http://chat.openai.com/"));
+      expect(r.ok && r.event.http_method).toBeUndefined();
+      expect(r.ok && r.event.action).toBe("allowed");
+    });
+
+    it("keeps the method and blocks a denied request", () => {
+      const r = parseLine(
+        "squid",
+        line("TCP_DENIED/403", "GET", "http://chat.openai.com/"),
+        undefined,
+        RECEIVED_2024,
+      );
+      expect(r.ok && r.event.http_method).toBe("GET");
+      expect(r.ok && r.event.action).toBe("blocked");
+    });
+
+    it("rejects a timestamp field that is not an epoch", () => {
+      expect(
+        parseLine(
+          "squid",
+          line("TCP_MISS/200", "GET", "http://x.com/").replace("1707489120.123", "2026-02-09"),
+        ),
+      ).toEqual({ ok: false, reason: "unparseable" });
+    });
+  });
+
   describe("column bounds", () => {
     const long = (n: number) => "a".repeat(n);
 
@@ -563,7 +740,7 @@ describe("parseLine", () => {
     });
 
     it("keeps a destination of exactly 512 characters", () => {
-      const r = parseLine("generic_kv", `suser=a@b.co dhost=${long(512)}`);
+      const r = parseLine("generic_kv", `suser=a@b.co dhost=${long(508)}.com`);
       expect(r.ok && r.event.destination.length).toBe(512);
     });
 

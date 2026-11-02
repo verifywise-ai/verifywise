@@ -40,6 +40,8 @@ const ALLOWED_ACTIONS = new Set([
   "accepted",
 ]);
 
+const NEGATION_WORDS = new Set(["not", "no", "never"]);
+
 // Netskope verdicts outside allow/block. Alerts and bypassed coaching let the
 // request through; the restrict actions stopped what the user tried to do.
 const NETSKOPE_VERDICTS: Record<string, "allow" | "block"> = {
@@ -80,9 +82,11 @@ function unescapeValue(raw: string): string {
 }
 
 // CEF header: `CEF:0|Vendor|Product|Version|SignatureId|Name|Severity|`. The
-// extension (key=value pairs) follows the seventh pipe. Header fields escape a
+// extension (key=value pairs) follows the seventh pipe. A forwarder may put its
+// own prefix (a host name, a syslog tag) before `CEF:`, so the header is
+// searched for rather than anchored. Header fields escape a
 // literal pipe as `\|`.
-const CEF_HEADER_RE = /^CEF:\d+(?:\|(?:[^|\\]|\\.)*){6}\|/;
+const CEF_HEADER_RE = /CEF:\d+(?:\|(?:[^|\\]|\\.)*){6}\|/;
 // A CEF extension key sits at the start or after whitespace and ends at `=`.
 const CEF_KEY_RE = /(?:^|\s)([A-Za-z_][\w.-]*)=/g;
 
@@ -92,7 +96,7 @@ const CEF_KEY_RE = /(?:^|\s)([A-Za-z_][\w.-]*)=/g;
  * ` key=`. Quotes have no meaning in CEF and are kept as written.
  */
 function parseCefExtension(extension: string): Fields | null {
-  const fields: Fields = {};
+  const fields: Fields = Object.create(null);
   const keys = [...extension.matchAll(CEF_KEY_RE)];
   for (let i = 0; i < keys.length; i++) {
     const key = keys[i][1];
@@ -110,8 +114,8 @@ function parseCefExtension(extension: string): Fields | null {
 /** Key=value pairs, or null when an event key appears more than once. */
 function parseKeyValues(body: string, cef = false): Fields | null {
   const header = cef ? CEF_HEADER_RE.exec(body) : null;
-  if (header) return parseCefExtension(body.slice(header[0].length));
-  const fields: Fields = {};
+  if (header) return parseCefExtension(body.slice(header.index + header[0].length));
+  const fields: Fields = Object.create(null);
   for (const m of body.matchAll(KV_PAIR_RE)) {
     const key = m[1];
     if (key in fields) {
@@ -134,7 +138,11 @@ function hostAndPath(raw: string): { host: string; path?: string } | null {
   try {
     const url = new URL(SCHEME_RE.test(raw) ? raw : `http://${raw}`);
     const host = url.hostname.replace(/^\[|\]$/g, "").replace(/\.$/, "");
-    if (!host) return null;
+    if (!/[a-z0-9]/i.test(host)) return null;
+    // Without a scheme the value must look like a host (dotted name, IPv4 or
+    // IPv6), so placeholders such as `-`, `N/A`, `none` and `null` are not read
+    // as a host called "-" or "n" and the next field gets its turn.
+    if (!SCHEME_RE.test(raw) && !host.includes(".") && !host.includes(":")) return null;
     return {
       host: host.toLowerCase(),
       path: url.pathname !== "/" ? url.pathname : undefined,
@@ -149,10 +157,15 @@ function normalizeAction(raw: unknown): SyslogEvent["action"] {
   // First run of letters, so "Blocked by policy" is a verdict but
   // "password_reset" and "dropbox-upload" (first words "password", "dropbox")
   // are not.
-  const word = /[a-z]+/.exec(raw.toLowerCase())?.[0];
+  const [word, next] = raw.toLowerCase().match(/[a-z]+/g) ?? [];
   if (!word) return undefined;
   if (BLOCKED_ACTIONS.has(word)) return "blocked";
   if (ALLOWED_ACTIONS.has(word)) return "allowed";
+  // A negated allow is a refusal: "Not allowed", "not_permitted", "unallowed",
+  // "disallowed". "Not blocked" and other negations are left unset.
+  if (NEGATION_WORDS.has(word) && next && ALLOWED_ACTIONS.has(next)) return "blocked";
+  const prefixed = /^(?:un|dis)([a-z]+)$/.exec(word)?.[1];
+  if (prefixed && ALLOWED_ACTIONS.has(prefixed)) return "blocked";
   return undefined;
 }
 
@@ -203,22 +216,111 @@ function pickTimestamp(receivedAt: Date, ...candidates: (string | undefined)[]):
   return receivedAt.toISOString();
 }
 
-// A time of day, and a trailing zone: Z, an offset (+02:00, -0500) or a name.
-const TIME_OF_DAY_RE = /\d:\d\d/;
-const TRAILING_ZONE_RE = /(?:Z|[+-]\d{2}(?::?\d{2})?|\b(?:GMT|UTC|UT|[ECMP][SD]T))\s*$/i;
+// A time of day (`15:29`, `15:29:11`, `15:29:11.250`); anything after it can
+// name the zone.
+const TIME_OF_DAY_RE = /\d:\d\d(?::\d\d)?(?:[.,]\d+)?/;
+// Words that may follow the time without being a zone.
+const NON_ZONE_WORDS = new Set([
+  "am",
+  "pm",
+  "t",
+  "mon",
+  "tue",
+  "tues",
+  "wed",
+  "thu",
+  "thur",
+  "thurs",
+  "fri",
+  "sat",
+  "sun",
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+  "sunday",
+  "jan",
+  "feb",
+  "mar",
+  "apr",
+  "may",
+  "jun",
+  "jul",
+  "aug",
+  "sep",
+  "sept",
+  "oct",
+  "nov",
+  "dec",
+  "january",
+  "february",
+  "march",
+  "april",
+  "june",
+  "july",
+  "august",
+  "september",
+  "october",
+  "november",
+  "december",
+]);
+// Zone abbreviations Date.parse cannot read (it knows GMT, UT, UTC, Z and the
+// US EST..PDT), as UTC offsets. Only abbreviations with one common meaning are
+// listed; an unlisted one (IST, ...) makes the payload time unreadable and the
+// header or receive time is used instead.
+const ZONE_OFFSETS: Record<string, string> = {
+  WET: "+0000",
+  WEST: "+0100",
+  BST: "+0100",
+  CET: "+0100",
+  CEST: "+0200",
+  EET: "+0200",
+  EEST: "+0300",
+  MSK: "+0300",
+  JST: "+0900",
+  KST: "+0900",
+  AEST: "+1000",
+  AEDT: "+1100",
+  ACST: "+0930",
+  AWST: "+0800",
+  NZST: "+1200",
+  NZDT: "+1300",
+};
+
+/** Whether the text after the time of day states a zone: Z, an offset or a name. */
+function statesZone(tail: string): boolean {
+  if (/^(?:[.,]\d+)?\s*[+-]\d{2}(?::?\d{2})?\b/.test(tail)) return true;
+  if (/\s[+-]\d{2}:?\d{2}\b/.test(tail)) return true;
+  const words = tail.match(/[a-z]+/gi) ?? [];
+  return words.some((w) => !NON_ZONE_WORDS.has(w.toLowerCase()));
+}
 
 /**
  * Date.parse reads a timestamp with a time but no zone (`2026-11-02 10:00:00`,
  * Zscaler's `Mon Jun 20 15:29:11 2022`) in the server's local zone. Senders do
- * not say which zone they use, so read it as UTC, like the syslog header.
+ * not say which zone they use, so read it as UTC, like the syslog header. A
+ * zone stated anywhere after the time (`... PST 2022`, `... GMT+0200 (CEST)`,
+ * `...Z`, `+02:00`) is honoured.
  */
 function parseDateText(text: string): number {
-  if (TIME_OF_DAY_RE.test(text) && !TRAILING_ZONE_RE.test(text)) {
+  const time = TIME_OF_DAY_RE.exec(text);
+  if (!time) return Date.parse(text);
+  const tail = text.slice(time.index + time[0].length);
+  if (!statesZone(tail)) {
     return /^\d{4}-\d{2}-\d{2}[T ]/.test(text)
       ? Date.parse(`${text.replace(" ", "T")}Z`)
       : Date.parse(`${text} UTC`);
   }
-  return Date.parse(text);
+  const abbreviation = (tail.match(/[a-z]+/gi) ?? []).find((w) => w.toUpperCase() in ZONE_OFFSETS);
+  if (!abbreviation) return Date.parse(text);
+  return Date.parse(
+    text.replace(
+      new RegExp(`\\(?\\b${abbreviation}\\b\\)?`),
+      `GMT${ZONE_OFFSETS[abbreviation.toUpperCase()]}`,
+    ),
+  );
 }
 
 /** ISO string from an ISO date or an epoch (seconds or milliseconds). */
@@ -401,12 +503,13 @@ function parseSquid(
   // Native access.log: time elapsed client code/status bytes method URL user ...
   const fields = body.trim().split(/\s+/);
   if (fields.length < 8) return { ok: false, reason: "unparseable" };
-  const timestamp = parseTimestamp(fields[0]);
-  if (!timestamp || !/^\d+(\.\d+)?$/.test(fields[0])) {
-    return { ok: false, reason: "unparseable" };
-  }
+  // Squid always writes an epoch; anything else is not an access.log line.
+  const timestamp = /^\d+(\.\d+)?$/.test(fields[0]) ? parseTimestamp(fields[0]) : undefined;
+  if (!timestamp) return { ok: false, reason: "unparseable" };
 
-  const method = fields[5];
+  // `NONE` stands in for the method when no request was read (aborted
+  // connections); it is not an HTTP method, so it is not stored as one.
+  const method = fields[5].toUpperCase() === "NONE" ? undefined : fields[5];
   // The result code (field 4, `CODE/status`) says whether Squid itself refused
   // the request: TCP_DENIED and TCP_DENIED_REPLY are ACL denials. A 403 from
   // the origin server (TCP_MISS/403) was let through, so only the code counts.
@@ -418,7 +521,7 @@ function parseSquid(
     {
       user: decodeSquidUser(fields[7]),
       host: target?.host,
-      path: method.toUpperCase() === "CONNECT" ? undefined : target?.path,
+      path: method?.toUpperCase() === "CONNECT" ? undefined : target?.path,
       method,
       action,
       timestamp,
