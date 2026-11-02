@@ -24,6 +24,7 @@ import { invalidateSourceCache } from "../../services/shadowAiSyslog/sourceCache
 import { hashSourceKey } from "../../services/shadowAiSyslog/sourceKey";
 import { startSyslogListener, SyslogListenerHandle } from "../../services/shadowAiSyslog/listener";
 import { SyslogListenerConfig } from "../../services/shadowAiSyslog/config";
+import { evaluateRulesForBatch } from "../../services/shadowAiAlertNotification.service";
 
 const ZSCALER_LINE =
   "user=alice@company.com dst=chat.openai.com method=POST uri=https://chat.openai.com/v1/chat action=allowed";
@@ -223,6 +224,24 @@ describe("Shadow AI syslog listener", () => {
       const row = await sourceRow(a.id);
       expect(row.accepted).toBe(1);
       expect(row.lastEventAt).not.toBeNull();
+    });
+
+    it("hands rule evaluation the batch's first event id and its AI-only emails", async () => {
+      const a = await addSource(orgA);
+      const h = await startFor();
+      (evaluateRulesForBatch as jest.Mock).mockClear();
+
+      await send(h.port, [`${ZSCALER_LINE} vw_source=${a.key}\n`], useTls);
+      await h.flushAll();
+
+      const [orgId, batch] = (evaluateRulesForBatch as jest.Mock).mock.calls[0];
+      const [[row]] = (await sequelize.query(
+        `SELECT MIN(id) AS id FROM shadow_ai_events WHERE organization_id = :orgId`,
+        { replacements: { orgId: orgA } },
+      )) as [Array<{ id: string }>, unknown];
+      expect(orgId).toBe(orgA);
+      expect(batch.firstEventId).toBe(Number(row.id));
+      expect([...batch.allEmails]).toEqual(["alice@company.com"]);
     });
 
     it("routes a line with org B's key to org B only", async () => {

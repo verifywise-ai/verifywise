@@ -18,6 +18,7 @@ import {
   getRecentAlertKeys,
 } from "../utils/shadowAiRules.utils";
 import { sequelize } from "../database/db";
+import { aiUsageEvent } from "../utils/shadowAiUsage.utils";
 import logger from "../utils/logger/fileLogger";
 
 const TRIGGER_LABELS: Record<ShadowAiTriggerType, string> = {
@@ -178,6 +179,8 @@ export interface BatchContext {
   blockedAttempts: { toolId: number; toolName: string; userEmail: string }[];
   allDepartments: Set<string>;
   allEmails: Set<string>;
+  /** Lowest shadow_ai_events id inserted by this batch (null if none). */
+  firstEventId: number | null;
 }
 
 /**
@@ -227,24 +230,27 @@ export async function evaluateRulesForBatch(
     }
   }
 
-  // Pre-fetch existing user emails for new_user_detected (single batch query)
+  // Pre-fetch existing user emails for new_user_detected (single batch query).
+  // A user exists once they have AI usage before this batch (ids below the
+  // batch's first inserted id); earlier unmatched traffic does not count, so
+  // their first AI tool use still raises the alert.
   const batchEmails = [...batch.allEmails];
   const existingEmails = new Set<string>();
   if (batchEmails.length > 0) {
     try {
+      // Emails come only from inserted events, so the boundary is set; if it
+      // ever is not, fall through to the safe default below.
+      if (batch.firstEventId === null) throw new Error("batch has no inserted events");
       const [userRows] = await sequelize.query(
         `SELECT DISTINCT user_email FROM shadow_ai_events
          WHERE organization_id = :organizationId AND user_email IN (:emails)
-         AND id NOT IN (
-           SELECT id FROM shadow_ai_events
-           WHERE organization_id = :organizationId
-           ORDER BY id DESC LIMIT :recentLimit
-         )`,
+         AND ${aiUsageEvent()}
+         AND id < :firstEventId`,
         {
           replacements: {
             organizationId,
             emails: batchEmails,
-            recentLimit: batchEmails.length * 10,
+            firstEventId: batch.firstEventId,
           },
         },
       );

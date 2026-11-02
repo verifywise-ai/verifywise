@@ -10,6 +10,8 @@
 jest.mock("../../database/db", () => ({
   sequelize: {
     query: jest.fn(),
+    // Rollups run their delete and insert in one transaction.
+    transaction: jest.fn(async (cb: (t: unknown) => unknown) => cb({})),
   },
 }));
 
@@ -76,8 +78,8 @@ describe("shadowAiAggregation.service", () => {
 
       await runDailyRollup();
 
-      // 1 call for getAllOrganizationIds + 3 calls for each org rollup
-      expect(mockQuery).toHaveBeenCalledTimes(4);
+      // 1 call for getAllOrganizationIds + delete and insert per org
+      expect(mockQuery).toHaveBeenCalledTimes(7);
     });
 
     it("should continue processing on org failure", async () => {
@@ -89,8 +91,8 @@ describe("shadowAiAggregation.service", () => {
 
       await runDailyRollup();
 
-      // Should have tried both orgs (1 getAllOrgs + 2 org queries)
-      expect(mockQuery).toHaveBeenCalledTimes(3);
+      // Should have tried both orgs (1 getAllOrgs + failed org 1 + delete and insert for org 2)
+      expect(mockQuery).toHaveBeenCalledTimes(4);
       expect(logger.error).toHaveBeenCalledWith(
         expect.stringContaining("Daily rollup failed for organization 1"),
         expect.any(Error),
@@ -114,8 +116,8 @@ describe("shadowAiAggregation.service", () => {
 
       await runMonthlyRollup();
 
-      // 1 getAllOrgs + 2 org rollup queries
-      expect(mockQuery).toHaveBeenCalledTimes(3);
+      // 1 getAllOrgs + delete and insert per org
+      expect(mockQuery).toHaveBeenCalledTimes(5);
     });
 
     it("should continue processing on org failure", async () => {
