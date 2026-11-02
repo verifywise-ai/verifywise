@@ -18,7 +18,12 @@ import { sequelize } from "../../../database/db";
 import { checkShadowAiRateLimit, ingestShadowAiEvents } from "../../shadowAiIngestion.service";
 import { revalidateSource } from "../sourceCache";
 import { recordSyslogSourceStatsQuery } from "../../../utils/shadowAiConfig.utils";
-import { FLUSH_MAX_EVENTS, MAX_CONCURRENT_FLUSHES, SourceBatcher } from "../batcher";
+import {
+  FLUSH_MAX_EVENTS,
+  MAX_CONCURRENT_FLUSHES,
+  RATE_LIMIT_SETTINGS_MAX_AGE_MS,
+  SourceBatcher,
+} from "../batcher";
 import type { CachedSource } from "../sourceCache";
 import type { SyslogEvent } from "../types";
 
@@ -52,16 +57,55 @@ const fill = (b: SourceBatcher, src: CachedSource) => {
 };
 
 describe("SourceBatcher", () => {
+  let refund: jest.Mock;
+
   beforeEach(() => {
     jest.clearAllMocks();
     revalidate.mockImplementation(async (src: CachedSource) => src);
-    rateLimit.mockResolvedValue({ allowed: true, maxPerHour: 0 });
+    refund = jest.fn();
+    rateLimit.mockResolvedValue({ allowed: true, maxPerHour: 0, refund });
     ingest.mockResolvedValue({ ingested: FLUSH_MAX_EVENTS, toolsMatched: 0, skipped: 0 });
     recordStats.mockResolvedValue(undefined);
     (sequelize.query as unknown as jest.Mock).mockResolvedValue(undefined);
     transaction.mockResolvedValue({
       commit: jest.fn().mockResolvedValue(undefined),
       rollback: jest.fn().mockResolvedValue(undefined),
+    });
+  });
+
+  describe("the hourly quota", () => {
+    it("reuses the organization's limit for a short time", async () => {
+      const b = new SourceBatcher();
+      fill(b, source(1));
+      await b.flushAll();
+      expect(rateLimit).toHaveBeenCalledWith(7, FLUSH_MAX_EVENTS, {
+        settingsMaxAgeMs: RATE_LIMIT_SETTINGS_MAX_AGE_MS,
+      });
+    });
+
+    it("gives the batch back when the write rolls back", async () => {
+      recordStats.mockRejectedValue(new Error("deadlock"));
+      const b = new SourceBatcher();
+      fill(b, source(1));
+      await b.flushAll();
+      expect(b.failedFlushes).toBe(1);
+      expect(refund).toHaveBeenCalledWith(FLUSH_MAX_EVENTS);
+    });
+
+    it("gives back rows that were skipped, after a commit", async () => {
+      ingest.mockResolvedValue({ ingested: FLUSH_MAX_EVENTS - 3, toolsMatched: 0, skipped: 3 });
+      const b = new SourceBatcher();
+      fill(b, source(1));
+      await b.flushAll();
+      expect(refund).toHaveBeenCalledTimes(1);
+      expect(refund).toHaveBeenCalledWith(3);
+    });
+
+    it("gives nothing back after a commit that stored every event", async () => {
+      const b = new SourceBatcher();
+      fill(b, source(1));
+      await b.flushAll();
+      expect(refund).toHaveBeenCalledWith(0);
     });
   });
 

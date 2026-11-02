@@ -20,12 +20,21 @@ import { getSettingsQuery } from "../utils/shadowAiConfig.utils";
 
 // ─── In-memory sliding window rate limiter ─────────────────────────────
 // Tracks event counts per tenant per hour window. Resets every hour.
-const rateLimitBuckets = new Map<string, { count: number; windowStart: number }>();
+type RateLimitBucket = { count: number; windowStart: number };
+const rateLimitBuckets = new Map<string, RateLimitBucket>();
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
 let lastCleanup = Date.now();
 
-function checkRateLimit(tenant: string, maxPerHour: number, batchSize: number): boolean {
-  if (maxPerHour <= 0) return true; // 0 = no limit
+/**
+ * Count the batch against the tenant's window. Returns the bucket it was
+ * counted in, null when no limit applies, or false when it would exceed it.
+ */
+function checkRateLimit(
+  tenant: string,
+  maxPerHour: number,
+  batchSize: number,
+): RateLimitBucket | null | false {
+  if (maxPerHour <= 0) return null; // 0 = no limit
 
   const now = Date.now();
 
@@ -44,8 +53,9 @@ function checkRateLimit(tenant: string, maxPerHour: number, batchSize: number): 
   if (!bucket || now - bucket.windowStart >= RATE_LIMIT_WINDOW_MS) {
     // New window — only set count if within limit
     if (batchSize > maxPerHour) return false;
-    rateLimitBuckets.set(tenant, { count: batchSize, windowStart: now });
-    return true;
+    const fresh = { count: batchSize, windowStart: now };
+    rateLimitBuckets.set(tenant, fresh);
+    return fresh;
   }
 
   if (bucket.count + batchSize > maxPerHour) {
@@ -53,36 +63,87 @@ function checkRateLimit(tenant: string, maxPerHour: number, batchSize: number): 
   }
 
   bucket.count += batchSize;
-  return true;
+  return bucket;
+}
+
+// Optional short cache of each organization's limit, for callers that check
+// often (the syslog listener flushes every 2 s per source).
+const rateLimitSettingsCache = new Map<number, { maxPerHour: number; expiresAt: number }>();
+const RATE_LIMIT_SETTINGS_CACHE_MAX = 10_000;
+
+async function readMaxPerHour(organizationId: number, settingsMaxAgeMs: number): Promise<number> {
+  const now = Date.now();
+  if (settingsMaxAgeMs > 0) {
+    const cached = rateLimitSettingsCache.get(organizationId);
+    if (cached && cached.expiresAt > now) return cached.maxPerHour;
+  }
+  const maxPerHour = (await getSettingsQuery(organizationId)).rate_limit_max_events_per_hour;
+  if (settingsMaxAgeMs > 0) {
+    if (rateLimitSettingsCache.size >= RATE_LIMIT_SETTINGS_CACHE_MAX) {
+      for (const [id, entry] of rateLimitSettingsCache) {
+        if (entry.expiresAt <= now) rateLimitSettingsCache.delete(id);
+      }
+      if (rateLimitSettingsCache.size >= RATE_LIMIT_SETTINGS_CACHE_MAX) {
+        rateLimitSettingsCache.clear();
+      }
+    }
+    rateLimitSettingsCache.set(organizationId, {
+      maxPerHour,
+      expiresAt: now + settingsMaxAgeMs,
+    });
+  }
+  return maxPerHour;
 }
 
 export interface ShadowAiRateLimitResult {
   allowed: boolean;
   /** The limit the batch was checked against; 0 = no limit (or settings unreadable). */
   maxPerHour: number;
+  /**
+   * Give back events that were counted but not stored (e.g. the write rolled
+   * back). Never returns more than this batch counted, and does nothing once
+   * the hour window has moved on.
+   */
+  refund: (count: number) => void;
 }
+
+const NO_REFUND = () => {};
 
 /**
  * Check the organization's hourly event limit and count this batch against it.
  * `allowed` is false when the batch would exceed the limit. If settings cannot
  * be read (e.g. table missing), the batch is allowed.
+ *
+ * `settingsMaxAgeMs` lets a frequent caller reuse the limit it read up to that
+ * long ago; the default 0 reads settings every time.
  */
 export async function checkShadowAiRateLimit(
   organizationId: number,
   batchSize: number,
+  options?: { settingsMaxAgeMs?: number },
 ): Promise<ShadowAiRateLimitResult> {
   let maxPerHour: number;
   try {
-    maxPerHour = (await getSettingsQuery(organizationId)).rate_limit_max_events_per_hour;
+    maxPerHour = await readMaxPerHour(organizationId, options?.settingsMaxAgeMs ?? 0);
   } catch (error) {
     // If settings table doesn't exist yet, skip rate limiting
     logger.debug("Rate limit check skipped (settings unavailable)");
-    return { allowed: true, maxPerHour: 0 };
+    return { allowed: true, maxPerHour: 0, refund: NO_REFUND };
   }
-  return {
-    allowed: checkRateLimit(String(organizationId), maxPerHour, batchSize),
-    maxPerHour,
+  const tenant = String(organizationId);
+  const bucket = checkRateLimit(tenant, maxPerHour, batchSize);
+  if (bucket === false) return { allowed: false, maxPerHour, refund: NO_REFUND };
+  if (bucket === null) return { allowed: true, maxPerHour, refund: NO_REFUND };
+
+  let refundable = batchSize;
+  const refund = (count: number) => {
+    // A new window replaced the bucket: these events count against nothing now.
+    if (rateLimitBuckets.get(tenant) !== bucket) return;
+    const amount = Math.min(Math.max(0, Math.floor(count)), refundable, bucket.count);
+    bucket.count -= amount;
+    refundable -= amount;
   };
+  return { allowed: true, maxPerHour, refund };
 }
 
 /**

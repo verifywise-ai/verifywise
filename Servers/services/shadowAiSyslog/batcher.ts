@@ -3,7 +3,8 @@
  *
  * Events and drops are buffered per source and flushed at 500 events or 2
  * seconds after the first item. Each flush re-checks the source, counts the
- * batch against the organization's hourly limit and writes events plus the
+ * batch against the organization's hourly limit (given back for events that
+ * end up not stored, e.g. on rollback) and writes events plus the
  * source's stats in one transaction scoped to that organization
  * (`SET LOCAL app.current_org`), so it works with RLS enforcement on.
  * Events are never retried.
@@ -25,6 +26,9 @@ export const MAX_PENDING_EVENTS = 20_000;
 // Flushes running at once, so a flood cannot take the HTTP API's DB pool.
 export const MAX_CONCURRENT_FLUSHES = 2;
 const FAILURE_LOG_INTERVAL_MS = 60_000;
+// How long a flush may reuse an organization's hourly limit instead of
+// reading settings again. A changed limit applies within this time.
+export const RATE_LIMIT_SETTINGS_MAX_AGE_MS = 30_000;
 
 interface Batch {
   source: CachedSource;
@@ -142,13 +146,19 @@ export class SourceBatcher {
     let dropped = batch.dropped;
     let lastDropReason = batch.lastDropReason;
 
-    if (
-      events.length > 0 &&
-      !(await checkShadowAiRateLimit(organizationId, events.length)).allowed
-    ) {
-      dropped += events.length;
-      lastDropReason = "rate_limited";
-      events = [];
+    // Events counted against the hourly limit are given back if not stored.
+    let refundQuota: (count: number) => void = () => {};
+    if (events.length > 0) {
+      const limit = await checkShadowAiRateLimit(organizationId, events.length, {
+        settingsMaxAgeMs: RATE_LIMIT_SETTINGS_MAX_AGE_MS,
+      });
+      if (limit.allowed) {
+        refundQuota = limit.refund;
+      } else {
+        dropped += events.length;
+        lastDropReason = "rate_limited";
+        events = [];
+      }
     }
 
     let transaction: Transaction | undefined;
@@ -172,6 +182,7 @@ export class SourceBatcher {
           lastDropReason = "unparseable";
         }
       }
+      const notStored = events.length - accepted;
       await recordSyslogSourceStatsQuery(
         organizationId,
         configId,
@@ -181,12 +192,14 @@ export class SourceBatcher {
         transaction,
       );
       await transaction.commit();
+      refundQuota(notStored);
     } catch (error) {
       try {
         await transaction?.rollback();
       } catch {
         // The failure below is what gets logged.
       }
+      refundQuota(events.length);
       this.failedFlushes++;
       this.logFailure(configId, organizationId, events.length, error);
     }
