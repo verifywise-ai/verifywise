@@ -21,7 +21,7 @@ import {
 } from "../../../../application/repository/entity.repository";
 import Alert from "../../../components/Alert";
 import CustomizableToast from "../../../components/Toast";
-import { background, border as borderPalette, status, text } from "../../../themes/palette";
+import { background, border as borderPalette, text } from "../../../themes/palette";
 import { fontSize, fontWeight, textStyles } from "../../../themes/typography";
 
 interface FrameworkSettingsProps {
