@@ -125,3 +125,33 @@ Every labelled vendor also needs a completed run on its row, not after findings 
 - **Product finding FR2:** when the first ask got a 429, every search of the run failed at once during the 60 s pause, and none asked again, because all of a run's news searches happen in its first seconds. The fix is in `e0d1d21ff` (the run waits out the pause, asks again, and the gather's clock moves to allow it) and `2c5889479` (a fixed-text step in the run trace for each 429 of GDELT, from the review).
 - **Void runs and the engine:** a run in which no search was answered stores no search engine, so a void run cannot show "GDELT" as its engine.
 - **What pass 3 changes:** the run is its own probe and no data probe is made; the runs are spaced apart; and the driver backs off after a void run. Only Citrix needs a fresh row; rows 2 to 21 have no run yet.
+
+### Pass 3 (from 2026-11-02): held, not finished
+
+- **Code:** `0b3effcf69f6b20e7751f772660601606a3ca6c0`, built and run from a snapshot worktree; a new database with 217 migrations; the lists `cve`, `eu_fsf`, `kev`, `ofac` and `uk_sanctions` synced; prompt version `vr-12`; engine GDELT. Written up on 2026-11-02, while the driver was still running (first start 08:33:48Z).
+- **Driver:** no probes (the run is its own probe); one run at a time; about 15 minutes between a clean run and the next start; after a void run the same vendor is tried again after a longer wait (the Cloudflare starts were 13:19, 13:49 and 14:49Z). It stops at a streak of 6 void runs, and the last start allowed is 2026-11-03T14:33:48Z.
+- **Accepted runs (6 of 21 vendors, all clean):** Citrix (run 5), Fortra (7), ConnectWise (11), Ivanti (12), Salesloft (13), Ingram Micro (14). Ingram Micro had 23 of 25 news searches answered, which is clean (at least 90 %).
+- **Void runs:**
+  - GDELT: runs 6 (Fortra), 8 (ConnectWise), and 15, 16 and 17 (Cloudflare, three in a row). Each of these had 2 refused asks and 1 final refusal, and no news answered.
+  - Sleep of the Mac: runs 9 and 10 (ConnectWise) ran during a clamshell sleep on battery (09:44:16Z to 11:55:43Z) and failed with timeouts. No void since the wake has been of this kind.
+- **GDELT asks:** 30 asks in the traces of pass 3: 22 refused (5 final), 6 answered, 2 with no answer while the Mac slept. News searches answered: pass 3 134 of 264, pass 2 0 of 94, pass 1 0 of 76. The worker log has no GDELT 429 line in any of the three passes.
+- **Scored, not passed.** The scorer takes the first completed `vr-12` run of each vendor row, so it counted void run 17 for Cloudflare (raw output: precision 0.88, 14 of 16; 7 of 21 vendors with a run). Counting only the accepted runs (a read-only script that uses the scorer's own loader and bars):
+
+  | Bar | Value | Met |
+  |---|---|---|
+  | Prompt version `vr-12` only | all runs of passes 2 and 3 | yes |
+  | Precision at least 0.90 | 0.83 (10 of 12, 0 traps) | no |
+  | Label agreement at least 80 % | 100 % (10 of 10) | yes |
+  | No High finding rated Low | none | yes |
+  | No sanctions match stated as a fact | none | yes |
+  | Coverage | no failed list, no run without coverage | yes |
+  | No run after earlier findings or risks of its row | none | yes |
+  | Every labelled vendor has a completed run | 6 of 21 | no |
+  | Recall (no bar) | 0.20 | n/a |
+
+- **The two unmatched findings:** Ivanti (run 12) cites the NVD records of the three CVEs of its first expectation, but its description leaves the CVE ids out, and the scorer matches description words only. Salesloft (run 13) reports a subprocessor change that no label or trap covers.
+- **Left for a human:**
+  - Decide whether the scorer (or the prompt) should account for the CVE ids a finding cites, and whether the Salesloft finding is a false positive. The labels cannot change.
+  - Let the driver finish: 15 vendors have no accepted run, Cloudflare among them (next start 2026-11-02T15:49:07Z). Until then the golden set cannot pass; otherwise accept a partial golden set.
+  - Keep the Mac on AC power with the lid open while the driver runs.
+  - Nothing in this repository says the bars are met.
