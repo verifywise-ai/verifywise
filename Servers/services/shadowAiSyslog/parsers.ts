@@ -82,11 +82,13 @@ function unescapeValue(raw: string): string {
 }
 
 // CEF header: `CEF:0|Vendor|Product|Version|SignatureId|Name|Severity|`. The
-// extension (key=value pairs) follows the seventh pipe. A forwarder may put its
-// own prefix (a host name, a syslog tag) before `CEF:`, so the header is
-// searched for rather than anchored. Header fields escape a
-// literal pipe as `\|`.
-const CEF_HEADER_RE = /CEF:\d+(?:\|(?:[^|\\]|\\.)*){6}\|/;
+// extension (key=value pairs) follows the seventh pipe. A forwarder may put a
+// short prefix (a host name, a syslog tag) before `CEF:`: at most two
+// whitespace-separated tokens, with no `=` or quotes. The header is NOT searched
+// for anywhere in the line, or free text in a plain key=value line (a user
+// agent) could carry a fake header and supply the user and destination.
+// Header fields escape a literal pipe as `\|`.
+const CEF_HEADER_RE = /^\s*(?:[^\s="']+\s+){0,2}CEF:\d+(?:\|(?:[^|\\]|\\.)*){6}\|/;
 // A CEF extension key sits at the start or after whitespace and ends at `=`.
 const CEF_KEY_RE = /(?:^|\s)([A-Za-z_][\w.-]*)=/g;
 
@@ -114,7 +116,7 @@ function parseCefExtension(extension: string): Fields | null {
 /** Key=value pairs, or null when an event key appears more than once. */
 function parseKeyValues(body: string, cef = false): Fields | null {
   const header = cef ? CEF_HEADER_RE.exec(body) : null;
-  if (header) return parseCefExtension(body.slice(header.index + header[0].length));
+  if (header) return parseCefExtension(body.slice(header[0].length));
   const fields: Fields = Object.create(null);
   for (const m of body.matchAll(KV_PAIR_RE)) {
     const key = m[1];

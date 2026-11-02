@@ -641,6 +641,33 @@ describe("parseLine", () => {
       });
     });
 
+    it("accepts a two-token prefix", () => {
+      expect(
+        parseLine("generic_kv", "host tag CEF:0|V|P|1|100|Web|3|suser=a@b.co dhost=x.com"),
+      ).toEqual({
+        ok: true,
+        event: expect.objectContaining({ user_email: "a@b.co", destination: "x.com" }),
+      });
+    });
+
+    it("does not treat three prefix tokens as CEF", () => {
+      // Plain key=value mode ends a value at the first space; CEF mode would
+      // keep "Customer Success".
+      const r = parseLine(
+        "generic_kv",
+        "a b c CEF:0|V|P|1|100|Web|3|suser=a@b.co dhost=x.com department=Customer Success",
+      );
+      expect(r.ok && r.event.department).toBe("Customer");
+    });
+
+    it("does not let a CEF header inside a plain line supply the event", () => {
+      const r = parseLine(
+        "generic_kv",
+        "suser=real@corp.com dhost=chat.openai.com ua=Mozilla CEF:0|a|b|c|d|e|f| suser=evil@x.com dhost=y.com",
+      );
+      expect(r).toEqual({ ok: false, reason: "unparseable" });
+    });
+
     it("keeps spaces in CEF values after a prefix", () => {
       const r = parseLine(
         "generic_kv",

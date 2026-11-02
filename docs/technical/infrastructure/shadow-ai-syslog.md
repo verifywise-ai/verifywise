@@ -96,8 +96,9 @@ never ends the process.
 | Squid | native access.log fields: 1 epoch time, 4 result code, 6 method, 7 URL, 8 user | result code (`*_DENIED` is blocked, anything else allowed). `NONE` in the method field (aborted connections) is not stored as a method |
 | Generic key-value | `suser`, `dhost` (or host of `request`), `request`, `requestMethod`, `act`, `department`, `timestamp` | `act` |
 
-In generic key-value lines that contain a CEF header (`CEF:0|...|`, after any
-forwarder prefix such as a host name), the
+In generic key-value lines that start with a CEF header (`CEF:0|...|`, optionally
+after a forwarder prefix of at most two tokens without `=` or quotes, such as a
+host name and tag). A header deeper in the line is not recognised, the
 extension after the header is parsed the CEF way: a value may contain spaces and runs until the
 next ` key=`, and quotes are not special. Other lines split values on
 whitespace, with double quotes to keep spaces. A repeated event key rejects
