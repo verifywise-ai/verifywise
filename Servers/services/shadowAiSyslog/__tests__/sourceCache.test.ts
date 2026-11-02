@@ -9,12 +9,14 @@ jest.mock("../../../utils/logger/fileLogger", () => ({
 import { listActiveSyslogSourcesQuery } from "../../../utils/shadowAiConfig.utils";
 import {
   invalidateSourceCache,
+  invalidateSourceCacheAfterCommit,
   resolveByKey,
   revalidateSource,
   sourcesForIp,
   SOURCE_CACHE_TTL_MS,
 } from "../sourceCache";
 import { hashSourceKey } from "../sourceKey";
+import type { Transaction } from "sequelize";
 
 const list = listActiveSyslogSourcesQuery as jest.Mock;
 const KEY = `vwsl_7_${"ab".repeat(24)}`;
@@ -106,5 +108,35 @@ describe("source cache", () => {
     list.mockResolvedValue([row]);
     now += 10_000;
     expect(await resolveByKey(KEY)).not.toBeNull();
+  });
+
+  describe("invalidateSourceCacheAfterCommit", () => {
+    it("keeps serving the cache until the transaction commits, then reloads", async () => {
+      list.mockResolvedValue([row]);
+      await resolveByKey(KEY);
+      expect(list).toHaveBeenCalledTimes(1);
+
+      let commit: (() => void) | undefined;
+      const transaction = { afterCommit: (fn: () => void) => (commit = fn) };
+      invalidateSourceCacheAfterCommit(transaction as unknown as Transaction);
+
+      // The write is not visible yet: a reload now would cache the old row.
+      await resolveByKey(KEY);
+      expect(list).toHaveBeenCalledTimes(1);
+
+      list.mockResolvedValue([]);
+      commit!();
+      expect(await resolveByKey(KEY)).toBeNull();
+      expect(list).toHaveBeenCalledTimes(2);
+    });
+
+    it("invalidates at once without a transaction", async () => {
+      list.mockResolvedValue([row]);
+      await resolveByKey(KEY);
+      list.mockResolvedValue([]);
+      invalidateSourceCacheAfterCommit(undefined);
+      expect(await resolveByKey(KEY)).toBeNull();
+      expect(list).toHaveBeenCalledTimes(2);
+    });
   });
 });

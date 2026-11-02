@@ -30,12 +30,16 @@ jest.mock("../../utils/shadowAiConfig.utils", () => ({
   createSyslogConfigQuery: jest.fn(),
   updateSyslogConfigQuery: jest.fn(),
   deleteSyslogConfigQuery: jest.fn(),
+  regenerateSyslogKeyQuery: jest.fn(),
   getSettingsQuery: jest.fn(),
   lockShadowAiSettings: jest.fn(),
   updateSettingsQuery: jest.fn(),
 }));
 jest.mock("../../services/shadowAiSyslog/listener", () => ({
   getSyslogListenerState: jest.fn(),
+}));
+jest.mock("../../services/shadowAiSyslog/sourceCache", () => ({
+  invalidateSourceCacheAfterCommit: jest.fn(),
 }));
 jest.mock("../../services/shadowAiSyslog/config", () => ({
   readSyslogListenerConfig: jest.fn(),
@@ -79,10 +83,12 @@ jest.mock("../../database/db", () => ({
 import { sequelize } from "../../database/db";
 import { getSyslogListenerState } from "../../services/shadowAiSyslog/listener";
 import { readSyslogListenerConfig } from "../../services/shadowAiSyslog/config";
+import { invalidateSourceCacheAfterCommit } from "../../services/shadowAiSyslog/sourceCache";
 import { appendRetentionChangeToLedger } from "../../utils/retentionAudit.utils";
 import {
   createSyslogConfigQuery,
   deleteSyslogConfigQuery,
+  regenerateSyslogKeyQuery,
   getSettingsQuery,
   getSyslogConfigsQuery,
   lockShadowAiSettings,
@@ -134,6 +140,7 @@ import {
   getUserDetail,
   getUsers,
   getUsersByDepartment,
+  regenerateSyslogKey,
   startGovernance,
   updateRule,
   updateSettings,
@@ -1077,6 +1084,62 @@ describe("shadowAi.ctrl", () => {
       await updateSyslogConfig(req, res);
       expect(res.status).toHaveBeenCalledWith(500);
     });
+  });
+
+  describe("source cache invalidation after a syslog config write", () => {
+    const config = { id: 1, parser_type: "zscaler", source_identifier: null, is_active: true };
+    const rlsTransaction = { afterCommit: jest.fn() };
+    const writes: [string, (req: any, res: any) => Promise<unknown>, () => void, any][] = [
+      [
+        "create",
+        createSyslogConfig,
+        () => mockCreateSyslogConfig.mockResolvedValue({ config, key: "vwsl_k" }),
+        { body: { parser_type: "zscaler" } },
+      ],
+      [
+        "update",
+        updateSyslogConfig,
+        () => mockUpdateSyslogConfig.mockResolvedValue(config),
+        { params: { id: "1" }, body: { is_active: false } },
+      ],
+      [
+        "delete",
+        deleteSyslogConfig,
+        () => mockDeleteSyslogConfig.mockResolvedValue(true),
+        { params: { id: "1" } },
+      ],
+      [
+        "regenerate",
+        regenerateSyslogKey,
+        () =>
+          (regenerateSyslogKeyQuery as jest.MockedFunction<any>).mockResolvedValue({
+            config,
+            key: "vwsl_k",
+          }),
+        { params: { id: "1" } },
+      ],
+    ];
+
+    it.each(writes)(
+      "%s waits for the request's RLS transaction to commit",
+      async (_name, handler, arrange, overrides) => {
+        arrange();
+        const res = createRes();
+        await handler(createReq({ ...overrides, rlsTransaction }), res);
+        expect(res.status.mock.calls[0][0]).toBeLessThan(400);
+        expect(invalidateSourceCacheAfterCommit).toHaveBeenCalledTimes(1);
+        expect(invalidateSourceCacheAfterCommit).toHaveBeenCalledWith(rlsTransaction);
+      },
+    );
+
+    it.each(writes)(
+      "%s invalidates at once without RLS enforcement",
+      async (_name, handler, arrange, overrides) => {
+        arrange();
+        await handler(createReq(overrides), createRes());
+        expect(invalidateSourceCacheAfterCommit).toHaveBeenCalledWith(undefined);
+      },
+    );
   });
 
   describe("deleteSyslogConfig", () => {

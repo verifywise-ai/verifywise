@@ -57,7 +57,7 @@ import { translateError } from "../utils/i18n.utils";
 import { normalizeIp } from "../services/shadowAiSyslog/ip";
 import { readSyslogListenerConfig } from "../services/shadowAiSyslog/config";
 import { getSyslogListenerState } from "../services/shadowAiSyslog/listener";
-import { invalidateSourceCache } from "../services/shadowAiSyslog/sourceCache";
+import { invalidateSourceCacheAfterCommit } from "../services/shadowAiSyslog/sourceCache";
 import { isParserType, PARSER_TYPES } from "../services/shadowAiSyslog/types";
 import {
   appendRetentionChangeToLedger,
@@ -1164,7 +1164,7 @@ export async function createSyslogConfig(req: Request, res: Response) {
       parser_type,
       is_active: is_active !== false,
     });
-    invalidateSourceCache();
+    invalidateSourceCacheAfterCommit(req.rlsTransaction);
 
     await logSuccess({
       eventType: "Create",
@@ -1238,7 +1238,7 @@ export async function updateSyslogConfig(req: Request, res: Response) {
     if (!updated) {
       return res.status(404).json(STATUS_CODE[404](req.t!("Syslog config not found")));
     }
-    invalidateSourceCache();
+    invalidateSourceCacheAfterCommit(req.rlsTransaction);
 
     await logSuccess({
       eventType: "Update",
@@ -1292,7 +1292,7 @@ export async function deleteSyslogConfig(req: Request, res: Response) {
     if (!deleted) {
       return res.status(404).json(STATUS_CODE[404](req.t!("Syslog config not found")));
     }
-    invalidateSourceCache();
+    invalidateSourceCacheAfterCommit(req.rlsTransaction);
 
     await logSuccess({
       eventType: "Delete",
@@ -1346,7 +1346,7 @@ export async function regenerateSyslogKey(req: Request, res: Response) {
     if (!result) {
       return res.status(404).json(STATUS_CODE[404](req.t!("Syslog config not found")));
     }
-    invalidateSourceCache();
+    invalidateSourceCacheAfterCommit(req.rlsTransaction);
 
     await logSuccess({
       eventType: "Update",

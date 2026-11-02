@@ -6,6 +6,7 @@
  * in-flight reload. A failed reload leaves no usable rows until a later one succeeds.
  */
 
+import type { Transaction } from "sequelize";
 import logger from "../../utils/logger/fileLogger";
 import { listActiveSyslogSourcesQuery } from "../../utils/shadowAiConfig.utils";
 import { normalizeIp } from "./ip";
@@ -98,6 +99,19 @@ async function ensureFresh(): Promise<void> {
 export function invalidateSourceCache(): void {
   generation++;
   expiresAt = 0;
+}
+
+/**
+ * Invalidate once a write is visible to other connections. Pass the
+ * transaction the write ran in (with RLS enforcement, `req.rlsTransaction`,
+ * committed only when the response finishes). Invalidating before the commit
+ * would let a concurrent reload cache the old row, such as a revoked key, for
+ * a full TTL. A rollback changed nothing, so it invalidates nothing. Without
+ * a transaction the write is already committed and the cache is dropped now.
+ */
+export function invalidateSourceCacheAfterCommit(transaction?: Transaction | null): void {
+  if (transaction) transaction.afterCommit(() => invalidateSourceCache());
+  else invalidateSourceCache();
 }
 
 export async function resolveByKeyHash(hash: string): Promise<CachedSource | null> {
