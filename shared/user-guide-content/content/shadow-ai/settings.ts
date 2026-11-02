@@ -296,7 +296,7 @@ export const settingsContent: ArticleContent = {
       ],
       rows: [
         { normalized: 'user_email', zscaler: 'user', netskope: 'user', squid: 'field 8', generic: 'suser' },
-        { normalized: 'destination', zscaler: 'dst, else host of uri', netskope: 'url (hostname)', squid: 'url (hostname)', generic: 'dhost, else host of request' },
+        { normalized: 'destination', zscaler: 'dst, else host of uri', netskope: 'url (hostname), else domain or site', squid: 'url (hostname)', generic: 'dhost, else host of request' },
         { normalized: 'uri_path', zscaler: 'uri (path)', netskope: 'url (path)', squid: 'url (path)', generic: 'request (path)' },
         { normalized: 'http_method', zscaler: 'method', netskope: 'method', squid: 'field 6', generic: 'requestMethod' },
         { normalized: 'action', zscaler: 'action', netskope: 'action', squid: 'field 4 (result code)', generic: 'act' },

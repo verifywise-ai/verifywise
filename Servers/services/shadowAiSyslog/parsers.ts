@@ -301,32 +301,51 @@ function parseGenericKv(
   );
 }
 
+// A JSON object may follow a prefix and be followed by trailing text. Try the
+// slice ending at each closing brace, last first, a bounded number of times.
+const MAX_JSON_END_ATTEMPTS = 8;
+
+function extractJsonObject(body: string): Record<string, unknown> | null {
+  const start = body.indexOf("{");
+  if (start === -1) return null;
+  let end = body.lastIndexOf("}");
+  for (let attempt = 0; attempt < MAX_JSON_END_ATTEMPTS && end > start; attempt++) {
+    try {
+      const parsed: unknown = JSON.parse(body.slice(start, end + 1));
+      return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+        ? (parsed as Record<string, unknown>)
+        : null;
+    } catch {
+      end = body.lastIndexOf("}", end - 1);
+    }
+  }
+  return null;
+}
+
+/** A host-shaped value (dotted name or IP), normalised; free text is rejected. */
+function dottedHost(raw: unknown): string | undefined {
+  if (typeof raw !== "string" || /\s/.test(raw)) return undefined;
+  const host = hostField(raw);
+  return host && (host.includes(".") || host.includes(":")) ? host : undefined;
+}
+
 function parseNetskope(
   body: string,
   headerTimestamp: string | undefined,
   receivedAt: Date,
 ): ParseResult {
-  // The JSON object may follow a prefix.
-  const start = body.indexOf("{");
-  const end = body.lastIndexOf("}");
-  if (start === -1 || end < start) return { ok: false, reason: "unparseable" };
+  const j = extractJsonObject(body);
+  if (!j) return { ok: false, reason: "unparseable" };
 
-  let json: unknown;
-  try {
-    json = JSON.parse(body.slice(start, end + 1));
-  } catch {
-    return { ok: false, reason: "unparseable" };
-  }
-  if (!json || typeof json !== "object" || Array.isArray(json)) {
-    return { ok: false, reason: "unparseable" };
-  }
-
-  const j = json as Record<string, unknown>;
   const url = typeof j.url === "string" ? hostAndPath(j.url) : null;
+  // `url` is the destination. Without it, `domain` (then `site`) is read when
+  // it looks like a host. `hostname` is NOT used: in Netskope events it is the
+  // user's device, not the site the user reached.
+  const host = url?.host ?? dottedHost(j.domain) ?? dottedHost(j.site);
   return buildEvent(
     {
       user: j.user,
-      host: url?.host,
+      host,
       path: url?.path,
       method: j.method,
       // `action` is Netskope's policy verdict (allow, block, ...); `activity`

@@ -1145,7 +1145,7 @@ const FIELD_MAPPING = [
   {
     normalized: "destination",
     zscaler: "dst",
-    netskope: "url (host)",
+    netskope: "url (host), else domain",
     squid: "url (host)",
     generic: "dhost",
   },

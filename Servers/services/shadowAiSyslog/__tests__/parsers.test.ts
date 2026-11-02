@@ -167,6 +167,47 @@ describe("parseLine", () => {
       });
     });
 
+    it("reads the destination from domain when there is no url", () => {
+      const r = parseLine("netskope", '{"user":"a@b.co","domain":"Chat.OpenAI.com","hostname":"LAPTOP-7"}');
+      expect(r.ok && r.event.destination).toBe("chat.openai.com");
+    });
+
+    it("falls back to site only when it is host-shaped", () => {
+      const ok = parseLine("netskope", '{"user":"a@b.co","site":"claude.ai"}');
+      expect(ok.ok && ok.event.destination).toBe("claude.ai");
+      expect(
+        parseLine("netskope", '{"user":"a@b.co","site":"Microsoft Office 365 Sharepoint Sites"}'),
+      ).toEqual({ ok: false, reason: "no_destination" });
+    });
+
+    it("never uses hostname, which is the user's device", () => {
+      expect(parseLine("netskope", '{"user":"a@b.co","hostname":"laptop.corp.local"}')).toEqual({
+        ok: false,
+        reason: "no_destination",
+      });
+    });
+
+    it("prefers url over domain and site", () => {
+      const r = parseLine(
+        "netskope",
+        '{"user":"a@b.co","url":"https://a.com/p","domain":"b.com","site":"c.com"}',
+      );
+      expect(r.ok && r.event.destination).toBe("a.com");
+    });
+
+    it("parses JSON followed by trailing text that contains a brace", () => {
+      const r = parseLine(
+        "netskope",
+        '<14> {"user":"a@b.co","url":"https://x.com/p"} trailer } more',
+      );
+      expect(r.ok && r.event.destination).toBe("x.com");
+    });
+
+    it("gives up on a long run of unmatched closing braces", () => {
+      const r = parseLine("netskope", `{"user":"a@b.co","url":"https://x.com"} ${"} ".repeat(50)}`);
+      expect(r).toEqual({ ok: false, reason: "unparseable" });
+    });
+
     it("drops broken JSON as unparseable", () => {
       expect(parseLine("netskope", "{not json")).toEqual({
         ok: false,
