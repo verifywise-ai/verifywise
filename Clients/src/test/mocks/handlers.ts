@@ -991,8 +991,18 @@ export const handlers = [
   http.get("/api/shadow-ai/config/syslog", () => HttpResponse.json({ data: mockSyslogConfigs })),
   http.post("/api/shadow-ai/config/syslog", async ({ request }) => {
     const body = (await request.json()) as Record<string, unknown>;
-    return HttpResponse.json({ data: { id: 3, ...body } }, { status: 201 });
+    return HttpResponse.json({ data: { id: 3, ...body, key: "vwsl_mockkey" } }, { status: 201 });
   }),
+  http.get("/api/shadow-ai/config/syslog/status", () =>
+    HttpResponse.json({
+      data: { enabled: true, port: 6514, tls: true, plaintext: false, ipOnly: false },
+    }),
+  ),
+  http.post("/api/shadow-ai/config/syslog/:id/regenerate-key", ({ params }) =>
+    HttpResponse.json({
+      data: { ...mockSyslogConfigs[0], id: Number(params.id), key: "vwsl_mockkey" },
+    }),
+  ),
   http.patch("/api/shadow-ai/config/syslog/:id", async ({ params, request }) => {
     const body = (await request.json()) as Record<string, unknown>;
     return HttpResponse.json({ data: { ...mockSyslogConfigs[0], id: Number(params.id), ...body } });

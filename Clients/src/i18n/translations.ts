@@ -102,6 +102,48 @@ export type Lang = "en" | "de" | "fr" | "es";
 
 export const translations: Record<string, Record<string, string>> = {
   de: {
+    // Shadow AI syslog sources
+    "Allowed sender IP (optional)": "Zulässige Absender-IP (optional)",
+    "Allowed sender IP": "Zulässige Absender-IP",
+    "Last received": "Zuletzt empfangen",
+    "Dropped": "Verworfen",
+    "Last drop reason": "Letzter Verwerfungsgrund",
+    "Parser": "Parser",
+    "No key yet": "Noch kein Schlüssel",
+    "Generate key": "Schlüssel erzeugen",
+    "Regenerate key": "Schlüssel neu erzeugen",
+    "Not an IP address. Clear it or enter the sender's IP.":
+      "Keine IP-Adresse. Leeren Sie das Feld oder geben Sie die IP des Absenders ein.",
+    "No user email in the log line": "Keine Benutzer-E-Mail in der Logzeile",
+    "No destination host in the log line": "Kein Zielhost in der Logzeile",
+    "Line does not match the parser type": "Die Zeile passt nicht zum Parser-Typ",
+    "Sent from an IP that isn't allowed or is shared with another source":
+      "Von einer IP gesendet, die nicht zulässig ist oder mit einer anderen Quelle geteilt wird",
+    "Over the hourly event limit": "Stündliches Ereignislimit überschritten",
+    "Unknown reason": "Unbekannter Grund",
+    "Syslog listener is off. Set SHADOW_AI_SYSLOG_ENABLED=true on the server to turn it on.":
+      "Der Syslog-Listener ist aus. Setzen Sie SHADOW_AI_SYSLOG_ENABLED=true auf dem Server, um ihn einzuschalten.",
+    "Syslog listener is on. Send to {host}:{port} over TLS.":
+      "Der Syslog-Listener ist an. Senden Sie per TLS an {host}:{port}.",
+    "Syslog listener is on. Send to {host}:{port} over plain TCP.":
+      "Der Syslog-Listener ist an. Senden Sie per einfachem TCP an {host}:{port}.",
+    "Enter an IPv4 or IPv6 address.": "Geben Sie eine IPv4- oder IPv6-Adresse ein.",
+    "Could not add the source. Try again.":
+      "Die Quelle konnte nicht hinzugefügt werden. Versuchen Sie es erneut.",
+    "Could not save the source. Try again.":
+      "Die Quelle konnte nicht gespeichert werden. Versuchen Sie es erneut.",
+    "Could not remove the source. Try again.":
+      "Die Quelle konnte nicht entfernt werden. Versuchen Sie es erneut.",
+    "Could not generate a key. Try again.":
+      "Der Schlüssel konnte nicht erzeugt werden. Versuchen Sie es erneut.",
+    "Your source key": "Ihr Quellenschlüssel",
+    "Add this to the sender's log format": "Fügen Sie dies zum Logformat des Absenders hinzu",
+    "Copy log format line": "Logformat-Zeile kopieren",
+    "Regenerate key for {name}?": "Schlüssel für {name} neu erzeugen?",
+    "The current key stops working right away. Update the sender's log format with the new key.":
+      "Der aktuelle Schlüssel funktioniert sofort nicht mehr. Aktualisieren Sie das Logformat des Absenders mit dem neuen Schlüssel.",
+    "Edit source": "Quelle bearbeiten",
+    "Remove source": "Quelle entfernen",
     ...agentDiscoveryDe,
     ...aiAppsDe,
     ...aiAuditDe,
@@ -9596,6 +9638,44 @@ export const translations: Record<string, Record<string, string>> = {
   },
 
   fr: {
+    // Shadow AI syslog sources
+    "Allowed sender IP (optional)": "IP d'expéditeur autorisée (facultatif)",
+    "Allowed sender IP": "IP d'expéditeur autorisée",
+    "Last received": "Dernière réception",
+    "Dropped": "Rejetés",
+    "Last drop reason": "Dernier motif de rejet",
+    "Parser": "Analyseur",
+    "No key yet": "Pas encore de clé",
+    "Generate key": "Générer une clé",
+    "Regenerate key": "Régénérer la clé",
+    "Not an IP address. Clear it or enter the sender's IP.":
+      "Ce n'est pas une adresse IP. Videz le champ ou saisissez l'IP de l'expéditeur.",
+    "No user email in the log line": "Aucun e-mail d'utilisateur dans la ligne de journal",
+    "No destination host in the log line": "Aucun hôte de destination dans la ligne de journal",
+    "Line does not match the parser type": "La ligne ne correspond pas au type d'analyseur",
+    "Sent from an IP that isn't allowed or is shared with another source":
+      "Envoyé depuis une IP non autorisée ou partagée avec une autre source",
+    "Over the hourly event limit": "Limite horaire d'événements dépassée",
+    "Unknown reason": "Motif inconnu",
+    "Syslog listener is off. Set SHADOW_AI_SYSLOG_ENABLED=true on the server to turn it on.":
+      "L'écouteur Syslog est désactivé. Définissez SHADOW_AI_SYSLOG_ENABLED=true sur le serveur pour l'activer.",
+    "Syslog listener is on. Send to {host}:{port} over TLS.":
+      "L'écouteur Syslog est activé. Envoyez vers {host}:{port} via TLS.",
+    "Syslog listener is on. Send to {host}:{port} over plain TCP.":
+      "L'écouteur Syslog est activé. Envoyez vers {host}:{port} via TCP simple.",
+    "Enter an IPv4 or IPv6 address.": "Saisissez une adresse IPv4 ou IPv6.",
+    "Could not add the source. Try again.": "Impossible d'ajouter la source. Réessayez.",
+    "Could not save the source. Try again.": "Impossible d'enregistrer la source. Réessayez.",
+    "Could not remove the source. Try again.": "Impossible de supprimer la source. Réessayez.",
+    "Could not generate a key. Try again.": "Impossible de générer la clé. Réessayez.",
+    "Your source key": "Votre clé de source",
+    "Add this to the sender's log format": "Ajoutez ceci au format de journal de l'expéditeur",
+    "Copy log format line": "Copier la ligne de format de journal",
+    "Regenerate key for {name}?": "Régénérer la clé de {name} ?",
+    "The current key stops working right away. Update the sender's log format with the new key.":
+      "La clé actuelle cesse de fonctionner immédiatement. Mettez à jour le format de journal de l'expéditeur avec la nouvelle clé.",
+    "Edit source": "Modifier la source",
+    "Remove source": "Supprimer la source",
     ...agentDiscoveryFr,
     ...aiAppsFr,
     ...aiAuditFr,
@@ -19029,6 +19109,44 @@ export const translations: Record<string, Record<string, string>> = {
     "180 days": "180 jours",
   },
   es: {
+    // Shadow AI syslog sources
+    "Allowed sender IP (optional)": "IP de origen permitida (opcional)",
+    "Allowed sender IP": "IP de origen permitida",
+    "Last received": "Última recepción",
+    "Dropped": "Descartados",
+    "Last drop reason": "Último motivo de descarte",
+    "Parser": "Analizador",
+    "No key yet": "Aún no hay clave",
+    "Generate key": "Generar clave",
+    "Regenerate key": "Regenerar clave",
+    "Not an IP address. Clear it or enter the sender's IP.":
+      "No es una dirección IP. Bórrelo o introduzca la IP del remitente.",
+    "No user email in the log line": "No hay correo de usuario en la línea de registro",
+    "No destination host in the log line": "No hay host de destino en la línea de registro",
+    "Line does not match the parser type": "La línea no coincide con el tipo de analizador",
+    "Sent from an IP that isn't allowed or is shared with another source":
+      "Enviado desde una IP no permitida o compartida con otra fuente",
+    "Over the hourly event limit": "Límite de eventos por hora superado",
+    "Unknown reason": "Motivo desconocido",
+    "Syslog listener is off. Set SHADOW_AI_SYSLOG_ENABLED=true on the server to turn it on.":
+      "El receptor de Syslog está desactivado. Defina SHADOW_AI_SYSLOG_ENABLED=true en el servidor para activarlo.",
+    "Syslog listener is on. Send to {host}:{port} over TLS.":
+      "El receptor de Syslog está activado. Envíe a {host}:{port} mediante TLS.",
+    "Syslog listener is on. Send to {host}:{port} over plain TCP.":
+      "El receptor de Syslog está activado. Envíe a {host}:{port} mediante TCP sin cifrar.",
+    "Enter an IPv4 or IPv6 address.": "Introduzca una dirección IPv4 o IPv6.",
+    "Could not add the source. Try again.": "No se pudo añadir la fuente. Inténtelo de nuevo.",
+    "Could not save the source. Try again.": "No se pudo guardar la fuente. Inténtelo de nuevo.",
+    "Could not remove the source. Try again.": "No se pudo eliminar la fuente. Inténtelo de nuevo.",
+    "Could not generate a key. Try again.": "No se pudo generar la clave. Inténtelo de nuevo.",
+    "Your source key": "Su clave de fuente",
+    "Add this to the sender's log format": "Añada esto al formato de registro del remitente",
+    "Copy log format line": "Copiar línea de formato de registro",
+    "Regenerate key for {name}?": "¿Regenerar la clave de {name}?",
+    "The current key stops working right away. Update the sender's log format with the new key.":
+      "La clave actual deja de funcionar de inmediato. Actualice el formato de registro del remitente con la nueva clave.",
+    "Edit source": "Editar fuente",
+    "Remove source": "Eliminar fuente",
     ...agentDiscoveryEs,
     ...aiAppsEs,
     ...aiAuditEs,
