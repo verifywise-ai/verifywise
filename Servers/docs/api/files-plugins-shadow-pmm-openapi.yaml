@@ -1245,10 +1245,10 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
 
-  /shadow-ai/config/syslog/status:
+  /v1/shadow-ai-syslog/status:
     get:
       tags: [Shadow AI - Configuration]
-      summary: Get syslog listener status (Admin only)
+      summary: Get syslog listener status (Admin and SuperAdmin only)
       responses:
         "200":
           description: Listener settings from the environment
@@ -1263,10 +1263,10 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
 
-  /shadow-ai/config/syslog/{id}/regenerate-key:
+  /v1/shadow-ai-syslog/sources/{id}/regenerate-key:
     post:
       tags: [Shadow AI - Configuration]
-      summary: Regenerate a syslog source key (Admin only)
+      summary: Regenerate a syslog source key (Admin and SuperAdmin only)
       parameters:
         - name: id
           in: path
