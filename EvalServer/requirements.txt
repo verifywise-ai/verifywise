@@ -61,7 +61,7 @@ posthog==7.45.3
 prompt-toolkit==3.0.52
 propcache==0.4.1
 proto-plus==1.28.4
-protobuf==6.33.5
+protobuf==7.36.2
 psycopg2-binary==2.9.13
 pyasn1==0.6.5
 pyasn1_modules==0.4.2
