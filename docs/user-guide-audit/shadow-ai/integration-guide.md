@@ -5,7 +5,7 @@
 **Verdict:** ✅ clean
 
 ## Summary
-The integration guide contains accurate claims about REST API endpoints, batch sizes, syslog port defaults, and syslog configuration. All critical technical details were verified against server controllers and client repository code with high confidence. No significant issues found.
+The integration guide contains accurate claims about REST API endpoints and batch sizes. The syslog claims in the earlier audit were checked only against config storage code, not a listener, and were wrong: no listener existed then. The syslog section was rewritten on 2026-11-02 from `Servers/services/shadowAiSyslog/`.
 
 ## Findings
 (No issues found during audit.)
@@ -14,9 +14,9 @@ The integration guide contains accurate claims about REST API endpoints, batch s
 
 - **Claim:** "The endpoint accepts batches of up to 10,000 events per request." (block: step-2-send-events) — verified at `Servers/controllers/shadowAiIngestion.ctrl.ts:29` where `MAX_EVENTS_PER_REQUEST = 10000`; also line 110 enforces this limit with HTTP 413 on overflow.
 - **Claim:** "**Endpoint:** `POST /api/v1/shadow-ai/events`" (block: step-2-send-events) — verified at `Servers/controllers/shadowAiIngestion.ctrl.ts:70` function name `ingestEvents` with comment "POST /api/v1/shadow-ai/events".
-- **Claim:** "The syslog listener is controlled by the `SHADOW_AI_SYSLOG_PORT` environment variable on the VerifyWise server. By default it listens on port **5514**." (block: syslog-step-1) — verified throughout article and config code; port 5514 is the documented default. `SHADOW_AI_SYSLOG_PORT` environment variable controls the listener (mentioned in article and config utils).
+- **Correction (2026-11-02):** the earlier entry here said the listener defaults to port 5514 and called it verified. That was wrong: the audit read only config-storage code and no listener existed. The listener defaults to port 6514 (`Servers/services/shadowAiSyslog/config.ts:19`), is off unless `SHADOW_AI_SYSLOG_ENABLED=true` (`config.ts:36`), and is enabled with six `SHADOW_AI_SYSLOG_*` variables.
 - **Claim:** "Select the **parser type** that matches your data source (Zscaler, Netskope, Squid proxy, or Generic key-value)" (block: syslog-step-2) — verified at `Servers/utils/shadowAiConfig.utils.ts:36` where `parser_type` field is stored in `shadow_ai_syslog_config` table; Clients/src/application/repository/shadowAi.repository.ts:314-320 confirms API accepts `parser_type` in create and update operations.
-- **Claim:** "Enter the **source identifier**, which must be the IP address of the machine that will send syslog messages ... The syslog listener matches incoming connections by source IP." (block: syslog-step-2) — verified at `Servers/utils/shadowAiConfig.utils.ts:35` where `source_identifier` is stored as field in syslog config; callout text confirms "Messages from unrecognized IPs are silently dropped" which aligns with IP-based matching behavior documented in codebase.
+- **Correction (2026-11-02):** the earlier entry said the listener matches connections by source IP and silently drops unknown IPs. Lines are routed by a per-source key carried as `vw_source=<key>` (`sourceKey.ts`, `listener.ts`). The optional Allowed sender IP is an extra check, and IP-only matching is a self-hosted, single-tenant mode (`SHADOW_AI_SYSLOG_ALLOW_IP_ONLY`).
 
 ## Skipped / non-verifiable
 - "This guide walks you through connecting your network infrastructure to VerifyWise Shadow AI detection" — opinion/motivation only.

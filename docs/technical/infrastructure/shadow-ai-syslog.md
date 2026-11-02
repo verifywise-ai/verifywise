@@ -51,7 +51,8 @@ The listener does not start, and the backend logs the reason, when:
 - the certificate or key file cannot be read
 
 A failed start does not stop the rest of the backend. The minimum TLS version is
-1.2. TCP only: there is no UDP listener.
+1.2. The certificate and key are read once, when the backend starts. After you
+rotate them (including a Kubernetes Secret), restart the backend. TCP only: there is no UDP listener.
 
 ## Limits
 

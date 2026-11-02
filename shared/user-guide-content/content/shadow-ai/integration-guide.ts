@@ -234,7 +234,7 @@ export const integrationGuideContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The listener starts without a certificate only when plaintext is allowed. It does not start with `SHADOW_AI_SYSLOG_ALLOW_IP_ONLY=true` when `MULTI_TENANCY_ENABLED=true`. If it does not start, the server log names the variable to fix. The listener accepts TCP only. There is no UDP. TLS is detected on its own, so one port serves TLS and, if allowed, plain TCP.',
+      text: 'The listener starts without a certificate only when plaintext is allowed. It does not start with `SHADOW_AI_SYSLOG_ALLOW_IP_ONLY=true` when `MULTI_TENANCY_ENABLED=true`. If it does not start, the server log names the variable to fix. The listener accepts TCP only. There is no UDP. TLS is detected on its own, so one port serves TLS and, if allowed, plain TCP. The certificate and key are read when the backend starts. After you renew or rotate them, including a Kubernetes Secret, restart the backend.',
     },
     {
       type: 'paragraph',
@@ -282,7 +282,7 @@ export const integrationGuideContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Create a Nanolog Streaming Service feed that sends to your VerifyWise host over TCP. In the feed output format, include the fields `user`, `dst`, `method`, `uri` and `action` as `name=value` pairs, optionally `department`, and add the literal text `vw_source=<key>`.',
+      text: 'Create a Nanolog Streaming Service feed that sends to your VerifyWise host over TCP. In the feed output format, include the fields `user`, `dst`, `method`, `uri` and `action` as `name=value` pairs, optionally `department`, and add the literal text `vw_source=<key>`. Your feed must be able to add a fixed field to every line. If it cannot, a self-hosted server can use IP-only mode (see below).',
     },
     {
       type: 'code',
@@ -299,7 +299,7 @@ export const integrationGuideContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Send the events as JSON over syslog. The line must contain a JSON object with `user`, `url`, `method` and `activity`, optionally `department` and `timestamp`. Put the key inside the object as `"vw_source"`, or write `vw_source=<key>` before the object.',
+      text: 'Send the events as JSON over syslog. The line must contain a JSON object with `user`, `url`, `method` and `activity`, optionally `department` and `timestamp`. Put the key inside the object as `"vw_source"`, or write `vw_source=<key>` before the object. If your product cannot add either to every event, a self-hosted server can use IP-only mode (see below).',
     },
     {
       type: 'code',
@@ -401,7 +401,7 @@ export const integrationGuideContent: ArticleContent = {
       rows: [
         { reason: 'No user email in the log line', fix: 'The user field is empty, a dash, or not an email address. Check proxy authentication and the field names for the parser.' },
         { reason: 'No destination host in the log line', fix: 'The destination field (or URL) is missing from the line.' },
-        { reason: 'Line does not match the parser type', fix: 'The Parser type does not fit the log format, or the line repeats a field such as user or dst. Try the Generic key-value parser.' },
+        { reason: 'Line does not match the parser type', fix: 'The Parser type does not fit the log format, or the line repeats a field such as user or dst. Check that the parser type matches the log format.' },
         { reason: 'Sent from an IP that isn\'t allowed or is shared with another source', fix: 'The line came from an IP other than the source\'s Allowed sender IP, or two sources list the same IP in IP-only mode. Behind a load balancer, clear the Allowed sender IP.' },
         { reason: 'Over the hourly event limit', fix: 'The hourly rate limit in Settings was reached, or the server is writing events slower than they arrive.' },
       ],
