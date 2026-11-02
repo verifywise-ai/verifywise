@@ -1,0 +1,21 @@
+{{- $syslog := .Values.shadowAiSyslog | default dict -}}
+{{- if $syslog.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-syslog
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "verifywise.labels" . | nindent 4 }}
+    component: backend
+spec:
+  type: {{ $syslog.serviceType }}
+  ports:
+  - port: {{ $syslog.port }}
+    targetPort: syslog
+    protocol: TCP
+    name: syslog
+  selector:
+    {{- include "verifywise.selectorLabels" . | nindent 4 }}
+    component: backend
+{{- end }}

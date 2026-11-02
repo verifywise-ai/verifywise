@@ -1,0 +1,153 @@
+# Shadow AI syslog listener
+
+A TCP listener inside the backend process that receives proxy logs for Shadow
+AI. It is off by default. Code: `Servers/services/shadowAiSyslog/`. Startup and
+shutdown are in `Servers/index.ts`. The Settings page is
+`Clients/src/presentation/pages/ShadowAI/SettingsPage.tsx`. The routes are
+under `/api/shadow-ai/config/syslog` in `Servers/routes/shadowAi.route.ts`.
+Source management is Admin only.
+
+## How a line is routed
+
+1. A connection opens. The first byte decides the transport: `0x16` is a TLS
+   handshake, anything else is plaintext. Plaintext is refused unless
+   `SHADOW_AI_SYSLOG_ALLOW_PLAINTEXT=true`.
+2. Framing accepts octet counting and newline-delimited messages (RFC 6587).
+   An RFC 5424 or RFC 3164 header is stripped when present.
+3. The line must carry `vw_source=<key>` (or `"vw_source":"<key>"` inside JSON).
+   The key is `vwsl_<organizationId>_<48 hex characters>`. It is removed from
+   the line before parsing, so it is never stored.
+4. The key is hashed (SHA-256) and looked up in the source cache. A match gives
+   the organisation, the parser type and the optional allowed sender IP. Only
+   the hash and a display prefix are stored.
+5. The parser turns the line into an event, or counts a drop. Events are
+   buffered per source and written in a transaction under that organisation.
+
+Raw lines and keys are never logged. The peer IP is logged at debug level only.
+
+In IP-only mode (`SHADOW_AI_SYSLOG_ALLOW_IP_ONLY=true`) a line without a valid
+key is matched by the connection's peer IP against the sources' allowed sender
+IP. If two sources list the same IP, neither claims the line and each gets a
+`wrong_sender_ip` drop.
+
+## Environment variables
+
+Booleans are on only for the exact string `true`.
+
+| Variable | Default | Meaning |
+|----------|---------|---------|
+| `SHADOW_AI_SYSLOG_ENABLED` | off | Start the listener. |
+| `SHADOW_AI_SYSLOG_PORT` | `6514` | TCP port. An invalid value falls back to 6514. |
+| `SHADOW_AI_SYSLOG_TLS_CERT_FILE` | unset | Path to the PEM certificate. Needs the key file. |
+| `SHADOW_AI_SYSLOG_TLS_KEY_FILE` | unset | Path to the PEM private key. Needs the certificate file. |
+| `SHADOW_AI_SYSLOG_ALLOW_PLAINTEXT` | off | Accept plain TCP. Required when no certificate is set. |
+| `SHADOW_AI_SYSLOG_ALLOW_IP_ONLY` | off | Match key-less lines by sender IP. Self-hosted only. |
+
+The listener does not start, and the backend logs the reason, when:
+
+- only one of the certificate and key files is set
+- neither a certificate nor `SHADOW_AI_SYSLOG_ALLOW_PLAINTEXT=true` is set
+- `SHADOW_AI_SYSLOG_ALLOW_IP_ONLY=true` and `MULTI_TENANCY_ENABLED=true`
+- the certificate or key file cannot be read
+
+A failed start does not stop the rest of the backend. The minimum TLS version is
+1.2. TCP only: there is no UDP listener.
+
+## Limits
+
+| Limit | Value |
+|-------|-------|
+| Message size | 64 KiB. Larger messages are discarded. |
+| Connections per process | 500 |
+| Idle connection | closed after 5 minutes |
+| TLS handshake | 30 seconds |
+| Connection with no valid key | closed after 100 lines or 60 seconds |
+| Batch flush | at 500 events per source, or every 2 seconds |
+| Pending events per process | 20,000. Beyond that, new events are dropped as `rate_limited`. |
+| Source cache | 60 seconds |
+
+The source cache holds every active source. The replica that serves a create,
+edit, delete or key change reloads it at once. Other replicas pick the change
+up within 60 seconds, so a regenerated or deleted key can keep working on them
+for up to a minute. The batch flush also applies the organisation's hourly
+Shadow AI rate limit (Settings, Rate limiting); events over it are dropped as
+`rate_limited`.
+
+## Parsers
+
+| Parser | Reads | Action |
+|--------|-------|--------|
+| Zscaler | `key=value`: `user`, `dst` (or host of `uri`), `uri`, `method`, `action`, `department`, `timestamp` | `action` |
+| Netskope | JSON object: `user`, `url`, `method`, `activity`, `department`, `timestamp` | `activity` |
+| Squid | native access.log fields: 1 epoch time, 6 method, 7 URL, 8 user | none |
+| Generic key-value | `suser`, `dhost` (or host of `request`), `request`, `requestMethod`, `act`, `department`, `timestamp` | `act` |
+
+Squid access logs have no allowed or blocked field, so Squid events carry no
+action. For the other parsers, an action starting with `block`, `deny`,
+`denied`, `drop`, `reset` or `reject` is stored as blocked, and one starting
+with `allow`, `permit`, `pass` or `accept` as allowed. Any other value is left
+unset.
+
+The user must be a valid email address. A repeated `user`, `suser`, `dst`,
+`dhost`, `uri`, `request`, `action` or `act` key makes the line ambiguous and it
+is dropped as `unparseable`.
+
+Timestamp order: the payload `timestamp` (Squid: field 1), then the syslog
+header, then the receive time.
+
+## Drop reasons
+
+Counted per source and shown on the Settings page.
+
+| Code | Settings page wording |
+|------|-----------------------|
+| `no_user` | No user email in the log line |
+| `no_destination` | No destination host in the log line |
+| `unparseable` | Line does not match the parser type |
+| `wrong_sender_ip` | Sent from an IP that isn't allowed or is shared with another source |
+| `rate_limited` | Over the hourly event limit (also used when the listener's queue is full) |
+
+Lines with no valid key or no IP-only match belong to no source, so they are
+not counted per source. They add to a process-wide counter
+(`getRefusedLineCount` in `listener.ts`) that is not shown in the UI.
+
+## Deployment
+
+- **Docker Compose:** publish the port (`- "6514:6514"`, commented in
+  `docker-compose.yml`), mount the certificate and key into the backend
+  container and set the variables. In the prod overlay, set them in `.env.prod`.
+- **Helm:** set `shadowAiSyslog.enabled=true` and `shadowAiSyslog.tlsSecretName`
+  (a TLS Secret with `tls.crt` and `tls.key`). The chart adds the container
+  port, the env vars, the Secret mount and a `backend-syslog` Service. Use
+  `shadowAiSyslog.serviceType=LoadBalancer` if the proxy is outside the cluster.
+  With default values nothing is added.
+- **Ansible:** set `shadow_ai_syslog_*` in `group_vars/all.yml`.
+
+Two points apply behind any TCP load balancer or NAT:
+
+- The listener sees the load balancer's address as the sender. The allowed
+  sender IP and IP-only mode need the real sender address, so they do not work
+  there. Route by key instead. The listener does not read the PROXY protocol.
+- Keys travel inside the log line. Use TLS, or a private network, between the
+  proxy and the listener.
+
+The worker process does not run the listener.
+
+### Hosted (app.verifywise.ai)
+
+The hosted deployment does not offer syslog yet. It needs a TLS certificate and
+a TCP load balancer on port 6514 in front of the backend, then
+`SHADOW_AI_SYSLOG_ENABLED=true`. Until the operator does that, customers on the
+hosted service should use the REST API.
+
+## Verifying
+
+1. In Settings, add a source and copy the key (shown once).
+2. Send one test line through the proxy or by hand, for example
+   `openssl s_client -connect host:6514` and paste a line ending in
+   `vw_source=<key>`.
+3. Within a few seconds the source's Accepted count and Last received change.
+4. If Dropped rises instead, the Last drop reason names the cause.
+
+Only events to a destination that matches a known AI tool count as AI usage in
+Insights. Other events are stored but do not count there.
