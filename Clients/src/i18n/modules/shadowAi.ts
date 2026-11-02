@@ -134,6 +134,57 @@ export const de: Record<string, string> = {
   "This will permanently remove this API key record. This action cannot be undone.":
     "Dies entfernt diesen API-Schlüssel-Datensatz dauerhaft. Diese Aktion kann nicht rückgängig gemacht werden.",
   "Top tool": "Top-Tool",
+  "e.g., 203.0.113.7": "z. B. 203.0.113.7",
+  "In IP-only mode, log lines without a key are matched by this IP.":
+    "Im Nur-IP-Modus werden Logzeilen ohne Schlüssel über diese IP zugeordnet.",
+  "Could not copy. Select the key and copy it by hand.":
+    "Kopieren nicht möglich. Markieren Sie den Schlüssel und kopieren Sie ihn manuell.",
+  'Remove "{name}"?': "„{name}“ entfernen?",
+  // Shadow AI syslog sources
+  "Allowed sender IP (optional)": "Zulässige Absender-IP (optional)",
+  "Allowed sender IP": "Zulässige Absender-IP",
+  "Last received": "Zuletzt empfangen",
+  "Dropped": "Verworfen",
+  "Last drop reason": "Letzter Verwerfungsgrund",
+  "Parser": "Parser",
+  "No key yet": "Noch kein Schlüssel",
+  "Generate key": "Schlüssel erzeugen",
+  "Regenerate key": "Schlüssel neu erzeugen",
+  "Not an IP address. Clear it or enter the sender's IP.":
+    "Keine IP-Adresse. Leeren Sie das Feld oder geben Sie die IP des Absenders ein.",
+  "No user email in the log line": "Keine Benutzer-E-Mail in der Logzeile",
+  "No destination host in the log line": "Kein Zielhost in der Logzeile",
+  "Line does not match the parser type": "Die Zeile passt nicht zum Parser-Typ",
+  "Sent from an IP that isn't allowed or is shared with another source":
+    "Von einer IP gesendet, die nicht zulässig ist oder mit einer anderen Quelle geteilt wird",
+  "Over the hourly event limit": "Stündliches Ereignislimit überschritten",
+  "Unknown reason": "Unbekannter Grund",
+  "Syslog listener failed to start. Check the server log.":
+    "Der Syslog-Listener konnte nicht starten. Prüfen Sie das Server-Log.",
+  "Syslog listener is off. Set SHADOW_AI_SYSLOG_ENABLED=true on the server to turn it on.":
+    "Der Syslog-Listener ist aus. Setzen Sie SHADOW_AI_SYSLOG_ENABLED=true auf dem Server, um ihn einzuschalten.",
+  "Syslog listener is on. Send to {host}:{port} over TLS.":
+    "Der Syslog-Listener ist an. Senden Sie per TLS an {host}:{port}.",
+  "Syslog listener is on. Send to {host}:{port} over plain TCP.":
+    "Der Syslog-Listener ist an. Senden Sie per einfachem TCP an {host}:{port}.",
+  "Enter an IPv4 or IPv6 address.": "Geben Sie eine IPv4- oder IPv6-Adresse ein.",
+  "Could not add the source. Try again.":
+    "Die Quelle konnte nicht hinzugefügt werden. Versuchen Sie es erneut.",
+  "Could not save the source. Try again.":
+    "Die Quelle konnte nicht gespeichert werden. Versuchen Sie es erneut.",
+  "Could not remove the source. Try again.":
+    "Die Quelle konnte nicht entfernt werden. Versuchen Sie es erneut.",
+  "Could not generate a key. Try again.":
+    "Der Schlüssel konnte nicht erzeugt werden. Versuchen Sie es erneut.",
+  "Your source key": "Ihr Quellenschlüssel",
+  "Add this to the start or end of each line in the sender's log format":
+    "Fügen Sie dies am Anfang oder Ende jeder Zeile im Logformat des Absenders hinzu",
+  "Copy log format line": "Logformat-Zeile kopieren",
+  "Regenerate key for {name}?": "Schlüssel für {name} neu erzeugen?",
+  "The current key stops working within a minute. Update every sender that uses it.":
+    "Der aktuelle Schlüssel funktioniert innerhalb einer Minute nicht mehr. Aktualisieren Sie jeden Absender, der ihn verwendet.",
+  "Edit source": "Quelle bearbeiten",
+  "Remove source": "Quelle entfernen",
 };
 
 export const fr: Record<string, string> = {
@@ -268,6 +319,53 @@ export const fr: Record<string, string> = {
   "This will permanently remove this API key record. This action cannot be undone.":
     "Cela supprimera définitivement cet enregistrement de clé API. Cette action est irréversible.",
   "Top tool": "Outil principal",
+  "e.g., 203.0.113.7": "p. ex. 203.0.113.7",
+  "In IP-only mode, log lines without a key are matched by this IP.":
+    "En mode IP seule, les lignes de journal sans clé sont associées via cette IP.",
+  "Could not copy. Select the key and copy it by hand.":
+    "Copie impossible. Sélectionnez la clé et copiez-la manuellement.",
+  'Remove "{name}"?': "Supprimer « {name} » ?",
+  // Shadow AI syslog sources
+  "Allowed sender IP (optional)": "IP d'expéditeur autorisée (facultatif)",
+  "Allowed sender IP": "IP d'expéditeur autorisée",
+  "Last received": "Dernière réception",
+  "Dropped": "Rejetés",
+  "Last drop reason": "Dernier motif de rejet",
+  "Parser": "Analyseur",
+  "No key yet": "Pas encore de clé",
+  "Generate key": "Générer une clé",
+  "Regenerate key": "Régénérer la clé",
+  "Not an IP address. Clear it or enter the sender's IP.":
+    "Ce n'est pas une adresse IP. Videz le champ ou saisissez l'IP de l'expéditeur.",
+  "No user email in the log line": "Aucun e-mail d'utilisateur dans la ligne de journal",
+  "No destination host in the log line": "Aucun hôte de destination dans la ligne de journal",
+  "Line does not match the parser type": "La ligne ne correspond pas au type d'analyseur",
+  "Sent from an IP that isn't allowed or is shared with another source":
+    "Envoyé depuis une IP non autorisée ou partagée avec une autre source",
+  "Over the hourly event limit": "Limite horaire d'événements dépassée",
+  "Unknown reason": "Motif inconnu",
+  "Syslog listener failed to start. Check the server log.":
+    "Le listener syslog n'a pas pu démarrer. Consultez le journal du serveur.",
+  "Syslog listener is off. Set SHADOW_AI_SYSLOG_ENABLED=true on the server to turn it on.":
+    "L'écouteur Syslog est désactivé. Définissez SHADOW_AI_SYSLOG_ENABLED=true sur le serveur pour l'activer.",
+  "Syslog listener is on. Send to {host}:{port} over TLS.":
+    "L'écouteur Syslog est activé. Envoyez vers {host}:{port} via TLS.",
+  "Syslog listener is on. Send to {host}:{port} over plain TCP.":
+    "L'écouteur Syslog est activé. Envoyez vers {host}:{port} via TCP simple.",
+  "Enter an IPv4 or IPv6 address.": "Saisissez une adresse IPv4 ou IPv6.",
+  "Could not add the source. Try again.": "Impossible d'ajouter la source. Réessayez.",
+  "Could not save the source. Try again.": "Impossible d'enregistrer la source. Réessayez.",
+  "Could not remove the source. Try again.": "Impossible de supprimer la source. Réessayez.",
+  "Could not generate a key. Try again.": "Impossible de générer la clé. Réessayez.",
+  "Your source key": "Votre clé de source",
+  "Add this to the start or end of each line in the sender's log format":
+    "Ajoutez ceci au début ou à la fin de chaque ligne du format de journal de l'expéditeur",
+  "Copy log format line": "Copier la ligne de format de journal",
+  "Regenerate key for {name}?": "Régénérer la clé de {name} ?",
+  "The current key stops working within a minute. Update every sender that uses it.":
+    "La clé actuelle cesse de fonctionner en moins d'une minute. Mettez à jour chaque expéditeur qui l'utilise.",
+  "Edit source": "Modifier la source",
+  "Remove source": "Supprimer la source",
 };
 
 export const es: Record<string, string> = {
@@ -402,4 +500,51 @@ export const es: Record<string, string> = {
   "This will permanently remove this API key record. This action cannot be undone.":
     "Esto eliminará permanentemente este registro de clave API. Esta acción no se puede deshacer.",
   "Top tool": "Herramienta principal",
+  "e.g., 203.0.113.7": "p. ej., 203.0.113.7",
+  "In IP-only mode, log lines without a key are matched by this IP.":
+    "En modo solo IP, las líneas de registro sin clave se asocian mediante esta IP.",
+  "Could not copy. Select the key and copy it by hand.":
+    "No se pudo copiar. Seleccione la clave y cópiela a mano.",
+  'Remove "{name}"?': "¿Eliminar «{name}»?",
+  // Shadow AI syslog sources
+  "Allowed sender IP (optional)": "IP de origen permitida (opcional)",
+  "Allowed sender IP": "IP de origen permitida",
+  "Last received": "Última recepción",
+  "Dropped": "Descartados",
+  "Last drop reason": "Último motivo de descarte",
+  "Parser": "Analizador",
+  "No key yet": "Aún no hay clave",
+  "Generate key": "Generar clave",
+  "Regenerate key": "Regenerar clave",
+  "Not an IP address. Clear it or enter the sender's IP.":
+    "No es una dirección IP. Bórrelo o introduzca la IP del remitente.",
+  "No user email in the log line": "No hay correo de usuario en la línea de registro",
+  "No destination host in the log line": "No hay host de destino en la línea de registro",
+  "Line does not match the parser type": "La línea no coincide con el tipo de analizador",
+  "Sent from an IP that isn't allowed or is shared with another source":
+    "Enviado desde una IP no permitida o compartida con otra fuente",
+  "Over the hourly event limit": "Límite de eventos por hora superado",
+  "Unknown reason": "Motivo desconocido",
+  "Syslog listener failed to start. Check the server log.":
+    "El listener de syslog no pudo iniciarse. Revise el registro del servidor.",
+  "Syslog listener is off. Set SHADOW_AI_SYSLOG_ENABLED=true on the server to turn it on.":
+    "El receptor de Syslog está desactivado. Defina SHADOW_AI_SYSLOG_ENABLED=true en el servidor para activarlo.",
+  "Syslog listener is on. Send to {host}:{port} over TLS.":
+    "El receptor de Syslog está activado. Envíe a {host}:{port} mediante TLS.",
+  "Syslog listener is on. Send to {host}:{port} over plain TCP.":
+    "El receptor de Syslog está activado. Envíe a {host}:{port} mediante TCP sin cifrar.",
+  "Enter an IPv4 or IPv6 address.": "Introduzca una dirección IPv4 o IPv6.",
+  "Could not add the source. Try again.": "No se pudo añadir la fuente. Inténtelo de nuevo.",
+  "Could not save the source. Try again.": "No se pudo guardar la fuente. Inténtelo de nuevo.",
+  "Could not remove the source. Try again.": "No se pudo eliminar la fuente. Inténtelo de nuevo.",
+  "Could not generate a key. Try again.": "No se pudo generar la clave. Inténtelo de nuevo.",
+  "Your source key": "Su clave de fuente",
+  "Add this to the start or end of each line in the sender's log format":
+    "Añada esto al principio o al final de cada línea del formato de registro del remitente",
+  "Copy log format line": "Copiar línea de formato de registro",
+  "Regenerate key for {name}?": "¿Regenerar la clave de {name}?",
+  "The current key stops working within a minute. Update every sender that uses it.":
+    "La clave actual deja de funcionar en menos de un minuto. Actualice cada remitente que la utilice.",
+  "Edit source": "Editar fuente",
+  "Remove source": "Eliminar fuente",
 };
