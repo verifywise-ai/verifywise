@@ -320,7 +320,7 @@ function statesZone(tail: string): boolean {
 }
 
 // A zone Date.parse reads by itself: UTC, GMT, Z, a US zone and/or an offset.
-const BRACKET_ZONE_RE = /^(?:(?:UTC|UT|GMT|Z|[ECMP][SD]T)\s*)?(?:[+-]\d{2}(?::?\d{2})?)?$/i;
+const BRACKET_ZONE_RE = /^(?:(?:UTC|UT|GMT|Z|[ECMP][SD]T)\s*)?(?:[+-]\d{1,2}(?::?\d{2})?)?$/i;
 
 /** The first listed zone name in the text: its position, length and offset. */
 function findZoneName(
@@ -368,9 +368,11 @@ function parseDateText(text: string): number {
     // A zone only inside brackets. `(UTC)`, `(GMT)`, `(PST)` and `(+05:30)`
     // are read without the brackets. Anything else (`(IST)`, `(India Standard
     // Time)`, a comment) leaves the time unreadable: Date.parse would read
-    // `(Novosibirsk)` as November in server-local time.
+    // `(Novosibirsk)` as November in server-local time. Only one bracket
+    // group is read, so a second one (`(UTC) (Janitor)`) cannot slip in.
     const inside = /\(([^()]*)\)?/.exec(tail)?.[1].trim() ?? "";
-    return inside && BRACKET_ZONE_RE.test(inside)
+    const groups = (tail.match(/\(/g) ?? []).length;
+    return groups === 1 && inside && BRACKET_ZONE_RE.test(inside)
       ? Date.parse(`${head}${tail.replace(/[()]/g, " ")}`)
       : NaN;
   }
