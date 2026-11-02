@@ -21,10 +21,16 @@
  *      names in a pre-existing verifywise table are removed first, keeping
  *      the lowest id — tenant tools copy by name, so nothing references
  *      these ids);
- *   2. copies rows from a legacy public.shadow_ai_tool_registry, if one
- *      exists, so local edits to the catalogue survive (it never drops or
- *      changes the public table);
- *   3. inserts the shipped catalogue, skipping names already present.
+ *   2. inserts the shipped catalogue, skipping names already present;
+ *   3. copies rows from a legacy public.shadow_ai_tool_registry, if one
+ *      exists, for names the shipped catalogue does not cover (custom
+ *      additions). The app never read the public copy (search_path is
+ *      `verifywise` only), so the shipped entries win; the public table is
+ *      never dropped or changed.
+ *
+ * Matching is host-only (shadowAiToolMatcher compares the destination host),
+ * so every domain is a bare host: the original Grok entry's "x.com/i/grok"
+ * could never match and is replaced by grok.com.
  */
 
 const TOOL_REGISTRY = [
@@ -141,7 +147,7 @@ const TOOL_REGISTRY = [
   {
     name: "Grok",
     vendor: "xAI",
-    domains: ["grok.x.ai", "x.com/i/grok"],
+    domains: ["grok.com", "grok.x.ai"],
     category: "chatbot",
     models: ["grok-2", "grok-3"],
     trains_on_data: true,
@@ -654,27 +660,6 @@ module.exports = {
         { transaction },
       );
 
-      const [[legacy]] = await queryInterface.sequelize.query(
-        `SELECT to_regclass('public.shadow_ai_tool_registry') IS NOT NULL AS exists;`,
-        { transaction },
-      );
-
-      if (legacy.exists) {
-        await queryInterface.sequelize.query(
-          `INSERT INTO verifywise.shadow_ai_tool_registry
-            (name, vendor, domains, category, models,
-             trains_on_data, soc2_certified, gdpr_compliant, created_at, updated_at)
-          SELECT name, vendor, domains, category, models,
-                 trains_on_data, soc2_certified, gdpr_compliant,
-                 COALESCE(created_at, NOW()), COALESCE(updated_at, NOW())
-          FROM public.shadow_ai_tool_registry
-          WHERE name IS NOT NULL AND domains IS NOT NULL
-          ORDER BY id
-          ON CONFLICT (name) DO NOTHING;`,
-          { transaction },
-        );
-      }
-
       for (const tool of TOOL_REGISTRY) {
         await queryInterface.sequelize.query(
           `INSERT INTO verifywise.shadow_ai_tool_registry
@@ -697,6 +682,27 @@ module.exports = {
             },
             transaction,
           },
+        );
+      }
+
+      const [[legacy]] = await queryInterface.sequelize.query(
+        `SELECT to_regclass('public.shadow_ai_tool_registry') IS NOT NULL AS exists;`,
+        { transaction },
+      );
+
+      if (legacy.exists) {
+        await queryInterface.sequelize.query(
+          `INSERT INTO verifywise.shadow_ai_tool_registry
+            (name, vendor, domains, category, models,
+             trains_on_data, soc2_certified, gdpr_compliant, created_at, updated_at)
+          SELECT name, vendor, domains, category, models,
+                 trains_on_data, soc2_certified, gdpr_compliant,
+                 COALESCE(created_at, NOW()), COALESCE(updated_at, NOW())
+          FROM public.shadow_ai_tool_registry
+          WHERE name IS NOT NULL AND domains IS NOT NULL
+          ORDER BY id
+          ON CONFLICT (name) DO NOTHING;`,
+          { transaction },
         );
       }
 

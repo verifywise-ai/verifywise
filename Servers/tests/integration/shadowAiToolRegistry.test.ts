@@ -1,6 +1,9 @@
-// Ingestion runs rule evaluation after responding, which can hold row locks
-// while afterEach truncates; give the hooks room as the other suites do.
-jest.setTimeout(60000);
+// Ingestion starts rule evaluation after it responds and does not wait for
+// it; left running, it races afterEach's TRUNCATE. Rules are not under test.
+jest.mock("../../services/shadowAiAlertNotification.service", () => ({
+  ...jest.requireActual("../../services/shadowAiAlertNotification.service"),
+  evaluateRulesForBatch: jest.fn().mockResolvedValue(undefined),
+}));
 
 import { createTestApp, testRequest } from "./setup";
 import { createTestOrganization, createTestUser, cleanupDatabase } from "./helpers";
@@ -68,6 +71,18 @@ describe("Shadow AI tool registry and ingestion matching", () => {
       "chat.openai.com",
       "chatgpt.com",
     ]);
+
+    // Matching is host-only, so no seeded domain may carry a path.
+    const [withPath] = await sequelize.query(
+      `SELECT name FROM shadow_ai_tool_registry
+       WHERE EXISTS (SELECT 1 FROM unnest(domains) d WHERE d LIKE '%/%')`,
+    );
+    expect(withPath).toEqual([]);
+
+    const [[{ patterns }]] = (await sequelize.query(
+      `SELECT COUNT(*)::int AS patterns FROM verifywise.shadow_ai_model_patterns`,
+    )) as [{ patterns: number }[], unknown];
+    expect(patterns).toBeGreaterThanOrEqual(4);
   });
 
   it("ingests a multi-domain match and an unmatched event", async () => {
@@ -124,32 +139,56 @@ describe("Shadow AI tool registry and ingestion matching", () => {
     expect(tool.domains).toEqual([]);
   });
 
-  it("extracts the model from a uri_path that matches a seeded pattern", async () => {
+  it("extracts models from uri_paths that match the seeded patterns", async () => {
+    const cases: [string, string, string | null][] = [
+      [
+        "bedrock-runtime.us-east-1.amazonaws.com",
+        "/model/anthropic.claude-3-sonnet-20240229-v1:0/invoke",
+        "anthropic.claude-3-sonnet-20240229-v1:0",
+      ],
+      [
+        "acme-prod.openai.azure.com",
+        "/openai/deployments/gpt-4o/chat/completions?api-version=2024-06-01",
+        "gpt-4o",
+      ],
+      [
+        "us-central1-aiplatform.googleapis.com",
+        "/v1/projects/p1/locations/us-central1/publishers/google/models/gemini-1.5-pro:generateContent",
+        "gemini-1.5-pro",
+      ],
+      [
+        "generativelanguage.googleapis.com",
+        "/v1beta/models/gemini-2.0-flash:generateContent",
+        "gemini-2.0-flash",
+      ],
+      // Anchored host patterns: a lookalike host extracts nothing.
+      ["api.openai.com.attacker.example", "/v1/chat/completions", null],
+      ["bedrock-runtime.us-east-1.amazonaws.com.attacker.example", "/model/x/invoke", null],
+    ];
+
     const app = await createTestApp();
     const res = await testRequest(app)
       .post("/api/v1/shadow-ai/events")
       .set("X-API-Key", apiKey)
       .send({
-        events: [
-          {
-            ...event("generativelanguage.googleapis.com"),
-            uri_path: "/v1beta/models/gemini-1.5-pro:generateContent",
-          },
-        ],
+        events: cases.map(([destination, uri_path]) => ({ ...event(destination), uri_path })),
       });
 
     expect(res.status).toBe(200);
-    expect(res.body.data.ingested).toBe(1);
+    expect(res.body.data.ingested).toBe(cases.length);
 
     const [rows] = await sequelize.query(
-      `SELECT detected_model FROM shadow_ai_events WHERE organization_id = :orgId`,
+      `SELECT destination, detected_model FROM shadow_ai_events WHERE organization_id = :orgId`,
       { replacements: { orgId } },
     );
-    expect(rows).toEqual([{ detected_model: "gemini-1.5-pro" }]);
-
-    const [[{ n }]] = (await sequelize.query(
-      `SELECT COUNT(*)::int AS n FROM verifywise.shadow_ai_model_patterns`,
-    )) as [{ n: number }[], unknown];
-    expect(n).toBeGreaterThanOrEqual(9);
+    const byDestination = Object.fromEntries(
+      (rows as { destination: string; detected_model: string | null }[]).map((r) => [
+        r.destination,
+        r.detected_model,
+      ]),
+    );
+    for (const [destination, , model] of cases) {
+      expect(byDestination[destination]).toBe(model);
+    }
   });
 });

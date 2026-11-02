@@ -15,56 +15,45 @@
  *      unique index on name so the copy and seed are idempotent; duplicate
  *      names in a pre-existing verifywise table are removed first, keeping
  *      the lowest id — nothing references these ids);
- *   2. copies rows from a legacy public.shadow_ai_model_patterns, if one
- *      exists (it never drops or changes the public table);
- *   3. inserts the shipped patterns, skipping names already present.
+ *   2. inserts the shipped patterns, skipping names already present;
+ *   3. copies rows from a legacy public.shadow_ai_model_patterns, if one
+ *      exists, for names the shipped set does not cover (custom additions).
+ *      The app never read the public copy (search_path is `verifywise`
+ *      only), so the shipped patterns win; the public table is never
+ *      dropped or changed.
+ *
+ * The extractor compiles domain_pattern and path_regex with `new RegExp(…,
+ * "i")` and returns the named group `model`, so both are anchored, escaped
+ * regexes. Only APIs that put the model in the URL are seeded. The original
+ * OpenAI, Anthropic, Cohere, Together AI and Groq rows are dropped: those
+ * APIs carry the model in the request body, so their patterns had no
+ * `model` group and could never return one.
  */
 
 const MODEL_PATTERNS = [
   {
+    // POST /model/<model-id>/invoke | invoke-with-response-stream | converse | converse-stream
     name: "AWS Bedrock",
-    domain_pattern: "bedrock-runtime.%.amazonaws.com",
-    path_regex: "/model/(?<model>[^/]+)/invoke",
+    domain_pattern: "^bedrock-runtime\\.[a-z0-9-]+\\.amazonaws\\.com$",
+    path_regex: "^/model/(?<model>[^/?]+)/(?:invoke|converse)",
   },
   {
+    // The deployment name, which Azure customers usually set to the model name.
     name: "Azure OpenAI",
-    domain_pattern: "%.openai.azure.com",
-    path_regex: "/openai/deployments/(?<model>[^/]+)/",
+    domain_pattern: "^[a-z0-9-]+\\.openai\\.azure\\.com$",
+    path_regex: "^/openai/deployments/(?<model>[^/?]+)/",
   },
   {
+    // Regional hosts (<region>-aiplatform) and the global aiplatform host.
     name: "Google Vertex AI",
-    domain_pattern: "%-aiplatform.googleapis.com",
-    path_regex: "/v1/projects/[^/]+/locations/[^/]+/publishers/[^/]+/models/(?<model>[^/:]+)",
+    domain_pattern: "^(?:[a-z0-9-]+-)?aiplatform\\.googleapis\\.com$",
+    path_regex:
+      "^/v1(?:beta1)?/projects/[^/]+/locations/[^/]+/publishers/[^/]+/models/(?<model>[^/:?]+)",
   },
   {
     name: "Google Gemini API",
-    domain_pattern: "generativelanguage.googleapis.com",
-    path_regex: "/v1beta/models/(?<model>[^/:]+)",
-  },
-  {
-    name: "OpenAI API",
-    domain_pattern: "api.openai.com",
-    path_regex: "/v1/(?:chat/completions|completions|embeddings)",
-  },
-  {
-    name: "Anthropic API",
-    domain_pattern: "api.anthropic.com",
-    path_regex: "/v1/messages",
-  },
-  {
-    name: "Cohere API",
-    domain_pattern: "api.cohere.ai",
-    path_regex: "/v1/(?:chat|generate|embed)",
-  },
-  {
-    name: "Together AI",
-    domain_pattern: "api.together.xyz",
-    path_regex: "/v1/(?:chat/completions|completions)",
-  },
-  {
-    name: "Groq API",
-    domain_pattern: "api.groq.com",
-    path_regex: "/openai/v1/chat/completions",
+    domain_pattern: "^generativelanguage\\.googleapis\\.com$",
+    path_regex: "^/v1(?:beta|alpha)?/models/(?<model>[^/:?]+)",
   },
 ];
 
@@ -96,6 +85,15 @@ module.exports = {
         { transaction },
       );
 
+      for (const pattern of MODEL_PATTERNS) {
+        await queryInterface.sequelize.query(
+          `INSERT INTO verifywise.shadow_ai_model_patterns (name, domain_pattern, path_regex)
+          VALUES (:name, :domain_pattern, :path_regex)
+          ON CONFLICT (name) DO NOTHING;`,
+          { replacements: pattern, transaction },
+        );
+      }
+
       const [[legacy]] = await queryInterface.sequelize.query(
         `SELECT to_regclass('public.shadow_ai_model_patterns') IS NOT NULL AS exists;`,
         { transaction },
@@ -111,15 +109,6 @@ module.exports = {
           ORDER BY id
           ON CONFLICT (name) DO NOTHING;`,
           { transaction },
-        );
-      }
-
-      for (const pattern of MODEL_PATTERNS) {
-        await queryInterface.sequelize.query(
-          `INSERT INTO verifywise.shadow_ai_model_patterns (name, domain_pattern, path_regex)
-          VALUES (:name, :domain_pattern, :path_regex)
-          ON CONFLICT (name) DO NOTHING;`,
-          { replacements: pattern, transaction },
         );
       }
 
