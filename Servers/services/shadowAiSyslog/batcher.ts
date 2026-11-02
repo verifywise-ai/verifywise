@@ -9,6 +9,7 @@
  * Events are never retried.
  */
 
+import type { Transaction } from "sequelize";
 import { sequelize } from "../../database/db";
 import logger from "../../utils/logger/fileLogger";
 import { recordSyslogSourceStatsQuery } from "../../utils/shadowAiConfig.utils";
@@ -42,7 +43,10 @@ export class SourceBatcher {
   private lastFailureLog = new Map<number, number>();
   /** Flushes that failed and were rolled back (process lifetime). */
   failedFlushes = 0;
-  /** Events discarded because their source was revoked or could not be re-checked. */
+  /**
+   * Events discarded because their source was revoked or could not be
+   * re-checked, or because the flush failed in a way write() did not handle.
+   */
   discardedEvents = 0;
 
   add(src: CachedSource, event: SyslogEvent): void {
@@ -91,10 +95,19 @@ export class SourceBatcher {
     if (!batch) return;
     this.batches.delete(key);
     if (batch.timer) clearTimeout(batch.timer);
-    const work = this.runLimited(() => this.write(batch)).finally(() => {
-      this.pendingEvents -= batch.events.length;
-      this.inflight.delete(work);
-    });
+    // write() handles its own failures. This catch is the last line, so a
+    // timer-started flush can never leave an unhandled rejection behind.
+    const work = this.runLimited(() => this.write(batch))
+      .catch((error) => {
+        this.failedFlushes++;
+        this.discardedEvents += batch.events.length;
+        const { configId, organizationId } = batch.source;
+        this.logFailure(configId, organizationId, batch.events.length, error);
+      })
+      .finally(() => {
+        this.pendingEvents -= batch.events.length;
+        this.inflight.delete(work);
+      });
     this.inflight.add(work);
   }
 
@@ -131,8 +144,10 @@ export class SourceBatcher {
       events = [];
     }
 
-    const transaction = await sequelize.transaction();
+    let transaction: Transaction | undefined;
     try {
+      // Inside the try: the pool can time out or the database be down.
+      transaction = await sequelize.transaction();
       await sequelize.query("SET LOCAL app.current_org = :orgId", {
         replacements: { orgId: organizationId },
         transaction,
@@ -161,7 +176,7 @@ export class SourceBatcher {
       await transaction.commit();
     } catch (error) {
       try {
-        await transaction.rollback();
+        await transaction?.rollback();
       } catch {
         // The failure below is what gets logged.
       }
