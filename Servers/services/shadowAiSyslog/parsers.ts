@@ -149,16 +149,15 @@ const isDotted = (host: string): boolean => host.includes(".") || host.includes(
 /** Host and path of a URL, or of a bare `host[:port][/path]` string. */
 function hostAndPath(raw: string): { host: string; path?: string } | null {
   const hasScheme = SCHEME_RE.test(raw);
-  // A bare IPv6 address (`2001:db8::1`) is not a valid URL host without
-  // brackets. It is compressed and lowercased, and `::ffff:1.2.3.4` becomes
-  // 1.2.3.4. `::` and zone IDs (`fe80::1%eth0`) are not destinations.
-  if (!hasScheme && net.isIPv6(raw)) {
-    const ip = raw.includes("%") ? null : normalizeIp(raw);
-    return ip && ip !== "::" ? { host: ip } : null;
-  }
   try {
-    const url = new URL(hasScheme ? raw : `http://${raw}`);
-    const host = url.hostname.replace(/^\[|\]$/g, "").replace(/\.$/, "");
+    // A bare IPv6 address (`2001:db8::1`) needs brackets to be read as a URL
+    // host. The URL parser rejects a zone ID (`fe80::1%eth0`).
+    const bare = !hasScheme && net.isIPv6(raw) ? `[${raw}]` : raw;
+    const url = new URL(hasScheme ? raw : `http://${bare}`);
+    let host = url.hostname.replace(/^\[|\]$/g, "").replace(/\.$/, "");
+    // One form per IPv6 address, however it was written: `::ffff:1.2.3.4`
+    // (which the URL parser turns into hex) is stored as 1.2.3.4.
+    if (host.includes(":")) host = normalizeIp(host) ?? host;
     if (!/[a-z0-9]/i.test(host)) return null;
     // Without a scheme the value must look like a host, so placeholders such
     // as `-`, `N/A`, `none` and `null` are not read as a host called "-" or
@@ -320,6 +319,9 @@ function statesZone(tail: string): boolean {
   return words.some((w) => !NON_ZONE_WORDS.has(w.toLowerCase()));
 }
 
+// A zone Date.parse reads by itself: UTC, GMT, Z, a US zone and/or an offset.
+const BRACKET_ZONE_RE = /^(?:(?:UTC|UT|GMT|Z|[ECMP][SD]T)\s*)?(?:[+-]\d{2}(?::?\d{2})?)?$/i;
+
 /** The first listed zone name in the text: its position, length and offset. */
 function findZoneName(
   text: string,
@@ -363,10 +365,14 @@ function parseDateText(text: string): number {
   // Without a listed name, a zone only inside brackets (`(IST)`, `(India
   // Standard Time)`) is one the parser cannot read: unreadable, not UTC.
   if (!zone && statesZone(tail.replace(/[()]/g, " "))) {
-    // A zone only inside brackets: Date.parse reads `(UTC)`, `(GMT)` and
-    // `(+05:30)` once the brackets go, but not `(IST)` or `(India Standard
-    // Time)`, which leave the time unreadable rather than read as UTC.
-    return Date.parse(`${head}${tail.replace(/[()]/g, " ")}`);
+    // A zone only inside brackets. `(UTC)`, `(GMT)`, `(PST)` and `(+05:30)`
+    // are read without the brackets. Anything else (`(IST)`, `(India Standard
+    // Time)`, a comment) leaves the time unreadable: Date.parse would read
+    // `(Novosibirsk)` as November in server-local time.
+    const inside = /\(([^()]*)\)?/.exec(tail)?.[1].trim() ?? "";
+    return inside && BRACKET_ZONE_RE.test(inside)
+      ? Date.parse(`${head}${tail.replace(/[()]/g, " ")}`)
+      : NaN;
   }
   const utc = Date.parse(`${head}${bare} UTC`);
   return zone ? utc - zone.minutes * 60 * 1000 : utc;
@@ -487,8 +493,9 @@ function parseGenericKv(
 // starts at the first `{` followed by a key (with only JSON whitespace
 // between), so a brace in the prefix (`host{1}`, `{}`) is passed over. Only
 // that one start is tried: falling through to a later `{` when the object is
-// broken (a relay cut the line) could pick a nested object as the event. Try the slice ending at each closing brace,
-// last first, a bounded number of times.
+// broken (a relay cut the line) could pick a nested object as the event.
+// Try the slice ending at each closing brace, last first, a bounded number of
+// times.
 const JSON_OBJECT_START_RE = /\{[ \t\r\n]*"/;
 const MAX_JSON_END_ATTEMPTS = 8;
 
@@ -587,7 +594,7 @@ function parseSquid(
       path: method?.toUpperCase() === "CONNECT" ? undefined : target?.path,
       method,
       action,
-      timestamps: [timestamp],
+      timestamps: [fields[0]],
     },
     headerTimestamp,
     receivedAt,

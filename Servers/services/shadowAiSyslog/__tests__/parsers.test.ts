@@ -1015,7 +1015,20 @@ describe("parseLine", () => {
       expect(at("2026-02-09 14:32:00 (UTC)")).toBe("2026-02-09T14:32:00.000Z");
       expect(at("2026-02-09 14:32:00 (GMT)")).toBe("2026-02-09T14:32:00.000Z");
       expect(at("2026-02-09 14:32:00 (+05:30)")).toBe("2026-02-09T09:02:00.000Z");
+      expect(at("2026-02-09 14:32:00 (PST)")).toBe("2026-02-09T22:32:00.000Z");
     });
+
+    it.each(["America/New_York", "UTC"])(
+      "does not let a bracketed comment change the date in %s",
+      (tz) => {
+        process.env.TZ = tz;
+        // Date.parse would read these as January or as the date in local time, both
+        // inside the accepted range.
+        expect(at("2026-02-09 14:32:00 (Janitor)")).toBe("2026-02-09T00:00:00.000Z");
+        expect(at("2026-02-09 14:32:00 (Febrile)")).toBe("2026-02-09T00:00:00.000Z");
+        expect(at("Mon Feb 09 14:32:00 (Novosibirsk) 2026")).toBe("2026-02-09T00:00:00.000Z");
+      },
+    );
   });
 
   describe("CEF event time fields", () => {
@@ -1080,6 +1093,9 @@ describe("parseLine", () => {
       };
       expect(dest("2001:DB8:0:0::1")).toBe("2001:db8::1");
       expect(dest("::ffff:1.2.3.4")).toBe("1.2.3.4");
+      expect(dest("[::ffff:1.2.3.4]")).toBe("1.2.3.4");
+      const viaUrl = parseLine("generic_kv", "suser=a@b.co request=http://[::FFFF:1.2.3.4]/x");
+      expect(viaUrl.ok && viaUrl.event.destination).toBe("1.2.3.4");
       expect(dest("::")).toBe("no_destination");
       expect(dest("fe80::1%eth0")).toBe("no_destination");
     });
@@ -1115,12 +1131,12 @@ describe("parseLine", () => {
     });
 
     it("stays linear on a line of braces", () => {
-      const startedAt = Date.now();
-      parseLine("netskope", "{".repeat(65000));
-      parseLine("netskope", `}${"{".repeat(65000)}`);
-      parseLine("netskope", `{${" ".repeat(65000)}x`);
-      // The quadratic search took over 2 s per line.
-      expect(Date.now() - startedAt).toBeLessThan(2000);
+      // The quadratic search took over 2 s per line; linear takes milliseconds.
+      for (const line of ["{".repeat(65000), `}${"{".repeat(65000)}`, `{${" ".repeat(65000)}x`]) {
+        const startedAt = Date.now();
+        parseLine("netskope", line);
+        expect(Date.now() - startedAt).toBeLessThan(500);
+      }
     });
 
     it("prefers a dotted domain over an undotted url host", () => {

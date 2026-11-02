@@ -135,12 +135,16 @@ is cut out and applied as an offset in minutes; brackets are removed because
 Date.parse treats them as comments. A numeric offset wins over a name that
 disagrees with it. ISO dates with `T`, a comma before the fraction, or AM/PM
 are accepted. A zone name the parser does not know (such as IST, bare or in
-brackets; `(UTC)` and `(GMT)` are read) makes the payload time unreadable and the header or receive time is used. Send an offset
+brackets) makes the payload time unreadable. Inside brackets only a zone
+Date.parse reads by itself (`(UTC)`, `(GMT)`, `(PST)`, `(+05:30)`) is used; any
+other bracketed text also makes the time unreadable, because Date.parse would
+read words like `(Novosibirsk)` as a month and the header or receive time is used. Send an offset
 or `Z` if the source logs in another zone.
 
 Destination values must look like a host: a dotted name, or an IPv4 or IPv6
 address (bare `2001:db8::1` or bracketed; a bare IPv6 address is compressed and
-lowercased, and `::ffff:1.2.3.4` is stored as `1.2.3.4`), or a URL with a scheme. Placeholders such as `-`, `N/A`, `none` and
+lowercased, and `::ffff:1.2.3.4` is stored as `1.2.3.4`, in every field and URL
+form), or a URL with a scheme. Placeholders such as `-`, `N/A`, `none` and
 `null` are skipped and the next field (`uri`, `request`, Netskope `domain`) is
 used instead.
 
