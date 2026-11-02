@@ -113,7 +113,8 @@ blocked, and `allow`, `allowed`, `permit`, `permitted`, `pass`, `passed`,
 negated allow (`Not allowed`, `not_permitted`, `unallowed`, `disallowed`) is
 blocked. A word
 that only begins with one of these (`password_reset`, `dropbox-upload`) and any
-other value is left unset. Netskope's `alert`, `useralert`, `bypass` and the
+other value is left unset by the parser, and ingestion then stores it as
+allowed (`normalizeEvent` treats anything but `blocked` as allowed). Netskope's `alert`, `useralert`, `bypass` and the
 `restrict*` / `disableDownload` verdicts are mapped before this step.
 
 The user must be a valid email address. A repeated `user`, `suser`, `dst`,

@@ -10,7 +10,7 @@ export const insightsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The Insights dashboard gives you a high-level view of Shadow AI activity across your organization. It surfaces key metrics, risk rankings and usage trends so you can quickly understand the scope and risk profile of unauthorized AI tool usage.',
+      text: 'The Insights page summarizes the Shadow AI data your log sources have sent: which AI tools were detected, who used them, which departments they belong to and how the tools score on risk.',
     },
     {
       type: 'heading',
@@ -20,21 +20,21 @@ export const insightsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The top of the page displays four summary cards that update based on the selected time period:',
+      text: 'Four cards sit at the top of the page. Click a card to open the page behind it.',
     },
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Unique apps', text: 'Number of distinct AI tools detected in network traffic' },
-        { bold: 'AI users', text: 'Total number of unique users who accessed AI tools' },
-        { bold: 'Highest risk tool', text: 'The AI tool with the highest calculated risk score' },
-        { bold: 'Most active department', text: 'The department with the most AI tool usage' },
+        { bold: 'Unique apps', text: 'Number of AI tools on the AI tools page. This counts every detected tool you have not deleted, whatever period is selected.' },
+        { bold: 'AI users', text: 'Distinct user emails with AI tool traffic in the selected period' },
+        { bold: 'Highest risk tool', text: 'The tool with the highest current risk score. Like Unique apps, it ignores the period. A newly detected tool has no score until the next nightly run.' },
+        { bold: 'Most active department', text: 'The department with the most AI tool events in the selected period. Events that arrive without a department are left out.' },
       ],
     },
     {
       type: 'callout',
       variant: 'info',
-      text: 'User, department and activity counts include only traffic that matched an AI tool when it was ingested. Your proxy may send other web traffic too. It is stored but does not count as AI usage, so someone who only visited other sites is not an AI user.',
+      text: 'User, department and event counts include only traffic that matched an AI tool when it was ingested. Your proxy may send other web traffic too. It is stored but does not count as AI usage, so someone who only visited other sites is not an AI user.',
     },
     {
       type: 'heading',
@@ -44,12 +44,12 @@ export const insightsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'This panel lists the top 5 AI tools sorted by their risk score. Each entry shows the tool name, its numeric risk score and the total number of network events recorded. Click "Go to AI tools" to view the full tool inventory.',
+      text: 'This panel lists five AI tools with their risk score and the number of events recorded for each tool since it was first detected. The event total is not limited to the selected period. Click "Go to AI tools" to see the full tool list.',
     },
     {
       type: 'callout',
       variant: 'info',
-      text: 'Risk scores range from 0 to 100 and are recalculated nightly. They factor in approval status (40%), data and compliance policies (25%), usage volume (15%, normalized to the tool\'s event ratio against the org average) and department sensitivity (20%).',
+      text: 'Risk scores run from 0 to 100 and are recalculated every night. Four factors feed the score: approval status (40%), the tool\'s data policy attributes such as training on user data, SOC 2, GDPR, SSO and encryption at rest (25%), the tool\'s event count compared with the average across your tools (15%) and the most sensitive department that used it in the last 30 days (20%). The approval factor drops to zero only when the tool is approved and linked to a model inventory entry.',
     },
     {
       type: 'heading',
@@ -59,7 +59,7 @@ export const insightsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'A pie chart showing how many AI users each department has, counting only traffic matched to an AI tool. This helps identify which parts of the organization are most actively using AI tools and may need additional oversight or training.',
+      text: 'A pie chart of distinct AI users per department in the selected period. The department is the value your log source sends with each event. Users whose events carry no department are grouped under "Unknown".',
     },
     {
       type: 'heading',
@@ -69,13 +69,13 @@ export const insightsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Two horizontal bar charts on the right side of the dashboard show:',
+      text: 'Two bar charts on the right show up to six tools each for the selected period:',
     },
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Most accessed tools by events', text: 'Tools ranked by total number of network events (API calls, page visits)' },
-        { bold: 'Most accessed tools by users', text: 'Tools ranked by number of distinct users who accessed them' },
+        { bold: 'Most accessed tools by events', text: 'Tools ranked by the number of events matched to them' },
+        { bold: 'Most accessed tools by users', text: 'Tools ranked by the number of distinct users who accessed them' },
       ],
     },
     {
@@ -86,7 +86,7 @@ export const insightsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Use the period selector in the top-right corner to adjust the time window for all dashboard data. Available options are last 7 days, last 30 days and last 90 days.',
+      text: 'Use the period selector in the top-right corner to choose last 7 days, last 30 days (the default) or last 90 days. It changes the AI users and Most active department cards, the department chart and both bar charts. Unique apps, Highest risk tool and the risk panel do not depend on the period.',
     },
     {
       type: 'article-links',

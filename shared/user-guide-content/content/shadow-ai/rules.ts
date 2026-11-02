@@ -10,7 +10,7 @@ export const rulesContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The Rules page lets you set up automated alerts for Shadow AI activity. When a rule\'s conditions are met, the system sends notifications so you can respond to new risks or policy violations without manually watching dashboards.',
+      text: 'The Rules page lets you set up alerts for Shadow AI activity. Rules are checked each time a batch of events arrives through the REST API or syslog. When a rule\'s condition is met, VerifyWise records an alert and, if you chose to be notified, sends you an in-app notification and an email.',
     },
     {
       type: 'heading',
@@ -20,7 +20,7 @@ export const rulesContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The default view displays all configured alert rules as cards. Each card shows the rule name, trigger type, threshold values, notification settings and an active/inactive toggle.',
+      text: 'The default view shows your alert rules as cards. Each card shows the rule name, trigger type, its threshold or departments, the cooldown, whether it notifies anyone and an on/off toggle. Rules cannot be edited after creation; to change one, delete it and create a new one.',
     },
     {
       type: 'paragraph',
@@ -43,8 +43,9 @@ export const rulesContent: ArticleContent = {
         { bold: 'Description', text: 'Optional notes about the rule\'s purpose' },
         { bold: 'Trigger type', text: 'The condition that fires the alert (see below)' },
         { bold: 'Configuration', text: 'Threshold or parameters specific to the trigger type' },
-        { bold: 'Notify me', text: 'Check this to receive in-app and email notifications when the rule fires' },
-        { bold: 'Active', text: 'Toggle whether the rule is active immediately after creation' },
+        { bold: 'Cooldown period', text: 'How long the rule stays quiet for the same tool, department or user after it fires (see below)' },
+        { bold: 'Notify me', text: 'On by default. Sends you an in-app notification and an email when the rule fires. Only the person who creates the rule is notified; with this off, alerts appear in the alert history only' },
+        { bold: 'Active', text: 'Whether the rule is checked from the moment it is created' },
       ],
     },
     {
@@ -63,29 +64,29 @@ export const rulesContent: ArticleContent = {
         {
           icon: 'Radar',
           title: 'New tool detected',
-          description: 'Fires when a previously unseen AI tool appears in network traffic.',
+          description: 'Fires when a batch of events contains an AI tool seen for the first time.',
         },
         {
           icon: 'TrendingUp',
           title: 'Usage threshold exceeded',
-          description: 'Fires when a tool\'s cumulative event count exceeds the configured threshold.',
+          description: 'Fires when new events arrive for a tool whose total event count has reached the threshold.',
         },
         {
           icon: 'Building2',
           title: 'Sensitive department usage',
-          description: 'Fires when users from specified departments access AI tools.',
+          description: 'Fires when events arrive from one of the departments you list (matched without regard to case).',
         },
         {
           icon: 'ShieldAlert',
           title: 'Blocked tool attempt',
-          description: 'Fires when someone attempts to access a tool with "Blocked" status.',
+          description: 'Fires when your proxy reports a blocked request (action blocked) to a tool whose status is Blocked.',
         },
       ],
     },
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Risk score exceeded', text: 'Fires when a tool\'s nightly risk score meets or exceeds the minimum threshold you set (1-100).' },
+        { bold: 'Risk score exceeded', text: 'Fires when new events arrive for a tool whose current risk score is at or above the minimum you set (default 70). Scores are recalculated nightly, so a tool without a score yet does not fire.' },
         { bold: 'New user detected', text: 'Fires the first time a user is observed accessing any AI tool. Earlier traffic from that user that matched no AI tool does not count, so it does not stop the alert.' },
       ],
     },
@@ -97,7 +98,7 @@ export const rulesContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The usage threshold is the cumulative number of network events (API calls, page visits) recorded for a single AI tool across all users. For example, setting the threshold to 100 means the alert fires once a tool has been accessed 100 times total.',
+      text: 'The usage threshold is the total number of events recorded for one AI tool across all users (default 100). Once a tool reaches it, the rule fires whenever new events for that tool arrive, at most once per cooldown period.',
     },
     {
       type: 'heading',
@@ -107,7 +108,7 @@ export const rulesContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The risk score (0-100) is calculated nightly using a weighted formula: approval status (40%), data and compliance policies (25%), usage volume (15%) and department sensitivity (20%). Tools that are unapproved with weak compliance posture in sensitive departments score highest.',
+      text: 'The risk score (0-100) is calculated nightly using a weighted formula: approval status (40%), data and compliance policies (25%), usage volume (15%) and department sensitivity (20%). Unapproved tools with weak compliance posture used by sensitive departments score highest. The rule is checked when new events for a tool arrive, not when the score changes.',
     },
     {
       type: 'callout',
@@ -122,7 +123,7 @@ export const rulesContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Click the trash icon on a rule card to delete it. You will be asked to confirm. Deleting a rule removes the rule definition but preserves any alert history that was already generated.',
+      text: 'Click the trash icon on a rule card to delete it. You will be asked to confirm. Deleting a rule removes the rule but keeps its alerts in the alert history, under the rule\'s name.',
     },
 
     // ─── Cooldowns & alert batching ──────────────────────────────────
@@ -172,7 +173,7 @@ export const rulesContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'As a safety net, the system limits the number of alerts that can fire in a single ingestion batch to 50. If more than 50 alerts are triggered by a single batch of events, the excess alerts are silently dropped. This prevents a flood of notifications from a misconfigured rule or a sudden traffic spike.',
+      text: 'As a safety net, at most 50 alerts can fire for one batch of events. Alerts beyond 50 are dropped without a record in the alert history. This prevents a flood of notifications from a misconfigured rule or a sudden traffic spike.',
     },
     {
       type: 'callout',
@@ -189,7 +190,7 @@ export const rulesContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Switch to the "Alert history" tab to view a chronological log of all triggered alerts. The table shows:',
+      text: 'Switch to the "Alert history" tab to see the alerts your rules have fired, newest first. The table shows:',
     },
     {
       type: 'bullet-list',
@@ -201,7 +202,7 @@ export const rulesContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Click column headers to sort. The table supports pagination for large alert volumes.',
+      text: 'Clicking a column header sorts the rows on the current page. Alerts are kept for the period set under alert history retention in Settings.',
     },
     {
       type: 'article-links',
@@ -223,7 +224,7 @@ export const rulesContent: ArticleContent = {
           collectionId: 'shadow-ai',
           articleId: 'insights',
           title: 'Insights',
-          description: 'View dashboard metrics and trends',
+          description: 'View dashboard metrics',
         },
       ],
     },

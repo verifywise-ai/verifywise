@@ -25,7 +25,7 @@ export const integrationGuideContent: ArticleContent = {
     {
       type: 'checklist',
       items: [
-        'Admin or Editor role in VerifyWise',
+        'Admin role in VerifyWise (only Admins can create API keys and syslog sources)',
         'Access to your network proxy, firewall, or SIEM configuration',
         'Network connectivity from your data source to the VerifyWise server',
       ],
@@ -79,7 +79,7 @@ export const integrationGuideContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: '**Endpoint:** `POST /v1/shadow-ai/events`',
+      text: '**Endpoint:** `POST /api/v1/shadow-ai/events`',
     },
     {
       type: 'paragraph',
@@ -121,7 +121,11 @@ export const integrationGuideContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: '**Required fields:** `user_email`, `destination`, `timestamp`. All other fields are optional but improve the accuracy of risk scoring and department-level reporting.',
+      text: '**Required fields:** `user_email`, `destination`, `timestamp`. All other fields are optional. `department` feeds risk scoring and department-level reporting.',
+    },
+    {
+      type: 'paragraph',
+      text: 'VerifyWise stores `user_email`, `manager_email` and `destination` in lowercase with surrounding spaces removed, so `Alice@Company.com` and `alice@company.com` count as one user. `http_method` is stored in upper case. An `action` of exactly `blocked` is stored as blocked; any other value, or none, is stored as allowed.',
     },
 
     {
@@ -138,6 +142,7 @@ export const integrationGuideContent: ArticleContent = {
       type: 'code',
       language: 'json',
       code: `{
+  "message": "OK",
   "data": {
     "ingested": 1,
     "tools_matched": 1
@@ -177,11 +182,16 @@ export const integrationGuideContent: ArticleContent = {
         { key: 'fix', label: 'How to fix', width: '50%' },
       ],
       rows: [
-        { status: '400', cause: 'Missing required field or invalid email', fix: 'Check that every event has user_email, destination and timestamp. Verify the email format.' },
+        { status: '400', cause: 'No `events` array, a missing required field, or an invalid `user_email`', fix: 'Send a body with an `events` array. The message names the index of the first bad event. Check that every event has user_email, destination and timestamp, and that user_email is an email address.' },
         { status: '401', cause: 'Missing or invalid API key', fix: 'Ensure the X-API-Key header is set with a valid, non-revoked key.' },
         { status: '413', cause: 'Batch too large', fix: 'Reduce to 10,000 or fewer events per request.' },
-        { status: '429', cause: 'Rate limit exceeded', fix: 'Wait until the next hour window, or increase the rate limit in Settings → Rate limiting.' },
+        { status: '429', cause: 'The batch would go over the hourly limit', fix: 'The whole batch is refused. The hour starts with the first batch counted, not on the clock hour. Wait, send a smaller batch, or ask an Admin to raise the limit in Settings → Rate limiting.' },
+        { status: '500', cause: 'An event cannot be stored: the timestamp cannot be read, or a field is too long (user_email, manager_email, department or job_title over 255 characters, destination over 512, http_method over 10)', fix: 'The whole batch is refused and nothing is stored. Send ISO 8601 timestamps and shorten the field.' },
       ],
+    },
+    {
+      type: 'paragraph',
+      text: 'An empty `events` array returns `200` with `ingested: 0`. A `uri_path` longer than 2,048 characters is left out; the event itself is stored.',
     },
 
     // ─── Syslog integration ────────────────────────────────────────────
@@ -272,6 +282,10 @@ export const integrationGuideContent: ArticleContent = {
       type: 'paragraph',
       text: 'Configure your proxy to send logs over TCP to your VerifyWise host on port 6514, using TLS, and to include `vw_source=<your key>` in every line. Put the field at the start or the end of the line, separated from the rest by a space. A key anywhere else in the line is ignored, so text inside another field, such as a user agent or a URL, can never route a line. VerifyWise removes it before the line is stored. The examples below show one line per product, with the field added.',
     },
+    {
+      type: 'paragraph',
+      text: 'Each event takes its time from the line\'s own time field, else from the syslog header, else from the time VerifyWise received it. A time with no zone is read as UTC, so if your proxy logs in local time, include an offset (`+02:00`) or `Z`. A zone name VerifyWise does not know, such as `IST`, makes the line\'s time unreadable and the header or receive time is used. A time more than a year old or more than 24 hours ahead is ignored the same way. As with the REST API, user emails and destinations are stored in lowercase.',
+    },
 
     // Zscaler
     {
@@ -282,7 +296,7 @@ export const integrationGuideContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Create a Nanolog Streaming Service feed that sends to your VerifyWise host over TCP. In the feed output format, include the fields `user`, `dst`, `method`, `uri` and `action` as `name=value` pairs, optionally `department`, and add the literal text `vw_source=<key>`. Your feed must be able to add a fixed field to every line. If it cannot, a self-hosted server can use IP-only mode (see below).',
+      text: 'Create a Nanolog Streaming Service feed that sends to your VerifyWise host over TCP. In the feed output format, include the fields `user`, `dst`, `method`, `uri` and `action` as `name=value` pairs, optionally `department` and `timestamp`, and add the literal text `vw_source=<key>`. Your feed must be able to add a fixed field to every line. If it cannot, a self-hosted server can use IP-only mode (see below).',
     },
     {
       type: 'code',
@@ -299,7 +313,7 @@ export const integrationGuideContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Send the events as JSON over syslog. The line must contain a JSON object with `user`, `url`, `method` and `action` (the policy verdict, such as `allow` or `block`), optionally `department` and `timestamp`. Put the key in the object as a top-level `"vw_source"` member (not inside a nested object), or write `vw_source=<key>` before or after the object, separated by a space. If your product cannot add either to every event, a self-hosted server can use IP-only mode (see below).',
+      text: 'Send the events as JSON over syslog, one object per line. Text before the object, such as a syslog tag, is fine. The object needs `user` and `url` (if `url` has no usable host, `domain` or `site` is used), plus `method` and `action` (the policy verdict), optionally `department` and `timestamp`. `allow`, `alert`, `useralert` and `bypass` are stored as allowed; `block`, `restrictToView`, `restrictAccess` and `disableDownload` as blocked. `activity` (what the user did, such as `Upload`) is read only when there is no `action`. Put the key in the object as a top-level `"vw_source"` member (not inside a nested object), or write `vw_source=<key>` before or after the object, separated by a space. If your product cannot add either to every event, a self-hosted server can use IP-only mode (see below).',
     },
     {
       type: 'code',
@@ -339,7 +353,7 @@ export const integrationGuideContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Use this parser for firewalls, DLP systems and custom forwarders that write `key=value` pairs or CEF extensions. In a CEF line a value can contain spaces (`department=Sales Ops`) and runs until the next `key=`; in plain `key=value` lines a value ends at the first space unless you put it in double quotes. It reads these fields:',
+      text: 'Use this parser for firewalls, DLP systems and custom forwarders that write `key=value` pairs or CEF extensions. In a line that starts with a CEF header (`CEF:0|...|`, optionally after a host name and tag) a value can contain spaces (`department=Sales Ops`) and runs until the next `key=`; in plain `key=value` lines a value ends at the first space unless you put it in double quotes. It reads these fields:',
     },
     {
       type: 'table',
@@ -352,6 +366,7 @@ export const integrationGuideContent: ArticleContent = {
       rows: [
         { field: 'suser', maps_to: 'user_email', required: 'Yes', example: 'alice@company.com' },
         { field: 'dhost (or host of request)', maps_to: 'destination', required: 'Yes', example: 'chat.openai.com' },
+        { field: 'request', maps_to: 'uri_path (path of the URL)', required: 'No', example: 'https://chat.openai.com/v1/chat' },
         { field: 'requestMethod', maps_to: 'http_method', required: 'No', example: 'POST' },
         { field: 'act', maps_to: 'action', required: 'No', example: 'allowed' },
         { field: 'department', maps_to: 'department', required: 'No', example: 'Engineering' },
@@ -445,7 +460,7 @@ export const integrationGuideContent: ArticleContent = {
         {
           symptom: 'REST API returns 401',
           cause: 'Invalid or revoked API key',
-          fix: 'Verify the key is correct and has not been revoked in Settings → API keys. Create a new key if needed.',
+          fix: 'Verify the key is correct and has not been revoked in Settings → API keys. Create a new key if needed. Keys have the form `vw_sk_<number>_<48 hex characters>`; a key with spaces or a missing part is refused.',
         },
         {
           symptom: 'REST API returns 429',
@@ -484,8 +499,8 @@ export const integrationGuideContent: ArticleContent = {
         },
         {
           symptom: 'Risk scores are all zero',
-          cause: 'Nightly recalculation has not run',
-          fix: 'Risk scores are recalculated nightly. New tools will have a score of 0 until the next calculation cycle runs.',
+          cause: 'The daily recalculation has not run yet',
+          fix: 'Risk scores are recalculated once a day, overnight. A new tool shows 0 until the next run.',
         },
         {
           symptom: 'Department data missing',
@@ -507,11 +522,11 @@ export const integrationGuideContent: ArticleContent = {
       type: 'bullet-list',
       items: [
         { bold: 'Use descriptive API key labels', text: 'Label each key with the source system and environment (e.g., "Zscaler prod" or "Browser ext staging") so you can quickly identify and rotate keys' },
-        { bold: 'Include optional fields', text: 'The department, job_title and manager_email fields aren\'t required but they significantly improve risk scoring accuracy and enable department-level alerts' },
+        { bold: 'Include the department', text: 'The department field is optional, but risk scoring, department-level reporting and sensitive department alerts depend on it' },
         { bold: 'Start with a single source', text: 'Integrate one data source first, verify events are flowing, then add additional sources' },
         { bold: 'Set up alert rules early', text: 'Create at least a "New tool detected" rule immediately after integration so you are notified when new AI tools appear in your network' },
         { bold: 'Monitor the rate limit', text: 'If you are ingesting from a high-volume proxy, configure the rate limit in Settings to prevent accidental overload during initial rollout' },
-        { bold: 'Rotate API keys regularly', text: 'Revoke and recreate API keys periodically. When rotating, create the new key first, update the data source config, then revoke the old key' },
+        { bold: 'Rotate API keys regularly', text: 'Revoke and recreate API keys periodically. When rotating, create the new key first, update the data source config, then revoke the old key. With several backend replicas, a revoked key can keep working on the other replicas for up to 5 minutes' },
       ],
     },
 

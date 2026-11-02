@@ -29,7 +29,7 @@ export const de: Record<string, string> = {
   "Most accessed tools by users": "Am häufigsten genutzte Tools nach Benutzern",
   "Most active department": "Aktivste Abteilung",
   "Risk score calculation": "Berechnung der Risikobewertung",
-  "Spot usage trends": "Nutzungstrends erkennen",
+  "Find high-risk usage": "Risikoreiche Nutzung finden",
   "Syslog sources": "Syslog-Quellen",
   "Total events": "Ereignisse insgesamt",
   "Total prompts": "Prompts insgesamt",
@@ -43,34 +43,34 @@ export const de: Record<string, string> = {
   "No alerts have been triggered yet.": "Noch keine Benachrichtigungen ausgelöst.",
   "No rules configured yet. Create rules to automate alerts and enforce AI usage policies.":
     "Noch keine Regeln konfiguriert. Erstellen Sie Regeln, um Benachrichtigungen zu automatisieren und KI-Nutzungsrichtlinien durchzusetzen.",
-  "No user activity detected yet. Activity will appear here once monitoring is connected.":
-    "Noch keine Benutzeraktivität erkannt. Aktivität erscheint hier, sobald die Überwachung verbunden ist.",
-  "Add the AI tools your organization uses or has detected. Track which tools are in use and who has access to them.":
-    "KI-Tools hinzufügen, die Ihre Organisation nutzt oder erkannt hat. Verfolgen Sie, welche Tools genutzt werden und wer Zugriff hat.",
-  "Discover AI tools being used without IT approval. Flag tools that may expose sensitive data or violate company policy.":
-    "KI-Tools entdecken, die ohne IT-Genehmigung genutzt werden. Tools markieren, die sensible Daten offenlegen oder Unternehmensrichtlinien verletzen könnten.",
+  "No AI tool activity in the last 30 days. Activity appears here once a log source sends traffic that matches an AI tool.":
+    "Keine KI-Tool-Aktivität in den letzten 30 Tagen. Aktivität erscheint hier, sobald eine Protokollquelle Datenverkehr sendet, der einem KI-Tool zugeordnet wird.",
+  "Send proxy or firewall logs through the REST API or syslog (Settings). Traffic to known AI tools appears here.":
+    "Senden Sie Proxy- oder Firewall-Protokolle über die REST-API oder Syslog (Einstellungen). Datenverkehr zu bekannten KI-Tools erscheint hier.",
+  "Each tool gets a risk score from 0 to 100, recalculated nightly. Review the highest scores first.":
+    "Jedes Tool erhält eine Risikobewertung von 0 bis 100, die jede Nacht neu berechnet wird. Prüfen Sie die höchsten Werte zuerst.",
   "Identify unauthorized tools": "Unautorisierte Tools identifizieren",
-  "Monitor adoption curves and usage spikes. Correlate activity with policy changes or new tool introductions.":
-    "Adoptionskurven und Nutzungsspitzen überwachen. Aktivität mit Richtlinienänderungen oder der Einführung neuer Tools in Beziehung setzen.",
-  "Notify the right people": "Die richtigen Personen benachrichtigen",
-  "Route alerts to security teams, managers, or compliance officers. Each rule can have different notification recipients.":
-    "Benachrichtigungen an Sicherheitsteams, Manager oder Compliance-Beauftragte weiterleiten. Jede Regel kann unterschiedliche Empfänger haben.",
+  "Risk scores show which users and departments use the riskiest AI tools.":
+    "Risikobewertungen zeigen, welche Benutzer und Abteilungen die riskantesten KI-Tools nutzen.",
+  "Get notified": "Benachrichtigt werden",
+  'Turn on "Notify me" to get an in-app notification and an email when the rule fires. Every alert is also kept in the alert history.':
+    "Aktivieren Sie „Mich benachrichtigen“, um eine In-App-Benachrichtigung und eine E-Mail zu erhalten, wenn die Regel auslöst. Jede Benachrichtigung wird außerdem im Benachrichtigungsverlauf gespeichert.",
   "See which departments have the highest AI tool usage. Identify teams that may need governance training or tool approvals.":
     "Erkennen, welche Abteilungen die höchste Nutzung von KI-Tools haben. Teams identifizieren, die möglicherweise Governance-Schulungen oder Tool-Genehmigungen benötigen.",
   "Select sensitivity level": "Sensitivitätsstufe auswählen",
-  "User sessions, tool access frequency, and department-level usage patterns for AI tools.":
-    "Benutzersitzungen, Häufigkeit des Tool-Zugriffs und abteilungsbezogene Nutzungsmuster für KI-Tools.",
-  "Alert on first use of any new AI tool, flag tools accessing sensitive data, notify when usage exceeds a set threshold per department.":
-    "Benachrichtigen bei erster Nutzung eines neuen KI-Tools, Tools markieren, die auf sensible Daten zugreifen, und benachrichtigen, wenn die Nutzung einen festgelegten Schwellenwert pro Abteilung überschreitet.",
-  "Classify detected tools as approved, under review, or blocked. Set policies per tool and notify users of compliance requirements.":
-    "Erkannte Tools als genehmigt, in Prüfung oder blockiert klassifizieren. Richtlinien pro Tool festlegen und Benutzer über Compliance-Anforderungen benachrichtigen.",
+  "Prompts and events per user and AI tool, grouped by the department your log source sends.":
+    "Prompts und Ereignisse pro Benutzer und KI-Tool, gruppiert nach der Abteilung, die Ihre Protokollquelle sendet.",
+  "Alert on any new AI tool, on use by Finance, Legal or HR, and on tools with a risk score of 70 or more.":
+    "Benachrichtigen Sie bei jedem neuen KI-Tool, bei Nutzung durch Finanzen, Recht oder Personal und bei Tools mit einer Risikobewertung von 70 oder mehr.",
+  "Give each tool a status, such as approved, under review or blocked, or start governance to add it to the model inventory.":
+    "Geben Sie jedem Tool einen Status, etwa genehmigt, in Prüfung oder blockiert, oder starten Sie die Governance, um es in das Modellinventar aufzunehmen.",
   "Data formats": "Datenformate",
-  "Manage API keys for syslog integration and configure syslog sources to feed network traffic data into Shadow AI detection.":
-    "API-Schlüssel für die Syslog-Integration verwalten und Syslog-Quellen konfigurieren, um Netzwerkverkehrsdaten in die Schatten-KI-Erkennung einzuspeisen.",
+  "Manage API keys for the REST API and syslog sources for proxy and firewall logs, and set the rate limit and data retention for Shadow AI.":
+    "API-Schlüssel für die REST-API und Syslog-Quellen für Proxy- und Firewall-Protokolle verwalten sowie Ratenbegrenzung und Datenaufbewahrung für Schatten-KI festlegen.",
   "Overview of Shadow AI activity across your organization. See summary metrics, top tools by usage, risk rankings, and department breakdown at a glance.":
     "Übersicht der Schatten-KI-Aktivität in Ihrer Organisation. Zusammenfassende Kennzahlen, meistgenutzte Tools, Risiko-Rankings und Abteilungsaufschlüsselung auf einen Blick sehen.",
-  "Set rules that fire when specific conditions are met: new tool detected, usage threshold exceeded, or data sensitivity flags triggered.":
-    "Regeln definieren, die bei bestimmten Bedingungen ausgelöst werden: neues Tool erkannt, Nutzungsschwelle überschritten oder Datensensitivitätsmarkierungen ausgelöst.",
+  "Fire an alert on a new tool, a usage threshold, a sensitive department, a blocked attempt, a high risk score or a new user.":
+    "Lösen Sie eine Benachrichtigung aus bei einem neuen Tool, einem Nutzungsschwellenwert, einer sensiblen Abteilung, einem blockierten Zugriffsversuch, einer hohen Risikobewertung oder einem neuen Benutzer.",
   "e.g., 100": "z. B. 100",
   "e.g., 4.0": "z. B. 4.0",
   "e.g., 70": "z. B. 70",
@@ -185,6 +185,16 @@ export const de: Record<string, string> = {
     "Der aktuelle Schlüssel funktioniert innerhalb einer Minute nicht mehr. Aktualisieren Sie jeden Absender, der ihn verwendet.",
   "Edit source": "Quelle bearbeiten",
   "Remove source": "Quelle entfernen",
+  "Highest risk score (0–100) among the AI tools this user accessed. Tool scores are recalculated nightly.":
+    "Höchste Risikobewertung (0–100) unter den KI-Tools, auf die dieser Benutzer zugegriffen hat. Tool-Bewertungen werden jede Nacht neu berechnet.",
+  "Highest risk score (0–100) among the AI tools this department accessed. Tool scores are recalculated nightly.":
+    "Höchste Risikobewertung (0–100) unter den KI-Tools, auf die diese Abteilung zugegriffen hat. Tool-Bewertungen werden jede Nacht neu berechnet.",
+  "API keys authenticate events sent to the REST API from a SIEM, script or browser extension. Syslog sources use their own keys.":
+    "API-Schlüssel authentifizieren Ereignisse, die von einem SIEM, einem Skript oder einer Browsererweiterung an die REST-API gesendet werden. Syslog-Quellen verwenden eigene Schlüssel.",
+  '"blocked" if the proxy refused the request. Any other value is stored as "allowed"':
+    '"blocked", wenn der Proxy die Anfrage abgelehnt hat. Jeder andere Wert wird als "allowed" gespeichert',
+  'Every line must start or end with vw_source=<key>, using its syslog source\'s key. A Netskope JSON object can carry it as a top-level "vw_source" member instead. An RFC 3164 or RFC 5424 header is removed before parsing. One example line per parser:':
+    'Jede Zeile muss mit vw_source=<key> beginnen oder enden, mit dem Schlüssel ihrer Syslog-Quelle. Ein Netskope-JSON-Objekt kann ihn stattdessen als Mitglied "vw_source" auf oberster Ebene enthalten. Ein RFC-3164- oder RFC-5424-Header wird vor dem Parsen entfernt. Eine Beispielzeile pro Parser:',
 };
 
 export const fr: Record<string, string> = {
@@ -215,7 +225,7 @@ export const fr: Record<string, string> = {
   "Most accessed tools by users": "Outils les plus consultés par utilisateurs",
   "Most active department": "Département le plus actif",
   "Risk score calculation": "Calcul du score de risque",
-  "Spot usage trends": "Repérer les tendances d'utilisation",
+  "Find high-risk usage": "Repérer les usages à risque",
   "Syslog sources": "Sources syslog",
   "Total events": "Événements au total",
   "Total prompts": "Prompts au total",
@@ -229,34 +239,34 @@ export const fr: Record<string, string> = {
   "No alerts have been triggered yet.": "Aucune alerte n'a encore été déclenchée.",
   "No rules configured yet. Create rules to automate alerts and enforce AI usage policies.":
     "Aucune règle configurée pour le moment. Créez des règles pour automatiser les alertes et faire appliquer les politiques d'usage IA.",
-  "No user activity detected yet. Activity will appear here once monitoring is connected.":
-    "Aucune activité utilisateur détectée pour le moment. L'activité apparaîtra ici une fois la surveillance connectée.",
-  "Add the AI tools your organization uses or has detected. Track which tools are in use and who has access to them.":
-    "Ajoutez les outils IA utilisés ou détectés par votre organisation. Suivez quels outils sont utilisés et qui y a accès.",
-  "Discover AI tools being used without IT approval. Flag tools that may expose sensitive data or violate company policy.":
-    "Découvrez les outils IA utilisés sans validation de la DSI. Signalez les outils susceptibles d'exposer des données sensibles ou de violer la politique de l'entreprise.",
+  "No AI tool activity in the last 30 days. Activity appears here once a log source sends traffic that matches an AI tool.":
+    "Aucune activité d'outil IA au cours des 30 derniers jours. L'activité apparaît ici dès qu'une source de journaux envoie du trafic correspondant à un outil IA.",
+  "Send proxy or firewall logs through the REST API or syslog (Settings). Traffic to known AI tools appears here.":
+    "Envoyez les journaux de proxy ou de pare-feu via l'API REST ou syslog (Paramètres). Le trafic vers les outils IA connus apparaît ici.",
+  "Each tool gets a risk score from 0 to 100, recalculated nightly. Review the highest scores first.":
+    "Chaque outil reçoit un score de risque de 0 à 100, recalculé chaque nuit. Examinez d'abord les scores les plus élevés.",
   "Identify unauthorized tools": "Identifier les outils non autorisés",
-  "Monitor adoption curves and usage spikes. Correlate activity with policy changes or new tool introductions.":
-    "Surveillez les courbes d'adoption et les pics d'utilisation. Corrélez l'activité avec les changements de politique ou l'arrivée de nouveaux outils.",
-  "Notify the right people": "Notifier les bonnes personnes",
-  "Route alerts to security teams, managers, or compliance officers. Each rule can have different notification recipients.":
-    "Acheminez les alertes vers les équipes de sécurité, les managers ou les responsables de la conformité. Chaque règle peut avoir des destinataires de notification différents.",
+  "Risk scores show which users and departments use the riskiest AI tools.":
+    "Les scores de risque montrent quels utilisateurs et départements utilisent les outils IA les plus risqués.",
+  "Get notified": "Recevoir des notifications",
+  'Turn on "Notify me" to get an in-app notification and an email when the rule fires. Every alert is also kept in the alert history.':
+    "Activez « M'avertir » pour recevoir une notification dans l'application et un e-mail lorsque la règle se déclenche. Chaque alerte est aussi conservée dans l'historique des alertes.",
   "See which departments have the highest AI tool usage. Identify teams that may need governance training or tool approvals.":
     "Voyez quels départements ont le plus recours aux outils IA. Identifiez les équipes qui pourraient avoir besoin d'une formation à la gouvernance ou de validations d'outils.",
   "Select sensitivity level": "Sélectionner le niveau de sensibilité",
-  "User sessions, tool access frequency, and department-level usage patterns for AI tools.":
-    "Sessions utilisateur, fréquence d'accès aux outils et modèles d'usage au niveau du département pour les outils IA.",
-  "Alert on first use of any new AI tool, flag tools accessing sensitive data, notify when usage exceeds a set threshold per department.":
-    "Alertez à la première utilisation de tout nouvel outil IA, signalez les outils accédant à des données sensibles, notifiez lorsque l'utilisation dépasse un seuil défini par département.",
-  "Classify detected tools as approved, under review, or blocked. Set policies per tool and notify users of compliance requirements.":
-    "Classez les outils détectés comme approuvés, en cours de relecture ou bloqués. Définissez des politiques par outil et notifiez les utilisateurs des exigences de conformité.",
+  "Prompts and events per user and AI tool, grouped by the department your log source sends.":
+    "Prompts et événements par utilisateur et par outil IA, regroupés selon le département envoyé par votre source de journaux.",
+  "Alert on any new AI tool, on use by Finance, Legal or HR, and on tools with a risk score of 70 or more.":
+    "Soyez alerté pour tout nouvel outil IA, pour une utilisation par la finance, le juridique ou les RH, et pour les outils dont le score de risque atteint 70 ou plus.",
+  "Give each tool a status, such as approved, under review or blocked, or start governance to add it to the model inventory.":
+    "Attribuez un statut à chaque outil, par exemple approuvé, en cours d'examen ou bloqué, ou lancez la gouvernance pour l'ajouter à l'inventaire des modèles.",
   "Data formats": "Formats de données",
-  "Manage API keys for syslog integration and configure syslog sources to feed network traffic data into Shadow AI detection.":
-    "Gérez les clés API pour l'intégration syslog et configurez des sources syslog pour alimenter la détection d'IA fantôme avec les données de trafic réseau.",
+  "Manage API keys for the REST API and syslog sources for proxy and firewall logs, and set the rate limit and data retention for Shadow AI.":
+    "Gérez les clés API pour l'API REST et les sources syslog pour les journaux de proxy et de pare-feu, et définissez la limite de débit et la conservation des données pour l'IA fantôme.",
   "Overview of Shadow AI activity across your organization. See summary metrics, top tools by usage, risk rankings, and department breakdown at a glance.":
     "Vue d'ensemble de l'activité d'IA fantôme dans votre organisation. Consultez en un coup d'œil les métriques synthétiques, les outils les plus utilisés, les classements de risques et la répartition par département.",
-  "Set rules that fire when specific conditions are met: new tool detected, usage threshold exceeded, or data sensitivity flags triggered.":
-    "Définissez des règles qui se déclenchent quand certaines conditions sont remplies : nouvel outil détecté, seuil d'utilisation dépassé, ou signalement de sensibilité des données.",
+  "Fire an alert on a new tool, a usage threshold, a sensitive department, a blocked attempt, a high risk score or a new user.":
+    "Déclenchez une alerte pour un nouvel outil, un seuil d'utilisation, un département sensible, une tentative bloquée, un score de risque élevé ou un nouvel utilisateur.",
   "e.g., 100": "ex. 100",
   "e.g., 4.0": "ex. 4.0",
   "e.g., 70": "ex. 70",
@@ -366,6 +376,16 @@ export const fr: Record<string, string> = {
     "La clé actuelle cesse de fonctionner en moins d'une minute. Mettez à jour chaque expéditeur qui l'utilise.",
   "Edit source": "Modifier la source",
   "Remove source": "Supprimer la source",
+  "Highest risk score (0–100) among the AI tools this user accessed. Tool scores are recalculated nightly.":
+    "Score de risque le plus élevé (0–100) parmi les outils IA utilisés par cet utilisateur. Les scores des outils sont recalculés chaque nuit.",
+  "Highest risk score (0–100) among the AI tools this department accessed. Tool scores are recalculated nightly.":
+    "Score de risque le plus élevé (0–100) parmi les outils IA utilisés par ce département. Les scores des outils sont recalculés chaque nuit.",
+  "API keys authenticate events sent to the REST API from a SIEM, script or browser extension. Syslog sources use their own keys.":
+    "Les clés API authentifient les événements envoyés à l'API REST par un SIEM, un script ou une extension de navigateur. Les sources syslog utilisent leurs propres clés.",
+  '"blocked" if the proxy refused the request. Any other value is stored as "allowed"':
+    '"blocked" si le proxy a refusé la requête. Toute autre valeur est enregistrée comme "allowed"',
+  'Every line must start or end with vw_source=<key>, using its syslog source\'s key. A Netskope JSON object can carry it as a top-level "vw_source" member instead. An RFC 3164 or RFC 5424 header is removed before parsing. One example line per parser:':
+    "Chaque ligne doit commencer ou se terminer par vw_source=<key>, avec la clé de sa source syslog. Un objet JSON Netskope peut à la place la porter comme membre \"vw_source\" de premier niveau. Un en-tête RFC 3164 ou RFC 5424 est supprimé avant l'analyse. Une ligne d'exemple par parseur :",
 };
 
 export const es: Record<string, string> = {
@@ -396,7 +416,7 @@ export const es: Record<string, string> = {
   "Most accessed tools by users": "Herramientas más accedidas por usuarios",
   "Most active department": "Departamento más activo",
   "Risk score calculation": "Cálculo de la puntuación de riesgo",
-  "Spot usage trends": "Detectar tendencias de uso",
+  "Find high-risk usage": "Detectar el uso de alto riesgo",
   "Syslog sources": "Fuentes de syslog",
   "Total events": "Total de eventos",
   "Total prompts": "Total de prompts",
@@ -410,34 +430,34 @@ export const es: Record<string, string> = {
   "No alerts have been triggered yet.": "Aún no se ha activado ninguna alerta.",
   "No rules configured yet. Create rules to automate alerts and enforce AI usage policies.":
     "Aún no hay reglas configuradas. Cree reglas para automatizar las alertas y aplicar las políticas de uso de IA.",
-  "No user activity detected yet. Activity will appear here once monitoring is connected.":
-    "Aún no se ha detectado actividad de usuarios. La actividad aparecerá aquí una vez que se conecte la supervisión.",
-  "Add the AI tools your organization uses or has detected. Track which tools are in use and who has access to them.":
-    "Añada las herramientas de IA que su organización utiliza o ha detectado. Haga seguimiento de qué herramientas están en uso y quién tiene acceso a ellas.",
-  "Discover AI tools being used without IT approval. Flag tools that may expose sensitive data or violate company policy.":
-    "Descubra las herramientas de IA que se utilizan sin aprobación de TI. Marque las herramientas que puedan exponer datos sensibles o infringir la política de la empresa.",
+  "No AI tool activity in the last 30 days. Activity appears here once a log source sends traffic that matches an AI tool.":
+    "No hay actividad de herramientas de IA en los últimos 30 días. La actividad aparece aquí cuando una fuente de registros envía tráfico que coincide con una herramienta de IA.",
+  "Send proxy or firewall logs through the REST API or syslog (Settings). Traffic to known AI tools appears here.":
+    "Envíe registros de proxy o firewall mediante la API REST o syslog (Configuración). El tráfico hacia herramientas de IA conocidas aparece aquí.",
+  "Each tool gets a risk score from 0 to 100, recalculated nightly. Review the highest scores first.":
+    "Cada herramienta recibe una puntuación de riesgo de 0 a 100, que se recalcula cada noche. Revise primero las puntuaciones más altas.",
   "Identify unauthorized tools": "Identificar herramientas no autorizadas",
-  "Monitor adoption curves and usage spikes. Correlate activity with policy changes or new tool introductions.":
-    "Supervise las curvas de adopción y los picos de uso. Correlacione la actividad con los cambios de políticas o la introducción de nuevas herramientas.",
-  "Notify the right people": "Notificar a las personas adecuadas",
-  "Route alerts to security teams, managers, or compliance officers. Each rule can have different notification recipients.":
-    "Dirija las alertas a los equipos de seguridad, los responsables o los responsables de cumplimiento. Cada regla puede tener diferentes destinatarios de notificaciones.",
+  "Risk scores show which users and departments use the riskiest AI tools.":
+    "Las puntuaciones de riesgo muestran qué usuarios y departamentos usan las herramientas de IA más riesgosas.",
+  "Get notified": "Recibir notificaciones",
+  'Turn on "Notify me" to get an in-app notification and an email when the rule fires. Every alert is also kept in the alert history.':
+    "Active «Notificarme» para recibir una notificación en la aplicación y un correo electrónico cuando se active la regla. Cada alerta también se guarda en el historial de alertas.",
   "See which departments have the highest AI tool usage. Identify teams that may need governance training or tool approvals.":
     "Vea qué departamentos tienen el mayor uso de herramientas de IA. Identifique los equipos que puedan necesitar formación en gobernanza o aprobaciones de herramientas.",
   "Select sensitivity level": "Selecciona el nivel de sensibilidad",
-  "User sessions, tool access frequency, and department-level usage patterns for AI tools.":
-    "Sesiones de usuario, frecuencia de acceso a las herramientas y patrones de uso por departamento de las herramientas de IA.",
-  "Alert on first use of any new AI tool, flag tools accessing sensitive data, notify when usage exceeds a set threshold per department.":
-    "Alerte sobre el primer uso de cualquier herramienta de IA nueva, marque las herramientas que acceden a datos sensibles y notifique cuando el uso supere un umbral establecido por departamento.",
-  "Classify detected tools as approved, under review, or blocked. Set policies per tool and notify users of compliance requirements.":
-    "Clasifique las herramientas detectadas como aprobadas, en revisión o bloqueadas. Establezca políticas por herramienta y notifique a los usuarios los requisitos de cumplimiento.",
+  "Prompts and events per user and AI tool, grouped by the department your log source sends.":
+    "Prompts y eventos por usuario y herramienta de IA, agrupados por el departamento que envía su fuente de registros.",
+  "Alert on any new AI tool, on use by Finance, Legal or HR, and on tools with a risk score of 70 or more.":
+    "Reciba alertas ante cualquier herramienta de IA nueva, ante el uso por Finanzas, Legal o RR. HH., y ante herramientas con una puntuación de riesgo de 70 o más.",
+  "Give each tool a status, such as approved, under review or blocked, or start governance to add it to the model inventory.":
+    "Asigne un estado a cada herramienta, como aprobada, en revisión o bloqueada, o inicie la gobernanza para añadirla al inventario de modelos.",
   "Data formats": "Formatos de datos",
-  "Manage API keys for syslog integration and configure syslog sources to feed network traffic data into Shadow AI detection.":
-    "Gestione las claves de API para la integración con syslog y configure las fuentes de syslog para alimentar la detección de Shadow AI con datos de tráfico de red.",
+  "Manage API keys for the REST API and syslog sources for proxy and firewall logs, and set the rate limit and data retention for Shadow AI.":
+    "Gestione las claves de API para la API REST y las fuentes de syslog para los registros de proxy y firewall, y defina el límite de tasa y la retención de datos de Shadow AI.",
   "Overview of Shadow AI activity across your organization. See summary metrics, top tools by usage, risk rankings, and department breakdown at a glance.":
     "Resumen de la actividad de Shadow AI en su organización. Vea de un vistazo las métricas resumidas, las principales herramientas por uso, las clasificaciones de riesgo y el desglose por departamento.",
-  "Set rules that fire when specific conditions are met: new tool detected, usage threshold exceeded, or data sensitivity flags triggered.":
-    "Establezca reglas que se activen cuando se cumplan condiciones específicas: detección de una nueva herramienta, superación de un umbral de uso o activación de indicadores de sensibilidad de los datos.",
+  "Fire an alert on a new tool, a usage threshold, a sensitive department, a blocked attempt, a high risk score or a new user.":
+    "Active una alerta ante una herramienta nueva, un umbral de uso, un departamento sensible, un intento bloqueado, una puntuación de riesgo alta o un usuario nuevo.",
   "e.g., 100": "p. ej., 100",
   "e.g., 4.0": "p. ej., 4.0",
   "e.g., 70": "p. ej., 70",
@@ -547,4 +567,14 @@ export const es: Record<string, string> = {
     "La clave actual deja de funcionar en menos de un minuto. Actualice cada remitente que la utilice.",
   "Edit source": "Editar fuente",
   "Remove source": "Eliminar fuente",
+  "Highest risk score (0–100) among the AI tools this user accessed. Tool scores are recalculated nightly.":
+    "Puntuación de riesgo más alta (0–100) entre las herramientas de IA a las que accedió este usuario. Las puntuaciones se recalculan cada noche.",
+  "Highest risk score (0–100) among the AI tools this department accessed. Tool scores are recalculated nightly.":
+    "Puntuación de riesgo más alta (0–100) entre las herramientas de IA a las que accedió este departamento. Las puntuaciones se recalculan cada noche.",
+  "API keys authenticate events sent to the REST API from a SIEM, script or browser extension. Syslog sources use their own keys.":
+    "Las claves de API autentican los eventos enviados a la API REST desde un SIEM, un script o una extensión del navegador. Las fuentes de syslog usan sus propias claves.",
+  '"blocked" if the proxy refused the request. Any other value is stored as "allowed"':
+    '"blocked" si el proxy rechazó la solicitud. Cualquier otro valor se guarda como "allowed"',
+  'Every line must start or end with vw_source=<key>, using its syslog source\'s key. A Netskope JSON object can carry it as a top-level "vw_source" member instead. An RFC 3164 or RFC 5424 header is removed before parsing. One example line per parser:':
+    'Cada línea debe empezar o terminar con vw_source=<key>, con la clave de su fuente de syslog. Un objeto JSON de Netskope puede llevarla en su lugar como miembro "vw_source" de nivel superior. Un encabezado RFC 3164 o RFC 5424 se elimina antes del análisis. Una línea de ejemplo por parser:',
 };

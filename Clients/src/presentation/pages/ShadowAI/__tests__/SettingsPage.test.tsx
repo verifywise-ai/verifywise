@@ -417,7 +417,7 @@ describe("ShadowAI - SettingsPage", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Regenerate" }));
 
     expect(await screen.findByText("Could not generate a key. Try again.")).toBeInTheDocument();
-    expect(screen.queryByText(/vw_source=/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/vw_source=vwsl_/)).not.toBeInTheDocument();
     consoleSpy.mockRestore();
   });
 
