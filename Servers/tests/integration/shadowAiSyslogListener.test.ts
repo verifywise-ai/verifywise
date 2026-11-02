@@ -410,6 +410,26 @@ describe("Shadow AI syslog listener", () => {
     expect(await eventCount(orgA)).toBe(1);
   });
 
+  it("stores a line whose model capture is too long, without the model", async () => {
+    const a = await addSource(orgA);
+    const h = await start();
+    const host = "acme.openai.azure.com";
+    const line = (model: string) =>
+      `user=alice@company.com dst=${host} uri=https://${host}/openai/deployments/${model}/chat vw_source=${a.key}\n`;
+    await send(h.port, [line("m".repeat(300)) + line("gpt-4o")]);
+    await h.flushAll();
+
+    const [rows] = await sequelize.query(
+      `SELECT detected_model FROM shadow_ai_events WHERE organization_id = :org ORDER BY id`,
+      { replacements: { org: orgA } },
+    );
+    expect((rows as { detected_model: string | null }[]).map((r) => r.detected_model)).toEqual([
+      null,
+      "gpt-4o",
+    ]);
+    expect((await sourceRow(a.id)).accepted).toBe(2);
+  });
+
   it("never routes by another organization's valid key placed inside a field", async () => {
     const a = await addSource(orgA);
     const n = await addSource(orgB, "netskope");

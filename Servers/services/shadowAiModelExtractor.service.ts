@@ -8,6 +8,7 @@
 import { sequelize } from "../database/db";
 import { IShadowAiModelPattern } from "../domain.layer/interfaces/i.shadowAi";
 import logger from "../utils/logger/fileLogger";
+import { SHADOW_AI_EVENT_LIMITS } from "../utils/shadowAiEventLimits";
 
 let patternCache: IShadowAiModelPattern[] = [];
 let patternCacheLastRefreshed = 0;
@@ -68,7 +69,10 @@ export async function extractModel(destination: string, uriPath?: string): Promi
       const match = pathRegex.exec(uriPath);
 
       if (match?.groups?.model) {
-        return match.groups.model;
+        // A capture wider than the column is not a model name: storing a cut
+        // version would name the wrong model, and the full one fails the insert.
+        const model = match.groups.model;
+        return [...model].length <= SHADOW_AI_EVENT_LIMITS.detected_model ? model : null;
       }
     } catch (error) {
       logger.warn(`Invalid regex pattern in model extractor (id=${pattern.id}):`, error);

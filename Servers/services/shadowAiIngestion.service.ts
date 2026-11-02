@@ -11,6 +11,7 @@ import { Transaction } from "sequelize";
 import { sequelize } from "../database/db";
 import logger from "../utils/logger/fileLogger";
 import { normalizeEvent, insertEventsQuery } from "../utils/shadowAiIngestion.utils";
+import { eventRowFitsColumns } from "../utils/shadowAiEventLimits";
 import { matchDomain, ensureTenantTool, updateToolCounters } from "./shadowAiToolMatcher.service";
 import { extractModel } from "./shadowAiModelExtractor.service";
 import { evaluateRulesForBatch } from "./shadowAiAlertNotification.service";
@@ -86,13 +87,19 @@ export async function checkShadowAiRateLimit(
  * transaction the caller owns commit/rollback and rule evaluation is deferred
  * to `afterCommit`, so rules never see uncommitted rows.
  *
+ * Every row is checked against the column widths before anything is written,
+ * because one row that does not fit fails the whole multi-row INSERT. With
+ * `options.skipInvalidRows` (the syslog listener) such rows are left out and
+ * counted in `skipped`; without it (REST) the batch is refused with an error,
+ * as an over-long field already failed it before this check existed.
+ *
  * Errors propagate to the caller (an owned transaction is rolled back first).
  */
 export async function ingestShadowAiEvents(
   organizationId: number,
   events: ShadowAiIngestionRequest["events"],
-  options?: { transaction?: Transaction },
-): Promise<{ ingested: number; toolsMatched: number }> {
+  options?: { transaction?: Transaction; skipInvalidRows?: boolean },
+): Promise<{ ingested: number; toolsMatched: number; skipped: number }> {
   const externalTransaction = options?.transaction;
   const transaction = externalTransaction ?? (await sequelize.transaction());
 
@@ -111,12 +118,12 @@ export async function ingestShadowAiEvents(
     const allEmails = new Set<string>();
 
     // Normalize all events first
-    const normalizedEvents = events.map(normalizeEvent);
+    const allNormalized = events.map(normalizeEvent);
 
     // Step 1: Parallelize domain matching and model extraction
     // matchDomain and extractModel are read-only lookups (no DB writes)
-    const matchResults = await Promise.all(
-      normalizedEvents.map(async (normalized) => {
+    const allMatches = await Promise.all(
+      allNormalized.map(async (normalized) => {
         const [registryMatch, model] = await Promise.all([
           matchDomain(normalized.destination),
           normalized.uri_path
@@ -126,6 +133,17 @@ export async function ingestShadowAiEvents(
         return { registryMatch, model };
       }),
     );
+
+    // Drop rows that cannot be stored before any tool, counter or rule work.
+    const fits = allNormalized.map((normalized, i) =>
+      eventRowFitsColumns({ ...normalized, detected_model: allMatches[i].model ?? undefined }),
+    );
+    const skipped = fits.filter((ok) => !ok).length;
+    if (skipped > 0 && !options?.skipInvalidRows) {
+      throw new Error(`${skipped} Shadow AI events have a field that is too long or invalid`);
+    }
+    const normalizedEvents = allNormalized.filter((_, i) => fits[i]);
+    const matchResults = allMatches.filter((_, i) => fits[i]);
 
     // Step 2: Process results sequentially (ensureTenantTool does DB writes)
     const processedEvents: Array<{
@@ -249,7 +267,7 @@ export async function ingestShadowAiEvents(
       startRuleEvaluation();
     }
 
-    return { ingested: insertedCount, toolsMatched: toolEventCounts.size };
+    return { ingested: insertedCount, toolsMatched: toolEventCounts.size, skipped };
   } catch (error) {
     if (!externalTransaction) {
       try {

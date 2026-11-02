@@ -106,7 +106,16 @@ Every field is bounded to its `shadow_ai_events` column, because one value
 over its column would fail the multi-row insert and lose the whole batch: an
 email over 255 characters drops the line as `no_user`, a destination over 512
 as `no_destination`; a method over 10 characters is left out and a department
-is cut to 255. NUL characters are removed from every string field.
+is cut to 255; a URI path over 2048 characters is left out. NUL characters
+are removed from every string field. A model name captured from the path that
+is longer than `detected_model` (255) is not stored (the event keeps no model).
+
+As a second check, `ingestShadowAiEvents` validates every row, derived
+`detected_model` included, against `utils/shadowAiEventLimits.ts` before any
+tool or counter work. The listener passes `skipInvalidRows`, so an offending
+row is dropped as `unparseable` and the rest of the batch is stored. The REST
+path keeps its contract: such a batch fails with 500, as it did when the
+INSERT itself failed, but now before anything is written.
 
 ## Drop reasons
 

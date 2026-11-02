@@ -139,9 +139,16 @@ export class SourceBatcher {
       });
       let accepted = 0;
       if (events.length > 0) {
-        ({ ingested: accepted } = await ingestShadowAiEvents(organizationId, events, {
+        let skipped = 0;
+        ({ ingested: accepted, skipped } = await ingestShadowAiEvents(organizationId, events, {
           transaction,
+          skipInvalidRows: true,
         }));
+        // Rows that do not fit a column are dropped, not allowed to fail the batch.
+        if (skipped > 0) {
+          dropped += skipped;
+          lastDropReason = "unparseable";
+        }
       }
       await recordSyslogSourceStatsQuery(
         organizationId,

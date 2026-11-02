@@ -7,6 +7,7 @@
  */
 
 import { isEmail } from "../../utils/validations/email.utils";
+import { SHADOW_AI_EVENT_LIMITS } from "../../utils/shadowAiEventLimits";
 import { ParseResult, ParserType, SyslogEvent } from "./types";
 
 type Fields = Record<string, string>;
@@ -67,10 +68,12 @@ function normalizeAction(raw: unknown): SyslogEvent["action"] {
 // Column widths of shadow_ai_events (tenant-tables migration). A value over
 // its column fails the multi-row insert and loses the whole batch, so every
 // field is bounded here. Lengths are in characters, as VARCHAR counts them.
-const MAX_EMAIL_CHARS = 255;
-const MAX_DESTINATION_CHARS = 512;
-const MAX_DEPARTMENT_CHARS = 255;
-const MAX_METHOD_CHARS = 10;
+const MAX_EMAIL_CHARS = SHADOW_AI_EVENT_LIMITS.user_email;
+const MAX_DESTINATION_CHARS = SHADOW_AI_EVENT_LIMITS.destination;
+const MAX_DEPARTMENT_CHARS = SHADOW_AI_EVENT_LIMITS.department;
+const MAX_METHOD_CHARS = SHADOW_AI_EVENT_LIMITS.http_method;
+// TEXT column; a longer path is left out (it is optional) to keep rows small.
+const MAX_URI_PATH_CHARS = SHADOW_AI_EVENT_LIMITS.uri_path;
 // Payload and header timestamps further than this from the receive time are
 // ignored (a far-future epoch would otherwise be stored as year +275760).
 const MAX_TIMESTAMP_SKEW_MS = 365 * 24 * 60 * 60 * 1000;
@@ -152,7 +155,7 @@ function buildEvent(
     timestamp: pickTimestamp(receivedAt, parseTimestamp(c.timestamp), headerTimestamp),
   };
   const path = c.path ? stripNul(c.path) : undefined;
-  if (path) event.uri_path = path;
+  if (path && charLength(path) <= MAX_URI_PATH_CHARS) event.uri_path = path;
   const method = normalizeMethod(c.method);
   if (method) event.http_method = method;
   const action = normalizeAction(c.action);

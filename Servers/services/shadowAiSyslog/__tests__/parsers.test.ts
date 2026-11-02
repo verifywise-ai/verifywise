@@ -299,6 +299,14 @@ describe("parseLine", () => {
       expect(ok.ok && ok.event.http_method).toBe("MKCALENDAR");
     });
 
+    it("leaves out a uri path longer than 2048 characters", () => {
+      const tooLong = parseLine("generic_kv", `suser=a@b.co request=https://x.com/${long(2048)}`);
+      expect(tooLong.ok && tooLong.event.destination).toBe("x.com");
+      expect(tooLong.ok && tooLong.event.uri_path).toBeUndefined();
+      const fits = parseLine("generic_kv", `suser=a@b.co request=https://x.com/${long(2047)}`);
+      expect(fits.ok && fits.event.uri_path?.length).toBe(2048);
+    });
+
     it("truncates a department to 255 characters", () => {
       const r = parseLine("generic_kv", `suser=a@b.co dhost=x.com department=${"é".repeat(300)}`);
       expect(r.ok && r.event.department).toBe("é".repeat(255));

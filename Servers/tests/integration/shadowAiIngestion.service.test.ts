@@ -57,4 +57,26 @@ describe("ingestShadowAiEvents with an external transaction", () => {
     expect(evaluateRulesForBatch).not.toHaveBeenCalled();
     expect(await eventCount()).toBe(0);
   });
+
+  describe("a row that does not fit its column", () => {
+    const good = (n: number) => ({
+      user_email: `user${n}@example.com`,
+      destination: "chat.openai.com",
+      timestamp: "2026-11-01T10:00:00Z",
+    });
+    const bad = { ...good(99), job_title: "x".repeat(256) };
+
+    it("is skipped with skipInvalidRows and the good rows are stored", async () => {
+      const result = await ingestShadowAiEvents(orgId, [good(1), bad, good(2)], {
+        skipInvalidRows: true,
+      });
+      expect(result).toEqual(expect.objectContaining({ ingested: 2, skipped: 1 }));
+      expect(await eventCount()).toBe(2);
+    });
+
+    it("refuses the batch without skipInvalidRows and writes nothing", async () => {
+      await expect(ingestShadowAiEvents(orgId, [good(1), bad])).rejects.toThrow(/too long/);
+      expect(await eventCount()).toBe(0);
+    });
+  });
 });
