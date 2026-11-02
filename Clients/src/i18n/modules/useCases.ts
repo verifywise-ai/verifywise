@@ -2,10 +2,7 @@
 // Spread into ../translations.ts. Other areas stay in that file for now.
 
 export const de: Record<string, string> = {
-  "senior": "leitend",
   "close calls": "Grenzfälle",
-  "not routed": "nicht zugewiesen",
-  "routing off": "Weiterleitung aus",
   "missed of completed": "übersehen von abgeschlossen",
   "decisions": "Entscheidungen",
   "Second review open": "Zweitprüfung offen",
@@ -15,12 +12,9 @@ export const de: Record<string, string> = {
   "No active reviewer": "Kein aktiver Prüfer",
   "Former user": "Ehemaliger Benutzer",
   "That submission could not be found": "Diese Einreichung wurde nicht gefunden",
-  "Only an Admin can change review routing.":
-    "Nur ein Administrator kann die Prüfungszuweisung ändern.",
   "All forms": "Alle Formulare",
   "Band changed": "Stufe geändert",
   "Band kept": "Stufe beibehalten",
-  "Band kept, senior lane": "Stufe beibehalten, leitender Bereich",
   "Check": "Prüfen",
   "Close call": "Grenzfall",
   "Counts the band in force at decision": "Zählt die Stufe, die bei der Entscheidung galt",
@@ -37,32 +31,16 @@ export const de: Record<string, string> = {
   "No submissions in this period.": "Keine Einreichungen in diesem Zeitraum.",
   "Redlines caught": "Erkannte rote Linien",
   "Second reviews": "Zweitprüfungen",
-  "Submissions by lane": "Einreichungen nach Bereich",
   "Suggested risks accepted": "Übernommene Risikovorschläge",
-  "Routing off": "Weiterleitung aus",
-  "Failed to send to senior review. Please try again.":
-    "Übergabe an die leitende Prüfung fehlgeschlagen. Bitte versuchen Sie es erneut.",
   "Failed to save the second review. Please try again.":
     "Die Zweitprüfung konnte nicht gespeichert werden. Bitte versuchen Sie es erneut.",
-  "Within": "Innerhalb von",
-  "points of the threshold": "Punkten um den Schwellenwert",
   "Prohibited practice": "Verbotene Praktik",
   "No usable score": "Keine verwertbare Bewertung",
   "below": "unter",
   "Band raised by a reviewer": "Stufe von einem Prüfer erhöht",
-  "Sent to senior review:": "An die leitende Prüfung übergeben:",
-  "Senior review": "Prüfung durch leitende Prüfer",
-  "Standard review": "Standardprüfung",
-  "Not routed yet": "Noch nicht zugewiesen",
   "Only": "Nur",
   "can decide this submission.": "können über diese Einreichung entscheiden.",
-  "Send to senior review": "An leitende Prüfer übergeben",
-  "Senior reviewers will decide this submission. Say why it needs a closer look.":
-    "Leitende Prüfer entscheiden über diese Einreichung. Nennen Sie den Grund für eine genauere Prüfung.",
-  "Why does this need a senior reviewer?": "Warum braucht dies einen leitenden Prüfer?",
   "Second review": "Zweitprüfung",
-  "A senior reviewer will check this approval.":
-    "Ein leitender Prüfer wird diese Genehmigung prüfen.",
   "Required when something was missed": "Erforderlich, wenn etwas übersehen wurde",
   "Agree": "Zustimmen",
   "Missed something": "Etwas übersehen",
@@ -73,34 +51,11 @@ export const de: Record<string, string> = {
   "Resolution note": "Hinweis zur Lösung",
   "What was done about it?": "Was wurde dagegen unternommen?",
   "Mark resolved": "Als gelöst markieren",
-  "Lane": "Bereich",
-  "Senior": "Leitend",
-  "Not routed": "Nicht zugewiesen",
   "Assigned to me": "Mir zugewiesen",
   "Scores of": "Bewertungen ab",
-  "or more, prohibited practices and scores within":
-    "oder mehr, verbotene Praktiken und Bewertungen innerhalb von",
-  "points of": "Punkten um",
-  "go to senior reviewers.": "gehen an leitende Prüfer.",
-  "Route by risk score": "Nach Risikobewertung weiterleiten",
-  "Send submissions to senior or standard reviewers based on their risk score.":
-    "Einreichungen anhand ihrer Risikobewertung an leitende oder Standard-Prüfer weiterleiten.",
-  "Senior reviewers": "Leitende Prüfer",
-  "Standard reviewers": "Standard-Prüfer",
-  "Select senior reviewers": "Leitende Prüfer auswählen",
-  "Select standard reviewers": "Standard-Prüfer auswählen",
-  "Pick at least one senior reviewer": "Wählen Sie mindestens einen leitenden Prüfer",
-  "Pick at least one standard reviewer": "Wählen Sie mindestens einen Standard-Prüfer",
   "Close-call margin": "Spanne für Grenzfälle",
   "Second review share %": "Anteil der Zweitprüfungen in %",
-  "Risk score that separates the lanes": "Risikobewertung, die die Bereiche trennt",
   "Points either side of the threshold": "Punkte auf beiden Seiten des Schwellenwerts",
-  "Share of standard decisions checked again":
-    "Anteil der Standardentscheidungen, die erneut geprüft werden",
-  "Fix the routing settings before saving":
-    "Korrigieren Sie die Weiterleitungseinstellungen vor dem Speichern",
-  "Fix the routing settings before publishing":
-    "Korrigieren Sie die Weiterleitungseinstellungen vor dem Veröffentlichen",
   "No risk score was recorded for this submission.":
     "Für diese Einreichung wurde kein Risikowert erfasst.",
   "set to": "gesetzt auf",
@@ -397,7 +352,6 @@ export const de: Record<string, string> = {
   "Escalate after": "Eskalieren nach",
   "Escalation contact": "Eskalationskontakt",
   "Field settings": "Feldeinstellungen",
-  "Choose a field above this one": "Wählen Sie ein Feld darüber",
   "Show this field only if…": "Dieses Feld nur anzeigen, wenn…",
   "Always shown": "Immer angezeigt",
   "is one of": "ist eines von",
@@ -414,7 +368,6 @@ export const de: Record<string, string> = {
     "Korrigieren Sie die markierten Felder vor dem Speichern",
   "Remove condition": "Bedingung entfernen",
   "Risk dimension": "Risikodimension",
-  "Add a number field above this one first": "Fügen Sie zuerst darüber ein Zahlenfeld hinzu",
   "Advanced": "Erweitert",
   "Calculated": "Berechnet",
   "Other answers": "Weitere Antworten",
@@ -502,8 +455,6 @@ export const de: Record<string, string> = {
   "Security check": "Sicherheitsprüfung",
   "Show AI-suggested questions while building the form":
     "KI-vorgeschlagene Fragen beim Erstellen des Formulars anzeigen",
-  "Shown as a tooltip next to the field label on the public form":
-    "Wird als Tooltip neben dem Feldlabel im öffentlichen Formular angezeigt",
   "Signatory": "Unterzeichner",
   "Start building your form": "Beginnen Sie mit dem Aufbau Ihres Formulars",
   "Submission approved": "Einreichung genehmigt",
@@ -720,13 +671,38 @@ export const de: Record<string, string> = {
     "Dieser Anwendungsfall wartet auf Genehmigung. Sie können diese Übersicht lesen, aber die übrigen Tabs bleiben deaktiviert, bis die Anfrage genehmigt oder abgelehnt wird, und die bei der Erstellung gewählten Rahmenwerke werden erst nach der Genehmigung hinzugefügt. Verfolgen Sie die Anfrage unter Genehmigungsanfragen in der Kopfzeile.",
   "This use case was rejected, so it can no longer be used. The tabs stay disabled and the frameworks picked at creation were never added. See the rejection comment under Approval requests in the header.":
     "Dieser Anwendungsfall wurde abgelehnt und kann nicht mehr verwendet werden. Die Tabs bleiben deaktiviert und die bei der Erstellung gewählten Rahmenwerke wurden nie hinzugefügt. Den Ablehnungskommentar finden Sie unter Genehmigungsanfragen in der Kopfzeile.",
+  "Back to use cases": "Zurück zu den Anwendungsfällen",
+  "CE marking": "CE-Kennzeichnung",
+  "Delete this use case?": "Diesen Anwendungsfall löschen?",
+  "This deletes the use case, its framework progress and its files. Its risks stay in the risk register but are no longer linked to it. This cannot be undone.":
+    "Dadurch werden der Anwendungsfall, sein Framework-Fortschritt und seine Dateien gelöscht. Seine Risiken bleiben im Risikoregister, sind aber nicht mehr mit ihm verknüpft. Dies kann nicht rückgängig gemacht werden.",
+  "EU AI Act completion status": "Fertigstellungsstatus EU-KI-Verordnung",
+  "ISO 42001 completion status": "Fertigstellungsstatus ISO 42001",
+  "Framework not found or could not be removed from the use case":
+    "Rahmenwerk nicht gefunden oder konnte nicht aus dem Anwendungsfall entfernt werden",
+  "General risk": "Allgemeines Risiko",
+  "Governance status, risks, frameworks and activity for this use case.":
+    "Governance-Status, Risiken, Rahmenwerke und Aktivitäten für diesen Anwendungsfall.",
+  "This use case could not be loaded. It may have been deleted, you may not have access to it, or the connection failed.":
+    "Dieser Anwendungsfall konnte nicht geladen werden. Möglicherweise wurde er gelöscht, Sie haben keinen Zugriff darauf oder die Verbindung ist fehlgeschlagen.",
+  "Use case details": "Details zum Anwendungsfall",
+  "Use case updated successfully": "Anwendungsfall erfolgreich aktualisiert",
+  "Use case deleted successfully.": "Anwendungsfall erfolgreich gelöscht.",
+  "View use case": "Anwendungsfall anzeigen",
+  "No use cases match your search or filters.":
+    "Keine Anwendungsfälle entsprechen Ihrer Suche oder Ihren Filtern.",
+  "Defaults for new use cases": "Standardwerte für neue Anwendungsfälle",
+  "New use cases start with this region and these frameworks. People can change them on each use case.":
+    "Neue Anwendungsfälle beginnen mit dieser Region und diesen Frameworks. Sie lassen sich in jedem Anwendungsfall ändern.",
+  "No default frameworks": "Keine Standard-Frameworks",
+  "Save use case defaults": "Standardwerte speichern",
+  "Use case defaults saved": "Standardwerte für Anwendungsfälle gespeichert",
+  "Failed to save use case defaults":
+    "Standardwerte für Anwendungsfälle konnten nicht gespeichert werden",
 };
 
 export const fr: Record<string, string> = {
-  "senior": "senior",
   "close calls": "cas limites",
-  "not routed": "non attribué",
-  "routing off": "acheminement désactivé",
   "missed of completed": "manquées sur terminées",
   "decisions": "décisions",
   "Second review open": "Seconde revue ouverte",
@@ -736,12 +712,9 @@ export const fr: Record<string, string> = {
   "No active reviewer": "Aucun relecteur actif",
   "Former user": "Ancien utilisateur",
   "That submission could not be found": "Cette soumission est introuvable",
-  "Only an Admin can change review routing.":
-    "Seul un administrateur peut modifier l'acheminement des révisions.",
   "All forms": "Tous les formulaires",
   "Band changed": "Niveau modifié",
   "Band kept": "Niveau conservé",
-  "Band kept, senior lane": "Niveau conservé, voie senior",
   "Check": "À vérifier",
   "Close call": "Cas limite",
   "Counts the band in force at decision": "Compte le niveau en vigueur au moment de la décision",
@@ -757,31 +730,16 @@ export const fr: Record<string, string> = {
   "No submissions in this period.": "Aucune soumission sur cette période.",
   "Redlines caught": "Lignes rouges détectées",
   "Second reviews": "Secondes revues",
-  "Submissions by lane": "Soumissions par voie",
   "Suggested risks accepted": "Risques suggérés acceptés",
-  "Routing off": "Acheminement désactivé",
-  "Failed to send to senior review. Please try again.":
-    "Échec de l'envoi à la revue senior. Veuillez réessayer.",
   "Failed to save the second review. Please try again.":
     "Échec de l'enregistrement de la seconde revue. Veuillez réessayer.",
-  "Within": "À moins de",
-  "points of the threshold": "points du seuil",
   "Prohibited practice": "Pratique interdite",
   "No usable score": "Aucun score exploitable",
   "below": "inférieur à",
   "Band raised by a reviewer": "Niveau relevé par un réviseur",
-  "Sent to senior review:": "Envoyé à la revue senior :",
-  "Senior review": "Revue senior",
-  "Standard review": "Revue standard",
-  "Not routed yet": "Pas encore acheminé",
   "Only": "Seuls",
   "can decide this submission.": "peuvent décider de cette soumission.",
-  "Send to senior review": "Envoyer à la revue senior",
-  "Senior reviewers will decide this submission. Say why it needs a closer look.":
-    "Les réviseurs seniors décideront de cette soumission. Indiquez pourquoi elle demande un examen plus approfondi.",
-  "Why does this need a senior reviewer?": "Pourquoi faut-il un réviseur senior ?",
   "Second review": "Seconde revue",
-  "A senior reviewer will check this approval.": "Un réviseur senior vérifiera cette approbation.",
   "Required when something was missed": "Obligatoire si un point a été manqué",
   "Agree": "D'accord",
   "Missed something": "Point manqué",
@@ -792,33 +750,11 @@ export const fr: Record<string, string> = {
   "Resolution note": "Note de résolution",
   "What was done about it?": "Qu'a-t-on fait à ce sujet ?",
   "Mark resolved": "Marquer comme résolu",
-  "Lane": "Voie",
-  "Senior": "Senior",
-  "Not routed": "Non acheminé",
   "Assigned to me": "Assignées à moi",
   "Scores of": "Les scores de",
-  "or more, prohibited practices and scores within":
-    "ou plus, les pratiques interdites et les scores à moins de",
-  "points of": "points de",
-  "go to senior reviewers.": "vont aux réviseurs seniors.",
-  "Route by risk score": "Acheminer selon le score de risque",
-  "Send submissions to senior or standard reviewers based on their risk score.":
-    "Envoyer les soumissions aux réviseurs seniors ou standard selon leur score de risque.",
-  "Senior reviewers": "Réviseurs seniors",
-  "Standard reviewers": "Réviseurs standard",
-  "Select senior reviewers": "Sélectionner les réviseurs seniors",
-  "Select standard reviewers": "Sélectionner les réviseurs standard",
-  "Pick at least one senior reviewer": "Choisissez au moins un réviseur senior",
-  "Pick at least one standard reviewer": "Choisissez au moins un réviseur standard",
   "Close-call margin": "Marge des cas limites",
   "Second review share %": "Part des secondes révisions en %",
-  "Risk score that separates the lanes": "Score de risque qui sépare les filières",
   "Points either side of the threshold": "Points de part et d'autre du seuil",
-  "Share of standard decisions checked again": "Part des décisions standard revérifiées",
-  "Fix the routing settings before saving":
-    "Corrigez les paramètres d'acheminement avant d'enregistrer",
-  "Fix the routing settings before publishing":
-    "Corrigez les paramètres d'acheminement avant de publier",
   "No risk score was recorded for this submission.":
     "Aucun score de risque n'a été enregistré pour cette soumission.",
   "set to": "fixé à",
@@ -1113,7 +1049,6 @@ export const fr: Record<string, string> = {
   "Escalate after": "Escalader après",
   "Escalation contact": "Contact d'escalade",
   "Field settings": "Paramètres du champ",
-  "Choose a field above this one": "Choisissez un champ au-dessus",
   "Show this field only if…": "Afficher ce champ uniquement si…",
   "Always shown": "Toujours affiché",
   "is one of": "est l'un de",
@@ -1130,7 +1065,6 @@ export const fr: Record<string, string> = {
     "Corrigez les champs en surbrillance avant d'enregistrer",
   "Remove condition": "Supprimer la condition",
   "Risk dimension": "Dimension de risque",
-  "Add a number field above this one first": "Ajoutez d'abord un champ numérique au-dessus",
   "Advanced": "Avancé",
   "Calculated": "Calculé",
   "Other answers": "Autres réponses",
@@ -1217,8 +1151,6 @@ export const fr: Record<string, string> = {
   "Security check": "Vérification de sécurité",
   "Show AI-suggested questions while building the form":
     "Afficher les questions suggérées par l'IA lors de la création du formulaire",
-  "Shown as a tooltip next to the field label on the public form":
-    "Affiché en info-bulle à côté du libellé du champ sur le formulaire public",
   "Signatory": "Signataire",
   "Start building your form": "Commencez à construire votre formulaire",
   "Submission approved": "Soumission approuvée",
@@ -1434,13 +1366,38 @@ export const fr: Record<string, string> = {
     "Ce cas d'usage est en attente d'approbation. Vous pouvez consulter cette vue d'ensemble, mais les autres onglets restent désactivés tant que la demande n'est pas approuvée ou rejetée, et les référentiels choisis à la création ne sont ajoutés qu'une fois l'approbation obtenue. Suivez la demande sous Demandes d'approbation dans l'en-tête.",
   "This use case was rejected, so it can no longer be used. The tabs stay disabled and the frameworks picked at creation were never added. See the rejection comment under Approval requests in the header.":
     "Ce cas d'usage a été rejeté : il ne peut plus être utilisé. Les onglets restent désactivés et les référentiels choisis à la création n'ont jamais été ajoutés. Consultez le commentaire de rejet sous Demandes d'approbation dans l'en-tête.",
+  "Back to use cases": "Retour aux cas d'usage",
+  "CE marking": "Marquage CE",
+  "Delete this use case?": "Supprimer ce cas d'usage ?",
+  "This deletes the use case, its framework progress and its files. Its risks stay in the risk register but are no longer linked to it. This cannot be undone.":
+    "Cela supprime le cas d'usage, sa progression dans les référentiels et ses fichiers. Ses risques restent dans le registre des risques, mais ne lui sont plus liés. Cette action est irréversible.",
+  "EU AI Act completion status": "Statut d'achèvement du Règlement IA de l'UE",
+  "ISO 42001 completion status": "Statut d'achèvement ISO 42001",
+  "Framework not found or could not be removed from the use case":
+    "Référentiel introuvable ou impossible à retirer du cas d'usage",
+  "General risk": "Risque général",
+  "Governance status, risks, frameworks and activity for this use case.":
+    "Statut de gouvernance, risques, référentiels et activité de ce cas d'usage.",
+  "This use case could not be loaded. It may have been deleted, you may not have access to it, or the connection failed.":
+    "Ce cas d'usage n'a pas pu être chargé. Il a peut-être été supprimé, vous n'y avez peut-être pas accès, ou la connexion a échoué.",
+  "Use case details": "Détails du cas d'usage",
+  "Use case updated successfully": "Cas d'usage mis à jour avec succès",
+  "Use case deleted successfully.": "Cas d'usage supprimé avec succès.",
+  "View use case": "Voir le cas d'usage",
+  "No use cases match your search or filters.":
+    "Aucun cas d'usage ne correspond à votre recherche ou à vos filtres.",
+  "Defaults for new use cases": "Valeurs par défaut des nouveaux cas d'usage",
+  "New use cases start with this region and these frameworks. People can change them on each use case.":
+    "Les nouveaux cas d'usage commencent avec cette région et ces cadres. Ils restent modifiables dans chaque cas d'usage.",
+  "No default frameworks": "Aucun cadre par défaut",
+  "Save use case defaults": "Enregistrer les valeurs par défaut",
+  "Use case defaults saved": "Valeurs par défaut des cas d'usage enregistrées",
+  "Failed to save use case defaults":
+    "Impossible d'enregistrer les valeurs par défaut des cas d'usage",
 };
 
 export const es: Record<string, string> = {
-  "senior": "sénior",
   "close calls": "casos límite",
-  "not routed": "sin asignar",
-  "routing off": "enrutamiento desactivado",
   "missed of completed": "omitidas de completadas",
   "decisions": "decisiones",
   "Second review open": "Segunda revisión abierta",
@@ -1450,12 +1407,9 @@ export const es: Record<string, string> = {
   "No active reviewer": "Ningún revisor activo",
   "Former user": "Usuario anterior",
   "That submission could not be found": "No se encontró ese envío",
-  "Only an Admin can change review routing.":
-    "Solo un administrador puede cambiar la asignación de revisiones.",
   "All forms": "Todos los formularios",
   "Band changed": "Nivel cambiado",
   "Band kept": "Nivel mantenido",
-  "Band kept, senior lane": "Nivel mantenido, vía sénior",
   "Check": "Revisar",
   "Close call": "Caso límite",
   "Counts the band in force at decision": "Cuenta el nivel vigente en el momento de la decisión",
@@ -1471,31 +1425,16 @@ export const es: Record<string, string> = {
   "No submissions in this period.": "Ningún envío en este período.",
   "Redlines caught": "Líneas rojas detectadas",
   "Second reviews": "Segundas revisiones",
-  "Submissions by lane": "Envíos por vía",
   "Suggested risks accepted": "Riesgos sugeridos aceptados",
-  "Routing off": "Enrutamiento desactivado",
-  "Failed to send to senior review. Please try again.":
-    "No se pudo enviar a revisión sénior. Inténtelo de nuevo.",
   "Failed to save the second review. Please try again.":
     "No se pudo guardar la segunda revisión. Inténtelo de nuevo.",
-  "Within": "A menos de",
-  "points of the threshold": "puntos del umbral",
   "Prohibited practice": "Práctica prohibida",
   "No usable score": "Sin puntuación utilizable",
   "below": "por debajo de",
   "Band raised by a reviewer": "Nivel elevado por un revisor",
-  "Sent to senior review:": "Enviado a revisión sénior:",
-  "Senior review": "Revisión sénior",
-  "Standard review": "Revisión estándar",
-  "Not routed yet": "Aún sin enrutar",
   "Only": "Solo",
   "can decide this submission.": "pueden decidir sobre este envío.",
-  "Send to senior review": "Enviar a revisión sénior",
-  "Senior reviewers will decide this submission. Say why it needs a closer look.":
-    "Los revisores sénior decidirán sobre este envío. Indique por qué requiere un examen más detallado.",
-  "Why does this need a senior reviewer?": "¿Por qué necesita un revisor sénior?",
   "Second review": "Segunda revisión",
-  "A senior reviewer will check this approval.": "Un revisor sénior comprobará esta aprobación.",
   "Required when something was missed": "Obligatoria si se pasó algo por alto",
   "Agree": "De acuerdo",
   "Missed something": "Se pasó algo por alto",
@@ -1506,34 +1445,11 @@ export const es: Record<string, string> = {
   "Resolution note": "Nota de resolución",
   "What was done about it?": "¿Qué se hizo al respecto?",
   "Mark resolved": "Marcar como resuelto",
-  "Lane": "Carril",
-  "Senior": "Sénior",
-  "Not routed": "Sin enrutar",
   "Assigned to me": "Asignados a mí",
   "Scores of": "Las puntuaciones de",
-  "or more, prohibited practices and scores within":
-    "o más, las prácticas prohibidas y las puntuaciones a menos de",
-  "points of": "puntos de",
-  "go to senior reviewers.": "pasan a los revisores sénior.",
-  "Route by risk score": "Enrutar según la puntuación de riesgo",
-  "Send submissions to senior or standard reviewers based on their risk score.":
-    "Enviar los envíos a revisores sénior o estándar según su puntuación de riesgo.",
-  "Senior reviewers": "Revisores sénior",
-  "Standard reviewers": "Revisores estándar",
-  "Select senior reviewers": "Seleccionar revisores sénior",
-  "Select standard reviewers": "Seleccionar revisores estándar",
-  "Pick at least one senior reviewer": "Elija al menos un revisor sénior",
-  "Pick at least one standard reviewer": "Elija al menos un revisor estándar",
   "Close-call margin": "Margen de casos límite",
   "Second review share %": "Porcentaje de segundas revisiones",
-  "Risk score that separates the lanes": "Puntuación de riesgo que separa los carriles",
   "Points either side of the threshold": "Puntos a cada lado del umbral",
-  "Share of standard decisions checked again":
-    "Porcentaje de decisiones estándar que se revisan de nuevo",
-  "Fix the routing settings before saving":
-    "Corrija la configuración de enrutamiento antes de guardar",
-  "Fix the routing settings before publishing":
-    "Corrija la configuración de enrutamiento antes de publicar",
   "No risk score was recorded for this submission.":
     "No se registró ninguna puntuación de riesgo para este envío.",
   "set to": "fijado en",
@@ -1826,7 +1742,6 @@ export const es: Record<string, string> = {
   "Escalate after": "Escalar después de",
   "Escalation contact": "Contacto de escalado",
   "Field settings": "Configuración del campo",
-  "Choose a field above this one": "Elija un campo encima",
   "Show this field only if…": "Mostrar este campo solo si…",
   "Always shown": "Siempre visible",
   "is one of": "es uno de",
@@ -1842,7 +1757,6 @@ export const es: Record<string, string> = {
   "Fix the highlighted fields before saving": "Corrija los campos resaltados antes de guardar",
   "Remove condition": "Eliminar condición",
   "Risk dimension": "Dimensión de riesgo",
-  "Add a number field above this one first": "Primero agregue un campo numérico encima",
   "Advanced": "Avanzado",
   "Calculated": "Calculado",
   "Other answers": "Otras respuestas",
@@ -1929,8 +1843,6 @@ export const es: Record<string, string> = {
   "Security check": "Comprobación de seguridad",
   "Show AI-suggested questions while building the form":
     "Mostrar preguntas sugeridas por IA mientras se crea el formulario",
-  "Shown as a tooltip next to the field label on the public form":
-    "Se muestra como información sobre herramientas junto a la etiqueta del campo en el formulario público",
   "Signatory": "Firmante",
   "Start building your form": "Empieza a crear tu formulario",
   "Submission approved": "Envío aprobado",
@@ -2144,4 +2056,32 @@ export const es: Record<string, string> = {
     "Este caso de uso está esperando aprobación. Puede leer esta vista general, pero las demás pestañas permanecen deshabilitadas hasta que la solicitud se apruebe o se rechace, y los marcos elegidos al crearlo solo se añaden una vez aprobado. Siga la solicitud en Solicitudes de aprobación en la cabecera.",
   "This use case was rejected, so it can no longer be used. The tabs stay disabled and the frameworks picked at creation were never added. See the rejection comment under Approval requests in the header.":
     "Este caso de uso fue rechazado, por lo que ya no se puede usar. Las pestañas permanecen deshabilitadas y los marcos elegidos al crearlo nunca se añadieron. Consulte el comentario de rechazo en Solicitudes de aprobación en la cabecera.",
+  "Back to use cases": "Volver a los casos de uso",
+  "CE marking": "Marcado CE",
+  "Delete this use case?": "¿Eliminar este caso de uso?",
+  "This deletes the use case, its framework progress and its files. Its risks stay in the risk register but are no longer linked to it. This cannot be undone.":
+    "Esto elimina el caso de uso, su progreso en los marcos y sus archivos. Sus riesgos permanecen en el registro de riesgos, pero ya no están vinculados a él. Esta acción no se puede deshacer.",
+  "EU AI Act completion status": "Estado de finalización del EU AI Act",
+  "ISO 42001 completion status": "Estado de finalización de ISO 42001",
+  "Framework not found or could not be removed from the use case":
+    "Marco no encontrado o no se pudo quitar del caso de uso",
+  "General risk": "Riesgo general",
+  "Governance status, risks, frameworks and activity for this use case.":
+    "Estado de gobernanza, riesgos, marcos y actividad de este caso de uso.",
+  "This use case could not be loaded. It may have been deleted, you may not have access to it, or the connection failed.":
+    "No se pudo cargar este caso de uso. Puede que se haya eliminado, que no tenga acceso a él o que la conexión haya fallado.",
+  "Use case details": "Detalles del caso de uso",
+  "Use case updated successfully": "Caso de uso actualizado correctamente",
+  "Use case deleted successfully.": "Caso de uso eliminado correctamente.",
+  "View use case": "Ver caso de uso",
+  "No use cases match your search or filters.":
+    "Ningún caso de uso coincide con su búsqueda o filtros.",
+  "Defaults for new use cases": "Valores predeterminados para nuevos casos de uso",
+  "New use cases start with this region and these frameworks. People can change them on each use case.":
+    "Los nuevos casos de uso empiezan con esta región y estos marcos. Se pueden cambiar en cada caso de uso.",
+  "No default frameworks": "Sin marcos predeterminados",
+  "Save use case defaults": "Guardar valores predeterminados",
+  "Use case defaults saved": "Valores predeterminados de casos de uso guardados",
+  "Failed to save use case defaults":
+    "No se pudieron guardar los valores predeterminados de los casos de uso",
 };

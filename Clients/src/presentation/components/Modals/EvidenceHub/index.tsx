@@ -2,7 +2,7 @@
 import React, { FC, useState, useEffect, useCallback, Suspense } from "react";
 import { Stack, Box, Typography, IconButton, Tooltip, Chip } from "@mui/material";
 import StepperModal from "../StepperModal";
-import { UploadIcon } from "lucide-react";
+import { UploadIcon, History as HistoryIcon } from "lucide-react";
 import { CustomizableButton } from "../../button/customizable-button";
 import FileManagerUploadModal from "../FileManagerUpload";
 import { Trash2 as DeleteIconGrey } from "lucide-react";
@@ -14,6 +14,8 @@ import Field from "../../Inputs/Field";
 import { useTheme } from "@mui/material";
 import CustomizableMultiSelect from "../../Inputs/Select/Multi";
 import TagInput from "../../Inputs/TagInput";
+import { HistorySidebar } from "../../Common/HistorySidebar";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface NewEvidenceHubProps {
   isOpen: boolean;
@@ -131,6 +133,8 @@ const NewEvidenceHub: FC<NewEvidenceHubProps> = ({
   const [riskOptions, setRiskOptions] = useState<{ _id: number; name: string }[]>([]);
   const [userOptions, setUserOptions] = useState<{ _id: number; name: string }[]>([]);
   const [activeStep, setActiveStep] = useState(0);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const queryClient = useQueryClient();
 
   const theme = useTheme();
 
@@ -148,6 +152,7 @@ const NewEvidenceHub: FC<NewEvidenceHubProps> = ({
       setErrors({});
       setIsSubmitting(false);
       setActiveStep(0);
+      setIsHistoryOpen(false);
       fetchModels();
       fetchRisks();
       fetchUsers();
@@ -287,22 +292,43 @@ const NewEvidenceHub: FC<NewEvidenceHubProps> = ({
     return true;
   };
 
+  // Activity history only exists for saved evidence. It is a header toggle,
+  // not a wizard step, so the last step keeps the Update button (issue #4977).
+  const evidenceId = isEdit ? initialData?.id : undefined;
+
+  // From the activity view, Next and Back first return to the form, so a
+  // failed validation is shown on fields the user can see.
   const handleNext = () => {
+    if (isHistoryOpen) {
+      setIsHistoryOpen(false);
+      return;
+    }
     if (validateCurrentStep()) {
       setActiveStep((prev) => prev + 1);
     }
   };
 
   const handleBack = () => {
+    if (isHistoryOpen) {
+      setIsHistoryOpen(false);
+      return;
+    }
     setActiveStep((prev) => prev - 1);
   };
 
   const handleSaveEvidence = async () => {
-    if (!validateCurrentStep()) return;
+    if (!validateCurrentStep()) {
+      setIsHistoryOpen(false);
+      return;
+    }
 
     setIsSubmitting(true);
     try {
       if (onSuccess) onSuccess(values);
+      // Marks the cached activity stale, so reopening the evidence refetches.
+      if (evidenceId) {
+        queryClient.invalidateQueries({ queryKey: ["changeHistory", "evidence_hub", evidenceId] });
+      }
       setIsOpen(false);
     } catch (error) {
       console.error("[NewEvidenceHub.handleSaveEvidence] error:", error);
@@ -584,12 +610,38 @@ const NewEvidenceHub: FC<NewEvidenceHubProps> = ({
       onNext={handleNext}
       onBack={handleBack}
       onSubmit={handleSaveEvidence}
-      canProceed={canProceed()}
+      canProceed={isHistoryOpen || canProceed()}
       isSubmitting={isSubmitting}
       submitButtonText={isEdit ? "Update" : "Save"}
       maxWidth="900px"
+      headerAction={
+        evidenceId ? (
+          <Tooltip title="Activity history" arrow>
+            <IconButton
+              aria-label="Activity history"
+              aria-pressed={isHistoryOpen}
+              onClick={() => setIsHistoryOpen((prev) => !prev)}
+              size="small"
+              sx={{
+                "color": isHistoryOpen ? theme.palette.primary.main : theme.palette.text.secondary,
+                "border": `1px solid ${theme.palette.divider}`,
+                "borderRadius": "4px",
+                "&:hover": {
+                  backgroundColor: theme.palette.background.fill,
+                },
+              }}
+            >
+              <HistoryIcon size={16} />
+            </IconButton>
+          </Tooltip>
+        ) : undefined
+      }
     >
-      {renderStepContent()}
+      {isHistoryOpen && evidenceId ? (
+        <HistorySidebar inline isOpen={true} entityType="evidence_hub" entityId={evidenceId} />
+      ) : (
+        renderStepContent()
+      )}
     </StepperModal>
   );
 };

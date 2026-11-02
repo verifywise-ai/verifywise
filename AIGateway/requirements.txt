@@ -7,6 +7,7 @@ pydantic-settings>=2.16.1
 redis>=8.1.0
 cryptography>=50.0.2
 httpx>=0.28.1
+boto3>=1.43.116,<2
 
 # Database (async PostgreSQL)
 sqlalchemy[asyncio]>=2.1.6

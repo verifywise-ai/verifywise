@@ -12,10 +12,15 @@ import {
   IAIAppDetail,
   IAIAppUpdatePayload,
 } from "../domain.layer/interfaces/i.aiApp";
+import { LifecycleStage } from "../domain.layer/enums/lifecycle-stage.enum";
+import { parseDepartment, syncAiAppStageWithStatus } from "./lifecycle.utils";
 import {
   ValidationException,
   NotFoundException,
 } from "../domain.layer/exceptions/custom.exception";
+
+/** UNIQUE(organization_id, name) on ai_apps (20260615140000-create-ai-apps). */
+export const AI_APP_NAME_CONSTRAINT = "ai_apps_organization_id_name_key";
 
 const DATA_EXPOSURE_DEFAULTS = [
   { data_type: "Public Data", allowed: true },
@@ -42,11 +47,28 @@ const POLICY_SUGGESTION_MAP: Record<string, string[]> = {
 
 interface GetAllAiAppsOptions {
   status?: AiAppStatus;
+  /** v1 only (#5193): filter by lifecycle stage. */
+  lifecycleStage?: LifecycleStage;
+  /** v1 only (#5193): add the lifecycle columns to each row. */
+  withLifecycle?: boolean;
+  /** v1 only (#5193): case-insensitive match on name or description. */
+  search?: string;
   vendorId?: number;
   page?: number;
   limit?: number;
   sortBy?: string;
   order?: "asc" | "desc";
+}
+
+/** Lifecycle columns (#5193); the legacy /api/ai-apps response leaves them out. */
+function lifecycleFields(row: any) {
+  return {
+    lifecycle_stage: row.lifecycle_stage as LifecycleStage,
+    go_live_date: row.go_live_date ?? null,
+    retired_at: row.retired_at ?? null,
+    last_confirmed_at: row.last_confirmed_at ?? null,
+    last_confirmed_by: row.last_confirmed_by ?? null,
+  };
 }
 
 function parseAiAppRow(row: any): IAIApp {
@@ -85,6 +107,18 @@ export async function getAllAiAppsQuery(
   if (options.status) {
     whereConditions.push("ai_apps.status = :status");
     replacements.status = options.status;
+  }
+
+  if (options.search) {
+    whereConditions.push(
+      "(ai_apps.name ILIKE :search ESCAPE '\\' OR ai_apps.description ILIKE :search ESCAPE '\\')",
+    );
+    replacements.search = `%${options.search.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+  }
+
+  if (options.lifecycleStage) {
+    whereConditions.push("ai_apps.lifecycle_stage = :lifecycleStage");
+    replacements.lifecycleStage = options.lifecycleStage;
   }
 
   if (options.vendorId) {
@@ -127,7 +161,11 @@ export async function getAllAiAppsQuery(
   );
 
   return {
-    ai_apps: (rows as any[]).map(parseAiAppRow),
+    ai_apps: (rows as any[]).map((row) =>
+      options.withLifecycle
+        ? { ...parseAiAppRow(row), ...lifecycleFields(row) }
+        : parseAiAppRow(row),
+    ),
     total: parseInt((countResult as any[])[0].total, 10),
   };
 }
@@ -231,6 +269,8 @@ export async function createAiAppQuery(
   data: IAIAppCreatePayload,
   organizationId: number,
   transaction: Transaction,
+  /** Who created it, for the lifecycle change history; null for the system. */
+  changedBy: number | null = null,
 ): Promise<IAIAppDetail> {
   const app = AiAppModel.createNewAiApp(organizationId, data);
   await app.validateAiAppData();
@@ -264,6 +304,14 @@ export async function createAiAppQuery(
   );
 
   const createdApp = (createdRows as any[])[0];
+  // A new app starts planned; its status may already say otherwise (#5193).
+  await syncAiAppStageWithStatus(
+    organizationId,
+    createdApp.id,
+    createdApp.status,
+    changedBy,
+    transaction,
+  );
 
   await linkModelsToAiAppQuery(
     createdApp.id,
@@ -300,6 +348,8 @@ export async function updateAiAppByIdQuery(
   data: IAIAppUpdatePayload,
   organizationId: number,
   transaction: Transaction,
+  /** Who changed it, for the lifecycle change history; null for the system. */
+  changedBy: number | null = null,
 ): Promise<IAIAppDetail | null> {
   const [existingRows] = await sequelize.query(
     `SELECT * FROM ai_apps WHERE organization_id = :organizationId AND id = :id`,
@@ -345,6 +395,11 @@ export async function updateAiAppByIdQuery(
      WHERE organization_id = :organizationId AND id = :id`,
     { replacements, transaction },
   );
+
+  // Keep the lifecycle stage in step with a status change (#5193).
+  if (data.status !== undefined && data.status !== apps[0].status) {
+    await syncAiAppStageWithStatus(organizationId, id, data.status, changedBy, transaction);
+  }
 
   return getAiAppByIdQuery(id, organizationId, transaction);
 }
@@ -605,4 +660,19 @@ export async function promoteFromShadowAiQuery(
   };
 
   return createAiAppQuery(payload, organizationId, transaction);
+}
+
+/**
+ * Departments from an AI app intake answer (#5193): a multi-select array or a
+ * comma-separated text answer. Trimmed, de-duplicated, and anything longer
+ * than the column allows is dropped.
+ */
+export function aiAppDepartmentsFrom(value: unknown): { department: string; user_count: number }[] {
+  const raw = Array.isArray(value) ? value : typeof value === "string" ? value.split(",") : [];
+  const names = new Set<string>();
+  for (const item of raw) {
+    const parsed = parseDepartment(item);
+    if (parsed.ok && parsed.department) names.add(parsed.department);
+  }
+  return [...names].map((department) => ({ department, user_count: 0 }));
 }

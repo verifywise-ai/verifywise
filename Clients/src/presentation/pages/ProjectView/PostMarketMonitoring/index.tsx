@@ -7,7 +7,7 @@
 
 import React, { useState, useCallback, useEffect, useMemo } from "react";
 import { Box, Stack, Typography, useTheme, CircularProgress } from "@mui/material";
-import { Plus, Trash2, GripVertical, Edit2 } from "lucide-react";
+import { Plus, Trash2, GripVertical, Edit2, FileText } from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -27,7 +27,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import Toggle from "../../../components/Inputs/Toggle";
 import Chip from "../../../components/Chip";
-import { useSearchParams } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import Field from "../../../components/Inputs/Field";
 import Select from "../../../components/Inputs/Select";
 import DatePicker from "../../../components/Inputs/Datepicker";
@@ -202,6 +202,7 @@ const SortableQuestionItem: React.FC<SortableQuestionItemProps> = ({
 
 const PostMarketMonitoring: React.FC = () => {
   const theme = useTheme();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const projectId = parseInt(searchParams.get("projectId") ?? "1", 10);
 
@@ -538,7 +539,19 @@ const PostMarketMonitoring: React.FC = () => {
               {project?.project_title || "Use case"} (EU AI Act Article 9, Article 72)
             </Typography>
           </Stack>
-          <Toggle checked={isActive} onChange={handleToggleActive} disabled={!canEdit} />
+          <Stack direction="row" alignItems="center" gap="16px">
+            {project?.id && (
+              <CustomizableButton
+                variant="outlined"
+                text="View reports"
+                startIcon={<FileText size={14} strokeWidth={1.5} />}
+                onClick={() => navigate(`/monitoring/reports?projectId=${project.id}`)}
+                testId="pmm-view-reports"
+                sx={{ height: "30px" }}
+              />
+            )}
+            <Toggle checked={isActive} onChange={handleToggleActive} disabled={!canEdit} />
+          </Stack>
         </Stack>
       </Box>
 

@@ -26,6 +26,7 @@ import {
   AssessmentProgress,
   ComplianceProgress,
 } from "../../../../application/interfaces/iprogress";
+import StaleMarker from "../../LifecycleTabs/StaleMarker";
 
 function ProjectCardSkeleton() {
   return (
@@ -62,6 +63,8 @@ interface ClausesProgress {
 interface ProjectCardProps {
   project: Project;
   isLoading?: boolean;
+  /** Live, but not confirmed within the "still live?" interval (#5187). */
+  isStale?: boolean;
 }
 
 // Helper to fetch progress data
@@ -147,6 +150,7 @@ function FrameworkButton({
 export const ProjectCard = React.memo(function ProjectCard({
   project,
   isLoading = false,
+  isStale = false,
 }: ProjectCardProps) {
   const formatDate = useFormattedDate();
   const navigate = useNavigateSearch();
@@ -194,7 +198,7 @@ export const ProjectCard = React.memo(function ProjectCard({
       className="project-card"
       sx={{ ...projectCardStyle, display: "flex", flexDirection: "column" }}
       role="article"
-      aria-label={`Project card for ${project.project_title}`}
+      aria-label={`Use case card for ${project.project_title}`}
     >
       {/* Header */}
       <Stack className="project-card-header" sx={{ gap: 2 }}>
@@ -202,10 +206,11 @@ export const ProjectCard = React.memo(function ProjectCard({
           <Typography className="project-card-title" sx={projectCardTitleStyle}>
             {project.uc_id ? `${project.uc_id}: ` : ""}
             {project.project_title}
+            {isStale && <StaleMarker />}
           </Typography>
           <Stack direction="row" spacing={8} sx={{ ml: 2 }}>
             <Stack className="project-card-spec-tile" alignItems="flex-end">
-              <Typography sx={projectCardSpecKeyStyle}>Project owner</Typography>
+              <Typography sx={projectCardSpecKeyStyle}>Owner</Typography>
               <Typography sx={projectCardSpecValueStyle}>
                 {ownerUser ? `${ownerUser.name} ${ownerUser.surname}` : "Unknown User"}
               </Typography>
@@ -454,32 +459,30 @@ export const ProjectCard = React.memo(function ProjectCard({
           )}
         </Stack>
       )}
-      {/* View Project Details Button */}
+      {/* View use case button */}
       <Stack direction="row" sx={{ mt: 0, mb: 0, justifyContent: "flex-end", gap: 1 }}>
         <ViewRelationshipsButton
           entityId={project.id}
           entityType="useCase"
           entityLabel={project.project_title}
         />
-        <Tooltip title="View project details" sx={{ fontSize: 13 }}>
-          <CustomizableButton
-            variant="contained"
-            onClick={() =>
-              navigate("/project-view", {
-                projectId: project.id.toString(),
-              })
-            }
-            sx={{
-              backgroundColor: "brand.primary",
-              border: "1px solid brand.primary",
-              mb: 0,
-              mt: 0,
-            }}
-            startIcon={<EyeIcon size={16} />}
-          >
-            View project details
-          </CustomizableButton>
-        </Tooltip>
+        <CustomizableButton
+          variant="contained"
+          onClick={() =>
+            navigate("/project-view", {
+              projectId: project.id.toString(),
+            })
+          }
+          sx={{
+            backgroundColor: "brand.primary",
+            border: "1px solid brand.primary",
+            mb: 0,
+            mt: 0,
+          }}
+          startIcon={<EyeIcon size={16} />}
+        >
+          View use case
+        </CustomizableButton>
       </Stack>
     </Stack>
   );

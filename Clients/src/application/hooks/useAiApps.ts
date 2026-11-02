@@ -23,6 +23,8 @@ import { AiAppStatus } from "../../domain/enums/aiApp.enum";
 export const aiAppQueryKeys = {
   all: ["aiApps"] as const,
   lists: () => [...aiAppQueryKeys.all, "list"] as const,
+  /** Lifecycle summary and per-app state (#5193); see useAiAppLifecycle. */
+  lifecycle: () => [...aiAppQueryKeys.all, "lifecycle"] as const,
   list: (filters: IGetAiAppsFilters) => [...aiAppQueryKeys.lists(), filters] as const,
   details: () => [...aiAppQueryKeys.all, "detail"] as const,
   detail: (id: number) => [...aiAppQueryKeys.details(), id] as const,
@@ -64,6 +66,8 @@ export const useCreateAiApp = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: aiAppQueryKeys.lists() });
+      // Tab counts, stale markers and the lifecycle stage follow status and existence.
+      queryClient.invalidateQueries({ queryKey: aiAppQueryKeys.lifecycle() });
     },
   });
 };
@@ -78,6 +82,8 @@ export const useUpdateAiApp = () => {
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: aiAppQueryKeys.detail(id) });
       queryClient.invalidateQueries({ queryKey: aiAppQueryKeys.lists() });
+      // Tab counts, stale markers and the lifecycle stage follow status and existence.
+      queryClient.invalidateQueries({ queryKey: aiAppQueryKeys.lifecycle() });
     },
   });
 };
@@ -92,6 +98,8 @@ export const useUpdateAiAppStatus = () => {
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: aiAppQueryKeys.detail(id) });
       queryClient.invalidateQueries({ queryKey: aiAppQueryKeys.lists() });
+      // Tab counts, stale markers and the lifecycle stage follow status and existence.
+      queryClient.invalidateQueries({ queryKey: aiAppQueryKeys.lifecycle() });
     },
   });
 };
@@ -105,6 +113,8 @@ export const useDeleteAiApp = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: aiAppQueryKeys.lists() });
+      // Tab counts, stale markers and the lifecycle stage follow status and existence.
+      queryClient.invalidateQueries({ queryKey: aiAppQueryKeys.lifecycle() });
     },
   });
 };
@@ -119,6 +129,8 @@ export const useLinkModelsToAiApp = () => {
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: aiAppQueryKeys.detail(id) });
       queryClient.invalidateQueries({ queryKey: aiAppQueryKeys.lists() });
+      // Tab counts, stale markers and the lifecycle stage follow status and existence.
+      queryClient.invalidateQueries({ queryKey: aiAppQueryKeys.lifecycle() });
     },
   });
 };
@@ -183,6 +195,8 @@ export const usePromoteFromShadowAi = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: aiAppQueryKeys.lists() });
+      // Tab counts, stale markers and the lifecycle stage follow status and existence.
+      queryClient.invalidateQueries({ queryKey: aiAppQueryKeys.lifecycle() });
     },
   });
 };

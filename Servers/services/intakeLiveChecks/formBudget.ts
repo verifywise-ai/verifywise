@@ -7,12 +7,14 @@ import redisClient from "../../database/redis";
 import logger from "../../utils/logger/fileLogger";
 import { TIMED_OUT, withDeadline } from "./deadline";
 
-export type FormBudgetEndpoint = "checks" | "prefill";
+export type FormBudgetEndpoint = "checks" | "prefill" | "explain";
 
 /** Calls per form per hour, across all visitors. */
 export const FORM_BUDGET_PER_HOUR: Readonly<Record<FormBudgetEndpoint, number>> = {
   checks: 300,
   prefill: 20,
+  // Plain-language risk tier explanations, only on request (#5190).
+  explain: 100,
 };
 
 /**

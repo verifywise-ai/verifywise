@@ -22,6 +22,8 @@ Design specs: `docs/superpowers/specs/2026-10-21-ai-intake-classification-design
 | Lane rules, decision gate, routing writes | `Servers/services/intakeRouting/routingRules.ts`, `decisionGate.ts`, `routingService.ts` |
 | Oversight figures | `Servers/services/intakeRouting/oversight.ts` |
 | Routing and oversight UI | `Clients/src/presentation/pages/IntakeFormBuilder/routing/`, `oversight/` |
+| Lane rules (client mirror, for "Preview as") | `Clients/src/application/utils/intakeRouting/routingRules.ts`, `previewRole.ts` |
+| Preview menu and role banner | `Clients/src/presentation/pages/IntakeFormBuilder/preview/`, `PublicIntakeForm/PreviewBanner.tsx` |
 
 ## Score
 
@@ -71,6 +73,24 @@ Both public submit handlers call `startIntakeAssessment` after the transaction c
 - If the job can't be queued, the handler emails reviewers at once without results, after claiming the notification.
 - Forms opened through the legacy `/{tenantSlug}/{formSlug}` route email org admins when the form has no recipients (`adminFallback`). The public-id route skips them, as before.
 - On worker start, `backfillIntakeAssessments` queues the stages each pending submission still needs: legacy rows, missing blocks and stages pending for over 10 minutes. It never re-runs a settled stage. A submission whose email never went (`notification_sent_at` is NULL, so its job or cap was lost) is queued with `notify: true`, or emailed at once when both stages have settled. Only forms with recipients count, so a form without recipients (which never claims) isn't listed on every start. The direct send also waits until the submission is over 10 minutes old, so a live job keeps its own email and language. The submitter's language and the route's `adminFallback` aren't stored, so that email uses the default language and a form without recipients stays silent.
+
+## Submitter confirmation and review time
+
+`intake_forms.review_days` (1–30, default 3, CHECK constraint; constants in `Servers/constants/intakeReviewTime.ts`, mirrored in `Clients/src/domain/intake/reviewTime.ts`) is the agreed review time in business days. The unversioned `/api/intake` form and submission contracts are frozen (ADR 0001), so it is its own v1 resource: `GET /api/v1/intake-form-review-time/:formId` (same access as reading the form) and `PUT /api/v1/intake-form-review-time/:formId` with `{ reviewDays }` (needs `intakeForm.edit`). The form builder (`ReviewTimeField`) loads it with the form and saves it after the form itself, only when it changed; until it has loaded (or if loading fails) the field is empty and disabled and nothing is sent. If the review time does not save, the form stays unsaved so Save retries it. Publishing an existing form saves the review time first; a new form with a non-default review time is created as a draft, given its review time and only then made active (it stays a draft if the review time fails). A new form otherwise gets the database default.
+
+At submit, the handler reads the form's `review_days` with the form it already loads (`getIntakeFormByIdQuery(..., { withReviewDays: true })`; the default columns stay as the frozen responses need them), and `reviewTimeAtSubmit` stores it and the date it runs out on the submission (`intake_submissions.review_days`, `review_due_date`). The due date is that many weekdays after the submission's calendar day: counting starts the next day, and holidays are not skipped. Organizations have no stored timezone, so the day is taken in UTC (`REVIEW_TIME_ZONE` in `services/intakeConfirmation/reviewTime.ts`; `addBusinessDays` takes the zone as a parameter). Neither column is in the legacy submission responses, and nothing reads them yet apart from the confirmation email.
+
+The submitter's "submission received" email names who reviews and by when, so it waits for routing. `sendSubmitterConfirmationOnce` (`services/intakeConfirmation/confirmation.ts`) sends it at most once per submission, claimed through `intake_submissions.confirmation_sent_at` (`claimSubmissionConfirmationQuery`, atomic, pending submissions only). It is called:
+
+- by the submit handler, without fallback. It sends at once when routing is off (naming the form's recipients who can still review) or when neither lane has a reviewer. Otherwise it waits.
+- by the assessment job, once `routeSettled` has run (or thrown), with fallback. It names the stored lane's reviewers, or the governance team if no lane was stored.
+- by `intake_notify_cap` at 2 minutes, with fallback, naming the governance team if routing has not picked a lane yet.
+- when the job can't be queued, at once, with fallback.
+- by `intake_confirmation_sweep`, a repeating BullMQ job every 5 minutes (also run once at worker start), with fallback. It covers submissions still unclaimed 3 minutes after submit and at most 7 days old, so confirmations do not depend on the assessment job or its cap surviving.
+
+The sentence is English, like the rest of the template body (the subject follows the submitter's language as before). It uses the review time and due date stored at submit, never the form's current setting. If the due date has already passed when the email goes (a late sweep), or none was stored, it names the reviewers only. Up to three reviewers are named (first and last name), then "and N others". The resubmit link uses a freshly signed token.
+
+`sendSubmissionReceivedEmail` resolves `false` when the mail service fails; the claim is then released (`releaseSubmissionConfirmationQuery`), `intake_submissions.confirmation_attempts` is counted up and `confirmation_next_attempt_at` set, so the sweep retries at most 5 times, after 5, 15 and 60 minutes, 6 hours and 24 hours (`CONFIRMATION_RETRY_GAPS_MINUTES`). After the last retry it gives up and logs that once. A mail provider that accepted the message but still reported a failure (a timeout after delivery) causes a duplicate on retry; that is an accepted risk. The token is built before the claim, so a failure there leaves the claim free as well. A failed reviewer lookup names the governance team, and a failed tenant slug lookup links to the generic page. When the form was deleted, the claim is taken and nothing is sent, so the sweep stops listing the submission. A resubmission is its own submission and gets its own email. Migration `20261031120000-intake-review-time` adds the form setting, the due date and the claim and marks every existing submission as confirmed, because the old code emailed at submit. `20261031130000-intake-confirmation-retry` adds the submission's `review_days` and the retry columns.
 
 ## Review endpoints
 
@@ -149,6 +169,15 @@ A reviewer who is deleted, or who loses `intakeForm.edit`, stays in the form's l
 
 Second-review actions by senior reviewers keep working after routing is turned off: `loadSecondReview` checks the stored senior list, not `routing.enabled`.
 
+### Preview as a role
+
+The builder's Preview menu opens either the public form or the review flow as a role. Both are UI only; the server still authorises every real action for the signed-in user.
+
+- **Submitter.** Opens `/<publicId>/use-case-form-intake?vwPreview=1&as=submitter` in a new tab. `PublicIntakeForm` shows a dismissible notice and nothing else changes: submitting still creates a real submission. Without `vwPreview=1` the page is unchanged.
+- **Admin, senior reviewer, standard reviewer.** Opens `/intake-forms/submissions?simulateRole=admin|senior|standard` in a new tab. The role lives only in the query string and only applies on the Submissions tab. A banner ("Previewing as <role>, simulation only") switches role in place or exits. The list's "Assigned to me" filter and the review modal follow the simulated role: `simulatedReviewGate` (`previewRole.ts`) runs the client copies of `entityLevel`, `laneOnRecord`, `canDecideLane` and `laneReviewerIdsFor` for a stand-in user who is the form's only reviewer of that kind. The modal reads the form's current routing with `getIntakeForm` when it opens; until that loads, or if it fails, the banner says so and no decision control shows. The blocked line names the form's reviewers for the simulated lane. Second-review actions follow one rule in the modal and the list (`simulatedCanSecondReview`): a second review is waiting and the role is a senior reviewer or an Admin. In the modal, Approve, Reject, Retry, Send to senior review, second-review actions and suggested-risk edits are turned off or hidden. Local edits (override, entity fields) still work and are never sent.
+
+The client copies of `laneFor`, `canDecideLane`, `laneReviewerIdsFor`, `laneAtDecision`, `laneOnRecord` and `entityLevel` are kept identical to the server's by a shared fixture, `Servers/services/intakeRouting/__fixtures__/routingRulesCases.json`. `Clients/src/application/utils/intakeRouting/__tests__/routingRules.test.ts` runs every case; on the server, `routingRules.mirror.test.ts` runs the lane cases and `controllers/__tests__/intakeForm.entityLevel.mirror.test.ts` runs the `entityLevel` cases through `getSubmissionPreview` (the function is private to the controller). Change a rule on the server and add a case there, and the client suite fails until the copy matches.
+
 ### Decision record
 
 Approve and reject both write `intake_submissions.decision_record` through `buildDecisionRecord`: `{ level, computedBand, bandInForce, bandChanged, overriddenBy, lane }`. `bandChanged` is true when the band in force at the decision differs from the computed one. Oversight reads it.
@@ -199,3 +228,10 @@ The migration adds `suggested_risks` and `notification_sent_at` and sets the def
 Server: `Servers/services/intakeScoring/__tests__/`, `Servers/utils/__tests__/intakeForm.assessment.utils.test.ts`, `Servers/controllers/__tests__/intakeForm.{assessmentEnqueue,review,approveRisks}.test.ts`. Client: `Clients/src/presentation/pages/IntakeFormBuilder/__tests__/{ScoreSection,SuggestedRisksSection,OverrideBandFloor,RiskTierChip}.test.tsx`.
 
 Routing and oversight: `Servers/services/intakeRouting/__tests__/` (`routingRules`, `routingService`, `decisionGate`, `oversight`). Client, in the same `__tests__` folder: `{RoutingSettingsSection,LaneSection,SecondReviewPanel,OversightTab,SubmissionPreviewModal.lane,laneFilter,IntakeFormsListPage.oversight}`.
+
+Preview as a role: `Servers/services/intakeRouting/__tests__/routingRules.mirror.test.ts`, `Servers/controllers/__tests__/intakeForm.entityLevel.mirror.test.ts`, `Clients/src/application/utils/intakeRouting/__tests__/`, `Clients/src/presentation/pages/IntakeFormBuilder/__tests__/{SubmissionPreviewModal.simulation,IntakeFormsListPage.simulation,PreviewMenu}.test.tsx`, `Clients/src/presentation/pages/PublicIntakeForm/__tests__/PublicIntakeForm.preview.test.tsx`.
+
+## AI app requests (#5193)
+
+`IntakeEntityType.AI_APP` (`"ai_app"`). Approval (`approveSubmission`) creates an AI app through `createAiAppQuery`: name, description and departments from the mapped answers (`aiAppDepartmentsFrom` in `utils/aiApp.utils.ts` accepts a multi-select array or comma-separated text), owner = approver, status `approved`, `discovered_source` `employee_report`, lifecycle stage `planned`. A duplicate name returns 409 and leaves the submission pending. AI app requests get no risk suggestions: the assessment job stores the suggestions stage as complete and empty without calling the model, the review dialog hides the section, and approval refuses (400) a request that still carries accepted suggestions rather than dropping them. Validation errors on the new app (blank or too long name) answer 400 with the reason; only the `ai_apps_organization_id_name_key` unique violation answers 409. The EU AI Act step and classification stay use case only. Tracing an AI app back to its intake request is not wired yet (the legacy `GET /api/intake/submissions/by-entity/...` is frozen).
+

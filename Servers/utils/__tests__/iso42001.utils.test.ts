@@ -5,7 +5,17 @@ jest.mock("../../database/db", () => ({
   },
 }));
 
-import { createNewSubClausesQuery, createNewAnnexeCategoriesQuery } from "../iso42001.utils";
+jest.mock("../changeHistory.base.utils", () => ({
+  ...jest.requireActual("../changeHistory.base.utils"),
+  recordUpdateChanges: jest.fn(),
+}));
+
+import {
+  createNewSubClausesQuery,
+  createNewAnnexeCategoriesQuery,
+  updateAnnexCategoryQuery,
+} from "../iso42001.utils";
+import { recordUpdateChanges } from "../changeHistory.base.utils";
 import { STATUSES } from "../../types/status.type";
 
 const transaction = {} as any;
@@ -62,5 +72,48 @@ describe("createNewAnnexeCategoriesQuery", () => {
 
     expect(replacementsOf(0)).toMatchObject({ owner: null, status: "Not started" });
     expect(replacementsOf(1)).toMatchObject({ owner: null, status: "Not started" });
+  });
+});
+
+// The annex drawer sends multipart strings: is_applicable as "false" and the
+// due date as dayjs toString(). History must diff what was stored, or every
+// save records changes nobody made.
+describe("updateAnnexCategoryQuery change history", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockQuery.mockReset();
+  });
+
+  it("locks the row for the snapshot and diffs the stored values, not the form strings", async () => {
+    const stored = { is_applicable: false, due_date: "2026-10-28", status: "Done" };
+    mockQuery
+      .mockResolvedValueOnce([stored]) // before snapshot
+      .mockResolvedValueOnce([[{ id: 3, ...stored }], 1]) // UPDATE ... RETURNING
+      .mockResolvedValue([[], 0]);
+
+    await updateAnnexCategoryQuery(
+      3,
+      {
+        is_applicable: "false" as any,
+        due_date: "Wed, 28 Oct 2026 04:00:00 GMT" as any,
+        status: "Done" as any,
+      },
+      [],
+      [],
+      1,
+      transaction,
+      7,
+    );
+
+    expect(String(mockQuery.mock.calls[0][0])).toMatch(/FOR UPDATE/);
+    expect(recordUpdateChanges).toHaveBeenCalledWith(
+      "annex_category",
+      3,
+      stored,
+      { id: 3, is_applicable: false, due_date: "2026-10-28", status: "Done" },
+      7,
+      1,
+      transaction,
+    );
   });
 });

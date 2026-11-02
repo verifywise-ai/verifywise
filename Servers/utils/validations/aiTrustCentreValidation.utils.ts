@@ -13,6 +13,7 @@ import {
   ValidationResult,
   ValidationError,
 } from "./validation.utils";
+import { isWebUrl } from "./url.utils";
 
 /**
  * Validation constants for AI Trust Centre
@@ -416,17 +417,15 @@ export const validateSubprocessorURL = (value: any): ValidationResult => {
 
   const trimmedValue = value.trim();
 
-  // Basic URL validation
-  try {
-    new URL(trimmedValue);
+  // http or https only: a bare new URL() also accepts javascript: and data:
+  if (isWebUrl(trimmedValue)) {
     return { isValid: true };
-  } catch {
-    return {
-      isValid: false,
-      message: "Subprocessor URL must be a valid URL",
-      code: "INVALID_URL_FORMAT",
-    };
   }
+  return {
+    isValid: false,
+    message: "Subprocessor URL must be a valid URL",
+    code: "INVALID_URL_FORMAT",
+  };
 };
 
 /**

@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { brand } from "../../../../themes/palette";
 import { singleTheme } from "../../../../themes";
+import UseCaseLifecyclePanel from "./UseCaseLifecyclePanel";
 
 /**
  * A use case whose approval request is pending or rejected has every tab in the
@@ -53,7 +54,13 @@ const approvalNotices = {
   },
 };
 
-const VWProjectOverview = ({ project }: { project?: Project }) => {
+const VWProjectOverview = ({
+  project,
+  onLifecycleChanged,
+}: {
+  project?: Project;
+  onLifecycleChanged?: () => void;
+}) => {
   const formatDate = useFormattedDate();
   const [projectFrameworkId, setProjectFrameworkId] = useState<number | null>(null);
   const [projectFrameworkId2, setProjectFrameworkId2] = useState<number | null>(null);
@@ -290,6 +297,9 @@ const VWProjectOverview = ({ project }: { project?: Project }) => {
           </Typography>
         </Alert>
       )}
+      {project && !project.is_organizational && (
+        <UseCaseLifecyclePanel project={project} onChanged={onLifecycleChanged} />
+      )}
       {/* Main Content */}
       <Stack className="vw-project-overview" sx={{ width: "100%" }}>
         <Stack className="vw-project-overview-row" sx={rowStyle}>
@@ -350,7 +360,7 @@ const VWProjectOverview = ({ project }: { project?: Project }) => {
             <>
               {projectFrameworkId && (
                 <Stack sx={columnStyle}>
-                  <Typography sx={projectRiskSection}>EU AI Act Completion Status</Typography>
+                  <Typography sx={projectRiskSection}>EU AI Act completion status</Typography>
                   <GroupStatsCard
                     completed={completedEuActNumbers}
                     total={totalEuActNumbers}
@@ -361,7 +371,7 @@ const VWProjectOverview = ({ project }: { project?: Project }) => {
               )}
               {projectFrameworkId2 && (
                 <Stack sx={columnStyle}>
-                  <Typography sx={projectRiskSection}>ISO 42001 Completion Status</Typography>
+                  <Typography sx={projectRiskSection}>ISO 42001 completion status</Typography>
                   <GroupStatsCard
                     completed={completedIso42001Numbers}
                     total={totalIso42001Numbers}
@@ -372,7 +382,7 @@ const VWProjectOverview = ({ project }: { project?: Project }) => {
               )}
               {genericFrameworkProgress.map((fw) => (
                 <Stack key={fw.framework_id} sx={columnStyle}>
-                  <Typography sx={projectRiskSection}>{`${fw.name} Completion Status`}</Typography>
+                  <Typography sx={projectRiskSection}>{`${fw.name} completion status`}</Typography>
                   <GroupStatsCard
                     completed={[fw.done]}
                     total={[fw.total]}

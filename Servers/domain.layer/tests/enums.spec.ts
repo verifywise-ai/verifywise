@@ -150,7 +150,7 @@ describe("Domain Enums", () => {
 
   describe("IntakeEntityType", () => {
     it("should have expected values", () => {
-      verifyEnum(IntakeEntityType, ["MODEL", "USE_CASE"]);
+      verifyEnum(IntakeEntityType, ["MODEL", "USE_CASE", "AI_APP"]);
     });
   });
 

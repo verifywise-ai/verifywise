@@ -83,10 +83,21 @@ import {
   es as intakeLiveChecksEs,
 } from "./modules/intakeLiveChecks";
 import {
+  de as intakeLogicDe,
+  fr as intakeLogicFr,
+  es as intakeLogicEs,
+} from "./modules/intakeLogic";
+import {
+  de as intakePreviewDe,
+  fr as intakePreviewFr,
+  es as intakePreviewEs,
+} from "./modules/intakePreview";
+import {
   de as modelInventoryDe,
   fr as modelInventoryFr,
   es as modelInventoryEs,
 } from "./modules/modelInventory";
+import { de as mcpServersDe, fr as mcpServersFr, es as mcpServersEs } from "./modules/mcpServers";
 import { de as policiesDe, fr as policiesFr, es as policiesEs } from "./modules/policies";
 import { de as reportingDe, fr as reportingFr, es as reportingEs } from "./modules/reporting";
 import {
@@ -101,6 +112,11 @@ import { de as superAdminDe, fr as superAdminFr, es as superAdminEs } from "./mo
 import { de as tasksDe, fr as tasksFr, es as tasksEs } from "./modules/tasks";
 import { de as trainingDe, fr as trainingFr, es as trainingEs } from "./modules/training";
 import { de as useCasesDe, fr as useCasesFr, es as useCasesEs } from "./modules/useCases";
+import {
+  de as useCaseLifecycleDe,
+  fr as useCaseLifecycleFr,
+  es as useCaseLifecycleEs,
+} from "./modules/useCaseLifecycle";
 import { de as vendorsDe, fr as vendorsFr, es as vendorsEs } from "./modules/vendors";
 
 export type Lang = "en" | "de" | "fr" | "es";
@@ -128,7 +144,10 @@ export const translations: Record<string, Record<string, string>> = {
     ...governanceDe,
     ...incidentsDe,
     ...intakeLiveChecksDe,
+    ...intakeLogicDe,
+    ...intakePreviewDe,
     ...modelInventoryDe,
+    ...mcpServersDe,
     ...policiesDe,
     ...reportingDe,
     ...riskManagementDe,
@@ -139,8 +158,8 @@ export const translations: Record<string, Record<string, string>> = {
     ...tasksDe,
     ...trainingDe,
     ...useCasesDe,
+    ...useCaseLifecycleDe,
     ...vendorsDe,
-    "standard": "Standard",
     "days": "Tage",
     "open": "offen",
     "prohibited": "verboten",
@@ -2777,8 +2796,6 @@ export const translations: Record<string, Record<string, string>> = {
     "contains": "enthält",
     "is empty": "ist leer",
     "is not empty": "ist nicht leer",
-    "Add a field above this one to create a rule":
-      "Fügen Sie darüber ein Feld hinzu, um eine Regel zu erstellen",
     "All conditions": "Alle Bedingungen",
     "Any condition": "Eine beliebige Bedingung",
     "Autonomy level": "Autonomiegrad",
@@ -5702,6 +5719,88 @@ export const translations: Record<string, Record<string, string>> = {
     "60 days": "60 Tage",
     "90 days": "90 Tage",
     "180 days": "180 Tage",
+    "expert": "in Expertenprüfung",
+    "regular": "in regulärer Prüfung",
+    "not assigned": "nicht zugewiesen",
+    "assignment off": "Zuweisung aus",
+    "Only an Admin can change reviewer assignment.":
+      "Nur ein Administrator kann die Prüferzuweisung ändern.",
+    "Band kept, expert review": "Stufe beibehalten, Expertenprüfung",
+    "Submissions by review level": "Einreichungen nach Prüfstufe",
+    "Assignment off": "Zuweisung aus",
+    "Failed to request expert review. Please try again.":
+      "Anfordern der Expertenprüfung fehlgeschlagen. Bitte versuchen Sie es erneut.",
+    "Less than": "Weniger als",
+    "points from the threshold": "Punkte vom Schwellenwert entfernt",
+    "Expert review requested:": "Expertenprüfung angefordert:",
+    "Expert review": "Expertenprüfung",
+    "Regular review": "Reguläre Prüfung",
+    "Not assigned yet": "Noch nicht zugewiesen",
+    "Request expert review": "Expertenprüfung anfordern",
+    "Expert reviewers will decide this submission. Say why it needs a closer look.":
+      "Expertenprüfer entscheiden über diese Einreichung. Nennen Sie den Grund für eine genauere Prüfung.",
+    "Why does this need an expert reviewer?": "Warum braucht dies einen Expertenprüfer?",
+    "An expert reviewer will check this approval.":
+      "Ein Expertenprüfer wird diese Genehmigung prüfen.",
+    "Review level": "Prüfstufe",
+    "All review levels": "Alle Prüfstufen",
+    "Expert": "Experten",
+    "Not assigned": "Nicht zugewiesen",
+    "or more, prohibited practices and scores less than":
+      "oder mehr, verbotene Praktiken und Bewertungen mit weniger als",
+    "points from": "Punkten Abstand zu",
+    "go to expert reviewers.": "gehen an Expertenprüfer.",
+    "Assign reviewers by risk score": "Prüfer nach Risikobewertung zuweisen",
+    "Send submissions to expert or regular reviewers based on their risk score.":
+      "Einreichungen anhand ihrer Risikobewertung an Expertenprüfer oder reguläre Prüfer senden.",
+    "Expert reviewers": "Expertenprüfer",
+    "Regular reviewers": "Reguläre Prüfer",
+    "Select expert reviewers": "Expertenprüfer auswählen",
+    "Select regular reviewers": "Reguläre Prüfer auswählen",
+    "Pick at least one expert reviewer": "Wählen Sie mindestens einen Expertenprüfer",
+    "Pick at least one regular reviewer": "Wählen Sie mindestens einen regulären Prüfer",
+    "Risk score that separates the review levels": "Risikobewertung, die die Prüfstufen trennt",
+    "Share of regular review decisions checked again":
+      "Anteil der Entscheidungen in der regulären Prüfung, die erneut geprüft werden",
+    "Fix the reviewer assignment settings before saving":
+      "Korrigieren Sie die Einstellungen der Prüferzuweisung vor dem Speichern",
+    "Fix the reviewer assignment settings before publishing":
+      "Korrigieren Sie die Einstellungen der Prüferzuweisung vor dem Veröffentlichen",
+    "Review time (business days)": "Prüfdauer (Werktage)",
+    "Sets the due date named in the confirmation email to the submitter":
+      "Legt das Fälligkeitsdatum in der Bestätigungs-E-Mail an den Einreichenden fest",
+    "Use a whole number from 1 to 30": "Verwenden Sie eine ganze Zahl von 1 bis 30",
+    "Fix the review time before saving": "Korrigieren Sie die Prüfdauer vor dem Speichern",
+    "Fix the review time before publishing":
+      "Korrigieren Sie die Prüfdauer vor dem Veröffentlichen",
+    "The form was saved, but the review time was not. Click Save to try again.":
+      "Das Formular wurde gespeichert, die Prüfdauer jedoch nicht. Klicken Sie erneut auf Speichern.",
+    "The review time could not be saved, so the form was not published. Click Publish to try again.":
+      "Die Prüfdauer konnte nicht gespeichert werden, daher wurde das Formular nicht veröffentlicht. Klicken Sie erneut auf Veröffentlichen.",
+    "The form was saved as a draft, but the review time was not. Click Publish to try again.":
+      "Das Formular wurde als Entwurf gespeichert, die Prüfdauer jedoch nicht. Klicken Sie erneut auf Veröffentlichen.",
+    "Could not load the review time. Reload the page to change it.":
+      "Die Prüfdauer konnte nicht geladen werden. Laden Sie die Seite neu, um sie zu ändern.",
+    "This subcontrol": "Diese Unterkontrolle",
+    "Control": "Kontrolle",
+    "Show all use cases": "Alle Anwendungsfälle anzeigen",
+    "View reports": "Berichte anzeigen",
+    "Choose a field": "Wählen Sie ein Feld",
+    "Field:": "Feld:",
+    "Missing field": "Fehlendes Feld",
+    "Not usable in this formula": "In dieser Formel nicht verwendbar",
+    "Unnamed field": "Unbenanntes Feld",
+    "The problem is just after": "Das Problem liegt direkt nach",
+    "Add another field to create a rule":
+      "Fügen Sie ein weiteres Feld hinzu, um eine Regel zu erstellen",
+    "Add a number field first": "Fügen Sie zuerst ein Zahlenfeld hinzu",
+    "Calculated value": "Berechneter Wert",
+    "Enter a full web address starting with http:// or https://":
+      "Geben Sie eine vollständige Webadresse ein, die mit http:// oder https:// beginnt",
+    "Shown under the field on the public form":
+      "Wird im öffentlichen Formular unter dem Feld angezeigt",
+    "Use case and AI app lifecycles, intake form logic and MCP server auth":
+      "Lebenszyklen für Anwendungsfälle und KI-Apps, Logik für Aufnahmeformulare und MCP-Server-Authentifizierung",
   },
 
   fr: {
@@ -5726,7 +5825,10 @@ export const translations: Record<string, Record<string, string>> = {
     ...governanceFr,
     ...incidentsFr,
     ...intakeLiveChecksFr,
+    ...intakeLogicFr,
+    ...intakePreviewFr,
     ...modelInventoryFr,
+    ...mcpServersFr,
     ...policiesFr,
     ...reportingFr,
     ...riskManagementFr,
@@ -5737,8 +5839,8 @@ export const translations: Record<string, Record<string, string>> = {
     ...tasksFr,
     ...trainingFr,
     ...useCasesFr,
+    ...useCaseLifecycleFr,
     ...vendorsFr,
-    "standard": "standard",
     "days": "jours",
     "open": "ouvertes",
     "prohibited": "interdit",
@@ -8315,8 +8417,6 @@ export const translations: Record<string, Record<string, string>> = {
     "contains": "contient",
     "is empty": "est vide",
     "is not empty": "n'est pas vide",
-    "Add a field above this one to create a rule":
-      "Ajoutez un champ au-dessus pour créer une règle",
     "All conditions": "Toutes les conditions",
     "Any condition": "N'importe quelle condition",
     "Autonomy level": "Niveau d'autonomie",
@@ -11234,6 +11334,88 @@ export const translations: Record<string, Record<string, string>> = {
     "60 days": "60 jours",
     "90 days": "90 jours",
     "180 days": "180 jours",
+    "expert": "expert",
+    "regular": "habituel",
+    "not assigned": "non attribué",
+    "assignment off": "attribution désactivée",
+    "Only an Admin can change reviewer assignment.":
+      "Seul un administrateur peut modifier l'attribution des réviseurs.",
+    "Band kept, expert review": "Niveau conservé, revue experte",
+    "Submissions by review level": "Soumissions par niveau de revue",
+    "Assignment off": "Attribution désactivée",
+    "Failed to request expert review. Please try again.":
+      "Échec de la demande de revue experte. Veuillez réessayer.",
+    "Less than": "À moins de",
+    "points from the threshold": "points du seuil",
+    "Expert review requested:": "Revue experte demandée :",
+    "Expert review": "Revue experte",
+    "Regular review": "Revue habituelle",
+    "Not assigned yet": "Pas encore attribué",
+    "Request expert review": "Demander une revue experte",
+    "Expert reviewers will decide this submission. Say why it needs a closer look.":
+      "Les réviseurs experts décideront de cette soumission. Indiquez pourquoi elle demande un examen plus approfondi.",
+    "Why does this need an expert reviewer?": "Pourquoi faut-il un réviseur expert ?",
+    "An expert reviewer will check this approval.":
+      "Un réviseur expert vérifiera cette approbation.",
+    "Review level": "Niveau de revue",
+    "All review levels": "Tous les niveaux de revue",
+    "Expert": "Expert",
+    "Not assigned": "Non attribué",
+    "or more, prohibited practices and scores less than":
+      "ou plus, les pratiques interdites et les scores à moins de",
+    "points from": "points de",
+    "go to expert reviewers.": "vont aux réviseurs experts.",
+    "Assign reviewers by risk score": "Attribuer les réviseurs selon le score de risque",
+    "Send submissions to expert or regular reviewers based on their risk score.":
+      "Envoyer les soumissions aux réviseurs experts ou habituels selon leur score de risque.",
+    "Expert reviewers": "Réviseurs experts",
+    "Regular reviewers": "Réviseurs habituels",
+    "Select expert reviewers": "Sélectionner les réviseurs experts",
+    "Select regular reviewers": "Sélectionner les réviseurs habituels",
+    "Pick at least one expert reviewer": "Choisissez au moins un réviseur expert",
+    "Pick at least one regular reviewer": "Choisissez au moins un réviseur habituel",
+    "Risk score that separates the review levels":
+      "Score de risque qui sépare les niveaux de revue",
+    "Share of regular review decisions checked again":
+      "Part des décisions en revue habituelle revérifiées",
+    "Fix the reviewer assignment settings before saving":
+      "Corrigez les paramètres d'attribution des réviseurs avant d'enregistrer",
+    "Fix the reviewer assignment settings before publishing":
+      "Corrigez les paramètres d'attribution des réviseurs avant de publier",
+    "Review time (business days)": "Délai d'examen (jours ouvrés)",
+    "Sets the due date named in the confirmation email to the submitter":
+      "Définit l'échéance indiquée dans l'e-mail de confirmation envoyé au demandeur",
+    "Use a whole number from 1 to 30": "Utilisez un nombre entier de 1 à 30",
+    "Fix the review time before saving": "Corrigez le délai d'examen avant d'enregistrer",
+    "Fix the review time before publishing": "Corrigez le délai d'examen avant de publier",
+    "The form was saved, but the review time was not. Click Save to try again.":
+      "Le formulaire a été enregistré, mais pas le délai d'examen. Cliquez à nouveau sur Enregistrer.",
+    "The review time could not be saved, so the form was not published. Click Publish to try again.":
+      "Le délai d'examen n'a pas pu être enregistré, le formulaire n'a donc pas été publié. Cliquez à nouveau sur Publier.",
+    "The form was saved as a draft, but the review time was not. Click Publish to try again.":
+      "Le formulaire a été enregistré comme brouillon, mais pas le délai d'examen. Cliquez à nouveau sur Publier.",
+    "Could not load the review time. Reload the page to change it.":
+      "Impossible de charger le délai d'examen. Rechargez la page pour le modifier.",
+    "Show all use cases": "Afficher tous les cas d'usage",
+    "View reports": "Voir les rapports",
+    "This subcontrol": "Ce sous-contrôle",
+    "Control": "Contrôle",
+    "Choose a field": "Choisissez un champ",
+    "Field:": "Champ :",
+    "Missing field": "Champ manquant",
+    "Not usable in this formula": "Non utilisable dans cette formule",
+    "Unnamed field": "Champ sans nom",
+    "The problem is just after": "Le problème se trouve juste après",
+    "Add another field to create a rule": "Ajoutez un autre champ pour créer une règle",
+    "Add a number field first": "Ajoutez d'abord un champ numérique",
+    "Calculated value": "Valeur calculée",
+    "Enter a full web address starting with http:// or https://":
+      "Saisissez une adresse web complète commençant par http:// ou https://",
+    "Shown under the field on the public form": "Affiché sous le champ sur le formulaire public",
+    "Use case and AI app lifecycles, intake form logic and MCP server auth":
+      "Cycles de vie des cas d'usage et des applications d'IA, logique des formulaires d'intake et authentification des serveurs MCP",
+
+    "Request": "Requête",
   },
   es: {
     ...agentDiscoveryEs,
@@ -11257,7 +11439,10 @@ export const translations: Record<string, Record<string, string>> = {
     ...governanceEs,
     ...incidentsEs,
     ...intakeLiveChecksEs,
+    ...intakeLogicEs,
+    ...intakePreviewEs,
     ...modelInventoryEs,
+    ...mcpServersEs,
     ...policiesEs,
     ...reportingEs,
     ...riskManagementEs,
@@ -11268,8 +11453,8 @@ export const translations: Record<string, Record<string, string>> = {
     ...tasksEs,
     ...trainingEs,
     ...useCasesEs,
+    ...useCaseLifecycleEs,
     ...vendorsEs,
-    "standard": "estándar",
     "days": "días",
     "open": "abiertas",
     "prohibited": "prohibido",
@@ -13037,7 +13222,6 @@ export const translations: Record<string, Record<string, string>> = {
     "contains": "contiene",
     "is empty": "está vacío",
     "is not empty": "no está vacío",
-    "Add a field above this one to create a rule": "Agregue un campo encima para crear una regla",
     "All conditions": "Todas las condiciones",
     "Any condition": "Cualquier condición",
     "Autonomy level": "Nivel de autonomía",
@@ -16656,5 +16840,86 @@ export const translations: Record<string, Record<string, string>> = {
     "60 days": "60 días",
     "90 days": "90 días",
     "180 days": "180 días",
+    "expert": "experto",
+    "regular": "habitual",
+    "not assigned": "sin asignar",
+    "assignment off": "asignación desactivada",
+    "Only an Admin can change reviewer assignment.":
+      "Solo un administrador puede cambiar la asignación de revisores.",
+    "Band kept, expert review": "Nivel mantenido, revisión experta",
+    "Submissions by review level": "Envíos por nivel de revisión",
+    "Assignment off": "Asignación desactivada",
+    "Failed to request expert review. Please try again.":
+      "No se pudo solicitar la revisión experta. Inténtelo de nuevo.",
+    "Less than": "A menos de",
+    "points from the threshold": "puntos del umbral",
+    "Expert review requested:": "Revisión experta solicitada:",
+    "Expert review": "Revisión experta",
+    "Regular review": "Revisión habitual",
+    "Not assigned yet": "Aún sin asignar",
+    "Request expert review": "Solicitar revisión experta",
+    "Expert reviewers will decide this submission. Say why it needs a closer look.":
+      "Los revisores expertos decidirán sobre este envío. Indique por qué requiere un examen más detallado.",
+    "Why does this need an expert reviewer?": "¿Por qué necesita un revisor experto?",
+    "An expert reviewer will check this approval.":
+      "Un revisor experto comprobará esta aprobación.",
+    "Review level": "Nivel de revisión",
+    "All review levels": "Todos los niveles de revisión",
+    "Expert": "Experto",
+    "Not assigned": "Sin asignar",
+    "or more, prohibited practices and scores less than":
+      "o más, las prácticas prohibidas y las puntuaciones a menos de",
+    "points from": "puntos de",
+    "go to expert reviewers.": "pasan a los revisores expertos.",
+    "Assign reviewers by risk score": "Asignar revisores según la puntuación de riesgo",
+    "Send submissions to expert or regular reviewers based on their risk score.":
+      "Enviar los envíos a revisores expertos o habituales según su puntuación de riesgo.",
+    "Expert reviewers": "Revisores expertos",
+    "Regular reviewers": "Revisores habituales",
+    "Select expert reviewers": "Seleccionar revisores expertos",
+    "Select regular reviewers": "Seleccionar revisores habituales",
+    "Pick at least one expert reviewer": "Elija al menos un revisor experto",
+    "Pick at least one regular reviewer": "Elija al menos un revisor habitual",
+    "Risk score that separates the review levels":
+      "Puntuación de riesgo que separa los niveles de revisión",
+    "Share of regular review decisions checked again":
+      "Porcentaje de decisiones de revisión habitual que se revisan de nuevo",
+    "Fix the reviewer assignment settings before saving":
+      "Corrija la configuración de asignación de revisores antes de guardar",
+    "Fix the reviewer assignment settings before publishing":
+      "Corrija la configuración de asignación de revisores antes de publicar",
+    "Review time (business days)": "Plazo de revisión (días hábiles)",
+    "Sets the due date named in the confirmation email to the submitter":
+      "Define la fecha límite indicada en el correo de confirmación al solicitante",
+    "Use a whole number from 1 to 30": "Use un número entero del 1 al 30",
+    "Fix the review time before saving": "Corrija el plazo de revisión antes de guardar",
+    "Fix the review time before publishing": "Corrija el plazo de revisión antes de publicar",
+    "The form was saved, but the review time was not. Click Save to try again.":
+      "El formulario se guardó, pero el plazo de revisión no. Haga clic de nuevo en Guardar.",
+    "The review time could not be saved, so the form was not published. Click Publish to try again.":
+      "No se pudo guardar el plazo de revisión, así que el formulario no se publicó. Haga clic de nuevo en Publicar.",
+    "The form was saved as a draft, but the review time was not. Click Publish to try again.":
+      "El formulario se guardó como borrador, pero el plazo de revisión no. Haga clic de nuevo en Publicar.",
+    "Could not load the review time. Reload the page to change it.":
+      "No se pudo cargar el plazo de revisión. Vuelva a cargar la página para cambiarlo.",
+    "This subcontrol": "Este subcontrol",
+    "Control": "Control",
+    "Show all use cases": "Mostrar todos los casos de uso",
+    "View reports": "Ver informes",
+    "Choose a field": "Elija un campo",
+    "Field:": "Campo:",
+    "Missing field": "Campo faltante",
+    "Not usable in this formula": "No se puede usar en esta fórmula",
+    "Unnamed field": "Campo sin nombre",
+    "The problem is just after": "El problema está justo después de",
+    "Add another field to create a rule": "Agregue otro campo para crear una regla",
+    "Add a number field first": "Primero agregue un campo numérico",
+    "Calculated value": "Valor calculado",
+    "Use case and AI app lifecycles, intake form logic and MCP server auth":
+      "Ciclos de vida de casos de uso y aplicaciones de IA, lógica de formularios de solicitud y autenticación de servidores MCP",
+    "Enter a full web address starting with http:// or https://":
+      "Introduzca una dirección web completa que empiece por http:// o https://",
+    "Shown under the field on the public form":
+      "Se muestra debajo del campo en el formulario público",
   },
 };

@@ -14,6 +14,8 @@ export interface AlertCorProps {
   title?: string;
   body: string;
   isToast?: boolean;
+  /** Render in the page flow instead of floating top-right. */
+  inline?: boolean;
   hasIcon?: boolean;
   onClick?: () => void;
   alertTimeout?: number;

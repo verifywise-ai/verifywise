@@ -319,7 +319,45 @@ describe("saving a form with invalid logic", () => {
     expect(intake.updateIntakeFormQuery).not.toHaveBeenCalled();
   });
 
-  it("rejects a formula that uses a later field and does not save", async () => {
+  it("rejects a formula loop and does not save", async () => {
+    const r = res();
+    await ctrl.updateIntakeForm(
+      req({
+        params: { id: "1" },
+        body: {
+          schema: {
+            version: "1.0",
+            fields: [
+              {
+                id: "total",
+                type: "calculated",
+                label: "Total",
+                order: 0,
+                required: false,
+                formula: "{n} + 1",
+              },
+              {
+                id: "n",
+                type: "calculated",
+                label: "N",
+                order: 1,
+                required: false,
+                formula: "{total} * 2",
+              },
+            ],
+          },
+        },
+      }) as any,
+      r,
+    );
+    expect(r.status).toHaveBeenCalledWith(400);
+    expect(String(r.json.mock.calls[0][0].data)).toContain(
+      'Field "Total": the formula forms a circular reference with "N"',
+    );
+    expect(intake.updateIntakeFormQuery).not.toHaveBeenCalled();
+  });
+
+  it("saves a formula that uses a later field", async () => {
     const r = res();
     await ctrl.updateIntakeForm(
       req({
@@ -343,9 +381,8 @@ describe("saving a form with invalid logic", () => {
       }) as any,
       r,
     );
-    expect(r.status).toHaveBeenCalledWith(400);
-    expect(String(r.json.mock.calls[0][0].data)).toContain('Field "Total"');
-    expect(intake.updateIntakeFormQuery).not.toHaveBeenCalled();
+    expect(r.status).not.toHaveBeenCalledWith(400);
+    expect(intake.updateIntakeFormQuery).toHaveBeenCalled();
   });
 
   it("does not block an update that leaves the schema, entity type and status alone", async () => {

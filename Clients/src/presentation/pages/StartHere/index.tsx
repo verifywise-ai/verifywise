@@ -276,24 +276,24 @@ const RESOURCES = [
 
 const WHATS_NEW = [
   {
+    label: "A lifecycle for every AI system you run",
+    sub: "October 31, 2026",
+    url: "https://verifywise.ai/blog/ai-inventory-lifecycle-and-intake",
+  },
+  {
+    label: "New Jersey tenant screening AI: the rules already in force",
+    sub: "October 17, 2026",
+    url: "https://verifywise.ai/blog/ai-tenant-screening-new-jersey-a5495",
+  },
+  {
+    label: "VerifyWise 2.6: risk inheritance and evidence retention",
+    sub: "October 13, 2026",
+    url: "https://verifywise.ai/blog/verifywise-2-6-announcement",
+  },
+  {
     label: "VerifyWise on the Wavestone UK Cybersecurity Startup Radar",
     sub: "August 26, 2026",
     url: "https://verifywise.ai/blog/verifywise-wavestone-uk-cybersecurity-startup-radar-2026",
-  },
-  {
-    label: "VerifyWise 2.5: reporting, observability, and extensions",
-    sub: "August 23, 2026",
-    url: "https://verifywise.ai/blog/verifywise-2-5-announcement",
-  },
-  {
-    label: "Stop shopping for DORA compliance software",
-    sub: "August 11, 2026",
-    url: "https://verifywise.ai/blog/stop-shopping-for-dora-compliance-software",
-  },
-  {
-    label: "Model risk management for AI and ML",
-    sub: "July 6, 2026",
-    url: "https://verifywise.ai/blog/model-risk-management-ai-ml",
   },
 ] as const;
 

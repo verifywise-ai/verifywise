@@ -1005,6 +1005,7 @@ export async function saveAnnexes(req: RequestWithFile, res: Response): Promise<
       filesToUnlink,
       req.organizationId!,
       transaction,
+      req.userId ?? null,
     );
 
     // Update the project's last updated date

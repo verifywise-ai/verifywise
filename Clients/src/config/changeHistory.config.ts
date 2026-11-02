@@ -12,6 +12,9 @@ export type EntityType =
   | "project"
   | "framework"
   | "evidence_hub"
+  | "control_eu"
+  | "subcontrol_eu"
+  | "annex_category"
   | "risk"
   | "vendor_risk"
   | "policy"
@@ -67,6 +70,24 @@ export const ENTITY_HISTORY_CONFIGS: {
     emptyStateTitle: "Activity history",
     emptyStateMessage:
       "Automatically tracks every change to this evidence. See what your team is working on and what updates they've made, in real time.",
+  },
+  control_eu: {
+    entityName: "Control",
+    emptyStateTitle: "Activity history",
+    emptyStateMessage:
+      "Automatically tracks every change to this control's status, owner, reviewer, approver, due date and risk review.",
+  },
+  subcontrol_eu: {
+    entityName: "Subcontrol",
+    emptyStateTitle: "Activity history",
+    emptyStateMessage:
+      "Automatically tracks every change to this subcontrol's status, implementation details, evidence and feedback.",
+  },
+  annex_category: {
+    entityName: "Annex control",
+    emptyStateTitle: "Activity history",
+    emptyStateMessage:
+      "Automatically tracks every change to this annex control. See what your team is working on and what updates they've made, in real time.",
   },
   risk: {
     entityName: "Risk",

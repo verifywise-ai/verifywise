@@ -283,7 +283,7 @@ const ReviewAgentModal: React.FC<ReviewAgentModalProps> = ({
 
         {actionError && (
           <Box sx={{ px: "24px", pb: "16px" }}>
-            <Alert variant="error" body={actionError} hasIcon={false} sx={{ position: "static" }} />
+            <Alert variant="error" body={actionError} hasIcon={false} inline />
           </Box>
         )}
 

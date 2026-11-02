@@ -646,7 +646,9 @@ export async function updateProjectById(req: Request, res: Response): Promise<an
             )
           : null;
         if (staleRequestId) {
-          await withdrawApprovalRequestQuery(staleRequestId, req.organizationId!, transaction);
+          await withdrawApprovalRequestQuery(staleRequestId, req.organizationId!, transaction, {
+            changedBy: req.userId!,
+          });
         }
         if (!submittedWorkflowId) {
           // Cleared: the frameworks chosen at creation waited for an approval
@@ -655,6 +657,7 @@ export async function updateProjectById(req: Request, res: Response): Promise<an
             projectId,
             req.organizationId!,
             transaction,
+            req.userId!,
           );
         } else {
           updateApprovalResult = await createUseCaseApprovalRequest(

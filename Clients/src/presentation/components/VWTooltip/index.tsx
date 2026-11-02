@@ -60,6 +60,11 @@ interface VWTooltipProps {
    * screen readers keep announcing that name.
    */
   describeChild?: boolean;
+
+  /** Controlled open state, e.g. for a trigger that also opens on click or tap */
+  open?: boolean;
+  onOpen?: TooltipProps["onOpen"];
+  onClose?: TooltipProps["onClose"];
 }
 
 const VWTooltip: React.FC<VWTooltipProps> = ({
@@ -71,9 +76,15 @@ const VWTooltip: React.FC<VWTooltipProps> = ({
   backgroundColor = "#1F2937",
   arrow = true,
   describeChild = false,
+  open,
+  onOpen,
+  onClose,
 }) => {
   return (
     <Tooltip
+      open={open}
+      onOpen={onOpen}
+      onClose={onClose}
       title={
         <Box>
           {header && (

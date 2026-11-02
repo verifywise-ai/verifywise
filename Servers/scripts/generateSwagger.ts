@@ -5,7 +5,9 @@
  * Run: npm run generate:swagger  (or: npx ts-node scripts/generateSwagger.ts)
  *
  * What it does:
- * 1. Parses app.ts to get the base path -> route file mapping.
+ * 1. Parses the route registration files (REGISTRATION_FILES: app.ts today; legacy
+ *    registration modules and routes/v1/index.ts are added as app.ts is decomposed)
+ *    to get the base path -> route file mapping.
  * 2. Reads each route file to extract method, path, middleware, and handler name.
  * 3. Infers bearerAuth security for routes protected by authenticateJWT / superAdminOnly.
  * 4. Merges the discovered endpoints into the existing swagger.yaml, preserving rich
@@ -45,53 +47,202 @@ interface RouteRegistration {
   importName: string;
   isFactory: boolean;
   line: number;
+  // Absolute path of the file the registration was parsed from. Imports are
+  // resolved relative to this file's directory.
+  sourceFile: string;
+  // Set for registrations expanded from a versioned registry (e.g. "v1");
+  // used to derive version-aware OpenAPI tags.
+  apiVersion?: string;
 }
 
+// Files parsed for route registrations, in mount order. app.ts holds the
+// global middleware and the mounts that stay top-level (webhooks, the /v1
+// gateway proxy, /api/v1). The legacy registration modules (routes/legacy/)
+// are listed in the order app.ts calls their register functions. The v1
+// registry (routes/v1/index.ts) is not listed here: it is expanded in place
+// when the /api/v1 mount in app.ts is parsed.
+const REGISTRATION_FILES = [
+  APP_FILE,
+  path.join(ROUTES_DIR, "legacy", "coreAuth.routes.ts"),
+  path.join(ROUTES_DIR, "legacy", "vendors.routes.ts"),
+  path.join(ROUTES_DIR, "legacy", "projectsRisks.routes.ts"),
+  path.join(ROUTES_DIR, "legacy", "billingMisc.routes.ts"),
+  path.join(ROUTES_DIR, "legacy", "filesData.routes.ts"),
+  path.join(ROUTES_DIR, "legacy", "frameworks.routes.ts"),
+  path.join(ROUTES_DIR, "legacy", "aiGovernance.routes.ts"),
+  path.join(ROUTES_DIR, "legacy", "aiPlatform.routes.ts"),
+  path.join(ROUTES_DIR, "legacy", "workflows.routes.ts"),
+  path.join(ROUTES_DIR, "legacy", "reporting.routes.ts"),
+];
+
+// Versioned API registry (ADR 0001). app.ts mounts this router once at
+// /api/v1; its `router.use("/<resource>", <router>)` registrations are
+// expanded in place so the generated spec keeps mount order.
+const V1_REGISTRY_FILE = path.join(ROUTES_DIR, "v1", "index.ts");
+const V1_MOUNT_PATH = "/api/v1";
+
 // ---------------------------------------------------------------------------
-// Parse app.ts for route registrations
+// Parse the registration files for route registrations
 // ---------------------------------------------------------------------------
 export function parseAppFile(): RouteRegistration[] {
-  const content = fs.readFileSync(APP_FILE, "utf-8");
-  const lines = content.split("\n");
   const registrations: RouteRegistration[] = [];
 
-  // Matches:
-  //   app.use("/api/users", userRoutes);
-  //   app.use("/api/deepeval", deepEvalRoutes());
-  //   app.use("/api/automations", automation);
-  const useRegex = /app\.use\s*\(\s*"([^"]+)"\s*,\s*(\w+)(?:\s*\(\s*\))?\s*\)/g;
+  for (const sourceFile of REGISTRATION_FILES) {
+    const content = fs.readFileSync(sourceFile, "utf-8");
+    const lines = content.split("\n");
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    let match: RegExpExecArray | null;
-    while ((match = useRegex.exec(line)) !== null) {
-      registrations.push({
-        basePath: match[1],
-        importName: match[2],
-        isFactory: line.includes(`${match[2]}()`),
-        line: i + 1,
-      });
+    // Matches:
+    //   app.use("/api/users", userRoutes);
+    //   app.use("/api/deepeval", deepEvalRoutes());
+    //   app.use("/api/automations", automation);
+    const useRegex = /app\.use\s*\(\s*"([^"]+)"\s*,\s*(\w+)(?:\s*\(\s*\))?\s*\)/g;
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      let match: RegExpExecArray | null;
+      while ((match = useRegex.exec(line)) !== null) {
+        // The /api/v1 mount is a nested registry router, not a route file:
+        // expand its router.use() registrations in place so endpoints keep
+        // their runtime mount order and get version-aware tags.
+        if (match[1] === V1_MOUNT_PATH && fs.existsSync(V1_REGISTRY_FILE)) {
+          registrations.push(...parseVersionedRegistry(V1_MOUNT_PATH, V1_REGISTRY_FILE));
+          continue;
+        }
+        registrations.push({
+          basePath: match[1],
+          importName: match[2],
+          isFactory: line.includes(`${match[2]}()`),
+          line: i + 1,
+          sourceFile,
+        });
+      }
     }
-  }
 
-  // Inline health endpoints (/health, /health/live, /health/ready)
-  for (const match of content.matchAll(/app\.get\("(\/health(?:\/[a-z]+)?)"/g)) {
-    registrations.push({
-      basePath: match[1],
-      importName: "_inline_health",
-      isFactory: false,
-      line: 0,
-    });
+    // Inline health endpoints (/health, /health/live, /health/ready) live in
+    // app.ts only.
+    if (sourceFile === APP_FILE) {
+      for (const match of content.matchAll(/app\.get\("(\/health(?:\/[a-z]+)?)"/g)) {
+        registrations.push({
+          basePath: match[1],
+          importName: "_inline_health",
+          isFactory: false,
+          line: 0,
+          sourceFile,
+        });
+      }
+    }
   }
 
   return registrations;
 }
 
 // ---------------------------------------------------------------------------
-// Find the route file that corresponds to an import name in app.ts
+// Parse a versioned registry (routes/v1/index.ts) for router.use()
+// registrations and expand them under the registry's mount path.
 // ---------------------------------------------------------------------------
-export function findRouteFile(importName: string): string | null {
-  const content = fs.readFileSync(APP_FILE, "utf-8");
+function parseVersionedRegistry(mountPath: string, registryFile: string): RouteRegistration[] {
+  const apiVersion = mountPath.replace(/^\/api\//, ""); // "/api/v1" -> "v1"
+  const content = fs.readFileSync(registryFile, "utf-8");
+  const lines = content.split("\n");
+  const registrations: RouteRegistration[] = [];
+
+  // Matches the registry convention:
+  //   router.use("/shadow-ai", shadowAiIngestionRoutes);
+  const useRegex = /router\.use\s*\(\s*"([^"]+)"\s*,\s*(\w+)(?:\s*\(\s*\))?\s*\)/g;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    let match: RegExpExecArray | null;
+    while ((match = useRegex.exec(line)) !== null) {
+      registrations.push({
+        basePath: mountPath + match[1],
+        importName: match[2],
+        isFactory: line.includes(`${match[2]}()`),
+        line: i + 1,
+        sourceFile: registryFile,
+        apiVersion,
+      });
+    }
+  }
+
+  return registrations;
+}
+
+// ---------------------------------------------------------------------------
+// Extract the local binding names from an import statement's binding clause.
+// Handles default imports, named imports (incl. aliases), and mixed forms:
+//   userRoutes                          -> ["userRoutes"]
+//   virtualFolderRoutes, { filesFolderRouter } -> ["virtualFolderRoutes", "filesFolderRouter"]
+//   { a, b as c }                       -> ["a", "c"]
+// ---------------------------------------------------------------------------
+function parseImportedNames(bindings: string): string[] {
+  const names: string[] = [];
+  const namedMatch = bindings.match(/\{([^}]*)\}/);
+  const defaultPart = bindings
+    .replace(/\{[^}]*\}/, "")
+    .replace(/,/g, " ")
+    .trim();
+  if (defaultPart && !defaultPart.startsWith("*")) {
+    names.push(defaultPart);
+  }
+  if (namedMatch) {
+    for (const entry of namedMatch[1].split(",")) {
+      const e = entry.trim();
+      if (!e) continue;
+      const asMatch = e.match(/\bas\s+(\w+)$/);
+      names.push(asMatch ? asMatch[1] : e);
+    }
+  }
+  return names;
+}
+
+// ---------------------------------------------------------------------------
+// Resolve an imported router binding to its route file by parsing the source
+// file's own import statements. The specifier is resolved relative to the
+// source file's directory, so registration modules outside Servers/ root
+// (routes/legacy/*.ts, routes/v1/index.ts) work unchanged. Only resolutions
+// that land on an existing .ts file under routes/ or extensions/ are
+// accepted; anything else returns null so callers can fall back to the legacy
+// heuristics.
+// ---------------------------------------------------------------------------
+function resolveImportBinding(sourceFile: string, importName: string): string | null {
+  const content = fs.readFileSync(sourceFile, "utf-8");
+  const sourceDir = path.dirname(sourceFile);
+  const importRegex = /import\s+([^;]+?)\s+from\s+"(\.[^"]+)";/g;
+
+  let match: RegExpExecArray | null;
+  while ((match = importRegex.exec(content)) !== null) {
+    const bindings = match[1];
+    const specifier = match[2];
+    if (!parseImportedNames(bindings).includes(importName)) continue;
+
+    let resolved = path.resolve(sourceDir, specifier);
+    if (resolved.endsWith(".js")) resolved = resolved.slice(0, -3);
+    if (resolved.endsWith(".ts")) resolved = resolved.slice(0, -3);
+    resolved += ".ts";
+
+    if (!fs.existsSync(resolved)) continue;
+
+    const rel = path.relative(SERVERS_DIR, resolved);
+    if (rel.startsWith("routes" + path.sep) || rel.startsWith("extensions" + path.sep)) {
+      return resolved;
+    }
+  }
+
+  return null;
+}
+
+// ---------------------------------------------------------------------------
+// Find the route file that corresponds to an imported router binding.
+// Prefers binding-exact import resolution relative to the file the
+// registration was parsed from; falls back to the legacy substring heuristics
+// (which read sourceFile, i.e. app.ts for the flat mount list).
+// ---------------------------------------------------------------------------
+export function findRouteFile(importName: string, sourceFile: string = APP_FILE): string | null {
+  const resolved = resolveImportBinding(sourceFile, importName);
+  if (resolved) return resolved;
+
+  const content = fs.readFileSync(sourceFile, "utf-8");
   // Match imports from either the legacy `./routes/` folder or the newer
   // `./extensions/<key>/` layout — both register Express routers.
   const importPathRegex = /from\s+"\.\/(routes|extensions)\/([^"]+)";/g;
@@ -323,14 +474,15 @@ export function buildEndpoints(): Endpoint[] {
       continue;
     }
 
-    const routeFilePath = findRouteFile(reg.importName);
+    const routeFilePath = findRouteFile(reg.importName, reg.sourceFile);
     if (!routeFilePath || !fs.existsSync(routeFilePath)) {
       console.warn(`  Could not find route file for: ${reg.basePath} (${reg.importName})`);
       continue;
     }
 
     const rawEndpoints = parseRouteFile(routeFilePath);
-    const tag = deriveTag(reg.basePath);
+    const baseTag = deriveTag(reg.basePath);
+    const tag = reg.apiVersion ? `${reg.apiVersion}: ${baseTag}` : baseTag;
 
     for (const ep of rawEndpoints) {
       const fullPath = reg.basePath + ep.routePath;
@@ -400,6 +552,8 @@ export function deriveTag(basePath: string): string {
     "/api/ai-detection/repositories": "AI Detection",
     "/api/shadow-ai": "Shadow AI",
     "/api/v1/shadow-ai": "Shadow AI",
+    "/api/v1/intake-tier-suggestion": "Intake Forms",
+    "/api/v1/use-case-org-settings": "Use Case Settings",
     "/api/ai-incident-managements": "Incidents",
     "/api/approval-workflows": "Approval Workflows",
     "/api/approval-requests": "Approval Workflows",
@@ -483,12 +637,28 @@ function humanizeHandlerName(name: string): string {
 // ---------------------------------------------------------------------------
 // Merge discovered endpoints into existing swagger.yaml
 // ---------------------------------------------------------------------------
+
+// Generator-owned API description. swagger.yaml is never hand-edited, so the
+// versioning conventions live here and are (re)applied on every run.
+const API_DOC_DESCRIPTION = `AI Governance Platform API.
+
+**Versioning (ADR 0001):** paths under \`/v1/...\` (relative to the \`/api\`
+server — e.g. \`/v1/shadow-ai/events\` is served at \`/api/v1/shadow-ai/events\`)
+are the versioned API surface. All other paths are the legacy, unversioned
+surface: backward-compatible, frozen for bug fixes only, and deprecated
+through the process in \`docs/technical/adr/0001-api-versioning.md\`. New
+endpoints and changed contracts are introduced under \`/api/v1\`.
+
+**Tags:** versioned operations are tagged \`v1: <Resource>\`; legacy
+operations keep their historical tags.`;
+
 export function mergeSwagger(endpoints: Endpoint[], existing: any): any {
   const doc = JSON.parse(JSON.stringify(existing));
 
   // Ensure top-level structure
   doc.openapi = doc.openapi || "3.0.0";
   doc.info = doc.info || { title: "VerifyWise API", version: "2.0.0" };
+  doc.info.description = API_DOC_DESCRIPTION;
   doc.paths = doc.paths || {};
   doc.components = doc.components || {};
   doc.components.securitySchemes = doc.components.securitySchemes || {
@@ -500,7 +670,20 @@ export function mergeSwagger(endpoints: Endpoint[], existing: any): any {
   const usedOperationIds = new Set<string>();
   const allTags = new Set<string>();
 
-  for (const ep of endpoints) {
+  // Process endpoints in the existing spec's path order so regeneration is
+  // stable no matter how route registration is organized across app.ts and
+  // the legacy/v1 registration modules. Without this, reordering mounts would
+  // reshuffle the paths: block and swap operationIds between duplicate
+  // handler names (first occurrence wins the bare id). Undocumented endpoints
+  // keep their discovery order at the end.
+  const existingOrder = new Map(Object.keys(existingPaths).map((p, i) => [p, i]));
+  const orderedEndpoints = [...endpoints].sort((a, b) => {
+    const ai = existingOrder.get(a.openApiPath) ?? Number.MAX_SAFE_INTEGER;
+    const bi = existingOrder.get(b.openApiPath) ?? Number.MAX_SAFE_INTEGER;
+    return ai - bi;
+  });
+
+  for (const ep of orderedEndpoints) {
     const method = ep.method.toLowerCase();
     const openApiPath = ep.openApiPath;
 
@@ -582,7 +765,7 @@ if (require.main === module) {
 }
 
 function main() {
-  console.log("Parsing app.ts for route mappings...");
+  console.log("Parsing route registration files for route mappings...");
   const endpoints = buildEndpoints();
   console.log(`Found ${endpoints.length} endpoints`);
 

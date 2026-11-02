@@ -48,7 +48,7 @@ describe("deleteProjectWithSideEffects", () => {
 
     expect(result).toEqual({ deleted: true, withdrawnApprovalId: 900 });
     expect(lock).toHaveBeenCalledWith(111, 5, tx);
-    expect(withdraw).toHaveBeenCalledWith(900, 5, tx);
+    expect(withdraw).toHaveBeenCalledWith(900, 5, tx, { releaseUseCase: false });
     expect(record).toHaveBeenCalledWith(111, 8, 5, tx);
     expect(del).toHaveBeenCalledWith(111, 5, tx, {
       enqueueAutomationAfterCommit: false,

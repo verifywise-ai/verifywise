@@ -27,6 +27,22 @@ jest.mock("../../utils/euAiActClassification.utils", () => ({
   getLatestRunForSubmissionQuery: jest.fn(),
 }));
 jest.mock("../../utils/project.utils", () => ({ createNewProjectQuery: jest.fn() }));
+// Approving a use case reads the org's use case defaults (#5192): none set
+// unless a test sets mockUseCaseDefaults.
+let mockUseCaseDefaults: { default_geography: number | null; default_framework_ids: number[] } = {
+  default_geography: null,
+  default_framework_ids: [],
+};
+const mockAddFramework = jest.fn<any>();
+jest.mock("../../utils/useCaseOrgSettings.utils", () => ({
+  getUseCaseOrgSettings: async (organizationId: number) => ({
+    organization_id: organizationId,
+    ...mockUseCaseDefaults,
+  }),
+}));
+jest.mock("../../utils/framework.utils", () => ({
+  addFrameworkToProjectQuery: (...args: unknown[]) => mockAddFramework(...args),
+}));
 jest.mock("../../utils/eu.utils", () => ({ createEUFrameworkQuery: jest.fn() }));
 jest.mock("../../utils/modelInventory.utils", () => ({ createNewModelInventoryQuery: jest.fn() }));
 jest.mock("../../utils/useCaseChangeHistory.utils", () => ({
@@ -68,6 +84,9 @@ jest.mock("../../utils/statusCode.utils", () => ({
     500: (d: any) => ({ message: "Internal Server Error", data: d }),
   },
 }));
+jest.mock("../../utils/intakeTierSuggestion.utils", () => ({
+  setTierSuggestionResponseQuery: jest.fn<any>().mockResolvedValue(undefined),
+}));
 jest.mock("../../database/db", () => ({
   sequelize: {
     transaction: jest.fn<any>().mockResolvedValue({ commit: jest.fn(), rollback: jest.fn() }),
@@ -78,6 +97,7 @@ jest.mock("../../database/db", () => ({
 const ctrl = require("../intakeForm.ctrl") as typeof import("../intakeForm.ctrl");
 const intake = require("../../utils/intakeForm.utils");
 const runs = require("../../utils/euAiActClassification.utils");
+const tierResponses = require("../../utils/intakeTierSuggestion.utils");
 const projects = require("../../utils/project.utils");
 const euFramework = require("../../utils/eu.utils");
 const history = require("../../utils/useCaseChangeHistory.utils");
@@ -202,6 +222,41 @@ describe("public submit with the EU AI Act step", () => {
       const data = r.json.mock.calls[0][0].data;
       expect(data).not.toHaveProperty("result");
       expect(data).not.toHaveProperty("level");
+    },
+  );
+
+  it.each(["byId", "bySlug"] as const)(
+    "%s: stores the applicant's response with the server-scored level, not the page's",
+    async (route) => {
+      const r = res();
+      r.locals = { tierSuggestionResponse: { accepted: false, context: "Internal staff only" } };
+      await ROUTES[route].handler(
+        req({
+          params: ROUTES[route].params,
+          body: submitBody({ euAiActRiskAnswers: ANSWERS }),
+        }) as any,
+        r,
+      );
+      expect(r.status).toHaveBeenCalledWith(201);
+      const [submissionId, organizationId, stored] =
+        tierResponses.setTierSuggestionResponseQuery.mock.calls[0];
+      expect(submissionId).toBe(99);
+      expect(organizationId).toBe(5);
+      expect(stored).toMatchObject({
+        suggestedLevel: "Limited risk",
+        questionnaireVersion: 2,
+        accepted: false,
+        context: "Internal staff only",
+      });
+    },
+  );
+
+  it.each(["byId", "bySlug"] as const)(
+    "%s: stores no response through the legacy route",
+    async (route) => {
+      const r = await submit(route, submitBody({ euAiActRiskAnswers: ANSWERS }));
+      expect(r.status).toHaveBeenCalledWith(201);
+      expect(tierResponses.setTierSuggestionResponseQuery).not.toHaveBeenCalled();
     },
   );
 
@@ -406,6 +461,60 @@ describe("approval with the EU AI Act step", () => {
     expect(r.status).toHaveBeenCalledWith(200);
     expect(projects.createNewProjectQuery.mock.calls[0][2]).toEqual([]);
     expect(euFramework.createEUFrameworkQuery).not.toHaveBeenCalled();
+    expect(mockAddFramework).not.toHaveBeenCalled();
+  });
+
+  describe("with the organization's use case defaults", () => {
+    beforeEach(() => {
+      mockUseCaseDefaults = { default_geography: 2, default_framework_ids: [1, 12] };
+      mockAddFramework.mockResolvedValue(true);
+    });
+    afterEach(() => {
+      mockUseCaseDefaults = { default_geography: null, default_framework_ids: [] };
+    });
+
+    it("attaches the default frameworks and region when there is no run", async () => {
+      runs.getLatestRunForSubmissionQuery.mockResolvedValue(null);
+      const r = await approve({ confirmedEntityData: { project_title: "P" } });
+      expect(r.status).toHaveBeenCalledWith(200);
+      expect(projects.createNewProjectQuery.mock.calls[0][0].geography).toBe(2);
+      expect(projects.createNewProjectQuery.mock.calls[0][2]).toEqual([]);
+      expect(mockAddFramework.mock.calls.map((c: unknown[]) => [c[0], c[1]])).toEqual([
+        [1, 50],
+        [12, 50],
+      ]);
+    });
+
+    it("keeps the submission's own region", async () => {
+      runs.getLatestRunForSubmissionQuery.mockResolvedValue(null);
+      await approve({ confirmedEntityData: { project_title: "P", geography: "5" } });
+      expect(projects.createNewProjectQuery.mock.calls[0][0].geography).toBe(5);
+    });
+
+    it("adds the other defaults, not a second EU AI Act, when a run brings it", async () => {
+      runs.getLatestRunForSubmissionQuery.mockResolvedValue(RUN);
+      const r = await approve({ confirmedEntityData: { project_title: "P" } });
+      expect(r.status).toHaveBeenCalledWith(200);
+      expect(projects.createNewProjectQuery.mock.calls[0][2]).toEqual([1]);
+      expect(mockAddFramework.mock.calls.map((c: unknown[]) => c[0])).toEqual([12]);
+    });
+
+    it("still approves when a default framework's setup throws", async () => {
+      runs.getLatestRunForSubmissionQuery.mockResolvedValue(null);
+      mockAddFramework.mockRejectedValueOnce(new Error("structure seed failed"));
+      const r = await approve({ confirmedEntityData: { project_title: "P" } });
+      expect(r.status).toHaveBeenCalledWith(200);
+      // The second default is still added after the first one failed.
+      expect(mockAddFramework).toHaveBeenCalledTimes(2);
+    });
+
+    it("still approves when a default framework can no longer be added", async () => {
+      runs.getLatestRunForSubmissionQuery.mockResolvedValue(null);
+      mockAddFramework.mockResolvedValueOnce(false);
+      const r = await approve({ confirmedEntityData: { project_title: "P" } });
+      expect(r.status).toHaveBeenCalledWith(200);
+      expect(mockAddFramework).toHaveBeenCalledTimes(2);
+    });
   });
 
   // Answers to questions hidden by the scope answer: validation drops them.

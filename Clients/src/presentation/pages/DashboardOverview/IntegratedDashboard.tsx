@@ -50,6 +50,7 @@ import { PortfolioExposureCard } from "../../components/Charts/PortfolioExposure
 import { PortfolioTrendChart } from "../../components/Charts/PortfolioTrendChart";
 import { LossCategoryBreakdown } from "../../components/Charts/LossCategoryBreakdown";
 import UseCasesTable from "../../components/Table/UseCasesTable";
+import UseCaseLifecycleWidgets from "./UseCaseLifecycleWidgets";
 import { EmptyStateMessage } from "../../components/EmptyStateMessage";
 import ActivityItem from "../../components/ActivityItem";
 import { ButtonToggle } from "../../components/button-toggle";
@@ -740,6 +741,9 @@ const IntegratedDashboard: React.FC = () => {
                   </DashboardCard>
                 </Box>
 
+                {/* Executive Row 5b: Use case lifecycle (#5187) */}
+                <UseCaseLifecycleWidgets />
+
                 {/* Executive Row 5: Training, Policy, Incident status */}
                 <Box
                   sx={{
@@ -987,6 +991,9 @@ const IntegratedDashboard: React.FC = () => {
                     })()}
                   </DashboardCard>
                 </Box>
+
+                {/* Operations Row 4b: Use case lifecycle (#5187) */}
+                <UseCaseLifecycleWidgets />
 
                 {/* Operations Row 5: Training, Policy, Model lifecycle */}
                 <Box
