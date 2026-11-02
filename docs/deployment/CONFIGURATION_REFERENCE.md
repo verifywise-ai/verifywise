@@ -149,12 +149,11 @@ ENCRYPTION_KEY=your-32-character-encryption-key
 
 | Variable | Description | Default | Required |
 |----------|-------------|---------|----------|
-| `MULTI_TENANCY_ENABLED` | Enable multi-tenant mode | `false` | No |
+| `MULTI_TENANCY_ENABLED` | Allow new organizations to be created from the sign-up flow on the VerifyWise hosted app | `false` | No |
 
-When enabled:
-- Each organization gets a separate PostgreSQL schema
-- Tenant context is derived from JWT token
-- Data is isolated between organizations
+Every deployment stores all organizations in one shared `verifywise` schema. Each tenant-scoped table has an `organization_id` column, and the organization comes from the signed-in user's JWT. This holds whether the flag is on or off.
+
+The flag only controls organization creation through `POST /api/organizations` once a first organization exists. It takes effect only for requests from the VerifyWise hosted app hosts, so on a self-hosted server it has no effect. A SuperAdmin can create more organizations on any server through `POST /api/super-admin/organizations`, which does not check this flag. See `docs/technical/architecture/multi-tenancy.md`.
 
 ```bash
 MULTI_TENANCY_ENABLED=true

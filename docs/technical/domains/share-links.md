@@ -209,7 +209,7 @@ Frontend loads SharedView page
     ↓
 GET /api/shares/view/abc123...
     ↓
-Backend searches ALL tenant schemas
+Backend looks up the token in the share_links table
     ↓
 Token found? → Check is_enabled + expires_at
     ↓
@@ -337,7 +337,7 @@ useDeleteShareLink()                     // Delete mutation
 
 ### Design Choices
 
-- Token searches across all tenant schemas
+- Token lookup is a single query on the shared share_links table; the organization comes from the matched row
 - No rate limiting on public endpoints (consider adding)
 - No audit log of public views (only mutations logged)
 

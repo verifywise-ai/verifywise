@@ -178,12 +178,12 @@ CREATE USER verifywise_app WITH PASSWORD 'secure_password';
 
 -- Grant only required permissions
 GRANT CONNECT ON DATABASE verifywise TO verifywise_app;
-GRANT USAGE ON SCHEMA public TO verifywise_app;
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO verifywise_app;
-GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO verifywise_app;
+GRANT USAGE ON SCHEMA verifywise TO verifywise_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA verifywise TO verifywise_app;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA verifywise TO verifywise_app;
 
--- For multi-tenant schemas (created dynamically)
-ALTER DEFAULT PRIVILEGES IN SCHEMA public
+-- All organizations share the verifywise schema; cover tables added by later migrations
+ALTER DEFAULT PRIVILEGES IN SCHEMA verifywise
     GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO verifywise_app;
 ```
 
