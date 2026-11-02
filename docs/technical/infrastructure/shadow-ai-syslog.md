@@ -99,7 +99,7 @@ never ends the process.
 In generic key-value lines that start with a CEF header (`CEF:0|...|`), the
 extension is parsed the CEF way: a value may contain spaces and runs until the
 next ` key=`, and quotes are not special. Other lines split values on
-whitespace, with double quotes to keep spaces. A repeated identity key rejects
+whitespace, with double quotes to keep spaces. A repeated event key rejects
 the line in both modes.
 
 Squid access logs have no allowed or blocked field, so the Squid parser reads
@@ -110,8 +110,9 @@ with `allow`, `permit`, `pass` or `accept` as allowed. Any other value is left
 unset.
 
 The user must be a valid email address. A repeated `user`, `suser`, `dst`,
-`dhost`, `uri`, `request`, `action` or `act` key makes the line ambiguous and it
-is dropped as `unparseable`.
+`dhost`, `uri`, `request`, `action`, `act`, `method`, `requestMethod`,
+`department` or `timestamp` key makes the line ambiguous and it is dropped as
+`unparseable`. Repeats of keys the parser does not read are ignored.
 
 Timestamp order: the payload `timestamp` (Squid: field 1), then the syslog
 header, then the receive time. A payload or header timestamp more than a year

@@ -125,7 +125,7 @@ export const settingsContent: ArticleContent = {
       rows: [
         { reason: 'No user email in the log line', meaning: 'The user field is missing, empty or not an email address.' },
         { reason: 'No destination host in the log line', meaning: 'The line has no destination host or URL.' },
-        { reason: 'Line does not match the parser type', meaning: 'The parser could not read the line, or the line repeats a user, destination or action field.' },
+        { reason: 'Line does not match the parser type', meaning: 'The parser could not read the line, or the line repeats a field such as user, destination, action, method, department or timestamp.' },
         { reason: 'Sent from an IP that isn\'t allowed or is shared with another source', meaning: 'The sender IP is not the source\'s Allowed sender IP, or two sources share an IP in IP-only mode.' },
         { reason: 'Over the hourly event limit', meaning: 'The hourly rate limit was reached, or the listener\'s queue was full.' },
       ],

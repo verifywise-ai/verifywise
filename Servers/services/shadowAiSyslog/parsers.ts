@@ -36,9 +36,24 @@ function netskopeVerdict(raw: unknown): unknown {
   return NETSKOPE_VERDICTS[raw.trim().toLowerCase()] ?? raw;
 }
 
-// Keys that decide who, where or what. A line repeating one of them is
-// ambiguous (an attacker can append a second value), so it is rejected.
-const IDENTITY_KEYS = new Set(["user", "suser", "dst", "dhost", "uri", "request", "action", "act"]);
+// Keys that become event fields. A line repeating one of them is ambiguous:
+// free text (a user agent, a URL) placed before the real key could supply the
+// value that wins, or an attacker could append a second one. Such a line is
+// rejected rather than guessing which copy is real.
+const EVENT_KEYS = new Set([
+  "user",
+  "suser",
+  "dst",
+  "dhost",
+  "uri",
+  "request",
+  "action",
+  "act",
+  "method",
+  "requestMethod",
+  "department",
+  "timestamp",
+]);
 
 function unescapeValue(raw: string): string {
   return raw.replace(/\\(.)/g, "$1");
@@ -64,7 +79,7 @@ function parseCefExtension(extension: string): Fields | null {
     const valueStart = keys[i].index! + keys[i][0].length;
     const valueEnd = i + 1 < keys.length ? keys[i + 1].index! : extension.length;
     if (key in fields) {
-      if (IDENTITY_KEYS.has(key)) return null;
+      if (EVENT_KEYS.has(key)) return null;
       continue;
     }
     fields[key] = unescapeValue(extension.slice(valueStart, valueEnd).trimEnd());
@@ -72,7 +87,7 @@ function parseCefExtension(extension: string): Fields | null {
   return fields;
 }
 
-/** Key=value pairs, or null when an identity key appears more than once. */
+/** Key=value pairs, or null when an event key appears more than once. */
 function parseKeyValues(body: string, cef = false): Fields | null {
   const header = cef ? CEF_HEADER_RE.exec(body) : null;
   if (header) return parseCefExtension(body.slice(header[0].length));
@@ -80,7 +95,7 @@ function parseKeyValues(body: string, cef = false): Fields | null {
   for (const m of body.matchAll(KV_PAIR_RE)) {
     const key = m[1];
     if (key in fields) {
-      if (IDENTITY_KEYS.has(key)) return null;
+      if (EVENT_KEYS.has(key)) return null;
       continue;
     }
     fields[key] = unescapeValue(m[2] ?? m[3] ?? "");

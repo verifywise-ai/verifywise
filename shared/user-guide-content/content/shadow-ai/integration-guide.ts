@@ -401,7 +401,7 @@ export const integrationGuideContent: ArticleContent = {
       rows: [
         { reason: 'No user email in the log line', fix: 'The user field is empty, a dash, or not an email address. Check proxy authentication and the field names for the parser.' },
         { reason: 'No destination host in the log line', fix: 'The destination field (or URL) is missing from the line.' },
-        { reason: 'Line does not match the parser type', fix: 'The Parser type does not fit the log format, or the line repeats a field such as user or dst. Check that the parser type matches the log format.' },
+        { reason: 'Line does not match the parser type', fix: 'The Parser type does not fit the log format, or the line repeats a field such as user, dst, department or timestamp. Check that the parser type matches the log format.' },
         { reason: 'Sent from an IP that isn\'t allowed or is shared with another source', fix: 'The line came from an IP other than the source\'s Allowed sender IP, or two sources list the same IP in IP-only mode. Behind a load balancer, clear the Allowed sender IP.' },
         { reason: 'Over the hourly event limit', fix: 'The hourly rate limit in Settings was reached, or the server is writing events slower than they arrive.' },
       ],

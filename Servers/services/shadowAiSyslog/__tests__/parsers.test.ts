@@ -601,6 +601,24 @@ describe("parseLine", () => {
       });
     });
 
+    it.each([
+      ["zscaler", "user=a@b.co dst=x.com department=Sales department=Admin"],
+      ["zscaler", "user=a@b.co dst=x.com method=GET method=POST"],
+      ["zscaler", "user=a@b.co dst=x.com timestamp=2026-02-09T00:00:00Z timestamp=2026-02-09T01:00:00Z"],
+      ["generic_kv", "suser=a@b.co dhost=x.com requestMethod=GET requestMethod=POST"],
+      ["generic_kv", "CEF:0|V|P|1|100|Web|3|suser=a@b.co dhost=x.com department=A department=B"],
+    ])("rejects a repeated non-identity key (%s: %s)", (parser, line) => {
+      expect(parseLine(parser as "zscaler" | "generic_kv", line)).toEqual({
+        ok: false,
+        reason: "unparseable",
+      });
+    });
+
+    it("still ignores a repeat of a key the parser does not read", () => {
+      const r = parseLine("zscaler", "ua=a ua=b user=a@b.co dst=x.com");
+      expect(r.ok).toBe(true);
+    });
+
     it("does not read fields out of an escaped quote inside a quoted value", () => {
       expect(parseLine("zscaler", 'ua="a \\" user=victim@x.co \\"" dst=x.com')).toEqual({
         ok: false,
