@@ -98,7 +98,7 @@ describe("organization_members under RLS: removing a user from one organization"
     expect(await userExists(userId)).toBe(false);
   });
 
-  it("keeps a super admin's account when their last membership is removed", async () => {
+  it("deletes an elected super admin's account when their last membership is removed", async () => {
     const orgA = await createTestOrganization(`RLS members sa ${Date.now()}`);
     const userId = await createTestUser(
       orgA,
@@ -114,9 +114,14 @@ describe("organization_members under RLS: removing a user from one organization"
       removeUserFromOrganizationQuery(userId, orgA, t),
     );
 
-    expect(result).toEqual({ removed: true, accountDeleted: false });
-    expect(await userExists(userId)).toBe(true);
-    expect(await membershipsOf(userId)).toEqual([]);
+    // Like anyone else: the super_admins row goes with the account.
+    expect(result).toEqual({ removed: true, accountDeleted: true });
+    expect(await userExists(userId)).toBe(false);
+    const superAdminRows = await sequelize.query(
+      `SELECT 1 FROM super_admins WHERE user_id = :userId`,
+      { replacements: { userId }, type: QueryTypes.SELECT },
+    );
+    expect(superAdminRows).toHaveLength(0);
   });
 
   it("lets an organization invite a member of other organizations only", async () => {
