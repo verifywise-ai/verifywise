@@ -153,6 +153,24 @@ function pickTimestamp(receivedAt: Date, ...candidates: (string | undefined)[]):
   return receivedAt.toISOString();
 }
 
+// A time of day, and a trailing zone: Z, an offset (+02:00, -0500) or a name.
+const TIME_OF_DAY_RE = /\d:\d\d/;
+const TRAILING_ZONE_RE = /(?:Z|[+-]\d{2}(?::?\d{2})?|\b(?:GMT|UTC|UT|[ECMP][SD]T))\s*$/i;
+
+/**
+ * Date.parse reads a timestamp with a time but no zone (`2026-11-02 10:00:00`,
+ * Zscaler's `Mon Jun 20 15:29:11 2022`) in the server's local zone. Senders do
+ * not say which zone they use, so read it as UTC, like the syslog header.
+ */
+function parseDateText(text: string): number {
+  if (TIME_OF_DAY_RE.test(text) && !TRAILING_ZONE_RE.test(text)) {
+    return /^\d{4}-\d{2}-\d{2}[T ]/.test(text)
+      ? Date.parse(`${text.replace(" ", "T")}Z`)
+      : Date.parse(`${text} UTC`);
+  }
+  return Date.parse(text);
+}
+
 /** ISO string from an ISO date or an epoch (seconds or milliseconds). */
 function parseTimestamp(raw: unknown): string | undefined {
   let ms: number;
@@ -162,7 +180,7 @@ function parseTimestamp(raw: unknown): string | undefined {
     const text = raw.trim();
     ms = /^\d+(\.\d+)?$/.test(text)
       ? Number(text) * (Number(text) < 1e12 ? 1000 : 1)
-      : Date.parse(text);
+      : parseDateText(text);
   } else {
     return undefined;
   }

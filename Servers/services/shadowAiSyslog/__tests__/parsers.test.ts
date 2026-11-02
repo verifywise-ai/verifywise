@@ -370,6 +370,38 @@ describe("parseLine", () => {
     });
   });
 
+  describe("zone-less timestamps", () => {
+    const at = (timestamp: string) => {
+      const r = parseLine(
+        "generic_kv",
+        `suser=a@b.co dhost=x.com timestamp=${timestamp}`,
+        undefined,
+        RECEIVED,
+      );
+      return r.ok ? r.event.timestamp : r;
+    };
+    const originalTz = process.env.TZ;
+    afterEach(() => {
+      if (originalTz === undefined) delete process.env.TZ;
+      else process.env.TZ = originalTz;
+    });
+
+    it.each(["America/New_York", "Asia/Tokyo", "UTC"])("reads them as UTC in %s", (tz) => {
+      process.env.TZ = tz;
+      expect(at('"Mon Feb 09 14:32:00 2026"')).toBe("2026-02-09T14:32:00.000Z");
+      expect(at('"2026-02-09 14:32:00"')).toBe("2026-02-09T14:32:00.000Z");
+      expect(at("2026-02-09T14:32:00")).toBe("2026-02-09T14:32:00.000Z");
+      expect(at("2026-02-09T14:32:00.250")).toBe("2026-02-09T14:32:00.250Z");
+    });
+
+    it("leaves a timestamp that names its zone alone", () => {
+      expect(at("2026-02-09T14:32:00Z")).toBe("2026-02-09T14:32:00.000Z");
+      expect(at("2026-02-09T16:32:00+02:00")).toBe("2026-02-09T14:32:00.000Z");
+      expect(at("2026-02-09T09:32:00-0500")).toBe("2026-02-09T14:32:00.000Z");
+      expect(at('"Mon Feb 09 14:32:00 2026 GMT"')).toBe("2026-02-09T14:32:00.000Z");
+    });
+  });
+
   describe("column bounds", () => {
     const long = (n: number) => "a".repeat(n);
 
