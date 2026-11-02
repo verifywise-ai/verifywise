@@ -25,6 +25,20 @@ const MAX_TREND_POINTS = 731; // ~2 years of daily data
 const MAX_USER_TOOL_DETAIL_ROWS = 200;
 
 /**
+ * The one definition of AI usage for Shadow AI counts: an event counts when
+ * it matched an AI tool at ingestion. Proxy traffic that matched no tool is
+ * stored but is not AI usage, so it must not add users, events, prompts or
+ * departments to any count.
+ *
+ * It reads the is_ai_tool flag, not detected_tool_id: that foreign key is
+ * ON DELETE SET NULL, so filtering on it would drop a deleted tool's users
+ * from past counts. Pass the table alias when the query uses one.
+ */
+export function aiUsageEvent(alias?: string): string {
+  return `${alias ? `${alias}.` : ""}is_ai_tool = TRUE`;
+}
+
+/**
  * Get summary stats for the insights dashboard.
  */
 export async function getInsightsSummaryQuery(
@@ -37,12 +51,13 @@ export async function getInsightsSummaryQuery(
        (SELECT COUNT(DISTINCT user_email)
         FROM shadow_ai_events
         WHERE organization_id = :organizationId
-          AND detected_tool_id IS NOT NULL
+          AND ${aiUsageEvent()}
           AND event_timestamp > NOW() - INTERVAL '1 day' * :periodDays) as total_ai_users,
        (SELECT COUNT(DISTINCT department)
         FROM shadow_ai_events
         WHERE organization_id = :organizationId
           AND department IS NOT NULL
+          AND ${aiUsageEvent()}
           AND event_timestamp > NOW() - INTERVAL '1 day' * :periodDays) as departments_using_ai`,
     { replacements: { organizationId, periodDays } },
   );
@@ -65,6 +80,7 @@ export async function getInsightsSummaryQuery(
      FROM shadow_ai_events
      WHERE organization_id = :organizationId
        AND department IS NOT NULL
+       AND ${aiUsageEvent()}
        AND event_timestamp > NOW() - INTERVAL '1 day' * :periodDays
      GROUP BY department
      ORDER BY COUNT(*) DESC
@@ -153,6 +169,7 @@ export async function getUsersByDepartmentQuery(
        COUNT(DISTINCT user_email) as user_count
      FROM shadow_ai_events
      WHERE organization_id = :organizationId
+       AND ${aiUsageEvent()}
        AND event_timestamp > NOW() - INTERVAL '1 day' * :periodDays
      GROUP BY department
      ORDER BY user_count DESC, department ASC
@@ -186,6 +203,7 @@ export async function getTrendQuery(
        SELECT event_timestamp, user_email, detected_tool_id
        FROM shadow_ai_events
        WHERE organization_id = :organizationId
+         AND ${aiUsageEvent()}
          AND event_timestamp > NOW() - INTERVAL '1 day' * :periodDays
      ),
      new_tool_dates AS (
@@ -237,10 +255,9 @@ export async function getUserActivityQuery(
   const limit = options?.limit || 20;
   const offset = (page - 1) * limit;
 
-  // Only events matched to a known AI tool count; unmatched proxy traffic
-  // (detected_tool_id IS NULL) must not make a user appear in this list.
-  let whereClause =
-    "WHERE e.organization_id = :organizationId AND e.event_timestamp > NOW() - INTERVAL '30 days' AND e.detected_tool_id IS NOT NULL";
+  // Only AI usage counts (see aiUsageEvent); the list and its total share
+  // this clause so they always agree.
+  let whereClause = `WHERE e.organization_id = :organizationId AND e.event_timestamp > NOW() - INTERVAL '30 days' AND ${aiUsageEvent("e")}`;
   const replacements: Record<string, any> = { organizationId, limit, offset };
 
   if (options?.department) {
@@ -264,6 +281,8 @@ export async function getUserActivityQuery(
        COALESCE(MAX(t.risk_score), 0) as risk_score,
        COALESCE(MAX(e.department), 'Unknown') as department
      FROM shadow_ai_events e
+     -- LEFT, not INNER: events of a deleted tool (detected_tool_id now NULL)
+     -- still count as AI usage; their risk falls back to 0 via COALESCE.
      LEFT JOIN shadow_ai_tools t ON e.organization_id = t.organization_id AND e.detected_tool_id = t.id
      ${whereClause}
      GROUP BY e.user_email
@@ -305,6 +324,7 @@ export async function getDepartmentActivityQuery(
        FROM shadow_ai_events
        WHERE organization_id = :organizationId
          AND event_timestamp > NOW() - INTERVAL '30 days'
+         -- Naming a top tool needs a tool that still exists.
          AND detected_tool_id IS NOT NULL
        GROUP BY department, detected_tool_id
        ORDER BY department, tool_events DESC
@@ -320,6 +340,7 @@ export async function getDepartmentActivityQuery(
      LEFT JOIN top_tools tt ON COALESCE(e.department, 'Unknown') = tt.department
      LEFT JOIN shadow_ai_tools t2 ON e.organization_id = t2.organization_id AND tt.detected_tool_id = t2.id
      WHERE e.organization_id = :organizationId
+       AND ${aiUsageEvent("e")}
        AND e.event_timestamp > NOW() - INTERVAL '30 days'
      GROUP BY COALESCE(e.department, 'Unknown'), t2.name
      ORDER BY total_prompts DESC, department ASC

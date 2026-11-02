@@ -215,9 +215,10 @@ export async function ingestEvents(req: Request, res: Response) {
       let detectedToolId: number | undefined;
 
       if (normalized.department) allDepartments.add(normalized.department);
-      allEmails.add(normalized.user_email);
 
       if (registryMatch) {
+        // Only AI usage makes someone a user (new_user_detected rule).
+        allEmails.add(normalized.user_email);
         const { id: toolId, isNew } = await ensureTenantTool(
           organizationId,
           registryMatch,

@@ -70,7 +70,8 @@ async function insertEventChunk(
     values.push(
       `(:organizationId, :user_email_${i}, :destination_${i}, :uri_path_${i}, :http_method_${i},
         :action_${i}, :detected_tool_id_${i}, :detected_model_${i},
-        :event_timestamp_${i}, :department_${i}, :job_title_${i}, :manager_email_${i})`,
+        :event_timestamp_${i}, :department_${i}, :job_title_${i}, :manager_email_${i},
+        :is_ai_tool_${i})`,
     );
     replacements[`user_email_${i}`] = evt.user_email;
     replacements[`destination_${i}`] = evt.destination;
@@ -78,6 +79,9 @@ async function insertEventChunk(
     replacements[`http_method_${i}`] = evt.http_method || null;
     replacements[`action_${i}`] = evt.action || "allowed";
     replacements[`detected_tool_id_${i}`] = evt.detected_tool_id || null;
+    // Matched an AI tool at ingestion. Stored on the event so the usage still
+    // counts after the tool is deleted and detected_tool_id is set to NULL.
+    replacements[`is_ai_tool_${i}`] = evt.detected_tool_id != null;
     replacements[`detected_model_${i}`] = evt.detected_model || null;
     replacements[`event_timestamp_${i}`] = evt.event_timestamp;
     replacements[`department_${i}`] = evt.department || null;
@@ -89,7 +93,7 @@ async function insertEventChunk(
     INSERT INTO shadow_ai_events
       (organization_id, user_email, destination, uri_path, http_method, action,
        detected_tool_id, detected_model, event_timestamp,
-       department, job_title, manager_email)
+       department, job_title, manager_email, is_ai_tool)
     VALUES ${values.join(",\n")}
   `;
 

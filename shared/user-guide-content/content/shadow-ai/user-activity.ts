@@ -20,14 +20,14 @@ export const userActivityContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The default view lists individual users who have been detected using AI tools. The table includes:',
+      text: 'The default view lists individual users who have been detected using AI tools. A user appears here only if some of their traffic matched an AI tool. The table includes:',
     },
     {
       type: 'bullet-list',
       items: [
         { bold: 'User', text: 'The user\'s email address (click to open the detail view)' },
         { bold: 'Department', text: 'The department the user belongs to' },
-        { bold: 'Total prompts', text: 'Cumulative number of interactions recorded' },
+        { bold: 'Total prompts', text: 'Number of prompts (POST requests) sent to AI tools' },
         { bold: 'Risk score', text: 'Aggregated risk across the tools this user accesses' },
       ],
     },
@@ -68,7 +68,7 @@ export const userActivityContent: ArticleContent = {
       items: [
         { bold: 'Department', text: 'Name of the department' },
         { bold: 'Users', text: 'Number of unique users in this department who accessed AI tools' },
-        { bold: 'Total prompts', text: 'Cumulative interactions across all users in the department' },
+        { bold: 'Total prompts', text: 'Prompts (POST requests) sent to AI tools by all users in the department' },
         { bold: 'Top tool', text: 'The most frequently used AI tool in this department' },
         { bold: 'Risk score', text: 'Aggregated risk for the department' },
       ],
