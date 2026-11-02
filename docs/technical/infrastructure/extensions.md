@@ -414,7 +414,7 @@ sync never overlap.
 ### Schedule, backoff and the tick
 
 `extension_sync_tick` (`scheduleExtensionSyncTick`, every 5 minutes,
-non-obliterating, registered in `addAllJobs()`) first closes every org's stale
+registered in `addAllJobs()`) first closes every org's stale
 `started` runs of each provider with a schedule (`closeStaleRunsForProvider`,
 each org under its own advisory lock), so an abandoned scheduled run raises the
 backoff before the due check; then it runs `DUE_RUNS_SQL` once per provider. It

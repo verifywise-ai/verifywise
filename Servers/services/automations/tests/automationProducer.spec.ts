@@ -100,10 +100,10 @@ describe("automationProducer", () => {
   });
 
   describe("scheduleVendorReviewDateNotification", () => {
-    it("should obliterate queue and add a repeating job", async () => {
+    it("should add a repeating job at midnight without obliterating", async () => {
       await scheduleVendorReviewDateNotification();
 
-      expect(mockObliterate).toHaveBeenCalledWith({ force: true });
+      expect(mockObliterate).not.toHaveBeenCalled();
       expectSchedulerCall("send_vendor_notification", { type: "review_date" }, "0 0 * * *");
     });
   });
@@ -121,10 +121,10 @@ describe("automationProducer", () => {
   });
 
   describe("scheduleReportNotification", () => {
-    it("should obliterate queue and add a repeating job", async () => {
+    it("should add a repeating job at midnight without obliterating", async () => {
       await scheduleReportNotification();
 
-      expect(mockObliterate).toHaveBeenCalledWith({ force: true });
+      expect(mockObliterate).not.toHaveBeenCalled();
       expectSchedulerCall("send_report_notification", { type: "report_notification" }, "0 0 * * *");
     });
   });

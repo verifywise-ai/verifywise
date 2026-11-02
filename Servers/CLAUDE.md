@@ -1,6 +1,6 @@
 # Servers — Backend Development Guide
 
-> **Last Updated:** 2026-10-29
+> **Last Updated:** 2026-11-02
 
 ---
 
@@ -163,6 +163,10 @@ Bug fixes to existing unversioned endpoints stay on their legacy router in `rout
 
 - **Frameworks 5–25** (SOC 2, GDPR, HIPAA, ...) are declared in `structures/<Name>/*.structure.ts` (registry `structures/index.ts`) and served by the generic `routes/frameworkImpl.route.ts`. Migrations `require("../../dist/structures")`, so run `npm run build` before `npm run migrate-db`. Guide: `docs/technical/guides/adding-new-framework.md`.
 - **Extensions** live in `extensions/<key>/`. They are mounted at `/api/extensions/<key>` **after** the `/api/extensions` catalog router, and gated with `requireExtensionEnabled("<key>")`. Read config with `ExtensionService.getRuntimeConfiguration(key, orgId)`. Reference: `docs/technical/infrastructure/extensions.md`.
+
+### Background Jobs (BullMQ)
+
+`addAllJobs` (`jobs/producer.ts`) runs at every backend start, on every replica. Register a recurring job with `upsertJobScheduler`, which is idempotent by scheduler id, and never `obliterate` or `drain` a queue there: the automation queue also carries one-off jobs (extension sync runs, manual reports, emails, risk link recomputes) that other replicas queued or are running. To retire a scheduler, remove it by id with `removeJobScheduler`. Reference: `docs/technical/infrastructure/automations.md#startup-flow`.
 
 ---
 

@@ -140,7 +140,6 @@ export async function enqueueRiskLinkDirection(organizationId: number, riskIds: 
 }
 
 export async function scheduleVendorReviewDateNotification() {
-  await automationQueue.obliterate({ force: true });
   logger.info("Adding Vendor Review Date Notification jobs to the queue...");
   // Vendor Review Date Notification Every day at 12 am
   await automationQueue.upsertJobScheduler(
@@ -179,7 +178,6 @@ export async function schedulePolicyDueSoonNotification() {
 }
 
 export async function scheduleReportNotification() {
-  await automationQueue.obliterate({ force: true });
   logger.info("Adding Report Notification jobs to the queue...");
   // Report Notification Every day at 12 am
   await automationQueue.upsertJobScheduler(

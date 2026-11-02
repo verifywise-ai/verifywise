@@ -8,7 +8,6 @@ export const notificationQueue = new Queue("slack-notifications", {
 });
 
 export async function scheduleDailyNotification() {
-  await notificationQueue.obliterate({ force: true });
   logger.info("Adding Slack notification jobs to the queue...");
 
   // Policy Due Soon Slack Notification Every day at 9 am

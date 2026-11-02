@@ -38,9 +38,9 @@ describe("slackProducer", () => {
   });
 
   describe("scheduleDailyNotification", () => {
-    it("should obliterate existing jobs before adding new ones", async () => {
+    it("should not obliterate the queue (the scheduler upsert is idempotent by id)", async () => {
       await scheduleDailyNotification();
-      expect(mockObliterate).toHaveBeenCalledWith({ force: true });
+      expect(mockObliterate).not.toHaveBeenCalled();
     });
 
     it("should schedule policy notification job with cron pattern", async () => {

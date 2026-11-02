@@ -114,17 +114,17 @@ Recurring (cron) jobs only — see [On-Demand Jobs](#on-demand-jobs) below for j
 ```typescript
 // File: Servers/services/automations/automationProducer.ts
 
-export const scheduleVendorReviewDateNotification = async () => {
-  await automationQueue.add(
+export async function scheduleVendorReviewDateNotification() {
+  await automationQueue.upsertJobScheduler(
     "send_vendor_notification",
-    { type: "review_date" },
+    { pattern: "0 0 * * *" },  // Daily at midnight
     {
-      repeat: { pattern: "0 0 * * *" },  // Daily at midnight
-      removeOnComplete: true,
-      removeOnFail: false,
+      name: "send_vendor_notification",
+      data: { type: "review_date" },
+      opts: { removeOnComplete: true, removeOnFail: false },
     }
   );
-};
+}
 ```
 
 **Processing Logic:**
@@ -136,17 +136,17 @@ export const scheduleVendorReviewDateNotification = async () => {
 ### Report Notifications
 
 ```typescript
-export const scheduleReportNotification = async () => {
-  await automationQueue.add(
+export async function scheduleReportNotification() {
+  await automationQueue.upsertJobScheduler(
     "send_report_notification",
-    { type: "report_notification" },
+    { pattern: "0 0 * * *" },
     {
-      repeat: { pattern: "0 0 * * *" },
-      removeOnComplete: true,
-      removeOnFail: false,
+      name: "send_report_notification",
+      data: { type: "report_notification" },
+      opts: { removeOnComplete: true, removeOnFail: false },
     }
   );
-};
+}
 ```
 
 **Processing Logic:**
@@ -159,17 +159,17 @@ export const scheduleReportNotification = async () => {
 ### PMM Hourly Check
 
 ```typescript
-export const schedulePMMHourlyCheck = async () => {
-  await automationQueue.add(
+export async function schedulePMMHourlyCheck() {
+  await automationQueue.upsertJobScheduler(
     "pmm_hourly_check",
-    { type: "pmm" },
+    { pattern: "0 * * * *" },  // Every hour
     {
-      repeat: { pattern: "0 * * * *" },  // Every hour
-      removeOnComplete: true,
-      removeOnFail: false,
+      name: "pmm_hourly_check",
+      data: { type: "pmm" },
+      opts: { removeOnComplete: true, removeOnFail: false },
     }
   );
-};
+}
 ```
 
 **Processing Logic:**
@@ -184,15 +184,15 @@ export const schedulePMMHourlyCheck = async () => {
 Powers the template-first reporting layer (see [Reporting Domain](../domains/reporting.md)). This repeatable job runs every 15 minutes and dispatches due scheduled reports.
 
 ```typescript
-// Registered in Servers/jobs/producer.ts (addAllJobs)
+// scheduleReportSchedulerTick, registered in Servers/jobs/producer.ts (addAllJobs)
 
-await automationQueue.add(
+await automationQueue.upsertJobScheduler(
   "report_scheduler_tick",
-  { type: "report_scheduler_tick" },
+  { pattern: "*/15 * * * *" },  // Every 15 minutes
   {
-    repeat: { pattern: "*/15 * * * *" },  // Every 15 minutes
-    removeOnComplete: true,
-    removeOnFail: false,
+    name: "report_scheduler_tick",
+    data: { type: "reporting" },
+    opts: { removeOnComplete: true, removeOnFail: false },
   }
 );
 ```
@@ -620,6 +620,13 @@ import { addAllJobs } from "./jobs/producer";
 addAllJobs();
 ```
 
+Every backend start runs `addAllJobs`, on every replica, so it never empties a queue. The automation queue also holds the [on-demand jobs](#on-demand-jobs) (`extension_sync_run`, `generate_report_manual`, `send_email`, the risk link recomputes), which users or other replicas queued or are running. Each step runs on its own (`safeSchedule`): one that fails is logged and the rest still run.
+
+- **Schedulers are upserted.** `upsertJobScheduler` is idempotent by scheduler id: another start leaves one next job per scheduler, and a changed pattern takes effect at the next start.
+- **Retiring a scheduler.** Deleting a `schedule*` function leaves its scheduler in Redis. Remove it by id at startup, as `scheduleExtensionSyncTick` does with `removeJobScheduler("jira_assets_scheduled_sync_check")`.
+- **BullMQ 5 leftovers.** Releases before v2.5 scheduled with `queue.add(name, data, { repeat })`, and BullMQ 6 keeps running such an entry beside the scheduler that replaced it. `addAllJobs` therefore first removes them from both queues with `removeLegacyRepeatableJobs` (`Servers/jobs/legacyRepeatableJobs.ts`): entries without an iteration count, or under BullMQ 5's md5 key. On a queue without such entries it removes nothing.
+- **Never `obliterate` or `drain` these queues at startup.** Either deletes the on-demand jobs, and `obliterate({ force: true })` also deletes jobs a worker is running, whose worker then fails with "Missing key for job". Obliterate deletes the schedulers too.
+
 ## Redis Configuration
 
 ```env
@@ -674,6 +681,7 @@ await queue.add(jobName, data, {
 | File | Purpose |
 |------|---------|
 | `Servers/jobs/producer.ts` | Job scheduling entry point |
+| `Servers/jobs/legacyRepeatableJobs.ts` | Removes BullMQ 5 repeatable jobs at startup |
 | `Servers/jobs/worker.ts` | Worker initialization |
 | `Servers/services/automations/automationProducer.ts` | Automation queue producer |
 | `Servers/services/automations/automationWorker.ts` | Automation queue worker |
