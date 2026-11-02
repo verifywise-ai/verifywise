@@ -549,8 +549,10 @@ export interface GdeltEngineDeps {
  *   GDELT_MAX_ASKS refusals: the last one is the answer of the run;
  * - a request that failed for a reason that passes (a network error, a time-out, a 5xx) is asked
  *   once more through the queue, so that the gap holds for it too;
- * - a load that no search waits for any more is given up, before its request is made, and the next
- *   search starts a new one: that load has no answer to keep. A real failure of GDELT that comes
+ * - a load that no search waits for any more is given up, and the next search starts a new one:
+ *   that load has no answer to keep. It is given up before its request when the request was not
+ *   made yet, or after it when the request was in flight and came back as a 429, a 5xx or a
+ *   time-out. A real failure of GDELT that comes
  *   back after every search has left (a 403, a refusal of robots.txt, a type that is not JSON) is
  *   still the answer of the run.
  */
