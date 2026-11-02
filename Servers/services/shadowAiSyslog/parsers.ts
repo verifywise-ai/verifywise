@@ -315,14 +315,18 @@ function parseDateText(text: string): number {
       ? Date.parse(`${text.replace(" ", "T")}Z`)
       : Date.parse(`${text} UTC`);
   }
-  const abbreviation = (tail.match(/[a-z]+/gi) ?? []).find((w) => w.toUpperCase() in ZONE_OFFSETS);
-  if (!abbreviation) return Date.parse(text);
-  return Date.parse(
-    text.replace(
-      new RegExp(`\\(?\\b${abbreviation}\\b\\)?`),
-      `GMT${ZONE_OFFSETS[abbreviation.toUpperCase()]}`,
-    ),
-  );
+  // Swap the first listed name (with its brackets, if any) for its GMT offset.
+  const zoneWord = /\(?\b([a-z]+)\b\)?/gi;
+  let zone: RegExpExecArray | null;
+  while ((zone = zoneWord.exec(tail))) {
+    const name = zone[1].toUpperCase();
+    if (!Object.prototype.hasOwnProperty.call(ZONE_OFFSETS, name)) continue;
+    const start = text.length - tail.length + zone.index;
+    return Date.parse(
+      `${text.slice(0, start)}GMT${ZONE_OFFSETS[name]}${text.slice(start + zone[0].length)}`,
+    );
+  }
+  return Date.parse(text);
 }
 
 /** ISO string from an ISO date or an epoch (seconds or milliseconds). */

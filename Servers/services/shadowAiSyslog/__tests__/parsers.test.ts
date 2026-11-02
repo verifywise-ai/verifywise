@@ -566,6 +566,8 @@ describe("parseLine", () => {
       expect(at('"2026-02-09 14:32:00 JST"')).toBe("2026-02-09T05:32:00.000Z");
       expect(at('"2026-02-09 14:32:00 AEDT"')).toBe("2026-02-09T03:32:00.000Z");
       expect(at('"2026-02-09 14:32:00 BST"')).toBe("2026-02-09T13:32:00.000Z");
+      // A bracketed name on its own.
+      expect(at('"2026-02-09 14:32:00 (JST)"')).toBe("2026-02-09T05:32:00.000Z");
     });
 
     it("falls back to the header time when the abbreviation is unknown", () => {
