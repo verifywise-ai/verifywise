@@ -45,6 +45,7 @@ import {
   createSyslogConfigQuery,
   updateSyslogConfigQuery,
   deleteSyslogConfigQuery,
+  regenerateSyslogKeyQuery,
   getSettingsQuery,
   lockShadowAiSettings,
   updateSettingsQuery,
@@ -52,6 +53,9 @@ import {
 import { ShadowAiToolStatus } from "../domain.layer/interfaces/i.shadowAi";
 
 import { translateError } from "../utils/i18n.utils";
+import { normalizeIp } from "../services/shadowAiSyslog/ip";
+import { readSyslogListenerConfig } from "../services/shadowAiSyslog/config";
+import { invalidateSourceCache } from "../services/shadowAiSyslog/sourceCache";
 import {
   appendRetentionChangeToLedger,
   canChangeRetentionPeriods,
@@ -1057,6 +1061,16 @@ export async function getAlertHistory(req: Request, res: Response) {
 
 // ─── Configuration ──────────────────────────────────────────────────────
 
+/**
+ * The sender IP to store. undefined leaves the column alone, null (from null or
+ * an empty string) clears it. The validator has already rejected non-IPs.
+ */
+function toStoredSenderIp(value: unknown): string | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null || (typeof value === "string" && value.trim() === "")) return null;
+  return typeof value === "string" ? normalizeIp(value) : null;
+}
+
 export async function getSyslogConfigs(req: Request, res: Response) {
   const fn = "getSyslogConfigs";
   const userId = req.userId!;
@@ -1121,12 +1135,11 @@ export async function createSyslogConfig(req: Request, res: Response) {
         .json(STATUS_CODE[403](req.t!("Only admins can manage syslog configuration")));
     }
 
-    const { source_identifier, parser_type, is_active } = req.body;
-    if (!source_identifier || !parser_type) {
-      return res
-        .status(400)
-        .json(STATUS_CODE[400](req.t!("Missing required fields: source_identifier, parser_type")));
+    const { parser_type, is_active } = req.body;
+    if (!parser_type) {
+      return res.status(400).json(STATUS_CODE[400](req.t!("Missing required fields: parser_type")));
     }
+    const source_identifier = toStoredSenderIp(req.body.source_identifier) ?? null;
 
     const validParsers = ["zscaler", "netskope", "squid", "generic_kv"];
     if (!validParsers.includes(parser_type)) {
@@ -1139,21 +1152,22 @@ export async function createSyslogConfig(req: Request, res: Response) {
       );
     }
 
-    const config = await createSyslogConfigQuery(organizationId, {
+    const { config, key } = await createSyslogConfigQuery(organizationId, {
       source_identifier,
       parser_type,
       is_active: is_active !== false,
     });
+    invalidateSourceCache();
 
     await logSuccess({
       eventType: "Create",
-      description: `syslog config created: ${source_identifier}`,
+      description: `syslog config created: ${config.id}`,
       functionName: fn,
       fileName: FILE_NAME,
       userId,
       organizationId,
     });
-    return res.status(201).json(STATUS_CODE[201](config));
+    return res.status(201).json(STATUS_CODE[201]({ ...config, key }));
   } catch (error) {
     await logFailure({
       eventType: "Create",
@@ -1193,7 +1207,8 @@ export async function updateSyslogConfig(req: Request, res: Response) {
       return res.status(400).json(STATUS_CODE[400](req.t!("Invalid config ID")));
     }
 
-    const { source_identifier, parser_type, is_active } = req.body;
+    const { parser_type, is_active } = req.body;
+    const source_identifier = toStoredSenderIp(req.body.source_identifier);
 
     if (parser_type) {
       const validParsers = ["zscaler", "netskope", "squid", "generic_kv"];
@@ -1217,6 +1232,7 @@ export async function updateSyslogConfig(req: Request, res: Response) {
     if (!updated) {
       return res.status(404).json(STATUS_CODE[404](req.t!("Syslog config not found")));
     }
+    invalidateSourceCache();
 
     await logSuccess({
       eventType: "Update",
@@ -1270,6 +1286,7 @@ export async function deleteSyslogConfig(req: Request, res: Response) {
     if (!deleted) {
       return res.status(404).json(STATUS_CODE[404](req.t!("Syslog config not found")));
     }
+    invalidateSourceCache();
 
     await logSuccess({
       eventType: "Delete",
@@ -1284,6 +1301,104 @@ export async function deleteSyslogConfig(req: Request, res: Response) {
     await logFailure({
       eventType: "Delete",
       description: "failed to delete syslog config",
+      functionName: fn,
+      fileName: FILE_NAME,
+      userId,
+      organizationId,
+      error: error as Error,
+    });
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+  }
+}
+
+export async function regenerateSyslogKey(req: Request, res: Response) {
+  const fn = "regenerateSyslogKey";
+  const userId = req.userId!;
+  const organizationId = req.organizationId!;
+  const configId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+
+  logProcessing({
+    description: `regenerating syslog key: ${configId}`,
+    functionName: fn,
+    fileName: FILE_NAME,
+    userId,
+    organizationId,
+  });
+
+  try {
+    if (req.role !== "Admin" && req.role !== "SuperAdmin") {
+      return res
+        .status(403)
+        .json(STATUS_CODE[403](req.t!("Only admins can manage syslog configuration")));
+    }
+
+    if (isNaN(configId)) {
+      return res.status(400).json(STATUS_CODE[400](req.t!("Invalid config ID")));
+    }
+
+    const result = await regenerateSyslogKeyQuery(organizationId, configId);
+    if (!result) {
+      return res.status(404).json(STATUS_CODE[404](req.t!("Syslog config not found")));
+    }
+    invalidateSourceCache();
+
+    await logSuccess({
+      eventType: "Update",
+      description: `syslog key regenerated: ${configId}`,
+      functionName: fn,
+      fileName: FILE_NAME,
+      userId,
+      organizationId,
+    });
+    return res.status(200).json(STATUS_CODE[200]({ ...result.config, key: result.key }));
+  } catch (error) {
+    await logFailure({
+      eventType: "Update",
+      description: "failed to regenerate syslog key",
+      functionName: fn,
+      fileName: FILE_NAME,
+      userId,
+      organizationId,
+      error: error as Error,
+    });
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+  }
+}
+
+export async function getSyslogStatus(req: Request, res: Response) {
+  const fn = "getSyslogStatus";
+  const userId = req.userId!;
+  const organizationId = req.organizationId!;
+
+  logProcessing({
+    description: "fetching syslog listener status",
+    functionName: fn,
+    fileName: FILE_NAME,
+    userId,
+    organizationId,
+  });
+
+  try {
+    if (req.role !== "Admin" && req.role !== "SuperAdmin") {
+      return res
+        .status(403)
+        .json(STATUS_CODE[403](req.t!("Only admins can manage syslog configuration")));
+    }
+
+    const config = readSyslogListenerConfig();
+    return res.status(200).json(
+      STATUS_CODE[200]({
+        enabled: config.enabled,
+        port: config.port,
+        tls: Boolean(config.tlsCertFile && config.tlsKeyFile),
+        plaintext: config.allowPlaintext,
+        ipOnly: config.allowIpOnly,
+      }),
+    );
+  } catch (error) {
+    await logFailure({
+      eventType: "Read",
+      description: "failed to read syslog listener status",
       functionName: fn,
       fileName: FILE_NAME,
       userId,

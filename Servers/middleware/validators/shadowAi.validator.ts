@@ -1,5 +1,6 @@
 import { body, param } from "express-validator";
 import { handleValidationErrors } from "../validate.middleware";
+import { normalizeIp } from "../../services/shadowAiSyslog/ip";
 
 const idParam = param("id").isInt({ min: 1 }).withMessage("id must be a positive integer");
 
@@ -66,12 +67,22 @@ export const validateUpdateRule = [
 
 const PARSER_TYPES = ["zscaler", "netskope", "squid", "generic_kv"];
 
+/**
+ * The allowed sender IP. Optional; an empty string or null clears it. A
+ * hostname is rejected, so a legacy row with one can still be updated, just
+ * not re-saved with that value.
+ */
+const sourceIdentifier = body("source_identifier")
+  .optional({ nullable: true })
+  .custom((value) => {
+    if (typeof value !== "string") throw new Error("source_identifier must be an IP address");
+    if (value.trim() === "") return true;
+    if (normalizeIp(value) === null) throw new Error("source_identifier must be an IP address");
+    return true;
+  });
+
 export const validateCreateSyslogConfig = [
-  body("source_identifier")
-    .isString()
-    .trim()
-    .notEmpty()
-    .withMessage("source_identifier is required"),
+  sourceIdentifier,
   body("parser_type")
     .isIn(PARSER_TYPES)
     .withMessage(`parser_type must be one of: ${PARSER_TYPES.join(", ")}`),
@@ -81,7 +92,7 @@ export const validateCreateSyslogConfig = [
 
 export const validateUpdateSyslogConfig = [
   idParam,
-  body("source_identifier").optional({ nullable: true }).isString().trim().notEmpty(),
+  sourceIdentifier,
   body("parser_type").optional({ nullable: true }).isIn(PARSER_TYPES),
   body("is_active").optional({ nullable: true }).isBoolean(),
   handleValidationErrors,

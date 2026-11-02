@@ -27596,3 +27596,31 @@ paths:
       security:
         -
           bearerAuth: []
+  /shadow-ai/config/syslog/status:
+    get:
+      summary: 'Get Syslog Status'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Shadow AI'
+      operationId: getSyslogStatus
+      security:
+        -
+          bearerAuth: []
+  '/shadow-ai/config/syslog/{id}/regenerate-key':
+    post:
+      summary: 'Regenerate Syslog Key'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Shadow AI'
+      operationId: regenerateSyslogKey
+      security:
+        -
+          bearerAuth: []

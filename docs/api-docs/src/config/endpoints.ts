@@ -10917,6 +10917,28 @@ export const shadowAiEndpoints: Endpoint[] = [
     ],
     tag: "v1: Shadow AI",
   },
+  {
+    method: 'GET',
+    path: '/shadow-ai/config/syslog/status',
+    summary: "Get Syslog Status",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Shadow AI",
+  },
+  {
+    method: 'POST',
+    path: '/shadow-ai/config/syslog/{id}/regenerate-key',
+    summary: "Regenerate Syslog Key",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Shadow AI",
+  },
 ];
 
 // Share Links endpoints
