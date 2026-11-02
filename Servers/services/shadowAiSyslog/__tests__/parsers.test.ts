@@ -51,6 +51,24 @@ describe("parseLine", () => {
       });
     });
 
+    it.each([
+      ["chat.openai.com:443", "chat.openai.com"],
+      ["Chat.OpenAI.com.", "chat.openai.com"],
+      ["[2001:db8::1]:443", "2001:db8::1"],
+    ])("normalises dst %s to %s", (dst, expected) => {
+      const r = parseLine("zscaler", `user=a@b.co dst=${dst}`);
+      expect(r.ok && r.event.destination).toBe(expected);
+    });
+
+    it("falls back to the uri host when dst is not a host", () => {
+      const r = parseLine("zscaler", 'user=a@b.co dst="not a host" uri=https://x.com/p');
+      expect(r.ok && r.event.destination).toBe("x.com");
+      expect(parseLine("zscaler", 'user=a@b.co dst="not a host"')).toEqual({
+        ok: false,
+        reason: "no_destination",
+      });
+    });
+
     it("drops a line with no pairs as unparseable", () => {
       expect(parseLine("zscaler", "hello world")).toEqual({
         ok: false,
@@ -309,6 +327,14 @@ describe("parseLine", () => {
         ok: true,
         event: expect.objectContaining({ department: "Sales" }),
       });
+    });
+
+    it.each([
+      ["chat.openai.com:443", "chat.openai.com"],
+      ["chat.openai.com.", "chat.openai.com"],
+    ])("normalises dhost %s to %s", (dhost, expected) => {
+      const r = parseLine("generic_kv", `suser=a@b.co dhost=${dhost}`);
+      expect(r.ok && r.event.destination).toBe(expected);
     });
 
     it("drops a missing user", () => {

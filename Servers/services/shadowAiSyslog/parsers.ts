@@ -88,6 +88,12 @@ function parseKeyValues(body: string, cef = false): Fields | null {
   return fields;
 }
 
+/** Normalised host of a bare host field (`dst`, `dhost`), or undefined. */
+function hostField(raw: unknown): string | undefined {
+  const value = nonEmpty(raw);
+  return value ? (hostAndPath(value)?.host ?? undefined) : undefined;
+}
+
 /** Host and path of a URL, or of a bare `host[:port][/path]` string. */
 function hostAndPath(raw: string): { host: string; path?: string } | null {
   try {
@@ -240,7 +246,7 @@ function parseZscaler(
   return buildEvent(
     {
       user: f.user,
-      host: nonEmpty(f.dst)?.toLowerCase() ?? uri?.host,
+      host: hostField(f.dst) ?? uri?.host,
       path: uri?.path,
       method: f.method,
       action: f.action,
@@ -263,7 +269,7 @@ function parseGenericKv(
   return buildEvent(
     {
       user: f.suser,
-      host: nonEmpty(f.dhost)?.toLowerCase() ?? request?.host,
+      host: hostField(f.dhost) ?? request?.host,
       path: request?.path,
       method: f.requestMethod,
       action: f.act,
