@@ -1120,7 +1120,7 @@ const SYSLOG_EXAMPLES: { label: string; format: string; example: string }[] = [
   {
     label: "Netskope (JSON-in-syslog)",
     format: "netskope",
-    example: `{"user":"alice@company.com","url":"https://chat.openai.com/v1/chat","method":"POST","activity":"allowed","department":"Engineering","timestamp":"2026-02-09T14:32:00Z"}`,
+    example: `{"user":"alice@company.com","url":"https://chat.openai.com/v1/chat","method":"POST","action":"allow","department":"Engineering","timestamp":"2026-02-09T14:32:00Z"}`,
   },
   {
     label: "Squid (space-delimited)",
@@ -1164,7 +1164,7 @@ const FIELD_MAPPING = [
     squid: "field 6",
     generic: "requestMethod",
   },
-  { normalized: "action", zscaler: "action", netskope: "activity", squid: "—", generic: "act" },
+  { normalized: "action", zscaler: "action", netskope: "action", squid: "—", generic: "act" },
   {
     normalized: "timestamp",
     zscaler: "syslog header",

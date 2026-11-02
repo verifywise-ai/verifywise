@@ -299,12 +299,12 @@ export const integrationGuideContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Send the events as JSON over syslog. The line must contain a JSON object with `user`, `url`, `method` and `activity`, optionally `department` and `timestamp`. Put the key in the object as a top-level `"vw_source"` member (not inside a nested object), or write `vw_source=<key>` before or after the object, separated by a space. If your product cannot add either to every event, a self-hosted server can use IP-only mode (see below).',
+      text: 'Send the events as JSON over syslog. The line must contain a JSON object with `user`, `url`, `method` and `action` (the policy verdict, such as `allow` or `block`), optionally `department` and `timestamp`. Put the key in the object as a top-level `"vw_source"` member (not inside a nested object), or write `vw_source=<key>` before or after the object, separated by a space. If your product cannot add either to every event, a self-hosted server can use IP-only mode (see below).',
     },
     {
       type: 'code',
       language: 'json',
-      code: `{"user":"alice@company.com","url":"https://chat.openai.com/v1/chat","method":"POST","activity":"allowed","department":"Engineering","timestamp":"2026-02-09T14:32:00Z","vw_source":"YOUR_SOURCE_KEY"}`,
+      code: `{"user":"alice@company.com","url":"https://chat.openai.com/v1/chat","method":"POST","action":"allow","department":"Engineering","timestamp":"2026-02-09T14:32:00Z","vw_source":"YOUR_SOURCE_KEY"}`,
     },
 
     // Squid

@@ -88,7 +88,7 @@ export const settingsContent: ArticleContent = {
       ],
       rows: [
         { parser: 'Zscaler', description: 'Reads key=value lines with user, dst, method, uri, action and department' },
-        { parser: 'Netskope', description: 'Reads a JSON object with user, url, method, activity, department and timestamp' },
+        { parser: 'Netskope', description: 'Reads a JSON object with user, url, method, action, department and timestamp' },
         { parser: 'Squid proxy', description: 'Reads the native Squid access log. No allowed or blocked action' },
         { parser: 'Generic key-value', description: 'Reads CEF-style key=value lines with suser, dhost, requestMethod and act (default)' },
       ],
@@ -245,7 +245,7 @@ export const settingsContent: ArticleContent = {
   "user": "alice@company.com",
   "url": "https://chat.openai.com/v1/chat",
   "method": "POST",
-  "activity": "allowed",
+  "action": "allow",
   "department": "Engineering",
   "timestamp": "2026-02-09T14:32:00Z",
   "vw_source": "YOUR_SOURCE_KEY"
@@ -299,7 +299,7 @@ export const settingsContent: ArticleContent = {
         { normalized: 'destination', zscaler: 'dst, else host of uri', netskope: 'url (hostname)', squid: 'url (hostname)', generic: 'dhost, else host of request' },
         { normalized: 'uri_path', zscaler: 'uri (path)', netskope: 'url (path)', squid: 'url (path)', generic: 'request (path)' },
         { normalized: 'http_method', zscaler: 'method', netskope: 'method', squid: 'field 6', generic: 'requestMethod' },
-        { normalized: 'action', zscaler: 'action', netskope: 'activity', squid: '—', generic: 'act' },
+        { normalized: 'action', zscaler: 'action', netskope: 'action', squid: '—', generic: 'act' },
         { normalized: 'timestamp', zscaler: 'timestamp', netskope: 'timestamp', squid: 'field 1 (epoch)', generic: 'timestamp' },
         { normalized: 'department', zscaler: 'department', netskope: 'department', squid: '—', generic: 'department' },
       ],

@@ -239,7 +239,10 @@ function parseNetskope(
       host: url?.host,
       path: url?.path,
       method: j.method,
-      action: j.activity,
+      // `action` is Netskope's policy verdict (allow, block, ...); `activity`
+      // is what the user did (Upload, Login, ...). `activity` is read only
+      // when there is no `action`, for senders that followed an older guide.
+      action: j.action ?? j.activity,
       department: j.department,
       timestamp: j.timestamp,
     },

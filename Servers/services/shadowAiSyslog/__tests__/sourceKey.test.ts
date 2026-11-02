@@ -128,7 +128,7 @@ const GUIDE_LINES: [ParserType, string][] = [
   ["generic_kv", "suser=alice@company.com dhost=chat.openai.com requestMethod=POST act=allowed"],
   [
     "netskope",
-    '{"user":"alice@company.com","url":"https://chat.openai.com/v1/chat","method":"POST","activity":"allowed","department":"Engineering","timestamp":"2026-02-09T14:32:00Z"}',
+    '{"user":"alice@company.com","url":"https://chat.openai.com/v1/chat","method":"POST","action":"allow","department":"Engineering","timestamp":"2026-02-09T14:32:00Z"}',
   ],
 ];
 

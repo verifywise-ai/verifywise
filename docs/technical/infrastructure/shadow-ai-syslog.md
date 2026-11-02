@@ -84,7 +84,7 @@ Shadow AI rate limit (Settings, Rate limiting); events over it are dropped as
 | Parser | Reads | Action |
 |--------|-------|--------|
 | Zscaler | `key=value`: `user`, `dst` (or host of `uri`), `uri`, `method`, `action`, `department`, `timestamp` | `action` |
-| Netskope | JSON object: `user`, `url`, `method`, `activity`, `department`, `timestamp` | `activity` |
+| Netskope | JSON object: `user`, `url`, `method`, `action`, `department`, `timestamp` | `action` (Netskope's policy verdict, e.g. `allow` or `block`). `activity` is what the user did (`Upload`, `Login Attempt`) and is read only when there is no `action` |
 | Squid | native access.log fields: 1 epoch time, 6 method, 7 URL, 8 user | none |
 | Generic key-value | `suser`, `dhost` (or host of `request`), `request`, `requestMethod`, `act`, `department`, `timestamp` | `act` |
 

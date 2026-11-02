@@ -61,7 +61,7 @@ describe("parseLine", () => {
 
   describe("netskope", () => {
     const json =
-      '{"user":"alice@company.com","url":"https://chat.openai.com/v1/chat","method":"POST","activity":"allowed","department":"Engineering","timestamp":"2026-02-09T14:32:00Z"}';
+      '{"user":"alice@company.com","url":"https://chat.openai.com/v1/chat","method":"POST","action":"allow","department":"Engineering","timestamp":"2026-02-09T14:32:00Z"}';
 
     it("parses the guide example", () => {
       expect(parseLine("netskope", json, undefined, RECEIVED)).toEqual({
@@ -76,6 +76,43 @@ describe("parseLine", () => {
           timestamp: "2026-02-09T14:32:00.000Z",
         },
       });
+    });
+
+    it("reads the verdict from action, not from the user's activity", () => {
+      const r = parseLine(
+        "netskope",
+        '{"user":"a@b.co","url":"https://x.com","activity":"Upload","action":"block"}',
+      );
+      expect(r.ok && r.event.action).toBe("blocked");
+      const allowed = parseLine(
+        "netskope",
+        '{"user":"a@b.co","url":"https://x.com","activity":"Login Attempt","action":"allow"}',
+      );
+      expect(allowed.ok && allowed.event.action).toBe("allowed");
+    });
+
+    it("prefers action when activity also carries a verdict", () => {
+      const r = parseLine(
+        "netskope",
+        '{"user":"a@b.co","url":"https://x.com","activity":"allowed","action":"block"}',
+      );
+      expect(r.ok && r.event.action).toBe("blocked");
+    });
+
+    it("still reads a verdict from activity when there is no action", () => {
+      const r = parseLine(
+        "netskope",
+        '{"user":"a@b.co","url":"https://x.com","activity":"blocked"}',
+      );
+      expect(r.ok && r.event.action).toBe("blocked");
+    });
+
+    it("leaves the action out for an activity that is not a verdict", () => {
+      const r = parseLine(
+        "netskope",
+        '{"user":"a@b.co","url":"https://x.com","activity":"Upload"}',
+      );
+      expect(r.ok && r.event.action).toBeUndefined();
     });
 
     it("accepts a prefix before the JSON", () => {
