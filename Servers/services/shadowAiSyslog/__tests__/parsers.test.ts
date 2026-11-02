@@ -214,6 +214,23 @@ describe("parseLine", () => {
       });
     });
 
+    it.each([
+      ["TCP_DENIED/403", "blocked"],
+      ["TCP_DENIED_REPLY/403", "blocked"],
+      ["TCP_DENIED/407", "blocked"],
+      ["TCP_MISS/403", "allowed"],
+      ["TCP_TUNNEL/200", "allowed"],
+      ["TCP_HIT/200", "allowed"],
+    ])("maps the Squid result %s to %s", (code, expected) => {
+      const r = parseLine(
+        "squid",
+        `1707489120.000 200 10.0.0.1 ${code} 0 GET https://x.com/ a@b.co HIER_NONE/-`,
+        undefined,
+        RECEIVED_2024,
+      );
+      expect(r.ok && r.event.action).toBe(expected);
+    });
+
     it("drops short or non-squid lines as unparseable", () => {
       expect(parseLine("squid", "too few fields")).toEqual({
         ok: false,

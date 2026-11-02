@@ -326,8 +326,8 @@ export const integrationGuideContent: ArticleContent = {
     {
       type: 'callout',
       variant: 'info',
-      title: 'Squid lines have no allowed or blocked action',
-      text: 'The Squid access log has no field for allowed or blocked, so Squid events are stored without an action. If the user field is a dash (`-`), the line is dropped because it has no user email. Squid\'s `access_log tcp://` output is not encrypted, so the server operator must allow plaintext, or you must put a TLS forwarder between Squid and VerifyWise.',
+      title: 'How Squid actions are set',
+      text: 'The Squid access log has no allowed or blocked field, so VerifyWise reads the result code: a code with `DENIED` in it (such as `TCP_DENIED/403`) means Squid refused the request and is stored as blocked. Every other code is stored as allowed, including a 403 returned by the destination itself. If the user field is a dash (`-`), the line is dropped because it has no user email. Squid\'s `access_log tcp://` output is not encrypted, so the server operator must allow plaintext, or you must put a TLS forwarder between Squid and VerifyWise.',
     },
 
     // Generic

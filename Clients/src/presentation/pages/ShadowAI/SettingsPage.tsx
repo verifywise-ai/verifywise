@@ -1163,7 +1163,13 @@ const FIELD_MAPPING = [
     squid: "field 6",
     generic: "requestMethod",
   },
-  { normalized: "action", zscaler: "action", netskope: "action", squid: "—", generic: "act" },
+  {
+    normalized: "action",
+    zscaler: "action",
+    netskope: "action",
+    squid: "field 4 (result)",
+    generic: "act",
+  },
   {
     normalized: "timestamp",
     zscaler: "syslog header",

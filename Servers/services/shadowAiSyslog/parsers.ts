@@ -281,6 +281,11 @@ function parseSquid(
   }
 
   const method = fields[5];
+  // The result code (field 4, `CODE/status`) says whether Squid itself refused
+  // the request: TCP_DENIED and TCP_DENIED_REPLY are ACL denials. A 403 from
+  // the origin server (TCP_MISS/403) was let through, so only the code counts.
+  const resultCode = fields[3].split("/")[0].toUpperCase();
+  const action = /(^|_)DENIED(_|$)/.test(resultCode) ? "blocked" : "allowed";
   // CONNECT lines carry host:port instead of a URL, so they have no path.
   const target = hostAndPath(fields[6]);
   return buildEvent(
@@ -289,6 +294,7 @@ function parseSquid(
       host: target?.host,
       path: method.toUpperCase() === "CONNECT" ? undefined : target?.path,
       method,
+      action,
       timestamp,
     },
     headerTimestamp,

@@ -93,11 +93,12 @@ never ends the process.
 |--------|-------|--------|
 | Zscaler | `key=value`: `user`, `dst` (or host of `uri`), `uri`, `method`, `action`, `department`, `timestamp` | `action` |
 | Netskope | JSON object: `user`, `url`, `method`, `action`, `department`, `timestamp` | `action` (Netskope's policy verdict, e.g. `allow` or `block`). `activity` is what the user did (`Upload`, `Login Attempt`) and is read only when there is no `action`. `alert`, `useralert` and `bypass` count as allowed (the request went through); `restrictToView`, `restrictAccess` and `disableDownload` count as blocked |
-| Squid | native access.log fields: 1 epoch time, 6 method, 7 URL, 8 user | none |
+| Squid | native access.log fields: 1 epoch time, 4 result code, 6 method, 7 URL, 8 user | result code (`*_DENIED` is blocked, anything else allowed) |
 | Generic key-value | `suser`, `dhost` (or host of `request`), `request`, `requestMethod`, `act`, `department`, `timestamp` | `act` |
 
-Squid access logs have no allowed or blocked field, so Squid events carry no
-action. For the other parsers, an action starting with `block`, `deny`,
+Squid access logs have no allowed or blocked field, so the Squid parser reads
+the result code (field 4): a code containing `DENIED` (`TCP_DENIED`,
+`TCP_DENIED_REPLY`) is blocked and every other code is allowed. For the other parsers, an action starting with `block`, `deny`,
 `denied`, `drop`, `reset` or `reject` is stored as blocked, and one starting
 with `allow`, `permit`, `pass` or `accept` as allowed. Any other value is left
 unset.
