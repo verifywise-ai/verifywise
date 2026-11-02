@@ -43,7 +43,7 @@ export const rulesContent: ArticleContent = {
         { bold: 'Description', text: 'Optional notes about the rule\'s purpose' },
         { bold: 'Trigger type', text: 'The condition that fires the alert (see below)' },
         { bold: 'Configuration', text: 'Threshold or parameters specific to the trigger type' },
-        { bold: 'Cooldown period', text: 'How long the rule stays quiet for the same tool, department or user after it fires (see below)' },
+        { bold: 'Cooldown period', text: 'How long the rule stays quiet for the same tool, department or user after it fires (see below). A Blocked tool attempt rule can still fire once per blocked request within a single batch' },
         { bold: 'Notify me', text: 'On by default. Sends you an in-app notification and an email when the rule fires. Only the person who creates the rule is notified; with this off, alerts appear in the alert history only' },
         { bold: 'Active', text: 'Whether the rule is checked from the moment it is created' },
       ],
@@ -163,7 +163,7 @@ export const rulesContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The "context" that determines deduplication depends on the trigger type: for tool-based triggers (new tool detected, usage threshold, blocked attempt, risk score exceeded), the cooldown applies per tool per rule. For sensitive department triggers, it applies per department per rule. For new user detected, it applies per user email per rule.',
+      text: 'The "context" that determines deduplication depends on the trigger type: for tool-based triggers (new tool detected, usage threshold, blocked attempt, risk score exceeded), the cooldown applies per tool per rule. For sensitive department triggers, it applies per department per rule. For new user detected, it applies per user email per rule. The cooldown is checked against alerts from earlier batches, so within one batch a Blocked tool attempt rule fires once for every blocked request to the tool.',
     },
     {
       type: 'heading',

@@ -309,7 +309,7 @@ export const settingsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Rate limiting caps how many events your organization can ingest per hour, across the REST API and syslog. It protects the system from a misconfigured data source or a traffic spike. Only Admins can change it.',
+      text: 'Rate limiting caps how many events your organization can ingest per hour, across the REST API and syslog. It protects the system from a misconfigured data source or a traffic spike. Only Admins can change it. The count is kept in memory by each backend process, so with several backend replicas the effective limit is the setting times the number of replicas.',
     },
     {
       type: 'bullet-list',
@@ -345,7 +345,7 @@ export const settingsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Set a value to 0 or leave it empty to keep data indefinitely. Cleanup runs once a day, so a change applies at the next run. Raw events are removed by the time of the event, not the time it arrived. Admins can change these periods, and so can a custom role that has the organization admin permission. Each change is recorded in the audit ledger.',
+      text: 'Each period can be 1 to 3,650 days. Cleanup runs once a day, so a change applies at the next run. Raw events are removed by the time of the event, not the time it arrived. Admins can change these periods, and so can a custom role that has the organization admin permission. Each change is recorded in the audit ledger.',
     },
     {
       type: 'callout',

@@ -31,7 +31,7 @@ export const userActivityContent: ArticleContent = {
       type: 'bullet-list',
       items: [
         { bold: 'User', text: 'The user\'s email address. Click the row to open the detail view.' },
-        { bold: 'Department', text: 'The department sent with the user\'s events by your log source, or "Unknown" if none was sent' },
+        { bold: 'Department', text: 'A department sent with the user\'s events by your log source, or "Unknown" if none was sent. If the user\'s events carry more than one department, the list shows the alphabetically last one, while the detail view shows the most recent' },
         { bold: 'Total prompts', text: 'POST requests the user sent to AI tools' },
         { bold: 'Risk score', text: 'The highest risk score among the AI tools the user accessed. A tool that has not been scored yet counts as 0.' },
       ],

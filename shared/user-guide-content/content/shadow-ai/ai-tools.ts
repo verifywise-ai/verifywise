@@ -108,13 +108,13 @@ export const aiToolsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'If a tool is not yet in the model inventory, a "Start governance" button appears in the detail view. It opens a form with the provider and model name filled in from the tool. Choose a governance owner (required) and, optionally, a version. Submitting creates a model inventory entry with the status Pending, links the tool to it and sets the tool\'s status to Under review. Tick "Automatically create a lifecycle entry" to also start the model lifecycle checklist for the new entry.',
+      text: 'If a tool is not yet in the model inventory, a "Start governance" button appears in the detail view. It opens a form with the provider and model name filled in from the tool. Choose a governance owner (required) and, optionally, a version. The form also asks for data sensitivity and a risk description, but these two values are not saved yet. Submitting creates a model inventory entry with the status Pending, links the tool to it and sets the tool\'s status to Under review. Tick "Automatically create a lifecycle entry" to also start the model lifecycle checklist for the new entry.',
     },
     {
       type: 'callout',
       variant: 'tip',
       title: 'Best practice',
-      text: 'Bring high-risk tools under governance early. A tool linked to a model inventory entry shows a "Governed" badge. Once that entry is approved and the tool\'s status is Approved, the approval part of its risk score drops to zero at the next nightly run.',
+      text: 'Bring high-risk tools under governance early. A tool linked to a model inventory entry shows a "Governed" badge. Once the tool is linked to an entry and its status here is Approved, the approval part of its risk score drops to zero at the next nightly run. The model inventory entry\'s own status is not part of the score.',
     },
     {
       type: 'heading',
@@ -147,7 +147,7 @@ export const aiToolsContent: ArticleContent = {
         { factor: 'Approval status', weight: '40%', description: 'Zero only when the tool is linked to a model inventory entry and its status is Approved; otherwise the maximum.' },
         { factor: 'Data & compliance', weight: '25%', description: 'Based on training-on-data policy, SOC 2, GDPR, SSO and encryption at rest.' },
         { factor: 'Usage volume', weight: '15%', description: 'The tool\'s event count compared with the average across your tools. Higher usage increases the score.' },
-        { factor: 'Department sensitivity', weight: '20%', description: 'The most sensitive department that used the tool in the last 30 days. Finance, Legal and HR are rated highest, Engineering and Product medium, Marketing and Sales lowest.' },
+        { factor: 'Department sensitivity', weight: '20%', description: 'The most sensitive department that used the tool in the last 30 days. Finance, Legal and HR (80) are rated highest, then Engineering and Product (50), any other department (30), and Marketing and Sales (20). Names are matched exactly, ignoring case, so "Finance & Accounting" counts as another department.' },
       ],
     },
     {

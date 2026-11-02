@@ -1509,18 +1509,21 @@ function DataRetentionSection({
       description: "Individual event records from ingestion",
       value: eventsDays,
       setter: setEventsDays,
+      defaultVal: 30,
     },
     {
       label: "Daily rollups",
       description: "Aggregated daily statistics",
       value: rollupsDays,
       setter: setRollupsDays,
+      defaultVal: 365,
     },
     {
       label: "Alert history",
       description: "Records of triggered alerts",
       value: alertsDays,
       setter: setAlertsDays,
+      defaultVal: 90,
     },
   ];
 
@@ -1546,7 +1549,7 @@ function DataRetentionSection({
                     label={`${field.label} (days)`}
                     value={field.value}
                     onChange={(e) => field.setter(e.target.value.replace(/[^0-9]/g, ""))}
-                    placeholder="Keep indefinitely"
+                    placeholder={`${field.defaultVal} (default)`}
                   />
                   <Typography sx={{ fontSize: 11, color: palette.text.disabled, mt: 0.5 }}>
                     {field.description}

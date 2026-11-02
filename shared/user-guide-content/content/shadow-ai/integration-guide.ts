@@ -182,11 +182,11 @@ export const integrationGuideContent: ArticleContent = {
         { key: 'fix', label: 'How to fix', width: '50%' },
       ],
       rows: [
-        { status: '400', cause: 'No `events` array, a missing required field, or an invalid `user_email`', fix: 'Send a body with an `events` array. The message names the index of the first bad event. Check that every event has user_email, destination and timestamp, and that user_email is an email address.' },
+        { status: '400', cause: 'No `events` array, a missing required field, or an invalid `user_email`', fix: 'Send a body with an `events` array. The message names the index of the first bad event. Check that every event has user_email, destination and timestamp, and that user_email is an email address. The refused batch still counts against the hourly rate limit.' },
         { status: '401', cause: 'Missing or invalid API key', fix: 'Ensure the X-API-Key header is set with a valid, non-revoked key.' },
         { status: '413', cause: 'Batch too large', fix: 'Reduce to 10,000 or fewer events per request.' },
         { status: '429', cause: 'The batch would go over the hourly limit', fix: 'The whole batch is refused. The hour starts with the first batch counted, not on the clock hour. Wait, send a smaller batch, or ask an Admin to raise the limit in Settings → Rate limiting.' },
-        { status: '500', cause: 'An event cannot be stored: the timestamp cannot be read, or a field is too long (user_email, manager_email, department or job_title over 255 characters, destination over 512, http_method over 10)', fix: 'The whole batch is refused and nothing is stored. Send ISO 8601 timestamps and shorten the field.' },
+        { status: '500', cause: 'An event cannot be stored: the timestamp cannot be read, or a field is too long (user_email, manager_email, department or job_title over 255 characters, destination over 512, http_method over 10)', fix: 'The whole batch is refused and nothing is stored. Send ISO 8601 timestamps and shorten the field. The refused batch still counts against the hourly rate limit.' },
       ],
     },
     {
@@ -313,7 +313,7 @@ export const integrationGuideContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Send the events as JSON over syslog, one object per line. Text before the object, such as a syslog tag, is fine. The object needs `user` and `url` (if `url` has no usable host, `domain` or `site` is used), plus `method` and `action` (the policy verdict), optionally `department` and `timestamp`. `allow`, `alert`, `useralert` and `bypass` are stored as allowed; `block`, `restrictToView`, `restrictAccess` and `disableDownload` as blocked. `activity` (what the user did, such as `Upload`) is read only when there is no `action`. Put the key in the object as a top-level `"vw_source"` member (not inside a nested object), or write `vw_source=<key>` before or after the object, separated by a space. If your product cannot add either to every event, a self-hosted server can use IP-only mode (see below).',
+      text: 'Send the events as JSON over syslog, one object per line. Text before the object, such as a syslog tag, is fine. The object needs `user` and `url` (if `url` has no usable host, `domain` or `site` is used), plus `method` and `action` (the policy verdict), optionally `department` and `timestamp`. `allow`, `alert`, `useralert` and `bypass` are stored as allowed; `block`, `restrictToView`, `restrictAccess` and `disableDownload` as blocked. `activity` (what the user did, such as `Upload`) is read only when there is no `action`. Put the key in the object as a top-level `"vw_source"` member (not inside a nested object), or write `vw_source=<key>` before or after the object, separated by a space. The `"vw_source"` member is read only when the line, after its syslog header, is the object alone; if your forwarder adds other text before the object, use `vw_source=<key>` at the start or end of the line instead. If your product cannot add either to every event, a self-hosted server can use IP-only mode (see below).',
     },
     {
       type: 'code',
