@@ -236,12 +236,11 @@ export async function evaluateRulesForBatch(
   // their first AI tool use still raises the alert.
   const batchEmails = [...batch.allEmails];
   const existingEmails = new Set<string>();
-  if (batchEmails.length > 0 && batch.firstEventId == null) {
-    // Without the batch boundary, prior usage cannot be told apart from this
-    // batch: treat everyone as existing (no false alerts).
-    for (const e of batchEmails) existingEmails.add(e);
-  } else if (batchEmails.length > 0) {
+  if (batchEmails.length > 0) {
     try {
+      // Emails come only from inserted events, so the boundary is set; if it
+      // ever is not, fall through to the safe default below.
+      if (batch.firstEventId === null) throw new Error("batch has no inserted events");
       const [userRows] = await sequelize.query(
         `SELECT DISTINCT user_email FROM shadow_ai_events
          WHERE organization_id = :organizationId AND user_email IN (:emails)

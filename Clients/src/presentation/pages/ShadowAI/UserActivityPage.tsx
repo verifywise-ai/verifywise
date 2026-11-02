@@ -33,6 +33,7 @@ import {
   getUserDetail,
   getDepartmentActivity,
   GetUsersParams,
+  ShadowAiUserDetailTool,
 } from "../../../application/repository/shadowAi.repository";
 import {
   ShadowAiUserActivity,
@@ -57,7 +58,7 @@ import { pageOfLabel } from "../../components/Table/pageOfLabel";
 interface UserDetailData {
   email: string;
   department: string;
-  tools: { tool_name: string; event_count: number; last_used: string }[];
+  tools: ShadowAiUserDetailTool[];
   total_prompts: number;
 }
 
@@ -135,6 +136,7 @@ export default function UserActivityPage() {
     () => [
       { id: "tool_name", label: "Tool" },
       { id: "event_count", label: "Events" },
+      { id: "prompt_count", label: "Prompts" },
       { id: "last_used", label: "Last used" },
     ],
     [],
@@ -182,15 +184,14 @@ export default function UserActivityPage() {
     [],
   );
   const getDetailToolValue = useCallback(
-    (
-      row: { tool_name: string; event_count: number; last_used: string },
-      key: string,
-    ): string | number => {
+    (row: ShadowAiUserDetailTool, key: string): string | number => {
       switch (key) {
         case "tool_name":
           return row.tool_name;
         case "event_count":
           return row.event_count;
+        case "prompt_count":
+          return row.prompt_count;
         case "last_used":
           return new Date(row.last_used).getTime();
         default:
@@ -355,12 +356,18 @@ export default function UserActivityPage() {
                   />
                   <TableBody>
                     {sortedDetailTools.map((t) => (
-                      <TableRow key={t.tool_name} sx={singleTheme.tableStyles.primary.body.row}>
+                      <TableRow
+                        key={t.tool_id ?? "deleted"}
+                        sx={singleTheme.tableStyles.primary.body.row}
+                      >
                         <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
                           {t.tool_name}
                         </TableCell>
                         <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
                           {t.event_count}
+                        </TableCell>
+                        <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                          {t.prompt_count}
                         </TableCell>
                         <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
                           {formatDate(t.last_used)}

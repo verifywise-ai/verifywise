@@ -9,11 +9,10 @@
  * - the user detail drawer agrees with the user list;
  * - the new_user_detected and sensitive_department rules ignore unmatched
  *   traffic, and a new user's first AI event alerts in any batch size;
+ * - daily and monthly rollups count only AI usage and are idempotent;
  * - a database trigger sets is_ai_tool, and migration 20261102063837
  *   backfills it from detected_tool_id.
  */
-jest.setTimeout(60000);
-
 import { QueryTypes } from "sequelize";
 import { sequelize } from "../../database/db";
 import { cleanupDatabase, createTestOrganization, createTestUser } from "./helpers";
@@ -29,6 +28,7 @@ import {
   getUserActivityQuery,
   getUsersByDepartmentQuery,
 } from "../../utils/shadowAiInsights.utils";
+import { runDailyRollup, runMonthlyRollup } from "../../services/shadowAiAggregation.service";
 
 const backfill = require("../../database/migrations/20261102063837-shadow-ai-events-is-ai-tool.js");
 
@@ -128,9 +128,10 @@ const ingest = async (orgId: number, events: Evt[]) => {
     res as any,
   );
   expect(res.statusCode).toBe(200);
-  if (evaluate.mock.results.length > callsBefore) {
-    await evaluate.mock.results[callsBefore].value;
-  }
+  // Rule evaluation is fire-and-forget in the controller; wait for it here so
+  // no query from it is still running when cleanup truncates the tables.
+  expect(evaluate.mock.results.length).toBe(callsBefore + 1);
+  await evaluate.mock.results[callsBefore].value;
 };
 
 const times = (n: number, e: Evt): Evt[] => Array.from({ length: n }, () => e);
@@ -329,6 +330,87 @@ describe("alert rules count only AI usage", () => {
       { user: "kate@test.com", destination: AI, department: "Legal" },
     ]);
     expect(await alerted(orgId, "sensitive_department", "department")).toEqual(["Legal"]);
+  });
+});
+
+describe("rollups count only AI usage and can be rerun", () => {
+  const createTool = async (orgId: number, name: string) =>
+    (
+      (await sequelize.query(
+        `INSERT INTO shadow_ai_tools (organization_id, name, domains, status)
+         VALUES (:orgId, :name, '{chatgpt.com}', 'detected') RETURNING id`,
+        { replacements: { orgId, name } },
+      )) as [Array<{ id: number }>, unknown]
+    )[0][0].id;
+
+  it("daily rollup: deleted tool, two departments and a rerun give one row per key", async () => {
+    const orgId = await createTestOrganization(`Rollup ${Date.now()}`);
+    const chatgpt = await createTool(orgId, "ChatGPT");
+    const claude = await createTool(orgId, "Claude");
+    const event = (user: string, toolId: number | null, dept: string, hour: number) =>
+      sequelize.query(
+        `INSERT INTO shadow_ai_events (organization_id, user_email, detected_tool_id, department, http_method, event_timestamp)
+         VALUES (:orgId, :user, :toolId, :dept, 'POST', (CURRENT_DATE - 1) + make_interval(hours => :hour))`,
+        { replacements: { orgId, user, toolId, dept, hour } },
+      );
+    // lena moved departments during the day: same key, two departments.
+    await event("lena@test.com", chatgpt, "Sales", 9);
+    await event("lena@test.com", chatgpt, "Legal", 15);
+    // mike used a tool that is then deleted: his row has a NULL tool_id.
+    await event("mike@test.com", claude, "Finance", 10);
+    await event("mike@test.com", claude, "Finance", 11);
+    // Unmatched traffic is not rolled up.
+    await event("nina@test.com", null, "Finance", 12);
+    await sequelize.query(`DELETE FROM shadow_ai_tools WHERE id = :id`, {
+      replacements: { id: claude },
+    });
+
+    await runDailyRollup();
+    await runDailyRollup();
+
+    const rows = await sequelize.query<{
+      user_email: string;
+      tool_id: number | null;
+      department: string;
+      total_events: number;
+    }>(
+      `SELECT user_email, tool_id, department, total_events FROM shadow_ai_daily_rollups
+        WHERE organization_id = :orgId ORDER BY user_email`,
+      { replacements: { orgId }, type: QueryTypes.SELECT },
+    );
+    expect(rows).toEqual([
+      { user_email: "lena@test.com", tool_id: chatgpt, department: "Legal", total_events: 2 },
+      { user_email: "mike@test.com", tool_id: null, department: "Finance", total_events: 2 },
+    ]);
+  });
+
+  it("monthly rollup: a rerun does not duplicate rows with a NULL tool_id", async () => {
+    const orgId = await createTestOrganization(`Monthly ${Date.now()}`);
+    // getAllOrganizationIds reads orgs from events.
+    await sequelize.query(
+      `INSERT INTO shadow_ai_events (organization_id, user_email, event_timestamp)
+       VALUES (:orgId, 'seed@test.com', NOW())`,
+      { replacements: { orgId } },
+    );
+    await sequelize.query(
+      `INSERT INTO shadow_ai_daily_rollups (organization_id, rollup_date, user_email, tool_id, department, total_events)
+       VALUES (:orgId, DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month')::date, 'o@test.com', NULL, 'Finance', 3),
+              (:orgId, DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month')::date + 1, 'p@test.com', NULL, NULL, 4)`,
+      { replacements: { orgId } },
+    );
+
+    await runMonthlyRollup();
+    await runMonthlyRollup();
+
+    const rows = await sequelize.query<{ department: string | null; total_events: string }>(
+      `SELECT department, total_events FROM shadow_ai_monthly_rollups
+        WHERE organization_id = :orgId ORDER BY department NULLS LAST`,
+      { replacements: { orgId }, type: QueryTypes.SELECT },
+    );
+    expect(rows.map((r) => [r.department, Number(r.total_events)])).toEqual([
+      ["Finance", 3],
+      [null, 4],
+    ]);
   });
 });
 

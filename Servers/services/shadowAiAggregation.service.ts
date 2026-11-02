@@ -40,31 +40,38 @@ export async function runDailyRollup(): Promise<void> {
 
   for (const organizationId of orgIds) {
     try {
-      await sequelize.query(
-        `
-        INSERT INTO shadow_ai_daily_rollups
-          (organization_id, rollup_date, user_email, tool_id, department, total_events, post_events, blocked_events)
-        SELECT
-          :organizationId,
-          DATE(event_timestamp) as rollup_date,
-          user_email,
-          detected_tool_id as tool_id,
-          department,
-          COUNT(*) as total_events,
-          COUNT(CASE WHEN http_method = 'POST' THEN 1 END) as post_events,
-          COUNT(CASE WHEN action = 'blocked' THEN 1 END) as blocked_events
-        FROM shadow_ai_events
-        WHERE organization_id = :organizationId
-          AND ${aiUsageEvent()}
-          AND DATE(event_timestamp) = CURRENT_DATE - INTERVAL '1 day'
-        GROUP BY DATE(event_timestamp), user_email, detected_tool_id, department
-        ON CONFLICT (organization_id, rollup_date, user_email, tool_id) DO UPDATE SET
-          total_events = EXCLUDED.total_events,
-          post_events = EXCLUDED.post_events,
-          blocked_events = EXCLUDED.blocked_events
-      `,
-        { replacements: { organizationId } },
-      );
+      // Rebuild yesterday's rows so reruns are idempotent: rows with a NULL
+      // tool_id (a deleted tool's events) never match the unique key, so an
+      // upsert alone would duplicate them. Rows are grouped by exactly the
+      // key (organization, date, user, tool); the user's latest department
+      // wins, so two departments cannot hit the same key twice.
+      await sequelize.transaction(async (transaction) => {
+        await sequelize.query(
+          `DELETE FROM shadow_ai_daily_rollups
+           WHERE organization_id = :organizationId
+             AND rollup_date = CURRENT_DATE - INTERVAL '1 day'`,
+          { replacements: { organizationId }, transaction },
+        );
+        await sequelize.query(
+          `INSERT INTO shadow_ai_daily_rollups
+             (organization_id, rollup_date, user_email, tool_id, department, total_events, post_events, blocked_events)
+           SELECT
+             :organizationId,
+             DATE(event_timestamp) as rollup_date,
+             user_email,
+             detected_tool_id as tool_id,
+             (ARRAY_AGG(department ORDER BY event_timestamp DESC))[1] as department,
+             COUNT(*) as total_events,
+             COUNT(CASE WHEN http_method = 'POST' THEN 1 END) as post_events,
+             COUNT(CASE WHEN action = 'blocked' THEN 1 END) as blocked_events
+           FROM shadow_ai_events
+           WHERE organization_id = :organizationId
+             AND ${aiUsageEvent()}
+             AND DATE(event_timestamp) = CURRENT_DATE - INTERVAL '1 day'
+           GROUP BY DATE(event_timestamp), user_email, detected_tool_id`,
+          { replacements: { organizationId }, transaction },
+        );
+      });
 
       logger.debug(`✅ Daily rollup completed for organization ${organizationId}`);
     } catch (error) {
@@ -83,32 +90,35 @@ export async function runMonthlyRollup(): Promise<void> {
 
   for (const organizationId of orgIds) {
     try {
-      await sequelize.query(
-        `
-        INSERT INTO shadow_ai_monthly_rollups
-          (organization_id, rollup_month, tool_id, department, unique_users, total_events, post_events, blocked_events)
-        SELECT
-          :organizationId,
-          DATE_TRUNC('month', rollup_date) as rollup_month,
-          tool_id,
-          department,
-          COUNT(DISTINCT user_email) as unique_users,
-          SUM(total_events) as total_events,
-          SUM(post_events) as post_events,
-          SUM(blocked_events) as blocked_events
-        FROM shadow_ai_daily_rollups
-        WHERE organization_id = :organizationId
-          AND rollup_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month')
-          AND rollup_date < DATE_TRUNC('month', CURRENT_DATE)
-        GROUP BY DATE_TRUNC('month', rollup_date), tool_id, department
-        ON CONFLICT (organization_id, rollup_month, tool_id, department) DO UPDATE SET
-          unique_users = EXCLUDED.unique_users,
-          total_events = EXCLUDED.total_events,
-          post_events = EXCLUDED.post_events,
-          blocked_events = EXCLUDED.blocked_events
-      `,
-        { replacements: { organizationId } },
-      );
+      // Rebuild last month's rows so reruns are idempotent (rows with a NULL
+      // tool_id never match the unique key, so an upsert would duplicate).
+      await sequelize.transaction(async (transaction) => {
+        await sequelize.query(
+          `DELETE FROM shadow_ai_monthly_rollups
+           WHERE organization_id = :organizationId
+             AND rollup_month = DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month')`,
+          { replacements: { organizationId }, transaction },
+        );
+        await sequelize.query(
+          `INSERT INTO shadow_ai_monthly_rollups
+             (organization_id, rollup_month, tool_id, department, unique_users, total_events, post_events, blocked_events)
+           SELECT
+             :organizationId,
+             DATE_TRUNC('month', rollup_date) as rollup_month,
+             tool_id,
+             department,
+             COUNT(DISTINCT user_email) as unique_users,
+             SUM(total_events) as total_events,
+             SUM(post_events) as post_events,
+             SUM(blocked_events) as blocked_events
+           FROM shadow_ai_daily_rollups
+           WHERE organization_id = :organizationId
+             AND rollup_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month')
+             AND rollup_date < DATE_TRUNC('month', CURRENT_DATE)
+           GROUP BY DATE_TRUNC('month', rollup_date), tool_id, department`,
+          { replacements: { organizationId }, transaction },
+        );
+      });
 
       logger.debug(`✅ Monthly rollup completed for organization ${organizationId}`);
     } catch (error) {

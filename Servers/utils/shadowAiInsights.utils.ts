@@ -353,6 +353,8 @@ export async function getUserDetailQuery(
   periodDays: number = 30,
 ): Promise<
   Array<{
+    /** NULL for events of a deleted tool. */
+    tool_id: number | null;
     tool_name: string;
     event_count: number;
     /** POST requests, counted the same way as total_prompts in the user list. */
@@ -362,18 +364,21 @@ export async function getUserDetailQuery(
 > {
   const [rows] = await sequelize.query(
     `SELECT
+       e.detected_tool_id as tool_id,
        COALESCE(t.name, 'Unknown') as tool_name,
        COUNT(*) as event_count,
        COUNT(CASE WHEN e.http_method = 'POST' THEN 1 END) as prompt_count,
        MAX(e.event_timestamp) as last_used
      FROM shadow_ai_events e
      -- LEFT, as in the user list: a deleted tool's events still count.
+     -- Grouped by tool id so a live tool is never merged with them; events
+     -- of deleted tools share one "Unknown" row (their link is gone).
      LEFT JOIN shadow_ai_tools t ON e.organization_id = t.organization_id AND e.detected_tool_id = t.id
      WHERE e.organization_id = :organizationId
        AND e.user_email = :userEmail
        AND ${aiUsageEvent("e")}
        AND e.event_timestamp > NOW() - INTERVAL '1 day' * :periodDays
-     GROUP BY COALESCE(t.name, 'Unknown')
+     GROUP BY e.detected_tool_id, t.name
      ORDER BY event_count DESC, tool_name ASC
      LIMIT :maxRows`,
     {

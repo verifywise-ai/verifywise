@@ -40,13 +40,13 @@ export async function insertEventsQuery(
   if (events.length === 0) return { inserted: 0, firstEventId: null };
 
   // Process in chunks to avoid oversized SQL statements
-  let firstEventId = Number.MAX_SAFE_INTEGER;
+  let firstEventId: number | null = null;
   for (let start = 0; start < events.length; start += INSERT_CHUNK_SIZE) {
     const chunk = events.slice(start, start + INSERT_CHUNK_SIZE);
-    firstEventId = Math.min(
-      firstEventId,
-      await insertEventChunk(organizationId, chunk, transaction),
-    );
+    const chunkFirst = await insertEventChunk(organizationId, chunk, transaction);
+    if (chunkFirst !== null && (firstEventId === null || chunkFirst < firstEventId)) {
+      firstEventId = chunkFirst;
+    }
   }
 
   return { inserted: events.length, firstEventId };
@@ -68,7 +68,7 @@ async function insertEventChunk(
     manager_email?: string;
   }>,
   transaction?: Transaction,
-): Promise<number> {
+): Promise<number | null> {
   const values: string[] = [];
   const replacements: Record<string, any> = { organizationId };
 
@@ -105,7 +105,8 @@ async function insertEventChunk(
     replacements,
     ...(transaction ? { transaction } : {}),
   });
-  return Math.min(...(rows as Array<{ id: string | number }>).map((r) => Number(r.id)));
+  const ids = (rows as Array<{ id: string | number }>).map((r) => Number(r.id));
+  return ids.length > 0 ? Math.min(...ids) : null;
 }
 
 /**

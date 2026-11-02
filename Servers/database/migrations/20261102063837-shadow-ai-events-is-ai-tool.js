@@ -44,7 +44,7 @@ module.exports = {
       CREATE OR REPLACE FUNCTION verifywise.shadow_ai_events_set_is_ai_tool()
       RETURNS trigger LANGUAGE plpgsql AS $func$
       BEGIN
-        NEW.is_ai_tool := COALESCE(NEW.is_ai_tool, false) OR NEW.detected_tool_id IS NOT NULL;
+        NEW.is_ai_tool := true;
         RETURN NEW;
       END;
       $func$;
@@ -55,7 +55,11 @@ module.exports = {
     await run(`
       CREATE TRIGGER trg_shadow_ai_events_is_ai_tool
         BEFORE INSERT OR UPDATE ON verifywise.shadow_ai_events
-        FOR EACH ROW EXECUTE FUNCTION verifywise.shadow_ai_events_set_is_ai_tool();
+        FOR EACH ROW
+        -- Only rows with a tool need the flag; unmatched rows, unrelated
+        -- updates and the FK's SET NULL skip the function entirely.
+        WHEN (NEW.detected_tool_id IS NOT NULL)
+        EXECUTE FUNCTION verifywise.shadow_ai_events_set_is_ai_tool();
     `);
 
     let lastId = 0;
