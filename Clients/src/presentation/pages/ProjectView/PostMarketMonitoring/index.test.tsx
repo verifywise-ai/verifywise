@@ -1,4 +1,5 @@
 import { screen, fireEvent, waitFor } from "@testing-library/react";
+import { Routes, Route } from "react-router";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 
 const mockGetConfigByProjectId = vi.fn();
@@ -98,6 +99,20 @@ describe("PostMarketMonitoring", () => {
       expect(screen.getByText("Post-market monitoring")).toBeInTheDocument();
     });
     expect(screen.getByText(/Chatbot Assistant/)).toBeInTheDocument();
+  });
+
+  it("links to the monitoring reports for this use case", async () => {
+    renderWithProviders(
+      <Routes>
+        <Route path="/project-view" element={<PostMarketMonitoring />} />
+        <Route path="/monitoring/reports" element={<div>Reports archive page</div>} />
+      </Routes>,
+      { route: "/project-view?projectId=5" },
+    );
+
+    fireEvent.click(await screen.findByText("View reports"));
+
+    expect(await screen.findByText("Reports archive page")).toBeInTheDocument();
   });
 
   it("does not fetch questions when no config exists yet (404)", async () => {

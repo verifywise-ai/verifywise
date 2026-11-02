@@ -32,6 +32,7 @@ import {
   PMMReportWithDetails,
   PMMReportsFilterRequest,
 } from "../../../../domain/types/PostMarketMonitoring";
+import { useSearchParams } from "react-router";
 import dayjs, { Dayjs } from "dayjs";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import { AlertState } from "../../../../application/interfaces/appStates";
@@ -41,9 +42,18 @@ interface LocalAlertState extends AlertState {
   visible: boolean;
 }
 
+/** Reads `?projectId=` as a positive integer; anything else means "all use cases". */
+const parseProjectId = (raw: string | null): number | undefined => {
+  if (!raw || !/^\d+$/.test(raw)) return undefined;
+  const id = Number(raw);
+  return Number.isSafeInteger(id) && id > 0 ? id : undefined;
+};
+
 const ReportsArchive: React.FC = () => {
   const formatDate = useFormattedDate();
   const theme = useTheme();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const projectId = parseProjectId(searchParams.get("projectId"));
 
   // State
   const [isLoading, setIsLoading] = useState(true);
@@ -83,6 +93,10 @@ const ReportsArchive: React.FC = () => {
         flagged_only: flaggedOnly,
       };
 
+      if (projectId) {
+        filters.project_id = projectId;
+      }
+
       if (startDate) {
         filters.start_date = startDate;
       }
@@ -99,7 +113,7 @@ const ReportsArchive: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [page, rowsPerPage, startDate, endDate, flaggedOnly, showAlert]);
+  }, [page, rowsPerPage, startDate, endDate, flaggedOnly, projectId, showAlert]);
 
   useEffect(() => {
     loadReports();
@@ -136,6 +150,19 @@ const ReportsArchive: React.FC = () => {
     setFlaggedOnly(false);
     setPage(0);
   }, []);
+
+  // Drop the use case scope and list reports for every use case
+  const handleShowAllUseCases = useCallback(() => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete("projectId");
+        return next;
+      },
+      { replace: true },
+    );
+    setPage(0);
+  }, [setSearchParams]);
 
   // Check if any filter is active
   const hasActiveFilters = useMemo(() => {
@@ -185,9 +212,31 @@ const ReportsArchive: React.FC = () => {
         <Typography sx={{ fontSize: 16, fontWeight: 600, color: theme.palette.text.primary }}>
           Monitoring reports
         </Typography>
-        <Typography sx={{ fontSize: 13, color: theme.palette.other.icon }}>
-          View and download past monitoring cycle reports
-        </Typography>
+        {projectId ? (
+          <Stack direction="row" alignItems="center" gap="8px" flexWrap="wrap">
+            <Typography sx={{ fontSize: 13, color: theme.palette.other.icon }}>
+              Showing reports for {reports[0]?.project_title || "this use case"}
+            </Typography>
+            <CustomizableButton
+              variant="text"
+              text="Show all use cases"
+              onClick={handleShowAllUseCases}
+              testId="pmm-reports-show-all"
+              sx={{
+                "height": "30px",
+                "color": theme.palette.primary.main,
+                "fontSize": 13,
+                "&:hover": {
+                  backgroundColor: theme.palette.status.success.bg,
+                },
+              }}
+            />
+          </Stack>
+        ) : (
+          <Typography sx={{ fontSize: 13, color: theme.palette.other.icon }}>
+            View and download past monitoring cycle reports
+          </Typography>
+        )}
       </Stack>
 
       {/* Filters */}
