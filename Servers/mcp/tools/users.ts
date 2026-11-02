@@ -16,7 +16,6 @@ import {
   listAllUsersQuery,
   listOrganizationUsersQuery,
   organizationExists,
-  userExistsByEmail,
 } from "../../utils/superAdmin.utils";
 import {
   InviteRefusalError,
@@ -50,14 +49,14 @@ const createUser: ToolDef = {
   name: "create_user",
   title: "Create user",
   description:
-    "Create a user inside an existing organization with a randomly generated password. The user is active immediately — no invitation email is sent. Returns the generated password, which is shown only once and is not recoverable afterwards.",
+    "Create a user inside an existing organization with a randomly generated password. The user is active immediately — no invitation email is sent. Returns the generated password, which is shown only once and is not recoverable afterwards. If the email already has an account, that account is added to the organization instead and keeps its own password.",
   inputSchema: {
     organizationId: z
       .number()
       .int()
       .positive()
       .describe("Id of the organization the user belongs to."),
-    email: z.string().email().describe("The user's email address. Must be unused."),
+    email: z.string().email().describe("The user's email address."),
     firstName: z.string().min(1).describe("The user's first name."),
     lastName: z.string().min(1).describe("The user's last name."),
     role: roleArg,
@@ -74,6 +73,16 @@ const createUser: ToolDef = {
       password,
       roleId: role.id,
     });
+
+    if (user.existing_account) {
+      return result({
+        userId: user.id,
+        email: user.email,
+        role: role.name,
+        organizationId: args.organizationId,
+        note: "This email already had an account. It was added to the organization and keeps its own password.",
+      });
+    }
 
     return result({
       userId: user.id,
@@ -125,7 +134,7 @@ const updateUser: ToolDef = {
       .positive()
       .optional()
       .describe(
-        "The user's organization, used only to resolve a custom role name. Omit unless the organization defines its own roles.",
+        "The organization whose role to change. A user can belong to several organizations, with a role in each: required with role.",
       ),
   },
   handler: async (args) => {
@@ -138,16 +147,18 @@ const updateUser: ToolDef = {
       throw new Error("Provide a name, email or role to update.");
     }
 
+    if (args.role !== undefined && args.organizationId === undefined) {
+      throw new Error("Provide the organizationId whose role to change.");
+    }
     const role =
-      args.role === undefined
-        ? undefined
-        : await resolveRole(args.organizationId ?? null, args.role);
+      args.role === undefined ? undefined : await resolveRole(args.organizationId!, args.role);
 
     const user = await updateUserDetails(args.userId, {
       name: args.firstName,
       surname: args.lastName,
       email: args.email,
       roleId: role?.id,
+      organizationId: args.organizationId,
     });
 
     return result({ user });
@@ -158,7 +169,7 @@ const deleteUser: ToolDef = {
   name: "delete_user",
   title: "Delete user",
   description:
-    "Permanently delete a user and remove them from their organization. This cannot be undone.",
+    "Permanently delete a user's account, removing them from every organization they belong to. This cannot be undone.",
   inputSchema: {
     userId: z.number().int().positive().describe("Id of the user to delete."),
   },
@@ -173,16 +184,18 @@ const INVITE_REFUSALS: Record<InviteRefusalCode, string> = {
   exceeds_access: "The invitation grants more access than the inviter has.",
   cannot_replace: "A pending invitation exists for a role above the inviter's own.",
   conflict: "The pending invitation was changed by someone else. Try again.",
+  already_member: "That user is already a member of this organization.",
+  super_admin: "That email belongs to a super admin, who cannot join an organization.",
 };
 
 const inviteUser: ToolDef = {
   name: "invite_user",
   title: "Invite user",
   description:
-    "Invite a user to an existing organization by email. They set their own password through the invitation link, so no password is generated. The invitation expires after one week.",
+    "Invite a user to an existing organization by email. A new user sets their own password through the invitation link, so no password is generated; an existing user joins by logging in through the link with their own password. The invitation expires after one week.",
   inputSchema: {
     organizationId: z.number().int().positive().describe("Id of the organization to invite into."),
-    email: z.string().email().describe("The invitee's email address. Must be unused."),
+    email: z.string().email().describe("The invitee's email address."),
     firstName: z.string().min(1).describe("The invitee's first name."),
     lastName: z.string().min(1).optional().describe("The invitee's last name."),
     role: roleArg,
@@ -192,10 +205,6 @@ const inviteUser: ToolDef = {
     if (!(await organizationExists(args.organizationId))) {
       throw new Error(`No organization with id ${args.organizationId} on this deployment.`);
     }
-    if (await userExistsByEmail(args.email)) {
-      throw new Error(`A user with the email ${args.email} already exists.`);
-    }
-
     const role = await resolveRole(args.organizationId, args.role);
 
     let invitation;

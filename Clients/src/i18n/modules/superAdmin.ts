@@ -24,7 +24,6 @@ export const de: Record<string, string> = {
   "Delete Organization": "Organisation löschen",
   "Edit user": "Benutzer bearbeiten",
   "Invite user": "Benutzer einladen",
-  "Remove User": "Benutzer entfernen",
   "Send an invitation to a new user": "Einladung an einen neuen Benutzer senden",
   "All Organizations": "Alle Organisationen",
   "Last Login": "Letzte Anmeldung",
@@ -42,25 +41,17 @@ export const de: Record<string, string> = {
     "Alle Benutzer über alle Organisationen hinweg anzeigen und verwalten.",
   "Last login": "Letzte Anmeldung",
   "Loading organizations...": "Organisationen werden geladen...",
-  "This will permanently remove the user and all their data from this organization.":
-    "Dies entfernt den Benutzer und alle seine Daten dauerhaft aus dieser Organisation.",
-  "This will permanently remove the user and all their data.":
-    "Dies entfernt den Benutzer und alle seine Daten dauerhaft.",
   "View users": "Benutzer anzeigen",
   "All Roles": "Alle Rollen",
   "Elect": "Wählen",
   "Elect Super Admin": "Super Admin wählen",
   "Elect a Super Admin": "Einen Super Admin wählen",
   "Elect other users as Super Admins": "Andere Benutzer als Super Admins wählen",
-  "Grant an existing user cross-organization Super Admin capabilities. Their base organization role is unchanged.":
-    "Einem bestehenden Benutzer organisationsübergreifende Super Admin-Berechtigungen erteilen. Seine Basisrolle in der Organisation bleibt unverändert.",
   "No Super Admins yet.": "Noch keine Super Admins.",
   "Revoke Super Admin": "Super Admin widerrufen",
   "Search by name or email": "Nach Name oder E-Mail suchen",
   "Sent": "Gesendet",
   "Super Admins": "Super Admins",
-  "They will keep their normal organization role but lose cross-organization access.":
-    "Er behält seine normale Organisationsrolle, verliert jedoch den organisationsübergreifenden Zugriff.",
   "Add first user": "Ersten Benutzer hinzufügen",
   "Add user": "Benutzer hinzufügen",
   "Create API tokens for the super admin API":
@@ -78,6 +69,21 @@ export const de: Record<string, string> = {
   "Failed to create the config file.": "Die Konfigurationsdatei konnte nicht erstellt werden.",
   "Downloading revokes the token issued here last time. Anything set up with the previous file, on this machine or another, stops working immediately.":
     "Beim Herunterladen wird das zuletzt hier ausgestellte Token widerrufen. Alles, was mit der vorherigen Datei eingerichtet wurde, auf diesem oder einem anderen Rechner, funktioniert sofort nicht mehr.",
+  "Remove user": "Benutzer entfernen",
+  "They lose access to this organization. If it is their only organization, their account is deleted too.":
+    "Der Benutzer verliert den Zugriff auf diese Organisation. Ist es seine einzige Organisation, wird auch sein Konto gelöscht.",
+  "A Super Admin with no organization cannot be revoked":
+    "Einem Super Admin ohne Organisation kann die Rolle nicht entzogen werden",
+  "Name and email apply in every organization the user belongs to.":
+    "Name und E-Mail gelten in jeder Organisation, der der Benutzer angehört.",
+  "This email already has an account. The invitation lets them join with it.":
+    "Für diese E-Mail-Adresse gibt es bereits ein Konto. Mit der Einladung tritt der Benutzer mit diesem Konto bei.",
+  "This email already has an account. It joins with its own name and password.":
+    "Für diese E-Mail-Adresse gibt es bereits ein Konto. Es tritt mit seinem eigenen Namen und Passwort bei.",
+  "Grant an existing user cross-organization Super Admin capabilities. Their organization roles are unchanged.":
+    "Einem bestehenden Benutzer organisationsübergreifende Super Admin-Berechtigungen erteilen. Seine Rollen in den Organisationen bleiben unverändert.",
+  "They will keep their organization roles but lose cross-organization access.":
+    "Er behält seine Organisationsrollen, verliert jedoch den organisationsübergreifenden Zugriff.",
 };
 
 export const fr: Record<string, string> = {
@@ -103,7 +109,6 @@ export const fr: Record<string, string> = {
   "Delete Organization": "Supprimer l'organisation",
   "Edit user": "Modifier l'utilisateur",
   "Invite user": "Inviter un utilisateur",
-  "Remove User": "Retirer l'utilisateur",
   "Send an invitation to a new user": "Envoyer une invitation à un nouvel utilisateur",
   "All Organizations": "Toutes les organisations",
   "Last Login": "Dernière connexion",
@@ -121,25 +126,17 @@ export const fr: Record<string, string> = {
     "Consulter et gérer tous les utilisateurs dans toutes les organisations.",
   "Last login": "Dernière connexion",
   "Loading organizations...": "Chargement des organisations...",
-  "This will permanently remove the user and all their data from this organization.":
-    "Cela supprimera définitivement l'utilisateur et toutes ses données de cette organisation.",
-  "This will permanently remove the user and all their data.":
-    "Cela supprimera définitivement l'utilisateur et toutes ses données.",
   "View users": "Voir les utilisateurs",
   "All Roles": "Tous les rôles",
   "Elect": "Élire",
   "Elect Super Admin": "Élire un Super Admin",
   "Elect a Super Admin": "Élire un Super Admin",
   "Elect other users as Super Admins": "Élire d'autres utilisateurs comme Super Admins",
-  "Grant an existing user cross-organization Super Admin capabilities. Their base organization role is unchanged.":
-    "Accordez à un utilisateur existant des capacités de Super Admin inter-organisations. Son rôle de base dans l'organisation reste inchangé.",
   "No Super Admins yet.": "Aucun Super Admin pour le moment.",
   "Revoke Super Admin": "Révoquer Super Admin",
   "Search by name or email": "Rechercher par nom ou e-mail",
   "Sent": "Envoyé",
   "Super Admins": "Super Admins",
-  "They will keep their normal organization role but lose cross-organization access.":
-    "Il conservera son rôle normal dans l'organisation mais perdra l'accès inter-organisations.",
   "Add first user": "Ajouter le premier utilisateur",
   "Add user": "Ajouter un utilisateur",
   "Create API tokens for the super admin API":
@@ -157,6 +154,21 @@ export const fr: Record<string, string> = {
   "Failed to create the config file.": "Impossible de créer le fichier de configuration.",
   "Downloading revokes the token issued here last time. Anything set up with the previous file, on this machine or another, stops working immediately.":
     "Le téléchargement révoque le jeton émis ici la dernière fois. Tout ce qui a été configuré avec le fichier précédent, sur cette machine ou une autre, cesse immédiatement de fonctionner.",
+  "Remove user": "Retirer l'utilisateur",
+  "They lose access to this organization. If it is their only organization, their account is deleted too.":
+    "Il perd l'accès à cette organisation. Si c'est sa seule organisation, son compte est également supprimé.",
+  "A Super Admin with no organization cannot be revoked":
+    "Un Super Admin sans organisation ne peut pas être révoqué",
+  "Name and email apply in every organization the user belongs to.":
+    "Le nom et l'e-mail s'appliquent dans toutes les organisations de l'utilisateur.",
+  "This email already has an account. The invitation lets them join with it.":
+    "Cette adresse e-mail a déjà un compte. L'invitation lui permet de rejoindre l'organisation avec ce compte.",
+  "This email already has an account. It joins with its own name and password.":
+    "Cette adresse e-mail a déjà un compte. Il rejoint l'organisation avec son propre nom et mot de passe.",
+  "Grant an existing user cross-organization Super Admin capabilities. Their organization roles are unchanged.":
+    "Accordez à un utilisateur existant des capacités de Super Admin inter-organisations. Ses rôles dans les organisations restent inchangés.",
+  "They will keep their organization roles but lose cross-organization access.":
+    "Il conservera ses rôles dans les organisations mais perdra l'accès inter-organisations.",
 };
 
 export const es: Record<string, string> = {
@@ -180,7 +192,6 @@ export const es: Record<string, string> = {
   "Delete Organization": "Eliminar organización",
   "Edit user": "Editar usuario",
   "Invite user": "Invitar usuario",
-  "Remove User": "Eliminar usuario",
   "Send an invitation to a new user": "Enviar una invitación a un nuevo usuario",
   "All Organizations": "Todas las organizaciones",
   "Last Login": "Último inicio de sesión",
@@ -198,25 +209,17 @@ export const es: Record<string, string> = {
     "Vea y gestione todos los usuarios de todas las organizaciones.",
   "Last login": "Último inicio de sesión",
   "Loading organizations...": "Cargando organizaciones...",
-  "This will permanently remove the user and all their data from this organization.":
-    "Esto eliminará permanentemente al usuario y todos sus datos de esta organización.",
-  "This will permanently remove the user and all their data.":
-    "Esto eliminará permanentemente al usuario y todos sus datos.",
   "View users": "Ver usuarios",
   "All Roles": "Todos los roles",
   "Elect": "Elegir",
   "Elect Super Admin": "Elegir Super Admin",
   "Elect a Super Admin": "Elegir un Super Admin",
   "Elect other users as Super Admins": "Elegir a otros usuarios como Super Admins",
-  "Grant an existing user cross-organization Super Admin capabilities. Their base organization role is unchanged.":
-    "Conceda a un usuario existente capacidades de Super Admin entre organizaciones. Su rol base en la organización no cambia.",
   "No Super Admins yet.": "Aún no hay Super Admins.",
   "Revoke Super Admin": "Revocar Super Admin",
   "Search by name or email": "Buscar por nombre o correo electrónico",
   "Sent": "Enviado",
   "Super Admins": "Super Admins",
-  "They will keep their normal organization role but lose cross-organization access.":
-    "Mantendrá su rol normal en la organización pero perderá el acceso entre organizaciones.",
   "Add first user": "Añadir primer usuario",
   "Add user": "Añadir usuario",
   "Create API tokens for the super admin API":
@@ -234,4 +237,19 @@ export const es: Record<string, string> = {
   "Failed to create the config file.": "No se pudo crear el archivo de configuración.",
   "Downloading revokes the token issued here last time. Anything set up with the previous file, on this machine or another, stops working immediately.":
     "Al descargarlo se revoca el token emitido aquí la última vez. Todo lo que se configuró con el archivo anterior, en este equipo o en otro, deja de funcionar de inmediato.",
+  "Remove user": "Quitar usuario",
+  "They lose access to this organization. If it is their only organization, their account is deleted too.":
+    "Pierde el acceso a esta organización. Si es su única organización, también se elimina su cuenta.",
+  "A Super Admin with no organization cannot be revoked":
+    "Un Super Admin sin organización no se puede revocar",
+  "Name and email apply in every organization the user belongs to.":
+    "El nombre y el correo se aplican en todas las organizaciones del usuario.",
+  "This email already has an account. The invitation lets them join with it.":
+    "Este correo ya tiene una cuenta. La invitación le permite unirse con ella.",
+  "This email already has an account. It joins with its own name and password.":
+    "Este correo ya tiene una cuenta. Se une con su propio nombre y contraseña.",
+  "Grant an existing user cross-organization Super Admin capabilities. Their organization roles are unchanged.":
+    "Conceda a un usuario existente capacidades de Super Admin entre organizaciones. Sus roles en las organizaciones no cambian.",
+  "They will keep their organization roles but lose cross-organization access.":
+    "Mantendrá sus roles en las organizaciones pero perderá el acceso entre organizaciones.",
 };

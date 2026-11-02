@@ -105,8 +105,8 @@ describe("inviteEmail.utils", () => {
       });
     });
 
-    it("writes a known recipient in their saved language", async () => {
-      mockGetUserByEmail.mockResolvedValue({ id: 8, role_name: "Editor" } as Awaited<
+    it("sends a known recipient the join link, in their saved language", async () => {
+      mockGetUserByEmail.mockResolvedValue({ id: 8 } as unknown as Awaited<
         ReturnType<typeof getUserByEmailQuery>
       >);
       mockGetUserLanguage.mockResolvedValue("de");
@@ -117,15 +117,17 @@ describe("inviteEmail.utils", () => {
       expect(mockGetUserLanguage).toHaveBeenCalledWith(8);
       expect(mockSendEmail).toHaveBeenCalledWith(
         "user@example.com",
-        "Erstellen Sie Ihr Konto",
+        "Treten Sie einer Organisation auf VerifyWise bei",
         "<mjml>template</mjml>",
         expect.objectContaining({
-          heading: "Willkommen bei VerifyWise",
+          link: "https://app.example.com/join?token=mock-token-123",
+          heading: "Sie wurden in eine Organisation eingeladen",
           greeting: "Hallo John,",
-          intro: "Ein Administrator hat ein Konto für Sie auf dem VerifyWise-Server erstellt.",
+          intro:
+            "Ein Administrator hat Sie eingeladen, seiner Organisation auf dem VerifyWise-Server beizutreten.",
           instruction:
-            "Klicken Sie auf die Schaltfläche unten, um Ihr Konto einzurichten und zu beginnen.",
-          button: "Konto erstellen",
+            "Klicken Sie auf die Schaltfläche unten und melden Sie sich mit Ihrem bestehenden Konto an, um beizutreten.",
+          button: "Organisation beitreten",
           ignore:
             "Wenn Sie diese Einladung nicht erwartet haben, ignorieren Sie diese E-Mail bitte.",
           thanks: "Vielen Dank.",
@@ -166,16 +168,35 @@ describe("inviteEmail.utils", () => {
       );
     });
 
+    it("still sends the join link when the recipient's language lookup fails", async () => {
+      mockGetUserByEmail.mockResolvedValue({ id: 8 } as unknown as Awaited<
+        ReturnType<typeof getUserByEmailQuery>
+      >);
+      mockGetUserLanguage.mockRejectedValue(new Error("db down"));
+
+      await sendInviteEmail({ ...params, lang: "de" });
+
+      expect(mockSendEmail).toHaveBeenCalledWith(
+        "user@example.com",
+        "Treten Sie einer Organisation auf VerifyWise bei",
+        "<mjml>template</mjml>",
+        expect.objectContaining({ link: "https://app.example.com/join?token=mock-token-123" }),
+      );
+    });
+
     it("sends English when the recipient language resolves to English", async () => {
-      mockGetUserByEmail.mockResolvedValue({ id: 8, role_name: null } as Awaited<
+      mockGetUserByEmail.mockResolvedValue({ id: 8 } as unknown as Awaited<
         ReturnType<typeof getUserByEmailQuery>
       >);
       mockGetUserLanguage.mockResolvedValue("en");
 
       await sendInviteEmail({ ...params, lang: "de" });
 
-      expect(mockSendEmail.mock.calls[0][1]).toBe("Create your account");
-      expect(mockSendEmail.mock.calls[0][3]).toMatchObject(englishCopy);
+      expect(mockSendEmail.mock.calls[0][1]).toBe("Join an organization on VerifyWise");
+      expect(mockSendEmail.mock.calls[0][3]).toMatchObject({
+        heading: "You have been invited to an organization",
+        button: "Join organization",
+      });
     });
 
     // The invitation row is already saved when this runs, so a send that

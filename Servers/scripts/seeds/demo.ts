@@ -102,14 +102,16 @@ function parseArgs(argv: string[]): Args {
 async function resolveUser(orgId: number, userId?: number): Promise<number> {
   if (userId !== undefined) {
     const rows = await sequelize.query<{ id: number }>(
-      `SELECT id FROM users WHERE id = :userId AND organization_id = :orgId`,
+      `SELECT user_id AS id FROM organization_members WHERE user_id = :userId AND organization_id = :orgId`,
       { replacements: { userId, orgId }, type: QueryTypes.SELECT },
     );
     if (!rows[0]) throw new Error(`User ${userId} does not belong to org ${orgId}.`);
     return userId;
   }
   const admins = await sequelize.query<{ id: number }>(
-    `SELECT id FROM users WHERE organization_id = :orgId AND role_id = 1 ORDER BY id LIMIT 1`,
+    `SELECT user_id AS id FROM organization_members
+     WHERE organization_id = :orgId AND role_id = 1
+     ORDER BY user_id LIMIT 1`,
     { replacements: { orgId }, type: QueryTypes.SELECT },
   );
   if (!admins[0]) throw new Error(`Org ${orgId} has no Admin user; pass --user <id>.`);

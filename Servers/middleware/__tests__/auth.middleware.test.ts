@@ -9,7 +9,6 @@ jest.mock("../../utils/jwt.utils", () => ({
   getTokenPayload: jest.fn(),
 }));
 jest.mock("../../utils/user.utils", () => ({
-  doesUserBelongsToOrganizationQuery: jest.fn(),
   getUserByIdQuery: jest.fn(),
 }));
 jest.mock("../../tools/getTenantHash", () => ({
@@ -41,7 +40,8 @@ jest.mock("../../utils/superAdmin.utils", () => ({
 
 import authenticateJWT from "../auth.middleware";
 import { getTokenPayload } from "../../utils/jwt.utils";
-import { doesUserBelongsToOrganizationQuery, getUserByIdQuery } from "../../utils/user.utils";
+import { getUserByIdQuery } from "../../utils/user.utils";
+import { isUserSuperAdmin } from "../../utils/superAdmin.utils";
 import { getTenantHash } from "../../tools/getTenantHash";
 import { isValidTenantHash } from "../../utils/security.utils";
 import { getRoleNameById } from "../../utils/roleMap";
@@ -49,9 +49,7 @@ import { getActiveApiTokenByHashQuery, touchApiTokenLastUsedQuery } from "../../
 
 // Cast mocks for type safety
 const mockGetTokenPayload = getTokenPayload as jest.MockedFunction<typeof getTokenPayload>;
-const mockBelongsToOrg = doesUserBelongsToOrganizationQuery as jest.MockedFunction<
-  typeof doesUserBelongsToOrganizationQuery
->;
+const mockIsUserSuperAdmin = isUserSuperAdmin as jest.MockedFunction<typeof isUserSuperAdmin>;
 const mockGetUserById = getUserByIdQuery as jest.MockedFunction<typeof getUserByIdQuery>;
 const mockGetTenantHash = getTenantHash as jest.MockedFunction<typeof getTenantHash>;
 const mockIsValidTenantHash = isValidTenantHash as jest.MockedFunction<typeof isValidTenantHash>;
@@ -89,8 +87,7 @@ const validPayload = {
 
 function setupValidMocks() {
   mockGetTokenPayload.mockReturnValue(validPayload as any);
-  mockBelongsToOrg.mockResolvedValue({ belongs: true } as any);
-  mockGetUserById.mockResolvedValue({ role_id: 1, organization_id: 10 } as any);
+  mockGetUserById.mockResolvedValue({ id: 1, role_id: 1 } as any);
   mockGetRoleNameById.mockResolvedValue("Admin");
   mockIsValidTenantHash.mockReturnValue(true);
   mockGetTenantHash.mockReturnValue("a1b2c3d4e5");
@@ -215,10 +212,22 @@ describe("authenticateJWT middleware", () => {
   });
 
   describe("organization membership", () => {
+    it("loads the user as a member of the token's organization", async () => {
+      setupValidMocks();
+      const req = createReq("Bearer valid-token");
+      const res = createRes();
+
+      await authenticateJWT(req as Request, res as Response, next);
+
+      expect(mockGetUserById).toHaveBeenCalledWith(1, null, 10);
+      expect(next).toHaveBeenCalled();
+    });
+
     it("should return 403 when user does not belong to organization", async () => {
       mockGetTokenPayload.mockReturnValue(validPayload as any);
-      mockGetUserById.mockResolvedValue({ role_id: 1, organization_id: 10 } as any);
-      mockBelongsToOrg.mockResolvedValue({ belongs: false } as any);
+      // Not a member of org 10, but the account exists.
+      mockGetUserById.mockImplementation((async (_id: number, _tx: unknown, orgId?: number) =>
+        orgId === undefined ? { id: 1 } : undefined) as any);
       const req = createReq("Bearer valid-token");
       const res = createRes();
 
@@ -229,15 +238,77 @@ describe("authenticateJWT middleware", () => {
         message: "Forbidden",
         data: "User does not belong to this organization",
       });
+      expect(next).not.toHaveBeenCalled();
+    });
+
+    it("should return 401 when the account no longer exists", async () => {
+      mockGetTokenPayload.mockReturnValue(validPayload as any);
+      mockGetUserById.mockResolvedValue(undefined as any);
+      const req = createReq("Bearer valid-token");
+      const res = createRes();
+
+      await authenticateJWT(req as Request, res as Response, next);
+
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(next).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("token types", () => {
+    it("rejects the organization-selection token as an access token", async () => {
+      setupValidMocks();
+      mockGetTokenPayload.mockReturnValue({
+        ...validPayload,
+        type: "organization_selection",
+      } as any);
+      const req = createReq("Bearer selection-token");
+      const res = createRes();
+
+      await authenticateJWT(req as Request, res as Response, next);
+
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(mockGetUserById).not.toHaveBeenCalled();
+      expect(next).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("pure super admin (token without an organization)", () => {
+    const pureSuperAdminPayload = { ...validPayload, roleName: "SuperAdmin", organizationId: null };
+
+    it("authenticates a user with a super_admins row, without an organization", async () => {
+      mockGetTokenPayload.mockReturnValue(pureSuperAdminPayload as any);
+      mockGetUserById.mockResolvedValue({ id: 1 } as any);
+      mockIsUserSuperAdmin.mockResolvedValueOnce(true);
+      const req = createReq("Bearer super-admin") as any;
+      const res = createRes();
+
+      await authenticateJWT(req as Request, res as Response, next);
+
+      expect(mockGetUserById).toHaveBeenCalledWith(1);
+      expect(req.isSuperAdmin).toBe(true);
+      expect(req.organizationId).toBeUndefined();
+      expect(next).toHaveBeenCalled();
+    });
+
+    it("refuses a token without an organization for a user with no super_admins row", async () => {
+      mockGetTokenPayload.mockReturnValue(pureSuperAdminPayload as any);
+      mockGetUserById.mockResolvedValue({ id: 1 } as any);
+      mockIsUserSuperAdmin.mockResolvedValueOnce(false);
+      const req = createReq("Bearer no-org") as any;
+      const res = createRes();
+
+      await authenticateJWT(req as Request, res as Response, next);
+
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(next).not.toHaveBeenCalled();
     });
   });
 
   describe("role consistency", () => {
     it("should return 403 when role has changed since token was issued", async () => {
       mockGetTokenPayload.mockReturnValue(validPayload as any);
-      mockBelongsToOrg.mockResolvedValue({ belongs: true } as any);
       // Token says Admin, but DB now resolves role_id 3 to "Editor"
-      mockGetUserById.mockResolvedValue({ role_id: 3, organization_id: 10 } as any);
+      mockGetUserById.mockResolvedValue({ id: 1, role_id: 3 } as any);
       mockGetRoleNameById.mockResolvedValue("Editor");
       const req = createReq("Bearer role-changed");
       const res = createRes();
@@ -253,8 +324,7 @@ describe("authenticateJWT middleware", () => {
 
     it("should return 403 when the role id has been deleted (lookup returns undefined)", async () => {
       mockGetTokenPayload.mockReturnValue(validPayload as any);
-      mockBelongsToOrg.mockResolvedValue({ belongs: true } as any);
-      mockGetUserById.mockResolvedValue({ role_id: 99, organization_id: 10 } as any);
+      mockGetUserById.mockResolvedValue({ id: 1, role_id: 99 } as any);
       mockGetRoleNameById.mockResolvedValue(undefined);
       const req = createReq("Bearer stale-role");
       const res = createRes();
@@ -299,8 +369,7 @@ describe("authenticateJWT middleware", () => {
 
     it("should authenticate when the api_token hash is found and active", async () => {
       mockGetTokenPayload.mockReturnValue(apiTokenPayload as any);
-      mockGetUserById.mockResolvedValue({ role_id: 1, organization_id: 10 } as any);
-      mockBelongsToOrg.mockResolvedValue({ belongs: true } as any);
+      mockGetUserById.mockResolvedValue({ id: 1, role_id: 1 } as any);
       mockGetTenantHash.mockReturnValue("a1b2c3d4e5");
       // Token row exists, not revoked
       mockGetActiveApiToken.mockResolvedValue({ id: 7, revoked: false } as any);
@@ -323,8 +392,7 @@ describe("authenticateJWT middleware", () => {
 
     it("should touch last_used_at on a successful api_token request", async () => {
       mockGetTokenPayload.mockReturnValue(apiTokenPayload as any);
-      mockGetUserById.mockResolvedValue({ role_id: 1, organization_id: 10 } as any);
-      mockBelongsToOrg.mockResolvedValue({ belongs: true } as any);
+      mockGetUserById.mockResolvedValue({ id: 1, role_id: 1 } as any);
       mockGetTenantHash.mockReturnValue("a1b2c3d4e5");
       mockGetActiveApiToken.mockResolvedValue({ id: 7, revoked: false } as any);
       mockTouchApiToken.mockResolvedValue(undefined as any);
@@ -340,7 +408,7 @@ describe("authenticateJWT middleware", () => {
 
     it("should return 401 when the api_token hash is not found (revoked or deleted)", async () => {
       mockGetTokenPayload.mockReturnValue(apiTokenPayload as any);
-      mockGetUserById.mockResolvedValue({ role_id: 1, organization_id: 10 } as any);
+      mockGetUserById.mockResolvedValue({ id: 1, role_id: 1 } as any);
       // No active row for this hash
       mockGetActiveApiToken.mockResolvedValue(null as any);
 
@@ -358,8 +426,7 @@ describe("authenticateJWT middleware", () => {
       // This is the core regression: a correctly-signed, unexpired JWT must
       // still be rejected once its api_tokens row no longer exists.
       mockGetTokenPayload.mockReturnValue(apiTokenPayload as any);
-      mockGetUserById.mockResolvedValue({ role_id: 1, organization_id: 10 } as any);
-      mockBelongsToOrg.mockResolvedValue({ belongs: true } as any);
+      mockGetUserById.mockResolvedValue({ id: 1, role_id: 1 } as any);
       mockGetActiveApiToken.mockResolvedValue(null as any);
 
       const req = createReq("Bearer signed-but-revoked") as any;

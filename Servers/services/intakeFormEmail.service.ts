@@ -44,8 +44,9 @@ async function getAdminUsersForOrganization(
     const admins = await sequelize.query(
       `SELECT u.id, u.name, u.email
        FROM users u
-       JOIN roles r ON u.role_id = r.id
-       WHERE r.name = 'Admin' AND u.organization_id = :organizationId`,
+       JOIN organization_members om ON om.user_id = u.id AND om.organization_id = :organizationId
+       JOIN roles r ON om.role_id = r.id
+       WHERE r.name = 'Admin'`,
       {
         replacements: { organizationId },
         type: QueryTypes.SELECT,

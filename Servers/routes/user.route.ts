@@ -6,6 +6,7 @@
  *
  * Authentication Endpoints:
  * - POST /login - User authentication with email/password
+ * - POST /login/select-organization - Choose the organization when the user has several
  * - POST /refresh-token - Obtain new access token using refresh token
  * - POST /check-user-exists - Check if any user exists (setup flow)
  *
@@ -52,12 +53,14 @@ import { authLimiter, loginLimiter, tokenRefreshLimiter } from "../middleware/ra
 import {
   checkUserExists,
   createNewUser,
+  acceptInvitationAsExistingUser,
   deleteUserById,
   getAllUsers,
   getUserById,
   getPreferencesForCurrentUser,
   patchPreferencesForCurrentUser,
   loginUser,
+  selectLoginOrganization,
   loginUserWithMicrosoft,
   updateUserById,
   calculateProgress,
@@ -150,6 +153,21 @@ router.get("/:id", authenticateJWT, getUserById);
 router.post("/register", authLimiter, registerJWT, createNewUser);
 
 /**
+ * POST /users/invitations/accept
+ *
+ * Accepts an invitation as an existing user: their own email and password
+ * confirm the account, which then joins the inviting organization.
+ *
+ * @name post/invitations/accept
+ * @function
+ * @memberof module:routes/user.route
+ * @inner
+ * @param {express.Request} req - Express request object
+ * @param {express.Response} res - Express response object
+ */
+router.post("/invitations/accept", loginLimiter, registerJWT, acceptInvitationAsExistingUser);
+
+/**
  * POST /users/login
  *
  * Authenticates a user and returns a token.
@@ -165,6 +183,9 @@ router.post("/register", authLimiter, registerJWT, createNewUser);
 // middleware/rateLimit.middleware.ts with every other limiter, so it shares the
 // standard RateLimit-* headers and STATUS_CODE[429] envelope.
 router.post("/login", loginLimiter, loginUser);
+// Second login step for a user in several organizations: exchanges the
+// short-lived selection token from /login for a session in the chosen one.
+router.post("/login/select-organization", loginLimiter, selectLoginOrganization);
 router.post("/login-microsoft", loginLimiter, loginUserWithMicrosoft);
 
 router.post("/refresh-token", tokenRefreshLimiter, refreshAccessToken);

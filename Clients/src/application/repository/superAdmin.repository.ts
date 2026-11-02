@@ -87,12 +87,22 @@ export async function inviteUserToOrg(
 
 export async function createUserInOrg(
   orgId: number,
-  data: { email: string; name: string; surname?: string; password: string; roleId: number },
+  // password: required for a new account; an existing account keeps its own.
+  data: { email: string; name: string; surname?: string; password?: string; roleId: number },
 ) {
-  return apiServices.post<ServerResponse<OrgUser>>(
+  // existing_account: the email already had an account, which was added to
+  // the organization with its own name and password.
+  return apiServices.post<ServerResponse<OrgUser & { existing_account?: boolean }>>(
     `/super-admin/organizations/${orgId}/users`,
     data,
   );
+}
+
+/** Removes a user from one organization; the account goes only with its last one. */
+export async function removeOrgUser(orgId: number, userId: number) {
+  return apiServices.delete<
+    ServerResponse<{ removed: true; userId: number; accountDeleted: boolean }>
+  >(`/super-admin/organizations/${orgId}/users/${userId}`);
 }
 
 export async function createOrgWithUser(data: {
@@ -107,7 +117,7 @@ export async function createOrgWithUser(data: {
     password?: string;
   };
 }) {
-  return apiServices.post<ServerResponse<{ organizationId: number }>>(
+  return apiServices.post<ServerResponse<{ organizationId: number; existingAccount?: boolean }>>(
     `/super-admin/organizations-with-user`,
     data,
   );
@@ -119,15 +129,18 @@ export async function checkEmailExists(email: string) {
   );
 }
 
+/** Name and email are the account's; a role is set in one organization, so it needs organizationId. */
 export async function updateUser(
   userId: number,
-  data: { name?: string; surname?: string; email?: string; roleId?: number },
+  data: {
+    name?: string;
+    surname?: string;
+    email?: string;
+    roleId?: number;
+    organizationId?: number;
+  },
 ) {
   return apiServices.patch(`/super-admin/users/${userId}`, data);
-}
-
-export async function removeUser(userId: number) {
-  return apiServices.delete(`/super-admin/users/${userId}`);
 }
 
 export interface MonitoringConfig {
@@ -167,10 +180,13 @@ export interface SuperAdminEntry {
   name: string;
   surname: string;
   email: string;
-  role_id: number | null;
-  role_name: string | null;
-  organization_id: number | null;
-  organization_name: string | null;
+  /** Empty for a pure super admin. */
+  organizations: {
+    organization_id: number;
+    organization_name: string;
+    role_id: number;
+    role_name: string;
+  }[];
 }
 
 export async function listSuperAdmins() {

@@ -11,11 +11,13 @@
  * - surname: User's last name (min 2 chars)
  * - email: Email address (validated format)
  * - password_hash: Bcrypt hashed password (10 rounds)
- * - role_id: Foreign key to RoleModel
  * - created_at: Account creation timestamp
  * - last_login: Last successful login timestamp
  * - is_demo: Flag for demo/sandbox users
- * - organization_id: Foreign key to OrganizationModel (multi-tenancy)
+ *
+ * A user's organizations and the role held in each are rows in
+ * organization_members. role_id here is virtual: the role in the organization
+ * the user was loaded for, set only by organization-scoped queries.
  *
  * Key Features:
  * - Automatic password hashing with bcrypt
@@ -36,14 +38,12 @@
  * @module domain.layer/models/user
  */
 
-import { Column, DataType, ForeignKey, Model, Table } from "sequelize-typescript";
-import { RoleModel } from "../role/role.model";
+import { Column, DataType, Model, Table } from "sequelize-typescript";
 import { emailValidation } from "../../validations/email.valid";
 import { numberValidation } from "../../validations/number.valid";
 import { passwordValidation } from "../../validations/password.valid";
 import { ValidationException, BusinessLogicException } from "../../exceptions/custom.exception";
 import bcrypt from "bcrypt";
-import { OrganizationModel } from "../organization/organization.model";
 import { SSOProvider } from "../../interfaces/i.ssoConfig";
 
 @Table({
@@ -79,11 +79,10 @@ export class UserModel extends Model<UserModel> {
   })
   password_hash!: string;
 
-  @ForeignKey(() => RoleModel)
   @Column({
-    type: DataType.INTEGER,
+    type: DataType.VIRTUAL,
   })
-  role_id!: number;
+  role_id?: number;
 
   @Column({
     type: DataType.DATE,
@@ -109,13 +108,6 @@ export class UserModel extends Model<UserModel> {
   })
   is_demo?: boolean;
 
-  @ForeignKey(() => OrganizationModel)
-  @Column({
-    type: DataType.INTEGER,
-    allowNull: true,
-  })
-  organization_id?: number;
-
   @Column({
     type: DataType.INTEGER,
     allowNull: true,
@@ -138,7 +130,8 @@ export class UserModel extends Model<UserModel> {
    * Creates a new user with validation and password hashing
    *
    * Factory method that creates a UserModel instance with validated data and hashed password.
-   * Does NOT save to database - caller must persist using query utilities.
+   * Does NOT save to database - caller must persist using query utilities, which
+   * also add the user's first organization membership.
    *
    * @static
    * @async
@@ -146,8 +139,6 @@ export class UserModel extends Model<UserModel> {
    * @param {string} surname - User's last name (min 2 chars)
    * @param {string} email - Email address (validated format)
    * @param {string} password - Plain text password (will be hashed)
-   * @param {number} role_id - Role ID (1=Admin, 2=Reviewer, 3=Editor, 4=Auditor)
-   * @param {number} organization_id - Organization ID for multi-tenancy
    * @returns {Promise<UserModel>} UserModel instance (not yet persisted)
    * @throws {ValidationException} If any field fails validation
    *
@@ -155,11 +146,10 @@ export class UserModel extends Model<UserModel> {
    * - Password hashed with bcrypt (10 rounds)
    * - Email format validated
    * - Password strength validated (uppercase, lowercase, digit, 8+ chars)
-   * - Role and organization IDs validated (must be >= 1)
    *
    * @example
    * const user = await UserModel.createNewUser(
-   *   'John', 'Doe', 'john@example.com', 'SecurePass123!', 1, 1
+   *   'John', 'Doe', 'john@example.com', 'SecurePass123!'
    * );
    * // User instance created but not saved to database yet
    */
@@ -168,8 +158,6 @@ export class UserModel extends Model<UserModel> {
     surname: string,
     email: string,
     password: string | null,
-    role_id: number,
-    organization_id: number,
     sso_provider?: SSOProvider,
     sso_user_id?: string,
   ): Promise<UserModel> {
@@ -199,25 +187,14 @@ export class UserModel extends Model<UserModel> {
       }
     }
 
-    // Validate role_id
-    if (!numberValidation(role_id, 1)) {
-      throw new ValidationException("Invalid role_id", "role_id", role_id);
-    }
-    // Validate organization_id
-    if (!numberValidation(organization_id, 1)) {
-      throw new ValidationException("Invalid organization_id", "organization_id", organization_id);
-    }
-
     const user = new UserModel();
     user.name = name;
     user.surname = surname;
     user.email = normalizedEmail;
     user.password_hash = isSSO ? (null as unknown as string) : await bcrypt.hash(password!, 10);
-    user.role_id = role_id;
     user.created_at = new Date();
     user.last_login = new Date();
     user.is_demo = false;
-    user.organization_id = organization_id;
     user.sso_provider = sso_provider;
     user.sso_user_id = sso_user_id;
 
@@ -303,8 +280,6 @@ export class UserModel extends Model<UserModel> {
    * - Name: Required, min 2 chars
    * - Surname: Required, min 2 chars
    * - Email: Required, valid format
-   * - Role ID: Required, >= 1
-   * - Organization ID: If present, must be >= 1
    *
    * @example
    * await user.validateUserData();
@@ -333,18 +308,6 @@ export class UserModel extends Model<UserModel> {
 
     if (!this.email || !emailValidation(this.email)) {
       throw new ValidationException("Valid email is required", "email", this.email);
-    }
-
-    if (!this.role_id || !numberValidation(this.role_id, 1)) {
-      throw new ValidationException("Valid role_id is required", "role_id", this.role_id);
-    }
-
-    if (this.organization_id && !numberValidation(this.organization_id, 1)) {
-      throw new ValidationException(
-        "Valid organization_id is required",
-        "organization_id",
-        this.organization_id,
-      );
     }
   }
 

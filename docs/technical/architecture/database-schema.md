@@ -92,8 +92,6 @@ CREATE TABLE users (
   surname VARCHAR(255) NOT NULL,        -- Last name (min 2 chars)
   email VARCHAR(255) UNIQUE NOT NULL,   -- Email (validated format)
   password_hash VARCHAR(255) NOT NULL,  -- Bcrypt hash (10 rounds)
-  role_id INTEGER REFERENCES roles(id),
-  organization_id INTEGER REFERENCES organizations(id),
   profile_photo_id INTEGER,
   created_at TIMESTAMP DEFAULT NOW(),
   last_login TIMESTAMP,
@@ -101,10 +99,46 @@ CREATE TABLE users (
 );
 ```
 
+`users` holds identity only. A user's organizations, and the role held in
+each, are rows in `organization_members` (below). `UserModel.role_id` is a
+VIRTUAL attribute: the role in the organization the user was loaded for, set
+only by organization-scoped queries (`getUserByIdQuery(id, tx, organizationId)`,
+`getAllUsersQuery`).
+
 **Associations:**
-- BELONGS_TO: RoleModel (`role_id`)
-- BELONGS_TO: OrganizationModel (`organization_id`)
-- HAS_MANY: ProjectsMembersModel, VendorModel, RiskModel, TasksModel
+- HAS_MANY: organization_members, ProjectsMembersModel, VendorModel, RiskModel, TasksModel
+
+### Organization members
+
+**Table:** `organization_members` (verifywise schema), migration `20261028124759-create-organization-members.js`
+
+```sql
+CREATE TABLE organization_members (
+  organization_id INTEGER NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  role_id INTEGER NOT NULL REFERENCES roles(id),
+  joined_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (organization_id, user_id)
+);
+CREATE INDEX idx_organization_members_user_id ON organization_members(user_id);
+```
+
+A user can belong to several organizations with a different role in each.
+The organization is chosen at login and fixed for the session (it travels in
+the JWT as `organizationId`).
+
+**Superadmin invariant** (deferred constraint trigger
+`check_orphan_user_has_superadmin`, on `users` INSERT and
+`organization_members` DELETE): a user with no membership must have a
+`super_admins` row, checked at commit. Such a user is a pure super admin: they
+never join an organization and cannot be deleted, so at least one super admin
+always exists. `protect_orphan_superadmin_delete` refuses revoking the
+`super_admins` row of a user with no membership.
+
+Removing a user from an organization (`removeUserFromOrganizationQuery`)
+deletes that membership and that organization's references; when it was their
+last membership the account is deleted too. Deleting an account
+(`deleteUserAccountQuery`, super admin only) removes every membership.
 
 **Key Methods:**
 - `createNewUser()` - Factory with bcrypt hashing
@@ -760,8 +794,9 @@ PRIMARY KEY (vendor_id, project_id) ON vendor_projects
 ### Foreign Key Relationships
 
 ```
-users.role_id → roles.id
-users.organization_id → organizations.id
+organization_members.user_id → users.id
+organization_members.organization_id → organizations.id
+organization_members.role_id → roles.id
 projects.owner → users.id
 projects.last_updated_by → users.id
 project_members.user_id → users.id
@@ -793,7 +828,7 @@ approval_requests.requested_by → users.id
 ```sql
 -- Performance indexes
 CREATE INDEX idx_users_email ON users(email);
-CREATE INDEX idx_users_organization ON users(organization_id);
+CREATE INDEX idx_organization_members_user_id ON organization_members(user_id);
 CREATE INDEX idx_projects_owner ON projects(owner);
 CREATE INDEX idx_projects_status ON projects(status);
 CREATE INDEX idx_vendors_assignee ON vendors(assignee);

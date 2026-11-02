@@ -8,7 +8,6 @@ export type UserData = {
   created_at: Date;
   last_login: Date;
   is_demo?: boolean;
-  organization_id?: number;
 };
 
 export function buildUser(overrides?: Partial<UserData>): UserData {
@@ -21,7 +20,6 @@ export function buildUser(overrides?: Partial<UserData>): UserData {
     role_id: 1,
     created_at: new Date("2025-01-01"),
     last_login: new Date("2025-01-01"),
-    organization_id: 1,
     ...overrides,
   };
 }

@@ -6,8 +6,8 @@ export type EmailAvailabilityStatus =
   | "idle" // empty
   | "invalid" // malformed
   | "checking"
-  | "available"
-  | "taken"
+  | "available" // no account yet
+  | "existing" // an account exists: it joins the organization with its own name and password
   | "error"; // network / server
 
 interface State {
@@ -42,7 +42,7 @@ export function useEmailAvailability(email: string): State {
         const res = await checkEmailExists(trimmed);
         if (myToken !== tokenRef.current) return;
         const exists = Boolean((res.data as any)?.data?.exists);
-        setStatus(exists ? "taken" : "available");
+        setStatus(exists ? "existing" : "available");
       } catch {
         if (myToken !== tokenRef.current) return;
         setStatus("error");
