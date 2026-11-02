@@ -341,6 +341,15 @@ function parseNetskope(
   );
 }
 
+/** Squid escapes the user name (`%[un`), so `alice@corp.com` may arrive as `alice%40corp.com`. */
+function decodeSquidUser(raw: string): string {
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return raw;
+  }
+}
+
 function parseSquid(
   body: string,
   headerTimestamp: string | undefined,
@@ -364,7 +373,7 @@ function parseSquid(
   const target = hostAndPath(fields[6]);
   return buildEvent(
     {
-      user: fields[7],
+      user: decodeSquidUser(fields[7]),
       host: target?.host,
       path: method.toUpperCase() === "CONNECT" ? undefined : target?.path,
       method,

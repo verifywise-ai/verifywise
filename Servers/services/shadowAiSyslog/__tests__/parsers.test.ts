@@ -249,6 +249,37 @@ describe("parseLine", () => {
       expect(r.ok && r.event.action).toBe(expected);
     });
 
+    it("decodes a percent-escaped user name", () => {
+      const r = parseLine(
+        "squid",
+        "1707489120.000 200 10.0.0.1 TCP_MISS/200 0 GET https://x.com/ alice%40corp.com DIRECT/x.com",
+        undefined,
+        RECEIVED_2024,
+      );
+      expect(r.ok && r.event.user_email).toBe("alice@corp.com");
+    });
+
+    it("keeps a user name with a broken escape as written instead of throwing", () => {
+      const r = parseLine(
+        "squid",
+        "1707489120.000 200 10.0.0.1 TCP_MISS/200 0 GET https://x.com/ alice%E0%A4%A@corp.com DIRECT/x.com",
+        undefined,
+        RECEIVED_2024,
+      );
+      expect(r.ok && r.event.user_email).toBe("alice%E0%A4%A@corp.com");
+    });
+
+    it("drops a user name that decodes to something that is not an email", () => {
+      expect(
+        parseLine(
+          "squid",
+          "1707489120.000 200 10.0.0.1 TCP_MISS/200 0 GET https://x.com/ alice%20x DIRECT/x.com",
+          undefined,
+          RECEIVED_2024,
+        ),
+      ).toEqual({ ok: false, reason: "no_user" });
+    });
+
     it("drops short or non-squid lines as unparseable", () => {
       expect(parseLine("squid", "too few fields")).toEqual({
         ok: false,
