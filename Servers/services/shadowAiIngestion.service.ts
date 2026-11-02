@@ -56,27 +56,33 @@ function checkRateLimit(tenant: string, maxPerHour: number, batchSize: number): 
   return true;
 }
 
+export interface ShadowAiRateLimitResult {
+  allowed: boolean;
+  /** The limit the batch was checked against; 0 = no limit (or settings unreadable). */
+  maxPerHour: number;
+}
+
 /**
  * Check the organization's hourly event limit and count this batch against it.
- * Returns false when the batch would exceed the limit. If settings cannot be
- * read (e.g. table missing), the batch is allowed.
+ * `allowed` is false when the batch would exceed the limit. If settings cannot
+ * be read (e.g. table missing), the batch is allowed.
  */
 export async function checkShadowAiRateLimit(
   organizationId: number,
   batchSize: number,
-): Promise<boolean> {
+): Promise<ShadowAiRateLimitResult> {
+  let maxPerHour: number;
   try {
-    const settings = await getSettingsQuery(organizationId);
-    return checkRateLimit(
-      String(organizationId),
-      settings.rate_limit_max_events_per_hour,
-      batchSize,
-    );
+    maxPerHour = (await getSettingsQuery(organizationId)).rate_limit_max_events_per_hour;
   } catch (error) {
     // If settings table doesn't exist yet, skip rate limiting
     logger.debug("Rate limit check skipped (settings unavailable)");
-    return true;
+    return { allowed: true, maxPerHour: 0 };
   }
+  return {
+    allowed: checkRateLimit(String(organizationId), maxPerHour, batchSize),
+    maxPerHour,
+  };
 }
 
 /**

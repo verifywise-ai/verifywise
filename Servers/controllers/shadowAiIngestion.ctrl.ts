@@ -14,7 +14,6 @@ import {
   checkShadowAiRateLimit,
   ingestShadowAiEvents,
 } from "../services/shadowAiIngestion.service";
-import { getSettingsQuery } from "../utils/shadowAiConfig.utils";
 import { ShadowAiIngestionRequest } from "../domain.layer/interfaces/i.shadowAi";
 
 import { translateError } from "../utils/i18n.utils";
@@ -69,15 +68,16 @@ export async function ingestEvents(req: Request, res: Response) {
   }
 
   // Check rate limit from organization settings
-  if (!(await checkShadowAiRateLimit(organizationId, body.events.length))) {
-    const settings = await getSettingsQuery(organizationId);
-    return res.status(429).json(
-      STATUS_CODE[429](
-        req.t!("Rate limit exceeded: max {max} events/hour", {
-          max: settings.rate_limit_max_events_per_hour,
-        }),
-      ),
-    );
+  // The check reports the limit it used, so the 429 needs no second read.
+  const rateLimit = await checkShadowAiRateLimit(organizationId, body.events.length);
+  if (!rateLimit.allowed) {
+    return res
+      .status(429)
+      .json(
+        STATUS_CODE[429](
+          req.t!("Rate limit exceeded: max {max} events/hour", { max: rateLimit.maxPerHour }),
+        ),
+      );
   }
 
   // Validate required fields and basic formats

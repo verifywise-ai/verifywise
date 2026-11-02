@@ -8,6 +8,7 @@ import { createTestApp, testRequest } from "./setup";
 import { createTestOrganization, createTestUser, cleanupDatabase } from "./helpers";
 import { sequelize } from "../../database/db";
 import { generateApiKey, createApiKeyQuery } from "../../utils/shadowAiApiKey.utils";
+import * as shadowAiConfigUtils from "../../utils/shadowAiConfig.utils";
 
 /**
  * Characterises POST /api/v1/shadow-ai/events (X-API-Key auth). Written before
@@ -93,6 +94,29 @@ describe("POST /api/v1/shadow-ai/events", () => {
       { destination: "chat.openai.com", uri_path: "/c/1" },
       { destination: "example.com", uri_path: null },
     ]);
+  });
+
+  it("returns 429 with the limit over the hourly limit, reading settings once", async () => {
+    await sequelize.query(
+      `INSERT INTO shadow_ai_settings (organization_id, rate_limit_max_events_per_hour)
+       VALUES (:org, 1)`,
+      { replacements: { org: orgA } },
+    );
+    const settingsRead = jest.spyOn(shadowAiConfigUtils, "getSettingsQuery");
+    try {
+      const app = await createTestApp();
+      const res = await testRequest(app)
+        .post("/api/v1/shadow-ai/events")
+        .set("X-API-Key", keyA)
+        .send({ events: [event("chat.openai.com"), event("example.com")] });
+
+      expect(res.status).toBe(429);
+      expect(JSON.stringify(res.body)).toContain("Rate limit exceeded: max 1 events/hour");
+      expect(settingsRead).toHaveBeenCalledTimes(1);
+      expect(await count("shadow_ai_events", orgA)).toBe(0);
+    } finally {
+      settingsRead.mockRestore();
+    }
   });
 
   it("returns 200 with ingested 0 for an empty batch", async () => {

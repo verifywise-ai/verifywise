@@ -142,7 +142,10 @@ export class SourceBatcher {
     let dropped = batch.dropped;
     let lastDropReason = batch.lastDropReason;
 
-    if (events.length > 0 && !(await checkShadowAiRateLimit(organizationId, events.length))) {
+    if (
+      events.length > 0 &&
+      !(await checkShadowAiRateLimit(organizationId, events.length)).allowed
+    ) {
       dropped += events.length;
       lastDropReason = "rate_limited";
       events = [];

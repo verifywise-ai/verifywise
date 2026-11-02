@@ -55,7 +55,7 @@ describe("SourceBatcher", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     revalidate.mockImplementation(async (src: CachedSource) => src);
-    rateLimit.mockResolvedValue(true);
+    rateLimit.mockResolvedValue({ allowed: true, maxPerHour: 0 });
     ingest.mockResolvedValue({ ingested: FLUSH_MAX_EVENTS, toolsMatched: 0, skipped: 0 });
     recordStats.mockResolvedValue(undefined);
     (sequelize.query as unknown as jest.Mock).mockResolvedValue(undefined);
