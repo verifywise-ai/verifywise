@@ -58,6 +58,7 @@ import { normalizeIp } from "../services/shadowAiSyslog/ip";
 import { readSyslogListenerConfig } from "../services/shadowAiSyslog/config";
 import { getSyslogListenerState } from "../services/shadowAiSyslog/listener";
 import { invalidateSourceCache } from "../services/shadowAiSyslog/sourceCache";
+import { isParserType, PARSER_TYPES } from "../services/shadowAiSyslog/types";
 import {
   appendRetentionChangeToLedger,
   canChangeRetentionPeriods,
@@ -1148,12 +1149,11 @@ export async function createSyslogConfig(req: Request, res: Response) {
     }
     const source_identifier = toStoredSenderIp(req.body.source_identifier) ?? null;
 
-    const validParsers = ["zscaler", "netskope", "squid", "generic_kv"];
-    if (!validParsers.includes(parser_type)) {
+    if (!isParserType(parser_type)) {
       return res.status(400).json(
         STATUS_CODE[400](
           req.t!("Invalid parser_type. Must be one of: {options}", {
-            options: validParsers.join(", "),
+            options: PARSER_TYPES.join(", "),
           }),
         ),
       );
@@ -1218,12 +1218,11 @@ export async function updateSyslogConfig(req: Request, res: Response) {
     const source_identifier = toStoredSenderIp(req.body.source_identifier);
 
     if (parser_type) {
-      const validParsers = ["zscaler", "netskope", "squid", "generic_kv"];
-      if (!validParsers.includes(parser_type)) {
+      if (!isParserType(parser_type)) {
         return res.status(400).json(
           STATUS_CODE[400](
             req.t!("Invalid parser_type. Must be one of: {options}", {
-              options: validParsers.join(", "),
+              options: PARSER_TYPES.join(", "),
             }),
           ),
         );

@@ -1,6 +1,7 @@
 import { body, param } from "express-validator";
 import { handleValidationErrors } from "../validate.middleware";
 import { normalizeIp } from "../../services/shadowAiSyslog/ip";
+import { PARSER_TYPES } from "../../services/shadowAiSyslog/types";
 
 const idParam = param("id").isInt({ min: 1 }).withMessage("id must be a positive integer");
 
@@ -64,8 +65,6 @@ export const validateUpdateRule = [
   body("cooldown_minutes").optional({ nullable: true }).isInt({ min: 0 }),
   handleValidationErrors,
 ];
-
-const PARSER_TYPES = ["zscaler", "netskope", "squid", "generic_kv"];
 
 /**
  * The allowed sender IP. Optional; an empty string or null clears it. A

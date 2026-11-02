@@ -10,7 +10,7 @@ import logger from "../../utils/logger/fileLogger";
 import { listActiveSyslogSourcesQuery } from "../../utils/shadowAiConfig.utils";
 import { normalizeIp } from "./ip";
 import { hashSourceKey, orgIdFromKey } from "./sourceKey";
-import type { ParserType } from "./types";
+import { isParserType, type ParserType } from "./types";
 
 export interface CachedSource {
   configId: number;
@@ -24,8 +24,6 @@ export interface CachedSource {
 export const SOURCE_CACHE_TTL_MS = 60_000;
 // After a failed reload, nothing is served; the next lookup after this retries.
 const RELOAD_RETRY_MS = 5_000;
-
-const PARSER_TYPES: readonly ParserType[] = ["zscaler", "netskope", "squid", "generic_kv"];
 
 let byHash = new Map<string, CachedSource>();
 let byId = new Map<number, CachedSource>();
@@ -43,11 +41,11 @@ async function reload(): Promise<void> {
     const nextId = new Map<number, CachedSource>();
     const nextIp = new Map<string, CachedSource[]>();
     for (const row of rows) {
-      if (!PARSER_TYPES.includes(row.parser_type as ParserType)) continue;
+      if (!isParserType(row.parser_type)) continue;
       const src: CachedSource = {
         configId: row.id,
         organizationId: row.organization_id,
-        parserType: row.parser_type as ParserType,
+        parserType: row.parser_type,
         allowedIp: row.source_identifier,
         keyHash: row.key_hash,
       };
