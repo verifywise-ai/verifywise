@@ -431,6 +431,36 @@ describe("parseLine", () => {
     });
   });
 
+  describe("action words", () => {
+    const action = (value: string) => {
+      const r = parseLine("generic_kv", `suser=a@b.co dhost=x.com act="${value}"`);
+      return r.ok ? r.event.action : "dropped";
+    };
+
+    it.each([
+      ["Blocked by policy", "blocked"],
+      ["BLOCK", "blocked"],
+      ["denied", "blocked"],
+      ["dropped", "blocked"],
+      ["Rejected: bad category", "blocked"],
+      ["reset", "blocked"],
+      ["  Allowed", "allowed"],
+      ["permitted", "allowed"],
+      ["passed", "allowed"],
+      ["accept-all", "allowed"],
+      ["Allow/override", "allowed"],
+    ])("maps %s to %s", (value, expected) => {
+      expect(action(value)).toBe(expected);
+    });
+
+    it.each(["password_reset", "dropbox-upload", "passthrough", "resetpw", "acceptance_test", "", "Upload"])(
+      "leaves %j unset",
+      (value) => {
+        expect(action(value)).toBeUndefined();
+      },
+    );
+  });
+
   describe("timestamp fallback", () => {
     const line = "suser=a@b.co dhost=x.com";
 

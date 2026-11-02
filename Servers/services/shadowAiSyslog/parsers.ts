@@ -17,8 +17,28 @@ type Fields = Record<string, string>;
 const KV_PAIR_RE = /(?<=^|[\s|])([A-Za-z_][\w.-]*)=(?:"((?:[^"\\]|\\.)*)"|((?:[^\s\\]|\\.)*))/g;
 const SCHEME_RE = /^[a-z][a-z0-9+.-]*:\/\//i;
 
-const BLOCKED_ACTIONS = ["block", "deny", "denied", "drop", "reset", "reject"];
-const ALLOWED_ACTIONS = ["allow", "permit", "pass", "accept"];
+// Verdict words, matched against the first word of the action value.
+const BLOCKED_ACTIONS = new Set([
+  "block",
+  "blocked",
+  "deny",
+  "denied",
+  "drop",
+  "dropped",
+  "reset",
+  "reject",
+  "rejected",
+]);
+const ALLOWED_ACTIONS = new Set([
+  "allow",
+  "allowed",
+  "permit",
+  "permitted",
+  "pass",
+  "passed",
+  "accept",
+  "accepted",
+]);
 
 // Netskope verdicts outside allow/block. Alerts and bypassed coaching let the
 // request through; the restrict actions stopped what the user tried to do.
@@ -126,9 +146,13 @@ function hostAndPath(raw: string): { host: string; path?: string } | null {
 
 function normalizeAction(raw: unknown): SyslogEvent["action"] {
   if (typeof raw !== "string") return undefined;
-  const value = raw.trim().toLowerCase();
-  if (BLOCKED_ACTIONS.some((a) => value.startsWith(a))) return "blocked";
-  if (ALLOWED_ACTIONS.some((a) => value.startsWith(a))) return "allowed";
+  // First run of letters, so "Blocked by policy" is a verdict but
+  // "password_reset" and "dropbox-upload" (first words "password", "dropbox")
+  // are not.
+  const word = /[a-z]+/.exec(raw.toLowerCase())?.[0];
+  if (!word) return undefined;
+  if (BLOCKED_ACTIONS.has(word)) return "blocked";
+  if (ALLOWED_ACTIONS.has(word)) return "allowed";
   return undefined;
 }
 

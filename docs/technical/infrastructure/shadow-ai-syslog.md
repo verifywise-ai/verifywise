@@ -104,10 +104,14 @@ the line in both modes.
 
 Squid access logs have no allowed or blocked field, so the Squid parser reads
 the result code (field 4): a code containing `DENIED` (`TCP_DENIED`,
-`TCP_DENIED_REPLY`) is blocked and every other code is allowed. For the other parsers, an action starting with `block`, `deny`,
-`denied`, `drop`, `reset` or `reject` is stored as blocked, and one starting
-with `allow`, `permit`, `pass` or `accept` as allowed. Any other value is left
-unset.
+`TCP_DENIED_REPLY`) is blocked and every other code is allowed. For the other parsers, the first word of
+the action value (the first run of letters) decides: `block`, `blocked`, `deny`,
+`denied`, `drop`, `dropped`, `reset`, `reject` or `rejected` is stored as
+blocked, and `allow`, `allowed`, `permit`, `permitted`, `pass`, `passed`,
+`accept` or `accepted` as allowed, so `Blocked by policy` is blocked. A word
+that only begins with one of these (`password_reset`, `dropbox-upload`) and any
+other value is left unset. Netskope's `alert`, `useralert`, `bypass` and the
+`restrict*` / `disableDownload` verdicts are mapped before this step.
 
 The user must be a valid email address. A repeated `user`, `suser`, `dst`,
 `dhost`, `uri`, `request`, `action`, `act`, `method`, `requestMethod`,
