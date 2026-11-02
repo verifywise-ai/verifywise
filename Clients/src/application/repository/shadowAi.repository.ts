@@ -11,6 +11,8 @@ import {
   IShadowAiApiKey,
   IShadowAiApiKeyCreated,
   IShadowAiSyslogConfig,
+  IShadowAiSyslogConfigWithKey,
+  IShadowAiSyslogListenerStatus,
   ShadowAiInsightsSummary,
   ShadowAiToolByEvents,
   ShadowAiToolByUsers,
@@ -26,6 +28,8 @@ import {
 } from "../../domain/interfaces/i.shadowAi";
 
 const BASE_URL = "/shadow-ai";
+// Syslog listener status and key regeneration live on the versioned API.
+const SYSLOG_V1_URL = "/v1/shadow-ai-syslog";
 
 // ============================================================================
 // API Keys
@@ -313,10 +317,12 @@ export async function getSyslogConfigs(): Promise<IShadowAiSyslogConfig[]> {
   return response.data.data;
 }
 
-export async function createSyslogConfig(
-  config: Omit<IShadowAiSyslogConfig, "id" | "created_at">,
-): Promise<IShadowAiSyslogConfig> {
-  const response = await apiServices.post<{ data: IShadowAiSyslogConfig }>(
+export async function createSyslogConfig(config: {
+  parser_type: IShadowAiSyslogConfig["parser_type"];
+  source_identifier?: string | null;
+  is_active?: boolean;
+}): Promise<IShadowAiSyslogConfigWithKey> {
+  const response = await apiServices.post<{ data: IShadowAiSyslogConfigWithKey }>(
     `${BASE_URL}/config/syslog`,
     config,
   );
@@ -336,6 +342,22 @@ export async function updateSyslogConfig(
 
 export async function deleteSyslogConfig(id: number): Promise<void> {
   await apiServices.delete(`${BASE_URL}/config/syslog/${id}`);
+}
+
+/** Issues a new source key and invalidates the old one. The key is in the response only. */
+export async function regenerateSyslogKey(id: number): Promise<IShadowAiSyslogConfigWithKey> {
+  const response = await apiServices.post<{ data: IShadowAiSyslogConfigWithKey }>(
+    `${SYSLOG_V1_URL}/sources/${id}/regenerate-key`,
+    {},
+  );
+  return response.data.data;
+}
+
+export async function getSyslogListenerStatus(): Promise<IShadowAiSyslogListenerStatus> {
+  const response = await apiServices.get<{ data: IShadowAiSyslogListenerStatus }>(
+    `${SYSLOG_V1_URL}/status`,
+  );
+  return response.data.data;
 }
 
 // ============================================================================

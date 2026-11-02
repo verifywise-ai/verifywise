@@ -37,6 +37,11 @@ services:
       # Bind to localhost only: the plain-HTTP API must not be reachable from
       # the network directly. The TLS-terminating host nginx proxies to it.
       - 127.0.0.1:$BACKEND_PORT:$BACKEND_PORT
+      # Shadow AI syslog listener (off by default). To receive proxy logs,
+      # publish the port here and set the SHADOW_AI_SYSLOG_* variables below.
+      # Unlike the API port, a proxy outside this host must reach it, so it is
+      # not bound to localhost. Use TLS; see docs/technical/infrastructure/shadow-ai-syslog.md.
+      # - "6514:6514"
     environment:
       - PORT=$BACKEND_PORT
       - DB_HOST=postgresdb
@@ -55,6 +60,14 @@ services:
       - EVAL_SERVER_INTERNAL_KEY=${EVAL_SERVER_INTERNAL_KEY:?EVAL_SERVER_INTERNAL_KEY must be set in the env file before starting}
       - SUPERADMIN_EMAIL=$SUPERADMIN_EMAIL
       - SUPERADMIN_PASSWORD=${SUPERADMIN_PASSWORD:?SUPERADMIN_PASSWORD must be set in the env file before starting}
+      # Shadow AI syslog listener (off by default). Mount the certificate and
+      # key into the container (volumes) and point the two *_FILE variables at them.
+      # - SHADOW_AI_SYSLOG_ENABLED=true
+      # - SHADOW_AI_SYSLOG_PORT=6514
+      # - SHADOW_AI_SYSLOG_TLS_CERT_FILE=/certs/syslog.crt
+      # - SHADOW_AI_SYSLOG_TLS_KEY_FILE=/certs/syslog.key
+      # - SHADOW_AI_SYSLOG_ALLOW_PLAINTEXT=false
+      # - SHADOW_AI_SYSLOG_ALLOW_IP_ONLY=false
     restart: unless-stopped
   frontend:
     depends_on:

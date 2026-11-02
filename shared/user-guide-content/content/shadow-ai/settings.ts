@@ -68,7 +68,11 @@ export const settingsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Syslog sources define where network traffic data comes from. Each source has a unique identifier and a parser type that determines how incoming log lines are interpreted.',
+      text: 'Syslog sources define where network traffic data comes from. Each source has a parser type, a secret key that every log line carries, and an optional allowed sender IP. Only Admins can manage them. The setup steps are in the Integration guide.',
+    },
+    {
+      type: 'paragraph',
+      text: 'A line above the table shows whether the syslog listener is on and where to send logs (port 6514 by default, over TLS or plain TCP). The listener is off until the server operator sets `SHADOW_AI_SYSLOG_ENABLED=true`. If it is turned on but could not start, the line says so; the server log has the reason. The hosted service does not offer syslog yet.',
     },
     {
       type: 'heading',
@@ -83,15 +87,58 @@ export const settingsContent: ArticleContent = {
         { key: 'description', label: 'Description', width: '70%' },
       ],
       rows: [
-        { parser: 'Zscaler', description: 'Parses Zscaler Internet Access log format' },
-        { parser: 'Netskope', description: 'Parses Netskope Cloud Security log format' },
-        { parser: 'Squid proxy', description: 'Parses Squid HTTP proxy access logs' },
-        { parser: 'Generic key-value', description: 'Parses generic key=value formatted logs (default)' },
+        { parser: 'Zscaler', description: 'Reads key=value lines with user, dst, method, uri, action and department' },
+        { parser: 'Netskope', description: 'Reads a JSON object with user, url, method, action, department and timestamp' },
+        { parser: 'Squid proxy', description: 'Reads the native Squid access log. A `DENIED` result code is blocked, anything else is allowed' },
+        { parser: 'Generic key-value', description: 'Reads CEF-style key=value lines with suser, dhost, requestMethod and act (default)' },
       ],
     },
     {
+      type: 'heading',
+      id: 'syslog-source-table',
+      level: 3,
+      text: 'The source table',
+    },
+    {
+      type: 'table',
+      columns: [
+        { key: 'column', label: 'Column', width: '30%' },
+        { key: 'meaning', label: 'Meaning', width: '70%' },
+      ],
+      rows: [
+        { column: 'Allowed sender IP', meaning: 'If set, lines from other IPs are dropped. A value that is not an IP address is flagged for you to clear or fix.' },
+        { column: 'Parser', meaning: 'The parser type for this source.' },
+        { column: 'Key', meaning: 'The first characters of the key, or "No key yet". Use "Generate key" or "Regenerate key" to create one.' },
+        { column: 'Last received', meaning: 'When the last event from this source was stored, or "Never".' },
+        { column: 'Accepted', meaning: 'Events stored.' },
+        { column: 'Dropped', meaning: 'Lines that could not become events.' },
+        { column: 'Last drop reason', meaning: 'Why the last line was dropped, in plain words (see the table below).' },
+        { column: 'Status', meaning: 'Active or Inactive.' },
+      ],
+    },
+    {
+      type: 'table',
+      columns: [
+        { key: 'reason', label: 'Last drop reason', width: '45%' },
+        { key: 'meaning', label: 'Meaning', width: '55%' },
+      ],
+      rows: [
+        { reason: 'No user email in the log line', meaning: 'The user field is missing, empty or not an email address.' },
+        { reason: 'No destination host in the log line', meaning: 'The line has no destination host or URL.' },
+        { reason: 'Line does not match the parser type', meaning: 'The parser could not read the line, or the line repeats a field such as user, destination, action, method, department or timestamp.' },
+        { reason: 'Sent from an IP that isn\'t allowed or is shared with another source', meaning: 'The sender IP is not the source\'s Allowed sender IP, or two sources share an IP in IP-only mode.' },
+        { reason: 'Over the hourly event limit', meaning: 'The hourly rate limit was reached, or the listener\'s queue was full.' },
+      ],
+    },
+    {
+      type: 'heading',
+      id: 'syslog-source-keys',
+      level: 3,
+      text: 'Source keys',
+    },
+    {
       type: 'paragraph',
-      text: 'To add a source, click "Add source", enter the source identifier (e.g., `proxy-01.corp.com`) and select the parser type. You can edit or delete sources at any time.',
+      text: 'When you add a source, the "Your source key" dialog shows the key once, with a copy button and a ready-made `vw_source=<key>` line. VerifyWise stores only a hash and the first characters of the key, so it cannot show the key again. If you lose it, click "Regenerate key". The old key stops working at once on the server you used and within 60 seconds on any other replica. Removing a source stops processing events from it.',
     },
 
     // ─── Data Formats ──────────────────────────────────────────────────
@@ -172,7 +219,7 @@ export const settingsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Syslog messages are expected over UDP/TCP using RFC 3164 or RFC 5424 framing. The PRI, timestamp and hostname header are stripped automatically before parsing. Below are example log lines for each supported parser.',
+      text: 'Syslog messages arrive over TCP (TLS by default), newline-delimited or octet-counted, up to 64 KiB each. An RFC 3164 or RFC 5424 header is removed when present. Every line must carry the source key as `vw_source=<key>` at the start or the end of the line, or as a top-level `"vw_source"` member when the line is a JSON object. A key anywhere else is ignored. VerifyWise removes the key before parsing and never stores it. Below is one example per parser, with the field added.',
     },
     {
       type: 'heading',
@@ -183,7 +230,7 @@ export const settingsContent: ArticleContent = {
     {
       type: 'code',
       language: 'text',
-      code: 'user=alice@company.com dst=chat.openai.com method=POST uri=https://chat.openai.com/v1/chat action=allowed department=Engineering',
+      code: 'user=alice@company.com dst=chat.openai.com method=POST uri=https://chat.openai.com/v1/chat action=allowed department=Engineering vw_source=YOUR_SOURCE_KEY',
     },
     {
       type: 'heading',
@@ -198,9 +245,10 @@ export const settingsContent: ArticleContent = {
   "user": "alice@company.com",
   "url": "https://chat.openai.com/v1/chat",
   "method": "POST",
-  "activity": "allowed",
+  "action": "allow",
   "department": "Engineering",
-  "timestamp": "2026-02-09T14:32:00Z"
+  "timestamp": "2026-02-09T14:32:00Z",
+  "vw_source": "YOUR_SOURCE_KEY"
 }`,
     },
     {
@@ -212,18 +260,18 @@ export const settingsContent: ArticleContent = {
     {
       type: 'code',
       language: 'text',
-      code: '1707489120.000 200 10.0.0.1 TCP_MISS/200 1024 POST https://chat.openai.com/v1/chat alice@company.com DIRECT/chat.openai.com',
+      code: '1707489120.000 200 10.0.0.1 TCP_MISS/200 1024 POST https://chat.openai.com/v1/chat alice@company.com DIRECT/chat.openai.com vw_source=YOUR_SOURCE_KEY',
     },
     {
       type: 'heading',
       id: 'syslog-generic',
       level: 3,
-      text: 'Generic key-value (CEF-like)',
+      text: 'Generic key-value (CEF-style)',
     },
     {
       type: 'code',
       language: 'text',
-      code: 'suser=alice@company.com dhost=chat.openai.com requestMethod=POST act=allowed',
+      code: 'suser=alice@company.com dhost=chat.openai.com requestMethod=POST act=allowed vw_source=YOUR_SOURCE_KEY',
     },
 
     // Field mapping table
@@ -235,7 +283,7 @@ export const settingsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Each parser extracts fields from the source format and maps them to the normalized event schema:',
+      text: 'Each parser maps its fields to the normalized event schema. The user must be a valid email address. For the action, the first word of the value decides: block, deny, drop, reset or reject (and forms such as blocked, denied or dropped) become blocked, and allow, permit, pass or accept (and forms such as allowed or permitted) become allowed, so `Blocked by policy` is blocked. A negated allow such as `Not allowed` or `disallowed` is also blocked. Any other value, including words that only begin with one of these such as `password_reset`, is left empty. The timestamp comes from the payload field when present, then from the syslog header, then from the time VerifyWise received the line. A timestamp without a time zone is read as UTC; a zone it states (an offset, `Z`, `PST`, `CEST`) is used. A destination of `-`, `N/A` or `none` is skipped and the next field (such as the URL) is used. A timestamp more than a year before the time the line was received, or more than a day after it, is ignored. An email address longer than 255 characters or a destination longer than 512 drops the line, and a department is cut to 255 characters.',
     },
     {
       type: 'table',
@@ -248,12 +296,12 @@ export const settingsContent: ArticleContent = {
       ],
       rows: [
         { normalized: 'user_email', zscaler: 'user', netskope: 'user', squid: 'field 8', generic: 'suser' },
-        { normalized: 'destination', zscaler: 'dst', netskope: 'url (hostname)', squid: 'url (hostname)', generic: 'dhost' },
-        { normalized: 'uri_path', zscaler: 'uri (path)', netskope: 'url (path)', squid: 'url (path)', generic: '—' },
+        { normalized: 'destination', zscaler: 'dst, else host of uri', netskope: 'url (hostname), else domain or site', squid: 'url (hostname)', generic: 'dhost, else host of request' },
+        { normalized: 'uri_path', zscaler: 'uri (path)', netskope: 'url (path)', squid: 'url (path)', generic: 'request (path)' },
         { normalized: 'http_method', zscaler: 'method', netskope: 'method', squid: 'field 6', generic: 'requestMethod' },
-        { normalized: 'action', zscaler: 'action', netskope: 'activity', squid: '—', generic: 'act' },
-        { normalized: 'timestamp', zscaler: 'syslog header', netskope: 'timestamp', squid: 'field 1 (epoch)', generic: 'syslog header' },
-        { normalized: 'department', zscaler: 'department', netskope: 'department', squid: '—', generic: '—' },
+        { normalized: 'action', zscaler: 'action', netskope: 'action', squid: 'field 4 (result code)', generic: 'act' },
+        { normalized: 'timestamp', zscaler: 'timestamp', netskope: 'timestamp', squid: 'field 1 (epoch)', generic: 'timestamp' },
+        { normalized: 'department', zscaler: 'department', netskope: 'department', squid: '—', generic: 'department' },
       ],
     },
 

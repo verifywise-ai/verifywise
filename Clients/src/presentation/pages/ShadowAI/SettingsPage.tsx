@@ -32,12 +32,15 @@ import {
   createSyslogConfig,
   updateSyslogConfig,
   deleteSyslogConfig,
+  regenerateSyslogKey,
+  getSyslogListenerStatus,
   getSettingsConfig,
   updateSettingsConfig,
 } from "../../../application/repository/shadowAi.repository";
 import {
   IShadowAiApiKey,
   IShadowAiSyslogConfig,
+  IShadowAiSyslogListenerStatus,
   IShadowAiSettings,
 } from "../../../domain/interfaces/i.shadowAi";
 import singleTheme from "../../themes/v1SingleTheme";
@@ -49,6 +52,8 @@ import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
 import { useUserGuideSidebarContext } from "../../components/UserGuide/UserGuideSidebarContext";
 import { palette } from "../../themes/palette";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
+import { useTranslation } from "../../../application/hooks/useTranslation";
+import { formatRelativeDate } from "../../../application/utils/dateFormatter";
 
 const numberFormatter = new Intl.NumberFormat("en-US");
 
@@ -427,21 +432,86 @@ function ApiKeysSection() {
 
 // ─── Syslog Config Section ──────────────────────────────────────────
 
+type SyslogParser = IShadowAiSyslogConfig["parser_type"];
+
+const PARSER_LABELS: Record<SyslogParser, string> = {
+  zscaler: "Zscaler",
+  netskope: "Netskope",
+  squid: "Squid proxy",
+  generic_kv: "Generic key-value",
+};
+
+/** Plain-words wording for the drop reasons the listener records. */
+const DROP_REASON_LABELS: Record<string, string> = {
+  no_user: "No user email in the log line",
+  no_destination: "No destination host in the log line",
+  unparseable: "Line does not match the parser type",
+  wrong_sender_ip: "Sent from an IP that isn't allowed or is shared with another source",
+  rate_limited: "Over the hourly event limit",
+};
+
+const IPV4_PATTERN = /^(25[0-5]|2[0-4]\d|1?\d?\d)(\.(25[0-5]|2[0-4]\d|1?\d?\d)){3}$/;
+
+/** Loose IPv4 or IPv6 check. The server normalises and has the final say. */
+function isIpAddress(value: string): boolean {
+  if (IPV4_PATTERN.test(value)) return true;
+  const colons = value.split(":").length - 1;
+  return colons >= 2 && /^[0-9a-fA-F:.]+$/.test(value);
+}
+
+function sourceName(config: IShadowAiSyslogConfig): string {
+  return config.source_identifier || `${PARSER_LABELS[config.parser_type]} source`;
+}
+
+const wrapSx = { overflowWrap: "anywhere" as const, minWidth: 0 };
+
+const keyBoxSx = {
+  fontFamily: "monospace",
+  fontSize: 13,
+  backgroundColor: palette.background.hover,
+  px: "12px",
+  py: "6px",
+  borderRadius: "4px",
+  border: `1px solid ${palette.border.dark}`,
+  wordBreak: "break-all" as const,
+  flex: 1,
+};
+
 function SyslogConfigSection() {
-  const formatDate = useFormattedDate();
+  const { t } = useTranslation();
   const cardSx = useCardSx();
   const { open: openGuide } = useUserGuideSidebarContext();
   const [loading, setLoading] = useState(true);
   const [configs, setConfigs] = useState<IShadowAiSyslogConfig[]>([]);
+  const [listenerStatus, setListenerStatus] = useState<IShadowAiSyslogListenerStatus | null>(null);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [formSource, setFormSource] = useState("");
-  const [formParser, setFormParser] = useState<IShadowAiSyslogConfig["parser_type"]>("generic_kv");
+  const [formParser, setFormParser] = useState<SyslogParser>("generic_kv");
+  const [formError, setFormError] = useState("");
   const [creating, setCreating] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<IShadowAiSyslogConfig | null>(null);
   const [editTarget, setEditTarget] = useState<IShadowAiSyslogConfig | null>(null);
   const [editSource, setEditSource] = useState("");
-  const [editParser, setEditParser] = useState<IShadowAiSyslogConfig["parser_type"]>("generic_kv");
+  const [editParser, setEditParser] = useState<SyslogParser>("generic_kv");
+  const [editError, setEditError] = useState("");
   const [editing, setEditing] = useState(false);
+  const [regenTarget, setRegenTarget] = useState<IShadowAiSyslogConfig | null>(null);
+  const [regenerating, setRegenerating] = useState(false);
+  const [actionError, setActionError] = useState("");
+  // The full key lives here only while the dialog is open. Never persisted or logged.
+  const [revealedKey, setRevealedKey] = useState<string | null>(null);
+  const [copiedField, setCopiedField] = useState<"key" | "line" | null>(null);
+  const [copyFailed, setCopyFailed] = useState(false);
+  // Ref, not state: a second click can land before a state update re-renders.
+  const generatingRef = useRef(false);
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(
+    () => () => {
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    },
+    [],
+  );
 
   const fetchConfigs = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
@@ -457,29 +527,72 @@ function SyslogConfigSection() {
     }
   }, []);
 
+  const fetchStatus = useCallback(async (signal?: AbortSignal) => {
+    try {
+      const data = await getSyslogListenerStatus();
+      if (signal?.aborted) return;
+      setListenerStatus(data);
+    } catch (error) {
+      if (signal?.aborted) return;
+      console.error("Failed to load syslog listener status:", error);
+    }
+  }, []);
+
   useEffect(() => {
     const controller = new AbortController();
     fetchConfigs(controller.signal);
+    fetchStatus(controller.signal);
     return () => {
       controller.abort();
     };
-  }, [fetchConfigs]);
+  }, [fetchConfigs, fetchStatus]);
+
+  const closeKeyDialog = () => {
+    setRevealedKey(null);
+    setCopiedField(null);
+    setCopyFailed(false);
+  };
+
+  const handleCopy = async (field: "key" | "line", text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      setCopiedField(null);
+      setCopyFailed(true);
+      return;
+    }
+    setCopyFailed(false);
+    setCopiedField(field);
+    if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    copyTimerRef.current = setTimeout(() => setCopiedField(null), 2000);
+  };
+
+  const resetCreateForm = () => {
+    setCreateModalOpen(false);
+    setFormSource("");
+    setFormParser("generic_kv");
+    setFormError("");
+  };
 
   const handleCreate = async () => {
-    if (!formSource.trim()) return;
+    const sender = formSource.trim();
+    if (sender && !isIpAddress(sender)) {
+      setFormError(t("Enter an IPv4 or IPv6 address."));
+      return;
+    }
     setCreating(true);
+    setActionError("");
     try {
-      await createSyslogConfig({
-        source_identifier: formSource.trim(),
+      const created = await createSyslogConfig({
+        source_identifier: sender || null,
         parser_type: formParser,
         is_active: true,
       });
-      setCreateModalOpen(false);
-      setFormSource("");
-      setFormParser("generic_kv");
+      resetCreateForm();
+      setRevealedKey(created.key);
       fetchConfigs();
-    } catch (error) {
-      console.error("Failed to create syslog config:", error);
+    } catch {
+      setActionError(t("Could not add the source. Try again."));
     } finally {
       setCreating(false);
     }
@@ -487,22 +600,32 @@ function SyslogConfigSection() {
 
   const openEdit = (config: IShadowAiSyslogConfig) => {
     setEditTarget(config);
-    setEditSource(config.source_identifier);
+    setEditSource(config.source_identifier ?? "");
     setEditParser(config.parser_type);
+    setEditError("");
   };
 
   const handleEdit = async () => {
-    if (!editTarget || !editSource.trim()) return;
+    if (!editTarget) return;
+    const sender = editSource.trim();
+    // Send the sender IP only when it changed, so a legacy hostname row can
+    // still change its parser without clearing or retyping that field.
+    const senderChanged = sender !== (editTarget.source_identifier ?? "").trim();
+    if (senderChanged && sender && !isIpAddress(sender)) {
+      setEditError(t("Enter an IPv4 or IPv6 address."));
+      return;
+    }
     setEditing(true);
+    setActionError("");
     try {
       await updateSyslogConfig(editTarget.id, {
-        source_identifier: editSource.trim(),
+        ...(senderChanged ? { source_identifier: sender || null } : {}),
         parser_type: editParser,
       });
       setEditTarget(null);
       fetchConfigs();
-    } catch (error) {
-      console.error("Failed to update syslog config:", error);
+    } catch {
+      setActionError(t("Could not save the source. Try again."));
     } finally {
       setEditing(false);
     }
@@ -510,20 +633,81 @@ function SyslogConfigSection() {
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
+    setActionError("");
     try {
       await deleteSyslogConfig(deleteTarget.id);
       setDeleteTarget(null);
       fetchConfigs();
-    } catch (error) {
-      console.error("Failed to delete syslog config:", error);
+    } catch {
+      setDeleteTarget(null);
+      setActionError(t("Could not remove the source. Try again."));
     }
   };
 
-  const PARSER_LABELS: Record<IShadowAiSyslogConfig["parser_type"], string> = {
-    zscaler: "Zscaler",
-    netskope: "Netskope",
-    squid: "Squid proxy",
-    generic_kv: "Generic key-value",
+  const handleGenerateKey = async (config: IShadowAiSyslogConfig) => {
+    if (generatingRef.current) return;
+    generatingRef.current = true;
+    setRegenerating(true);
+    setActionError("");
+    try {
+      const result = await regenerateSyslogKey(config.id);
+      setRegenTarget(null);
+      setRevealedKey(result.key);
+      fetchConfigs();
+    } catch {
+      setRegenTarget(null);
+      setActionError(t("Could not generate a key. Try again."));
+    } finally {
+      generatingRef.current = false;
+      setRegenerating(false);
+    }
+  };
+
+  // Enabled in configuration but not bound (port taken, bad TLS files, ...).
+  // `running` is compared to false so a status without the field reads as running.
+  const listenerFailed = !!listenerStatus?.enabled && listenerStatus.running === false;
+
+  const statusText = (() => {
+    if (!listenerStatus) return "";
+    if (!listenerStatus.enabled) {
+      return t(
+        "Syslog listener is off. Set SHADOW_AI_SYSLOG_ENABLED=true on the server to turn it on.",
+      );
+    }
+    if (listenerFailed) return t("Syslog listener failed to start. Check the server log.");
+    const template = listenerStatus.tls
+      ? "Syslog listener is on. Send to {host}:{port} over TLS."
+      : "Syslog listener is on. Send to {host}:{port} over plain TCP.";
+    return t(template)
+      .replace("{host}", window.location.hostname)
+      .replace("{port}", String(listenerStatus.port));
+  })();
+
+  const ipOnlyHint = listenerStatus?.ipOnly
+    ? t("In IP-only mode, log lines without a key are matched by this IP.")
+    : undefined;
+
+  const columns = [
+    "Allowed sender IP",
+    "Parser",
+    "Key",
+    "Last received",
+    "Accepted",
+    "Dropped",
+    "Last drop reason",
+    "Status",
+    "",
+  ];
+
+  const parserItems = Object.entries(PARSER_LABELS).map(([value, label]) => ({
+    _id: value,
+    name: label,
+  }));
+
+  const renderDropReason = (reason?: string | null) => {
+    if (!reason) return "—";
+    const label = DROP_REASON_LABELS[reason];
+    return label ? t(label) : t("Unknown reason");
   };
 
   return (
@@ -534,6 +718,7 @@ function SyslogConfigSection() {
           <CustomizableButton
             text="Add source"
             variant="contained"
+            testId="syslog-add-source"
             sx={{
               "backgroundColor": palette.brand.primary,
               "&:hover": { backgroundColor: palette.brand.primaryHover },
@@ -555,6 +740,29 @@ function SyslogConfigSection() {
           </Typography>
         </Typography>
 
+        {statusText && (
+          <Typography
+            data-testid="syslog-listener-status"
+            sx={{
+              ...wrapSx,
+              fontSize: 13,
+              color: listenerFailed
+                ? palette.status.error.text
+                : listenerStatus?.enabled
+                  ? palette.status.success.text
+                  : palette.status.default.text,
+            }}
+          >
+            {statusText}
+          </Typography>
+        )}
+
+        {actionError && (
+          <Alert severity="error" sx={{ fontSize: 13 }} onClose={() => setActionError("")}>
+            {actionError}
+          </Alert>
+        )}
+
         {loading ? (
           <Skeleton variant="rectangular" height={100} sx={{ borderRadius: "4px" }} />
         ) : configs.length === 0 ? (
@@ -575,60 +783,111 @@ function SyslogConfigSection() {
             <Table>
               <TableHead>
                 <TableRow sx={singleTheme.tableStyles.primary.header.row}>
-                  {["Source identifier", "Parser", "Status", "Created", ""].map((h) => (
-                    <TableCell key={h} sx={singleTheme.tableStyles.primary.header.cell}>
-                      {h}
+                  {columns.map((h, index) => (
+                    <TableCell
+                      key={h || `actions-${index}`}
+                      sx={singleTheme.tableStyles.primary.header.cell}
+                    >
+                      {t(h)}
                     </TableCell>
                   ))}
                 </TableRow>
               </TableHead>
               <TableBody>
-                {configs.map((c) => (
-                  <TableRow
-                    key={c.id}
-                    sx={{ ...singleTheme.tableStyles.primary.body.row, cursor: "pointer" }}
-                    onClick={() => openEdit(c)}
-                  >
-                    <TableCell
-                      sx={{ ...singleTheme.tableStyles.primary.body.cell, fontFamily: "monospace" }}
+                {configs.map((c) => {
+                  const legacyIdentifier =
+                    !!c.source_identifier && !isIpAddress(c.source_identifier);
+                  const cellSx = singleTheme.tableStyles.primary.body.cell;
+                  return (
+                    <TableRow
+                      key={c.id}
+                      sx={{ ...singleTheme.tableStyles.primary.body.row, cursor: "pointer" }}
+                      onClick={() => openEdit(c)}
                     >
-                      {c.source_identifier}
-                    </TableCell>
-                    <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                      {PARSER_LABELS[c.parser_type]}
-                    </TableCell>
-                    <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                      <Chip label={c.is_active ? "Active" : "Inactive"} size="small" />
-                    </TableCell>
-                    <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                      {c.created_at ? formatDate(c.created_at) : "—"}
-                    </TableCell>
-                    <TableCell align="right" sx={singleTheme.tableStyles.primary.body.cell}>
-                      <Stack direction="row" gap="4px" justifyContent="flex-end">
-                        <IconButton
-                          size="small"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openEdit(c);
-                          }}
-                          sx={{ color: palette.status.default.text }}
-                        >
-                          <Pencil size={14} strokeWidth={1.5} />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setDeleteTarget(c);
-                          }}
-                          sx={{ color: palette.status.error.text }}
-                        >
-                          <Trash2 size={14} strokeWidth={1.5} />
-                        </IconButton>
-                      </Stack>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                      <TableCell
+                        sx={{ ...cellSx, ...wrapSx, fontFamily: "monospace", maxWidth: 200 }}
+                      >
+                        {c.source_identifier || "—"}
+                        {legacyIdentifier && (
+                          <Typography
+                            sx={{
+                              fontFamily: "inherit",
+                              fontSize: 12,
+                              color: palette.status.warning.text,
+                            }}
+                          >
+                            {t("Not an IP address. Clear it or enter the sender's IP.")}
+                          </Typography>
+                        )}
+                      </TableCell>
+                      <TableCell sx={cellSx}>{PARSER_LABELS[c.parser_type]}</TableCell>
+                      <TableCell sx={cellSx} onClick={(e) => e.stopPropagation()}>
+                        <Stack gap="4px" alignItems="flex-start">
+                          <Typography
+                            sx={{
+                              ...wrapSx,
+                              fontSize: 13,
+                              fontFamily: c.key_prefix ? "monospace" : "inherit",
+                            }}
+                          >
+                            {c.key_prefix ? `${c.key_prefix}...` : t("No key yet")}
+                          </Typography>
+                          <CustomizableButton
+                            text={t(c.key_prefix ? "Regenerate key" : "Generate key")}
+                            variant="outlined"
+                            disabled={regenerating}
+                            testId={`syslog-key-action-${c.id}`}
+                            sx={{ height: 30, fontSize: 13 }}
+                            onClick={() =>
+                              c.key_prefix ? setRegenTarget(c) : handleGenerateKey(c)
+                            }
+                          />
+                        </Stack>
+                      </TableCell>
+                      <TableCell sx={cellSx}>
+                        {c.last_event_at ? formatRelativeDate(c.last_event_at) : t("Never")}
+                      </TableCell>
+                      <TableCell sx={cellSx}>
+                        {numberFormatter.format(Number(c.events_accepted ?? 0))}
+                      </TableCell>
+                      <TableCell sx={cellSx}>
+                        {numberFormatter.format(Number(c.events_dropped ?? 0))}
+                      </TableCell>
+                      <TableCell sx={{ ...cellSx, ...wrapSx, maxWidth: 220 }}>
+                        {renderDropReason(c.last_drop_reason)}
+                      </TableCell>
+                      <TableCell sx={cellSx}>
+                        <Chip label={t(c.is_active ? "Active" : "Inactive")} size="small" />
+                      </TableCell>
+                      <TableCell align="right" sx={cellSx}>
+                        <Stack direction="row" gap="4px" justifyContent="flex-end">
+                          <IconButton
+                            size="small"
+                            aria-label={t("Edit source")}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openEdit(c);
+                            }}
+                            sx={{ color: palette.status.default.text }}
+                          >
+                            <Pencil size={14} strokeWidth={1.5} />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            aria-label={t("Remove source")}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeleteTarget(c);
+                            }}
+                            sx={{ color: palette.status.error.text }}
+                          >
+                            <Trash2 size={14} strokeWidth={1.5} />
+                          </IconButton>
+                        </Stack>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </TableContainer>
@@ -637,36 +896,32 @@ function SyslogConfigSection() {
         {/* Create modal */}
         <StandardModal
           isOpen={createModalOpen}
-          onClose={() => {
-            setCreateModalOpen(false);
-            setFormSource("");
-            setFormParser("generic_kv");
-          }}
-          title="Add syslog source"
+          onClose={resetCreateForm}
+          title={t("Add syslog source")}
           description=""
-          submitButtonText="Add"
+          submitButtonText={t("Add")}
           onSubmit={handleCreate}
           isSubmitting={creating}
           maxWidth="400px"
         >
           <Stack gap="16px">
-            <Field
-              label="Source identifier"
-              value={formSource}
-              onChange={(e) => setFormSource(e.target.value)}
-              placeholder="e.g., proxy-01.corp.com"
-            />
             <Select
               id="parser-type-select"
-              label="Parser type"
+              label={t("Parser type")}
               value={formParser}
-              onChange={(e) =>
-                setFormParser(e.target.value as IShadowAiSyslogConfig["parser_type"])
-              }
-              items={Object.entries(PARSER_LABELS).map(([value, label]) => ({
-                _id: value,
-                name: label,
-              }))}
+              onChange={(e) => setFormParser(e.target.value as SyslogParser)}
+              items={parserItems}
+            />
+            <Field
+              label={t("Allowed sender IP (optional)")}
+              value={formSource}
+              onChange={(e) => {
+                setFormSource(e.target.value);
+                setFormError("");
+              }}
+              error={formError}
+              helperText={ipOnlyHint}
+              placeholder={t("e.g., 203.0.113.7")}
             />
           </Stack>
         </StandardModal>
@@ -675,48 +930,132 @@ function SyslogConfigSection() {
         <StandardModal
           isOpen={!!editTarget}
           onClose={() => setEditTarget(null)}
-          title="Edit syslog source"
+          title={t("Edit syslog source")}
           description=""
-          submitButtonText="Save"
+          submitButtonText={t("Save")}
           onSubmit={handleEdit}
           isSubmitting={editing}
           maxWidth="400px"
         >
           <Stack gap="16px">
-            <Field
-              label="Source identifier"
-              value={editSource}
-              onChange={(e) => setEditSource(e.target.value)}
-              placeholder="e.g., proxy-01.corp.com"
-            />
             <Select
               id="edit-parser-type-select"
-              label="Parser type"
+              label={t("Parser type")}
               value={editParser}
-              onChange={(e) =>
-                setEditParser(e.target.value as IShadowAiSyslogConfig["parser_type"])
-              }
-              items={Object.entries(PARSER_LABELS).map(([value, label]) => ({
-                _id: value,
-                name: label,
-              }))}
+              onChange={(e) => setEditParser(e.target.value as SyslogParser)}
+              items={parserItems}
+            />
+            <Field
+              label={t("Allowed sender IP (optional)")}
+              value={editSource}
+              onChange={(e) => {
+                setEditSource(e.target.value);
+                setEditError("");
+              }}
+              error={editError}
+              helperText={ipOnlyHint}
+              placeholder={t("e.g., 203.0.113.7")}
             />
           </Stack>
+        </StandardModal>
+
+        {/* Key shown once */}
+        <StandardModal
+          isOpen={revealedKey !== null}
+          onClose={closeKeyDialog}
+          title={t("Your source key")}
+          description={t("Copy this key now. You won't be able to see it again.")}
+          submitButtonText={t("Done")}
+          onSubmit={closeKeyDialog}
+          showCancelButton={false}
+          maxWidth="520px"
+        >
+          <Stack gap="16px">
+            <Stack gap="4px">
+              <Typography sx={{ fontSize: 13, fontWeight: 600 }}>{t("Key")}</Typography>
+              <Stack direction="row" alignItems="center" gap="8px">
+                <Box sx={keyBoxSx}>{revealedKey}</Box>
+                <IconButton
+                  size="small"
+                  aria-label={t("Copy key")}
+                  onClick={() => revealedKey && handleCopy("key", revealedKey)}
+                >
+                  {copiedField === "key" ? (
+                    <Check size={14} color={palette.status.success.text} />
+                  ) : (
+                    <Copy size={14} />
+                  )}
+                </IconButton>
+              </Stack>
+            </Stack>
+            <Stack gap="4px">
+              <Typography sx={{ fontSize: 13, fontWeight: 600 }}>
+                {t("Add this to the start or end of each line in the sender's log format")}
+              </Typography>
+              <Stack direction="row" alignItems="center" gap="8px">
+                <Box sx={keyBoxSx}>{`vw_source=${revealedKey ?? ""}`}</Box>
+                <IconButton
+                  size="small"
+                  aria-label={t("Copy log format line")}
+                  onClick={() => revealedKey && handleCopy("line", `vw_source=${revealedKey}`)}
+                >
+                  {copiedField === "line" ? (
+                    <Check size={14} color={palette.status.success.text} />
+                  ) : (
+                    <Copy size={14} />
+                  )}
+                </IconButton>
+              </Stack>
+            </Stack>
+            <Typography
+              aria-live="polite"
+              sx={{ fontSize: 13, color: palette.status.success.text }}
+            >
+              {copiedField ? t("Copied") : ""}
+            </Typography>
+            {copyFailed && (
+              <Typography role="alert" sx={{ fontSize: 13, color: palette.status.error.text }}>
+                {t("Could not copy. Select the key and copy it by hand.")}
+              </Typography>
+            )}
+          </Stack>
+        </StandardModal>
+
+        {/* Regenerate confirmation */}
+        <StandardModal
+          isOpen={!!regenTarget}
+          onClose={() => setRegenTarget(null)}
+          title={t("Regenerate key for {name}?").replace(
+            "{name}",
+            regenTarget ? sourceName(regenTarget) : "",
+          )}
+          description=""
+          submitButtonText={t("Regenerate")}
+          onSubmit={() => regenTarget && handleGenerateKey(regenTarget)}
+          isSubmitting={regenerating}
+          maxWidth="400px"
+        >
+          <Typography variant="body2" sx={{ color: "text.secondary" }}>
+            {t("The current key stops working within a minute. Update every sender that uses it.")}
+          </Typography>
         </StandardModal>
 
         {/* Delete confirmation */}
         <StandardModal
           isOpen={!!deleteTarget}
           onClose={() => setDeleteTarget(null)}
-          title={`Remove "${deleteTarget?.source_identifier}"?`}
+          title={t('Remove "{name}"?').replace(
+            "{name}",
+            deleteTarget ? sourceName(deleteTarget) : "",
+          )}
           description=""
-          submitButtonText="Remove"
+          submitButtonText={t("Remove")}
           onSubmit={handleDelete}
           submitButtonColor={palette.status.error.text}
           maxWidth="400px"
         >
           <Typography variant="body2" sx={{ color: "text.secondary" }}>
-            This will stop processing events from this source.
+            {t("This will stop processing events from this source.")}
           </Typography>
         </StandardModal>
       </Stack>
@@ -780,7 +1119,7 @@ const SYSLOG_EXAMPLES: { label: string; format: string; example: string }[] = [
   {
     label: "Netskope (JSON-in-syslog)",
     format: "netskope",
-    example: `{"user":"alice@company.com","url":"https://chat.openai.com/v1/chat","method":"POST","activity":"allowed","department":"Engineering","timestamp":"2026-02-09T14:32:00Z"}`,
+    example: `{"user":"alice@company.com","url":"https://chat.openai.com/v1/chat","method":"POST","action":"allow","department":"Engineering","timestamp":"2026-02-09T14:32:00Z"}`,
   },
   {
     label: "Squid (space-delimited)",
@@ -806,7 +1145,7 @@ const FIELD_MAPPING = [
   {
     normalized: "destination",
     zscaler: "dst",
-    netskope: "url (host)",
+    netskope: "url (host), else domain",
     squid: "url (host)",
     generic: "dhost",
   },
@@ -824,7 +1163,13 @@ const FIELD_MAPPING = [
     squid: "field 6",
     generic: "requestMethod",
   },
-  { normalized: "action", zscaler: "action", netskope: "activity", squid: "—", generic: "act" },
+  {
+    normalized: "action",
+    zscaler: "action",
+    netskope: "action",
+    squid: "field 4 (result)",
+    generic: "act",
+  },
   {
     normalized: "timestamp",
     zscaler: "syslog header",
