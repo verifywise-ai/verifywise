@@ -64,14 +64,44 @@ function normalizeAction(raw: unknown): SyslogEvent["action"] {
   return undefined;
 }
 
+// Column widths of shadow_ai_events (tenant-tables migration). A value over
+// its column fails the multi-row insert and loses the whole batch, so every
+// field is bounded here. Lengths are in characters, as VARCHAR counts them.
+const MAX_EMAIL_CHARS = 255;
+const MAX_DESTINATION_CHARS = 512;
+const MAX_DEPARTMENT_CHARS = 255;
+const MAX_METHOD_CHARS = 10;
+// Payload and header timestamps further than this from the receive time are
+// ignored (a far-future epoch would otherwise be stored as year +275760).
+const MAX_TIMESTAMP_SKEW_MS = 365 * 24 * 60 * 60 * 1000;
+
+const charLength = (value: string): number => [...value].length;
+
+/** Remove NUL characters, which PostgreSQL text columns reject. */
+const stripNul = (value: string): string => value.replace(/\u0000/g, "");
+
 function normalizeMethod(raw: unknown): string | undefined {
   if (typeof raw !== "string") return undefined;
-  const value = raw.trim().toUpperCase();
-  return /^[A-Z]{1,16}$/.test(value) ? value : undefined;
+  const value = stripNul(raw).trim().toUpperCase();
+  return value.length <= MAX_METHOD_CHARS && /^[A-Z]+$/.test(value) ? value : undefined;
 }
 
 function nonEmpty(raw: unknown): string | undefined {
-  return typeof raw === "string" && raw.trim() ? raw.trim() : undefined;
+  if (typeof raw !== "string") return undefined;
+  const value = stripNul(raw).trim();
+  return value || undefined;
+}
+
+/** The first timestamp within a year of the receive time, else the receive time. */
+function pickTimestamp(receivedAt: Date, ...candidates: (string | undefined)[]): string {
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    const ms = Date.parse(candidate);
+    if (!Number.isNaN(ms) && Math.abs(ms - receivedAt.getTime()) <= MAX_TIMESTAMP_SKEW_MS) {
+      return candidate;
+    }
+  }
+  return receivedAt.toISOString();
 }
 
 /** ISO string from an ISO date or an epoch (seconds or milliseconds). */
@@ -108,21 +138,27 @@ function buildEvent(
   receivedAt: Date,
 ): ParseResult {
   const user = nonEmpty(c.user);
-  if (!user || !isEmail(user)) return { ok: false, reason: "no_user" };
-  if (!c.host) return { ok: false, reason: "no_destination" };
+  if (!user || charLength(user) > MAX_EMAIL_CHARS || !isEmail(user)) {
+    return { ok: false, reason: "no_user" };
+  }
+  const host = nonEmpty(c.host);
+  if (!host || charLength(host) > MAX_DESTINATION_CHARS) {
+    return { ok: false, reason: "no_destination" };
+  }
 
   const event: SyslogEvent = {
     user_email: user,
-    destination: c.host,
-    timestamp: parseTimestamp(c.timestamp) ?? headerTimestamp ?? receivedAt.toISOString(),
+    destination: host,
+    timestamp: pickTimestamp(receivedAt, parseTimestamp(c.timestamp), headerTimestamp),
   };
-  if (c.path) event.uri_path = c.path;
+  const path = c.path ? stripNul(c.path) : undefined;
+  if (path) event.uri_path = path;
   const method = normalizeMethod(c.method);
   if (method) event.http_method = method;
   const action = normalizeAction(c.action);
   if (action) event.action = action;
   const department = nonEmpty(c.department);
-  if (department) event.department = department;
+  if (department) event.department = [...department].slice(0, MAX_DEPARTMENT_CHARS).join("");
   return { ok: true, event };
 }
 

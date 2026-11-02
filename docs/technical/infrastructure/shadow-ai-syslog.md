@@ -99,7 +99,14 @@ The user must be a valid email address. A repeated `user`, `suser`, `dst`,
 is dropped as `unparseable`.
 
 Timestamp order: the payload `timestamp` (Squid: field 1), then the syslog
-header, then the receive time.
+header, then the receive time. A payload or header timestamp more than a year
+from the receive time is skipped.
+
+Every field is bounded to its `shadow_ai_events` column, because one value
+over its column would fail the multi-row insert and lose the whole batch: an
+email over 255 characters drops the line as `no_user`, a destination over 512
+as `no_destination`; a method over 10 characters is left out and a department
+is cut to 255. NUL characters are removed from every string field.
 
 ## Drop reasons
 

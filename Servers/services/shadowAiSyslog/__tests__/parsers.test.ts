@@ -1,6 +1,8 @@
 import { parseLine } from "../parsers";
 
 const RECEIVED = new Date("2026-02-10T00:00:00.000Z");
+// Near the 2024 epoch used in the Squid and epoch examples.
+const RECEIVED_2024 = new Date("2024-02-10T00:00:00.000Z");
 
 describe("parseLine", () => {
   describe("zscaler", () => {
@@ -62,7 +64,7 @@ describe("parseLine", () => {
       '{"user":"alice@company.com","url":"https://chat.openai.com/v1/chat","method":"POST","activity":"allowed","department":"Engineering","timestamp":"2026-02-09T14:32:00Z"}';
 
     it("parses the guide example", () => {
-      expect(parseLine("netskope", json)).toEqual({
+      expect(parseLine("netskope", json, undefined, RECEIVED)).toEqual({
         ok: true,
         event: {
           user_email: "alice@company.com",
@@ -84,6 +86,8 @@ describe("parseLine", () => {
       const r = parseLine(
         "netskope",
         '{"user":"a@b.co","url":"https://x.com","timestamp":1707489120}',
+        undefined,
+        RECEIVED_2024,
       );
       expect(r).toEqual({
         ok: true,
@@ -111,6 +115,8 @@ describe("parseLine", () => {
         parseLine(
           "squid",
           "1707489120.000 200 10.0.0.1 TCP_MISS/200 1024 POST https://chat.openai.com/v1/chat alice@company.com DIRECT/chat.openai.com",
+          undefined,
+          RECEIVED_2024,
         ),
       ).toEqual({
         ok: true,
@@ -244,14 +250,125 @@ describe("parseLine", () => {
       const r = parseLine(
         "squid",
         "1707489120.000 200 10.0.0.1 TCP_MISS/200 1024 GET https://x.com/ a@b.co DIRECT/x.com",
-        "2026-02-09T00:00:00.000Z",
-        RECEIVED,
+        "2024-02-01T00:00:00.000Z",
+        RECEIVED_2024,
       );
       expect(r).toEqual({
         ok: true,
         event: expect.objectContaining({
           timestamp: "2024-02-09T14:32:00.000Z",
         }),
+      });
+    });
+  });
+
+  describe("column bounds", () => {
+    const long = (n: number) => "a".repeat(n);
+
+    it("drops an email longer than 255 characters as no_user", () => {
+      const user = `${long(64)}@${long(63)}.${long(63)}.${long(63)}.${long(20)}.com`;
+      expect(user.length).toBeGreaterThan(255);
+      expect(parseLine("generic_kv", `suser=${user} dhost=x.com`)).toEqual({
+        ok: false,
+        reason: "no_user",
+      });
+    });
+
+    it("drops a destination longer than 512 characters as no_destination", () => {
+      expect(parseLine("generic_kv", `suser=a@b.co dhost=${long(513)}.com`)).toEqual({
+        ok: false,
+        reason: "no_destination",
+      });
+      const host = Array.from({ length: 9 }, () => long(60)).join(".");
+      expect(parseLine("generic_kv", `suser=a@b.co request=https://${host}/x`)).toEqual({
+        ok: false,
+        reason: "no_destination",
+      });
+    });
+
+    it("keeps a destination of exactly 512 characters", () => {
+      const r = parseLine("generic_kv", `suser=a@b.co dhost=${long(512)}`);
+      expect(r.ok && r.event.destination.length).toBe(512);
+    });
+
+    it("leaves out a method longer than 10 characters", () => {
+      const r = parseLine("generic_kv", "suser=a@b.co dhost=x.com requestMethod=PROPPATCHXX");
+      expect(r.ok).toBe(true);
+      expect(r.ok && r.event.http_method).toBeUndefined();
+      const ok = parseLine("generic_kv", "suser=a@b.co dhost=x.com requestMethod=MKCALENDAR");
+      expect(ok.ok && ok.event.http_method).toBe("MKCALENDAR");
+    });
+
+    it("truncates a department to 255 characters", () => {
+      const r = parseLine("generic_kv", `suser=a@b.co dhost=x.com department=${"é".repeat(300)}`);
+      expect(r.ok && r.event.department).toBe("é".repeat(255));
+    });
+
+    it("strips NUL characters from every string field", () => {
+      const r = parseLine(
+        "netskope",
+        JSON.stringify({
+          user: "a@b.co\u0000",
+          url: "https://x.com/p\u0000ath",
+          method: "PO\u0000ST",
+          department: "R\u0000D",
+        }),
+        undefined,
+        RECEIVED,
+      );
+      expect(r).toEqual({
+        ok: true,
+        event: {
+          user_email: "a@b.co",
+          destination: "x.com",
+          uri_path: "/p%00ath",
+          http_method: "POST",
+          department: "RD",
+          timestamp: RECEIVED.toISOString(),
+        },
+      });
+      const kv = parseLine(
+        "generic_kv",
+        "suser=a@b.co dhost=x.\u0000com department=\u0000",
+        undefined,
+        RECEIVED,
+      );
+      expect(kv).toEqual({
+        ok: true,
+        event: { user_email: "a@b.co", destination: "x.com", timestamp: RECEIVED.toISOString() },
+      });
+    });
+
+    it("falls back to the receive time for a far-future epoch", () => {
+      const r = parseLine(
+        "netskope",
+        '{"user":"a@b.co","url":"https://x.com","timestamp":8640000000000}',
+        undefined,
+        RECEIVED,
+      );
+      expect(r).toEqual({
+        ok: true,
+        event: expect.objectContaining({ timestamp: RECEIVED.toISOString() }),
+      });
+    });
+
+    it("ignores timestamps more than a year from the receive time", () => {
+      const line = "suser=a@b.co dhost=x.com timestamp=2020-01-01T00:00:00Z";
+      expect(parseLine("generic_kv", line, "2026-02-01T00:00:00.000Z", RECEIVED)).toEqual({
+        ok: true,
+        event: expect.objectContaining({ timestamp: "2026-02-01T00:00:00.000Z" }),
+      });
+      expect(parseLine("generic_kv", line, "2099-01-01T00:00:00.000Z", RECEIVED)).toEqual({
+        ok: true,
+        event: expect.objectContaining({ timestamp: RECEIVED.toISOString() }),
+      });
+    });
+
+    it("keeps a timestamp just inside a year of the receive time", () => {
+      const line = "suser=a@b.co dhost=x.com timestamp=2025-02-11T00:00:00.000Z";
+      expect(parseLine("generic_kv", line, undefined, RECEIVED)).toEqual({
+        ok: true,
+        event: expect.objectContaining({ timestamp: "2025-02-11T00:00:00.000Z" }),
       });
     });
   });
