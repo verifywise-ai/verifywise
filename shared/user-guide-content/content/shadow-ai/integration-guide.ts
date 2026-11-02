@@ -327,7 +327,7 @@ export const integrationGuideContent: ArticleContent = {
       type: 'callout',
       variant: 'info',
       title: 'How Squid actions are set',
-      text: 'The Squid access log has no allowed or blocked field, so VerifyWise reads the result code: a code with `DENIED` in it (such as `TCP_DENIED/403`) means Squid refused the request and is stored as blocked. Every other code is stored as allowed, including a 403 returned by the destination itself. With SSL bumping, the line Squid writes for a step of the TLS handshake (`NONE_NONE/000 CONNECT` or `NONE/200 CONNECT`) is skipped, so a visit is not counted twice; it is not reported as dropped. If the user field is a dash (`-`), the line is dropped because it has no user email. Squid\'s `access_log tcp://` output is not encrypted, so the server operator must allow plaintext, or you must put a TLS forwarder between Squid and VerifyWise.',
+      text: 'The Squid access log has no allowed or blocked field, so VerifyWise reads the result code: a code with `DENIED` in it (such as `TCP_DENIED/403`) means Squid refused the request and is stored as blocked. Every other code is stored as allowed, including a 403 returned by the destination itself. If the user field is a dash (`-`), the line is dropped because it has no user email. Squid\'s `access_log tcp://` output is not encrypted, so the server operator must allow plaintext, or you must put a TLS forwarder between Squid and VerifyWise.',
     },
 
     // Generic

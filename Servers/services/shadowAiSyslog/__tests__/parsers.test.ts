@@ -1005,6 +1005,11 @@ describe("parseLine", () => {
       // `west` is cut out, but `us` and `2` are left: unreadable, so the header time is used.
       expect(at("2026-02-09 14:32:00 us-west-2")).toBe("2026-02-09T00:00:00.000Z");
     });
+
+    it("does not read an unknown zone in brackets as UTC", () => {
+      expect(at("2026-02-09 14:32:00 (IST)")).toBe("2026-02-09T00:00:00.000Z");
+      expect(at("2026-02-09 14:32:00 (India Standard Time)")).toBe("2026-02-09T00:00:00.000Z");
+    });
   });
 
   describe("CEF event time fields", () => {
@@ -1027,33 +1032,22 @@ describe("parseLine", () => {
       expect(time("rt=Feb 09 2024 14:32:00")).toBe("2024-02-09T14:32:00.000Z");
     });
 
+    it("uses rt when timestamp is empty or unreadable", () => {
+      for (const ext of ["timestamp= rt=1707489120000", "timestamp=soon rt=1707489120000"]) {
+        const r = cef(ext);
+        expect(r.ok && r.event.timestamp).toBe("2024-02-09T14:32:00.000Z");
+      }
+    });
+
+    it("does not reject a repeated end in Zscaler lines, which do not read it", () => {
+      expect(parseLine("zscaler", "user=a@b.co dst=x.com end=1 end=2").ok).toBe(true);
+    });
+
     it("rejects a repeated rt", () => {
       expect(cef("rt=1707489120000 rt=1707489000000")).toEqual({
         ok: false,
         reason: "unparseable",
       });
-    });
-  });
-
-  describe("squid ssl_bump steps", () => {
-    const line = (code: string) =>
-      `1707489120.123 50 10.0.0.1 ${code} 0 CONNECT chat.openai.com:443 alice@corp.com HIER_NONE/- -`;
-
-    it.each(["NONE_NONE/000", "NONE/200", "none/000"])(
-      "skips %s CONNECT without a drop",
-      (code) => {
-        expect(parseLine("squid", line(code))).toEqual({ ok: false, reason: null });
-      },
-    );
-
-    it("still records other NONE lines", () => {
-      expect(parseLine("squid", line("NONE/503")).ok).toBe(true);
-      expect(
-        parseLine(
-          "squid",
-          "1707489120.123 50 10.0.0.1 NONE_NONE/000 0 GET http://chat.openai.com/ alice@corp.com HIER_NONE/- -",
-        ).ok,
-      ).toBe(true);
     });
   });
 
@@ -1068,6 +1062,13 @@ describe("parseLine", () => {
         event: expect.objectContaining({ destination: "2001:db8::1" }),
       });
     });
+
+    it("keeps an IPv4-mapped address as written", () => {
+      expect(parseLine("generic_kv", "suser=a@b.co dhost=::ffff:1.2.3.4")).toEqual({
+        ok: true,
+        event: expect.objectContaining({ destination: "::ffff:1.2.3.4" }),
+      });
+    });
   });
 
   describe("netskope JSON position and url host", () => {
@@ -1080,11 +1081,29 @@ describe("parseLine", () => {
       });
     });
 
-    it("gives up after a bounded number of attempts", () => {
-      expect(parseLine("netskope", `${"{".repeat(20)} ${json}`)).toEqual({
-        ok: false,
-        reason: "unparseable",
+    it("skips braces that do not start an object", () => {
+      expect(parseLine("netskope", `${"{".repeat(20)} ${json}`).ok).toBe(true);
+      // A real object with many nested objects after a brace in the prefix.
+      const nested = JSON.stringify({
+        user: "a@b.co",
+        url: "https://chat.openai.com/c",
+        ...Object.fromEntries(Array.from({ length: 13 }, (_, i) => [`n${i}`, { i }])),
       });
+      expect(parseLine("netskope", `{tag} ${nested}`).ok).toBe(true);
+    });
+
+    it("does not take a nested object as the event when the outer one is broken", () => {
+      const broken =
+        '{"user":"real@corp.com","url":"https://real.ai/x","bad": ,"meta":{"user":"ceo@corp.com","url":"https://evil.example/p"}}';
+      expect(parseLine("netskope", broken)).toEqual({ ok: false, reason: "unparseable" });
+    });
+
+    it("stays linear on a line of braces", () => {
+      const startedAt = Date.now();
+      parseLine("netskope", "{".repeat(65000));
+      parseLine("netskope", `}${"{".repeat(65000)}`);
+      parseLine("netskope", `{${" ".repeat(65000)}x`);
+      expect(Date.now() - startedAt).toBeLessThan(500);
     });
 
     it("prefers a dotted domain over an undotted url host", () => {

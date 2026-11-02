@@ -76,10 +76,9 @@ const EVENT_KEYS = new Set([
   "requestMethod",
   "department",
   "timestamp",
-  "rt",
-  "end",
-  "start",
 ]);
+// The generic parser also reads CEF's event time keys.
+const GENERIC_EVENT_KEYS = new Set([...EVENT_KEYS, "rt", "end", "start"]);
 
 function unescapeValue(raw: string): string {
   return raw.replace(/\\(.)/g, "$1");
@@ -101,7 +100,7 @@ const CEF_KEY_RE = /(?:^|\s)([A-Za-z_][\w.-]*)=/g;
  * spaces (only `=` and `\` are escaped), so a value runs until the next
  * ` key=`. Quotes have no meaning in CEF and are kept as written.
  */
-function parseCefExtension(extension: string): Fields | null {
+function parseCefExtension(extension: string, eventKeys: Set<string>): Fields | null {
   const fields: Fields = Object.create(null);
   const keys = [...extension.matchAll(CEF_KEY_RE)];
   for (let i = 0; i < keys.length; i++) {
@@ -109,7 +108,7 @@ function parseCefExtension(extension: string): Fields | null {
     const valueStart = keys[i].index! + keys[i][0].length;
     const valueEnd = i + 1 < keys.length ? keys[i + 1].index! : extension.length;
     if (key in fields) {
-      if (EVENT_KEYS.has(key)) return null;
+      if (eventKeys.has(key)) return null;
       continue;
     }
     fields[key] = unescapeValue(extension.slice(valueStart, valueEnd).trimEnd());
@@ -117,15 +116,19 @@ function parseCefExtension(extension: string): Fields | null {
   return fields;
 }
 
-/** Key=value pairs, or null when an event key appears more than once. */
+/**
+ * Key=value pairs, or null when an event key appears more than once. `cef` is
+ * the generic parser: it accepts a CEF header and reads the CEF time keys.
+ */
 function parseKeyValues(body: string, cef = false): Fields | null {
+  const eventKeys = cef ? GENERIC_EVENT_KEYS : EVENT_KEYS;
   const header = cef ? CEF_HEADER_RE.exec(body) : null;
-  if (header) return parseCefExtension(body.slice(header[0].length));
+  if (header) return parseCefExtension(body.slice(header[0].length), eventKeys);
   const fields: Fields = Object.create(null);
   for (const m of body.matchAll(KV_PAIR_RE)) {
     const key = m[1];
     if (key in fields) {
-      if (EVENT_KEYS.has(key)) return null;
+      if (eventKeys.has(key)) return null;
       continue;
     }
     fields[key] = unescapeValue(m[2] ?? m[3] ?? "");
@@ -145,9 +148,11 @@ const isDotted = (host: string): boolean => host.includes(".") || host.includes(
 /** Host and path of a URL, or of a bare `host[:port][/path]` string. */
 function hostAndPath(raw: string): { host: string; path?: string } | null {
   const hasScheme = SCHEME_RE.test(raw);
+  // A bare IP address is kept as written: the URL parser would reject an
+  // unbracketed IPv6 address and rewrite `::ffff:1.2.3.4` as hex.
+  if (!hasScheme && net.isIP(raw)) return { host: raw.toLowerCase() };
   try {
-    // A bare IPv6 address (`2001:db8::1`) needs brackets to be read as a host.
-    const url = new URL(hasScheme ? raw : `http://${net.isIPv6(raw) ? `[${raw}]` : raw}`);
+    const url = new URL(hasScheme ? raw : `http://${raw}`);
     const host = url.hostname.replace(/^\[|\]$/g, "").replace(/\.$/, "");
     if (!/[a-z0-9]/i.test(host)) return null;
     // Without a scheme the value must look like a host, so placeholders such
@@ -348,9 +353,12 @@ function parseDateText(text: string): number {
   // so they go too, balanced or not, or a leftover `(` would hide the rest.
   const zone = findZoneName(tail);
   if (zone) tail = `${tail.slice(0, zone.index)} ${tail.slice(zone.index + zone.length)}`;
-  tail = tail.replace(/\([^()]*\)/g, " ").replace(/[()]/g, " ");
-  if (statesZone(tail)) return Date.parse(`${head}${tail}`);
-  const utc = Date.parse(`${head}${tail} UTC`);
+  const bare = tail.replace(/\([^()]*\)/g, " ").replace(/[()]/g, " ");
+  if (statesZone(bare)) return Date.parse(`${head}${bare}`);
+  // Without a listed name, a zone only inside brackets (`(IST)`, `(India
+  // Standard Time)`) is one the parser cannot read: unreadable, not UTC.
+  if (!zone && statesZone(tail.replace(/[()]/g, " "))) return NaN;
+  const utc = Date.parse(`${head}${bare} UTC`);
   return zone ? utc - zone.minutes * 60 * 1000 : utc;
 }
 
@@ -451,33 +459,36 @@ function parseGenericKv(
       method: f.requestMethod,
       action: f.act,
       department: f.department,
-      // CEF names the event time `rt` (receipt), `end` or `start`.
-      timestamp: f.timestamp ?? f.rt ?? f.end ?? f.start,
+      // CEF names the event time `rt` (receipt), `end` or `start`. The first
+      // that reads as a time is used, so an empty `timestamp=` does not hide `rt`.
+      timestamp: [f.timestamp, f.rt, f.end, f.start].find((t) => parseTimestamp(t) !== undefined),
     },
     headerTimestamp,
     receivedAt,
   );
 }
 
-// A JSON object may follow a prefix (which may itself contain `{`) and be
-// followed by trailing text. Try the slice from each opening brace, first
-// first, to each closing brace, last first. Lines run to 64 KiB, so the number
-// of JSON.parse calls per line is bounded.
-const MAX_JSON_PARSE_ATTEMPTS = 12;
+// A JSON object may follow a prefix and be followed by trailing text. It
+// starts at the first `{` followed by a key or `}`, so a brace in the prefix
+// (`host{1}`) is passed over. Only that one start is tried: falling through
+// to a later `{` when the object is broken (a relay cut the line) could pick
+// a nested object as the event. Try the slice ending at each closing brace,
+// last first, a bounded number of times.
+const JSON_OBJECT_START_RE = /\{\s*["}]/;
+const MAX_JSON_END_ATTEMPTS = 8;
 
 function extractJsonObject(body: string): Record<string, unknown> | null {
-  let attempts = 0;
-  for (let start = body.indexOf("{"); start !== -1; start = body.indexOf("{", start + 1)) {
-    for (let end = body.lastIndexOf("}"); end > start; end = body.lastIndexOf("}", end - 1)) {
-      if (attempts++ >= MAX_JSON_PARSE_ATTEMPTS) return null;
-      try {
-        const parsed: unknown = JSON.parse(body.slice(start, end + 1));
-        return parsed && typeof parsed === "object" && !Array.isArray(parsed)
-          ? (parsed as Record<string, unknown>)
-          : null;
-      } catch {
-        // Try a shorter slice.
-      }
+  const start = body.search(JSON_OBJECT_START_RE);
+  if (start === -1) return null;
+  let end = body.lastIndexOf("}");
+  for (let attempt = 0; attempt < MAX_JSON_END_ATTEMPTS && end > start; attempt++) {
+    try {
+      const parsed: unknown = JSON.parse(body.slice(start, end + 1));
+      return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+        ? (parsed as Record<string, unknown>)
+        : null;
+    } catch {
+      end = body.lastIndexOf("}", end - 1);
     }
   }
   return null;
@@ -547,20 +558,10 @@ function parseSquid(
   // `NONE` stands in for the method when no request was read (aborted
   // connections); it is not an HTTP method, so it is not stored as one.
   const method = fields[5].toUpperCase() === "NONE" ? undefined : fields[5];
-  const [resultCode, status] = fields[3].toUpperCase().split("/");
-  // With ssl_bump, Squid logs a step of the TLS handshake (`NONE_NONE/000
-  // CONNECT`, `NONE/200 CONNECT`) before the line for the tunnel or the bumped
-  // request. Counting it would record the same visit twice, so it is skipped.
-  if (
-    /^NONE(_NONE)?$/.test(resultCode) &&
-    (status === "000" || status === "200") &&
-    method?.toUpperCase() === "CONNECT"
-  ) {
-    return { ok: false, reason: null };
-  }
   // The result code (field 4, `CODE/status`) says whether Squid itself refused
   // the request: TCP_DENIED and TCP_DENIED_REPLY are ACL denials. A 403 from
   // the origin server (TCP_MISS/403) was let through, so only the code counts.
+  const resultCode = fields[3].split("/")[0].toUpperCase();
   const action = /(^|_)DENIED(_|$)/.test(resultCode) ? "blocked" : "allowed";
   // CONNECT lines carry host:port instead of a URL, so they have no path.
   const target = hostAndPath(fields[6]);

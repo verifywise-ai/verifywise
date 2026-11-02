@@ -271,7 +271,7 @@ function handleConnection(raw: net.Socket, ctx: ConnectionContext): void {
     }
     const parsed = parseLine(src.parserType, rest, headerTimestamp);
     if (parsed.ok) ctx.batcher.add(src, parsed.event);
-    else if (parsed.reason) ctx.batcher.drop(src, parsed.reason);
+    else ctx.batcher.drop(src, parsed.reason);
   };
 
   const attachReader = (stream: net.Socket) => {
