@@ -10,8 +10,8 @@ import { listActiveSyslogSourcesQuery } from "../../../utils/shadowAiConfig.util
 import {
   invalidateSourceCache,
   resolveByKey,
-  resolveByIp,
   revalidateSource,
+  sourcesForIp,
   SOURCE_CACHE_TTL_MS,
 } from "../sourceCache";
 import { hashSourceKey } from "../sourceKey";
@@ -51,8 +51,29 @@ describe("source cache", () => {
 
   it("shares one in-flight reload between concurrent callers", async () => {
     list.mockResolvedValue([row]);
-    await Promise.all([resolveByKey(KEY), resolveByKey(KEY), resolveByIp("10.0.0.5")]);
+    await Promise.all([resolveByKey(KEY), resolveByKey(KEY), sourcesForIp("10.0.0.5")]);
     expect(list).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not answer a caller after invalidation with a reload that started before it", async () => {
+    const stale = { ...row, parser_type: "squid" };
+    let finishOld!: (rows: unknown[]) => void;
+    list
+      .mockImplementationOnce(() => new Promise((resolve) => (finishOld = resolve)))
+      .mockResolvedValue([row]);
+
+    const early = resolveByKey(KEY);
+    await Promise.resolve();
+    invalidateSourceCache();
+    // Both arrive after the invalidation: they must share one fresh reload.
+    const late = Promise.all([resolveByKey(KEY), sourcesForIp("10.0.0.5")]);
+    finishOld([stale]);
+
+    expect((await early)?.parserType).toBe("squid");
+    const [byKey, byIp] = await late;
+    expect(byKey?.parserType).toBe("zscaler");
+    expect(byIp.map((s) => s.parserType)).toEqual(["zscaler"]);
+    expect(list).toHaveBeenCalledTimes(2);
   });
 
   it("serves nothing when a reload fails after invalidation", async () => {
@@ -63,7 +84,7 @@ describe("source cache", () => {
     list.mockRejectedValue(new Error("db down"));
     invalidateSourceCache();
     expect(await resolveByKey(KEY)).toBeNull();
-    expect(await resolveByIp("10.0.0.5")).toBeNull();
+    expect(await sourcesForIp("10.0.0.5")).toEqual([]);
     expect(await revalidateSource(src!)).toBeNull();
   });
 

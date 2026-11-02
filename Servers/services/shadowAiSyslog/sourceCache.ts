@@ -32,7 +32,8 @@ let byId = new Map<number, CachedSource>();
 let byIp = new Map<string, CachedSource[]>();
 let expiresAt = 0;
 let generation = 0;
-let inflight: Promise<void> | null = null;
+// The reload in progress and the generation it started at.
+let inflight: { generation: number; promise: Promise<void> } | null = null;
 
 async function reload(): Promise<void> {
   const startedGeneration = generation;
@@ -73,14 +74,26 @@ async function reload(): Promise<void> {
   }
 }
 
+/**
+ * Wait for rows loaded no earlier than the current generation. A reload that
+ * started before an `invalidateSourceCache()` is not joined as the answer: it
+ * is awaited (reloads never overlap, so an old one cannot overwrite a newer
+ * one) and then a fresh reload runs, shared by every caller of that generation.
+ */
 async function ensureFresh(): Promise<void> {
-  if (Date.now() < expiresAt) return;
-  if (!inflight) {
-    inflight = reload().finally(() => {
-      inflight = null;
-    });
+  const wanted = generation;
+  while (Date.now() >= expiresAt) {
+    if (!inflight) {
+      const entry = { generation, promise: Promise.resolve() };
+      entry.promise = reload().finally(() => {
+        if (inflight === entry) inflight = null;
+      });
+      inflight = entry;
+    }
+    const current = inflight;
+    await current.promise;
+    if (current.generation >= wanted) return;
   }
-  await inflight;
 }
 
 /** Drop the cached sources so the next lookup reloads them. */
@@ -111,12 +124,6 @@ export async function sourcesForIp(ip: string): Promise<CachedSource[]> {
   if (!normalized) return [];
   await ensureFresh();
   return byIp.get(normalized) ?? [];
-}
-
-export async function resolveByIp(ip: string): Promise<CachedSource | "ambiguous" | null> {
-  const matches = await sourcesForIp(ip);
-  if (matches.length === 0) return null;
-  return matches.length === 1 ? matches[0] : "ambiguous";
 }
 
 /**
