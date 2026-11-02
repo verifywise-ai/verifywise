@@ -2,9 +2,8 @@
  * Cache of active syslog sources used by the listener to route lines.
  *
  * Every active row is loaded at most once per TTL (or right after
- * `invalidateSourceCache()`), never per line: the cross-organization query
- * behind it costs 1 + 2N statements. Concurrent callers share one in-flight
- * reload. A failed reload leaves no usable rows until a later one succeeds.
+ * `invalidateSourceCache()`), never per line. Concurrent callers share one
+ * in-flight reload. A failed reload leaves no usable rows until a later one succeeds.
  */
 
 import logger from "../../utils/logger/fileLogger";

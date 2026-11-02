@@ -102,44 +102,29 @@ export interface ActiveSyslogSource {
 }
 
 /**
- * Active syslog sources across every organization. Used only by the TCP
- * listener, which runs outside any request.
+ * Active syslog sources across every organization, in one cross-organization
+ * SELECT. Used only by the TCP listener, which runs outside any request.
  *
- * Reads one organization at a time with `app.current_org` set for that
- * organization, the way the retention jobs do, so it keeps returning rows if
- * this table gets a tenant policy and RLS_ENFORCEMENT_ENABLED is on. The
- * organization list comes from `organizations`, which has no tenant policy.
+ * This works because `shadow_ai_syslog_config` has no tenant policy today (it
+ * is in the deferredScopedTables list of scripts/deferred-tables-entries.txt).
+ * When a tenant policy lands on this table, this query must move to a
+ * per-organization read with `app.current_org` set, or to a policy-bypass
+ * role; otherwise it returns no rows with RLS_ENFORCEMENT_ENABLED on and the
+ * listener routes nothing.
  */
 export async function listActiveSyslogSourcesQuery(): Promise<ActiveSyslogSource[]> {
-  const orgs = (await sequelize.query(`SELECT id FROM organizations ORDER BY id`, {
-    type: QueryTypes.SELECT,
-  })) as { id: number }[];
-
-  const sources: ActiveSyslogSource[] = [];
-  await sequelize.transaction(async (transaction) => {
-    for (const { id } of orgs) {
-      await sequelize.query(`SELECT set_config('app.current_org', :org, true)`, {
-        replacements: { org: String(id) },
-        type: QueryTypes.SELECT,
-        transaction,
-      });
-      const rows = (await sequelize.query(
-        `SELECT id, organization_id, parser_type, source_identifier, key_hash
-           FROM shadow_ai_syslog_config
-          WHERE organization_id = :organizationId AND is_active = true
-          ORDER BY id`,
-        { replacements: { organizationId: id }, type: QueryTypes.SELECT, transaction },
-      )) as ActiveSyslogSource[];
-      sources.push(
-        ...rows.map((r) => ({
-          ...r,
-          id: Number(r.id),
-          organization_id: Number(r.organization_id),
-        })),
-      );
-    }
-  });
-  return sources;
+  const rows = (await sequelize.query(
+    `SELECT id, organization_id, parser_type, source_identifier, key_hash
+       FROM shadow_ai_syslog_config
+      WHERE is_active = true
+      ORDER BY id`,
+    { type: QueryTypes.SELECT },
+  )) as ActiveSyslogSource[];
+  return rows.map((r) => ({
+    ...r,
+    id: Number(r.id),
+    organization_id: Number(r.organization_id),
+  }));
 }
 
 /**

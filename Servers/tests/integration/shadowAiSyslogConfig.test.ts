@@ -260,7 +260,15 @@ describe("Shadow AI syslog source keys and status", () => {
     const a = await create(orgA, { source_identifier: "10.0.0.5" });
     const b = await create(orgB);
     await create(orgB, { is_active: false });
-    const rows = await listActiveSyslogSourcesQuery();
+    const spy = jest.spyOn(sequelize, "query");
+    let rows: Awaited<ReturnType<typeof listActiveSyslogSourcesQuery>>;
+    try {
+      rows = await listActiveSyslogSourcesQuery();
+      // One cross-organization SELECT, not a statement pair per organization.
+      expect(spy).toHaveBeenCalledTimes(1);
+    } finally {
+      spy.mockRestore();
+    }
     expect(rows.map((r) => r.id).sort()).toEqual([a.body.data.id, b.body.data.id].sort());
     const first = rows.find((r) => r.id === a.body.data.id)!;
     expect(first.organization_id).toBe(orgA);
