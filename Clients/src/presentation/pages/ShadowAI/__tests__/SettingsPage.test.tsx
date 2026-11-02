@@ -437,10 +437,8 @@ describe("ShadowAI - SettingsPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => {
-      expect(mockUpdateSyslogConfig).toHaveBeenCalledWith(1, {
-        source_identifier: "203.0.113.7",
-        parser_type: "zscaler",
-      });
+      // The sender IP did not change, so it is not sent.
+      expect(mockUpdateSyslogConfig).toHaveBeenCalledWith(1, { parser_type: "zscaler" });
     });
   });
 
@@ -531,13 +529,29 @@ describe("ShadowAI - SettingsPage", () => {
       });
     });
 
-    it("blocks Save until the field is a valid IP, then saves it", async () => {
+    it("changes the parser without sending the unchanged hostname", async () => {
       mockGetSyslogConfigs.mockResolvedValue([legacy]);
       mockUpdateSyslogConfig.mockResolvedValue({});
       renderWithProviders(<SettingsPage />);
 
       fireEvent.click(await screen.findByText("proxy-01.corp.com"));
       fireEvent.click(await screen.findByRole("button", { name: "Save" }));
+      await waitFor(() => {
+        expect(mockUpdateSyslogConfig).toHaveBeenCalledWith(1, { parser_type: "zscaler" });
+      });
+      expect(screen.queryByText("Enter an IPv4 or IPv6 address.")).not.toBeInTheDocument();
+    });
+
+    it("blocks Save for a changed value that is not an IP, then saves a valid one", async () => {
+      mockGetSyslogConfigs.mockResolvedValue([legacy]);
+      mockUpdateSyslogConfig.mockResolvedValue({});
+      renderWithProviders(<SettingsPage />);
+
+      fireEvent.click(await screen.findByText("proxy-01.corp.com"));
+      fireEvent.change(await screen.findByLabelText("Allowed sender IP (optional)"), {
+        target: { value: "proxy-02.corp.com" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Save" }));
       expect(await screen.findByText("Enter an IPv4 or IPv6 address.")).toBeInTheDocument();
       expect(mockUpdateSyslogConfig).not.toHaveBeenCalled();
 

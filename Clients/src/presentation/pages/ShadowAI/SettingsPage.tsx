@@ -608,7 +608,10 @@ function SyslogConfigSection() {
   const handleEdit = async () => {
     if (!editTarget) return;
     const sender = editSource.trim();
-    if (sender && !isIpAddress(sender)) {
+    // Send the sender IP only when it changed, so a legacy hostname row can
+    // still change its parser without clearing or retyping that field.
+    const senderChanged = sender !== (editTarget.source_identifier ?? "").trim();
+    if (senderChanged && sender && !isIpAddress(sender)) {
       setEditError(t("Enter an IPv4 or IPv6 address."));
       return;
     }
@@ -616,7 +619,7 @@ function SyslogConfigSection() {
     setActionError("");
     try {
       await updateSyslogConfig(editTarget.id, {
-        source_identifier: sender || null,
+        ...(senderChanged ? { source_identifier: sender || null } : {}),
         parser_type: editParser,
       });
       setEditTarget(null);
