@@ -6,6 +6,7 @@
  * Timestamp order: payload field, then syslog header, then receive time.
  */
 
+import net from "net";
 import { isEmail } from "../../utils/validations/email.utils";
 import { SHADOW_AI_EVENT_LIMITS } from "../../utils/shadowAiEventLimits";
 import { ParseResult, ParserType, SyslogEvent } from "./types";
@@ -75,6 +76,9 @@ const EVENT_KEYS = new Set([
   "requestMethod",
   "department",
   "timestamp",
+  "rt",
+  "end",
+  "start",
 ]);
 
 function unescapeValue(raw: string): string {
@@ -135,16 +139,21 @@ function hostField(raw: unknown): string | undefined {
   return value ? (hostAndPath(value)?.host ?? undefined) : undefined;
 }
 
+/** A dotted name, IPv4 or IPv6 address, as opposed to `localhost` or `-`. */
+const isDotted = (host: string): boolean => host.includes(".") || host.includes(":");
+
 /** Host and path of a URL, or of a bare `host[:port][/path]` string. */
 function hostAndPath(raw: string): { host: string; path?: string } | null {
+  const hasScheme = SCHEME_RE.test(raw);
   try {
-    const url = new URL(SCHEME_RE.test(raw) ? raw : `http://${raw}`);
+    // A bare IPv6 address (`2001:db8::1`) needs brackets to be read as a host.
+    const url = new URL(hasScheme ? raw : `http://${net.isIPv6(raw) ? `[${raw}]` : raw}`);
     const host = url.hostname.replace(/^\[|\]$/g, "").replace(/\.$/, "");
     if (!/[a-z0-9]/i.test(host)) return null;
-    // Without a scheme the value must look like a host (dotted name, IPv4 or
-    // IPv6), so placeholders such as `-`, `N/A`, `none` and `null` are not read
-    // as a host called "-" or "n" and the next field gets its turn.
-    if (!SCHEME_RE.test(raw) && !host.includes(".") && !host.includes(":")) return null;
+    // Without a scheme the value must look like a host, so placeholders such
+    // as `-`, `N/A`, `none` and `null` are not read as a host called "-" or
+    // "n" and the next field gets its turn.
+    if (!hasScheme && !isDotted(host)) return null;
     return {
       host: host.toLowerCase(),
       path: url.pathname !== "/" ? url.pathname : undefined,
@@ -218,6 +227,8 @@ function pickTimestamp(receivedAt: Date, ...candidates: (string | undefined)[]):
   return receivedAt.toISOString();
 }
 
+// Seconds or milliseconds since the epoch.
+const EPOCH_RE = /^\d+(\.\d+)?$/;
 // A time of day (`15:29`, `15:29:11`, `15:29:11.250`); anything after it can
 // name the zone.
 const TIME_OF_DAY_RE = /\d:\d\d(?::\d\d)?(?:[.,]\d+)?/;
@@ -269,26 +280,26 @@ const NON_ZONE_WORDS = new Set([
   "december",
 ]);
 // Zone abbreviations Date.parse cannot read (it knows GMT, UT, UTC, Z and the
-// US EST..PDT), as UTC offsets. Only abbreviations with one common meaning are
-// listed; an unlisted one (IST, ...) makes the payload time unreadable and the
-// header or receive time is used instead.
-const ZONE_OFFSETS: Record<string, string> = {
-  WET: "+0000",
-  WEST: "+0100",
-  BST: "+0100",
-  CET: "+0100",
-  CEST: "+0200",
-  EET: "+0200",
-  EEST: "+0300",
-  MSK: "+0300",
-  JST: "+0900",
-  KST: "+0900",
-  AEST: "+1000",
-  AEDT: "+1100",
-  ACST: "+0930",
-  AWST: "+0800",
-  NZST: "+1200",
-  NZDT: "+1300",
+// US EST..PDT), as minutes east of UTC. Only abbreviations with one common
+// meaning are listed; an unlisted one (IST, ...) makes the payload time
+// unreadable and the header or receive time is used instead.
+const ZONE_OFFSETS: Record<string, number> = {
+  WET: 0,
+  WEST: 60,
+  BST: 60,
+  CET: 60,
+  CEST: 120,
+  EET: 120,
+  EEST: 180,
+  MSK: 180,
+  JST: 540,
+  KST: 540,
+  AEST: 600,
+  AEDT: 660,
+  ACST: 570,
+  AWST: 480,
+  NZST: 720,
+  NZDT: 780,
 };
 
 /** Whether the text after the time of day states a zone: Z, an offset or a name. */
@@ -299,34 +310,48 @@ function statesZone(tail: string): boolean {
   return words.some((w) => !NON_ZONE_WORDS.has(w.toLowerCase()));
 }
 
+/** The first listed zone name in the text: its position, length and offset. */
+function findZoneName(
+  text: string,
+): { index: number; length: number; minutes: number } | undefined {
+  const word = /[a-z]+/gi;
+  let m: RegExpExecArray | null;
+  while ((m = word.exec(text))) {
+    const name = m[0].toUpperCase();
+    if (Object.prototype.hasOwnProperty.call(ZONE_OFFSETS, name)) {
+      return { index: m.index, length: m[0].length, minutes: ZONE_OFFSETS[name] };
+    }
+  }
+  return undefined;
+}
+
 /**
  * Date.parse reads a timestamp with a time but no zone (`2026-11-02 10:00:00`,
  * Zscaler's `Mon Jun 20 15:29:11 2022`) in the server's local zone. Senders do
  * not say which zone they use, so read it as UTC, like the syslog header. A
  * zone stated anywhere after the time (`... PST 2022`, `... GMT+0200 (CEST)`,
- * `...Z`, `+02:00`) is honoured.
+ * `...Z`, `+02:00`) is honoured; a numeric offset wins over a zone name.
  */
 function parseDateText(text: string): number {
   const time = TIME_OF_DAY_RE.exec(text);
   if (!time) return Date.parse(text);
-  const tail = text.slice(time.index + time[0].length);
-  if (!statesZone(tail)) {
-    return /^\d{4}-\d{2}-\d{2}[T ]/.test(text)
-      ? Date.parse(`${text.replace(" ", "T")}Z`)
-      : Date.parse(`${text} UTC`);
-  }
-  // Swap the first listed name (with its brackets, if any) for its GMT offset.
-  const zoneWord = /\(?\b([a-z]+)\b\)?/gi;
-  let zone: RegExpExecArray | null;
-  while ((zone = zoneWord.exec(tail))) {
-    const name = zone[1].toUpperCase();
-    if (!Object.prototype.hasOwnProperty.call(ZONE_OFFSETS, name)) continue;
-    const start = text.length - tail.length + zone.index;
-    return Date.parse(
-      `${text.slice(0, start)}GMT${ZONE_OFFSETS[name]}${text.slice(start + zone[0].length)}`,
-    );
-  }
-  return Date.parse(text);
+  const timeEnd = time.index + time[0].length;
+  // Date.parse reads `2026-02-09 14:32:00.5 UTC` but not `2026-02-09T14:32:00 UTC`
+  // or a comma before the fraction.
+  const head = text
+    .slice(0, timeEnd)
+    .replace(/^(\d{4}-\d{2}-\d{2})T/, "$1 ")
+    .replace(/,(\d+)$/, ".$1");
+  let tail = text.slice(timeEnd);
+  // A listed name is cut out (Date.parse cannot read it) and applied as an
+  // offset below. Brackets are comments to Date.parse (`(CEST)`, `(Tokyo JST)`),
+  // so they go too, balanced or not, or a leftover `(` would hide the rest.
+  const zone = findZoneName(tail);
+  if (zone) tail = `${tail.slice(0, zone.index)} ${tail.slice(zone.index + zone.length)}`;
+  tail = tail.replace(/\([^()]*\)/g, " ").replace(/[()]/g, " ");
+  if (statesZone(tail)) return Date.parse(`${head}${tail}`);
+  const utc = Date.parse(`${head}${tail} UTC`);
+  return zone ? utc - zone.minutes * 60 * 1000 : utc;
 }
 
 /** ISO string from an ISO date or an epoch (seconds or milliseconds). */
@@ -336,7 +361,7 @@ function parseTimestamp(raw: unknown): string | undefined {
     ms = raw < 1e12 ? raw * 1000 : raw;
   } else if (typeof raw === "string" && raw.trim()) {
     const text = raw.trim();
-    ms = /^\d+(\.\d+)?$/.test(text)
+    ms = EPOCH_RE.test(text)
       ? Number(text) * (Number(text) < 1e12 ? 1000 : 1)
       : parseDateText(text);
   } else {
@@ -426,29 +451,33 @@ function parseGenericKv(
       method: f.requestMethod,
       action: f.act,
       department: f.department,
-      timestamp: f.timestamp,
+      // CEF names the event time `rt` (receipt), `end` or `start`.
+      timestamp: f.timestamp ?? f.rt ?? f.end ?? f.start,
     },
     headerTimestamp,
     receivedAt,
   );
 }
 
-// A JSON object may follow a prefix and be followed by trailing text. Try the
-// slice ending at each closing brace, last first, a bounded number of times.
-const MAX_JSON_END_ATTEMPTS = 8;
+// A JSON object may follow a prefix (which may itself contain `{`) and be
+// followed by trailing text. Try the slice from each opening brace, first
+// first, to each closing brace, last first. Lines run to 64 KiB, so the number
+// of JSON.parse calls per line is bounded.
+const MAX_JSON_PARSE_ATTEMPTS = 12;
 
 function extractJsonObject(body: string): Record<string, unknown> | null {
-  const start = body.indexOf("{");
-  if (start === -1) return null;
-  let end = body.lastIndexOf("}");
-  for (let attempt = 0; attempt < MAX_JSON_END_ATTEMPTS && end > start; attempt++) {
-    try {
-      const parsed: unknown = JSON.parse(body.slice(start, end + 1));
-      return parsed && typeof parsed === "object" && !Array.isArray(parsed)
-        ? (parsed as Record<string, unknown>)
-        : null;
-    } catch {
-      end = body.lastIndexOf("}", end - 1);
+  let attempts = 0;
+  for (let start = body.indexOf("{"); start !== -1; start = body.indexOf("{", start + 1)) {
+    for (let end = body.lastIndexOf("}"); end > start; end = body.lastIndexOf("}", end - 1)) {
+      if (attempts++ >= MAX_JSON_PARSE_ATTEMPTS) return null;
+      try {
+        const parsed: unknown = JSON.parse(body.slice(start, end + 1));
+        return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+          ? (parsed as Record<string, unknown>)
+          : null;
+      } catch {
+        // Try a shorter slice.
+      }
     }
   }
   return null;
@@ -458,7 +487,7 @@ function extractJsonObject(body: string): Record<string, unknown> | null {
 function dottedHost(raw: unknown): string | undefined {
   if (typeof raw !== "string" || /\s/.test(raw)) return undefined;
   const host = hostField(raw);
-  return host && (host.includes(".") || host.includes(":")) ? host : undefined;
+  return host && isDotted(host) ? host : undefined;
 }
 
 function parseNetskope(
@@ -469,16 +498,18 @@ function parseNetskope(
   const j = extractJsonObject(body);
   if (!j) return { ok: false, reason: "unparseable" };
 
-  const url = typeof j.url === "string" ? hostAndPath(j.url) : null;
-  // `url` is the destination. Without it, `domain` (then `site`) is read when
-  // it looks like a host. `hostname` is NOT used: in Netskope events it is the
-  // user's device, not the site the user reached.
-  const host = url?.host ?? dottedHost(j.domain) ?? dottedHost(j.site);
+  const parsedUrl = typeof j.url === "string" ? hostAndPath(j.url) : null;
+  // `url` is the destination. When it is missing or names an undotted host
+  // (`http://localhost`), `domain` (then `site`) is read when it looks like a
+  // host; the undotted `url` host is the last resort. `hostname` is NOT used:
+  // in Netskope events it is the user's device, not the site the user reached.
+  const url = parsedUrl && isDotted(parsedUrl.host) ? parsedUrl : null;
+  const host = url?.host ?? dottedHost(j.domain) ?? dottedHost(j.site) ?? parsedUrl?.host;
   return buildEvent(
     {
       user: j.user,
       host,
-      path: url?.path,
+      path: parsedUrl && host === parsedUrl.host ? parsedUrl.path : undefined,
       method: j.method,
       // `action` is Netskope's policy verdict (allow, block, ...); `activity`
       // is what the user did (Upload, Login, ...). `activity` is read only
@@ -510,16 +541,26 @@ function parseSquid(
   const fields = body.trim().split(/\s+/);
   if (fields.length < 8) return { ok: false, reason: "unparseable" };
   // Squid always writes an epoch; anything else is not an access.log line.
-  const timestamp = /^\d+(\.\d+)?$/.test(fields[0]) ? parseTimestamp(fields[0]) : undefined;
+  const timestamp = EPOCH_RE.test(fields[0]) ? parseTimestamp(fields[0]) : undefined;
   if (!timestamp) return { ok: false, reason: "unparseable" };
 
   // `NONE` stands in for the method when no request was read (aborted
   // connections); it is not an HTTP method, so it is not stored as one.
   const method = fields[5].toUpperCase() === "NONE" ? undefined : fields[5];
+  const [resultCode, status] = fields[3].toUpperCase().split("/");
+  // With ssl_bump, Squid logs a step of the TLS handshake (`NONE_NONE/000
+  // CONNECT`, `NONE/200 CONNECT`) before the line for the tunnel or the bumped
+  // request. Counting it would record the same visit twice, so it is skipped.
+  if (
+    /^NONE(_NONE)?$/.test(resultCode) &&
+    (status === "000" || status === "200") &&
+    method?.toUpperCase() === "CONNECT"
+  ) {
+    return { ok: false, reason: null };
+  }
   // The result code (field 4, `CODE/status`) says whether Squid itself refused
   // the request: TCP_DENIED and TCP_DENIED_REPLY are ACL denials. A 403 from
   // the origin server (TCP_MISS/403) was let through, so only the code counts.
-  const resultCode = fields[3].split("/")[0].toUpperCase();
   const action = /(^|_)DENIED(_|$)/.test(resultCode) ? "blocked" : "allowed";
   // CONNECT lines carry host:port instead of a URL, so they have no path.
   const target = hostAndPath(fields[6]);

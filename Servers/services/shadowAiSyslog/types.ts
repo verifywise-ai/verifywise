@@ -25,4 +25,6 @@ export interface SyslogEvent {
   department?: string;
 }
 
-export type ParseResult = { ok: true; event: SyslogEvent } | { ok: false; reason: DropReason };
+/** `reason: null` is a line that is not an event (skipped, not counted as dropped). */
+export type ParseResult =
+  { ok: true; event: SyslogEvent } | { ok: false; reason: DropReason | null };
