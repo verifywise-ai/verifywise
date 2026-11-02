@@ -990,7 +990,7 @@ function SyslogConfigSection() {
             </Stack>
             <Stack gap="4px">
               <Typography sx={{ fontSize: 13, fontWeight: 600 }}>
-                Add this to the start or end of each line in the sender's log format
+                {t("Add this to the start or end of each line in the sender's log format")}
               </Typography>
               <Stack direction="row" alignItems="center" gap="8px">
                 <Box sx={keyBoxSx}>{`vw_source=${revealedKey ?? ""}`}</Box>
@@ -1036,8 +1036,7 @@ function SyslogConfigSection() {
           maxWidth="400px"
         >
           <Typography variant="body2" sx={{ color: "text.secondary" }}>
-            The current key stops working right away. Update the sender's log format with the new
-            key.
+            {t("The current key stops working within a minute. Update every sender that uses it.")}
           </Typography>
         </StandardModal>
 

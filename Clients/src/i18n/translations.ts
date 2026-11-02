@@ -149,8 +149,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Fügen Sie dies am Anfang oder Ende jeder Zeile im Logformat des Absenders hinzu",
     "Copy log format line": "Logformat-Zeile kopieren",
     "Regenerate key for {name}?": "Schlüssel für {name} neu erzeugen?",
-    "The current key stops working right away. Update the sender's log format with the new key.":
-      "Der aktuelle Schlüssel funktioniert sofort nicht mehr. Aktualisieren Sie das Logformat des Absenders mit dem neuen Schlüssel.",
+    "The current key stops working within a minute. Update every sender that uses it.":
+      "Der aktuelle Schlüssel funktioniert innerhalb einer Minute nicht mehr. Aktualisieren Sie jeden Absender, der ihn verwendet.",
     "Edit source": "Quelle bearbeiten",
     "Remove source": "Quelle entfernen",
     ...agentDiscoveryDe,
@@ -9690,8 +9690,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Ajoutez ceci au début ou à la fin de chaque ligne du format de journal de l'expéditeur",
     "Copy log format line": "Copier la ligne de format de journal",
     "Regenerate key for {name}?": "Régénérer la clé de {name} ?",
-    "The current key stops working right away. Update the sender's log format with the new key.":
-      "La clé actuelle cesse de fonctionner immédiatement. Mettez à jour le format de journal de l'expéditeur avec la nouvelle clé.",
+    "The current key stops working within a minute. Update every sender that uses it.":
+      "La clé actuelle cesse de fonctionner en moins d'une minute. Mettez à jour chaque expéditeur qui l'utilise.",
     "Edit source": "Modifier la source",
     "Remove source": "Supprimer la source",
     ...agentDiscoveryFr,
@@ -19170,8 +19170,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Añada esto al principio o al final de cada línea del formato de registro del remitente",
     "Copy log format line": "Copiar línea de formato de registro",
     "Regenerate key for {name}?": "¿Regenerar la clave de {name}?",
-    "The current key stops working right away. Update the sender's log format with the new key.":
-      "La clave actual deja de funcionar de inmediato. Actualice el formato de registro del remitente con la nueva clave.",
+    "The current key stops working within a minute. Update every sender that uses it.":
+      "La clave actual deja de funcionar en menos de un minuto. Actualice cada remitente que la utilice.",
     "Edit source": "Editar fuente",
     "Remove source": "Eliminar fuente",
     ...agentDiscoveryEs,

@@ -393,7 +393,7 @@ describe("ShadowAI - SettingsPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Regenerate key" }));
     expect(
       await screen.findByText(
-        "The current key stops working right away. Update the sender's log format with the new key.",
+        "The current key stops working within a minute. Update every sender that uses it.",
       ),
     ).toBeInTheDocument();
     expect(mockRegenerateSyslogKey).not.toHaveBeenCalled();
