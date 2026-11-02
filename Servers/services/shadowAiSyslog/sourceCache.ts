@@ -4,7 +4,7 @@
  * Every active row is loaded at most once per TTL (or right after
  * `invalidateSourceCache()`), never per line: the cross-organization query
  * behind it costs 1 + 2N statements. Concurrent callers share one in-flight
- * reload.
+ * reload. A failed reload leaves no usable rows until a later one succeeds.
  */
 
 import logger from "../../utils/logger/fileLogger";
@@ -23,7 +23,7 @@ export interface CachedSource {
 }
 
 export const SOURCE_CACHE_TTL_MS = 60_000;
-// After a failed reload, keep serving the previous rows and retry this soon.
+// After a failed reload, nothing is served; the next lookup after this retries.
 const RELOAD_RETRY_MS = 5_000;
 
 const PARSER_TYPES: readonly ParserType[] = ["zscaler", "netskope", "squid", "generic_kv"];
@@ -62,8 +62,13 @@ async function reload(): Promise<void> {
     // An invalidation during the reload may mean these rows are already old.
     expiresAt = generation === startedGeneration ? Date.now() + SOURCE_CACHE_TTL_MS : 0;
   } catch (error) {
+    // Fail closed: rows this old may include revoked or re-keyed sources, so
+    // nothing routes (and no waiting batch is written) until a reload succeeds.
+    byHash = new Map();
+    byId = new Map();
+    byIp = new Map();
     logger.error(
-      `Shadow AI syslog source cache reload failed: ${(error as Error)?.message ?? "unknown error"}`,
+      `Shadow AI syslog source cache reload failed, routing nothing until it succeeds: ${(error as Error)?.message ?? "unknown error"}`,
     );
     expiresAt = Date.now() + RELOAD_RETRY_MS;
   }

@@ -42,6 +42,8 @@ export class SourceBatcher {
   private lastFailureLog = new Map<number, number>();
   /** Flushes that failed and were rolled back (process lifetime). */
   failedFlushes = 0;
+  /** Events discarded because their source was revoked or could not be re-checked. */
+  discardedEvents = 0;
 
   add(src: CachedSource, event: SyslogEvent): void {
     if (this.pendingEvents >= MAX_PENDING_EVENTS) {
@@ -111,8 +113,12 @@ export class SourceBatcher {
 
   private async write(batch: Batch): Promise<void> {
     const source = await revalidateSource(batch.source);
-    // Deleted, deactivated or re-keyed since the lines arrived.
-    if (!source) return;
+    // Deleted, deactivated or re-keyed since the lines arrived, or the cache
+    // could not be refreshed: discard without writing.
+    if (!source) {
+      this.discardedEvents += batch.events.length;
+      return;
+    }
 
     const { organizationId, configId } = source;
     let events = batch.events;

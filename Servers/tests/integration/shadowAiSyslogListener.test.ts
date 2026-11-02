@@ -13,9 +13,12 @@ import tls from "tls";
 import { execFileSync } from "child_process";
 import { createTestOrganization, cleanupDatabase } from "./helpers";
 import { sequelize } from "../../database/db";
+import * as configUtils from "../../utils/shadowAiConfig.utils";
 import {
   createSyslogConfigQuery,
+  deleteSyslogConfigQuery,
   regenerateSyslogKeyQuery,
+  updateSyslogConfigQuery,
 } from "../../utils/shadowAiConfig.utils";
 import { invalidateSourceCache } from "../../services/shadowAiSyslog/sourceCache";
 import { hashSourceKey } from "../../services/shadowAiSyslog/sourceKey";
@@ -395,6 +398,64 @@ describe("Shadow AI syslog listener", () => {
     await pause(2600);
     expect(await eventCount(orgA)).toBe(1);
     await h.flushAll();
+  });
+
+  describe("a key revoked while its events wait to be flushed", () => {
+    const writeAndWait = async (socket: net.Socket, line: string) => {
+      await new Promise<void>((resolve) => socket.write(line, () => resolve()));
+      // Long enough to be routed, well short of the 2 s flush.
+      await pause(300);
+    };
+
+    it.each([
+      ["regenerated", (org: number, id: number) => regenerateSyslogKeyQuery(org, id)],
+      [
+        "deactivated",
+        (org: number, id: number) => updateSyslogConfigQuery(org, id, { is_active: false }),
+      ],
+      ["deleted", (org: number, id: number) => deleteSyslogConfigQuery(org, id)],
+    ])("writes nothing when the source is %s", async (label, revoke) => {
+      const a = await addSource(orgA);
+      const h = await start();
+      const socket = await connect(h.port, false);
+      socket.on("error", () => undefined);
+
+      await writeAndWait(socket, `${ZSCALER_LINE} vw_source=${a.key}\n`);
+      expect(await eventCount(orgA)).toBe(0);
+
+      await revoke(orgA, a.id);
+      invalidateSourceCache();
+      await h.flushAll();
+      expect(await eventCount(orgA)).toBe(0);
+      if (label !== "deleted") expect((await sourceRow(a.id)).accepted).toBe(0);
+
+      // A later line with the old key on the same open connection.
+      await writeAndWait(socket, `${ZSCALER_LINE} vw_source=${a.key}\n`);
+      await h.flushAll();
+      expect(await eventCount(orgA)).toBe(0);
+      if (label !== "deleted") expect((await sourceRow(a.id)).accepted).toBe(0);
+    });
+  });
+
+  it("writes nothing for a previously valid key when the cache reload fails", async () => {
+    const a = await addSource(orgA);
+    const h = await start();
+    await send(h.port, [`${ZSCALER_LINE} vw_source=${a.key}\n`]);
+    await h.flushAll();
+    expect(await eventCount(orgA)).toBe(1);
+
+    const spy = jest
+      .spyOn(configUtils, "listActiveSyslogSourcesQuery")
+      .mockRejectedValue(new Error("database unavailable"));
+    try {
+      invalidateSourceCache();
+      await send(h.port, [`${ZSCALER_LINE} vw_source=${a.key}\n`]);
+      await h.flushAll();
+      expect(await eventCount(orgA)).toBe(1);
+      expect(spy).toHaveBeenCalled();
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   describe("IP-only mode", () => {

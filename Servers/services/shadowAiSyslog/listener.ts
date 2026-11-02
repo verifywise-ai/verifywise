@@ -28,6 +28,17 @@ export const MAX_LINES_WITHOUT_KEY = 100;
 export const NO_KEY_TIMEOUT_MS = 60_000;
 
 const TLS_HANDSHAKE_BYTE = 0x16;
+const HANDLING_ERROR_LOG_INTERVAL_MS = 60_000;
+let lastHandlingErrorLog = 0;
+
+/** Once a minute at most; the error message only, never the line or key. */
+function logHandlingError(error: unknown): void {
+  const now = Date.now();
+  if (now - lastHandlingErrorLog < HANDLING_ERROR_LOG_INTERVAL_MS) return;
+  lastHandlingErrorLog = now;
+  const message = error instanceof Error ? error.message : "unknown error";
+  logger.warn(`Shadow AI syslog line handling failed, closing the connection: ${message}`);
+}
 
 export interface SyslogListenerHandle {
   port: number;
@@ -236,7 +247,10 @@ function handleConnection(raw: net.Socket, ctx: ConnectionContext): void {
             await handleMessage(message);
           }
         })
-        .catch(() => close("line handling failed"))
+        .catch((error: unknown) => {
+          logHandlingError(error);
+          close("line handling failed");
+        })
         .finally(() => {
           if (!stopped && !closed) stream.resume();
         });
