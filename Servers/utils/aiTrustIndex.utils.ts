@@ -500,7 +500,9 @@ export async function resolveRecipients(organizationId: number): Promise<string[
   let userEmails: string[] = [];
   if (userIds.length) {
     const rows = (await sequelize.query(
-      `SELECT email FROM users WHERE organization_id = :organizationId AND id = ANY(ARRAY[:ids]::int[]);`,
+      `SELECT u.email FROM users u
+       JOIN organization_members om ON om.user_id = u.id AND om.organization_id = :organizationId
+       WHERE u.id = ANY(ARRAY[:ids]::int[]);`,
       { replacements: { organizationId, ids: userIds }, type: QueryTypes.SELECT },
     )) as { email: string }[];
     userEmails = rows.map((r) => r.email);

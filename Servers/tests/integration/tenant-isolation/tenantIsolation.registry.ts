@@ -60,9 +60,11 @@ export const tenantIsolationRegistry: IsolationEntity[] = [
     },
     denial: { read: [403, 404] },
   }),
+  // users is identity only; a user's organizations and roles are their
+  // organization_members rows.
   {
     name: "users",
-    tables: ["users"],
+    tables: ["organization_members"],
     baseRoute: "/api/users",
   },
   // Custom organization roles and their permission matrix (issue #4588):

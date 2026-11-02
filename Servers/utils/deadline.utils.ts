@@ -285,7 +285,7 @@ export async function hasDeadlineNoticeQuery(
 /** Org admin user ids (role_id = 1) — the deadline sweep notifies all of them. */
 export async function getDeadlineAdminIdsQuery(organizationId: number): Promise<number[]> {
   const rows = (await sequelize.query(
-    `SELECT id FROM users WHERE organization_id = :organizationId AND role_id = 1`,
+    `SELECT user_id AS id FROM organization_members WHERE organization_id = :organizationId AND role_id = 1`,
     { replacements: { organizationId }, type: QueryTypes.SELECT },
   )) as { id: number }[];
   return rows.map((row) => Number(row.id));

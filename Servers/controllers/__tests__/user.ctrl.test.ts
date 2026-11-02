@@ -4,7 +4,7 @@ import { Request, Response } from "express";
 jest.mock("../../utils/user.utils", () => ({
   checkUserExistsQuery: jest.fn(),
   createNewUserQuery: jest.fn(),
-  deleteUserByIdQuery: jest.fn(),
+  removeUserFromOrganizationQuery: jest.fn(),
   deleteUserProfilePhotoQuery: jest.fn(),
   getAllUsersQuery: jest.fn(),
   getUserByEmailQuery: jest.fn(),
@@ -19,6 +19,8 @@ jest.mock("bcrypt", () => ({
 }));
 jest.mock("../../utils/jwt.utils", () => ({
   generateToken: jest.fn().mockReturnValue("token"),
+  generateOrganizationSelectionToken: jest.fn().mockReturnValue("selection-token"),
+  getTokenPayload: jest.fn(),
   getRefreshTokenPayload: jest.fn().mockReturnValue({
     id: 1,
     email: "a@b.com",
@@ -109,7 +111,34 @@ jest.mock("../../utils/role.utils", () => ({
   getRoleByIdQuery: jest.fn().mockResolvedValue({ name: "Admin" }),
 }));
 jest.mock("../../utils/invitation.utils", () => ({
+  getPendingInvitationQuery: jest.fn(),
   markInvitationAcceptedQuery: jest.fn().mockResolvedValue(1),
+}));
+jest.mock("../../utils/ssoConfig.utils", () => ({
+  isSSOFeatureEnabled: jest.fn(() => true),
+  getSSOConfigQuery: jest.fn(async () => ({ is_enabled: true })),
+  getAzureADConfigForLoginQuery: jest
+    .fn()
+    .mockResolvedValue({ client_id: "c", tenant_id: "t", client_secret: "s" }),
+}));
+jest.mock("@azure/msal-node", () => ({
+  ConfidentialClientApplication: jest.fn().mockImplementation(() => ({
+    acquireTokenByCode: jest.fn().mockResolvedValue({
+      accessToken: "graph-token",
+      idTokenClaims: { roles: ["Reviewer"] },
+    } as never),
+  })),
+}));
+jest.mock("../../utils/organizationMember.utils", () => ({
+  addOrganizationMemberQuery: jest.fn(),
+  getUserOrganizationsQuery: jest.fn(),
+  updateOrganizationMemberRoleQuery: jest.fn(),
+}));
+jest.mock("../../utils/superAdmin.utils", () => ({
+  isUserSuperAdmin: jest.fn().mockResolvedValue(false),
+}));
+jest.mock("../../utils/roleMap", () => ({
+  getRoleNameById: jest.fn().mockResolvedValue("Admin"),
 }));
 jest.mock("../../utils/userPreference.utils", () => ({
   getPreferencesByUserQuery: jest.fn(),
@@ -214,6 +243,9 @@ import {
   updateUserRole,
   getUserProfilePhoto,
   deleteUserProfilePhoto,
+  selectLoginOrganization,
+  acceptInvitationAsExistingUser,
+  loginUserWithMicrosoft,
 } from "../user.ctrl";
 import {
   getAllUsersQuery,
@@ -221,14 +253,30 @@ import {
   getUserByIdQuery,
   createNewUserQuery,
   updateUserByIdQuery,
-  deleteUserByIdQuery,
+  removeUserFromOrganizationQuery,
   resetPasswordQuery,
   checkUserExistsQuery,
   getUserProfilePhotoQuery,
   deleteUserProfilePhotoQuery,
   isLastAdminQuery,
 } from "../../utils/user.utils";
-import { markInvitationAcceptedQuery } from "../../utils/invitation.utils";
+import {
+  getPendingInvitationQuery,
+  markInvitationAcceptedQuery,
+} from "../../utils/invitation.utils";
+import { getSSOConfigQuery } from "../../utils/ssoConfig.utils";
+import { UniqueConstraintError } from "sequelize";
+import {
+  addOrganizationMemberQuery,
+  getUserOrganizationsQuery,
+  updateOrganizationMemberRoleQuery,
+} from "../../utils/organizationMember.utils";
+import { isUserSuperAdmin } from "../../utils/superAdmin.utils";
+import { getRoleNameById } from "../../utils/roleMap";
+import { generateUserTokens } from "../../utils/auth.utils";
+import { getTokenPayload } from "../../utils/jwt.utils";
+import { revokeTokenFamily } from "../../utils/refreshToken.utils";
+import bcrypt from "bcrypt";
 import { sequelize } from "../../database/db";
 import {
   getPreferencesByUserQuery,
@@ -241,7 +289,33 @@ const mockGetByEmail = getUserByEmailQuery as jest.MockedFunction<typeof getUser
 const mockGetById = getUserByIdQuery as jest.MockedFunction<typeof getUserByIdQuery>;
 const mockCreate = createNewUserQuery as jest.MockedFunction<typeof createNewUserQuery>;
 const mockUpdate = updateUserByIdQuery as jest.MockedFunction<typeof updateUserByIdQuery>;
-const mockDelete = deleteUserByIdQuery as jest.MockedFunction<typeof deleteUserByIdQuery>;
+const mockRemove = removeUserFromOrganizationQuery as jest.MockedFunction<
+  typeof removeUserFromOrganizationQuery
+>;
+const mockOrganizations = getUserOrganizationsQuery as jest.MockedFunction<
+  typeof getUserOrganizationsQuery
+>;
+const mockUpdateRole = updateOrganizationMemberRoleQuery as jest.MockedFunction<
+  typeof updateOrganizationMemberRoleQuery
+>;
+const mockAddMember = addOrganizationMemberQuery as jest.MockedFunction<
+  typeof addOrganizationMemberQuery
+>;
+const mockIsSuperAdmin = isUserSuperAdmin as jest.MockedFunction<typeof isUserSuperAdmin>;
+const mockTokenPayload = getTokenPayload as jest.MockedFunction<typeof getTokenPayload>;
+
+const ACME = { organization_id: 1, organization_name: "Acme", role_id: 1, role_name: "Admin" };
+const GLOBEX = { organization_id: 2, organization_name: "Globex", role_id: 3, role_name: "Editor" };
+
+/**
+ * getUserByIdQuery as the organization filter in its SQL answers: the user is
+ * returned only for the organization they belong to (and with no
+ * organization, as identity).
+ */
+const memberOf =
+  (organizationId: number, user: unknown) =>
+  async (_id: number, _tx?: unknown, orgId?: number): Promise<any> =>
+    orgId === undefined || orgId === organizationId ? user : undefined;
 const mockIsLastAdmin = isLastAdminQuery as jest.MockedFunction<typeof isLastAdminQuery>;
 const mockGetPreferences = getPreferencesByUserQuery as jest.MockedFunction<
   typeof getPreferencesByUserQuery
@@ -348,7 +422,7 @@ describe("user.ctrl", () => {
 
   describe("getUserById", () => {
     it("should answer 404, like a missing user, for a user in another organization", async () => {
-      mockGetById.mockResolvedValue(mockUser(buildUser({ id: 2, organization_id: 99 })) as any);
+      mockGetById.mockImplementation(memberOf(99, mockUser(buildUser({ id: 2 }))));
       const req = createReq({ params: { id: "2" }, userId: 1, isSuperAdmin: false });
       const res = createRes();
       await getUserById(req, res);
@@ -511,12 +585,64 @@ describe("user.ctrl", () => {
   });
 
   describe("loginUser", () => {
-    it("should return 202 on successful login", async () => {
-      mockGetByEmail.mockResolvedValue(mockUser({ ...buildUser(), role_name: "Admin" }) as any);
+    it("should log a user with one organization straight in to it", async () => {
+      mockGetByEmail.mockResolvedValue(mockUser(buildUser()) as any);
+      mockOrganizations.mockResolvedValue([ACME]);
       const req = createReq({ body: { email: "a@b.com", password: "pass" } });
       const res = createRes();
       await loginUser(req, res);
+      expect(generateUserTokens).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 1, roleName: "Admin", organizationId: 1 }),
+        res,
+      );
       expect(res.status).toHaveBeenCalledWith(202);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ token: "token" }) }),
+      );
+    });
+    it("should ask a user with several organizations to choose, without a session", async () => {
+      mockGetByEmail.mockResolvedValue(mockUser(buildUser()) as any);
+      mockOrganizations.mockResolvedValue([ACME, GLOBEX]);
+      const req = createReq({ body: { email: "a@b.com", password: "pass" } });
+      const res = createRes();
+      await loginUser(req, res);
+      expect(generateUserTokens).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(202);
+      expect(res.json).toHaveBeenCalledWith({
+        message: "Accepted",
+        data: {
+          requiresOrganizationSelection: true,
+          organizations: [
+            { id: 1, name: "Acme", role_name: "Admin" },
+            { id: 2, name: "Globex", role_name: "Editor" },
+          ],
+          selectionToken: "selection-token",
+        },
+      });
+    });
+    it("should log a pure super admin in without an organization", async () => {
+      mockGetByEmail.mockResolvedValue(mockUser(buildUser()) as any);
+      mockOrganizations.mockResolvedValue([]);
+      mockIsSuperAdmin.mockResolvedValueOnce(true);
+      const req = createReq({ body: { email: "a@b.com", password: "pass" } });
+      const res = createRes();
+      await loginUser(req, res);
+      expect(generateUserTokens).toHaveBeenCalledWith(
+        expect.objectContaining({ roleName: "SuperAdmin", organizationId: null }),
+        res,
+      );
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({ data: { token: "token", isSuperAdmin: true } }),
+      );
+    });
+    it("should refuse a user with no organization and no super_admins row", async () => {
+      mockGetByEmail.mockResolvedValue(mockUser(buildUser()) as any);
+      mockOrganizations.mockResolvedValue([]);
+      const req = createReq({ body: { email: "a@b.com", password: "pass" } });
+      const res = createRes();
+      await loginUser(req, res);
+      expect(generateUserTokens).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(403);
     });
     it("should return 401 when password is invalid", async () => {
       const u = mockUser(buildUser());
@@ -597,7 +723,7 @@ describe("user.ctrl", () => {
 
   describe("updateUserById", () => {
     it("should answer 404, like a missing user, for a user in another organization", async () => {
-      mockGetById.mockResolvedValue(mockUser(buildUser({ id: 2, organization_id: 99 })) as any);
+      mockGetById.mockImplementation(memberOf(99, mockUser(buildUser({ id: 2 }))));
       const req = createReq({ params: { id: "2" }, body: { name: "X" } });
       const res = createRes();
       await updateUserById(req, res);
@@ -634,11 +760,9 @@ describe("user.ctrl", () => {
       // Caller is an Admin of org 1 (createReq defaults); target user 2 is in
       // org 1 with the built-in Admin role (id 1).
       async function assignRole(roleId: number) {
-        mockGetById.mockResolvedValue(
-          mockUser(buildUser({ id: 2, organization_id: 1, role_id: 1 })) as any,
-        );
-        mockUpdate.mockResolvedValue(mockUser(buildUser({ id: 2, role_id: roleId })) as any);
-        const req = createReq({ params: { id: "2" }, body: { name: "X", roleId } });
+        mockGetById.mockResolvedValue(mockUser(buildUser({ id: 2, role_id: 1 })) as any);
+        mockUpdate.mockResolvedValue(mockUser(buildUser({ id: 2 })) as any);
+        const req = createReq({ params: { id: "2" }, body: { roleId } });
         const res = createRes();
         await updateUserById(req, res);
         return res;
@@ -651,17 +775,17 @@ describe("user.ctrl", () => {
         expect(mockIsLastAdmin).toHaveBeenCalledWith(1, 2, expect.anything());
         expect(res.status).toHaveBeenCalledWith(409);
         expect(mockUpdate).not.toHaveBeenCalled();
+        expect(mockUpdateRole).not.toHaveBeenCalled();
       });
 
       it("should answer 400 when the role is deleted before the update lands", async () => {
         mockRoleById.mockResolvedValueOnce({ id: 3, name: "Editor", organization_id: null } as any);
-        mockGetById.mockResolvedValue(
-          mockUser(buildUser({ id: 2, organization_id: 1, role_id: 1 })) as any,
-        );
-        mockUpdate.mockRejectedValueOnce(
+        mockGetById.mockResolvedValue(mockUser(buildUser({ id: 2, role_id: 1 })) as any);
+        mockUpdate.mockResolvedValue(mockUser(buildUser({ id: 2 })) as any);
+        mockUpdateRole.mockRejectedValueOnce(
           new ForeignKeyConstraintError({ message: "violates foreign key constraint" } as any),
         );
-        const req = createReq({ params: { id: "2" }, body: { name: "X", roleId: 3 } });
+        const req = createReq({ params: { id: "2" }, body: { roleId: 3 } });
         const res = createRes();
         await updateUserById(req, res);
         expect(res.status).toHaveBeenCalledWith(400);
@@ -704,10 +828,8 @@ describe("user.ctrl", () => {
         // true would become 1 (Admin) with Number(); only digits count.
         for (const roleId of ["abc", "5abc", -1, 1.5, true, [3], "0x2", " 2 ", "2e0"] as any[]) {
           mockRoleById.mockClear();
-          mockGetById.mockResolvedValue(
-            mockUser(buildUser({ id: 2, organization_id: 1, role_id: 1 })) as any,
-          );
-          const req = createReq({ params: { id: "2" }, body: { name: "X", roleId } });
+          mockGetById.mockResolvedValue(mockUser(buildUser({ id: 2, role_id: 1 })) as any);
+          const req = createReq({ params: { id: "2" }, body: { roleId } });
           const res = createRes();
           await updateUserById(req, res);
           expect(res.status).toHaveBeenCalledWith(400);
@@ -731,11 +853,8 @@ describe("user.ctrl", () => {
         } as any);
         const res = await assignRole(41);
         expect(res.status).toHaveBeenCalledWith(202);
-        expect(mockUpdate).toHaveBeenCalledWith(
-          2,
-          expect.objectContaining({ role_id: 41 }),
-          expect.anything(),
-        );
+        // The role is the membership's, in the caller's organization.
+        expect(mockUpdateRole).toHaveBeenCalledWith(1, 2, 41, expect.anything());
       });
 
       it("should allow assigning a built-in role", async () => {
@@ -746,11 +865,8 @@ describe("user.ctrl", () => {
         } as any);
         const res = await assignRole(2);
         expect(res.status).toHaveBeenCalledWith(202);
-        expect(mockUpdate).toHaveBeenCalledWith(
-          2,
-          expect.objectContaining({ role_id: 2 }),
-          expect.anything(),
-        );
+        // The role is the membership's, in the caller's organization.
+        expect(mockUpdateRole).toHaveBeenCalledWith(1, 2, 2, expect.anything());
       });
     });
     it("should return 404 for a user that does not exist", async () => {
@@ -762,32 +878,59 @@ describe("user.ctrl", () => {
       expect(mockUpdate).not.toHaveBeenCalled();
     });
     it("should return 403 when a non-admin updates another user", async () => {
-      mockGetById.mockResolvedValue(mockUser(buildUser({ id: 2, organization_id: 1 })) as any);
+      mockGetById.mockResolvedValue(mockUser(buildUser({ id: 2 })) as any);
       const req = createReq({ params: { id: "2" }, body: { name: "X" }, role: "Reviewer" } as any);
       const res = createRes();
       await updateUserById(req, res);
       expect(res.status).toHaveBeenCalledWith(403);
     });
+    it("should return 403 when an Admin changes another user's name or email", async () => {
+      for (const body of [{ name: "X" }, { surname: "Y" }, { email: "new@b.com" }]) {
+        jest.clearAllMocks();
+        mockGetById.mockResolvedValue(mockUser(buildUser({ id: 2 })) as any);
+        const req = createReq({ params: { id: "2" }, body });
+        const res = createRes();
+        await updateUserById(req, res);
+        expect(res.status).toHaveBeenCalledWith(403);
+        expect(mockUpdate).not.toHaveBeenCalled();
+      }
+    });
+    it("should let an Admin send another user's unchanged name and email with a role", async () => {
+      (getRoleByIdQuery as jest.Mock).mockResolvedValueOnce({
+        id: 3,
+        name: "Editor",
+        organization_id: null,
+      } as never);
+      mockGetById.mockResolvedValue(mockUser(buildUser({ id: 2, role_id: 1 })) as any);
+      mockUpdate.mockResolvedValue(mockUser(buildUser({ id: 2 })) as any);
+      const req = createReq({
+        params: { id: "2" },
+        body: { name: "Test", surname: "User", email: "a@b.com", roleId: 3 },
+      });
+      const res = createRes();
+      await updateUserById(req, res);
+      expect(res.status).toHaveBeenCalledWith(202);
+      expect(mockUpdateRole).toHaveBeenCalledWith(1, 2, 3, expect.anything());
+    });
   });
 
   describe("deleteUserById", () => {
-    it("should answer 404 for a pure super-admin (no role, no org)", async () => {
-      mockGetById.mockResolvedValue(
-        mockUser(buildUser({ role_id: null as any, organization_id: null as any })) as any,
-      );
+    it("should answer 404 for a pure super-admin (no membership)", async () => {
+      mockGetById.mockImplementation(memberOf(-1, mockUser(buildUser())));
       const req = createReq({ params: { id: "1" } });
       const res = createRes();
       await deleteUserById(req, res);
+      expect(mockGetById).toHaveBeenCalledWith(1, expect.anything(), 1);
       expect(res.status).toHaveBeenCalledWith(404);
-      expect(mockDelete).not.toHaveBeenCalled();
+      expect(mockRemove).not.toHaveBeenCalled();
     });
     it("should answer 404, like a missing user, for a user in another organization", async () => {
-      mockGetById.mockResolvedValue(mockUser(buildUser({ id: 2, organization_id: 99 })) as any);
+      mockGetById.mockImplementation(memberOf(99, mockUser(buildUser({ id: 2 }))));
       const req = createReq({ params: { id: "2" } });
       const res = createRes();
       await deleteUserById(req, res);
       expect(res.status).toHaveBeenCalledWith(404);
-      expect(mockDelete).not.toHaveBeenCalled();
+      expect(mockRemove).not.toHaveBeenCalled();
     });
     it("should refuse to delete the organization's last Admin", async () => {
       mockGetById.mockResolvedValue(mockUser(buildUser()) as any);
@@ -796,7 +939,7 @@ describe("user.ctrl", () => {
       const res = createRes();
       await deleteUserById(req, res);
       expect(res.status).toHaveBeenCalledWith(409);
-      expect(mockDelete).not.toHaveBeenCalled();
+      expect(mockRemove).not.toHaveBeenCalled();
     });
     it("should return 403 for demo user", async () => {
       const u = mockUser(buildUser());
@@ -807,12 +950,13 @@ describe("user.ctrl", () => {
       await deleteUserById(req, res);
       expect(res.status).toHaveBeenCalledWith(403);
     });
-    it("should return 202 when user is deleted", async () => {
-      mockGetById.mockResolvedValue(mockUser(buildUser()) as any);
-      mockDelete.mockResolvedValue(buildUser() as any);
-      const req = createReq({ params: { id: "1" } });
+    it("should remove the user from the caller's organization only", async () => {
+      mockGetById.mockResolvedValue(mockUser(buildUser({ id: 2 })) as any);
+      mockRemove.mockResolvedValue({ removed: true, accountDeleted: false });
+      const req = createReq({ params: { id: "2" } });
       const res = createRes();
       await deleteUserById(req, res);
+      expect(mockRemove).toHaveBeenCalledWith(2, 1, expect.anything());
       expect(res.status).toHaveBeenCalledWith(202);
     });
     it("should return 404 when user is not found", async () => {
@@ -850,6 +994,280 @@ describe("user.ctrl", () => {
     });
   });
 
+  describe("selectLoginOrganization", () => {
+    const selection = {
+      id: 1,
+      email: "a@b.com",
+      type: "organization_selection",
+      expire: Date.now() + 60000,
+    };
+
+    it("should log in to the chosen organization", async () => {
+      mockTokenPayload.mockReturnValue(selection);
+      mockGetById.mockResolvedValue(mockUser(buildUser()) as any);
+      mockOrganizations.mockResolvedValue([ACME, GLOBEX]);
+      const req = createReq({ body: { selectionToken: "selection-token", organizationId: 2 } });
+      const res = createRes();
+      await selectLoginOrganization(req, res);
+      expect(generateUserTokens).toHaveBeenCalledWith(
+        expect.objectContaining({ roleName: "Editor", organizationId: 2 }),
+        res,
+      );
+      expect(res.status).toHaveBeenCalledWith(202);
+    });
+    it("should refuse an organization the user does not belong to", async () => {
+      mockTokenPayload.mockReturnValue(selection);
+      mockGetById.mockResolvedValue(mockUser(buildUser()) as any);
+      mockOrganizations.mockResolvedValue([ACME, GLOBEX]);
+      const req = createReq({ body: { selectionToken: "selection-token", organizationId: 9 } });
+      const res = createRes();
+      await selectLoginOrganization(req, res);
+      expect(generateUserTokens).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(403);
+    });
+    it("should refuse any token that is not a selection token", async () => {
+      mockTokenPayload.mockReturnValue({ ...selection, type: undefined });
+      const req = createReq({ body: { selectionToken: "access-token", organizationId: 1 } });
+      const res = createRes();
+      await selectLoginOrganization(req, res);
+      expect(mockGetById).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(401);
+    });
+    it("should refuse an expired selection token", async () => {
+      mockTokenPayload.mockReturnValue({ ...selection, expire: Date.now() - 1 });
+      const req = createReq({ body: { selectionToken: "selection-token", organizationId: 1 } });
+      const res = createRes();
+      await selectLoginOrganization(req, res);
+      expect(generateUserTokens).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(406);
+    });
+  });
+
+  describe("acceptInvitationAsExistingUser", () => {
+    const acceptReq = (password = "pass") =>
+      createReq({
+        body: { email: "a@b.com", password, roleId: 3, organizationId: 2 },
+      });
+    const acceptRes = () => {
+      const res = createRes();
+      res.locals = { invitation: CHECKED_INVITATION };
+      return res;
+    };
+
+    it("should add the membership, accept the invitation and log in to the organization", async () => {
+      mockGetByEmail.mockResolvedValue(mockUser(buildUser()) as any);
+      mockOrganizations.mockResolvedValueOnce([ACME]).mockResolvedValueOnce([ACME, GLOBEX]);
+      const res = acceptRes();
+      await acceptInvitationAsExistingUser(acceptReq(), res);
+      expect(mockAddMember).toHaveBeenCalledWith(2, 1, 3, expect.anything());
+      expect(markInvitationAcceptedQuery).toHaveBeenCalledWith(
+        2,
+        CHECKED_INVITATION,
+        expect.anything(),
+      );
+      expect(generateUserTokens).toHaveBeenCalledWith(
+        expect.objectContaining({ organizationId: 2, roleName: "Editor" }),
+        res,
+      );
+      expect(res.status).toHaveBeenCalledWith(202);
+    });
+    it("should refuse a wrong password without joining", async () => {
+      mockGetByEmail.mockResolvedValue(mockUser(buildUser()) as any);
+      (bcrypt.compare as jest.Mock).mockResolvedValueOnce(false as never);
+      const res = acceptRes();
+      await acceptInvitationAsExistingUser(acceptReq("wrong"), res);
+      expect(mockAddMember).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(401);
+    });
+    it("should refuse a pure super admin", async () => {
+      mockGetByEmail.mockResolvedValue(mockUser(buildUser()) as any);
+      mockOrganizations.mockResolvedValueOnce([]);
+      const res = acceptRes();
+      await acceptInvitationAsExistingUser(acceptReq(), res);
+      expect(mockAddMember).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(409);
+    });
+    it("should refuse a user who is already a member", async () => {
+      mockGetByEmail.mockResolvedValue(mockUser(buildUser()) as any);
+      mockOrganizations.mockResolvedValueOnce([ACME, GLOBEX]);
+      const res = acceptRes();
+      await acceptInvitationAsExistingUser(acceptReq(), res);
+      expect(mockAddMember).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(409);
+    });
+    it("should send an account without a password (SSO only) to Microsoft sign-in", async () => {
+      mockGetByEmail.mockResolvedValue(mockUser(buildUser({ password_hash: null })) as any);
+      mockOrganizations.mockResolvedValueOnce([ACME]);
+      const res = acceptRes();
+      await acceptInvitationAsExistingUser(acceptReq(), res);
+      expect(bcrypt.compare).not.toHaveBeenCalled();
+      expect(mockAddMember).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(409);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.stringContaining("Sign in with Microsoft") }),
+      );
+    });
+    it("should tell an SSO-only account when the organization has no Microsoft sign-in", async () => {
+      mockGetByEmail.mockResolvedValue(mockUser(buildUser({ password_hash: null })) as any);
+      mockOrganizations.mockResolvedValueOnce([ACME]);
+      (getSSOConfigQuery as jest.Mock).mockResolvedValueOnce(undefined as never);
+      const res = acceptRes();
+      await acceptInvitationAsExistingUser(acceptReq(), res);
+      expect(res.status).toHaveBeenCalledWith(409);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.stringContaining("no Microsoft sign-in") }),
+      );
+    });
+    it("should refuse a passwordless pure super admin, not send them to Microsoft sign-in", async () => {
+      mockGetByEmail.mockResolvedValue(mockUser(buildUser({ password_hash: null })) as any);
+      mockOrganizations.mockResolvedValueOnce([]);
+      const res = acceptRes();
+      await acceptInvitationAsExistingUser(acceptReq(), res);
+      expect(mockAddMember).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(409);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({ data: "A super admin cannot join an organization" }),
+      );
+    });
+    it("should tell a passwordless member they are already a member", async () => {
+      mockGetByEmail.mockResolvedValue(mockUser(buildUser({ password_hash: null })) as any);
+      mockOrganizations.mockResolvedValueOnce([ACME, GLOBEX]);
+      const res = acceptRes();
+      await acceptInvitationAsExistingUser(acceptReq(), res);
+      expect(res.status).toHaveBeenCalledWith(409);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({ data: "User is already a member of this organization" }),
+      );
+    });
+    it("should answer a second submit at once (a double click) with 409, not 500", async () => {
+      mockGetByEmail.mockResolvedValue(mockUser(buildUser()) as any);
+      mockOrganizations.mockResolvedValueOnce([ACME]);
+      mockAddMember.mockRejectedValueOnce(new UniqueConstraintError({}) as never);
+      const transaction = { commit: jest.fn(), rollback: jest.fn() };
+      (sequelize.transaction as jest.Mock).mockResolvedValueOnce(transaction as never);
+      const res = acceptRes();
+      await acceptInvitationAsExistingUser(acceptReq(), res);
+      expect(transaction.rollback).toHaveBeenCalled();
+      expect(generateUserTokens).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(409);
+    });
+    it("should roll back the membership when the invitation cannot be marked accepted", async () => {
+      mockGetByEmail.mockResolvedValue(mockUser(buildUser()) as any);
+      mockOrganizations.mockResolvedValueOnce([ACME]);
+      (markInvitationAcceptedQuery as jest.Mock).mockResolvedValueOnce(0 as never);
+      const transaction = { commit: jest.fn(), rollback: jest.fn() };
+      (sequelize.transaction as jest.Mock).mockResolvedValueOnce(transaction as never);
+      const res = acceptRes();
+      await acceptInvitationAsExistingUser(acceptReq(), res);
+      expect(transaction.rollback).toHaveBeenCalled();
+      expect(transaction.commit).not.toHaveBeenCalled();
+      expect(generateUserTokens).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(403);
+    });
+  });
+
+  describe("loginUserWithMicrosoft", () => {
+    const ssoReq = () =>
+      createReq({ body: { code: "code", organizationId: 2, redirectUri: "http://localhost" } });
+    const pending = (expiresInMs: number) => ({
+      id: 41,
+      role_id: 3,
+      expires_at_ms: Date.now() + expiresInMs,
+    });
+    let fetchSpy: jest.SpiedFunction<typeof fetch>;
+
+    beforeEach(() => {
+      fetchSpy = jest.spyOn(global, "fetch").mockResolvedValue({
+        ok: true,
+        json: async () => ({ id: "ms-1", mail: "a@b.com" }),
+      } as Response);
+    });
+    afterEach(() => {
+      fetchSpy.mockRestore();
+      // Drop queued answers a refused sign-in did not reach.
+      mockOrganizations.mockReset();
+      (getPendingInvitationQuery as jest.Mock).mockReset();
+    });
+
+    const ssoUser = (overrides = {}) =>
+      mockUser(
+        buildUser({
+          password_hash: null,
+          sso_provider: "AzureAD",
+          sso_user_id: "ms-1",
+          ...overrides,
+        }),
+      ) as any;
+
+    it("should let an SSO-only account join through a pending invitation, with the invited role", async () => {
+      mockGetByEmail.mockResolvedValue(ssoUser());
+      mockOrganizations.mockResolvedValueOnce([ACME]).mockResolvedValueOnce([ACME, GLOBEX]);
+      (getPendingInvitationQuery as jest.Mock).mockResolvedValueOnce(pending(60_000) as never);
+      const res = createRes();
+      await loginUserWithMicrosoft(ssoReq(), res);
+      expect(markInvitationAcceptedQuery).toHaveBeenCalledWith(
+        2,
+        expect.objectContaining({ id: 41, roleId: 3 }),
+        expect.anything(),
+      );
+      // The invited role (Editor, 3), not the IdP claim (Reviewer).
+      expect(mockAddMember).toHaveBeenCalledWith(2, 1, 3, expect.anything());
+      expect(generateUserTokens).toHaveBeenCalledWith(
+        expect.objectContaining({ organizationId: 2, roleName: "Editor" }),
+        res,
+      );
+      expect(res.status).toHaveBeenCalledWith(202);
+    });
+    it("should not join an account linked to another Microsoft identity, or none", async () => {
+      for (const user of [ssoUser({ sso_user_id: "someone-else" }), mockUser(buildUser()) as any]) {
+        mockGetByEmail.mockResolvedValue(user);
+        mockOrganizations.mockResolvedValueOnce([ACME]);
+        const res = createRes();
+        await loginUserWithMicrosoft(ssoReq(), res);
+        expect(markInvitationAcceptedQuery).not.toHaveBeenCalled();
+        expect(mockAddMember).not.toHaveBeenCalled();
+        expect(res.status).toHaveBeenCalledWith(403);
+      }
+    });
+    it("should never join a pure super admin", async () => {
+      mockGetByEmail.mockResolvedValue(ssoUser());
+      mockOrganizations.mockResolvedValueOnce([]);
+      const res = createRes();
+      await loginUserWithMicrosoft(ssoReq(), res);
+      expect(mockAddMember).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(403);
+    });
+    it("should refuse a non-member without a pending invitation", async () => {
+      mockGetByEmail.mockResolvedValue(ssoUser());
+      mockOrganizations.mockResolvedValueOnce([ACME]).mockResolvedValueOnce([ACME]);
+      (getPendingInvitationQuery as jest.Mock).mockResolvedValueOnce(null as never);
+      const res = createRes();
+      await loginUserWithMicrosoft(ssoReq(), res);
+      expect(mockAddMember).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(403);
+    });
+    it("should refuse a non-member whose invitation has expired", async () => {
+      mockGetByEmail.mockResolvedValue(ssoUser());
+      mockOrganizations.mockResolvedValueOnce([ACME]).mockResolvedValueOnce([ACME]);
+      (getPendingInvitationQuery as jest.Mock).mockResolvedValueOnce(pending(-1) as never);
+      const res = createRes();
+      await loginUserWithMicrosoft(ssoReq(), res);
+      expect(markInvitationAcceptedQuery).not.toHaveBeenCalled();
+      expect(mockAddMember).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(403);
+    });
+    it("should sign in a second callback for the same join, which finds the membership", async () => {
+      mockGetByEmail.mockResolvedValue(ssoUser());
+      // The first callback took the invitation and added the membership.
+      mockOrganizations.mockResolvedValueOnce([ACME]).mockResolvedValueOnce([ACME, GLOBEX]);
+      (getPendingInvitationQuery as jest.Mock).mockResolvedValueOnce(null as never);
+      const res = createRes();
+      await loginUserWithMicrosoft(ssoReq(), res);
+      expect(mockAddMember).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(202);
+    });
+  });
+
   describe("refreshAccessToken", () => {
     it("should return 400 when refresh token is missing", async () => {
       const req = createReq({ cookies: {} });
@@ -857,11 +1275,37 @@ describe("user.ctrl", () => {
       await refreshAccessToken(req, res);
       expect(res.status).toHaveBeenCalledWith(400);
     });
-    it("should return 200 with new token", async () => {
+    it("should return 200 with new token and the session's organization", async () => {
+      mockGetById.mockResolvedValue(mockUser(buildUser({ role_id: 1 })) as any);
       const req = createReq({ cookies: { refresh_token: "valid" } });
       const res = createRes();
       await refreshAccessToken(req, res);
+      expect(mockGetById).toHaveBeenCalledWith(1, null, 1);
       expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({ data: { token: "token", organizationId: 1 } }),
+      );
+    });
+    it("should mint the current role, not the one in the old token", async () => {
+      mockGetById.mockResolvedValue(mockUser(buildUser({ role_id: 3 })) as any);
+      (getRoleNameById as jest.Mock).mockResolvedValueOnce("Editor" as never);
+      const req = createReq({ cookies: { refresh_token: "valid" } });
+      const res = createRes();
+      await refreshAccessToken(req, res);
+      expect(generateUserTokens).toHaveBeenCalledWith(
+        expect.objectContaining({ roleName: "Editor", organizationId: 1 }),
+        res,
+        "family-1",
+      );
+    });
+    it("should revoke the family and return 401 once the user is removed from the organization", async () => {
+      mockGetById.mockResolvedValue(undefined as any);
+      const req = createReq({ cookies: { refresh_token: "valid" } });
+      const res = createRes();
+      await refreshAccessToken(req, res);
+      expect(revokeTokenFamily).toHaveBeenCalledWith("family-1");
+      expect(generateUserTokens).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(401);
     });
     it("should return 500 on error", async () => {
       const { getRefreshTokenPayload } = require("../../utils/jwt.utils");
@@ -982,10 +1426,10 @@ describe("user.ctrl", () => {
   describe("getUserProfilePhoto", () => {
     // Another organization's user and a missing one answer alike (no id oracle).
     it.each([
-      ["another organization's user", mockUser(buildUser({ id: 2, organization_id: 99 }))],
+      ["another organization's user", mockUser(buildUser({ id: 2 }))],
       ["a missing user", null],
     ])("should return 404 for %s", async (_label, user) => {
-      mockGetById.mockResolvedValue(user as any);
+      mockGetById.mockImplementation(memberOf(99, user));
       const req = createReq({ params: { id: "2" } });
       const res = createRes();
       await getUserProfilePhoto(req, res);
@@ -1025,10 +1469,10 @@ describe("user.ctrl", () => {
   describe("deleteUserProfilePhoto", () => {
     // Another organization's user and a missing one answer alike (no id oracle).
     it.each([
-      ["another organization's user", mockUser(buildUser({ id: 2, organization_id: 99 }))],
+      ["another organization's user", mockUser(buildUser({ id: 2 }))],
       ["a missing user", null],
     ])("should return 404 for %s", async (_label, user) => {
-      mockGetById.mockResolvedValue(user as any);
+      mockGetById.mockImplementation(memberOf(99, user));
       const req = createReq({ params: { id: "2" } });
       const res = createRes();
       await deleteUserProfilePhoto(req, res);
@@ -1119,14 +1563,6 @@ describe("user.ctrl", () => {
       const res = createRes();
       await getPreferencesForCurrentUser(req, res);
       expect(res.status).toHaveBeenCalledWith(404);
-    });
-
-    it("should return 403 for cross-organization access", async () => {
-      mockGetById.mockResolvedValue(mockUser(buildUser({ organization_id: 99 })) as any);
-      const req = createReq({ userId: 2 });
-      const res = createRes();
-      await getPreferencesForCurrentUser(req, res);
-      expect(res.status).toHaveBeenCalledWith(403);
     });
 
     it("should return 500 on query error", async () => {

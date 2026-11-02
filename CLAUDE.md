@@ -1,6 +1,6 @@
 # VerifyWise - Development Guide
 
-> **Last Updated:** 2026-10-21
+> **Last Updated:** 2026-10-28
 
 This document contains cross-cutting rules for the VerifyWise codebase. Directory-scoped guides load automatically when working in each area:
 
@@ -72,7 +72,8 @@ Express Router → Middleware Chain → Controller → Service → Utils → Pos
 interface TokenPayload {
   id: number;              // User ID
   email: string;
-  organizationId: number;
+  organizationId: number;  // Chosen at login, fixed for the session; null for a pure super admin.
+                           // A user can belong to several orgs (organization_members), a role in each.
   tenantId: string;        // Tenant hash
   roleName: string;        // "Admin" | "Reviewer" | "Editor" | "Auditor"
   expire: number;            // Unix timestamp (Date.now() + ms)

@@ -31,20 +31,48 @@ interface InviteEmailResult {
 }
 
 /**
- * Saved language for an address that already has a user. Undefined when the
- * address is new or the lookup fails, so the caller keeps the inviter's language.
+ * The recipient as an existing user: whether the address already has an
+ * account, and that account's saved language. A failed account lookup counts
+ * as a new address, so the caller keeps the inviter's language and the sign-up
+ * link; a failed language lookup only keeps the inviter's language.
  * `getUserLanguage` maps a Spanish preference to English: the backend
  * dictionaries are English, German and French.
  */
-const recipientLanguage = async (email: string): Promise<string | undefined> => {
+const existingRecipient = async (
+  email: string,
+): Promise<{ hasAccount: boolean; lang?: string }> => {
+  let userId: number | undefined;
   try {
-    const user = await getUserByEmailQuery(email);
-    if (typeof user?.id !== "number") return undefined;
-    return getUserLanguage(user.id);
+    userId = (await getUserByEmailQuery(email))?.id;
   } catch {
-    return undefined;
+    // Falls back to the sign-up link, which an existing account cannot use.
+    return { hasAccount: false };
+  }
+  if (typeof userId !== "number") return { hasAccount: false };
+  try {
+    return { hasAccount: true, lang: await getUserLanguage(userId) };
+  } catch {
+    return { hasAccount: true };
   }
 };
+
+/** Copy for an address that already has an account: log in to join, no sign-up. */
+const joinCopy = (lang: string | undefined, name: string) => ({
+  heading: translate(lang, "You have been invited to an organization"),
+  greeting: translate(lang, "Hello {name},", { name }),
+  intro: translate(
+    lang,
+    "An administrator has invited you to join their organization on the VerifyWise server.",
+  ),
+  instruction: translate(
+    lang,
+    "Click the button below and log in with your existing account to join.",
+  ),
+  button: translate(lang, "Join organization"),
+  ignore: translate(lang, "If you did not expect this invitation, please ignore this email."),
+  thanks: translate(lang, "Thank you."),
+  footer: translate(lang, "Sent with care from VerifyWise"),
+});
 
 const inviteCopy = (lang: string | undefined, name: string) => ({
   heading: translate(lang, "Welcome to VerifyWise"),
@@ -75,7 +103,8 @@ const inviteCopy = (lang: string | undefined, name: string) => ({
  */
 export const sendInviteEmail = async (params: InviteEmailParams): Promise<InviteEmailResult> => {
   const { email, name, surname, roleId, organizationId, lang: inviterLang, expiresAt } = params;
-  const lang = (await recipientLanguage(email)) ?? inviterLang;
+  const recipient = await existingRecipient(email);
+  const lang = recipient.lang ?? inviterLang;
 
   const token = generateInviteTokenUntil(
     {
@@ -91,7 +120,9 @@ export const sendInviteEmail = async (params: InviteEmailParams): Promise<Invite
     throw new Error("Could not sign the invitation link");
   }
 
-  const link = `${frontEndUrl}/user-reg?${new URLSearchParams({
+  // Chosen when the email is sent, so a resend follows the address's current
+  // state: an account by now gets the join link instead of the sign-up link.
+  const link = `${frontEndUrl}/${recipient.hasAccount ? "join" : "user-reg"}?${new URLSearchParams({
     token,
   }).toString()}`;
 
@@ -99,11 +130,13 @@ export const sendInviteEmail = async (params: InviteEmailParams): Promise<Invite
     const templatePath = path.resolve(__dirname, "../templates/account-creation-email.mjml");
     const template = await fs.readFile(templatePath, "utf8");
 
-    const subject = translate(lang, "Create your account");
+    const subject = recipient.hasAccount
+      ? translate(lang, "Join an organization on VerifyWise")
+      : translate(lang, "Create your account");
     const info = await sendEmail(email, subject, template, {
       name,
       link,
-      ...inviteCopy(lang, name),
+      ...(recipient.hasAccount ? joinCopy(lang, name) : inviteCopy(lang, name)),
     });
 
     return { link, info };

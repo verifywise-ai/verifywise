@@ -1,5 +1,8 @@
 import { describe, it, expect, jest, beforeEach } from "@jest/globals";
 
+jest.mock("../../utils/organizationMember.utils", () => ({
+  inviteeRefusalQuery: jest.fn().mockResolvedValue(null),
+}));
 jest.mock("../../utils/inviteEmail.utils", () => ({
   sendInviteEmail: jest.fn(),
 }));
