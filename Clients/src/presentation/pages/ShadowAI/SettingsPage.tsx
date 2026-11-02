@@ -980,7 +980,7 @@ function SyslogConfigSection() {
             </Stack>
             <Stack gap="4px">
               <Typography sx={{ fontSize: 13, fontWeight: 600 }}>
-                Add this to the sender's log format
+                Add this to the start or end of each line in the sender's log format
               </Typography>
               <Stack direction="row" alignItems="center" gap="8px">
                 <Box sx={keyBoxSx}>{`vw_source=${revealedKey ?? ""}`}</Box>

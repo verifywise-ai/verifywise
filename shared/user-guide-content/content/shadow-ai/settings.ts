@@ -219,7 +219,7 @@ export const settingsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Syslog messages arrive over TCP (TLS by default), newline-delimited or octet-counted, up to 64 KiB each. An RFC 3164 or RFC 5424 header is removed when present. Every line must carry the source key as `vw_source=<key>`, or as a `"vw_source"` field inside JSON. VerifyWise removes the key before parsing and never stores it. Below is one example per parser, with the field added.',
+      text: 'Syslog messages arrive over TCP (TLS by default), newline-delimited or octet-counted, up to 64 KiB each. An RFC 3164 or RFC 5424 header is removed when present. Every line must carry the source key as `vw_source=<key>` at the start or the end of the line, or as a top-level `"vw_source"` member when the line is a JSON object. A key anywhere else is ignored. VerifyWise removes the key before parsing and never stores it. Below is one example per parser, with the field added.',
     },
     {
       type: 'heading',

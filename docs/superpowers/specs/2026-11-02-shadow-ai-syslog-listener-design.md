@@ -53,10 +53,10 @@ The hosted app (app.verifywise.ai) serves many customers from one server. Severa
 
 - Format `vwsl_{organizationId}_{48 hex chars}`, generated server-side when a source is created, shown to the Admin once, stored only as a SHA-256 hash (`key_hash`) plus a display prefix (`key_prefix`), the same pattern as Shadow AI API keys (`Servers/utils/shadowAiApiKey.utils.ts`).
 - **Regenerate key** replaces the hash; the old key stops working within the cache window below.
-- The sender puts the key in each line as the literal field `vw_source=<key>`, anywhere in the message. Every target format can carry it:
+- The sender puts the key in each line as the literal field `vw_source=<key>` as the first or last whitespace-delimited token of the message (final review ruling: a key anywhere else could come from a user-controlled field and route the line to another organization). Every target format can carry it:
   - Zscaler NSS feed format and `generic_kv`: add `vw_source=<key>` to the feed's output format string.
   - Squid: add the literal to the `logformat` used by `access_log`.
-  - Netskope and other JSON senders: either a `"vw_source":"<key>"` field in the JSON, or the literal before the JSON.
+  - Netskope and other JSON senders: either a top-level `"vw_source":"<key>"` member of the JSON object, or the literal before or after the JSON.
   - rsyslog or syslog-ng relays: add it in the template.
 - The listener finds the field, removes it from the line before parsing (so it is never stored), hashes it, and looks the hash up in a cache (`hash → { organizationId, configId, parserType, allowedIp, isActive }`, 60 s TTL, invalidated at once in the process that served a create, update, regenerate or delete). The organization ID embedded in the key must equal the row's `organization_id`.
 - Routing is **per line**, so one connection (for example from a relay) can carry several sources.

@@ -35,58 +35,62 @@ export function orgIdFromKey(key: string): number | null {
   return Number.isSafeInteger(id) ? id : null;
 }
 
-// "vw_source":"<value>" inside JSON.
-const JSON_FIELD_RE = /"vw_source"\s*:\s*"([^"]*)"/g;
-// vw_source=<value> or vw_source="<value>" as a standalone key=value pair:
-// only at the start of the line or after whitespace or `|`, so a `?vw_source=`
-// inside a URL never counts.
-const KV_FIELD_RE = /(?<=^|[\s|])vw_source=(?:"([^"]*)"|([^\s"]*))/g;
+// A whole whitespace-delimited token `vw_source=<value>` or
+// `vw_source="<value>"`. Only the first and the last token of the body count:
+// text inside another field (a quoted user agent, a URL, a JSON string) never
+// sits at either end, so it can never choose the organization.
+const KV_TOKEN_RE = /^vw_source=(?:"([^"]*)"|([^"]*))$/;
 
-/** Remove body[start, end) plus one adjacent separator. */
-function removeKvSpan(body: string, start: number, end: number): string {
-  if (/\s/.test(body[end] ?? "")) return body.slice(0, start) + body.slice(end + 1);
-  if (start > 0 && /\s/.test(body[start - 1])) {
-    return body.slice(0, start - 1) + body.slice(end);
-  }
-  return body.slice(0, start) + body.slice(end);
+function kvKey(token: string | undefined): string | null {
+  if (!token) return null;
+  const m = KV_TOKEN_RE.exec(token);
+  const value = m ? (m[1] ?? m[2]) : undefined;
+  return value && SOURCE_KEY_RE.test(value) ? value : null;
 }
 
-function removeJsonSpan(body: string, start: number, end: number): string {
-  const after = /^\s*,\s*/.exec(body.slice(end));
-  if (after) return body.slice(0, start) + body.slice(end + after[0].length);
-  const before = /\s*,\s*$/.exec(body.slice(0, start));
-  if (before) return body.slice(0, start - before[0].length) + body.slice(end);
-  return body.slice(0, start) + body.slice(end);
+/** A top-level `"vw_source"` member when the whole body is one JSON object. */
+function jsonKey(body: string): { key: string; rest: string } | null {
+  const text = body.trim();
+  if (!text.startsWith("{") || !text.endsWith("}")) return null;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    return null;
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+  const { vw_source: key, ...others } = parsed as Record<string, unknown>;
+  if (typeof key !== "string" || !SOURCE_KEY_RE.test(key)) return null;
+  return { key, rest: JSON.stringify(others) };
 }
 
 /**
- * Find the source key field, validate it and remove it from the line so it is
- * never stored. Every candidate is scanned and the first valid one wins, so
- * decoy `vw_source` text placed earlier in the line cannot hide the real key.
- * No valid candidate yields `key: null` and leaves the line alone.
+ * Find the source key, validate it and remove it from the line so it is never
+ * stored. Accepted places: the first or the last whitespace-delimited token
+ * (`vw_source=<key>`), or a top-level `"vw_source"` member when the body is a
+ * JSON object. Malformed candidates are ignored. Two different valid keys mean
+ * the line cannot be attributed, so it yields `key: null`, as does a line with
+ * no valid key; the line is then left alone.
  */
 export function extractSourceKey(body: string): {
   key: string | null;
   rest: string;
 } {
-  const candidates: { index: number; end: number; value: string; json: boolean }[] = [];
-  for (const m of body.matchAll(JSON_FIELD_RE)) {
-    candidates.push({ index: m.index, end: m.index + m[0].length, value: m[1], json: true });
-  }
-  for (const m of body.matchAll(KV_FIELD_RE)) {
-    candidates.push({
-      index: m.index,
-      end: m.index + m[0].length,
-      value: m[1] ?? m[2] ?? "",
-      json: false,
-    });
-  }
-  candidates.sort((a, b) => a.index - b.index);
+  const tokens = [...body.matchAll(/\S+/g)];
+  const first = tokens[0];
+  const last = tokens.length > 1 ? tokens[tokens.length - 1] : undefined;
+  const firstKey = kvKey(first?.[0]);
+  const lastKey = kvKey(last?.[0]);
 
-  for (const c of candidates) {
-    if (!SOURCE_KEY_RE.test(c.value)) continue;
-    const rest = c.json ? removeJsonSpan(body, c.index, c.end) : removeKvSpan(body, c.index, c.end);
-    return { key: c.value, rest };
+  if (!firstKey && !lastKey) return jsonKey(body) ?? { key: null, rest: body };
+  if (firstKey && lastKey && firstKey !== lastKey) return { key: null, rest: body };
+
+  // Cut the key token and the whitespace that joins it to the rest.
+  const start = firstKey && first ? (tokens[1]?.index ?? body.length) : 0;
+  let end = body.length;
+  if (lastKey && last) {
+    end = last.index;
+    while (end > start && /\s/.test(body[end - 1])) end--;
   }
-  return { key: null, rest: body };
+  return { key: (firstKey ?? lastKey) as string, rest: body.slice(start, end) };
 }

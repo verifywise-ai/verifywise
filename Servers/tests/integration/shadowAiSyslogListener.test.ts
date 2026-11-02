@@ -410,6 +410,35 @@ describe("Shadow AI syslog listener", () => {
     expect(await eventCount(orgA)).toBe(1);
   });
 
+  it("never routes by another organization's valid key placed inside a field", async () => {
+    const a = await addSource(orgA);
+    const n = await addSource(orgB, "netskope");
+    const orgC = await createTestOrganization("Syslog listener C");
+    const c = await addSource(orgC);
+    const cNetskope = await addSource(orgC, "netskope");
+    const h = await start();
+
+    const decoys = [
+      // Real key of A at the end, C's key in a quoted user agent.
+      `user=alice@company.com ua="Mozilla vw_source=${c.key}" dst=chat.openai.com vw_source=${a.key}`,
+      // Real key of A at the start, C's key in a URL query.
+      `vw_source=${a.key} user=alice@company.com uri=https://chat.openai.com/?vw_source=${c.key} dst=chat.openai.com`,
+      // No real key: C's key joined to a URL by a pipe, or in the middle.
+      `user=alice@company.com uri=https://chat.openai.com/a|vw_source=${c.key} dst=chat.openai.com`,
+      `user=alice@company.com vw_source=${c.key} dst=chat.openai.com`,
+      // JSON: C's key in a string value, B's key as the top-level member.
+      `{"user":"alice@company.com","useragent":"x vw_source=${cNetskope.key}","url":"https://chat.openai.com/","vw_source":"${n.key}"}`,
+    ];
+    await send(h.port, [decoys.map((l) => `${l}\n`).join("")]);
+    await h.flushAll();
+
+    expect(await eventCount(orgA)).toBe(2);
+    expect(await eventCount(orgB)).toBe(1);
+    expect(await eventCount(orgC)).toBe(0);
+    expect((await sourceRow(c.id)).dropped).toBe(0);
+    expect((await sourceRow(cNetskope.id)).dropped).toBe(0);
+  });
+
   it("flushes on its own after two seconds", async () => {
     const a = await addSource(orgA);
     const h = await start();

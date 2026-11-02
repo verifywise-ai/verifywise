@@ -143,7 +143,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Could not generate a key. Try again.":
       "Der Schlüssel konnte nicht erzeugt werden. Versuchen Sie es erneut.",
     "Your source key": "Ihr Quellenschlüssel",
-    "Add this to the sender's log format": "Fügen Sie dies zum Logformat des Absenders hinzu",
+    "Add this to the start or end of each line in the sender's log format":
+      "Fügen Sie dies am Anfang oder Ende jeder Zeile im Logformat des Absenders hinzu",
     "Copy log format line": "Logformat-Zeile kopieren",
     "Regenerate key for {name}?": "Schlüssel für {name} neu erzeugen?",
     "The current key stops working right away. Update the sender's log format with the new key.":
@@ -9681,7 +9682,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Could not remove the source. Try again.": "Impossible de supprimer la source. Réessayez.",
     "Could not generate a key. Try again.": "Impossible de générer la clé. Réessayez.",
     "Your source key": "Votre clé de source",
-    "Add this to the sender's log format": "Ajoutez ceci au format de journal de l'expéditeur",
+    "Add this to the start or end of each line in the sender's log format":
+      "Ajoutez ceci au début ou à la fin de chaque ligne du format de journal de l'expéditeur",
     "Copy log format line": "Copier la ligne de format de journal",
     "Regenerate key for {name}?": "Régénérer la clé de {name} ?",
     "The current key stops working right away. Update the sender's log format with the new key.":
@@ -19158,7 +19160,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Could not remove the source. Try again.": "No se pudo eliminar la fuente. Inténtelo de nuevo.",
     "Could not generate a key. Try again.": "No se pudo generar la clave. Inténtelo de nuevo.",
     "Your source key": "Su clave de fuente",
-    "Add this to the sender's log format": "Añada esto al formato de registro del remitente",
+    "Add this to the start or end of each line in the sender's log format":
+      "Añada esto al principio o al final de cada línea del formato de registro del remitente",
     "Copy log format line": "Copiar línea de formato de registro",
     "Regenerate key for {name}?": "¿Regenerar la clave de {name}?",
     "The current key stops working right away. Update the sender's log format with the new key.":

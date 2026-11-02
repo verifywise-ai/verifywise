@@ -14,8 +14,13 @@ Source management is Admin only.
    `SHADOW_AI_SYSLOG_ALLOW_PLAINTEXT=true`.
 2. Framing accepts octet counting and newline-delimited messages (RFC 6587).
    An RFC 5424 or RFC 3164 header is stripped when present.
-3. The line must carry `vw_source=<key>` (or `"vw_source":"<key>"` inside JSON).
-   The key is `vwsl_<organizationId>_<48 hex characters>`. It is removed from
+3. The line must carry `vw_source=<key>` as its first or last
+   whitespace-delimited token (trailing whitespace and CR are allowed), or, when
+   the body is one JSON object, as a top-level `"vw_source"` member. A key
+   anywhere else (inside a quoted value, a URL, a JSON string or a nested
+   object, or joined by `|`) is ignored, so a user who controls a field such as
+   the user agent cannot route lines to an organisation whose key they hold.
+   Two different valid keys at the two ends make the line unroutable. The key is `vwsl_<organizationId>_<48 hex characters>`. It is removed from
    the line before parsing, so it is never stored.
 4. The key is hashed (SHA-256) and looked up in the source cache. A match gives
    the organisation, the parser type and the optional allowed sender IP. Only

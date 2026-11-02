@@ -270,7 +270,7 @@ export const integrationGuideContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Configure your proxy to send logs over TCP to your VerifyWise host on port 6514, using TLS, and to include `vw_source=<your key>` in every line. The field can sit anywhere in the line, as long as it is separated by a space. VerifyWise removes it before the line is stored. The examples below show one line per product, with the field added.',
+      text: 'Configure your proxy to send logs over TCP to your VerifyWise host on port 6514, using TLS, and to include `vw_source=<your key>` in every line. Put the field at the start or the end of the line, separated from the rest by a space. A key anywhere else in the line is ignored, so text inside another field, such as a user agent or a URL, can never route a line. VerifyWise removes it before the line is stored. The examples below show one line per product, with the field added.',
     },
 
     // Zscaler
@@ -299,7 +299,7 @@ export const integrationGuideContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Send the events as JSON over syslog. The line must contain a JSON object with `user`, `url`, `method` and `activity`, optionally `department` and `timestamp`. Put the key inside the object as `"vw_source"`, or write `vw_source=<key>` before the object. If your product cannot add either to every event, a self-hosted server can use IP-only mode (see below).',
+      text: 'Send the events as JSON over syslog. The line must contain a JSON object with `user`, `url`, `method` and `activity`, optionally `department` and `timestamp`. Put the key in the object as a top-level `"vw_source"` member (not inside a nested object), or write `vw_source=<key>` before or after the object, separated by a space. If your product cannot add either to every event, a self-hosted server can use IP-only mode (see below).',
     },
     {
       type: 'code',
@@ -459,7 +459,7 @@ export const integrationGuideContent: ArticleContent = {
         {
           symptom: 'Syslog source shows "Never" under Last received',
           cause: 'The listener is off, the port is not reachable, or the lines carry no valid key',
-          fix: 'Check the status line above the table in Settings. Confirm your proxy reaches the host on port 6514 over TCP and that every line contains `vw_source=<key>` with the key you copied. If you lost the key, click "Regenerate key". Lines with no valid key are not counted anywhere.',
+          fix: 'Check the status line above the table in Settings. Confirm your proxy reaches the host on port 6514 over TCP and that every line starts or ends with `vw_source=<key>` (or carries it as a top-level JSON member) with the key you copied. If you lost the key, click "Regenerate key". Lines with no valid key are not counted anywhere.',
         },
         {
           symptom: 'Dropped count rises',
