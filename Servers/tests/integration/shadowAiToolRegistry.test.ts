@@ -123,4 +123,33 @@ describe("Shadow AI tool registry and ingestion matching", () => {
     expect(tool.id).toBe(id);
     expect(tool.domains).toEqual([]);
   });
+
+  it("extracts the model from a uri_path that matches a seeded pattern", async () => {
+    const app = await createTestApp();
+    const res = await testRequest(app)
+      .post("/api/v1/shadow-ai/events")
+      .set("X-API-Key", apiKey)
+      .send({
+        events: [
+          {
+            ...event("generativelanguage.googleapis.com"),
+            uri_path: "/v1beta/models/gemini-1.5-pro:generateContent",
+          },
+        ],
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.ingested).toBe(1);
+
+    const [rows] = await sequelize.query(
+      `SELECT detected_model FROM shadow_ai_events WHERE organization_id = :orgId`,
+      { replacements: { orgId } },
+    );
+    expect(rows).toEqual([{ detected_model: "gemini-1.5-pro" }]);
+
+    const [[{ n }]] = (await sequelize.query(
+      `SELECT COUNT(*)::int AS n FROM verifywise.shadow_ai_model_patterns`,
+    )) as [{ n: number }[], unknown];
+    expect(n).toBeGreaterThanOrEqual(9);
+  });
 });

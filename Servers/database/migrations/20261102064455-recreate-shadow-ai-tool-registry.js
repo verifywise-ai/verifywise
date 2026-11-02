@@ -17,7 +17,10 @@
  *
  * This migration:
  *   1. creates verifywise.shadow_ai_tool_registry (original columns, plus a
- *      unique index on name so the seed and copy are idempotent);
+ *      unique index on name so the seed and copy are idempotent; duplicate
+ *      names in a pre-existing verifywise table are removed first, keeping
+ *      the lowest id — tenant tools copy by name, so nothing references
+ *      these ids);
  *   2. copies rows from a legacy public.shadow_ai_tool_registry, if one
  *      exists, so local edits to the catalogue survive (it never drops or
  *      changes the public table);
@@ -629,6 +632,13 @@ module.exports = {
           created_at TIMESTAMPTZ DEFAULT NOW(),
           updated_at TIMESTAMPTZ DEFAULT NOW()
         );`,
+        { transaction },
+      );
+
+      await queryInterface.sequelize.query(
+        `DELETE FROM verifywise.shadow_ai_tool_registry a
+          USING verifywise.shadow_ai_tool_registry b
+          WHERE a.name = b.name AND a.id > b.id;`,
         { transaction },
       );
 
