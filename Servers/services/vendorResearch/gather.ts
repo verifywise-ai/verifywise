@@ -9,9 +9,9 @@
  * missing.
  *
  * It has three parts. The searches are the queries that work (`suggestedQueries` of queries.ts: the
- * name and one or two topic words, and one led by the vendor's first other name) for the news
- * categories that the run researches, and one more for each of them that the model's memory gave
- * (hints.ts, only ever a query). The best two
+ * name and one or two topic words, and one led by the first of the vendor's other names that makes
+ * a query of its own) for the news categories that the run researches, and one more for each of
+ * them that the model's memory gave (hints.ts, only ever a query). The best two
  * results of each news category are then read (`planNewsReads`), because a snippet is short and can
  * mislead and the page says what happened; the reads are made together with those of the site. The site is
  * read for the two categories that read the vendor's own pages: the pages its home page links to

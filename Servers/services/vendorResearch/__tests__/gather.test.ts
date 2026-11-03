@@ -379,6 +379,29 @@ describe("planSearches", () => {
     ]);
   });
 
+  it("plans the search of the next other name when the first is the vendor's name with a legal form", () => {
+    const known = buildTarget({
+      vendor_name: "Acme",
+      website: "acme.com",
+      vendor_provides: "Cloud hosting",
+      other_names: "Acme Ltd, Initech",
+    });
+
+    expect(known.aliases).toEqual(["Acme Ltd", "Initech"]);
+    expect(planSearches(known, ALL)).toEqual([
+      { category: "security_incidents", query: "Acme data breach" },
+      { category: "security_incidents", query: "Acme security incident" },
+      { category: "security_incidents", query: "Initech data breach" },
+      { category: "legal_regulatory", query: "Acme lawsuit" },
+      { category: "legal_regulatory", query: "Acme fined" },
+      { category: "legal_regulatory", query: "Acme FTC" },
+      { category: "legal_regulatory", query: "Acme settlement" },
+      { category: "legal_regulatory", query: "Initech lawsuit" },
+      { category: "availability", query: "Acme outage" },
+      { category: "availability", query: "Initech outage" },
+    ]);
+  });
+
   it("adds the searches in the language of the vendor's market after the English ones, with the language, before the hints", () => {
     const german = buildTarget({
       vendor_name: "Brise GmbH",
@@ -1916,6 +1939,33 @@ describe("gatherSources", () => {
       outcome: "failed",
       reason: "blocked_by_site",
     });
+  });
+
+  it("makes every search it plans for a vendor whose first other name is its name with a legal form: none is refused as a repeat", async () => {
+    const known = buildTarget({
+      vendor_name: "Acme",
+      website: "acme.com",
+      vendor_provides: "Cloud hosting",
+      other_names: "Acme Ltd, Initech",
+    });
+    const environment = setup({ vendor: known });
+
+    const result = await run(environment, { target: known, researchable: NEWS_ONLY });
+
+    expect(environment.asked.map((entry) => entry.query)).toEqual([
+      "Acme data breach",
+      "Acme security incident",
+      "Initech data breach",
+      "Acme lawsuit",
+      "Acme fined",
+      "Acme FTC",
+      "Acme settlement",
+      "Initech lawsuit",
+      "Acme outage",
+      "Initech outage",
+    ]);
+    expect(result.actions.filter((action) => action.outcome === "refused")).toEqual([]);
+    expect(result.digest).not.toContain("the search failed");
   });
 
   it("gives the loop a digest of what it collected", async () => {

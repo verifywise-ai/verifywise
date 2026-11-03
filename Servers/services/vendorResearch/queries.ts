@@ -12,10 +12,11 @@
  * that names it only by one of them keeps that name in front, since it is the name the press
  * writes, and a query that holds the vendor's name keeps the other names as topic words. The model
  * is told what was searched when that is not what it asked. `suggestedQueries` gives the model the
- * queries that work, for the categories that search the news; the other two read the vendor's own
- * website.
+ * queries that work, for the categories that search the news, none of them one that the session
+ * would refuse as a repeat of another; the other two read the vendor's own website.
  */
 import { ResearchCategory } from "../../domain.layer/interfaces/i.vendorResearch";
+import { REPEATED_QUERY_JACCARD, queryWords, similarity } from "../webResearch/queryMatch";
 import { shortName, wholeWord } from "./identity";
 import { localQueries, regulatorTopicsOf } from "./market";
 import { ResearchTarget } from "./target";
@@ -186,27 +187,51 @@ export const NEWS_TOPIC_WORDS: readonly string[] = [
 /**
  * Queries that work, for each of the categories that search the news. The categories that read
  * the vendor's own website (certifications, ai_specific) have none. A vendor with other names gets
- * one more query for each category: the first topic of the category, led by its first other name,
- * since the press may write about the vendor under that name alone. A vendor in a market of
- * another language (see market.ts) gets the queries in that language last.
+ * one more query for each category: the first topic of the category, led by the first of its other
+ * names that makes a query of its own, since the press may write about the vendor under that name
+ * alone. A vendor in a market of another language (see market.ts) gets the queries in that
+ * language last. No query repeats one before it as the web session tells a repeat (see
+ * webResearch/queryMatch.ts), in any category, since the session would refuse it and the search
+ * would not be made. They are compared as the engine is given them, once `normalizeQuery` has
+ * shaped them. An other name that is the vendor's name with a legal form ("monday.com Ltd." for
+ * "monday.com"), its domain, or its name with a word more or less gives the query of the name
+ * again, so the next other name leads; a category whose other names all do that gets no query of
+ * an other name.
  */
 export function suggestedQueries(
   target: ResearchTarget,
   researchable: readonly ResearchCategory[],
 ): Partial<Record<ResearchCategory, string[]>> {
   const name = shortName(target.name);
-  const alias = target.aliases?.[0];
   const local = localQueries(target, researchable);
+  /** The words of the queries given so far, as the session compares them. */
+  const given: Set<string>[] = [];
+  /** Whether the session would ask `query` after the ones given so far; a query it would ask is given. */
+  const isNew = (query: string): boolean => {
+    const words = queryWords(normalizeQuery(query, target));
+    if (given.some((earlier) => similarity(earlier, words) >= REPEATED_QUERY_JACCARD)) return false;
+    given.push(words);
+    return true;
+  };
   const suggested: Partial<Record<ResearchCategory, string[]>> = {};
   for (const category of researchable) {
     const topics = NEWS_TOPICS[category];
     if (topics === undefined) continue;
     // The legal and regulatory news also names the authority of the vendor's jurisdiction.
     const regulators = category === "legal_regulatory" ? regulatorTopicsOf(target) : [];
+    const ofName = [...topics, ...regulators].map((topic) => `${name} ${topic}`).filter(isNew);
+    // The first other name whose query is not one given already: the vendor's name with a legal
+    // form, its domain or its name with a word more makes the query of the name again.
+    const ofOtherName = (target.aliases ?? [])
+      .map((alias) => `${shortName(alias)} ${topics[0]}`)
+      .find(isNew);
     suggested[category] = [
-      ...[...topics, ...regulators].map((topic) => `${name} ${topic}`),
-      ...(alias === undefined ? [] : [`${shortName(alias)} ${topics[0]}`]),
-      ...local.filter((search) => search.category === category).map((search) => search.query),
+      ...ofName,
+      ...(ofOtherName === undefined ? [] : [ofOtherName]),
+      ...local
+        .filter((search) => search.category === category)
+        .map((search) => search.query)
+        .filter(isNew),
     ];
   }
   return suggested;

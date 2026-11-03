@@ -182,6 +182,21 @@ describe("hintSearchesOf", () => {
         ]),
       ).toEqual([{ category: "security_incidents", query: "AcmeAI zero day exploit" }]);
     });
+
+    it("drops a hint that repeats the query the code makes for the next other name, when the first is the vendor's name with a legal form", () => {
+      const withLegalForm = { ...target, aliases: ["Acme Analytics Ltd", "AcmeAI"] };
+
+      expect(
+        hintSearchesOf(
+          [
+            hint("legal_regulatory", "AcmeAI lawsuits"),
+            hint("legal_regulatory", "AcmeAI antitrust"),
+          ],
+          withLegalForm,
+          ALL,
+        ),
+      ).toEqual([{ category: "legal_regulatory", query: "AcmeAI antitrust" }]);
+    });
   });
 });
 

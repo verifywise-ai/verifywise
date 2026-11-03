@@ -433,6 +433,185 @@ describe("suggestedQueries", () => {
         suggestedQueries(ACME, ["legal_regulatory"]),
       );
     });
+
+    const NEWS = [
+      "security_incidents",
+      "legal_regulatory",
+      "availability",
+      "financial_health",
+    ] as const;
+
+    it("leads with the next other name when the first is the vendor's own name with a legal form, as for a dotted name that is also the domain", () => {
+      const target: ResearchTarget = {
+        name: "acme.io",
+        domain: "acme.io",
+        provides: "Work management",
+        aliases: ["acme.io Ltd.", "ACMI"],
+      };
+
+      expect(suggestedQueries(target, NEWS)).toEqual({
+        security_incidents: [
+          "acme.io data breach",
+          "acme.io security incident",
+          "ACMI data breach",
+        ],
+        legal_regulatory: [
+          "acme.io lawsuit",
+          "acme.io fined",
+          "acme.io FTC",
+          "acme.io settlement",
+          "ACMI lawsuit",
+        ],
+        availability: ["acme.io outage", "ACMI outage"],
+        financial_health: [
+          "acme.io layoffs",
+          "acme.io bankruptcy",
+          "acme.io acquisition",
+          "ACMI layoffs",
+        ],
+      });
+    });
+
+    it.each([
+      ["a legal form", "Acme Analytics Ltd"],
+      ["a legal form in capitals, as a home page may write it", "ACME ANALYTICS, INC."],
+      ["the article and a legal form", "The Acme Analytics Company"],
+      ["two legal forms", "Acme Analytics Pty Ltd"],
+      ["its domain", "acme-analytics.com"],
+      ["its domain with www", "www.acme-analytics.com"],
+    ])(
+      "passes over an other name that is the vendor's name with %s, and leads with the next one",
+      (_form, first) => {
+        const suggested = suggestedQueries({ ...ACME, aliases: [first, "Initech"] }, NEWS);
+
+        expect(NEWS.map((category) => suggested[category]!.slice(-1)[0])).toEqual([
+          "Initech data breach",
+          "Initech lawsuit",
+          "Initech outage",
+          "Initech layoffs",
+        ]);
+      },
+    );
+
+    it("gives a category no query of an other name when each of them makes the query of the name again, and keeps it in the others", () => {
+      const target = { ...ACME, aliases: ["Acme Analytics Holding Corp", "Acme Analytics Inc"] };
+
+      expect(suggestedQueries(target, NEWS)).toEqual({
+        security_incidents: ["Acme Analytics data breach", "Acme Analytics security incident"],
+        legal_regulatory: [
+          "Acme Analytics lawsuit",
+          "Acme Analytics fined",
+          "Acme Analytics FTC",
+          "Acme Analytics settlement",
+          "Acme Analytics Holding lawsuit",
+        ],
+        availability: ["Acme Analytics outage", "Acme Analytics Holding outage"],
+        financial_health: [
+          "Acme Analytics layoffs",
+          "Acme Analytics bankruptcy",
+          "Acme Analytics acquisition",
+          "Acme Analytics Holding layoffs",
+        ],
+      });
+    });
+
+    it("gives no two queries that the session would take for one, compared as the engine is given them, whatever the other names", () => {
+      for (const aliases of [
+        ["Acme Analytics Ltd", "Initech"],
+        ["acme-analytics.com"],
+        ["Acme Analytics Holding Corp"],
+        ["Acme Analytics Group"],
+        ["Cirrus"],
+      ]) {
+        for (const domain of ["acme-analytics.com", "acme-analytics.fr", "acme-analytics.co.uk"]) {
+          const target = { ...ACME, domain, aliases };
+          const queries = Object.values(suggestedQueries(target, RESEARCH_CATEGORIES))
+            .flat()
+            .map((query) => queryWords(normalizeQuery(query, target)));
+
+          for (let first = 0; first < queries.length; first += 1) {
+            for (let second = first + 1; second < queries.length; second += 1) {
+              expect(similarity(queries[first], queries[second])).toBeLessThan(
+                REPEATED_QUERY_JACCARD,
+              );
+            }
+          }
+        }
+      }
+    });
+
+    it("leaves out a query of the name that the session would take for one before it, for a name of eight words", () => {
+      const target: ResearchTarget = {
+        name: "Alpha Beta Gamma Delta Epsilon Zeta Eta Theta",
+        domain: "alpha-beta.com",
+        provides: "x",
+      };
+
+      expect(suggestedQueries(target, ["legal_regulatory"])).toEqual({
+        legal_regulatory: ["Alpha Beta Gamma Delta Epsilon Zeta Eta Theta lawsuit"],
+      });
+    });
+
+    it("keeps the first other name when it makes a query of its own: Ray-Project for Anyscale", () => {
+      const target: ResearchTarget = {
+        name: "Anyscale",
+        domain: "anyscale.com",
+        provides: "AI compute",
+        aliases: ["Ray-Project"],
+      };
+
+      const suggested = suggestedQueries(target, NEWS);
+
+      expect(suggested.security_incidents).toEqual([
+        "Anyscale data breach",
+        "Anyscale security incident",
+        "Ray-Project data breach",
+      ]);
+      expect(NEWS.map((category) => suggested[category]!.slice(-1)[0])).toEqual([
+        "Ray-Project data breach",
+        "Ray-Project lawsuit",
+        "Ray-Project outage",
+        "Ray-Project layoffs",
+      ]);
+    });
+
+    it("leads with NetScaler and never with Citrix Systems", () => {
+      const target: ResearchTarget = {
+        name: "Citrix",
+        domain: "citrix.com",
+        provides: "x",
+        aliases: ["NetScaler", "Citrix Systems"],
+      };
+
+      const suggested = suggestedQueries(target, NEWS);
+
+      expect(NEWS.map((category) => suggested[category]!.slice(-1)[0])).toEqual([
+        "NetScaler data breach",
+        "NetScaler lawsuit",
+        "NetScaler outage",
+        "NetScaler layoffs",
+      ]);
+      expect(
+        Object.values(suggested)
+          .flat()
+          .filter((q) => q.startsWith("Citrix Systems")),
+      ).toEqual([]);
+    });
+
+    it("keeps an other name that adds a word to a name of one word, or that is the brand of the domain", () => {
+      expect(
+        suggestedQueries(
+          { name: "Acme", domain: "acme.com", provides: "x", aliases: ["Acme Global"] },
+          ["security_incidents"],
+        ).security_incidents,
+      ).toContain("Acme Global data breach");
+      expect(
+        suggestedQueries(
+          { name: "Acme Analytics", domain: "acme.com", provides: "x", aliases: ["Acme"] },
+          ["security_incidents"],
+        ).security_incidents,
+      ).toContain("Acme data breach");
+    });
   });
 });
 
