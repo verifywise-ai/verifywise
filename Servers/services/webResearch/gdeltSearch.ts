@@ -41,6 +41,13 @@
  * - A query it refuses (too short, badly formed) is answered with plain text and a 200, a rate limit
  *   with plain text and a 429. Neither is JSON, and neither is read as an answer: the search fails
  *   with the fixed SearchEngineError. `{}` is an answer: nothing was found.
+ * - "Too short" is a rule about a quoted phrase: GDELT answers one of 5 characters or more ("Extia",
+ *   "Slack") and refuses one of 4 with "The specified phrase is too short." (probed on 2026-11-03,
+ *   the ticker "MNDY" of monday.com), while the same query with that name as a bare word, and the bare
+ *   word FTC in every US request, is answered. One refused phrase refuses the whole request, so the
+ *   vendor would have no news on any run. A name of 5 characters or more is therefore quoted, a
+ *   shorter one that is a single word of 3 characters or more is asked for bare, and any other short
+ *   name is left out (see `nameTermsOf`).
  *
  * The index of a request is kept in the cache that runs share for an hour, under the address of the
  * request, so that a second run of the same vendor makes no request. It is public data that the
@@ -58,8 +65,8 @@
  * goes wrong comes out as a SearchEngineError, and nothing is logged here: the query is never
  * written anywhere.
  *
- * The one thing this module knows of the vendors is `shortName`: the names it is given are quoted as
- * the press writes them, without the legal form ("Acme Analytics", not "Acme Analytics, Inc.").
+ * The one thing this module knows of the vendors is `shortName`: the names it is given are asked for
+ * as the press writes them, without the legal form ("Acme Analytics", not "Acme Analytics, Inc.").
  */
 import { shortName } from "../vendorResearch/identity";
 import { MAX_SNIPPET_CHARS, cleanText, cutAtCodePoint } from "../vendorResearch/text";
@@ -92,6 +99,13 @@ export const GDELT_COOL_DOWN_MS = 60_000;
 export const GDELT_MAX_ASKS = 3;
 /** The news of GDELT reaches back 3 months: the window of the API when no timespan is sent. */
 export const GDELT_NEWS_WINDOW_MONTHS = 3;
+/**
+ * The shortest quoted phrase GDELT answers, in characters: "Extia" (5) was answered on 2026-11-03,
+ * "MNDY" (4) was refused with "The specified phrase is too short."
+ */
+export const GDELT_MIN_PHRASE_CHARS = 5;
+/** The shortest bare word that may stand for a name: GDELT answers the bare 3-letter FTC in every US request. */
+export const GDELT_MIN_WORD_CHARS = 3;
 
 const GDELT_DOC_URL = "https://api.gdeltproject.org/api/v2/doc/doc";
 /** The articles the request asks for, and the most that are read. */
@@ -124,6 +138,9 @@ const wordsOf = (text: string): string[] => text.toLowerCase().match(WORD) ?? []
 /** The words of the query language of GDELT that cannot stand alone as a term. */
 const OPERATOR_WORDS: ReadonlySet<string> = new Set(["or", "and", "not"]);
 
+/** A text that is one word, in any script: letters and digits and nothing else. */
+const ONE_WORD = /^[\p{L}\p{N}]+$/u;
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
@@ -139,8 +156,11 @@ function oneLine(value: unknown, max: number): string {
 }
 
 /**
- * The names to search for, as the press writes them and each once: without the legal form, without
- * the double quote that would end the phrase early, one line each.
+ * The names to search for, as they stand in the query and each once: as the press writes them,
+ * without the legal form, without the double quote that would end the phrase early, one line each.
+ * A name of GDELT_MIN_PHRASE_CHARS or more is a quoted phrase. A shorter one is refused by GDELT as a
+ * phrase, so it stands as a bare word when it is one word of GDELT_MIN_WORD_CHARS or more and is no
+ * word of the query language; any other short name is left out, and takes no place of MAX_NAMES.
  */
 function nameTermsOf(names: readonly string[]): string[] {
   const terms: string[] = [];
@@ -151,8 +171,15 @@ function nameTermsOf(names: readonly string[]): string[] {
     const term = oneLine(shortName(oneLine(unquoted, MAX_NAME_CHARS * 2)), MAX_NAME_CHARS);
     const key = term.toLowerCase();
     if (term === "" || seen.has(key)) continue;
+    const length = [...term].length;
+    if (length >= GDELT_MIN_PHRASE_CHARS) {
+      terms.push(`"${term}"`);
+    } else if (ONE_WORD.test(term) && length >= GDELT_MIN_WORD_CHARS && !OPERATOR_WORDS.has(key)) {
+      terms.push(term);
+    } else {
+      continue;
+    }
     seen.add(key);
-    terms.push(term);
   }
   return terms;
 }
@@ -183,17 +210,19 @@ const groupOf = (terms: readonly string[]): string =>
   terms.length === 1 ? terms[0] : `(${terms.join(" OR ")})`;
 
 function addressOf(names: readonly string[], topics: readonly string[]): string {
-  const vendor = groupOf(names.map((name) => `"${name}"`));
+  const vendor = groupOf(names);
   const query = topics.length === 0 ? vendor : `${vendor} AND ${groupOf(topics)}`;
   // cleanText first: encodeURIComponent throws on a lone surrogate.
   return `${GDELT_DOC_URL}?query=${encodeURIComponent(cleanText(query))}&mode=artlist&format=json&maxrecords=${MAX_RECORDS}`;
 }
 
 /**
- * The address of the request for a vendor: the articles that name the vendor (any of its names,
- * quoted) and any of the topics, as a list of articles in JSON, 250 at most, with no time span.
- * Null when no name is left to search for. The address is kept within the length a URL may have by
- * leaving out topics from the end, and then names from the end, but the first one.
+ * The address of the request for a vendor: the articles that name the vendor (any of its names, each
+ * as a quoted phrase, or as a bare word when it is shorter than GDELT_MIN_PHRASE_CHARS) and any of
+ * the topics, as a list of articles in JSON, 250 at most, with no time span. Null when no name is
+ * left to search for, a name that is too short to ask for included. The address is kept within the
+ * length a URL may have by leaving out topics from the end, and then names from the end, but the
+ * first one.
  */
 export function buildGdeltUrl(names: readonly string[], topics: readonly string[]): string | null {
   let usedNames = nameTermsOf(names);
@@ -476,9 +505,10 @@ function robotsOf(fetch: typeof guardedFetch, cache: WebCache | undefined): Robo
 
 export interface GdeltEngineDeps {
   /**
-   * The names of the vendor, its own first: the articles must name one of them. They are quoted as
-   * an article writes them, without the legal form, and the words of every name are no topic words
-   * of a query.
+   * The names of the vendor, its own first: the articles must name one of them. They are asked for
+   * as an article writes them, without the legal form: quoted, or as a bare word when shorter than
+   * GDELT_MIN_PHRASE_CHARS, and one too short to ask for is left out (see `buildGdeltUrl`). The
+   * words of every name as given are no topic words of a query, those left out included.
    */
   names: readonly string[];
   /**

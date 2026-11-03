@@ -225,35 +225,37 @@ function freshProcess() {
 
 describe("buildGdeltUrl", () => {
   it("asks for the articles that name the vendor and one of the topics, as a list of articles in JSON", () => {
-    expect(buildGdeltUrl(["Okta"], ["breach"])).toBe(
-      `${API}?query=%22Okta%22%20AND%20breach&mode=artlist&format=json&maxrecords=250`,
+    expect(buildGdeltUrl(["Zscaler"], ["breach"])).toBe(
+      `${API}?query=%22Zscaler%22%20AND%20breach&mode=artlist&format=json&maxrecords=250`,
     );
   });
 
   it("quotes every name and puts the names, and the topics, in an OR block of their own", () => {
-    const url = buildGdeltUrl(["Okta", "Okta Identity Cloud"], ["breach", "lawsuit", "fined"]);
+    const url = buildGdeltUrl(["Zscaler", "Okta Identity Cloud"], ["breach", "lawsuit", "fined"]);
 
     expect(queryOf(url as string)).toBe(
-      '("Okta" OR "Okta Identity Cloud") AND (breach OR lawsuit OR fined)',
+      '("Zscaler" OR "Okta Identity Cloud") AND (breach OR lawsuit OR fined)',
     );
   });
 
   it("uses parentheses only around more than one term", () => {
-    expect(queryOf(buildGdeltUrl(["Okta"], ["breach", "lawsuit"]) as string)).toBe(
-      '"Okta" AND (breach OR lawsuit)',
+    expect(queryOf(buildGdeltUrl(["Zscaler"], ["breach", "lawsuit"]) as string)).toBe(
+      '"Zscaler" AND (breach OR lawsuit)',
     );
-    expect(queryOf(buildGdeltUrl(["Okta", "Auth0"], ["breach"]) as string)).toBe(
-      '("Okta" OR "Auth0") AND breach',
+    expect(queryOf(buildGdeltUrl(["Zscaler", "Auth0"], ["breach"]) as string)).toBe(
+      '("Zscaler" OR "Auth0") AND breach',
     );
   });
 
   it("asks for the vendor alone when there are no topics", () => {
-    expect(queryOf(buildGdeltUrl(["Okta"], []) as string)).toBe('"Okta"');
-    expect(queryOf(buildGdeltUrl(["Okta", "Auth0"], []) as string)).toBe('("Okta" OR "Auth0")');
+    expect(queryOf(buildGdeltUrl(["Zscaler"], []) as string)).toBe('"Zscaler"');
+    expect(queryOf(buildGdeltUrl(["Zscaler", "Auth0"], []) as string)).toBe(
+      '("Zscaler" OR "Auth0")',
+    );
   });
 
   it("asks for nothing else: no time span, no sort, no language, in the order of the address", () => {
-    const url = new URL(buildGdeltUrl(["Okta"], ["breach"]) as string);
+    const url = new URL(buildGdeltUrl(["Zscaler"], ["breach"]) as string);
 
     // timespan=3months made GDELT answer {} to queries that do have matches (probed 2026-10-31).
     expect([...url.searchParams.keys()]).toEqual(["query", "mode", "format", "maxrecords"]);
@@ -293,30 +295,83 @@ describe("buildGdeltUrl", () => {
       '("Acme Analytics" OR "AcmeAI") AND breach',
     );
     // A name and its short form are one name.
-    expect(queryOf(buildGdeltUrl(["Acme Corp", "ACME", "acme"], ["breach"]) as string)).toBe(
-      '"Acme" AND breach',
+    expect(queryOf(buildGdeltUrl(["Zenith Corp", "ZENITH", "zenith"], ["breach"]) as string)).toBe(
+      '"Zenith" AND breach',
     );
   });
 
   it("puts the words of a topic in quotes when there are several, and each topic once", () => {
     expect(
       queryOf(
-        buildGdeltUrl(["Okta"], ["ICO fine", "settlement", "Settlement", "FTC", "ftc"]) as string,
+        buildGdeltUrl(
+          ["Zscaler"],
+          ["ICO fine", "settlement", "Settlement", "FTC", "ftc"],
+        ) as string,
       ),
-    ).toBe('"Okta" AND ("ICO fine" OR settlement OR FTC)');
+    ).toBe('"Zscaler" AND ("ICO fine" OR settlement OR FTC)');
   });
 
   it("keeps only the words of a topic, so that a topic cannot be an operator of the query", () => {
     expect(
       queryOf(
-        buildGdeltUrl(["Okta"], ["domain:evil.example", "-fraud", '"; OR (', "  "]) as string,
+        buildGdeltUrl(["Zscaler"], ["domain:evil.example", "-fraud", '"; OR (', "  "]) as string,
       ),
-    ).toBe('"Okta" AND ("domain evil example" OR fraud)');
+    ).toBe('"Zscaler" AND ("domain evil example" OR fraud)');
   });
 
   it("gives no address when no name is left to ask for", () => {
     expect(buildGdeltUrl([], ["breach"])).toBeNull();
     expect(buildGdeltUrl(["  ", '""', String.fromCharCode(7)], ["breach"])).toBeNull();
+  });
+
+  // GDELT answers a quoted phrase of fewer than 5 characters with "The specified phrase is too
+  // short." as text/html and a 200 (live requests of 2026-11-03), which costs the vendor all of its
+  // news. A bare word of 3 characters or more is answered: the bare FTC is in every US request.
+  it("asks for a name shorter than five characters as a bare word, since GDELT refuses so short a quoted phrase", () => {
+    expect(queryOf(buildGdeltUrl(["monday.com", "MNDY"], ["breach", "FTC"]) as string)).toBe(
+      '("monday.com" OR MNDY) AND (breach OR FTC)',
+    );
+    expect(buildGdeltUrl(["Okta"], ["breach"])).toBe(
+      `${API}?query=Okta%20AND%20breach&mode=artlist&format=json&maxrecords=250`,
+    );
+    expect(
+      queryOf(buildGdeltUrl(["International Business Machines", "IBM"], ["breach"]) as string),
+    ).toBe('("International Business Machines" OR IBM) AND breach');
+  });
+
+  it("leaves out a short name that cannot stand as one word: under three characters, several words, or a sign in it", () => {
+    expect(
+      queryOf(buildGdeltUrl(["Acme Analytics", "HP", "A B", "x.ai", "AT&T"], ["breach"]) as string),
+    ).toBe('"Acme Analytics" AND breach');
+  });
+
+  it("leaves out a short name that is a word of the query language", () => {
+    expect(queryOf(buildGdeltUrl(["Acme Analytics", "NOT", "and"], ["breach"]) as string)).toBe(
+      '"Acme Analytics" AND breach',
+    );
+  });
+
+  it("gives no address when every name is too short to ask for", () => {
+    expect(buildGdeltUrl(["HP"], ["breach"])).toBeNull();
+    expect(buildGdeltUrl(["x.ai", "3M"], ["breach"])).toBeNull();
+  });
+
+  // Green on the code before the fix too: it pins what the fix must not change.
+  it("keeps a name of five characters or more as a quoted phrase", () => {
+    expect(queryOf(buildGdeltUrl(["Extia"], ["breach"]) as string)).toBe('"Extia" AND breach');
+    expect(queryOf(buildGdeltUrl(["Slack", "Slack Technologies"], ["breach"]) as string)).toBe(
+      '("Slack" OR "Slack Technologies") AND breach',
+    );
+  });
+
+  it("does not count a name that is left out towards the most names a request takes", () => {
+    const names = ["HP", ...Array.from({ length: 9 }, (_, i) => `Vendor${i}`)];
+
+    const query = queryOf(buildGdeltUrl(names, ["breach"]) as string) as string;
+
+    // The nine names that can be asked for are all there: the left-out HP took no place.
+    expect(query).toContain('"Vendor8"');
+    expect(query).not.toContain("HP");
   });
 
   it("keeps the address within the length a URL may have, leaving out topics from the end first", () => {
@@ -325,10 +380,10 @@ describe("buildGdeltUrl", () => {
       { length: 60 },
       (_, i) => `${"w".repeat(48)}${String(i).padStart(2, "0")}`,
     );
-    const all = buildGdeltUrl(["Okta", "Auth0"], topics.slice(0, 5)) as string;
+    const all = buildGdeltUrl(["Zscaler", "Auth0"], topics.slice(0, 5)) as string;
     expect(all).toContain(`(${"w".repeat(48)}00%20OR%20`);
 
-    const url = buildGdeltUrl(["Okta", "Auth0"], topics) as string;
+    const url = buildGdeltUrl(["Zscaler", "Auth0"], topics) as string;
 
     const href = new URL(url).href;
     expect(href.length).toBeLessThanOrEqual(2048);
@@ -336,7 +391,7 @@ describe("buildGdeltUrl", () => {
     expect(href.length).toBeGreaterThan(2048 - 60);
     const query = queryOf(url) as string;
     expect(
-      query.startsWith(`("Okta" OR "Auth0") AND (${"w".repeat(48)}00 OR ${"w".repeat(48)}01`),
+      query.startsWith(`("Zscaler" OR "Auth0") AND (${"w".repeat(48)}00 OR ${"w".repeat(48)}01`),
     ).toBe(true);
     const kept = query.match(/w{48}\d\d/g) as string[];
     expect(kept.length).toBeGreaterThan(20);
@@ -883,6 +938,37 @@ describe("the engine", () => {
 
       await failureOf(engine.search("breach", "news"));
 
+      expect(feed.mock).not.toHaveBeenCalled();
+    });
+
+    it("asks GDELT for a short other name as a bare word", async () => {
+      const feed = fakeGdelt([bodyOf([raw()])]);
+      const engine = createGdeltEngine({
+        names: ["monday.com", "MNDY"],
+        topics: ["breach"],
+        fetch: feed.fetch,
+        queue: (task) => task(),
+        robots: allowAll,
+      });
+
+      await engine.search("monday.com breach", "news");
+
+      expect(queryOf(feed.calls[0].url)).toBe('("monday.com" OR MNDY) AND breach');
+    });
+
+    it("makes no request, and fails like any failed search, when every name is too short to ask for", async () => {
+      const feed = fakeGdelt([bodyOf([raw()])]);
+      const engine = createGdeltEngine({
+        names: ["HP", "3M"],
+        topics: ["breach"],
+        fetch: feed.fetch,
+        queue: passThrough,
+        robots: allowAll,
+      });
+
+      const failure = await failureOf(engine.search("breach", "news"));
+
+      expect(failure.message).toBe(FIXED_MESSAGE);
       expect(feed.mock).not.toHaveBeenCalled();
     });
 
@@ -2520,6 +2606,44 @@ describe("the engine", () => {
         false,
       );
       expect(session.budget().searchesLeft).toBe(before - 1);
+    });
+
+    it("records a vendor with no name that can be asked for as a search that was not available, not as an answer with no articles", async () => {
+      const process = freshProcess();
+      const feed = fakeGdelt([bodyOf([raw()])]);
+      const engine = process.createGdeltEngine({
+        names: ["HP"],
+        topics: ["breach"],
+        fetch: feed.fetch,
+        queue: passThrough,
+        robots: allowAll,
+      });
+      const session = process.createWebSession<"security_incidents">({
+        engine,
+        readPage: async () => {
+          throw new Error("no page is read");
+        },
+        domain: null,
+        cutoffs: {},
+      });
+
+      const outcome = await session.search(
+        "HP breach",
+        "news",
+        "security_incidents",
+        new AbortController().signal,
+      );
+
+      expect(outcome).toEqual({ ok: false, reason: "search_unavailable" });
+      expect(session.snapshot().calls).toEqual([
+        {
+          category: "security_incidents",
+          tool: "search",
+          answered: false,
+          failure: "search_unavailable",
+        },
+      ]);
+      expect(feed.mock).not.toHaveBeenCalled();
     });
   });
 
