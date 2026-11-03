@@ -119,6 +119,7 @@ Every labelled vendor also needs a completed run on its row, not after findings 
 - The third pass, on 2026-11-02, was stopped by its own clean-up after 6 of 21 vendors had an accepted run. Details are in its section.
 - The fourth pass, from 2026-11-02 to 2026-11-03, ended BLOCKED-ENV with 14 of 21 vendors accepted, and the verdict is held (precision 0.83, and 7 vendors without a run). Details are in its section.
 - The fifth pass, on 2026-11-03, ran the 7 vendors without a run, ended BLOCKED-ENV with 19 of 21 vendors accepted, and the verdict is held (precision 0.85, label agreement 64 %, 2 vendors without a run). Details are in its section.
+- The sixth pass, on 2026-11-03, ran monday.com and Anyscale on the fixed code, ended DONE with 21 of 21 vendors accepted, and the verdict is held (precision 0.83, label agreement 68 %). Details are in its section.
 
 ### Pass 2 (2026-11-01 to 2026-11-02): BLOCKED-ENV, nothing scored
 
@@ -203,7 +204,7 @@ Every labelled vendor also needs a completed run on its row, not after findings 
 - **Driver:** pass 4's, with growing GDELT gaps (30, 60, 60, 90, 120, 120 and 180 minutes after the first to the seventh GDELT void in a row) and a stop at 8 GDELT voids in a row (exit 5). Env voids keep the 15 minute gap and the stop at 6 in a row (exit 6). It ended with exit 6 on monday.com.
 - **Accepted runs of pass 5 (5, all clean):** Invoicely (run 42), GoatCounter (45), Conduent (46), Extia (47), TikTok (49).
 - **Void runs:** 19 attempts, 14 void (74 %): 8 GDELT voids and 6 env voids; none partial, 5 clean. 9 of the voids are monday.com's (6 env, 3 GDELT): it had 0 news searches answered in all 9 attempts (runs 50 to 58). Anyscale never ran in pass 5 (it was last in the order; its row 46 holds no run).
-- **GDELT asks:** 46 asks in the traces, 35 refused (27 non-final, 8 final), 5 answered: 0.76 refusals per ask (pass 4: 0.81). News searches answered: 109 of 421. `worker.log` holds no 429 line. In monday.com's env voids the shared GDELT ask ended in `search_unavailable` without a final 429; no other vendor ran after 16:25Z, so the trace cannot tell a monday.com-specific failure from a GDELT outage.
+- **GDELT asks:** 46 asks in the traces, 35 refused (27 non-final, 8 final), 5 answered: 0.76 refusals per ask (pass 4: 0.81). News searches answered: 109 of 421. `worker.log` holds no 429 line. In monday.com's env voids the shared GDELT ask ended in `search_unavailable` without a final 429; no other vendor ran after 16:25Z, so the trace cannot tell a monday.com-specific failure from a GDELT outage. The audit after pass 5 found the cause, a product defect, fixed in `2d8d9e249` (see pass 6).
 - **Scored:** the raw `score.txt` counts monday.com's void run 58 and finds no run for Anyscale (precision 0.85, 23 of 27; agreement 65 %). The verdict comes from the read-only `scoreAccepted.ts`: pass 4's 14 runs plus the latest non-void pass-5 run of each other label.
 
   | Bar | Value | Met |
@@ -230,4 +231,43 @@ Every labelled vendor also needs a completed run on its row, not after findings 
   - Precision is 0.85. Pass 4's question stays open: should the labels cover the (a) findings, or should the scorer count a (b) finding?
   - 19 of 21 vendors have a run. Run monday.com and Anyscale in another pass, or accept 19 of 21.
   - Decide whether a partial run (Wiser Solutions, run 29: 19 of 23 news searches answered, no findings) counts for the golden set.
+  - Nothing in this repository says the bars are met.
+
+### Pass 6 (2026-11-03): DONE at 21 of 21 vendors, held
+
+- **The audit after pass 5:** monday.com's other name, MNDY, made GDELT refuse every request ("The specified phrase is too short."), because every name was quoted and GDELT refuses a quoted phrase under 5 characters. The fix is `2d8d9e249289bfa20e82caef485c12ddddb8a43a`, in `gdeltSearch.ts` only: a name under 5 characters goes in bare when it is one word of 3 or more letters and digits, and any other short name is left out. The other audit findings were ruled not defects and are left for the owner.
+- **What it is:** pass 5's database restored from its dump (the same one expected foreign-key error on the research key), the fixed code (`2d8d9e249`, prompt `vr-12`, registry `sr-5`, engine GDELT), and only monday.com and Anyscale. The 19 accepted runs of passes 4 and 5 stand, because the fixed code sends their byte-identical GDELT requests: the review rebuilt the address of all 58 runs of the pass-5 snapshot with both codes, and only monday.com's 9 changed.
+- **Dates:** first start 2026-11-03T22:02:08Z; the driver ended at 2026-11-03T23:03:47Z (exit 0).
+- **Driver:** pass 5's, with the BLOCKED-QUERY rule for monday.com (a stop if its GDELT address is refused again as too short).
+- **Accepted runs of pass 6 (2):** Anyscale (run 62, clean, 21 of 21 news searches answered) and monday.com (run 60, partial, 17 of 21).
+- **Runs:** 4 attempts (runs 59 to 62): monday.com twice (both partial), Anyscale twice (run 61 a GDELT void with 2 refused asks and 1 final refusal, then run 62 clean). No env void.
+- **monday.com's news on the fixed code:** answered. Run 59 had 8 of 23 news searches answered (its first load of the address ended after 29 s with no 429; a later load was answered), run 60 had 17 of 21 (most likely from the one-hour cache), and neither showed pass 5's "too short" refusal. Both stay partial: 4 of the 15 code news searches repeat a query and are refused as `repeated_query`, so no monday.com run can reach the 0.90 clean share.
+- **GDELT asks:** 7 asks (1 estimated): 3 refused (2 non-final, 1 final), 3 answered, 1 failed without a 429. News searches answered: 46 of 89. `worker.log` holds no GDELT 429 line.
+- **Scored:** the raw `score.txt` and the read-only `scoreAccepted.ts` score the same 21 runs, one accepted run per label.
+
+  | Bar | Value | Met |
+  |---|---|---|
+  | Prompt version `vr-12` only | 21 scored runs (all 62 runs in the database) | yes |
+  | Precision at least 0.90 | 0.83 (25 of 30, 1 trap); pass 5 was 0.85 | no |
+  | Label agreement at least 80 % | 68 % (17 of 25); pass 5 was 64 % | no |
+  | No High finding rated Low | none | yes |
+  | No sanctions match stated as a fact | none | yes |
+  | Coverage | no failed list, none missing, on all 21 accepted runs | yes |
+  | No run after earlier findings or risks of its row | none | yes |
+  | Every labelled vendor has a completed run | 21 of 21 (monday.com 60 and Wiser Solutions 29 are partial runs) | yes |
+  | Recall (no bar) | 0.18 (25 of 138) | n/a |
+
+- **Verdict: held.** Two bars are missed. The missing-run bar is now met.
+- **The five unmatched findings:**
+  - Salesloft, run 13, finding 24: (a) no label or trap covers it (`ai_specific` subprocessor addition).
+  - Salesloft, run 13, finding 25: (a) no label or trap covers it (availability, from the status page history).
+  - Typeform, run 26, finding 33: (b) it cites the status page history record of 2026-08-07, the day of the expected outage, but has none of the expectation's words.
+  - Anyscale, run 62, finding 71: (a) availability from the status page history; Anyscale has no availability expectation and its one trap does not match.
+  - Invoicely, run 42, finding 48: (c) it matches Invoicely trap 3 ("non-personally identifiable"), so it counts as a false positive.
+- **What-if numbers (not the scorer's; the verdict does not use them):** with (b) counted as matched, precision is 0.87 (26 of 30); with the (a) findings left out, 0.93 (25 of 27); with both, 0.96 (26 of 27). None changes the agreement (68 %), so the set would still be held.
+- **Left for a human:**
+  - Precision is 0.83. Decide whether to accept it as measured or let the miss stand; the key is frozen (audit issue 8).
+  - Agreement is 68 %. The causes are TikTok 50 to 55 (Low), Conduent 49 (Medium) and Coinbase 32 (Low), each rated below its label, and the audit found each rating follows the spec. Decide whether to change the classification or rating rules, accept that the labels were too high, or let the miss stand (audit issues 3 to 5).
+  - Decide whether a partial run counts (monday.com 60, Wiser Solutions 29), and whether monday.com's repeated queries are a defect. If a partial run does not count, the run bar is 19 of 21 (audit issue 9).
+  - Other open audit questions: whether a GDELT failure that is not a 429 should write its own trace step (issue 6), and whether a news engine that answers about half the runs of every non-Anthropic key is acceptable for launch (issue 7).
   - Nothing in this repository says the bars are met.
