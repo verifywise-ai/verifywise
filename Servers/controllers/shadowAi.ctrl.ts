@@ -55,6 +55,8 @@ import { ShadowAiToolStatus } from "../domain.layer/interfaces/i.shadowAi";
 
 import { translateError } from "../utils/i18n.utils";
 import { normalizeIp } from "../services/shadowAiSyslog/ip";
+import { buildGovernanceModelRisk } from "../services/shadowAiGovernance";
+import { createNewModelRiskQuery } from "../utils/modelRisk.utils";
 import { readSyslogListenerConfig } from "../services/shadowAiSyslog/config";
 import { getSyslogListenerState } from "../services/shadowAiSyslog/listener";
 import { invalidateSourceCacheAfterCommit } from "../services/shadowAiSyslog/sourceCache";
@@ -713,6 +715,19 @@ export async function startGovernance(req: Request, res: Response) {
         },
       );
 
+      // Record the form's risk assessment as a risk on the new model
+      let riskEntryId: number | null = null;
+      const modelRisk = buildGovernanceModelRisk(req.body.risk_assessment ?? undefined, {
+        toolName: tool.name,
+        ownerId,
+        modelId: modelInventoryId,
+        startedAt: new Date(),
+      });
+      if (modelRisk) {
+        const created = await createNewModelRiskQuery(modelRisk, organizationId, transaction);
+        riskEntryId = created.id ?? null;
+      }
+
       // Initialize lifecycle review if requested
       let lifecycleInitialized = false;
       if (req.body.start_lifecycle) {
@@ -768,7 +783,7 @@ export async function startGovernance(req: Request, res: Response) {
 
       await logSuccess({
         eventType: "Create",
-        description: `governance started for tool: ${toolId}, MI: ${modelInventoryId}, lifecycle: ${lifecycleInitialized}`,
+        description: `governance started for tool: ${toolId}, MI: ${modelInventoryId}, risk: ${riskEntryId}, lifecycle: ${lifecycleInitialized}`,
         functionName: fn,
         fileName: FILE_NAME,
         userId,
@@ -779,6 +794,7 @@ export async function startGovernance(req: Request, res: Response) {
         STATUS_CODE[201]({
           model_inventory_id: modelInventoryId,
           tool_id: toolId,
+          risk_entry_id: riskEntryId,
           lifecycle_initialized: lifecycleInitialized,
         }),
       );

@@ -18,6 +18,9 @@ jest.mock("../../utils/shadowAiTools.utils", () => ({
   updateToolStatusQuery: jest.fn(),
   linkToolToModelInventoryQuery: jest.fn(),
 }));
+jest.mock("../../utils/modelRisk.utils", () => ({
+  createNewModelRiskQuery: jest.fn(),
+}));
 jest.mock("../../utils/shadowAiRules.utils", () => ({
   getAllRulesQuery: jest.fn(),
   createRuleQuery: jest.fn(),
@@ -81,6 +84,7 @@ jest.mock("../../database/db", () => ({
 }));
 
 import { sequelize } from "../../database/db";
+import { createNewModelRiskQuery } from "../../utils/modelRisk.utils";
 import { getSyslogListenerState } from "../../services/shadowAiSyslog/listener";
 import { readSyslogListenerConfig } from "../../services/shadowAiSyslog/config";
 import { invalidateSourceCacheAfterCommit } from "../../services/shadowAiSyslog/sourceCache";
@@ -640,6 +644,64 @@ describe("shadowAi.ctrl", () => {
       const res = createRes();
       await startGovernance(req, res);
       expect(mockLinkTool).toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(201);
+    });
+
+    it("records the form's risk assessment as a risk on the new model", async () => {
+      const mockCreateRisk = createNewModelRiskQuery as jest.MockedFunction<any>;
+      mockCreateRisk.mockResolvedValue({ id: 55 });
+      mockGetToolById.mockResolvedValue({ id: 1, name: "ChatGPT" });
+      mockLinkTool.mockResolvedValue(undefined);
+      mockSequelizeQuery
+        .mockResolvedValueOnce([[{ id: 10 }]]) // INSERT INTO model_inventories RETURNING id
+        .mockResolvedValueOnce(undefined); // UPDATE shadow_ai_tools
+      const req = createReq({
+        params: { id: "1" },
+        body: {
+          model_inventory: { provider: "OpenAI", model: "GPT-4" },
+          governance_owner_id: "2",
+          risk_assessment: { data_sensitivity: "High", description: "Customer data pasted in" },
+        },
+      });
+      const res = createRes();
+      await startGovernance(req, res);
+      expect(mockCreateRisk).toHaveBeenCalledWith(
+        expect.objectContaining({
+          risk_name: "Use of ChatGPT",
+          risk_level: "High",
+          owner: "2",
+          description: "Customer data pasted in",
+          model_id: 10,
+        }),
+        1,
+        expect.anything(),
+      );
+      expect(res.status).toHaveBeenCalledWith(201);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ risk_entry_id: 55 }),
+        }),
+      );
+    });
+
+    it("creates no risk when the risk assessment is empty", async () => {
+      const mockCreateRisk = createNewModelRiskQuery as jest.MockedFunction<any>;
+      mockGetToolById.mockResolvedValue({ id: 1, name: "ChatGPT" });
+      mockLinkTool.mockResolvedValue(undefined);
+      mockSequelizeQuery
+        .mockResolvedValueOnce([[{ id: 10 }]])
+        .mockResolvedValueOnce(undefined);
+      const req = createReq({
+        params: { id: "1" },
+        body: {
+          model_inventory: { provider: "OpenAI", model: "GPT-4" },
+          governance_owner_id: "2",
+          risk_assessment: { description: "   " },
+        },
+      });
+      const res = createRes();
+      await startGovernance(req, res);
+      expect(mockCreateRisk).not.toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(201);
     });
 

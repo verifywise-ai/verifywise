@@ -2,6 +2,10 @@ import { body, param } from "express-validator";
 import { handleValidationErrors } from "../validate.middleware";
 import { normalizeIp } from "../../services/shadowAiSyslog/ip";
 import { PARSER_TYPES } from "../../services/shadowAiSyslog/types";
+import {
+  DATA_SENSITIVITIES,
+  MAX_RISK_DESCRIPTION_LENGTH,
+} from "../../services/shadowAiGovernance";
 
 const idParam = param("id").isInt({ min: 1 }).withMessage("id must be a positive integer");
 
@@ -38,6 +42,19 @@ export const validateStartGovernance = [
       return Number.isInteger(n) && n > 0;
     })
     .withMessage("governance_owner_id must be a positive integer"),
+  body("risk_assessment")
+    .optional({ nullable: true })
+    .custom((v) => typeof v === "object" && !Array.isArray(v))
+    .withMessage("risk_assessment must be an object"),
+  body("risk_assessment.data_sensitivity")
+    .optional({ nullable: true })
+    .isIn([...DATA_SENSITIVITIES])
+    .withMessage("risk_assessment.data_sensitivity must be High, Medium or Low"),
+  body("risk_assessment.description")
+    .optional({ nullable: true })
+    .isString()
+    .isLength({ max: MAX_RISK_DESCRIPTION_LENGTH })
+    .withMessage("risk_assessment.description must be text of at most 5000 characters"),
   body("start_lifecycle").optional({ nullable: true }).isBoolean(),
   handleValidationErrors,
 ];
