@@ -64,6 +64,7 @@ interface _CustomPaletteExtras {
     primaryLight: string;
     primaryDark: string;
   };
+  icon: { default: string; error: string };
   other: { icon: string; line: string; fill: string; grid: string };
 }
 
@@ -99,6 +100,7 @@ declare module "@mui/material/styles" {
       primaryLight?: string;
       primaryDark?: string;
     };
+    icon?: { default?: string; error?: string };
     other?: { icon?: string; line?: string; fill?: string; grid?: string };
     unresolved?: _UnresolvedColorOptions;
   }
@@ -131,6 +133,7 @@ declare module "@mui/material/styles/createPalette" {
       primaryLight?: string;
       primaryDark?: string;
     };
+    icon?: { default?: string; error?: string };
     other?: { icon?: string; line?: string; fill?: string; grid?: string };
     unresolved?: _UnresolvedColorOptions;
   }

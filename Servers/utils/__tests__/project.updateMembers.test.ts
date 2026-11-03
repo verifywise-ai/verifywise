@@ -33,7 +33,7 @@ function mockDb({
   const orgUsers = [6, 7, 8];
   query.mockImplementation(async (sql: string, opts: any = {}) => {
     if (sql.includes("FOR UPDATE")) return rowExists ? [{ id: 1 }] : [];
-    if (sql.startsWith("SELECT id FROM users"))
+    if (sql.startsWith("SELECT user_id AS id FROM organization_members"))
       return opts.replacements.userIds
         .filter((id: number) => orgUsers.includes(id))
         .map((id: number) => ({ id }));

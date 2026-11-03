@@ -9,7 +9,8 @@
  * - `createNewUserQuery`: Creates a new user in the database.
  * - `resetPasswordQuery`: Resets the password for a user identified by their email.
  * - `updateUserByIdQuery`: Updates user details by their ID.
- * - `deleteUserByIdQuery`: Deletes a user by their ID.
+ * - `removeUserFromOrganizationQuery`: Removes a user from one organization.
+ * - `deleteUserAccountQuery`: Deletes a user's account from every organization.
  *
  * Each function interacts with the database using SQL queries and returns the result.
  *
@@ -35,6 +36,8 @@ import { QuestionModel } from "../domain.layer/models/question/question.model";
 import { deleteFileById } from "./fileUpload.utils";
 import { reassignAgentOwnersOfDeletedUsersQuery } from "./agentDiscovery.utils";
 import { AutomationModel } from "../domain.layer/models/automation/automation.model";
+import { addOrganizationMemberQuery } from "./organizationMember.utils";
+import { revokeUserOrganizationTokens } from "./refreshToken.utils";
 
 /**
  * Retrieves all users from the database.
@@ -55,9 +58,12 @@ import { AutomationModel } from "../domain.layer/models/automation/automation.mo
  */
 export const getAllUsersQuery = async (organization_id: number): Promise<UserModel[]> => {
   const users = await sequelize.query(
-    "SELECT * FROM users WHERE organization_id = :organization_id ORDER BY created_at DESC, id ASC",
+    `SELECT u.*, om.role_id
+       FROM users u
+       JOIN organization_members om ON om.user_id = u.id AND om.organization_id = :organization_id
+      ORDER BY u.created_at DESC, u.id ASC`,
     {
-      replacements: { organization_id }, // Assuming you want to fetch users without filtering by organization
+      replacements: { organization_id },
       mapToModel: true,
       model: UserModel,
     },
@@ -68,24 +74,20 @@ export const getAllUsersQuery = async (organization_id: number): Promise<UserMod
 /**
  * Retrieves a user from the database by their email address.
  *
- * This function executes a SQL query to select a user from the `users` table
- * based on the provided email address. It returns a promise that resolves to
- * the user object or null if no user is found.
+ * Identity only: a user's organizations and roles are their
+ * organization_members rows (getUserOrganizationsQuery).
  *
  * @param {string} email - The email address of the user to retrieve.
  * @returns {Promise<User | null>} A promise that resolves to the user object or null.
  *
  * @throws {Error} If there is an error executing the SQL query.
  */
-export const getUserByEmailQuery = async (
-  email: string,
-): Promise<(UserModel & { role_name: string | null }) | null> => {
+export const getUserByEmailQuery = async (email: string): Promise<UserModel | null> => {
   try {
     const [userObj] = await sequelize.query(
       `
-      SELECT users.*, roles.name AS role_name
+      SELECT users.*
       FROM users
-      LEFT JOIN roles ON users.role_id = roles.id
       WHERE LOWER(TRIM(users.email)) = LOWER(TRIM(:email))
       LIMIT 1
       `,
@@ -95,18 +97,7 @@ export const getUserByEmailQuery = async (
       },
     );
 
-    if (!userObj) {
-      // no user found
-      return null;
-    }
-
-    const user = userObj as UserModel & { role_name: string | null };
-
-    if (!user.role_name) {
-      console.warn(`User ${email} has no assigned role`);
-    }
-
-    return user;
+    return (userObj as UserModel | undefined) ?? null;
   } catch (error) {
     console.error("Error getting user by email:", error);
     throw error;
@@ -136,11 +127,20 @@ export const getUserByEmailQuery = async (
 export const getUserByIdQuery = async (
   id: number,
   transaction: Transaction | null = null,
-  /** When given, only a user of this organization is returned. */
+  /**
+   * When given, only a member of this organization is returned, with role_id
+   * set to their role in it. Without it, the user is identity only.
+   */
   organizationId?: number,
 ): Promise<UserModel> => {
-  const orgFilter = organizationId !== undefined ? " AND organization_id = :organizationId" : "";
-  const users = await sequelize.query<UserModel>(`SELECT * FROM users WHERE id = :id${orgFilter}`, {
+  const query =
+    organizationId !== undefined
+      ? `SELECT u.*, om.role_id
+           FROM users u
+           JOIN organization_members om ON om.user_id = u.id AND om.organization_id = :organizationId
+          WHERE u.id = :id`
+      : `SELECT * FROM users WHERE id = :id`;
+  const users = await sequelize.query<UserModel>(query, {
     replacements: { id, organizationId },
     model: UserModel,
     mapToModel: true, // converts results into UserModel instances
@@ -177,9 +177,9 @@ export const findUsersNotInOrganization = async (
   if (unique.length === 0) return [];
 
   const rows = (await sequelize.query(
-    `SELECT id FROM users
+    `SELECT user_id AS id FROM organization_members
      WHERE organization_id = :organizationId
-       AND id IN (:userIds);`,
+       AND user_id IN (:userIds);`,
     {
       replacements: { organizationId, userIds: unique },
       type: QueryTypes.SELECT,
@@ -204,7 +204,7 @@ export const doesUserBelongsToOrganizationQuery = async (
   organizationId: number,
 ) => {
   const result = (await sequelize.query(
-    "SELECT COUNT(*) > 0 AS belongs FROM users WHERE id = :userId AND organization_id = :organizationId",
+    "SELECT COUNT(*) > 0 AS belongs FROM organization_members WHERE user_id = :userId AND organization_id = :organizationId",
     {
       replacements: { userId, organizationId },
     },
@@ -213,69 +213,55 @@ export const doesUserBelongsToOrganizationQuery = async (
 };
 
 /**
- * Creates a new user in the database.
+ * Creates a new user and their first organization membership.
  *
- * @param user - An object containing the user details, excluding the user ID.
- * @returns A promise that resolves to the newly created user object.
- *
- * @example
- * ```typescript
- * const newUser = await createNewUserQuery({
- *   name: "John Doe",
- *   email: "john.doe@example.com",
- *   password_hash: "hashed_password",
- *   role_id: 2,
- *   created_at: new Date(),
- *   last_login: new Date()
- * });
- * ```
+ * @param user - The user's identity details, excluding the user ID.
+ * @param membership - The organization the user joins and their role in it.
+ * @returns The new user, with role_id set to their role in that organization.
  *
  * @throws Will throw an error if the database query fails.
  */
 export const createNewUserQuery = async (
   user: Omit<UserModel, "id">,
+  membership: { organizationId: number; roleId: number },
   transaction: Transaction,
   is_demo: boolean = false,
 ): Promise<UserModel> => {
-  const {
-    name,
-    surname,
-    email,
-    password_hash,
-    role_id,
-    organization_id,
-    sso_provider,
-    sso_user_id,
-  } = user;
+  const { name, surname, email, password_hash, sso_provider, sso_user_id } = user;
   const created_at = new Date();
   const last_login = new Date();
 
   try {
     const result = await sequelize.query(
-      `INSERT INTO users (name, surname, email, password_hash, role_id, created_at, last_login, is_demo, organization_id, sso_provider, sso_user_id)
-        VALUES (:name, :surname, :email, :password_hash, :role_id, :created_at, :last_login, :is_demo, :organization_id, :sso_provider, :sso_user_id) RETURNING *`,
+      `INSERT INTO users (name, surname, email, password_hash, created_at, last_login, is_demo, sso_provider, sso_user_id)
+        VALUES (:name, :surname, :email, :password_hash, :created_at, :last_login, :is_demo, :sso_provider, :sso_user_id) RETURNING *`,
       {
         replacements: {
           name,
           surname,
           email,
           password_hash: password_hash ?? null,
-          role_id,
           created_at,
           last_login,
           is_demo,
-          organization_id,
           sso_provider: sso_provider ?? null,
           sso_user_id: sso_user_id ?? null,
         },
         mapToModel: true,
         model: UserModel,
-        // type: QueryTypes.INSERT
         transaction,
       },
     );
 
-    return result[0];
+    const created = result[0];
+    await addOrganizationMemberQuery(
+      membership.organizationId,
+      created.id!,
+      membership.roleId,
+      transaction,
+    );
+    created.role_id = membership.roleId;
+    return created;
   } catch (error) {
     console.error("Error creating new user:", error);
     throw error;
@@ -324,10 +310,10 @@ export const resetPasswordQuery = async (
  * const updatedUser = await updateUserByIdQuery('123', {
  *   name: 'John Doe',
  *   email: 'john.doe@example.com',
- *   password_hash: 'newhashedpassword',
- *   role_id: 1,
  *   last_login: new Date()
  * });
+ *
+ * A role is per organization: updateOrganizationMemberRoleQuery.
  */
 export const updateUserByIdQuery = async (
   id: number,
@@ -335,7 +321,7 @@ export const updateUserByIdQuery = async (
   transaction: Transaction,
 ): Promise<UserModel> => {
   const updateUser: Partial<Record<keyof UserModel, any>> = {};
-  const setClause = ["name", "surname", "email", "role_id", "last_login"]
+  const setClause = ["name", "surname", "email", "last_login"]
     .filter((f) => {
       if (user[f as keyof UserModel] !== undefined && user[f as keyof UserModel]) {
         updateUser[f as keyof UserModel] = user[f as keyof UserModel];
@@ -362,9 +348,9 @@ export const updateUserByIdQuery = async (
 };
 
 /**
- * True if `userId` holds the built-in Admin role and is the only user in
- * `organizationId` who does. Locks every Admin row of the organization (in id
- * order) for the rest of the transaction, so two concurrent demotions or
+ * True if `userId` holds the built-in Admin role and is the only member of
+ * `organizationId` who does. Locks every Admin membership of the organization
+ * (in user id order) for the rest of the transaction, so two concurrent demotions or
  * deletions cannot each see the other Admin and leave the organization with
  * none: the second waits, then re-reads the first one's change.
  */
@@ -374,35 +360,29 @@ export const isLastAdminQuery = async (
   transaction: Transaction,
 ): Promise<boolean> => {
   const rows = (await sequelize.query(
-    `SELECT u.id
-       FROM users u
-       JOIN roles r ON r.id = u.role_id
-      WHERE u.organization_id = :organizationId
+    `SELECT om.user_id AS id
+       FROM organization_members om
+       JOIN roles r ON r.id = om.role_id
+      WHERE om.organization_id = :organizationId
         AND r.organization_id IS NULL
         AND r.name = 'Admin'
-      ORDER BY u.id
-        FOR UPDATE OF u`,
+      ORDER BY om.user_id
+        FOR UPDATE OF om`,
     { replacements: { organizationId }, type: QueryTypes.SELECT, transaction },
   )) as { id: number }[];
   return rows.length === 1 && rows[0].id === userId;
 };
 
 /**
- * Deletes a user from the database by their ID.
- *
- * This function executes a SQL DELETE query to remove a user from the 'users' table
- * based on the provided user ID. It returns the deleted user's data.
- *
- * @param {string} id - The unique identifier of the user to be deleted.
- * @returns {Promise<User>} A promise that resolves to the deleted user's data.
- *
- * @throws {Error} If the query fails or the user does not exist.
+ * Clears one organization's references to a user: assignment columns go to
+ * NULL, agents they primarily own move to their next owner, and their project
+ * memberships in that organization are deleted. Audit columns are kept.
  */
-export const deleteUserByIdQuery = async (
+const clearOrganizationReferencesToUser = async (
   id: number,
   organizationId: number,
   transaction: Transaction,
-): Promise<boolean> => {
+): Promise<void> => {
   const usersFK = [
     {
       table: "projects",
@@ -438,7 +418,6 @@ export const deleteUserByIdQuery = async (
           `UPDATE ${entry.table} SET ${f} = :x WHERE organization_id = :organizationId AND ${f} = :id`,
           {
             replacements: { x: null, id, organizationId },
-            // type: QueryTypes.UPDATE
             transaction,
           },
         );
@@ -446,8 +425,7 @@ export const deleteUserByIdQuery = async (
     );
   }
 
-  // Agents whose primary owner is this user move to their next remaining owner
-  // (the user's agent_primitive_owners rows go with the user via ON DELETE CASCADE).
+  // Agents whose primary owner is this user move to their next remaining owner.
   await reassignAgentOwnersOfDeletedUsersQuery([id], organizationId, transaction);
 
   await sequelize.query(
@@ -458,14 +436,73 @@ export const deleteUserByIdQuery = async (
       transaction,
     },
   );
-  const result = await sequelize.query("DELETE FROM users WHERE id = :id RETURNING *", {
+};
+
+/**
+ * Removes a user from one organization: clears that organization's references
+ * to them, revokes their refresh tokens for it, and deletes the membership.
+ * When it was their last membership the account is deleted too, in the same
+ * transaction, unless they are a super admin.
+ *
+ * @returns `removed` false when the user is not a member of the organization.
+ */
+export const removeUserFromOrganizationQuery = async (
+  id: number,
+  organizationId: number,
+  transaction: Transaction,
+): Promise<{ removed: boolean; accountDeleted: boolean }> => {
+  await clearOrganizationReferencesToUser(id, organizationId, transaction);
+  await revokeUserOrganizationTokens(id, organizationId, transaction);
+
+  const removed = (await sequelize.query(
+    `DELETE FROM organization_members
+     WHERE organization_id = :organizationId AND user_id = :id
+     RETURNING user_id`,
+    { replacements: { id, organizationId }, type: QueryTypes.SELECT, transaction },
+  )) as { user_id: number }[];
+  if (removed.length === 0) {
+    return { removed: false, accountDeleted: false };
+  }
+
+  // The helper sees every organization's memberships: under RLS enforcement a
+  // plain NOT EXISTS here only sees the current organization's rows. A super
+  // admin keeps their account as a pure super admin.
+  const deleted = (await sequelize.query(
+    `DELETE FROM users
+     WHERE id = :id
+       AND NOT verifywise.user_has_organization_membership(:id)
+       AND NOT EXISTS (SELECT 1 FROM super_admins WHERE user_id = :id)
+     RETURNING id`,
+    { replacements: { id }, type: QueryTypes.SELECT, transaction },
+  )) as { id: number }[];
+  return { removed: true, accountDeleted: deleted.length > 0 };
+};
+
+/**
+ * Deletes a user's account: clears every organization's references to them,
+ * then deletes the user. Memberships, refresh tokens and a super_admins row go
+ * with it (ON DELETE CASCADE).
+ *
+ * @returns false when the user does not exist.
+ */
+export const deleteUserAccountQuery = async (
+  id: number,
+  transaction: Transaction,
+): Promise<boolean> => {
+  const memberships = (await sequelize.query(
+    `SELECT organization_id FROM organization_members WHERE user_id = :id`,
+    { replacements: { id }, type: QueryTypes.SELECT, transaction },
+  )) as { organization_id: number }[];
+  for (const { organization_id } of memberships) {
+    await clearOrganizationReferencesToUser(id, organization_id, transaction);
+  }
+
+  const deleted = (await sequelize.query(`DELETE FROM users WHERE id = :id RETURNING id`, {
     replacements: { id },
-    mapToModel: true,
-    model: UserModel,
-    type: QueryTypes.DELETE,
+    type: QueryTypes.SELECT,
     transaction,
-  });
-  return result.length > 0;
+  })) as { id: number }[];
+  return deleted.length > 0;
 };
 
 /**
@@ -654,30 +691,42 @@ export const deleteUserProfilePhotoQuery = async (
 };
 
 /**
- * Deletes one organization's demo users.
+ * Removes one organization's demo users.
  *
- * Scoped by organization_id: removing demo data from one org must never delete
- * another org's users.
+ * Scoped by organization: removing demo data from one org must never touch
+ * another org's users. A demo user who is also a member of another
+ * organization keeps their account and that membership.
  *
- * @param organizationId - The organization whose demo users are deleted.
+ * @param organizationId - The organization whose demo users are removed.
  * @param transaction - The database transaction to use.
- * @returns A promise that resolves when the demo users are deleted.
+ * @returns A promise that resolves when the demo users are removed.
  */
 export const deleteDemoUsersQuery = async (
   organizationId: number,
   transaction: Transaction,
 ): Promise<void> => {
   const demoUsers = (await sequelize.query(
-    `SELECT id FROM users WHERE organization_id = :organizationId AND is_demo = true`,
+    `SELECT u.id
+       FROM users u
+       JOIN organization_members om ON om.user_id = u.id AND om.organization_id = :organizationId
+      WHERE u.is_demo = true`,
     { replacements: { organizationId }, type: QueryTypes.SELECT, transaction },
   )) as { id: number }[];
-  await reassignAgentOwnersOfDeletedUsersQuery(
-    demoUsers.map((u) => Number(u.id)),
-    organizationId,
-    transaction,
-  );
+  if (demoUsers.length === 0) return;
+  const userIds = demoUsers.map((u) => Number(u.id));
+
+  await reassignAgentOwnersOfDeletedUsersQuery(userIds, organizationId, transaction);
   await sequelize.query(
-    `DELETE FROM users WHERE organization_id = :organizationId AND is_demo = true`,
-    { replacements: { organizationId }, transaction },
+    `DELETE FROM organization_members
+     WHERE organization_id = :organizationId AND user_id IN (:userIds)`,
+    { replacements: { organizationId, userIds }, transaction },
+  );
+  // See removeUserFromOrganizationQuery: a plain NOT EXISTS is blind to other
+  // organizations under RLS enforcement.
+  await sequelize.query(
+    `DELETE FROM users u
+     WHERE u.id IN (:userIds)
+       AND NOT verifywise.user_has_organization_membership(u.id)`,
+    { replacements: { userIds }, transaction },
   );
 };

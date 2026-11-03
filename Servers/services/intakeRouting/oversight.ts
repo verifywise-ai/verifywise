@@ -383,9 +383,10 @@ const ROUTED_FORMS_SQL = `
     AND (CAST(:formId AS INTEGER) IS NULL OR id = CAST(:formId AS INTEGER))`;
 
 const REVIEWER_NAMES_SQL = `
-  SELECT id, name, surname
-  FROM users
-  WHERE organization_id = :organizationId AND id = ANY(ARRAY[:ids]::INTEGER[])`;
+  SELECT u.id, u.name, u.surname
+  FROM users u
+  JOIN organization_members om ON om.user_id = u.id AND om.organization_id = :organizationId
+  WHERE u.id = ANY(ARRAY[:ids]::INTEGER[])`;
 
 export async function getIntakeOversightQuery(
   organizationId: number,

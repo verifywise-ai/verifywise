@@ -15,6 +15,7 @@ import {
   ShadowAiUserActivity,
   ShadowAiDepartmentActivity,
 } from "../domain.layer/interfaces/i.shadowAi";
+import { aiUsageEvent } from "./shadowAiUsage.utils";
 
 // Hard caps on row counts for aggregate dashboards. These are defensive
 // upper bounds — real-world cardinality is much lower (departments ~50,
@@ -37,11 +38,13 @@ export async function getInsightsSummaryQuery(
        (SELECT COUNT(DISTINCT user_email)
         FROM shadow_ai_events
         WHERE organization_id = :organizationId
+          AND ${aiUsageEvent()}
           AND event_timestamp > NOW() - INTERVAL '1 day' * :periodDays) as total_ai_users,
        (SELECT COUNT(DISTINCT department)
         FROM shadow_ai_events
         WHERE organization_id = :organizationId
           AND department IS NOT NULL
+          AND ${aiUsageEvent()}
           AND event_timestamp > NOW() - INTERVAL '1 day' * :periodDays) as departments_using_ai`,
     { replacements: { organizationId, periodDays } },
   );
@@ -64,6 +67,7 @@ export async function getInsightsSummaryQuery(
      FROM shadow_ai_events
      WHERE organization_id = :organizationId
        AND department IS NOT NULL
+       AND ${aiUsageEvent()}
        AND event_timestamp > NOW() - INTERVAL '1 day' * :periodDays
      GROUP BY department
      ORDER BY COUNT(*) DESC
@@ -152,6 +156,7 @@ export async function getUsersByDepartmentQuery(
        COUNT(DISTINCT user_email) as user_count
      FROM shadow_ai_events
      WHERE organization_id = :organizationId
+       AND ${aiUsageEvent()}
        AND event_timestamp > NOW() - INTERVAL '1 day' * :periodDays
      GROUP BY department
      ORDER BY user_count DESC, department ASC
@@ -185,6 +190,7 @@ export async function getTrendQuery(
        SELECT event_timestamp, user_email, detected_tool_id
        FROM shadow_ai_events
        WHERE organization_id = :organizationId
+         AND ${aiUsageEvent()}
          AND event_timestamp > NOW() - INTERVAL '1 day' * :periodDays
      ),
      new_tool_dates AS (
@@ -236,8 +242,9 @@ export async function getUserActivityQuery(
   const limit = options?.limit || 20;
   const offset = (page - 1) * limit;
 
-  let whereClause =
-    "WHERE e.organization_id = :organizationId AND e.event_timestamp > NOW() - INTERVAL '30 days'";
+  // Only AI usage counts (see aiUsageEvent); the list and its total share
+  // this clause so they always agree.
+  let whereClause = `WHERE e.organization_id = :organizationId AND e.event_timestamp > NOW() - INTERVAL '30 days' AND ${aiUsageEvent("e")}`;
   const replacements: Record<string, any> = { organizationId, limit, offset };
 
   if (options?.department) {
@@ -261,6 +268,8 @@ export async function getUserActivityQuery(
        COALESCE(MAX(t.risk_score), 0) as risk_score,
        COALESCE(MAX(e.department), 'Unknown') as department
      FROM shadow_ai_events e
+     -- LEFT, not INNER: events of a deleted tool (detected_tool_id now NULL)
+     -- still count as AI usage; their risk falls back to 0 via COALESCE.
      LEFT JOIN shadow_ai_tools t ON e.organization_id = t.organization_id AND e.detected_tool_id = t.id
      ${whereClause}
      GROUP BY e.user_email
@@ -302,6 +311,7 @@ export async function getDepartmentActivityQuery(
        FROM shadow_ai_events
        WHERE organization_id = :organizationId
          AND event_timestamp > NOW() - INTERVAL '30 days'
+         -- Naming a top tool needs a tool that still exists.
          AND detected_tool_id IS NOT NULL
        GROUP BY department, detected_tool_id
        ORDER BY department, tool_events DESC
@@ -317,6 +327,7 @@ export async function getDepartmentActivityQuery(
      LEFT JOIN top_tools tt ON COALESCE(e.department, 'Unknown') = tt.department
      LEFT JOIN shadow_ai_tools t2 ON e.organization_id = t2.organization_id AND tt.detected_tool_id = t2.id
      WHERE e.organization_id = :organizationId
+       AND ${aiUsageEvent("e")}
        AND e.event_timestamp > NOW() - INTERVAL '30 days'
      GROUP BY COALESCE(e.department, 'Unknown'), t2.name
      ORDER BY total_prompts DESC, department ASC
@@ -342,22 +353,32 @@ export async function getUserDetailQuery(
   periodDays: number = 30,
 ): Promise<
   Array<{
+    /** NULL for events of a deleted tool. */
+    tool_id: number | null;
     tool_name: string;
     event_count: number;
+    /** POST requests, counted the same way as total_prompts in the user list. */
+    prompt_count: number;
     last_used: string;
   }>
 > {
   const [rows] = await sequelize.query(
     `SELECT
-       t.name as tool_name,
+       e.detected_tool_id as tool_id,
+       COALESCE(t.name, 'Unknown') as tool_name,
        COUNT(*) as event_count,
+       COUNT(CASE WHEN e.http_method = 'POST' THEN 1 END) as prompt_count,
        MAX(e.event_timestamp) as last_used
      FROM shadow_ai_events e
-     JOIN shadow_ai_tools t ON e.organization_id = t.organization_id AND e.detected_tool_id = t.id
+     -- LEFT, as in the user list: a deleted tool's events still count.
+     -- Grouped by tool id so a live tool is never merged with them; events
+     -- of deleted tools share one "Unknown" row (their link is gone).
+     LEFT JOIN shadow_ai_tools t ON e.organization_id = t.organization_id AND e.detected_tool_id = t.id
      WHERE e.organization_id = :organizationId
        AND e.user_email = :userEmail
+       AND ${aiUsageEvent("e")}
        AND e.event_timestamp > NOW() - INTERVAL '1 day' * :periodDays
-     GROUP BY t.name
+     GROUP BY e.detected_tool_id, t.name
      ORDER BY event_count DESC, tool_name ASC
      LIMIT :maxRows`,
     {

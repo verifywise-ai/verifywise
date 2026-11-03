@@ -21,7 +21,7 @@ const createOrganizationWithAdmin: ToolDef = {
   name: "create_organization_with_admin",
   title: "Create organization with admin",
   description:
-    "Create a new VerifyWise organization together with its first Admin user, generating a random password for that user. The organization and user are created in a single transaction. Returns the generated password, which is shown only once and is not recoverable afterwards.",
+    "Create a new VerifyWise organization together with its first Admin user, generating a random password for that user. The organization and user are created in a single transaction. Returns the generated password, which is shown only once and is not recoverable afterwards. An email that already has an account is added to the organization as its Admin instead, keeping its own password; a super admin with no organization is refused.",
   inputSchema: {
     organizationName: z.string().min(2).max(255).describe("Name of the new organization."),
     adminEmail: z.string().email().describe("Email address of the organization's Admin user."),
@@ -38,7 +38,7 @@ const createOrganizationWithAdmin: ToolDef = {
     }
 
     const password = generatePassword();
-    const { organizationId } = await createOrganizationWithUser({
+    const { organizationId, existingAccount } = await createOrganizationWithUser({
       orgName: args.organizationName,
       logo: args.logo,
       mode: "direct",
@@ -52,6 +52,16 @@ const createOrganizationWithAdmin: ToolDef = {
       invitedBy: caller.userId,
     });
 
+    if (existingAccount) {
+      return result({
+        organizationId,
+        organizationName: args.organizationName,
+        adminEmail: args.adminEmail,
+        role: role.name,
+        existingAccount: true,
+        note: "This email already had an account. It was added to the organization and keeps its own password.",
+      });
+    }
     return result({
       organizationId,
       organizationName: args.organizationName,

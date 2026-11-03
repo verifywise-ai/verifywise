@@ -204,6 +204,7 @@ export const routeMapping: Record<string, string> = {
   "/register": "Create account",
   "/admin-reg": "Admin registration",
   "/user-reg": "User registration",
+  "/join": "Join organization",
   "/forgot-password": "Forgot password",
   "/reset-password": "Reset password",
   "/set-new-password": "Set new password",

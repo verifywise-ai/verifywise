@@ -12,6 +12,11 @@ services:
   backend:
     env_file:
       - ./.env.prod
+    # Shadow AI syslog listener (off by default). Set SHADOW_AI_SYSLOG_* in
+    # .env.prod (see docs/technical/infrastructure/shadow-ai-syslog.md), mount
+    # the TLS certificate and key, and publish the port:
+    # ports:
+    #   - "6514:6514"
 
   worker:
     env_file:

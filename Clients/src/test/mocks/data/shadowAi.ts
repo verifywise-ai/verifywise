@@ -148,10 +148,15 @@ export const mockDepartmentActivity: ShadowAiDepartmentActivity[] = [
 export function createMockSyslogConfig(overrides: Partial<IShadowAiSyslogConfig> = {}) {
   return {
     id: 1,
-    source_identifier: "proxy-01.corp.com",
+    source_identifier: "203.0.113.7" as string | null,
     parser_type: "zscaler",
     is_active: true,
     created_at: "2026-01-01T00:00:00Z",
+    key_prefix: "vwsl_abcd1234efgh" as string | null,
+    last_event_at: "2026-01-15T00:00:00Z" as string | null,
+    events_accepted: 12,
+    events_dropped: 3,
+    last_drop_reason: "no_user" as string | null,
     ...overrides,
   } satisfies IShadowAiSyslogConfig;
 }
@@ -160,9 +165,14 @@ export const mockSyslogConfigs: IShadowAiSyslogConfig[] = [
   createMockSyslogConfig(),
   createMockSyslogConfig({
     id: 2,
-    source_identifier: "proxy-02.corp.com",
+    source_identifier: null,
     parser_type: "netskope",
     is_active: false,
+    key_prefix: null,
+    last_event_at: null,
+    events_accepted: 0,
+    events_dropped: 0,
+    last_drop_reason: null,
   }),
 ];
 

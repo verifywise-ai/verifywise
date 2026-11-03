@@ -62,8 +62,8 @@ export const getOrgMemberIdsQuery = async (
 ): Promise<number[]> => {
   if (userIds.length === 0) return [];
   const rows = (await sequelize.query(
-    `SELECT id FROM users
-      WHERE organization_id = :organizationId AND id IN (:userIds)`,
+    `SELECT user_id AS id FROM organization_members
+      WHERE organization_id = :organizationId AND user_id IN (:userIds)`,
     { replacements: { organizationId, userIds }, type: QueryTypes.SELECT },
   )) as { id: number }[];
   return rows.map((r) => r.id);

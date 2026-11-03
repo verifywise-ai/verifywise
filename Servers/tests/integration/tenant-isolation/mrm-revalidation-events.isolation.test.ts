@@ -76,8 +76,17 @@ describe("MRM revalidation events tenant isolation", () => {
     const modelId = await createTestModelInventory(owner.orgId);
     const eventId = await createTestMrmRevalidationEvent(owner.orgId, modelId);
 
-    await sequelize.query(`DELETE FROM organizations WHERE id = :id`, {
-      replacements: { id: owner.orgId },
+    // Its only member goes with it, as when the app deletes an organization:
+    // a user left with no organization is refused at commit.
+    await sequelize.transaction(async (transaction) => {
+      await sequelize.query(`DELETE FROM organizations WHERE id = :id`, {
+        replacements: { id: owner.orgId },
+        transaction,
+      });
+      await sequelize.query(`DELETE FROM users WHERE id = :id`, {
+        replacements: { id: owner.userId },
+        transaction,
+      });
     });
 
     const rows = await sequelize.query(`SELECT id FROM mrm_revalidation_events WHERE id = :id`, {
