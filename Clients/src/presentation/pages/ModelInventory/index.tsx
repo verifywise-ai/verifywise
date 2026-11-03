@@ -80,6 +80,7 @@ import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/us
 import { palette } from "../../themes/palette";
 
 import Alert from "../../components/Alert";
+import ListStateWrapper from "../../components/ListStateWrapper";
 
 // Constants
 const REDIRECT_DELAY_MS = 2000;
@@ -153,6 +154,7 @@ const ModelInventory: React.FC = () => {
   const hasProcessedUrlParam = useRef(false);
   const [modelInventoryData, setModelInventoryData] = useState<IModelInventory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [modelInventoryError, setModelInventoryError] = useState<string | null>(null);
   const [isNewModelInventoryModalOpen, setIsNewModelInventoryModalOpen] = useState(false);
   // Note: Lifecycle config is managed by the Model Lifecycle extension (pages/Extensions/model-lifecycle)
 
@@ -848,8 +850,13 @@ const ModelInventory: React.FC = () => {
     if (showLoading) {
       setIsLoading(true);
     }
+    setModelInventoryError(null);
     try {
-      const response = await getAllEntities({ routeUrl: "/modelInventory" });
+      const response = await getAllEntities({
+        routeUrl: "/modelInventory",
+        // The model list renders its own inline error state.
+        suppressGlobalErrorToast: true,
+      });
       if (response?.data) {
         setModelInventoryData(response.data);
         // Only force table re-render if we're not in an optimistic update scenario
@@ -863,11 +870,7 @@ const ModelInventory: React.FC = () => {
         type: "error",
         message: `Failed to fetch model inventory data: ${error}`,
       });
-      setAlert({
-        variant: "error",
-        body: "Failed to load model inventory data. Please try again later.",
-      });
-      setShowAlert(true);
+      setModelInventoryError("Failed to load model inventory data. Please try again later.");
     } finally {
       if (showLoading) {
         setIsLoading(false);
@@ -2080,6 +2083,32 @@ const ModelInventory: React.FC = () => {
     [selectedRiskLevel],
   );
 
+  // GroupedTableView renders the table's own placeholder for an empty list, so the
+  // same element serves as the empty state and the table stays mounted (keeping
+  // its page and sort) when a search briefly matches nothing.
+  const modelInventoryList = (
+    <GroupedTableView
+      groupedData={groupedModelInventory}
+      ungroupedData={filteredData}
+      renderTable={(data, options) => (
+        <ModelInventoryTable
+          key={tableKey}
+          data={data}
+          isLoading={false}
+          onEdit={handleEditModelInventory}
+          onDelete={handleDeleteModelInventory}
+          onCheckModelHasRisks={handleCheckModelHasRisks}
+          onViewDetails={handleViewModelDetails}
+          deletingId={deletingId}
+          hidePagination={options?.hidePagination}
+          modelRisks={modelRisksData}
+          flashRowId={flashRowId}
+          visibleColumns={modelVisibleColumns}
+        />
+      )}
+    />
+  );
+
   return (
     <Stack className="vwhome" sx={mainStackStyle}>
       {/* Replace Share Link Confirmation Modal */}
@@ -2337,26 +2366,16 @@ const ModelInventory: React.FC = () => {
               </Stack>
             </Stack>
 
-            <GroupedTableView
-              groupedData={groupedModelInventory}
-              ungroupedData={filteredData}
-              renderTable={(data, options) => (
-                <ModelInventoryTable
-                  key={tableKey}
-                  data={data}
-                  isLoading={isLoading}
-                  onEdit={handleEditModelInventory}
-                  onDelete={handleDeleteModelInventory}
-                  onCheckModelHasRisks={handleCheckModelHasRisks}
-                  onViewDetails={handleViewModelDetails}
-                  deletingId={deletingId}
-                  hidePagination={options?.hidePagination}
-                  modelRisks={modelRisksData}
-                  flashRowId={flashRowId}
-                  visibleColumns={modelVisibleColumns}
-                />
-              )}
-            />
+            <ListStateWrapper
+              items={filteredData}
+              isLoading={isLoading}
+              loadingLabel="Loading model inventory"
+              // A failed silent refresh (after an edit or delete) keeps the loaded models on screen.
+              errorMessage={modelInventoryData.length ? null : modelInventoryError}
+              emptyState={modelInventoryList}
+            >
+              {modelInventoryList}
+            </ListStateWrapper>
           </>
         )}
 

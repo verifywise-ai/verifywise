@@ -16,6 +16,7 @@ jest.mock("../../utils/intakeForm.utils", () => ({
   getSubmissionByIdQuery: jest.fn(),
   getSubmissionByEntityQuery: jest.fn(),
   approveSubmissionQuery: jest.fn(),
+  setDecisionRecordQuery: jest.fn<any>().mockResolvedValue(undefined),
   updateSubmissionRiskQuery: jest.fn<any>().mockResolvedValue(undefined),
   updateSubmissionRiskOverrideQuery: jest.fn<any>().mockResolvedValue(undefined),
   updateIntakeFormQuery: jest.fn<any>().mockResolvedValue({ id: 1 }),
@@ -36,8 +37,8 @@ jest.mock("../../services/intakeFormEmail.service", () => ({
   sendSubmissionApprovedEmail: jest.fn<any>().mockResolvedValue(undefined),
   sendSubmissionRejectedEmail: jest.fn<any>().mockResolvedValue(undefined),
 }));
-jest.mock("../../services/intakeRiskScoring.service", () => ({
-  calculateSubmissionRisk: jest.fn<any>().mockResolvedValue({}),
+jest.mock("../../services/intakeScoring/enqueue", () => ({
+  enqueueIntakeAssessment: jest.fn<any>().mockResolvedValue(undefined),
 }));
 jest.mock("../../services/intakeLLM.service", () => ({
   generateSuggestedQuestions: jest.fn(),
@@ -75,7 +76,7 @@ jest.mock("../../database/db", () => ({
 /* eslint-disable @typescript-eslint/no-require-imports */
 const ctrl = require("../intakeForm.ctrl") as typeof import("../intakeForm.ctrl");
 const intake = require("../../utils/intakeForm.utils");
-const scoring = require("../../services/intakeRiskScoring.service");
+const enqueue = require("../../services/intakeScoring/enqueue");
 /* eslint-enable @typescript-eslint/no-require-imports */
 
 /** Same format as the controller's private createSignedToken. */
@@ -196,11 +197,10 @@ describe("public submit with form logic", () => {
       expect(r.status).toHaveBeenCalledWith(201);
       const stored = intake.createSubmissionQuery.mock.calls[0][0].data;
       expect({ ...stored }).toEqual({ q: "no", cost: "10", total: 120 });
-      expect({ ...scoring.calculateSubmissionRisk.mock.calls[0][0] }).toEqual({
-        q: "no",
-        cost: "10",
-        total: 120,
-      });
+      // The assessment job scores what was stored, so it sees the same data.
+      expect(enqueue.enqueueIntakeAssessment).toHaveBeenCalledWith(
+        expect.objectContaining({ submissionId: 99 }),
+      );
     },
   );
 
@@ -319,7 +319,45 @@ describe("saving a form with invalid logic", () => {
     expect(intake.updateIntakeFormQuery).not.toHaveBeenCalled();
   });
 
-  it("rejects a formula that uses a later field and does not save", async () => {
+  it("rejects a formula loop and does not save", async () => {
+    const r = res();
+    await ctrl.updateIntakeForm(
+      req({
+        params: { id: "1" },
+        body: {
+          schema: {
+            version: "1.0",
+            fields: [
+              {
+                id: "total",
+                type: "calculated",
+                label: "Total",
+                order: 0,
+                required: false,
+                formula: "{n} + 1",
+              },
+              {
+                id: "n",
+                type: "calculated",
+                label: "N",
+                order: 1,
+                required: false,
+                formula: "{total} * 2",
+              },
+            ],
+          },
+        },
+      }) as any,
+      r,
+    );
+    expect(r.status).toHaveBeenCalledWith(400);
+    expect(String(r.json.mock.calls[0][0].data)).toContain(
+      'Field "Total": the formula forms a circular reference with "N"',
+    );
+    expect(intake.updateIntakeFormQuery).not.toHaveBeenCalled();
+  });
+
+  it("saves a formula that uses a later field", async () => {
     const r = res();
     await ctrl.updateIntakeForm(
       req({
@@ -343,9 +381,8 @@ describe("saving a form with invalid logic", () => {
       }) as any,
       r,
     );
-    expect(r.status).toHaveBeenCalledWith(400);
-    expect(String(r.json.mock.calls[0][0].data)).toContain('Field "Total"');
-    expect(intake.updateIntakeFormQuery).not.toHaveBeenCalled();
+    expect(r.status).not.toHaveBeenCalledWith(400);
+    expect(intake.updateIntakeFormQuery).toHaveBeenCalled();
   });
 
   it("does not block an update that leaves the schema, entity type and status alone", async () => {

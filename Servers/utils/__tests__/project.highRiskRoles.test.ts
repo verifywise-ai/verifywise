@@ -22,7 +22,7 @@ const modelRow = (values: Record<string, unknown>) => ({ ...values, dataValues: 
 
 function mockDb(row: Record<string, unknown>) {
   query.mockImplementation(async (sql: string, opts: any = {}) => {
-    if (sql.startsWith("SELECT id FROM users"))
+    if (sql.startsWith("SELECT user_id AS id FROM organization_members"))
       return opts.replacements.userIds.map((id: number) => ({ id }));
     if (sql.startsWith("SELECT id FROM frameworks")) return [[], 0];
     if (sql.includes("nextval('project_uc_id_seq')")) return [{ next_id: 1 }];

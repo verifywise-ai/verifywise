@@ -60,6 +60,7 @@ import RiskAnalysisModal from "../RiskAnalysisModal";
 import type { ClassificationResult } from "../../../../domain/types/euAiActClassification";
 import { getAutocompleteStyles } from "../../../utils/inputStyles";
 import { useStyles } from "./styles";
+import { GEOGRAPHY_ITEMS } from "../../../../application/constants/geography";
 
 const riskClassificationItems = [
   { _id: 1, name: AiRiskClassification.PROHIBITED },
@@ -69,14 +70,7 @@ const riskClassificationItems = [
   { _id: 5, name: AiRiskClassification.OUT_OF_SCOPE },
 ];
 
-const geographyItems = [
-  { _id: 1, name: "Global" },
-  { _id: 2, name: "Europe" },
-  { _id: 3, name: "North America" },
-  { _id: 4, name: "South America" },
-  { _id: 5, name: "Asia" },
-  { _id: 6, name: "Africa" },
-];
+const geographyItems = [...GEOGRAPHY_ITEMS];
 
 const useCaseCategoryItems = [
   { _id: 1, name: "Generative AI" },
@@ -580,7 +574,7 @@ const ProjectSettings = React.memo(
         } else if (response.status === 404) {
           setAlert({
             variant: "error",
-            body: "Framework not found or could not be removed from the project",
+            body: "Framework not found or could not be removed from the use case",
             isToast: true,
             visible: true,
           });
@@ -721,7 +715,7 @@ const ProjectSettings = React.memo(
       }
       setAlert({
         variant: "success",
-        body: "Project updated successfully",
+        body: "Use case updated successfully",
         isToast: true,
         visible: true,
       });
@@ -795,7 +789,7 @@ const ProjectSettings = React.memo(
 
           setAlert({
             variant: "success",
-            body: "Project updated successfully",
+            body: "Use case updated successfully",
             isToast: true,
             visible: true,
           });
@@ -828,8 +822,8 @@ const ProjectSettings = React.memo(
           variant: isError ? "error" : "success",
           title: isError ? "Error" : "Success",
           body: isError
-            ? "Failed to delete project. Please try again."
-            : "Project deleted successfully.",
+            ? "Failed to delete use case. Please try again."
+            : "Use case deleted successfully.",
           isToast: true,
           visible: true,
         });
@@ -854,7 +848,7 @@ const ProjectSettings = React.memo(
         setAlert({
           variant: "error",
           title: "Error",
-          body: "Failed to delete project. Please try again.",
+          body: "Failed to delete use case. Please try again.",
           isToast: true,
           visible: true,
         });
@@ -975,9 +969,9 @@ const ProjectSettings = React.memo(
                 </Box>
               </Box>
 
-              {/* Project Details Card */}
+              {/* Use case details card */}
               <Box sx={styles.card}>
-                <Typography sx={styles.sectionTitle}>Project Details</Typography>
+                <Typography sx={styles.sectionTitle}>Use case details</Typography>
                 <Box
                   sx={{
                     display: "grid",
@@ -1643,9 +1637,12 @@ const ProjectSettings = React.memo(
 
         {isDeleteModalOpen && (
           <ConfirmationModal
-            title="Confirm delete"
+            title="Delete this use case?"
             body={
-              <Typography fontSize={13}>Are you sure you want to delete the use case?</Typography>
+              <Typography fontSize={13}>
+                This deletes the use case, its framework progress and its files. Its risks stay in
+                the risk register but are no longer linked to it. This cannot be undone.
+              </Typography>
             }
             cancelText="Cancel"
             proceedText="Delete"

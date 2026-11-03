@@ -50,6 +50,12 @@ describe("validateApiKeyFormat", () => {
     expect(result.valid).toBe(true);
   });
 
+  // Google's newer key format starts with "AQ." instead of "AIza" (#5135).
+  it("accepts the new AQ.-prefixed Gemini key", () => {
+    const result = validateApiKeyFormat("gemini", "AQ.0123456789012345678901234567890123");
+    expect(result.valid).toBe(true);
+  });
+
   it("rejects invalid Gemini key", () => {
     const result = validateApiKeyFormat("gemini", "xxxxx");
     expect(result.valid).toBe(false);

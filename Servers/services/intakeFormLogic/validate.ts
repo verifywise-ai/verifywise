@@ -9,7 +9,7 @@ import {
 } from "./types";
 import type { Condition, LogicField, LogicSchema, SchemaLogicError } from "./types";
 import { parseFormula } from "./formula";
-import { sortFields } from "./evaluate";
+import { dependencyGraph, sortFields } from "./evaluate";
 
 const NUMERIC_TYPES = ["number", "calculated"];
 const OPTION_TYPES = ["select", "multiselect"];
@@ -40,8 +40,19 @@ function conditionValueError(condition: Condition, ref: LogicField): "value" | "
  */
 export function validateSchemaLogic(schema: LogicSchema, entityType: string): SchemaLogicError[] {
   const fields = sortFields(schema && Array.isArray(schema.fields) ? schema.fields : []);
-  const position = new Map(fields.map((field, index) => [field.id, index] as const));
   const byId = new Map(fields.map((field) => [field.id, field] as const));
+  const graph = dependencyGraph(fields);
+  const positionOf = new Map(fields.map((field, index) => [field.id, index] as const));
+  // The first of `refs` that leads back to the field at `index`, if any: a
+  // ref leads back exactly when it is the field itself or in its component.
+  const loopThrough = (index: number, refs: string[]): number | null => {
+    for (const refId of refs) {
+      const ref = positionOf.get(refId);
+      if (ref === undefined) continue;
+      if (ref === index || graph.componentOf[ref] === graph.componentOf[index]) return ref;
+    }
+    return null;
+  };
   const requiredEntityFields = Object.prototype.hasOwnProperty.call(
     REQUIRED_ENTITY_FIELDS,
     entityType,
@@ -91,11 +102,15 @@ export function validateSchemaLogic(schema: LogicSchema, entityType: string): Sc
           const ref = byId.get(refId);
           if (!ref) {
             add("the formula refers to a field that was removed");
-          } else if ((position.get(refId) ?? Infinity) >= index) {
-            add(`the formula uses "${ref.label}", which is not above it`);
           } else if (!NUMERIC_TYPES.includes(ref.type)) {
             add(`the formula uses "${ref.label}", which is not a number or calculated field`);
           }
+        }
+        const loop = loopThrough(index, parsed.refs);
+        if (loop === index) {
+          add("the formula uses this field itself");
+        } else if (loop !== null) {
+          add(`the formula forms a circular reference with "${fields[loop].label}"`);
         }
       }
       if (
@@ -161,10 +176,6 @@ export function validateSchemaLogic(schema: LogicSchema, entityType: string): Sc
         add("a condition refers to a field that was removed");
         continue;
       }
-      if ((position.get(ref.id) ?? Infinity) >= index) {
-        add(`depends on "${ref.label}", which is not above it`);
-        continue;
-      }
       const allowed = Object.prototype.hasOwnProperty.call(OPERATORS_BY_TYPE, ref.type)
         ? OPERATORS_BY_TYPE[ref.type]
         : [];
@@ -178,6 +189,17 @@ export function validateSchemaLogic(schema: LogicSchema, entityType: string): Sc
       } else if (valueError === "value") {
         add(`the condition on "${ref.label}" needs a valid value`);
       }
+    }
+    const loop = loopThrough(
+      index,
+      visibility.conditions.flatMap((condition) =>
+        condition && typeof condition === "object" ? [condition.fieldId] : [],
+      ),
+    );
+    if (loop === index) {
+      add("the show/hide rules depend on this field itself");
+    } else if (loop !== null) {
+      add(`the show/hide rules form a circular reference with "${fields[loop].label}"`);
     }
   });
 

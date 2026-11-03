@@ -20,6 +20,7 @@ import ButtonsSection from "../sections/ButtonsSection";
 import CardsSection from "../sections/CardsSection";
 import ChipSection from "../sections/ChipSection";
 import ColorsSection from "../sections/ColorsSection";
+import TokensSection from "../sections/TokensSection";
 import CommonPatternsSection from "../sections/CommonPatternsSection";
 import DosAndDontsSection from "../sections/DosAndDontsSection";
 import EmptyStatesSection from "../sections/EmptyStatesSection";
@@ -59,6 +60,7 @@ const sections: Array<{
   { name: "CardsSection", Component: CardsSection, title: "Cards & containers" },
   { name: "ChipSection", Component: ChipSection, title: "Chips" },
   { name: "ColorsSection", Component: ColorsSection, title: "Colors" },
+  { name: "TokensSection", Component: TokensSection, title: "Tokens" },
   { name: "CommonPatternsSection", Component: CommonPatternsSection, title: "Common patterns" },
   { name: "DosAndDontsSection", Component: DosAndDontsSection, title: "Do's and don'ts" },
   { name: "EmptyStatesSection", Component: EmptyStatesSection, title: "Empty states" },

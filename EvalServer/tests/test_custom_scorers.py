@@ -455,7 +455,7 @@ async def test_run_custom_scorer_threshold_boundary(monkeypatch: pytest.MonkeyPa
 async def test_run_custom_scorer_reports_the_threshold_it_used(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """The result carries its pass line; with no threshold every score passes, i.e. 0."""
+    """The result carries its pass line; a missing threshold defaults to 0.5."""
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
 
     fake_client = MagicMock()
@@ -471,11 +471,15 @@ async def test_run_custom_scorer_reports_the_threshold_it_used(
     )
     assert result.threshold == 0.8
 
+    # Explicit None (DB-backed scorer whose default_threshold column is NULL):
+    # coalesce to 0.5, so the judge's FAIL is not reported as passed (issue #4783).
     no_threshold = _scorer_row()
     no_threshold["defaultThreshold"] = None
     result = await run_custom_scorer(scorer_config=no_threshold, input_text="Q", output_text="A")
-    assert result.passed is True
-    assert result.threshold == 0.0
+    assert result.label == "FAIL"
+    assert result.score == 0.0
+    assert result.passed is False
+    assert result.threshold == 0.5
 
     string_threshold = _scorer_row()
     string_threshold["defaultThreshold"] = "0.7"
@@ -492,16 +496,15 @@ async def test_run_custom_scorer_reports_the_threshold_it_used(
         result = await run_custom_scorer(scorer_config=invalid, input_text="Q", output_text="A")
         assert result.threshold == 0.5, bad
 
-    # No threshold on a scale below 0: the stored line is the lowest score, so no row
-    # shows as failing on the dashboard while every row passed.
+    # No threshold on a scale below 0: still judged against the 0.5 default.
     negative = _scorer_row(
         choice_scores=[{"label": "PASS", "score": 1.0}, {"label": "FAIL", "score": -1.0}]
     )
     negative["defaultThreshold"] = None
     result = await run_custom_scorer(scorer_config=negative, input_text="Q", output_text="A")
     assert result.score == -1.0
-    assert result.passed is True
-    assert result.threshold == -1.0
+    assert result.passed is False
+    assert result.threshold == 0.5
 
 
 @pytest.mark.asyncio

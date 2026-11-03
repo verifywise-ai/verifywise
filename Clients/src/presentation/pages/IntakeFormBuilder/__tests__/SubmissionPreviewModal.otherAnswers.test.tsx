@@ -52,7 +52,14 @@ describe("SubmissionPreviewModal other answers", () => {
       },
     });
     renderWithProviders(
-      <SubmissionPreviewModal isOpen onClose={vi.fn()} submissionId={1} onApproved={vi.fn()} />,
+      <SubmissionPreviewModal
+        isOpen
+        onClose={vi.fn()}
+        submissionId={1}
+        onApproved={vi.fn()}
+        onRejected={vi.fn()}
+        onChanged={vi.fn()}
+      />,
     );
     fireEvent.click(await screen.findByRole("button", { name: /Other answers/ }));
     expect(screen.getByText("Pilot only")).toBeInTheDocument();

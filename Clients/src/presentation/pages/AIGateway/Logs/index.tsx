@@ -184,8 +184,15 @@ export default function LogsPage() {
     try {
       const res = await apiServices.get<Record<string, any>>(`/ai-gateway/guardrails/logs?limit=${grRowsPerPage}&offset=${grPage * grRowsPerPage}`);
       const data = res?.data || {};
-      setGrLogs(data.logs || data?.data?.logs || []);
-      setGrTotal(data.total || data.logs?.length || 0);
+      const logs = data.logs || data?.data?.logs || [];
+      const total = data.total ?? data?.data?.total ?? logs.length;
+      // A purge can leave the current page past the end; go to the last page that has rows.
+      if (logs.length === 0 && total > 0 && grPage > 0) {
+        setGrPage(Math.ceil(total / grRowsPerPage) - 1);
+        return;
+      }
+      setGrLogs(logs);
+      setGrTotal(total);
     } catch {
       setGrError("Failed to load guardrail logs. Please try again.");
     } finally {
@@ -748,7 +755,7 @@ export default function LogsPage() {
             <Stack gap="12px">
               <Typography sx={sectionTitleSx}>Guardrail detection logs</Typography>
               <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
-                Every blocked or masked request across all endpoints for the last 30 days.
+                Every guardrail detection across all endpoints, newest first. A request with several matches has one row for each.
               </Typography>
 
               {grLoading ? (
@@ -765,7 +772,7 @@ export default function LogsPage() {
               ) : grLogs.length === 0 ? (
                 <EmptyState
                   icon={FileText}
-                  message="No guardrail detections in this period."
+                  message="No guardrail detections yet."
                   showBorder={false}
                 />
               ) : (

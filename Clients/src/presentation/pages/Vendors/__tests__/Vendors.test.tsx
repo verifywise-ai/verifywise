@@ -1,4 +1,10 @@
+import { screen } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
+
+let mockVendorsLoading = false;
+let mockVendorsError: Error | null = null;
+let mockVendorsData: Array<Record<string, unknown>> = [];
+const mockUseVendors = vi.fn();
 
 // Mock hooks used by Vendors page
 vi.mock("../../../../application/hooks/useUsers", () => ({
@@ -6,11 +12,15 @@ vi.mock("../../../../application/hooks/useUsers", () => ({
 }));
 
 vi.mock("../../../../application/hooks/useVendors", () => ({
-  useVendors: () => ({
-    data: [],
-    isLoading: false,
-    refetch: vi.fn(),
-  }),
+  useVendors: (...args: unknown[]) => {
+    mockUseVendors(...args);
+    return {
+      data: mockVendorsData,
+      isLoading: mockVendorsLoading,
+      error: mockVendorsError,
+      refetch: vi.fn(),
+    };
+  },
   useDeleteVendor: () => ({ mutateAsync: vi.fn() }),
 }));
 
@@ -141,6 +151,9 @@ import Vendors from "../index";
 describe("Vendors", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockVendorsLoading = false;
+    mockVendorsError = null;
+    mockVendorsData = [];
   });
 
   it("renders without crashing", () => {
@@ -148,5 +161,46 @@ describe("Vendors", () => {
       route: "/vendors",
     });
     expect(container).toBeTruthy();
+  });
+
+  it("shows the standardized loading state", () => {
+    mockVendorsLoading = true;
+    renderWithProviders(<Vendors />, { route: "/vendors" });
+
+    expect(screen.getByRole("status", { name: "Loading vendors" })).toBeInTheDocument();
+  });
+
+  it("shows the standardized error alert when vendors fail to load", () => {
+    mockVendorsError = new Error("network error");
+    renderWithProviders(<Vendors />, { route: "/vendors" });
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Failed to load vendors. Please try again later.",
+    );
+    expect(screen.queryByTestId("vendor-table")).not.toBeInTheDocument();
+  });
+
+  it("asks for the vendor list without the global toast (the page shows the error inline)", () => {
+    renderWithProviders(<Vendors />, { route: "/vendors" });
+
+    expect(mockUseVendors).toHaveBeenCalledWith(expect.anything(), {
+      suppressGlobalErrorToast: true,
+    });
+  });
+
+  it("keeps cached vendors on screen when a background refetch fails", () => {
+    mockVendorsError = new Error("network error");
+    mockVendorsData = [
+      {
+        id: 1,
+        vendor_name: "Acme AI",
+        vendor_provides: "Models",
+        vendor_contact_person: "Jane Doe",
+      },
+    ];
+    renderWithProviders(<Vendors />, { route: "/vendors" });
+
+    expect(screen.queryByText("Failed to load vendors. Please try again later.")).toBeNull();
+    expect(screen.getByTestId("grouped-table-view")).toBeInTheDocument();
   });
 });

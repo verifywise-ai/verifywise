@@ -105,18 +105,19 @@ export function PolicyContentEditor({
           <GlobalStyles styles={policyEditorStyles} />
         </Box>
 
-        {contentError && (
-          <Typography
-            component="span"
-            color={theme.palette.status?.error?.text || theme.palette.error.main}
-            sx={{ opacity: 0.8, fontSize: 11, mt: 1 }}
-          >
-            {contentError}
-          </Typography>
-        )}
-
         {children}
       </Stack>
+
+      {/* Rendered below the editor row, not beside it (#3923). */}
+      {contentError && (
+        <Typography
+          component="span"
+          color={theme.palette.status?.error?.text || theme.palette.error.main}
+          sx={{ opacity: 0.8, fontSize: 11, mt: 1 }}
+        >
+          {contentError}
+        </Typography>
+      )}
     </>
   );
 }

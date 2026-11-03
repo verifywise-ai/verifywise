@@ -87,6 +87,19 @@ export function validateIntakeFormSchemaLabels(schema: unknown): string[] {
 }
 
 /**
+ * Default for the EU AI Act risk step when a create request omits it: on for
+ * use case forms, unless a question is already mapped to the AI risk
+ * classification (an implicit default must not make the form invalid).
+ */
+export function defaultEuAiActRiskStepEnabled(
+  entityType: string,
+  schema?: IIntakeFormSchema | null,
+): boolean {
+  if (entityType !== "use_case") return false;
+  return !(schema?.fields ?? []).some((f) => f?.entityFieldMapping === "ai_risk_classification");
+}
+
+/**
  * The EU AI Act risk step sets the use case's AI risk classification. It only
  * exists on use case forms (forced off elsewhere) and cannot coexist with a
  * question mapped to that field.

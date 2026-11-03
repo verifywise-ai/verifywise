@@ -649,7 +649,11 @@ async def create_deepeval_scorer_controller(
     description = payload.get("description")
     config = payload.get("config") or {}
     enabled = bool(payload.get("enabled", True))
+    # A missing threshold persists NULL, which used to silence the pass/fail check
+    # entirely (issue #4783). Default to the same 0.5 used everywhere else.
     default_threshold = payload.get("defaultThreshold")
+    if default_threshold is None:
+        default_threshold = 0.5
     weight = payload.get("weight")
     created_by = payload.get("createdBy")
 

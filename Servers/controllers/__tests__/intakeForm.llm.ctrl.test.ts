@@ -28,6 +28,10 @@ jest.mock("../../services/intakeLLM.service", () => ({
   generateSuggestedQuestions: jest.fn(),
   generateFieldGuidance: jest.fn(),
 }));
+// The controller queues intake assessments; keep BullMQ from opening Redis.
+jest.mock("../../services/intakeScoring/enqueue", () => ({
+  enqueueIntakeAssessment: jest.fn(),
+}));
 
 import {
   getLLMSuggestedQuestions,

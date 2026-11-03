@@ -465,10 +465,14 @@ export default function PolicyEditorPage() {
 
         <Stack
           sx={{
-            height: "calc(100vh - 100px)",
+            // Cap the editor area just below the viewport instead of assuming
+            // an exact chrome height; when space is tighter the area shrinks
+            // and scrolls rather than silently clipping the last lines (#3923).
+            height: "100%",
+            maxHeight: "calc(100vh - 100px)",
             display: "flex",
             flexDirection: "column",
-            overflow: "hidden",
+            overflow: "auto",
           }}
         >
           <PolicyHeader

@@ -943,7 +943,7 @@ export default function SpendDashboardPage() {
                 <Stack direction="row" alignItems="center" gap="6px">
                   <Typography sx={sectionTitleSx}>Guardrail detections</Typography>
                   <MuiTooltip
-                    title="Daily trend of blocked and masked requests — rising detections may indicate increased PII exposure or attack attempts"
+                    title="Daily trend of blocked and masked detections. A request counts once for each match, so one request can add several. Rising detections may indicate increased PII exposure or attack attempts."
                     arrow
                     placement="top"
                   >
@@ -1102,7 +1102,7 @@ export default function SpendDashboardPage() {
               <Stack direction="row" alignItems="center" gap="6px">
                 <Typography sx={sectionTitleSx}>Guardrails activity</Typography>
                 <MuiTooltip
-                  title="What your guardrails caught in this period"
+                  title="What your guardrails caught in this period, counted per detection. A request with several matches counts once for each."
                   arrow
                   placement="top"
                 >

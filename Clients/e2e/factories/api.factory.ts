@@ -237,6 +237,13 @@ export interface CreateProjectPayload {
   members?: number[];
   framework?: number[];
   enable_ai_data_insertion?: boolean;
+  /**
+   * Organizational projects carry the org-wide frameworks (ISO 42001 = 2,
+   * ISO 27001 = 3, NIST AI RMF = 4). The /framework page only renders for an
+   * org that has one. Only `framework` ids flagged is_organizational on the
+   * server are accepted when this is true.
+   */
+  is_organizational?: boolean;
 }
 
 export const projects = {

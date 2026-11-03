@@ -114,12 +114,8 @@ vi.mock("../../../components/Skeletons", () => ({
   default: () => <div data-testid="skeleton" />,
 }));
 
-vi.mock("../../../components/AddNewRiskMITForm", () => ({
-  default: () => <div data-testid="add-new-risk-mit" />,
-}));
-
-vi.mock("../../../components/AddNewRiskIBMForm", () => ({
-  default: () => <div data-testid="add-new-risk-ibm" />,
+vi.mock("../../../components/RiskCatalogModal", () => ({
+  default: ({ source }: { source: string }) => <div data-testid={`add-new-risk-${source}`} />,
 }));
 
 vi.mock("../../../components/AnalyticsDrawer", () => ({

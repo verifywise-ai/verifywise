@@ -16,6 +16,7 @@ import {
   ComplianceProgressData,
   AssessmentStatusData,
 } from "../../../domain.layer/interfaces/i.reportGeneration";
+import { status } from "../../../tools/design-tokens/palette";
 
 describe("chartUtils", () => {
   describe("generateRiskDistributionChart", () => {
@@ -174,12 +175,10 @@ describe("chartUtils", () => {
     it("should apply correct colors based on percentage", () => {
       const svg = generateComplianceProgressChart(mockComplianceData);
 
-      // 80% should be green (#027A48)
-      // 50% should be warning (#B54708)
-      // 20% should be error (#B42318)
-      expect(svg).toContain("#027A48");
-      expect(svg).toContain("#B54708");
-      expect(svg).toContain("#B42318");
+      // 80% is success, 50% is warning, 20% is error.
+      expect(svg).toContain(status.success.text);
+      expect(svg).toContain(status.warning.text);
+      expect(svg).toContain(status.error.text);
     });
 
     it("should include title when provided", () => {

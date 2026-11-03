@@ -11,24 +11,36 @@
   box-sizing: border-box;
 }
 
-/* Typography */
+/* Typography. {{color…}} is replaced from the shared palette at render time. */
 :root {
-  --color-primary: #13715B;
-  --color-secondary: #1C2130;
-  --color-text-primary: #1C2130;
-  --color-text-secondary: #667085;
-  --color-text-tertiary: #98A2B3;
-  --color-background: #FFFFFF;
-  --color-background-alt: #F9FAFB;
-  --color-border: #E4E7EC;
-  --color-success: #027A48;
-  --color-success-bg: #ECFDF3;
-  --color-warning: #B54708;
-  --color-warning-bg: #FFFAEB;
-  --color-error: #B42318;
-  --color-error-bg: #FEF3F2;
-  --color-info: #026AA2;
-  --color-info-bg: #F0F9FF;
+  --color-primary: {{colorBrandPrimary}};
+  --color-secondary: {{colorTextPrimary}};
+  --color-text-primary: {{colorTextPrimary}};
+  --color-text-secondary: {{colorTextSecondary}};
+  --color-text-tertiary: {{colorTextTertiary}};
+  --color-text-icon: {{colorTextIcon}};
+  --color-background: {{colorBackground}};
+  --color-background-alt: {{colorBackgroundAlt}};
+  --color-background-hover: {{colorBackgroundHover}};
+  --color-border: {{colorBorderLight}};
+  --color-success: {{colorSuccessText}};
+  --color-success-bg: {{colorSuccessBg}};
+  --color-warning: {{colorWarningText}};
+  --color-warning-bg: {{colorWarningBg}};
+  --color-error: {{colorErrorText}};
+  --color-error-bg: {{colorErrorBg}};
+  --color-info: {{colorInfoText}};
+  --color-info-bg: {{colorInfoBg}};
+  --color-risk-critical: {{colorRiskCriticalText}};
+  --color-risk-critical-bg: {{colorRiskCriticalBg}};
+  --color-risk-high: {{colorRiskHighText}};
+  --color-risk-high-bg: {{colorRiskHighBg}};
+  --color-risk-medium: {{colorRiskMediumText}};
+  --color-risk-medium-bg: {{colorRiskMediumBg}};
+  --color-risk-low: {{colorRiskLowText}};
+  --color-risk-low-bg: {{colorRiskLowBg}};
+  --color-risk-very-low: {{colorRiskVeryLowText}};
+  --color-risk-very-low-bg: {{colorRiskVeryLowBg}};
   --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
@@ -277,7 +289,7 @@ body {
 }
 
 .data-table tbody tr:hover {
-  background: #F3F4F6;
+  background: var(--color-background-hover);
 }
 
 /* Status Chips */
@@ -311,29 +323,29 @@ body {
 }
 
 .chip-default {
-  background: #F2F4F7;
-  color: #344054;
+  background: var(--color-background-hover);
+  color: var(--color-text-secondary);
 }
 
 /* Risk Level Chips */
 .chip-critical {
-  background: #FEF3F2;
-  color: #B42318;
+  background: var(--color-risk-critical-bg);
+  color: var(--color-risk-critical);
 }
 
 .chip-high {
-  background: #FFF6ED;
-  color: #C4320A;
+  background: var(--color-risk-high-bg);
+  color: var(--color-risk-high);
 }
 
 .chip-medium {
-  background: #FFFAEB;
-  color: #B54708;
+  background: var(--color-risk-medium-bg);
+  color: var(--color-risk-medium);
 }
 
 .chip-low {
-  background: #ECFDF3;
-  color: #027A48;
+  background: var(--color-risk-low-bg);
+  color: var(--color-risk-low);
 }
 
 /* Every risk vocabulary that reaches a chip ranks "Very high" above "High"
@@ -341,13 +353,13 @@ body {
    stopped at `high`. Callers strip the " risk" suffix the project/vendor
    `risk_level_autocalculated` enum carries before building the class name. */
 .chip-very-high {
-  background: #FEF3F2;
-  color: #B42318;
+  background: var(--color-risk-critical-bg);
+  color: var(--color-risk-critical);
 }
 
 .chip-very-low {
-  background: #F0F9FF;
-  color: #026AA2;
+  background: var(--color-risk-very-low-bg);
+  color: var(--color-risk-very-low);
 }
 
 /* Progress Bars */
@@ -512,13 +524,13 @@ body {
 /* Sections with no data (section notices) */
 .section-notice-intro {
   font-size: 11px;
-  color: #667085;
+  color: var(--color-text-icon);
   margin-bottom: 8px;
 }
 
 .section-notice {
   font-size: 12px;
-  color: #344054;
+  color: var(--color-text-secondary);
   padding-left: 18px;
 }
 

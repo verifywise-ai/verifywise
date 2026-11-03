@@ -59,7 +59,7 @@ describe("ShadowAI - UserActivityPage", () => {
     renderWithProviders(<UserActivityPage />, { route: "/shadow-ai/user-activity/users" });
 
     await waitFor(() => {
-      expect(screen.getByText(/No user activity detected yet/)).toBeInTheDocument();
+      expect(screen.getByText(/No AI tool activity in the last 30 days/)).toBeInTheDocument();
     });
   });
 

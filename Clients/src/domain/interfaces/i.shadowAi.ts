@@ -82,10 +82,35 @@ export interface IShadowAiApiKeyCreated extends IShadowAiApiKey {
 
 export interface IShadowAiSyslogConfig {
   id: number;
-  source_identifier: string;
+  /** Allowed sender IP. Null when the source is matched by its key only. */
+  source_identifier: string | null;
   parser_type: "zscaler" | "netskope" | "squid" | "generic_kv";
   is_active: boolean;
   created_at?: string;
+  /** First characters of the source key, for display. Null until a key exists. */
+  key_prefix?: string | null;
+  last_event_at?: string | null;
+  /** Counts can arrive as strings because Postgres returns bigint that way. */
+  events_accepted?: number | string;
+  events_dropped?: number | string;
+  last_drop_reason?: string | null;
+}
+
+/** Create and regenerate responses. The key is returned once and never again. */
+export interface IShadowAiSyslogConfigWithKey extends IShadowAiSyslogConfig {
+  key: string;
+}
+
+export interface IShadowAiSyslogListenerStatus {
+  enabled: boolean;
+  port: number;
+  tls: boolean;
+  plaintext: boolean;
+  ipOnly: boolean;
+  /** Whether the listener is actually bound in the server process. */
+  running: boolean;
+  /** Why the last start attempt failed, if it did. */
+  startError: { code: string; message: string } | null;
 }
 
 // ─── Insights ────────────────────────────────────────────────────────

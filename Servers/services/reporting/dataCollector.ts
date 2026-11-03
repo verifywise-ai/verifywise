@@ -4,6 +4,7 @@
  * Following VerifyWise clean architecture patterns
  */
 
+import { background, brand, risk, status, text } from "../../tools/design-tokens/palette";
 import {
   ReportData,
   ReportMetadata,
@@ -69,18 +70,18 @@ import { QueryTypes } from "sequelize";
  * without the suffix, and they share this map.
  */
 const RISK_LEVEL_COLORS: Record<string, string> = {
-  Critical: "#B42318",
-  "Very high risk": "#B42318",
-  "Very High": "#B42318",
-  "High risk": "#C4320A",
-  High: "#C4320A",
-  "Medium risk": "#B54708",
-  Medium: "#B54708",
-  "Low risk": "#027A48",
-  Low: "#027A48",
-  "Very low risk": "#026AA2",
-  "Very Low": "#026AA2",
-  "No risk": "#667085",
+  Critical: risk.critical.text,
+  "Very high risk": risk.critical.text,
+  "Very High": risk.critical.text,
+  "High risk": risk.high.text,
+  High: risk.high.text,
+  "Medium risk": risk.medium.text,
+  Medium: risk.medium.text,
+  "Low risk": risk.low.text,
+  Low: risk.low.text,
+  "Very low risk": risk.veryLow.text,
+  "Very Low": risk.veryLow.text,
+  "No risk": text.icon,
 };
 
 /**
@@ -105,18 +106,8 @@ export const isoDate = (value: unknown): string | undefined => {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 };
 
-// Status color mapping (for future use with charts)
-// const STATUS_COLORS: Record<string, string> = {
-//   Compliant: "#027A48",
-//   Complete: "#027A48",
-//   Completed: "#027A48",
-//   "In Progress": "#B54708",
-//   Partial: "#B54708",
-//   "Non-Compliant": "#B42318",
-//   Incomplete: "#B42318",
-//   "Not Applicable": "#344054",
-//   Draft: "#344054",
-// };
+// A future status chart should use status.success.text, status.warning.text,
+// status.error.text, and text.secondary from the shared palette.
 
 export class ReportDataCollector {
   private organizationId: number;
@@ -642,26 +633,24 @@ export class ReportDataCollector {
    * Collect organization branding
    */
   private async collectBranding(): Promise<ReportBranding> {
-    const user = await getUserByIdQuery(this.userId);
+    // Branding is the organization the report is generated in.
     let organizationName = "VerifyWise";
     let organizationLogo: string | undefined;
 
-    if (user?.organization_id) {
-      const organization = await getOrganizationByIdQuery(user.organization_id);
-      if (organization) {
-        organizationName = organization.name || "VerifyWise";
-        // Fetch organization logo if available
-        if (organization.logo) {
-          organizationLogo = organization.logo;
-        }
+    const organization = await getOrganizationByIdQuery(this.organizationId);
+    if (organization) {
+      organizationName = organization.name || "VerifyWise";
+      // Fetch organization logo if available
+      if (organization.logo) {
+        organizationLogo = organization.logo;
       }
     }
 
     return {
       organizationName,
       organizationLogo,
-      primaryColor: "#13715B", // VerifyWise green
-      secondaryColor: "#1C2130",
+      primaryColor: brand.primary,
+      secondaryColor: text.primary,
     };
   }
 
@@ -704,11 +693,11 @@ export class ReportDataCollector {
     if (sections.assessment) {
       const { answeredQuestions, totalQuestions } = sections.assessment;
       chartData.assessmentStatus = [
-        { status: "Answered", count: answeredQuestions, color: "#027A48" },
+        { status: "Answered", count: answeredQuestions, color: status.success.text },
         {
           status: "Pending",
           count: Math.max(totalQuestions - answeredQuestions, 0),
-          color: "#F2F4F7",
+          color: background.hover,
         },
       ];
     }
@@ -741,7 +730,7 @@ export class ReportDataCollector {
       risksByLevel: Object.entries(risksByLevel).map(([level, count]) => ({
         level,
         count,
-        color: RISK_LEVEL_COLORS[level] || "#667085",
+        color: RISK_LEVEL_COLORS[level] || text.icon,
       })),
       risks: risks.map((risk) => ({
         id: risk.id,
@@ -937,14 +926,14 @@ export class ReportDataCollector {
    *
    * Controls carry a numeric `owner` FK, not a name (eu.utils.ts:482).
    *
-   * `users` is tenant-scoped, so this filters on the caller's organization
+   * Only members of the caller's organization resolve
    * (docs/technical/security/tenant-isolation.md §2.1, §4.4). getUserByIdQuery
-   * is `SELECT * FROM users WHERE id = :id` with no org filter, and the names
-   * it returns reach the rendered report, the facts block sent to the tenant's
-   * LLM provider, collectAllowedOwners, and the persisted audit_metadata — an
-   * id pointing at another tenant must resolve to nothing, not to a name. Users
-   * with a NULL organization_id (SuperAdmin/seed, §2.2) are dropped for the
-   * same reason.
+   * without an organization is `SELECT * FROM users WHERE id = :id`, and the
+   * names returned here reach the rendered report, the facts block sent to the
+   * tenant's LLM provider, collectAllowedOwners, and the persisted
+   * audit_metadata — an id pointing at someone outside this organization must
+   * resolve to nothing, not to a name. Users with no membership here
+   * (SuperAdmin/seed, §2.2) are dropped for the same reason.
    *
    * One query for the whole set, so this is also not N sequential round-trips.
    * `IN (:ids)` rather than `= ANY(:ids)`: sequelize expands an array
@@ -961,8 +950,11 @@ export class ReportDataCollector {
 
     try {
       const users = (await sequelize.query(
-        `SELECT id, name, surname FROM users
-         WHERE organization_id = :organizationId AND id IN (:ids)`,
+        `SELECT u.id, u.name, u.surname
+           FROM users u
+           JOIN organization_members om
+             ON om.user_id = u.id AND om.organization_id = :organizationId
+          WHERE u.id IN (:ids)`,
         {
           replacements: { organizationId: this.organizationId, ids: distinct },
           type: QueryTypes.SELECT,

@@ -37,9 +37,13 @@ export async function extractText(buffer: Buffer, mimetype: string): Promise<str
 
 async function extractPdf(buffer: Buffer): Promise<string> {
   const parser = new PDFParse({ data: buffer });
-  const { text } = await parser.getText();
-  await parser.destroy();
-  return text?.trim() ?? "";
+  try {
+    const { text } = await parser.getText();
+    return text?.trim() ?? "";
+  } finally {
+    // Free the parser even when getText throws.
+    await parser.destroy();
+  }
 }
 
 async function extractDocx(buffer: Buffer): Promise<string> {

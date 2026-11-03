@@ -19,6 +19,8 @@ export interface IVWLinkCoreProps {
   className?: string;
   /** ARIA label for accessibility */
   ariaLabel?: string;
+  /** Exposes expanded state when the link toggles a region */
+  ariaExpanded?: boolean;
   /** Test identifier for automated testing */
   testId?: string;
 }

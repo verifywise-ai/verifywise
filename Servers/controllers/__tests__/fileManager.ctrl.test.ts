@@ -248,6 +248,18 @@ describe("fileManager.ctrl", () => {
       expect(res.status).toHaveBeenCalledWith(400);
     });
 
+    it.each(["All reports", "Project risks report"])(
+      "returns 400 and stores nothing when the source is the report source %s",
+      async (source) => {
+        mockValidateUpload.mockReturnValue({ valid: true });
+        const req = createReq({ file: makeFile(), body: { source } });
+        const res = createRes();
+        await uploadFile(req, res);
+        expect(res.status).toHaveBeenCalledWith(400);
+        expect(mockUploadOrgFile).not.toHaveBeenCalled();
+      },
+    );
+
     it("should return 201 on successful upload", async () => {
       mockValidateUpload.mockReturnValue({ valid: true });
       mockUploadOrgFile.mockResolvedValue({

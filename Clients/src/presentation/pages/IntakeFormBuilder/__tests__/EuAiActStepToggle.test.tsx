@@ -81,6 +81,36 @@ describe("EuAiActStepToggle", () => {
     expect(onToggle).toHaveBeenCalledWith(true);
   });
 
+  it("keeps a notice visible while the step is off", () => {
+    const { rerender } = renderWithProviders(
+      <EuAiActStepToggle
+        entityType="use_case"
+        enabled={false}
+        hasRiskMapping={false}
+        onToggle={vi.fn()}
+      />,
+    );
+    expect(screen.getByTestId("eu-ai-act-step-off-notice")).toHaveTextContent(
+      /EU AI Act questions are off/,
+    );
+    rerender(
+      <EuAiActStepToggle entityType="use_case" enabled hasRiskMapping={false} onToggle={vi.fn()} />,
+    );
+    expect(screen.queryByTestId("eu-ai-act-step-off-notice")).toBeNull();
+  });
+
+  it("shows no notice on model forms", () => {
+    renderWithProviders(
+      <EuAiActStepToggle
+        entityType="model"
+        enabled={false}
+        hasRiskMapping={false}
+        onToggle={vi.fn()}
+      />,
+    );
+    expect(screen.queryByTestId("eu-ai-act-step-off-notice")).toBeNull();
+  });
+
   it("fires once when the description row is clicked", () => {
     const onToggle = vi.fn();
     renderWithProviders(

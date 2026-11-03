@@ -40,6 +40,8 @@ const fetchAgentPrimitives = async (
       permission_categories: a.permission_categories,
       last_activity: a.last_activity,
       linked_model_inventory_id: a.linked_model_inventory_id,
+      linked_use_case: a.linked_project_title ?? null,
+      description: a.description,
       created_at: a.created_at,
     }));
   } catch (error) {

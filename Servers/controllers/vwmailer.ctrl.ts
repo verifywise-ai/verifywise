@@ -74,6 +74,14 @@ export const invite = async (
             .json(
               STATUS_CODE[409](req.t!("The invitation was changed by someone else. Try again.")),
             );
+        case "already_member":
+          return res
+            .status(409)
+            .json(STATUS_CODE[409](req.t!("User is already a member of this organization")));
+        case "super_admin":
+          return res
+            .status(409)
+            .json(STATUS_CODE[409](req.t!("A super admin cannot join an organization")));
       }
     }
     return res.status(500).json(

@@ -39,6 +39,7 @@ export const RISK_TAGGABLE_TYPES: string[] = [
 export const REQUIRED_ENTITY_FIELDS: Record<string, string[]> = {
   model: ["name"],
   use_case: ["project_title", "goal"],
+  ai_app: ["name"],
 };
 
 export const CONDITION_OPERATORS = [

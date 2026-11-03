@@ -315,7 +315,8 @@ const AgentDiscovery: React.FC = () => {
     setSelectedAgent(null);
     fetchAgents();
     fetchStats();
-    showAlertMessage("success", "Agent review status updated.");
+    // The panel also links and unlinks, so the message covers any change.
+    showAlertMessage("success", "Agent updated.");
   };
 
   const handleManualSuccess = () => {

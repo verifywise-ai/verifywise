@@ -22,10 +22,11 @@
     /* Path aliases */
     "paths": {
       "*": ["./*"],
-      "@user-guide-content/*": ["../shared/user-guide-content/*"]
+      "@user-guide-content/*": ["../shared/user-guide-content/*"],
+      "@design-tokens/*": ["../shared/design-tokens/*"]
     }
   },
-  "include": ["src", "env.vars.ts", "../shared/user-guide-content"],
+  "include": ["src", "env.vars.ts", "../shared/user-guide-content", "../shared/design-tokens"],
   "exclude": [
     "src/**/*.test.ts",
     "src/**/*.test.tsx",

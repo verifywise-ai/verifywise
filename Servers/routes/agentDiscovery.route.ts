@@ -14,6 +14,8 @@ import {
   reviewAgentPrimitive,
   linkModelToAgent,
   unlinkModelFromAgent,
+  linkUseCaseToAgent,
+  unlinkUseCaseFromAgent,
   getAgentAuditLogs,
   deleteAgentPrimitiveById,
 } from "../controllers/agentDiscovery.ctrl";
@@ -34,7 +36,7 @@ router.post("/sync", authenticateJWT, authorize("agentDiscovery.admin"), trigger
 // Update (manual agents only)
 router.patch("/:id", authenticateJWT, authorize("agentDiscovery.admin"), updateAgentPrimitive);
 
-// Review + model linking
+// Review + model and use case linking (synced agents included)
 router.patch(
   "/:id/review",
   authenticateJWT,
@@ -52,6 +54,18 @@ router.patch(
   authenticateJWT,
   authorize("agentDiscovery.admin"),
   unlinkModelFromAgent,
+);
+router.patch(
+  "/:id/link-use-case",
+  authenticateJWT,
+  authorize("agentDiscovery.admin"),
+  linkUseCaseToAgent,
+);
+router.patch(
+  "/:id/unlink-use-case",
+  authenticateJWT,
+  authorize("agentDiscovery.admin"),
+  unlinkUseCaseFromAgent,
 );
 
 // Audit logs

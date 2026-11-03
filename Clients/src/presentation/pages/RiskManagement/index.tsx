@@ -16,8 +16,7 @@ import { deleteEntityById, getEntityById } from "../../../application/repository
 import CustomizableToast from "../../components/Toast";
 import CustomizableSkeleton from "../../components/Skeletons";
 import allowedRoles from "../../../application/constants/permissions";
-import AddNewRiskMITModal from "../../components/AddNewRiskMITForm";
-import AddNewRiskIBMModal from "../../components/AddNewRiskIBMForm";
+import RiskCatalogModal from "../../components/RiskCatalogModal";
 import { getAllProjectRisks } from "../../../application/repository/projectRisk.repository";
 import { useAuth } from "../../../application/hooks/useAuth";
 import useUsers from "../../../application/hooks/useUsers";
@@ -25,6 +24,7 @@ import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
 import PageTour from "../../components/PageTour";
 import RiskManagementSteps from "./RiskManagementSteps";
 import { RiskModel } from "../../../domain/models/Common/risks/risk.model";
+import { RiskFormValues } from "../../../domain/types/riskForm.types";
 import { onAiActionCompleted } from "../../../application/events/aiActionEvents";
 import AnalyticsDrawer from "../../components/AnalyticsDrawer";
 import { ExportMenu } from "../../components/Table/ExportMenu";
@@ -93,22 +93,7 @@ const RiskManagement = () => {
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
   const [isIBMModalOpen, setIsIBMModalOpen] = useState(false);
   const [insertFromMenuAnchor, setInsertFromMenuAnchor] = useState<null | HTMLElement>(null);
-  const [selectedRiskData, setSelectedRiskData] = useState<{
-    riskName: string;
-    actionOwner: number;
-    aiLifecyclePhase: number;
-    riskDescription: string;
-    riskCategory: number[];
-    potentialImpact: string;
-    assessmentMapping: string;
-    controlsMapping: string;
-    likelihood: number;
-    riskSeverity: number;
-    riskLevel: number;
-    reviewNotes: string;
-    applicableProjects: number[];
-    applicableFrameworks: number[];
-  } | null>(null);
+  const [selectedRiskData, setSelectedRiskData] = useState<RiskFormValues | null>(null);
 
   // State for filtering
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -589,22 +574,7 @@ const RiskManagement = () => {
     }
   };
 
-  const handleRiskSelected = (riskData: {
-    riskName: string;
-    actionOwner: number;
-    aiLifecyclePhase: number;
-    riskDescription: string;
-    riskCategory: number[];
-    potentialImpact: string;
-    assessmentMapping: string;
-    controlsMapping: string;
-    likelihood: number;
-    riskSeverity: number;
-    riskLevel: number;
-    reviewNotes: string;
-    applicableProjects: number[];
-    applicableFrameworks: number[];
-  }) => {
+  const handleRiskSelected = (riskData: RiskFormValues) => {
     setSelectedRiskData({
       ...riskData,
       applicableProjects: riskData.applicableProjects || [],
@@ -1051,12 +1021,14 @@ const RiskManagement = () => {
           />
         </StandardModal>
       </Stack>
-      <AddNewRiskMITModal
+      <RiskCatalogModal
+        source="mit"
         isOpen={isAIModalOpen}
         setIsOpen={setIsAIModalOpen}
         onRiskSelected={handleRiskSelected}
       />
-      <AddNewRiskIBMModal
+      <RiskCatalogModal
+        source="ibm"
         isOpen={isIBMModalOpen}
         setIsOpen={setIsIBMModalOpen}
         onRiskSelected={handleRiskSelected}

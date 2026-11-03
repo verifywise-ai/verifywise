@@ -1,3 +1,4 @@
+import { LifecycleStage } from "../enums/lifecycleStage.enum";
 import { HighRiskRole } from "../enums/highRiskRole.enum";
 // this model will be replaced by the one inside structures/new-mock-data/projects.mock.ts directory
 
@@ -41,6 +42,14 @@ export type Project = {
     | "Closed"
     | "On hold"
     | "Rejected";
+  /** Lifecycle (#5187), separate from status. */
+  lifecycle_stage?: LifecycleStage;
+  /** YYYY-MM-DD */
+  go_live_date?: string | null;
+  retired_at?: string | null;
+  last_confirmed_at?: string | null;
+  last_confirmed_by?: number | null;
+  department?: string | null;
   has_pending_approval?: boolean;
   approval_status?: "pending" | "rejected" | null;
   _source?: string; // Plugin source identifier (e.g., 'jira-assets')

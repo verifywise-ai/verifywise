@@ -56,6 +56,7 @@ const Alert: React.FC<AlertProps> = ({
   title,
   body,
   isToast,
+  inline = false,
   hasIcon = true,
   onClick,
   action,
@@ -77,10 +78,14 @@ const Alert: React.FC<AlertProps> = ({
       alignItems={"center"}
       gap={theme.spacing(8)}
       sx={{
-        position: "fixed",
-        top: theme.spacing(5),
-        right: theme.spacing(5),
-        zIndex: 9999,
+        ...(inline
+          ? { position: "static" }
+          : {
+              position: "fixed",
+              top: theme.spacing(5),
+              right: theme.spacing(5),
+              zIndex: 9999,
+            }),
         padding: hasIcon ? theme.spacing(8) : `${theme.spacing(4)} ${theme.spacing(8)}`,
         backgroundColor: bg,
         border: `1px solid ${text}`,

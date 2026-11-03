@@ -314,7 +314,7 @@ export const ENTITY_TIPS: EntityTips = {
     {
       header: "Shadow AI insights reveal hidden AI usage across your organization.",
       content:
-        "The insights dashboard aggregates data from network traffic, proxy logs, and browser activity to show which AI tools are being used, by whom, and how often. Use the period selector to compare activity over different time ranges.",
+        "The insights dashboard summarizes proxy and firewall logs sent through the REST API or syslog to show which AI tools are used, by whom, and how often. Use the period selector to change the time range for user, department and chart counts.",
     },
     {
       header: "Risk scores help prioritize which tools need attention first.",
@@ -360,14 +360,14 @@ export const ENTITY_TIPS: EntityTips = {
   ],
   "shadow-ai-settings": [
     {
-      header: "API keys authenticate your network monitoring infrastructure.",
+      header: "API keys authenticate events sent to the REST API.",
       content:
-        "Generate API keys for each data source (proxy, firewall, browser extension) to feed network traffic data into Shadow AI detection. Each key can be labeled and revoked independently for security.",
+        "Create one API key per system that calls the REST API, such as a SIEM webhook, a script or a browser extension. Proxies and firewalls that forward syslog use a syslog source key instead. Each key can be labeled and revoked on its own.",
     },
     {
       header: "Syslog sources define where your network traffic data comes from.",
       content:
-        "Configure syslog sources for each network monitoring point in your infrastructure. Select the appropriate parser type to ensure events are correctly parsed and attributed to the right AI tools.",
+        "Add one source per proxy or log format, pick the parser type that matches its log lines, and add the source's key to every line it sends.",
     },
   ],
   "evals-overview": [

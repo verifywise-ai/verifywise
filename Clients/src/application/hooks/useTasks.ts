@@ -12,10 +12,12 @@ export const taskQueryKeys = {
 
 interface UseTasksOptions {
   includeArchived?: boolean;
+  /** Skip the global error toast; the caller shows its own message. */
+  suppressGlobalErrorToast?: boolean;
 }
 
 export function useTasks(options: UseTasksOptions = {}) {
-  const { includeArchived } = options;
+  const { includeArchived, suppressGlobalErrorToast } = options;
 
   return useQuery({
     queryKey: taskQueryKeys.list({ includeArchived }),
@@ -25,6 +27,7 @@ export function useTasks(options: UseTasksOptions = {}) {
         sort_by: "created_at",
         sort_order: "DESC",
         signal,
+        suppressGlobalErrorToast,
       });
       return (response?.data?.tasks as ITask[]) || [];
     },

@@ -452,6 +452,23 @@ async def get_guardrail_logs(
     return []
 
 
+async def count_guardrail_logs(org_id: int) -> int:
+    """COUNT of the org's logs, the total get_guardrail_logs pages through."""
+    async with get_db() as db:
+        result = await db.execute(
+            text(
+                """
+                SELECT COUNT(*)
+                FROM ai_gateway_guardrail_logs
+                WHERE organization_id = :org_id
+                """
+            ),
+            {"org_id": org_id},
+        )
+        return int(result.scalar() or 0)
+    return 0
+
+
 async def get_guardrail_stats(
     org_id: int, start_date: datetime, end_date: datetime
 ) -> dict:

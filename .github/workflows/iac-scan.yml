@@ -14,6 +14,7 @@ on:
     branches: [master, develop]
     paths:
       - 'kubernetes/**'
+      - 'observability/**'
       - 'ansible/**'
       - '**/Dockerfile*'
       - 'docker-compose*.yml'
@@ -22,6 +23,7 @@ on:
     branches: [master, develop]
     paths:
       - 'kubernetes/**'
+      - 'observability/**'
       - 'ansible/**'
       - '**/Dockerfile*'
       - 'docker-compose*.yml'
@@ -82,3 +84,93 @@ jobs:
         with:
           sarif_file: 'trivy-config-results.sarif'
           category: 'iac-config'
+
+  # (#4617-5) Helm chart lint + render. helm template catches values/templates
+  # that parse but render to invalid or unexpected manifests — a class Trivy's
+  # config scan cannot see (it scans static YAML, not Helm templating).
+  helm-lint:
+    name: Helm lint and template (verifywise chart)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+
+      - name: Helm lint
+        run: helm lint kubernetes/helm/verifywise
+
+      - name: Helm template (render check)
+        run: helm template verifywise kubernetes/helm/verifywise > /tmp/verifywise-rendered.yaml
+
+      - name: Upload rendered manifests
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: helm-rendered-manifests
+          path: /tmp/verifywise-rendered.yaml
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # (#4617-11, #4683-CI) Validate the observability stack configs with the
+  # upstream projects' own validators (promtool/amtool) rather than generic
+  # YAML parsing alone: promtool check config also validates scrape_configs
+  # semantics, and promtool check rules validates alert-rule expressions.
+  observability-validate:
+    name: Validate observability configs
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      # The apt prometheus package is a 2.x build that cannot parse the v3
+      # `otlp` field this stack's config uses (compose deploys
+      # prom/prometheus:v3.1.0), and the alertmanager apt package is not in
+      # the runner's default repos — so fetch pinned upstream binaries.
+      - name: Install promtool and amtool
+        env:
+          PROMETHEUS_VERSION: 3.1.0
+          AMTOOL_VERSION: 0.27.0
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-yaml
+          curl -fsSL "https://github.com/prometheus/prometheus/releases/download/v${PROMETHEUS_VERSION}/prometheus-${PROMETHEUS_VERSION}.linux-amd64.tar.gz" | tar -xz
+          sudo cp "prometheus-${PROMETHEUS_VERSION}.linux-amd64/promtool" /usr/local/bin/promtool
+          curl -fsSL "https://github.com/prometheus/alertmanager/releases/download/v${AMTOOL_VERSION}/alertmanager-${AMTOOL_VERSION}.linux-amd64.tar.gz" | tar -xz
+          sudo cp "alertmanager-${AMTOOL_VERSION}.linux-amd64/amtool" /usr/local/bin/amtool
+          promtool --version
+          amtool --version
+
+      - name: promtool check config (prometheus.yml)
+        run: promtool check config observability/prometheus.yml
+
+      - name: promtool check rules (alerts.yml)
+        run: promtool check rules observability/alerts.yml
+
+      # Guarded: the observability pod added this file in this PR; keep the
+      # job green on branches where it does not exist yet.
+      - name: amtool check-config (alertmanager.yml)
+        if: hashFiles('observability/alertmanager/alertmanager.yml') != ''
+        run: amtool check-config observability/alertmanager/alertmanager.yml
+
+      - name: Validate Grafana dashboard JSON
+        run: |
+          node -e "
+            const fs = require('fs'), path = require('path');
+            const dir = 'observability/grafana/dashboards';
+            if (!fs.existsSync(dir)) { console.log('no dashboards dir; skipping'); process.exit(0); }
+            const files = fs.readdirSync(dir).filter(f => f.endsWith('.json'));
+            if (files.length === 0) { console.log('no dashboard JSON files; skipping'); process.exit(0); }
+            for (const f of files) {
+              const p = path.join(dir, f);
+              const j = JSON.parse(fs.readFileSync(p, 'utf8'));
+              if (!j.panels && !j.dashboard) throw new Error(p + ': not a Grafana dashboard shape');
+              console.log('OK', p);
+            }
+          "
+
+      - name: YAML-parse Loki and OTel collector configs
+        run: |
+          python3 -c "import yaml; yaml.safe_load(open('observability/loki-config.yaml')); print('OK observability/loki-config.yaml')"
+          python3 -c "import yaml; yaml.safe_load(open('observability/otel-collector-config.yaml')); print('OK observability/otel-collector-config.yaml')"

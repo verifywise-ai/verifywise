@@ -527,17 +527,17 @@ export default function AIToolsPage() {
           <EmptyStateTip
             icon={Wifi}
             title="Connect data sources"
-            description="Add the AI tools your organization uses or has detected. Track which tools are in use and who has access to them."
+            description="Send proxy or firewall logs through the REST API or syslog (Settings). Traffic to known AI tools appears here."
           />
           <EmptyStateTip
             icon={ShieldAlert}
             title="Identify unauthorized tools"
-            description="Discover AI tools being used without IT approval. Flag tools that may expose sensitive data or violate company policy."
+            description="Each tool gets a risk score from 0 to 100, recalculated nightly. Review the highest scores first."
           />
           <EmptyStateTip
             icon={Tags}
             title="Categorize and govern"
-            description="Classify detected tools as approved, under review, or blocked. Set policies per tool and notify users of compliance requirements."
+            description="Give each tool a status, such as approved, under review or blocked, or start governance to add it to the model inventory."
           />
         </EmptyState>
       ) : (

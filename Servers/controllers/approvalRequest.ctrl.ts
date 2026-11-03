@@ -770,7 +770,9 @@ export async function withdrawRequest(req: Request, res: Response): Promise<any>
         .json(STATUS_CODE[403](req.t!("Only the requestor can withdraw this request")));
     }
 
-    await withdrawApprovalRequestQuery(requestId, organizationId, transaction);
+    await withdrawApprovalRequestQuery(requestId, organizationId, transaction, {
+      changedBy: userId,
+    });
 
     await transaction.commit();
 

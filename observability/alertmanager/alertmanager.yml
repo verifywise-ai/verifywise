@@ -1,0 +1,66 @@
+# Alertmanager configuration for the VerifyWise observability stack.
+#
+# All secrets/endpoints come from environment variables (Alertmanager supports
+# ${VAR} interpolation in this file) — never commit real values here.
+# See README.md in this directory for the compose service to add and the full
+# env-var list.
+
+global:
+  # Sender address used for email notifications.
+  # Defaults are literal and safe (loopback/no-op). Override by injecting env
+  # and using your own compose `environment:` mapping or a config patch — ${VAR}
+  # interpolation is intentionally NOT used here because amtool check-config
+  # validates this file raw (no compose expansion). See README.md.
+  smtp_from: alertmanager@verifywise.local
+  smtp_smarthost: localhost:25
+  smtp_auth_username: ''
+  smtp_auth_password: ''
+  # Only warn when SMTP is not configured yet (no smarthost set).
+  smtp_require_tls: false
+
+# The root route. Every alert carries a `team` label (set in
+# observability/prometheus/alerts.yml); we route on it so additional teams can
+# be added later without restructuring.
+route:
+  receiver: sre-webhook          # default/fallback receiver
+  group_by: ["alertname", "deployment", "severity"]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 12h
+  routes:
+    - match:
+        team: sre
+      receiver: sre-webhook
+      # Escalate critical alerts to email after the webhook path.
+      routes:
+        - match:
+            severity: critical
+          receiver: sre-email
+          continue: true
+
+# Example: if a whole deployment is down, suppress per-endpoint noise.
+inhibit_rules:
+  - source_matchers:
+      - alertname = "VwDeploymentSilent"
+    target_matchers:
+      - severity = "warning"
+    equal: ["deployment"]
+
+receivers:
+  # Default receiver: post alerts to an ops webhook (Slack/Teams/PagerDuty
+  # bridge, or a tiny forwarder). Point ALERTMANAGER_WEBHOOK_URL at it, e.g.
+  #   ALERTMANAGER_WEBHOOK_URL=https://hooks.slack.com/services/xxx/yyy/zzz
+  # (via a Slack-compatible proxy) or a PagerDuty Events API v2 endpoint.
+  - name: sre-webhook
+    webhook_configs:
+      # Loopback placeholder: replace via compose environment/config patch
+      # (see README.md) with your real Slack/Teams/PagerDuty bridge URL.
+      - url: http://127.0.0.1:5001/alerts
+        send_resolved: true
+
+  # Email receiver; only useful once SMTP env vars are set. Disabled by
+  # default by pointing at the placeholder smarthost.
+  - name: sre-email
+    email_configs:
+      - to: sre@verifywise.local
+        send_resolved: true

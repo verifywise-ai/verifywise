@@ -63,6 +63,18 @@ export const handlers = [
   // Health check
   http.get("/api/health", () => HttpResponse.json({ status: "ok" })),
 
+  // Applicant's response to the suggested risk level (submission review): none given.
+  http.get("/api/v1/intake-tier-suggestion/submissions/:id", () =>
+    HttpResponse.json({ data: { response: null } }),
+  ),
+
+  // Use case defaults (Settings → Organization, use case form): none set.
+  http.get("/api/v1/use-case-org-settings", () =>
+    HttpResponse.json({
+      data: { organization_id: 1, default_geography: null, default_framework_ids: [] },
+    }),
+  ),
+
   // ==================== Auth / Users ====================
 
   // Specific auth routes (must precede /api/users/:id)
@@ -979,8 +991,26 @@ export const handlers = [
   http.get("/api/shadow-ai/config/syslog", () => HttpResponse.json({ data: mockSyslogConfigs })),
   http.post("/api/shadow-ai/config/syslog", async ({ request }) => {
     const body = (await request.json()) as Record<string, unknown>;
-    return HttpResponse.json({ data: { id: 3, ...body } }, { status: 201 });
+    return HttpResponse.json({ data: { id: 3, ...body, key: "vwsl_mockkey" } }, { status: 201 });
   }),
+  http.get("/api/v1/shadow-ai-syslog/status", () =>
+    HttpResponse.json({
+      data: {
+        enabled: true,
+        port: 6514,
+        tls: true,
+        plaintext: false,
+        ipOnly: false,
+        running: true,
+        startError: null,
+      },
+    }),
+  ),
+  http.post("/api/v1/shadow-ai-syslog/sources/:id/regenerate-key", ({ params }) =>
+    HttpResponse.json({
+      data: { ...mockSyslogConfigs[0], id: Number(params.id), key: "vwsl_mockkey" },
+    }),
+  ),
   http.patch("/api/shadow-ai/config/syslog/:id", async ({ params, request }) => {
     const body = (await request.json()) as Record<string, unknown>;
     return HttpResponse.json({ data: { ...mockSyslogConfigs[0], id: Number(params.id), ...body } });

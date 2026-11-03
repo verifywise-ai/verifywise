@@ -9,7 +9,7 @@
  *   node scripts/i18n-audit.mjs --lang=de  # only DE
  *   node scripts/i18n-audit.mjs --strict   # exit 1 if any gaps (CI mode)
  */
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join, extname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { dirname } from "node:path";
@@ -17,6 +17,7 @@ import { dirname } from "node:path";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SRC_DIR = join(__dirname, "..", "src");
 const TRANSLATIONS_PATH = join(SRC_DIR, "i18n", "translations.ts");
+const MODULES_DIR = join(SRC_DIR, "i18n", "modules");
 const SUPPORTED_LANGS = ["de", "fr", "es"];
 
 const args = process.argv.slice(2);
@@ -32,7 +33,27 @@ const targetLangs = langArg ? [langArg] : SUPPORTED_LANGS;
 
 // ─── Load dictionaries ──────────────────────────────────────────────────────
 
+const dictCache = new Map();
+
+// Collect keys in any of the three forms Prettier may produce:
+//   "Foo bar":   "..."      (default — has special chars)
+//   Dashboard:   "..."      (bare identifier — Prettier strips quotes)
+//   'Click "X"': "..."      (single quotes — when content contains ")
+// Without handling all three, hundreds of dictionary entries silently
+// disappear from the audit's view whenever a formatter changes the file.
+const PAIR_RE =
+  /(?:"((?:[^"\\]|\\.)+)"|'((?:[^'\\]|\\.)+)'|([A-Za-z_$][\w$]*))\s*:\s*(?:\n\s*)?(?:"((?:[^"\\]|\\.)*)"|'((?:[^'\\]|\\.)*)')/g;
+
+function addPairs(keys, block) {
+  for (const m of block.matchAll(PAIR_RE)) {
+    // Unescape: \" → ", \' → ', \\ → \
+    const raw = m[1] ?? m[2] ?? m[3];
+    keys.add(raw.replace(/\\(["'\\])/g, "$1"));
+  }
+}
+
 function loadDict(lang) {
+  if (dictCache.has(lang)) return dictCache.get(lang);
   const content = readFileSync(TRANSLATIONS_PATH, "utf8");
   // Static regex that matches any "xx: { ... }," block. We then select the
   // block for the requested language instead of building a regex from `lang`.
@@ -48,20 +69,31 @@ function loadDict(lang) {
     throw new Error(`Could not find ${lang}: { ... } block in translations.ts`);
   }
   const keys = new Set();
-  // Collect keys in any of the three forms Prettier may produce:
-  //   "Foo bar":   "..."      (default — has special chars)
-  //   Dashboard:   "..."      (bare identifier — Prettier strips quotes)
-  //   'Click "X"': "..."      (single quotes — when content contains ")
-  // Without handling all three, hundreds of dictionary entries silently
-  // disappear from the audit's view whenever a formatter changes the file.
-  const pairRe =
-    /(?:"((?:[^"\\]|\\.)+)"|'((?:[^'\\]|\\.)+)'|([A-Za-z_$][\w$]*))\s*:\s*(?:\n\s*)?(?:"((?:[^"\\]|\\.)*)"|'((?:[^'\\]|\\.)*)')/g;
-  for (const m of block[2].matchAll(pairRe)) {
-    // Unescape: \" → ", \' → ', \\ → \
-    const raw = m[1] ?? m[2] ?? m[3];
-    const key = raw.replace(/\\(["'\\])/g, "$1");
-    keys.add(key);
+  addPairs(keys, block[2]);
+
+  // Area dictionaries that have been moved out of translations.ts.
+  // Static regex, same as the translations.ts block above: select the
+  // requested language after the match instead of building a regex from `lang`.
+  if (existsSync(MODULES_DIR)) {
+    for (const name of readdirSync(MODULES_DIR)) {
+      if (!name.endsWith(".ts")) continue;
+      const moduleText = readFileSync(join(MODULES_DIR, name), "utf8");
+      const exportRe = /export const (de|fr|es)\b[^=]*=\s*\{([\s\S]*?)\n\};/g;
+      let exported = null;
+      for (const m of moduleText.matchAll(exportRe)) {
+        if (m[1] === lang) {
+          exported = m;
+          break;
+        }
+      }
+      if (!exported) {
+        throw new Error(`Could not find ${lang} dictionary in i18n/modules/${name}`);
+      }
+      addPairs(keys, exported[2]);
+    }
   }
+
+  dictCache.set(lang, keys);
   return keys;
 }
 

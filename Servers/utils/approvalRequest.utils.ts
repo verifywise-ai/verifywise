@@ -1,4 +1,5 @@
-import { Transaction } from "sequelize";
+import { QueryTypes, Transaction } from "sequelize";
+import { releaseUseCaseFromReview } from "./lifecycle.utils";
 import { sequelize } from "../database/db";
 import { ApprovalRequestModel } from "../domain.layer/models/approvalWorkflow/approvalRequest.model";
 import { ApprovalRequestStepModel } from "../domain.layer/models/approvalWorkflow/approvalRequestStep.model";
@@ -185,7 +186,7 @@ export const evaluateAutoApproval = (
 
 /**
  * Create the compliance frameworks a use case had queued while awaiting
- * approval. Shared by the manual final-step approval path, the risk-based
+ * approval, and move it from in review to planned. Shared by the manual final-step approval path, the risk-based
  * auto-approval path, and an edit that clears the use case's workflow (the
  * approval the frameworks waited for no longer exists).
  */
@@ -193,7 +194,12 @@ export const createPendingFrameworksForApprovedUseCase = async (
   entityId: number,
   organizationId: number,
   transaction: Transaction,
+  /** Who ended the approval; null for automatic approval. */
+  changedBy: number | null = null,
 ): Promise<void> => {
+  // The approval it waited on is over, so the use case leaves review (#5187).
+  await releaseUseCaseFromReview(organizationId, entityId, changedBy, transaction);
+
   const [projectData] = await sequelize.query(
     `SELECT id, pending_frameworks, enable_ai_data_insertion
      FROM projects
@@ -923,6 +929,11 @@ export const processApprovalQuery = async (
     const entityId = (request as any).entity_id;
     const entityType = (request as any).entity_type;
 
+    // A rejected use case is no longer waiting on anyone (#5187).
+    if (entityType === "use_case" && entityId) {
+      await releaseUseCaseFromReview(organizationId, entityId, userId, transaction);
+    }
+
     if (entityType === "file" && entityId) {
       // Update file review_status to 'rejected'
       await sequelize.query(
@@ -1052,7 +1063,12 @@ export const processApprovalQuery = async (
       const entityType = (request as any).entity_type;
 
       if (entityType === "use_case" && entityId) {
-        await createPendingFrameworksForApprovedUseCase(entityId, organizationId, transaction);
+        await createPendingFrameworksForApprovedUseCase(
+          entityId,
+          organizationId,
+          transaction,
+          userId,
+        );
       }
 
       // ===== FILE STATUS UPDATE AFTER APPROVAL =====
@@ -1105,20 +1121,44 @@ export const withdrawApprovalRequestQuery = async (
   requestId: number,
   organizationId: number,
   transaction: Transaction,
+  options: {
+    /** Who withdrew it; null for the system. */
+    changedBy?: number | null;
+    /**
+     * Move a use case that waited on this request back to planned (#5187).
+     * Off only when the use case itself is being deleted.
+     */
+    releaseUseCase?: boolean;
+  } = {},
 ): Promise<void> => {
-  await sequelize.query(
+  const rows = (await sequelize.query(
     `UPDATE approval_requests
      SET status = :status, updated_at = NOW()
-     WHERE organization_id = :organizationId AND id = :requestId`,
+     WHERE organization_id = :organizationId AND id = :requestId
+     RETURNING entity_type, entity_id`,
     {
       replacements: {
         organizationId,
         requestId,
         status: ApprovalRequestStatus.WITHDRAWN,
       },
+      type: QueryTypes.SELECT,
       transaction,
     },
-  );
+  )) as { entity_type: string; entity_id: number | null }[];
+  const withdrawn = rows[0];
+  if (
+    (options.releaseUseCase ?? true) &&
+    withdrawn?.entity_type === "use_case" &&
+    withdrawn.entity_id
+  ) {
+    await releaseUseCaseFromReview(
+      organizationId,
+      withdrawn.entity_id,
+      options.changedBy ?? null,
+      transaction,
+    );
+  }
 };
 
 /**

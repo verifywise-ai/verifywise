@@ -11,7 +11,9 @@ name: SAST (Semgrep)
 #   p/secrets                  — hardcoded secret patterns
 #
 # On pull requests, findings are printed to the job log (rule, file:line,
-# message) and also uploaded as SARIF to the GitHub Security tab. The scan is an
+# message) and also uploaded as SARIF to the GitHub Security tab (minus
+# findings silenced with `# nosemgrep`, which are dropped before the upload so
+# their alerts close; the annotation itself is the reviewed record). The scan is an
 # enforced blocking gate — but only for NEW findings. The pre-existing
 # findings backlog is triaged separately (tracked outside CI); blocking on it
 # would fail every PR. Semgrep's built-in baseline diffing
@@ -80,6 +82,52 @@ jobs:
             # still fail the job.
             semgrep scan $RULES --sarif --output semgrep.sarif
           fi
+
+      # Semgrep honours `# nosemgrep` comments for its own output and exit code,
+      # but still writes those findings into the SARIF, marked as suppressed
+      # ("suppressions": [{"kind": "inSource"}]). Code scanning opens alerts for
+      # them anyway, so a reviewed nosemgrep annotation never closes its alert.
+      # Drop them before the upload.
+      - name: Drop nosemgrep-suppressed results from the SARIF
+        if: ${{ !cancelled() && hashFiles('semgrep.sarif') != '' }}
+        run: |
+          python3 - <<'EOF'
+          import json
+          import os
+
+          try:
+              with open("semgrep.sarif") as f:
+                  sarif = json.load(f)
+          except ValueError as e:
+              # Leave a broken file for the upload step to report; failing here
+              # would hide the real scan error behind a filter error.
+              print(f"::warning::semgrep.sarif is not valid JSON, left unfiltered: {e}")
+              raise SystemExit(0)
+
+          # Suppressed only when every suppression is accepted (no status means
+          # accepted): one "underReview" or "rejected" entry keeps it active.
+          def suppressed(result):
+              entries = result.get("suppressions") or []
+              return bool(entries) and all(
+                  s.get("status", "accepted") == "accepted" for s in entries
+              )
+
+          dropped = 0
+          for run in sarif.get("runs") or []:
+              # An absent or null results array means "not computed", not
+              # "clean"; leave it alone so open alerts are not closed.
+              results = run.get("results")
+              if not isinstance(results, list):
+                  continue
+              kept = [r for r in results if not suppressed(r)]
+              dropped += len(results) - len(kept)
+              run["results"] = kept
+
+          with open("semgrep.sarif.tmp", "w") as f:
+              json.dump(sarif, f)
+          os.replace("semgrep.sarif.tmp", "semgrep.sarif")
+          print(f"Dropped {dropped} nosemgrep-suppressed result(s) from semgrep.sarif")
+          EOF
 
       - name: Upload Semgrep results to GitHub Security
         uses: github/codeql-action/upload-sarif@v4

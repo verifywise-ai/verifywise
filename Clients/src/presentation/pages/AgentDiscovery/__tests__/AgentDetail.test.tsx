@@ -263,6 +263,68 @@ describe("AgentDetail", () => {
     expect(screen.queryByText("Review status changed to confirmed")).not.toBeInTheDocument();
   });
 
+  it("shows the description and links the use case to its page", async () => {
+    serve({
+      ...agent,
+      description: "Reads invoices and flags duplicates",
+      linked_project_id: 12,
+      linked_project_title: "Accounts payable",
+    });
+    renderAt("5");
+
+    expect(await screen.findByTestId("agent-detail-description")).toHaveTextContent(
+      "Reads invoices and flags duplicates",
+    );
+    const useCase = screen.getByTestId("agent-detail-linked-use-case");
+    expect(useCase).toHaveTextContent("Accounts payable");
+    expect(useCase).toHaveAttribute("href", "/project-view?projectId=12");
+  });
+
+  it("says when there is no description or linked use case", async () => {
+    serve(agent);
+    renderAt("5");
+
+    expect(await screen.findByText("No description")).toBeInTheDocument();
+    expect(screen.queryByTestId("agent-detail-linked-use-case")).not.toBeInTheDocument();
+    expect(screen.getByText("Not linked")).toBeInTheDocument();
+  });
+
+  it("describes use case links and description edits without quoting the text", async () => {
+    serve(agent);
+    const entry = (
+      id: number,
+      action: string,
+      field: string,
+      from: string | null,
+      to: string | null,
+    ) => ({
+      id,
+      agent_primitive_id: 5,
+      action,
+      field_changed: field,
+      old_value: from,
+      new_value: to,
+      performed_by: null,
+      created_at: `2026-10-0${id}T00:00:00Z`,
+    });
+    auditHandler = () =>
+      Promise.resolve({
+        data: {
+          data: [
+            entry(1, "use_case_linked", "linked_project_id", null, "12"),
+            entry(2, "use_case_unlinked", "linked_project_id", "12", null),
+            entry(3, "field_updated", "description", "Old text", "New text"),
+          ],
+        },
+      });
+    renderAt("5");
+
+    expect(await screen.findByText("Linked to a use case")).toBeInTheDocument();
+    expect(screen.getByText("Unlinked from its use case")).toBeInTheDocument();
+    expect(screen.getByText("Updated description")).toBeInTheDocument();
+    expect(screen.queryByText(/New text/)).not.toBeInTheDocument();
+  });
+
   it("keeps a text owner with a comma as one owner in the activity", async () => {
     mockUsers = [{ id: 3, name: "Ada", surname: "L", email: "ada@example.com" }];
     serve(agent);

@@ -1,6 +1,8 @@
 import express from "express";
 import authenticateJWT from "../../middleware/auth.middleware";
 import { requireExtensionEnabled } from "../../middleware/requireExtensionEnabled.middleware";
+import { idParamCheck, validateId } from "../../domain.layer/validations/id.valid";
+import { handleValidationErrors } from "../../middleware/validate.middleware";
 import {
   addApproverCtrl,
   addPersonCtrl,
@@ -27,6 +29,18 @@ const router = express.Router();
 router.use(authenticateJWT);
 router.use(requireExtensionEnabled("model-lifecycle"));
 
+// Every id in these paths is a Postgres INTEGER: reject anything else with a
+// 400 before it reaches a query (an oversized id would otherwise 500 there).
+for (const name of ["id", "phaseId", "itemId", "fileId", "userId"]) {
+  const chain = idParamCheck(name);
+  router.param(name, (req, res, next) => {
+    chain
+      .run(req)
+      .then(() => handleValidationErrors(req, res, next))
+      .catch(next);
+  });
+}
+
 // ---- Config (phases + items) ------------------------------------------
 router.get("/config", listConfig);
 router.post("/phases", createPhaseCtrl);
@@ -46,7 +60,8 @@ router.get("/models/:id/lifecycle/progress", getProgressCtrl);
 router.put("/models/:id/lifecycle/items/:itemId", upsertValueCtrl);
 
 // ---- Files ------------------------------------------------------------
-router.post("/models/:id/lifecycle/items/:itemId/files", attachFileCtrl);
+// fileId is in the body here, so router.param does not see it.
+router.post("/models/:id/lifecycle/items/:itemId/files", validateId("fileId"), attachFileCtrl);
 router.delete("/models/:id/lifecycle/items/:itemId/files/:fileId", detachFileCtrl);
 
 // ---- People -----------------------------------------------------------

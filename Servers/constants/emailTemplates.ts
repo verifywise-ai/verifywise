@@ -66,6 +66,9 @@ export const EMAIL_TEMPLATES = {
   // File lifecycle templates
   FILE_EXPIRING: "file-expiring.mjml",
 
+  // Inventory lifecycle templates
+  LIFECYCLE_CONFIRMATION_DUE: "lifecycle-confirmation-due.mjml",
+
   // AI Gateway templates
   AI_GATEWAY_BUDGET_WARNING: "ai-gateway-budget-warning.mjml",
   AI_GATEWAY_BUDGET_EXHAUSTED: "ai-gateway-budget-exhausted.mjml",
@@ -78,6 +81,7 @@ export const EMAIL_TEMPLATES = {
   INTAKE_SUBMISSION_APPROVED: "intake-submission-approved.mjml",
   INTAKE_SUBMISSION_REJECTED: "intake-submission-rejected.mjml",
   INTAKE_NEW_SUBMISSION_ADMIN: "intake-new-submission-admin.mjml",
+  INTAKE_SECOND_REVIEW: "intake-second-review.mjml",
 
   // Assignment notification template
   ASSIGNMENT_NOTIFICATION: "assignment-notification.mjml",

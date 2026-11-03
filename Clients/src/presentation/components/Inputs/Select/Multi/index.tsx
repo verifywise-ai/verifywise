@@ -41,6 +41,7 @@ interface CustomizableMultiSelectProps {
   isHidden?: boolean;
   width?: number;
   sx?: object;
+  disabled?: boolean;
 }
 
 function CustomizableMultiSelect({
@@ -55,6 +56,7 @@ function CustomizableMultiSelect({
   isHidden,
   width,
   sx,
+  disabled = false,
 }: CustomizableMultiSelectProps) {
   const theme = useTheme();
   const [open, setOpen] = useState(false);
@@ -122,7 +124,7 @@ function CustomizableMultiSelect({
             <Chip
               key={idVal}
               label={item.name + (item.surname ? " " + item.surname : "")}
-              onDelete={() => handleChipDelete(idVal)}
+              onDelete={disabled ? undefined : () => handleChipDelete(idVal)}
               onMouseDown={(e) => {
                 // prevent Select from toggling when interacting with chips
                 e.stopPropagation();
@@ -193,6 +195,7 @@ function CustomizableMultiSelect({
         onOpen={() => setOpen(true)}
         onClose={() => setOpen(false)}
         multiple
+        disabled={disabled}
         displayEmpty
         renderValue={renderValue}
         IconComponent={(iconProps) => <ChevronDown size={16} {...iconProps} />}

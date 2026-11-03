@@ -9,6 +9,8 @@ lerna-debug.log*
 
 node_modules
 dist
+# Compiled from shared/design-tokens so the server build can import it.
+tools/design-tokens
 dist-ssr
 *.local
 .tsbuildinfo

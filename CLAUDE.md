@@ -1,6 +1,6 @@
 # VerifyWise - Development Guide
 
-> **Last Updated:** 2026-10-21
+> **Last Updated:** 2026-11-02
 
 This document contains cross-cutting rules for the VerifyWise codebase. Directory-scoped guides load automatically when working in each area:
 
@@ -72,7 +72,8 @@ Express Router → Middleware Chain → Controller → Service → Utils → Pos
 interface TokenPayload {
   id: number;              // User ID
   email: string;
-  organizationId: number;
+  organizationId: number;  // Chosen at login, fixed for the session; null for a pure super admin.
+                           // A user can belong to several orgs (organization_members), a role in each.
   tenantId: string;        // Tenant hash
   roleName: string;        // "Admin" | "Reviewer" | "Editor" | "Auditor"
   expire: number;            // Unix timestamp (Date.now() + ms)
@@ -208,6 +209,7 @@ Read the relevant file BEFORE implementing changes in that area:
 | Code style (short version) | `docs/technical/guides/code-style.md` |
 | Detailed coding standards (TS, React, backend, security, testing) | `CodeRules/README.md` |
 | Extensions (built-in integrations: catalog, enablement, gate middleware) | `docs/technical/infrastructure/extensions.md` |
+| Shadow AI syslog listener (TCP port 6514, per-source keys, parsers, drop reasons, env vars, Helm/Compose) | `docs/technical/infrastructure/shadow-ai-syslog.md` |
 | Approval workflows | `docs/technical/domains/approvals.md` |
 | Agent Control (AI Gateway native tool-call hook, file-write gating, approval, result capture, run correlation, multi-agent wiring) | `docs/technical/domains/agent-control.md` |
 | Agent Control integrator/developer docs (connect an agent, Claude Code + Cursor, generic contract, API ref) | `shared/user-guide-content/content/developers/` |
@@ -224,6 +226,7 @@ Read the relevant file BEFORE implementing changes in that area:
 | Datasets | `docs/technical/domains/datasets.md` |
 | Tasks | `docs/technical/domains/tasks.md` |
 | Incidents | `docs/technical/domains/incidents.md` |
+| Intake forms (AI scoring with rule minimums, suggested risks, assessment job, one-time email, approval risks) | `docs/technical/domains/intake-forms.md` |
 | Evidence hub | `docs/technical/domains/evidence.md` |
 | Training registry | `docs/technical/domains/training.md` |
 | Search | `docs/technical/domains/search.md` |

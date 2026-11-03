@@ -7,8 +7,9 @@ services:
 
   backend:
     build:
-      context: ./Servers
-      dockerfile: Dockerfile.dev
+      # Repo root, as for the production image: npm run watch compiles ../shared/design-tokens
+      context: .
+      dockerfile: Servers/Dockerfile.dev
     # volumes:
     #   - ./Servers/:/app
     env_file:

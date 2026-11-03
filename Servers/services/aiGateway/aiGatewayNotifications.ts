@@ -28,8 +28,10 @@ const ENFORCEMENT_MODE_LABELS: Record<string, string> = {
  */
 async function getOrgAdmins(organizationId: number): Promise<Array<{ id: number; name: string }>> {
   const users = await sequelize.query(
-    `SELECT id, COALESCE(NULLIF(TRIM(COALESCE(name, '') || ' ' || COALESCE(surname, '')), ''), 'Admin') AS name
-     FROM users WHERE organization_id = :organizationId AND role_id = 1`,
+    `SELECT u.id, COALESCE(NULLIF(TRIM(COALESCE(u.name, '') || ' ' || COALESCE(u.surname, '')), ''), 'Admin') AS name
+     FROM users u
+     JOIN organization_members om ON om.user_id = u.id AND om.organization_id = :organizationId
+     WHERE om.role_id = 1`,
     { replacements: { organizationId }, type: QueryTypes.SELECT },
   );
   return (users as any[]).map((u) => ({ id: Number(u.id), name: u.name }));
@@ -277,7 +279,10 @@ export async function notifyConfigChange(
   let changedByName = "A user";
   try {
     const users = await sequelize.query(
-      `SELECT name, surname FROM users WHERE id = :userId AND organization_id = :organizationId`,
+      `SELECT u.name, u.surname
+       FROM users u
+       JOIN organization_members om ON om.user_id = u.id AND om.organization_id = :organizationId
+       WHERE u.id = :userId`,
       {
         replacements: { userId: changedByUserId, organizationId },
         type: QueryTypes.SELECT,

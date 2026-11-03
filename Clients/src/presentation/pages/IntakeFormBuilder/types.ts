@@ -1,5 +1,7 @@
+import type { FormRouting } from "../../../domain/types/intakeRouting";
 import { IntakeFormStatus, IntakeEntityType } from "../../../domain/intake/enums";
 import { brand } from "../../themes/palette";
+import { GEOGRAPHY_ITEMS } from "../../../application/constants/geography";
 import {
   RISK_DIMENSIONS,
   sortFields,
@@ -97,13 +99,69 @@ export interface FormDesignSettings {
  */
 export const DEFAULT_DESIGN_SETTINGS: FormDesignSettings = {
   format: "narrow",
-  alignment: "left",
+  alignment: "center",
   colorTheme: `${brand.primary}`,
   backgroundColor: "#fafafa",
   logoUrl: "",
   fontFamily: "Inter",
   collectContactInfo: true,
 };
+
+// Routing types live in the domain layer; re-exported for existing imports.
+export type {
+  FormRouting,
+  ReviewLane,
+  RoutingReason,
+  SecondReview,
+  SubmissionRouting,
+} from "../../../domain/types/intakeRouting";
+export type NeedsAttentionKind =
+  | "second_review_open"
+  | "second_review_missed"
+  | "prohibited_pending"
+  | "pending_old"
+  | "lane_empty";
+
+/** Figures behind the oversight tab. */
+export interface IntakeOversight {
+  weeks: number;
+  totals: {
+    submissions: number;
+    senior: number;
+    standard: number;
+    closeCalls: number;
+    notRouted: number;
+    routingOff: number;
+  };
+  medianDecisionHours: { all: number | null; senior: number | null; standard: number | null };
+  redlines: { prohibited: number; highRisk: number };
+  secondReviews: { completed: number; missed: number; open: number };
+  byWeek: Array<{
+    weekStart: string;
+    senior: number;
+    closeCall: number;
+    standard: number;
+    notRouted: number;
+    routingOff: number;
+  }>;
+  reviewers: Array<{
+    userId: number;
+    name: string;
+    decisions: number;
+    bandChanged: number;
+    medianDecisionHours: number | null;
+    check: boolean;
+  }>;
+  bandKept: { kept: number; decided: number; seniorKept: number; seniorDecided: number };
+  suggestions: { accepted: number; suggested: number };
+  needsAttention: Array<{
+    kind: NeedsAttentionKind;
+    submissionId: number | null;
+    formId: number;
+    title: string;
+    at: string;
+  }>;
+}
 
 /**
  * Intake form data structure
@@ -125,7 +183,9 @@ export interface IntakeForm {
   llmKeyId?: number | null;
   suggestedQuestionsEnabled?: boolean;
   euAiActRiskStepEnabled?: boolean;
+  liveChecksEnabled?: boolean;
   designSettings?: FormDesignSettings | null;
+  routing?: FormRouting | null;
   createdBy?: number;
   createdAt?: Date;
   updatedAt?: Date;
@@ -148,7 +208,9 @@ export interface CreateIntakeFormInput {
   llmKeyId?: number | null;
   suggestedQuestionsEnabled?: boolean;
   euAiActRiskStepEnabled?: boolean;
+  liveChecksEnabled?: boolean;
   designSettings?: FormDesignSettings | null;
+  routing?: FormRouting | null;
 }
 
 /**
@@ -167,7 +229,9 @@ export interface UpdateIntakeFormInput {
   llmKeyId?: number | null;
   suggestedQuestionsEnabled?: boolean;
   euAiActRiskStepEnabled?: boolean;
+  liveChecksEnabled?: boolean;
   designSettings?: FormDesignSettings | null;
+  routing?: FormRouting | null;
 }
 
 /**
@@ -274,6 +338,28 @@ export const ENTITY_FIELD_MAPPINGS: Record<IntakeEntityType, EntityFieldMapping[
       label: "Geography",
       description: "Geographic scope of the use case",
       requiredFieldType: ["select"],
+    },
+  ],
+  // AI apps (#5193): what approval copies onto the new AI app.
+  [IntakeEntityType.AI_APP]: [
+    {
+      field: "name",
+      label: "AI app name",
+      description: "Name of the AI app",
+      requiredFieldType: ["text"],
+      entityRequired: true,
+    },
+    {
+      field: "description",
+      label: "Description",
+      description: "What the AI app is used for",
+      requiredFieldType: ["textarea", "text"],
+    },
+    {
+      field: "departments",
+      label: "Departments",
+      description: "Teams that use the AI app (a multi-select, or text separated by commas)",
+      requiredFieldType: ["multiselect", "text"],
     },
   ],
 };
@@ -499,14 +585,7 @@ export const DEFAULT_USE_CASE_FIELDS: FormField[] = [
     type: "select",
     label: "Geography",
     guidanceText: "The geographic scope affects which regulations apply to this use case.",
-    options: [
-      { label: "Global", value: "1" },
-      { label: "Europe", value: "2" },
-      { label: "North America", value: "3" },
-      { label: "South America", value: "4" },
-      { label: "Asia", value: "5" },
-      { label: "Africa", value: "6" },
-    ],
+    options: GEOGRAPHY_ITEMS.map(({ _id, name }) => ({ label: name, value: String(_id) })),
     entityFieldMapping: "geography",
     order: 3,
   },
@@ -541,6 +620,38 @@ export const DEFAULT_USE_CASE_FIELDS: FormField[] = [
 /**
  * Default model inventory fields pre-populated for new forms
  */
+export const DEFAULT_AI_APP_FIELDS: FormField[] = [
+  {
+    id: generateFieldId(),
+    type: "text",
+    label: "AI app name",
+    placeholder: "Enter the name of the AI app",
+    guidanceText: "Use the product name people know it by, so reviewers can find it.",
+    validation: { required: true, maxLength: 255 },
+    entityFieldMapping: "name",
+    order: 0,
+  },
+  {
+    id: generateFieldId(),
+    type: "textarea",
+    label: "Description",
+    placeholder: "Describe what you want to use the AI app for",
+    guidanceText: "Include the task, the data it will see and who will use it.",
+    validation: { maxLength: 2000 },
+    entityFieldMapping: "description",
+    order: 1,
+  },
+  {
+    id: generateFieldId(),
+    type: "text",
+    label: "Departments",
+    placeholder: "e.g. Sales, Support",
+    guidanceText: "Separate several departments with commas.",
+    entityFieldMapping: "departments",
+    order: 2,
+  },
+];
+
 export const DEFAULT_MODEL_FIELDS: FormField[] = [
   {
     id: generateFieldId(),
@@ -809,7 +920,9 @@ export function createEmptyForm(entityType?: IntakeEntityType): IntakeForm {
           ? DEFAULT_USE_CASE_FIELDS.map((f, i) => ({ ...f, id: generateFieldId(), order: i }))
           : type === IntakeEntityType.MODEL
             ? DEFAULT_MODEL_FIELDS.map((f, i) => ({ ...f, id: generateFieldId(), order: i }))
-            : [],
+            : type === IntakeEntityType.AI_APP
+              ? DEFAULT_AI_APP_FIELDS.map((f, i) => ({ ...f, id: generateFieldId(), order: i }))
+              : [],
     },
     submitButtonText: "Submit",
     status: IntakeFormStatus.DRAFT,
@@ -821,6 +934,7 @@ export function createEmptyForm(entityType?: IntakeEntityType): IntakeForm {
     // New use case forms start with the EU AI Act step on; it replaces the
     // old risk level and role questions of the template.
     euAiActRiskStepEnabled: type === IntakeEntityType.USE_CASE,
+    liveChecksEnabled: true,
     designSettings: { ...DEFAULT_DESIGN_SETTINGS },
   };
 }

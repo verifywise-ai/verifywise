@@ -1239,11 +1239,55 @@ paths:
                   - $ref: "#/components/schemas/ApiResponse"
                   - properties:
                       data:
-                        $ref: "#/components/schemas/SyslogConfig"
+                        $ref: "#/components/schemas/SyslogConfigWithKey"
         "400":
           $ref: "#/components/responses/BadRequest"
         "403":
           $ref: "#/components/responses/Forbidden"
+
+  /v1/shadow-ai-syslog/status:
+    get:
+      tags: [Shadow AI - Configuration]
+      summary: Get syslog listener status (Admin and SuperAdmin only)
+      responses:
+        "200":
+          description: Listener settings from the environment
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiResponse"
+                  - properties:
+                      data:
+                        $ref: "#/components/schemas/SyslogListenerStatus"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/shadow-ai-syslog/sources/{id}/regenerate-key:
+    post:
+      tags: [Shadow AI - Configuration]
+      summary: Regenerate a syslog source key (Admin and SuperAdmin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Key replaced; the new key is returned once
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiResponse"
+                  - properties:
+                      data:
+                        $ref: "#/components/schemas/SyslogConfigWithKey"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /shadow-ai/config/syslog/{id}:
     patch:
@@ -2533,21 +2577,63 @@ components:
           type: integer
         source_identifier:
           type: string
+          nullable: true
+          description: Allowed sender IP, stored normalised
         parser_type:
           type: string
           enum: [zscaler, netskope, squid, generic_kv]
         is_active:
           type: boolean
+        key_prefix:
+          type: string
+          nullable: true
+          description: First 16 characters of the source key
+        last_event_at:
+          type: string
+          format: date-time
+          nullable: true
+        events_accepted:
+          type: integer
+        events_dropped:
+          type: integer
+        last_drop_reason:
+          type: string
+          nullable: true
         created_at:
           type: string
           format: date-time
 
+    SyslogConfigWithKey:
+      allOf:
+        - $ref: "#/components/schemas/SyslogConfig"
+        - type: object
+          properties:
+            key:
+              type: string
+              description: Full source key, returned once only
+
+    SyslogListenerStatus:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        port:
+          type: integer
+        tls:
+          type: boolean
+        plaintext:
+          type: boolean
+        ipOnly:
+          type: boolean
+
     CreateSyslogConfigRequest:
       type: object
-      required: [source_identifier, parser_type]
+      required: [parser_type]
       properties:
         source_identifier:
           type: string
+          nullable: true
+          description: Optional sender IP address
         parser_type:
           type: string
           enum: [zscaler, netskope, squid, generic_kv]
@@ -2560,6 +2646,8 @@ components:
       properties:
         source_identifier:
           type: string
+          nullable: true
+          description: Sender IP address; empty string or null clears it
         parser_type:
           type: string
           enum: [zscaler, netskope, squid, generic_kv]

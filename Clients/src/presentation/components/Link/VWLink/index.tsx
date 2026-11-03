@@ -54,6 +54,7 @@ export const VWLink = memo(function VWLink({
   sx,
   className,
   ariaLabel,
+  ariaExpanded,
   testId,
 }: IVWLinkProps) {
   const [isHovered, setIsHovered] = useState(false);
@@ -83,6 +84,7 @@ export const VWLink = memo(function VWLink({
         {...linkProps}
         className={className}
         aria-label={ariaLabel}
+        aria-expanded={ariaExpanded}
         data-testid={testId}
         sx={{
           "textDecoration": showUnderline ? "underline" : "none",

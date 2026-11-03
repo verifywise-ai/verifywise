@@ -73,9 +73,20 @@ describe("policy.repository", () => {
 
       const result = await getAllPolicies();
 
-      expect(apiServices.get).toHaveBeenCalledWith("/policies");
+      expect(apiServices.get).toHaveBeenCalledWith("/policies", {});
       expect(result).toEqual(mockPolicies);
       expect(result).toHaveLength(2);
+    });
+
+    it("passes suppressGlobalErrorToast through when the caller shows its own error", async () => {
+      const response = { data: { message: "Success", data: mockPolicies } };
+      vi.mocked(apiServices.get).mockResolvedValue(response as any);
+
+      await getAllPolicies({ suppressGlobalErrorToast: true });
+
+      expect(apiServices.get).toHaveBeenCalledWith("/policies", {
+        suppressGlobalErrorToast: true,
+      });
     });
 
     it("should return empty array when no policies exist", async () => {

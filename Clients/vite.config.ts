@@ -29,6 +29,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@user-guide-content": path.resolve(__dirname, "../shared/user-guide-content"),
+      "@design-tokens": path.resolve(__dirname, "../shared/design-tokens"),
     },
   },
   server: {

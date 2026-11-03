@@ -1,3 +1,4 @@
+import { screen, within } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 
 // Mock hooks
@@ -179,10 +180,12 @@ vi.mock("../../../components/TabBar", () => ({
 }));
 
 import ModelInventory from "../index";
+import { getAllEntities } from "../../../../application/repository/entity.repository";
 
 describe("ModelInventory", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(getAllEntities).mockResolvedValue({ data: [] } as never);
     vi.spyOn(console, "error").mockImplementation(() => {});
   });
 
@@ -193,5 +196,26 @@ describe("ModelInventory", () => {
   it("renders without crashing", () => {
     const { container } = renderWithProviders(<ModelInventory />);
     expect(container).toBeTruthy();
+  });
+
+  it("shows a standardized error alert when models fail to load", async () => {
+    vi.mocked(getAllEntities).mockImplementation(({ routeUrl }) =>
+      routeUrl === "/modelInventory"
+        ? Promise.reject(new Error("network error"))
+        : Promise.resolve({ data: [] } as never),
+    );
+
+    renderWithProviders(<ModelInventory />);
+
+    const wrapper = await screen.findByTestId("list-state-wrapper");
+    expect(within(wrapper).getByRole("alert")).toHaveTextContent(
+      "Failed to load model inventory data. Please try again later.",
+    );
+    expect(within(wrapper).queryByTestId("model-inventory-table")).not.toBeInTheDocument();
+    // The inline alert replaces the global toast for this request only.
+    expect(getAllEntities).toHaveBeenCalledWith({
+      routeUrl: "/modelInventory",
+      suppressGlobalErrorToast: true,
+    });
   });
 });

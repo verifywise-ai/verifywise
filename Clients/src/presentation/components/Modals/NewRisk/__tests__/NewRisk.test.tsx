@@ -1,6 +1,11 @@
 import { vi } from "vitest";
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+
+const { createMutateAsync, updateMutateAsync } = vi.hoisted(() => ({
+  createMutateAsync: vi.fn(),
+  updateMutateAsync: vi.fn(),
+}));
 
 vi.mock("../../../AddNewRiskForm", () => ({
   default: () => <div data-testid="risk-form" />,
@@ -13,10 +18,29 @@ vi.mock("../../../LinkedRisksPanel/VendorRiskLinksPanel", () => ({
     <div data-testid="vendor-risk-links">{vendorRiskId}</div>
   ),
 }));
+vi.mock("../../../../../application/hooks/useVendorRiskMutations", () => ({
+  useCreateVendorRisk: () => ({ mutateAsync: createMutateAsync }),
+  useUpdateVendorRisk: () => ({ mutateAsync: updateMutateAsync }),
+}));
+vi.mock("../../../../../application/hooks/useAuth", () => ({
+  useAuth: () => ({
+    token: "test-token",
+    userToken: null,
+    userRoleName: "Admin",
+    userId: 1,
+    organizationId: 1,
+    isAuthenticated: true,
+    isSuperAdmin: false,
+  }),
+}));
+vi.mock("../../../CustomFieldsSection/RequiredCustomFieldsGate", () => ({
+  useRequiredCustomFieldsGate: () => ({ blocked: false, onPendingChange: vi.fn() }),
+}));
 
 import { renderWithProviders } from "../../../../../test/renderWithProviders";
 import AddNewRisk from "../index";
 import { ExistingRisk } from "../../../../../domain/interfaces/i.vendor";
+import { RiskCalculator } from "../../../../tools/riskCalculator";
 
 const existingRisk: ExistingRisk = {
   id: 7,
@@ -84,5 +108,35 @@ describe("NewRisk (AddNewRisk)", () => {
 
     expect(screen.queryByTestId("vendor-risk-links")).toBeNull();
     expect(screen.getByRole("button", { name: "Save" })).toBeInTheDocument();
+  });
+
+  // Regression guard: risk_level must be derived from the selected likelihood/severity
+  // (the deleted AddNewVendorRiskForm hardcoded "High Risk" instead).
+  it("derives risk_level from likelihood and severity via RiskCalculator on save", async () => {
+    updateMutateAsync.mockResolvedValue({ status: 202, data: {} });
+    const getRiskLevelSpy = vi.spyOn(RiskCalculator, "getRiskLevel");
+
+    renderWithProviders(
+      <AddNewRisk isOpen={true} setIsOpen={vi.fn()} vendors={[]} existingRisk={existingRisk} />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(updateMutateAsync).toHaveBeenCalledTimes(1));
+    // existingRisk: likelihood "Possible" (3) + severity "Major" (4) → 3×1 + 4×3 = 15 → "High risk"
+    expect(getRiskLevelSpy).toHaveBeenCalledWith("Possible", "Major");
+    const payload = updateMutateAsync.mock.calls[0][0];
+    expect(payload).toMatchObject({
+      id: 7,
+      data: {
+        risk_level: "High risk",
+        likelihood: "Possible",
+        risk_severity: "Major",
+      },
+    });
+    // The computed level replaces the stored value, not a restatement of it.
+    expect(payload.data.risk_level).not.toBe(existingRisk.risk_level);
+
+    getRiskLevelSpy.mockRestore();
   });
 });
