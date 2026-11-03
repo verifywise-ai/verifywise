@@ -1,7 +1,5 @@
 import fs from "fs";
 import path from "path";
-import fs from "fs";
-import path from "path";
 import { brand } from "../../../shared/design-tokens/palette";
 import {
   applyColorTokens,
