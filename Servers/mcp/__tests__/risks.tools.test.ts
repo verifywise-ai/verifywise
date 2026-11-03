@@ -44,7 +44,7 @@ import { requireOrganization } from "../scope";
 import { resolveFrameworkIds } from "../frameworks";
 import { riskTools } from "../tools/risks";
 
-const CALLER = { userId: 7, organizationId: null };
+const CALLER = { userId: 7, organizationId: 3, role: "Admin", isSuperAdmin: false };
 
 const tool = (name: string) => {
   const found = riskTools.find((t) => t.name === name);

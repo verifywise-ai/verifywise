@@ -1,6 +1,6 @@
 # VerifyWise - Development Guide
 
-> **Last Updated:** 2026-11-02
+> **Last Updated:** 2026-11-03
 
 This document contains cross-cutting rules for the VerifyWise codebase. Directory-scoped guides load automatically when working in each area:
 
@@ -8,7 +8,7 @@ This document contains cross-cutting rules for the VerifyWise codebase. Director
 - **Frontend:** `Clients/CLAUDE.md` — clean architecture, component patterns
 - **EvalServer:** `EvalServer/CLAUDE.md` — Alembic migrations, FastAPI patterns
 - **AI Gateway:** `AIGateway/CLAUDE.md` — LLM proxy, guardrails, spend tracking
-- **MCP Server:** `Servers/mcp/` — the deployment's own MCP server, served over Streamable HTTP at `POST /api/mcp`. 19 super-admin tools: organizations and users (`services/superAdmin.service.ts`, `services/invitation.service.ts`), use cases (`services/useCase.service.ts`), risks (`services/risk.service.ts`), the framework catalogue and compliance posture. Tools call the same services the REST controllers do, so an MCP write is indistinguishable from a console one. Governance tools take an explicit `organizationId` — a super admin belongs to no organization — checked by `mcp/scope.ts`. Connect a client with `claude mcp add --transport http verifywise https://<deployment>/api/mcp --header "Authorization: Bearer <api token>"`.
+- **MCP Server:** `Servers/mcp/` — the deployment's own MCP server, served over Streamable HTTP at `POST /api/mcp`. Open to super admins and organization Admins (gate in `routes/mcp.route.ts`); `toolsFor` in `mcp/server.ts` picks the tool set from the caller. Super admins get 11 deployment tools for organizations and their users (`services/superAdmin.service.ts`, `services/invitation.service.ts`) and no governance tools: the SuperAdmin role holds no use case or risk permission over REST, and `docs/technical/security/tenant-isolation.md` §3 allows no super-admin write into another organization. An Admin gets 22 tools pinned to their token's organization by `scopeToOrganization` (`mcp/scope.ts`, no `organizationId` argument): `list_users`, `invite_user`, `update_user_role`, `remove_user` (`organizationUserTools`), plus use cases (`services/useCase.service.ts`), risks (`services/risk.service.ts`), the framework catalogue, compliance posture, read-only lists of vendors, policies, models, incidents, tasks, trainings and datasets (each the console list's own query), and `update_incident` (`services/incidentManagement.service.ts`). An Admin who is also a super admin gets both sets; where a name is in both, the super-admin tool is kept (30 tools). Tools call the same services the REST controllers do, so an MCP write is indistinguishable from a console one. Connect tab: `Clients/.../SettingsPage/McpConnect`, shown in Super Admin → Settings and, for Admins only, in Settings. Connect a client with `claude mcp add --transport http verifywise https://<deployment>/api/mcp --header "Authorization: Bearer <api token>"`.
 
 ### Custom Agents
 

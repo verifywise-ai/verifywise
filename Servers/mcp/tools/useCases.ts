@@ -6,9 +6,8 @@
  * created in the console: same frameworks instantiated, same change history,
  * same approval request.
  *
- * Every tool takes an organizationId. Governance rows are scoped by
- * organization_id and a super admin belongs to no organization, so the target
- * is named per call rather than taken from the token.
+ * Every tool takes an organizationId, which mcp/scope.ts fixes to the calling
+ * Admin's organization before the tool is offered: the model never names it.
  */
 
 import { z } from "zod";
@@ -65,8 +64,7 @@ const organizationIdArg = z
  * cannot be delivered must not look like a failed write.
  *
  * The Slack message and the "use case created" digest the controller also sends
- * are deliberately left out — both route through the acting user's own
- * organization, and a super admin belongs to none.
+ * are not sent from here.
  */
 async function notifyOwnerAssigned(
   useCase: { id?: number; project_title: string; owner: number; description?: string },

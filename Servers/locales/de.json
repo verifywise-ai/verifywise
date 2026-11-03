@@ -25,6 +25,7 @@
   "Access denied: User does not have permission to access this organization's compliance data": "Zugriff verweigert: Der Benutzer hat keine Berechtigung, auf die Compliance-Daten dieser Organisation zuzugreifen",
   "Access denied: User does not have permission to access this organization's compliance details": "Zugriff verweigert: Der Benutzer hat keine Berechtigung, auf die Compliance-Details dieser Organisation zuzugreifen",
   "Access restricted to super-admin only": "Zugriff nur für Super-Admin erlaubt",
+  "Access restricted to Admins and super admins": "Zugriff nur für Admins und Super-Admins erlaubt",
   "Access Token is required": "Zugriffstoken ist erforderlich",
   "Action ID is required": "Aktion-ID ist erforderlich",
   "Action key is required": "Aktion-Schlüssel ist erforderlich",

@@ -47,7 +47,7 @@ import { listFrameworkRefs } from "../frameworks";
 import { requireOrganization } from "../scope";
 import { complianceTools } from "../tools/compliance";
 
-const CALLER = { userId: 7, organizationId: null };
+const CALLER = { userId: 7, organizationId: 3, role: "Admin", isSuperAdmin: false };
 
 const tool = (name: string) => {
   const found = complianceTools.find((t) => t.name === name);

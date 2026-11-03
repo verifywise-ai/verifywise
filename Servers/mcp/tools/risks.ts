@@ -6,8 +6,8 @@
  * computation and the change-history write happen once, wherever the risk came
  * from.
  *
- * Every tool takes an organizationId: risks are scoped by organization_id and a
- * super admin belongs to no organization.
+ * Every tool takes an organizationId, which mcp/scope.ts fixes to the calling
+ * Admin's organization before the tool is offered: the model never names it.
  *
  * The FAIR quantitative fields (event frequency, loss magnitudes, ALE, control
  * effectiveness) are deliberately not exposed. They are a set of fifteen

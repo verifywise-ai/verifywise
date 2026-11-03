@@ -47,7 +47,7 @@ import { requireOrganization } from "../scope";
 import { resolveUseCaseFrameworks } from "../frameworks";
 import { useCaseTools } from "../tools/useCases";
 
-const CALLER = { userId: 7, organizationId: null };
+const CALLER = { userId: 7, organizationId: 3, role: "Admin", isSuperAdmin: false };
 
 const tool = (name: string) => {
   const found = useCaseTools.find((t) => t.name === name);

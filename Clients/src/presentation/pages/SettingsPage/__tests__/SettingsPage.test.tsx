@@ -58,6 +58,10 @@ vi.mock("../ApiKeys", () => ({
   default: () => <div data-testid="apikeys-tab" />,
 }));
 
+vi.mock("../McpConnect", () => ({
+  default: ({ scope }: { scope: string }) => <div data-testid="mcp-tab">{scope}</div>,
+}));
+
 vi.mock("../AuditLedger", () => ({
   default: () => <div data-testid="audit-ledger-tab" />,
 }));
@@ -144,6 +148,27 @@ describe("SettingsPage", () => {
     mockHasOrganizationAdmin = false;
     renderWithProviders(<ProfilePage />, { route: "/settings" });
     expect(screen.queryByText("Data retention")).not.toBeInTheDocument();
+  });
+
+  it("opens the MCP tab for an Admin, scoped to the organization", () => {
+    renderAt("/settings/mcp");
+    expect(screen.getByText("MCP")).toBeInTheDocument();
+    expect(screen.getByTestId("path")).toHaveTextContent("/settings/mcp");
+    expect(screen.getByTestId("mcp-tab")).toHaveTextContent("organization");
+  });
+
+  /** The MCP server refuses anyone else, so the tab is not offered at all. */
+  it("hides the MCP tab from every role but Admin", () => {
+    mockRole = "Editor";
+    renderWithProviders(<ProfilePage />, { route: "/settings" });
+    expect(screen.queryByText("MCP")).not.toBeInTheDocument();
+  });
+
+  it("falls back to the default tab on a direct MCP link for a non-Admin", () => {
+    mockRole = "Reviewer";
+    renderAt("/settings/mcp");
+    expect(screen.getByTestId("path")).toHaveTextContent(/^\/settings$/);
+    expect(screen.queryByTestId("mcp-tab")).not.toBeInTheDocument();
   });
 
   it("renders without crashing", () => {

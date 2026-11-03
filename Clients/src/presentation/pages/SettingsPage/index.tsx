@@ -12,6 +12,7 @@ import allowedRoles from "../../../application/constants/permissions";
 import { useAuth } from "../../../application/hooks/useAuth";
 import { useHasPermission, useMyPermissions } from "../../../application/hooks/useMyPermissions";
 import ApiKeys from "./ApiKeys";
+import McpConnect from "./McpConnect";
 import AuditLedger from "./AuditLedger";
 import DataRetention from "./DataRetention";
 import EntraIdConfig from "./EntraIdConfig";
@@ -37,6 +38,7 @@ const BUILT_IN_TABS = [
   "organization",
   "features",
   "apikeys",
+  "mcp",
   "audit-ledger",
   "data-retention",
   "sso",
@@ -62,6 +64,8 @@ export default function ProfilePage() {
   const { permissions, error: permissionsError } = useMyPermissions();
   const permissionsResolved = permissions !== undefined || Boolean(permissionsError);
   const isCustomFieldsDisabled = userRoleName !== "Admin";
+  // The MCP server admits organization Admins only (Servers/routes/mcp.route.ts).
+  const isMcpHidden = userRoleName !== "Admin";
 
   const { tab } = useParams<{ tab?: string }>();
 
@@ -73,8 +77,11 @@ export default function ProfilePage() {
     if (!ssoFeatureEnabled) {
       tabs = tabs.filter((t) => t !== "sso");
     }
+    if (isMcpHidden) {
+      tabs = tabs.filter((t) => t !== "mcp");
+    }
     return tabs;
-  }, [ssoFeatureEnabled]);
+  }, [ssoFeatureEnabled, isMcpHidden]);
 
   // keep state synced with URL
   useEffect(() => {
@@ -180,6 +187,16 @@ export default function ProfilePage() {
               disabled: isApiKeysDisabled,
               tooltip: "Generate keys for programmatic API access",
             },
+            ...(!isMcpHidden
+              ? [
+                  {
+                    label: "MCP",
+                    value: "mcp",
+                    icon: "Bot" as TabItem["icon"],
+                    tooltip: "Connect Claude Code to this organization",
+                  },
+                ]
+              : []),
             ...(!isAuditLedgerDisabled
               ? [
                   {
@@ -265,6 +282,12 @@ export default function ProfilePage() {
         <TabPanel sx={{ p: 0 }} value="apikeys">
           <ApiKeys />
         </TabPanel>
+
+        {!isMcpHidden && (
+          <TabPanel sx={{ p: 0 }} value="mcp">
+            <McpConnect scope="organization" />
+          </TabPanel>
+        )}
 
         {!isAuditLedgerDisabled && (
           <TabPanel sx={{ p: 0 }} value="audit-ledger">

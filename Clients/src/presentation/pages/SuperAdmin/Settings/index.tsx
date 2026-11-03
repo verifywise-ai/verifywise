@@ -10,7 +10,7 @@ import Password from "../../SettingsPage/Password";
 import Monitoring from "./Monitoring";
 import SuperAdmins from "./SuperAdmins";
 import ApiKeys from "../../SettingsPage/ApiKeys";
-import McpConnect from "./McpConnect";
+import McpConnect from "../../SettingsPage/McpConnect";
 
 export default function SuperAdminSettings() {
   const navigate = useNavigate();
@@ -99,7 +99,7 @@ export default function SuperAdminSettings() {
         </TabPanel>
 
         <TabPanel sx={{ p: 0 }} value="mcp">
-          <McpConnect />
+          <McpConnect scope="deployment" />
         </TabPanel>
 
         <TabPanel sx={{ p: 0 }} value="api-keys">

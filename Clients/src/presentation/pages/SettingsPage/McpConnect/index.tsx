@@ -1,21 +1,22 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Box, IconButton, Stack, Typography, useTheme } from "@mui/material";
 import { Check as CheckIcon, Copy as CopyIcon, Download as DownloadIcon } from "lucide-react";
-import { CustomizableButton } from "../../../../components/button/customizable-button";
-import Alert from "../../../../components/Alert";
-import Select from "../../../../components/Inputs/Select";
+import { CustomizableButton } from "../../../components/button/customizable-button";
+import Alert from "../../../components/Alert";
+import Select from "../../../components/Inputs/Select";
 import {
   createApiToken,
   getApiTokens,
   revokeApiToken,
-} from "../../../../../application/repository/tokens.repository";
+} from "../../../../application/repository/tokens.repository";
+import { useAuth } from "../../../../application/hooks/useAuth";
 
 const SERVER_NAME = "verifywise";
 const TOKEN_PLACEHOLDER = "<your-api-token>";
 // Deliberately not ".mcp.json": that is Claude Code's project config, which
-// teams commit, and this file holds a token that administers every
-// organization. The file is a single server entry for `claude mcp add-json`,
-// which stores it in the user's own Claude Code config, outside any repository.
+// teams commit, and this file holds an administrator's token. The file is a
+// single server entry for `claude mcp add-json`, which stores it in the user's
+// own Claude Code config, outside any repository.
 const CONFIG_FILENAME = "verifywise-mcp.json";
 /** Tokens this tab issues are named with this prefix, so it can clean up its own. */
 const TOKEN_NAME_PREFIX = "Claude Code MCP";
@@ -29,16 +30,7 @@ const FILE_PREVIEW = `{
   }
 }`;
 
-const TOOL_NAMES = [
-  "list_organizations",
-  "create_organization_with_admin",
-  "update_organization",
-  "delete_organization",
-  "list_users",
-  "create_user",
-  "invite_user",
-  "update_user",
-  "delete_user",
+const GOVERNANCE_TOOL_NAMES = [
   "list_use_cases",
   "get_use_case",
   "create_use_case",
@@ -50,6 +42,54 @@ const TOOL_NAMES = [
   "list_frameworks",
   "get_compliance_posture",
 ];
+
+/**
+ * What the server offers each kind of caller (Servers/mcp/server.ts): a super
+ * admin the whole deployment, an organization Admin their own organization.
+ */
+const SCOPES = {
+  deployment: {
+    intro:
+      "Manage the organizations on this deployment and the users in them from Claude Code, or any MCP client.",
+    fileWarning: "Anyone who has the file can administer every organization here",
+    coverage: "organizations and users",
+    tools: [
+      "list_organizations",
+      "create_organization_with_admin",
+      "update_organization",
+      "delete_organization",
+      "list_users",
+      "create_user",
+      "invite_user",
+      "list_invitations",
+      "update_user",
+      "remove_user",
+      "delete_user",
+    ],
+  },
+  organization: {
+    intro:
+      "Manage your organization's members, use cases, risks, incidents and compliance posture, and look up its vendors, policies, models, tasks, trainings and datasets, from Claude Code or any MCP client.",
+    fileWarning: "Anyone who has the file can act as you in this organization",
+    coverage:
+      "members, use cases, risks, compliance posture, vendors, policies, models, incidents, tasks, trainings and datasets",
+    tools: [
+      "list_users",
+      "invite_user",
+      "update_user_role",
+      "remove_user",
+      ...GOVERNANCE_TOOL_NAMES,
+      "list_vendors",
+      "list_policies",
+      "list_models",
+      "list_incidents",
+      "update_incident",
+      "list_tasks",
+      "list_trainings",
+      "list_datasets",
+    ],
+  },
+};
 
 /** The same expiry choices the API keys page offers; this mints the same kind of token. */
 const EXPIRY_ITEMS = [
@@ -157,6 +197,11 @@ const Step: React.FC<{ number: number; title: string; children: React.ReactNode 
   );
 };
 
+interface McpConnectProps {
+  /** "deployment" in the super admin console, "organization" in an Admin's settings. */
+  scope: keyof typeof SCOPES;
+}
+
 /**
  * How to point an MCP client at this deployment.
  *
@@ -164,9 +209,14 @@ const Step: React.FC<{ number: number; title: string; children: React.ReactNode 
  * /api/mcp, so connecting is one command plus an API token. The endpoint is
  * derived from the current origin rather than configured, so the command shown
  * is always correct for whichever deployment the operator is looking at.
+ *
+ * The server decides from the token which tools it offers; scope only says
+ * which of those this page describes.
  */
-const McpConnect: React.FC = () => {
+const McpConnect: React.FC<McpConnectProps> = ({ scope }) => {
   const theme = useTheme();
+  const { userId } = useAuth();
+  const { intro, fileWarning, coverage, tools } = SCOPES[scope];
   const endpoint = `${window.location.origin}/api/mcp`;
   const command = `claude mcp add --transport http ${SERVER_NAME} ${endpoint} --header "Authorization: Bearer ${TOKEN_PLACEHOLDER}"`;
   // $(cat ...) keeps the token out of shell history: only this literal is recorded.
@@ -190,19 +240,25 @@ const McpConnect: React.FC = () => {
   );
 
   /**
-   * Revoke still-valid tokens this tab issued earlier.
+   * Revoke still-valid tokens this tab issued earlier for this user.
    *
    * Best-effort: a cleanup failure must not stop the operator getting a working
-   * config file, so anything that goes wrong here is swallowed. Only tokens
-   * carrying this tab's own name prefix are touched — never one created by hand
-   * on the API keys page.
+   * config file, so anything that goes wrong here is swallowed. Only this
+   * user's tokens carrying this tab's own name prefix are touched — never one
+   * created by hand on the API keys page, nor another administrator's: the
+   * token list holds every token of the organization (or, for super admins,
+   * of every super admin).
    */
   const revokePreviousTokens = useCallback(async () => {
     try {
       const response = await getApiTokens({ routeUrl: "/tokens" });
       const existing: any[] = response?.data?.data ?? [];
       const mine = existing.filter(
-        (t) => typeof t?.name === "string" && t.name.startsWith(TOKEN_NAME_PREFIX) && !t.revoked,
+        (t) =>
+          typeof t?.name === "string" &&
+          t.name.startsWith(TOKEN_NAME_PREFIX) &&
+          t.created_by === userId &&
+          !t.revoked,
       );
       await Promise.all(
         mine.map((t) =>
@@ -212,7 +268,7 @@ const McpConnect: React.FC = () => {
     } catch {
       // Ignored: cleanup is housekeeping, not part of issuing the token.
     }
-  }, []);
+  }, [userId]);
 
   /**
    * Mint a token and hand back a ready-to-use config file.
@@ -285,9 +341,8 @@ const McpConnect: React.FC = () => {
     >
       <Stack sx={{ flex: 1, minWidth: 0, maxWidth: 640 }} gap={theme.spacing(8)}>
         <Typography sx={{ fontSize: 13, color: theme.palette.text.secondary }}>
-          Manage organizations, users and their governance data on this deployment from Claude Code,
-          or any MCP client. The server runs here — nothing is installed on your machine, and the
-          connection is authorized by an API token you create below.
+          {intro} The server runs here — nothing is installed on your machine, and the connection is
+          authorized by an API token you create below.
         </Typography>
 
         {error && (
@@ -308,12 +363,12 @@ const McpConnect: React.FC = () => {
             <Box component="span" sx={{ fontFamily: "monospace" }}>
               {CONFIG_FILENAME}
             </Box>{" "}
-            file, already pointed at this deployment. The token is shown nowhere else. Anyone who
-            has the file can administer every organization here, so delete it once it is added.
+            file, already pointed at this deployment. The token is shown nowhere else. {fileWarning}
+            , so delete it once it is added.
           </Typography>
           <Alert
             variant="info"
-            body="Downloading revokes the token issued here last time. Anything set up with the previous file, on this machine or another, stops working immediately."
+            body="Downloading revokes the token issued to you here last time. Anything set up with the previous file, on this machine or another, stops working immediately."
             isToast={false}
             sx={{ position: "static" }}
           />
@@ -369,8 +424,7 @@ const McpConnect: React.FC = () => {
             <Box component="span" sx={{ fontFamily: "monospace" }}>
               {SERVER_NAME}
             </Box>{" "}
-            should be listed with nineteen tools, covering organizations, users, use cases, risks
-            and compliance posture.
+            should be listed with {tools.length} tools, covering {coverage}.
           </Typography>
         </Step>
 
@@ -410,7 +464,7 @@ const McpConnect: React.FC = () => {
 
         <Panel title="Tools it adds">
           <Stack gap="6px">
-            {TOOL_NAMES.map((tool) => (
+            {tools.map((tool) => (
               <Typography
                 key={tool}
                 sx={{ fontSize: 12, fontFamily: "monospace", color: theme.palette.text.secondary }}
