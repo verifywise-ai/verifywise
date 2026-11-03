@@ -117,6 +117,7 @@ Every labelled vendor also needs a completed run on its row, not after findings 
 - The first pass, on 2026-11-01, is void: GDELT refused the requests of the machine it ran on (so the runs had no news), and the verifier rejected claims that rest on records of the CISA catalog of known exploited vulnerabilities, which it had not been told were a database of the code. Both were addressed afterwards (the engine, its pause after a 429 and its three asks per run are described in [Web research toolkit](../../technical/infrastructure/web-research.md#search-engines-q21-decided-2026-10-31); the verifier's `database` attribute, prompt `vr-12`).
 - The second pass, from 2026-11-01T23:05:15Z (first start) to 2026-11-02T07:08:03Z (last start), is blocked by the environment and scored nothing. Details are in the next section. Nothing in this repository says the bars are met.
 - The third pass, on 2026-11-02, was stopped by its own clean-up after 6 of 21 vendors had an accepted run. Details are in its section.
+- The fourth pass, from 2026-11-02 to 2026-11-03, ended BLOCKED-ENV with 14 of 21 vendors accepted, and the verdict is held (precision 0.83, and 7 vendors without a run). Details are in its section.
 
 ### Pass 2 (2026-11-01 to 2026-11-02): BLOCKED-ENV, nothing scored
 
@@ -156,4 +157,40 @@ Every labelled vendor also needs a completed run on its row, not after findings 
   - Decide whether the scorer (or the prompt) should account for the CVE ids a finding cites, and whether the Salesloft finding is a false positive. The labels cannot change.
   - Pass 4 runs all 21 vendors again. Until every vendor has an accepted run, the golden set cannot pass, unless a partial golden set is accepted.
   - Keep the Mac on AC power with the lid open while the driver runs.
+  - Nothing in this repository says the bars are met.
+
+### Pass 4 (2026-11-02 to 2026-11-03): BLOCKED-ENV at 14 of 21 vendors, held
+
+- **Code and dates:** `98c707adb2ce8c702f386ba21964506915164c17` (the same code as `0b3effcf6`; only docs commits lie between), built and run from a snapshot worktree; a new database with 217 migrations; the lists `cve`, `eu_fsf`, `kev`, `ofac` and `uk_sanctions` synced; prompt version `vr-12`, registry `sr-5`; engine GDELT. First start 2026-11-02T15:18:36Z; the driver ended at 2026-11-03T11:23:09Z. A dump of the database (without the `llm_keys` rows) is kept outside the repository.
+- **Driver:** pass 3's (no probes, one run at a time, a longer wait after a void run), plus two changes. The 21 vendor rows are made up front, in one second and in the order of the labels, and each is checked by name before its run. Void runs now have two kinds: a GDELT void (the trace holds a final refusal; gap 30 minutes after the first, 60 after each further one; 6 in a row stop the driver with exit 5) and an env void (any other void run; gap 15 minutes; 6 in a row stop it with exit 6). A clean or partial run resets both streaks.
+- **Accepted runs (14 of 21 vendors, 13 clean):** Citrix (run 3), Fortra (5), ConnectWise (7), Ivanti (11), Salesloft (13), Ingram Micro (18), Cloudflare (19), Advanced Computer Software Group Limited (21), Coinbase (25), Typeform (26), Wiser Solutions (29, partial), Slack (30), Arthur AI (31), Mercury (32). Wiser Solutions answered 19 of 23 news searches, below the 0.90 clean share, and has no findings.
+- **Not run:** Anyscale never had an accepted run (7 void runs). Invoicely, GoatCounter, Conduent, Extia, TikTok and monday.com were never started. The driver stopped itself after the sixth GDELT void in a row (Anyscale, run 39, exit 5).
+- **Runs:** 39 in all: 13 clean, 2 partial (both Wiser Solutions) and 24 void (62 %).
+  - GDELT voids, 21: runs 1 and 2 (Citrix), 4 (Fortra), 6 (ConnectWise), 8 to 10 (Ivanti), 14, 16 and 17 (Ingram Micro), 20 (label 8), 22 to 24 (Coinbase), 27 (Wiser Solutions), 34 to 39 (Anyscale).
+  - Env voids, 3: runs 12 (Salesloft), 15 (Ingram Micro) and 33 (Anyscale), none of them with a final GDELT refusal.
+- **GDELT asks:** the run traces count about 96 asks, 78 refused (21 final). News searches answered: 327 of 885 (pass 3: 134 of 264). `worker.log` holds no GDELT 429 line, so these counts come from the traces only.
+- **Scored:** the raw `score.txt` counts Anyscale's void run 39 as a run (15 of 21 vendors with a run, precision 0.83). The verdict comes from a read-only script that scores each label's latest non-void run (`scoreAccepted.ts`; labels are matched to the state by profile).
+
+  | Bar | Value | Met |
+  |---|---|---|
+  | Prompt version `vr-12` only | all 39 runs | yes |
+  | Precision at least 0.90 | 0.83 (15 of 18, 0 traps) | no |
+  | Label agreement at least 80 % | 93 % (14 of 15); Coinbase finding 32 is Low against the label Medium | yes |
+  | No High finding rated Low | none | yes |
+  | No sanctions match stated as a fact | none | yes |
+  | Coverage | no failed list, nothing stale, on all 14 accepted runs | yes |
+  | No run after earlier findings or risks of its row | none | yes |
+  | Every labelled vendor has a completed run | 14 of 21 | no |
+  | Recall (no bar) | 0.15 (raw 0.14) | n/a |
+
+- **Verdict: held.** Two bars are missed, and the merge waits until the golden set is finished.
+- **The three unmatched findings:**
+  - Salesloft, run 13, finding 24: (a) no label or trap covers it. It reports subprocessors added to the trust centre as an `ai_specific` finding, and Salesloft has no `ai_specific` expectation or trap.
+  - Salesloft, run 13, finding 25: (a) no label or trap covers it. It is an availability finding from the incident history of the status page, and the only availability trap of Salesloft does not match.
+  - Typeform, run 26, finding 33: (b) it cites the record of an expected risk but lacks the matching words. It cites the status page history, dated 2026-08-07, the day of the expected outage, but only counts the incidents and maintenance windows since 2025-11-03. The cited record is the whole history page, not the incident's own page. Pass 3 had the same case with Ivanti.
+- **Against pass 3, for its six labels:** 10 findings with 8 matched (precision 0.80), against 12 with 10 matched (0.83); recall 8 of 49 against 10 of 49; 18 attempts against 9.
+- **Left for a human:**
+  - Precision is 0.83, below 0.90. Decide between extending the labels, letting the scorer credit a finding that cites an expected risk's record without its words, or letting the miss stand. The labels cannot change otherwise.
+  - Decide whether the 7 vendors without a run are run again (GDELT refused 62 % of the runs of this pass), or a partial golden set of 14 of 21 is accepted.
+  - Decide whether a partial run (Wiser Solutions, run 29) counts for the golden set.
   - Nothing in this repository says the bars are met.
