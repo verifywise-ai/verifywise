@@ -53,10 +53,7 @@ jest.mock("../../utils/logger/fileLogger", () => ({
   },
 }));
 
-import {
-  evaluateRulesForBatch,
-  processTriggeredRules,
-} from "../shadowAiAlertNotification.service";
+import { evaluateRulesForBatch, processTriggeredRules } from "../shadowAiAlertNotification.service";
 import { sendInAppNotification, sendBulkInAppNotifications } from "../inAppNotification.service";
 import {
   getActiveRulesQuery,

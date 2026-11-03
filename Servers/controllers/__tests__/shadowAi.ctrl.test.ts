@@ -688,9 +688,7 @@ describe("shadowAi.ctrl", () => {
       const mockCreateRisk = createNewModelRiskQuery as jest.MockedFunction<any>;
       mockGetToolById.mockResolvedValue({ id: 1, name: "ChatGPT" });
       mockLinkTool.mockResolvedValue(undefined);
-      mockSequelizeQuery
-        .mockResolvedValueOnce([[{ id: 10 }]])
-        .mockResolvedValueOnce(undefined);
+      mockSequelizeQuery.mockResolvedValueOnce([[{ id: 10 }]]).mockResolvedValueOnce(undefined);
       const req = createReq({
         params: { id: "1" },
         body: {

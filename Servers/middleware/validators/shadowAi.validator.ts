@@ -2,10 +2,7 @@ import { body, param } from "express-validator";
 import { handleValidationErrors } from "../validate.middleware";
 import { normalizeIp } from "../../services/shadowAiSyslog/ip";
 import { PARSER_TYPES } from "../../services/shadowAiSyslog/types";
-import {
-  DATA_SENSITIVITIES,
-  MAX_RISK_DESCRIPTION_LENGTH,
-} from "../../services/shadowAiGovernance";
+import { DATA_SENSITIVITIES, MAX_RISK_DESCRIPTION_LENGTH } from "../../services/shadowAiGovernance";
 
 const idParam = param("id").isInt({ min: 1 }).withMessage("id must be a positive integer");
 
