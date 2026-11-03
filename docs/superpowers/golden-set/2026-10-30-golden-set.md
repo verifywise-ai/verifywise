@@ -118,6 +118,7 @@ Every labelled vendor also needs a completed run on its row, not after findings 
 - The second pass, from 2026-11-01T23:05:15Z (first start) to 2026-11-02T07:08:03Z (last start), is blocked by the environment and scored nothing. Details are in the next section. Nothing in this repository says the bars are met.
 - The third pass, on 2026-11-02, was stopped by its own clean-up after 6 of 21 vendors had an accepted run. Details are in its section.
 - The fourth pass, from 2026-11-02 to 2026-11-03, ended BLOCKED-ENV with 14 of 21 vendors accepted, and the verdict is held (precision 0.83, and 7 vendors without a run). Details are in its section.
+- The fifth pass, on 2026-11-03, ran the 7 vendors without a run, ended BLOCKED-ENV with 19 of 21 vendors accepted, and the verdict is held (precision 0.85, label agreement 64 %, 2 vendors without a run). Details are in its section.
 
 ### Pass 2 (2026-11-01 to 2026-11-02): BLOCKED-ENV, nothing scored
 
@@ -191,6 +192,42 @@ Every labelled vendor also needs a completed run on its row, not after findings 
 - **Against pass 3, for its six labels:** 10 findings with 8 matched (precision 0.80), against 12 with 10 matched (0.83); recall 8 of 49 against 10 of 49; 18 attempts against 9.
 - **Left for a human:**
   - Precision is 0.83, below 0.90. Decide between extending the labels, letting the scorer credit a finding that cites an expected risk's record without its words, or letting the miss stand. The labels cannot change otherwise.
-  - Decide whether the 7 vendors without a run are run again (GDELT refused 62 % of the runs of this pass), or a partial golden set of 14 of 21 is accepted.
+  - Run the 7 vendors without a run: pass 5 did. 62 % of the runs of this pass were void (54 % refused by GDELT, 8 % for other causes).
   - Decide whether a partial run (Wiser Solutions, run 29) counts for the golden set.
+  - Nothing in this repository says the bars are met.
+
+### Pass 5 (2026-11-03): BLOCKED-ENV at 19 of 21 vendors, held
+
+- **What it is:** pass 4's database restored from its dump (the dump has no `llm_keys` rows, so one stale `research_llm_key_id` was cleared and its foreign key added again), the same code (`98c707adb2ce8c702f386ba21964506915164c17`, 217 migrations, prompt `vr-12`, registry `sr-5`, engine GDELT), and only the 7 labels pass 4 did not accept, with Anyscale last. Pass 4's 14 accepted runs stand and are not run again.
+- **Dates:** first start 2026-11-03T11:52:54Z; the driver ended at 2026-11-03T20:26:42Z.
+- **Driver:** pass 4's, with growing GDELT gaps (30, 60, 60, 90, 120, 120 and 180 minutes after the first to the seventh GDELT void in a row) and a stop at 8 GDELT voids in a row (exit 5). Env voids keep the 15 minute gap and the stop at 6 in a row (exit 6). It ended with exit 6 on monday.com.
+- **Accepted runs of pass 5 (5, all clean):** Invoicely (run 42), GoatCounter (45), Conduent (46), Extia (47), TikTok (49).
+- **Void runs:** 19 attempts, 14 void (74 %): 8 GDELT voids and 6 env voids; none partial, 5 clean. 9 of the voids are monday.com's (6 env, 3 GDELT): it had 0 news searches answered in all 9 attempts (runs 50 to 58). Anyscale never ran in pass 5 (it was last in the order; its row 46 holds no run).
+- **GDELT asks:** 46 asks in the traces, 35 refused (27 non-final, 8 final), 5 answered: 0.76 refusals per ask (pass 4: 0.81). News searches answered: 109 of 421. `worker.log` holds no 429 line. In monday.com's env voids the shared GDELT ask ended in `search_unavailable` without a final 429; no other vendor ran after 16:25Z, so the trace cannot tell a monday.com-specific failure from a GDELT outage.
+- **Scored:** the raw `score.txt` counts monday.com's void run 58 and finds no run for Anyscale (precision 0.85, 23 of 27; agreement 65 %). The verdict comes from the read-only `scoreAccepted.ts`: pass 4's 14 runs plus the latest non-void pass-5 run of each other label.
+
+  | Bar | Value | Met |
+  |---|---|---|
+  | Prompt version `vr-12` only | all 19 scored runs (all 58 runs in the database) | yes |
+  | Precision at least 0.90 | 0.85 (22 of 26, 1 trap) | no |
+  | Label agreement at least 80 % | 64 % (14 of 22); pass-5 labels 0 of 7 (TikTok 0/6, Conduent 0/1) | no |
+  | No High finding rated Low | none | yes |
+  | No sanctions match stated as a fact | none | yes |
+  | Coverage | no failed list, none missing, on all 19 accepted runs | yes |
+  | No run after earlier findings or risks of its row | none | yes |
+  | Every labelled vendor has a completed run | 19 of 21 (Anyscale, monday.com missing) | no |
+  | Recall (no bar) | 0.17 (22 of 129) | n/a |
+
+- **Verdict: held.** Three bars are missed. Against pass 4, precision went from 0.83 to 0.85, agreement from 93 % to 64 %, and the vendors without a run from 7 to 2.
+- **The four unmatched findings:**
+  - Salesloft, run 13, finding 24: (a) no label or trap covers it (subprocessors added to the trust centre, as `ai_specific`).
+  - Salesloft, run 13, finding 25: (a) no label or trap covers it (availability, from the status page incident history).
+  - Typeform, run 26, finding 33: (b) it cites the status page history record of 2026-08-07, the day of the expected outage, but has none of the expectation's words.
+  - Invoicely, run 42, finding 48: (c) it matches Invoicely trap 3 (`ai_specific`, "non-personally identifiable"), so it counts as a false positive.
+- **What-if numbers (not the scorer's; the verdict does not use them):** with the (b) finding counted as matched, precision is 0.88 (23 of 26); with the (a) findings left out, 0.92 (22 of 24); with both, 0.96 (23 of 24). None changes the agreement or the 2 vendors without a run.
+- **Left for a human:**
+  - Agreement is 64 %. The cause is TikTok findings 50 to 55 (four Low against High, two Low against Medium) and Conduent finding 49 (Medium against High). sr-5 classes every TikTok source as `unverified`, its own privacy policy page included (publisher `social`, flag `user_content`). No finding is High rated Low. Decide whether the classification or rating rules change, whether the labels were too high, or whether the miss stands.
+  - Precision is 0.85. Pass 4's question stays open: should the labels cover the (a) findings, or should the scorer count a (b) finding?
+  - 19 of 21 vendors have a run. Run monday.com and Anyscale in another pass, or accept 19 of 21.
+  - Decide whether a partial run (Wiser Solutions, run 29: 19 of 23 news searches answered, no findings) counts for the golden set.
   - Nothing in this repository says the bars are met.
