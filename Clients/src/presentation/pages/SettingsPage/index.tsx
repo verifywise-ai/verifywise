@@ -47,7 +47,7 @@ const BUILT_IN_TABS = [
 ];
 
 export default function ProfilePage() {
-  const { userRoleName } = useAuth();
+  const { userRoleName, isSuperAdmin } = useAuth();
   const ssoFeatureEnabled = useSsoFeatureEnabled();
   const location = useLocation();
   const navigate = useNavigate();
@@ -285,7 +285,13 @@ export default function ProfilePage() {
 
         {!isMcpHidden && (
           <TabPanel sx={{ p: 0 }} value="mcp">
-            <McpConnect scope="organization" />
+            <McpConnect
+              disabledReason={
+                isSuperAdmin
+                  ? "You are also a super admin, so set up MCP from Super Admin → Settings → MCP. A connection made there gives you these tools and the super-admin ones together."
+                  : undefined
+              }
+            />
           </TabPanel>
         )}
 

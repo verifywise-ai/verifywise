@@ -99,7 +99,7 @@ export default function SuperAdminSettings() {
         </TabPanel>
 
         <TabPanel sx={{ p: 0 }} value="mcp">
-          <McpConnect scope="deployment" />
+          <McpConnect />
         </TabPanel>
 
         <TabPanel sx={{ p: 0 }} value="api-keys">
