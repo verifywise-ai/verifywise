@@ -57,6 +57,7 @@ export const de: Record<string, string> = {
   "Create API tokens for the super admin API":
     "API-Tokens für die Super-Administrator-API erstellen",
   "Connect Claude Code to this deployment": "Claude Code mit dieser Bereitstellung verbinden",
+  "Connect Claude Code to this organization": "Claude Code mit dieser Organisation verbinden",
   "Download the config file": "Konfigurationsdatei herunterladen",
   "Token expires in": "Token läuft ab in",
   "Config file downloaded": "Konfigurationsdatei heruntergeladen",
@@ -64,11 +65,13 @@ export const de: Record<string, string> = {
   "Check it worked": "Prüfen, ob es funktioniert hat",
   "What the file contains": "Was die Datei enthält",
   "Tools it adds": "Hinzugefügte Tools",
+  "Couldn't load the tool list. Reload the page to try again.":
+    "Die Tool-Liste konnte nicht geladen werden. Laden Sie die Seite neu, um es erneut zu versuchen.",
   "Download config file": "Konfigurationsdatei herunterladen",
   "Preparing...": "Wird vorbereitet...",
   "Failed to create the config file.": "Die Konfigurationsdatei konnte nicht erstellt werden.",
-  "Downloading revokes the token issued here last time. Anything set up with the previous file, on this machine or another, stops working immediately.":
-    "Beim Herunterladen wird das zuletzt hier ausgestellte Token widerrufen. Alles, was mit der vorherigen Datei eingerichtet wurde, auf diesem oder einem anderen Rechner, funktioniert sofort nicht mehr.",
+  "Downloading revokes the token issued to you here last time. Anything set up with the previous file, on this machine or another, stops working immediately.":
+    "Beim Herunterladen wird das Token widerrufen, das Ihnen hier zuletzt ausgestellt wurde. Alles, was mit der vorherigen Datei eingerichtet wurde, auf diesem oder einem anderen Rechner, funktioniert sofort nicht mehr.",
   "Remove user": "Benutzer entfernen",
   "They lose access to this organization. If it is their only organization, their account is deleted too.":
     "Der Benutzer verliert den Zugriff auf diese Organisation. Ist es seine einzige Organisation, wird auch sein Konto gelöscht.",
@@ -142,6 +145,7 @@ export const fr: Record<string, string> = {
   "Create API tokens for the super admin API":
     "Créer des tokens d'API pour l'API super administrateur",
   "Connect Claude Code to this deployment": "Connecter Claude Code à ce déploiement",
+  "Connect Claude Code to this organization": "Connecter Claude Code à cette organisation",
   "Download the config file": "Télécharger le fichier de configuration",
   "Token expires in": "Le jeton expire dans",
   "Config file downloaded": "Fichier de configuration téléchargé",
@@ -149,11 +153,13 @@ export const fr: Record<string, string> = {
   "Check it worked": "Vérifier que cela fonctionne",
   "What the file contains": "Contenu du fichier",
   "Tools it adds": "Outils ajoutés",
+  "Couldn't load the tool list. Reload the page to try again.":
+    "Impossible de charger la liste des outils. Rechargez la page pour réessayer.",
   "Download config file": "Télécharger le fichier de configuration",
   "Preparing...": "Préparation...",
   "Failed to create the config file.": "Impossible de créer le fichier de configuration.",
-  "Downloading revokes the token issued here last time. Anything set up with the previous file, on this machine or another, stops working immediately.":
-    "Le téléchargement révoque le jeton émis ici la dernière fois. Tout ce qui a été configuré avec le fichier précédent, sur cette machine ou une autre, cesse immédiatement de fonctionner.",
+  "Downloading revokes the token issued to you here last time. Anything set up with the previous file, on this machine or another, stops working immediately.":
+    "Le téléchargement révoque le jeton qui vous a été émis ici la dernière fois. Tout ce qui a été configuré avec le fichier précédent, sur cette machine ou une autre, cesse immédiatement de fonctionner.",
   "Remove user": "Retirer l'utilisateur",
   "They lose access to this organization. If it is their only organization, their account is deleted too.":
     "Il perd l'accès à cette organisation. Si c'est sa seule organisation, son compte est également supprimé.",
@@ -225,6 +231,7 @@ export const es: Record<string, string> = {
   "Create API tokens for the super admin API":
     "Crear tokens de API para la API de superadministrador",
   "Connect Claude Code to this deployment": "Conectar Claude Code a esta implementación",
+  "Connect Claude Code to this organization": "Conectar Claude Code a esta organización",
   "Download the config file": "Descargar el archivo de configuración",
   "Token expires in": "El token caduca en",
   "Config file downloaded": "Archivo de configuración descargado",
@@ -232,11 +239,13 @@ export const es: Record<string, string> = {
   "Check it worked": "Comprobar que funcionó",
   "What the file contains": "Qué contiene el archivo",
   "Tools it adds": "Herramientas que añade",
+  "Couldn't load the tool list. Reload the page to try again.":
+    "No se pudo cargar la lista de herramientas. Recarga la página para volver a intentarlo.",
   "Download config file": "Descargar el archivo de configuración",
   "Preparing...": "Preparando...",
   "Failed to create the config file.": "No se pudo crear el archivo de configuración.",
-  "Downloading revokes the token issued here last time. Anything set up with the previous file, on this machine or another, stops working immediately.":
-    "Al descargarlo se revoca el token emitido aquí la última vez. Todo lo que se configuró con el archivo anterior, en este equipo o en otro, deja de funcionar de inmediato.",
+  "Downloading revokes the token issued to you here last time. Anything set up with the previous file, on this machine or another, stops working immediately.":
+    "Al descargarlo se revoca el token que se te emitió aquí la última vez. Todo lo que se configuró con el archivo anterior, en este equipo o en otro, deja de funcionar de inmediato.",
   "Remove user": "Quitar usuario",
   "They lose access to this organization. If it is their only organization, their account is deleted too.":
     "Pierde el acceso a esta organización. Si es su única organización, también se elimina su cuenta.",
