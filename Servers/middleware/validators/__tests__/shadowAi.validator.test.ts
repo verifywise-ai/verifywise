@@ -1,5 +1,9 @@
 import { Request, Response } from "express";
-import { validateCreateSyslogConfig, validateUpdateSyslogConfig } from "../shadowAi.validator";
+import {
+  validateCreateSyslogConfig,
+  validateStartGovernance,
+  validateUpdateSyslogConfig,
+} from "../shadowAi.validator";
 
 async function run(chain: unknown[], body: Record<string, unknown>, params = {}) {
   const req = { body, params, query: {}, headers: {}, cookies: {} } as unknown as Request;
@@ -55,5 +59,28 @@ describe("syslog config validators", () => {
     ]) {
       expect((await run(validateUpdateSyslogConfig, body, { id: "1" })).status).toBeUndefined();
     }
+  });
+});
+
+describe("validateStartGovernance risk_assessment", () => {
+  const base = {
+    model_inventory: { provider: "OpenAI", model: "GPT-4" },
+    governance_owner_id: 2,
+  };
+  const status = async (risk_assessment: unknown) =>
+    (await run(validateStartGovernance, { ...base, risk_assessment }, { id: "1" })).status;
+
+  it("accepts a valid assessment, an empty one and none", async () => {
+    expect(await status({ data_sensitivity: "High", description: "x" })).toBeUndefined();
+    expect(await status({ data_sensitivity: "", description: "x" })).toBeUndefined();
+    expect(await status({ description: "" })).toBeUndefined();
+    expect(await status(undefined)).toBeUndefined();
+  });
+
+  it("rejects an unknown sensitivity, a non-string or too long description", async () => {
+    expect(await status({ data_sensitivity: "high" })).toBe(400);
+    expect(await status({ description: 123 })).toBe(400);
+    expect(await status({ description: "x".repeat(5001) })).toBe(400);
+    expect(await status(["High"])).toBe(400);
   });
 });

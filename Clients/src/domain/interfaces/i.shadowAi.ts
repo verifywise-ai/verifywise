@@ -197,7 +197,7 @@ export interface ShadowAiGovernanceRequest {
   };
   governance_owner_id: number;
   risk_assessment?: {
-    data_sensitivity?: string;
+    data_sensitivity?: "High" | "Medium" | "Low";
     description?: string;
   };
   start_lifecycle?: boolean;

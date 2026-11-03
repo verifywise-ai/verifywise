@@ -14,6 +14,9 @@ export type DataSensitivity = (typeof DATA_SENSITIVITIES)[number];
 
 export const MAX_RISK_DESCRIPTION_LENGTH = 5000;
 
+/** model_risks.risk_name is VARCHAR(255); a tool name can be that long itself. */
+const MAX_RISK_NAME_LENGTH = 255;
+
 const LEVEL_FOR_SENSITIVITY: Record<DataSensitivity, ModelRiskLevel> = {
   High: ModelRiskLevel.HIGH,
   Medium: ModelRiskLevel.MEDIUM,
@@ -41,7 +44,7 @@ export function buildGovernanceModelRisk(
   due.setUTCDate(due.getUTCDate() + GOVERNANCE_RISK_DEADLINE_DAYS);
 
   return {
-    risk_name: `Use of ${ctx.toolName}`,
+    risk_name: `Use of ${ctx.toolName}`.slice(0, MAX_RISK_NAME_LENGTH),
     risk_category: ModelRiskCategory.SECURITY,
     // Data sensitivity sets the level; a description alone is rated Medium.
     risk_level: sensitivity ? LEVEL_FOR_SENSITIVITY[sensitivity] : ModelRiskLevel.MEDIUM,

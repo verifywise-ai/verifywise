@@ -29,6 +29,14 @@ describe("buildGovernanceModelRisk", () => {
     });
   });
 
+  it("keeps the risk name within the 255-character column", () => {
+    const risk = buildGovernanceModelRisk(
+      { data_sensitivity: "High" },
+      { ...ctx, toolName: "x".repeat(255) },
+    );
+    expect(risk?.risk_name).toHaveLength(255);
+  });
+
   it("rates a description without sensitivity as Medium and keeps the text", () => {
     const risk = buildGovernanceModelRisk({ description: " Pastes source code " }, ctx);
     expect(risk).toMatchObject({ risk_level: "Medium", description: "Pastes source code" });

@@ -21,6 +21,12 @@ jest.mock("../../utils/shadowAiTools.utils", () => ({
 jest.mock("../../utils/modelRisk.utils", () => ({
   createNewModelRiskQuery: jest.fn(),
 }));
+jest.mock("../../utils/user.utils", () => ({
+  getUserByIdQuery: jest.fn(),
+}));
+jest.mock("../../utils/changeHistory.base.utils", () => ({
+  recordEntityCreation: jest.fn(),
+}));
 jest.mock("../../utils/shadowAiRules.utils", () => ({
   getAllRulesQuery: jest.fn(),
   createRuleQuery: jest.fn(),
@@ -85,6 +91,8 @@ jest.mock("../../database/db", () => ({
 
 import { sequelize } from "../../database/db";
 import { createNewModelRiskQuery } from "../../utils/modelRisk.utils";
+import { getUserByIdQuery } from "../../utils/user.utils";
+import { recordEntityCreation } from "../../utils/changeHistory.base.utils";
 import { getSyslogListenerState } from "../../services/shadowAiSyslog/listener";
 import { readSyslogListenerConfig } from "../../services/shadowAiSyslog/config";
 import { invalidateSourceCacheAfterCommit } from "../../services/shadowAiSyslog/sourceCache";
@@ -576,6 +584,27 @@ describe("shadowAi.ctrl", () => {
   });
 
   describe("startGovernance", () => {
+    beforeEach(() => {
+      (getUserByIdQuery as jest.MockedFunction<any>).mockResolvedValue({ id: 2 });
+    });
+
+    it("returns 400 when the governance owner is not in the organization", async () => {
+      (getUserByIdQuery as jest.MockedFunction<any>).mockResolvedValue(null);
+      mockGetToolById.mockResolvedValue({ id: 1, name: "ChatGPT" });
+      const req = createReq({
+        params: { id: "1" },
+        body: {
+          model_inventory: { provider: "OpenAI", model: "GPT-4" },
+          governance_owner_id: "99",
+        },
+      });
+      const res = createRes();
+      await startGovernance(req, res);
+      expect(getUserByIdQuery).toHaveBeenCalledWith(99, null, 1);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(mockSequelizeQuery).not.toHaveBeenCalled();
+    });
+
     it("should return 403 for non-write role", async () => {
       const req = createReq({ role: "Auditor", params: { id: "1" }, body: {} });
       const res = createRes();
@@ -674,6 +703,14 @@ describe("shadowAi.ctrl", () => {
           model_id: 10,
         }),
         1,
+        expect.anything(),
+      );
+      expect(recordEntityCreation).toHaveBeenCalledWith(
+        "model_risk",
+        55,
+        expect.any(Number),
+        1,
+        expect.objectContaining({ risk_name: "Use of ChatGPT" }),
         expect.anything(),
       );
       expect(res.status).toHaveBeenCalledWith(201);

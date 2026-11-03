@@ -57,6 +57,8 @@ import { translateError } from "../utils/i18n.utils";
 import { normalizeIp } from "../services/shadowAiSyslog/ip";
 import { buildGovernanceModelRisk } from "../services/shadowAiGovernance";
 import { createNewModelRiskQuery } from "../utils/modelRisk.utils";
+import { getUserByIdQuery } from "../utils/user.utils";
+import { recordEntityCreation } from "../utils/changeHistory.base.utils";
 import { readSyslogListenerConfig } from "../services/shadowAiSyslog/config";
 import { getSyslogListenerState } from "../services/shadowAiSyslog/listener";
 import { invalidateSourceCacheAfterCommit } from "../services/shadowAiSyslog/sourceCache";
@@ -656,6 +658,14 @@ export async function startGovernance(req: Request, res: Response) {
         .json(STATUS_CODE[400](req.t!("governance_owner_id must be a positive integer")));
     }
 
+    // The owner is stored on the tool and on the model risk, so it must be a
+    // member of this organization.
+    if (!(await getUserByIdQuery(ownerId, null, organizationId))) {
+      return res
+        .status(400)
+        .json(STATUS_CODE[400](req.t!("The governance owner must be a user in your organization")));
+    }
+
     let transaction: Transaction | null = null;
 
     try {
@@ -726,6 +736,16 @@ export async function startGovernance(req: Request, res: Response) {
       if (modelRisk) {
         const created = await createNewModelRiskQuery(modelRisk, organizationId, transaction);
         riskEntryId = created.id ?? null;
+        if (riskEntryId !== null) {
+          await recordEntityCreation(
+            "model_risk",
+            riskEntryId,
+            userId,
+            organizationId,
+            modelRisk,
+            transaction,
+          );
+        }
       }
 
       // Initialize lifecycle review if requested

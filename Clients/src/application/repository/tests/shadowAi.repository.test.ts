@@ -1195,7 +1195,7 @@ describe("shadowAi.repository", () => {
         },
         governance_owner_id: 1,
         risk_assessment: {
-          data_sensitivity: "high",
+          data_sensitivity: "High",
           description: "Customer data may be processed",
         },
         start_lifecycle: true,
