@@ -964,4 +964,199 @@ describe("parseLine", () => {
       });
     });
   });
+
+  describe("zone names, ISO variants and brackets", () => {
+    const at = (timestamp: string) => {
+      const r = parseLine(
+        "generic_kv",
+        `suser=a@b.co dhost=x.com timestamp="${timestamp}"`,
+        "2026-02-09T00:00:00.000Z",
+        RECEIVED,
+      );
+      return r.ok ? r.event.timestamp : r;
+    };
+    const originalTz = process.env.TZ;
+    afterEach(() => {
+      if (originalTz === undefined) delete process.env.TZ;
+      else process.env.TZ = originalTz;
+    });
+
+    it.each(["America/New_York", "Asia/Tokyo", "UTC"])("reads them in %s", (tz) => {
+      process.env.TZ = tz;
+      // ISO date with a `T` and a zone name.
+      expect(at("2026-02-09T14:32:00 CET")).toBe("2026-02-09T13:32:00.000Z");
+      // Comma fraction, with and without a zone.
+      expect(at("2026-02-09T14:32:00,250Z")).toBe("2026-02-09T14:32:00.250Z");
+      expect(at("2026-02-09 14:32:00,250")).toBe("2026-02-09T14:32:00.250Z");
+      // ISO date with AM/PM and no zone.
+      expect(at("2026-02-09T02:32:00 PM")).toBe("2026-02-09T14:32:00.000Z");
+      // A name inside a bracket with other text, or with one bracket only.
+      expect(at("2026-02-09 14:32:00 (Tokyo JST)")).toBe("2026-02-09T05:32:00.000Z");
+      expect(at("2026-02-09 14:32:00 JST)")).toBe("2026-02-09T05:32:00.000Z");
+      expect(at("2026-02-09 14:32:00 (JST")).toBe("2026-02-09T05:32:00.000Z");
+      // A name right after the digits.
+      expect(at("2026-02-09 14:32:00JST")).toBe("2026-02-09T05:32:00.000Z");
+      // A numeric offset wins over a name that disagrees with it.
+      expect(at("Mon Feb 09 2026 14:32:00 GMT+0100 (CEST)")).toBe("2026-02-09T13:32:00.000Z");
+    });
+
+    it("reads a lowercase name, but not one inside other words", () => {
+      expect(at("2026-02-09 14:32:00 cet")).toBe("2026-02-09T13:32:00.000Z");
+      // `west` is cut out, but `us` and `2` are left: unreadable, so the header time is used.
+      expect(at("2026-02-09 14:32:00 us-west-2")).toBe("2026-02-09T00:00:00.000Z");
+    });
+
+    it("does not read an unknown zone in brackets as UTC", () => {
+      expect(at("2026-02-09 14:32:00 (IST)")).toBe("2026-02-09T00:00:00.000Z");
+      expect(at("2026-02-09 14:32:00 (India Standard Time)")).toBe("2026-02-09T00:00:00.000Z");
+    });
+
+    it("reads a zone Date.parse knows inside brackets", () => {
+      expect(at("2026-02-09 14:32:00 (UTC)")).toBe("2026-02-09T14:32:00.000Z");
+      expect(at("2026-02-09 14:32:00 (GMT)")).toBe("2026-02-09T14:32:00.000Z");
+      expect(at("2026-02-09 14:32:00 (+05:30)")).toBe("2026-02-09T09:02:00.000Z");
+      expect(at("2026-02-09 14:32:00 (PST)")).toBe("2026-02-09T22:32:00.000Z");
+      expect(at("2026-02-09 14:32:00 (UTC+5)")).toBe("2026-02-09T09:32:00.000Z");
+    });
+
+    it.each(["America/New_York", "UTC"])(
+      "does not let a bracketed comment change the date in %s",
+      (tz) => {
+        process.env.TZ = tz;
+        // Date.parse would read these as January or as the date in local time, both
+        // inside the accepted range.
+        expect(at("2026-02-09 14:32:00 (Janitor)")).toBe("2026-02-09T00:00:00.000Z");
+        expect(at("2026-02-09 14:32:00 (Febrile)")).toBe("2026-02-09T00:00:00.000Z");
+        expect(at("2026-02-09 14:32:00 (UTC) (Janitor)")).toBe("2026-02-09T00:00:00.000Z");
+        expect(at("Mon Feb 09 14:32:00 (Novosibirsk) 2026")).toBe("2026-02-09T00:00:00.000Z");
+      },
+    );
+  });
+
+  describe("CEF event time fields", () => {
+    const cef = (ext: string) =>
+      parseLine(
+        "generic_kv",
+        `CEF:0|V|P|1|100|Web|3|suser=a@b.co dhost=x.com ${ext}`,
+        undefined,
+        RECEIVED_2024,
+      );
+
+    it("reads rt, then end, then start", () => {
+      const time = (ext: string) => {
+        const r = cef(ext);
+        return r.ok ? r.event.timestamp : r;
+      };
+      expect(time("rt=1707489120000 end=1707489000000")).toBe("2024-02-09T14:32:00.000Z");
+      expect(time("end=1707489120000 start=1707489000000")).toBe("2024-02-09T14:32:00.000Z");
+      expect(time("start=1707489120000")).toBe("2024-02-09T14:32:00.000Z");
+      expect(time("rt=Feb 09 2024 14:32:00")).toBe("2024-02-09T14:32:00.000Z");
+    });
+
+    it("uses rt when timestamp is empty or unreadable", () => {
+      for (const ext of [
+        "timestamp= rt=1707489120000",
+        "timestamp=soon rt=1707489120000",
+        "timestamp=0 rt=1707489120000",
+      ]) {
+        const r = cef(ext);
+        expect(r.ok && r.event.timestamp).toBe("2024-02-09T14:32:00.000Z");
+      }
+    });
+
+    it("does not reject a repeated end in Zscaler lines, which do not read it", () => {
+      expect(parseLine("zscaler", "user=a@b.co dst=x.com end=1 end=2").ok).toBe(true);
+    });
+
+    it("rejects a repeated rt", () => {
+      expect(cef("rt=1707489120000 rt=1707489000000")).toEqual({
+        ok: false,
+        reason: "unparseable",
+      });
+    });
+  });
+
+  describe("bare IPv6 destinations", () => {
+    it("reads an unbracketed IPv6 address as the host", () => {
+      expect(parseLine("generic_kv", "suser=a@b.co dhost=2001:db8::1")).toEqual({
+        ok: true,
+        event: expect.objectContaining({ destination: "2001:db8::1" }),
+      });
+      expect(parseLine("zscaler", "user=a@b.co dst=2001:DB8::1")).toEqual({
+        ok: true,
+        event: expect.objectContaining({ destination: "2001:db8::1" }),
+      });
+    });
+
+    it("stores one form per address", () => {
+      const dest = (dhost: string) => {
+        const r = parseLine("generic_kv", `suser=a@b.co dhost=${dhost}`);
+        return r.ok ? r.event.destination : r.reason;
+      };
+      expect(dest("2001:DB8:0:0::1")).toBe("2001:db8::1");
+      expect(dest("::ffff:1.2.3.4")).toBe("1.2.3.4");
+      expect(dest("[::ffff:1.2.3.4]")).toBe("1.2.3.4");
+      const viaUrl = parseLine("generic_kv", "suser=a@b.co request=http://[::FFFF:1.2.3.4]/x");
+      expect(viaUrl.ok && viaUrl.event.destination).toBe("1.2.3.4");
+      expect(dest("::")).toBe("no_destination");
+      expect(dest("fe80::1%eth0")).toBe("no_destination");
+    });
+  });
+
+  describe("netskope JSON position and url host", () => {
+    const json = JSON.stringify({ user: "a@b.co", url: "https://chat.openai.com/c" });
+
+    it("finds the object after a prefix containing a brace", () => {
+      expect(parseLine("netskope", `host{1} tag: ${json}`)).toEqual({
+        ok: true,
+        event: expect.objectContaining({ destination: "chat.openai.com", uri_path: "/c" }),
+      });
+    });
+
+    it("skips braces that do not start an object", () => {
+      expect(parseLine("netskope", `${"{".repeat(20)} ${json}`).ok).toBe(true);
+      // A real object with many nested objects after a brace in the prefix.
+      const nested = JSON.stringify({
+        user: "a@b.co",
+        url: "https://chat.openai.com/c",
+        ...Object.fromEntries(Array.from({ length: 13 }, (_, i) => [`n${i}`, { i }])),
+      });
+      expect(parseLine("netskope", `{tag} ${nested}`).ok).toBe(true);
+      expect(parseLine("netskope", `host{} ${json}`).ok).toBe(true);
+      expect(parseLine("netskope", `{\u00a0"x" ${json}`).ok).toBe(true);
+    });
+
+    it("does not take a nested object as the event when the outer one is broken", () => {
+      const broken =
+        '{"user":"real@corp.com","url":"https://real.ai/x","bad": ,"meta":{"user":"ceo@corp.com","url":"https://evil.example/p"}}';
+      expect(parseLine("netskope", broken)).toEqual({ ok: false, reason: "unparseable" });
+    });
+
+    it("stays linear on a line of braces", () => {
+      // The quadratic search took over 2 s per line; linear takes milliseconds.
+      for (const line of ["{".repeat(65000), `}${"{".repeat(65000)}`, `{${" ".repeat(65000)}x`]) {
+        const startedAt = Date.now();
+        parseLine("netskope", line);
+        expect(Date.now() - startedAt).toBeLessThan(1500);
+      }
+    });
+
+    it("prefers a dotted domain over an undotted url host", () => {
+      const r = parseLine(
+        "netskope",
+        JSON.stringify({ user: "a@b.co", url: "http://localhost/x", domain: "chat.openai.com" }),
+      );
+      expect(r.ok && r.event.destination).toBe("chat.openai.com");
+      expect(r.ok && r.event.uri_path).toBeUndefined();
+    });
+
+    it("falls back to the undotted url host when nothing else names one", () => {
+      expect(
+        parseLine("netskope", JSON.stringify({ user: "a@b.co", url: "http://intranet/x" })),
+      ).toEqual({
+        ok: true,
+        event: expect.objectContaining({ destination: "intranet", uri_path: "/x" }),
+      });
+    });
+  });
 });

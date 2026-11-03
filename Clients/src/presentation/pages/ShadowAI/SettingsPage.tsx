@@ -96,7 +96,7 @@ export default function SettingsPage() {
   return (
     <PageHeaderExtended
       title="Settings"
-      description="Manage API keys for syslog integration and configure syslog sources to feed network traffic data into Shadow AI detection."
+      description="Manage API keys for the REST API and syslog sources for proxy and firewall logs, and set the rate limit and data retention for Shadow AI."
       helpArticlePath="shadow-ai/settings"
       tipBoxEntity="shadow-ai-settings"
     >
@@ -244,8 +244,8 @@ function ApiKeysSection() {
         </Stack>
 
         <Typography sx={{ fontSize: 13, color: palette.status.default.text }}>
-          API keys are used to authenticate Shadow AI event ingestion from your network proxy, SIEM,
-          or browser extension.{" "}
+          API keys authenticate events sent to the REST API from a SIEM, script or browser
+          extension. Syslog sources use their own keys.{" "}
           <Typography
             component="span"
             sx={docLinkSx}
@@ -1098,7 +1098,8 @@ const API_FIELDS = [
   {
     field: "action",
     required: "No",
-    description: '"allowed" or "blocked" — whether the proxy permitted the request',
+    description:
+      '"blocked" if the proxy refused the request. Any other value is stored as "allowed"',
   },
   {
     field: "department",
@@ -1114,23 +1115,24 @@ const SYSLOG_EXAMPLES: { label: string; format: string; example: string }[] = [
     label: "Zscaler (key=value)",
     format: "zscaler",
     example:
-      "user=alice@company.com dst=chat.openai.com method=POST uri=https://chat.openai.com/v1/chat action=allowed department=Engineering",
+      "user=alice@company.com dst=chat.openai.com method=POST uri=https://chat.openai.com/v1/chat action=allowed department=Engineering vw_source=YOUR_SOURCE_KEY",
   },
   {
     label: "Netskope (JSON-in-syslog)",
     format: "netskope",
-    example: `{"user":"alice@company.com","url":"https://chat.openai.com/v1/chat","method":"POST","action":"allow","department":"Engineering","timestamp":"2026-02-09T14:32:00Z"}`,
+    example: `{"user":"alice@company.com","url":"https://chat.openai.com/v1/chat","method":"POST","action":"allow","department":"Engineering","timestamp":"2026-02-09T14:32:00Z","vw_source":"YOUR_SOURCE_KEY"}`,
   },
   {
     label: "Squid (space-delimited)",
     format: "squid",
     example:
-      "1707489120.000 200 10.0.0.1 TCP_MISS/200 1024 POST https://chat.openai.com/v1/chat alice@company.com DIRECT/chat.openai.com",
+      "1707489120.000 200 10.0.0.1 TCP_MISS/200 1024 POST https://chat.openai.com/v1/chat alice@company.com DIRECT/chat.openai.com vw_source=YOUR_SOURCE_KEY",
   },
   {
     label: "Generic key-value (CEF-like)",
     format: "generic_kv",
-    example: "suser=alice@company.com dhost=chat.openai.com requestMethod=POST act=allowed",
+    example:
+      "suser=alice@company.com dhost=chat.openai.com requestMethod=POST act=allowed vw_source=YOUR_SOURCE_KEY",
   },
 ];
 
@@ -1144,17 +1146,17 @@ const FIELD_MAPPING = [
   },
   {
     normalized: "destination",
-    zscaler: "dst",
-    netskope: "url (host), else domain",
+    zscaler: "dst, else host of uri",
+    netskope: "url (host), else domain or site",
     squid: "url (host)",
-    generic: "dhost",
+    generic: "dhost, else host of request",
   },
   {
     normalized: "uri_path",
     zscaler: "uri (path)",
     netskope: "url (path)",
     squid: "url (path)",
-    generic: "—",
+    generic: "request (path)",
   },
   {
     normalized: "http_method",
@@ -1166,23 +1168,23 @@ const FIELD_MAPPING = [
   {
     normalized: "action",
     zscaler: "action",
-    netskope: "action",
+    netskope: "action, else activity",
     squid: "field 4 (result)",
     generic: "act",
   },
   {
     normalized: "timestamp",
-    zscaler: "syslog header",
+    zscaler: "timestamp",
     netskope: "timestamp",
     squid: "field 1 (epoch)",
-    generic: "syslog header",
+    generic: "timestamp, else rt, end or start",
   },
   {
     normalized: "department",
     zscaler: "department",
     netskope: "department",
     squid: "—",
-    generic: "—",
+    generic: "department",
   },
 ];
 
@@ -1267,9 +1269,9 @@ function DataFormatsSection() {
           Syslog format examples
         </Typography>
         <Typography sx={{ fontSize: 13, color: palette.status.default.text, lineHeight: 1.5 }}>
-          Syslog messages use RFC 3164 or 5424 framing. The PRI, timestamp, and hostname header are
-          stripped automatically before parsing. Below are example log lines for each supported
-          parser.
+          {
+            'Every line must start or end with vw_source=<key>, using its syslog source\'s key. A Netskope JSON object can carry it as a top-level "vw_source" member instead. An RFC 3164 or RFC 5424 header is removed before parsing. One example line per parser:'
+          }
         </Typography>
 
         <Stack gap="12px">

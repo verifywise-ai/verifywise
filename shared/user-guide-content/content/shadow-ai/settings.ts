@@ -10,7 +10,7 @@ export const settingsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The Settings page is where you configure data sources, access controls and operational parameters for Shadow AI detection. It\'s divided into five sections: API keys, syslog sources, rate limiting, data retention and risk score calculation.',
+      text: 'The Settings page is where you configure data sources, access controls and operational parameters for Shadow AI detection. It\'s divided into six sections: API keys, syslog sources, data formats, rate limiting, data retention and risk score calculation. Only Admins can manage API keys, syslog sources and the rate limit.',
     },
     {
       type: 'heading',
@@ -20,7 +20,7 @@ export const settingsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'API keys authenticate event ingestion from your network proxy, SIEM, browser extension or any system that forwards traffic data to VerifyWise.',
+      text: 'API keys authenticate events sent to the REST API, for example from a SIEM webhook, a script or a browser extension. Syslog sources do not use these keys; each source has its own key (see below).',
     },
     {
       type: 'heading',
@@ -56,8 +56,8 @@ export const settingsContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Revoke', text: 'Deactivates the key immediately. Integrations using this key will stop working. This cannot be undone.' },
-        { bold: 'Delete', text: 'Permanently removes a revoked key from the list.' },
+        { bold: 'Revoke', text: 'Deactivates the key. Integrations using this key will stop working. This cannot be undone. The server you are connected to refuses the key at once; with several backend replicas, the others can accept it for up to 5 minutes.' },
+        { bold: 'Delete', text: 'Permanently removes a revoked key from the list. Only revoked keys can be deleted.' },
       ],
     },
     {
@@ -87,10 +87,10 @@ export const settingsContent: ArticleContent = {
         { key: 'description', label: 'Description', width: '70%' },
       ],
       rows: [
-        { parser: 'Zscaler', description: 'Reads key=value lines with user, dst, method, uri, action and department' },
-        { parser: 'Netskope', description: 'Reads a JSON object with user, url, method, action, department and timestamp' },
+        { parser: 'Zscaler', description: 'Reads key=value lines with user, dst, method, uri, action, department and timestamp' },
+        { parser: 'Netskope', description: 'Reads a JSON object with user, url (else domain or site), method, action, department and timestamp' },
         { parser: 'Squid proxy', description: 'Reads the native Squid access log. A `DENIED` result code is blocked, anything else is allowed' },
-        { parser: 'Generic key-value', description: 'Reads CEF-style key=value lines with suser, dhost, requestMethod and act (default)' },
+        { parser: 'Generic key-value', description: 'Reads key=value lines and CEF extensions with suser, dhost, request, requestMethod, act, department and timestamp (or CEF rt, end, start). The default for a new source' },
       ],
     },
     {
@@ -163,7 +163,7 @@ export const settingsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Send events via `POST /v1/shadow-ai/events` with a JSON request body containing an `events` array. Authenticate using the `X-API-Key` header with a valid API key.',
+      text: 'Send events via `POST /api/v1/shadow-ai/events` with a JSON request body containing an `events` array of up to 10,000 events. Authenticate using the `X-API-Key` header with a valid API key.',
     },
     {
       type: 'code',
@@ -192,22 +192,22 @@ export const settingsContent: ArticleContent = {
         { key: 'description', label: 'Description', width: '60%' },
       ],
       rows: [
-        { field: 'user_email', required: 'Yes', description: 'Email address of the user who made the request' },
-        { field: 'destination', required: 'Yes', description: 'Hostname or domain of the AI tool (e.g., chat.openai.com)' },
-        { field: 'timestamp', required: 'Yes', description: 'ISO 8601 timestamp of the event' },
-        { field: 'uri_path', required: 'No', description: 'URL path of the request (e.g., /v1/chat)' },
-        { field: 'http_method', required: 'No', description: 'HTTP method (GET, POST, etc.)' },
-        { field: 'action', required: 'No', description: '"allowed" or "blocked", indicating whether the proxy permitted the request' },
-        { field: 'department', required: 'No', description: 'Department of the user (e.g., Engineering, Finance)' },
+        { field: 'user_email', required: 'Yes', description: 'Email address of the user who made the request. Stored in lowercase, with surrounding spaces removed. Up to 255 characters' },
+        { field: 'destination', required: 'Yes', description: 'Hostname or domain of the AI tool (e.g., chat.openai.com). Stored in lowercase. Up to 512 characters' },
+        { field: 'timestamp', required: 'Yes', description: 'ISO 8601 timestamp of the event. A timestamp that cannot be read fails the whole request' },
+        { field: 'uri_path', required: 'No', description: 'URL path of the request (e.g., /v1/chat). Left out if longer than 2,048 characters' },
+        { field: 'http_method', required: 'No', description: 'HTTP method (GET, POST, etc.). Stored in upper case' },
+        { field: 'action', required: 'No', description: '"blocked" if the proxy refused the request. Any other value, or none, is stored as "allowed"' },
+        { field: 'department', required: 'No', description: 'Department of the user (e.g., Engineering, Finance). Used in risk scoring and department alerts' },
         { field: 'job_title', required: 'No', description: 'Job title of the user' },
-        { field: 'manager_email', required: 'No', description: 'Email address of the user\'s manager' },
+        { field: 'manager_email', required: 'No', description: 'Email address of the user\'s manager. Stored in lowercase' },
       ],
     },
     {
       type: 'callout',
       variant: 'info',
       title: 'Authentication',
-      text: 'All requests must include the `X-API-Key` header with a valid API key created from the API keys section above. Requests without a valid key receive a 401 response.',
+      text: 'All requests must include the `X-API-Key` header with a valid API key created from the API keys section above. Requests without a valid key receive a 401 response. The Integration guide lists every error response.',
     },
 
     // Syslog format examples
@@ -241,15 +241,11 @@ export const settingsContent: ArticleContent = {
     {
       type: 'code',
       language: 'json',
-      code: `{
-  "user": "alice@company.com",
-  "url": "https://chat.openai.com/v1/chat",
-  "method": "POST",
-  "action": "allow",
-  "department": "Engineering",
-  "timestamp": "2026-02-09T14:32:00Z",
-  "vw_source": "YOUR_SOURCE_KEY"
-}`,
+      code: `{"user":"alice@company.com","url":"https://chat.openai.com/v1/chat","method":"POST","action":"allow","department":"Engineering","timestamp":"2026-02-09T14:32:00Z","vw_source":"YOUR_SOURCE_KEY"}`,
+    },
+    {
+      type: 'paragraph',
+      text: 'Send the whole object on one line. With newline-delimited framing, a pretty-printed object is split into lines that cannot be read.',
     },
     {
       type: 'heading',
@@ -283,7 +279,7 @@ export const settingsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Each parser maps its fields to the normalized event schema. The user must be a valid email address. For the action, the first word of the value decides: block, deny, drop, reset or reject (and forms such as blocked, denied or dropped) become blocked, and allow, permit, pass or accept (and forms such as allowed or permitted) become allowed, so `Blocked by policy` is blocked. A negated allow such as `Not allowed` or `disallowed` is also blocked. Any other value, including words that only begin with one of these such as `password_reset`, is left empty. The timestamp comes from the payload field when present, then from the syslog header, then from the time VerifyWise received the line. A timestamp without a time zone is read as UTC; a zone it states (an offset, `Z`, `PST`, `CEST`) is used. A destination of `-`, `N/A` or `none` is skipped and the next field (such as the URL) is used. A timestamp more than a year before the time the line was received, or more than a day after it, is ignored. An email address longer than 255 characters or a destination longer than 512 drops the line, and a department is cut to 255 characters.',
+      text: 'Each parser maps its fields to the normalized event schema. The user must be a valid email address; it is stored in lowercase. For the action, the first word of the value decides: block, deny, drop, reset or reject (and forms such as blocked, denied or dropped) become blocked, and allow, permit, pass or accept (and forms such as allowed or permitted) become allowed, so `Blocked by policy` is blocked. A negated allow such as `Not allowed` or `disallowed` is also blocked. Any other value, including words that only begin with one of these such as `password_reset`, or no action at all, is stored as allowed. The timestamp comes from the payload field when present, then from the syslog header, then from the time VerifyWise received the line. A timestamp without a time zone is read as UTC; a zone it states (an offset, `Z`, `PST`, `CEST`, also in brackets such as `(Tokyo JST)`) is used. A zone name VerifyWise does not know, such as `IST`, makes the payload time unreadable, so send an offset or `Z` if your source logs in another zone. A timestamp more than a year before the time the line was received, or more than a day after it, is ignored. A destination can be a host name, an IPv4 or IPv6 address (bare or in brackets) or a URL, and is stored in lowercase. A destination of `-`, `N/A` or `none` is skipped and the next field (such as the URL) is used. An email address longer than 255 characters or a destination longer than 512 drops the line, and a department is cut to 255 characters.',
     },
     {
       type: 'table',
@@ -299,8 +295,8 @@ export const settingsContent: ArticleContent = {
         { normalized: 'destination', zscaler: 'dst, else host of uri', netskope: 'url (hostname), else domain or site', squid: 'url (hostname)', generic: 'dhost, else host of request' },
         { normalized: 'uri_path', zscaler: 'uri (path)', netskope: 'url (path)', squid: 'url (path)', generic: 'request (path)' },
         { normalized: 'http_method', zscaler: 'method', netskope: 'method', squid: 'field 6', generic: 'requestMethod' },
-        { normalized: 'action', zscaler: 'action', netskope: 'action', squid: 'field 4 (result code)', generic: 'act' },
-        { normalized: 'timestamp', zscaler: 'timestamp', netskope: 'timestamp', squid: 'field 1 (epoch)', generic: 'timestamp' },
+        { normalized: 'action', zscaler: 'action', netskope: 'action, else activity', squid: 'field 4 (result code)', generic: 'act' },
+        { normalized: 'timestamp', zscaler: 'timestamp', netskope: 'timestamp', squid: 'field 1 (epoch)', generic: 'timestamp, else CEF rt, end or start' },
         { normalized: 'department', zscaler: 'department', netskope: 'department', squid: '—', generic: 'department' },
       ],
     },
@@ -313,14 +309,15 @@ export const settingsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Rate limiting controls the maximum number of events that can be ingested per hour. This protects the system from being overwhelmed by a misconfigured data source or traffic spike.',
+      text: 'Rate limiting caps how many events your organization can ingest per hour, across the REST API and syslog. It protects the system from a misconfigured data source or a traffic spike. Only Admins can change it. The count is kept in memory by each backend process, so with several backend replicas the effective limit is the setting times the number of replicas.',
     },
     {
       type: 'bullet-list',
       items: [
-        { text: 'Set a numeric value to cap hourly ingestion' },
-        { text: 'Set to 0 or leave empty to allow unlimited ingestion' },
-        { text: 'Changes take effect immediately' },
+        { text: 'Set a number to cap hourly ingestion. Set 0 or leave the field empty for no limit (the default).' },
+        { text: 'The hour starts with the first event counted, not on the clock hour.' },
+        { text: 'A REST request that would go over the limit is refused whole with a 429 response. Syslog events over the limit are dropped and show "Over the hourly event limit" on the source.' },
+        { text: 'A change applies to the REST API at once and to syslog within 30 seconds.' },
       ],
     },
     {
@@ -348,7 +345,7 @@ export const settingsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Set a value to 0 or leave it empty to keep data indefinitely. Changes take effect on the next cleanup cycle.',
+      text: 'Each period can be 1 to 3,650 days. Cleanup runs once a day, so a change applies at the next run. Raw events are removed by the time of the event, not the time it arrived. Admins can change these periods, and so can a custom role that has the organization admin permission. Each change is recorded in the audit ledger.',
     },
     {
       type: 'callout',
@@ -377,7 +374,7 @@ export const settingsContent: ArticleContent = {
         { factor: 'Approval status', weight: '40%', description: 'Unapproved tools (not in model inventory or not approved) receive the maximum score.' },
         { factor: 'Data & compliance', weight: '25%', description: 'Based on training-on-data policy, SOC 2, GDPR, SSO and encryption at rest.' },
         { factor: 'Usage volume', weight: '15%', description: 'Normalized against the organization average. Higher usage increases the score.' },
-        { factor: 'Department sensitivity', weight: '20%', description: 'Uses the highest sensitivity among departments accessing the tool. Finance, Legal and HR are rated highest (80).' },
+        { factor: 'Department sensitivity', weight: '20%', description: 'Uses the highest sensitivity among departments that used the tool in the last 30 days. Finance, Legal and HR are rated highest (80). Events without a department add nothing here.' },
       ],
     },
     {

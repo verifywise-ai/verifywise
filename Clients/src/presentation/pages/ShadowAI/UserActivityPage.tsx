@@ -112,7 +112,7 @@ export default function UserActivityPage() {
         id: "risk_score",
         label: "Risk score",
         tooltip:
-          "Calculated nightly (0–100). Weighted: approval status (40%), compliance (25%), usage volume (15%), department sensitivity (20%).",
+          "Highest risk score (0–100) among the AI tools this user accessed. Tool scores are recalculated nightly.",
       },
     ],
     [],
@@ -127,7 +127,7 @@ export default function UserActivityPage() {
         id: "risk_score",
         label: "Risk score",
         tooltip:
-          "Calculated nightly (0–100). Weighted: approval status (40%), compliance (25%), usage volume (15%), department sensitivity (20%).",
+          "Highest risk score (0–100) among the AI tools this department accessed. Tool scores are recalculated nightly.",
       },
     ],
     [],
@@ -431,13 +431,13 @@ export default function UserActivityPage() {
         ) : !hasData ? (
           <EmptyState
             icon={Users}
-            message="No user activity detected yet. Activity will appear here once monitoring is connected."
+            message="No AI tool activity in the last 30 days. Activity appears here once a log source sends traffic that matches an AI tool."
             showBorder
           >
             <EmptyStateTip
               icon={Activity}
               title="What gets tracked?"
-              description="User sessions, tool access frequency, and department-level usage patterns for AI tools."
+              description="Prompts and events per user and AI tool, grouped by the department your log source sends."
             />
             <EmptyStateTip
               icon={Building2}
@@ -446,8 +446,8 @@ export default function UserActivityPage() {
             />
             <EmptyStateTip
               icon={TrendingUp}
-              title="Spot usage trends"
-              description="Monitor adoption curves and usage spikes. Correlate activity with policy changes or new tool introductions."
+              title="Find high-risk usage"
+              description="Risk scores show which users and departments use the riskiest AI tools."
             />
           </EmptyState>
         ) : viewMode === "users" ? (

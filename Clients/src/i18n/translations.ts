@@ -2307,8 +2307,8 @@ export const translations: Record<string, Record<string, string>> = {
 
     "Shadow AI insights reveal hidden AI usage across your organization.":
       "Schatten-KI-Einblicke zeigen verborgene KI-Nutzung in Ihrer Organisation.",
-    "The insights dashboard aggregates data from network traffic, proxy logs, and browser activity to show which AI tools are being used, by whom, and how often. Use the period selector to compare activity over different time ranges.":
-      "Das Insights-Dashboard aggregiert Daten aus Netzwerkverkehr, Proxy-Logs und Browser-Aktivität und zeigt, welche KI-Tools von wem und wie oft genutzt werden. Nutzen Sie die Zeitraumauswahl, um Aktivität über verschiedene Zeiträume zu vergleichen.",
+    "The insights dashboard summarizes proxy and firewall logs sent through the REST API or syslog to show which AI tools are used, by whom, and how often. Use the period selector to change the time range for user, department and chart counts.":
+      "Das Insights-Dashboard fasst Proxy- und Firewall-Protokolle zusammen, die über die REST-API oder Syslog gesendet werden, und zeigt, welche KI-Tools genutzt werden, von wem und wie oft. Mit der Zeitraumauswahl ändern Sie den Zeitraum für Benutzer-, Abteilungs- und Diagrammzahlen.",
     "Risk scores help prioritize which tools need attention first.":
       "Risikobewertungen helfen, welche Tools zuerst Aufmerksamkeit brauchen.",
     "Tools with higher risk scores may be handling sensitive data or lack enterprise security features. Focus governance efforts on high-risk tools first, then work through the list systematically.":
@@ -2341,14 +2341,14 @@ export const translations: Record<string, Record<string, string>> = {
     "Frequent alerts may indicate rules need fine-tuning, while no alerts might mean thresholds are too high. Check alert history regularly and adjust trigger conditions to maintain an effective monitoring balance.":
       "Häufige Alarme deuten darauf hin, dass Regeln feinjustiert werden müssen; keine Alarme können bedeuten, dass Schwellen zu hoch liegen. Prüfen Sie den Alarm-Verlauf regelmäßig und passen Sie Auslöserbedingungen an, um eine effektive Überwachung zu halten.",
 
-    "API keys authenticate your network monitoring infrastructure.":
-      "API-Schlüssel authentifizieren Ihre Netzwerküberwachungs-Infrastruktur.",
-    "Generate API keys for each data source (proxy, firewall, browser extension) to feed network traffic data into Shadow AI detection. Each key can be labeled and revoked independently for security.":
-      "Erzeugen Sie API-Schlüssel für jede Datenquelle (Proxy, Firewall, Browser-Erweiterung), um Netzwerkverkehrsdaten in die Schatten-KI-Erkennung einzuspeisen. Jeder Schlüssel kann unabhängig gekennzeichnet und widerrufen werden.",
+    "API keys authenticate events sent to the REST API.":
+      "API-Schlüssel authentifizieren Ereignisse, die an die REST-API gesendet werden.",
+    "Create one API key per system that calls the REST API, such as a SIEM webhook, a script or a browser extension. Proxies and firewalls that forward syslog use a syslog source key instead. Each key can be labeled and revoked on its own.":
+      "Erstellen Sie einen API-Schlüssel pro System, das die REST-API aufruft, etwa einen SIEM-Webhook, ein Skript oder eine Browsererweiterung. Proxys und Firewalls, die Syslog weiterleiten, verwenden stattdessen einen Syslog-Quellschlüssel. Jeder Schlüssel kann einzeln benannt und widerrufen werden.",
     "Syslog sources define where your network traffic data comes from.":
       "Syslog-Quellen definieren, woher Ihre Netzwerkverkehrsdaten stammen.",
-    "Configure syslog sources for each network monitoring point in your infrastructure. Select the appropriate parser type to ensure events are correctly parsed and attributed to the right AI tools.":
-      "Konfigurieren Sie Syslog-Quellen für jeden Überwachungspunkt in Ihrer Infrastruktur. Wählen Sie den passenden Parser-Typ, damit Ereignisse korrekt geparst und den richtigen KI-Tools zugeordnet werden.",
+    "Add one source per proxy or log format, pick the parser type that matches its log lines, and add the source's key to every line it sends.":
+      "Fügen Sie eine Quelle pro Proxy oder Protokollformat hinzu, wählen Sie den Parser-Typ, der zu ihren Protokollzeilen passt, und fügen Sie den Schlüssel der Quelle zu jeder gesendeten Zeile hinzu.",
 
     "Monitor trends to track progress over time.":
       "Trends überwachen, um den Fortschritt im Zeitverlauf zu verfolgen.",
@@ -8003,8 +8003,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Tout le monde n'a pas besoin d'accéder à l'ensemble des données de gouvernance. Utilisez les rôles pour accorder des niveaux d'accès appropriés : lecteurs pour les parties prenantes, éditeurs pour les membres de l'équipe de gouvernance et administrateurs pour les propriétaires du système. L'accès par rôles protège les informations sensibles.",
     "Shadow AI insights reveal hidden AI usage across your organization.":
       "Les analyses d'IA fantôme révèlent l'usage caché de l'IA dans votre organisation.",
-    "The insights dashboard aggregates data from network traffic, proxy logs, and browser activity to show which AI tools are being used, by whom, and how often. Use the period selector to compare activity over different time ranges.":
-      "Le tableau de bord d'analyses agrège les données de trafic réseau, des journaux de proxy et de l'activité navigateur pour montrer quels outils IA sont utilisés, par qui et à quelle fréquence. Utilisez le sélecteur de période pour comparer l'activité sur différentes plages.",
+    "The insights dashboard summarizes proxy and firewall logs sent through the REST API or syslog to show which AI tools are used, by whom, and how often. Use the period selector to change the time range for user, department and chart counts.":
+      "Le tableau de bord des insights résume les journaux de proxy et de pare-feu envoyés via l'API REST ou syslog pour montrer quels outils IA sont utilisés, par qui et à quelle fréquence. Utilisez le sélecteur de période pour modifier la plage de temps des chiffres par utilisateur, par département et des graphiques.",
     "Risk scores help prioritize which tools need attention first.":
       "Les scores de risque aident à prioriser les outils qui requièrent attention en premier.",
     "Tools with higher risk scores may be handling sensitive data or lack enterprise security features. Focus governance efforts on high-risk tools first, then work through the list systematically.":
@@ -8033,14 +8033,14 @@ export const translations: Record<string, Record<string, string>> = {
       "Examiner l'historique des alertes pour comprendre les schémas et ajuster les règles.",
     "Frequent alerts may indicate rules need fine-tuning, while no alerts might mean thresholds are too high. Check alert history regularly and adjust trigger conditions to maintain an effective monitoring balance.":
       "Des alertes fréquentes peuvent indiquer que les règles doivent être affinées ; une absence d'alerte peut signifier que les seuils sont trop élevés. Consultez régulièrement l'historique des alertes et ajustez les conditions de déclenchement pour maintenir un équilibre efficace de surveillance.",
-    "API keys authenticate your network monitoring infrastructure.":
-      "Les clés API authentifient votre infrastructure de surveillance réseau.",
-    "Generate API keys for each data source (proxy, firewall, browser extension) to feed network traffic data into Shadow AI detection. Each key can be labeled and revoked independently for security.":
-      "Générez des clés API pour chaque source de données (proxy, pare-feu, extension de navigateur) afin d'alimenter la détection d'IA fantôme avec les données de trafic réseau. Chaque clé peut être étiquetée et révoquée indépendamment pour la sécurité.",
+    "API keys authenticate events sent to the REST API.":
+      "Les clés API authentifient les événements envoyés à l'API REST.",
+    "Create one API key per system that calls the REST API, such as a SIEM webhook, a script or a browser extension. Proxies and firewalls that forward syslog use a syslog source key instead. Each key can be labeled and revoked on its own.":
+      "Créez une clé API par système qui appelle l'API REST, comme un webhook SIEM, un script ou une extension de navigateur. Les proxys et pare-feu qui transfèrent des journaux syslog utilisent plutôt une clé de source syslog. Chaque clé peut être nommée et révoquée séparément.",
     "Syslog sources define where your network traffic data comes from.":
       "Les sources syslog définissent la provenance de vos données de trafic réseau.",
-    "Configure syslog sources for each network monitoring point in your infrastructure. Select the appropriate parser type to ensure events are correctly parsed and attributed to the right AI tools.":
-      "Configurez des sources syslog pour chaque point de surveillance réseau de votre infrastructure. Sélectionnez le type d'analyseur approprié pour garantir que les événements sont correctement analysés et attribués aux bons outils IA.",
+    "Add one source per proxy or log format, pick the parser type that matches its log lines, and add the source's key to every line it sends.":
+      "Ajoutez une source par proxy ou format de journal, choisissez le type de parseur correspondant à ses lignes, et ajoutez la clé de la source à chaque ligne envoyée.",
     "Monitor trends to track progress over time.":
       "Surveiller les tendances pour suivre les progrès dans le temps.",
     "The overview highlights performance trends across your experiments. Watch for improvements after model updates or regressions that need investigation. Consistent monitoring catches issues before they impact production.":
@@ -14837,8 +14837,8 @@ export const translations: Record<string, Record<string, string>> = {
       "No todo el mundo necesita acceso a todos los datos de gobernanza. Utilice los roles para conceder los niveles de acceso adecuados: lectores para las partes interesadas, editores para los miembros del equipo de gobernanza y administradores para los propietarios del sistema. El acceso basado en roles protege la información sensible.",
     "Shadow AI insights reveal hidden AI usage across your organization.":
       "Los análisis de Shadow AI revelan el uso oculto de la IA en su organización.",
-    "The insights dashboard aggregates data from network traffic, proxy logs, and browser activity to show which AI tools are being used, by whom, and how often. Use the period selector to compare activity over different time ranges.":
-      "El panel de análisis agrega datos del tráfico de red, los registros de proxy y la actividad del navegador para mostrar qué herramientas de IA se están utilizando, por quién y con qué frecuencia. Utilice el selector de periodo para comparar la actividad en distintos intervalos de tiempo.",
+    "The insights dashboard summarizes proxy and firewall logs sent through the REST API or syslog to show which AI tools are used, by whom, and how often. Use the period selector to change the time range for user, department and chart counts.":
+      "El panel de insights resume los registros de proxy y firewall enviados mediante la API REST o syslog para mostrar qué herramientas de IA se usan, quién las usa y con qué frecuencia. Use el selector de período para cambiar el intervalo de tiempo de los recuentos de usuarios, departamentos y gráficos.",
     "Risk scores help prioritize which tools need attention first.":
       "Las puntuaciones de riesgo ayudan a priorizar qué herramientas necesitan atención primero.",
     "Tools with higher risk scores may be handling sensitive data or lack enterprise security features. Focus governance efforts on high-risk tools first, then work through the list systematically.":
@@ -14867,14 +14867,14 @@ export const translations: Record<string, Record<string, string>> = {
       "Revise el historial de alertas para comprender los patrones y ajustar las reglas.",
     "Frequent alerts may indicate rules need fine-tuning, while no alerts might mean thresholds are too high. Check alert history regularly and adjust trigger conditions to maintain an effective monitoring balance.":
       "Las alertas frecuentes pueden indicar que las reglas necesitan un ajuste fino, mientras que la ausencia de alertas podría significar que los umbrales son demasiado altos. Revise el historial de alertas con regularidad y ajuste las condiciones de activación para mantener un equilibrio de supervisión eficaz.",
-    "API keys authenticate your network monitoring infrastructure.":
-      "Las claves de API autentican su infraestructura de supervisión de red.",
-    "Generate API keys for each data source (proxy, firewall, browser extension) to feed network traffic data into Shadow AI detection. Each key can be labeled and revoked independently for security.":
-      "Genere claves de API para cada fuente de datos (proxy, firewall, extensión del navegador) para alimentar la detección de Shadow AI con datos de tráfico de red. Cada clave puede etiquetarse y revocarse de forma independiente por seguridad.",
+    "API keys authenticate events sent to the REST API.":
+      "Las claves de API autentican los eventos enviados a la API REST.",
+    "Create one API key per system that calls the REST API, such as a SIEM webhook, a script or a browser extension. Proxies and firewalls that forward syslog use a syslog source key instead. Each key can be labeled and revoked on its own.":
+      "Cree una clave de API por cada sistema que llame a la API REST, como un webhook de SIEM, un script o una extensión del navegador. Los proxies y firewalls que reenvían syslog usan en su lugar una clave de fuente de syslog. Cada clave se puede etiquetar y revocar por separado.",
     "Syslog sources define where your network traffic data comes from.":
       "Las fuentes de syslog definen de dónde proceden los datos de tráfico de su red.",
-    "Configure syslog sources for each network monitoring point in your infrastructure. Select the appropriate parser type to ensure events are correctly parsed and attributed to the right AI tools.":
-      "Configure las fuentes de syslog para cada punto de monitorización de red de su infraestructura. Seleccione el tipo de analizador adecuado para garantizar que los eventos se analicen correctamente y se atribuyan a las herramientas de IA correctas.",
+    "Add one source per proxy or log format, pick the parser type that matches its log lines, and add the source's key to every line it sends.":
+      "Añada una fuente por cada proxy o formato de registro, elija el tipo de parser que coincida con sus líneas y añada la clave de la fuente a cada línea que envíe.",
     "Monitor trends to track progress over time.":
       "Monitorice las tendencias para hacer un seguimiento del progreso a lo largo del tiempo.",
     "The overview highlights performance trends across your experiments. Watch for improvements after model updates or regressions that need investigation. Consistent monitoring catches issues before they impact production.":
