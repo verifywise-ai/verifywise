@@ -21,7 +21,7 @@
  * breach"). A caller that has the text of a page does not give it, because the address of a page
  * is the one that was asked for and the page can answer from somewhere else.
  */
-import { ResearchTarget } from "./target";
+import type { ResearchTarget } from "./target";
 
 const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
@@ -71,6 +71,17 @@ const LEGAL_FORMS: ReadonlySet<string> = new Set([
 ]);
 
 const bare = (token: string): string => token.toLowerCase().replace(/[.,]/g, "");
+
+/**
+ * True for a word that `shortName` takes off a name, in any case and with or without its dots: a
+ * legal form ("Inc.", "LLC", "GmbH", "S.p.A.") or the article ("The"). A part of the Other names
+ * field that holds nothing else is no name of its own (see `otherNamesIn` in
+ * utils/validations/vendorValidation.utils.ts).
+ */
+export const isLegalFormOrArticle = (word: string): boolean => {
+  const letters = bare(word);
+  return letters === "the" || LEGAL_FORMS.has(letters);
+};
 
 /**
  * The name without the article in front and the legal forms behind it; the name as it is written

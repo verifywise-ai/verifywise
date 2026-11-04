@@ -1,5 +1,5 @@
-import { brandOf, createVendorMatcher, wholeWord } from "../identity";
-import { ResearchTarget } from "../target";
+import { brandOf, createVendorMatcher, isLegalFormOrArticle, wholeWord } from "../identity";
+import { ResearchTarget, buildTarget } from "../target";
 
 const target = (overrides: Partial<ResearchTarget> = {}): ResearchTarget => ({
   name: "Acme Analytics",
@@ -193,6 +193,75 @@ describe("a vendor known by other names", () => {
 
     expect(mentions(source({ title: "C++ (Labs) ships a fix" }))).toBe(true);
   });
+});
+
+describe("a vendor whose legal name is written with a comma in its other names", () => {
+  it("takes no source about another company for the vendor's when its legal name is written with a comma", () => {
+    const mentions = createVendorMatcher(
+      buildTarget({
+        vendor_name: "Acme Analytics",
+        website: "acme-analytics.example",
+        vendor_provides: "x",
+        other_names: "Acme Analytics, Inc.",
+      }),
+    );
+
+    expect(mentions(source({ title: "Initech Inc. reports a data breach" }))).toBe(false);
+    expect(mentions(source({ title: "Acme Analytics, Inc. reports a data breach" }))).toBe(true);
+  });
+});
+
+describe("isLegalFormOrArticle", () => {
+  it.each([
+    "Inc.",
+    "INC",
+    "inc",
+    "Incorporated",
+    "LLC",
+    "L.L.C.",
+    "Ltd",
+    "Ltd.",
+    "Limited",
+    "Corp.",
+    "Corporation",
+    "Co.",
+    "Company",
+    "GmbH",
+    "G.m.b.H.",
+    "AG",
+    "S.A.",
+    "SA",
+    "B.V.",
+    "N.V.",
+    "plc",
+    "p.l.c.",
+    "PLC",
+    "Pty",
+    "Pte.",
+    "Oy",
+    "AB",
+    "AS",
+    "SAS",
+    "SARL",
+    "S.r.l.",
+    "SRL",
+    "S.p.A.",
+    "K.K.",
+    "L.P.",
+    "LLP",
+    "Pvt.",
+    "The",
+    "the",
+  ])("is true for %p", (word) => {
+    expect(isLegalFormOrArticle(word)).toBe(true);
+  });
+
+  it.each(["Acme", "Initech", "S.L.", "SE", "Ltda.", "de", "&", "--", ""])(
+    "is false for %p",
+    (word) => {
+      expect(isLegalFormOrArticle(word)).toBe(false);
+    },
+  );
 });
 
 describe("brandOf", () => {

@@ -176,6 +176,39 @@ describe("Vendors API", () => {
       expect(await storedNames(app, created.body.data.id)).toBe("Facebook, Instagram, WhatsApp");
     });
 
+    it("keeps a legal name written with a comma as one name, its legal form included", async () => {
+      const app = await asAdmin();
+      const text = "Acme Analytics, Inc., Acme Systems, Inc.";
+
+      const created = await testRequest(app)
+        .post("/api/v1/vendors")
+        .send({ ...validVendorPayload, assignee: userId, other_names: text });
+
+      expect(created.status).toBe(201);
+      expect(await storedNames(app, created.body.data.id)).toBe(text);
+    });
+
+    it("accepts five legal names written with commas, on creation and on update", async () => {
+      const app = await asAdmin();
+      const five = "Alpha, Inc., Beta, LLC, Gamma, Ltd., Delta, GmbH, Epsilon, plc";
+
+      const created = await testRequest(app)
+        .post("/api/v1/vendors")
+        .send({ ...validVendorPayload, assignee: userId, other_names: five });
+      expect(created.status).toBe(201);
+      expect(await storedNames(app, created.body.data.id)).toBe(five);
+
+      const other = await testRequest(app)
+        .post("/api/v1/vendors")
+        .send({ ...validVendorPayload, assignee: userId });
+      expect(other.status).toBe(201);
+      const updated = await testRequest(app)
+        .patch(`/api/v1/vendors/${other.body.data.id}`)
+        .send({ other_names: five });
+      expect(updated.status).toBe(202);
+      expect(await storedNames(app, other.body.data.id)).toBe(five);
+    });
+
     it("leaves a vendor created without them with none", async () => {
       const app = await asAdmin();
 

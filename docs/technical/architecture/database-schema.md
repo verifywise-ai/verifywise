@@ -245,7 +245,8 @@ CREATE TABLE vendors (
   past_issues past_issues_enum,
   regulatory_exposure regulatory_exposure_enum,
   risk_score INTEGER,
-  -- The other names the vendor is known by, separated by commas ("Facebook" for "Meta Platforms").
+  -- The other names the vendor is known by, separated by commas ("Facebook" for "Meta Platforms");
+  -- a legal form after a comma is part of the name before it ("Acme Analytics, Inc.").
   -- The vendor research names the vendor by them as well.
   other_names TEXT
 );

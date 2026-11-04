@@ -80,7 +80,7 @@ export const vendorManagementContent: ArticleContent = {
       type: 'ordered-list',
       items: [
         { bold: 'Vendor name', text: 'The official company or product name' },
-        { bold: 'Other names (optional)', text: 'Other names the vendor is known by, separated by commas, for example "Facebook" for "Meta Platforms". The web research looks for sources that use them too' },
+        { bold: 'Other names (optional)', text: 'Other names the vendor is known by, separated by commas, for example "Facebook" for "Meta Platforms". A legal name written with a comma, such as "Acme Analytics, Inc.", counts as one name. The web research looks for sources that use them too' },
         { bold: 'Vendor provides', text: 'Description of what the vendor supplies' },
         { bold: 'Assignee', text: 'Person responsible for managing this vendor relationship' },
         { bold: 'Website', text: 'Vendor\'s official website URL' },

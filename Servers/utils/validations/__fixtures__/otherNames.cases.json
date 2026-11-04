@@ -1,0 +1,209 @@
+{
+  "names": [
+    {
+      "name": "a legal form after a name, then another name",
+      "text": "Acme Analytics, Inc., Initrode",
+      "names": ["Acme Analytics, Inc.", "Initrode"]
+    },
+    {
+      "name": "two legal forms in a row",
+      "text": "Hanbit Electronics Co., Ltd.",
+      "names": ["Hanbit Electronics Co., Ltd."]
+    },
+    {
+      "name": "a legal form written with dots",
+      "text": "Northwind Traders, L.L.C., NWT",
+      "names": ["Northwind Traders, L.L.C.", "NWT"]
+    },
+    {
+      "name": "a legal form in capitals",
+      "text": "ACME ANALYTICS, INC",
+      "names": ["ACME ANALYTICS, INC"]
+    },
+    {
+      "name": "a legal form of two words",
+      "text": "Acme Analytics, Pty Ltd",
+      "names": ["Acme Analytics, Pty Ltd"]
+    },
+    {
+      "name": "a legal form after a semicolon",
+      "text": "Acme Analytics; Inc.",
+      "names": ["Acme Analytics, Inc."]
+    },
+    {
+      "name": "a legal form on a line of its own",
+      "text": "Acme Analytics\nInc.",
+      "names": ["Acme Analytics, Inc."]
+    },
+    {
+      "name": "the article of an inverted name",
+      "text": "Contoso Company, The",
+      "names": ["Contoso Company, The"]
+    },
+    {
+      "name": "two legal names with the same form",
+      "text": "Acme Analytics, Inc., Acme Systems, Inc.",
+      "names": ["Acme Analytics, Inc.", "Acme Systems, Inc."]
+    },
+    {
+      "name": "the legal form Inc.",
+      "text": "Acme, Inc.",
+      "names": ["Acme, Inc."]
+    },
+    {
+      "name": "the legal form Incorporated",
+      "text": "Acme, Incorporated",
+      "names": ["Acme, Incorporated"]
+    },
+    {
+      "name": "the legal form LLC",
+      "text": "Acme, LLC",
+      "names": ["Acme, LLC"]
+    },
+    {
+      "name": "the legal form Ltd.",
+      "text": "Acme, Ltd.",
+      "names": ["Acme, Ltd."]
+    },
+    {
+      "name": "the legal form Limited",
+      "text": "Acme, Limited",
+      "names": ["Acme, Limited"]
+    },
+    {
+      "name": "the legal form Corp.",
+      "text": "Acme, Corp.",
+      "names": ["Acme, Corp."]
+    },
+    {
+      "name": "the legal form Corporation",
+      "text": "Acme, Corporation",
+      "names": ["Acme, Corporation"]
+    },
+    {
+      "name": "the legal form Co.",
+      "text": "Acme, Co.",
+      "names": ["Acme, Co."]
+    },
+    {
+      "name": "the legal form Company",
+      "text": "Acme, Company",
+      "names": ["Acme, Company"]
+    },
+    {
+      "name": "the legal form GmbH",
+      "text": "Acme, GmbH",
+      "names": ["Acme, GmbH"]
+    },
+    {
+      "name": "the legal form AG",
+      "text": "Acme, AG",
+      "names": ["Acme, AG"]
+    },
+    {
+      "name": "the legal form S.A.",
+      "text": "Acme, S.A.",
+      "names": ["Acme, S.A."]
+    },
+    {
+      "name": "the legal form B.V.",
+      "text": "Acme, B.V.",
+      "names": ["Acme, B.V."]
+    },
+    {
+      "name": "the legal form N.V.",
+      "text": "Acme, N.V.",
+      "names": ["Acme, N.V."]
+    },
+    {
+      "name": "the legal form plc",
+      "text": "Acme, plc",
+      "names": ["Acme, plc"]
+    },
+    {
+      "name": "the legal form Pty",
+      "text": "Acme, Pty",
+      "names": ["Acme, Pty"]
+    },
+    {
+      "name": "the legal form Pte.",
+      "text": "Acme, Pte.",
+      "names": ["Acme, Pte."]
+    },
+    {
+      "name": "the legal form Oy",
+      "text": "Acme, Oy",
+      "names": ["Acme, Oy"]
+    },
+    {
+      "name": "the legal form AB",
+      "text": "Acme, AB",
+      "names": ["Acme, AB"]
+    },
+    {
+      "name": "the legal form AS",
+      "text": "Acme, AS",
+      "names": ["Acme, AS"]
+    },
+    {
+      "name": "the legal form SAS",
+      "text": "Acme, SAS",
+      "names": ["Acme, SAS"]
+    },
+    {
+      "name": "the legal form SARL",
+      "text": "Acme, SARL",
+      "names": ["Acme, SARL"]
+    },
+    {
+      "name": "the legal form S.r.l.",
+      "text": "Acme, S.r.l.",
+      "names": ["Acme, S.r.l."]
+    },
+    {
+      "name": "the legal form S.p.A.",
+      "text": "Acme, S.p.A.",
+      "names": ["Acme, S.p.A."]
+    },
+    {
+      "name": "the legal form K.K.",
+      "text": "Acme, K.K.",
+      "names": ["Acme, K.K."]
+    },
+    {
+      "name": "the legal form L.P.",
+      "text": "Acme, L.P.",
+      "names": ["Acme, L.P."]
+    },
+    {
+      "name": "the legal form LLP",
+      "text": "Acme, LLP",
+      "names": ["Acme, LLP"]
+    },
+    {
+      "name": "the legal form Pvt.",
+      "text": "Acme, Pvt.",
+      "names": ["Acme, Pvt."]
+    },
+    {
+      "name": "names with no legal form, as before",
+      "text": "Facebook, Instagram;  WhatsApp\nMeta Quest",
+      "names": ["Facebook", "Instagram", "WhatsApp", "Meta Quest"]
+    },
+    {
+      "name": "a legal form inside a name, as before",
+      "text": "monday.com Ltd., MNDY",
+      "names": ["monday.com Ltd.", "MNDY"]
+    },
+    {
+      "name": "a legal form with no name before it is a name",
+      "text": "SAS, JMP",
+      "names": ["SAS", "JMP"]
+    },
+    {
+      "name": "a form the list does not have is a name of its own",
+      "text": "Acme Analytics, S.L.",
+      "names": ["Acme Analytics", "S.L."]
+    }
+  ]
+}

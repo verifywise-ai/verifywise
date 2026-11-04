@@ -2,7 +2,7 @@ import { RESEARCH_CATEGORIES } from "../../../domain.layer/interfaces/i.vendorRe
 import { REPEATED_QUERY_JACCARD, queryWords, similarity } from "../../webResearch/queryMatch";
 import { regulatorTopicsOf } from "../market";
 import { MAX_TOPIC_WORDS, NEWS_TOPIC_WORDS, normalizeQuery, suggestedQueries } from "../queries";
-import { ResearchTarget } from "../target";
+import { ResearchTarget, buildTarget } from "../target";
 
 const ACME: ResearchTarget = {
   name: "Acme Analytics, Inc.",
@@ -424,6 +424,38 @@ describe("suggestedQueries", () => {
     it("adds the query for outages of the first other name to the category of availability", () => {
       expect(suggestedQueries(WITH_ALIASES, ["availability"])).toEqual({
         availability: ["Acme Analytics outage", "AcmeAI outage"],
+      });
+    });
+
+    it("leads no search with a legal form when the vendor's legal name is written with a comma", () => {
+      const target = buildTarget({
+        vendor_name: "Acme Analytics",
+        website: "acme-analytics.example",
+        vendor_provides: "x",
+        other_names: "Acme Analytics, Inc.",
+      });
+
+      expect(
+        suggestedQueries(target, [
+          "security_incidents",
+          "legal_regulatory",
+          "availability",
+          "financial_health",
+        ]),
+      ).toEqual({
+        security_incidents: ["Acme Analytics data breach", "Acme Analytics security incident"],
+        legal_regulatory: [
+          "Acme Analytics lawsuit",
+          "Acme Analytics fined",
+          "Acme Analytics FTC",
+          "Acme Analytics settlement",
+        ],
+        availability: ["Acme Analytics outage"],
+        financial_health: [
+          "Acme Analytics layoffs",
+          "Acme Analytics bankruptcy",
+          "Acme Analytics acquisition",
+        ],
       });
     });
 

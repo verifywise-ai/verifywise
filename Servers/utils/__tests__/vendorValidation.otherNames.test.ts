@@ -1,11 +1,21 @@
+import { readFileSync } from "fs";
+import { resolve } from "path";
 import {
   VENDOR_VALIDATION_LIMITS,
   normalizeOtherNames,
+  otherNamesIn,
   updateVendorSchema,
   createVendorSchema,
   validateOtherNames,
   validateUpdateVendor,
 } from "../validations/vendorValidation.utils";
+
+// The cases are shared with the form (Clients/src/application/validations/tests/otherNamesValidation.test.ts).
+const cases: { names: Array<{ name: string; text: string; names: string[] }> } = JSON.parse(
+  readFileSync(resolve(__dirname, "../validations/__fixtures__/otherNames.cases.json"), "utf8"),
+);
+
+const FIVE = "Alpha, Inc., Beta, LLC, Gamma, Ltd., Delta, GmbH, Epsilon, plc";
 
 describe("the limits of the other names of a vendor", () => {
   it("allows 500 characters in all, 8 names, and 2 to 80 characters in a name", () => {
@@ -128,6 +138,35 @@ describe("normalizeOtherNames", () => {
   it("is the same text when it is normalized again", () => {
     const once = normalizeOtherNames("  A1 ;B2,\nC3 ,a1");
     expect(normalizeOtherNames(once)).toBe(once);
+  });
+});
+
+describe("a legal form after a comma", () => {
+  it.each(cases.names)(
+    "is read with the name before it, as the cases shared with the form say: $name",
+    ({ text, names }) => {
+      expect(otherNamesIn(text)).toEqual(names);
+    },
+  );
+
+  it("is part of the name before it, so five legal names are five names", () => {
+    expect(validateOtherNames(FIVE)).toEqual({ isValid: true });
+  });
+
+  it("counts towards the length of that name", () => {
+    expect(validateOtherNames(`${"x".repeat(75)}, Inc.`)).toEqual({
+      isValid: false,
+      message: "Each of the other names must be between 2 and 80 characters",
+      code: "INVALID_NAME_LENGTH",
+    });
+    expect(validateOtherNames(`${"x".repeat(74)}, Inc.`)).toEqual({ isValid: true });
+  });
+
+  it("is kept in the stored text of each name it ends", () => {
+    const text = "Acme Analytics, Inc., Acme Systems, Inc.";
+
+    expect(normalizeOtherNames(text)).toBe(text);
+    expect(normalizeOtherNames(normalizeOtherNames(text))).toBe(text);
   });
 });
 

@@ -1,4 +1,20 @@
-import { checkOtherNames } from "../otherNamesValidation";
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { checkOtherNames, otherNamesIn } from "../otherNamesValidation";
+
+// The cases live with the server's validation; both suites run the same file. Resolved with
+// node:path, as the intake form logic cases test does: Vite refuses `new URL(..., import.meta.url)`
+// for files outside Clients/.
+const CASES_FILE = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  "../../../../../Servers/utils/validations/__fixtures__/otherNames.cases.json",
+);
+const cases: { names: Array<{ name: string; text: string; names: string[] }> } = JSON.parse(
+  readFileSync(CASES_FILE, "utf8"),
+);
+
+const FIVE = "Alpha, Inc., Beta, LLC, Gamma, Ltd., Delta, GmbH, Epsilon, plc";
 
 const ACCEPTED = { accepted: true, message: "" };
 
@@ -63,5 +79,23 @@ describe("checkOtherNames", () => {
     // Servers/utils/validations/vendorValidation.utils.ts.
     expect(checkOtherNames("ab, cd, ef, gh, ij, kl, mn, op")).toEqual(ACCEPTED);
     expect(checkOtherNames("ab, cd, ef, gh, ij, kl, mn, op, qr").accepted).toBe(false);
+  });
+});
+
+describe("a legal form after a comma", () => {
+  it.each(cases.names)("reads $name as the server reads it", ({ text, names }) => {
+    expect(otherNamesIn(text)).toEqual(names);
+  });
+
+  it("counts a legal form after a comma as part of the name before it, so five legal names are five names", () => {
+    expect(checkOtherNames(FIVE)).toEqual(ACCEPTED);
+  });
+
+  it("counts a legal form after a comma towards the length of that name", () => {
+    expect(checkOtherNames(`${"x".repeat(75)}, Inc.`)).toEqual({
+      accepted: false,
+      message: "Each of the other names must be between 2 and 80 characters",
+    });
+    expect(checkOtherNames(`${"x".repeat(74)}, Inc.`)).toEqual(ACCEPTED);
   });
 });

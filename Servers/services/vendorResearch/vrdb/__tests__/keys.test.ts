@@ -3,7 +3,7 @@
  * vendor are strong, an exact name is weak, and a name of three letters is too short to match a
  * sanctions list. The hosts of a list entry's website field are the domains it is matched by.
  */
-import type { ResearchTarget } from "../../target";
+import { buildTarget, type ResearchTarget } from "../../target";
 import {
   cikKey,
   cpeKey,
@@ -38,6 +38,25 @@ describe("vendorKeys", () => {
         "domain:acme.example",
       ]),
     );
+  });
+
+  it("gives a vendor whose legal name has a comma no key of its legal form alone", () => {
+    const target = buildTarget({
+      vendor_name: "Acme Analytics",
+      website: "acme-analytics.example",
+      vendor_provides: "x",
+      other_names: "Acme Analytics, Limited",
+    });
+
+    expect(vendorKeys(target)).toEqual([
+      "kev:acmeanalytics",
+      "kev:acmeanalyticslimited",
+      "cve:acmeanalytics",
+      "cve:acmeanalyticslimited",
+      "cpe:acmeanalytics",
+      "name:acmeanalytics",
+      "name:acmeanalyticslimited",
+    ]);
   });
 
   it("holds no domain key for a domain that the website check did not verify", () => {

@@ -17,7 +17,10 @@
  * Products are never taken as names, because "Windows 11" does not make a source about Microsoft;
  * they are for the briefing, which tells the model what the site lists.
  */
-import { VENDOR_VALIDATION_LIMITS } from "../../utils/validations/vendorValidation.utils";
+import {
+  VENDOR_VALIDATION_LIMITS,
+  otherNamesIn,
+} from "../../utils/validations/vendorValidation.utils";
 import type { PageIdentity } from "../webResearch/siteIdentity";
 import { brandOf, shortName } from "./identity";
 import type { ResearchTarget } from "./target";
@@ -53,22 +56,22 @@ function distinct(names: readonly string[]): string[] {
 }
 
 /**
- * The names in a text a person wrote: separated by commas, semicolons or line breaks, each cleaned
- * and trimmed. A name of fewer than two or more than MAX_ALIAS_CHARS characters, or with no letter
- * or digit in it, is passed over, a name is kept once however it is written, and at most
- * MAX_ALIASES are kept.
+ * The names in a text a person wrote, as the record reads them (`otherNamesIn`): separated by
+ * commas, semicolons or line breaks, a legal name written with a comma ("Acme Analytics, Inc.") one
+ * name, each cleaned and trimmed. A name of fewer than two or more than MAX_ALIAS_CHARS characters,
+ * or with no letter or digit in it, is passed over, a name is kept once however it is written, and
+ * at most MAX_ALIASES are kept.
  */
 export function parseOtherNames(text: string | null | undefined): string[] {
   if (typeof text !== "string") return [];
-  const names = text
-    .split(/[,;\n\r]+/)
-    .map((part) => cleanText(part).replace(/\s+/g, " ").trim())
-    .filter(
-      (name) =>
-        name.length >= MIN_ALIAS_CHARS &&
-        name.length <= MAX_ALIAS_CHARS &&
-        /[\p{L}\p{N}]/u.test(name),
-    );
+  // cleanText keeps tab, line feed and carriage return and never removes a comma or a semicolon,
+  // so cleaning the text before the split gives the parts that cleaning each part gives.
+  const names = otherNamesIn(cleanText(text)).filter(
+    (name) =>
+      name.length >= MIN_ALIAS_CHARS &&
+      name.length <= MAX_ALIAS_CHARS &&
+      /[\p{L}\p{N}]/u.test(name),
+  );
   return distinct(names).slice(0, MAX_ALIASES);
 }
 

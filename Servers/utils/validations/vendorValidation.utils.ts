@@ -13,6 +13,7 @@ import {
   ValidationError,
   VALIDATION_PATTERNS,
 } from "./validation.utils";
+import { isLegalFormOrArticle } from "../../services/vendorResearch/identity";
 
 /**
  * Validation constants for vendors
@@ -25,7 +26,8 @@ export const VENDOR_VALIDATION_LIMITS = {
   REVIEW_RESULT: { MIN: 1, MAX: 1000 },
   /**
    * The other names a vendor is known by (see services/vendorResearch/aliases.ts, which reads the
-   * same limits): a text of names separated by commas, semicolons or line breaks.
+   * same limits): a text of names separated by commas, semicolons or line breaks, in which a legal
+   * form after a comma belongs to the name before it (see `otherNamesIn`).
    */
   OTHER_NAMES: { MAX_CHARS: 500, MAX_NAMES: 8, MIN_NAME_CHARS: 2, MAX_NAME_CHARS: 80 },
   /** A company registration number, as a register writes it. */
@@ -159,12 +161,31 @@ export const validateReviewResult = (value: any): ValidationResult => {
 /** A name for comparing: lower case, letters and digits only ("Face-Book" and "facebook" are one). */
 const nameKey = (name: string): string => name.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "");
 
-/** The names in a text, in the order written: split at commas, semicolons and line breaks, white space collapsed. */
-const namesIn = (text: string): string[] =>
-  text
-    .split(/[,;\n\r]+/)
-    .map((part) => part.replace(/\s+/g, " ").trim())
-    .filter((part) => part !== "");
+/**
+ * The names in a text of other names, in the order written: split at commas, semicolons and line
+ * breaks, white space collapsed. A part that holds nothing but legal forms or the article ends the
+ * name before it, since a legal name is written with a comma ("Acme Analytics, Inc.", "Hanbit
+ * Electronics Co., Ltd.", "Contoso Company, The"), and taken for a name of its own it would name
+ * every company with that form (see `isLegalFormOrArticle` in services/vendorResearch/identity.ts,
+ * whose legal forms are the ones `shortName` takes off a name). With no name before it, such a part
+ * is a name, so that a brand that is also a legal form (SAS) can be written first. The research
+ * reads the field with this too (see `parseOtherNames`), so a text the record accepts is read as
+ * the same names. The form keeps a copy of it (Clients/src/application/validations/
+ * otherNamesValidation.ts); both run the cases of __fixtures__/otherNames.cases.json.
+ */
+export const otherNamesIn = (text: string): string[] => {
+  const names: string[] = [];
+  for (const part of text.split(/[,;\n\r]+/)) {
+    const name = part.replace(/\s+/g, " ").trim();
+    if (name === "") continue;
+    if (names.length > 0 && name.split(" ").every(isLegalFormOrArticle)) {
+      names[names.length - 1] += `, ${name}`;
+    } else {
+      names.push(name);
+    }
+  }
+  return names;
+};
 
 /** The names once each, however they are written; the first way a name was written stays. */
 const distinctNames = (names: readonly string[]): string[] => {
@@ -179,8 +200,8 @@ const distinctNames = (names: readonly string[]): string[] => {
 
 /**
  * Validates the other names of a vendor: optional text of at most 500 characters that holds at most
- * 8 names, each of 2 to 80 characters with a letter or a digit in it. A name that is written twice
- * counts once.
+ * 8 names (a legal form after a comma is part of the name before it, see `otherNamesIn`), each of 2
+ * to 80 characters with a letter or a digit in it. A name that is written twice counts once.
  */
 export const validateOtherNames = (value: any): ValidationResult => {
   const limits = VENDOR_VALIDATION_LIMITS.OTHER_NAMES;
@@ -196,7 +217,7 @@ export const validateOtherNames = (value: any): ValidationResult => {
       code: "TOO_LONG",
     };
   }
-  const names = namesIn(text);
+  const names = otherNamesIn(text);
   if (
     names.some((name) => name.length < limits.MIN_NAME_CHARS || name.length > limits.MAX_NAME_CHARS)
   ) {
@@ -224,12 +245,13 @@ export const validateOtherNames = (value: any): ValidationResult => {
 };
 
 /**
- * The other names as they are stored: the names once each, joined by a comma and a space; null
- * when there is none. The text is expected to be valid (see `validateOtherNames`).
+ * The other names as they are stored: the names once each, joined by a comma and a space
+ * ("Acme Analytics, Inc., Initrode"), which `otherNamesIn` reads as the same names; null when there
+ * is none. The text is expected to be valid (see `validateOtherNames`).
  */
 export const normalizeOtherNames = (value: unknown): string | null => {
   if (typeof value !== "string") return null;
-  const names = distinctNames(namesIn(value));
+  const names = distinctNames(otherNamesIn(value));
   return names.length === 0 ? null : names.join(", ");
 };
 

@@ -16,6 +16,7 @@ import {
   createGdeltEngine,
   parseGdeltBody,
 } from "../gdeltSearch";
+import { parseOtherNames } from "../../vendorResearch/aliases";
 import { MAX_SNIPPET_CHARS } from "../../vendorResearch/text";
 import type { RobotsChecker } from "../robots";
 import type { GdeltArticle } from "../webCache";
@@ -244,6 +245,14 @@ describe("buildGdeltUrl", () => {
     );
     expect(queryOf(buildGdeltUrl(["Zscaler", "Auth0"], ["breach"]) as string)).toBe(
       '("Zscaler" OR "Auth0") AND breach',
+    );
+  });
+
+  it("asks for a vendor whose legal name has a comma under its name, and not under its legal form", () => {
+    const names = ["Acme Analytics", ...parseOtherNames("Acme Analytics, Inc., Initrode")];
+
+    expect(queryOf(buildGdeltUrl(names, ["breach"]) as string)).toBe(
+      '("Acme Analytics" OR "Initrode") AND breach',
     );
   });
 

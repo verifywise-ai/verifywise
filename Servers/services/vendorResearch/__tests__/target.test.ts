@@ -247,6 +247,21 @@ describe("buildTarget", () => {
       expect(target.aliases).toEqual(["Facebook"]);
     });
 
+    it("take a legal name written with a comma for one name, and never its legal form alone", () => {
+      // The legal name is the vendor's own, so only Facebook is another name.
+      expect(
+        buildTarget({ ...record, other_names: "Meta Platforms, Inc., Facebook" }).aliases,
+      ).toEqual(["Facebook"]);
+      expect(
+        buildTarget({
+          vendor_name: "Acme Analytics",
+          website: "acme-analytics.example",
+          vendor_provides: "x",
+          other_names: "Acme Analytics, Inc., Initrode",
+        }).aliases,
+      ).toEqual(["Acme Analytics, Inc.", "Initrode"]);
+    });
+
     it.each([[undefined], [null], [""], ["  ,; "]])(
       "are no field of the target when the record has %p",
       (otherNames) => {

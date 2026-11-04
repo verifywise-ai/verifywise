@@ -1,5 +1,15 @@
+import { readFileSync } from "fs";
+import { resolve } from "path";
 import { MAX_ALIASES, MAX_ALIAS_CHARS, parseOtherNames, profileOf, withAliases } from "../aliases";
 import { ResearchTarget } from "../target";
+
+// The cases are shared with the record's validation and the form (see otherNamesIn).
+const cases: { names: Array<{ name: string; text: string; names: string[] }> } = JSON.parse(
+  readFileSync(
+    resolve(__dirname, "../../../utils/validations/__fixtures__/otherNames.cases.json"),
+    "utf8",
+  ),
+);
 
 const target = (overrides: Partial<ResearchTarget> = {}): ResearchTarget => ({
   name: "Acme Analytics, Inc.",
@@ -39,6 +49,15 @@ describe("parseOtherNames", () => {
     const justRight = "y".repeat(MAX_ALIAS_CHARS);
 
     expect(parseOtherNames(`A, ${tooLong}, ${justRight}, --, (), 3M`)).toEqual([justRight, "3M"]);
+  });
+
+  it.each(cases.names)("reads $name as the names a person meant", ({ text, names }) => {
+    expect(parseOtherNames(text)).toEqual(names);
+  });
+
+  it("keeps a legal form with no name before it as a name, so that a brand such as SAS is written first, and ends the name before it otherwise", () => {
+    expect(parseOtherNames("SAS, JMP")).toEqual(["SAS", "JMP"]);
+    expect(parseOtherNames("JMP, SAS")).toEqual(["JMP, SAS"]);
   });
 
   it("keeps at most as many names as a vendor may have", () => {
