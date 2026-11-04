@@ -162,6 +162,35 @@ MULTI_TENANCY_ENABLED=true
 
 ---
 
+## Shadow AI syslog listener
+
+A TCP listener for proxy logs, off by default. Full behaviour is in
+[Shadow AI syslog listener](../technical/infrastructure/shadow-ai-syslog.md).
+
+| Variable | Description | Default | Required |
+|----------|-------------|---------|----------|
+| `SHADOW_AI_SYSLOG_ENABLED` | Start the listener | off | No |
+| `SHADOW_AI_SYSLOG_PORT` | TCP port | `6514` | No |
+| `SHADOW_AI_SYSLOG_TLS_CERT_FILE` | PEM certificate path | unset | With the key file |
+| `SHADOW_AI_SYSLOG_TLS_KEY_FILE` | PEM private key path | unset | With the certificate file |
+| `SHADOW_AI_SYSLOG_ALLOW_PLAINTEXT` | Accept plain TCP | off | Only if no certificate |
+| `SHADOW_AI_SYSLOG_ALLOW_IP_ONLY` | Match key-less lines by sender IP | off | No |
+
+- Booleans are on only for the string `true`.
+- Without a certificate and key, the listener starts only when
+  `SHADOW_AI_SYSLOG_ALLOW_PLAINTEXT=true`.
+- `SHADOW_AI_SYSLOG_ALLOW_IP_ONLY=true` is refused when `MULTI_TENANCY_ENABLED=true`.
+- The listener is TCP only. Publish the port yourself (Compose `ports`, a Helm
+  `shadowAiSyslog` Service, or a load balancer).
+
+```bash
+SHADOW_AI_SYSLOG_ENABLED=true
+SHADOW_AI_SYSLOG_TLS_CERT_FILE=/certs/syslog.crt
+SHADOW_AI_SYSLOG_TLS_KEY_FILE=/certs/syslog.key
+```
+
+---
+
 ## Email configuration
 
 ### Provider selection

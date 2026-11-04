@@ -1,5 +1,7 @@
 // ─── Shadow AI Detection — Domain Interfaces ─────────────────────────
 
+import type { ParserType } from "../../services/shadowAiSyslog/types";
+
 // ─── Events ──────────────────────────────────────────────────────────
 
 export interface IShadowAiEvent {
@@ -144,9 +146,17 @@ export interface IShadowAiApiKey {
 
 export interface IShadowAiSyslogConfig {
   id?: number;
-  source_identifier: string;
-  parser_type: "zscaler" | "netskope" | "squid" | "generic_kv";
+  organization_id?: number;
+  /** Allowed sender IP, normalised. Null when the source is matched by key only. */
+  source_identifier: string | null;
+  parser_type: ParserType;
   is_active: boolean;
+  /** First 16 characters of the source key, for display. */
+  key_prefix?: string | null;
+  last_event_at?: Date | null;
+  events_accepted?: number | string;
+  events_dropped?: number | string;
+  last_drop_reason?: string | null;
   created_at?: Date;
 }
 

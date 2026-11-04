@@ -416,7 +416,7 @@
   "Missing required fields: framework_type, entity_type, entity_id": "Pflichtfelder fehlen: framework_type, entity_type, entity_id",
   "Missing required fields: model_inventory.provider, model_inventory.model, governance_owner_id": "Pflichtfelder fehlen: model_inventory.provider, model_inventory.model, governance_owner_id",
   "Missing required fields: name, trigger_type, actions": "Pflichtfelder fehlen: name, trigger_type, actions",
-  "Missing required fields: source_identifier, parser_type": "Pflichtfelder fehlen: source_identifier, parser_type",
+  "Missing required fields: parser_type": "Pflichtfelder fehlen: parser_type",
   "Missing required fields: triggerId, name, actions": "Pflichtfelder fehlen: triggerId, name, actions",
   "Missing required fields: user_id and date_format": "Pflichtfelder fehlen: user_id und date_format",
   "Missing required params: framework_type, entity_type, entity_id": "Pflicht-Parameter fehlen: framework_type, entity_type, entity_id",

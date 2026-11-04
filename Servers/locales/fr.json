@@ -416,7 +416,7 @@
   "Missing required fields: framework_type, entity_type, entity_id": "Champs obligatoires manquants : framework_type, entity_type, entity_id",
   "Missing required fields: model_inventory.provider, model_inventory.model, governance_owner_id": "Champs obligatoires manquants : model_inventory.provider, model_inventory.model, governance_owner_id",
   "Missing required fields: name, trigger_type, actions": "Champs obligatoires manquants : name, trigger_type, actions",
-  "Missing required fields: source_identifier, parser_type": "Champs obligatoires manquants : source_identifier, parser_type",
+  "Missing required fields: parser_type": "Champs obligatoires manquants : parser_type",
   "Missing required fields: triggerId, name, actions": "Champs obligatoires manquants : triggerId, name, actions",
   "Missing required fields: user_id and date_format": "Champs obligatoires manquants : user_id et date_format",
   "Missing required params: framework_type, entity_type, entity_id": "Paramètres obligatoires manquants : framework_type, entity_type, entity_id",

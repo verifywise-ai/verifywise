@@ -34,6 +34,26 @@ replicas:
   evalServer: 1
 
 # ---------------------------------------------------------------------------
+# Shadow AI syslog listener (off by default)
+# ---------------------------------------------------------------------------
+# A TCP listener on the backend pods that receives proxy logs for Shadow AI.
+# When enabled, the chart adds a `backend-syslog` Service. It is TCP only.
+# Use TLS in production: create a Secret holding tls.crt and tls.key
+# (`kubectl create secret tls ...`) and set `tlsSecretName`. Plain TCP needs
+# `allowPlaintext: true` and is meant for a private network only.
+# `allowIpOnly` matches log lines without a key by sender IP. The backend
+# refuses to start the listener with it when config.multiTenancyEnabled is "true".
+shadowAiSyslog:
+  enabled: false
+  port: 6514
+  # ClusterIP keeps it inside the cluster. Use LoadBalancer (or NodePort) to
+  # let a proxy outside the cluster reach it.
+  serviceType: ClusterIP
+  tlsSecretName: ""
+  allowPlaintext: false
+  allowIpOnly: false
+
+# ---------------------------------------------------------------------------
 # Public frontend URL
 # ---------------------------------------------------------------------------
 # The URL the user's browser hits (used in invite emails, notifications).
