@@ -22,7 +22,9 @@
  * collected and spends its steps on what is missing. The time limit of that work (30 seconds)
  * stops while the news engine waits out a pause of GDELT: each wait it tells of, plus one ask, is
  * added to it, up to GATHER_MAX_PAUSE_MS, and the clock stops with the work, so a wait of a later
- * loop moves nothing.
+ * loop moves nothing. The same engine tells the run of each 429 it meets and of the failure that
+ * ends its one request for another reason, and each is written to the run's trace as a step with a
+ * fixed word (see `RunHooks`).
  *
  * The loop can run as one loop for each category, all at the same time (see loops.ts): each gets a
  * budget of its own from the session, a few model turns, a task that names its category and a
@@ -40,7 +42,7 @@ import {
   type RunCoverage,
   RunProgress,
 } from "../../domain.layer/interfaces/i.vendorResearch";
-import { GDELT_ASK_MS, createGdeltEngine } from "../webResearch/gdeltSearch";
+import { GDELT_ASK_MS, type GdeltFailureKind, createGdeltEngine } from "../webResearch/gdeltSearch";
 import { createProviderSearchEngine, withFallback } from "../webResearch/providerSearch";
 import { PageReader, createPageReader } from "../webResearch/readPage";
 import type { PageRenderer } from "../webResearch/renderPage";
@@ -270,6 +272,12 @@ export interface RunSearchInput {
    * answer of the run (see `GdeltEngineDeps.onRefused`). The researcher counts it.
    */
   onRefused?: (refusal: { final: boolean }) => void;
+  /**
+   * Told once, with its kind, when the GDELT engine's one request has failed for good for a reason
+   * that is not a 429, and when the vendor has no name that can be asked for (see
+   * `GdeltEngineDeps.onFailed`). The researcher writes it to the trace.
+   */
+  onFailed?: (failure: { kind: GdeltFailureKind }) => void;
 }
 
 /**
@@ -296,6 +304,7 @@ export function createRunSearch(input: RunSearchInput): RunSearch {
     ...(input.onRetry === undefined ? {} : { onRetry: input.onRetry }),
     ...(input.onPause === undefined ? {} : { onPause: input.onPause }),
     ...(input.onRefused === undefined ? {} : { onRefused: input.onRefused }),
+    ...(input.onFailed === undefined ? {} : { onFailed: input.onFailed }),
   });
   const { model } = input;
   if (input.search?.engine !== "anthropic" || typeof model !== "object" || model === null) {
@@ -327,8 +336,9 @@ export function createRunSearch(input: RunSearchInput): RunSearch {
 
 /**
  * What a run offers to the engine that searches for it, to be told of what happens to the news:
- * a retried request, a wait for a pause of GDELT (which moves the clock of the routine work), and a
- * refusal (which is counted and written to the trace). `createRunSearch` takes them one by one;
+ * a retried request, a wait for a pause of GDELT (which moves the clock of the routine work), a
+ * refusal (which is counted and written to the trace), and a failure of another kind (which is
+ * written to the trace). `createRunSearch` takes them one by one;
  * an engine that was built before the run, as a live evaluation builds it, is handed them through
  * `bindHooks` (see `createVendorResearcher`).
  */
@@ -336,6 +346,7 @@ export interface RunHooks {
   onRetry(): void;
   onPause(waitMs: number): void;
   onRefused(refusal: { final: boolean }): void;
+  onFailed(failure: { kind: GdeltFailureKind }): void;
 }
 
 /**
@@ -354,6 +365,42 @@ function traceGdeltRefusal(trace: TraceRecorder | undefined, refusal: { final: b
       outcome: "failed",
       reason: refusal.final ? "gdelt_refused_final" : "gdelt_refused",
     });
+  } catch {
+    // Not part of the research.
+  }
+}
+
+/** The word of the trace for each failure of GDELT that is not a 429 (see `GdeltFailureKind`). */
+const GDELT_FAILURE_REASONS: Readonly<Record<GdeltFailureKind, string>> = {
+  not_json: "gdelt_not_json",
+  bad_answer: "gdelt_bad_answer",
+  unreachable: "gdelt_unreachable",
+  server_error: "gdelt_server_error",
+  bad_status: "gdelt_bad_status",
+  robots: "gdelt_robots",
+  no_query: "gdelt_no_query",
+  failed: "gdelt_failed",
+};
+
+/**
+ * Writes one step to the run's trace for the failure that ended the GDELT engine's one request for
+ * a reason that is not a 429, so that a person who opens the run can tell a query that GDELT
+ * refuses (`gdelt_not_json`) or a vendor with no name to ask for (`gdelt_no_query`) from an outage
+ * (`gdelt_unreachable`, `gdelt_server_error`). The step is one of a closed set of words and has no
+ * query, no address and nothing of the vendor or of what GDELT answered; a kind that is not in the
+ * set is written as `gdelt_failed`, and never as its own text. It goes to the trace and not
+ * through the session, so the counter of the searches does not move. The trace is no part of the
+ * research, so a failure of it is let go.
+ */
+function traceGdeltFailure(
+  trace: TraceRecorder | undefined,
+  failure: { kind: GdeltFailureKind },
+): void {
+  try {
+    const reason = Object.prototype.hasOwnProperty.call(GDELT_FAILURE_REASONS, failure.kind)
+      ? GDELT_FAILURE_REASONS[failure.kind]
+      : GDELT_FAILURE_REASONS.failed;
+    trace?.step({ by: "code", tool: "search", kind: "news", outcome: "failed", reason });
   } catch {
     // Not part of the research.
   }
@@ -528,6 +575,7 @@ export function createVendorResearcher(
         metrics.gdeltRefused(refusal);
         traceGdeltRefusal(trace, refusal);
       },
+      onFailed: (failure) => traceGdeltFailure(trace, failure),
     };
     let searching: RunSearch;
     if (deps.engine !== undefined) {

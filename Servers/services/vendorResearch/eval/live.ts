@@ -52,6 +52,7 @@ export async function runLive(
       onRetry: () => hooks?.onRetry(),
       onPause: (waitMs) => hooks?.onPause(waitMs),
       onRefused: (refusal) => hooks?.onRefused(refusal),
+      onFailed: (failure) => hooks?.onFailed(failure),
     }).engine,
     readPage: createPageReader(),
     generate: generateObjectWithSelfCorrection,

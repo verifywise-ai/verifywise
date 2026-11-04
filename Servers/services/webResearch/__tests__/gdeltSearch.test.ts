@@ -981,6 +981,46 @@ describe("the engine", () => {
       expect(feed.mock).not.toHaveBeenCalled();
     });
 
+    it("tells onFailed once, as no_query, when no name is left to ask for", async () => {
+      const feed = fakeGdelt([bodyOf([raw()])]);
+      const onFailed = jest.fn();
+      const engine = createGdeltEngine({
+        names: ["HP"],
+        topics: ["breach"],
+        fetch: feed.fetch,
+        queue: passThrough,
+        onFailed,
+      });
+
+      await failureOf(engine.search("HP breach", "news"));
+      await failureOf(engine.search("HP lawsuit", "news"));
+
+      expect(onFailed.mock.calls).toEqual([[{ kind: "no_query" }]]);
+      expect(feed.calls).toHaveLength(0);
+      expect(feed.robotsCalls).toHaveLength(0);
+    });
+
+    it("does not tell onFailed of a search cancelled before it began, or of a search of the web", async () => {
+      const feed = fakeGdelt([bodyOf([raw()])]);
+      const onFailed = jest.fn();
+      const engine = createGdeltEngine({
+        names: ["HP"],
+        topics: ["breach"],
+        fetch: feed.fetch,
+        queue: passThrough,
+        onFailed,
+      });
+      const cancelled = new AbortController();
+      cancelled.abort();
+
+      await failureOf(engine.search("HP breach", "news", cancelled.signal));
+      await failureOf(engine.search("HP breach", "web"));
+      expect(onFailed).not.toHaveBeenCalled();
+
+      await failureOf(engine.search("HP breach", "news"));
+      expect(onFailed.mock.calls).toEqual([[{ kind: "no_query" }]]);
+    });
+
     it("is not cut short by the abort of one of the searches that wait for it: the others still get the index", async () => {
       const release = deferred<string>();
       const feed = fakeGdelt([() => release.promise]);
@@ -1833,6 +1873,184 @@ describe("the engine", () => {
         expect(feed.calls).toHaveLength(2);
       });
     });
+
+    describe("the hook that is told of a failure that is not a 429", () => {
+      const cut: GuardedResponse = { ...response("x", bodyOf([raw()])), truncated: true };
+
+      it.each<[string, string, Step[], number]>([
+        ["not_json", "a 200 whose type is not JSON", [new FetchError("unsupported_type")], 1],
+        // The fake serves a string as JSON: the kind follows the type and not the text.
+        ["bad_answer", "a refusal in plain text", ["The specified phrase is too short."], 1],
+        ["bad_answer", "a body that is no object", ["[]"], 1],
+        ["bad_answer", "articles that are no list", ['{"articles": {}}'], 1],
+        ["bad_answer", "a body that was cut", [cut], 1],
+        [
+          "unreachable",
+          "no answer after its retry",
+          [new FetchError("unreachable"), new FetchError("unreachable")],
+          2,
+        ],
+        ["server_error", "a 503 and a 502", [status(503), status(502)], 2],
+        ["server_error", "a 503 that asks for a long wait", [status(503, 120_000)], 1],
+        ["bad_status", "a 400", [status(400)], 1],
+        ["bad_status", "a 401", [new FetchError("blocked_by_site", undefined, { status: 401 })], 1],
+        ["bad_status", "a 403", [status(403)], 1],
+        ["bad_status", "a 404", [new FetchError("not_found", undefined, { status: 404 })], 1],
+        ["robots", "robots.txt", [new FetchError("blocked_by_robots")], 1],
+        ["failed", "an address the policy refused", [new FetchError("not_allowed")], 1],
+        ["failed", "an error of our own", [new TypeError("broken")], 1],
+      ])(
+        "tells onFailed once, as %s, for %s, and the search that follows fails without asking again",
+        async (kind, _name, steps, requests) => {
+          const feed = fakeGdelt(steps);
+          const onFailed = jest.fn();
+          const engine = make(feed, { onFailed });
+
+          const first = await failureOf(engine.search("Acme breach", "news"));
+          const second = await failureOf(engine.search("Acme lawsuit", "news"));
+
+          expect(onFailed.mock.calls).toEqual([[{ kind }]]);
+          expect(feed.calls).toHaveLength(requests);
+          expect(first.message).toBe(FIXED_MESSAGE);
+          expect(second.message).toBe(FIXED_MESSAGE);
+        },
+      );
+
+      it("tells onFailed once when several searches share the failed request", async () => {
+        const feed = fakeGdelt([new FetchError("unsupported_type")]);
+        const onFailed = jest.fn();
+        const engine = make(feed, { onFailed });
+
+        const searches = [
+          engine.search("Acme breach", "news"),
+          engine.search("Acme lawsuit", "news"),
+          engine.search("Acme outage", "news"),
+        ];
+        const settled = await Promise.allSettled(searches);
+
+        expect(settled.map(({ status: outcome }) => outcome)).toEqual([
+          "rejected",
+          "rejected",
+          "rejected",
+        ]);
+        expect(onFailed.mock.calls).toEqual([[{ kind: "not_json" }]]);
+        expect(feed.calls).toHaveLength(1);
+      });
+
+      it("tells onFailed the kind and nothing else: not the query, the address, the vendor or the text of the error", async () => {
+        const feed = fakeGdelt([
+          new FetchError("unsupported_type", `The specified phrase is too short. ${SECRET_QUERY}`),
+        ]);
+        const onFailed = jest.fn();
+        const engine = createGdeltEngine({
+          names: ["Zorblax Analytics"],
+          topics: ["breach"],
+          fetch: feed.fetch,
+          queue: passThrough,
+          robots: allowAll,
+          onFailed,
+        });
+
+        await failureOf(engine.search(SECRET_QUERY, "news"));
+
+        expect(Object.keys(onFailed.mock.calls[0][0])).toEqual(["kind"]);
+        const told = JSON.stringify(onFailed.mock.calls);
+        expect(told).not.toContain("Zorblax");
+        expect(told).not.toContain("gdeltproject");
+        expect(told).not.toContain("too short");
+      });
+
+      it("never lets an onFailed that throws change the search", async () => {
+        const feed = fakeGdelt([new FetchError("unsupported_type"), bodyOf([raw()])]);
+        const onFailed = jest.fn(() => {
+          throw new Error(SECRET_QUERY);
+        });
+        const engine = make(feed, { onFailed });
+
+        const first = await failureOf(engine.search("Acme breach", "news"));
+        const second = await failureOf(engine.search("Acme lawsuit", "news"));
+
+        expect(first.message).toBe(FIXED_MESSAGE);
+        expect(second.message).toBe(FIXED_MESSAGE);
+        expect(feed.calls).toHaveLength(1);
+      });
+
+      it("does not tell onFailed of a run that is answered: by the request, after a retry, or from the cache", async () => {
+        const answered = fakeGdelt([bodyOf([raw()])]);
+        const onFailedAnswered = jest.fn();
+        await expect(
+          make(answered, { onFailed: onFailedAnswered }).search("Acme breach", "news"),
+        ).resolves.toHaveLength(1);
+        expect(onFailedAnswered).not.toHaveBeenCalled();
+
+        const retried = fakeGdelt([status(503), bodyOf([raw()])]);
+        const onFailedRetried = jest.fn();
+        const onRetry = jest.fn();
+        await expect(
+          make(retried, { onFailed: onFailedRetried, onRetry }).search("Acme breach", "news"),
+        ).resolves.toHaveLength(1);
+        expect(onFailedRetried).not.toHaveBeenCalled();
+        expect(onRetry).toHaveBeenCalledTimes(1);
+
+        const { cache } = memoryCache();
+        await make(fakeGdelt([bodyOf([raw()])]), { cache }).search("Acme breach", "news");
+        await settle();
+        const cached = fakeGdelt([new FetchError("unsupported_type")]);
+        const onFailedCached = jest.fn();
+        await expect(
+          make(cached, { cache, onFailed: onFailedCached }).search("Acme breach", "news"),
+        ).resolves.toHaveLength(1);
+        expect(onFailedCached).not.toHaveBeenCalled();
+        expect(cached.calls).toHaveLength(0);
+      });
+
+      it("makes the same requests and gives the same answers with the hooks as without them", async () => {
+        const scripts: Array<() => Step[]> = [
+          () => [bodyOf([raw()])],
+          () => ["{}"],
+          () => [status(503), bodyOf([raw()])],
+          () => [new FetchError("unsupported_type")],
+          () => [new FetchError("unreachable"), new FetchError("unreachable")],
+          () => [status(403)],
+          () => [new FetchError("blocked_by_robots")],
+          () => [cut],
+        ];
+        const outcomeOf = async (promise: Promise<unknown>) => {
+          try {
+            return { status: "ok", value: await promise };
+          } catch (error) {
+            return { status: "failed", message: (error as Error).message };
+          }
+        };
+        for (const script of scripts) {
+          const plainFeed = fakeGdelt(script());
+          const hookedFeed = fakeGdelt(script());
+          const plain = make(plainFeed);
+          const hooked = make(hookedFeed, {
+            onFailed: jest.fn(),
+            onRefused: jest.fn(),
+            onRetry: jest.fn(),
+          });
+          const plainOutcomes = [];
+          const hookedOutcomes = [];
+
+          for (const query of ["Acme breach", "Acme lawsuit", "Acme outage"]) {
+            plainOutcomes.push(await outcomeOf(plain.search(query, "news")));
+            hookedOutcomes.push(await outcomeOf(hooked.search(query, "news")));
+          }
+
+          const requestsOf = (feed: ReturnType<typeof fakeGdelt>) =>
+            feed.calls.map(({ url, options }) => ({
+              url,
+              ...options,
+              beforeRequest: typeof options?.beforeRequest,
+            }));
+          expect(requestsOf(hookedFeed)).toEqual(requestsOf(plainFeed));
+          expect(hookedFeed.robotsCalls).toEqual(plainFeed.robotsCalls);
+          expect(hookedOutcomes).toEqual(plainOutcomes);
+        }
+      });
+    });
   });
 
   describe("through the real guardedFetch", () => {
@@ -1946,6 +2164,92 @@ describe("the engine", () => {
         expect(apiRequests).toBe(2);
       },
     );
+
+    it.each<
+      [
+        string,
+        string,
+        (url: URL) => { status: number; headers: http.IncomingHttpHeaders; body: string },
+      ]
+    >([
+      [
+        "not_json",
+        "a 200 of text/html, the live answer for a phrase that is too short",
+        (url) =>
+          url.pathname === "/robots.txt"
+            ? NOT_FOUND
+            : {
+                status: 200,
+                headers: { "content-type": "text/html; charset=utf-8" },
+                body: "The specified phrase is too short.",
+              },
+      ],
+      [
+        "not_json",
+        "a 200 of text/plain",
+        (url) =>
+          url.pathname === "/robots.txt"
+            ? NOT_FOUND
+            : { status: 200, headers: { "content-type": "text/plain" }, body: RATE_LIMIT_TEXT },
+      ],
+      [
+        "bad_answer",
+        "a 200 of type JSON whose body is plain text",
+        (url) => (url.pathname === "/robots.txt" ? NOT_FOUND : JSON_OK(RATE_LIMIT_TEXT)),
+      ],
+      [
+        "bad_status",
+        "a 403",
+        (url) =>
+          url.pathname === "/robots.txt"
+            ? NOT_FOUND
+            : { status: 403, headers: { "content-type": "text/plain" }, body: "Forbidden" },
+      ],
+      ["bad_status", "an API that answers not found", () => NOT_FOUND],
+      [
+        "server_error",
+        "a 503 on every request",
+        (url) =>
+          url.pathname === "/robots.txt"
+            ? NOT_FOUND
+            : { status: 503, headers: { "content-type": "text/plain" }, body: "oops" },
+      ],
+      [
+        "unreachable",
+        "a transport that fails for the API",
+        (url) => {
+          if (url.pathname === "/robots.txt") return NOT_FOUND;
+          throw new Error("connection reset");
+        },
+      ],
+      [
+        "robots",
+        "a robots.txt that disallows the API",
+        (url) =>
+          url.pathname === "/robots.txt"
+            ? {
+                status: 200,
+                headers: { "content-type": "text/plain" },
+                body: "User-agent: *\nDisallow: /api\n",
+              }
+            : JSON_OK(bodyOf([raw()])),
+      ],
+      [
+        "robots",
+        "a robots.txt whose answer throws",
+        (url) => {
+          if (url.pathname === "/robots.txt") throw new Error("connection reset");
+          return JSON_OK(bodyOf([raw()]));
+        },
+      ],
+    ])("tells onFailed %s for %s, through the real guardedFetch", async (kind, _name, answer) => {
+      const { fetch } = overTransport(guardedFetch, answer);
+      const onFailed = jest.fn();
+
+      await failureOf(make(fetch, { onFailed }).search("Acme breach", "news"));
+
+      expect(onFailed.mock.calls).toEqual([[{ kind }]]);
+    });
 
     it("does not read the API when robots.txt disallows the path, and says nothing more than the fixed error", async () => {
       const { fetch, requests } = overTransport(guardedFetch, (url) =>
@@ -2218,6 +2522,99 @@ describe("the engine", () => {
       await expect(run.search("Acme support", "news")).rejects.toBeInstanceOf(
         process.SearchEngineError,
       );
+      expect(fetch).toHaveBeenCalledTimes(1);
+    });
+
+    it("tells onFailed nothing of a 429, the last one included: those are told to onRefused, as before", async () => {
+      const { fails, engine, script, apiRequests } = setUp();
+      script("limit", "limit", "limit");
+      const onRefused = jest.fn();
+      const onFailed = jest.fn();
+      const run = engine("Acme", undefined, undefined, { onRefused, onFailed });
+
+      await fails(run.search("Acme breach", "news"));
+      await fails(run.search("Acme lawsuit", "news"));
+
+      expect(onRefused.mock.calls).toEqual([
+        [{ final: false }],
+        [{ final: false }],
+        [{ final: true }],
+      ]);
+      expect(apiRequests()).toBe(3);
+      expect(onFailed).not.toHaveBeenCalled();
+    });
+
+    it("tells onRefused of the 429 and onFailed of the refusal of the query that follows it", async () => {
+      const { fails, engine, answers, apiRequests } = setUp();
+      let asked = 0;
+      answers.api = (url) => {
+        if (url.pathname === "/robots.txt") return NOT_FOUND;
+        asked += 1;
+        return asked === 1
+          ? rateLimited(url)
+          : {
+              status: 200,
+              headers: { "content-type": "text/html; charset=utf-8" },
+              body: "The specified phrase is too short.",
+            };
+      };
+      const onRefused = jest.fn();
+      const onFailed = jest.fn();
+
+      await fails(
+        engine("Acme", undefined, undefined, { onRefused, onFailed }).search("Acme breach", "news"),
+      );
+
+      expect(onRefused.mock.calls).toEqual([[{ final: false }]]);
+      expect(onFailed.mock.calls).toEqual([[{ kind: "not_json" }]]);
+      expect(apiRequests()).toBe(2);
+    });
+
+    it("does not tell onFailed of a load that no search waits for any more", async () => {
+      const { process, engine, script, hold, release, waiting, advance } = setUp();
+      script("limit", "index");
+      hold();
+      const onFailed = jest.fn();
+      const run = engine("Acme", undefined, undefined, { onFailed });
+      const controller = new AbortController();
+
+      const leaving = run.search("Acme breach", "news", controller.signal).catch((e: unknown) => e);
+      await waiting();
+      controller.abort();
+      expect(await leaving).toBeInstanceOf(process.SearchEngineError);
+      await flush();
+      advance(GDELT_COOL_DOWN_MS);
+      release();
+      await expect(run.search("Acme breach", "news")).resolves.toHaveLength(1);
+
+      expect(onFailed).not.toHaveBeenCalled();
+    });
+
+    it("tells onFailed once of a real failure that lands after every search has left", async () => {
+      const { process, engine } = setUp();
+      const held = deferred<GuardedResponse>();
+      const fetch = jest.fn(async (): Promise<GuardedResponse> => held.promise);
+      const onFailed = jest.fn();
+      const run = engine("Acme", undefined, undefined, {
+        fetch: fetch as unknown as typeof guardedFetch,
+        robots: allowAll,
+        onFailed,
+      });
+      const controller = new AbortController();
+
+      const leaving = run.search("Acme breach", "news", controller.signal);
+      await flush();
+      controller.abort();
+      await expect(leaving).rejects.toBeInstanceOf(process.SearchEngineError);
+      expect(onFailed).not.toHaveBeenCalled();
+      held.reject(new process.FetchError("blocked_by_site", undefined, { status: 403 }));
+      await flush();
+
+      expect(onFailed.mock.calls).toEqual([[{ kind: "bad_status" }]]);
+      await expect(run.search("Acme support", "news")).rejects.toBeInstanceOf(
+        process.SearchEngineError,
+      );
+      expect(onFailed).toHaveBeenCalledTimes(1);
       expect(fetch).toHaveBeenCalledTimes(1);
     });
 

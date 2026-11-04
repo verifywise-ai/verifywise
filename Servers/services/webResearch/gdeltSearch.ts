@@ -27,7 +27,10 @@
  *   minutes, and in one probe refused a request and answered the next one 6 seconds later, so the
  *   refusals do not come from our own rate. A refusal is never cached; an answer is. The engine
  *   tells `onRefused` of each 429 and `onPause` of each pause it waits out, and neither hears the
- *   query or the vendor.
+ *   query or the vendor. A failure that is not a 429 and ends the run's one request for good (or
+ *   a vendor with no name to ask for) is told to `onFailed`, once for the run, with a fixed word
+ *   of what the engine saw (see `GdeltFailureKind`), and nothing of the query, the address or the
+ *   answer.
  * - It reaches back 3 months, gives titles and no snippets, and has no way to ask for the news of
  *   one topic cheaply. A run makes 18 to 28 searches, so the engine does not make one request for
  *   each. It makes ONE request for the run, the first search's: the articles that name the vendor
@@ -106,6 +109,22 @@ export const GDELT_NEWS_WINDOW_MONTHS = 3;
 export const GDELT_MIN_PHRASE_CHARS = 5;
 /** The shortest bare word that may stand for a name: GDELT answers the bare 3-letter FTC in every US request. */
 export const GDELT_MIN_WORD_CHARS = 3;
+/**
+ * The kinds of failure of the run's one request that are not a 429 (those are told to
+ * `onRefused`), and the vendor with no name to ask for. Each names what the engine saw, never what
+ * GDELT wrote: the text of a refusal is third-party text and is not read.
+ */
+export const GDELT_FAILURE_KINDS = [
+  "not_json",
+  "bad_answer",
+  "unreachable",
+  "server_error",
+  "bad_status",
+  "robots",
+  "no_query",
+  "failed",
+] as const;
+export type GdeltFailureKind = (typeof GDELT_FAILURE_KINDS)[number];
 
 const GDELT_DOC_URL = "https://api.gdeltproject.org/api/v2/doc/doc";
 /** The articles the request asks for, and the most that are read. */
@@ -424,6 +443,13 @@ class Unwanted extends Error {
   }
 }
 
+/**
+ * The last 429 of the run (the GDELT_MAX_ASKS-th), which is the answer of the run. It is told to
+ * `onRefused` already, so it is no failure for `onFailed`. It is still a SearchEngineError: it is
+ * never asked again and never given up as unwanted.
+ */
+class FinalRefusal extends SearchEngineError {}
+
 /** Whether an error is the end of a wait, a turn in the queue or a sleep by an abort signal. */
 const isAbortError = (error: unknown): boolean =>
   error instanceof Error && error.name === "AbortError";
@@ -464,6 +490,47 @@ function retryWaitOf(error: unknown): number | null {
   const asked = error.retryAfterMs;
   if (asked !== undefined && asked > MAX_RETRY_AFTER_MS) return null;
   return asked ?? 0;
+}
+
+/**
+ * What the run's one request came to, as a kind for `onFailed`, or null when the failure is not one
+ * to tell (the last 429, which `onRefused` has heard). The kind follows what the engine saw, never
+ * a text: a refusal's text is not read, and a body served as JSON that is no index is a bad answer
+ * whatever it says.
+ *
+ * - A failure by status: a 5xx is `server_error` (no answer after its one retry, or a Retry-After
+ *   of more than 5 seconds), any other status is `bad_status` (a 4xx, or a redirect that was not
+ *   followed).
+ * - A failure without one, by its reason: `unsupported_type` is `not_json` (a 200 that is not JSON,
+ *   how GDELT refuses a query), `blocked_by_robots` is `robots`, `unreachable` is `unreachable` (a
+ *   network error, a time-out, too many redirects, a body that could not be decoded),
+ *   `blocked_by_site` and `not_found` are `bad_status`, and `not_allowed` (the URL policy refused
+ *   the address) is `failed`.
+ * - Any other SearchEngineError is `bad_answer`: a body that was cut, is no JSON even after its
+ *   repair, is no object, or holds articles that are no list.
+ * - Anything else is `failed`: an error of our own.
+ */
+function failureKindOf(error: unknown): GdeltFailureKind | null {
+  if (error instanceof FinalRefusal) return null;
+  if (error instanceof FetchError) {
+    if (error.status !== undefined) return error.status >= 500 ? "server_error" : "bad_status";
+    switch (error.reason) {
+      case "unsupported_type":
+        return "not_json";
+      case "blocked_by_robots":
+        return "robots";
+      case "unreachable":
+        return "unreachable";
+      case "blocked_by_site":
+      case "not_found":
+        return "bad_status";
+      case "not_allowed":
+      default:
+        return "failed";
+    }
+  }
+  if (error instanceof SearchEngineError) return "bad_answer";
+  return "failed";
 }
 
 /**
@@ -560,6 +627,15 @@ export interface GdeltEngineDeps {
    * the query, not the vendor. It serves a counter, so one that throws changes nothing.
    */
   onRefused?: (refusal: { final: boolean }) => void;
+  /**
+   * Told once, with the kind, when the run's one request has failed for good for a reason that is
+   * not a 429, and when no name of the vendor can be asked for (see `GdeltFailureKind` and
+   * `failureKindOf`). It is not told of a load that was given up because no search waited for it,
+   * of an index from the cache, or of a 429 (those go to `onRefused`). It is told nothing else:
+   * not the query, not the address, not the error or its text. It serves the trace, so one that
+   * throws changes nothing.
+   */
+  onFailed?: (failure: { kind: GdeltFailureKind }) => void;
 }
 
 /**
@@ -571,7 +647,8 @@ export interface GdeltEngineDeps {
  * run, which may carry the signals of different loops, so one signal's abort ends that search at
  * once and cancels nothing for the others. The request is bounded by its own time-outs.
  *
- * A failure of the request is the answer of every search of the run, with three exceptions, none
+ * A failure of the request is told once to `onFailed`, with a fixed kind (the last 429 is told to
+ * `onRefused` instead). It is the answer of every search of the run, with three exceptions, none
  * of which is a failure of GDELT that the run should keep:
  *
  * - the process is leaving GDELT alone, or GDELT has just refused with a 429. The request then
@@ -612,6 +689,8 @@ export function createGdeltEngine(deps: GdeltEngineDeps): SearchEngine {
   let refusals = 0;
   /** The pause that `onPause` was last told of, so that it hears of each pause once. */
   let toldUntil = Number.NEGATIVE_INFINITY;
+  /** Whether `onFailed` was told that no name of the vendor can be asked for, which it hears once. */
+  let toldNoQuery = false;
 
   /** Tells a hook, which serves a counter or a clock and is not part of the search. */
   const tell = <T>(hook: ((value: T) => void) | undefined, value: T): void => {
@@ -647,7 +726,7 @@ export function createGdeltEngine(deps: GdeltEngineDeps): SearchEngine {
         refusals += 1;
         const final = refusals >= GDELT_MAX_ASKS;
         tell(deps.onRefused, { final });
-        if (final) throw new SearchEngineError();
+        if (final) throw new FinalRefusal();
         throw new Paused();
       }
       throw error;
@@ -719,8 +798,11 @@ export function createGdeltEngine(deps: GdeltEngineDeps): SearchEngine {
       // The abort of the load ends the wait, the turn in the queue or the sleep with an AbortError,
       // and that is no failure of GDELT. Whatever else the request came to after the last search
       // left (the request itself is not cancelled) is the answer of GDELT, and it stays the
-      // answer of the run: the next search must not ask again for it.
+      // answer of the run: the next search must not ask again for it. That is where a failure
+      // becomes the answer of the run, so it is told here, once: the failed load stays current.
       if (until.aborted && isAbortError(error)) throw new Unwanted();
+      const kind = failureKindOf(error);
+      if (kind !== null) tell(deps.onFailed, { kind });
       throw error;
     }
     if (cache !== undefined) cacheGdeltIndex(cache, url, articles);
@@ -811,7 +893,14 @@ export function createGdeltEngine(deps: GdeltEngineDeps): SearchEngine {
       try {
         // A search of the web, a vendor with no name to search for and a search that was cancelled
         // before it began cost no request.
-        if (kind !== "news" || requestUrl === null || signal?.aborted) {
+        if (kind !== "news" || signal?.aborted) throw new SearchEngineError();
+        if (requestUrl === null) {
+          // The first news search that is not cancelled tells that this vendor has no name that
+          // can be asked for, once for the run.
+          if (!toldNoQuery) {
+            toldNoQuery = true;
+            tell(deps.onFailed, { kind: "no_query" });
+          }
           throw new SearchEngineError();
         }
         const index = await indexFor(requestUrl, signal);

@@ -12,7 +12,7 @@ import {
   type VrdbSourceId,
 } from "../../../domain.layer/interfaces/i.vendorResearch";
 import * as gdeltSearchModule from "../../webResearch/gdeltSearch";
-import { GDELT_ASK_MS } from "../../webResearch/gdeltSearch";
+import { GDELT_ASK_MS, type GdeltFailureKind } from "../../webResearch/gdeltSearch";
 import * as guardedFetchModule from "../../webResearch/guardedFetch";
 import * as providerSearchModule from "../../webResearch/providerSearch";
 import { SearchUnavailableError } from "../../webResearch/providerSearch";
@@ -3088,6 +3088,240 @@ describe("createVendorResearcher: the search engine of each run", () => {
       });
     });
 
+    describe("the failures it meets that are not a 429", () => {
+      // Taken before any spy is set: `afterEach` restores the mocks, and this is the real builder.
+      const realCreateGdeltEngine = gdeltSearchModule.createGdeltEngine;
+
+      const FAILURE_REASONS: Array<[GdeltFailureKind, string]> = [
+        ["not_json", "gdelt_not_json"],
+        ["bad_answer", "gdelt_bad_answer"],
+        ["unreachable", "gdelt_unreachable"],
+        ["server_error", "gdelt_server_error"],
+        ["bad_status", "gdelt_bad_status"],
+        ["robots", "gdelt_robots"],
+        ["no_query", "gdelt_no_query"],
+        ["failed", "gdelt_failed"],
+      ];
+
+      const projected = (
+        steps: ReturnType<ReturnType<typeof createTraceRecorder>["snapshot"]>["steps"],
+      ) =>
+        steps.map(({ by, tool, kind, outcome, reason }) => ({ by, tool, kind, outcome, reason }));
+
+      it.each(FAILURE_REASONS)(
+        "writes one fixed-text step for a failure of kind %s: %s",
+        async (kind, reason) => {
+          const spies = builders();
+          const trace = createTraceRecorder();
+
+          await researcherOf(scriptedModel([finishStep, finishStep]))({
+            target: WITHOUT_DOMAIN,
+            model: MODEL,
+            now: NOW,
+            trace,
+          });
+          const before = trace.snapshot().steps.length;
+          depsOf(spies).onFailed?.({ kind });
+
+          const added = trace.snapshot().steps.slice(before);
+          expect(projected(added)).toEqual([
+            { by: "code", tool: "search", kind: "news", outcome: "failed", reason },
+          ]);
+          for (const step of added) {
+            expect(step.query).toBeUndefined();
+            expect(step.usedQuery).toBeUndefined();
+            expect(step.url).toBeUndefined();
+            expect(step.ms).toBeUndefined();
+            expect(step.results).toBeUndefined();
+          }
+        },
+      );
+
+      it("writes gdelt_failed for a kind it does not know, and never the kind's text", async () => {
+        const spies = builders();
+        const trace = createTraceRecorder();
+
+        await researcherOf(scriptedModel([finishStep, finishStep]))({
+          target: WITHOUT_DOMAIN,
+          model: MODEL,
+          now: NOW,
+          trace,
+        });
+        const before = trace.snapshot().steps.length;
+        depsOf(spies).onFailed?.({ kind: "constructor" } as never);
+        depsOf(spies).onFailed?.({ kind: "Zorblax confidential" } as never);
+
+        const added = trace.snapshot().steps.slice(before);
+        expect(added.map((step) => step.reason)).toEqual(["gdelt_failed", "gdelt_failed"]);
+        const written = JSON.stringify(trace.snapshot());
+        expect(written).not.toContain("Zorblax");
+        expect(written).not.toContain("constructor");
+      });
+
+      it("is wired for a key of Claude too, whose fallback GDELT is", async () => {
+        const spies = builders();
+        const trace = createTraceRecorder();
+
+        await researcherOf(scriptedModel([finishStep, finishStep]))({
+          target: WITHOUT_DOMAIN,
+          model: MODEL,
+          now: NOW,
+          search: CLAUDE,
+          trace,
+        });
+        const before = trace.snapshot().steps.length;
+        depsOf(spies).onFailed?.({ kind: "unreachable" });
+
+        expect(projected(trace.snapshot().steps.slice(before))).toEqual([
+          {
+            by: "code",
+            tool: "search",
+            kind: "news",
+            outcome: "failed",
+            reason: "gdelt_unreachable",
+          },
+        ]);
+      });
+
+      it("lets the run go on when the run keeps no trace, or its trace throws", async () => {
+        const spies = builders();
+        await researcherOf(scriptedModel([finishStep, finishStep]))({
+          target: WITHOUT_DOMAIN,
+          model: MODEL,
+          now: NOW,
+        });
+        expect(() => depsOf(spies).onFailed?.({ kind: "unreachable" })).not.toThrow();
+
+        const spiesWithTrace = builders();
+        const trace = createTraceRecorder();
+        await researcherOf(scriptedModel([finishStep, finishStep]))({
+          target: WITHOUT_DOMAIN,
+          model: MODEL,
+          now: NOW,
+          trace,
+        });
+        jest.spyOn(trace, "step").mockImplementation(() => {
+          throw new Error("the trace broke");
+        });
+        expect(() => depsOf(spiesWithTrace).onFailed?.({ kind: "unreachable" })).not.toThrow();
+      });
+
+      it("still writes gdelt_refused and gdelt_refused_final for the 429s, and no other GDELT word", async () => {
+        const spies = builders();
+        const trace = createTraceRecorder();
+        const gdeltRefused = jest.fn();
+        const metrics = {
+          findingDecided: jest.fn(),
+          searchFinished: jest.fn(),
+          searchRetried: jest.fn(),
+          cacheLookup: jest.fn(),
+          gdeltRefused,
+        } as unknown as ResearchMetrics;
+
+        await researcherOf(scriptedModel([finishStep, finishStep]), { metrics })({
+          target: WITHOUT_DOMAIN,
+          model: MODEL,
+          now: NOW,
+          trace,
+        });
+        const before = trace.snapshot().steps.length;
+        depsOf(spies).onRefused?.({ final: false });
+        depsOf(spies).onRefused?.({ final: false });
+        depsOf(spies).onRefused?.({ final: true });
+
+        const added = trace.snapshot().steps.slice(before);
+        expect(added.map((step) => step.reason)).toEqual([
+          "gdelt_refused",
+          "gdelt_refused",
+          "gdelt_refused_final",
+        ]);
+        expect(gdeltRefused).toHaveBeenCalledTimes(3);
+      });
+
+      /** The real engine over a fetch that answers with `answer`, as a run builds it. */
+      function realEngineOver(
+        spies: ReturnType<typeof builders>,
+        answer: () => Promise<guardedFetchModule.GuardedResponse>,
+      ) {
+        const fetch = jest.fn(answer);
+        spies.createGdeltEngine.mockImplementation((deps) =>
+          realCreateGdeltEngine({
+            ...deps,
+            fetch: fetch as unknown as typeof guardedFetchModule.guardedFetch,
+            queue: (task) => task(),
+            robots: { isAllowed: async () => true },
+          }),
+        );
+        return fetch;
+      }
+
+      const gdeltStepsOf = (trace: ReturnType<typeof createTraceRecorder>) =>
+        trace.snapshot().steps.filter((step) => step.reason?.startsWith("gdelt_"));
+
+      it("writes one gdelt_not_json step for a run whose GDELT request gets a 200 that is not JSON, and records every failed search as search_unavailable", async () => {
+        const spies = builders();
+        const fetch = realEngineOver(spies, async () => {
+          throw new guardedFetchModule.FetchError("unsupported_type");
+        });
+        const trace = createTraceRecorder();
+
+        await researcherOf(searchTwice())({
+          target: WITHOUT_DOMAIN,
+          model: MODEL,
+          now: NOW,
+          trace,
+        });
+
+        expect(projected(gdeltStepsOf(trace))).toEqual([
+          { by: "code", tool: "search", kind: "news", outcome: "failed", reason: "gdelt_not_json" },
+        ]);
+        const asked = trace.snapshot().steps.filter((step) => step.turn !== undefined);
+        expect(asked.filter((step) => step.tool === "search").map((step) => step.reason)).toEqual([
+          "search_unavailable",
+          "search_unavailable",
+        ]);
+        expect(fetch).toHaveBeenCalledTimes(1);
+      });
+
+      it("writes no GDELT step for a run whose news was answered", async () => {
+        const spies = builders();
+        realEngineOver(spies, async () => ({
+          url: "https://api.gdeltproject.org/api/v2/doc/doc",
+          status: 200,
+          contentType: "application/json",
+          body: Buffer.from(
+            JSON.stringify({
+              articles: [
+                {
+                  url: "https://news.example/acme-breach",
+                  title: "Acme confirms a data breach",
+                  seendate: "20261025T100000Z",
+                  domain: "news.example",
+                  language: "English",
+                },
+              ],
+            }),
+          ),
+          truncated: false,
+        }));
+        const trace = createTraceRecorder();
+
+        await researcherOf(searchTwice())({
+          target: WITHOUT_DOMAIN,
+          model: MODEL,
+          now: NOW,
+          trace,
+        });
+
+        expect(gdeltStepsOf(trace)).toEqual([]);
+        const searches = trace.snapshot().steps.filter((step) => step.tool === "search");
+        expect(searches.length).toBeGreaterThan(0);
+        expect(searches.every((step) => step.outcome === "ok" || step.outcome === "empty")).toBe(
+          true,
+        );
+      });
+    });
+
     describe("the retries it makes", () => {
       function countingMetrics() {
         const retries: Array<{ kind: string }> = [];
@@ -3688,6 +3922,27 @@ describe("runEvalCase: an engine that is given", () => {
 
     expect(run.trace.steps.map((step) => ("reason" in step ? step.reason : undefined))).toContain(
       "gdelt_refused",
+    );
+  });
+
+  it("is handed the hook that writes a failure of GDELT to the trace of the run", async () => {
+    let hooks: RunHooks | undefined;
+    let told = false;
+    const engine = liveLikeEngine(() => {
+      if (told) return;
+      told = true;
+      hooks?.onFailed?.({ kind: "not_json" });
+    });
+
+    const run = await runEvalCase(GATHERING_CASE as NonNullable<typeof GATHERING_CASE>, {
+      engine,
+      bindHooks: (given) => {
+        hooks = given;
+      },
+    });
+
+    expect(run.trace.steps.map((step) => ("reason" in step ? step.reason : undefined))).toContain(
+      "gdelt_not_json",
     );
   });
 });
