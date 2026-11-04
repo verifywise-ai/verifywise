@@ -4,7 +4,7 @@ import { Copy, Plus, Trash2 } from "lucide-react";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import { ButtonToggle } from "../../../components/button-toggle";
 import CodeBlock from "../components/CodeBlock";
-import { brand, text, status } from "../../../themes/palette";
+import { brand, button, text, status } from "../../../themes/palette";
 
 // Code snippets
 const customizableButtonSnippets = {
@@ -54,6 +54,18 @@ const customizableButtonSnippets = {
 />`,
   secondary: `<CustomizableButton
   variant="contained"
+  color="secondary"
+  text="Cancel"
+  onClick={handleCancel}
+/>`,
+  secondaryOutlined: `<CustomizableButton
+  variant="outlined"
+  color="secondary"
+  text="Cancel"
+  onClick={handleCancel}
+/>`,
+  secondaryText: `<CustomizableButton
+  variant="text"
   color="secondary"
   text="Cancel"
   onClick={handleCancel}
@@ -141,15 +153,20 @@ const ButtonsSection: React.FC = () => {
           <SpecCard title="Font weight" value="500" note="Medium weight" onCopy={handleCopy} />
           <SpecCard
             title="Primary color"
-            value={brand.primary}
-            note="Main action buttons"
+            value={button.primary.contained.bg.default}
+            note="button.primary.contained.bg.default"
             onCopy={handleCopy}
           />
-          <SpecCard title="Primary hover" value="#0f604d" note="Hover state" onCopy={handleCopy} />
+          <SpecCard
+            title="Primary hover"
+            value={button.primary.contained.bg.hover}
+            note="button.primary.contained.bg.hover"
+            onCopy={handleCopy}
+          />
           <SpecCard
             title="Secondary color"
-            value="#F4F4F4"
-            note="Utility buttons (light bg)"
+            value={button.secondary.contained.bg.default}
+            note="button.secondary.contained.bg.default"
             onCopy={handleCopy}
           />
           <SpecCard
@@ -318,6 +335,22 @@ const ButtonsSection: React.FC = () => {
               >
                 <CustomizableButton variant="contained" color="secondary" text="Cancel" />
               </ExampleWithCode>
+
+              <ExampleWithCode
+                label="Secondary outlined"
+                code={customizableButtonSnippets.secondaryOutlined}
+                onCopy={handleCopy}
+              >
+                <CustomizableButton variant="outlined" color="secondary" text="Cancel" />
+              </ExampleWithCode>
+
+              <ExampleWithCode
+                label="Secondary text"
+                code={customizableButtonSnippets.secondaryText}
+                onCopy={handleCopy}
+              >
+                <CustomizableButton variant="text" color="secondary" text="Cancel" />
+              </ExampleWithCode>
             </Stack>
           </Box>
 
@@ -388,18 +421,24 @@ const ButtonsSection: React.FC = () => {
       {/* Color Palette for Buttons */}
       <SpecSection title="Button color palette">
         <Typography sx={{ fontSize: 13, color: theme.palette.text.tertiary, mb: "24px" }}>
-          Available color options for CustomizableButton. Each color has contained, outlined, and
+          Primary and secondary fills come from button tokens. Success, warning, error, and info
+          still use the local palette in v1SingleTheme.ts. Each color has contained, outlined, and
           text variants.
         </Typography>
 
         <Box sx={{ display: "flex", gap: "16px", flexWrap: "wrap", mb: "24px" }}>
           <ColorSwatch
             label="Primary"
-            color={brand.primary}
-            hoverColor="#0f604d"
+            color={button.primary.contained.bg.default}
+            hoverColor={button.primary.contained.bg.hover}
             onCopy={handleCopy}
           />
-          <ColorSwatch label="Secondary" color="#F4F4F4" hoverColor="#e3e3e3" onCopy={handleCopy} />
+          <ColorSwatch
+            label="Secondary"
+            color={button.secondary.contained.bg.default}
+            hoverColor={button.secondary.contained.bg.hover}
+            onCopy={handleCopy}
+          />
           <ColorSwatch
             label="Success"
             color={status.success.text}
@@ -416,14 +455,32 @@ const ButtonsSection: React.FC = () => {
           <ColorSwatch label="Info" color="#1565C0" hoverColor="#0D47A1" onCopy={handleCopy} />
         </Box>
 
-        <Box sx={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-          <CustomizableButton variant="contained" color="primary" text="Primary" />
-          <CustomizableButton variant="contained" color="secondary" text="Secondary" />
-          <CustomizableButton variant="contained" color="success" text="Success" />
-          <CustomizableButton variant="contained" color="warning" text="Warning" />
-          <CustomizableButton variant="contained" color="error" text="Error" />
-          <CustomizableButton variant="contained" color="info" text="Info" />
-        </Box>
+        <Stack spacing="12px">
+          <Box sx={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+            <CustomizableButton variant="contained" color="primary" text="Primary" />
+            <CustomizableButton variant="contained" color="secondary" text="Secondary" />
+            <CustomizableButton variant="contained" color="success" text="Success" />
+            <CustomizableButton variant="contained" color="warning" text="Warning" />
+            <CustomizableButton variant="contained" color="error" text="Error" />
+            <CustomizableButton variant="contained" color="info" text="Info" />
+          </Box>
+          <Box sx={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+            <CustomizableButton variant="outlined" color="primary" text="Primary" />
+            <CustomizableButton variant="outlined" color="secondary" text="Secondary" />
+            <CustomizableButton variant="outlined" color="success" text="Success" />
+            <CustomizableButton variant="outlined" color="warning" text="Warning" />
+            <CustomizableButton variant="outlined" color="error" text="Error" />
+            <CustomizableButton variant="outlined" color="info" text="Info" />
+          </Box>
+          <Box sx={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+            <CustomizableButton variant="text" color="primary" text="Primary" />
+            <CustomizableButton variant="text" color="secondary" text="Secondary" />
+            <CustomizableButton variant="text" color="success" text="Success" />
+            <CustomizableButton variant="text" color="warning" text="Warning" />
+            <CustomizableButton variant="text" color="error" text="Error" />
+            <CustomizableButton variant="text" color="info" text="Info" />
+          </Box>
+        </Stack>
       </SpecSection>
 
       <Divider sx={{ my: "32px" }} />
