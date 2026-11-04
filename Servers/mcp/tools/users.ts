@@ -4,12 +4,19 @@
  * Handlers call services/superAdmin.service.ts — the same code the super-admin
  * console controllers call — so each operation has one implementation
  * regardless of whether it was reached over REST or MCP.
+ *
+ * userTools act on the whole deployment and are for super admins.
+ * organizationUserTools are an organization Admin's: each takes an
+ * organizationId that mcp/scope.ts fixes to the Admin's own organization, and
+ * none can create a password or delete an account, matching what an Admin can
+ * do from the Team settings.
  */
 
 import { z } from "zod";
 import {
   createUserInOrganization,
   removeUserById,
+  removeUserFromOrganization,
   updateUserDetails,
 } from "../../services/superAdmin.service";
 import {
@@ -23,6 +30,7 @@ import {
   type InviteRefusalCode,
 } from "../../services/invitation.service";
 import { getRoleByName } from "../../utils/roleMap";
+import { getInvitationsByOrganizationQuery } from "../../utils/invitation.utils";
 import { generatePassword } from "../password";
 import { result, type ToolDef } from "../tool";
 
@@ -178,6 +186,54 @@ const deleteUser: ToolDef = {
   },
 };
 
+/**
+ * Fails naming the id, the same pre-check invite_user runs: an unknown
+ * organization would otherwise read as an empty list, or as "not a member".
+ */
+async function requireExistingOrganization(organizationId: number): Promise<void> {
+  if (!(await organizationExists(organizationId))) {
+    throw new Error(`No organization with id ${organizationId} on this deployment.`);
+  }
+}
+
+const removeUserFromOrganizationTool: ToolDef = {
+  name: "remove_user",
+  title: "Remove user from organization",
+  description:
+    "Remove a user from one organization, leaving their other memberships alone. Their account is deleted only if this was the last organization they belonged to. The organization must keep at least one Admin. To delete an account from every organization, use delete_user.",
+  inputSchema: {
+    organizationId: z
+      .number()
+      .int()
+      .positive()
+      .describe("Id of the organization to remove the user from."),
+    userId: z.number().int().positive().describe("Id of the user to remove."),
+  },
+  handler: async (args) => {
+    await requireExistingOrganization(args.organizationId);
+    return result(await removeUserFromOrganization(args.organizationId, args.userId));
+  },
+};
+
+const listInvitations: ToolDef = {
+  name: "list_invitations",
+  title: "List invitations",
+  description:
+    "List an organization's pending invitations: who was invited, with which role, by whom, and when the invitation expires.",
+  inputSchema: {
+    organizationId: z
+      .number()
+      .int()
+      .positive()
+      .describe("Id of the organization whose invitations to list."),
+  },
+  handler: async (args) => {
+    await requireExistingOrganization(args.organizationId);
+    const invitations = await getInvitationsByOrganizationQuery(args.organizationId);
+    return result({ organizationId: args.organizationId, count: invitations.length, invitations });
+  },
+};
+
 /** Refusal codes from the invitation service, as sentences the model can act on. */
 const INVITE_REFUSALS: Record<InviteRefusalCode, string> = {
   unknown_role: "That role does not exist on this deployment.",
@@ -188,63 +244,158 @@ const INVITE_REFUSALS: Record<InviteRefusalCode, string> = {
   super_admin: "That email belongs to a super admin, who cannot join an organization.",
 };
 
+const inviteArgs = {
+  email: z.string().email().describe("The invitee's email address."),
+  firstName: z.string().min(1).describe("The invitee's first name."),
+  lastName: z.string().min(1).optional().describe("The invitee's last name."),
+  role: roleArg,
+};
+
+const INVITE_DESCRIPTION =
+  "Invite a user to an existing organization by email. A new user sets their own password through the invitation link, so no password is generated; an existing user joins by logging in through the link with their own password. The invitation expires after one week.";
+
+/**
+ * Invite into one organization through the invitation service.
+ *
+ * inviterRole null is the trusted footing of a verified super admin, with no
+ * role ceiling; an Admin passes their own role, as the Team settings do.
+ */
+async function invite(args: Record<string, any>, invitedBy: number, inviterRole: string | null) {
+  const role = await resolveRole(args.organizationId, args.role);
+
+  let invitation;
+  try {
+    invitation = await inviteUserToOrganization({
+      organizationId: args.organizationId,
+      email: args.email,
+      name: args.firstName,
+      surname: args.lastName,
+      roleId: role.id,
+      invitedBy,
+      inviterRole,
+    });
+  } catch (error) {
+    if (error instanceof InviteRefusalError) {
+      throw new Error(INVITE_REFUSALS[error.code]);
+    }
+    throw error;
+  }
+
+  // An invitation that saved but could not be emailed still works; the link
+  // is returned so it can be passed on by hand.
+  return invitation.emailSent
+    ? result({
+        email: args.email,
+        role: role.name,
+        organizationId: args.organizationId,
+        emailSent: true,
+      })
+    : result({
+        email: args.email,
+        role: role.name,
+        organizationId: args.organizationId,
+        emailSent: false,
+        emailError: invitation.error,
+        invitationLink: invitation.link,
+      });
+}
+
 const inviteUser: ToolDef = {
   name: "invite_user",
   title: "Invite user",
-  description:
-    "Invite a user to an existing organization by email. A new user sets their own password through the invitation link, so no password is generated; an existing user joins by logging in through the link with their own password. The invitation expires after one week.",
+  description: INVITE_DESCRIPTION,
   inputSchema: {
     organizationId: z.number().int().positive().describe("Id of the organization to invite into."),
-    email: z.string().email().describe("The invitee's email address."),
-    firstName: z.string().min(1).describe("The invitee's first name."),
-    lastName: z.string().min(1).optional().describe("The invitee's last name."),
-    role: roleArg,
+    ...inviteArgs,
   },
   handler: async (args, caller) => {
-    // The same pre-checks the super-admin console runs before inviting.
-    if (!(await organizationExists(args.organizationId))) {
-      throw new Error(`No organization with id ${args.organizationId} on this deployment.`);
-    }
-    const role = await resolveRole(args.organizationId, args.role);
-
-    let invitation;
-    try {
-      invitation = await inviteUserToOrganization({
-        organizationId: args.organizationId,
-        email: args.email,
-        name: args.firstName,
-        surname: args.lastName,
-        roleId: role.id,
-        invitedBy: caller.userId,
-        // Trusted: superAdminOnly already verified the caller, so no role
-        // ceiling applies — the same footing the super-admin route uses.
-        inviterRole: null,
-      });
-    } catch (error) {
-      if (error instanceof InviteRefusalError) {
-        throw new Error(INVITE_REFUSALS[error.code]);
-      }
-      throw error;
-    }
-
-    // An invitation that saved but could not be emailed still works; the link
-    // is returned so it can be passed on by hand.
-    return invitation.emailSent
-      ? result({
-          email: args.email,
-          role: role.name,
-          organizationId: args.organizationId,
-          emailSent: true,
-        })
-      : result({
-          email: args.email,
-          role: role.name,
-          organizationId: args.organizationId,
-          emailSent: false,
-          emailError: invitation.error,
-          invitationLink: invitation.link,
-        });
+    // The same pre-check the super-admin console runs before inviting.
+    await requireExistingOrganization(args.organizationId);
+    // Trusted: the caller is a verified super admin, so no role ceiling
+    // applies — the same footing the super-admin route uses.
+    return invite(args, caller.userId, null);
   },
 };
 
-export const userTools: ToolDef[] = [createUser, inviteUser, listUsers, updateUser, deleteUser];
+export const userTools: ToolDef[] = [
+  createUser,
+  inviteUser,
+  listInvitations,
+  listUsers,
+  updateUser,
+  removeUserFromOrganizationTool,
+  deleteUser,
+];
+
+const organizationIdArg = z
+  .number()
+  .int()
+  .positive()
+  .describe("Id of the organization whose members to manage.");
+
+const listOrganizationUsers: ToolDef = {
+  name: "list_users",
+  title: "List users",
+  description: "List the members of the organization, with each one's role.",
+  inputSchema: { organizationId: organizationIdArg },
+  handler: async (args) => {
+    const users = await listOrganizationUsersQuery(args.organizationId);
+    return result({ organizationId: args.organizationId, count: users.length, users });
+  },
+};
+
+const inviteOrganizationUser: ToolDef = {
+  name: "invite_user",
+  title: "Invite user",
+  description: INVITE_DESCRIPTION,
+  inputSchema: { organizationId: organizationIdArg, ...inviteArgs },
+  handler: async (args, caller) => invite(args, caller.userId, caller.role),
+};
+
+const updateUserRole: ToolDef = {
+  name: "update_user_role",
+  title: "Update user role",
+  description:
+    "Change a member's role in the organization. The organization must keep at least one Admin. Names and email addresses belong to the person and are changed only by them.",
+  inputSchema: {
+    organizationId: organizationIdArg,
+    userId: z.number().int().positive().describe("Id of the member whose role to change."),
+    role: roleArg.describe("New role name."),
+  },
+  handler: async (args) => {
+    const role = await resolveRole(args.organizationId, args.role);
+    // The service answers with every organization the user belongs to; an
+    // Admin is shown their own organization's membership only.
+    const { id, name, surname, email } = await updateUserDetails(args.userId, {
+      roleId: role.id,
+      organizationId: args.organizationId,
+    });
+    return result({
+      user: { id, name, surname, email, organizationId: args.organizationId, role: role.name },
+    });
+  },
+};
+
+const removeUser: ToolDef = {
+  name: "remove_user",
+  title: "Remove user",
+  description:
+    "Remove a member from the organization. Their account is deleted only if this was the last organization they belonged to. The organization must keep at least one Admin.",
+  inputSchema: {
+    organizationId: organizationIdArg,
+    userId: z.number().int().positive().describe("Id of the member to remove."),
+  },
+  handler: async (args) => {
+    // Whether the account went too would tell the Admin if the user belongs to
+    // other organizations, so only the removal is reported, as on REST.
+    await removeUserFromOrganization(args.organizationId, args.userId);
+    return result({ removed: true, userId: args.userId, organizationId: args.organizationId });
+  },
+};
+
+export const organizationUserTools: ToolDef[] = [
+  inviteOrganizationUser,
+  listOrganizationUsers,
+  updateUserRole,
+  removeUser,
+];
