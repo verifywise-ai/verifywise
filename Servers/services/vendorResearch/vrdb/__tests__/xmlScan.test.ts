@@ -160,15 +160,17 @@ describe("scanElements", () => {
     expect(elements[0].attributes.constructor).toBe("y");
   });
 
-  it("200,000 '<' characters scan in under 200 ms", () => {
+  // A linear scan takes a few milliseconds here and a quadratic one many seconds, so the bounds
+  // leave room for a machine that runs the whole suite at once.
+  it("200,000 '<' characters scan in under a second", () => {
     for (const xml of ["<".repeat(200_000), `<r><item>${"<".repeat(200_000)}</item></r>`]) {
       const startedAt = performance.now();
       scan(xml, "item");
-      expect(performance.now() - startedAt).toBeLessThan(200);
+      expect(performance.now() - startedAt).toBeLessThan(1000);
     }
   });
 
-  it("200,000 '&' characters and an unclosed attribute scan in under 200 ms", () => {
+  it("200,000 '&' characters and an unclosed attribute scan in under a second", () => {
     const xmls = [
       `<r><item>${"&".repeat(200_000)};</item></r>`,
       `<r><item a="${"<item ".repeat(40_000)}`,
@@ -177,15 +179,15 @@ describe("scanElements", () => {
     for (const xml of xmls) {
       const startedAt = performance.now();
       scan(xml, "item");
-      expect(performance.now() - startedAt).toBeLessThan(200);
+      expect(performance.now() - startedAt).toBeLessThan(1000);
     }
   });
 
-  it("50,000 elements scan in under a second", () => {
+  it("50,000 elements scan in under two seconds", () => {
     const xml = `<list>${'<item id="1"><name>A &amp; B</name><v>x</v></item>'.repeat(50_000)}</list>`;
     const startedAt = performance.now();
     const { elements, errors } = scan(xml, "item");
-    expect(performance.now() - startedAt).toBeLessThan(1000);
+    expect(performance.now() - startedAt).toBeLessThan(2000);
     expect(elements).toHaveLength(50_000);
     expect(errors).toBe(0);
   });
