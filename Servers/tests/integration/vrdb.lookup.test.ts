@@ -17,6 +17,7 @@ import {
   databaseReadThroughStore,
   sharedVrdbLookup,
 } from "../../services/vendorResearch/vrdb/lookup";
+import { NAME_ONLY_LOOKUP_NOTE } from "../../services/vendorResearch/records/ofac";
 import type { ReadThroughDeps } from "../../services/vendorResearch/vrdb/readThrough";
 import { vrdbSourceOf } from "../../services/vendorResearch/vrdb/sources";
 import type { ParsedRecord } from "../../services/vendorResearch/vrdb/types";
@@ -77,6 +78,47 @@ const sanctionsRecord = (id: string, keys: string[]): ParsedRecord => ({
   publishedAt: "2024-05-01",
   sourceUpdatedAt: null,
 });
+
+/** A record of an AI-specific list: the vendor's name is its only key, whatever the list. */
+const aiRecord = (
+  recordType: ParsedRecord["recordType"],
+  id: string,
+  publishedAt: string | null,
+): ParsedRecord => ({
+  sourceRecordId: id,
+  recordType,
+  title: `Entry ${id}`,
+  summary: `Entry ${id} of a list about AI.`,
+  url: `https://lists.example/ai?entry=${id}`,
+  identifiers: { names: ["Acme Analytics"] },
+  matchKeys: ["name:acmeanalytics"],
+  publishedAt,
+  sourceUpdatedAt: null,
+});
+
+async function seedAiLists(): Promise<void> {
+  const lists = [
+    ["atlas", aiRecord("ai_case_study", "AML.CS9001", "2026-03-01")],
+    ["nhtsa_sgo", aiRecord("crash_report_summary", "acmeanalytics:ads", "2026-08-01")],
+    ["fda_ai_devices", aiRecord("ai_device_authorizations", "acmeanalytics", "2026-06-25")],
+    // The AI Incident Database sits behind the closed gate Q29: a copy of it in the tables is
+    // never offered and is not in the coverage.
+    ["aiid", aiRecord("ai_incident", "1797", "2026-05-11")],
+  ] as const;
+  for (const [sourceId, record] of lists) {
+    await upsertVrdbSourceQuery(vrdbSourceOf(sourceId), SYNCED_AT);
+    await applyVrdbSnapshotQuery({
+      sourceId,
+      records: [record],
+      missingStatus: "withdrawn",
+      rawSnapshotHash: "c".repeat(64),
+      sourceVersion: "2026.10",
+      etag: null,
+      lastModified: null,
+      at: SYNCED_AT,
+    });
+  }
+}
 
 async function seedLists(): Promise<void> {
   await upsertVrdbSourceQuery(vrdbSourceOf("kev"), SYNCED_AT);
@@ -153,6 +195,10 @@ describe("the lookup of a vendor, in the database", () => {
       ["uk_sanctions", "found"],
       ["eu_fsf", "failed"],
       ["cve", "failed"],
+      // The AI lists are asked for the AI-specific category only; this run did not research it.
+      ["atlas", "not_researched"],
+      ["nhtsa_sgo", "not_researched"],
+      ["fda_ai_devices", "not_researched"],
     ]);
     expect(await matchRows()).toEqual([
       expect.objectContaining({
@@ -177,6 +223,80 @@ describe("the lookup of a vendor, in the database", () => {
         matched_key: "domain:acme-analytics.example",
       }),
     ]);
+  });
+
+  it("offers the AI-specific records by the vendor's name only, as weak matches, and never the gated list", async () => {
+    await seedAiLists();
+    const orgId = await createTestOrganization("VRDB org");
+    const vendorId = await createTestVendor(orgId, { vendor_name: "Acme Analytics" });
+    const lookup = sharedVrdbLookup({ organizationId: orgId, vendorId }, CONFIG, NO_READ_THROUGH);
+    if (lookup === undefined) throw new Error("the lookup is on in this test");
+
+    const outcome = await lookup({
+      target: TARGET,
+      verifiedDomains: [TARGET.domain],
+      researchable: ["ai_specific"],
+      now: NOW,
+    });
+
+    const offered = outcome.records.flatMap((entry) =>
+      entry.records.map((record) => [record.vrdb.sourceRecordId, record.vrdb.strength]),
+    );
+    expect(offered).toHaveLength(3);
+    expect(offered).toEqual(
+      expect.arrayContaining([
+        ["AML.CS9001", "weak"],
+        ["acmeanalytics:ads", "weak"],
+        ["acmeanalytics", "weak"],
+      ]),
+    );
+    for (const entry of outcome.records) {
+      for (const record of entry.records) expect(record.text).toContain(NAME_ONLY_LOOKUP_NOTE);
+    }
+    expect(
+      outcome.coverage
+        .filter((entry) => ["atlas", "nhtsa_sgo", "fda_ai_devices", "aiid"].includes(entry.id))
+        .map((entry) => [entry.id, entry.outcome]),
+    ).toEqual([
+      ["atlas", "found"],
+      ["nhtsa_sgo", "found"],
+      ["fda_ai_devices", "found"],
+    ]);
+    // Three weak name matches were kept for the organization, and none for the gated list. The
+    // rows come back in the collation of the database, so they are compared as a set.
+    const rows = await matchRows();
+    expect(rows.map((row) => row.source_record_id).sort()).toEqual([
+      "AML.CS9001",
+      "acmeanalytics",
+      "acmeanalytics:ads",
+    ]);
+    for (const row of rows) {
+      expect(row).toMatchObject({
+        organization_id: orgId,
+        vendor_id: vendorId,
+        match_method: "name_exact",
+        match_strength: "weak",
+        matched_key: "name:acmeanalytics",
+      });
+    }
+  });
+
+  it("offers nothing of the AI-specific lists to a run that did not research that category", async () => {
+    await seedAiLists();
+    const orgId = await createTestOrganization("VRDB org");
+    const vendorId = await createTestVendor(orgId, { vendor_name: "Acme Analytics" });
+    const lookup = sharedVrdbLookup({ organizationId: orgId, vendorId }, CONFIG, NO_READ_THROUGH);
+    if (lookup === undefined) throw new Error("the lookup is on in this test");
+
+    const outcome = await lookup({
+      target: TARGET,
+      verifiedDomains: [TARGET.domain],
+      researchable: ["security_incidents", "legal_regulatory"],
+      now: NOW,
+    });
+
+    expect(outcome.records).toEqual([]);
+    expect(await matchRows()).toEqual([]);
   });
 
   it("a second lookup moves last_matched_at only", async () => {
