@@ -471,7 +471,7 @@ export default function ModelLifecycleConfig() {
           onClick={() => setConfigOpen(true)}
           sx={{ alignSelf: "flex-start" }}
         >
-          Configure Phases!!!!!!
+          Configure Phases
         </CustomizableButton>
       </Stack>
 
