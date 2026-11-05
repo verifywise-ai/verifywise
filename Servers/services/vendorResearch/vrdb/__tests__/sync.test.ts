@@ -348,6 +348,54 @@ describe("syncSource", () => {
     });
   });
 
+  it("applies the rest and logs, by number, the records a connector left out within its tolerance", async () => {
+    const memory = memoryStore();
+    const { connector } = fakeConnector("uk_sanctions", [
+      snapshotOf({ records: [recordOf("A"), recordOf("B")], skipped: 3 }),
+    ]);
+
+    const result = await sync("uk_sanctions", memory, connector);
+
+    expect(result).toMatchObject({ outcome: "ok" });
+    expect(activeIds(memory, "uk_sanctions")).toEqual(["A", "B"]);
+    expect(logger.warn).toHaveBeenCalledTimes(1);
+    expect(logger.warn).toHaveBeenCalledWith(
+      "vendor risk database: uk_sanctions left out 3 records that do not parse",
+    );
+  });
+
+  it("names one left-out record in the singular, and logs nothing when none was left out", async () => {
+    const memory = memoryStore();
+    const { connector } = fakeConnector("uk_sanctions", [
+      snapshotOf({ records: [recordOf("A")], skipped: 1 }),
+      snapshotOf({ records: [recordOf("A"), recordOf("B")], skipped: 0 }),
+      snapshotOf({ records: [recordOf("A"), recordOf("B"), recordOf("C")] }),
+    ]);
+
+    await sync("uk_sanctions", memory, connector);
+    expect(logger.warn).toHaveBeenCalledTimes(1);
+    expect(logger.warn).toHaveBeenCalledWith(
+      "vendor risk database: uk_sanctions left out 1 record that does not parse",
+    );
+
+    (logger.warn as jest.Mock).mockClear();
+    await sync("uk_sanctions", memory, connector);
+    await sync("uk_sanctions", memory, connector);
+    expect(logger.warn).not.toHaveBeenCalled();
+  });
+
+  it("logs the records it left out also when the copy is then refused", async () => {
+    const memory = memoryStore();
+    const { connector } = fakeConnector("uk_sanctions", [snapshotOf({ records: [], skipped: 2 })]);
+
+    const result = await sync("uk_sanctions", memory, connector);
+
+    expect(result).toMatchObject({ outcome: "failed", errorCode: "empty" });
+    expect(logger.warn).toHaveBeenCalledWith(
+      "vendor risk database: uk_sanctions left out 2 records that do not parse",
+    );
+  });
+
   it("updates a record whose content changed", async () => {
     const memory = memoryStore();
     const { connector } = fakeConnector("uk_sanctions", [

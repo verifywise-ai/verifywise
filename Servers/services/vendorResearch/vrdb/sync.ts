@@ -231,6 +231,7 @@ async function syncWhole(
     const parsed = connector.parse(snapshot);
     if (parsed.root === null) throw new Refused("wrong_root");
     if (parsed.errors > 0) throw new Refused("parse_errors");
+    logSkipped(id, parsed.skipped ?? 0);
     const seen = new Set(parsed.records.map((record) => record.sourceRecordId)).size;
     if (seen === 0) throw new Refused("empty");
     const active = state?.activeRecords ?? 0;
@@ -263,18 +264,27 @@ async function syncWhole(
 }
 
 /**
+ * The entries a connector left out because they do not parse, within what it tolerates, for the
+ * log: a fixed phrase, the list's id, a number and, for a list read by its changes, a day; never
+ * an entry. Nothing is logged when none was left out.
+ */
+function logSkipped(id: VrdbSourceId, skipped: number, day?: string): void {
+  if (skipped <= 0) return;
+  const of = day === undefined ? "" : ` of ${day}`;
+  logger.warn(
+    skipped === 1
+      ? `vendor risk database: ${id} left out 1 record${of} that does not parse`
+      : `vendor risk database: ${id} left out ${skipped} records${of} that do not parse`,
+  );
+}
+
+/**
  * What a day left behind, for the log: the entries its connector left out because they do not
  * parse, and the hour of the hourly release it was read from when the list published no end-of-day
  * release for it. The lines hold fixed phrases, the list's id, a day and an hour, never an entry.
  */
 function logDay(id: VrdbSourceId, day: string, skipped: number, through?: string): void {
-  if (skipped > 0) {
-    logger.warn(
-      skipped === 1
-        ? `vendor risk database: ${id} left out 1 record of ${day} that does not parse`
-        : `vendor risk database: ${id} left out ${skipped} records of ${day} that do not parse`,
-    );
-  }
+  logSkipped(id, skipped, day);
   if (through !== undefined) {
     logger.warn(
       `vendor risk database: ${id} read ${day} up to ${through} from an hourly release: the list published no end-of-day release for that day`,
