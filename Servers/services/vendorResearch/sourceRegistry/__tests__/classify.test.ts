@@ -1112,11 +1112,14 @@ describe("emailOnDomain", () => {
     expect(emailOnDomain(text, "acme.example")).toBe(false);
   });
 
-  it("reads 200,000 @ signs in under 50 ms", () => {
+  // The read is one linear pass: 2 to 5 ms measured, alone or with coverage on. A pass quadratic in
+  // the @ signs, 2 x 10^10 steps here, could not fit in a second; the bound leaves room for a full
+  // parallel run with coverage, where the same call once took 248 ms.
+  it("reads 200,000 @ signs in under a second", () => {
     const text = "a@".repeat(200_000);
     const startedAt = performance.now();
     expect(emailOnDomain(text, "acme.example")).toBe(false);
-    expect(performance.now() - startedAt).toBeLessThan(50);
+    expect(performance.now() - startedAt).toBeLessThan(1000);
   });
 });
 
