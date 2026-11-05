@@ -20,11 +20,11 @@ export default function LifecyclePhaseContent({
   return (
     <Stack sx={{ flex: 1, overflowY: "auto", p: 12, gap: 8 }}>
       <Stack sx={{ gap: 2 }}>
-        <Typography sx={{ ...textStyles.cardTitle, color: text.primary }}>
-          {phase.name}
-        </Typography>
+        <Typography sx={{ ...textStyles.cardTitle, color: text.primary }}>{phase.name}</Typography>
         {phase.description && (
-          <Typography sx={{ ...textStyles.body, color: text.secondary }}>{phase.description}</Typography>
+          <Typography sx={{ ...textStyles.body, color: text.secondary }}>
+            {phase.description}
+          </Typography>
         )}
       </Stack>
 
@@ -39,7 +39,9 @@ export default function LifecyclePhaseContent({
                   {item.name}
                 </Typography>
                 {item.is_required && (
-                  <Typography sx={{ ...textStyles.caption, color: text.error }}>Required</Typography>
+                  <Typography sx={{ ...textStyles.caption, color: text.error }}>
+                    Required
+                  </Typography>
                 )}
               </Stack>
               {item.description && (

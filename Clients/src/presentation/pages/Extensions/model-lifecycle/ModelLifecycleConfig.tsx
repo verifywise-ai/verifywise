@@ -38,15 +38,7 @@ import {
 } from "lucide-react";
 import { LifecycleItem, useLifecycleConfig } from "./useModelLifecycle";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
-import {
-  background,
-  border,
-  brand,
-  editor,
-  icon,
-  status,
-  text,
-} from "../../../themes/palette";
+import { background, border, brand, editor, icon, status, text } from "../../../themes/palette";
 import { textStyles } from "../../../../presentation/themes/typography";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 
@@ -78,14 +70,11 @@ const VW_TYPOGRAPHY = {
 // Styled Components
 // ============================================================================
 
-
-
-
 const vwTextField = {
   "& .MuiOutlinedInput-root": {
     "backgroundColor": VW_COLORS.bgMain,
     "borderRadius": "4px",
-...textStyles.body,
+    ...textStyles.body,
     "& .MuiOutlinedInput-notchedOutline": {
       borderColor: border.dark,
       borderWidth: "1px",
@@ -103,7 +92,7 @@ const vwTextField = {
 const vwSelect = {
   "backgroundColor": VW_COLORS.bgMain,
   "borderRadius": "4px",
-...textStyles.body,
+  ...textStyles.body,
   "& .MuiOutlinedInput-notchedOutline": {
     borderColor: border.dark,
   },
@@ -392,7 +381,7 @@ export default function ModelLifecycleConfig() {
         ) : phases.length === 0 ? (
           <Typography
             sx={{
-...textStyles.body,
+              ...textStyles.body,
               color: VW_COLORS.textTertiary,
             }}
           >
@@ -697,9 +686,7 @@ export default function ModelLifecycleConfig() {
                     </IconButton>
                   </AccordionSummary>
 
-                  <AccordionDetails
-                    sx={{ px: 8, py: 6, backgroundColor: VW_COLORS.bgMain }}
-                  >
+                  <AccordionDetails sx={{ px: 8, py: 6, backgroundColor: VW_COLORS.bgMain }}>
                     <Stack spacing={0}>
                       {(Array.isArray(phase.items) ? phase.items : []).map((item, itemIdx) => (
                         <Stack
@@ -869,7 +856,6 @@ export default function ModelLifecycleConfig() {
                             size="small"
                             onClick={() => handleCreateItem(phase.id)}
                             disabled={!newItemName.trim() || saving}
-
                           >
                             Add
                           </CustomizableButton>
@@ -893,10 +879,9 @@ export default function ModelLifecycleConfig() {
                           startIcon={<Plus size={14} />}
                           onClick={() => setAddingItemForPhase(phase.id)}
                           sx={{
-                            "alignSelf": "flex-start",
-                            "mt": 6,
-                            "textTransform": "none",
-
+                            alignSelf: "flex-start",
+                            mt: 6,
+                            textTransform: "none",
                           }}
                         >
                           Add item
@@ -951,7 +936,7 @@ export default function ModelLifecycleConfig() {
                     startIcon={<Plus size={14} />}
                     onClick={handleCreatePhase}
                     disabled={!newPhaseName.trim() || saving}
-                    sx={{alignSelf: "flex-start" }}
+                    sx={{ alignSelf: "flex-start" }}
                   >
                     Create phase
                   </CustomizableButton>
@@ -968,7 +953,11 @@ export default function ModelLifecycleConfig() {
             borderTop: `1px solid ${border.light}`,
           }}
         >
-          <CustomizableButton variant="outlined" color="secondary" onClick={() => setConfigOpen(false)}>
+          <CustomizableButton
+            variant="outlined"
+            color="secondary"
+            onClick={() => setConfigOpen(false)}
+          >
             Close
           </CustomizableButton>
         </DialogActions>
@@ -995,7 +984,11 @@ export default function ModelLifecycleConfig() {
           </Typography>
         </DialogContent>
         <DialogActions sx={{ px: 10, py: 6 }}>
-          <CustomizableButton onClick={() => setDeletePhaseId(null)} variant="text" color="secondary" >
+          <CustomizableButton
+            onClick={() => setDeletePhaseId(null)}
+            variant="text"
+            color="secondary"
+          >
             Cancel
           </CustomizableButton>
           <CustomizableButton
@@ -1030,7 +1023,11 @@ export default function ModelLifecycleConfig() {
           </Typography>
         </DialogContent>
         <DialogActions sx={{ px: 6, py: 6 }}>
-          <CustomizableButton onClick={() => setDeleteItemId(null)} variant="text" color="secondary">
+          <CustomizableButton
+            onClick={() => setDeleteItemId(null)}
+            variant="text"
+            color="secondary"
+          >
             Cancel
           </CustomizableButton>
           <CustomizableButton

@@ -40,7 +40,11 @@ export default function LifecyclePhasePanel({
   }).length;
 
   const isComplete = totalItems > 0 && filledItems === totalItems;
-  const chipColor = isComplete ? status.success.strong : filledItems > 0 ? accent.blue.text : text.secondary;
+  const chipColor = isComplete
+    ? status.success.strong
+    : filledItems > 0
+      ? accent.blue.text
+      : text.secondary;
 
   return (
     <Accordion
@@ -102,11 +106,13 @@ export default function LifecyclePhasePanel({
           {items.map((item) => (
             <Stack key={item.id} sx={{ px: 8, py: 8, gap: 4 }}>
               <Stack direction="row" alignItems="center" sx={{ gap: 4 }}>
-                <Typography sx={{ ...textStyles.formLabel, color: text.secondary}}>
+                <Typography sx={{ ...textStyles.formLabel, color: text.secondary }}>
                   {item.name}
                 </Typography>
                 {item.is_required && (
-                  <Typography sx={{ ...textStyles.caption, color: text.error }}>Required</Typography>
+                  <Typography sx={{ ...textStyles.caption, color: text.error }}>
+                    Required
+                  </Typography>
                 )}
               </Stack>
               {item.description && (
@@ -118,7 +124,9 @@ export default function LifecyclePhasePanel({
             </Stack>
           ))}
           {items.length === 0 && (
-            <Typography sx={{ ...textStyles.body, textAlign: "center", color: text.subdued, py: 4 }}>
+            <Typography
+              sx={{ ...textStyles.body, textAlign: "center", color: text.subdued, py: 4 }}
+            >
               No items configured for this phase
             </Typography>
           )}

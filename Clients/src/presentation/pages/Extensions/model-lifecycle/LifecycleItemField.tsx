@@ -102,7 +102,6 @@ const VW_COLORS = {
   successBg: "#ecfdf3",
 };
 
-
 const vwChipSx = {
   ...textStyles.bodyLarge,
   color: text.secondary,
@@ -363,7 +362,7 @@ function DocumentsFieldRenderer({
                 sx={{
                   flex: 1,
                   ...textStyles.body,
-                  color: text.secondary
+                  color: text.secondary,
                 }}
               >
                 {file.filename || `File #${file.file_id}`}
@@ -399,10 +398,10 @@ function DocumentsFieldRenderer({
         sx={{
           "border": `1px dashed ${VW_COLORS.borderDark}`,
           "borderRadius": "4px",
-                pt: 4,
-                pb: 4,
-                pl: 6,
-                pr: 6,
+          "pt": 4,
+          "pb": 4,
+          "pl": 6,
+          "pr": 6,
           "textAlign": "center",
           "cursor": "pointer",
           "transition": "all 0.15s ease",
@@ -416,10 +415,7 @@ function DocumentsFieldRenderer({
         {uploading ? (
           <CircularProgress size={20} sx={{ color: VW_COLORS.primary }} />
         ) : (
-          <Stack
-            direction="row"
-            sx={{ gap: 4, justifyContent: "center", alignItems: "center" }}
-          >
+          <Stack direction="row" sx={{ gap: 4, justifyContent: "center", alignItems: "center" }}>
             <Upload size={16} color={text.icon} />
             <Typography
               sx={{
@@ -728,7 +724,7 @@ function ChecklistFieldRenderer({
             size="small"
             sx={{
               "color": border.dark,
-              "&.Mui-checked": { color: brand.primary},
+              "&.Mui-checked": { color: brand.primary },
               "padding": 2,
             }}
           />
@@ -765,7 +761,13 @@ function ChecklistFieldRenderer({
           }}
           sx={{ flex: 1 }}
         />
-        <CustomizableButton variant="outlined" color="secondary" size="small" onClick={addItem} loading={saving}>
+        <CustomizableButton
+          variant="outlined"
+          color="secondary"
+          size="small"
+          onClick={addItem}
+          loading={saving}
+        >
           Add
         </CustomizableButton>
       </Stack>
@@ -935,18 +937,16 @@ function ApprovalFieldRenderer({
                 size="small"
                 ariaLabel="Approve"
                 onClick={() => handleStatusChange(approval.user_id, "approved")}
-
               >
                 <Check size={16} />
               </CustomizableButton>
               <CustomizableButton
                 iconOnly
                 variant="text"
-                color="error" 
+                color="error"
                 size="small"
                 ariaLabel="Reject"
                 onClick={() => handleStatusChange(approval.user_id, "rejected")}
-
               >
                 <X size={16} />
               </CustomizableButton>

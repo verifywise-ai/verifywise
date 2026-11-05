@@ -95,7 +95,6 @@ export default function LifecycleSidebar({
                   backgroundColor: isComplete || isActive ? background.alt : background.main,
                   color: isComplete || isActive ? border.light : icon.default,
                   ...textStyles.badge,
-
                 }}
               >
                 {isComplete ? <Check size={14} /> : index + 1}
