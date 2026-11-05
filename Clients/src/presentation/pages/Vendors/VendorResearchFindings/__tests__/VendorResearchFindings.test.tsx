@@ -833,6 +833,207 @@ describe("the credibility of a finding", () => {
     expect(row.queryByText(NOTE)).not.toBeInTheDocument();
   });
 
+  describe("with the AI-specific lists", () => {
+    /**
+     * One record of each AI-specific list as a finding cites it: matched by name, so weak, and in
+     * the class of its list (the AI Incident Database is an aggregator, MITRE curates its case
+     * studies, NHTSA and the FDA are regulators). The ids and the companies are invented.
+     */
+    const AI_RECORDS = [
+      {
+        id: "aiid",
+        name: "AI Incident Database",
+        category: "unverified",
+        badge: "Unverified",
+        url: "https://incidentdatabase.ai/cite/9001",
+        host: "incidentdatabase.ai",
+        recordId: "9001",
+      },
+      {
+        id: "atlas",
+        name: "MITRE ATLAS case studies",
+        category: "trusted_press",
+        badge: "Trusted press",
+        url: "https://atlas.mitre.org/studies/AML.CS9001",
+        host: "atlas.mitre.org",
+        recordId: "AML.CS9001",
+      },
+      {
+        id: "nhtsa_sgo",
+        name: "NHTSA Standing General Order crash reports",
+        category: "official",
+        badge: "Official",
+        url: "https://www.nhtsa.gov/laws-regulations/standing-general-order-crash-reporting?reportingEntity=acmecars&automation=ads",
+        host: "www.nhtsa.gov",
+        recordId: "acmecars:ads",
+      },
+      {
+        id: "fda_ai_devices",
+        name: "FDA list of AI-enabled medical devices",
+        category: "official",
+        badge: "Official",
+        url: "https://www.fda.gov/medical-devices/software-medical-device-samd/artificial-intelligence-enabled-medical-devices?company=acmecloud",
+        host: "www.fda.gov",
+        recordId: "acmecloud",
+      },
+    ] as const;
+    type AiRecord = (typeof AI_RECORDS)[number];
+    const [, ATLAS_RECORD] = AI_RECORDS;
+
+    /** The record as the finding cites it, and as the credibility rule saw it. */
+    const citedRecord = (list: AiRecord, status: "active" | "withdrawn" = "active") => ({
+      citation: {
+        url: list.url,
+        title: `Record ${list.recordId}`,
+        quote: `A record of ${list.host}`,
+        published_at: "2026-09-02",
+        category: list.category,
+        publisher: list.id,
+        record: {
+          source_id: list.id,
+          record_id: 12,
+          status,
+          match_strength: "weak" as const,
+        },
+      },
+      seen: {
+        url: list.url,
+        category: list.category,
+        publisher: list.id,
+        entry: null,
+        reviewed: true,
+        reading: "read" as const,
+        record: {
+          source: list.id,
+          match: "weak" as const,
+          status,
+          source_record_id: list.recordId,
+          as_of: "2026-10-09",
+        },
+      },
+    });
+
+    it.each(AI_RECORDS)(
+      "a record of the $name matched by name shows the name-only line, the note and the badge of its class",
+      async (list) => {
+        const { citation, seen } = citedRecord(list);
+        mocks.list.mockResolvedValue({
+          rows: [
+            credibleFinding({
+              credibility: "low",
+              credibility_basis: {
+                rule: "name_only",
+                registry_version: "2026-10-29.1",
+                name_only: true,
+                sources: [seen],
+              },
+              sources: [citation],
+            }),
+          ],
+          total: 1,
+        });
+        renderSection();
+        await screen.findByText(FIRST);
+
+        const row = within(rowOf(FIRST));
+        expect(row.getByText("Low")).toBeInTheDocument();
+        const line = row.getByText(`Low: the ${list.name} entry matches the vendor by name only.`);
+        expect(follows(line, row.getByText(NOTE))).toBe(true);
+        // The badge is the class of the list, in front of the host of the record.
+        expect(row.getByText(list.badge).nextElementSibling).toContainElement(
+          row.getByRole("link", { name: list.host }),
+        );
+      },
+    );
+
+    it.each(AI_RECORDS)(
+      "a record the $name withdrew reads as withdrawn, with the day of the copy",
+      async (list) => {
+        const { citation, seen } = citedRecord(list, "withdrawn");
+        mocks.list.mockResolvedValue({
+          rows: [
+            credibleFinding({
+              credibility: "low",
+              credibility_basis: {
+                rule: "inactive",
+                registry_version: "2026-10-29.1",
+                name_only: true,
+                sources: [seen],
+              },
+              sources: [citation],
+            }),
+          ],
+          total: 1,
+        });
+        renderSection();
+        await screen.findByText(FIRST);
+
+        const row = within(rowOf(FIRST));
+        const line = row.getByText(`Low: ${list.name} withdrew the record on 9 Oct 2026.`);
+        // A record matched by name carries the note, whatever the rule that decided the label.
+        expect(follows(line, row.getByText(NOTE))).toBe(true);
+        expect(
+          follows(row.getByRole("link", { name: list.host }), row.getByText("Withdrawn")),
+        ).toBe(true);
+      },
+    );
+
+    it("the line of one trusted publisher does not name a weak record of MITRE ATLAS", async () => {
+      // MITRE ATLAS is trusted press, but every match of it is by name: it gives only Low support,
+      // so it is no publisher of Medium. It is still among the sources, and it still has its note.
+      const NEWS = "https://www.reuters.com/technology/acme-breach";
+      const { citation, seen } = citedRecord(ATLAS_RECORD);
+      mocks.list.mockResolvedValue({
+        rows: [
+          credibleFinding({
+            credibility: "medium",
+            credibility_basis: {
+              rule: "trusted_press_one",
+              registry_version: "2026-10-29.1",
+              name_only: true,
+              sources: [
+                {
+                  url: NEWS,
+                  category: "trusted_press",
+                  publisher: "reuters",
+                  publisher_name: "Reuters",
+                  entry: "P1",
+                  reviewed: true,
+                  reading: "read",
+                },
+                seen,
+              ],
+            },
+            sources: [
+              {
+                url: NEWS,
+                title: "Acme breach",
+                quote: "Acme was breached.",
+                published_at: null,
+                category: "trusted_press",
+              },
+              citation,
+            ],
+          }),
+        ],
+        total: 1,
+      });
+      renderSection();
+      await screen.findByText(FIRST);
+
+      const row = within(rowOf(FIRST));
+      expect(row.getByText("Medium")).toBeInTheDocument();
+      // The whole text of the element is the sentence: no second publisher in its brackets.
+      expect(
+        row.getByText(
+          "Medium: one trusted publisher reports it (Reuters); no official source and no second independent publisher.",
+        ),
+      ).toBeInTheDocument();
+      expect(row.getByText(NOTE)).toBeInTheDocument();
+      expect(row.getByRole("link", { name: "atlas.mitre.org" })).toBeInTheDocument();
+    });
+  });
+
   it("puts a badge before each source's host", async () => {
     mocks.list.mockResolvedValue({
       rows: [
@@ -2876,6 +3077,82 @@ describe("the coverage of the latest run", () => {
       ])}`,
     );
     expect(line.closest("[data-vw-no-translate]")).not.toBeNull();
+  });
+
+  it("lists the AI-specific lists the run checked, with their notices as their owners wrote them", async () => {
+    // The notice of the ATLAS case studies names the year of the day: stand the clock still at 2026.
+    vi.setSystemTime(new Date("2026-10-31T12:00:00Z"));
+    mocks.latest.mockResolvedValue(
+      run({
+        coverage: coverage({
+          sources: [
+            listCopy("aiid", { outcome: "found", weak: 2 }),
+            listCopy("atlas", { outcome: "found", weak: 1 }),
+            listCopy("nhtsa_sgo"),
+            listCopy("fda_ai_devices", { stale: true }),
+          ],
+          lookups: [],
+          cited: { official: 0, trusted_press: 1, vendor: 0, unverified: 2 },
+        }),
+      }),
+    );
+    renderSection({ route: WITH_VENDOR_7 });
+
+    expect(
+      await screen.findByText(
+        "Checked: AI Incident Database (2), MITRE ATLAS case studies (1), NHTSA Standing General Order crash reports (0), FDA list of AI-enabled medical devices (0)",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "No records in NHTSA Standing General Order crash reports, FDA list of AI-enabled medical devices as of 10 Oct 2026",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "FDA list of AI-enabled medical devices: last updated 10 Oct 2026, not up to date",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Sources cited: 0 official, 1 trusted press, 0 vendor, 2 unverified"),
+    ).toBeInTheDocument();
+    const line = screen.getByText(
+      `Data sources: ${joinAttributions([
+        "AI Incident Database, Responsible AI Collaborative (incidentdatabase.ai), CC BY-SA 4.0. Adapted by VerifyWise; the adapted records are shared under CC BY-SA 4.0.",
+        "MITRE ATLAS™ case studies, Copyright 2021-2026 The MITRE Corporation, under the Apache License 2.0. Adapted by VerifyWise.",
+        "NHTSA Standing General Order crash reports, US Department of Transportation. Counted by VerifyWise; NHTSA states the data may be incomplete or unverified.",
+        "FDA list of AI-enabled medical devices, US Food and Drug Administration",
+      ])}`,
+    );
+    // The share-alike notice is never translated: it is a condition of the licence.
+    expect(line.closest("[data-vw-no-translate]")).not.toBeNull();
+  });
+
+  it("names the AI-specific lists the run could not check, and says nothing of the ones it did not ask", async () => {
+    mocks.latest.mockResolvedValue(
+      run({
+        coverage: coverage({
+          sources: [
+            listCopy("atlas", { checked: false, outcome: "failed", last_success_at: null }),
+            listCopy("nhtsa_sgo", { checked: false, outcome: "not_researched" }),
+            listCopy("fda_ai_devices", { outcome: "found", weak: 3 }),
+          ],
+          lookups: [],
+        }),
+      }),
+    );
+    renderSection({ route: WITH_VENDOR_7 });
+
+    expect(await screen.findByText("Not checked: MITRE ATLAS case studies")).toBeInTheDocument();
+    expect(
+      screen.getByText("Checked: FDA list of AI-enabled medical devices (3)"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/^Data sources: FDA list of AI-enabled medical devices,/),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/NHTSA Standing General Order crash reports/),
+    ).not.toBeInTheDocument();
   });
 
   it("a run without coverage shows no coverage block", async () => {

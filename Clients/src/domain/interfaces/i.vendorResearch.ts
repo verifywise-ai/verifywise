@@ -63,14 +63,32 @@ export type RecordSourceId =
   | "uk_sanctions"
   | "eu_fsf"
   | "cve"
-  | "un_sanctions";
+  | "un_sanctions"
+  | "aiid"
+  | "atlas"
+  | "nhtsa_sgo"
+  | "fda_ai_devices";
 
 /**
  * The lists the vendor risk database mirrors, and the databases it reads through (the NVD, the
- * SEC): looked up in the database instead of on the web.
+ * SEC): looked up in the database instead of on the web. The AI-specific lists are aiid (the AI
+ * Incident Database), atlas (MITRE ATLAS case studies), nhtsa_sgo (NHTSA's crash reports of
+ * automated driving and driver assistance systems) and fda_ai_devices (the FDA's list of
+ * AI-enabled medical devices).
  */
 export type VrdbSourceId =
-  "kev" | "nvd" | "sec" | "ofac" | "uk_sanctions" | "eu_fsf" | "cve" | "un_sanctions";
+  | "kev"
+  | "nvd"
+  | "sec"
+  | "ofac"
+  | "uk_sanctions"
+  | "eu_fsf"
+  | "cve"
+  | "un_sanctions"
+  | "aiid"
+  | "atlas"
+  | "nhtsa_sgo"
+  | "fda_ai_devices";
 
 /**
  * What a run learned from one source of records: records were found, none were, the lookup

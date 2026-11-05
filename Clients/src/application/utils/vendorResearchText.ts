@@ -451,6 +451,10 @@ const DATABASE_NAMES: Record<RecordSourceId, string> = {
   statuspage: "the vendor's status page",
   cve: "the CVE Program",
   un_sanctions: "UN Security Council Consolidated List",
+  aiid: "AI Incident Database",
+  atlas: "MITRE ATLAS case studies",
+  nhtsa_sgo: "NHTSA Standing General Order crash reports",
+  fda_ai_devices: "FDA list of AI-enabled medical devices",
 };
 
 /** The lists as "the {list} entry" names them. */
@@ -465,6 +469,10 @@ const LIST_NAMES: Record<RecordSourceId, string> = {
   statuspage: "vendor's status page",
   cve: "CVE List",
   un_sanctions: "UN Security Council Consolidated List",
+  aiid: "AI Incident Database",
+  atlas: "MITRE ATLAS case studies",
+  nhtsa_sgo: "NHTSA Standing General Order crash reports",
+  fda_ai_devices: "FDA list of AI-enabled medical devices",
 };
 
 /** The sentence of a record its database no longer stands by, with the day of the copy and without. */
@@ -666,7 +674,10 @@ function ruleSentence(basis: CredibilityBasis, t: Translate, lang: string): stri
       );
     }
     case "trusted_press_one": {
-      const names = joinedOnce(publishersOf(supporting));
+      // The strong sources only, as the server's rule holds them (credibility.ts): a weak record
+      // gives only Low support, so a MITRE ATLAS case study (trusted press, matched by name) is no
+      // publisher here.
+      const names = joinedOnce(publishersOf(strong));
       return names === null
         ? t(
             "Medium: one trusted publisher reports it; no official source and no second independent publisher.",
@@ -826,6 +837,15 @@ const ATTRIBUTIONS: Record<VrdbSourceId, string> = {
     return `CVE records Copyright © 1999-${new Date().getUTCFullYear()}, The MITRE Corporation, under the CVE Terms of Use (https://www.cve.org/Legal/TermsOfUse)`;
   },
   un_sanctions: "United Nations Security Council Consolidated List",
+  aiid: "AI Incident Database, Responsible AI Collaborative (incidentdatabase.ai), CC BY-SA 4.0. Adapted by VerifyWise; the adapted records are shared under CC BY-SA 4.0.",
+  // As the CVE's: the string the server stores for the list (vrdb/sources.ts), with the year of the
+  // day in UTC, read at each call, not once at load.
+  get atlas(): string {
+    return `MITRE ATLAS™ case studies, Copyright 2021-${new Date().getUTCFullYear()} The MITRE Corporation, under the Apache License 2.0. Adapted by VerifyWise.`;
+  },
+  nhtsa_sgo:
+    "NHTSA Standing General Order crash reports, US Department of Transportation. Counted by VerifyWise; NHTSA states the data may be incomplete or unverified.",
+  fda_ai_devices: "FDA list of AI-enabled medical devices, US Food and Drug Administration",
 };
 
 /**

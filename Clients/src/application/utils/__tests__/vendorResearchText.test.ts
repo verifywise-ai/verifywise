@@ -12,6 +12,7 @@ import type {
   ResearchCategory,
   RunCoverage,
   RunProgress,
+  SourceCategory,
   VrdbSourceId,
 } from "../../../domain/interfaces/i.vendorResearch";
 import * as vendorResearchText from "../vendorResearchText";
@@ -630,7 +631,83 @@ const RECORD_SOURCES: RecordSourceId[] = [
   "eu_fsf",
   "cve",
   "un_sanctions",
+  "aiid",
+  "atlas",
+  "nhtsa_sgo",
+  "fda_ai_devices",
 ];
+
+/**
+ * The four AI-specific lists: the server's name of each (vrdb/sources.ts), the class its records
+ * have (sourceRegistry/classify.ts) and an address of the form its records have, with an invented
+ * id. Every match of them is by name, so each record is weak.
+ */
+const AI_LISTS = [
+  {
+    id: "aiid",
+    name: "AI Incident Database",
+    category: "unverified",
+    url: "https://incidentdatabase.ai/cite/9001",
+    recordId: "9001",
+  },
+  {
+    id: "atlas",
+    name: "MITRE ATLAS case studies",
+    category: "trusted_press",
+    url: "https://atlas.mitre.org/studies/AML.CS9001",
+    recordId: "AML.CS9001",
+  },
+  {
+    id: "nhtsa_sgo",
+    name: "NHTSA Standing General Order crash reports",
+    category: "official",
+    url: "https://www.nhtsa.gov/laws-regulations/standing-general-order-crash-reporting?reportingEntity=acmecars&automation=ads",
+    recordId: "acmecars:ads",
+  },
+  {
+    id: "fda_ai_devices",
+    name: "FDA list of AI-enabled medical devices",
+    category: "official",
+    url: "https://www.fda.gov/medical-devices/software-medical-device-samd/artificial-intelligence-enabled-medical-devices?company=acmecloud",
+    recordId: "acmecloud",
+  },
+] as const satisfies ReadonlyArray<{
+  id: RecordSourceId;
+  name: string;
+  category: SourceCategory;
+  url: string;
+  recordId: string;
+}>;
+type AiList = (typeof AI_LISTS)[number];
+const [AIID, ATLAS] = AI_LISTS;
+
+/**
+ * What the terms of the AI-specific lists ask a screen that shows their data to say, as the server
+ * stores it (vrdb/sources.ts). Never translated. The notice of MITRE ATLAS is below: it names a year.
+ */
+const AI_NOTICES = {
+  aiid: "AI Incident Database, Responsible AI Collaborative (incidentdatabase.ai), CC BY-SA 4.0. Adapted by VerifyWise; the adapted records are shared under CC BY-SA 4.0.",
+  nhtsa_sgo:
+    "NHTSA Standing General Order crash reports, US Department of Transportation. Counted by VerifyWise; NHTSA states the data may be incomplete or unverified.",
+  fda_ai_devices: "FDA list of AI-enabled medical devices, US Food and Drug Administration",
+};
+/**
+ * The notice of the ATLAS case studies: MITRE's copyright line up to the year of the day (Q32), with
+ * the mark. The server stores it with the year of the day in UTC, so a test sets the clock before it
+ * reads one.
+ */
+const atlasNotice = (year: number) =>
+  `MITRE ATLAS™ case studies, Copyright 2021-${year} The MITRE Corporation, under the Apache License 2.0. Adapted by VerifyWise.`;
+
+/** The record of an AI-specific list as the server describes it: weak, in the class of its list. */
+const aiRecordOf = (
+  list: AiList,
+  record: Partial<NonNullable<CredibilitySource["record"]>> = {},
+): CredibilitySource => ({
+  ...recordOf(list.id, { match: "weak", source_record_id: list.recordId, ...record }),
+  url: list.url,
+  category: list.category,
+});
 
 /** The sentence of every rule, with what the server's English line says for the same basis. */
 const RULE_SENTENCES: Array<[name: string, basis: CredibilityBasis, sentence: string]> = [
@@ -819,6 +896,53 @@ const RULE_SENTENCES: Array<[name: string, basis: CredibilityBasis, sentence: st
     basisOf("inactive", [recordOf("ofac", { status: "delisted", as_of: undefined })]),
     "Low: OFAC Specially Designated Nationals list removed the record.",
   ],
+  // The AI-specific lists: matched by name, and withdrawn (not delisted) when they drop a record.
+  ...AI_LISTS.flatMap((list): Array<[name: string, basis: CredibilityBasis, sentence: string]> => [
+    [
+      `an entry of the ${list.name} matched by name`,
+      basisOf("name_only", [aiRecordOf(list)], true),
+      `Low: the ${list.name} entry matches the vendor by name only.`,
+    ],
+    [
+      `a record the ${list.name} withdrew`,
+      basisOf("inactive", [aiRecordOf(list, { status: "withdrawn", as_of: "2026-10-09" })]),
+      `Low: ${list.name} withdrew the record on 9 Oct 2026.`,
+    ],
+    [
+      `a record the ${list.name} withdrew on no known day`,
+      basisOf("inactive", [aiRecordOf(list, { status: "withdrawn", as_of: undefined })]),
+      `Low: ${list.name} withdrew the record.`,
+    ],
+  ]),
+  // A weak record gives only Low support, whatever its class: MITRE ATLAS is trusted press, and
+  // its case studies are matched by name, so one is no publisher of a line (credibility.ts).
+  [
+    "one trusted publisher next to a weak record of MITRE ATLAS",
+    basisOf(
+      "trusted_press_one",
+      [press("reuters", "Reuters", "https://www.reuters.com/a"), aiRecordOf(ATLAS)],
+      true,
+    ),
+    "Medium: one trusted publisher reports it (Reuters); no official source and no second independent publisher.",
+  ],
+  [
+    "a weak record of MITRE ATLAS alone",
+    basisOf("trusted_press_one", [aiRecordOf(ATLAS)], true),
+    "Medium: one trusted publisher reports it; no official source and no second independent publisher.",
+  ],
+  [
+    "two trusted publishers next to a weak record of MITRE ATLAS",
+    basisOf(
+      "trusted_press_two",
+      [
+        press("reuters", "Reuters", "https://www.reuters.com/a"),
+        aiRecordOf(ATLAS),
+        press("bbc", "BBC", "https://www.bbc.co.uk/news/1"),
+      ],
+      true,
+    ),
+    "High: 2 independent trusted publishers report it (Reuters, BBC).",
+  ],
 ];
 
 const NAME_ONLY_NOTE = "Matched by name only: this may be another company.";
@@ -891,6 +1015,38 @@ describe("credibilityRationale", () => {
     expect(sentenceOf("cve")).toBe("Low: the CVE List entry matches the vendor by name only.");
     expect(sentenceOf("un_sanctions")).toBe(
       "Low: the UN Security Council Consolidated List entry matches the vendor by name only.",
+    );
+  });
+
+  it("names the publishers of the strong sources only: a weak record is none, whatever its class", () => {
+    // MITRE ATLAS is trusted press, and every match of it is by name: it gives only Low support, so
+    // the sentence of the Medium rule must not name it as the publisher that reports the risk.
+    const basis = basisOf(
+      "trusted_press_one",
+      [aiRecordOf(ATLAS), press("reuters", "Reuters", "https://www.reuters.com/a")],
+      true,
+    );
+    const { sentence } = credibilityRationale(basis, english, "en");
+    expect(sentence).toBe(
+      "Medium: one trusted publisher reports it (Reuters); no official source and no second independent publisher.",
+    );
+    for (const name of ["atlas", "ATLAS", "MITRE", "mitre.org"]) {
+      expect(sentence).not.toContain(name);
+    }
+    // The record says what it is in the note of its own, which the screen shows beside the line.
+    expect(nameOnlyNote(basis, english)).toBe(NAME_ONLY_NOTE);
+  });
+
+  it("names no publisher for a weak record: alone, with another one, or withdrawn", () => {
+    const withdrawn = aiRecordOf(ATLAS, { status: "withdrawn" });
+    const sentenceOf = (...sources: CredibilitySource[]) =>
+      credibilityRationale(basisOf("trusted_press_one", sources, true), english, "en").sentence;
+    const unnamed =
+      "Medium: one trusted publisher reports it; no official source and no second independent publisher.";
+    expect(sentenceOf(aiRecordOf(ATLAS))).toBe(unnamed);
+    expect(sentenceOf(aiRecordOf(ATLAS), aiRecordOf(AIID))).toBe(unnamed);
+    expect(sentenceOf(withdrawn, press("reuters", "Reuters", "https://www.reuters.com/a"))).toBe(
+      "Medium: one trusted publisher reports it (Reuters); no official source and no second independent publisher.",
     );
   });
 
@@ -1018,6 +1174,12 @@ describe("nameOnlyNote", () => {
         english,
       ),
     ).toBe(NAME_ONLY_NOTE);
+  });
+
+  it.each(AI_LISTS)("is the note for a record of the $name, which only a name matched", (list) => {
+    expect(nameOnlyNote(basisOf("name_only", [aiRecordOf(list)], true), english)).toBe(
+      NAME_ONLY_NOTE,
+    );
   });
 
   it("is nothing otherwise", () => {
@@ -1457,6 +1619,106 @@ describe("coverageLines", () => {
     });
   });
 
+  describe("with the AI-specific lists: the AI Incident Database, MITRE ATLAS, NHTSA and the FDA", () => {
+    /** Every match of these lists is by name, so a run counts weak records only. */
+    const aiRun = (overrides: Partial<RunCoverage> = {}) =>
+      coverageOf({
+        sources: [
+          listCopy("aiid", { outcome: "found", weak: 2 }),
+          listCopy("atlas", { outcome: "found", weak: 1 }),
+          listCopy("nhtsa_sgo"),
+          listCopy("fda_ai_devices", { outcome: "found", weak: 1 }),
+        ],
+        lookups: [],
+        ...overrides,
+      });
+
+    it("counts the records each list held, in the screen's own names", () => {
+      expect(linesOf(aiRun()).checked).toBe(
+        "Checked: AI Incident Database (2), MITRE ATLAS case studies (1), NHTSA Standing General Order crash reports (0), FDA list of AI-enabled medical devices (1)",
+      );
+    });
+
+    it("says which of them held no record, as of the day of its copy", () => {
+      expect(linesOf(aiRun()).none).toBe(
+        "No records in NHTSA Standing General Order crash reports as of 10 Oct 2026",
+      );
+      const allNone = aiRun({
+        sources: AI_LISTS.map((list) => listCopy(list.id)),
+      });
+      expect(linesOf(allNone).none).toBe(
+        "No records in AI Incident Database, MITRE ATLAS case studies, NHTSA Standing General Order crash reports, FDA list of AI-enabled medical devices as of 10 Oct 2026",
+      );
+    });
+
+    it("names the lists the run could not check, and the ones that are out of date", () => {
+      const lines = linesOf(
+        aiRun({
+          sources: [
+            listCopy("aiid", { checked: false, outcome: "failed", last_success_at: null }),
+            listCopy("atlas", { stale: true, last_success_at: "2026-10-07T09:23:00.000Z" }),
+            // Not asked by this run, or turned off: not a gap of its findings.
+            listCopy("nhtsa_sgo", { checked: false, outcome: "not_researched" }),
+            listCopy("fda_ai_devices", { checked: false, outcome: "off" }),
+          ],
+        }),
+      );
+      expect(lines.notChecked).toBe("Not checked: AI Incident Database");
+      expect(lines.stale).toEqual([
+        "MITRE ATLAS case studies: last updated 7 Oct 2026, not up to date",
+      ]);
+      expect(lines.off).toBe(false);
+    });
+
+    it("gives the notice of each list it checked, with what its terms ask the screen to say", () => {
+      vi.setSystemTime(new Date("2026-10-31T12:00:00Z"));
+      expect(linesOf(aiRun()).attributions).toEqual([
+        AI_NOTICES.aiid,
+        atlasNotice(2026),
+        AI_NOTICES.nhtsa_sgo,
+        AI_NOTICES.fda_ai_devices,
+      ]);
+      // A list the run did not ask gives no notice: nothing of it is in the findings.
+      const atlasFailed = aiRun({
+        sources: [
+          listCopy("atlas", { checked: false, outcome: "failed" }),
+          listCopy("fda_ai_devices"),
+        ],
+      });
+      expect(linesOf(atlasFailed).attributions).toEqual([AI_NOTICES.fda_ai_devices]);
+    });
+
+    it("writes the year of the ATLAS notice from the UTC clock, at each call", () => {
+      const notice = () =>
+        linesOf(aiRun({ sources: [listCopy("atlas", { outcome: "found", weak: 1 })] }))
+          .attributions;
+      // The local year is 1999 here, so that only the UTC year can be right.
+      const localYear = vi.spyOn(Date.prototype, "getFullYear").mockReturnValue(1999);
+      try {
+        vi.setSystemTime(new Date("2026-12-31T23:30:00Z"));
+        expect(notice()).toEqual([atlasNotice(2026)]);
+        vi.setSystemTime(new Date("2027-01-01T00:30:00Z"));
+        expect(notice()).toEqual([atlasNotice(2027)]);
+      } finally {
+        localYear.mockRestore();
+      }
+    });
+
+    it("turned off, they are off with the other lists", () => {
+      const off = linesOf(
+        aiRun({
+          sources: [
+            listCopy("kev", { checked: false, outcome: "off" }),
+            ...AI_LISTS.map((list) => listCopy(list.id, { checked: false, outcome: "off" })),
+          ],
+        }),
+      );
+      expect(off.off).toBe(true);
+      expect(off.checked).toBeNull();
+      expect(off.attributions).toEqual([]);
+    });
+  });
+
   it("leaves out a list or a database it does not know", () => {
     const lines = linesOf(
       coverageOf({
@@ -1500,6 +1762,19 @@ describe("joinAttributions", () => {
       ]),
     ).toBe(
       "CISA Known Exploited Vulnerabilities catalog (CC0 1.0); OFAC Specially Designated Nationals list, US Department of the Treasury; UK Sanctions List, FCDO. Contains public sector information licensed under the Open Government Licence v3.0; EU consolidated list of financial sanctions, © European Union",
+    );
+  });
+
+  it("joins the notices of the AI-specific lists the same way: the full stop of each but the last is dropped", () => {
+    expect(
+      joinAttributions([
+        AI_NOTICES.aiid,
+        atlasNotice(2026),
+        AI_NOTICES.nhtsa_sgo,
+        AI_NOTICES.fda_ai_devices,
+      ]),
+    ).toBe(
+      "AI Incident Database, Responsible AI Collaborative (incidentdatabase.ai), CC BY-SA 4.0. Adapted by VerifyWise; the adapted records are shared under CC BY-SA 4.0; MITRE ATLAS™ case studies, Copyright 2021-2026 The MITRE Corporation, under the Apache License 2.0. Adapted by VerifyWise; NHTSA Standing General Order crash reports, US Department of Transportation. Counted by VerifyWise; NHTSA states the data may be incomplete or unverified; FDA list of AI-enabled medical devices, US Food and Drug Administration",
     );
   });
 
@@ -1584,7 +1859,20 @@ describe("translation", () => {
       {
         registry_version: "2026-10-29.1",
         sources: (
-          ["kev", "nvd", "sec", "ofac", "uk_sanctions", "eu_fsf", "cve", "un_sanctions"] as const
+          [
+            "kev",
+            "nvd",
+            "sec",
+            "ofac",
+            "uk_sanctions",
+            "eu_fsf",
+            "cve",
+            "un_sanctions",
+            "aiid",
+            "atlas",
+            "nhtsa_sgo",
+            "fda_ai_devices",
+          ] as const
         ).map((id) => ({
           id,
           name: id,
@@ -1632,6 +1920,10 @@ describe("translation", () => {
         "NVD",
         "SEC EDGAR filings",
         "CVE List",
+        "AI Incident Database",
+        "MITRE ATLAS case studies",
+        "NHTSA Standing General Order crash reports",
+        "FDA list of AI-enabled medical devices",
       ]),
     );
   });
@@ -1640,6 +1932,61 @@ describe("translation", () => {
     const missing = keysRequested().filter((key) => translations[lang][key] === undefined);
     expect(missing).toEqual([]);
   });
+
+  it.each(LANGS)(
+    "names the AI-specific lists in %s, and leaves their notices as they are",
+    (lang) => {
+      const t = (key: string) => translations[lang][key] ?? key;
+      const lines = coverageLines(
+        {
+          registry_version: "2026-10-29.1",
+          sources: AI_LISTS.map((list) => ({
+            id: list.id,
+            name: "The server's name",
+            attribution: "The server's attribution",
+            mode: "mirror" as const,
+            checked: true,
+            outcome: "found" as const,
+            strong: 0,
+            weak: 1,
+            last_success_at: "2026-10-10T11:00:00.000Z",
+            stale: false,
+          })),
+          lookups: [],
+          cited: { official: 0, trusted_press: 0, vendor: 0, unverified: 0 },
+        },
+        t,
+        lang,
+      );
+      for (const list of AI_LISTS) {
+        const words = translations[lang][list.name];
+        expect(lines.checked).toContain(`${words} (1)`);
+        // In the sentence of a record matched by name, and of one the list withdrew.
+        for (const basis of [
+          basisOf("name_only", [aiRecordOf(list)], true),
+          basisOf("inactive", [aiRecordOf(list, { status: "withdrawn" })]),
+        ]) {
+          const { sentence } = credibilityRationale(basis, t, lang);
+          expect(sentence).toContain(words);
+          expect(sentence).not.toContain("{");
+        }
+      }
+      // The descriptive names are worded in the language; the name of the database is its own.
+      for (const list of AI_LISTS.filter((entry) => entry.id !== "aiid")) {
+        expect(translations[lang][list.name]).not.toBe(list.name);
+        const { sentence } = credibilityRationale(
+          basisOf("name_only", [aiRecordOf(list)], true),
+          t,
+          lang,
+        );
+        expect(sentence).not.toContain(list.name);
+      }
+      // The words of a licence are never translated.
+      expect(lines.attributions).toContain(AI_NOTICES.aiid);
+      expect(lines.attributions).toContain(AI_NOTICES.nhtsa_sgo);
+      expect(lines.attributions).toContain(AI_NOTICES.fda_ai_devices);
+    },
+  );
 
   it.each(LANGS)("describes a run error and a category line in %s", (lang) => {
     const t = (key: string) => translations[lang][key] ?? key;

@@ -182,16 +182,43 @@ const pressSource = (entry: string, name: string | undefined, url: string): Cred
   });
 
 /**
+ * The record of an AI-specific list as the server describes it: matched by name, so weak, and in the
+ * class of its list (the AI Incident Database is an aggregator, MITRE curates its case studies,
+ * NHTSA and the FDA are regulators).
+ */
+const aiRecordSource = (
+  source: RecordSourceId,
+  category: CredibilitySource["category"],
+  record: Partial<NonNullable<CredibilitySource["record"]>> = {},
+): CredibilitySource => ({
+  ...recordSource(source, { match: "weak", source_record_id: "9001", ...record }),
+  category,
+});
+
+/** The four AI-specific lists: the id, the class of the records and the name the screen words. */
+const AI_LISTS = [
+  { id: "aiid", category: "unverified", name: "AI Incident Database" },
+  { id: "atlas", category: "trusted_press", name: "MITRE ATLAS case studies" },
+  { id: "nhtsa_sgo", category: "official", name: "NHTSA Standing General Order crash reports" },
+  { id: "fda_ai_devices", category: "official", name: "FDA list of AI-enabled medical devices" },
+] as const satisfies ReadonlyArray<{
+  id: RecordSourceId;
+  category: CredibilitySource["category"];
+  name: string;
+}>;
+
+/**
  * A basis for every sentence the line of a credibility label can be, and the values the sentence
  * is filled with in a language: the names of the databases are translated, the hosts, publishers
  * and record ids are data.
  */
-const RATIONALES: Array<{
+interface Rationale {
   rule: CredibilityRule;
   sources: CredibilitySource[];
   key: string;
   values?: (lang: (typeof LANGS)[number]) => Record<string, string | number>;
-}> = [
+}
+const RATIONALES: Rationale[] = [
   {
     rule: "official_record",
     sources: [recordSource("kev")],
@@ -432,6 +459,31 @@ const RATIONALES: Array<{
     sources: [recordSource("eu_fsf", { status: "delisted", as_of: undefined })],
     key: "Low: {operator} removed the record.",
     values: (lang) => ({ operator: tr(lang, "EU consolidated list of financial sanctions") }),
+  },
+  // The AI-specific lists: matched by name, and withdrawn (not delisted) when they drop a record.
+  ...AI_LISTS.flatMap((list): Rationale[] => [
+    {
+      rule: "name_only",
+      sources: [aiRecordSource(list.id, list.category)],
+      key: "Low: the {list} entry matches the vendor by name only.",
+      values: (lang) => ({ list: tr(lang, list.name) }),
+    },
+    {
+      rule: "inactive",
+      sources: [aiRecordSource(list.id, list.category, { status: "withdrawn" })],
+      key: "Low: {operator} withdrew the record on {date}.",
+      values: (lang) => ({ operator: tr(lang, list.name), date: dateIn(lang, "2026-10-07") }),
+    },
+  ]),
+  // A weak record of MITRE ATLAS (trusted press) is no publisher of the Medium line.
+  {
+    rule: "trusted_press_one",
+    sources: [
+      aiRecordSource("atlas", "trusted_press", { source_record_id: "AML.CS9001" }),
+      pressSource("reuters", "Reuters", "https://www.reuters.com/a"),
+    ],
+    key: "Medium: one trusted publisher reports it ({publisher}); no official source and no second independent publisher.",
+    values: () => ({ publisher: "Reuters" }),
   },
 ];
 
@@ -1100,6 +1152,96 @@ describe.each(LANGS)("research findings in %s", (lang) => {
             "This product uses data from the NVD API but is not endorsed or certified by the NVD.",
             "CVE records Copyright © 1999-2026, The MITRE Corporation, under the CVE Terms of Use (https://www.cve.org/Legal/TermsOfUse)",
             "United Nations Security Council Consolidated List",
+          ]),
+        }),
+      ),
+    ).toBeInTheDocument();
+
+    expectNoUntranslatedText(lang, FIXTURES);
+  });
+
+  it("translates the coverage of a run that checked the AI-specific lists, and leaves their notices as they are", async () => {
+    // The notice of the ATLAS case studies names the year of the day: stand the clock still at 2026.
+    vi.setSystemTime(new Date("2026-10-31T12:00:00Z"));
+    mocks.latest.mockResolvedValue(
+      run({
+        category_summary: FOUR_OUTCOMES,
+        coverage: coverage({
+          sources: [
+            listCopy("aiid", { outcome: "found", weak: 2 }),
+            listCopy("atlas", {
+              outcome: "found",
+              weak: 1,
+              stale: true,
+              last_success_at: "2026-10-07T09:23:00.000Z",
+            }),
+            listCopy("nhtsa_sgo"),
+            listCopy("fda_ai_devices", {
+              checked: false,
+              outcome: "failed",
+              last_success_at: null,
+            }),
+          ],
+          lookups: [],
+          cited: { official: 0, trusted_press: 1, vendor: 0, unverified: 2 },
+        }),
+      }),
+    );
+    renderSection();
+    const name = (key: string) => tr(lang, key);
+
+    expect(
+      await screen.findByText(
+        tr(lang, "Checked: {sources}", {
+          sources: [
+            `${name("AI Incident Database")} (2)`,
+            `${name("MITRE ATLAS case studies")} (1)`,
+            `${name("NHTSA Standing General Order crash reports")} (0)`,
+          ].join(", "),
+        }),
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        tr(lang, "Not checked: {sources}", {
+          sources: name("FDA list of AI-enabled medical devices"),
+        }),
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        tr(lang, "No records in {sources} as of {dates}", {
+          sources: name("NHTSA Standing General Order crash reports"),
+          dates: dateIn(lang, "2026-10-10T08:00:00.000Z"),
+        }),
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        tr(lang, "{source}: last updated {date}, not up to date", {
+          source: name("MITRE ATLAS case studies"),
+          date: dateIn(lang, "2026-10-07T09:23:00.000Z"),
+        }),
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        tr(
+          lang,
+          "Sources cited: {official} official, {press} trusted press, {vendor} vendor, {unverified} unverified",
+          { official: 0, press: 1, vendor: 0, unverified: 2 },
+        ),
+      ),
+    ).toBeInTheDocument();
+    // The notices stay as their owners wrote them, the share-alike one of the incident database
+    // among them; the label before them does not.
+    expect(
+      screen.getByText(
+        tr(lang, "Data sources: {attributions}", {
+          attributions: joinAttributions([
+            "AI Incident Database, Responsible AI Collaborative (incidentdatabase.ai), CC BY-SA 4.0. Adapted by VerifyWise; the adapted records are shared under CC BY-SA 4.0.",
+            "MITRE ATLAS™ case studies, Copyright 2021-2026 The MITRE Corporation, under the Apache License 2.0. Adapted by VerifyWise.",
+            "NHTSA Standing General Order crash reports, US Department of Transportation. Counted by VerifyWise; NHTSA states the data may be incomplete or unverified.",
           ]),
         }),
       ),
