@@ -2096,13 +2096,18 @@ describe("the prompt of the credibility rules", () => {
     );
   });
 
-  it("asks of an AI database entry what it asks of a sanctions entry matched by name: an entity of that name, at most one risk, in ai_specific, Possible at most", () => {
+  it("asks of an AI database entry what it asks of a sanctions entry matched by name: an entity of that name, at most one risk for each database, in ai_specific, Possible at most", () => {
     expect(prompt).toContain(
-      'The vendor was matched to it by name only, so its text has the Lookup note: it may be another company. Write the risk as "An entity named <the name of the entry> appears in <the database>", raise at most one risk from it, in ai_specific, rate its likelihood Possible at most, and make the action plan a check of who the vendor is against the entry.',
+      `The vendor was matched to it by name only, so its text has the Lookup note: it may be another company. From the entries of ${AIID_RECORD_MARK}, ${ATLAS_RECORD_MARK} or ${NHTSA_RECORD_MARK} raise at most one risk for each of those databases, in ai_specific: write it as "An entity named <the name of the entry> appears in <the database>", rate its likelihood Possible at most, and make the action plan a check of who the vendor is against the entry.`,
     );
+  });
+
+  it("says that an entry of the FDA list raises no risk, and what it is for", () => {
     expect(prompt).toContain(
-      "A list of authorized devices is no risk by itself: use it only to say that the vendor's AI is part of a regulated medical device.",
+      `An entry of ${FDA_RECORD_MARK} raises no risk: use it only to say, in the description of another risk, that the vendor's AI is part of a regulated medical device.`,
     );
+    // The old sentence let a model raise a risk from the list and also told it not to.
+    expect(prompt).not.toContain("A list of authorized devices is no risk by itself");
   });
 
   it("names the UN list among the sanctions lists, and the CVE Program among the databases", () => {

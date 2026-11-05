@@ -10,6 +10,7 @@ import path from "path";
 import { FetchError } from "../../../../webResearch/guardedFetch";
 import { vrdbSourceOf } from "../../sources";
 import {
+  NHTSA_MAX_ROWS,
   NHTSA_MAX_UNREADABLE,
   NHTSA_RECORD_MARK,
   nhtsaConnector,
@@ -465,6 +466,20 @@ describe("nhtsaConnector.parse, the file", () => {
       nhtsaConnector.parse({ bodies: [EMPTY, EMPTY], etag: null, lastModified: null, bytes: 0 })
         .root,
     ).toBeNull();
+  });
+
+  it("reads a file at the row limit and gives no root for one with a row more", () => {
+    const rowsOf = (count: number): Cells[] => Array.from({ length: count }, () => ({}));
+
+    const atLimit = parse(csvOf(rowsOf(NHTSA_MAX_ROWS)), EMPTY, EMPTY);
+    const over = parse(csvOf(rowsOf(NHTSA_MAX_ROWS + 1)), EMPTY, EMPTY);
+
+    expect(atLimit.root).not.toBeNull();
+    expect(atLimit.errors).toBe(0);
+    expect(atLimit.records[0].identifiers).toMatchObject({ reports: NHTSA_MAX_ROWS });
+    expect(over.root).toBeNull();
+    expect(over.records).toEqual([]);
+    expect(over.errors).toBeGreaterThan(0);
   });
 
   it("gives a root and no record for files that hold a header and no report", () => {

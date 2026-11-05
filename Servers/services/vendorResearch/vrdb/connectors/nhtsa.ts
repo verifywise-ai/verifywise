@@ -86,6 +86,13 @@ const NHTSA_TYPES = ["text/csv", "application/csv", "application/octet-stream"];
 const NHTSA_TOTAL_TIMEOUT_MS = 120_000;
 const NHTSA_ROOT = "SGO-2021-01_Incident_Reports";
 
+/**
+ * The most reports (rows under the header) a file may hold. The largest file of the real list has
+ * 2,574 on 2026-11-05 and 32 MiB cannot hold many more than 25,000 of the 116-column rows, so a file
+ * past this is not the list: the reader stops there instead of holding millions of short rows.
+ */
+export const NHTSA_MAX_ROWS = 60_000;
+
 /** The rows of the three files that may be left out because they do not parse, whatever the size. */
 export const NHTSA_MAX_UNREADABLE = 10;
 
@@ -265,8 +272,10 @@ interface FileReading {
 
 /** One file as reports; null when it is not the list (no header, or a column missing). */
 function readFile(text: string, automation: Automation): FileReading | null {
-  // A byte order mark in front of a quoted first cell would hide the quote from the reader.
-  const csv = readCsv(text.charCodeAt(0) === 0xfeff ? text.slice(1) : text);
+  // A byte order mark in front of a quoted first cell would hide the quote from the reader. The
+  // header counts as a row, so the reader stops one row past the limit of reports.
+  const csv = readCsv(text.charCodeAt(0) === 0xfeff ? text.slice(1) : text, NHTSA_MAX_ROWS + 1);
+  if (csv.more) return null;
   const [header, ...body] = csv.rows;
   if (header === undefined) return null;
   const columns = columnsOf(header);

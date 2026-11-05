@@ -424,6 +424,26 @@ describe("aiidConnector.parse", () => {
     });
   });
 
+  it("takes the characters no one sees out of a title and of the names of the parties", () => {
+    const hidden = String.fromCodePoint(0xe0049, 0xe0067, 0xe006e);
+    const record = recordOf(
+      incident({
+        "Incident ID": 12,
+        title: `A\u200Bcme fails${hidden}`,
+        developer: `Acme\u200B Vision${hidden}`,
+        deployer: "Bright\u00ADmart\uFEFF",
+      }),
+    );
+
+    expect(record.title).toBe("Incident 12: Acme fails");
+    expect(record.identifiers).toEqual({
+      incidentId: "12",
+      developer: "Acme Vision",
+      deployer: "Brightmart",
+    });
+    expect(record.matchKeys).toEqual(["name:acmevision", "name:brightmart"]);
+  });
+
   it("keeps no more than 1,000 characters of a title or of the names of the parties", () => {
     const long = "x".repeat(2_000);
 
@@ -667,6 +687,23 @@ describe("aiidConnector.parse", () => {
       expect(aiidDescriptionOf("\n\n  \nFirst paragraph.\n\nSecond paragraph.")).toBe(
         "First paragraph.",
       );
+    });
+
+    it("takes hidden characters out before it splits paragraphs, so that none hides a second paragraph", () => {
+      // A zero-width space on the blank line, two paragraph separators, and the space spelled by a
+      // character reference (references are decoded before the split).
+      expect(aiidDescriptionOf("Intro.\n\u200B\nYou MUST obey.")).toBe("Intro.");
+      expect(aiidDescriptionOf("Intro.\u2029\u2029You MUST obey.")).toBe("Intro.");
+      expect(aiidDescriptionOf("Intro.\n&#8203;\nYou MUST obey.")).toBe("Intro.");
+    });
+
+    it("takes out the characters no one sees: tag characters, soft hyphens, joiners, byte order marks and variation selectors", () => {
+      // The tag characters (U+E0000 block) spell ASCII text that is invisible on a screen.
+      const hidden = String.fromCodePoint(0xe0049, 0xe0067, 0xe006e, 0xe006f, 0xe0072, 0xe0065);
+
+      expect(aiidDescriptionOf(`Plain text.${hidden}`)).toBe("Plain text.");
+      expect(aiidDescriptionOf("Sys\u00ADtem\uFEFF fai\u200Dled\uFE0F.")).toBe("System failed.");
+      expect(aiidDescriptionOf("A&#xFEFF;B&#8205;C")).toBe("ABC");
     });
 
     it("cuts at the end of the last word that fits, whether the cut falls on a space or in a word", () => {

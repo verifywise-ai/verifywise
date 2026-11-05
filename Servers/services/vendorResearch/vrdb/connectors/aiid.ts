@@ -214,12 +214,24 @@ function isExportHost(address: string): boolean {
 
 const oneLine = (text: string): string => text.replace(/\s+/g, " ").trim();
 
+/** The characters that are no one's text: format characters (zero-width, soft hyphen, byte order mark, the tag characters that spell invisible ASCII) and variation selectors. */
+const HIDDEN = /[\p{Cf}\p{Variation_Selector}]/gu;
+/** A line or paragraph separator of Unicode, which is a line break to a reader. */
+const SEPARATORS = /[\p{Zl}\p{Zp}]/gu;
+
+/**
+ * The text as a reader sees it: the separators of Unicode as line breaks and the hidden characters
+ * gone. Taken out before a paragraph is split (a zero-width space on a blank line would keep a
+ * second paragraph in the first) and again after the references are decoded (one can spell them).
+ */
+const visible = (text: string): string => text.replace(SEPARATORS, "\n").replace(HIDDEN, "");
+
 const textOf = (value: CellValue | undefined): string =>
   typeof value === "string" ? value : typeof value === "number" ? String(value) : "";
 
 /** A cell as one line of plain text, no longer than MAX_FIELD_CHARS. */
 const lineOf = (value: CellValue | undefined): string =>
-  cutAtCodePoint(oneLine(cleanText(textOf(value))), MAX_FIELD_CHARS);
+  cutAtCodePoint(oneLine(cleanText(visible(textOf(value)))), MAX_FIELD_CHARS);
 
 /** A description of more than MAX_DESCRIPTION_CHARS, cut between two words and said to be cut. */
 function shortened(text: string): string {
@@ -237,8 +249,8 @@ function shortened(text: string): string {
  * them; it keeps a description that carried markup from putting it before the model.
  */
 export function aiidDescriptionOf(text: string): string {
-  const reduced = text.replace(TAG, "").replace(MARKDOWN_LINK, "$1");
-  const decoded = decodeEntities(reduced).replace(TAG, "");
+  const reduced = visible(text).replace(TAG, "").replace(MARKDOWN_LINK, "$1");
+  const decoded = visible(decodeEntities(reduced)).replace(TAG, "");
   return shortened(oneLine(cleanText(decoded.trim().split(BLANK_LINE, 1)[0])));
 }
 

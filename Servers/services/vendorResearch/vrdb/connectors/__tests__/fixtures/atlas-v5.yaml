@@ -4,20 +4,20 @@ id: ATLAS
 name: Adversarial Threat Landscape for AI Systems
 version: 5.9.0
 matrices:
-- id: ATLAS
-  name: ATLAS Matrix
-  tactics:
-  - id: AML.TA9000
-    name: Fictional Tactic
-    description: A tactic of the format-5 fixture.
+  - id: ATLAS
+    name: ATLAS Matrix
+    tactics:
+      - id: AML.TA9000
+        name: Fictional Tactic
+        description: A tactic of the format-5 fixture.
 data:
   tactics: []
 case-studies:
-- id: AML.CS0900
-  name: Northwind Assistant Session Hijack
-  object-type: case-study
-  summary: The summary is called summary in format 5, and the file has no format-version.
-  incident-date: 2029-11-04
-  incident-date-granularity: DATE
-  case-study-type: incident
-  target: Northwind's Assistant
+  - id: AML.CS0900
+    name: Northwind Assistant Session Hijack
+    object-type: case-study
+    summary: The summary is called summary in format 5, and the file has no format-version.
+    incident-date: 2029-11-04
+    incident-date-granularity: DATE
+    case-study-type: incident
+    target: Northwind's Assistant
