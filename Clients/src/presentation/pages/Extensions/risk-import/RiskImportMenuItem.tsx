@@ -8,6 +8,7 @@ import {
   riskMenuItemTitleStyle,
   riskMenuItemSubtitleStyle,
 } from "../../RiskManagement/style";
+import { brand } from "../../../themes/palette";
 
 interface RiskImportMenuItemProps {
   onClick: () => void;
@@ -46,7 +47,12 @@ export default function RiskImportMenuItem({ onClick }: RiskImportMenuItemProps)
         </Typography>
       </Box>
       {/* Icon slot mirrors the IBM/MIT logo slot for visual alignment. */}
-      <FileSpreadsheet size={18} strokeWidth={1.75} color="#13715B" style={{ opacity: 0.75 }} />
+      <FileSpreadsheet
+        size={18}
+        strokeWidth={1.75}
+        color={brand.primary}
+        style={{ opacity: 0.75 }}
+      />
     </Box>
   );
 }
