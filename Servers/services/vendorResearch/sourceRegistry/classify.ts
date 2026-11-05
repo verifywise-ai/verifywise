@@ -515,6 +515,15 @@ const RECORD_CLASSES: Readonly<
   eu_fsf: { category: "official", match: "weak" },
   cve: { category: "official", match: "strong" },
   un_sanctions: { category: "official", match: "weak" },
+  // The AI-specific lists (spec D2.14 to D2.17, Q30): every match is by name, so each record gives
+  // only Low support (D5.3 step 0) with the name-only note, whatever its class. The class decides
+  // the publisher label. The AI Incident Database collects allegations from news reports, so it is
+  // an aggregator (unverified); MITRE curates the ATLAS case studies with references (trusted
+  // press, as its registry entry); NHTSA and the FDA are regulators.
+  aiid: { category: "unverified", match: "weak" },
+  atlas: { category: "trusted_press", match: "weak" },
+  nhtsa_sgo: { category: "official", match: "weak" },
+  fda_ai_devices: { category: "official", match: "weak" },
   hibp: { category: "unverified", match: null },
   statuspage: { category: "vendor", match: null },
 };

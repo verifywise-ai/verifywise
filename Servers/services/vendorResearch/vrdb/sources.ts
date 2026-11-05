@@ -188,6 +188,74 @@ export const VRDB_SOURCES: readonly VrdbSourceDefinition[] = [
     missingStatus: "delisted",
     gate: "Q6",
   },
+  {
+    id: "aiid",
+    name: "AI Incident Database",
+    operator: "the Responsible AI Collaborative",
+    listName: "AI Incident Database",
+    category: "ai_specific",
+    mode: "mirror",
+    schedule: "11 4 * * *",
+    staleAfterHours: STALE_AFTER_HOURS,
+    licence:
+      "CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/): the incidents, entities and classifications collections of the AI Incident Database; report text, submissions and media excluded. Commercial use awaits the operator's confirmation (Q29).",
+    attribution:
+      "AI Incident Database, Responsible AI Collaborative (incidentdatabase.ai), CC BY-SA 4.0. Adapted by VerifyWise; the adapted records are shared under CC BY-SA 4.0.",
+    documentationUrl: "https://incidentdatabase.ai/research/snapshots/",
+    missingStatus: "withdrawn",
+    gate: "Q29",
+  },
+  {
+    id: "atlas",
+    name: "MITRE ATLAS case studies",
+    operator: "MITRE",
+    listName: "MITRE ATLAS case studies",
+    category: "ai_specific",
+    mode: "mirror",
+    schedule: "17 3 * * *",
+    staleAfterHours: STALE_AFTER_HOURS,
+    licence:
+      "Apache License 2.0 (https://www.apache.org/licenses/LICENSE-2.0); the atlas-data repository's LICENSE (Q32).",
+    // Read at each use, as the CVE's is, so that a process that runs over New Year writes the new
+    // year at its next sync.
+    get attribution(): string {
+      return `MITRE ATLAS™ case studies, Copyright 2021-${new Date().getUTCFullYear()} The MITRE Corporation, under the Apache License 2.0. Adapted by VerifyWise.`;
+    },
+    documentationUrl: "https://github.com/mitre-atlas/atlas-data",
+    missingStatus: "withdrawn",
+  },
+  {
+    id: "nhtsa_sgo",
+    name: "NHTSA Standing General Order crash reports",
+    operator: "NHTSA",
+    listName: "NHTSA Standing General Order crash reports",
+    category: "ai_specific",
+    mode: "mirror",
+    schedule: "5 13 * * *",
+    staleAfterHours: STALE_AFTER_HOURS,
+    licence:
+      "None published; a work of the US Government (17 U.S.C. §105); accepted on 2026-11-05 (Q31)",
+    attribution:
+      "NHTSA Standing General Order crash reports, US Department of Transportation. Counted by VerifyWise; NHTSA states the data may be incomplete or unverified.",
+    documentationUrl:
+      "https://www.nhtsa.gov/laws-regulations/standing-general-order-crash-reporting",
+    missingStatus: "withdrawn",
+  },
+  {
+    id: "fda_ai_devices",
+    name: "FDA list of AI-enabled medical devices",
+    operator: "the FDA",
+    listName: "FDA list of AI-enabled medical devices",
+    category: "ai_specific",
+    mode: "mirror",
+    schedule: "35 5 * * *",
+    staleAfterHours: STALE_AFTER_HOURS,
+    licence: "Public domain (fda.gov: content may be republished freely)",
+    attribution: "FDA list of AI-enabled medical devices, US Food and Drug Administration",
+    documentationUrl:
+      "https://www.fda.gov/medical-devices/software-medical-device-samd/artificial-intelligence-enabled-medical-devices",
+    missingStatus: "withdrawn",
+  },
 ];
 
 /** The lists whose gate is open, or that have none, in the order above. `gates` is for the tests. */

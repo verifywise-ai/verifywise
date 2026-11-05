@@ -26,6 +26,7 @@ jest.mock("../../../../utils/logger/fileLogger", () => ({
 
 import { Queue } from "bullmq";
 import type { VendorResearchConfig } from "../../config";
+import { VRDB_GATES } from "../gates";
 import {
   VRDB_QUEUE,
   VRDB_RELABEL_JOB,
@@ -41,12 +42,42 @@ import { activeMirrors } from "../sources";
 import type { VrdbSourceState } from "../types";
 
 /**
- * The mirrored lists whose gates are open by default (the CVE records, Q7, are; the UN list, Q6,
- * is not), those of them that are copied whole, and every mirrored list.
+ * The mirrored lists whose gates are open by default (the CVE records, Q7, and the three AI lists
+ * with no gate are; the UN list, Q6, and the AI Incident Database, Q29, are not), those of them
+ * that are copied whole, and every mirrored list, in the order of the table of sources.
  */
-const ACTIVE = ["kev", "ofac", "uk_sanctions", "eu_fsf", "cve"] as const;
-const WHOLE = ["kev", "ofac", "uk_sanctions", "eu_fsf"] as const;
-const MIRRORS = [...ACTIVE, "un_sanctions"] as const;
+const ACTIVE = [
+  "kev",
+  "ofac",
+  "uk_sanctions",
+  "eu_fsf",
+  "cve",
+  "atlas",
+  "nhtsa_sgo",
+  "fda_ai_devices",
+] as const;
+const WHOLE = [
+  "kev",
+  "ofac",
+  "uk_sanctions",
+  "eu_fsf",
+  "atlas",
+  "nhtsa_sgo",
+  "fda_ai_devices",
+] as const;
+const GATED = ["un_sanctions", "aiid"] as const;
+const MIRRORS = [
+  "kev",
+  "ofac",
+  "uk_sanctions",
+  "eu_fsf",
+  "cve",
+  "un_sanctions",
+  "aiid",
+  "atlas",
+  "nhtsa_sgo",
+  "fda_ai_devices",
+] as const;
 
 const config = (overrides: Partial<VendorResearchConfig> = {}): VendorResearchConfig => ({
   autoRun: true,
@@ -102,6 +133,10 @@ describe("the queue of the vendor risk database", () => {
       "vrdb_sync_eu_fsf",
       "vrdb_sync_cve",
       "vrdb_sync_un_sanctions",
+      "vrdb_sync_aiid",
+      "vrdb_sync_atlas",
+      "vrdb_sync_nhtsa_sgo",
+      "vrdb_sync_fda_ai_devices",
     ]);
   });
 });
@@ -172,8 +207,8 @@ describe("scheduleVendorRiskDatabaseSync", () => {
     expect(queue.upsertJobScheduler.mock.calls.map(([id]) => id)).toEqual(
       ACTIVE.map((id) => `vrdb_sync_${id}`),
     );
-    // Only the UN list (Q6) waits behind a closed gate now.
-    expect(queue.removeJobScheduler.mock.calls).toEqual([["vrdb_sync_un_sanctions"]]);
+    // The UN list (Q6) and the AI Incident Database (Q29) wait behind a closed gate.
+    expect(queue.removeJobScheduler.mock.calls).toEqual(GATED.map((id) => [`vrdb_sync_${id}`]));
     expect(states).toHaveBeenCalledWith([...ACTIVE]);
     // A first sync of each list that is copied whole; the CVE records are copied from a baseline.
     expect(queue.add.mock.calls.map(([, , opts]) => opts.jobId)).toEqual(
@@ -193,7 +228,7 @@ describe("scheduleVendorRiskDatabaseSync", () => {
     expect(queue.upsertJobScheduler.mock.calls.map(([id]) => id)).toEqual(
       ACTIVE.map((id) => `vrdb_sync_${id}`),
     );
-    expect(queue.removeJobScheduler.mock.calls).toEqual([["vrdb_sync_un_sanctions"]]);
+    expect(queue.removeJobScheduler.mock.calls).toEqual(GATED.map((id) => [`vrdb_sync_${id}`]));
     expect(states).toHaveBeenCalledWith([...ACTIVE]);
     // ... but no first sync: a sync without a cursor would be refused as no_baseline, and the
     // first copy of the list is the baseline an operator loads (scripts/vrdbCveBaseline.ts).
@@ -223,12 +258,15 @@ describe("scheduleVendorRiskDatabaseSync", () => {
     await scheduleVendorRiskDatabaseSync(config(), queue, states);
 
     expect(states).toHaveBeenCalledWith([...ACTIVE]);
+    // The three open AI lists have no row either, so they are queued too; the gated ones are not.
     expect(queue.add.mock.calls).toEqual(
-      (["ofac", "uk_sanctions", "eu_fsf"] as const).map((id) => [
-        "vrdb_sync",
-        { sourceId: id },
-        { ...VRDB_SYNC_JOB_OPTIONS, jobId: `vrdb_sync_first_${id}` },
-      ]),
+      (["ofac", "uk_sanctions", "eu_fsf", "atlas", "nhtsa_sgo", "fda_ai_devices"] as const).map(
+        (id) => [
+          "vrdb_sync",
+          { sourceId: id },
+          { ...VRDB_SYNC_JOB_OPTIONS, jobId: `vrdb_sync_first_${id}` },
+        ],
+      ),
     );
     expect(queue.upsertJobScheduler).toHaveBeenCalledTimes(ACTIVE.length);
   });
@@ -260,5 +298,88 @@ describe("scheduleVendorRiskDatabaseSync", () => {
     await scheduleVendorRiskDatabaseSync(config({ records: false }), fakeQueue());
 
     expect(mockObliterate).not.toHaveBeenCalled();
+  });
+});
+
+describe("the AI-specific lists in the schedule (spec D2.14 to D2.17)", () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  it("schedules the three open lists at their own minutes, in UTC, and none for the AI Incident Database", async () => {
+    const queue = fakeQueue();
+
+    await scheduleVendorRiskDatabaseSync(config(), queue);
+
+    for (const [id, pattern] of [
+      ["atlas", "17 3 * * *"],
+      ["nhtsa_sgo", "5 13 * * *"],
+      ["fda_ai_devices", "35 5 * * *"],
+    ] as const) {
+      expect(queue.upsertJobScheduler).toHaveBeenCalledWith(
+        `vrdb_sync_${id}`,
+        { pattern, tz: "UTC" },
+        { name: "vrdb_sync", data: { sourceId: id }, opts: VRDB_SYNC_JOB_OPTIONS },
+      );
+    }
+    // The gate Q29 is closed: its scheduler is removed, not upserted, and no first sync is queued.
+    expect(queue.upsertJobScheduler.mock.calls.map(([id]) => id)).not.toContain("vrdb_sync_aiid");
+    expect(queue.removeJobScheduler).toHaveBeenCalledWith("vrdb_sync_aiid");
+    expect(queue.add.mock.calls.map(([, data]) => data.sourceId)).not.toContain("aiid");
+  });
+
+  it("queues a first sync of each open list that was never copied, and of the AI Incident Database only once Q29 is open", async () => {
+    const closed = fakeQueue();
+    await scheduleVendorRiskDatabaseSync(config(), closed, async () => []);
+    expect(closed.add.mock.calls.map(([, , opts]) => opts.jobId)).toEqual(
+      expect.arrayContaining([
+        "vrdb_sync_first_atlas",
+        "vrdb_sync_first_nhtsa_sgo",
+        "vrdb_sync_first_fda_ai_devices",
+      ]),
+    );
+    expect(closed.add.mock.calls.map(([, , opts]) => opts.jobId)).not.toContain(
+      "vrdb_sync_first_aiid",
+    );
+
+    jest.replaceProperty(VRDB_GATES, "Q29", true);
+    const opened = fakeQueue();
+    const states = jest.fn(async () => [] as VrdbSourceState[]);
+
+    await scheduleVendorRiskDatabaseSync(config(), opened, states);
+
+    // The scheduler of the AI Incident Database, at its minute, and the UN list's removal only.
+    expect(opened.upsertJobScheduler).toHaveBeenCalledWith(
+      "vrdb_sync_aiid",
+      { pattern: "11 4 * * *", tz: "UTC" },
+      { name: "vrdb_sync", data: { sourceId: "aiid" }, opts: VRDB_SYNC_JOB_OPTIONS },
+    );
+    expect(opened.removeJobScheduler.mock.calls).toEqual([["vrdb_sync_un_sanctions"]]);
+    expect(states).toHaveBeenCalledWith([
+      "kev",
+      "ofac",
+      "uk_sanctions",
+      "eu_fsf",
+      "cve",
+      "aiid",
+      "atlas",
+      "nhtsa_sgo",
+      "fda_ai_devices",
+    ]);
+    expect(opened.add.mock.calls.map(([, , opts]) => opts.jobId)).toContain("vrdb_sync_first_aiid");
+  });
+
+  it("removes the scheduler of every AI list when the records are off", async () => {
+    const queue = fakeQueue();
+
+    await scheduleVendorRiskDatabaseSync(config({ records: false }), queue);
+
+    expect(queue.upsertJobScheduler).not.toHaveBeenCalled();
+    expect(queue.removeJobScheduler.mock.calls.map(([id]) => id)).toEqual(
+      expect.arrayContaining([
+        "vrdb_sync_aiid",
+        "vrdb_sync_atlas",
+        "vrdb_sync_nhtsa_sgo",
+        "vrdb_sync_fda_ai_devices",
+      ]),
+    );
   });
 });

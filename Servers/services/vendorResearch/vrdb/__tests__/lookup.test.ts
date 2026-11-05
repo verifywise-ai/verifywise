@@ -25,10 +25,12 @@ jest.mock("../queue", () => ({
 }));
 
 import type { ResearchCategory } from "../../../../domain.layer/interfaces/i.vendorResearch";
+import { LOOKBACK_MONTHS, monthsBefore } from "../../categories";
 import type { VendorResearchConfig } from "../../config";
 import { NAME_ONLY_LOOKUP_NOTE } from "../../records/ofac";
 import type { ResearchTarget } from "../../target";
 import type { ReadThroughConnector } from "../connectors/types";
+import { VRDB_GATES } from "../gates";
 import logger from "../../../../utils/logger/fileLogger";
 import {
   type LookupStore,
@@ -91,6 +93,41 @@ const ALL_SYNCED = [
   state("uk_sanctions", hoursAgo(2)),
   state("eu_fsf", hoursAgo(4)),
 ];
+
+/** The AI-specific lists (spec D2.14 to D2.17): the open ones, each copied on a day of its own. */
+const AI_SPECIFIC: readonly ResearchCategory[] = ["ai_specific"];
+const AI_SYNCED = [
+  ...ALL_SYNCED,
+  state("atlas", new Date("2026-10-30T03:17:00Z")),
+  state("nhtsa_sgo", new Date("2026-10-29T13:05:00Z")),
+  state("fda_ai_devices", new Date("2026-10-28T05:35:00Z")),
+];
+const AI_OPEN = ["atlas", "nhtsa_sgo", "fda_ai_devices"] as const;
+/** A case study of the ATLAS list, a summary of the NHTSA's reports and a company of the FDA's list. */
+const caseStudy = (id: string, day: string | null, overrides: Partial<VrdbRow> = {}) =>
+  row({
+    sourceId: "atlas",
+    sourceRecordId: id,
+    recordType: "ai_case_study",
+    publishedAt: day,
+    ...overrides,
+  });
+const crashSummary = (id: string, day: string | null, overrides: Partial<VrdbRow> = {}) =>
+  row({
+    sourceId: "nhtsa_sgo",
+    sourceRecordId: id,
+    recordType: "crash_report_summary",
+    publishedAt: day,
+    ...overrides,
+  });
+const authorizations = (id: string, day: string | null, overrides: Partial<VrdbRow> = {}) =>
+  row({
+    sourceId: "fda_ai_devices",
+    sourceRecordId: id,
+    recordType: "ai_device_authorizations",
+    publishedAt: day,
+    ...overrides,
+  });
 
 const offer = (rows: VrdbRow[], overrides: Partial<Parameters<typeof offerRecords>[0]> = {}) =>
   offerRecords({
@@ -373,6 +410,28 @@ describe("offerRecords", () => {
         last_success_at: null,
         stale: false,
       }),
+      // The three open AI lists serve ai_specific, a category this run does not research.
+      expect.objectContaining({
+        id: "atlas",
+        mode: "mirror",
+        checked: false,
+        outcome: "not_researched",
+        last_success_at: null,
+      }),
+      expect.objectContaining({
+        id: "nhtsa_sgo",
+        mode: "mirror",
+        checked: false,
+        outcome: "not_researched",
+        last_success_at: null,
+      }),
+      expect.objectContaining({
+        id: "fda_ai_devices",
+        mode: "mirror",
+        checked: false,
+        outcome: "not_researched",
+        last_success_at: null,
+      }),
     ]);
     expect(both.outcome.records.map((entry) => entry.source)).toEqual([
       "kev",
@@ -387,6 +446,9 @@ describe("offerRecords", () => {
       ["uk_sanctions", "not_researched"],
       ["eu_fsf", "not_researched"],
       ["cve", "failed"],
+      ["atlas", "not_researched"],
+      ["nhtsa_sgo", "not_researched"],
+      ["fda_ai_devices", "not_researched"],
     ]);
     expect(securityOnly.outcome.records.map((entry) => entry.source)).toEqual(["kev"]);
   });
@@ -406,7 +468,7 @@ describe("offerRecords", () => {
     expect(recordsOf(result, "ofac")[0].vrdb.stale).toBe(true);
   });
 
-  it("covers no list behind a closed gate (the UN list), and offers the CVE records now that Q7 is open", () => {
+  it("covers no list behind a closed gate (the UN list and the AI Incident Database), and offers the CVE records now that Q7 is open", () => {
     const result = offer(
       [
         row({ sourceId: "un_sanctions", sourceRecordId: "QDe.001" }),
@@ -416,11 +478,25 @@ describe("offerRecords", () => {
           recordType: "vulnerability",
           matchKeys: ["cve:acmeanalytics"],
         }),
+        row({ sourceId: "aiid", sourceRecordId: "9001", recordType: "ai_incident" }),
       ],
-      { states: [...ALL_SYNCED, state("cve", hoursAgo(1)), state("un_sanctions", hoursAgo(1))] },
+      {
+        states: [
+          ...ALL_SYNCED,
+          state("cve", hoursAgo(1)),
+          state("un_sanctions", hoursAgo(1)),
+          state("aiid", hoursAgo(1)),
+          state("atlas", hoursAgo(2)),
+          state("nhtsa_sgo", hoursAgo(3)),
+          state("fda_ai_devices", hoursAgo(4)),
+        ],
+        // The run researches ai_specific too, so that the AI lists are asked for.
+        researchable: [...BOTH, "ai_specific"],
+      },
     );
 
-    // The UN list has a copy and a match, and is not covered; the CVE records are, after the EU list.
+    // The UN list and the AI Incident Database have a copy and a match, and are not covered; the CVE
+    // records are, after the EU list, and the three open AI lists after them.
     expect(result.outcome.coverage.map((entry) => entry.id)).toEqual([
       "kev",
       "nvd",
@@ -429,6 +505,9 @@ describe("offerRecords", () => {
       "uk_sanctions",
       "eu_fsf",
       "cve",
+      "atlas",
+      "nhtsa_sgo",
+      "fda_ai_devices",
     ]);
     expect(result.outcome.records.map((entry) => entry.source)).toEqual([
       "kev",
@@ -436,6 +515,9 @@ describe("offerRecords", () => {
       "uk_sanctions",
       "eu_fsf",
       "cve",
+      "atlas",
+      "nhtsa_sgo",
+      "fda_ai_devices",
     ]);
     expect(recordsOf(result, "cve").map((record) => record.vrdb.sourceRecordId)).toEqual([
       "CVE-2026-0002",
@@ -467,6 +549,9 @@ describe("offerRecords", () => {
       ["uk_sanctions", "off", false],
       ["eu_fsf", "off", false],
       ["cve", "off", false],
+      ["atlas", "off", false],
+      ["nhtsa_sgo", "off", false],
+      ["fda_ai_devices", "off", false],
     ]);
     expect(result.outcome.records).toEqual([]);
     expect(result.matches).toEqual([]);
@@ -653,6 +738,320 @@ describe("offerRecords", () => {
   });
 });
 
+describe("offerRecords: the AI-specific lists (spec D2.14 to D2.17)", () => {
+  const offerAi = (rows: VrdbRow[], overrides: Partial<Parameters<typeof offerRecords>[0]> = {}) =>
+    offer(rows, { researchable: AI_SPECIFIC, states: AI_SYNCED, ...overrides });
+  const omittedOf = (result: ReturnType<typeof offer>, source: string) =>
+    result.outcome.records.find((entry) => entry.source === source)?.omitted;
+
+  afterEach(() => jest.restoreAllMocks());
+
+  it("matches a case study, a crash report summary and a company of the FDA by name only: weak, with the lookup note", () => {
+    const result = offerAi([
+      caseStudy("AML.CS9001", "2026-03-02"),
+      crashSummary("acmeanalytics:ads", "2026-09-01"),
+      authorizations("acmeanalytics", "2026-06-29"),
+    ]);
+
+    for (const source of AI_OPEN) {
+      const [record] = recordsOf(result, source);
+      // Every key of these lists is a name: no identifier, no domain, nothing strong (R5).
+      expect(record.vrdb).toMatchObject({
+        sourceId: source,
+        strength: "weak",
+        method: "name_exact",
+        matchedKey: "name:acmeanalytics",
+      });
+      expect(record.text).toContain(NAME_ONLY_LOOKUP_NOTE);
+      expect(coverageOf(result, source)).toMatchObject({
+        mode: "mirror",
+        checked: true,
+        outcome: "found",
+        strong: 0,
+        weak: 1,
+      });
+    }
+    // The match rows keep a method the table of matches already has: no new one (R10.12).
+    expect(result.matches).toEqual([
+      { recordId: 1, method: "name_exact", strength: "weak", matchedKey: "name:acmeanalytics" },
+      { recordId: 2, method: "name_exact", strength: "weak", matchedKey: "name:acmeanalytics" },
+      { recordId: 3, method: "name_exact", strength: "weak", matchedKey: "name:acmeanalytics" },
+    ]);
+  });
+
+  it("a website of the vendor that the website check verified does not make a match by name strong: these lists have no key but the name", () => {
+    const rows = [
+      caseStudy("AML.CS9001", "2026-03-02"),
+      crashSummary("acmeanalytics:ads", "2026-09-01"),
+      authorizations("acmeanalytics", "2026-06-29"),
+    ];
+
+    for (const verifiedDomains of [[], [ACME.domain as string]]) {
+      const result = offerAi(rows, { verifiedDomains });
+
+      for (const source of AI_OPEN) {
+        expect(recordsOf(result, source)[0].vrdb).toMatchObject({
+          strength: "weak",
+          method: "name_exact",
+        });
+        expect(coverageOf(result, source)).toMatchObject({ strong: 0, weak: 1 });
+      }
+    }
+  });
+
+  it("offers nothing of another name: a record of a company that is not the vendor's is not a match", () => {
+    const result = offerAi([
+      caseStudy("AML.CS9001", "2026-03-02", { matchKeys: ["name:otherco"] }),
+      crashSummary("otherco:ads", "2026-09-01", { matchKeys: ["name:otherco"] }),
+      authorizations("otherco", "2026-06-29", { matchKeys: ["name:otherco"] }),
+    ]);
+
+    for (const source of AI_OPEN) {
+      expect(recordsOf(result, source)).toEqual([]);
+      expect(coverageOf(result, source)).toMatchObject({ checked: true, outcome: "none" });
+    }
+    expect(result.matches).toEqual([]);
+  });
+
+  it("ends each text with 'As of <date>.', the day of that list's last copy", () => {
+    const result = offerAi([
+      caseStudy("AML.CS9001", "2026-03-02"),
+      crashSummary("acmeanalytics:ads", "2026-09-01"),
+      authorizations("acmeanalytics", "2026-06-29"),
+    ]);
+
+    expect(recordsOf(result, "atlas")[0].text).toMatch(/ As of 2026-10-30\.$/);
+    expect(recordsOf(result, "nhtsa_sgo")[0].text).toMatch(/ As of 2026-10-29\.$/);
+    expect(recordsOf(result, "fda_ai_devices")[0].text).toMatch(/ As of 2026-10-28\.$/);
+    expect(recordsOf(result, "atlas")[0].text.startsWith("The text of record 1.")).toBe(true);
+  });
+
+  it("keeps the day of a case study and of a crash report summary, which are events, and dates the authorizations by the copy, which are a state", () => {
+    const result = offerAi([
+      caseStudy("AML.CS9001", "2026-03-02"),
+      crashSummary("acmeanalytics:ads", "2026-09-01"),
+      authorizations("acmeanalytics", "2026-06-29"),
+    ]);
+
+    expect(recordsOf(result, "atlas")[0].publishedAt).toBe("2026-03-02");
+    expect(recordsOf(result, "nhtsa_sgo")[0].publishedAt).toBe("2026-09-01");
+    expect(recordsOf(result, "fda_ai_devices")[0].publishedAt).toBe("2026-10-28");
+    expect(recordsOf(result, "fda_ai_devices")[0].vrdb.asOf).toBe("2026-10-28");
+  });
+
+  it("leaves out a case study and a crash report summary older than the 24 months of the lookback, and counts them as old", () => {
+    expect(LOOKBACK_MONTHS.ai_specific).toBe(24);
+    const cutoffs = { ai_specific: monthsBefore(NOW, LOOKBACK_MONTHS.ai_specific) };
+    expect(cutoffs).toEqual({ ai_specific: "2024-10-30" });
+
+    const result = offerAi(
+      [
+        caseStudy("AML.CS9001", "2024-10-29"),
+        caseStudy("AML.CS9002", "2024-10-30"),
+        crashSummary("acmeanalytics:ads", "2024-09-01"),
+        crashSummary("acmeanalytics:adas", "2026-09-01"),
+      ],
+      { cutoffs },
+    );
+
+    // The first day of the window is in; the day before it is out.
+    expect(recordsOf(result, "atlas").map((record) => record.vrdb.sourceRecordId)).toEqual([
+      "AML.CS9002",
+    ]);
+    expect(omittedOf(result, "atlas")).toEqual({ old: 1 });
+    expect(recordsOf(result, "nhtsa_sgo").map((record) => record.vrdb.sourceRecordId)).toEqual([
+      "acmeanalytics:adas",
+    ]);
+    expect(omittedOf(result, "nhtsa_sgo")).toEqual({ old: 1 });
+    // An old record is no match of the vendor.
+    expect(result.matches.map((match) => match.recordId)).toEqual([2, 4]);
+  });
+
+  it("offers the authorizations of a company whatever the day of the latest, as of the copy: a state has no lookback", () => {
+    const result = offerAi([authorizations("acmeanalytics", "2019-03-01")], {
+      cutoffs: { ai_specific: monthsBefore(NOW, LOOKBACK_MONTHS.ai_specific) },
+    });
+
+    const [record] = recordsOf(result, "fda_ai_devices");
+    expect(record.vrdb.sourceRecordId).toBe("acmeanalytics");
+    expect(record.publishedAt).toBe("2026-10-28");
+    expect(omittedOf(result, "fda_ai_devices")).toEqual({});
+    expect(coverageOf(result, "fda_ai_devices")).toMatchObject({ outcome: "found", weak: 1 });
+  });
+
+  it("caps each list at its MAX_RECORDS, three for ATLAS and NHTSA and two for the FDA, newest first, and counts the rest as more", () => {
+    const result = offerAi([
+      ...Array.from({ length: 4 }, (_, index) =>
+        caseStudy(`AML.CS900${index + 1}`, `2026-0${index + 1}-01`),
+      ),
+      ...Array.from({ length: 4 }, (_, index) =>
+        crashSummary(`acme${index + 1}:ads`, `2026-0${index + 1}-01`),
+      ),
+      ...Array.from({ length: 3 }, (_, index) =>
+        authorizations(`acme${index + 1}`, `2026-0${index + 1}-01`),
+      ),
+    ]);
+
+    expect(recordsOf(result, "atlas").map((record) => record.vrdb.sourceRecordId)).toEqual([
+      "AML.CS9004",
+      "AML.CS9003",
+      "AML.CS9002",
+    ]);
+    expect(omittedOf(result, "atlas")).toEqual({ more: 1 });
+    expect(recordsOf(result, "nhtsa_sgo")).toHaveLength(3);
+    expect(omittedOf(result, "nhtsa_sgo")).toEqual({ more: 1 });
+    expect(recordsOf(result, "fda_ai_devices").map((record) => record.vrdb.sourceRecordId)).toEqual(
+      ["acme3", "acme2"],
+    );
+    expect(omittedOf(result, "fda_ai_devices")).toEqual({ more: 1 });
+  });
+
+  it("a run that does not research ai_specific gets none of them: not_researched and no record, whatever matches", () => {
+    const result = offerAi(
+      [
+        caseStudy("AML.CS9001", "2026-03-02"),
+        crashSummary("acmeanalytics:ads", "2026-09-01"),
+        authorizations("acmeanalytics", "2026-06-29"),
+      ],
+      { researchable: BOTH },
+    );
+
+    for (const source of AI_OPEN) {
+      expect(coverageOf(result, source)).toMatchObject({
+        checked: false,
+        outcome: "not_researched",
+        strong: 0,
+        weak: 0,
+      });
+    }
+    expect(result.outcome.records.map((entry) => entry.source)).toEqual([
+      "kev",
+      "ofac",
+      "uk_sanctions",
+      "eu_fsf",
+    ]);
+    expect(result.matches).toEqual([]);
+  });
+
+  it("a run that researches ai_specific alone asks only the AI lists, and covers the three open ones without the AI Incident Database", () => {
+    const result = offerAi([caseStudy("AML.CS9001", "2026-03-02")]);
+
+    expect(result.outcome.coverage.map((entry) => [entry.id, entry.outcome])).toEqual([
+      ["kev", "not_researched"],
+      ["nvd", "not_researched"],
+      ["sec", "not_researched"],
+      ["ofac", "not_researched"],
+      ["uk_sanctions", "not_researched"],
+      ["eu_fsf", "not_researched"],
+      ["cve", "not_researched"],
+      ["atlas", "found"],
+      ["nhtsa_sgo", "none"],
+      ["fda_ai_devices", "none"],
+    ]);
+    expect(result.outcome.records.map((entry) => entry.source)).toEqual([...AI_OPEN]);
+  });
+
+  it("a list never copied is failed, and one not brought up to date for 48 hours is stale and still offered", () => {
+    const neverCopied = offerAi([caseStudy("AML.CS9001", "2026-03-02")], { states: ALL_SYNCED });
+    for (const source of AI_OPEN) {
+      expect(coverageOf(neverCopied, source)).toMatchObject({
+        checked: false,
+        outcome: "failed",
+        last_success_at: null,
+        stale: false,
+      });
+    }
+    expect(neverCopied.matches).toEqual([]);
+
+    const stale = offerAi(
+      [caseStudy("AML.CS9001", "2026-03-02"), crashSummary("acmeanalytics:ads", "2026-09-01")],
+      {
+        states: [
+          ...ALL_SYNCED,
+          state("atlas", hoursAgo(49)),
+          state("nhtsa_sgo", hoursAgo(47)),
+          state("fda_ai_devices", hoursAgo(5)),
+        ],
+      },
+    );
+    expect(coverageOf(stale, "atlas")).toMatchObject({ outcome: "found", stale: true });
+    expect(recordsOf(stale, "atlas")[0].vrdb.stale).toBe(true);
+    expect(coverageOf(stale, "nhtsa_sgo")).toMatchObject({ outcome: "found", stale: false });
+  });
+
+  it("a record that its list withdrew is not offered", () => {
+    const result = offerAi([
+      caseStudy("AML.CS9001", "2026-03-02", { status: "withdrawn" }),
+      crashSummary("acmeanalytics:ads", "2026-09-01"),
+    ]);
+
+    expect(recordsOf(result, "atlas")).toEqual([]);
+    expect(coverageOf(result, "atlas")).toMatchObject({ outcome: "none" });
+    expect(recordsOf(result, "nhtsa_sgo")).toHaveLength(1);
+  });
+
+  describe("the AI Incident Database", () => {
+    const incident = (id: string, day: string | null) =>
+      row({ sourceId: "aiid", sourceRecordId: id, recordType: "ai_incident", publishedAt: day });
+    const STATES = [...AI_SYNCED, state("aiid", new Date("2026-10-30T04:11:00Z"))];
+
+    it("is neither covered nor offered while Q29 is closed, though it has a copy and a matching incident", () => {
+      expect(VRDB_GATES.Q29).toBe(false);
+
+      const result = offerAi([incident("9101", "2026-08-03")], { states: STATES });
+
+      expect(coverageOf(result, "aiid")).toBeUndefined();
+      expect(result.outcome.coverage.map((entry) => entry.id)).toEqual([
+        "kev",
+        "nvd",
+        "sec",
+        "ofac",
+        "uk_sanctions",
+        "eu_fsf",
+        "cve",
+        ...AI_OPEN,
+      ]);
+      expect(result.outcome.records.map((entry) => entry.source)).not.toContain("aiid");
+      expect(result.matches).toEqual([]);
+    });
+
+    it("once Q29 is open is covered after the CVE records, offers an incident on the day of the incident, and counts one dated 2023 as old", () => {
+      jest.replaceProperty(VRDB_GATES, "Q29", true);
+      const cutoffs = { ai_specific: monthsBefore(NOW, LOOKBACK_MONTHS.ai_specific) };
+
+      const result = offerAi([incident("9101", "2023-05-17"), incident("9102", "2026-08-03")], {
+        states: STATES,
+        cutoffs,
+      });
+
+      expect(result.outcome.coverage.map((entry) => entry.id)).toEqual([
+        "kev",
+        "nvd",
+        "sec",
+        "ofac",
+        "uk_sanctions",
+        "eu_fsf",
+        "cve",
+        "aiid",
+        ...AI_OPEN,
+      ]);
+      const [offered] = recordsOf(result, "aiid");
+      expect(recordsOf(result, "aiid")).toHaveLength(1);
+      expect(offered.vrdb).toMatchObject({
+        sourceRecordId: "9102",
+        strength: "weak",
+        method: "name_exact",
+        asOf: "2026-10-30",
+      });
+      // An incident is an event: it keeps its own day, not the day of the copy.
+      expect(offered.publishedAt).toBe("2026-08-03");
+      expect(offered.text).toContain(NAME_ONLY_LOOKUP_NOTE);
+      expect(omittedOf(result, "aiid")).toEqual({ old: 1 });
+      expect(coverageOf(result, "aiid")).toMatchObject({ outcome: "found", strong: 0, weak: 1 });
+    });
+  });
+});
+
 /** A store in memory that answers with the given rows and states, and keeps what it was asked. */
 function fakeStore(rows: VrdbRow[] = [], states: VrdbSourceState[] = ALL_SYNCED) {
   const store: jest.Mocked<LookupStore> = {
@@ -685,6 +1084,45 @@ describe("createVrdbLookup", () => {
     // a sync.
     expect(store.sourceStates).toHaveBeenCalledWith(["kev", "cve"]);
     expect(store.findRecords).toHaveBeenCalledWith(expect.any(Array), ["kev", "nvd", "sec", "cve"]);
+  });
+
+  it("reads the states and records of the three open AI lists for ai_specific, and never the AI Incident Database while Q29 is closed", async () => {
+    const store = fakeStore();
+    const lookup = createVrdbLookup({ store, organizationId: 1, vendorId: 2, enabled: true });
+
+    await lookup({ ...lookupInput(), researchable: ["ai_specific"] });
+
+    expect(store.sourceStates).toHaveBeenCalledWith([...AI_OPEN]);
+    expect(store.findRecords).toHaveBeenCalledWith(expect.any(Array), [...AI_OPEN]);
+  });
+
+  it("writes one weak match row per AI record it offers, and none for the AI Incident Database", async () => {
+    const store = fakeStore(
+      [
+        caseStudy("AML.CS9001", "2026-03-02"),
+        crashSummary("acmeanalytics:ads", "2026-09-01"),
+        authorizations("acmeanalytics", "2026-06-29"),
+        row({ sourceId: "aiid", sourceRecordId: "9101", recordType: "ai_incident" }),
+      ],
+      [...AI_SYNCED, state("aiid", hoursAgo(2))],
+    );
+    const lookup = createVrdbLookup({ store, organizationId: 7, vendorId: 9, enabled: true });
+
+    const outcome = await lookup({ ...lookupInput(), researchable: ["ai_specific"] });
+
+    expect(outcome.records.map((entry) => entry.source)).toEqual([...AI_OPEN]);
+    expect(store.recordMatches).toHaveBeenCalledTimes(1);
+    expect(store.recordMatches).toHaveBeenCalledWith(
+      7,
+      9,
+      [1, 2, 3].map((recordId) => ({
+        recordId,
+        method: "name_exact",
+        strength: "weak",
+        matchedKey: "name:acmeanalytics",
+      })),
+      NOW,
+    );
   });
 
   it("a vendor without a domain is looked up by its names", async () => {
@@ -759,6 +1197,9 @@ describe("createVrdbLookup", () => {
       ["uk_sanctions", "failed"],
       ["eu_fsf", "failed"],
       ["cve", "not_researched"],
+      ["atlas", "not_researched"],
+      ["nhtsa_sgo", "not_researched"],
+      ["fda_ai_devices", "not_researched"],
     ]);
     expect(store.recordMatches).not.toHaveBeenCalled();
   });
@@ -858,6 +1299,9 @@ describe("createVrdbLookup", () => {
       ["uk_sanctions", "not_researched"],
       ["eu_fsf", "not_researched"],
       ["cve", "failed"],
+      ["atlas", "not_researched"],
+      ["nhtsa_sgo", "not_researched"],
+      ["fda_ai_devices", "not_researched"],
     ]);
   });
 

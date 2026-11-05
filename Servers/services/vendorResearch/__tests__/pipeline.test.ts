@@ -1403,12 +1403,12 @@ describe("runVendorResearch", () => {
       });
     });
 
-    it("records the prompt version vr-12", async () => {
+    it("records the prompt version vr-13", async () => {
       await run();
 
       expect(onlyFinish().input.promptVersion).toBe(CREDIBILITY_PROMPT_VERSION);
-      // vr-12 is vr-11 with the database of a record in the verifier prompt.
-      expect(CREDIBILITY_PROMPT_VERSION).toBe("vr-12");
+      // vr-13 is vr-12 with the AI databases in the analysis prompt.
+      expect(CREDIBILITY_PROMPT_VERSION).toBe("vr-13");
       expect(generate.mock.calls[0][0].system).toBe(buildSystemPrompt(NOW));
     });
 

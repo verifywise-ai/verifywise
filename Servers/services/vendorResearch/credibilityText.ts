@@ -157,7 +157,9 @@ function ruleSentence(basis: CredibilityBasis): string {
       return `High: ${publishers.length} independent trusted publishers report it${listed(publishers)}.`;
     }
     case "trusted_press_one":
-      return `Medium: one trusted publisher reports it${listed(publishersOf(supporting))}; no official source and no second independent publisher.`;
+      // A weak record (an ATLAS case study) is trusted press by class but no publisher: only the
+      // strong sources are counted, as credibility.ts counts them.
+      return `Medium: one trusted publisher reports it${listed(publishersOf(strong))}; no official source and no second independent publisher.`;
     case "capped_unconfirmed":
       return "Medium: only search results show it; the pages could not be read.";
     case "contradicted":

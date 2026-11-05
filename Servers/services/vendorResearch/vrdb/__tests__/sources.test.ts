@@ -1,7 +1,8 @@
 /**
  * The lists the vendor risk database mirrors (spec D4, Rulings 1 and 5 of the M1 plan): one
  * definition per VRDB id, with its schedule, its licence and when its copy is out of date; a list
- * behind a closed gate (gates.ts) is neither synced nor looked up.
+ * behind a closed gate (gates.ts) is neither synced nor looked up. The four AI-specific lists
+ * (spec D2.14 to D2.17) are pinned against the sheets of the rulings of 2026-11-05.
  */
 import { createHash } from "crypto";
 import { VRDB_SOURCE_IDS } from "../../../../domain.layer/interfaces/i.vendorResearch";
@@ -9,6 +10,7 @@ import { MAX_RECORDS, RECORD_CATEGORY } from "../../records/types";
 import { classifyRecord, recordMatchOf } from "../../sourceRegistry/classify";
 import * as gatesModule from "../gates";
 import {
+  AIID_PERMISSION_GRANTED,
   CVE_TERMS_APPROVED,
   SEC_CONTACT,
   UN_PERMISSION_GRANTED,
@@ -27,8 +29,8 @@ import {
   vrdbSourceOf,
 } from "../sources";
 
-const CLOSED: Record<VrdbGate, boolean> = { Q4: false, Q6: false, Q7: false };
-const OPEN: Record<VrdbGate, boolean> = { Q4: true, Q6: true, Q7: true };
+const CLOSED: Record<VrdbGate, boolean> = { Q4: false, Q6: false, Q7: false, Q29: false };
+const OPEN: Record<VrdbGate, boolean> = { Q4: true, Q6: true, Q7: true, Q29: true };
 const idsOf = (sources: ReadonlyArray<{ id: string }>) => sources.map((source) => source.id);
 
 describe("the VRDB sources", () => {
@@ -42,6 +44,10 @@ describe("the VRDB sources", () => {
       "eu_fsf",
       "cve",
       "un_sanctions",
+      "aiid",
+      "atlas",
+      "nhtsa_sgo",
+      "fda_ai_devices",
     ]);
     expect(idsOf(VRDB_SOURCES)).toEqual([...VRDB_SOURCE_IDS]);
     for (const id of VRDB_SOURCE_IDS) expect(vrdbSourceOf(id).id).toBe(id);
@@ -55,6 +61,9 @@ describe("the VRDB sources", () => {
       ["ofac", "41"],
       ["uk_sanctions", "47"],
       ["eu_fsf", "53"],
+      ["atlas", "17"],
+      ["nhtsa_sgo", "5"],
+      ["fda_ai_devices", "35"],
     ]);
     expect(minutesOf(OPEN)).toEqual([
       ["kev", "23"],
@@ -63,7 +72,14 @@ describe("the VRDB sources", () => {
       ["eu_fsf", "53"],
       ["cve", "29"],
       ["un_sanctions", "59"],
+      ["aiid", "11"],
+      ["atlas", "17"],
+      ["nhtsa_sgo", "5"],
+      ["fda_ai_devices", "35"],
     ]);
+    // A minute of its own: two downloads of tens of megabytes never start together.
+    const minutes = activeMirrors(OPEN).map(({ schedule }) => schedule.split(" ")[0]);
+    expect(new Set(minutes).size).toBe(minutes.length);
     const FIELD = /^(?:\*|\*\/\d+|\d+)$/;
     for (const { schedule } of activeMirrors(OPEN)) {
       const fields = schedule.split(" ");
@@ -73,13 +89,15 @@ describe("the VRDB sources", () => {
   });
 
   it("a source behind a closed gate is not active", () => {
-    // The SEC (Q4) and the CVE records (Q7) are open; the UN list (Q6) is the one that waits.
-    expect(VRDB_GATES).toEqual({ Q4: true, Q6: false, Q7: true });
+    // The SEC (Q4) and the CVE records (Q7) are open; the UN list (Q6) and the AI Incident Database
+    // (Q29) are the ones that wait.
+    expect(VRDB_GATES).toEqual({ Q4: true, Q6: false, Q7: true, Q29: false });
     expect(vrdbSourceOf("cve").gate).toBe("Q7");
     expect(vrdbSourceOf("un_sanctions").gate).toBe("Q6");
+    expect(vrdbSourceOf("aiid").gate).toBe("Q29");
     expect(vrdbSourceOf("sec").gate).toBe("Q4");
-    // By default: the SEC after the NVD and the CVE records after the EU list, in the order of the
-    // table, without the UN list.
+    // By default: the SEC after the NVD, the CVE records after the EU list and the three open AI
+    // lists last, in the order of the table, without the UN list and the AI Incident Database.
     expect(idsOf(activeVrdbSources())).toEqual([
       "kev",
       "nvd",
@@ -88,8 +106,20 @@ describe("the VRDB sources", () => {
       "uk_sanctions",
       "eu_fsf",
       "cve",
+      "atlas",
+      "nhtsa_sgo",
+      "fda_ai_devices",
     ]);
-    expect(idsOf(activeMirrors())).toEqual(["kev", "ofac", "uk_sanctions", "eu_fsf", "cve"]);
+    expect(idsOf(activeMirrors())).toEqual([
+      "kev",
+      "ofac",
+      "uk_sanctions",
+      "eu_fsf",
+      "cve",
+      "atlas",
+      "nhtsa_sgo",
+      "fda_ai_devices",
+    ]);
     expect(idsOf(activeReadThroughs())).toEqual(["nvd", "sec"]);
     // With every gate closed, only the lists that have none are active.
     expect(idsOf(activeVrdbSources(CLOSED))).toEqual([
@@ -98,8 +128,19 @@ describe("the VRDB sources", () => {
       "ofac",
       "uk_sanctions",
       "eu_fsf",
+      "atlas",
+      "nhtsa_sgo",
+      "fda_ai_devices",
     ]);
-    expect(idsOf(activeMirrors(CLOSED))).toEqual(["kev", "ofac", "uk_sanctions", "eu_fsf"]);
+    expect(idsOf(activeMirrors(CLOSED))).toEqual([
+      "kev",
+      "ofac",
+      "uk_sanctions",
+      "eu_fsf",
+      "atlas",
+      "nhtsa_sgo",
+      "fda_ai_devices",
+    ]);
     expect(idsOf(activeReadThroughs(CLOSED))).toEqual(["nvd"]);
   });
 
@@ -117,6 +158,8 @@ describe("the VRDB sources", () => {
   });
 
   it("opening a gate makes it active", () => {
+    // The three open AI lists have no gate, so they are in every one of these.
+    const AI_OPEN = ["atlas", "nhtsa_sgo", "fda_ai_devices"];
     expect(idsOf(activeVrdbSources({ ...CLOSED, Q7: true }))).toEqual([
       "kev",
       "nvd",
@@ -124,6 +167,7 @@ describe("the VRDB sources", () => {
       "uk_sanctions",
       "eu_fsf",
       "cve",
+      ...AI_OPEN,
     ]);
     expect(idsOf(activeVrdbSources({ ...CLOSED, Q6: true }))).toEqual([
       "kev",
@@ -132,6 +176,7 @@ describe("the VRDB sources", () => {
       "uk_sanctions",
       "eu_fsf",
       "un_sanctions",
+      ...AI_OPEN,
     ]);
     expect(idsOf(activeVrdbSources({ ...CLOSED, Q4: true }))).toEqual([
       "kev",
@@ -140,6 +185,16 @@ describe("the VRDB sources", () => {
       "ofac",
       "uk_sanctions",
       "eu_fsf",
+      ...AI_OPEN,
+    ]);
+    expect(idsOf(activeVrdbSources({ ...CLOSED, Q29: true }))).toEqual([
+      "kev",
+      "nvd",
+      "ofac",
+      "uk_sanctions",
+      "eu_fsf",
+      "aiid",
+      ...AI_OPEN,
     ]);
     expect(idsOf(activeMirrors(OPEN))).toEqual(
       VRDB_SOURCE_IDS.filter((id) => id !== "nvd" && id !== "sec"),
@@ -149,7 +204,7 @@ describe("the VRDB sources", () => {
 
   it("every source is stale after 48 hours", () => {
     expect(VRDB_SOURCES.map((source) => source.staleAfterHours)).toEqual([
-      48, 48, 48, 48, 48, 48, 48, 48,
+      48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48,
     ]);
   });
 
@@ -227,6 +282,42 @@ describe("the VRDB sources", () => {
         category: "legal_regulatory",
         schedule: "59 */6 * * *",
         missingStatus: "delisted",
+        mode: "mirror",
+      },
+      {
+        id: "aiid",
+        operator: "the Responsible AI Collaborative",
+        listName: "AI Incident Database",
+        category: "ai_specific",
+        schedule: "11 4 * * *",
+        missingStatus: "withdrawn",
+        mode: "mirror",
+      },
+      {
+        id: "atlas",
+        operator: "MITRE",
+        listName: "MITRE ATLAS case studies",
+        category: "ai_specific",
+        schedule: "17 3 * * *",
+        missingStatus: "withdrawn",
+        mode: "mirror",
+      },
+      {
+        id: "nhtsa_sgo",
+        operator: "NHTSA",
+        listName: "NHTSA Standing General Order crash reports",
+        category: "ai_specific",
+        schedule: "5 13 * * *",
+        missingStatus: "withdrawn",
+        mode: "mirror",
+      },
+      {
+        id: "fda_ai_devices",
+        operator: "the FDA",
+        listName: "FDA list of AI-enabled medical devices",
+        category: "ai_specific",
+        schedule: "35 5 * * *",
+        missingStatus: "withdrawn",
         mode: "mirror",
       },
     ]);
@@ -368,6 +459,184 @@ describe("the VRDB sources", () => {
     expect(MAX_RECORDS.un_sanctions).toBe(2);
     expect(classifyRecord("un_sanctions").category).toBe("official");
     expect(recordMatchOf("un_sanctions")).toBe("weak");
+  });
+
+  it.each([
+    ["aiid", 3, "unverified"],
+    ["atlas", 3, "trusted_press"],
+    ["nhtsa_sgo", 3, "official"],
+    ["fda_ai_devices", 2, "official"],
+  ] as const)(
+    "serves %s in ai_specific, %i records a run, as %s and weak (R3, R4, R7)",
+    (id, records, category) => {
+      expect(RECORD_CATEGORY[id]).toBe("ai_specific");
+      expect(MAX_RECORDS[id]).toBe(records);
+      // Every match of these lists is by name, so no record of them is strong, whatever its class.
+      expect(classifyRecord(id).category).toBe(category);
+      expect(recordMatchOf(id)).toBe("weak");
+    },
+  );
+
+  describe("the AI-specific lists (spec D2.14 to D2.17, Q29 to Q32)", () => {
+    // The values of the sheets of the rulings of 2026-11-05. The attribution of the ATLAS case
+    // studies carries the year of the day, so it has a block of its own below.
+    const SHEETS = [
+      {
+        id: "aiid",
+        name: "AI Incident Database",
+        operator: "the Responsible AI Collaborative",
+        listName: "AI Incident Database",
+        schedule: "11 4 * * *",
+        licence:
+          "CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/): the incidents, entities and classifications collections of the AI Incident Database; report text, submissions and media excluded. Commercial use awaits the operator's confirmation (Q29).",
+      },
+      {
+        id: "atlas",
+        name: "MITRE ATLAS case studies",
+        operator: "MITRE",
+        listName: "MITRE ATLAS case studies",
+        schedule: "17 3 * * *",
+        licence:
+          "Apache License 2.0 (https://www.apache.org/licenses/LICENSE-2.0); the atlas-data repository's LICENSE (Q32).",
+      },
+      {
+        id: "nhtsa_sgo",
+        name: "NHTSA Standing General Order crash reports",
+        operator: "NHTSA",
+        listName: "NHTSA Standing General Order crash reports",
+        schedule: "5 13 * * *",
+        licence:
+          "None published; a work of the US Government (17 U.S.C. §105); accepted on 2026-11-05 (Q31)",
+      },
+      {
+        id: "fda_ai_devices",
+        name: "FDA list of AI-enabled medical devices",
+        operator: "the FDA",
+        listName: "FDA list of AI-enabled medical devices",
+        schedule: "35 5 * * *",
+        licence: "Public domain (fda.gov: content may be republished freely)",
+      },
+    ] as const;
+
+    it.each(SHEETS)(
+      "$id is a mirror in ai_specific that is out of date after 48 hours and withdraws a record it no longer lists",
+      ({ id, name, operator, listName, schedule, licence }) => {
+        const definition = vrdbSourceOf(id);
+
+        expect(isMirror(definition)).toBe(true);
+        expect(definition).toMatchObject({
+          id,
+          name,
+          operator,
+          listName,
+          category: "ai_specific",
+          mode: "mirror",
+          schedule,
+          staleAfterHours: 48,
+          licence,
+          missingStatus: "withdrawn",
+        });
+      },
+    );
+
+    it("holds the attribution of each list that has a fixed one, word for word", () => {
+      expect(vrdbSourceOf("aiid").attribution).toBe(
+        "AI Incident Database, Responsible AI Collaborative (incidentdatabase.ai), CC BY-SA 4.0. Adapted by VerifyWise; the adapted records are shared under CC BY-SA 4.0.",
+      );
+      expect(vrdbSourceOf("nhtsa_sgo").attribution).toBe(
+        "NHTSA Standing General Order crash reports, US Department of Transportation. Counted by VerifyWise; NHTSA states the data may be incomplete or unverified.",
+      );
+      expect(vrdbSourceOf("fda_ai_devices").attribution).toBe(
+        "FDA list of AI-enabled medical devices, US Food and Drug Administration",
+      );
+    });
+
+    it("points to the page of each operator that publishes the list", () => {
+      expect(vrdbSourceOf("aiid").documentationUrl).toBe(
+        "https://incidentdatabase.ai/research/snapshots/",
+      );
+      expect(vrdbSourceOf("atlas").documentationUrl).toBe(
+        "https://github.com/mitre-atlas/atlas-data",
+      );
+      // The paths of these two pages are marked "verify" in the sheets: the host is what is fixed.
+      expect(new URL(vrdbSourceOf("nhtsa_sgo").documentationUrl).hostname).toBe("www.nhtsa.gov");
+      expect(new URL(vrdbSourceOf("fda_ai_devices").documentationUrl).hostname).toBe("www.fda.gov");
+    });
+
+    it("keeps the AI Incident Database shut until its operator confirms in writing, or the product owner accepts the risk (Q29)", () => {
+      expect(AIID_PERMISSION_GRANTED).toBe(false);
+      expect(VRDB_GATES.Q29).toBe(AIID_PERMISSION_GRANTED);
+      expect(vrdbSourceOf("aiid").gate).toBe("Q29");
+      // The licence says why: the operator's confirmation is still awaited.
+      expect(vrdbSourceOf("aiid").licence).toContain("awaits the operator's confirmation (Q29)");
+
+      // Closed, it is neither scheduled nor looked up ...
+      expect(idsOf(activeVrdbSources())).not.toContain("aiid");
+      expect(idsOf(activeMirrors())).not.toContain("aiid");
+      expect(idsOf(activeVrdbSources(CLOSED))).not.toContain("aiid");
+      // ... and opening the gate makes it active, at its place in the table, and changes nothing else.
+      expect(idsOf(activeVrdbSources({ ...VRDB_GATES, Q29: true }))).toEqual([
+        "kev",
+        "nvd",
+        "sec",
+        "ofac",
+        "uk_sanctions",
+        "eu_fsf",
+        "cve",
+        "aiid",
+        "atlas",
+        "nhtsa_sgo",
+        "fda_ai_devices",
+      ]);
+      expect(idsOf(activeMirrors({ ...VRDB_GATES, Q29: true }))).toContain("aiid");
+      expect(vrdbSourceOf("aiid").mode).toBe("mirror");
+    });
+
+    it("leaves the other three open: no gate, active with every gate closed", () => {
+      for (const id of ["atlas", "nhtsa_sgo", "fda_ai_devices"] as const) {
+        expect(vrdbSourceOf(id).gate).toBeUndefined();
+        expect(idsOf(activeVrdbSources(CLOSED))).toContain(id);
+        expect(idsOf(activeMirrors(CLOSED))).toContain(id);
+      }
+    });
+
+    describe("the notice of the ATLAS case studies (Q32)", () => {
+      const attributionIn = (year: number) =>
+        `MITRE ATLAS™ case studies, Copyright 2021-${year} The MITRE Corporation, under the Apache License 2.0. Adapted by VerifyWise.`;
+
+      afterEach(() => {
+        jest.useRealTimers();
+        jest.restoreAllMocks();
+      });
+
+      it("attributes the case studies to MITRE with the year of the day", () => {
+        jest.useFakeTimers({ now: new Date("2026-06-15T12:00:00Z") });
+        expect(vrdbSourceOf("atlas").attribution).toBe(attributionIn(2026));
+        expect(vrdbSourceOf("atlas").attribution).toContain(
+          "Copyright 2021-2026 The MITRE Corporation",
+        );
+        expect(vrdbSourceOf("atlas").attribution).toContain("under the Apache License 2.0");
+      });
+
+      it.each([
+        ["2026-12-31T23:30:00Z", 2026],
+        ["2027-01-01T00:30:00Z", 2027],
+      ])("at %s the attribution names %i, by the UTC clock and not the local one", (now, year) => {
+        jest.useFakeTimers({ now: new Date(now) });
+        // In whatever zone the process runs, the local year is 1999 here, so that only the UTC year can
+        // be right.
+        jest.spyOn(Date.prototype, "getFullYear").mockReturnValue(1999);
+        expect(vrdbSourceOf("atlas").attribution).toBe(attributionIn(year));
+      });
+
+      it("reads the year at each use, so a process that runs over New Year writes the new one", () => {
+        jest.useFakeTimers({ now: new Date("2026-12-31T23:59:59Z") });
+        const source = vrdbSourceOf("atlas");
+        expect(source.attribution).toBe(attributionIn(2026));
+        jest.setSystemTime(new Date("2027-01-01T00:00:01Z"));
+        expect(source.attribution).toBe(attributionIn(2027));
+      });
+    });
   });
 
   describe("isStale", () => {

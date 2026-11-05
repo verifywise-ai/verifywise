@@ -5,6 +5,9 @@
  * relabels the pending findings that cite it (Ruling 12 of the M2 plan).
  */
 const mockWorkerOn = jest.fn();
+// The sync of a list with the database: a test of the connector map sees which connector the job
+// hands it. The other tests of the job inject their own sync.
+const mockSyncSource = jest.fn();
 
 jest.mock("bullmq", () => ({
   Queue: jest.fn().mockImplementation(() => ({})),
@@ -18,12 +21,33 @@ jest.mock("../../../../utils/logger/fileLogger", () => ({
   default: { debug: jest.fn(), error: jest.fn(), info: jest.fn(), warn: jest.fn() },
 }));
 jest.mock("../../../../utils/vrdb.utils", () => ({}));
+jest.mock("../sync", () => ({
+  syncSource: (...args: unknown[]) => mockSyncSource(...args),
+}));
 
 import { UnrecoverableError, Worker } from "bullmq";
 import logger from "../../../../utils/logger/fileLogger";
 import type { VendorResearchConfig } from "../../config";
+import { aiidConnector } from "../connectors/aiid";
+import { atlasConnector } from "../connectors/atlas";
+import { cveConnector } from "../connectors/cve";
+import { euConnector } from "../connectors/eu";
+import { fdaConnector } from "../connectors/fda";
+import { kevConnector } from "../connectors/kev";
+import { nhtsaConnector } from "../connectors/nhtsa";
+import { ofacConnector } from "../connectors/ofac";
+import { ukConnector } from "../connectors/uk";
+import { unConnector } from "../connectors/un";
+import { VRDB_GATES, type VrdbGate } from "../gates";
+import { VRDB_SOURCES, isMirror } from "../sources";
 import type { SyncResult } from "../sync";
-import { VrdbSyncFailed, VrdbSyncNotRetried, createVrdbWorker, processVrdbJob } from "../worker";
+import {
+  VrdbSyncFailed,
+  VrdbSyncNotRetried,
+  connectorFetch,
+  createVrdbWorker,
+  processVrdbJob,
+} from "../worker";
 
 const config = (overrides: Partial<VendorResearchConfig> = {}): VendorResearchConfig => ({
   autoRun: true,
@@ -60,7 +84,7 @@ describe("processVrdbJob", () => {
     expect(sync).not.toHaveBeenCalled();
   });
 
-  it.each([["un_sanctions"]])(
+  it.each([["un_sanctions"], ["aiid"]])(
     "the job of a list behind a closed gate does nothing: %s",
     async (sourceId) => {
       const sync = syncOf({ outcome: "ok" });
@@ -171,6 +195,93 @@ describe("processVrdbJob", () => {
       expect(sync).not.toHaveBeenCalled();
     },
   );
+});
+
+describe("the connector of each list", () => {
+  // The job syncs a list with the connector of its map entry, through the page guard. The sync is
+  // the mock above, so that no download is made and the test reads what the job handed it.
+  afterEach(() => {
+    jest.restoreAllMocks();
+    mockSyncSource.mockReset();
+  });
+
+  const openGates = () => {
+    for (const gate of Object.keys(VRDB_GATES) as VrdbGate[]) {
+      jest.replaceProperty(VRDB_GATES, gate, true);
+    }
+  };
+
+  it.each([
+    ["atlas", atlasConnector],
+    ["nhtsa_sgo", nhtsaConnector],
+    ["fda_ai_devices", fdaConnector],
+  ] as const)(
+    "the job of %s, a list with no gate, syncs it with its own connector",
+    async (sourceId, connector) => {
+      mockSyncSource.mockResolvedValue({ outcome: "ok" });
+
+      await expect(processVrdbJob(syncJob({ sourceId }), { config: config() })).resolves.toEqual({
+        outcome: "ok",
+      });
+
+      expect(mockSyncSource).toHaveBeenCalledTimes(1);
+      const [id, deps] = mockSyncSource.mock.calls[0];
+      expect(id).toBe(sourceId);
+      expect(deps.connector).toBe(connector);
+      expect(connector.id).toBe(sourceId);
+      expect(deps.fetch).toBe(connectorFetch);
+    },
+  );
+
+  it("the job of the AI Incident Database reaches no connector while Q29 is closed, and syncs with its own once it is open", async () => {
+    mockSyncSource.mockResolvedValue({ outcome: "ok" });
+
+    await expect(
+      processVrdbJob(syncJob({ sourceId: "aiid" }), { config: config() }),
+    ).resolves.toBeNull();
+    expect(mockSyncSource).not.toHaveBeenCalled();
+
+    jest.replaceProperty(VRDB_GATES, "Q29", true);
+
+    await expect(
+      processVrdbJob(syncJob({ sourceId: "aiid" }), { config: config() }),
+    ).resolves.toEqual({ outcome: "ok" });
+    expect(mockSyncSource).toHaveBeenCalledTimes(1);
+    const [id, deps] = mockSyncSource.mock.calls[0];
+    expect(id).toBe("aiid");
+    expect(deps.connector).toBe(aiidConnector);
+    expect(aiidConnector.id).toBe("aiid");
+  });
+
+  it("every mirrored list has a connector of its own, which names it, once its gate is open", async () => {
+    openGates();
+    const connectors = {
+      kev: kevConnector,
+      ofac: ofacConnector,
+      uk_sanctions: ukConnector,
+      eu_fsf: euConnector,
+      cve: cveConnector,
+      un_sanctions: unConnector,
+      aiid: aiidConnector,
+      atlas: atlasConnector,
+      nhtsa_sgo: nhtsaConnector,
+      fda_ai_devices: fdaConnector,
+    };
+    const mirrors = VRDB_SOURCES.filter(isMirror).map(({ id }) => id);
+
+    // The four AI lists are in the map beside the six that were there.
+    expect([...mirrors].sort()).toEqual(Object.keys(connectors).sort());
+    for (const [id, connector] of Object.entries(connectors)) {
+      mockSyncSource.mockClear().mockResolvedValue({ outcome: "ok" });
+
+      await processVrdbJob(syncJob({ sourceId: id }), { config: config() });
+
+      expect(mockSyncSource).toHaveBeenCalledTimes(1);
+      expect(mockSyncSource.mock.calls[0][0]).toBe(id);
+      expect(mockSyncSource.mock.calls[0][1].connector).toBe(connector);
+      expect(connector.id).toBe(id);
+    }
+  });
 });
 
 describe("the status job", () => {

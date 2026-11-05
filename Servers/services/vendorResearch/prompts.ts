@@ -27,7 +27,11 @@ import type { EventCluster } from "./clusters";
 import type { Materiality } from "./materiality";
 import { MAX_TOPIC_WORDS, suggestedQueries } from "./queries";
 import { OFAC_RECORD_MARK } from "./records/ofac";
+import { AIID_RECORD_MARK } from "./vrdb/connectors/aiid";
+import { ATLAS_RECORD_MARK } from "./vrdb/connectors/atlas";
 import { EU_RECORD_MARK } from "./vrdb/connectors/eu";
+import { FDA_RECORD_MARK } from "./vrdb/connectors/fda";
+import { NHTSA_RECORD_MARK } from "./vrdb/connectors/nhtsa";
 import { UK_RECORD_MARK } from "./vrdb/connectors/uk";
 import { UN_RECORD_MARK } from "./vrdb/connectors/un";
 import {
@@ -84,8 +88,14 @@ export { escapeForPrompt, unescapeFromPrompt };
  * the description of the flaw, and the verifier saw neither the database nor the whole record. The
  * verifier prompt now carries a `database` attribute on such a source and says that the entry
  * being one of that database is part of what it says. That is `vr-12`.
+ *
+ * The next version adds the AI databases (spec D2.14 to D2.17): the analysis prompt names them
+ * beside the sanctions lists and asks the same caution of an entry matched by name only, which is
+ * every entry of them. That is `vr-13`. It was not run against the golden set (a run costs the
+ * research key's credits); the paragraph reaches only a source whose text begins with one of the
+ * new marks.
  */
-export const CREDIBILITY_PROMPT_VERSION = "vr-12";
+export const CREDIBILITY_PROMPT_VERSION = "vr-13";
 
 const UNKNOWN_DOMAIN = "unknown";
 
@@ -257,6 +267,19 @@ export function buildSystemPrompt(now: Date): string {
     "  registration number, an LEI): it is about the vendor unless the identifiers it lists say",
     "  otherwise, so make the action plan a check of them, and a designation in force is a risk",
     "  in legal_regulatory.",
+    "- A source whose text begins with the name of an AI database is an entry of that database:",
+    `  ${AIID_RECORD_MARK} (an incident that others reported: an allegation that the database does`,
+    `  not establish), ${ATLAS_RECORD_MARK} (a case study of an attack on an AI system: its Type`,
+    "  says whether it is an Incident, an attack reported in the wild, or an Exercise, a",
+    `  demonstration by researchers that is not an attack in the wild), ${NHTSA_RECORD_MARK}`,
+    "  (counts of the reports that makers of automated driving systems must file: a report is not a",
+    `  finding of fault) or ${FDA_RECORD_MARK} (devices that the FDA authorized: a status and not an`,
+    "  incident). The vendor was matched to it by name only, so its text has the Lookup note: it may",
+    '  be another company. Write the risk as "An entity named <the name of the entry> appears in',
+    '  <the database>", raise at most one risk from it, in ai_specific, rate its likelihood',
+    "  Possible at most, and make the action plan a check of who the vendor is against the entry.",
+    "  A list of authorized devices is no risk by itself: use it only to say that the vendor's AI",
+    "  is part of a regulated medical device.",
     "",
     "How to rate a risk:",
     "- Rate what the sources show for this vendor, not the worst case of its kind. The two ratings",
@@ -793,6 +816,10 @@ export const VERIFIER_DATABASE_NAMES: Readonly<Record<RecordSourceId, string>> =
   uk_sanctions: UK_RECORD_MARK,
   eu_fsf: EU_RECORD_MARK,
   un_sanctions: UN_RECORD_MARK,
+  aiid: AIID_RECORD_MARK,
+  atlas: ATLAS_RECORD_MARK,
+  nhtsa_sgo: NHTSA_RECORD_MARK,
+  fda_ai_devices: FDA_RECORD_MARK,
 };
 
 /** ` database="…"` for a source whose address has a record, and nothing for any other. */

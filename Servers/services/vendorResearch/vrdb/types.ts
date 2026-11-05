@@ -25,7 +25,14 @@ import type { ReadThroughSource } from "./sources";
 export interface ParsedRecord {
   /** The list's own id of the record: a CVE id, an OFAC entity number, a unique id. */
   sourceRecordId: string;
-  recordType: "vulnerability" | "sanctions_entity" | "sec_filing";
+  recordType:
+    | "vulnerability"
+    | "sanctions_entity"
+    | "sec_filing"
+    | "ai_incident"
+    | "ai_case_study"
+    | "crash_report_summary"
+    | "ai_device_authorizations";
   title: string;
   /** The record as plain text, word for word the list's: what the model reads and quotes. */
   summary: string;

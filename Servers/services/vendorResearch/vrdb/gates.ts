@@ -24,9 +24,17 @@
  *   condition, that every copy reproduces MITRE's copyright designation and the licence, which the
  *   cve row of vrdb_sources holds (sources.ts). The first copy is a baseline that an operator loads
  *   once, with scripts/vrdbCveBaseline.ts; the daily sync reads the changes from it on.
+ * - Q29, the AI Incident Database (aiid): the written confirmation of its operator, the Responsible
+ *   AI Collaborative (info@incidentdatabase.ai), that a commercial product may store the weekly
+ *   export and show records derived from it under CC BY-SA 4.0, or the product owner's explicit
+ *   written acceptance of that risk. The incidents, entities and classifications collections are
+ *   licensed CC BY-SA 4.0, but the site's general terms bar anyone from selling or commercially
+ *   exploiting "any aspect of the Site" without express permission, and the two do not agree on
+ *   their face. The connector is built and tested; until the gate opens the list is never
+ *   downloaded, scheduled or looked up, and no run shows it (spec D2.14, D7 Q29).
  */
 
-export type VrdbGate = "Q4" | "Q6" | "Q7";
+export type VrdbGate = "Q4" | "Q6" | "Q7" | "Q29";
 
 /**
  * The address of a role that the SEC's User-Agent names (Q4): the Technical Support contact of
@@ -49,9 +57,17 @@ export const UN_PERMISSION_GRANTED = false;
  */
 export const CVE_TERMS_APPROVED = true;
 
+/**
+ * True once the Responsible AI Collaborative has confirmed in writing that a commercial product may
+ * store the weekly export of the AI Incident Database and show records derived from it under CC
+ * BY-SA 4.0, or the product owner has accepted that risk in writing (Q29). Closed on 2026-11-05.
+ */
+export const AIID_PERMISSION_GRANTED = false;
+
 /** Which gates are open. */
 export const VRDB_GATES: Readonly<Record<VrdbGate, boolean>> = {
   Q4: SEC_CONTACT !== null,
   Q6: UN_PERMISSION_GRANTED,
   Q7: CVE_TERMS_APPROVED,
+  Q29: AIID_PERMISSION_GRANTED,
 };

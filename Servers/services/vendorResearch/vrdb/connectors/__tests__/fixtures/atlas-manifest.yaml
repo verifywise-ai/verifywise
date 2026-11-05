@@ -1,0 +1,17 @@
+- release: '2030.02'
+  release-date: '2030-02-27'
+  versions:
+  - format-version: 6.2.0
+    path: v6/ATLAS-2030.02.yaml
+- release: '2030.01'
+  release-date: '2030-01-30'
+  versions:
+  - format-version: 6.1.0
+    path: v6/ATLAS-2030.01.yaml
+  - format-version: 5.9.0
+    path: legacy/ATLAS-5.9.0.yaml
+- release: '2029.12'
+  release-date: '2029-12-15'
+  versions:
+  - format-version: 5.8.0
+    path: legacy/ATLAS-5.8.0.yaml

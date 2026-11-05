@@ -32,6 +32,7 @@ const NVD_URL = "https://nvd.nist.gov/vuln/detail/CVE-2026-31337";
 const REUTERS = "https://www.reuters.com/world/acme-designated";
 const BBC = "https://www.bbc.co.uk/news/acme-designated";
 const NEWS_RESULT = "https://localnews.example/acme";
+const ATLAS_URL = "https://atlas.mitre.org/studies/AML.CS9001";
 
 /** A record as the basis describes it: matched, read, from the copy of 20 October. */
 const describedRecord = (
@@ -96,6 +97,19 @@ const citedPage = (url: string, publisher: string): FindingSource => ({
   published_at: null,
   category: "trusted_press",
   publisher,
+});
+
+/**
+ * A case study of the ATLAS list as the basis describes it, and as the finding cites it: trusted
+ * press by its class, and a weak record, since every match of the list is by name.
+ */
+const describedCaseStudy = (status: RecordStatus = "active"): CredibilitySource => ({
+  ...describedRecord(ATLAS_URL, "atlas", { match: "weak", status, id: "AML.CS9001" }),
+  category: "trusted_press",
+});
+const citedCaseStudy = (recordId: number, status: RecordStatus = "active"): FindingSource => ({
+  ...citedRecord(ATLAS_URL, "atlas", recordId, status, "weak"),
+  category: "trusted_press",
 });
 
 const basisOf = (
@@ -222,6 +236,76 @@ describe("relabelFinding", () => {
 
     expect(unrejected?.label).toBe("high");
     expect(unrejected?.basis.sources[0].record).not.toHaveProperty("rejected_by");
+  });
+
+  it("a case study that ATLAS withdrew makes a finding Low, and back on the list it is Low by name only, never Medium", () => {
+    const withdrawn = relabelFinding({
+      basis: basisOf("name_only", [describedCaseStudy()], true),
+      sources: [citedCaseStudy(401)],
+      statuses: statuses([[401, { status: "withdrawn", changedOn: "2026-10-31" }]]),
+    });
+
+    expect(withdrawn).toMatchObject({
+      label: "low",
+      basis: { rule: "inactive", name_only: true },
+      sources: [{ record: { status: "withdrawn" } }],
+    });
+    expect(withdrawn?.basis.sources[0].record).toMatchObject({
+      source: "atlas",
+      match: "weak",
+      status: "withdrawn",
+      as_of: "2026-10-31",
+    });
+    expect(credibilityRationale(withdrawn!.basis)).toBe(
+      "Low: MITRE ATLAS case studies withdrew the record on 31 Oct 2026. Matched by name only: this may be another company.",
+    );
+
+    // Trusted press by its class, but a record found by name: it is the name that counts.
+    const back = relabelFinding({
+      basis: withdrawn!.basis,
+      sources: withdrawn!.sources,
+      statuses: statuses([[401, { status: "active", changedOn: "2026-11-02" }]]),
+    });
+
+    expect(back).toMatchObject({
+      label: "low",
+      basis: { rule: "name_only", name_only: true },
+      sources: [{ record: { status: "active" } }],
+    });
+    expect(credibilityRationale(back!.basis)).toBe(
+      "Low: the MITRE ATLAS case studies entry matches the vendor by name only.",
+    );
+  });
+
+  it("a case study that ATLAS withdrew, or lists again, leaves a finding that Reuters reports at Medium, with the note", () => {
+    const withdrawn = relabelFinding({
+      basis: basisOf(
+        "trusted_press_one",
+        [describedCaseStudy(), describedPress(REUTERS, "reuters", "Reuters")],
+        true,
+      ),
+      sources: [citedCaseStudy(401), citedPage(REUTERS, "reuters")],
+      statuses: statuses([[401, { status: "withdrawn", changedOn: "2026-10-31" }]]),
+    });
+
+    expect(withdrawn).toMatchObject({
+      label: "medium",
+      basis: { rule: "trusted_press_one", name_only: true },
+      sources: [{ record: { status: "withdrawn" } }, { url: REUTERS }],
+    });
+
+    // Listed again, the record is no second publisher: Reuters is still the only one.
+    const listedAgain = relabelFinding({
+      basis: withdrawn!.basis,
+      sources: withdrawn!.sources,
+      statuses: statuses([[401, { status: "active", changedOn: "2026-11-02" }]]),
+    });
+
+    expect(listedAgain).toMatchObject({
+      label: "medium",
+      basis: { rule: "trusted_press_one", name_only: true },
+      sources: [{ record: { status: "active" } }, { url: REUTERS }],
+    });
   });
 
   it("two trusted publishers keep it High", () => {

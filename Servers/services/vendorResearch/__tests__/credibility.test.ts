@@ -66,6 +66,12 @@ const rate = (
 
 const NVD_PAGE = "https://nvd.nist.gov/vuln/detail/CVE-2026-31337";
 const OFAC_PAGE = "https://sanctionssearch.ofac.treas.gov/Details.aspx?id=1";
+const ATLAS_PAGE = "https://atlas.mitre.org/studies/AML.CS9001";
+const AIID_PAGE = "https://incidentdatabase.ai/cite/9101";
+const NHTSA_PAGE =
+  "https://www.nhtsa.gov/laws-regulations/standing-general-order-crash-reporting?reportingEntity=acmeanalytics&automation=ads";
+const FDA_PAGE =
+  "https://www.fda.gov/medical-devices/software-medical-device-samd/artificial-intelligence-enabled-medical-devices?company=acmeanalytics";
 const SEC_PAGE = "https://www.sec.gov/Archives/edgar/data/1/x.htm";
 const REUTERS = "https://www.reuters.com/technology/acme-breach";
 const BBC_UK = "https://www.bbc.co.uk/news/acme-breach";
@@ -416,6 +422,103 @@ describe("credibilityOf", () => {
         entry: "forums",
         user_content: true,
       });
+    });
+  });
+
+  describe("the AI databases: every match is by name, so a record is Low support whatever its class (D5.3 step 0)", () => {
+    const ATLAS = { [ATLAS_PAGE]: { record: "atlas" as const } };
+
+    it("a finding whose only source is a weak trusted-press record (an ATLAS case study) is Low, name_only, with the note", () => {
+      const rated = rate("ai_specific", [source(ATLAS_PAGE)], { provenance: ATLAS });
+
+      expect(rated).toMatchObject({ label: "low", basis: { rule: "name_only", name_only: true } });
+      // Trusted press by its class, weak by its match: the class labels the publisher, the match
+      // decides the support.
+      expect(rated.basis.sources).toEqual([
+        {
+          url: ATLAS_PAGE,
+          category: "trusted_press",
+          publisher: "atlas",
+          entry: null,
+          reviewed: true,
+          reading: "read",
+          record: { source: "atlas", match: "weak", status: "active" },
+        },
+      ]);
+    });
+
+    it("one strong trusted-press web source and a weak ATLAS record are Medium, trusted_press_one, with the note", () => {
+      // The weak record is no second publisher and no publisher at all: the one trusted publisher
+      // is Reuters, and what the record adds is the note.
+      expect(
+        rate("ai_specific", [source(REUTERS), source(ATLAS_PAGE)], { provenance: ATLAS }),
+      ).toMatchObject({ label: "medium", basis: { rule: "trusted_press_one", name_only: true } });
+      expect(
+        rate("ai_specific", [source(ATLAS_PAGE), source(REUTERS)], { provenance: ATLAS }),
+      ).toMatchObject({ label: "medium", basis: { rule: "trusted_press_one", name_only: true } });
+    });
+
+    it("a weak ATLAS record beside a trusted search result nobody could confirm does not turn the one publisher into two", () => {
+      expect(
+        rate("ai_specific", [result(REUTERS), source(ATLAS_PAGE)], {
+          provenance: ATLAS,
+          verdict: { outcome: "unread" },
+        }),
+      ).toMatchObject({ label: "medium", basis: { rule: "trusted_press_one", name_only: true } });
+    });
+
+    it("two trusted publishers beside a weak ATLAS record are High, trusted_press_two, with the note", () => {
+      expect(
+        rate("ai_specific", [source(ATLAS_PAGE), source(REUTERS), source(BBC_UK)], {
+          provenance: ATLAS,
+        }),
+      ).toMatchObject({ label: "high", basis: { rule: "trusted_press_two", name_only: true } });
+    });
+
+    it("a weak ATLAS record beside an unverified source is Low by name_only, not by unverified", () => {
+      expect(
+        rate("ai_specific", [source(ATLAS_PAGE), source("https://medium.com/@x/acme-ai")], {
+          provenance: ATLAS,
+        }),
+      ).toMatchObject({ label: "low", basis: { rule: "name_only", name_only: true } });
+    });
+
+    it.each([
+      ["aiid", "unverified", AIID_PAGE],
+      ["atlas", "trusted_press", ATLAS_PAGE],
+      ["nhtsa_sgo", "official", NHTSA_PAGE],
+      ["fda_ai_devices", "official", FDA_PAGE],
+    ] as const)(
+      "a record of %s found by name is Low, name_only, with the note, whatever its class (%s)",
+      (id, category, url) => {
+        const rated = rate("ai_specific", [source(url)], { provenance: { [url]: { record: id } } });
+
+        expect(rated).toMatchObject({
+          label: "low",
+          basis: { rule: "name_only", name_only: true },
+        });
+        expect(rated.basis.sources[0]).toMatchObject({
+          category,
+          publisher: id,
+          record: { source: id, match: "weak", status: "active" },
+        });
+      },
+    );
+
+    it("a case study that ATLAS withdrew is Low, inactive, and keeps the note", () => {
+      expect(
+        rate("ai_specific", [source(ATLAS_PAGE)], {
+          provenance: { [ATLAS_PAGE]: { record: "atlas", status: "withdrawn" } },
+        }),
+      ).toMatchObject({ label: "low", basis: { rule: "inactive", name_only: true } });
+    });
+
+    it("a withdrawn ATLAS record beside Reuters leaves Reuters alone: Medium, with the note", () => {
+      expect(
+        rate("ai_specific", [source(ATLAS_PAGE), source(REUTERS)], {
+          provenance: { [ATLAS_PAGE]: { record: "atlas", status: "withdrawn" } },
+        }),
+      ).toMatchObject({ label: "medium", basis: { rule: "trusted_press_one", name_only: true } });
     });
   });
 
@@ -837,6 +940,24 @@ describe("decideCredibility", () => {
       }),
     ],
     ["15", rate("certifications", [source(REUTERS), own(`${SITE}/product/overview`)])],
+    [
+      "an ATLAS record alone",
+      rate("ai_specific", [source(ATLAS_PAGE)], {
+        provenance: { [ATLAS_PAGE]: { record: "atlas" as const } },
+      }),
+    ],
+    [
+      "an ATLAS record and Reuters",
+      rate("ai_specific", [source(ATLAS_PAGE), source(REUTERS)], {
+        provenance: { [ATLAS_PAGE]: { record: "atlas" as const } },
+      }),
+    ],
+    [
+      "an AI Incident Database record and Reuters",
+      rate("ai_specific", [source(AIID_PAGE), source(REUTERS)], {
+        provenance: { [AIID_PAGE]: { record: "aiid" as const } },
+      }),
+    ],
     ["no sources", rate("security_incidents", [])],
   ];
 

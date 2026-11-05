@@ -26,6 +26,10 @@ export const RECORD_SOURCE_IDS = [
   "eu_fsf",
   "cve",
   "un_sanctions",
+  "aiid",
+  "atlas",
+  "nhtsa_sgo",
+  "fda_ai_devices",
 ] as const;
 export type RecordSourceId = (typeof RECORD_SOURCE_IDS)[number];
 
@@ -34,7 +38,10 @@ export type RecordSourceId = (typeof RECORD_SOURCE_IDS)[number];
  * SEC), in services/vendorResearch/vrdb: their records are looked up in the database, not on the
  * web, unless an operator turned the records off (VENDOR_RESEARCH_RECORDS). A list behind a closed
  * gate (vrdb/gates.ts) is neither copied nor looked up. Q4 (sec) and Q7 (cve) are open, so only
- * un_sanctions waits for its gate, Q6.
+ * un_sanctions (Q6) and aiid (Q29) wait for their gates. The AI-specific lists are aiid (the AI
+ * Incident Database), atlas (MITRE ATLAS case studies), nhtsa_sgo (NHTSA's crash reports of
+ * automated driving and driver assistance systems) and fda_ai_devices (the FDA's list of
+ * AI-enabled medical devices).
  */
 export const VRDB_SOURCE_IDS = [
   "kev",
@@ -45,6 +52,10 @@ export const VRDB_SOURCE_IDS = [
   "eu_fsf",
   "cve",
   "un_sanctions",
+  "aiid",
+  "atlas",
+  "nhtsa_sgo",
+  "fda_ai_devices",
 ] as const;
 export type VrdbSourceId = (typeof VRDB_SOURCE_IDS)[number];
 

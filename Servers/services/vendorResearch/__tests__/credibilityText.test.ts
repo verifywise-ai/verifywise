@@ -68,6 +68,21 @@ const OFAC_BY_NAME = source({
     as_of: "2026-10-29",
   },
 });
+// A case study of MITRE ATLAS is trusted press by class but only ever matches by name, so it is
+// no publisher: the sentence of the Medium rule must not count it among the trusted publishers.
+const ATLAS_BY_NAME = source({
+  url: "https://atlas.mitre.org/studies/AML.CS9001",
+  category: "trusted_press",
+  publisher: "atlas",
+  reviewed: true,
+  record: {
+    source: "atlas",
+    match: "weak",
+    status: "active",
+    source_record_id: "AML.CS9001",
+    as_of: "2026-10-29",
+  },
+});
 
 describe("credibilityRationale", () => {
   it("an official record: its operator, its id and the day of the copy", () => {
@@ -152,6 +167,19 @@ describe("credibilityRationale", () => {
   it("one trusted publisher", () => {
     expect(credibilityRationale(basis("trusted_press_one", [REUTERS]))).toBe(
       "Medium: one trusted publisher reports it (Reuters); no official source and no second independent publisher.",
+    );
+  });
+
+  it("one trusted publisher beside a weak trusted-press record: the record is no publisher, whatever the order", () => {
+    const line =
+      "Medium: one trusted publisher reports it (Reuters); no official source and no second independent publisher. " +
+      NAME_ONLY_NOTE;
+
+    expect(credibilityRationale(basis("trusted_press_one", [REUTERS, ATLAS_BY_NAME], true))).toBe(
+      line,
+    );
+    expect(credibilityRationale(basis("trusted_press_one", [ATLAS_BY_NAME, REUTERS], true))).toBe(
+      line,
     );
   });
 

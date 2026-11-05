@@ -614,6 +614,12 @@ const RECORD_SOURCE_NAMES: Record<RecordSourceId, string> = {
     "EU consolidated list of financial sanctions (entities that have the name or the verified website of the vendor)",
   cve: "CVE Program records (critical vulnerabilities of the vendor's products)",
   un_sanctions: "UN Security Council Consolidated List (entities that have the name of the vendor)",
+  aiid: "AI Incident Database (incidents whose developer or deployer has the name of the vendor)",
+  atlas: "MITRE ATLAS case studies (attacks on AI systems whose target has the name of the vendor)",
+  nhtsa_sgo:
+    "NHTSA Standing General Order crash reports (summaries by reporting entity that has the name of the vendor)",
+  fda_ai_devices:
+    "FDA list of AI-enabled medical devices (the company that has the name of the vendor)",
 };
 
 /** An address as the session keeps it, so that a record can be found among the sources. */

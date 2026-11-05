@@ -18,9 +18,13 @@ import logger from "../../../utils/logger/fileLogger";
 import * as vrdbStore from "../../../utils/vrdb.utils";
 import { guardedConditionalFetch } from "../../webResearch/guardedFetch";
 import { type VendorResearchConfig, getVendorResearchConfig } from "../config";
+import { aiidConnector } from "./connectors/aiid";
+import { atlasConnector } from "./connectors/atlas";
 import { cveConnector } from "./connectors/cve";
 import { euConnector } from "./connectors/eu";
+import { fdaConnector } from "./connectors/fda";
 import { kevConnector } from "./connectors/kev";
+import { nhtsaConnector } from "./connectors/nhtsa";
 import { ofacConnector } from "./connectors/ofac";
 import type { Connector, ConnectorFetch, IncrementalConnector } from "./connectors/types";
 import { ukConnector } from "./connectors/uk";
@@ -31,10 +35,11 @@ import { activeMirrors } from "./sources";
 import { type SyncErrorCode, type SyncResult, syncSource } from "./sync";
 
 /**
- * The connector of each list the job copies. A list behind a closed gate (the UN list, Q6) has its
- * connector here, and no job of it runs until the gate opens (`processVrdbJob`). The gate of the
- * CVE records (Q7) is open: their job reads the changes since the baseline that an operator loads
- * (scripts/vrdbCveBaseline.ts), and is refused as `no_baseline` until then.
+ * The connector of each list the job copies. A list behind a closed gate (the UN list, Q6, and the
+ * AI Incident Database, Q29) has its connector here, and no job of it runs until the gate opens
+ * (`processVrdbJob`). The gate of the CVE records (Q7) is open: their job reads the changes since
+ * the baseline that an operator loads (scripts/vrdbCveBaseline.ts), and is refused as
+ * `no_baseline` until then.
  */
 const CONNECTORS: Partial<Record<VrdbSourceId, Connector | IncrementalConnector>> = {
   kev: kevConnector,
@@ -43,6 +48,10 @@ const CONNECTORS: Partial<Record<VrdbSourceId, Connector | IncrementalConnector>
   eu_fsf: euConnector,
   cve: cveConnector,
   un_sanctions: unConnector,
+  aiid: aiidConnector,
+  atlas: atlasConnector,
+  nhtsa_sgo: nhtsaConnector,
+  fda_ai_devices: fdaConnector,
 };
 
 /**

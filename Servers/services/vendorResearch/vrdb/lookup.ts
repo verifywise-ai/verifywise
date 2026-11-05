@@ -115,8 +115,20 @@ function lookupKeysOf(input: Pick<OfferInput, "target" | "verifiedDomains" | "re
 /** A vulnerability: one CVE is offered by one list (Ruling 10 of the M2 plan). */
 const isVulnerability = (row: VrdbRow) => row.recordType === "vulnerability";
 
-/** A record that is an event, a vulnerability or a filing: the lookback applies, and it keeps its day. */
-const isEvent = (row: VrdbRow) => isVulnerability(row) || row.recordType === "sec_filing";
+/**
+ * The record types that are events: a vulnerability, a filing, an AI incident or case study, and a
+ * summary of crash reports. The lookback applies to them, and they keep their day. A sanctions
+ * entry and the FDA's authorizations are states: no lookback, and they are as of the copy.
+ */
+const EVENT_RECORD_TYPES: ReadonlySet<string> = new Set([
+  "vulnerability",
+  "sec_filing",
+  "ai_incident",
+  "ai_case_study",
+  "crash_report_summary",
+]);
+
+const isEvent = (row: VrdbRow) => EVENT_RECORD_TYPES.has(row.recordType);
 
 /** The strong first, then the newest (no day last), then the greater id (CVE-2026-10 after -9). */
 function byStrengthAndAge(

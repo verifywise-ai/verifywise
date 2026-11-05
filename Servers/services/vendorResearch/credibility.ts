@@ -244,7 +244,9 @@ export function decideCredibility(
     const backing = holds(strong);
     if (backing?.some((source) => source.reading === "read")) return decide("high", rule);
   }
-  const trusted = supporting.filter((source) => source.category === "trusted_press");
+  // A weak record gives only Low support (D5.3 step 0), whatever its class: the ATLAS case studies
+  // are trusted press and every match of them is by name, so a weak record is no publisher here.
+  const trusted = strong.filter((source) => source.category === "trusted_press");
   const oneTrusted = publishersOf(trusted) === 1;
   if (oneTrusted && trusted.some((source) => source.reading === "read")) {
     return decide("medium", "trusted_press_one");
