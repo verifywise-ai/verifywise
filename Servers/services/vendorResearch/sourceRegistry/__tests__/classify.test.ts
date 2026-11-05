@@ -368,6 +368,108 @@ describe("classifySource", () => {
     });
   });
 
+  describe("the AI databases of Q30 (sr-6)", () => {
+    it.each([
+      ["https://incidentdatabase.ai/cite/1/", "ai-incident-database"],
+      ["https://www.incidentdatabase.ai/cite/1797", "ai-incident-database"],
+      ["https://incidentdatabase.ai/research/snapshots/", "ai-incident-database"],
+      ["https://staging.incidentdatabase.ai/cite/1/", "ai-incident-database"],
+      ["https://www.aiaaic.org/aiaaic-repository/user-guide", "aiaaic"],
+      ["https://oecd.ai/en/incidents-methodology", "oecd-ai"],
+      ["https://avidml.org/legal/terms-and-conditions", "avid"],
+      ["https://airisk.mit.edu/ai-incident-tracker", "mit-ai-incident-tracker"],
+    ])("takes %s for unverified and reviewed, entry %s", (url, entry) => {
+      // The whole answer: the host is reviewed now, and no flag comes with it.
+      expect(at(url)).toEqual({ category: "unverified", publisher: entry, entry, reviewed: true });
+    });
+
+    it("takes a page of atlas.mitre.org, or of a subdomain of it, for trusted press under the name MITRE ATLAS, from the one registry entry that holds the host", () => {
+      expect(REGISTRY.filter((entry) => entry.hosts.includes("atlas.mitre.org"))).toHaveLength(1);
+      for (const url of [
+        "https://atlas.mitre.org/studies/AML.CS0046",
+        "https://atlas.mitre.org/matrices/ATLAS",
+        "https://app.atlas.mitre.org/studies/AML.CS0046",
+      ]) {
+        expect(at(url)).toEqual({
+          category: "trusted_press",
+          publisher: "mitre-atlas",
+          entry: "mitre-atlas",
+          reviewed: true,
+          publisherName: "MITRE ATLAS",
+        });
+      }
+    });
+
+    it("keeps the downgrade rules of its category for a page of these hosts", () => {
+      // Trusted press: the generic rules of G1 (Q11) lower an opinion, a paid or a release page.
+      for (const url of [
+        "https://atlas.mitre.org/opinion/the-case-for-atlas",
+        "https://atlas.mitre.org/sponsored/acme-analytics",
+        "https://atlas.mitre.org/press-release/acme-analytics-joins-atlas",
+        "https://sponsored.atlas.mitre.org/acme-analytics",
+      ]) {
+        expect(at(url)).toEqual({
+          category: "unverified",
+          publisher: "mitre-atlas",
+          entry: "mitre-atlas",
+          reviewed: true,
+          downgraded: true,
+        });
+      }
+      // Unverified: nothing to lower from, so the same paths change nothing and mark nothing.
+      for (const url of [
+        "https://incidentdatabase.ai/opinion/the-case-for-incident-reports",
+        "https://incidentdatabase.ai/sponsored/acme-analytics",
+        "https://sponsored.incidentdatabase.ai/acme-analytics",
+      ]) {
+        expect(at(url)).toEqual({
+          category: "unverified",
+          publisher: "ai-incident-database",
+          entry: "ai-incident-database",
+          reviewed: true,
+        });
+      }
+      // User content (G11, Q25) is read before the entry, on every host.
+      for (const url of [
+        "https://atlas.mitre.org/discussions/1",
+        "https://incidentdatabase.ai/forum/1",
+      ]) {
+        expect(at(url)).toMatchObject({ category: "unverified", userContent: true, entry: null });
+      }
+    });
+
+    it.each([
+      // The owners' other hosts: an entry names one host and not the organisation behind it.
+      "https://mitre.org/about",
+      "https://attack.mitre.org/techniques/T1059/",
+      "https://cwe.mitre.org/data/definitions/79.html",
+      "https://www.mit.edu/",
+      "https://news.mit.edu/2026/ai-incident-tracker",
+      "https://www.oecd.org/en/topics/artificial-intelligence.html",
+      // No entry for the GW DAIL's university, or for a look-alike of a host that has one.
+      "https://blogs.gwu.edu/law-ai/",
+      "https://notincidentdatabase.ai/cite/1",
+      "https://incidentdatabase.ai.example/cite/1",
+      "https://atlas.mitre.org.example/studies/AML.CS0046",
+    ])("takes %s for a host that no one reviewed", (url) => {
+      expect(at(url)).toMatchObject({ category: "unverified", entry: null, reviewed: false });
+    });
+
+    it.each([
+      ["https://www.nhtsa.gov/laws-regulations/standing-general-order-crash-reporting", "nhtsa"],
+      [
+        "https://static.nhtsa.gov/odi/ffdd/sgo-2021-01/SGO-2021-01_Incident_Reports_ADS.csv",
+        "nhtsa",
+      ],
+      [
+        "https://www.fda.gov/medical-devices/software-medical-device-samd/artificial-intelligence-enabled-medical-devices",
+        "fda",
+      ],
+    ])("takes %s of a regulator for official under .gov, publisher %s", (url, publisher) => {
+      expect(at(url)).toEqual({ category: "official", publisher, entry: "us-gov", reviewed: true });
+    });
+  });
+
   describe("a syndicated copy", () => {
     const MSN = "https://www.msn.com/en-us/news/x";
 

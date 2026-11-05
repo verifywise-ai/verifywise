@@ -40,6 +40,19 @@
  * nobody asked or the SEC could not say, take the downgrade of the archive and the viewers that
  * every other filing has (classify.ts, steps 5 and 6). The records of the SEC's database keep
  * their strength (Q3), and the backfill, which makes no request, reads such a filing as unverified.
+ * Version sr-6 (2026-11-05) adds the hosts of the AI databases of spec D2.14 to D2.18 (Q30), so
+ * that a page of one of them that a web search cites gets a reviewed label and a reason in place
+ * of the "unreviewed" mark. No data is copied: the records of the lists that are built (D2.14 to
+ * D2.17) are classified by their database (`classifyRecord`, classify.ts), and the databases of
+ * D2.18 are no source. incidentdatabase.ai (the AI Incident Database), aiaaic.org, oecd.ai,
+ * avidml.org and airisk.mit.edu (the MIT AI Incident Tracker) were unverified and still are, so
+ * their entries only remove the mark and give the reason. atlas.mitre.org is the one whose label
+ * changes: it is trusted press (P-atlas), since MITRE curates the ATLAS case studies from
+ * published research and incident reports, with references for each. Each entry names the host of
+ * the database and not its owner's: mitre.org, mit.edu and oecd.org stay unknown, and there is no
+ * entry for gwu.edu (the GW DAIL is a blog under it, and an entry would label the whole
+ * university) or for the Agent Incident Registry (its host was not verified). nhtsa.gov and
+ * fda.gov are official already, as `.gov` hosts (`us-gov`).
  *
  * An entry is added or changed only in a pull request that gives its reason, its evidence and a
  * review date, and every change gives the registry a new `REGISTRY_VERSION`, which a run stores so
@@ -53,7 +66,7 @@
  */
 import type { SourceCategory } from "../../../domain.layer/interfaces/i.vendorResearch";
 
-export const REGISTRY_VERSION = "sr-5";
+export const REGISTRY_VERSION = "sr-6";
 
 /**
  * G1: the path segments that hold opinion, paid content or press releases on any trusted press
@@ -221,6 +234,9 @@ const REVIEWED_SR3 = "2026-10-31";
 
 /** The day the entries that sr-5 added or changed were reviewed. */
 const REVIEWED_SR5 = "2026-10-31";
+
+/** The day the entries that sr-6 added (the AI databases of Q30) were reviewed. */
+const REVIEWED_SR6 = "2026-11-05";
 
 /** A trusted press entry whose publisher's pages could not be read: kept from today's list (Q9). */
 const carriedOver = (id: string, hosts: readonly string[], publisher?: string): RegistryEntry => ({
@@ -1156,6 +1172,23 @@ const TRUSTED_PRESS: readonly RegistryEntry[] = [
     evidence: ["https://iapp.org/news/write-for-us"],
     reviewed: REVIEWED,
   },
+  {
+    // Q30 (sr-6), P-atlas. The status is P: the repository's README and LICENSE were read, but not
+    // the review process for contributions. The entry names atlas.mitre.org only: the other sites
+    // of mitre.org (attack.mitre.org, cwe.mitre.org) stay unknown.
+    id: "mitre-atlas",
+    hosts: ["atlas.mitre.org"],
+    category: "trusted_press",
+    publisher: "MITRE ATLAS",
+    reason:
+      "MITRE curates the ATLAS case studies from published research and incident reports, with references for each; the review process for contributions was not read",
+    status: "P",
+    evidence: [
+      "https://github.com/mitre-atlas/atlas-data",
+      "https://github.com/mitre-atlas/atlas-data/blob/main/LICENSE",
+    ],
+    reviewed: REVIEWED_SR6,
+  },
 ];
 
 const UNVERIFIED: readonly RegistryEntry[] = [
@@ -1340,6 +1373,62 @@ const UNVERIFIED: readonly RegistryEntry[] = [
     status: "U",
     evidence: [],
     reviewed: REVIEWED,
+  },
+  {
+    // Q30 (sr-6): the five entries from here on give a reason to hosts that were unverified and
+    // unreviewed already. Only incidentdatabase.ai belongs to a source of the vendor risk database
+    // (aiid, behind the closed gate Q29), and that source's records are classified by their
+    // database, not by this host.
+    id: "ai-incident-database",
+    hosts: ["incidentdatabase.ai"],
+    category: "unverified",
+    reason:
+      "The Responsible AI Collaborative's index of alleged AI harms: its editors summarise news reports, and an incident page restates allegations, not findings",
+    status: "P",
+    evidence: ["https://incidentdatabase.ai/terms-of-use/", "https://incidentdatabase.ai/cite/1/"],
+    reviewed: REVIEWED_SR6,
+  },
+  {
+    id: "aiaaic",
+    hosts: ["aiaaic.org"],
+    category: "unverified",
+    reason:
+      "A volunteer-compiled repository of entries that summarise media reports; no editorial or corrections policy was seen",
+    status: "P",
+    evidence: ["https://www.aiaaic.org/aiaaic-repository/user-guide"],
+    reviewed: REVIEWED_SR6,
+  },
+  {
+    // The entry covers every page of oecd.ai, the OECD's own policy pages on the host included
+    // (they were not reviewed). Revisit it if a finding ever needs one of them.
+    id: "oecd-ai",
+    hosts: ["oecd.ai"],
+    category: "unverified",
+    reason:
+      "Titles and summaries of OECD AIM incidents are generated by a language model from news articles; the OECD's policy pages on the host were not reviewed",
+    status: "P",
+    evidence: ["https://oecd.ai/en/incidents-methodology"],
+    reviewed: REVIEWED_SR6,
+  },
+  {
+    id: "avid",
+    hosts: ["avidml.org"],
+    category: "unverified",
+    reason:
+      "Community-contributed AI vulnerability reports; its last data commit was on 2026-03-26",
+    status: "P",
+    evidence: ["https://avidml.org/legal/terms-and-conditions"],
+    reviewed: REVIEWED_SR6,
+  },
+  {
+    id: "mit-ai-incident-tracker",
+    hosts: ["airisk.mit.edu"],
+    category: "unverified",
+    reason:
+      "The MIT AI Incident Tracker is a reclassification of the AI Incident Database's incidents, so it is not an independent publisher",
+    status: "P",
+    evidence: ["https://airisk.mit.edu/ai-incident-tracker"],
+    reviewed: REVIEWED_SR6,
   },
 ];
 
