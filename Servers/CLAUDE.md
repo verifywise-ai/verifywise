@@ -1,6 +1,6 @@
 # Servers — Backend Development Guide
 
-> **Last Updated:** 2026-11-02
+> **Last Updated:** 2026-11-06
 
 ---
 
@@ -166,7 +166,7 @@ Bug fixes to existing unversioned endpoints stay on their legacy router in `rout
 
 ### Background Jobs (BullMQ)
 
-`addAllJobs` (`jobs/producer.ts`) runs at every backend start, on every replica. Register a recurring job with `upsertJobScheduler`, which is idempotent by scheduler id, and never `obliterate` or `drain` a queue there: the automation queue also carries one-off jobs (extension sync runs, manual reports, emails, risk link recomputes) that other replicas queued or are running. To retire a scheduler, remove it by id with `removeJobScheduler`. Reference: `docs/technical/infrastructure/automations.md#startup-flow`.
+`addAllJobs` (`jobs/producer.ts`) runs at every backend start, on every replica. Register a recurring job with `upsertJobScheduler`, which is idempotent by scheduler id, and never `obliterate` or `drain` a queue there: the automation queue also carries one-off jobs (extension sync runs, manual reports, emails, risk link recomputes) that other replicas queued or are running. To retire a scheduler, remove it by id with `removeJobScheduler`. The automation queue keeps a finished job that sets no retention of its own for a day (completed) or a week (failed); a scheduler template keeps its failed runs a week (`FAILED_JOB_RETENTION`), never `removeOnFail: false`. A job with a fixed `jobId` sets `removeOnComplete` and `removeOnFail` to `true`, since BullMQ ignores an add whose id is still in use. Reference: `docs/technical/infrastructure/automations.md#startup-flow`.
 
 ---
 

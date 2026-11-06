@@ -64,9 +64,15 @@ Handles general automation tasks: email sending, report generation, vendor notif
 import { Queue } from "bullmq";
 
 export const automationQueue = new Queue("automation-actions", {
-  connection: { url: process.env.REDIS_URL }
+  connection: { url: REDIS_URL },
+  defaultJobOptions: {
+    removeOnComplete: COMPLETED_JOB_RETENTION,  // { age: 1 day, count: 1000 }
+    removeOnFail: FAILED_JOB_RETENTION,         // { age: 7 days, count: 5000 }
+  },
 });
 ```
+
+**Finished jobs.** BullMQ keeps a finished job until something removes it, and no code reads one back. A job that sets no `removeOnComplete`/`removeOnFail` of its own is kept for a day after it completes (at most 1000) and for a week after it fails (at most 5000). These are the automation emails from `enqueueAutomationAction`, `generate_report_manual`, `send_pmm_notification` and `send_report_notification_daily`, and they carry recipients and message bodies. Every scheduler removes a completed run at once and keeps a failed run for a week (`FAILED_JOB_RETENTION` in its template). The one-off jobs with a fixed id (`extension_sync_run`, the risk link jobs, `intake_assessment`) remove themselves as soon as they settle, because BullMQ ignores an add whose id is still in use. BullMQ applies `age` and `count` when another job of the same kind finishes, not on a timer.
 
 ### Slack Notifications Queue
 
@@ -121,7 +127,7 @@ export async function scheduleVendorReviewDateNotification() {
     {
       name: "send_vendor_notification",
       data: { type: "review_date" },
-      opts: { removeOnComplete: true, removeOnFail: false },
+      opts: { removeOnComplete: true, removeOnFail: FAILED_JOB_RETENTION },
     }
   );
 }
@@ -143,7 +149,7 @@ export async function scheduleReportNotification() {
     {
       name: "send_report_notification",
       data: { type: "report_notification" },
-      opts: { removeOnComplete: true, removeOnFail: false },
+      opts: { removeOnComplete: true, removeOnFail: FAILED_JOB_RETENTION },
     }
   );
 }
@@ -166,7 +172,7 @@ export async function schedulePMMHourlyCheck() {
     {
       name: "pmm_hourly_check",
       data: { type: "pmm" },
-      opts: { removeOnComplete: true, removeOnFail: false },
+      opts: { removeOnComplete: true, removeOnFail: FAILED_JOB_RETENTION },
     }
   );
 }
@@ -192,7 +198,7 @@ await automationQueue.upsertJobScheduler(
   {
     name: "report_scheduler_tick",
     data: { type: "reporting" },
-    opts: { removeOnComplete: true, removeOnFail: false },
+    opts: { removeOnComplete: true, removeOnFail: FAILED_JOB_RETENTION },
   }
 );
 ```
@@ -654,7 +660,7 @@ export const redisClient = new IORedis(
 ```typescript
 worker.on("failed", (job, err) => {
   console.error(`Job ${job?.id} failed: ${err.message}`);
-  // Jobs with removeOnFail: false are kept for debugging
+  // Failed jobs stay in the failed set for a week (see Finished jobs)
 });
 
 worker.on("error", (err) => {
@@ -672,7 +678,7 @@ await queue.add(jobName, data, {
     delay: 1000,                  // 1s, 2s, 4s delays
   },
   removeOnComplete: true,
-  removeOnFail: false,            // Keep failed jobs for inspection
+  removeOnFail: { age: 7 * 24 * 3600 },  // Keep failed jobs a week for inspection
 });
 ```
 

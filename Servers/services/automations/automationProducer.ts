@@ -2,9 +2,27 @@ import { Queue } from "bullmq";
 import { REDIS_URL } from "../../database/redis";
 import logger from "../../utils/logger/fileLogger";
 
+const DAY_SECONDS = 24 * 60 * 60;
+
+/**
+ * How long finished jobs stay in Redis for inspection (`age` in seconds, at
+ * most `count` jobs). BullMQ keeps a finished job for good unless its options
+ * say otherwise, no code reads one back, and the jobs queued without options of
+ * their own (the automation emails, manual reports, PMM notifications) carry
+ * recipients and message bodies.
+ */
+const COMPLETED_JOB_RETENTION = { age: DAY_SECONDS, count: 1000 };
+const FAILED_JOB_RETENTION = { age: 7 * DAY_SECONDS, count: 5000 };
+
 // Create a new queue (connected to Redis using environment variable)
 export const automationQueue = new Queue("automation-actions", {
   connection: { url: REDIS_URL },
+  // For the jobs that set no retention of their own. The schedulers below keep
+  // their failed runs as long.
+  defaultJobOptions: {
+    removeOnComplete: COMPLETED_JOB_RETENTION,
+    removeOnFail: FAILED_JOB_RETENTION,
+  },
 });
 
 export async function enqueueAutomationAction(
@@ -152,7 +170,7 @@ export async function scheduleVendorReviewDateNotification() {
       data: { type: "review_date" },
       opts: {
         removeOnComplete: true,
-        removeOnFail: false,
+        removeOnFail: FAILED_JOB_RETENTION,
       },
     },
   );
@@ -171,7 +189,7 @@ export async function schedulePolicyDueSoonNotification() {
       data: { type: "policy_due_soon" },
       opts: {
         removeOnComplete: true,
-        removeOnFail: false,
+        removeOnFail: FAILED_JOB_RETENTION,
       },
     },
   );
@@ -190,7 +208,7 @@ export async function scheduleReportNotification() {
       data: { type: "report_notification" },
       opts: {
         removeOnComplete: true,
-        removeOnFail: false,
+        removeOnFail: FAILED_JOB_RETENTION,
       },
     },
   );
@@ -209,7 +227,7 @@ export async function schedulePMMHourlyCheck() {
       data: { type: "pmm" },
       opts: {
         removeOnComplete: true,
-        removeOnFail: false,
+        removeOnFail: FAILED_JOB_RETENTION,
       },
     },
   );
@@ -227,7 +245,7 @@ export async function scheduleShadowAiJobs() {
       data: { type: "shadow_ai" },
       opts: {
         removeOnComplete: true,
-        removeOnFail: false,
+        removeOnFail: FAILED_JOB_RETENTION,
       },
     },
   );
@@ -241,7 +259,7 @@ export async function scheduleShadowAiJobs() {
       data: { type: "shadow_ai" },
       opts: {
         removeOnComplete: true,
-        removeOnFail: false,
+        removeOnFail: FAILED_JOB_RETENTION,
       },
     },
   );
@@ -255,7 +273,7 @@ export async function scheduleShadowAiJobs() {
       data: { type: "shadow_ai" },
       opts: {
         removeOnComplete: true,
-        removeOnFail: false,
+        removeOnFail: FAILED_JOB_RETENTION,
       },
     },
   );
@@ -269,7 +287,7 @@ export async function scheduleShadowAiJobs() {
       data: { type: "shadow_ai" },
       opts: {
         removeOnComplete: true,
-        removeOnFail: false,
+        removeOnFail: FAILED_JOB_RETENTION,
       },
     },
   );
@@ -283,7 +301,7 @@ export async function scheduleShadowAiJobs() {
       data: { type: "ai_gateway" },
       opts: {
         removeOnComplete: true,
-        removeOnFail: false,
+        removeOnFail: FAILED_JOB_RETENTION,
       },
     },
   );
@@ -300,7 +318,7 @@ export async function scheduleAgentDiscoverySync() {
       data: { type: "agent_discovery" },
       opts: {
         removeOnComplete: true,
-        removeOnFail: false,
+        removeOnFail: FAILED_JOB_RETENTION,
       },
     },
   );
@@ -317,7 +335,7 @@ export async function scheduleAiDetectionScanCheck() {
       data: { type: "ai_detection" },
       opts: {
         removeOnComplete: true,
-        removeOnFail: false,
+        removeOnFail: FAILED_JOB_RETENTION,
       },
     },
   );
@@ -459,7 +477,7 @@ export async function scheduleExtensionSyncTick() {
       data: {},
       opts: {
         removeOnComplete: true,
-        removeOnFail: false,
+        removeOnFail: FAILED_JOB_RETENTION,
       },
     },
   );
@@ -476,7 +494,7 @@ export async function scheduleAiGatewayRiskDetection() {
       data: { type: "ai_gateway_risk" },
       opts: {
         removeOnComplete: true,
-        removeOnFail: false,
+        removeOnFail: FAILED_JOB_RETENTION,
       },
     },
   );
@@ -493,7 +511,7 @@ export async function scheduleAiGatewayCacheCleanup() {
       data: { type: "ai_gateway_cache" },
       opts: {
         removeOnComplete: true,
-        removeOnFail: false,
+        removeOnFail: FAILED_JOB_RETENTION,
       },
     },
   );
@@ -510,7 +528,7 @@ export async function scheduleMcpGatewayCleanup() {
       data: { type: "mcp_gateway" },
       opts: {
         removeOnComplete: true,
-        removeOnFail: false,
+        removeOnFail: FAILED_JOB_RETENTION,
       },
     },
   );
@@ -527,7 +545,7 @@ export async function scheduleProactiveRiskAnomalyDetection() {
       data: { type: "proactive" },
       opts: {
         removeOnComplete: true,
-        removeOnFail: false,
+        removeOnFail: FAILED_JOB_RETENTION,
       },
     },
   );
@@ -546,7 +564,7 @@ export async function scheduleMrmRevalidationSweep() {
       data: { type: "mrm_revalidation" },
       opts: {
         removeOnComplete: true,
-        removeOnFail: false,
+        removeOnFail: FAILED_JOB_RETENTION,
       },
     },
   );
@@ -563,7 +581,7 @@ export async function scheduleProactiveComplianceScoreCheck() {
       data: { type: "proactive" },
       opts: {
         removeOnComplete: true,
-        removeOnFail: false,
+        removeOnFail: FAILED_JOB_RETENTION,
       },
     },
   );
@@ -580,7 +598,7 @@ export async function scheduleProactiveTaskOverdueCheck() {
       data: { type: "proactive" },
       opts: {
         removeOnComplete: true,
-        removeOnFail: false,
+        removeOnFail: FAILED_JOB_RETENTION,
       },
     },
   );
@@ -597,7 +615,7 @@ export async function scheduleProactiveWeeklyDigest() {
       data: { type: "proactive" },
       opts: {
         removeOnComplete: true,
-        removeOnFail: false,
+        removeOnFail: FAILED_JOB_RETENTION,
       },
     },
   );
@@ -620,7 +638,7 @@ export async function scheduleReportSchedulerTick() {
       data: { type: "reporting" },
       opts: {
         removeOnComplete: true,
-        removeOnFail: false,
+        removeOnFail: FAILED_JOB_RETENTION,
       },
     },
   );
@@ -638,7 +656,7 @@ export async function scheduleWorkflowAutopilotJobs() {
       data: { type: "workflow" },
       opts: {
         removeOnComplete: true,
-        removeOnFail: false,
+        removeOnFail: FAILED_JOB_RETENTION,
       },
     },
   );
@@ -652,7 +670,7 @@ export async function scheduleWorkflowAutopilotJobs() {
       data: { type: "workflow" },
       opts: {
         removeOnComplete: true,
-        removeOnFail: false,
+        removeOnFail: FAILED_JOB_RETENTION,
       },
     },
   );
@@ -666,7 +684,7 @@ export async function scheduleWorkflowAutopilotJobs() {
       data: { type: "workflow" },
       opts: {
         removeOnComplete: true,
-        removeOnFail: false,
+        removeOnFail: FAILED_JOB_RETENTION,
       },
     },
   );
@@ -685,7 +703,7 @@ export async function scheduleMrmRetentionPrune() {
       data: { type: "mrm_retention" },
       opts: {
         removeOnComplete: true,
-        removeOnFail: false,
+        removeOnFail: FAILED_JOB_RETENTION,
       },
     },
   );
@@ -704,7 +722,7 @@ export async function scheduleDataRetentionPrune() {
       data: { type: "data_retention" },
       opts: {
         removeOnComplete: true,
-        removeOnFail: false,
+        removeOnFail: FAILED_JOB_RETENTION,
       },
     },
   );
@@ -724,7 +742,7 @@ export async function scheduleFileExpirySweep() {
       data: { type: "file_expiry" },
       opts: {
         removeOnComplete: true,
-        removeOnFail: false,
+        removeOnFail: FAILED_JOB_RETENTION,
       },
     },
   );
@@ -744,7 +762,7 @@ export async function scheduleIntakeConfirmationSweep() {
       data: { type: "intake_confirmation" },
       opts: {
         removeOnComplete: true,
-        removeOnFail: false,
+        removeOnFail: FAILED_JOB_RETENTION,
       },
     },
   );
@@ -764,7 +782,7 @@ export async function scheduleLifecycleConfirmationSweep() {
       data: { type: "lifecycle_confirmation" },
       opts: {
         removeOnComplete: true,
-        removeOnFail: false,
+        removeOnFail: FAILED_JOB_RETENTION,
       },
     },
   );
@@ -783,7 +801,7 @@ export async function scheduleEvidenceFreshnessSweep() {
       data: {},
       opts: {
         removeOnComplete: true,
-        removeOnFail: false,
+        removeOnFail: FAILED_JOB_RETENTION,
       },
     },
   );
@@ -802,7 +820,7 @@ export async function scheduleDeadlineEscalationSweep() {
       data: {},
       opts: {
         removeOnComplete: true,
-        removeOnFail: false,
+        removeOnFail: FAILED_JOB_RETENTION,
       },
     },
   );
@@ -821,7 +839,7 @@ export async function scheduleStaleInheritanceNotifySweep() {
       data: {},
       opts: {
         removeOnComplete: true,
-        removeOnFail: false,
+        removeOnFail: FAILED_JOB_RETENTION,
       },
     },
   );
@@ -841,7 +859,7 @@ export async function scheduleApprovalOverdueSweep() {
       data: {},
       opts: {
         removeOnComplete: true,
-        removeOnFail: false,
+        removeOnFail: FAILED_JOB_RETENTION,
       },
     },
   );
@@ -859,7 +877,7 @@ export async function scheduleAiTrustIndexSync() {
       data: {},
       opts: {
         removeOnComplete: true,
-        removeOnFail: false,
+        removeOnFail: FAILED_JOB_RETENTION,
       },
     },
   );

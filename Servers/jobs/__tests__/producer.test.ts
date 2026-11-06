@@ -8,8 +8,9 @@
  *
  * The real producers run here against an in-memory stand-in for BullMQ's Queue.
  * It keeps the BullMQ behaviour these tests depend on: jobs by id (an add with
- * an id in use is ignored), job schedulers by id (an upsert replaces one), and
- * obliterate, which deletes both.
+ * an id in use is ignored), job schedulers by id (an upsert replaces one, and
+ * its job options sit on top of the queue's default ones), and obliterate,
+ * which deletes both.
  *
  * @module jobs/tests/producer
  */
@@ -27,6 +28,7 @@ interface MockSchedulerRecord {
   pattern?: string;
   tz?: string;
   iterationCount?: number;
+  template?: { opts?: Record<string, unknown> };
 }
 
 interface MockQueueState {
@@ -44,7 +46,10 @@ jest.mock("bullmq", () => {
     schedulers = new Map<string, MockSchedulerRecord>();
     private lastId = 0;
 
-    constructor(public name: string) {
+    constructor(
+      public name: string,
+      private queueOpts: { defaultJobOptions?: Record<string, unknown> } = {},
+    ) {
       mockQueues.set(name, this);
     }
 
@@ -61,7 +66,7 @@ jest.mock("bullmq", () => {
     async upsertJobScheduler(
       id: string,
       repeat: { pattern: string; tz?: string },
-      template: { name: string },
+      template: { name: string; opts?: Record<string, unknown> },
     ) {
       const iterationCount = this.schedulers.get(id)?.iterationCount ?? 1;
       this.schedulers.set(id, {
@@ -70,6 +75,8 @@ jest.mock("bullmq", () => {
         next: Date.now() + 60_000,
         ...repeat,
         iterationCount,
+        // As in BullMQ, the queue's default job options sit under the template's.
+        template: { opts: { ...this.queueOpts.defaultJobOptions, ...template.opts } },
       });
     }
 
@@ -96,7 +103,14 @@ jest.mock("bullmq", () => {
       };
     }
   }
-  return { Queue: jest.fn().mockImplementation((name: string) => new FakeQueue(name)) };
+  return {
+    Queue: jest
+      .fn()
+      .mockImplementation(
+        (name: string, queueOpts?: { defaultJobOptions?: Record<string, unknown> }) =>
+          new FakeQueue(name, queueOpts),
+      ),
+  };
 });
 
 jest.mock("../../database/redis", () => ({
@@ -207,5 +221,18 @@ describe("addAllJobs", () => {
     expect([...automationQueue().schedulers.keys()]).toEqual(
       expect.arrayContaining(["send_vendor_notification", "extension_sync_tick"]),
     );
+  });
+
+  it("keeps the failed runs of no automation scheduler forever", async () => {
+    await addAllJobs();
+
+    // BullMQ keeps a failed job for good when its removeOnFail is false or unset.
+    const keptForever = [...automationQueue().schedulers.values()]
+      .filter(({ template }) => {
+        const removeOnFail = template?.opts?.removeOnFail;
+        return removeOnFail === false || removeOnFail === undefined;
+      })
+      .map(({ key }) => key);
+    expect(keptForever).toEqual([]);
   });
 });
