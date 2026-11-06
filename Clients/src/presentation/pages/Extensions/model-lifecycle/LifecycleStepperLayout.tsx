@@ -3,6 +3,7 @@ import { Box, Stack, CircularProgress, Typography } from "@mui/material";
 import { LifecyclePhase, LifecycleProgress } from "./useModelLifecycle";
 import LifecycleSidebar from "./LifecycleSidebar";
 import LifecyclePhaseContent from "./LifecyclePhaseContent";
+import { background, border, text } from "../../../themes/palette";
 
 interface LifecycleStepperLayoutProps {
   phases: LifecyclePhase[];
@@ -46,7 +47,7 @@ export default function LifecycleStepperLayout({
 
   if (phases.length === 0) {
     return (
-      <Typography sx={{ textAlign: "center", color: "#667085", py: 4 }}>
+      <Typography sx={{ textAlign: "center", color: text.icon, py: 4 }}>
         No lifecycle phases configured. Contact an administrator to set up the model lifecycle.
       </Typography>
     );
@@ -55,9 +56,9 @@ export default function LifecycleStepperLayout({
   return (
     <Box
       sx={{
-        border: "1px solid #E0E4E9",
+        border: `1px solid ${border.light}`,
         borderRadius: "4px",
-        backgroundColor: "#fff",
+        backgroundColor: background.main,
         overflow: "hidden",
         display: "flex",
         flexDirection: { xs: "column", md: "row" },
@@ -78,8 +79,8 @@ export default function LifecycleStepperLayout({
             onValueChanged={onValueChanged}
           />
         ) : (
-          <Stack alignItems="center" justifyContent="center" sx={{ flex: 1, p: "24px" }}>
-            <Typography sx={{ color: "#667085" }}>Select a phase from the sidebar</Typography>
+          <Stack alignItems="center" justifyContent="center" sx={{ flex: 1, p: 12 }}>
+            <Typography sx={{ color: text.icon }}>Select a phase from the sidebar</Typography>
           </Stack>
         )}
       </Box>
