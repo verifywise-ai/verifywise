@@ -1,6 +1,6 @@
 jest.setTimeout(60000);
 
-import { QueryTypes } from "sequelize";
+import { QueryTypes, Transaction } from "sequelize";
 import { sequelize } from "../../database/db";
 import { cleanupDatabase, createTestOrganization, createTestUser } from "./helpers";
 import { createInvitationQuery } from "../../utils/invitation.utils";
@@ -16,13 +16,44 @@ const EXPIRES = new Date("2026-11-05T12:00:00.000Z");
 const invite = async (orgId: number, email: string, roleId: number, invitedBy: number) =>
   (await createInvitationQuery(orgId, email, "In", "Vitee", roleId, invitedBy, EXPIRES))!;
 
-const pendingEmails = async (orgId: number) =>
+const pendingEmails = async (orgId: number, transaction: Transaction) =>
   (
     await sequelize.query<{ email: string }>(
       `SELECT email FROM invitations WHERE organization_id = :orgId AND status = 'pending' ORDER BY email`,
-      { replacements: { orgId }, type: QueryTypes.SELECT },
+      { replacements: { orgId }, type: QueryTypes.SELECT, transaction },
     )
   ).map((r) => r.email);
+
+// The migration ran on 2026-10-06, while users still carried organization_id
+// and role_id. 20261028124759-create-organization-members moved both into
+// organization_members and dropped them, so its SQL no longer runs on today's
+// schema. Run it on the schema it ran against: inside a transaction, put the
+// two columns back from organization_members, run the migration, read the
+// result through `read`, then roll everything back.
+const migrateOnLegacyUsers = async <T>(
+  read: (transaction: Transaction) => Promise<T>,
+): Promise<T> => {
+  const transaction = await sequelize.transaction();
+  try {
+    await sequelize.query(
+      `ALTER TABLE verifywise.users ADD COLUMN organization_id INTEGER, ADD COLUMN role_id INTEGER`,
+      { transaction },
+    );
+    await sequelize.query(
+      `UPDATE verifywise.users u SET organization_id = m.organization_id, role_id = m.role_id
+         FROM verifywise.organization_members m WHERE m.user_id = u.id`,
+      { transaction },
+    );
+    await migration.up({
+      sequelize: {
+        query: (sql: string, options?: object) => sequelize.query(sql, { ...options, transaction }),
+      },
+    });
+    return await read(transaction);
+  } finally {
+    await transaction.rollback();
+  }
+};
 
 // Before the /invite fix any logged-in user could invite anyone, with any
 // role, into any organization. The migration removes the pending invitations
@@ -47,17 +78,16 @@ describe("migration: revoke invitations the invite rules refuse", () => {
       replacements: { id: accepted.id },
     });
 
-    await migration.up({ sequelize });
+    const { pending, acceptedRows } = await migrateOnLegacyUsers(async (transaction) => {
+      const [{ count }] = await sequelize.query<{ count: string }>(
+        `SELECT COUNT(*) AS count FROM invitations WHERE id = :id`,
+        { replacements: { id: accepted.id }, type: QueryTypes.SELECT, transaction },
+      );
+      return { pending: await pendingEmails(orgA, transaction), acceptedRows: Number(count) };
+    });
 
-    expect(await pendingEmails(orgA)).toEqual([
-      "kept-admin-invites-admin@x.com",
-      "kept-admin-invites-editor@x.com",
-    ]);
-    const [{ count }] = await sequelize.query<{ count: string }>(
-      `SELECT COUNT(*) AS count FROM invitations WHERE id = :id`,
-      { replacements: { id: accepted.id }, type: QueryTypes.SELECT },
-    );
-    expect(Number(count)).toBe(1);
+    expect(pending).toEqual(["kept-admin-invites-admin@x.com", "kept-admin-invites-editor@x.com"]);
+    expect(acceptedRows).toBe(1);
   });
 
   it("keeps invites a super admin sent from outside the organization", async () => {
@@ -70,9 +100,9 @@ describe("migration: revoke invitations the invite rules refuse", () => {
     });
     await invite(orgA, "kept-super-admin-invite@x.com", 1, superAdmin);
 
-    await migration.up({ sequelize });
+    const pending = await migrateOnLegacyUsers((transaction) => pendingEmails(orgA, transaction));
 
-    expect(await pendingEmails(orgA)).toEqual(["kept-super-admin-invite@x.com"]);
+    expect(pending).toEqual(["kept-super-admin-invite@x.com"]);
   });
 
   it("revokes a super admin's invites into roles the organization cannot grant", async () => {
@@ -102,9 +132,9 @@ describe("migration: revoke invitations the invite rules refuse", () => {
     await invite(orgA, "revoked-foreign-custom@x.com", foreignRole, superAdmin);
     await invite(orgA, "revoked-super-admin-role@x.com", superAdminRole, superAdmin);
 
-    await migration.up({ sequelize });
+    const pending = await migrateOnLegacyUsers((transaction) => pendingEmails(orgA, transaction));
 
-    expect(await pendingEmails(orgA)).toEqual(["kept-builtin@x.com", "kept-own-custom@x.com"]);
+    expect(pending).toEqual(["kept-builtin@x.com", "kept-own-custom@x.com"]);
   });
 
   it("revokes an invite into another organization's custom role", async () => {
@@ -119,9 +149,9 @@ describe("migration: revoke invitations the invite rules refuse", () => {
     );
     await invite(orgA, "revoked-foreign-role@x.com", foreignRole, adminA);
 
-    await migration.up({ sequelize });
+    const pending = await migrateOnLegacyUsers((transaction) => pendingEmails(orgA, transaction));
 
-    expect(await pendingEmails(orgA)).toEqual([]);
+    expect(pending).toEqual([]);
   });
 
   it("keeps custom-role invites only from a custom role allowed to invite, within its access", async () => {
@@ -157,9 +187,9 @@ describe("migration: revoke invitations the invite rules refuse", () => {
     await invite(orgA, "revoked-no-invite-permission@x.com", viewer, plain);
     await invite(orgA, "revoked-editor-grants-custom@x.com", viewer, editor);
 
-    await migration.up({ sequelize });
+    const pending = await migrateOnLegacyUsers((transaction) => pendingEmails(orgA, transaction));
 
-    expect(await pendingEmails(orgA)).toEqual(["kept-lead-grants-viewer@x.com"]);
+    expect(pending).toEqual(["kept-lead-grants-viewer@x.com"]);
   });
 
   it("revokes pending invitations with no recorded inviter", async () => {
@@ -173,8 +203,8 @@ describe("migration: revoke invitations the invite rules refuse", () => {
       replacements: { id: legacy.id },
     });
 
-    await migration.up({ sequelize });
+    const pending = await migrateOnLegacyUsers((transaction) => pendingEmails(orgA, transaction));
 
-    expect(await pendingEmails(orgA)).toEqual([]);
+    expect(pending).toEqual([]);
   });
 });
