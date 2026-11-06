@@ -2,7 +2,7 @@ import { useMemo, useCallback } from "react";
 import { Stack, Typography, Box } from "@mui/material";
 import { Check } from "lucide-react";
 import { LifecyclePhase, LifecycleProgress } from "./useModelLifecycle";
-import { background, brand, icon, text, border } from "../../../themes/palette";
+import { background, brand, text } from "../../../themes/palette";
 import { textStyles } from "../../../../presentation/themes/typography";
 
 interface LifecycleSidebarProps {
