@@ -92,8 +92,8 @@ export default function LifecycleSidebar({
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  backgroundColor: isComplete || isActive ? background.alt : background.main,
-                  color: isComplete || isActive ? border.light : icon.default,
+                  backgroundColor: isComplete || isActive ? brand.primary : background.surface,
+                  color: isComplete || isActive ? text.onPrimary : text.secondary,
                   ...textStyles.badge,
                 }}
               >

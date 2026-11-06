@@ -74,6 +74,7 @@ export const text = {
   tertiary: grey[600],
   accent: grey[400],
   disabled: grey[350],
+  onPrimary: grey[50],
   black: grey[950],
   icon: grey[450],
   muted: grey[600],
