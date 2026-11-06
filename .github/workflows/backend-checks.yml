@@ -150,7 +150,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        suite: [isolation-matrix, regression-suites, smoke-and-audit]
+        suite:
+          - isolation-matrix
+          - regression-suites
+          - feature-suites
+          - jira-incidents
+          - shadow-ai
+          - smoke-and-audit
         # (#4680) The isolation pack must be proven with the RLS runtime flag
         # both off (current default) and on (RLS_ENFORCEMENT_ENABLED=true), so
         # the flag can be flipped in production without losing the guarantee.
@@ -160,6 +166,12 @@ jobs:
           - suite: regression-suites
             rls: on
           - suite: smoke-and-audit
+            rls: on
+          - suite: feature-suites
+            rls: on
+          - suite: jira-incidents
+            rls: on
+          - suite: shadow-ai
             rls: on
     defaults:
       run:
@@ -249,6 +261,28 @@ jobs:
       - name: Run schema-drift tenant isolation audit
         if: matrix.suite == 'smoke-and-audit'
         run: npx ts-node scripts/auditTenantIsolationCoverage.ts
+
+      # These suites used to run in no CI job, so when #5179 moved users'
+      # organization and role into organization_members, two of them broke and
+      # nothing went red. They are split into three jobs so that none outlasts
+      # the Coverage Gate. Like the regex above, every pattern is anchored to
+      # `tests/integration/`, so no file runs in two jobs. The folder and prefix
+      # patterns pick up new files on their own; a new root-level suite has to
+      # be added to a list, here or in regression-suites.
+      #
+      # Root-level feature suites, plus the caching, contract and health packs.
+      - name: Run feature integration suites
+        if: matrix.suite == 'feature-suites'
+        run: |
+          npm run test:integration -- --testPathPatterns='tests/integration/((aiAppLifecycle|deadlineEscalation|euVisibleCategories\.highRiskRoles|evidenceFreshness|incidentUpdate\.concurrency|intakeAlignmentBackup\.migration|intakeReviewTime|invitations\.pending|invitations\.revokeRefused|testApp\.binding|useCaseIntakeInReview|useCaseLifecycle|users\.lastAdmin|vendors\.riskSuggestions)\.test\.ts|(caching|contract|health)/)'
+
+      - name: Run Jira incident integration suites
+        if: matrix.suite == 'jira-incidents'
+        run: npm run test:integration -- --testPathPatterns='tests/integration/jira-incidents/'
+
+      - name: Run Shadow AI integration suites
+        if: matrix.suite == 'shadow-ai'
+        run: npm run test:integration -- --testPathPatterns='tests/integration/shadowAi'
 
   api-docs-drift:
     name: API Docs Drift

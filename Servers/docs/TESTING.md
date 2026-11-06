@@ -36,6 +36,27 @@ scripts and `Servers/jest.config.js` on branch `chore/debora-one-fix-to-all`.
 | Tenant isolation          | `tests/integration/tenant-isolation/`                      | yes            | `test:integration` |
 | Performance               | `tests/perf/**` (owned by another team)                    | yes            | dedicated CI job   |
 
+### Which CI job runs which integration suite
+
+The `tenant-isolation-tests` job in `.github/workflows/backend-checks.yml` has
+one matrix entry per group of Postgres-backed suites. Each entry is its own job
+with its own database, and every pattern is anchored to `tests/integration/`
+so no file runs in two jobs:
+
+| Matrix entry        | Runs                                                                               |
+| ------------------- | ---------------------------------------------------------------------------------- |
+| `isolation-matrix`  | `tenant-isolation/`, once with RLS enforcement off and once with it on             |
+| `regression-suites` | the root-level regression suites in its list, plus `rate-limiting/limiter-wiring`  |
+| `feature-suites`    | the root-level feature suites in its list, plus `caching/`, `contract/`, `health/` |
+| `jira-incidents`    | `jira-incidents/`                                                                  |
+| `shadow-ai`         | every `shadowAi*` file                                                             |
+| `smoke-and-audit`   | `deadline-summary` (`npm run test:smoke`), then the schema-drift audit             |
+
+The rest of `rate-limiting/` needs no database and runs in `lint-and-build`
+(`npm run test:ratelimit`). A new file in one of the folders or under one of
+the prefixes above runs in CI on its own; a new root-level suite runs only once
+it is added to the `regression-suites` or `feature-suites` list.
+
 ## 2. Running the Postgres-backed suites locally
 
 1. **Database.** The compose stack's database service is `postgresdb`
