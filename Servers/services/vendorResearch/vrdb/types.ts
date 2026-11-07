@@ -32,7 +32,9 @@ export interface ParsedRecord {
     | "ai_incident"
     | "ai_case_study"
     | "crash_report_summary"
-    | "ai_device_authorizations";
+    | "ai_device_authorizations"
+    | "restricted_party"
+    | "ai_device_recall";
   title: string;
   /** The record as plain text, word for word the list's: what the model reads and quotes. */
   summary: string;

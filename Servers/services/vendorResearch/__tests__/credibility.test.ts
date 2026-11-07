@@ -72,6 +72,9 @@ const NHTSA_PAGE =
   "https://www.nhtsa.gov/laws-regulations/standing-general-order-crash-reporting?reportingEntity=acmeanalytics&automation=ads";
 const FDA_PAGE =
   "https://www.fda.gov/medical-devices/software-medical-device-samd/artificial-intelligence-enabled-medical-devices?company=acmeanalytics";
+const FDA_RECALL_PAGE =
+  "https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfRES/res.cfm?start_search=1&event_id=90001";
+const CSL_PAGE = "https://www.trade.gov/consolidated-screening-list?list=el&entry=acmeanalytics";
 const SEC_PAGE = "https://www.sec.gov/Archives/edgar/data/1/x.htm";
 const REUTERS = "https://www.reuters.com/technology/acme-breach";
 const BBC_UK = "https://www.bbc.co.uk/news/acme-breach";
@@ -81,6 +84,25 @@ const ICO_RESULT = "https://ico.org.uk/x";
 const LOCAL_NEWS = "https://localnews.example/x";
 const INCIDENT_NOTICE = `${SITE}/blog/security-update`;
 const WIRE = "https://www.prnewswire.com/news-releases/acme-iso-27001";
+
+/** What the lookup keeps of an entry of the US Consolidated Screening List it offered: by name unless said. */
+const cslVrdb = (over: Partial<VrdbRecordMeta> = {}): VrdbRecordMeta => ({
+  recordId: 11,
+  sourceId: "csl",
+  sourceRecordId: "el:acmeanalytics",
+  strength: "weak",
+  method: "name_exact",
+  matchedKey: "name:acmeanalytics",
+  status: "active",
+  asOf: "2026-11-07",
+  stale: false,
+  ...over,
+});
+const CSL_BY_WEBSITE = cslVrdb({
+  strength: "strong",
+  method: "domain",
+  matchedKey: "domain:acme-analytics.example",
+});
 
 describe("credibilityOf", () => {
   describe("the worked cases of D5.7", () => {
@@ -488,6 +510,7 @@ describe("credibilityOf", () => {
       ["atlas", "trusted_press", ATLAS_PAGE],
       ["nhtsa_sgo", "official", NHTSA_PAGE],
       ["fda_ai_devices", "official", FDA_PAGE],
+      ["fda_device_recalls", "official", FDA_RECALL_PAGE],
     ] as const)(
       "a record of %s found by name is Low, name_only, with the note, whatever its class (%s)",
       (id, category, url) => {
@@ -519,6 +542,91 @@ describe("credibilityOf", () => {
           provenance: { [ATLAS_PAGE]: { record: "atlas", status: "withdrawn" } },
         }),
       ).toMatchObject({ label: "medium", basis: { rule: "trusted_press_one", name_only: true } });
+    });
+  });
+
+  describe("the US Consolidated Screening List: found by name it is Low support, found by a website it is as strong as the UK and EU lists", () => {
+    const cslRecord = (meta: VrdbRecordMeta, extra: EvidenceSource[] = []) =>
+      rate("legal_regulatory", [source(CSL_PAGE), ...extra], {
+        provenance: { [CSL_PAGE]: { record: "csl", vrdb: meta } },
+      });
+
+    it("a finding whose only source is a weak csl record is Low, name_only, with the note", () => {
+      const rated = cslRecord(cslVrdb());
+
+      expect(rated).toMatchObject({ label: "low", basis: { rule: "name_only", name_only: true } });
+      // Official by its class, weak by its match: the class labels the publisher, the match decides
+      // the support, and the basis keeps the record's id and the day of its copy.
+      expect(rated.basis.sources).toEqual([
+        {
+          url: CSL_PAGE,
+          category: "official",
+          publisher: "csl",
+          entry: null,
+          reviewed: true,
+          reading: "read",
+          record: {
+            source: "csl",
+            match: "weak",
+            status: "active",
+            source_record_id: "el:acmeanalytics",
+            as_of: "2026-11-07",
+          },
+        },
+      ]);
+    });
+
+    it("a csl record the run has no lookup for is weak by its class: Low, name_only, as an OFAC entry is (case 9)", () => {
+      expect(
+        rate("legal_regulatory", [source(CSL_PAGE)], {
+          provenance: { [CSL_PAGE]: { record: "csl" } },
+        }),
+      ).toMatchObject({ label: "low", basis: { rule: "name_only", name_only: true } });
+    });
+
+    it("a strong csl record, matched by a website of the vendor, is High, official_record, with no note, as a UK or EU record is", () => {
+      const rated = cslRecord(CSL_BY_WEBSITE);
+
+      expect(rated).toMatchObject({
+        label: "high",
+        basis: { rule: "official_record", name_only: false },
+      });
+      expect(rated.basis.sources[0].record).toEqual({
+        source: "csl",
+        match: "strong",
+        status: "active",
+        source_record_id: "el:acmeanalytics",
+        as_of: "2026-11-07",
+      });
+    });
+
+    it("a csl record that its list delisted is Low, inactive: with the note when it matched by name, and without it when it matched by a website", () => {
+      expect(cslRecord(cslVrdb({ status: "delisted" }))).toMatchObject({
+        label: "low",
+        basis: { rule: "inactive", name_only: true },
+      });
+      expect(cslRecord({ ...CSL_BY_WEBSITE, status: "delisted" })).toMatchObject({
+        label: "low",
+        basis: { rule: "inactive", name_only: false },
+      });
+    });
+
+    it("a weak csl record is no publisher: beside Reuters it is Medium by trusted_press_one, beside Reuters and the BBC High, both with the note", () => {
+      expect(cslRecord(cslVrdb(), [source(REUTERS)])).toMatchObject({
+        label: "medium",
+        basis: { rule: "trusted_press_one", name_only: true },
+      });
+      expect(cslRecord(cslVrdb(), [source(REUTERS), source(BBC_UK)])).toMatchObject({
+        label: "high",
+        basis: { rule: "trusted_press_two", name_only: true },
+      });
+    });
+
+    it("a weak csl record beside an unverified source is Low by name_only, not by unverified", () => {
+      expect(cslRecord(cslVrdb(), [source("https://medium.com/@x/acme-sanctions")])).toMatchObject({
+        label: "low",
+        basis: { rule: "name_only", name_only: true },
+      });
     });
   });
 
@@ -956,6 +1064,32 @@ describe("decideCredibility", () => {
       "an AI Incident Database record and Reuters",
       rate("ai_specific", [source(AIID_PAGE), source(REUTERS)], {
         provenance: { [AIID_PAGE]: { record: "aiid" as const } },
+      }),
+    ],
+    [
+      "a screening-list record found by name",
+      rate("legal_regulatory", [source(CSL_PAGE)], {
+        provenance: { [CSL_PAGE]: { record: "csl" as const, vrdb: cslVrdb() } },
+      }),
+    ],
+    [
+      "a screening-list record found by a website",
+      rate("legal_regulatory", [source(CSL_PAGE)], {
+        provenance: { [CSL_PAGE]: { record: "csl" as const, vrdb: CSL_BY_WEBSITE } },
+      }),
+    ],
+    [
+      "a screening-list record that was delisted",
+      rate("legal_regulatory", [source(CSL_PAGE)], {
+        provenance: {
+          [CSL_PAGE]: { record: "csl" as const, vrdb: cslVrdb({ status: "delisted" }) },
+        },
+      }),
+    ],
+    [
+      "a device recall found by name and Reuters",
+      rate("ai_specific", [source(FDA_RECALL_PAGE), source(REUTERS)], {
+        provenance: { [FDA_RECALL_PAGE]: { record: "fda_device_recalls" as const } },
       }),
     ],
     ["no sources", rate("security_incidents", [])],

@@ -26,10 +26,12 @@ export const RECORD_SOURCE_IDS = [
   "eu_fsf",
   "cve",
   "un_sanctions",
+  "csl",
   "aiid",
   "atlas",
   "nhtsa_sgo",
   "fda_ai_devices",
+  "fda_device_recalls",
 ] as const;
 export type RecordSourceId = (typeof RECORD_SOURCE_IDS)[number];
 
@@ -40,8 +42,10 @@ export type RecordSourceId = (typeof RECORD_SOURCE_IDS)[number];
  * gate (vrdb/gates.ts) is neither copied nor looked up. Q4 (sec) and Q7 (cve) are open, so only
  * un_sanctions (Q6) and aiid (Q29) wait for their gates. The AI-specific lists are aiid (the AI
  * Incident Database), atlas (MITRE ATLAS case studies), nhtsa_sgo (NHTSA's crash reports of
- * automated driving and driver assistance systems) and fda_ai_devices (the FDA's list of
- * AI-enabled medical devices).
+ * automated driving and driver assistance systems), fda_ai_devices (the FDA's list of
+ * AI-enabled medical devices) and fda_device_recalls (the FDA's recalls of those devices). The
+ * csl list is the US Consolidated Screening List: the export control and trade restriction lists
+ * of the Departments of Commerce, State and Treasury, without the SDN list that ofac holds.
  */
 export const VRDB_SOURCE_IDS = [
   "kev",
@@ -52,10 +56,12 @@ export const VRDB_SOURCE_IDS = [
   "eu_fsf",
   "cve",
   "un_sanctions",
+  "csl",
   "aiid",
   "atlas",
   "nhtsa_sgo",
   "fda_ai_devices",
+  "fda_device_recalls",
 ] as const;
 export type VrdbSourceId = (typeof VRDB_SOURCE_IDS)[number];
 

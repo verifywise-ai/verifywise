@@ -116,9 +116,11 @@ function lookupKeysOf(input: Pick<OfferInput, "target" | "verifiedDomains" | "re
 const isVulnerability = (row: VrdbRow) => row.recordType === "vulnerability";
 
 /**
- * The record types that are events: a vulnerability, a filing, an AI incident or case study, and a
- * summary of crash reports. The lookback applies to them, and they keep their day. A sanctions
- * entry and the FDA's authorizations are states: no lookback, and they are as of the copy.
+ * The record types that are events: a vulnerability, a filing, an AI incident or case study, a
+ * summary of crash reports, and a recall of an AI-enabled device. The lookback applies to them, and
+ * they keep their day. A sanctions entry, an entry of the screening list (`restricted_party`: a
+ * listing in force, whatever its age) and the FDA's authorizations are states: no lookback, and
+ * they are as of the copy.
  */
 const EVENT_RECORD_TYPES: ReadonlySet<string> = new Set([
   "vulnerability",
@@ -126,6 +128,7 @@ const EVENT_RECORD_TYPES: ReadonlySet<string> = new Set([
   "ai_incident",
   "ai_case_study",
   "crash_report_summary",
+  "ai_device_recall",
 ]);
 
 const isEvent = (row: VrdbRow) => EVENT_RECORD_TYPES.has(row.recordType);

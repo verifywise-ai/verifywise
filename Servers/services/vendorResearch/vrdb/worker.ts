@@ -20,9 +20,11 @@ import { guardedConditionalFetch } from "../../webResearch/guardedFetch";
 import { type VendorResearchConfig, getVendorResearchConfig } from "../config";
 import { aiidConnector } from "./connectors/aiid";
 import { atlasConnector } from "./connectors/atlas";
+import { cslConnector } from "./connectors/csl";
 import { cveConnector } from "./connectors/cve";
 import { euConnector } from "./connectors/eu";
 import { fdaConnector } from "./connectors/fda";
+import { fdaRecallsConnector } from "./connectors/fdaRecalls";
 import { kevConnector } from "./connectors/kev";
 import { nhtsaConnector } from "./connectors/nhtsa";
 import { ofacConnector } from "./connectors/ofac";
@@ -48,10 +50,12 @@ const CONNECTORS: Partial<Record<VrdbSourceId, Connector | IncrementalConnector>
   eu_fsf: euConnector,
   cve: cveConnector,
   un_sanctions: unConnector,
+  csl: cslConnector,
   aiid: aiidConnector,
   atlas: atlasConnector,
   nhtsa_sgo: nhtsaConnector,
   fda_ai_devices: fdaConnector,
+  fda_device_recalls: fdaRecallsConnector,
 };
 
 /**

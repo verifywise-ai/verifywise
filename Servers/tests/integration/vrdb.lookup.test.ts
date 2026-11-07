@@ -11,6 +11,7 @@ import "./setup";
 import { QueryTypes } from "sequelize";
 import { cleanupDatabase, createTestOrganization } from "./helpers";
 import { sequelize } from "../../database/db";
+import type { VrdbSourceId } from "../../domain.layer/interfaces/i.vendorResearch";
 import { createTestVendor } from "../factories";
 import type { VendorResearchConfig } from "../../services/vendorResearch/config";
 import {
@@ -96,11 +97,47 @@ const aiRecord = (
   sourceUpdatedAt: null,
 });
 
+/**
+ * An entry of the US Consolidated Screening List: a listing in force, found by a name or a website
+ * (the same fictional company as the other lists').
+ */
+const screeningRecord = (id: string, keys: string[], publishedAt: string | null): ParsedRecord => ({
+  sourceRecordId: id,
+  recordType: "restricted_party",
+  title: `Consolidated Screening List: ${id}`,
+  summary: `US Consolidated Screening List (trade.gov). Entry ${id} of a list of export controls.`,
+  url: `https://www.trade.gov/consolidated-screening-list?entry=${encodeURIComponent(id)}`,
+  identifiers: { names: ["Acme Analytics"] },
+  matchKeys: keys,
+  publishedAt,
+  sourceUpdatedAt: null,
+});
+
+/** The copy of a list in the tables, as a sync of 2026-10-30 left it. */
+async function seedList(
+  sourceId: VrdbSourceId,
+  records: ParsedRecord[],
+  missingStatus: "withdrawn" | "delisted",
+): Promise<void> {
+  await upsertVrdbSourceQuery(vrdbSourceOf(sourceId), SYNCED_AT);
+  await applyVrdbSnapshotQuery({
+    sourceId,
+    records,
+    missingStatus,
+    rawSnapshotHash: "d".repeat(64),
+    sourceVersion: "2026-10-30",
+    etag: null,
+    lastModified: null,
+    at: SYNCED_AT,
+  });
+}
+
 async function seedAiLists(): Promise<void> {
   const lists = [
     ["atlas", aiRecord("ai_case_study", "AML.CS9001", "2026-03-01")],
     ["nhtsa_sgo", aiRecord("crash_report_summary", "acmeanalytics:ads", "2026-08-01")],
     ["fda_ai_devices", aiRecord("ai_device_authorizations", "acmeanalytics", "2026-06-25")],
+    ["fda_device_recalls", aiRecord("ai_device_recall", "90001", "2026-08-15")],
     // The AI Incident Database sits behind the closed gate Q29: a copy of it in the tables is
     // never offered and is not in the coverage.
     ["aiid", aiRecord("ai_incident", "1797", "2026-05-11")],
@@ -195,10 +232,14 @@ describe("the lookup of a vendor, in the database", () => {
       ["uk_sanctions", "found"],
       ["eu_fsf", "failed"],
       ["cve", "failed"],
+      // The screening list serves legal_regulatory, which this run researches, and no copy of it was
+      // made here: failed, like the sanctions lists of this test that no one seeded.
+      ["csl", "failed"],
       // The AI lists are asked for the AI-specific category only; this run did not research it.
       ["atlas", "not_researched"],
       ["nhtsa_sgo", "not_researched"],
       ["fda_ai_devices", "not_researched"],
+      ["fda_device_recalls", "not_researched"],
     ]);
     expect(await matchRows()).toEqual([
       expect.objectContaining({
@@ -242,12 +283,13 @@ describe("the lookup of a vendor, in the database", () => {
     const offered = outcome.records.flatMap((entry) =>
       entry.records.map((record) => [record.vrdb.sourceRecordId, record.vrdb.strength]),
     );
-    expect(offered).toHaveLength(3);
+    expect(offered).toHaveLength(4);
     expect(offered).toEqual(
       expect.arrayContaining([
         ["AML.CS9001", "weak"],
         ["acmeanalytics:ads", "weak"],
         ["acmeanalytics", "weak"],
+        ["90001", "weak"],
       ]),
     );
     for (const entry of outcome.records) {
@@ -255,17 +297,21 @@ describe("the lookup of a vendor, in the database", () => {
     }
     expect(
       outcome.coverage
-        .filter((entry) => ["atlas", "nhtsa_sgo", "fda_ai_devices", "aiid"].includes(entry.id))
+        .filter((entry) =>
+          ["atlas", "nhtsa_sgo", "fda_ai_devices", "fda_device_recalls", "aiid"].includes(entry.id),
+        )
         .map((entry) => [entry.id, entry.outcome]),
     ).toEqual([
       ["atlas", "found"],
       ["nhtsa_sgo", "found"],
       ["fda_ai_devices", "found"],
+      ["fda_device_recalls", "found"],
     ]);
-    // Three weak name matches were kept for the organization, and none for the gated list. The
+    // Four weak name matches were kept for the organization, and none for the gated list. The
     // rows come back in the collation of the database, so they are compared as a set.
     const rows = await matchRows();
     expect(rows.map((row) => row.source_record_id).sort()).toEqual([
+      "90001",
       "AML.CS9001",
       "acmeanalytics",
       "acmeanalytics:ads",
@@ -297,6 +343,90 @@ describe("the lookup of a vendor, in the database", () => {
 
     expect(outcome.records).toEqual([]);
     expect(await matchRows()).toEqual([]);
+  });
+
+  it("offers the screening list's entries whatever their age and the recalls of the lookback only, and keeps them as matches", async () => {
+    await seedList(
+      "csl",
+      [
+        screeningRecord("el:acmeanalytics", ["name:acmeanalytics"], "2019-05-16"),
+        screeningRecord(
+          "cmic:otherco",
+          ["name:otherco", "domain:acme-analytics.example"],
+          "2021-06-03",
+        ),
+        screeningRecord("ssi:somebodyelse", ["name:somebodyelse"], "2024-01-10"),
+      ],
+      "delisted",
+    );
+    await seedList(
+      "fda_device_recalls",
+      [
+        aiRecord("ai_device_recall", "90001", "2026-08-15"),
+        aiRecord("ai_device_recall", "90002", "2023-02-01"),
+      ],
+      "withdrawn",
+    );
+    const orgId = await createTestOrganization("VRDB org");
+    const vendorId = await createTestVendor(orgId, { vendor_name: "Acme Analytics" });
+    const lookup = sharedVrdbLookup({ organizationId: orgId, vendorId }, CONFIG, NO_READ_THROUGH);
+    if (lookup === undefined) throw new Error("the lookup is on in this test");
+
+    const outcome = await lookup({
+      target: TARGET,
+      verifiedDomains: [TARGET.domain],
+      researchable: ["legal_regulatory", "ai_specific"],
+      // The lookback at NOW: 36 months for legal_regulatory and 24 for ai_specific.
+      cutoffs: { legal_regulatory: "2023-10-30", ai_specific: "2024-10-30" },
+      now: NOW,
+    });
+
+    const listed = (id: string) => outcome.records.find((entry) => entry.source === id);
+    // A listing in force is a state: the designation of 2019 is offered beside the other, as of the
+    // copy, and the website match comes first.
+    expect(
+      listed("csl")?.records.map((record) => [
+        record.vrdb.sourceRecordId,
+        record.vrdb.strength,
+        record.publishedAt,
+      ]),
+    ).toEqual([
+      ["cmic:otherco", "strong", "2026-10-30"],
+      ["el:acmeanalytics", "weak", "2026-10-30"],
+    ]);
+    expect(listed("csl")?.omitted).toEqual({});
+    expect(listed("csl")?.records[0].text).not.toContain(NAME_ONLY_LOOKUP_NOTE);
+    expect(listed("csl")?.records[1].text).toContain(NAME_ONLY_LOOKUP_NOTE);
+    // A recall is an event: the one of 2023 is left out and counted, the other keeps its day.
+    expect(
+      listed("fda_device_recalls")?.records.map((record) => [
+        record.vrdb.sourceRecordId,
+        record.publishedAt,
+      ]),
+    ).toEqual([["90001", "2026-08-15"]]);
+    expect(listed("fda_device_recalls")?.omitted).toEqual({ old: 1 });
+    expect(
+      outcome.coverage
+        .filter((entry) => ["csl", "fda_device_recalls"].includes(entry.id))
+        .map((entry) => [entry.id, entry.outcome, entry.strong, entry.weak]),
+    ).toEqual([
+      ["csl", "found", 1, 1],
+      ["fda_device_recalls", "found", 0, 1],
+    ]);
+    // Three matches were kept for the organization, by methods the table already has. The rows come
+    // back in the collation of the database, so they are compared as a set.
+    const rows = await matchRows();
+    expect(
+      rows
+        .map((row) => [row.source_record_id, row.match_method, row.match_strength, row.matched_key])
+        .sort(),
+    ).toEqual([
+      ["90001", "name_exact", "weak", "name:acmeanalytics"],
+      ["cmic:otherco", "domain", "strong", "domain:acme-analytics.example"],
+      ["el:acmeanalytics", "name_exact", "weak", "name:acmeanalytics"],
+    ]);
+    for (const row of rows)
+      expect(row).toMatchObject({ organization_id: orgId, vendor_id: vendorId });
   });
 
   it("a second lookup moves last_matched_at only", async () => {

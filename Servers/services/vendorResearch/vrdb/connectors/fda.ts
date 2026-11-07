@@ -44,8 +44,8 @@ export const FDA_URL = "https://www.fda.gov/media/178541/download?attachment";
 export const FDA_RECORD_MARK = "FDA list of AI-enabled medical devices";
 /** The file is 141 KB today (1,614 rows); the limit holds some 24,000 rows. */
 export const FDA_MAX_BYTES = 2 * 1024 * 1024;
-const FDA_TYPES = ["text/csv", "application/octet-stream"];
-const FDA_TOTAL_TIMEOUT_MS = 60_000;
+export const FDA_TYPES = ["text/csv", "application/octet-stream"];
+export const FDA_TOTAL_TIMEOUT_MS = 60_000;
 /** The only host the file may come from, after redirects. */
 const FDA_HOST = "www.fda.gov";
 /** The root of the document: the name of the file. */
@@ -135,7 +135,7 @@ function lastModifiedDay(header: string | null): string | null {
 }
 
 /** Whether an address is the file's: https, the host www.fda.gov, no port other than 443, no user. */
-function isFdaAddress(text: string): boolean {
+export function isFdaAddress(text: string): boolean {
   try {
     const url = new URL(text);
     return (
@@ -193,7 +193,7 @@ const compareText = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 
 const withoutBom = (text: string): string => (text.charCodeAt(0) === 0xfeff ? text.slice(1) : text);
 
 /** Whether a row is the header of the list: its six columns, by name and in order. */
-const isListHeader = (row: readonly string[] | undefined): boolean =>
+export const isListHeader = (row: readonly string[] | undefined): boolean =>
   row !== undefined &&
   row.length === FDA_COLUMNS.length &&
   FDA_COLUMNS.every((name, at) => lineOf(row[at]) === name);
@@ -326,6 +326,45 @@ function recordOf(key: string, entry: Company): ParsedRecord {
     publishedAt: entry.latest,
     sourceUpdatedAt: null,
   };
+}
+
+/** A row of the list as the recalls connector joins it: the submission number, the device, the company. */
+export interface FdaListRow {
+  submission: string;
+  device: string;
+  company: string;
+}
+
+/**
+ * The rows of the list that `parse` would read, as the recalls of AI-enabled devices
+ * (connectors/fdaRecalls.ts) need them to join: each cell cleaned as `parse` cleans it, the device
+ * cut as `parse` cuts it. It applies the rules `parse` applies, so that the two connectors see one
+ * list: a row that cannot be read is left out up to what `parse` tolerates. Null when the text is
+ * not the list: its header is not the six columns, it ends inside a quoted cell (it was cut
+ * short), it holds more rows than the list can, or more rows than `parse` tolerates cannot be read.
+ */
+export function readFdaListRows(text: string): FdaListRow[] | null {
+  const { rows, cut, more } = readCsv(withoutBom(text), MAX_ROWS);
+  const [header, ...body] = rows;
+  if (cut !== null || more || !isListHeader(header)) return null;
+  const list: FdaListRow[] = [];
+  let read = 0;
+  let unreadable = 0;
+  for (const row of body) {
+    const cells = row.map(lineOf);
+    if (cells.every((cell) => cell === "")) continue;
+    read += 1;
+    const entry = readRow(cells);
+    if (entry === null) unreadable += 1;
+    else {
+      list.push({
+        submission: entry.device.submission,
+        device: entry.device.device,
+        company: entry.company,
+      });
+    }
+  }
+  return unreadable > unreadableAllowed(read) ? null : list;
 }
 
 export const fdaConnector: Connector = {

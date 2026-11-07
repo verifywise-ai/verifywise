@@ -84,6 +84,40 @@ const ATLAS_BY_NAME = source({
   },
 });
 
+// An entry of the US Consolidated Screening List and a recall of an AI-enabled device are official
+// records that only ever match by name or, for the screening list, by a website: the line names the
+// list as its definition (vrdb/sources.ts) calls it.
+const CSL_BY_NAME = source({
+  url: "https://www.trade.gov/consolidated-screening-list?list=el&entry=acmeanalytics",
+  category: "official",
+  publisher: "csl",
+  reviewed: true,
+  record: {
+    source: "csl",
+    match: "weak",
+    status: "active",
+    source_record_id: "el:acmeanalytics",
+    as_of: "2026-11-07",
+  },
+});
+const CSL_BY_WEBSITE = {
+  ...CSL_BY_NAME,
+  record: { ...CSL_BY_NAME.record!, match: "strong" },
+} as CredibilitySource;
+const RECALL_BY_NAME = source({
+  url: "https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfRES/res.cfm?start_search=1&event_id=90001",
+  category: "official",
+  publisher: "fda_device_recalls",
+  reviewed: true,
+  record: {
+    source: "fda_device_recalls",
+    match: "weak",
+    status: "active",
+    source_record_id: "90001",
+    as_of: "2026-11-07",
+  },
+});
+
 describe("credibilityRationale", () => {
   it("an official record: its operator, its id and the day of the copy", () => {
     expect(credibilityRationale(basis("official_record", [KEV_RECORD]))).toBe(
@@ -217,6 +251,35 @@ describe("credibilityRationale", () => {
       "Low: the OFAC SDN list entry matches the vendor by name only.",
     );
   });
+
+  it.each([
+    ["the screening list", CSL_BY_NAME, "US Consolidated Screening List"],
+    ["the FDA device recalls", RECALL_BY_NAME, "FDA device recall database"],
+  ] as const)("a record of %s found by name only: the list it is on", (_label, record, list) => {
+    expect(credibilityRationale(basis("name_only", [record], true))).toBe(
+      `Low: the ${list} entry matches the vendor by name only.`,
+    );
+  });
+
+  it("an entry of the screening list found by a website of the vendor: its name, its id and the day of the copy", () => {
+    expect(credibilityRationale(basis("official_record", [CSL_BY_WEBSITE]))).toBe(
+      "High: US Consolidated Screening List lists it (el:acmeanalytics), as of 7 Nov 2026.",
+    );
+  });
+
+  it.each([
+    ["delisted", "removed", CSL_BY_NAME, "US Consolidated Screening List"],
+    ["withdrawn", "withdrew", RECALL_BY_NAME, "FDA recalls of AI-enabled medical devices"],
+  ] as const)(
+    "a record the list %s: %s, with the day of the copy, and the note of a match by name",
+    (status, verb, record, list) => {
+      const inactive = { ...record, record: { ...record.record!, status } } as CredibilitySource;
+
+      expect(credibilityRationale(basis("inactive", [inactive], true))).toBe(
+        `Low: ${list} ${verb} the record on 7 Nov 2026. ${NAME_ONLY_NOTE}`,
+      );
+    },
+  );
 
   it("a contradicted quote", () => {
     expect(

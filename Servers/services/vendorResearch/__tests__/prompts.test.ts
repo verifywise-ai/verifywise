@@ -1,3 +1,4 @@
+import { createHash } from "crypto";
 import {
   EvidenceSource,
   RECORD_SOURCE_IDS,
@@ -34,8 +35,10 @@ import { CHANGE_MARK } from "../policySnapshots";
 import { NAME_ONLY_LOOKUP_NOTE, OFAC_RECORD_MARK } from "../records/ofac";
 import { AIID_RECORD_MARK } from "../vrdb/connectors/aiid";
 import { ATLAS_RECORD_MARK } from "../vrdb/connectors/atlas";
+import { CSL_RECORD_MARK } from "../vrdb/connectors/csl";
 import { EU_RECORD_MARK } from "../vrdb/connectors/eu";
 import { FDA_RECORD_MARK } from "../vrdb/connectors/fda";
+import { FDA_RECALL_RECORD_MARK } from "../vrdb/connectors/fdaRecalls";
 import { NHTSA_RECORD_MARK } from "../vrdb/connectors/nhtsa";
 import { UK_RECORD_MARK } from "../vrdb/connectors/uk";
 import { UN_RECORD_MARK } from "../vrdb/connectors/un";
@@ -100,9 +103,35 @@ function expectIntactStructure(prompt: string, sources: number) {
 describe("the versions of the prompts", () => {
   // The loop prompt names the search engine and its kinds: that change moved the version from vr-10
   // to vr-11; the verifier prompt naming the database of a record moved it to vr-12; the analysis
-  // prompt naming the AI databases moved it to vr-13. A stored run says which prompt it asked with.
+  // prompt naming the AI databases moved it to vr-13, and naming the US Consolidated Screening List
+  // and the FDA recalls of AI-enabled devices to vr-14. A stored run says which prompt it asked with.
   it("names the version of the analysis prompt that every run asks with", () => {
-    expect(CREDIBILITY_PROMPT_VERSION).toBe("vr-13");
+    expect(CREDIBILITY_PROMPT_VERSION).toBe("vr-14");
+  });
+
+  it("changes only the sanctions bullet and the AI bullet from vr-13: the rest of the prompt is its text, character for character", () => {
+    // vr-14 added the screening list to the sanctions bullet and the device recalls to the AI bullet,
+    // which stand one after the other, and nothing else. The digest is of the prompt with the two
+    // bullets cut out, taken from the vr-13 text: a change anywhere else is a new version, and moves
+    // the version and this digest together.
+    const text = buildSystemPrompt(NOW);
+    const first = text.indexOf(
+      "- A source whose text begins with the name of a sanctions list is an entry of that list:",
+    );
+    const last = text.indexOf("\nHow to rate a risk:");
+    expect(first).toBeGreaterThan(0);
+    expect(last).toBeGreaterThan(first);
+    // The two bullets are the only lines of the cut, and they are the two that this version names.
+    const cut = text.slice(first, last);
+    expect(cut.split("\n- ")).toHaveLength(2);
+    expect(cut).toContain(CSL_RECORD_MARK);
+    expect(cut).toContain(FDA_RECALL_RECORD_MARK);
+
+    const rest = text.slice(0, first) + text.slice(last);
+
+    expect(createHash("sha256").update(rest, "utf8").digest("hex")).toBe(
+      "bfbcc34db83ed21770395fe09ea5f728395cf28fa73acd1d79a7817639918c8a",
+    );
   });
 
   it("has no version of the confidence rules, which no run asks with any more", () => {
@@ -234,7 +263,38 @@ describe("buildSystemPrompt", () => {
 
   it("tells the model what a record of a sanctions list is: a match by name only, at most one risk, and a check of who the vendor is", () => {
     expect(prompt).toContain(
-      `A source whose text begins with the name of a sanctions list is an entry of that list: ${OFAC_RECORD_MARK} (the United States Treasury), ${UK_RECORD_MARK} (the United Kingdom), ${EU_RECORD_MARK} (the European Union) or ${UN_RECORD_MARK} (the United Nations Security Council). When its text has a Lookup note, the vendor was matched to the entry by its name only: it may be another company. It shows that an entity of that name is on the list, never that the vendor is: write the risk as "An entity named <the name of the entry> is on <the list>". Raise at most one risk from it, in legal_regulatory, rate its likelihood Possible at most, and make the action plan a check of who the vendor is against the entry: its address, its country, its owners and the identifiers it lists.`,
+      `A source whose text begins with the name of a sanctions list is an entry of that list: ${OFAC_RECORD_MARK} (the United States Treasury), ${UK_RECORD_MARK} (the United Kingdom), ${EU_RECORD_MARK} (the European Union), ${UN_RECORD_MARK} (the United Nations Security Council) or ${CSL_RECORD_MARK} (the consolidated list of the export control and sanctions lists of the United States Departments of Commerce, State and Treasury: its List line names the list, and a listing on the Entity List or the Military End User List means that an export licence is required, not that the entity is sanctioned). When its text has a Lookup note, the vendor was matched to the entry by its name only: it may be another company. It shows that an entity of that name is on the list, never that the vendor is: write the risk as "An entity named <the name of the entry> is on <the list>". Raise at most one risk from it, in legal_regulatory, rate its likelihood Possible at most, and make the action plan a check of who the vendor is against the entry: its address, its country, its owners and the identifiers it lists.`,
+    );
+  });
+
+  it("names the screening list among the sanctions lists, and says that a listing on the Entity List is a licence requirement and not a sanction", () => {
+    const sanctions = prompt.slice(
+      prompt.indexOf("- A source whose text begins with the name of a sanctions list"),
+      prompt.indexOf("- A source whose text begins with the name of an AI database"),
+    );
+
+    // The five lists in the bullet, each by the mark its records begin with, in this order.
+    const marks = [
+      OFAC_RECORD_MARK,
+      UK_RECORD_MARK,
+      EU_RECORD_MARK,
+      UN_RECORD_MARK,
+      CSL_RECORD_MARK,
+    ];
+    const places = marks.map((mark) => sanctions.indexOf(mark));
+    expect(places.every((place) => place > -1)).toBe(true);
+    expect([...places].sort((a, b) => a - b)).toEqual(places);
+    expect(CSL_RECORD_MARK).toBe("US Consolidated Screening List");
+    // The screening list holds the export control lists of Commerce and State beside Treasury's: a
+    // listing on two of them is a requirement of a licence, which a model must not write as a sanction.
+    expect(sanctions).toContain(
+      "a listing on the Entity List or the Military End User List means that an export licence is required, not that the entity is sanctioned",
+    );
+    expect(sanctions).toContain("its List line names the list");
+    // The rules of the bullet stand after it and apply to the entries of the screening list as they do
+    // to the others: a name alone shows that an entity of that name is on the list.
+    expect(sanctions.indexOf("not that the entity is sanctioned")).toBeLessThan(
+      sanctions.indexOf("When its text has a Lookup note"),
     );
   });
 
@@ -614,13 +674,13 @@ describe("the bounds that the system prompt states", () => {
   });
 
   // The analysis text of the prompt version "vr-2" has these lines, with counts as words and limits
-  // as digits; "vr-3" to "vr-13" left these lines as they were. Writing their numbers from the
+  // as digits; "vr-3" to "vr-14" left these lines as they were. Writing their numbers from the
   // constants must not change a character of them, line breaks included, or the stored version
   // would no longer describe the prompt.
   it("writes the lines that hold a number exactly as the vr-2 text has them", () => {
     const lines = buildSystemPrompt(NOW).split("\n");
 
-    expect(CREDIBILITY_PROMPT_VERSION).toBe("vr-13");
+    expect(CREDIBILITY_PROMPT_VERSION).toBe("vr-14");
     for (const line of [
       "- Every risk cites at least one source and at most five. Each citation is a source id and a",
       "  at most 300 characters. Do not quote the title, the URL or the vendor block.",
@@ -1861,7 +1921,7 @@ describe("the prompts of the verifier", () => {
   });
 
   describe("VERIFIER_DATABASE_NAMES", () => {
-    it("names every database of a record, the four sanctions lists and the four AI databases by their marks", () => {
+    it("names every database of a record, the five sanctions lists and the five AI databases by their marks", () => {
       expect(VERIFIER_DATABASE_NAMES).toEqual({
         kev: "CISA Known Exploited Vulnerabilities Catalog",
         nvd: "National Vulnerability Database",
@@ -1873,10 +1933,12 @@ describe("the prompts of the verifier", () => {
         uk_sanctions: UK_RECORD_MARK,
         eu_fsf: EU_RECORD_MARK,
         un_sanctions: UN_RECORD_MARK,
+        csl: CSL_RECORD_MARK,
         aiid: AIID_RECORD_MARK,
         atlas: ATLAS_RECORD_MARK,
         nhtsa_sgo: NHTSA_RECORD_MARK,
         fda_ai_devices: FDA_RECORD_MARK,
+        fda_device_recalls: FDA_RECALL_RECORD_MARK,
       });
       expect(Object.keys(VERIFIER_DATABASE_NAMES).sort()).toEqual([...RECORD_SOURCE_IDS].sort());
     });
@@ -1886,6 +1948,13 @@ describe("the prompts of the verifier", () => {
       expect(VERIFIER_DATABASE_NAMES.atlas).toBe("MITRE ATLAS");
       expect(VERIFIER_DATABASE_NAMES.nhtsa_sgo).toBe("NHTSA Standing General Order crash reports");
       expect(VERIFIER_DATABASE_NAMES.fda_ai_devices).toBe("FDA list of AI-enabled medical devices");
+    });
+
+    it("names the screening list and the device recalls as the sheets of the rulings of 2026-11-07 do: what the text of a record begins with", () => {
+      expect(VERIFIER_DATABASE_NAMES.csl).toBe("US Consolidated Screening List");
+      expect(VERIFIER_DATABASE_NAMES.fda_device_recalls).toBe(
+        "FDA medical device recalls (openFDA)",
+      );
     });
   });
 
@@ -1931,6 +2000,8 @@ describe("the prompts of the verifier", () => {
       ["atlas", "MITRE ATLAS"],
       ["nhtsa_sgo", "NHTSA Standing General Order crash reports"],
       ["fda_ai_devices", "FDA list of AI-enabled medical devices"],
+      ["csl", "US Consolidated Screening List"],
+      ["fda_device_recalls", "FDA medical device recalls (openFDA)"],
     ] as const)("gives a record of %s the mark of its database", (id, mark) => {
       const url = `https://records.example/${id}?record=1`;
       const prompt = buildVerifierUserPrompt(
@@ -2045,8 +2116,14 @@ describe("the prompt of the credibility rules", () => {
   // the databases and the sanctions lists of the vendor risk database are worded as they are.
   const prompt = buildSystemPrompt(NOW).replace(/\n +/g, " ");
 
-  it("names the OFAC, UK, EU and UN marks and the lookup note", () => {
-    for (const mark of [OFAC_RECORD_MARK, UK_RECORD_MARK, EU_RECORD_MARK, UN_RECORD_MARK]) {
+  it("names the OFAC, UK, EU, UN and CSL marks and the lookup note", () => {
+    for (const mark of [
+      OFAC_RECORD_MARK,
+      UK_RECORD_MARK,
+      EU_RECORD_MARK,
+      UN_RECORD_MARK,
+      CSL_RECORD_MARK,
+    ]) {
       expect(buildSystemPrompt(NOW)).toContain(mark);
     }
     expect(NAME_ONLY_LOOKUP_NOTE).toMatch(/^Lookup note: /);
@@ -2072,12 +2149,20 @@ describe("the prompt of the credibility rules", () => {
     expect(prompt).not.toContain("matched the vendor's website: it is about the vendor, and");
   });
 
-  it("names the four AI databases by their marks in a bullet of their own, and keeps the sanctions bullet before it (vr-13)", () => {
-    // The marks are what the text of a record begins with (the sheets of the rulings of 2026-11-05).
-    expect([AIID_RECORD_MARK, ATLAS_RECORD_MARK, NHTSA_RECORD_MARK, FDA_RECORD_MARK]).toEqual([
+  it("names the five AI databases by their marks in a bullet of their own, and keeps the sanctions bullet before it (vr-14)", () => {
+    // The marks are what the text of a record begins with (the sheets of the rulings of 2026-11-05
+    // and 2026-11-07).
+    expect([
+      AIID_RECORD_MARK,
+      ATLAS_RECORD_MARK,
+      NHTSA_RECORD_MARK,
+      FDA_RECALL_RECORD_MARK,
+      FDA_RECORD_MARK,
+    ]).toEqual([
       "AI Incident Database",
       "MITRE ATLAS",
       "NHTSA Standing General Order crash reports",
+      "FDA medical device recalls (openFDA)",
       "FDA list of AI-enabled medical devices",
     ]);
     const sanctions =
@@ -2087,7 +2172,7 @@ describe("the prompt of the credibility rules", () => {
 
     expect(prompt).toContain(sanctions);
     expect(prompt).toContain(
-      `${ai} ${AIID_RECORD_MARK} (an incident that others reported: an allegation that the database does not establish), ${ATLAS_RECORD_MARK} (a case study of an attack on an AI system: its Type says whether it is an Incident, an attack reported in the wild, or an Exercise, a demonstration by researchers that is not an attack in the wild), ${NHTSA_RECORD_MARK} (counts of the reports that makers of automated driving systems must file: a report is not a finding of fault) or ${FDA_RECORD_MARK} (devices that the FDA authorized: a status and not an incident).`,
+      `${ai} ${AIID_RECORD_MARK} (an incident that others reported: an allegation that the database does not establish), ${ATLAS_RECORD_MARK} (a case study of an attack on an AI system: its Type says whether it is an Incident, an attack reported in the wild, or an Exercise, a demonstration by researchers that is not an attack in the wild), ${NHTSA_RECORD_MARK} (counts of the reports that makers of automated driving systems must file: a report is not a finding of fault), ${FDA_RECALL_RECORD_MARK} (a recall of a device that is on the FDA's list of AI-enabled devices: the firm's correction or removal of a device; the recalling firm may be a subsidiary or a distributor of the maker, and a recall is not a finding that the AI failed) or ${FDA_RECORD_MARK} (devices that the FDA authorized: a status and not an incident).`,
     );
     expect(prompt.indexOf(sanctions)).toBeLessThan(prompt.indexOf(ai));
     // The sanctions bullet still ends with its own rule, in legal_regulatory, before the AI bullet.
@@ -2098,8 +2183,17 @@ describe("the prompt of the credibility rules", () => {
 
   it("asks of an AI database entry what it asks of a sanctions entry matched by name: an entity of that name, at most one risk for each database, in ai_specific, Possible at most", () => {
     expect(prompt).toContain(
-      `The vendor was matched to it by name only, so its text has the Lookup note: it may be another company. From the entries of ${AIID_RECORD_MARK}, ${ATLAS_RECORD_MARK} or ${NHTSA_RECORD_MARK} raise at most one risk for each of those databases, in ai_specific: write it as "An entity named <the name of the entry> appears in <the database>", rate its likelihood Possible at most, and make the action plan a check of who the vendor is against the entry.`,
+      `The vendor was matched to it by name only, so its text has the Lookup note: it may be another company. From the entries of ${AIID_RECORD_MARK}, ${ATLAS_RECORD_MARK}, ${NHTSA_RECORD_MARK} or ${FDA_RECALL_RECORD_MARK} raise at most one risk for each of those databases, in ai_specific: write it as "An entity named <the name of the entry> appears in <the database>", rate its likelihood Possible at most, and make the action plan a check of who the vendor is against the entry.`,
     );
+  });
+
+  it("says of a recall that it is a firm's correction of a device, that the recalling firm may be the maker's subsidiary or distributor, and that it is no finding that the AI failed", () => {
+    expect(prompt).toContain(
+      `${FDA_RECALL_RECORD_MARK} (a recall of a device that is on the FDA's list of AI-enabled devices: the firm's correction or removal of a device; the recalling firm may be a subsidiary or a distributor of the maker, and a recall is not a finding that the AI failed)`,
+    );
+    // The recalls are among the databases that raise a risk, one each, and not like the FDA's list of
+    // authorized devices, which raises none.
+    expect(prompt).not.toContain(`An entry of ${FDA_RECALL_RECORD_MARK} raises no risk`);
   });
 
   it("says that an entry of the FDA list raises no risk, and what it is for", () => {
@@ -2112,7 +2206,7 @@ describe("the prompt of the credibility rules", () => {
 
   it("names the UN list among the sanctions lists, and the CVE Program among the databases", () => {
     expect(prompt).toContain(
-      `- A source whose text begins with the name of a sanctions list is an entry of that list: ${OFAC_RECORD_MARK} (the United States Treasury), ${UK_RECORD_MARK} (the United Kingdom), ${EU_RECORD_MARK} (the European Union) or ${UN_RECORD_MARK} (the United Nations Security Council).`,
+      `- A source whose text begins with the name of a sanctions list is an entry of that list: ${OFAC_RECORD_MARK} (the United States Treasury), ${UK_RECORD_MARK} (the United Kingdom), ${EU_RECORD_MARK} (the European Union), ${UN_RECORD_MARK} (the United Nations Security Council) or ${CSL_RECORD_MARK} (the consolidated list of the export control and sanctions lists of the United States Departments of Commerce, State and Treasury:`,
     );
     expect(prompt).toContain(
       "- A source whose text begins with the name of a public database (the CISA Known Exploited Vulnerabilities Catalog, the National Vulnerability Database, the CVE Program, Have I Been Pwned or SEC EDGAR) is a record of that database, matched to the vendor by its name or domain.",

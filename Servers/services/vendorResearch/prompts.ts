@@ -29,8 +29,10 @@ import { MAX_TOPIC_WORDS, suggestedQueries } from "./queries";
 import { OFAC_RECORD_MARK } from "./records/ofac";
 import { AIID_RECORD_MARK } from "./vrdb/connectors/aiid";
 import { ATLAS_RECORD_MARK } from "./vrdb/connectors/atlas";
+import { CSL_RECORD_MARK } from "./vrdb/connectors/csl";
 import { EU_RECORD_MARK } from "./vrdb/connectors/eu";
 import { FDA_RECORD_MARK } from "./vrdb/connectors/fda";
+import { FDA_RECALL_RECORD_MARK } from "./vrdb/connectors/fdaRecalls";
 import { NHTSA_RECORD_MARK } from "./vrdb/connectors/nhtsa";
 import { UK_RECORD_MARK } from "./vrdb/connectors/uk";
 import { UN_RECORD_MARK } from "./vrdb/connectors/un";
@@ -94,8 +96,14 @@ export { escapeForPrompt, unescapeFromPrompt };
  * every entry of them. That is `vr-13`. It was not run against the golden set (a run costs the
  * research key's credits); the paragraph reaches only a source whose text begins with one of the
  * new marks.
+ *
+ * The next version adds the US Consolidated Screening List to the sanctions paragraph and the FDA
+ * recalls of AI-enabled devices to the AI paragraph (spec D2.19, D2.20): a listing on the Entity List
+ * is a licence requirement and not a sanction, and a recall is a firm's correction of a device, not
+ * a finding that its AI failed. That is `vr-14`. Like `vr-13` it was not run against the golden set;
+ * the new wording reaches only a source whose text begins with one of the two new marks.
  */
-export const CREDIBILITY_PROMPT_VERSION = "vr-13";
+export const CREDIBILITY_PROMPT_VERSION = "vr-14";
 
 const UNKNOWN_DOMAIN = "unknown";
 
@@ -256,7 +264,11 @@ export function buildSystemPrompt(now: Date): string {
     "- A source whose text begins with the name of a sanctions list is an entry of that list:",
     `  ${OFAC_RECORD_MARK} (the United States Treasury),`,
     `  ${UK_RECORD_MARK} (the United Kingdom), ${EU_RECORD_MARK} (the European`,
-    `  Union) or ${UN_RECORD_MARK} (the United Nations Security Council). When its text has a`,
+    `  Union), ${UN_RECORD_MARK} (the United Nations Security Council) or`,
+    `  ${CSL_RECORD_MARK} (the consolidated list of the export control and sanctions lists of the`,
+    "  United States Departments of Commerce, State and Treasury: its List line names the list, and",
+    "  a listing on the Entity List or the Military End User List means that an export licence is",
+    "  required, not that the entity is sanctioned). When its text has a",
     "  Lookup note, the vendor was matched to the entry by its name only: it may be another",
     "  company. It shows that an entity of that name is on the list,",
     '  never that the vendor is: write the risk as "An entity named <the name of the entry> is on',
@@ -273,10 +285,13 @@ export function buildSystemPrompt(now: Date): string {
     "  says whether it is an Incident, an attack reported in the wild, or an Exercise, a",
     `  demonstration by researchers that is not an attack in the wild), ${NHTSA_RECORD_MARK}`,
     "  (counts of the reports that makers of automated driving systems must file: a report is not a",
-    `  finding of fault) or ${FDA_RECORD_MARK} (devices that the FDA authorized: a status and not an`,
+    `  finding of fault), ${FDA_RECALL_RECORD_MARK} (a recall of a device that is on the FDA's list of`,
+    "  AI-enabled devices: the firm's correction or removal of a device; the recalling firm may be a",
+    "  subsidiary or a distributor of the maker, and a recall is not a finding that the AI failed)",
+    `  or ${FDA_RECORD_MARK} (devices that the FDA authorized: a status and not an`,
     "  incident). The vendor was matched to it by name only, so its text has the Lookup note: it may",
-    `  be another company. From the entries of ${AIID_RECORD_MARK}, ${ATLAS_RECORD_MARK} or`,
-    `  ${NHTSA_RECORD_MARK} raise at most one risk for each of those databases, in`,
+    `  be another company. From the entries of ${AIID_RECORD_MARK}, ${ATLAS_RECORD_MARK},`,
+    `  ${NHTSA_RECORD_MARK} or ${FDA_RECALL_RECORD_MARK} raise at most one risk for each of those databases, in`,
     '  ai_specific: write it as "An entity named <the name of the entry> appears in <the database>",',
     "  rate its likelihood Possible at most, and make the action plan a check of who the vendor is",
     `  against the entry. An entry of ${FDA_RECORD_MARK} raises no risk: use it only to say, in the`,
@@ -817,10 +832,12 @@ export const VERIFIER_DATABASE_NAMES: Readonly<Record<RecordSourceId, string>> =
   uk_sanctions: UK_RECORD_MARK,
   eu_fsf: EU_RECORD_MARK,
   un_sanctions: UN_RECORD_MARK,
+  csl: CSL_RECORD_MARK,
   aiid: AIID_RECORD_MARK,
   atlas: ATLAS_RECORD_MARK,
   nhtsa_sgo: NHTSA_RECORD_MARK,
   fda_ai_devices: FDA_RECORD_MARK,
+  fda_device_recalls: FDA_RECALL_RECORD_MARK,
 };
 
 /** ` database="…"` for a source whose address has a record, and nothing for any other. */

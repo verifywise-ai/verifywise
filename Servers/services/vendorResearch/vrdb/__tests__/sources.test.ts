@@ -2,7 +2,9 @@
  * The lists the vendor risk database mirrors (spec D4, Rulings 1 and 5 of the M1 plan): one
  * definition per VRDB id, with its schedule, its licence and when its copy is out of date; a list
  * behind a closed gate (gates.ts) is neither synced nor looked up. The four AI-specific lists
- * (spec D2.14 to D2.17) are pinned against the sheets of the rulings of 2026-11-05.
+ * (spec D2.14 to D2.17) are pinned against the sheets of the rulings of 2026-11-05, and the US
+ * Consolidated Screening List and the FDA device recalls (spec D2.19, D2.20) against the sheets of
+ * the rulings of 2026-11-07, as amended the same day.
  */
 import { createHash } from "crypto";
 import { VRDB_SOURCE_IDS } from "../../../../domain.layer/interfaces/i.vendorResearch";
@@ -44,10 +46,12 @@ describe("the VRDB sources", () => {
       "eu_fsf",
       "cve",
       "un_sanctions",
+      "csl",
       "aiid",
       "atlas",
       "nhtsa_sgo",
       "fda_ai_devices",
+      "fda_device_recalls",
     ]);
     expect(idsOf(VRDB_SOURCES)).toEqual([...VRDB_SOURCE_IDS]);
     for (const id of VRDB_SOURCE_IDS) expect(vrdbSourceOf(id).id).toBe(id);
@@ -61,9 +65,11 @@ describe("the VRDB sources", () => {
       ["ofac", "41"],
       ["uk_sanctions", "47"],
       ["eu_fsf", "53"],
+      ["csl", "7"],
       ["atlas", "17"],
       ["nhtsa_sgo", "5"],
       ["fda_ai_devices", "35"],
+      ["fda_device_recalls", "43"],
     ]);
     expect(minutesOf(OPEN)).toEqual([
       ["kev", "23"],
@@ -72,10 +78,12 @@ describe("the VRDB sources", () => {
       ["eu_fsf", "53"],
       ["cve", "29"],
       ["un_sanctions", "59"],
+      ["csl", "7"],
       ["aiid", "11"],
       ["atlas", "17"],
       ["nhtsa_sgo", "5"],
       ["fda_ai_devices", "35"],
+      ["fda_device_recalls", "43"],
     ]);
     // A minute of its own: two downloads of tens of megabytes never start together.
     const minutes = activeMirrors(OPEN).map(({ schedule }) => schedule.split(" ")[0]);
@@ -96,7 +104,8 @@ describe("the VRDB sources", () => {
     expect(vrdbSourceOf("un_sanctions").gate).toBe("Q6");
     expect(vrdbSourceOf("aiid").gate).toBe("Q29");
     expect(vrdbSourceOf("sec").gate).toBe("Q4");
-    // By default: the SEC after the NVD, the CVE records after the EU list and the three open AI
+    // By default: the SEC after the NVD, the CVE records after the EU list, the screening list after
+    // the CVE records (the UN list that stood before it waits behind its gate), and the four open AI
     // lists last, in the order of the table, without the UN list and the AI Incident Database.
     expect(idsOf(activeVrdbSources())).toEqual([
       "kev",
@@ -106,9 +115,11 @@ describe("the VRDB sources", () => {
       "uk_sanctions",
       "eu_fsf",
       "cve",
+      "csl",
       "atlas",
       "nhtsa_sgo",
       "fda_ai_devices",
+      "fda_device_recalls",
     ]);
     expect(idsOf(activeMirrors())).toEqual([
       "kev",
@@ -116,9 +127,11 @@ describe("the VRDB sources", () => {
       "uk_sanctions",
       "eu_fsf",
       "cve",
+      "csl",
       "atlas",
       "nhtsa_sgo",
       "fda_ai_devices",
+      "fda_device_recalls",
     ]);
     expect(idsOf(activeReadThroughs())).toEqual(["nvd", "sec"]);
     // With every gate closed, only the lists that have none are active.
@@ -128,18 +141,22 @@ describe("the VRDB sources", () => {
       "ofac",
       "uk_sanctions",
       "eu_fsf",
+      "csl",
       "atlas",
       "nhtsa_sgo",
       "fda_ai_devices",
+      "fda_device_recalls",
     ]);
     expect(idsOf(activeMirrors(CLOSED))).toEqual([
       "kev",
       "ofac",
       "uk_sanctions",
       "eu_fsf",
+      "csl",
       "atlas",
       "nhtsa_sgo",
       "fda_ai_devices",
+      "fda_device_recalls",
     ]);
     expect(idsOf(activeReadThroughs(CLOSED))).toEqual(["nvd"]);
   });
@@ -158,8 +175,9 @@ describe("the VRDB sources", () => {
   });
 
   it("opening a gate makes it active", () => {
-    // The three open AI lists have no gate, so they are in every one of these.
-    const AI_OPEN = ["atlas", "nhtsa_sgo", "fda_ai_devices"];
+    // The screening list and the four open AI lists have no gate, so they are in every one of these:
+    // the screening list stands after the UN list and before the AI Incident Database.
+    const AI_OPEN = ["atlas", "nhtsa_sgo", "fda_ai_devices", "fda_device_recalls"];
     expect(idsOf(activeVrdbSources({ ...CLOSED, Q7: true }))).toEqual([
       "kev",
       "nvd",
@@ -167,6 +185,7 @@ describe("the VRDB sources", () => {
       "uk_sanctions",
       "eu_fsf",
       "cve",
+      "csl",
       ...AI_OPEN,
     ]);
     expect(idsOf(activeVrdbSources({ ...CLOSED, Q6: true }))).toEqual([
@@ -176,6 +195,7 @@ describe("the VRDB sources", () => {
       "uk_sanctions",
       "eu_fsf",
       "un_sanctions",
+      "csl",
       ...AI_OPEN,
     ]);
     expect(idsOf(activeVrdbSources({ ...CLOSED, Q4: true }))).toEqual([
@@ -185,6 +205,7 @@ describe("the VRDB sources", () => {
       "ofac",
       "uk_sanctions",
       "eu_fsf",
+      "csl",
       ...AI_OPEN,
     ]);
     expect(idsOf(activeVrdbSources({ ...CLOSED, Q29: true }))).toEqual([
@@ -193,6 +214,7 @@ describe("the VRDB sources", () => {
       "ofac",
       "uk_sanctions",
       "eu_fsf",
+      "csl",
       "aiid",
       ...AI_OPEN,
     ]);
@@ -204,7 +226,7 @@ describe("the VRDB sources", () => {
 
   it("every source is stale after 48 hours", () => {
     expect(VRDB_SOURCES.map((source) => source.staleAfterHours)).toEqual([
-      48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48,
+      48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48,
     ]);
   });
 
@@ -285,6 +307,15 @@ describe("the VRDB sources", () => {
         mode: "mirror",
       },
       {
+        id: "csl",
+        operator: "the International Trade Administration",
+        listName: "US Consolidated Screening List",
+        category: "legal_regulatory",
+        schedule: "7 */6 * * *",
+        missingStatus: "delisted",
+        mode: "mirror",
+      },
+      {
         id: "aiid",
         operator: "the Responsible AI Collaborative",
         listName: "AI Incident Database",
@@ -317,6 +348,15 @@ describe("the VRDB sources", () => {
         listName: "FDA list of AI-enabled medical devices",
         category: "ai_specific",
         schedule: "35 5 * * *",
+        missingStatus: "withdrawn",
+        mode: "mirror",
+      },
+      {
+        id: "fda_device_recalls",
+        operator: "the FDA",
+        listName: "FDA device recall database",
+        category: "ai_specific",
+        schedule: "43 14 * * *",
         missingStatus: "withdrawn",
         mode: "mirror",
       },
@@ -583,10 +623,12 @@ describe("the VRDB sources", () => {
         "uk_sanctions",
         "eu_fsf",
         "cve",
+        "csl",
         "aiid",
         "atlas",
         "nhtsa_sgo",
         "fda_ai_devices",
+        "fda_device_recalls",
       ]);
       expect(idsOf(activeMirrors({ ...VRDB_GATES, Q29: true }))).toContain("aiid");
       expect(vrdbSourceOf("aiid").mode).toBe("mirror");
@@ -637,6 +679,90 @@ describe("the VRDB sources", () => {
         expect(source.attribution).toBe(attributionIn(2027));
       });
     });
+  });
+
+  describe("the US Consolidated Screening List and the FDA device recalls (spec D2.19, D2.20, Q33, Q34)", () => {
+    // The values of the csl and fda_device_recalls sheets of the rulings of 2026-11-07 as amended the
+    // same day: the product reads ITA's downloadable file and not its Data API, so the attribution of
+    // the csl row is the one for a file. The closing sentence of each list's records belongs to its
+    // connector, whose tests pin it.
+    const SHEETS = [
+      {
+        id: "csl",
+        name: "US Consolidated Screening List",
+        operator: "the International Trade Administration",
+        listName: "US Consolidated Screening List",
+        category: "legal_regulatory",
+        schedule: "7 */6 * * *",
+        missingStatus: "delisted",
+        licence:
+          "None published; a work of the US Government (17 U.S.C. §105) compiled by the International Trade Administration, whose developer terms allow services that search, display and analyze it; accepted on 2026-11-07 (Q33)",
+        attribution:
+          "This product uses data from the International Trade Administration's Consolidated Screening List but is not endorsed or certified by the International Trade Administration. Entries adapted by VerifyWise.",
+        documentationUrl: "https://www.trade.gov/consolidated-screening-list",
+      },
+      {
+        id: "fda_device_recalls",
+        name: "FDA recalls of AI-enabled medical devices",
+        operator: "the FDA",
+        listName: "FDA device recall database",
+        category: "ai_specific",
+        schedule: "43 14 * * *",
+        missingStatus: "withdrawn",
+        licence:
+          "CC0 1.0 (https://open.fda.gov/license/): openFDA's device recall records; the GMDN content of the openfda block is not used (Q34)",
+        attribution:
+          "FDA medical device recalls through openFDA, US Food and Drug Administration (CC0 1.0), joined by VerifyWise to the FDA list of AI-enabled medical devices.",
+        documentationUrl: "https://open.fda.gov/apis/device/recall/",
+      },
+    ] as const;
+
+    it.each(SHEETS)(
+      "$id is a mirror in $category that is out of date after 48 hours, with the values of its sheet word for word",
+      (sheet) => {
+        const definition = vrdbSourceOf(sheet.id);
+
+        expect(isMirror(definition)).toBe(true);
+        // The whole definition: a field that the sheet does not name, a gate included, fails it.
+        expect(definition).toEqual({ ...sheet, mode: "mirror", staleAfterHours: 48 });
+      },
+    );
+
+    it("holds no gate for either list: both are active, and scheduled, with every gate closed", () => {
+      for (const { id } of SHEETS) {
+        expect(vrdbSourceOf(id).gate).toBeUndefined();
+        expect(idsOf(activeVrdbSources(CLOSED))).toContain(id);
+        expect(idsOf(activeMirrors(CLOSED))).toContain(id);
+        expect(idsOf(activeMirrors())).toContain(id);
+      }
+    });
+
+    it("attributes the screening list for the file that is read, not for ITA's Data API, and says that its entries are adapted", () => {
+      const { attribution } = vrdbSourceOf("csl");
+
+      expect(attribution).toContain(
+        "International Trade Administration's Consolidated Screening List",
+      );
+      // The terms of the Data API ask for another sentence; this product reads the downloadable file.
+      expect(attribution).not.toContain("Data API");
+      // The terms bar a change of content that still names ITA as its source: every record is adapted.
+      expect(attribution).toMatch(/Entries adapted by VerifyWise\.$/);
+    });
+
+    it.each([
+      ["csl", "legal_regulatory", 2],
+      ["fda_device_recalls", "ai_specific", 3],
+    ] as const)(
+      "serves %s in %s, %i records a run, as official and weak (R3, R4, R8 of 2026-11-07)",
+      (id, category, records) => {
+        expect(RECORD_CATEGORY[id]).toBe(category);
+        expect(MAX_RECORDS[id]).toBe(records);
+        // Both are a government's own records found by a name: the class labels the publisher, and a
+        // name alone is a weak match (a website or an LEI of a screening-list entry is a strong key).
+        expect(classifyRecord(id).category).toBe("official");
+        expect(recordMatchOf(id)).toBe("weak");
+      },
+    );
   });
 
   describe("isStale", () => {

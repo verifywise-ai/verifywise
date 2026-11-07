@@ -515,6 +515,10 @@ const RECORD_CLASSES: Readonly<
   eu_fsf: { category: "official", match: "weak" },
   cve: { category: "official", match: "strong" },
   un_sanctions: { category: "official", match: "weak" },
+  // The US Consolidated Screening List (spec D2.19, Q33): the export control and trade restriction
+  // lists of Commerce, State and Treasury. Like the sanctions lists it is a government's own record,
+  // found by the name alone (weak); a website or an LEI of an OFAC entry earns a strong key.
+  csl: { category: "official", match: "weak" },
   // The AI-specific lists (spec D2.14 to D2.17, Q30): every match is by name, so each record gives
   // only Low support (D5.3 step 0) with the name-only note, whatever its class. The class decides
   // the publisher label. The AI Incident Database collects allegations from news reports, so it is
@@ -524,6 +528,9 @@ const RECORD_CLASSES: Readonly<
   atlas: { category: "trusted_press", match: "weak" },
   nhtsa_sgo: { category: "official", match: "weak" },
   fda_ai_devices: { category: "official", match: "weak" },
+  // The FDA's recalls of the devices on that list (spec D2.20, Q34): the regulator's own record,
+  // matched by the recalling firm's name or the AI list's company, so weak.
+  fda_device_recalls: { category: "official", match: "weak" },
   hibp: { category: "unverified", match: null },
   statuspage: { category: "vendor", match: null },
 };

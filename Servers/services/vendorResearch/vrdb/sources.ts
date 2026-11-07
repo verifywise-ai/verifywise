@@ -189,6 +189,22 @@ export const VRDB_SOURCES: readonly VrdbSourceDefinition[] = [
     gate: "Q6",
   },
   {
+    id: "csl",
+    name: "US Consolidated Screening List",
+    operator: "the International Trade Administration",
+    listName: "US Consolidated Screening List",
+    category: "legal_regulatory",
+    mode: "mirror",
+    schedule: "7 */6 * * *",
+    staleAfterHours: STALE_AFTER_HOURS,
+    licence:
+      "None published; a work of the US Government (17 U.S.C. §105) compiled by the International Trade Administration, whose developer terms allow services that search, display and analyze it; accepted on 2026-11-07 (Q33)",
+    attribution:
+      "This product uses data from the International Trade Administration's Consolidated Screening List but is not endorsed or certified by the International Trade Administration. Entries adapted by VerifyWise.",
+    documentationUrl: "https://www.trade.gov/consolidated-screening-list",
+    missingStatus: "delisted",
+  },
+  {
     id: "aiid",
     name: "AI Incident Database",
     operator: "the Responsible AI Collaborative",
@@ -254,6 +270,24 @@ export const VRDB_SOURCES: readonly VrdbSourceDefinition[] = [
     attribution: "FDA list of AI-enabled medical devices, US Food and Drug Administration",
     documentationUrl:
       "https://www.fda.gov/medical-devices/software-medical-device-samd/artificial-intelligence-enabled-medical-devices",
+    missingStatus: "withdrawn",
+  },
+  {
+    id: "fda_device_recalls",
+    name: "FDA recalls of AI-enabled medical devices",
+    operator: "the FDA",
+    // "the {listName} entry matches the vendor by name only": a recall is an entry of the FDA's
+    // recall database, so the list reads as one in that sentence (the name is for the other lines).
+    listName: "FDA device recall database",
+    category: "ai_specific",
+    mode: "mirror",
+    schedule: "43 14 * * *",
+    staleAfterHours: STALE_AFTER_HOURS,
+    licence:
+      "CC0 1.0 (https://open.fda.gov/license/): openFDA's device recall records; the GMDN content of the openfda block is not used (Q34)",
+    attribution:
+      "FDA medical device recalls through openFDA, US Food and Drug Administration (CC0 1.0), joined by VerifyWise to the FDA list of AI-enabled medical devices.",
+    documentationUrl: "https://open.fda.gov/apis/device/recall/",
     missingStatus: "withdrawn",
   },
 ];

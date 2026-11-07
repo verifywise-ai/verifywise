@@ -42,9 +42,10 @@ import { activeMirrors } from "../sources";
 import type { VrdbSourceState } from "../types";
 
 /**
- * The mirrored lists whose gates are open by default (the CVE records, Q7, and the three AI lists
- * with no gate are; the UN list, Q6, and the AI Incident Database, Q29, are not), those of them
- * that are copied whole, and every mirrored list, in the order of the table of sources.
+ * The mirrored lists whose gates are open by default (the CVE records, Q7, the screening list and
+ * the four AI lists with no gate are; the UN list, Q6, and the AI Incident Database, Q29, are not),
+ * those of them that are copied whole, and every mirrored list, in the order of the table of
+ * sources.
  */
 const ACTIVE = [
   "kev",
@@ -52,18 +53,22 @@ const ACTIVE = [
   "uk_sanctions",
   "eu_fsf",
   "cve",
+  "csl",
   "atlas",
   "nhtsa_sgo",
   "fda_ai_devices",
+  "fda_device_recalls",
 ] as const;
 const WHOLE = [
   "kev",
   "ofac",
   "uk_sanctions",
   "eu_fsf",
+  "csl",
   "atlas",
   "nhtsa_sgo",
   "fda_ai_devices",
+  "fda_device_recalls",
 ] as const;
 const GATED = ["un_sanctions", "aiid"] as const;
 const MIRRORS = [
@@ -73,10 +78,12 @@ const MIRRORS = [
   "eu_fsf",
   "cve",
   "un_sanctions",
+  "csl",
   "aiid",
   "atlas",
   "nhtsa_sgo",
   "fda_ai_devices",
+  "fda_device_recalls",
 ] as const;
 
 const config = (overrides: Partial<VendorResearchConfig> = {}): VendorResearchConfig => ({
@@ -133,10 +140,12 @@ describe("the queue of the vendor risk database", () => {
       "vrdb_sync_eu_fsf",
       "vrdb_sync_cve",
       "vrdb_sync_un_sanctions",
+      "vrdb_sync_csl",
       "vrdb_sync_aiid",
       "vrdb_sync_atlas",
       "vrdb_sync_nhtsa_sgo",
       "vrdb_sync_fda_ai_devices",
+      "vrdb_sync_fda_device_recalls",
     ]);
   });
 });
@@ -258,15 +267,25 @@ describe("scheduleVendorRiskDatabaseSync", () => {
     await scheduleVendorRiskDatabaseSync(config(), queue, states);
 
     expect(states).toHaveBeenCalledWith([...ACTIVE]);
-    // The three open AI lists have no row either, so they are queued too; the gated ones are not.
+    // The screening list and the open AI lists have no row either, so they are queued too; the gated
+    // ones are not.
     expect(queue.add.mock.calls).toEqual(
-      (["ofac", "uk_sanctions", "eu_fsf", "atlas", "nhtsa_sgo", "fda_ai_devices"] as const).map(
-        (id) => [
-          "vrdb_sync",
-          { sourceId: id },
-          { ...VRDB_SYNC_JOB_OPTIONS, jobId: `vrdb_sync_first_${id}` },
-        ],
-      ),
+      (
+        [
+          "ofac",
+          "uk_sanctions",
+          "eu_fsf",
+          "csl",
+          "atlas",
+          "nhtsa_sgo",
+          "fda_ai_devices",
+          "fda_device_recalls",
+        ] as const
+      ).map((id) => [
+        "vrdb_sync",
+        { sourceId: id },
+        { ...VRDB_SYNC_JOB_OPTIONS, jobId: `vrdb_sync_first_${id}` },
+      ]),
     );
     expect(queue.upsertJobScheduler).toHaveBeenCalledTimes(ACTIVE.length);
   });
@@ -359,10 +378,12 @@ describe("the AI-specific lists in the schedule (spec D2.14 to D2.17)", () => {
       "uk_sanctions",
       "eu_fsf",
       "cve",
+      "csl",
       "aiid",
       "atlas",
       "nhtsa_sgo",
       "fda_ai_devices",
+      "fda_device_recalls",
     ]);
     expect(opened.add.mock.calls.map(([, , opts]) => opts.jobId)).toContain("vrdb_sync_first_aiid");
   });
@@ -381,5 +402,77 @@ describe("the AI-specific lists in the schedule (spec D2.14 to D2.17)", () => {
         "vrdb_sync_fda_ai_devices",
       ]),
     );
+  });
+});
+
+describe("the screening list and the device recalls in the schedule (spec D2.19, D2.20)", () => {
+  // Neither waits behind a gate, so each has its scheduler and, while it was never copied, its first
+  // sync, as the open AI lists have.
+  const NEW_LISTS = [
+    ["csl", "7 */6 * * *"],
+    ["fda_device_recalls", "43 14 * * *"],
+  ] as const;
+
+  it("schedules both at their own minutes, in UTC, and removes the scheduler of neither", async () => {
+    const queue = fakeQueue();
+
+    await scheduleVendorRiskDatabaseSync(config(), queue);
+
+    for (const [id, pattern] of NEW_LISTS) {
+      expect(queue.upsertJobScheduler).toHaveBeenCalledWith(
+        `vrdb_sync_${id}`,
+        { pattern, tz: "UTC" },
+        { name: "vrdb_sync", data: { sourceId: id }, opts: VRDB_SYNC_JOB_OPTIONS },
+      );
+      expect(queue.removeJobScheduler).not.toHaveBeenCalledWith(`vrdb_sync_${id}`);
+    }
+  });
+
+  it("queues a first sync of each while it was never copied, one job id per list", async () => {
+    const queue = fakeQueue();
+    // Neither has a row: no sync of either ever ran.
+    const states = jest.fn(async () => [] as VrdbSourceState[]);
+
+    await scheduleVendorRiskDatabaseSync(config(), queue, states);
+
+    // Both are among the lists whose states are read, and both are copied whole: unlike the CVE
+    // records they have no baseline to wait for.
+    expect(states).toHaveBeenCalledWith(expect.arrayContaining(["csl", "fda_device_recalls"]));
+    for (const [id] of NEW_LISTS) {
+      expect(queue.add).toHaveBeenCalledWith(
+        "vrdb_sync",
+        { sourceId: id },
+        { ...VRDB_SYNC_JOB_OPTIONS, jobId: `vrdb_sync_first_${id}` },
+      );
+    }
+  });
+
+  it("queues a first sync of a list whose row has no success, and none of a list that was copied", async () => {
+    const queue = fakeQueue();
+    const states = jest.fn(async () => [
+      // A row of syncs that all failed is still a list that was never copied.
+      state("csl", null),
+      state("fda_device_recalls", new Date("2026-11-06T14:43:00Z")),
+    ]);
+
+    await scheduleVendorRiskDatabaseSync(config(), queue, states);
+
+    const first = queue.add.mock.calls.map(([, data]) => data.sourceId);
+    expect(first).toContain("csl");
+    expect(first).not.toContain("fda_device_recalls");
+  });
+
+  it("removes the scheduler of each when the records are off, and queues no first sync", async () => {
+    const queue = fakeQueue();
+    const states = jest.fn(async () => [] as VrdbSourceState[]);
+
+    await scheduleVendorRiskDatabaseSync(config({ records: false }), queue, states);
+
+    for (const [id] of NEW_LISTS) {
+      expect(queue.removeJobScheduler).toHaveBeenCalledWith(`vrdb_sync_${id}`);
+    }
+    expect(queue.upsertJobScheduler).not.toHaveBeenCalled();
+    expect(states).not.toHaveBeenCalled();
+    expect(queue.add).not.toHaveBeenCalled();
   });
 });

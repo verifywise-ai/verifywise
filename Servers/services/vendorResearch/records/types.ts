@@ -27,10 +27,12 @@ export const RECORD_CATEGORY: Readonly<Record<RecordSourceId, ResearchCategory>>
   eu_fsf: "legal_regulatory",
   cve: "security_incidents",
   un_sanctions: "legal_regulatory",
+  csl: "legal_regulatory",
   aiid: "ai_specific",
   atlas: "ai_specific",
   nhtsa_sgo: "ai_specific",
   fda_ai_devices: "ai_specific",
+  fda_device_recalls: "ai_specific",
 };
 
 /** One record of a database, written out as a source. */
@@ -117,8 +119,10 @@ export const MAX_RECORDS = {
   eu_fsf: 2,
   cve: 3,
   un_sanctions: 2,
+  csl: 2,
   aiid: 3,
   atlas: 3,
   nhtsa_sgo: 3,
   fda_ai_devices: 2,
+  fda_device_recalls: 3,
 } as const satisfies Record<RecordSourceId, number>;

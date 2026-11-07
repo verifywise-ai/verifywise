@@ -30,9 +30,11 @@ import logger from "../../../../utils/logger/fileLogger";
 import type { VendorResearchConfig } from "../../config";
 import { aiidConnector } from "../connectors/aiid";
 import { atlasConnector } from "../connectors/atlas";
+import { cslConnector } from "../connectors/csl";
 import { cveConnector } from "../connectors/cve";
 import { euConnector } from "../connectors/eu";
 import { fdaConnector } from "../connectors/fda";
+import { fdaRecallsConnector } from "../connectors/fdaRecalls";
 import { kevConnector } from "../connectors/kev";
 import { nhtsaConnector } from "../connectors/nhtsa";
 import { ofacConnector } from "../connectors/ofac";
@@ -212,9 +214,11 @@ describe("the connector of each list", () => {
   };
 
   it.each([
+    ["csl", cslConnector],
     ["atlas", atlasConnector],
     ["nhtsa_sgo", nhtsaConnector],
     ["fda_ai_devices", fdaConnector],
+    ["fda_device_recalls", fdaRecallsConnector],
   ] as const)(
     "the job of %s, a list with no gate, syncs it with its own connector",
     async (sourceId, connector) => {
@@ -262,14 +266,17 @@ describe("the connector of each list", () => {
       eu_fsf: euConnector,
       cve: cveConnector,
       un_sanctions: unConnector,
+      csl: cslConnector,
       aiid: aiidConnector,
       atlas: atlasConnector,
       nhtsa_sgo: nhtsaConnector,
       fda_ai_devices: fdaConnector,
+      fda_device_recalls: fdaRecallsConnector,
     };
     const mirrors = VRDB_SOURCES.filter(isMirror).map(({ id }) => id);
 
-    // The four AI lists are in the map beside the six that were there.
+    // The screening list and the device recalls are in the map beside the four AI lists and the six
+    // that were there.
     expect([...mirrors].sort()).toEqual(Object.keys(connectors).sort());
     for (const [id, connector] of Object.entries(connectors)) {
       mockSyncSource.mockClear().mockResolvedValue({ outcome: "ok" });
@@ -282,6 +289,108 @@ describe("the connector of each list", () => {
       expect(connector.id).toBe(id);
     }
   });
+});
+
+describe("the jobs of the screening list and the device recalls", () => {
+  // Neither list waits behind a gate, so its job is carried out as the job of any open list is: the
+  // sync through its connector (above), the retry rules of a failed sync, and the status job.
+  const NEW_LISTS = ["csl", "fda_device_recalls"] as const;
+
+  it.each(NEW_LISTS)("the job of %s syncs it, with no gate to open", async (sourceId) => {
+    const result: SyncResult = {
+      outcome: "ok",
+      counts: { seen: 5170, inserted: 12, updated: 3, statusChanged: 0 },
+    };
+    const sync = syncOf(result);
+
+    await expect(
+      processVrdbJob(syncJob({ sourceId }), { config: config(), sync }),
+    ).resolves.toEqual(result);
+    expect(sync).toHaveBeenCalledWith(sourceId);
+  });
+
+  it.each(NEW_LISTS)("the job of %s does nothing while the records are off", async (sourceId) => {
+    const sync = syncOf({ outcome: "ok" });
+
+    await expect(
+      processVrdbJob(syncJob({ sourceId }), { config: config({ records: false }), sync }),
+    ).resolves.toBeNull();
+    expect(sync).not.toHaveBeenCalled();
+  });
+
+  it.each(NEW_LISTS)(
+    "a sync of %s that failed on the way throws, so that BullMQ retries it",
+    async (sourceId) => {
+      const sync = syncOf({ outcome: "failed", errorCode: "fetch_failed" });
+
+      const failed = processVrdbJob(syncJob({ sourceId }), { config: config(), sync });
+
+      await expect(failed).rejects.toThrow(VrdbSyncFailed);
+      await expect(failed).rejects.toThrow(`The sync of ${sourceId} failed (fetch_failed)`);
+      await expect(failed).rejects.not.toBeInstanceOf(UnrecoverableError);
+    },
+  );
+
+  it.each(NEW_LISTS)(
+    "a sync of %s that the list refused is not retried, whatever the refusal",
+    async (sourceId) => {
+      // A file that is not the list, one with unreadable entries, an empty join of the recalls, a
+      // copy that would lose a fifth of its records: a retry a minute later meets the same answer.
+      for (const errorCode of [
+        "wrong_root",
+        "parse_errors",
+        "empty",
+        "shrank",
+        "too_large",
+      ] as const) {
+        const sync = syncOf({ outcome: "failed", errorCode });
+
+        const refused = processVrdbJob(syncJob({ sourceId }), { config: config(), sync });
+
+        await expect(refused).rejects.toBeInstanceOf(UnrecoverableError);
+        await expect(refused).rejects.toThrow(`The sync of ${sourceId} failed (${errorCode})`);
+      }
+    },
+  );
+
+  it("a sync of the recalls whose answer asked for a wait is not retried by the job, which would ask sooner", async () => {
+    // openFDA's 429 carries its Retry-After through the connector to the sync's result.
+    const sync = syncOf({ outcome: "failed", errorCode: "fetch_failed", retryAfterMs: 60_000 });
+
+    const failed = processVrdbJob(syncJob({ sourceId: "fda_device_recalls" }), {
+      config: config(),
+      sync,
+    });
+
+    await expect(failed).rejects.toBeInstanceOf(UnrecoverableError);
+    await expect(failed).rejects.toThrow("The sync of fda_device_recalls failed (fetch_failed)");
+  });
+
+  it.each(NEW_LISTS)(
+    "a sync of %s that changed statuses adds its status job, which relabels the pending findings of the list",
+    async (sourceId) => {
+      // A listing that left the screening list is delisted, a recall that left the join withdrawn.
+      const enqueueRelabel = jest.fn().mockResolvedValue(undefined);
+      const relabel = jest.fn().mockResolvedValue({ relabeled: 2 });
+      const changed = syncOf({
+        outcome: "ok",
+        counts: { seen: 9, inserted: 0, updated: 1, statusChanged: 3 },
+      });
+
+      await processVrdbJob(syncJob({ sourceId }), {
+        config: config(),
+        sync: changed,
+        enqueueRelabel,
+      });
+      await expect(
+        processVrdbJob(syncJob({ sourceId }, "vrdb_relabel"), { config: config(), relabel }),
+      ).resolves.toEqual({ relabeled: 2 });
+
+      expect(enqueueRelabel).toHaveBeenCalledTimes(1);
+      expect(enqueueRelabel).toHaveBeenCalledWith(sourceId);
+      expect(relabel).toHaveBeenCalledWith(sourceId);
+    },
+  );
 });
 
 describe("the status job", () => {
