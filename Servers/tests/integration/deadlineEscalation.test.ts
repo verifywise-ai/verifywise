@@ -1,11 +1,9 @@
 jest.setTimeout(60000);
 
-// Mock only the Redis transport: the sweep and both notifiers under test are
-// REAL, so this file proves actual `notifications` rows are written. The
-// integration setup module is deliberately NOT imported — it would replace
-// the whole notifier module with stubs. Email delivery fails offline (no
-// RESEND_API_KEY) but sendInAppNotification swallows email errors by design,
-// after the row is already persisted.
+// Mock only the Redis transport and the email send: the sweep and both
+// notifiers under test are REAL, so this file proves actual `notifications`
+// rows are written. The integration setup module is deliberately NOT
+// imported — it would replace the whole notifier module with stubs.
 jest.mock("../../database/redis", () => ({
   __esModule: true,
   default: { publish: jest.fn().mockResolvedValue(1) },
@@ -17,10 +15,30 @@ import { cleanupDatabase, seedTwoOrgsAndUsers, createTestUser } from "./helpers"
 import { sequelize } from "../../database/db";
 import { createTestRisk, createTestModelRisk } from "../factories";
 import { DEADLINE_OVERDUE_LOOKBACK_DAYS } from "../../utils/deadline.utils";
+import { notificationService } from "../../services/notificationService";
+import { EMAIL_TEMPLATES } from "../../constants/emailTemplates";
 import {
   runDeadlineEscalationSweep,
   runDeadlineEscalationSweepAllOrgs,
 } from "../../services/automations/actions/deadlineEscalationSweep";
+
+// Email fails at once, as it does with no email provider configured (here and
+// in CI), and sendInAppNotification swallows the failure by design, after the
+// row is persisted. The real send queue would back off 600 ms × 2^failures, up
+// to 9.6 s, between failed sends and keep the failure count in
+// .rate-limit-state.json across runs: this file took over 40 s, and over 60 s
+// on later runs, almost all of it waiting. The stub also records who the sweep
+// tried to email.
+const sendEmailWithTemplate = jest
+  .spyOn(notificationService, "sendEmailWithTemplate")
+  .mockRejectedValue(new Error("Email ID is not set in environment variables"));
+
+/** Addresses the sweep tried to email, in order. */
+const emailedTo = (): string[] => sendEmailWithTemplate.mock.calls.map(([to]) => to);
+
+beforeEach(() => {
+  sendEmailWithTemplate.mockClear();
+});
 
 afterEach(async () => {
   await cleanupDatabase();
@@ -69,6 +87,14 @@ describe("deadline escalation sweep", () => {
       entity_id: risk,
       threshold: "7",
     });
+    // The 7-day notice emails too; that send fails, and the row is kept.
+    expect(sendEmailWithTemplate).toHaveBeenCalledTimes(1);
+    expect(sendEmailWithTemplate).toHaveBeenCalledWith(
+      seed.emailA,
+      expect.any(String),
+      EMAIL_TEMPLATES.RISK_DEADLINE_DUE,
+      expect.objectContaining({ entity_kind: "Risk" }),
+    );
   });
 
   it("running the sweep twice → exactly one row per recipient, not two", async () => {
@@ -95,6 +121,7 @@ describe("deadline escalation sweep", () => {
       [seed.userA, 1],
       [owner, 1],
     ]);
+    expect(emailedTo().sort()).toEqual([seed.emailA, "owner-a@t.com"].sort());
   });
 
   it("a second org's due risk never notifies org 1's users", async () => {
@@ -108,6 +135,7 @@ describe("deadline escalation sweep", () => {
     const rowsB = await noticeRows(seed.orgB);
     expect(rowsB).toHaveLength(1);
     expect(rowsB[0]).toMatchObject({ user_id: seed.userB, entity_id: riskB });
+    expect(emailedTo()).toEqual([seed.emailB]);
   });
 
   it("Completed / Canceled risks and Resolved / Accepted model risks are never escalated", async () => {
@@ -134,6 +162,7 @@ describe("deadline escalation sweep", () => {
 
     expect(summary).toEqual({ scanned: 0, emailed: 0, slacked: 0 });
     expect(await noticeRows(seed.orgA)).toHaveLength(0);
+    expect(sendEmailWithTemplate).not.toHaveBeenCalled();
   });
 
   it("a long-past deadline does not flood; a recently overdue one still notifies", async () => {
@@ -148,6 +177,8 @@ describe("deadline escalation sweep", () => {
     const rows = await noticeRows(seed.orgA);
     expect(rows.every((row) => row.entity_id === recent)).toBe(true);
     expect(rows.map((row) => row.threshold).sort()).toEqual(["1", "7"]);
+    // Only the 7-day notice emails; the 1-day notice goes to Slack instead.
+    expect(emailedTo()).toEqual([seed.emailA]);
   });
 
   it("a rescheduled deadline escalates again; an unchanged one does not", async () => {
@@ -165,6 +196,7 @@ describe("deadline escalation sweep", () => {
     expect(afterReschedule).toMatchObject({ emailed: 1 });
     const rows = await noticeRows(seed.orgA);
     expect(rows.filter((row) => row.threshold === "7")).toHaveLength(2);
+    expect(emailedTo()).toEqual([seed.emailA, seed.emailA]);
   });
 
   it("a risk 30 days out produces no row", async () => {
@@ -176,5 +208,6 @@ describe("deadline escalation sweep", () => {
 
     expect(summary).toEqual({ scanned: 0, emailed: 0, slacked: 0 });
     expect(await noticeRows(seed.orgA)).toHaveLength(0);
+    expect(sendEmailWithTemplate).not.toHaveBeenCalled();
   });
 });
