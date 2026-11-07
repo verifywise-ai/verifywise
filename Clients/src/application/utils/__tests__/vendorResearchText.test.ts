@@ -9,6 +9,7 @@ import type {
   CredibilityRule,
   CredibilitySource,
   RecordSourceId,
+  RecordStatus,
   ResearchCategory,
   RunCoverage,
   RunProgress,
@@ -631,10 +632,12 @@ const RECORD_SOURCES: RecordSourceId[] = [
   "eu_fsf",
   "cve",
   "un_sanctions",
+  "csl",
   "aiid",
   "atlas",
   "nhtsa_sgo",
   "fda_ai_devices",
+  "fda_device_recalls",
 ];
 
 /**
@@ -702,6 +705,66 @@ const atlasNotice = (year: number) =>
 /** The record of an AI-specific list as the server describes it: weak, in the class of its list. */
 const aiRecordOf = (
   list: AiList,
+  record: Partial<NonNullable<CredibilitySource["record"]>> = {},
+): CredibilitySource => ({
+  ...recordOf(list.id, { match: "weak", source_record_id: list.recordId, ...record }),
+  url: list.url,
+  category: list.category,
+});
+
+/**
+ * The two lists that came after the AI-specific ones, both open: the US Consolidated Screening List
+ * (the export-control and trade-restriction lists of Commerce, State and Treasury, without the SDN
+ * list that OFAC holds) and the FDA's recalls of the devices on its AI list. The server's name of
+ * each (vrdb/sources.ts), the class its records have (sourceRegistry/classify.ts), the status it
+ * gives a record it no longer holds (`missingStatus`) and an address of the form its records have,
+ * with an invented id. A match by name is weak.
+ */
+const CSL_AND_RECALLS = [
+  {
+    id: "csl",
+    name: "US Consolidated Screening List",
+    list: "US Consolidated Screening List",
+    category: "official",
+    dropped: "delisted",
+    url: "https://www.trade.gov/consolidated-screening-list?list=el&entry=acmetradingco",
+    recordId: "el:acmetradingco",
+  },
+  {
+    id: "fda_device_recalls",
+    name: "FDA recalls of AI-enabled medical devices",
+    // What "the {list} entry" says: a recall is an entry of the FDA's recall database.
+    list: "FDA device recall database",
+    category: "official",
+    dropped: "withdrawn",
+    url: "https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfRES/res.cfm?start_search=1&event_id=90001",
+    recordId: "90001",
+  },
+] as const satisfies ReadonlyArray<{
+  id: RecordSourceId;
+  name: string;
+  list: string;
+  category: SourceCategory;
+  dropped: Exclude<RecordStatus, "active" | "rejected">;
+  url: string;
+  recordId: string;
+}>;
+type CslOrRecalls = (typeof CSL_AND_RECALLS)[number];
+
+/**
+ * What the terms of those two lists ask a screen that shows their data to say, as the server stores
+ * it (vrdb/sources.ts). Never translated. ITA asks for a sentence that names its Data API; the
+ * product reads the downloadable file, so the notice of the screening list names the list.
+ */
+const CSL_AND_RECALLS_NOTICES = {
+  csl: "This product uses data from the International Trade Administration's Consolidated Screening List but is not endorsed or certified by the International Trade Administration. Entries adapted by VerifyWise.",
+  fda_device_recalls:
+    "FDA medical device recalls through openFDA, US Food and Drug Administration (CC0 1.0), joined by VerifyWise to the FDA list of AI-enabled medical devices.",
+};
+
+/** The record of one of those lists as the server describes it: weak, in the class of its list. */
+const cslOrRecallRecordOf = (
+  list: CslOrRecalls,
   record: Partial<NonNullable<CredibilitySource["record"]>> = {},
 ): CredibilitySource => ({
   ...recordOf(list.id, { match: "weak", source_record_id: list.recordId, ...record }),
@@ -914,6 +977,38 @@ const RULE_SENTENCES: Array<[name: string, basis: CredibilityBasis, sentence: st
       `Low: ${list.name} withdrew the record.`,
     ],
   ]),
+  // The US Consolidated Screening List and the FDA recalls: matched by name. The sentence of a record
+  // that its list no longer holds follows the status the record has, so each status is worded for
+  // each list: the screening list delists a record and the recalls withdraw it, and the words are
+  // those of the status ("removed", "withdrew") whichever list wrote it.
+  ...CSL_AND_RECALLS.flatMap(
+    (list): Array<[name: string, basis: CredibilityBasis, sentence: string]> => [
+      [
+        `an entry of the ${list.name} matched by name`,
+        basisOf("name_only", [cslOrRecallRecordOf(list)], true),
+        `Low: the ${list.list} entry matches the vendor by name only.`,
+      ],
+      ...(
+        [
+          ["withdrawn", "withdrew"],
+          ["delisted", "removed"],
+        ] as const
+      ).flatMap(
+        ([status, verb]): Array<[name: string, basis: CredibilityBasis, sentence: string]> => [
+          [
+            `a ${status} record of the ${list.name}`,
+            basisOf("inactive", [cslOrRecallRecordOf(list, { status, as_of: "2026-10-09" })]),
+            `Low: ${list.name} ${verb} the record on 9 Oct 2026.`,
+          ],
+          [
+            `a ${status} record of the ${list.name} on no known day`,
+            basisOf("inactive", [cslOrRecallRecordOf(list, { status, as_of: undefined })]),
+            `Low: ${list.name} ${verb} the record.`,
+          ],
+        ],
+      ),
+    ],
+  ),
   // A weak record gives only Low support, whatever its class: MITRE ATLAS is trusted press, and
   // its case studies are matched by name, so one is no publisher of a line (credibility.ts).
   [
@@ -1016,6 +1111,26 @@ describe("credibilityRationale", () => {
     expect(sentenceOf("un_sanctions")).toBe(
       "Low: the UN Security Council Consolidated List entry matches the vendor by name only.",
     );
+    expect(sentenceOf("csl")).toBe(
+      "Low: the US Consolidated Screening List entry matches the vendor by name only.",
+    );
+    expect(sentenceOf("fda_device_recalls")).toBe(
+      "Low: the FDA device recall database entry matches the vendor by name only.",
+    );
+  });
+
+  it("words a strong match of the US Consolidated Screening List as it does the other official lists", () => {
+    // An entry the OFAC lists derive (a website or an LEI of the vendor) can match strongly; the
+    // BIS and State lists carry neither, so their entries match by name and stay Low.
+    const basis = basisOf("official_record", [
+      recordOf("csl", { source_record_id: "ssi:acmetradingco" }),
+    ]);
+    expect(credibilityRationale(basis, english, "en")).toEqual({
+      sentence:
+        "High: US Consolidated Screening List lists it (ssi:acmetradingco), as of 7 Oct 2026.",
+      stale: null,
+    });
+    expect(nameOnlyNote(basis, english)).toBeNull();
   });
 
   it("names the publishers of the strong sources only: a weak record is none, whatever its class", () => {
@@ -1181,6 +1296,15 @@ describe("nameOnlyNote", () => {
       NAME_ONLY_NOTE,
     );
   });
+
+  it.each(CSL_AND_RECALLS)(
+    "is the note for a record of the $name, which only a name matched",
+    (list) => {
+      expect(nameOnlyNote(basisOf("name_only", [cslOrRecallRecordOf(list)], true), english)).toBe(
+        NAME_ONLY_NOTE,
+      );
+    },
+  );
 
   it("is nothing otherwise", () => {
     expect(nameOnlyNote(basisOf("official_record", [recordOf("kev")]), english)).toBeNull();
@@ -1719,6 +1843,154 @@ describe("coverageLines", () => {
     });
   });
 
+  describe("with the US Consolidated Screening List and the FDA recalls of AI-enabled devices", () => {
+    /** Every match of these lists is by name, so a run counts weak records only. */
+    const pairRun = (overrides: Partial<RunCoverage> = {}) =>
+      coverageOf({
+        sources: [
+          listCopy("csl", { outcome: "found", weak: 2 }),
+          listCopy("fda_device_recalls", { outcome: "found", weak: 1 }),
+        ],
+        lookups: [],
+        ...overrides,
+      });
+
+    it("counts the records each list held, in the screen's own names", () => {
+      expect(linesOf(pairRun()).checked).toBe(
+        "Checked: US Consolidated Screening List (2), FDA recalls of AI-enabled medical devices (1)",
+      );
+    });
+
+    it("says which of them held no record, as of the day of its copy", () => {
+      const noneAtAll = pairRun({ sources: CSL_AND_RECALLS.map((list) => listCopy(list.id)) });
+      expect(linesOf(noneAtAll).none).toBe(
+        "No records in US Consolidated Screening List, FDA recalls of AI-enabled medical devices as of 10 Oct 2026",
+      );
+      const recallsOnly = pairRun({
+        sources: [
+          listCopy("csl", { outcome: "found", weak: 1 }),
+          listCopy("fda_device_recalls", { last_success_at: "2026-10-09T23:00:00.000Z" }),
+        ],
+      });
+      expect(linesOf(recallsOnly).none).toBe(
+        "No records in FDA recalls of AI-enabled medical devices as of 9 Oct 2026",
+      );
+      expect(linesOf(pairRun()).none).toBeNull();
+    });
+
+    it("names the lists the run could not check, and the ones that are out of date", () => {
+      const lines = linesOf(
+        pairRun({
+          sources: [
+            listCopy("csl", { checked: false, outcome: "failed", last_success_at: null }),
+            listCopy("fda_device_recalls", {
+              stale: true,
+              last_success_at: "2026-10-07T09:23:00.000Z",
+            }),
+          ],
+        }),
+      );
+      expect(lines.notChecked).toBe("Not checked: US Consolidated Screening List");
+      expect(lines.stale).toEqual([
+        "FDA recalls of AI-enabled medical devices: last updated 7 Oct 2026, not up to date",
+      ]);
+      expect(lines.off).toBe(false);
+
+      // A list that is out of date but was not asked is no gap of the findings, and one that was
+      // not researched (the category it serves was not) is none either.
+      const unasked = linesOf(
+        pairRun({
+          sources: [
+            listCopy("csl", { checked: false, outcome: "not_researched", stale: true }),
+            listCopy("fda_device_recalls", { checked: false, outcome: "not_researched" }),
+          ],
+        }),
+      );
+      expect(unasked.notChecked).toBeNull();
+      expect(unasked.stale).toEqual([]);
+      expect(unasked.checked).toBeNull();
+    });
+
+    it("gives the notice of each list it checked, as its owner wrote it and in the order of the run", () => {
+      const notices = linesOf(pairRun()).attributions;
+      expect(notices).toEqual([
+        CSL_AND_RECALLS_NOTICES.csl,
+        CSL_AND_RECALLS_NOTICES.fda_device_recalls,
+      ]);
+      // The product reads ITA's downloadable file, not its Data API: the notice does not say so.
+      expect(notices.join(" ")).not.toContain("Data API");
+
+      const recallsFirst = pairRun({
+        sources: [listCopy("fda_device_recalls"), listCopy("csl")],
+      });
+      expect(linesOf(recallsFirst).attributions).toEqual([
+        CSL_AND_RECALLS_NOTICES.fda_device_recalls,
+        CSL_AND_RECALLS_NOTICES.csl,
+      ]);
+
+      // A list the run did not ask gives no notice: nothing of it is in the findings.
+      const cslFailed = pairRun({
+        sources: [
+          listCopy("csl", { checked: false, outcome: "failed", last_success_at: null }),
+          listCopy("fda_device_recalls"),
+        ],
+      });
+      expect(linesOf(cslFailed).attributions).toEqual([CSL_AND_RECALLS_NOTICES.fda_device_recalls]);
+    });
+
+    it("sits among the other lists in the order the run gives them", () => {
+      const lines = linesOf(
+        coverageOf({
+          sources: [
+            listCopy("kev", { outcome: "found", strong: 1 }),
+            listCopy("ofac"),
+            listCopy("un_sanctions"),
+            listCopy("csl", { outcome: "found", weak: 1 }),
+            listCopy("fda_ai_devices"),
+            listCopy("fda_device_recalls", { outcome: "found", weak: 1 }),
+          ],
+        }),
+      );
+      expect(lines.checked).toBe(
+        "Checked: CISA Known Exploited Vulnerabilities (1), OFAC Specially Designated Nationals list (0), UN Security Council Consolidated List (0), US Consolidated Screening List (1), FDA list of AI-enabled medical devices (0), FDA recalls of AI-enabled medical devices (1), the National Vulnerability Database, SEC EDGAR",
+      );
+      expect(lines.attributions).toEqual([
+        ATTRIBUTIONS[0],
+        ATTRIBUTIONS[1],
+        "United Nations Security Council Consolidated List",
+        CSL_AND_RECALLS_NOTICES.csl,
+        "FDA list of AI-enabled medical devices, US Food and Drug Administration",
+        CSL_AND_RECALLS_NOTICES.fda_device_recalls,
+      ]);
+    });
+
+    it("turned off, they are off with the other lists", () => {
+      const off = linesOf(
+        pairRun({
+          sources: [
+            listCopy("kev", { checked: false, outcome: "off" }),
+            ...CSL_AND_RECALLS.map((list) => listCopy(list.id, { checked: false, outcome: "off" })),
+          ],
+        }),
+      );
+      expect(off.off).toBe(true);
+      expect(off.checked).toBeNull();
+      expect(off.attributions).toEqual([]);
+
+      // One of them on is not off.
+      const oneOn = linesOf(
+        pairRun({
+          sources: [
+            listCopy("csl", { checked: false, outcome: "off" }),
+            listCopy("fda_device_recalls"),
+          ],
+        }),
+      );
+      expect(oneOn.off).toBe(false);
+      expect(oneOn.attributions).toEqual([CSL_AND_RECALLS_NOTICES.fda_device_recalls]);
+    });
+  });
+
   it("leaves out a list or a database it does not know", () => {
     const lines = linesOf(
       coverageOf({
@@ -1775,6 +2047,21 @@ describe("joinAttributions", () => {
       ]),
     ).toBe(
       "AI Incident Database, Responsible AI Collaborative (incidentdatabase.ai), CC BY-SA 4.0. Adapted by VerifyWise; the adapted records are shared under CC BY-SA 4.0; MITRE ATLAS™ case studies, Copyright 2021-2026 The MITRE Corporation, under the Apache License 2.0. Adapted by VerifyWise; NHTSA Standing General Order crash reports, US Department of Transportation. Counted by VerifyWise; NHTSA states the data may be incomplete or unverified; FDA list of AI-enabled medical devices, US Food and Drug Administration",
+    );
+  });
+
+  it("joins the notices of the screening list and the recalls the same way, whichever comes last", () => {
+    const { csl, fda_device_recalls: recalls } = CSL_AND_RECALLS_NOTICES;
+    // The notice of each ends in a full stop: the one before a semicolon goes, the last stays.
+    expect(joinAttributions([csl, recalls])).toBe(
+      "This product uses data from the International Trade Administration's Consolidated Screening List but is not endorsed or certified by the International Trade Administration. Entries adapted by VerifyWise; FDA medical device recalls through openFDA, US Food and Drug Administration (CC0 1.0), joined by VerifyWise to the FDA list of AI-enabled medical devices.",
+    );
+    expect(joinAttributions([recalls, csl])).toBe(
+      "FDA medical device recalls through openFDA, US Food and Drug Administration (CC0 1.0), joined by VerifyWise to the FDA list of AI-enabled medical devices; This product uses data from the International Trade Administration's Consolidated Screening List but is not endorsed or certified by the International Trade Administration. Entries adapted by VerifyWise.",
+    );
+    // Only a final full stop is dropped: the one inside the screening list's notice is its own.
+    expect(joinAttributions([csl, recalls])).toContain(
+      "International Trade Administration. Entries adapted",
     );
   });
 
@@ -1868,10 +2155,12 @@ describe("translation", () => {
             "eu_fsf",
             "cve",
             "un_sanctions",
+            "csl",
             "aiid",
             "atlas",
             "nhtsa_sgo",
             "fda_ai_devices",
+            "fda_device_recalls",
           ] as const
         ).map((id) => ({
           id,
@@ -1924,6 +2213,9 @@ describe("translation", () => {
         "MITRE ATLAS case studies",
         "NHTSA Standing General Order crash reports",
         "FDA list of AI-enabled medical devices",
+        "US Consolidated Screening List",
+        "FDA recalls of AI-enabled medical devices",
+        "FDA device recall database",
       ]),
     );
   });
@@ -1985,6 +2277,60 @@ describe("translation", () => {
       expect(lines.attributions).toContain(AI_NOTICES.aiid);
       expect(lines.attributions).toContain(AI_NOTICES.nhtsa_sgo);
       expect(lines.attributions).toContain(AI_NOTICES.fda_ai_devices);
+    },
+  );
+
+  it.each(LANGS)(
+    "names the US Consolidated Screening List and the FDA recalls in %s, and leaves their notices as they are",
+    (lang) => {
+      const t = (key: string) => translations[lang][key] ?? key;
+      const lines = coverageLines(
+        {
+          registry_version: "2026-10-29.1",
+          sources: CSL_AND_RECALLS.map((list) => ({
+            id: list.id,
+            name: "The server's name",
+            attribution: "The server's attribution",
+            mode: "mirror" as const,
+            checked: true,
+            outcome: "found" as const,
+            strong: 0,
+            weak: 1,
+            last_success_at: "2026-10-10T11:00:00.000Z",
+            stale: false,
+          })),
+          lookups: [],
+          cited: { official: 0, trusted_press: 0, vendor: 0, unverified: 0 },
+        },
+        t,
+        lang,
+      );
+      for (const list of CSL_AND_RECALLS) {
+        // Each is worded in the language, though the screening list keeps the title it is known by.
+        const words = translations[lang][list.name];
+        const listWords = translations[lang][list.list];
+        expect(words).toBeDefined();
+        expect(words).not.toBe(list.name);
+        expect(listWords).toBeDefined();
+        expect(listWords).not.toBe(list.list);
+        expect(lines.checked).toContain(`${words} (1)`);
+        // In the sentence of a record matched by name (the list its entry is on), and of one the list
+        // dropped, by its status (the database that dropped it).
+        for (const [basis, expected] of [
+          [basisOf("name_only", [cslOrRecallRecordOf(list)], true), listWords],
+          [basisOf("inactive", [cslOrRecallRecordOf(list, { status: list.dropped })]), words],
+        ] as const) {
+          const { sentence } = credibilityRationale(basis, t, lang);
+          expect(sentence).toContain(expected);
+          expect(sentence).not.toContain(list.name);
+          expect(sentence).not.toContain("{");
+        }
+      }
+      // The words of a licence are never translated.
+      expect(lines.attributions).toEqual([
+        CSL_AND_RECALLS_NOTICES.csl,
+        CSL_AND_RECALLS_NOTICES.fda_device_recalls,
+      ]);
     },
   );
 

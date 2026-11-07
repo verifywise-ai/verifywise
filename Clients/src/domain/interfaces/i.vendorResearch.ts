@@ -64,17 +64,20 @@ export type RecordSourceId =
   | "eu_fsf"
   | "cve"
   | "un_sanctions"
+  | "csl"
   | "aiid"
   | "atlas"
   | "nhtsa_sgo"
-  | "fda_ai_devices";
+  | "fda_ai_devices"
+  | "fda_device_recalls";
 
 /**
  * The lists the vendor risk database mirrors, and the databases it reads through (the NVD, the
  * SEC): looked up in the database instead of on the web. The AI-specific lists are aiid (the AI
  * Incident Database), atlas (MITRE ATLAS case studies), nhtsa_sgo (NHTSA's crash reports of
- * automated driving and driver assistance systems) and fda_ai_devices (the FDA's list of
- * AI-enabled medical devices).
+ * automated driving and driver assistance systems), fda_ai_devices (the FDA's list of
+ * AI-enabled medical devices) and fda_device_recalls (the FDA's recalls of those devices). The
+ * csl list is the US Consolidated Screening List, without the SDN list that ofac holds.
  */
 export type VrdbSourceId =
   | "kev"
@@ -85,10 +88,12 @@ export type VrdbSourceId =
   | "eu_fsf"
   | "cve"
   | "un_sanctions"
+  | "csl"
   | "aiid"
   | "atlas"
   | "nhtsa_sgo"
-  | "fda_ai_devices";
+  | "fda_ai_devices"
+  | "fda_device_recalls";
 
 /**
  * What a run learned from one source of records: records were found, none were, the lookup

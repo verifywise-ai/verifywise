@@ -184,7 +184,8 @@ const pressSource = (entry: string, name: string | undefined, url: string): Cred
 /**
  * The record of an AI-specific list as the server describes it: matched by name, so weak, and in the
  * class of its list (the AI Incident Database is an aggregator, MITRE curates its case studies,
- * NHTSA and the FDA are regulators).
+ * NHTSA and the FDA are regulators). The record of any other list matched by name has the same
+ * form, the US Consolidated Screening List's among them.
  */
 const aiRecordSource = (
   source: RecordSourceId,
@@ -206,6 +207,38 @@ const AI_LISTS = [
   category: CredibilitySource["category"];
   name: string;
 }>;
+
+/**
+ * The two lists that came after them, both open: the US Consolidated Screening List and the FDA's
+ * recalls of the devices on its AI list. The id, the class of the records (a government's own
+ * records are official) and the name the screen words.
+ */
+const CSL_AND_RECALLS = [
+  {
+    id: "csl",
+    category: "official",
+    name: "US Consolidated Screening List",
+    list: "US Consolidated Screening List",
+  },
+  {
+    id: "fda_device_recalls",
+    category: "official",
+    name: "FDA recalls of AI-enabled medical devices",
+    // What "the {list} entry" says: a recall is an entry of the FDA's recall database.
+    list: "FDA device recall database",
+  },
+] as const satisfies ReadonlyArray<{
+  id: RecordSourceId;
+  category: CredibilitySource["category"];
+  name: string;
+  list: string;
+}>;
+
+/** What the terms of those two lists ask a screen to say, as the server stores it (vrdb/sources.ts). */
+const CSL_NOTICE =
+  "This product uses data from the International Trade Administration's Consolidated Screening List but is not endorsed or certified by the International Trade Administration. Entries adapted by VerifyWise.";
+const RECALLS_NOTICE =
+  "FDA medical device recalls through openFDA, US Food and Drug Administration (CC0 1.0), joined by VerifyWise to the FDA list of AI-enabled medical devices.";
 
 /**
  * A basis for every sentence the line of a credibility label can be, and the values the sentence
@@ -473,6 +506,28 @@ const RATIONALES: Rationale[] = [
       sources: [aiRecordSource(list.id, list.category, { status: "withdrawn" })],
       key: "Low: {operator} withdrew the record on {date}.",
       values: (lang) => ({ operator: tr(lang, list.name), date: dateIn(lang, "2026-10-07") }),
+    },
+  ]),
+  // The US Consolidated Screening List and the FDA recalls: matched by name, and each worded for
+  // both statuses a record can leave a list with, because the sentence follows the record's status.
+  ...CSL_AND_RECALLS.flatMap((list): Rationale[] => [
+    {
+      rule: "name_only",
+      sources: [aiRecordSource(list.id, list.category)],
+      key: "Low: the {list} entry matches the vendor by name only.",
+      values: (lang) => ({ list: tr(lang, list.list) }),
+    },
+    {
+      rule: "inactive",
+      sources: [aiRecordSource(list.id, list.category, { status: "withdrawn" })],
+      key: "Low: {operator} withdrew the record on {date}.",
+      values: (lang) => ({ operator: tr(lang, list.name), date: dateIn(lang, "2026-10-07") }),
+    },
+    {
+      rule: "inactive",
+      sources: [aiRecordSource(list.id, list.category, { status: "delisted", as_of: undefined })],
+      key: "Low: {operator} removed the record.",
+      values: (lang) => ({ operator: tr(lang, list.name) }),
     },
   ]),
   // A weak record of MITRE ATLAS (trusted press) is no publisher of the Medium line.
@@ -1244,6 +1299,119 @@ describe.each(LANGS)("research findings in %s", (lang) => {
             "NHTSA Standing General Order crash reports, US Department of Transportation. Counted by VerifyWise; NHTSA states the data may be incomplete or unverified.",
           ]),
         }),
+      ),
+    ).toBeInTheDocument();
+
+    expectNoUntranslatedText(lang, FIXTURES);
+  });
+
+  it("translates the coverage of a run that checked the US Consolidated Screening List and the FDA recalls, and leaves their notices as they are", async () => {
+    mocks.latest.mockResolvedValue(
+      run({
+        category_summary: FOUR_OUTCOMES,
+        coverage: coverage({
+          sources: [
+            listCopy("csl", { outcome: "found", weak: 2 }),
+            listCopy("fda_device_recalls", {
+              stale: true,
+              last_success_at: "2026-10-07T09:23:00.000Z",
+            }),
+          ],
+          lookups: [],
+          cited: { official: 2, trusted_press: 0, vendor: 0, unverified: 0 },
+        }),
+      }),
+    );
+    renderSection();
+    const name = (key: string) => tr(lang, key);
+
+    expect(
+      await screen.findByText(
+        tr(lang, "Checked: {sources}", {
+          sources: [
+            `${name("US Consolidated Screening List")} (2)`,
+            `${name("FDA recalls of AI-enabled medical devices")} (0)`,
+          ].join(", "),
+        }),
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        tr(lang, "No records in {sources} as of {dates}", {
+          sources: name("FDA recalls of AI-enabled medical devices"),
+          dates: dateIn(lang, "2026-10-07T09:23:00.000Z"),
+        }),
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        tr(lang, "{source}: last updated {date}, not up to date", {
+          source: name("FDA recalls of AI-enabled medical devices"),
+          date: dateIn(lang, "2026-10-07T09:23:00.000Z"),
+        }),
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        tr(
+          lang,
+          "Sources cited: {official} official, {press} trusted press, {vendor} vendor, {unverified} unverified",
+          { official: 2, press: 0, vendor: 0, unverified: 0 },
+        ),
+      ),
+    ).toBeInTheDocument();
+    // The notices stay as their owners wrote them; the label before them does not.
+    expect(
+      screen.getByText(
+        tr(lang, "Data sources: {attributions}", {
+          attributions: joinAttributions([CSL_NOTICE, RECALLS_NOTICE]),
+        }),
+      ),
+    ).toBeInTheDocument();
+
+    expectNoUntranslatedText(lang, FIXTURES);
+  });
+
+  it("translates the screening list that a run could not check, beside the recalls that it did", async () => {
+    mocks.latest.mockResolvedValue(
+      run({
+        category_summary: FOUR_OUTCOMES,
+        coverage: coverage({
+          sources: [
+            listCopy("csl", { checked: false, outcome: "failed", last_success_at: null }),
+            listCopy("fda_device_recalls", { outcome: "found", weak: 1 }),
+          ],
+          lookups: [],
+        }),
+      }),
+    );
+    renderSection();
+    const name = (key: string) => tr(lang, key);
+
+    expect(
+      await screen.findByText(
+        tr(lang, "Not checked: {sources}", { sources: name("US Consolidated Screening List") }),
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        tr(lang, "Checked: {sources}", {
+          sources: `${name("FDA recalls of AI-enabled medical devices")} (1)`,
+        }),
+      ),
+    ).toBeInTheDocument();
+    // Only the notice of the list the run asked is shown.
+    expect(
+      screen.getByText(tr(lang, "Data sources: {attributions}", { attributions: RECALLS_NOTICE })),
+    ).toBeInTheDocument();
+    // The other line of the block, which the screen shows beside them.
+    expect(
+      screen.getByText(
+        tr(
+          lang,
+          "Sources cited: {official} official, {press} trusted press, {vendor} vendor, {unverified} unverified",
+          { official: 1, press: 0, vendor: 0, unverified: 0 },
+        ),
       ),
     ).toBeInTheDocument();
 

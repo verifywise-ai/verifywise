@@ -1034,6 +1034,179 @@ describe("the credibility of a finding", () => {
     });
   });
 
+  describe("with the US Consolidated Screening List and the FDA recalls", () => {
+    /**
+     * One record of each list as a finding cites it: matched by name, so weak, and in the class of
+     * its list (a government's own records are official). `dropped` is what the list does to a
+     * record it no longer holds, with the line and the tag the screen then shows: the screening
+     * list delists it, the recalls withdraw it. The ids and the companies are invented.
+     */
+    const LISTS = [
+      {
+        id: "csl",
+        name: "US Consolidated Screening List",
+        list: "US Consolidated Screening List",
+        url: "https://www.trade.gov/consolidated-screening-list?list=el&entry=acmetradingco",
+        host: "www.trade.gov",
+        recordId: "el:acmetradingco",
+        dropped: "delisted",
+        droppedLine: "Low: US Consolidated Screening List removed the record on 9 Oct 2026.",
+        droppedTag: "Delisted",
+      },
+      {
+        id: "fda_device_recalls",
+        name: "FDA recalls of AI-enabled medical devices",
+        // "the {list} entry": a recall is an entry of the FDA's recall database.
+        list: "FDA device recall database",
+        url: "https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfRES/res.cfm?start_search=1&event_id=90001",
+        host: "www.accessdata.fda.gov",
+        recordId: "90001",
+        dropped: "withdrawn",
+        droppedLine:
+          "Low: FDA recalls of AI-enabled medical devices withdrew the record on 9 Oct 2026.",
+        droppedTag: "Withdrawn",
+      },
+    ] as const;
+    type ListUnderTest = (typeof LISTS)[number];
+    const [CSL] = LISTS;
+
+    /** The record as the finding cites it, and as the credibility rule saw it. */
+    const citedRecord = (
+      list: ListUnderTest,
+      options: {
+        status?: "active" | "withdrawn" | "delisted";
+        match?: "weak" | "strong";
+      } = {},
+    ) => {
+      const { status = "active", match = "weak" } = options;
+      return {
+        citation: {
+          url: list.url,
+          title: `Record ${list.recordId}`,
+          quote: `A record of ${list.host}`,
+          published_at: "2026-09-02",
+          category: "official" as const,
+          publisher: list.id,
+          record: { source_id: list.id, record_id: 12, status, match_strength: match },
+        },
+        seen: {
+          url: list.url,
+          category: "official" as const,
+          publisher: list.id,
+          entry: null,
+          reviewed: true,
+          reading: "read" as const,
+          record: {
+            source: list.id,
+            match,
+            status,
+            source_record_id: list.recordId,
+            as_of: "2026-10-09",
+          },
+        },
+      };
+    };
+
+    it.each(LISTS)(
+      "a record of the $name matched by name shows the name-only line, the note and the official badge",
+      async (list) => {
+        const { citation, seen } = citedRecord(list);
+        mocks.list.mockResolvedValue({
+          rows: [
+            credibleFinding({
+              credibility: "low",
+              credibility_basis: {
+                rule: "name_only",
+                registry_version: "2026-10-29.1",
+                name_only: true,
+                sources: [seen],
+              },
+              sources: [citation],
+            }),
+          ],
+          total: 1,
+        });
+        renderSection();
+        await screen.findByText(FIRST);
+
+        const row = within(rowOf(FIRST));
+        expect(row.getByText("Low")).toBeInTheDocument();
+        const line = row.getByText(`Low: the ${list.list} entry matches the vendor by name only.`);
+        expect(follows(line, row.getByText(NOTE))).toBe(true);
+        // The badge is the class of the list, in front of the host of the record.
+        expect(row.getByText("Official").nextElementSibling).toContainElement(
+          row.getByRole("link", { name: list.host }),
+        );
+      },
+    );
+
+    it.each(LISTS)(
+      "a record the $name dropped reads as $droppedTag, with the day of the copy",
+      async (list) => {
+        const { citation, seen } = citedRecord(list, { status: list.dropped });
+        mocks.list.mockResolvedValue({
+          rows: [
+            credibleFinding({
+              credibility: "low",
+              credibility_basis: {
+                rule: "inactive",
+                registry_version: "2026-10-29.1",
+                name_only: true,
+                sources: [seen],
+              },
+              sources: [citation],
+            }),
+          ],
+          total: 1,
+        });
+        renderSection();
+        await screen.findByText(FIRST);
+
+        const row = within(rowOf(FIRST));
+        const line = row.getByText(list.droppedLine);
+        // A record matched by name carries the note, whatever the rule that decided the label.
+        expect(follows(line, row.getByText(NOTE))).toBe(true);
+        expect(
+          follows(row.getByRole("link", { name: list.host }), row.getByText(list.droppedTag)),
+        ).toBe(true);
+      },
+    );
+
+    it("a strong match of the US Consolidated Screening List reads as High, with no name-only note", async () => {
+      // An entry that an OFAC list derives, matched by the vendor's website or its LEI.
+      const { citation, seen } = citedRecord(CSL, { match: "strong" });
+      mocks.list.mockResolvedValue({
+        rows: [
+          credibleFinding({
+            credibility: "high",
+            credibility_basis: {
+              rule: "official_record",
+              registry_version: "2026-10-29.1",
+              name_only: false,
+              sources: [seen],
+            },
+            sources: [citation],
+          }),
+        ],
+        total: 1,
+      });
+      renderSection();
+      await screen.findByText(FIRST);
+
+      const row = within(rowOf(FIRST));
+      expect(row.getByText("High")).toBeInTheDocument();
+      expect(
+        row.getByText(
+          "High: US Consolidated Screening List lists it (el:acmetradingco), as of 9 Oct 2026.",
+        ),
+      ).toBeInTheDocument();
+      expect(row.queryByText(NOTE)).not.toBeInTheDocument();
+      expect(row.getByText("Official").nextElementSibling).toContainElement(
+        row.getByRole("link", { name: CSL.host }),
+      );
+    });
+  });
+
   it("puts a badge before each source's host", async () => {
     mocks.list.mockResolvedValue({
       rows: [
@@ -3153,6 +3326,104 @@ describe("the coverage of the latest run", () => {
     expect(
       screen.queryByText(/NHTSA Standing General Order crash reports/),
     ).not.toBeInTheDocument();
+  });
+
+  describe("with the US Consolidated Screening List and the FDA recalls of AI-enabled devices", () => {
+    /** What the terms of the two lists ask a screen to say, as the server stores it (vrdb/sources.ts). */
+    const CSL_NOTICE =
+      "This product uses data from the International Trade Administration's Consolidated Screening List but is not endorsed or certified by the International Trade Administration. Entries adapted by VerifyWise.";
+    const RECALLS_NOTICE =
+      "FDA medical device recalls through openFDA, US Food and Drug Administration (CC0 1.0), joined by VerifyWise to the FDA list of AI-enabled medical devices.";
+
+    it("lists the two lists the run checked, with their notices as their owners wrote them", async () => {
+      mocks.latest.mockResolvedValue(
+        run({
+          coverage: coverage({
+            sources: [
+              listCopy("csl", { outcome: "found", weak: 2 }),
+              listCopy("fda_device_recalls", { stale: true }),
+            ],
+            lookups: [],
+            cited: { official: 2, trusted_press: 0, vendor: 0, unverified: 0 },
+          }),
+        }),
+      );
+      renderSection({ route: WITH_VENDOR_7 });
+
+      expect(
+        await screen.findByText(
+          "Checked: US Consolidated Screening List (2), FDA recalls of AI-enabled medical devices (0)",
+        ),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          "No records in FDA recalls of AI-enabled medical devices as of 10 Oct 2026",
+        ),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          "FDA recalls of AI-enabled medical devices: last updated 10 Oct 2026, not up to date",
+        ),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText("Sources cited: 2 official, 0 trusted press, 0 vendor, 0 unverified"),
+      ).toBeInTheDocument();
+      const line = screen.getByText(
+        `Data sources: ${joinAttributions([CSL_NOTICE, RECALLS_NOTICE])}`,
+      );
+      // The words of a notice are never translated, and the full stop of the first is not doubled.
+      expect(line.closest("[data-vw-no-translate]")).not.toBeNull();
+      expect(line.textContent).toContain(
+        "Entries adapted by VerifyWise; FDA medical device recalls",
+      );
+      expect(line.textContent).not.toContain("Data API");
+    });
+
+    it("names the screening list when the run could not check it, and says nothing of the recalls it did not ask", async () => {
+      mocks.latest.mockResolvedValue(
+        run({
+          coverage: coverage({
+            sources: [
+              listCopy("csl", { checked: false, outcome: "failed", last_success_at: null }),
+              listCopy("fda_device_recalls", { checked: false, outcome: "not_researched" }),
+              listCopy("kev", { outcome: "found", strong: 1 }),
+            ],
+            lookups: [],
+          }),
+        }),
+      );
+      renderSection({ route: WITH_VENDOR_7 });
+
+      expect(
+        await screen.findByText("Not checked: US Consolidated Screening List"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText("Checked: CISA Known Exploited Vulnerabilities (1)"),
+      ).toBeInTheDocument();
+      // Neither notice is shown: nothing of the two lists is in the findings.
+      expect(screen.queryByText(/Consolidated Screening List but is not endorsed/)).toBeNull();
+      expect(screen.queryByText(/FDA recalls of AI-enabled medical devices/)).toBeNull();
+      expect(screen.queryByText(/openFDA/)).toBeNull();
+    });
+
+    it("turned off, they are off with the other lists", async () => {
+      mocks.latest.mockResolvedValue(
+        run({
+          coverage: coverage({
+            sources: (["kev", "csl", "fda_device_recalls"] as const).map((id) =>
+              listCopy(id, { checked: false, outcome: "off" }),
+            ),
+            lookups: [],
+            cited: { official: 0, trusted_press: 0, vendor: 0, unverified: 0 },
+          }),
+        }),
+      );
+      renderSection({ route: WITH_VENDOR_7 });
+
+      expect(await screen.findByText("Public databases turned off")).toBeInTheDocument();
+      expect(screen.queryByText(/^Checked:/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/^Data sources:/)).not.toBeInTheDocument();
+    });
   });
 
   it("a run without coverage shows no coverage block", async () => {

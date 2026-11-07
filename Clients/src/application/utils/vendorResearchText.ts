@@ -451,10 +451,12 @@ const DATABASE_NAMES: Record<RecordSourceId, string> = {
   statuspage: "the vendor's status page",
   cve: "the CVE Program",
   un_sanctions: "UN Security Council Consolidated List",
+  csl: "US Consolidated Screening List",
   aiid: "AI Incident Database",
   atlas: "MITRE ATLAS case studies",
   nhtsa_sgo: "NHTSA Standing General Order crash reports",
   fda_ai_devices: "FDA list of AI-enabled medical devices",
+  fda_device_recalls: "FDA recalls of AI-enabled medical devices",
 };
 
 /** The lists as "the {list} entry" names them. */
@@ -469,10 +471,12 @@ const LIST_NAMES: Record<RecordSourceId, string> = {
   statuspage: "vendor's status page",
   cve: "CVE List",
   un_sanctions: "UN Security Council Consolidated List",
+  csl: "US Consolidated Screening List",
   aiid: "AI Incident Database",
   atlas: "MITRE ATLAS case studies",
   nhtsa_sgo: "NHTSA Standing General Order crash reports",
   fda_ai_devices: "FDA list of AI-enabled medical devices",
+  fda_device_recalls: "FDA device recall database",
 };
 
 /** The sentence of a record its database no longer stands by, with the day of the copy and without. */
@@ -837,6 +841,9 @@ const ATTRIBUTIONS: Record<VrdbSourceId, string> = {
     return `CVE records Copyright © 1999-${new Date().getUTCFullYear()}, The MITRE Corporation, under the CVE Terms of Use (https://www.cve.org/Legal/TermsOfUse)`;
   },
   un_sanctions: "United Nations Security Council Consolidated List",
+  // The string the server stores for the list (vrdb/sources.ts). ITA asks for a sentence that names
+  // its Data API; the product reads ITA's downloadable file, so the sentence names the list instead.
+  csl: "This product uses data from the International Trade Administration's Consolidated Screening List but is not endorsed or certified by the International Trade Administration. Entries adapted by VerifyWise.",
   aiid: "AI Incident Database, Responsible AI Collaborative (incidentdatabase.ai), CC BY-SA 4.0. Adapted by VerifyWise; the adapted records are shared under CC BY-SA 4.0.",
   // As the CVE's: the string the server stores for the list (vrdb/sources.ts), with the year of the
   // day in UTC, read at each call, not once at load.
@@ -846,6 +853,8 @@ const ATTRIBUTIONS: Record<VrdbSourceId, string> = {
   nhtsa_sgo:
     "NHTSA Standing General Order crash reports, US Department of Transportation. Counted by VerifyWise; NHTSA states the data may be incomplete or unverified.",
   fda_ai_devices: "FDA list of AI-enabled medical devices, US Food and Drug Administration",
+  fda_device_recalls:
+    "FDA medical device recalls through openFDA, US Food and Drug Administration (CC0 1.0), joined by VerifyWise to the FDA list of AI-enabled medical devices.",
 };
 
 /**
