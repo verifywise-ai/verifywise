@@ -35,6 +35,7 @@
     "generate:swagger": "ts-node scripts/generateSwagger.ts",
     "generate:endpoints": "ts-node scripts/generateEndpointsTs.ts",
     "check:api-drift": "ts-node scripts/checkApiDrift.ts",
+    "check:integration-suites": "ts-node --transpile-only scripts/checkIntegrationSuites.ts",
     "migrate:shared-schema": "ts-node scripts/migrateToSharedSchema.ts",
     "i18n:extract": "node scripts/extract-i18n-keys.mjs",
     "i18n:translate": "node scripts/translate-with-glossary.mjs",

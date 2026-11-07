@@ -92,6 +92,15 @@ jobs:
 
       # The unit suite runs once, with coverage, in the Coverage Gate job below.
 
+      # Blocking. An integration suite runs in CI only if some step's jest
+      # pattern selects it, and nothing noticed when none did: in November 2026,
+      # 50 of the 112 files under tests/integration/ ran in no job. This asks
+      # Jest which files each jest step in this workflow selects (--listTests,
+      # no database) and fails when a file runs in no step or in two. A file
+      # left out on purpose goes in EXCLUDED in the script, with the reason.
+      - name: Check every integration suite runs in exactly one CI step
+        run: npm run check:integration-suites
+
       # Blocking. The limiters are the only thing standing between /users/login and
       # unlimited password guesses, and the unit suite cannot see them: it excludes
       # tests/integration/, and a limiter is invisible to a unit test with its store
@@ -268,7 +277,8 @@ jobs:
       # the Coverage Gate. Like the regex above, every pattern is anchored to
       # `tests/integration/`, so no file runs in two jobs. The folder and prefix
       # patterns pick up new files on their own; a new root-level suite has to
-      # be added to a list, here or in regression-suites.
+      # be added to a list, here or in regression-suites, and lint-and-build's
+      # integration suite check fails until it is.
       #
       # Root-level feature suites, plus the caching, contract and health packs.
       - name: Run feature integration suites

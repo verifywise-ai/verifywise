@@ -1,6 +1,6 @@
 # VerifyWise - Development Guide
 
-> **Last Updated:** 2026-11-03
+> **Last Updated:** 2026-11-07
 
 This document contains cross-cutting rules for the VerifyWise codebase. Directory-scoped guides load automatically when working in each area:
 
@@ -142,6 +142,7 @@ fine unasked; `gh pr create` is not.
 - **Minimum coverage:** 80%
 - **Frontend:** `cd Clients && npx vitest run` (Vitest — `npm run test` is `vitest watch` and never exits)
 - **Backend:** `cd Servers && npm run test` (Jest — this is `test:unit`; it *excludes* `tests/integration/`, which must be run separately)
+- **Backend integration suites:** every test file in `Servers/tests/integration/` must run in exactly one CI step of `backend-checks.yml` (or be listed in `EXCLUDED` with a reason); `cd Servers && npm run check:integration-suites` checks it, and so does `lint-and-build`. See `Servers/docs/TESTING.md`.
 
 ---
 

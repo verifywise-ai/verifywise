@@ -57,6 +57,15 @@ The rest of `rate-limiting/` needs no database and runs in `lint-and-build`
 the prefixes above runs in CI on its own; a new root-level suite runs only once
 it is added to the `regression-suites` or `feature-suites` list.
 
+`lint-and-build` checks this with `npm run check:integration-suites`
+(`scripts/checkIntegrationSuites.ts`). It asks Jest which files each jest step
+in the workflow selects (`--listTests`, so no database is needed) and fails when
+a file under `tests/integration/` runs in no step or in more than one, or when a
+step's `if: matrix.suite == '...'` names a suite the matrix no longer has. A file
+left out on purpose goes in the script's `EXCLUDED` list with the reason; the
+check also fails when a listed file runs after all, so the list cannot go stale.
+Run it locally before pushing a new suite; it takes a few seconds.
+
 ## 2. Running the Postgres-backed suites locally
 
 1. **Database.** The compose stack's database service is `postgresdb`
