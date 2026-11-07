@@ -409,7 +409,7 @@ describe("fdaRecallsConnector.download, the six steps", () => {
       totalTimeoutMs: 60_000,
     };
     expect(server.calls.map((call) => call.limits)).toEqual([
-      { maxBytes: MIB, allowedContentTypes: ["application/json"], totalTimeoutMs: 30_000 },
+      { maxBytes: 16 * MIB, allowedContentTypes: ["application/json"], totalTimeoutMs: 30_000 },
       {
         maxBytes: 2 * MIB,
         allowedContentTypes: ["text/csv", "application/octet-stream"],

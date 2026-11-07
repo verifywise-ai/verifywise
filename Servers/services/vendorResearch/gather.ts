@@ -614,7 +614,7 @@ const RECORD_SOURCE_NAMES: Record<RecordSourceId, string> = {
     "EU consolidated list of financial sanctions (entities that have the name or the verified website of the vendor)",
   cve: "CVE Program records (critical vulnerabilities of the vendor's products)",
   un_sanctions: "UN Security Council Consolidated List (entities that have the name of the vendor)",
-  csl: "US Consolidated Screening List (export control and trade restriction lists: entries that have the name or the verified website of the vendor)",
+  csl: "US Consolidated Screening List (export control and trade restriction lists: entries that have the name, the verified website or the legal entity identifier of the vendor)",
   aiid: "AI Incident Database (incidents whose developer or deployer has the name of the vendor)",
   atlas: "MITRE ATLAS case studies (attacks on AI systems whose target has the name of the vendor)",
   nhtsa_sgo:

@@ -106,16 +106,17 @@ const ROOT = "device/recall.json";
 
 type Limits = Parameters<ConnectorFetch>[2];
 const JSON_TYPES = ["application/json"];
-const PROBE_LIMITS: Limits = {
-  maxBytes: 1024 * 1024,
-  allowedContentTypes: JSON_TYPES,
-  totalTimeoutMs: 30_000,
-};
 const JOIN_LIMITS: Limits = {
   maxBytes: 16 * 1024 * 1024,
   allowedContentTypes: JSON_TYPES,
   totalTimeoutMs: 60_000,
 };
+/**
+ * The probe asks for one product, and a product can carry millions of characters of lot numbers
+ * (`code_info`), so the size it may be is the join's: a probe cut at a smaller limit would fail
+ * every sync as soon as the first product of the dataset were a large one.
+ */
+const PROBE_LIMITS: Limits = { ...JOIN_LIMITS, totalTimeoutMs: 30_000 };
 /** The limits of the AI list's own connector (fda.ts). */
 const LIST_LIMITS: Limits = {
   maxBytes: FDA_MAX_BYTES,
@@ -139,7 +140,7 @@ const REQUEST_GAP_MS = 500;
 const MAX_REQUESTS = 80;
 const MAX_ANSWER_BYTES = 96 * 1024 * 1024;
 
-/** The most events of a list (164 on 2026-11-07); more is not the list. */
+/** The most events of a list (155 on 2026-11-07); more is not the list. */
 const MAX_EVENTS = 5000;
 /** The most name keys of a record. */
 const MAX_KEYS = 50;
