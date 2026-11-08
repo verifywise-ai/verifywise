@@ -495,7 +495,7 @@ describe("IntegratedDashboard", () => {
       await user.click(screen.getByRole("button", { name: "Save" }));
 
       await waitFor(() => expect(mockSaveLayout).toHaveBeenCalledTimes(1));
-      const saved = mockSaveLayout.mock.calls[0][0];
+      const saved = mockSaveLayout.mock.calls[0][0]([entry("executive.task-radar", 0, false)]);
       expect(saved).toContainEqual(entry("executive.task-radar", 0, false));
       const radar = saved.find((e: any) => e.widgetKey === "operations.task-radar");
       expect(radar.visible).toBe(false);

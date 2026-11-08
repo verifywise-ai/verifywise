@@ -62,10 +62,15 @@ const EditLayoutModal = ({
     }
   };
 
+  // A save in flight cannot be taken back, so the modal stays until it settles.
+  const handleClose = () => {
+    if (!saving) onClose();
+  };
+
   return (
     <StandardModal
       isOpen
-      onClose={onClose}
+      onClose={handleClose}
       title="Edit layout"
       description="Show, hide and reorder the widgets in this view. Only you see these changes."
       onSubmit={handleSave}

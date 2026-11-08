@@ -87,6 +87,20 @@ describe("EditLayoutModal", () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
+  it("cannot be closed while a save is in flight", async () => {
+    let finish: () => void = () => {};
+    const onSave = vi.fn(() => new Promise<void>((resolve) => (finish = resolve)));
+    const { onClose, user } = setup({ onSave });
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(onClose).not.toHaveBeenCalled();
+
+    finish();
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+  });
+
   it("discards the draft on cancel", async () => {
     const { onSave, onClose, user } = setup();
     await user.click(screen.getByRole("switch", { name: "Show Task radar" }));

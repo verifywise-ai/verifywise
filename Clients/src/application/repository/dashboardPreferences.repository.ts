@@ -31,6 +31,7 @@ export async function getDashboardPreferences(): Promise<DashboardPreferences> {
 export async function updateDashboardPreferences(
   layout: DashboardLayoutEntry[],
 ): Promise<DashboardPreferences> {
-  const response = await apiServices.put(ROUTE, { layout });
+  // The edit modal shows its own error when a save fails.
+  const response = await apiServices.put(ROUTE, { layout }, { suppressGlobalErrorToast: true });
   return (response.data as { data: DashboardPreferences }).data;
 }

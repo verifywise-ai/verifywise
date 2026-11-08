@@ -178,21 +178,23 @@ export function resolveViewLayout(
 }
 
 /**
- * The full list to store after editing one view. The other view's entries are
- * kept as they are, including keys this release does not know, so saving never
- * loses another view's layout. Positions are unique across the whole list.
+ * The full list to store after editing one view. Only the edited view's known
+ * widgets are replaced. The other view's entries and any key this release does
+ * not know are kept, so a save never loses them. Positions are unique across
+ * the whole list.
  */
 export function buildLayoutForSave(
   saved: DashboardLayoutEntry[] | null | undefined,
   view: DashboardView,
   widgets: ViewWidget[],
 ): DashboardLayoutEntry[] {
-  const otherViews = validEntries(saved).filter((entry) => !entry.widgetKey.startsWith(`${view}.`));
+  const replaced = new Set<string>(DEFAULT_WIDGET_ORDER[view].map((key) => layoutKey(view, key)));
+  const kept = validEntries(saved).filter((entry) => !replaced.has(entry.widgetKey));
   const edited = widgets.map((widget) => ({
     widgetKey: layoutKey(view, widget.key),
     visible: widget.visible,
   }));
-  return [...otherViews, ...edited].map((entry, position) => ({
+  return [...kept, ...edited].map((entry, position) => ({
     widgetKey: entry.widgetKey,
     visible: entry.visible,
     position,

@@ -154,7 +154,7 @@ const IntegratedDashboard: React.FC = () => {
   const [isEditingLayout, setIsEditingLayout] = useState(false);
   const savedLayout = preferences?.layout;
 
-  const loading = dashboardLoading || metricsLoading || layoutLoading;
+  const loading = dashboardLoading || metricsLoading;
 
   // Mark content ready once loading completes
   useEffect(() => {
@@ -291,11 +291,11 @@ const IntegratedDashboard: React.FC = () => {
   };
 
   const handleSaveLayout = async (widgets: ViewWidget[]) => {
-    await saveLayout(buildLayoutForSave(savedLayout, dashboardView, widgets));
+    await saveLayout((latest) => buildLayoutForSave(latest, dashboardView, widgets));
   };
 
   // Show step progress dialog on cold loads (no cache)
-  if (loading && !hasAnyCache) {
+  if ((loading || layoutLoading) && !hasAnyCache) {
     return (
       <StepProgressDialog
         open={true}
@@ -392,8 +392,10 @@ const IntegratedDashboard: React.FC = () => {
         {/* Tab: AI Audit */}
         {dashboardTab === "ai-audit" && <AIAuditDashboard />}
 
-        {/* Tab: Overview (original dashboard): rows come from the widget registry */}
+        {/* Tab: Overview (original dashboard): rows come from the widget registry.
+            They wait for the saved layout so widgets do not visibly rearrange. */}
         {dashboardTab === "overview" &&
+          !layoutLoading &&
           (widgetRows.length === 0 ? (
             <EmptyStateMessage message="All widgets are hidden. Use Edit layout to show them." />
           ) : (

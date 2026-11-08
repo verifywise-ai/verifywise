@@ -167,6 +167,13 @@ describe("buildLayoutForSave", () => {
     );
   });
 
+  it("keeps unknown keys in the view being edited", () => {
+    const saved = [entry("operations.from-a-newer-release", 0, false)];
+    expect(buildLayoutForSave(saved, "operations", widgets)[0]).toEqual(
+      entry("operations.from-a-newer-release", 0, false),
+    );
+  });
+
   it("drops malformed entries and handles no saved layout", () => {
     expect(buildLayoutForSave(null, "operations", widgets)).toHaveLength(2);
     expect(buildLayoutForSave(["bad", null] as never, "operations", widgets)).toHaveLength(2);

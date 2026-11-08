@@ -24,14 +24,30 @@ export function useDashboardPreferences() {
   });
 }
 
-/** Replace the user's layout; the cached copy is replaced on success. */
+/**
+ * Replace the user's layout. `build` gets the layout stored right now, not the
+ * cached copy: a save rewrites both views, so a stale or failed read would
+ * overwrite the other view. When that read fails nothing is saved.
+ */
 export function useUpdateDashboardPreferences() {
   const { userId, organizationId } = useAuth();
   const queryClient = useQueryClient();
+  const queryKey = preferencesKey(userId, organizationId);
   return useMutation({
-    mutationFn: (layout: DashboardLayoutEntry[]) => updateDashboardPreferences(layout),
+    mutationFn: async (
+      build: (latest: DashboardLayoutEntry[] | null) => DashboardLayoutEntry[],
+    ) => {
+      // A refetch already running must not land after the save and undo it.
+      await queryClient.cancelQueries({ queryKey });
+      const latest = await queryClient.fetchQuery({
+        queryKey,
+        queryFn: getDashboardPreferences,
+        staleTime: 0,
+      });
+      return updateDashboardPreferences(build(latest.layout));
+    },
     onSuccess: (preferences) => {
-      queryClient.setQueryData(preferencesKey(userId, organizationId), preferences);
+      queryClient.setQueryData(queryKey, preferences);
     },
   });
 }
