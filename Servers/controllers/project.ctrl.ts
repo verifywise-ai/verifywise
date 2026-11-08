@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import {
+  canViewProjectQuery,
   calculateProjectRisks,
   calculateVendirRisks,
   countAnswersByProjectId,
@@ -45,11 +46,7 @@ import {
 } from "../services/projects/approvalRequest.service";
 import { createUseCaseService, updateUseCaseService } from "../services/useCase.service";
 import { notifyExternalOwnerAssigned } from "../services/externalOwnerNotification.service";
-import {
-  resolveOwnerForCreate,
-  resolveOwnerForUpdate,
-  stripExternalOwnerFields,
-} from "../utils/externalOwner.utils";
+import { changesExternalOwner, stripExternalOwnerFields } from "../utils/externalOwner.utils";
 import {
   notifyUserAssigned,
   notifyApprovalAutoApproved,
@@ -217,8 +214,8 @@ export async function createProject(req: Request, res: Response): Promise<any> {
 
   try {
     // Only /api/v1/projects accepts external owners; the legacy body is frozen.
-    if (res.locals?.acceptsExternalOwner) resolveOwnerForCreate(projectData);
-    else stripExternalOwnerFields(projectData);
+    const acceptsExternalOwner = res.locals?.acceptsExternalOwner === true;
+    if (!acceptsExternalOwner) stripExternalOwnerFields(projectData);
 
     const {
       useCase: createdProject,
@@ -226,7 +223,12 @@ export async function createProject(req: Request, res: Response): Promise<any> {
       approvalResult,
     } = await createUseCaseService(
       projectData,
-      { userId: req.userId!, organizationId: req.organizationId!, actorRole: req.role },
+      {
+        userId: req.userId!,
+        organizationId: req.organizationId!,
+        actorRole: req.role,
+        requireOwner: acceptsExternalOwner,
+      },
       transaction,
     );
 
@@ -468,14 +470,39 @@ export async function updateProjectById(req: Request, res: Response): Promise<an
     const updatedProject: Partial<ProjectModel> & { members?: number[] } = updateData;
 
     // Only /api/v1/projects accepts external owners; the legacy body is frozen.
-    if (res.locals?.acceptsExternalOwner) resolveOwnerForUpdate(updatedProject, existingProject);
-    else stripExternalOwnerFields(updatedProject);
+    const acceptsExternalOwner = res.locals?.acceptsExternalOwner === true;
+    if (!acceptsExternalOwner) stripExternalOwnerFields(updatedProject);
+
+    // Handing a use case to an outside address emails them, so useCase.edit is
+    // not enough: the actor must be able to see this use case.
+    if (
+      acceptsExternalOwner &&
+      changesExternalOwner(updatedProject, existingProject) &&
+      !(await canViewProjectQuery(projectId, { userId, role }, req.organizationId!, transaction))
+    ) {
+      await transaction.rollback();
+      await logFailure({
+        eventType: "Update",
+        description: `Denied external owner change on project ID ${projectId}`,
+        functionName: "updateProjectById",
+        fileName: "project.ctrl.ts",
+        error: new Error("Forbidden"),
+        userId: req.userId!,
+        organizationId: req.organizationId!,
+      });
+      return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
+    }
 
     const { useCase: project, currentMembers } = await updateUseCaseService(
       projectId,
       updatedProject,
       existingProject,
-      { userId, organizationId: req.organizationId!, actorRole: role },
+      {
+        userId,
+        organizationId: req.organizationId!,
+        actorRole: role,
+        requireOwner: acceptsExternalOwner,
+      },
       transaction,
     );
 

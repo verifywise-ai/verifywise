@@ -45,13 +45,16 @@ describe("project validator v1: external owner (#5256)", () => {
     expect(fields(res.body)).toContain("owner");
   });
 
-  it.each([true, "1e1", "abc", 0, -1])("rejects a non-integer owner: %s", async (owner) => {
-    await supertest(app)
-      .post("/v1/projects")
-      .send({ ...noOwner, owner, ...external })
-      .expect(400);
-    await supertest(app).patch("/v1/projects/1").send({ owner }).expect(400);
-  });
+  it.each([[[]], [[5, 6]], [true], ["1e1"], [{}], ["abc"], [0], [-1]])(
+    "rejects an owner that is not a positive integer: %j",
+    async (owner) => {
+      await supertest(app)
+        .post("/v1/projects")
+        .send({ ...noOwner, owner, ...external })
+        .expect(400);
+      await supertest(app).patch("/v1/projects/1").send({ owner }).expect(400);
+    },
+  );
 
   it("rejects a malformed external email", async () => {
     const res = await supertest(app)

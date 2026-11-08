@@ -148,6 +148,18 @@ export function resolveOwnerForUpdate(
   return {};
 }
 
+/**
+ * Whether an update would set, change or clear the external owner, including a
+ * numeric owner replacing one. Repeating the stored values is not a change, so
+ * forms that resend the whole use case are not caught by it.
+ */
+export function changesExternalOwner(input: OwnerFields, current: OwnerFields): boolean {
+  const next = resolveOwnerForUpdate(input, current, { requireOwner: false });
+  return (["external_owner_name", "external_owner_email"] as const).some(
+    (field) => next[field] !== undefined && next[field] !== (current[field] ?? null),
+  );
+}
+
 /** Legacy /api/projects requests cannot set external owners: the fields are ignored. */
 export function stripExternalOwnerFields(body: Record<string, unknown>): void {
   delete body.external_owner_name;

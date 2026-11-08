@@ -22,6 +22,7 @@ import {
 } from "../externalOwnerNotification.service";
 import { notificationService } from "../notificationService";
 import { sequelize } from "../../database/db";
+import { getOrganizationByIdQuery } from "../../utils/organization.utils";
 import { EMAIL_TEMPLATES } from "../../constants/emailTemplates";
 import { compileMjmlToHtml } from "../../tools/mjmlCompiler";
 
@@ -125,7 +126,9 @@ describe("notifyExternalOwnerConfirmationDue", () => {
     expect(variables.message).toContain("2026-06-01");
     expect(variables.message).toContain("90");
     expect(variables.message).toContain("Acme asks owners");
-    expect(variables.contact_message).toContain("at Acme");
+    expect(variables.contact_message).toBe(
+      "Please tell Grace Hopper (grace@acme.test) whether it is still in use, so they can confirm it or retire it.",
+    );
     expect(variables.contact_message).toContain("Grace Hopper");
     expect(Object.values(variables).join(" ")).not.toMatch(/https?:\/\//);
     expect(Object.values(variables).join(" ").toLowerCase()).not.toContain("log in");
@@ -135,7 +138,22 @@ describe("notifyExternalOwnerConfirmationDue", () => {
     query.mockResolvedValue([]);
     await notifyExternalOwnerConfirmationDue(entry);
     const variables = send.mock.calls[0][3] as Record<string, string>;
-    expect(variables.contact_message).toContain("an administrator of Acme");
+    expect(variables.contact_message).toBe(
+      "Please tell an administrator of Acme whether it is still in use, so they can confirm it or retire it.",
+    );
+  });
+
+  it("reads correctly when the organization cannot be looked up", async () => {
+    query.mockResolvedValue([]);
+    (getOrganizationByIdQuery as unknown as jest.Mock<any>).mockRejectedValueOnce(
+      new Error("db down"),
+    );
+    await notifyExternalOwnerConfirmationDue(entry);
+    const variables = send.mock.calls[0][3] as Record<string, string>;
+    expect(variables.message).toContain("your organization asks owners");
+    expect(variables.contact_message).toBe(
+      "Please tell an administrator of your organization whether it is still in use, so they can confirm it or retire it.",
+    );
   });
 
   it("propagates a send failure so the sweep can retry tomorrow", async () => {

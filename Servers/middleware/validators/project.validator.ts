@@ -127,6 +127,13 @@ export const validateUpdateProjectStatus = [
 // /api/v1/projects: the same body plus external owners (#5256). The legacy
 // validators above stay frozen. owner keeps isInt semantics through
 // optionalProjectBodyFields, so true or "1e1" are still rejected.
+const ownerIsScalar = body("owner").custom((value) => {
+  // isInt checks array elements one by one, so [] and [5, 6] would pass it.
+  if (value === undefined || value === null) return true;
+  if (typeof value === "number" || typeof value === "string") return true;
+  throw new Error("owner must be a positive integer");
+});
+
 const externalOwnerBodyFields = [
   body("external_owner_name")
     .optional({ values: "null" })
@@ -163,6 +170,7 @@ export const validateCreateProjectV1 = [
     }
     return true;
   }),
+  ownerIsScalar,
   body("start_date")
     .isISO8601()
     .withMessage("start_date is required and must be a valid ISO 8601 date"),
@@ -173,6 +181,7 @@ export const validateCreateProjectV1 = [
 
 export const validateUpdateProjectV1 = [
   projectIdParam,
+  ownerIsScalar,
   ...optionalProjectBodyFields,
   ...externalOwnerBodyFields,
   handleValidationErrors,

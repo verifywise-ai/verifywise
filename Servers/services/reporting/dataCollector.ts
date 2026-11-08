@@ -25,7 +25,6 @@ import {
   IncidentManagementSectionData,
 } from "../../domain.layer/interfaces/i.reportGeneration";
 import type { SectionNotice } from "../../domain.layer/interfaces/i.reportGeneration";
-import { resolveProjectOwnerName } from "../../utils/project.utils";
 import {
   generateRiskDistributionChart,
   generateRiskDonutChart,
@@ -571,10 +570,9 @@ export class ReportDataCollector {
     );
     const user = await getUserByIdQuery(this.userId);
 
-    // Get project owner name
-    const projectOwnerName = project
-      ? await resolveProjectOwnerName(project, "Unknown")
-      : "Unknown";
+    // getProjectByIdQuery has already resolved the owner's name.
+    const ownerName: string | undefined = (project as any)?.dataValues?.owner_name;
+    const projectOwnerName = !ownerName || ownerName === "Unassigned" ? "Unknown" : ownerName;
 
     return {
       projectId,

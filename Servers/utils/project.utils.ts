@@ -27,6 +27,7 @@ import {
 import { findUsersNotInOrganization } from "./user.utils";
 import {
   formatExternalOwnerName,
+  OwnerRuleOptions,
   resolveOwnerForCreate,
   resolveOwnerForUpdate,
 } from "./externalOwner.utils";
@@ -47,7 +48,8 @@ export const resolveProjectOwnerName = async (
 ): Promise<string> => {
   if (row.owner) {
     const owner = (await sequelize.query(
-      `SELECT name || ' ' || surname AS full_name FROM users WHERE id = :owner_id;`,
+      `SELECT TRIM(COALESCE(name, '') || ' ' || COALESCE(surname, '')) AS full_name
+         FROM users WHERE id = :owner_id;`,
       { replacements: { owner_id: row.owner }, transaction },
     )) as [{ full_name: string }[], number];
     if (owner[0]?.[0]?.full_name) return owner[0][0].full_name;
@@ -164,6 +166,48 @@ export const ensureProjectMemberQuery = async (
      ON CONFLICT (user_id, project_id) DO NOTHING;`,
     { replacements: { organizationId, projectId, userId }, transaction },
   );
+};
+
+/**
+ * Keep the user who owned a use case on its team once it moves to an external
+ * owner, unless they are an Admin of this organization, who sees it by role.
+ */
+export const keepPreviousOwnerAsMemberQuery = async (
+  projectId: number,
+  previousOwnerId: number,
+  organizationId: number,
+  transaction: Transaction,
+): Promise<void> => {
+  await sequelize.query(
+    `INSERT INTO projects_members (organization_id, project_id, user_id)
+     SELECT om.organization_id, :projectId, om.user_id
+       FROM organization_members om
+      WHERE om.organization_id = :organizationId
+        AND om.user_id = :previousOwnerId
+        AND om.role_id <> 1
+     ON CONFLICT (user_id, project_id) DO NOTHING;`,
+    { replacements: { organizationId, projectId, previousOwnerId }, transaction },
+  );
+};
+
+/** Whether the user can see this use case: the rule that scopes the use case list. */
+export const canViewProjectQuery = async (
+  projectId: number,
+  viewer: { userId: number; role: string },
+  organizationId: number,
+  transaction: Transaction,
+): Promise<boolean> => {
+  const visibility = projectVisibilitySql("p", viewer);
+  const rows = await sequelize.query(
+    `SELECT 1 FROM projects p
+      WHERE p.organization_id = :organizationId AND p.id = :projectId${visibility.sql}`,
+    {
+      replacements: { organizationId, projectId, ...visibility.replacements },
+      type: QueryTypes.SELECT,
+      transaction,
+    },
+  );
+  return rows.length > 0;
 };
 
 export const getAllProjectsQuery = async (
@@ -326,6 +370,8 @@ export const countAnswersByProjectId = async (
 export interface NewProjectServerFields {
   /** Run through parseDepartment; an invalid value is a 400. */
   department?: unknown;
+  /** Reject a use case with no owner of either kind. On for the v1 API only. */
+  requireOwner?: boolean;
 }
 
 export const createNewProjectQuery = async (
@@ -344,7 +390,9 @@ export const createNewProjectQuery = async (
       i18nKey: "Invalid department",
     });
   }
-  const ownership = resolveOwnerForCreate(project, { requireOwner: false });
+  const ownership = resolveOwnerForCreate(project, {
+    requireOwner: serverFields.requireOwner ?? false,
+  });
   await assertOwnerInOrganization(ownership.owner, organizationId, transaction);
   const memberIds = await normaliseMemberIds(members, organizationId, transaction);
   // Frameworks are optional for use cases; default to empty array
@@ -579,6 +627,7 @@ export const updateProjectByIdQuery = async (
   members: number[] | undefined,
   organizationId: number,
   transaction: Transaction,
+  { requireOwner = false }: OwnerRuleOptions = {},
 ): Promise<(IProjectAttributes & { members: number[] }) | null> => {
   // Lock the row before touching members. If it was deleted after the caller's
   // existence check, return null (404) rather than failing the member INSERT on
@@ -590,7 +639,7 @@ export const updateProjectByIdQuery = async (
   if (locked.length === 0) return null;
   const oldProject = await getProjectByIdQuery(id, organizationId);
   // Selecting one kind of owner clears the other; checked against the locked row.
-  Object.assign(project, resolveOwnerForUpdate(project, oldProject ?? {}, { requireOwner: false }));
+  Object.assign(project, resolveOwnerForUpdate(project, oldProject ?? {}, { requireOwner }));
   await assertOwnerInOrganization(project.owner, organizationId, transaction);
   // A partial update (e.g. only ai_risk_classification or status) must not
   // touch members: treating a missing list as [] removed every member.

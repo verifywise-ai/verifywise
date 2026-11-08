@@ -1,5 +1,6 @@
 import { describe, expect, it } from "@jest/globals";
 import {
+  changesExternalOwner,
   formatExternalOwnerName,
   resolveOwnerForCreate,
   resolveOwnerForUpdate,
@@ -181,6 +182,41 @@ describe("resolveOwnerForUpdate", () => {
     expect(
       resolveOwnerForUpdate({ external_owner_name: null, external_owner_email: null }, userOwned),
     ).toEqual({ external_owner_name: null, external_owner_email: null });
+  });
+});
+
+describe("changesExternalOwner", () => {
+  const ada = { external_owner_name: "Ada Lovelace", external_owner_email: "ada@example.com" };
+
+  it("is true when setting, changing or clearing the external owner", () => {
+    expect(changesExternalOwner(ada, userOwned)).toBe(true);
+    expect(changesExternalOwner({ ...ada, external_owner_name: "Bob" }, externalOwned)).toBe(true);
+    expect(
+      changesExternalOwner(
+        { external_owner_name: null, external_owner_email: null },
+        externalOwned,
+      ),
+    ).toBe(true);
+  });
+
+  it("is true for a numeric owner on an externally owned row", () => {
+    expect(changesExternalOwner({ owner: 9 }, externalOwned)).toBe(true);
+  });
+
+  it("is false when the external owner stays the same or is not involved", () => {
+    expect(changesExternalOwner({}, externalOwned)).toBe(false);
+    expect(changesExternalOwner(ada, externalOwned)).toBe(false);
+    expect(
+      changesExternalOwner({ ...ada, external_owner_email: "ADA@Example.com" }, externalOwned),
+    ).toBe(false);
+    // What the forms send for a user-owned use case.
+    expect(
+      changesExternalOwner(
+        { owner: 9, external_owner_name: null, external_owner_email: null },
+        userOwned,
+      ),
+    ).toBe(false);
+    expect(changesExternalOwner({ owner: null }, externalOwned)).toBe(false);
   });
 });
 

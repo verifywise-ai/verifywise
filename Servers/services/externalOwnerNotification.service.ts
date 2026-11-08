@@ -118,7 +118,7 @@ export async function notifyExternalOwnerConfirmationDue(params: {
       heading: `Is "${entryTitle}" still live?`,
       message: `You own the ${noun} ${entryTitle}. It has not been confirmed as live since ${since}, and ${organization} asks owners to confirm every ${intervalDays} days.`,
       action_message: ACCOUNT_NOTE,
-      contact_message: `Please tell ${contact} at ${organization} whether it is still in use, so they can confirm it or retire it.`,
+      contact_message: `Please tell ${contact} whether it is still in use, so they can confirm it or retire it.`,
     },
   );
 }

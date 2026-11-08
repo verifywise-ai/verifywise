@@ -31,7 +31,6 @@ jest.mock("../../../utils/user.utils", () => ({
 }));
 
 jest.mock("../../../utils/project.utils", () => ({
-  resolveProjectOwnerName: async (_row: unknown, fallback: string) => fallback,
   getProjectByIdQuery: jest
     .fn()
     .mockResolvedValue({ project_title: "P", is_organizational: false }),

@@ -17,6 +17,7 @@ import {
   createNewProjectQuery,
   ensureProjectMemberQuery,
   getCurrentProjectMembers,
+  keepPreviousOwnerAsMemberQuery,
   updateProjectByIdQuery,
 } from "../utils/project.utils";
 import { resolveHighRiskRolesWrite } from "../utils/highRiskRoles.utils";
@@ -31,7 +32,6 @@ import {
 } from "../utils/useCaseChangeHistory.utils";
 import { createUseCaseApprovalRequest } from "./projects/approvalRequest.service";
 import { logStructured } from "../utils/logger/fileLogger";
-import { resolveOwnerForUpdate } from "../utils/externalOwner.utils";
 import { seesAllProjects } from "../utils/projectVisibility.utils";
 
 export interface UseCaseServiceContext {
@@ -39,17 +39,16 @@ export interface UseCaseServiceContext {
   organizationId: number;
   /** The acting user's role, when the caller has one (HTTP requests do). */
   actorRole?: string;
+  /** Reject a write that leaves no owner of either kind. On for the v1 API only. */
+  requireOwner?: boolean;
 }
 
-/** A non-Admin keeps access through membership once a use case has no user owner. */
-const losesAccessWithoutMembership = (
-  useCase: Pick<IProjectAttributes, "owner" | "external_owner_email">,
-  actorRole: string | undefined,
-): boolean =>
-  !useCase.owner &&
-  Boolean(useCase.external_owner_email) &&
-  actorRole !== undefined &&
-  !seesAllProjects(actorRole);
+const isExternallyOwned = (useCase: Pick<IProjectAttributes, "owner" | "external_owner_email">) =>
+  !useCase.owner && Boolean(useCase.external_owner_email);
+
+/** Non-Admins see a use case only as its owner or a member. */
+const needsMembershipForAccess = (actorRole: string | undefined): boolean =>
+  actorRole !== undefined && !seesAllProjects(actorRole);
 
 /**
  * The frameworks whose controls, clauses, annexes and assessments are built out
@@ -128,9 +127,12 @@ export async function createUseCaseService(
     ctx.organizationId,
     ctx.userId,
     transaction,
+    false,
+    { requireOwner: ctx.requireOwner ?? false },
   );
 
-  if (losesAccessWithoutMembership(createdProject, ctx.actorRole)) {
+  // owner is NULL, so a non-Admin creator would otherwise lose the use case.
+  if (isExternallyOwned(createdProject) && needsMembershipForAccess(ctx.actorRole)) {
     await ensureProjectMemberQuery(createdProject.id!, ctx.userId, ctx.organizationId, transaction);
     const members: number[] = (createdProject.dataValues as any).members ?? [];
     if (!members.includes(ctx.userId)) members.push(ctx.userId);
@@ -252,10 +254,6 @@ export async function updateUseCaseService(
   if (highRiskRoles === undefined) delete input.high_risk_roles;
   else input.high_risk_roles = highRiskRoles;
 
-  // Normalise ownership now so the change history records what is written: the
-  // lowercased email, and the kind of owner that selecting the other one clears.
-  Object.assign(input, resolveOwnerForUpdate(input, existingUseCase, { requireOwner: false }));
-
   // 2. Members before the update, to identify the newly added ones.
   const currentMembers = await getCurrentProjectMembers(useCaseId, ctx.organizationId, transaction);
 
@@ -266,17 +264,28 @@ export async function updateUseCaseService(
     members,
     ctx.organizationId,
     transaction,
+    { requireOwner: ctx.requireOwner ?? false },
   );
 
-  // The owner handed the use case to an external owner: unless an Admin, they
-  // would lose access, because owner is now NULL.
-  const keepActorAsMember =
-    useCase !== null &&
-    Number(existingUseCase.owner) === ctx.userId &&
-    losesAccessWithoutMembership(useCase, ctx.actorRole);
-  if (keepActorAsMember) {
-    await ensureProjectMemberQuery(useCaseId, ctx.userId, ctx.organizationId, transaction);
-    if (!useCase.members.includes(ctx.userId)) useCase.members.push(ctx.userId);
+  // Moved from a user to an external owner: owner is now NULL, so anyone who
+  // relied on it would lose access. Neither the previous owner nor a non-Admin
+  // who made the change should.
+  const keptAsMembers: number[] = [];
+  if (useCase && existingUseCase.owner && isExternallyOwned(useCase)) {
+    await keepPreviousOwnerAsMemberQuery(
+      useCaseId,
+      existingUseCase.owner,
+      ctx.organizationId,
+      transaction,
+    );
+    keptAsMembers.push(Number(existingUseCase.owner));
+    if (needsMembershipForAccess(ctx.actorRole)) {
+      await ensureProjectMemberQuery(useCaseId, ctx.userId, ctx.organizationId, transaction);
+      keptAsMembers.push(ctx.userId);
+    }
+    useCase.members = (
+      await getCurrentProjectMembers(useCaseId, ctx.organizationId, transaction)
+    ).map(Number);
   }
 
   // 4. Change history.
@@ -285,7 +294,7 @@ export async function updateUseCaseService(
     // the same members in another order are not recorded as a change.
     const byId = (a: number, b: number) => a - b;
     const memberChanges =
-      members !== undefined || keepActorAsMember
+      members !== undefined || keptAsMembers.length > 0
         ? await trackUseCaseChanges(
             { members: currentMembers.map(Number).sort(byId) } as any,
             { members: [...useCase.members].sort(byId) } as any,
@@ -303,7 +312,7 @@ export async function updateUseCaseService(
     }
   }
 
-  // Counted as already present, so the caller's "you were added" email skips them.
+  // Kept members count as already present, so the "you were added" email skips them.
   const before = currentMembers.map(Number);
-  return { useCase, currentMembers: keepActorAsMember ? [...before, ctx.userId] : before };
+  return { useCase, currentMembers: [...before, ...keptAsMembers] };
 }
