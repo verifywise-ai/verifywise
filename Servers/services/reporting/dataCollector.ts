@@ -25,7 +25,7 @@ import {
   IncidentManagementSectionData,
 } from "../../domain.layer/interfaces/i.reportGeneration";
 import type { SectionNotice } from "../../domain.layer/interfaces/i.reportGeneration";
-import { formatExternalOwnerName } from "../../utils/externalOwner.utils";
+import { resolveProjectOwnerName } from "../../utils/project.utils";
 import {
   generateRiskDistributionChart,
   generateRiskDonutChart,
@@ -572,15 +572,9 @@ export class ReportDataCollector {
     const user = await getUserByIdQuery(this.userId);
 
     // Get project owner name
-    let projectOwnerName = "Unknown";
-    if (project?.owner) {
-      const owner = await getUserByIdQuery(project.owner);
-      if (owner) {
-        projectOwnerName = `${owner.name || ""} ${owner.surname || ""}`.trim();
-      }
-    } else if (project?.external_owner_name) {
-      projectOwnerName = formatExternalOwnerName(project.external_owner_name);
-    }
+    const projectOwnerName = project
+      ? await resolveProjectOwnerName(project, "Unknown")
+      : "Unknown";
 
     return {
       projectId,

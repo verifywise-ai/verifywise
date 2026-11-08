@@ -1,7 +1,7 @@
 import { Worker, Job } from "bullmq";
 import { REDIS_URL } from "../../database/redis";
 import sendEmail from "./actions/sendEmail";
-import { formatExternalOwnerName } from "../../utils/externalOwner.utils";
+import { resolveProjectOwnerName } from "../../utils/project.utils";
 import logger from "../../utils/logger/fileLogger";
 import { getAllOrganizationsQuery } from "../../utils/organization.utils";
 import { getAllVendorsQuery } from "../../utils/vendor.utils";
@@ -384,17 +384,7 @@ async function sendReportNotification() {
         }[],
         number,
       ];
-      // owner is NULL for an external owner, so there may be no user row.
-      const [ownerRows] = (await sequelize.query(
-        `SELECT name || ' ' || surname AS full_name FROM users WHERE id = :userId;`,
-        {
-          replacements: { userId: projectDetails[0][0].owner },
-        },
-      )) as [{ full_name: string }[], number];
-      const externalOwnerName = projectDetails[0][0].external_owner_name;
-      const full_name =
-        ownerRows[0]?.full_name ??
-        (externalOwnerName ? formatExternalOwnerName(externalOwnerName) : "Unknown");
+      const full_name = await resolveProjectOwnerName(projectDetails[0][0], "Unknown");
       const [[{ organization_name }]] = (await sequelize.query(
         `SELECT name FROM organizations WHERE id = :orgId;`,
         {

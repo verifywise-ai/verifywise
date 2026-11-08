@@ -71,7 +71,7 @@ describe("notifyExternalOwnerAssigned", () => {
       assignedByUserId: 8,
     });
     const variables = send.mock.calls[0][3] as Record<string, string>;
-    expect(variables.contact_message).toContain("administrator");
+    expect(variables.contact_message).toContain("an administrator of Acme");
     expect(variables.contact_message).not.toContain("null");
     expect(variables.contact_message).not.toContain("undefined");
   });
@@ -124,9 +124,18 @@ describe("notifyExternalOwnerConfirmationDue", () => {
     expect(template).toBe(EMAIL_TEMPLATES.EXTERNAL_OWNER_NOTICE);
     expect(variables.message).toContain("2026-06-01");
     expect(variables.message).toContain("90");
+    expect(variables.message).toContain("Acme asks owners");
+    expect(variables.contact_message).toContain("at Acme");
     expect(variables.contact_message).toContain("Grace Hopper");
     expect(Object.values(variables).join(" ")).not.toMatch(/https?:\/\//);
     expect(Object.values(variables).join(" ").toLowerCase()).not.toContain("log in");
+  });
+
+  it("names the organization in the fallback contact too", async () => {
+    query.mockResolvedValue([]);
+    await notifyExternalOwnerConfirmationDue(entry);
+    const variables = send.mock.calls[0][3] as Record<string, string>;
+    expect(variables.contact_message).toContain("an administrator of Acme");
   });
 
   it("propagates a send failure so the sweep can retry tomorrow", async () => {

@@ -7909,6 +7909,8 @@ tags:
   -
     name: 'v1: V1/Lifecycle Settings'
   -
+    name: 'v1: V1/Projects'
+  -
     name: 'v1: V1/Use Case Lifecycle'
 paths:
   /webhooks/github:
@@ -27772,6 +27774,34 @@ paths:
       tags:
         - 'v1: Shadow AI'
       operationId: regenerateSyslogKey
+      security:
+        -
+          bearerAuth: []
+  /v1/projects:
+    post:
+      summary: 'Create Project'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Projects'
+      operationId: v1_projects_createProject
+      security:
+        -
+          bearerAuth: []
+  '/v1/projects/{id}':
+    patch:
+      summary: 'Update Project By Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Projects'
+      operationId: v1_projects_updateProjectById
       security:
         -
           bearerAuth: []

@@ -35,10 +35,10 @@ async function ownerRow(id: number): Promise<Record<string, any>> {
   return (rows as any[])[0];
 }
 
-async function apiAs(orgId: number, userId: number) {
+async function apiAs(orgId: number, userId: number, role: string = "Admin") {
   const app = await createTestApp({
     bypassAuth: true,
-    mockUser: { userId, organizationId: orgId, role: "Admin" },
+    mockUser: { userId, organizationId: orgId, role },
   });
   return testRequest(app);
 }
@@ -95,7 +95,7 @@ describe("external use case owners", () => {
     const api = await apiAs(orgId, adminId);
 
     await api
-      .patch(`/api/projects/${projectId}`)
+      .patch(`/api/v1/projects/${projectId}`)
       .send({ external_owner_name: "Ada", external_owner_email: "ada@example.com" })
       .expect(202);
     expect(await ownerRow(projectId)).toEqual({
@@ -104,7 +104,7 @@ describe("external use case owners", () => {
       external_owner_email: "ada@example.com",
     });
 
-    await api.patch(`/api/projects/${projectId}`).send({ owner: adminId }).expect(202);
+    await api.patch(`/api/v1/projects/${projectId}`).send({ owner: adminId }).expect(202);
     expect(await ownerRow(projectId)).toEqual({
       owner: adminId,
       external_owner_name: null,
@@ -119,7 +119,7 @@ describe("external use case owners", () => {
     const api = await apiAs(orgId, adminId);
 
     await api
-      .patch(`/api/projects/${projectId}`)
+      .patch(`/api/v1/projects/${projectId}`)
       .send({ external_owner_name: "Ada", external_owner_email: "ada@example.com" })
       .expect(202);
     await waitForSends(1);
@@ -127,7 +127,7 @@ describe("external use case owners", () => {
     expect(send.mock.calls[0][0]).toBe("ada@example.com");
 
     await api
-      .patch(`/api/projects/${projectId}`)
+      .patch(`/api/v1/projects/${projectId}`)
       .send({ external_owner_name: "Ada L.", external_owner_email: "ADA@example.com" })
       .expect(202);
     // Give a wrongly fired notice the time it would need to arrive.
@@ -142,11 +142,11 @@ describe("external use case owners", () => {
     const api = await apiAs(orgId, adminId);
 
     await api
-      .patch(`/api/projects/${projectId}`)
+      .patch(`/api/v1/projects/${projectId}`)
       .send({ external_owner_name: null, external_owner_email: null })
       .expect(400);
     await api
-      .patch(`/api/projects/${projectId}`)
+      .patch(`/api/v1/projects/${projectId}`)
       .send({ owner: adminId, external_owner_name: "B", external_owner_email: "b@example.com" })
       .expect(400);
     expect((await ownerRow(projectId)).external_owner_email).toBe("ada@example.com");
@@ -206,5 +206,224 @@ describe("external use case owners", () => {
     );
 
     expect((rows as any[]).map((r) => r.id)).not.toContain(projectId);
+  });
+
+  describe("/api/v1/projects router", () => {
+    const body = {
+      project_title: "Vendor bot",
+      start_date: "2026-01-01T00:00:00.000Z",
+      external_owner_name: "Ada Lovelace",
+      external_owner_email: "ADA@Example.com",
+    };
+
+    it("requires authentication", async () => {
+      const app = await createTestApp();
+      const noToken = await testRequest(app).post("/api/v1/projects").send(body);
+      expect([400, 401]).toContain(noToken.status);
+      const badToken = await testRequest(app)
+        .patch("/api/v1/projects/1")
+        .set("Authorization", "Bearer not-a-real-token")
+        .send({ owner: 1 });
+      expect([400, 401]).toContain(badToken.status);
+    });
+
+    it("denies a role without useCase.edit", async () => {
+      const orgId = await createTestOrganization();
+      const userId = await admin(orgId);
+      const api = await apiAs(orgId, userId, "Auditor");
+      await api.post("/api/v1/projects").send(body).expect(403);
+      await api.patch("/api/v1/projects/1").send({ owner: userId }).expect(403);
+    });
+
+    it("never updates another organization's use case", async () => {
+      const orgA = await createTestOrganization();
+      const orgB = await createTestOrganization();
+      const adminA = await admin(orgA);
+      const adminB = await admin(orgB);
+      const projectA = await createTestProject(orgA, adminA);
+      const api = await apiAs(orgB, adminB);
+
+      await api
+        .patch(`/api/v1/projects/${projectA}`)
+        .send({ external_owner_name: "Eve", external_owner_email: "eve@example.com" })
+        .expect(404);
+      expect(await ownerRow(projectA)).toEqual({
+        owner: adminA,
+        external_owner_name: null,
+        external_owner_email: null,
+      });
+    });
+
+    it("creates with an external owner", async () => {
+      const orgId = await createTestOrganization();
+      const adminId = await admin(orgId);
+      const api = await apiAs(orgId, adminId);
+
+      const res = await api.post("/api/v1/projects").send(body).expect(201);
+
+      expect(await ownerRow(res.body.data.project.id)).toEqual({
+        owner: null,
+        external_owner_name: "Ada Lovelace",
+        external_owner_email: "ada@example.com",
+      });
+    });
+
+    it("rejects a create with whitespace for both owner kinds", async () => {
+      const orgId = await createTestOrganization();
+      const adminId = await admin(orgId);
+      const api = await apiAs(orgId, adminId);
+      await api
+        .post("/api/v1/projects")
+        .send({ ...body, external_owner_name: " ", external_owner_email: " " })
+        .expect(400);
+    });
+
+    it("treats owner: null as a no-op on a row with no user owner", async () => {
+      const orgId = await createTestOrganization();
+      const adminId = await admin(orgId);
+      const goneId = await admin(orgId);
+      const orphan = await createTestProject(orgId, goneId);
+      await sequelize.query(`DELETE FROM users WHERE id = :id`, { replacements: { id: goneId } });
+      const external = await createExternal(orgId, adminId);
+      const api = await apiAs(orgId, adminId);
+
+      await api.patch(`/api/v1/projects/${orphan}`).send({ owner: null }).expect(202);
+      await api.patch(`/api/v1/projects/${external}`).send({ owner: null }).expect(202);
+      expect((await ownerRow(external)).external_owner_email).toBe("ada@example.com");
+    });
+  });
+
+  describe("legacy /api/projects parity", () => {
+    it("ignores external owner fields on create and keeps owner required", async () => {
+      const orgId = await createTestOrganization();
+      const adminId = await admin(orgId);
+      const api = await apiAs(orgId, adminId);
+      const body = {
+        project_title: "Legacy",
+        start_date: "2026-01-01T00:00:00.000Z",
+        external_owner_name: "Ada",
+        external_owner_email: "ada@example.com",
+      };
+
+      await api.post("/api/projects").send(body).expect(400);
+
+      const res = await api
+        .post("/api/projects")
+        .send({ ...body, owner: adminId })
+        .expect(201);
+      expect(await ownerRow(res.body.data.project.id)).toEqual({
+        owner: adminId,
+        external_owner_name: null,
+        external_owner_email: null,
+      });
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      expect(send).not.toHaveBeenCalled();
+    });
+
+    it("ignores external owner fields on update", async () => {
+      const orgId = await createTestOrganization();
+      const adminId = await admin(orgId);
+      const projectId = await createTestProject(orgId, adminId);
+      const api = await apiAs(orgId, adminId);
+
+      await api
+        .patch(`/api/projects/${projectId}`)
+        .send({ external_owner_name: "Ada", external_owner_email: "ada@example.com" })
+        .expect(202);
+      expect(await ownerRow(projectId)).toEqual({
+        owner: adminId,
+        external_owner_name: null,
+        external_owner_email: null,
+      });
+    });
+
+    it("still clears the owner with owner: null", async () => {
+      const orgId = await createTestOrganization();
+      const adminId = await admin(orgId);
+      const projectId = await createTestProject(orgId, adminId);
+      const api = await apiAs(orgId, adminId);
+
+      await api.patch(`/api/projects/${projectId}`).send({ owner: null }).expect(202);
+      expect((await ownerRow(projectId)).owner).toBeNull();
+    });
+
+    it("clears the external fields when a numeric owner is set", async () => {
+      const orgId = await createTestOrganization();
+      const adminId = await admin(orgId);
+      const projectId = await createExternal(orgId, adminId);
+      const api = await apiAs(orgId, adminId);
+
+      await api.patch(`/api/projects/${projectId}`).send({ owner: adminId }).expect(202);
+      expect(await ownerRow(projectId)).toEqual({
+        owner: adminId,
+        external_owner_name: null,
+        external_owner_email: null,
+      });
+    });
+  });
+
+  describe("access for the person naming an external owner", () => {
+    const isMember = async (projectId: number, userId: number, orgId: number) => {
+      const [rows] = await sequelize.query(
+        `SELECT 1 FROM projects_members
+          WHERE project_id = :projectId AND user_id = :userId AND organization_id = :orgId`,
+        { replacements: { projectId, userId, orgId } },
+      );
+      return (rows as unknown[]).length === 1;
+    };
+    const external = { external_owner_name: "Ada", external_owner_email: "ada@example.com" };
+
+    it("keeps a non-Admin who creates one with an external owner", async () => {
+      const orgId = await createTestOrganization();
+      const editorId = await createTestUser(orgId, 3, `ext-ed-${Date.now()}@test.com`, "Pw123456!");
+      const api = await apiAs(orgId, editorId, "Editor");
+
+      const res = await api
+        .post("/api/v1/projects")
+        .send({ project_title: "P", start_date: "2026-01-01T00:00:00.000Z", ...external })
+        .expect(201);
+
+      expect(await isMember(res.body.data.project.id, editorId, orgId)).toBe(true);
+      expect(res.body.data.project.members).toContain(editorId);
+    });
+
+    it("keeps a non-Admin owner who hands the use case over, without a self email", async () => {
+      const orgId = await createTestOrganization();
+      const editorId = await createTestUser(orgId, 3, `ext-ow-${Date.now()}@test.com`, "Pw123456!");
+      const projectId = await createTestProject(orgId, editorId);
+      const api = await apiAs(orgId, editorId, "Editor");
+
+      const res = await api.patch(`/api/v1/projects/${projectId}`).send(external).expect(202);
+
+      expect(await isMember(projectId, editorId, orgId)).toBe(true);
+      expect(res.body.data.members).toContain(editorId);
+      await waitForSends(1);
+      expect(send.mock.calls.map((call) => call[0])).toEqual(["ada@example.com"]);
+    });
+
+    it("is idempotent for someone already on the team", async () => {
+      const orgId = await createTestOrganization();
+      const editorId = await createTestUser(orgId, 3, `ext-id-${Date.now()}@test.com`, "Pw123456!");
+      const projectId = await createTestProject(orgId, editorId);
+      await sequelize.query(
+        `INSERT INTO projects_members (organization_id, project_id, user_id)
+         VALUES (:orgId, :projectId, :editorId)`,
+        { replacements: { orgId, projectId, editorId } },
+      );
+      const api = await apiAs(orgId, editorId, "Editor");
+
+      await api.patch(`/api/v1/projects/${projectId}`).send(external).expect(202);
+      expect(await isMember(projectId, editorId, orgId)).toBe(true);
+    });
+
+    it("does not add an Admin, who keeps access by role", async () => {
+      const orgId = await createTestOrganization();
+      const adminId = await admin(orgId);
+      const projectId = await createTestProject(orgId, adminId);
+      const api = await apiAs(orgId, adminId);
+
+      await api.patch(`/api/v1/projects/${projectId}`).send(external).expect(202);
+      expect(await isMember(projectId, adminId, orgId)).toBe(false);
+    });
   });
 });

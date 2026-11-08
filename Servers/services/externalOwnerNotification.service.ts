@@ -19,7 +19,6 @@ export interface ExternalOwnerRecipient {
 }
 
 const ACCOUNT_NOTE = "You do not need a VerifyWise account and this email has no sign-in link.";
-const FALLBACK_CONTACT = "an administrator of your organization";
 
 interface ContactRow {
   name: string | null;
@@ -28,7 +27,11 @@ interface ContactRow {
 }
 
 /** "Name (email)" for the preferred user, or an org admin, or generic wording. */
-async function resolveContact(organizationId: number, preferredUserId: number | null) {
+async function resolveContact(
+  organizationId: number,
+  organization: string,
+  preferredUserId: number | null,
+) {
   try {
     const rows = await sequelize.query<ContactRow>(
       `SELECT u.name, u.surname, u.email
@@ -51,7 +54,7 @@ async function resolveContact(organizationId: number, preferredUserId: number | 
     // The notice is still worth sending with the generic wording.
     logger.error("Could not look up a contact for an external owner notice:", error);
   }
-  return FALLBACK_CONTACT;
+  return `an administrator of ${organization}`;
 }
 
 async function organizationName(organizationId: number): Promise<string> {
@@ -70,8 +73,8 @@ export async function notifyExternalOwnerAssigned(params: {
   assignedByUserId: number;
 }): Promise<void> {
   const { organizationId, useCaseTitle, recipient, assignedByUserId } = params;
-  const contact = await resolveContact(organizationId, assignedByUserId);
   const organization = await organizationName(organizationId);
+  const contact = await resolveContact(organizationId, organization, assignedByUserId);
 
   await notificationService.sendEmailWithTemplate(
     recipient.email,
@@ -103,7 +106,8 @@ export async function notifyExternalOwnerConfirmationDue(params: {
 }): Promise<void> {
   const { organizationId, entryTitle, noun, since, intervalDays, recipient, contactUserId } =
     params;
-  const contact = await resolveContact(organizationId, contactUserId);
+  const organization = await organizationName(organizationId);
+  const contact = await resolveContact(organizationId, organization, contactUserId);
 
   await notificationService.sendEmailWithTemplate(
     recipient.email,
@@ -112,9 +116,9 @@ export async function notifyExternalOwnerConfirmationDue(params: {
     {
       recipient_name: recipient.name,
       heading: `Is "${entryTitle}" still live?`,
-      message: `You own the ${noun} ${entryTitle}. It has not been confirmed as live since ${since}, and your organization asks owners to confirm every ${intervalDays} days.`,
+      message: `You own the ${noun} ${entryTitle}. It has not been confirmed as live since ${since}, and ${organization} asks owners to confirm every ${intervalDays} days.`,
       action_message: ACCOUNT_NOTE,
-      contact_message: `Please tell ${contact} whether it is still in use, so they can confirm it or retire it.`,
+      contact_message: `Please tell ${contact} at ${organization} whether it is still in use, so they can confirm it or retire it.`,
     },
   );
 }

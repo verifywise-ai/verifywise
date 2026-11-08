@@ -15,6 +15,7 @@ import { IProjectAttributes } from "../domain.layer/interfaces/i.project";
 import { HighRiskRole } from "../domain.layer/enums/high-risk-role.enum";
 import {
   createNewProjectQuery,
+  ensureProjectMemberQuery,
   getCurrentProjectMembers,
   updateProjectByIdQuery,
 } from "../utils/project.utils";
@@ -31,11 +32,24 @@ import {
 import { createUseCaseApprovalRequest } from "./projects/approvalRequest.service";
 import { logStructured } from "../utils/logger/fileLogger";
 import { resolveOwnerForUpdate } from "../utils/externalOwner.utils";
+import { seesAllProjects } from "../utils/projectVisibility.utils";
 
 export interface UseCaseServiceContext {
   userId: number;
   organizationId: number;
+  /** The acting user's role, when the caller has one (HTTP requests do). */
+  actorRole?: string;
 }
+
+/** A non-Admin keeps access through membership once a use case has no user owner. */
+const losesAccessWithoutMembership = (
+  useCase: Pick<IProjectAttributes, "owner" | "external_owner_email">,
+  actorRole: string | undefined,
+): boolean =>
+  !useCase.owner &&
+  Boolean(useCase.external_owner_email) &&
+  actorRole !== undefined &&
+  !seesAllProjects(actorRole);
 
 /**
  * The frameworks whose controls, clauses, annexes and assessments are built out
@@ -115,6 +129,13 @@ export async function createUseCaseService(
     ctx.userId,
     transaction,
   );
+
+  if (losesAccessWithoutMembership(createdProject, ctx.actorRole)) {
+    await ensureProjectMemberQuery(createdProject.id!, ctx.userId, ctx.organizationId, transaction);
+    const members: number[] = (createdProject.dataValues as any).members ?? [];
+    if (!members.includes(ctx.userId)) members.push(ctx.userId);
+    (createdProject.dataValues as any).members = members;
+  }
 
   // 3. Only create frameworks immediately if NO approval workflow is assigned.
   //    Otherwise they stay on the use case as pending_frameworks and are
@@ -233,7 +254,7 @@ export async function updateUseCaseService(
 
   // Normalise ownership now so the change history records what is written: the
   // lowercased email, and the kind of owner that selecting the other one clears.
-  Object.assign(input, resolveOwnerForUpdate(input, existingUseCase));
+  Object.assign(input, resolveOwnerForUpdate(input, existingUseCase, { requireOwner: false }));
 
   // 2. Members before the update, to identify the newly added ones.
   const currentMembers = await getCurrentProjectMembers(useCaseId, ctx.organizationId, transaction);
@@ -247,13 +268,24 @@ export async function updateUseCaseService(
     transaction,
   );
 
+  // The owner handed the use case to an external owner: unless an Admin, they
+  // would lose access, because owner is now NULL.
+  const keepActorAsMember =
+    useCase !== null &&
+    Number(existingUseCase.owner) === ctx.userId &&
+    losesAccessWithoutMembership(useCase, ctx.actorRole);
+  if (keepActorAsMember) {
+    await ensureProjectMemberQuery(useCaseId, ctx.userId, ctx.organizationId, transaction);
+    if (!useCase.members.includes(ctx.userId)) useCase.members.push(ctx.userId);
+  }
+
   // 4. Change history.
   if (useCase) {
     // members is removed from input above, so compare it on its own. Sorted, so
     // the same members in another order are not recorded as a change.
     const byId = (a: number, b: number) => a - b;
     const memberChanges =
-      members !== undefined
+      members !== undefined || keepActorAsMember
         ? await trackUseCaseChanges(
             { members: currentMembers.map(Number).sort(byId) } as any,
             { members: [...useCase.members].sort(byId) } as any,
@@ -271,5 +303,7 @@ export async function updateUseCaseService(
     }
   }
 
-  return { useCase, currentMembers: currentMembers.map(Number) };
+  // Counted as already present, so the caller's "you were added" email skips them.
+  const before = currentMembers.map(Number);
+  return { useCase, currentMembers: keepActorAsMember ? [...before, ctx.userId] : before };
 }

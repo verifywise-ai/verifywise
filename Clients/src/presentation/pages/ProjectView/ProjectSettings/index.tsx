@@ -787,7 +787,13 @@ const ProjectSettings = React.memo(
       }).then(async (response) => {
         if (response.status === 202) {
           // Create new values reference and update both ref and form state
-          const newValues = { ...values };
+          // The server can add the acting user to the team when an external
+          // owner is named, so keep its list or the next save would drop them.
+          const savedMembers = response.data?.data?.members;
+          const newValues = {
+            ...values,
+            members: Array.isArray(savedMembers) ? savedMembers.map(Number) : values.members,
+          };
           initialValuesRef.current = newValues;
           setValues(newValues);
 

@@ -159,10 +159,22 @@ describe("resolveOwnerForUpdate", () => {
     expect(resolveOwnerForUpdate({ owner: null }, externalOwned)).toEqual({});
   });
 
-  it("does not treat a user whose account was deleted as an external owner", () => {
+  it("treats owner: null as a no-op on a row whose user was deleted", () => {
     const orphaned = { owner: null, external_owner_name: null, external_owner_email: null };
     expect(resolveOwnerForUpdate({}, orphaned)).toEqual({});
-    expect(() => resolveOwnerForUpdate({ owner: null }, orphaned)).toThrow(ValidationException);
+    expect(resolveOwnerForUpdate({ owner: null }, orphaned)).toEqual({});
+    expect(
+      resolveOwnerForUpdate({ external_owner_name: null, external_owner_email: null }, orphaned),
+    ).toEqual({ external_owner_name: null, external_owner_email: null });
+  });
+
+  it("leaves clearing allowed for the layers shared with the legacy API", () => {
+    expect(resolveOwnerForUpdate({ owner: null }, userOwned, { requireOwner: false })).toEqual({});
+    expect(resolveOwnerForCreate({}, { requireOwner: false })).toEqual({
+      owner: null,
+      external_owner_name: null,
+      external_owner_email: null,
+    });
   });
 
   it("lets an explicit clear of empty external fields pass on a user-owned use case", () => {

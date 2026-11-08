@@ -20,24 +20,6 @@ const optionalProjectBodyFields = [
     .optional({ nullable: true })
     .isInt({ min: 1 })
     .withMessage("owner must be a positive integer"),
-  body("external_owner_name")
-    .optional({ values: "null" })
-    .isString()
-    .withMessage("external_owner_name must be a string")
-    .isLength({ max: EXTERNAL_OWNER_NAME_MAX_LENGTH })
-    .withMessage(
-      `external_owner_name must be at most ${EXTERNAL_OWNER_NAME_MAX_LENGTH} characters`,
-    ),
-  body("external_owner_email")
-    .optional({ values: "null" })
-    .custom((value) => {
-      if (typeof value !== "string") throw new Error("external_owner_email must be a string");
-      const trimmed = value.trim();
-      if (trimmed !== "" && !emailValidation(trimmed)) {
-        throw new Error("external_owner_email must be a valid email address");
-      }
-      return true;
-    }),
   body("start_date").optional().isISO8601().withMessage("start_date must be a valid ISO 8601 date"),
   body("geography")
     .optional({ nullable: true })
@@ -120,18 +102,7 @@ export const validateCreateProject = [
     .trim()
     .notEmpty()
     .withMessage("project_title is required and must be a non-empty string"),
-  body("owner").custom((value, { req }) => {
-    // An external owner stands in for a user owner; the two-fields-together
-    // and not-both rules are enforced by resolveOwnerForCreate.
-    if (value === undefined || value === null) {
-      if (req.body.external_owner_name || req.body.external_owner_email) return true;
-      throw new Error("owner is required unless an external owner is given");
-    }
-    if (!Number.isInteger(Number(value)) || Number(value) < 1) {
-      throw new Error("owner must be a positive integer");
-    }
-    return true;
-  }),
+  body("owner").isInt({ min: 1 }).withMessage("owner is required and must be a positive integer"),
   body("start_date")
     .isISO8601()
     .withMessage("start_date is required and must be a valid ISO 8601 date"),
@@ -150,5 +121,59 @@ export const validateUpdateProjectStatus = [
   body("status")
     .isIn(Object.values(ProjectStatus))
     .withMessage(`status must be one of: ${Object.values(ProjectStatus).join(", ")}`),
+  handleValidationErrors,
+];
+
+// /api/v1/projects: the same body plus external owners (#5256). The legacy
+// validators above stay frozen. owner keeps isInt semantics through
+// optionalProjectBodyFields, so true or "1e1" are still rejected.
+const externalOwnerBodyFields = [
+  body("external_owner_name")
+    .optional({ values: "null" })
+    .isString()
+    .withMessage("external_owner_name must be a string")
+    .isLength({ max: EXTERNAL_OWNER_NAME_MAX_LENGTH })
+    .withMessage(
+      `external_owner_name must be at most ${EXTERNAL_OWNER_NAME_MAX_LENGTH} characters`,
+    ),
+  body("external_owner_email")
+    .optional({ values: "null" })
+    .custom((value) => {
+      if (typeof value !== "string") throw new Error("external_owner_email must be a string");
+      const trimmed = value.trim();
+      if (trimmed !== "" && !emailValidation(trimmed)) {
+        throw new Error("external_owner_email must be a valid email address");
+      }
+      return true;
+    }),
+];
+
+export const validateCreateProjectV1 = [
+  body("project_title")
+    .isString()
+    .trim()
+    .notEmpty()
+    .withMessage("project_title is required and must be a non-empty string"),
+  body("owner").custom((value, { req }) => {
+    // Presence only: the type is checked by optionalProjectBodyFields, and the
+    // two-fields-together and not-both rules by resolveOwnerForCreate.
+    if (value === undefined || value === null) {
+      if (req.body.external_owner_name || req.body.external_owner_email) return true;
+      throw new Error("owner is required unless an external owner is given");
+    }
+    return true;
+  }),
+  body("start_date")
+    .isISO8601()
+    .withMessage("start_date is required and must be a valid ISO 8601 date"),
+  ...optionalProjectBodyFields,
+  ...externalOwnerBodyFields,
+  handleValidationErrors,
+];
+
+export const validateUpdateProjectV1 = [
+  projectIdParam,
+  ...optionalProjectBodyFields,
+  ...externalOwnerBodyFields,
   handleValidationErrors,
 ];

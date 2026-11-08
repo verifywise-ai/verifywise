@@ -46,6 +46,11 @@ import {
 import { createUseCaseService, updateUseCaseService } from "../services/useCase.service";
 import { notifyExternalOwnerAssigned } from "../services/externalOwnerNotification.service";
 import {
+  resolveOwnerForCreate,
+  resolveOwnerForUpdate,
+  stripExternalOwnerFields,
+} from "../utils/externalOwner.utils";
+import {
   notifyUserAssigned,
   notifyApprovalAutoApproved,
 } from "../services/inAppNotification.service";
@@ -211,13 +216,17 @@ export async function createProject(req: Request, res: Response): Promise<any> {
   });
 
   try {
+    // Only /api/v1/projects accepts external owners; the legacy body is frozen.
+    if (res.locals?.acceptsExternalOwner) resolveOwnerForCreate(projectData);
+    else stripExternalOwnerFields(projectData);
+
     const {
       useCase: createdProject,
       frameworks,
       approvalResult,
     } = await createUseCaseService(
       projectData,
-      { userId: req.userId!, organizationId: req.organizationId! },
+      { userId: req.userId!, organizationId: req.organizationId!, actorRole: req.role },
       transaction,
     );
 
@@ -458,11 +467,15 @@ export async function updateProjectById(req: Request, res: Response): Promise<an
 
     const updatedProject: Partial<ProjectModel> & { members?: number[] } = updateData;
 
+    // Only /api/v1/projects accepts external owners; the legacy body is frozen.
+    if (res.locals?.acceptsExternalOwner) resolveOwnerForUpdate(updatedProject, existingProject);
+    else stripExternalOwnerFields(updatedProject);
+
     const { useCase: project, currentMembers } = await updateUseCaseService(
       projectId,
       updatedProject,
       existingProject,
-      { userId, organizationId: req.organizationId! },
+      { userId, organizationId: req.organizationId!, actorRole: role },
       transaction,
     );
 

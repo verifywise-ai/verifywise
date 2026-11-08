@@ -6,8 +6,8 @@ import { emailValidation } from "../domain.layer/validations/email.valid";
  *
  * A use case is owned either by a user (`owner`) or by an external person
  * (`external_owner_name` + `external_owner_email`), who has no account and only
- * ever receives email. Exactly one applies: selecting one clears the other, and
- * a create or an update that touches ownership must leave one in place.
+ * ever receives email. Exactly one applies: selecting one clears the other. On
+ * the v1 API, a create or an update that touches ownership must leave one in place.
  *
  * The rule lives here, not in a database CHECK: deleting a user sets
  * projects.owner to NULL, and a CHECK would make that delete fail.
@@ -33,6 +33,14 @@ export type OwnerAssignment = {
   external_owner_name: string | null;
   external_owner_email: string | null;
 };
+
+/**
+ * requireOwner: reject a write that leaves no owner. On for the v1 API; the
+ * layers shared with the frozen legacy API and internal callers leave it off.
+ */
+export interface OwnerRuleOptions {
+  requireOwner?: boolean;
+}
 
 const fail = (message: string, field: string, value: unknown): never => {
   throw new ValidationException(message, field, value, { i18nKey: message });
@@ -76,7 +84,10 @@ const isSet = (owner: number | null | undefined): owner is number =>
   owner !== undefined && owner !== null;
 
 /** The ownership columns for a new use case. Throws when the rule is not met. */
-export function resolveOwnerForCreate(input: OwnerFields): OwnerAssignment {
+export function resolveOwnerForCreate(
+  input: OwnerFields,
+  { requireOwner = true }: OwnerRuleOptions = {},
+): OwnerAssignment {
   const name = normaliseExternalOwnerName(input.external_owner_name);
   const email = normaliseExternalOwnerEmail(input.external_owner_email);
 
@@ -84,7 +95,10 @@ export function resolveOwnerForCreate(input: OwnerFields): OwnerAssignment {
     if (name || email) fail(OWNER_CONFLICT, "owner", input.owner);
     return { owner: input.owner, external_owner_name: null, external_owner_email: null };
   }
-  if (!name && !email) fail(OWNER_REQUIRED, "owner", input.owner);
+  if (!name && !email) {
+    if (requireOwner) fail(OWNER_REQUIRED, "owner", input.owner);
+    return { owner: null, external_owner_name: null, external_owner_email: null };
+  }
   if (!name || !email) fail(EXTERNAL_INCOMPLETE, "external_owner_email", email);
   return { owner: null, external_owner_name: name!, external_owner_email: email! };
 }
@@ -97,6 +111,7 @@ export function resolveOwnerForCreate(input: OwnerFields): OwnerAssignment {
 export function resolveOwnerForUpdate(
   input: OwnerFields,
   current: OwnerFields,
+  { requireOwner = true }: OwnerRuleOptions = {},
 ): Partial<OwnerAssignment> {
   const name = normaliseExternalOwnerName(input.external_owner_name);
   const email = normaliseExternalOwnerEmail(input.external_owner_email);
@@ -114,20 +129,29 @@ export function resolveOwnerForUpdate(
   }
 
   if (name === null || email === null) {
-    // The external fields were cleared; only fine if a user owner remains.
-    if (input.owner === undefined && isSet(current.owner)) {
-      return { external_owner_name: null, external_owner_email: null };
+    // The external fields were cleared. A user owner that stays is fine, and so
+    // is a row that had no owner of either kind to lose.
+    const keepsUserOwner = input.owner === undefined && isSet(current.owner);
+    const hadNoOwner = !isSet(current.owner) && !current.external_owner_email;
+    if (requireOwner && !keepsUserOwner && !hadNoOwner) {
+      fail(OWNER_REQUIRED, "owner", input.owner);
     }
-    return fail(OWNER_REQUIRED, "owner", input.owner);
+    return { external_owner_name: null, external_owner_email: null };
   }
 
-  if (input.owner === null) {
-    // Clients that send the whole form repeat owner: null for an external owner.
-    if (current.external_owner_email) return {};
-    return fail(OWNER_REQUIRED, "owner", input.owner);
+  // owner: null on a row with no user owner changes nothing: clients that send
+  // the whole form repeat it for an external owner, or after the user was deleted.
+  if (input.owner === null && requireOwner && isSet(current.owner)) {
+    fail(OWNER_REQUIRED, "owner", input.owner);
   }
 
   return {};
+}
+
+/** Legacy /api/projects requests cannot set external owners: the fields are ignored. */
+export function stripExternalOwnerFields(body: Record<string, unknown>): void {
+  delete body.external_owner_name;
+  delete body.external_owner_email;
 }
 
 /** How an external owner is named wherever the owner is shown as plain text. */

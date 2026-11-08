@@ -30,6 +30,7 @@ jest.mock("../../../utils/user.utils", () => ({
 
 jest.mock("../../../utils/project.utils", () => ({
   getProjectByIdQuery: jest.fn().mockResolvedValue(null),
+  resolveProjectOwnerName: async (_row: unknown, fallback: string) => fallback,
 }));
 
 jest.mock("../../../utils/framework.utils", () => ({

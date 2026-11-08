@@ -40,7 +40,7 @@ import {
  * The owner's name as plain text (automation emails, reports): the user's full
  * name, "Name (external)" for an external owner, or the fallback for neither.
  */
-const resolveOwnerName = async (
+export const resolveProjectOwnerName = async (
   row: { owner?: number | null; external_owner_name?: string | null },
   fallback: string,
   transaction?: Transaction,
@@ -147,6 +147,25 @@ export const getUserProjects = async (
   return projects;
 };
 
+/**
+ * Add a user to a use case's team if they are not on it. Idempotent, inside the
+ * caller's transaction. Used so naming an external owner never locks out the
+ * non-Admin who did it: their access otherwise came only from being the owner.
+ */
+export const ensureProjectMemberQuery = async (
+  projectId: number,
+  userId: number,
+  organizationId: number,
+  transaction: Transaction,
+): Promise<void> => {
+  await sequelize.query(
+    `INSERT INTO projects_members (organization_id, project_id, user_id)
+     VALUES (:organizationId, :projectId, :userId)
+     ON CONFLICT (user_id, project_id) DO NOTHING;`,
+    { replacements: { organizationId, projectId, userId }, transaction },
+  );
+};
+
 export const getAllProjectsQuery = async (
   {
     userId,
@@ -236,7 +255,7 @@ export const getProjectByIdQuery = async (
     (project.dataValues as any)["framework"].push(pf);
   }
 
-  (project.dataValues as any)["owner_name"] = await resolveOwnerName(project, "Unassigned");
+  (project.dataValues as any)["owner_name"] = await resolveProjectOwnerName(project, "Unassigned");
 
   const members = await sequelize.query(
     `SELECT user_id FROM projects_members WHERE organization_id = :organizationId AND project_id = :project_id`,
@@ -325,7 +344,7 @@ export const createNewProjectQuery = async (
       i18nKey: "Invalid department",
     });
   }
-  const ownership = resolveOwnerForCreate(project);
+  const ownership = resolveOwnerForCreate(project, { requireOwner: false });
   await assertOwnerInOrganization(ownership.owner, organizationId, transaction);
   const memberIds = await normaliseMemberIds(members, organizationId, transaction);
   // Frameworks are optional for use cases; default to empty array
@@ -475,7 +494,11 @@ export const createNewProjectQuery = async (
   if (automations[0].length > 0) {
     const automation = automations[0][0];
     if (automation["trigger_key"] === "project_added") {
-      const owner_name = await resolveOwnerName(createdProject.dataValues, "Unknown", transaction);
+      const owner_name = await resolveProjectOwnerName(
+        createdProject.dataValues,
+        "Unknown",
+        transaction,
+      );
 
       const params = automation.params!;
 
@@ -567,7 +590,7 @@ export const updateProjectByIdQuery = async (
   if (locked.length === 0) return null;
   const oldProject = await getProjectByIdQuery(id, organizationId);
   // Selecting one kind of owner clears the other; checked against the locked row.
-  Object.assign(project, resolveOwnerForUpdate(project, oldProject ?? {}));
+  Object.assign(project, resolveOwnerForUpdate(project, oldProject ?? {}, { requireOwner: false }));
   await assertOwnerInOrganization(project.owner, organizationId, transaction);
   // A partial update (e.g. only ai_risk_classification or status) must not
   // touch members: treating a missing list as [] removed every member.
@@ -702,7 +725,11 @@ export const updateProjectByIdQuery = async (
   if (automations[0].length > 0) {
     const automation = automations[0][0];
     if (automation["trigger_key"] === "project_updated") {
-      const owner_name = await resolveOwnerName(updatedProject.dataValues, "Unknown", transaction);
+      const owner_name = await resolveProjectOwnerName(
+        updatedProject.dataValues,
+        "Unknown",
+        transaction,
+      );
 
       const params = automation.params!;
 
@@ -932,7 +959,7 @@ export const deleteProjectByIdQuery = async (
       if (automations[0].length > 0) {
         const automation = automations[0][0];
         if (automation["trigger_key"] === "project_deleted") {
-          const owner_name = await resolveOwnerName(deletedProject, "Unknown", transaction);
+          const owner_name = await resolveProjectOwnerName(deletedProject, "Unknown", transaction);
 
           const params = automation.params!;
 
