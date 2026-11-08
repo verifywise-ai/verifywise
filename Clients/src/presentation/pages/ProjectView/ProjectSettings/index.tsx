@@ -765,50 +765,55 @@ const ProjectSettings = React.memo(
             null,
           framework: values.monitoredRegulationsAndStandards.map((fw) => fw._id),
         },
-      }).then(async (response) => {
-        if (response.status === 202) {
-          // Create new values reference and update both ref and form state
-          const newValues = { ...values };
-          initialValuesRef.current = newValues;
-          setValues(newValues);
+      })
+        .then(async (response) => {
+          if (response.status === 202) {
+            // Create new values reference and update both ref and form state
+            const newValues = { ...values };
+            initialValuesRef.current = newValues;
+            setValues(newValues);
 
-          let cfFlushFailed = false;
-          const pid = Number(projectId);
-          if (Number.isFinite(pid) && pid > 0 && customFieldsRef.current?.hasPendingValues()) {
-            try {
-              await customFieldsRef.current.flush(pid);
-            } catch (cfError) {
-              cfFlushFailed = true;
-              console.error("Project saved, but custom field values failed to save:", cfError);
+            let cfFlushFailed = false;
+            const pid = Number(projectId);
+            if (Number.isFinite(pid) && pid > 0 && customFieldsRef.current?.hasPendingValues()) {
+              try {
+                await customFieldsRef.current.flush(pid);
+              } catch (cfError) {
+                cfFlushFailed = true;
+                console.error("Project saved, but custom field values failed to save:", cfError);
+              }
             }
-          }
-          if (cfFlushFailed) {
-            setIsLoading(false);
-            return;
-          }
+            if (cfFlushFailed) {
+              setIsLoading(false);
+              return;
+            }
 
-          setAlert({
-            variant: "success",
-            body: "Use case updated successfully",
-            isToast: true,
-            visible: true,
-          });
-          setTimeout(() => {
+            setAlert({
+              variant: "success",
+              body: "Use case updated successfully",
+              isToast: true,
+              visible: true,
+            });
+            setTimeout(() => {
+              setIsLoading(false);
+              setAlert(null);
+            }, 2000);
+            // setRefreshKey((prevKey) => prevKey + 1);
+            triggerRefresh(true);
+          } else if (response.status === 400) {
             setIsLoading(false);
-            setAlert(null);
-          }, 2000);
-          // setRefreshKey((prevKey) => prevKey + 1);
-          triggerRefresh(true);
-        } else if (response.status === 400) {
+            setAlert({
+              variant: "error",
+              body: response.data.data.message,
+              isToast: true,
+              visible: true,
+            });
+          }
+        })
+        .catch(() => {
+          // A refused save (403, for one) rejects, and the API layer shows the error.
           setIsLoading(false);
-          setAlert({
-            variant: "error",
-            body: response.data.data.message,
-            isToast: true,
-            visible: true,
-          });
-        }
-      });
+        });
     }, [values, projectId]);
 
     const handleConfirmDelete = useCallback(async () => {
