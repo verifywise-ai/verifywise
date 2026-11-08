@@ -25,6 +25,7 @@
   "Access denied: User does not have permission to access this organization's compliance data": "Access denied: User does not have permission to access this organization's compliance data",
   "Access denied: User does not have permission to access this organization's compliance details": "Access denied: User does not have permission to access this organization's compliance details",
   "Access restricted to super-admin only": "Access restricted to super-admin only",
+  "Access restricted to Admins and super admins": "Access restricted to Admins and super admins",
   "Access Token is required": "Access Token is required",
   "Action ID is required": "Action ID is required",
   "Action key is required": "Action key is required",

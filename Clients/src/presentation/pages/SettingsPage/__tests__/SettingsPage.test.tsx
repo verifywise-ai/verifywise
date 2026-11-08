@@ -5,12 +5,13 @@ import { renderWithProviders } from "../../../../test/renderWithProviders";
 let mockRole = "Admin";
 let mockHasOrganizationAdmin = true;
 let mockPermissionsLoading = false;
+let mockIsSuperAdmin = false;
 
 // Mock hooks
 vi.mock("../../../../application/hooks/useAuth", () => ({
   useAuth: () => ({
     userRoleName: mockRole,
-    isSuperAdmin: false,
+    isSuperAdmin: mockIsSuperAdmin,
   }),
 }));
 vi.mock("../../../../application/hooks/useMyPermissions", () => ({
@@ -58,6 +59,14 @@ vi.mock("../ApiKeys", () => ({
   default: () => <div data-testid="apikeys-tab" />,
 }));
 
+vi.mock("../McpConnect", () => ({
+  default: ({ disabledReason }: { disabledReason?: string }) => (
+    <div data-testid="mcp-tab">
+      {disabledReason && <p data-testid="mcp-disabled">{disabledReason}</p>}
+    </div>
+  ),
+}));
+
 vi.mock("../AuditLedger", () => ({
   default: () => <div data-testid="audit-ledger-tab" />,
 }));
@@ -101,6 +110,7 @@ describe("SettingsPage", () => {
     mockRole = "Admin";
     mockHasOrganizationAdmin = true;
     mockPermissionsLoading = false;
+    mockIsSuperAdmin = false;
   });
 
   it("opens the Data retention tab from a direct link when permitted", () => {
@@ -144,6 +154,42 @@ describe("SettingsPage", () => {
     mockHasOrganizationAdmin = false;
     renderWithProviders(<ProfilePage />, { route: "/settings" });
     expect(screen.queryByText("Data retention")).not.toBeInTheDocument();
+  });
+
+  it("opens the MCP tab for an Admin", () => {
+    renderAt("/settings/mcp");
+    expect(screen.getByText("MCP")).toBeInTheDocument();
+    expect(screen.getByTestId("path")).toHaveTextContent("/settings/mcp");
+    expect(screen.getByTestId("mcp-tab")).toBeInTheDocument();
+  });
+
+  it("leaves the MCP tab usable for an Admin who is not a super admin", () => {
+    renderAt("/settings/mcp");
+    expect(screen.queryByTestId("mcp-disabled")).not.toBeInTheDocument();
+  });
+
+  /** Their connection belongs in the super admin console, which adds the super-admin tools. */
+  it("shows the MCP tab disabled, with the reason, to an Admin who is also a super admin", () => {
+    mockIsSuperAdmin = true;
+    renderAt("/settings/mcp");
+    expect(screen.getByText("MCP")).toBeInTheDocument();
+    expect(screen.getByTestId("mcp-disabled")).toHaveTextContent(
+      "set up MCP from Super Admin → Settings → MCP",
+    );
+  });
+
+  /** The MCP server refuses anyone else, so the tab is not offered at all. */
+  it("hides the MCP tab from every role but Admin", () => {
+    mockRole = "Editor";
+    renderWithProviders(<ProfilePage />, { route: "/settings" });
+    expect(screen.queryByText("MCP")).not.toBeInTheDocument();
+  });
+
+  it("falls back to the default tab on a direct MCP link for a non-Admin", () => {
+    mockRole = "Reviewer";
+    renderAt("/settings/mcp");
+    expect(screen.getByTestId("path")).toHaveTextContent(/^\/settings$/);
+    expect(screen.queryByTestId("mcp-tab")).not.toBeInTheDocument();
   });
 
   it("renders without crashing", () => {
