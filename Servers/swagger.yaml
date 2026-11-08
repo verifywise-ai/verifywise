@@ -5704,7 +5704,7 @@ components:
         risk_assessment:
           type: object
           nullable: true
-          description: When either field is set, a model risk named "Use of <tool>" is created on the new model inventory entry, owned by the governance owner and due in 90 days.
+          description: 'When either field is set, a model risk named "Use of <tool>" is created on the new model inventory entry, owned by the governance owner and due in 90 days.'
           properties:
             data_sensitivity:
               type: string
@@ -5712,7 +5712,7 @@ components:
                 - High
                 - Medium
                 - Low
-              description: Sets the risk level. Without it the level is Medium.
+              description: 'Sets the risk level. Without it the level is Medium.'
             description:
               type: string
               maxLength: 5000
@@ -5729,7 +5729,7 @@ components:
         risk_entry_id:
           type: integer
           nullable: true
-          description: The model risk created from risk_assessment, or null.
+          description: 'The model risk created from risk_assessment, or null.'
         lifecycle_initialized:
           type: boolean
     ShadowAiRule:
