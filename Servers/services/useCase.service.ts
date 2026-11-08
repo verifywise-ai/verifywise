@@ -14,6 +14,7 @@ import { ProjectModel } from "../domain.layer/models/project/project.model";
 import { IProjectAttributes } from "../domain.layer/interfaces/i.project";
 import { HighRiskRole } from "../domain.layer/enums/high-risk-role.enum";
 import {
+  canViewProjectQuery,
   createNewProjectQuery,
   ensureProjectMemberQuery,
   getCurrentProjectMembers,
@@ -33,6 +34,8 @@ import {
 import { createUseCaseApprovalRequest } from "./projects/approvalRequest.service";
 import { logStructured } from "../utils/logger/fileLogger";
 import { seesAllProjects } from "../utils/projectVisibility.utils";
+import { changesExternalOwner } from "../utils/externalOwner.utils";
+import { ForbiddenException } from "../domain.layer/exceptions/custom.exception";
 
 export interface UseCaseServiceContext {
   userId: number;
@@ -239,6 +242,24 @@ export async function updateUseCaseService(
   ctx: UseCaseServiceContext,
   transaction: Transaction,
 ): Promise<UpdateUseCaseServiceResult> {
+  // A numeric owner replaces an external owner, which useCase.edit alone must
+  // not allow. Rows with no external owner are not checked, so the frozen legacy
+  // contract is unchanged for them. A caller with no role is not trusted.
+  if (
+    existingUseCase.external_owner_email &&
+    changesExternalOwner(input, existingUseCase) &&
+    !(await canViewProjectQuery(
+      useCaseId,
+      { userId: ctx.userId, role: ctx.actorRole ?? "" },
+      ctx.organizationId,
+      transaction,
+    ))
+  ) {
+    throw new ForbiddenException("Access denied", "use_case", "change_external_owner", {
+      i18nKey: "Access denied",
+    });
+  }
+
   // Only replace members when the request sends a list; a missing field leaves
   // them unchanged. null still clears them, as it did before.
   const rawMembers = input.members as number[] | null | undefined;

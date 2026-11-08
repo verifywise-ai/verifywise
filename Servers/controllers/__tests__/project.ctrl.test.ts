@@ -102,6 +102,7 @@ jest.mock("../../domain.layer/models/project/project.model", () => ({
 jest.mock("../../domain.layer/exceptions/custom.exception", () => ({
   ValidationException: class ValidationException extends Error {},
   BusinessLogicException: class BusinessLogicException extends Error {},
+  ForbiddenException: class ForbiddenException extends Error {},
 }));
 jest.mock("../../services/projects/approvalRequest.service", () => ({
   ...jest.requireActual("../../services/projects/approvalRequest.service"),

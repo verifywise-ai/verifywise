@@ -368,7 +368,9 @@ const updateUseCase: ToolDef = {
         args.useCaseId,
         input,
         existing,
-        { userId: caller.userId, organizationId: args.organizationId },
+        // Only super admins and organization Admins get this tool, and both see
+        // every use case in the organization, as with the list query above.
+        { userId: caller.userId, organizationId: args.organizationId, actorRole: "SuperAdmin" },
         transaction,
       );
       // The rollback is left to the catch below, so the transaction is only

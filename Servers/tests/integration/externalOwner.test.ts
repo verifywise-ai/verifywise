@@ -8,7 +8,13 @@ import { sequelize } from "../../database/db";
 import { cleanupDatabase, createTestOrganization, createTestUser } from "./helpers";
 import { createTestApp, testRequest } from "./setup";
 import { createTestProject } from "../factories/test-entities.factory";
-import { createNewProjectQuery, resolveProjectOwnerName } from "../../utils/project.utils";
+import {
+  createNewProjectQuery,
+  getProjectByIdQuery,
+  resolveProjectOwnerName,
+} from "../../utils/project.utils";
+import { updateUseCaseService } from "../../services/useCase.service";
+import { ForbiddenException } from "../../domain.layer/exceptions/custom.exception";
 import { LIFECYCLE_ENTITIES, findConfirmationsDue } from "../../utils/lifecycle.utils";
 import { projectVisibilitySql } from "../../utils/projectVisibility.utils";
 import { notificationService } from "../../services/notificationService";
@@ -471,7 +477,15 @@ describe("external use case owners", () => {
       expect((await ownerRow(projectId)).external_owner_email).toBe("ada@example.com");
     });
 
-    it("still lets that Editor make edits that do not touch the external owner", async () => {
+    const memberIds = async (projectId: number) => {
+      const [rows] = await sequelize.query(
+        `SELECT user_id FROM projects_members WHERE project_id = :projectId ORDER BY user_id`,
+        { replacements: { projectId } },
+      );
+      return (rows as { user_id: number }[]).map((r) => r.user_id);
+    };
+
+    it("denies an unrelated Editor any v1 edit, so they cannot add themselves", async () => {
       const orgId = await createTestOrganization();
       const ownerId = await editor(orgId);
       const projectId = await createTestProject(orgId, ownerId);
@@ -480,8 +494,98 @@ describe("external use case owners", () => {
 
       await api
         .patch(`/api/v1/projects/${projectId}`)
-        .send({ goal: "Updated", external_owner_name: null, external_owner_email: null })
-        .expect(202);
+        .send({ members: [stranger] })
+        .expect(403);
+      await api.patch(`/api/v1/projects/${projectId}`).send({ goal: "Hijacked" }).expect(403);
+
+      expect(await memberIds(projectId)).toEqual([]);
+      const [rows] = await sequelize.query(`SELECT goal FROM projects WHERE id = :projectId`, {
+        replacements: { projectId },
+      });
+      expect((rows as { goal: string | null }[])[0].goal).not.toBe("Hijacked");
+    });
+
+    it("lets a member make an ordinary edit on v1", async () => {
+      const orgId = await createTestOrganization();
+      const ownerId = await editor(orgId);
+      const projectId = await createTestProject(orgId, ownerId);
+      const memberId = await editor(orgId);
+      await addMember(orgId, projectId, memberId);
+      const api = await apiAs(orgId, memberId, "Editor");
+
+      await api.patch(`/api/v1/projects/${projectId}`).send({ goal: "Updated" }).expect(202);
+    });
+
+    it("denies a legacy numeric owner on an externally owned row, and keeps the owner", async () => {
+      const orgId = await createTestOrganization();
+      const adminId = await admin(orgId);
+      const projectId = await createExternal(orgId, adminId);
+      const stranger = await editor(orgId);
+      const api = await apiAs(orgId, stranger, "Editor");
+
+      await api.patch(`/api/projects/${projectId}`).send({ owner: stranger }).expect(403);
+
+      expect(await ownerRow(projectId)).toEqual({
+        owner: null,
+        external_owner_name: "Ada Lovelace",
+        external_owner_email: "ada@example.com",
+      });
+    });
+
+    it("lets a member replace an external owner through the legacy route", async () => {
+      const orgId = await createTestOrganization();
+      const adminId = await admin(orgId);
+      const projectId = await createExternal(orgId, adminId);
+      const memberId = await editor(orgId);
+      await addMember(orgId, projectId, memberId);
+      const api = await apiAs(orgId, memberId, "Editor");
+
+      await api.patch(`/api/projects/${projectId}`).send({ owner: memberId }).expect(202);
+      expect((await ownerRow(projectId)).owner).toBe(memberId);
+    });
+
+    it("leaves other legacy edits on an externally owned row ungated", async () => {
+      const orgId = await createTestOrganization();
+      const adminId = await admin(orgId);
+      const projectId = await createExternal(orgId, adminId);
+      const stranger = await editor(orgId);
+      const api = await apiAs(orgId, stranger, "Editor");
+
+      await api.patch(`/api/projects/${projectId}`).send({ goal: "Updated" }).expect(202);
+      await api.patch(`/api/projects/${projectId}`).send({ owner: null }).expect(202);
+      expect((await ownerRow(projectId)).external_owner_email).toBe("ada@example.com");
+    });
+
+    it("guards the shared service: no role is not trusted, SuperAdmin passes", async () => {
+      const orgId = await createTestOrganization();
+      const adminId = await admin(orgId);
+      const projectId = await createExternal(orgId, adminId);
+      const stranger = await editor(orgId);
+      const existing = await getProjectByIdQuery(projectId, orgId);
+
+      await expect(
+        sequelize.transaction((transaction) =>
+          updateUseCaseService(
+            projectId,
+            { owner: stranger },
+            existing!,
+            { userId: stranger, organizationId: orgId },
+            transaction,
+          ),
+        ),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect((await ownerRow(projectId)).external_owner_email).toBe("ada@example.com");
+
+      await sequelize.transaction((transaction) =>
+        updateUseCaseService(
+          projectId,
+          { owner: stranger },
+          existing!,
+          { userId: stranger, organizationId: orgId, actorRole: "SuperAdmin" },
+          transaction,
+        ),
+      );
+      expect((await ownerRow(projectId)).owner).toBe(stranger);
     });
 
     it("allows the owner, a member and an Admin", async () => {

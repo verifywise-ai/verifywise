@@ -22,6 +22,7 @@ import { IControl } from "../domain.layer/interfaces/i.control";
 import { IControlCategory } from "../domain.layer/interfaces/i.controlCategory";
 import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper";
 import {
+  ForbiddenException,
   ValidationException,
   BusinessLogicException,
 } from "../domain.layer/exceptions/custom.exception";
@@ -46,7 +47,7 @@ import {
 } from "../services/projects/approvalRequest.service";
 import { createUseCaseService, updateUseCaseService } from "../services/useCase.service";
 import { notifyExternalOwnerAssigned } from "../services/externalOwnerNotification.service";
-import { changesExternalOwner, stripExternalOwnerFields } from "../utils/externalOwner.utils";
+import { stripExternalOwnerFields } from "../utils/externalOwner.utils";
 import {
   notifyUserAssigned,
   notifyApprovalAutoApproved,
@@ -473,17 +474,16 @@ export async function updateProjectById(req: Request, res: Response): Promise<an
     const acceptsExternalOwner = res.locals?.acceptsExternalOwner === true;
     if (!acceptsExternalOwner) stripExternalOwnerFields(updatedProject);
 
-    // Handing a use case to an outside address emails them, so useCase.edit is
-    // not enough: the actor must be able to see this use case.
+    // v1 also requires being able to see the use case, so useCase.edit alone
+    // cannot add oneself to a team or hand a use case to an outside address.
     if (
       acceptsExternalOwner &&
-      changesExternalOwner(updatedProject, existingProject) &&
       !(await canViewProjectQuery(projectId, { userId, role }, req.organizationId!, transaction))
     ) {
       await transaction.rollback();
       await logFailure({
         eventType: "Update",
-        description: `Denied external owner change on project ID ${projectId}`,
+        description: `Denied update of project ID ${projectId}: no access to the use case`,
         functionName: "updateProjectById",
         fileName: "project.ctrl.ts",
         error: new Error("Forbidden"),
@@ -740,6 +740,19 @@ export async function updateProjectById(req: Request, res: Response): Promise<an
     return res.status(404).json(STATUS_CODE[404]({}));
   } catch (error) {
     await transaction.rollback();
+
+    if (error instanceof ForbiddenException) {
+      await logFailure({
+        eventType: "Update",
+        description: `Forbidden: ${error.message}`,
+        functionName: "updateProjectById",
+        fileName: "project.ctrl.ts",
+        error: error as Error,
+        userId: req.userId!,
+        organizationId: req.organizationId!,
+      });
+      return res.status(403).json(STATUS_CODE[403](translateError(req, error)));
+    }
 
     if (error instanceof ValidationException) {
       await logFailure({
