@@ -66,7 +66,7 @@ export async function getFria(req: Request, res: Response): Promise<Response> {
       owner_name: string | null;
     }>(
       `SELECT p.id, p.project_title, p.owner,
-              u.name || ' ' || u.surname AS owner_name
+              COALESCE(u.name || ' ' || u.surname, p.external_owner_name) AS owner_name
        FROM projects p
        LEFT JOIN users u ON p.owner = u.id
        WHERE p.id = :projectId AND p.organization_id = :organizationId`,

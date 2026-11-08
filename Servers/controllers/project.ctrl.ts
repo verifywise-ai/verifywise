@@ -44,6 +44,7 @@ import {
   notifyUseCaseApprovalRequested,
 } from "../services/projects/approvalRequest.service";
 import { createUseCaseService, updateUseCaseService } from "../services/useCase.service";
+import { notifyExternalOwnerAssigned } from "../services/externalOwnerNotification.service";
 import {
   notifyUserAssigned,
   notifyApprovalAutoApproved,
@@ -274,24 +275,27 @@ export async function createProject(req: Request, res: Response): Promise<any> {
       }
 
       // Send project creation notification to admin (fire-and-forget, don't block response)
-      sendProjectCreatedNotification({
-        projectId: createdProject.id!,
-        projectName: createdProject.project_title,
-        adminId: createdProject.owner,
-        organizationId: req.organizationId!,
-        userId: req.userId!,
-      }).catch(async (emailError) => {
-        // Log the email error but don't fail the project creation
-        await logFailure({
-          eventType: "Create",
-          description: "Failed to send project creation notification email",
-          functionName: "createProject",
-          fileName: "project.ctrl.ts",
-          error: emailError as Error,
-          userId: req.userId!,
+      // An external owner has no user id; they get the external notice below.
+      if (createdProject.owner) {
+        sendProjectCreatedNotification({
+          projectId: createdProject.id!,
+          projectName: createdProject.project_title,
+          adminId: createdProject.owner,
           organizationId: req.organizationId!,
+          userId: req.userId!,
+        }).catch(async (emailError) => {
+          // Log the email error but don't fail the project creation
+          await logFailure({
+            eventType: "Create",
+            description: "Failed to send project creation notification email",
+            functionName: "createProject",
+            fileName: "project.ctrl.ts",
+            error: emailError as Error,
+            userId: req.userId!,
+            organizationId: req.organizationId!,
+          });
         });
-      });
+      }
 
       const actor = await getUserByIdQuery(req.userId!);
 
@@ -333,6 +337,17 @@ export async function createProject(req: Request, res: Response): Promise<any> {
           assignerName,
           baseUrl,
         ).catch((err) => console.error("Failed to send owner notification:", err));
+      } else if (createdProject.external_owner_email) {
+        // Email only: an external owner has no in-app notifications.
+        notifyExternalOwnerAssigned({
+          organizationId: req.organizationId!,
+          useCaseTitle: createdProject.project_title,
+          recipient: {
+            name: createdProject.external_owner_name || createdProject.external_owner_email,
+            email: createdProject.external_owner_email,
+          },
+          assignedByUserId: req.userId!,
+        }).catch((err) => console.error("Failed to notify external owner:", err));
       }
 
       return res.status(201).json(
@@ -572,6 +587,21 @@ export async function updateProjectById(req: Request, res: Response): Promise<an
         ).catch((err) => console.error("Failed to send owner notification:", err));
       }
 
+      // Same notice for an external owner, by email only. Naming the same
+      // person again (a name fix, a case change) does not re-send it.
+      const newExternalEmail = project.external_owner_email;
+      if (newExternalEmail && newExternalEmail !== existingProject.external_owner_email) {
+        notifyExternalOwnerAssigned({
+          organizationId: req.organizationId!,
+          useCaseTitle: project.project_title,
+          recipient: {
+            name: project.external_owner_name || newExternalEmail,
+            email: newExternalEmail,
+          },
+          assignedByUserId: userId,
+        }).catch((err) => console.error("Failed to notify external owner:", err));
+      }
+
       // Calculate which members actually got added (both new and re-added)
       // This includes users who weren't in currentMembers but are now in the final project
       const finalMembers = project.members || [];
@@ -799,17 +829,17 @@ export async function getProjectStatsById(req: Request, res: Response): Promise<
 
   try {
     const project: any = await getProjectByIdQuery(projectId, req.organizationId!);
-    const project_owner = project.owner;
-    const ownerUser: any = getUserByIdQuery(project_owner);
+    // owner is NULL for an external owner; there is no user row to look up.
+    const ownerUser: any = project.owner ? await getUserByIdQuery(project.owner) : null;
     const project_last_updated = project.last_updated;
     const project_last_updated_by = project.last_updated_by;
     const userWhoUpdated: any = getUserByIdQuery(project_last_updated_by);
 
     const overviewDetails = {
       user: {
-        name: ownerUser.name,
-        surname: ownerUser.surname,
-        email: ownerUser.email,
+        name: ownerUser?.name ?? project.external_owner_name ?? null,
+        surname: ownerUser?.surname ?? null,
+        email: ownerUser?.email ?? project.external_owner_email ?? null,
         project_last_updated,
         userWhoUpdated,
       },

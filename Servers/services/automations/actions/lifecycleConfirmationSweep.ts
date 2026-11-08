@@ -7,6 +7,7 @@ import {
   markConfirmationReminded,
 } from "../../../utils/lifecycle.utils";
 import { notifyLifecycleConfirmationDue } from "../../inAppNotification.service";
+import { notifyExternalOwnerConfirmationDue } from "../../externalOwnerNotification.service";
 import logger from "../../../utils/logger/fileLogger";
 
 /**
@@ -14,7 +15,8 @@ import logger from "../../../utils/logger/fileLogger";
  *
  * For every entity with a lifecycle (use cases today; AI apps plug in through
  * LIFECYCLE_ENTITIES), finds live entries whose last confirmation (or go-live
- * date) is older than the org's interval and emails the owner. The entry's
+ * date) is older than the org's interval and emails the owner (a user, or an
+ * external owner with no account, who gets email only). The entry's
  * confirmation_reminded_at is stamped after a successful send, so each owner
  * hears about an entry once per period rather than every day. A failed send
  * is not stamped and is retried the next day.
@@ -48,20 +50,38 @@ export async function runLifecycleConfirmationSweep(
   let notified = 0;
   for (const row of rows) {
     try {
-      await notifyLifecycleConfirmationDue(
-        organizationId,
-        Number(row.owner),
-        {
-          id: Number(row.id),
-          title: row.title,
+      if (row.owner !== null && row.owner !== undefined) {
+        await notifyLifecycleConfirmationDue(
+          organizationId,
+          Number(row.owner),
+          {
+            id: Number(row.id),
+            title: row.title,
+            noun: entity.noun,
+            path: entity.path(Number(row.id)),
+            entityType: entity.notificationEntityType,
+            since: formatDate(row.baseline),
+            intervalDays,
+          },
+          baseUrl,
+        );
+      } else if (row.external_owner_email) {
+        // No account, so email only: no in-app row and no link to the app.
+        await notifyExternalOwnerConfirmationDue({
+          organizationId,
+          entryTitle: row.title,
           noun: entity.noun,
-          path: entity.path(Number(row.id)),
-          entityType: entity.notificationEntityType,
           since: formatDate(row.baseline),
           intervalDays,
-        },
-        baseUrl,
-      );
+          recipient: {
+            name: row.external_owner_name || row.external_owner_email,
+            email: row.external_owner_email,
+          },
+          contactUserId: row.contact_user_id ?? null,
+        });
+      } else {
+        continue;
+      }
       await markConfirmationReminded(entity, organizationId, Number(row.id));
       notified += 1;
     } catch (error) {

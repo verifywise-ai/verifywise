@@ -67,7 +67,7 @@ const organizationIdArg = z
  * are not sent from here.
  */
 async function notifyOwnerAssigned(
-  useCase: { id?: number; project_title: string; owner: number; description?: string },
+  useCase: { id?: number; project_title: string; owner: number | null; description?: string },
   actingUserId: number,
   organizationId: number,
 ): Promise<void> {

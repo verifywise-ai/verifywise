@@ -30,6 +30,7 @@ import {
 } from "../utils/useCaseChangeHistory.utils";
 import { createUseCaseApprovalRequest } from "./projects/approvalRequest.service";
 import { logStructured } from "../utils/logger/fileLogger";
+import { resolveOwnerForUpdate } from "../utils/externalOwner.utils";
 
 export interface UseCaseServiceContext {
   userId: number;
@@ -141,6 +142,8 @@ export async function createUseCaseService(
       {
         project_title: createdProject.project_title,
         owner: createdProject.owner,
+        external_owner_name: createdProject.external_owner_name,
+        external_owner_email: createdProject.external_owner_email,
         start_date: createdProject.start_date,
         geography: createdProject.geography,
         ai_risk_classification: createdProject.ai_risk_classification,
@@ -227,6 +230,10 @@ export async function updateUseCaseService(
   delete input.type_of_high_risk_role;
   if (highRiskRoles === undefined) delete input.high_risk_roles;
   else input.high_risk_roles = highRiskRoles;
+
+  // Normalise ownership now so the change history records what is written: the
+  // lowercased email, and the kind of owner that selecting the other one clears.
+  Object.assign(input, resolveOwnerForUpdate(input, existingUseCase));
 
   // 2. Members before the update, to identify the newly added ones.
   const currentMembers = await getCurrentProjectMembers(useCaseId, ctx.organizationId, transaction);

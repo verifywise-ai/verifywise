@@ -25,6 +25,7 @@ import {
   IncidentManagementSectionData,
 } from "../../domain.layer/interfaces/i.reportGeneration";
 import type { SectionNotice } from "../../domain.layer/interfaces/i.reportGeneration";
+import { formatExternalOwnerName } from "../../utils/externalOwner.utils";
 import {
   generateRiskDistributionChart,
   generateRiskDonutChart,
@@ -577,6 +578,8 @@ export class ReportDataCollector {
       if (owner) {
         projectOwnerName = `${owner.name || ""} ${owner.surname || ""}`.trim();
       }
+    } else if (project?.external_owner_name) {
+      projectOwnerName = formatExternalOwnerName(project.external_owner_name);
     }
 
     return {

@@ -141,10 +141,38 @@ describe("updateProjectByIdQuery members handling", () => {
     expect(statements().some((s) => s.startsWith("INSERT") || s.startsWith("UPDATE"))).toBe(false);
   });
 
-  it("accepts an owner from the organization and allows clearing it", async () => {
+  it("accepts an owner from the organization and clears any external owner", async () => {
     await updateProjectByIdQuery(1, { owner: 7 } as any, undefined, 1, transaction);
-    await updateProjectByIdQuery(1, { owner: null } as any, undefined, 1, transaction);
-    expect(statements().filter((s) => s.startsWith("UPDATE projects SET"))).toHaveLength(2);
+    const update = query.mock.calls.find((c) => String(c[0]).startsWith("UPDATE projects SET"))!;
+    expect(String(update[0])).toContain("external_owner_email = :external_owner_email");
+    expect((update[1] as any).replacements).toMatchObject({
+      owner: 7,
+      external_owner_name: null,
+      external_owner_email: null,
+    });
+  });
+
+  it("refuses to leave a use case with no owner of either kind (#5256)", async () => {
+    await expect(
+      updateProjectByIdQuery(1, { owner: null } as any, undefined, 1, transaction),
+    ).rejects.toBeInstanceOf(ValidationException);
+    expect(statements().some((s) => s.startsWith("UPDATE"))).toBe(false);
+  });
+
+  it("stores an external owner, lowercased, and clears the user owner (#5256)", async () => {
+    await updateProjectByIdQuery(
+      1,
+      { external_owner_name: "Ada", external_owner_email: "ADA@Example.com" } as any,
+      undefined,
+      1,
+      transaction,
+    );
+    const update = query.mock.calls.find((c) => String(c[0]).startsWith("UPDATE projects SET"))!;
+    expect((update[1] as any).replacements).toMatchObject({
+      owner: null,
+      external_owner_name: "Ada",
+      external_owner_email: "ada@example.com",
+    });
   });
 
   it("returns null without touching members when the row is already gone", async () => {
