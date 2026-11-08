@@ -18,9 +18,7 @@ describe("buildGovernanceModelRisk", () => {
   it("treats falsy non-string values the validator lets through as blank", () => {
     expect(buildGovernanceModelRisk({ description: 0 as unknown as string }, ctx)).toBeNull();
     expect(buildGovernanceModelRisk({ description: false as unknown as string }, ctx)).toBeNull();
-    expect(
-      buildGovernanceModelRisk({ data_sensitivity: 0 as unknown as "High" }, ctx),
-    ).toBeNull();
+    expect(buildGovernanceModelRisk({ data_sensitivity: 0 as unknown as "High" }, ctx)).toBeNull();
   });
 
   it("sets the level from data sensitivity and is due in 90 days", () => {
