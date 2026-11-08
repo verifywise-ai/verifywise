@@ -31,7 +31,9 @@ projects
 ├── id (PK)
 ├── uc_id (UNIQUE)           # Auto-generated UC-ID
 ├── project_title            # Display name
-├── owner (FK → users)       # Project owner
+├── owner (FK → users)       # Project owner; NULL for an external owner
+├── external_owner_name      # Owner with no account (#5256)
+├── external_owner_email     # Lowercase; email notices only
 ├── start_date
 ├── geography
 ├── ai_risk_classification   # PROHIBITED, HIGH_RISK, LIMITED_RISK, MINIMAL_RISK
@@ -221,7 +223,9 @@ Read models: `GET /api/v1/use-case-lifecycle/summary` (stale ids and the interva
 POST /projects
 {
   project_title: string,           // Required
-  owner: number,                   // Required, user ID
+  owner?: number | null,           // User ID; required unless an external owner is given
+  external_owner_name?: string,    // With external_owner_email, instead of owner (max 255)
+  external_owner_email?: string,   // Valid email, stored lowercase (max 254)
   members: number[],               // Optional, user IDs
   framework: number[],             // Required, framework IDs
   start_date: Date,                // Required
@@ -316,6 +320,18 @@ When a project is deleted, the following are removed:
 - Has administrative access
 - Receives project notifications
 - Stored in `projects.owner` field
+
+### External Owners
+
+A use case can instead be owned by someone with no account (#5256): a name and email in `projects.external_owner_name` and `projects.external_owner_email`, with `owner` NULL.
+
+- **Either a user or an external owner, never both.** Selecting one clears the other. `utils/externalOwner.utils.ts` (`resolveOwnerForCreate`, `resolveOwnerForUpdate`) enforces this on create and update, normalises the email to lowercase, and rejects a write that would leave no owner. A partial update that does not mention ownership is left alone.
+- **No database CHECK requires an owner.** `owner` is `ON DELETE SET NULL`, so such a CHECK would make deleting a user fail. A row can therefore have neither kind of owner after its user is deleted.
+- **External owners never gain access.** Every access check compares `owner` to a user id, and SQL `NULL = :userId` matches nothing. They are not in `projects_members`, and they cannot sign in.
+- **Notifications are email only** (`services/externalOwnerNotification.service.ts`, template `external-owner-notice.mjml`): no in-app rows, and no link they could not open. Each email names someone to contact: on assignment, the person who assigned them; for the still-live check, the last editor of the use case, falling back to an organization Admin. A failed email never fails a save. A failed still-live reminder is not stamped and is retried the next day.
+- **Only the assignment notice and the still-live check reach external owners.** Task and risk assignment notices go to their own assignees, not through the use case owner. Automatic governance tasks that default to the use case owner stay unassigned for an externally owned use case.
+- **Display:** "Name (external)" with a Mail icon in the list and overview (`components/ExternalOwner/ExternalOwnerName.tsx`).
+- **Reports and automations** use "Name (external)" as the owner name.
 
 ### Project Members
 
