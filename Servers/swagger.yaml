@@ -23514,6 +23514,8 @@ paths:
           description: 'Created successfully'
         '401':
           description: Unauthorized
+        '409':
+          description: 'The tool is already under governance'
         '500':
           description: 'Internal server error'
   /shadow-ai/rules:

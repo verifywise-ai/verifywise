@@ -46,6 +46,9 @@ export const validateStartGovernance = [
   // An empty value means "not given" for both fields, as on the form.
   body("risk_assessment.data_sensitivity")
     .optional({ values: "falsy" })
+    // isIn alone checks an array's elements one by one and accepts an empty array.
+    .isString()
+    .withMessage("risk_assessment.data_sensitivity must be High, Medium or Low")
     .isIn([...DATA_SENSITIVITIES])
     .withMessage("risk_assessment.data_sensitivity must be High, Medium or Low"),
   body("risk_assessment.description")

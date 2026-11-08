@@ -605,6 +605,23 @@ describe("shadowAi.ctrl", () => {
       expect(mockSequelizeQuery).not.toHaveBeenCalled();
     });
 
+    it("returns 409 and writes nothing when the tool is already governed", async () => {
+      mockGetToolById.mockResolvedValue({ id: 1, name: "ChatGPT", model_inventory_id: 10 });
+      const req = createReq({
+        params: { id: "1" },
+        body: {
+          model_inventory: { provider: "OpenAI", model: "GPT-4" },
+          governance_owner_id: "2",
+          risk_assessment: { data_sensitivity: "High" },
+        },
+      });
+      const res = createRes();
+      await startGovernance(req, res);
+      expect(res.status).toHaveBeenCalledWith(409);
+      expect(mockSequelizeQuery).not.toHaveBeenCalled();
+      expect(createNewModelRiskQuery).not.toHaveBeenCalled();
+    });
+
     it("should return 403 for non-write role", async () => {
       const req = createReq({ role: "Auditor", params: { id: "1" }, body: {} });
       const res = createRes();
@@ -705,6 +722,7 @@ describe("shadowAi.ctrl", () => {
         1,
         expect.anything(),
       );
+      expect(mockLinkTool).toHaveBeenCalledWith(1, 1, 10, 55, expect.anything());
       expect(recordEntityCreation).toHaveBeenCalledWith(
         "model_risk",
         55,

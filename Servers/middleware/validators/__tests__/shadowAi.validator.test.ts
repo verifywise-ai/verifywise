@@ -79,6 +79,8 @@ describe("validateStartGovernance risk_assessment", () => {
 
   it("rejects an unknown sensitivity, a non-string or too long description", async () => {
     expect(await status({ data_sensitivity: "high" })).toBe(400);
+    expect(await status({ data_sensitivity: ["High", "Low"] })).toBe(400);
+    expect(await status({ data_sensitivity: [] })).toBe(400);
     expect(await status({ description: 123 })).toBe(400);
     expect(await status({ description: "x".repeat(5001) })).toBe(400);
     expect(await status(["High"])).toBe(400);

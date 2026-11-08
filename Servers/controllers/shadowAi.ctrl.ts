@@ -637,6 +637,13 @@ export async function startGovernance(req: Request, res: Response) {
       return res.status(404).json(STATUS_CODE[404](req.t!("Tool not found")));
     }
 
+    // A second run would add another model and risk and orphan the first pair.
+    if (tool.model_inventory_id) {
+      return res
+        .status(409)
+        .json(STATUS_CODE[409](req.t!("This tool is already under governance")));
+    }
+
     const { model_inventory, governance_owner_id } = req.body;
 
     if (!model_inventory?.provider || !model_inventory?.model || !governance_owner_id) {
@@ -705,26 +712,6 @@ export async function startGovernance(req: Request, res: Response) {
       );
       const modelInventoryId = (miResult as any[])[0].id;
 
-      // Link tool to model inventory
-      await linkToolToModelInventoryQuery(
-        organizationId,
-        toolId,
-        modelInventoryId,
-        undefined,
-        transaction,
-      );
-
-      // Update tool governance owner
-      await sequelize.query(
-        `UPDATE shadow_ai_tools
-         SET governance_owner_id = :ownerId, status = 'under_review', updated_at = NOW()
-         WHERE organization_id = :organizationId AND id = :toolId`,
-        {
-          replacements: { organizationId, ownerId, toolId },
-          transaction,
-        },
-      );
-
       // Record the form's risk assessment as a risk on the new model
       let riskEntryId: number | null = null;
       const modelRisk = buildGovernanceModelRisk(req.body.risk_assessment ?? undefined, {
@@ -747,6 +734,26 @@ export async function startGovernance(req: Request, res: Response) {
           );
         }
       }
+
+      // Link tool to model inventory and to the risk created above
+      await linkToolToModelInventoryQuery(
+        organizationId,
+        toolId,
+        modelInventoryId,
+        riskEntryId ?? undefined,
+        transaction,
+      );
+
+      // Update tool governance owner
+      await sequelize.query(
+        `UPDATE shadow_ai_tools
+         SET governance_owner_id = :ownerId, status = 'under_review', updated_at = NOW()
+         WHERE organization_id = :organizationId AND id = :toolId`,
+        {
+          replacements: { organizationId, ownerId, toolId },
+          transaction,
+        },
+      );
 
       // Initialize lifecycle review if requested
       let lifecycleInitialized = false;

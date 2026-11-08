@@ -20,6 +20,9 @@ type DataSensitivity = NonNullable<
   NonNullable<ShadowAiGovernanceRequest["risk_assessment"]>["data_sensitivity"]
 >;
 
+/** Matches the server limit on risk_assessment.description. */
+const MAX_RISK_DESCRIPTION_LENGTH = 5000;
+
 interface GovernanceWizardModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -56,6 +59,10 @@ export default function GovernanceWizardModal({
     }
     if (!ownerId) {
       setError("Governance owner is required.");
+      return;
+    }
+    if (riskDescription.trim().length > MAX_RISK_DESCRIPTION_LENGTH) {
+      setError(`Risk description must be ${MAX_RISK_DESCRIPTION_LENGTH} characters or fewer.`);
       return;
     }
 
