@@ -1,3 +1,4 @@
+import ExternalOwnerName from "../../ExternalOwner/ExternalOwnerName";
 import React, { useEffect, useState, useMemo } from "react";
 
 import { Stack, Typography, Tooltip, Link } from "@mui/material";
@@ -212,7 +213,13 @@ export const ProjectCard = React.memo(function ProjectCard({
             <Stack className="project-card-spec-tile" alignItems="flex-end">
               <Typography sx={projectCardSpecKeyStyle}>Owner</Typography>
               <Typography sx={projectCardSpecValueStyle}>
-                {ownerUser ? `${ownerUser.name} ${ownerUser.surname}` : "Unknown User"}
+                {project.external_owner_name ? (
+                  <ExternalOwnerName name={project.external_owner_name} />
+                ) : ownerUser ? (
+                  `${ownerUser.name} ${ownerUser.surname}`
+                ) : (
+                  "Unknown User"
+                )}
               </Typography>
             </Stack>
             <Stack className="project-card-spec-tile" alignItems="flex-end">
