@@ -12473,6 +12473,32 @@ export const v1V1aiAppsEndpoints: Endpoint[] = [
   },
 ];
 
+// v1: V1/Dashboard endpoints
+export const v1V1dashboardEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/dashboard/preferences',
+    summary: "Get Dashboard Preferences Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Dashboard",
+  },
+  {
+    method: 'PUT',
+    path: '/v1/dashboard/preferences',
+    summary: "Update Dashboard Preferences Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Dashboard",
+  },
+];
+
 // v1: V1/Intake Form Review Time endpoints
 export const v1V1intakeFormReviewTimeEndpoints: Endpoint[] = [
   {
@@ -12956,6 +12982,7 @@ export const allEndpoints = {
   v1UseCaseSettings: v1UseCaseSettingsEndpoints,
   v1V1aiAppLifecycle: v1V1aiAppLifecycleEndpoints,
   v1V1aiApps: v1V1aiAppsEndpoints,
+  v1V1dashboard: v1V1dashboardEndpoints,
   v1V1intakeFormReviewTime: v1V1intakeFormReviewTimeEndpoints,
   v1V1lifecycleSettings: v1V1lifecycleSettingsEndpoints,
   v1V1useCaseLifecycle: v1V1useCaseLifecycleEndpoints,

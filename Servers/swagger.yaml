@@ -7905,6 +7905,8 @@ tags:
   -
     name: 'v1: V1/Ai Apps'
   -
+    name: 'v1: V1/Dashboard'
+  -
     name: 'v1: V1/Intake Form Review Time'
   -
     name: 'v1: V1/Lifecycle Settings'
@@ -27772,6 +27774,33 @@ paths:
       tags:
         - 'v1: Shadow AI'
       operationId: regenerateSyslogKey
+      security:
+        -
+          bearerAuth: []
+  /v1/dashboard/preferences:
+    get:
+      summary: 'Get Dashboard Preferences Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Dashboard'
+      operationId: getDashboardPreferencesHandler
+      security:
+        -
+          bearerAuth: []
+    put:
+      summary: 'Update Dashboard Preferences Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Dashboard'
+      operationId: updateDashboardPreferencesHandler
       security:
         -
           bearerAuth: []
