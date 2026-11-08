@@ -36,8 +36,10 @@ export function buildGovernanceModelRisk(
   assessment: GovernanceRiskAssessment | undefined,
   ctx: { toolName: string; ownerId: number; modelId: number; startedAt: Date },
 ): Partial<IModelRisk> | null {
-  const sensitivity = assessment?.data_sensitivity;
-  const description = assessment?.description?.trim();
+  // The validator skips falsy values such as 0 or false, so read strings only.
+  const sensitivity = assessment?.data_sensitivity || undefined;
+  const description =
+    typeof assessment?.description === "string" ? assessment.description.trim() : "";
   if (!sensitivity && !description) return null;
 
   const due = new Date(ctx.startedAt.getTime());
