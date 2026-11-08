@@ -170,14 +170,14 @@ describe("external-owner-notice template", () => {
 
   it("escapes user-supplied values", async () => {
     const html = await compileMjmlToHtml(template, {
-      recipient_name: "<script>alert(1)</script>",
+      recipient_name: "<img src=x onerror=alert(1)>",
       heading: "Heading <b>x</b>",
       message: "Body",
       action_message: "Action",
       contact_message: "Contact",
     });
-    expect(html).not.toContain("<script>alert(1)</script>");
-    expect(html).toContain("&lt;script&gt;");
+    expect(html).not.toContain("<img src=x");
+    expect(html).toContain("&lt;img src=x");
     expect(html).not.toContain("<b>x</b>");
   });
 
