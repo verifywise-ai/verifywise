@@ -316,6 +316,32 @@ describe("a small-sample exclusion (5-301(d))", () => {
   });
 });
 
+describe("blank scores on a scoring-rate run", () => {
+  const withBlanks = {
+    ...base,
+    result: { ...result, totalApplicants: 1000, blankScoreCount: 400 } as BiasAuditResult,
+  };
+
+  it("states the scored and blank-score counts and does not call the total assessed", () => {
+    const body = section(composeStance(withBlanks), "results").body;
+    expect(body).toContain("Individuals in the file: 1000.");
+    expect(body).toContain("With a score, and so in the rates: 600.");
+    expect(body).toContain("With a blank score, left out of the median and every rate: 400.");
+    expect(body).not.toContain("Total individuals assessed");
+  });
+
+  it("reconciles the counts in the data section too", () => {
+    const body = section(composeStance(withBlanks), "data_relied_on").body;
+    expect(body).toContain("With a score, and so in the rates: 600.");
+  });
+
+  it("keeps the plain total when no score is blank", () => {
+    const body = section(composeStance(base), "results").body;
+    expect(body).toContain("Total individuals assessed:");
+    expect(body).not.toContain("With a blank score");
+  });
+});
+
 describe("a table where no comparison was possible", () => {
   const noComparison = {
     ...base,

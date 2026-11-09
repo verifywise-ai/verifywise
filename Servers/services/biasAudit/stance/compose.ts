@@ -199,6 +199,14 @@ function exclusionNote(rateName: string): string {
   );
 }
 
+/** The file total reconciled with the sample a scoring-rate run computed over. */
+function scoredCounts(total: number, blank: number): string {
+  return (
+    `With a score, and so in the rates: ${total - blank}. ` +
+    `With a blank score, left out of the median and every rate: ${blank}.`
+  );
+}
+
 function fixed(n: number | null): string {
   return n === null ? "not computed" : n.toFixed(2);
 }
@@ -235,7 +243,13 @@ function resultsBody(args: ComposeStanceArgs): string {
   if (result.tables.some((t) => t.rows.some((r) => r.excluded))) {
     lines.push(exclusionNote(rateName), "");
   }
-  lines.push(`Total individuals assessed: ${result.totalApplicants}.`);
+  const blank = result.blankScoreCount ?? 0;
+  if (blank > 0) {
+    lines.push(`Individuals in the file: ${result.totalApplicants}.`);
+    lines.push(scoredCounts(result.totalApplicants, blank));
+  } else {
+    lines.push(`Total individuals assessed: ${result.totalApplicants}.`);
+  }
   lines.push(
     `Individuals whose category is unknown: ${result.unknownCount}. This number is stated because ` +
       "5-301(c) asks for it.",
@@ -267,6 +281,9 @@ function dataBody(args: ComposeStanceArgs): string {
   const lines: string[] = [];
   if (args.result) {
     lines.push(`Individuals in the file: ${args.result.totalApplicants}.`);
+    if ((args.result.blankScoreCount ?? 0) > 0) {
+      lines.push(scoredCounts(args.result.totalApplicants, args.result.blankScoreCount!));
+    }
     lines.push(`Individuals whose category is unknown: ${args.result.unknownCount}.`);
   } else {
     lines.push("No result is stored for this run, so no data summary is given.");

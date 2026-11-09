@@ -257,6 +257,28 @@ describe("blank scores on a scoring-rate run", () => {
     expect(codes(runDataGates(empty, scoring))).not.toContain("score_values_blank");
   });
 
+  it("stops with fewer than two groups among the scored records", () => {
+    const records = [...Array(1000)].map((_, i) => ({
+      sex: i < 500 ? "Male" : "Female",
+      score: i < 500 ? i : null,
+    }));
+    const result = runDataGates(records, scoring);
+    expect(result.mayComputeRatios).toBe(false);
+    const f = result.findings.find((x) => x.code === "fewer_than_two_groups")!;
+    expect(f.message).toContain("among the 500 scored records");
+  });
+
+  it("stops when the column is mostly blank among the scored records", () => {
+    const records = [...Array(1000)].map((_, i) => ({
+      sex: i < 100 ? (i % 2 ? "Male" : "Female") : i < 400 ? "" : i % 2 ? "Male" : "Female",
+      score: i < 400 ? i : null,
+    }));
+    const f = runDataGates(records, scoring).findings.find(
+      (x) => x.code === "demographic_column_majority_missing",
+    )!;
+    expect(f.message).toContain("100 of 400 scored records");
+  });
+
   it("does not apply on a selection-rate run", () => {
     const records = [...Array(40)].map((_, i) => ({
       sex: i % 2 ? "Male" : "Female",

@@ -431,6 +431,20 @@ describe("blank scores in scoring rate mode", () => {
     expect(got.overallSelectionRate).toBe(0.5);
   });
 
+  it("reconciles the file total with the scored sample", () => {
+    const got = computeBiasAudit(records, config);
+    expect(got.totalApplicants).toBe(150);
+    expect(got.blankScoreCount).toBe(50);
+    expect(got.summary).toContain("Audit read 150 records: 100 with a score and 50 with a blank");
+    expect(got.summary).not.toContain("Audit analyzed");
+  });
+
+  it("keeps the plain sentence when every record has a score", () => {
+    const got = computeBiasAudit(groupB, config);
+    expect(got.blankScoreCount).toBe(0);
+    expect(got.summary).toContain("Audit analyzed 50 applicants");
+  });
+
   it("measures the 2% small-sample share against scored records", () => {
     const small = [
       ...Array.from({ length: 900 }, () => ({ sex: "Z", score: null })),

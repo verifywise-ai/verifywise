@@ -85,6 +85,7 @@ export function computeBiasAudit(
   let totalSelected = 0;
   let overallRate = 0;
   let median: number | null = null;
+  let blankScoreCount = 0;
 
   const countTable = (table: CategoryTable) => {
     tables.push(table);
@@ -139,6 +140,7 @@ export function computeBiasAudit(
     // so a group's rate and the 2% share are over its scored records. The
     // gates report the blank-score count (dataGates.ts, score_values_blank).
     const scoredApplicants = scored.length;
+    blankScoreCount = totalApplicants - scoredApplicants;
     for (const [categoryKey, categoryConfig] of Object.entries(config.categories)) {
       countTable(
         computeCategoryTable({
@@ -208,8 +210,13 @@ export function computeBiasAudit(
     metric === "scoring_rate" ? detectDegenerateMedian(records, RECORD_KEYS.score) : null;
 
   const summaryParts = [
-    `Audit analyzed ${withThousands(totalApplicants)} applicants ` +
-      `(overall rate: ${formatPercent(overallRate)}).`,
+    blankScoreCount > 0
+      ? `Audit read ${withThousands(totalApplicants)} records: ` +
+        `${withThousands(totalApplicants - blankScoreCount)} with a score and ` +
+        `${withThousands(blankScoreCount)} with a blank score, left out of the median and ` +
+        `every rate (overall rate of scored records: ${formatPercent(overallRate)}).`
+      : `Audit analyzed ${withThousands(totalApplicants)} applicants ` +
+        `(overall rate: ${formatPercent(overallRate)}).`,
   ];
   if (unknownCount > 0) {
     summaryParts.push(`${withThousands(unknownCount)} rows excluded due to missing data.`);
@@ -275,6 +282,7 @@ export function computeBiasAudit(
     overallSelectionRate: round6(overallRate),
     overallMedian: median,
     totalApplicants,
+    blankScoreCount,
     totalSelected,
     unknownCount,
     flagsCount: totalFlags,

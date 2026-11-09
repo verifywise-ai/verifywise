@@ -127,7 +127,13 @@ export interface BiasAuditResult {
    * it to state what the rate was measured against.
    */
   overallMedian: number | null;
+  /** Every record read, scored or not. */
   totalApplicants: number;
+  /**
+   * Records left out of the median and every rate for having a blank score,
+   * in scoring-rate mode. Absent on runs stored before it existed.
+   */
+  blankScoreCount?: number;
   totalSelected: number;
   unknownCount: number;
   flagsCount: number;
