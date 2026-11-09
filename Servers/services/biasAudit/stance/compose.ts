@@ -117,6 +117,8 @@ const BASIS_LABEL: Record<string, string> = {
   test_volume: "test data, because historical volume is too low",
   test_attribute: "test data, because the characteristic is not captured",
   test_availability: "test data, because historical data is not available to you",
+  test_stated:
+    "test data, going by your answer on the data basis, although you hold historical records",
   not_applicable: "not applicable",
 };
 

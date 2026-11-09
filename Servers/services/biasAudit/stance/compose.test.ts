@@ -316,6 +316,28 @@ describe("a small-sample exclusion (5-301(d))", () => {
   });
 });
 
+describe("a stated test basis on held data", () => {
+  it("states it without claiming the data is not captured", () => {
+    const body = section(
+      composeStance({
+        ...base,
+        derivedBasis: {
+          perCategory: [
+            { category: "sex", basis: "test_stated", expiryTrigger: "Sex trigger text." },
+          ],
+          confirmed: false,
+          summary: "We read your answers as follows.",
+        },
+      }),
+      "basis",
+    ).body;
+    expect(body).toContain(
+      "test data, going by your answer on the data basis, although you hold historical records",
+    );
+    expect(body).not.toContain("not captured");
+  });
+});
+
 describe("blank scores on a scoring-rate run", () => {
   const withBlanks = {
     ...base,
