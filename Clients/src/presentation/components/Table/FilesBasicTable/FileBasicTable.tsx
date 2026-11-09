@@ -59,6 +59,7 @@ import EvidenceQualityBadge, { type QualityGrade } from "../../EvidenceQualityBa
 import StandardModal from "../../Modals/StandardModal";
 import { getAllFolders } from "../../../../application/repository/virtualFolder.repository";
 import type { IFolderWithCount } from "../../../../domain/interfaces/i.virtualFolder";
+import { background, border } from "../../../themes/palette";
 
 const DEFAULT_ROWS_PER_PAGE = 10;
 const FILES_BASIC_SORTING_KEY = "verifywise_files_basic_sorting";
@@ -150,7 +151,7 @@ const SortableTableHead: React.FC<{
               minWidth: 40,
               maxWidth: 40,
               padding: 0,
-              borderBottom: "1px solid #d0d5dd",
+              borderBottom: `1px solid ${border.dark}`,
             }}
           >
             <Box
@@ -716,15 +717,15 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
                           data.cols[colIndex++]?.name,
                           sortConfig,
                         )
-                          ? "#e8e8e8"
-                          : "#fafafa",
+                          ? "background.surface"
+                          : background.main,
                       }}
                     >
                       <Box
                         sx={{
                           display: "flex",
                           alignItems: "center",
-                          gap: "8px",
+                          gap: 4,
                           maxWidth: "360px",
                         }}
                         title={row.fileName}
@@ -747,7 +748,7 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
                           sortConfig,
                         )
                           ? "background.surface"
-                          : "inherit",
+                          : background.main,
                       }}
                     >
                       {row.getFormattedUploadDate()}
@@ -763,7 +764,7 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
                           sortConfig,
                         )
                           ? "background.surface"
-                          : "inherit",
+                          : background.main,
                       }}
                     >
                       {row.uploaderName || row.uploader}
@@ -807,7 +808,7 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
                               sortConfig,
                             )
                               ? "background.surface"
-                              : "inherit",
+                              : background.main,
                           }}
                         >
                           {isKnownSource && hasLinks ? (
@@ -856,7 +857,7 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
                           sortConfig,
                         )
                           ? "background.surface"
-                          : "inherit",
+                          : background.main,
                       }}
                     >
                       <Chip
@@ -882,7 +883,7 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
                           sortConfig,
                         )
                           ? "background.surface"
-                          : "inherit",
+                          : background.main,
                       }}
                     >
                       <Chip
@@ -894,10 +895,8 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
                   )}
                   {/* Quality column — AI analyze trigger + grade badge */}
                   {visibleColumnKeys.includes("quality") && (
-                    <TableCell
-                      sx={{ ...singleTheme.tableStyles.primary.body.cell, minWidth: "80px" }}
-                    >
-                      <Stack direction="row" alignItems="center" spacing="4px">
+                    <TableCell sx={{ ...singleTheme.tableStyles.primary.body.cell, minWidth: 40 }}>
+                      <Stack direction="row" alignItems="center" spacing={2}>
                         {(() => {
                           const fid = Number(row.id);
                           const entry = analysisByFileId.get(fid);
@@ -952,13 +951,13 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
                     <TableCell
                       sx={{
                         ...singleTheme.tableStyles.primary.body.cell,
-                        minWidth: "50px",
+                        minWidth: 24,
                         backgroundColor: getSortMatchForColumn(
                           data.cols[data.cols.length - 1]?.name,
                           sortConfig,
                         )
                           ? "background.surface"
-                          : "inherit",
+                          : background.main,
                       }}
                     >
                       <IconButton

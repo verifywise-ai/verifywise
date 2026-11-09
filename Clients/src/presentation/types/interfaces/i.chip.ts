@@ -16,6 +16,10 @@ export type ChipVariant =
   | "error"
   | "info"
   | "default"
+  // Accent (categorical)
+  | "accent-pink"
+  | "accent-purple"
+  | "accent-teal"
   // Severity
   | "catastrophic"
   | "major"

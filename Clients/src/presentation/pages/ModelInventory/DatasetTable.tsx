@@ -51,8 +51,9 @@ import {
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
-import { DatasetStatus, DataClassification, DatasetType } from "../../../domain/enums/dataset.enum";
-import Chip from "../../components/Chip";
+import { DataClassification, DatasetType } from "../../../domain/enums/dataset.enum";
+import StatusBadge from "../../components/StatusBadge";
+import type { ChipVariant } from "../../types/interfaces/i.chip";
 import { palette } from "../../themes/palette";
 
 dayjs.extend(utc);
@@ -98,8 +99,20 @@ const TooltipCell: React.FC<{ value: string | null | undefined }> = ({ value }) 
   );
 };
 
-const StatusBadge: React.FC<{ status: DatasetStatus }> = ({ status }) => {
-  return <Chip label={status} />;
+/** Category colors for the TYPE and CLASSIFICATION columns. */
+const TYPE_VARIANTS: Record<DatasetType, ChipVariant> = {
+  [DatasetType.TRAINING]: "info",
+  [DatasetType.VALIDATION]: "warning",
+  [DatasetType.TESTING]: "accent-purple",
+  [DatasetType.PRODUCTION]: "success",
+  [DatasetType.REFERENCE]: "default",
+};
+
+const CLASSIFICATION_VARIANTS: Record<DataClassification, ChipVariant> = {
+  [DataClassification.PUBLIC]: "success",
+  [DataClassification.INTERNAL]: "default",
+  [DataClassification.CONFIDENTIAL]: "warning",
+  [DataClassification.RESTRICTED]: "error",
 };
 
 /**
@@ -109,18 +122,23 @@ const StatusBadge: React.FC<{ status: DatasetStatus }> = ({ status }) => {
  */
 const TypeBadge: React.FC<{ type: DatasetType | null }> = ({ type }) => {
   if (!type) return <TooltipCell value={type} />;
-  return <Chip label={type} />;
+  return <StatusBadge label={type} variant={TYPE_VARIANTS[type] ?? "default"} />;
 };
 
 const ClassificationBadge: React.FC<{ classification: DataClassification | null }> = ({
   classification,
 }) => {
   if (!classification) return <TooltipCell value={classification} />;
-  return <Chip label={classification} />;
+  return (
+    <StatusBadge
+      label={classification}
+      variant={CLASSIFICATION_VARIANTS[classification] ?? "default"}
+    />
+  );
 };
 
 const PIIBadge: React.FC<{ containsPii: boolean }> = ({ containsPii }) => {
-  return <Chip label={containsPii ? "Yes" : "No"} />;
+  return <StatusBadge label={containsPii ? "Yes" : "No"} />;
 };
 
 const DatasetTable: React.FC<DatasetTableProps> = ({
@@ -410,7 +428,7 @@ const DatasetTable: React.FC<DatasetTableProps> = ({
                 )}
                 {isVisible("status") && (
                   <TableCell>
-                    <StatusBadge status={dataset.status} />
+                    <StatusBadge label={dataset.status} />
                   </TableCell>
                 )}
                 {isVisible("owner") && (

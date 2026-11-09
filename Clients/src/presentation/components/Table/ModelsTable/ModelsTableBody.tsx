@@ -13,7 +13,7 @@ import { Trash2, MoreVertical } from "lucide-react";
 import singleTheme from "../../../themes/v1SingleTheme";
 import { ModelRow } from "./index";
 import { CustomizableButton } from "../../button/customizable-button";
-import { text, background, border as borderPalette, status } from "../../../themes/palette";
+import { text, background, border as borderPalette, status, accent } from "../../../themes/palette";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 
 interface ModelsTableBodyProps {
@@ -32,27 +32,30 @@ const formatTimestamp = (
   return formatDate(dateStr, { includeTime: true });
 };
 
-// Provider color mapping for chips
+// Provider color mapping for chips. Providers are categories, so they use the
+// accent group (not status tokens, which imply a state).
+const DEFAULT_PROVIDER_COLORS = { bg: background.surface, text: status.default.text };
+const PROVIDER_COLORS: Record<string, { bg: string; text: string }> = {
+  openai: { bg: accent.teal.bg, text: accent.teal.text },
+  anthropic: { bg: accent.orange.bg, text: accent.orange.text },
+  google: { bg: accent.blue.bg, text: accent.blue.text },
+  mistral: { bg: accent.purple.bg, text: accent.purple.text },
+  ollama: DEFAULT_PROVIDER_COLORS,
+  huggingface: { bg: accent.amber.bg, text: accent.amber.text },
+  xai: DEFAULT_PROVIDER_COLORS,
+  bedrock: { bg: accent.orange.bg, text: accent.orange.text },
+  meta: { bg: accent.blue.bg, text: accent.blue.text },
+  deepseek: { bg: accent.purple.bg, text: accent.purple.text },
+  microsoft: { bg: accent.indigo.bg, text: accent.indigo.text },
+  cohere: { bg: accent.amber.bg, text: accent.amber.text },
+  perplexity: { bg: accent.teal.bg, text: accent.teal.text },
+  nvidia: { bg: accent.teal.bg, text: accent.teal.text },
+  qwen: { bg: accent.orange.bg, text: accent.orange.text },
+  moonshot: { bg: accent.purple.bg, text: accent.purple.text },
+};
+
 const getProviderColor = (provider: string): { bg: string; text: string } => {
-  const colors: Record<string, { bg: string; text: string }> = {
-    openai: { bg: "#E8F5E9", text: "#2E7D32" },
-    anthropic: { bg: "#FFF3E0", text: "#E65100" },
-    google: { bg: "#E3F2FD", text: "#1565C0" },
-    mistral: { bg: "#F3E5F5", text: "#7B1FA2" },
-    ollama: { bg: "#ECEFF1", text: "#37474F" },
-    huggingface: { bg: "#FFF8E1", text: "#F57F17" },
-    xai: { bg: "#FAFAFA", text: "#212121" },
-    bedrock: { bg: "#FFF3E0", text: "#FF6F00" },
-    meta: { bg: "#E8F0FE", text: "#1A56DB" },
-    deepseek: { bg: "#EDE8FD", text: "#5B21B6" },
-    microsoft: { bg: "#E3F2FD", text: "#0369A1" },
-    cohere: { bg: "#FFF3E0", text: "#B45309" },
-    perplexity: { bg: "#F0FDF4", text: "#15803D" },
-    nvidia: { bg: "#F0FDF4", text: "#166534" },
-    qwen: { bg: "#FFF7ED", text: "#C2410C" },
-    moonshot: { bg: "#F5F3FF", text: "#6D28D9" },
-  };
-  return colors[provider.toLowerCase()] || { bg: `${background.surface}`, text: "#616161" };
+  return PROVIDER_COLORS[provider.toLowerCase()] ?? DEFAULT_PROVIDER_COLORS;
 };
 
 import * as ProviderIcons from "../../ProviderIcons";
@@ -222,9 +225,7 @@ const ModelsTableBody: React.FC<ModelsTableBodyProps> = ({
                 textAlign: "left",
               }}
             >
-              <Box
-                sx={{ display: "inline-flex", alignItems: "center", gap: "8px", textAlign: "left" }}
-              >
+              <Box sx={{ display: "inline-flex", alignItems: "center", gap: 4, textAlign: "left" }}>
                 <Box
                   sx={{
                     width: 24,
@@ -290,8 +291,8 @@ const ModelsTableBody: React.FC<ModelsTableBodyProps> = ({
               sx={{
                 ...singleTheme.tableStyles.primary.body.cell,
                 textAlign: "center",
-                minWidth: "80px",
-                maxWidth: "80px",
+                minWidth: 40,
+                maxWidth: 40,
                 verticalAlign: "middle",
               }}
               onClick={(e) => e.stopPropagation()}
@@ -338,21 +339,10 @@ const ModelsTableBody: React.FC<ModelsTableBodyProps> = ({
           {onDelete && (
             <CustomizableButton
               variant="outlined"
+              color="error"
+              size="medium"
               onClick={deleteModelRow}
               startIcon={<Trash2 size={14} />}
-              sx={{
-                "height": "34px",
-                "fontSize": "13px",
-                "fontWeight": 500,
-                "color": "#DC2626",
-                "borderColor": `${borderPalette.dark}`,
-                "backgroundColor": "transparent",
-                "justifyContent": "flex-start",
-                "&:hover": {
-                  backgroundColor: "#FEF2F2",
-                  borderColor: "#DC2626",
-                },
-              }}
             >
               Delete
             </CustomizableButton>

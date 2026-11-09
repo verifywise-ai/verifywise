@@ -26,12 +26,12 @@ import { brand, text, background, border as borderPalette, status } from "../../
 // Re-export TemplateRow from TemplatesList
 export type { TemplateRow } from "./TemplatesList";
 import type { TemplateRow } from "./TemplatesList";
+import { getPredominantDifficultyLabel } from "./TemplatesList";
 import {
-  getPredominantDifficultyLabel,
-  getDifficultyStyles,
-  getCategoryStyles,
-  getTypeStyles,
-} from "./TemplatesList";
+  getDatasetCategoryVariant,
+  getDatasetTypeVariant,
+  getDifficultyVariant,
+} from "../../../utils/datasetBadgeVariants";
 
 export type SortDirection = "asc" | "desc" | null;
 export type SortConfig = {
@@ -281,8 +281,7 @@ const TemplatesTable: React.FC<TemplatesTableProps> = ({
                         }
                         size="small"
                         uppercase={false}
-                        backgroundColor={getTypeStyles(template.type).backgroundColor}
-                        textColor={getTypeStyles(template.type).color}
+                        variant={getDatasetTypeVariant(template.type)}
                       />
                     ) : (
                       <Typography sx={{ fontSize: "13px", color: `${text.disabled}` }}>
@@ -303,8 +302,7 @@ const TemplatesTable: React.FC<TemplatesTableProps> = ({
                       }
                       size="small"
                       uppercase={false}
-                      backgroundColor={getCategoryStyles(template.category).backgroundColor}
-                      textColor={getCategoryStyles(template.category).color}
+                      variant={getDatasetCategoryVariant(template.category)}
                     />
                   </TableCell>
                   <TableCell
@@ -323,8 +321,7 @@ const TemplatesTable: React.FC<TemplatesTableProps> = ({
                       label={difficultyLabel}
                       size="small"
                       uppercase={false}
-                      backgroundColor={getDifficultyStyles(difficultyLabel).backgroundColor}
-                      textColor={getDifficultyStyles(difficultyLabel).color}
+                      variant={getDifficultyVariant(difficultyLabel)}
                     />
                   </TableCell>
                   <TableCell
@@ -382,10 +379,4 @@ const TemplatesTable: React.FC<TemplatesTableProps> = ({
 };
 
 export default TemplatesTable;
-export {
-  getPredominantDifficultyLabel,
-  getDifficultyStyles,
-  getTypeStyles,
-  getCategoryStyles,
-} from "./TemplatesList";
-export { default as TemplatesList } from "./TemplatesList";
+export { getPredominantDifficultyLabel } from "./TemplatesList";

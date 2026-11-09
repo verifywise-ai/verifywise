@@ -6,7 +6,7 @@ import {
   ChipVariant,
   ChipColorConfig,
 } from "../../types/interfaces/i.chip";
-import { background, status, risk } from "../../themes/palette";
+import { background, status, risk, accent } from "../../themes/palette";
 import { fontSize, fontWeight } from "../../themes/typography";
 
 /**
@@ -27,6 +27,11 @@ const VARIANT_COLORS: Record<ChipVariant, ChipColorConfig> = {
   "error": { backgroundColor: `${status.error.bg}`, textColor: `${status.error.text}` },
   "info": { backgroundColor: `${status.info.bg}`, textColor: `${status.info.text}` },
   "default": { backgroundColor: `${background.hover}`, textColor: `${status.default.text}` },
+
+  // Accent (categorical)
+  "accent-pink": { backgroundColor: `${accent.pink.bg}`, textColor: `${accent.pink.text}` },
+  "accent-purple": { backgroundColor: `${accent.purple.bg}`, textColor: `${accent.purple.text}` },
+  "accent-teal": { backgroundColor: `${accent.teal.bg}`, textColor: `${accent.teal.text}` },
 
   // Severity (maps to same colors as risk levels)
   "catastrophic": { backgroundColor: `${risk.critical.bg}`, textColor: `${status.error.text}` },

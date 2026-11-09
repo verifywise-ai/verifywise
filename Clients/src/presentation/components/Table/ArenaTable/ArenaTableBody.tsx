@@ -31,6 +31,8 @@ import { ArenaRow } from "./index";
 import ConfirmationModal from "../../Dialogs/ConfirmationModal";
 import { CustomizableButton } from "../../button/customizable-button";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
+import { accent, border, text } from "../../../themes/palette";
+import { textStyles } from "../../../themes/typography";
 
 interface ArenaTableBodyProps {
   rows: ArenaRow[];
@@ -200,7 +202,7 @@ const ArenaTableBody: React.FC<ArenaTableBodyProps> = ({
               textTransform: "none",
             }}
           >
-            <Typography sx={{ fontSize: 12, color: "#475569" }}>
+            <Typography sx={{ fontSize: 12, color: text.primary }}>
               {row.dataset
                 ? row.dataset.split("/").pop()?.replace(".json", "") || row.dataset
                 : "-"}
@@ -225,14 +227,14 @@ const ArenaTableBody: React.FC<ArenaTableBodyProps> = ({
                   component={Loader2}
                   size={12}
                   sx={{
-                    color: "#ef6c00",
+                    color: accent.orange.text,
                     animation: `${spin} 1s linear infinite`,
                   }}
                 />
                 <Typography
                   sx={{
                     fontSize: 12,
-                    color: "#ef6c00",
+                    color: accent.orange.text,
                     fontWeight: 500,
                     animation: `${pulse} 1.5s ease-in-out infinite`,
                   }}
@@ -241,9 +243,9 @@ const ArenaTableBody: React.FC<ArenaTableBodyProps> = ({
                 </Typography>
               </Box>
             ) : row.status === "failed" ? (
-              <Typography sx={{ fontSize: 12, color: "#c62828" }}>—</Typography>
+              <Typography sx={{ fontSize: 12, color: text.error }}>—</Typography>
             ) : (
-              <Typography sx={{ fontSize: 12, color: "text.disabled" }}>—</Typography>
+              <Typography sx={{ fontSize: 12, color: text.disabled }}>—</Typography>
             )}
           </TableCell>
 
@@ -271,7 +273,7 @@ const ArenaTableBody: React.FC<ArenaTableBodyProps> = ({
             onClick={(e) => e.stopPropagation()}
           >
             {deleting === row.id ? (
-              <CircularProgress size={18} sx={{ color: "#6366f1" }} />
+              <CircularProgress size={18} sx={{ color: accent.blue.text }} />
             ) : (
               <IconButton
                 disableRipple={theme.components?.MuiIconButton?.defaultProps?.disableRipple}
@@ -297,7 +299,7 @@ const ArenaTableBody: React.FC<ArenaTableBodyProps> = ({
           "& .MuiPopover-paper": {
             minWidth: 140,
             borderRadius: "4px",
-            border: "1px solid #d0d5dd",
+            border: `1px solid ${border.dark}`,
             boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
             overflow: "hidden",
             mt: 0.5,
@@ -309,22 +311,9 @@ const ArenaTableBody: React.FC<ArenaTableBodyProps> = ({
           {onViewResults && menuRow?.status === "completed" && (
             <CustomizableButton
               variant="outlined"
+              color="secondary"
               onClick={handleViewResultsClick}
               startIcon={<Eye size={14} />}
-              sx={{
-                "height": "34px",
-                "fontSize": "13px",
-                "fontWeight": 500,
-                "color": "#374151",
-                "borderColor": "border.dark",
-                "backgroundColor": "transparent",
-                "justifyContent": "flex-start",
-                "&:hover": {
-                  backgroundColor: "#F0FDF4",
-                  borderColor: "brand.primary",
-                  color: "brand.primary",
-                },
-              }}
             >
               View results
             </CustomizableButton>
@@ -332,22 +321,9 @@ const ArenaTableBody: React.FC<ArenaTableBodyProps> = ({
           {onDownload && menuRow?.status === "completed" && (
             <CustomizableButton
               variant="outlined"
+              color="secondary"
               onClick={handleDownloadClick}
               startIcon={<Download size={14} />}
-              sx={{
-                "height": "34px",
-                "fontSize": "13px",
-                "fontWeight": 500,
-                "color": "#374151",
-                "borderColor": "border.dark",
-                "backgroundColor": "transparent",
-                "justifyContent": "flex-start",
-                "&:hover": {
-                  backgroundColor: "#F0FDF4",
-                  borderColor: "brand.primary",
-                  color: "brand.primary",
-                },
-              }}
             >
               Download results as JSON
             </CustomizableButton>
@@ -355,22 +331,9 @@ const ArenaTableBody: React.FC<ArenaTableBodyProps> = ({
           {onCopy && menuRow?.status === "completed" && (
             <CustomizableButton
               variant="outlined"
+              color="secondary"
               onClick={handleCopyClick}
               startIcon={<Copy size={14} />}
-              sx={{
-                "height": "34px",
-                "fontSize": "13px",
-                "fontWeight": 500,
-                "color": "#374151",
-                "borderColor": "border.dark",
-                "backgroundColor": "transparent",
-                "justifyContent": "flex-start",
-                "&:hover": {
-                  backgroundColor: "#F0FDF4",
-                  borderColor: "brand.primary",
-                  color: "brand.primary",
-                },
-              }}
             >
               Copy results to clipboard
             </CustomizableButton>
@@ -378,21 +341,9 @@ const ArenaTableBody: React.FC<ArenaTableBodyProps> = ({
           {onDelete && (
             <CustomizableButton
               variant="outlined"
+              color="error"
               onClick={deleteArenaRow}
               startIcon={<Trash2 size={14} />}
-              sx={{
-                "height": "34px",
-                "fontSize": "13px",
-                "fontWeight": 500,
-                "color": "#DC2626",
-                "borderColor": "border.dark",
-                "backgroundColor": "transparent",
-                "justifyContent": "flex-start",
-                "&:hover": {
-                  backgroundColor: "#FEF2F2",
-                  borderColor: "#DC2626",
-                },
-              }}
             >
               Delete
             </CustomizableButton>
@@ -405,7 +356,7 @@ const ArenaTableBody: React.FC<ArenaTableBodyProps> = ({
         isOpen={deleteConfirmOpen}
         title="Delete Arena Battle"
         body={
-          <Typography sx={{ fontSize: 14, color: "text.icon" }}>
+          <Typography sx={{ ...textStyles.body, color: text.primary }}>
             Are you sure you want to delete "{rowToDelete?.name}"? This action cannot be undone.
           </Typography>
         }
