@@ -279,13 +279,11 @@ export async function createAiAppQuery(
   const [createdRows] = await sequelize.query(
     `INSERT INTO ai_apps (
       organization_id, name, description, vendor_id, owner_id, status,
-      discovered_source, shadow_ai_tool_id, required_training, required_training_id,
-      risk_score, is_demo,
+      discovered_source, shadow_ai_tool_id, required_training, risk_score, is_demo,
       created_at, updated_at
     ) VALUES (
       :organizationId, :name, :description, :vendorId, :ownerId, :status,
-      :discoveredSource, :shadowAiToolId, :requiredTraining, :requiredTrainingId,
-      :riskScore, :isDemo,
+      :discoveredSource, :shadowAiToolId, :requiredTraining, :riskScore, :isDemo,
       NOW(), NOW()
     ) RETURNING *`,
     {
@@ -299,7 +297,6 @@ export async function createAiAppQuery(
         discoveredSource: app.discovered_source,
         shadowAiToolId: app.shadow_ai_tool_id ?? null,
         requiredTraining: app.required_training ?? null,
-        requiredTrainingId: app.required_training_id ?? null,
         riskScore: app.risk_score ?? null,
         isDemo: app.is_demo ?? false,
       },
@@ -378,7 +375,6 @@ export async function updateAiAppByIdQuery(
     "discovered_source",
     "shadow_ai_tool_id",
     "required_training",
-    "required_training_id",
     "risk_score",
   ];
 
