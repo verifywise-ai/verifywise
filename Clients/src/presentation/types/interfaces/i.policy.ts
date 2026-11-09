@@ -23,6 +23,8 @@ export interface PolicyTableProps {
   onDelete: (id: number) => void;
   onLinkedObjects: (id: number) => void;
   onAssignToFolder?: (id: number) => void;
+  /** Save a policy as an organization-owned template (#5261). */
+  onSaveAsTemplate?: (id: number) => void;
   onRefresh?: () => void;
   isLoading?: boolean;
   error?: Error | null;
