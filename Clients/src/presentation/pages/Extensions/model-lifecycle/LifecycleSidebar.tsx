@@ -2,7 +2,7 @@ import { useMemo, useCallback } from "react";
 import { Stack, Typography, Box } from "@mui/material";
 import { Check } from "lucide-react";
 import { LifecyclePhase, LifecycleProgress } from "./useModelLifecycle";
-import { background, brand, text } from "../../../themes/palette";
+import { background, border, brand, text } from "../../../themes/palette";
 import { textStyles } from "../../../../presentation/themes/typography";
 
 interface LifecycleSidebarProps {
@@ -44,11 +44,11 @@ export default function LifecycleSidebar({
       sx={{
         width: 280,
         minWidth: 280,
-        borderRight: `1px solid border.light`,
+        borderRight: `1px solid ${border.light}`,
         backgroundColor: background.main,
       }}
     >
-      <Box sx={{ px: 10, py: 8, borderBottom: `1px solid border.light` }}>
+      <Box sx={{ px: 10, py: 8, borderBottom: `1px solid ${border.light}` }}>
         <Typography sx={{ ...textStyles.cardTitle, color: text.secondary, mb: 2 }}>
           Lifecycle Progress
         </Typography>

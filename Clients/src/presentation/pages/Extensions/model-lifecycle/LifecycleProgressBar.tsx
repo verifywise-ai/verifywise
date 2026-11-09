@@ -36,7 +36,7 @@ export default function LifecycleProgressBar({
         </Typography>
       </Stack>
 
-      <Stack direction="row" sx={{ gap: 8, width: "100%" }}>
+      <Stack direction="row" sx={{ gap: 3, width: "100%" }}>
         {phases.map((phase) => {
           const pct = phase.total_items > 0 ? (phase.filled_items / phase.total_items) * 100 : 0;
           const color = getPhaseColor(phase.filled_items, phase.total_items);
@@ -75,7 +75,7 @@ export default function LifecycleProgressBar({
         })}
       </Stack>
 
-      <Stack direction="row" sx={{ gap: 8, width: "100%" }}>
+      <Stack direction="row" sx={{ gap: 3, width: "100%" }}>
         {phases.map((phase) => (
           <Typography
             key={phase.phase_id}

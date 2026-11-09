@@ -80,7 +80,6 @@ export const text = {
   muted: grey[600],
   subdued: grey[400],
   error: red[500],
-  
 } as const;
 
 /** Icon strokes. Read the scales directly so icons do not depend on text tokens. */
