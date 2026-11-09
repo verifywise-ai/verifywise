@@ -512,9 +512,9 @@ export const getApprovalRequestByIdQuery = async (
       p.high_risk_roles,
       p.start_date,
       p.geography,
-      owner_user.name as owner_name,
+      COALESCE(owner_user.name, p.external_owner_name || ' (external)') as owner_name,
       owner_user.surname as owner_surname,
-      owner_user.email as owner_email,
+      COALESCE(owner_user.email, p.external_owner_email) as owner_email,
       -- File fields
       f.filename as file_name,
       f.size as file_size,

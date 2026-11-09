@@ -442,6 +442,8 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
     fieldsToTrack: [
       "project_title",
       "owner",
+      "external_owner_name",
+      "external_owner_email",
       "members",
       "start_date",
       "geography",
@@ -457,6 +459,8 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
     fieldLabels: {
       project_title: "Name",
       owner: "Owner",
+      external_owner_name: "External owner name",
+      external_owner_email: "External owner email",
       members: "Team members",
       start_date: "Start date",
       geography: "Geography",

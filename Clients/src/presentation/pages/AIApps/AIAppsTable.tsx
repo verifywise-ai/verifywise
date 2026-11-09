@@ -1,5 +1,6 @@
 import { useCallback, useEffect } from "react";
 import {
+  Box,
   Table,
   TableBody,
   TableCell,
@@ -23,6 +24,9 @@ import StaleMarker from "../../components/LifecycleTabs/StaleMarker";
 import { TableEmptyStateLayout } from "../../components/Table/TableEmptyStateLayout";
 import { EmptyState } from "../../components/EmptyState";
 import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
+import Checkbox from "../../components/Inputs/Checkbox";
+import { useTranslation } from "../../../application/hooks/useTranslation";
+import { fill } from "../../../i18n/fill";
 
 interface AIAppsTableProps {
   apps: IAIApp[];
@@ -38,6 +42,16 @@ interface AIAppsTableProps {
    * page, page size and sort changes are reported instead of applied here.
    */
   serverPaging?: AIAppsServerPaging;
+  /** Renders row checkboxes. Leave out for users who cannot run bulk actions. */
+  selection?: AIAppsTableSelection;
+}
+
+export interface AIAppsTableSelection {
+  isSelected: (id: number) => boolean;
+  onToggle: (id: number) => void;
+  onToggleAll: () => void;
+  allSelected: boolean;
+  someSelected: boolean;
 }
 
 export interface AIAppsServerPaging {
@@ -70,7 +84,9 @@ export default function AIAppsTable({
   showEmptyTips = false,
   staleIds,
   serverPaging,
+  selection,
 }: AIAppsTableProps) {
+  const { t } = useTranslation();
   const sortComparator = useCallback((a: IAIApp, b: IAIApp, key: string): number => {
     switch (key) {
       case "name":
@@ -139,7 +155,21 @@ export default function AIAppsTable({
       };
 
   const tableHeader = (
-    <StandardTableHead columns={columns} sortConfig={sortConfig} onSort={handleSort} />
+    <StandardTableHead
+      columns={columns}
+      sortConfig={sortConfig}
+      onSort={handleSort}
+      selection={
+        selection && sortedRows.length > 0
+          ? {
+              allSelected: selection.allSelected,
+              someSelected: selection.someSelected,
+              onToggleAll: selection.onToggleAll,
+              ariaLabel: t("Select all AI apps on this page"),
+            }
+          : undefined
+      }
+    />
   );
 
   if (!sortedRows || sortedRows.length === 0) {
@@ -184,6 +214,25 @@ export default function AIAppsTable({
                 sx={{ ...singleTheme.tableStyles.primary.body.row, cursor: "pointer" }}
                 onClick={() => onEditApp(app)}
               >
+                {selection && app.id !== undefined && (
+                  <TableCell
+                    sx={{ width: 40, minWidth: 40, maxWidth: 40, padding: 0 }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <Checkbox
+                        id={`ai-app-row-checkbox-${app.id}`}
+                        value={String(app.id)}
+                        isChecked={selection.isSelected(app.id)}
+                        onChange={() => selection.onToggle(app.id as number)}
+                        onClick={(e) => e.stopPropagation()}
+                        ariaLabel={fill(t("Select {name}"), { name: app.name })}
+                        size="small"
+                        sx={{ p: 0 }}
+                      />
+                    </Box>
+                  </TableCell>
+                )}
                 <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
                   <Stack direction="row" alignItems="center" gap="8px">
                     <Bot size={16} strokeWidth={1.5} color={palette.text.secondary} />
@@ -262,7 +311,7 @@ export default function AIAppsTable({
             getRange={pagination.getRange}
             entityLabel="AI app"
             entityLabelPlural="AI apps"
-            colSpan={TABLE_COLUMNS.length}
+            colSpan={TABLE_COLUMNS.length + (selection ? 1 : 0)}
           />
         )}
       </Table>

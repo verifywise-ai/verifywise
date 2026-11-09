@@ -1491,6 +1491,48 @@ export const notifyLifecycleConfirmationDue = async (
 };
 
 /**
+ * One summary of the AI app assessments a bulk run left for this owner (#5258).
+ * Awaits the in-app row, which rejects if it can't be stored. The email joins
+ * the rate-limited queue un-awaited, at about 600ms each it would otherwise
+ * hold the request open, and its recipient is passed in so nothing touches the
+ * database once the response has gone.
+ */
+export const notifyAiAppAssessmentsAssigned = async (
+  organizationId: number,
+  owner: { id: number; name: string; email: string },
+  count: number,
+  requesterName: string,
+): Promise<void> => {
+  const title = `${count} AI app assessment${count === 1 ? "" : "s"} to complete`;
+  const actionUrl = "/ai-apps/assessments?assigned=me";
+
+  await sendInAppNotification(organizationId, {
+    user_id: owner.id,
+    type: NotificationType.ASSIGNMENT_OWNER,
+    title,
+    message: `${requesterName} asked you to complete the risk assessment for AI apps you own.`,
+    entity_type: NotificationEntityType.AI_APP,
+    action_url: actionUrl,
+  });
+
+  const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+  notificationService
+    .sendEmailWithTemplate(owner.email, title, EMAIL_TEMPLATES.AI_APP_ASSESSMENTS_ASSIGNED, {
+      summary_title: title,
+      recipient_name: owner.name || "there",
+      requester_name: requesterName,
+      assessments_url: `${baseUrl}${actionUrl}`,
+    })
+    .catch((error: unknown) => {
+      logger.error(
+        `Failed to email owner ${owner.id} about AI app assessments: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    });
+};
+
+/**
  * Notify training assigned
  */
 export const notifyTrainingAssigned = async (

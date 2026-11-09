@@ -22,6 +22,7 @@ import {
 } from "@mui/material";
 import { Download, Upload, CheckCircle, XCircle, X } from "lucide-react";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
+import { brand, icon } from "../../../themes/palette";
 
 interface RiskImportModalProps {
   open: boolean;
@@ -216,7 +217,7 @@ export default function RiskImportModal({ open, onClose, onImportComplete }: Ris
             Download the template, fill it with your risk data, and upload to create risks in bulk
           </Typography>
         </Box>
-        <IconButton onClick={handleClose} size="small" sx={{ color: "#98A2B3", mt: -0.5 }}>
+        <IconButton onClick={handleClose} size="small" sx={{ color: icon.default, mt: -0.5 }}>
           <X size={20} />
         </IconButton>
       </DialogTitle>
@@ -404,9 +405,9 @@ export default function RiskImportModal({ open, onClose, onImportComplete }: Ris
                   )
                 }
                 sx={{
-                  "backgroundColor": "#13715B",
+                  "backgroundColor": brand.primary,
                   "&:hover": {
-                    backgroundColor: "#0F5A47",
+                    backgroundColor: brand.primaryHover,
                   },
                 }}
               >

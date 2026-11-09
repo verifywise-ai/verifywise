@@ -197,7 +197,7 @@ export interface ShadowAiGovernanceRequest {
   };
   governance_owner_id: number;
   risk_assessment?: {
-    data_sensitivity?: string;
+    data_sensitivity?: "High" | "Medium" | "Low";
     description?: string;
   };
   start_lifecycle?: boolean;
@@ -205,6 +205,6 @@ export interface ShadowAiGovernanceRequest {
 
 export interface ShadowAiGovernanceResult {
   model_inventory_id?: number;
-  risk_entry_id?: number;
-  lifecycle_started?: boolean;
+  risk_entry_id?: number | null;
+  lifecycle_initialized?: boolean;
 }

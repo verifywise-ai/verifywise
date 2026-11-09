@@ -6,7 +6,10 @@ export type Project = {
   id: number;
   uc_id?: string;
   project_title: string;
-  owner: number;
+  owner: number | null;
+  /** An owner with no account: email notices only, no access (#5256). */
+  external_owner_name?: string | null;
+  external_owner_email?: string | null;
   members: string[];
   start_date: Date;
   ai_risk_classification: "high risk" | "limited risk" | "minimal risk" | null;

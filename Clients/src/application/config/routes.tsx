@@ -80,6 +80,9 @@ const AgentDiscovery = lazyRoute(() => import("../../presentation/pages/AgentDis
 const AgentDetail = lazyRoute(() => import("../../presentation/pages/AgentDiscovery/AgentDetail"));
 const ModelInventory = lazyRoute(() => import("../../presentation/pages/ModelInventory"));
 const AIApps = lazyRoute(() => import("../../presentation/pages/AIApps"));
+const AIAppAssessments = lazyRoute(
+  () => import("../../presentation/pages/AIApps/AIAppAssessments"),
+);
 const ModelLifecycleDetail = lazyRoute(
   () => import("../../presentation/pages/ModelInventory/ModelLifecycleDetail"),
 );
@@ -598,6 +601,14 @@ export const createRoutes = (
       element={
         <Suspense fallback={<LazyFallback />}>
           <AIApps />
+        </Suspense>
+      }
+    />
+    <Route
+      path="/ai-apps/assessments"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <AIAppAssessments />
         </Suspense>
       }
     />

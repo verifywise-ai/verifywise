@@ -173,6 +173,8 @@ export const createNewVendorQuery = async (
   organizationId: number,
   transaction: Transaction,
   is_demo: boolean = false,
+  /** Bulk loads turn this off: one automation per row is not what anyone configured. */
+  options: { runAutomations: boolean } = { runAutomations: true },
 ): Promise<VendorModel> => {
   // Build dynamic query for optional fields
   const fields = [
@@ -281,6 +283,8 @@ export const createNewVendorQuery = async (
     createdVendor["projects"] = vendors_projects.map((p) => p.project_id);
   }
   await updateProjectUpdatedByIdQuery(vendorId, "vendors", organizationId, transaction);
+
+  if (!options.runAutomations) return createdVendor;
 
   const automations = (await sequelize.query(
     `SELECT

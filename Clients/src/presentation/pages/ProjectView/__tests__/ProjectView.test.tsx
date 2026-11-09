@@ -2,7 +2,8 @@ import { fireEvent, screen } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 
 // Mock hooks
-const { projectDataMock, navigateMock } = vi.hoisted(() => ({
+const { projectDataMock, navigateMock, searchParamsMock } = vi.hoisted(() => ({
+  searchParamsMock: { value: "projectId=1" },
   projectDataMock: vi.fn(() => ({
     project: null as unknown,
     error: null as string | null,
@@ -62,6 +63,9 @@ vi.mock("../../../../application/constants/permissions", () => ({
 vi.mock("../V1.0ProjectView/Overview", () => ({
   default: () => <div data-testid="project-overview" />,
 }));
+vi.mock("../V1.0ProjectView/Raci", () => ({
+  default: () => <div data-testid="project-raci" />,
+}));
 vi.mock("../V1.0ProjectView/ProjectRisks", () => ({
   default: () => <div data-testid="project-risks" />,
 }));
@@ -99,7 +103,13 @@ vi.mock("../../../components/breadcrumbs/routeMapping", () => ({
   getRouteIcon: () => null,
 }));
 vi.mock("../../../components/TabBar", () => ({
-  default: () => <div data-testid="tab-bar" />,
+  default: ({ tabs }: { tabs: Array<{ label: string }> }) => (
+    <div data-testid="tab-bar">
+      {tabs.map((tab) => (
+        <span key={tab.label}>{tab.label}</span>
+      ))}
+    </div>
+  ),
 }));
 
 // Mock react-router
@@ -107,7 +117,7 @@ vi.mock("react-router", async () => {
   const actual = await vi.importActual("react-router");
   return {
     ...actual,
-    useSearchParams: () => [new URLSearchParams("projectId=1"), vi.fn()],
+    useSearchParams: () => [new URLSearchParams(searchParamsMock.value), vi.fn()],
     useNavigate: () => navigateMock,
   };
 });
@@ -172,5 +182,60 @@ describe("ProjectView (VWProjectView)", () => {
     renderWithProviders(<VWProjectView />, { route: "/project-view?projectId=1" });
 
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("UC-7: Resume screening");
+  });
+
+  it("offers the RACI tab on a regular use case", () => {
+    projectDataMock.mockReturnValue({
+      project: { id: 1, project_title: "Resume screening", is_organizational: false },
+      error: null,
+      isLoading: false,
+    });
+    renderWithProviders(<VWProjectView />, { route: "/project-view?projectId=1" });
+
+    expect(screen.getByText("RACI")).toBeInTheDocument();
+  });
+
+  describe("with a link to the RACI tab", () => {
+    beforeEach(() => {
+      searchParamsMock.value = "projectId=1&tab=raci";
+    });
+    afterEach(() => {
+      searchParamsMock.value = "projectId=1";
+    });
+
+    it("opens the matrix on a regular use case", () => {
+      projectDataMock.mockReturnValue({
+        project: { id: 1, project_title: "Resume screening", is_organizational: false },
+        error: null,
+        isLoading: false,
+      });
+      renderWithProviders(<VWProjectView />, { route: "/project-view?projectId=1&tab=raci" });
+
+      expect(screen.getByTestId("project-raci")).toBeInTheDocument();
+    });
+
+    it("falls back to overview on an organizational use case", () => {
+      projectDataMock.mockReturnValue({
+        project: { id: 1, project_title: "ISO programme", is_organizational: true },
+        error: null,
+        isLoading: false,
+      });
+      renderWithProviders(<VWProjectView />, { route: "/project-view?projectId=1&tab=raci" });
+
+      expect(screen.getByTestId("project-overview")).toBeInTheDocument();
+      expect(screen.queryByTestId("project-raci")).not.toBeInTheDocument();
+    });
+  });
+
+  it("hides the RACI tab on an organizational use case", () => {
+    projectDataMock.mockReturnValue({
+      project: { id: 1, project_title: "ISO programme", is_organizational: true },
+      error: null,
+      isLoading: false,
+    });
+    renderWithProviders(<VWProjectView />, { route: "/project-view?projectId=1" });
+
+    expect(screen.getByTestId("tab-bar")).toBeInTheDocument();
+    expect(screen.queryByText("RACI")).not.toBeInTheDocument();
   });
 });

@@ -7,6 +7,7 @@
 
 import express from "express";
 import authenticateJWT from "../middleware/auth.middleware";
+import { requireProjectAccess } from "../middleware/projectAccess.middleware";
 import {
   getConfigByProjectId,
   createConfig,
@@ -109,6 +110,11 @@ router.get("/reports/:reportId/download", authenticateJWT, downloadReport);
 router.post("/cycles/:cycleId/reassign", authenticateJWT, reassignStakeholder);
 
 // POST /pmm/projects/:projectId/start-cycle - Manually start new cycle
-router.post("/projects/:projectId/start-cycle", authenticateJWT, startNewCycle);
+router.post(
+  "/projects/:projectId/start-cycle",
+  authenticateJWT,
+  requireProjectAccess("projectId"),
+  startNewCycle,
+);
 
 export default router;

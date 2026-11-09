@@ -69,6 +69,9 @@ export const EMAIL_TEMPLATES = {
   // Inventory lifecycle templates
   LIFECYCLE_CONFIRMATION_DUE: "lifecycle-confirmation-due.mjml",
 
+  // External use case owners (no account; email only)
+  EXTERNAL_OWNER_NOTICE: "external-owner-notice.mjml",
+
   // AI Gateway templates
   AI_GATEWAY_BUDGET_WARNING: "ai-gateway-budget-warning.mjml",
   AI_GATEWAY_BUDGET_EXHAUSTED: "ai-gateway-budget-exhausted.mjml",
@@ -85,6 +88,9 @@ export const EMAIL_TEMPLATES = {
 
   // Assignment notification template
   ASSIGNMENT_NOTIFICATION: "assignment-notification.mjml",
+
+  // AI app bulk assessment: one summary per owner per run
+  AI_APP_ASSESSMENTS_ASSIGNED: "ai-app-assessments-assigned.mjml",
 } as const;
 
 // Type-safe template keys

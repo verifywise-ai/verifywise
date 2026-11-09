@@ -1,5 +1,7 @@
 import { Stack, Typography, Box, Tooltip } from "@mui/material";
 import { LifecycleProgress } from "./useModelLifecycle";
+import { accent, background, status, text } from "../../../themes/palette";
+import { textStyles } from "../../../themes";
 
 interface LifecycleProgressBarProps {
   progress: LifecycleProgress | null;
@@ -16,25 +18,25 @@ export default function LifecycleProgressBar({
   }
 
   const getPhaseColor = (filled: number, total: number) => {
-    if (total === 0) return "#E0E4E9";
-    if (filled === total) return "#079455";
-    if (filled > 0) return "#2E90FA";
-    return "#E0E4E9";
+    if (total === 0) return text.subdued;
+    if (filled === total) return status.success.strong;
+    if (filled > 0) return accent.blue.text;
+    return text.subdued;
   };
 
   return (
-    <Stack sx={{ gap: "12px" }}>
+    <Stack sx={{ gap: 6 }}>
       <Stack direction="row" alignItems="center" justifyContent="space-between">
-        <Typography sx={{ fontWeight: 600, fontSize: "14px", color: "#344054" }}>
+        <Typography sx={{ ...textStyles.cardTitle, color: text.secondary }}>
           Lifecycle Progress
         </Typography>
-        <Typography sx={{ fontSize: "13px", color: "#667085" }}>
+        <Typography sx={{ ...textStyles.caption, color: text.secondary }}>
           {progress.completion_percentage}% complete ({progress.filled_items}/{progress.total_items}{" "}
           items)
         </Typography>
       </Stack>
 
-      <Stack direction="row" sx={{ gap: "6px", width: "100%" }}>
+      <Stack direction="row" sx={{ gap: 3, width: "100%" }}>
         {phases.map((phase) => {
           const pct = phase.total_items > 0 ? (phase.filled_items / phase.total_items) * 100 : 0;
           const color = getPhaseColor(phase.filled_items, phase.total_items);
@@ -52,7 +54,7 @@ export default function LifecycleProgressBar({
                   "height": 8,
                   "borderRadius": 3,
                   "overflow": "hidden",
-                  "backgroundColor": "#E0E4E9",
+                  "backgroundColor": background.main,
                   "cursor": onPhaseClick ? "pointer" : "default",
                   "&:hover": onPhaseClick ? { opacity: 0.8 } : {},
                   "position": "relative",
@@ -73,15 +75,15 @@ export default function LifecycleProgressBar({
         })}
       </Stack>
 
-      <Stack direction="row" sx={{ gap: "6px", width: "100%" }}>
+      <Stack direction="row" sx={{ gap: 3, width: "100%" }}>
         {phases.map((phase) => (
           <Typography
             key={phase.phase_id}
             sx={{
               flex: 1,
               textAlign: "center",
-              fontSize: "11px",
-              color: "#667085",
+              ...textStyles.caption,
+              color: text.secondary,
               overflow: "hidden",
               textOverflow: "ellipsis",
               whiteSpace: "nowrap",

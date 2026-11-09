@@ -17,6 +17,7 @@ import { textStyles } from "../../../themes/typography";
 
 const links = [
   { id: "colors", label: "Colors", detail: "Scales in primitives.ts and the semantic palette." },
+  { id: "buttons", label: "Buttons", detail: "CustomizableButton and button.* tokens." },
   { id: "typography", label: "Typography", detail: "fontSize, fontWeight, and textStyles." },
   { id: "spacing", label: "Spacing & layout", detail: "theme.spacing(), where 4 is 8px." },
 ];
@@ -43,8 +44,8 @@ const TokensSection: React.FC = () => {
           <Box component="span" sx={{ fontFamily: "monospace", fontSize: 13 }}>
             shared/design-tokens/primitives.ts
           </Box>
-          . The shared palette.ts builds brand, text, background, border, and status from them. The
-          client palette.ts re-exports that palette so existing imports stay valid.
+          . The shared palette.ts builds brand, button, text, icon, background, border, and status
+          from them. The client palette.ts re-exports that palette so existing imports stay valid.
         </Typography>
       </Box>
 

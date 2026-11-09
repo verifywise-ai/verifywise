@@ -1,3 +1,4 @@
+import ExternalOwnerName from "../../../../components/ExternalOwner/ExternalOwnerName";
 import { Alert, Divider, Stack, Typography } from "@mui/material";
 import { columnStyle, rowStyle } from "./style";
 import { GroupStatsCard } from "../../../../components/Cards/GroupStatsCard";
@@ -29,6 +30,7 @@ import {
 import { brand } from "../../../../themes/palette";
 import { singleTheme } from "../../../../themes";
 import UseCaseLifecyclePanel from "./UseCaseLifecyclePanel";
+import LinkedAiAppsCard from "./LinkedAiAppsCard";
 
 /**
  * A use case whose approval request is pending or rejected has every tab in the
@@ -305,7 +307,17 @@ const VWProjectOverview = ({
         <Stack className="vw-project-overview-row" sx={rowStyle}>
           {project ? (
             <>
-              <InfoCard title="Owner" body={projectOwner || "N/A"} icon={<UserIcon size={16} />} />
+              <InfoCard
+                title="Owner"
+                body={
+                  project.external_owner_name ? (
+                    <ExternalOwnerName name={project.external_owner_name} />
+                  ) : (
+                    projectOwner || "N/A"
+                  )
+                }
+                icon={<UserIcon size={16} />}
+              />
               <InfoCard
                 title="Use case status"
                 body={project.status || "Not started"}
@@ -355,6 +367,7 @@ const VWProjectOverview = ({
             </>
           )}
         </Stack>
+        {!project.is_organizational && <LinkedAiAppsCard project={project} />}
         <Stack className="vw-project-overview-frameworks" sx={{ width: "100%", gap: 2, mb: 10 }}>
           {project ? (
             <>

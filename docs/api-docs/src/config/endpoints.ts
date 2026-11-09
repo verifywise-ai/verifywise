@@ -10758,6 +10758,7 @@ export const shadowAiEndpoints: Endpoint[] = [
     responses: [
       { status: 201, description: "Created successfully" },
       { status: 401, description: "Unauthorized" },
+      { status: 409, description: "The tool is already under governance" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Shadow AI",
@@ -12471,6 +12472,219 @@ export const v1V1aiAppsEndpoints: Endpoint[] = [
     ],
     tag: "v1: V1/Ai Apps",
   },
+  {
+    method: 'GET',
+    path: '/v1/ai-apps/{id}/use-cases',
+    summary: "List Ai App Use Cases",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai Apps",
+  },
+  {
+    method: 'POST',
+    path: '/v1/ai-apps/{id}/use-cases',
+    summary: "Link Ai App Use Case",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai Apps",
+  },
+  {
+    method: 'DELETE',
+    path: '/v1/ai-apps/{id}/use-cases/{projectId}',
+    summary: "Unlink Ai App Use Case",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai Apps",
+  },
+  {
+    method: 'GET',
+    path: '/v1/ai-apps/ids',
+    summary: "Get Ai App Ids V1",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai Apps",
+  },
+  {
+    method: 'GET',
+    path: '/v1/ai-apps/import/template',
+    summary: "Download Ai App Import Template",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai Apps",
+  },
+  {
+    method: 'POST',
+    path: '/v1/ai-apps/import',
+    summary: "Import Ai Apps",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai Apps",
+  },
+  {
+    method: 'GET',
+    path: '/v1/ai-apps/questionnaires',
+    summary: "List Ai App Questionnaires",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai Apps",
+  },
+  {
+    method: 'POST',
+    path: '/v1/ai-apps/questionnaires',
+    summary: "Create Ai App Questionnaire",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai Apps",
+  },
+  {
+    method: 'PATCH',
+    path: '/v1/ai-apps/questionnaires/{id}',
+    summary: "Update Ai App Questionnaire",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai Apps",
+  },
+  {
+    method: 'DELETE',
+    path: '/v1/ai-apps/questionnaires/{id}',
+    summary: "Delete Ai App Questionnaire",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai Apps",
+  },
+  {
+    method: 'POST',
+    path: '/v1/ai-apps/bulk-assess',
+    summary: "Bulk Assess Ai Apps",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai Apps",
+  },
+  {
+    method: 'GET',
+    path: '/v1/ai-apps/assessments',
+    summary: "List Ai App Assessments",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai Apps",
+  },
+  {
+    method: 'GET',
+    path: '/v1/ai-apps/assessments/worksheet',
+    summary: "Download Ai App Assessment Worksheet",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai Apps",
+  },
+  {
+    method: 'POST',
+    path: '/v1/ai-apps/assessments/answers',
+    summary: "Submit Ai App Assessment Answers",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai Apps",
+  },
+  {
+    method: 'POST',
+    path: '/v1/ai-apps/assessments/cancel',
+    summary: "Cancel Ai App Assessments",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai Apps",
+  },
+  {
+    method: 'PUT',
+    path: '/v1/ai-apps/assessments/{assessmentId}/answers',
+    summary: "Answer Ai App Assessment",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai Apps",
+  },
+  {
+    method: 'GET',
+    path: '/v1/ai-apps/{id}/assessments',
+    summary: "List Ai App Assessments For App",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai Apps",
+  },
+];
+
+// v1: V1/Dashboard endpoints
+export const v1V1dashboardEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/dashboard/preferences',
+    summary: "Get Dashboard Preferences Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Dashboard",
+  },
+  {
+    method: 'PUT',
+    path: '/v1/dashboard/preferences',
+    summary: "Update Dashboard Preferences Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Dashboard",
+  },
 ];
 
 // v1: V1/Intake Form Review Time endpoints
@@ -12522,6 +12736,87 @@ export const v1V1lifecycleSettingsEndpoints: Endpoint[] = [
       { status: 500, description: "Internal server error" },
     ],
     tag: "v1: V1/Lifecycle Settings",
+  },
+];
+
+// v1: V1/Projects endpoints
+export const v1V1projectsEndpoints: Endpoint[] = [
+  {
+    method: 'POST',
+    path: '/v1/projects',
+    summary: "Create Project",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Projects",
+  },
+  {
+    method: 'PATCH',
+    path: '/v1/projects/{id}',
+    summary: "Update Project By Id",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Projects",
+  },
+  {
+    method: 'GET',
+    path: '/v1/projects/{id}/ai-apps',
+    summary: "List Use Case Ai Apps",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Projects",
+  },
+  {
+    method: 'GET',
+    path: '/v1/projects/{id}/create-ai-app',
+    summary: "Get Create Ai App Preview",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Projects",
+  },
+  {
+    method: 'POST',
+    path: '/v1/projects/{id}/create-ai-app',
+    summary: "Create Ai App From Use Case",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Projects",
+  },
+  {
+    method: 'GET',
+    path: '/v1/projects/{id}/raci',
+    summary: "Get Raci Matrix",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Projects",
+  },
+  {
+    method: 'PUT',
+    path: '/v1/projects/{id}/raci/users/{userId}',
+    summary: "Update Raci User Roles",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Projects",
   },
 ];
 
@@ -12956,8 +13251,10 @@ export const allEndpoints = {
   v1UseCaseSettings: v1UseCaseSettingsEndpoints,
   v1V1aiAppLifecycle: v1V1aiAppLifecycleEndpoints,
   v1V1aiApps: v1V1aiAppsEndpoints,
+  v1V1dashboard: v1V1dashboardEndpoints,
   v1V1intakeFormReviewTime: v1V1intakeFormReviewTimeEndpoints,
   v1V1lifecycleSettings: v1V1lifecycleSettingsEndpoints,
+  v1V1projects: v1V1projectsEndpoints,
   v1V1useCaseLifecycle: v1V1useCaseLifecycleEndpoints,
   vendor: vendorEndpoints,
   vendorRisk: vendorRiskEndpoints,

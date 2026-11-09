@@ -211,7 +211,13 @@ describe("task.ctrl", () => {
       const res = createRes();
       await createTask(req, res);
       expect(res.status).toHaveBeenCalledWith(201);
-      expect(mockPersistLinks).toHaveBeenCalledWith(5, links, 1, expect.anything());
+      expect(mockPersistLinks).toHaveBeenCalledWith(
+        5,
+        links,
+        { userId: 1, role: "Admin" },
+        1,
+        expect.anything(),
+      );
     });
     it("should not persist entity_links when none are provided", async () => {
       const task = mockTask(buildTask());
@@ -360,7 +366,13 @@ describe("task.ctrl", () => {
       const res = createRes();
       await updateTask(req, res);
       expect(res.status).toHaveBeenCalledWith(200);
-      expect(mockPersistLinks).toHaveBeenCalledWith(7, links, 1, expect.anything());
+      expect(mockPersistLinks).toHaveBeenCalledWith(
+        7,
+        links,
+        { userId: 1, role: "Admin" },
+        1,
+        expect.anything(),
+      );
     });
     it("should not persist entity_links when none are provided", async () => {
       const existing = mockTask(buildTask());

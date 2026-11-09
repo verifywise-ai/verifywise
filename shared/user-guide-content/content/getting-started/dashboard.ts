@@ -43,6 +43,20 @@ export const dashboardContent: ArticleContent = {
     },
     {
       type: 'heading',
+      id: 'customize-layout',
+      level: 2,
+      text: 'Customizing your layout',
+    },
+    {
+      type: 'paragraph',
+      text: 'Click "Edit layout" next to the view toggle to choose what appears on your dashboard. Use the toggle beside a widget to show or hide it and the arrows to move it up or down, then click "Save". Each view keeps its own layout. Your layout is saved to your account, so it follows you to other browsers, and nobody else in your organization is affected.',
+    },
+    {
+      type: 'paragraph',
+      text: 'To go back to the standard arrangement, open "Edit layout", click "Reset to default" and save. Widgets that need data you don\'t have yet, such as organizational frameworks, join the list once that data exists.',
+    },
+    {
+      type: 'heading',
       id: 'governance-score',
       level: 2,
       text: 'AI governance score',

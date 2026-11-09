@@ -5701,6 +5701,21 @@ components:
         governance_owner_id:
           type: integer
           minimum: 1
+        risk_assessment:
+          type: object
+          nullable: true
+          description: 'When either field is set, a model risk named "Use of <tool>" is created on the new model inventory entry, owned by the governance owner and due in 90 days.'
+          properties:
+            data_sensitivity:
+              type: string
+              enum:
+                - High
+                - Medium
+                - Low
+              description: 'Sets the risk level. Without it the level is Medium.'
+            description:
+              type: string
+              maxLength: 5000
         start_lifecycle:
           type: boolean
           default: false
@@ -5711,6 +5726,10 @@ components:
           type: integer
         tool_id:
           type: integer
+        risk_entry_id:
+          type: integer
+          nullable: true
+          description: 'The model risk created from risk_assessment, or null.'
         lifecycle_initialized:
           type: boolean
     ShadowAiRule:
@@ -7905,9 +7924,13 @@ tags:
   -
     name: 'v1: V1/Ai Apps'
   -
+    name: 'v1: V1/Dashboard'
+  -
     name: 'v1: V1/Intake Form Review Time'
   -
     name: 'v1: V1/Lifecycle Settings'
+  -
+    name: 'v1: V1/Projects'
   -
     name: 'v1: V1/Use Case Lifecycle'
 paths:
@@ -23495,6 +23518,8 @@ paths:
           description: 'Created successfully'
         '401':
           description: Unauthorized
+        '409':
+          description: 'The tool is already under governance'
         '500':
           description: 'Internal server error'
   /shadow-ai/rules:
@@ -27772,6 +27797,365 @@ paths:
       tags:
         - 'v1: Shadow AI'
       operationId: regenerateSyslogKey
+      security:
+        -
+          bearerAuth: []
+  /v1/dashboard/preferences:
+    get:
+      summary: 'Get Dashboard Preferences Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Dashboard'
+      operationId: getDashboardPreferencesHandler
+      security:
+        -
+          bearerAuth: []
+    put:
+      summary: 'Update Dashboard Preferences Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Dashboard'
+      operationId: updateDashboardPreferencesHandler
+      security:
+        -
+          bearerAuth: []
+  /v1/projects:
+    post:
+      summary: 'Create Project'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Projects'
+      operationId: v1_projects_createProject
+      security:
+        -
+          bearerAuth: []
+  '/v1/projects/{id}':
+    patch:
+      summary: 'Update Project By Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Projects'
+      operationId: v1_projects_updateProjectById
+      security:
+        -
+          bearerAuth: []
+  '/v1/ai-apps/{id}/use-cases':
+    get:
+      summary: 'List Ai App Use Cases'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai Apps'
+      operationId: listAiAppUseCases
+      security:
+        -
+          bearerAuth: []
+    post:
+      summary: 'Link Ai App Use Case'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai Apps'
+      operationId: linkAiAppUseCase
+      security:
+        -
+          bearerAuth: []
+  '/v1/ai-apps/{id}/use-cases/{projectId}':
+    delete:
+      summary: 'Unlink Ai App Use Case'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai Apps'
+      operationId: unlinkAiAppUseCase
+      security:
+        -
+          bearerAuth: []
+  '/v1/projects/{id}/ai-apps':
+    get:
+      summary: 'List Use Case Ai Apps'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Projects'
+      operationId: listUseCaseAiApps
+      security:
+        -
+          bearerAuth: []
+  '/v1/projects/{id}/create-ai-app':
+    get:
+      summary: 'Get Create Ai App Preview'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Projects'
+      operationId: getCreateAiAppPreview
+      security:
+        -
+          bearerAuth: []
+    post:
+      summary: 'Create Ai App From Use Case'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Projects'
+      operationId: createAiAppFromUseCase
+      security:
+        -
+          bearerAuth: []
+  '/v1/projects/{id}/raci':
+    get:
+      summary: 'Get Raci Matrix'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Projects'
+      operationId: getRaciMatrix
+      security:
+        -
+          bearerAuth: []
+  '/v1/projects/{id}/raci/users/{userId}':
+    put:
+      summary: 'Update Raci User Roles'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Projects'
+      operationId: updateRaciUserRoles
+      security:
+        -
+          bearerAuth: []
+  /v1/ai-apps/ids:
+    get:
+      summary: 'Get Ai App Ids V1'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai Apps'
+      operationId: getAiAppIdsV1
+      security:
+        -
+          bearerAuth: []
+  /v1/ai-apps/import/template:
+    get:
+      summary: 'Download Ai App Import Template'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai Apps'
+      operationId: downloadAiAppImportTemplate
+      security:
+        -
+          bearerAuth: []
+  /v1/ai-apps/import:
+    post:
+      summary: 'Import Ai Apps'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai Apps'
+      operationId: importAiApps
+      security:
+        -
+          bearerAuth: []
+  /v1/ai-apps/questionnaires:
+    get:
+      summary: 'List Ai App Questionnaires'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai Apps'
+      operationId: listAiAppQuestionnaires
+      security:
+        -
+          bearerAuth: []
+    post:
+      summary: 'Create Ai App Questionnaire'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai Apps'
+      operationId: createAiAppQuestionnaire
+      security:
+        -
+          bearerAuth: []
+  '/v1/ai-apps/questionnaires/{id}':
+    patch:
+      summary: 'Update Ai App Questionnaire'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai Apps'
+      operationId: updateAiAppQuestionnaire
+      security:
+        -
+          bearerAuth: []
+    delete:
+      summary: 'Delete Ai App Questionnaire'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai Apps'
+      operationId: deleteAiAppQuestionnaire
+      security:
+        -
+          bearerAuth: []
+  /v1/ai-apps/bulk-assess:
+    post:
+      summary: 'Bulk Assess Ai Apps'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai Apps'
+      operationId: bulkAssessAiApps
+      security:
+        -
+          bearerAuth: []
+  /v1/ai-apps/assessments:
+    get:
+      summary: 'List Ai App Assessments'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai Apps'
+      operationId: listAiAppAssessments
+      security:
+        -
+          bearerAuth: []
+  /v1/ai-apps/assessments/worksheet:
+    get:
+      summary: 'Download Ai App Assessment Worksheet'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai Apps'
+      operationId: downloadAiAppAssessmentWorksheet
+      security:
+        -
+          bearerAuth: []
+  /v1/ai-apps/assessments/answers:
+    post:
+      summary: 'Submit Ai App Assessment Answers'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai Apps'
+      operationId: submitAiAppAssessmentAnswers
+      security:
+        -
+          bearerAuth: []
+  /v1/ai-apps/assessments/cancel:
+    post:
+      summary: 'Cancel Ai App Assessments'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai Apps'
+      operationId: cancelAiAppAssessments
+      security:
+        -
+          bearerAuth: []
+  '/v1/ai-apps/assessments/{assessmentId}/answers':
+    put:
+      summary: 'Answer Ai App Assessment'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai Apps'
+      operationId: answerAiAppAssessment
+      security:
+        -
+          bearerAuth: []
+  '/v1/ai-apps/{id}/assessments':
+    get:
+      summary: 'List Ai App Assessments For App'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai Apps'
+      operationId: listAiAppAssessmentsForApp
       security:
         -
           bearerAuth: []
