@@ -1,21 +1,23 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Box, IconButton, Stack, Typography, useTheme } from "@mui/material";
 import { Check as CheckIcon, Copy as CopyIcon, Download as DownloadIcon } from "lucide-react";
-import { CustomizableButton } from "../../../../components/button/customizable-button";
-import Alert from "../../../../components/Alert";
-import Select from "../../../../components/Inputs/Select";
+import { CustomizableButton } from "../../../components/button/customizable-button";
+import Alert from "../../../components/Alert";
+import Select from "../../../components/Inputs/Select";
 import {
   createApiToken,
   getApiTokens,
   revokeApiToken,
-} from "../../../../../application/repository/tokens.repository";
+} from "../../../../application/repository/tokens.repository";
+import { useAuth } from "../../../../application/hooks/useAuth";
+import { useMcpTools } from "../../../../application/hooks/useMcpTools";
 
 const SERVER_NAME = "verifywise";
 const TOKEN_PLACEHOLDER = "<your-api-token>";
 // Deliberately not ".mcp.json": that is Claude Code's project config, which
-// teams commit, and this file holds a token that administers every
-// organization. The file is a single server entry for `claude mcp add-json`,
-// which stores it in the user's own Claude Code config, outside any repository.
+// teams commit, and this file holds an administrator's token. The file is a
+// single server entry for `claude mcp add-json`, which stores it in the user's
+// own Claude Code config, outside any repository.
 const CONFIG_FILENAME = "verifywise-mcp.json";
 /** Tokens this tab issues are named with this prefix, so it can clean up its own. */
 const TOKEN_NAME_PREFIX = "Claude Code MCP";
@@ -28,18 +30,6 @@ const FILE_PREVIEW = `{
     "Authorization": "Bearer <token>"
   }
 }`;
-
-const TOOL_NAMES = [
-  "list_organizations",
-  "create_organization_with_admin",
-  "update_organization",
-  "delete_organization",
-  "list_users",
-  "create_user",
-  "invite_user",
-  "update_user",
-  "delete_user",
-];
 
 /** The same expiry choices the API keys page offers; this mints the same kind of token. */
 const EXPIRY_ITEMS = [
@@ -147,6 +137,11 @@ const Step: React.FC<{ number: number; title: string; children: React.ReactNode 
   );
 };
 
+interface McpConnectProps {
+  /** Shown as an info alert, with downloading turned off, when this tab is not the one to use. */
+  disabledReason?: string;
+}
+
 /**
  * How to point an MCP client at this deployment.
  *
@@ -154,9 +149,16 @@ const Step: React.FC<{ number: number; title: string; children: React.ReactNode 
  * /api/mcp, so connecting is one command plus an API token. The endpoint is
  * derived from the current origin rather than configured, so the command shown
  * is always correct for whichever deployment the operator is looking at.
+ *
+ * What a connection can do is decided in one place, toolsFor in
+ * Servers/mcp/server.ts, from the user the token belongs to. This page shows
+ * the server's own answer for the signed-in user (useMcpTools) rather than a
+ * list of its own.
  */
-const McpConnect: React.FC = () => {
+const McpConnect: React.FC<McpConnectProps> = ({ disabledReason }) => {
   const theme = useTheme();
+  const { userId } = useAuth();
+  const { data: tools, isLoading: toolsLoading, isError: toolsFailed } = useMcpTools();
   const endpoint = `${window.location.origin}/api/mcp`;
   const command = `claude mcp add --transport http ${SERVER_NAME} ${endpoint} --header "Authorization: Bearer ${TOKEN_PLACEHOLDER}"`;
   // $(cat ...) keeps the token out of shell history: only this literal is recorded.
@@ -180,19 +182,25 @@ const McpConnect: React.FC = () => {
   );
 
   /**
-   * Revoke still-valid tokens this tab issued earlier.
+   * Revoke still-valid tokens this tab issued earlier for this user.
    *
    * Best-effort: a cleanup failure must not stop the operator getting a working
-   * config file, so anything that goes wrong here is swallowed. Only tokens
-   * carrying this tab's own name prefix are touched — never one created by hand
-   * on the API keys page.
+   * config file, so anything that goes wrong here is swallowed. Only this
+   * user's tokens carrying this tab's own name prefix are touched — never one
+   * created by hand on the API keys page, nor another administrator's: the
+   * token list holds every token of the organization (or, for super admins,
+   * of every super admin).
    */
   const revokePreviousTokens = useCallback(async () => {
     try {
       const response = await getApiTokens({ routeUrl: "/tokens" });
       const existing: any[] = response?.data?.data ?? [];
       const mine = existing.filter(
-        (t) => typeof t?.name === "string" && t.name.startsWith(TOKEN_NAME_PREFIX) && !t.revoked,
+        (t) =>
+          typeof t?.name === "string" &&
+          t.name.startsWith(TOKEN_NAME_PREFIX) &&
+          t.created_by === userId &&
+          !t.revoked,
       );
       await Promise.all(
         mine.map((t) =>
@@ -202,7 +210,7 @@ const McpConnect: React.FC = () => {
     } catch {
       // Ignored: cleanup is housekeeping, not part of issuing the token.
     }
-  }, []);
+  }, [userId]);
 
   /**
    * Mint a token and hand back a ready-to-use config file.
@@ -267,149 +275,172 @@ const McpConnect: React.FC = () => {
   }, [endpoint, expiryDays, revokePreviousTokens]);
 
   return (
-    <Stack
-      direction={{ xs: "column", lg: "row" }}
-      alignItems="flex-start"
-      gap={theme.spacing(12)}
-      sx={{ pt: 4 }}
-    >
-      <Stack sx={{ flex: 1, minWidth: 0, maxWidth: 640 }} gap={theme.spacing(8)}>
-        <Typography sx={{ fontSize: 13, color: theme.palette.text.secondary }}>
-          Manage organizations and users on this deployment from Claude Code, or any MCP client. The
-          server runs here — nothing is installed on your machine, and the connection is authorized
-          by an API token you create below.
-        </Typography>
+    <Stack gap={theme.spacing(8)} sx={{ pt: 4 }}>
+      {disabledReason && (
+        <Alert variant="info" body={disabledReason} isToast={false} sx={{ position: "static" }} />
+      )}
 
-        {error && (
-          <Box sx={{ mb: 2 }}>
+      <Stack
+        direction={{ xs: "column", lg: "row" }}
+        alignItems="flex-start"
+        gap={theme.spacing(12)}
+      >
+        <Stack sx={{ flex: 1, minWidth: 0, maxWidth: 640 }} gap={theme.spacing(8)}>
+          <Typography sx={{ fontSize: 13, color: theme.palette.text.secondary }}>
+            Use VerifyWise from Claude Code, or any MCP client, with the tools listed on the right.
+            The server runs here — nothing is installed on your machine, and the connection is
+            authorized by an API token you create below.
+          </Typography>
+
+          {error && (
+            <Box sx={{ mb: 2 }}>
+              <Alert
+                variant="error"
+                body={error}
+                isToast={false}
+                onClick={() => setError(null)}
+                sx={{ position: "static" }}
+              />
+            </Box>
+          )}
+
+          <Step number={1} title="Download the config file">
+            <Typography sx={{ fontSize: 12, color: theme.palette.text.secondary }}>
+              This creates an API token for you and puts it straight into a{" "}
+              <Box component="span" sx={{ fontFamily: "monospace" }}>
+                {CONFIG_FILENAME}
+              </Box>{" "}
+              file, already pointed at this deployment. The token is shown nowhere else. Anyone who
+              has the file can do everything those tools allow, as you, so delete it once it is
+              added.
+            </Typography>
             <Alert
-              variant="error"
-              body={error}
+              variant="info"
+              body="Downloading revokes the token issued to you here last time. Anything set up with the previous file, on this machine or another, stops working immediately."
               isToast={false}
-              onClick={() => setError(null)}
               sx={{ position: "static" }}
             />
-          </Box>
-        )}
-
-        <Step number={1} title="Download the config file">
-          <Typography sx={{ fontSize: 12, color: theme.palette.text.secondary }}>
-            This creates an API token for you and puts it straight into a{" "}
-            <Box component="span" sx={{ fontFamily: "monospace" }}>
-              {CONFIG_FILENAME}
-            </Box>{" "}
-            file, already pointed at this deployment. The token is shown nowhere else. Anyone who
-            has the file can administer every organization here, so delete it once it is added.
-          </Typography>
-          <Alert
-            variant="info"
-            body="Downloading revokes the token issued here last time. Anything set up with the previous file, on this machine or another, stops working immediately."
-            isToast={false}
-            sx={{ position: "static" }}
-          />
-          <Box sx={{ maxWidth: 200 }}>
-            <Select
-              id="mcp-token-expiry"
-              label="Token expires in"
-              value={expiryDays}
-              items={EXPIRY_ITEMS}
-              onChange={(e) => setExpiryDays(Number(e.target.value))}
-            />
-          </Box>
-          <Box>
-            <CustomizableButton
-              variant="contained"
-              text={isGenerating ? "Preparing..." : "Download config file"}
-              icon={<DownloadIcon size={16} />}
-              onClick={handleDownload}
-              isDisabled={isGenerating}
-            />
-          </Box>
-          {downloaded && (
-            <Stack direction="row" alignItems="center" gap="6px">
-              <CheckIcon size={14} color={theme.palette.primary.main} />
-              <Typography sx={{ fontSize: 12, color: theme.palette.primary.main }}>
-                Config file downloaded
-              </Typography>
-            </Stack>
-          )}
-        </Step>
-
-        <Step number={2} title="Add it to Claude Code">
-          <Typography sx={{ fontSize: 12, color: theme.palette.text.secondary }}>
-            Run this in the folder you downloaded the file to. It adds VerifyWise to Claude Code for
-            your user account, so it works in every project and the token stays out of project files
-            that might be committed. Then delete the file.
-          </Typography>
-          <Snippet value={addFileCommand} label="add command" testId="mcp-add-file-command" />
-          <Typography sx={{ fontSize: 12, color: theme.palette.text.secondary }}>
-            Prefer a command, or using a client other than Claude Code? Create a token on the API
-            keys tab and run this instead:
-          </Typography>
-          <Snippet value={command} label="connect command" testId="mcp-connect-command" />
-        </Step>
-
-        <Step number={3} title="Check it worked">
-          <Typography sx={{ fontSize: 12, color: theme.palette.text.secondary }}>
-            Restart Claude Code and run{" "}
-            <Box component="span" sx={{ fontFamily: "monospace" }}>
-              /mcp
+            <Box sx={{ maxWidth: 200 }}>
+              <Select
+                id="mcp-token-expiry"
+                label="Token expires in"
+                value={expiryDays}
+                items={EXPIRY_ITEMS}
+                onChange={(e) => setExpiryDays(Number(e.target.value))}
+                disabled={Boolean(disabledReason)}
+              />
             </Box>
-            .{" "}
+            <Box>
+              <CustomizableButton
+                variant="contained"
+                text={isGenerating ? "Preparing..." : "Download config file"}
+                icon={<DownloadIcon size={16} />}
+                onClick={handleDownload}
+                isDisabled={isGenerating || Boolean(disabledReason)}
+              />
+            </Box>
+            {downloaded && (
+              <Stack direction="row" alignItems="center" gap="6px">
+                <CheckIcon size={14} color={theme.palette.primary.main} />
+                <Typography sx={{ fontSize: 12, color: theme.palette.primary.main }}>
+                  Config file downloaded
+                </Typography>
+              </Stack>
+            )}
+          </Step>
+
+          <Step number={2} title="Add it to Claude Code">
+            <Typography sx={{ fontSize: 12, color: theme.palette.text.secondary }}>
+              Run this in the folder you downloaded the file to. It adds VerifyWise to Claude Code
+              for your user account, so it works in every project and the token stays out of project
+              files that might be committed. Then delete the file.
+            </Typography>
+            <Snippet value={addFileCommand} label="add command" testId="mcp-add-file-command" />
+            <Typography sx={{ fontSize: 12, color: theme.palette.text.secondary }}>
+              Prefer a command, or using a client other than Claude Code? Create a token on the API
+              keys tab and run this instead:
+            </Typography>
+            <Snippet value={command} label="connect command" testId="mcp-connect-command" />
+          </Step>
+
+          <Step number={3} title="Check it worked">
+            <Typography sx={{ fontSize: 12, color: theme.palette.text.secondary }}>
+              Restart Claude Code and run{" "}
+              <Box component="span" sx={{ fontFamily: "monospace" }}>
+                /mcp
+              </Box>
+              .{" "}
+              <Box component="span" sx={{ fontFamily: "monospace" }}>
+                {SERVER_NAME}
+              </Box>{" "}
+              should be listed with the tools shown under Tools it adds.
+            </Typography>
+          </Step>
+
+          <Typography sx={{ fontSize: 12, color: theme.palette.text.tertiary }}>
+            To administer more than one deployment, repeat this on each and change{" "}
             <Box component="span" sx={{ fontFamily: "monospace" }}>
               {SERVER_NAME}
             </Box>{" "}
-            should be listed with nine tools for creating, listing, updating and deleting
-            organizations and users, and for inviting users by email.
+            in both places in the command to a different name per deployment, for example{" "}
+            <Box component="span" sx={{ fontFamily: "monospace" }}>
+              verifywise-test
+            </Box>{" "}
+            and{" "}
+            <Box component="span" sx={{ fontFamily: "monospace" }}>
+              verifywise-prod
+            </Box>
+            .
           </Typography>
-        </Step>
+        </Stack>
 
-        <Typography sx={{ fontSize: 12, color: theme.palette.text.tertiary }}>
-          To administer more than one deployment, repeat this on each and change{" "}
-          <Box component="span" sx={{ fontFamily: "monospace" }}>
-            {SERVER_NAME}
-          </Box>{" "}
-          in both places in the command to a different name per deployment, for example{" "}
-          <Box component="span" sx={{ fontFamily: "monospace" }}>
-            verifywise-test
-          </Box>{" "}
-          and{" "}
-          <Box component="span" sx={{ fontFamily: "monospace" }}>
-            verifywise-prod
-          </Box>
-          .
-        </Typography>
-      </Stack>
+        <Stack gap={theme.spacing(8)} sx={{ width: { xs: "100%", lg: 380 }, flexShrink: 0 }}>
+          <Panel title="What the file contains">
+            <Typography
+              component="pre"
+              sx={{
+                fontSize: 12,
+                fontFamily: "monospace",
+                color: theme.palette.text.secondary,
+                whiteSpace: "pre-wrap",
+                wordBreak: "break-word",
+                m: 0,
+              }}
+            >
+              {FILE_PREVIEW}
+            </Typography>
+          </Panel>
 
-      <Stack gap={theme.spacing(8)} sx={{ width: { xs: "100%", lg: 380 }, flexShrink: 0 }}>
-        <Panel title="What the file contains">
-          <Typography
-            component="pre"
-            sx={{
-              fontSize: 12,
-              fontFamily: "monospace",
-              color: theme.palette.text.secondary,
-              whiteSpace: "pre-wrap",
-              wordBreak: "break-word",
-              m: 0,
-            }}
-          >
-            {FILE_PREVIEW}
-          </Typography>
-        </Panel>
-
-        <Panel title="Tools it adds">
-          <Stack gap="6px">
-            {TOOL_NAMES.map((tool) => (
-              <Typography
-                key={tool}
-                sx={{ fontSize: 12, fontFamily: "monospace", color: theme.palette.text.secondary }}
-              >
-                {tool}
+          <Panel title="Tools it adds">
+            {toolsLoading ? (
+              <Typography sx={{ fontSize: 12, color: theme.palette.text.secondary }}>
+                Loading the tools…
               </Typography>
-            ))}
-          </Stack>
-        </Panel>
+            ) : toolsFailed || !tools ? (
+              <Typography sx={{ fontSize: 12, color: theme.palette.text.secondary }}>
+                Couldn't load the tool list. Reload the page to try again.
+              </Typography>
+            ) : (
+              <Stack gap="6px">
+                <Typography sx={{ fontSize: 12, color: theme.palette.text.secondary }}>
+                  {tools.length} tools for your account
+                </Typography>
+                {tools.map((tool) => (
+                  <Typography
+                    key={tool.name}
+                    sx={{
+                      fontSize: 12,
+                      fontFamily: "monospace",
+                      color: theme.palette.text.secondary,
+                    }}
+                  >
+                    {tool.name}
+                  </Typography>
+                ))}
+              </Stack>
+            )}
+          </Panel>
+        </Stack>
       </Stack>
     </Stack>
   );

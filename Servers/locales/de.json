@@ -25,6 +25,7 @@
   "Access denied: User does not have permission to access this organization's compliance data": "Zugriff verweigert: Der Benutzer hat keine Berechtigung, auf die Compliance-Daten dieser Organisation zuzugreifen",
   "Access denied: User does not have permission to access this organization's compliance details": "Zugriff verweigert: Der Benutzer hat keine Berechtigung, auf die Compliance-Details dieser Organisation zuzugreifen",
   "Access restricted to super-admin only": "Zugriff nur für Super-Admin erlaubt",
+  "Access restricted to Admins and super admins": "Zugriff nur für Admins und Super-Admins erlaubt",
   "Access Token is required": "Zugriffstoken ist erforderlich",
   "Action ID is required": "Aktion-ID ist erforderlich",
   "Action key is required": "Aktion-Schlüssel ist erforderlich",
@@ -276,6 +277,11 @@
   "Function is required": "Funktion ist erforderlich",
   "GitHub token deleted successfully": "GitHub-Token erfolgreich gelöscht",
   "governance_owner_id must be a positive integer": "governance_owner_id muss eine positive ganze Zahl sein",
+  "The governance owner must be a user in your organization": "Der Governance-Verantwortliche muss ein Benutzer Ihrer Organisation sein",
+  "This tool is already under governance": "Dieses Tool steht bereits unter Governance",
+  "risk_assessment must be an object": "risk_assessment muss ein Objekt sein",
+  "risk_assessment.data_sensitivity must be High, Medium or Low": "risk_assessment.data_sensitivity muss High, Medium oder Low sein",
+  "risk_assessment.description must be text of at most 5000 characters": "risk_assessment.description muss ein Text mit höchstens 5000 Zeichen sein",
   "governance_status must be 'reviewed', 'approved', 'flagged', or null": "governance_status muss 'reviewed', 'approved', 'flagged' oder null sein",
   "Hint is required": "Hinweis ist erforderlich",
   "Hosting provider is required": "Hosting-Anbieter ist erforderlich",
@@ -966,5 +972,10 @@
   "Only a live AI app can be confirmed as still live": "Nur eine aktive KI-App kann als weiterhin aktiv bestätigt werden",
   "Invalid lifecycle stage": "Ungültige Lebenszyklusphase",
   "An AI app with this name already exists": "Eine KI-App mit diesem Namen existiert bereits",
-  "AI app requests cannot carry accepted risk suggestions": "KI-App-Anfragen können keine angenommenen Risikovorschläge enthalten"
+  "AI app requests cannot carry accepted risk suggestions": "KI-App-Anfragen können keine angenommenen Risikovorschläge enthalten",
+  "A use case needs an owner or an external owner": "Ein Anwendungsfall benötigt einen Verantwortlichen oder einen externen Verantwortlichen",
+  "A use case cannot have both an owner and an external owner": "Ein Anwendungsfall kann nicht gleichzeitig einen Verantwortlichen und einen externen Verantwortlichen haben",
+  "An external owner needs both a name and an email": "Ein externer Verantwortlicher benötigt sowohl einen Namen als auch eine E-Mail-Adresse",
+  "External owner name is not valid": "Der Name des externen Verantwortlichen ist ungültig",
+  "External owner email is not valid": "Die E-Mail-Adresse des externen Verantwortlichen ist ungültig"
 }

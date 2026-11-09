@@ -570,14 +570,9 @@ export class ReportDataCollector {
     );
     const user = await getUserByIdQuery(this.userId);
 
-    // Get project owner name
-    let projectOwnerName = "Unknown";
-    if (project?.owner) {
-      const owner = await getUserByIdQuery(project.owner);
-      if (owner) {
-        projectOwnerName = `${owner.name || ""} ${owner.surname || ""}`.trim();
-      }
-    }
+    // getProjectByIdQuery has already resolved the owner's name.
+    const ownerName: string | undefined = (project as any)?.dataValues?.owner_name;
+    const projectOwnerName = !ownerName || ownerName === "Unassigned" ? "Unknown" : ownerName;
 
     return {
       projectId,

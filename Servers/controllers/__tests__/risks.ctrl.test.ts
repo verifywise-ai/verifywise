@@ -62,6 +62,9 @@ jest.mock("../../utils/validations/quantitativeRiskValidation.utils", () => ({
   validateQuantitativeRiskFields: jest.fn().mockReturnValue([]),
 }));
 jest.mock("../../services/risk.service", () => ({
+  // Only creation is stubbed. updateRiskService stays real so the update tests
+  // keep covering its steps through the mocked risk.utils below.
+  ...jest.requireActual("../../services/risk.service"),
   createRiskService: jest.fn(),
 }));
 jest.mock("../../utils/statusCode.utils", () => ({

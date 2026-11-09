@@ -63,6 +63,8 @@ export function mapProjectResponseDTOToProject(dto: ProjectResponseDTO): Project
     uc_id: dto.uc_id,
     project_title: dto.project_title,
     owner: dto.owner,
+    external_owner_name: dto.external_owner_name,
+    external_owner_email: dto.external_owner_email,
     members: Array.isArray(dto.members) ? dto.members.map(String) : [],
     start_date: new Date(dto.start_date),
     ai_risk_classification: mapRiskClassification(
@@ -104,6 +106,8 @@ export function mapProjectResponseDTOToModel(dto: ProjectResponseDTO): ProjectMo
     uc_id: dto.uc_id,
     project_title: dto.project_title,
     owner: dto.owner,
+    external_owner_name: dto.external_owner_name,
+    external_owner_email: dto.external_owner_email,
     start_date: new Date(dto.start_date),
     ai_risk_classification: mapRiskClassification(
       dto.ai_risk_classification,

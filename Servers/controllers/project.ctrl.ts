@@ -1,34 +1,28 @@
 import { Request, Response } from "express";
 
-import { resolveHighRiskRolesWrite } from "../utils/highRiskRoles.utils";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import {
   calculateProjectRisks,
   calculateVendirRisks,
+  canViewProjectQuery,
   countAnswersByProjectId,
   countSubControlsByProjectId,
-  createNewProjectQuery,
   getAllProjectsQuery,
   getProjectByIdQuery,
   updateProjectByIdQuery,
-  getCurrentProjectMembers,
 } from "../utils/project.utils";
 import { getUserByIdQuery } from "../utils/user.utils";
 import { getControlCategoryByProjectIdQuery } from "../utils/controlCategory.utils";
 import { ProjectModel } from "../domain.layer/models/project/project.model";
 import { getAllControlsByControlGroupQuery } from "../utils/control.utils";
 import { getAllSubcontrolsByControlIdQuery } from "../utils/subControl.utils";
-import { createEUFrameworkQuery } from "../utils/eu.utils";
 import { sequelize } from "../database/db";
-import { createISOFrameworkQuery } from "../utils/iso42001.utils";
 import { IProjectAttributes } from "../domain.layer/interfaces/i.project";
 import { IControl } from "../domain.layer/interfaces/i.control";
 import { IControlCategory } from "../domain.layer/interfaces/i.controlCategory";
 import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper";
-import { logStructured } from "../utils/logger/fileLogger";
-import { createISO27001FrameworkQuery } from "../utils/iso27001.utils";
-import { createNISTAI_RMFFrameworkQuery } from "../utils/nistAiRmfCorrect.utils";
 import {
+  ForbiddenException,
   ValidationException,
   BusinessLogicException,
 } from "../domain.layer/exceptions/custom.exception";
@@ -39,11 +33,7 @@ import {
 } from "../services/userNotification/projectNotifications";
 import { sendSlackNotification } from "../services/slack/slackNotificationService";
 import { SlackNotificationRoutingType } from "../domain.layer/enums/slack.enum";
-import {
-  recordUseCaseCreation,
-  trackUseCaseChanges,
-  recordMultipleFieldChanges,
-} from "../utils/useCaseChangeHistory.utils";
+import { recordMultipleFieldChanges } from "../utils/useCaseChangeHistory.utils";
 import {
   hasPendingApprovalQuery,
   getPendingApprovalRequestIdQuery,
@@ -55,6 +45,9 @@ import {
   createUseCaseApprovalRequest,
   notifyUseCaseApprovalRequested,
 } from "../services/projects/approvalRequest.service";
+import { createUseCaseService, updateUseCaseService } from "../services/useCase.service";
+import { notifyExternalOwnerAssigned } from "../services/externalOwnerNotification.service";
+import { stripExternalOwnerFields } from "../utils/externalOwner.utils";
 import {
   notifyUserAssigned,
   notifyApprovalAutoApproved,
@@ -221,115 +214,26 @@ export async function createProject(req: Request, res: Response): Promise<any> {
   });
 
   try {
-    // Either role field may be sent; store the resolved list only.
-    const highRiskRoles = resolveHighRiskRolesWrite(projectData, []) ?? [];
-    delete projectData.type_of_high_risk_role;
-    const newProject: Partial<ProjectModel> & {
-      members: number[] | undefined;
-      framework: number[];
-      enable_ai_data_insertion: boolean;
-    } = { ...projectData, high_risk_roles: highRiskRoles };
+    // Only /api/v1/projects accepts external owners; the legacy body is frozen.
+    const acceptsExternalOwner = res.locals?.acceptsExternalOwner === true;
+    if (!acceptsExternalOwner) stripExternalOwnerFields(projectData);
 
-    const createdProject = await createNewProjectQuery(
-      newProject,
-      newProject.members ?? [],
-      newProject.framework || [],
-      req.organizationId!,
-      req.userId!,
+    const {
+      useCase: createdProject,
+      frameworks,
+      approvalResult,
+    } = await createUseCaseService(
+      projectData,
+      {
+        userId: req.userId!,
+        organizationId: req.organizationId!,
+        actorRole: req.role,
+        requireOwner: acceptsExternalOwner,
+      },
       transaction,
     );
 
-    // Only create frameworks immediately if NO approval workflow is assigned
-    // Otherwise, store frameworks for creation after approval
-    const frameworks: { [key: string]: object } = {};
-    if (!createdProject.approval_workflow_id) {
-      // No approval workflow - create frameworks immediately
-      for (const framework of newProject.framework || []) {
-        if (framework === 1) {
-          const eu = await createEUFrameworkQuery(
-            createdProject.id!,
-            newProject.enable_ai_data_insertion,
-            req.organizationId!,
-            transaction,
-          );
-          frameworks["eu"] = eu;
-        } else if (framework === 2) {
-          const iso42001 = await createISOFrameworkQuery(
-            createdProject.id!,
-            newProject.enable_ai_data_insertion,
-            req.organizationId!,
-            transaction,
-          );
-          frameworks["iso42001"] = iso42001;
-        } else if (framework === 3) {
-          const iso27001 = await createISO27001FrameworkQuery(
-            createdProject.id!,
-            newProject.enable_ai_data_insertion,
-            req.organizationId!,
-            transaction,
-          );
-          frameworks["iso27001"] = iso27001;
-        } else if (framework === 4) {
-          const nist = await createNISTAI_RMFFrameworkQuery(
-            createdProject.id!,
-            newProject.enable_ai_data_insertion,
-            req.organizationId!,
-            transaction,
-          );
-          frameworks["nist_ai_rmf"] = nist;
-        }
-      }
-    } else {
-      // Approval workflow assigned - defer framework creation until approval
-      logProcessing({
-        description: `deferring framework creation pending approval (frameworks=${JSON.stringify(newProject.framework)}, enable_ai_data_insertion=${newProject.enable_ai_data_insertion})`,
-        functionName: "createProject",
-        fileName: "project.ctrl.ts",
-        userId: req.userId!,
-        organizationId: req.organizationId!,
-      });
-    }
-
     if (createdProject) {
-      // Record use case creation in change history
-      if (createdProject.id && req.userId) {
-        await recordUseCaseCreation(
-          createdProject.id,
-          req.userId,
-          req.organizationId!,
-          {
-            project_title: createdProject.project_title,
-            owner: createdProject.owner,
-            start_date: createdProject.start_date,
-            geography: createdProject.geography,
-            ai_risk_classification: createdProject.ai_risk_classification,
-            // An empty list is no value, so creation records no roles line.
-            high_risk_roles: createdProject.high_risk_roles?.length
-              ? createdProject.high_risk_roles
-              : undefined,
-            goal: createdProject.goal,
-            target_industry: createdProject.target_industry,
-            description: createdProject.description,
-            status: createdProject.status,
-          },
-          transaction,
-        );
-      }
-
-      // Create approval request if an approval workflow is assigned to the use-case
-      logStructured(
-        "processing",
-        `use case ${createdProject.id} created with approval_workflow_id=${createdProject.approval_workflow_id ?? "none"} (body sent ${projectData.approval_workflow_id ?? "none"})`,
-        "createProject",
-        "project.ctrl.ts",
-      );
-      const approvalResult = await createUseCaseApprovalRequest(
-        createdProject,
-        req.userId!,
-        req.organizationId!,
-        transaction,
-      );
-
       await transaction.commit();
 
       // Auto-approved requests skip approver notifications; tell the
@@ -383,24 +287,27 @@ export async function createProject(req: Request, res: Response): Promise<any> {
       }
 
       // Send project creation notification to admin (fire-and-forget, don't block response)
-      sendProjectCreatedNotification({
-        projectId: createdProject.id!,
-        projectName: createdProject.project_title,
-        adminId: createdProject.owner,
-        organizationId: req.organizationId!,
-        userId: req.userId!,
-      }).catch(async (emailError) => {
-        // Log the email error but don't fail the project creation
-        await logFailure({
-          eventType: "Create",
-          description: "Failed to send project creation notification email",
-          functionName: "createProject",
-          fileName: "project.ctrl.ts",
-          error: emailError as Error,
-          userId: req.userId!,
+      // An external owner has no user id; they get the external notice below.
+      if (createdProject.owner) {
+        sendProjectCreatedNotification({
+          projectId: createdProject.id!,
+          projectName: createdProject.project_title,
+          adminId: createdProject.owner,
           organizationId: req.organizationId!,
+          userId: req.userId!,
+        }).catch(async (emailError) => {
+          // Log the email error but don't fail the project creation
+          await logFailure({
+            eventType: "Create",
+            description: "Failed to send project creation notification email",
+            functionName: "createProject",
+            fileName: "project.ctrl.ts",
+            error: emailError as Error,
+            userId: req.userId!,
+            organizationId: req.organizationId!,
+          });
         });
-      });
+      }
 
       const actor = await getUserByIdQuery(req.userId!);
 
@@ -442,6 +349,18 @@ export async function createProject(req: Request, res: Response): Promise<any> {
           assignerName,
           baseUrl,
         ).catch((err) => console.error("Failed to send owner notification:", err));
+      } else if (createdProject.external_owner_email) {
+        // Email only: an external owner has no in-app notifications. Awaited
+        // for its lookups; it does not wait for the mail provider.
+        await notifyExternalOwnerAssigned({
+          organizationId: req.organizationId!,
+          useCaseTitle: createdProject.project_title,
+          recipient: {
+            name: createdProject.external_owner_name || createdProject.external_owner_email,
+            email: createdProject.external_owner_email,
+          },
+          assignedByUserId: req.userId!,
+        }).catch((err) => console.error("Failed to notify external owner:", err));
       }
 
       return res.status(201).json(
@@ -550,75 +469,44 @@ export async function updateProjectById(req: Request, res: Response): Promise<an
       return res.status(404).json(STATUS_CODE[404]({}));
     }
 
+    // The useCase.edit permission alone would let an Editor change any use case
+    // in the organization, including adding themselves as a member.
+    if (
+      !(await canViewProjectQuery(projectId, { userId, role }, req.organizationId!, transaction))
+    ) {
+      await transaction.rollback();
+      await logFailure({
+        eventType: "Update",
+        description: `Update refused, no access to project ID ${projectId}`,
+        functionName: "updateProjectById",
+        fileName: "project.ctrl.ts",
+        error: new Error("Access denied"),
+        userId,
+        organizationId: req.organizationId!,
+      });
+      return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
+    }
+
     const updatedProject: Partial<ProjectModel> & { members?: number[] } = updateData;
-    // Only replace members when the request sends a list; a missing field leaves them
-    // unchanged. null still clears them, as it did before.
-    const rawMembers = updatedProject.members as number[] | null | undefined;
-    const members = rawMembers === null ? [] : Array.isArray(rawMembers) ? rawMembers : undefined;
 
-    delete updatedProject.members;
-    delete updatedProject.id;
+    // Only /api/v1/projects accepts external owners; the legacy body is frozen.
+    const acceptsExternalOwner = res.locals?.acceptsExternalOwner === true;
+    if (!acceptsExternalOwner) stripExternalOwnerFields(updatedProject);
 
-    // Either role field may be sent. Resolve them against the stored list, so a
-    // client that writes back the derived single role cannot drop the other one.
-    const highRiskRoles = resolveHighRiskRolesWrite(updateData, existingProject.high_risk_roles);
-    delete updateData.type_of_high_risk_role;
-    if (highRiskRoles === undefined) delete updatedProject.high_risk_roles;
-    else updatedProject.high_risk_roles = highRiskRoles;
-
-    // if (!updatedProject.project_title || !updatedProject.owner) {
-    //   return res.status(400).json(
-    //     STATUS_CODE[400]({ message: req.t!("project_title and owner are required") })
-    //   );
-    // }
-
-    // Get current project and members to check for changes
-    // const ownerChanged =
-    //   existingProject && existingProject.owner !== updatedProject.owner;
-
-    // Get current members before update to identify newly added ones
-    const currentMembers = await getCurrentProjectMembers(
-      projectId,
-      req.organizationId!,
-      transaction,
-    );
-
-    const project = await updateProjectByIdQuery(
+    const { useCase: project, currentMembers } = await updateUseCaseService(
       projectId,
       updatedProject,
-      members,
-      req.organizationId!,
+      existingProject,
+      {
+        userId,
+        organizationId: req.organizationId!,
+        actorRole: role,
+        requireOwner: acceptsExternalOwner,
+      },
       transaction,
     );
 
     if (project) {
-      // Track and record changes for use case history
-      if (req.userId && existingProject) {
-        // members is removed from updatedProject above, so compare it on its own.
-        // Sorted, so the same members in another order are not recorded as a change.
-        const byId = (a: number, b: number) => a - b;
-        const memberChanges =
-          members !== undefined
-            ? await trackUseCaseChanges(
-                { members: currentMembers.map(Number).sort(byId) } as any,
-                { members: [...project.members].sort(byId) } as any,
-              )
-            : [];
-        const changes = [
-          ...(await trackUseCaseChanges(existingProject, updatedProject)),
-          ...memberChanges,
-        ];
-        if (changes.length > 0) {
-          await recordMultipleFieldChanges(
-            projectId,
-            req.userId,
-            req.organizationId!,
-            changes,
-            transaction,
-          );
-        }
-      }
-
       // #4904: a workflow attached on edit (not set before) starts an approval
       // request, exactly as create does. An inactive or wrong-entity workflow
       // throws ValidationException, which rolls back and maps to 400.
@@ -739,6 +627,21 @@ export async function updateProjectById(req: Request, res: Response): Promise<an
         ).catch((err) => console.error("Failed to send owner notification:", err));
       }
 
+      // Same notice for an external owner, by email only. Naming the same
+      // person again (a name fix, a case change) does not re-send it.
+      const newExternalEmail = project.external_owner_email;
+      if (newExternalEmail && newExternalEmail !== existingProject.external_owner_email) {
+        await notifyExternalOwnerAssigned({
+          organizationId: req.organizationId!,
+          useCaseTitle: project.project_title,
+          recipient: {
+            name: project.external_owner_name || newExternalEmail,
+            email: newExternalEmail,
+          },
+          assignedByUserId: userId,
+        }).catch((err) => console.error("Failed to notify external owner:", err));
+      }
+
       // Calculate which members actually got added (both new and re-added)
       // This includes users who weren't in currentMembers but are now in the final project
       const finalMembers = project.members || [];
@@ -837,6 +740,19 @@ export async function updateProjectById(req: Request, res: Response): Promise<an
     return res.status(404).json(STATUS_CODE[404]({}));
   } catch (error) {
     await transaction.rollback();
+
+    if (error instanceof ForbiddenException) {
+      await logFailure({
+        eventType: "Update",
+        description: `Forbidden: ${error.message}`,
+        functionName: "updateProjectById",
+        fileName: "project.ctrl.ts",
+        error: error as Error,
+        userId: req.userId!,
+        organizationId: req.organizationId!,
+      });
+      return res.status(403).json(STATUS_CODE[403](translateError(req, error)));
+    }
 
     if (error instanceof ValidationException) {
       await logFailure({
@@ -966,17 +882,17 @@ export async function getProjectStatsById(req: Request, res: Response): Promise<
 
   try {
     const project: any = await getProjectByIdQuery(projectId, req.organizationId!);
-    const project_owner = project.owner;
-    const ownerUser: any = getUserByIdQuery(project_owner);
+    // owner is NULL for an external owner; there is no user row to look up.
+    const ownerUser: any = project.owner ? await getUserByIdQuery(project.owner) : null;
     const project_last_updated = project.last_updated;
     const project_last_updated_by = project.last_updated_by;
     const userWhoUpdated: any = getUserByIdQuery(project_last_updated_by);
 
     const overviewDetails = {
       user: {
-        name: ownerUser.name,
-        surname: ownerUser.surname,
-        email: ownerUser.email,
+        name: ownerUser?.name ?? project.external_owner_name ?? null,
+        surname: ownerUser?.surname ?? null,
+        email: ownerUser?.email ?? project.external_owner_email ?? null,
         project_last_updated,
         userWhoUpdated,
       },

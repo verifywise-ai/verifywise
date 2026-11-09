@@ -3,6 +3,8 @@ import { handleValidationErrors } from "../validate.middleware";
 import { AiRiskClassification } from "../../domain.layer/enums/ai-risk-classification.enum";
 import { HighRiskRole } from "../../domain.layer/enums/high-risk-role.enum";
 import { ProjectStatus } from "../../domain.layer/enums/project-status.enum";
+import { emailValidation } from "../../domain.layer/validations/email.valid";
+import { EXTERNAL_OWNER_NAME_MAX_LENGTH } from "../../utils/externalOwner.utils";
 
 const projectIdParam = param("id").isInt({ min: 1 }).withMessage("id must be a positive integer");
 
@@ -119,5 +121,68 @@ export const validateUpdateProjectStatus = [
   body("status")
     .isIn(Object.values(ProjectStatus))
     .withMessage(`status must be one of: ${Object.values(ProjectStatus).join(", ")}`),
+  handleValidationErrors,
+];
+
+// /api/v1/projects: the same body plus external owners (#5256). The legacy
+// validators above stay frozen. owner keeps isInt semantics through
+// optionalProjectBodyFields, so true or "1e1" are still rejected.
+const ownerIsScalar = body("owner").custom((value) => {
+  // isInt checks array elements one by one, so [] and [5, 6] would pass it.
+  if (value === undefined || value === null) return true;
+  if (typeof value === "number" || typeof value === "string") return true;
+  throw new Error("owner must be a positive integer");
+});
+
+const externalOwnerBodyFields = [
+  body("external_owner_name")
+    .optional({ values: "null" })
+    .isString()
+    .withMessage("external_owner_name must be a string")
+    .isLength({ max: EXTERNAL_OWNER_NAME_MAX_LENGTH })
+    .withMessage(
+      `external_owner_name must be at most ${EXTERNAL_OWNER_NAME_MAX_LENGTH} characters`,
+    ),
+  body("external_owner_email")
+    .optional({ values: "null" })
+    .custom((value) => {
+      if (typeof value !== "string") throw new Error("external_owner_email must be a string");
+      const trimmed = value.trim();
+      if (trimmed !== "" && !emailValidation(trimmed)) {
+        throw new Error("external_owner_email must be a valid email address");
+      }
+      return true;
+    }),
+];
+
+export const validateCreateProjectV1 = [
+  body("project_title")
+    .isString()
+    .trim()
+    .notEmpty()
+    .withMessage("project_title is required and must be a non-empty string"),
+  body("owner").custom((value, { req }) => {
+    // Presence only: the type is checked by optionalProjectBodyFields, and the
+    // two-fields-together and not-both rules by resolveOwnerForCreate.
+    if (value === undefined || value === null) {
+      if (req.body.external_owner_name || req.body.external_owner_email) return true;
+      throw new Error("owner is required unless an external owner is given");
+    }
+    return true;
+  }),
+  ownerIsScalar,
+  body("start_date")
+    .isISO8601()
+    .withMessage("start_date is required and must be a valid ISO 8601 date"),
+  ...optionalProjectBodyFields,
+  ...externalOwnerBodyFields,
+  handleValidationErrors,
+];
+
+export const validateUpdateProjectV1 = [
+  projectIdParam,
+  ownerIsScalar,
+  ...optionalProjectBodyFields,
+  ...externalOwnerBodyFields,
   handleValidationErrors,
 ];
