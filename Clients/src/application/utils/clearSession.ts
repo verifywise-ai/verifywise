@@ -39,6 +39,20 @@ export const endSessionAndReload = async (dispatch: Dispatch) => {
 };
 
 /**
+ * Loads / as a new page, keeping the session: a tab whose session a login in
+ * another tab moved to another organization. The token is flushed to storage
+ * first so the reload restores it.
+ */
+export const reloadSession = async () => {
+  try {
+    await persistor.flush();
+  } catch {
+    // Best-effort: the reload still goes ahead.
+  }
+  window.location.assign("/");
+};
+
+/**
  * Starts a session with a new token: empties the query cache first, so no
  * response cached in this tab before (an earlier session that was never
  * logged out, or another user) is shown to the user signing in. Every

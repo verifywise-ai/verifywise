@@ -25,6 +25,7 @@ import Toggle from "../../../components/Inputs/Toggle";
 import StandardModal from "../../../components/Modals/StandardModal";
 import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtended";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
+import { getGatewayErrorText } from "../../../../application/utils/apiErrorReason";
 import palette from "../../../themes/palette";
 import {
   CODE_BLOCK_BG,
@@ -126,13 +127,6 @@ function NativeToolListsToggle({
     </Box>
   );
 }
-
-/** Pulls the gateway's error text out of a failed request, if it sent one. */
-const apiErrorText = (err: unknown): string | undefined => {
-  const data = (err as { response?: { data?: { detail?: string; message?: string } } })?.response
-    ?.data;
-  return data?.detail || data?.message;
-};
 
 /** Mode select with its explanation, shared by the create and change-mode modals. */
 function EnforcementModeSelect({
@@ -276,7 +270,7 @@ export default function MCPAgentKeysPage() {
 
       await loadData();
     } catch (err: unknown) {
-      setCreateError(apiErrorText(err) || "Failed to create agent key");
+      setCreateError(getGatewayErrorText(err, "Failed to create agent key"));
     } finally {
       submittingRef.current = false;
       setCreateSubmitting(false);
@@ -327,7 +321,7 @@ export default function MCPAgentKeysPage() {
       setModeTarget(null);
       await loadData();
     } catch (err: unknown) {
-      setModeError(apiErrorText(err) || "Failed to save the key settings");
+      setModeError(getGatewayErrorText(err, "Failed to save the key settings"));
     } finally {
       submittingRef.current = false;
       setModeSubmitting(false);

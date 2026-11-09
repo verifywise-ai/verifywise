@@ -2,15 +2,20 @@ import { sequelize } from "../database/db";
 import { QueryTypes } from "sequelize";
 import * as fs from "fs";
 import * as path from "path";
+import { redactRowText } from "./logger/redact";
 
 /**
  * Get event logs for an organization
+ *
+ * Descriptions are redacted on the way out as well as at write time
+ * (logEvent): rows written before write-time redaction may still hold raw
+ * error text, and every org member can read this list.
  *
  * @param {number} organizationId - Organization ID for tenant isolation
  * @returns {Promise<any[]>} Array of event logs
  */
 export const getEventsQuery = async (organizationId: number) => {
-  const events = await sequelize.query(
+  const events = (await sequelize.query(
     `SELECT * FROM event_logs
      WHERE organization_id = :organization_id
      ORDER BY timestamp DESC`,
@@ -18,8 +23,8 @@ export const getEventsQuery = async (organizationId: number) => {
       replacements: { organization_id: organizationId },
       type: QueryTypes.SELECT,
     },
-  );
-  return events;
+  )) as Array<Record<string, unknown>>;
+  return events.map(redactRowText);
 };
 
 /**

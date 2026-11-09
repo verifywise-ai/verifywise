@@ -20,9 +20,43 @@ const getProjectFrameworkId = async (
     { replacements: { organizationId, project_id: projectId } },
   )) as [{ id: number }[], number];
   if (!result[0] || result[0].length === 0) {
-    throw new Error(`NIST AI RMF framework not found for project #${projectId}`);
+    throw new Error(
+      `NIST AI RMF is not linked to project #${projectId}. To set it up: (1) go to the Frameworks page, (2) select your organizational project, (3) add the NIST AI RMF framework, then try again.`,
+    );
   }
   return result[0][0].id;
+};
+
+const NIST_ORG_SETUP_MESSAGE =
+  "NIST AI RMF is not linked to any project in your organization. To set it up: (1) go to the Frameworks page, (2) select your organizational project, (3) add the NIST AI RMF framework, then try again.";
+
+// --- Helper: discover all NIST AI RMF links (framework_id=4) in the organization ---
+const getNistLinkedProjects = async (
+  organizationId: number,
+): Promise<
+  {
+    project_framework_id: number;
+    project_id: number;
+    project_title: string;
+    is_demo: boolean;
+  }[]
+> => {
+  const result = (await sequelize.query(
+    `SELECT pf.id AS project_framework_id, pf.project_id, p.project_title, p.is_demo
+     FROM projects_frameworks pf
+     JOIN projects p ON p.id = pf.project_id AND p.organization_id = pf.organization_id
+     WHERE pf.organization_id = :organizationId AND pf.framework_id = 4`,
+    { replacements: { organizationId } },
+  )) as [
+    {
+      project_framework_id: number;
+      project_id: number;
+      project_title: string;
+      is_demo: boolean;
+    }[],
+    number,
+  ];
+  return result[0] || [];
 };
 
 // --- Read Tools ---
@@ -174,6 +208,90 @@ const getNistStatusBreakdown = async (params: { project_id: number }, organizati
   }
 };
 
+const getNistOrgProgress = async (_params: Record<string, unknown>, organizationId: number) => {
+  try {
+    const linked = await getNistLinkedProjects(organizationId);
+    // Demo org projects (created by the "demo data" driver) carry mock
+    // subcategory statuses — exclude them from totals, but don't hide them.
+    const realProjects = linked.filter((p) => !p.is_demo);
+    const excludedDemoProjects = linked
+      .filter((p) => p.is_demo)
+      .map((p) => ({ project_id: p.project_id, project_title: p.project_title }));
+
+    if (realProjects.length === 0) {
+      return {
+        status: "not_configured",
+        linkedProjects: 0,
+        projects: [],
+        totals: null,
+        excludedDemoProjects,
+        message:
+          excludedDemoProjects.length > 0
+            ? `NIST AI RMF is only linked to demo project(s) in your organization, which contain mock data. ${NIST_ORG_SETUP_MESSAGE}`
+            : NIST_ORG_SETUP_MESSAGE,
+      };
+    }
+
+    const rawCounts = await Promise.all(
+      realProjects.map(async (p) => {
+        const [subcategoryCounts, assignmentCounts] = await Promise.all([
+          countSubcategoriesNISTByProjectId(p.project_framework_id, organizationId),
+          countSubcategoryAssignmentsNISTByProjectId(p.project_framework_id, organizationId),
+        ]);
+        // Count utils return strings; SUM(...) is NULL on zero rows.
+        return {
+          project_id: p.project_id,
+          project_title: p.project_title,
+          totalSubcategories: parseInt(subcategoryCounts.totalSubcategories) || 0,
+          doneSubcategories: parseInt(subcategoryCounts.doneSubcategories) || 0,
+          totalAssignable: parseInt(assignmentCounts.totalSubcategories) || 0,
+          totalAssigned: parseInt(assignmentCounts.assignedSubcategories) || 0,
+        };
+      }),
+    );
+
+    const totalSubcategories = rawCounts.reduce((sum, c) => sum + c.totalSubcategories, 0);
+    const doneSubcategories = rawCounts.reduce((sum, c) => sum + c.doneSubcategories, 0);
+    const totalAssignable = rawCounts.reduce((sum, c) => sum + c.totalAssignable, 0);
+    const totalAssigned = rawCounts.reduce((sum, c) => sum + c.totalAssigned, 0);
+
+    const projects = rawCounts.map((c) => ({
+      project_id: c.project_id,
+      project_title: c.project_title,
+      totalSubcategories: c.totalSubcategories,
+      doneSubcategories: c.doneSubcategories,
+      completionPercentage:
+        c.totalSubcategories > 0
+          ? Math.round((c.doneSubcategories / c.totalSubcategories) * 100)
+          : 0,
+      totalAssigned: c.totalAssigned,
+      assignmentPercentage:
+        c.totalAssignable > 0 ? Math.round((c.totalAssigned / c.totalAssignable) * 100) : 0,
+    }));
+
+    return {
+      status: "ok",
+      linkedProjects: projects.length,
+      projects,
+      totals: {
+        totalSubcategories,
+        doneSubcategories,
+        completionPercentage:
+          totalSubcategories > 0 ? Math.round((doneSubcategories / totalSubcategories) * 100) : 0,
+        totalAssigned,
+        assignmentPercentage:
+          totalAssignable > 0 ? Math.round((totalAssigned / totalAssignable) * 100) : 0,
+      },
+      excludedDemoProjects,
+    };
+  } catch (error) {
+    logger.error("Error fetching NIST AI RMF organization progress:", error);
+    throw new Error(
+      `Failed to fetch NIST AI RMF organization progress: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+};
+
 // --- Write Tools ---
 
 const agentUpdateNistSubcategory = createWriteToolFn({
@@ -213,6 +331,7 @@ const availableNistAiRmfTools: any = {
   get_nist_progress: getNistProgress,
   get_nist_progress_by_function: getNistProgressByFunction,
   get_nist_status_breakdown: getNistStatusBreakdown,
+  get_nist_org_progress: getNistOrgProgress,
   agent_update_nist_subcategory: agentUpdateNistSubcategory,
 };
 

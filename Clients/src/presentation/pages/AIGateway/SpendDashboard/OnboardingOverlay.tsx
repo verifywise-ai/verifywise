@@ -23,6 +23,7 @@ import Select from "../../../components/Inputs/Select";
 import StandardModal from "../../../components/Modals/StandardModal";
 import palette from "../../../themes/palette";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
+import { getGatewayErrorText } from "../../../../application/utils/apiErrorReason";
 import { validateApiKeyFormat } from "../../../../application/utils/apiKeyValidation";
 import {
   API_KEY_PROVIDERS,
@@ -570,9 +571,7 @@ export default function OnboardingOverlay({
       closeModal();
       onStepCompleted();
     } catch (err: unknown) {
-      const errData = (err as { response?: { data?: { detail?: string; message?: string } } })
-        ?.response?.data;
-      setKeyError(errData?.detail || errData?.message || "Failed to create API key");
+      setKeyError(getGatewayErrorText(err, "Failed to create API key"));
     } finally {
       setKeySubmitting(false);
     }
@@ -602,9 +601,7 @@ export default function OnboardingOverlay({
       closeModal();
       onStepCompleted();
     } catch (err: unknown) {
-      const errData = (err as { response?: { data?: { detail?: string; message?: string } } })
-        ?.response?.data;
-      setEndpointError(errData?.detail || errData?.message || "Failed to create endpoint");
+      setEndpointError(getGatewayErrorText(err, "Failed to create endpoint"));
     } finally {
       setEndpointSubmitting(false);
     }
@@ -629,9 +626,7 @@ export default function OnboardingOverlay({
         setVkeyError("Key was created but could not be retrieved. Refresh the page.");
       }
     } catch (err: unknown) {
-      const errData = (err as { response?: { data?: { detail?: string; message?: string } } })
-        ?.response?.data;
-      setVkeyError(errData?.detail || errData?.message || "Failed to create virtual key");
+      setVkeyError(getGatewayErrorText(err, "Failed to create virtual key"));
     } finally {
       setVkeySubmitting(false);
     }
@@ -655,12 +650,11 @@ export default function OnboardingOverlay({
       setFirstReqResponse(text);
       onStepCompleted();
     } catch (err: unknown) {
-      const errData = (err as { response?: { data?: { detail?: string; message?: string } } })
-        ?.response?.data;
       setFirstReqError(
-        errData?.detail ||
-          errData?.message ||
+        getGatewayErrorText(
+          err,
           "Request failed. Check that your endpoint and API key are configured correctly.",
+        ),
       );
     } finally {
       setFirstReqRunning(false);

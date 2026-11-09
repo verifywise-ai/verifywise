@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router";
+import { Link as RouterLink, useNavigate, useParams } from "react-router";
 import { Box, Stack, Typography, Divider } from "@mui/material";
 import { Bot, ClipboardCheck, Eye, Pencil } from "lucide-react";
 import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtended";
@@ -18,7 +18,7 @@ import {
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import { useTranslation } from "../../../../application/hooks/useTranslation";
 import { getAgentLifecycle } from "../agentLifecycle";
-import { formatSourceLabel, getAgentOwnerIds } from "../agentLabels";
+import { formatSourceLabel, formatUseCaseLabel, getAgentOwnerIds } from "../agentLabels";
 import { useUserNames } from "../useUserNames";
 import { useLinkedModelLabel } from "../useLinkedModelLabel";
 import ReviewAgentModal from "../../../components/Modals/AgentDiscovery/ReviewAgentModal";
@@ -359,6 +359,22 @@ export default function AgentDetail() {
             )}
           </Box>
 
+          <Box mb="20px">
+            <FieldBlock label="Description">
+              <Typography
+                data-testid="agent-detail-description"
+                sx={{
+                  fontSize: 13,
+                  color: agent.description ? palette.text.primary : palette.text.secondary,
+                  whiteSpace: "pre-wrap",
+                  overflowWrap: "anywhere",
+                }}
+              >
+                {agent.description || "No description"}
+              </Typography>
+            </FieldBlock>
+          </Box>
+
           <Stack direction="row" flexWrap="wrap" gap="24px" mb="20px">
             <FieldBlock label="Type">
               <Typography sx={{ fontSize: 13, color: palette.text.primary }}>
@@ -369,6 +385,27 @@ export default function AgentDetail() {
               <Typography sx={{ fontSize: 13, color: palette.text.primary }}>
                 {agent.is_manual ? "Manually entered" : formatSourceLabel(agent.source_system)}
               </Typography>
+            </FieldBlock>
+            <FieldBlock label="Linked use case">
+              {agent.linked_project_id ? (
+                <Typography
+                  component={RouterLink}
+                  to={`/project-view?projectId=${agent.linked_project_id}`}
+                  data-testid="agent-detail-linked-use-case"
+                  sx={{
+                    "fontSize": 13,
+                    "color": palette.brand.primary,
+                    "textDecoration": "none",
+                    "&:hover": { textDecoration: "underline" },
+                  }}
+                >
+                  {formatUseCaseLabel(agent)}
+                </Typography>
+              ) : (
+                <Typography sx={{ fontSize: 13, color: palette.text.secondary }}>
+                  Not linked
+                </Typography>
+              )}
             </FieldBlock>
             <FieldBlock label="Linked model">
               <Typography

@@ -4,8 +4,8 @@
  * autoDriver (gateway tables have no FK to projects, so the link is by name).
  *
  * Model ids follow what the real gateway stores:
- *   - endpoint.model is provider-prefixed, exactly as the endpoint form builds it
- *     (`${provider}/${litellmId}`, hence "gemini/gemini/gemini-2.5-flash");
+ *   - endpoint.model is provider-prefixed once, as the endpoint form and API
+ *     store it ("gemini/gemini-2.5-flash", never "gemini/gemini/...");
  *   - spend-log model on success is the id the provider returns (unprefixed,
  *     usually dated), on error it is the endpoint's prefixed model.
  */
@@ -81,7 +81,7 @@ export const MODEL_PROFILES: Record<string, ModelProfile> = {
     baseLatencyMs: 190,
     perOutputTokenMs: 0,
   },
-  "gemini/gemini/gemini-2.5-flash": {
+  "gemini/gemini-2.5-flash": {
     returnedModel: "gemini-2.5-flash",
     inputPerToken: 3e-7,
     outputPerToken: 2.5e-6,
@@ -316,7 +316,7 @@ export const ENDPOINTS: EndpointDefinition[] = [
     slug: "sandbox-gemini-flash",
     display_name: "Experimentation sandbox (Gemini Flash)",
     provider: "gemini",
-    model: "gemini/gemini/gemini-2.5-flash",
+    model: "gemini/gemini-2.5-flash",
     apiKeyName: "Google AI Studio",
     max_tokens: 2048,
     temperature: 0.7,

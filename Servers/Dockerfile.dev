@@ -5,13 +5,15 @@ WORKDIR /app
 # Install git for AI detection repository scanning
 RUN apk add --no-cache git
 
-COPY ./package.json ./
+COPY ./Servers/package.json ./
 RUN npm install
 
-COPY ./ ./
-COPY ./SQL_Commands.sql ./SQL_Commands.sql
+COPY ./Servers/ ./
+COPY ./Servers/SQL_Commands.sql ./SQL_Commands.sql
+# npm run watch compiles the shared colour tokens from ../shared/design-tokens
+COPY ./shared/design-tokens /shared/design-tokens
 
-COPY ./templates ./dist/templates
+COPY ./Servers/templates ./dist/templates
 
 EXPOSE 3000
 

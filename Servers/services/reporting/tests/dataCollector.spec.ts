@@ -35,6 +35,8 @@ jest.mock("../../../utils/framework.utils", () => ({
   getAllFrameworkByIdQuery: jest.fn(),
 }));
 
+import { brand, risk, text } from "../../../tools/design-tokens/palette";
+
 jest.mock("../chartUtils", () => ({
   generateRiskDistributionChart: jest.fn().mockReturnValue("<svg>bar</svg>"),
   generateRiskDonutChart: jest.fn().mockReturnValue("<svg>donut</svg>"),
@@ -202,10 +204,10 @@ describe("dataCollector", () => {
       const medium = risksByLevel.find((r) => r.level === "Medium");
       const low = risksByLevel.find((r) => r.level === "Low");
 
-      expect(critical!.color).toBe("#B42318");
-      expect(high!.color).toBe("#C4320A");
-      expect(medium!.color).toBe("#B54708");
-      expect(low!.color).toBe("#027A48");
+      expect(critical!.color).toBe(risk.critical.text);
+      expect(high!.color).toBe(risk.high.text);
+      expect(medium!.color).toBe(risk.medium.text);
+      expect(low!.color).toBe(risk.low.text);
     });
 
     it("should use default color for unknown risk levels", async () => {
@@ -219,7 +221,7 @@ describe("dataCollector", () => {
       const custom = result.sections.projectRisks!.risksByLevel.find(
         (r) => r.level === "CustomLevel",
       );
-      expect(custom!.color).toBe("#667085");
+      expect(custom!.color).toBe(text.icon);
     });
 
     it("should handle missing project owner gracefully", async () => {
@@ -241,7 +243,7 @@ describe("dataCollector", () => {
       const collector = createDataCollector(10, 1, 1, 100, 5);
       const result = await collector.collectAllData([]);
 
-      expect(result.branding.primaryColor).toBe("#13715B");
+      expect(result.branding.primaryColor).toBe(brand.primary);
     });
   });
 
@@ -472,11 +474,11 @@ describe("dataCollector", () => {
     // colour map was keyed "High"/"Medium", so every level missed and the
     // report's donut, bar chart and legend came out uniformly grey.
     it.each([
-      ["Very high risk", "#B42318"],
-      ["High risk", "#C4320A"],
-      ["Medium risk", "#B54708"],
-      ["Low risk", "#027A48"],
-      ["Very low risk", "#026AA2"],
+      ["Very high risk", risk.critical.text],
+      ["High risk", risk.high.text],
+      ["Medium risk", risk.medium.text],
+      ["Low risk", risk.low.text],
+      ["Very low risk", risk.veryLow.text],
     ])("%s is not the grey fallback", async (level, expected) => {
       mockGetProjectRisks.mockResolvedValue([
         { id: 1, risk_name: "R", risk_level_autocalculated: level },
@@ -497,7 +499,7 @@ describe("dataCollector", () => {
       const result = await collector.collectAllData(["projectRisks"]);
 
       expect(result.sections.projectRisks!.risksByLevel[0].level).toBe("Unknown");
-      expect(result.sections.projectRisks!.risksByLevel[0].color).toBe("#667085");
+      expect(result.sections.projectRisks!.risksByLevel[0].color).toBe(text.icon);
     });
   });
   describe("a use case with no framework", () => {

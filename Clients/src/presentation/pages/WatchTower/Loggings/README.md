@@ -32,6 +32,7 @@ import WatchTowerLogs from "./Loggings";
 - **Endpoint**: `/logger/logs`
 - **Method**: GET
 - **Authentication**: Requires Bearer token
+- **Authorization**: Admin only (`logs.admin` permission). Other roles get 403, and the page hides the Logs tab for them
 - **Response Format**:
   ```typescript
   {

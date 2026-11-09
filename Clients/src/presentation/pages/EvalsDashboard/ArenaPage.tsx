@@ -30,6 +30,7 @@ import VWTooltip from "../../components/VWTooltip";
 import Checkbox from "../../components/Inputs/Checkbox";
 import GroupedSelect from "../../components/Inputs/Select/GroupedSelect";
 import ModelSelector from "../../components/Inputs/ModelSelector";
+import { DEFAULT_JUDGE } from "../../utils/providers";
 import ArenaResultsPage from "./ArenaResultsPage";
 import { FilterBy, FilterCondition, FilterColumn } from "../../components/Table/FilterBy";
 import { GroupBy, GroupByOption } from "../../components/Table/GroupBy";
@@ -161,9 +162,9 @@ export default function ArenaPage({ orgId }: ArenaPageProps) {
   const [filterConditions, setFilterConditions] = useState<FilterCondition[]>([]);
   const [filterLogic, setFilterLogic] = useState<"and" | "or">("and");
   // Group state - values reserved for future grouping feature
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
   const [_groupBy, setGroupBy] = useState<string | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
   const [_groupSortOrder, setGroupSortOrder] = useState<"asc" | "desc">("asc");
 
   // Filter columns for arena battles
@@ -193,8 +194,8 @@ export default function ArenaPage({ orgId }: ArenaPageProps) {
   const [newComparison, setNewComparison] = useState({
     name: "",
     selectedCriteria: ["helpfulness", "accuracy"] as string[], // Default selected criteria
-    judgeProvider: "openai",
-    judgeModel: "gpt-4o",
+    judgeProvider: DEFAULT_JUDGE.provider as string,
+    judgeModel: DEFAULT_JUDGE.model as string,
     datasetPath: "", // Single dataset for all contestants
     contestants: [
       {
@@ -417,8 +418,8 @@ export default function ArenaPage({ orgId }: ArenaPageProps) {
     setNewComparison({
       name: "",
       selectedCriteria: ["helpfulness", "accuracy"],
-      judgeProvider: "openai",
-      judgeModel: "gpt-4o",
+      judgeProvider: DEFAULT_JUDGE.provider,
+      judgeModel: DEFAULT_JUDGE.model,
       datasetPath: "",
       contestants: [
         { name: "Select Model", hyperparameters: { model: "", provider: "openai" }, testCases: [] },

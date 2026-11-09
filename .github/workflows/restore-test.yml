@@ -1,0 +1,189 @@
+name: DR Restore Test
+
+# (#4684) Monthly disaster-recovery drill: prove that a pg_dump backup of a
+# fully migrated VerifyWise database can be restored into a fresh database and
+# passes smoke checks. The drill measures dump and restore durations and
+# compares them against the RTO tiers defined in
+# docs/deployment/DISASTER_RECOVERY_GUIDE.md (section 1):
+#
+#   | Tier             | RTO        |
+#   |------------------|------------|
+#   | Development      | 24 hours   |
+#   | Standard         | 4 hours    |
+#   | Enterprise       | 1 hour     |
+#   | Mission-critical | 15 minutes |
+#
+# This is a synthetic drill on an ephemeral CI database (minimal smoke dataset),
+# so measured durations are a lower bound on production restore times — treat
+# them as a regression canary for the restore PROCEDURE, not as proof that the
+# production RTO is met.
+
+permissions:
+  contents: read
+
+on:
+  schedule:
+    # First day of every month, 03:30 UTC.
+    - cron: '30 3 1 * *'
+  workflow_dispatch:
+
+jobs:
+  restore-test:
+    name: pg_dump → drop → restore → smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DB_HOST: localhost
+      DB_PORT: "5432"
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: verifywise_restore_test
+      NODE_ENV: test
+      SUPERADMIN_EMAIL: super@local.dev
+      SUPERADMIN_PASSWORD: Super123!
+      # Required by the RLS runtime-role migration (rls-app-role.js), which
+      # fails closed without it. CI-only value; not a real credential.
+      DB_APP_PASSWORD: test-app-role-password-for-ci
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: Servers/package-lock.json
+
+      - name: Install dependencies
+        working-directory: Servers
+        run: npm ci
+
+      - name: Create fresh database
+        run: |
+          psql -h localhost -U postgres -d postgres \
+            -c "DROP DATABASE IF EXISTS \"$DB_NAME\";" \
+            -c "CREATE DATABASE \"$DB_NAME\";"
+
+      # seedTestData runs from dist/ (mirrors e2e-tests.yml).
+      - name: Build backend
+        working-directory: Servers
+        run: npm run build
+
+      # Same integration DB prep as backend-checks.yml / e2e-tests.yml:
+      # the migration set (including the RLS runtime-role migration) must
+      # apply cleanly from scratch — a restore target in DR starts empty.
+      - name: Run migrations
+        working-directory: Servers
+        run: npx sequelize db:migrate
+
+      - name: Insert minimal smoke dataset
+        working-directory: Servers
+        run: node dist/scripts/seedTestData.js
+
+      - name: Record row counts before backup
+        run: |
+          psql -h localhost -U postgres -d "$DB_NAME" -tA -F, -c "
+            SELECT 'users', count(*) FROM users
+            UNION ALL SELECT 'organizations', count(*) FROM organizations
+            UNION ALL SELECT 'projects', count(*) FROM projects
+            UNION ALL SELECT 'vendors', count(*) FROM vendors;
+          " | tee /tmp/row-counts-before.txt
+
+      - name: pg_dump (timed)
+        run: |
+          START=$(date +%s)
+          pg_dump -h localhost -U postgres -d "$DB_NAME" \
+            --format=custom --file=/tmp/verifywise-backup.dump
+          END=$(date +%s)
+          echo "dump_seconds=$((END - START))" >> "$GITHUB_ENV"
+          ls -lh /tmp/verifywise-backup.dump
+
+      - name: Drop and recreate the database (simulated total loss)
+        run: |
+          psql -h localhost -U postgres -d postgres \
+            -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '$DB_NAME' AND pid <> pg_backend_pid();" \
+            -c "DROP DATABASE \"$DB_NAME\";" \
+            -c "CREATE DATABASE \"$DB_NAME\";"
+
+      - name: Restore from backup (timed)
+        run: |
+          START=$(date +%s)
+          pg_restore -h localhost -U postgres -d "$DB_NAME" \
+            --no-owner --no-privileges /tmp/verifywise-backup.dump
+          END=$(date +%s)
+          echo "restore_seconds=$((END - START))" >> "$GITHUB_ENV"
+
+      - name: Smoke queries and row-count assertions
+        run: |
+          psql -h localhost -U postgres -d "$DB_NAME" -tA -F, -c "
+            SELECT 'users', count(*) FROM users
+            UNION ALL SELECT 'organizations', count(*) FROM organizations
+            UNION ALL SELECT 'projects', count(*) FROM projects
+            UNION ALL SELECT 'vendors', count(*) FROM vendors;
+          " | tee /tmp/row-counts-after.txt
+
+          # The restored database must be exactly what was backed up.
+          diff /tmp/row-counts-before.txt /tmp/row-counts-after.txt \
+            || { echo "::error::Row counts differ after restore — restore is not faithful."; exit 1; }
+
+          # Smoke queries: restored data must actually be readable/usable, not
+          # just present. The seeded super-admin must be queryable by login.
+          psql -h localhost -U postgres -d "$DB_NAME" -tA -c \
+            "SELECT count(*) FROM users WHERE email = '$SUPERADMIN_EMAIL';" \
+            | grep -q '^1$' \
+            || { echo "::error::Seeded super-admin missing after restore."; exit 1; }
+
+      - name: Record duration vs RTO tiers
+        run: |
+          TOTAL=$((dump_seconds + restore_seconds))
+          {
+            echo "## DR restore drill (#4684)"
+            echo ""
+            echo "- pg_dump duration: **${dump_seconds}s**"
+            echo "- Restore duration: **${restore_seconds}s**"
+            echo "- Total (dump + restore): **${TOTAL}s**"
+            echo ""
+            echo "RTO tiers (docs/deployment/DISASTER_RECOVERY_GUIDE.md §1):"
+            echo ""
+            echo "| Tier | RTO | Met by drill total |"
+            echo "|------|----:|--------------------|"
+            for tier in "Development:86400" "Standard:14400" "Enterprise:3600" "Mission-critical:900"; do
+              name="${tier%%:*}"
+              secs="${tier##*:}"
+              if [ "$TOTAL" -le "$secs" ]; then met="✅"; else met="⚠️ (synthetic dataset only)"; fi
+              echo "| $name | ${secs}s | $met |"
+            done
+            echo ""
+            echo "> CI uses a minimal smoke dataset, so these durations are a lower"
+            echo "> bound. A production-size restore will be slower; the drill guards"
+            echo "> the restore *procedure* against regressions."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload backup artifact
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: dr-restore-test-evidence
+          path: |
+            /tmp/verifywise-backup.dump
+            /tmp/row-counts-before.txt
+            /tmp/row-counts-after.txt
+          if-no-files-found: ignore
+          retention-days: 7

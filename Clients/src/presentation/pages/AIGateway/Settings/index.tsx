@@ -36,10 +36,7 @@ import CustomizableSkeleton from "../../../components/Skeletons";
 import VirtualKeysTab from "../VirtualKeys/index";
 import { validateApiKeyFormat } from "../../../../application/utils/apiKeyValidation";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
-import {
-  getClientErrorReason,
-  getGatewayErrorDetail,
-} from "../../../../application/utils/apiErrorReason";
+import { getGatewayErrorText } from "../../../../application/utils/apiErrorReason";
 import {
   GATEWAY_DEFAULT_RETENTION_DAYS,
   GatewayPurgeWarning,
@@ -135,12 +132,6 @@ interface RiskSuggestion {
   reviewed_at?: string;
   reviewed_by_name?: string;
 }
-
-// The gateway's own { detail } reason, else the server's reason for a rejected
-// request (4xx; generic status text and axios's "Request failed with status
-// code N" are filtered out), else the translated fallback.
-const apiErrorText = (err: unknown, fallback: string): string =>
-  getGatewayErrorDetail(err) || getClientErrorReason(err) || fallback;
 
 export default function AIGatewaySettingsPage() {
   const { t } = useTranslation();
@@ -335,9 +326,7 @@ export default function AIGatewaySettingsPage() {
       setKeyForm({ key_name: "", provider: "", api_key: "" });
       await loadData();
     } catch (err: any) {
-      setKeyError(
-        err?.response?.data?.detail || err?.response?.data?.message || "Failed to create API key",
-      );
+      setKeyError(getGatewayErrorText(err, "Failed to create API key"));
     } finally {
       setKeySubmitting(false);
     }
@@ -430,7 +419,7 @@ export default function AIGatewaySettingsPage() {
       });
       await loadData();
     } catch (err: any) {
-      setGsError(apiErrorText(err, t("Failed to save settings")));
+      setGsError(getGatewayErrorText(err, t("Failed to save settings")));
     } finally {
       setGsSaving(false);
       setPendingGsSave(null);
@@ -444,7 +433,7 @@ export default function AIGatewaySettingsPage() {
       const count = res?.data?.total_deleted ?? res?.data?.data?.total_deleted ?? 0;
       setPurgeMessage({ text: fill(t("{count} logs deleted"), { count }), isError: false });
     } catch (err: any) {
-      setPurgeMessage({ text: apiErrorText(err, t("Failed to purge logs")), isError: true });
+      setPurgeMessage({ text: getGatewayErrorText(err, t("Failed to purge logs")), isError: true });
     } finally {
       setPurging(false);
       setIsPurgeModalOpen(false);

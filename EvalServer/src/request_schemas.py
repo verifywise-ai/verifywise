@@ -12,27 +12,9 @@ guarantees that known fields, when present, have the right type — it does not
 restrict additional fields.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
-
-
-class EvaluateConfig(BaseModel):
-    """
-    Body for ``POST /deepeval/evaluate``.
-
-    Everything is optional — the controller/runner apply their own defaults.
-    Nested objects stay free-form; only the top-level shape is validated.
-    """
-
-    model_config = ConfigDict(extra="allow")
-
-    dataset: Optional[Dict[str, Any]] = None
-    model: Optional[Dict[str, Any]] = None
-    judgeLlm: Optional[Dict[str, Any]] = None
-    metrics: Optional[Dict[str, Any]] = None
-    metric_thresholds: Optional[Dict[str, Any]] = None
-    selectedScorers: Optional[List[str]] = None
 
 
 class CreateScorerRequest(BaseModel):

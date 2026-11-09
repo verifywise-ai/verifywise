@@ -16,6 +16,12 @@ export const catalogMatchSchema = z
     id: z.number().int(),
     reason: z.string().max(300),
     ai_lifecycle_phase: z.string().optional(),
+    // Use-case-specific drafts: the catalogs carry no impact or mitigation
+    // text, and the risk register requires a mitigation plan. Optional so an
+    // answer that omits them still parses; callers fall back.
+    impact: z.string().max(1000).optional(),
+    mitigation_plan: z.string().max(1000).optional(),
+    implementation_strategy: z.string().max(1000).optional(),
   })
   .strict();
 
@@ -36,6 +42,7 @@ export const suggestedRiskSchema = z
     severity: z.number().int().min(1).max(5),
     impact: z.string().max(1000),
     mitigation_plan: z.string().max(1000),
+    implementation_strategy: z.string().max(1000).optional(),
   })
   .strict();
 

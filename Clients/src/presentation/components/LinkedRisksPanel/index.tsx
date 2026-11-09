@@ -3,6 +3,7 @@ import { Alert, Box, CircularProgress, Stack, Typography } from "@mui/material";
 import { Network } from "lucide-react";
 import { CustomizableButton } from "../button/customizable-button";
 import { EmptyState } from "../EmptyState";
+import VWTooltip from "../VWTooltip";
 import { textStyles } from "../../themes/typography";
 import {
   useAcknowledgeParentLevelChange,
@@ -18,6 +19,8 @@ import LinkRiskForm from "./LinkRiskForm";
 import LinkRow from "./LinkRow";
 import { GROUPING_WINDOW_MS, SCAN_WINDOW_MS } from "./polling";
 import { useWatchedLinks } from "./useWatchedLinks";
+import { useFormFocus } from "./useFormFocus";
+import { groupingNotice } from "./groupingNotice";
 import { fill } from "../../../i18n/fill";
 
 // Moved to LinkRow with the row that uses it; re-exported for existing callers.
@@ -38,7 +41,7 @@ const GROUPS: { title: string; match: (link: RiskLink) => boolean }[] = [
     title: "Child risks",
     match: (l) => l.relationType === "inherits_from" && l.direction === "incoming",
   },
-  { title: "Relates to", match: (l) => l.relationType === "related_to" },
+  { title: "Related risks", match: (l) => l.relationType === "related_to" },
 ];
 
 export default function LinkedRisksPanel({ riskId }: LinkedRisksPanelProps) {
@@ -48,6 +51,7 @@ export default function LinkedRisksPanel({ riskId }: LinkedRisksPanelProps) {
   const [dismissing, setDismissing] = useState<RiskLink | null>(null);
   const isAdmin = useIsAdmin();
   const { t } = useTranslation();
+  const { formRef, openerRef } = useFormFocus(showForm ? "link" : null);
 
   const { links, isLoading, isError, refetch, isWatching, watchForResult } = useWatchedLinks(
     useRiskLinks,
@@ -103,9 +107,14 @@ export default function LinkedRisksPanel({ riskId }: LinkedRisksPanelProps) {
     recompute.mutate(undefined, {
       onSuccess: (result) => {
         setNotice(
-          fill(t("Scanning {count} risks. Links will appear as the scan completes."), {
-            count: result.enqueued,
-          }),
+          fill(
+            t(
+              result.enqueued === 1
+                ? "Scanning {count} risk. Links will appear as the scan completes."
+                : "Scanning {count} risks. Links will appear as the scan completes.",
+            ),
+            { count: result.enqueued },
+          ),
         );
         watchForResult("Scan finished. No related risks found.", SCAN_WINDOW_MS);
       },
@@ -120,17 +129,7 @@ export default function LinkedRisksPanel({ riskId }: LinkedRisksPanelProps) {
         setNotice(
           result.enqueued === 0
             ? "No clusters of related risks to group yet. Run a scan for related risks first."
-            : fill(
-                t(
-                  "Grouping {count} clusters of related risks. Suggestions appear here as they finish.",
-                ),
-                { count: result.enqueued },
-              ) +
-                (result.skipped > 0
-                  ? ` ${fill(t("{count} clusters were too large to group in one pass."), {
-                      count: result.skipped,
-                    })}`
-                  : ""),
+            : groupingNotice(t, result),
         );
         // Nothing was queued, so there is nothing to wait for. The grouping
         // calls out to a model, so its window can close while the job is still
@@ -147,10 +146,24 @@ export default function LinkedRisksPanel({ riskId }: LinkedRisksPanelProps) {
     });
   };
 
+  const suggestHierarchyDisabled = suggestHierarchy.isPending || isWatching;
+  const suggestHierarchyButton = (
+    <CustomizableButton
+      size="small"
+      variant="text"
+      color="secondary"
+      onClick={handleSuggestHierarchy}
+      isDisabled={suggestHierarchyDisabled}
+    >
+      Suggest hierarchy
+    </CustomizableButton>
+  );
+
   if (isError) {
     return (
       <Alert
         severity="error"
+        sx={{ fontSize: "13px" }}
         action={
           <CustomizableButton size="small" variant="text" onClick={() => void refetch()}>
             Retry
@@ -163,15 +176,29 @@ export default function LinkedRisksPanel({ riskId }: LinkedRisksPanelProps) {
   }
 
   return (
-    <Stack spacing={8} sx={{ py: 8 }}>
+    <Stack spacing="16px" sx={{ py: "16px" }}>
+      <Typography sx={{ ...textStyles.body, color: "text.secondary" }}>
+        Link this risk to others it is connected to. VerifyWise also suggests links from what risks
+        have in common, such as category, controls, lifecycle phase or project. Confirm a suggestion
+        to keep it, or dismiss it.
+      </Typography>
+
       <Stack direction="row" justifyContent="space-between">
-        <Stack direction="row" spacing={4}>
+        <Stack direction="row" spacing="8px">
+          {/*
+            The form has its own Cancel, so this button only opens it. It stays
+            in place (disabled) while the form is open: removing it would slide
+            "Suggest hierarchy" under the pointer, so a double-click would start
+            an AI job.
+          */}
           <CustomizableButton
+            ref={openerRef("link")}
             size="small"
             variant="text"
-            onClick={() => setShowForm((open) => !open)}
+            onClick={() => setShowForm(true)}
+            isDisabled={showForm}
           >
-            {showForm ? "Cancel" : "Link a risk"}
+            Link a risk
           </CustomizableButton>
           {/*
             Here rather than in the empty state below: a hierarchy pass groups
@@ -179,15 +206,20 @@ export default function LinkedRisksPanel({ riskId }: LinkedRisksPanelProps) {
             there were no links would be unreachable exactly when it is useful.
           */}
           {isAdmin && (
-            <CustomizableButton
-              size="small"
-              variant="text"
-              color="secondary"
-              onClick={handleSuggestHierarchy}
-              isDisabled={suggestHierarchy.isPending || isWatching}
+            <VWTooltip
+              content="Uses AI to propose parent and child links among risks that are already related. Suggestions appear in this list for you to confirm."
+              describeChild
             >
-              Suggest hierarchy
-            </CustomizableButton>
+              {/* A disabled button fires no hover events, so a span carries the
+                  tooltip then; otherwise the button takes it and is described. */}
+              {suggestHierarchyDisabled ? (
+                <Box component="span" sx={{ display: "inline-flex" }}>
+                  {suggestHierarchyButton}
+                </Box>
+              ) : (
+                suggestHierarchyButton
+              )}
+            </VWTooltip>
           )}
         </Stack>
         <CustomizableButton
@@ -208,19 +240,25 @@ export default function LinkedRisksPanel({ riskId }: LinkedRisksPanelProps) {
         instead and let the server's 409 do the explaining.
       */}
       {showForm && (
-        <LinkRiskForm
-          riskId={riskId}
-          existingLinks={showDismissed ? [] : links}
-          onClose={() => setShowForm(false)}
-        />
+        <Box ref={formRef}>
+          <LinkRiskForm
+            riskId={riskId}
+            existingLinks={showDismissed ? [] : links}
+            onClose={() => setShowForm(false)}
+          />
+        </Box>
       )}
 
-      {notice && <Alert severity="info">{notice}</Alert>}
+      {notice && (
+        <Alert severity="info" sx={{ fontSize: "13px" }}>
+          {notice}
+        </Alert>
+      )}
 
       {isLoading && <CircularProgress size={20} />}
 
       {!isLoading && links.length === 0 && (
-        <Stack spacing={4} alignItems="center">
+        <Stack spacing="8px" alignItems="center">
           {/* showBorder={false}: this list lives inside a tab panel, not a table. */}
           <EmptyState icon={Network} message="No linked risks yet." showBorder={false} />
           {isAdmin ? (
@@ -245,10 +283,10 @@ export default function LinkedRisksPanel({ riskId }: LinkedRisksPanelProps) {
         if (group.length === 0) return null;
         return (
           <Box key={title}>
-            <Typography sx={{ ...textStyles.subsectionTitle, color: "text.primary", mb: 4 }}>
+            <Typography sx={{ ...textStyles.subsectionTitle, color: "text.primary", mb: "8px" }}>
               {title}
             </Typography>
-            <Stack spacing={4}>
+            <Stack spacing="8px">
               {group.map((link) => (
                 <LinkRow
                   key={link.id}

@@ -16,7 +16,7 @@
 
 ### integration-guide.md
 - ✅ "The endpoint accepts batches of up to 10,000 events per request" — Verified at `Servers/controllers/shadowAiIngestion.ctrl.ts:29`. Constant defined: `const MAX_EVENTS_PER_REQUEST = 10000;`. Enforcement verified at line 110 (HTTP 413 on overflow).
-- ✅ "Enter the source identifier, which must be the IP address of the machine that will send syslog messages" — Verified at `Servers/utils/shadowAiConfig.utils.ts:35`. Field stored as `source_identifier` in syslog config. IP-based matching aligns with documented behavior and codebase design.
+- ❌ Corrected 2026-11-02: "Enter the source identifier, which must be the IP address of the machine that will send syslog messages" was marked verified from config storage code only. No listener existed then. Lines are now routed by a per-source key (`vw_source=<key>`, `Servers/services/shadowAiSyslog/sourceKey.ts`); the sender IP is optional. The guide section was rewritten from code.
 
 ### rules.md
 - ✅ "Trigger types are: New tool detected, Usage threshold exceeded, Sensitive department usage, Blocked tool attempt, Risk score exceeded, New user detected" — Verified at `Clients/src/domain/interfaces/i.shadowAi.ts:39-45`. Type ShadowAiTriggerType defines all six: "new_tool_detected", "usage_threshold_exceeded", "sensitive_department", "blocked_attempt", "risk_score_exceeded", "new_user_detected".

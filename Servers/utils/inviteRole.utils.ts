@@ -1,11 +1,11 @@
-import { getRoleByName, getRoleNameById } from "./roleMap";
+import { getRoleByName } from "./roleMap";
 import { getRoleByIdQuery } from "./role.utils";
 import {
   getEffectivePermissions,
   loadCustomRolePermissions,
-  roleHasPermission,
+  roleInfoHasPermission,
 } from "./rolePermissions.utils";
-import { getUserByIdQuery } from "./user.utils";
+import { getUserRoleInOrganization } from "./userPermission.utils";
 import { CheckedInvitation, getPendingInvitationQuery } from "./invitation.utils";
 
 /** Why a role may not be granted through an invitation. */
@@ -72,13 +72,14 @@ export async function userInviteRefusal(
   userId: number,
   roleId: number,
 ): Promise<InviteRoleRefusal | "not_allowed" | null> {
-  const user = userId ? await getUserByIdQuery(userId) : undefined;
-  if (!user || user.organization_id !== organizationId) return "not_allowed";
-  const roleName = await getRoleNameById(user.role_id);
-  if (!roleName || !(await roleHasPermission(organizationId, roleName, "invitation.super"))) {
+  // Same resolution as userHasPermission (by role_id, user filtered to the
+  // organization in SQL); the role is kept because inviteRoleRefusal needs
+  // its name.
+  const role = await getUserRoleInOrganization(organizationId, userId);
+  if (!role || !(await roleInfoHasPermission(organizationId, role, "invitation.super"))) {
     return "not_allowed";
   }
-  return inviteRoleRefusal(organizationId, roleName, roleId);
+  return inviteRoleRefusal(organizationId, role.name, roleId);
 }
 
 /**

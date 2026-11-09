@@ -1,11 +1,17 @@
-import { sendEmail } from "./emailService";
+import { notificationService } from "./notificationService";
 import { EMAIL_TEMPLATES } from "../constants/emailTemplates";
 import { IntakeEntityType } from "../domain.layer/enums/intake-entity-type.enum";
 import { sequelize } from "../database/db";
 import { QueryTypes } from "sequelize";
 import logger from "../utils/logger/fileLogger";
-import { getUsersByIds } from "../utils/intakeForm.utils";
+import {
+  getEligibleReviewerIdsQuery,
+  getIntakeFormByIdQuery,
+  getSubmissionByIdQuery,
+  getUsersByIds,
+} from "../utils/intakeForm.utils";
 import { translate } from "../utils/i18n.utils";
+import { escapeHtml } from "../utils/sanitization.utils";
 
 // `lang?: string` on each helper below currently uses the *requester's* locale
 // (req.lang). For known recipients we should prefer their stored preference via
@@ -21,6 +27,8 @@ function getEntityTypeDisplayName(entityType: IntakeEntityType): string {
       return "Model";
     case IntakeEntityType.USE_CASE:
       return "Use Case";
+    case IntakeEntityType.AI_APP:
+      return "AI App";
     default:
       return entityType;
   }
@@ -36,8 +44,9 @@ async function getAdminUsersForOrganization(
     const admins = await sequelize.query(
       `SELECT u.id, u.name, u.email
        FROM users u
-       JOIN roles r ON u.role_id = r.id
-       WHERE r.name = 'Admin' AND u.organization_id = :organizationId`,
+       JOIN organization_members om ON om.user_id = u.id AND om.organization_id = :organizationId
+       JOIN roles r ON om.role_id = r.id
+       WHERE r.name = 'Admin'`,
       {
         replacements: { organizationId },
         type: QueryTypes.SELECT,
@@ -76,8 +85,17 @@ function buildResubmitLink(
   return buildFrontendUrl(`/intake-forms`);
 }
 
+/** The "who reviews and by when" block, escaped; empty without a sentence. */
+export function renderReviewHtml(reviewText: string | undefined): string {
+  if (!reviewText) return "";
+  return `<div class="box box-primary"><p class="box-subtitle">${escapeHtml(reviewText)}</p></div>`;
+}
+
 /**
- * Send confirmation email to submitter after form submission
+ * Send confirmation email to submitter after form submission. `reviewText`
+ * (already worded, see intakeConfirmation/reviewTime.ts) names who reviews
+ * the submission and by when. Never throws: resolves false when the email
+ * could not be sent, so the caller can release its claim and retry later.
  */
 export async function sendSubmissionReceivedEmail(
   submitterEmail: string,
@@ -89,29 +107,83 @@ export async function sendSubmissionReceivedEmail(
   tenantSlug?: string,
   formSlug?: string,
   lang?: string,
-): Promise<void> {
+  reviewText?: string,
+): Promise<boolean> {
   try {
     const resubmitLink = buildResubmitLink(resubmissionToken, publicId, tenantSlug, formSlug);
 
     const subject = translate(lang, "Submission received: {formName}", { formName });
-    await sendEmail(submitterEmail, subject, EMAIL_TEMPLATES.INTAKE_SUBMISSION_RECEIVED, {
-      submitterName: submitterName || submitterEmail.split("@")[0],
-      formName,
-      submissionId: String(submissionId),
-      resubmitLink,
-    });
+    await notificationService.sendEmailWithTemplate(
+      submitterEmail,
+      subject,
+      EMAIL_TEMPLATES.INTAKE_SUBMISSION_RECEIVED,
+      {
+        submitterName: submitterName || submitterEmail.split("@")[0],
+        formName,
+        submissionId: String(submissionId),
+        resubmitLink,
+        reviewHtml: renderReviewHtml(reviewText),
+      },
+    );
 
     logger.info(
       `Submission received email sent to ${submitterEmail} for submission #${submissionId}`,
     );
+    return true;
   } catch (error) {
     logger.error("Failed to send submission received email:", error);
+    return false;
   }
+}
+
+/** The initial assessment shown in the new-submission email. */
+export interface IntakeNotificationResults {
+  /** EU AI Act level from the rules; null when the submission was not rule-checked. */
+  level: string | null;
+  /** Already worded, e.g. "64 (High)", "at least 70 (rules only)", "No score yet". */
+  scoreText: string;
+  suggestionCount: number;
+  /** The 2-minute wait ran out before both stages finished. */
+  capReached: boolean;
+}
+
+/**
+ * The email's results block as HTML. Every value is escaped; the block goes in
+ * through a raw-HTML template key. When the wait ran out, only a note is shown,
+ * so no half-finished number reaches the reviewer.
+ */
+export function renderIntakeResultsHtml(
+  results: IntakeNotificationResults | undefined,
+  lang?: string,
+): string {
+  if (!results) return "";
+  const t = (key: string, vars?: Record<string, string | number>) =>
+    escapeHtml(translate(lang, key, vars));
+  const title = `<p class="box-title">${t("Initial assessment")}</p>`;
+  if (results.capReached) {
+    return `<div class="box box-primary">${title}<p class="box-subtitle">${t(
+      "Scoring was still running when this email was sent. Open the submission to see the results.",
+    )}</p></div>`;
+  }
+  const row = (label: string, value: string) =>
+    `<p class="box-subtitle" style="margin-bottom: 6px;"><strong>${t(label)}</strong> ${value}</p>`;
+  return (
+    `<div class="box box-primary">${title}` +
+    row(
+      "EU AI Act level:",
+      results.level ? escapeHtml(translate(lang, results.level)) : t("Not rule-checked"),
+    ) +
+    row("Risk score:", escapeHtml(results.scoreText)) +
+    row("Suggested risks:", escapeHtml(String(results.suggestionCount))) +
+    `</div>`
+  );
 }
 
 /**
  * Send notification email to designated recipients (or org admins as fallback)
- * Accepts either an array of user IDs or an organization ID for fallback
+ * Accepts either an array of user IDs or an organization ID for fallback.
+ * `results` adds the initial assessment; `laneText` (already worded) adds the
+ * review lane line. Without them the email is unchanged.
  */
 export async function sendNewSubmissionAdminNotification(
   recipientsOrOrgId: number[] | number,
@@ -121,6 +193,8 @@ export async function sendNewSubmissionAdminNotification(
   submissionId: number,
   entityType: IntakeEntityType,
   lang?: string,
+  results?: IntakeNotificationResults,
+  laneText?: string,
 ): Promise<void> {
   try {
     let recipients: Array<{ id: number; name: string; email: string }>;
@@ -142,23 +216,40 @@ export async function sendNewSubmissionAdminNotification(
     const entityTypeDisplay = getEntityTypeDisplayName(entityType);
 
     const subject = translate(lang, "New submission pending review: {formName}", { formName });
+    const resultsHtml = renderIntakeResultsHtml(results, lang);
+    const laneHtml = laneText
+      ? `<p class="box-subtitle" style="margin-top: 6px;"><strong>${escapeHtml(
+          translate(lang, "Review level:"),
+        )}</strong> ${escapeHtml(laneText)}</p>`
+      : "";
+    let sent = 0;
     for (const recipient of recipients) {
       try {
-        await sendEmail(recipient.email, subject, EMAIL_TEMPLATES.INTAKE_NEW_SUBMISSION_ADMIN, {
-          adminName: recipient.name || recipient.email.split("@")[0],
-          formName,
-          submitterName: submitterName || submitterEmail.split("@")[0],
-          submitterEmail,
-          submissionId: String(submissionId),
-          entityType: entityTypeDisplay,
-          reviewLink,
-        });
+        await notificationService.sendEmailWithTemplate(
+          recipient.email,
+          subject,
+          EMAIL_TEMPLATES.INTAKE_NEW_SUBMISSION_ADMIN,
+          {
+            adminName: recipient.name || recipient.email.split("@")[0],
+            formName,
+            submitterName: submitterName || submitterEmail.split("@")[0],
+            submitterEmail,
+            submissionId: String(submissionId),
+            entityType: entityTypeDisplay,
+            reviewLink,
+            laneHtml,
+            resultsHtml,
+          },
+        );
+        sent += 1;
       } catch (error) {
         logger.error(`Failed to send admin notification to ${recipient.email}:`, error);
       }
     }
 
-    logger.info(`Admin notification emails sent for submission #${submissionId}`);
+    logger.info(
+      `Admin notification emails sent for submission #${submissionId}: ${sent} of ${recipients.length}`,
+    );
   } catch (error) {
     logger.error("Failed to send admin notification emails:", error);
   }
@@ -179,12 +270,17 @@ export async function sendSubmissionApprovedEmail(
     const entityTypeDisplay = getEntityTypeDisplayName(entityType);
 
     const subject = translate(lang, "Submission approved: {formName}", { formName });
-    await sendEmail(submitterEmail, subject, EMAIL_TEMPLATES.INTAKE_SUBMISSION_APPROVED, {
-      submitterName: submitterName || submitterEmail.split("@")[0],
-      formName,
-      submissionId: String(submissionId),
-      entityType: entityTypeDisplay,
-    });
+    await notificationService.sendEmailWithTemplate(
+      submitterEmail,
+      subject,
+      EMAIL_TEMPLATES.INTAKE_SUBMISSION_APPROVED,
+      {
+        submitterName: submitterName || submitterEmail.split("@")[0],
+        formName,
+        submissionId: String(submissionId),
+        entityType: entityTypeDisplay,
+      },
+    );
 
     logger.info(
       `Submission approved email sent to ${submitterEmail} for submission #${submissionId}`,
@@ -213,18 +309,79 @@ export async function sendSubmissionRejectedEmail(
     const resubmitLink = buildResubmitLink(resubmissionToken, publicId, tenantSlug, formSlug);
 
     const subject = translate(lang, "Submission requires changes: {formName}", { formName });
-    await sendEmail(submitterEmail, subject, EMAIL_TEMPLATES.INTAKE_SUBMISSION_REJECTED, {
-      submitterName: submitterName || submitterEmail.split("@")[0],
-      formName,
-      submissionId: String(submissionId),
-      rejectionReason,
-      resubmitLink,
-    });
+    await notificationService.sendEmailWithTemplate(
+      submitterEmail,
+      subject,
+      EMAIL_TEMPLATES.INTAKE_SUBMISSION_REJECTED,
+      {
+        submitterName: submitterName || submitterEmail.split("@")[0],
+        formName,
+        submissionId: String(submissionId),
+        rejectionReason,
+        resubmitLink,
+      },
+    );
 
     logger.info(
       `Submission rejected email sent to ${submitterEmail} for submission #${submissionId}`,
     );
   } catch (error) {
     logger.error("Failed to send submission rejected email:", error);
+  }
+}
+
+/**
+ * Ask the form's senior reviewers for a second review of an approval that was
+ * picked for sampling. Never throws: a failed email is logged.
+ */
+export async function sendSecondReviewRequestEmail(
+  organizationId: number,
+  submissionId: number,
+  seniorReviewerIds: number[],
+  lang?: string,
+): Promise<void> {
+  try {
+    const submission = await getSubmissionByIdQuery(submissionId, organizationId);
+    if (!submission) return;
+    const form = await getIntakeFormByIdQuery(submission.formId, organizationId);
+    const formName = form?.name || "Unknown Form";
+    const approvers = submission.reviewedBy ? await getUsersByIds([submission.reviewedBy]) : [];
+    const approverName = approvers[0]?.name || approvers[0]?.email || "A reviewer";
+    const eligibleIds = await getEligibleReviewerIdsQuery(organizationId, seniorReviewerIds);
+    const recipients = await getUsersByIds(eligibleIds);
+    if (recipients.length === 0) {
+      logger.warn(`No eligible senior reviewers for submission #${submissionId} second review`);
+      return;
+    }
+
+    const reviewLink = buildFrontendUrl(`/intake-forms/submissions?submission=${submissionId}`);
+    const subject = translate(lang, "Second review requested: {formName}", { formName });
+    let sent = 0;
+    for (const recipient of recipients) {
+      try {
+        await notificationService.sendEmailWithTemplate(
+          recipient.email,
+          subject,
+          EMAIL_TEMPLATES.INTAKE_SECOND_REVIEW,
+          {
+            reviewerName: recipient.name || recipient.email.split("@")[0],
+            formName,
+            submissionId: String(submissionId),
+            entityType: getEntityTypeDisplayName(submission.entityType),
+            approverName,
+            reviewLink,
+          },
+        );
+        sent += 1;
+      } catch (error) {
+        logger.error(`Failed to send second review request to ${recipient.email}:`, error);
+      }
+    }
+
+    logger.info(
+      `Second review request emails sent for submission #${submissionId}: ${sent} of ${recipients.length}`,
+    );
+  } catch (error) {
+    logger.error("Failed to send second review request emails:", error);
   }
 }

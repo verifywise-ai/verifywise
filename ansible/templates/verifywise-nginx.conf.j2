@@ -1,4 +1,15 @@
 # Managed by Ansible
+
+# Send "Connection: upgrade" only when the client asked for an upgrade
+# (WebSocket); ordinary requests close as usual. This file is included in
+# nginx's http block, where map is allowed. The vw_ prefix keeps it clear of
+# the common $connection_upgrade map other sites define (a duplicate fails
+# nginx -t).
+map $http_upgrade $vw_connection_upgrade {
+    default upgrade;
+    ''      close;
+}
+
 server {
     server_name {{ server_name_value }};
 
@@ -11,16 +22,22 @@ server {
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 
-    # TLS hardening (per docs/deployment/SECURITY_HARDENING_GUIDE.md).
-    # These take effect once certbot adds the SSL listener (listen 443 ssl) to
-    # this server block. Certbot manages its own options-ssl-nginx.conf include;
-    # keep these directives here as well so the protocol/cipher policy persists
-    # even if that include is changed or removed.
+    # TLS hardening (per docs/deployment/SECURITY_HARDENING_GUIDE.md). These
+    # take effect once certbot adds the SSL listener (listen 443 ssl) to this
+    # server block, and they are kept here so the TLS floor survives a change
+    # to certbot's options-ssl-nginx.conf include.
+    #
+    # ssl_ciphers is deliberately NOT set: certbot's nginx installer inserts the
+    # cipher list from that include and refuses to deploy the certificate when
+    # the block already carries a different one ("tried to insert directive
+    # ssl_ciphers but found conflicting"), which leaves the host on port 80 with
+    # no TLS listener. Both values below match the include's, so they pass.
     ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384;
     ssl_prefer_server_ciphers off;
 
-    # Custom error page for maintenance/upgrades
+    # Maintenance page for browser pages. /api and /v1 set their own JSON
+    # errors below: API clients (SDKs, MCP clients, webhook senders) parse
+    # JSON, not HTML.
     error_page 502 503 504 /upgrade.html;
 
     location = /upgrade.html {
@@ -32,7 +49,7 @@ server {
         proxy_pass http://localhost:{{ frontend_port }};
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
+        proxy_set_header Connection $vw_connection_upgrade;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -40,15 +57,80 @@ server {
         proxy_cache_bypass $http_upgrade;
     }
 
-    location /api/ {
+    # Every client must get through: MCP clients, webhooks and ingestion send
+    # no browser Referer, so do not gate on it.
+    location ^~ /api/ {
         proxy_pass http://localhost:{{ backend_port }};
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
+        proxy_set_header Connection $vw_connection_upgrade;
         proxy_set_header Host $host;
+        # The backend trusts one proxy hop and rate-limits by client IP:
+        # without these every user shares the proxy's address
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_cache_bypass $http_upgrade;
+        # A down backend fails fast instead of after nginx's default 60s
+        proxy_connect_timeout 5s;
+        # Same as the app's request timeout (customAxios, 120s)
+        proxy_read_timeout 120s;
+        error_page 502 503 = @api_unavailable;
+        error_page 504 = @api_timeout;
+    }
+
+    location @api_unavailable {
+        default_type application/json;
+        return 503 '{"message":"VerifyWise is unavailable, please retry shortly"}';
+    }
+
+    location @api_timeout {
+        default_type application/json;
+        # No connect time (one "-" per address tried): down, not slow
+        if ($upstream_connect_time ~ "^-(, -)*$") {
+            return 503 '{"message":"VerifyWise is unavailable, please retry shortly"}';
+        }
+        return 504 '{"message":"VerifyWise did not respond in time"}';
+    }
+
+    # OpenAI-compatible AI Gateway API used with virtual keys
+    # (base URL https://<host>/v1). The backend forwards it to the gateway.
+    location ^~ /v1/ {
+        proxy_pass http://localhost:{{ backend_port }};
+        proxy_http_version 1.1;
+        proxy_connect_timeout 5s;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        # Stream responses as they arrive and allow slow model calls
+        proxy_buffering off;
+        proxy_read_timeout 300s;
+        client_max_body_size 10m;
+        # SDK clients expect JSON, not the HTML maintenance page above.
+        # A timeout is its own error: the model call may still have run (and
+        # been billed), so it must not read as "unavailable, retry". Only a
+        # connection that never opened is reported as unavailable.
+        error_page 413 = @v1_too_large;
+        error_page 502 503 = @v1_unavailable;
+        error_page 504 = @v1_timeout;
+    }
+
+    location @v1_too_large {
+        default_type application/json;
+        return 413 '{"detail":"Request body is larger than 10 MB"}';
+    }
+
+    location @v1_unavailable {
+        default_type application/json;
+        return 503 '{"detail":"VerifyWise is unavailable, please retry shortly"}';
+    }
+
+    location @v1_timeout {
+        default_type application/json;
+        if ($upstream_connect_time ~ "^-(, -)*$") {
+            return 503 '{"detail":"VerifyWise is unavailable, please retry shortly"}';
+        }
+        return 504 '{"detail":"The AI Gateway request timed out"}';
     }
 }

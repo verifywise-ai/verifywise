@@ -53,6 +53,18 @@ interface VWTooltipProps {
 
   /** Whether to show an arrow pointing to the trigger element (default: true) */
   arrow?: boolean;
+
+  /**
+   * Use the tooltip as the trigger's description rather than its label (default: false).
+   * Set it when the trigger already has a visible name, such as a labelled button, so
+   * screen readers keep announcing that name.
+   */
+  describeChild?: boolean;
+
+  /** Controlled open state, e.g. for a trigger that also opens on click or tap */
+  open?: boolean;
+  onOpen?: TooltipProps["onOpen"];
+  onClose?: TooltipProps["onClose"];
 }
 
 const VWTooltip: React.FC<VWTooltipProps> = ({
@@ -63,9 +75,16 @@ const VWTooltip: React.FC<VWTooltipProps> = ({
   placement = "top",
   backgroundColor = "#1F2937",
   arrow = true,
+  describeChild = false,
+  open,
+  onOpen,
+  onClose,
 }) => {
   return (
     <Tooltip
+      open={open}
+      onOpen={onOpen}
+      onClose={onClose}
       title={
         <Box>
           {header && (
@@ -120,6 +139,7 @@ const VWTooltip: React.FC<VWTooltipProps> = ({
         </Box>
       }
       arrow={arrow}
+      describeChild={describeChild}
       placement={placement}
       slotProps={{
         tooltip: {

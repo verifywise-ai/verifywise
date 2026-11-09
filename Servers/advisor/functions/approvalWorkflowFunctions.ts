@@ -382,6 +382,17 @@ const agentCreateApprovalRequest = createWriteToolFn({
   },
 });
 
+// processApprovalQuery only accepts a decision from an approver on the current
+// step, so a missing user would always fail as "not an approver". Name the
+// real problem instead.
+const requireDecidingUser = (params: Record<string, unknown>): number => {
+  const userId = params._userId as number;
+  if (!userId) {
+    throw new Error("Cannot decide on an approval request without a deciding user");
+  }
+  return userId;
+};
+
 const agentApproveApprovalStep = createWriteToolFn({
   toolName: "agent_approve_approval_step",
   warningLevel: "warning",
@@ -392,7 +403,7 @@ const agentApproveApprovalStep = createWriteToolFn({
     try {
       const result = await processApprovalQuery(
         params.request_id as number,
-        (params._userId as number) || 0,
+        requireDecidingUser(params),
         ApprovalResult.APPROVED,
         params.comment as string | undefined,
         organizationId,
@@ -422,7 +433,7 @@ const agentRejectApprovalStep = createWriteToolFn({
     try {
       const result = await processApprovalQuery(
         params.request_id as number,
-        (params._userId as number) || 0,
+        requireDecidingUser(params),
         ApprovalResult.REJECTED,
         params.comment as string | undefined,
         organizationId,

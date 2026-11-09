@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useParams, useNavigate } from "react-router";
 import { Box, Typography, Stack, IconButton, Collapse } from "@mui/material";
 import TabContext from "@mui/lab/TabContext";
@@ -32,8 +32,14 @@ import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtende
 import { EmptyState } from "../../../components/EmptyState";
 import EmptyStateTip from "../../../components/EmptyState/EmptyStateTip";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
+import { useTranslation } from "../../../../application/hooks/useTranslation";
+import { fill } from "../../../../i18n/fill";
 import palette from "../../../themes/palette";
 import { sectionTitleSx, useCardSx } from "../shared";
+import {
+  getClientErrorReason,
+  getGatewayErrorDetail,
+} from "../../../../application/utils/apiErrorReason";
 import CustomizableSkeleton from "../../../components/Skeletons";
 
 // ─── Guardrail Catalog ────────────────────────────────────────────────────────
@@ -558,7 +564,30 @@ const FILTER_TYPE_ITEMS = [
   { _id: "regex", name: "Regex pattern" },
 ];
 
+// The gateway's 4xx reason, else a client reason, else the fallback (as on Settings).
+// An object detail ({message, code}) is the gateway rejecting the internal
+// key: a server misconfiguration the user cannot act on, so it gets the fallback.
+const apiErrorText = (err: unknown, fallback: string): string => {
+  const detail = (err as { response?: { detail?: unknown } } | null)?.response?.detail;
+  if (detail !== null && typeof detail === "object") return fallback;
+  return getGatewayErrorDetail(err) || getClientErrorReason(err) || fallback;
+};
+
+// Matches the gateway's limit on POST /guardrails/test.
+const MAX_TEST_TEXT = 20_000;
+
+/** Whether text has more than `max` code points; stops counting past `max`. */
+function exceedsCodePoints(text: string, max: number): boolean {
+  if (text.length <= max) return false; // UTF-16 length is never below the code-point count
+  let count = 0;
+  for (const _ of text) {
+    if (++count > max) return true;
+  }
+  return false;
+}
+
 export default function GuardrailsPage() {
+  const { t: tr, lang } = useTranslation();
   const cardSx = useCardSx();
   const { tab: urlTab } = useParams<{ tab: string }>();
   const navigate = useNavigate();
@@ -673,22 +702,24 @@ export default function GuardrailsPage() {
     setCfSubmitting(true);
     setCfError("");
     try {
-      await apiServices.post("/ai-gateway/guardrails", {
-        guardrail_type: "content_filter",
-        name: cfForm.name,
-        action: cfForm.action,
-        config: {
-          type: cfForm.type,
-          pattern: cfForm.pattern,
+      await apiServices.post(
+        "/ai-gateway/guardrails",
+        {
+          guardrail_type: "content_filter",
+          name: cfForm.name,
+          action: cfForm.action,
+          config: {
+            type: cfForm.type,
+            pattern: cfForm.pattern,
+          },
         },
-      });
+        { suppressGlobalErrorToast: true }, // the form shows the error
+      );
       setIsCfModalOpen(false);
       setCfForm({ name: "", type: "keyword", pattern: "", action: "block" });
       await loadRules();
-    } catch (err: any) {
-      setCfError(
-        err?.response?.data?.detail || err?.response?.data?.message || "Failed to create rule",
-      );
+    } catch (err) {
+      setCfError(apiErrorText(err, "Failed to create rule"));
     } finally {
       setCfSubmitting(false);
     }
@@ -719,22 +750,32 @@ export default function GuardrailsPage() {
     }
   };
 
+  // Count code points, as the gateway's len() does (an emoji is one, not two).
+  const testTextTooLong = useMemo(() => exceedsCodePoints(testText, MAX_TEST_TEXT), [testText]);
+  // The current test run. Editing the text or closing the dialog makes it
+  // stale: its result would describe text that is no longer there, so it is
+  // dropped. Run test stays disabled until the request ends, so the gateway
+  // never has more than one scan from this dialog.
+  const testRunRef = useRef<object | null>(null);
+
   const handleTest = async () => {
     if (!testText.trim()) return;
+    const run = {};
+    testRunRef.current = run;
     setTestLoading(true);
     setTestResult(null);
     try {
-      const res = await apiServices.post<Record<string, any>>("/ai-gateway/guardrails/test", {
-        text: testText,
-      });
-      setTestResult(res?.data?.data);
-    } catch (err: any) {
-      setTestResult({
-        error:
-          err?.response?.data?.detail ||
-          err?.response?.data?.message ||
-          "Test failed — is the AI Gateway service running?",
-      });
+      const res = await apiServices.post<Record<string, any>>(
+        "/ai-gateway/guardrails/test",
+        { text: testText },
+        { suppressGlobalErrorToast: true }, // the dialog shows the error
+      );
+      if (testRunRef.current === run) setTestResult(res?.data?.data);
+    } catch (err) {
+      if (testRunRef.current === run)
+        setTestResult({
+          error: apiErrorText(err, "Test failed — is the AI Gateway service running?"),
+        });
     } finally {
       setTestLoading(false);
     }
@@ -1150,12 +1191,16 @@ export default function GuardrailsPage() {
       {/* ─── Test Guardrails Modal ──────────────────────────────────────── */}
       <StandardModal
         isOpen={isTestOpen}
-        onClose={() => setIsTestOpen(false)}
+        onClose={() => {
+          testRunRef.current = null;
+          setIsTestOpen(false);
+        }}
         title="Test guardrails"
         description="Paste sample text to preview what your active guardrail rules would detect"
         onSubmit={handleTest}
         submitButtonText={testLoading ? "Scanning..." : "Run test"}
         isSubmitting={testLoading}
+        isSubmitDisabled={testTextTooLong || !testText.trim()}
         maxWidth="560px"
       >
         <Stack gap="16px">
@@ -1163,7 +1208,18 @@ export default function GuardrailsPage() {
             label="Sample text"
             placeholder="e.g., My email is john@example.com and my credit card is 4111-1111-1111-1111"
             value={testText}
-            onChange={(e) => setTestText(e.target.value)}
+            onChange={(e) => {
+              testRunRef.current = null; // a result only describes the text it scanned
+              setTestText(e.target.value);
+              setTestResult(null);
+            }}
+            error={
+              testTextTooLong
+                ? fill(tr("Sample text must be at most {max} characters"), {
+                    max: MAX_TEST_TEXT.toLocaleString(lang),
+                  })
+                : undefined
+            }
             isRequired
           />
           {testResult && !testResult.error && (

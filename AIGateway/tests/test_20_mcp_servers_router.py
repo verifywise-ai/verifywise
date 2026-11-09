@@ -20,7 +20,8 @@ from utils.mcp_credentials import normalize_auth_config
 
 pytestmark = pytest.mark.asyncio
 
-OK = {"status": "success", "tools_discovered": 3, "error": None}
+CHANGES = {"added": 1, "removed": 0, "changed": 0, "unchanged": 2}
+OK = {"status": "success", "tools_discovered": 3, "changes": CHANGES, "error": None}
 
 
 def _request(body=None, role="Admin"):
@@ -106,7 +107,7 @@ class TestCreate:
     async def test_create_inactive_skips_discovery(self, fakes):
         body = {"name": "S", "slug": "s", "url": "https://a/mcp", "auth_type": "none", "is_active": False}
         out = await router.create_mcp_server(_request(body))
-        assert out["discovery"] == {"status": "skipped", "tools_discovered": 0, "error": None}
+        assert out["discovery"] == {"status": "skipped", "tools_discovered": 0, "changes": None, "error": None}
         assert fakes["discovery"] == []
 
     async def test_create_missing_secret_is_400(self, fakes):
@@ -160,12 +161,12 @@ class TestPatch:
 class TestDiscoverEndpoint:
     async def test_manual_discovery_uses_25s_budget(self, fakes):
         out = await router.discover_server_tools(9, _request())
-        assert out == {"status": "success", "tools_discovered": 3}
+        assert out == {"status": "success", "tools_discovered": 3, "changes": CHANGES}
         assert fakes["discovery"] == [(9, router.MANUAL_DISCOVERY_SECONDS)]
 
     async def test_manual_failure_is_502_with_message(self, fakes, monkeypatch):
         async def fail(org_id, server, budget):
-            return {"status": "failed", "tools_discovered": 0, "error": "Could not connect to the server address"}
+            return {"status": "failed", "tools_discovered": 0, "changes": None, "error": "Could not connect to the server address"}
         monkeypatch.setattr(router, "run_discovery", fail)
         with pytest.raises(HTTPException) as e:
             await router.discover_server_tools(9, _request())
@@ -382,3 +383,134 @@ class TestUnsafeServerUrlOnToolCall:
         assert body["error"]["message"] == "This MCP server's address is not allowed"
         assert failures == []
         assert audits and audits[0]["result_status"] == "error" and audits[0]["is_error"] is True
+
+
+class TestOauthResubmit:
+    @staticmethod
+    def _oauth_row():
+        cfg = normalize_auth_config(
+            "oauth",
+            {"client_id": "app", "client_secret": "s3cret", "token_url": "https://auth.example.com/t",
+             "scope": "mcp"},
+            None,
+        )
+        return _row(auth_type="oauth", auth_config=cfg)
+
+    @staticmethod
+    def _form(**over):
+        form = {"client_id": "app", "client_secret": "", "token_url": "https://auth.example.com/t",
+                "scope": "mcp"}
+        form.update(over)
+        return form
+
+    async def test_rename_with_full_config_skips_discovery_and_keeps_ciphertext(self, fakes):
+        from utils.mcp_credentials import config_fingerprint
+
+        fakes["row"] = self._oauth_row()
+        before = dict(fakes["row"]["auth_config"])
+        out = await router.update_mcp_server(
+            9, _request({"name": "Renamed", "auth_type": "oauth", "auth_config": self._form()})
+        )
+        assert out["discovery"]["status"] == "skipped"
+        assert fakes["discovery"] == []
+        assert fakes["saved"]["auth_config"] == before
+        assert config_fingerprint("oauth", fakes["saved"]["auth_config"]) == config_fingerprint("oauth", before)
+
+    async def test_changed_scope_runs_discovery(self, fakes):
+        fakes["row"] = self._oauth_row()
+        out = await router.update_mcp_server(
+            9, _request({"auth_type": "oauth", "auth_config": self._form(scope="other")})
+        )
+        assert out["discovery"] == OK
+
+    async def test_empty_scope_clears_it(self, fakes):
+        fakes["row"] = self._oauth_row()
+        out = await router.update_mcp_server(
+            9, _request({"auth_type": "oauth", "auth_config": self._form(scope="")})
+        )
+        assert "scope" not in fakes["saved"]["auth_config"]
+        assert out["discovery"] == OK
+
+    async def test_api_key_rename_with_header_resubmitted_skips_discovery(self, fakes):
+        await router.update_mcp_server(
+            9, _request({"name": "R", "auth_type": "api_key", "auth_config": {"header": "X-K"}})
+        )
+        assert fakes["discovery"] == []
+
+
+class TestUrlOriginChange:
+    """A token minted for one host must not be sent to another with the old secret."""
+
+    MESSAGE = "Enter the secret again: the server address now points to a different host"
+
+    @staticmethod
+    def _oauth_row():
+        cfg = normalize_auth_config(
+            "oauth",
+            {"client_id": "app", "client_secret": "s3cret", "token_url": "https://auth.example.com/t"},
+            None,
+        )
+        return _row(auth_type="oauth", auth_config=cfg, url="https://a.example.com/mcp")
+
+    @staticmethod
+    def _aws_row():
+        cfg = normalize_auth_config(
+            "aws_iam",
+            {"region": "us-east-1", "access_key_id": "AKIAEXAMPLE", "secret_access_key": "awssecret"},
+            None,
+        )
+        return _row(auth_type="aws_iam", auth_config=cfg, url="https://aws-mcp.us-east-1.api.aws/mcp")
+
+    @pytest.mark.parametrize("kind", ["oauth", "aws"])
+    async def test_other_host_without_a_new_secret_is_400(self, fakes, kind):
+        fakes["row"] = self._oauth_row() if kind == "oauth" else self._aws_row()
+        with pytest.raises(HTTPException) as e:
+            await router.update_mcp_server(9, _request({"url": "https://evil.example.net/mcp"}))
+        assert e.value.status_code == 400 and e.value.detail == self.MESSAGE
+        assert fakes["saved"] is None
+
+    async def test_other_port_or_scheme_is_a_different_origin(self, fakes):
+        fakes["row"] = self._oauth_row()
+        for url in ("https://a.example.com:8443/mcp", "http://a.example.com/mcp"):
+            with pytest.raises(HTTPException) as e:
+                await router.update_mcp_server(9, _request({"url": url}))
+            assert e.value.detail == self.MESSAGE
+
+    async def test_blank_secret_in_the_form_still_counts_as_missing(self, fakes):
+        fakes["row"] = self._oauth_row()
+        form = {"client_id": "app", "client_secret": "  ", "token_url": "https://auth.example.com/t"}
+        with pytest.raises(HTTPException) as e:
+            await router.update_mcp_server(
+                9, _request({"url": "https://evil.example.net/mcp", "auth_type": "oauth", "auth_config": form})
+            )
+        assert e.value.detail == self.MESSAGE
+
+    async def test_other_host_with_a_new_secret_is_saved(self, fakes):
+        fakes["row"] = self._oauth_row()
+        form = {"client_id": "app", "client_secret": "fresh", "token_url": "https://auth.example.com/t"}
+        await router.update_mcp_server(
+            9, _request({"url": "https://b.example.com/mcp", "auth_type": "oauth", "auth_config": form})
+        )
+        assert decrypt(fakes["saved"]["auth_config"]["client_secret_enc"]) == "fresh"
+
+    async def test_new_aws_secret_allows_a_host_change(self, fakes):
+        fakes["row"] = self._aws_row()
+        form = {"region": "us-east-1", "access_key_id": "AKIAEXAMPLE", "secret_access_key": "fresh"}
+        await router.update_mcp_server(
+            9, _request({"url": "https://other.example.com/mcp", "auth_type": "aws_iam", "auth_config": form})
+        )
+        assert decrypt(fakes["saved"]["auth_config"]["secret_access_key_enc"]) == "fresh"
+
+    async def test_same_origin_path_change_keeps_the_secret(self, fakes):
+        fakes["row"] = self._oauth_row()
+        await router.update_mcp_server(9, _request({"url": "https://a.example.com/other/path"}))
+        assert fakes["saved"]["url"] == "https://a.example.com/other/path"
+
+    async def test_default_port_is_normalised(self, fakes):
+        fakes["row"] = self._oauth_row()
+        await router.update_mcp_server(9, _request({"url": "https://A.example.com:443/mcp"}))
+        assert fakes["saved"] is not None
+
+    async def test_api_key_servers_are_unchanged(self, fakes):
+        await router.update_mcp_server(9, _request({"url": "https://b.example.com/mcp"}))
+        assert fakes["saved"]["url"] == "https://b.example.com/mcp"

@@ -16,6 +16,32 @@ import AiOrNotScreening from "../../../components/Modals/AiOrNotScreening";
 import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtended";
 import { brand } from "../../../themes/palette";
 import { testIds } from "../../../test-ids";
+import LifecycleTabs from "../../../components/LifecycleTabs";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  useCaseLifecycleKeys,
+  useUseCaseLifecycleSummary,
+  useUseCaseStageCounts,
+} from "../../../../application/hooks/useUseCaseLifecycle";
+import { LifecycleStage } from "../../../../domain/enums/lifecycleStage.enum";
+import { useLifecycleTab } from "../../../../application/hooks/useLifecycleTab";
+import PendingIntakeSubmissions from "../../../components/LifecycleTabs/PendingIntakeSubmissions";
+
+const STAGE_STORAGE_KEY = "use-cases-lifecycle-tab";
+
+const STAGE_TOOLTIPS: Record<LifecycleStage, string> = {
+  [LifecycleStage.IN_REVIEW]: "Intake requests and use cases waiting for an approval decision",
+  [LifecycleStage.PLANNED]: "Use cases that are not live yet",
+  [LifecycleStage.LIVE]: "Use cases in use today",
+  [LifecycleStage.RETIRED]: "Use cases that are no longer in use",
+};
+
+const STAGE_EMPTY: Record<LifecycleStage, string> = {
+  [LifecycleStage.IN_REVIEW]: "No use cases are waiting for review.",
+  [LifecycleStage.PLANNED]: "No planned use cases.",
+  [LifecycleStage.LIVE]: "No live use cases. Open a planned use case and mark it as live.",
+  [LifecycleStage.RETIRED]: "No retired use cases.",
+};
 
 const Home = () => {
   const location = useLocation();
@@ -32,6 +58,24 @@ const Home = () => {
     if (!dashboard) return [];
     return dashboard.projects_list.filter((p) => !p.is_organizational);
   }, [dashboard]);
+
+  // Lifecycle tabs (#5187). Counts come from the rows this page already shows,
+  // so a tab count always equals the rows under it; stale markers come from
+  // the server, which applies the org's "still live?" interval.
+  const [stage, handleStageChange] = useLifecycleTab(STAGE_STORAGE_KEY);
+  const { data: lifecycleSummary } = useUseCaseLifecycleSummary();
+  const staleIds = useMemo(() => new Set(lifecycleSummary?.stale_ids ?? []), [lifecycleSummary]);
+  // Stage counts, with pending intake requests (#5188) added to In review:
+  // the same helper the dashboard uses, so the two always show one number.
+  // The requests are not projects yet, so they are listed apart from the
+  // use cases, below the toolbar.
+  const { counts: stageCounts, pending: pendingSubmissions } = useUseCaseStageCounts(projects);
+  const stageProjects = useMemo(
+    () => projects.filter((p) => (p.lifecycle_stage ?? LifecycleStage.PLANNED) === stage),
+    [projects, stage],
+  );
+  const inReviewWithRequests =
+    stage === LifecycleStage.IN_REVIEW && (pendingSubmissions?.total ?? 0) > 0;
 
   const [runHomeTour, setRunHomeTour] = useState(false);
   const newProjectButtonRef = useRef<HTMLDivElement>(null);
@@ -55,6 +99,14 @@ const Home = () => {
     void fetchDashboard();
   }, [fetchDashboard, refreshProjectsFlag, refreshUsers]);
 
+  // A create or delete changes the stale markers too. Invalidating here (not
+  // in the effect above) keeps the summary to one fetch on mount.
+  const queryClient = useQueryClient();
+  const refreshProjects = () => {
+    setRefreshProjectsFlag((prev) => !prev);
+    void queryClient.invalidateQueries({ queryKey: useCaseLifecycleKeys.all });
+  };
+
   const submitFormRef = useRef<(() => void) | undefined>(undefined);
 
   // Auto-open create modal when navigating from "Add new..." dropdown
@@ -69,7 +121,7 @@ const Home = () => {
 
   const handleProjectFormModalClose = () => {
     setIsProjectFormModalOpen(false);
-    setRefreshProjectsFlag((prev) => !prev);
+    refreshProjects();
   };
 
   return (
@@ -81,9 +133,39 @@ const Home = () => {
     >
       {/* Projects List */}
       <ProjectList
-        projects={projects}
+        projects={stageProjects}
         isLoading={isPending}
-        onProjectDeleted={() => setRefreshProjectsFlag((prev) => !prev)}
+        staleIds={staleIds}
+        // An org with no use cases at all keeps the onboarding empty state on
+        // every tab; the intake requests still show above it in In review.
+        emptyMessage={
+          projects.length === 0
+            ? undefined
+            : inReviewWithRequests
+              ? "No use cases are waiting for an approval decision."
+              : STAGE_EMPTY[stage]
+        }
+        header={
+          <LifecycleTabs
+            value={stage}
+            onChange={handleStageChange}
+            counts={stageCounts}
+            isLoading={isPending}
+            tooltips={STAGE_TOOLTIPS}
+            dataJoyrideId="use-case-lifecycle-tabs"
+          />
+        }
+        renderBeforeList={(searchTerm) =>
+          stage === LifecycleStage.IN_REVIEW ? (
+            <PendingIntakeSubmissions
+              pending={pendingSubmissions}
+              searchTerm={searchTerm}
+              description="Submitted through an intake form. The use case is created when a reviewer approves the request."
+              exportNote="Intake requests are not included in the use case export."
+            />
+          ) : null
+        }
+        onProjectDeleted={refreshProjects}
         newProjectButton={
           <div data-joyride-id="new-project-button" ref={newProjectButtonRef}>
             <CustomizableButton
@@ -106,7 +188,7 @@ const Home = () => {
         isOpen={isProjectFormModalOpen}
         onClose={async () => {
           setIsProjectFormModalOpen(false);
-          setRefreshProjectsFlag((prev) => !prev);
+          refreshProjects();
         }}
         title="Create new use case"
         description="Create a new use case by filling in the following details"

@@ -99,6 +99,7 @@ import {
   iso27001Endpoints,
   iso42001Endpoints,
   llmKeyEndpoints,
+  mcpEndpoints,
   modelInventoryEndpoints,
   modelRiskEndpoints,
   nistAiRmfEndpoints,
@@ -198,6 +199,7 @@ const App: React.FC = () => {
     { id: 'roles', label: 'Roles', icon: <UserCog size={14} />, category: 'core-resources', keywords: ['role', 'permission', 'access'] },
     { id: 'invitations', label: 'Invitations', icon: <Mail size={14} />, category: 'core-resources', keywords: ['invite', 'invitation', 'onboard'] },
     { id: 'super-admin', label: 'Super admin', icon: <Shield size={14} />, category: 'core-resources', keywords: ['super', 'admin', 'system'] },
+    { id: 'mcp', label: 'MCP server', icon: <Shield size={14} />, category: 'core-resources', keywords: ['mcp', 'claude', 'super', 'admin', 'json-rpc'] },
 
     // Risk Management
     { id: 'project-risks', label: 'Project risks', icon: <AlertTriangle size={14} />, category: 'risk-management', keywords: ['risk', 'threat', 'vulnerability', 'project'] },
@@ -623,6 +625,7 @@ const App: React.FC = () => {
               {activeSection === 'roles' && <EndpointSection title="Roles" description="Endpoints for managing user roles and permissions." endpoints={roleEndpoints} />}
               {activeSection === 'invitations' && <EndpointSection title="Invitations" description="Endpoints for managing user invitations." endpoints={invitationEndpoints} />}
               {activeSection === 'super-admin' && <EndpointSection title="Super admin" description="Endpoints for super admin operations across all organizations." endpoints={superAdminEndpoints} />}
+              {activeSection === 'mcp' && <EndpointSection title="MCP server" description="MCP endpoint that lets Claude Code run super admin tools on this deployment." endpoints={mcpEndpoints} />}
               {activeSection === 'project-risks' && <EndpointSection title="Project risks" description="Endpoints for managing project-level risks." endpoints={projectRiskEndpoints} />}
               {activeSection === 'vendors' && <EndpointSection title="Vendors" description="Endpoints for managing third-party vendors and suppliers." endpoints={vendorEndpoints} />}
               {activeSection === 'vendor-risks' && <EndpointSection title="Vendor risks" description="Endpoints for managing vendor-related risks." endpoints={vendorRiskEndpoints} />}

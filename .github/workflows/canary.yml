@@ -1,0 +1,97 @@
+name: Canary
+
+# (#4681-a) Scheduled canary: the minimal @canary critical journey
+# (Clients/e2e/canary/canary.spec.ts — login → dashboard renders → project
+# list loads) against a live environment. Deliberately separate from
+# e2e-tests.yml: no sharding, no Postgres/Redis services, no app startup —
+# it tests the DEPLOYED environment, not a PR build.
+#
+# Add this badge to a README/wiki to surface canary health:
+#   [![Canary](https://github.com/OWNER/REPO/actions/workflows/canary.yml/badge.svg)](https://github.com/OWNER/REPO/actions/workflows/canary.yml)
+
+permissions:
+  contents: read
+
+on:
+  schedule:
+    # Every 30 minutes.
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+jobs:
+  # Configure CANARY_BASE_URL as a repo variable and CANARY_EMAIL /
+  # CANARY_PASSWORD as secrets for the target environment. The account must be
+  # an in-org user, not a super-admin. Until all three exist the canary job is
+  # skipped with a warning instead of failing every 30 minutes.
+  config:
+    name: Check canary configuration
+    runs-on: ubuntu-latest
+    outputs:
+      available: ${{ steps.cfg.outputs.available }}
+    steps:
+      - id: cfg
+        env:
+          CANARY_BASE_URL: ${{ vars.CANARY_BASE_URL }}
+          CANARY_EMAIL: ${{ secrets.CANARY_EMAIL }}
+          CANARY_PASSWORD: ${{ secrets.CANARY_PASSWORD }}
+        run: |
+          if [ -n "$CANARY_BASE_URL" ] && [ -n "$CANARY_EMAIL" ] && [ -n "$CANARY_PASSWORD" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::CANARY_BASE_URL, CANARY_EMAIL or CANARY_PASSWORD is not set - skipping the canary."
+          fi
+
+  canary:
+    name: Canary critical journey (@canary)
+    needs: config
+    if: needs.config.outputs.available == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Single worker on purpose: the canary is a fast, deterministic signal;
+    # parallelism would only multiply logins against the rate limiter.
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: Clients/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: Clients
+        run: npm ci --legacy-peer-deps
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-browsers-${{ runner.os }}-${{ hashFiles('Clients/package-lock.json', 'Clients/package.json') }}
+          restore-keys: |
+            playwright-browsers-${{ runner.os }}-
+
+      - name: Install Playwright browsers
+        working-directory: Clients
+        run: npx playwright install --with-deps chromium
+
+      # Against a deployed URL the `canary` project signs in with E2E_EMAIL
+      # (e2e/canary/canary.setup.ts) and never runs global.setup.ts, which
+      # deletes and recreates organizations.
+      - name: Run canary suite
+        working-directory: Clients
+        env:
+          E2E_BASE_URL: ${{ vars.CANARY_BASE_URL }}
+          E2E_EMAIL: ${{ secrets.CANARY_EMAIL }}
+          E2E_PASSWORD: ${{ secrets.CANARY_PASSWORD }}
+        run: npx playwright test --project=canary --grep @canary
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: canary-playwright-report
+          path: Clients/playwright-report/
+          retention-days: 7

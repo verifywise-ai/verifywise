@@ -14,7 +14,8 @@ The Alert component is designed to display various types of messages to the user
 - `variant`: The type of alert to display. Options are "success", "info", "warning", and "error".
 - `title`: The title text of the alert.
 - `body`: The body text of the alert.
-- `isToast`: Whether the alert is a toast notification.
+- `isToast`: Whether the alert is a toast notification (shows a close button).
+- `inline`: Render in the page flow instead of floating in the top-right corner. Without it the alert is always `position: fixed`, even when `isToast` is false, so set it for alerts that sit inside a panel, form or modal.
 - `hasIcon`: Whether to display an icon in the alert. Defaults to true.
 - `onClick`: Callback function to handle click events.
 

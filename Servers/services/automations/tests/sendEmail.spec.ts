@@ -43,6 +43,23 @@ describe("sendEmail action", () => {
     );
   });
 
+  it("escapes markup in the body so entity values cannot inject links", async () => {
+    mockSendAutomationEmail.mockResolvedValue(undefined);
+
+    await sendEmail({
+      to: ["user@example.com"],
+      subject: "Vendor review",
+      body: 'Vendor: <a href="https://evil.example">Re-verify</a>\nThanks',
+    });
+
+    expect(mockSendAutomationEmail).toHaveBeenCalledWith(
+      ["user@example.com"],
+      "Vendor review",
+      "Vendor: &lt;a href=&quot;https://evil.example&quot;&gt;Re-verify&lt;/a&gt;<br>Thanks",
+      undefined,
+    );
+  });
+
   it("should convert newlines to <br> tags in body", async () => {
     mockSendAutomationEmail.mockResolvedValue(undefined);
 

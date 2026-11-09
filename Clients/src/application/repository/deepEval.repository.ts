@@ -6,6 +6,7 @@
  */
 
 import { deepEvalProjectsService } from "../../infrastructure/api/deepEvalProjectsService";
+import { evalModelsService } from "../../infrastructure/api/evalModelsService";
 import {
   deepEvalDatasetsService,
   isSingleTurnPrompt,
@@ -220,6 +221,8 @@ export const deleteLlmApiKey = (provider: LLMProvider, id?: number) =>
 
 export const hasLlmApiKey = (provider: LLMProvider) => evaluationLlmApiKeysService.hasKey(provider);
 
+export const verifySavedLlmApiKey = (id: number) => evaluationLlmApiKeysService.verifySavedKey(id);
+
 export const verifyLlmApiKey = (provider: string, apiKey: string) =>
   evaluationLlmApiKeysService.verifyKey({ provider, apiKey });
 
@@ -247,10 +250,19 @@ export const getMetricAggregates = (
   params: Parameters<typeof metricsService.getMetricAggregates>[0],
 ) => metricsService.getMetricAggregates(params);
 
+// ==================== MODEL CATALOG ====================
+
+/** The provider's current chat models from the AI Gateway's LiteLLM catalog ([] when down). */
+export const getGatewayModelsForProvider = (provider: string) =>
+  evalModelsService.getGatewayModelsForProvider(provider);
+
+export const hasGatewayCatalog = (provider: string) =>
+  evalModelsService.hasGatewayCatalog(provider);
+
 // ==================== MODEL VALIDATION ====================
 
-export const validateModel = (modelName: string, provider?: string) =>
-  modelValidationService.validateModel(modelName, provider);
+export const validateModel = (modelName: string, provider?: string, probe = false) =>
+  modelValidationService.validateModel(modelName, provider, probe);
 
 export const validateModelForExperiment = (config: Record<string, unknown>) =>
   experimentsService.validateModelForExperiment(config);

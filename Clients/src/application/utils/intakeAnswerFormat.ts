@@ -1,4 +1,4 @@
-import { normalizeDecimals } from "./intakeFormLogic";
+import { isEmptyAnswer, normalizeDecimals } from "./intakeFormLogic";
 
 interface CalculatedDisplay {
   decimals?: number | null;
@@ -42,6 +42,33 @@ export function describeFormula(
   return `= ${text.replace(/\s+/g, " ").trim()}`;
 }
 
+export type FormulaSegment =
+  | { kind: "text"; text: string; start: number }
+  | { kind: "ref"; fieldId: string; start: number; end: number };
+
+/**
+ * "{cost} * 12" → a reference to cost, then the text " * 12". Offsets index
+ * the formula string, so an editor can map its caret onto the stored formula.
+ * Text segments are never empty.
+ */
+export function splitFormula(formula: string): FormulaSegment[] {
+  const segments: FormulaSegment[] = [];
+  let last = 0;
+  for (const match of formula.matchAll(/\{([A-Za-z0-9_-]+)\}/g)) {
+    const start = match.index ?? 0;
+    if (start > last) {
+      segments.push({ kind: "text", text: formula.slice(last, start), start: last });
+    }
+    const end = start + match[0].length;
+    segments.push({ kind: "ref", fieldId: match[1], start, end });
+    last = end;
+  }
+  if (last < formula.length) {
+    segments.push({ kind: "text", text: formula.slice(last), start: last });
+  }
+  return segments;
+}
+
 export interface AnswerField {
   type: string;
   options?: Array<{ label: string; value: string }> | null;
@@ -59,7 +86,7 @@ export function formatAnswer(
   if (field.type === "calculated") {
     return formatCalculatedValue(typeof value === "number" ? value : null, field);
   }
-  if (value === null || value === undefined || value === "") return "—";
+  if (isEmptyAnswer(value)) return "—";
   if (field.type === "checkbox") return value ? "Yes" : "No";
   if (field.type === "date") return formatDate(value as string);
   if (field.type === "select" && field.options) {

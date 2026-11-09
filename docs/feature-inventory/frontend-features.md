@@ -614,7 +614,7 @@ For each page/screen the following subsections describe: routes, user-facing fea
 |-----------|-------|
 | Routes | `/risk-management` |
 | Component | `Clients/src/presentation/pages/RiskManagement/index.tsx` |
-| Features | Project risk register, risk heatmap/timeline visualization, risk filters, create/edit risk modals (`NewRisk`, `AddNewRiskForm`, `AddNewRiskIBMForm`, `AddNewRiskMITForm`), quantitative risk assessment mode toggle, mitigation section, linked policies. |
+| Features | Project risk register, risk heatmap/timeline visualization, risk filters, create/edit risk modals (`NewRisk`, `AddNewRiskForm`, `RiskCatalogModal`), quantitative risk assessment mode toggle, mitigation section, linked policies. |
 | Key components | `RisksView`, `RiskVisualizationTabs`, `RiskHeatMap`, `RiskTimeline`, `RiskCategories`, `NewRisk`, `AddNewRiskForm`, `QuantitativeRiskForm`. |
 | Access | Main sidebar → Risk management; Start Here shortcut. |
 | e2e tests | `Clients/e2e/risk-management.spec.ts` |

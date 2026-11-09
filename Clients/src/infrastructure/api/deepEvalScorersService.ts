@@ -103,6 +103,10 @@ export interface ScorerTestResult {
   score: number;
   passed: boolean;
   rawResponse: string;
+  /** Set when the judge call failed; score is then not a real score */
+  error?: string;
+  /** LiteLLM's price for the judge call; null when unknown */
+  costUsd?: number | null;
   tokenUsage?: {
     promptTokens: number;
     completionTokens: number;

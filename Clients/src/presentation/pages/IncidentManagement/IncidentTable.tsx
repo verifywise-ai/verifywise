@@ -21,6 +21,7 @@ import { AIIncidentManagementModel } from "../../../domain/models/Common/inciden
 import { IncidentTableProps } from "../../types/interfaces/i.table";
 import { incidentRowHover, incidentTableRowDeletingStyle } from "./style";
 import CustomIconButton from "../../components/IconButton";
+import JiraIssueChip from "../../components/JiraIssueChip";
 import { useStandardTable } from "../../../application/hooks/useStandardTable";
 import type { StandardColumn } from "../../../domain/types/standardTable";
 import StandardTableHead from "../../components/Table/StandardTableHead";
@@ -68,6 +69,7 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
   archivedId,
   hidePagination = false,
   visibleColumns,
+  jiraLinks,
 }) => {
   const formatDate = useFormattedDate();
   const isVisible = useCallback(
@@ -187,7 +189,14 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
                         backgroundColor: sortConfig.key === "incident_id" ? "#e8e8e8" : "#fafafa",
                       }}
                     >
-                      {incident.incident_id}{" "}
+                      {jiraLinks?.get(incident.id) ? (
+                        <Stack direction="row" alignItems="center" flexWrap="wrap" gap="8px">
+                          <span>{incident.incident_id}</span>
+                          <JiraIssueChip link={jiraLinks.get(incident.id)!} />
+                        </Stack>
+                      ) : (
+                        <>{incident.incident_id} </>
+                      )}
                     </TableCell>
                   )}
                   {isVisible("ai_project") && (

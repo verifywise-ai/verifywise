@@ -133,6 +133,21 @@ class EvaluationLlmApiKeysService {
   }
 
   /**
+   * Ask the provider whether a saved key still works. The key never leaves the gateway.
+   * Resolves valid when the check itself fails, so an outage never hides a working key.
+   */
+  async verifySavedKey(id: number): Promise<{ valid: boolean }> {
+    try {
+      const response = await CustomAxios.post<{ data: { valid: boolean } }>(
+        `/ai-gateway/keys/${id}/verify`,
+      );
+      return { valid: response.data?.data?.valid ?? true };
+    } catch {
+      return { valid: true };
+    }
+  }
+
+  /**
    * Verify via AI Gateway (same provider checks as gateway Settings).
    */
   async verifyKey(request: VerifyKeyRequest): Promise<{ valid: boolean; error?: string }> {

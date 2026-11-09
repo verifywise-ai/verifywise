@@ -1,5 +1,6 @@
 import { screen, waitFor, fireEvent } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
+import CustomException from "../../../../infrastructure/exceptions/customeException";
 
 // ─── Mocks ──────────────────────────────────────────────────────────────────
 
@@ -58,7 +59,7 @@ const mockEndpoints = [
     provider: "openai",
     model: "openai/gpt-4o",
     api_key_id: 1,
-    api_key_name: "OpenAI Key",
+    key_name: "OpenAI Key",
     max_tokens: 4096,
     temperature: 0.7,
     system_prompt: "",
@@ -79,7 +80,7 @@ const mockEndpoints = [
     provider: "anthropic",
     model: "anthropic/claude-3",
     api_key_id: 1,
-    api_key_name: "OpenAI Key",
+    key_name: "OpenAI Key",
     max_tokens: null,
     temperature: null,
     system_prompt: "",
@@ -322,6 +323,7 @@ describe("AIGateway - Endpoints", () => {
           api_key_id: 1,
           slug: "new-endpoint",
         }),
+        { suppressGlobalErrorToast: true },
       );
     });
 
@@ -356,14 +358,16 @@ describe("AIGateway - Endpoints", () => {
       expect(apiServices.patch).toHaveBeenCalledWith(
         "/ai-gateway/endpoints/1",
         expect.objectContaining({ display_name: "Production GPT-4o (renamed)" }),
+        { suppressGlobalErrorToast: true },
       );
     });
   });
 
   it("shows the API error message when create submission fails", async () => {
-    (apiServices.post as any).mockRejectedValue({
-      response: { data: { detail: "Slug already exists" } },
-    });
+    // apiServices throws CustomException(message, status, body).
+    (apiServices.post as any).mockRejectedValue(
+      new CustomException("Request failed", 400, { detail: "Slug already exists" }),
+    );
     renderWithProviders(<EndpointsPage />);
 
     await waitFor(() => {
@@ -424,8 +428,77 @@ describe("AIGateway - Endpoints", () => {
     fireEvent.click(screen.getByRole("button", { name: "Delete" }));
 
     await waitFor(() => {
-      expect(apiServices.delete).toHaveBeenCalledWith("/ai-gateway/endpoints/1");
+      expect(apiServices.delete).toHaveBeenCalledWith("/ai-gateway/endpoints/1", {
+        suppressGlobalErrorToast: true,
+      });
     });
+  });
+
+  it("shows why a delete failed and keeps the dialog open", async () => {
+    (apiServices.delete as any).mockRejectedValue(
+      new CustomException("Request failed", 400, { detail: "Endpoint is busy" }),
+    );
+    const { container } = renderWithProviders(<EndpointsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Production GPT-4o")).toBeInTheDocument();
+    });
+
+    fireEvent.click(container.querySelectorAll("svg.lucide-trash-2")[0].closest("button")!);
+    await waitFor(() => {
+      expect(screen.getByText("Delete endpoint")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Endpoint is busy")).toBeInTheDocument();
+    });
+    expect(screen.getByText("Delete endpoint")).toBeInTheDocument();
+  });
+
+  it("closes the dialog and reloads when the endpoint was already deleted", async () => {
+    (apiServices.delete as any).mockRejectedValue(
+      new CustomException("Request failed", 404, { detail: "Endpoint not found" }),
+    );
+    const { container } = renderWithProviders(<EndpointsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Production GPT-4o")).toBeInTheDocument();
+    });
+    const loadsBefore = (apiServices.get as any).mock.calls.length;
+
+    fireEvent.click(container.querySelectorAll("svg.lucide-trash-2")[0].closest("button")!);
+    await waitFor(() => {
+      expect(screen.getByText("Delete endpoint")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+
+    await waitFor(() => {
+      expect(screen.queryByText("Delete endpoint")).not.toBeInTheDocument();
+    });
+    expect((apiServices.get as any).mock.calls.length).toBeGreaterThan(loadsBefore);
+    expect(screen.queryByText("Endpoint not found")).not.toBeInTheDocument();
+  });
+
+  it("treats a generic 404 as a failure, not as already deleted", async () => {
+    (apiServices.delete as any).mockRejectedValue(
+      new CustomException("Request failed", 404, { detail: "Not Found" }),
+    );
+    const { container } = renderWithProviders(<EndpointsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Production GPT-4o")).toBeInTheDocument();
+    });
+    fireEvent.click(container.querySelectorAll("svg.lucide-trash-2")[0].closest("button")!);
+    await waitFor(() => {
+      expect(screen.getByText("Delete endpoint")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Not Found")).toBeInTheDocument();
+    });
+    expect(screen.getByText("Delete endpoint")).toBeInTheDocument();
   });
 
   it("reveals the cache TTL field when response caching is enabled", async () => {

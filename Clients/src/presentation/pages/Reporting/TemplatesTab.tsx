@@ -157,7 +157,7 @@ export default function TemplatesTab({
   if (isLoading) {
     return (
       <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
-        <CircularProgress size={20} />
+        <CircularProgress size={20} aria-label="Loading" />
       </Box>
     );
   }

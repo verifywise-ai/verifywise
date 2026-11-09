@@ -10,11 +10,11 @@ export const extensionsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Extensions are optional features built into VerifyWise. Some connect VerifyWise to tools you already use (Slack, MLflow, Azure AI Foundry, Jira Assets). Others add extra tools inside the app (Model Lifecycle, Risk Import, Dataset Bulk Upload).',
+      text: 'Extensions are optional features built into VerifyWise. Some connect VerifyWise to tools you already use (Slack, MLflow, Azure AI Foundry, Jira Assets, Jira incidents). Others add extra tools inside the app (Model Lifecycle, Risk Import, Dataset Bulk Upload).',
     },
     {
       type: 'paragraph',
-      text: 'All seven extensions ship with VerifyWise, so there is nothing to download or install. Each one stays off until an Admin enables it for the organization.',
+      text: 'All eight extensions ship with VerifyWise, so there is nothing to download or install. Each one stays off until an Admin enables it for the organization.',
     },
     {
       type: 'callout',
@@ -80,10 +80,10 @@ export const extensionsContent: ArticleContent = {
       type: 'bullet-list',
       items: [
         { bold: 'Configuration', text: 'A form with the extension\'s connection settings. Password and token fields are stored encrypted. Leave a secret field blank to keep the existing value.' },
-        { bold: 'Extension panel', text: 'Slack, Model Lifecycle and Jira Assets show their own setup panel here once enabled.' },
+        { bold: 'Extension panel', text: 'Slack, Model Lifecycle, Jira Assets and Jira incidents show their own setup panel here once enabled.' },
         { bold: 'Enable / Disable', text: 'Turns the extension on or off.' },
         { bold: 'Save configuration', text: 'Saves changes to the Configuration form after the extension is enabled. You see "Configuration saved." when it works.' },
-        { bold: 'Test connection', text: 'Checks the saved settings against the external service. Available for MLflow and Azure AI Foundry. Jira Assets has its own **Test Connection** button in its panel.' },
+        { bold: 'Test connection', text: 'Checks the saved settings against the external service. Available for MLflow, Azure AI Foundry and Jira incidents. Jira Assets has its own **Test Connection** button in its panel, and Jira incidents also has a **Test connection** button in its panel that checks the values you have typed before you save them.' },
       ],
     },
     {
@@ -126,6 +126,7 @@ export const extensionsContent: ArticleContent = {
         { name: 'Model Lifecycle', category: 'ML Ops', summary: 'Adds configurable lifecycle phases to each model' },
         { name: 'Risk Import', category: 'Data management', summary: 'Creates risks in bulk from an Excel template' },
         { name: 'Jira Assets Integration', category: 'Data management', summary: 'Imports "AI System" objects from Jira Service Management Assets as use cases' },
+        { name: 'Jira incidents', category: 'Data management', summary: 'Imports new Jira issues as incidents and keeps their status in sync both ways' },
         { name: 'Dataset Bulk Upload', category: 'Data management', summary: 'Uploads many dataset files at once, with PII detection' },
       ],
     },
@@ -324,6 +325,80 @@ export const extensionsContent: ArticleContent = {
     },
     {
       type: 'heading',
+      id: 'jira-incidents',
+      level: 3,
+      text: 'Jira incidents',
+    },
+    {
+      type: 'paragraph',
+      text: 'Imports new issues from a Jira Cloud project as VerifyWise incidents, then keeps their status in sync in both directions.',
+    },
+    {
+      type: 'callout',
+      variant: 'info',
+      title: 'What it does and doesn\'t do',
+      text: 'Only issues created in Jira after this is set up are imported. VerifyWise doesn\'t create Jira issues. After import, only status stays in sync, in both directions. Later changes to other Jira fields aren\'t copied. If a Jira status move needs a field such as Resolution, VerifyWise can\'t make it. Those incidents show an error, and you can change the status in Jira.',
+    },
+    {
+      type: 'paragraph',
+      text: '**Before you start**, you need:',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { bold: 'A Jira Cloud site', text: 'such as https://your-company.atlassian.net. Jira Data Center and Server are not supported.' },
+        { bold: 'A service account', text: 'a Jira user that VerifyWise acts as. In the project you import from, it needs the Jira permissions **Browse projects**, **Transition issues** and **Link issues**.' },
+        { bold: 'A classic API token', text: 'for that account, created at id.atlassian.com. Scoped API tokens aren\'t supported.' },
+      ],
+    },
+    {
+      type: 'ordered-list',
+      items: [
+        { text: 'Click **Enable** on the Jira incidents card, then **Configure**.' },
+        { text: 'Under **Connection**, enter the **Jira site URL**, the **Service account email** and the **API token**. Click **Test connection** to check them; once a project is chosen, it also checks the three permissions.' },
+        { text: 'Click **Save**. VerifyWise checks the token with Jira and loads your projects and priorities.' },
+        { text: 'Under **Which issues to import**, choose the **Jira project** and the **Issue type**. Optionally enter a **Label** to import only issues with that label; matching labels from Jira appear as you type.' },
+        { text: 'Under **Status mapping**, check the two tables. **Jira to VerifyWise** has a row for every status in the issue type\'s workflow, and each one needs a VerifyWise status. **VerifyWise to Jira** has a row for each VerifyWise status; pick the Jira status to move the issue to, or **Don\'t change Jira**. Both are filled in from Jira\'s status categories to start with.' },
+        { text: 'Under **Severity mapping**, map each Jira priority to Minor, Serious or Very serious. The starting values are Highest and High → Very serious, Medium → Serious, Low and Lowest → Minor, and Serious for any other priority.' },
+        { text: 'Under **Defaults for imported incidents**, choose the **Use case** and **Incident type** and enter the **Reporter**.' },
+        { text: 'Click **Save**. Once everything is filled in, syncing starts on its own, every hour by default.' },
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: '**What an imported incident contains:** the issue\'s summary and description as the description, the severity from your mapping (Serious when the issue has no priority), the status from your mapping, the issue\'s created date as the date it occurred and was detected, and your default use case, type and reporter. Its approval status starts as Pending. A new imported incident runs the same automations as any new incident, and a Very serious one starts the incident response workflow. If your VerifyWise server has its web address configured, the Jira issue also gets a link back to the incident. If adding that link fails, the next syncs try again.',
+    },
+    {
+      type: 'paragraph',
+      text: '**Where it shows up:** imported incidents show the Jira key, for example SEC-42, next to the incident ID in the incidents table and in the incident\'s edit header. Click it to open the issue in Jira. A dot on the key means the link needs attention: a sync error, a conflict, or an issue deleted in Jira. Hover over or tab to the key to see the reason.',
+    },
+    {
+      type: 'callout',
+      variant: 'info',
+      title: 'How syncing works',
+      text: 'Each sync first imports issues created since the last sync, then compares status on both sides. A status changed in Jira is copied to the incident, and a status changed in VerifyWise moves the Jira issue, unless you chose **Don\'t change Jira** for it. If both changed since the last sync, the more recent change wins, and the other side is updated to match. Once an incident is closed on both sides, scheduled syncs check its Jira issue once a day, so reopening it in Jira can take up to a day to show in VerifyWise. **Sync now** checks it straight away. The **Sync** section lets you click **Sync now** or change how often it runs, from every hour to every 48 hours. **Sync activity** lists the latest 50 events with links to the incident and the Jira issue. Changing the project, issue type or label affects new imports only. Only Admins can open these settings.',
+    },
+    {
+      type: 'table',
+      columns: [
+        { key: 'problem', label: 'You see', width: '40%' },
+        { key: 'fix', label: 'What to do', width: '60%' },
+      ],
+      rows: [
+        { problem: 'Jira rejected the API token. It may have expired or been revoked.', fix: 'Create a new classic API token for the service account, enter it under **Connection** and click **Save**.' },
+        { problem: 'Jira status \'Awaiting vendor\' isn\'t mapped', fix: 'A status was added to the workflow. Open the settings page, where it now appears in **Jira to VerifyWise**, check its mapping and click **Save**.' },
+        { problem: 'No move from \'Done\' to \'In Progress\' in this workflow, or Moving to \'Done\' needs a value for Resolution', fix: 'The Jira workflow does not let VerifyWise make that move. Change the status in Jira; the incident keeps its VerifyWise status.' },
+        { problem: 'VerifyWise can no longer read Jira project SEC', fix: 'Give the service account **Browse projects** on the project again. Nothing is changed until it can read the project.' },
+        { problem: 'Deleted in Jira', fix: 'The issue was deleted or is no longer visible to the service account. The incident is kept. If the issue comes back, syncing resumes.' },
+        { problem: 'Rate limited by Jira. The next sync continues where this one stopped.', fix: 'Nothing; the next sync picks up the rest.' },
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: 'Deleting an imported incident in VerifyWise does not touch the Jira issue, and the issue is not imported again.',
+    },
+    {
+      type: 'heading',
       id: 'dataset-bulk-upload',
       level: 3,
       text: 'Dataset Bulk Upload',
@@ -353,6 +428,7 @@ export const extensionsContent: ArticleContent = {
         { action: 'Enable, configure or disable an extension', roles: 'Admin' },
         { action: 'Import risks from Excel (Risk Import)', roles: 'Admin, Editor' },
         { action: 'Bulk upload datasets (Dataset Bulk Upload)', roles: 'Admin, Editor' },
+        { action: 'See the Jira key on imported incidents (Jira incidents)', roles: 'Anyone who can see incidents' },
       ],
     },
     {

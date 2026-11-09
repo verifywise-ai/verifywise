@@ -88,7 +88,7 @@ describe("ModelSelector Component", () => {
     const trigger = screen.getByText("Select a model").closest("div")?.parentElement;
     if (trigger) await user.click(trigger);
 
-    expect(screen.getByPlaceholderText("Find a model")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Find a model or type its ID")).toBeInTheDocument();
   });
 
   it("shows provider list in dropdown", async () => {
@@ -151,11 +151,11 @@ describe("ModelSelector Component", () => {
     const trigger = screen.getByText("Select a model").closest("div")?.parentElement;
     if (trigger) await user.click(trigger);
 
-    expect(screen.getByPlaceholderText("Find a model")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Find a model or type its ID")).toBeInTheDocument();
 
     await user.click(document.body);
 
-    expect(screen.queryByPlaceholderText("Find a model")).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText("Find a model or type its ID")).not.toBeInTheDocument();
   });
 
   it("shows 'Add API key' button", async () => {
@@ -240,5 +240,85 @@ describe("ModelSelector Component", () => {
 
     await user.click(screen.getByText("Go to settings"));
     expect(handleNavigate).toHaveBeenCalled();
+  });
+
+  it("uses a typed model ID that is not in the list", async () => {
+    const handleModelChange = vi.fn();
+    const user = userEvent.setup();
+
+    renderWithProviders(
+      <ModelSelector
+        provider="openrouter"
+        model=""
+        onProviderChange={vi.fn()}
+        onModelChange={handleModelChange}
+        configuredProviders={[{ provider: "openrouter" }]}
+        onNavigateToSettings={vi.fn()}
+      />,
+    );
+
+    const trigger = screen.getByText("Select a model").closest("div")?.parentElement;
+    if (trigger) await user.click(trigger);
+    await user.type(screen.getByPlaceholderText("Find a model or type its ID"), "qwen/qwen3-max");
+    await user.click(screen.getByText("Use “qwen/qwen3-max”"));
+
+    expect(handleModelChange).toHaveBeenCalledWith("qwen/qwen3-max");
+  });
+
+  it("shows a typed model ID on the trigger", () => {
+    renderWithProviders(
+      <ModelSelector
+        provider="openrouter"
+        model="qwen/qwen3-max"
+        onProviderChange={vi.fn()}
+        onModelChange={vi.fn()}
+        configuredProviders={[{ provider: "openrouter" }]}
+        onNavigateToSettings={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("qwen/qwen3-max")).toBeInTheDocument();
+  });
+
+  it("lists Self-Hosted only when the caller handles an endpoint", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <ModelSelector
+        provider="openai"
+        model=""
+        onProviderChange={vi.fn()}
+        onModelChange={vi.fn()}
+        configuredProviders={baseConfiguredProviders}
+        onNavigateToSettings={vi.fn()}
+      />,
+    );
+    const trigger = screen.getByText("Select a model").closest("div")?.parentElement;
+    if (trigger) await user.click(trigger);
+    expect(screen.queryByText("Self-Hosted")).not.toBeInTheDocument();
+  });
+
+  it("picks a self-hosted model from the endpoint form", async () => {
+    const handleModelChange = vi.fn();
+    const user = userEvent.setup();
+    renderWithProviders(
+      <ModelSelector
+        provider="self-hosted"
+        model=""
+        onProviderChange={vi.fn()}
+        onModelChange={handleModelChange}
+        configuredProviders={[]}
+        onNavigateToSettings={vi.fn()}
+        endpointUrl="http://localhost:11434/v1"
+        onEndpointUrlChange={vi.fn()}
+        onApiKeyChange={vi.fn()}
+      />,
+    );
+    const trigger = screen.getByText("Select a model").closest("div")?.parentElement;
+    if (trigger) await user.click(trigger);
+
+    expect(screen.queryByText("API key required")).not.toBeInTheDocument();
+    await user.type(screen.getByPlaceholderText("e.g., llama3.2, mistral, codellama"), "llama3.2");
+    await user.click(screen.getByRole("button", { name: "Use this model" }));
+
+    expect(handleModelChange).toHaveBeenCalledWith("llama3.2");
   });
 });

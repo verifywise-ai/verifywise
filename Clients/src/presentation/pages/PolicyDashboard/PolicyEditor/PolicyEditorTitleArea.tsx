@@ -14,6 +14,7 @@ export interface PolicyEditorTitleAreaProps {
   onEditedTitleChange: (value: string) => void;
   onSaveTitle: () => void;
   onCancelEditTitle: () => void;
+  readOnly?: boolean;
 }
 
 /** Back control + inline policy title editing. */
@@ -28,6 +29,7 @@ export function PolicyEditorTitleArea({
   onEditedTitleChange,
   onSaveTitle,
   onCancelEditTitle,
+  readOnly = false,
 }: PolicyEditorTitleAreaProps) {
   return (
     <Box sx={{ display: "flex", flexDirection: "row", alignItems: "center", gap: 1 }}>
@@ -106,21 +108,23 @@ export function PolicyEditorTitleArea({
             <Typography sx={{ ...textStyles.cardTitle, color: palette.text.secondary }}>
               {pageTitle}
             </Typography>
-            <IconButton
-              size="small"
-              onClick={onStartEditTitle}
-              className="edit-title-icon"
-              sx={{
-                "transition": "opacity 0.2s",
-                "color": palette.text.disabled,
-                "&:hover": {
-                  color: palette.brand.primary,
-                  backgroundColor: palette.background.hover,
-                },
-              }}
-            >
-              <Pencil size={14} />
-            </IconButton>
+            {!readOnly && (
+              <IconButton
+                size="small"
+                onClick={onStartEditTitle}
+                className="edit-title-icon"
+                sx={{
+                  "transition": "opacity 0.2s",
+                  "color": palette.text.disabled,
+                  "&:hover": {
+                    color: palette.brand.primary,
+                    backgroundColor: palette.background.hover,
+                  },
+                }}
+              >
+                <Pencil size={14} />
+              </IconButton>
+            )}
           </>
         )}
       </Box>

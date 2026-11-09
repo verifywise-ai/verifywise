@@ -5,12 +5,19 @@ Executes PII detection and content filter checks on text.
 Returns structured detection results with block/mask actions.
 """
 
+import asyncio
+import contextvars
+import functools
 import logging
 import re
+import threading
 import time
+from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass, field
 
 logger = logging.getLogger(__name__)
+
+SCAN_THREAD_PREFIX = "guardrail-scan"
 
 # Regex pattern cache to avoid recompilation on every request
 _compiled_cache: dict[tuple[str, str], "re.Pattern | None"] = {}
@@ -271,6 +278,10 @@ def _apply_mask(
     return result
 
 
+def _nothing_to_scan(text: str, guardrail_rules: list[dict]) -> bool:
+    return not text or not guardrail_rules
+
+
 def scan_text(
     text: str,
     guardrail_rules: list[dict],
@@ -289,7 +300,7 @@ def scan_text(
     """
     start_time = time.time()
 
-    if not text or not guardrail_rules:
+    if _nothing_to_scan(text, guardrail_rules):
         return ScanResult()
 
     all_detections: list[Detection] = []
@@ -327,3 +338,80 @@ def scan_text(
         masked_text=masked_text,
         execution_time_ms=int((time.time() - start_time) * 1000),
     )
+
+
+# ---------------------------------------------------------------------------
+# Off-loop scanning
+# ---------------------------------------------------------------------------
+#
+# scan_text is CPU-bound and synchronous (Presidio + spaCy NER for PII, regex
+# for content filters). Called straight from a coroutine it stalls the event
+# loop, and with it every other gateway request, for as long as the scan (or
+# the first-use spaCy model load) takes.
+#
+# Async callers use scan_text_async, which runs scan_text on ONE dedicated
+# worker thread. One thread, not a pool: Presidio and spaCy are not documented
+# as safe to use from several threads at once, and every analysis then happens
+# on the same thread, so the shared engine is never used concurrently. Scans
+# queue behind each other on that thread. That is intended: throughput is the
+# same as the serial, on-loop behaviour before, but the loop stays free.
+
+_scan_executor: ThreadPoolExecutor | None = None
+_scan_executor_lock = threading.Lock()
+
+
+def get_scan_executor() -> ThreadPoolExecutor:
+    """The single guardrail scan thread, created on first use."""
+    global _scan_executor
+    with _scan_executor_lock:
+        if _scan_executor is None:
+            _scan_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix=SCAN_THREAD_PREFIX)
+        return _scan_executor
+
+
+def shutdown_scan_executor() -> None:
+    """Stop taking new work on the scan thread at app shutdown, without waiting.
+    Scans already queued still run, so no awaiting caller sees a cancellation;
+    Python joins the thread at interpreter exit, as it does for any executor."""
+    global _scan_executor
+    with _scan_executor_lock:
+        executor, _scan_executor = _scan_executor, None
+    if executor is not None:
+        executor.shutdown(wait=False)
+
+
+async def scan_text_async(
+    text: str,
+    guardrail_rules: list[dict],
+    settings: dict,
+) -> ScanResult:
+    """scan_text, run on the dedicated scan thread so the event loop is not blocked.
+    Same arguments and result as scan_text."""
+    if _nothing_to_scan(text, guardrail_rules):
+        # Answer at once instead of queueing behind other scans.
+        return ScanResult()
+    loop = asyncio.get_running_loop()
+    # run_in_executor does not carry contextvars; copy them so log lines from
+    # the scan thread keep the request id.
+    ctx = contextvars.copy_context()
+    return await loop.run_in_executor(
+        get_scan_executor(),
+        functools.partial(ctx.run, scan_text, text=text, guardrail_rules=guardrail_rules, settings=settings),
+    )
+
+
+def _preload_pii_engine() -> None:
+    """Load Presidio and the spaCy model. Runs on the scan thread."""
+    from services import presidio_engine
+
+    try:
+        presidio_engine.warm_up()
+    except Exception as e:
+        # The lazy path loads it again on the first PII scan and reports the error there.
+        logger.error(f"PII engine preload failed: {e}")
+
+
+def preload_pii_engine() -> Future:
+    """Start loading the PII engine on the scan thread and return without waiting,
+    so the first PII scan does not pay for the spaCy model load."""
+    return get_scan_executor().submit(_preload_pii_engine)

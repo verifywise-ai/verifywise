@@ -1,9 +1,20 @@
+from datetime import date
+
 import litellm
 from fastapi import APIRouter, Request
 
 from services.cost_service import validate_model
 
 router = APIRouter()
+
+
+def _deprecation_date(info: dict) -> str | None:
+    """The ISO date the provider retires the model, or None when LiteLLM has none or a bad one."""
+    value = info.get("deprecation_date")
+    try:
+        return date.fromisoformat(value).isoformat() if isinstance(value, str) else None
+    except ValueError:
+        return None
 
 # Cache the model list at module scope — computed once on first import
 _cached_models: dict | None = None
@@ -87,6 +98,8 @@ def build_model_catalog() -> list:
             "supports_system_messages": info.get("supports_system_messages", False),
             "supports_tool_choice": info.get("supports_tool_choice", False),
             "supports_parallel_function_calling": info.get("supports_parallel_function_calling", False),
+            # A missing date doesn't mean the provider still serves the model to every key
+            "deprecation_date": _deprecation_date(info),
         })
 
     _cached_catalog = catalog
@@ -123,5 +136,10 @@ async def validate_model_endpoint(request: Request, model: str):
             ),
             "supports_streaming": info.get("supports_native_streaming", True),
             "mode": info.get("mode", "chat"),
+            # get_model_info drops this field; read the cost-map entry it resolved
+            # ("anthropic/claude-x" is stored as "claude-x")
+            "deprecation_date": _deprecation_date(
+                litellm.model_cost.get(info.get("key") or model) or {}
+            ),
         },
     }

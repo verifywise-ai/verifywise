@@ -14,10 +14,8 @@ import Alert from "../../components/Alert";
 import ConfirmationModal from "../../components/Dialogs/ConfirmationModal";
 import StandardModal from "../../components/Modals/StandardModal";
 import VWTooltip from "../../components/VWTooltip";
+import { EXPERIMENT_ACTION_TOOLTIPS } from "../../components/Table/ExperimentTable/actionTooltips";
 import {
-  TrendingUp,
-  TrendingDown,
-  Minus,
   X,
   Pencil,
   Check,
@@ -44,6 +42,18 @@ import {
   type EvaluationLog,
 } from "../../../application/repository/deepEval.repository";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
+import {
+  entryScore,
+  findMetricEntry,
+  entryError,
+  entryReason,
+  entryThreshold,
+  METRIC_STATUS_COLORS,
+  metricStatus,
+  SCORE_BAND_COLORS,
+  scoreBand,
+  type MetricScoreEntry,
+} from "./metricScore";
 
 // Preprocess LaTeX delimiters to work with remark-math
 const preprocessLatex = (text: string): string => {
@@ -52,16 +62,6 @@ const preprocessLatex = (text: string): string => {
   // Convert \( \) to $ $ (inline math)
   processed = processed.replace(/\\\(/g, "$").replace(/\\\)/g, "$");
   return processed;
-};
-
-// For bias and toxicity the raw score IS the level (0 = none = best, 1 = worst).
-// Display it directly — no inversion needed.
-const getDisplayScore = (score: number, _metricName: string): number => score;
-
-// Metrics where a lower displayed score is better (green = low, red = high)
-const lowerIsBetter = (metricName: string): boolean => {
-  const n = metricName.toLowerCase();
-  return n.includes("bias") || n.includes("toxicity") || n.includes("hallucination");
 };
 
 // Convert camelCase or concatenated metric names to proper display format
@@ -413,6 +413,38 @@ export default function ExperimentDetailContent({
   const failureReason =
     experiment.status === "failed" ? experiment.error_message?.trim() || undefined : undefined;
 
+  const rerunDisabled = rerunLoading || experiment.status === "running";
+  const rerunButton = (
+    <CustomizableButton
+      variant="contained"
+      onClick={handleRerunExperiment}
+      isDisabled={rerunDisabled}
+      startIcon={<RotateCcw size={14} />}
+      sx={{
+        "backgroundColor": palette.brand.primary,
+        "border": `1px solid ${palette.brand.primary}`,
+        "&:hover": {
+          backgroundColor: palette.brand.primaryHover,
+          border: `1px solid ${palette.brand.primaryHover}`,
+        },
+      }}
+    >
+      {rerunLoading ? "Starting…" : "Rerun"}
+    </CustomizableButton>
+  );
+
+  // Prompts of a finished run with no numeric score (e.g. the model returned nothing).
+  // They are logged but left out of the averages, so the header shows both numbers.
+  const unscoredPrompts =
+    experiment.status === "completed"
+      ? logs.filter(
+          (log) =>
+            !Object.values(
+              (log.metadata?.metric_scores ?? {}) as Record<string, MetricScoreEntry>,
+            ).some((entry) => entryScore(entry) !== null),
+        ).length
+      : 0;
+
   return (
     <Box>
       {alert && (
@@ -541,81 +573,103 @@ export default function ExperimentDetailContent({
 
         {/* Action buttons */}
         <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 3 }}>
-          <CustomizableButton
-            variant="outlined"
-            onClick={async () => {
-              try {
-                const blob = new Blob([JSON.stringify({ experiment, logs }, null, 2)], {
-                  type: "application/json",
-                });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = `${experiment.id}_results.json`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-              } catch (err) {
-                console.error("Failed to download:", err);
-              }
-            }}
-            startIcon={<Download size={14} />}
-            sx={{
-              "borderColor": palette.border.dark,
-              "color": palette.text.secondary,
-              "&:hover": {
-                borderColor: palette.brand.primary,
-                color: palette.brand.primary,
-                backgroundColor: palette.status.success.bg,
-              },
-            }}
+          <VWTooltip
+            content={EXPERIMENT_ACTION_TOOLTIPS.downloadFull}
+            placement="bottom"
+            maxWidth={280}
+            describeChild
           >
-            Download
-          </CustomizableButton>
-          <CustomizableButton
-            variant="outlined"
-            onClick={async () => {
-              try {
-                await navigator.clipboard.writeText(JSON.stringify({ experiment, logs }, null, 2));
-                setAlert({ variant: "success", body: "Results copied to clipboard" });
-                setTimeout(() => setAlert(null), 3000);
-              } catch (err) {
-                console.error("Failed to copy:", err);
-              }
-            }}
-            startIcon={<Copy size={14} />}
-            sx={{
-              "borderColor": palette.border.dark,
-              "color": palette.text.secondary,
-              "&:hover": {
-                borderColor: palette.brand.primary,
-                color: palette.brand.primary,
-                backgroundColor: palette.status.success.bg,
-              },
-            }}
+            <CustomizableButton
+              variant="outlined"
+              onClick={async () => {
+                try {
+                  const blob = new Blob([JSON.stringify({ experiment, logs }, null, 2)], {
+                    type: "application/json",
+                  });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = `${experiment.id}_results.json`;
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                  URL.revokeObjectURL(url);
+                } catch (err) {
+                  console.error("Failed to download:", err);
+                }
+              }}
+              startIcon={<Download size={14} />}
+              sx={{
+                "borderColor": palette.border.dark,
+                "color": palette.text.secondary,
+                "&:hover": {
+                  borderColor: palette.brand.primary,
+                  color: palette.brand.primary,
+                  backgroundColor: palette.status.success.bg,
+                },
+              }}
+            >
+              Download
+            </CustomizableButton>
+          </VWTooltip>
+          <VWTooltip
+            content={EXPERIMENT_ACTION_TOOLTIPS.copyFull}
+            placement="bottom"
+            maxWidth={280}
+            describeChild
           >
-            Copy
-          </CustomizableButton>
+            <CustomizableButton
+              variant="outlined"
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(
+                    JSON.stringify({ experiment, logs }, null, 2),
+                  );
+                  setAlert({ variant: "success", body: "Results copied to clipboard" });
+                  setTimeout(() => setAlert(null), 3000);
+                } catch (err) {
+                  console.error("Failed to copy:", err);
+                }
+              }}
+              startIcon={<Copy size={14} />}
+              sx={{
+                "borderColor": palette.border.dark,
+                "color": palette.text.secondary,
+                "&:hover": {
+                  borderColor: palette.brand.primary,
+                  color: palette.brand.primary,
+                  backgroundColor: palette.status.success.bg,
+                },
+              }}
+            >
+              Copy
+            </CustomizableButton>
+          </VWTooltip>
           <Box
             sx={{ width: "1px", height: "24px", backgroundColor: palette.border.light, mx: 0.5 }}
           />
-          <CustomizableButton
-            variant="contained"
-            onClick={handleRerunExperiment}
-            isDisabled={rerunLoading || experiment.status === "running"}
-            startIcon={<RotateCcw size={14} />}
-            sx={{
-              "backgroundColor": palette.brand.primary,
-              "border": `1px solid ${palette.brand.primary}`,
-              "&:hover": {
-                backgroundColor: palette.brand.primaryHover,
-                border: `1px solid ${palette.brand.primaryHover}`,
-              },
-            }}
+          <VWTooltip
+            content={
+              experiment.status === "running"
+                ? EXPERIMENT_ACTION_TOOLTIPS.rerunWhileRunning
+                : EXPERIMENT_ACTION_TOOLTIPS.rerun
+            }
+            placement="bottom-end"
+            maxWidth={280}
+            describeChild
           >
-            {rerunLoading ? "Starting…" : "Rerun"}
-          </CustomizableButton>
+            {/* While the experiment runs, the disabled button fires no hover events, so a
+                span carries the tooltip; otherwise the button takes it directly, so it is
+                described. Not keyed on rerunLoading: clicking Rerun must not remount the
+                hovered button (the brief "Starting…" state just shows no tooltip). */}
+            {experiment.status === "running" ? (
+              <Box component="span" sx={{ display: "inline-flex" }}>
+                {rerunButton}
+              </Box>
+            ) : (
+              rerunButton
+            )}
+          </VWTooltip>
         </Stack>
       </Box>
 
@@ -837,18 +891,38 @@ export default function ExperimentDetailContent({
               >
                 Prompts
               </Typography>
-              <Typography
-                sx={{
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color:
-                    experiment.status === "completed"
-                      ? palette.status.success.text
-                      : palette.text.secondary,
-                }}
-              >
-                {logs.length}
-              </Typography>
+              {unscoredPrompts > 0 ? (
+                <VWTooltip
+                  content={`${unscoredPrompts} of ${logs.length} prompts got no score, usually because the model returned no response or an error. They are left out of the averages.`}
+                  placement="bottom"
+                  maxWidth={280}
+                >
+                  <Typography
+                    data-testid="experiment-scored-prompts"
+                    sx={{
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: palette.status.success.text,
+                      cursor: "help",
+                    }}
+                  >
+                    {logs.length} · {logs.length - unscoredPrompts} scored
+                  </Typography>
+                </VWTooltip>
+              ) : (
+                <Typography
+                  sx={{
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color:
+                      experiment.status === "completed"
+                        ? palette.status.success.text
+                        : palette.text.secondary,
+                  }}
+                >
+                  {logs.length}
+                </Typography>
+              )}
             </Box>
             <Box sx={{ textAlign: "center" }}>
               <Typography
@@ -899,6 +973,23 @@ export default function ExperimentDetailContent({
             "Coherence": "coherence",
             "Tonality": "tonality",
             "Safety": "safety",
+            // Names the evaluator stores today (EvaluationModule deepeval_evaluator.py)
+            "Relevance": "answerRelevancy",
+            "Correctness": "correctness",
+            "Completeness": "completeness",
+            "Instruction Following": "instructionFollowing",
+            // Same keys as results.avg_scores (run_evaluation metric_config_map)
+            "Context Relevancy": "contextRelevancy",
+            "Context Precision": "contextPrecision",
+            "Context Recall": "contextRecall",
+            "Tool Selection": "toolSelection",
+            "Action Relevance": "actionRelevance",
+            "Planning Quality": "planningQuality",
+            // Not enabled by run_evaluation, but other evaluator entry points emit it
+            "Plan Quality": "planQuality",
+            "Plan Adherence": "planAdherence",
+            "Argument Correctness": "argumentCorrectness",
+            "Step Efficiency": "stepEfficiency",
             // Conversational metrics (multi-turn)
             "Turn Relevancy": "turnRelevancy",
             "Knowledge Retention": "knowledgeRetention",
@@ -913,19 +1004,24 @@ export default function ExperimentDetailContent({
           };
 
           // Calculate overall averages and per-sample scores for sparklines
-          const metricsSum: Record<string, { sum: number; count: number; scores: number[] }> = {};
+          // threshold = the first one stored on the metric's entries (the run uses one).
+          const metricsSum: Record<
+            string,
+            { sum: number; count: number; scores: number[]; threshold: number | null }
+          > = {};
           logs.forEach((log) => {
             if (log.metadata?.metric_scores) {
               Object.entries(log.metadata.metric_scores).forEach(([rawKey, value]) => {
                 // Normalize key: convert display names to camelCase, or keep if already camelCase
                 const key = displayNameToKey[rawKey] || rawKey;
-                const score =
-                  typeof value === "number" ? value : (value as { score?: number })?.score;
-                if (typeof score === "number") {
-                  if (!metricsSum[key]) metricsSum[key] = { sum: 0, count: 0, scores: [] };
+                const score = entryScore(value as MetricScoreEntry);
+                if (score !== null) {
+                  if (!metricsSum[key])
+                    metricsSum[key] = { sum: 0, count: 0, scores: [], threshold: null };
                   metricsSum[key].sum += score;
                   metricsSum[key].count += 1;
                   metricsSum[key].scores.push(score);
+                  metricsSum[key].threshold ??= entryThreshold(value as MetricScoreEntry);
                 }
               });
             }
@@ -952,6 +1048,14 @@ export default function ExperimentDetailContent({
               category: "quality",
               singleTurnOnly: true,
             },
+            // Universal core G-Eval metrics (single-turn)
+            correctness: { label: "Correctness", category: "quality", singleTurnOnly: true },
+            completeness: { label: "Completeness", category: "quality", singleTurnOnly: true },
+            instructionFollowing: {
+              label: "Instruction Following",
+              category: "quality",
+              singleTurnOnly: true,
+            },
             faithfulness: { label: "Faithfulness", category: "quality", singleTurnOnly: true },
             contextualRelevancy: {
               label: "Contextual Relevancy",
@@ -968,10 +1072,49 @@ export default function ExperimentDetailContent({
               category: "quality",
               singleTurnOnly: true,
             },
+            // RAG metrics as the evaluator names them today
+            contextRelevancy: {
+              label: "Context Relevancy",
+              category: "quality",
+              singleTurnOnly: true,
+            },
+            contextPrecision: {
+              label: "Context Precision",
+              category: "quality",
+              singleTurnOnly: true,
+            },
+            contextRecall: { label: "Context Recall", category: "quality", singleTurnOnly: true },
             hallucination: { label: "Hallucination", category: "safety", singleTurnOnly: true },
             // Agent metrics (single-turn)
             toolCorrectness: {
               label: "Tool Correctness",
+              category: "quality",
+              singleTurnOnly: true,
+            },
+            toolSelection: { label: "Tool Selection", category: "quality", singleTurnOnly: true },
+            actionRelevance: {
+              label: "Action Relevance",
+              category: "quality",
+              singleTurnOnly: true,
+            },
+            planningQuality: {
+              label: "Planning Quality",
+              category: "quality",
+              singleTurnOnly: true,
+            },
+            planQuality: { label: "Plan Quality", category: "quality", singleTurnOnly: true },
+            planAdherence: {
+              label: "Plan Adherence",
+              category: "quality",
+              singleTurnOnly: true,
+            },
+            argumentCorrectness: {
+              label: "Argument Correctness",
+              category: "quality",
+              singleTurnOnly: true,
+            },
+            stepEfficiency: {
+              label: "Step Efficiency",
               category: "quality",
               singleTurnOnly: true,
             },
@@ -1010,10 +1153,10 @@ export default function ExperimentDetailContent({
               category: "conversational",
               multiTurnOnly: true,
             },
+            // Scored for conversations and for single-turn (agent) runs alike.
             taskCompletion: {
               label: "Task Completion",
-              category: "conversational",
-              multiTurnOnly: true,
+              category: isMultiTurnExperiment ? "conversational" : "quality",
             },
             conversationSafety: {
               label: "Conversation Safety",
@@ -1043,75 +1186,22 @@ export default function ExperimentDetailContent({
             },
           };
 
-          // Get score color based on value thresholds.
-          // Hallucination is the only truly inverse metric (0 = no hallucination = best).
-          // Bias and Toxicity use the same 0→1 scale as quality metrics: the EvalServer
-          // stores score=1 when the output is unbiased/non-toxic and score=0 when it fails.
-          const getScoreColor = (score: number | undefined, metricKey?: string) => {
+          // Colour the average against the metric's pass line (see scoreBand).
+          const getScoreColor = (
+            score: number | undefined,
+            metricName: string,
+            threshold: number | null,
+            passFailOnly: boolean,
+          ) => {
             if (score === undefined)
               return {
                 bg: palette.status.default.bg,
                 text: palette.status.default.text,
                 icon: palette.status.default.text,
               };
-
-            // Lower-is-better metrics: hallucination, bias, toxicity
-            const isInverse = metricKey && lowerIsBetter(metricKey);
-
-            if (isInverse) {
-              // For inverse metrics: low = good (green), high = bad (red)
-              if (score <= 0.3)
-                return {
-                  bg: palette.status.success.bg,
-                  text: palette.status.success.text,
-                  icon: palette.status.success.text,
-                };
-              if (score <= 0.6)
-                return {
-                  bg: palette.status.warning.bg,
-                  text: palette.status.warning.text,
-                  icon: palette.status.warning.text,
-                };
-              return {
-                bg: palette.status.error.bg,
-                text: palette.status.error.text,
-                icon: palette.status.error.text,
-              };
-            }
-
-            // Normal metrics: high = good (green), low = bad (red)
-            if (score >= 0.7)
-              return {
-                bg: palette.status.success.bg,
-                text: palette.status.success.text,
-                icon: palette.status.success.text,
-              };
-            if (score >= 0.4)
-              return {
-                bg: palette.status.warning.bg,
-                text: palette.status.warning.text,
-                icon: palette.status.warning.text,
-              };
-            return {
-              bg: palette.status.error.bg,
-              text: palette.status.error.text,
-              icon: palette.status.error.text,
-            };
-          };
-
-          // Get delta indicator (simulated - in real app would compare to previous experiment)
-          const getDeltaIndicator = (scores: number[]) => {
-            if (scores.length < 2) return null;
-            const firstHalf = scores.slice(0, Math.floor(scores.length / 2));
-            const secondHalf = scores.slice(Math.floor(scores.length / 2));
-            const firstAvg = firstHalf.reduce((a, b) => a + b, 0) / firstHalf.length;
-            const secondAvg = secondHalf.reduce((a, b) => a + b, 0) / secondHalf.length;
-            const delta = secondAvg - firstAvg;
-            if (Math.abs(delta) < 0.02) return { type: "neutral" as const, value: 0 };
-            return {
-              type: delta > 0 ? ("up" as const) : ("down" as const),
-              value: Math.abs(delta * 100),
-            };
+            const band = scoreBand(metricName, score, threshold, { passFailOnly });
+            const { bg, text } = SCORE_BAND_COLORS[band];
+            return { bg, text, icon: text };
           };
 
           // Simple SVG sparkline component
@@ -1247,8 +1337,13 @@ export default function ExperimentDetailContent({
               metricsSum[metric.key];
             const avgValue = entry ? entry.sum / Math.max(1, entry.count) : undefined;
             const scores = entry?.scores || [];
-            const colors = getScoreColor(avgValue, metric.label);
-            const delta = getDeltaIndicator(scores);
+            // Custom scorers use their own score scale, so they get pass/fail colours only.
+            const colors = getScoreColor(
+              avgValue,
+              metric.label,
+              entry?.threshold ?? null,
+              metric.category === "scorer",
+            );
             const BackgroundIcon = getMetricIcon(metric.key);
 
             return (
@@ -1310,46 +1405,6 @@ export default function ExperimentDetailContent({
                     >
                       {metric.label}
                     </Typography>
-                    {delta && (
-                      <Box
-                        sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 0.5,
-                          px: 1,
-                          py: 0.25,
-                          borderRadius: "4px",
-                          backgroundColor:
-                            delta.type === "up"
-                              ? palette.status.success.bg
-                              : delta.type === "down"
-                                ? palette.status.error.bg
-                                : palette.status.default.bg,
-                        }}
-                      >
-                        {delta.type === "up" ? (
-                          <TrendingUp size={10} color={palette.status.success.text} />
-                        ) : delta.type === "down" ? (
-                          <TrendingDown size={10} color={palette.status.error.text} />
-                        ) : (
-                          <Minus size={10} color={palette.status.default.text} />
-                        )}
-                        <Typography
-                          sx={{
-                            fontSize: "9px",
-                            fontWeight: 600,
-                            color:
-                              delta.type === "up"
-                                ? palette.status.success.text
-                                : delta.type === "down"
-                                  ? palette.status.error.text
-                                  : palette.status.default.text,
-                          }}
-                        >
-                          {delta.value.toFixed(1)}%
-                        </Typography>
-                      </Box>
-                    )}
                   </Box>
                   <Box
                     sx={{
@@ -1368,9 +1423,7 @@ export default function ExperimentDetailContent({
                         fontFamily: "'JetBrains Mono', 'Fira Code', 'Courier New', monospace",
                       }}
                     >
-                      {avgValue === undefined
-                        ? "N/A"
-                        : `${(getDisplayScore(avgValue, metric.label) * 100).toFixed(1)}%`}
+                      {avgValue === undefined ? "N/A" : `${(avgValue * 100).toFixed(1)}%`}
                     </Typography>
                     {scores.length >= 2 && <Sparkline scores={scores} color={colors.icon} />}
                   </Box>
@@ -1486,32 +1539,11 @@ export default function ExperimentDetailContent({
         const metricColumns = Array.from(allMetricNames);
 
         // Helper to get metric score from log
-        const getMetricScore = (log: EvaluationLog, metricName: string): number | null => {
-          if (!log.metadata?.metric_scores) return null;
-          // Try exact match first
-          const scores = log.metadata.metric_scores as Record<string, number | { score?: number }>;
-          if (scores[metricName] !== undefined) {
-            const data = scores[metricName];
-            return typeof data === "number" ? data : (data?.score ?? null);
-          }
-          // Try G-Eval format
-          const gevalKey = `G-Eval (${metricName})`;
-          if (scores[gevalKey] !== undefined) {
-            const data = scores[gevalKey];
-            return typeof data === "number" ? data : (data?.score ?? null);
-          }
-          // Try case-insensitive match
-          const key = Object.keys(scores).find(
-            (k) =>
-              k.toLowerCase() === metricName.toLowerCase() ||
-              k.replace(/^G-Eval\s*\((.+)\)$/i, "$1").toLowerCase() === metricName.toLowerCase(),
+        const getMetricEntry = (log: EvaluationLog, metricName: string): MetricScoreEntry =>
+          findMetricEntry(
+            log.metadata?.metric_scores as Record<string, MetricScoreEntry> | undefined,
+            metricName,
           );
-          if (key) {
-            const data = scores[key];
-            return typeof data === "number" ? data : (data?.score ?? null);
-          }
-          return null;
-        };
 
         return (
           <>
@@ -1641,66 +1673,26 @@ export default function ExperimentDetailContent({
                             {log.input_text || "-"}
                           </td>
                           {metricColumns.map((metric) => {
-                            const score = getMetricScore(log, metric);
-                            // Prefer the backend-computed passed flag; fall back to score >= 0.5
-                            const rawMetricData = (() => {
-                              const ms = log.metadata?.metric_scores as
-                                | Record<string, number | { score?: number; passed?: boolean }>
-                                | undefined;
-                              if (!ms) return undefined;
-                              return (
-                                ms[metric] ??
-                                ms[`G-Eval (${metric})`] ??
-                                ms[
-                                  Object.keys(ms).find(
-                                    (k) =>
-                                      k.toLowerCase() === metric.toLowerCase() ||
-                                      k.replace(/^G-Eval\s*\((.+)\)$/i, "$1").toLowerCase() ===
-                                        metric.toLowerCase(),
-                                  ) ?? ""
-                                ]
-                              );
-                            })();
-                            const backendPassedRaw =
-                              typeof rawMetricData === "object" &&
-                              rawMetricData !== null &&
-                              "passed" in rawMetricData
-                                ? (rawMetricData as { passed?: boolean }).passed
-                                : undefined;
-                            // For lower-is-better metrics the backend's passed flag is inverted
-                            // (it uses score >= threshold). Flip it so green = low = good.
-                            const passed =
-                              score !== null &&
-                              (backendPassedRaw !== undefined
-                                ? lowerIsBetter(metric)
-                                  ? !backendPassedRaw
-                                  : backendPassedRaw
-                                : lowerIsBetter(metric)
-                                  ? score <= 0.5
-                                  : score >= 0.5);
+                            const entry = getMetricEntry(log, metric);
+                            const score = entryScore(entry);
+                            const status = metricStatus(metric, entry);
                             return (
                               <td
                                 key={metric}
+                                title={entryError(entry) || undefined}
                                 style={{
                                   textAlign: "center",
                                   padding: "12px 16px",
                                   borderBottom: `1px solid ${palette.border.dark}`,
                                   borderRight: `1px solid ${palette.border.dark}`,
-                                  backgroundColor:
-                                    score !== null
-                                      ? passed
-                                        ? "rgba(16, 185, 129, 0.18)"
-                                        : "rgba(239, 68, 68, 0.18)"
-                                      : "transparent",
+                                  backgroundColor: METRIC_STATUS_COLORS[status].bg,
                                   fontSize: "12px",
                                   fontWeight: 500,
                                   color:
                                     score !== null ? palette.text.secondary : palette.text.disabled,
                                 }}
                               >
-                                {score !== null
-                                  ? `${(getDisplayScore(score, metric) * 100).toFixed(0)}%`
-                                  : "-"}
+                                {score !== null ? `${(score * 100).toFixed(0)}%` : "-"}
                               </td>
                             );
                           })}
@@ -1748,27 +1740,25 @@ export default function ExperimentDetailContent({
                 };
 
                 // Calculate overall pass/fail for this sample
-                const metricScores = selectedLog.metadata?.metric_scores || {};
-                const scoreEntries = Object.entries(metricScores);
-                const passedCount = scoreEntries.filter(([name, data]) => {
-                  if (typeof data === "object" && data !== null && "passed" in (data as object)) {
-                    const bp = (data as { passed?: boolean }).passed;
-                    // Backend uses score >= threshold for all metrics — flip for lower-is-better ones
-                    return lowerIsBetter(name) ? bp === false : bp === true;
-                  }
-                  const score =
-                    typeof data === "number" ? data : (data as { score?: number })?.score;
-                  return (
-                    typeof score === "number" && (lowerIsBetter(name) ? score <= 0.5 : score >= 0.5)
-                  );
-                }).length;
+                const metricScores = (selectedLog.metadata?.metric_scores || {}) as Record<
+                  string,
+                  MetricScoreEntry
+                >;
+                const statuses = Object.entries(metricScores)
+                  .map(([name, data]) => metricStatus(name, data))
+                  .filter((status) => status !== "notEvaluated");
+                const passedCount = statuses.filter((status) => status === "passed").length;
 
                 return (
                   <StandardModal
                     isOpen={selectedSampleIndex !== null}
                     onClose={() => setSelectedSampleIndex(null)}
                     title={`Sample ${selectedSampleIndex + 1}`}
-                    description={`${passedCount}/${scoreEntries.length} metrics passed`}
+                    description={
+                      statuses.length === 0
+                        ? "No metrics were evaluated"
+                        : `${passedCount}/${statuses.length} metrics passed`
+                    }
                     maxWidth="1100px"
                     fitContent
                     customFooter={
@@ -2036,30 +2026,14 @@ export default function ExperimentDetailContent({
                           <Stack spacing={2} sx={{ flex: 1, overflowY: "auto", pr: 1 }}>
                             {Object.entries(selectedLog.metadata.metric_scores).map(
                               ([metricName, metricData]) => {
-                                const score =
-                                  typeof metricData === "number"
-                                    ? metricData
-                                    : (metricData as { score?: number })?.score;
-                                // Use the backend-computed passed flag when present.
-                                // It already handles per-metric thresholds and semantics.
-                                const backendPassed =
-                                  typeof metricData === "object" &&
-                                  metricData !== null &&
-                                  "passed" in (metricData as object)
-                                    ? (metricData as { passed?: boolean }).passed
-                                    : undefined;
-                                const passed =
-                                  backendPassed !== undefined
-                                    ? lowerIsBetter(metricName)
-                                      ? !backendPassed
-                                      : backendPassed
-                                    : typeof score === "number" &&
-                                      (lowerIsBetter(metricName) ? score <= 0.5 : score >= 0.5);
-                                const rawReason =
-                                  typeof metricData === "object" && metricData !== null
-                                    ? (metricData as { reason?: string }).reason
-                                    : undefined;
-                                const reason = parseMetricReason(rawReason);
+                                const entry = metricData as MetricScoreEntry;
+                                const score = entryScore(entry);
+                                const status = metricStatus(metricName, entry);
+                                const statusColor = METRIC_STATUS_COLORS[status].text;
+                                // An error explains the failure, so it wins over the judge's
+                                // reason and is shown as written.
+                                const reason =
+                                  entryError(entry) || parseMetricReason(entryReason(entry));
                                 const friendlyMetric = formatMetricName(
                                   metricName.replace(/^G-Eval\s*\((.+)\)$/i, "$1"),
                                 );
@@ -2072,7 +2046,7 @@ export default function ExperimentDetailContent({
                                       borderRadius: "6px",
                                       backgroundColor: palette.background.main,
                                       border: `1px solid ${palette.border.light}`,
-                                      borderLeft: `3px solid ${passed ? palette.status.success.text : palette.status.error.text}`,
+                                      borderLeft: `3px solid ${statusColor}`,
                                     }}
                                   >
                                     <Stack
@@ -2094,13 +2068,11 @@ export default function ExperimentDetailContent({
                                         sx={{
                                           fontSize: 13,
                                           fontWeight: 700,
-                                          color: passed
-                                            ? palette.status.success.text
-                                            : palette.status.error.text,
+                                          color: statusColor,
                                         }}
                                       >
                                         {typeof score === "number"
-                                          ? `${(getDisplayScore(score, metricName) * 100).toFixed(0)}%`
+                                          ? `${(score * 100).toFixed(0)}%`
                                           : "N/A"}
                                       </Typography>
                                     </Stack>
@@ -2118,10 +2090,8 @@ export default function ExperimentDetailContent({
                                       <Box
                                         sx={{
                                           height: "100%",
-                                          width: `${(typeof score === "number" ? getDisplayScore(score, metricName) : 0) * 100}%`,
-                                          backgroundColor: passed
-                                            ? palette.status.success.text
-                                            : palette.status.error.text,
+                                          width: `${(score ?? 0) * 100}%`,
+                                          backgroundColor: statusColor,
                                           borderRadius: 2,
                                           transition: "width 0.3s ease",
                                         }}

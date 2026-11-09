@@ -15,21 +15,6 @@ export interface DeliveryCtx {
   runId?: number;
 }
 
-/**
- * The MJML compiler substitutes placeholders by plain string replacement into
- * markup, so anything caller-controlled has to be escaped here. The report name
- * is the only such slot in report-ready.mjml, and it is user-supplied: it comes
- * from scheduled_reports.name or the request's reportName.
- */
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
-
 // Delivers a generated report across the enabled channels. Each channel is
 // try/caught independently so one failure neither throws nor blocks the others.
 export async function deliverReport(delivery: any, artifact: DeliveryArtifact, ctx: DeliveryCtx) {
@@ -105,7 +90,9 @@ export async function deliverReport(delivery: any, artifact: DeliveryArtifact, c
         "utf8",
       );
       const html = await compileMjmlToHtml(template, {
-        reportName: escapeHtml(artifact.filename),
+        // User-supplied (scheduled_reports.name or the request's reportName);
+        // compileMjmlToHtml escapes it like every non-HTML slot.
+        reportName: artifact.filename,
         generatedAt: new Date().toISOString().slice(0, 10),
         downloadNote: delivery.attachFile
           ? "The report is attached to this email."

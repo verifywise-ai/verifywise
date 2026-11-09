@@ -75,27 +75,6 @@ export interface RiskSectionProps {
 }
 
 /**
- * Risk form values interface
- * Pure domain type with no framework dependencies
- */
-export interface IRiskFormValues {
-  riskName: string;
-  actionOwner: number;
-  aiLifecyclePhase: number;
-  riskDescription: string;
-  riskCategory: number[];
-  potentialImpact: string;
-  assessmentMapping: string;
-  controlsMapping: string;
-  likelihood: number;
-  riskSeverity: number;
-  riskLevel: number;
-  reviewNotes: string;
-  applicableProjects: number[];
-  applicableFrameworks: number[];
-}
-
-/**
  * Risk form errors interface
  * Pure domain type with no framework dependencies
  */

@@ -32,6 +32,7 @@ export interface AdvisorProjectSummary {
   status: string | null;
   ai_risk_classification: string | null;
   owner: number | null;
+  is_organizational: boolean;
 }
 
 const DEFAULT_LIMIT = 50;
@@ -71,7 +72,8 @@ const listProjects = async (
         projects.project_title,
         projects.status,
         projects.ai_risk_classification,
-        projects.owner
+        projects.owner,
+        projects.is_organizational
       FROM projects
       WHERE ${whereClause}
       ORDER BY projects.project_title ASC, projects.id ASC
@@ -88,6 +90,7 @@ const listProjects = async (
       status: string | null;
       ai_risk_classification: string | null;
       owner: number | null;
+      is_organizational: boolean;
     }>;
 
     return rows.map((r) => ({
@@ -97,6 +100,7 @@ const listProjects = async (
       status: r.status,
       ai_risk_classification: r.ai_risk_classification,
       owner: r.owner,
+      is_organizational: r.is_organizational,
     }));
   } catch (error) {
     logger.error("Error listing projects for advisor:", error);

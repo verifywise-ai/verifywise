@@ -88,7 +88,7 @@ export default function LinkChildRiskForm({
   };
 
   return (
-    <Stack spacing={4} sx={{ py: 4 }}>
+    <Stack spacing="8px" sx={{ py: "8px" }}>
       <AutoCompleteField<Candidate>
         label="Project risk"
         placeholder="Search risks"
@@ -99,7 +99,7 @@ export default function LinkChildRiskForm({
           <li {...props} key={option.id}>
             <Stack
               direction="row"
-              spacing={4}
+              spacing="8px"
               alignItems="center"
               sx={{ width: "100%", justifyContent: "space-between" }}
             >
@@ -119,9 +119,13 @@ export default function LinkChildRiskForm({
         become a child.
       </Typography>
 
-      {error && <Alert severity="error">{error}</Alert>}
+      {error && (
+        <Alert severity="error" sx={{ fontSize: "13px" }}>
+          {error}
+        </Alert>
+      )}
 
-      <Stack direction="row" spacing={4}>
+      <Stack direction="row" spacing="8px">
         <CustomizableButton
           size="small"
           variant="contained"

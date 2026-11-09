@@ -104,6 +104,7 @@ enabled the extension. All are tenant-scoped by `organization_id`.
 | azure-ai-foundry | `azure_ai_model_records` |
 | model-lifecycle | `model_lifecycle_phases`, `_items`, `_values`, `_item_files`, `_item_people`, `_item_approvals`, `_change_history` |
 | jira-assets | `jira_assets_config`, `jira_assets_use_cases`, sequence `jira_use_case_uc_id_seq`; runs and schedule in the shared `extension_sync_runs` / `extension_sync_settings` (the old `jira_assets_sync_history` is kept, unwritten, for one release) |
+| jira-incidents | `jira_incidents_config`, `jira_incident_links`, `jira_incident_sync_events`; imported incidents live in the core `ai_incident_managements`; runs and schedule in `extension_sync_runs` / `extension_sync_settings` |
 | risk-import, dataset-bulk-upload | None. They write to the core `risks` and `datasets` / `files` tables. |
 
 ---
@@ -203,11 +204,12 @@ to a runner that returns `{ success, message, testedAt }`:
 | `mlflow` | Stored runtime config overlaid with the submitted config → `testConnection` in `extensions/mlflow/mlflow.service.ts` |
 | `azure-ai-foundry` | Same pattern → `testConnection` in `extensions/azure-ai-foundry/azureAiFoundry.service.ts` |
 | `jira-assets` | Submitted config. If no `api_token` is submitted, the stored token comes from `jira_assets_config`. Then `clientFromConfig(...).testConnection()`. |
+| `jira-incidents` | `testConnection(orgId, submitted)` in `extensions/jira-incidents/jiraIncidents.config.ts`: submitted fields overlaid on `jira_incidents_config`; a changed site URL or email needs a submitted token; checks `/myself`, then the three project permissions when a project is known. Never throws. |
 
 Any other key returns **200** with `success: false` and "Test connection is not
-available for '`<key>`'." It never 404s. Jira Assets has no route of its own for
-this. A `/test-connection` route under `/api/extensions/jira-assets` would be
-shadowed by the catalog router.
+available for '`<key>`'." It never 404s. Neither Jira extension has a route of
+its own for this. A `/test-connection` route under `/api/extensions/<key>`
+would be shadowed by the catalog router.
 
 ---
 
@@ -236,19 +238,23 @@ Both pages redirect non-Admins to `/` (`userRoleName !== "Admin"`). The old
 pre-enable fields; **Configure to enable** when there are; **Configure** when
 enabled and the extension has a settings surface; **Disable** when enabled. A
 settings surface is either config fields or membership in
-`KEYS_WITH_POST_ENABLE_UI` (`slack`, `model-lifecycle`, `jira-assets`).
+`KEYS_WITH_POST_ENABLE_UI` (`slack`, `model-lifecycle`, `jira-assets`,
+`jira-incidents`).
 
 **Settings page** (`Extensions/Settings/index.tsx`): a **Configuration** card
 when `configFields.length > 0`. Then the extension's own panel for `slack`
-(`SlackConfiguration`), `model-lifecycle` (`ModelLifecycleConfig`) or
-`jira-assets` (`JiraAssetsConfiguration`). Then the **Enable**/**Disable**,
+(`SlackConfiguration`), `model-lifecycle` (`ModelLifecycleConfig`),
+`jira-assets` (`JiraAssetsConfiguration`) or `jira-incidents`
+(`JiraIncidentsConfiguration`). Then the **Enable**/**Disable**,
 **Save configuration** and **Test connection** actions. **Test connection**
 appears for any enabled extension with `requires_configuration = true`. For
-Slack and Model Lifecycle it therefore shows the "not available" message.
+Slack and Model Lifecycle it therefore shows the "not available" message. For
+Jira incidents it tests the saved connection (the panel has its own **Test
+connection** for unsaved values).
 
 ---
 
-## The seven extensions
+## The eight extensions
 
 | Key | Category | Config fields | Server dir | Client dir | Where it surfaces |
 |-----|----------|---------------|------------|------------|-------------------|
@@ -258,6 +264,7 @@ Slack and Model Lifecycle it therefore shows the "not available" message.
 | `model-lifecycle` | ml_ops | none (post-enable panel) | `Servers/extensions/model-lifecycle/` | `Extensions/model-lifecycle/` | **View lifecycle** in Model inventory rows; model lifecycle detail page |
 | `risk-import` | data_management | none | `Servers/extensions/risk-import/` | `Extensions/risk-import/` | Risk management → **Import from Excel** |
 | `jira-assets` | data_management | none (post-enable panel, stored in `jira_assets_config`) | `Servers/extensions/jira-assets/` | `Extensions/jira-assets/` | Imported use cases; Jira use-case views in `ProjectView/V1.0ProjectView` |
+| `jira-incidents` | data_management | none (post-enable panel, stored in `jira_incidents_config`) | `Servers/extensions/jira-incidents/` | `Extensions/jira-incidents/` | Imported incidents; a Jira chip on the incidents table and the incident header (`components/JiraIssueChip`) |
 | `dataset-bulk-upload` | data_management | none | `Servers/extensions/dataset-bulk-upload/` | `Extensions/dataset-bulk-upload/` | Datasets → **Bulk upload** |
 
 Client dirs are relative to `Clients/src/presentation/pages/`.
@@ -274,9 +281,10 @@ enabled can call the route.
 | `/api/extensions/slack` | `GET/POST /oauth/workspaces`, `GET/PATCH/DELETE /oauth/workspaces/:id`, `POST /oauth/workspaces/:id/send` | `POST /oauth/workspaces` rate-limited (`slackWorkspaceCreateLimiter`, 10/hour) |
 | `/api/extensions/mlflow` | `GET /models`, `GET /models/:modelId`, `POST /sync` | |
 | `/api/extensions/azure-ai-foundry` | `GET /models`, `GET /models/:deploymentId`, `POST /sync`, `GET /discover` | |
-| `/api/extensions/model-lifecycle` | `GET /config`; phases CRUD and reorder; items CRUD and reorder; `GET /models/:id/lifecycle`, `/progress`; item values, files, people and approvals under `/models/:id/lifecycle/items/:itemId/...` | |
+| `/api/extensions/model-lifecycle` | `GET /config`; phases CRUD and reorder; items CRUD and reorder; `GET /models/:id/lifecycle`, `/progress`; item values, files, people and approvals under `/models/:id/lifecycle/items/:itemId/...` `POST .../items/:itemId/files` links only a file of the caller's organization (404 otherwise). | `DELETE .../items/:itemId/files/:fileId` only unlinks: the `files` row stays in the File Manager. Deleting a phase or item also keeps its files. 404 when the item has no link to the file, 400 when an id is not a positive integer up to 2147483647. |
 | `/api/extensions/risk-import` | `GET /template`, `POST /import` | Admin, Editor |
 | `/api/extensions/jira-assets` | `GET/POST /config`, `PATCH /config/sync`, `PATCH /config/selection`, `GET /vw-attributes`, schema and object-type discovery (`GET /object-types/:id/objects?startAt=` is one page of up to 1000 for the import picker), `POST /import`, `POST /sync` (202, queued for the worker), `GET /sync/status`, `GET /sync/history`, `GET /use-cases`, `POST /use-cases/remove-missing`, `GET/DELETE /use-cases/:id`, `GET /projects/:projectId/custom-frameworks-progress` | `extension.admin` (Admin) on `POST /config`, `PATCH /config/sync`, `PATCH /config/selection`, `POST /import`, `POST /sync`, `POST /use-cases/remove-missing`, `DELETE /use-cases/:id`. Errors: 400 bad input, 404 not configured, 409 a run is live or a sync job is waiting, 502 Jira or network failure (reason in `error`), 503 the job queue did not answer. |
+| `/api/extensions/jira-incidents` | `GET/PUT /config`, `GET /jira/projects`, `GET /jira/issue-types?project=`, `GET /jira/statuses?project=&issue_type=` (with `default_map_in` / `default_map_out`), `GET /jira/priorities` (with `default_severity_map`), `GET /jira/labels?query=`, `GET /events?limit=` (1–200, default 50), `GET /links?incident_ids=` (at most 500) | `extension.admin` (Admin) on every route, reads included, **except `GET /links`**: it is registered before the extension gate, open to any member, and returns `[]` when the extension is disabled. Errors: 400 bad input or "Connect to Jira first" on the pickers, 502 Jira's answer (401 from Jira included) or a network failure. |
 | `/api/extensions/dataset-bulk-upload` | `POST /upload` (multipart, one file per request, 30 MB, CSV/XLS/XLSX; 413/415 on error) | Admin, Editor |
 
 The full list is in `Servers/swagger.yaml` under `/extensions/...`.
@@ -287,6 +295,14 @@ Only Slack needs deployment-level settings: `SLACK_CLIENT_ID`,
 `SLACK_CLIENT_SECRET` and `SLACK_API_URL` on the server, and
 `VITE_SLACK_CLIENT_ID` and `VITE_SLACK_URL` on the client. The other
 extensions are configured per organization in the UI.
+
+Jira incidents reads `FRONTEND_URL` to build the remote link it adds to each
+imported Jira issue (skipped, with one warning per run, when unset), and
+`JIRA_INCIDENTS_ALLOW_LOCAL_SITE_URL=true` lets the site URL be
+`http(s)://localhost` or `127.0.0.1` for the local mock. That override only
+counts when `NODE_ENV` is `development` or `test`; set anywhere else, the
+server logs a warning at startup (`warnIfLocalOverrideIgnored`, `index.ts`)
+and ignores it.
 
 ---
 
@@ -315,11 +331,13 @@ extensions are configured per organization in the UI.
 
 Runs of an extension (scheduled syncs, "Sync now", and any other exclusive
 operation such as an import) go through the **sync engine** in
-`Servers/extensions/sync-engine/`. Jira Assets is its first provider. MLflow
-and Azure AI Foundry still sync on their own `POST /sync` routes.
+`Servers/extensions/sync-engine/`. Its providers are Jira Assets and Jira
+incidents ([below](#jira-incidents)). MLflow and Azure AI Foundry still sync on
+their own `POST /sync` routes.
 
-**No sync deletes anything** (Jira Assets). Neither a manual nor a scheduled
-sync removes a project or a use case. A linked object Jira no longer returns is
+**No sync deletes anything.** Neither a manual nor a scheduled sync removes a
+project, a use case or an incident; Jira incidents marks a link
+`deleted_in_jira` and leaves the incident alone. A linked object Jira no longer returns is
 flagged instead (`jira_assets_use_cases.missing_in_jira_since`). An Admin
 removes flagged use cases explicitly from the panel (see
 [Removing missing use cases](#removing-missing-use-cases)).
@@ -818,6 +836,60 @@ remove button are disabled for non-Admins.
    extension's settings panel, and set `displayName` for event-log text.
 6. Add tests like `extensions/jira-assets/__tests__/` (run body on a context
    from `createRunContext`, readiness per kind).
+
+### Jira incidents
+
+Imports new issues from one Jira Cloud project and issue type (optionally one
+label) as VerifyWise incidents, then keeps **status only** in sync both ways.
+It never creates Jira issues and never copies later changes to other fields.
+The incident side (tables, creation path, status rules, deletes) is in
+[incidents.md](../domains/incidents.md#imported-incidents-jira-incidents-extension).
+
+**Connection.** A Jira Cloud site (`https://<name>.atlassian.net`, normalised
+by `siteUrl.ts`), a service account email and a classic API token sent as Basic
+auth to the site URL; scoped tokens are not supported. The token is encrypted
+at rest, never returned (`has_api_token` only) and must be re-entered when the
+site URL or email changes. Saving checks the credentials with `/myself` and
+stores the service account's id and time zone; JQL dates are written in that
+time zone. Every request goes through `safeFetch` with a per-request timeout.
+
+**Readiness** (`readinessOf`): connection, project, issue type, every Jira
+status mapped in, every VerifyWise status mapped out (a value or "Don't change
+Jira"), the severity map, and the use case, type and reporter defaults. The
+first save that makes it ready sets `import_from` to now (only issues created
+after that are imported) and creates an hourly schedule with `INSERT … ON
+CONFLICT DO NOTHING`, so an admin's own schedule is never overwritten.
+
+**A run** (`jiraIncidents.sync.ts`): readiness; then the project must still be
+readable, or the run fails with "VerifyWise can no longer read Jira project
+<key>" before any link is touched (otherwise every issue would look deleted);
+then import (JQL from `max(import_from, last_checked_at − 10 min)`, issues with
+a link are skipped), then status sync (settled closed links are re-read at
+most once a day on scheduled runs, every time on manual ones; one heartbeat
+per batch of 50), then a retry of up to 20 pending remote links. A rejected token fails the run so the
+engine's backoff applies. A rate limit allows one `Retry-After` wait of at most
+10 seconds per run, then ends the run early but successfully; so does the
+10-minute deadline. `last_checked_at` only moves when the import window
+finished. Counts: `imported`, `status_from_jira`, `status_to_jira`,
+`conflicts`, `errors`, `deleted_in_jira`.
+
+**Code map.** `jiraIncidents.client.ts` (Jira REST), `jiraIncidents.config.ts`
+(config, readiness, test connection), `jiraIncidents.import.ts`,
+`jiraIncidents.statusSync.ts`, `decide.ts` (the decision table), `mapping.ts`
+(defaults by status category and priority name), `adf.ts`, `jql.ts`,
+`jiraIncidents.store.ts` (links and events), `jiraIncidents.ctrl.ts` /
+`.route.ts`. Client: `Extensions/jira-incidents/` (settings page, form state,
+sync activity), `application/repository/jiraIncidents.repository.ts`,
+`application/hooks/useJiraIncidentLinks.ts`, `components/JiraIssueChip`.
+
+**Access.** Everything is Admin only, reads included, because it holds
+connection details and mappings. The exception is `GET /links`, behind the
+incident chips: open to any member and `[]` when the extension is off.
+
+**Local testing.** `Servers/tests/mocks/jiraCloud/` is a simulated Jira Cloud
+(see its `README.md`; `npx ts-node --transpile-only
+tests/mocks/jiraCloud/start.ts --port 4010`). Point the site URL at it with
+`JIRA_INCIDENTS_ALLOW_LOCAL_SITE_URL=true` in development or test.
 
 ## Adding a new extension
 

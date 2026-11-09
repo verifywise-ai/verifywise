@@ -37,7 +37,7 @@ export const roleConfigurationContent: ArticleContent = {
         {
           icon: 'CheckCircle',
           title: 'Reviewer',
-          description: 'Read access plus the ability to approve or reject items. Can\'t create or edit content.',
+          description: 'Read access, plus approving items assigned to them and uploading evidence. Can\'t create or edit content.',
         },
         {
           icon: 'Edit',
@@ -92,7 +92,7 @@ export const roleConfigurationContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Reviewers can view content and approve or reject items, but they can\'t create or edit content. This role works well for people who need to sign off on governance activities without authoring them.',
+      text: 'Reviewers can view content, approve or reject items assigned to them and upload evidence files, but they can\'t create or edit content. This role works well for people who need to sign off on governance activities without authoring them.',
     },
     {
       type: 'paragraph',
@@ -102,8 +102,10 @@ export const roleConfigurationContent: ArticleContent = {
       type: 'checklist',
       items: [
         'View use cases, assessments and compliance status',
-        'Approve or reject items in approval workflows',
-        'View models, vendors, policies and training records',
+        'Approve or reject items in approval workflows where they are an assigned approver',
+        'Approve or request changes on policies they are assigned to review',
+        'View models, vendors, risks, policies and training records',
+        'Upload and manage evidence files',
         'View reports',
         'Access dashboard',
         'Update personal profile and preferences',
@@ -116,9 +118,9 @@ export const roleConfigurationContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { text: 'Create, edit or delete content' },
+        { text: 'Create, edit or delete use cases, models, vendors, risks, policies, tasks or training records' },
         { text: 'Invite users or manage team members' },
-        { text: 'Access organization settings' },
+        { text: 'Edit organization settings' },
         { text: 'Generate reports' },
         { text: 'Access integrations or API keys' },
       ],
@@ -141,9 +143,12 @@ export const roleConfigurationContent: ArticleContent = {
       type: 'checklist',
       items: [
         'Create, edit and delete use cases and assessments',
-        'Manage models, vendors and policies',
-        'View training records and organization settings',
-        'Generate reports',
+        'Create, edit and delete models, vendors, risks and policies',
+        'Create tasks',
+        'Create and edit training records',
+        'Upload and manage evidence files',
+        'View organization settings',
+        'Run report templates and scheduled reports',
         'Access most settings tabs',
       ],
     },
@@ -156,7 +161,7 @@ export const roleConfigurationContent: ArticleContent = {
       items: [
         { text: 'Invite users or manage team members' },
         { text: 'Edit organization settings' },
-        { text: 'Create, edit or delete training records' },
+        { text: 'Delete training records' },
         { text: 'Manage integrations (Slack, MLflow)' },
         { text: 'Create or delete API keys' },
         { text: 'Change their own role' },
@@ -180,7 +185,7 @@ export const roleConfigurationContent: ArticleContent = {
       type: 'checklist',
       items: [
         'View use cases, assessments and compliance status',
-        'View models, vendors, policies and training records',
+        'View models, vendors, risks, policies and training records',
         'View reports (can\'t generate new ones)',
         'Access dashboard',
         'Update personal profile and preferences',
@@ -193,9 +198,9 @@ export const roleConfigurationContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { text: 'Create, edit or delete any content' },
+        { text: 'Create, edit or delete any content, including evidence files' },
         { text: 'Invite users or manage team members' },
-        { text: 'Access organization settings' },
+        { text: 'Edit organization settings' },
         { text: 'Generate reports' },
         { text: 'Access integrations or API keys' },
       ],
@@ -261,16 +266,30 @@ export const roleConfigurationContent: ArticleContent = {
       ],
       rows: [
         { feature: 'Use cases', admin: 'Full access', reviewer: 'View + approve', editor: 'Full access', auditor: 'View only' },
-        { feature: 'Models', admin: 'Full access', reviewer: 'View + approve', editor: 'Full access', auditor: 'View only' },
-        { feature: 'Vendors', admin: 'Full access', reviewer: 'View + approve', editor: 'Full access', auditor: 'View only' },
-        { feature: 'Policies', admin: 'Full access', reviewer: 'View + approve', editor: 'Full access', auditor: 'View only' },
-        { feature: 'Training', admin: 'Full access', reviewer: 'View only', editor: 'View only', auditor: 'View only' },
-        { feature: 'Reports', admin: 'Generate', reviewer: 'View only', editor: 'Generate', auditor: 'View only' },
+        { feature: 'Use case team members', admin: 'Full access', reviewer: 'None', editor: 'None', auditor: 'None' },
+        { feature: 'Risks', admin: 'Full access', reviewer: 'View + approve', editor: 'Full access', auditor: 'View only' },
+        { feature: 'Models and model risks', admin: 'Full access', reviewer: 'View + approve', editor: 'Full access', auditor: 'View only' },
+        { feature: 'Vendors and vendor risks', admin: 'Full access', reviewer: 'View + approve', editor: 'Full access', auditor: 'View only' },
+        { feature: 'Policies', admin: 'Full access', reviewer: 'View + review', editor: 'Full access', auditor: 'View only' },
+        { feature: 'Tasks', admin: 'Full access', reviewer: 'View assigned', editor: 'Create + manage own', auditor: 'View assigned' },
+        { feature: 'Training', admin: 'Full access', reviewer: 'View only', editor: 'Create + edit', auditor: 'View only' },
+        { feature: 'Evidence files', admin: 'Full access', reviewer: 'Upload + manage', editor: 'Upload + manage', auditor: 'View only' },
+        { feature: 'Reports', admin: 'Generate', reviewer: 'View only', editor: 'Run templates + schedules', auditor: 'View only' },
+        { feature: 'Approval workflows', admin: 'Full access', reviewer: 'Approve when assigned', editor: 'Approve when assigned', auditor: 'Approve when assigned' },
         { feature: 'Team management', admin: 'Full access', reviewer: 'None', editor: 'None', auditor: 'None' },
         { feature: 'Organization settings', admin: 'Full access', reviewer: 'View only', editor: 'View only', auditor: 'View only' },
+        { feature: 'Audit ledger and data retention', admin: 'Full access', reviewer: 'None', editor: 'None', auditor: 'None' },
         { feature: 'Integrations', admin: 'Full access', reviewer: 'None', editor: 'None', auditor: 'None' },
         { feature: 'API keys', admin: 'Full access', reviewer: 'None', editor: 'None', auditor: 'None' },
       ],
+    },
+    {
+      type: 'paragraph',
+      text: 'Admins see every use case in the organization. Other roles see the use cases they own or are a team member of. Likewise, Admins see every task, and other roles see the tasks they created or are assigned to.',
+    },
+    {
+      type: 'paragraph',
+      text: '"Approve" means approving or rejecting items where the user is an assigned approver in an approval workflow. Anyone assigned as an approver can act on that step, whatever their role. "Review" means approving or requesting changes on a policy the user is assigned to review.',
     },
     {
       type: 'heading',

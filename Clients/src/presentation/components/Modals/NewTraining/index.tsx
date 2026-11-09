@@ -45,6 +45,9 @@ import {
 } from "../../../../application/repository/entity.repository";
 import { createEvidenceHub } from "../../../../application/repository/evidenceHub.repository";
 import { CustomizableButton } from "../../button/customizable-button";
+import { useAuth } from "../../../../application/hooks/useAuth";
+import allowedRoles from "../../../../application/constants/permissions";
+import ReadOnlyFieldset from "../../ReadOnlyFieldset";
 
 type TrainingFormState = Omit<Partial<TrainingRegistarDTO>, "status"> & {
   status: TrainingStatus;
@@ -75,6 +78,9 @@ const NewTraining: FC<NewTrainingProps> = ({
   entityId,
 }) => {
   const theme = useTheme();
+  // Roles without edit rights can open an existing record but not change it.
+  const { userRoleName } = useAuth();
+  const isReadOnly = isEdit && !allowedRoles.training.edit.includes(userRoleName);
   const [values, setValues] = useState<TrainingFormState>(initialData || initialState);
   const validators = useMemo(
     () => ({
@@ -398,7 +404,7 @@ const NewTraining: FC<NewTrainingProps> = ({
       title={isEdit ? "Edit training" : "New training"}
       description="Record and manage your organization's AI literacy and compliance trainings. Enter training details such as name, provider, duration, department, participants, and status to keep a clear history of all AI-related education initiatives."
       onSubmit={activeTab === "details" ? handleSaveTraining : undefined}
-      hideSubmitButton={activeTab !== "details"}
+      hideSubmitButton={activeTab !== "details" || isReadOnly}
       submitButtonText={isEdit ? "Update training" : "Create training"}
       maxWidth="680px"
     >
@@ -421,7 +427,9 @@ const NewTraining: FC<NewTrainingProps> = ({
               onChange={(_, newValue) => setActiveTab(newValue)}
             />
           </Box>
-          {activeTab === "details" && formContent}
+          {activeTab === "details" && (
+            <ReadOnlyFieldset readOnly={isReadOnly}>{formContent}</ReadOnlyFieldset>
+          )}
           {activeTab === "evidence" && (
             <Stack spacing={2}>
               <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={2}>

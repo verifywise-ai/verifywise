@@ -1,4 +1,4 @@
-import { screen, waitFor, fireEvent } from "@testing-library/react";
+import { screen, waitFor, fireEvent, within } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import { ModelInventoryStatus } from "../../../../domain/enums/modelInventory.enum";
 
@@ -361,13 +361,16 @@ describe("ModelInventory interactions", () => {
   });
 
   it("shows an error alert when the initial fetch fails", async () => {
-    mockGetAllEntities.mockRejectedValue(new Error("network down"));
+    mockGetAllEntities.mockImplementation(({ routeUrl }: { routeUrl: string }) =>
+      routeUrl === "/modelInventory"
+        ? Promise.reject(new Error("network down"))
+        : Promise.resolve({ data: [] }),
+    );
     renderWithProviders(<ModelInventory />);
 
-    await waitFor(() => {
-      expect(
-        screen.getByText(/Failed to load .+ data\. Please try again later\./),
-      ).toBeInTheDocument();
-    });
+    const wrapper = await screen.findByTestId("list-state-wrapper");
+    expect(within(wrapper).getByRole("alert")).toHaveTextContent(
+      "Failed to load model inventory data. Please try again later.",
+    );
   });
 });

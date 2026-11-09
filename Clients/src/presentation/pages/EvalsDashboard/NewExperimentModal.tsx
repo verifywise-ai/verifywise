@@ -15,7 +15,6 @@ import {
   AccordionSummary,
   AccordionDetails,
   FormHelperText,
-  Chip as MuiChip,
 } from "@mui/material";
 import {
   Check,
@@ -33,6 +32,7 @@ import {
 import StepperModal from "../../components/Modals/StepperModal";
 import SelectableCard from "../../components/SelectableCard";
 import Field from "../../components/Inputs/Field";
+import ModelPicker from "../../components/Inputs/ModelPicker";
 import Checkbox from "../../components/Inputs/Checkbox";
 import Alert from "../../components/Alert";
 import Chip from "../../components/Chip";
@@ -45,6 +45,7 @@ import {
   listScorers,
   getAllLlmApiKeys,
   addLlmApiKey,
+  verifySavedLlmApiKey,
   validateModel,
   type DeepEvalScorer,
   type LLMApiKey,
@@ -54,6 +55,7 @@ import { getAllEntities } from "../../../application/repository/entity.repositor
 import { PROVIDERS, type ModelInfo } from "../../utils/providers";
 import { evalModelsService, type SavedModel } from "../../../infrastructure/api/evalModelsService";
 import { useModelPreferences } from "../../../application/hooks/useModelPreferences";
+import { mergeWithBundledModels } from "../../../application/hooks/useProviderModels";
 import {
   datasetNameFromPresetPath,
   generateDefaultExperimentName,
@@ -63,6 +65,8 @@ import {
   type JudgeMode,
   type ProviderType,
   type UserDataset,
+  apiKeyHelperText,
+  validationAlertTitle,
   WIZARD_STEPS,
 } from "./NewExperiment/newExperimentConfig";
 import {
@@ -142,6 +146,16 @@ export default function NewExperimentModal({
   // Configured API keys state
   const [configuredApiKeys, setConfiguredApiKeys] = useState<LLMApiKey[]>([]);
   const [loadingApiKeys, setLoadingApiKeys] = useState(true);
+  // Saved keys the provider refused when the wizard checked them; those count as missing
+  const [rejectedKeyIds, setRejectedKeyIds] = useState<Set<number>>(new Set());
+  const checkedKeyIds = useRef<Set<number>>(new Set());
+  // Bumped on each open; key checks and the key list belong to the open that started them
+  const openGeneration = useRef(0);
+  const keysGeneration = useRef(-1);
+  // orgId the saved models were last loaded for, so a late orgId reloads only the models
+  const modelsOrgId = useRef<string | undefined>(undefined);
+  // listModels reads null, undefined and "" alike
+  const modelsOrg = orgId || undefined;
 
   // Saved models from the Models page (database)
   const [savedModels, setSavedModels] = useState<SavedModel[]>([]);
@@ -277,10 +291,11 @@ export default function NewExperimentModal({
     },
   });
 
-  // Reset warning acknowledgment when model changes
+  // Reset warning acknowledgment when model changes; picking another saved model counts,
+  // so a model the provider refused does not let the next one skip the check
   useEffect(() => {
     setApiKeyWarningAcknowledged(false);
-  }, [config.model.name, config.model.accessMethod]);
+  }, [config.model.name, config.model.accessMethod, selectedSavedModelId]);
 
   // Fetch model inventories when modal opens
   useEffect(() => {
@@ -439,25 +454,87 @@ export default function NewExperimentModal({
     setActiveStep((prev) => prev + 1);
   };
 
-  // Load configured API keys and saved models when modal opens
+  // Load configured API keys and saved models when the modal opens. The modal stays mounted
+  // between opens, so key checks start afresh each time: a key fixed or revoked in the
+  // meantime is seen as it is now.
   useEffect(() => {
     if (!isOpen) return;
+    const generation = ++openGeneration.current;
+    checkedKeyIds.current = new Set();
+    setRejectedKeyIds(new Set());
+    modelsOrgId.current = modelsOrg;
     (async () => {
-      try {
-        setLoadingApiKeys(true);
-        const [keys, models] = await Promise.all([
-          getAllLlmApiKeys(),
-          evalModelsService.listModels(orgId || undefined),
-        ]);
-        setConfiguredApiKeys(keys);
-        setSavedModels(models);
-      } catch {
-        /* ignore */
-      } finally {
-        setLoadingApiKeys(false);
+      setLoadingApiKeys(true);
+      const [keys, models] = await Promise.allSettled([
+        getAllLlmApiKeys(),
+        evalModelsService.listModels(modelsOrg),
+      ]);
+      // A slower load from an earlier open must not replace this open's lists
+      if (generation !== openGeneration.current) return;
+      if (keys.status === "fulfilled") {
+        setConfiguredApiKeys(keys.value);
+      } else {
+        // Keep checking the last list loaded, so a key refused before is not shown as configured
+        console.warn("Failed to load saved API keys:", keys.reason);
       }
+      // A late orgId reloads the models itself; this open's older list must not replace it
+      if (models.status === "fulfilled" && modelsOrgId.current === modelsOrg) {
+        setSavedModels(models.value);
+      } else if (models.status === "rejected") {
+        console.warn("Failed to load saved models:", models.reason);
+      }
+      keysGeneration.current = generation;
+      setLoadingApiKeys(false);
     })();
-  }, [isOpen, orgId]);
+    // orgId arriving after the open is handled below, without reloading keys
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
+
+  // Saved models depend on orgId, which may arrive after the modal opens
+  useEffect(() => {
+    if (!isOpen || modelsOrg === modelsOrgId.current) return;
+    modelsOrgId.current = modelsOrg;
+    let stale = false;
+    evalModelsService
+      .listModels(modelsOrg)
+      .then((models) => {
+        if (!stale) setSavedModels(models);
+      })
+      .catch((err) => console.warn("Failed to load saved models:", err));
+    return () => {
+      stale = true;
+    };
+  }, [isOpen, modelsOrg]);
+
+  // Check the saved keys of the chosen model and judge providers once per open, so a dead
+  // key shows the key field instead of "API key configured" and the run doesn't fail on it
+  useEffect(() => {
+    // Wait for this open's key list; the previous open's may name deleted keys
+    if (!isOpen || loadingApiKeys || keysGeneration.current !== openGeneration.current) return;
+    const generation = openGeneration.current;
+    const providers: string[] = [config.model.accessMethod];
+    // The standard judge only runs outside scorer-only mode
+    if (judgeMode !== "scorer") providers.push(config.judgeLlm.provider);
+    for (const key of configuredApiKeys) {
+      if (!providers.includes(key.provider) || key.id === undefined) continue;
+      if (checkedKeyIds.current.has(key.id)) continue;
+      const keyId = key.id;
+      checkedKeyIds.current.add(keyId);
+      void verifySavedLlmApiKey(keyId).then(({ valid }) => {
+        // A reply from an earlier open must not mark a key fixed since then
+        if (!valid && generation === openGeneration.current) {
+          setRejectedKeyIds((prev) => new Set(prev).add(keyId));
+        }
+      });
+    }
+  }, [
+    isOpen,
+    loadingApiKeys,
+    judgeMode,
+    config.model.accessMethod,
+    config.judgeLlm.provider,
+    configuredApiKeys,
+  ]);
 
   // Reset model selection and apply saved judge preferences on each open
   useEffect(() => {
@@ -617,14 +694,16 @@ export default function NewExperimentModal({
         modelProvider !== "huggingface"
       ) {
         try {
-          const validation = await validateModel(modelName, modelProvider);
+          // probe: one tiny call with the saved key catches a refused key or a model the
+          // provider no longer serves before the run spends anything
+          const validation = await validateModel(modelName, modelProvider, true);
           if (!validation.valid) {
             // Show warning but allow user to proceed by clicking again
             setAlert({
               show: true,
               variant: "warning",
-              title: "API key may not be configured",
-              body: `${validation.error_message || `The API key for ${validation.provider || modelProvider} may not be configured.`} Click "Run experiment" again to proceed anyway.`,
+              title: validationAlertTitle(validation.probe_failed, validation.probe_error_code),
+              body: `${validation.error_message || `The API key for ${validation.provider || modelProvider} may not be configured.`} Click "Start Experiment" again to proceed anyway.`,
             });
             setApiKeyWarningAcknowledged(true);
             setLoading(false);
@@ -1001,10 +1080,19 @@ export default function NewExperimentModal({
     });
   };
 
-  // Check if a provider has a configured API key
-  const hasApiKey = (providerId: string): boolean => {
-    return configuredApiKeys.some((k) => k.provider === providerId);
-  };
+  // Saved keys the provider has not refused
+  const usableApiKeys = useMemo(
+    () => configuredApiKeys.filter((k) => k.id === undefined || !rejectedKeyIds.has(k.id)),
+    [configuredApiKeys, rejectedKeyIds],
+  );
+
+  // Check if a provider has a configured API key the provider has not refused
+  const hasApiKey = (providerId: string): boolean =>
+    usableApiKeys.some((k) => k.provider === providerId);
+
+  // A saved key exists for the provider, but the provider refused it
+  const savedKeyRejected = (providerId: string): boolean =>
+    !hasApiKey(providerId) && configuredApiKeys.some((k) => k.provider === providerId);
 
   const selectedProvider = availableJudgeProviders.find((p) => p.id === config.judgeLlm.provider);
 
@@ -1033,9 +1121,10 @@ export default function NewExperimentModal({
     // Use live gateway catalog if already loaded for this provider
     const live = gatewayModels[providerId];
     if (live && live.length > 0) {
+      const named = mergeWithBundledModels(providerId, live);
       const liveIds = new Set(live.map((m) => m.id));
       const uniqueSaved = saved.filter((s) => !liveIds.has(s.id));
-      return [...uniqueSaved, ...live];
+      return [...uniqueSaved, ...named];
     }
 
     // Fall back to bundled static JSON while gateway loads (or if gateway is down)
@@ -1063,39 +1152,30 @@ export default function NewExperimentModal({
 
   // Load live model catalog from AI Gateway when a cloud provider is selected.
   // Runs for both the model-under-test and the judge provider.
-  useEffect(() => {
-    const loadForProvider = async (provider: string) => {
-      if (!provider || gatewayModelsLoaded.current.has(provider)) return;
-      // Only cloud providers — local/custom providers don't have a LiteLLM catalog entry
-      if (!(CLOUD_PROVIDER_IDS as readonly string[]).includes(provider)) return;
-      gatewayModelsLoaded.current.add(provider); // mark before fetch to prevent concurrent calls
-      try {
-        const models = await evalModelsService.getGatewayModelsForProvider(provider);
-        if (models.length > 0) {
-          setGatewayModels((prev) => ({ ...prev, [provider]: models }));
-        }
-      } catch {
-        // Gateway unreachable — static fallback will be used
+  const loadGatewayModels = async (provider: string) => {
+    if (!provider || gatewayModelsLoaded.current.has(provider)) return;
+    // Only cloud providers — local/custom providers don't have a LiteLLM catalog entry
+    if (!(CLOUD_PROVIDER_IDS as readonly string[]).includes(provider)) return;
+    gatewayModelsLoaded.current.add(provider); // mark before fetch to prevent concurrent calls
+    try {
+      const models = await evalModelsService.getGatewayModelsForProvider(provider);
+      if (models.length > 0) {
+        setGatewayModels((prev) => ({ ...prev, [provider]: models }));
+      } else {
+        // Gateway down or restarting: the bundled list shows, and the next pick asks again
+        gatewayModelsLoaded.current.delete(provider);
       }
-    };
-    loadForProvider(config.model.accessMethod as string);
+    } catch {
+      gatewayModelsLoaded.current.delete(provider);
+    }
+  };
+
+  useEffect(() => {
+    void loadGatewayModels(config.model.accessMethod as string);
   }, [config.model.accessMethod]);
 
   useEffect(() => {
-    const loadForProvider = async (provider: string) => {
-      if (!provider || gatewayModelsLoaded.current.has(provider)) return;
-      if (!(CLOUD_PROVIDER_IDS as readonly string[]).includes(provider)) return;
-      gatewayModelsLoaded.current.add(provider);
-      try {
-        const models = await evalModelsService.getGatewayModelsForProvider(provider);
-        if (models.length > 0) {
-          setGatewayModels((prev) => ({ ...prev, [provider]: models }));
-        }
-      } catch {
-        // Gateway unreachable — static fallback will be used
-      }
-    };
-    loadForProvider(config.judgeLlm.provider as string);
+    void loadGatewayModels(config.judgeLlm.provider as string);
   }, [config.judgeLlm.provider]);
 
   // Auto-load default dataset when reaching step 2 (Dataset)
@@ -1142,7 +1222,11 @@ export default function NewExperimentModal({
             selectedModelInventoryId={selectedModelInventoryId}
             fieldsRef={formFieldsRef}
             getProviderModels={getProviderModels}
+            getSavedModelIds={(providerId) =>
+              getSavedModelsForProvider(providerId).map((m) => m.name)
+            }
             hasApiKey={hasApiKey}
+            savedKeyRejected={savedKeyRejected}
             onProviderSelect={(providerId) => {
               setSelectedSavedModelId(null);
               setConfig((prev) => ({
@@ -1155,12 +1239,14 @@ export default function NewExperimentModal({
               }));
               setUseCustomModelName(false);
             }}
-            onModelNameChange={(name) =>
+            onModelNameChange={(name) => {
+              // A model chosen in the picker replaces a saved model picked above it
+              setSelectedSavedModelId(null);
               setConfig((prev) => ({
                 ...prev,
                 model: { ...prev.model, name },
-              }))
-            }
+              }));
+            }}
             onEndpointUrlChange={(url) =>
               setConfig((prev) => ({
                 ...prev,
@@ -1623,154 +1709,27 @@ export default function NewExperimentModal({
                   <Box ref={formFieldsRef}>
                     <Stack spacing={3}>
                       {/* Model Selection - Dropdown for cloud providers, text input for local/OpenRouter */}
-                      {config.judgeLlm.provider === "openrouter" ? (
-                        /* OpenRouter - Custom model input with suggestions */
-                        <Box>
-                          <Typography
-                            sx={{
-                              fontSize: "13px",
-                              fontWeight: 500,
-                              color: palette.text.secondary,
-                              mb: 1,
-                            }}
-                          >
-                            Model
-                          </Typography>
-                          <Typography
-                            sx={{ fontSize: "11px", color: palette.text.tertiary, mb: 1.5 }}
-                          >
-                            OpenRouter supports any model. Enter the model ID or select from saved
-                            or popular options.
-                          </Typography>
-                          <Field
-                            label=""
-                            value={config.judgeLlm.model}
-                            onChange={(e) =>
-                              setConfig((prev) => ({
-                                ...prev,
-                                judgeLlm: { ...prev.judgeLlm, model: e.target.value },
-                              }))
-                            }
-                            placeholder="e.g., openai/gpt-4o, anthropic/claude-3-opus"
-                          />
-                          <Typography
-                            sx={{
-                              fontSize: "11px",
-                              fontWeight: 600,
-                              color: palette.text.disabled,
-                              mt: 2,
-                              mb: 1,
-                              textTransform: "uppercase",
-                            }}
-                          >
-                            Popular Models
-                          </Typography>
-                          <Stack direction="row" flexWrap="wrap" gap={1}>
-                            {[
-                              { id: "openai/gpt-4o", name: "GPT-4o" },
-                              { id: "anthropic/claude-3.5-sonnet", name: "Claude 3.5 Sonnet" },
-                              { id: "google/gemini-pro-1.5", name: "Gemini Pro 1.5" },
-                              { id: "meta-llama/llama-3.1-70b-instruct", name: "Llama 3.1 70B" },
-                              { id: "mistralai/mistral-large", name: "Mistral Large" },
-                            ].map((m) => (
-                              <MuiChip
-                                key={m.id}
-                                label={m.name}
-                                variant={config.judgeLlm.model === m.id ? "filled" : "outlined"}
-                                onClick={() =>
-                                  setConfig((prev) => ({
-                                    ...prev,
-                                    judgeLlm: { ...prev.judgeLlm, model: m.id },
-                                  }))
-                                }
-                                sx={{
-                                  "cursor": "pointer",
-                                  "backgroundColor":
-                                    config.judgeLlm.model === m.id
-                                      ? palette.brand.primaryLight
-                                      : "transparent",
-                                  "borderColor":
-                                    config.judgeLlm.model === m.id
-                                      ? palette.brand.primary
-                                      : palette.border.dark,
-                                  "color":
-                                    config.judgeLlm.model === m.id
-                                      ? palette.brand.primary
-                                      : palette.text.secondary,
-                                  "&:hover": {
-                                    backgroundColor:
-                                      config.judgeLlm.model === m.id
-                                        ? palette.brand.primaryLight
-                                        : palette.background.accent,
-                                    borderColor: palette.brand.primary,
-                                  },
-                                }}
-                              />
-                            ))}
-                          </Stack>
-                        </Box>
-                      ) : PROVIDERS[config.judgeLlm.provider] ? (
-                        <Box>
-                          <Typography
-                            sx={{
-                              fontSize: "13px",
-                              fontWeight: 500,
-                              color: palette.text.secondary,
-                              mb: 1,
-                            }}
-                          >
-                            Model
-                          </Typography>
-                          <FormControl fullWidth size="small">
-                            <Select
-                              value={config.judgeLlm.model}
-                              onChange={(e) =>
-                                setConfig((prev) => ({
-                                  ...prev,
-                                  judgeLlm: { ...prev.judgeLlm, model: e.target.value as string },
-                                }))
-                              }
-                              displayEmpty
-                              sx={{
-                                "fontSize": "13px",
-                                "& .MuiOutlinedInput-notchedOutline": {
-                                  borderColor: palette.border.dark,
-                                },
-                                "&:hover .MuiOutlinedInput-notchedOutline": {
-                                  borderColor: palette.border.dark,
-                                },
-                                "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                                  borderColor: palette.brand.primary,
-                                },
-                              }}
-                            >
-                              <MenuItem value="" disabled>
-                                <Typography sx={{ color: palette.text.disabled, fontSize: "13px" }}>
-                                  Select a model
-                                </Typography>
-                              </MenuItem>
-                              {getProviderModels(config.judgeLlm.provider).map((model) => (
-                                <MenuItem key={model.id} value={model.id}>
-                                  <Stack
-                                    direction="row"
-                                    alignItems="center"
-                                    justifyContent="space-between"
-                                    sx={{ width: "100%" }}
-                                  >
-                                    <Typography sx={{ fontSize: "13px" }}>{model.name}</Typography>
-                                    {model.inputCost !== undefined && (
-                                      <Typography
-                                        sx={{ fontSize: "11px", color: palette.text.disabled }}
-                                      >
-                                        ${model.inputCost}/1M in
-                                      </Typography>
-                                    )}
-                                  </Stack>
-                                </MenuItem>
-                              ))}
-                            </Select>
-                          </FormControl>
-                        </Box>
+                      {PROVIDERS[config.judgeLlm.provider] ? (
+                        /* Cloud judges, OpenRouter included: the gateway catalog, any ID typed */
+                        <ModelPicker
+                          value={config.judgeLlm.model}
+                          onChange={(model) =>
+                            setConfig((prev) => ({
+                              ...prev,
+                              judgeLlm: { ...prev.judgeLlm, model },
+                            }))
+                          }
+                          models={getProviderModels(config.judgeLlm.provider)}
+                          savedModelIds={getSavedModelsForProvider(config.judgeLlm.provider).map(
+                            (m) => m.name,
+                          )}
+                          placeholder={
+                            config.judgeLlm.provider === "openrouter"
+                              ? "Search or type an ID, e.g. openai/gpt-4o"
+                              : "Search or type a model ID"
+                          }
+                          testId="judge"
+                        />
                       ) : (
                         /* Local judge providers (Ollama, HuggingFace, Custom / Self-hosted) */
                         (() => {
@@ -1798,7 +1757,8 @@ export default function NewExperimentModal({
                                       judgeLlm: { ...prev.judgeLlm, endpointUrl: e.target.value },
                                     }))
                                   }
-                                  placeholder="https://api.example.com/v1/chat/completions"
+                                  // The OpenAI-compatible base URL; /chat/completions is added
+                                  placeholder="http://localhost:8000/v1"
                                 />
                               )}
 
@@ -1987,7 +1947,9 @@ export default function NewExperimentModal({
                             }
                             placeholder={`Enter your ${selectedProvider.name} API key`}
                             autoComplete="off"
-                            helperText="Your key will be saved securely for future experiments"
+                            helperText={apiKeyHelperText(
+                              savedKeyRejected(config.judgeLlm.provider),
+                            )}
                           />
                         ))}
                     </Stack>

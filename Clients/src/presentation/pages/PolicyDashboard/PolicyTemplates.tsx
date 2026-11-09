@@ -18,6 +18,8 @@ import { GroupedTableView } from "../../components/Table/GroupedTableView";
 import CustomizableSkeleton from "../../components/Skeletons";
 import CustomizablePolicyTable from "../../components/Table/PolicyTable";
 import singleTheme from "../../themes/v1SingleTheme";
+import { useAuth } from "../../../application/hooks/useAuth";
+import allowedRoles from "../../../application/constants/permissions";
 
 // Define table headers in the format expected by CustomizablePolicyTable
 const tableHeaders = [
@@ -48,6 +50,8 @@ const PolicyTemplates: React.FC<PolicyTemplatesProps> = ({
   isLoading = false,
 }) => {
   const navigate = useNavigate();
+  const { userRoleName } = useAuth();
+  const canCreatePolicy = !!userRoleName && allowedRoles.policies.create.includes(userRoleName);
   const [searchParams, setSearchParams] = useSearchParams();
   const hasProcessedUrlParam = useRef(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -83,7 +87,7 @@ const PolicyTemplates: React.FC<PolicyTemplatesProps> = ({
   }, [searchParams, setSearchParams, navigate]);
 
   const handleSelectPolicyTemplate = (id: number) => {
-    if (id) {
+    if (id && canCreatePolicy) {
       navigate(`/policies/new?templateId=${id}`);
     }
   };

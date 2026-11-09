@@ -11,6 +11,8 @@ import {
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import ExperimentDetailContent from "../ExperimentDetailContent";
+import { palette } from "../../../themes/palette";
+import { EXPERIMENT_ACTION_TOOLTIPS } from "../../../components/Table/ExperimentTable/actionTooltips";
 
 // A single-turn sample with a passing (answerRelevancy) and a numeric
 // lower-is-better (bias) metric, plus a parseable JSON reason string.
@@ -201,6 +203,38 @@ describe("ExperimentDetailContent", () => {
       expect(await screen.findByText("Status")).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "Rerun" })).toBeDisabled();
     });
+
+    it("explains what download, copy and rerun do in tooltips", async () => {
+      renderDetail();
+      await screen.findByText("Test Experiment");
+
+      fireEvent.mouseOver(screen.getByRole("button", { name: "Download" }));
+      expect(await screen.findByText(EXPERIMENT_ACTION_TOOLTIPS.downloadFull)).toBeInTheDocument();
+
+      fireEvent.mouseOver(screen.getByRole("button", { name: "Copy" }));
+      expect(await screen.findByText(EXPERIMENT_ACTION_TOOLTIPS.copyFull)).toBeInTheDocument();
+
+      const rerunButton = screen.getByRole("button", { name: "Rerun" });
+      fireEvent.mouseOver(rerunButton);
+      expect(await screen.findByText(EXPERIMENT_ACTION_TOOLTIPS.rerun)).toBeInTheDocument();
+      // The tooltip describes the button; its name stays "Rerun".
+      expect(screen.getByRole("button", { name: "Rerun" })).toBe(rerunButton);
+    });
+
+    it("explains why rerun is disabled while the experiment runs", async () => {
+      deepEvalMocks.getExperiment.mockResolvedValue({
+        experiment: { ...mockExperiment, status: "running" },
+      });
+      renderDetail();
+      await screen.findByText("Status");
+
+      // The disabled button fires no hover events; its wrapper shows the tooltip.
+      const rerun = screen.getByRole("button", { name: "Rerun" });
+      fireEvent.mouseOver(rerun.parentElement as HTMLElement);
+      expect(
+        await screen.findByText(EXPERIMENT_ACTION_TOOLTIPS.rerunWhileRunning),
+      ).toBeInTheDocument();
+    });
   });
 
   describe("inline editing", () => {
@@ -333,6 +367,51 @@ describe("ExperimentDetailContent", () => {
       expect(screen.getAllByText("Customer Engagement").length).toBeGreaterThan(0);
     });
 
+    it("treats the evaluator's metric names as built-in metrics, Task Completion included", async () => {
+      mockLogs([
+        {
+          ...LOG,
+          metadata: {
+            metric_scores: {
+              "Relevance": { score: 0.9, passed: true },
+              "Correctness": { score: 0.8, passed: true },
+              "Instruction Following": { score: 0.7, passed: true },
+              // run_evaluation saves Task Completion under its camelCase key
+              "taskCompletion": { score: 0.6, passed: true },
+            },
+          },
+        },
+      ]);
+
+      renderDetail();
+
+      expect(await screen.findByText("Quality metrics")).toBeInTheDocument();
+      expect(screen.queryByText("Custom scorers")).not.toBeInTheDocument();
+      expect(screen.queryByText("Conversational metrics")).not.toBeInTheDocument();
+      expect(screen.getAllByText("Task Completion").length).toBeGreaterThan(0);
+      expect(screen.getByText("60.0%")).toBeInTheDocument();
+    });
+
+    it("shows how many prompts were scored when some got no score", async () => {
+      mockLogs([
+        LOG,
+        {
+          ...LOG,
+          id: "log-2",
+          output_text: "",
+          status: "error",
+          error_message: "empty_output",
+          metadata: {},
+        },
+      ]);
+
+      renderDetail();
+
+      expect(await screen.findByTestId("experiment-scored-prompts")).toHaveTextContent(
+        "2 · 1 scored",
+      );
+    });
+
     it("skips the metrics header when no log has metric scores", async () => {
       mockLogs([{ ...LOG, metadata: {} }]);
 
@@ -394,6 +473,52 @@ describe("ExperimentDetailContent", () => {
       expect(screen.getByText("0/1 metrics passed")).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "Previous" })).toBeEnabled();
       expect(screen.getByRole("button", { name: "Next" })).toBeDisabled();
+    });
+
+    it("counts a clean bias result as passed, fails errored metrics and leaves out skipped ones", async () => {
+      mockLogs([
+        {
+          ...LOG,
+          metadata: {
+            metric_scores: {
+              Bias: { score: 0, passed: true, reason: "No biased language" },
+              // No passed flag: lower is better, so 10% hallucination passes.
+              Hallucination: 0.1,
+              Faithfulness: {
+                score: null,
+                passed: false,
+                skipped: true,
+                reason: "No retrieval/context provided",
+              },
+              Toxicity: { score: null, passed: false, error: "Judge timeout" },
+            },
+          },
+        },
+        {
+          ...LOG,
+          id: "log-2",
+          input_text: "Second question",
+          metadata: {
+            metric_scores: {
+              Faithfulness: { score: null, passed: false, skipped: true },
+            },
+          },
+        },
+      ]);
+
+      renderDetail();
+      // The samples table shows the errored cell as failed, with its error on hover.
+      const erroredCell = await screen.findByTitle("Judge timeout");
+      expect(erroredCell).toHaveStyle({ backgroundColor: palette.status.error.bg });
+
+      fireEvent.click(await screen.findByText("What is 2+2?"));
+
+      expect(await screen.findByText("2/3 metrics passed")).toBeInTheDocument();
+      expect(screen.getByText("Judge timeout")).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole("button", { name: "Next" }));
+
+      expect(screen.getByText("No metrics were evaluated")).toBeInTheDocument();
     });
 
     it("renders the conversation view for a multi-turn sample", async () => {

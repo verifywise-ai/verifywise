@@ -1,6 +1,6 @@
 # VerifyWise - Development Guide
 
-> **Last Updated:** 2026-10-11
+> **Last Updated:** 2026-11-03
 
 This document contains cross-cutting rules for the VerifyWise codebase. Directory-scoped guides load automatically when working in each area:
 
@@ -8,7 +8,7 @@ This document contains cross-cutting rules for the VerifyWise codebase. Director
 - **Frontend:** `Clients/CLAUDE.md` — clean architecture, component patterns
 - **EvalServer:** `EvalServer/CLAUDE.md` — Alembic migrations, FastAPI patterns
 - **AI Gateway:** `AIGateway/CLAUDE.md` — LLM proxy, guardrails, spend tracking
-- **MCP Server:** `MCPServer/README.md` — MCP server for super-admin org/user administration across deployments
+- **MCP Server:** `Servers/mcp/` — the deployment's own MCP server, served over Streamable HTTP at `POST /api/mcp`. Open to super admins and organization Admins (gate in `routes/mcp.route.ts`). `toolsFor` in `mcp/server.ts` is the single source of truth for which tools a caller gets: super admins get the deployment tools (`organizationTools`, `userTools`: organizations and their users) and no governance tools, since the SuperAdmin role holds no use case or risk permission over REST and `docs/technical/security/tenant-isolation.md` §3 allows no super-admin write into another organization; Admins get the organization tools (`organizationAdminTools`), each pinned to their token's organization by `scopeToOrganization` (`mcp/scope.ts`); a user who is both gets both, and where a name is in both the super-admin tool is kept. Tools call the same services and queries the REST controllers do, so an MCP write is indistinguishable from a console one. The connect tab (`Clients/.../SettingsPage/McpConnect`, in Super Admin → Settings and, for Admins, in Settings) lists the signed-in user's tools by sending `tools/list` to `/api/mcp` (`useMcpTools`), so no tool list is kept in the frontend. Connect a client with `claude mcp add --transport http verifywise https://<deployment>/api/mcp --header "Authorization: Bearer <api token>"`.
 
 ### Custom Agents
 
@@ -36,7 +36,7 @@ Everything is in this repository. There is no separate plugin repository. The fo
 |------|-------|-----------|
 | Core frameworks (EU AI Act, ISO 42001, ISO 27001, NIST AI RMF; ids 1–4) | Hand-built tables, routes and pages | `docs/technical/domains/compliance-frameworks.md` |
 | 21 bundled frameworks (SOC 2, GDPR, HIPAA, ...; ids 5–25) | `Servers/structures/<Name>/*.structure.ts`, registry `Servers/structures/index.ts` | `docs/technical/guides/adding-new-framework.md` |
-| 7 extensions (Slack, MLflow, Azure AI Foundry, Model Lifecycle, Risk Import, Jira Assets, Dataset Bulk Upload) | `Servers/extensions/<key>/` + `Clients/src/presentation/pages/Extensions/` | `docs/technical/infrastructure/extensions.md` |
+| 8 extensions (Slack, MLflow, Azure AI Foundry, Model Lifecycle, Risk Import, Jira Assets, Jira incidents, Dataset Bulk Upload) | `Servers/extensions/<key>/` + `Clients/src/presentation/pages/Extensions/` | `docs/technical/infrastructure/extensions.md` |
 
 ---
 
@@ -72,7 +72,8 @@ Express Router → Middleware Chain → Controller → Service → Utils → Pos
 interface TokenPayload {
   id: number;              // User ID
   email: string;
-  organizationId: number;
+  organizationId: number;  // Chosen at login, fixed for the session; null for a pure super admin.
+                           // A user can belong to several orgs (organization_members), a role in each.
   tenantId: string;        // Tenant hash
   roleName: string;        // "Admin" | "Reviewer" | "Editor" | "Auditor"
   expire: number;            // Unix timestamp (Date.now() + ms)
@@ -208,6 +209,7 @@ Read the relevant file BEFORE implementing changes in that area:
 | Code style (short version) | `docs/technical/guides/code-style.md` |
 | Detailed coding standards (TS, React, backend, security, testing) | `CodeRules/README.md` |
 | Extensions (built-in integrations: catalog, enablement, gate middleware) | `docs/technical/infrastructure/extensions.md` |
+| Shadow AI syslog listener (TCP port 6514, per-source keys, parsers, drop reasons, env vars, Helm/Compose) | `docs/technical/infrastructure/shadow-ai-syslog.md` |
 | Approval workflows | `docs/technical/domains/approvals.md` |
 | Agent Control (AI Gateway native tool-call hook, file-write gating, approval, result capture, run correlation, multi-agent wiring) | `docs/technical/domains/agent-control.md` |
 | Agent Control integrator/developer docs (connect an agent, Claude Code + Cursor, generic contract, API ref) | `shared/user-guide-content/content/developers/` |
@@ -224,6 +226,7 @@ Read the relevant file BEFORE implementing changes in that area:
 | Datasets | `docs/technical/domains/datasets.md` |
 | Tasks | `docs/technical/domains/tasks.md` |
 | Incidents | `docs/technical/domains/incidents.md` |
+| Intake forms (AI scoring with rule minimums, suggested risks, assessment job, one-time email, approval risks) | `docs/technical/domains/intake-forms.md` |
 | Evidence hub | `docs/technical/domains/evidence.md` |
 | Training registry | `docs/technical/domains/training.md` |
 | Search | `docs/technical/domains/search.md` |

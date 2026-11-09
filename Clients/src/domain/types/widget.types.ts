@@ -70,6 +70,8 @@ export interface SelectCorProps {
     surname?: string;
     icon?: React.ComponentType<{ color?: string; size?: number }>;
     color?: string;
+    /** Shown but not selectable. */
+    disabled?: boolean;
   }[];
   /**
    * Accessible name for selects with no visible label. Without it the

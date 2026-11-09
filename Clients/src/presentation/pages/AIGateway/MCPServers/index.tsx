@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Box, Typography, Stack, IconButton, Tooltip } from "@mui/material";
+import { Box, Typography, Stack, IconButton, Tooltip, CircularProgress } from "@mui/material";
+import { useNavigate } from "react-router";
 import {
   CirclePlus,
   Server,
@@ -21,22 +22,20 @@ import Select from "../../../components/Inputs/Select";
 import StandardModal from "../../../components/Modals/StandardModal";
 import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtended";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
+import {
+  getClientErrorReason,
+  getGatewayErrorDetail,
+  getGatewayErrorText,
+} from "../../../../application/utils/apiErrorReason";
 import palette from "../../../themes/palette";
-import { slugify } from "../shared";
+import { FROM_MCP_SERVERS, slugify } from "../shared";
 import MCPTable from "../MCPTable";
 import CustomizableSkeleton from "../../../components/Skeletons";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
-
-interface ServerForm {
-  name: string;
-  slug: string;
-  url: string;
-  auth_type: string;
-  auth_token: string;
-  auth_header_name: string;
-  auth_api_key: string;
-  description: string;
-}
+import { useTranslation } from "../../../../application/hooks/useTranslation";
+import { fill } from "../../../../i18n/fill";
+import { VWLink } from "../../../components/Link/VWLink";
+import MCPServerAuthFields, { ServerForm } from "./MCPServerAuthFields";
 
 const EMPTY_FORM: ServerForm = {
   name: "",
@@ -46,6 +45,16 @@ const EMPTY_FORM: ServerForm = {
   auth_token: "",
   auth_header_name: "",
   auth_api_key: "",
+  oauth_client_id: "",
+  oauth_client_secret: "",
+  oauth_token_url: "",
+  oauth_token_url_source: "manual",
+  oauth_scope: "",
+  oauth_resource: "",
+  oauth_auth_method: "client_secret_basic",
+  aws_region: "",
+  aws_access_key_id: "",
+  aws_secret_access_key: "",
   description: "",
 };
 
@@ -53,7 +62,21 @@ const AUTH_TYPE_ITEMS = [
   { _id: "none", name: "None" },
   { _id: "bearer", name: "Bearer token" },
   { _id: "api_key", name: "API key" },
+  { _id: "oauth", name: "OAuth (client credentials)" },
+  { _id: "aws_iam", name: "AWS IAM" },
 ];
+
+const AWS_MCP_REGION_RE = /^https:\/\/aws-mcp\.([a-z0-9-]+)\.api\.aws\//;
+const DISCOVERY_DEBOUNCE_MS = 600;
+
+const authLabel = (authType: string) =>
+  authType === "none"
+    ? "no auth"
+    : authType === "oauth"
+      ? "OAuth"
+      : authType === "aws_iam"
+        ? "AWS IAM"
+        : authType;
 
 interface MCPServer {
   id: number;
@@ -68,12 +91,63 @@ interface MCPServer {
   last_discovery_error?: string | null;
   auth_header?: string;
   auth_secret_hint?: string;
+  aws_region?: string;
+  aws_access_key_id?: string;
+  oauth_client_id?: string;
+  oauth_token_url?: string;
+  oauth_token_url_source?: "manual" | "discovered";
+  oauth_scope?: string;
+  oauth_resource?: string;
   created_by_name: string;
   created_at: string;
 }
 
+type DiscoveryChanges = { added: number; removed: number; changed: number; unchanged: number };
+
+type Discovery = {
+  status: "success" | "failed" | "skipped";
+  tools_discovered: number;
+  changes?: DiscoveryChanges | null;
+  error: string | null;
+};
+
+type Translate = (key: string) => string;
+
+// Counts are filled into translated templates: the DOM translator only matches
+// whole strings, so "3 tools found" would otherwise stay in English.
+const toolsFound = (t: Translate, n: number) =>
+  n === 0
+    ? t("The server offered no tools")
+    : n === 1
+      ? t("One tool found")
+      : fill(t("{count} tools found"), { count: n });
+
+const hasChanges = (c: DiscoveryChanges) => c.added + c.removed + c.changed > 0;
+
+const changeSummary = (t: Translate, c: DiscoveryChanges) =>
+  [
+    c.added && fill(t("{count} new"), { count: c.added }),
+    c.removed && fill(t("{count} removed"), { count: c.removed }),
+    c.changed && fill(t("{count} changed"), { count: c.changed }),
+  ]
+    .filter(Boolean)
+    .join(", ");
+
+// One wording for every successful discovery, whether it ran on save or from
+// the Discover button. With no active tools stored before the run (a new
+// server, or one whose tools had all gone) there is nothing to compare, so
+// only the total means anything.
+const discoveryBody = (t: Translate, total: number, c?: DiscoveryChanges | null) =>
+  c && c.removed + c.changed + c.unchanged > 0 && hasChanges(c)
+    ? changeSummary(t, c)
+    : toolsFound(t, total);
+
+const toolsCatalogPath = (serverId: number) => `/ai-gateway/mcp/tools?server=${serverId}`;
+
 export default function MCPServersPage() {
   const formatDate = useFormattedDate();
+  const { t } = useTranslation();
+  const navigate = useNavigate();
   const [servers, setServers] = useState<MCPServer[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -85,20 +159,43 @@ export default function MCPServersPage() {
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
 
   const [form, setForm] = useState<ServerForm>({ ...EMPTY_FORM });
+  const [findingTokenUrl, setFindingTokenUrl] = useState(false);
+  const [tokenUrlNote, setTokenUrlNote] = useState("");
+  // The (OAuth, URL) pair discovery last ran for, so it fires once per URL.
+  const discoveredFor = useRef("");
+  const discoverySeq = useRef(0);
+  // The URL the AWS region was last prefilled for.
+  const prefilledFor = useRef("");
+  // Read when a lookup answers, to drop it if the admin has moved on.
+  const latestForm = useRef(form);
+  latestForm.current = form;
   const [alert, setAlert] = useState<{
     variant: "success" | "warning" | "error";
     title: string;
     body?: string;
+    action?: { label: string; onClick: () => void };
   } | null>(null);
-  const [discoveringId, setDiscoveringId] = useState<number | null>(null);
+  // Ids of servers with a discovery running; each row has its own spinner.
+  const [discoveringIds, setDiscoveringIds] = useState<ReadonlySet<number>>(new Set());
 
-  // Fixed phrases go in the title (and the 0/1 tool counts in the body) so each
-  // renders as its own text node and the DOM translator can match it.
-  // One dismiss timer at a time: an older alert's timer must not close a newer one.
+  // Titles are fixed phrases the DOM translator matches; bodies with counts
+  // arrive already translated. One dismiss timer at a time: an older alert's timer must not close a newer one.
   const alertTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const showAlert = (variant: "success" | "warning" | "error", title: string, body?: string) => {
+  const showAlert = (
+    variant: "success" | "warning" | "error",
+    title: string,
+    body?: string,
+    serverId?: number,
+  ) => {
     if (alertTimer.current) clearTimeout(alertTimer.current);
-    setAlert({ variant, title, body });
+    const action =
+      serverId === undefined
+        ? undefined
+        : {
+            label: "View tools",
+            onClick: () => navigate(toolsCatalogPath(serverId), { state: FROM_MCP_SERVERS }),
+          };
+    setAlert({ variant, title, body, action });
     alertTimer.current = setTimeout(() => setAlert(null), 6000);
   };
   useEffect(
@@ -108,41 +205,44 @@ export default function MCPServersPage() {
     [],
   );
 
-  type Discovery = {
-    status: "success" | "failed" | "skipped";
-    tools_discovered: number;
-    error: string | null;
-  };
-
-  const toolsFound = (n: number) =>
-    n === 0 ? "The server offered no tools" : n === 1 ? "One tool found" : `${n} tools found`;
-
-  const reportDiscovery = (prefix: string, discovery?: Discovery) => {
+  const reportDiscovery = (prefix: string, serverId: number | undefined, discovery?: Discovery) => {
     if (!discovery || discovery.status === "skipped") {
       showAlert("success", prefix);
     } else if (discovery.status === "success") {
-      showAlert("success", prefix, toolsFound(discovery.tools_discovered));
+      const total = discovery.tools_discovered;
+      showAlert(
+        "success",
+        prefix,
+        discoveryBody(t, total, discovery.changes),
+        total > 0 ? serverId : undefined,
+      );
     } else {
       // The server is saved either way; say so, or the admin may think the save failed.
       showAlert("warning", `${prefix}, but discovery failed`, discovery.error || undefined);
     }
   };
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
+  // Reloads can overlap (two discoveries at once); only the latest one may
+  // write, or an older response could put stale tool counts back on screen.
+  const loadSeq = useRef(0);
+
+  // The skeleton is for the first load and retries; later reloads keep the table on screen.
+  const loadData = useCallback(async (showSkeleton = false) => {
+    const seq = ++loadSeq.current;
+    if (showSkeleton) setLoading(true);
     setLoadError(null);
     try {
       const res = await apiServices.get<Record<string, any>>("/ai-gateway/mcp/servers");
-      setServers(res?.data?.servers || []);
+      if (seq === loadSeq.current) setServers(res?.data?.servers || []);
     } catch {
-      setLoadError("Failed to load MCP servers. Please try again.");
+      if (seq === loadSeq.current) setLoadError("Failed to load MCP servers. Please try again.");
     } finally {
-      setLoading(false);
+      if (seq === loadSeq.current) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    loadData();
+    loadData(true);
   }, [loadData]);
 
   const isEditing = editingId !== null;
@@ -150,6 +250,86 @@ export default function MCPServersPage() {
   // The stored secret only carries over while the auth type is unchanged;
   // switching type means a new secret is required and no "current" hint applies.
   const keepsStoredSecret = isEditing && editingServer?.auth_type === form.auth_type;
+
+  const runTokenUrlDiscovery = async (url: string, manual: boolean) => {
+    const seq = ++discoverySeq.current;
+    discoveredFor.current = url;
+    setFindingTokenUrl(true);
+    if (manual) setFormError("");
+    try {
+      const res = await apiServices.post<Record<string, any>>(
+        "/ai-gateway/mcp/servers/discover-oauth",
+        { url },
+      );
+      if (seq !== discoverySeq.current) return;
+      // The answer is for a URL the admin has since changed or left.
+      if (latestForm.current.auth_type !== "oauth" || latestForm.current.url.trim() !== url) return;
+      const found: string | undefined = res?.data?.token_url;
+      if (!found) {
+        if (manual) setFormError("Could not find the token URL");
+        return;
+      }
+      let host = found;
+      try {
+        host = new URL(found).host;
+      } catch {
+        // Show the raw value if it does not parse.
+      }
+      // Never overwrite a URL the admin typed while discovery ran, and say nothing about it.
+      if (!manual && latestForm.current.oauth_token_url.trim()) return;
+      setForm((p) => ({
+        ...p,
+        oauth_token_url: found,
+        oauth_token_url_source: "discovered",
+        oauth_auth_method: res?.data?.auth_method || p.oauth_auth_method,
+      }));
+      setTokenUrlNote(
+        fill(t("Found at {host}. Check this is your identity provider before saving."), { host }),
+      );
+    } catch (err: any) {
+      // A failed automatic lookup stays quiet: the admin can type the URL.
+      if (manual && seq === discoverySeq.current) {
+        setFormError(getGatewayErrorText(err, "Could not find the token URL"));
+      }
+    } finally {
+      if (seq === discoverySeq.current) setFindingTokenUrl(false);
+    }
+  };
+
+  const handleFindTokenUrl = () => {
+    const url = form.url.trim();
+    if (!url) {
+      setFormError("Enter the server URL first");
+      return;
+    }
+    runTokenUrlDiscovery(url, true);
+  };
+
+  // Look up the token URL once for each URL typed while OAuth is selected.
+  useEffect(() => {
+    const url = form.url.trim();
+    if (!isModalOpen || form.auth_type !== "oauth" || !url || form.oauth_token_url.trim()) return;
+    if (discoveredFor.current === url) return;
+    const timer = setTimeout(() => runTokenUrlDiscovery(url, false), DISCOVERY_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isModalOpen, form.auth_type, form.url, form.oauth_token_url]);
+
+  // A note about a discovered URL no longer applies once the admin edits it.
+  useEffect(() => {
+    if (form.oauth_token_url_source === "manual") setTokenUrlNote("");
+  }, [form.oauth_token_url_source]);
+
+  // aws-mcp.<region>.api.aws URLs name their region; fill it when empty. Only a
+  // changed URL prefills: an admin who clears the field keeps it empty.
+  useEffect(() => {
+    if (form.auth_type !== "aws_iam") return;
+    const url = form.url.trim();
+    if (prefilledFor.current === url) return;
+    prefilledFor.current = url;
+    const region = AWS_MCP_REGION_RE.exec(url)?.[1];
+    if (region) setForm((p) => (p.aws_region ? p : { ...p, aws_region: region }));
+  }, [form.auth_type, form.url]);
 
   const handleNameChange = (value: string) => {
     setForm((p) => ({
@@ -159,9 +339,18 @@ export default function MCPServersPage() {
     }));
   };
 
+  const resetDiscovery = () => {
+    discoverySeq.current++;
+    discoveredFor.current = "";
+    prefilledFor.current = "";
+    setTokenUrlNote("");
+    setFindingTokenUrl(false);
+  };
+
   const openCreateModal = () => {
     setEditingId(null);
     setForm({ ...EMPTY_FORM });
+    resetDiscovery();
     setFormError("");
     setIsModalOpen(true);
   };
@@ -176,8 +365,19 @@ export default function MCPServersPage() {
       auth_token: "",
       auth_header_name: srv.auth_header || "",
       auth_api_key: "",
+      oauth_client_id: srv.oauth_client_id || "",
+      oauth_client_secret: "",
+      oauth_token_url: srv.oauth_token_url || "",
+      oauth_token_url_source: srv.oauth_token_url_source || "manual",
+      oauth_scope: srv.oauth_scope || "",
+      oauth_resource: srv.oauth_resource || "",
+      oauth_auth_method: "",
+      aws_region: srv.aws_region || "",
+      aws_access_key_id: srv.aws_access_key_id || "",
+      aws_secret_access_key: "",
       description: srv.description || "",
     });
+    resetDiscovery();
     setFormError("");
     setIsModalOpen(true);
   };
@@ -212,6 +412,27 @@ export default function MCPServersPage() {
       } else if (editingServer && header && header !== (editingServer.auth_header || "")) {
         payload.auth_config = { header };
       }
+    } else if (form.auth_type === "oauth") {
+      const secret = form.oauth_client_secret.trim();
+      const scope = form.oauth_scope.trim();
+      const resource = form.oauth_resource.trim();
+      payload.auth_config = {
+        client_id: form.oauth_client_id.trim(),
+        ...(secret ? { client_secret: secret } : {}),
+        token_url: form.oauth_token_url.trim(),
+        token_url_source: form.oauth_token_url_source,
+        // Always sent, so clearing the field clears the stored value.
+        scope,
+        resource,
+        ...(form.oauth_auth_method ? { auth_method: form.oauth_auth_method } : {}),
+      };
+    } else if (form.auth_type === "aws_iam") {
+      const secret = form.aws_secret_access_key.trim();
+      payload.auth_config = {
+        region: form.aws_region.trim(),
+        access_key_id: form.aws_access_key_id.trim(),
+        ...(secret ? { secret_access_key: secret } : {}),
+      };
     }
 
     try {
@@ -224,14 +445,14 @@ export default function MCPServersPage() {
       }
       setIsModalOpen(false);
       setForm({ ...EMPTY_FORM });
-      reportDiscovery("Server saved", res?.data?.discovery);
+      reportDiscovery(
+        "Server saved",
+        res?.data?.server?.id ?? editingId ?? undefined,
+        res?.data?.discovery,
+      );
       await loadData();
     } catch (err: any) {
-      setFormError(
-        err?.response?.data?.detail ||
-          err?.response?.data?.message ||
-          `Failed to ${editingId ? "update" : "create"} server`,
-      );
+      setFormError(getGatewayErrorText(err, `Failed to ${editingId ? "update" : "create"} server`));
     } finally {
       setIsSubmitting(false);
     }
@@ -249,17 +470,40 @@ export default function MCPServersPage() {
   };
 
   const handleDiscover = async (id: number) => {
-    setDiscoveringId(id);
+    setDiscoveringIds((prev) => new Set(prev).add(id));
     try {
       const res = await apiServices.post<Record<string, any>>(
         `/ai-gateway/mcp/servers/${id}/discover`,
       );
-      showAlert("success", toolsFound(res?.data?.tools_discovered ?? 0));
+      const total: number = res?.data?.tools_discovered ?? 0;
+      const changes: DiscoveryChanges | null | undefined = res?.data?.changes;
+      // A run that only removed tools leaves nothing to view.
+      const viewFor = total > 0 ? id : undefined;
+      if (!changes) {
+        // No change data to go on: report the total only.
+        showAlert("success", toolsFound(t, total), undefined, viewFor);
+      } else {
+        showAlert(
+          "success",
+          hasChanges(changes) ? "Tools updated" : "No changes",
+          discoveryBody(t, total, changes),
+          viewFor,
+        );
+      }
     } catch (err: any) {
-      showAlert("error", "Discovery failed", err?.response?.data?.detail);
+      showAlert(
+        "error",
+        "Discovery failed",
+        getGatewayErrorDetail(err) ?? getClientErrorReason(err) ?? undefined,
+      );
     } finally {
-      setDiscoveringId(null);
+      // Reload first so the spinner stays until the new tool count is on screen.
       await loadData();
+      setDiscoveringIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
     }
   };
 
@@ -268,7 +512,7 @@ export default function MCPServersPage() {
       const res = await apiServices.patch<Record<string, any>>(`/ai-gateway/mcp/servers/${id}`, {
         is_active: !isActive,
       });
-      if (!isActive) reportDiscovery("Server switched on", res?.data?.discovery);
+      if (!isActive) reportDiscovery("Server switched on", id, res?.data?.discovery);
       await loadData();
     } catch {
       // Silently handle
@@ -306,6 +550,7 @@ export default function MCPServersPage() {
           variant={alert.variant}
           title={alert.title}
           body={alert.body ?? ""}
+          action={alert.action}
           isToast
           onClick={() => setAlert(null)}
         />
@@ -318,7 +563,7 @@ export default function MCPServersPage() {
             variant="outlined"
             text="Retry"
             icon={<RotateCcw size={16} />}
-            onClick={loadData}
+            onClick={() => loadData(true)}
           />
         </EmptyState>
       ) : servers.length === 0 ? (
@@ -376,15 +621,30 @@ export default function MCPServersPage() {
                   />
                 </span>
               </Tooltip>,
-              <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
-                {srv.tool_count > 0 ? srv.tool_count : "—"}
-              </Typography>,
+              srv.tool_count > 0 ? (
+                <VWLink
+                  ariaLabel={
+                    srv.tool_count === 1
+                      ? t("View one tool")
+                      : fill(t("View {count} tools"), { count: srv.tool_count })
+                  }
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(toolsCatalogPath(srv.id), { state: FROM_MCP_SERVERS });
+                  }}
+                  sx={{ fontSize: 12 }}
+                >
+                  {srv.tool_count}
+                </VWLink>
+              ) : (
+                <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>—</Typography>
+              ),
               <Box>
                 <Typography sx={{ fontSize: 12, color: palette.text.secondary }}>
                   {srv.url}
                 </Typography>
                 <Typography sx={{ fontSize: 11, color: palette.text.tertiary }}>
-                  {srv.auth_type === "none" ? "no auth" : srv.auth_type}
+                  {authLabel(srv.auth_type)}
                   {srv.slug && ` · /${srv.slug}`}
                 </Typography>
               </Box>,
@@ -414,11 +674,16 @@ export default function MCPServersPage() {
                     <IconButton
                       size="small"
                       onClick={() => handleDiscover(srv.id)}
-                      disabled={discoveringId === srv.id}
+                      disabled={discoveringIds.has(srv.id)}
                       sx={{ p: 0.5 }}
                       aria-label="Discover tools"
+                      aria-busy={discoveringIds.has(srv.id)}
                     >
-                      <Search size={14} strokeWidth={1.5} color={palette.text.tertiary} />
+                      {discoveringIds.has(srv.id) ? (
+                        <CircularProgress size={14} sx={{ color: palette.text.tertiary }} />
+                      ) : (
+                        <Search size={14} strokeWidth={1.5} color={palette.text.tertiary} />
+                      )}
                     </IconButton>
                   </span>
                 </Tooltip>
@@ -505,43 +770,15 @@ export default function MCPServersPage() {
             getOptionValue={(item) => item._id}
           />
 
-          {form.auth_type === "bearer" && (
-            <Field
-              label="Bearer token"
-              placeholder="Enter the bearer token"
-              value={form.auth_token}
-              onChange={(e) => setForm((p) => ({ ...p, auth_token: e.target.value }))}
-              isRequired={!keepsStoredSecret}
-            />
-          )}
-          {form.auth_type === "bearer" && keepsStoredSecret && editingServer?.auth_secret_hint && (
-            <Typography sx={{ fontSize: 11, color: palette.text.tertiary }}>
-              {`Current token: ${editingServer.auth_secret_hint}. Leave blank to keep it.`}
-            </Typography>
-          )}
-
-          {form.auth_type === "api_key" && (
-            <>
-              <Field
-                label="Header name"
-                placeholder="e.g., X-API-Key (defaults to X-API-Key)"
-                value={form.auth_header_name}
-                onChange={(e) => setForm((p) => ({ ...p, auth_header_name: e.target.value }))}
-              />
-              <Field
-                label="API key"
-                placeholder="Enter the API key value"
-                value={form.auth_api_key}
-                onChange={(e) => setForm((p) => ({ ...p, auth_api_key: e.target.value }))}
-                isRequired={!keepsStoredSecret}
-              />
-              {keepsStoredSecret && editingServer?.auth_secret_hint && (
-                <Typography sx={{ fontSize: 11, color: palette.text.tertiary }}>
-                  {`Current key: ${editingServer.auth_secret_hint}. Leave blank to keep it.`}
-                </Typography>
-              )}
-            </>
-          )}
+          <MCPServerAuthFields
+            form={form}
+            setForm={setForm}
+            editingServer={editingServer}
+            keepsStoredSecret={keepsStoredSecret}
+            onFindTokenUrl={handleFindTokenUrl}
+            findingTokenUrl={findingTokenUrl}
+            tokenUrlNote={tokenUrlNote}
+          />
 
           {formError && (
             <Typography sx={{ fontSize: 12, color: palette.status.error.text }}>

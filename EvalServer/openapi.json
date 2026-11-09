@@ -5,6 +5,23 @@
     "version": "0.1.0"
   },
   "paths": {
+    "/health": {
+      "get": {
+        "summary": "Health",
+        "description": "Liveness probe used by the Docker HEALTHCHECK and k8s deployments.",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
     "/": {
       "get": {
         "summary": "Root",
@@ -15,179 +32,6 @@
             "content": {
               "application/json": {
                 "schema": {}
-              }
-            }
-          }
-        }
-      }
-    },
-    "/deepeval/evaluate": {
-      "post": {
-        "tags": ["DeepEval"],
-        "summary": "Create Deepeval Evaluation",
-        "description": "Create and run a DeepEval evaluation.\n\nRequest body:\n{\n    \"model\": {\n        \"name\": \"TinyLlama/TinyLlama-1.1B-Chat-v1.0\",\n        \"provider\": \"huggingface\",\n        \"generation\": {\n            \"max_tokens\": 500,\n            \"temperature\": 0.7\n        }\n    },\n    \"dataset\": {\n        \"use_builtin\": true,\n        \"categories\": [\"coding\", \"mathematics\"],  // optional\n        \"difficulties\": [\"easy\", \"medium\"],  // optional\n        \"limit\": 10  // optional\n    },\n    \"metrics\": {\n        \"answer_relevancy\": true,\n        \"bias\": true,\n        \"toxicity\": true,\n        \"faithfulness\": false,\n        \"hallucination\": false,\n        \"contextual_relevancy\": false\n    },\n    \"metric_thresholds\": {\n        \"answer_relevancy\": 0.5,\n        \"bias\": 0.5,\n        \"toxicity\": 0.5\n    },\n    \"selectedScorers\": [\"scorer_id_1\", \"scorer_id_2\"]  // optional - if not specified, all enabled scorers will run\n}",
-        "operationId": "create_deepeval_evaluation_deepeval_evaluate_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/EvaluateConfig"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/deepeval/evaluate/status/{eval_id}": {
-      "get": {
-        "tags": ["DeepEval"],
-        "summary": "Get Evaluation Status",
-        "description": "Get the status of a DeepEval evaluation.\n\nReturns:\n{\n    \"eval_id\": \"deepeval_20250130_120000\",\n    \"status\": \"running\" | \"completed\" | \"failed\",\n    \"progress\": \"3/10 prompts evaluated\",\n    \"created_at\": \"2025-01-30T12:00:00\",\n    \"updated_at\": \"2025-01-30T12:01:30\"\n}",
-        "operationId": "get_evaluation_status_deepeval_evaluate_status__eval_id__get",
-        "parameters": [
-          {
-            "name": "eval_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Eval Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/deepeval/evaluate/results/{eval_id}": {
-      "get": {
-        "tags": ["DeepEval"],
-        "summary": "Get Evaluation Results",
-        "description": "Get the results of a completed DeepEval evaluation.\n\nReturns:\n{\n    \"eval_id\": \"deepeval_20250130_120000\",\n    \"status\": \"completed\",\n    \"results\": {\n        \"model\": \"TinyLlama/TinyLlama-1.1B-Chat-v1.0\",\n        \"total_samples\": 10,\n        \"metric_summaries\": {\n            \"answer_relevancy\": {\n                \"average_score\": 0.745,\n                \"pass_rate\": 80.0,\n                \"min_score\": 0.267,\n                \"max_score\": 1.0\n            },\n            \"bias\": {...},\n            \"toxicity\": {...}\n        },\n        \"category_breakdown\": {...},\n        \"detailed_results\": [...]\n    }\n}",
-        "operationId": "get_evaluation_results_deepeval_evaluate_results__eval_id__get",
-        "parameters": [
-          {
-            "name": "eval_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Eval Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/deepeval/evaluations": {
-      "get": {
-        "tags": ["DeepEval"],
-        "summary": "Get All Evaluations",
-        "description": "Get all DeepEval evaluations for the current tenant.\n\nReturns:\n{\n    \"evaluations\": [\n        {\n            \"eval_id\": \"deepeval_20250130_120000\",\n            \"status\": \"completed\",\n            \"model\": \"TinyLlama/TinyLlama-1.1B-Chat-v1.0\",\n            \"total_samples\": 10,\n            \"created_at\": \"2025-01-30T12:00:00\",\n            \"completed_at\": \"2025-01-30T12:05:30\"\n        },\n        ...\n    ]\n}",
-        "operationId": "get_all_evaluations_deepeval_evaluations_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        }
-      }
-    },
-    "/deepeval/evaluations/{eval_id}": {
-      "delete": {
-        "tags": ["DeepEval"],
-        "summary": "Delete Evaluation",
-        "description": "Delete a DeepEval evaluation and its results.\n\nReturns:\n{\n    \"message\": \"Evaluation deleted successfully\",\n    \"eval_id\": \"deepeval_20250130_120000\"\n}",
-        "operationId": "delete_evaluation_deepeval_evaluations__eval_id__delete",
-        "parameters": [
-          {
-            "name": "eval_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Eval Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
               }
             }
           }
@@ -1888,7 +1732,7 @@
           "Evaluation Logs & Monitoring"
         ],
         "summary": "Validate Model Api Key",
-        "description": "Validate that the required API key is available for a model.\n\nChecks both environment variables AND the database for stored API keys.\n\nReturns:\n{\n    \"valid\": true/false,\n    \"model_name\": \"mistral-large-latest\",\n    \"provider\": \"mistral\",\n    \"has_api_key\": true/false,\n    \"has_openrouter_fallback\": true/false,\n    \"error_message\": \"MISTRAL_API_KEY not configured\" (if invalid)\n}",
+        "description": "Validate that the required API key is available for a model.\n\nChecks the organization's saved API keys (AI Gateway key storage).\n\nReturns:\n{\n    \"valid\": true/false,\n    \"model_name\": \"mistral-large-latest\",\n    \"provider\": \"mistral\",\n    \"has_api_key\": true/false,\n    \"has_openrouter_fallback\": true/false,\n    \"error_message\": \"MISTRAL_API_KEY not configured\" (if invalid)\n}",
         "operationId": "validate_model_api_key_deepeval_models_validate_post",
         "requestBody": {
           "content": {
@@ -3375,88 +3219,6 @@
         "title": "CreateScorerRequest",
         "description": "Body for ``POST /deepeval/scorers``."
       },
-      "EvaluateConfig": {
-        "properties": {
-          "dataset": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Dataset"
-          },
-          "model": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Model"
-          },
-          "judgeLlm": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Judgellm"
-          },
-          "metrics": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Metrics"
-          },
-          "metric_thresholds": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Metric Thresholds"
-          },
-          "selectedScorers": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Selectedscorers"
-          }
-        },
-        "additionalProperties": true,
-        "type": "object",
-        "title": "EvaluateConfig",
-        "description": "Body for ``POST /deepeval/evaluate``.\n\nEverything is optional \u2014 the controller/runner apply their own defaults.\nNested objects stay free-form; only the top-level shape is validated."
-      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -3727,6 +3489,11 @@
               }
             ],
             "title": "Provider"
+          },
+          "probe": {
+            "type": "boolean",
+            "title": "Probe",
+            "default": false
           }
         },
         "type": "object",

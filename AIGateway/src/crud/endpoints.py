@@ -8,12 +8,24 @@ def _text(sql: str):
 from database.db import get_db
 
 
+def role_visibility(role_id: Optional[int]) -> tuple[str, dict[str, Any]]:
+    """SQL predicate (on alias `e`) and params limiting endpoints to those the
+    role may see, shared by the endpoints list and the virtual-key rows.
+    An empty or NULL allowed_role_ids is open to every role, as the gateway
+    enforces it (tenant_proxy.resolve_endpoint)."""
+    if role_id is None:
+        return "", {}
+    return (
+        "AND (e.allowed_role_ids IS NULL OR cardinality(e.allowed_role_ids) = 0"
+        " OR :role_id = ANY(e.allowed_role_ids))",
+        {"role_id": role_id},
+    )
+
+
 async def get_all_endpoints(org_id: int, role_id: Optional[int] = None) -> list[dict]:
     async with get_db() as db:
-        role_filter = "AND :role_id = ANY(e.allowed_role_ids)" if role_id is not None else ""
-        params: dict[str, Any] = {"org_id": org_id}
-        if role_id is not None:
-            params["role_id"] = role_id
+        role_filter, role_params = role_visibility(role_id)
+        params: dict[str, Any] = {"org_id": org_id, **role_params}
 
         result = await db.execute(
             _text("""
@@ -58,10 +70,23 @@ async def get_all_endpoints(org_id: int, role_id: Optional[int] = None) -> list[
     return []
 
 
-async def get_endpoint_by_id(org_id: int, id: int) -> Optional[dict]:
+async def get_endpoint_by_id(
+    org_id: int, id: int, *, role_id: Optional[int]
+) -> Optional[dict]:
+    """Fetch one endpoint in the organization.
+
+    ``role_id`` is required so every caller chooses its visibility on purpose.
+    With a role the endpoint is returned only when that role may see it
+    (role_visibility, the endpoints list's rule and the gateway's: an empty
+    or NULL allowed_role_ids is open to every role). ``role_id=None``
+    reads unfiltered, for internal callers (the Admin-only update and delete
+    routes, and update_endpoint's re-read).
+    """
+    role_filter, role_params = role_visibility(role_id)
+    params: dict[str, Any] = {"org_id": org_id, "id": id, **role_params}
     async with get_db() as db:
         result = await db.execute(
-            text("""
+            _text("""
                 SELECT
                     e.id,
                     e.slug,
@@ -87,8 +112,9 @@ async def get_endpoint_by_id(org_id: int, id: int) -> Optional[dict]:
                 LEFT JOIN ai_gateway_api_keys ak ON e.api_key_id = ak.id
                 WHERE e.organization_id = :org_id
                   AND e.id = :id
+                """ + role_filter + """
             """),
-            {"org_id": org_id, "id": id},
+            params,
         )
         row = result.mappings().first()
         if not row:
@@ -211,7 +237,7 @@ async def update_endpoint(org_id: int, id: int, data: dict) -> Optional[dict]:
 
     if not set_clauses:
         # Nothing to update — return existing row
-        return await get_endpoint_by_id(org_id, id)
+        return await get_endpoint_by_id(org_id, id, role_id=None)
 
     set_clauses.append("updated_at = NOW()")
     set_sql = ", ".join(set_clauses)
@@ -269,13 +295,22 @@ async def delete_endpoint(org_id: int, id: int) -> bool:
                 ", ".join(ref_slugs),
             )
 
-        # Remove this endpoint from virtual key allowed_endpoint_ids arrays
+        # Remove this endpoint from virtual key allowed_endpoint_ids arrays,
+        # except where it is a key's last one (counting what is left after
+        # removing every copy, so [9, 9] counts as one): an empty list means "every
+        # endpoint" to the gateway, so emptying it would widen the key. The
+        # left-over id names an endpoint that no longer exists (ids are never
+        # reused), so that key can no longer call anything. UPDATE re-checks
+        # the condition on the locked row, so concurrent deletes cannot empty
+        # a key between them.
         await db.execute(
+            # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
             text("""
                 UPDATE ai_gateway_virtual_keys
                 SET allowed_endpoint_ids = array_remove(allowed_endpoint_ids, :id)
                 WHERE organization_id = :org_id
                   AND :id = ANY(allowed_endpoint_ids)
+                  AND cardinality(array_remove(allowed_endpoint_ids, :id)) > 0
             """),
             {"org_id": org_id, "id": id},
         )

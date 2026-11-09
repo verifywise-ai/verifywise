@@ -98,7 +98,10 @@ class Settings:
     """Connection and behaviour settings for Agent Control.
 
     Attributes:
-        gateway_url: AI Gateway base URL (``VW_GATEWAY_URL``), e.g. ``http://localhost:8100``.
+        gateway_url: The URL VerifyWise is opened at (``VW_GATEWAY_URL``), e.g.
+            ``https://verifywise.example.com``. In local development use the
+            backend, e.g. ``http://localhost:3000``: the Vite dev server does
+            not forward ``/v1``.
         agent_key: Agent key ``sk-mcp-...`` (``VW_AGENT_KEY``).
         fail_mode: ``open`` runs the tool when the gateway cannot decide; ``closed``
             refuses it (``VW_FAIL_MODE``, default ``open``).

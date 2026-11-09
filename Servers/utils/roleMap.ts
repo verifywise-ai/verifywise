@@ -81,11 +81,21 @@ async function getRoleMap(): Promise<RoleMaps> {
 }
 
 /**
+ * Resolve a role id to its role (name and owning organization, NULL for a
+ * built-in). Returns undefined if the id doesn't exist. Prefer this over
+ * id → name → getRoleByName when the id is known: the name lookup lets an
+ * org-scoped role shadow a built-in of the same name.
+ */
+export async function getRoleById(id: number): Promise<RoleInfo | undefined> {
+  const map = await getRoleMap();
+  return map.byId.get(id);
+}
+
+/**
  * Resolve a role id to its name. Returns undefined if the id doesn't exist.
  */
 export async function getRoleNameById(id: number): Promise<string | undefined> {
-  const map = await getRoleMap();
-  return map.byId.get(id)?.name;
+  return (await getRoleById(id))?.name;
 }
 
 /**

@@ -14,7 +14,7 @@ class TenantMiddleware(BaseHTTPMiddleware):
 
     # Paths that don't require tenant headers:
     # - /v1/* — virtual key auth (public SDK routes)
-    # - /internal/v1/* — hot-path routes (completions, models, guardrails scan)
+    # - /internal/v1/* — hot-path routes (completions, models)
     #   that receive provider keys directly, not tenant-scoped
     # - /health, /docs — service endpoints
     SKIP_PREFIXES = ("/v1/", "/internal/v1/", "/health", "/docs", "/openapi.json")

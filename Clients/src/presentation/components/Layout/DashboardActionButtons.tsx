@@ -11,6 +11,7 @@ import {
   getPendingApprovals,
   getMyApprovalRequests,
 } from "../../../application/repository/approvalRequest.repository";
+import { getAppModuleFromPath } from "../../../application/utils/appModule";
 import { actionButtonsStyles } from "./style";
 import "./icon-shake.css";
 
@@ -84,6 +85,12 @@ export const DashboardActionButtons = memo(function DashboardActionButtons({
   // super-admin module — its API calls target the caller's org, which a
   // pure SuperAdmin doesn't have.
   const isSuperAdminRoute = location.pathname.startsWith("/super-admin");
+
+  // Intake forms belong to the Governance ("main") module only
+  const isGovernanceModule = useMemo(
+    () => getAppModuleFromPath(location.pathname) === "main",
+    [location.pathname],
+  );
 
   const shouldHide = (hideOnMainDashboard && isMainDashboard) || isSuperAdminRoute;
 
@@ -198,8 +205,8 @@ export const DashboardActionButtons = memo(function DashboardActionButtons({
         </VWTooltip>
       )}
 
-      {/* Intake forms */}
-      {isAdmin && (
+      {/* Intake forms (Governance module only) */}
+      {isAdmin && isGovernanceModule && (
         <VWTooltip
           header="Intake forms"
           content={"Create and manage intake forms for external submissions."}

@@ -13,6 +13,11 @@ export interface AgentPrimitiveRow {
   reviewed_by: number | null;
   reviewed_at: string | null;
   linked_model_inventory_id: number | null;
+  /** The use case (project) the agent belongs to, if any. */
+  linked_project_id?: number | null;
+  /** Title of the linked use case, joined in by the list and detail reads. */
+  linked_project_title?: string | null;
+  description?: string | null;
   is_stale: boolean;
   is_manual: boolean;
   created_at: string;

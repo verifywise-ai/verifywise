@@ -3,6 +3,7 @@ import { getAllRolesQuery } from "../../utils/role.utils";
 import { getOrganizationByIdQuery } from "../../utils/organization.utils";
 import { getSubscription } from "../../utils/subscription.util";
 import { pendingInvitationToReplace, userInviteRefusal } from "../../utils/inviteRole.utils";
+import { inviteeRefusalQuery } from "../../utils/organizationMember.utils";
 import { createInvitationQuery } from "../../utils/invitation.utils";
 import { sendInviteEmail } from "../../utils/inviteEmail.utils";
 import { INVITATION_LIFETIME_MS } from "../../utils/jwt.utils";
@@ -58,7 +59,7 @@ const fetchUsers = async (
 
 const getUserDetail = async (params: { user_id: number }, organizationId: number): Promise<any> => {
   try {
-    const user = await getUserByIdQuery(params.user_id);
+    const user = await getUserByIdQuery(params.user_id, null, organizationId);
     if (!user) {
       return { error: "User not found", user_id: params.user_id };
     }
@@ -204,7 +205,7 @@ const getOrganizationDetail = async (_params: {}, organizationId: number): Promi
 
     // Get member count
     const memberCount = (await sequelize.query(
-      `SELECT COUNT(*) as count FROM users WHERE organization_id = :organization_id`,
+      `SELECT COUNT(*) as count FROM organization_members WHERE organization_id = :organization_id`,
       {
         replacements: { organization_id: organizationId },
         type: QueryTypes.SELECT,
@@ -355,8 +356,8 @@ const fetchSlackWebhooks = async (_params: {}, organizationId: number): Promise<
     const rows = (await sequelize.query(
       `SELECT sw.id, sw.channel, sw.team_name, sw.team_id, sw.is_active, sw.routing_type, sw.created_at
        FROM slack_webhooks sw
-       INNER JOIN users u ON sw.user_id = u.id
-       WHERE u.organization_id = :organization_id
+       INNER JOIN organization_members om
+         ON om.user_id = sw.user_id AND om.organization_id = :organization_id
        ORDER BY sw.created_at DESC`,
       {
         replacements: { organization_id: organizationId },
@@ -389,6 +390,8 @@ const INVITE_REFUSAL_MESSAGES = {
   not_allowed: "You do not have permission to invite users",
   unknown_role: "Unknown role",
   exceeds_access: "You cannot invite a user with more access than your own",
+  already_member: "User is already a member of this organization",
+  super_admin: "A super admin cannot join an organization",
 } as const;
 
 const agentSendInvitation = createWriteToolFn({
@@ -418,6 +421,10 @@ const agentSendInvitation = createWriteToolFn({
     const refusal = await userInviteRefusal(organizationId, invitedBy, roleId);
     if (refusal) {
       throw new Error(INVITE_REFUSAL_MESSAGES[refusal]);
+    }
+    const inviteeRefusal = await inviteeRefusalQuery(organizationId, email);
+    if (inviteeRefusal) {
+      throw new Error(INVITE_REFUSAL_MESSAGES[inviteeRefusal]);
     }
     const replace = await pendingInvitationToReplace(
       organizationId,
@@ -506,8 +513,9 @@ const agentSendSlackTestMessage = createWriteToolFn({
     const webhooks = (await sequelize.query(
       `SELECT sw.id, sw.url, sw.url_iv, sw.channel
        FROM slack_webhooks sw
-       INNER JOIN users u ON sw.user_id = u.id
-       WHERE sw.id = :webhook_id AND u.organization_id = :organization_id`,
+       INNER JOIN organization_members om
+         ON om.user_id = sw.user_id AND om.organization_id = :organization_id
+       WHERE sw.id = :webhook_id`,
       {
         replacements: { webhook_id: params.webhook_id, organization_id: organizationId },
         type: QueryTypes.SELECT,

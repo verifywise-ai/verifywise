@@ -1,0 +1,181 @@
+# VerifyWise alert rules (Prometheus, evaluated against the central stack).
+#
+# METRIC NAMING
+# -------------
+# App metrics arrive via the OTLP receiver, which translates OpenTelemetry
+# instrument names to Prometheus conventions (dots -> underscores, counters get
+# the `_total` suffix, histograms get the `_seconds` unit suffix):
+#
+#   OTel instrument                          Prometheus series
+#   ---------------------------------------  --------------------------------------------
+#   http.server.requests (counter)           http_server_requests_total
+#   http.server.request.duration (histogram) http_server_request_duration_seconds_{bucket,sum,count}
+#
+# Labels on those series (verified in Servers/observability/otel.ts and
+# Servers/middleware/requestMetrics.middleware.ts):
+#   deployment, service_name, http_request_method, http_route, http_response_status_code
+#
+# Rules that reference metrics NOT yet emitted by the application are marked
+# with `# TODO(metric-wiring):` and carry the expected instrument/label shape so
+# the backend pod can implement them exactly.
+
+groups:
+  # ---------------------------------------------------------------------------
+  # availability
+  # ---------------------------------------------------------------------------
+  - name: availability
+    rules:
+      # (a) Error rate above 2% over 5 minutes, per deployment + service.
+      - alert: VwHighErrorRate
+        expr: |
+          100 *
+            sum by (deployment, service_name) (rate(http_server_requests_total{http_response_status_code=~"5.."}[5m]))
+            / clamp_min(sum by (deployment, service_name) (rate(http_server_requests_total[5m])), 0.001)
+            > 2
+        for: 5m
+        labels:
+          severity: critical
+          team: sre
+        annotations:
+          summary: "High 5xx error rate on {{ $labels.deployment }}/{{ $labels.service_name }}"
+          description: "5xx error rate is {{ $value }}% over the last 5m (SLO: <= 2%)."
+
+      # End-to-end pipeline test: must ALWAYS be firing, otherwise alerting is
+      # broken (Prometheus down, Alertmanager unreachable, or rules not loaded).
+      - alert: VwWatchdog
+        expr: vector(1)
+        labels:
+          severity: none
+          team: sre
+        annotations:
+          summary: "Watchdog — alert pipeline alive"
+          description: "This alert should always be firing. If it is not, the alerting pipeline is broken."
+
+      # A deployment that was sending traffic and has gone silent for 15m.
+      # Compares current 15m request rate against a 1d lookback.
+      - alert: VwDeploymentSilent
+        expr: |
+          sum by (deployment) (rate(http_server_requests_total[15m])) == 0
+          and
+          sum by (deployment) (rate(http_server_requests_total[1d] offset 15m)) > 0
+        for: 15m
+        labels:
+          severity: warning
+          team: sre
+        annotations:
+          summary: "Deployment {{ $labels.deployment }} has stopped sending traffic"
+          description: "No requests recorded for 15m, after traffic was seen over the previous day."
+
+  # ---------------------------------------------------------------------------
+  # latency
+  # ---------------------------------------------------------------------------
+  - name: latency
+    rules:
+      # (b) p95 SLO burn alert. SLO: 99.5% of requests faster than 800ms.
+      # Two-window (1h/5m) burn-rate style: fires only when both the slow and
+      # the fast budget are being consumed.
+      - alert: VwP95LatencySLOBurn
+        expr: |
+          (
+            sum by (deployment) (rate(http_server_request_duration_seconds_bucket{le="0.8"}[1h]))
+              / sum by (deployment) (rate(http_server_request_duration_seconds_count[1h]))
+          ) < 0.995
+          and
+          (
+            sum by (deployment) (rate(http_server_request_duration_seconds_bucket{le="0.8"}[5m]))
+              / sum by (deployment) (rate(http_server_request_duration_seconds_count[5m]))
+          ) < 0.995
+        for: 10m
+        labels:
+          severity: warning
+          team: sre
+        annotations:
+          summary: "p95 latency SLO burning on {{ $labels.deployment }}"
+          description: "Fewer than 99.5% of requests completed under 800ms on both the 1h and 5m windows."
+
+  # ---------------------------------------------------------------------------
+  # resources
+  # ---------------------------------------------------------------------------
+  - name: resources
+    rules:
+      # (c) BullMQ queue depth.
+      # TODO(metric-wiring): no queue-depth instrument exists yet. Expected shape:
+      #   OTel ObservableGauge `verifywise.queue.jobs` (Prom: verifywise_queue_jobs)
+      #   labels: queue (e.g. "notification", "automations"), state
+      #   (waiting|active|delayed|failed), deployment.
+      # Implement in Servers/jobs/worker.ts by polling Worker.getJobCounts()
+      # on an ObservableGauge (15s cadence).
+      - alert: VwBullMQQueueDepthHigh
+        expr: |
+          max by (queue, deployment) (verifywise_queue_jobs{state="waiting"}) > 100
+        for: 10m
+        labels:
+          severity: warning
+          team: sre
+        annotations:
+          summary: "BullMQ queue {{ $labels.queue }} backing up on {{ $labels.deployment }}"
+          description: "More than 100 waiting jobs for 10m. Check Servers/jobs/worker.ts workers."
+
+      # (d) DB pool connections above 80% of max.
+      # TODO(metric-wiring): no pool instrument exists yet (Sequelize pool has no
+      # OTel instrumentation; Servers/database/db.ts uses default pooling).
+      # Expected shape:
+      #   ObservableGauge `verifywise.db.pool.connections`
+      #     (Prom: verifywise_db_pool_connections) labels: state ("in_use"|"idle"), deployment
+      #   ObservableGauge `verifywise.db.pool.max`
+      #     (Prom: verifywise_db_pool_max) labels: deployment
+      # Alternative (no app change): scrape postgres_exporter and alert on
+      #   pg_stat_activity_count / max_connections.
+      - alert: VwDBPoolNearExhaustion
+        expr: |
+          sum by (deployment) (verifywise_db_pool_connections{state="in_use"})
+            / sum by (deployment) (verifywise_db_pool_max)
+            > 0.8
+        for: 10m
+        labels:
+          severity: warning
+          team: sre
+        annotations:
+          summary: "DB pool >80% in use on {{ $labels.deployment }}"
+          description: "Database connection pool is nearly exhausted; expect request queuing/timeouts."
+
+  # ---------------------------------------------------------------------------
+  # business
+  # ---------------------------------------------------------------------------
+  - name: business
+    rules:
+      # (e) Backup age above 26h (backups are expected at least daily).
+      # TODO(metric-wiring): nothing in the app exports a backup timestamp.
+      # Required: a backup job/exporter (e.g. a sidecar in the backup cron that
+      # writes a node_exporter textfile-collector metric, or a tiny /metrics
+      # endpoint) exposing the Unix timestamp of the last successful backup:
+      #   gauge `verifywise_backup_last_success_timestamp_seconds`
+      #   labels: deployment (job label of whichever exporter provides it).
+      # 26h = 24h schedule + 2h tolerance.
+      - alert: VwBackupTooOld
+        expr: |
+          time() - max by (deployment) (verifywise_backup_last_success_timestamp_seconds) > 93600
+        for: 30m
+        labels:
+          severity: critical
+          team: sre
+        annotations:
+          summary: "Last successful backup on {{ $labels.deployment }} is over 26h old"
+          description: "No fresh backup for 26h+. Verify the backup cron and its timestamp exporter."
+
+      # (f) Frontend canary failure.
+      # TODO(metric-wiring): no frontend canary metric exists yet. Expected shape:
+      #   gauge `verifywise_frontend_canary_success` (1 = last canary probe OK, 0 = failed)
+      #   labels: deployment, url (e.g. "https://app.example.com/login").
+      # Source: Uptime Kuma (see observability/uptime-kuma) exporting to
+      # Prometheus, or a tiny canary prober pushing OTLP.
+      - alert: VwFrontendCanaryFailing
+        expr: |
+          max by (deployment, url) (verifywise_frontend_canary_success) == 0
+        for: 5m
+        labels:
+          severity: critical
+          team: sre
+        annotations:
+          summary: "Frontend canary failing for {{ $labels.url }} ({{ $labels.deployment }})"
+          description: "The synthetic frontend check has been failing for 5m."

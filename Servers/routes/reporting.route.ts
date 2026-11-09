@@ -42,7 +42,14 @@ router.post(
 // Declared before the "/:id" route so the literal path is never captured as an id.
 router.get("/sections", authenticateJWT, listSections);
 
-router.delete("/:id", authenticateJWT, deleteGeneratedReportById);
+// Deleting a generated report - Admin only, like generating one
+router.delete(
+  "/:id",
+  authenticateJWT,
+  authorize("reporting.admin"),
+  validateId("id"),
+  deleteGeneratedReportById,
+);
 
 router.get("/generate-report", authenticateJWT, getAllGeneratedReports);
 

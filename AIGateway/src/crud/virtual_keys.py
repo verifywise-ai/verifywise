@@ -3,6 +3,9 @@ import secrets
 import hashlib
 from typing import Any, Optional
 from sqlalchemy import text
+# _text: crud.endpoints' sqlalchemy.text wrapper for SQL built from fixed
+# fragments (here the role_visibility predicate), reused rather than redefined.
+from crud.endpoints import _text, role_visibility
 from database.db import get_db
 
 
@@ -17,7 +20,7 @@ def generate_virtual_key() -> dict:
     }
 
 
-async def get_all_virtual_keys(org_id: int) -> list[dict]:
+async def get_all_virtual_keys(org_id: int, role_id: int) -> list[dict]:
     async with get_db() as db:
         result = await db.execute(
             # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
@@ -49,9 +52,55 @@ async def get_all_virtual_keys(org_id: int) -> list[dict]:
             """),
             {"org_id": org_id},
         )
-        rows = result.mappings().all()
-        return [dict(row) for row in rows]
+        keys = [dict(row) for row in result.mappings().all()]
+        await _attach_endpoint_names(db, org_id, role_id, keys)
+        return keys
     return []
+
+
+async def _attach_endpoint_names(db, org_id: int, role_id: int, keys: list[dict]) -> None:
+    """Add `allowed_endpoints` (id, name, is_active) to each key: the endpoints
+    it may call that the viewer's role may see (the endpoints list's rule), so
+    a name hidden there stays hidden here; the page shows those by id.
+    is_active is false when the endpoint or its provider key is switched off.
+    Also add `missing_endpoint_ids`: ids that name no endpoint in the org,
+    usually because it was deleted (crud.endpoints.delete_endpoint leaves a
+    key's last id in place so the key does not widen) but writes do not check
+    ids either. The key cannot call those, which the page must not show like
+    a role-hidden endpoint.
+    It does not apply the key's own model/provider limits."""
+    ids = sorted({eid for key in keys for eid in key.get("allowed_endpoint_ids") or [] if eid is not None})
+    endpoints: dict[int, dict] = {}
+    existing: set[int] = set()
+    if ids:
+        # The role rule is a column, not a filter, so one query also tells a
+        # hidden endpoint (exists, not visible) from a missing one (no row).
+        role_filter, role_params = role_visibility(role_id)
+        result = await db.execute(
+            _text(
+                """
+                SELECT e.id,
+                       COALESCE(NULLIF(BTRIM(e.display_name), ''), e.slug) AS name,
+                       (e.is_active AND COALESCE(k.is_active, FALSE)) AS is_active,
+                       (TRUE """
+                + role_filter
+                + """) AS visible
+                FROM ai_gateway_endpoints e
+                LEFT JOIN ai_gateway_api_keys k ON k.id = e.api_key_id
+                WHERE e.organization_id = :org_id AND e.id = ANY(:ids)
+                """
+            ),
+            {"org_id": org_id, "ids": ids, **role_params},
+        )
+        for row in result.mappings().all():
+            existing.add(row["id"])
+            if row["visible"]:
+                endpoints[row["id"]] = {"id": row["id"], "name": row["name"], "is_active": row["is_active"]}
+    for key in keys:
+        # In the key's order, once each ([9, 9] can be left by delete_endpoint).
+        key_ids = list(dict.fromkeys(eid for eid in key.get("allowed_endpoint_ids") or [] if eid is not None))
+        key["allowed_endpoints"] = [endpoints[eid] for eid in key_ids if eid in endpoints]
+        key["missing_endpoint_ids"] = [eid for eid in key_ids if eid not in existing]
 
 
 async def create_virtual_key(org_id: int, data: dict) -> Optional[dict]:

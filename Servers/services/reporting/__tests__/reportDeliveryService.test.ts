@@ -144,16 +144,22 @@ describe("deliverReport", () => {
     (uploadFile as jest.Mock).mockResolvedValue({ id: 100 });
     (sendAutomationEmail as jest.Mock).mockResolvedValue(undefined);
 
+    const filename = `<img src=x onerror=alert(1)>.pdf`;
+
     await deliverReport(
       { saveToStorage: true, sendEmailLink: true, recipients: ["a@example.com"] },
-      { ...artifact, filename: `<img src=x onerror=alert(1)>.pdf` },
+      { ...artifact, filename },
       ctx,
     );
 
+    // The raw name goes into a plain slot, which the real compiler escapes.
     const { compileMjmlToHtml } = jest.requireMock("../../../tools/mjmlCompiler");
-    const [, slots] = (compileMjmlToHtml as jest.Mock).mock.calls[0];
-    expect(slots.reportName).not.toContain("<img");
-    expect(slots.reportName).toContain("&lt;img");
+    const [template, slots] = (compileMjmlToHtml as jest.Mock).mock.calls[0];
+    expect(slots.reportName).toBe(filename);
+    const real = jest.requireActual("../../../tools/mjmlCompiler");
+    const html: string = await real.compileMjmlToHtml(template, slots);
+    expect(html).not.toContain("<img");
+    expect(html).toContain("&lt;img");
   });
 
   it("skips every channel that is not enabled", async () => {

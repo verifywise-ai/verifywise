@@ -1,6 +1,19 @@
 import { sequelize } from "../../database/db";
 import { QueryTypes } from "sequelize";
 import logger from "../../utils/logger/fileLogger";
+import { userHasPermission } from "../../utils/userPermission.utils";
+import { redactRowText } from "../../utils/logger/redact";
+
+// Both tools read audit_ledger, which REST serves only with auditLedger.super
+// (GET /api/audit-ledger). The advisor runs as the signed-in user, so apply
+// the same permission to them; without it the tool returns this refusal and
+// never queries the ledger.
+const AUDIT_LEDGER_REFUSAL = {
+  error: "You do not have permission to read the audit ledger",
+} as const;
+
+const canReadAuditLedger = (organizationId: number, userId?: number) =>
+  userHasPermission(organizationId, userId, "auditLedger.super");
 
 // --- Read Tools ---
 
@@ -13,7 +26,9 @@ const fetchEventLogs = async (
     limit?: number;
   },
   organizationId: number,
+  userId?: number,
 ): Promise<any> => {
+  if (!(await canReadAuditLedger(organizationId, userId))) return AUDIT_LEDGER_REFUSAL;
   try {
     const conditions: string[] = ["organization_id = :organization_id"];
     const replacements: Record<string, any> = { organization_id: organizationId };
@@ -40,7 +55,7 @@ const fetchEventLogs = async (
 
     const rows = (await sequelize.query(
       `SELECT id, entry_type, user_id, occurred_at, event_type, entity_type,
-              entity_id, action, field_name, old_value, new_value, description
+              entity_id, action, field_name, description
        FROM audit_ledger
        WHERE ${conditions.join(" AND ")}
        ORDER BY occurred_at DESC
@@ -52,18 +67,8 @@ const fetchEventLogs = async (
     )) as any[];
 
     return {
-      event_logs: rows.map((r: any) => ({
-        id: r.id,
-        entry_type: r.entry_type,
-        user_id: r.user_id,
-        occurred_at: r.occurred_at,
-        event_type: r.event_type,
-        entity_type: r.entity_type,
-        entity_id: r.entity_id,
-        action: r.action,
-        field_name: r.field_name,
-        description: r.description,
-      })),
+      // The SELECT lists exactly the returned columns.
+      event_logs: rows.map(redactRowText),
       count: rows.length,
       filters_applied: {
         entity_type: params.entity_type || null,
@@ -83,7 +88,9 @@ const fetchEventLogs = async (
 const getAuditTrailForEntity = async (
   params: { entity_type: string; entity_id: number; limit?: number },
   organizationId: number,
+  userId?: number,
 ): Promise<any> => {
+  if (!(await canReadAuditLedger(organizationId, userId))) return AUDIT_LEDGER_REFUSAL;
   try {
     const limit = params.limit || 100;
 
@@ -119,7 +126,7 @@ const getAuditTrailForEntity = async (
     return {
       entity_type: params.entity_type,
       entity_id: params.entity_id,
-      audit_entries: rows.map((r: any) => ({
+      audit_entries: rows.map(redactRowText).map((r: any) => ({
         id: r.id,
         entry_type: r.entry_type,
         user_id: r.user_id,

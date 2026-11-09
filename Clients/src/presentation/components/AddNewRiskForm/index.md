@@ -226,8 +226,7 @@ const COMPONENT_CONSTANTS = {
 
 ### Styling
 
-- `tabStyle` - Tab styling configuration
-- `styles.module.css` - Component-specific styles
+- `getTabStyle(theme)` - Theme-aware tab styling from `style.ts`
 
 ## License
 

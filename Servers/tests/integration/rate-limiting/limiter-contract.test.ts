@@ -26,7 +26,11 @@ jest.mock("../../../utils/logger/fileLogger", () => ({
   error: jest.fn(),
 }));
 
-import { buildRateLimitConfigs, createRateLimiter } from "../../../middleware/rateLimit.middleware";
+import {
+  buildRateLimitConfigs,
+  createRateLimiter,
+  gatewayErrorBody,
+} from "../../../middleware/rateLimit.middleware";
 import {
   advancePastWindow,
   consumeAs,
@@ -75,6 +79,14 @@ const LIMITERS = [
     windowMinutes: 60,
   },
   { name: "healthCheckLimiter", key: "healthCheck", limit: 1000, windowMinutes: 1 },
+  { name: "virtualKeyProxyLimiter", key: "virtualKeyProxy", limit: 3000, windowMinutes: 1 },
+  {
+    name: "intakeLiveChecksVisitorLimiter",
+    key: "intakeLiveChecksVisitor",
+    limit: 10,
+    windowMinutes: 1,
+  },
+  { name: "intakePrefillVisitorLimiter", key: "intakePrefillVisitor", limit: 3, windowMinutes: 10 },
 ] as const;
 
 describe.each(LIMITERS)("$name (production config)", ({ key, limit, windowMinutes }) => {
@@ -508,5 +520,33 @@ describe("header contract is uniform across limiters", () => {
         await limited.close();
       }
     }
+  });
+});
+
+/**
+ * /v1 clients talk to the AI Gateway, whose errors are { detail }. The proxy's
+ * own 429 must use that shape, not the backend's { message, data } envelope.
+ */
+describe("virtualKeyProxyLimiter 429 body", () => {
+  let limited: LimitedApp;
+
+  beforeAll(() => {
+    // The production limit itself is covered by the describe.each above; a
+    // budget of 1 checks the body without 3000 more requests
+    limited = createLimitedApp(
+      createRateLimiter({ ...PROD.virtualKeyProxy, maxRequests: 1 }, gatewayErrorBody),
+    );
+  });
+
+  afterAll(async () => {
+    await limited.close();
+  });
+
+  it("answers in the gateway's { detail } shape once the budget is spent", async () => {
+    await consumeAs(limited, IP, 1);
+
+    const res = await get(limited, IP);
+    expect(res.status).toBe(429);
+    expect(res.body).toEqual({ detail: PROD.virtualKeyProxy.message });
   });
 });

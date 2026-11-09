@@ -7,7 +7,11 @@ export const modelInventoryQueryKeys = {
   lists: () => [...modelInventoryQueryKeys.all, "list"] as const,
 };
 
-export const useModelInventories = (): UseQueryResult<IModelInventory[], Error> => {
+/** Pass `enabled: false` to hold off the fetch (e.g. until a drawer opens). */
+export const useModelInventories = ({ enabled = true }: { enabled?: boolean } = {}): UseQueryResult<
+  IModelInventory[],
+  Error
+> => {
   return useQuery({
     queryKey: modelInventoryQueryKeys.lists(),
     queryFn: async ({ signal }) => {
@@ -15,5 +19,6 @@ export const useModelInventories = (): UseQueryResult<IModelInventory[], Error> 
     },
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
+    enabled,
   });
 };

@@ -16,6 +16,7 @@ import { palette } from "../../../themes/palette";
 import ConfirmationModal from "../../Dialogs/ConfirmationModal";
 import { CustomizableButton } from "../../button/customizable-button";
 import VWTooltip from "../../VWTooltip";
+import { EXPERIMENT_ACTION_TOOLTIPS } from "./actionTooltips";
 import type { IExperimentRow, IExperimentTableBodyProps } from "../../../types/interfaces/i.table";
 
 // Pulse animation for "Running..." text in the experiment name cell.
@@ -47,6 +48,7 @@ const ExperimentTableBody: React.FC<IExperimentTableBodyProps> = ({
   const [rowToDelete, setRowToDelete] = useState<IExperimentRow | null>(null);
   const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [menuRow, setMenuRow] = useState<IExperimentRow | null>(null);
+  const menuRowIsRunning = menuRow ? RUNNING_STATUSES.has(menuRow.status) : false;
 
   const showActionsColumn = !compact && Boolean(onRerun || onDelete || onDownload || onCopy);
   const showLinkedModelColumn = !compact;
@@ -66,6 +68,31 @@ const ExperimentTableBody: React.FC<IExperimentTableBodyProps> = ({
     if (menuRow && onRerun) onRerun(menuRow);
     closeExperimentMenu();
   };
+
+  const rerunMenuButton = (
+    <CustomizableButton
+      variant="outlined"
+      onClick={handleRerunClick}
+      isDisabled={menuRowIsRunning}
+      startIcon={<RotateCcw size={14} />}
+      sx={{
+        "height": "34px",
+        "fontSize": "13px",
+        "fontWeight": 500,
+        "color": palette.text.secondary,
+        "borderColor": palette.border.dark,
+        "backgroundColor": "transparent",
+        "justifyContent": "flex-start",
+        "&:hover": {
+          backgroundColor: palette.status.success.bg,
+          borderColor: palette.brand.primary,
+          color: palette.brand.primary,
+        },
+      }}
+    >
+      Rerun
+    </CustomizableButton>
+  );
 
   const handleDownloadClick = () => {
     if (menuRow && onDownload) onDownload(menuRow);
@@ -310,74 +337,87 @@ const ExperimentTableBody: React.FC<IExperimentTableBodyProps> = ({
       >
         <Stack spacing={1}>
           {onRerun && (
-            <CustomizableButton
-              variant="outlined"
-              onClick={handleRerunClick}
-              isDisabled={menuRow ? RUNNING_STATUSES.has(menuRow.status) : false}
-              startIcon={<RotateCcw size={14} />}
-              sx={{
-                "height": "34px",
-                "fontSize": "13px",
-                "fontWeight": 500,
-                "color": palette.text.secondary,
-                "borderColor": palette.border.dark,
-                "backgroundColor": "transparent",
-                "justifyContent": "flex-start",
-                "&:hover": {
-                  backgroundColor: palette.status.success.bg,
-                  borderColor: palette.brand.primary,
-                  color: palette.brand.primary,
-                },
-              }}
+            <VWTooltip
+              content={
+                menuRowIsRunning
+                  ? EXPERIMENT_ACTION_TOOLTIPS.rerunWhileRunning
+                  : EXPERIMENT_ACTION_TOOLTIPS.rerun
+              }
+              placement="left"
+              maxWidth={280}
+              describeChild
             >
-              Rerun
-            </CustomizableButton>
+              {/* A disabled button fires no hover events, so a span carries the tooltip
+                  then (column flex keeps the button full width); an enabled button takes
+                  it directly, so it is described. */}
+              {menuRowIsRunning ? (
+                <Box component="span" sx={{ display: "flex", flexDirection: "column" }}>
+                  {rerunMenuButton}
+                </Box>
+              ) : (
+                rerunMenuButton
+              )}
+            </VWTooltip>
           )}
           {onDownload && menuRow?.status === "Completed" && (
-            <CustomizableButton
-              variant="outlined"
-              onClick={handleDownloadClick}
-              startIcon={<Download size={14} />}
-              sx={{
-                "height": "34px",
-                "fontSize": "13px",
-                "fontWeight": 500,
-                "color": palette.text.secondary,
-                "borderColor": palette.border.dark,
-                "backgroundColor": "transparent",
-                "justifyContent": "flex-start",
-                "&:hover": {
-                  backgroundColor: palette.status.success.bg,
-                  borderColor: palette.brand.primary,
-                  color: palette.brand.primary,
-                },
-              }}
+            <VWTooltip
+              content={EXPERIMENT_ACTION_TOOLTIPS.downloadSummary}
+              placement="left"
+              maxWidth={280}
+              describeChild
             >
-              Download results as JSON
-            </CustomizableButton>
+              <CustomizableButton
+                variant="outlined"
+                onClick={handleDownloadClick}
+                startIcon={<Download size={14} />}
+                sx={{
+                  "height": "34px",
+                  "fontSize": "13px",
+                  "fontWeight": 500,
+                  "color": palette.text.secondary,
+                  "borderColor": palette.border.dark,
+                  "backgroundColor": "transparent",
+                  "justifyContent": "flex-start",
+                  "&:hover": {
+                    backgroundColor: palette.status.success.bg,
+                    borderColor: palette.brand.primary,
+                    color: palette.brand.primary,
+                  },
+                }}
+              >
+                Download results as JSON
+              </CustomizableButton>
+            </VWTooltip>
           )}
           {onCopy && menuRow?.status === "Completed" && (
-            <CustomizableButton
-              variant="outlined"
-              onClick={handleCopyClick}
-              startIcon={<Copy size={14} />}
-              sx={{
-                "height": "34px",
-                "fontSize": "13px",
-                "fontWeight": 500,
-                "color": palette.text.secondary,
-                "borderColor": palette.border.dark,
-                "backgroundColor": "transparent",
-                "justifyContent": "flex-start",
-                "&:hover": {
-                  backgroundColor: palette.status.success.bg,
-                  borderColor: palette.brand.primary,
-                  color: palette.brand.primary,
-                },
-              }}
+            <VWTooltip
+              content={EXPERIMENT_ACTION_TOOLTIPS.copySummary}
+              placement="left"
+              maxWidth={280}
+              describeChild
             >
-              Copy results to clipboard
-            </CustomizableButton>
+              <CustomizableButton
+                variant="outlined"
+                onClick={handleCopyClick}
+                startIcon={<Copy size={14} />}
+                sx={{
+                  "height": "34px",
+                  "fontSize": "13px",
+                  "fontWeight": 500,
+                  "color": palette.text.secondary,
+                  "borderColor": palette.border.dark,
+                  "backgroundColor": "transparent",
+                  "justifyContent": "flex-start",
+                  "&:hover": {
+                    backgroundColor: palette.status.success.bg,
+                    borderColor: palette.brand.primary,
+                    color: palette.brand.primary,
+                  },
+                }}
+              >
+                Copy results to clipboard
+              </CustomizableButton>
+            </VWTooltip>
           )}
           {onDelete && (
             <CustomizableButton

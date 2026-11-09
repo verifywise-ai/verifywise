@@ -1,9 +1,10 @@
 import { registerSyncProvider } from "./registry";
 import type { SyncProvider } from "./types";
 import { jiraAssetsSyncProvider } from "../jira-assets/jiraAssets.syncProvider";
+import { jiraIncidentsSyncProvider } from "../jira-incidents/jiraIncidents.syncProvider";
 
 /** Every extension that runs on the sync engine. */
-export const SYNC_PROVIDERS: SyncProvider[] = [jiraAssetsSyncProvider];
+export const SYNC_PROVIDERS: SyncProvider[] = [jiraAssetsSyncProvider, jiraIncidentsSyncProvider];
 
 let registered = false;
 

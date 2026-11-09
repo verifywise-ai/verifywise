@@ -21,6 +21,13 @@ export enum Severity {
   VERY_SERIOUS = "Very serious",
 }
 
+/** Severity values that count as a critical-tier incident and launch the incident_response workflow. */
+const CRITICAL_SEVERITIES = new Set([Severity.VERY_SERIOUS.toLowerCase(), "critical"]);
+
+export function isCriticalIncidentSeverity(severity: unknown): severity is string {
+  return typeof severity === "string" && CRITICAL_SEVERITIES.has(severity.toLowerCase());
+}
+
 export enum IncidentType {
   MALFUNCTION = "Malfunction",
   UNEXPECTED_BEHAVIOR = "Unexpected behavior",

@@ -180,7 +180,7 @@ cd EvaluationModule && python -m pytest tests/ -m "not integration"
 
 | File | What it tests |
 |------|---------------|
-| `test_gateway_litellm_client.py` | Mirror of EvalServer's table — guarantees parity between the two copies of the helper |
+| `test_gateway_litellm_client.py` | The gateway client itself (EvalServer's `utils.gateway_litellm_client` re-exports it, so there is one copy) |
 | `test_model_runner.py` | All 10 provider dispatch paths (`_generate_*`); gateway mode routing; retry/backoff; `generate_batch`; env-var → API-key resolution |
 
 ### Servers — `__tests__/`

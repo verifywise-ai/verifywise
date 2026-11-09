@@ -44,12 +44,6 @@ export interface DetailFieldProps {
   withWrap?: boolean;
 }
 
-export interface IStepDetailsModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  stepDetails: IStepDetails | null;
-}
-
 export interface IRequestorApprovalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -61,24 +55,18 @@ export interface ITimelineStep {
   stepNumber: number;
   title: string;
   status: "completed" | "pending" | "rejected";
-  approverName?: string;
   date?: string;
-  comment?: string;
-  showDetailsLink?: boolean;
-  approvalResult?: "approved" | "rejected" | "pending";
+  approvers: ITimelineApprover[];
   dueAt?: string | null;
   escalatedAt?: string | null;
   isOverdue?: boolean;
 }
 
-export interface IStepDetails {
-  stepId: number;
-  owner: string;
-  teamMembers: string[];
-  location: string;
-  startDate: string;
-  targetIndustry: string;
-  description: string;
+export interface ITimelineApprover {
+  id: number;
+  name: string;
+  result: "approved" | "rejected" | "pending";
+  comment?: string;
 }
 
 export interface IMenuGroupExtended {

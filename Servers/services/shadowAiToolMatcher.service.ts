@@ -87,13 +87,16 @@ export async function ensureTenantTool(
   );
   const alreadyExists = (existing as any[]).length > 0;
 
+  // Sequelize expands an array replacement into a comma-separated list
+  // ('a', 'b'), so the domains go inside ARRAY[...] to arrive as one text[]
+  // value. An empty list becomes ARRAY[]::text[], which Postgres accepts.
   const [rows] = await sequelize.query(
     `INSERT INTO shadow_ai_tools
        (organization_id, name, vendor, domains, status, risk_score,
         first_detected_at, last_seen_at, total_users, total_events,
         trains_on_data, soc2_certified, gdpr_compliant)
      VALUES
-       (:organizationId, :name, :vendor, :domains, 'detected', NULL,
+       (:organizationId, :name, :vendor, ARRAY[:domains]::text[], 'detected', NULL,
         NOW(), NOW(), 0, 0,
         :trains_on_data, :soc2_certified, :gdpr_compliant)
      ON CONFLICT (organization_id, name) DO UPDATE SET name = EXCLUDED.name
@@ -103,7 +106,7 @@ export async function ensureTenantTool(
         organizationId,
         name: registryEntry.name,
         vendor: registryEntry.vendor || null,
-        domains: registryEntry.domains,
+        domains: registryEntry.domains ?? [],
         trains_on_data: registryEntry.trains_on_data ?? null,
         soc2_certified: registryEntry.soc2_certified ?? null,
         gdpr_compliant: registryEntry.gdpr_compliant ?? null,

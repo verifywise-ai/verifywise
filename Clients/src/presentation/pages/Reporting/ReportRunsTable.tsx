@@ -166,7 +166,7 @@ export default function ReportRunsTable({ variant }: { variant: "live" | "archiv
   if (isLoading) {
     return (
       <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
-        <CircularProgress size={20} />
+        <CircularProgress size={20} aria-label="Loading" />
       </Box>
     );
   }

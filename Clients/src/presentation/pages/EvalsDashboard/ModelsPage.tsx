@@ -1,17 +1,5 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
-import {
-  Box,
-  Stack,
-  Typography,
-  Card,
-  CardContent,
-  Grid,
-  Select,
-  MenuItem,
-  FormControl,
-  Chip as MuiChip,
-  CircularProgress,
-} from "@mui/material";
+import { Box, Stack, Typography, Card, CardContent, Grid, CircularProgress } from "@mui/material";
 import { Plus, Check } from "lucide-react";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import SearchBox from "../../components/Search/SearchBox";
@@ -32,6 +20,8 @@ import { PageHeader } from "../../components/Layout/PageHeader";
 import HelperIcon from "../../components/HelperIcon";
 import TipBox from "../../components/TipBox";
 import Field from "../../components/Inputs/Field";
+import ModelPicker from "../../components/Inputs/ModelPicker";
+import { useProviderModels } from "../../../application/hooks/useProviderModels";
 import { useAuth } from "../../../application/hooks/useAuth";
 import allowedRoles from "../../../application/constants/permissions";
 import { PROVIDERS } from "../../utils/providers";
@@ -133,10 +123,6 @@ export default function ModelsPage({ orgId, openAddModal, onAddModalConsumed }: 
   const [configuredApiKeys, setConfiguredApiKeys] = useState<LLMApiKey[]>([]);
   const [loadingApiKeys, setLoadingApiKeys] = useState(true);
 
-  // Gateway models state
-  const [gatewayModels, setGatewayModels] = useState<{ id: string; name: string }[]>([]);
-  const [loadingGatewayModels, setLoadingGatewayModels] = useState(false);
-
   // Load configured API keys when modal opens
   useEffect(() => {
     if (!addModalOpen) return;
@@ -153,31 +139,10 @@ export default function ModelsPage({ orgId, openAddModal, onAddModalConsumed }: 
     })();
   }, [addModalOpen]);
 
-  // Fetch live gateway models whenever the selected provider changes
-  useEffect(() => {
-    const provider = newModel.accessMethod;
-    if (!provider || provider === "custom" || provider === "ollama" || provider === "openrouter") {
-      setGatewayModels([]);
-      return;
-    }
-    let cancelled = false;
-    (async () => {
-      setLoadingGatewayModels(true);
-      try {
-        const models = await evalModelsService.getGatewayModelsForProvider(provider);
-        if (!cancelled) {
-          setGatewayModels(models.map((m) => ({ id: m.id, name: m.name })));
-        }
-      } catch {
-        if (!cancelled) setGatewayModels([]);
-      } finally {
-        if (!cancelled) setLoadingGatewayModels(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [newModel.accessMethod]);
+  // Cloud providers (OpenRouter included) pick from the AI Gateway's LiteLLM catalog
+  const catalogProvider =
+    newModel.accessMethod && PROVIDERS[newModel.accessMethod] ? newModel.accessMethod : "";
+  const { models: availableModels, isLoading: modelsLoading } = useProviderModels(catalogProvider);
 
   // Check if a provider has a configured API key
   const hasApiKey = useCallback(
@@ -351,19 +316,6 @@ export default function ModelsPage({ orgId, openAddModal, onAddModalConsumed }: 
       setIsSaving(false);
     }
   };
-
-  // Get available models for selected provider — prefer live gateway models, fall back to static
-  const availableModels = useMemo(() => {
-    if (
-      !newModel.accessMethod ||
-      newModel.accessMethod === "custom" ||
-      newModel.accessMethod === "ollama"
-    ) {
-      return [];
-    }
-    if (gatewayModels.length > 0) return gatewayModels;
-    return PROVIDERS[newModel.accessMethod]?.models || [];
-  }, [newModel.accessMethod, gatewayModels]);
 
   return (
     <Stack sx={{ width: "100%" }}>
@@ -572,72 +524,7 @@ export default function ModelsPage({ orgId, openAddModal, onAddModalConsumed }: 
                   Model
                 </Typography>
 
-                {newModel.accessMethod === "openrouter" ? (
-                  /* OpenRouter - Custom model input with suggestions */
-                  <Box>
-                    <Typography sx={{ fontSize: "11px", color: palette.text.tertiary, mb: 1.5 }}>
-                      OpenRouter supports any model. Enter the model ID or select from popular
-                      options.
-                    </Typography>
-                    <Field
-                      value={newModel.modelName}
-                      onChange={(e) =>
-                        setNewModel((prev) => ({ ...prev, modelName: e.target.value }))
-                      }
-                      placeholder="e.g., openai/gpt-4o, anthropic/claude-3-opus"
-                    />
-                    <Typography
-                      sx={{
-                        fontSize: "11px",
-                        fontWeight: 600,
-                        color: palette.text.disabled,
-                        mt: 2,
-                        mb: 1,
-                        textTransform: "uppercase",
-                      }}
-                    >
-                      Popular Models
-                    </Typography>
-                    <Stack direction="row" flexWrap="wrap" gap={1}>
-                      {[
-                        { id: "openai/gpt-4o", name: "GPT-4o" },
-                        { id: "anthropic/claude-3.5-sonnet", name: "Claude 3.5 Sonnet" },
-                        { id: "google/gemini-pro-1.5", name: "Gemini Pro 1.5" },
-                        { id: "meta-llama/llama-3.1-70b-instruct", name: "Llama 3.1 70B" },
-                        { id: "mistralai/mistral-large", name: "Mistral Large" },
-                      ].map((m) => (
-                        <MuiChip
-                          key={m.id}
-                          label={m.name}
-                          variant={newModel.modelName === m.id ? "filled" : "outlined"}
-                          onClick={() => setNewModel((prev) => ({ ...prev, modelName: m.id }))}
-                          sx={{
-                            "cursor": "pointer",
-                            "backgroundColor":
-                              newModel.modelName === m.id
-                                ? palette.brand.primaryLight
-                                : "transparent",
-                            "borderColor":
-                              newModel.modelName === m.id
-                                ? palette.brand.primary
-                                : palette.border.dark,
-                            "color":
-                              newModel.modelName === m.id
-                                ? palette.brand.primary
-                                : palette.text.secondary,
-                            "&:hover": {
-                              backgroundColor:
-                                newModel.modelName === m.id
-                                  ? palette.brand.primaryLight
-                                  : palette.background.accent,
-                              borderColor: palette.brand.primary,
-                            },
-                          }}
-                        />
-                      ))}
-                    </Stack>
-                  </Box>
-                ) : newModel.accessMethod === "ollama" || newModel.accessMethod === "custom" ? (
+                {newModel.accessMethod === "ollama" || newModel.accessMethod === "custom" ? (
                   /* Ollama/Custom - Text input */
                   <Box>
                     <Typography sx={{ fontSize: "11px", color: palette.text.tertiary, mb: 1.5 }}>
@@ -669,43 +556,19 @@ export default function ModelsPage({ orgId, openAddModal, onAddModalConsumed }: 
                       </Box>
                     )}
                   </Box>
-                ) : loadingGatewayModels ? (
-                  /* Loading models from gateway */
-                  <Stack direction="row" alignItems="center" gap={1.5} sx={{ py: 1 }}>
-                    <CircularProgress size={16} />
-                    <Typography sx={{ fontSize: "13px", color: palette.text.tertiary }}>
-                      Loading models...
-                    </Typography>
-                  </Stack>
-                ) : availableModels.length > 0 ? (
-                  /* Standard providers - Dropdown populated from AI Gateway */
-                  <FormControl fullWidth size="small">
-                    <Select
-                      value={newModel.modelName}
-                      onChange={(e) =>
-                        setNewModel((prev) => ({ ...prev, modelName: e.target.value }))
-                      }
-                      displayEmpty
-                      sx={{ backgroundColor: palette.background.main }}
-                    >
-                      <MenuItem value="" disabled>
-                        Select a model
-                      </MenuItem>
-                      {availableModels.map((model) => (
-                        <MenuItem key={model.id} value={model.id}>
-                          {model.name}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
                 ) : (
-                  /* Fallback text input */
-                  <Field
+                  <ModelPicker
+                    label=""
                     value={newModel.modelName}
-                    onChange={(e) =>
-                      setNewModel((prev) => ({ ...prev, modelName: e.target.value }))
+                    onChange={(modelName) => setNewModel((prev) => ({ ...prev, modelName }))}
+                    models={availableModels}
+                    loading={modelsLoading}
+                    showPrices
+                    placeholder={
+                      newModel.accessMethod === "openrouter"
+                        ? "Search or type an ID, e.g. openai/gpt-4o"
+                        : "Search or type a model ID"
                     }
-                    placeholder="Enter model name"
                   />
                 )}
               </Box>

@@ -10,11 +10,17 @@ export const policyQueryKeys = {
   detail: (id: number | string) => [...policyQueryKeys.details(), id] as const,
 };
 
-export const usePolicies = (): UseQueryResult<PolicyManagerModel[], Error> => {
+export const usePolicies = (
+  options: {
+    /** Skip the global error toast; the caller shows its own message. */
+    suppressGlobalErrorToast?: boolean;
+  } = {},
+): UseQueryResult<PolicyManagerModel[], Error> => {
+  const { suppressGlobalErrorToast } = options;
   return useQuery({
     queryKey: policyQueryKeys.list(),
     queryFn: async () => {
-      return await getAllPolicies();
+      return await getAllPolicies({ suppressGlobalErrorToast });
     },
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,

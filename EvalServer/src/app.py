@@ -13,6 +13,7 @@ from routers.bias_audits import router as bias_audits
 from routers.reports import router as reports
 from middlewares.middleware import TenantMiddleware
 from middlewares.auth import is_configured, verify_internal_key_dependency, INTERNAL_KEY_ENV
+from utils.gateway_litellm_client import gateway_mode_enabled
 from database.redis import close_redis
 from database.config import settings
 from sqlalchemy import text
@@ -134,6 +135,13 @@ async def startup_event():
         raise RuntimeError(
             f"{INTERNAL_KEY_ENV} is not set or is a placeholder. "
             "Set it to a strong secret shared with the Express backend."
+        )
+    # Cloud models (tested, judges, scorers, Arena, report summaries) run only through
+    # the AI Gateway's LiteLLM; without its key every cloud call would fail mid-run.
+    if not gateway_mode_enabled():
+        raise RuntimeError(
+            "AI_GATEWAY_INTERNAL_KEY is not set or is a placeholder. "
+            "EvalServer calls cloud models through the AI Gateway; set it to the gateway's internal key."
         )
     # Alembic migrations run once in Dockerfile/CLI before uvicorn starts workers.
     await run_data_migration()

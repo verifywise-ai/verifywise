@@ -106,7 +106,7 @@ describe("ProjectCard", () => {
     renderWithProviders(<ProjectCard project={buildProject()} />);
 
     const article = screen.getByRole("article");
-    expect(article).toHaveAttribute("aria-label", "Project card for AI Governance Platform");
+    expect(article).toHaveAttribute("aria-label", "Use case card for AI Governance Platform");
   });
 
   it("shows owner name from users list", () => {
@@ -193,11 +193,11 @@ describe("ProjectCard", () => {
     });
   });
 
-  it("calls navigate on View project details button click", async () => {
+  it("calls navigate on View use case button click", async () => {
     const user = userEvent.setup();
     renderWithProviders(<ProjectCard project={buildProject()} />);
 
-    await user.click(screen.getByText("View project details"));
+    await user.click(screen.getByText("View use case"));
 
     expect(mockNavigate).toHaveBeenCalledWith("/project-view", {
       projectId: "1",

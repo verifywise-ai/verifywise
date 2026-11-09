@@ -41,7 +41,11 @@ compactor:
   delete_request_store: filesystem
 
 ruler:
-  alertmanager_url: http://localhost:9093
+  # Use the compose service name, not localhost: Prometheus/Loki/Alertmanager
+  # share the internal network of docker-compose.observability.yml, where the
+  # service is reachable as http://alertmanager:9093 (see
+  # observability/alertmanager/README.md for the service definition to add).
+  alertmanager_url: http://alertmanager:9093
 
 query_range:
   results_cache:

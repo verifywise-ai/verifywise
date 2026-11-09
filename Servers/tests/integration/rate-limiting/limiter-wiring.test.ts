@@ -287,6 +287,20 @@ describe("rate limiter wiring", () => {
       expect(webhooks).toBeLessThan(globalIndex(app));
     });
 
+    it("mounts /v1 BEFORE the global limiter, behind its own limiter", () => {
+      // One customer app server sends all of its LLM traffic from one IP; the
+      // gateway enforces per-key RPM and budget. /v1 gets its own ceiling.
+      const v1Layers = stackOf(app).flatMap((layer, index) => {
+        const match = layer.matchers?.[0]?.("/v1/chat/completions");
+        return match && match.path === "/v1" ? [{ layer, index }] : [];
+      });
+      expect(v1Layers.length).toBeGreaterThanOrEqual(2);
+      expect(v1Layers[0].layer.handle).toBe(rateLimiters.virtualKeyProxyLimiter);
+      for (const { index } of v1Layers) {
+        expect(index).toBeLessThan(globalIndex(app));
+      }
+    });
+
     it.each(
       [...new Set(PROTECTED_ROUTES.map((route) => route.mount))].filter(
         (mount) => mount !== "/api/webhooks",

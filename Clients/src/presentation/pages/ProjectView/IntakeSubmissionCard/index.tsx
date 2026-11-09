@@ -97,7 +97,32 @@ export default function IntakeSubmissionCard({ projectId }: IntakeSubmissionCard
         {(submission.submitterName || submission.submitterEmail) && (
           <> &middot; {submission.submitterName || submission.submitterEmail}</>
         )}
-        {submission.riskTier && <> &middot; Risk: {submission.riskTier}</>}
+        {submission.riskScore && submission.riskScore.finalScore !== null ? (
+          <>
+            {" "}
+            &middot; <span>Risk score:</span>{" "}
+            {submission.riskScore.rulesOnly ? (
+              <>
+                <span>at least</span> {submission.riskScore.finalScore} <span>(rules only)</span>
+              </>
+            ) : (
+              <>
+                {submission.riskScore.finalScore} (
+                <span>{submission.riskScore.band ?? submission.riskTier}</span>)
+              </>
+            )}
+            {/* A reviewer's band override, shown apart so number and band agree */}
+            {submission.riskOverrideTier &&
+              submission.riskOverrideTier !== submission.riskScore.band && (
+                <>
+                  {" "}
+                  &middot; <span>band set to</span> <span>{submission.riskOverrideTier}</span>
+                </>
+              )}
+          </>
+        ) : (
+          !submission.riskScore && submission.riskTier && <> &middot; Risk: {submission.riskTier}</>
+        )}
       </Typography>
 
       {/* Mapped fields — always visible */}

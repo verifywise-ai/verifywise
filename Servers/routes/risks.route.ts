@@ -40,17 +40,24 @@ router.patch(
 );
 
 // POST, PUT, DELETE requests
-router.post("/", authenticateJWT, validateCreateRisk, createRisk);
+router.post("/", authenticateJWT, authorize("risks.edit"), validateCreateRisk, createRisk);
 // AI risk suggestions: auth first so the limiter can key on req.userId,
 // then the limiter, then validation, then the controller.
 router.post(
   "/suggest-ai",
   authenticateJWT,
+  authorize("risks.edit"),
   riskSuggestionsAiLimiter,
   validateSuggestRisksWithAI,
   suggestRisksWithAI,
 );
-router.put("/:id", authenticateJWT, validateUpdateRisk, updateRiskById);
-router.delete("/:id", authenticateJWT, validateRiskIdParam, deleteRiskById);
+router.put("/:id", authenticateJWT, authorize("risks.edit"), validateUpdateRisk, updateRiskById);
+router.delete(
+  "/:id",
+  authenticateJWT,
+  authorize("risks.edit"),
+  validateRiskIdParam,
+  deleteRiskById,
+);
 
 export default router;

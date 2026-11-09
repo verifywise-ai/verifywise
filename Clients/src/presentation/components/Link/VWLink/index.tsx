@@ -2,6 +2,7 @@ import { memo, useState } from "react";
 import { Link, Box } from "@mui/material";
 import { ExternalLink } from "lucide-react";
 import { IVWLinkProps } from "../../../types/link.types";
+import palette from "../../../themes/palette";
 
 /**
  * VWLink component
@@ -53,6 +54,7 @@ export const VWLink = memo(function VWLink({
   sx,
   className,
   ariaLabel,
+  ariaExpanded,
   testId,
 }: IVWLinkProps) {
   const [isHovered, setIsHovered] = useState(false);
@@ -82,6 +84,7 @@ export const VWLink = memo(function VWLink({
         {...linkProps}
         className={className}
         aria-label={ariaLabel}
+        aria-expanded={ariaExpanded}
         data-testid={testId}
         sx={{
           "textDecoration": showUnderline ? "underline" : "none",
@@ -113,8 +116,11 @@ export const VWLink = memo(function VWLink({
             border: "none !important",
             boxShadow: "none !important",
           },
+          // !important, or the `outline: none !important` above hides the
+          // keyboard focus ring too. sx does not resolve palette paths inside
+          // a shorthand, so the colour is passed as a value.
           "&:focus-visible": {
-            outline: "2px solid brand.primary",
+            outline: `2px solid ${palette.brand.primary} !important`,
             outlineOffset: "2px",
             borderRadius: "2px",
             border: "none !important",

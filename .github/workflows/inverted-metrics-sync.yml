@@ -1,0 +1,60 @@
+name: LLM Evals inverted metrics sync
+
+# The lower-is-better metric list is copied into the CI runners, the SDK and the
+# frontend. This light job runs only the drift test whenever any copy changes.
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+on:
+  pull_request:
+    branches: ['master', 'develop']
+    paths:
+      - '.github/actions/eval/**'
+      - 'EvalServer/src/utils/metric_constants.py'
+      - 'EvalServer/scripts/ci_eval_runner.py'
+      - 'EvalServer/action/eval_runner.py'
+      - 'EvalServer/sdk/src/verifywise/models.py'
+      - 'EvalServer/tests/test_inverted_metrics_in_sync.py'
+      - 'Clients/src/presentation/pages/EvalsDashboard/metricScore.ts'
+      - '.github/workflows/inverted-metrics-sync.yml'
+  push:
+    branches: ['master', 'develop']
+    paths:
+      - '.github/actions/eval/**'
+      - 'EvalServer/src/utils/metric_constants.py'
+      - 'EvalServer/scripts/ci_eval_runner.py'
+      - 'EvalServer/action/eval_runner.py'
+      - 'EvalServer/sdk/src/verifywise/models.py'
+      - 'EvalServer/tests/test_inverted_metrics_in_sync.py'
+      - 'Clients/src/presentation/pages/EvalsDashboard/metricScore.ts'
+      - '.github/workflows/inverted-metrics-sync.yml'
+
+jobs:
+  inverted-metrics-sync:
+    name: Inverted metrics drift test
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: EvalServer
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - name: Install pytest
+        run: python -m pip install pytest==9.1.1 pytest-asyncio==1.4.0
+
+      - name: Run drift test
+        run: python -m pytest tests/test_inverted_metrics_in_sync.py -v
+        env:
+          PYTHONPATH: src

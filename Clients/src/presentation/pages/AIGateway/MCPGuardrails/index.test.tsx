@@ -23,6 +23,7 @@ vi.mock("../../../components/Layout/PageHeaderExtended", () => ({
 
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import MCPGuardrailsPage from "./index";
+import CustomException from "../../../../infrastructure/exceptions/customeException";
 
 const mockGet = apiServices.get as unknown as ReturnType<typeof vi.fn>;
 const mockPost = apiServices.post as unknown as ReturnType<typeof vi.fn>;
@@ -251,7 +252,9 @@ describe("MCPGuardrailsPage", () => {
   });
 
   it("shows the API error message when create submission fails", async () => {
-    mockPost.mockRejectedValue({ response: { data: { detail: "Duplicate rule name" } } });
+    mockPost.mockRejectedValue(
+      new CustomException("Conflict", 409, { detail: "Duplicate rule name" }),
+    );
     renderWithProviders(<MCPGuardrailsPage />);
 
     await waitFor(() => {

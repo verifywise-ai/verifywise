@@ -5,11 +5,13 @@
  * - Split-view dropdown with providers on left, models on right
  * - Search functionality for models
  * - API key status indicators
- * - Custom model input for OpenRouter
+ * - Models from the AI Gateway's LiteLLM catalog (bundled list as fallback)
+ * - Any model ID can be typed in the search box and used
+ * - Self-hosted models (endpoint, model name, optional key) when the caller handles the endpoint
  * - VW styling with green accent colors
  */
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   Box,
   Stack,
@@ -22,7 +24,10 @@ import {
   useTheme,
 } from "@mui/material";
 import { Search, Check, ChevronRight, ChevronDown, Plus, Key, Settings } from "lucide-react";
-import { PROVIDERS, getModelsForProvider } from "../../../utils/providers";
+import Field from "../Field";
+import { CustomizableButton } from "../../button/customizable-button";
+import { PROVIDERS } from "../../../utils/providers";
+import { useProviderModels } from "../../../../application/hooks/useProviderModels";
 
 // Provider icons
 import { ReactComponent as OpenAILogo } from "../../../assets/icons/openai_logo.svg";
@@ -31,15 +36,19 @@ import { ReactComponent as GeminiLogo } from "../../../assets/icons/gemini_logo.
 import { ReactComponent as MistralLogo } from "../../../assets/icons/mistral_logo.svg";
 import { ReactComponent as XAILogo } from "../../../assets/icons/xai_logo.svg";
 import { ReactComponent as OpenRouterLogo } from "../../../assets/icons/openrouter_logo.svg";
+import { ReactComponent as OllamaLogo } from "../../../assets/icons/ollama_logo.svg";
 
 const PROVIDER_ICONS: Record<string, React.FC<React.SVGProps<SVGSVGElement>>> = {
-  openai: OpenAILogo,
-  anthropic: AnthropicLogo,
-  google: GeminiLogo,
-  mistral: MistralLogo,
-  xai: XAILogo,
-  openrouter: OpenRouterLogo,
+  "openai": OpenAILogo,
+  "anthropic": AnthropicLogo,
+  "google": GeminiLogo,
+  "mistral": MistralLogo,
+  "xai": XAILogo,
+  "openrouter": OpenRouterLogo,
+  "self-hosted": OllamaLogo,
 };
+
+const SELF_HOSTED = "self-hosted";
 
 export interface ConfiguredProvider {
   provider: string;
@@ -53,6 +62,11 @@ interface ModelSelectorProps {
   configuredProviders: ConfiguredProvider[];
   onNavigateToSettings: () => void;
   label?: string;
+  /** Self-hosted model server; the Self-Hosted provider is listed only with onEndpointUrlChange */
+  endpointUrl?: string;
+  apiKey?: string;
+  onEndpointUrlChange?: (url: string) => void;
+  onApiKeyChange?: (key: string) => void;
 }
 
 function ModelSelector({
@@ -63,31 +77,42 @@ function ModelSelector({
   configuredProviders,
   onNavigateToSettings,
   label = "Model",
+  endpointUrl,
+  apiKey,
+  onEndpointUrlChange,
+  onApiKeyChange,
 }: ModelSelectorProps) {
   const theme = useTheme();
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [customModel, setCustomModel] = useState(model || "");
   const anchorRef = useRef<HTMLDivElement>(null);
 
-  const providerList = Object.values(PROVIDERS);
-  const models = getModelsForProvider(provider);
-  const selectedModel = models.find((m) => m.id === model);
-
-  // OpenRouter allows custom model names
-  const isOpenRouter = provider === "openrouter";
-
-  // Sync customModel when model prop changes (for OpenRouter)
+  const supportsSelfHosted = !!onEndpointUrlChange;
+  const providerList = Object.values(PROVIDERS).filter(
+    (p) => supportsSelfHosted || p.provider !== SELF_HOSTED,
+  );
+  const isSelfHosted = provider === SELF_HOSTED && supportsSelfHosted;
+  const [selfHostedModel, setSelfHostedModel] = useState(isSelfHosted ? model : "");
   useEffect(() => {
-    if (isOpenRouter) {
-      setCustomModel(model);
-    }
-  }, [model, isOpenRouter]);
+    if (isSelfHosted) setSelfHostedModel(model);
+  }, [model, isSelfHosted]);
+  const canUseSelfHosted = !!selfHostedModel.trim() && !!(endpointUrl || "").trim();
+  const pickSelfHostedModel = () => {
+    if (!canUseSelfHosted) return;
+    onModelChange(selfHostedModel.trim());
+    setOpen(false);
+  };
+  const { models, isLoading: modelsLoading } = useProviderModels(provider);
+  const selectedModel = models.find((m) => m.id === model);
+  // A typed ID the list does not have can still be used (OpenRouter serves any model)
+  const typedId = searchQuery.trim();
+  const canUseTypedId = !!typedId && !models.some((m) => m.id === typedId);
 
   // Check if provider has API key configured
   const hasApiKey = (providerId: string) =>
     configuredProviders.some((cp) => cp.provider === providerId);
-  const currentProviderHasKey = hasApiKey(provider);
+  // A self-hosted server needs no saved provider key
+  const currentProviderHasKey = isSelfHosted || hasApiKey(provider);
 
   const filteredModels = models.filter(
     (m) =>
@@ -97,7 +122,6 @@ function ModelSelector({
 
   const handleProviderSelect = (newProvider: string) => {
     onProviderChange(newProvider);
-    setCustomModel("");
     setSearchQuery("");
   };
 
@@ -167,13 +191,10 @@ function ModelSelector({
           <Typography
             sx={{
               fontSize: 13,
-              color:
-                selectedModel || (isOpenRouter && model)
-                  ? theme.palette.text.primary
-                  : theme.palette.text.disabled,
+              color: model ? theme.palette.text.primary : theme.palette.text.disabled,
             }}
           >
-            {isOpenRouter && model ? model : selectedModel?.name || "Select a model"}
+            {selectedModel?.name || model || "Select a model"}
           </Typography>
         </Stack>
         <ChevronDown
@@ -218,7 +239,7 @@ function ModelSelector({
               <TextField
                 fullWidth
                 size="small"
-                placeholder="Find a model"
+                placeholder="Find a model or type its ID"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 autoFocus
@@ -303,7 +324,7 @@ function ModelSelector({
                             >
                               {p.displayName}
                             </Typography>
-                            {!providerHasKey && (
+                            {!providerHasKey && p.provider !== SELF_HOSTED && (
                               <Typography
                                 sx={{
                                   fontSize: 10,
@@ -372,7 +393,68 @@ function ModelSelector({
                   flexDirection: "column",
                 }}
               >
-                {!currentProviderHasKey ? (
+                {isSelfHosted ? (
+                  /* Self-hosted model server: endpoint, model name, optional key */
+                  <Stack sx={{ p: "16px" }} gap="12px">
+                    <Box>
+                      <Typography
+                        sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.secondary }}
+                      >
+                        Self-hosted model
+                      </Typography>
+                      <Typography sx={{ fontSize: 11, color: theme.palette.text.tertiary }}>
+                        Connect to a locally running model server (Ollama, vLLM, etc.)
+                      </Typography>
+                    </Box>
+                    <Field
+                      label="Endpoint URL"
+                      isRequired
+                      placeholder="http://localhost:11434/v1"
+                      value={endpointUrl || ""}
+                      onChange={(e) => onEndpointUrlChange?.(e.target.value)}
+                      InputProps={{
+                        onClick: (e) => e.stopPropagation(),
+                        onKeyDown: (e) => e.stopPropagation(),
+                      }}
+                      autoComplete="off"
+                    />
+                    <Field
+                      label="Model name"
+                      isRequired
+                      placeholder="e.g., llama3.2, mistral, codellama"
+                      value={selfHostedModel}
+                      onChange={(e) => setSelfHostedModel(e.target.value)}
+                      InputProps={{
+                        onClick: (e) => e.stopPropagation(),
+                        onKeyDown: (e) => {
+                          if (e.key === "Enter") pickSelfHostedModel();
+                          e.stopPropagation();
+                        },
+                      }}
+                      autoComplete="off"
+                    />
+                    <Field
+                      label="API key (optional)"
+                      type="password"
+                      placeholder="Leave empty if not required"
+                      value={apiKey || ""}
+                      onChange={(e) => onApiKeyChange?.(e.target.value)}
+                      InputProps={{
+                        onClick: (e) => e.stopPropagation(),
+                        onKeyDown: (e) => e.stopPropagation(),
+                      }}
+                      autoComplete="off"
+                    />
+                    <Box>
+                      <CustomizableButton
+                        variant="contained"
+                        text="Use this model"
+                        isDisabled={!canUseSelfHosted}
+                        onClick={pickSelfHostedModel}
+                      />
+                    </Box>
+                  </Stack>
+                ) : !currentProviderHasKey ? (
                   /* No API key message - centered vertically */
                   <Box
                     sx={{
@@ -441,192 +523,87 @@ function ModelSelector({
                       </Box>
                     </Box>
                   </Box>
-                ) : isOpenRouter ? (
-                  /* Custom model input for OpenRouter */
-                  <Box sx={{ p: 2 }}>
-                    <Typography
-                      sx={{
-                        fontSize: 12,
-                        fontWeight: 600,
-                        color: theme.palette.text.secondary,
-                        mb: 1,
-                      }}
-                    >
-                      Enter model name
-                    </Typography>
-                    <Typography sx={{ fontSize: 11, color: theme.palette.text.disabled, mb: 1.5 }}>
-                      OpenRouter supports any model. Enter the model ID (e.g.,
-                      anthropic/claude-3-opus)
-                    </Typography>
-                    <TextField
-                      size="small"
-                      fullWidth
-                      placeholder="e.g., openai/gpt-4o, anthropic/claude-3-opus"
-                      value={customModel}
-                      onChange={(e) => setCustomModel(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && customModel.trim()) {
-                          onModelChange(customModel.trim());
-                          setOpen(false);
-                        }
-                        e.stopPropagation();
-                      }}
-                      onClick={(e) => e.stopPropagation()}
-                      autoComplete="off"
-                      sx={{
-                        "mb": 1.5,
-                        "& .MuiOutlinedInput-root": {
-                          fontSize: 13,
-                          borderRadius: theme.shape.borderRadius,
-                        },
-                      }}
-                    />
-                    <Box
-                      onClick={() => {
-                        if (customModel.trim()) {
-                          onModelChange(customModel.trim());
-                          setOpen(false);
-                        }
-                      }}
-                      sx={{
-                        "display": "inline-flex",
-                        "alignItems": "center",
-                        "gap": 1,
-                        "px": 2,
-                        "py": 1,
-                        "borderRadius": theme.shape.borderRadius,
-                        "cursor": customModel.trim() ? "pointer" : "not-allowed",
-                        "backgroundColor": customModel.trim()
-                          ? theme.palette.primary.main
-                          : theme.palette.action.disabledBackground,
-                        "color": customModel.trim()
-                          ? theme.palette.common.white
-                          : theme.palette.text.disabled,
-                        "fontSize": 12,
-                        "fontWeight": 500,
-                        "&:hover": {
-                          backgroundColor: customModel.trim()
-                            ? theme.palette.primary.dark
-                            : theme.palette.action.disabledBackground,
-                        },
-                      }}
-                    >
-                      <Check size={14} />
-                      Use this model
-                    </Box>
-
-                    {/* Popular OpenRouter models */}
-                    <Typography
-                      sx={{
-                        fontSize: 11,
-                        fontWeight: 600,
-                        color: theme.palette.text.disabled,
-                        mt: 2,
-                        mb: 1,
-                        textTransform: "uppercase",
-                      }}
-                    >
-                      Popular models
-                    </Typography>
-                    {[
-                      { id: "openai/gpt-4o", name: "GPT-4o" },
-                      { id: "anthropic/claude-3.5-sonnet", name: "Claude 3.5 Sonnet" },
-                      { id: "google/gemini-pro-1.5", name: "Gemini Pro 1.5" },
-                      { id: "meta-llama/llama-3.1-70b-instruct", name: "Llama 3.1 70B" },
-                      { id: "mistralai/mistral-large", name: "Mistral Large" },
-                    ].map((m) => (
-                      <Box
-                        key={m.id}
-                        onClick={() => {
-                          setCustomModel(m.id);
-                          onModelChange(m.id);
-                          setOpen(false);
-                        }}
-                        sx={{
-                          "display": "flex",
-                          "alignItems": "center",
-                          "justifyContent": "space-between",
-                          "px": 1.5,
-                          "py": 0.75,
-                          "borderRadius": theme.shape.borderRadius,
-                          "cursor": "pointer",
-                          "backgroundColor":
-                            model === m.id ? theme.palette.background.accent : "transparent",
-                          "&:hover": {
-                            backgroundColor:
-                              model === m.id
-                                ? theme.palette.background.accent
-                                : theme.palette.action.hover,
-                          },
-                        }}
-                      >
-                        <Typography
-                          sx={{
-                            fontSize: 12,
-                            fontWeight: model === m.id ? 600 : 400,
-                            color:
-                              model === m.id
-                                ? theme.palette.primary.main
-                                : theme.palette.text.secondary,
-                          }}
-                        >
-                          {m.name}
-                        </Typography>
-                        <Typography sx={{ fontSize: 10, color: theme.palette.text.disabled }}>
-                          {m.id}
-                        </Typography>
-                      </Box>
-                    ))}
-                  </Box>
-                ) : filteredModels.length === 0 ? (
-                  <Box sx={{ p: 3, textAlign: "center" }}>
-                    <Typography sx={{ fontSize: 13, color: theme.palette.text.disabled }}>
-                      No models found
-                    </Typography>
-                  </Box>
                 ) : (
-                  filteredModels.map((m) => {
-                    const isSelected = m.id === model;
-                    return (
+                  <>
+                    {/* The bundled list shows meanwhile; it may still change */}
+                    {modelsLoading && (
+                      <Typography
+                        sx={{ fontSize: 11, color: theme.palette.text.tertiary, pl: 2.5, py: 0.5 }}
+                      >
+                        Updating model list…
+                      </Typography>
+                    )}
+                    {canUseTypedId && (
                       <Box
-                        key={m.id}
-                        onClick={() => handleModelSelect(m.id)}
+                        onClick={() => handleModelSelect(typedId)}
                         sx={{
                           "display": "flex",
                           "alignItems": "center",
-                          "justifyContent": "space-between",
+                          "gap": "8px",
                           "pl": 2.5,
                           "pr": 1.5,
                           "py": 1,
                           "cursor": "pointer",
-                          "backgroundColor": isSelected
-                            ? theme.palette.background.accent
-                            : "transparent",
-                          "&:hover": {
-                            backgroundColor: isSelected
-                              ? theme.palette.background.accent
-                              : theme.palette.action.hover,
-                          },
+                          "&:hover": { backgroundColor: theme.palette.action.hover },
                         }}
                       >
-                        <Stack direction="row" alignItems="center" spacing={1.5}>
-                          {isSelected && <Check size={16} color={theme.palette.primary.main} />}
-                          {renderProviderIcon(provider, 18)}
-                          <Typography
+                        <Plus size={16} color={theme.palette.primary.main} />
+                        <Typography sx={{ fontSize: 13, color: theme.palette.primary.main }}>
+                          Use “{typedId}”
+                        </Typography>
+                      </Box>
+                    )}
+                    {filteredModels.length === 0 && !canUseTypedId ? (
+                      <Box sx={{ p: 3, textAlign: "center" }}>
+                        <Typography sx={{ fontSize: 13, color: theme.palette.text.disabled }}>
+                          No models found
+                        </Typography>
+                      </Box>
+                    ) : (
+                      filteredModels.map((m) => {
+                        const isSelected = m.id === model;
+                        return (
+                          <Box
+                            key={m.id}
+                            onClick={() => handleModelSelect(m.id)}
                             sx={{
-                              fontSize: 13,
-                              fontWeight: isSelected ? 600 : 400,
-                              color: isSelected
-                                ? theme.palette.primary.main
-                                : theme.palette.text.secondary,
+                              "display": "flex",
+                              "alignItems": "center",
+                              "justifyContent": "space-between",
+                              "pl": 2.5,
+                              "pr": 1.5,
+                              "py": 1,
+                              "cursor": "pointer",
+                              "backgroundColor": isSelected
+                                ? theme.palette.background.accent
+                                : "transparent",
+                              "&:hover": {
+                                backgroundColor: isSelected
+                                  ? theme.palette.background.accent
+                                  : theme.palette.action.hover,
+                              },
                             }}
                           >
-                            {m.name}
-                          </Typography>
-                        </Stack>
-                      </Box>
-                    );
-                  })
+                            <Stack direction="row" alignItems="center" spacing={1.5}>
+                              {isSelected && <Check size={16} color={theme.palette.primary.main} />}
+                              {renderProviderIcon(provider, 18)}
+                              <Typography
+                                sx={{
+                                  fontSize: 13,
+                                  fontWeight: isSelected ? 600 : 400,
+                                  color: isSelected
+                                    ? theme.palette.primary.main
+                                    : theme.palette.text.secondary,
+                                }}
+                              >
+                                {m.name}
+                              </Typography>
+                            </Stack>
+                          </Box>
+                        );
+                      })
+                    )}
+                  </>
                 )}
               </Box>
             </Stack>

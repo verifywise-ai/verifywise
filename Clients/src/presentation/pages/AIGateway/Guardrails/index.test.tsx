@@ -1,5 +1,6 @@
-import { screen, waitFor, fireEvent } from "@testing-library/react";
+import { act, screen, waitFor, fireEvent } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
+import CustomException from "../../../../infrastructure/exceptions/customeException";
 
 const mockNavigate = vi.fn();
 let mockParams: { tab?: string } = {};
@@ -245,6 +246,7 @@ describe("AIGateway - Guardrails", () => {
           name: "Block term",
           config: { type: "keyword", pattern: "confidential" },
         }),
+        { suppressGlobalErrorToast: true },
       );
     });
   });
@@ -324,9 +326,11 @@ describe("AIGateway - Guardrails", () => {
     fireEvent.click(screen.getByRole("button", { name: "Run test" }));
 
     await waitFor(() => {
-      expect(mockPost).toHaveBeenCalledWith("/ai-gateway/guardrails/test", {
-        text: "email me at j@example.com",
-      });
+      expect(mockPost).toHaveBeenCalledWith(
+        "/ai-gateway/guardrails/test",
+        { text: "email me at j@example.com" },
+        { suppressGlobalErrorToast: true },
+      );
     });
     await waitFor(() => {
       expect(screen.getByText("Would be blocked")).toBeInTheDocument();
@@ -335,7 +339,9 @@ describe("AIGateway - Guardrails", () => {
   });
 
   it("shows an error message when the guardrail test request fails", async () => {
-    mockPost.mockRejectedValue({ response: { data: { detail: "Service unavailable" } } });
+    mockPost.mockRejectedValue(
+      new CustomException("Request failed", 400, { detail: "Service unavailable" }),
+    );
     renderWithProviders(<GuardrailsPage />);
 
     await waitFor(() => {
@@ -349,6 +355,151 @@ describe("AIGateway - Guardrails", () => {
     await waitFor(() => {
       expect(screen.getByText("Service unavailable")).toBeInTheDocument();
     });
+  });
+
+  it("hides the gateway's internal-key rejection behind the friendly error", async () => {
+    mockPost.mockRejectedValue(
+      new CustomException("Request failed", 401, {
+        detail: { message: "Invalid internal key", code: "INVALID_KEY" },
+      }),
+    );
+    renderWithProviders(<GuardrailsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Test guardrails" })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Test guardrails" }));
+    fireEvent.change(screen.getByLabelText(/^Sample text/), { target: { value: "hi" } });
+    fireEvent.click(screen.getByRole("button", { name: "Run test" }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("Test failed — is the AI Gateway service running?"),
+      ).toBeInTheDocument();
+    });
+    expect(screen.queryByText("Invalid internal key")).not.toBeInTheDocument();
+  });
+
+  it("shows the friendly error, not the proxy's socket error, when the gateway is down", async () => {
+    mockPost.mockRejectedValue(
+      new CustomException("connect ECONNREFUSED 127.0.0.1:8100", 502, {
+        error: "AI Gateway proxy error",
+        message: "connect ECONNREFUSED 127.0.0.1:8100",
+      }),
+    );
+    renderWithProviders(<GuardrailsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Test guardrails" })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Test guardrails" }));
+    fireEvent.change(screen.getByLabelText(/^Sample text/), { target: { value: "hi" } });
+    fireEvent.click(screen.getByRole("button", { name: "Run test" }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("Test failed — is the AI Gateway service running?"),
+      ).toBeInTheDocument();
+    });
+    expect(screen.queryByText(/ECONNREFUSED/)).not.toBeInTheDocument();
+  });
+
+  it("does not send sample text over the gateway's length limit", async () => {
+    renderWithProviders(<GuardrailsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Test guardrails" })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Test guardrails" }));
+    fireEvent.change(screen.getByLabelText(/^Sample text/), {
+      target: { value: "a".repeat(20_001) },
+    });
+
+    expect(screen.getByText("Sample text must be at most 20,000 characters")).toBeInTheDocument();
+    const run = screen.getByRole("button", { name: "Run test" });
+    expect(run).toBeDisabled();
+    fireEvent.click(run);
+    expect(mockPost).not.toHaveBeenCalled();
+  });
+
+  it("keeps Run test disabled until there is sample text", async () => {
+    renderWithProviders(<GuardrailsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Test guardrails" })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Test guardrails" }));
+    expect(screen.getByRole("button", { name: "Run test" })).toBeDisabled();
+    fireEvent.change(screen.getByLabelText(/^Sample text/), { target: { value: "   " } });
+    expect(screen.getByRole("button", { name: "Run test" })).toBeDisabled();
+    fireEvent.change(screen.getByLabelText(/^Sample text/), { target: { value: "hi" } });
+    expect(screen.getByRole("button", { name: "Run test" })).not.toBeDisabled();
+  });
+
+  it("counts an emoji as one character, as the gateway does", async () => {
+    renderWithProviders(<GuardrailsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Test guardrails" })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Test guardrails" }));
+    // 12,000 emoji: 24,000 UTF-16 units but 12,000 characters.
+    fireEvent.change(screen.getByLabelText(/^Sample text/), {
+      target: { value: "\u{1F600}".repeat(12_000) },
+    });
+
+    expect(screen.queryByText(/must be at most/)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Run test" })).not.toBeDisabled();
+  });
+
+  it("drops a response that arrives after the sample text changed", async () => {
+    let answer: (v: unknown) => void = () => {};
+    mockPost.mockReturnValue(new Promise((resolve) => (answer = resolve)));
+    renderWithProviders(<GuardrailsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Test guardrails" })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Test guardrails" }));
+    fireEvent.change(screen.getByLabelText(/^Sample text/), { target: { value: "card 4111" } });
+    fireEvent.click(screen.getByRole("button", { name: "Run test" }));
+    fireEvent.change(screen.getByLabelText(/^Sample text/), { target: { value: "hello" } });
+
+    // The scan is still running on the gateway, so no second one can start.
+    expect(screen.getByRole("button", { name: "Scanning..." })).toBeDisabled();
+
+    await act(async () => {
+      answer({ data: { data: { would_block: true, detections: [], execution_time_ms: 9 } } });
+    });
+    expect(screen.queryByText("Would be blocked")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Run test" })).not.toBeDisabled();
+  });
+
+  it("clears a result when the sample text changes", async () => {
+    mockPost.mockResolvedValue({
+      data: { data: { would_block: false, detections: [], execution_time_ms: 3 } },
+    });
+    renderWithProviders(<GuardrailsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Test guardrails" })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Test guardrails" }));
+    fireEvent.change(screen.getByLabelText(/^Sample text/), { target: { value: "hello" } });
+    fireEvent.click(screen.getByRole("button", { name: "Run test" }));
+    await waitFor(() => {
+      expect(screen.getByText("3ms")).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByLabelText(/^Sample text/), { target: { value: "hello again" } });
+    expect(screen.queryByText("3ms")).not.toBeInTheDocument();
   });
 
   it("opens the catalog modal, filters by search, and enables an item", async () => {

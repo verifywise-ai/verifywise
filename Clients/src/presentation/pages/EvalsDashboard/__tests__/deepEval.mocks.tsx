@@ -32,6 +32,7 @@ const deepEvalMocks = vi.hoisted(() => ({
   listScorers: vi.fn(),
   getAllLlmApiKeys: vi.fn(),
   addLlmApiKey: vi.fn(),
+  verifySavedLlmApiKey: vi.fn(),
   validateModel: vi.fn(),
   getAllEntities: vi.fn(),
   listModels: vi.fn(),
@@ -67,6 +68,7 @@ vi.mock("../../../../application/repository/deepEval.repository", () => ({
   listScorers: deepEvalMocks.listScorers,
   getAllLlmApiKeys: deepEvalMocks.getAllLlmApiKeys,
   addLlmApiKey: deepEvalMocks.addLlmApiKey,
+  verifySavedLlmApiKey: deepEvalMocks.verifySavedLlmApiKey,
   validateModel: deepEvalMocks.validateModel,
   getExperiment: deepEvalMocks.getExperiment,
   getLogs: deepEvalMocks.getLogs,
@@ -342,6 +344,7 @@ export function resetDeepEvalMocks(): void {
   deepEvalMocks.addLlmApiKey
     .mockReset()
     .mockResolvedValue({ id: 1, provider: "openai", apiKey: "sk-test" });
+  deepEvalMocks.verifySavedLlmApiKey.mockReset().mockResolvedValue({ valid: true });
   deepEvalMocks.validateModel.mockReset().mockResolvedValue({ valid: true });
   deepEvalMocks.getAllEntities.mockReset().mockResolvedValue({ data: [] });
   deepEvalMocks.listModels.mockReset().mockResolvedValue([]);

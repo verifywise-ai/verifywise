@@ -10,7 +10,6 @@ import {
   Typography,
   Select as MuiSelect,
   MenuItem,
-  Switch,
   InputAdornment,
   IconButton,
   TextFieldProps,
@@ -396,96 +395,6 @@ export const VWSelect: React.FC<VWSelectProps> = ({
 };
 
 // ============================================
-// VWToggle - Switch matching VerifyWise Toggle
-// ============================================
-interface VWToggleProps {
-  checked: boolean;
-  onChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  disabled?: boolean;
-  label?: string;
-  description?: string;
-}
-
-export const VWToggle: React.FC<VWToggleProps> = ({
-  checked,
-  onChange,
-  disabled,
-  label,
-  description,
-}) => {
-  const toggleStyles = {
-    "width": 36,
-    "height": 22,
-    "padding": "2px 0",
-    "marginRight": 1,
-    "display": "flex",
-    "alignItems": "center",
-    "& .MuiSwitch-switchBase": {
-      "padding": "2px",
-      "&.Mui-checked": {
-        "transform": "translateX(14px)",
-        "color": "#fff",
-        "& + .MuiSwitch-track": {
-          backgroundColor: colors.primary,
-          opacity: 1,
-          border: 0,
-        },
-      },
-    },
-    "& .MuiSwitch-thumb": {
-      boxShadow: "0 2px 4px 0 rgb(0 35 11 / 20%)",
-      width: 14,
-      height: 14,
-      borderRadius: "4px !important",
-      backgroundColor: "#fff",
-      margin: 0,
-    },
-    "& .MuiSwitch-track": {
-      borderRadius: "4px !important",
-      backgroundColor: colors.border.light,
-      opacity: 1,
-      transition: "background-color 200ms",
-    },
-  };
-
-  if (label || description) {
-    return (
-      <Stack direction="row" alignItems="flex-start" gap={1.5}>
-        <Switch
-          checked={checked}
-          onChange={onChange}
-          disabled={disabled}
-          disableRipple
-          sx={toggleStyles}
-        />
-        <Stack>
-          {label && (
-            <Typography fontSize={13} fontWeight={500} color={colors.text.primary}>
-              {label}
-            </Typography>
-          )}
-          {description && (
-            <Typography fontSize={12} color={colors.text.tertiary}>
-              {description}
-            </Typography>
-          )}
-        </Stack>
-      </Stack>
-    );
-  }
-
-  return (
-    <Switch
-      checked={checked}
-      onChange={onChange}
-      disabled={disabled}
-      disableRipple
-      sx={toggleStyles}
-    />
-  );
-};
-
-// ============================================
 // VWButton - Button matching VerifyWise styling
 // ============================================
 interface VWButtonProps {
@@ -572,6 +481,5 @@ export const VWButton: React.FC<VWButtonProps> = ({
 export default {
   VWField,
   VWSelect,
-  VWToggle,
   VWButton,
 };

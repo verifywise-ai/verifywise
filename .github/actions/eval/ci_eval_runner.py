@@ -20,6 +20,14 @@ import time
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
+# Lower is better (0 = none found). Matched by exact name, so a custom scorer such as
+# "unbiasedTone" is not inverted. Keep in sync with EvalServer/src/utils/metric_constants.py.
+INVERTED_METRICS = {"bias", "toxicity", "hallucination"}
+
+
+def is_inverted(name: str) -> bool:
+    return name.lower().replace("_", "").replace(" ", "") in INVERTED_METRICS
+
 try:
     import requests
 except ImportError:
@@ -189,7 +197,7 @@ def parse_results(experiment: Dict[str, Any], threshold: float) -> Dict[str, Any
         score = float(score)
         mt = metric_thresholds_raw.get(name)
         mt = float(mt) if mt is not None else threshold
-        inverted = any(k in name.lower() for k in ["bias", "toxicity", "hallucination", "conversationsafety"])
+        inverted = is_inverted(name)
         passed = (score <= mt) if inverted else (score >= mt)
         if not passed:
             all_passed = False

@@ -40,4 +40,47 @@ spec:
                 name: frontend
                 port:
                   number: 80
+
+---
+# OpenAI-compatible AI Gateway API used with virtual keys (base URL /v1).
+# A separate Ingress so its annotations apply to /v1 only: LLM requests can
+# carry large prompts, take minutes and stream their response.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: verifywise-gateway-api-ingress
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "verifywise.labels" . | nindent 4 }}
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    {{- if .Values.ingress.tls.enabled }}
+    # The certificate is requested by verifywise-ingress; this one reuses its secret.
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    {{- end }}
+spec:
+  ingressClassName: {{ .Values.ingress.className | quote }}
+  {{- if .Values.ingress.tls.enabled }}
+  tls:
+    - hosts:
+        - {{ required "ingress.host is required when ingress.tls.enabled=true" .Values.ingress.host | quote }}
+      secretName: {{ .Values.ingress.tls.secretName | quote }}
+  {{- end }}
+  rules:
+    -
+      {{- if .Values.ingress.host }}
+      host: {{ .Values.ingress.host | quote }}
+      {{- end }}
+      http:
+        paths:
+          - path: /v1
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 3000
 {{- end }}

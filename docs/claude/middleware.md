@@ -4,12 +4,28 @@
 
 File: `Servers/middleware/rateLimit.middleware.ts`
 
+Production limits. The ones written `relaxed ? … : …` in
+`buildRateLimitConfigs` are raised only when `NODE_ENV` is an explicit dev/test
+value; email, Slack, file, scan and risk-suggestion limits never are.
+
 | Limiter | Window | Max Requests | Use Case |
 |---------|--------|--------------|----------|
-| `authLimiter` | 15 min | 5 | Login, registration, password reset |
-| `generalApiLimiter` | 15 min | 100 | Standard API endpoints |
-| `fileOperationsLimiter` | 15 min | 50 | File upload/download |
+| `generalApiLimiter` | 1 min | 300 | Global per-IP ceiling, mounted ahead of all routes |
+| `authLimiter` | 15 min | 5 | Register, password reset, change password |
+| `loginLimiter` | 1 min | 5 | Login and login-microsoft |
+| `tokenRefreshLimiter` | 15 min | 60 | Access-token refresh |
+| `fileOperationsLimiter` | 15 min | 100 | File upload, download, delete |
 | `aiDetectionScanLimiter` | 60 min | 10 | AI code scanning |
+| `riskSuggestionsAiLimiter` | 60 min | 10, per user | LLM-backed risk suggestions |
+| `mrmIngestionLimiter` | 15 min | 5000, per token | MRM metric ingestion pushes |
+| `webhookLimiter` | 1 min | 100 | Inbound signed webhooks |
+| `virtualKeyProxyLimiter` | 1 min | 3000 | `/v1` virtual key proxy, mounted ahead of `generalApiLimiter` (the gateway enforces per-key RPM and budget) |
+| `passwordResetEmailLimiter`, `inviteEmailLimiter`, `invitationResendLimiter` | 1 min | 5 each | Outbound email |
+| `slackWebhookCreateLimiter`, `slackWorkspaceCreateLimiter` | 60 min | 10 each | Slack setup |
+| `healthCheckLimiter` | 1 min | 1000 | Health probe |
+
+Build new limiters with `createRateLimiter(RATE_LIMIT_CONFIGS.<name>)`, never
+inline `rateLimit()` in a route file (see `tests/integration/rate-limiting/`).
 
 ```typescript
 import {
@@ -24,7 +40,11 @@ router.post("/upload", fileOperationsLimiter, uploadController);
 router.post("/scans", aiDetectionScanLimiter, startScanController);
 ```
 
-Response on limit exceeded: 429 with `RateLimit-*` headers.
+Response on limit exceeded: 429 with `RateLimit-*` headers and the body
+`{ message: "Too Many Requests", data: <limiter message> }`. The one exception
+is `virtualKeyProxyLimiter`, which answers `{ detail: <limiter message> }`
+(`gatewayErrorBody`) so `/v1` clients get the AI Gateway's error shape for
+every error.
 
 ---
 

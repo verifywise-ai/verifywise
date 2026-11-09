@@ -76,7 +76,11 @@ export const fetchAuditLedgerBatch = async (
   );
 };
 
-/** A ledger row as CSV values, in AUDIT_LEDGER_EXPORT_COLUMNS order. */
+/**
+ * A ledger row as CSV values, in AUDIT_LEDGER_EXPORT_COLUMNS order. Text is
+ * exported as stored, not redacted: the export is the verifiable copy kept
+ * before retention cleanup, so every row must still match its entry_hash.
+ */
 export const ledgerRowValues = (row: any): unknown[] => [
   row.id,
   row.occurred_at instanceof Date ? row.occurred_at.toISOString() : row.occurred_at,

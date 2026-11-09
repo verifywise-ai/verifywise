@@ -45,6 +45,8 @@ interface LinkedObjectsTableProps {
   hidePagination?: boolean;
   paginated?: boolean;
   type?: string;
+  /** Hides the remove action for roles that cannot edit policies. */
+  canRemove?: boolean;
 }
 
 const SORT_KEY = "vw_link_risk_policies_sort";
@@ -158,6 +160,7 @@ const LinkedObjectsTable: React.FC<LinkedObjectsTableProps> = ({
   hidePagination = false,
   paginated = true,
   type,
+  canRemove = true,
 }) => {
   const formatDate = useFormattedDate();
   const theme = useTheme();
@@ -343,17 +346,19 @@ const LinkedObjectsTable: React.FC<LinkedObjectsTableProps> = ({
                   }}
                 >
                   {/* Delete objects */}
-                  <CustomIconButton
-                    id={Number(row.id)}
-                    onDelete={() => onRemove(type!, row.id)}
-                    onEdit={() => {
-                      // edit
-                    }}
-                    onMouseEvent={() => {}}
-                    warningTitle={`Delete this ${type}?`}
-                    warningMessage={`When you delete this ${type}, all data related to it will be removed. This action is non-recoverable.`}
-                    type="LinkedObjectsType"
-                  />
+                  {canRemove && (
+                    <CustomIconButton
+                      id={Number(row.id)}
+                      onDelete={() => onRemove(type!, row.id)}
+                      onEdit={() => {
+                        // edit
+                      }}
+                      onMouseEvent={() => {}}
+                      warningTitle={`Delete this ${type}?`}
+                      warningMessage={`When you delete this ${type}, all data related to it will be removed. This action is non-recoverable.`}
+                      type="LinkedObjectsType"
+                    />
+                  )}
                 </TableCell>
               </TableRow>
             ))
@@ -371,7 +376,17 @@ const LinkedObjectsTable: React.FC<LinkedObjectsTableProps> = ({
         )}
       </TableBody>
     ),
-    [sortedData, hidePagination, page, rowsPerPage, deletingId, onRemove, type, formatDate],
+    [
+      sortedData,
+      hidePagination,
+      page,
+      rowsPerPage,
+      deletingId,
+      onRemove,
+      type,
+      formatDate,
+      canRemove,
+    ],
   );
 
   return (

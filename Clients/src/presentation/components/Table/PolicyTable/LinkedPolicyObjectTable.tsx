@@ -40,6 +40,8 @@ interface LinkedPolicyObjectsTableProps {
   deletingId?: number | null;
   hidePagination?: boolean;
   paginated?: boolean;
+  /** Hides the remove action for roles that cannot edit policies. */
+  canRemove?: boolean;
   type?: string;
 }
 
@@ -154,6 +156,7 @@ const LinkedPolicyObjectsTable: React.FC<LinkedPolicyObjectsTableProps> = ({
   hidePagination = false,
   paginated = true,
   type,
+  canRemove = true,
 }) => {
   const formatDate = useFormattedDate();
   const theme = useTheme();
@@ -359,19 +362,21 @@ const LinkedPolicyObjectsTable: React.FC<LinkedPolicyObjectsTableProps> = ({
                     zIndex: 10,
                   }}
                 >
-                  <CustomIconButton
-                    id={Number(row.id)}
-                    // onDelete={() => onRemove(type!, row.id)}
-                    onDelete={() => {
-                      if (!type || row.id == null) return;
-                      onRemove(type, Number(row.id));
-                    }}
-                    onEdit={() => {}}
-                    onMouseEvent={() => {}}
-                    warningTitle={`Delete this policy?`}
-                    warningMessage={`When you delete this policy, all data related to it will be removed. This action is non-recoverable.`}
-                    type="LinkedObjectsType"
-                  />
+                  {canRemove && (
+                    <CustomIconButton
+                      id={Number(row.id)}
+                      // onDelete={() => onRemove(type!, row.id)}
+                      onDelete={() => {
+                        if (!type || row.id == null) return;
+                        onRemove(type, Number(row.id));
+                      }}
+                      onEdit={() => {}}
+                      onMouseEvent={() => {}}
+                      warningTitle={`Delete this policy?`}
+                      warningMessage={`When you delete this policy, all data related to it will be removed. This action is non-recoverable.`}
+                      type="LinkedObjectsType"
+                    />
+                  )}
                 </TableCell>
               </TableRow>
             ))
@@ -396,6 +401,7 @@ const LinkedPolicyObjectsTable: React.FC<LinkedPolicyObjectsTableProps> = ({
       type,
       onRemove,
       formatDate,
+      canRemove,
     ],
   );
 

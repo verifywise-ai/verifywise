@@ -7,7 +7,9 @@ import EmptyStateTip from "../../../components/EmptyState/EmptyStateTip";
 import { EmptyStateMessage } from "../../../components/EmptyStateMessage";
 import { TableEmptyStateLayout } from "../../../components/Table/TableEmptyStateLayout";
 import StandardTableHead from "../../../components/Table/StandardTableHead";
+import ListStateWrapper from "../../../components/ListStateWrapper";
 import CodeBlock from "../components/CodeBlock";
+import { textStyles } from "../../../themes/typography";
 
 const TABLE_EMPTY_COLUMNS = [
   { id: "name", label: "NAME", sortable: true },
@@ -68,6 +70,23 @@ import { Database } from "lucide-react";
     message="No datasets found. Add a dataset to get started."
   />
 </TableEmptyStateLayout>`,
+  listState: `import ListStateWrapper from "../ListStateWrapper";
+import { EmptyState } from "../EmptyState";
+import { Database } from "lucide-react";
+
+<ListStateWrapper
+  items={datasets}
+  isLoading={isLoading}
+  errorMessage={error ? "Failed to load datasets. Please try again." : null}
+  emptyState={
+    <EmptyState
+      icon={Database}
+      message="No datasets found. Add a dataset to get started."
+    />
+  }
+>
+  <DatasetsTable datasets={datasets} />
+</ListStateWrapper>`,
 };
 
 const EmptyStatesSection: React.FC = () => {
@@ -113,6 +132,72 @@ const EmptyStatesSection: React.FC = () => {
           SVG illustration with a contextual icon.
         </Typography>
       </Box>
+
+      <SpecSection title="Unified list states">
+        <Typography sx={{ fontSize: 13, color: theme.palette.text.tertiary, mb: "24px" }}>
+          Wrap primary lists with ListStateWrapper so loading, request errors, empty arrays, and
+          populated content follow the same priority and presentation.
+        </Typography>
+
+        <ExampleWithCode
+          label="Loading, error, and empty arrays"
+          code={emptyStateSnippets.listState}
+          onCopy={handleCopy}
+        >
+          <Stack spacing="16px">
+            <Box>
+              <Typography sx={{ fontSize: 11, color: theme.palette.text.accent, mb: "4px" }}>
+                Loading
+              </Typography>
+              <ListStateWrapper
+                items={[]}
+                isLoading
+                loadingHeight={120}
+                loadingLabel="Loading datasets"
+                emptyState={null}
+              >
+                Dataset rows
+              </ListStateWrapper>
+            </Box>
+
+            <Box>
+              <Typography
+                sx={{ ...textStyles.bodySmall, color: theme.palette.text.accent, mb: "4px" }}
+              >
+                Error
+              </Typography>
+              <ListStateWrapper
+                items={[]}
+                isLoading={false}
+                errorMessage="Failed to load datasets. Please try again."
+                emptyState={null}
+              >
+                Dataset rows
+              </ListStateWrapper>
+            </Box>
+
+            <Box>
+              <Typography sx={{ fontSize: 11, color: theme.palette.text.accent, mb: "4px" }}>
+                Empty array
+              </Typography>
+              <ListStateWrapper
+                items={[]}
+                isLoading={false}
+                emptyState={
+                  <EmptyState
+                    icon={Database}
+                    message="No datasets found. Add a dataset to get started."
+                  />
+                }
+              >
+                Dataset rows
+              </ListStateWrapper>
+            </Box>
+          </Stack>
+        </ExampleWithCode>
+      </SpecSection>
+
+      <Divider sx={{ my: "32px" }} />
 
       {/* EmptyState Component */}
       <SpecSection title="EmptyState component">

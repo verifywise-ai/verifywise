@@ -20,12 +20,17 @@ export function PageHeaderExtended({
   titleFontFamily,
   breadcrumbItems,
   actionButton = null,
+  backButton,
 }: PageHeaderExtendedProps) {
   return (
     <Stack className="vwhome" gap={0}>
       <PageBreadcrumbs items={breadcrumbItems} sx={{ "mb": 0, "& > hr": { mb: 0 } }} />
 
-      <Box sx={{ mt: "16px" }}>
+      {backButton && (
+        <Box sx={{ display: "flex", justifyContent: "flex-start", mt: "16px" }}>{backButton}</Box>
+      )}
+
+      <Box sx={{ mt: backButton ? "8px" : "16px" }}>
         <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
           <PageHeader
             title={title}

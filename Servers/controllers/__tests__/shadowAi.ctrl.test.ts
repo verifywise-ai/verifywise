@@ -18,6 +18,15 @@ jest.mock("../../utils/shadowAiTools.utils", () => ({
   updateToolStatusQuery: jest.fn(),
   linkToolToModelInventoryQuery: jest.fn(),
 }));
+jest.mock("../../utils/modelRisk.utils", () => ({
+  createNewModelRiskQuery: jest.fn(),
+}));
+jest.mock("../../utils/user.utils", () => ({
+  getUserByIdQuery: jest.fn(),
+}));
+jest.mock("../../utils/changeHistory.base.utils", () => ({
+  recordEntityCreation: jest.fn(),
+}));
 jest.mock("../../utils/shadowAiRules.utils", () => ({
   getAllRulesQuery: jest.fn(),
   createRuleQuery: jest.fn(),
@@ -30,9 +39,19 @@ jest.mock("../../utils/shadowAiConfig.utils", () => ({
   createSyslogConfigQuery: jest.fn(),
   updateSyslogConfigQuery: jest.fn(),
   deleteSyslogConfigQuery: jest.fn(),
+  regenerateSyslogKeyQuery: jest.fn(),
   getSettingsQuery: jest.fn(),
   lockShadowAiSettings: jest.fn(),
   updateSettingsQuery: jest.fn(),
+}));
+jest.mock("../../services/shadowAiSyslog/listener", () => ({
+  getSyslogListenerState: jest.fn(),
+}));
+jest.mock("../../services/shadowAiSyslog/sourceCache", () => ({
+  invalidateSourceCacheAfterCommit: jest.fn(),
+}));
+jest.mock("../../services/shadowAiSyslog/config", () => ({
+  readSyslogListenerConfig: jest.fn(),
 }));
 jest.mock("../../utils/logger/logHelper", () => ({
   logProcessing: jest.fn(),
@@ -71,10 +90,17 @@ jest.mock("../../database/db", () => ({
 }));
 
 import { sequelize } from "../../database/db";
+import { createNewModelRiskQuery } from "../../utils/modelRisk.utils";
+import { getUserByIdQuery } from "../../utils/user.utils";
+import { recordEntityCreation } from "../../utils/changeHistory.base.utils";
+import { getSyslogListenerState } from "../../services/shadowAiSyslog/listener";
+import { readSyslogListenerConfig } from "../../services/shadowAiSyslog/config";
+import { invalidateSourceCacheAfterCommit } from "../../services/shadowAiSyslog/sourceCache";
 import { appendRetentionChangeToLedger } from "../../utils/retentionAudit.utils";
 import {
   createSyslogConfigQuery,
   deleteSyslogConfigQuery,
+  regenerateSyslogKeyQuery,
   getSettingsQuery,
   getSyslogConfigsQuery,
   lockShadowAiSettings,
@@ -117,6 +143,7 @@ import {
   getRules,
   getSettings,
   getSyslogConfigs,
+  getSyslogStatus,
   getToolById,
   getTools,
   getToolsByEvents,
@@ -125,6 +152,7 @@ import {
   getUserDetail,
   getUsers,
   getUsersByDepartment,
+  regenerateSyslogKey,
   startGovernance,
   updateRule,
   updateSettings,
@@ -556,6 +584,44 @@ describe("shadowAi.ctrl", () => {
   });
 
   describe("startGovernance", () => {
+    beforeEach(() => {
+      (getUserByIdQuery as jest.MockedFunction<any>).mockResolvedValue({ id: 2 });
+    });
+
+    it("returns 400 when the governance owner is not in the organization", async () => {
+      (getUserByIdQuery as jest.MockedFunction<any>).mockResolvedValue(null);
+      mockGetToolById.mockResolvedValue({ id: 1, name: "ChatGPT" });
+      const req = createReq({
+        params: { id: "1" },
+        body: {
+          model_inventory: { provider: "OpenAI", model: "GPT-4" },
+          governance_owner_id: "99",
+        },
+      });
+      const res = createRes();
+      await startGovernance(req, res);
+      expect(getUserByIdQuery).toHaveBeenCalledWith(99, null, 1);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(mockSequelizeQuery).not.toHaveBeenCalled();
+    });
+
+    it("returns 409 and writes nothing when the tool is already governed", async () => {
+      mockGetToolById.mockResolvedValue({ id: 1, name: "ChatGPT", model_inventory_id: 10 });
+      const req = createReq({
+        params: { id: "1" },
+        body: {
+          model_inventory: { provider: "OpenAI", model: "GPT-4" },
+          governance_owner_id: "2",
+          risk_assessment: { data_sensitivity: "High" },
+        },
+      });
+      const res = createRes();
+      await startGovernance(req, res);
+      expect(res.status).toHaveBeenCalledWith(409);
+      expect(mockSequelizeQuery).not.toHaveBeenCalled();
+      expect(createNewModelRiskQuery).not.toHaveBeenCalled();
+    });
+
     it("should return 403 for non-write role", async () => {
       const req = createReq({ role: "Auditor", params: { id: "1" }, body: {} });
       const res = createRes();
@@ -624,6 +690,71 @@ describe("shadowAi.ctrl", () => {
       const res = createRes();
       await startGovernance(req, res);
       expect(mockLinkTool).toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(201);
+    });
+
+    it("records the form's risk assessment as a risk on the new model", async () => {
+      const mockCreateRisk = createNewModelRiskQuery as jest.MockedFunction<any>;
+      mockCreateRisk.mockResolvedValue({ id: 55 });
+      mockGetToolById.mockResolvedValue({ id: 1, name: "ChatGPT" });
+      mockLinkTool.mockResolvedValue(undefined);
+      mockSequelizeQuery
+        .mockResolvedValueOnce([[{ id: 10 }]]) // INSERT INTO model_inventories RETURNING id
+        .mockResolvedValueOnce(undefined); // UPDATE shadow_ai_tools
+      const req = createReq({
+        params: { id: "1" },
+        body: {
+          model_inventory: { provider: "OpenAI", model: "GPT-4" },
+          governance_owner_id: "2",
+          risk_assessment: { data_sensitivity: "High", description: "Customer data pasted in" },
+        },
+      });
+      const res = createRes();
+      await startGovernance(req, res);
+      expect(mockCreateRisk).toHaveBeenCalledWith(
+        expect.objectContaining({
+          risk_name: "Use of ChatGPT",
+          risk_level: "High",
+          owner: "2",
+          description: "Customer data pasted in",
+          model_id: 10,
+        }),
+        1,
+        expect.anything(),
+      );
+      expect(mockLinkTool).toHaveBeenCalledWith(1, 1, 10, 55, expect.anything());
+      expect(recordEntityCreation).toHaveBeenCalledWith(
+        "model_risk",
+        55,
+        expect.any(Number),
+        1,
+        expect.objectContaining({ risk_name: "Use of ChatGPT" }),
+        expect.anything(),
+      );
+      expect(res.status).toHaveBeenCalledWith(201);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ risk_entry_id: 55 }),
+        }),
+      );
+    });
+
+    it("creates no risk when the risk assessment is empty", async () => {
+      const mockCreateRisk = createNewModelRiskQuery as jest.MockedFunction<any>;
+      mockGetToolById.mockResolvedValue({ id: 1, name: "ChatGPT" });
+      mockLinkTool.mockResolvedValue(undefined);
+      mockSequelizeQuery.mockResolvedValueOnce([[{ id: 10 }]]).mockResolvedValueOnce(undefined);
+      const req = createReq({
+        params: { id: "1" },
+        body: {
+          model_inventory: { provider: "OpenAI", model: "GPT-4" },
+          governance_owner_id: "2",
+          risk_assessment: { description: "   " },
+        },
+      });
+      const res = createRes();
+      await startGovernance(req, res);
+      expect(mockCreateRisk).not.toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(201);
     });
 
@@ -844,6 +975,57 @@ describe("shadowAi.ctrl", () => {
     });
   });
 
+  describe("getSyslogStatus", () => {
+    const mockState = getSyslogListenerState as jest.MockedFunction<any>;
+    const mockConfig = readSyslogListenerConfig as jest.MockedFunction<any>;
+    beforeEach(() => {
+      mockConfig.mockReturnValue({
+        enabled: true,
+        port: 6514,
+        tlsCertFile: "/c.pem",
+        tlsKeyFile: "/k.pem",
+        allowPlaintext: false,
+        allowIpOnly: false,
+        multiTenancy: false,
+      });
+    });
+
+    it("reports a running listener", async () => {
+      mockState.mockReturnValue({ started: true, lastStartError: null });
+      const res = createRes();
+      await getSyslogStatus(createReq(), res);
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json.mock.calls[0][0].data).toEqual({
+        enabled: true,
+        port: 6514,
+        tls: true,
+        plaintext: false,
+        ipOnly: false,
+        running: true,
+        startError: null,
+      });
+    });
+
+    it("reports an enabled listener that failed to start, with the reason", async () => {
+      const startError = {
+        code: "EADDRINUSE",
+        message: "listen EADDRINUSE: address already in use",
+      };
+      mockState.mockReturnValue({ started: false, lastStartError: startError });
+      const res = createRes();
+      await getSyslogStatus(createReq(), res);
+      expect(res.json.mock.calls[0][0].data).toEqual(
+        expect.objectContaining({ enabled: true, running: false, startError }),
+      );
+    });
+
+    it("returns 403 for non-admin", async () => {
+      const res = createRes();
+      await getSyslogStatus(createReq({ role: "Editor" }), res);
+      expect(res.status).toHaveBeenCalledWith(403);
+    });
+  });
+
   describe("getSyslogConfigs", () => {
     it("should return 403 for non-admin", async () => {
       const req = createReq({ role: "Editor" });
@@ -889,8 +1071,8 @@ describe("shadowAi.ctrl", () => {
       expect(res.status).toHaveBeenCalledWith(403);
     });
 
-    it("should return 400 when required fields missing", async () => {
-      const req = createReq({ body: { source_identifier: "fw-01" } });
+    it("should return 400 when parser_type is missing", async () => {
+      const req = createReq({ body: { source_identifier: "10.0.0.5" } });
       const res = createRes();
       await createSyslogConfig(req, res);
       expect(res.status).toHaveBeenCalledWith(400);
@@ -905,16 +1087,45 @@ describe("shadowAi.ctrl", () => {
 
     it("should return 201 on success", async () => {
       mockCreateSyslogConfig.mockResolvedValue({
-        id: 1,
-        source_identifier: "fw-01",
-        parser_type: "zscaler",
+        config: { id: 1, source_identifier: "10.0.0.5", parser_type: "zscaler" },
+        key: "vwsl_1_key",
       });
       const req = createReq({
-        body: { source_identifier: "fw-01", parser_type: "zscaler", is_active: true },
+        body: { source_identifier: "10.0.0.5", parser_type: "zscaler", is_active: true },
       });
       const res = createRes();
       await createSyslogConfig(req, res);
       expect(mockCreateSyslogConfig).toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(201);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ id: 1, key: "vwsl_1_key" }),
+        }),
+      );
+    });
+
+    it("should store the sender IP normalised", async () => {
+      mockCreateSyslogConfig.mockResolvedValue({ config: { id: 1 }, key: "k" });
+      const req = createReq({
+        body: { source_identifier: "::ffff:10.0.0.9", parser_type: "squid" },
+      });
+      await createSyslogConfig(req, createRes());
+      expect(mockCreateSyslogConfig).toHaveBeenCalledWith(1, {
+        source_identifier: "10.0.0.9",
+        parser_type: "squid",
+        is_active: true,
+      });
+    });
+
+    it("should create a source without a sender IP", async () => {
+      mockCreateSyslogConfig.mockResolvedValue({ config: { id: 1 }, key: "k" });
+      const req = createReq({ body: { parser_type: "squid" } });
+      const res = createRes();
+      await createSyslogConfig(req, res);
+      expect(mockCreateSyslogConfig).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({ source_identifier: null }),
+      );
       expect(res.status).toHaveBeenCalledWith(201);
     });
 
@@ -954,21 +1165,31 @@ describe("shadowAi.ctrl", () => {
 
     it("should return 404 when config not found", async () => {
       mockUpdateSyslogConfig.mockResolvedValue(null);
-      const req = createReq({ params: { id: "1" }, body: { source_identifier: "fw-01" } });
+      const req = createReq({ params: { id: "1" }, body: { source_identifier: "10.0.0.5" } });
       const res = createRes();
       await updateSyslogConfig(req, res);
       expect(res.status).toHaveBeenCalledWith(404);
     });
 
     it("should return 200 on success", async () => {
-      mockUpdateSyslogConfig.mockResolvedValue({ id: 1, source_identifier: "fw-01-updated" });
-      const req = createReq({ params: { id: "1" }, body: { source_identifier: "fw-01-updated" } });
+      mockUpdateSyslogConfig.mockResolvedValue({ id: 1, source_identifier: "10.0.0.7" });
+      const req = createReq({
+        params: { id: "1" },
+        body: { source_identifier: " ::ffff:10.0.0.7 " },
+      });
       const res = createRes();
       await updateSyslogConfig(req, res);
       expect(mockUpdateSyslogConfig).toHaveBeenCalledWith(1, 1, {
-        source_identifier: "fw-01-updated",
+        source_identifier: "10.0.0.7",
       });
       expect(res.status).toHaveBeenCalledWith(200);
+    });
+
+    it("should clear the sender IP with an empty string", async () => {
+      mockUpdateSyslogConfig.mockResolvedValue({ id: 1, source_identifier: null });
+      const req = createReq({ params: { id: "1" }, body: { source_identifier: "" } });
+      await updateSyslogConfig(req, createRes());
+      expect(mockUpdateSyslogConfig).toHaveBeenCalledWith(1, 1, { source_identifier: null });
     });
 
     it("should return 500 on error", async () => {
@@ -978,6 +1199,62 @@ describe("shadowAi.ctrl", () => {
       await updateSyslogConfig(req, res);
       expect(res.status).toHaveBeenCalledWith(500);
     });
+  });
+
+  describe("source cache invalidation after a syslog config write", () => {
+    const config = { id: 1, parser_type: "zscaler", source_identifier: null, is_active: true };
+    const rlsTransaction = { afterCommit: jest.fn() };
+    const writes: [string, (req: any, res: any) => Promise<unknown>, () => void, any][] = [
+      [
+        "create",
+        createSyslogConfig,
+        () => mockCreateSyslogConfig.mockResolvedValue({ config, key: "vwsl_k" }),
+        { body: { parser_type: "zscaler" } },
+      ],
+      [
+        "update",
+        updateSyslogConfig,
+        () => mockUpdateSyslogConfig.mockResolvedValue(config),
+        { params: { id: "1" }, body: { is_active: false } },
+      ],
+      [
+        "delete",
+        deleteSyslogConfig,
+        () => mockDeleteSyslogConfig.mockResolvedValue(true),
+        { params: { id: "1" } },
+      ],
+      [
+        "regenerate",
+        regenerateSyslogKey,
+        () =>
+          (regenerateSyslogKeyQuery as jest.MockedFunction<any>).mockResolvedValue({
+            config,
+            key: "vwsl_k",
+          }),
+        { params: { id: "1" } },
+      ],
+    ];
+
+    it.each(writes)(
+      "%s waits for the request's RLS transaction to commit",
+      async (_name, handler, arrange, overrides) => {
+        arrange();
+        const res = createRes();
+        await handler(createReq({ ...overrides, rlsTransaction }), res);
+        expect(res.status.mock.calls[0][0]).toBeLessThan(400);
+        expect(invalidateSourceCacheAfterCommit).toHaveBeenCalledTimes(1);
+        expect(invalidateSourceCacheAfterCommit).toHaveBeenCalledWith(rlsTransaction);
+      },
+    );
+
+    it.each(writes)(
+      "%s invalidates at once without RLS enforcement",
+      async (_name, handler, arrange, overrides) => {
+        arrange();
+        await handler(createReq(overrides), createRes());
+        expect(invalidateSourceCacheAfterCommit).toHaveBeenCalledWith(undefined);
+      },
+    );
   });
 
   describe("deleteSyslogConfig", () => {

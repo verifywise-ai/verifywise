@@ -1,7 +1,7 @@
 openapi: 3.0.0
 info:
   title: 'VerifyWise API'
-  description: 'AI Governance Platform API'
+  description: "AI Governance Platform API.\n\n**Versioning (ADR 0001):** paths under `/v1/...` (relative to the `/api`\nserver — e.g. `/v1/shadow-ai/events` is served at `/api/v1/shadow-ai/events`)\nare the versioned API surface. All other paths are the legacy, unversioned\nsurface: backward-compatible, frozen for bug fixes only, and deprecated\nthrough the process in `docs/technical/adr/0001-api-versioning.md`. New\nendpoints and changed contracts are introduced under `/api/v1`.\n\n**Tags:** versioned operations are tagged `v1: <Resource>`; legacy\noperations keep their historical tags."
   version: 2.0.0
 servers:
   -
@@ -5701,6 +5701,21 @@ components:
         governance_owner_id:
           type: integer
           minimum: 1
+        risk_assessment:
+          type: object
+          nullable: true
+          description: 'When either field is set, a model risk named "Use of <tool>" is created on the new model inventory entry, owned by the governance owner and due in 90 days.'
+          properties:
+            data_sensitivity:
+              type: string
+              enum:
+                - High
+                - Medium
+                - Low
+              description: 'Sets the risk level. Without it the level is Medium.'
+            description:
+              type: string
+              maxLength: 5000
         start_lifecycle:
           type: boolean
           default: false
@@ -5711,6 +5726,10 @@ components:
           type: integer
         tool_id:
           type: integer
+        risk_entry_id:
+          type: integer
+          nullable: true
+          description: 'The model risk created from risk_assessment, or null.'
         lifecycle_initialized:
           type: boolean
     ShadowAiRule:
@@ -7789,6 +7808,8 @@ tags:
   -
     name: Extensions
   -
+    name: 'Extensions/Jira Incidents'
+  -
     name: FRIA
   -
     name: Files
@@ -7816,6 +7837,8 @@ tags:
     name: 'LLM Keys'
   -
     name: Mail
+  -
+    name: Mcp
   -
     name: 'Model Inventory'
   -
@@ -7890,6 +7913,26 @@ tags:
     name: Vendors
   -
     name: Webhooks
+  -
+    name: 'v1: Change History'
+  -
+    name: 'v1: Intake Forms'
+  -
+    name: 'v1: Shadow AI'
+  -
+    name: 'v1: Use Case Settings'
+  -
+    name: 'v1: V1/Ai App Lifecycle'
+  -
+    name: 'v1: V1/Ai Apps'
+  -
+    name: 'v1: V1/Dashboard'
+  -
+    name: 'v1: V1/Intake Form Review Time'
+  -
+    name: 'v1: V1/Lifecycle Settings'
+  -
+    name: 'v1: V1/Use Case Lifecycle'
 paths:
   /webhooks/github:
     post:
@@ -8232,10 +8275,59 @@ paths:
         '500':
           description: 'Internal server error'
       operationId: createNewUser
+  /users/invitations/accept:
+    post:
+      summary: 'Accept an invitation as an existing user'
+      description: "For an invited email that already has an account. The invitation link's token goes in the Authorization header (checked as for /users/register); the user's own email and password confirm the account. The account joins the inviting organization with the invited role, the invitation is marked accepted, and the user is logged in to that organization. The account itself is not changed. Rate-limited like /users/login.\n"
+      tags:
+        - Users
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+                - roleId
+                - organizationId
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: priya@example.com
+                password:
+                  type: string
+                  format: password
+                roleId:
+                  type: integer
+                  description: 'Must match the invitation'
+                  example: 3
+                organizationId:
+                  type: integer
+                  description: 'Must match the invitation'
+                  example: 4
+      responses:
+        '202':
+          description: 'Joined and logged in to the organization; the same body as a single-organization login'
+        '401':
+          description: 'Invalid email or password, or an invalid invitation link'
+        '403':
+          description: 'The invitation was revoked, changed, or sent to a different email'
+        '406':
+          description: 'The invitation link has expired'
+        '409':
+          description: 'Already a member of this organization, or a super admin (who cannot join an organization)'
+        '429':
+          description: 'Too many attempts'
+        '500':
+          description: 'Internal server error'
+      operationId: acceptInvitationAsExistingUser
   /users/login:
     post:
       summary: 'Authenticate user'
-      description: "Validates email/password credentials via bcrypt. Returns a JWT access token\nin the response body and sets a refresh token in an HTTP-only cookie.\nRate-limited to 5 requests per minute per IP.\n"
+      description: "Validates email/password credentials via bcrypt. A user with one organization (or a super admin with none) gets a JWT access token\nin the response body and a refresh token in an HTTP-only cookie.\nA user with several organizations gets no session yet: the response lists the organizations and a short-lived selectionToken for POST /users/login/select-organization.\nRate-limited to 5 requests per minute per IP.\n"
       tags:
         - Users
       requestBody:
@@ -8270,7 +8362,7 @@ paths:
                 type: object
                 properties:
                   message: {type: string, example: Accepted}
-                  data: {type: object, properties: {token: {type: string, description: 'JWT access token'}, isSuperAdmin: {type: boolean, description: 'Only present when user is super-admin (role_id=5)'}, onboarding_status: {type: string, description: 'Organization onboarding status (not present for super-admin)', example: completed}, is_org_creator: {type: boolean, description: 'Whether user is the first admin of the org (not present for super-admin)'}}}
+                  data: {type: object, properties: {token: {type: string, description: 'JWT access token (absent when requiresOrganizationSelection)'}, isSuperAdmin: {type: boolean, description: 'Whether the user has a super_admins row'}, onboarding_status: {type: string, description: 'Organization onboarding status (not present for a pure super-admin)', example: completed}, is_org_creator: {type: boolean, description: 'Whether user is the first admin of the org (not present for a pure super-admin)'}, requiresOrganizationSelection: {type: boolean, description: 'Present and true when the user belongs to several organizations'}, organizations: {type: array, description: 'The organizations to choose from', items: {type: object, properties: {id: {type: integer}, name: {type: string}, role_name: {type: string}}}}, selectionToken: {type: string, description: 'Exchange at POST /users/login/select-organization; valid for 5 minutes'}}}
         '401':
           description: 'Invalid email or password'
           content:
@@ -8282,6 +8374,42 @@ paths:
         '500':
           description: 'Internal server error'
       operationId: loginUser
+  /users/login/select-organization:
+    post:
+      summary: 'Choose the organization to log in to'
+      description: "Second login step for a user who belongs to several organizations. Exchanges the short-lived selectionToken returned by /users/login for a session in the chosen organization. The organization is fixed for the session. Rate-limited like /users/login.\n"
+      tags:
+        - Users
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - selectionToken
+                - organizationId
+              properties:
+                selectionToken:
+                  type: string
+                  description: 'From the /users/login response; valid for 5 minutes'
+                organizationId:
+                  type: integer
+                  example: 4
+      responses:
+        '202':
+          description: 'Logged in; the same body as a single-organization login, and the refresh token cookie'
+        '401':
+          description: 'Not a valid selection token'
+        '403':
+          description: 'The user is not a member of that organization'
+        '406':
+          description: 'The selection token has expired'
+        '429':
+          description: 'Too many attempts'
+        '500':
+          description: 'Internal server error'
+      operationId: selectLoginOrganization
   /users/login-microsoft:
     post:
       summary: 'Login User With Microsoft'
@@ -10805,7 +10933,7 @@ paths:
       tags:
         - Files
       summary: 'Get User Files Meta Data'
-      operationId: files_getAllFolders
+      operationId: getAllFolders
       security:
         -
           bearerAuth: []
@@ -10820,7 +10948,7 @@ paths:
       tags:
         - Files
       summary: 'Post File Content'
-      operationId: files_createFolder
+      operationId: createFolder
       security:
         -
           bearerAuth: []
@@ -10972,7 +11100,7 @@ paths:
       tags:
         - Files
       summary: 'Get File Content By Id'
-      operationId: files_getFolderById
+      operationId: getFolderById
       security:
         -
           bearerAuth: []
@@ -10997,7 +11125,7 @@ paths:
       tags:
         - Files
       summary: 'Update Folder'
-      operationId: files_updateFolder
+      operationId: updateFolder
       security:
         -
           bearerAuth: []
@@ -11024,7 +11152,7 @@ paths:
       tags:
         - Files
       summary: 'Delete Folder'
-      operationId: files_deleteFolder
+      operationId: deleteFolder
       security:
         -
           bearerAuth: []
@@ -13249,6 +13377,7 @@ paths:
       tags:
         - System
       summary: 'Get Logs'
+      description: 'Returns the last 500 lines of the caller''s organization server log for today. Admin only (requires the logs.admin permission; built-in roles: Admin).'
       operationId: getLogs
       security:
         -
@@ -13258,6 +13387,8 @@ paths:
           description: Success
         '401':
           description: Unauthorized
+        '403':
+          description: 'Forbidden: caller does not hold the logs.admin permission'
         '500':
           description: 'Internal server error'
   /modelInventory:
@@ -14673,6 +14804,140 @@ paths:
           description: 'The projectId'
           schema:
             type: integer
+  /extensions/jira-incidents/links:
+    get:
+      summary: 'Get Jira links for incidents'
+      description: 'Jira issue links for the given incident ids (incident_ids=1,2, at most 500). Open to any member; returns an empty list when the extension is disabled.'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Extensions/Jira Incidents'
+      operationId: getLinksCtrl
+      security:
+        -
+          bearerAuth: []
+  /extensions/jira-incidents/config:
+    get:
+      summary: 'Get Jira incidents settings'
+      description: 'Connection, mappings and readiness. Never returns the API token. Admin only.'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Extensions/Jira Incidents'
+      operationId: getConfigCtrl
+      security:
+        -
+          bearerAuth: []
+    put:
+      summary: 'Save Jira incidents settings'
+      description: 'Partial update of the connection, mappings and import defaults; checks the credentials with Jira. Admin only.'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Extensions/Jira Incidents'
+      operationId: putConfigCtrl
+      security:
+        -
+          bearerAuth: []
+  /extensions/jira-incidents/jira/projects:
+    get:
+      summary: 'List Jira projects'
+      description: 'Projects the saved service account can browse. Admin only.'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Extensions/Jira Incidents'
+      operationId: getProjectsCtrl
+      security:
+        -
+          bearerAuth: []
+  /extensions/jira-incidents/jira/issue-types:
+    get:
+      summary: 'List Jira issue types'
+      description: 'Issue types of a Jira project (project=<id>). Admin only.'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Extensions/Jira Incidents'
+      operationId: getIssueTypesCtrl
+      security:
+        -
+          bearerAuth: []
+  /extensions/jira-incidents/jira/statuses:
+    get:
+      summary: 'List Jira statuses'
+      description: 'Statuses for a project and issue type, with the default status mappings both ways. Admin only.'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Extensions/Jira Incidents'
+      operationId: getStatusesCtrl
+      security:
+        -
+          bearerAuth: []
+  /extensions/jira-incidents/jira/priorities:
+    get:
+      summary: 'List Jira priorities'
+      description: 'Jira priorities with the default priority-to-severity mapping. Admin only.'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Extensions/Jira Incidents'
+      operationId: getPrioritiesCtrl
+      security:
+        -
+          bearerAuth: []
+  /extensions/jira-incidents/jira/labels:
+    get:
+      summary: 'Search Jira labels'
+      description: 'Labels matching query, for the import filter. Admin only.'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Extensions/Jira Incidents'
+      operationId: getLabelsCtrl
+      security:
+        -
+          bearerAuth: []
+  /extensions/jira-incidents/events:
+    get:
+      summary: 'List Jira incidents sync activity'
+      description: 'Most recent sync events, newest first (limit 1-200, default 50). Admin only.'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Extensions/Jira Incidents'
+      operationId: getEventsCtrl
+      security:
+        -
+          bearerAuth: []
   /extensions/model-lifecycle/config:
     get:
       summary: 'List Config'
@@ -14958,10 +15223,14 @@ paths:
     post:
       summary: 'Attach File Ctrl'
       responses:
-        '200':
-          description: Success
+        '201':
+          description: 'File linked to the item'
+        '400':
+          description: 'fileId (body) or a path id is not a positive integer up to 2147483647'
         '403':
           description: 'Extension not enabled for this organization, or role not allowed'
+        '404':
+          description: 'File not found in this organization'
         '500':
           description: 'Internal server error'
       tags:
@@ -14991,9 +15260,13 @@ paths:
       summary: 'Detach File Ctrl'
       responses:
         '200':
-          description: Success
+          description: 'Link removed. The file itself is kept and stays in the File Manager.'
+        '400':
+          description: 'id, itemId or fileId is not a positive integer up to 2147483647'
         '403':
           description: 'Extension not enabled for this organization, or role not allowed'
+        '404':
+          description: 'The lifecycle item has no link to this file'
         '500':
           description: 'Internal server error'
       tags:
@@ -16452,6 +16725,7 @@ paths:
       tags:
         - Reporting
       summary: 'Delete Generated Report By Id'
+      description: 'Admin only. Deletes a generated report file; any other file id answers 404.'
       operationId: deleteGeneratedReportById
       security:
         -
@@ -16466,8 +16740,14 @@ paths:
       responses:
         '200':
           description: 'Deleted successfully'
+        '400':
+          description: 'id is not a positive integer up to 2147483647'
         '401':
           description: Unauthorized
+        '403':
+          description: 'Role not allowed to delete reports'
+        '404':
+          description: 'No generated report with this id in the organization'
         '500':
           description: 'Internal server error'
   /dashboard:
@@ -22557,7 +22837,7 @@ paths:
       tags:
         - Files
       summary: 'Get All Folders'
-      operationId: getAllFolders
+      operationId: virtual_folders_getAllFolders
       security:
         -
           bearerAuth: []
@@ -22572,7 +22852,7 @@ paths:
       tags:
         - Files
       summary: 'Create Folder'
-      operationId: createFolder
+      operationId: virtual_folders_createFolder
       security:
         -
           bearerAuth: []
@@ -22625,7 +22905,7 @@ paths:
       tags:
         - Files
       summary: 'Get Folder By Id'
-      operationId: getFolderById
+      operationId: virtual_folders_getFolderById
       security:
         -
           bearerAuth: []
@@ -22647,7 +22927,7 @@ paths:
       tags:
         - Files
       summary: 'Update Folder'
-      operationId: updateFolder
+      operationId: virtual_folders_updateFolder
       security:
         -
           bearerAuth: []
@@ -22674,7 +22954,7 @@ paths:
       tags:
         - Files
       summary: 'Delete Folder'
-      operationId: deleteFolder
+      operationId: virtual_folders_deleteFolder
       security:
         -
           bearerAuth: []
@@ -23238,6 +23518,8 @@ paths:
           description: 'Created successfully'
         '401':
           description: Unauthorized
+        '409':
+          description: 'The tool is already under governance'
         '500':
           description: 'Internal server error'
   /shadow-ai/rules:
@@ -23467,7 +23749,7 @@ paths:
   /v1/shadow-ai/events:
     post:
       tags:
-        - 'Shadow AI'
+        - 'v1: Shadow AI'
       summary: 'Ingest Events'
       operationId: ingestEvents
       requestBody:
@@ -23799,6 +24081,34 @@ paths:
         '500':
           description: 'Internal server error'
       description: 'Requires role: Admin'
+  '/agent-primitives/{id}/link-use-case':
+    patch:
+      summary: 'Link Use Case To Agent'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Agent Discovery'
+      operationId: linkUseCaseToAgent
+      security:
+        -
+          bearerAuth: []
+  '/agent-primitives/{id}/unlink-use-case':
+    patch:
+      summary: 'Unlink Use Case From Agent'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Agent Discovery'
+      operationId: unlinkUseCaseFromAgent
+      security:
+        -
+          bearerAuth: []
   '/agent-primitives/{id}/audit-logs':
     get:
       tags:
@@ -23842,6 +24152,7 @@ paths:
       tags:
         - 'Intake Forms'
       summary: 'Create Intake Form'
+      description: 'The optional routing block turns on review routing for the form. Form responses carry the saved routing block.'
       operationId: createIntakeForm
       security:
         -
@@ -23851,9 +24162,18 @@ paths:
           application/json:
             schema:
               type: object
+              properties:
+                routing:
+                  type: object
+                  nullable: true
+                  description: 'Review routing settings. Omit to leave unchanged, null to clear.'
+                  required: [enabled]
+                  properties: {enabled: {type: boolean}, seniorReviewerIds: {type: array, items: {type: integer}, description: 'User ids who can edit intake forms. At least one is required when enabled.'}, standardReviewerIds: {type: array, items: {type: integer}, description: 'User ids who can edit intake forms. At least one is required when enabled.'}, threshold: {type: integer, minimum: 1, maximum: 99, default: 50}, closeCallMargin: {type: integer, minimum: 0, maximum: 25, default: 10}, secondReviewRate: {type: integer, minimum: 0, maximum: 100, default: 10, description: 'Percent of standard-lane approvals by non-senior reviewers picked for a second review'}}
       responses:
         '201':
           description: 'Created successfully'
+        '400':
+          description: 'Invalid routing settings, or a reviewer who cannot review intake submissions'
         '401':
           description: Unauthorized
         '500':
@@ -23885,6 +24205,7 @@ paths:
       tags:
         - 'Intake Forms'
       summary: 'Update Intake Form'
+      description: 'Saving a routing block routes the form''s pending submissions again. Form responses carry the saved routing block.'
       operationId: updateIntakeForm
       security:
         -
@@ -23901,9 +24222,16 @@ paths:
           application/json:
             schema:
               type: object
+              properties:
+                routing:
+                  type: object
+                  nullable: true
+                  description: 'Review routing settings. Omit to leave unchanged, null to clear. Same fields as on create: enabled (required), seniorReviewerIds, standardReviewerIds, threshold (1 to 99, default 50), closeCallMargin (0 to 25, default 10), secondReviewRate (0 to 100, default 10).'
       responses:
         '200':
           description: Success
+        '400':
+          description: 'Invalid routing settings, or a reviewer who cannot review intake submissions'
         '401':
           description: Unauthorized
         '500':
@@ -23981,6 +24309,25 @@ paths:
           description: Unauthorized
         '500':
           description: 'Internal server error'
+  /intake/routing/eligible-reviewers:
+    get:
+      summary: 'Get Eligible Reviewers'
+      description: 'Users of the organization whose role can edit intake forms, as id, name, surname and email. Used to fill the reviewer pickers in the routing settings.'
+      responses:
+        '200':
+          description: Success
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Intake Forms'
+      operationId: getEligibleReviewers
+      security:
+        -
+          bearerAuth: []
   /intake/forms/suggested-questions:
     post:
       tags:
@@ -24023,11 +24370,54 @@ paths:
           description: Unauthorized
         '500':
           description: 'Internal server error'
+  /intake/oversight:
+    get:
+      summary: 'Get Intake Oversight'
+      description: 'Routing and review figures for the last 4, 8 or 12 weeks (weeks start Monday, UTC): totals by lane, weekly buckets, median hours to decision, redlines, second reviews, per-reviewer decisions, band kept, suggested risks accepted and up to 20 needs-attention rows. An empty period returns zero counts and null medians.'
+      parameters:
+        -
+          name: weeks
+          in: query
+          required: false
+          schema:
+            type: integer
+            enum:
+              - 4
+              - 8
+              - 12
+            default: 8
+        -
+          name: formId
+          in: query
+          required: false
+          description: 'Limit the figures to one form of the organization'
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: 'weeks is not 4, 8 or 12, or formId is invalid'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: 'Form not found in this organization'
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Intake Forms'
+      operationId: getIntakeOversight
+      security:
+        -
+          bearerAuth: []
   /intake/submissions:
     get:
       tags:
         - 'Intake Forms'
       summary: 'Get Pending Submissions'
+      description: 'Each row also carries routing (lane, reason, score, threshold, closeCallMargin, routedAt, and escalation or secondReview when set), routingEnabled and laneReviewerIds (user ids who can decide the stored lane).'
       operationId: getPendingSubmissions
       security:
         -
@@ -24112,6 +24502,7 @@ paths:
       tags:
         - 'Intake Forms'
       summary: 'Get Submission Preview'
+      description: 'Also returns routing, routingEnabled, canDecide, decideBlockedReason, laneReviewers (id and name of the users who can decide) and isSeniorReviewer for the caller.'
       operationId: getSubmissionPreview
       security:
         -
@@ -24154,8 +24545,145 @@ paths:
       responses:
         '200':
           description: Success
+        '400':
+          description: 'Invalid band, or a band below the rule minimum (AI-scored submissions)'
         '401':
           description: Unauthorized
+        '500':
+          description: 'Internal server error'
+  '/intake/submissions/{id}/assessment/retry':
+    post:
+      tags:
+        - 'Intake Forms'
+      summary: 'Retry Failed Or Stalled Assessment Stages'
+      description: 'Queues the scoring and/or suggested-risk stages that failed or have been pending for over 10 minutes. Finished stages are never re-run. Pending submissions only.'
+      operationId: retrySubmissionAssessment
+      security:
+        -
+          bearerAuth: []
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '202':
+          description: 'Queued; body lists the stages'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: 'Submission not found'
+        '409':
+          description: 'Submission not pending, or nothing to retry'
+        '500':
+          description: 'Internal server error'
+  '/intake/submissions/{id}/suggested-risks/accept-all':
+    post:
+      tags:
+        - 'Intake Forms'
+      summary: 'Accept All Suggested Risks'
+      description: 'Moves every suggested risk still in "suggested" to "accepted". Dismissed ones stay dismissed; ones without a mitigation plan are skipped. Returns { accepted, skipped }.'
+      operationId: acceptAllSuggestedRisks
+      security:
+        -
+          bearerAuth: []
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Success
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: 'Submission not found'
+        '409':
+          description: 'Submission not pending'
+        '500':
+          description: 'Internal server error'
+  '/intake/submissions/{id}/suggested-risks/{suggestionId}':
+    patch:
+      tags:
+        - 'Intake Forms'
+      summary: 'Update A Suggested Risk'
+      description: 'Edits, accepts, dismisses or restores one suggested risk on a pending submission. Accepting requires a mitigation plan.'
+      operationId: updateSuggestedRisk
+      security:
+        -
+          bearerAuth: []
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        -
+          name: suggestionId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                state:
+                  type: string
+                  enum: [suggested, accepted, dismissed]
+                name:
+                  type: string
+                  maxLength: 200
+                description:
+                  type: string
+                  maxLength: 1000
+                likelihood:
+                  type: string
+                  enum: [Rare, Unlikely, Possible, Likely, 'Almost Certain']
+                severity:
+                  type: string
+                  enum: [Negligible, Minor, Moderate, Major, Catastrophic]
+                mitigationPlan:
+                  type: string
+                  maxLength: 1000
+                implementationStrategy:
+                  type: string
+                  maxLength: 1000
+                deadline:
+                  type: string
+                  format: date
+                  nullable: true
+                modelRiskCategory:
+                  type: string
+                  enum: [Performance, 'Bias & Fairness', Security, 'Data Quality', Compliance]
+                modelRiskLevel:
+                  type: string
+                  enum: [Low, Medium, High, Critical]
+      responses:
+        '200':
+          description: 'The updated suggestion'
+        '400':
+          description: 'Invalid field, nothing to update, or accepting without a mitigation plan'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: 'Submission or suggestion not found'
+        '409':
+          description: 'Submission not pending'
         '500':
           description: 'Internal server error'
   '/intake/forms/{id}/submissions':
@@ -24186,6 +24714,7 @@ paths:
       tags:
         - 'Intake Forms'
       summary: 'Approve Submission'
+      description: 'With routing on, only a reviewer of the lane the approval would make true, or an Admin, can approve (403 otherwise). A standard-lane approval by a non-senior reviewer may be picked for a second review.'
       operationId: approveSubmission
       security:
         -
@@ -24207,6 +24736,8 @@ paths:
           description: 'Created successfully'
         '401':
           description: Unauthorized
+        '403':
+          description: 'Routing is on and the caller may not decide this lane'
         '500':
           description: 'Internal server error'
   '/intake/submissions/{id}/reject':
@@ -24214,6 +24745,7 @@ paths:
       tags:
         - 'Intake Forms'
       summary: 'Reject Submission'
+      description: 'With routing on, only a reviewer of the stored lane, or an Admin, can reject (403 otherwise).'
       operationId: rejectSubmission
       security:
         -
@@ -24235,8 +24767,148 @@ paths:
           description: 'Created successfully'
         '401':
           description: Unauthorized
+        '403':
+          description: 'Routing is on and the caller may not decide this lane'
         '500':
           description: 'Internal server error'
+  '/intake/submissions/{id}/escalate':
+    post:
+      summary: 'Send Submission To Senior Review'
+      description: 'Moves a pending standard-lane submission to the senior lane with reason escalated. Re-routing leaves it there. Allowed for an Admin or a reviewer listed on the form. Returns the new routing.'
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - reason
+              properties:
+                reason:
+                  type: string
+                  minLength: 1
+                  maxLength: 1000
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: 'Invalid id, or the reason is missing or longer than 1000 characters'
+        '401':
+          description: Unauthorized
+        '403':
+          description: 'Caller is not an Admin or a reviewer of the form'
+        '404':
+          description: 'Submission or form not found'
+        '409':
+          description: 'Not pending, routing is off, not in the standard lane, or the submission changed'
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Intake Forms'
+      operationId: escalateSubmission
+      security:
+        -
+          bearerAuth: []
+  '/intake/submissions/{id}/second-review':
+    post:
+      summary: 'Record Second Review'
+      description: 'Closes an open second review as agreed or missed. Allowed for a senior reviewer of the form or an Admin, never for the person who approved the submission. Does not change the approval or the entity it created. Returns the new routing.'
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - outcome
+              properties:
+                outcome:
+                  type: string
+                  enum: [agreed, missed]
+                note:
+                  type: string
+                  maxLength: 2000
+                  description: 'Required when the outcome is missed'
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: 'Invalid id or outcome, a missed outcome without a note, or a note over 2000 characters'
+        '401':
+          description: Unauthorized
+        '403':
+          description: 'Caller is not a senior reviewer of the form or an Admin, or approved the submission'
+        '404':
+          description: 'Submission not found'
+        '409':
+          description: 'The second review is not open, or it changed'
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Intake Forms'
+      operationId: recordSecondReview
+      security:
+        -
+          bearerAuth: []
+  '/intake/submissions/{id}/second-review/resolve':
+    post:
+      summary: 'Resolve Missed Second Review'
+      description: 'Closes a missed second review once the follow-up is done. Same caller rules as recording a second review. Returns the new routing.'
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - note
+              properties:
+                note:
+                  type: string
+                  minLength: 1
+                  maxLength: 2000
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: 'Invalid id, or the note is missing or longer than 2000 characters'
+        '401':
+          description: Unauthorized
+        '403':
+          description: 'Caller is not a senior reviewer of the form or an Admin, or approved the submission'
+        '404':
+          description: 'Submission not found'
+        '409':
+          description: 'The review is not missed, is already resolved, or changed'
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Intake Forms'
+      operationId: resolveSecondReviewMiss
+      security:
+        -
+          bearerAuth: []
   /intake/public/captcha:
     get:
       tags:
@@ -24248,6 +24920,208 @@ paths:
           description: Success
         '500':
           description: 'Internal server error'
+  '/intake/public/by-id/{publicId}/live-checks':
+    post:
+      tags:
+        - 'Intake Forms'
+      summary: 'Post Public Live Checks'
+      description: 'Runs AI checks for vague and conflicting answers on a public intake form. Unauthenticated; rate-limited per visitor and per form. Returns aiAvailable false when live checks are off or the form has no usable LLM key.'
+      operationId: postPublicLiveChecks
+      parameters:
+        -
+          name: publicId
+          in: path
+          required: true
+          description: 'Public form id (hex)'
+          schema:
+            type: string
+            pattern: '^[0-9a-f]+$'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+              properties:
+                data:
+                  type: object
+                  description: 'Current answers keyed by question id'
+                language:
+                  type: string
+                  description: 'Language for hint text (en, de, fr, es)'
+      responses:
+        '200':
+          description: 'data is { aiAvailable, hints, error? }. A failed model call is still a 200 with hints [] and error "unavailable".'
+        '400':
+          description: 'data is not an object'
+        '404':
+          description: 'Form not found or not active'
+        '413':
+          description: 'Request body over 10 MB'
+        '429':
+          description: 'Rate limit or form budget reached; see the Retry-After header'
+        '500':
+          description: 'Internal server error'
+  '/intake/public/by-id/{publicId}/prefill':
+    post:
+      tags:
+        - 'Intake Forms'
+      summary: 'Post Public Prefill'
+      description: 'Suggests answers for empty questions from an uploaded vendor document (PDF or Word .docx). The file is not stored. Unauthenticated; rate-limited per visitor and per form.'
+      operationId: postPublicPrefill
+      parameters:
+        -
+          name: publicId
+          in: path
+          required: true
+          description: 'Public form id (hex)'
+          schema:
+            type: string
+            pattern: '^[0-9a-f]+$'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                data:
+                  type: string
+                  description: 'Current answers as a JSON object string'
+                language:
+                  type: string
+                  description: 'Language for suggestions (en, de, fr, es)'
+      responses:
+        '200':
+          description: 'data is { fileName, suggestions }'
+        '400':
+          description: 'Missing file, invalid data, or an unreadable multipart body (extra fields or files)'
+        '404':
+          description: 'Form not found or prefill unavailable'
+        '413':
+          description: 'File too large'
+        '415':
+          description: 'Not a PDF or .docx file (extension, MIME type and content must match)'
+        '422':
+          description: 'File could not be read'
+        '429':
+          description: 'Rate limit or form budget reached; see the Retry-After header'
+        '500':
+          description: 'Internal server error'
+        '502':
+          description: 'Model call failed'
+  '/intake/public/{tenantSlug}/{formSlug}/live-checks':
+    post:
+      tags:
+        - 'Intake Forms'
+      summary: 'Post Public Live Checks'
+      description: 'Legacy slug URL for the live checks endpoint. Same behaviour as /intake/public/by-id/{publicId}/live-checks.'
+      operationId: intake_postPublicLiveChecks
+      parameters:
+        -
+          name: tenantSlug
+          in: path
+          required: true
+          schema:
+            type: string
+        -
+          name: formSlug
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+              properties:
+                data:
+                  type: object
+                  description: 'Current answers keyed by question id'
+                language:
+                  type: string
+                  description: 'Language for hint text (en, de, fr, es)'
+      responses:
+        '200':
+          description: 'data is { aiAvailable, hints, error? }. A failed model call is still a 200 with hints [] and error "unavailable".'
+        '400':
+          description: 'data is not an object'
+        '404':
+          description: 'Form not found or not active'
+        '413':
+          description: 'Request body over 10 MB'
+        '429':
+          description: 'Rate limit or form budget reached; see the Retry-After header'
+        '500':
+          description: 'Internal server error'
+  '/intake/public/{tenantSlug}/{formSlug}/prefill':
+    post:
+      tags:
+        - 'Intake Forms'
+      summary: 'Post Public Prefill'
+      description: 'Legacy slug URL for the prefill endpoint. Same behaviour as /intake/public/by-id/{publicId}/prefill.'
+      operationId: intake_postPublicPrefill
+      parameters:
+        -
+          name: tenantSlug
+          in: path
+          required: true
+          schema:
+            type: string
+        -
+          name: formSlug
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                data:
+                  type: string
+                  description: 'Current answers as a JSON object string'
+                language:
+                  type: string
+                  description: 'Language for suggestions (en, de, fr, es)'
+      responses:
+        '200':
+          description: 'data is { fileName, suggestions }'
+        '400':
+          description: 'Missing file, invalid data, or an unreadable multipart body (extra fields or files)'
+        '404':
+          description: 'Form not found or prefill unavailable'
+        '413':
+          description: 'File too large'
+        '415':
+          description: 'Not a PDF or .docx file (extension, MIME type and content must match)'
+        '422':
+          description: 'File could not be read'
+        '429':
+          description: 'Rate limit or form budget reached; see the Retry-After header'
+        '500':
+          description: 'Internal server error'
+        '502':
+          description: 'Model call failed'
   '/intake/public/by-id/{publicId}':
     get:
       tags:
@@ -26116,12 +26990,78 @@ paths:
           description: 'Forbidden - insufficient role'
         '500':
           description: 'Internal server error'
+  '/super-admin/organizations/{id}/users/{userId}':
+    delete:
+      summary: 'Remove a user from an organization'
+      description: 'Removes the user''s membership of this organization. The account is deleted only when this was the user''s last organization; a member of other organizations keeps it. Requires role: Super Admin'
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: 'Organization ID'
+        -
+          name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: 'User ID'
+      responses:
+        '200':
+          description: 'Removed; accountDeleted says whether the account was deleted too'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: {type: string, example: OK}
+                  data: {type: object, properties: {removed: {type: boolean}, userId: {type: integer}, accountDeleted: {type: boolean}}}
+        '400':
+          description: 'Invalid organization or user ID'
+        '404':
+          description: 'The user is not a member of this organization'
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Super Admin'
+      operationId: removeOrgUser
+      security:
+        -
+          bearerAuth: []
   '/super-admin/users/{id}':
     patch:
       summary: 'Update User'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                surname:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                roleId:
+                  type: integer
+                  description: 'The role in organizationId'
+                organizationId:
+                  type: integer
+                  description: 'Required with roleId: a role is per organization'
       responses:
         '200':
-          description: Success
+          description: 'The user, with every organization they belong to and their role in each'
+        '400':
+          description: 'Unknown role, or no fields to update'
+        '403':
+          description: 'A pure super admin, who has no organization role'
+        '404':
+          description: 'No such user, or not a member of organizationId'
         '500':
           description: 'Internal server error'
       tags:
@@ -26200,50 +27140,6 @@ paths:
         -
           bearerAuth: []
       description: 'Requires role: Super Admin'
-  /super-admin/mcp-server:
-    get:
-      summary: 'Get Mcp Server'
-      responses:
-        '200':
-          description: Success
-        '500':
-          description: 'Internal server error'
-      tags:
-        - 'Super Admin'
-      operationId: getMcpServer
-      security:
-        -
-          bearerAuth: []
-      description: 'Requires role: Super Admin'
-    delete:
-      summary: 'Uninstall Mcp Server Handler'
-      responses:
-        '200':
-          description: Success
-        '500':
-          description: 'Internal server error'
-      tags:
-        - 'Super Admin'
-      operationId: uninstallMcpServerHandler
-      security:
-        -
-          bearerAuth: []
-      description: 'Requires role: Super Admin'
-  /super-admin/mcp-server/install:
-    post:
-      summary: 'Install Mcp Server Handler'
-      responses:
-        '200':
-          description: Success
-        '500':
-          description: 'Internal server error'
-      tags:
-        - 'Super Admin'
-      operationId: installMcpServerHandler
-      security:
-        -
-          bearerAuth: []
-      description: 'Requires role: Super Admin'
   /super-admin/super-admins:
     get:
       summary: 'List Super Admins'
@@ -26288,6 +27184,45 @@ paths:
         -
           bearerAuth: []
       description: 'Requires role: Super Admin'
+  /mcp:
+    post:
+      summary: 'MCP JSON-RPC request'
+      responses:
+        '200':
+          description: 'JSON-RPC response'
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Mcp
+      operationId: handleMcpRequest
+      security:
+        -
+          bearerAuth: []
+      description: 'Stateless MCP endpoint for the super admin tools. Send a JSON-RPC message in the body; the reply is plain JSON, not an SSE stream. Requires role: Super Admin'
+    get:
+      summary: 'Rejected (use POST)'
+      responses:
+        '405':
+          description: 'Method not allowed: this server has no event stream, use POST'
+      tags:
+        - Mcp
+      operationId: rejectMcpGet
+      security:
+        -
+          bearerAuth: []
+      description: 'Always returns 405. Requires role: Super Admin'
+    delete:
+      summary: 'Rejected (stateless server)'
+      responses:
+        '405':
+          description: 'Method not allowed: there is no session to end'
+      tags:
+        - Mcp
+      operationId: rejectMcpDelete
+      security:
+        -
+          bearerAuth: []
+      description: 'Always returns 405. Requires role: Super Admin'
   /internal/ai-gateway/notify:
     post:
       tags:
@@ -26561,3 +27496,500 @@ paths:
       tags:
         - System
       operationId: healthCheck
+  '/v1/evidence-hub-change-history/{id}':
+    get:
+      summary: 'Get Evidence Hub Change History By Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Change History'
+      operationId: getEvidenceHubChangeHistoryById
+      security:
+        -
+          bearerAuth: []
+  '/v1/model-lifecycle-change-history/{id}':
+    get:
+      summary: 'Get Model Lifecycle Change History By Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Change History'
+      operationId: getModelLifecycleChangeHistoryById
+      security:
+        -
+          bearerAuth: []
+  '/v1/control-eu-change-history/{id}':
+    get:
+      summary: 'Get Control E U Change History By Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Change History'
+      operationId: getControlEUChangeHistoryById
+      security:
+        -
+          bearerAuth: []
+  '/v1/subcontrol-eu-change-history/{id}':
+    get:
+      summary: 'Get Subcontrol E U Change History By Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Change History'
+      operationId: getSubcontrolEUChangeHistoryById
+      security:
+        -
+          bearerAuth: []
+  '/v1/annex-category-change-history/{id}':
+    get:
+      summary: 'Get Annex Category Change History By Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Change History'
+      operationId: getAnnexCategoryChangeHistoryById
+      security:
+        -
+          bearerAuth: []
+  /v1/use-case-lifecycle/summary:
+    get:
+      summary: 'Get Lifecycle Summary Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Use Case Lifecycle'
+      operationId: getLifecycleSummaryHandler
+      security:
+        -
+          bearerAuth: []
+  /v1/use-case-lifecycle/dashboard:
+    get:
+      summary: 'Get Lifecycle Dashboard Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Use Case Lifecycle'
+      operationId: getLifecycleDashboardHandler
+      security:
+        -
+          bearerAuth: []
+  '/v1/use-case-lifecycle/{id}/go-live':
+    post:
+      summary: 'Go Live Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Use Case Lifecycle'
+      operationId: goLiveHandler
+      security:
+        -
+          bearerAuth: []
+  '/v1/use-case-lifecycle/{id}/retire':
+    post:
+      summary: 'Retire Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Use Case Lifecycle'
+      operationId: retireHandler
+      security:
+        -
+          bearerAuth: []
+  '/v1/use-case-lifecycle/{id}/confirm':
+    post:
+      summary: 'Confirm Still Live Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Use Case Lifecycle'
+      operationId: confirmStillLiveHandler
+      security:
+        -
+          bearerAuth: []
+  '/v1/use-case-lifecycle/{id}/department':
+    patch:
+      summary: 'Update Department Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Use Case Lifecycle'
+      operationId: updateDepartmentHandler
+      security:
+        -
+          bearerAuth: []
+  /v1/lifecycle-settings:
+    get:
+      summary: 'Get Lifecycle Settings Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Lifecycle Settings'
+      operationId: getLifecycleSettingsHandler
+      security:
+        -
+          bearerAuth: []
+    patch:
+      summary: 'Update Lifecycle Settings Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Lifecycle Settings'
+      operationId: updateLifecycleSettingsHandler
+      security:
+        -
+          bearerAuth: []
+  /v1/ai-apps:
+    get:
+      summary: 'Get All Ai Apps V1'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai Apps'
+      operationId: getAllAiAppsV1
+      security:
+        -
+          bearerAuth: []
+  /v1/ai-app-lifecycle/summary:
+    get:
+      summary: 'Get Ai App Lifecycle Summary Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai App Lifecycle'
+      operationId: getAiAppLifecycleSummaryHandler
+      security:
+        -
+          bearerAuth: []
+  '/v1/ai-app-lifecycle/{id}':
+    get:
+      summary: 'Get Ai App Lifecycle Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai App Lifecycle'
+      operationId: getAiAppLifecycleHandler
+      security:
+        -
+          bearerAuth: []
+  '/v1/ai-app-lifecycle/{id}/history':
+    get:
+      summary: 'Get Ai App History Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai App Lifecycle'
+      operationId: getAiAppHistoryHandler
+      security:
+        -
+          bearerAuth: []
+  '/v1/ai-app-lifecycle/{id}/go-live':
+    post:
+      summary: 'Ai App Go Live Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai App Lifecycle'
+      operationId: aiAppGoLiveHandler
+      security:
+        -
+          bearerAuth: []
+  '/v1/ai-app-lifecycle/{id}/retire':
+    post:
+      summary: 'Ai App Retire Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai App Lifecycle'
+      operationId: aiAppRetireHandler
+      security:
+        -
+          bearerAuth: []
+  '/v1/ai-app-lifecycle/{id}/confirm':
+    post:
+      summary: 'Ai App Confirm Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai App Lifecycle'
+      operationId: aiAppConfirmHandler
+      security:
+        -
+          bearerAuth: []
+  /v1/use-case-lifecycle/intake-submissions:
+    get:
+      summary: 'Get Pending Submissions Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Use Case Lifecycle'
+      operationId: getPendingSubmissionsHandler
+      security:
+        -
+          bearerAuth: []
+  /v1/ai-app-lifecycle/intake-submissions:
+    get:
+      summary: 'Get Pending Ai App Submissions Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai App Lifecycle'
+      operationId: getPendingAiAppSubmissionsHandler
+      security:
+        -
+          bearerAuth: []
+  /v1/use-case-org-settings:
+    get:
+      summary: 'Get Use Case Org Settings Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Use Case Settings'
+      operationId: getUseCaseOrgSettingsHandler
+      security:
+        -
+          bearerAuth: []
+    put:
+      summary: 'Update Use Case Org Settings Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Use Case Settings'
+      operationId: updateUseCaseOrgSettingsHandler
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin'
+  '/v1/intake-tier-suggestion/public/by-id/{publicId}':
+    post:
+      summary: 'Post Public Tier Suggestion'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Intake Forms'
+      operationId: postPublicTierSuggestion
+  '/v1/intake-tier-suggestion/public/by-id/{publicId}/explain':
+    post:
+      summary: 'Post Public Tier Explanation'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Intake Forms'
+      operationId: postPublicTierExplanation
+  '/v1/intake-tier-suggestion/public/by-id/{publicId}/submit':
+    post:
+      summary: 'Submit Public Form By Public Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Intake Forms'
+      operationId: v1_intake_tier_suggestion_submitPublicFormByPublicId
+  '/v1/intake-tier-suggestion/public/{tenantSlug}/{formSlug}':
+    post:
+      summary: 'Post Public Tier Suggestion'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Intake Forms'
+      operationId: v1_intake_tier_suggestion_postPublicTierSuggestion
+  '/v1/intake-tier-suggestion/public/{tenantSlug}/{formSlug}/explain':
+    post:
+      summary: 'Post Public Tier Explanation'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Intake Forms'
+      operationId: v1_intake_tier_suggestion_postPublicTierExplanation
+  '/v1/intake-tier-suggestion/public/{tenantSlug}/{formSlug}/submit':
+    post:
+      summary: 'Submit Public Form'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Intake Forms'
+      operationId: v1_intake_tier_suggestion_submitPublicForm
+  '/v1/intake-tier-suggestion/submissions/{id}':
+    get:
+      summary: 'Get Submission Tier Suggestion Response'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Intake Forms'
+      operationId: getSubmissionTierSuggestionResponse
+      security:
+        -
+          bearerAuth: []
+  '/v1/intake-form-review-time/{formId}':
+    get:
+      summary: 'Get Intake Form Review Time'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Intake Form Review Time'
+      operationId: getIntakeFormReviewTime
+      security:
+        -
+          bearerAuth: []
+    put:
+      summary: 'Update Intake Form Review Time'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Intake Form Review Time'
+      operationId: updateIntakeFormReviewTime
+      security:
+        -
+          bearerAuth: []
+  /v1/shadow-ai-syslog/status:
+    get:
+      summary: 'Get Syslog Status'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Shadow AI'
+      operationId: getSyslogStatus
+      security:
+        -
+          bearerAuth: []
+  '/v1/shadow-ai-syslog/sources/{id}/regenerate-key':
+    post:
+      summary: 'Regenerate Syslog Key'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Shadow AI'
+      operationId: regenerateSyslogKey
+      security:
+        -
+          bearerAuth: []
+  /v1/dashboard/preferences:
+    get:
+      summary: 'Get Dashboard Preferences Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Dashboard'
+      operationId: getDashboardPreferencesHandler
+      security:
+        -
+          bearerAuth: []
+    put:
+      summary: 'Update Dashboard Preferences Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Dashboard'
+      operationId: updateDashboardPreferencesHandler
+      security:
+        -
+          bearerAuth: []

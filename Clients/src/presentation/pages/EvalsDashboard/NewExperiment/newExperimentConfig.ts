@@ -33,6 +33,29 @@ export const MODEL_PROVIDERS_WITHOUT_API_KEY = ["ollama", "local"] as const;
  */
 export const SCORER_PROVIDERS_WITHOUT_API_KEY = ["self-hosted", "ollama"] as const;
 
+/** Key field hint when the provider refused the saved key. Also in i18n/translations.ts. */
+export const REJECTED_SAVED_KEY_HINT =
+  "The provider rejected the saved API key. Enter a working key. It is saved as a new key, and an Admin can remove the old one in AI Gateway settings.";
+
+/** Hint under an API key field: why it is back when the saved key was refused. */
+export const apiKeyHelperText = (savedKeyRejected: boolean): string =>
+  savedKeyRejected
+    ? REJECTED_SAVED_KEY_HINT
+    : "Your key will be saved securely for future experiments";
+
+/**
+ * Title of the pre-run warning. A failed live check names what was refused, so the user
+ * fixes the key or picks another model. Titles are also in i18n/translations.ts.
+ */
+export const validationAlertTitle = (probeFailed?: boolean, probeErrorCode?: string | null) => {
+  if (!probeFailed) return "API key may not be configured";
+  if (probeErrorCode === "model_not_found") return "The provider refused this model";
+  if (probeErrorCode === "invalid_api_key" || probeErrorCode === "permission_denied") {
+    return "The provider refused the saved API key";
+  }
+  return "The provider refused this request";
+};
+
 export type TaskType = "chatbot" | "rag" | "agent";
 
 export type DatasetTurnType = "single-turn" | "multi-turn" | "simulated";

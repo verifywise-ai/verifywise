@@ -6,6 +6,7 @@ jest.mock("../../utils/project.utils", () => ({
   getProjectByIdQuery: jest.fn(),
   createNewProjectQuery: jest.fn(),
   updateProjectByIdQuery: jest.fn(),
+  canViewProjectQuery: jest.fn(),
   deleteProjectByIdQuery: jest.fn(),
   lockProjectForDelete: jest.fn(),
   getCurrentProjectMembers: jest.fn(),
@@ -414,6 +415,22 @@ describe("project.ctrl", () => {
   });
 
   describe("updateProjectById", () => {
+    const mockCanView = jest.requireMock<any>("../../utils/project.utils").canViewProjectQuery;
+
+    beforeEach(() => {
+      mockCanView.mockResolvedValue(true);
+    });
+
+    it("returns 403 and writes nothing when the caller cannot see the use case", async () => {
+      mockCanView.mockResolvedValue(false);
+      mockGetById.mockResolvedValue({ ...buildProject(), owner: 1 } as any);
+      const req = createReq({ params: { id: "1" }, body: { members: [2] } });
+      const res = createRes();
+      await updateProjectById(req, res);
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(mockUpdate).not.toHaveBeenCalled();
+    });
+
     it("should return 401 when userId or role is missing", async () => {
       const req = createReq({
         params: { id: "1" },
@@ -587,7 +604,9 @@ describe("project.ctrl", () => {
       await updateProjectById(req, res);
       expect(res.status).toHaveBeenCalledWith(202);
       expect(mockGetPendingApproval).toHaveBeenCalledWith(1, "use_case", 1, expect.anything());
-      expect(mockWithdrawApproval).toHaveBeenCalledWith(77, 1, expect.anything());
+      expect(mockWithdrawApproval).toHaveBeenCalledWith(77, 1, expect.anything(), {
+        changedBy: 1,
+      });
       expect(mockCreateApproval).toHaveBeenCalled();
     });
     it("notifies the requester when the edit-time request is auto-approved", async () => {
@@ -644,8 +663,10 @@ describe("project.ctrl", () => {
       const res = createRes();
       await updateProjectById(req, res);
       expect(res.status).toHaveBeenCalledWith(202);
-      expect(mockWithdrawApproval).toHaveBeenCalledWith(77, 1, expect.anything());
-      expect(mockCreatePendingFrameworks).toHaveBeenCalledWith(1, 1, expect.anything());
+      expect(mockWithdrawApproval).toHaveBeenCalledWith(77, 1, expect.anything(), {
+        changedBy: 1,
+      });
+      expect(mockCreatePendingFrameworks).toHaveBeenCalledWith(1, 1, expect.anything(), 1);
       expect(mockCreateApproval).not.toHaveBeenCalled();
     });
     it("starts no request when the attached workflow is unchanged (#4904)", async () => {

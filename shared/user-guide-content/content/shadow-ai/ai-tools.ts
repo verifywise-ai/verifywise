@@ -10,7 +10,7 @@ export const aiToolsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The AI tools page is your central inventory of all AI applications detected in your organization\'s network traffic. From here you can review each tool\'s risk profile, change its status and bring it under formal governance through the model inventory.',
+      text: 'The AI tools page lists every AI tool found in the proxy and firewall logs your organization sends to VerifyWise. A tool appears here the first time a log line matches a known AI tool. From here you can review each tool\'s risk score, set its status, add it to the model inventory or promote it to an AI app.',
     },
     {
       type: 'heading',
@@ -35,7 +35,7 @@ export const aiToolsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Click any column header to sort the table. Use the status filter dropdown to narrow the list to a specific status.',
+      text: 'The list opens with the highest risk scores first; tools that have no score yet come last. Use the status filter to show tools with one status. Clicking a column header sorts the rows on the current page, and your choice is remembered.',
     },
     {
       type: 'heading',
@@ -45,7 +45,7 @@ export const aiToolsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Each tool can be assigned one of these statuses to reflect your organization\'s assessment:',
+      text: 'Each tool has one of these statuses. A status records your assessment; VerifyWise does not block or allow traffic itself, so enforce decisions in your proxy or firewall. Two statuses change behavior in VerifyWise: Approved lowers the risk score once the tool is also in the model inventory, and Blocked makes "Blocked tool attempt" rules fire.',
     },
     {
       type: 'icon-cards',
@@ -68,14 +68,14 @@ export const aiToolsContent: ArticleContent = {
         {
           icon: 'AlertTriangle',
           title: 'Restricted',
-          description: 'Allowed with conditions (e.g., specific departments only).',
+          description: 'Allowed with conditions, such as specific departments only. The conditions are not enforced by VerifyWise.',
         },
       ],
     },
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Blocked', text: 'Prohibited from use. Access attempts can trigger alerts if a "Blocked tool attempt" rule is configured.' },
+        { bold: 'Blocked', text: 'Prohibited from use. When your proxy reports a blocked request to this tool, a "Blocked tool attempt" rule can send an alert.' },
         { bold: 'Dismissed', text: 'Reviewed but deemed irrelevant (e.g., false positive).' },
       ],
     },
@@ -94,7 +94,9 @@ export const aiToolsContent: ArticleContent = {
       items: [
         { text: 'Vendor, total users, total events, risk score, first detected and last seen dates' },
         { text: 'A status selector to change the tool\'s status' },
-        { text: 'Department breakdown showing which teams are using the tool' },
+        { text: 'A "Start governance" button, or a "Governed" badge once the tool is in the model inventory' },
+        { text: 'A "Promote to AI app" button' },
+        { text: 'Departments that used the tool, with a user count for each' },
         { text: 'Top users ranked by event count' },
       ],
     },
@@ -106,13 +108,23 @@ export const aiToolsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'If a detected tool has not yet been added to the model inventory, a "Start governance" button appears in the detail view. Clicking it opens a wizard that creates a new model inventory entry pre-filled with the tool\'s provider, name and version.',
+      text: 'If a tool is not yet in the model inventory, a "Start governance" button appears in the detail view. It opens a form with the provider and model name filled in from the tool. Choose a governance owner (required) and, optionally, a version. Submitting creates a model inventory entry with the status Pending, links the tool to it and sets the tool\'s status to Under review. If you also pick a data sensitivity or write a risk description, a risk named "Use of <tool name>" is added to the new model\'s risks. Its level follows the data sensitivity (Medium if you only wrote a description), the governance owner owns it, and it is due in 90 days. Tick "Automatically create a lifecycle entry" to also start the model lifecycle checklist for the new entry.',
     },
     {
       type: 'callout',
       variant: 'tip',
       title: 'Best practice',
-      text: 'Bring high-risk tools under governance early. Once a tool is linked to a model inventory entry, it shows a "Governed" badge and inherits the full lifecycle tracking available in the AI governance module.',
+      text: 'Bring high-risk tools under governance early. A tool linked to a model inventory entry shows a "Governed" badge. Once the tool is linked to an entry and its status here is Approved, the approval part of its risk score drops to zero at the next nightly run. The model inventory entry\'s own status is not part of the score.',
+    },
+    {
+      type: 'heading',
+      id: 'promote-to-ai-app',
+      level: 2,
+      text: 'Promoting to an AI app',
+    },
+    {
+      type: 'paragraph',
+      text: 'Click "Promote to AI app" in the detail view to add the tool to the AI apps inventory. The new AI app takes the tool\'s name, starts as a draft and notes the vendor in its description. Each tool can be promoted once; a second attempt shows an error.',
     },
     {
       type: 'heading',
@@ -122,7 +134,7 @@ export const aiToolsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The risk score is a composite metric from 0 to 100 that gets recalculated nightly. It uses a weighted formula:',
+      text: 'The risk score is a composite metric from 0 to 100, recalculated every night. A newly detected tool has no score until the next run. It uses a weighted formula:',
     },
     {
       type: 'table',
@@ -132,10 +144,10 @@ export const aiToolsContent: ArticleContent = {
         { key: 'description', label: 'Description', width: '55%' },
       ],
       rows: [
-        { factor: 'Approval status', weight: '40%', description: 'Tools not in the model inventory or not approved receive the maximum score.' },
+        { factor: 'Approval status', weight: '40%', description: 'Zero only when the tool is linked to a model inventory entry and its status is Approved; otherwise the maximum.' },
         { factor: 'Data & compliance', weight: '25%', description: 'Based on training-on-data policy, SOC 2, GDPR, SSO and encryption at rest.' },
-        { factor: 'Usage volume', weight: '15%', description: 'Normalized against the organization average. Higher usage increases the score.' },
-        { factor: 'Department sensitivity', weight: '20%', description: 'Uses the highest sensitivity among accessing departments. Finance, Legal and HR are rated highest.' },
+        { factor: 'Usage volume', weight: '15%', description: 'The tool\'s event count compared with the average across your tools. Higher usage increases the score.' },
+        { factor: 'Department sensitivity', weight: '20%', description: 'The most sensitive department that used the tool in the last 30 days. Finance, Legal and HR (80) are rated highest, then Engineering and Product (50), any other department (30), and Marketing and Sales (20). Names are matched exactly, ignoring case, so "Finance & Accounting" counts as another department.' },
       ],
     },
     {

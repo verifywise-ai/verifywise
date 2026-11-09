@@ -16,6 +16,39 @@ _analyzer = None
 _anonymizer = None
 _initialized = False
 
+# The spaCy model requirements.txt installs (pinned wheel). Presidio's own
+# default is en_core_web_lg (~560 MB), which nothing installs, so without this
+# the engine downloaded lg on its first PII scan.
+SPACY_MODEL = "en_core_web_md"
+
+
+def nlp_configuration() -> dict:
+    """Presidio's default NLP configuration (its default.yaml: NER entity
+    mapping, ignored labels, confidence) keeping only the English model,
+    swapped for SPACY_MODEL. A hand-written config would drop the NER
+    settings and change what PII rules detect. Raises when a Presidio upgrade
+    changes the default's shape, rather than silently loading another model."""
+    import copy
+
+    from presidio_analyzer.nlp_engine import NlpEngineProvider
+
+    # Copied so a Presidio that caches its default is never edited in place.
+    config = copy.deepcopy(NlpEngineProvider().nlp_configuration)
+    models = config.get("models") or []
+    english = [m for m in models if isinstance(m, dict) and m.get("lang_code") == "en"]
+    if (
+        config.get("nlp_engine_name") != "spacy"
+        or not all(isinstance(m, dict) for m in models)
+        or len(english) != 1
+        or not isinstance(english[0].get("model_name"), str)
+    ):
+        raise RuntimeError(
+            "Presidio's default NLP configuration changed shape; update presidio_engine.nlp_configuration"
+        )
+    english[0]["model_name"] = SPACY_MODEL
+    config["models"] = english
+    return config
+
 
 def _get_custom_recognizers():
     """Build custom pattern recognizers for EU-specific PII."""
@@ -83,10 +116,12 @@ def _ensure_initialized():
 
     try:
         from presidio_analyzer import AnalyzerEngine
+        from presidio_analyzer.nlp_engine import NlpEngineProvider
         from presidio_anonymizer import AnonymizerEngine
 
-        logger.info("Loading Presidio engine with en_core_web_md...")
-        _analyzer = AnalyzerEngine()
+        logger.info(f"Loading Presidio engine with {SPACY_MODEL}...")
+        nlp_engine = NlpEngineProvider(nlp_configuration=nlp_configuration()).create_engine()
+        _analyzer = AnalyzerEngine(nlp_engine=nlp_engine)
 
         # Add custom EU recognizers
         for recognizer in _get_custom_recognizers():
@@ -99,7 +134,8 @@ def _ensure_initialized():
     except ImportError as e:
         logger.error(f"Presidio not installed: {e}")
         raise RuntimeError(
-            "Presidio is not installed. Run: pip install presidio-analyzer presidio-anonymizer && python -m spacy download en_core_web_md"
+            "Presidio is not installed. Install AIGateway/requirements.txt as the Dockerfile does "
+            "(presidio-anonymizer with --no-deps, to keep cryptography>=50)"
         ) from e
     except Exception as e:
         logger.error(f"Failed to initialize Presidio: {e}")
@@ -159,3 +195,32 @@ def is_available() -> bool:
         return True
     except ImportError:
         return False
+
+
+def _missing_spacy_models() -> list[str]:
+    """spaCy models the engine's NLP configuration needs that are not installed."""
+    import spacy.util
+
+    return [m["model_name"] for m in nlp_configuration()["models"] if not spacy.util.is_package(m["model_name"])]
+
+
+def warm_up() -> bool:
+    """Load the engine now so the first PII scan does not wait for it.
+
+    Skips (returns False) when Presidio or its spaCy model is not installed:
+    Presidio would download a missing model, and a startup preload must not
+    pull hundreds of MB on every start. The lazy path in analyze_text still
+    loads (or downloads) it, or raises its clear error, on the first PII scan.
+    Other load errors are raised to the caller.
+    """
+    if _initialized:
+        return True
+    if not is_available():
+        logger.info("Presidio is not installed; skipping PII engine preload")
+        return False
+    missing = _missing_spacy_models()
+    if missing:
+        logger.info(f"spaCy model {', '.join(missing)} not installed; PII engine will load on first PII scan")
+        return False
+    _ensure_initialized()
+    return True

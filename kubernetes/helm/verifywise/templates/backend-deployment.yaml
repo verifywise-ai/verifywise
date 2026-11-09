@@ -1,3 +1,4 @@
+{{- $syslog := .Values.shadowAiSyslog | default dict -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -29,6 +30,11 @@ spec:
         - containerPort: 3000
           name: http
           protocol: TCP
+        {{- if $syslog.enabled }}
+        - containerPort: {{ $syslog.port }}
+          name: syslog
+          protocol: TCP
+        {{- end }}
         env:
         - name: PORT
           valueFrom:
@@ -92,6 +98,30 @@ spec:
         - name: MULTI_TENANCY_ENABLED
           valueFrom:
             configMapKeyRef: { name: verifywise-config, key: MULTI_TENANCY_ENABLED }
+
+        {{- if $syslog.enabled }}
+        # Shadow AI syslog listener (see values.yaml: shadowAiSyslog)
+        - name: SHADOW_AI_SYSLOG_ENABLED
+          valueFrom:
+            configMapKeyRef: { name: verifywise-config, key: SHADOW_AI_SYSLOG_ENABLED }
+        - name: SHADOW_AI_SYSLOG_PORT
+          valueFrom:
+            configMapKeyRef: { name: verifywise-config, key: SHADOW_AI_SYSLOG_PORT }
+        - name: SHADOW_AI_SYSLOG_ALLOW_PLAINTEXT
+          valueFrom:
+            configMapKeyRef: { name: verifywise-config, key: SHADOW_AI_SYSLOG_ALLOW_PLAINTEXT }
+        - name: SHADOW_AI_SYSLOG_ALLOW_IP_ONLY
+          valueFrom:
+            configMapKeyRef: { name: verifywise-config, key: SHADOW_AI_SYSLOG_ALLOW_IP_ONLY }
+        {{- if $syslog.tlsSecretName }}
+        - name: SHADOW_AI_SYSLOG_TLS_CERT_FILE
+          valueFrom:
+            configMapKeyRef: { name: verifywise-config, key: SHADOW_AI_SYSLOG_TLS_CERT_FILE }
+        - name: SHADOW_AI_SYSLOG_TLS_KEY_FILE
+          valueFrom:
+            configMapKeyRef: { name: verifywise-config, key: SHADOW_AI_SYSLOG_TLS_KEY_FILE }
+        {{- end }}
+        {{- end }}
 
         # Email (all optional — reads what's present)
         - name: EMAIL_PROVIDER
@@ -180,6 +210,16 @@ spec:
           capabilities:
             drop:
               - ALL
+        {{- if and $syslog.enabled $syslog.tlsSecretName }}
+        volumeMounts:
+        - name: syslog-tls
+          mountPath: /etc/verifywise/syslog-tls
+          readOnly: true
+      volumes:
+      - name: syslog-tls
+        secret:
+          secretName: {{ $syslog.tlsSecretName }}
+        {{- end }}
 ---
 apiVersion: v1
 kind: Service

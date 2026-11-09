@@ -79,6 +79,25 @@ spec:
               name: verifywise-secrets
               key: EVAL_SERVER_INTERNAL_KEY
 
+        # AI Gateway: cloud models run only through it; EvalServer won't start without the key
+        - name: AI_GATEWAY_URL
+          valueFrom:
+            configMapKeyRef:
+              name: verifywise-config
+              key: AI_GATEWAY_URL
+        - name: AI_GATEWAY_INTERNAL_KEY
+          valueFrom:
+            secretKeyRef:
+              name: verifywise-secrets
+              key: AI_GATEWAY_INTERNAL_KEY
+
+        # Decrypts AI Gateway keys stored by the backend (report AI summaries)
+        - name: ENCRYPTION_KEY
+          valueFrom:
+            secretKeyRef:
+              name: verifywise-secrets
+              key: ENCRYPTION_KEY
+
         livenessProbe:
           httpGet:
             path: /health

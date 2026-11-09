@@ -122,7 +122,7 @@ export default function LinkRow({
   const { t } = useTranslation();
   return (
     <Box>
-      <Stack direction="row" alignItems="center" spacing={4} flexWrap="wrap">
+      <Stack direction="row" alignItems="center" gap="8px" flexWrap="wrap">
         <Typography sx={{ ...textStyles.body, color: "text.secondary", flexGrow: 1 }}>
           {link.relatedRisk.name ?? fill(t("Risk {id}"), { id: link.relatedRisk.id })}
         </Typography>

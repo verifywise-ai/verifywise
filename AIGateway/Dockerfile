@@ -19,7 +19,7 @@ COPY requirements.txt .
 # which is already listed in requirements.txt.
 RUN grep -v '^presidio-anonymizer' requirements.txt > requirements-install.txt && \
     pip install --no-cache-dir -r requirements-install.txt && \
-    pip install --no-cache-dir --no-deps presidio-anonymizer>=2.2.364 && \
+    pip install --no-cache-dir --no-deps "$(grep '^presidio-anonymizer' requirements.txt)" && \
     rm requirements-install.txt
 COPY src/ .
 COPY start.sh .

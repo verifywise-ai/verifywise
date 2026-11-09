@@ -39,6 +39,8 @@ import {
 import { HistorySidebar } from "../../Common/HistorySidebar";
 import TabBar from "../../TabBar";
 import { TabContext } from "@mui/lab";
+import JiraIssueChip from "../../JiraIssueChip";
+import type { JiraIncidentLink } from "../../../../application/repository/jiraIncidents.repository";
 
 // To
 import Field from "../../Inputs/Field";
@@ -60,6 +62,8 @@ interface SideDrawerIncidentProps {
   isEdit?: boolean;
   mode?: string;
   incidentId?: number;
+  /** The incident's Jira issue (Jira incidents extension), shown next to the incident ID. */
+  jiraLink?: JiraIncidentLink;
 }
 
 export interface NewIncidentFormValues {
@@ -221,6 +225,7 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
   isEdit = false,
   mode,
   incidentId,
+  jiraLink,
 }) => {
   const theme = useTheme();
   const [values, setValues] = useState<NewIncidentFormValues>(initialData || initialState);
@@ -551,6 +556,7 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
                     </Typography>
                   </Typography>
                 )}
+                {isEdit && jiraLink && <JiraIssueChip link={jiraLink} />}
               </Stack>
               <Box onClick={handleClose} sx={{ cursor: "pointer" }}>
                 <CloseIcon />

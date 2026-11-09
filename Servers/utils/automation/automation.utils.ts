@@ -6,7 +6,8 @@ export function replaceTemplateVariables(
   Object.entries(replacements).forEach(([key, value]) => {
     const escapedKey = key.replace(/\\/g, "\\\\").replace(/\./g, "\\.");
     const regex = new RegExp(`\\{\\{${escapedKey}\\}\\}`, "g");
-    result = result.replace(regex, String(value ?? ""));
+    // A replacer function inserts the value literally ("$&" is not a pattern).
+    result = result.replace(regex, () => String(value ?? ""));
   });
   return result;
 }

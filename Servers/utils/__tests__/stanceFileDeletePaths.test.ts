@@ -7,52 +7,42 @@ jest.mock("../../database/db", () => ({
   sequelize: { query: (...args: any[]) => mockQuery(...args) },
 }));
 
-import { ConflictException } from "../../domain.layer/exceptions/custom.exception";
 import { BIAS_AUDIT_STANCE_SOURCE } from "../fileUpload.utils";
-import { deleteReportByIdQuery } from "../reporting.utils";
+import { REPORT_FILE_SOURCES, deleteReportByIdQuery } from "../reporting.utils";
 import { deleteItem, detachFile } from "../../extensions/model-lifecycle/modelLifecycle.service";
-
-const tx = {} as any;
 
 beforeEach(() => mockQuery.mockReset());
 
 describe("report delete", () => {
-  it("refuses a stance PDF passed as a report id and deletes nothing", async () => {
-    mockQuery.mockResolvedValueOnce([{ source: BIAS_AUDIT_STANCE_SOURCE }]);
-    await expect(deleteReportByIdQuery(77, 5, tx)).rejects.toBeInstanceOf(ConflictException);
-    const sql = mockQuery.mock.calls.map((c) => c[0] as string);
-    expect(sql.some((s) => s.includes("DELETE"))).toBe(false);
+  it("cannot reach a stance PDF: the delete is scoped to report sources", async () => {
+    mockQuery.mockResolvedValueOnce([]);
+    await expect(deleteReportByIdQuery(77, 5)).resolves.toBe(false);
+    const [sql, opts] = mockQuery.mock.calls[0];
+    expect(sql).toContain("source IN (:sources)");
+    expect(opts.replacements.sources).not.toContain(BIAS_AUDIT_STANCE_SOURCE);
+    expect(REPORT_FILE_SOURCES).not.toContain(BIAS_AUDIT_STANCE_SOURCE);
   });
 
   it("still deletes a report", async () => {
-    mockQuery
-      .mockResolvedValueOnce([{ source: "Reporting" }])
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([{ id: 77 }]);
-    await expect(deleteReportByIdQuery(77, 5, tx)).resolves.toBe(true);
-    expect(mockQuery.mock.calls[2][0]).toContain("DELETE FROM files");
+    mockQuery.mockResolvedValueOnce([{ id: 77 }]);
+    await expect(deleteReportByIdQuery(77, 5)).resolves.toBe(true);
+    expect(mockQuery.mock.calls[0][0]).toContain("DELETE FROM files");
   });
 });
 
 describe("model lifecycle detach", () => {
-  it("unlinks the file but never deletes a stance PDF", async () => {
+  it("unlinks the file and never deletes a files row", async () => {
     mockQuery.mockResolvedValue([]);
     await detachFile(5, 3, 4, 77);
-    const [sql, opts] = mockQuery.mock.calls[1];
-    expect(sql).toContain("DELETE FROM files");
-    expect(sql).toContain("source IS DISTINCT FROM :stanceSource");
-    expect(opts.replacements.stanceSource).toBe(BIAS_AUDIT_STANCE_SOURCE);
+    const sql = mockQuery.mock.calls.map((c) => c[0] as string);
+    expect(sql[0]).toContain("DELETE FROM model_lifecycle_item_files");
+    expect(sql.some((s) => s.includes("DELETE FROM files"))).toBe(false);
   });
 
-  it("never deletes a stance PDF when an item and its attached files are removed", async () => {
-    mockQuery.mockResolvedValueOnce([{ file_id: 77 }]).mockResolvedValue([]);
+  it("never deletes a files row when an item is removed", async () => {
+    mockQuery.mockResolvedValue([]);
     await deleteItem(5, 4);
-    const [sql, opts] = mockQuery.mock.calls[1];
-    expect(sql).toContain("DELETE FROM files");
-    expect(sql).toContain("source IS DISTINCT FROM :stanceSource");
-    expect(opts.replacements).toMatchObject({
-      fileIds: [77],
-      stanceSource: BIAS_AUDIT_STANCE_SOURCE,
-    });
+    const sql = mockQuery.mock.calls.map((c) => c[0] as string);
+    expect(sql.some((s) => s.includes("DELETE FROM files"))).toBe(false);
   });
 });

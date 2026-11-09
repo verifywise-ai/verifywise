@@ -1,6 +1,6 @@
 # Reporting Domain
 
-> **Last Updated:** 2026-08-02
+> **Last Updated:** 2026-10-18
 
 ## Overview
 
@@ -75,7 +75,7 @@ Manual generation is **asynchronous**: `POST` queues the job and returns a `runI
 | GET | `/reporting/generate-report` | List generated reports. **Not read by the Reporting page** — see [the note below](#the-legacy-files-based-list-is-dead-code-for-the-ui) |
 | GET | `/reporting/runs/:id` | Poll a run's status (see [Template-First Reporting Layer](#template-first-reporting-layer)) |
 | GET | `/reporting/runs/:id/download` | Download the finished file once the run reaches a terminal status |
-| DELETE | `/reporting/:id` | Delete report |
+| DELETE | `/reporting/:id` | Delete a generated report file. Requires `reporting.admin` (Admin by default). Report files only; any other id answers 404 — see [Report File Sources](#report-file-sources) |
 
 ### Generate Report Request
 
@@ -1216,6 +1216,32 @@ Run status is a fixed vocabulary: `queued`, `running`, `success`, `partial_succe
 `GET /reporting/generate-report` (`getGeneratedReportsQuery`) still exists and still works, but nothing under `Clients/src/presentation/pages/Reporting/` calls it — the only caller, `useGeneratedReports`, is used solely by `Clients/src/presentation/pages/Reporting/Reports/index.tsx`, which nothing imports. The Reporting page reads exclusively from `report_runs` via `ReportRunsTable` (see [Run Archiving](#run-archiving)).
 
 This is more than an unused code path: `getGeneratedReportsQuery` builds its result with `JOIN projects p ON report.project_id = p.id` — an **inner** join. Any `files` row with a `NULL` `project_id` (an organization-scoped report, as opposed to a project-scoped one) is filtered out before it ever reaches the response. That inner join is why organization-scoped reports were invisible in the legacy list, and it is one more reason the `report_runs` pipeline — which has no such join — is the one the UI reads from now.
+
+### Report File Sources
+
+`REPORT_FILE_SOURCES` in `Servers/utils/reporting.utils.ts` is the one list of `files.source` values that mark a file as a generated report: exactly what report generation writes. `mapReportTypeToFileSource` (manual runs and scheduled runs) returns its type, `ReportFileSource`, and the scheduled delivery service saves under `"All reports"`. The list (`GET /reporting/generate-report`, also read by the advisor's reporting tools) and the delete both filter on it.
+
+Sources that are deliberately **not** in it, because a non-report path writes them:
+
+| Source | Why it is excluded |
+|--------|--------------------|
+| `Reference controls group`, `Management system clauses group` | ISO 42001 annex / clause evidence uploads (`iso42001.ctrl.ts`). Builds from mid-2025 also saved annexes / clauses reports under these labels; such a row cannot be told apart from evidence, so it no longer appears as a report. |
+| `Main clauses group`, `Annex controls group`, `Assessment tracker group`, `Compliance tracker group`, per-framework labels (`SOC 2 controls`, ...) | Framework evidence uploads |
+| `Subcategories group` | Legacy NIST AI RMF evidence label (still swept when the framework is removed, `frameworkFilesDeletionSourceMap`) |
+| `File Manager`, `policy_editor`, `AI trust center group`, `dataset_bulk_upload` | Other uploads |
+| `Post-Market Monitoring report` | Generated, but owned by the PMM module through `pmm_reports.file_id` |
+| `ISO 27001 report` | Legacy enum value; nothing generates it |
+
+Any new report source goes into `REPORT_FILE_SOURCES` and nowhere else; a source an upload path also writes must never be added.
+
+### Deleting a Report
+
+`DELETE /reporting/:id` (`deleteGeneratedReportById`):
+
+- Requires the `reporting.admin` permission (`authorize("reporting.admin")`), the same permission as generating a report. By default only Admin has it; a role without it gets 403.
+- `validateId("id")`: a non-numeric id, 0, or an id above 2147483647 (the Postgres `INTEGER` maximum) answers **400**.
+- One statement: `DELETE FROM files WHERE organization_id = :org AND id = :id AND source IN (REPORT_FILE_SOURCES) RETURNING id`. Folder mappings go with the row through `file_folder_mappings.file_id ... ON DELETE CASCADE`.
+- When nothing was deleted (missing id, another organization's file, or any non-report file such as evidence or a File Manager upload) it answers **404** and touches nothing.
 
 ## Related Documentation
 

@@ -139,6 +139,50 @@ NOT_STARTED → IN_PROGRESS → UNDER_REVIEW → COMPLETED → CLOSED
 | ON_HOLD | IN_PROGRESS | Resumed |
 | COMPLETED | CLOSED | Archived |
 
+## Lifecycle (#5187)
+
+`projects.lifecycle_stage` is separate from `status` (a project-management state that keeps working unchanged):
+
+```
+in_review → planned → live → retired
+               └────────────────↑   (a planned use case can be retired before launch)
+```
+
+| Column | Meaning |
+|--------|---------|
+| `lifecycle_stage` | `in_review` / `planned` / `live` / `retired`, VARCHAR + CHECK, default `planned` |
+| `go_live_date` | DATE the use case went live (today or earlier) |
+| `retired_at` | When it was retired |
+| `last_confirmed_at`, `last_confirmed_by` | Last "still live?" confirmation |
+| `confirmation_reminded_at` | Last reminder email; dedups the daily sweep to once per period |
+| `department` | Free text (there is no org-level department list) |
+
+Backfill (migration `20261031015101`): a pending approval request → `in_review` (status `Under review` alone is not enough: intake approval set it after the review); `Closed` → `retired`; everything else → `planned` (`Completed` is not assumed to be live).
+
+Transitions:
+
+| Trigger | Change |
+|---------|--------|
+| Approval request opened (`services/projects/approvalRequest.service.ts`) | `planned → in_review` |
+| Approval approved, auto-approved, rejected or withdrawn; workflow cleared or replaced (`releaseUseCaseFromReview`) | `in_review → planned` |
+| Use case created (any path, incl. intake approval) | `planned`; the request body never sets the stage |
+| `POST /api/v1/use-case-lifecycle/:id/go-live` | `planned → live`, sets `go_live_date`, resets the confirmation period |
+| `POST /api/v1/use-case-lifecycle/:id/confirm` | live only; sets `last_confirmed_*` |
+| `POST /api/v1/use-case-lifecycle/:id/retire` | `planned`/`live → retired`, sets `retired_at` |
+| `PATCH /api/v1/use-case-lifecycle/:id/department` | sets `department` |
+
+Writes are allowed for holders of `useCase.edit` and for the use case owner; Auditors never. The stage guard is part of the UPDATE, so a conflicting transition returns 409. Every change, including the automatic ones above, is recorded in `use_case_change_history`. Soft-deleting a workflow leaves its pending requests pending, so their use cases stay in review until the request is decided or withdrawn. Lifecycle columns are not accepted in legacy `POST/PATCH /api/projects` bodies; `department` on creation is only set by server code and goes through `parseDepartment`, the validator the PATCH endpoint uses.
+
+Read models: `GET /api/v1/use-case-lifecycle/summary` (stale ids and the interval) and `GET /api/v1/use-case-lifecycle/dashboard` (went live / retired this quarter, live by department/risk tier/regulation, stale). Both use `projectVisibilitySql` (`utils/projectVisibility.utils.ts`), the rule behind the use cases list. Stage counts are computed on the client from the use cases list (`countLifecycleStages`) on both the Use cases page and the dashboard, so the two never disagree.
+
+**Still live? check.** `lifecycle_org_settings.confirmation_interval_days` (30/90/180, default 90; `GET/PATCH /api/v1/lifecycle-settings`, PATCH needs `organization.admin`). A live use case is stale when `COALESCE(last_confirmed_at, go_live_date)` is older than the interval (`staleSql` in `utils/lifecycle.utils.ts`). The `lifecycle_confirmation_sweep` BullMQ job (daily 06:30) emails each owner once per period (`lifecycle-confirmation-due.mjml`).
+
+**Intake requests in review (#5188).** Pending use case intake submissions have no project until approval, so `GET /api/v1/use-case-lifecycle/intake-submissions` lists them from `intake_submissions` (status `pending`, entity type `use_case`; approved, rejected and superseded never appear). The response is `{ total, items, limit }`: `total` counts every pending request, `items` holds the oldest 500. Each item has the title (read from the field each form maps to `project_title`; schemas are read once per form, not sent per row), form name, submitter name, `submitted_at` and whole `days_in_review`, both measured from the first submission of its resubmission chain (`original_submission_id`, walked recursively). The In review tab and the dashboard both count `total` through `useUseCaseStageCounts`; the requests table sits under the list toolbar, follows its search (title, form, submitter), is not exported, and links each row to `/intake-forms/submissions?submission=<id>`. The dashboard response carries `review_time` (approved use case submissions, first submission → approval, last 12 months: count, median and average days); non-admins only count submissions whose created use case they can see (`projectVisibilitySql`). Comparing it with an agreed review time waits for #5189's per-form setting.
+
+**AI apps (#5193).** `LIFECYCLE_ENTITIES.ai_app` reuses the columns (no `department`; AI apps keep `ai_apps_departments`), the shared `lifecycle_org_settings` interval, the daily sweep and `controllers/lifecycle.ctrl.ts` (`lifecycleActionHandlers`). Routes: `GET /api/v1/ai-apps` (legacy list plus lifecycle columns and `?lifecycle_stage=`; `/api/ai-apps` is unchanged), `/api/v1/ai-app-lifecycle/summary` (server counts: the AI apps list is paged), `/:id`, `/:id/history` (`ai_app_change_history`), and `/:id/go-live|retire|confirm` (`aiApp.edit` or owner, never Auditors). Going live also needs status `approved` or `restricted` (`goLiveCondition` on the entity config; a planned draft gets 409 "Approve this AI app before marking it as live"; `GET /:id` returns `can_go_live` from the same condition, and setting a live app back to draft moves it to planned). Pending AI app intake requests: `GET /api/v1/ai-app-lifecycle/intake-submissions`, the same `getPendingIntakeSubmissions` as use cases (title from the field mapped to `name`), counted in and listed on the AI apps In review tab (hidden under a status filter). Backfill: `under_review` → in review, `banned` → retired, else planned. After that, `syncAiAppStageWithStatus` (called by `createAiAppQuery` and `updateAiAppByIdQuery`, so every status change) keeps it in step: under_review → in review (from planned); leaving under_review → planned (if still in review); banned → retired (sets `retired_at`, records history, ends still-live checks). The AI apps page pages, sorts and searches on the server per tab (`GET /api/v1/ai-apps?lifecycle_stage=&search=&page=&limit=&sortBy=&order=`).
+
+**Reuse.** Everything is keyed by `LIFECYCLE_ENTITIES` in `utils/lifecycle.utils.ts`; AI apps add an entry and the same columns. The frontend `LifecycleTabs` takes `extraCounts` for rows that are not entities yet (pending intake submissions in In review, #5188).
+
 ## API Endpoints
 
 ### CRUD Operations
@@ -238,6 +282,10 @@ PATCH /projects/:id
   status?: string
 }
 ```
+
+### Access
+
+The caller needs the `useCase.edit` permission and must be able to see the use case: an Admin, its owner or a member. Anyone else gets 403 and nothing is written.
 
 ### Processing
 
@@ -594,3 +642,39 @@ Intake forms support calculated fields, show/hide rules and risk dimension tags
   answers, option labels and ticked checkbox labels. A dimension uses its tagged
   answers when they match any keyword, and all answers otherwise; high-risk
   keywords in any untagged answer set a floor the tagged score cannot go below.
+## Intake live checks
+
+Hints on the public intake form while the submitter types, plus vendor document
+prefill (spec: `docs/superpowers/specs/2026-10-28-intake-live-checks-design.md`).
+One per-form toggle, `intake_forms.live_checks_enabled` (default true), covers
+rules, AI and prefill.
+
+- **Rule checks.** `Servers/services/intakeLiveChecks/rules.ts`, mirrored line
+  for line in `Clients/src/application/utils/intakeLiveChecks/`. Both run the
+  same fixtures (`__fixtures__/ruleCases.json`, `ruleCopy.json`). Kinds in order:
+  `prohibited`, `regulation`, `contradiction`, `vague`. English keywords only.
+- **AI checks.** Only on request: the submitter selects **Check my answers** in
+  the intake assistant (`useIntakeLiveChecks.checkWithAi`). The button is off
+  while a check runs and until a text answer changes, so typing never calls the
+  model. `POST /api/intake/public/by-id/:publicId/live-checks` and
+  `/public/:tenantSlug/:formSlug/live-checks` (no JWT). Visible answers only,
+  capped by `buildScoringAnswers`; one model call, 15 s, at most 8 hints; output
+  quoting text that is not in the answer, or a quote under 15 characters (unless
+  the answer is shorter), is dropped. Errors answer 200 with
+  `error: "unavailable"`.
+- **Prefill.** `POST .../prefill`, multipart, PDF or DOCX up to 10 MB, held in
+  memory only. DOCX zip size and entry count are checked before extraction,
+  which has its own deadline. Each suggestion carries a signed token
+  (`utils/signedToken.utils.ts`); at submit only a verified token becomes
+  provenance.
+- **Rate limits.** Per visitor and form (in memory): live checks 10/min, prefill
+  3 per 10 min. Per form (Redis, hourly key, 300 ms timeout, fails closed):
+  live checks 300, prefill 20. The count is refused outright while Redis is
+  disconnected, so the client's offline queue never replays refused calls.
+- **Storage.** `intake_submissions.live_checks` (JSONB): server-run rule hints
+  and verified prefill at submit; AI hints from the `liveChecks` stage of the
+  assessment job (`ai.status` pending, done, failed or skipped). The review
+  preview returns it as `liveChecks`.
+- **Submit.** Submit waits at most 2 s for the live-check write. A slower
+  write carries on after the response and queues the `liveChecks` stage itself
+  once it has stored a pending status.

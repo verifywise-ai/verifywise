@@ -30,13 +30,21 @@ function keyFor(url: string, params?: Record<string, any>): string {
  * widen the blast radius of a single rejection. Abortable callers therefore
  * keep independent fate, and only genuinely fire-and-forget concurrent reads
  * (the dashboard's first-login burst) share a request.
+ *
+ * Calls that pass `suppressGlobalErrorToast` are not deduped either: a shared
+ * request has one config, so the flag would leak to (or be missing for) the
+ * other caller, hiding a toast it relies on or adding one it renders itself.
  */
 export function getDeduped(
   url: string,
-  config?: { params?: Record<string, any>; signal?: AbortSignal },
+  config?: {
+    params?: Record<string, any>;
+    signal?: AbortSignal;
+    suppressGlobalErrorToast?: boolean;
+  },
 ): Promise<any> {
-  // Never collapse abortable requests into a shared promise.
-  if (config?.signal) {
+  // Never collapse abortable or toast-suppressed requests into a shared promise.
+  if (config?.signal || config?.suppressGlobalErrorToast) {
     return apiServices.get(url, config);
   }
 

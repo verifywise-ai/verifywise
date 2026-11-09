@@ -33,7 +33,7 @@ import {
   useTheme,
 } from "@mui/material";
 import "./index.css";
-import { forwardRef, useId, useMemo, useState } from "react";
+import { forwardRef, useId, useMemo, useState, type ReactNode } from "react";
 import { Eye as VisibilityIcon, EyeOff as VisibilityOffIcon } from "lucide-react";
 import { ForwardedRef } from "react";
 import { FieldProps as OriginalFieldProps } from "../../../types/widget.types";
@@ -50,6 +50,8 @@ interface FieldProps extends OriginalFieldProps {
   minRows?: number;
   maxRows?: number;
   borderless?: boolean;
+  /** Shown after the label, outside it (e.g. an info button): a label must not hold controls */
+  labelAdornment?: ReactNode;
 }
 
 const Field = forwardRef(
@@ -86,6 +88,7 @@ const Field = forwardRef(
       maxRows,
       borderless,
       dataTestId,
+      labelAdornment,
     }: FieldProps,
     ref: ForwardedRef<HTMLInputElement>,
   ) => {
@@ -106,6 +109,46 @@ const Field = forwardRef(
 
     const rootSx = sx;
 
+    const labelElement = label && (
+      <Typography
+        component="label"
+        htmlFor={fieldId}
+        variant="body1"
+        color={theme.palette.text.secondary}
+        fontWeight={500}
+        fontSize={"13px"}
+        // Beside an adornment the label may wrap (long translations), so it
+        // only keeps the 22px as a minimum.
+        sx={{
+          margin: 0,
+          display: "block",
+          ...(labelAdornment ? { minHeight: "22px" } : { height: "22px" }),
+        }}
+      >
+        {label}
+        {isRequired && (
+          <Typography
+            component="span"
+            ml={theme.spacing(1)}
+            color={theme.palette.status.error.text}
+          >
+            *
+          </Typography>
+        )}
+        {isOptional && (
+          <Typography
+            component="span"
+            fontSize="inherit"
+            fontWeight={400}
+            ml={theme.spacing(2)}
+            sx={{ opacity: 0.6 }}
+          >
+            {optionalLabel || "(optional)"}
+          </Typography>
+        )}
+      </Typography>
+    );
+
     return (
       <Stack
         data-testid={dataTestId}
@@ -117,39 +160,15 @@ const Field = forwardRef(
           ...(rootSx || {}),
         }}
       >
-        {label && (
-          <Typography
-            component="label"
-            htmlFor={fieldId}
-            variant="body1"
-            color={theme.palette.text.secondary}
-            fontWeight={500}
-            fontSize={"13px"}
-            sx={{ margin: 0, height: "22px", display: "block" }}
-          >
-            {label}
-            {isRequired && (
-              <Typography
-                component="span"
-                ml={theme.spacing(1)}
-                color={theme.palette.status.error.text}
-              >
-                *
-              </Typography>
-            )}
-            {isOptional && (
-              <Typography
-                component="span"
-                fontSize="inherit"
-                fontWeight={400}
-                ml={theme.spacing(2)}
-                sx={{ opacity: 0.6 }}
-              >
-                {optionalLabel || "(optional)"}
-              </Typography>
-            )}
-          </Typography>
-        )}
+        {labelElement &&
+          (labelAdornment ? (
+            <Stack direction="row" alignItems="center" sx={{ gap: "4px" }}>
+              {labelElement}
+              {labelAdornment}
+            </Stack>
+          ) : (
+            labelElement
+          ))}
         <TextField
           className="field-input"
           type={type === "password" ? (isVisible ? "text" : type) : type}

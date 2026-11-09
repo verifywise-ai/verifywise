@@ -13,6 +13,7 @@ import {
   listOrgInvitations,
   inviteUserToOrg,
   createUserInOrg,
+  removeOrgUser,
   emailExists,
   updateUser,
   removeUser,
@@ -22,9 +23,6 @@ import {
   listSuperAdmins,
   grantSuperAdmin,
   revokeSuperAdmin,
-  getMcpServer,
-  installMcpServerHandler,
-  uninstallMcpServerHandler,
 } from "../controllers/superAdmin.ctrl";
 
 const router = express.Router();
@@ -44,6 +42,7 @@ router.get("/organizations/:id/users", listOrgUsers);
 router.get("/organizations/:id/invitations", listOrgInvitations);
 router.post("/organizations/:id/invite", inviteUserToOrg);
 router.post("/organizations/:id/users", createUserInOrg);
+router.delete("/organizations/:id/users/:userId", removeOrgUser);
 router.patch("/users/:id", updateUser);
 router.delete("/users/:id", removeUser);
 
@@ -53,10 +52,6 @@ router.put("/monitoring", updateMonitoring);
 router.post("/monitoring/token", generateMonitoringToken);
 
 // SuperAdmin membership: list current SuperAdmins, elect a user, revoke.
-router.get("/mcp-server", getMcpServer);
-router.post("/mcp-server/install", installMcpServerHandler);
-router.delete("/mcp-server", uninstallMcpServerHandler);
-
 router.get("/super-admins", listSuperAdmins);
 router.post("/super-admins", grantSuperAdmin);
 router.delete("/super-admins/:user_id", revokeSuperAdmin);

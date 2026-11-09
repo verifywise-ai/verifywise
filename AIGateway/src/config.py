@@ -30,6 +30,10 @@ class Settings(BaseSettings):
     # (MCP_AUDIT_RETENTION_MIN_DAYS). Never applied to the default above.
     mcp_audit_retention_min_days: int = 7
 
+    # Load the PII engine (Presidio + spaCy model) in the background at startup
+    # so the first PII scan does not wait for it (GUARDRAILS_PRELOAD_PII).
+    guardrails_preload_pii: bool = True
+
     @field_validator("ai_gateway_internal_key", mode="before")
     @classmethod
     def _trim_internal_key(cls, value):

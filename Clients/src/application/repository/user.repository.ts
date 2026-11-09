@@ -161,15 +161,38 @@ export async function checkUserExists(): Promise<UserExistsResponse> {
 }
 
 /**
+ * A session for one organization: the body of a completed login, an
+ * organization selection, and an accepted invitation.
+ */
+export interface LoginSession {
+  token: string;
+  onboarding_status?: string;
+  is_org_creator?: boolean;
+  isSuperAdmin?: boolean;
+}
+
+/** An organization the user can log in to, offered after login. */
+export interface LoginOrganization {
+  id: number;
+  name: string;
+  role_name: string;
+}
+
+/**
+ * A user in several organizations chooses one before a session exists; the
+ * selection token is exchanged at /users/login/select-organization.
+ */
+export interface OrganizationSelection {
+  requiresOrganizationSelection: true;
+  organizations: LoginOrganization[];
+  selectionToken: string;
+}
+
+/**
  * Login response with nested data structure
  */
 interface LoginResponse {
-  data: {
-    token: string;
-    onboarding_status?: string;
-    is_org_creator?: boolean;
-    isSuperAdmin?: boolean;
-  };
+  data: LoginSession | OrganizationSelection;
 }
 
 export async function loginUser({
@@ -179,6 +202,35 @@ export async function loginUser({
 }): Promise<ApiResponse<LoginResponse>> {
   const response = await apiServices.post<LoginResponse>(`/users/login`, body);
   return response;
+}
+
+export async function selectLoginOrganization({
+  selectionToken,
+  organizationId,
+}: {
+  selectionToken: string;
+  organizationId: number;
+}): Promise<ApiResponse<{ data: LoginSession }>> {
+  return apiServices.post<{ data: LoginSession }>(`/users/login/select-organization`, {
+    selectionToken,
+    organizationId,
+  });
+}
+
+/**
+ * Accepts an invitation as an existing account: the password confirms the
+ * account, the invite token (from the emailed link) authorizes the join.
+ */
+export async function acceptInvitation({
+  inviteToken,
+  body,
+}: {
+  inviteToken: string;
+  body: { email: string; password: string; roleId: number; organizationId: number };
+}): Promise<ApiResponse<{ data: LoginSession }>> {
+  return apiServices.post<{ data: LoginSession }>(`/users/invitations/accept`, body, {
+    headers: { Authorization: `Bearer ${inviteToken}` },
+  });
 }
 
 export async function uploadUserProfilePhoto(

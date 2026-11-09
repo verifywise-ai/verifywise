@@ -8,7 +8,9 @@ pass/fail logic, and metric name formatting.
 import re
 
 SAFETY_METRICS = {"bias", "toxicity", "hallucination", "conversationsafety"}
-INVERTED_METRICS = {"bias", "toxicity", "hallucination", "conversationsafety"}
+# Stored lower is better (0 = none found). Conversation Safety is a G-Eval score
+# where 1.0 means safe, so it is a safety metric but not an inverted one.
+INVERTED_METRICS = {"bias", "toxicity", "hallucination"}
 
 
 def is_safety_metric(name: str) -> bool:

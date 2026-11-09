@@ -22,6 +22,7 @@ import MultiSelect from "../../../components/Inputs/MultiSelect";
 import StandardModal from "../../../components/Modals/StandardModal";
 import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtended";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
+import { getGatewayErrorText } from "../../../../application/utils/apiErrorReason";
 import palette from "../../../themes/palette";
 import { useTranslation } from "../../../../application/hooks/useTranslation";
 import { fill } from "../../../../i18n/fill";
@@ -264,9 +265,7 @@ export default function MCPGuardrailsPage() {
       await loadData();
     } catch (err: any) {
       setFormError(
-        err?.response?.data?.detail ||
-          err?.response?.data?.message ||
-          `Failed to ${isEditing ? "update" : "create"} guardrail`,
+        getGatewayErrorText(err, `Failed to ${isEditing ? "update" : "create"} guardrail`),
       );
     } finally {
       setIsSubmitting(false);

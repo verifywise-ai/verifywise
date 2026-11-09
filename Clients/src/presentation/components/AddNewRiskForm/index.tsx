@@ -8,7 +8,6 @@ import { CustomizableButton } from "../button/customizable-button";
 import { HistorySidebar } from "../Common/HistorySidebar";
 import CustomFieldsSection from "../CustomFieldsSection";
 import { getTabStyle } from "./style";
-import "./styles.module.css";
 import QuantitativeRiskForm from "../QuantitativeRiskForm";
 import { useRiskForm } from "./hooks/useRiskForm";
 

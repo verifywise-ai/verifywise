@@ -26,6 +26,8 @@ import { FileModel } from "../../../domain/models/Common/file/file.model";
 import LinkEvidenceSelectorModal from "./LinkEvidenceSelectorModal";
 
 import Alert from "../../components/Alert";
+import { useAuth } from "../../../application/hooks/useAuth";
+import allowedRoles from "../../../application/constants/permissions";
 
 interface LinkedPolicyModalProps {
   onClose: () => void;
@@ -34,6 +36,8 @@ interface LinkedPolicyModalProps {
 }
 
 const LinkedPolicyModal: React.FC<LinkedPolicyModalProps> = ({ onClose, policyId, isOpen }) => {
+  const { userRoleName } = useAuth();
+  const canEditPolicies = !!userRoleName && allowedRoles.policies.edit.includes(userRoleName);
   const [activeTab, setActiveTab] = useState("risks");
 
   const [risks, setRisks] = useState<any[]>([]);
@@ -177,18 +181,20 @@ const LinkedPolicyModal: React.FC<LinkedPolicyModalProps> = ({ onClose, policyId
     <Box onWheel={(e) => e.stopPropagation()} sx={{ height: "100%", overflow: "auto" }}>
       <Stack spacing={3}>
         {/* ---------- ADD BUTTON ---------- */}
-        <Box display="flex" justifyContent="flex-end">
-          <CustomizableButton
-            variant="contained"
-            sx={addNewModelButtonStyle}
-            text={`Link new ${label.toLowerCase()}`}
-            icon={<AddCircleOutlineIcon size={16} />}
-            onClick={() => {
-              if (type === "risk") setOpenRiskSelector(true);
-              if (type === "evidence") setOpenEvidenceSelector(true);
-            }}
-          />
-        </Box>
+        {canEditPolicies && (
+          <Box display="flex" justifyContent="flex-end">
+            <CustomizableButton
+              variant="contained"
+              sx={addNewModelButtonStyle}
+              text={`Link new ${label.toLowerCase()}`}
+              icon={<AddCircleOutlineIcon size={16} />}
+              onClick={() => {
+                if (type === "risk") setOpenRiskSelector(true);
+                if (type === "evidence") setOpenEvidenceSelector(true);
+              }}
+            />
+          </Box>
+        )}
 
         {/* ---------- TABLE LIST ---------- */}
         <LinkedObjectsTable
@@ -198,6 +204,7 @@ const LinkedPolicyModal: React.FC<LinkedPolicyModalProps> = ({ onClose, policyId
           evidenceData={filesData}
           paginated={true}
           type={type}
+          canRemove={canEditPolicies}
         />
       </Stack>
     </Box>

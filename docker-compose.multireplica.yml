@@ -1,0 +1,108 @@
+# Multi-replica backend scenario — issue #4677.
+#
+# NOT for production. This stack exists to prove the application runs
+# correctly behind a load balancer with more than one backend replica:
+# stateless auth, request distribution, and cross-replica rate-limit
+# behavior (see Servers/tests/perf/multireplica.k6.js and
+# docs/deployment/multi-replica-scaling.md).
+#
+# docker-compose.yml is intentionally untouched; this file mirrors its
+# services/env for postgres + redis + backend only, adds a second backend
+# replica, and puts an nginx load balancer in front of both.
+#
+# Usage (from the repo root, same env file as docker-compose.yml):
+#
+#   docker compose -f docker-compose.multireplica.yml --env-file .env up -d
+#   k6 run -e BASE_URL=http://localhost:8080 Servers/tests/perf/multireplica.k6.js
+#   docker compose -f docker-compose.multireplica.yml --env-file .env down
+
+version: "3.9"
+
+services:
+  postgresdb:
+    image: postgres:16.8
+    environment:
+      - POSTGRES_USER=$DB_USER
+      - POSTGRES_PASSWORD=${DB_PASSWORD:?DB_PASSWORD must be set in the env file before starting}
+      - POSTGRES_DB=$DB_NAME
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "$DB_USER", "-d", "$DB_NAME"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+  redis:
+    image: redis:7
+    expose:
+      - "6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # Two replicas of the SAME image with the SAME env. No sticky sessions,
+  # no shared volumes: anything that only worked single-replica fails here.
+  backend-1: &backend-replica
+    depends_on:
+      postgresdb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    image: ghcr.io/verifywise-ai/verifywise-backend:latest
+    pull_policy: always
+    environment:
+      - PORT=3000
+      - DB_HOST=postgresdb
+      - DB_USER=$DB_USER
+      - DB_PORT=$DB_PORT
+      - DB_PASSWORD=${DB_PASSWORD:?DB_PASSWORD must be set in the env file before starting}
+      - DB_NAME=$DB_NAME
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET must be set in the env file before starting}
+      - REDIS_URL=redis://redis:6379/0
+      - ENCRYPTION_KEY=$ENCRYPTION_KEY
+      - AI_GATEWAY_URL=${AI_GATEWAY_URL:-http://localhost:8100}
+      - AI_GATEWAY_INTERNAL_KEY=${AI_GATEWAY_INTERNAL_KEY:?AI_GATEWAY_INTERNAL_KEY must be set in the env file before starting}
+      - SUPERADMIN_EMAIL=$SUPERADMIN_EMAIL
+      - SUPERADMIN_PASSWORD=${SUPERADMIN_PASSWORD:?SUPERADMIN_PASSWORD must be set in the env file before starting}
+    expose:
+      - "3000"
+    restart: unless-stopped
+  backend-2:
+    <<: *backend-replica
+
+  # nginx load balancer: least_conn across the two replicas (with a single
+  # client this behaves like round-robin), and an
+  # X-Backend response header exposing which upstream answered. The app has
+  # no hostname-revealing endpoint of its own; the header is how the k6
+  # scenario test verifies request distribution. Config is generated inline
+  # so this file stays self-contained.
+  lb:
+    image: nginx:1.27-alpine
+    depends_on:
+      - backend-1
+      - backend-2
+    ports:
+      - "8080:8080"
+    command: >
+      /bin/sh -c "printf '%s\n'
+      'events {}'
+      'http {'
+      '  upstream verifywise_backend {'
+      '    least_conn;'
+      '    server backend-1:3000;'
+      '    server backend-2:3000;'
+      '  }'
+      '  server {'
+      '    listen 8080;'
+      '    location / {'
+      '      proxy_pass http://verifywise_backend;'
+      '      proxy_set_header Host $$host;'
+      '      proxy_set_header X-Real-IP $$remote_addr;'
+      '      proxy_set_header X-Forwarded-For $$proxy_add_x_forwarded_for;'
+      '      add_header X-Backend $$upstream_addr always;'
+      '    }'
+      '  }'
+      '}'
+      > /etc/nginx/lb.conf
+      && nginx -c /etc/nginx/lb.conf -g 'daemon off;'"
+    restart: unless-stopped

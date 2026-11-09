@@ -13,6 +13,8 @@ export interface ModelInfo {
   inputCost?: number; // Cost per 1M input tokens in USD
   outputCost?: number; // Cost per 1M output tokens in USD
   recommended?: boolean;
+  contextWindow?: number; // Max input tokens
+  deprecationDate?: string; // ISO date the provider retires the model
 }
 
 export interface ProviderConfig {
@@ -61,6 +63,9 @@ const PROVIDER_META: Record<string, { displayName: string; iconColor: string; lo
     logo: "/src/presentation/assets/icons/ollama_logo.svg",
   },
 };
+
+/** Judge used until the user picks one or a saved preference exists. */
+export const DEFAULT_JUDGE = { provider: "openai", model: "gpt-4o" } as const;
 
 export const PROVIDERS: Record<string, ProviderConfig> = {
   "openai": {

@@ -4,8 +4,9 @@
 #   Access via the ingress controller's public IP:  http://<INGRESS-IP>/
 #
 # To enable HTTPS with a real domain:
-#   1. Uncomment the three lines marked "HTTPS:" below.
-#   2. Replace  verifywise.example.com  with your real domain (2 places).
+#   1. Uncomment the lines marked "HTTPS:" below, in both Ingresses.
+#   2. Replace  verifywise.example.com  with your real domain (4 places:
+#      2 in each Ingress below).
 #   3. Make sure cert-manager is installed and a ClusterIssuer named
 #      "letsencrypt-prod" exists — the cert is issued automatically.
 #
@@ -48,3 +49,43 @@ spec:
                 name: frontend
                 port:
                   number: 80
+---
+# OpenAI-compatible AI Gateway API used with virtual keys (base URL /v1).
+# A separate Ingress so its annotations apply to /v1 only: LLM requests can
+# carry large prompts, take minutes and stream their response.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: verifywise-gateway-api-ingress
+  namespace: verifywise
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    # HTTPS: uncomment to redirect to HTTPS. The certificate is requested by
+    # verifywise-ingress above; this Ingress reuses its secret.
+    # nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  ingressClassName: nginx
+
+  # HTTPS: uncomment to terminate TLS at the ingress
+  # tls:
+  #   - hosts:
+  #       - verifywise.example.com
+  #     secretName: verifywise-tls
+
+  rules:
+    # HTTPS: replace this whole block with:
+    #   - host: verifywise.example.com
+    #     http:
+    #       paths: ...
+    - http:
+        paths:
+          - path: /v1
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 3000

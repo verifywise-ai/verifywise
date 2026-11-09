@@ -153,7 +153,43 @@ const GATEWAY_PROVIDER_MAP: Record<string, string> = {
   ai21: "Ai21",
   voyage: "Voyage",
   jina_ai: "Jina",
+  // LiteLLM provider strings that belong to a provider above.
+  vercel_ai_gateway: "Vercel",
+  v0: "Vercel",
+  vertex_ai: "Google",
+  google_pse: "Google",
+  sagemaker: "Aws",
+  amazon_nova: "Aws",
+  aws_polly: "Aws",
+  agentcore: "Aws",
+  transcribe: "Aws",
+  chatgpt: "OpenAI",
+  azure_text: "Microsoft",
+  microsoft_365_copilot: "Microsoft",
+  bing_grounding: "Microsoft",
+  cohere_chat: "Cohere",
+  codestral: "Mistral",
+  meta: "Meta",
+  anyscale: "Anyscale",
+  baseten: "Baseten",
+  stability: "Stability",
+  elevenlabs: "ElevenLabs",
+  assemblyai: "AssemblyAI",
+  vllm: "Vllm",
+  hosted_vllm: "Vllm",
 };
+
+/**
+ * Reduce a LiteLLM provider string to a key of GATEWAY_PROVIDER_MAP:
+ * "vertex_ai-anthropic_models" → "vertex_ai", "text-completion-openai" →
+ * "openai", "fireworks_ai-embedding-models" → "fireworks_ai".
+ */
+function normalizeProvider(provider: string): string {
+  const p = provider.toLowerCase().replace(/^text-completion-/, "");
+  if (p.startsWith("vertex_ai")) return "vertex_ai";
+  if (p.startsWith("bedrock")) return "bedrock";
+  return p.replace(/-[a-z0-9_-]*models$/, "");
+}
 
 /**
  * Get the provider icon component for a gateway provider ID.
@@ -162,18 +198,46 @@ const GATEWAY_PROVIDER_MAP: Record<string, string> = {
 export function getProviderIcon(
   provider: string,
 ): React.ComponentType<React.SVGProps<SVGSVGElement>> | null {
-  const key = GATEWAY_PROVIDER_MAP[provider.toLowerCase()];
+  const key = GATEWAY_PROVIDER_MAP[normalizeProvider(provider)];
   return key ? PROVIDER_ICONS[key] || null : null;
 }
 
 /**
- * Render a provider icon with fallback.
- * Returns the SVG icon element or null if no match.
+ * Render a provider icon. A provider without a logo gets a neutral tile
+ * with its initial, the same size as the logos, so rows line up.
  */
 export function ProviderIcon({ provider, size = 16 }: { provider: string; size?: number }) {
   const IconComponent = getProviderIcon(provider);
-  if (!IconComponent) return null;
-  return React.createElement(IconComponent, { width: size, height: size });
+  if (IconComponent) return React.createElement(IconComponent, { width: size, height: size });
+  const initial = provider
+    .replace(/[^a-z0-9]/gi, "")
+    .charAt(0)
+    .toUpperCase();
+  if (!initial) return null;
+  return React.createElement(
+    "span",
+    {
+      "aria-hidden": true,
+      "data-testid": "provider-icon-fallback",
+      "style": {
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexShrink: 0,
+        width: size,
+        height: size,
+        boxSizing: "border-box",
+        border: `1px solid ${palette.border.dark}`,
+        borderRadius: 4,
+        background: palette.background.alt,
+        color: palette.text.tertiary,
+        fontSize: Math.max(8, Math.round(size * 0.55)),
+        fontWeight: 600,
+        lineHeight: 1,
+      },
+    },
+    initial,
+  );
 }
 
 // ─── Shared constants ─────────────────────────────────────────────────────────
@@ -196,6 +260,9 @@ export const API_KEY_PROVIDERS = [
 ];
 
 const API_KEY_PROVIDER_IDS = new Set(API_KEY_PROVIDERS.map((p) => p._id));
+
+type ModelItem = { _id: string; name: string };
+const NO_MODEL_ITEMS: ModelItem[] = [];
 
 /**
  * Hook: fetch models from the AI Gateway (LiteLLM registry) and provide
@@ -249,14 +316,30 @@ export function useGatewayModels() {
     return () => ctrl.abort();
   }, [load]);
 
-  /** Get Select-compatible items for a given provider (memoized) */
+  /**
+   * Select-compatible items per provider, built once per load.
+   * LiteLLM lists some models with the provider prefix ("gemini/gemini-2.5-flash")
+   * and some without ("gpt-4o"), and a few both ways. The value is always
+   * "<provider>/<model>" exactly once, and each model appears once.
+   */
+  const itemsByProvider = useMemo(() => {
+    const result: Record<string, ModelItem[]> = {};
+    for (const [provider, models] of Object.entries(modelsByProvider)) {
+      const prefix = `${provider}/`;
+      const items = new Map<string, ModelItem>();
+      for (const m of models) {
+        const name = m.id.startsWith(prefix) ? m.id.slice(prefix.length) : m.id;
+        items.set(name, { _id: `${prefix}${name}`, name });
+      }
+      result[provider] = [...items.values()].sort((a, b) => a.name.localeCompare(b.name));
+    }
+    return result;
+  }, [modelsByProvider]);
+
+  /** Get Select-compatible items for a given provider (stable array identity) */
   const getModelsForProvider = useCallback(
-    (provider: string) =>
-      (modelsByProvider[provider] || []).map((m) => ({
-        _id: `${provider}/${m.id}`,
-        name: m.id,
-      })),
-    [modelsByProvider],
+    (provider: string) => itemsByProvider[provider] ?? NO_MODEL_ITEMS,
+    [itemsByProvider],
   );
 
   /** Get Select-compatible provider items (memoized) */
@@ -281,13 +364,26 @@ export function slugify(value: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
+/**
+ * Base URL users put in front of /v1 in their own code. An explicit backend URL
+ * wins (local development points at the backend on :3000). Otherwise it is the
+ * page's own origin, port included: deployments serve /v1 on the same host and
+ * port as the app, and the backend port itself is not reachable from outside.
+ */
+export function resolveGatewayUrl(
+  env: { VITE_APP_API_URL?: string; VITE_APP_API_BASE_URL?: string },
+  origin: string | undefined,
+): string {
+  const apiUrl = env.VITE_APP_API_URL || env.VITE_APP_API_BASE_URL;
+  if (apiUrl) return apiUrl.replace(/\/+$/, "").replace(/\/api$/, "");
+  return origin || "https://your-verifywise-host";
+}
+
 /** Gateway base URL for code examples */
-export const GATEWAY_URL = (() => {
-  const apiUrl = (import.meta as any)?.env?.VITE_APP_API_URL as string | undefined;
-  if (apiUrl) return apiUrl.replace(/\/api\/?$/, "");
-  if (typeof window !== "undefined") return window.location.origin.replace(/:\d+$/, ":3000");
-  return "https://your-verifywise-host";
-})();
+export const GATEWAY_URL = resolveGatewayUrl(
+  (import.meta as any)?.env ?? {},
+  typeof window !== "undefined" ? window.location.origin : undefined,
+);
 
 /** Color constants for code blocks and warning banners */
 export const CODE_BLOCK_BG = "#1E1E1E";
@@ -444,3 +540,9 @@ export async function streamPromptTest(
 
   return { content, tokens, cost, latency: Date.now() - startTime };
 }
+
+/** Navigation state the MCP servers page sends when it opens the tools catalog. */
+export const FROM_MCP_SERVERS = { from: "mcp-servers" } as const;
+
+export const cameFromMcpServers = (state: unknown): boolean =>
+  (state as { from?: unknown } | null)?.from === FROM_MCP_SERVERS.from;

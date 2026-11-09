@@ -7,6 +7,10 @@ vi.mock("react-router", async () => {
   return { ...actual, useNavigate: () => mockNavigate };
 });
 
+vi.mock("../../../../application/hooks/useAuth", () => ({
+  useAuth: () => ({ userRoleName: "Admin" }),
+}));
+
 vi.mock("../../../components/Table/PolicyTable", () => ({
   default: ({ data, renderRow }: any) => (
     <table>

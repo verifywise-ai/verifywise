@@ -20,6 +20,7 @@ import { Extension } from "../../../../domain/types/extensions";
 import SlackConfiguration from "../slack/SlackConfiguration";
 import ModelLifecycleConfig from "../model-lifecycle/ModelLifecycleConfig";
 import { JiraAssetsConfiguration } from "../jira-assets/JiraAssetsConfiguration";
+import { JiraIncidentsConfiguration } from "../jira-incidents/JiraIncidentsConfiguration";
 
 const CATEGORY_LABEL: Record<string, string> = {
   communication: "Communication",
@@ -320,6 +321,9 @@ export default function ExtensionSettingsPage() {
           {extension.enabled && extension.key === "slack" && <SlackConfiguration />}
           {extension.enabled && extension.key === "model-lifecycle" && <ModelLifecycleConfig />}
           {extension.enabled && extension.key === "jira-assets" && <JiraAssetsConfiguration />}
+          {extension.enabled && extension.key === "jira-incidents" && (
+            <JiraIncidentsConfiguration />
+          )}
 
           {/* Actions */}
           <Stack direction="row" spacing="12px" flexWrap="wrap" sx={{ rowGap: "8px" }}>

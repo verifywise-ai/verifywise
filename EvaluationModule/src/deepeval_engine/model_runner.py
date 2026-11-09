@@ -6,23 +6,53 @@ Generates responses from language models for evaluation prompts.
 
 import os
 import time
-from typing import Optional, Dict, Any
+from typing import TYPE_CHECKING, Optional, Dict, Any
 from transformers import AutoTokenizer, AutoModelForCausalLM
 import torch
+
+if TYPE_CHECKING:
+    from deepeval_engine.gateway_litellm_client import GatewayCompletion, GatewayProviderError
+
+# Cloud providers run only through the AI Gateway (LiteLLM); there is no direct SDK path
+CLOUD_PROVIDERS = ("openai", "anthropic", "google", "xai", "mistral", "openrouter")
+
+GATEWAY_RATE_LIMIT_RETRIES = 3
+GATEWAY_MAX_RETRY_DELAY_SECONDS = 60
+# Total wait per prompt: generate() is synchronous, so every second here holds the run
+GATEWAY_RETRY_BUDGET_SECONDS = 90
+
+
+def _is_passing_rate_limit(error: "GatewayProviderError") -> bool:
+    """A rate limit that lifts within the run; the rule lives in the gateway client."""
+    from deepeval_engine.gateway_litellm_client import rate_limit_recovers
+
+    return error.error_type == "RateLimitError" and rate_limit_recovers(error.message)
+
+
+def _rate_limit_delay(error: "GatewayProviderError", attempt: int) -> float:
+    """Exponential backoff, or the provider's hinted wait when longer; never over a minute."""
+    from deepeval_engine.gateway_litellm_client import retry_hint_seconds
+
+    backoff = 2 * (2 ** attempt)
+    hinted = retry_hint_seconds(error.message) or 0
+    return min(max(backoff, hinted), GATEWAY_MAX_RETRY_DELAY_SECONDS)
 
 
 class ModelRunner:
     """
     Runs inference on language models to generate responses for evaluation.
     
-    Supports HuggingFace models, OpenAI API, and Ollama.
+    Cloud providers run through the AI Gateway; HuggingFace, Ollama and custom
+    OpenAI-compatible endpoints run directly.
     """
     
     def __init__(
         self,
         model_name: str = "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
         provider: str = "huggingface",
-        device: Optional[str] = None
+        device: Optional[str] = None,
+        endpoint_url: Optional[str] = None,
+        api_key: Optional[str] = None,
     ):
         """
         Initialize model runner.
@@ -31,6 +61,8 @@ class ModelRunner:
             model_name: Name of the model (HuggingFace model ID, OpenAI model name, etc.)
             provider: Provider type ("huggingface", "openai", "ollama")
             device: Device to run on ("cpu", "cuda", "mps"). Auto-detected if None.
+            endpoint_url: Base URL of a custom_api (OpenAI-compatible) or Ollama endpoint
+            api_key: Key for a custom_api endpoint, if it needs one
         """
         self.model_name = model_name
         self.provider = provider.lower()
@@ -49,19 +81,19 @@ class ModelRunner:
         self.tokenizer = None
         self._gateway_mode = False
         self._gateway_api_key: Optional[str] = None
+        # Usage and cost of the last generate() call, when the gateway reported them
+        self.last_completion: Optional["GatewayCompletion"] = None
+        # Sampling settings LiteLLM left out on any call (the run records them)
+        self.dropped_params: set = set()
 
         from deepeval_engine.gateway_litellm_client import gateway_mode_enabled
 
-        cloud_via_gateway = self.provider in (
-            "openai",
-            "anthropic",
-            "google",
-            "xai",
-            "mistral",
-            "openrouter",
-            "huggingface",
-        )
-        if cloud_via_gateway and gateway_mode_enabled():
+        if self.provider in CLOUD_PROVIDERS or (self.provider == "huggingface" and gateway_mode_enabled()):
+            # Cloud models only run through the AI Gateway's LiteLLM
+            if not gateway_mode_enabled():
+                raise RuntimeError(
+                    f"Provider '{self.provider}' runs through the AI Gateway; set AI_GATEWAY_INTERNAL_KEY"
+                )
             self._gateway_api_key = self._env_api_key_for_provider()
             if not self._gateway_api_key:
                 raise ValueError(
@@ -69,22 +101,19 @@ class ModelRunner:
                 )
             self._gateway_mode = True
             print(f"✓ Model runner via AI Gateway (LiteLLM): {model_name} ({self.provider})")
+        elif self.provider == "local":
+            # Loading a user-named model in the shared server process would download any
+            # repo and unpickle its weights; local models run behind their own endpoint
+            raise ValueError(
+                "Local model files are not run inside EvalServer. Serve the model with "
+                "Ollama, vLLM or another OpenAI-compatible server and add it as a custom API model."
+            )
         elif self.provider == "huggingface":
             self._load_huggingface_model()
-        elif self.provider == "openai":
-            self._setup_openai()
-        elif self.provider == "anthropic":
-            self._setup_anthropic()
-        elif self.provider == "google":
-            self._setup_google()
-        elif self.provider == "xai":
-            self._setup_xai()
-        elif self.provider == "mistral":
-            self._setup_mistral()
+        elif self.provider == "custom_api":
+            self._setup_custom_api(endpoint_url, api_key)
         elif self.provider == "ollama":
-            self._setup_ollama()
-        elif self.provider == "openrouter":
-            self._setup_openrouter()
+            self._setup_ollama(endpoint_url)
         else:
             raise ValueError(f"Unsupported provider: {provider}")
 
@@ -109,38 +138,6 @@ class ModelRunner:
         v = self._env_api_key_for_provider_static(self.provider)
         return v if v else None
 
-    def _retry_with_backoff(self, func, max_retries=3, base_delay=2):
-        """
-        Retry a function with exponential backoff on rate limit errors.
-
-        Args:
-            func: Function to execute (should take no arguments, use lambda if needed)
-            max_retries: Maximum number of retries (default: 3)
-            base_delay: Base delay in seconds for exponential backoff (default: 2)
-
-        Returns:
-            Result from the function
-
-        Raises:
-            Exception: Re-raises the last exception if all retries fail
-        """
-        for attempt in range(max_retries + 1):
-            try:
-                return func()
-            except Exception as e:
-                error_str = str(e)
-                # Check if it's a rate limit error (Status 429 or rate limit message)
-                is_rate_limit = "429" in error_str or "rate limit" in error_str.lower()
-
-                if is_rate_limit and attempt < max_retries:
-                    # Exponential backoff: 2s, 4s, 8s
-                    delay = base_delay * (2 ** attempt)
-                    print(f"⏳ Rate limit hit. Retrying in {delay}s... (attempt {attempt + 1}/{max_retries})")
-                    time.sleep(delay)
-                else:
-                    # Not a rate limit error, or we've exhausted retries
-                    raise
-
     def _load_huggingface_model(self):
         """Load HuggingFace model."""
         print(f"Loading HuggingFace model: {self.model_name}...")
@@ -157,95 +154,27 @@ class ModelRunner:
         
         self.model.eval()
     
-    def _setup_openai(self):
-        """Setup OpenAI API."""
-        api_key = os.getenv("OPENAI_API_KEY")
-        if not api_key:
-            raise ValueError("OPENAI_API_KEY environment variable not set")
-        
-        try:
-            import openai
-            self.openai_client = openai.OpenAI(api_key=api_key)
-            print(f"✓ OpenAI API configured")
-        except ImportError:
-            raise ImportError("openai package not installed. Install with: pip install openai")
-    
-    def _setup_anthropic(self):
-        """Setup Anthropic API."""
-        api_key = os.getenv("ANTHROPIC_API_KEY")
-        if not api_key:
-            raise ValueError("ANTHROPIC_API_KEY environment variable not set")
-        
-        try:
-            import anthropic
-            self.anthropic_client = anthropic.Anthropic(api_key=api_key)
-            print(f"✓ Anthropic API configured")
-        except ImportError:
-            raise ImportError("anthropic package not installed. Install with: pip install anthropic")
-    
-    def _setup_google(self):
-        """Setup Google API (for Gemini models)."""
-        api_key = os.getenv("GOOGLE_API_KEY")
-        if not api_key:
-            raise ValueError("GOOGLE_API_KEY environment variable not set")
-        
-        try:
-            import google.generativeai as genai
-            genai.configure(api_key=api_key)
-            self.google_client = genai.GenerativeModel(self.model_name)
-            print(f"✓ Google API configured")
-        except ImportError:
-            raise ImportError("google-generativeai package not installed. Install with: pip install google-generativeai")
-    
-    def _setup_xai(self):
-        """Setup xAI API using official SDK."""
-        api_key = os.getenv("XAI_API_KEY")
-        if not api_key:
-            raise ValueError("XAI_API_KEY environment variable not set")
-        
-        try:
-            from xai_sdk import Client
-            self.xai_client = Client(api_key=api_key)
-            print(f"✓ xAI API configured")
-        except ImportError:
-            raise ImportError("xai-sdk package not installed. Install with: pip install xai-sdk")
-    
-    def _setup_mistral(self):
-        """Setup Mistral API using official SDK."""
-        api_key = os.getenv("MISTRAL_API_KEY")
-        if not api_key:
-            raise ValueError("MISTRAL_API_KEY environment variable not set")
-        
-        try:
-            from mistralai import Mistral
-            self.mistral_client = Mistral(api_key=api_key)
-            print(f"✓ Mistral API configured")
-        except ImportError:
-            raise ImportError("mistralai package not installed. Install with: pip install mistralai")
-    
-    def _setup_ollama(self):
+    def _setup_custom_api(self, endpoint_url: Optional[str], api_key: Optional[str]):
+        """An OpenAI-compatible server the user runs or names (vLLM, LM Studio, a proxy)."""
+        if not endpoint_url:
+            raise ValueError("A custom API model needs an endpoint URL")
+        from deepeval_engine.endpoint_client import openai_base_url, openai_compatible_client
+
+        # User-entered: the outbound policy (private hosts allowed for on-prem; metadata,
+        # wildcard and non-http refused), then the /v1 path self-hosted judges use too
+        base_url = openai_base_url(endpoint_url, keep_entered_path=True)
+        self.custom_client = openai_compatible_client(base_url, api_key)
+        print(f"✓ Custom API configured: {endpoint_url}")
+
+    def _setup_ollama(self, endpoint_url: Optional[str] = None):
         """Setup Ollama."""
         try:
-            import ollama
-            self.ollama_client = ollama
+            from deepeval_engine.endpoint_client import ollama_client
+
+            self.ollama_client = ollama_client(endpoint_url)
             print(f"✓ Ollama configured")
         except ImportError:
             raise ImportError("ollama package not installed. Install with: pip install ollama")
-    
-    def _setup_openrouter(self):
-        """Setup OpenRouter API (OpenAI-compatible)."""
-        api_key = os.getenv("OPENROUTER_API_KEY")
-        if not api_key:
-            raise ValueError("OPENROUTER_API_KEY environment variable not set")
-        try:
-            from openai import OpenAI
-            self.openrouter_client = OpenAI(
-                api_key=api_key,
-                base_url="https://openrouter.ai/api/v1"
-            )
-            print(f"✓ OpenRouter API configured")
-        except ImportError:
-            raise ImportError("openai package not installed. Install with: pip install openai")
     
     def generate(
         self,
@@ -266,24 +195,15 @@ class ModelRunner:
         Returns:
             Generated response text
         """
+        self.last_completion = None
         if getattr(self, "_gateway_mode", False):
             return self._generate_gateway(prompt, max_tokens, temperature, top_p)
         if self.provider == "huggingface":
             return self._generate_huggingface(prompt, max_tokens, temperature, top_p)
-        elif self.provider == "openai":
-            return self._generate_openai(prompt, max_tokens, temperature, top_p)
-        elif self.provider == "anthropic":
-            return self._generate_anthropic(prompt, max_tokens, temperature, top_p)
-        elif self.provider == "google":
-            return self._generate_google(prompt, max_tokens, temperature, top_p)
-        elif self.provider == "xai":
-            return self._generate_xai(prompt, max_tokens, temperature, top_p)
-        elif self.provider == "mistral":
-            return self._generate_mistral(prompt, max_tokens, temperature, top_p)
+        elif self.provider == "custom_api":
+            return self._generate_custom_api(prompt, max_tokens, temperature, top_p)
         elif self.provider == "ollama":
             return self._generate_ollama(prompt, max_tokens, temperature, top_p)
-        elif self.provider == "openrouter":
-            return self._generate_openrouter(prompt, max_tokens, temperature, top_p)
         else:
             raise ValueError(f"Unsupported provider: {self.provider}")
     
@@ -313,35 +233,30 @@ class ModelRunner:
         
         return response.strip()
     
-    def _generate_openai(
+    def _generate_custom_api(
         self,
         prompt: str,
         max_tokens: int,
         temperature: float,
         top_p: Optional[float],
     ) -> str:
-        """Generate using OpenAI API with retry logic for rate limits."""
-        # Some OpenAI models (e.g., o-series) do not allow temperature and top_p together.
-        # Prefer temperature and include top_p only when provided and not an o-series model.
+        """Generate with the run's own OpenAI-compatible endpoint (never the gateway)."""
         params: Dict[str, Any] = {
             "model": self.model_name,
             "messages": [{"role": "user", "content": prompt}],
             "max_tokens": max_tokens,
             "temperature": temperature,
         }
-        model_lower = (self.model_name or "").lower()
-        is_o_series = model_lower.startswith("o")  # covers o1, o3, etc.
-        if (top_p is not None) and not is_o_series:
-            params["top_p"] = top_p
+        from deepeval_engine.gateway_litellm_client import top_p_to_send
 
-        def _call_openai():
-            response = self.openai_client.chat.completions.create(**params)
-            content = response.choices[0].message.content if response.choices else None
-            if content is None:
-                raise ValueError("OpenAI returned an empty response (None content).")
-            return content.strip()
-
-        return self._retry_with_backoff(_call_openai)
+        sent_top_p = top_p_to_send(top_p)
+        if sent_top_p is not None:
+            params["top_p"] = sent_top_p
+        response = self.custom_client.chat.completions.create(**params)
+        content = response.choices[0].message.content if response.choices else None
+        if content is None:
+            raise ValueError("The endpoint returned an empty response (None content).")
+        return content.strip()
 
     def _generate_gateway(
         self,
@@ -351,7 +266,8 @@ class ModelRunner:
         top_p: Optional[float],
     ) -> str:
         from deepeval_engine.gateway_litellm_client import (
-            gateway_chat_completion_sync,
+            GatewayProviderError,
+            gateway_completion_sync,
             to_litellm_model,
         )
 
@@ -361,142 +277,37 @@ class ModelRunner:
         if not key:
             raise RuntimeError("Gateway mode without API key")
 
-        def _call():
-            return gateway_chat_completion_sync(
-                litellm_model,
-                messages,
-                key,
-                max_tokens=max_tokens,
-                temperature=temperature if top_p is None else temperature,
-            )
-
-        return self._retry_with_backoff(_call)
-
-    def _generate_anthropic(
-        self,
-        prompt: str,
-        max_tokens: int,
-        temperature: float,
-        top_p: Optional[float],
-    ) -> str:
-        """Generate using Anthropic API with retry logic for rate limits."""
-        # Anthropic does not allow specifying both temperature and top_p simultaneously.
-        kwargs: Dict[str, Any] = {
-            "model": self.model_name,
-            "max_tokens": max_tokens,
-            "messages": [{"role": "user", "content": prompt}],
-        }
-        if top_p is not None:
-            # If top_p is provided explicitly, use it and omit temperature
-            kwargs["top_p"] = top_p
-        else:
-            kwargs["temperature"] = temperature
-
-        def _call_anthropic():
+        # Only a passing rate limit is retried: quota and billing errors never recover.
+        # The wait blocks like the call itself does: generate() is synchronous.
+        waited = 0.0
+        for attempt in range(GATEWAY_RATE_LIMIT_RETRIES + 1):
             try:
-                message = self.anthropic_client.messages.create(**kwargs)
-                # Handle various response formats from Anthropic
-                if not message.content:
-                    return ""
-                content_block = message.content[0]
-                # Content block might be a TextBlock object or dict
-                if hasattr(content_block, 'text'):
-                    text = content_block.text
-                elif isinstance(content_block, dict):
-                    text = content_block.get('text', '')
-                else:
-                    text = str(content_block)
-                return (text or "").strip()
-            except Exception as e:
-                import traceback
-                print(f"Anthropic API error: {e}")
-                print(f"Traceback: {traceback.format_exc()}")
-                raise
+                completion = gateway_completion_sync(
+                    litellm_model,
+                    messages,
+                    key,
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                    top_p=top_p,
+                )
+                break
+            except GatewayProviderError as e:
+                if not _is_passing_rate_limit(e) or attempt == GATEWAY_RATE_LIMIT_RETRIES:
+                    raise
+                delay = _rate_limit_delay(e, attempt)
+                if waited + delay > GATEWAY_RETRY_BUDGET_SECONDS:
+                    raise
+                waited += delay
+                print(f"⏳ Rate limit hit. Retrying in {delay}s... (attempt {attempt + 1}/{GATEWAY_RATE_LIMIT_RETRIES})")
+                time.sleep(delay)
+        self.last_completion = completion
+        new_drops = set(completion.dropped_params) - self.dropped_params
+        if new_drops:
+            # Once per runner (one run), not per prompt
+            print(f"⚠️ {self.model_name} does not take {', '.join(sorted(new_drops))}; the provider default was used")
+            self.dropped_params.update(new_drops)
+        return completion.text
 
-        return self._retry_with_backoff(_call_anthropic)
-
-    def _generate_google(
-        self,
-        prompt: str,
-        max_tokens: int,
-        temperature: float,
-        top_p: Optional[float],
-    ) -> str:
-        """Generate using Google API (Gemini models) with retry logic for rate limits."""
-        generation_config = {
-            "max_output_tokens": max_tokens,
-            "temperature": temperature,
-        }
-        if top_p is not None:
-            generation_config["top_p"] = top_p
-
-        def _call_google():
-            response = self.google_client.generate_content(
-                prompt,
-                generation_config=generation_config
-            )
-            return response.text.strip()
-
-        return self._retry_with_backoff(_call_google)
-
-    def _generate_xai(
-        self,
-        prompt: str,
-        max_tokens: int,
-        temperature: float,
-        top_p: Optional[float],
-    ) -> str:
-        """Generate using xAI official SDK (gRPC-based) with retry logic for rate limits."""
-        from xai_sdk.chat import user
-
-        def _call_xai():
-            chat = self.xai_client.chat.create(model=self.model_name)
-            chat.append(user(prompt))
-            response = chat.sample(
-                max_tokens=max_tokens,
-                temperature=temperature,
-            )
-            return response.message.content.strip()
-
-        return self._retry_with_backoff(_call_xai)
-    
-    def _generate_mistral(
-        self,
-        prompt: str,
-        max_tokens: int,
-        temperature: float,
-        top_p: Optional[float],
-    ) -> str:
-        """Generate using Mistral official SDK with retry logic for rate limits."""
-        params: Dict[str, Any] = {
-            "model": self.model_name,
-            "messages": [{"role": "user", "content": prompt}],
-            "max_tokens": max_tokens,
-            "temperature": temperature,
-        }
-        if top_p is not None:
-            params["top_p"] = top_p
-
-        def _call_mistral():
-            chat_response = self.mistral_client.chat.complete(**params)
-            content = chat_response.choices[0].message.content
-
-            # Handle case where content is a list (e.g., list of content blocks)
-            if isinstance(content, list):
-                # Extract text from content blocks if they're dicts with 'text' key
-                # Otherwise just join them as strings
-                text_parts = []
-                for item in content:
-                    if isinstance(item, dict) and 'text' in item:
-                        text_parts.append(item['text'])
-                    else:
-                        text_parts.append(str(item))
-                content = ''.join(text_parts)
-
-            return content.strip() if content else ""
-
-        return self._retry_with_backoff(_call_mistral)
-    
     def _generate_ollama(
         self,
         prompt: str,
@@ -509,37 +320,14 @@ class ModelRunner:
             "num_predict": max_tokens,
             "temperature": temperature,
         }
-        if top_p is not None:
-            options["top_p"] = top_p
+        from deepeval_engine.gateway_litellm_client import top_p_to_send
+
+        sent_top_p = top_p_to_send(top_p)
+        if sent_top_p is not None:
+            options["top_p"] = sent_top_p
         response = self.ollama_client.generate(model=self.model_name, prompt=prompt, options=options)
         
         return response['response'].strip()
-    
-    def _generate_openrouter(
-        self,
-        prompt: str,
-        max_tokens: int,
-        temperature: float,
-        top_p: Optional[float],
-    ) -> str:
-        """Generate using OpenRouter (OpenAI-compatible API) with retry logic for rate limits."""
-        params: Dict[str, Any] = {
-            "model": self.model_name,
-            "messages": [{"role": "user", "content": prompt}],
-            "max_tokens": max_tokens,
-            "temperature": temperature,
-        }
-        if top_p is not None:
-            params["top_p"] = top_p
-
-        def _call_openrouter():
-            response = self.openrouter_client.chat.completions.create(**params)
-            content = response.choices[0].message.content if response.choices else None
-            if content is None:
-                raise ValueError("OpenRouter returned an empty response (None content). The model may have refused or timed out.")
-            return content.strip()
-
-        return self._retry_with_backoff(_call_openrouter)
     
     def generate_batch(
         self,

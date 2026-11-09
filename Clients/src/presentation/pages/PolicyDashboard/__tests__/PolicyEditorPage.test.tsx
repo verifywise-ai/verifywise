@@ -3,6 +3,10 @@ import { screen, fireEvent, waitFor } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 
 const mockNavigate = vi.fn();
+vi.mock("../../../../application/hooks/useAuth", () => ({
+  useAuth: () => ({ userRoleName: "Admin" }),
+}));
+
 vi.mock("react-router", async () => {
   const actual: any = await vi.importActual("react-router");
   return { ...actual, useNavigate: () => mockNavigate };

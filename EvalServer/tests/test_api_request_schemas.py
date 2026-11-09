@@ -1,6 +1,6 @@
 """
 FastAPI TestClient tests for the pydantic request schemas on the deepeval
-router (``/evaluate``, ``/scorers``, ``/models``).
+router (``/scorers``, ``/models``).
 
 Malformed bodies must be rejected with a 422 before any controller runs;
 well-formed bodies must reach the controller as plain dicts. Controllers are
@@ -46,7 +46,6 @@ def patched_controllers(monkeypatch: pytest.MonkeyPatch) -> Dict[str, AsyncMock]
     from routers import deepeval as router_module
 
     mocks = {
-        "evaluate": AsyncMock(return_value={"eval_id": "deepeval_test"}),
         "create_scorer": AsyncMock(return_value={"id": "scorer_1"}),
         "update_scorer": AsyncMock(return_value={"id": "scorer_1"}),
         "test_scorer": AsyncMock(return_value={"score": 1.0}),
@@ -54,7 +53,6 @@ def patched_controllers(monkeypatch: pytest.MonkeyPatch) -> Dict[str, AsyncMock]
         "update_model": AsyncMock(return_value={"id": "model_1"}),
     }
 
-    monkeypatch.setattr(router_module, "create_deepeval_evaluation_controller", mocks["evaluate"])
     monkeypatch.setattr(router_module, "create_deepeval_scorer_controller", mocks["create_scorer"])
     monkeypatch.setattr(router_module, "update_deepeval_scorer_controller", mocks["update_scorer"])
     monkeypatch.setattr(router_module, "test_deepeval_scorer_controller", mocks["test_scorer"])
@@ -81,50 +79,26 @@ def _headers(org_id: int = 7) -> Dict[str, str]:
 
 
 # --------------------------------------------------------------------------- #
-# POST /deepeval/evaluate                                                      #
+# Removed legacy evaluation routes                                             #
 # --------------------------------------------------------------------------- #
 
 
-def test_evaluate_valid_body_reaches_controller(client, patched_controllers) -> None:
-    resp = client.post(
-        "/deepeval/evaluate",
-        headers=_headers(),
-        json={
-            "model": {"name": "gpt-4o", "provider": "openai"},
-            "metrics": {"answer_relevancy": True},
-            "selectedScorers": ["scorer_1"],
-        },
-    )
-    assert resp.status_code == 200
-    kwargs = patched_controllers["evaluate"].call_args.kwargs
-    assert kwargs["config_data"]["model"]["name"] == "gpt-4o"
-    assert kwargs["config_data"]["selectedScorers"] == ["scorer_1"]
-    assert kwargs["organization_id"] == 7
-
-
-def test_evaluate_unknown_fields_pass_through(client, patched_controllers) -> None:
-    """extra="allow": runner-specific keys must survive validation untouched."""
-    resp = client.post(
-        "/deepeval/evaluate",
-        headers=_headers(),
-        json={"evaluationMode": "both", "taskType": "summarization", "metrics": {}},
-    )
-    assert resp.status_code == 200
-    config_data = patched_controllers["evaluate"].call_args.kwargs["config_data"]
-    assert config_data["evaluationMode"] == "both"
-    assert config_data["taskType"] == "summarization"
-
-
-def test_evaluate_wrong_type_metrics_returns_422(client, patched_controllers) -> None:
-    resp = client.post("/deepeval/evaluate", headers=_headers(), json={"metrics": "yes"})
-    assert resp.status_code == 422
-    patched_controllers["evaluate"].assert_not_called()
-
-
-def test_evaluate_wrong_type_selected_scorers_returns_422(client, patched_controllers) -> None:
-    resp = client.post("/deepeval/evaluate", headers=_headers(), json={"selectedScorers": "scorer_1"})
-    assert resp.status_code == 422
-    patched_controllers["evaluate"].assert_not_called()
+@pytest.mark.parametrize(
+    "method,path",
+    [
+        ("post", "/deepeval/evaluate"),
+        ("get", "/deepeval/evaluate/status/deepeval_7_x"),
+        ("get", "/deepeval/evaluate/results/deepeval_7_x"),
+        ("get", "/deepeval/evaluations"),
+        ("delete", "/deepeval/evaluations/deepeval_7_x"),
+    ],
+)
+def test_legacy_in_process_evaluation_routes_are_gone(client, method, path) -> None:
+    """They ran in the server process and put an org's judge key in os.environ,
+    where other orgs' runs could read it. Evaluations run as experiments now."""
+    kwargs = {"json": {"judgeLlm": {"provider": "openai", "apiKey": "sk-org-a"}}} if method == "post" else {}
+    resp = getattr(client, method)(path, headers=_headers(), **kwargs)
+    assert resp.status_code == 404
 
 
 # --------------------------------------------------------------------------- #

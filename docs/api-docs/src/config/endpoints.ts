@@ -219,6 +219,28 @@ export const agentDiscoveryEndpoints: Endpoint[] = [
     tag: "Agent Discovery",
   },
   {
+    method: 'PATCH',
+    path: '/agent-primitives/{id}/link-use-case',
+    summary: "Link Use Case To Agent",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Agent Discovery",
+  },
+  {
+    method: 'PATCH',
+    path: '/agent-primitives/{id}/unlink-use-case',
+    summary: "Unlink Use Case From Agent",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Agent Discovery",
+  },
+  {
     method: 'GET',
     path: '/agent-primitives/{id}/audit-logs',
     summary: "Get Agent Audit Logs",
@@ -4451,8 +4473,10 @@ export const extensionEndpoints: Endpoint[] = [
       { name: 'itemId', in: 'path', type: 'integer', required: true, description: "The itemId" },
     ],
     responses: [
-      { status: 200, description: "Success" },
+      { status: 201, description: "File linked to the item" },
+      { status: 400, description: "fileId (body) or a path id is not a positive integer up to 2147483647" },
       { status: 403, description: "Extension not enabled for this organization, or role not allowed" },
+      { status: 404, description: "File not found in this organization" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Extensions",
@@ -4469,8 +4493,10 @@ export const extensionEndpoints: Endpoint[] = [
       { name: 'fileId', in: 'path', type: 'integer', required: true, description: "The fileId" },
     ],
     responses: [
-      { status: 200, description: "Success" },
+      { status: 200, description: "Link removed. The file itself is kept and stays in the File Manager." },
+      { status: 400, description: "id, itemId or fileId is not a positive integer up to 2147483647" },
       { status: 403, description: "Extension not enabled for this organization, or role not allowed" },
+      { status: 404, description: "The lifecycle item has no link to this file" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Extensions",
@@ -4562,6 +4588,118 @@ export const extensionEndpoints: Endpoint[] = [
       { status: 500, description: "Internal server error" },
     ],
     tag: "Extensions",
+  },
+];
+
+// Extensions/Jira Incidents endpoints
+export const extensionsjiraIncidentsEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/extensions/jira-incidents/links',
+    summary: "Get Jira links for incidents",
+    description: "Jira issue links for the given incident ids (incident_ids=1,2, at most 500). Open to any member; returns an empty list when the extension is disabled.",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions/Jira Incidents",
+  },
+  {
+    method: 'GET',
+    path: '/extensions/jira-incidents/config',
+    summary: "Get Jira incidents settings",
+    description: "Connection, mappings and readiness. Never returns the API token. Admin only.",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions/Jira Incidents",
+  },
+  {
+    method: 'PUT',
+    path: '/extensions/jira-incidents/config',
+    summary: "Save Jira incidents settings",
+    description: "Partial update of the connection, mappings and import defaults; checks the credentials with Jira. Admin only.",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions/Jira Incidents",
+  },
+  {
+    method: 'GET',
+    path: '/extensions/jira-incidents/jira/projects',
+    summary: "List Jira projects",
+    description: "Projects the saved service account can browse. Admin only.",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions/Jira Incidents",
+  },
+  {
+    method: 'GET',
+    path: '/extensions/jira-incidents/jira/issue-types',
+    summary: "List Jira issue types",
+    description: "Issue types of a Jira project (project=<id>). Admin only.",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions/Jira Incidents",
+  },
+  {
+    method: 'GET',
+    path: '/extensions/jira-incidents/jira/statuses',
+    summary: "List Jira statuses",
+    description: "Statuses for a project and issue type, with the default status mappings both ways. Admin only.",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions/Jira Incidents",
+  },
+  {
+    method: 'GET',
+    path: '/extensions/jira-incidents/jira/priorities',
+    summary: "List Jira priorities",
+    description: "Jira priorities with the default priority-to-severity mapping. Admin only.",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions/Jira Incidents",
+  },
+  {
+    method: 'GET',
+    path: '/extensions/jira-incidents/jira/labels',
+    summary: "Search Jira labels",
+    description: "Labels matching query, for the import filter. Admin only.",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions/Jira Incidents",
+  },
+  {
+    method: 'GET',
+    path: '/extensions/jira-incidents/events',
+    summary: "List Jira incidents sync activity",
+    description: "Most recent sync events, newest first (limit 1-200, default 50). Admin only.",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions/Jira Incidents",
   },
 ];
 
@@ -5855,9 +5993,14 @@ export const intakeFormEndpoints: Endpoint[] = [
     method: 'POST',
     path: '/intake/forms',
     summary: "Create Intake Form",
+    description: "The optional routing block turns on review routing for the form. Form responses carry the saved routing block.",
     requiresAuth: true,
+    requestBody: {
+      "routing": "object (optional, nullable)",
+    },
     responses: [
       { status: 201, description: "Created successfully" },
+      { status: 400, description: "Invalid routing settings, or a reviewer who cannot review intake submissions" },
       { status: 401, description: "Unauthorized" },
       { status: 500, description: "Internal server error" },
     ],
@@ -5882,12 +6025,17 @@ export const intakeFormEndpoints: Endpoint[] = [
     method: 'PATCH',
     path: '/intake/forms/{id}',
     summary: "Update Intake Form",
+    description: "Saving a routing block routes the form's pending submissions again. Form responses carry the saved routing block.",
     requiresAuth: true,
     parameters: [
       { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
     ],
+    requestBody: {
+      "routing": "object (optional, nullable)",
+    },
     responses: [
       { status: 200, description: "Success" },
+      { status: 400, description: "Invalid routing settings, or a reviewer who cannot review intake submissions" },
       { status: 401, description: "Unauthorized" },
       { status: 500, description: "Internal server error" },
     ],
@@ -5939,6 +6087,20 @@ export const intakeFormEndpoints: Endpoint[] = [
     tag: "Intake Forms",
   },
   {
+    method: 'GET',
+    path: '/intake/routing/eligible-reviewers',
+    summary: "Get Eligible Reviewers",
+    description: "Users of the organization whose role can edit intake forms, as id, name, surname and email. Used to fill the reviewer pickers in the routing settings.",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Forbidden" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Intake Forms",
+  },
+  {
     method: 'POST',
     path: '/intake/forms/suggested-questions',
     summary: "Get L L M Suggested Questions",
@@ -5964,8 +6126,29 @@ export const intakeFormEndpoints: Endpoint[] = [
   },
   {
     method: 'GET',
+    path: '/intake/oversight',
+    summary: "Get Intake Oversight",
+    description: "Routing and review figures for the last 4, 8 or 12 weeks (weeks start Monday, UTC): totals by lane, weekly buckets, median hours to decision, redlines, second reviews, per-reviewer decisions, band kept, suggested risks accepted and up to 20 needs-attention rows. An empty period returns zero counts and null medians.",
+    requiresAuth: true,
+    parameters: [
+      { name: 'weeks', in: 'query', type: 'integer', required: false, description: "The weeks" },
+      { name: 'formId', in: 'query', type: 'integer', required: false, description: "Limit the figures to one form of the organization" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 400, description: "weeks is not 4, 8 or 12, or formId is invalid" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Forbidden" },
+      { status: 404, description: "Form not found in this organization" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Intake Forms",
+  },
+  {
+    method: 'GET',
     path: '/intake/submissions',
     summary: "Get Pending Submissions",
+    description: "Each row also carries routing (lane, reason, score, threshold, closeCallMargin, routedAt, and escalation or secondReview when set), routingEnabled and laneReviewerIds (user ids who can decide the stored lane).",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
@@ -6021,6 +6204,7 @@ export const intakeFormEndpoints: Endpoint[] = [
     method: 'GET',
     path: '/intake/submissions/{id}/preview',
     summary: "Get Submission Preview",
+    description: "Also returns routing, routingEnabled, canDecide, decideBlockedReason, laneReviewers (id and name of the users who can decide) and isSeniorReviewer for the caller.",
     requiresAuth: true,
     parameters: [
       { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
@@ -6042,7 +6226,79 @@ export const intakeFormEndpoints: Endpoint[] = [
     ],
     responses: [
       { status: 200, description: "Success" },
+      { status: 400, description: "Invalid band, or a band below the rule minimum (AI-scored submissions)" },
       { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Intake Forms",
+  },
+  {
+    method: 'POST',
+    path: '/intake/submissions/{id}/assessment/retry',
+    summary: "Retry Failed Or Stalled Assessment Stages",
+    description: "Queues the scoring and/or suggested-risk stages that failed or have been pending for over 10 minutes. Finished stages are never re-run. Pending submissions only.",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 202, description: "Queued; body lists the stages" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Forbidden" },
+      { status: 404, description: "Submission not found" },
+      { status: 409, description: "Submission not pending, or nothing to retry" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Intake Forms",
+  },
+  {
+    method: 'POST',
+    path: '/intake/submissions/{id}/suggested-risks/accept-all',
+    summary: "Accept All Suggested Risks",
+    description: "Moves every suggested risk still in \"suggested\" to \"accepted\". Dismissed ones stay dismissed; ones without a mitigation plan are skipped. Returns { accepted, skipped }.",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Forbidden" },
+      { status: 404, description: "Submission not found" },
+      { status: 409, description: "Submission not pending" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Intake Forms",
+  },
+  {
+    method: 'PATCH',
+    path: '/intake/submissions/{id}/suggested-risks/{suggestionId}',
+    summary: "Update A Suggested Risk",
+    description: "Edits, accepts, dismisses or restores one suggested risk on a pending submission. Accepting requires a mitigation plan.",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+      { name: 'suggestionId', in: 'path', type: 'string', required: true, description: "The suggestionId" },
+    ],
+    requestBody: {
+      "state": "suggested | accepted | dismissed (optional)",
+      "name": "string (optional)",
+      "description": "string (optional)",
+      "likelihood": "Rare | Unlikely | Possible | Likely | Almost Certain (optional)",
+      "severity": "Negligible | Minor | Moderate | Major | Catastrophic (optional)",
+      "mitigationPlan": "string (optional)",
+      "implementationStrategy": "string (optional)",
+      "deadline": "string (optional, nullable)",
+      "modelRiskCategory": "Performance | Bias & Fairness | Security | Data Quality | Compliance (optional)",
+      "modelRiskLevel": "Low | Medium | High | Critical (optional)",
+    },
+    responses: [
+      { status: 200, description: "The updated suggestion" },
+      { status: 400, description: "Invalid field, nothing to update, or accepting without a mitigation plan" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Forbidden" },
+      { status: 404, description: "Submission or suggestion not found" },
+      { status: 409, description: "Submission not pending" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Intake Forms",
@@ -6066,6 +6322,7 @@ export const intakeFormEndpoints: Endpoint[] = [
     method: 'POST',
     path: '/intake/submissions/{id}/approve',
     summary: "Approve Submission",
+    description: "With routing on, only a reviewer of the lane the approval would make true, or an Admin, can approve (403 otherwise). A standard-lane approval by a non-senior reviewer may be picked for a second review.",
     requiresAuth: true,
     parameters: [
       { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
@@ -6073,6 +6330,7 @@ export const intakeFormEndpoints: Endpoint[] = [
     responses: [
       { status: 201, description: "Created successfully" },
       { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Routing is on and the caller may not decide this lane" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Intake Forms",
@@ -6081,6 +6339,7 @@ export const intakeFormEndpoints: Endpoint[] = [
     method: 'POST',
     path: '/intake/submissions/{id}/reject',
     summary: "Reject Submission",
+    description: "With routing on, only a reviewer of the stored lane, or an Admin, can reject (403 otherwise).",
     requiresAuth: true,
     parameters: [
       { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
@@ -6088,6 +6347,77 @@ export const intakeFormEndpoints: Endpoint[] = [
     responses: [
       { status: 201, description: "Created successfully" },
       { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Routing is on and the caller may not decide this lane" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Intake Forms",
+  },
+  {
+    method: 'POST',
+    path: '/intake/submissions/{id}/escalate',
+    summary: "Send Submission To Senior Review",
+    description: "Moves a pending standard-lane submission to the senior lane with reason escalated. Re-routing leaves it there. Allowed for an Admin or a reviewer listed on the form. Returns the new routing.",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    requestBody: {
+      "reason": "string (required)",
+    },
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 400, description: "Invalid id, or the reason is missing or longer than 1000 characters" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Caller is not an Admin or a reviewer of the form" },
+      { status: 404, description: "Submission or form not found" },
+      { status: 409, description: "Not pending, routing is off, not in the standard lane, or the submission changed" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Intake Forms",
+  },
+  {
+    method: 'POST',
+    path: '/intake/submissions/{id}/second-review',
+    summary: "Record Second Review",
+    description: "Closes an open second review as agreed or missed. Allowed for a senior reviewer of the form or an Admin, never for the person who approved the submission. Does not change the approval or the entity it created. Returns the new routing.",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    requestBody: {
+      "outcome": "agreed | missed (required)",
+      "note": "string (optional)",
+    },
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 400, description: "Invalid id or outcome, a missed outcome without a note, or a note over 2000 characters" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Caller is not a senior reviewer of the form or an Admin, or approved the submission" },
+      { status: 404, description: "Submission not found" },
+      { status: 409, description: "The second review is not open, or it changed" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Intake Forms",
+  },
+  {
+    method: 'POST',
+    path: '/intake/submissions/{id}/second-review/resolve',
+    summary: "Resolve Missed Second Review",
+    description: "Closes a missed second review once the follow-up is done. Same caller rules as recording a second review. Returns the new routing.",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    requestBody: {
+      "note": "string (required)",
+    },
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 400, description: "Invalid id, or the note is missing or longer than 2000 characters" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Caller is not a senior reviewer of the form or an Admin, or approved the submission" },
+      { status: 404, description: "Submission not found" },
+      { status: 409, description: "The review is not missed, is already resolved, or changed" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Intake Forms",
@@ -6100,6 +6430,108 @@ export const intakeFormEndpoints: Endpoint[] = [
     responses: [
       { status: 200, description: "Success" },
       { status: 500, description: "Internal server error" },
+    ],
+    tag: "Intake Forms",
+  },
+  {
+    method: 'POST',
+    path: '/intake/public/by-id/{publicId}/live-checks',
+    summary: "Post Public Live Checks",
+    description: "Runs AI checks for vague and conflicting answers on a public intake form. Unauthenticated; rate-limited per visitor and per form. Returns aiAvailable false when live checks are off or the form has no usable LLM key.",
+    requiresAuth: false,
+    parameters: [
+      { name: 'publicId', in: 'path', type: 'string', required: true, description: "Public form id (hex)" },
+    ],
+    requestBody: {
+      "data": "object (required)",
+      "language": "string (optional)",
+    },
+    responses: [
+      { status: 200, description: "data is { aiAvailable, hints, error? }. A failed model call is still a 200 with hints [] and error \"unavailable\"." },
+      { status: 400, description: "data is not an object" },
+      { status: 404, description: "Form not found or not active" },
+      { status: 413, description: "Request body over 10 MB" },
+      { status: 429, description: "Rate limit or form budget reached; see the Retry-After header" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Intake Forms",
+  },
+  {
+    method: 'POST',
+    path: '/intake/public/by-id/{publicId}/prefill',
+    summary: "Post Public Prefill",
+    description: "Suggests answers for empty questions from an uploaded vendor document (PDF or Word .docx). The file is not stored. Unauthenticated; rate-limited per visitor and per form.",
+    requiresAuth: false,
+    parameters: [
+      { name: 'publicId', in: 'path', type: 'string', required: true, description: "Public form id (hex)" },
+    ],
+    requestBody: {
+      "file": "string (required)",
+      "data": "string (optional)",
+      "language": "string (optional)",
+    },
+    responses: [
+      { status: 200, description: "data is { fileName, suggestions }" },
+      { status: 400, description: "Missing file, invalid data, or an unreadable multipart body (extra fields or files)" },
+      { status: 404, description: "Form not found or prefill unavailable" },
+      { status: 413, description: "File too large" },
+      { status: 415, description: "Not a PDF or .docx file (extension, MIME type and content must match)" },
+      { status: 422, description: "File could not be read" },
+      { status: 429, description: "Rate limit or form budget reached; see the Retry-After header" },
+      { status: 500, description: "Internal server error" },
+      { status: 502, description: "Model call failed" },
+    ],
+    tag: "Intake Forms",
+  },
+  {
+    method: 'POST',
+    path: '/intake/public/{tenantSlug}/{formSlug}/live-checks',
+    summary: "Post Public Live Checks",
+    description: "Legacy slug URL for the live checks endpoint. Same behaviour as /intake/public/by-id/{publicId}/live-checks.",
+    requiresAuth: false,
+    parameters: [
+      { name: 'tenantSlug', in: 'path', type: 'string', required: true, description: "The tenantSlug" },
+      { name: 'formSlug', in: 'path', type: 'string', required: true, description: "The formSlug" },
+    ],
+    requestBody: {
+      "data": "object (required)",
+      "language": "string (optional)",
+    },
+    responses: [
+      { status: 200, description: "data is { aiAvailable, hints, error? }. A failed model call is still a 200 with hints [] and error \"unavailable\"." },
+      { status: 400, description: "data is not an object" },
+      { status: 404, description: "Form not found or not active" },
+      { status: 413, description: "Request body over 10 MB" },
+      { status: 429, description: "Rate limit or form budget reached; see the Retry-After header" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Intake Forms",
+  },
+  {
+    method: 'POST',
+    path: '/intake/public/{tenantSlug}/{formSlug}/prefill',
+    summary: "Post Public Prefill",
+    description: "Legacy slug URL for the prefill endpoint. Same behaviour as /intake/public/by-id/{publicId}/prefill.",
+    requiresAuth: false,
+    parameters: [
+      { name: 'tenantSlug', in: 'path', type: 'string', required: true, description: "The tenantSlug" },
+      { name: 'formSlug', in: 'path', type: 'string', required: true, description: "The formSlug" },
+    ],
+    requestBody: {
+      "file": "string (required)",
+      "data": "string (optional)",
+      "language": "string (optional)",
+    },
+    responses: [
+      { status: 200, description: "data is { fileName, suggestions }" },
+      { status: 400, description: "Missing file, invalid data, or an unreadable multipart body (extra fields or files)" },
+      { status: 404, description: "Form not found or prefill unavailable" },
+      { status: 413, description: "File too large" },
+      { status: 415, description: "Not a PDF or .docx file (extension, MIME type and content must match)" },
+      { status: 422, description: "File could not be read" },
+      { status: 429, description: "Rate limit or form budget reached; see the Retry-After header" },
+      { status: 500, description: "Internal server error" },
+      { status: 502, description: "Model call failed" },
     ],
     tag: "Intake Forms",
   },
@@ -7169,6 +7601,44 @@ export const llmKeyEndpoints: Endpoint[] = [
       { status: 500, description: "Internal server error" },
     ],
     tag: "LLM Keys",
+  },
+];
+
+// Mcp endpoints
+export const mcpEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/mcp',
+    summary: "Rejected (use POST)",
+    description: "Always returns 405. Requires role: Super Admin",
+    requiresAuth: true,
+    responses: [
+      { status: 405, description: "Method not allowed: this server has no event stream, use POST" },
+    ],
+    tag: "Mcp",
+  },
+  {
+    method: 'POST',
+    path: '/mcp',
+    summary: "MCP JSON-RPC request",
+    description: "Stateless MCP endpoint for the super admin tools. Send a JSON-RPC message in the body; the reply is plain JSON, not an SSE stream. Requires role: Super Admin",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "JSON-RPC response" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Mcp",
+  },
+  {
+    method: 'DELETE',
+    path: '/mcp',
+    summary: "Rejected (stateless server)",
+    description: "Always returns 405. Requires role: Super Admin",
+    requiresAuth: true,
+    responses: [
+      { status: 405, description: "Method not allowed: there is no session to end" },
+    ],
+    tag: "Mcp",
   },
 ];
 
@@ -9506,13 +9976,17 @@ export const reportingEndpoints: Endpoint[] = [
     method: 'DELETE',
     path: '/reporting/{id}',
     summary: "Delete Generated Report By Id",
+    description: "Admin only. Deletes a generated report file; any other file id answers 404.",
     requiresAuth: true,
     parameters: [
       { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
     ],
     responses: [
       { status: 200, description: "Deleted successfully" },
+      { status: 400, description: "id is not a positive integer up to 2147483647" },
       { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Role not allowed to delete reports" },
+      { status: 404, description: "No generated report with this id in the organization" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Reporting",
@@ -10420,6 +10894,7 @@ export const shadowAiEndpoints: Endpoint[] = [
     responses: [
       { status: 201, description: "Created successfully" },
       { status: 401, description: "Unauthorized" },
+      { status: 409, description: "The tool is already under governance" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Shadow AI",
@@ -10577,7 +11052,29 @@ export const shadowAiEndpoints: Endpoint[] = [
       { status: 201, description: "Created successfully" },
       { status: 500, description: "Internal server error" },
     ],
-    tag: "Shadow AI",
+    tag: "v1: Shadow AI",
+  },
+  {
+    method: 'GET',
+    path: '/v1/shadow-ai-syslog/status',
+    summary: "Get Syslog Status",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Shadow AI",
+  },
+  {
+    method: 'POST',
+    path: '/v1/shadow-ai-syslog/sources/{id}/regenerate-key',
+    summary: "Regenerate Syslog Key",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Shadow AI",
   },
 ];
 
@@ -10989,13 +11486,41 @@ export const superAdminEndpoints: Endpoint[] = [
     tag: "Super Admin",
   },
   {
+    method: 'DELETE',
+    path: '/super-admin/organizations/{id}/users/{userId}',
+    summary: "Remove a user from an organization",
+    description: "Removes the user's membership of this organization. The account is deleted only when this was the user's last organization; a member of other organizations keeps it. Requires role: Super Admin",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "Organization ID" },
+      { name: 'userId', in: 'path', type: 'integer', required: true, description: "User ID" },
+    ],
+    responses: [
+      { status: 200, description: "Removed; accountDeleted says whether the account was deleted too" },
+      { status: 400, description: "Invalid organization or user ID" },
+      { status: 404, description: "The user is not a member of this organization" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Super Admin",
+  },
+  {
     method: 'PATCH',
     path: '/super-admin/users/{id}',
     summary: "Update User",
     description: "Requires role: Super Admin",
     requiresAuth: true,
+    requestBody: {
+      "name": "string (optional)",
+      "surname": "string (optional)",
+      "email": "string (optional)",
+      "roleId": "integer (optional)",
+      "organizationId": "integer (optional)",
+    },
     responses: [
-      { status: 200, description: "Success" },
+      { status: 200, description: "The user, with every organization they belong to and their role in each" },
+      { status: 400, description: "Unknown role, or no fields to update" },
+      { status: 403, description: "A pure super admin, who has no organization role" },
+      { status: 404, description: "No such user, or not a member of organizationId" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Super Admin",
@@ -11045,42 +11570,6 @@ export const superAdminEndpoints: Endpoint[] = [
     method: 'POST',
     path: '/super-admin/monitoring/token',
     summary: "Generate Monitoring Token",
-    description: "Requires role: Super Admin",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Super Admin",
-  },
-  {
-    method: 'GET',
-    path: '/super-admin/mcp-server',
-    summary: "Get Mcp Server",
-    description: "Requires role: Super Admin",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Super Admin",
-  },
-  {
-    method: 'DELETE',
-    path: '/super-admin/mcp-server',
-    summary: "Uninstall Mcp Server Handler",
-    description: "Requires role: Super Admin",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Super Admin",
-  },
-  {
-    method: 'POST',
-    path: '/super-admin/mcp-server/install',
-    summary: "Install Mcp Server Handler",
     description: "Requires role: Super Admin",
     requiresAuth: true,
     responses: [
@@ -11145,10 +11634,12 @@ export const systemEndpoints: Endpoint[] = [
     method: 'GET',
     path: '/logger/logs',
     summary: "Get Logs",
+    description: "Returns the last 500 lines of the caller's organization server log for today. Admin only (requires the logs.admin permission; built-in roles: Admin).",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
       { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Forbidden: caller does not hold the logs.admin permission" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "System",
@@ -11595,9 +12086,32 @@ export const userEndpoints: Endpoint[] = [
   },
   {
     method: 'POST',
+    path: '/users/invitations/accept',
+    summary: "Accept an invitation as an existing user",
+    description: "For an invited email that already has an account. The invitation link's token goes in the Authorization header (checked as for /users/register); the user's own email and password confirm the account. The account joins the inviting organization with the invited role, the invitation is marked accepted, and the user is logged in to that organization. The account itself is not changed. Rate-limited like /users/login.",
+    requiresAuth: false,
+    requestBody: {
+      "email": "string (required)",
+      "password": "string (required)",
+      "roleId": "integer (required)",
+      "organizationId": "integer (required)",
+    },
+    responses: [
+      { status: 202, description: "Joined and logged in to the organization; the same body as a single-organization login" },
+      { status: 401, description: "Invalid email or password, or an invalid invitation link" },
+      { status: 403, description: "The invitation was revoked, changed, or sent to a different email" },
+      { status: 406, description: "The invitation link has expired" },
+      { status: 409, description: "Already a member of this organization, or a super admin (who cannot join an organization)" },
+      { status: 429, description: "Too many attempts" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Users",
+  },
+  {
+    method: 'POST',
     path: '/users/login',
     summary: "Authenticate user",
-    description: "Validates email/password credentials via bcrypt. Returns a JWT access token in the response body and sets a refresh token in an HTTP-only cookie. Rate-limited to 5 requests per minute per IP.",
+    description: "Validates email/password credentials via bcrypt. A user with one organization (or a super admin with none) gets a JWT access token in the response body and a refresh token in an HTTP-only cookie. A user with several organizations gets no session yet: the response lists the organizations and a short-lived selectionToken for POST /users/login/select-organization. Rate-limited to 5 requests per minute per IP.",
     requiresAuth: false,
     requestBody: {
       "email": "string (required)",
@@ -11607,6 +12121,26 @@ export const userEndpoints: Endpoint[] = [
       { status: 202, description: "Authentication successful" },
       { status: 401, description: "Invalid email or password" },
       { status: 429, description: "Too many login attempts" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Users",
+  },
+  {
+    method: 'POST',
+    path: '/users/login/select-organization',
+    summary: "Choose the organization to log in to",
+    description: "Second login step for a user who belongs to several organizations. Exchanges the short-lived selectionToken returned by /users/login for a session in the chosen organization. The organization is fixed for the session. Rate-limited like /users/login.",
+    requiresAuth: false,
+    requestBody: {
+      "selectionToken": "string (required)",
+      "organizationId": "integer (required)",
+    },
+    responses: [
+      { status: 202, description: "Logged in; the same body as a single-organization login, and the refresh token cookie" },
+      { status: 401, description: "Not a valid selection token" },
+      { status: 403, description: "The user is not a member of that organization" },
+      { status: 406, description: "The selection token has expired" },
+      { status: 429, description: "Too many attempts" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Users",
@@ -11810,6 +12344,428 @@ export const userEndpoints: Endpoint[] = [
       { status: 500, description: "Internal server error" },
     ],
     tag: "Users",
+  },
+];
+
+// v1: Change History endpoints
+export const v1ChangeHistoryEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/evidence-hub-change-history/{id}',
+    summary: "Get Evidence Hub Change History By Id",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Change History",
+  },
+  {
+    method: 'GET',
+    path: '/v1/model-lifecycle-change-history/{id}',
+    summary: "Get Model Lifecycle Change History By Id",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Change History",
+  },
+  {
+    method: 'GET',
+    path: '/v1/control-eu-change-history/{id}',
+    summary: "Get Control E U Change History By Id",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Change History",
+  },
+  {
+    method: 'GET',
+    path: '/v1/subcontrol-eu-change-history/{id}',
+    summary: "Get Subcontrol E U Change History By Id",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Change History",
+  },
+  {
+    method: 'GET',
+    path: '/v1/annex-category-change-history/{id}',
+    summary: "Get Annex Category Change History By Id",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Change History",
+  },
+];
+
+// v1: Intake Forms endpoints
+export const v1IntakeFormsEndpoints: Endpoint[] = [
+  {
+    method: 'POST',
+    path: '/v1/intake-tier-suggestion/public/by-id/{publicId}',
+    summary: "Post Public Tier Suggestion",
+    requiresAuth: false,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Intake Forms",
+  },
+  {
+    method: 'POST',
+    path: '/v1/intake-tier-suggestion/public/by-id/{publicId}/explain',
+    summary: "Post Public Tier Explanation",
+    requiresAuth: false,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Intake Forms",
+  },
+  {
+    method: 'POST',
+    path: '/v1/intake-tier-suggestion/public/by-id/{publicId}/submit',
+    summary: "Submit Public Form By Public Id",
+    requiresAuth: false,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Intake Forms",
+  },
+  {
+    method: 'POST',
+    path: '/v1/intake-tier-suggestion/public/{tenantSlug}/{formSlug}',
+    summary: "Post Public Tier Suggestion",
+    requiresAuth: false,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Intake Forms",
+  },
+  {
+    method: 'POST',
+    path: '/v1/intake-tier-suggestion/public/{tenantSlug}/{formSlug}/explain',
+    summary: "Post Public Tier Explanation",
+    requiresAuth: false,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Intake Forms",
+  },
+  {
+    method: 'POST',
+    path: '/v1/intake-tier-suggestion/public/{tenantSlug}/{formSlug}/submit',
+    summary: "Submit Public Form",
+    requiresAuth: false,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Intake Forms",
+  },
+  {
+    method: 'GET',
+    path: '/v1/intake-tier-suggestion/submissions/{id}',
+    summary: "Get Submission Tier Suggestion Response",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Intake Forms",
+  },
+];
+
+// v1: Use Case Settings endpoints
+export const v1UseCaseSettingsEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/use-case-org-settings',
+    summary: "Get Use Case Org Settings Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Use Case Settings",
+  },
+  {
+    method: 'PUT',
+    path: '/v1/use-case-org-settings',
+    summary: "Update Use Case Org Settings Handler",
+    description: "Requires role: Admin",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Use Case Settings",
+  },
+];
+
+// v1: V1/Ai App Lifecycle endpoints
+export const v1V1aiAppLifecycleEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/ai-app-lifecycle/summary',
+    summary: "Get Ai App Lifecycle Summary Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai App Lifecycle",
+  },
+  {
+    method: 'GET',
+    path: '/v1/ai-app-lifecycle/{id}',
+    summary: "Get Ai App Lifecycle Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai App Lifecycle",
+  },
+  {
+    method: 'GET',
+    path: '/v1/ai-app-lifecycle/{id}/history',
+    summary: "Get Ai App History Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai App Lifecycle",
+  },
+  {
+    method: 'POST',
+    path: '/v1/ai-app-lifecycle/{id}/go-live',
+    summary: "Ai App Go Live Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai App Lifecycle",
+  },
+  {
+    method: 'POST',
+    path: '/v1/ai-app-lifecycle/{id}/retire',
+    summary: "Ai App Retire Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai App Lifecycle",
+  },
+  {
+    method: 'POST',
+    path: '/v1/ai-app-lifecycle/{id}/confirm',
+    summary: "Ai App Confirm Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai App Lifecycle",
+  },
+  {
+    method: 'GET',
+    path: '/v1/ai-app-lifecycle/intake-submissions',
+    summary: "Get Pending Ai App Submissions Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai App Lifecycle",
+  },
+];
+
+// v1: V1/Ai Apps endpoints
+export const v1V1aiAppsEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/ai-apps',
+    summary: "Get All Ai Apps V1",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai Apps",
+  },
+];
+
+// v1: V1/Dashboard endpoints
+export const v1V1dashboardEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/dashboard/preferences',
+    summary: "Get Dashboard Preferences Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Dashboard",
+  },
+  {
+    method: 'PUT',
+    path: '/v1/dashboard/preferences',
+    summary: "Update Dashboard Preferences Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Dashboard",
+  },
+];
+
+// v1: V1/Intake Form Review Time endpoints
+export const v1V1intakeFormReviewTimeEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/intake-form-review-time/{formId}',
+    summary: "Get Intake Form Review Time",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Intake Form Review Time",
+  },
+  {
+    method: 'PUT',
+    path: '/v1/intake-form-review-time/{formId}',
+    summary: "Update Intake Form Review Time",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Intake Form Review Time",
+  },
+];
+
+// v1: V1/Lifecycle Settings endpoints
+export const v1V1lifecycleSettingsEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/lifecycle-settings',
+    summary: "Get Lifecycle Settings Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Lifecycle Settings",
+  },
+  {
+    method: 'PATCH',
+    path: '/v1/lifecycle-settings',
+    summary: "Update Lifecycle Settings Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Lifecycle Settings",
+  },
+];
+
+// v1: V1/Use Case Lifecycle endpoints
+export const v1V1useCaseLifecycleEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/use-case-lifecycle/summary',
+    summary: "Get Lifecycle Summary Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Use Case Lifecycle",
+  },
+  {
+    method: 'GET',
+    path: '/v1/use-case-lifecycle/dashboard',
+    summary: "Get Lifecycle Dashboard Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Use Case Lifecycle",
+  },
+  {
+    method: 'POST',
+    path: '/v1/use-case-lifecycle/{id}/go-live',
+    summary: "Go Live Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Use Case Lifecycle",
+  },
+  {
+    method: 'POST',
+    path: '/v1/use-case-lifecycle/{id}/retire',
+    summary: "Retire Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Use Case Lifecycle",
+  },
+  {
+    method: 'POST',
+    path: '/v1/use-case-lifecycle/{id}/confirm',
+    summary: "Confirm Still Live Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Use Case Lifecycle",
+  },
+  {
+    method: 'PATCH',
+    path: '/v1/use-case-lifecycle/{id}/department',
+    summary: "Update Department Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Use Case Lifecycle",
+  },
+  {
+    method: 'GET',
+    path: '/v1/use-case-lifecycle/intake-submissions',
+    summary: "Get Pending Submissions Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Use Case Lifecycle",
   },
 ];
 
@@ -12111,6 +13067,7 @@ export const allEndpoints = {
   evidenceAi: evidenceAiEndpoints,
   evidenceHub: evidenceHubEndpoints,
   extension: extensionEndpoints,
+  extensionsjiraIncidents: extensionsjiraIncidentsEndpoints,
   file: fileEndpoints,
   framework: frameworkEndpoints,
   fria: friaEndpoints,
@@ -12123,6 +13080,7 @@ export const allEndpoints = {
   iso42001: iso42001Endpoints,
   llmEvals: llmEvalsEndpoints,
   llmKey: llmKeyEndpoints,
+  mcp: mcpEndpoints,
   modelInventory: modelInventoryEndpoints,
   modelRisk: modelRiskEndpoints,
   mrm: mrmEndpoints,
@@ -12157,6 +13115,15 @@ export const allEndpoints = {
   telemetry: telemetryEndpoints,
   training: trainingEndpoints,
   user: userEndpoints,
+  v1ChangeHistory: v1ChangeHistoryEndpoints,
+  v1IntakeForms: v1IntakeFormsEndpoints,
+  v1UseCaseSettings: v1UseCaseSettingsEndpoints,
+  v1V1aiAppLifecycle: v1V1aiAppLifecycleEndpoints,
+  v1V1aiApps: v1V1aiAppsEndpoints,
+  v1V1dashboard: v1V1dashboardEndpoints,
+  v1V1intakeFormReviewTime: v1V1intakeFormReviewTimeEndpoints,
+  v1V1lifecycleSettings: v1V1lifecycleSettingsEndpoints,
+  v1V1useCaseLifecycle: v1V1useCaseLifecycleEndpoints,
   vendor: vendorEndpoints,
   vendorRisk: vendorRiskEndpoints,
   webhook: webhookEndpoints,

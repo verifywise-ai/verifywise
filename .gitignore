@@ -110,6 +110,7 @@ Desktop.ini
 graphify-out/
 .megasaver/
 **/.megasaver/
+*mcp.json
 
 # AI agent temp files
 agent.md

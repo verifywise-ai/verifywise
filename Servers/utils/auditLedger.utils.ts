@@ -4,6 +4,7 @@ import { QueryTypes, Transaction } from "sequelize";
 import { getFeatureSettingsQuery } from "./featureSettings.utils";
 import { getLatestLedgerCheckpoint } from "./auditLedgerRetention.utils";
 import { AUDIT_LEDGER_LOCK_NS, GENESIS_HASH } from "./auditLedgerConstants";
+import { redactSensitiveInfo } from "./logger/redact";
 
 export { AUDIT_LEDGER_LOCK_NS, GENESIS_HASH };
 
@@ -104,6 +105,13 @@ export async function appendToAuditLedger(entry: AuditLedgerEntry): Promise<void
   // Skip if audit ledger is disabled for this organization
   if (!(await isAuditLedgerEnabled(organizationId))) return;
 
+  // Redact before hashing, so the chain covers the stored text. Custom
+  // field and retention audits append descriptions directly, not through
+  // logEvent; for logEvent's already-redacted text this pass is a no-op.
+  // Field values are the entity's own history and are kept as given; the
+  // ledger readers (list, advisor tools) redact them on the way out.
+  const description = entry.description ? redactSensitiveInfo(entry.description) : null;
+
   const txn: Transaction = await sequelize.transaction();
 
   try {
@@ -144,7 +152,7 @@ export async function appendToAuditLedger(entry: AuditLedgerEntry): Promise<void
           field_name: entry.fieldName || null,
           old_value: entry.oldValue || null,
           new_value: entry.newValue || null,
-          description: entry.description || null,
+          description,
           sentinel,
           prev_hash: prevHash,
         },
@@ -176,7 +184,7 @@ export async function appendToAuditLedger(entry: AuditLedgerEntry): Promise<void
       field_name: entry.fieldName || null,
       old_value: entry.oldValue || null,
       new_value: entry.newValue || null,
-      description: entry.description || null,
+      description,
       prev_hash: prevHash,
     });
 

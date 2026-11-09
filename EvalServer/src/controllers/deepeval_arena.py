@@ -133,9 +133,6 @@ async def call_llm_model(
         prompt: The prompt to send
         api_keys: Dictionary mapping provider names to API keys
     """
-    import openai
-    import anthropic
-
     from utils.gateway_litellm_client import (
         gateway_chat_completion_async,
         gateway_mode_enabled,
@@ -148,77 +145,19 @@ async def call_llm_model(
     if not api_key:
         raise ValueError(f"No API key provided for provider: {provider}")
 
-    if gateway_mode_enabled():
-        try:
-            litellm_model = to_litellm_model(provider_l, model)
-            messages = [{"role": "user", "content": prompt}]
-            return await gateway_chat_completion_async(
-                litellm_model,
-                messages,
-                api_key,
-                max_tokens=1024,
-                temperature=0.0,
-            )
-        except Exception as e:
-            logger.error(f"Error calling {provider}/{model} via AI Gateway: {e}")
-            raise
-
+    # Arena models are cloud models; they run only through the AI Gateway's LiteLLM
+    if not gateway_mode_enabled():
+        raise RuntimeError(f"Provider '{provider}' runs through the AI Gateway; set AI_GATEWAY_INTERNAL_KEY")
     try:
-        if provider == "openai":
-            client = openai.OpenAI(api_key=api_key)
-            
-            # Newer OpenAI models (o1, o3, gpt-4o, etc.) use max_completion_tokens
-            # Older models use max_tokens
-            newer_models = ["o1", "o3", "gpt-4o", "gpt-4.5", "gpt-5"]
-            use_completion_tokens = any(model.startswith(prefix) for prefix in newer_models)
-            
-            if use_completion_tokens:
-                response = client.chat.completions.create(
-                    model=model,
-                    messages=[{"role": "user", "content": prompt}],
-                    max_completion_tokens=1024,
-                )
-            else:
-                response = client.chat.completions.create(
-                    model=model,
-                    messages=[{"role": "user", "content": prompt}],
-                    max_tokens=1024,
-                )
-            return response.choices[0].message.content or ""
-        
-        elif provider == "anthropic":
-            client = anthropic.Anthropic(api_key=api_key)
-            response = client.messages.create(
-                model=model,
-                max_tokens=1024,
-                messages=[{"role": "user", "content": prompt}],
-            )
-            return response.content[0].text if response.content else ""
-        
-        elif provider == "google":
-            from google import genai
-            client = genai.Client(api_key=api_key)
-            response = client.models.generate_content(model=model, contents=prompt)
-            return response.text or ""
-        
-        else:
-            # For other providers, try OpenAI-compatible API
-            provider_base_urls = {
-                "mistral": "https://api.mistral.ai/v1",
-                "xai": "https://api.x.ai/v1",
-                "openrouter": "https://openrouter.ai/api/v1",
-            }
-            base_url = provider_base_urls.get(provider.lower(), f"https://api.{provider}.com/v1")
-            client = openai.OpenAI(api_key=api_key, base_url=base_url)
-            response = client.chat.completions.create(
-                model=model,
-                messages=[{"role": "user", "content": prompt}],
-                max_tokens=1024,
-            )
-            return response.choices[0].message.content or ""
-            
+        return await gateway_chat_completion_async(
+            to_litellm_model(provider_l, model),
+            [{"role": "user", "content": prompt}],
+            api_key,
+            max_tokens=1024,
+            temperature=0.0,
+        )
     except Exception as e:
-        logger.error(f"Error calling {provider}/{model}: {e}")
+        logger.error(f"Error calling {provider}/{model} via AI Gateway: {e}")
         raise
 
 

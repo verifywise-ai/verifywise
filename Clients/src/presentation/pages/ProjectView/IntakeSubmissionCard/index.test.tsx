@@ -85,6 +85,44 @@ describe("IntakeSubmissionCard", () => {
     expect(screen.getByText("Yes")).toBeInTheDocument();
   });
 
+  it("shows an AI-scored submission as its score and band", () => {
+    mockUseEntityIntakeSubmission.mockReturnValue({
+      data: { ...baseSubmission, riskScore: { finalScore: 64, rulesOnly: false } },
+      isLoading: false,
+    });
+    renderWithProviders(<IntakeSubmissionCard projectId={1} />);
+    expect(screen.getByText("Risk score:")).toBeInTheDocument();
+    expect(screen.getByText(/64 \(/)).toBeInTheDocument();
+    expect(screen.getByText("High")).toBeInTheDocument();
+    expect(screen.queryByText(/Risk: High/)).toBeNull();
+  });
+
+  it("shows an override band apart from the score's own band", () => {
+    mockUseEntityIntakeSubmission.mockReturnValue({
+      data: {
+        ...baseSubmission,
+        riskTier: "Critical",
+        riskOverrideTier: "Critical",
+        riskScore: { finalScore: 40, rulesOnly: false, band: "Medium" },
+      },
+      isLoading: false,
+    });
+    renderWithProviders(<IntakeSubmissionCard projectId={1} />);
+    expect(screen.getByText("Medium")).toBeInTheDocument();
+    expect(screen.getByText("band set to")).toBeInTheDocument();
+    expect(screen.getByText("Critical")).toBeInTheDocument();
+  });
+
+  it("shows a rules-only score as at least N (rules only)", () => {
+    mockUseEntityIntakeSubmission.mockReturnValue({
+      data: { ...baseSubmission, riskScore: { finalScore: 70, rulesOnly: true } },
+      isLoading: false,
+    });
+    renderWithProviders(<IntakeSubmissionCard projectId={1} />);
+    expect(screen.getByText("at least")).toBeInTheDocument();
+    expect(screen.getByText("(rules only)")).toBeInTheDocument();
+  });
+
   it("shows unmapped-only fields behind the 'Additional answers' toggle", () => {
     mockUseEntityIntakeSubmission.mockReturnValue({
       data: {

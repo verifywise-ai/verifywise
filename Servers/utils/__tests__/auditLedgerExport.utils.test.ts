@@ -111,6 +111,12 @@ describe("ledgerRowValues", () => {
     expect(ledgerRowValues(row)).toHaveLength(AUDIT_LEDGER_EXPORT_COLUMNS.length);
   });
 
+  // The export is the verifiable copy: rows must still match entry_hash.
+  it("exports text as stored, unredacted", () => {
+    const values = ledgerRowValues({ ...row, description: "failed: token=abc" });
+    expect(values[12]).toBe("failed: token=abc");
+  });
+
   it("gives an empty user for a deleted user", () => {
     const values = ledgerRowValues({ ...row, user_id: null, user_name: null, user_surname: null });
     expect(values[3]).toBe("");

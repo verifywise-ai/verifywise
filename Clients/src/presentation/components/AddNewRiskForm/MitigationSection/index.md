@@ -127,10 +127,6 @@ The component is organized into several logical sections:
 - `alertState` - Alert state interface
 - Form value and error interfaces from parent component
 
-### Styling
-
-- `styles.module.css` - Component-specific styles
-
 ## License
 
 This component is licensed under the MIT License.

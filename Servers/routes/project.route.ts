@@ -75,7 +75,7 @@ router.get("/all/compliance/progress", authenticateJWT, allProjectsCompliancePro
 router.get("/all/assessment/progress", authenticateJWT, allProjectsAssessmentProgress);
 
 // POSTs
-router.post("/", authenticateJWT, validateCreateProject, createProject);
+router.post("/", authenticateJWT, authorize("useCase.edit"), validateCreateProject, createProject);
 router.post(
   "/:id/eu-ai-act-classification",
   authenticateJWT,
@@ -86,10 +86,28 @@ router.post(
 // router.post("/saveControls", authenticateJWT, saveControls);
 
 // Patches
-router.patch("/:id", authenticateJWT, validateUpdateProject, updateProjectById);
-router.patch("/:id/status", authenticateJWT, validateUpdateProjectStatus, updateProjectStatus);
+router.patch(
+  "/:id",
+  authenticateJWT,
+  authorize("useCase.edit"),
+  validateUpdateProject,
+  updateProjectById,
+);
+router.patch(
+  "/:id/status",
+  authenticateJWT,
+  authorize("useCase.edit"),
+  validateUpdateProjectStatus,
+  updateProjectStatus,
+);
 
 // DELETEs
-router.delete("/:id", authenticateJWT, validateProjectIdParam, deleteProjectById);
+router.delete(
+  "/:id",
+  authenticateJWT,
+  authorize("useCase.edit"),
+  validateProjectIdParam,
+  deleteProjectById,
+);
 
 export default router;

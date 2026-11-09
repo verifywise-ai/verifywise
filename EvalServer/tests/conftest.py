@@ -54,6 +54,8 @@ def _isolate_environment(monkeypatch: pytest.MonkeyPatch) -> None:
         "G_EVAL_MODEL",
         "G_EVAL_MAX_TOKENS",
         "OPENAI_API_BASE",
+        "G_EVAL_BASE_URL",
+        "G_EVAL_API_KEY",
         "OLLAMA_HOST",
     ):
         monkeypatch.delenv(key, raising=False)
