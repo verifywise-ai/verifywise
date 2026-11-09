@@ -15,12 +15,19 @@ jest.mock("../../utils/logger/fileLogger", () => ({
   __esModule: true,
   default: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
 }));
+jest.mock("../../database/redis", () => ({
+  __esModule: true,
+  default: { status: "ready", multi: jest.fn() },
+}));
 
 import {
+  ASSIGNMENT_EMAILS_PER_USER_PER_HOUR,
   notifyExternalOwnerAssigned,
   notifyExternalOwnerConfirmationDue,
 } from "../externalOwnerNotification.service";
 import { notificationService } from "../notificationService";
+import redisClient from "../../database/redis";
+import logger from "../../utils/logger/fileLogger";
 import { sequelize } from "../../database/db";
 import { getOrganizationByIdQuery } from "../../utils/organization.utils";
 import { EMAIL_TEMPLATES } from "../../constants/emailTemplates";
@@ -32,10 +39,114 @@ const query = sequelize.query as unknown as jest.Mock<any>;
 const recipient = { name: "Ada Lovelace", email: "ada@example.com" };
 const contactRow = { name: "Grace", surname: "Hopper", email: "grace@acme.test" };
 
+const redis = redisClient as unknown as { status: string; multi: jest.Mock<any> };
+const exec = jest.fn<any>();
+const incr = jest.fn<any>();
+const expire = jest.fn<any>();
+const redisChain = { incr, expire, exec };
+
 beforeEach(() => {
   jest.clearAllMocks();
   query.mockResolvedValue([contactRow]);
   send.mockResolvedValue(undefined);
+  redis.status = "ready";
+  redis.multi.mockReturnValue(redisChain);
+  incr.mockReturnValue(redisChain);
+  expire.mockReturnValue(redisChain);
+  exec.mockResolvedValue([
+    [null, 1],
+    [null, 1],
+  ]);
+});
+
+describe("notifyExternalOwnerAssigned hourly limit", () => {
+  const assign = () =>
+    notifyExternalOwnerAssigned({
+      organizationId: 3,
+      useCaseTitle: "Chatbot",
+      recipient,
+      assignedByUserId: 8,
+    });
+
+  it("counts per organization and sender, with an expiry", async () => {
+    await assign();
+    const key = incr.mock.calls[0][0] as string;
+    expect(key).toMatch(/^external-owner:assigned:3:8:\d{10}$/);
+    expect(expire).toHaveBeenCalledWith(key, 3600);
+    expect(key).not.toContain("ada@example.com");
+  });
+
+  it("sends the last email within the limit", async () => {
+    exec.mockResolvedValue([
+      [null, ASSIGNMENT_EMAILS_PER_USER_PER_HOUR],
+      [null, 1],
+    ]);
+    await assign();
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+
+  it("skips the email over the limit, resolves, and logs without the address", async () => {
+    exec.mockResolvedValue([
+      [null, ASSIGNMENT_EMAILS_PER_USER_PER_HOUR + 1],
+      [null, 1],
+    ]);
+    await expect(assign()).resolves.toBeUndefined();
+    expect(send).not.toHaveBeenCalled();
+    const warning = (logger.warn as unknown as jest.Mock<any>).mock.calls[0][0] as string;
+    expect(warning).toContain("over the hourly limit");
+    expect(warning).not.toContain("ada@example.com");
+  });
+
+  it("still sends when Redis is not connected, without queueing a count", async () => {
+    redis.status = "reconnecting";
+    await assign();
+    expect(redis.multi).not.toHaveBeenCalled();
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+
+  it("still sends when Redis errors or does not answer", async () => {
+    exec.mockRejectedValueOnce(new Error("redis down"));
+    await assign();
+    expect(send).toHaveBeenCalledTimes(1);
+
+    exec.mockReturnValueOnce(new Promise(() => undefined));
+    await assign();
+    expect(send).toHaveBeenCalledTimes(2);
+  });
+
+  it("resolves without waiting for the mail provider", async () => {
+    send.mockReturnValueOnce(new Promise(() => undefined));
+    await expect(assign()).resolves.toBeUndefined();
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+
+  it("logs a failed send instead of rejecting", async () => {
+    send.mockRejectedValueOnce(new Error("smtp down"));
+    await expect(assign()).resolves.toBeUndefined();
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(logger.error).toHaveBeenCalledWith(
+      "Failed to notify external owner:",
+      expect.any(Error),
+    );
+  });
+
+  it("does not count still-live reminders against the limit", async () => {
+    exec.mockResolvedValue([
+      [null, ASSIGNMENT_EMAILS_PER_USER_PER_HOUR + 1],
+      [null, 1],
+    ]);
+    await notifyExternalOwnerConfirmationDue({
+      organizationId: 3,
+      entryTitle: "Chatbot",
+      noun: "use case",
+      since: "2026-06-01",
+      intervalDays: 90,
+      recipient,
+      contactUserId: 8,
+    });
+    expect(redis.multi).not.toHaveBeenCalled();
+    expect(send).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe("notifyExternalOwnerAssigned", () => {

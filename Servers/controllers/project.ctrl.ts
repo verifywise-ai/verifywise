@@ -350,8 +350,9 @@ export async function createProject(req: Request, res: Response): Promise<any> {
           baseUrl,
         ).catch((err) => console.error("Failed to send owner notification:", err));
       } else if (createdProject.external_owner_email) {
-        // Email only: an external owner has no in-app notifications.
-        notifyExternalOwnerAssigned({
+        // Email only: an external owner has no in-app notifications. Awaited
+        // for its lookups; it does not wait for the mail provider.
+        await notifyExternalOwnerAssigned({
           organizationId: req.organizationId!,
           useCaseTitle: createdProject.project_title,
           recipient: {
@@ -630,7 +631,7 @@ export async function updateProjectById(req: Request, res: Response): Promise<an
       // person again (a name fix, a case change) does not re-send it.
       const newExternalEmail = project.external_owner_email;
       if (newExternalEmail && newExternalEmail !== existingProject.external_owner_email) {
-        notifyExternalOwnerAssigned({
+        await notifyExternalOwnerAssigned({
           organizationId: req.organizationId!,
           useCaseTitle: project.project_title,
           recipient: {

@@ -4,6 +4,9 @@ import { EMAIL_TEMPLATES } from "../constants/emailTemplates";
 import { notificationService } from "./notificationService";
 import { getOrganizationByIdQuery } from "../utils/organization.utils";
 import logger from "../utils/logger/fileLogger";
+import redisClient from "../database/redis";
+import { TIMED_OUT, withDeadline } from "./intakeLiveChecks/deadline";
+import { REDIS_TIMEOUT_MS } from "./intakeLiveChecks/formBudget";
 
 /**
  * Email-only notices for external use case owners (#5256).
@@ -65,7 +68,61 @@ async function organizationName(organizationId: number): Promise<string> {
   }
 }
 
-/** Tell a newly named external owner. The caller decides what a failure means. */
+/**
+ * Assignment emails one person can trigger per hour in an organization. The
+ * address and the use case title are free text, so without a cap anyone with
+ * useCase.edit could send VerifyWise-branded mail to any list of addresses.
+ */
+export const ASSIGNMENT_EMAILS_PER_USER_PER_HOUR = 30;
+
+const HOUR_SECONDS = 3600;
+
+/**
+ * Counts one assignment email against the sender's hourly cap. True while within
+ * it. A Redis failure also returns true: the email is the owner's only notice,
+ * so an outage must not lose it.
+ */
+async function withinAssignmentEmailLimit(
+  organizationId: number,
+  userId: number,
+): Promise<boolean> {
+  // The client queues commands while disconnected and replays them on reconnect.
+  if (redisClient.status !== "ready") {
+    logger.warn("External owner email limit: Redis not connected, not counting");
+    return true;
+  }
+  const hour = new Date().toISOString().slice(0, 13).replace(/[-T]/g, "");
+  const key = `external-owner:assigned:${organizationId}:${userId}:${hour}`;
+  try {
+    const replies = await withDeadline(
+      redisClient.multi().incr(key).expire(key, HOUR_SECONDS).exec(),
+      REDIS_TIMEOUT_MS,
+    );
+    if (replies === TIMED_OUT) {
+      logger.warn("External owner email limit: Redis did not answer, not counting");
+      return true;
+    }
+    const [incrReply, expireReply] = replies ?? [];
+    if (!incrReply || incrReply[0]) throw incrReply?.[0] ?? new Error("no reply to INCR");
+    if (expireReply?.[0]) logger.warn("External owner email limit: expiry not set");
+    return Number(incrReply[1]) <= ASSIGNMENT_EMAILS_PER_USER_PER_HOUR;
+  } catch (error) {
+    logger.warn(
+      `External owner email limit: Redis error, not counting: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
+    return true;
+  }
+}
+
+/**
+ * Tell a newly named external owner, unless the person naming them is over the
+ * hourly cap. Resolves once the lookups are done and the send has started, so
+ * callers can await it without waiting on the mail provider. They must await it
+ * before responding: with RLS on, a query issued after the response runs on the
+ * request's finished transaction and the email would lose its named contact.
+ */
 export async function notifyExternalOwnerAssigned(params: {
   organizationId: number;
   useCaseTitle: string;
@@ -73,21 +130,29 @@ export async function notifyExternalOwnerAssigned(params: {
   assignedByUserId: number;
 }): Promise<void> {
   const { organizationId, useCaseTitle, recipient, assignedByUserId } = params;
+  if (!(await withinAssignmentEmailLimit(organizationId, assignedByUserId))) {
+    logger.warn(
+      `External owner email skipped: user ${assignedByUserId} in organization ${organizationId} is over the hourly limit`,
+    );
+    return;
+  }
   const organization = await organizationName(organizationId);
   const contact = await resolveContact(organizationId, organization, assignedByUserId);
 
-  await notificationService.sendEmailWithTemplate(
-    recipient.email,
-    `You are the owner of "${useCaseTitle}"`,
-    EMAIL_TEMPLATES.EXTERNAL_OWNER_NOTICE,
-    {
-      recipient_name: recipient.name,
-      heading: `You are the owner of "${useCaseTitle}"`,
-      message: `${organization} has named you the owner of the use case ${useCaseTitle}. You will get reminders about it by email.`,
-      action_message: ACCOUNT_NOTE,
-      contact_message: `If this is not right, or you have questions, contact ${contact}.`,
-    },
-  );
+  notificationService
+    .sendEmailWithTemplate(
+      recipient.email,
+      `You are the owner of "${useCaseTitle}"`,
+      EMAIL_TEMPLATES.EXTERNAL_OWNER_NOTICE,
+      {
+        recipient_name: recipient.name,
+        heading: `You are the owner of "${useCaseTitle}"`,
+        message: `${organization} has named you the owner of the use case ${useCaseTitle}. You will get reminders about it by email.`,
+        action_message: ACCOUNT_NOTE,
+        contact_message: `If this is not right, or you have questions, contact ${contact}.`,
+      },
+    )
+    .catch((error) => logger.error("Failed to notify external owner:", error));
 }
 
 /**

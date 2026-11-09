@@ -49,7 +49,7 @@ async function apiAs(orgId: number, userId: number, role: string = "Admin") {
   return testRequest(app);
 }
 
-/** The notice is fire-and-forget after the response: wait for it to land. */
+/** The notice does not block on the mail provider: wait for it to land. */
 async function waitForSends(count: number): Promise<void> {
   for (let i = 0; i < 40 && send.mock.calls.length < count; i += 1) {
     await new Promise((resolve) => setTimeout(resolve, 50));
@@ -131,6 +131,10 @@ describe("external use case owners", () => {
     await waitForSends(1);
     expect(send).toHaveBeenCalledTimes(1);
     expect(send.mock.calls[0][0]).toBe("ada@example.com");
+    // The person who named them, not the fallback an RLS query failure would give.
+    const variables = send.mock.calls[0][3] as Record<string, string>;
+    expect(variables.contact_message).toContain("@test.com");
+    expect(variables.message).not.toContain("your organization");
 
     await api
       .patch(`/api/v1/projects/${projectId}`)
