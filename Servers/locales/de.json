@@ -982,5 +982,22 @@
   "AI app or use case not found": "KI-App oder Anwendungsfall nicht gefunden",
   "Link not found": "Verknüpfung nicht gefunden",
   "Organizational use cases cannot be linked to an AI app": "Organisationsweite Anwendungsfälle können nicht mit einer KI-App verknüpft werden",
-  "Use cases that are waiting for approval or were rejected cannot be linked to an AI app": "Anwendungsfälle, die auf Genehmigung warten oder abgelehnt wurden, können nicht mit einer KI-App verknüpft werden"
+  "Use cases that are waiting for approval or were rejected cannot be linked to an AI app": "Anwendungsfälle, die auf Genehmigung warten oder abgelehnt wurden, können nicht mit einer KI-App verknüpft werden",
+  "A questionnaire with this name already exists": "Ein Fragebogen mit diesem Namen ist bereits vorhanden",
+  "rows must be a list of 1 to 1000 rows": "rows muss eine Liste mit 1 bis 1000 Zeilen sein",
+  "dry_run must be true or false": "dry_run muss true oder false sein",
+  "Invalid questionnaire ID": "Ungültige Fragebogen-ID",
+  "Questionnaire not found": "Fragebogen nicht gefunden",
+  "app_ids must be a list of 1 to 1000 valid IDs": "app_ids muss eine Liste mit 1 bis 1000 gültigen IDs sein",
+  "notify_owners must be true or false": "notify_owners muss true oder false sein",
+  "Invalid assessment status": "Ungültiger Bewertungsstatus",
+  "Invalid assessment ID": "Ungültige Bewertungs-ID",
+  "assessment_ids must be a list of 1 to 1000 valid IDs": "assessment_ids muss eine Liste mit 1 bis 1000 gültigen IDs sein",
+  "The default questionnaire cannot be deleted": "Der Standardfragebogen kann nicht gelöscht werden",
+  "This questionnaire has pending assessments": "Für diesen Fragebogen gibt es ausstehende Bewertungen",
+  "Assessment not found": "Bewertung nicht gefunden",
+  "Only the app's owner or an editor can answer this assessment": "Nur der Eigentümer der App oder ein Bearbeiter kann diese Bewertung beantworten",
+  "This assessment is already completed": "Diese Bewertung ist bereits abgeschlossen",
+  "This assessment's questionnaire no longer exists": "Der Fragebogen dieser Bewertung ist nicht mehr vorhanden",
+  "Answer every question with a whole number from 1 to 5": "Beantworten Sie jede Frage mit einer ganzen Zahl von 1 bis 5"
 }

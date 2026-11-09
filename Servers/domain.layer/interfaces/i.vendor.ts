@@ -4,7 +4,7 @@ export interface IVendor {
   projects?: any[]; // required by validation, but optional in interface for compatibility
   vendor_name: string; // won't get any values, will be filled by user
   vendor_provides: string; // won't get any values, will be filled by user
-  assignee: number; // won't get any values, will be filled by user
+  assignee: number | null; // won't get any values, will be filled by user
   website: string; // won't get any values, will be filled by user
   vendor_contact_person: string; // won't get any values, will be filled by user
   review_result?: string; // optional field, can be filled by user

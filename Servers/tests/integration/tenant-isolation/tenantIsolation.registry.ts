@@ -205,6 +205,18 @@ export const tenantIsolationRegistry: IsolationEntity[] = [
     testFile: "ai-apps-projects.isolation.test.ts",
   },
   {
+    // Bulk assessment questionnaires (#5258).
+    name: "ai_app_questionnaires",
+    tables: ["ai_app_questionnaires"],
+    baseRoute: "/api/v1/ai-apps/questionnaires",
+  },
+  {
+    // Bulk assessments (#5258); ids from another org behave as nonexistent.
+    name: "ai_app_assessments",
+    tables: ["ai_app_assessments"],
+    baseRoute: "/api/v1/ai-apps/assessments",
+  },
+  {
     name: "mrm_validations",
     tables: ["mrm_validations"],
     baseRoute: "/api/mrm/validations",

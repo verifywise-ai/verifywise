@@ -88,6 +88,9 @@ export const EMAIL_TEMPLATES = {
 
   // Assignment notification template
   ASSIGNMENT_NOTIFICATION: "assignment-notification.mjml",
+
+  // AI app bulk assessment: one summary per owner per run
+  AI_APP_ASSESSMENTS_ASSIGNED: "ai-app-assessments-assigned.mjml",
 } as const;
 
 // Type-safe template keys

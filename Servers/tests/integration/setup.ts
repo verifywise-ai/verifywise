@@ -20,6 +20,7 @@ jest.mock("../../services/inAppNotification.service", () => ({
   notifyEvidenceStale: jest.fn().mockResolvedValue(undefined),
   notifyParentLevelChanged: jest.fn().mockResolvedValue(undefined),
   notifyApprovalAutoApproved: jest.fn().mockResolvedValue(undefined),
+  notifyAiAppAssessmentsAssigned: jest.fn().mockResolvedValue(undefined),
   ITaskEntityLinkForEmail: {},
 }));
 
