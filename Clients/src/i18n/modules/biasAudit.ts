@@ -341,8 +341,7 @@ export const de: Record<string, string> = {
   "Scoring rate": "Bewertungsrate",
   "Save answers": "Antworten speichern",
   "Attest profile": "Profil attestieren",
-  "Only an Admin or Editor can change answers.":
-    "Nur ein Admin oder Editor kann Antworten ändern.",
+  "Only an Admin or Editor can change answers.": "Nur ein Admin oder Editor kann Antworten ändern.",
   "Notes are required before these answers can be saved:":
     "Bevor diese Antworten gespeichert werden können, sind Notizen erforderlich:",
   "Only an Admin can attest the profile.": "Nur ein Admin kann das Profil attestieren.",
@@ -437,8 +436,7 @@ export const de: Record<string, string> = {
   "Choose CSV file": "CSV-Datei auswählen",
   "Sex column": "Spalte Geschlecht",
   "Race or ethnicity column": "Spalte ethnische Herkunft",
-  "Selected column (1, 0, yes, no, true, false)":
-    "Spalte Ausgewählt (1, 0, yes, no, true, false)",
+  "Selected column (1, 0, yes, no, true, false)": "Spalte Ausgewählt (1, 0, yes, no, true, false)",
   "Not in this file": "Nicht in dieser Datei",
   "Run measures": "Messungen ausführen",
   "Only an Admin or Editor can record a run.":
@@ -472,12 +470,10 @@ export const de: Record<string, string> = {
   "This reading was derived from your answers and is listed as an open item until you confirm it. If it is wrong, change your answers instead.":
     "Diese Lesart wurde aus Ihren Antworten abgeleitet und wird als offener Punkt geführt, bis Sie sie bestätigen. Ist sie falsch, ändern Sie stattdessen Ihre Antworten.",
   "Confirm this reading": "Diese Lesart bestätigen",
-  "Only an Admin can confirm the data basis.":
-    "Nur ein Admin kann die Datengrundlage bestätigen.",
+  "Only an Admin can confirm the data basis.": "Nur ein Admin kann die Datengrundlage bestätigen.",
   "Historical applicant data": "Historische Bewerberdaten",
   "Test data: too few historical records": "Testdaten: zu wenige historische Datensätze",
-  "Test data: the characteristics are not recorded":
-    "Testdaten: die Merkmale werden nicht erfasst",
+  "Test data: the characteristics are not recorded": "Testdaten: die Merkmale werden nicht erfasst",
   "Test data: the records exist but are not ours":
     "Testdaten: die Datensätze existieren, gehören aber nicht uns",
   "Sex": "Geschlecht",
@@ -966,8 +962,7 @@ export const fr: Record<string, string> = {
     "Seul un Admin ou un Éditeur peut enregistrer une exécution.",
   "The attested profile does not say who applies the cutoff. Answer it, save and attest again, so the module knows whether to compute selection rates or scoring rates.":
     "Le profil attesté n’indique pas qui applique le seuil. Répondez à cette question, enregistrez et attestez à nouveau, afin que le module sache s’il doit calculer des taux de sélection ou des taux de notation.",
-  "Upload the dataset as a .csv file.":
-    "Téléversez le jeu de données sous forme de fichier .csv.",
+  "Upload the dataset as a .csv file.": "Téléversez le jeu de données sous forme de fichier .csv.",
   "The dataset is larger than the 30 MB upload limit.":
     "Le jeu de données dépasse la limite de téléversement de 30 Mo.",
   "The file has no header row. Put the column names on the first line.":
@@ -1455,8 +1450,7 @@ export const es: Record<string, string> = {
     "Las respuestas de su borrador dejan el ámbito sin determinar.",
   "Runs and scope determinations follow the attested version until you attest the draft.":
     "Las ejecuciones y las determinaciones del ámbito siguen la versión atestiguada hasta que atestigüe el borrador.",
-  "Deciding questions still open in the draft:":
-    "Preguntas decisivas aún abiertas en el borrador:",
+  "Deciding questions still open in the draft:": "Preguntas decisivas aún abiertas en el borrador:",
   "(no longer applies)": "(ya no aplica)",
   "(notes without an answer)": "(notas sin respuesta)",
   "Discard these edits": "Descartar estos cambios",
@@ -1533,8 +1527,7 @@ export const es: Record<string, string> = {
     "Solo un Admin o un Editor puede generar una posición.",
   "The data checks withhold export for this run, so no stance can be generated from it.":
     "Las comprobaciones de datos retienen la exportación de esta ejecución, por lo que no se puede generar una posición a partir de ella.",
-  "Something went wrong. Please try again later.":
-    "Algo salió mal. Inténtelo de nuevo más tarde.",
+  "Something went wrong. Please try again later.": "Algo salió mal. Inténtelo de nuevo más tarde.",
   "Lowest impact ratio across runs": "Ratio de impacto más bajo entre ejecuciones",
   "Each point is the lowest impact ratio of any group in one run. The line breaks wherever the profile, question set, job description or measure changed, and each break says what changed.":
     "Cada punto es el ratio de impacto más bajo de cualquier grupo en una ejecución. La línea se interrumpe allí donde cambió el perfil, el conjunto de preguntas, la descripción del puesto o la medida, y cada interrupción indica qué cambió.",

@@ -2226,233 +2226,6 @@ export const automationEndpoints: Endpoint[] = [
   },
 ];
 
-// Bias Audit endpoints
-export const biasAuditEndpoints: Endpoint[] = [
-  {
-    method: 'GET',
-    path: '/bias-audit/questions/{frameworkId}',
-    summary: "Get Questions",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Bias Audit",
-  },
-  {
-    method: 'GET',
-    path: '/bias-audit/profiles/{projectId}/{frameworkId}',
-    summary: "Get Profile",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Bias Audit",
-  },
-  {
-    method: 'PUT',
-    path: '/bias-audit/profiles/{projectId}/{frameworkId}',
-    summary: "Save Profile Answers",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Bias Audit",
-  },
-  {
-    method: 'POST',
-    path: '/bias-audit/profiles/{projectId}/{frameworkId}/attest',
-    summary: "Attest Profile",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Bias Audit",
-  },
-  {
-    method: 'POST',
-    path: '/bias-audit/profiles/{projectId}/{frameworkId}/stance',
-    summary: "Generate Profile Stance",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Bias Audit",
-  },
-  {
-    method: 'GET',
-    path: '/bias-audit/runs',
-    summary: "List Runs",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Bias Audit",
-  },
-  {
-    method: 'POST',
-    path: '/bias-audit/runs',
-    summary: "Create Run",
-    requiresAuth: true,
-    responses: [
-      { status: 201, description: "Run recorded (with its gate findings, whether or not a result was computed)" },
-      { status: 400, description: "The upload, mapping or job description is invalid: no file, a CSV that cannot be read, a mapped key the run does not read, or a job description over 64 characters or with no letter or digit" },
-      { status: 401, description: "Not authenticated" },
-      { status: 403, description: "The caller's role may not record a run (biasAudit.edit)" },
-      { status: 404, description: "Project not found or not available to the caller, or no attested profile to run against" },
-      { status: 409, description: "The attested profile refuses a run: it places the tool out of scope, or its cutoff answer does not establish which rate applies" },
-      { status: 413, description: "The dataset exceeds the 30 MB upload limit" },
-      { status: 415, description: "The dataset is not a .csv file" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Bias Audit",
-  },
-  {
-    method: 'GET',
-    path: '/bias-audit/runs/trend',
-    summary: "Get Run Trend",
-    description: "The lowest impact ratio of each run of a project for one framework, oldest first, segmented wherever the profile version, question set, job description or metric changed. Each break names what changed. A run with no result, or a fairness_metrics run (which computes no impact ratio), contributes no point and does not break the series. A run its data checks did not clear for export is plotted with caveat true. Raw run results are not returned.",
-    requiresAuth: true,
-    parameters: [
-      { name: 'projectId', in: 'query', type: 'integer', required: true, description: "The projectId" },
-      { name: 'frameworkId', in: 'query', type: 'integer', required: true, description: "The frameworkId" },
-    ],
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 400, description: "projectId or frameworkId is missing or not a positive integer" },
-      { status: 404, description: "Project not found, or the caller is not a member of it" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Bias Audit",
-  },
-  {
-    method: 'GET',
-    path: '/bias-audit/runs/{id}',
-    summary: "Get Run",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Bias Audit",
-  },
-  {
-    method: 'POST',
-    path: '/bias-audit/runs/{id}/derived-basis/confirm',
-    summary: "Confirm Derived Basis",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Bias Audit",
-  },
-  {
-    method: 'POST',
-    path: '/bias-audit/runs/{id}/stance',
-    summary: "Generate Stance",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Bias Audit",
-  },
-  {
-    method: 'GET',
-    path: '/bias-audit/stances/{id}/download',
-    summary: "Download Stance",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Bias Audit",
-  },
-  {
-    method: 'GET',
-    path: '/bias-audit/job-descriptions',
-    summary: "Get Job Descriptions",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Bias Audit",
-  },
-  {
-    method: 'POST',
-    path: '/bias-audit/criteria-comparison',
-    summary: "Compare Criteria",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Bias Audit",
-  },
-  {
-    method: 'GET',
-    path: '/bias-audit/corpora',
-    summary: "List Corpora",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Bias Audit",
-  },
-  {
-    method: 'POST',
-    path: '/bias-audit/corpora',
-    summary: "Create Corpus",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Bias Audit",
-  },
-  {
-    method: 'GET',
-    path: '/bias-audit/corpora/{id}',
-    summary: "Get Corpus",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Bias Audit",
-  },
-  {
-    method: 'GET',
-    path: '/bias-audit/corpora/{id}/download',
-    summary: "Download Corpus",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Bias Audit",
-  },
-  {
-    method: 'POST',
-    path: '/bias-audit/corpora/{id}/resume',
-    summary: "Resume Corpus",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Bias Audit",
-  },
-];
-
 // CE Marking endpoints
 export const ceMarkingEndpoints: Endpoint[] = [
   {
@@ -11142,7 +10915,29 @@ export const shadowAiEndpoints: Endpoint[] = [
       { status: 201, description: "Created successfully" },
       { status: 500, description: "Internal server error" },
     ],
-    tag: "Shadow AI",
+    tag: "v1: Shadow AI",
+  },
+  {
+    method: 'GET',
+    path: '/v1/shadow-ai-syslog/status',
+    summary: "Get Syslog Status",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Shadow AI",
+  },
+  {
+    method: 'POST',
+    path: '/v1/shadow-ai-syslog/sources/{id}/regenerate-key',
+    summary: "Regenerate Syslog Key",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Shadow AI",
   },
 ];
 
@@ -11646,6 +11441,18 @@ export const superAdminEndpoints: Endpoint[] = [
     method: 'DELETE',
     path: '/super-admin/super-admins/{user_id}',
     summary: "Revoke Super Admin",
+    description: "Requires role: Super Admin",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Super Admin",
+  },
+  {
+    method: 'DELETE',
+    path: '/super-admin/organizations/{id}/users/{userId}',
+    summary: "Remove Org User",
     description: "Requires role: Super Admin",
     requiresAuth: true,
     responses: [
@@ -12342,6 +12149,689 @@ export const userEndpoints: Endpoint[] = [
     ],
     tag: "Users",
   },
+  {
+    method: 'POST',
+    path: '/users/invitations/accept',
+    summary: "Accept Invitation As Existing User",
+    requiresAuth: false,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Users",
+  },
+  {
+    method: 'POST',
+    path: '/users/login/select-organization',
+    summary: "Select Login Organization",
+    requiresAuth: false,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Users",
+  },
+];
+
+// v1: Change History endpoints
+export const v1ChangeHistoryEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/evidence-hub-change-history/{id}',
+    summary: "Get Evidence Hub Change History By Id",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Change History",
+  },
+  {
+    method: 'GET',
+    path: '/v1/model-lifecycle-change-history/{id}',
+    summary: "Get Model Lifecycle Change History By Id",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Change History",
+  },
+  {
+    method: 'GET',
+    path: '/v1/control-eu-change-history/{id}',
+    summary: "Get Control E U Change History By Id",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Change History",
+  },
+  {
+    method: 'GET',
+    path: '/v1/subcontrol-eu-change-history/{id}',
+    summary: "Get Subcontrol E U Change History By Id",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Change History",
+  },
+  {
+    method: 'GET',
+    path: '/v1/annex-category-change-history/{id}',
+    summary: "Get Annex Category Change History By Id",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Change History",
+  },
+];
+
+// v1: Intake Forms endpoints
+export const v1IntakeFormsEndpoints: Endpoint[] = [
+  {
+    method: 'POST',
+    path: '/v1/intake-tier-suggestion/public/by-id/{publicId}',
+    summary: "Post Public Tier Suggestion",
+    requiresAuth: false,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Intake Forms",
+  },
+  {
+    method: 'POST',
+    path: '/v1/intake-tier-suggestion/public/by-id/{publicId}/explain',
+    summary: "Post Public Tier Explanation",
+    requiresAuth: false,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Intake Forms",
+  },
+  {
+    method: 'POST',
+    path: '/v1/intake-tier-suggestion/public/by-id/{publicId}/submit',
+    summary: "Submit Public Form By Public Id",
+    requiresAuth: false,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Intake Forms",
+  },
+  {
+    method: 'POST',
+    path: '/v1/intake-tier-suggestion/public/{tenantSlug}/{formSlug}',
+    summary: "Post Public Tier Suggestion",
+    requiresAuth: false,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Intake Forms",
+  },
+  {
+    method: 'POST',
+    path: '/v1/intake-tier-suggestion/public/{tenantSlug}/{formSlug}/explain',
+    summary: "Post Public Tier Explanation",
+    requiresAuth: false,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Intake Forms",
+  },
+  {
+    method: 'POST',
+    path: '/v1/intake-tier-suggestion/public/{tenantSlug}/{formSlug}/submit',
+    summary: "Submit Public Form",
+    requiresAuth: false,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Intake Forms",
+  },
+  {
+    method: 'GET',
+    path: '/v1/intake-tier-suggestion/submissions/{id}',
+    summary: "Get Submission Tier Suggestion Response",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Intake Forms",
+  },
+];
+
+// v1: Use Case Settings endpoints
+export const v1UseCaseSettingsEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/use-case-org-settings',
+    summary: "Get Use Case Org Settings Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Use Case Settings",
+  },
+  {
+    method: 'PUT',
+    path: '/v1/use-case-org-settings',
+    summary: "Update Use Case Org Settings Handler",
+    description: "Requires role: Admin",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Use Case Settings",
+  },
+];
+
+// v1: V1/Ai App Lifecycle endpoints
+export const v1V1aiAppLifecycleEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/ai-app-lifecycle/summary',
+    summary: "Get Ai App Lifecycle Summary Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai App Lifecycle",
+  },
+  {
+    method: 'GET',
+    path: '/v1/ai-app-lifecycle/intake-submissions',
+    summary: "Get Pending Ai App Submissions Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai App Lifecycle",
+  },
+  {
+    method: 'GET',
+    path: '/v1/ai-app-lifecycle/{id}',
+    summary: "Get Ai App Lifecycle Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai App Lifecycle",
+  },
+  {
+    method: 'GET',
+    path: '/v1/ai-app-lifecycle/{id}/history',
+    summary: "Get Ai App History Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai App Lifecycle",
+  },
+  {
+    method: 'POST',
+    path: '/v1/ai-app-lifecycle/{id}/go-live',
+    summary: "Ai App Go Live Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai App Lifecycle",
+  },
+  {
+    method: 'POST',
+    path: '/v1/ai-app-lifecycle/{id}/retire',
+    summary: "Ai App Retire Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai App Lifecycle",
+  },
+  {
+    method: 'POST',
+    path: '/v1/ai-app-lifecycle/{id}/confirm',
+    summary: "Ai App Confirm Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai App Lifecycle",
+  },
+];
+
+// v1: V1/Ai Apps endpoints
+export const v1V1aiAppsEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/ai-apps',
+    summary: "Get All Ai Apps V1",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai Apps",
+  },
+];
+
+// v1: V1/Bias Audit endpoints
+export const v1V1biasAuditEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/bias-audit/questions/{frameworkId}',
+    summary: "Get Questions",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Bias Audit",
+  },
+  {
+    method: 'GET',
+    path: '/v1/bias-audit/profiles/{projectId}/{frameworkId}',
+    summary: "Get Profile",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Bias Audit",
+  },
+  {
+    method: 'PUT',
+    path: '/v1/bias-audit/profiles/{projectId}/{frameworkId}',
+    summary: "Save Profile Answers",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Bias Audit",
+  },
+  {
+    method: 'POST',
+    path: '/v1/bias-audit/profiles/{projectId}/{frameworkId}/attest',
+    summary: "Attest Profile",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Bias Audit",
+  },
+  {
+    method: 'POST',
+    path: '/v1/bias-audit/profiles/{projectId}/{frameworkId}/stance',
+    summary: "Generate Profile Stance",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Bias Audit",
+  },
+  {
+    method: 'GET',
+    path: '/v1/bias-audit/runs',
+    summary: "List Runs",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Bias Audit",
+  },
+  {
+    method: 'POST',
+    path: '/v1/bias-audit/runs',
+    summary: "Create Run",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Bias Audit",
+  },
+  {
+    method: 'GET',
+    path: '/v1/bias-audit/runs/trend',
+    summary: "Get Run Trend",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Bias Audit",
+  },
+  {
+    method: 'GET',
+    path: '/v1/bias-audit/runs/{id}',
+    summary: "Get Run",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Bias Audit",
+  },
+  {
+    method: 'POST',
+    path: '/v1/bias-audit/runs/{id}/derived-basis/confirm',
+    summary: "Confirm Derived Basis",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Bias Audit",
+  },
+  {
+    method: 'POST',
+    path: '/v1/bias-audit/runs/{id}/stance',
+    summary: "Generate Stance",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Bias Audit",
+  },
+  {
+    method: 'GET',
+    path: '/v1/bias-audit/stances/{id}/download',
+    summary: "Download Stance",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Bias Audit",
+  },
+  {
+    method: 'GET',
+    path: '/v1/bias-audit/job-descriptions',
+    summary: "Get Job Descriptions",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Bias Audit",
+  },
+  {
+    method: 'POST',
+    path: '/v1/bias-audit/criteria-comparison',
+    summary: "Compare Criteria",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Bias Audit",
+  },
+  {
+    method: 'GET',
+    path: '/v1/bias-audit/corpora',
+    summary: "List Corpora",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Bias Audit",
+  },
+  {
+    method: 'POST',
+    path: '/v1/bias-audit/corpora',
+    summary: "Create Corpus",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Bias Audit",
+  },
+  {
+    method: 'GET',
+    path: '/v1/bias-audit/corpora/{id}',
+    summary: "Get Corpus",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Bias Audit",
+  },
+  {
+    method: 'GET',
+    path: '/v1/bias-audit/corpora/{id}/download',
+    summary: "Download Corpus",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Bias Audit",
+  },
+  {
+    method: 'POST',
+    path: '/v1/bias-audit/corpora/{id}/resume',
+    summary: "Resume Corpus",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Bias Audit",
+  },
+];
+
+// v1: V1/Dashboard endpoints
+export const v1V1dashboardEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/dashboard/preferences',
+    summary: "Get Dashboard Preferences Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Dashboard",
+  },
+  {
+    method: 'PUT',
+    path: '/v1/dashboard/preferences',
+    summary: "Update Dashboard Preferences Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Dashboard",
+  },
+];
+
+// v1: V1/Intake Form Review Time endpoints
+export const v1V1intakeFormReviewTimeEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/intake-form-review-time/{formId}',
+    summary: "Get Intake Form Review Time",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Intake Form Review Time",
+  },
+  {
+    method: 'PUT',
+    path: '/v1/intake-form-review-time/{formId}',
+    summary: "Update Intake Form Review Time",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Intake Form Review Time",
+  },
+];
+
+// v1: V1/Lifecycle Settings endpoints
+export const v1V1lifecycleSettingsEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/lifecycle-settings',
+    summary: "Get Lifecycle Settings Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Lifecycle Settings",
+  },
+  {
+    method: 'PATCH',
+    path: '/v1/lifecycle-settings',
+    summary: "Update Lifecycle Settings Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Lifecycle Settings",
+  },
+];
+
+// v1: V1/Projects endpoints
+export const v1V1projectsEndpoints: Endpoint[] = [
+  {
+    method: 'POST',
+    path: '/v1/projects',
+    summary: "Create Project",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Projects",
+  },
+  {
+    method: 'PATCH',
+    path: '/v1/projects/{id}',
+    summary: "Update Project By Id",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Projects",
+  },
+];
+
+// v1: V1/Use Case Lifecycle endpoints
+export const v1V1useCaseLifecycleEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/use-case-lifecycle/summary',
+    summary: "Get Lifecycle Summary Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Use Case Lifecycle",
+  },
+  {
+    method: 'GET',
+    path: '/v1/use-case-lifecycle/intake-submissions',
+    summary: "Get Pending Submissions Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Use Case Lifecycle",
+  },
+  {
+    method: 'GET',
+    path: '/v1/use-case-lifecycle/dashboard',
+    summary: "Get Lifecycle Dashboard Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Use Case Lifecycle",
+  },
+  {
+    method: 'POST',
+    path: '/v1/use-case-lifecycle/{id}/go-live',
+    summary: "Go Live Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Use Case Lifecycle",
+  },
+  {
+    method: 'POST',
+    path: '/v1/use-case-lifecycle/{id}/retire',
+    summary: "Retire Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Use Case Lifecycle",
+  },
+  {
+    method: 'POST',
+    path: '/v1/use-case-lifecycle/{id}/confirm',
+    summary: "Confirm Still Live Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Use Case Lifecycle",
+  },
+  {
+    method: 'PATCH',
+    path: '/v1/use-case-lifecycle/{id}/department',
+    summary: "Update Department Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Use Case Lifecycle",
+  },
 ];
 
 // Vendors endpoints
@@ -12625,7 +13115,6 @@ export const allEndpoints = {
   audit: auditEndpoints,
   authentication: authenticationEndpoints,
   automation: automationEndpoints,
-  biasAudit: biasAuditEndpoints,
   ceMarking: ceMarkingEndpoints,
   changeHistory: changeHistoryEndpoints,
   compliance: complianceEndpoints,
@@ -12690,6 +13179,17 @@ export const allEndpoints = {
   telemetry: telemetryEndpoints,
   training: trainingEndpoints,
   user: userEndpoints,
+  v1ChangeHistory: v1ChangeHistoryEndpoints,
+  v1IntakeForms: v1IntakeFormsEndpoints,
+  v1UseCaseSettings: v1UseCaseSettingsEndpoints,
+  v1V1aiAppLifecycle: v1V1aiAppLifecycleEndpoints,
+  v1V1aiApps: v1V1aiAppsEndpoints,
+  v1V1biasAudit: v1V1biasAuditEndpoints,
+  v1V1dashboard: v1V1dashboardEndpoints,
+  v1V1intakeFormReviewTime: v1V1intakeFormReviewTimeEndpoints,
+  v1V1lifecycleSettings: v1V1lifecycleSettingsEndpoints,
+  v1V1projects: v1V1projectsEndpoints,
+  v1V1useCaseLifecycle: v1V1useCaseLifecycleEndpoints,
   vendor: vendorEndpoints,
   vendorRisk: vendorRiskEndpoints,
   webhook: webhookEndpoints,
