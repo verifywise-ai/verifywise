@@ -123,6 +123,26 @@ export const getUserProjects = async (
   return projects;
 };
 
+/** Whether the user can see this use case: the rule that scopes the use case list. */
+export const canViewProjectQuery = async (
+  projectId: number,
+  viewer: { userId: number; role: string },
+  organizationId: number,
+  transaction: Transaction,
+): Promise<boolean> => {
+  const visibility = projectVisibilitySql("p", viewer);
+  const rows = await sequelize.query(
+    `SELECT 1 FROM projects p
+      WHERE p.organization_id = :organizationId AND p.id = :projectId${visibility.sql}`,
+    {
+      replacements: { organizationId, projectId, ...visibility.replacements },
+      type: QueryTypes.SELECT,
+      transaction,
+    },
+  );
+  return rows.length > 0;
+};
+
 export const getAllProjectsQuery = async (
   {
     userId,

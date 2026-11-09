@@ -331,6 +331,20 @@ describe("ProjectSettings", () => {
     expect(await screen.findByText("Title already exists")).toBeInTheDocument();
   });
 
+  it("lets the user try again when the save request is rejected", async () => {
+    mockUpdateProject.mockRejectedValue(new Error("Access denied"));
+    renderWithProviders(<ProjectSettings />);
+    await waitFor(() => expect(screen.getByDisplayValue("Chatbot Assistant")).toBeInTheDocument());
+
+    fireEvent.change(screen.getByDisplayValue("Chatbot Assistant"), {
+      target: { value: "Refused title" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(mockUpdateProject).toHaveBeenCalled());
+    await waitFor(() => expect(screen.getByRole("button", { name: "Save" })).not.toBeDisabled());
+  });
+
   it("opens a confirmation dialog when reassigning ownership to an existing member", async () => {
     const user = userEvent.setup();
     renderWithProviders(<ProjectSettings />);

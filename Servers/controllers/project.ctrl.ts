@@ -4,6 +4,7 @@ import { STATUS_CODE } from "../utils/statusCode.utils";
 import {
   calculateProjectRisks,
   calculateVendirRisks,
+  canViewProjectQuery,
   countAnswersByProjectId,
   countSubControlsByProjectId,
   getAllProjectsQuery,
@@ -439,6 +440,24 @@ export async function updateProjectById(req: Request, res: Response): Promise<an
         organizationId: req.organizationId!,
       });
       return res.status(404).json(STATUS_CODE[404]({}));
+    }
+
+    // The useCase.edit permission alone would let an Editor change any use case
+    // in the organization, including adding themselves as a member.
+    if (
+      !(await canViewProjectQuery(projectId, { userId, role }, req.organizationId!, transaction))
+    ) {
+      await transaction.rollback();
+      await logFailure({
+        eventType: "Update",
+        description: `Update refused, no access to project ID ${projectId}`,
+        functionName: "updateProjectById",
+        fileName: "project.ctrl.ts",
+        error: new Error("Access denied"),
+        userId,
+        organizationId: req.organizationId!,
+      });
+      return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
     }
 
     const updatedProject: Partial<ProjectModel> & { members?: number[] } = updateData;

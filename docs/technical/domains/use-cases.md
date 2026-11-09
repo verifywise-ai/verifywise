@@ -283,6 +283,10 @@ PATCH /projects/:id
 }
 ```
 
+### Access
+
+The caller needs the `useCase.edit` permission and must be able to see the use case: an Admin, its owner or a member. Anyone else gets 403 and nothing is written.
+
 ### Processing
 
 1. Get current project state
