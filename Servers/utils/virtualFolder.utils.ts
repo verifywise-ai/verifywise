@@ -434,27 +434,25 @@ export const assignFilesToFolderQuery = async (
 ): Promise<number> => {
   if (fileIds.length === 0) return 0;
 
-  // Use INSERT ... ON CONFLICT DO NOTHING to handle duplicates gracefully
-  const values = fileIds
-    .map((_, i) => `(:organizationId, :file_id_${i}, :folderId, :userId, NOW())`)
-    .join(", ");
-
-  const replacements: Record<string, unknown> = {
-    organizationId,
-    folderId,
-    userId,
-  };
-  fileIds.forEach((fileId, i) => {
-    replacements[`file_id_${i}`] = fileId;
-  });
-
+  // Reads the rows from files, so an id for another organization or a bias
+  // audit stance PDF is never mapped, however the caller got here. ON CONFLICT
+  // handles files already in the folder.
   const result = await sequelize.query<{ id: number }>(
     `INSERT INTO file_folder_mappings (organization_id, file_id, folder_id, assigned_by, assigned_at)
-     VALUES ${values}
+     SELECT :organizationId, f.id, :folderId, :userId, NOW()
+       FROM files f
+      WHERE f.organization_id = :organizationId AND f.id IN (:fileIds)
+        AND ${VISIBLE_FILE_SQL("f")}
      ON CONFLICT (file_id, folder_id) DO NOTHING
      RETURNING id`,
     {
-      replacements,
+      replacements: {
+        organizationId,
+        folderId,
+        userId,
+        fileIds,
+        ...VISIBLE_FILE_REPLACEMENTS,
+      },
       type: QueryTypes.SELECT,
       transaction,
     },
