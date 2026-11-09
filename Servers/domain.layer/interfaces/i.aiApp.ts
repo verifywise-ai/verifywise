@@ -13,6 +13,7 @@ export interface IAIApp {
   discovered_source: AiAppDiscoveredSource;
   shadow_ai_tool_id?: number | null;
   required_training?: string | null;
+  required_training_id?: number | null;
   is_demo?: boolean;
   created_at?: Date;
   updated_at?: Date;
@@ -97,6 +98,7 @@ export interface IAIAppCreatePayload {
   discovered_source?: AiAppDiscoveredSource;
   shadow_ai_tool_id?: number | null;
   required_training?: string;
+  required_training_id?: number | null;
   model_inventory_ids?: number[];
   policy_ids?: number[];
   data_exposure?: { data_type: string; allowed: boolean }[];
@@ -113,5 +115,6 @@ export interface IAIAppUpdatePayload {
   discovered_source?: AiAppDiscoveredSource;
   shadow_ai_tool_id?: number | null;
   required_training?: string | null;
+  required_training_id?: number | null;
   risk_score?: number | null;
 }
