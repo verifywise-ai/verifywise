@@ -39,7 +39,7 @@ import { DatasetParseError, parseDataset, type ParsedDataset } from "./datasetPa
 import { runAudit, RECORD_KEYS } from "./index";
 import type { AuditOutcome, BiasAuditConfig } from "./index";
 import type { GateFinding } from "./dataGates";
-import type { UnmatchedValue } from "./demographics";
+import type { UnmatchedColumn } from "./demographics";
 
 /** The 0.8 figure is a convention the rule's guidance uses, not a statutory value. */
 export const LL144_THRESHOLD_SOURCE = "convention";
@@ -108,32 +108,50 @@ function stop(code: string, message: string, detail: Record<string, unknown> = {
 
 /** How many unmatched values a finding names; the rest are counted. */
 const MAX_NAMED_VALUES = 25;
-const MAX_VALUE_LENGTH = 80;
 
 /**
- * Values that matched no category stay as groups of their own. A note, not a
- * stop or a warning: a stop would refuse valid data such as a non-binary
- * category, and a warning would withhold the export for it. The note is
- * printed with the run's other findings.
+ * Values that matched no category. A note, not a stop or a warning: a stop
+ * would refuse valid data such as a non-binary category, and a warning would
+ * withhold the export for it. It is printed with the run's other findings.
+ *
+ * Only values that look like category labels are named here (demographics.ts);
+ * the dataset is not retained, so anything else is stored as a count.
  */
-function unmatchedValueNotes(unmatched: Record<string, UnmatchedValue[]>): GateFinding[] {
-  return Object.entries(unmatched).map(([column, values]) => {
-    const total = values.reduce((sum, v) => sum + v.count, 0);
-    const named = values
-      .slice(0, MAX_NAMED_VALUES)
-      .map((v) => `"${v.value.slice(0, MAX_VALUE_LENGTH)}" (${v.count})`)
-      .join(", ");
-    const more =
-      values.length > MAX_NAMED_VALUES ? `, and ${values.length - MAX_NAMED_VALUES} more` : "";
+function unmatchedValueNotes(unmatched: Record<string, UnmatchedColumn>): GateFinding[] {
+  return Object.entries(unmatched).map(([column, { named, otherRecords }]) => {
+    const namedRecords = named.reduce((sum, v) => sum + v.count, 0);
+    const parts: string[] = [];
+    if (named.length > 0) {
+      const list = named
+        .slice(0, MAX_NAMED_VALUES)
+        .map((v) => `"${v.value}" (${v.count})`)
+        .join(", ");
+      const more =
+        named.length > MAX_NAMED_VALUES ? `, and ${named.length - MAX_NAMED_VALUES} more` : "";
+      parts.push(
+        `${namedRecords} record(s) in the "${column}" column have a value that matches none of ` +
+          `this module's categories: ${list}${more}. Each value is kept as its own group in the ` +
+          `calculations. Check that it is a category you meant to report, not a typo or another ` +
+          `way of writing a listed one.`,
+      );
+    }
+    if (otherRecords > 0) {
+      parts.push(
+        `${otherRecords} record(s) in the "${column}" column had other values that are not ` +
+          `shown, because they do not look like category labels. They are counted as an unknown ` +
+          `category. Check the column mapping if this is unexpected.`,
+      );
+    }
     return {
       code: "demographic_values_unmatched",
       severity: "note",
-      message:
-        `${total} record(s) in the "${column}" column have a value that matches none of this ` +
-        `module's categories: ${named}${more}. Each value is kept as its own group in the ` +
-        `calculations. Check that it is a category you meant to report, not a typo or another ` +
-        `way of writing a listed one.`,
-      detail: { column, total, values: values.slice(0, MAX_NAMED_VALUES) },
+      message: parts.join(" "),
+      detail: {
+        column,
+        namedRecords,
+        otherRecords,
+        values: named.slice(0, MAX_NAMED_VALUES),
+      },
     };
   });
 }

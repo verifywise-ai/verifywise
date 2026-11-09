@@ -305,34 +305,50 @@ describe("demographic values", () => {
     );
   });
 
-  it("keeps an unmatched value as its own group and names it in a note", async () => {
-    const out = await run({
-      csv: csvWith((i) => (i === 0 ? "Non-binary" : i % 2 ? "Male" : "Female")),
-    });
+  const NON_BINARY = (i: number) => (i % 50 === 0 ? "Non-binary" : i % 2 ? "Male" : "Female");
+  const unmatchedNote = () =>
+    stored().gateFindingsJson.find(
+      (f: { code: string }) => f.code === "demographic_values_unmatched",
+    );
+
+  it("keeps a label-like unmatched value as its own group and names it in a note", async () => {
+    const out = await run({ csv: csvWith(NON_BINARY) });
     expect(sexTable().rows.map((r: { categoryName: string }) => r.categoryName)).toEqual([
       "Female",
       "Male",
       "Non-binary",
     ]);
-    const note = stored().gateFindingsJson.find(
-      (f: { code: string }) => f.code === "demographic_values_unmatched",
-    );
+    const note = unmatchedNote();
     expect(note.severity).toBe("note");
-    expect(note.message).toContain('"Non-binary" (1)');
-    expect(note.detail).toMatchObject({ column: "sex", total: 1 });
+    expect(note.message).toContain('"Non-binary" (6)');
+    expect(note.detail).toMatchObject({ column: "sex", namedRecords: 6, otherRecords: 0 });
     // Unmatched values alone do not hold back the export.
     expect(out.outcome.gates.findings.some((f) => f.severity !== "note")).toBe(false);
   });
 
-  it("stores the unmatched note on a blocked run too", async () => {
+  it("stores only a count for values that do not look like category labels", async () => {
     await run({
-      csv: csvWith((i) => (i === 0 ? "Non-binary" : i % 2 ? "Male" : "Female")),
+      csv: csvWith((i) =>
+        i < 3 ? `Person Name${i}` : i < 6 ? `user${i}@example.com` : i % 2 ? "Male" : "Female",
+      ),
+    });
+    const everything = JSON.stringify(stored());
+    expect(everything).not.toMatch(/Person Name/);
+    expect(everything).not.toMatch(/example\.com/);
+    const note = unmatchedNote();
+    expect(note.message).toContain('6 record(s) in the "sex" column had other values');
+    expect(note.detail).toMatchObject({ otherRecords: 6, values: [] });
+    expect(stored().resultJson.unknownCount).toBe(6);
+  });
+
+  it("keeps kept-out values out of a blocked run too", async () => {
+    await run({
+      csv: csvWith((i) => (i < 3 ? `Person Name${i}` : i % 2 ? "Male" : "Female")),
       mapping: { ...MAPPING, selected: "absent" },
     });
     expect(stored().resultJson).toBeNull();
-    expect(stored().gateFindingsJson.map((f: { code: string }) => f.code)).toContain(
-      "demographic_values_unmatched",
-    );
+    expect(JSON.stringify(stored())).not.toMatch(/Person Name/);
+    expect(unmatchedNote().detail.otherRecords).toBe(3);
   });
 });
 

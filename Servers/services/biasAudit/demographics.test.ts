@@ -85,36 +85,82 @@ describe("no answer", () => {
 });
 
 describe("values that match nothing", () => {
-  it("keeps the value as its own group and reports it with its count", () => {
+  const read = (values: string[]) => {
     const norm = n();
-    expect(norm.normalize("sex", " Non-binary ")).toBe("Non-binary");
-    expect(norm.normalize("sex", "non-BINARY")).toBe("Non-binary");
-    expect(norm.normalize("race_ethnicity", "Other")).toBe("Other");
-    expect(norm.unmatched()).toEqual({
-      sex: [{ value: "Non-binary", count: 2 }],
-      race_ethnicity: [{ value: "Other", count: 1 }],
-    });
+    const records = values.map((v) => ({ sex: norm.normalize("sex", v) }));
+    return { records, found: norm.finish(records) };
+  };
+  const repeat = (value: string, times: number) => Array<string>(times).fill(value);
+
+  it("keeps a label-like value as its own group and reports it with its count", () => {
+    const { records, found } = read([...repeat(" Non-binary ", 3), ...repeat("non-BINARY", 2)]);
+    expect(records.every((r) => r.sex === "Non-binary")).toBe(true);
+    expect(found).toEqual({ sex: { named: [{ value: "Non-binary", count: 5 }], otherRecords: 0 } });
   });
 
-  it("leaves a qualifier on its own unmatched, not blank", () => {
+  it("orders named values most frequent first", () => {
+    const { found } = read([...repeat("Other", 7), ...repeat("Agender", 5), ...repeat("Xeno", 9)]);
+    expect(found.sex.named.map((u) => u.value)).toEqual(["Xeno", "Other", "Agender"]);
+  });
+
+  it("reports nothing when every value matched", () => {
+    expect(read(["male", ""]).found).toEqual({});
+  });
+
+  it.each([
+    ["too few records", repeat("Non-binary", 4)],
+    ["an email address", repeat("jo@example.com", 10)],
+    ["mostly digits", repeat("E10042", 10)],
+    ["no letters", repeat("12345", 10)],
+    ["too long for a label", repeat("A long free text answer that goes well past a label", 10)],
+  ])("does not keep %s: blanks it and counts it", (_why, values) => {
+    const { records, found } = read(values);
+    expect(records.every((r) => r.sex === "")).toBe(true);
+    expect(found).toEqual({ sex: { named: [], otherRecords: values.length } });
+  });
+
+  it("does not keep one-off values such as names", () => {
+    const { records, found } = read(["Jane Doe", "John Smith", ...repeat("Non-binary", 5)]);
+    expect(records.slice(0, 2).map((r) => r.sex)).toEqual(["", ""]);
+    expect(JSON.stringify(found)).not.toContain("Jane");
+    expect(found.sex).toEqual({ named: [{ value: "Non-binary", count: 5 }], otherRecords: 2 });
+  });
+
+  it("leaves a qualifier on its own as an unmatched value", () => {
     const norm = n();
     expect(norm.normalize("race_ethnicity", "Not Hispanic or Latino")).toBe(
       "Not Hispanic or Latino",
     );
-    expect(norm.unmatched().race_ethnicity).toHaveLength(1);
+  });
+});
+
+describe("hostile input", () => {
+  const SEPARATOR_RUN = 2_000_000;
+
+  it.each([
+    ["trailing", `a${",".repeat(SEPARATOR_RUN)}`],
+    ["not reaching the end", `a${"-".repeat(SEPARATOR_RUN)}b`],
+    ["spaces", `a${" ".repeat(SEPARATOR_RUN)}b`],
+    ["parentheses", "(".repeat(SEPARATOR_RUN)],
+  ])("handles a very long value (%s) quickly and keeps none of it", (_name, value) => {
+    const norm = n();
+    const started = Date.now();
+    expect(norm.normalize("race_ethnicity", value)).toBe("");
+    expect(Date.now() - started).toBeLessThan(500);
+    expect(norm.finish([])).toEqual({ race_ethnicity: { named: [], otherRecords: 1 } });
   });
 
-  it("reports nothing when every value matched", () => {
+  it("stays fast on a separator run just under the length cap", () => {
     const norm = n();
-    norm.normalize("sex", "male");
-    norm.normalize("sex", "");
-    expect(norm.unmatched()).toEqual({});
+    const started = Date.now();
+    for (let i = 0; i < 5000; i++) {
+      norm.normalize("race_ethnicity", `white${",".repeat(190)}x${i}`);
+    }
+    expect(Date.now() - started).toBeLessThan(1000);
   });
 
-  it("orders values most frequent first", () => {
-    const norm = n();
-    for (const v of ["Other", "X", "X", "Other", "Other", "Y"]) norm.normalize("sex", v);
-    expect(norm.unmatched().sex.map((u) => u.value)).toEqual(["Other", "X", "Y"]);
+  it("still reads a qualifier with trailing separators", () => {
+    expect(n().normalize("race_ethnicity", "White, non-hispanic ,; -")).toBe("White");
   });
 });
 

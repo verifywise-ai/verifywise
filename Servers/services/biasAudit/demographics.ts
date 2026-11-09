@@ -10,8 +10,12 @@
  *    it (the alias table);
  *  - no answer: it becomes blank, so the data gates and the engine count it as
  *    the unknown category of § 5-301(b)(5) and (c)(5);
- *  - anything else, which stays as its own group and is reported. Refusing the
- *    file would refuse valid data such as a non-binary category.
+ *  - anything else. If it looks like a category label (see
+ *    looksLikeCategoryLabel) it stays as its own group and is reported by name,
+ *    because refusing the file would refuse valid data such as a non-binary
+ *    category. If it does not, it joins the unknown category and only its count
+ *    is kept. The dataset is hashed and not retained, and a mis-mapped column
+ *    must not put names, emails or IDs into a stored run or a stance PDF.
  */
 export interface DemographicCategory {
   groups: string[];
@@ -22,6 +26,22 @@ export interface UnmatchedValue {
   value: string;
   count: number;
 }
+
+export interface UnmatchedColumn {
+  /** Values that looked like category labels, most frequent first. */
+  named: UnmatchedValue[];
+  /** Records with a value that was not one, and so is not kept. */
+  otherRecords: number;
+}
+
+/** A value longer than this is not a category and gets no further processing. */
+const MAX_VALUE_LENGTH = 200;
+/** Longest value that can be reported by name. */
+const MAX_LABEL_LENGTH = 40;
+/** Fewest records a value needs to be reported by name. */
+const MIN_LABEL_RECORDS = 5;
+/** Largest share of digits in a value that can be reported by name. */
+const MAX_LABEL_DIGIT_SHARE = 0.25;
 
 const NO_ANSWER = new Set([
   "prefer not to say",
@@ -145,19 +165,42 @@ function normalizedKey(raw: string): string {
   return raw.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
+const SEPARATORS = new Set([" ", ",", ";", "-"]);
+
+/** A loop, not an anchored regex: a long run of separators stays linear. */
+function trimSeparators(text: string): string {
+  let end = text.length;
+  while (end > 0 && SEPARATORS.has(text[end - 1])) end--;
+  let start = 0;
+  while (start < end && SEPARATORS.has(text[start])) start++;
+  return text.slice(start, end);
+}
+
 /**
  * The rule's tables write categories as "White (Not Hispanic or Latino)", and
  * data exports often as "White, Non-Hispanic". The qualifier does not change
  * the category, so it is dropped before a second look-up. A value that is only
- * the qualifier is left alone.
+ * the qualifier is left alone. Callers pass a normalized key no longer than
+ * MAX_VALUE_LENGTH, so the regex runs on short text with single spaces.
  */
 function withoutQualifier(key: string): string {
-  const stripped = key
-    .replace(/\(?\s*(?:not|non)[\s-]hispanic(?:\s+or\s+latin[oax]+)?\s*\)?/g, "")
-    .replace(/[\s,;-]+$/g, "")
-    .replace(/^[\s,;-]+/g, "")
-    .trim();
+  const stripped = trimSeparators(
+    key.replace(/\(?\s*(?:not|non)[\s-]hispanic(?:\s+or\s+latin[oax]+)?\s*\)?/g, ""),
+  );
   return stripped === "" ? key : stripped;
+}
+
+/**
+ * Whether a value that matched nothing may be kept and shown. A category label
+ * is short, contains a letter, is shared by several records, and is not an
+ * email address or mostly digits. Anything else could be a person's name, an
+ * email or an ID from a mis-mapped column.
+ */
+function looksLikeCategoryLabel(value: string, count: number): boolean {
+  if (count < MIN_LABEL_RECORDS || value.length > MAX_LABEL_LENGTH) return false;
+  if (value.includes("@") || !/\p{L}/u.test(value)) return false;
+  const digits = [...value].filter((c) => c >= "0" && c <= "9").length;
+  return digits / value.length <= MAX_LABEL_DIGIT_SHARE;
 }
 
 export interface DemographicNormalizer {
@@ -165,8 +208,11 @@ export interface DemographicNormalizer {
   handles(categoryKey: string): boolean;
   /** The category name, blank for no answer, or the value itself if it matches nothing. */
   normalize(categoryKey: string, raw: string): string;
-  /** Values that matched nothing, per category, most frequent first. */
-  unmatched(): Record<string, UnmatchedValue[]>;
+  /**
+   * Call once every value is read: a value's record count decides whether it
+   * is kept. Blanks kept-out values in `records` and returns what was found.
+   */
+  finish(records: Array<Record<string, unknown>>): Record<string, UnmatchedColumn>;
 }
 
 export function createDemographicNormalizer(
@@ -174,6 +220,7 @@ export function createDemographicNormalizer(
 ): DemographicNormalizer {
   const lookups = new Map<string, Map<string, string>>();
   const unmatched = new Map<string, Map<string, UnmatchedValue>>();
+  const tooLong = new Map<string, number>();
   for (const [categoryKey, { groups }] of Object.entries(categories)) {
     const lookup = new Map<string, string>();
     for (const group of groups) {
@@ -182,6 +229,7 @@ export function createDemographicNormalizer(
     }
     lookups.set(categoryKey, lookup);
     unmatched.set(categoryKey, new Map());
+    tooLong.set(categoryKey, 0);
   }
 
   return {
@@ -189,7 +237,12 @@ export function createDemographicNormalizer(
     normalize(categoryKey, raw) {
       const lookup = lookups.get(categoryKey);
       if (!lookup) return raw;
-      const key = normalizedKey(raw);
+      const value = raw.trim();
+      if (value.length > MAX_VALUE_LENGTH) {
+        tooLong.set(categoryKey, tooLong.get(categoryKey)! + 1);
+        return "";
+      }
+      const key = normalizedKey(value);
       if (key === "" || NO_ANSWER.has(key)) return "";
       const known = lookup.get(key) ?? lookup.get(withoutQualifier(key));
       if (known) return known;
@@ -200,17 +253,29 @@ export function createDemographicNormalizer(
         entry.count += 1;
         return entry.value;
       }
-      const value = raw.trim();
       seen.set(key, { value, count: 1 });
       return value;
     },
-    unmatched() {
-      const out: Record<string, UnmatchedValue[]> = {};
+    finish(records) {
+      const out: Record<string, UnmatchedColumn> = {};
       for (const [categoryKey, seen] of unmatched) {
-        const values = [...seen.values()].sort(
-          (a, b) => b.count - a.count || a.value.localeCompare(b.value),
-        );
-        if (values.length > 0) out[categoryKey] = values;
+        const named: UnmatchedValue[] = [];
+        const hidden = new Set<string>();
+        let otherRecords = tooLong.get(categoryKey)!;
+        for (const entry of seen.values()) {
+          if (looksLikeCategoryLabel(entry.value, entry.count)) named.push(entry);
+          else {
+            hidden.add(entry.value);
+            otherRecords += entry.count;
+          }
+        }
+        if (hidden.size > 0) {
+          for (const record of records) {
+            if (hidden.has(record[categoryKey] as string)) record[categoryKey] = "";
+          }
+        }
+        named.sort((a, b) => b.count - a.count || a.value.localeCompare(b.value));
+        if (named.length > 0 || otherRecords > 0) out[categoryKey] = { named, otherRecords };
       }
       return out;
     },

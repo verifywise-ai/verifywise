@@ -13,7 +13,7 @@
  * `runAudit` provides it, so there is one definition of "unknown".
  */
 import { createDemographicNormalizer } from "./demographics";
-import type { DemographicCategory, UnmatchedValue } from "./demographics";
+import type { DemographicCategory, UnmatchedColumn } from "./demographics";
 import { RECORD_KEYS } from "./engine/recordKeys";
 import type { AuditRecord } from "./engine/types";
 
@@ -37,10 +37,10 @@ export interface ParsedDataset {
   blankOutcomeCount: number;
   /**
    * Demographic values that matched no category on the list, per category.
-   * They stay as their own groups; the caller reports them. Empty when no
-   * category list was given.
+   * Empty when no category list was given. See demographics.ts for which are
+   * kept as groups and which join the unknown category with only a count.
    */
-  unmatchedDemographics: Record<string, UnmatchedValue[]>;
+  unmatchedDemographics: Record<string, UnmatchedColumn>;
   /** Columns up to the last named header; blank names after it are trailing commas. */
   namedColumnCount: number;
   /**
@@ -177,7 +177,7 @@ export function parseDataset(
     unreadableOutcomeCount,
     unreadableScoreCount,
     blankOutcomeCount,
-    unmatchedDemographics: normalizer?.unmatched() ?? {},
+    unmatchedDemographics: normalizer?.finish(records) ?? {},
     namedColumnCount: namedColumns,
     wrongWidthRowCount,
   };

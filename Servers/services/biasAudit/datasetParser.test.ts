@@ -188,7 +188,14 @@ describe("demographic normalization", () => {
 
   it("reads values onto the category list and blanks no-answer values", () => {
     const parsed = parseDataset(
-      csv(["Male", "male", "M", "Female", "Prefer not to say", "Non-binary"]),
+      csv([
+        "Male",
+        "male",
+        "M",
+        "Female",
+        "Prefer not to say",
+        ...Array<string>(5).fill("Non-binary"),
+      ]),
       mapping,
       categories,
     );
@@ -198,9 +205,11 @@ describe("demographic normalization", () => {
       "Male",
       "Female",
       "",
-      "Non-binary",
+      ...Array<string>(5).fill("Non-binary"),
     ]);
-    expect(parsed.unmatchedDemographics).toEqual({ sex: [{ value: "Non-binary", count: 1 }] });
+    expect(parsed.unmatchedDemographics).toEqual({
+      sex: { named: [{ value: "Non-binary", count: 5 }], otherRecords: 0 },
+    });
   });
 
   it("leaves values alone when no category list is given", () => {
