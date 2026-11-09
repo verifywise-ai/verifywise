@@ -139,6 +139,16 @@ export const ROLE_PERMISSIONS = {
     description: "Create, update and delete custom organization roles",
     legacyRoles: ADMIN,
   },
+  "groups.manage": {
+    module: "Groups",
+    description: "Create, update and delete groups and manage their membership",
+    legacyRoles: ADMIN,
+  },
+  "policyTemplate.edit": {
+    module: "Policy templates",
+    description: "Create, update and delete organization policy templates",
+    legacyRoles: EDITOR,
+  },
   "ssoConfig.admin": {
     module: "SSO",
     description: "Configure SSO",
@@ -181,6 +191,11 @@ export const ROLE_PERMISSIONS = {
     description: "Import risks",
     legacyRoles: EDITOR,
   },
+  "ext.frameworkImport.edit": {
+    module: "Extensions",
+    description: "Import frameworks from a spreadsheet",
+    legacyRoles: EDITOR,
+  },
   "file.edit": {
     module: "Files",
     description: "Bulk-tag files",
@@ -209,6 +224,11 @@ export const ROLE_PERMISSIONS = {
   "training.edit": {
     module: "Training registry",
     description: "Create and update training records",
+    legacyRoles: EDITOR,
+  },
+  "training.assign": {
+    module: "Training registry",
+    description: "Assign training to users and groups and track completion",
     legacyRoles: EDITOR,
   },
   "useCase.classify": {
