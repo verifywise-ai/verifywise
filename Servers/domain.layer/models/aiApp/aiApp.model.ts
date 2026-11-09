@@ -83,6 +83,12 @@ export class AiAppModel extends Model<AiAppModel> implements IAIApp {
   required_training?: string | null;
 
   @Column({
+    type: DataType.INTEGER,
+    allowNull: true,
+  })
+  required_training_id?: number | null;
+
+  @Column({
     type: DataType.BOOLEAN,
     allowNull: false,
     defaultValue: false,
@@ -174,6 +180,7 @@ export class AiAppModel extends Model<AiAppModel> implements IAIApp {
       discovered_source: this.discovered_source,
       shadow_ai_tool_id: this.shadow_ai_tool_id,
       required_training: this.required_training,
+      required_training_id: this.required_training_id,
       is_demo: this.is_demo,
       created_at: (this.createdAt ?? this.created_at)?.toISOString(),
       updated_at: (this.updatedAt ?? this.updated_at)?.toISOString(),
@@ -213,6 +220,7 @@ export class AiAppModel extends Model<AiAppModel> implements IAIApp {
       discovered_source: data.discovered_source ?? AiAppDiscoveredSource.MANUAL,
       shadow_ai_tool_id: data.shadow_ai_tool_id ?? null,
       required_training: data.required_training ?? null,
+      required_training_id: data.required_training_id ?? null,
       risk_score: null,
       is_demo: data.is_demo ?? false,
       created_at: new Date(),
@@ -267,6 +275,10 @@ export class AiAppModel extends Model<AiAppModel> implements IAIApp {
 
     if (data.required_training !== undefined) {
       existingApp.required_training = data.required_training;
+    }
+
+    if (data.required_training_id !== undefined) {
+      existingApp.required_training_id = data.required_training_id;
     }
 
     if (data.risk_score !== undefined) {
