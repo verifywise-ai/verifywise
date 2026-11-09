@@ -1,3 +1,10 @@
+import {
+  EXTERNAL_OWNER_OPTION,
+  EXTERNAL_OWNER_OPTION_ID,
+  externalOwnerPayload,
+  validateExternalOwner,
+} from "../../../application/utils/externalOwner";
+import ExternalOwnerFields from "../ExternalOwner/ExternalOwnerFields";
 import React, { useState, useMemo, useCallback } from "react";
 import {
   Button,
@@ -36,6 +43,8 @@ const initialState: CreateProjectFormValues = {
   project_title: "",
   members: [],
   owner: 0,
+  external_owner_name: "",
+  external_owner_email: "",
   start_date: new Date().toISOString(),
   ai_risk_classification: 0,
   type_of_high_risk_role: 0,
@@ -127,9 +136,20 @@ export function CreateProjectForm({ closePopup, onNewProject }: CreateProjectFor
       newErrors.members = addTeamMember.message;
       setMemberRequired(true);
     }
-    const owner = selectValidation("Owner", values.owner);
-    if (!owner.accepted) {
-      newErrors.owner = owner.message;
+    if (values.owner === EXTERNAL_OWNER_OPTION_ID) {
+      const externalErrors = validateExternalOwner(
+        values.external_owner_name,
+        values.external_owner_email,
+      );
+      newErrors.externalOwnerName = externalErrors.name;
+      newErrors.externalOwnerEmail = externalErrors.email;
+      if (!externalErrors.name) delete newErrors.externalOwnerName;
+      if (!externalErrors.email) delete newErrors.externalOwnerEmail;
+    } else {
+      const owner = selectValidation("Owner", values.owner);
+      if (!owner.accepted) {
+        newErrors.owner = owner.message;
+      }
     }
     const riskClassification = selectValidation(
       "AI risk classification",
@@ -165,6 +185,11 @@ export function CreateProjectForm({ closePopup, onNewProject }: CreateProjectFor
       const response: ProjectResponse = await createProject({
         body: {
           ...values,
+          ...externalOwnerPayload(
+            values.owner,
+            values.external_owner_name,
+            values.external_owner_email,
+          ),
           type_of_high_risk_role: highRiskRoleItems.find(
             (item) => item._id === values.type_of_high_risk_role,
           )?.name,
@@ -249,17 +274,35 @@ export function CreateProjectForm({ closePopup, onNewProject }: CreateProjectFor
               placeholder="Select owner"
               value={values.owner === 0 ? "" : values.owner}
               onChange={handleOnSelectChange("owner")}
-              items={
-                users?.map((user) => ({
+              items={[
+                ...(users?.map((user) => ({
                   _id: user.id,
                   name: `${user.name} ${user.surname}`,
                   email: user.email,
-                })) || []
-              }
+                })) || []),
+                EXTERNAL_OWNER_OPTION,
+              ]}
               sx={createProjectFormStyles.selectStyle(theme)}
               error={errors.owner}
               isRequired
             />
+            {values.owner === EXTERNAL_OWNER_OPTION_ID && (
+              <ExternalOwnerFields
+                name={values.external_owner_name}
+                email={values.external_owner_email}
+                nameError={errors.externalOwnerName}
+                emailError={errors.externalOwnerEmail}
+                width="350px"
+                onNameChange={(value) => {
+                  setValues((prev) => ({ ...prev, external_owner_name: value }));
+                  setErrors((prev) => ({ ...prev, externalOwnerName: "" }));
+                }}
+                onEmailChange={(value) => {
+                  setValues((prev) => ({ ...prev, external_owner_email: value }));
+                  setErrors((prev) => ({ ...prev, externalOwnerEmail: "" }));
+                }}
+              />
+            )}
             <Select
               id="risk-classification-input"
               dataTestId={testIds.createProject.riskClassificationSelect}

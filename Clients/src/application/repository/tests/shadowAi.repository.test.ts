@@ -736,13 +736,12 @@ describe("shadowAi.repository", () => {
         limit: 10,
         period: "30d",
         department: "Engineering",
-        sort_by: "event_count",
-        order: "desc",
+        sort: "risk",
       });
 
       expect(apiServices.get).toHaveBeenCalledTimes(1);
       expect(apiServices.get).toHaveBeenCalledWith(
-        "/shadow-ai/users?page=1&limit=10&period=30d&department=Engineering&sort_by=event_count&order=desc",
+        "/shadow-ai/users?page=1&limit=10&period=30d&department=Engineering&sort=risk",
       );
       expect(result).toEqual(mockResponse.data.data);
     });
@@ -1038,13 +1037,12 @@ describe("shadowAi.repository", () => {
         page: 1,
         limit: 10,
         status: "blocked" as ShadowAiToolStatus,
-        sort_by: "event_count",
-        order: "desc",
+        sort: "events",
       });
 
       expect(apiServices.get).toHaveBeenCalledTimes(1);
       expect(apiServices.get).toHaveBeenCalledWith(
-        "/shadow-ai/tools?page=1&limit=10&status=blocked&sort_by=event_count&order=desc",
+        "/shadow-ai/tools?page=1&limit=10&status=blocked&sort=events",
       );
       expect(result).toEqual(mockResponse.data.data);
     });
@@ -1181,7 +1179,7 @@ describe("shadowAi.repository", () => {
           data: {
             model_inventory_id: 123,
             risk_entry_id: 456,
-            lifecycle_started: true,
+            lifecycle_initialized: true,
           } as ShadowAiGovernanceResult,
         },
         status: 202,
@@ -1197,7 +1195,7 @@ describe("shadowAi.repository", () => {
         },
         governance_owner_id: 1,
         risk_assessment: {
-          data_sensitivity: "high",
+          data_sensitivity: "High",
           description: "Customer data may be processed",
         },
         start_lifecycle: true,

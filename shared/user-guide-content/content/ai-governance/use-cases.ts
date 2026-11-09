@@ -38,6 +38,7 @@ export const useCasesContent: ArticleContent = {
         { bold: 'Title', text: 'A short name, up to 64 characters. Has to be unique in your organization.' },
         { bold: 'Goal', text: 'What the AI system is supposed to accomplish, up to 256 characters.' },
         { bold: 'Owner', text: 'Who is responsible. They get an email when you assign them.' },
+        { bold: 'External owner', text: 'Choose this in the owner list when the person responsible has no VerifyWise account, and enter their name and email. They get email notices only. They have no login and no access to VerifyWise, and the use case shows as "Name (external)".' },
         { bold: 'Start date', text: 'When work started or is expected to start.' },
         { bold: 'AI risk classification', text: 'Pick one: Prohibited, High risk, Limited risk, Minimal risk, or Out of scope. This drives how much oversight the EU AI Act expects. Not sure? Use the risk classification wizard described below.' },
         { bold: 'High-risk roles', text: 'Your organization\'s EU AI Act role for the AI system: Provider, Deployer or both. Choose both when you build the system and also use it yourself. The use case then lists the requirements of both roles, and compliance progress, readiness and reports count them.' },
@@ -299,7 +300,7 @@ export const useCasesContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The owner of a live use case confirms from time to time that it is still in use. If nobody confirms it within the check interval, it gets a Stale marker in the list. Its owner gets an email asking them to confirm it or retire it, once per interval until someone acts. To confirm, choose **Confirm still live** on the Overview tab.',
+      text: 'The owner of a live use case confirms from time to time that it is still in use. If nobody confirms it within the check interval, it gets a Stale marker in the list. Its owner gets an email asking them to confirm it or retire it, once per interval until someone acts. To confirm, choose **Confirm still live** on the Overview tab. An external owner cannot sign in to confirm, so their email names a colleague to contact, and someone with edit access confirms or retires the use case for them.',
     },
     {
       type: 'image',

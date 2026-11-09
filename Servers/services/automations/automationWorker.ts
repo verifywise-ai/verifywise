@@ -1,6 +1,7 @@
 import { Worker, Job } from "bullmq";
 import { REDIS_URL } from "../../database/redis";
 import sendEmail from "./actions/sendEmail";
+import { resolveProjectOwnerName } from "../../utils/project.utils";
 import logger from "../../utils/logger/fileLogger";
 import { getAllOrganizationsQuery } from "../../utils/organization.utils";
 import { getAllVendorsQuery } from "../../utils/vendor.utils";
@@ -364,6 +365,7 @@ async function sendReportNotification() {
         `SELECT
           p.project_title AS project_title,
           p.owner AS owner,
+          p.external_owner_name AS external_owner_name,
           pf.framework_id AS framework_id,
           pf.id AS project_framework_id
         FROM projects AS p
@@ -375,18 +377,14 @@ async function sendReportNotification() {
       )) as [
         {
           project_title: string;
-          owner: number;
+          owner: number | null;
+          external_owner_name: string | null;
           framework_id: number;
           project_framework_id: number;
         }[],
         number,
       ];
-      const [[{ full_name }]] = (await sequelize.query(
-        `SELECT name || ' ' || surname AS full_name FROM users WHERE id = :userId;`,
-        {
-          replacements: { userId: projectDetails[0][0].owner },
-        },
-      )) as [{ full_name: string }[], number];
+      const full_name = await resolveProjectOwnerName(projectDetails[0][0], "Unknown");
       const [[{ organization_name }]] = (await sequelize.query(
         `SELECT name FROM organizations WHERE id = :orgId;`,
         {

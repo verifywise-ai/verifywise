@@ -17,6 +17,8 @@ export interface User {
 export interface FormValues {
   project_title: string;
   owner: number;
+  external_owner_name: string;
+  external_owner_email: string;
   members: User[];
   start_date: string;
   ai_risk_classification: number | null;
@@ -63,6 +65,8 @@ export const initialState: FormValues = {
   project_title: "",
   members: [],
   owner: 0,
+  external_owner_name: "",
+  external_owner_email: "",
   start_date: new Date().toISOString(),
   ai_risk_classification: null,
   status: 1,

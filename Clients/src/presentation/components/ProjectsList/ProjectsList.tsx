@@ -1,3 +1,4 @@
+import { externalOwnerLabel, ownerFilterValue } from "../../../application/utils/externalOwner";
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { Box, Stack, Typography } from "@mui/material";
 import { ProjectCard } from "../Cards/ProjectCard";
@@ -118,17 +119,26 @@ const ProjectList = ({
   // FilterBy - Dynamic options generators
   const getUniqueProjectOwners = useCallback(() => {
     const ownerIds = new Set<string>();
+    const externalOwners = new Map<string, string>();
     projects.forEach((project) => {
       if (project.owner) {
         ownerIds.add(project.owner.toString());
+      } else if (project.external_owner_email) {
+        externalOwners.set(
+          ownerFilterValue(project)!,
+          externalOwnerLabel(project.external_owner_name || project.external_owner_email),
+        );
       }
     });
-    return Array.from(ownerIds)
-      .sort()
-      .map((ownerId) => ({
-        value: ownerId,
-        label: getUserNameById(ownerId),
-      }));
+    return [
+      ...Array.from(ownerIds)
+        .sort()
+        .map((ownerId) => ({
+          value: ownerId,
+          label: getUserNameById(ownerId),
+        })),
+      ...Array.from(externalOwners, ([value, label]) => ({ value, label })),
+    ];
   }, [projects, getUserNameById]);
 
   const getUniqueProjectStatuses = useCallback(() => {
@@ -190,7 +200,7 @@ const ProjectList = ({
         case "ai_risk_classification":
           return item.ai_risk_classification;
         case "owner":
-          return item.owner?.toString();
+          return ownerFilterValue(item);
         case "status":
           return item.status?.toLowerCase();
         case "start_date":
@@ -238,6 +248,9 @@ const ProjectList = ({
       case "owner":
         if (project.owner) {
           return getUserNameById(project.owner.toString());
+        }
+        if (project.external_owner_name) {
+          return externalOwnerLabel(project.external_owner_name);
         }
         return "Unassigned";
       case "status":
@@ -348,7 +361,11 @@ const ProjectList = ({
 
   const exportData = useMemo(() => {
     return filteredProjects.map((project) => {
-      const ownerName = project.owner ? getUserNameById(project.owner.toString()) : "-";
+      const ownerName = project.owner
+        ? getUserNameById(project.owner.toString())
+        : project.external_owner_name
+          ? externalOwnerLabel(project.external_owner_name)
+          : "-";
 
       return {
         uc_id: project.uc_id || project.id?.toString() || "-",

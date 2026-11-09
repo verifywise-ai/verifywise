@@ -277,6 +277,11 @@
   "Function is required": "Function is required",
   "GitHub token deleted successfully": "GitHub token deleted successfully",
   "governance_owner_id must be a positive integer": "governance_owner_id must be a positive integer",
+  "The governance owner must be a user in your organization": "The governance owner must be a user in your organization",
+  "This tool is already under governance": "This tool is already under governance",
+  "risk_assessment must be an object": "risk_assessment must be an object",
+  "risk_assessment.data_sensitivity must be High, Medium or Low": "risk_assessment.data_sensitivity must be High, Medium or Low",
+  "risk_assessment.description must be text of at most 5000 characters": "risk_assessment.description must be text of at most 5000 characters",
   "governance_status must be 'reviewed', 'approved', 'flagged', or null": "governance_status must be 'reviewed', 'approved', 'flagged', or null",
   "Hint is required": "Hint is required",
   "Hosting provider is required": "Hosting provider is required",
@@ -967,5 +972,10 @@
   "Only a live AI app can be confirmed as still live": "Only a live AI app can be confirmed as still live",
   "Invalid lifecycle stage": "Invalid lifecycle stage",
   "An AI app with this name already exists": "An AI app with this name already exists",
-  "AI app requests cannot carry accepted risk suggestions": "AI app requests cannot carry accepted risk suggestions"
+  "AI app requests cannot carry accepted risk suggestions": "AI app requests cannot carry accepted risk suggestions",
+  "A use case needs an owner or an external owner": "A use case needs an owner or an external owner",
+  "A use case cannot have both an owner and an external owner": "A use case cannot have both an owner and an external owner",
+  "An external owner needs both a name and an email": "An external owner needs both a name and an email",
+  "External owner name is not valid": "External owner name is not valid",
+  "External owner email is not valid": "External owner email is not valid"
 }

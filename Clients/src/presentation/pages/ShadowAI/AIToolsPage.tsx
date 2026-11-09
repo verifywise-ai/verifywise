@@ -176,8 +176,7 @@ export default function AIToolsPage() {
         const params: GetToolsParams = {
           page,
           limit: ROWS_PER_PAGE,
-          sort_by: "risk_score",
-          order: "desc",
+          sort: "risk",
         };
         if (statusFilter !== "all") params.status = statusFilter;
         const result = await getTools(params);
@@ -203,8 +202,7 @@ export default function AIToolsPage() {
       const params: GetToolsParams = {
         page,
         limit: ROWS_PER_PAGE,
-        sort_by: "risk_score",
-        order: "desc",
+        sort: "risk",
       };
       if (statusFilter !== "all") params.status = statusFilter;
       const result = await getTools(params);

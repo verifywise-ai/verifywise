@@ -67,7 +67,7 @@ const organizationIdArg = z
  * are not sent from here.
  */
 async function notifyOwnerAssigned(
-  useCase: { id?: number; project_title: string; owner: number; description?: string },
+  useCase: { id?: number; project_title: string; owner: number | null; description?: string },
   actingUserId: number,
   organizationId: number,
 ): Promise<void> {
@@ -368,7 +368,9 @@ const updateUseCase: ToolDef = {
         args.useCaseId,
         input,
         existing,
-        { userId: caller.userId, organizationId: args.organizationId },
+        // Only super admins and organization Admins get this tool, and both see
+        // every use case in the organization, as with the list query above.
+        { userId: caller.userId, organizationId: args.organizationId, actorRole: "SuperAdmin" },
         transaction,
       );
       // The rollback is left to the catch below, so the transaction is only
