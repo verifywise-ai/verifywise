@@ -146,6 +146,11 @@ const GUARDED_ROUTES: GuardedRoute[] = [
     verify: (after) => expect(after.runs).toBe(1),
   },
   {
+    name: "GET /api/projects/:id",
+    call: (api, id) => api.get(`/api/projects/${id}`),
+    success: 200,
+  },
+  {
     name: "GET /api/projects/stats/:id",
     call: (api, id) => api.get(`/api/projects/stats/${id}`),
     success: 202,
@@ -566,13 +571,243 @@ describe("project access guard", () => {
     });
   });
 
-  it("leaves GET /api/projects/:id open to a non-member, whom approval links reach", async () => {
-    const projectId = await createTestProject(orgId, ownerId);
-    const approver = await user(orgId, "Reviewer");
+  describe("linking a task to a use case's requirement", () => {
+    async function euControlIn(projectId: number): Promise<number> {
+      const projectFrameworkId = await createTestProjectFramework(
+        orgId,
+        projectId,
+        EU_AI_ACT_FRAMEWORK_ID,
+      );
+      return createTestControlEU(orgId, { projects_frameworks_id: projectFrameworkId });
+    }
 
-    const res = await (await apiAs(orgId, approver, "Reviewer")).get(`/api/projects/${projectId}`);
+    async function ownTask(userId: number): Promise<number> {
+      const taskId = await createTestTask(orgId, { creator_id: userId });
+      await assignTaskToUser(orgId, taskId, userId);
+      return taskId;
+    }
 
-    expect(res.status).toBe(200);
+    async function linkCount(entityId: number, entityType: string): Promise<number> {
+      const [rows] = await sequelize.query(
+        `SELECT COUNT(*)::int AS count FROM task_entity_links
+          WHERE organization_id = :orgId AND entity_id = :entityId AND entity_type = :entityType`,
+        { replacements: { orgId, entityId, entityType } },
+      );
+      return (rows as any[])[0].count;
+    }
+
+    const link = (api: Api, taskId: number, entity_id: number, entity_type: string) =>
+      api.post(`/api/tasks/${taskId}/entities`).send({ entity_id, entity_type });
+
+    it("refuses a non-member, who then cannot read the use case", async () => {
+      const projectId = await createTestProject(orgId, ownerId);
+      const controlId = await euControlIn(projectId);
+      const stranger = await user(orgId, "Editor");
+      const api = await apiAs(orgId, stranger, "Editor");
+
+      const res = await link(api, await ownTask(stranger), controlId, "eu_control");
+
+      expect(res.status).toBe(403);
+      expect(await linkCount(controlId, "eu_control")).toBe(0);
+      expect((await api.get(`/api/projects/${projectId}`)).status).toBe(403);
+    });
+
+    it("refuses a non-member linking a subcontrol through its parent", async () => {
+      const projectId = await createTestProject(orgId, ownerId);
+      const controlId = await euControlIn(projectId);
+      const [subcontrol] = await sequelize.query(
+        `INSERT INTO subcontrols_eu (organization_id, control_id) VALUES (:orgId, :controlId)
+         RETURNING id`,
+        { replacements: { orgId, controlId } },
+      );
+      const subcontrolId = (subcontrol as any[])[0].id;
+      const stranger = await user(orgId, "Editor");
+
+      const res = await link(
+        await apiAs(orgId, stranger, "Editor"),
+        await ownTask(stranger),
+        subcontrolId,
+        "eu_subcontrol",
+      );
+
+      expect(res.status).toBe(403);
+      expect(await linkCount(subcontrolId, "eu_subcontrol")).toBe(0);
+    });
+
+    it("drops the link when a non-member sends it with a new task", async () => {
+      const projectId = await createTestProject(orgId, ownerId);
+      const controlId = await euControlIn(projectId);
+      const stranger = await user(orgId, "Editor");
+      const api = await apiAs(orgId, stranger, "Editor");
+
+      const res = await api.post("/api/tasks").send({
+        title: "Self assigned",
+        assignees: [stranger],
+        entity_links: [{ entity_id: controlId, entity_type: "eu_control" }],
+      });
+
+      expect(res.status).toBe(201);
+      expect(await linkCount(controlId, "eu_control")).toBe(0);
+      expect((await api.get(`/api/projects/${projectId}`)).status).toBe(403);
+    });
+
+    it("drops the link when a non-member sends it on a task update", async () => {
+      const projectId = await createTestProject(orgId, ownerId);
+      const controlId = await euControlIn(projectId);
+      const stranger = await user(orgId, "Editor");
+
+      const res = await (
+        await apiAs(orgId, stranger, "Editor")
+      )
+        .put(`/api/tasks/${await ownTask(stranger)}`)
+        .send({
+          title: "Renamed",
+          entity_links: [{ entity_id: controlId, entity_type: "eu_control" }],
+        });
+
+      expect(res.status).toBe(200);
+      expect(await linkCount(controlId, "eu_control")).toBe(0);
+    });
+
+    it("lets a member link, and the assignee then read", async () => {
+      const projectId = await createTestProject(orgId, ownerId);
+      const controlId = await euControlIn(projectId);
+      const member = await user(orgId, "Editor");
+      await addMember(orgId, projectId, member);
+      const taskId = await ownTask(member);
+      const assignee = await user(orgId, "Editor");
+      await assignTaskToUser(orgId, taskId, assignee);
+
+      const res = await link(await apiAs(orgId, member, "Editor"), taskId, controlId, "eu_control");
+
+      expect(res.status).toBe(201);
+      const read = await (await apiAs(orgId, assignee, "Editor")).get(`/api/projects/${projectId}`);
+      expect(read.status).toBe(200);
+    });
+
+    it("lets an Admin link without being a member", async () => {
+      const projectId = await createTestProject(orgId, ownerId);
+      const controlId = await euControlIn(projectId);
+      const admin = await user(orgId, "Admin");
+
+      const res = await link(
+        await apiAs(orgId, admin, "Admin"),
+        await ownTask(admin),
+        controlId,
+        "eu_control",
+      );
+
+      expect(res.status).toBe(201);
+    });
+
+    it("still lets anyone link an organization-wide entity", async () => {
+      const vendorId = await createTestVendor(orgId);
+      const stranger = await user(orgId, "Editor");
+
+      const res = await link(
+        await apiAs(orgId, stranger, "Editor"),
+        await ownTask(stranger),
+        vendorId,
+        "vendor",
+      );
+
+      expect(res.status).toBe(201);
+    });
+  });
+
+  describe("approvers of the use case's workflow", () => {
+    async function workflowApprovedBy(approver: number): Promise<number> {
+      const [workflow] = await sequelize.query(
+        `INSERT INTO approval_workflows (organization_id, workflow_title, entity_type, created_by)
+         VALUES (:orgId, 'Review', 'use_case', :ownerId) RETURNING id`,
+        { replacements: { orgId, ownerId } },
+      );
+      const workflowId = (workflow as any[])[0].id;
+      const [step] = await sequelize.query(
+        `INSERT INTO approval_workflow_steps (organization_id, workflow_id, step_number, step_name)
+         VALUES (:orgId, :workflowId, 1, 'Step') RETURNING id`,
+        { replacements: { orgId, workflowId } },
+      );
+      await sequelize.query(
+        `INSERT INTO approval_step_approvers (organization_id, workflow_step_id, approver_id)
+         VALUES (:orgId, :stepId, :approver)`,
+        { replacements: { orgId, stepId: (step as any[])[0].id, approver } },
+      );
+      return workflowId;
+    }
+
+    async function useCaseWithApprover(approver: number): Promise<number> {
+      const projectId = await createTestProject(orgId, ownerId);
+      await sequelize.query(
+        `UPDATE projects SET approval_workflow_id = :workflowId WHERE id = :projectId`,
+        { replacements: { workflowId: await workflowApprovedBy(approver), projectId } },
+      );
+      return projectId;
+    }
+
+    it("lets the approver open the use case", async () => {
+      const approver = await user(orgId, "Reviewer");
+      const projectId = await useCaseWithApprover(approver);
+
+      const res = await (
+        await apiAs(orgId, approver, "Reviewer")
+      ).get(`/api/projects/${projectId}`);
+
+      expect(res.status).toBe(200);
+    });
+
+    it("does not let the approver write", async () => {
+      const approver = await user(orgId, "Editor");
+      const projectId = await useCaseWithApprover(approver);
+      const before = await snapshot(projectId);
+
+      const res = await (
+        await apiAs(orgId, approver, "Editor")
+      )
+        .patch(`/api/projects/${projectId}/status`)
+        .send({ status: "On hold" });
+
+      expect(res.status).toBe(403);
+      expect(await snapshot(projectId)).toEqual(before);
+    });
+
+    it("refuses the approver of a workflow that was deleted", async () => {
+      const approver = await user(orgId, "Reviewer");
+      const projectId = await useCaseWithApprover(approver);
+      await sequelize.query(
+        `UPDATE approval_workflows SET is_active = false
+          WHERE id = (SELECT approval_workflow_id FROM projects WHERE id = :projectId)`,
+        { replacements: { projectId } },
+      );
+
+      const res = await (
+        await apiAs(orgId, approver, "Reviewer")
+      ).get(`/api/projects/${projectId}`);
+
+      expect(res.status).toBe(403);
+    });
+
+    it("refuses the approver of a workflow on another use case", async () => {
+      const approver = await user(orgId, "Reviewer");
+      await useCaseWithApprover(approver);
+      const projectId = await useCaseWithApprover(await user(orgId, "Reviewer"));
+
+      const res = await (
+        await apiAs(orgId, approver, "Reviewer")
+      ).get(`/api/projects/${projectId}`);
+
+      expect(res.status).toBe(403);
+    });
+
+    it("does not add the use case to the approver's list", async () => {
+      const approver = await user(orgId, "Reviewer");
+      const projectId = await useCaseWithApprover(approver);
+
+      const res = await (await apiAs(orgId, approver, "Reviewer")).get("/api/projects");
+
+      const ids = (res.body.data ?? []).map((project: { id: number }) => project.id);
+      expect(ids).not.toContain(projectId);
+    });
   });
 
   it("does not treat a use case with no user owner as anyone's", async () => {

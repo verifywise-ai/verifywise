@@ -210,9 +210,28 @@ export const getProjectAccessQuery = async (
   evaluateProjectAccess(projectVisibilitySql("p", viewer), projectId, organizationId, transaction);
 
 /**
+ * SQL condition: :visibilityUserId approves a step of the active workflow set
+ * on `p`. Setting that workflow takes write access to the use case and editing
+ * one takes approvalWorkflow.admin, so nobody can grant themselves this. The
+ * caller's query must bind :organizationId and :visibilityUserId.
+ */
+const WORKFLOW_APPROVER_OF_PROJECT_SQL = `EXISTS (
+    SELECT 1
+      FROM approval_workflows aw
+      JOIN approval_workflow_steps aws
+        ON aws.workflow_id = aw.id AND aws.organization_id = :organizationId
+      JOIN approval_step_approvers asa
+        ON asa.workflow_step_id = aws.id AND asa.organization_id = :organizationId
+     WHERE aw.organization_id = :organizationId
+       AND aw.id = p.approval_workflow_id
+       AND aw.is_active = true
+       AND asa.approver_id = :visibilityUserId)`;
+
+/**
  * Same as getProjectAccessQuery, and also true for the assignees of a task
- * linked to the use case. Reads only: a task assignment lets someone open the
- * use case from the task, not change it, and does not add it to their list.
+ * linked to the use case and the approvers of its workflow. Reads only: both
+ * are sent to the use case to do their part, not to change it, and it is not
+ * added to their list.
  */
 export const getProjectReadAccessQuery = async (
   projectId: number,
@@ -223,7 +242,7 @@ export const getProjectReadAccessQuery = async (
   const visibility = projectVisibilitySql("p", viewer);
   const readAccess: ProjectAccessSql = visibility.sql
     ? {
-        sql: ` AND ((TRUE${visibility.sql}) OR ${taskAssigneeOfProjectSql("p.id")})`,
+        sql: ` AND ((TRUE${visibility.sql}) OR ${taskAssigneeOfProjectSql("p.id")} OR ${WORKFLOW_APPROVER_OF_PROJECT_SQL})`,
         replacements: visibility.replacements,
       }
     : visibility;

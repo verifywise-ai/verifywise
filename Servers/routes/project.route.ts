@@ -50,9 +50,7 @@ router.get(
   requireProjectAccess(),
   getVendorRisksCalculations,
 );
-// Not behind requireProjectAccess: workflow approvers need not be members, and
-// the approval request email and notification link them to this use case.
-router.get("/:id", authenticateJWT, validateProjectIdParam, getProjectById);
+router.get("/:id", authenticateJWT, validateProjectIdParam, requireProjectAccess(), getProjectById);
 router.get(
   "/stats/:id",
   authenticateJWT,

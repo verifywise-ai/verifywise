@@ -7,7 +7,7 @@ import { sequelize } from "../database/db";
 import { RaciRole } from "../domain.layer/enums/raci.enum";
 import { projectVisibilitySql } from "./projectVisibility.utils";
 import { recordEntityChange } from "./changeHistory.base.utils";
-import { TASK_ENTITY_TABLES, VALID_ENTITY_TYPES, type EntityType } from "./taskEntityLink.utils";
+import { taskLinkReachesProjectSql } from "./taskEntityLink.utils";
 import {
   applyRaciDelta,
   buildDerivedRaci,
@@ -42,40 +42,7 @@ export type RaciResult =
   | { status: "organizational" }
   | { status: "user_not_found" };
 
-/** Task link targets that do not belong to any one use case. */
-const ORGANIZATION_WIDE_LINK_TYPES: readonly EntityType[] = ["vendor", "model", "policy"];
-
-/** Task link targets that reach projects_frameworks through a parent row. */
-const LINK_PARENTS: Partial<Record<EntityType, { table: string; foreignKey: string }>> = {
-  eu_subcontrol: { table: "controls_eu", foreignKey: "control_id" },
-};
-
-/**
- * How a task's link reaches a use case. Tasks never store a use case id: the
- * link picker's "Use-case" option leads to one of the use case's framework
- * requirements, and that requirement is what task_entity_links records. A new
- * entity type is treated as a framework requirement, so if its table has no
- * projects_frameworks_id this query fails rather than quietly ignoring it.
- */
-const TASK_LINK_CONDITIONS = VALID_ENTITY_TYPES.filter(
-  (entityType) => !ORGANIZATION_WIDE_LINK_TYPES.includes(entityType),
-)
-  .map((entityType) => {
-    const table = TASK_ENTITY_TABLES[entityType];
-    const parent = LINK_PARENTS[entityType];
-    const source = parent
-      ? `${table} e JOIN ${parent.table} parent ON parent.id = e.${parent.foreignKey}`
-      : `${table} e`;
-    const frameworkKey = parent ? "parent.projects_frameworks_id" : "e.projects_frameworks_id";
-    const parentScope = parent ? "AND parent.organization_id = :organizationId" : "";
-    return `(tel.entity_type = '${entityType}' AND tel.entity_id IN (
-       SELECT e.id FROM ${source}
-         JOIN projects_frameworks pf ON pf.id = ${frameworkKey}
-        WHERE e.organization_id = :organizationId ${parentScope}
-          AND pf.organization_id = :organizationId
-          AND pf.project_id = :projectId))`;
-  })
-  .join("\n OR ");
+const TASK_LINK_CONDITIONS = taskLinkReachesProjectSql(":projectId");
 
 async function selectRows<T extends object>(
   sql: string,

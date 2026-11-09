@@ -16,8 +16,8 @@ const eventTypeFor = (method: string): "Read" | "Delete" | "Update" => {
 /**
  * Lets a request through only when the caller can see the use case named by
  * the route: an Admin, its owner or a member, the rule that scopes the use case
- * list. A GET also lets through the assignees of a task linked to the use case.
- * A permission such as useCase.edit alone says nothing about which use case.
+ * list. A GET also lets through the assignees of a task linked to the use case
+ * and the approvers of its workflow. A permission such as useCase.edit alone says nothing about which use case.
  * Use after authenticateJWT and any param validation.
  *
  * A use case that does not exist, or is in another organization, is passed on
