@@ -111,6 +111,24 @@ describe("getDashboardDataQuery", () => {
     );
   });
 
+  it("does not count a bias audit stance PDF as a report", async () => {
+    const files = [{ source: "Project risks report" }, { source: "Bias audit stance report" }];
+    mockQuery.mockImplementation(async (sql: any, options: any) => {
+      if (typeof sql === "string" && sql.includes("ILIKE")) {
+        const stanceSource = options?.replacements?.stanceSource;
+        const visible = sql.includes("IS DISTINCT FROM :stanceSource")
+          ? files.filter((f) => f.source !== stanceSource)
+          : files;
+        return [[{ count: String(visible.length) }], 0] as any;
+      }
+      return [[{ count: "0" }], 0] as any;
+    });
+
+    const result = await getDashboardDataQuery(organizationId, userId, role);
+
+    expect(result!.reports).toBe(1);
+  });
+
   it("should calculate task radar: overdue, due, upcoming", async () => {
     let callIndex = 0;
     mockQuery.mockImplementation(async (sql: any) => {

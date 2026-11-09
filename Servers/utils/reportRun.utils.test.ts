@@ -181,7 +181,6 @@ describe("deleteRunQuery", () => {
 
   it("runs every statement inside one transaction", async () => {
     mockQuery.mockResolvedValueOnce([{ id: 1, file_id: 42 }]); // fetch
-    mockQuery.mockResolvedValueOnce([]); // delete folder mappings
     mockQuery.mockResolvedValueOnce([]); // delete file
     mockQuery.mockResolvedValueOnce([]); // delete run
 
@@ -197,21 +196,20 @@ describe("deleteRunQuery", () => {
 
   it("deletes the run's file and then the run, both org-scoped", async () => {
     mockQuery.mockResolvedValueOnce([{ id: 1, file_id: 42 }]); // fetch
-    mockQuery.mockResolvedValueOnce([]); // delete folder mappings
     mockQuery.mockResolvedValueOnce([]); // delete file
     mockQuery.mockResolvedValueOnce([]); // delete run
 
     expect(await deleteRunQuery(1, 5)).toBe(true);
 
     const sql = mockQuery.mock.calls.map((c) => c[0] as string);
-    // deleteFileById clears the file's folder mappings first — a bare
-    // DELETE FROM files leaves those rows orphaned.
-    expect(sql[1]).toContain("DELETE FROM file_folder_mappings");
+    // deleteFileById deletes the file, scoped to a visible (non-stance) file
+    // in the organization; its folder mappings and links cascade.
+    expect(sql).toHaveLength(3);
+    expect(sql[1]).toContain("DELETE FROM files");
     expect(sql[1]).toContain("organization_id = :organizationId");
-    expect(sql[2]).toContain("DELETE FROM files");
-    expect(sql[2]).toContain("organization_id = :organizationId");
-    expect(sql[3]).toContain("DELETE FROM report_runs");
-    expect(sql[3]).toContain("organization_id = :organization_id");
+    expect(sql[1]).toContain("IS DISTINCT FROM :stanceSource");
+    expect(sql[2]).toContain("DELETE FROM report_runs");
+    expect(sql[2]).toContain("organization_id = :organization_id");
   });
 
   it("deletes the run alone when it produced no file", async () => {

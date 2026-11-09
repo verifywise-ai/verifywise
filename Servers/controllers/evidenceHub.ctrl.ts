@@ -12,6 +12,7 @@ import { STATUS_CODE } from "../utils/statusCode.utils";
 import logger, { logStructured } from "../utils/logger/fileLogger";
 import { sanitizeUserHtml } from "../utils/sanitization.utils";
 import { translateError } from "../utils/i18n.utils";
+import { NotFoundException } from "../domain.layer/exceptions/custom.exception";
 import {
   recordEvidenceAddedToModel,
   recordEvidenceRemovedFromModel,
@@ -162,6 +163,9 @@ export async function createNewEvidence(req: Request, res: Response) {
     return res.status(201).json(STATUS_CODE[201](savedEvidence.toSafeJSON()));
   } catch (error) {
     await transaction.rollback();
+    if (error instanceof NotFoundException) {
+      return res.status(404).json(STATUS_CODE[404](req.t!("File not found")));
+    }
     logStructured(
       "error",
       "failed to create new evidence",
@@ -318,6 +322,9 @@ export async function updateEvidenceById(req: Request, res: Response) {
     return res.status(200).json(STATUS_CODE[200](updatedEvidence.toSafeJSON()));
   } catch (error) {
     await transaction.rollback();
+    if (error instanceof NotFoundException) {
+      return res.status(404).json(STATUS_CODE[404](req.t!("File not found")));
+    }
     logger.error("❌ Error in updateEvidenceById:", error);
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }

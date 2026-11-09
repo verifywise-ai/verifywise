@@ -35,6 +35,7 @@ import {
   FileContentSearchOptions,
 } from "../repositories/file.repository";
 import { isRetentionPolicy } from "../utils/retention.utils";
+import { BIAS_AUDIT_STANCE_SOURCE } from "../utils/fileUpload.utils";
 import { isReportFileSource } from "../utils/reporting.utils";
 import { sequelize } from "../database/db";
 import { ApprovalWorkflowStepModel } from "../domain.layer/models/approvalWorkflow/approvalWorkflowStep.model";
@@ -236,6 +237,13 @@ export const uploadFile = async (req: Request, res: Response): Promise<any> => {
 
     // Parse source from request body
     const source: FileSource = (req.body.source as FileSource) || "File Manager";
+
+    // The stance source marks a file as an immutable bias audit record that
+    // cannot be deleted. Only the stance generator may write it; a client
+    // claiming it would create an undeletable file posing as a stance.
+    if (source === BIAS_AUDIT_STANCE_SOURCE) {
+      return res.status(400).json(STATUS_CODE[400](req.t!("This file source is reserved")));
+    }
 
     if (!file) {
       await logFailure({

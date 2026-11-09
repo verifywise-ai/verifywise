@@ -22,8 +22,8 @@ import {
   HeadingLevel,
   convertInchesToTwip,
 } from "docx";
-import { chromium, Browser } from "playwright";
 import { getFileById } from "../../repositories/file.repository";
+import { getSharedBrowser } from "../../utils/pdfBrowser.utils";
 import { JSDOM } from "jsdom";
 import { escapeHtml } from "../../utils/sanitization.utils";
 
@@ -35,32 +35,6 @@ const COLORS = {
   BORDER: "D0D5DD",
   BACKGROUND_LIGHT: "F9FAFB",
 };
-
-// Browser instance singleton for PDF generation
-let browserInstance: Browser | null = null;
-
-/**
- * Get or create browser instance for PDF generation
- */
-async function getBrowser(): Promise<Browser> {
-  if (!browserInstance || !browserInstance.isConnected()) {
-    browserInstance = await chromium.launch({
-      headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
-    });
-  }
-  return browserInstance;
-}
-
-/**
- * Close browser instance (call on server shutdown)
- */
-export async function closeBrowser(): Promise<void> {
-  if (browserInstance) {
-    await browserInstance.close();
-    browserInstance = null;
-  }
-}
 
 /**
  * Fetch image from file manager and return as base64
@@ -271,7 +245,8 @@ export async function generatePolicyPDF(
 </html>
   `;
 
-  const browser = await getBrowser();
+  // The server's shared browser (utils/pdfBrowser.utils), closed on shutdown.
+  const browser = await getSharedBrowser();
   const page = await browser.newPage();
 
   try {

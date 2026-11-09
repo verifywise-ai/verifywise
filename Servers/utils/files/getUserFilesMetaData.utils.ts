@@ -1,6 +1,7 @@
 import { sequelize } from "../../database/db";
 import { FileList } from "../../domain.layer/models/file/file.model";
 import { attachLinkProjections } from "./attachLinkProjections";
+import { VISIBLE_FILE_REPLACEMENTS, VISIBLE_FILE_SQL } from "./visibleFiles";
 
 export type { FileEntityLinkProjection } from "./attachLinkProjections";
 
@@ -24,7 +25,12 @@ const getUserFilesMetaDataQuery = async (
         : "";
 
   let query = null;
-  const replacements: Record<string, number> = { organizationId };
+  // A bias audit stance PDF is excluded by VISIBLE_FILE_SQL, not by the
+  // report filter that happens to match its source name.
+  const replacements: Record<string, number | string> = {
+    organizationId,
+    ...VISIBLE_FILE_REPLACEMENTS,
+  };
 
   // Show all files regardless of approval status - UI handles display
   if (role === "Admin" || role === "SuperAdmin") {
@@ -34,6 +40,7 @@ const getUserFilesMetaDataQuery = async (
       FROM files f JOIN projects p ON p.id = f.project_id AND p.organization_id = :organizationId
       JOIN users u ON f.uploaded_by = u.id
       WHERE f.organization_id = :organizationId AND f.source::TEXT NOT ILIKE '%report%'
+        AND ${VISIBLE_FILE_SQL("f")}
       ORDER BY f.uploaded_time DESC
       ${paginationClause};
     `;
@@ -49,6 +56,7 @@ const getUserFilesMetaDataQuery = async (
         JOIN projects p ON p.id = pu.project_id AND p.organization_id = :organizationId
         JOIN users u ON f.uploaded_by = u.id
         WHERE f.organization_id = :organizationId AND f.source::TEXT NOT ILIKE '%report%'
+        AND ${VISIBLE_FILE_SQL("f")}
         ORDER BY f.uploaded_time DESC
       ${paginationClause};`;
     replacements.userId = userId;

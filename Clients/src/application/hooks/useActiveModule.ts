@@ -60,6 +60,9 @@ export function useActiveModule() {
         case "ai-trust-index":
           navigate("/ai-trust-index/browse");
           break;
+        case "bias-audit":
+          navigate("/bias-audit");
+          break;
         case "super-admin":
           navigate("/super-admin");
           break;
@@ -84,6 +87,7 @@ export function useActiveModule() {
         "shadow-ai",
         "ai-gateway",
         "ai-trust-index",
+        "bias-audit",
         "super-admin",
       ].includes(stored)
     ) {

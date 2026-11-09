@@ -1,0 +1,117 @@
+{
+  "description": "Cases for the LL 144 intake applicability predicate. Servers/services/biasAudit/applicability.ts and the wizard's copy in Clients/src/presentation/pages/BiasAudit/intakeLayout.ts are both tested against this file, so the page shows exactly the questions the server would apply.",
+  "cases": [
+    { "name": "no predicate always applies", "predicate": null, "answers": {}, "expected": true },
+    {
+      "name": "answered: a value counts",
+      "predicate": { "answered": "role.party" },
+      "answers": { "role.party": { "value": "vendor", "dontKnow": false } },
+      "expected": true
+    },
+    {
+      "name": "answered: a missing answer does not count",
+      "predicate": { "answered": "role.party" },
+      "answers": {},
+      "expected": false
+    },
+    {
+      "name": "answered: a don't-know does not count",
+      "predicate": { "answered": "role.party" },
+      "answers": { "role.party": { "value": null, "dontKnow": true } },
+      "expected": false
+    },
+    {
+      "name": "answered: a blank value does not count",
+      "predicate": { "answered": "role.party" },
+      "answers": { "role.party": { "value": "", "dontKnow": false } },
+      "expected": false
+    },
+    {
+      "name": "equals: the matching value",
+      "predicate": { "equals": { "key": "cutoff.applied_by", "value": "person" } },
+      "answers": { "cutoff.applied_by": { "value": "person", "dontKnow": false } },
+      "expected": true
+    },
+    {
+      "name": "equals: another value",
+      "predicate": { "equals": { "key": "cutoff.applied_by", "value": "person" } },
+      "answers": { "cutoff.applied_by": { "value": "platform", "dontKnow": false } },
+      "expected": false
+    },
+    {
+      "name": "equals: a don't-know with a stale value does not match",
+      "predicate": { "equals": { "key": "cutoff.applied_by", "value": "person" } },
+      "answers": { "cutoff.applied_by": { "value": "person", "dontKnow": true } },
+      "expected": false
+    },
+    {
+      "name": "in scope while scope is unanswered",
+      "predicate": { "not": { "equals": { "key": "scope.weighting", "value": "one_of_several" } } },
+      "answers": {},
+      "expected": true
+    },
+    {
+      "name": "out of scope hides an in-scope question",
+      "predicate": { "not": { "equals": { "key": "scope.weighting", "value": "one_of_several" } } },
+      "answers": { "scope.weighting": { "value": "one_of_several", "dontKnow": false } },
+      "expected": false
+    },
+    {
+      "name": "all: every part holds",
+      "predicate": {
+        "all": [
+          { "not": { "equals": { "key": "scope.weighting", "value": "one_of_several" } } },
+          { "equals": { "key": "cutoff.applied_by", "value": "person" } }
+        ]
+      },
+      "answers": {
+        "scope.weighting": { "value": "biggest", "dontKnow": false },
+        "cutoff.applied_by": { "value": "person", "dontKnow": false }
+      },
+      "expected": true
+    },
+    {
+      "name": "all: one part fails",
+      "predicate": {
+        "all": [
+          { "not": { "equals": { "key": "scope.weighting", "value": "one_of_several" } } },
+          { "equals": { "key": "cutoff.applied_by", "value": "person" } }
+        ]
+      },
+      "answers": {
+        "scope.weighting": { "value": "one_of_several", "dontKnow": false },
+        "cutoff.applied_by": { "value": "person", "dontKnow": false }
+      },
+      "expected": false
+    },
+    {
+      "name": "any: one part holds",
+      "predicate": {
+        "any": [
+          { "equals": { "key": "data.held", "value": "none" } },
+          { "answered": "data.basis" }
+        ]
+      },
+      "answers": { "data.basis": { "value": "historical", "dontKnow": false } },
+      "expected": true
+    },
+    {
+      "name": "any: no part holds",
+      "predicate": {
+        "any": [
+          { "equals": { "key": "data.held", "value": "none" } },
+          { "answered": "data.basis" }
+        ]
+      },
+      "answers": {},
+      "expected": false
+    },
+    {
+      "name": "an empty all applies and an empty any does not",
+      "predicate": { "all": [{ "all": [] }, { "not": { "any": [] } }] },
+      "answers": {},
+      "expected": true
+    },
+    { "name": "an empty predicate object applies", "predicate": {}, "answers": {}, "expected": true }
+  ]
+}

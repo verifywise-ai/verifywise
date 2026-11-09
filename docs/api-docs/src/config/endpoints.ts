@@ -10758,7 +10758,6 @@ export const shadowAiEndpoints: Endpoint[] = [
     responses: [
       { status: 201, description: "Created successfully" },
       { status: 401, description: "Unauthorized" },
-      { status: 409, description: "The tool is already under governance" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Shadow AI",
@@ -11350,41 +11349,13 @@ export const superAdminEndpoints: Endpoint[] = [
     tag: "Super Admin",
   },
   {
-    method: 'DELETE',
-    path: '/super-admin/organizations/{id}/users/{userId}',
-    summary: "Remove a user from an organization",
-    description: "Removes the user's membership of this organization. The account is deleted only when this was the user's last organization; a member of other organizations keeps it. Requires role: Super Admin",
-    requiresAuth: true,
-    parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: "Organization ID" },
-      { name: 'userId', in: 'path', type: 'integer', required: true, description: "User ID" },
-    ],
-    responses: [
-      { status: 200, description: "Removed; accountDeleted says whether the account was deleted too" },
-      { status: 400, description: "Invalid organization or user ID" },
-      { status: 404, description: "The user is not a member of this organization" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Super Admin",
-  },
-  {
     method: 'PATCH',
     path: '/super-admin/users/{id}',
     summary: "Update User",
     description: "Requires role: Super Admin",
     requiresAuth: true,
-    requestBody: {
-      "name": "string (optional)",
-      "surname": "string (optional)",
-      "email": "string (optional)",
-      "roleId": "integer (optional)",
-      "organizationId": "integer (optional)",
-    },
     responses: [
-      { status: 200, description: "The user, with every organization they belong to and their role in each" },
-      { status: 400, description: "Unknown role, or no fields to update" },
-      { status: 403, description: "A pure super admin, who has no organization role" },
-      { status: 404, description: "No such user, or not a member of organizationId" },
+      { status: 200, description: "Success" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Super Admin",
@@ -11470,6 +11441,18 @@ export const superAdminEndpoints: Endpoint[] = [
     method: 'DELETE',
     path: '/super-admin/super-admins/{user_id}',
     summary: "Revoke Super Admin",
+    description: "Requires role: Super Admin",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Super Admin",
+  },
+  {
+    method: 'DELETE',
+    path: '/super-admin/organizations/{id}/users/{userId}',
+    summary: "Remove Org User",
     description: "Requires role: Super Admin",
     requiresAuth: true,
     responses: [
@@ -11950,32 +11933,9 @@ export const userEndpoints: Endpoint[] = [
   },
   {
     method: 'POST',
-    path: '/users/invitations/accept',
-    summary: "Accept an invitation as an existing user",
-    description: "For an invited email that already has an account. The invitation link's token goes in the Authorization header (checked as for /users/register); the user's own email and password confirm the account. The account joins the inviting organization with the invited role, the invitation is marked accepted, and the user is logged in to that organization. The account itself is not changed. Rate-limited like /users/login.",
-    requiresAuth: false,
-    requestBody: {
-      "email": "string (required)",
-      "password": "string (required)",
-      "roleId": "integer (required)",
-      "organizationId": "integer (required)",
-    },
-    responses: [
-      { status: 202, description: "Joined and logged in to the organization; the same body as a single-organization login" },
-      { status: 401, description: "Invalid email or password, or an invalid invitation link" },
-      { status: 403, description: "The invitation was revoked, changed, or sent to a different email" },
-      { status: 406, description: "The invitation link has expired" },
-      { status: 409, description: "Already a member of this organization, or a super admin (who cannot join an organization)" },
-      { status: 429, description: "Too many attempts" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Users",
-  },
-  {
-    method: 'POST',
     path: '/users/login',
     summary: "Authenticate user",
-    description: "Validates email/password credentials via bcrypt. A user with one organization (or a super admin with none) gets a JWT access token in the response body and a refresh token in an HTTP-only cookie. A user with several organizations gets no session yet: the response lists the organizations and a short-lived selectionToken for POST /users/login/select-organization. Rate-limited to 5 requests per minute per IP.",
+    description: "Validates email/password credentials via bcrypt. Returns a JWT access token in the response body and sets a refresh token in an HTTP-only cookie. Rate-limited to 5 requests per minute per IP.",
     requiresAuth: false,
     requestBody: {
       "email": "string (required)",
@@ -11985,26 +11945,6 @@ export const userEndpoints: Endpoint[] = [
       { status: 202, description: "Authentication successful" },
       { status: 401, description: "Invalid email or password" },
       { status: 429, description: "Too many login attempts" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Users",
-  },
-  {
-    method: 'POST',
-    path: '/users/login/select-organization',
-    summary: "Choose the organization to log in to",
-    description: "Second login step for a user who belongs to several organizations. Exchanges the short-lived selectionToken returned by /users/login for a session in the chosen organization. The organization is fixed for the session. Rate-limited like /users/login.",
-    requiresAuth: false,
-    requestBody: {
-      "selectionToken": "string (required)",
-      "organizationId": "integer (required)",
-    },
-    responses: [
-      { status: 202, description: "Logged in; the same body as a single-organization login, and the refresh token cookie" },
-      { status: 401, description: "Not a valid selection token" },
-      { status: 403, description: "The user is not a member of that organization" },
-      { status: 406, description: "The selection token has expired" },
-      { status: 429, description: "Too many attempts" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Users",
@@ -12209,6 +12149,28 @@ export const userEndpoints: Endpoint[] = [
     ],
     tag: "Users",
   },
+  {
+    method: 'POST',
+    path: '/users/invitations/accept',
+    summary: "Accept Invitation As Existing User",
+    requiresAuth: false,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Users",
+  },
+  {
+    method: 'POST',
+    path: '/users/login/select-organization',
+    summary: "Select Login Organization",
+    requiresAuth: false,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Users",
+  },
 ];
 
 // v1: Change History endpoints
@@ -12393,6 +12355,17 @@ export const v1V1aiAppLifecycleEndpoints: Endpoint[] = [
   },
   {
     method: 'GET',
+    path: '/v1/ai-app-lifecycle/intake-submissions',
+    summary: "Get Pending Ai App Submissions Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai App Lifecycle",
+  },
+  {
+    method: 'GET',
     path: '/v1/ai-app-lifecycle/{id}',
     summary: "Get Ai App Lifecycle Handler",
     requiresAuth: true,
@@ -12446,17 +12419,6 @@ export const v1V1aiAppLifecycleEndpoints: Endpoint[] = [
     ],
     tag: "v1: V1/Ai App Lifecycle",
   },
-  {
-    method: 'GET',
-    path: '/v1/ai-app-lifecycle/intake-submissions',
-    summary: "Get Pending Ai App Submissions Handler",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "v1: V1/Ai App Lifecycle",
-  },
 ];
 
 // v1: V1/Ai Apps endpoints
@@ -12471,6 +12433,219 @@ export const v1V1aiAppsEndpoints: Endpoint[] = [
       { status: 500, description: "Internal server error" },
     ],
     tag: "v1: V1/Ai Apps",
+  },
+];
+
+// v1: V1/Bias Audit endpoints
+export const v1V1biasAuditEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/bias-audit/questions/{frameworkId}',
+    summary: "Get Questions",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Bias Audit",
+  },
+  {
+    method: 'GET',
+    path: '/v1/bias-audit/profiles/{projectId}/{frameworkId}',
+    summary: "Get Profile",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Bias Audit",
+  },
+  {
+    method: 'PUT',
+    path: '/v1/bias-audit/profiles/{projectId}/{frameworkId}',
+    summary: "Save Profile Answers",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Bias Audit",
+  },
+  {
+    method: 'POST',
+    path: '/v1/bias-audit/profiles/{projectId}/{frameworkId}/attest',
+    summary: "Attest Profile",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Bias Audit",
+  },
+  {
+    method: 'POST',
+    path: '/v1/bias-audit/profiles/{projectId}/{frameworkId}/stance',
+    summary: "Generate Profile Stance",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Bias Audit",
+  },
+  {
+    method: 'GET',
+    path: '/v1/bias-audit/runs',
+    summary: "List Runs",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Bias Audit",
+  },
+  {
+    method: 'POST',
+    path: '/v1/bias-audit/runs',
+    summary: "Create Run",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Bias Audit",
+  },
+  {
+    method: 'GET',
+    path: '/v1/bias-audit/runs/trend',
+    summary: "Get Run Trend",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Bias Audit",
+  },
+  {
+    method: 'GET',
+    path: '/v1/bias-audit/runs/{id}',
+    summary: "Get Run",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Bias Audit",
+  },
+  {
+    method: 'POST',
+    path: '/v1/bias-audit/runs/{id}/derived-basis/confirm',
+    summary: "Confirm Derived Basis",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Bias Audit",
+  },
+  {
+    method: 'POST',
+    path: '/v1/bias-audit/runs/{id}/stance',
+    summary: "Generate Stance",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Bias Audit",
+  },
+  {
+    method: 'GET',
+    path: '/v1/bias-audit/stances/{id}/download',
+    summary: "Download Stance",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Bias Audit",
+  },
+  {
+    method: 'GET',
+    path: '/v1/bias-audit/job-descriptions',
+    summary: "Get Job Descriptions",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Bias Audit",
+  },
+  {
+    method: 'POST',
+    path: '/v1/bias-audit/criteria-comparison',
+    summary: "Compare Criteria",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Bias Audit",
+  },
+  {
+    method: 'GET',
+    path: '/v1/bias-audit/corpora',
+    summary: "List Corpora",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Bias Audit",
+  },
+  {
+    method: 'POST',
+    path: '/v1/bias-audit/corpora',
+    summary: "Create Corpus",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Bias Audit",
+  },
+  {
+    method: 'GET',
+    path: '/v1/bias-audit/corpora/{id}',
+    summary: "Get Corpus",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Bias Audit",
+  },
+  {
+    method: 'GET',
+    path: '/v1/bias-audit/corpora/{id}/download',
+    summary: "Download Corpus",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Bias Audit",
+  },
+  {
+    method: 'POST',
+    path: '/v1/bias-audit/corpora/{id}/resume',
+    summary: "Resume Corpus",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Bias Audit",
   },
 ];
 
@@ -12593,6 +12768,17 @@ export const v1V1useCaseLifecycleEndpoints: Endpoint[] = [
   },
   {
     method: 'GET',
+    path: '/v1/use-case-lifecycle/intake-submissions',
+    summary: "Get Pending Submissions Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Use Case Lifecycle",
+  },
+  {
+    method: 'GET',
     path: '/v1/use-case-lifecycle/dashboard',
     summary: "Get Lifecycle Dashboard Handler",
     requiresAuth: true,
@@ -12639,17 +12825,6 @@ export const v1V1useCaseLifecycleEndpoints: Endpoint[] = [
     method: 'PATCH',
     path: '/v1/use-case-lifecycle/{id}/department',
     summary: "Update Department Handler",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "v1: V1/Use Case Lifecycle",
-  },
-  {
-    method: 'GET',
-    path: '/v1/use-case-lifecycle/intake-submissions',
-    summary: "Get Pending Submissions Handler",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
@@ -13009,6 +13184,7 @@ export const allEndpoints = {
   v1UseCaseSettings: v1UseCaseSettingsEndpoints,
   v1V1aiAppLifecycle: v1V1aiAppLifecycleEndpoints,
   v1V1aiApps: v1V1aiAppsEndpoints,
+  v1V1biasAudit: v1V1biasAuditEndpoints,
   v1V1dashboard: v1V1dashboardEndpoints,
   v1V1intakeFormReviewTime: v1V1intakeFormReviewTimeEndpoints,
   v1V1lifecycleSettings: v1V1lifecycleSettingsEndpoints,

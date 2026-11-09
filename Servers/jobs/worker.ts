@@ -3,6 +3,7 @@ import "dotenv/config";
 import { Worker } from "bullmq";
 import { createNotificationWorker } from "../services/slack/slackWorker";
 import { createAutomationWorker } from "../services/automations/automationWorker";
+import { createCorpusGenerationWorker } from "../services/biasAudit/generation/generationJob";
 import logger from "../utils/logger/fileLogger";
 import { warnIfGatewayKeyMissing } from "../utils/aiGatewayKeyCheck";
 
@@ -12,9 +13,10 @@ void warnIfGatewayKeyMissing(logger);
 
 const notificationWorker = createNotificationWorker();
 const automationWorker = createAutomationWorker();
+const corpusGenerationWorker = createCorpusGenerationWorker();
 
 // Add workers here as you add on new workers within the application
-const workers: Worker[] = [notificationWorker, automationWorker];
+const workers: Worker[] = [notificationWorker, automationWorker, corpusGenerationWorker];
 
 // Global error handler for all workers
 workers.forEach((worker) => {

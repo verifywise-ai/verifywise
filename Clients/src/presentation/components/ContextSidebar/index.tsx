@@ -6,6 +6,7 @@ import { useAIDetectionSidebarContextSafe } from "../../../application/contexts/
 import { useShadowAISidebarContextSafe } from "../../../application/contexts/ShadowAISidebar.context";
 import { useAIGatewaySidebarContextSafe } from "../../../application/contexts/AIGatewaySidebar.context";
 import { useAITrustIndexSidebarContextSafe } from "../../../application/contexts/AITrustIndexSidebar.context";
+import { useBiasAuditSidebarContextSafe } from "../../../application/contexts/BiasAuditSidebar.context";
 import Sidebar from "../Sidebar";
 import SuperAdminSidebar from "../SuperAdminSidebar";
 import EvalsSidebar from "../../pages/EvalsDashboard/EvalsSidebar";
@@ -13,6 +14,8 @@ import AIDetectionSidebar from "../../pages/AIDetection/AIDetectionSidebar";
 import ShadowAISidebar from "../../pages/ShadowAI/ShadowAISidebar";
 import AIGatewaySidebar from "../../pages/AIGateway/AIGatewaySidebar";
 import AITrustIndexSidebar from "../../pages/AITrustIndex/AITrustIndexSidebar";
+import BiasAuditSidebar from "../../pages/BiasAudit/BiasAuditSidebar";
+import { parseSection, sectionPath } from "../../pages/BiasAudit/sections";
 
 interface ContextSidebarProps {
   activeModule: AppModule;
@@ -46,6 +49,7 @@ export function ContextSidebar({
   const shadowAiSidebarContext = useShadowAISidebarContextSafe();
   const aiGatewaySidebarContext = useAIGatewaySidebarContextSafe();
   const aiTrustIndexSidebarContext = useAITrustIndexSidebarContextSafe();
+  const biasAuditSidebarContext = useBiasAuditSidebarContextSafe();
   const location = useLocation();
   const navigate = useNavigate();
   const { isSuperAdmin } = useAuth();
@@ -222,6 +226,21 @@ export function ContextSidebar({
           onTabChange={handleTrustIndexTabChange}
           trackedCount={aiTrustIndexSidebarContext?.trackedCount ?? 0}
           isAdmin={isAdmin}
+        />
+      );
+    }
+    case "bias-audit": {
+      // /bias-audit/:projectId/:section
+      const biasAuditSection = parseSection(location.pathname.split("/")[3]);
+      const biasAuditProjectId = biasAuditSidebarContext?.projectId ?? null;
+
+      return (
+        <BiasAuditSidebar
+          activeSection={biasAuditSection}
+          onSectionChange={(section) => navigate(sectionPath(biasAuditProjectId, section))}
+          runsCount={biasAuditSidebarContext?.runsCount ?? 0}
+          scopeCount={biasAuditSidebarContext?.scopeCount ?? 0}
+          disabled={biasAuditProjectId === null}
         />
       );
     }

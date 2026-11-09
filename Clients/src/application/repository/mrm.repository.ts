@@ -7,10 +7,8 @@
  */
 
 import { apiServices } from "../../infrastructure/api/networkServices";
-import {
-  filenameFromContentDisposition,
-  triggerBrowserDownload,
-} from "../../presentation/utils/browserDownload.utils";
+import { filenameFromContentDisposition } from "../utils/contentDisposition";
+import { triggerBrowserDownload } from "../../presentation/utils/browserDownload.utils";
 import {
   IAssignTierPayload,
   ICreateFindingPayload,

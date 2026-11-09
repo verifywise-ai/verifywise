@@ -172,6 +172,9 @@ export async function deleteGeneratedReportById(req: Request, res: Response): Pr
       userId: req.userId!,
       organizationId: req.organizationId!,
     });
+    if ((error as { statusCode?: number })?.statusCode === 409) {
+      return res.status(409).json(STATUS_CODE[409](translateError(req, error)));
+    }
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }

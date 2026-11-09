@@ -34,8 +34,22 @@ vi.mock("../../../pages/ShadowAI/ShadowAISidebar", () => ({
 vi.mock("../../../pages/AIGateway/AIGatewaySidebar", () => ({
   default: () => <div data-testid="ai-gateway-sidebar" />,
 }));
+const biasAuditContext = vi.hoisted(() => ({
+  value: null as null | { projectId: number | null; runsCount: number; scopeCount: number },
+}));
+vi.mock("../../../../application/contexts/BiasAuditSidebar.context", () => ({
+  useBiasAuditSidebarContextSafe: () => biasAuditContext.value,
+}));
+const biasAuditSidebarProps = vi.hoisted(() => ({ last: null as any }));
+vi.mock("../../../pages/BiasAudit/BiasAuditSidebar", () => ({
+  default: (props: any) => {
+    biasAuditSidebarProps.last = props;
+    return <div data-testid="bias-audit-sidebar" />;
+  },
+}));
 
-import { screen } from "@testing-library/react";
+import { act, screen } from "@testing-library/react";
+import { useLocation } from "react-router";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import { ContextSidebar } from "../index";
 
@@ -59,5 +73,48 @@ describe("ContextSidebar", () => {
     renderWithProviders(<ContextSidebar activeModule="super-admin" />);
     expect(screen.getByTestId("main-sidebar")).toBeInTheDocument();
     expect(screen.queryByTestId("super-admin-sidebar")).not.toBeInTheDocument();
+  });
+
+  describe("bias-audit module", () => {
+    let pathname = "";
+    const PathProbe = () => {
+      pathname = useLocation().pathname;
+      return null;
+    };
+
+    it("renders the bias audit sidebar with the section from the URL and the page's counts", () => {
+      biasAuditContext.value = { projectId: 7, runsCount: 3, scopeCount: 1 };
+      renderWithProviders(<ContextSidebar activeModule="bias-audit" />, {
+        route: "/bias-audit/7/scope",
+      });
+      expect(screen.getByTestId("bias-audit-sidebar")).toBeInTheDocument();
+      expect(screen.queryByTestId("main-sidebar")).not.toBeInTheDocument();
+      expect(biasAuditSidebarProps.last).toMatchObject({
+        activeSection: "scope",
+        runsCount: 3,
+        scopeCount: 1,
+        disabled: false,
+      });
+    });
+
+    it("links a section to the use case the page shows", () => {
+      biasAuditContext.value = { projectId: 7, runsCount: 0, scopeCount: 0 };
+      renderWithProviders(
+        <>
+          <ContextSidebar activeModule="bias-audit" />
+          <PathProbe />
+        </>,
+        { route: "/bias-audit" },
+      );
+      expect(biasAuditSidebarProps.last.activeSection).toBe("profile");
+      act(() => biasAuditSidebarProps.last.onSectionChange("runs"));
+      expect(pathname).toBe("/bias-audit/7/runs");
+    });
+
+    it("disables the sections while no use case has the framework", () => {
+      biasAuditContext.value = { projectId: null, runsCount: 0, scopeCount: 0 };
+      renderWithProviders(<ContextSidebar activeModule="bias-audit" />, { route: "/bias-audit" });
+      expect(biasAuditSidebarProps.last.disabled).toBe(true);
+    });
   });
 });

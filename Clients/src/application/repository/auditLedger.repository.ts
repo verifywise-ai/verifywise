@@ -1,5 +1,5 @@
 import CustomAxios from "../../infrastructure/api/customAxios";
-import { filenameFromContentDisposition } from "../../presentation/utils/browserDownload.utils";
+import { filenameFromContentDisposition } from "../utils/contentDisposition";
 
 /**
  * Longer than the client's 120 s default: the server streams large ledgers in

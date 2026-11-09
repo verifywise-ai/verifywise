@@ -16,6 +16,7 @@ describe("getAppModuleFromPath", () => {
     expect(getAppModuleFromPath("/ai-detection/scan")).toBe("ai-detection");
     expect(getAppModuleFromPath("/shadow-ai/insights")).toBe("shadow-ai");
     expect(getAppModuleFromPath("/ai-trust-index/browse")).toBe("ai-trust-index");
+    expect(getAppModuleFromPath("/bias-audit/runs")).toBe("bias-audit");
     expect(getAppModuleFromPath("/super-admin")).toBe("super-admin");
   });
 });

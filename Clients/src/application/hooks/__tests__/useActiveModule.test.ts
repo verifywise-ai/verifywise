@@ -70,4 +70,20 @@ describe("useActiveModule", () => {
     renderHook(() => useActiveModule());
     expect(mockDispatch).toHaveBeenCalledWith(expect.objectContaining({ payload: "evals" }));
   });
+
+  it("navigates to /bias-audit for the bias-audit module", () => {
+    const { result } = renderHook(() => useActiveModule());
+
+    act(() => {
+      result.current.setActiveModule("bias-audit");
+    });
+
+    expect(mockNavigate).toHaveBeenCalledWith("/bias-audit");
+  });
+
+  it("detects the bias-audit module from a section URL", () => {
+    mockPathname = "/bias-audit/3/runs";
+    renderHook(() => useActiveModule());
+    expect(mockDispatch).toHaveBeenCalledWith(expect.objectContaining({ payload: "bias-audit" }));
+  });
 });

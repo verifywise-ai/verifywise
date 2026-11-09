@@ -1,6 +1,11 @@
 import { Request, Response } from "express";
 import { sequelize } from "../database/db";
 import { STATUS_CODE } from "../utils/statusCode.utils";
+import {
+  allFilesVisibleQuery,
+  VISIBLE_FILE_REPLACEMENTS,
+  VISIBLE_FILE_SQL,
+} from "../utils/files/visibleFiles";
 import logger, { logStructured } from "../utils/logger/fileLogger";
 import {
   upsertAnalysisQuery,
@@ -164,8 +169,9 @@ export async function analyzeFile(req: Request, res: Response) {
     // ---- File metadata + content ---------------------------------
     const [fileRows] = await sequelize.query(
       `SELECT id, filename, type FROM files
-       WHERE id = :fileId AND organization_id = :organizationId`,
-      { replacements: { fileId, organizationId } },
+       WHERE id = :fileId AND organization_id = :organizationId
+         AND ${VISIBLE_FILE_SQL("files")}`,
+      { replacements: { fileId, organizationId, ...VISIBLE_FILE_REPLACEMENTS } },
     );
     const file = (fileRows as any[])[0];
     if (!file) {
@@ -175,8 +181,9 @@ export async function analyzeFile(req: Request, res: Response) {
     const [contentRows] = await sequelize.query(
       `SELECT content, octet_length(content) AS size_bytes,
               uploaded_time AS upload_date
-       FROM files WHERE id = :fileId AND organization_id = :organizationId`,
-      { replacements: { fileId, organizationId } },
+       FROM files WHERE id = :fileId AND organization_id = :organizationId
+         AND ${VISIBLE_FILE_SQL("files")}`,
+      { replacements: { fileId, organizationId, ...VISIBLE_FILE_REPLACEMENTS } },
     );
     const contentRow = (contentRows as any[])[0];
 
@@ -519,6 +526,10 @@ export async function applySuggestions(req: Request, res: Response) {
 
     if (!suggestions || !Array.isArray(suggestions) || suggestions.length === 0) {
       return res.status(400).json(STATUS_CODE[400]("Suggestions array is required"));
+    }
+
+    if (!(await allFilesVisibleQuery([fileId], req.organizationId!))) {
+      return res.status(404).json(STATUS_CODE[404]("File not found"));
     }
 
     const userId = req.userId ? Number(req.userId) : undefined;

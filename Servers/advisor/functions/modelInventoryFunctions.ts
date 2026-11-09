@@ -9,6 +9,7 @@ import {
 } from "../../utils/modelInventory.utils";
 import { createWriteToolFn } from "../confirmation/createWriteTool";
 import { sequelize } from "../../database/db";
+import { VISIBLE_FILE_REPLACEMENTS, VISIBLE_FILE_SQL } from "../../utils/files/visibleFiles";
 import logger from "../../utils/logger/fileLogger";
 
 export interface FetchModelInventoriesParams {
@@ -715,7 +716,9 @@ const listFilesForModel = async (
     // Files can be linked to a model via two parallel paths:
     //   1) `file_entity_links` polymorphic table (entity_type='model_inventory') — used by framework/evidence flows
     //   2) `files.model_id` direct column — used by the FileManagerUpload UI
-    // Both are populated in practice; UNION returns the merged set.
+    // Both are populated in practice; UNION returns the merged set. A bias
+    // audit stance PDF is served only by the stance endpoint, so both
+    // branches leave it out as if it were missing.
     const limitClause = params.limit && params.limit > 0 ? `LIMIT ${Math.floor(params.limit)}` : "";
     const [rows] = (await sequelize.query(
       `SELECT id, filename, type, size, version, review_status,
@@ -726,10 +729,11 @@ const listFilesForModel = async (
                 fel.link_type, fel.project_id, fel.created_at AS linked_at,
                 'evidence_link' AS source
          FROM file_entity_links fel
-         INNER JOIN files f ON f.id = fel.file_id
+         INNER JOIN files f ON f.id = fel.file_id AND f.organization_id = fel.organization_id
          WHERE fel.entity_type = 'model_inventory'
            AND fel.entity_id = :model_id
            AND fel.organization_id = :organization_id
+           AND ${VISIBLE_FILE_SQL("f")}
 
          UNION
 
@@ -740,11 +744,16 @@ const listFilesForModel = async (
          FROM files f
          WHERE f.model_id = :model_id
            AND f.organization_id = :organization_id
+           AND ${VISIBLE_FILE_SQL("f")}
        ) merged
        ORDER BY linked_at DESC
        ${limitClause}`,
       {
-        replacements: { model_id: params.model_id, organization_id: organizationId },
+        replacements: {
+          model_id: params.model_id,
+          organization_id: organizationId,
+          ...VISIBLE_FILE_REPLACEMENTS,
+        },
       },
     )) as [Array<Record<string, unknown>>, unknown];
     return rows;
@@ -766,10 +775,19 @@ const agentAttachFileToModel = createWriteToolFn({
     const fileId = params.file_id as number;
     const projectId = params.project_id as number | undefined;
 
-    // Verify the file exists and belongs to this organization before linking
+    // Verify the file exists and belongs to this organization before linking.
+    // A bias audit stance PDF is refused exactly as a missing file is.
     const [fileRows] = (await sequelize.query(
-      `SELECT id FROM files WHERE id = :file_id AND organization_id = :organization_id`,
-      { replacements: { file_id: fileId, organization_id: organizationId } },
+      `SELECT id FROM files
+        WHERE id = :file_id AND organization_id = :organization_id
+          AND ${VISIBLE_FILE_SQL("files")}`,
+      {
+        replacements: {
+          file_id: fileId,
+          organization_id: organizationId,
+          ...VISIBLE_FILE_REPLACEMENTS,
+        },
+      },
     )) as [Array<{ id: number }>, unknown];
     if (!fileRows || fileRows.length === 0) {
       throw new Error(

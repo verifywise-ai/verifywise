@@ -13,7 +13,7 @@ describe("AppSwitcher", () => {
     vi.clearAllMocks();
   });
 
-  it("renders all 5 module buttons", () => {
+  it("renders all 7 module buttons, LL 144 bias audit last", () => {
     renderWithProviders(<AppSwitcher {...defaultProps} />);
 
     expect(screen.getByLabelText("Governance")).toBeInTheDocument();
@@ -21,6 +21,17 @@ describe("AppSwitcher", () => {
     expect(screen.getByLabelText("AI Detection")).toBeInTheDocument();
     expect(screen.getByLabelText("Shadow AI")).toBeInTheDocument();
     expect(screen.getByLabelText("AI Gateway")).toBeInTheDocument();
+    expect(screen.getByLabelText("AI Trust Index")).toBeInTheDocument();
+    const buttons = screen.getAllByRole("button");
+    expect(buttons).toHaveLength(7);
+    expect(buttons[6]).toHaveAccessibleName("LL 144 bias audit");
+  });
+
+  it("calls onModuleChange with bias-audit when the LL 144 button is clicked", () => {
+    renderWithProviders(<AppSwitcher {...defaultProps} />);
+
+    fireEvent.click(screen.getByLabelText("LL 144 bias audit"));
+    expect(defaultProps.onModuleChange).toHaveBeenCalledWith("bias-audit");
   });
 
   it("does not render super admin button by default", () => {

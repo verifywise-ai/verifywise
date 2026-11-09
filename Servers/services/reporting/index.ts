@@ -12,7 +12,7 @@ import {
 import { ReportType } from "../../domain.layer/models/reporting/reporting.model";
 import { createDataCollector, createScopedDataCollector } from "./dataCollector";
 import { resolveFrameworkTargets } from "./reportScope";
-import { generatePDF, closeBrowser } from "./pdfGenerator";
+import { generatePDF } from "./pdfGenerator";
 import { generateDOCX } from "./docxGenerator";
 import logger from "../../utils/logger/fileLogger";
 import { runAnalyzers } from "./analyzers/runAnalyzers";
@@ -294,13 +294,6 @@ export async function getReportData(
   }
 
   return reportData;
-}
-
-/**
- * Cleanup resources (call on server shutdown)
- */
-export async function cleanup(): Promise<void> {
-  await closeBrowser();
 }
 
 // Re-export types and utilities

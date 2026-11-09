@@ -6,6 +6,7 @@ import { STATUS_CODE } from "../utils/statusCode.utils";
 import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper";
 import { appendToAuditLedger } from "../utils/auditLedger.utils";
 import { translateError } from "../utils/i18n.utils";
+import { NotFoundException } from "../domain.layer/exceptions/custom.exception";
 import {
   getEvidenceFilesForEntity,
   getEvidenceFilesForEntityTypes,
@@ -997,8 +998,18 @@ export async function linkFriaEvidence(req: Request, res: Response): Promise<Res
       return res.status(400).json(STATUS_CODE[400](req.t!("Invalid FRIA ID")));
     }
 
-    if (!file_id || !entity_type) {
+    if (file_id === undefined || file_id === null || file_id === "" || !entity_type) {
       return res.status(400).json(STATUS_CODE[400](req.t!("Missing file_id or entity_type")));
+    }
+    // A JSON number or a string of digits; Number() alone would take true, [7] or "1e2".
+    const fileId =
+      typeof file_id === "number"
+        ? file_id
+        : typeof file_id === "string" && /^\d+$/.test(file_id)
+          ? Number(file_id)
+          : NaN;
+    if (!Number.isSafeInteger(fileId) || fileId <= 0) {
+      return res.status(400).json(STATUS_CODE[400](req.t!("Invalid file ID")));
     }
 
     const fria = await getFriaByIdQuery(friaId, organizationId);
@@ -1008,7 +1019,7 @@ export async function linkFriaEvidence(req: Request, res: Response): Promise<Res
 
     await createFileEntityLink(
       organizationId,
-      file_id,
+      fileId,
       "fria",
       entity_type,
       friaId,
@@ -1018,7 +1029,7 @@ export async function linkFriaEvidence(req: Request, res: Response): Promise<Res
 
     await logSuccess({
       eventType: "Create",
-      description: `Linked evidence file ${file_id} to FRIA ${friaId} section ${entity_type}`,
+      description: `Linked evidence file ${fileId} to FRIA ${friaId} section ${entity_type}`,
       functionName: "linkFriaEvidence",
       fileName: FILE_NAME,
       userId,
@@ -1027,6 +1038,9 @@ export async function linkFriaEvidence(req: Request, res: Response): Promise<Res
 
     return res.status(201).json(STATUS_CODE[201]({ linked: true }));
   } catch (error) {
+    if (error instanceof NotFoundException) {
+      return res.status(404).json(STATUS_CODE[404](req.t!("File not found")));
+    }
     await logFailure({
       eventType: "Create",
       description: "Failed to link FRIA evidence",

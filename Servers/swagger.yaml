@@ -5701,21 +5701,6 @@ components:
         governance_owner_id:
           type: integer
           minimum: 1
-        risk_assessment:
-          type: object
-          nullable: true
-          description: 'When either field is set, a model risk named "Use of <tool>" is created on the new model inventory entry, owned by the governance owner and due in 90 days.'
-          properties:
-            data_sensitivity:
-              type: string
-              enum:
-                - High
-                - Medium
-                - Low
-              description: 'Sets the risk level. Without it the level is Medium.'
-            description:
-              type: string
-              maxLength: 5000
         start_lifecycle:
           type: boolean
           default: false
@@ -5726,10 +5711,6 @@ components:
           type: integer
         tool_id:
           type: integer
-        risk_entry_id:
-          type: integer
-          nullable: true
-          description: 'The model risk created from risk_assessment, or null.'
         lifecycle_initialized:
           type: boolean
     ShadowAiRule:
@@ -7924,6 +7905,8 @@ tags:
   -
     name: 'v1: V1/Ai Apps'
   -
+    name: 'v1: V1/Bias Audit'
+  -
     name: 'v1: V1/Dashboard'
   -
     name: 'v1: V1/Intake Form Review Time'
@@ -8275,59 +8258,10 @@ paths:
         '500':
           description: 'Internal server error'
       operationId: createNewUser
-  /users/invitations/accept:
-    post:
-      summary: 'Accept an invitation as an existing user'
-      description: "For an invited email that already has an account. The invitation link's token goes in the Authorization header (checked as for /users/register); the user's own email and password confirm the account. The account joins the inviting organization with the invited role, the invitation is marked accepted, and the user is logged in to that organization. The account itself is not changed. Rate-limited like /users/login.\n"
-      tags:
-        - Users
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - email
-                - password
-                - roleId
-                - organizationId
-              properties:
-                email:
-                  type: string
-                  format: email
-                  example: priya@example.com
-                password:
-                  type: string
-                  format: password
-                roleId:
-                  type: integer
-                  description: 'Must match the invitation'
-                  example: 3
-                organizationId:
-                  type: integer
-                  description: 'Must match the invitation'
-                  example: 4
-      responses:
-        '202':
-          description: 'Joined and logged in to the organization; the same body as a single-organization login'
-        '401':
-          description: 'Invalid email or password, or an invalid invitation link'
-        '403':
-          description: 'The invitation was revoked, changed, or sent to a different email'
-        '406':
-          description: 'The invitation link has expired'
-        '409':
-          description: 'Already a member of this organization, or a super admin (who cannot join an organization)'
-        '429':
-          description: 'Too many attempts'
-        '500':
-          description: 'Internal server error'
-      operationId: acceptInvitationAsExistingUser
   /users/login:
     post:
       summary: 'Authenticate user'
-      description: "Validates email/password credentials via bcrypt. A user with one organization (or a super admin with none) gets a JWT access token\nin the response body and a refresh token in an HTTP-only cookie.\nA user with several organizations gets no session yet: the response lists the organizations and a short-lived selectionToken for POST /users/login/select-organization.\nRate-limited to 5 requests per minute per IP.\n"
+      description: "Validates email/password credentials via bcrypt. Returns a JWT access token\nin the response body and sets a refresh token in an HTTP-only cookie.\nRate-limited to 5 requests per minute per IP.\n"
       tags:
         - Users
       requestBody:
@@ -8362,7 +8296,7 @@ paths:
                 type: object
                 properties:
                   message: {type: string, example: Accepted}
-                  data: {type: object, properties: {token: {type: string, description: 'JWT access token (absent when requiresOrganizationSelection)'}, isSuperAdmin: {type: boolean, description: 'Whether the user has a super_admins row'}, onboarding_status: {type: string, description: 'Organization onboarding status (not present for a pure super-admin)', example: completed}, is_org_creator: {type: boolean, description: 'Whether user is the first admin of the org (not present for a pure super-admin)'}, requiresOrganizationSelection: {type: boolean, description: 'Present and true when the user belongs to several organizations'}, organizations: {type: array, description: 'The organizations to choose from', items: {type: object, properties: {id: {type: integer}, name: {type: string}, role_name: {type: string}}}}, selectionToken: {type: string, description: 'Exchange at POST /users/login/select-organization; valid for 5 minutes'}}}
+                  data: {type: object, properties: {token: {type: string, description: 'JWT access token'}, isSuperAdmin: {type: boolean, description: 'Only present when user is super-admin (role_id=5)'}, onboarding_status: {type: string, description: 'Organization onboarding status (not present for super-admin)', example: completed}, is_org_creator: {type: boolean, description: 'Whether user is the first admin of the org (not present for super-admin)'}}}
         '401':
           description: 'Invalid email or password'
           content:
@@ -8374,42 +8308,6 @@ paths:
         '500':
           description: 'Internal server error'
       operationId: loginUser
-  /users/login/select-organization:
-    post:
-      summary: 'Choose the organization to log in to'
-      description: "Second login step for a user who belongs to several organizations. Exchanges the short-lived selectionToken returned by /users/login for a session in the chosen organization. The organization is fixed for the session. Rate-limited like /users/login.\n"
-      tags:
-        - Users
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - selectionToken
-                - organizationId
-              properties:
-                selectionToken:
-                  type: string
-                  description: 'From the /users/login response; valid for 5 minutes'
-                organizationId:
-                  type: integer
-                  example: 4
-      responses:
-        '202':
-          description: 'Logged in; the same body as a single-organization login, and the refresh token cookie'
-        '401':
-          description: 'Not a valid selection token'
-        '403':
-          description: 'The user is not a member of that organization'
-        '406':
-          description: 'The selection token has expired'
-        '429':
-          description: 'Too many attempts'
-        '500':
-          description: 'Internal server error'
-      operationId: selectLoginOrganization
   /users/login-microsoft:
     post:
       summary: 'Login User With Microsoft'
@@ -23518,8 +23416,6 @@ paths:
           description: 'Created successfully'
         '401':
           description: Unauthorized
-        '409':
-          description: 'The tool is already under governance'
         '500':
           description: 'Internal server error'
   /shadow-ai/rules:
@@ -26824,78 +26720,12 @@ paths:
           description: 'Forbidden - insufficient role'
         '500':
           description: 'Internal server error'
-  '/super-admin/organizations/{id}/users/{userId}':
-    delete:
-      summary: 'Remove a user from an organization'
-      description: 'Removes the user''s membership of this organization. The account is deleted only when this was the user''s last organization; a member of other organizations keeps it. Requires role: Super Admin'
-      parameters:
-        -
-          name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: 'Organization ID'
-        -
-          name: userId
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: 'User ID'
-      responses:
-        '200':
-          description: 'Removed; accountDeleted says whether the account was deleted too'
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message: {type: string, example: OK}
-                  data: {type: object, properties: {removed: {type: boolean}, userId: {type: integer}, accountDeleted: {type: boolean}}}
-        '400':
-          description: 'Invalid organization or user ID'
-        '404':
-          description: 'The user is not a member of this organization'
-        '500':
-          description: 'Internal server error'
-      tags:
-        - 'Super Admin'
-      operationId: removeOrgUser
-      security:
-        -
-          bearerAuth: []
   '/super-admin/users/{id}':
     patch:
       summary: 'Update User'
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                name:
-                  type: string
-                surname:
-                  type: string
-                email:
-                  type: string
-                  format: email
-                roleId:
-                  type: integer
-                  description: 'The role in organizationId'
-                organizationId:
-                  type: integer
-                  description: 'Required with roleId: a role is per organization'
       responses:
         '200':
-          description: 'The user, with every organization they belong to and their role in each'
-        '400':
-          description: 'Unknown role, or no fields to update'
-        '403':
-          description: 'A pure super admin, who has no organization role'
-        '404':
-          description: 'No such user, or not a member of organizationId'
+          description: Success
         '500':
           description: 'Internal server error'
       tags:
@@ -27330,6 +27160,34 @@ paths:
       tags:
         - System
       operationId: healthCheck
+  /v1/shadow-ai-syslog/status:
+    get:
+      summary: 'Get Syslog Status'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Shadow AI'
+      operationId: getSyslogStatus
+      security:
+        -
+          bearerAuth: []
+  '/v1/shadow-ai-syslog/sources/{id}/regenerate-key':
+    post:
+      summary: 'Regenerate Syslog Key'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Shadow AI'
+      operationId: regenerateSyslogKey
+      security:
+        -
+          bearerAuth: []
   '/v1/evidence-hub-change-history/{id}':
     get:
       summary: 'Get Evidence Hub Change History By Id'
@@ -27400,6 +27258,141 @@ paths:
       security:
         -
           bearerAuth: []
+  '/v1/intake-form-review-time/{formId}':
+    get:
+      summary: 'Get Intake Form Review Time'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Intake Form Review Time'
+      operationId: getIntakeFormReviewTime
+      security:
+        -
+          bearerAuth: []
+    put:
+      summary: 'Update Intake Form Review Time'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Intake Form Review Time'
+      operationId: updateIntakeFormReviewTime
+      security:
+        -
+          bearerAuth: []
+  '/v1/intake-tier-suggestion/public/by-id/{publicId}':
+    post:
+      summary: 'Post Public Tier Suggestion'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Intake Forms'
+      operationId: postPublicTierSuggestion
+  '/v1/intake-tier-suggestion/public/by-id/{publicId}/explain':
+    post:
+      summary: 'Post Public Tier Explanation'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Intake Forms'
+      operationId: postPublicTierExplanation
+  '/v1/intake-tier-suggestion/public/by-id/{publicId}/submit':
+    post:
+      summary: 'Submit Public Form By Public Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Intake Forms'
+      operationId: v1_intake_tier_suggestion_submitPublicFormByPublicId
+  '/v1/intake-tier-suggestion/public/{tenantSlug}/{formSlug}':
+    post:
+      summary: 'Post Public Tier Suggestion'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Intake Forms'
+      operationId: v1_intake_tier_suggestion_postPublicTierSuggestion
+  '/v1/intake-tier-suggestion/public/{tenantSlug}/{formSlug}/explain':
+    post:
+      summary: 'Post Public Tier Explanation'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Intake Forms'
+      operationId: v1_intake_tier_suggestion_postPublicTierExplanation
+  '/v1/intake-tier-suggestion/public/{tenantSlug}/{formSlug}/submit':
+    post:
+      summary: 'Submit Public Form'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Intake Forms'
+      operationId: v1_intake_tier_suggestion_submitPublicForm
+  '/v1/intake-tier-suggestion/submissions/{id}':
+    get:
+      summary: 'Get Submission Tier Suggestion Response'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Intake Forms'
+      operationId: getSubmissionTierSuggestionResponse
+      security:
+        -
+          bearerAuth: []
+  /v1/use-case-org-settings:
+    get:
+      summary: 'Get Use Case Org Settings Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Use Case Settings'
+      operationId: getUseCaseOrgSettingsHandler
+      security:
+        -
+          bearerAuth: []
+    put:
+      summary: 'Update Use Case Org Settings Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Use Case Settings'
+      operationId: updateUseCaseOrgSettingsHandler
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin'
   /v1/use-case-lifecycle/summary:
     get:
       summary: 'Get Lifecycle Summary Handler'
@@ -27411,6 +27404,20 @@ paths:
       tags:
         - 'v1: V1/Use Case Lifecycle'
       operationId: getLifecycleSummaryHandler
+      security:
+        -
+          bearerAuth: []
+  /v1/use-case-lifecycle/intake-submissions:
+    get:
+      summary: 'Get Pending Submissions Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Use Case Lifecycle'
+      operationId: getPendingSubmissionsHandler
       security:
         -
           bearerAuth: []
@@ -27539,6 +27546,20 @@ paths:
       security:
         -
           bearerAuth: []
+  /v1/ai-app-lifecycle/intake-submissions:
+    get:
+      summary: 'Get Pending Ai App Submissions Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai App Lifecycle'
+      operationId: getPendingAiAppSubmissionsHandler
+      security:
+        -
+          bearerAuth: []
   '/v1/ai-app-lifecycle/{id}':
     get:
       summary: 'Get Ai App Lifecycle Handler'
@@ -27609,194 +27630,31 @@ paths:
       security:
         -
           bearerAuth: []
-  /v1/use-case-lifecycle/intake-submissions:
-    get:
-      summary: 'Get Pending Submissions Handler'
-      responses:
-        '200':
-          description: Success
-        '500':
-          description: 'Internal server error'
-      tags:
-        - 'v1: V1/Use Case Lifecycle'
-      operationId: getPendingSubmissionsHandler
-      security:
-        -
-          bearerAuth: []
-  /v1/ai-app-lifecycle/intake-submissions:
-    get:
-      summary: 'Get Pending Ai App Submissions Handler'
-      responses:
-        '200':
-          description: Success
-        '500':
-          description: 'Internal server error'
-      tags:
-        - 'v1: V1/Ai App Lifecycle'
-      operationId: getPendingAiAppSubmissionsHandler
-      security:
-        -
-          bearerAuth: []
-  /v1/use-case-org-settings:
-    get:
-      summary: 'Get Use Case Org Settings Handler'
-      responses:
-        '200':
-          description: Success
-        '500':
-          description: 'Internal server error'
-      tags:
-        - 'v1: Use Case Settings'
-      operationId: getUseCaseOrgSettingsHandler
-      security:
-        -
-          bearerAuth: []
-    put:
-      summary: 'Update Use Case Org Settings Handler'
-      responses:
-        '200':
-          description: Success
-        '500':
-          description: 'Internal server error'
-      tags:
-        - 'v1: Use Case Settings'
-      operationId: updateUseCaseOrgSettingsHandler
-      security:
-        -
-          bearerAuth: []
-      description: 'Requires role: Admin'
-  '/v1/intake-tier-suggestion/public/by-id/{publicId}':
+  /v1/projects:
     post:
-      summary: 'Post Public Tier Suggestion'
+      summary: 'Create Project'
       responses:
         '200':
           description: Success
         '500':
           description: 'Internal server error'
       tags:
-        - 'v1: Intake Forms'
-      operationId: postPublicTierSuggestion
-  '/v1/intake-tier-suggestion/public/by-id/{publicId}/explain':
-    post:
-      summary: 'Post Public Tier Explanation'
-      responses:
-        '200':
-          description: Success
-        '500':
-          description: 'Internal server error'
-      tags:
-        - 'v1: Intake Forms'
-      operationId: postPublicTierExplanation
-  '/v1/intake-tier-suggestion/public/by-id/{publicId}/submit':
-    post:
-      summary: 'Submit Public Form By Public Id'
-      responses:
-        '200':
-          description: Success
-        '500':
-          description: 'Internal server error'
-      tags:
-        - 'v1: Intake Forms'
-      operationId: v1_intake_tier_suggestion_submitPublicFormByPublicId
-  '/v1/intake-tier-suggestion/public/{tenantSlug}/{formSlug}':
-    post:
-      summary: 'Post Public Tier Suggestion'
-      responses:
-        '200':
-          description: Success
-        '500':
-          description: 'Internal server error'
-      tags:
-        - 'v1: Intake Forms'
-      operationId: v1_intake_tier_suggestion_postPublicTierSuggestion
-  '/v1/intake-tier-suggestion/public/{tenantSlug}/{formSlug}/explain':
-    post:
-      summary: 'Post Public Tier Explanation'
-      responses:
-        '200':
-          description: Success
-        '500':
-          description: 'Internal server error'
-      tags:
-        - 'v1: Intake Forms'
-      operationId: v1_intake_tier_suggestion_postPublicTierExplanation
-  '/v1/intake-tier-suggestion/public/{tenantSlug}/{formSlug}/submit':
-    post:
-      summary: 'Submit Public Form'
-      responses:
-        '200':
-          description: Success
-        '500':
-          description: 'Internal server error'
-      tags:
-        - 'v1: Intake Forms'
-      operationId: v1_intake_tier_suggestion_submitPublicForm
-  '/v1/intake-tier-suggestion/submissions/{id}':
-    get:
-      summary: 'Get Submission Tier Suggestion Response'
-      responses:
-        '200':
-          description: Success
-        '500':
-          description: 'Internal server error'
-      tags:
-        - 'v1: Intake Forms'
-      operationId: getSubmissionTierSuggestionResponse
+        - 'v1: V1/Projects'
+      operationId: v1_projects_createProject
       security:
         -
           bearerAuth: []
-  '/v1/intake-form-review-time/{formId}':
-    get:
-      summary: 'Get Intake Form Review Time'
+  '/v1/projects/{id}':
+    patch:
+      summary: 'Update Project By Id'
       responses:
         '200':
           description: Success
         '500':
           description: 'Internal server error'
       tags:
-        - 'v1: V1/Intake Form Review Time'
-      operationId: getIntakeFormReviewTime
-      security:
-        -
-          bearerAuth: []
-    put:
-      summary: 'Update Intake Form Review Time'
-      responses:
-        '200':
-          description: Success
-        '500':
-          description: 'Internal server error'
-      tags:
-        - 'v1: V1/Intake Form Review Time'
-      operationId: updateIntakeFormReviewTime
-      security:
-        -
-          bearerAuth: []
-  /v1/shadow-ai-syslog/status:
-    get:
-      summary: 'Get Syslog Status'
-      responses:
-        '200':
-          description: Success
-        '500':
-          description: 'Internal server error'
-      tags:
-        - 'v1: Shadow AI'
-      operationId: getSyslogStatus
-      security:
-        -
-          bearerAuth: []
-  '/v1/shadow-ai-syslog/sources/{id}/regenerate-key':
-    post:
-      summary: 'Regenerate Syslog Key'
-      responses:
-        '200':
-          description: Success
-        '500':
-          description: 'Internal server error'
-      tags:
-        - 'v1: Shadow AI'
-      operationId: regenerateSyslogKey
+        - 'v1: V1/Projects'
+      operationId: v1_projects_updateProjectById
       security:
         -
           bearerAuth: []
@@ -27827,31 +27685,303 @@ paths:
       security:
         -
           bearerAuth: []
-  /v1/projects:
+  '/v1/bias-audit/questions/{frameworkId}':
+    get:
+      summary: 'Get Questions'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Bias Audit'
+      operationId: v1_bias_audit_getQuestions
+      security:
+        -
+          bearerAuth: []
+  '/v1/bias-audit/profiles/{projectId}/{frameworkId}':
+    get:
+      summary: 'Get Profile'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Bias Audit'
+      operationId: getProfile
+      security:
+        -
+          bearerAuth: []
+    put:
+      summary: 'Save Profile Answers'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Bias Audit'
+      operationId: saveProfileAnswers
+      security:
+        -
+          bearerAuth: []
+  '/v1/bias-audit/profiles/{projectId}/{frameworkId}/attest':
     post:
-      summary: 'Create Project'
+      summary: 'Attest Profile'
       responses:
         '200':
           description: Success
         '500':
           description: 'Internal server error'
       tags:
-        - 'v1: V1/Projects'
-      operationId: v1_projects_createProject
+        - 'v1: V1/Bias Audit'
+      operationId: attestProfile
       security:
         -
           bearerAuth: []
-  '/v1/projects/{id}':
-    patch:
-      summary: 'Update Project By Id'
+  '/v1/bias-audit/profiles/{projectId}/{frameworkId}/stance':
+    post:
+      summary: 'Generate Profile Stance'
       responses:
         '200':
           description: Success
         '500':
           description: 'Internal server error'
       tags:
-        - 'v1: V1/Projects'
-      operationId: v1_projects_updateProjectById
+        - 'v1: V1/Bias Audit'
+      operationId: generateProfileStance
       security:
         -
           bearerAuth: []
+  /v1/bias-audit/runs:
+    post:
+      summary: 'Create Run'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Bias Audit'
+      operationId: createRun
+      security:
+        -
+          bearerAuth: []
+    get:
+      summary: 'List Runs'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Bias Audit'
+      operationId: v1_bias_audit_listRuns
+      security:
+        -
+          bearerAuth: []
+  /v1/bias-audit/runs/trend:
+    get:
+      summary: 'Get Run Trend'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Bias Audit'
+      operationId: getRunTrend
+      security:
+        -
+          bearerAuth: []
+  '/v1/bias-audit/runs/{id}':
+    get:
+      summary: 'Get Run'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Bias Audit'
+      operationId: v1_bias_audit_getRun
+      security:
+        -
+          bearerAuth: []
+  '/v1/bias-audit/runs/{id}/derived-basis/confirm':
+    post:
+      summary: 'Confirm Derived Basis'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Bias Audit'
+      operationId: confirmDerivedBasis
+      security:
+        -
+          bearerAuth: []
+  '/v1/bias-audit/runs/{id}/stance':
+    post:
+      summary: 'Generate Stance'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Bias Audit'
+      operationId: generateStance
+      security:
+        -
+          bearerAuth: []
+  '/v1/bias-audit/stances/{id}/download':
+    get:
+      summary: 'Download Stance'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Bias Audit'
+      operationId: downloadStance
+      security:
+        -
+          bearerAuth: []
+  /v1/bias-audit/job-descriptions:
+    get:
+      summary: 'Get Job Descriptions'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Bias Audit'
+      operationId: getJobDescriptions
+      security:
+        -
+          bearerAuth: []
+  /v1/bias-audit/criteria-comparison:
+    post:
+      summary: 'Compare Criteria'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Bias Audit'
+      operationId: compareCriteria
+      security:
+        -
+          bearerAuth: []
+  /v1/bias-audit/corpora:
+    post:
+      summary: 'Create Corpus'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Bias Audit'
+      operationId: createCorpus
+      security:
+        -
+          bearerAuth: []
+    get:
+      summary: 'List Corpora'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Bias Audit'
+      operationId: listCorpora
+      security:
+        -
+          bearerAuth: []
+  '/v1/bias-audit/corpora/{id}':
+    get:
+      summary: 'Get Corpus'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Bias Audit'
+      operationId: getCorpus
+      security:
+        -
+          bearerAuth: []
+  '/v1/bias-audit/corpora/{id}/download':
+    get:
+      summary: 'Download Corpus'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Bias Audit'
+      operationId: downloadCorpus
+      security:
+        -
+          bearerAuth: []
+  '/v1/bias-audit/corpora/{id}/resume':
+    post:
+      summary: 'Resume Corpus'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Bias Audit'
+      operationId: resumeCorpus
+      security:
+        -
+          bearerAuth: []
+  /users/invitations/accept:
+    post:
+      summary: 'Accept Invitation As Existing User'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Users
+      operationId: acceptInvitationAsExistingUser
+  /users/login/select-organization:
+    post:
+      summary: 'Select Login Organization'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Users
+      operationId: selectLoginOrganization
+  '/super-admin/organizations/{id}/users/{userId}':
+    delete:
+      summary: 'Remove Org User'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Super Admin'
+      operationId: removeOrgUser
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Super Admin'

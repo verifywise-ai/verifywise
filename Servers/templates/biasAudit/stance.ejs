@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title><%= model.heading %></title>
+<style>
+  body { font-family: Inter, Helvetica, Arial, sans-serif; font-size: 12px; line-height: 1.5; color: #101828; margin: 0; }
+  h1 { font-size: 20px; margin: 0 0 4px; color: #13715B; }
+  h2 { font-size: 14px; margin: 0 0 6px; color: #13715B; }
+  .meta { color: #475467; margin-bottom: 16px; }
+  section { border: 1px solid #d0d5dd; border-radius: 4px; padding: 10px 12px; margin-bottom: 10px; page-break-inside: avoid; }
+  .body { white-space: pre-wrap; margin: 0 0 6px; }
+  span[data-customer-text] { background: #f2f4f7; border-bottom: 1px solid #d0d5dd; white-space: pre-wrap; }
+  dl { margin: 6px 0 0; display: grid; grid-template-columns: 180px 1fr; gap: 2px 10px; }
+  dt { color: #475467; }
+  dd { margin: 0; word-break: break-all; }
+  .blank { border: 1px solid #d0d5dd; border-radius: 4px; min-height: 28px; padding: 6px 8px; margin: 4px 0 10px; }
+  .blank .label { color: #475467; font-size: 11px; font-weight: 600; }
+  .footer { margin-top: 16px; padding-top: 8px; border-top: 1px solid #d0d5dd; color: #475467; font-size: 11px; }
+</style>
+</head>
+<body>
+<h1><%= model.heading %></h1>
+<div class="meta">
+  <% if (model.attestation && model.attestation.user) { %>Attested by <span data-customer-text><%= model.attestation.user %></span> on <%= model.attestation.date %>.<% } else if (model.attestation && model.attestation.reason === 'unnamed') { %>Attested on <%= model.attestation.date %> by a user with no recorded name.<% } else if (model.attestation) { %>Attested on <%= model.attestation.date %> by a user no longer in this organization.<% } else { %>No attestation is recorded.<% } %>
+</div>
+
+<% sections.forEach(function (s) { %>
+<section data-key="<%= s.key %>">
+  <h2><%= s.title %></h2>
+  <p class="body"><% s.parts.forEach(function (p) { %><% if (p.kind === 'customer') { %><span data-customer-text><%= p.text %></span><% } else { %><%= p.text %><% } %><% }) %></p>
+  <% if (s.key === 'what_was_tested') { %>
+  <dl>
+    <dt>Preset</dt><dd><%= tested.presetId %></dd>
+    <dt>Measure</dt><dd><%= tested.metric %></dd>
+    <dt>Reference line</dt><dd><%= tested.threshold %></dd>
+    <dt>Small-sample exclusion</dt><dd><%= tested.smallSampleExclusion %></dd>
+    <dt>Categories tested</dt><dd><%= tested.categories %></dd>
+    <dt>Rows in the file</dt><dd><%= tested.rowCount %></dd>
+    <% if (tested.corpus) { %>
+    <dt data-fact="corpus">Generated corpus</dt><dd><%= tested.corpus.corpus %></dd>
+    <dt data-fact="models">Models that produced it</dt><dd><%= tested.corpus.models %></dd>
+    <dt data-fact="cell_sizes">Cell sizes</dt><dd><%= tested.corpus.cellSizes %></dd>
+    <dt data-fact="criteria">Criteria comparison</dt><dd><%= tested.corpus.criteria %></dd>
+    <% } %>
+  </dl>
+  <% } %>
+  <% if (s.key === 'data_relied_on') { %>
+  <dl>
+    <dt>Dataset SHA-256</dt><dd><%= data.sha256 %></dd>
+    <dt>Dataset kept by VerifyWise</dt><dd><%= data.retained %></dd>
+  </dl>
+  <% } %>
+</section>
+<% }) %>
+
+<% if (model.blankFields.length > 0) { %>
+<section data-key="blank_fields">
+  <h2>Fields to complete</h2>
+  <% model.blankFields.forEach(function (f) { %>
+  <div class="blank"><div class="label"><%= blankFieldLabel(f.field) %></div><div><%= f.instruction %></div></div>
+  <% }) %>
+</section>
+<% } %>
+
+<div class="footer">
+  This document is not a Local Law 144 bias audit. <% if (!hasEvidence) { %>It records the answers given, as given. No file was supplied and no figures were computed.<% } else { %>It records the answers given and the figures computed from the file supplied, as given.<% } %><% if (model.scope === 'out_of_scope') { %> The scope determination belongs to the party that answered.<% } %>
+</div>
+</body>
+</html>
