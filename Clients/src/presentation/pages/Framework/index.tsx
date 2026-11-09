@@ -59,6 +59,13 @@ import { brand, border as borderPalette, icon } from "../../themes/palette";
 import GovernanceIntelligenceContextBar from "../../components/GovernanceOS/GovernanceIntelligenceContextBar";
 import { storageService } from "../../../infrastructure/storage";
 import { textStyles } from "../../themes/typography";
+import { useExtensions } from "../../../application/contexts/Extensions.context";
+import {
+  useDeleteImportedFramework,
+  useImportedFrameworks,
+} from "../../../application/hooks/useFrameworkImport";
+import FrameworkImportModal from "./Components/FrameworkImportModal";
+import { FileUp as FileUpIcon } from "lucide-react";
 
 // Tab styles following ProjectFrameworks pattern
 const tabStyle = {
@@ -115,6 +122,14 @@ const Framework = () => {
     countToTrigger: 1,
   });
   const { users } = useUsers();
+
+  // Framework import extension (#5254).
+  const { isEnabled } = useExtensions();
+  const isFrameworkImportEnabled = isEnabled("framework-import");
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const { data: importedFrameworks = [] } = useImportedFrameworks();
+  const deleteImportedMutation = useDeleteImportedFramework();
+  const [confirmDeleteImported, setConfirmDeleteImported] = useState<number | null>(null);
 
   // Check if there are any organizational projects
   const organizationalProject = useMemo(() => {
@@ -852,6 +867,26 @@ const Framework = () => {
                       }}
                     />
                   </MenuItem>
+                  {isFrameworkImportEnabled && (
+                    <MenuItem
+                      onClick={() => {
+                        closeFrameworkMenu();
+                        setIsImportModalOpen(true);
+                      }}
+                      disabled={!allowedRoles.frameworks.manage.includes(userRoleName)}
+                    >
+                      <ListItemIcon sx={{ minWidth: 32 }}>
+                        <FileUpIcon size={16} color={icon.default} />
+                      </ListItemIcon>
+                      <ListItemText
+                        primary="Import framework from Excel"
+                        primaryTypographyProps={{
+                          ...textStyles.body,
+                          color: "text.primary",
+                        }}
+                      />
+                    </MenuItem>
+                  )}
                   <MenuItem
                     onClick={handleEditProjectClick}
                     disabled={!allowedRoles.projects.edit.includes(userRoleName)}
@@ -900,6 +935,90 @@ const Framework = () => {
         {/* Only show framework content if organizational project exists */}
         {organizationalProject && (
           <>
+            {/* Imported frameworks (#5254): self-service spreadsheet imports live here. */}
+            {(isFrameworkImportEnabled || importedFrameworks.length > 0) && (
+              <Box sx={{ mb: 4 }}>
+                <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
+                  <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                    Imported frameworks
+                  </Typography>
+                  {isFrameworkImportEnabled && (
+                    <CustomizableButton
+                      variant="outlined"
+                      text="Import from Excel"
+                      startIcon={<FileUpIcon size={16} />}
+                      onClick={() => setIsImportModalOpen(true)}
+                      isDisabled={!allowedRoles.frameworks.manage.includes(userRoleName)}
+                    />
+                  )}
+                </Stack>
+                {importedFrameworks.length === 0 ? (
+                  <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
+                    No imported frameworks yet. Import one from a spreadsheet to track your own
+                    compliance structure.
+                  </Typography>
+                ) : (
+                  <Stack spacing={1}>
+                    {importedFrameworks.map((fw) => (
+                      <Stack
+                        key={fw.id}
+                        direction="row"
+                        justifyContent="space-between"
+                        alignItems="center"
+                        sx={{
+                          border: `1px solid ${borderPalette.dark}`,
+                          borderRadius: "4px",
+                          p: 2,
+                        }}
+                      >
+                        <Box>
+                          <Typography sx={{ fontSize: 13, fontWeight: 600 }}>{fw.name}</Typography>
+                          <Typography sx={{ fontSize: 12, color: "text.secondary" }}>
+                            {fw.topics.length} topic(s) ·{" "}
+                            {fw.topics.reduce((acc, t) => acc + t.subtopics.length, 0)} subtopic(s)
+                          </Typography>
+                        </Box>
+                        {allowedRoles.frameworks.manage.includes(userRoleName) && (
+                          <CustomizableButton
+                            variant="outlined"
+                            text="Delete"
+                            onClick={() => setConfirmDeleteImported(fw.id)}
+                            isDisabled={deleteImportedMutation.isPending}
+                          />
+                        )}
+                      </Stack>
+                    ))}
+                  </Stack>
+                )}
+              </Box>
+            )}
+
+            {isImportModalOpen && (
+              <FrameworkImportModal
+                open={isImportModalOpen}
+                onClose={() => setIsImportModalOpen(false)}
+                onImportComplete={() => setIsImportModalOpen(false)}
+              />
+            )}
+
+            {confirmDeleteImported !== null && (
+              <ConfirmationModal
+                isOpen
+                title="Delete this imported framework?"
+                body="When you delete an imported framework, its topics and subtopics are removed. Use cases already assessed against it are not affected."
+                cancelText="Cancel"
+                proceedText="Delete"
+                proceedButtonColor="error"
+                proceedButtonVariant="contained"
+                onCancel={() => setConfirmDeleteImported(null)}
+                onProceed={async () => {
+                  await deleteImportedMutation.mutateAsync(confirmDeleteImported);
+                  setConfirmDeleteImported(null);
+                }}
+                isLoading={deleteImportedMutation.isPending}
+              />
+            )}
+
             <TabContext value={mainTabValue}>
               <TabBar
                 tabs={[
