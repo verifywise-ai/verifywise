@@ -972,8 +972,9 @@ export async function getUserNamesQuery(
 ): Promise<Array<{ id: number; name: string; surname: string }>> {
   if (userIds.length === 0) return [];
   return (await sequelize.query(
-    `SELECT id, name, surname FROM users
-      WHERE id IN (:user_ids) AND organization_id = :organization_id`,
+    `SELECT u.id, u.name, u.surname FROM users u
+       JOIN organization_members om ON om.user_id = u.id AND om.organization_id = :organization_id
+      WHERE u.id IN (:user_ids)`,
     {
       replacements: { user_ids: userIds, organization_id: organizationId },
       type: QueryTypes.SELECT,
