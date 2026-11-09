@@ -77,7 +77,7 @@ const Raci: FC<RaciProps> = ({ projectId }) => {
   const theme = useTheme();
   const { userRoleName } = useAuth();
   const canEdit = allowedRoles.projects.edit.includes(userRoleName);
-  const { data, isLoading, isError, refetch } = useRaci(projectId);
+  const { data, isLoading, refetch } = useRaci(projectId);
   const updateRoles = useUpdateRaciRoles(projectId);
   const [isAddOpen, setIsAddOpen] = useState(false);
 
@@ -118,7 +118,9 @@ const Raci: FC<RaciProps> = ({ projectId }) => {
     );
   }
 
-  if (isError || !data) {
+  // Only a first load with nothing to show is an error. A failed background
+  // refetch keeps the loaded matrix and any open modal.
+  if (!data) {
     return (
       <Stack sx={{ gap: "16px", alignItems: "center" }}>
         <EmptyState icon={UsersIcon} message="The RACI matrix could not be loaded." />

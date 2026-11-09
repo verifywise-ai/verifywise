@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "../../../../../../test/renderWithProviders";
 import { RaciRole, RaciSubjectType } from "../../../../../../domain/enums/raci.enum";
@@ -244,6 +244,21 @@ describe("Raci", () => {
 
     expect(await screen.findByText("Ada Lovelace")).toBeInTheDocument();
     expect(getMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps the loaded matrix and an open modal when a background refetch fails", async () => {
+    getMock.mockResolvedValueOnce(matrix([owner]));
+    getMock.mockRejectedValue(new Error("Offline"));
+    const { queryClient } = renderRaci();
+    fireEvent.click(await screen.findByTestId("button-raci-add-person"));
+    await screen.findByRole("combobox");
+
+    await act(() => queryClient.refetchQueries({ queryKey: ["raci", 5] }));
+
+    expect(queryClient.getQueryState(["raci", 5])?.status).toBe("error");
+    expect(screen.getByRole("combobox")).toBeInTheDocument();
+    expect(screen.getByTestId("button-raci-A-1")).toBeInTheDocument();
+    expect(screen.queryByTestId("button-raci-retry")).not.toBeInTheDocument();
   });
 
   it("says so when a role change fails, and clears it on the next success", async () => {
