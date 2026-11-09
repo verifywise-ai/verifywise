@@ -25,7 +25,7 @@ import {
 import { chromium, Browser } from "playwright";
 import { getFileById } from "../../repositories/file.repository";
 import { JSDOM } from "jsdom";
-import { escapeHtml, sanitizeUserHtml } from "../../utils/sanitization.utils";
+import { escapeHtml, sanitizeHtmlForPdf } from "../../utils/sanitization.utils";
 
 // VerifyWise theme colors
 const COLORS = {
@@ -154,9 +154,8 @@ export async function generatePolicyPDF(
   organizationId: number,
 ): Promise<Buffer> {
   // Sanitized here as well as on write: not every write path sanitizes, and older
-  // rows may predate it. Images are inlined afterwards because the sanitizer
-  // removes data: URLs.
-  const processedHtml = await processImagesInHtml(sanitizeUserHtml(contentHtml), organizationId);
+  // rows may predate it.
+  const processedHtml = await processImagesInHtml(sanitizeHtmlForPdf(contentHtml), organizationId);
 
   // Build full HTML document with styling
   const fullHtml = `

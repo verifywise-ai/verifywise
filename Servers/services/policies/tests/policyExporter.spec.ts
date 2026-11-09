@@ -290,6 +290,18 @@ describe("policyExporter", () => {
         expect(html).not.toContain("onclick");
       });
 
+      it("keeps base64 images from older policies, but only on images", async () => {
+        await generatePolicyPDF(
+          "Security Policy",
+          '<img src="data:image/png;base64,AAAA"><a href="data:text/html,x">Link</a>',
+          1,
+        );
+
+        const [html] = mockPage.setContent.mock.calls[0];
+        expect(html).toContain('src="data:image/png;base64,AAAA"');
+        expect(html).not.toContain("data:text/html");
+      });
+
       it("renders with JavaScript disabled", async () => {
         await generatePolicyPDF("Security Policy", "<p>Body</p>", 1);
 
