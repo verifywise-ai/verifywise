@@ -39,6 +39,7 @@ import { DatasetParseError, parseDataset, type ParsedDataset } from "./datasetPa
 import { runAudit, RECORD_KEYS } from "./index";
 import type { AuditOutcome, BiasAuditConfig } from "./index";
 import type { GateFinding } from "./dataGates";
+import type { UnmatchedValue } from "./demographics";
 
 /** The 0.8 figure is a convention the rule's guidance uses, not a statutory value. */
 export const LL144_THRESHOLD_SOURCE = "convention";
@@ -103,6 +104,38 @@ function isRunMetric(m: string | null): m is RunMetric {
 
 function stop(code: string, message: string, detail: Record<string, unknown> = {}): GateFinding {
   return { code, severity: "stop", message, detail };
+}
+
+/** How many unmatched values a finding names; the rest are counted. */
+const MAX_NAMED_VALUES = 25;
+const MAX_VALUE_LENGTH = 80;
+
+/**
+ * Values that matched no category stay as groups of their own. A note, not a
+ * stop or a warning: a stop would refuse valid data such as a non-binary
+ * category, and a warning would withhold the export for it. The note is
+ * printed with the run's other findings.
+ */
+function unmatchedValueNotes(unmatched: Record<string, UnmatchedValue[]>): GateFinding[] {
+  return Object.entries(unmatched).map(([column, values]) => {
+    const total = values.reduce((sum, v) => sum + v.count, 0);
+    const named = values
+      .slice(0, MAX_NAMED_VALUES)
+      .map((v) => `"${v.value.slice(0, MAX_VALUE_LENGTH)}" (${v.count})`)
+      .join(", ");
+    const more =
+      values.length > MAX_NAMED_VALUES ? `, and ${values.length - MAX_NAMED_VALUES} more` : "";
+    return {
+      code: "demographic_values_unmatched",
+      severity: "note",
+      message:
+        `${total} record(s) in the "${column}" column have a value that matches none of this ` +
+        `module's categories: ${named}${more}. Each value is kept as its own group in the ` +
+        `calculations. Check that it is a category you meant to report, not a typo or another ` +
+        `way of writing a listed one.`,
+      detail: { column, total, values: values.slice(0, MAX_NAMED_VALUES) },
+    };
+  });
 }
 
 /** A run that could not compute: findings stored, nothing exportable. */
@@ -176,7 +209,7 @@ export async function createRun(input: CreateRunInput): Promise<CreateRunResult>
 
   let parsed: ParsedDataset;
   try {
-    parsed = parseDataset(data.toString("utf8"), mapping);
+    parsed = parseDataset(data.toString("utf8"), mapping, LL144_CONFIG.categories);
   } catch (error: unknown) {
     if (error instanceof DatasetParseError) {
       throw new ValidationException(error.message, "csv");
@@ -266,7 +299,15 @@ export async function createRun(input: CreateRunInput): Promise<CreateRunResult>
     );
   }
 
-  const outcome = blockers.length > 0 ? blockedOutcome(blockers) : runAudit(parsed.records, config);
+  const computed =
+    blockers.length > 0 ? blockedOutcome(blockers) : runAudit(parsed.records, config);
+  const outcome: AuditOutcome = {
+    ...computed,
+    gates: {
+      ...computed.gates,
+      findings: [...computed.gates.findings, ...unmatchedValueNotes(parsed.unmatchedDemographics)],
+    },
+  };
 
   const derived = deriveBasis(answers);
   const triggers = derived

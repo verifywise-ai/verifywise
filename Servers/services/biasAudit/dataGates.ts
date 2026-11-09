@@ -148,9 +148,10 @@ export function runDataGates(records: AuditRecord[], config: BiasAuditConfig): G
       code: "demographic_values_missing",
       severity: "note",
       message:
-        `${withThousands(unknown.unknownRecords)} of ${withThousands(total)} records have no value ` +
-        `for at least one protected category. They are left out of that category's rates and ` +
-        `reported as an unknown category, as § 5-301(c) requires.`,
+        `${withThousands(unknown.unknownRecords)} of ${withThousands(total)} records have no value, ` +
+        `or a value meaning no answer, for at least one protected category. They are left out of ` +
+        `that category's rates and reported as an unknown category, as § 5-301(b)(5) and (c)(5) ` +
+        `require.`,
       detail: { ...unknown, total },
     });
   }

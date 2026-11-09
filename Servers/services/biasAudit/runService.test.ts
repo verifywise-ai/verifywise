@@ -263,6 +263,79 @@ describe("createRun", () => {
   });
 });
 
+describe("demographic values", () => {
+  const csvWith = (sexOf: (i: number) => string) => {
+    const rows = ["gender,race,outcome"];
+    for (let i = 0; i < 300; i++) {
+      rows.push(`${sexOf(i)},${i % 3 ? "White" : "asian"},${i % 5 < 2 ? 1 : 0}`);
+    }
+    return rows.join("\n") + "\n";
+  };
+  const sexTable = () =>
+    stored().resultJson.tables.find((t: { categoryKey: string }) => t.categoryKey === "sex");
+
+  it("counts Male, male and M as one group", async () => {
+    await run({ csv: csvWith((i) => (i % 2 ? ["Male", "male", "M"][i % 3] : "Female")) });
+    expect(sexTable().rows.map((r: { categoryName: string }) => r.categoryName)).toEqual([
+      "Female",
+      "Male",
+    ]);
+  });
+
+  it("counts a no-answer value as unknown, not a group", async () => {
+    await run({
+      csv: csvWith((i) => (i % 10 === 0 ? "Prefer not to say" : i % 2 ? "Male" : "Female")),
+    });
+    expect(sexTable().rows.map((r: { categoryName: string }) => r.categoryName)).toEqual([
+      "Female",
+      "Male",
+    ]);
+    expect(stored().resultJson.unknownCount).toBe(30);
+    const note = stored().gateFindingsJson.find(
+      (f: { code: string }) => f.code === "demographic_values_missing",
+    );
+    expect(note.message).toMatch(/no answer/);
+  });
+
+  it("runs the fewer-than-two-groups gate on normalized values", async () => {
+    await run({ csv: csvWith((i) => (i % 2 ? "M" : "male")) });
+    expect(stored().resultJson).toBeNull();
+    expect(stored().gateFindingsJson.map((f: { code: string }) => f.code)).toContain(
+      "fewer_than_two_groups",
+    );
+  });
+
+  it("keeps an unmatched value as its own group and names it in a note", async () => {
+    const out = await run({
+      csv: csvWith((i) => (i === 0 ? "Non-binary" : i % 2 ? "Male" : "Female")),
+    });
+    expect(sexTable().rows.map((r: { categoryName: string }) => r.categoryName)).toEqual([
+      "Female",
+      "Male",
+      "Non-binary",
+    ]);
+    const note = stored().gateFindingsJson.find(
+      (f: { code: string }) => f.code === "demographic_values_unmatched",
+    );
+    expect(note.severity).toBe("note");
+    expect(note.message).toContain('"Non-binary" (1)');
+    expect(note.detail).toMatchObject({ column: "sex", total: 1 });
+    // Unmatched values alone do not hold back the export.
+    expect(out.outcome.gates.findings.some((f) => f.severity !== "note")).toBe(false);
+  });
+
+  it("stores the unmatched note on a blocked run too", async () => {
+    await run({
+      csv: csvWith((i) => (i === 0 ? "Non-binary" : i % 2 ? "Male" : "Female")),
+      mapping: { ...MAPPING, selected: "absent" },
+    });
+    expect(stored().resultJson).toBeNull();
+    expect(stored().gateFindingsJson.map((f: { code: string }) => f.code)).toContain(
+      "demographic_values_unmatched",
+    );
+  });
+});
+
 describe("createRun, scoring rate", () => {
   const PERSON = ANSWERS.map((a) =>
     a.question_key === "cutoff.applied_by" ? ans("cutoff.applied_by", "person") : a,

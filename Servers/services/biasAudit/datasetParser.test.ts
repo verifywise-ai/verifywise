@@ -179,3 +179,33 @@ describe("parseDataset", () => {
     expect(out.unreadableScoreCount).toBe(1);
   });
 });
+
+describe("demographic normalization", () => {
+  const categories = { sex: { groups: ["Male", "Female"] } };
+  const csv = (values: string[]) =>
+    ["sex,selected", ...values.map((v, i) => `${v},${i % 2 ? "1" : "0"}`)].join("\n") + "\n";
+  const mapping = { sex: "sex", selected: "selected" };
+
+  it("reads values onto the category list and blanks no-answer values", () => {
+    const parsed = parseDataset(
+      csv(["Male", "male", "M", "Female", "Prefer not to say", "Non-binary"]),
+      mapping,
+      categories,
+    );
+    expect(parsed.records.map((r) => r.sex)).toEqual([
+      "Male",
+      "Male",
+      "Male",
+      "Female",
+      "",
+      "Non-binary",
+    ]);
+    expect(parsed.unmatchedDemographics).toEqual({ sex: [{ value: "Non-binary", count: 1 }] });
+  });
+
+  it("leaves values alone when no category list is given", () => {
+    const parsed = parseDataset(csv(["M", "Prefer not to say"]), mapping);
+    expect(parsed.records.map((r) => r.sex)).toEqual(["M", "Prefer not to say"]);
+    expect(parsed.unmatchedDemographics).toEqual({});
+  });
+});
