@@ -6,9 +6,10 @@ import { Project } from "../../../../../../domain/types/Project";
 
 const mockCreate = vi.fn();
 let mockAiApps: unknown[] = [];
+let mockPreview = { model_count: 3, caller_becomes_owner: false };
 vi.mock("../../../../../../application/repository/aiApp.repository", () => ({
   getProjectAiApps: () => Promise.resolve(mockAiApps),
-  getCreateAiAppPreview: () => Promise.resolve({ model_count: 3 }),
+  getCreateAiAppPreview: () => Promise.resolve(mockPreview),
   createAiAppFromUseCase: (...args: unknown[]) => mockCreate(...args),
 }));
 
@@ -37,6 +38,7 @@ describe("LinkedAiAppsCard", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockAiApps = [];
+    mockPreview = { model_count: 3, caller_becomes_owner: false };
     mockPermissions = [];
     mockRole = "Reviewer";
   });
@@ -97,18 +99,44 @@ describe("LinkedAiAppsCard", () => {
     expect(await screen.findByText("AI app created from this use case")).toBeInTheDocument();
   });
 
-  it.each([
-    ["an external owner", { external_owner_name: "Ada", owner: null }],
-    ["no owner", { owner: null }],
-  ])("warns about the new owner for %s", async (_label, overrides) => {
+  it("follows the server on who will own the app, and stops claiming to copy the owner", async () => {
     mockPermissions = ["aiApp.edit"];
-    renderWithProviders(<LinkedAiAppsCard project={project(overrides as Partial<Project>)} />);
+    mockPreview = { model_count: 1, caller_becomes_owner: true };
+    // An owner id on the use case: the server says that person has left.
+    renderWithProviders(<LinkedAiAppsCard project={project({ owner: 7 })} />);
     fireEvent.click(await screen.findByTestId(BUTTON));
+
     expect(
       await screen.findByText(
-        "This use case's owner has no account, so you will own the new AI app.",
+        "This use case's owner has no account in this organization, so you will own the new AI app.",
       ),
     ).toBeInTheDocument();
+    expect(screen.getByText("Copies the description and 1 linked model.")).toBeInTheDocument();
+    expect(screen.queryByText(/the owner and/)).toBeNull();
+  });
+
+  it("reports a 404 itself, since the global toast skips those", async () => {
+    mockPermissions = ["aiApp.edit"];
+    mockCreate.mockRejectedValue(new CustomException("Project not found", 404, {}));
+    renderWithProviders(<LinkedAiAppsCard project={project()} />);
+    fireEvent.click(await screen.findByTestId(BUTTON));
+    await screen.findByDisplayValue("Fraud scoring");
+    fireEvent.click(screen.getByRole("button", { name: "Create AI app" }));
+
+    expect(await screen.findByText("This use case is no longer available")).toBeInTheDocument();
+  });
+
+  it("leaves other failures to the global toast", async () => {
+    mockPermissions = ["aiApp.edit"];
+    mockCreate.mockRejectedValue(new CustomException("Bad", 400, {}));
+    renderWithProviders(<LinkedAiAppsCard project={project()} />);
+    fireEvent.click(await screen.findByTestId(BUTTON));
+    await screen.findByDisplayValue("Fraud scoring");
+    fireEvent.click(screen.getByRole("button", { name: "Create AI app" }));
+
+    await waitFor(() => expect(mockCreate).toHaveBeenCalled());
+    expect(screen.queryByText("Bad")).toBeNull();
+    expect(screen.getByDisplayValue("Fraud scoring")).toBeInTheDocument();
   });
 
   it("requires a name without calling the server", async () => {

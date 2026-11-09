@@ -16,6 +16,7 @@ import {
 import { useCanEditAiApps } from "../../../../application/hooks/useCanEditAiApps";
 import { useProjects } from "../../../../application/hooks/useProjects";
 import { useTranslation } from "../../../../application/hooks/useTranslation";
+import { isClientError } from "../../../../application/utils/apiErrorReason";
 import { fill } from "../../../../i18n/fill";
 
 interface UseCaseOption {
@@ -27,13 +28,17 @@ interface UseCaseOption {
 export default function AIAppLinkedUseCases({ appId }: { appId: number }) {
   const { t } = useTranslation();
   const canEdit = useCanEditAiApps();
-  const { data } = useAiAppUseCases(appId);
+  const { data, refetch } = useAiAppUseCases(appId);
   const linkMutation = useLinkUseCaseToAiApp(appId);
   const unlinkMutation = useUnlinkUseCaseFromAiApp(appId);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [selected, setSelected] = useState<UseCaseOption | null>(null);
-  const [alert, setAlert] = useState<{ variant: "success"; body: string } | null>(null);
-  const { data: projects } = useProjects({ enabled: isAddOpen });
+  const [alert, setAlert] = useState<{ variant: "success" | "error"; body: string } | null>(null);
+  const {
+    approvedProjects,
+    isLoading: projectsLoading,
+    isError: projectsFailed,
+  } = useProjects({ enabled: isAddOpen });
 
   useEffect(() => {
     if (!alert) return;
@@ -45,27 +50,47 @@ export default function AIAppLinkedUseCases({ appId }: { appId: number }) {
   const hiddenCount = data?.hidden_count ?? 0;
   const isBusy = linkMutation.isPending || unlinkMutation.isPending;
 
+  const linkable = useMemo(
+    () => approvedProjects.filter((project) => !project.is_organizational),
+    [approvedProjects],
+  );
+
   const options = useMemo<UseCaseOption[]>(() => {
     const linked = new Set(useCases.map((useCase) => useCase.id));
-    return (projects ?? [])
-      .filter((project) => !project.is_organizational && !linked.has(project.id))
+    return linkable
+      .filter((project) => !linked.has(project.id))
       .map((project) => ({
         id: project.id,
         label: project.uc_id
           ? `${project.uc_id} - ${project.project_title}`
           : project.project_title,
       }));
-  }, [projects, useCases]);
+  }, [linkable, useCases]);
 
-  // Failures reach the user through customAxios' error toast.
+  const pickerPlaceholder = () => {
+    if (projectsLoading) return "Loading use cases...";
+    if (projectsFailed) return "Could not load use cases";
+    if (linkable.length === 0) return "No use cases can be linked yet";
+    if (options.length === 0) return "All use cases are already linked";
+    return "Select a use case";
+  };
+
+  /** customAxios toasts every failure except a 404, which only this screen can report. */
+  const reportIfGone = (error: unknown, body: string) => {
+    if (isClientError(error) && error.status === 404) {
+      setAlert({ variant: "error", body });
+      refetch();
+    }
+  };
+
   const handleAdd = async () => {
     if (!selected) return;
     try {
       await linkMutation.mutateAsync(selected.id);
       setIsAddOpen(false);
       setAlert({ variant: "success", body: "Use case linked" });
-    } catch {
-      setIsAddOpen(true);
+    } catch (error) {
+      reportIfGone(error, "This use case or AI app is no longer available");
     }
   };
 
@@ -73,8 +98,8 @@ export default function AIAppLinkedUseCases({ appId }: { appId: number }) {
     try {
       await unlinkMutation.mutateAsync(projectId);
       setAlert({ variant: "success", body: "Use case removed" });
-    } catch {
-      setAlert(null);
+    } catch (error) {
+      reportIfGone(error, "This use case is no longer linked");
     }
   };
 
@@ -177,9 +202,7 @@ export default function AIAppLinkedUseCases({ appId }: { appId: number }) {
       >
         <AutoCompleteField<UseCaseOption, false>
           label="Use case"
-          placeholder={
-            options.length === 0 ? "All use cases are already linked" : "Select a use case"
-          }
+          placeholder={pickerPlaceholder()}
           options={options}
           value={selected}
           onChange={(_event, value) => setSelected(value as UseCaseOption | null)}

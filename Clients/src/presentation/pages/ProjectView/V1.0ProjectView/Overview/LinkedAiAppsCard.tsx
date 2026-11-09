@@ -48,7 +48,7 @@ const LinkedAiAppsCard = ({ project }: { project: Project }) => {
   }, [alert]);
 
   const isSettled = project.approval_status !== "pending" && project.approval_status !== "rejected";
-  const ownerHasNoAccount = !!project.external_owner_name || project.owner == null;
+  const callerBecomesOwner = preview?.caller_becomes_owner ?? false;
 
   const openModal = () => {
     setName(project.project_title ?? "");
@@ -76,20 +76,25 @@ const LinkedAiAppsCard = ({ project }: { project: Project }) => {
         setNameError(getClientErrorReason(error) ?? t("An AI app with this name already exists"));
         return;
       }
-      setAlert({
-        variant: "error",
-        body: getClientErrorReason(error) ?? "Failed to create the AI app",
-      });
+      // customAxios toasts every other failure, but never a 404.
+      if (isClientError(error) && error.status === 404) {
+        setAlert({ variant: "error", body: "This use case is no longer available" });
+      }
     }
   };
 
-  const copiedLine = !preview
-    ? t("Copies the description, the owner and the linked models.")
-    : preview.model_count === 1
+  const copiedLine = () => {
+    if (!preview) return t("Copies the description and the linked models.");
+    const count = preview.model_count;
+    if (callerBecomesOwner) {
+      return count === 1
+        ? t("Copies the description and 1 linked model.")
+        : fill(t("Copies the description and {count} linked models."), { count });
+    }
+    return count === 1
       ? t("Copies the description, the owner and 1 linked model.")
-      : fill(t("Copies the description, the owner and {count} linked models."), {
-          count: preview.model_count,
-        });
+      : fill(t("Copies the description, the owner and {count} linked models."), { count });
+  };
 
   return (
     <Stack sx={{ ...infoCardStyle, mb: "20px", width: "auto" }} data-testid="linked-ai-apps-card">
@@ -160,12 +165,13 @@ const LinkedAiAppsCard = ({ project }: { project: Project }) => {
           <Stack direction="row" gap="8px" alignItems="flex-start">
             <Bot size={16} strokeWidth={1.5} color={palette.text.secondary} />
             <Typography sx={{ fontSize: 13, color: palette.text.secondary }}>
-              {copiedLine}
+              {copiedLine()}
             </Typography>
           </Stack>
-          {ownerHasNoAccount && (
+          {callerBecomesOwner && (
             <Typography sx={{ fontSize: 13, color: palette.text.secondary }}>
-              This use case's owner has no account, so you will own the new AI app.
+              This use case's owner has no account in this organization, so you will own the new AI
+              app.
             </Typography>
           )}
         </Stack>

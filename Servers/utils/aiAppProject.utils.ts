@@ -3,6 +3,7 @@ import { sequelize } from "../database/db";
 import { ValidationException } from "../domain.layer/exceptions/custom.exception";
 import { IAIAppDetail } from "../domain.layer/interfaces/i.aiApp";
 import { createAiAppQuery } from "./aiApp.utils";
+import { getApprovalStatusQuery } from "./approvalRequest.utils";
 import { recordEntityChange } from "./changeHistory.base.utils";
 import { projectVisibilitySql } from "./projectVisibility.utils";
 
@@ -40,6 +41,8 @@ const HISTORY_CREATED_FROM = "Created from use case";
 const HISTORY_LINKED = "Linked use case";
 
 const ORGANIZATIONAL_REFUSAL = "Organizational use cases cannot be linked to an AI app";
+const UNAPPROVED_REFUSAL =
+  "Use cases that are waiting for approval or were rejected cannot be linked to an AI app";
 
 /**
  * How the AI app's change history names a use case. Anyone in the org can read
@@ -49,9 +52,23 @@ function useCaseLabel(project: Pick<VisibleProject, "id" | "uc_id">): string {
   return project.uc_id ?? `#${project.id}`;
 }
 
-function refuseOrganizational(project: VisibleProject): void {
+/** Organizational use cases, and ones not (or not yet) approved, cannot be linked. */
+async function refuseUnlinkable(
+  project: VisibleProject,
+  organizationId: number,
+  transaction: Transaction,
+): Promise<void> {
   if (project.is_organizational) {
     throw new ValidationException(ORGANIZATIONAL_REFUSAL, "project_id", project.id);
+  }
+  const approval = await getApprovalStatusQuery(
+    project.id,
+    "use_case",
+    organizationId,
+    transaction,
+  );
+  if (approval) {
+    throw new ValidationException(UNAPPROVED_REFUSAL, "project_id", project.id);
   }
 }
 
@@ -115,19 +132,24 @@ export async function getCreateAiAppPreviewQuery(
   projectId: number,
   viewer: ProjectViewer,
   organizationId: number,
-): Promise<{ model_count: number } | null> {
+): Promise<{ model_count: number; caller_becomes_owner: boolean } | null> {
   const project = await getVisibleProjectQuery(projectId, viewer, organizationId);
   if (!project) return null;
   const modelIds = await getProjectModelIdsQuery(projectId, organizationId);
-  return { model_count: modelIds.length };
+  const ownerId = await resolveAiAppOwnerQuery(project.owner, viewer.userId, organizationId);
+  return { model_count: modelIds.length, caller_becomes_owner: ownerId !== project.owner };
 }
 
-/** External owners (#5256) leave the owner null; a former member is not eligible either. */
+/**
+ * Who owns an AI app made from this use case. External owners (#5256) leave the
+ * owner null and a former member is not eligible, so both fall to the caller.
+ * Shared by the create and its preview, so the two cannot disagree.
+ */
 async function resolveAiAppOwnerQuery(
   projectOwner: number | null,
   fallbackUserId: number,
   organizationId: number,
-  transaction: Transaction,
+  transaction?: Transaction,
 ): Promise<number> {
   if (projectOwner === null) return fallbackUserId;
   const rows = await sequelize.query(
@@ -173,7 +195,7 @@ export async function createAiAppFromProjectQuery(
 ): Promise<IAIAppDetail | null> {
   const project = await getVisibleProjectQuery(projectId, viewer, organizationId, transaction);
   if (!project) return null;
-  refuseOrganizational(project);
+  await refuseUnlinkable(project, organizationId, transaction);
 
   const ownerId = await resolveAiAppOwnerQuery(
     project.owner,
@@ -270,7 +292,7 @@ export async function linkUseCaseToAiAppQuery(
   if (!(await aiAppExistsQuery(aiAppId, organizationId, transaction))) return false;
   const project = await getVisibleProjectQuery(projectId, viewer, organizationId, transaction);
   if (!project) return false;
-  refuseOrganizational(project);
+  await refuseUnlinkable(project, organizationId, transaction);
 
   const inserted = await insertLinkQuery(
     aiAppId,

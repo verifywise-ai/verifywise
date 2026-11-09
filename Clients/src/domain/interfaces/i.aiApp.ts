@@ -142,6 +142,8 @@ export interface IAIAppUseCases {
 /** What creating an AI app from a use case would copy (GET /v1/projects/:id/create-ai-app). */
 export interface ICreateAiAppPreview {
   model_count: number;
+  /** The use case's owner cannot own the new AI app, so the caller will. */
+  caller_becomes_owner: boolean;
 }
 
 export interface IGetAiAppsFilters {

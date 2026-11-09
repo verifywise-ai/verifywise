@@ -132,11 +132,23 @@ export async function getCreateAiAppPreview(req: Request, res: Response): Promis
   if (projectId === null) {
     return res.status(400).json(STATUS_CODE[400](req.t!("Invalid use case ID")));
   }
+
+  logProcessing({
+    ...context(req, functionName),
+    description: `starting ${functionName} for use case ${projectId}`,
+  });
+
   try {
     const preview = await getCreateAiAppPreviewQuery(projectId, viewerOf(req), req.organizationId!);
     if (!preview) {
       return res.status(404).json(STATUS_CODE[404](req.t!("Project not found")));
     }
+
+    await logSuccess({
+      ...context(req, functionName),
+      eventType: "Read",
+      description: `Previewed AI app creation from use case ${projectId}`,
+    });
     return res.status(200).json(STATUS_CODE[200](preview));
   } catch (error) {
     return failed(req, res, functionName, "Read", "Failed to preview AI app creation", error);

@@ -78,6 +78,20 @@ async function link(orgId: number, appId: number, projectId: number): Promise<vo
   );
 }
 
+async function requestApproval(
+  orgId: number,
+  projectId: number,
+  requestedBy: number,
+  status: "Pending" | "Rejected",
+): Promise<void> {
+  await sequelize.query(
+    `INSERT INTO approval_requests
+       (organization_id, request_name, entity_id, entity_type, status, requested_by)
+     VALUES (:orgId, 'Use case approval', :projectId, 'use_case', :status, :requestedBy)`,
+    { replacements: { orgId, projectId, status, requestedBy } },
+  );
+}
+
 async function scalar(sql: string, replacements: Record<string, unknown>): Promise<number> {
   const [rows] = await sequelize.query(sql, { replacements });
   return Number((rows as any[])[0].total);
@@ -207,7 +221,7 @@ describe("AI app and use case links", () => {
 
       const preview = await api.get(`/api/v1/projects/${projectId}/create-ai-app`);
       expect(preview.status).toBe(200);
-      expect(preview.body.data).toEqual({ model_count: 2 });
+      expect(preview.body.data).toEqual({ model_count: 2, caller_becomes_owner: false });
 
       const res = await api.post(`/api/v1/projects/${projectId}/create-ai-app`).send({});
 
@@ -280,11 +294,49 @@ describe("AI app and use case links", () => {
       const projectId = await createTestProject(orgId, outsider);
       const api = await as(orgId, adminId, "Admin");
 
+      const preview = await api.get(`/api/v1/projects/${projectId}/create-ai-app`);
+      expect(preview.body.data.caller_becomes_owner).toBe(true);
+
       const res = await api.post(`/api/v1/projects/${projectId}/create-ai-app`).send({});
 
       expect(res.status).toBe(201);
       expect(res.body.data.owner_id).toBe(adminId);
     });
+
+    it("previews the caller as owner of an externally owned use case, not of another member's", async () => {
+      const editorId = await userIn(orgId, "Editor");
+      const external = await createTestProject(orgId, adminId);
+      await setProject(
+        external,
+        `owner = NULL, external_owner_name = 'Ada', external_owner_email = 'ada@example.com'`,
+      );
+      const memberOwned = await createTestProject(orgId, editorId);
+      const api = await as(orgId, adminId, "Admin");
+
+      const externalPreview = await api.get(`/api/v1/projects/${external}/create-ai-app`);
+      expect(externalPreview.body.data.caller_becomes_owner).toBe(true);
+
+      const memberPreview = await api.get(`/api/v1/projects/${memberOwned}/create-ai-app`);
+      expect(memberPreview.body.data.caller_becomes_owner).toBe(false);
+    });
+
+    it.each(["Pending", "Rejected"] as const)(
+      "refuses a use case whose approval is %s and creates nothing",
+      async (status) => {
+        const projectId = await createTestProject(orgId, adminId);
+        await requestApproval(orgId, projectId, adminId, status);
+        const api = await as(orgId, adminId, "Admin");
+
+        const res = await api.post(`/api/v1/projects/${projectId}/create-ai-app`).send({});
+
+        expect(res.status).toBe(400);
+        expect(res.body.data).toBe(
+          "Use cases that are waiting for approval or were rejected cannot be linked to an AI app",
+        );
+        expect(await appCount(orgId)).toBe(0);
+        expect(await linkCount(projectId)).toBe(0);
+      },
+    );
 
     it("answers 409 for a taken name and leaves no app and no link", async () => {
       await aiApp(orgId, adminId, "Taken");
@@ -467,6 +519,23 @@ describe("AI app and use case links", () => {
       ).toBe(400);
       expect(await linkCount(projectId)).toBe(0);
     });
+
+    it.each(["Pending", "Rejected"] as const)(
+      "refuses to link a use case whose approval is %s",
+      async (status) => {
+        const appId = await aiApp(orgId, adminId);
+        const projectId = await createTestProject(orgId, adminId);
+        await requestApproval(orgId, projectId, adminId, status);
+        const api = await as(orgId, adminId, "Admin");
+
+        const res = await api
+          .post(`/api/v1/ai-apps/${appId}/use-cases`)
+          .send({ project_id: projectId });
+
+        expect(res.status).toBe(400);
+        expect(await linkCount(projectId)).toBe(0);
+      },
+    );
 
     it("answers 404 to a non-member non-admin on link and unlink", async () => {
       const editorId = await userIn(orgId, "Editor");

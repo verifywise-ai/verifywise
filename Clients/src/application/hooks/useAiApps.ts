@@ -36,12 +36,14 @@ export const aiAppQueryKeys = {
   detail: (id: number) => [...aiAppQueryKeys.details(), id] as const,
   policySuggestions: (name: string) => [...aiAppQueryKeys.all, "policySuggestions", name] as const,
   /** AI apps linked to one use case (#5259). */
-  byProject: (projectId: number) => [...aiAppQueryKeys.all, "byProject", projectId] as const,
+  allByProject: () => [...aiAppQueryKeys.all, "byProject"] as const,
+  byProject: (projectId: number) => [...aiAppQueryKeys.allByProject(), projectId] as const,
   /** What creating an AI app from a use case would copy (#5259). */
   createPreview: (projectId: number) =>
     [...aiAppQueryKeys.all, "createPreview", projectId] as const,
   /** Use cases linked to one AI app (#5259). */
-  useCases: (id: number) => [...aiAppQueryKeys.all, "useCases", id] as const,
+  allUseCases: () => [...aiAppQueryKeys.all, "useCases"] as const,
+  useCases: (id: number) => [...aiAppQueryKeys.allUseCases(), id] as const,
 };
 
 export const useAiApps = (
@@ -95,6 +97,9 @@ export const useUpdateAiApp = () => {
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: aiAppQueryKeys.detail(id) });
       queryClient.invalidateQueries({ queryKey: aiAppQueryKeys.lists() });
+      // The linked AI app chips show its name.
+      queryClient.invalidateQueries({ queryKey: aiAppQueryKeys.allByProject() });
+      queryClient.invalidateQueries({ queryKey: aiAppQueryKeys.useCases(id) });
       // Tab counts, stale markers and the lifecycle stage follow status and existence.
       queryClient.invalidateQueries({ queryKey: aiAppQueryKeys.lifecycle() });
     },
@@ -124,8 +129,11 @@ export const useDeleteAiApp = () => {
     mutationFn: async (id: number) => {
       return await deleteAiApp(id);
     },
-    onSuccess: () => {
+    onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: aiAppQueryKeys.lists() });
+      // Deleting the app removes its links.
+      queryClient.invalidateQueries({ queryKey: aiAppQueryKeys.allByProject() });
+      queryClient.invalidateQueries({ queryKey: aiAppQueryKeys.useCases(id) });
       // Tab counts, stale markers and the lifecycle stage follow status and existence.
       queryClient.invalidateQueries({ queryKey: aiAppQueryKeys.lifecycle() });
     },

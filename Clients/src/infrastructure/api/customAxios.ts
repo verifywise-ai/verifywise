@@ -156,12 +156,7 @@ const getEnvelopeErrorMessage = (data: ApiErrorEnvelope): string | undefined => 
 // Endpoints whose UI already renders its own error message (e.g. the login
 // page shows an inline alert). Skip the global toast for these so users don't
 // see duplicate notifications.
-const ENDPOINTS_WITH_CUSTOM_ERROR_UI = [
-  "/users/login",
-  "/users/invitations/accept",
-  // A taken name is shown on the modal's name field, not as a toast.
-  "/create-ai-app",
-];
+const ENDPOINTS_WITH_CUSTOM_ERROR_UI = ["/users/login", "/users/invitations/accept"];
 
 // Endpoints authorized by the token in an emailed link (invitation, password
 // reset), which the page sends itself, not by the session token.
@@ -242,6 +237,9 @@ const showGlobalErrorAlert = (error: AxiosError) => {
     // a failure: the Settings page opens a dialog asking where to move answers.
     const inner = responseData.data as { code?: unknown } | undefined;
     if (status === 409 && inner?.code === "options_in_use") return;
+    // The create AI app modal shows a taken name on its name field.
+    if (status === 409 && error.config?.method === "post" && requestUrl.endsWith("/create-ai-app"))
+      return;
     const detail = getEnvelopeErrorMessage(responseData);
     showAlert({
       variant: "error",

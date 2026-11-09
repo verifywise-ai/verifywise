@@ -981,5 +981,6 @@
   "AI app name must be text of at most 255 characters": "Le nom de l'application IA doit être un texte de 255 caractères maximum",
   "AI app or use case not found": "Application IA ou cas d'usage introuvable",
   "Link not found": "Lien introuvable",
-  "Organizational use cases cannot be linked to an AI app": "Les cas d'usage organisationnels ne peuvent pas être liés à une application IA"
+  "Organizational use cases cannot be linked to an AI app": "Les cas d'usage organisationnels ne peuvent pas être liés à une application IA",
+  "Use cases that are waiting for approval or were rejected cannot be linked to an AI app": "Les cas d'usage en attente d'approbation ou rejetés ne peuvent pas être liés à une application IA"
 }
