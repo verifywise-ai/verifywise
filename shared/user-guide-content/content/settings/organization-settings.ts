@@ -145,6 +145,33 @@ export const organizationSettingsContent: ArticleContent = {
     },
     {
       type: 'heading',
+      id: 'connect-mcp-client',
+      level: 2,
+      text: 'Connecting an MCP client',
+    },
+    {
+      type: 'paragraph',
+      text: 'Use the **MCP** tab under **Settings** to connect Claude Code or another MCP client to VerifyWise. Only Admins see this tab. The server runs in your VerifyWise deployment, so there is nothing to install. The connection is limited to your own organization.',
+    },
+    {
+      type: 'ordered-list',
+      items: [
+        { text: 'Choose when the token expires, then select **Download config file**.' },
+        { text: 'In the folder holding the file, run the command shown on the tab to add it to Claude Code. Then delete the file.' },
+        { text: 'Restart Claude Code and run `/mcp`. You should see `verifywise` with the tools listed on the tab.' },
+      ],
+    },
+    {
+      type: 'callout',
+      variant: 'warning',
+      text: 'The file contains an API token. A person who has the file can use those tools as you. Downloading a new file revokes the token you got from this tab last time, so anything set up with the old file stops working.',
+    },
+    {
+      type: 'paragraph',
+      text: 'For other MCP clients, create a token on the **API keys** tab and use the connect command on the **MCP** tab. If you are also a super admin, set up the connection from **Super Admin**, **Settings**, **MCP** instead.',
+    },
+    {
+      type: 'heading',
       id: 'faq',
       level: 2,
       text: 'Frequently asked questions',

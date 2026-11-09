@@ -120,7 +120,7 @@ export const useCasesContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The landing tab. Shows the use case details, which frameworks are linked, and a breakdown of risk levels.',
+      text: 'The landing tab. Shows the use case details, which frameworks are linked, a breakdown of risk levels and the AI apps linked to the use case.',
     },
     {
       type: 'heading',
@@ -175,6 +175,33 @@ export const useCasesContent: ArticleContent = {
     {
       type: 'paragraph',
       text: 'A chronological log of every change made to the use case: who changed what, when, and the old and new values. Useful for audits and internal reviews.',
+    },
+    {
+      type: 'heading',
+      id: 'raci-tab',
+      level: 3,
+      text: 'RACI',
+    },
+    {
+      type: 'paragraph',
+      text: 'Use this tab to see who is responsible, accountable, consulted and informed for the use case. Organizational use cases do not have it. Most roles fill in from data you already keep and change when that data changes:',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { bold: 'Accountable', text: 'The use case owner, including an external owner.' },
+        { bold: 'Responsible', text: 'Team members other than the owner. People assigned to an open task linked to one of the use case\'s framework controls also get this role. Completed or deleted tasks do not count. Tasks linked only to a vendor, model or policy do not count either.' },
+        { bold: 'Consulted', text: 'Approvers in the use case\'s active approval workflow.' },
+        { bold: 'Informed', text: 'Set by hand only.' },
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: 'Hover over a filled role to see where it came from. Admins and Editors can select a role to add or remove it. **Add person** gives another person in the organization a role. Other users see the matrix read-only. An external owner\'s row cannot be changed.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Removing a role overrides the data that gave it. Select the role again to restore it. A warning appears when no person or more than one person is accountable. You can save either way. Use the export menu to download the matrix.',
     },
     {
       type: 'heading',
@@ -384,6 +411,36 @@ export const useCasesContent: ArticleContent = {
     },
     {
       type: 'heading',
+      id: 'linked-ai-apps',
+      level: 2,
+      text: 'Linking AI apps',
+    },
+    {
+      type: 'paragraph',
+      text: 'Link a use case to the AI apps it relies on, so each one shows the other. A use case shows its links in the **Linked AI apps** card on the **Overview** tab. An AI app shows them under **Linked use cases** on its detail page. Organizational use cases cannot be linked. Neither can use cases whose approval is pending or rejected. Changing links takes edit rights on AI apps, which Admins and Editors have by default.',
+    },
+    {
+      type: 'paragraph',
+      text: 'To start a new AI app from a use case:',
+    },
+    {
+      type: 'ordered-list',
+      items: [
+        { text: 'On the **Overview** tab, select **Create AI app from this use case**.' },
+        { text: 'Keep the suggested name or enter another. AI app names must be unique.' },
+        { text: 'Select **Create AI app**.' },
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: 'You get a draft AI app linked to the use case, with its description, its owner and the models on its **Linked models** tab copied over. If the owner has no account in your organization, for example an external owner, you become the owner of the AI app.',
+    },
+    {
+      type: 'paragraph',
+      text: 'To link an existing AI app, open its detail page and select **Add use case** under **Linked use cases**. Select the X next to a use case to remove the link.',
+    },
+    {
+      type: 'heading',
       id: 'roles-and-permissions',
       level: 2,
       text: 'Who can do what',
@@ -396,6 +453,23 @@ export const useCasesContent: ArticleContent = {
         { bold: 'Reviewer', text: 'Read plus approve or reject.' },
         { bold: 'Auditor', text: 'Read only.' },
       ],
+    },
+    {
+      type: 'paragraph',
+      text: 'Your role sets what you can do. Your connection to the use case sets which use cases you can do it on:',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { bold: 'Admins', text: 'Every use case in the organization.' },
+        { bold: 'The owner and team members', text: 'Open the use case and do what their role allows.' },
+        { bold: 'Assignees of a linked task', text: 'Open the use case read-only, while they are assigned to a task linked to one of its framework controls.' },
+        { bold: 'Approvers', text: 'Open the use case read-only, while they are approvers in its active approval workflow.' },
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: 'Other users cannot open or change the use case, including Editors. Assignees and approvers do not see it in their use case list. To link a task to a framework control, you need access to that control\'s use case.',
     },
     {
       type: 'heading',
@@ -425,6 +499,7 @@ export const useCasesContent: ArticleContent = {
         { bold: 'Risk management', text: 'Risks created inside a use case feed into the global register. You can also link existing risks from the risk management page.' },
         { bold: 'Frameworks', text: 'Compliance progress is tracked per use case. Controls and assessments stay scoped to the use case they belong to.' },
         { bold: 'Model inventory', text: 'Link models so there is a clear trail from business process to underlying AI.' },
+        { bold: 'AI apps', text: 'Link the AI apps a use case relies on, or create a draft AI app from the use case.' },
         { bold: 'Vendors', text: 'Vendor risks can be tied to specific use cases.' },
         { bold: 'Dashboard', text: 'The main dashboard rolls up data from every use case: compliance progress, risk distribution, task status.' },
         { bold: 'Evidence hub', text: 'Attach evidence items to use cases for audit readiness.' },
