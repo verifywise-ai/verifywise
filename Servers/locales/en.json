@@ -987,5 +987,22 @@
   "AI app or use case not found": "AI app or use case not found",
   "Link not found": "Link not found",
   "Organizational use cases cannot be linked to an AI app": "Organizational use cases cannot be linked to an AI app",
-  "Use cases that are waiting for approval or were rejected cannot be linked to an AI app": "Use cases that are waiting for approval or were rejected cannot be linked to an AI app"
+  "Use cases that are waiting for approval or were rejected cannot be linked to an AI app": "Use cases that are waiting for approval or were rejected cannot be linked to an AI app",
+  "A questionnaire with this name already exists": "A questionnaire with this name already exists",
+  "rows must be a list of 1 to 1000 rows": "rows must be a list of 1 to 1000 rows",
+  "dry_run must be true or false": "dry_run must be true or false",
+  "Invalid questionnaire ID": "Invalid questionnaire ID",
+  "Questionnaire not found": "Questionnaire not found",
+  "app_ids must be a list of 1 to 1000 valid IDs": "app_ids must be a list of 1 to 1000 valid IDs",
+  "notify_owners must be true or false": "notify_owners must be true or false",
+  "Invalid assessment status": "Invalid assessment status",
+  "Invalid assessment ID": "Invalid assessment ID",
+  "assessment_ids must be a list of 1 to 1000 valid IDs": "assessment_ids must be a list of 1 to 1000 valid IDs",
+  "The default questionnaire cannot be deleted": "The default questionnaire cannot be deleted",
+  "This questionnaire has pending assessments": "This questionnaire has pending assessments",
+  "Assessment not found": "Assessment not found",
+  "Only the app's owner or an editor can answer this assessment": "Only the app's owner or an editor can answer this assessment",
+  "This assessment is already completed": "This assessment is already completed",
+  "This assessment's questionnaire no longer exists": "This assessment's questionnaire no longer exists",
+  "Answer every question with a whole number from 1 to 5": "Answer every question with a whole number from 1 to 5"
 }

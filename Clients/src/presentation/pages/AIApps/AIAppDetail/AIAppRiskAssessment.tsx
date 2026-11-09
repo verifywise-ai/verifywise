@@ -16,6 +16,7 @@ import {
   getRiskLevel,
   scoresFromRiskScore,
 } from "../utils";
+import AIAppAssessmentHistory from "./AIAppAssessmentHistory";
 
 interface AIAppRiskAssessmentProps {
   appId: number;
@@ -169,6 +170,8 @@ export default function AIAppRiskAssessment({ appId, currentRiskScore }: AIAppRi
           </Grid>
         ))}
       </Grid>
+
+      <AIAppAssessmentHistory appId={appId} />
 
       {alert && (
         <Alert variant={alert.variant} body={alert.body} isToast onClick={() => setAlert(null)} />

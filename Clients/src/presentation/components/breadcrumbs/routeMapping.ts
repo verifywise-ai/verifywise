@@ -186,6 +186,7 @@ export const routeMapping: Record<string, string> = {
 
   // AI apps
   "/ai-apps": "AI apps",
+  "/ai-apps/assessments": "Assessments",
 
   // Intake forms
   "/intake-forms": "Intake forms",
@@ -378,6 +379,7 @@ export const routeIconMapping: Record<string, () => React.ReactNode> = {
 
   // AI apps
   "/ai-apps": () => React.createElement(Bot, { size: 14, strokeWidth: 1.5 }),
+  "/ai-apps/assessments": () => React.createElement(Bot, { size: 14, strokeWidth: 1.5 }),
 };
 
 /**

@@ -8,6 +8,7 @@ import {
   createAiAppQuery,
   deleteAiAppByIdQuery,
   getAiAppByIdQuery,
+  getAiAppIdsQuery,
   getAllAiAppsQuery,
   getPolicySuggestionsQuery,
   linkModelsToAiAppQuery,
@@ -19,6 +20,8 @@ import {
 import { AiAppStatus, AiAppPolicyStatus } from "../domain.layer/enums/ai-app-status.enum";
 import { ValidationException } from "../domain.layer/exceptions/custom.exception";
 import { toId } from "../utils/validations/validation.utils";
+
+const MAX_SELECT_ALL_IDS = 1000;
 
 function parseIdParam(req: Request): number {
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
@@ -79,6 +82,45 @@ export async function getAllAiAppsV1(req: Request, res: Response): Promise<any> 
       eventType: "Read",
       description: "failed to list AI apps (v1)",
       functionName: "getAllAiAppsV1",
+      fileName: "aiApp.ctrl.ts",
+      error: error as Error,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+  }
+}
+
+/**
+ * GET /api/v1/ai-apps/ids (#5258): ids matching the list filters, capped at
+ * 1000, behind "Select all".
+ */
+export async function getAiAppIdsV1(req: Request, res: Response): Promise<any> {
+  const { status, lifecycle_stage: stage } = req.query;
+  if (status !== undefined && !Object.values(AiAppStatus).includes(status as AiAppStatus)) {
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid status value")));
+  }
+  if (stage !== undefined && !isLifecycleStage(stage)) {
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid lifecycle stage")));
+  }
+  try {
+    const search =
+      typeof req.query.search === "string" ? req.query.search.trim().slice(0, 200) : "";
+    const result = await getAiAppIdsQuery(
+      req.organizationId!,
+      {
+        status: status as AiAppStatus | undefined,
+        lifecycleStage: stage,
+        search: search || undefined,
+      },
+      MAX_SELECT_ALL_IDS,
+    );
+    return res.status(200).json(STATUS_CODE[200](result));
+  } catch (error) {
+    await logFailure({
+      eventType: "Read",
+      description: "failed to list AI app ids",
+      functionName: "getAiAppIdsV1",
       fileName: "aiApp.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
