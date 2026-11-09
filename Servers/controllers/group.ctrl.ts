@@ -15,6 +15,7 @@ import {
   removeGroupMemberQuery,
   setGroupMembersQuery,
   setProjectGroupsQuery,
+  updateGroupByIdQuery,
 } from "../utils/group.utils";
 
 const FILE_NAME = "group.ctrl.ts";
