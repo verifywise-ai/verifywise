@@ -21,6 +21,7 @@ import {
 
 import authenticateJWT from "../middleware/auth.middleware";
 import authorize from "../middleware/accessControl.middleware";
+import { requireProjectAccess } from "../middleware/projectAccess.middleware";
 import {
   classifyUseCase,
   getUseCaseClassification,
@@ -47,8 +48,16 @@ router.get(
   validateProjectIdParam,
   getVendorRisksCalculations,
 );
+// Not behind requireProjectAccess: a task assignee who is not a member reaches
+// this from the emailed link to an EU AI Act requirement of the use case.
 router.get("/:id", authenticateJWT, validateProjectIdParam, getProjectById);
-router.get("/stats/:id", authenticateJWT, validateProjectIdParam, getProjectStatsById);
+router.get(
+  "/stats/:id",
+  authenticateJWT,
+  validateProjectIdParam,
+  requireProjectAccess(),
+  getProjectStatsById,
+);
 
 router.get("/complainces/:projid", authenticateJWT, validateProjectProjIdParam, getCompliances);
 
@@ -81,6 +90,7 @@ router.post(
   authenticateJWT,
   validateProjectIdParam,
   authorize("useCase.classify"),
+  requireProjectAccess(),
   classifyUseCase,
 );
 // router.post("/saveControls", authenticateJWT, saveControls);
@@ -98,6 +108,7 @@ router.patch(
   authenticateJWT,
   authorize("useCase.edit"),
   validateUpdateProjectStatus,
+  requireProjectAccess(),
   updateProjectStatus,
 );
 
@@ -107,6 +118,7 @@ router.delete(
   authenticateJWT,
   authorize("useCase.edit"),
   validateProjectIdParam,
+  requireProjectAccess(),
   deleteProjectById,
 );
 

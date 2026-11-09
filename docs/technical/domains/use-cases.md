@@ -215,6 +215,27 @@ Read models: `GET /api/v1/use-case-lifecycle/summary` (stale ids and the interva
 | GET | `/projects/calculateProjectRisks/:id` | Project risks |
 | GET | `/projects/calculateVendorRisks/:id` | Vendor risks |
 
+### Access to a single use case
+
+A permission such as `useCase.edit` says what a role may do, not on which use case. `requireProjectAccess` (`middleware/projectAccess.middleware.ts`) adds the use case: the caller must be an Admin, its owner or a member, the rule that scopes the use case list (`projectVisibilitySql`). It runs after authentication and param validation.
+
+| Guarded route |
+|---------------|
+| `DELETE /api/projects/:id` |
+| `PATCH /api/projects/:id/status` |
+| `POST /api/projects/:id/eu-ai-act-classification` |
+| `GET /api/projects/stats/:id` |
+| `POST /api/v1/use-case-lifecycle/:id/go-live`, `/retire`, `/confirm` |
+| `PATCH /api/v1/use-case-lifecycle/:id/department` |
+
+- **No access:** 403 with "Access denied", logged with `logFailure`, nothing written. A refused write also reaches the event log; a refused `GET` only reaches the file log, because `logFailure` skips the event log for `Read`. Never use a detail listed in `SESSION_DENIED_DETAILS` (`customAxios.ts`): those end the user's session.
+- **Not found or another organization:** passed on, so the controller answers its 404.
+- **An error in the check:** 500, never allowed.
+- **Adds to route rules, does not replace them.** The lifecycle rule (`useCase.edit` or owner, Auditors never) and the `useCase.edit` / `useCase.classify` checks still apply.
+- **`PATCH /api/projects/:id` and `PATCH /api/v1/projects/:id`** keep their own check in `updateProjectById` (`canViewProjectQuery`), inside the update's transaction.
+- **`GET /api/projects/:id` is not guarded.** A task can be assigned to anyone in the organization and linked to an EU AI Act requirement; its email links to `/project-view`, which needs this read, and EU AI Act requirements have no page outside the use case. Scoping the read needs a decision on those users first. A refused or failed load shows the empty state in `ProjectView`.
+- **MCP tools** call services directly and are not behind this guard.
+
 ## Create Project
 
 ### Request
@@ -289,7 +310,7 @@ PATCH /projects/:id
 
 ### Access
 
-The caller needs the `useCase.edit` permission and must be able to see the use case: an Admin, its owner or a member. Anyone else gets 403 and nothing is written.
+The caller needs the `useCase.edit` permission and must be able to see the use case: an Admin, its owner or a member. Anyone else gets 403 and nothing is written. See [Access to a single use case](#access-to-a-single-use-case).
 
 ### Processing
 
