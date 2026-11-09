@@ -177,7 +177,7 @@ export function parseDataset(
     unreadableOutcomeCount,
     unreadableScoreCount,
     blankOutcomeCount,
-    unmatchedDemographics: normalizer?.finish(records) ?? {},
+    unmatchedDemographics: normalizer?.unmatched() ?? {},
     namedColumnCount: namedColumns,
     wrongWidthRowCount,
   };

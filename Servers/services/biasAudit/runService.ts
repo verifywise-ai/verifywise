@@ -114,8 +114,8 @@ const MAX_NAMED_VALUES = 25;
  * would refuse valid data such as a non-binary category, and a warning would
  * withhold the export for it. It is printed with the run's other findings.
  *
- * Only values that look like category labels are named here (demographics.ts);
- * the dataset is not retained, so anything else is stored as a count.
+ * Only recognized labels are named here (demographics.ts); the dataset is not
+ * retained, so anything else is stored as a count.
  */
 function unmatchedValueNotes(unmatched: Record<string, UnmatchedColumn>): GateFinding[] {
   return Object.entries(unmatched).map(([column, { named, otherRecords }]) => {
@@ -129,17 +129,15 @@ function unmatchedValueNotes(unmatched: Record<string, UnmatchedColumn>): GateFi
       const more =
         named.length > MAX_NAMED_VALUES ? `, and ${named.length - MAX_NAMED_VALUES} more` : "";
       parts.push(
-        `${namedRecords} record(s) in the "${column}" column have a value that matches none of ` +
-          `this module's categories: ${list}${more}. Each value is kept as its own group in the ` +
-          `calculations. Check that it is a category you meant to report, not a typo or another ` +
-          `way of writing a listed one.`,
+        `${namedRecords} record(s) in the "${column}" column have a recognized value outside ` +
+          `this module's category list: ${list}${more}. Each is reported as its own group.`,
       );
     }
     if (otherRecords > 0) {
       parts.push(
         `${otherRecords} record(s) in the "${column}" column had other values that are not ` +
-          `shown, because they do not look like category labels. They are counted as an unknown ` +
-          `category. Check the column mapping if this is unexpected.`,
+          `shown, because they are not on the module's list of recognized labels. They are ` +
+          `counted as an unknown category. Check the column mapping if this is unexpected.`,
       );
     }
     return {

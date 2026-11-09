@@ -326,6 +326,22 @@ describe("demographic values", () => {
     expect(out.outcome.gates.findings.some((f) => f.severity !== "note")).toBe(false);
   });
 
+  it("applies the 2% exclusion to a small non-binary group, which stays a group", async () => {
+    await run({ csv: csvWith((i) => (i % 100 === 0 ? "non-binary" : i % 2 ? "Male" : "Female")) });
+    const row = sexTable().rows.find(
+      (r: { categoryName: string }) => r.categoryName === "Non-binary",
+    );
+    expect(row).toMatchObject({ applicantCount: 3, excluded: true, impactRatio: null });
+    expect(unmatchedNote().detail).toMatchObject({ namedRecords: 3, otherRecords: 0 });
+  });
+
+  it("does not keep a name, however many rows carry it", async () => {
+    await run({ csv: csvWith((i) => (i < 10 ? "Jane Doe" : i % 2 ? "Male" : "Female")) });
+    expect(JSON.stringify(stored())).not.toContain("Jane Doe");
+    expect(unmatchedNote().detail).toMatchObject({ otherRecords: 10, values: [] });
+    expect(stored().resultJson.unknownCount).toBe(10);
+  });
+
   it("stores only a count for values that do not look like category labels", async () => {
     await run({
       csv: csvWith((i) =>
