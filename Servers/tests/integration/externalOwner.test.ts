@@ -544,16 +544,21 @@ describe("external use case owners", () => {
       expect((await ownerRow(projectId)).owner).toBe(memberId);
     });
 
-    it("leaves other legacy edits on an externally owned row ungated", async () => {
+    it("denies an unrelated Editor other legacy edits on an externally owned row", async () => {
       const orgId = await createTestOrganization();
       const adminId = await admin(orgId);
       const projectId = await createExternal(orgId, adminId);
       const stranger = await editor(orgId);
       const api = await apiAs(orgId, stranger, "Editor");
 
-      await api.patch(`/api/projects/${projectId}`).send({ goal: "Updated" }).expect(202);
-      await api.patch(`/api/projects/${projectId}`).send({ owner: null }).expect(202);
+      await api.patch(`/api/projects/${projectId}`).send({ goal: "Hijacked" }).expect(403);
+      await api.patch(`/api/projects/${projectId}`).send({ owner: null }).expect(403);
+
       expect((await ownerRow(projectId)).external_owner_email).toBe("ada@example.com");
+      const [rows] = await sequelize.query(`SELECT goal FROM projects WHERE id = :projectId`, {
+        replacements: { projectId },
+      });
+      expect((rows as { goal: string | null }[])[0].goal).not.toBe("Hijacked");
     });
 
     it("guards the shared service: no role is not trusted, SuperAdmin passes", async () => {
@@ -605,17 +610,6 @@ describe("external use case owners", () => {
         await api.patch(`/api/v1/projects/${projectId}`).send(external).expect(202);
         expect((await ownerRow(projectId)).external_owner_email).toBe("eve@example.com");
       }
-    });
-
-    it("does not gate the legacy route", async () => {
-      const orgId = await createTestOrganization();
-      const ownerId = await editor(orgId);
-      const projectId = await createTestProject(orgId, ownerId);
-      const stranger = await editor(orgId);
-      const api = await apiAs(orgId, stranger, "Editor");
-
-      await api.patch(`/api/projects/${projectId}`).send({ owner: stranger }).expect(202);
-      expect((await ownerRow(projectId)).owner).toBe(stranger);
     });
   });
 

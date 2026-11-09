@@ -287,6 +287,10 @@ PATCH /projects/:id
 }
 ```
 
+### Access
+
+The caller needs the `useCase.edit` permission and must be able to see the use case: an Admin, its owner or a member. Anyone else gets 403 and nothing is written.
+
 ### Processing
 
 1. Get current project state
@@ -327,8 +331,8 @@ A use case can instead be owned by someone with no account (#5256): a name and e
 
 - **API.** External owners exist only on `POST /api/v1/projects` and `PATCH /api/v1/projects/:id` (`routes/v1/projects.route.ts`), thin adapters over the same controllers with their own validators. Reads stay on the legacy routes. On legacy `POST /api/projects` and `PATCH /api/projects/:id` the contract is unchanged: `owner` stays required on create, `owner: null` still clears it on update, and `external_owner_*` are ignored. The router sets `res.locals.acceptsExternalOwner`; without it the controllers drop those fields. A legacy update that sets a numeric owner on an externally owned row clears the external fields, so a row never has both.
 - **Either a user or an external owner, never both.** Selecting one clears the other. `utils/externalOwner.utils.ts` (`resolveOwnerForCreate`, `resolveOwnerForUpdate`) enforces this, normalises the email to lowercase and, on v1, rejects a write that would leave no owner. A partial update that does not mention ownership is left alone. `owner: null` on a row with no user owner (external, or its user was deleted) is a no-op.
-- **Writing on v1 needs access to the use case.** Every `PATCH /api/v1/projects/:id` requires being an Admin, the owner or a member, the rule that scopes the use case list; `useCase.edit` alone is a 403, with no write and no email.
-- **Replacing an external owner on legacy needs the same access.** `updateUseCaseService` applies that check when an update would clear or replace an existing external owner, so `PATCH /api/projects/:id` and the MCP update tool inherit it. Other edits, and rows with no external owner, behave as before.
+- **Writing needs access to the use case.** `updateProjectById` requires being an Admin, the owner or a member, the rule that scopes the use case list, on both `PATCH /api/v1/projects/:id` and `PATCH /api/projects/:id`; `useCase.edit` alone is a 403, with no write and no email.
+- **The MCP update tool has its own check for external owners.** It calls `updateUseCaseService` directly, without the controller, so the service applies the same access rule when an update would clear or replace an existing external owner. Other MCP edits, and rows with no external owner, behave as before.
 - **Nobody loses access when a use case moves to an external owner.** Non-Admins see a use case only as owner or member, so the previous non-Admin owner and a non-Admin who makes the change are added to `projects_members` in the same transaction, as is a non-Admin who creates a use case with an external owner.
 - **No database CHECK requires an owner.** `owner` is `ON DELETE SET NULL`, so such a CHECK would make deleting a user fail. A row can therefore have neither kind of owner after its user is deleted.
 - **External owners never gain access.** Every access check compares `owner` to a user id, and SQL `NULL = :userId` matches nothing. They are not in `projects_members`, and they cannot sign in.

@@ -56,7 +56,7 @@ export default function InsightsPage() {
           getToolsByEvents(period, 6),
           getToolsByUsers(period, 6),
           getUsersByDepartment(period),
-          getTools({ sort_by: "risk_score", order: "desc", limit: 5 }),
+          getTools({ sort: "risk", limit: 5 }),
         ]);
         if (controller.signal.aborted) return;
         setSummary(summaryData);

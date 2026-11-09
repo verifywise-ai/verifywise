@@ -2,9 +2,9 @@ import { Request, Response } from "express";
 
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import {
-  canViewProjectQuery,
   calculateProjectRisks,
   calculateVendirRisks,
+  canViewProjectQuery,
   countAnswersByProjectId,
   countSubControlsByProjectId,
   getAllProjectsQuery,
@@ -468,30 +468,29 @@ export async function updateProjectById(req: Request, res: Response): Promise<an
       return res.status(404).json(STATUS_CODE[404]({}));
     }
 
-    const updatedProject: Partial<ProjectModel> & { members?: number[] } = updateData;
-
-    // Only /api/v1/projects accepts external owners; the legacy body is frozen.
-    const acceptsExternalOwner = res.locals?.acceptsExternalOwner === true;
-    if (!acceptsExternalOwner) stripExternalOwnerFields(updatedProject);
-
-    // v1 also requires being able to see the use case, so useCase.edit alone
-    // cannot add oneself to a team or hand a use case to an outside address.
+    // The useCase.edit permission alone would let an Editor change any use case
+    // in the organization, including adding themselves as a member.
     if (
-      acceptsExternalOwner &&
       !(await canViewProjectQuery(projectId, { userId, role }, req.organizationId!, transaction))
     ) {
       await transaction.rollback();
       await logFailure({
         eventType: "Update",
-        description: `Denied update of project ID ${projectId}: no access to the use case`,
+        description: `Update refused, no access to project ID ${projectId}`,
         functionName: "updateProjectById",
         fileName: "project.ctrl.ts",
-        error: new Error("Forbidden"),
-        userId: req.userId!,
+        error: new Error("Access denied"),
+        userId,
         organizationId: req.organizationId!,
       });
       return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
     }
+
+    const updatedProject: Partial<ProjectModel> & { members?: number[] } = updateData;
+
+    // Only /api/v1/projects accepts external owners; the legacy body is frozen.
+    const acceptsExternalOwner = res.locals?.acceptsExternalOwner === true;
+    if (!acceptsExternalOwner) stripExternalOwnerFields(updatedProject);
 
     const { useCase: project, currentMembers } = await updateUseCaseService(
       projectId,
