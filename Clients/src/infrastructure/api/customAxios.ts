@@ -156,7 +156,12 @@ const getEnvelopeErrorMessage = (data: ApiErrorEnvelope): string | undefined => 
 // Endpoints whose UI already renders its own error message (e.g. the login
 // page shows an inline alert). Skip the global toast for these so users don't
 // see duplicate notifications.
-const ENDPOINTS_WITH_CUSTOM_ERROR_UI = ["/users/login", "/users/invitations/accept"];
+const ENDPOINTS_WITH_CUSTOM_ERROR_UI = [
+  "/users/login",
+  "/users/invitations/accept",
+  // A taken name is shown on the modal's name field, not as a toast.
+  "/create-ai-app",
+];
 
 // Endpoints authorized by the token in an emailed link (invitation, password
 // reset), which the page sends itself, not by the session token.

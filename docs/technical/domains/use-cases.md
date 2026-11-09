@@ -381,9 +381,12 @@ Project
 ├── Vendors ──────────────────────── M:N via vendors_projects
 ├── Models ───────────────────────── 1:N
 ├── Files ────────────────────────── 1:N
+├── AI Apps ──────────────────────── M:N via ai_apps_projects
 ├── Approval Workflow ────────────── N:1 (optional)
 └── Change History ───────────────── 1:N
 ```
+
+**Linked AI apps (#5259).** `ai_apps_projects` links use cases and AI apps (`utils/aiAppProject.utils.ts`). `GET /api/v1/projects/:id/ai-apps` lists a use case's AI apps; `GET /api/v1/ai-apps/:id/use-cases` lists an AI app's use cases the caller can see, plus `hidden_count` for the rest; `POST` to that path (`{ project_id }`, idempotent) and `DELETE .../:projectId` change the links. `POST /api/v1/projects/:id/create-ai-app` creates a draft AI app in one transaction, copying the title (or `{ name }`), description, `is_demo`, the distinct models in `model_inventories_projects_frameworks`, and the owner when they belong to the organization, otherwise the caller (external owners leave `owner` null); `GET` on that path returns the `model_count` for the confirmation modal. Writes need `aiApp.edit`. A use case the caller cannot see (`projectVisibilitySql`) answers 404, organizational use cases cannot be linked (400), and a taken AI app name answers 409. Create, link and unlink are recorded in `ai_app_change_history`.
 
 ## Change History
 

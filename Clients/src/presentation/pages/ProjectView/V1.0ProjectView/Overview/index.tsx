@@ -30,6 +30,7 @@ import {
 import { brand } from "../../../../themes/palette";
 import { singleTheme } from "../../../../themes";
 import UseCaseLifecyclePanel from "./UseCaseLifecyclePanel";
+import LinkedAiAppsCard from "./LinkedAiAppsCard";
 
 /**
  * A use case whose approval request is pending or rejected has every tab in the
@@ -366,6 +367,7 @@ const VWProjectOverview = ({
             </>
           )}
         </Stack>
+        {!project.is_organizational && <LinkedAiAppsCard project={project} />}
         <Stack className="vw-project-overview-frameworks" sx={{ width: "100%", gap: 2, mb: 10 }}>
           {project ? (
             <>

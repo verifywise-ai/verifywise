@@ -118,6 +118,32 @@ export interface IPolicySuggestion {
   suggested: boolean;
 }
 
+/** An AI app linked to a use case (GET /v1/projects/:id/ai-apps). */
+export interface ILinkedAiApp {
+  id: number;
+  name: string;
+  status: string;
+  lifecycle_stage: string;
+}
+
+export interface ILinkedUseCase {
+  id: number;
+  uc_id: string | null;
+  project_title: string;
+  status: string;
+}
+
+/** GET /v1/ai-apps/:id/use-cases: the use cases the caller can see, and how many others. */
+export interface IAIAppUseCases {
+  use_cases: ILinkedUseCase[];
+  hidden_count: number;
+}
+
+/** What creating an AI app from a use case would copy (GET /v1/projects/:id/create-ai-app). */
+export interface ICreateAiAppPreview {
+  model_count: number;
+}
+
 export interface IGetAiAppsFilters {
   status?: AiAppStatus;
   /** Set to list one lifecycle stage; served by GET /api/v1/ai-apps. */
