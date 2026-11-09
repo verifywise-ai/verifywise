@@ -224,6 +224,32 @@ describe("dataCollector", () => {
       expect(custom!.color).toBe(text.icon);
     });
 
+    it("shows the owner name the project query resolved, including an external owner", async () => {
+      mockGetProject.mockResolvedValue({
+        project_title: "Test",
+        owner: null,
+        is_organizational: false,
+        dataValues: { owner_name: "Ada (external)" },
+      } as any);
+
+      const result = await createDataCollector(10, 1, 1, 100, 5).collectAllData([]);
+
+      expect(result.metadata.projectOwner).toBe("Ada (external)");
+    });
+
+    it("reports Unknown when the project query found no owner", async () => {
+      mockGetProject.mockResolvedValue({
+        project_title: "Test",
+        owner: null,
+        is_organizational: false,
+        dataValues: { owner_name: "Unassigned" },
+      } as any);
+
+      const result = await createDataCollector(10, 1, 1, 100, 5).collectAllData([]);
+
+      expect(result.metadata.projectOwner).toBe("Unknown");
+    });
+
     it("should handle missing project owner gracefully", async () => {
       mockGetProject.mockResolvedValue({
         project_title: "Test",

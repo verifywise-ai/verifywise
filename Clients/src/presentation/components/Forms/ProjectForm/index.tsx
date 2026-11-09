@@ -1,3 +1,11 @@
+import {
+  EXTERNAL_OWNER_OPTION,
+  EXTERNAL_OWNER_OPTION_ID,
+  externalOwnerPayload,
+  ownerSelectValue,
+  validateExternalOwner,
+} from "../../../../application/utils/externalOwner";
+import ExternalOwnerFields from "../../ExternalOwner/ExternalOwnerFields";
 import { Alert, Box, SelectChangeEvent, Stack, Typography, useTheme } from "@mui/material";
 import { TabContext } from "@mui/lab";
 import { X as ClearIcon } from "lucide-react";
@@ -95,7 +103,9 @@ export const ProjectForm = ({
     if (projectToEdit) {
       return {
         project_title: projectToEdit.project_title || "",
-        owner: projectToEdit.owner || 0,
+        owner: ownerSelectValue(projectToEdit),
+        external_owner_name: projectToEdit.external_owner_name || "",
+        external_owner_email: projectToEdit.external_owner_email || "",
         members: [], // Will be populated in useEffect when users data is available
         start_date: projectToEdit.start_date || "",
         ai_risk_classification: projectToEdit.ai_risk_classification || null,
@@ -150,9 +160,18 @@ export const ProjectForm = ({
         return r.accepted ? "" : r.message;
       },
       owner: (v: unknown) => {
+        if (v === EXTERNAL_OWNER_OPTION_ID) return "";
         const r = selectValidation("Owner", v as number);
         return r.accepted ? "" : r.message;
       },
+      external_owner_name: (v: unknown, vals: FormValues) =>
+        vals.owner === EXTERNAL_OWNER_OPTION_ID
+          ? (validateExternalOwner(v as string, vals.external_owner_email).name ?? "")
+          : "",
+      external_owner_email: (v: unknown, vals: FormValues) =>
+        vals.owner === EXTERNAL_OWNER_OPTION_ID
+          ? (validateExternalOwner(vals.external_owner_name, v as string).email ?? "")
+          : "",
       geography: (v: unknown) => {
         const r = selectValidation("Geography", v as number);
         return r.accepted ? "" : r.message;
@@ -485,6 +504,11 @@ export const ProjectForm = ({
           last_updated_by: userInfo?.id,
           members: teamMember,
           enable_ai_data_insertion: values.enable_ai_data_insertion,
+          ...externalOwnerPayload(
+            values.owner,
+            values.external_owner_name,
+            values.external_owner_email,
+          ),
         };
 
         // Add AI-specific fields only when EU AI Act is selected
@@ -819,7 +843,7 @@ export const ProjectForm = ({
               </Suspense>
             </Stack>
 
-            {/* Row 2: Owner | Status */}
+            {/* Row 2: Owner | Status (external owner details below when selected) */}
             <Stack
               className="vwproject-form-row"
               sx={{ flexDirection: { xs: "column", md: "row" }, gap: 6 }}
@@ -831,13 +855,14 @@ export const ProjectForm = ({
                 value={values.owner || ""}
                 onChange={handleOnSelectChange("owner")}
                 onBlur={handleFieldBlur("owner")}
-                items={
-                  users?.map((user: any) => ({
+                items={[
+                  ...(users?.map((user: any) => ({
                     _id: user.id,
                     name: `${user.name} ${user.surname}`,
                     email: user.email,
-                  })) || []
-                }
+                  })) || []),
+                  EXTERNAL_OWNER_OPTION,
+                ]}
                 sx={{
                   flex: 1,
                   backgroundColor: theme.palette.background.main,
@@ -863,6 +888,22 @@ export const ProjectForm = ({
                 error={errors.status}
               />
             </Stack>
+            {values.owner === EXTERNAL_OWNER_OPTION_ID && (
+              <ExternalOwnerFields
+                name={values.external_owner_name}
+                email={values.external_owner_email}
+                nameError={errors.external_owner_name}
+                emailError={errors.external_owner_email}
+                onNameChange={(value) => {
+                  setValues((prev) => ({ ...prev, external_owner_name: value }));
+                  clearFieldError("external_owner_name");
+                }}
+                onEmailChange={(value) => {
+                  setValues((prev) => ({ ...prev, external_owner_email: value }));
+                  clearFieldError("external_owner_email");
+                }}
+              />
+            )}
 
             {/* Row 3: Start date | Geography */}
             <Stack

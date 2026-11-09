@@ -7,7 +7,7 @@ import { brand, text } from "../../../themes/palette";
 
 interface InfoCardProps {
   title: string;
-  body: string;
+  body: ReactNode;
   icon?: ReactNode;
   actionIcon?: ReactNode;
   actionTooltip?: string;

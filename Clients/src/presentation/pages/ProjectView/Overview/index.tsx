@@ -2,6 +2,7 @@
  * This file is currently in use
  */
 
+import ExternalOwnerName from "../../../components/ExternalOwner/ExternalOwnerName";
 import { Stack, Typography, useTheme } from "@mui/material";
 import ProgressBar from "../../../components/ProjectCard/ProgressBar";
 import { FC, memo, useCallback, useMemo } from "react";
@@ -124,7 +125,13 @@ const Overview: FC<OverviewProps> = memo(({ projectRisksSummary }) => {
         <Stack direction="row" spacing={18} sx={{ pb: "31px" }}>
           <Stack sx={styles.block}>
             <Typography sx={styles.title}>Owner</Typography>
-            <Typography sx={styles.value}>{projectOwner}</Typography>
+            <Typography sx={styles.value}>
+              {project?.external_owner_name ? (
+                <ExternalOwnerName name={project.external_owner_name} />
+              ) : (
+                projectOwner
+              )}
+            </Typography>
           </Stack>
           <Stack sx={styles.block}>
             <Typography sx={styles.title}>Last updated</Typography>

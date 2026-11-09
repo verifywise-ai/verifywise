@@ -103,6 +103,7 @@ jest.mock("../../domain.layer/models/project/project.model", () => ({
 jest.mock("../../domain.layer/exceptions/custom.exception", () => ({
   ValidationException: class ValidationException extends Error {},
   BusinessLogicException: class BusinessLogicException extends Error {},
+  ForbiddenException: class ForbiddenException extends Error {},
 }));
 jest.mock("../../services/projects/approvalRequest.service", () => ({
   ...jest.requireActual("../../services/projects/approvalRequest.service"),
@@ -483,6 +484,7 @@ describe("project.ctrl", () => {
         undefined,
         1,
         expect.anything(),
+        { requireOwner: false },
       );
     });
     it("rolls back its transaction when the row is gone at update time", async () => {
@@ -516,7 +518,9 @@ describe("project.ctrl", () => {
       const req = createReq({ params: { id: "1" }, body: { project_title: "P2", members: null } });
       const res = createRes();
       await updateProjectById(req, res);
-      expect(mockUpdate).toHaveBeenCalledWith(1, expect.anything(), [], 1, expect.anything());
+      expect(mockUpdate).toHaveBeenCalledWith(1, expect.anything(), [], 1, expect.anything(), {
+        requireOwner: false,
+      });
     });
     it("passes an explicit empty members list through, so members can still be cleared", async () => {
       const existing = { ...buildProject(), owner: 1 };
@@ -527,7 +531,9 @@ describe("project.ctrl", () => {
       const req = createReq({ params: { id: "1" }, body: { project_title: "P2", members: [] } });
       const res = createRes();
       await updateProjectById(req, res);
-      expect(mockUpdate).toHaveBeenCalledWith(1, expect.anything(), [], 1, expect.anything());
+      expect(mockUpdate).toHaveBeenCalledWith(1, expect.anything(), [], 1, expect.anything(), {
+        requireOwner: false,
+      });
     });
     it("records member changes in the use case history, ignoring order", async () => {
       const existing = { ...buildProject(), owner: 1 };

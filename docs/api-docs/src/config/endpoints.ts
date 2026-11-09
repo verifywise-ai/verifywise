@@ -12552,6 +12552,32 @@ export const v1V1lifecycleSettingsEndpoints: Endpoint[] = [
   },
 ];
 
+// v1: V1/Projects endpoints
+export const v1V1projectsEndpoints: Endpoint[] = [
+  {
+    method: 'POST',
+    path: '/v1/projects',
+    summary: "Create Project",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Projects",
+  },
+  {
+    method: 'PATCH',
+    path: '/v1/projects/{id}',
+    summary: "Update Project By Id",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Projects",
+  },
+];
+
 // v1: V1/Use Case Lifecycle endpoints
 export const v1V1useCaseLifecycleEndpoints: Endpoint[] = [
   {
@@ -12986,6 +13012,7 @@ export const allEndpoints = {
   v1V1dashboard: v1V1dashboardEndpoints,
   v1V1intakeFormReviewTime: v1V1intakeFormReviewTimeEndpoints,
   v1V1lifecycleSettings: v1V1lifecycleSettingsEndpoints,
+  v1V1projects: v1V1projectsEndpoints,
   v1V1useCaseLifecycle: v1V1useCaseLifecycleEndpoints,
   vendor: vendorEndpoints,
   vendorRisk: vendorRiskEndpoints,

@@ -13,6 +13,8 @@ export interface FormValues {
 export interface CreateProjectFormValues {
   project_title: string;
   owner: number;
+  external_owner_name: string;
+  external_owner_email: string;
   members: CreateProjectFormUserModel[];
   start_date: string;
   ai_risk_classification: number;

@@ -1,3 +1,4 @@
+import { externalOwnerLabel } from "../../../../application/utils/externalOwner";
 import type { Node, Edge } from "@xyflow/react";
 import { Position, MarkerType } from "@xyflow/react";
 import type { EntityGraphData } from "../../../../application/repository/entityGraph.repository";
@@ -179,7 +180,12 @@ export function generateNodesAndEdges(
         {
           sublabel: uc.project_title,
           hasHighRisk: hasRisk,
-          rawData: { ...uc, owner_name: getUserName(uc.owner) },
+          rawData: {
+            ...uc,
+            owner_name: uc.external_owner_name
+              ? externalOwnerLabel(uc.external_owner_name)
+              : getUserName(uc.owner ?? undefined),
+          },
         },
       );
     });

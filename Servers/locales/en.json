@@ -972,5 +972,10 @@
   "Only a live AI app can be confirmed as still live": "Only a live AI app can be confirmed as still live",
   "Invalid lifecycle stage": "Invalid lifecycle stage",
   "An AI app with this name already exists": "An AI app with this name already exists",
-  "AI app requests cannot carry accepted risk suggestions": "AI app requests cannot carry accepted risk suggestions"
+  "AI app requests cannot carry accepted risk suggestions": "AI app requests cannot carry accepted risk suggestions",
+  "A use case needs an owner or an external owner": "A use case needs an owner or an external owner",
+  "A use case cannot have both an owner and an external owner": "A use case cannot have both an owner and an external owner",
+  "An external owner needs both a name and an email": "An external owner needs both a name and an email",
+  "External owner name is not valid": "External owner name is not valid",
+  "External owner email is not valid": "External owner email is not valid"
 }

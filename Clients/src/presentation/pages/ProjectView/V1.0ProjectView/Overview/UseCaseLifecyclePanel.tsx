@@ -47,7 +47,12 @@ const UseCaseLifecyclePanel = ({
   const canEditUseCases = permissions
     ? permissions.includes("useCase.edit")
     : canEditUseCasesByRole(userRoleName);
-  const canManage = canManageLifecycle(userRoleName, userId, project.owner, canEditUseCases);
+  const canManage = canManageLifecycle(
+    userRoleName,
+    userId,
+    project.owner ?? undefined,
+    canEditUseCases,
+  );
   const stage = project.lifecycle_stage ?? LifecycleStage.PLANNED;
 
   const saveDepartment = async () => {
