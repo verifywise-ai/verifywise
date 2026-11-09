@@ -8,22 +8,31 @@ import {
   Stack,
   Typography,
   Box,
-  IconButton,
   CircularProgress,
-  TextField,
   Checkbox,
   FormControlLabel,
   Radio,
   RadioGroup,
   Chip,
-  Button,
-  Select,
-  MenuItem,
 } from "@mui/material";
 import { Trash2, Upload, FileText, Check, X } from "lucide-react";
+import { CustomizableButton } from "../../../components/button/customizable-button";
+import Field from "../../../components/Inputs/Field";
+import Select from "../../../components/Inputs/Select";
 import { LifecycleItem, LifecycleValue } from "./useModelLifecycle";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import type CustomException from "../../../../infrastructure/exceptions/customeException";
+import {
+  background,
+  border,
+  border as borderPalette,
+  brand,
+  editor,
+  icon,
+  status,
+  text,
+} from "../../../themes/palette";
+import { textStyles } from "../../../themes/typography";
 
 // User type for dropdown
 interface User {
@@ -31,6 +40,20 @@ interface User {
   name: string;
   surname: string;
   email: string;
+}
+
+function toUserOption(user: User) {
+  const givenName = user.name?.trim() ?? "";
+  const fullName = `${givenName} ${user.surname || ""}`.trim();
+  if (!givenName) {
+    return { _id: user.id, name: fullName || user.email, email: user.email };
+  }
+  return {
+    _id: user.id,
+    name: givenName,
+    surname: user.surname,
+    email: user.email,
+  };
 }
 
 // Custom hook for fetching users
@@ -65,62 +88,23 @@ function useUsers() {
 // ============================================================================
 
 const VW_COLORS = {
-  primary: "#13715B",
-  primaryDark: "#0F5A47",
-  textPrimary: "#1c2130",
-  textSecondary: "#344054",
-  textTertiary: "#475467",
-  textAccent: "#838c99",
-  bgMain: "#FFFFFF",
-  bgAlt: "#FCFCFD",
-  bgFill: "#F4F4F4",
-  bgAccent: "#f9fafb",
+  primary: brand.primary,
+  textSecondary: text.secondary,
+  textTertiary: text.tertiary,
+  textAccent: text.accent,
+  bgMain: background.main,
+  bgAccent: background.alt,
   borderLight: "#eaecf0",
-  borderDark: "#d0d5dd",
+  borderDark: borderPalette.dark,
   error: "#f04438",
-  errorBg: "#FEE2E2",
-  success: "#079455",
+  errorBg: editor.imageErrorBg,
+  success: status.success.strong,
   successBg: "#ecfdf3",
 };
 
-const VW_TYPOGRAPHY = {
-  fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
-  fontSize: 13,
-};
-
-// Shared input styles
-const vwInputSx = {
-  "& .MuiInputBase-root": {
-    fontFamily: VW_TYPOGRAPHY.fontFamily,
-    fontSize: "13px",
-    borderRadius: "4px",
-  },
-  "& .MuiOutlinedInput-root": {
-    "& fieldset": { borderColor: VW_COLORS.borderDark },
-    "&:hover fieldset": { borderColor: VW_COLORS.primary },
-    "&.Mui-focused fieldset": { borderColor: VW_COLORS.primary },
-  },
-};
-
-const vwButtonOutlined = {
-  "textTransform": "none" as const,
-  "fontWeight": 500,
-  "fontSize": "13px",
-  "fontFamily": VW_TYPOGRAPHY.fontFamily,
-  "borderRadius": "4px",
-  "borderColor": VW_COLORS.borderDark,
-  "color": VW_COLORS.textSecondary,
-  "&:hover": {
-    borderColor: VW_COLORS.primary,
-    color: VW_COLORS.primary,
-    backgroundColor: "rgba(19, 113, 91, 0.04)",
-  },
-};
-
 const vwChipSx = {
-  fontFamily: VW_TYPOGRAPHY.fontFamily,
-  fontSize: "12px",
-  fontWeight: 500,
+  ...textStyles.bodyLarge,
+  color: text.secondary,
   borderRadius: "4px",
 };
 
@@ -252,7 +236,7 @@ function TextFieldRenderer({
   }, [text, modelId, item.id, onValueChanged]);
 
   return (
-    <TextField
+    <Field
       placeholder={config?.placeholder || `Enter ${item.name.toLowerCase()}`}
       value={text}
       onChange={(e) => {
@@ -260,14 +244,11 @@ function TextFieldRenderer({
         setText(e.target.value);
       }}
       onBlur={handleBlur}
-      multiline={multiline}
       rows={multiline ? 3 : undefined}
-      size="small"
-      fullWidth
-      sx={vwInputSx}
+      width="100%"
       InputProps={{
         endAdornment: saving ? (
-          <CircularProgress size={14} sx={{ color: VW_COLORS.primary }} />
+          <CircularProgress size={14} sx={{ color: icon.brand }} />
         ) : undefined,
       }}
     />
@@ -357,41 +338,45 @@ function DocumentsFieldRenderer({
   );
 
   return (
-    <Stack sx={{ gap: "12px" }}>
+    <Stack sx={{ gap: 6 }}>
       {files.length > 0 && (
-        <Stack sx={{ gap: "8px" }}>
+        <Stack sx={{ gap: 4 }}>
           {files.map((file) => (
             <Stack
               key={file.id}
               direction="row"
               alignItems="center"
               sx={{
-                gap: "10px",
-                p: "10px 12px",
+                gap: 4,
+                pt: 4,
+                pb: 4,
+                pl: 6,
+                pr: 6,
                 borderRadius: "4px",
-                border: `1px solid ${VW_COLORS.borderLight}`,
-                backgroundColor: VW_COLORS.bgAccent,
+                border: `1px solid ${border.light}`,
+                backgroundColor: background.alt,
               }}
             >
-              <FileText size={16} color={VW_COLORS.textAccent} />
+              <FileText size={16} color={text.icon} />
               <Typography
                 sx={{
                   flex: 1,
-                  fontFamily: VW_TYPOGRAPHY.fontFamily,
-                  fontSize: "13px",
-                  color: VW_COLORS.textSecondary,
+                  ...textStyles.body,
+                  color: text.secondary,
                 }}
               >
                 {file.filename || `File #${file.file_id}`}
               </Typography>
-              <IconButton
-                size="small"
+              <CustomizableButton
+                iconOnly
+                variant="text"
+                size="medium"
+                ariaLabel="Remove file"
                 onClick={() => handleRemoveFile(file.file_id)}
-                aria-label="Remove file"
                 sx={{ "color": VW_COLORS.textAccent, "&:hover": { color: VW_COLORS.error } }}
               >
-                <Trash2 size={14} />
-              </IconButton>
+                <Trash2 size={16} />
+              </CustomizableButton>
             </Stack>
           ))}
         </Stack>
@@ -400,8 +385,7 @@ function DocumentsFieldRenderer({
         <Typography
           role="alert"
           sx={{
-            fontFamily: VW_TYPOGRAPHY.fontFamily,
-            fontSize: "13px",
+            ...textStyles.body,
             color: VW_COLORS.error,
           }}
         >
@@ -414,7 +398,10 @@ function DocumentsFieldRenderer({
         sx={{
           "border": `1px dashed ${VW_COLORS.borderDark}`,
           "borderRadius": "4px",
-          "p": "20px 16px",
+          "pt": 4,
+          "pb": 4,
+          "pl": 6,
+          "pr": 6,
           "textAlign": "center",
           "cursor": "pointer",
           "transition": "all 0.15s ease",
@@ -428,16 +415,12 @@ function DocumentsFieldRenderer({
         {uploading ? (
           <CircularProgress size={20} sx={{ color: VW_COLORS.primary }} />
         ) : (
-          <Stack
-            direction="row"
-            sx={{ gap: "8px", justifyContent: "center", alignItems: "center" }}
-          >
-            <Upload size={16} color={VW_COLORS.textAccent} />
+          <Stack direction="row" sx={{ gap: 4, justifyContent: "center", alignItems: "center" }}>
+            <Upload size={16} color={text.icon} />
             <Typography
               sx={{
-                fontFamily: VW_TYPOGRAPHY.fontFamily,
-                fontSize: "13px",
-                color: VW_COLORS.textTertiary,
+                ...textStyles.body,
+                color: text.tertiary,
               }}
             >
               Click to upload documents
@@ -532,9 +515,9 @@ function PeopleFieldRenderer({
   );
 
   return (
-    <Stack sx={{ gap: "10px" }}>
+    <Stack sx={{ gap: 4 }}>
       {currentPeople.length > 0 && (
-        <Stack direction="row" flexWrap="wrap" sx={{ gap: "8px" }}>
+        <Stack direction="row" flexWrap="wrap" sx={{ gap: 4 }}>
           {currentPeople.map((p) => (
             <Chip
               key={p.user_id}
@@ -544,8 +527,8 @@ function PeopleFieldRenderer({
               onDelete={() => handleRemove(p.user_id)}
               sx={{
                 ...vwChipSx,
-                "borderColor": VW_COLORS.borderDark,
-                "color": VW_COLORS.textSecondary,
+                "borderColor": border.dark,
+                "color": text.primary,
                 "& .MuiChip-deleteIcon": {
                   "color": VW_COLORS.textAccent,
                   "&:hover": { color: VW_COLORS.error },
@@ -555,43 +538,25 @@ function PeopleFieldRenderer({
           ))}
         </Stack>
       )}
-      <Stack direction="row" sx={{ gap: "8px" }}>
+      <Stack direction="row" alignItems="center" sx={{ gap: 4 }}>
         <Select
+          id={`lifecycle-people-${item.id}`}
+          ariaLabel={item.name}
+          placeholder={usersLoading ? "Loading users..." : "Select a user..."}
           value={selectedUserId}
+          items={availableUsers.map(toUserOption)}
           onChange={(e) => setSelectedUserId(e.target.value as number | "")}
-          displayEmpty
-          size="small"
-          sx={{
-            "flex": 1,
-            "fontFamily": VW_TYPOGRAPHY.fontFamily,
-            "fontSize": "13px",
-            "& .MuiOutlinedInput-notchedOutline": { borderColor: VW_COLORS.borderDark },
-            "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: VW_COLORS.primary },
-            "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: VW_COLORS.primary },
-          }}
-        >
-          <MenuItem value="" disabled>
-            <Typography sx={{ color: VW_COLORS.textAccent, fontSize: "13px" }}>
-              {usersLoading ? "Loading users..." : "Select a user..."}
-            </Typography>
-          </MenuItem>
-          {availableUsers.map((user) => (
-            <MenuItem key={user.id} value={user.id}>
-              <Typography sx={{ fontSize: "13px", color: VW_COLORS.textSecondary }}>
-                {`${user.name} ${user.surname}`.trim() || user.email}
-              </Typography>
-            </MenuItem>
-          ))}
-        </Select>
-        <Button
+          sx={{ flex: 1 }}
+        />
+        <CustomizableButton
           variant="outlined"
+          color="secondary"
           size="small"
           onClick={handleAdd}
           disabled={saving || !selectedUserId}
-          sx={vwButtonOutlined}
         >
           Add
-        </Button>
+        </CustomizableButton>
       </Stack>
       {saving && <CircularProgress size={14} sx={{ color: VW_COLORS.primary }} />}
     </Stack>
@@ -639,7 +604,7 @@ function ClassificationFieldRenderer({
   );
 
   return (
-    <Stack sx={{ gap: "8px" }}>
+    <Stack sx={{ gap: 4 }}>
       <RadioGroup value={selected} onChange={(e) => handleChange(e.target.value)}>
         {levels.map((level) => (
           <FormControlLabel
@@ -657,9 +622,8 @@ function ClassificationFieldRenderer({
             label={
               <Typography
                 sx={{
-                  fontFamily: VW_TYPOGRAPHY.fontFamily,
-                  fontSize: "13px",
-                  color: VW_COLORS.textSecondary,
+                  ...textStyles.body,
+                  color: text.secondary,
                 }}
               >
                 {level}
@@ -669,7 +633,7 @@ function ClassificationFieldRenderer({
           />
         ))}
       </RadioGroup>
-      {saving && <CircularProgress size={14} sx={{ color: VW_COLORS.primary }} />}
+      {saving && <CircularProgress size={14} sx={{ color: icon.brand }} />}
     </Stack>
   );
 }
@@ -751,54 +715,62 @@ function ChecklistFieldRenderer({
   );
 
   return (
-    <Stack sx={{ gap: "10px" }}>
+    <Stack sx={{ gap: 4 }}>
       {items.map((it, index) => (
-        <Stack key={index} direction="row" alignItems="center" sx={{ gap: "10px" }}>
+        <Stack key={index} direction="row" alignItems="center" sx={{ gap: 4 }}>
           <Checkbox
             checked={it.checked}
             onChange={() => toggleItem(index)}
             size="small"
             sx={{
-              "color": VW_COLORS.borderDark,
-              "&.Mui-checked": { color: VW_COLORS.primary },
-              "padding": "4px",
+              "color": border.dark,
+              "&.Mui-checked": { color: brand.primary },
+              "padding": 2,
             }}
           />
           <Typography
             sx={{
               flex: 1,
-              fontFamily: VW_TYPOGRAPHY.fontFamily,
-              fontSize: "13px",
+
+              ...textStyles.body,
               textDecoration: it.checked ? "line-through" : "none",
-              color: it.checked ? VW_COLORS.textAccent : VW_COLORS.textSecondary,
+              color: it.checked ? text.subdued : text.primary,
             }}
           >
             {it.label}
           </Typography>
-          <IconButton
+          <CustomizableButton
+            iconOnly
+            variant="text"
+            color="error"
             size="small"
+            ariaLabel="Remove item"
             onClick={() => removeItem(index)}
-            aria-label="Remove item"
-            sx={{ "color": VW_COLORS.textAccent, "&:hover": { color: VW_COLORS.error } }}
           >
-            <X size={14} />
-          </IconButton>
+            <X size={16} />
+          </CustomizableButton>
         </Stack>
       ))}
-      <Stack direction="row" sx={{ gap: "10px" }}>
-        <TextField
+      <Stack direction="row" alignItems="center" sx={{ gap: 4 }}>
+        <Field
           placeholder="Add checklist item..."
           value={newItemText}
           onChange={(e) => setNewItemText(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && addItem()}
-          size="small"
-          sx={{ flex: 1, ...vwInputSx }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") addItem();
+          }}
+          sx={{ flex: 1 }}
         />
-        <Button variant="outlined" size="small" onClick={addItem} sx={vwButtonOutlined}>
+        <CustomizableButton
+          variant="outlined"
+          color="secondary"
+          size="small"
+          onClick={addItem}
+          loading={saving}
+        >
           Add
-        </Button>
+        </CustomizableButton>
       </Stack>
-      {saving && <CircularProgress size={14} sx={{ color: VW_COLORS.primary }} />}
     </Stack>
   );
 }
@@ -920,26 +892,28 @@ function ApprovalFieldRenderer({
   };
 
   return (
-    <Stack sx={{ gap: "12px" }}>
+    <Stack sx={{ gap: 6 }}>
       {currentApprovals.map((approval) => (
         <Stack
           key={approval.user_id}
           direction="row"
           alignItems="center"
           sx={{
-            gap: "10px",
-            p: "12px 16px",
+            gap: 4,
+            pt: 6,
+            pb: 6,
+            pr: 8,
+            pl: 8,
             borderRadius: "4px",
-            border: `1px solid ${VW_COLORS.borderLight}`,
-            backgroundColor: VW_COLORS.bgMain,
+            border: `1px solid ${border.light}`,
+            background: background.main,
           }}
         >
           <Typography
             sx={{
               flex: 1,
-              fontFamily: VW_TYPOGRAPHY.fontFamily,
-              fontSize: "13px",
-              color: VW_COLORS.textSecondary,
+              ...textStyles.body,
+              color: text.primary,
             }}
           >
             {getApproverDisplayName(approval)}
@@ -956,79 +930,61 @@ function ApprovalFieldRenderer({
           />
           {approval.status === "pending" && (
             <>
-              <IconButton
+              <CustomizableButton
+                iconOnly
+                variant="text"
+                color="primary"
                 size="small"
+                ariaLabel="Approve"
                 onClick={() => handleStatusChange(approval.user_id, "approved")}
-                sx={{
-                  "color": VW_COLORS.success,
-                  "&:hover": { backgroundColor: VW_COLORS.successBg },
-                }}
-                aria-label="Approve"
               >
                 <Check size={16} />
-              </IconButton>
-              <IconButton
+              </CustomizableButton>
+              <CustomizableButton
+                iconOnly
+                variant="text"
+                color="error"
                 size="small"
+                ariaLabel="Reject"
                 onClick={() => handleStatusChange(approval.user_id, "rejected")}
-                sx={{
-                  "color": VW_COLORS.error,
-                  "&:hover": { backgroundColor: VW_COLORS.errorBg },
-                }}
-                aria-label="Reject"
               >
                 <X size={16} />
-              </IconButton>
+              </CustomizableButton>
             </>
           )}
-          <IconButton
+          <CustomizableButton
+            iconOnly
+            variant="text"
             size="small"
+            ariaLabel="Remove approver"
             onClick={() => removeApprover(approval.user_id)}
             sx={{ "color": VW_COLORS.textAccent, "&:hover": { color: VW_COLORS.error } }}
-            aria-label="Remove approver"
           >
             <Trash2 size={14} />
-          </IconButton>
+          </CustomizableButton>
         </Stack>
       ))}
-      <Stack direction="row" sx={{ gap: "8px" }}>
+      <Stack direction="row" alignItems="center" sx={{ gap: 4 }}>
         <Select
+          id={`lifecycle-approval-${item.id}`}
+          ariaLabel={item.name}
+          placeholder={usersLoading ? "Loading users..." : "Select an approver..."}
           value={selectedUserId}
+          items={availableUsers.map(toUserOption)}
           onChange={(e) => setSelectedUserId(e.target.value as number | "")}
-          displayEmpty
-          size="small"
-          sx={{
-            "flex": 1,
-            "fontFamily": VW_TYPOGRAPHY.fontFamily,
-            "fontSize": "13px",
-            "& .MuiOutlinedInput-notchedOutline": { borderColor: VW_COLORS.borderDark },
-            "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: VW_COLORS.primary },
-            "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: VW_COLORS.primary },
-          }}
-        >
-          <MenuItem value="" disabled>
-            <Typography sx={{ color: VW_COLORS.textAccent, fontSize: "13px" }}>
-              {usersLoading ? "Loading users..." : "Select an approver..."}
-            </Typography>
-          </MenuItem>
-          {availableUsers.map((user) => (
-            <MenuItem key={user.id} value={user.id}>
-              <Typography sx={{ fontSize: "13px", color: VW_COLORS.textSecondary }}>
-                {`${user.name} ${user.surname}`.trim() || user.email}
-              </Typography>
-            </MenuItem>
-          ))}
-        </Select>
-        <Button
+          sx={{ flex: 1 }}
+        />
+        <CustomizableButton
           variant="outlined"
+          color="secondary"
           size="small"
           onClick={addApprover}
           disabled={saving || !selectedUserId}
-          sx={vwButtonOutlined}
+          loading={saving}
         >
           Add Approver
-        </Button>
+        </CustomizableButton>
       </Stack>
-      {saving && <CircularProgress size={14} sx={{ color: VW_COLORS.primary }} />}
     </Stack>
   );
 }
