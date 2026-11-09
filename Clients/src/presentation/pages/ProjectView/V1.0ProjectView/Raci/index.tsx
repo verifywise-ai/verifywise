@@ -29,6 +29,7 @@ import {
   RACI_LEGEND,
   RACI_ROLE_NAMES,
   RACI_ROLES,
+  RACI_SAVE_ERROR_MESSAGE,
   RACI_WARNING_MESSAGES,
   buildRaciExportRows,
   describeSources,
@@ -102,6 +103,13 @@ const Raci: FC<RaciProps> = ({ projectId }) => {
     updateRoles.mutate({ userId, change: { add: roles } }, { onSuccess: onAdded });
   };
 
+  // A save error belongs to the attempt that caused it, so opening or closing
+  // the modal clears it.
+  const setAddModalOpen = (isOpen: boolean) => {
+    updateRoles.reset();
+    setIsAddOpen(isOpen);
+  };
+
   if (isLoading) {
     return (
       <Stack data-testid="raci-loading">
@@ -146,7 +154,7 @@ const Raci: FC<RaciProps> = ({ projectId }) => {
               variant="contained"
               text="Add person"
               startIcon={<UserPlus size={16} strokeWidth={1.5} />}
-              onClick={() => setIsAddOpen(true)}
+              onClick={() => setAddModalOpen(true)}
               testId="button-raci-add-person"
               sx={{ height: "30px", minHeight: "30px" }}
             />
@@ -159,6 +167,10 @@ const Raci: FC<RaciProps> = ({ projectId }) => {
           />
         </Stack>
       </Stack>
+
+      {updateRoles.isError && !isAddOpen && (
+        <Alert variant="error" body={RACI_SAVE_ERROR_MESSAGE} inline />
+      )}
 
       {data.warnings.map((warning) => (
         <Alert key={warning} variant="warning" body={RACI_WARNING_MESSAGES[warning]} inline />
@@ -215,8 +227,9 @@ const Raci: FC<RaciProps> = ({ projectId }) => {
         <AddPersonModal
           isOpen={isAddOpen}
           isSubmitting={updateRoles.isPending}
+          hasSaveError={updateRoles.isError}
           existingUserIds={existingUserIds}
-          onClose={() => setIsAddOpen(false)}
+          onClose={() => setAddModalOpen(false)}
           onSubmit={handleAddPerson}
         />
       )}

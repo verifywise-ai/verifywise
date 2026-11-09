@@ -34,6 +34,8 @@ export const RACI_SOURCE_LABELS: Record<RaciSource, string> = {
   manual: "Added manually",
 };
 
+export const RACI_SAVE_ERROR_MESSAGE = "The role change could not be saved. Please try again.";
+
 export const RACI_WARNING_MESSAGES: Record<RaciWarning, string> = {
   no_accountable: "No one is accountable for this use case yet. Give one person the A role.",
   multiple_accountable:

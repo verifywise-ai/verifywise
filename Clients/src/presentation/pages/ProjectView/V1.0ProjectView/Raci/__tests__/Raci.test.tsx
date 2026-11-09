@@ -6,6 +6,8 @@ import type { RaciMatrix, RaciRow } from "../../../../../../application/reposito
 import Raci from "../index";
 import { buildRaciExportRows } from "../raci.constants";
 
+const SAVE_ERROR = "The role change could not be saved. Please try again.";
+
 const PEOPLE = [
   { id: 7, name: "Grace", surname: "Hopper", email: "grace@example.com" },
   { id: 8, name: "Alan", surname: "Turing", email: "alan@example.com" },
@@ -244,6 +246,32 @@ describe("Raci", () => {
     expect(getMock).toHaveBeenCalledTimes(2);
   });
 
+  it("says so when a role change fails, and clears it on the next success", async () => {
+    getMock.mockResolvedValue(matrix([member]));
+    updateMock.mockRejectedValueOnce(new Error("Forbidden"));
+    updateMock.mockResolvedValue(matrix([member]));
+    renderRaci();
+
+    fireEvent.click(await screen.findByTestId("button-raci-C-2"));
+    expect(await screen.findByText(SAVE_ERROR)).toBeInTheDocument();
+
+    fireEvent.click(await screen.findByTestId("button-raci-C-2"));
+    await waitFor(() => expect(screen.queryByText(SAVE_ERROR)).not.toBeInTheDocument());
+  });
+
+  it("does not carry a failed role change into the add person modal", async () => {
+    getMock.mockResolvedValue(matrix([member]));
+    updateMock.mockRejectedValueOnce(new Error("Forbidden"));
+    renderRaci();
+
+    fireEvent.click(await screen.findByTestId("button-raci-C-2"));
+    await screen.findByText(SAVE_ERROR);
+    fireEvent.click(screen.getByTestId("button-raci-add-person"));
+
+    await screen.findByRole("combobox");
+    expect(screen.queryByText(SAVE_ERROR)).not.toBeInTheDocument();
+  });
+
   describe("add person", () => {
     const openModal = async () => {
       getMock.mockResolvedValue(matrix([owner]));
@@ -252,6 +280,37 @@ describe("Raci", () => {
       fireEvent.click(await screen.findByTestId("button-raci-add-person"));
       return screen.findByRole("combobox");
     };
+
+    const submitAlanAsConsulted = async (combobox: HTMLElement) => {
+      fireEvent.mouseDown(combobox);
+      fireEvent.click(await screen.findByRole("option", { name: /Alan Turing/ }));
+      fireEvent.click(screen.getByLabelText("Consulted: gives input before decisions"));
+      fireEvent.click(screen.getByRole("button", { name: "Add person" }));
+    };
+
+    it("keeps the modal open with an error when the add fails", async () => {
+      const combobox = await openModal();
+      updateMock.mockReset();
+      updateMock.mockRejectedValue(new Error("Failed"));
+      await submitAlanAsConsulted(combobox);
+
+      expect(await screen.findByText(SAVE_ERROR)).toBeInTheDocument();
+      expect(screen.getByRole("combobox")).toHaveValue("Alan Turing");
+      expect(screen.getByLabelText("Consulted: gives input before decisions")).toBeChecked();
+    });
+
+    it("clears a failed add when the modal is cancelled", async () => {
+      const combobox = await openModal();
+      updateMock.mockReset();
+      updateMock.mockRejectedValue(new Error("Failed"));
+      await submitAlanAsConsulted(combobox);
+      await screen.findByText(SAVE_ERROR);
+
+      fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+      await waitFor(() => expect(screen.queryByRole("combobox")).not.toBeInTheDocument());
+      expect(screen.queryByText(SAVE_ERROR)).not.toBeInTheDocument();
+    });
 
     it("lists only people not already in the matrix", async () => {
       getMock.mockResolvedValue(matrix([{ ...member, subject_id: 7, name: "Grace Hopper" }]));

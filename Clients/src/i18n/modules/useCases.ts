@@ -722,6 +722,8 @@ export const de: Record<string, string> = {
   "Person": "Person",
   "Select a person": "Person auswählen",
   "The RACI matrix could not be loaded.": "Die RACI-Matrix konnte nicht geladen werden.",
+  "The role change could not be saved. Please try again.":
+    "Die Rollenänderung konnte nicht gespeichert werden. Bitte versuchen Sie es erneut.",
   "Who is responsible, accountable, consulted and informed":
     "Wer verantwortlich, rechenschaftspflichtig, konsultiert und informiert ist",
   "Responsible": "Verantwortlich",
@@ -1465,6 +1467,8 @@ export const fr: Record<string, string> = {
   "Person": "Personne",
   "Select a person": "Sélectionner une personne",
   "The RACI matrix could not be loaded.": "La matrice RACI n'a pas pu être chargée.",
+  "The role change could not be saved. Please try again.":
+    "La modification du rôle n'a pas pu être enregistrée. Veuillez réessayer.",
   "Who is responsible, accountable, consulted and informed":
     "Qui est responsable, redevable, consulté et informé",
   "Responsible": "Responsable",
@@ -2204,6 +2208,8 @@ export const es: Record<string, string> = {
   "Person": "Persona",
   "Select a person": "Seleccionar una persona",
   "The RACI matrix could not be loaded.": "No se pudo cargar la matriz RACI.",
+  "The role change could not be saved. Please try again.":
+    "No se pudo guardar el cambio de rol. Inténtelo de nuevo.",
   "Who is responsible, accountable, consulted and informed":
     "Quién es responsable, rinde cuentas, es consultado y es informado",
   "Responsible": "Responsable",

@@ -1,16 +1,19 @@
 import { useMemo, useState, type FC } from "react";
 import { Stack, Typography } from "@mui/material";
+import Alert from "../../../../components/Alert";
 import StandardModal from "../../../../components/Modals/StandardModal";
 import AutoCompleteField from "../../../../components/Inputs/Autocomplete";
 import Checkbox from "../../../../components/Inputs/Checkbox";
 import useUsers from "../../../../../application/hooks/useUsers";
 import type { User } from "../../../../../domain/types/User";
 import type { RaciRole } from "../../../../../domain/enums/raci.enum";
-import { RACI_LEGEND, RACI_ROLES } from "./raci.constants";
+import { RACI_LEGEND, RACI_ROLES, RACI_SAVE_ERROR_MESSAGE } from "./raci.constants";
 
 interface AddPersonModalProps {
   isOpen: boolean;
   isSubmitting: boolean;
+  /** The last save failed; the modal stays open so the person can retry. */
+  hasSaveError: boolean;
   /** People already in the matrix, who cannot be picked again. */
   existingUserIds: number[];
   onClose: () => void;
@@ -21,6 +24,7 @@ interface AddPersonModalProps {
 const AddPersonModal: FC<AddPersonModalProps> = ({
   isOpen,
   isSubmitting,
+  hasSaveError,
   existingUserIds,
   onClose,
   onSubmit,
@@ -68,6 +72,7 @@ const AddPersonModal: FC<AddPersonModalProps> = ({
       fitContent
     >
       <Stack sx={{ gap: "16px" }}>
+        {hasSaveError && <Alert variant="error" body={RACI_SAVE_ERROR_MESSAGE} inline />}
         <AutoCompleteField<User>
           id="raci-person"
           label="Person"
