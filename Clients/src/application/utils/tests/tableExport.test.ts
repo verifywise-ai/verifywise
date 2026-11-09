@@ -190,6 +190,18 @@ describe("tableExport", () => {
       expect(await readCell(value)).toBe(value);
     });
 
+    it.each(["-", " -", "- "])("leaves the dash placeholder %j alone", async (value) => {
+      expect(await readCell(value)).toBe(value);
+    });
+
+    it.each([
+      ["\t-", "'\t-"],
+      ["--", "'--"],
+      ["-=1", "'-=1"],
+    ])("still neutralizes %j, which is more than a lone dash", async (value, expected) => {
+      expect(await readCell(value)).toBe(expected);
+    });
+
     it.each([
       [-5, "-5"],
       [1.2, "1.2"],
