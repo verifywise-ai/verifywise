@@ -57,6 +57,93 @@ const fetchTrainingRecords = async (
   }
 };
 
+/**
+ * Assignment counts for the org (#5260): how many pending/completed/
+ * overdue assignments exist, plus how many distinct users still owe a
+ * training (group assignments resolved through group_members).
+ */
+const getTrainingAssignmentAnalytics = async (
+  organizationId: number,
+): Promise<{
+  totalAssignments: number;
+  pendingAssignments: number;
+  completedAssignments: number;
+  overdueAssignments: number;
+  pendingOrOverdueUsers: number;
+  assignmentsByTraining: Array<{
+    training_id: number;
+    training_name: string;
+    pending: number;
+    completed: number;
+    overdue: number;
+  }>;
+}> => {
+  const statusRows = (await sequelize.query(
+    `SELECT status, COUNT(*)::int AS count
+       FROM training_assignments
+      WHERE organization_id = :organizationId
+      GROUP BY status`,
+    { replacements: { organizationId }, type: QueryTypes.SELECT },
+  )) as Array<{ status: string; count: number }>;
+
+  const countBy = (status: string) => statusRows.find((r) => r.status === status)?.count ?? 0;
+
+  const userRows = (await sequelize.query(
+    `SELECT COUNT(DISTINCT user_id)::int AS count
+       FROM (
+         SELECT a.subject_id AS user_id
+           FROM training_assignments a
+          WHERE a.organization_id = :organizationId
+            AND a.subject_type = 'user'
+            AND a.status IN ('pending', 'overdue')
+          UNION
+         SELECT gm.user_id
+           FROM training_assignments a
+           JOIN group_members gm
+             ON gm.group_id = a.subject_id
+            AND gm.organization_id = a.organization_id
+          WHERE a.organization_id = :organizationId
+            AND a.subject_type = 'group'
+            AND a.status IN ('pending', 'overdue')
+       ) owed`,
+    { replacements: { organizationId }, type: QueryTypes.SELECT },
+  )) as Array<{ count: number }>;
+
+  const byTraining = (await sequelize.query(
+    `SELECT a.training_id,
+            t.training_name,
+            COUNT(*) FILTER (WHERE a.status = 'pending')::int AS pending,
+            COUNT(*) FILTER (WHERE a.status = 'completed')::int AS completed,
+            COUNT(*) FILTER (WHERE a.status = 'overdue')::int AS overdue
+       FROM training_assignments a
+       JOIN trainingregistar t
+         ON t.id = a.training_id
+        AND t.organization_id = a.organization_id
+      WHERE a.organization_id = :organizationId
+      GROUP BY a.training_id, t.training_name
+      ORDER BY a.training_id`,
+    { replacements: { organizationId }, type: QueryTypes.SELECT },
+  )) as Array<{
+    training_id: number;
+    training_name: string;
+    pending: number;
+    completed: number;
+    overdue: number;
+  }>;
+
+  const pending = countBy("pending");
+  const completed = countBy("completed");
+  const overdue = countBy("overdue");
+  return {
+    totalAssignments: pending + completed + overdue,
+    pendingAssignments: pending,
+    completedAssignments: completed,
+    overdueAssignments: overdue,
+    pendingOrOverdueUsers: userRows[0]?.count ?? 0,
+    assignmentsByTraining: byTraining,
+  };
+};
+
 const getTrainingAnalytics = async (
   _params: Record<string, unknown>,
   organizationId: number,
@@ -94,12 +181,21 @@ const getTrainingAnalytics = async (
       0,
     );
 
+    const assignments = await getTrainingAssignmentAnalytics(organizationId);
+
     return {
       totalTrainingRecords: total,
       statusDistribution,
       departmentDistribution,
       providerDistribution,
       totalPeopleTrained,
+      assignments: {
+        total: assignments.totalAssignments,
+        pending: assignments.pendingAssignments,
+        completed: assignments.completedAssignments,
+        overdue: assignments.overdueAssignments,
+        pendingOrOverdueUsers: assignments.pendingOrOverdueUsers,
+      },
     };
   } catch (error) {
     logger.error("Error getting training analytics:", error);
@@ -135,6 +231,8 @@ const getTrainingExecutiveSummary = async (
       0,
     );
 
+    const assignments = await getTrainingAssignmentAnalytics(organizationId);
+
     return {
       totalTrainingRecords: total,
       completedTrainings: completedCount,
@@ -144,6 +242,13 @@ const getTrainingExecutiveSummary = async (
       departmentsCovered: departments.size,
       departments: Array.from(departments),
       totalPeopleTrained,
+      assignments: {
+        total: assignments.totalAssignments,
+        pending: assignments.pendingAssignments,
+        overdue: assignments.overdueAssignments,
+        pendingOrOverdueUsers: assignments.pendingOrOverdueUsers,
+      },
+      assignmentsByTraining: assignments.assignmentsByTraining,
     };
   } catch (error) {
     logger.error("Error getting training executive summary:", error);
@@ -230,9 +335,13 @@ const agentAssignTrainingToUser = createWriteToolFn({
   warningLevel: "info",
   descriptionFn: (params) => `Assign training #${params.training_id} to user #${params.user_id}`,
   executeFn: async (params, organizationId) => {
-    // Check if assignment already exists
+    // Check if assignment already exists (subject_type 'user' rows)
     const existing = await sequelize.query(
-      `SELECT id FROM training_assignments WHERE organization_id = :organizationId AND training_id = :training_id AND user_id = :user_id`,
+      `SELECT id FROM training_assignments
+        WHERE organization_id = :organizationId
+          AND training_id = :training_id
+          AND subject_type = 'user'
+          AND subject_id = :user_id`,
       {
         replacements: {
           organizationId,
@@ -248,13 +357,17 @@ const agentAssignTrainingToUser = createWriteToolFn({
     }
 
     await sequelize.query(
-      `INSERT INTO training_assignments (organization_id, training_id, user_id, assigned_at)
-       VALUES (:organizationId, :training_id, :user_id, NOW())`,
+      `INSERT INTO training_assignments (
+         organization_id, training_id, subject_type, subject_id, assigned_by, assigned_at
+       ) VALUES (
+         :organizationId, :training_id, 'user', :user_id, :assigned_by, NOW()
+       )`,
       {
         replacements: {
           organizationId,
           training_id: params.training_id,
           user_id: params.user_id,
+          assigned_by: (params.assigned_by as number) ?? null,
         },
       },
     );
