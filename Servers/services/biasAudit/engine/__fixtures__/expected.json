@@ -1637,8 +1637,8 @@
     "tables": [
       {
         "category_key": "race_ethnicity",
-        "highest_group": "Two or more races",
-        "highest_rate": 0.3,
+        "highest_group": "Asian",
+        "highest_rate": 0.25,
         "rows": [
           {
             "applicant_count": 500,
@@ -1646,7 +1646,7 @@
             "category_type": "race_ethnicity",
             "excluded": false,
             "flagged": false,
-            "impact_ratio": 0.833333,
+            "impact_ratio": 1.0,
             "selected_count": 125,
             "selection_rate": 0.25
           },
@@ -1666,7 +1666,7 @@
             "category_type": "race_ethnicity",
             "excluded": false,
             "flagged": false,
-            "impact_ratio": 0.829933,
+            "impact_ratio": 0.99592,
             "selected_count": 122,
             "selection_rate": 0.24898
           }

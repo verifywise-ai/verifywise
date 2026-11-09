@@ -276,6 +276,46 @@ describe("derived basis", () => {
   });
 });
 
+describe("a small-sample exclusion (5-301(d))", () => {
+  const excludedRow = {
+    categoryType: "race_ethnicity",
+    categoryName: "Two or more races",
+    selectionRate: 0.3,
+    impactRatio: null,
+    flagged: false,
+    excluded: true,
+    applicantCount: 10,
+    selectedCount: 3,
+  };
+  const withExclusion = {
+    ...base,
+    result: {
+      ...result,
+      excludedCount: 1,
+      tables: [{ ...result.tables[0], rows: [...result.tables[0].rows, excludedRow] }],
+    } as BiasAuditResult,
+  };
+  const body = (s: ReturnType<typeof composeStance>) => section(s, "results").body;
+
+  it("prints the excluded group's count and rate", () => {
+    expect(body(composeStance(withExclusion))).toContain(
+      "Two or more races: 10 individuals, selection rate 0.30, impact ratio not computed",
+    );
+  });
+
+  it("says the auditor's justification has still to be added, and lists it as open", () => {
+    const s = composeStance(withExclusion);
+    expect(body(s)).toMatch(/5-301\(d\).*independent auditor's justification/s);
+    expect(s.openItems.join(" ")).toMatch(/justification for the small-sample exclusion/i);
+  });
+
+  it("says nothing about an exclusion when no group was excluded", () => {
+    const s = composeStance(base);
+    expect(body(s)).not.toMatch(/justification/i);
+    expect(s.openItems.join(" ")).not.toMatch(/small-sample/i);
+  });
+});
+
 describe("gate findings", () => {
   it("carries warn and note findings", () => {
     const body = section(composeStance(base), "data_relied_on").body;

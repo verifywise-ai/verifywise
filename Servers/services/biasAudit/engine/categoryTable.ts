@@ -23,7 +23,8 @@ export interface CategoryTableArgs {
  *
  *  - a record whose group name is blank is skipped, so the counted total can
  *    be far below the record count (see dataGates.ts);
- *  - when the highest rate is 0, every impact ratio is null.
+ *  - when the highest rate in the calculation is 0, every impact ratio is
+ *    null (see impactRatios.ts for how the reference rate is chosen).
  */
 export function computeCategoryTable(args: CategoryTableArgs): CategoryTable {
   const {
@@ -48,16 +49,10 @@ export function computeCategoryTable(args: CategoryTableArgs): CategoryTable {
   }
 
   const rows: GroupResult[] = [];
-  let highestRate = 0;
-  let highestGroup = "";
 
   for (const groupName of [...groups.keys()].sort()) {
     const { applicants, selected } = groups.get(groupName)!;
     const rate = applicants > 0 ? selected / applicants : 0;
-    if (rate > highestRate) {
-      highestRate = rate;
-      highestGroup = groupName;
-    }
     rows.push({
       categoryType: categoryKey,
       categoryName: groupName,
@@ -70,7 +65,11 @@ export function computeCategoryTable(args: CategoryTableArgs): CategoryTable {
     });
   }
 
-  applyImpactRatios(rows, { highestRate, totalApplicants, threshold, smallSampleExclusion });
+  const { highestRate, highestGroup } = applyImpactRatios(rows, {
+    totalApplicants,
+    threshold,
+    smallSampleExclusion,
+  });
 
   return {
     title: `${titlePrefix} by ${categoryLabel.toLowerCase()}`,

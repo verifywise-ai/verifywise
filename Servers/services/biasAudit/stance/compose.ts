@@ -181,6 +181,23 @@ function vetoBlock(args: ComposeStanceArgs, key: string): string {
   return lines.join("\n");
 }
 
+/**
+ * 5-301(d): the summary of results must state the independent auditor's
+ * justification and the excluded category's count and rate. The rows above
+ * carry the count and rate. This states only what the module did and leaves
+ * the justification to the auditor, because the module applies the exclusion
+ * by a fixed rule and has no auditor's reasoning to report.
+ */
+function exclusionNote(rateName: string): string {
+  return (
+    "Each group marked as excluded is below 2% of the data in this run, so it has no impact " +
+    `ratio and its ${rateName} is not used as the reference for the other groups. Its number of ` +
+    `individuals and ${rateName} are shown above. 5-301(d) has the summary of results state the ` +
+    "independent auditor's justification for an exclusion. The module applied this exclusion " +
+    "by a fixed rule, so that justification still has to be added."
+  );
+}
+
 function fixed(n: number | null): string {
   return n === null ? "not computed" : n.toFixed(2);
 }
@@ -210,6 +227,9 @@ function resultsBody(args: ComposeStanceArgs): string {
       );
     }
     lines.push("");
+  }
+  if (result.tables.some((t) => t.rows.some((r) => r.excluded))) {
+    lines.push(exclusionNote(rateName), "");
   }
   lines.push(`Total individuals assessed: ${result.totalApplicants}.`);
   lines.push(
@@ -339,6 +359,11 @@ function openItemsOf(args: ComposeStanceArgs, scope: StanceModel["scope"]): stri
   }
   if (args.result === null) {
     for (const f of args.gateFindings.filter((x) => x.severity === "stop")) items.push(f.message);
+  }
+  if (args.result?.tables.some((t) => t.rows.some((r) => r.excluded))) {
+    items.push(
+      "Add the independent auditor's justification for the small-sample exclusion (5-301(d)).",
+    );
   }
   for (const o of args.order.filter((x) => x.blocked)) {
     items.push(`Row-order check for ${o.attribute} withholds the export until it is resolved.`);

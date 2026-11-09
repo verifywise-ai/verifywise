@@ -50,16 +50,10 @@ export function computeIntersectionalTable(args: IntersectionalArgs): CategoryTa
   }
 
   const rows: GroupResult[] = [];
-  let highestRate = 0;
-  let highestGroup = "";
 
   for (const name of [...groups.keys()].sort()) {
     const { applicants, selected } = groups.get(name)!;
     const rate = applicants > 0 ? selected / applicants : 0;
-    if (rate > highestRate) {
-      highestRate = rate;
-      highestGroup = name;
-    }
     rows.push({
       categoryType: "intersectional",
       categoryName: name,
@@ -72,7 +66,11 @@ export function computeIntersectionalTable(args: IntersectionalArgs): CategoryTa
     });
   }
 
-  applyImpactRatios(rows, { highestRate, totalApplicants, threshold, smallSampleExclusion });
+  const { highestRate, highestGroup } = applyImpactRatios(rows, {
+    totalApplicants,
+    threshold,
+    smallSampleExclusion,
+  });
 
   return {
     title,

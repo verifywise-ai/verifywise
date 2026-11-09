@@ -374,3 +374,26 @@ describe("computeScoreDistributionTable at scale", () => {
     expect(bins[9].upper).toBe(999);
   });
 });
+
+describe("summary when a small-sample exclusion leaves no reference", () => {
+  it("says every group is excluded rather than that none has a rate", () => {
+    const records = Array.from({ length: 60 }, (_, g) =>
+      Array.from({ length: 10 }, (_v, i) => ({ race_ethnicity: `G${g}`, selected: i === 0 })),
+    ).flat();
+    const got = computeBiasAudit(records, {
+      presetId: "t",
+      metric: "selection_rate",
+      categories: { race_ethnicity: { label: "Race/Ethnicity", groups: [] } },
+      intersectional: { required: false, cross: [] },
+      threshold: 0.8,
+      smallSampleExclusion: 0.02,
+      outcomeColumn: "selected",
+      scoreColumn: "score",
+      predictionColumn: null,
+      groundTruthColumn: null,
+    });
+    expect(got.summary).toContain("every group is below the small-sample exclusion");
+    expect(got.summary).not.toContain("no group with a value has a non-zero rate");
+    expect(got.flagsCount).toBe(0);
+  });
+});

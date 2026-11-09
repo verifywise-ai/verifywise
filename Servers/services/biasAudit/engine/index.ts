@@ -235,6 +235,9 @@ export function computeBiasAudit(
     // reference group, so it holds no ratios and therefore no flags; the
     // Python still reports "No adverse impact flags detected" for it.
     const noReference = tables.filter((t) => !t.highestRate);
+    const allExcluded = (t: CategoryTable) => t.rows.length > 0 && t.rows.every((r) => r.excluded);
+    const tableList = (list: CategoryTable[]) =>
+      list.map((t) => t.title.charAt(0).toLowerCase() + t.title.slice(1)).join("; ");
     if (totalFlags > 0) {
       summaryParts.push(
         `${totalFlags} group(s) flagged with impact ratio below ` +
@@ -244,11 +247,20 @@ export function computeBiasAudit(
     if (tables.length === 0) {
       summaryParts.push("No impact ratios were computed: no protected category is configured.");
     } else if (noReference.length > 0) {
-      const titles = noReference.map((t) => t.title.charAt(0).toLowerCase() + t.title.slice(1));
-      summaryParts.push(
-        `No impact ratio could be computed for ${titles.join("; ")}: ` +
-          `no group with a value has a non-zero rate.`,
-      );
+      const noRate = noReference.filter((t) => !allExcluded(t));
+      const smallOnly = noReference.filter(allExcluded);
+      if (noRate.length > 0) {
+        summaryParts.push(
+          `No impact ratio could be computed for ${tableList(noRate)}: ` +
+            `no group with a value has a non-zero rate.`,
+        );
+      }
+      if (smallOnly.length > 0) {
+        summaryParts.push(
+          `No impact ratio could be computed for ${tableList(smallOnly)}: ` +
+            `every group is below the small-sample exclusion.`,
+        );
+      }
     } else if (totalFlags === 0) {
       summaryParts.push("No adverse impact flags detected.");
     }

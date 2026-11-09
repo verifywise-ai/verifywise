@@ -90,3 +90,47 @@ describe("computeIntersectionalTable against the Python oracle", () => {
     expect(t.highestRate).toBeNull();
   });
 });
+
+describe("the intersectional reference rate under the small-sample exclusion", () => {
+  const records = [
+    ...Array.from({ length: 10 }, () => ({ a: "X", b: "Tiny", selected: true })),
+    ...Array.from({ length: 500 }, (_, i) => ({ a: "X", b: "Big", selected: i < 250 })),
+    ...Array.from({ length: 490 }, (_, i) => ({ a: "Y", b: "Big", selected: i < 196 })),
+  ];
+
+  it("does not let an excluded cell set the reference or name highestGroup", () => {
+    const t = computeIntersectionalTable({
+      records,
+      crossKeys: ["a", "b"],
+      totalApplicants: records.length,
+      threshold: 0.8,
+      smallSampleExclusion: 0.02,
+      rateOf: (r) => Boolean(r.selected),
+    });
+    expect(t.highestGroup).toBe("X - Big");
+    expect(t.highestRate).toBeCloseTo(0.5);
+    expect(t.rows.find((r) => r.categoryName === "X - Tiny")).toMatchObject({
+      excluded: true,
+      impactRatio: null,
+      selectionRate: 1,
+    });
+    expect(t.rows.find((r) => r.categoryName === "Y - Big")!.impactRatio).toBeCloseTo(0.8);
+  });
+
+  it("computes no ratios when every cell is excluded", () => {
+    const small = Array.from({ length: 60 }, (_, g) =>
+      Array.from({ length: 10 }, () => ({ a: `A${g}`, b: "B", selected: true })),
+    ).flat();
+    const t = computeIntersectionalTable({
+      records: small,
+      crossKeys: ["a", "b"],
+      totalApplicants: small.length,
+      threshold: 0.8,
+      smallSampleExclusion: 0.02,
+      rateOf: (r) => Boolean(r.selected),
+    });
+    expect(t.rows.every((r) => r.excluded && r.impactRatio === null)).toBe(true);
+    expect(t.highestGroup).toBe("");
+    expect(t.highestRate).toBeNull();
+  });
+});
