@@ -44,6 +44,26 @@ describe("Test Change History Repository", () => {
       expect(response).toEqual(mockPayload);
     });
 
+    it.each([
+      ["evidence_hub", "evidence-hub"],
+      ["model_lifecycle", "model-lifecycle"],
+      ["control_eu", "control-eu"],
+      ["subcontrol_eu", "subcontrol-eu"],
+      ["annex_category", "annex-category"],
+    ])("calls the /v1 history endpoint for %s", async (entityType, route) => {
+      vi.mocked(apiServices.get).mockResolvedValue({
+        data: { message: "OK", data: { data: [], hasMore: false, total: 0 } },
+        status: 200,
+        statusText: "OK",
+      });
+
+      await getEntityChangeHistory(entityType as any, 7);
+
+      expect(apiServices.get).toHaveBeenCalledWith(
+        `/v1/${route}-change-history/7?limit=100&offset=0`,
+      );
+    });
+
     it("should use custom limit and offset when provided", async () => {
       const mockPayload = {
         data: [{ id: 2, field_name: "owner" }],

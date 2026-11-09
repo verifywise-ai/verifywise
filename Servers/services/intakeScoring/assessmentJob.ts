@@ -48,6 +48,8 @@ import {
 } from "../intakeLiveChecks/aiChecks";
 import { visibleScoringAnswers } from "../intakeLiveChecks/answers";
 import { routeSubmission } from "../intakeRouting/routingService";
+import { laneAssigneeIds } from "../intakeRouting/routingRules";
+import { trySendSubmitterConfirmation } from "../intakeConfirmation/confirmation";
 import { ClassificationContext, runAiScoring } from "./aiScoring";
 import { AssessmentStage, enqueueIntakeAssessment, IntakeAssessmentJobData } from "./enqueue";
 import { generateIntakeSuggestions } from "./intakeSuggestions";
@@ -78,6 +80,15 @@ export interface AssessmentDeps {
   listNeedingAssessment: typeof getSubmissionsNeedingAssessmentQuery;
   enqueue: typeof enqueueIntakeAssessment;
   routeSubmission: typeof routeSubmission;
+  /**
+   * The submitter's confirmation, once routing has run (or failed): it names
+   * the lane's reviewers, or the governance team when no lane was stored.
+   */
+  confirmSubmitter: (
+    organizationId: number,
+    submissionId: number,
+    lang: string | undefined,
+  ) => Promise<void>;
   generateImpl?: GenerateObjectImpl;
   now: () => Date;
 }
@@ -99,6 +110,8 @@ const defaultDeps: AssessmentDeps = {
   listNeedingAssessment: getSubmissionsNeedingAssessmentQuery,
   enqueue: enqueueIntakeAssessment,
   routeSubmission,
+  confirmSubmitter: (organizationId, submissionId, lang) =>
+    trySendSubmitterConfirmation(organizationId, submissionId, lang, { fallback: true }),
   now: () => new Date(),
 };
 
@@ -189,6 +202,9 @@ function useCaseInputFor(submission: IIntakeSubmission, form: IIntakeForm): UseC
       technology: technology || undefined,
     };
   }
+  if (submission.entityType === IntakeEntityType.AI_APP) {
+    return { name: text("name") ?? form.name, purpose: text("description") };
+  }
   return {
     name: text("project_title") ?? form.name,
     purpose: text("goal", "description"),
@@ -257,6 +273,20 @@ async function runSuggestionsStage(
   deps: AssessmentDeps,
 ): Promise<void> {
   const { model, submission, form, answers, classification, submissionId, organizationId } = ctx;
+  // AI apps have no risk register, so their requests get no suggestions
+  // (#5193). The stage is stored as settled so nothing waits on it.
+  if (submission.entityType === IntakeEntityType.AI_APP) {
+    await deps.saveSuggestions(
+      submissionId,
+      {
+        ...pendingSuggestions(startedAt),
+        status: "complete",
+        generatedAt: deps.now().toISOString(),
+      },
+      organizationId,
+    );
+    return;
+  }
   if (!model) {
     await deps.saveSuggestions(
       submissionId,
@@ -505,9 +535,9 @@ export async function runIntakeAssessment(
     );
     await settleAll([
       wants("scoring")
-        ? failScoring(classification, error).then(() =>
-            routeSettled(d, submissionId, organizationId),
-          )
+        ? failScoring(classification, error)
+            .then(() => routeSettled(d, submissionId, organizationId))
+            .then(() => d.confirmSubmitter(organizationId, submissionId, data.lang))
         : undefined,
       wants("suggestions") ? failSuggestions(error) : undefined,
       liveChecksStage(error instanceof Error ? error : new Error(String(error))),
@@ -529,6 +559,7 @@ export async function runIntakeAssessment(
             return failScoring(ctx.classification, error);
           })
           .then(() => routeSettled(d, submissionId, organizationId))
+          .then(() => d.confirmSubmitter(organizationId, submissionId, data.lang))
       : undefined,
     wants("suggestions")
       ? runSuggestionsStage(ctx, startedAt, d).catch((error) => {
@@ -611,13 +642,13 @@ export function scoreTextFor(assessment: IRiskAssessmentV2 | null, lang?: string
 }
 
 const SENIOR_LANE_TEXT: Record<RoutingReason, string> = {
-  prohibited: "Senior review: prohibited practice",
-  no_score: "Senior review: no usable score",
-  close_call: "Senior review: close call",
-  at_or_above_threshold: "Senior review: score at or above the threshold",
-  below_threshold: "Senior review: score below the threshold",
-  override_raised: "Senior review: a reviewer raised the band",
-  escalated: "Senior review: sent by a reviewer",
+  prohibited: "Expert review: prohibited practice",
+  no_score: "Expert review: no usable score",
+  close_call: "Expert review: close call",
+  at_or_above_threshold: "Expert review: score at or above the threshold",
+  below_threshold: "Expert review: score below the threshold",
+  override_raised: "Expert review: a reviewer raised the band",
+  escalated: "Expert review: requested by a reviewer",
 };
 
 /**
@@ -636,20 +667,15 @@ export async function notificationAudience(
   const cfg = form.routing;
   if (!cfg?.enabled) return { recipients: base };
   const lane = submission.routing?.lane;
-  const laneIds =
-    lane === "senior"
-      ? cfg.seniorReviewerIds
-      : lane === "standard"
-        ? cfg.standardReviewerIds
-        : [...cfg.seniorReviewerIds, ...cfg.standardReviewerIds];
+  const laneIds = laneAssigneeIds(cfg, lane);
   // Saved ids can go stale (user deleted, role lost intakeForm.edit); the
   // form's own recipients are left as configured.
   const reviewers = await d.getEligibleIds(organizationId, laneIds);
   const laneText = !lane
-    ? "Not routed yet: scoring is still running"
+    ? "Not assigned yet: scoring is still running"
     : lane === "senior"
       ? SENIOR_LANE_TEXT[submission.routing!.reason]
-      : "Standard review";
+      : "Regular review";
   return {
     recipients: [...new Set([...base, ...reviewers])],
     laneText: translate(lang, laneText),

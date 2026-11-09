@@ -38,6 +38,10 @@ jest.mock("../../services/intakeFormEmail.service", () => ({
 jest.mock("../../services/intakeScoring/enqueue", () => ({
   enqueueIntakeAssessment: jest.fn(),
 }));
+jest.mock("../../services/intakeConfirmation/confirmation", () => ({
+  ...(jest.requireActual("../../services/intakeConfirmation/confirmation") as object),
+  trySendSubmitterConfirmation: jest.fn<any>().mockResolvedValue(undefined),
+}));
 jest.mock("../../services/intakeLLM.service", () => ({
   generateSuggestedQuestions: jest.fn(),
   generateFieldGuidance: jest.fn(),
@@ -77,6 +81,7 @@ const ctrl = require("../intakeForm.ctrl") as typeof import("../intakeForm.ctrl"
 const intake = require("../../utils/intakeForm.utils");
 const emails = require("../../services/intakeFormEmail.service");
 const { enqueueIntakeAssessment } = require("../../services/intakeScoring/enqueue");
+const { trySendSubmitterConfirmation } = require("../../services/intakeConfirmation/confirmation");
 const { llmKeyExistsQuery } = require("../../utils/llmKey.utils");
 const { createSignedToken } = require("../../utils/signedToken.utils");
 /* eslint-enable @typescript-eslint/no-require-imports */
@@ -148,6 +153,7 @@ describe("public submit queues the assessment", () => {
       recipients,
       routing,
       llmKeyId: 2,
+      reviewDays: 5,
     }));
     intake.createSubmissionQuery.mockResolvedValue({ id: 99 });
     intake.claimSubmissionNotificationQuery.mockResolvedValue(true);
@@ -168,9 +174,23 @@ describe("public submit queues the assessment", () => {
         adminFallback: ROUTES[route].adminFallback,
       });
       expect(emails.sendNewSubmissionAdminNotification).not.toHaveBeenCalled();
-      expect(emails.sendSubmissionReceivedEmail).toHaveBeenCalledTimes(1);
+      // The confirmation waits for routing unless there is nothing to wait for.
+      expect(emails.sendSubmissionReceivedEmail).not.toHaveBeenCalled();
+      expect(trySendSubmitterConfirmation).toHaveBeenCalledTimes(1);
+      expect(trySendSubmitterConfirmation).toHaveBeenCalledWith(5, 99, "de", { fallback: false });
+      // The review time in force at submit, read with the form, is stored with the submission.
+      expect(intake.getIntakeFormByIdQuery).toHaveBeenCalledWith(1, 5, { withReviewDays: true });
+      const created = intake.createSubmissionQuery.mock.calls[0][0];
+      expect(created.reviewDays).toBe(5);
+      expect(created.reviewDueDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     },
   );
+
+  it("byId: confirms to the submitter at once, naming the governance team, when the queue fails", async () => {
+    enqueueIntakeAssessment.mockRejectedValue(new Error("redis down"));
+    await submit("byId");
+    expect(trySendSubmitterConfirmation).toHaveBeenCalledWith(5, 99, "de", { fallback: true });
+  });
 
   it.each(["byId", "bySlug"] as const)(
     "%s: emails reviewers at once, without results, when the queue fails",

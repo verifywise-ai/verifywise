@@ -451,7 +451,9 @@ export const assignFilesToFolderQuery = async (
 ): Promise<number> => {
   if (fileIds.length === 0) return 0;
 
-  // ON CONFLICT DO NOTHING handles duplicates gracefully
+  // Reads the rows from files, so an id for another organization or a bias
+  // audit stance PDF is never mapped, however the caller got here. ON CONFLICT
+  // handles files already in the folder.
   const result = await sequelize.query<{ id: number }>(
     `INSERT INTO file_folder_mappings (organization_id, file_id, folder_id, assigned_by, assigned_at)
      SELECT files.organization_id, files.id, :folderId, :userId, NOW()

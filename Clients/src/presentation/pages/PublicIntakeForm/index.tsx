@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useParams, useSearchParams, useNavigate } from "react-router";
 import { useForm } from "react-hook-form";
 import { Box, Collapse, Typography, useMediaQuery } from "@mui/material";
-import { Send, Loader2, Info, AlertCircle, Sparkles } from "lucide-react";
+import { Send, Loader2, Info, AlertCircle, Sparkles, ChevronDown } from "lucide-react";
 import Field from "../../components/Inputs/Field";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import { FormFieldRenderer, FormFieldHint, FieldLabel } from "./FormFieldRenderer";
@@ -10,7 +10,17 @@ import { CalculatedFieldDisplay } from "./CalculatedFieldDisplay";
 import { LiveCheckHints, fieldToneFor } from "./LiveCheckHints";
 import { IntakeAssistantPanel } from "./IntakeAssistantPanel";
 import { VendorPrefillCard } from "./VendorPrefillCard";
+import { TierSuggestionCard, type TierResponseState } from "./TierSuggestionCard";
+import {
+  postTierExplanation,
+  postTierSuggestion,
+  submitPublicFormWithTierResponse,
+  type TierSuggestion,
+} from "../../../application/repository/intakeTierSuggestion.repository";
 import { PrefillLine } from "./PrefillLine";
+import { PreviewBanner } from "./PreviewBanner";
+import { PreviewSubmitMenu, TestSubmitPassed, type PreviewSubmitMode } from "./PreviewSubmitMenu";
+import { PUBLIC_PREVIEW_PARAM } from "../../../application/utils/intakeRouting/previewRole";
 import {
   cleanSubmission,
   evaluateForm,
@@ -165,6 +175,13 @@ export function PublicIntakeForm() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const resubmissionToken = searchParams.get("token") || undefined;
+  // A builder's preview adds a notice and asks, on Submit, whether to test
+  // (check the answers, send nothing) or submit for real. It unlocks nothing.
+  const isPreview = searchParams.get(PUBLIC_PREVIEW_PARAM) === "1";
+  const [previewDismissed, setPreviewDismissed] = useState(false);
+  const showPreviewBanner = isPreview && !previewDismissed;
+  const [submitMenuAnchor, setSubmitMenuAnchor] = useState<HTMLElement | null>(null);
+  const [testSubmitPassed, setTestSubmitPassed] = useState(false);
 
   // State
   const [formData, setFormData] = useState<PublicFormData | null>(null);
@@ -180,6 +197,13 @@ export function PublicIntakeForm() {
   const [riskStep, setRiskStep] = useState<{ questionnaire: Questionnaire } | null>(null);
   const [riskAnswers, setRiskAnswers] = useState<Answers>({});
   const [step, setStep] = useState<"risk" | "form">("form");
+  // The risk level suggested from the risk step answers, and the applicant's response (#5190).
+  const [tierSuggestion, setTierSuggestion] = useState<TierSuggestion | null>(null);
+  const [tierLoading, setTierLoading] = useState(false);
+  const [tierResponse, setTierResponse] = useState<TierResponseState>({
+    choice: null,
+    context: "",
+  });
   const [liveChecks, setLiveChecks] = useState(NO_LIVE_CHECKS);
   const [prefill, setPrefill] = useState<Record<string, PrefillEntry>>({});
   const wideScreen = useMediaQuery("(min-width:1100px)");
@@ -209,6 +233,40 @@ export function PublicIntakeForm() {
   // Checks run on the form step only; the EU AI Act risk step is unchanged.
   const checksOn = Boolean(formData) && liveChecks.enabled && step === "form";
   const aiOn = checksOn && liveChecks.aiAvailable;
+
+  // Suggest a risk level once the risk step is done, from the answers it will
+  // submit. Changed answers drop the old suggestion and response at once, so a
+  // response can never be sent against a level the applicant hasn't seen.
+  // The same answers are not asked about again. A failure shows nothing.
+  const prunedRiskAnswers = useMemo(
+    () => (riskStep ? pruneHiddenAnswers(riskStep.questionnaire, riskAnswers) : null),
+    [riskStep, riskAnswers],
+  );
+  const riskAnswersKey = prunedRiskAnswers ? JSON.stringify(prunedRiskAnswers) : "";
+  const suggestedForKey = useRef<string | null>(null);
+  useEffect(() => {
+    if (!prunedRiskAnswers || step !== "form") return;
+    if (suggestedForKey.current === riskAnswersKey) return;
+    suggestedForKey.current = null;
+    setTierSuggestion(null);
+    setTierResponse({ choice: null, context: "" });
+    const controller = new AbortController();
+    setTierLoading(true);
+    postTierSuggestion(formRef, prunedRiskAnswers, controller.signal)
+      .then((suggestion) => {
+        suggestedForKey.current = riskAnswersKey;
+        setTierSuggestion(suggestion);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setTierSuggestion(null);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setTierLoading(false);
+      });
+    return () => controller.abort();
+    // riskAnswersKey stands for prunedRiskAnswers' content.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [riskAnswersKey, step, formRef]);
   const { hints, hintsFor, staleQuestionIds, aiPaused, checkWithAi, aiCheck } = useIntakeLiveChecks(
     {
       ref: formRef,
@@ -357,8 +415,9 @@ export function PublicIntakeForm() {
     return emailRegex.test(email);
   };
 
-  const onSubmit = async (data: Record<string, unknown>) => {
+  const onSubmit = async (data: Record<string, unknown>, mode: PreviewSubmitMode = "real") => {
     if (!formData) return;
+    setTestSubmitPassed(false);
     const isNewFormat = !!publicId;
     if (!isNewFormat && (!tenantSlug || !formSlug)) return;
 
@@ -382,6 +441,12 @@ export function PublicIntakeForm() {
       return;
     }
 
+    // Every check above has passed; a test stops here and sends nothing.
+    if (mode === "test") {
+      setTestSubmitPassed(true);
+      return;
+    }
+
     setIsSubmitting(true);
     setError(null);
 
@@ -401,14 +466,25 @@ export function PublicIntakeForm() {
         captchaToken,
         captchaAnswer: captchaNum,
         resubmissionToken,
-        ...(riskStep
-          ? { euAiActRiskAnswers: pruneHiddenAnswers(riskStep.questionnaire, riskAnswers) }
-          : {}),
+        ...(riskStep ? { euAiActRiskAnswers: prunedRiskAnswers ?? {} } : {}),
       };
 
-      const response = isNewFormat
-        ? await submitPublicFormById(publicId!, payload)
-        : await submitPublicForm(tenantSlug!, formSlug!, payload);
+      // With a response to the suggested level, submit through v1, which
+      // stores it. "Add context" with nothing written is no response.
+      const context = tierResponse.context.trim();
+      const tierSuggestionResponse =
+        !tierSuggestion || tierLoading || !tierResponse.choice
+          ? null
+          : tierResponse.choice === "accept"
+            ? { accepted: true }
+            : context
+              ? { accepted: false, context }
+              : null;
+      const response = tierSuggestionResponse
+        ? await submitPublicFormWithTierResponse(formRef, { ...payload, tierSuggestionResponse })
+        : isNewFormat
+          ? await submitPublicFormById(publicId!, payload)
+          : await submitPublicForm(tenantSlug!, formSlug!, payload);
 
       if (response.data) {
         const successPath = isNewFormat
@@ -524,7 +600,7 @@ export function PublicIntakeForm() {
     return null;
   }
 
-  // Same order the show/hide rules and formulas use.
+  // Form order. Rules and formulas are settled in dependency order (evaluateForm).
   const sortedFields = sortFields(formData.schema.fields);
 
   // Resolve design settings; a key missing from the saved settings takes its default.
@@ -572,6 +648,7 @@ export function PublicIntakeForm() {
           ...formMargin,
         }}
       >
+        {showPreviewBanner && <PreviewBanner onDismiss={() => setPreviewDismissed(true)} />}
         <Box sx={{ display: "flex", gap: `${PANEL_GAP}px`, alignItems: "flex-start" }}>
           {/* Card with banner + form body */}
           <Box
@@ -657,7 +734,14 @@ export function PublicIntakeForm() {
 
             {/* Form body */}
             {(!riskStep || step === "form") && (
-              <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ p: "32px" }}>
+              <Box
+                component="form"
+                // In a preview, Submit (and Enter, which clicks it) opens the
+                // test / real menu instead; a stray submit there only tests.
+                onSubmit={handleSubmit((data) => onSubmit(data, isPreview ? "test" : "real"))}
+                onChange={() => setTestSubmitPassed(false)}
+                sx={{ p: "32px" }}
+              >
                 {/* Back to the risk step */}
                 {riskStep && (
                   <Box sx={{ mb: "16px" }}>
@@ -667,6 +751,19 @@ export function PublicIntakeForm() {
                       onClick={() => setStep("risk")}
                     />
                   </Box>
+                )}
+
+                {riskStep && (
+                  <TierSuggestionCard
+                    suggestion={tierSuggestion}
+                    loading={tierLoading}
+                    aiAvailable={Boolean(formData) && liveChecks.enabled && liveChecks.aiAvailable}
+                    onExplain={() =>
+                      postTierExplanation(formRef, prunedRiskAnswers ?? {}, getLanguage())
+                    }
+                    response={tierResponse}
+                    onResponseChange={setTierResponse}
+                  />
                 )}
 
                 {/* Answers leave the page before submit when AI checks are on: say so. */}
@@ -846,9 +943,22 @@ export function PublicIntakeForm() {
 
                 {assistantPanel && !panelBeside && <Box sx={{ mb: "24px" }}>{assistantPanel}</Box>}
 
-                {/* Submit button */}
+                {testSubmitPassed && <TestSubmitPassed />}
+
+                {/* Submit button. In a preview it opens the test / real choice. */}
                 <CustomizableButton
                   type="submit"
+                  onClick={
+                    isPreview
+                      ? (event) => {
+                          event.preventDefault();
+                          setTestSubmitPassed(false);
+                          setSubmitMenuAnchor(event.currentTarget);
+                        }
+                      : undefined
+                  }
+                  endIcon={isPreview ? <ChevronDown size={16} /> : undefined}
+                  testId="public-form-submit"
                   variant="contained"
                   isDisabled={isSubmitting}
                   startIcon={
@@ -881,6 +991,16 @@ export function PublicIntakeForm() {
                     },
                   }}
                 />
+                {isPreview && (
+                  <PreviewSubmitMenu
+                    anchor={submitMenuAnchor}
+                    onClose={() => setSubmitMenuAnchor(null)}
+                    onChoose={(mode) => {
+                      setSubmitMenuAnchor(null);
+                      void handleSubmit((data) => onSubmit(data, mode))();
+                    }}
+                  />
+                )}
               </Box>
             )}
           </Box>

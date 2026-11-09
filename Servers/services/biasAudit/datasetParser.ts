@@ -12,6 +12,8 @@
  * The count of records with no demographic value is not computed here:
  * `runAudit` provides it, so there is one definition of "unknown".
  */
+import { createDemographicNormalizer } from "./demographics";
+import type { DemographicCategory, UnmatchedColumn } from "./demographics";
 import { RECORD_KEYS } from "./engine/recordKeys";
 import type { AuditRecord } from "./engine/types";
 
@@ -33,6 +35,12 @@ export interface ParsedDataset {
   unreadableScoreCount: number;
   /** Outcome cells that were blank; each is read as not selected, so the caller decides. */
   blankOutcomeCount: number;
+  /**
+   * Demographic values that matched no category on the list, per category.
+   * Empty when no category list was given. See demographics.ts for which are
+   * kept as groups and which join the unknown category with only a count.
+   */
+  unmatchedDemographics: Record<string, UnmatchedColumn>;
   /** Columns up to the last named header; blank names after it are trailing commas. */
   namedColumnCount: number;
   /**
@@ -113,7 +121,17 @@ function countNamedColumns(headers: string[]): number {
   return count;
 }
 
-export function parseDataset(csv: string, mapping: Record<string, string>): ParsedDataset {
+/**
+ * Pass `categories` to read the demographic columns onto those category
+ * lists (see demographics.ts): the gates and the engine then see canonical
+ * names, and a "no answer" value as blank.
+ */
+export function parseDataset(
+  csv: string,
+  mapping: Record<string, string>,
+  categories?: Record<string, DemographicCategory>,
+): ParsedDataset {
+  const normalizer = categories ? createDemographicNormalizer(categories) : null;
   const table = readCsv(csv);
   if (table.length === 0) throw new DatasetParseError("The file is empty: it has no rows.");
   const headers = table[0].map((h) => h.trim());
@@ -156,7 +174,7 @@ export function parseDataset(csv: string, mapping: Record<string, string>): Pars
         const n = raw === "" ? NaN : Number(raw);
         record[key] = Number.isFinite(n) ? n : null;
         if (raw !== "" && !Number.isFinite(n)) unreadableScoreCount++;
-      } else record[key] = raw;
+      } else record[key] = normalizer?.handles(key) ? normalizer.normalize(key, raw) : raw;
     }
     return record;
   });
@@ -168,6 +186,7 @@ export function parseDataset(csv: string, mapping: Record<string, string>): Pars
     unreadableOutcomeCount,
     unreadableScoreCount,
     blankOutcomeCount,
+    unmatchedDemographics: normalizer?.unmatched() ?? {},
     namedColumnCount: namedColumns,
     wrongWidthRowCount,
   };

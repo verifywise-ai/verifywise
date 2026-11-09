@@ -11,6 +11,7 @@ import {
   tryAutoApproveRequestQuery,
 } from "../../utils/approvalRequest.utils";
 import { getUserByIdQuery } from "../../utils/user.utils";
+import { moveUseCaseIntoReview } from "../../utils/lifecycle.utils";
 import { notifyApprovalRequested } from "../inAppNotification.service";
 import { logStructured } from "../../utils/logger/fileLogger";
 
@@ -108,6 +109,10 @@ export const createUseCaseApprovalRequest = async (
     organizationId,
     transaction,
   );
+
+  // A planned use case with an open approval request is in review (#5187).
+  // Approval (manual or automatic, below) moves it back to planned.
+  await moveUseCaseIntoReview(organizationId, project.id, requestedBy, transaction);
 
   // Risk-based auto-approval, evaluated from the project row (never the
   // client payload), inside the project-creation transaction

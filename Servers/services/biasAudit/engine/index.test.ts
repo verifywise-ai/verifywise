@@ -374,3 +374,157 @@ describe("computeScoreDistributionTable at scale", () => {
     expect(bins[9].upper).toBe(999);
   });
 });
+
+describe("summary when a small-sample exclusion leaves no reference", () => {
+  it("says every group is excluded rather than that none has a rate", () => {
+    const records = Array.from({ length: 60 }, (_, g) =>
+      Array.from({ length: 10 }, (_v, i) => ({ race_ethnicity: `G${g}`, selected: i === 0 })),
+    ).flat();
+    const got = computeBiasAudit(records, {
+      presetId: "t",
+      metric: "selection_rate",
+      categories: { race_ethnicity: { label: "Race/Ethnicity", groups: [] } },
+      intersectional: { required: false, cross: [] },
+      threshold: 0.8,
+      smallSampleExclusion: 0.02,
+      outcomeColumn: "selected",
+      scoreColumn: "score",
+      predictionColumn: null,
+      groundTruthColumn: null,
+    });
+    expect(got.summary).toContain("every group is below the small-sample exclusion");
+    expect(got.summary).not.toContain("no group with a value has a non-zero rate");
+    expect(got.flagsCount).toBe(0);
+  });
+});
+
+describe("blank scores in scoring rate mode", () => {
+  // Group A: 100 rows, 50 blank, 25 of the 50 scored above the median.
+  const groupA = [
+    ...Array.from({ length: 50 }, () => ({ sex: "A", score: null })),
+    ...Array.from({ length: 25 }, () => ({ sex: "A", score: 10 })),
+    ...Array.from({ length: 25 }, () => ({ sex: "A", score: 1 })),
+  ];
+  const groupB = Array.from({ length: 50 }, (_, i) => ({ sex: "B", score: i < 25 ? 10 : 1 }));
+  const records = [...groupA, ...groupB];
+  const config: BiasAuditConfig = {
+    presetId: "t",
+    metric: "scoring_rate",
+    categories: { sex: { label: "Sex", groups: [] } },
+    intersectional: { required: false, cross: [] },
+    threshold: 0.8,
+    smallSampleExclusion: 0.02,
+    outcomeColumn: "selected",
+    scoreColumn: "score",
+    predictionColumn: null,
+    groundTruthColumn: null,
+  };
+
+  it("rates a group over its scored records: 25 of 50 is 0.50, not 25 of 100", () => {
+    const got = computeBiasAudit(records, config);
+    const a = got.tables[0].rows.find((r) => r.categoryName === "A")!;
+    expect(a.applicantCount).toBe(50);
+    expect(a.selectedCount).toBe(25);
+    expect(a.selectionRate).toBe(0.5);
+    expect(a.impactRatio).toBe(1);
+    expect(a.flagged).toBe(false);
+    expect(got.overallSelectionRate).toBe(0.5);
+  });
+
+  it("reconciles the file total with the scored sample", () => {
+    const got = computeBiasAudit(records, config);
+    expect(got.totalApplicants).toBe(150);
+    expect(got.blankScoreCount).toBe(50);
+    expect(got.summary).toContain("Audit read 150 records: 100 with a score and 50 with a blank");
+    expect(got.summary).not.toContain("Audit analyzed");
+  });
+
+  it("keeps the plain sentence when every record has a score", () => {
+    const got = computeBiasAudit(groupB, config);
+    expect(got.blankScoreCount).toBe(0);
+    expect(got.summary).toContain("Audit analyzed 50 applicants");
+  });
+
+  it("measures the 2% small-sample share against scored records", () => {
+    const small = [
+      ...Array.from({ length: 900 }, () => ({ sex: "Z", score: null })),
+      ...Array.from({ length: 50 }, () => ({ sex: "A", score: 10 })),
+      ...Array.from({ length: 48 }, () => ({ sex: "B", score: 1 })),
+      ...Array.from({ length: 2 }, () => ({ sex: "C", score: 10 })),
+    ];
+    const got = computeBiasAudit(small, config);
+    const c = got.tables[0].rows.find((r) => r.categoryName === "C")!;
+    // C holds 2 of 100 scored records: exactly 2%, not excluded.
+    expect(c.excluded).toBe(false);
+    // Z has no scored records, so it is not a group in the table at all.
+    expect(got.tables[0].rows.some((r) => r.categoryName === "Z")).toBe(false);
+  });
+});
+
+describe("tables where no comparison was possible", () => {
+  const cfg = (over: Partial<BiasAuditConfig> = {}): BiasAuditConfig => ({
+    presetId: "t",
+    metric: "selection_rate",
+    categories: { sex: { label: "Sex", groups: [] } },
+    intersectional: { required: false, cross: [] },
+    threshold: 0.8,
+    smallSampleExclusion: 0.02,
+    outcomeColumn: "selected",
+    scoreColumn: "score",
+    predictionColumn: null,
+    groundTruthColumn: null,
+    ...over,
+  });
+  const of = (sex: string, n: number, selected: number) =>
+    Array.from({ length: n }, (_, i) => ({ sex, selected: i < selected }));
+
+  it("reports no comparison, not a clean result, for one group left after exclusion", () => {
+    const got = computeBiasAudit([...of("Male", 990, 400), ...of("Female", 10, 2)], cfg());
+    const table = got.tables[0];
+    expect(table.noComparison).toBe("single_group");
+    expect(table.rows.every((r) => r.impactRatio === null && !r.flagged)).toBe(true);
+    expect(table.highestGroup).toBeNull();
+    expect(got.summary).toContain("nothing to compare it with");
+    expect(got.summary).not.toContain("No adverse impact flags detected");
+    // The excluded group still reports its count and rate.
+    expect(table.rows.find((r) => r.categoryName === "Female")).toMatchObject({
+      applicantCount: 10,
+      selectionRate: 0.2,
+      excluded: true,
+    });
+  });
+
+  it("does the same for an intersectional table", () => {
+    const records = [
+      ...Array.from({ length: 990 }, (_, i) => ({ sex: "M", race: "A", selected: i < 400 })),
+      ...Array.from({ length: 10 }, (_, i) => ({ sex: "F", race: "B", selected: i < 2 })),
+    ];
+    const got = computeBiasAudit(
+      records,
+      cfg({
+        categories: { sex: { label: "Sex", groups: [] } },
+        intersectional: { required: true, cross: ["sex", "race"] },
+      }),
+    );
+    const inter = got.tables.find((t) => t.categoryKey === "intersectional")!;
+    expect(inter.noComparison).toBe("single_group");
+    expect(inter.rows.every((r) => r.impactRatio === null)).toBe(true);
+    expect(got.summary).not.toContain("No adverse impact flags detected");
+  });
+
+  it("names the real reason when only an excluded group has a non-zero rate", () => {
+    const got = computeBiasAudit(
+      [...of("Male", 500, 0), ...of("Female", 490, 0), ...of("Other", 10, 3)],
+      cfg(),
+    );
+    expect(got.tables[0].noComparison).toBe("only_excluded_nonzero");
+    expect(got.summary).toContain("only groups below the small-sample exclusion");
+    expect(got.summary).not.toContain("no group with a value has a non-zero rate");
+  });
+
+  it("keeps the zero-rate reason when no group has a non-zero rate", () => {
+    const got = computeBiasAudit([...of("Male", 500, 0), ...of("Female", 500, 0)], cfg());
+    expect(got.tables[0].noComparison).toBe("zero_rate");
+    expect(got.summary).toContain("no group with a value has a non-zero rate");
+  });
+});

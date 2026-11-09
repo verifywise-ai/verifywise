@@ -1,3 +1,4 @@
+import type { NoComparisonReason } from "./impactRatios";
 import type { DegenerateMedian } from "./scoringRate";
 
 export type MetricMode = "selection_rate" | "scoring_rate" | "fairness_metrics";
@@ -19,6 +20,8 @@ export interface CategoryTable {
   rows: GroupResult[];
   highestGroup: string | null;
   highestRate: number | null;
+  /** Set when this table has no impact ratios; absent on runs stored before it existed. */
+  noComparison?: NoComparisonReason | null;
 }
 
 export type AuditRecord = Record<string, unknown>;
@@ -124,7 +127,13 @@ export interface BiasAuditResult {
    * it to state what the rate was measured against.
    */
   overallMedian: number | null;
+  /** Every record read, scored or not. */
   totalApplicants: number;
+  /**
+   * Records left out of the median and every rate for having a blank score,
+   * in scoring-rate mode. Absent on runs stored before it existed.
+   */
+  blankScoreCount?: number;
   totalSelected: number;
   unknownCount: number;
   flagsCount: number;

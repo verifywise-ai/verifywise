@@ -5,7 +5,7 @@
  * Includes filtering by use case, date range, and flagged status.
  */
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   Box,
   Stack,
@@ -32,18 +32,30 @@ import {
   PMMReportWithDetails,
   PMMReportsFilterRequest,
 } from "../../../../domain/types/PostMarketMonitoring";
+import { useSearchParams } from "react-router";
 import dayjs, { Dayjs } from "dayjs";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import { AlertState } from "../../../../application/interfaces/appStates";
+import useProjectData from "../../../../application/hooks/useProjectData";
 
 interface LocalAlertState extends AlertState {
   isToast: boolean;
   visible: boolean;
 }
 
+/** Reads `?projectId=` as a positive integer; anything else means "all use cases". */
+const parseProjectId = (raw: string | null): number | undefined => {
+  if (!raw || !/^\d+$/.test(raw)) return undefined;
+  const id = Number(raw);
+  return Number.isSafeInteger(id) && id > 0 ? id : undefined;
+};
+
 const ReportsArchive: React.FC = () => {
   const formatDate = useFormattedDate();
   const theme = useTheme();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const projectId = parseProjectId(searchParams.get("projectId"));
+  const { project: scopedProject } = useProjectData({ projectId: projectId?.toString() ?? "" });
 
   // State
   const [isLoading, setIsLoading] = useState(true);
@@ -57,6 +69,14 @@ const ReportsArchive: React.FC = () => {
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
   const [flaggedOnly, setFlaggedOnly] = useState(false);
+
+  // A new use case scope starts from the first page, however the URL changed
+  useEffect(() => {
+    setPage(0);
+  }, [projectId]);
+
+  // Only the latest request may write to state; an older one can finish later
+  const latestRequestRef = useRef(0);
 
   // Show alert helper - defined before loadReports to avoid ESLint warning
   const showAlert = useCallback(
@@ -75,6 +95,7 @@ const ReportsArchive: React.FC = () => {
       return;
     }
 
+    const requestId = ++latestRequestRef.current;
     setIsLoading(true);
     try {
       const filters: PMMReportsFilterRequest = {
@@ -82,6 +103,10 @@ const ReportsArchive: React.FC = () => {
         limit: rowsPerPage,
         flagged_only: flaggedOnly,
       };
+
+      if (projectId) {
+        filters.project_id = projectId;
+      }
 
       if (startDate) {
         filters.start_date = startDate;
@@ -91,15 +116,19 @@ const ReportsArchive: React.FC = () => {
       }
 
       const response = await pmmService.getReports(filters);
+      if (requestId !== latestRequestRef.current) return;
       setReports(response.reports);
       setTotal(response.total);
     } catch (error) {
+      if (requestId !== latestRequestRef.current) return;
       console.error("Error loading reports:", error);
       showAlert("error", "Failed to load reports");
     } finally {
-      setIsLoading(false);
+      if (requestId === latestRequestRef.current) {
+        setIsLoading(false);
+      }
     }
-  }, [page, rowsPerPage, startDate, endDate, flaggedOnly, showAlert]);
+  }, [page, rowsPerPage, startDate, endDate, flaggedOnly, projectId, showAlert]);
 
   useEffect(() => {
     loadReports();
@@ -137,6 +166,18 @@ const ReportsArchive: React.FC = () => {
     setPage(0);
   }, []);
 
+  // Drop the use case scope and list reports for every use case
+  const handleShowAllUseCases = useCallback(() => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete("projectId");
+        return next;
+      },
+      { replace: true },
+    );
+  }, [setSearchParams]);
+
   // Check if any filter is active
   const hasActiveFilters = useMemo(() => {
     return startDate || endDate || flaggedOnly;
@@ -157,6 +198,14 @@ const ReportsArchive: React.FC = () => {
     backgroundColor: theme.palette.background.accent,
     borderBottom: `1px solid ${theme.palette.border.light}`,
     padding: "12px 16px",
+  };
+
+  const textButtonStyle = {
+    "height": "30px",
+    "fontSize": 13,
+    "&:hover": {
+      backgroundColor: theme.palette.background.accent,
+    },
   };
 
   const tableCellStyle = {
@@ -185,9 +234,28 @@ const ReportsArchive: React.FC = () => {
         <Typography sx={{ fontSize: 16, fontWeight: 600, color: theme.palette.text.primary }}>
           Monitoring reports
         </Typography>
-        <Typography sx={{ fontSize: 13, color: theme.palette.other.icon }}>
-          View and download past monitoring cycle reports
-        </Typography>
+        {projectId ? (
+          <Stack direction="row" alignItems="center" gap="8px" flexWrap="wrap">
+            <Typography sx={{ fontSize: 13, color: theme.palette.other.icon }}>Use case</Typography>
+            <Typography
+              data-testid="pmm-reports-scope"
+              sx={{ fontSize: 13, fontWeight: 500, color: theme.palette.text.primary }}
+            >
+              {scopedProject?.project_title ?? `#${projectId}`}
+            </Typography>
+            <CustomizableButton
+              variant="text"
+              text="Show all use cases"
+              onClick={handleShowAllUseCases}
+              testId="pmm-reports-show-all"
+              sx={{ ...textButtonStyle, color: theme.palette.primary.main }}
+            />
+          </Stack>
+        ) : (
+          <Typography sx={{ fontSize: 13, color: theme.palette.other.icon }}>
+            View and download past monitoring cycle reports
+          </Typography>
+        )}
       </Stack>
 
       {/* Filters */}
@@ -249,14 +317,7 @@ const ReportsArchive: React.FC = () => {
               variant="text"
               text="Reset filters"
               onClick={handleResetFilters}
-              sx={{
-                "height": "34px",
-                "color": theme.palette.other.icon,
-                "fontSize": 13,
-                "&:hover": {
-                  backgroundColor: theme.palette.background.accent,
-                },
-              }}
+              sx={{ ...textButtonStyle, color: theme.palette.other.icon }}
             />
           )}
         </Stack>
@@ -281,7 +342,7 @@ const ReportsArchive: React.FC = () => {
               <Table>
                 <TableHead>
                   <TableRow>
-                    <TableCell sx={tableHeaderStyle}>Use case</TableCell>
+                    {!projectId && <TableCell sx={tableHeaderStyle}>Use case</TableCell>}
                     <TableCell sx={tableHeaderStyle}>Cycle</TableCell>
                     <TableCell sx={tableHeaderStyle}>Completed</TableCell>
                     <TableCell sx={tableHeaderStyle}>By</TableCell>
@@ -301,11 +362,13 @@ const ReportsArchive: React.FC = () => {
                         "&:hover": { backgroundColor: theme.palette.background.accent },
                       }}
                     >
-                      <TableCell sx={tableCellStyle}>
-                        <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
-                          {report.project_title}
-                        </Typography>
-                      </TableCell>
+                      {!projectId && (
+                        <TableCell sx={tableCellStyle}>
+                          <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
+                            {report.project_title}
+                          </Typography>
+                        </TableCell>
+                      )}
                       <TableCell sx={tableCellStyle}>#{report.cycle_number}</TableCell>
                       <TableCell sx={tableCellStyle}>
                         {report.completed_at ? formatDate(report.completed_at) : "-"}

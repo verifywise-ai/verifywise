@@ -23,6 +23,7 @@ import {
   FormatterContext,
   getEntityConfig,
   GENERIC_FORMATTERS,
+  runInSavepoint,
 } from "../config/changeHistory.config";
 import { ValidationException } from "../domain.layer/exceptions/custom.exception";
 import logger from "./logger/fileLogger";
@@ -71,6 +72,7 @@ export const recordEntityChange = async (
   newValue?: string,
   transaction?: Transaction,
   changedBySystem = false,
+  deferLedger?: (append: () => void) => void,
 ): Promise<void> => {
   try {
     const config = getEntityConfig(entityType);
@@ -116,7 +118,9 @@ export const recordEntityChange = async (
         oldValue: oldValue || null,
         newValue: newValue || null,
       }).catch((err) => logger.error(`[audit_ledger] write failed: ${err}`));
-    if (transaction) {
+    if (deferLedger) {
+      deferLedger(appendLedger);
+    } else if (transaction) {
       transaction.afterCommit(() => {
         appendLedger();
       });
@@ -148,6 +152,7 @@ export const recordMultipleFieldChanges = async (
   changes: Array<{ fieldName: string; oldValue: string; newValue: string }>,
   transaction?: Transaction,
   changedBySystem = false,
+  deferLedger?: (append: () => void) => void,
 ): Promise<void> => {
   for (const change of changes) {
     await recordEntityChange(
@@ -161,6 +166,7 @@ export const recordMultipleFieldChanges = async (
       change.newValue,
       transaction,
       changedBySystem,
+      deferLedger,
     );
   }
 };
@@ -391,6 +397,90 @@ export const trackEntityChanges = async (
   }
 
   return changes;
+};
+
+/**
+ * The written values of the keys an UPDATE set, read back from its RETURNING
+ * row. Diffing these instead of the request values compares what the
+ * database stored on both sides: Postgres has already cast form strings such
+ * as "false" or a long date string to the column types, so an unchanged
+ * value never shows as a change. Accepts a plain row or a sequelize instance.
+ */
+export const writtenValues = (
+  returned: unknown,
+  updateValues: Record<string, unknown>,
+): Record<string, unknown> => {
+  if (!returned || typeof returned !== "object") return updateValues;
+  const row =
+    typeof (returned as { get?: unknown }).get === "function"
+      ? (returned as { get: (o: { plain: true }) => Record<string, unknown> }).get({ plain: true })
+      : (returned as Record<string, unknown>);
+  return Object.fromEntries(
+    Object.keys(updateValues)
+      .filter((key) => key in row)
+      .map((key) => [key, row[key]]),
+  );
+};
+
+/**
+ * Best-effort field-level history for an UPDATE already expressed as a
+ * set-values object (the values going into the SET clause). Callers snapshot
+ * the tracked columns before updating, pass the values they actually write,
+ * and this diffs, formats and records the changes on the same transaction.
+ *
+ * A caller that cannot name the acting user (e.g. an advisor write tool,
+ * which only receives an organization id) should omit `changedBy` entirely:
+ * the change is then recorded as made by the system rather than mislabeled as
+ * an anonymous user.
+ *
+ * History must never fail the underlying edit: on a transaction the work runs
+ * in a savepoint, and any error is logged and swallowed, matching the
+ * model-lifecycle extension's guarantee.
+ */
+export const recordUpdateChanges = async (
+  entityType: EntityType,
+  entityId: number,
+  before: Record<string, unknown> | null | undefined,
+  updateValues: Record<string, unknown>,
+  changedBy: number | null | undefined,
+  organizationId: number,
+  transaction?: Transaction,
+): Promise<void> => {
+  if (!before) return;
+  try {
+    // Name lookups already run in their own savepoints.
+    const changes = await trackEntityChanges(entityType, before, updateValues, {
+      organizationId,
+      transaction,
+    });
+    if (changes.length === 0) return;
+    const changedBySystem = changedBy === undefined;
+    // A savepoint keeps a failed history write from aborting the caller's
+    // transaction, which would fail the edit at its next statement. Ledger
+    // appends wait until every row is written: a rolled-back row must not
+    // leave an append-only ledger entry behind.
+    const ledgerAppends: Array<() => void> = [];
+    await runInSavepoint(
+      () =>
+        recordMultipleFieldChanges(
+          entityType,
+          entityId,
+          changedBy ?? null,
+          organizationId,
+          changes,
+          transaction,
+          changedBySystem,
+          (append) => ledgerAppends.push(append),
+        ),
+      transaction,
+    );
+    for (const append of ledgerAppends) {
+      if (transaction) transaction.afterCommit(() => append());
+      else append();
+    }
+  } catch (error) {
+    logger.error(`Error recording ${entityType} change history: ${error}`);
+  }
 };
 
 /**

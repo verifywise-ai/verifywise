@@ -1,5 +1,6 @@
 import { computeCategoryTable } from "./categoryTable";
 import { computeFairnessMetricsTable } from "./fairnessMetrics";
+import { NO_COMPARISON_TEXT } from "./impactRatios";
 import { computeIntersectionalTable } from "./intersectional";
 import { RECORD_KEYS } from "./recordKeys";
 import { formatPercent, round6 } from "./round";
@@ -55,14 +56,21 @@ function twoDecimals(x: number): string {
  * Like the Python, it reads those literal keys rather than the configured
  * column names, so a caller maps its columns before calling.
  *
- * Deliberate divergences from the Python, all in the summary text; the
- * arithmetic is identical. Where the Python reports "No adverse impact flags
- * detected" for a computation that produced no ratios, this says why instead:
+ * Deliberate divergences from the Python. These change figures:
+ *
+ *  - the reference rate comes only from groups left in the calculation, so a
+ *    group under the small-sample exclusion cannot set it (impactRatios.ts);
+ *  - in scoring mode the tables and the 2% share use the scored records, so a
+ *    blank score is in neither the numerator nor the denominator;
+ *  - a table with fewer than two groups in the calculation has no ratios.
+ *
+ * These change only the summary text. Where the Python reports "No adverse
+ * impact flags detected" for a computation that produced no ratios, this says
+ * why instead:
  *
  *  - a degenerate median: none, or too few, of the records score above it
  *    (the condition is also returned in `diagnostics`);
- *  - a table with no reference group, because no group with a value has a
- *    non-zero rate;
+ *  - a table with no comparison (`noComparison` on the table, stating why);
  *  - no protected category configured at all.
  *
  * Group names also differ in one respect: a whitespace-only value is blank
@@ -84,6 +92,7 @@ export function computeBiasAudit(
   let totalSelected = 0;
   let overallRate = 0;
   let median: number | null = null;
+  let blankScoreCount = 0;
 
   const countTable = (table: CategoryTable) => {
     tables.push(table);
@@ -134,13 +143,18 @@ export function computeBiasAudit(
     overallRate = scored.length > 0 ? totalSelected / scored.length : 0;
     const rateOf = aboveMedian(median, RECORD_KEYS.score);
 
+    // Each category and intersectional table runs on the scored sample too,
+    // so a group's rate and the 2% share are over its scored records. The
+    // gates report the blank-score count (dataGates.ts, score_values_blank).
+    const scoredApplicants = scored.length;
+    blankScoreCount = totalApplicants - scoredApplicants;
     for (const [categoryKey, categoryConfig] of Object.entries(config.categories)) {
       countTable(
         computeCategoryTable({
-          records,
+          records: scored,
           categoryKey,
           categoryLabel: categoryConfig.label,
-          totalApplicants,
+          totalApplicants: scoredApplicants,
           threshold: config.threshold,
           smallSampleExclusion: config.smallSampleExclusion,
           rateOf,
@@ -152,9 +166,9 @@ export function computeBiasAudit(
     if (config.intersectional.required && config.intersectional.cross.length >= 2) {
       countTable(
         computeIntersectionalTable({
-          records,
+          records: scored,
           crossKeys: config.intersectional.cross,
-          totalApplicants,
+          totalApplicants: scoredApplicants,
           threshold: config.threshold,
           smallSampleExclusion: config.smallSampleExclusion,
           rateOf,
@@ -203,8 +217,13 @@ export function computeBiasAudit(
     metric === "scoring_rate" ? detectDegenerateMedian(records, RECORD_KEYS.score) : null;
 
   const summaryParts = [
-    `Audit analyzed ${withThousands(totalApplicants)} applicants ` +
-      `(overall rate: ${formatPercent(overallRate)}).`,
+    blankScoreCount > 0
+      ? `Audit read ${withThousands(totalApplicants)} records: ` +
+        `${withThousands(totalApplicants - blankScoreCount)} with a score and ` +
+        `${withThousands(blankScoreCount)} with a blank score, left out of the median and ` +
+        `every rate (overall rate of scored records: ${formatPercent(overallRate)}).`
+      : `Audit analyzed ${withThousands(totalApplicants)} applicants ` +
+        `(overall rate: ${formatPercent(overallRate)}).`,
   ];
   if (unknownCount > 0) {
     summaryParts.push(`${withThousands(unknownCount)} rows excluded due to missing data.`);
@@ -234,7 +253,7 @@ export function computeBiasAudit(
     // The second divergence. A table whose highest rate is zero has no
     // reference group, so it holds no ratios and therefore no flags; the
     // Python still reports "No adverse impact flags detected" for it.
-    const noReference = tables.filter((t) => !t.highestRate);
+    const noComparison = tables.filter((t) => t.noComparison);
     if (totalFlags > 0) {
       summaryParts.push(
         `${totalFlags} group(s) flagged with impact ratio below ` +
@@ -243,12 +262,14 @@ export function computeBiasAudit(
     }
     if (tables.length === 0) {
       summaryParts.push("No impact ratios were computed: no protected category is configured.");
-    } else if (noReference.length > 0) {
-      const titles = noReference.map((t) => t.title.charAt(0).toLowerCase() + t.title.slice(1));
-      summaryParts.push(
-        `No impact ratio could be computed for ${titles.join("; ")}: ` +
-          `no group with a value has a non-zero rate.`,
-      );
+    } else if (noComparison.length > 0) {
+      // Never "no adverse impact flags": at least one table compared nothing.
+      for (const [reason, text] of Object.entries(NO_COMPARISON_TEXT)) {
+        const list = noComparison.filter((t) => t.noComparison === reason);
+        if (list.length === 0) continue;
+        const titles = list.map((t) => t.title.charAt(0).toLowerCase() + t.title.slice(1));
+        summaryParts.push(`No impact ratio could be computed for ${titles.join("; ")}: ${text}.`);
+      }
     } else if (totalFlags === 0) {
       summaryParts.push("No adverse impact flags detected.");
     }
@@ -268,6 +289,7 @@ export function computeBiasAudit(
     overallSelectionRate: round6(overallRate),
     overallMedian: median,
     totalApplicants,
+    blankScoreCount,
     totalSelected,
     unknownCount,
     flagsCount: totalFlags,

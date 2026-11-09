@@ -19,6 +19,7 @@ import type { DerivedBasis } from "../deriveBasis";
 import type { ReadinessResult } from "../readinessScore";
 import { FORBIDDEN_WORDS } from "./vocabulary";
 import type { BiasAuditResult, GateFinding, OrderFinding } from "../index";
+import { NO_COMPARISON_TEXT } from "../engine/impactRatios";
 
 export interface StanceSection {
   key: string;
@@ -145,6 +146,8 @@ const BASIS_LABEL: Record<string, string> = {
   test_volume: "test data, because historical volume is too low",
   test_attribute: "test data, because the characteristic is not captured",
   test_availability: "test data, because historical data is not available to you",
+  test_stated:
+    "test data, going by your answer on the data basis, although you hold historical records",
   not_applicable: "not applicable",
 };
 
@@ -204,6 +207,31 @@ function vetoBlock(args: ComposeStanceArgs, key: string): string {
   return lines.join("\n");
 }
 
+/**
+ * 5-301(d): the summary of results must state the independent auditor's
+ * justification and the excluded category's count and rate. The rows above
+ * carry the count and rate. This states only what the module did and leaves
+ * the justification to the auditor, because the module applies the exclusion
+ * by a fixed rule and has no auditor's reasoning to report.
+ */
+function exclusionNote(rateName: string): string {
+  return (
+    "Each group marked as excluded is below 2% of the data in this run, so it has no impact " +
+    `ratio and its ${rateName} is not used as the reference for the other groups. Its number of ` +
+    `individuals and ${rateName} are shown above. 5-301(d) has the summary of results state the ` +
+    "independent auditor's justification for an exclusion. The module applied this exclusion " +
+    "by a fixed rule, so that justification still has to be added."
+  );
+}
+
+/** The file total reconciled with the sample a scoring-rate run computed over. */
+function scoredCounts(total: number, blank: number): string {
+  return (
+    `With a score, and so in the rates: ${total - blank}. ` +
+    `With a blank score, left out of the median and every rate: ${blank}.`
+  );
+}
+
 function fixed(n: number | null): string {
   return n === null ? "not computed" : n.toFixed(2);
 }
@@ -243,9 +271,21 @@ function resultsBody(args: ComposeStanceArgs): string {
           `impact ratio ${ratioText(r.impactRatio)}${note}`,
       );
     }
+    if (table.noComparison) {
+      lines.push(`No impact ratio could be computed: ${NO_COMPARISON_TEXT[table.noComparison]}.`);
+    }
     lines.push("");
   }
-  lines.push(`Total individuals assessed: ${result.totalApplicants}.`);
+  if (result.tables.some((t) => t.rows.some((r) => r.excluded))) {
+    lines.push(exclusionNote(rateName), "");
+  }
+  const blank = result.blankScoreCount ?? 0;
+  if (blank > 0) {
+    lines.push(`Individuals in the file: ${result.totalApplicants}.`);
+    lines.push(scoredCounts(result.totalApplicants, blank));
+  } else {
+    lines.push(`Total individuals assessed: ${result.totalApplicants}.`);
+  }
   lines.push(
     `Individuals whose category is unknown: ${result.unknownCount}. This number is stated because ` +
       "5-301(c) asks for it.",
@@ -277,6 +317,9 @@ function dataBody(args: ComposeStanceArgs): string {
   const lines: string[] = [];
   if (args.result) {
     lines.push(`Individuals in the file: ${args.result.totalApplicants}.`);
+    if ((args.result.blankScoreCount ?? 0) > 0) {
+      lines.push(scoredCounts(args.result.totalApplicants, args.result.blankScoreCount!));
+    }
     lines.push(`Individuals whose category is unknown: ${args.result.unknownCount}.`);
   } else {
     lines.push("No result is stored for this run, so no data summary is given.");
@@ -430,6 +473,16 @@ function openItemsOf(args: ComposeStanceArgs, scope: StanceModel["scope"]): stri
   }
   if (args.result === null) {
     for (const f of args.gateFindings.filter((x) => x.severity === "stop")) items.push(f.message);
+  }
+  if (args.result?.tables.some((t) => t.rows.some((r) => r.excluded))) {
+    items.push(
+      "Add the independent auditor's justification for the small-sample exclusion (5-301(d)).",
+    );
+  }
+  for (const t of args.result?.tables ?? []) {
+    if (t.noComparison) {
+      items.push(`No comparison was possible for ${t.title.toLowerCase()}.`);
+    }
   }
   for (const o of args.order.filter((x) => x.blocked)) {
     items.push(

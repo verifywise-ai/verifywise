@@ -122,17 +122,11 @@ const iconSnippets = {
 <User size={16} />
 <Settings size={20} />
 <Bell size={24} />`,
-  withColor: `// Using theme colors
-<User
-  size={16}
-  color={theme.palette.text.secondary}
-/>
+  withColor: `import { Trash2, User } from "lucide-react";
+import { icon } from "../../themes/palette";
 
-// Using hex colors
-<AlertCircle
-  size={16}
-  color="#D32F2F"  // Error red
-/>`,
+<User size={16} color={icon.default} />
+<Trash2 size={16} color={icon.error} />`,
   withStroke: `// Adjust stroke width (default: 2)
 <User size={16} strokeWidth={1.5} />  // Thinner
 <User size={16} strokeWidth={2} />    // Default
@@ -490,10 +484,10 @@ const IconsSection: React.FC = () => {
             <SpecTable
               onCopy={handleCopy}
               specs={[
-                { property: "Default", value: "text.icon (text.tertiary)" },
+                { property: "Default", value: "icon.default" },
                 { property: "Primary", value: "brand.primary (primary.main)" },
                 { property: "Success", value: "status.success.text (status.success.main)" },
-                { property: "Error", value: "status.error.text (status.error.main)" },
+                { property: "Error", value: "icon.error" },
                 { property: "Warning", value: "#795548 (status.warning.main)" },
                 { property: "Info", value: "#1565C0 (status.info.main)" },
               ]}

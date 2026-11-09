@@ -414,17 +414,19 @@ export default function RulesPage() {
               <EmptyStateTip
                 icon={Zap}
                 title="Trigger-based alerts"
-                description="Set rules that fire when specific conditions are met: new tool detected, usage threshold exceeded, or data sensitivity flags triggered."
+                description="Fire an alert on a new tool, a usage threshold, a sensitive department, a blocked attempt, a high risk score or a new user."
               />
               <EmptyStateTip
                 icon={Mail}
-                title="Notify the right people"
-                description="Route alerts to security teams, managers, or compliance officers. Each rule can have different notification recipients."
+                title="Get notified"
+                description={
+                  'Turn on "Notify me" to get an in-app notification and an email when the rule fires. Every alert is also kept in the alert history.'
+                }
               />
               <EmptyStateTip
                 icon={Filter}
                 title="Common rules to start with"
-                description="Alert on first use of any new AI tool, flag tools accessing sensitive data, notify when usage exceeds a set threshold per department."
+                description="Alert on any new AI tool, on use by Finance, Legal or HR, and on tools with a risk score of 70 or more."
               />
             </EmptyState>
           ) : (
@@ -768,9 +770,9 @@ export default function RulesPage() {
                   <Typography
                     sx={{ fontSize: 12, color: palette.status.default.text, lineHeight: 1.5 }}
                   >
-                    This is the cumulative number of network events (API calls, page visits)
-                    recorded for a single AI tool across all users. For example, a threshold of 100
-                    means the alert fires once a tool has been accessed 100 times total.
+                    This is the total number of events recorded for one AI tool across all users.
+                    Once a tool reaches it, the rule fires when new events for that tool arrive, at
+                    most once per cooldown period.
                   </Typography>
                 </Stack>
               </Stack>

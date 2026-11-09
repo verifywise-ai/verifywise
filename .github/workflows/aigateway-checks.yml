@@ -118,6 +118,9 @@ jobs:
             tests/test_20_mcp_servers_router.py \
             tests/test_21_safe_outbound_url.py \
             tests/test_22_monitor_mode.py \
+            tests/test_23_mcp_token_service.py \
+            tests/test_24_mcp_oauth_discovery.py \
+            tests/test_25_mcp_token_proxy.py \
             tests/test_mcp_hook_tool_acls.py \
             tests/test_mcp_hook_result_outcome.py \
             tests/test_mcp_hook_request_validation.py \

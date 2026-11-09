@@ -213,6 +213,7 @@ export async function detachFileCtrl(req: Request, res: Response): Promise<any> 
       intParam(req, "id"),
       intParam(req, "itemId"),
       intParam(req, "fileId"),
+      uid(req),
     );
     if (!detached) {
       return res.status(404).json(STATUS_CODE[404](req.t!("File link not found")));
@@ -251,6 +252,7 @@ export async function removePersonCtrl(req: Request, res: Response): Promise<any
       intParam(req, "id"),
       intParam(req, "itemId"),
       intParam(req, "userId"),
+      uid(req),
     );
     return res.status(200).json(STATUS_CODE[200]({ success: true }));
   } catch (err) {
@@ -286,6 +288,7 @@ export async function removeApproverCtrl(req: Request, res: Response): Promise<a
       intParam(req, "id"),
       intParam(req, "itemId"),
       intParam(req, "userId"),
+      uid(req),
     );
     return res.status(200).json(STATUS_CODE[200]({ success: true }));
   } catch (err) {
@@ -307,6 +310,7 @@ export async function updateApprovalStatusCtrl(req: Request, res: Response): Pro
       intParam(req, "itemId"),
       intParam(req, "userId"),
       status as svc.ApprovalStatus,
+      uid(req),
     );
     if (!row) {
       return res.status(404).json(STATUS_CODE[404](req.t!("Approval record not found")));

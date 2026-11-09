@@ -33,7 +33,7 @@ export const mcpServersContent: ArticleContent = {
         { bold: 'Health status', text: 'A color-coded chip: green for "Healthy", red for "Unhealthy" or gray for "Unknown".' },
         { bold: 'Tool count', text: 'How many of this server\'s tools are currently available. Tools the server no longer offers aren\'t counted.' },
         { bold: 'URL', text: 'The server\'s address.' },
-        { bold: 'Auth type', text: 'Shows "no auth", "bearer" or "api_key".' },
+        { bold: 'Auth type', text: 'Shows "no auth", "bearer", "api_key", "OAuth" or "AWS IAM".' },
         { bold: 'Slug', text: 'The URL-safe identifier, shown as a path segment (e.g., /my-server).' },
         { bold: 'Created by', text: 'The user who registered the server and the date.' },
       ],
@@ -64,7 +64,7 @@ export const mcpServersContent: ArticleContent = {
         { field: 'Slug', required: 'Yes', description: 'Auto-generated from the name. Lowercase letters, digits and hyphens only. Must start with a letter or digit. Can\'t be changed after creation.' },
         { field: 'URL', required: 'Yes', description: 'The full address of the MCP server (e.g., https://mcp-server.example.com). It must start with http or https and can\'t contain a username or password. Cloud metadata addresses (169.254.169.254) and 0.0.0.0 are blocked. Private network addresses are allowed.' },
         { field: 'Description', required: 'No', description: 'A short note about what this server does (e.g., "Exposes search and retrieval tools").' },
-        { field: 'Authentication', required: 'No', description: 'How the gateway authenticates with this server. Options: None (default), Bearer token or API key. OAuth isn\'t supported yet.' },
+        { field: 'Authentication', required: 'No', description: 'How the gateway authenticates with this server. Options: None (default), Bearer token, API key, OAuth (client credentials) or AWS IAM.' },
       ],
     },
     {
@@ -75,7 +75,7 @@ export const mcpServersContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The gateway supports three authentication methods when connecting to your backend MCP servers. OAuth isn\'t supported yet. The gateway connects over Streamable HTTP and uses tools only (not resources or prompts).',
+      text: 'The gateway supports five authentication methods when connecting to your backend MCP servers. The gateway connects over Streamable HTTP and uses tools only (not resources or prompts).',
     },
     {
       type: 'bullet-list',
@@ -83,13 +83,66 @@ export const mcpServersContent: ArticleContent = {
         { bold: 'None', text: 'No authentication header is sent. Use this for servers on a private network or behind a VPN.' },
         { bold: 'Bearer token', text: 'The gateway sends an `Authorization: Bearer <token>` header with each request. Enter the token in the modal.' },
         { bold: 'API key', text: 'The gateway sends a custom header with an API key value. You choose the header name (defaults to `X-API-Key`) and enter the key value.' },
+        { bold: 'OAuth (client credentials)', text: 'The gateway requests an access token with your client ID and secret, then sends it as a bearer token. See "Connecting an OAuth server" below.' },
+        { bold: 'AWS IAM', text: 'The gateway signs in to AWS with an IAM user\'s access keys to get a token. See "Connecting the AWS MCP Server" below.' },
       ],
     },
     {
       type: 'callout',
       variant: 'warning',
       title: 'Auth credentials are stored encrypted',
-      text: 'Bearer tokens and API keys are encrypted at rest and only decrypted when the gateway contacts the server. After saving, Admins see only a masked hint of the credential, never the full value.',
+      text: 'Bearer tokens, API keys, client secrets and AWS secret access keys are encrypted at rest and only decrypted when the gateway contacts the server. After saving, Admins see only a masked hint of the credential, never the full value.',
+    },
+    {
+      type: 'heading',
+      id: 'connecting-oauth-server',
+      level: 3,
+      text: 'Connecting an OAuth server',
+    },
+    {
+      type: 'paragraph',
+      text: 'Choose **OAuth (client credentials)** when the server wants an access token from a client ID and secret. Fill in these fields:',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { bold: 'Client ID and Client secret', text: 'The credentials your identity provider gave you for this server.' },
+        { bold: 'Scope (optional)', text: 'The scope to request, if the provider needs one.' },
+        { bold: 'Token URL', text: 'Where the gateway requests tokens. Leave it blank and the gateway looks it up from the server address when you finish typing it. You can also click **Find token URL**. If nothing is found, enter the URL yourself.' },
+        { bold: 'Advanced', text: 'Client authentication (**Basic (header)** or **In request body**) and an optional resource value. The default is a Basic header.' },
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: 'Check a found token URL before you save. The gateway sends your client secret to that address. The token URL must pass the same address checks as the server URL.',
+    },
+    {
+      type: 'heading',
+      id: 'connecting-aws-mcp-server',
+      level: 3,
+      text: 'Connecting the AWS MCP Server',
+    },
+    {
+      type: 'paragraph',
+      text: 'The AWS MCP Server doesn\'t accept a static key, so use **AWS IAM**. Before you start, create an IAM user with long-term access keys and attach the AWS managed policy `AWSMCPSignInOAuthAccessPolicy`. It grants `signin:CreateOAuth2Token`.',
+    },
+    {
+      type: 'ordered-list',
+      items: [
+        { text: 'Click **Add server** and enter a name.' },
+        { text: 'Enter the server address, for example `https://aws-mcp.us-east-1.api.aws/mcp`.' },
+        { text: 'Set Authentication to **AWS IAM**.' },
+        { text: 'Enter the Region (for example `us-east-1`), the Access key ID and the Secret access key.' },
+        { text: 'Click **Add server**. The gateway requests a token and lists the server\'s tools.' },
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: 'Tool calls run with the permissions of that IAM user, so give it only what your agents need. The gateway renews the token before it expires. Tokens last up to an hour. Temporary credentials and role assumption aren\'t supported.',
+    },
+    {
+      type: 'paragraph',
+      text: 'If the gateway can\'t get a token, the server shows as Unhealthy. Hover over the chip to see the reason, such as a rejected client secret or an IAM user missing the policy. Agents calling the server get a generic internal error until you fix it.',
     },
     {
       type: 'heading',
@@ -103,7 +156,7 @@ export const mcpServersContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'To update auth credentials, select the auth type and enter new values. Leave the credential field blank to keep the existing credential.',
+      text: 'To update auth credentials, select the auth type and enter new values. Leave the secret field blank to keep the existing one. If you switch to a different auth type, enter the new credentials.',
     },
     {
       type: 'heading',

@@ -73,6 +73,9 @@ interface StepperModalProps {
 
   /** Optional badge to display next to the title (e.g., use case indicator) */
   headerBadge?: React.ReactNode;
+
+  /** Optional control shown next to the close button (e.g., an activity toggle) */
+  headerAction?: React.ReactNode;
 }
 
 const StepperModal: React.FC<StepperModalProps> = ({
@@ -90,6 +93,7 @@ const StepperModal: React.FC<StepperModalProps> = ({
   submitButtonText = "Submit",
   maxWidth = "1000px",
   headerBadge,
+  headerAction,
 }) => {
   const isLastStep = activeStep === steps.length - 1;
   const isFirstStep = activeStep === 0;
@@ -167,34 +171,37 @@ const StepperModal: React.FC<StepperModalProps> = ({
               </Typography>
             </Stack>
 
-            <Box
-              component="span"
-              role="button"
-              tabIndex={0}
-              onClick={(e) => {
-                e.stopPropagation();
-                onClose();
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
+            <Stack direction="row" alignItems="center" gap="8px">
+              {headerAction}
+              <Box
+                component="span"
+                role="button"
+                tabIndex={0}
+                onClick={(e) => {
+                  e.stopPropagation();
                   onClose();
-                }
-              }}
-              sx={{
-                "cursor": "pointer",
-                "color": "text.muted",
-                "display": "flex",
-                "alignItems": "center",
-                "padding": "4px",
-                "borderRadius": "4px",
-                "&:hover": {
-                  backgroundColor: "#F2F4F7",
-                },
-              }}
-            >
-              <CloseIcon size={20} />
-            </Box>
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    onClose();
+                  }
+                }}
+                sx={{
+                  "cursor": "pointer",
+                  "color": "text.muted",
+                  "display": "flex",
+                  "alignItems": "center",
+                  "padding": "4px",
+                  "borderRadius": "4px",
+                  "&:hover": {
+                    backgroundColor: "#F2F4F7",
+                  },
+                }}
+              >
+                <CloseIcon size={20} />
+              </Box>
+            </Stack>
           </Stack>
         </Stack>
 

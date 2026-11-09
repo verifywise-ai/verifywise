@@ -6,7 +6,7 @@ jest.setTimeout(60000);
 /**
  * Deleting a user must not be blocked by the reporting / workflow tables.
  *
- * deleteUserByIdQuery hard-deletes the users row after nulling a hardcoded list
+ * deleteUserAccountQuery hard-deletes the users row after nulling a hardcoded list
  * of FK columns. Every user reference this branch introduced was declared as a
  * bare `REFERENCES users(id)` — i.e. NO ACTION — and none of them is on that
  * list, so the DELETE raises 23503 and the enclosing transaction rolls back.
@@ -21,7 +21,7 @@ jest.setTimeout(60000);
 
 import { sequelize } from "../../database/db";
 import { QueryTypes } from "sequelize";
-import { deleteUserByIdQuery } from "../../utils/user.utils";
+import { deleteUserAccountQuery } from "../../utils/user.utils";
 import { startWorkflow } from "../../services/workflows/engine";
 import { WorkflowDefinition } from "../../services/workflows/types";
 import { createTestOrganization, createTestUser, cleanupDatabase } from "./helpers";
@@ -81,7 +81,7 @@ describe("user deletion against branch-introduced user foreign keys", () => {
     const transaction = await sequelize.transaction();
     let deleted: Boolean;
     try {
-      deleted = await deleteUserByIdQuery(userId, orgId, transaction);
+      deleted = await deleteUserAccountQuery(userId, transaction);
       await transaction.commit();
     } catch (error) {
       await transaction.rollback();

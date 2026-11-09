@@ -12,14 +12,14 @@ describe("the split that a single answer would flatten", () => {
   // ethnicity at all. Sex was auditable from historical data; race and the
   // intersectional categories were not.
   it("splits sex from race when only sex is held", () => {
-    const d = deriveBasis(a({ "data.held": "sex_only", "data.basis": "test_attribute" }));
+    const d = deriveBasis(a({ "data.held": "sex_only", "data.basis": "historical" }));
     expect(find(d, "sex").basis).toBe("historical");
     expect(find(d, "race_ethnicity").basis).toBe("test_attribute");
     expect(find(d, "intersectional").basis).toBe("test_attribute");
   });
 
   it("gives the race basis an expiry that sex volume cannot satisfy", () => {
-    const d = deriveBasis(a({ "data.held": "sex_only", "data.basis": "test_attribute" }));
+    const d = deriveBasis(a({ "data.held": "sex_only", "data.basis": "historical" }));
     const race = find(d, "race_ethnicity");
     expect(race.expiryTrigger).toMatch(/race and ethnicity/i);
     expect(race.expiryTrigger).not.toMatch(/sex/i);
@@ -52,6 +52,52 @@ describe("the uniform cases", () => {
     );
     expect(d!.perCategory.every((c) => c.basis === "test_availability")).toBe(true);
     expect(find(d, "sex").expiryTrigger).toMatch(/become available/i);
+  });
+});
+
+describe("a stated test-data basis when data is held (5-302(b))", () => {
+  it("overrides a derived historical, with wording true of held data", () => {
+    const d = deriveBasis(a({ "data.held": "all_sufficient", "data.basis": "test_attribute" }));
+    for (const c of ["sex", "race_ethnicity", "intersectional"]) {
+      expect(find(d, c).basis).toBe("test_stated");
+      expect(find(d, c).expiryTrigger).toMatch(/uses your historical records/);
+      expect(find(d, c).expiryTrigger).not.toMatch(/captured|volume|become available/);
+    }
+    expect(d!.summary).toContain(
+      "going by your answer on the data basis, although you hold historical records",
+    );
+    expect(d!.summary).not.toContain("not held");
+  });
+
+  it("applies to sex under sex_only, while race keeps its not-held reason", () => {
+    const d = deriveBasis(a({ "data.held": "sex_only", "data.basis": "test_attribute" }));
+    expect(find(d, "sex").basis).toBe("test_stated");
+    expect(find(d, "sex").expiryTrigger).toMatch(/historical records of sex/);
+    expect(find(d, "race_ethnicity").basis).toBe("test_attribute");
+    // Race is what decides the intersection, so its true reason carries.
+    expect(find(d, "intersectional").basis).toBe("test_attribute");
+  });
+
+  it.each([
+    ["all_low_volume", "test_volume"],
+    ["customers_hold_it", "test_availability"],
+  ])("keeps the holdings-derived reason for %s", (heldAnswer, want) => {
+    for (const basis of ["test_attribute", "test_volume", "test_availability", "historical"]) {
+      const d = deriveBasis(a({ "data.held": heldAnswer, "data.basis": basis }));
+      expect(find(d, "sex").basis).toBe(want);
+      expect(find(d, "race_ethnicity").basis).toBe(want);
+    }
+  });
+
+  it("leaves a stated historical basis to the holdings", () => {
+    const all = deriveBasis(a({ "data.held": "all_sufficient", "data.basis": "historical" }));
+    expect(find(all, "race_ethnicity").basis).toBe("historical");
+  });
+
+  it("does not accept test_stated as an answer", () => {
+    expect(
+      deriveBasis(a({ "data.held": "all_sufficient", "data.basis": "test_stated" })),
+    ).toBeNull();
   });
 });
 

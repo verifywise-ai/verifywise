@@ -1,3 +1,4 @@
+{{- $syslog := .Values.shadowAiSyslog | default dict -}}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -34,6 +35,19 @@ data:
 
   # Feature flags
   MULTI_TENANCY_ENABLED: {{ .Values.config.multiTenancyEnabled | quote }}
+
+  {{- if $syslog.enabled }}
+
+  # Shadow AI syslog listener
+  SHADOW_AI_SYSLOG_ENABLED: "true"
+  SHADOW_AI_SYSLOG_PORT: {{ $syslog.port | quote }}
+  SHADOW_AI_SYSLOG_ALLOW_PLAINTEXT: {{ $syslog.allowPlaintext | quote }}
+  SHADOW_AI_SYSLOG_ALLOW_IP_ONLY: {{ $syslog.allowIpOnly | quote }}
+  {{- if $syslog.tlsSecretName }}
+  SHADOW_AI_SYSLOG_TLS_CERT_FILE: "/etc/verifywise/syslog-tls/tls.crt"
+  SHADOW_AI_SYSLOG_TLS_KEY_FILE: "/etc/verifywise/syslog-tls/tls.key"
+  {{- end }}
+  {{- end }}
 
   # Email
   EMAIL_PROVIDER: {{ .Values.config.email.provider | quote }}

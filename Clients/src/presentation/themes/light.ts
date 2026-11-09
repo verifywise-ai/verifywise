@@ -1,5 +1,5 @@
 import { createTheme } from "@mui/material/styles";
-import { text, background, border, status, brand } from "./palette";
+import { text, background, border, status, brand, icon } from "./palette";
 
 declare module "@mui/material/Button" {
   interface ButtonPropsVariantOverrides {
@@ -54,8 +54,12 @@ const light = createTheme({
         border: status.warning.border,
       },
     },
+    icon: {
+      default: icon.default,
+      error: icon.error,
+    },
     other: {
-      icon: text.icon,
+      icon: icon.default,
       line: "#d6d9dd",
       fill: "#e3e3e3",
       grid: "#a2a3a3",

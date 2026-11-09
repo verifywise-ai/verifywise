@@ -1601,12 +1601,12 @@
     "metric": "selection_rate",
     "overall_selection_rate": 0.333333,
     "score_distribution_tables": [],
-    "summary": "Audit analyzed 60 applicants (overall rate: 33.3%). No adverse impact flags detected.",
+    "summary": "Audit analyzed 60 applicants (overall rate: 33.3%). No impact ratio could be computed for impact ratios by sex: only one group is left in the calculation, so there is nothing to compare it with.",
     "tables": [
       {
         "category_key": "sex",
-        "highest_group": "Male",
-        "highest_rate": 0.333333,
+        "highest_group": null,
+        "highest_rate": null,
         "rows": [
           {
             "applicant_count": 60,
@@ -1614,7 +1614,7 @@
             "category_type": "sex",
             "excluded": false,
             "flagged": false,
-            "impact_ratio": 0.999999,
+            "impact_ratio": null,
             "selected_count": 20,
             "selection_rate": 0.333333
           }
@@ -1637,8 +1637,8 @@
     "tables": [
       {
         "category_key": "race_ethnicity",
-        "highest_group": "Two or more races",
-        "highest_rate": 0.3,
+        "highest_group": "Asian",
+        "highest_rate": 0.25,
         "rows": [
           {
             "applicant_count": 500,
@@ -1646,7 +1646,7 @@
             "category_type": "race_ethnicity",
             "excluded": false,
             "flagged": false,
-            "impact_ratio": 0.833333,
+            "impact_ratio": 1.0,
             "selected_count": 125,
             "selection_rate": 0.25
           },
@@ -1666,7 +1666,7 @@
             "category_type": "race_ethnicity",
             "excluded": false,
             "flagged": false,
-            "impact_ratio": 0.829933,
+            "impact_ratio": 0.99592,
             "selected_count": 122,
             "selection_rate": 0.24898
           }

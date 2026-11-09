@@ -101,6 +101,54 @@ describe("computeCategoryTable against the Python oracle", () => {
     expect(excluded.impactRatio).toBeNull();
   });
 
+  describe("the reference rate under the small-sample exclusion (5-301(d))", () => {
+    const row = (group: string, selected: boolean) => ({ group, selected });
+    const of = (group: string, total: number, selected: number) =>
+      Array.from({ length: total }, (_, i) => row(group, i < selected));
+    const rateOf = (r: Record<string, unknown>) => Boolean(r.selected);
+    const table = (records: Record<string, unknown>[]) =>
+      computeCategoryTable({
+        records,
+        categoryKey: "group",
+        categoryLabel: "Group",
+        totalApplicants: records.length,
+        threshold: 0.8,
+        smallSampleExclusion: 0.02,
+        rateOf,
+      });
+
+    it("takes the highest rate from non-excluded groups only", () => {
+      const t = table([...of("Tiny", 10, 10), ...of("Big", 500, 250), ...of("Other", 490, 196)]);
+      expect(t.highestGroup).toBe("Big");
+      expect(t.highestRate).toBeCloseTo(0.5);
+      const ratio = (name: string) => t.rows.find((r) => r.categoryName === name)!.impactRatio;
+      expect(ratio("Big")).toBe(1);
+      expect(ratio("Other")).toBeCloseTo(0.8);
+    });
+
+    it("still reports an excluded group's count and rate, with no ratio", () => {
+      const t = table([...of("Tiny", 10, 10), ...of("Big", 500, 250), ...of("Other", 490, 196)]);
+      const tiny = t.rows.find((r) => r.categoryName === "Tiny")!;
+      expect(tiny).toMatchObject({
+        applicantCount: 10,
+        selectedCount: 10,
+        selectionRate: 1,
+        excluded: true,
+        impactRatio: null,
+        flagged: false,
+      });
+    });
+
+    it("computes no ratios when every group is excluded", () => {
+      const groups = Array.from({ length: 60 }, (_, g) => of(`G${g}`, 10, g % 2 === 0 ? 5 : 1));
+      const t = table(groups.flat());
+      expect(t.rows).toHaveLength(60);
+      expect(t.rows.every((r) => r.excluded && r.impactRatio === null && !r.flagged)).toBe(true);
+      expect(t.highestGroup).toBeNull();
+      expect(t.highestRate).toBeNull();
+    });
+  });
+
   it("skips records whose group name is blank, as the Python does", () => {
     const c = byName("selection_rate_blank_group_names");
     const table = computeCategoryTable({
@@ -143,8 +191,7 @@ describe("computeCategoryTable against the Python oracle", () => {
     expect(table.rows.map((r) => r.categoryName)).toEqual(["Female", "Male"]);
   });
 
-  // Review Focus 2
-  it("makes a lone group its own reference, but the ratio is not exactly 1", () => {
+  it("gives a lone group no ratio, because there is nothing to compare", () => {
     const c = byName("selection_rate_single_group");
     const table = computeCategoryTable({
       records: c.records,
@@ -156,16 +203,30 @@ describe("computeCategoryTable against the Python oracle", () => {
       rateOf: (r) => Boolean(r.selected),
     });
     expect(table.rows).toHaveLength(1);
-
-    // 0.999999, NOT 1.0. The engine divides the ROUNDED rate by the
-    // UNROUNDED highest rate: with 20 of 60 selected, round(1/3, 6) is
-    // 0.333333 while highestRate stays 0.3333333..., so the quotient is
-    // 0.999999. Verified against the Python. Preserve this asymmetry; it
-    // affects every ratio whose rate is not exactly representable.
-    expect(table.rows[0].impactRatio).toBe(0.999999);
+    expect(table.rows[0].impactRatio).toBeNull();
     expect(table.rows[0].flagged).toBe(false);
+    expect(table.noComparison).toBe("single_group");
+    expect(table.highestGroup).toBeNull();
     expect(table.rows.map((r) => r.impactRatio)).toEqual(
       exp("selection_rate_single_group").tables[0].rows.map((r: any) => r.impact_ratio),
     );
+  });
+
+  // Review Focus 2
+  it("divides the rounded rate by the unrounded highest rate", () => {
+    // 20 of 60 rounds to 0.333333 while the reference stays 0.3333333..., so
+    // the other row's quotient is not exact. Verified against the Python.
+    const rows = (group: string, n: number, selected: number) =>
+      Array.from({ length: n }, (_, i) => ({ group, selected: i < selected }));
+    const table = computeCategoryTable({
+      records: [...rows("A", 60, 20), ...rows("B", 60, 20)],
+      categoryKey: "group",
+      categoryLabel: "Group",
+      totalApplicants: 120,
+      threshold: 0.8,
+      smallSampleExclusion: null,
+      rateOf: (r) => Boolean(r.selected),
+    });
+    expect(table.rows.map((r) => r.impactRatio)).toEqual([0.999999, 0.999999]);
   });
 });

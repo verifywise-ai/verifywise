@@ -1,5 +1,5 @@
 /**
- * Client for the NYC Local Law 144 (AEDT) bias audit module, `/api/bias-audit`.
+ * Client for the NYC Local Law 144 (AEDT) bias audit module, `/api/v1/bias-audit`.
  *
  * Not to be confused with `biasAuditService.ts`, which is the Evals
  * dashboard's client for `/deepeval/bias-audits/*`. The two modules coexist
@@ -342,7 +342,7 @@ export interface AedtCreateCorpusInput {
 
 // ==================== SERVICE ====================
 
-const BASE = "/bias-audit";
+const BASE = "/v1/bias-audit";
 
 /**
  * Request options for this module. The caller shows its own message, so the

@@ -53,7 +53,7 @@ describe("aedtBiasAuditService.getRunTrend", () => {
       [3, false],
       [4, true],
     ]);
-    expect(sent[0].url).toBe("/bias-audit/runs/trend");
+    expect(sent[0].url).toBe("/v1/bias-audit/runs/trend");
     expect(sent[0].params).toEqual({ projectId: 7, frameworkId: 12 });
   });
 });

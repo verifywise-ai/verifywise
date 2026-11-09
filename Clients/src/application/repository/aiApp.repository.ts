@@ -17,6 +17,8 @@ function buildQueryString(filters: IGetAiAppsFilters): string {
   if (filters.limit) params.append("limit", String(filters.limit));
   if (filters.sortBy) params.append("sortBy", filters.sortBy);
   if (filters.order) params.append("order", filters.order);
+  if (filters.lifecycleStage) params.append("lifecycle_stage", filters.lifecycleStage);
+  if (filters.search) params.append("search", filters.search);
   const query = params.toString();
   return query ? `?${query}` : "";
 }
@@ -25,7 +27,9 @@ export async function getAllAiApps(
   filters: IGetAiAppsFilters = {},
   signal?: AbortSignal,
 ): Promise<IAIAppListResponse> {
-  const response = await apiServices.get(`/ai-apps${buildQueryString(filters)}`, {
+  // The lifecycle stage filter and columns are only on the v1 list (#5193).
+  const base = filters.lifecycleStage ? "/v1/ai-apps" : "/ai-apps";
+  const response = await apiServices.get(`${base}${buildQueryString(filters)}`, {
     signal,
   });
   // Backend wraps payloads as STATUS_CODE[200]({ ai_apps, total }) → { message, data },

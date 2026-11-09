@@ -233,3 +233,57 @@ describe("messages", () => {
     expect(f.message.toLowerCase()).not.toContain("pass mark");
   });
 });
+
+describe("blank scores on a scoring-rate run", () => {
+  const scoring: BiasAuditConfig = { ...config, metric: "scoring_rate", scoreColumn: "score" };
+
+  it("reports how many records were left out, without withholding the export", () => {
+    const records = [...Array(200)].map((_, i) => ({
+      sex: i % 2 ? "Male" : "Female",
+      score: i < 50 ? null : i,
+    }));
+    const result = runDataGates(records, scoring);
+    const f = result.findings.find((x) => x.code === "score_values_blank")!;
+    expect(f.severity).toBe("note");
+    expect(f.message).toContain("50 of 200 records have a blank score");
+    expect(f.detail).toMatchObject({ blank: 50, total: 200 });
+    expect(result.mayExportPdf).toBe(true);
+  });
+
+  it("adds nothing when every record has a score, or none does", () => {
+    const full = [...Array(40)].map((_, i) => ({ sex: i % 2 ? "Male" : "Female", score: i }));
+    expect(codes(runDataGates(full, scoring))).not.toContain("score_values_blank");
+    const empty = [...Array(40)].map((_, i) => ({ sex: i % 2 ? "Male" : "Female", score: null }));
+    expect(codes(runDataGates(empty, scoring))).not.toContain("score_values_blank");
+  });
+
+  it("stops with fewer than two groups among the scored records", () => {
+    const records = [...Array(1000)].map((_, i) => ({
+      sex: i < 500 ? "Male" : "Female",
+      score: i < 500 ? i : null,
+    }));
+    const result = runDataGates(records, scoring);
+    expect(result.mayComputeRatios).toBe(false);
+    const f = result.findings.find((x) => x.code === "fewer_than_two_groups")!;
+    expect(f.message).toContain("among the 500 scored records");
+  });
+
+  it("stops when the column is mostly blank among the scored records", () => {
+    const records = [...Array(1000)].map((_, i) => ({
+      sex: i < 100 ? (i % 2 ? "Male" : "Female") : i < 400 ? "" : i % 2 ? "Male" : "Female",
+      score: i < 400 ? i : null,
+    }));
+    const f = runDataGates(records, scoring).findings.find(
+      (x) => x.code === "demographic_column_majority_missing",
+    )!;
+    expect(f.message).toContain("100 of 400 scored records");
+  });
+
+  it("does not apply on a selection-rate run", () => {
+    const records = [...Array(40)].map((_, i) => ({
+      sex: i % 2 ? "Male" : "Female",
+      selected: i % 3 === 0,
+    }));
+    expect(codes(runDataGates(records, config))).not.toContain("score_values_blank");
+  });
+});

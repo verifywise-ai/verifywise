@@ -11,7 +11,7 @@ import {
   InputAdornment,
   CircularProgress,
 } from "@mui/material";
-import { Check, X } from "lucide-react";
+import { Check, Info } from "lucide-react";
 import Field from "../../Inputs/Field";
 import Select from "../../Inputs/Select";
 import { ROLE_OPTIONS } from "../../../../application/constants/roles";
@@ -45,15 +45,20 @@ interface Props {
 function EmailAdornment({ status }: { status: EmailAvailabilityStatus }) {
   if (status === "checking") return <CircularProgress size={14} thickness={5} />;
   if (status === "available") return <Check size={16} color="#16a34a" />;
-  if (status === "taken") return <X size={16} color="#dc2626" />;
+  if (status === "existing") return <Info size={16} color="#475467" />;
   return null;
 }
 
-function emailHelperText(status: EmailAvailabilityStatus): string | undefined {
+function emailErrorText(status: EmailAvailabilityStatus): string | undefined {
   if (status === "invalid") return "Enter a valid email address.";
-  if (status === "taken") return "A user with this email already exists.";
   if (status === "error") return "Could not verify email. Try again.";
   return undefined;
+}
+
+function existingAccountText(mode: UserFormMode): string {
+  return mode === "invite"
+    ? "This email already has an account. The invitation lets them join with it."
+    : "This email already has an account. It joins with its own name and password.";
 }
 
 /**
@@ -75,9 +80,8 @@ const UserFormFields = ({
     onEmailStatusChange?.(emailStatus);
   }, [emailStatus, onEmailStatusChange]);
 
-  const emailError =
-    emailStatus === "taken" || emailStatus === "invalid" || emailStatus === "error";
-  const emailHelper = emailHelperText(emailStatus);
+  const emailError = emailErrorText(emailStatus);
+  const isExistingAccount = emailStatus === "existing";
 
   return (
     <Stack spacing={2}>
@@ -101,7 +105,8 @@ const UserFormFields = ({
         value={values.email}
         onChange={(e) => onChange({ email: e.target.value })}
         autoFocus={emailAutoFocus}
-        error={emailError ? emailHelper : undefined}
+        error={emailError}
+        helperText={isExistingAccount ? existingAccountText(mode) : undefined}
         InputProps={{
           endAdornment: (
             <InputAdornment position="end">
@@ -138,7 +143,7 @@ const UserFormFields = ({
         getOptionValue={(item: { _id: string | number }) => item._id}
         sx={{ width: "100%" }}
       />
-      {mode === "direct" && (
+      {mode === "direct" && !isExistingAccount && (
         <Stack spacing={0.5}>
           <Box sx={{ display: "flex", gap: 1, alignItems: "flex-end" }}>
             <Field

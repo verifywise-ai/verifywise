@@ -1,5 +1,7 @@
+import type { FormRouting } from "../../../domain/types/intakeRouting";
 import { IntakeFormStatus, IntakeEntityType } from "../../../domain/intake/enums";
 import { brand } from "../../themes/palette";
+import { GEOGRAPHY_ITEMS } from "../../../application/constants/geography";
 import {
   RISK_DIMENSIONS,
   sortFields,
@@ -105,50 +107,14 @@ export const DEFAULT_DESIGN_SETTINGS: FormDesignSettings = {
   collectContactInfo: true,
 };
 
-/** Per-form review routing settings, as the server stores them. */
-export interface FormRouting {
-  enabled: boolean;
-  seniorReviewerIds: number[];
-  standardReviewerIds: number[];
-  threshold: number;
-  closeCallMargin: number;
-  secondReviewRate: number;
-}
-
-export type ReviewLane = "senior" | "standard";
-
-export type RoutingReason =
-  | "prohibited"
-  | "no_score"
-  | "close_call"
-  | "at_or_above_threshold"
-  | "below_threshold"
-  | "override_raised"
-  | "escalated";
-
-export interface SecondReview {
-  status: "open" | "agreed" | "missed";
-  selectedAt: string;
-  reviewedBy?: number;
-  reviewedAt?: string;
-  note?: string;
-  resolvedBy?: number;
-  resolvedAt?: string;
-  resolutionNote?: string;
-}
-
-/** Lane decision for one submission. */
-export interface SubmissionRouting {
-  lane: ReviewLane;
-  reason: RoutingReason;
-  score: number | null;
-  threshold: number;
-  closeCallMargin: number;
-  routedAt: string;
-  escalation?: { by: number; at: string; reason: string };
-  secondReview?: SecondReview;
-}
-
+// Routing types live in the domain layer; re-exported for existing imports.
+export type {
+  FormRouting,
+  ReviewLane,
+  RoutingReason,
+  SecondReview,
+  SubmissionRouting,
+} from "../../../domain/types/intakeRouting";
 export type NeedsAttentionKind =
   | "second_review_open"
   | "second_review_missed"
@@ -374,6 +340,28 @@ export const ENTITY_FIELD_MAPPINGS: Record<IntakeEntityType, EntityFieldMapping[
       requiredFieldType: ["select"],
     },
   ],
+  // AI apps (#5193): what approval copies onto the new AI app.
+  [IntakeEntityType.AI_APP]: [
+    {
+      field: "name",
+      label: "AI app name",
+      description: "Name of the AI app",
+      requiredFieldType: ["text"],
+      entityRequired: true,
+    },
+    {
+      field: "description",
+      label: "Description",
+      description: "What the AI app is used for",
+      requiredFieldType: ["textarea", "text"],
+    },
+    {
+      field: "departments",
+      label: "Departments",
+      description: "Teams that use the AI app (a multi-select, or text separated by commas)",
+      requiredFieldType: ["multiselect", "text"],
+    },
+  ],
 };
 
 /**
@@ -597,14 +585,7 @@ export const DEFAULT_USE_CASE_FIELDS: FormField[] = [
     type: "select",
     label: "Geography",
     guidanceText: "The geographic scope affects which regulations apply to this use case.",
-    options: [
-      { label: "Global", value: "1" },
-      { label: "Europe", value: "2" },
-      { label: "North America", value: "3" },
-      { label: "South America", value: "4" },
-      { label: "Asia", value: "5" },
-      { label: "Africa", value: "6" },
-    ],
+    options: GEOGRAPHY_ITEMS.map(({ _id, name }) => ({ label: name, value: String(_id) })),
     entityFieldMapping: "geography",
     order: 3,
   },
@@ -639,6 +620,38 @@ export const DEFAULT_USE_CASE_FIELDS: FormField[] = [
 /**
  * Default model inventory fields pre-populated for new forms
  */
+export const DEFAULT_AI_APP_FIELDS: FormField[] = [
+  {
+    id: generateFieldId(),
+    type: "text",
+    label: "AI app name",
+    placeholder: "Enter the name of the AI app",
+    guidanceText: "Use the product name people know it by, so reviewers can find it.",
+    validation: { required: true, maxLength: 255 },
+    entityFieldMapping: "name",
+    order: 0,
+  },
+  {
+    id: generateFieldId(),
+    type: "textarea",
+    label: "Description",
+    placeholder: "Describe what you want to use the AI app for",
+    guidanceText: "Include the task, the data it will see and who will use it.",
+    validation: { maxLength: 2000 },
+    entityFieldMapping: "description",
+    order: 1,
+  },
+  {
+    id: generateFieldId(),
+    type: "text",
+    label: "Departments",
+    placeholder: "e.g. Sales, Support",
+    guidanceText: "Separate several departments with commas.",
+    entityFieldMapping: "departments",
+    order: 2,
+  },
+];
+
 export const DEFAULT_MODEL_FIELDS: FormField[] = [
   {
     id: generateFieldId(),
@@ -907,7 +920,9 @@ export function createEmptyForm(entityType?: IntakeEntityType): IntakeForm {
           ? DEFAULT_USE_CASE_FIELDS.map((f, i) => ({ ...f, id: generateFieldId(), order: i }))
           : type === IntakeEntityType.MODEL
             ? DEFAULT_MODEL_FIELDS.map((f, i) => ({ ...f, id: generateFieldId(), order: i }))
-            : [],
+            : type === IntakeEntityType.AI_APP
+              ? DEFAULT_AI_APP_FIELDS.map((f, i) => ({ ...f, id: generateFieldId(), order: i }))
+              : [],
     },
     submitButtonText: "Submit",
     status: IntakeFormStatus.DRAFT,

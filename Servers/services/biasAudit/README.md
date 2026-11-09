@@ -252,7 +252,7 @@ requires the four corpus facts in the rendered HTML.
 
 ## Endpoints
 
-Mounted at `/api/bias-audit`, all behind `authenticateJWT`. Project-scoped calls check project
+Mounted at `/api/v1/bias-audit`, all behind `authenticateJWT`. Project-scoped calls check project
 membership (`projectAccess.ts`) and answer 404 to a non-member. An organization Admin skips
 the membership check and reaches every project in the organization. SuperAdmin gets no such
 bypass, unlike project files (`canUserAccessFile`). `GET /stances/:id/download` applies the
@@ -290,6 +290,24 @@ from the record log on every retry. Before create, list, view and resume, the ca
 organization is swept for corpora with no heartbeat for 10 minutes, which fails them; a failed
 corpus can be resumed. Only a `complete` corpus downloads, as `candidate_id,artifact_kind,artifact`
 with no demographic or tier column.
+
+## Deliberate divergences from EvalServer
+
+The engine is a port of EvalServer's Python, and differs from it on purpose in these ways:
+
+- **Reference rate.** The highest rate comes only from groups left in the calculation, so a
+  group under the 2% exclusion cannot set the denominator. This is our reading of § 5-301(d),
+  which the rule does not state outright.
+- **Scored sample.** In scoring-rate mode the tables, the 2% share and the demographic gates use
+  the records with a score. A blank score is in neither the numerator nor the denominator, and
+  the result reports how many were left out.
+- **No comparison.** A table with fewer than two groups in the calculation, or none with a
+  non-zero rate, has no ratios and says why. It is never reported as clean.
+- **Blank values.** A whitespace-only demographic value is blank, not a group.
+- **Summary text.** A computation that produced no ratios says why instead of "No adverse impact
+  flags detected".
+
+Two oracle cases were edited by hand to match; the fixtures README lists them.
 
 ## The oracle
 

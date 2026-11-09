@@ -320,6 +320,111 @@ describe("createRun", () => {
   });
 });
 
+describe("demographic values", () => {
+  const csvWith = (sexOf: (i: number) => string) => {
+    const rows = ["gender,race,outcome"];
+    for (let i = 0; i < 300; i++) {
+      rows.push(`${sexOf(i)},${i % 3 ? "White" : "asian"},${i % 5 < 2 ? 1 : 0}`);
+    }
+    return rows.join("\n") + "\n";
+  };
+  const sexTable = () =>
+    stored().resultJson.tables.find((t: { categoryKey: string }) => t.categoryKey === "sex");
+
+  it("counts Male, male and M as one group", async () => {
+    await run({ csv: csvWith((i) => (i % 2 ? ["Male", "male", "M"][i % 3] : "Female")) });
+    expect(sexTable().rows.map((r: { categoryName: string }) => r.categoryName)).toEqual([
+      "Female",
+      "Male",
+    ]);
+  });
+
+  it("counts a no-answer value as unknown, not a group", async () => {
+    await run({
+      csv: csvWith((i) => (i % 10 === 0 ? "Prefer not to say" : i % 2 ? "Male" : "Female")),
+    });
+    expect(sexTable().rows.map((r: { categoryName: string }) => r.categoryName)).toEqual([
+      "Female",
+      "Male",
+    ]);
+    expect(stored().resultJson.unknownCount).toBe(30);
+    const note = stored().gateFindingsJson.find(
+      (f: { code: string }) => f.code === "demographic_values_missing",
+    );
+    expect(note.message).toMatch(/no answer/);
+  });
+
+  it("runs the fewer-than-two-groups gate on normalized values", async () => {
+    await run({ csv: csvWith((i) => (i % 2 ? "M" : "male")) });
+    expect(stored().resultJson).toBeNull();
+    expect(stored().gateFindingsJson.map((f: { code: string }) => f.code)).toContain(
+      "fewer_than_two_groups",
+    );
+  });
+
+  const NON_BINARY = (i: number) => (i % 50 === 0 ? "Non-binary" : i % 2 ? "Male" : "Female");
+  const unmatchedNote = () =>
+    stored().gateFindingsJson.find(
+      (f: { code: string }) => f.code === "demographic_values_unmatched",
+    );
+
+  it("keeps a label-like unmatched value as its own group and names it in a note", async () => {
+    const out = await run({ csv: csvWith(NON_BINARY) });
+    expect(sexTable().rows.map((r: { categoryName: string }) => r.categoryName)).toEqual([
+      "Female",
+      "Male",
+      "Non-binary",
+    ]);
+    const note = unmatchedNote();
+    expect(note.severity).toBe("note");
+    expect(note.message).toContain('"Non-binary" (6)');
+    expect(note.detail).toMatchObject({ column: "sex", namedRecords: 6, otherRecords: 0 });
+    // Unmatched values alone do not hold back the export.
+    expect(out.outcome.gates.findings.some((f) => f.severity !== "note")).toBe(false);
+  });
+
+  it("applies the 2% exclusion to a small non-binary group, which stays a group", async () => {
+    await run({ csv: csvWith((i) => (i % 100 === 0 ? "non-binary" : i % 2 ? "Male" : "Female")) });
+    const row = sexTable().rows.find(
+      (r: { categoryName: string }) => r.categoryName === "Non-binary",
+    );
+    expect(row).toMatchObject({ applicantCount: 3, excluded: true, impactRatio: null });
+    expect(unmatchedNote().detail).toMatchObject({ namedRecords: 3, otherRecords: 0 });
+  });
+
+  it("does not keep a name, however many rows carry it", async () => {
+    await run({ csv: csvWith((i) => (i < 10 ? "Jane Doe" : i % 2 ? "Male" : "Female")) });
+    expect(JSON.stringify(stored())).not.toContain("Jane Doe");
+    expect(unmatchedNote().detail).toMatchObject({ otherRecords: 10, values: [] });
+    expect(stored().resultJson.unknownCount).toBe(10);
+  });
+
+  it("stores only a count for values that do not look like category labels", async () => {
+    await run({
+      csv: csvWith((i) =>
+        i < 3 ? `Person Name${i}` : i < 6 ? `user${i}@example.com` : i % 2 ? "Male" : "Female",
+      ),
+    });
+    const everything = JSON.stringify(stored());
+    expect(everything).not.toMatch(/Person Name/);
+    expect(everything).not.toMatch(/example\.com/);
+    const note = unmatchedNote();
+    expect(note.message).toContain('6 record(s) in the "sex" column had other values');
+    expect(note.detail).toMatchObject({ otherRecords: 6, values: [] });
+    expect(stored().resultJson.unknownCount).toBe(6);
+  });
+
+  it("keeps kept-out values out of a blocked run too", async () => {
+    await run({
+      csv: csvWith((i) => (i < 3 ? `Person Name${i}` : i % 2 ? "Male" : "Female")),
+      mapping: { ...MAPPING, selected: "absent" },
+    });
+    expect(stored().resultJson).toBeNull();
+    expect(JSON.stringify(stored())).not.toMatch(/Person Name/);
+    expect(unmatchedNote().detail.otherRecords).toBe(3);
+  });
+});
+
 describe("createRun, scoring rate", () => {
   const PERSON = ANSWERS.map((a) =>
     a.question_key === "cutoff.applied_by" ? ans("cutoff.applied_by", "person") : a,
@@ -346,6 +451,35 @@ describe("createRun, scoring rate", () => {
     expect(stored().resultJson).not.toBeNull();
     expect(stored().resultJson.metric).toBe("scoring_rate");
     expect(stored().resultJson.totalApplicants).toBe(300);
+  });
+
+  it("rates each group over its scored records and records a blank-score note", async () => {
+    utils.getProfileAnswersQuery.mockResolvedValue([
+      ...PERSON,
+      ans("threshold.operational", "stated"),
+    ]);
+    const rows = ["gender,race,s"];
+    // Female: 100 rows, 50 blank, 25 of the 50 scored above the median.
+    for (let i = 0; i < 100; i++) {
+      const score = i < 50 ? "" : i < 75 ? "9" : "1";
+      rows.push(`Female,${i % 2 ? "White" : "Asian"},${score}`);
+    }
+    for (let i = 0; i < 100; i++) {
+      rows.push(`Male,${i % 2 ? "White" : "Asian"},${i < 50 ? "9" : "1"}`);
+    }
+    const out = await run({ csv: rows.join("\n") + "\n", mapping: SCORE_MAPPING });
+    expect(out.outcome.result).not.toBeNull();
+    const sex = stored().resultJson.tables.find(
+      (t: { categoryKey: string }) => t.categoryKey === "sex",
+    );
+    const female = sex.rows.find((r: { categoryName: string }) => r.categoryName === "Female");
+    expect(female.applicantCount).toBe(50);
+    expect(female.selectionRate).toBe(0.5);
+    const note = stored().gateFindingsJson.find(
+      (f: { code: string }) => f.code === "score_values_blank",
+    );
+    expect(note.detail.blank).toBe(50);
+    expect(stored().resultJson.totalApplicants).toBe(200);
   });
 
   it("accepts the score key and refuses the selected key for a scoring run", async () => {

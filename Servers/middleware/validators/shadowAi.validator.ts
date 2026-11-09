@@ -1,5 +1,8 @@
 import { body, param } from "express-validator";
 import { handleValidationErrors } from "../validate.middleware";
+import { normalizeIp } from "../../services/shadowAiSyslog/ip";
+import { PARSER_TYPES } from "../../services/shadowAiSyslog/types";
+import { DATA_SENSITIVITIES, MAX_RISK_DESCRIPTION_LENGTH } from "../../services/shadowAiGovernance";
 
 const idParam = param("id").isInt({ min: 1 }).withMessage("id must be a positive integer");
 
@@ -36,6 +39,24 @@ export const validateStartGovernance = [
       return Number.isInteger(n) && n > 0;
     })
     .withMessage("governance_owner_id must be a positive integer"),
+  body("risk_assessment")
+    .optional({ nullable: true })
+    .custom((v) => typeof v === "object" && !Array.isArray(v))
+    .withMessage("risk_assessment must be an object"),
+  // An empty value means "not given" for both fields, as on the form.
+  body("risk_assessment.data_sensitivity")
+    .optional({ values: "falsy" })
+    // isIn alone checks an array's elements one by one and accepts an empty array.
+    .isString()
+    .withMessage("risk_assessment.data_sensitivity must be High, Medium or Low")
+    .isIn([...DATA_SENSITIVITIES])
+    .withMessage("risk_assessment.data_sensitivity must be High, Medium or Low"),
+  body("risk_assessment.description")
+    .optional({ values: "falsy" })
+    .isString()
+    .withMessage("risk_assessment.description must be text of at most 5000 characters")
+    .isLength({ max: MAX_RISK_DESCRIPTION_LENGTH })
+    .withMessage("risk_assessment.description must be text of at most 5000 characters"),
   body("start_lifecycle").optional({ nullable: true }).isBoolean(),
   handleValidationErrors,
 ];
@@ -64,14 +85,22 @@ export const validateUpdateRule = [
   handleValidationErrors,
 ];
 
-const PARSER_TYPES = ["zscaler", "netskope", "squid", "generic_kv"];
+/**
+ * The allowed sender IP. Optional; an empty string or null clears it. A
+ * hostname is rejected, so a legacy row with one can still be updated, just
+ * not re-saved with that value.
+ */
+const sourceIdentifier = body("source_identifier")
+  .optional({ nullable: true })
+  .custom((value) => {
+    if (typeof value !== "string") throw new Error("source_identifier must be an IP address");
+    if (value.trim() === "") return true;
+    if (normalizeIp(value) === null) throw new Error("source_identifier must be an IP address");
+    return true;
+  });
 
 export const validateCreateSyslogConfig = [
-  body("source_identifier")
-    .isString()
-    .trim()
-    .notEmpty()
-    .withMessage("source_identifier is required"),
+  sourceIdentifier,
   body("parser_type")
     .isIn(PARSER_TYPES)
     .withMessage(`parser_type must be one of: ${PARSER_TYPES.join(", ")}`),
@@ -81,7 +110,7 @@ export const validateCreateSyslogConfig = [
 
 export const validateUpdateSyslogConfig = [
   idParam,
-  body("source_identifier").optional({ nullable: true }).isString().trim().notEmpty(),
+  sourceIdentifier,
   body("parser_type").optional({ nullable: true }).isIn(PARSER_TYPES),
   body("is_active").optional({ nullable: true }).isBoolean(),
   handleValidationErrors,

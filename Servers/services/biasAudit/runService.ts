@@ -46,6 +46,7 @@ import type { AuditOutcome, BiasAuditConfig } from "./index";
 import { mayExportStoredRun, type GateFinding } from "./dataGates";
 import { CORPUS_ID_KEY, joinScoresToManifest, tierSeparationFindings } from "./corpusJoin";
 import { sameJobDescription } from "./jobDescription";
+import type { UnmatchedColumn } from "./demographics";
 import type { ManifestRow } from "./generation/manifest";
 import { jobDescriptionSha256 } from "./generation/generateCorpus";
 import { buildTrendSeries, type TrendSeries } from "./trendSeries";
@@ -108,6 +109,54 @@ export interface CreateRunResult {
 
 function stop(code: string, message: string, detail: Record<string, unknown> = {}): GateFinding {
   return { code, severity: "stop", message, detail };
+}
+
+/** How many unmatched values a finding names; the rest are counted. */
+const MAX_NAMED_VALUES = 25;
+
+/**
+ * Values that matched no category. A note, not a stop or a warning: a stop
+ * would refuse valid data such as a non-binary category, and a warning would
+ * withhold the export for it. It is printed with the run's other findings.
+ *
+ * Only recognized labels are named here (demographics.ts); the dataset is not
+ * retained, so anything else is stored as a count.
+ */
+function unmatchedValueNotes(unmatched: Record<string, UnmatchedColumn>): GateFinding[] {
+  return Object.entries(unmatched).map(([column, { named, otherRecords }]) => {
+    const namedRecords = named.reduce((sum, v) => sum + v.count, 0);
+    const parts: string[] = [];
+    if (named.length > 0) {
+      const list = named
+        .slice(0, MAX_NAMED_VALUES)
+        .map((v) => `"${v.value}" (${v.count})`)
+        .join(", ");
+      const more =
+        named.length > MAX_NAMED_VALUES ? `, and ${named.length - MAX_NAMED_VALUES} more` : "";
+      parts.push(
+        `${namedRecords} record(s) in the "${column}" column have a recognized value outside ` +
+          `this module's category list: ${list}${more}. Each is reported as its own group.`,
+      );
+    }
+    if (otherRecords > 0) {
+      parts.push(
+        `${otherRecords} record(s) in the "${column}" column had other values that are not ` +
+          `shown, because they are not on the module's list of recognized labels. They are ` +
+          `counted as an unknown category. Check the column mapping if this is unexpected.`,
+      );
+    }
+    return {
+      code: "demographic_values_unmatched",
+      severity: "note",
+      message: parts.join(" "),
+      detail: {
+        column,
+        namedRecords,
+        otherRecords,
+        values: named.slice(0, MAX_NAMED_VALUES),
+      },
+    };
+  });
 }
 
 /** A run that could not compute: findings stored, nothing exportable. */
@@ -263,7 +312,7 @@ export async function createRun(input: CreateRunInput): Promise<CreateRunResult>
 
   let parsed: ParsedDataset;
   try {
-    parsed = parseDataset(data.toString("utf8"), mapping);
+    parsed = parseDataset(data.toString("utf8"), mapping, LL144_CONFIG.categories);
   } catch (error: unknown) {
     if (error instanceof DatasetParseError) {
       throw new ValidationException(error.message, "csv");
@@ -392,13 +441,17 @@ export async function createRun(input: CreateRunInput): Promise<CreateRunResult>
   }
 
   const computed = blockers.length > 0 ? blockedOutcome(blockers) : runAudit(records, config);
-  const outcome: AuditOutcome =
-    blockers.length > 0 || tierFindings.length === 0
-      ? computed
-      : {
-          ...computed,
-          gates: { ...computed.gates, findings: [...computed.gates.findings, ...tierFindings] },
-        };
+  const outcome: AuditOutcome = {
+    ...computed,
+    gates: {
+      ...computed.gates,
+      findings: [
+        ...computed.gates.findings,
+        ...tierFindings,
+        ...unmatchedValueNotes(parsed.unmatchedDemographics),
+      ],
+    },
+  };
 
   const derived = deriveBasis(answers);
   const triggers = derived

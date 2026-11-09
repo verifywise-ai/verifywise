@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import {
   Table,
   TableBody,
@@ -19,6 +19,7 @@ import StandardTablePagination from "../../components/Table/StandardTablePaginat
 import { useStandardTable } from "../../../application/hooks/useStandardTable";
 import type { StandardColumn } from "../../../domain/types/standardTable";
 import { statusToChipProps, formatDiscoveredSource } from "./utils";
+import StaleMarker from "../../components/LifecycleTabs/StaleMarker";
 import { TableEmptyStateLayout } from "../../components/Table/TableEmptyStateLayout";
 import { EmptyState } from "../../components/EmptyState";
 import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
@@ -30,7 +31,26 @@ interface AIAppsTableProps {
   onDeleteApp: (app: IAIApp) => void;
   emptyMessage?: string;
   showEmptyTips?: boolean;
+  /** Live apps nobody confirmed within the "still live?" interval (#5193). */
+  staleIds?: Set<number>;
+  /**
+   * The server pages and sorts (#5193): `apps` is one page of `total`, and
+   * page, page size and sort changes are reported instead of applied here.
+   */
+  serverPaging?: AIAppsServerPaging;
 }
+
+export interface AIAppsServerPaging {
+  total: number;
+  page: number;
+  rowsPerPage: number;
+  onPageChange: (page: number) => void;
+  onRowsPerPageChange: (rowsPerPage: number) => void;
+  onSortChange: (key: string, direction: "asc" | "desc" | null) => void;
+}
+
+/** Columns the server can sort by (GET /api/v1/ai-apps sortBy). */
+const SERVER_SORTABLE = new Set(["name", "status", "risk_score"]);
 
 const TABLE_COLUMNS: StandardColumn[] = [
   { id: "name", label: "AI app", sortable: true },
@@ -48,6 +68,8 @@ export default function AIAppsTable({
   onDeleteApp,
   emptyMessage = "This is your inventory of the AI apps your teams use. Record who owns each one and how it was found, then manage it from here. Add your first AI app to get started.",
   showEmptyTips = false,
+  staleIds,
+  serverPaging,
 }: AIAppsTableProps) {
   const sortComparator = useCallback((a: IAIApp, b: IAIApp, key: string): number => {
     switch (key) {
@@ -82,8 +104,42 @@ export default function AIAppsTable({
     sortComparator,
   });
 
+  // Server-paged: the server sorts, so report sort changes to the page.
+  const onServerSortChange = serverPaging?.onSortChange;
+  useEffect(() => {
+    onServerSortChange?.(sortConfig.key, sortConfig.direction);
+  }, [onServerSortChange, sortConfig.key, sortConfig.direction]);
+
+  const columns = serverPaging
+    ? TABLE_COLUMNS.map((c) => ({ ...c, sortable: c.sortable && SERVER_SORTABLE.has(c.id) }))
+    : TABLE_COLUMNS;
+  const visibleRows = serverPaging
+    ? sortedRows
+    : sortedRows.slice(validPage * rowsPerPage, validPage * rowsPerPage + rowsPerPage);
+  const pagination = serverPaging
+    ? {
+        totalCount: serverPaging.total,
+        page: serverPaging.page,
+        rowsPerPage: serverPaging.rowsPerPage,
+        onPageChange: (_: unknown, next: number) => serverPaging.onPageChange(next),
+        onRowsPerPageChange: (event: React.ChangeEvent<HTMLInputElement>) =>
+          serverPaging.onRowsPerPageChange(parseInt(event.target.value, 10)),
+        getRange: `${serverPaging.page * serverPaging.rowsPerPage + 1} - ${Math.min(
+          (serverPaging.page + 1) * serverPaging.rowsPerPage,
+          serverPaging.total,
+        )}`,
+      }
+    : {
+        totalCount,
+        page: validPage,
+        rowsPerPage,
+        onPageChange: handleChangePage,
+        onRowsPerPageChange: handleChangeRowsPerPage,
+        getRange,
+      };
+
   const tableHeader = (
-    <StandardTableHead columns={TABLE_COLUMNS} sortConfig={sortConfig} onSort={handleSort} />
+    <StandardTableHead columns={columns} sortConfig={sortConfig} onSort={handleSort} />
   );
 
   if (!sortedRows || sortedRows.length === 0) {
@@ -119,92 +175,91 @@ export default function AIAppsTable({
       <Table sx={singleTheme.tableStyles.primary.frame}>
         {tableHeader}
         <TableBody>
-          {sortedRows
-            .slice(validPage * rowsPerPage, validPage * rowsPerPage + rowsPerPage)
-            .map((app) => {
-              const chipProps = statusToChipProps(app.status);
-              return (
-                <TableRow
-                  key={app.id}
-                  hover
-                  sx={{ ...singleTheme.tableStyles.primary.body.row, cursor: "pointer" }}
-                  onClick={() => onEditApp(app)}
-                >
-                  <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                    <Stack direction="row" alignItems="center" gap="8px">
-                      <Bot size={16} strokeWidth={1.5} color={palette.text.secondary} />
-                      {app.name}
-                    </Stack>
-                  </TableCell>
-                  <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                    <Chip {...chipProps} size="small" uppercase={false} />
-                  </TableCell>
-                  <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                    {app.vendor_name || "—"}
-                  </TableCell>
-                  <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                    {app.risk_score ?? "—"}
-                  </TableCell>
-                  <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                    {formatDiscoveredSource(app.discovered_source)}
-                  </TableCell>
-                  <TableCell sx={singleTheme.tableStyles.primary.body.cell} align="right">
-                    <Stack
-                      direction="row"
-                      justifyContent="flex-end"
-                      gap="4px"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <Tooltip title="Edit">
-                        <IconButton
-                          size="small"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onEditApp(app);
-                          }}
-                          aria-label={`Edit ${app.name}`}
-                        >
-                          <SquarePen size={14} strokeWidth={1.5} />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Details">
-                        <IconButton
-                          size="small"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onViewApp(app);
-                          }}
-                          aria-label={`View details for ${app.name}`}
-                        >
-                          <Eye size={14} strokeWidth={1.5} />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Delete">
-                        <IconButton
-                          size="small"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onDeleteApp(app);
-                          }}
-                          aria-label={`Delete ${app.name}`}
-                        >
-                          <Trash2 size={14} strokeWidth={1.5} />
-                        </IconButton>
-                      </Tooltip>
-                    </Stack>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
+          {visibleRows.map((app) => {
+            const chipProps = statusToChipProps(app.status);
+            return (
+              <TableRow
+                key={app.id}
+                hover
+                sx={{ ...singleTheme.tableStyles.primary.body.row, cursor: "pointer" }}
+                onClick={() => onEditApp(app)}
+              >
+                <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                  <Stack direction="row" alignItems="center" gap="8px">
+                    <Bot size={16} strokeWidth={1.5} color={palette.text.secondary} />
+                    {app.name}
+                    {app.id !== undefined && staleIds?.has(app.id) && <StaleMarker />}
+                  </Stack>
+                </TableCell>
+                <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                  <Chip {...chipProps} size="small" uppercase={false} />
+                </TableCell>
+                <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                  {app.vendor_name || "—"}
+                </TableCell>
+                <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                  {app.risk_score ?? "—"}
+                </TableCell>
+                <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                  {formatDiscoveredSource(app.discovered_source)}
+                </TableCell>
+                <TableCell sx={singleTheme.tableStyles.primary.body.cell} align="right">
+                  <Stack
+                    direction="row"
+                    justifyContent="flex-end"
+                    gap="4px"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Tooltip title="Edit">
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEditApp(app);
+                        }}
+                        aria-label={`Edit ${app.name}`}
+                      >
+                        <SquarePen size={14} strokeWidth={1.5} />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Details">
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onViewApp(app);
+                        }}
+                        aria-label={`View details for ${app.name}`}
+                      >
+                        <Eye size={14} strokeWidth={1.5} />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Delete">
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDeleteApp(app);
+                        }}
+                        aria-label={`Delete ${app.name}`}
+                      >
+                        <Trash2 size={14} strokeWidth={1.5} />
+                      </IconButton>
+                    </Tooltip>
+                  </Stack>
+                </TableCell>
+              </TableRow>
+            );
+          })}
         </TableBody>
-        {totalCount > 0 && (
+        {pagination.totalCount > 0 && (
           <StandardTablePagination
-            totalCount={totalCount}
-            page={validPage}
-            rowsPerPage={rowsPerPage}
-            onPageChange={handleChangePage}
-            onRowsPerPageChange={handleChangeRowsPerPage}
-            getRange={getRange}
+            totalCount={pagination.totalCount}
+            page={pagination.page}
+            rowsPerPage={pagination.rowsPerPage}
+            onPageChange={pagination.onPageChange}
+            onRowsPerPageChange={pagination.onRowsPerPageChange}
+            getRange={pagination.getRange}
             entityLabel="AI app"
             entityLabelPlural="AI apps"
             colSpan={TABLE_COLUMNS.length}

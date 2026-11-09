@@ -180,6 +180,42 @@ export class IntakeSubmissionModel
   notificationSentAt!: Date | null;
 
   @Column({
+    type: DataType.INTEGER,
+    allowNull: true,
+    field: "review_days",
+  })
+  reviewDays!: number | null;
+
+  @Column({
+    type: DataType.DATEONLY,
+    allowNull: true,
+    field: "review_due_date",
+  })
+  reviewDueDate!: string | null;
+
+  @Column({
+    type: DataType.DATE,
+    allowNull: true,
+    field: "confirmation_sent_at",
+  })
+  confirmationSentAt!: Date | null;
+
+  @Column({
+    type: DataType.INTEGER,
+    allowNull: false,
+    defaultValue: 0,
+    field: "confirmation_attempts",
+  })
+  confirmationAttempts!: number;
+
+  @Column({
+    type: DataType.DATE,
+    allowNull: true,
+    field: "confirmation_next_attempt_at",
+  })
+  confirmationNextAttemptAt!: Date | null;
+
+  @Column({
     type: DataType.DATE,
     field: "created_at",
   })

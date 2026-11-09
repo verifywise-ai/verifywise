@@ -17,3 +17,17 @@ arithmetic and additionally returns a `degenerateMedian` diagnostic so callers c
 present it as a result. Its summary also differs: it states why no ratio was computed instead
 of reporting an absence of flags, here and wherever a table has no reference group (for
 example `selection_rate_none_selected`). See the port's `engine/index.ts`.
+
+**Changed by hand:** `selection_rate_small_sample_excluded` was edited after generation. The
+Python takes the highest rate over every group, including one under the 2% exclusion, so an
+excluded group (here `Two or more races`) set the denominator for the others. The port takes
+it over the groups left in the calculation, per § 5-301(d) as we read it, so this case now
+expects `Asian` as the reference and ratios of 1.0 and 0.99592. Regenerating from the Python
+would put the old values back.
+
+`selection_rate_single_group` was also edited by hand: the Python gave a lone group a ratio of
+0.999999 and reported no flags. With one group there is nothing to compare, so the port gives no
+ratio and the summary says so.
+
+No case holds a blank score, so the port's scored-sample rule has no oracle case. It is covered
+in `index.test.ts`.

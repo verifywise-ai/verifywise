@@ -27,6 +27,8 @@ function getEntityTypeDisplayName(entityType: IntakeEntityType): string {
       return "Model";
     case IntakeEntityType.USE_CASE:
       return "Use Case";
+    case IntakeEntityType.AI_APP:
+      return "AI App";
     default:
       return entityType;
   }
@@ -42,8 +44,9 @@ async function getAdminUsersForOrganization(
     const admins = await sequelize.query(
       `SELECT u.id, u.name, u.email
        FROM users u
-       JOIN roles r ON u.role_id = r.id
-       WHERE r.name = 'Admin' AND u.organization_id = :organizationId`,
+       JOIN organization_members om ON om.user_id = u.id AND om.organization_id = :organizationId
+       JOIN roles r ON om.role_id = r.id
+       WHERE r.name = 'Admin'`,
       {
         replacements: { organizationId },
         type: QueryTypes.SELECT,
@@ -82,8 +85,17 @@ function buildResubmitLink(
   return buildFrontendUrl(`/intake-forms`);
 }
 
+/** The "who reviews and by when" block, escaped; empty without a sentence. */
+export function renderReviewHtml(reviewText: string | undefined): string {
+  if (!reviewText) return "";
+  return `<div class="box box-primary"><p class="box-subtitle">${escapeHtml(reviewText)}</p></div>`;
+}
+
 /**
- * Send confirmation email to submitter after form submission
+ * Send confirmation email to submitter after form submission. `reviewText`
+ * (already worded, see intakeConfirmation/reviewTime.ts) names who reviews
+ * the submission and by when. Never throws: resolves false when the email
+ * could not be sent, so the caller can release its claim and retry later.
  */
 export async function sendSubmissionReceivedEmail(
   submitterEmail: string,
@@ -95,7 +107,8 @@ export async function sendSubmissionReceivedEmail(
   tenantSlug?: string,
   formSlug?: string,
   lang?: string,
-): Promise<void> {
+  reviewText?: string,
+): Promise<boolean> {
   try {
     const resubmitLink = buildResubmitLink(resubmissionToken, publicId, tenantSlug, formSlug);
 
@@ -109,14 +122,17 @@ export async function sendSubmissionReceivedEmail(
         formName,
         submissionId: String(submissionId),
         resubmitLink,
+        reviewHtml: renderReviewHtml(reviewText),
       },
     );
 
     logger.info(
       `Submission received email sent to ${submitterEmail} for submission #${submissionId}`,
     );
+    return true;
   } catch (error) {
     logger.error("Failed to send submission received email:", error);
+    return false;
   }
 }
 
@@ -203,7 +219,7 @@ export async function sendNewSubmissionAdminNotification(
     const resultsHtml = renderIntakeResultsHtml(results, lang);
     const laneHtml = laneText
       ? `<p class="box-subtitle" style="margin-top: 6px;"><strong>${escapeHtml(
-          translate(lang, "Review lane:"),
+          translate(lang, "Review level:"),
         )}</strong> ${escapeHtml(laneText)}</p>`
       : "";
     let sent = 0;

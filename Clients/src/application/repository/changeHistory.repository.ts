@@ -7,6 +7,19 @@
 import { apiServices } from "../../infrastructure/api/networkServices";
 import { EntityType } from "../../config/changeHistory.config";
 
+/**
+ * Entity types whose history endpoints were added after the API versioning
+ * policy (docs/technical/adr/0001-api-versioning.md), so they are served
+ * under /api/v1. Older types keep their unversioned paths.
+ */
+const V1_HISTORY_ENTITY_TYPES = new Set<EntityType>([
+  "evidence_hub",
+  "model_lifecycle",
+  "control_eu",
+  "subcontrol_eu",
+  "annex_category",
+]);
+
 export interface ChangeHistoryResponse {
   data: any[];
   hasMore: boolean;
@@ -30,8 +43,9 @@ export const getEntityChangeHistory = async (
 ): Promise<ChangeHistoryResponse> => {
   // Convert entity_type to route format (e.g., "model_inventory" -> "model-inventory")
   const routeType = entityType.replace(/_/g, "-");
+  const prefix = V1_HISTORY_ENTITY_TYPES.has(entityType) ? "/v1" : "";
   const response = await apiServices.get(
-    `/${routeType}-change-history/${entityId}?limit=${limit}&offset=${offset}`,
+    `${prefix}/${routeType}-change-history/${entityId}?limit=${limit}&offset=${offset}`,
   );
   // API returns { message: "OK", data: { data: [...], hasMore: boolean, total: number } }
   return (response.data as any).data;

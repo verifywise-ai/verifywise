@@ -7,6 +7,17 @@ frontend_port: 8080
 node_env: production
 multi_tenancy_enabled: "false"
 
+# Shadow AI syslog listener (TCP, off by default). Quote the booleans: only the
+# string "true" turns a flag on. Enabling also needs a TLS certificate and key
+# (set the two *_file paths) or shadow_ai_syslog_allow_plaintext: "true", and
+# the container port published; see docs/technical/infrastructure/shadow-ai-syslog.md.
+shadow_ai_syslog_enabled: "false"
+shadow_ai_syslog_port: "6514"
+shadow_ai_syslog_allow_plaintext: "false"
+shadow_ai_syslog_allow_ip_only: "false"
+shadow_ai_syslog_tls_cert_file: ""
+shadow_ai_syslog_tls_key_file: ""
+
 # Database
 db_host: postgresdb
 db_port: 5432

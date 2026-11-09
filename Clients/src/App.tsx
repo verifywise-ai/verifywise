@@ -60,6 +60,7 @@ const AUTH_ROUTES = [
   "/login",
   "/admin-reg",
   "/user-reg",
+  "/join",
   "/register",
   "/forgot-password",
   "/reset-password",

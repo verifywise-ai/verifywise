@@ -58,9 +58,8 @@ async function resetDatabase() {
         "Admin",
         "verifywise@email.com",
         "MyJH4rTm!@.45L0wm",
-        1,
-        1,
       ),
+      { organizationId: 1, roleId: 1 },
       transaction,
       true,
     );

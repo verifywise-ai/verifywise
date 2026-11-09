@@ -1123,6 +1123,21 @@ const deferredScopedTables: SharedTableEntry[] = [
       "Deferred to a future isolation wave; not covered by the first-pass matrix. Written only via changeHistory.base.utils, which filters by organization_id. See runbook section 2.4.",
   },
   {
+    name: "control_eu_change_history",
+    justification:
+      "Deferred to a future isolation wave; not covered by the first-pass matrix. Written only via changeHistory.base.utils, which filters by organization_id. See runbook section 2.4.",
+  },
+  {
+    name: "subcontrol_eu_change_history",
+    justification:
+      "Deferred to a future isolation wave; not covered by the first-pass matrix. Written only via changeHistory.base.utils, which filters by organization_id. See runbook section 2.4.",
+  },
+  {
+    name: "annex_category_change_history",
+    justification:
+      "Deferred to a future isolation wave; not covered by the first-pass matrix. Written only via changeHistory.base.utils, which filters by organization_id. See runbook section 2.4.",
+  },
+  {
     name: "user_preferences",
     justification:
       "Deferred to a future isolation wave; not covered by the first-pass matrix. See runbook section 2.4.",

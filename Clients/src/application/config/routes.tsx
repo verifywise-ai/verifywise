@@ -28,6 +28,9 @@ const MicrosoftCallback = lazyRoute(
 const RegisterUser = lazyRoute(
   () => import("../../presentation/pages/Authentication/RegisterUser"),
 );
+const JoinOrganization = lazyRoute(
+  () => import("../../presentation/pages/Authentication/JoinOrganization"),
+);
 
 // ── Core dashboard routes ─────────────────────────────────────────────
 const VWHome = lazyRoute(() => import("../../presentation/pages/Home/1.0Home"));
@@ -1196,6 +1199,15 @@ export const createRoutes = (triggerSidebar: boolean, _triggerSidebarReload: () 
     element={
       <Suspense fallback={<LazyFallback />}>
         <ProtectedRoute Component={RegisterUser} />
+      </Suspense>
+    }
+  />,
+  <Route
+    key="join"
+    path="/join"
+    element={
+      <Suspense fallback={<LazyFallback />}>
+        <ProtectedRoute Component={JoinOrganization} />
       </Suspense>
     }
   />,

@@ -16,6 +16,9 @@ import type { z } from "zod";
 export interface McpCaller {
   userId: number;
   organizationId: number | null;
+  /** The caller's role in the token's organization, "SuperAdmin" for a pure super admin. */
+  role: string;
+  isSuperAdmin: boolean;
 }
 
 export interface ToolDef {

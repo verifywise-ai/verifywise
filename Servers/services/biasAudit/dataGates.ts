@@ -123,19 +123,27 @@ export function runDataGates(records: AuditRecord[], config: BiasAuditConfig): G
     });
   }
 
-  // Demographic columns: majority missing, then fewer than two groups.
+  // Demographic columns: majority missing, then fewer than two groups. A
+  // scoring-rate run computes over its scored records, so that is the sample
+  // these gates must judge. (No scored record at all is its own stop below.)
+  const scored =
+    config.metric === "scoring_rate"
+      ? records.filter((r) => scoreValue(r, RECORD_KEYS.score) !== null)
+      : records;
+  const sample = scored.length > 0 ? scored : records;
+  const sampleName = sample.length < total ? "scored records" : "records";
   for (const column of categoryKeys) {
-    const values = records.map((r) => groupValue(r, column)).filter((v) => v !== null);
+    const values = sample.map((r) => groupValue(r, column)).filter((v) => v !== null);
     const present = values.length;
-    if (total > 0 && present / total < MIN_PRESENT_FRACTION) {
+    if (sample.length > 0 && present / sample.length < MIN_PRESENT_FRACTION) {
       findings.push({
         code: "demographic_column_majority_missing",
         severity: "stop",
         message:
           `The "${column}" column has a value for ${withThousands(present)} of ` +
-          `${withThousands(total)} records. Rates for a column that is mostly blank ` +
+          `${withThousands(sample.length)} ${sampleName}. Rates for a column that is mostly blank ` +
           `do not describe the applicant pool, so no ratios are shown.`,
-        detail: { column, present, total },
+        detail: { column, present, total: sample.length },
       });
     }
     const distinct = new Set(values).size;
@@ -144,7 +152,8 @@ export function runDataGates(records: AuditRecord[], config: BiasAuditConfig): G
         code: "fewer_than_two_groups",
         severity: "stop",
         message:
-          `The "${column}" column has ${distinct} distinct group(s) with data. ` +
+          `The "${column}" column has ${distinct} distinct group(s) with data among the ` +
+          `${withThousands(sample.length)} ${sampleName}. ` +
           `An impact ratio compares groups, so at least two are needed.`,
         detail: { column, distinctGroups: distinct },
       });
@@ -158,9 +167,10 @@ export function runDataGates(records: AuditRecord[], config: BiasAuditConfig): G
       code: "demographic_values_missing",
       severity: "note",
       message:
-        `${withThousands(unknown.unknownRecords)} of ${withThousands(total)} records have no value ` +
-        `for at least one protected category. They are left out of that category's rates and ` +
-        `reported as an unknown category, as § 5-301(c) requires.`,
+        `${withThousands(unknown.unknownRecords)} of ${withThousands(total)} records have no value, ` +
+        `a value meaning no answer, or a value not read as a category, for at least one protected category. They are left out of ` +
+        `that category's rates and reported as an unknown category, as § 5-301(b)(5) and (c)(5) ` +
+        `require.`,
       detail: { ...unknown, total },
     });
   }
@@ -254,6 +264,18 @@ export function runDataGates(records: AuditRecord[], config: BiasAuditConfig): G
       .map((r) => scoreValue(r, RECORD_KEYS.score))
       .filter((v): v is number => v !== null);
     const distinctValues = new Set(values).size;
+    const blankScores = total - values.length;
+    if (blankScores > 0 && values.length > 0) {
+      findings.push({
+        code: "score_values_blank",
+        severity: "note",
+        message:
+          `${withThousands(blankScores)} of ${withThousands(total)} records have a blank score. ` +
+          `They are left out of the median and every scoring rate, so each group's rate is over ` +
+          `its scored records only.`,
+        detail: { column: RECORD_KEYS.score, blank: blankScores, total },
+      });
+    }
     if (values.length === 0) {
       findings.push({
         code: "score_column_empty",

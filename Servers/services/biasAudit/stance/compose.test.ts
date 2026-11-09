@@ -305,6 +305,124 @@ describe("derived basis", () => {
   });
 });
 
+describe("a small-sample exclusion (5-301(d))", () => {
+  const excludedRow = {
+    categoryType: "race_ethnicity",
+    categoryName: "Two or more races",
+    selectionRate: 0.3,
+    impactRatio: null,
+    flagged: false,
+    excluded: true,
+    applicantCount: 10,
+    selectedCount: 3,
+  };
+  const withExclusion = {
+    ...base,
+    result: {
+      ...result,
+      excludedCount: 1,
+      tables: [{ ...result.tables[0], rows: [...result.tables[0].rows, excludedRow] }],
+    } as BiasAuditResult,
+  };
+  const body = (s: ReturnType<typeof composeStance>) => section(s, "results").body;
+
+  it("prints the excluded group's count and rate", () => {
+    expect(body(composeStance(withExclusion))).toContain(
+      "Two or more races: 10 individuals, selection rate 0.30, impact ratio not computed",
+    );
+  });
+
+  it("says the auditor's justification has still to be added, and lists it as open", () => {
+    const s = composeStance(withExclusion);
+    expect(body(s)).toMatch(/5-301\(d\).*independent auditor's justification/s);
+    expect(s.openItems.join(" ")).toMatch(/justification for the small-sample exclusion/i);
+  });
+
+  it("says nothing about an exclusion when no group was excluded", () => {
+    const s = composeStance(base);
+    expect(body(s)).not.toMatch(/justification/i);
+    expect(s.openItems.join(" ")).not.toMatch(/small-sample/i);
+  });
+});
+
+describe("a stated test basis on held data", () => {
+  it("states it without claiming the data is not captured", () => {
+    const body = section(
+      composeStance({
+        ...base,
+        derivedBasis: {
+          perCategory: [
+            { category: "sex", basis: "test_stated", expiryTrigger: "Sex trigger text." },
+          ],
+          confirmed: false,
+          summary: "We read your answers as follows.",
+        },
+      }),
+      "basis",
+    ).body;
+    expect(body).toContain(
+      "test data, going by your answer on the data basis, although you hold historical records",
+    );
+    expect(body).not.toContain("not captured");
+  });
+});
+
+describe("blank scores on a scoring-rate run", () => {
+  const withBlanks = {
+    ...base,
+    result: { ...result, totalApplicants: 1000, blankScoreCount: 400 } as BiasAuditResult,
+  };
+
+  it("states the scored and blank-score counts and does not call the total assessed", () => {
+    const body = section(composeStance(withBlanks), "results").body;
+    expect(body).toContain("Individuals in the file: 1000.");
+    expect(body).toContain("With a score, and so in the rates: 600.");
+    expect(body).toContain("With a blank score, left out of the median and every rate: 400.");
+    expect(body).not.toContain("Total individuals assessed");
+  });
+
+  it("reconciles the counts in the data section too", () => {
+    const body = section(composeStance(withBlanks), "data_relied_on").body;
+    expect(body).toContain("With a score, and so in the rates: 600.");
+  });
+
+  it("keeps the plain total when no score is blank", () => {
+    const body = section(composeStance(base), "results").body;
+    expect(body).toContain("Total individuals assessed:");
+    expect(body).not.toContain("With a blank score");
+  });
+});
+
+describe("a table where no comparison was possible", () => {
+  const noComparison = {
+    ...base,
+    result: {
+      ...result,
+      tables: [
+        {
+          ...result.tables[0],
+          noComparison: "single_group",
+          rows: result.tables[0].rows.map((r) => ({ ...r, impactRatio: null, flagged: false })),
+        },
+      ],
+    } as BiasAuditResult,
+  };
+
+  it("says so in the results and lists it as open", () => {
+    const s = composeStance(noComparison);
+    expect(section(s, "results").body).toContain(
+      "No impact ratio could be computed: only one group is left in the calculation",
+    );
+    expect(s.openItems.join(" ")).toMatch(/no comparison was possible/i);
+  });
+
+  it("says nothing of the kind when ratios were computed", () => {
+    expect(section(composeStance(base), "results").body).not.toContain(
+      "No impact ratio could be computed",
+    );
+  });
+});
+
 describe("gate findings", () => {
   it("carries warn and note findings", () => {
     const body = section(composeStance(base), "data_relied_on").body;
