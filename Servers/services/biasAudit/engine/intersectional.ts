@@ -66,7 +66,7 @@ export function computeIntersectionalTable(args: IntersectionalArgs): CategoryTa
     });
   }
 
-  const { highestRate, highestGroup } = applyImpactRatios(rows, {
+  const { highestRate, highestGroup, noComparison } = applyImpactRatios(rows, {
     totalApplicants,
     threshold,
     smallSampleExclusion,
@@ -81,5 +81,6 @@ export function computeIntersectionalTable(args: IntersectionalArgs): CategoryTa
     // fields disagree in that case. Both are reproduced as they are.
     highestGroup: highestGroup,
     highestRate: highestRate > 0 ? round6(highestRate) : null,
+    noComparison,
   };
 }

@@ -316,6 +316,36 @@ describe("a small-sample exclusion (5-301(d))", () => {
   });
 });
 
+describe("a table where no comparison was possible", () => {
+  const noComparison = {
+    ...base,
+    result: {
+      ...result,
+      tables: [
+        {
+          ...result.tables[0],
+          noComparison: "single_group",
+          rows: result.tables[0].rows.map((r) => ({ ...r, impactRatio: null, flagged: false })),
+        },
+      ],
+    } as BiasAuditResult,
+  };
+
+  it("says so in the results and lists it as open", () => {
+    const s = composeStance(noComparison);
+    expect(section(s, "results").body).toContain(
+      "No impact ratio could be computed: only one group is left in the calculation",
+    );
+    expect(s.openItems.join(" ")).toMatch(/no comparison was possible/i);
+  });
+
+  it("says nothing of the kind when ratios were computed", () => {
+    expect(section(composeStance(base), "results").body).not.toContain(
+      "No impact ratio could be computed",
+    );
+  });
+});
+
 describe("gate findings", () => {
   it("carries warn and note findings", () => {
     const body = section(composeStance(base), "data_relied_on").body;

@@ -19,6 +19,7 @@ import type { DerivedBasis } from "../deriveBasis";
 import type { ReadinessResult } from "../readinessScore";
 import { FORBIDDEN_WORDS } from "./vocabulary";
 import type { BiasAuditResult, GateFinding, OrderFinding } from "../index";
+import { NO_COMPARISON_TEXT } from "../engine/impactRatios";
 
 export interface StanceSection {
   key: string;
@@ -226,6 +227,9 @@ function resultsBody(args: ComposeStanceArgs): string {
           `impact ratio ${fixed(r.impactRatio)}${note}`,
       );
     }
+    if (table.noComparison) {
+      lines.push(`No impact ratio could be computed: ${NO_COMPARISON_TEXT[table.noComparison]}.`);
+    }
     lines.push("");
   }
   if (result.tables.some((t) => t.rows.some((r) => r.excluded))) {
@@ -364,6 +368,11 @@ function openItemsOf(args: ComposeStanceArgs, scope: StanceModel["scope"]): stri
     items.push(
       "Add the independent auditor's justification for the small-sample exclusion (5-301(d)).",
     );
+  }
+  for (const t of args.result?.tables ?? []) {
+    if (t.noComparison) {
+      items.push(`No comparison was possible for ${t.title.toLowerCase()}.`);
+    }
   }
   for (const o of args.order.filter((x) => x.blocked)) {
     items.push(`Row-order check for ${o.attribute} withholds the export until it is resolved.`);

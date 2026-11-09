@@ -24,3 +24,7 @@ excluded group (here `Two or more races`) set the denominator for the others. Th
 it over the groups left in the calculation, per § 5-301(d) as we read it, so this case now
 expects `Asian` as the reference and ratios of 1.0 and 0.99592. Regenerating from the Python
 would put the old values back.
+
+`selection_rate_single_group` was also edited by hand: the Python gave a lone group a ratio of
+0.999999 and reported no flags. With one group there is nothing to compare, so the port gives no
+ratio and the summary says so.

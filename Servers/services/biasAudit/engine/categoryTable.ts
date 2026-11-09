@@ -65,7 +65,7 @@ export function computeCategoryTable(args: CategoryTableArgs): CategoryTable {
     });
   }
 
-  const { highestRate, highestGroup } = applyImpactRatios(rows, {
+  const { highestRate, highestGroup, noComparison } = applyImpactRatios(rows, {
     totalApplicants,
     threshold,
     smallSampleExclusion,
@@ -77,5 +77,6 @@ export function computeCategoryTable(args: CategoryTableArgs): CategoryTable {
     rows,
     highestGroup: highestGroup || null,
     highestRate: highestGroup ? round6(highestRate) : null,
+    noComparison,
   };
 }

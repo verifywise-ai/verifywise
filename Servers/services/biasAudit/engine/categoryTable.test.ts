@@ -191,8 +191,7 @@ describe("computeCategoryTable against the Python oracle", () => {
     expect(table.rows.map((r) => r.categoryName)).toEqual(["Female", "Male"]);
   });
 
-  // Review Focus 2
-  it("makes a lone group its own reference, but the ratio is not exactly 1", () => {
+  it("gives a lone group no ratio, because there is nothing to compare", () => {
     const c = byName("selection_rate_single_group");
     const table = computeCategoryTable({
       records: c.records,
@@ -204,16 +203,30 @@ describe("computeCategoryTable against the Python oracle", () => {
       rateOf: (r) => Boolean(r.selected),
     });
     expect(table.rows).toHaveLength(1);
-
-    // 0.999999, NOT 1.0. The engine divides the ROUNDED rate by the
-    // UNROUNDED highest rate: with 20 of 60 selected, round(1/3, 6) is
-    // 0.333333 while highestRate stays 0.3333333..., so the quotient is
-    // 0.999999. Verified against the Python. Preserve this asymmetry; it
-    // affects every ratio whose rate is not exactly representable.
-    expect(table.rows[0].impactRatio).toBe(0.999999);
+    expect(table.rows[0].impactRatio).toBeNull();
     expect(table.rows[0].flagged).toBe(false);
+    expect(table.noComparison).toBe("single_group");
+    expect(table.highestGroup).toBeNull();
     expect(table.rows.map((r) => r.impactRatio)).toEqual(
       exp("selection_rate_single_group").tables[0].rows.map((r: any) => r.impact_ratio),
     );
+  });
+
+  // Review Focus 2
+  it("divides the rounded rate by the unrounded highest rate", () => {
+    // 20 of 60 rounds to 0.333333 while the reference stays 0.3333333..., so
+    // the other row's quotient is not exact. Verified against the Python.
+    const rows = (group: string, n: number, selected: number) =>
+      Array.from({ length: n }, (_, i) => ({ group, selected: i < selected }));
+    const table = computeCategoryTable({
+      records: [...rows("A", 60, 20), ...rows("B", 60, 20)],
+      categoryKey: "group",
+      categoryLabel: "Group",
+      totalApplicants: 120,
+      threshold: 0.8,
+      smallSampleExclusion: null,
+      rateOf: (r) => Boolean(r.selected),
+    });
+    expect(table.rows.map((r) => r.impactRatio)).toEqual([0.999999, 0.999999]);
   });
 });

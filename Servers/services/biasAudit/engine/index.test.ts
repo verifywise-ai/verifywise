@@ -446,3 +446,71 @@ describe("blank scores in scoring rate mode", () => {
     expect(got.tables[0].rows.some((r) => r.categoryName === "Z")).toBe(false);
   });
 });
+
+describe("tables where no comparison was possible", () => {
+  const cfg = (over: Partial<BiasAuditConfig> = {}): BiasAuditConfig => ({
+    presetId: "t",
+    metric: "selection_rate",
+    categories: { sex: { label: "Sex", groups: [] } },
+    intersectional: { required: false, cross: [] },
+    threshold: 0.8,
+    smallSampleExclusion: 0.02,
+    outcomeColumn: "selected",
+    scoreColumn: "score",
+    predictionColumn: null,
+    groundTruthColumn: null,
+    ...over,
+  });
+  const of = (sex: string, n: number, selected: number) =>
+    Array.from({ length: n }, (_, i) => ({ sex, selected: i < selected }));
+
+  it("reports no comparison, not a clean result, for one group left after exclusion", () => {
+    const got = computeBiasAudit([...of("Male", 990, 400), ...of("Female", 10, 2)], cfg());
+    const table = got.tables[0];
+    expect(table.noComparison).toBe("single_group");
+    expect(table.rows.every((r) => r.impactRatio === null && !r.flagged)).toBe(true);
+    expect(table.highestGroup).toBeNull();
+    expect(got.summary).toContain("nothing to compare it with");
+    expect(got.summary).not.toContain("No adverse impact flags detected");
+    // The excluded group still reports its count and rate.
+    expect(table.rows.find((r) => r.categoryName === "Female")).toMatchObject({
+      applicantCount: 10,
+      selectionRate: 0.2,
+      excluded: true,
+    });
+  });
+
+  it("does the same for an intersectional table", () => {
+    const records = [
+      ...Array.from({ length: 990 }, (_, i) => ({ sex: "M", race: "A", selected: i < 400 })),
+      ...Array.from({ length: 10 }, (_, i) => ({ sex: "F", race: "B", selected: i < 2 })),
+    ];
+    const got = computeBiasAudit(
+      records,
+      cfg({
+        categories: { sex: { label: "Sex", groups: [] } },
+        intersectional: { required: true, cross: ["sex", "race"] },
+      }),
+    );
+    const inter = got.tables.find((t) => t.categoryKey === "intersectional")!;
+    expect(inter.noComparison).toBe("single_group");
+    expect(inter.rows.every((r) => r.impactRatio === null)).toBe(true);
+    expect(got.summary).not.toContain("No adverse impact flags detected");
+  });
+
+  it("names the real reason when only an excluded group has a non-zero rate", () => {
+    const got = computeBiasAudit(
+      [...of("Male", 500, 0), ...of("Female", 490, 0), ...of("Other", 10, 3)],
+      cfg(),
+    );
+    expect(got.tables[0].noComparison).toBe("only_excluded_nonzero");
+    expect(got.summary).toContain("only groups below the small-sample exclusion");
+    expect(got.summary).not.toContain("no group with a value has a non-zero rate");
+  });
+
+  it("keeps the zero-rate reason when no group has a non-zero rate", () => {
+    const got = computeBiasAudit([...of("Male", 500, 0), ...of("Female", 500, 0)], cfg());
+    expect(got.tables[0].noComparison).toBe("zero_rate");
+    expect(got.summary).toContain("no group with a value has a non-zero rate");
+  });
+});
