@@ -59,7 +59,7 @@ export interface IFriaAssessment {
   rights_flagged: number;
 
   // Metadata
-  created_by: number;
+  created_by?: number;
   updated_by?: number;
   created_at?: Date;
   updated_at?: Date;
@@ -143,7 +143,7 @@ export interface IFriaSnapshot {
   version: number;
   snapshot_data: Record<string, unknown>;
   snapshot_reason?: string;
-  created_by: number;
+  created_by?: number;
   created_at?: Date;
 }
 
