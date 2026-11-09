@@ -165,6 +165,19 @@ describe("use case lifecycle", () => {
         ).post(`/api/v1/use-case-lifecycle/${ownedByReviewer}/go-live`)
       ).status,
     ).toBe(200);
+    // useCase.edit counts only on a use case the Editor can see.
+    expect(
+      (
+        await (
+          await as(orgId, editor, "Editor")
+        ).post(`/api/v1/use-case-lifecycle/${ownedByAuditor}/go-live`)
+      ).status,
+    ).toBe(403);
+    await sequelize.query(
+      `INSERT INTO projects_members (organization_id, project_id, user_id)
+       VALUES (:orgId, :projectId, :userId)`,
+      { replacements: { orgId, projectId: ownedByAuditor, userId: editor } },
+    );
     expect(
       (
         await (

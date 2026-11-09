@@ -882,6 +882,17 @@ export async function getProjectStatsById(req: Request, res: Response): Promise<
 
   try {
     const project: any = await getProjectByIdQuery(projectId, req.organizationId!);
+    if (!project) {
+      await logSuccess({
+        eventType: "Read",
+        description: `Project not found for stats: ID ${projectId}`,
+        functionName: "getProjectStatsById",
+        fileName: "project.ctrl.ts",
+        userId: req.userId!,
+        organizationId: req.organizationId!,
+      });
+      return res.status(404).json(STATUS_CODE[404]({}));
+    }
     // owner is NULL for an external owner; there is no user row to look up.
     const ownerUser: any = project.owner ? await getUserByIdQuery(project.owner) : null;
     const project_last_updated = project.last_updated;
