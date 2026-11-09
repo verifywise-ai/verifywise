@@ -188,12 +188,41 @@ describe("policyExporter", () => {
       expect(result.toString()).toBe("%PDF-1.4 fake");
     });
 
-    it("launches a headless browser with the sandbox flags", async () => {
-      await generatePolicyPDF("Security Policy", "<p>Body</p>", 1);
+    describe("browser launch", () => {
+      const launchArgs = [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-gpu",
+      ];
+      const originalPath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
 
-      expect(mockLaunch).toHaveBeenCalledWith({
-        headless: true,
-        args: ["--no-sandbox", "--disable-setuid-sandbox"],
+      afterEach(() => {
+        if (originalPath === undefined) {
+          delete process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
+        } else {
+          process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH = originalPath;
+        }
+      });
+
+      it("uses Playwright's own browser when no executable path is configured", async () => {
+        delete process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
+
+        await generatePolicyPDF("Security Policy", "<p>Body</p>", 1);
+
+        expect(mockLaunch).toHaveBeenCalledWith({ headless: true, args: launchArgs });
+      });
+
+      it("uses the configured executable, as the Docker image requires", async () => {
+        process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH = "/usr/bin/chromium-browser";
+
+        await generatePolicyPDF("Security Policy", "<p>Body</p>", 1);
+
+        expect(mockLaunch).toHaveBeenCalledWith({
+          headless: true,
+          args: launchArgs,
+          executablePath: "/usr/bin/chromium-browser",
+        });
       });
     });
 
