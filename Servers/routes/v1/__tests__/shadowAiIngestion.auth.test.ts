@@ -34,7 +34,7 @@ const sequelizeTransaction = jest.fn(async () => ({
   rollback: transactionRollback,
 }));
 
-jest.mock("../../database/db", () => ({
+jest.mock("../../../database/db", () => ({
   __esModule: true,
   sequelize: {
     query: (...args: unknown[]) => sequelizeQuery(...(args as [string])),
@@ -42,24 +42,24 @@ jest.mock("../../database/db", () => ({
   },
 }));
 
-jest.mock("../../services/shadowAiToolMatcher.service", () => ({
+jest.mock("../../../services/shadowAiToolMatcher.service", () => ({
   __esModule: true,
   matchDomain: jest.fn(async () => null), // no registry match → no tool writes
   ensureTenantTool: jest.fn(),
   updateToolCounters: jest.fn(),
 }));
 
-jest.mock("../../services/shadowAiModelExtractor.service", () => ({
+jest.mock("../../../services/shadowAiModelExtractor.service", () => ({
   __esModule: true,
   extractModel: jest.fn(async () => null),
 }));
 
-jest.mock("../../services/shadowAiAlertNotification.service", () => ({
+jest.mock("../../../services/shadowAiAlertNotification.service", () => ({
   __esModule: true,
   evaluateRulesForBatch: jest.fn(async () => {}),
 }));
 
-jest.mock("../../utils/shadowAiConfig.utils", () => ({
+jest.mock("../../../utils/shadowAiConfig.utils", () => ({
   __esModule: true,
   getSettingsQuery: jest.fn(async () => ({ rate_limit_max_events_per_hour: 0 })), // 0 = no limit
 }));
@@ -68,7 +68,7 @@ jest.mock("../../utils/shadowAiConfig.utils", () => ({
 let keyRows: unknown[] = [];
 
 import shadowAiIngestionRouter from "../shadowAiIngestion.route";
-import { clearApiKeyCache } from "../../utils/shadowAiApiKey.utils";
+import { clearApiKeyCache } from "../../../utils/shadowAiApiKey.utils";
 
 const VALID_KEY = `vw_sk_1_${"a".repeat(48)}`;
 const UNKNOWN_KEY = `vw_sk_1_${"b".repeat(48)}`;
