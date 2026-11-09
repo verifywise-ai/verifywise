@@ -17,7 +17,7 @@ const DATES = {
   annexI: "2028-08-02",
 };
 
-const ARTICLE_5: Record<string, ClassificationReason> = {
+export const ARTICLE_5: Record<string, ClassificationReason> = {
   manipulation: {
     article: "Article 5(1)(a)",
     text: "Manipulative or deceptive techniques that materially distort behaviour and are likely to cause significant harm are prohibited.",
@@ -57,7 +57,7 @@ const OMNIBUS_BAN = {
   },
 };
 
-const ANNEX_III_ARTICLE: Record<string, string> = {
+export const ANNEX_III_ARTICLE: Record<string, string> = {
   biometrics_use: "Annex III, point 1",
   critical_infrastructure_use: "Annex III, point 2",
   education_use: "Annex III, point 3",

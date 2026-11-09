@@ -35,17 +35,7 @@ import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import { useTranslation } from "../../../../application/hooks/useTranslation";
 import { fill } from "../../../../i18n/fill";
 import { VWLink } from "../../../components/Link/VWLink";
-
-interface ServerForm {
-  name: string;
-  slug: string;
-  url: string;
-  auth_type: string;
-  auth_token: string;
-  auth_header_name: string;
-  auth_api_key: string;
-  description: string;
-}
+import MCPServerAuthFields, { ServerForm } from "./MCPServerAuthFields";
 
 const EMPTY_FORM: ServerForm = {
   name: "",
@@ -55,6 +45,16 @@ const EMPTY_FORM: ServerForm = {
   auth_token: "",
   auth_header_name: "",
   auth_api_key: "",
+  oauth_client_id: "",
+  oauth_client_secret: "",
+  oauth_token_url: "",
+  oauth_token_url_source: "manual",
+  oauth_scope: "",
+  oauth_resource: "",
+  oauth_auth_method: "client_secret_basic",
+  aws_region: "",
+  aws_access_key_id: "",
+  aws_secret_access_key: "",
   description: "",
 };
 
@@ -62,7 +62,21 @@ const AUTH_TYPE_ITEMS = [
   { _id: "none", name: "None" },
   { _id: "bearer", name: "Bearer token" },
   { _id: "api_key", name: "API key" },
+  { _id: "oauth", name: "OAuth (client credentials)" },
+  { _id: "aws_iam", name: "AWS IAM" },
 ];
+
+const AWS_MCP_REGION_RE = /^https:\/\/aws-mcp\.([a-z0-9-]+)\.api\.aws\//;
+const DISCOVERY_DEBOUNCE_MS = 600;
+
+const authLabel = (authType: string) =>
+  authType === "none"
+    ? "no auth"
+    : authType === "oauth"
+      ? "OAuth"
+      : authType === "aws_iam"
+        ? "AWS IAM"
+        : authType;
 
 interface MCPServer {
   id: number;
@@ -77,6 +91,13 @@ interface MCPServer {
   last_discovery_error?: string | null;
   auth_header?: string;
   auth_secret_hint?: string;
+  aws_region?: string;
+  aws_access_key_id?: string;
+  oauth_client_id?: string;
+  oauth_token_url?: string;
+  oauth_token_url_source?: "manual" | "discovered";
+  oauth_scope?: string;
+  oauth_resource?: string;
   created_by_name: string;
   created_at: string;
 }
@@ -138,6 +159,16 @@ export default function MCPServersPage() {
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
 
   const [form, setForm] = useState<ServerForm>({ ...EMPTY_FORM });
+  const [findingTokenUrl, setFindingTokenUrl] = useState(false);
+  const [tokenUrlNote, setTokenUrlNote] = useState("");
+  // The (OAuth, URL) pair discovery last ran for, so it fires once per URL.
+  const discoveredFor = useRef("");
+  const discoverySeq = useRef(0);
+  // The URL the AWS region was last prefilled for.
+  const prefilledFor = useRef("");
+  // Read when a lookup answers, to drop it if the admin has moved on.
+  const latestForm = useRef(form);
+  latestForm.current = form;
   const [alert, setAlert] = useState<{
     variant: "success" | "warning" | "error";
     title: string;
@@ -220,6 +251,86 @@ export default function MCPServersPage() {
   // switching type means a new secret is required and no "current" hint applies.
   const keepsStoredSecret = isEditing && editingServer?.auth_type === form.auth_type;
 
+  const runTokenUrlDiscovery = async (url: string, manual: boolean) => {
+    const seq = ++discoverySeq.current;
+    discoveredFor.current = url;
+    setFindingTokenUrl(true);
+    if (manual) setFormError("");
+    try {
+      const res = await apiServices.post<Record<string, any>>(
+        "/ai-gateway/mcp/servers/discover-oauth",
+        { url },
+      );
+      if (seq !== discoverySeq.current) return;
+      // The answer is for a URL the admin has since changed or left.
+      if (latestForm.current.auth_type !== "oauth" || latestForm.current.url.trim() !== url) return;
+      const found: string | undefined = res?.data?.token_url;
+      if (!found) {
+        if (manual) setFormError("Could not find the token URL");
+        return;
+      }
+      let host = found;
+      try {
+        host = new URL(found).host;
+      } catch {
+        // Show the raw value if it does not parse.
+      }
+      // Never overwrite a URL the admin typed while discovery ran, and say nothing about it.
+      if (!manual && latestForm.current.oauth_token_url.trim()) return;
+      setForm((p) => ({
+        ...p,
+        oauth_token_url: found,
+        oauth_token_url_source: "discovered",
+        oauth_auth_method: res?.data?.auth_method || p.oauth_auth_method,
+      }));
+      setTokenUrlNote(
+        fill(t("Found at {host}. Check this is your identity provider before saving."), { host }),
+      );
+    } catch (err: any) {
+      // A failed automatic lookup stays quiet: the admin can type the URL.
+      if (manual && seq === discoverySeq.current) {
+        setFormError(getGatewayErrorText(err, "Could not find the token URL"));
+      }
+    } finally {
+      if (seq === discoverySeq.current) setFindingTokenUrl(false);
+    }
+  };
+
+  const handleFindTokenUrl = () => {
+    const url = form.url.trim();
+    if (!url) {
+      setFormError("Enter the server URL first");
+      return;
+    }
+    runTokenUrlDiscovery(url, true);
+  };
+
+  // Look up the token URL once for each URL typed while OAuth is selected.
+  useEffect(() => {
+    const url = form.url.trim();
+    if (!isModalOpen || form.auth_type !== "oauth" || !url || form.oauth_token_url.trim()) return;
+    if (discoveredFor.current === url) return;
+    const timer = setTimeout(() => runTokenUrlDiscovery(url, false), DISCOVERY_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isModalOpen, form.auth_type, form.url, form.oauth_token_url]);
+
+  // A note about a discovered URL no longer applies once the admin edits it.
+  useEffect(() => {
+    if (form.oauth_token_url_source === "manual") setTokenUrlNote("");
+  }, [form.oauth_token_url_source]);
+
+  // aws-mcp.<region>.api.aws URLs name their region; fill it when empty. Only a
+  // changed URL prefills: an admin who clears the field keeps it empty.
+  useEffect(() => {
+    if (form.auth_type !== "aws_iam") return;
+    const url = form.url.trim();
+    if (prefilledFor.current === url) return;
+    prefilledFor.current = url;
+    const region = AWS_MCP_REGION_RE.exec(url)?.[1];
+    if (region) setForm((p) => (p.aws_region ? p : { ...p, aws_region: region }));
+  }, [form.auth_type, form.url]);
+
   const handleNameChange = (value: string) => {
     setForm((p) => ({
       ...p,
@@ -228,9 +339,18 @@ export default function MCPServersPage() {
     }));
   };
 
+  const resetDiscovery = () => {
+    discoverySeq.current++;
+    discoveredFor.current = "";
+    prefilledFor.current = "";
+    setTokenUrlNote("");
+    setFindingTokenUrl(false);
+  };
+
   const openCreateModal = () => {
     setEditingId(null);
     setForm({ ...EMPTY_FORM });
+    resetDiscovery();
     setFormError("");
     setIsModalOpen(true);
   };
@@ -245,8 +365,19 @@ export default function MCPServersPage() {
       auth_token: "",
       auth_header_name: srv.auth_header || "",
       auth_api_key: "",
+      oauth_client_id: srv.oauth_client_id || "",
+      oauth_client_secret: "",
+      oauth_token_url: srv.oauth_token_url || "",
+      oauth_token_url_source: srv.oauth_token_url_source || "manual",
+      oauth_scope: srv.oauth_scope || "",
+      oauth_resource: srv.oauth_resource || "",
+      oauth_auth_method: "",
+      aws_region: srv.aws_region || "",
+      aws_access_key_id: srv.aws_access_key_id || "",
+      aws_secret_access_key: "",
       description: srv.description || "",
     });
+    resetDiscovery();
     setFormError("");
     setIsModalOpen(true);
   };
@@ -281,6 +412,27 @@ export default function MCPServersPage() {
       } else if (editingServer && header && header !== (editingServer.auth_header || "")) {
         payload.auth_config = { header };
       }
+    } else if (form.auth_type === "oauth") {
+      const secret = form.oauth_client_secret.trim();
+      const scope = form.oauth_scope.trim();
+      const resource = form.oauth_resource.trim();
+      payload.auth_config = {
+        client_id: form.oauth_client_id.trim(),
+        ...(secret ? { client_secret: secret } : {}),
+        token_url: form.oauth_token_url.trim(),
+        token_url_source: form.oauth_token_url_source,
+        // Always sent, so clearing the field clears the stored value.
+        scope,
+        resource,
+        ...(form.oauth_auth_method ? { auth_method: form.oauth_auth_method } : {}),
+      };
+    } else if (form.auth_type === "aws_iam") {
+      const secret = form.aws_secret_access_key.trim();
+      payload.auth_config = {
+        region: form.aws_region.trim(),
+        access_key_id: form.aws_access_key_id.trim(),
+        ...(secret ? { secret_access_key: secret } : {}),
+      };
     }
 
     try {
@@ -492,7 +644,7 @@ export default function MCPServersPage() {
                   {srv.url}
                 </Typography>
                 <Typography sx={{ fontSize: 11, color: palette.text.tertiary }}>
-                  {srv.auth_type === "none" ? "no auth" : srv.auth_type}
+                  {authLabel(srv.auth_type)}
                   {srv.slug && ` · /${srv.slug}`}
                 </Typography>
               </Box>,
@@ -618,43 +770,15 @@ export default function MCPServersPage() {
             getOptionValue={(item) => item._id}
           />
 
-          {form.auth_type === "bearer" && (
-            <Field
-              label="Bearer token"
-              placeholder="Enter the bearer token"
-              value={form.auth_token}
-              onChange={(e) => setForm((p) => ({ ...p, auth_token: e.target.value }))}
-              isRequired={!keepsStoredSecret}
-            />
-          )}
-          {form.auth_type === "bearer" && keepsStoredSecret && editingServer?.auth_secret_hint && (
-            <Typography sx={{ fontSize: 11, color: palette.text.tertiary }}>
-              {`Current token: ${editingServer.auth_secret_hint}. Leave blank to keep it.`}
-            </Typography>
-          )}
-
-          {form.auth_type === "api_key" && (
-            <>
-              <Field
-                label="Header name"
-                placeholder="e.g., X-API-Key (defaults to X-API-Key)"
-                value={form.auth_header_name}
-                onChange={(e) => setForm((p) => ({ ...p, auth_header_name: e.target.value }))}
-              />
-              <Field
-                label="API key"
-                placeholder="Enter the API key value"
-                value={form.auth_api_key}
-                onChange={(e) => setForm((p) => ({ ...p, auth_api_key: e.target.value }))}
-                isRequired={!keepsStoredSecret}
-              />
-              {keepsStoredSecret && editingServer?.auth_secret_hint && (
-                <Typography sx={{ fontSize: 11, color: palette.text.tertiary }}>
-                  {`Current key: ${editingServer.auth_secret_hint}. Leave blank to keep it.`}
-                </Typography>
-              )}
-            </>
-          )}
+          <MCPServerAuthFields
+            form={form}
+            setForm={setForm}
+            editingServer={editingServer}
+            keepsStoredSecret={keepsStoredSecret}
+            onFindTokenUrl={handleFindTokenUrl}
+            findingTokenUrl={findingTokenUrl}
+            tokenUrlNote={tokenUrlNote}
+          />
 
           {formError && (
             <Typography sx={{ fontSize: 12, color: palette.status.error.text }}>

@@ -584,14 +584,14 @@
       "calculated": { "total": null }
     },
     {
-      "name": "formula on a later field gets no value",
+      "name": "formula on a later field reads it",
       "fields": [
         { "id": "total", "type": "calculated", "label": "Total", "order": 0, "formula": "{b} + 1" },
         { "id": "b", "type": "number", "label": "B", "order": 1 }
       ],
       "answers": { "b": 5 },
       "visibleIds": ["b", "total"],
-      "calculated": { "total": null }
+      "calculated": { "total": 6 }
     },
     {
       "name": "malformed visibility shows the field",
@@ -621,6 +621,128 @@
       ],
       "answers": {},
       "visibleIds": ["d"],
+      "calculated": {}
+    },
+    {
+      "name": "a total at the top adds fields below",
+      "anyOrder": true,
+      "fields": [
+        {
+          "id": "total",
+          "type": "calculated",
+          "label": "Total",
+          "order": 0,
+          "formula": "{a} + {b}"
+        },
+        { "id": "a", "type": "number", "label": "A", "order": 1 },
+        { "id": "b", "type": "number", "label": "B", "order": 2 }
+      ],
+      "answers": { "a": 3, "b": 4 },
+      "visibleIds": ["a", "b", "total"],
+      "calculated": { "total": 7 }
+    },
+    {
+      "name": "a chain across positions",
+      "anyOrder": true,
+      "fields": [
+        { "id": "c", "type": "calculated", "label": "C", "order": 0, "formula": "{b} * 2" },
+        { "id": "a", "type": "number", "label": "A", "order": 1 },
+        { "id": "b", "type": "calculated", "label": "B", "order": 2, "formula": "{a} + 1" }
+      ],
+      "answers": { "a": 4 },
+      "visibleIds": ["a", "b", "c"],
+      "calculated": { "b": 5, "c": 10 }
+    },
+    {
+      "name": "a rule on a later field reads its answer",
+      "anyOrder": true,
+      "fields": [
+        {
+          "id": "d",
+          "type": "text",
+          "label": "D",
+          "order": 0,
+          "visibility": {
+            "match": "all",
+            "conditions": [{ "fieldId": "q", "operator": "is_not_empty" }]
+          }
+        },
+        { "id": "q", "type": "text", "label": "Q", "order": 1 }
+      ],
+      "answers": { "q": "x", "d": "y" },
+      "visibleIds": ["d", "q"],
+      "calculated": {}
+    },
+    {
+      "name": "a rule on a later calculated field",
+      "anyOrder": true,
+      "fields": [
+        {
+          "id": "d",
+          "type": "text",
+          "label": "D",
+          "order": 0,
+          "visibility": {
+            "match": "all",
+            "conditions": [{ "fieldId": "t", "operator": "gt", "value": 10 }]
+          }
+        },
+        { "id": "a", "type": "number", "label": "A", "order": 1 },
+        { "id": "t", "type": "calculated", "label": "T", "order": 2, "formula": "{a} * 2" }
+      ],
+      "answers": { "a": 6 },
+      "visibleIds": ["a", "d", "t"],
+      "calculated": { "t": 12 }
+    },
+    {
+      "name": "a formula loop gives empty values",
+      "fields": [
+        { "id": "x", "type": "calculated", "label": "X", "order": 0, "formula": "{y} + 1" },
+        { "id": "y", "type": "calculated", "label": "Y", "order": 1, "formula": "{x} + 1" }
+      ],
+      "answers": {},
+      "visibleIds": ["x", "y"],
+      "calculated": { "x": null, "y": null }
+    },
+    {
+      "name": "a field reading a loop gets no value",
+      "fields": [
+        { "id": "x", "type": "calculated", "label": "X", "order": 0, "formula": "{y} + 1" },
+        { "id": "y", "type": "calculated", "label": "Y", "order": 1, "formula": "{x} + 1" },
+        { "id": "z", "type": "calculated", "label": "Z", "order": 2, "formula": "{x} * 2" },
+        { "id": "n", "type": "number", "label": "N", "order": 3 },
+        { "id": "m", "type": "calculated", "label": "M", "order": 4, "formula": "{n} + 1" }
+      ],
+      "answers": { "n": 1 },
+      "visibleIds": ["m", "n", "x", "y", "z"],
+      "calculated": { "x": null, "y": null, "z": null, "m": 2 }
+    },
+    {
+      "name": "a rule loop does not hang",
+      "fields": [
+        {
+          "id": "a",
+          "type": "text",
+          "label": "A",
+          "order": 0,
+          "visibility": {
+            "match": "all",
+            "conditions": [{ "fieldId": "b", "operator": "is_not_empty" }]
+          }
+        },
+        {
+          "id": "b",
+          "type": "text",
+          "label": "B",
+          "order": 1,
+          "visibility": {
+            "match": "all",
+            "conditions": [{ "fieldId": "a", "operator": "is_not_empty" }]
+          }
+        }
+      ],
+      "answers": { "a": "x", "b": "y" },
+      "visibleIds": [],
       "calculated": {}
     }
   ],
@@ -848,7 +970,7 @@
       "errorFieldIds": []
     },
     {
-      "name": "condition on a later field",
+      "name": "a condition on a later field is allowed",
       "entityType": "use_case",
       "fields": [
         {
@@ -863,7 +985,7 @@
         },
         { "id": "q", "type": "text", "label": "Q", "order": 1 }
       ],
-      "errorFieldIds": ["d"]
+      "errorFieldIds": []
     },
     {
       "name": "condition on itself",
@@ -880,7 +1002,8 @@
           }
         }
       ],
-      "errorFieldIds": ["d"]
+      "errorFieldIds": ["d"],
+      "messages": ["Field \"D\": the show/hide rules depend on this field itself"]
     },
     {
       "name": "condition on a removed field",
@@ -1129,13 +1252,13 @@
       "errorFieldIds": ["total"]
     },
     {
-      "name": "formula on a later field",
+      "name": "a formula on a later field is allowed",
       "entityType": "use_case",
       "fields": [
         { "id": "total", "type": "calculated", "label": "Total", "order": 0, "formula": "{n} + 1" },
         { "id": "n", "type": "number", "label": "N", "order": 1 }
       ],
-      "errorFieldIds": ["total"]
+      "errorFieldIds": []
     },
     {
       "name": "formula on itself",
@@ -1149,7 +1272,8 @@
           "formula": "{total} + 1"
         }
       ],
-      "errorFieldIds": ["total"]
+      "errorFieldIds": ["total"],
+      "messages": ["Field \"Total\": the formula uses this field itself"]
     },
     {
       "name": "formula on a text field",
@@ -1385,6 +1509,77 @@
         }
       ],
       "errorFieldIds": ["blank", "dup"]
+    },
+    {
+      "name": "a formula loop",
+      "entityType": "use_case",
+      "fields": [
+        { "id": "x", "type": "calculated", "label": "X", "order": 0, "formula": "{y} + 1" },
+        { "id": "y", "type": "calculated", "label": "Y", "order": 1, "formula": "{x} + 1" }
+      ],
+      "errorFieldIds": ["x", "y"],
+      "messages": [
+        "Field \"X\": the formula forms a circular reference with \"Y\"",
+        "Field \"Y\": the formula forms a circular reference with \"X\""
+      ]
+    },
+    {
+      "name": "a longer formula loop",
+      "entityType": "use_case",
+      "fields": [
+        { "id": "x", "type": "calculated", "label": "X", "order": 0, "formula": "{y} + 1" },
+        { "id": "y", "type": "calculated", "label": "Y", "order": 1, "formula": "{z} + 1" },
+        { "id": "z", "type": "calculated", "label": "Z", "order": 2, "formula": "{x} + 1" },
+        { "id": "n", "type": "number", "label": "N", "order": 3 },
+        { "id": "ok", "type": "calculated", "label": "Ok", "order": 4, "formula": "{n} + {z}" }
+      ],
+      "errorFieldIds": ["x", "y", "z"]
+    },
+    {
+      "name": "a rule loop",
+      "entityType": "use_case",
+      "fields": [
+        {
+          "id": "a",
+          "type": "text",
+          "label": "A",
+          "order": 0,
+          "visibility": {
+            "match": "all",
+            "conditions": [{ "fieldId": "b", "operator": "is_not_empty" }]
+          }
+        },
+        {
+          "id": "b",
+          "type": "text",
+          "label": "B",
+          "order": 1,
+          "visibility": {
+            "match": "all",
+            "conditions": [{ "fieldId": "a", "operator": "is_not_empty" }]
+          }
+        }
+      ],
+      "errorFieldIds": ["a", "b"],
+      "messages": ["Field \"A\": the show/hide rules form a circular reference with \"B\""]
+    },
+    {
+      "name": "a loop through a rule and a formula",
+      "entityType": "use_case",
+      "fields": [
+        { "id": "t", "type": "calculated", "label": "T", "order": 0, "formula": "{n} + 1" },
+        {
+          "id": "n",
+          "type": "number",
+          "label": "N",
+          "order": 1,
+          "visibility": {
+            "match": "all",
+            "conditions": [{ "fieldId": "t", "operator": "gt", "value": 1 }]
+          }
+        }
+      ],
+      "errorFieldIds": ["n", "t"]
     }
   ]
 }

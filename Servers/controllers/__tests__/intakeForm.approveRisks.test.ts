@@ -24,6 +24,15 @@ jest.mock("../../utils/intakeSubmissionData.utils", () => ({
   rescoreStoredRun: jest.fn(),
 }));
 jest.mock("../../utils/project.utils", () => ({ createNewProjectQuery: jest.fn() }));
+// Approving a use case reads the org's use case defaults (#5192): none set.
+jest.mock("../../utils/useCaseOrgSettings.utils", () => ({
+  getUseCaseOrgSettings: async (organizationId: number) => ({
+    organization_id: organizationId,
+    default_geography: null,
+    default_framework_ids: [],
+  }),
+}));
+jest.mock("../../utils/framework.utils", () => ({ addFrameworkToProjectQuery: async () => true }));
 jest.mock("../../utils/eu.utils", () => ({ createEUFrameworkQuery: jest.fn() }));
 jest.mock("../../utils/modelInventory.utils", () => ({ createNewModelInventoryQuery: jest.fn() }));
 jest.mock("../../domain.layer/models/modelInventory/modelInventory.model", () => ({

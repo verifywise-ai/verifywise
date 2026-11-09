@@ -11,6 +11,7 @@ import {
   IRiskOverride,
   ISuggestedRisksBlock,
 } from "../../interfaces/i.intakeSubmission";
+import type { ILiveChecks } from "../../interfaces/i.intakeLiveChecks";
 import { ValidationException } from "../../exceptions/custom.exception";
 
 @Table({
@@ -165,11 +166,54 @@ export class IntakeSubmissionModel
   decisionRecord!: IDecisionRecord | null;
 
   @Column({
+    type: DataType.JSONB,
+    allowNull: true,
+    field: "live_checks",
+  })
+  liveChecks!: ILiveChecks | null;
+
+  @Column({
     type: DataType.DATE,
     allowNull: true,
     field: "notification_sent_at",
   })
   notificationSentAt!: Date | null;
+
+  @Column({
+    type: DataType.INTEGER,
+    allowNull: true,
+    field: "review_days",
+  })
+  reviewDays!: number | null;
+
+  @Column({
+    type: DataType.DATEONLY,
+    allowNull: true,
+    field: "review_due_date",
+  })
+  reviewDueDate!: string | null;
+
+  @Column({
+    type: DataType.DATE,
+    allowNull: true,
+    field: "confirmation_sent_at",
+  })
+  confirmationSentAt!: Date | null;
+
+  @Column({
+    type: DataType.INTEGER,
+    allowNull: false,
+    defaultValue: 0,
+    field: "confirmation_attempts",
+  })
+  confirmationAttempts!: number;
+
+  @Column({
+    type: DataType.DATE,
+    allowNull: true,
+    field: "confirmation_next_attempt_at",
+  })
+  confirmationNextAttemptAt!: Date | null;
 
   @Column({
     type: DataType.DATE,
@@ -293,6 +337,7 @@ export class IntakeSubmissionModel
       suggestedRisks: this.suggestedRisks,
       routing: this.routing,
       decisionRecord: this.decisionRecord,
+      liveChecks: this.liveChecks,
       notificationSentAt: this.notificationSentAt,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,

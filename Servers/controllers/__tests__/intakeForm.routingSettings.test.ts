@@ -297,7 +297,7 @@ describe("who may change routing", () => {
     );
     expect(r.status).toHaveBeenCalledWith(403);
     expect(r.json).toHaveBeenCalledWith(
-      expect.objectContaining({ data: "Only an Admin can change review routing" }),
+      expect.objectContaining({ data: "Only an Admin can change reviewer assignment" }),
     );
     expect(intake.updateIntakeFormQuery).not.toHaveBeenCalled();
   });

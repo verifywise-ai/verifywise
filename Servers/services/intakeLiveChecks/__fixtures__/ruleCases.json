@@ -1,0 +1,295 @@
+[
+  {
+    "name": "placeholder in a text field",
+    "schema": {
+      "version": "1",
+      "fields": [{ "id": "name", "type": "text", "label": "Name", "order": 0 }]
+    },
+    "data": { "name": " TBD " },
+    "expected": [{ "ruleId": "placeholder", "questionId": "name", "kind": "vague" }]
+  },
+  {
+    "name": "placeholder in a textarea is not also too short",
+    "schema": {
+      "version": "1",
+      "fields": [{ "id": "desc", "type": "textarea", "label": "Description", "order": 0 }]
+    },
+    "data": { "desc": "To be decided" },
+    "expected": [{ "ruleId": "placeholder", "questionId": "desc", "kind": "vague" }]
+  },
+  {
+    "name": "every placeholder value is caught, and trailing punctuation is not a placeholder",
+    "schema": {
+      "version": "1",
+      "fields": [
+        { "id": "a", "type": "text", "label": "A", "order": 0 },
+        { "id": "b", "type": "text", "label": "B", "order": 1 },
+        { "id": "c", "type": "text", "label": "C", "order": 2 },
+        { "id": "d", "type": "text", "label": "D", "order": 3 },
+        { "id": "e", "type": "text", "label": "E", "order": 4 },
+        { "id": "f", "type": "text", "label": "F", "order": 5 },
+        { "id": "g", "type": "text", "label": "G", "order": 6 },
+        { "id": "h", "type": "text", "label": "H", "order": 7 },
+        { "id": "i", "type": "text", "label": "I", "order": 8 }
+      ]
+    },
+    "data": {
+      "a": "TBA",
+      "b": "N/A",
+      "c": "na",
+      "d": "Not sure",
+      "e": "unknown",
+      "f": "None",
+      "g": "-",
+      "h": "?",
+      "i": "tbd."
+    },
+    "expected": [
+      { "ruleId": "placeholder", "questionId": "a", "kind": "vague" },
+      { "ruleId": "placeholder", "questionId": "b", "kind": "vague" },
+      { "ruleId": "placeholder", "questionId": "c", "kind": "vague" },
+      { "ruleId": "placeholder", "questionId": "d", "kind": "vague" },
+      { "ruleId": "placeholder", "questionId": "e", "kind": "vague" },
+      { "ruleId": "placeholder", "questionId": "f", "kind": "vague" },
+      { "ruleId": "placeholder", "questionId": "g", "kind": "vague" },
+      { "ruleId": "placeholder", "questionId": "h", "kind": "vague" }
+    ]
+  },
+  {
+    "name": "short textarea answer is too short and still matched for terms",
+    "schema": {
+      "version": "1",
+      "fields": [{ "id": "desc", "type": "textarea", "label": "Description", "order": 0 }]
+    },
+    "data": { "desc": "Screens CVs" },
+    "expected": [
+      { "ruleId": "annex3_employment_use", "questionId": "desc", "kind": "regulation" },
+      { "ruleId": "too_short", "questionId": "desc", "kind": "vague" }
+    ]
+  },
+  {
+    "name": "short text field answer is fine",
+    "schema": {
+      "version": "1",
+      "fields": [{ "id": "vendor", "type": "text", "label": "Vendor", "order": 0 }]
+    },
+    "data": { "vendor": "Acme" },
+    "expected": []
+  },
+  {
+    "name": "textarea of exactly 20 characters is not too short, and a negated term stays quiet",
+    "schema": {
+      "version": "1",
+      "fields": [{ "id": "desc", "type": "textarea", "label": "Description", "order": 0 }]
+    },
+    "data": { "desc": "No CVs are processed" },
+    "expected": []
+  },
+  {
+    "name": "emotion recognition of job candidates",
+    "schema": {
+      "version": "1",
+      "fields": [{ "id": "desc", "type": "textarea", "label": "Description", "order": 0 }]
+    },
+    "data": { "desc": "scores video interviews for enthusiasm and confidence of job candidates" },
+    "expected": [
+      { "ruleId": "art5_emotion_workplace_education", "questionId": "desc", "kind": "prohibited" },
+      { "ruleId": "annex3_employment_use", "questionId": "desc", "kind": "regulation" }
+    ]
+  },
+  {
+    "name": "negated emotion recognition stays quiet",
+    "schema": {
+      "version": "1",
+      "fields": [{ "id": "desc", "type": "textarea", "label": "Description", "order": 0 }]
+    },
+    "data": { "desc": "We do not use emotion recognition at work" },
+    "expected": []
+  },
+  {
+    "name": "emotion term without a work or education term does not fire",
+    "schema": {
+      "version": "1",
+      "fields": [{ "id": "desc", "type": "textarea", "label": "Description", "order": 0 }]
+    },
+    "data": { "desc": "Tracks the mood of songs in a playlist" },
+    "expected": []
+  },
+  {
+    "name": "automated rejection of applicants",
+    "schema": {
+      "version": "1",
+      "fields": [{ "id": "desc", "type": "textarea", "label": "Description", "order": 0 }]
+    },
+    "data": { "desc": "automatically reject applicants below 60" },
+    "expected": [
+      { "ruleId": "annex3_employment_use", "questionId": "desc", "kind": "regulation" },
+      { "ruleId": "gdpr_art22", "questionId": "desc", "kind": "regulation" }
+    ]
+  },
+  {
+    "name": "GDPR phrase is not suppressed by its own negation word",
+    "schema": {
+      "version": "1",
+      "fields": [{ "id": "desc", "type": "textarea", "label": "Description", "order": 0 }]
+    },
+    "data": { "desc": "Invoices are approved without human review" },
+    "expected": [{ "ruleId": "gdpr_art22", "questionId": "desc", "kind": "regulation" }]
+  },
+  {
+    "name": "untargeted face scraping",
+    "schema": {
+      "version": "1",
+      "fields": [{ "id": "desc", "type": "textarea", "label": "Description", "order": 0 }]
+    },
+    "data": { "desc": "scrape faces from social media to build a database" },
+    "expected": [{ "ruleId": "art5_facial_scraping", "questionId": "desc", "kind": "prohibited" }]
+  },
+  {
+    "name": "credit scoring",
+    "schema": {
+      "version": "1",
+      "fields": [{ "id": "desc", "type": "textarea", "label": "Description", "order": 0 }]
+    },
+    "data": { "desc": "credit scoring for loan applicants" },
+    "expected": [
+      { "ruleId": "annex3_employment_use", "questionId": "desc", "kind": "regulation" },
+      { "ruleId": "annex3_essential_services_use", "questionId": "desc", "kind": "regulation" }
+    ]
+  },
+  {
+    "name": "a word that only starts like a whole-word term does not match",
+    "schema": {
+      "version": "1",
+      "fields": [{ "id": "desc", "type": "textarea", "label": "Description", "order": 0 }]
+    },
+    "data": { "desc": "For example, it drafts replies to customer emails" },
+    "expected": []
+  },
+  {
+    "name": "an answer in a hidden field is ignored",
+    "schema": {
+      "version": "1",
+      "fields": [
+        {
+          "id": "uses_ai",
+          "type": "select",
+          "label": "Uses AI",
+          "order": 0,
+          "options": [
+            { "value": "yes", "label": "Yes" },
+            { "value": "no", "label": "No" }
+          ]
+        },
+        {
+          "id": "details",
+          "type": "textarea",
+          "label": "Details",
+          "order": 1,
+          "visibility": {
+            "match": "all",
+            "conditions": [{ "fieldId": "uses_ai", "operator": "equals", "value": "yes" }]
+          }
+        }
+      ]
+    },
+    "data": { "uses_ai": "no", "details": "credit scoring for loans" },
+    "expected": []
+  },
+  {
+    "name": "only text and textarea fields are read",
+    "schema": {
+      "version": "1",
+      "fields": [{ "id": "email", "type": "email", "label": "Email", "order": 0 }]
+    },
+    "data": { "email": "tbd@x.com" },
+    "expected": []
+  },
+  {
+    "name": "hints are sorted by kind, then by field order",
+    "schema": {
+      "version": "1",
+      "fields": [
+        { "id": "second", "type": "textarea", "label": "Second", "order": 1 },
+        { "id": "first", "type": "text", "label": "First", "order": 0 },
+        { "id": "third", "type": "textarea", "label": "Third", "order": 2 }
+      ]
+    },
+    "data": {
+      "second": "Grading of essays",
+      "first": "n/a",
+      "third": "Builds a social credit system for citizens"
+    },
+    "expected": [
+      { "ruleId": "art5_social_scoring", "questionId": "third", "kind": "prohibited" },
+      { "ruleId": "annex3_education_use", "questionId": "second", "kind": "regulation" },
+      { "ruleId": "placeholder", "questionId": "first", "kind": "vague" },
+      { "ruleId": "too_short", "questionId": "second", "kind": "vague" }
+    ]
+  },
+  {
+    "name": "empty data",
+    "schema": {
+      "version": "1",
+      "fields": [{ "id": "desc", "type": "textarea", "label": "Description", "order": 0 }]
+    },
+    "data": {},
+    "expected": []
+  },
+  {
+    "name": "scraping Facebook pages is not face scraping",
+    "schema": {
+      "version": "1",
+      "fields": [{ "id": "desc", "type": "textarea", "label": "Description", "order": 0 }]
+    },
+    "data": { "desc": "Scrapes public Facebook pages for brand mentions" },
+    "expected": []
+  },
+  {
+    "name": "Facebook is not a face for biometric categorisation",
+    "schema": {
+      "version": "1",
+      "fields": [{ "id": "desc", "type": "textarea", "label": "Description", "order": 0 }]
+    },
+    "data": { "desc": "Runs political ads on Facebook" },
+    "expected": []
+  },
+  {
+    "name": "faced is not a face",
+    "schema": {
+      "version": "1",
+      "fields": [{ "id": "desc", "type": "textarea", "label": "Description", "order": 0 }]
+    },
+    "data": { "desc": "We faced political pressure last year" },
+    "expected": []
+  },
+  {
+    "name": "scrapped is not scraping",
+    "schema": {
+      "version": "1",
+      "fields": [{ "id": "desc", "type": "textarea", "label": "Description", "order": 0 }]
+    },
+    "data": { "desc": "We scrapped the old face matching project" },
+    "expected": []
+  },
+  {
+    "name": "faces with a sensitive trait is biometric categorisation",
+    "schema": {
+      "version": "1",
+      "fields": [{ "id": "desc", "type": "textarea", "label": "Description", "order": 0 }]
+    },
+    "data": { "desc": "Uses faces to infer ethnic origin of visitors" },
+    "expected": [
+      { "ruleId": "art5_biometric_categorisation", "questionId": "desc", "kind": "prohibited" }
+    ]
+  },
+  {
+    "name": "negation does not cross a sentence end",
+    "schema": {
+      "version": "1",
+      "fields": [{ "id": "desc", "type": "textarea", "label": "Description", "order": 0 }]
+    },
+    "data": { "desc": "We do not store data. CVs are screened." },
+    "expected": [{ "ruleId": "annex3_employment_use", "questionId": "desc", "kind": "regulation" }]
+  }
+]

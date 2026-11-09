@@ -94,6 +94,7 @@ export interface IIntakeForm {
   llmKeyId: number | null;
   suggestedQuestionsEnabled: boolean;
   euAiActRiskStepEnabled: boolean;
+  liveChecksEnabled: boolean;
   designSettings: Record<string, unknown> | null;
   routing: IFormRouting | null;
   createdBy: number;
@@ -119,6 +120,7 @@ export interface ICreateIntakeFormInput {
   llmKeyId?: number | null;
   suggestedQuestionsEnabled?: boolean;
   euAiActRiskStepEnabled?: boolean;
+  liveChecksEnabled?: boolean;
   designSettings?: Record<string, unknown> | null;
   routing?: IFormRouting | null;
   createdBy: number;
@@ -142,6 +144,7 @@ export interface IUpdateIntakeFormInput {
   llmKeyId?: number | null;
   suggestedQuestionsEnabled?: boolean;
   euAiActRiskStepEnabled?: boolean;
+  liveChecksEnabled?: boolean;
   designSettings?: Record<string, unknown> | null;
   routing?: IFormRouting | null;
 }
@@ -159,5 +162,6 @@ export interface IPublicIntakeForm {
   submitButtonText: string;
   publicId: string | null;
   euAiActRiskStepEnabled: boolean;
+  liveChecksEnabled: boolean;
   designSettings: Record<string, unknown> | null;
 }

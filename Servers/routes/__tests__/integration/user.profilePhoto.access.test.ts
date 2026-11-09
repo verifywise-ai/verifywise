@@ -22,10 +22,14 @@ const mockDeleteUserProfilePhoto = jest.fn((_req: any, res: any) => res.status(2
 jest.mock("../../../controllers/user.ctrl", () => ({
   checkUserExists: jest.fn((_req: any, res: any) => res.status(200).json({ exists: true })),
   createNewUser: jest.fn((_req: any, res: any) => res.status(201).json({ id: 1 })),
+  acceptInvitationAsExistingUser: jest.fn((_req: any, res: any) =>
+    res.status(202).json({ token: "jwt" }),
+  ),
   deleteUserById: jest.fn((_req: any, res: any) => res.status(204).send()),
   getAllUsers: jest.fn((_req: any, res: any) => res.status(200).json([])),
   getUserById: jest.fn((_req: any, res: any) => res.status(200).json({ id: 1 })),
   loginUser: jest.fn((_req: any, res: any) => res.status(200).json({ token: "jwt" })),
+  selectLoginOrganization: jest.fn((_req: any, res: any) => res.status(202).json({ token: "jwt" })),
   loginUserWithMicrosoft: jest.fn((_req: any, res: any) => res.status(200).json({ token: "jwt" })),
   updateUserById: jest.fn((_req: any, res: any) => res.status(200).json({ updated: true })),
   calculateProgress: jest.fn((_req: any, res: any) => res.status(200).json({ progress: 50 })),

@@ -178,6 +178,17 @@ describe("shadowAiToolMatcher.service", () => {
       expect(result).toEqual({ id: 42, isNew: false });
     });
 
+    it("should insert domains as a single text[] value", async () => {
+      mockQuery.mockResolvedValueOnce([[], []] as any);
+      mockQuery.mockResolvedValueOnce([[{ id: 7 }], []] as any);
+
+      await ensureTenantTool(1, { ...registryEntry, domains: ["chat.openai.com", "chatgpt.com"] });
+
+      const [sql, options] = mockQuery.mock.calls[1] as [string, any];
+      expect(sql).toContain("ARRAY[:domains]::text[]");
+      expect(options.replacements.domains).toEqual(["chat.openai.com", "chatgpt.com"]);
+    });
+
     it("should pass transaction when provided", async () => {
       const tx = { id: "tx-1" };
       mockQuery.mockResolvedValueOnce([[], []] as any);

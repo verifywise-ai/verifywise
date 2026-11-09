@@ -9,6 +9,7 @@ import {
   IPublicIntakeForm,
 } from "../../interfaces/i.intakeForm";
 import { ValidationException } from "../../exceptions/custom.exception";
+import { DEFAULT_REVIEW_DAYS } from "../../../constants/intakeReviewTime";
 
 @Table({
   tableName: "intake_forms",
@@ -134,6 +135,14 @@ export class IntakeFormModel extends Model<IntakeFormModel> implements IIntakeFo
   euAiActRiskStepEnabled!: boolean;
 
   @Column({
+    type: DataType.BOOLEAN,
+    allowNull: false,
+    defaultValue: true,
+    field: "live_checks_enabled",
+  })
+  liveChecksEnabled!: boolean;
+
+  @Column({
     type: DataType.JSONB,
     allowNull: true,
     field: "design_settings",
@@ -146,6 +155,14 @@ export class IntakeFormModel extends Model<IntakeFormModel> implements IIntakeFo
     field: "routing",
   })
   routing!: IFormRouting | null;
+
+  @Column({
+    type: DataType.INTEGER,
+    allowNull: false,
+    defaultValue: DEFAULT_REVIEW_DAYS,
+    field: "review_days",
+  })
+  reviewDays!: number;
 
   @Column({
     type: DataType.INTEGER,
@@ -251,6 +268,7 @@ export class IntakeFormModel extends Model<IntakeFormModel> implements IIntakeFo
       submitButtonText: this.submitButtonText,
       publicId: this.publicId,
       euAiActRiskStepEnabled: this.euAiActRiskStepEnabled,
+      liveChecksEnabled: this.liveChecksEnabled,
       designSettings: this.designSettings,
     };
   }
@@ -276,6 +294,7 @@ export class IntakeFormModel extends Model<IntakeFormModel> implements IIntakeFo
       llmKeyId: this.llmKeyId,
       suggestedQuestionsEnabled: this.suggestedQuestionsEnabled,
       euAiActRiskStepEnabled: this.euAiActRiskStepEnabled,
+      liveChecksEnabled: this.liveChecksEnabled,
       designSettings: this.designSettings,
       routing: this.routing,
       createdBy: this.createdBy,

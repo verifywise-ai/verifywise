@@ -36,23 +36,23 @@ describe("LaneSection", () => {
 
   it("shows the chip for each lane", () => {
     const first = renderLane({ routing: routing({ lane: "senior" }) });
-    expect(screen.getByText("Senior review")).toBeInTheDocument();
+    expect(screen.getByText("Expert review")).toBeInTheDocument();
     first.unmount();
     const second = renderLane();
-    expect(screen.getByText("Standard review")).toBeInTheDocument();
+    expect(screen.getByText("Regular review")).toBeInTheDocument();
     second.unmount();
     renderLane({ routing: null });
-    expect(screen.getByText("Not routed yet")).toBeInTheDocument();
+    expect(screen.getByText("Not assigned yet")).toBeInTheDocument();
   });
 
   it("shows Routing off instead of a lane when the form doesn't route", () => {
     renderWithProviders(<LaneChip routing={routing()} routingEnabled={false} />);
-    expect(screen.getByText("Routing off")).toBeInTheDocument();
-    expect(screen.queryByText("Standard review")).not.toBeInTheDocument();
+    expect(screen.getByText("Assignment off")).toBeInTheDocument();
+    expect(screen.queryByText("Regular review")).not.toBeInTheDocument();
   });
 
   it.each([
-    [{ reason: "close_call", closeCallMargin: 10 }, "Within 10 points of the threshold"],
+    [{ reason: "close_call", closeCallMargin: 10 }, "Less than 10 points from the threshold"],
     [{ reason: "prohibited" }, "Prohibited practice"],
     [{ reason: "no_score", score: null }, "No usable score"],
     [{ reason: "at_or_above_threshold", score: 80 }, "Score 80, threshold 50"],
@@ -63,7 +63,7 @@ describe("LaneSection", () => {
         reason: "escalated",
         escalation: { by: 2, at: "2026-10-22T01:00:00.000Z", reason: "Odd vendor" },
       },
-      "Sent to senior review: Odd vendor",
+      "Expert review requested: Odd vendor",
     ],
   ] as Array<[Partial<SubmissionRouting>, string]>)("reason line for %j", (patch, text) => {
     renderLane({ routing: routing(patch) });
@@ -86,10 +86,10 @@ describe("LaneSection", () => {
   it("falls back to the server's message when no reviewers are listed", () => {
     renderLane({
       canDecide: false,
-      decideBlockedReason: "This submission is assigned to senior reviewers",
+      decideBlockedReason: "This submission is assigned to expert reviewers",
     });
     expect(screen.getByTestId("lane-blocked")).toHaveTextContent(
-      "This submission is assigned to senior reviewers",
+      "This submission is assigned to expert reviewers",
     );
   });
 
@@ -100,7 +100,7 @@ describe("LaneSection", () => {
 
   it("hides the escalate button unless the user can escalate", () => {
     renderLane();
-    expect(screen.queryByText("Send to senior review")).not.toBeInTheDocument();
+    expect(screen.queryByText("Request expert review")).not.toBeInTheDocument();
   });
 
   it("needs a reason before sending, then calls escalateSubmission with it", async () => {
@@ -109,11 +109,11 @@ describe("LaneSection", () => {
     const onEscalated = vi.fn();
     renderLane({ canEscalate: true, onEscalated });
 
-    fireEvent.click(screen.getByRole("button", { name: "Send to senior review" }));
-    const submit = screen.getAllByRole("button", { name: "Send to senior review" }).pop()!;
+    fireEvent.click(screen.getByRole("button", { name: "Request expert review" }));
+    const submit = screen.getAllByRole("button", { name: "Request expert review" }).pop()!;
     expect(submit).toBeDisabled();
 
-    fireEvent.change(screen.getByPlaceholderText("Why does this need a senior reviewer?"), {
+    fireEvent.change(screen.getByPlaceholderText("Why does this need an expert reviewer?"), {
       target: { value: "  Needs a closer look  " },
     });
     expect(submit).toBeEnabled();

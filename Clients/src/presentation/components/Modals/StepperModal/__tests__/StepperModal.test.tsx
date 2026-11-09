@@ -23,4 +23,20 @@ describe("StepperModal", () => {
     );
     expect(screen.getByText("Wizard")).toBeInTheDocument();
   });
+
+  it("renders a header action next to the close button", () => {
+    renderWithProviders(
+      <StepperModal
+        isOpen={true}
+        onClose={vi.fn()}
+        title="Wizard"
+        steps={["Step 1", "Step 2"]}
+        activeStep={0}
+        headerAction={<button>Activity history</button>}
+      >
+        <div>Step content</div>
+      </StepperModal>,
+    );
+    expect(screen.getByRole("button", { name: "Activity history" })).toBeInTheDocument();
+  });
 });

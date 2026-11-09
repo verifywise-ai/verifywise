@@ -26,6 +26,8 @@ import {
   createSyslogConfig,
   updateSyslogConfig,
   deleteSyslogConfig,
+  regenerateSyslogKey,
+  getSyslogListenerStatus,
   getSettingsConfig,
   updateSettingsConfig,
 } from "../shadowAi.repository";
@@ -734,13 +736,12 @@ describe("shadowAi.repository", () => {
         limit: 10,
         period: "30d",
         department: "Engineering",
-        sort_by: "event_count",
-        order: "desc",
+        sort: "risk",
       });
 
       expect(apiServices.get).toHaveBeenCalledTimes(1);
       expect(apiServices.get).toHaveBeenCalledWith(
-        "/shadow-ai/users?page=1&limit=10&period=30d&department=Engineering&sort_by=event_count&order=desc",
+        "/shadow-ai/users?page=1&limit=10&period=30d&department=Engineering&sort=risk",
       );
       expect(result).toEqual(mockResponse.data.data);
     });
@@ -1036,13 +1037,12 @@ describe("shadowAi.repository", () => {
         page: 1,
         limit: 10,
         status: "blocked" as ShadowAiToolStatus,
-        sort_by: "event_count",
-        order: "desc",
+        sort: "events",
       });
 
       expect(apiServices.get).toHaveBeenCalledTimes(1);
       expect(apiServices.get).toHaveBeenCalledWith(
-        "/shadow-ai/tools?page=1&limit=10&status=blocked&sort_by=event_count&order=desc",
+        "/shadow-ai/tools?page=1&limit=10&status=blocked&sort=events",
       );
       expect(result).toEqual(mockResponse.data.data);
     });
@@ -1179,7 +1179,7 @@ describe("shadowAi.repository", () => {
           data: {
             model_inventory_id: 123,
             risk_entry_id: 456,
-            lifecycle_started: true,
+            lifecycle_initialized: true,
           } as ShadowAiGovernanceResult,
         },
         status: 202,
@@ -1195,7 +1195,7 @@ describe("shadowAi.repository", () => {
         },
         governance_owner_id: 1,
         risk_assessment: {
-          data_sensitivity: "high",
+          data_sensitivity: "High",
           description: "Customer data may be processed",
         },
         start_lifecycle: true,
@@ -1567,6 +1567,63 @@ describe("shadowAi.repository", () => {
   // ============================================================================
   // Config
   // ============================================================================
+
+  describe("regenerateSyslogKey", () => {
+    it("should POST to /v1/shadow-ai-syslog/sources/:id/regenerate-key and return the key", async () => {
+      const created = { id: 4, parser_type: "squid", is_active: true, key: "vwsl_secret" };
+      vi.mocked(apiServices.post).mockResolvedValue({
+        data: { data: created },
+        status: 200,
+        statusText: "OK",
+      });
+
+      const result = await regenerateSyslogKey(4);
+
+      expect(apiServices.post).toHaveBeenCalledWith(
+        "/v1/shadow-ai-syslog/sources/4/regenerate-key",
+        {},
+      );
+      expect(result).toEqual(created);
+    });
+
+    it("should rethrow API errors", async () => {
+      const mockError = { response: { status: 404, data: { message: "Not found" } } };
+      vi.mocked(apiServices.post).mockRejectedValue(mockError);
+
+      await expect(regenerateSyslogKey(4)).rejects.toEqual(mockError);
+    });
+  });
+
+  describe("getSyslogListenerStatus", () => {
+    it("should GET /v1/shadow-ai-syslog/status", async () => {
+      const status = {
+        enabled: true,
+        port: 6514,
+        tls: true,
+        plaintext: false,
+        ipOnly: false,
+        running: true,
+        startError: null,
+      };
+      vi.mocked(apiServices.get).mockResolvedValue({
+        data: { data: status },
+        status: 200,
+        statusText: "OK",
+      });
+
+      const result = await getSyslogListenerStatus();
+
+      expect(apiServices.get).toHaveBeenCalledWith("/v1/shadow-ai-syslog/status");
+      expect(result).toEqual(status);
+    });
+
+    it("should rethrow API errors", async () => {
+      const mockError = { response: { status: 403, data: { message: "Forbidden" } } };
+      vi.mocked(apiServices.get).mockRejectedValue(mockError);
+
+      await expect(getSyslogListenerStatus()).rejects.toEqual(mockError);
+    });
+  });
 
   describe("getSyslogConfigs", () => {
     it("should make GET request to /shadow-ai/config/syslog", async () => {

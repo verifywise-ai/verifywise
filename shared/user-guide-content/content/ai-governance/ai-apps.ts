@@ -75,6 +75,50 @@ export const aiAppsContent: ArticleContent = {
     },
     {
       type: 'heading',
+      id: 'lifecycle',
+      level: 2,
+      text: 'Lifecycle: in review, planned, live, retired',
+    },
+    {
+      type: 'paragraph',
+      text: 'Next to its status, every app has a lifecycle stage. The AI apps page splits the inventory into four tabs with counts: In review, Planned, Live and Retired. The status says whether an app may be used. The lifecycle says whether it is in use.',
+    },
+    {
+      type: 'image',
+      src: '/images/user-guide/ai-apps-lifecycle-tabs.png',
+      alt: 'AI apps page on the Live tab with three apps. GitHub Copilot is marked Stale',
+      caption: 'Live AI apps. GitHub Copilot is marked Stale because nobody has confirmed it recently.',
+    },
+    {
+      type: 'paragraph',
+      text: 'On the app detail page, choose **Mark as live** and pick the go-live date (today or earlier). Choose **Confirm still live** on a live app. **Retire** works on planned and live apps, so an app that never launches can be retired too. Only an app with status Approved or Restricted can be marked as live, so approve a Draft app first. Setting a live app back to Draft returns it to Planned. Admins, Editors and the app owner can change the lifecycle. Auditors cannot.',
+    },
+    {
+      type: 'image',
+      src: '/images/user-guide/ai-app-draft-cannot-go-live.png',
+      alt: 'Lifecycle panel of a Draft AI app with Mark as live disabled and a note to approve the app first',
+      caption: 'A Draft app can\'t be marked as live until it is approved.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Live apps get the same still-live check as use cases. Admins set the interval under Settings, Organization, Still-live check (30, 90 or 180 days, 90 by default). When nobody confirms a live app within it, the app is marked Stale. Its owner gets an email asking them to confirm it or retire it, once per interval.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Some status changes move the stage too. Setting a planned app to Under review moves it to In review. Leaving Under review brings it back to Planned. Banning an app retires it and stops its still-live checks. Approved and Restricted don\'t mark an app as live, so mark the apps in use as live yourself. Apps that existed before the lifecycle were placed by the same rules.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Employees can also request an app through an intake form of type AI app. Requests waiting for a decision are listed at the top of the In review tab and included in its count. **Review** opens the request. Approving it creates the app as Approved and Planned, with the approver as owner. The name, description and departments come from the requester\'s answers.',
+    },
+    {
+      type: 'image',
+      src: '/images/user-guide/ai-apps-in-review-intake.png',
+      alt: 'In review tab of the AI apps page with two intake requests above an app under review',
+      caption: 'Two app requests wait for review above an app that is under review.',
+    },
+    {
+      type: 'heading',
       id: 'detail-page',
       level: 2,
       text: 'The app detail page',

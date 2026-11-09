@@ -7,12 +7,14 @@ export const de: Record<string, string> = {
   "Invite a team member": "Teammitglied einladen",
   "Set up your organization": "Organisation einrichten",
   "Complete a risk assessment": "Risikobewertung abschließen",
+  "A lifecycle for every AI system you run":
+    "Ein Lebenszyklus für jedes KI-System, das Sie betreiben",
+  "New Jersey tenant screening AI: the rules already in force":
+    "KI bei der Mieterprüfung in New Jersey: die bereits geltenden Regeln",
+  "VerifyWise 2.6: risk inheritance and evidence retention":
+    "VerifyWise 2.6: Risikovererbung und Aufbewahrung von Nachweisen",
   "VerifyWise on the Wavestone UK Cybersecurity Startup Radar":
     "VerifyWise im UK Cybersecurity Startup Radar von Wavestone",
-  "VerifyWise 2.5: reporting, observability, and extensions":
-    "VerifyWise 2.5: Reporting, Observability und Extensions",
-  "Stop shopping for DORA compliance software": "Hören Sie auf, DORA-Compliance-Software zu suchen",
-  "Model risk management for AI and ML": "Modellrisikomanagement für KI und ML",
   "Quick start guide": "Schnellstartanleitung",
   "Navigating the dashboard": "Navigation im Dashboard",
   "Installing VerifyWise": "VerifyWise installieren",
@@ -163,13 +165,14 @@ export const fr: Record<string, string> = {
   "Invite a team member": "Inviter un membre",
   "Set up your organization": "Configurer votre organisation",
   "Complete a risk assessment": "Compléter une évaluation des risques",
+  "A lifecycle for every AI system you run":
+    "Un cycle de vie pour chaque système d'IA que vous exploitez",
+  "New Jersey tenant screening AI: the rules already in force":
+    "L'IA de sélection des locataires au New Jersey : les règles déjà en vigueur",
+  "VerifyWise 2.6: risk inheritance and evidence retention":
+    "VerifyWise 2.6 : héritage des risques et conservation des preuves",
   "VerifyWise on the Wavestone UK Cybersecurity Startup Radar":
     "VerifyWise dans le UK Cybersecurity Startup Radar de Wavestone",
-  "VerifyWise 2.5: reporting, observability, and extensions":
-    "VerifyWise 2.5 : reporting, observabilité et extensions",
-  "Stop shopping for DORA compliance software":
-    "Arrêtez de chercher un logiciel de conformité DORA",
-  "Model risk management for AI and ML": "Gestion du risque de modèle pour l'IA et le ML",
   "Quick start guide": "Guide de démarrage rapide",
   "Navigating the dashboard": "Naviguer dans le tableau de bord",
   "Installing VerifyWise": "Installer VerifyWise",
@@ -321,12 +324,13 @@ export const es: Record<string, string> = {
   "Invite a team member": "Invitar a un miembro del equipo",
   "Set up your organization": "Configura tu organización",
   "Complete a risk assessment": "Completar una evaluación de riesgos",
+  "A lifecycle for every AI system you run": "Un ciclo de vida para cada sistema de IA que opera",
+  "New Jersey tenant screening AI: the rules already in force":
+    "IA para la selección de inquilinos en Nueva Jersey: las normas ya vigentes",
+  "VerifyWise 2.6: risk inheritance and evidence retention":
+    "VerifyWise 2.6: herencia de riesgos y conservación de evidencias",
   "VerifyWise on the Wavestone UK Cybersecurity Startup Radar":
     "VerifyWise en el UK Cybersecurity Startup Radar de Wavestone",
-  "VerifyWise 2.5: reporting, observability, and extensions":
-    "VerifyWise 2.5: informes, observabilidad y extensiones",
-  "Stop shopping for DORA compliance software": "Deje de buscar software de cumplimiento de DORA",
-  "Model risk management for AI and ML": "Gestión del riesgo de modelos para IA y ML",
   "Quick start guide": "Guía de inicio rápido",
   "Navigating the dashboard": "Navegar por el panel",
   "Installing VerifyWise": "Instalar VerifyWise",

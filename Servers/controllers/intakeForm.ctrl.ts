@@ -1,5 +1,4 @@
 import { Request, Response } from "express";
-import { createHmac, timingSafeEqual } from "crypto";
 import { Transaction } from "sequelize";
 import { sequelize } from "../database/db";
 import {
@@ -37,6 +36,16 @@ import {
 } from "../utils/intakeForm.utils";
 import { createNewModelInventoryQuery } from "../utils/modelInventory.utils";
 import { createNewProjectQuery } from "../utils/project.utils";
+import { setTierSuggestionResponseQuery } from "../utils/intakeTierSuggestion.utils";
+import type { ApplicantTierResponse } from "./intakeTierSuggestion.ctrl";
+import { addFrameworkToProjectQuery } from "../utils/framework.utils";
+import { getUseCaseOrgSettings } from "../utils/useCaseOrgSettings.utils";
+import {
+  AI_APP_NAME_CONSTRAINT,
+  aiAppDepartmentsFrom,
+  createAiAppQuery,
+} from "../utils/aiApp.utils";
+import { AiAppDiscoveredSource, AiAppStatus } from "../domain.layer/enums/ai-app-status.enum";
 import { createEUFrameworkQuery } from "../utils/eu.utils";
 import { EU_AI_ACT_FRAMEWORK_ID } from "../utils/validations/projectValidation.utils";
 import { IntakeFormStatus } from "../domain.layer/enums/intake-form-status.enum";
@@ -69,19 +78,25 @@ import {
 } from "../utils/euAiActClassification.utils";
 import { recordMultipleFieldChanges } from "../utils/useCaseChangeHistory.utils";
 import { STATUS_CODE } from "../utils/statusCode.utils";
-import { NotFoundException } from "../domain.layer/exceptions/custom.exception";
+import {
+  NotFoundException,
+  ValidationException,
+} from "../domain.layer/exceptions/custom.exception";
 import { llmKeyExistsQuery } from "../utils/llmKey.utils";
 import { sanitizeUserHtml } from "../utils/sanitization.utils";
 import logger from "../utils/logger/fileLogger";
 import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper";
 import {
-  sendSubmissionReceivedEmail,
   sendNewSubmissionAdminNotification,
   sendSubmissionApprovedEmail,
   sendSubmissionRejectedEmail,
   sendSecondReviewRequestEmail,
 } from "../services/intakeFormEmail.service";
 import { enqueueIntakeAssessment } from "../services/intakeScoring/enqueue";
+import {
+  reviewTimeAtSubmit,
+  trySendSubmitterConfirmation,
+} from "../services/intakeConfirmation/confirmation";
 import { notificationAudience } from "../services/intakeScoring/assessmentJob";
 import { cleanSubmission, isEmptyAnswer, parseFormula } from "../services/intakeFormLogic";
 import { generateSuggestedQuestions, generateFieldGuidance } from "../services/intakeLLM.service";
@@ -95,6 +110,7 @@ import {
 } from "../utils/intakeSubmissionData.utils";
 import { toId } from "../utils/validations/validation.utils";
 import { isEmail } from "../utils/validations/email.utils";
+import { isWebUrl } from "../utils/validations/url.utils";
 import {
   isAssessmentV2,
   type IIntakeSubmission,
@@ -137,15 +153,17 @@ import {
 } from "../services/intakeRouting/decisionGate";
 import { raiseForOverride, rerouteFormPending } from "../services/intakeRouting/routingService";
 import { getIntakeOversightQuery, OVERSIGHT_WEEKS } from "../services/intakeRouting/oversight";
-import type { IFormRouting, IIntakeForm } from "../domain.layer/interfaces/i.intakeForm";
+import type {
+  IFormRouting,
+  IIntakeForm,
+  IPublicIntakeForm,
+} from "../domain.layer/interfaces/i.intakeForm";
+import { createSignedToken, verifySignedToken } from "../utils/signedToken.utils";
+import { formAiAvailable } from "../services/intakeLiveChecks/availability";
+import { recordSubmitLiveChecks } from "../services/intakeLiveChecks/submit";
+
 /** Safely extract a single string from req.params (which may be string | string[]). */
 const paramStr = (val: string | string[]): string => (Array.isArray(val) ? val[0] : val);
-
-/** Secret key for signing CAPTCHA and resubmission tokens. */
-const TOKEN_SECRET = process.env.JWT_SECRET || process.env.ENCRYPTION_KEY;
-if (!TOKEN_SECRET) {
-  throw new Error("JWT_SECRET or ENCRYPTION_KEY must be set for intake form token signing");
-}
 
 /** Map lowercase form option values to valid AiRiskClassification enum values. */
 function mapToAiRiskClassification(value: string): AiRiskClassification | string {
@@ -162,30 +180,6 @@ function mapToAiRiskClassification(value: string): AiRiskClassification | string
     "out of scope": AiRiskClassification.OUT_OF_SCOPE,
   };
   return map[value?.toLowerCase()?.trim()] || value || "";
-}
-
-/** Create an HMAC-signed token from a payload object. */
-function createSignedToken(payload: Record<string, unknown>): string {
-  const data = JSON.stringify(payload);
-  const signature = createHmac("sha256", TOKEN_SECRET!).update(data).digest("hex");
-  return Buffer.from(JSON.stringify({ data, signature })).toString("base64");
-}
-
-/** Verify and decode an HMAC-signed token. Returns null if invalid. */
-function verifySignedToken<T = Record<string, unknown>>(token: string): T | null {
-  try {
-    const { data, signature } = JSON.parse(Buffer.from(token, "base64").toString());
-    const expectedSignature = createHmac("sha256", TOKEN_SECRET!).update(data).digest("hex");
-    // Use timing-safe comparison to prevent timing attacks
-    const sigBuf = Buffer.from(signature, "hex");
-    const expectedBuf = Buffer.from(expectedSignature, "hex");
-    if (sigBuf.length !== expectedBuf.length || !timingSafeEqual(sigBuf, expectedBuf)) {
-      return null;
-    }
-    return JSON.parse(data) as T;
-  } catch {
-    return null;
-  }
 }
 
 /** Parse and validate an integer ID parameter. Returns NaN for invalid values. */
@@ -247,17 +241,57 @@ async function handleLlmKeyRequest(
   }
 }
 
+/**
+ * What the public page needs to know about live checks before making any call.
+ * Reads the full form row for llmKeyId; the key id and provider are never sent.
+ */
+async function buildPublicLiveChecks(
+  form: IPublicIntakeForm,
+  organizationId: number,
+): Promise<{ enabled: boolean; aiAvailable: boolean }> {
+  const enabled = Boolean(form.liveChecksEnabled);
+  if (!enabled) return { enabled, aiAvailable: false };
+  try {
+    const full = await getIntakeFormByIdQuery(form.id, organizationId);
+    return { enabled, aiAvailable: full ? await formAiAvailable(full, organizationId) : false };
+  } catch (error) {
+    // Rules still run; only AI is withheld.
+    logger.error(`Error reading the LLM key of form ${form.id}`, error);
+    return { enabled, aiAvailable: false };
+  }
+}
+
 // ============================================================================
 // EU AI ACT RISK STEP HELPERS
 // ============================================================================
 
-/** Stores the scored EU AI Act answers of a public submission as its classification run. */
+/**
+ * Stores the scored EU AI Act answers of a public submission as its
+ * classification run, and the applicant's response to the tier suggested from
+ * them when the v1 submit route passed one (#5190). The stored level is the
+ * one scored here, never a value the page sent.
+ */
 async function persistIntakeRiskRun(
   submissionId: number,
   prepared: PreparedRun,
   organizationId: number,
   transaction: Transaction,
+  applicantResponse?: ApplicantTierResponse,
 ): Promise<void> {
+  if (applicantResponse) {
+    await setTierSuggestionResponseQuery(
+      submissionId,
+      organizationId,
+      {
+        suggestedLevel: prepared.result.level,
+        questionnaireVersion: prepared.questionnaireVersion,
+        accepted: applicantResponse.accepted,
+        context: applicantResponse.context,
+        respondedAt: new Date().toISOString(),
+      },
+      transaction,
+    );
+  }
   await insertClassificationRunQuery(
     {
       useCaseId: null,
@@ -325,6 +359,8 @@ function startIntakeAssessment(params: {
   form: IIntakeForm | null;
   /** Email the organization's admins when the form has no recipients. */
   adminFallback: boolean;
+  /** Also run the AI live checks (stored pending at submit). */
+  liveChecks: boolean;
   formId: number;
   formName: string;
   submitterName: string;
@@ -335,7 +371,9 @@ function startIntakeAssessment(params: {
   return enqueueIntakeAssessment({
     organizationId,
     submissionId,
-    stages: ["scoring", "suggestions"],
+    stages: params.liveChecks
+      ? ["scoring", "suggestions", "liveChecks"]
+      : ["scoring", "suggestions"],
     notify: true,
     lang,
     adminFallback,
@@ -344,6 +382,8 @@ function startIntakeAssessment(params: {
       `Could not queue the assessment for submission ${submissionId}; emailing reviewers now:`,
       error,
     );
+    // No job will route it, so the submitter is told now: the governance team.
+    await trySendSubmitterConfirmation(organizationId, submissionId, lang, { fallback: true });
     try {
       // Same audience as the job's email: recipients plus the lane reviewers
       // (no lane is stored yet, so both lanes while routing is on). If that
@@ -502,7 +542,7 @@ function routingReasonText(req: Request, reason: RoutingReason | null): string {
     case "override_raised":
       return req.t!("a reviewer raised the band");
     case "escalated":
-      return req.t!("a reviewer sent it to senior review");
+      return req.t!("a reviewer requested expert review");
     default:
       return req.t!("the score is below the threshold");
   }
@@ -667,14 +707,8 @@ function validateFormData(
         break;
       }
       case "url": {
-        if (typeof value !== "string") {
+        if (!isWebUrl(value)) {
           errors.push(`"${field.label}" must be a valid URL`);
-        } else {
-          try {
-            new URL(value);
-          } catch {
-            errors.push(`"${field.label}" must be a valid URL`);
-          }
         }
         break;
       }
@@ -878,7 +912,7 @@ const EMPTY_LANE_MESSAGE =
 const sameIds = (a: number[], b: number[]) =>
   a.length === b.length && a.every((id) => b.includes(id));
 
-const ROUTING_FORBIDDEN_MESSAGE = "Only an Admin can change review routing";
+const ROUTING_FORBIDDEN_MESSAGE = "Only an Admin can change reviewer assignment";
 
 /**
  * Whether saving `next` changes the stored routing. Compared by value: id
@@ -1051,6 +1085,7 @@ export async function createIntakeForm(req: Request, res: Response) {
       llmKeyId,
       suggestedQuestionsEnabled,
       euAiActRiskStepEnabled,
+      liveChecksEnabled,
       designSettings,
     } = req.body;
 
@@ -1136,6 +1171,7 @@ export async function createIntakeForm(req: Request, res: Response) {
         llmKeyId: llmKey.llmKeyId,
         suggestedQuestionsEnabled,
         euAiActRiskStepEnabled: riskStep.enabled,
+        liveChecksEnabled: liveChecksEnabled == null ? true : Boolean(liveChecksEnabled),
         designSettings,
         routing: routing.value,
         createdBy: req.userId!,
@@ -1217,6 +1253,7 @@ export async function updateIntakeForm(req: Request, res: Response) {
       llmKeyId,
       suggestedQuestionsEnabled,
       euAiActRiskStepEnabled,
+      liveChecksEnabled,
       designSettings,
     } = req.body;
 
@@ -1304,6 +1341,7 @@ export async function updateIntakeForm(req: Request, res: Response) {
         llmKeyId: llmKey.llmKeyId,
         suggestedQuestionsEnabled,
         euAiActRiskStepEnabled: riskStep.enabled,
+        liveChecksEnabled: liveChecksEnabled == null ? undefined : Boolean(liveChecksEnabled),
         designSettings,
         routing: routing.value,
       },
@@ -1768,7 +1806,7 @@ export async function getSubmissionPreview(req: Request, res: Response) {
     const decideBlockedReason = canDecide
       ? null
       : lane === "senior"
-        ? req.t!("This submission is assigned to senior reviewers")
+        ? req.t!("This submission is assigned to expert reviewers")
         : req.t!("This submission is assigned to the form's reviewers");
 
     return res.status(200).json(
@@ -1784,6 +1822,7 @@ export async function getSubmissionPreview(req: Request, res: Response) {
         riskAssessment: submission.riskAssessment,
         riskTier: submission.riskTier,
         riskOverride: submission.riskOverride,
+        liveChecks: submission.liveChecks ?? null,
         entityPreview: entityData,
         euAiActClassification,
         assessment,
@@ -1996,10 +2035,12 @@ export async function retrySubmissionAssessment(req: Request, res: Response) {
         .json(STATUS_CODE[409](req.t!("Only pending submissions can be changed")));
     }
 
+    // The live checks stage reads the submitter's stored language, not this request's.
     const stages = selectRetryStages(
       submission.riskAssessment,
       submission.suggestedRisks,
       new Date(),
+      submission.liveChecks,
     );
     if (stages.length === 0) {
       return res.status(409).json(STATUS_CODE[409](req.t!("Nothing to retry")));
@@ -2364,7 +2405,7 @@ export async function approveSubmission(req: Request, res: Response) {
       return res.status(403).json(
         STATUS_CODE[403](
           decision.lane === "senior"
-            ? req.t!("A senior reviewer has to decide this: {reason}", {
+            ? req.t!("An expert reviewer has to decide this: {reason}", {
                 reason: routingReasonText(req, decision.reason),
               })
             : req.t!("This submission is assigned to the form's reviewers"),
@@ -2448,6 +2489,9 @@ export async function approveSubmission(req: Request, res: Response) {
       );
       entityId = createdModel.id!;
     } else if (submission.entityType === IntakeEntityType.USE_CASE) {
+      // The organization's defaults for a new use case (#5192): its region
+      // when the submission gave none, and its frameworks.
+      const useCaseDefaults = await getUseCaseOrgSettings(req.organizationId!, transaction);
       const createdProject = await createNewProjectQuery(
         {
           project_title: (entityData.project_title as string) || "",
@@ -2459,19 +2503,53 @@ export async function approveSubmission(req: Request, res: Response) {
           owner: req.userId!,
           ai_risk_classification: aiRiskClassification as any,
           high_risk_roles: highRiskRolesFromEntityData(entityData),
-          geography: entityData.geography ? Number(entityData.geography) : 1,
+          geography: entityData.geography
+            ? Number(entityData.geography)
+            : (useCaseDefaults.default_geography ?? 1),
+          // The intake review already happened, so the use case starts
+          // planned (createNewProjectQuery's default), not in review (#5187).
           status: ProjectStatus.UNDER_REVIEW,
         },
         [],
         // Only a level that comes from the EU AI Act step (a scorable run)
-        // brings the EU AI Act framework along. Submissions without a run keep
-        // their mapped or reviewer level and get no framework.
+        // brings the EU AI Act framework along here. The organization's default
+        // frameworks are added below.
         classification ? [EU_AI_ACT_FRAMEWORK_ID] : [],
         req.organizationId!,
         req.userId!,
         transaction,
       );
       entityId = createdProject.id!;
+      // The organization's default frameworks, except the EU AI Act when the
+      // run above already brought it. Each is added in its own savepoint: one
+      // that no longer applies, or whose setup fails, is skipped and the
+      // approval goes ahead without it.
+      for (const frameworkId of useCaseDefaults.default_framework_ids) {
+        if (classification && frameworkId === EU_AI_ACT_FRAMEWORK_ID) continue;
+        const savepoint = await sequelize.transaction({ transaction });
+        let added = false;
+        try {
+          added = await addFrameworkToProjectQuery(
+            frameworkId,
+            entityId,
+            req.organizationId!,
+            savepoint,
+          );
+          await savepoint.commit();
+        } catch (error) {
+          await savepoint.rollback();
+          logger.error(
+            `Default framework ${frameworkId} failed to set up on use case ${entityId}: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+          );
+        }
+        if (!added) {
+          logger.warn(
+            `Default framework ${frameworkId} was not added to use case ${entityId} on intake approval`,
+          );
+        }
+      }
       if (classification) {
         await createEUFrameworkQuery(entityId, false, req.organizationId!, transaction);
         await insertClassificationRunQuery(
@@ -2507,6 +2585,41 @@ export async function approveSubmission(req: Request, res: Response) {
           transaction,
         );
       }
+    } else if (submission.entityType === IntakeEntityType.AI_APP) {
+      // An approved AI app request (#5193). The app starts planned, like a use
+      // case from intake; its approval status says it was approved.
+      try {
+        const createdApp = await createAiAppQuery(
+          {
+            name: typeof entityData.name === "string" ? entityData.name.trim() : "",
+            description:
+              typeof entityData.description === "string" ? entityData.description : undefined,
+            owner_id: req.userId!,
+            status: AiAppStatus.APPROVED,
+            discovered_source: AiAppDiscoveredSource.EMPLOYEE_REPORT,
+            departments: aiAppDepartmentsFrom(entityData.departments),
+          },
+          req.organizationId!,
+          transaction,
+          req.userId!,
+        );
+        entityId = createdApp.id!;
+      } catch (error) {
+        // A blank or too long name, or another invalid answer: say which.
+        if (error instanceof ValidationException) {
+          await transaction.rollback();
+          return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
+        }
+        // Only the per-org name constraint means the name is taken.
+        const pg = (error as { parent?: { code?: string; constraint?: string } })?.parent;
+        if (pg?.code === "23505" && pg.constraint === AI_APP_NAME_CONSTRAINT) {
+          await transaction.rollback();
+          return res
+            .status(409)
+            .json(STATUS_CODE[409](req.t!("An AI app with this name already exists")));
+        }
+        throw error;
+      }
     } else {
       await transaction.rollback();
       return res.status(400).json(STATUS_CODE[400](req.t!("Unsupported entity type")));
@@ -2516,6 +2629,18 @@ export async function approveSubmission(req: Request, res: Response) {
     // entity, in this transaction: any failure rolls the approval back. The
     // submission row is locked above, so no suggestion changes underneath.
     const approval = { approverId: req.userId!, approvedAt: new Date(), submissionId };
+    // AI apps have no risk register (#5193): their requests get no
+    // suggestions, and an accepted one from before that is refused rather than
+    // dropped or filed as a use case risk under the app's id.
+    if (
+      submission.entityType === IntakeEntityType.AI_APP &&
+      (submission.suggestedRisks?.items ?? []).some((s) => s.state === "accepted")
+    ) {
+      await transaction.rollback();
+      return res
+        .status(400)
+        .json(STATUS_CODE[400](req.t!("AI app requests cannot carry accepted risk suggestions")));
+    }
     for (const s of submission.suggestedRisks?.items ?? []) {
       if (s.state !== "accepted") continue;
       if (submission.entityType === IntakeEntityType.MODEL) {
@@ -2678,7 +2803,7 @@ export async function rejectSubmission(req: Request, res: Response) {
         .json(
           STATUS_CODE[403](
             lane === "senior"
-              ? req.t!("This submission is assigned to senior reviewers")
+              ? req.t!("This submission is assigned to expert reviewers")
               : req.t!("This submission is assigned to the form's reviewers"),
           ),
         );
@@ -2801,7 +2926,7 @@ export async function escalateSubmission(req: Request, res: Response) {
         .status(409)
         .json(
           STATUS_CODE[409](
-            req.t!("Only pending submissions in standard review can be sent to senior review"),
+            req.t!("Expert review can only be requested for pending submissions in regular review"),
           ),
         );
     }
@@ -2813,11 +2938,7 @@ export async function escalateSubmission(req: Request, res: Response) {
     ) {
       return res
         .status(403)
-        .json(
-          STATUS_CODE[403](
-            req.t!("Only this form's reviewers can send a submission to senior review"),
-          ),
-        );
+        .json(STATUS_CODE[403](req.t!("Only this form's reviewers can request expert review")));
     }
 
     const at = new Date().toISOString();
@@ -2843,7 +2964,7 @@ export async function escalateSubmission(req: Request, res: Response) {
 
     await logSuccess({
       eventType: "Update",
-      description: `submission ${submissionId} escalated to senior review`,
+      description: `submission ${submissionId} escalated to expert review`,
       functionName: "escalateSubmission",
       fileName: "intakeForm.ctrl.ts",
       userId,
@@ -3045,6 +3166,7 @@ export async function getPublicFormByPublicId(req: Request, res: Response) {
         previousSubmitterName,
         previousSubmitterEmail,
         ...(await buildPublicRiskStep(form, previousSubmissionId, tenantInfo.orgId)),
+        liveChecks: await buildPublicLiveChecks(form, tenantInfo.orgId),
       }),
     );
   } catch (error) {
@@ -3095,7 +3217,10 @@ export async function submitPublicFormByPublicId(req: Request, res: Response) {
     } = req.body;
 
     // Validate contact info (always required)
-    const fullFormForValidation = await getIntakeFormByIdQuery(form.id, tenantInfo.orgId);
+    // With its review time, which the submission stores (#5189).
+    const fullFormForValidation = await getIntakeFormByIdQuery(form.id, tenantInfo.orgId, {
+      withReviewDays: true,
+    });
 
     if (!submitterEmail) {
       return res.status(400).json(STATUS_CODE[400](req.t!("Submitter email is required")));
@@ -3200,6 +3325,9 @@ export async function submitPublicFormByPublicId(req: Request, res: Response) {
       }
     }
 
+    // The review time in force now; the confirmation email uses this, not the
+    // form's later setting.
+    const reviewTime = reviewTimeAtSubmit(fullFormForValidation?.reviewDays);
     const transaction = await sequelize.transaction();
 
     try {
@@ -3212,6 +3340,7 @@ export async function submitPublicFormByPublicId(req: Request, res: Response) {
           entityType: form.entityType,
           originalSubmissionId,
           ipAddress: clientIp,
+          ...reviewTime,
         },
         tenantInfo.orgId,
         transaction,
@@ -3223,6 +3352,7 @@ export async function submitPublicFormByPublicId(req: Request, res: Response) {
           riskStep.prepared,
           tenantInfo.orgId,
           transaction,
+          res.locals?.tierSuggestionResponse,
         );
       }
 
@@ -3241,28 +3371,31 @@ export async function submitPublicFormByPublicId(req: Request, res: Response) {
 
       const submissionName = resolvedName || "Anonymous";
 
-      // Send confirmation email to submitter (only if email present)
-      if (resolvedEmail) {
-        sendSubmissionReceivedEmail(
-          resolvedEmail,
-          submissionName,
-          form.name,
-          submission.id,
-          newResubmissionToken || "",
-          publicId,
-          undefined,
-          undefined,
-          req.lang,
-        ).catch((err) => logger.error("Failed to send submission received email:", err));
-      }
+      // The submitter's confirmation names the reviewers, so with routing on
+      // it waits for the lane (the assessment job or its 2-minute cap sends
+      // it); with nothing to wait for it goes now.
+      void trySendSubmitterConfirmation(tenantInfo.orgId, submission.id!, req.lang, {
+        fallback: false,
+      });
 
       // Get full form with recipients to send notifications
       const fullForm = await getIntakeFormByIdQuery(form.id, tenantInfo.orgId);
+
+      // After the commit and never thrown: a failed write leaves the submission as is.
+      const liveChecks = await recordSubmitLiveChecks({
+        form: fullFormForValidation,
+        organizationId: tenantInfo.orgId,
+        submissionId: submission.id!,
+        data: cleanedData,
+        prefill: req.body.prefill,
+        language: req.lang,
+      });
 
       void startIntakeAssessment({
         organizationId: tenantInfo.orgId,
         submissionId: submission.id!,
         lang: req.lang,
+        liveChecks,
         form: fullForm,
         adminFallback: false,
         formId: form.id,
@@ -3384,6 +3517,7 @@ export async function getPublicForm(req: Request, res: Response) {
         previousSubmitterName,
         previousSubmitterEmail,
         ...(await buildPublicRiskStep(form, previousSubmissionId, tenantInfo.id)),
+        liveChecks: await buildPublicLiveChecks(form, tenantInfo.id),
       }),
     );
   } catch (error) {
@@ -3437,7 +3571,10 @@ export async function submitPublicForm(req: Request, res: Response) {
     } = req.body;
 
     // Validate contact info (always required)
-    const fullFormForValidation = await getIntakeFormByIdQuery(form.id, tenantInfo.id);
+    // With its review time, which the submission stores (#5189).
+    const fullFormForValidation = await getIntakeFormByIdQuery(form.id, tenantInfo.id, {
+      withReviewDays: true,
+    });
 
     if (!submitterEmail) {
       return res.status(400).json(STATUS_CODE[400](req.t!("Submitter email is required")));
@@ -3542,6 +3679,9 @@ export async function submitPublicForm(req: Request, res: Response) {
       }
     }
 
+    // The review time in force now; the confirmation email uses this, not the
+    // form's later setting.
+    const reviewTime = reviewTimeAtSubmit(fullFormForValidation?.reviewDays);
     const transaction = await sequelize.transaction();
 
     try {
@@ -3554,13 +3694,20 @@ export async function submitPublicForm(req: Request, res: Response) {
           entityType: form.entityType,
           originalSubmissionId,
           ipAddress: clientIp,
+          ...reviewTime,
         },
         tenantInfo.id,
         transaction,
       );
 
       if (riskStep.prepared) {
-        await persistIntakeRiskRun(submission.id!, riskStep.prepared, tenantInfo.id, transaction);
+        await persistIntakeRiskRun(
+          submission.id!,
+          riskStep.prepared,
+          tenantInfo.id,
+          transaction,
+          res.locals?.tierSuggestionResponse,
+        );
       }
 
       await transaction.commit();
@@ -3578,31 +3725,31 @@ export async function submitPublicForm(req: Request, res: Response) {
 
       const submissionName = resolvedName || "Anonymous";
 
-      // Use publicId for emails if available
-      const formPublicId = form.publicId;
-
-      // Send confirmation email to submitter (only if email present)
-      if (resolvedEmail) {
-        sendSubmissionReceivedEmail(
-          resolvedEmail,
-          submissionName,
-          form.name,
-          submission.id,
-          newResubmissionToken || "",
-          formPublicId || "",
-          tenantSlug,
-          formSlug,
-          req.lang,
-        ).catch((err) => logger.error("Failed to send submission received email:", err));
-      }
+      // The submitter's confirmation names the reviewers, so with routing on
+      // it waits for the lane (the assessment job or its 2-minute cap sends
+      // it); with nothing to wait for it goes now.
+      void trySendSubmitterConfirmation(tenantInfo.id, submission.id!, req.lang, {
+        fallback: false,
+      });
 
       // Use per-form recipients; this route falls back to org admins without them
       const fullForm = await getIntakeFormByIdQuery(form.id, tenantInfo.id);
+
+      // After the commit and never thrown: a failed write leaves the submission as is.
+      const liveChecks = await recordSubmitLiveChecks({
+        form: fullFormForValidation,
+        organizationId: tenantInfo.id,
+        submissionId: submission.id!,
+        data: cleanedData,
+        prefill: req.body.prefill,
+        language: req.lang,
+      });
 
       void startIntakeAssessment({
         organizationId: tenantInfo.id,
         submissionId: submission.id!,
         lang: req.lang,
+        liveChecks,
         form: fullForm,
         adminFallback: true,
         formId: form.id,
@@ -3681,7 +3828,9 @@ async function loadSecondReview(req: Request, res: Response, submissionId: numbe
   if (!isSenior && !isAdminRequest(req)) {
     res
       .status(403)
-      .json(STATUS_CODE[403](req.t!("Only a senior reviewer of this form can do a second review")));
+      .json(
+        STATUS_CODE[403](req.t!("Only an expert reviewer of this form can do a second review")),
+      );
     return null;
   }
   if (submission.reviewedBy === req.userId) {

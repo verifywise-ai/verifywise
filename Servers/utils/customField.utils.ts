@@ -310,8 +310,8 @@ const validateValueForDefinition = async (
     case "user": {
       const userId = assertPositiveInt(raw, "value");
       const rows = await sequelize.query(
-        `SELECT 1 AS ok FROM users
-          WHERE id = :userId AND organization_id = :organizationId
+        `SELECT 1 AS ok FROM organization_members
+          WHERE user_id = :userId AND organization_id = :organizationId
           LIMIT 1`,
         {
           replacements: { userId, organizationId },

@@ -5,6 +5,7 @@
 
 import { alertStyles } from "./alerts";
 import { tableStyles } from "./tables";
+import { brand, button as buttonTokens } from "./palette";
 
 const textColors = {
   theme: "#0f604d",
@@ -48,12 +49,12 @@ const buttonSizes = {
   },
 };
 
-// Standardized color palette
+// Primary and secondary button colors come from the design tokens.
+const primaryButton = buttonTokens.primary;
+const secondaryButton = buttonTokens.secondary;
+
+// Standardized color palette (success, warning, error, info)
 const colors = {
-  primary: "#13715B",
-  primaryHover: "#0f604d",
-  secondary: "#6B7280",
-  secondaryHover: "#4B5563",
   success: "#059669",
   successHover: "#047857",
   warning: "#D97706",
@@ -83,8 +84,8 @@ const buttons = {
   primary: {
     contained: {
       ...buttonSizes.medium,
-      "backgroundColor": colors.primary,
-      "color": "#fff",
+      "backgroundColor": primaryButton.contained.bg.default,
+      "color": primaryButton.contained.text.default,
       "boxShadow": "none",
       "textTransform": "inherit",
       "borderRadius": "4px",
@@ -92,45 +93,38 @@ const buttons = {
       "fontWeight": 500,
       "transition": "all 0.2s ease",
       "&:hover": {
-        backgroundColor: colors.primaryHover,
-        boxShadow: "none",
-      },
-      "&:active": {
-        backgroundColor: colors.primaryHover,
+        backgroundColor: primaryButton.contained.bg.hover,
         boxShadow: "none",
       },
       "&.Mui-disabled": {
-        backgroundColor: "#E5E7EB",
-        color: "#9CA3AF",
+        backgroundColor: primaryButton.contained.bg.disabled,
+        color: primaryButton.contained.text.disabled,
       },
     },
     outlined: {
       ...buttonSizes.medium,
       "backgroundColor": "transparent",
-      "color": colors.primary,
-      "border": `1px solid ${colors.primary}`,
+      "color": primaryButton.outlined.text.default,
+      "border": `1px solid ${primaryButton.outlined.border.default}`,
       "boxShadow": "none",
       "textTransform": "inherit",
       "borderRadius": "4px",
       "fontWeight": 500,
       "transition": "all 0.2s ease",
       "&:hover": {
-        backgroundColor: `${colors.primary}08`,
-        borderColor: colors.primaryHover,
+        backgroundColor: `${primaryButton.outlined.text.default}08`,
+        borderColor: primaryButton.outlined.border.hover,
         boxShadow: "none",
       },
-      "&:active": {
-        backgroundColor: `${colors.primary}12`,
-      },
       "&.Mui-disabled": {
-        borderColor: "#E5E7EB",
-        color: "#9CA3AF",
+        borderColor: primaryButton.outlined.border.disabled,
+        color: primaryButton.outlined.text.disabled,
       },
     },
     text: {
       ...buttonSizes.medium,
       "backgroundColor": "transparent",
-      "color": colors.primary,
+      "color": primaryButton.text.text.default,
       "border": "none",
       "boxShadow": "none",
       "textTransform": "inherit",
@@ -138,14 +132,11 @@ const buttons = {
       "fontWeight": 500,
       "transition": "all 0.2s ease",
       "&:hover": {
-        backgroundColor: `${colors.primary}08`,
+        backgroundColor: `${primaryButton.text.text.default}08`,
         boxShadow: "none",
       },
-      "&:active": {
-        backgroundColor: `${colors.primary}12`,
-      },
       "&.Mui-disabled": {
-        color: "#9CA3AF",
+        color: primaryButton.text.text.disabled,
       },
     },
   },
@@ -153,8 +144,8 @@ const buttons = {
   secondary: {
     contained: {
       ...buttonSizes.medium,
-      "backgroundColor": colors.secondary,
-      "color": "#fff",
+      "backgroundColor": secondaryButton.contained.bg.default,
+      "color": secondaryButton.contained.text.default,
       "boxShadow": "none",
       "textTransform": "inherit",
       "borderRadius": "4px",
@@ -162,40 +153,33 @@ const buttons = {
       "fontWeight": 500,
       "transition": "all 0.2s ease",
       "&:hover": {
-        backgroundColor: colors.secondaryHover,
-        boxShadow: "none",
-      },
-      "&:active": {
-        backgroundColor: colors.secondaryHover,
+        backgroundColor: secondaryButton.contained.bg.hover,
         boxShadow: "none",
       },
       "&.Mui-disabled": {
-        backgroundColor: "#E5E7EB",
-        color: "#9CA3AF",
+        backgroundColor: secondaryButton.contained.bg.disabled,
+        color: secondaryButton.contained.text.disabled,
       },
     },
     outlined: {
       ...buttonSizes.medium,
       "backgroundColor": "transparent",
-      "color": colors.secondary,
-      "border": `1px solid ${colors.secondary}`,
+      "color": secondaryButton.outlined.text.default,
+      "border": `1px solid ${secondaryButton.outlined.border.default}`,
       "boxShadow": "none",
       "textTransform": "inherit",
       "borderRadius": "4px",
       "fontWeight": 500,
       "transition": "all 0.2s ease",
       "&:hover": {
-        backgroundColor: `${colors.secondary}08`,
-        borderColor: colors.secondaryHover,
-      },
-      "&:active": {
-        backgroundColor: `${colors.secondary}12`,
+        backgroundColor: `${secondaryButton.outlined.bg.hover}`,
+        borderColor: secondaryButton.outlined.border.hover,
       },
     },
     text: {
       ...buttonSizes.medium,
       "backgroundColor": "transparent",
-      "color": colors.secondary,
+      "color": secondaryButton.text.text.default,
       "border": "none",
       "boxShadow": "none",
       "textTransform": "inherit",
@@ -203,10 +187,7 @@ const buttons = {
       "fontWeight": 500,
       "transition": "all 0.2s ease",
       "&:hover": {
-        backgroundColor: `${colors.secondary}08`,
-      },
-      "&:active": {
-        backgroundColor: `${colors.secondary}12`,
+        backgroundColor: `${secondaryButton.text.text.default}08`,
       },
     },
   },
@@ -441,7 +422,7 @@ const iconButtons = {
     outline: "none",
   },
   "&:focus-visible": {
-    outline: `2px solid ${colors.primary}`,
+    outline: `2px solid ${brand.primary}`,
     outlineOffset: 1,
   },
   "& svg path": {
@@ -465,7 +446,7 @@ const iconButtonsRectangle = {
     outline: "none",
   },
   "&:focus-visible": {
-    outline: `2px solid ${colors.primary}`,
+    outline: `2px solid ${brand.primary}`,
     outlineOffset: 1,
   },
   "& svg path": {

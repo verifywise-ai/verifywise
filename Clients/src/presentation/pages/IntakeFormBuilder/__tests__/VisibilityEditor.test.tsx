@@ -21,10 +21,10 @@ const PERSONAL: FormField = {
 };
 
 describe("VisibilityEditor", () => {
-  it("adds a condition on the first earlier field with its first operator and option", () => {
+  it("adds a condition on the first other field with its first operator and option", () => {
     const onChange = vi.fn();
     renderWithProviders(
-      <VisibilityEditor visibility={undefined} earlierFields={[PERSONAL]} onChange={onChange} />,
+      <VisibilityEditor visibility={undefined} otherFields={[PERSONAL]} onChange={onChange} />,
     );
     fireEvent.click(screen.getByRole("button", { name: "Add condition" }));
     expect(onChange).toHaveBeenCalledWith({
@@ -41,7 +41,7 @@ describe("VisibilityEditor", () => {
           match: "all",
           conditions: [{ fieldId: "personal", operator: "equals", value: "yes" }],
         }}
-        earlierFields={[PERSONAL]}
+        otherFields={[PERSONAL]}
         onChange={onChange}
       />,
     );
@@ -49,14 +49,14 @@ describe("VisibilityEditor", () => {
     expect(onChange).toHaveBeenCalledWith(undefined);
   });
 
-  it("explains when there is no earlier field to depend on", () => {
+  it("explains when there is no other field to depend on", () => {
     renderWithProviders(
-      <VisibilityEditor visibility={undefined} earlierFields={[]} onChange={vi.fn()} />,
+      <VisibilityEditor visibility={undefined} otherFields={[]} onChange={vi.fn()} />,
     );
-    expect(screen.getByText("Add a field above this one to create a rule")).toBeInTheDocument();
+    expect(screen.getByText("Add another field to create a rule")).toBeInTheDocument();
   });
 
-  it("keeps leftover conditions removable once no field is above", () => {
+  it("keeps leftover conditions removable once no other field exists", () => {
     const onChange = vi.fn();
     renderWithProviders(
       <VisibilityEditor
@@ -64,11 +64,11 @@ describe("VisibilityEditor", () => {
           match: "all",
           conditions: [{ fieldId: "personal", operator: "equals", value: "yes" }],
         }}
-        earlierFields={[]}
+        otherFields={[]}
         onChange={onChange}
       />,
     );
-    expect(screen.getByText("Add a field above this one to create a rule")).toBeInTheDocument();
+    expect(screen.getByText("Add another field to create a rule")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Add condition" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Remove condition" }));
     expect(onChange).toHaveBeenCalledWith(undefined);
@@ -78,7 +78,7 @@ describe("VisibilityEditor", () => {
     renderWithProviders(
       <VisibilityEditor
         visibility={undefined}
-        earlierFields={[PERSONAL]}
+        otherFields={[PERSONAL]}
         onChange={vi.fn()}
         blockedReason="This field is always shown"
       />,
@@ -107,7 +107,7 @@ describe("VisibilityEditor", () => {
           match: "all",
           conditions: [{ fieldId: "gone", operator: "equals", value: "x" }],
         }}
-        earlierFields={[PERSONAL]}
+        otherFields={[PERSONAL]}
         onChange={vi.fn()}
       />,
     );
@@ -144,7 +144,7 @@ describe("VisibilityEditor", () => {
     renderWithProviders(
       <VisibilityEditor
         visibility={{ match: "all" } as never}
-        earlierFields={[PERSONAL]}
+        otherFields={[PERSONAL]}
         onChange={vi.fn()}
       />,
     );

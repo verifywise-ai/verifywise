@@ -1,4 +1,19 @@
 import {
+  EXTERNAL_OWNER_OPTION,
+  EXTERNAL_OWNER_OPTION_ID,
+  externalOwnerPayload,
+  ownerSelectValue,
+  validateExternalOwner,
+} from "../../../../application/utils/externalOwner";
+import ExternalOwnerFields from "../../../components/ExternalOwner/ExternalOwnerFields";
+import ExternalOwnerName from "../../../components/ExternalOwner/ExternalOwnerName";
+import {
+  ownerChangeForExternalEdit,
+  ownerChangeForSelection,
+  OwnerParty,
+  PendingOwnerChange,
+} from "./ownerChange";
+import {
   SelectChangeEvent,
   Stack,
   Typography,
@@ -40,7 +55,6 @@ import useFrameworks from "../../../../application/hooks/useFrameworks";
 import { Framework } from "../../../../domain/types/Framework";
 import allowedRoles from "../../../../application/constants/permissions";
 import { VerifyWiseContext } from "../../../../application/contexts/VerifyWise.context";
-import { User } from "../../../../domain/types/User";
 import {
   deleteProject,
   updateProject,
@@ -60,6 +74,7 @@ import RiskAnalysisModal from "../RiskAnalysisModal";
 import type { ClassificationResult } from "../../../../domain/types/euAiActClassification";
 import { getAutocompleteStyles } from "../../../utils/inputStyles";
 import { useStyles } from "./styles";
+import { GEOGRAPHY_ITEMS } from "../../../../application/constants/geography";
 
 const riskClassificationItems = [
   { _id: 1, name: AiRiskClassification.PROHIBITED },
@@ -69,14 +84,7 @@ const riskClassificationItems = [
   { _id: 5, name: AiRiskClassification.OUT_OF_SCOPE },
 ];
 
-const geographyItems = [
-  { _id: 1, name: "Global" },
-  { _id: 2, name: "Europe" },
-  { _id: 3, name: "North America" },
-  { _id: 4, name: "South America" },
-  { _id: 5, name: "Asia" },
-  { _id: 6, name: "Africa" },
-];
+const geographyItems = [...GEOGRAPHY_ITEMS];
 
 const useCaseCategoryItems = [
   { _id: 1, name: "Generative AI" },
@@ -137,6 +145,8 @@ interface FormValues {
   goal: string;
   status: number;
   owner: number;
+  externalOwnerName: string;
+  externalOwnerEmail: string;
   members: number[];
   startDate: string;
   riskClassification: number | null;
@@ -161,6 +171,8 @@ interface FormErrors {
   goal?: string;
   status?: string;
   owner?: string;
+  externalOwnerName?: string;
+  externalOwnerEmail?: string;
   startDate?: string;
   members?: string;
   riskClassification?: string;
@@ -180,6 +192,8 @@ const initialState: FormValues = {
   goal: "",
   status: 1,
   owner: 0,
+  externalOwnerName: "",
+  externalOwnerEmail: "",
   members: [],
   startDate: "",
   riskClassification: null,
@@ -194,6 +208,9 @@ const initialState: FormValues = {
   deploymentContext: null,
 };
 
+const OwnerPartyName = ({ party }: { party: OwnerParty }) =>
+  party.external ? <ExternalOwnerName name={party.name} showIcon={false} /> : <>{party.name}</>;
+
 const ProjectSettings = React.memo(
   ({ triggerRefresh = () => {} }: { triggerRefresh?: (isUpdate: boolean) => void }) => {
     const { setProjects } = useContext(VerifyWiseContext);
@@ -202,9 +219,7 @@ const ProjectSettings = React.memo(
     const projectId = searchParams.get("projectId") ?? "1"; // default project ID is 2
     const theme = useTheme();
     const styles = useStyles();
-    const [isChangeOwnerModalOpen, setIsChangeOwnerModalOpen] = useState(false);
-    const [pendingOwnerId, setPendingOwnerId] = useState<User | null>(null);
-    const [removedOwner, setRemovedOwner] = useState<User | null>(null);
+    const [pendingOwnerChange, setPendingOwnerChange] = useState<PendingOwnerChange | null>(null);
     const [isRiskModalOpen, setIsRiskModalOpen] = useState(false);
     const canClassify = allowedRoles.projects.classify.includes(userRoleName);
 
@@ -246,6 +261,8 @@ const ProjectSettings = React.memo(
         values.goal !== initialValuesRef.current.goal ||
         values.status !== initialValuesRef.current.status ||
         values.owner !== initialValuesRef.current.owner ||
+        values.externalOwnerName !== initialValuesRef.current.externalOwnerName ||
+        values.externalOwnerEmail !== initialValuesRef.current.externalOwnerEmail ||
         JSON.stringify(values.members) !== JSON.stringify(initialValuesRef.current.members) ||
         values.startDate !== initialValuesRef.current.startDate ||
         values.riskClassification !== initialValuesRef.current.riskClassification ||
@@ -337,7 +354,9 @@ const ProjectSettings = React.memo(
             projectStatusItems.find(
               (item) => item.name.toLowerCase() === (project.status || "Not started").toLowerCase(),
             )?._id || 1,
-          owner: project.owner ?? 0,
+          owner: ownerSelectValue(project),
+          externalOwnerName: project.external_owner_name ?? "",
+          externalOwnerEmail: project.external_owner_email ?? "",
           startDate: project.start_date ? dayjs(project.start_date).toISOString() : "",
           members: project.members ? project.members.map(Number) : [],
           riskClassification:
@@ -388,20 +407,9 @@ const ProjectSettings = React.memo(
         const selectedValue = Number(event.target.value);
 
         if (prop === "owner") {
-          if (values.members.includes(selectedValue)) {
-            let oldOwner = null;
-            let newOwnerId = null;
-            for (const user of users) {
-              if (user.id === selectedValue) {
-                newOwnerId = user;
-              }
-              if (user.id === values.owner) {
-                oldOwner = user;
-              }
-            }
-            setRemovedOwner(oldOwner);
-            setPendingOwnerId(newOwnerId);
-            setIsChangeOwnerModalOpen(true);
+          const change = ownerChangeForSelection(values, selectedValue, users);
+          if (change) {
+            setPendingOwnerChange(change);
             return;
           }
         }
@@ -411,21 +419,8 @@ const ProjectSettings = React.memo(
       [users, values],
     );
 
-    const handleOwnershipChangeAcknowledge = () => {
-      if (!pendingOwnerId) return;
-      setValues((prevValues) => ({
-        ...prevValues,
-        owner: pendingOwnerId.id,
-        members: values.members.filter((member) => member !== pendingOwnerId.id),
-      }));
-      setErrors((prevErrors) => ({ ...prevErrors, owner: "" }));
-      setIsChangeOwnerModalOpen(false);
-      setPendingOwnerId(null);
-      setRemovedOwner(null);
-    };
-
     const handleCloseOwnerChangeDialog = useCallback((): void => {
-      setIsChangeOwnerModalOpen(false);
+      setPendingOwnerChange(null);
     }, []);
 
     const handleOnTextFieldChange = useCallback(
@@ -580,7 +575,7 @@ const ProjectSettings = React.memo(
         } else if (response.status === 404) {
           setAlert({
             variant: "error",
-            body: "Framework not found or could not be removed from the project",
+            body: "Framework not found or could not be removed from the use case",
             isToast: true,
             visible: true,
           });
@@ -640,9 +635,18 @@ const ProjectSettings = React.memo(
         newErrors.startDate = startDate.message;
       }
 
-      const owner = selectValidation("Owner", values.owner);
-      if (!owner.accepted) {
-        newErrors.owner = owner.message;
+      if (values.owner === EXTERNAL_OWNER_OPTION_ID) {
+        const externalErrors = validateExternalOwner(
+          values.externalOwnerName,
+          values.externalOwnerEmail,
+        );
+        if (externalErrors.name) newErrors.externalOwnerName = externalErrors.name;
+        if (externalErrors.email) newErrors.externalOwnerEmail = externalErrors.email;
+      } else {
+        const owner = selectValidation("Owner", values.owner);
+        if (!owner.accepted) {
+          newErrors.owner = owner.message;
+        }
       }
 
       // Framework selection is optional for use cases
@@ -677,6 +681,11 @@ const ProjectSettings = React.memo(
         return;
       }
       if (validateForm()) {
+        const externalEdit = ownerChangeForExternalEdit(initialValuesRef.current, values, users);
+        if (externalEdit) {
+          setPendingOwnerChange(externalEdit);
+          return;
+        }
         setIsSaving(true);
         handleSaveConfirm().finally(() => setIsSaving(false));
       } else {
@@ -721,7 +730,7 @@ const ProjectSettings = React.memo(
       }
       setAlert({
         variant: "success",
-        body: "Project updated successfully",
+        body: "Use case updated successfully",
         isToast: true,
         visible: true,
       });
@@ -747,7 +756,11 @@ const ProjectSettings = React.memo(
         body: {
           id: projectId,
           project_title: values.projectTitle,
-          owner: values.owner,
+          ...externalOwnerPayload(
+            values.owner,
+            values.externalOwnerName,
+            values.externalOwnerEmail,
+          ),
           members: values.members.map(String),
           start_date: values.startDate,
           ai_risk_classification: selectedRiskClass,
@@ -771,51 +784,90 @@ const ProjectSettings = React.memo(
             null,
           framework: values.monitoredRegulationsAndStandards.map((fw) => fw._id),
         },
-      }).then(async (response) => {
-        if (response.status === 202) {
-          // Create new values reference and update both ref and form state
-          const newValues = { ...values };
-          initialValuesRef.current = newValues;
-          setValues(newValues);
+      })
+        .then(async (response) => {
+          if (response.status === 202) {
+            // Create new values reference and update both ref and form state
+            // The server can add the acting user to the team when an external
+            // owner is named, so keep its list or the next save would drop them.
+            const savedMembers = response.data?.data?.members;
+            const newValues = {
+              ...values,
+              members: Array.isArray(savedMembers) ? savedMembers.map(Number) : values.members,
+            };
+            initialValuesRef.current = newValues;
+            setValues(newValues);
 
-          let cfFlushFailed = false;
-          const pid = Number(projectId);
-          if (Number.isFinite(pid) && pid > 0 && customFieldsRef.current?.hasPendingValues()) {
-            try {
-              await customFieldsRef.current.flush(pid);
-            } catch (cfError) {
-              cfFlushFailed = true;
-              console.error("Project saved, but custom field values failed to save:", cfError);
+            let cfFlushFailed = false;
+            const pid = Number(projectId);
+            if (Number.isFinite(pid) && pid > 0 && customFieldsRef.current?.hasPendingValues()) {
+              try {
+                await customFieldsRef.current.flush(pid);
+              } catch (cfError) {
+                cfFlushFailed = true;
+                console.error("Project saved, but custom field values failed to save:", cfError);
+              }
             }
-          }
-          if (cfFlushFailed) {
-            setIsLoading(false);
-            return;
-          }
+            if (cfFlushFailed) {
+              setIsLoading(false);
+              return;
+            }
 
-          setAlert({
-            variant: "success",
-            body: "Project updated successfully",
-            isToast: true,
-            visible: true,
-          });
-          setTimeout(() => {
+            setAlert({
+              variant: "success",
+              body: "Use case updated successfully",
+              isToast: true,
+              visible: true,
+            });
+            setTimeout(() => {
+              setIsLoading(false);
+              setAlert(null);
+            }, 2000);
+            // setRefreshKey((prevKey) => prevKey + 1);
+            triggerRefresh(true);
+          } else if (response.status === 400) {
             setIsLoading(false);
-            setAlert(null);
-          }, 2000);
-          // setRefreshKey((prevKey) => prevKey + 1);
-          triggerRefresh(true);
-        } else if (response.status === 400) {
+            setAlert({
+              variant: "error",
+              body: response.data.data.message,
+              isToast: true,
+              visible: true,
+            });
+          }
+        })
+        .catch(() => {
+          // A refused save (403, for one) rejects, and the API layer shows the error.
           setIsLoading(false);
-          setAlert({
-            variant: "error",
-            body: response.data.data.message,
-            isToast: true,
-            visible: true,
-          });
-        }
-      });
+        });
     }, [values, projectId]);
+
+    const handleOwnershipChangeAcknowledge = () => {
+      if (!pendingOwnerChange) return;
+      const { nextOwner, removeMemberId, saveOnProceed } = pendingOwnerChange;
+      setPendingOwnerChange(null);
+      if (saveOnProceed) {
+        setIsSaving(true);
+        handleSaveConfirm().finally(() => setIsSaving(false));
+        return;
+      }
+      setValues((prevValues) => ({
+        ...prevValues,
+        owner: nextOwner,
+        // Details of a previous external owner must not linger after a change.
+        externalOwnerName: "",
+        externalOwnerEmail: "",
+        members:
+          removeMemberId === undefined
+            ? prevValues.members
+            : prevValues.members.filter((member) => member !== removeMemberId),
+      }));
+      setErrors((prevErrors) => ({
+        ...prevErrors,
+        owner: "",
+        externalOwnerName: "",
+        externalOwnerEmail: "",
+      }));
+    };
 
     const handleConfirmDelete = useCallback(async () => {
       setIsLoading(true);
@@ -828,8 +880,8 @@ const ProjectSettings = React.memo(
           variant: isError ? "error" : "success",
           title: isError ? "Error" : "Success",
           body: isError
-            ? "Failed to delete project. Please try again."
-            : "Project deleted successfully.",
+            ? "Failed to delete use case. Please try again."
+            : "Use case deleted successfully.",
           isToast: true,
           visible: true,
         });
@@ -854,7 +906,7 @@ const ProjectSettings = React.memo(
         setAlert({
           variant: "error",
           title: "Error",
-          body: "Failed to delete project. Please try again.",
+          body: "Failed to delete use case. Please try again.",
           isToast: true,
           visible: true,
         });
@@ -975,9 +1027,9 @@ const ProjectSettings = React.memo(
                 </Box>
               </Box>
 
-              {/* Project Details Card */}
+              {/* Use case details card */}
               <Box sx={styles.card}>
-                <Typography sx={styles.sectionTitle}>Project Details</Typography>
+                <Typography sx={styles.sectionTitle}>Use case details</Typography>
                 <Box
                   sx={{
                     display: "grid",
@@ -997,13 +1049,14 @@ const ProjectSettings = React.memo(
                     label=""
                     value={values.owner || ""}
                     onChange={handleOnSelectChange("owner")}
-                    items={
-                      users?.map((user) => ({
+                    items={[
+                      ...(users?.map((user) => ({
                         _id: user.id,
                         name: `${user.name} ${user.surname}`,
                         email: user.email,
-                      })) || []
-                    }
+                      })) || []),
+                      EXTERNAL_OWNER_OPTION,
+                    ]}
                     sx={{
                       width: 400,
                       backgroundColor: theme.palette.background.main,
@@ -1011,24 +1064,60 @@ const ProjectSettings = React.memo(
                     error={errors.owner}
                     isRequired
                   />
-                  {isChangeOwnerModalOpen && (
+                  {values.owner === EXTERNAL_OWNER_OPTION_ID && (
+                    <>
+                      <Box />
+                      <ExternalOwnerFields
+                        name={values.externalOwnerName}
+                        email={values.externalOwnerEmail}
+                        nameError={errors.externalOwnerName}
+                        emailError={errors.externalOwnerEmail}
+                        width={400}
+                        onNameChange={(value) => {
+                          setValues((prev) => ({ ...prev, externalOwnerName: value }));
+                          setErrors((prev) => ({ ...prev, externalOwnerName: "" }));
+                        }}
+                        onEmailChange={(value) => {
+                          setValues((prev) => ({ ...prev, externalOwnerEmail: value }));
+                          setErrors((prev) => ({ ...prev, externalOwnerEmail: "" }));
+                        }}
+                      />
+                    </>
+                  )}
+                  {pendingOwnerChange && (
                     <ConfirmationModal
                       title="Confirm owner change"
                       body={
                         <Typography fontSize={13}>
-                          You setting ownership from{" "}
-                          <strong>
-                            {removedOwner?.name} {removedOwner?.surname}
-                          </strong>{" "}
+                          You are setting ownership
+                          {pendingOwnerChange.from && (
+                            <>
+                              {" "}
+                              from{" "}
+                              <strong>
+                                <OwnerPartyName party={pendingOwnerChange.from} />
+                              </strong>
+                            </>
+                          )}{" "}
                           to{" "}
                           <strong>
-                            {pendingOwnerId?.name} {pendingOwnerId?.surname}
+                            {pendingOwnerChange.to ? (
+                              <OwnerPartyName party={pendingOwnerChange.to} />
+                            ) : null}
                           </strong>
-                          . We will remove{" "}
-                          <strong>
-                            {pendingOwnerId?.name} {pendingOwnerId?.surname}
-                          </strong>{" "}
-                          from the members list.
+                          {pendingOwnerChange.removeMemberId !== undefined ? (
+                            <>
+                              . We will remove{" "}
+                              <strong>
+                                {pendingOwnerChange.to ? (
+                                  <OwnerPartyName party={pendingOwnerChange.to} />
+                                ) : null}
+                              </strong>{" "}
+                              from the members list.
+                            </>
+                          ) : (
+                            "."
+                          )}
                         </Typography>
                       }
                       cancelText="Cancel"
@@ -1643,9 +1732,12 @@ const ProjectSettings = React.memo(
 
         {isDeleteModalOpen && (
           <ConfirmationModal
-            title="Confirm delete"
+            title="Delete this use case?"
             body={
-              <Typography fontSize={13}>Are you sure you want to delete the use case?</Typography>
+              <Typography fontSize={13}>
+                This deletes the use case, its framework progress and its files. Its risks stay in
+                the risk register but are no longer linked to it. This cannot be undone.
+              </Typography>
             }
             cancelText="Cancel"
             proceedText="Delete"

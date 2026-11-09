@@ -57,6 +57,24 @@ describe("email color tokens", () => {
     expect(html).not.toContain("{{color");
   });
 
+  it("substitutes palette colors in the report ready email", async () => {
+    const mjml = fs.readFileSync(
+      path.join(__dirname, "../../templates/report-ready.mjml"),
+      "utf-8",
+    );
+    const html = await compileMjmlToHtml(mjml, {
+      reportName: "Quarterly review",
+      generatedAt: "28 October 2026",
+      downloadNote: "The file is ready.",
+      downloadButtonHtml: '<a href="https://example.com/report">Download</a>',
+    });
+
+    expect(mjml).not.toMatch(/#13715b/i);
+    expect(html).toContain(brand.primary);
+    expect(html).toContain("Quarterly review");
+    expect(html).not.toContain("{{color");
+  });
+
   it("substitutes color placeholders before MJML compilation", async () => {
     const html = await compileMjmlToHtml(
       '<mjml><mj-body><mj-text color="{{colorBrandPrimary}}">{{heading}}</mj-text></mj-body></mjml>',

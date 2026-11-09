@@ -33,7 +33,7 @@ function mockDb({
   const orgUsers = [6, 7, 8];
   query.mockImplementation(async (sql: string, opts: any = {}) => {
     if (sql.includes("FOR UPDATE")) return rowExists ? [{ id: 1 }] : [];
-    if (sql.startsWith("SELECT id FROM users"))
+    if (sql.startsWith("SELECT user_id AS id FROM organization_members"))
       return opts.replacements.userIds
         .filter((id: number) => orgUsers.includes(id))
         .map((id: number) => ({ id }));
@@ -145,6 +145,82 @@ describe("updateProjectByIdQuery members handling", () => {
     await updateProjectByIdQuery(1, { owner: 7 } as any, undefined, 1, transaction);
     await updateProjectByIdQuery(1, { owner: null } as any, undefined, 1, transaction);
     expect(statements().filter((s) => s.startsWith("UPDATE projects SET"))).toHaveLength(2);
+  });
+
+  describe("requireOwner, checked against the locked row (#5256)", () => {
+    const storedRow = (owner: number | null, external_owner_email: string | null = null) => {
+      const fallback = query.getMockImplementation()!;
+      query.mockImplementation(async (sql: string, opts: any = {}) => {
+        if (sql.startsWith("SELECT * FROM projects") && !opts.transaction) {
+          return [
+            {
+              id: 1,
+              owner,
+              external_owner_name: external_owner_email ? "Ada" : null,
+              external_owner_email,
+              dataValues: { owner },
+            },
+          ];
+        }
+        if (sql.includes("FROM projects_frameworks")) return [[], 0];
+        return fallback(sql, opts);
+      });
+    };
+    const write = (body: object, requireOwner?: boolean) =>
+      updateProjectByIdQuery(1, body as any, undefined, 1, transaction, { requireOwner });
+    const updates = () => statements().filter((s) => s.startsWith("UPDATE"));
+
+    it("refuses to leave a use case with no owner of either kind", async () => {
+      storedRow(7);
+      await expect(write({ owner: null }, true)).rejects.toBeInstanceOf(ValidationException);
+      expect(updates()).toHaveLength(0);
+    });
+
+    it("refuses to clear the only external owner", async () => {
+      storedRow(null, "ada@example.com");
+      await expect(
+        write({ external_owner_name: null, external_owner_email: null }, true),
+      ).rejects.toBeInstanceOf(ValidationException);
+      expect(updates()).toHaveLength(0);
+    });
+
+    it("treats owner: null as a no-op on a row with no user owner", async () => {
+      storedRow(null);
+      await write({ owner: null }, true);
+      expect(updates()).toHaveLength(1);
+    });
+
+    it("does not apply when off, which is what the legacy API uses", async () => {
+      storedRow(7);
+      await write({ owner: null }, false);
+      expect(updates()).toHaveLength(1);
+    });
+  });
+
+  it("clears the external fields when a numeric owner is set (#5256)", async () => {
+    await updateProjectByIdQuery(1, { owner: 7 } as any, undefined, 1, transaction);
+    const update = query.mock.calls.find((c) => String(c[0]).startsWith("UPDATE projects SET"))!;
+    expect((update[1] as any).replacements).toMatchObject({
+      owner: 7,
+      external_owner_name: null,
+      external_owner_email: null,
+    });
+  });
+
+  it("stores an external owner, lowercased, and clears the user owner (#5256)", async () => {
+    await updateProjectByIdQuery(
+      1,
+      { external_owner_name: "Ada", external_owner_email: "ADA@Example.com" } as any,
+      undefined,
+      1,
+      transaction,
+    );
+    const update = query.mock.calls.find((c) => String(c[0]).startsWith("UPDATE projects SET"))!;
+    expect((update[1] as any).replacements).toMatchObject({
+      owner: null,
+      external_owner_name: "Ada",
+      external_owner_email: "ada@example.com",
+    });
   });
 
   it("returns null without touching members when the row is already gone", async () => {

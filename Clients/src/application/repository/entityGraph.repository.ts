@@ -5,7 +5,8 @@ export interface EntityGraphData {
     id: number;
     uc_id?: string;
     project_title: string;
-    owner: number;
+    owner: number | null;
+    external_owner_name?: string | null;
     review_date?: string;
     created_at?: string;
     // Additional fields

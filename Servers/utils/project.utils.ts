@@ -3,6 +3,9 @@ import { ValidationException } from "../domain.layer/exceptions/custom.exception
 import { sequelize } from "../database/db";
 import { ProjectsMembersModel } from "../domain.layer/models/projectsMembers/projectsMembers.model";
 import { QueryTypes, Transaction } from "sequelize";
+import { LifecycleStage } from "../domain.layer/enums/lifecycle-stage.enum";
+import { parseDepartment } from "./lifecycle.utils";
+import { projectVisibilitySql } from "./projectVisibility.utils";
 import { VendorsProjectsModel } from "../domain.layer/models/vendorsProjects/vendorsProjects.model";
 import { RiskModel } from "../domain.layer/models/risks/risk.model";
 import { FileModel } from "../domain.layer/models/file/file.model";
@@ -23,10 +26,36 @@ import {
 } from "./customField.utils";
 import { findUsersNotInOrganization } from "./user.utils";
 import {
+  formatExternalOwnerName,
+  OwnerRuleOptions,
+  resolveOwnerForCreate,
+  resolveOwnerForUpdate,
+} from "./externalOwner.utils";
+import {
   highRiskRolesArraySql,
   normalizeHighRiskRoles,
   withLegacyHighRiskRole,
 } from "./highRiskRoles.utils";
+
+/**
+ * The owner's name as plain text (automation emails, reports): the user's full
+ * name, "Name (external)" for an external owner, or the fallback for neither.
+ */
+export const resolveProjectOwnerName = async (
+  row: { owner?: number | null; external_owner_name?: string | null },
+  fallback: string,
+  transaction?: Transaction,
+): Promise<string> => {
+  if (row.owner) {
+    const owner = (await sequelize.query(
+      `SELECT TRIM(COALESCE(name, '') || ' ' || COALESCE(surname, '')) AS full_name
+         FROM users WHERE id = :owner_id;`,
+      { replacements: { owner_id: row.owner }, transaction },
+    )) as [{ full_name: string }[], number];
+    if (owner[0]?.[0]?.full_name) return owner[0][0].full_name;
+  }
+  return row.external_owner_name ? formatExternalOwnerName(row.external_owner_name) : fallback;
+};
 
 /**
  * Turn a client member list into the ids to store. Clients send "7" for 7, and
@@ -99,23 +128,15 @@ export const getUserProjects = async (
   { userId, role, transaction }: GetUserProjectsOptions,
   organizationId: number,
 ) => {
-  const baseQueryParts: string[] = [`SELECT DISTINCT p.*`, `FROM projects p`];
+  const visibility = projectVisibilitySql("p", { userId, role });
+  const replacements: { [key: string]: any } = { organizationId, ...visibility.replacements };
 
-  const whereConditions: string[] = ["p.organization_id = :organizationId"];
-  const replacements: { [key: string]: any } = { organizationId };
-
-  if (role !== "Admin" && role !== "SuperAdmin") {
-    baseQueryParts.push(
-      `LEFT JOIN projects_members pm ON pm.project_id = p.id AND pm.organization_id = :organizationId`,
-    );
-    whereConditions.push("(p.owner = :userId OR pm.user_id = :userId)");
-    replacements.userId = userId;
-  }
-
-  baseQueryParts.push("WHERE " + whereConditions.join(" AND "));
-  baseQueryParts.push("ORDER BY p.created_at DESC, p.id ASC");
-
-  const finalQuery = baseQueryParts.join("\n");
+  const finalQuery = [
+    `SELECT DISTINCT p.*`,
+    `FROM projects p`,
+    `WHERE p.organization_id = :organizationId${visibility.sql}`,
+    "ORDER BY p.created_at DESC, p.id ASC",
+  ].join("\n");
 
   const projects = await sequelize.query(finalQuery, {
     replacements,
@@ -126,6 +147,67 @@ export const getUserProjects = async (
   });
   projects.forEach((project) => withLegacyHighRiskRole(project));
   return projects;
+};
+
+/**
+ * Add a user to a use case's team if they are not on it. Idempotent, inside the
+ * caller's transaction. Used so naming an external owner never locks out the
+ * non-Admin who did it: their access otherwise came only from being the owner.
+ */
+export const ensureProjectMemberQuery = async (
+  projectId: number,
+  userId: number,
+  organizationId: number,
+  transaction: Transaction,
+): Promise<void> => {
+  await sequelize.query(
+    `INSERT INTO projects_members (organization_id, project_id, user_id)
+     VALUES (:organizationId, :projectId, :userId)
+     ON CONFLICT (user_id, project_id) DO NOTHING;`,
+    { replacements: { organizationId, projectId, userId }, transaction },
+  );
+};
+
+/**
+ * Keep the user who owned a use case on its team once it moves to an external
+ * owner, unless they are an Admin of this organization, who sees it by role.
+ */
+export const keepPreviousOwnerAsMemberQuery = async (
+  projectId: number,
+  previousOwnerId: number,
+  organizationId: number,
+  transaction: Transaction,
+): Promise<void> => {
+  await sequelize.query(
+    `INSERT INTO projects_members (organization_id, project_id, user_id)
+     SELECT om.organization_id, :projectId, om.user_id
+       FROM organization_members om
+      WHERE om.organization_id = :organizationId
+        AND om.user_id = :previousOwnerId
+        AND om.role_id <> 1
+     ON CONFLICT (user_id, project_id) DO NOTHING;`,
+    { replacements: { organizationId, projectId, previousOwnerId }, transaction },
+  );
+};
+
+/** Whether the user can see this use case: the rule that scopes the use case list. */
+export const canViewProjectQuery = async (
+  projectId: number,
+  viewer: { userId: number; role: string },
+  organizationId: number,
+  transaction: Transaction,
+): Promise<boolean> => {
+  const visibility = projectVisibilitySql("p", viewer);
+  const rows = await sequelize.query(
+    `SELECT 1 FROM projects p
+      WHERE p.organization_id = :organizationId AND p.id = :projectId${visibility.sql}`,
+    {
+      replacements: { organizationId, projectId, ...visibility.replacements },
+      type: QueryTypes.SELECT,
+      transaction,
+    },
+  );
+  return rows.length > 0;
 };
 
 export const getAllProjectsQuery = async (
@@ -217,20 +299,7 @@ export const getProjectByIdQuery = async (
     (project.dataValues as any)["framework"].push(pf);
   }
 
-  // Handle case where project owner might be null or user doesn't exist
-  let ownerName = "Unassigned";
-  if (project.owner) {
-    const projectOwner = (await sequelize.query(
-      `SELECT name || ' ' || surname AS full_name FROM users WHERE id = :owner_id;`,
-      {
-        replacements: { owner_id: project.owner },
-      },
-    )) as [{ full_name: string }[], number];
-    if (projectOwner[0] && projectOwner[0][0]) {
-      ownerName = projectOwner[0][0].full_name;
-    }
-  }
-  (project.dataValues as any)["owner_name"] = ownerName;
+  (project.dataValues as any)["owner_name"] = await resolveProjectOwnerName(project, "Unassigned");
 
   const members = await sequelize.query(
     `SELECT user_id FROM projects_members WHERE organization_id = :organizationId AND project_id = :project_id`,
@@ -292,6 +361,19 @@ export const countAnswersByProjectId = async (
   };
 };
 
+/**
+ * Server-decided fields of a new use case (#5187). Never read from the
+ * project object, which the legacy create endpoint fills from the request
+ * body: every new use case starts planned, and opening an approval request
+ * (services/projects/approvalRequest.service.ts) is what moves it to review.
+ */
+export interface NewProjectServerFields {
+  /** Run through parseDepartment; an invalid value is a 400. */
+  department?: unknown;
+  /** Reject a use case with no owner of either kind. On for the v1 API only. */
+  requireOwner?: boolean;
+}
+
 export const createNewProjectQuery = async (
   project: Partial<ProjectModel> & { enable_ai_data_insertion?: boolean },
   members: number[],
@@ -300,8 +382,18 @@ export const createNewProjectQuery = async (
   userId: number,
   transaction: Transaction,
   isDemo: boolean = false,
+  serverFields: NewProjectServerFields = {},
 ): Promise<ProjectModel> => {
-  await assertOwnerInOrganization(project.owner, organizationId, transaction);
+  const department = parseDepartment(serverFields.department);
+  if (!department.ok) {
+    throw new ValidationException("Invalid department", "department", serverFields.department, {
+      i18nKey: "Invalid department",
+    });
+  }
+  const ownership = resolveOwnerForCreate(project, {
+    requireOwner: serverFields.requireOwner ?? false,
+  });
+  await assertOwnerInOrganization(ownership.owner, organizationId, transaction);
   const memberIds = await normaliseMemberIds(members, organizationId, transaction);
   // Frameworks are optional for use cases; default to empty array
   const projectFrameworks = frameworks || [];
@@ -338,20 +430,24 @@ export const createNewProjectQuery = async (
 
   const result = await sequelize.query(
     `INSERT INTO projects (
-      organization_id, uc_id, project_title, owner, start_date, geography, target_industry, description, ai_risk_classification,
+      organization_id, uc_id, project_title, owner, external_owner_name, external_owner_email, start_date, geography, target_industry, description, ai_risk_classification,
       high_risk_roles, goal, status, last_updated, last_updated_by, is_demo, is_organizational, approval_workflow_id,
-      pending_frameworks, enable_ai_data_insertion, use_case_category, use_case_purpose, use_case_audience, deployment_context
+      pending_frameworks, enable_ai_data_insertion, use_case_category, use_case_purpose, use_case_audience, deployment_context,
+      lifecycle_stage, department
     ) VALUES (
-      :organization_id, :uc_id, :project_title, :owner, :start_date, :geography, :target_industry, :description, :ai_risk_classification,
+      :organization_id, :uc_id, :project_title, :owner, :external_owner_name, :external_owner_email, :start_date, :geography, :target_industry, :description, :ai_risk_classification,
       ${roles.sql}, :goal, :status, :last_updated, :last_updated_by, :is_demo, :is_organizational, :approval_workflow_id,
-      :pending_frameworks, :enable_ai_data_insertion, :use_case_category, :use_case_purpose, :use_case_audience, :deployment_context
+      :pending_frameworks, :enable_ai_data_insertion, :use_case_category, :use_case_purpose, :use_case_audience, :deployment_context,
+      :lifecycle_stage, :department
     ) RETURNING *`,
     {
       replacements: {
         organization_id: organizationId,
         uc_id: ucId,
         project_title: project.project_title,
-        owner: project.owner,
+        owner: ownership.owner,
+        external_owner_name: ownership.external_owner_name,
+        external_owner_email: ownership.external_owner_email,
         start_date: project.start_date,
         geography: project.geography || 1,
         ai_risk_classification: project.ai_risk_classification || null,
@@ -370,6 +466,8 @@ export const createNewProjectQuery = async (
         use_case_purpose: project.use_case_purpose || null,
         use_case_audience: project.use_case_audience || null,
         deployment_context: project.deployment_context || null,
+        lifecycle_stage: LifecycleStage.PLANNED,
+        department: department.department,
         ...roles.replacements,
       },
       mapToModel: true,
@@ -444,20 +542,18 @@ export const createNewProjectQuery = async (
   if (automations[0].length > 0) {
     const automation = automations[0][0];
     if (automation["trigger_key"] === "project_added") {
-      const owner_name = (await sequelize.query(
-        `SELECT name || ' ' || surname AS full_name FROM users WHERE id = :owner_id;`,
-        {
-          replacements: { owner_id: createdProject.dataValues.owner },
-          transaction,
-        },
-      )) as [{ full_name: string }[], number];
+      const owner_name = await resolveProjectOwnerName(
+        createdProject.dataValues,
+        "Unknown",
+        transaction,
+      );
 
       const params = automation.params!;
 
       // Build replacements
       const replacements = buildProjectReplacements({
         ...createdProject.dataValues,
-        owner_name: owner_name[0]?.[0]?.full_name || "Unknown",
+        owner_name,
       });
 
       // Replace variables in subject and body
@@ -531,6 +627,7 @@ export const updateProjectByIdQuery = async (
   members: number[] | undefined,
   organizationId: number,
   transaction: Transaction,
+  { requireOwner = false }: OwnerRuleOptions = {},
 ): Promise<(IProjectAttributes & { members: number[] }) | null> => {
   // Lock the row before touching members. If it was deleted after the caller's
   // existence check, return null (404) rather than failing the member INSERT on
@@ -540,8 +637,10 @@ export const updateProjectByIdQuery = async (
     { replacements: { organizationId, id }, type: QueryTypes.SELECT, transaction },
   );
   if (locked.length === 0) return null;
-  await assertOwnerInOrganization(project.owner, organizationId, transaction);
   const oldProject = await getProjectByIdQuery(id, organizationId);
+  // Selecting one kind of owner clears the other; checked against the locked row.
+  Object.assign(project, resolveOwnerForUpdate(project, oldProject ?? {}, { requireOwner }));
+  await assertOwnerInOrganization(project.owner, organizationId, transaction);
   // A partial update (e.g. only ai_risk_classification or status) must not
   // touch members: treating a missing list as [] removed every member.
   // Ids are normalised before diffing; otherwise "7" never matched 7 and every
@@ -585,6 +684,8 @@ export const updateProjectByIdQuery = async (
   const setParts = [
     "project_title",
     "owner",
+    "external_owner_name",
+    "external_owner_email",
     "start_date",
     "ai_risk_classification",
     "goal",
@@ -619,6 +720,14 @@ export const updateProjectByIdQuery = async (
     );
     setParts.push(`high_risk_roles = ${roles.sql}`);
     Object.assign(updateProject, roles.replacements);
+  }
+  // A new external owner is told they will get reminders, so one already sent
+  // to the previous owner must not hold theirs back for a whole interval.
+  if (
+    project.external_owner_email &&
+    project.external_owner_email !== oldProject?.external_owner_email
+  ) {
+    setParts.push("confirmation_reminded_at = NULL");
   }
   const setClause = setParts.join(", ");
 
@@ -673,20 +782,18 @@ export const updateProjectByIdQuery = async (
   if (automations[0].length > 0) {
     const automation = automations[0][0];
     if (automation["trigger_key"] === "project_updated") {
-      const owner_name = (await sequelize.query(
-        `SELECT name || ' ' || surname AS full_name FROM users WHERE id = :owner_id;`,
-        {
-          replacements: { owner_id: updatedProject.dataValues.owner },
-          transaction,
-        },
-      )) as [{ full_name: string }[], number];
+      const owner_name = await resolveProjectOwnerName(
+        updatedProject.dataValues,
+        "Unknown",
+        transaction,
+      );
 
       const params = automation.params!;
 
       // Build replacements
       const replacements = buildProjectUpdateReplacements(oldProject, {
         ...updatedProject.dataValues,
-        owner_name: owner_name[0]?.[0]?.full_name || "Unknown",
+        owner_name,
       });
 
       // Replace variables in subject and body
@@ -885,7 +992,7 @@ export const deleteProjectByIdQuery = async (
   // from blocking the core project deletion operation
   try {
     // Only proceed with automation if we have a valid deleted project
-    if (deletedProject && deletedProject.owner) {
+    if (deletedProject && (deletedProject.owner || deletedProject.external_owner_name)) {
       const automations = (await sequelize.query(
         `SELECT
           pat.key AS trigger_key,
@@ -909,20 +1016,14 @@ export const deleteProjectByIdQuery = async (
       if (automations[0].length > 0) {
         const automation = automations[0][0];
         if (automation["trigger_key"] === "project_deleted") {
-          const owner_name = (await sequelize.query(
-            `SELECT name || ' ' || surname AS full_name FROM users WHERE id = :owner_id;`,
-            {
-              replacements: { owner_id: deletedProject.owner },
-              transaction,
-            },
-          )) as [{ full_name: string }[], number];
+          const owner_name = await resolveProjectOwnerName(deletedProject, "Unknown", transaction);
 
           const params = automation.params!;
 
           // Build replacements
           const replacements = buildProjectReplacements({
             ...deletedProject,
-            owner_name: owner_name[0]?.[0]?.full_name || "Unknown",
+            owner_name,
           });
 
           // Replace variables in subject and body

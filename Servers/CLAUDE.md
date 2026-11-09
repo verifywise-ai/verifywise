@@ -1,6 +1,6 @@
 # Servers — Backend Development Guide
 
-> **Last Updated:** 2026-10-19
+> **Last Updated:** 2026-10-29
 
 ---
 
@@ -145,17 +145,59 @@ and the reference-data seeds that run with migrations.
 3. **Utils** (`utils/{entity}.utils.ts`) — Raw SQL via `sequelize.query()` with unqualified table names and `:replacements` (including `organization_id` for tenant isolation)
 4. **Model** (`domain.layer/models/{entity}/`) — Sequelize-typescript decorators
 
-**Don't forget:** Register new routes in `app.ts`:
+**Don't forget:** Register new routes. New endpoints and changed API contracts belong
+under `/api/v1` (see **API Versioning** below):
 
 ```typescript
-import entityRoutes from "./routes/entity.route";
-app.use("/api/entities", entityRoutes);
+// routes/v1/entities.route.ts — relative paths only, never include /api or /v1
+router.get("/", authenticateJWT, listEntities);
+
+// routes/v1/index.ts — register with the exact two-arg form (the swagger
+// generator parses this file):
+router.use("/entities", entitiesRoutes);
 ```
+
+Bug fixes to existing unversioned endpoints stay on their legacy router in `routes/`.
 
 ### Frameworks and Extensions
 
 - **Frameworks 5–25** (SOC 2, GDPR, HIPAA, ...) are declared in `structures/<Name>/*.structure.ts` (registry `structures/index.ts`) and served by the generic `routes/frameworkImpl.route.ts`. Migrations `require("../../dist/structures")`, so run `npm run build` before `npm run migrate-db`. Guide: `docs/technical/guides/adding-new-framework.md`.
 - **Extensions** live in `extensions/<key>/`. They are mounted at `/api/extensions/<key>` **after** the `/api/extensions` catalog router, and gated with `requireExtensionEnabled("<key>")`. Read config with `ExtensionService.getRuntimeConfiguration(key, orgId)`. Reference: `docs/technical/infrastructure/extensions.md`.
+
+---
+
+## API Versioning
+
+The full policy is [ADR 0001](../docs/technical/adr/0001-api-versioning.md). The rules
+every contributor must follow:
+
+- **Legacy surface is frozen.** All existing unversioned `/api/*` endpoints keep their
+  exact paths, behavior, auth, and mount order. Bug fixes only — never add endpoints or
+  change contracts on unversioned paths.
+- **New endpoints and changed contracts go under `/api/v1`.** Create
+  `routes/v1/<resource>.route.ts` (kebab-case resource names) and register it in
+  `routes/v1/index.ts` with `router.use("/<resource>", <router>)`. The `/api/v1` prefix is
+  applied at mount level in `app.ts` — never put `/api` or `v1` inside router paths.
+- **Don't duplicate logic.** A v1 contract change is a thin router/adapter reusing the
+  existing controller and utils. Unchanged contracts get no v1 copy.
+- **Auth is unchanged.** Use `authenticateJWT` per route (or `router.use` for fully
+  protected routers) plus `authorize(...)` / `superAdminOnly` where required. API-key or
+  signature auth only for documented machine-ingestion surfaces.
+- **Swagger:** versioned operations get tags of the form `v1: <Resource>`; legacy
+  operations keep their existing tags. Regenerate (`generate:swagger`,
+  `generate:endpoints`, `check:api-drift`) — never hand-edit `swagger.yaml`. Deprecation
+  markings go through the generator's deprecation list (`scripts/apiDeprecations.ts`),
+  not manual edits.
+- **Raw-body trap:** the `express.json` exclusions in `app.ts` match legacy URL substrings
+  (`/api/deepeval/`, `/api/bias_and_fairness/`, `/api/webhooks/`). If such a router is ever
+  migrated to `/api/v1`, update the exclusions in the same PR.
+- **Tests required for v1 routers:** authentication (401), authorization (403 where
+  applicable), tenant isolation (cross-org denied), and the happy path. Legacy→v1
+  migrations also need a parity test proving the legacy path is unchanged.
+- **Future versions / removal:** a v2 follows the same pattern (`routes/v2/`, `/api/v2`)
+  via an ADR addendum. Legacy endpoint removal follows the deprecation process in ADR 0001
+  (generator deprecation marking → release notes → ≥1 minor release cycle → dedicated
+  removal PR with parity coverage).
 
 ---
 
@@ -167,7 +209,9 @@ from the route files and must never be edited by hand.
 
 ### Adding or changing an endpoint
 
-1. Edit the route file (`Servers/routes/{entity}.route.ts`).
+1. Edit the route file. For new endpoints or changed contracts this is
+   `Servers/routes/v1/{entity}.route.ts` (see **API Versioning**); for bug fixes on the
+   legacy surface it is `Servers/routes/{entity}.route.ts`.
 2. If the endpoint requires authentication, apply `authenticateJWT` (or mount the
    router with `router.use(authenticateJWT)`). The generator automatically emits
    `security: [bearerAuth: []]` for protected operations.

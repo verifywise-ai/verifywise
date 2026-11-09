@@ -1,4 +1,5 @@
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 
 // Mock all hooks used by IntegratedDashboard
@@ -18,6 +19,14 @@ vi.mock("../../../../application/hooks/useDashboardMetrics", () => ({
   hasDashboardCache: () => mockHasCache,
 }));
 
+let mockPreferences: any = { data: undefined, isLoading: false };
+const mockSaveLayout = vi.fn();
+
+vi.mock("../../../../application/hooks/useDashboardPreferences", () => ({
+  useDashboardPreferences: () => mockPreferences,
+  useUpdateDashboardPreferences: () => ({ mutateAsync: mockSaveLayout }),
+}));
+
 vi.mock("../../../../application/hooks/useAuth", () => ({
   useAuth: () => ({
     userToken: { name: "Test User" },
@@ -31,6 +40,11 @@ vi.mock("../../../../application/hooks/useNavigateSearch", () => ({
 
 vi.mock("../../../../application/utils/dateFormatter", () => ({
   formatRelativeDate: (d: string) => d,
+}));
+
+// Lifecycle widgets have their own tests (UseCaseLifecycleWidgets.test.tsx).
+vi.mock("../UseCaseLifecycleWidgets", () => ({
+  default: () => <div data-testid="use-case-lifecycle-widgets" />,
 }));
 
 // Mock child components that are complex
@@ -264,6 +278,8 @@ describe("IntegratedDashboard", () => {
     vi.clearAllMocks();
     localStorage.clear();
     mockHasCache = true;
+    mockPreferences = { data: undefined, isLoading: false };
+    mockSaveLayout.mockResolvedValue(undefined);
     // Suppress React "not wrapped in act(...)" warnings from async state updates
     vi.spyOn(console, "error").mockImplementation(() => {});
   });
@@ -356,6 +372,137 @@ describe("IntegratedDashboard", () => {
     renderWithProviders(<IntegratedDashboard />);
 
     expect(screen.queryByTestId("step-progress-dialog")).not.toBeInTheDocument();
+  });
+
+  describe("per-user layout", () => {
+    const entry = (widgetKey: string, position: number, visible = true) => ({
+      widgetKey,
+      visible,
+      position,
+    });
+    const isBefore = (first: HTMLElement, second: HTMLElement) =>
+      Boolean(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING);
+
+    const expectDefaultLayout = () => {
+      expect(screen.getByTestId("header-card-models")).toBeInTheDocument();
+      expect(screen.getByTestId("task-radar")).toBeInTheDocument();
+      expect(screen.getByTestId("card-model-risks")).toBeInTheDocument();
+      expect(
+        isBefore(screen.getByTestId("task-radar"), screen.getByTestId("card-model-risks")),
+      ).toBe(true);
+    };
+
+    it("uses the default layout when there is no saved row", () => {
+      mockPreferences = { data: { layout: null, updated_at: null }, isLoading: false };
+      renderWithProviders(<IntegratedDashboard />);
+      expectDefaultLayout();
+    });
+
+    it("uses the default layout when the fetch failed", () => {
+      mockPreferences = { data: undefined, isLoading: false, isError: true };
+      renderWithProviders(<IntegratedDashboard />);
+      expectDefaultLayout();
+    });
+
+    it("ignores unknown saved keys without crashing", () => {
+      mockPreferences = {
+        data: { layout: [entry("operations.gone-widget", 0), entry("nonsense", 1)] },
+        isLoading: false,
+      };
+      renderWithProviders(<IntegratedDashboard />);
+      expectDefaultLayout();
+    });
+
+    it("hides and reorders widgets from the saved layout", () => {
+      mockPreferences = {
+        data: {
+          layout: [
+            entry("operations.model-risks", 0),
+            entry("operations.task-radar", 1, false),
+            entry("operations.quick-stats", 2),
+          ],
+        },
+        isLoading: false,
+      };
+      renderWithProviders(<IntegratedDashboard />);
+      expect(screen.queryByTestId("task-radar")).not.toBeInTheDocument();
+      expect(
+        isBefore(screen.getByTestId("card-model-risks"), screen.getByTestId("header-card-models")),
+      ).toBe(true);
+    });
+
+    it("still shows a widget missing from the saved layout", () => {
+      mockPreferences = {
+        data: { layout: [entry("operations.quick-stats", 0)] },
+        isLoading: false,
+      };
+      renderWithProviders(<IntegratedDashboard />);
+      expect(screen.getByTestId("card-model-risks")).toBeInTheDocument();
+    });
+
+    it("keeps the two views apart", async () => {
+      mockPreferences = {
+        data: { layout: [entry("executive.task-radar", 0, false)] },
+        isLoading: false,
+      };
+      renderWithProviders(<IntegratedDashboard />);
+      expect(screen.getByTestId("task-radar")).toBeInTheDocument();
+
+      await userEvent.click(screen.getByText("Executive view"));
+      expect(screen.queryByTestId("task-radar")).not.toBeInTheDocument();
+    });
+
+    it("says so when every widget is hidden", () => {
+      const layout = [
+        "quick-stats",
+        "task-radar",
+        "incident-status",
+        "evidence-coverage",
+        "governance-score",
+        "use-case-risks",
+        "vendor-risks",
+        "model-risks",
+        "recent-use-cases",
+        "recent-activity",
+        "use-case-lifecycle",
+        "training-status",
+        "policy-status",
+        "model-lifecycle",
+      ].map((key, i) => entry(`operations.${key}`, i, false));
+      mockPreferences = { data: { layout }, isLoading: false };
+      renderWithProviders(<IntegratedDashboard />);
+      expect(screen.getByTestId("empty-state")).toHaveTextContent(
+        "All widgets are hidden. Use Edit layout to show them.",
+      );
+    });
+
+    it("waits for the layout before drawing, so widgets do not jump", () => {
+      mockPreferences = { data: undefined, isLoading: true };
+      renderWithProviders(<IntegratedDashboard />);
+      expect(screen.queryByTestId("task-radar")).not.toBeInTheDocument();
+    });
+
+    it("saves the edited view through the update hook", async () => {
+      const user = userEvent.setup();
+      mockPreferences = {
+        data: { layout: [entry("executive.task-radar", 0, false)] },
+        isLoading: false,
+      };
+      renderWithProviders(<IntegratedDashboard />);
+
+      await user.click(screen.getByRole("button", { name: "Edit layout" }));
+      await user.click(screen.getByRole("switch", { name: "Show Task radar" }));
+      await user.click(screen.getByRole("button", { name: "Save" }));
+
+      await waitFor(() => expect(mockSaveLayout).toHaveBeenCalledTimes(1));
+      const saved = mockSaveLayout.mock.calls[0][0]([entry("executive.task-radar", 0, false)]);
+      expect(saved).toContainEqual(entry("executive.task-radar", 0, false));
+      const radar = saved.find((e: any) => e.widgetKey === "operations.task-radar");
+      expect(radar.visible).toBe(false);
+      const positions = saved.map((e: any) => e.position);
+      expect(new Set(positions).size).toBe(positions.length);
+      await waitFor(() => expect(screen.queryByText("Reset to default")).not.toBeInTheDocument());
+    });
   });
 
   it("should render Dashboard heading text", () => {

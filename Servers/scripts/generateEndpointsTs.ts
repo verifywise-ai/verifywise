@@ -131,6 +131,9 @@ function tagToVarName(tag: string): string {
     Tokens: "token",
     Training: "training",
     "User Preferences": "userPreference",
+    // Versioned operations (ADR 0001) map back to their resource group so
+    // this registry stays stable when a tag gains its version prefix.
+    "v1: Shadow AI": "shadowAi",
     "Vendor Risks": "vendorRisk",
     Vendors: "vendor",
     Webhooks: "webhook",

@@ -6,10 +6,19 @@
  */
 
 import { useState, useEffect } from "react";
-import { Stack, Box, Typography, CircularProgress, useTheme } from "@mui/material";
-import { ArrowLeft } from "lucide-react";
+import {
+  Stack,
+  Box,
+  Typography,
+  CircularProgress,
+  useTheme,
+  IconButton,
+  Tooltip,
+} from "@mui/material";
+import { ArrowLeft, History as HistoryIcon } from "lucide-react";
 import { useNavigate } from "react-router";
 import ModelLifecycleTab from "./ModelLifecycleTab";
+import { HistorySidebar } from "../../../components/Common/HistorySidebar";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 
 interface ModelData {
@@ -30,6 +39,7 @@ export default function ModelLifecycleDetail({ modelId }: ModelLifecycleDetailPr
   const navigate = useNavigate();
   const [model, setModel] = useState<ModelData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
   useEffect(() => {
     if (!modelId) return;
@@ -140,12 +150,40 @@ export default function ModelLifecycleDetail({ modelId }: ModelLifecycleDetailPr
                 )}
               </Stack>
             </Stack>
+            <Tooltip title="Activity history" arrow>
+              <IconButton
+                onClick={() => setIsHistoryOpen((prev) => !prev)}
+                size="small"
+                sx={{
+                  "color": isHistoryOpen
+                    ? theme.palette.primary.main
+                    : theme.palette.text.secondary,
+                  "border": `1px solid ${theme.palette.divider}`,
+                  "borderRadius": "4px",
+                  "&:hover": {
+                    backgroundColor: theme.palette.background.fill,
+                  },
+                }}
+              >
+                <HistoryIcon size={16} />
+              </IconButton>
+            </Tooltip>
           </Stack>
         </Stack>
       </Box>
 
-      {/* Lifecycle content */}
-      <ModelLifecycleTab modelId={modelId} />
+      {/* Lifecycle content + change history sidebar (issue #4977) */}
+      <Stack direction="row" alignItems="flex-start" sx={{ gap: "16px" }}>
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <ModelLifecycleTab modelId={modelId} />
+        </Box>
+        <HistorySidebar
+          isOpen={isHistoryOpen}
+          entityType="model_lifecycle"
+          entityId={modelId}
+          height="100%"
+        />
+      </Stack>
     </Stack>
   );
 }

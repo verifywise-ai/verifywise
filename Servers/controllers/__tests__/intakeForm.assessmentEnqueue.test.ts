@@ -16,7 +16,9 @@ jest.mock("../../utils/intakeForm.utils", () => ({
   getSubmissionByIdQuery: jest.fn(),
   claimSubmissionNotificationQuery: jest.fn(),
   getEligibleReviewerIdsQuery: jest.fn(),
+  updateLiveChecksQuery: jest.fn(),
 }));
+jest.mock("../../utils/llmKey.utils", () => ({ llmKeyExistsQuery: jest.fn() }));
 jest.mock("../../utils/euAiActClassification.utils", () => ({
   insertClassificationRunQuery: jest.fn(),
   getLatestRunForSubmissionQuery: jest.fn(),
@@ -35,6 +37,10 @@ jest.mock("../../services/intakeFormEmail.service", () => ({
 }));
 jest.mock("../../services/intakeScoring/enqueue", () => ({
   enqueueIntakeAssessment: jest.fn(),
+}));
+jest.mock("../../services/intakeConfirmation/confirmation", () => ({
+  ...(jest.requireActual("../../services/intakeConfirmation/confirmation") as object),
+  trySendSubmitterConfirmation: jest.fn<any>().mockResolvedValue(undefined),
 }));
 jest.mock("../../services/intakeLLM.service", () => ({
   generateSuggestedQuestions: jest.fn(),
@@ -75,6 +81,9 @@ const ctrl = require("../intakeForm.ctrl") as typeof import("../intakeForm.ctrl"
 const intake = require("../../utils/intakeForm.utils");
 const emails = require("../../services/intakeFormEmail.service");
 const { enqueueIntakeAssessment } = require("../../services/intakeScoring/enqueue");
+const { trySendSubmitterConfirmation } = require("../../services/intakeConfirmation/confirmation");
+const { llmKeyExistsQuery } = require("../../utils/llmKey.utils");
+const { createSignedToken } = require("../../utils/signedToken.utils");
 /* eslint-enable @typescript-eslint/no-require-imports */
 
 const sign = (payload: object) => {
@@ -102,7 +111,7 @@ const ROUTES = {
     adminFallback: true,
   },
 };
-const submit = async (route: keyof typeof ROUTES) => {
+const submit = async (route: keyof typeof ROUTES, body: Record<string, unknown> = {}) => {
   const r = res();
   await ROUTES[route].handler(
     {
@@ -116,6 +125,7 @@ const submit = async (route: keyof typeof ROUTES) => {
         formData: {},
         captchaToken: sign({ answer: 4, timestamp: Date.now() }),
         captchaAnswer: 4,
+        ...body,
       },
     } as any,
     r,
@@ -143,6 +153,7 @@ describe("public submit queues the assessment", () => {
       recipients,
       routing,
       llmKeyId: 2,
+      reviewDays: 5,
     }));
     intake.createSubmissionQuery.mockResolvedValue({ id: 99 });
     intake.claimSubmissionNotificationQuery.mockResolvedValue(true);
@@ -163,9 +174,23 @@ describe("public submit queues the assessment", () => {
         adminFallback: ROUTES[route].adminFallback,
       });
       expect(emails.sendNewSubmissionAdminNotification).not.toHaveBeenCalled();
-      expect(emails.sendSubmissionReceivedEmail).toHaveBeenCalledTimes(1);
+      // The confirmation waits for routing unless there is nothing to wait for.
+      expect(emails.sendSubmissionReceivedEmail).not.toHaveBeenCalled();
+      expect(trySendSubmitterConfirmation).toHaveBeenCalledTimes(1);
+      expect(trySendSubmitterConfirmation).toHaveBeenCalledWith(5, 99, "de", { fallback: false });
+      // The review time in force at submit, read with the form, is stored with the submission.
+      expect(intake.getIntakeFormByIdQuery).toHaveBeenCalledWith(1, 5, { withReviewDays: true });
+      const created = intake.createSubmissionQuery.mock.calls[0][0];
+      expect(created.reviewDays).toBe(5);
+      expect(created.reviewDueDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     },
   );
+
+  it("byId: confirms to the submitter at once, naming the governance team, when the queue fails", async () => {
+    enqueueIntakeAssessment.mockRejectedValue(new Error("redis down"));
+    await submit("byId");
+    expect(trySendSubmitterConfirmation).toHaveBeenCalledWith(5, 99, "de", { fallback: true });
+  });
 
   it.each(["byId", "bySlug"] as const)(
     "%s: emails reviewers at once, without results, when the queue fails",
@@ -216,4 +241,121 @@ describe("public submit queues the assessment", () => {
     await submit("bySlug");
     expect(emails.sendNewSubmissionAdminNotification.mock.calls[0][0]).toBe(5);
   });
+});
+
+describe("public submit stores live checks", () => {
+  const LIVE_SCHEMA = {
+    version: "1.0",
+    fields: [
+      { id: "desc", type: "textarea", label: "Description", order: 0 },
+      { id: "vendor", type: "text", label: "Vendor", order: 1 },
+    ],
+  };
+  const DESC = "scores video interviews for enthusiasm and confidence of job candidates";
+  let liveChecksEnabled: boolean;
+  let llmKeyId: number | null;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    liveChecksEnabled = true;
+    llmKeyId = 2;
+    intake.getTenantByPublicId.mockResolvedValue({ orgId: 5 });
+    intake.getTenantHashBySlug.mockResolvedValue({ id: 5 });
+    intake.checkRateLimitQuery.mockResolvedValue(true);
+    intake.getFormByPublicIdQuery.mockResolvedValue(FORM);
+    intake.getActivePublicFormQuery.mockResolvedValue(FORM);
+    intake.getIntakeFormByIdQuery.mockImplementation(async () => ({
+      ...FORM,
+      schema: LIVE_SCHEMA,
+      recipients: [3],
+      routing: null,
+      llmKeyId,
+      liveChecksEnabled,
+    }));
+    intake.createSubmissionQuery.mockResolvedValue({ id: 99 });
+    intake.claimSubmissionNotificationQuery.mockResolvedValue(true);
+    intake.updateLiveChecksQuery.mockResolvedValue(undefined);
+    llmKeyExistsQuery.mockResolvedValue(true);
+    enqueueIntakeAssessment.mockResolvedValue(undefined);
+  });
+
+  const stored = () => intake.updateLiveChecksQuery.mock.calls[0];
+  const queuedStages = () => enqueueIntakeAssessment.mock.calls[0][0].stages;
+
+  it.each(["byId", "bySlug"] as const)(
+    "%s: stores rule hints and queues the AI checks stage when the form has a key",
+    async (route) => {
+      const r = await submit(route, { formData: { desc: DESC, vendor: "Acme" } });
+      expect(r.status).toHaveBeenCalledWith(201);
+      const [submissionId, orgId, liveChecks] = stored();
+      expect([submissionId, orgId]).toEqual([99, 5]);
+      expect(liveChecks.rules.map((h: { ruleId: string }) => h.ruleId)).toContain(
+        "art5_emotion_workplace_education",
+      );
+      expect(liveChecks.ai).toMatchObject({ status: "pending", hints: [], language: "de" });
+      expect(queuedStages()).toEqual(["scoring", "suggestions", "liveChecks"]);
+      expect(llmKeyExistsQuery).toHaveBeenCalledWith(2, 5);
+    },
+  );
+
+  it("without a key stores the AI checks as skipped and queues only the usual stages", async () => {
+    llmKeyId = null;
+    await submit("byId", { formData: { desc: DESC } });
+    expect(stored()[2].ai).toEqual({ status: "skipped", hints: [] });
+    expect(queuedStages()).toEqual(["scoring", "suggestions"]);
+  });
+
+  it("with live checks off stores nothing and queues only the usual stages", async () => {
+    liveChecksEnabled = false;
+    await submit("byId", { formData: { desc: DESC } });
+    expect(intake.updateLiveChecksQuery).not.toHaveBeenCalled();
+    expect(queuedStages()).toEqual(["scoring", "suggestions"]);
+  });
+
+  it("keeps a verified prefill entry and drops a forged one", async () => {
+    const token = createSignedToken({
+      kind: "intake_prefill",
+      formId: FORM.id,
+      questionId: "vendor",
+      value: "Acme",
+      fileName: "vendor.pdf",
+      location: "Page 1",
+      excerpt: "Acme provides",
+      issuedAt: Date.now(),
+    });
+    await submit("bySlug", {
+      formData: { desc: "Routes support tickets", vendor: "Acme" },
+      prefill: {
+        vendor: { token, confirmed: false },
+        desc: { fileName: "forged.pdf", excerpt: "x", confirmed: true },
+      },
+    });
+    expect(stored()[2].prefill).toEqual({
+      vendor: {
+        fileName: "vendor.pdf",
+        location: "Page 1",
+        excerpt: "Acme provides",
+        confirmed: false,
+      },
+    });
+  });
+
+  it.each(["byId", "bySlug"] as const)(
+    "%s: still returns 201 when the live checks write, the key lookup and Redis all fail",
+    async (route) => {
+      intake.updateLiveChecksQuery.mockRejectedValue(new Error("db down"));
+      enqueueIntakeAssessment.mockRejectedValue(new Error("redis down"));
+      const r = await submit(route, { formData: { desc: DESC } });
+      expect(r.status).toHaveBeenCalledWith(201);
+      // The write failed, so the AI stage is not queued.
+      expect(queuedStages()).toEqual(["scoring", "suggestions"]);
+      expect(emails.sendNewSubmissionAdminNotification).toHaveBeenCalledTimes(1);
+
+      jest.clearAllMocks();
+      llmKeyExistsQuery.mockRejectedValue(new Error("db down"));
+      const again = await submit(route, { formData: { desc: DESC } });
+      expect(again.status).toHaveBeenCalledWith(201);
+      expect(intake.updateLiveChecksQuery).not.toHaveBeenCalled();
+    },
+  );
 });

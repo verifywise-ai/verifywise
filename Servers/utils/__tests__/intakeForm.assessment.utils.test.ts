@@ -13,6 +13,8 @@ import {
   claimSubmissionNotificationQuery,
   getSubmissionsNeedingAssessmentQuery,
   getSubmissionByIdQuery,
+  updateLiveChecksQuery,
+  setLiveChecksAiQuery,
 } from "../intakeForm.utils";
 import {
   isAssessmentV2,
@@ -231,6 +233,18 @@ describe("getSubmissionsNeedingAssessmentQuery", () => {
     expect(sql).toContain("suggested_risks IS NULL");
     expect(sql).toContain('WHERE "needsScoring" OR "needsSuggestions"');
   });
+
+  it("lists AI live checks only when stored and pending past the stale limit", async () => {
+    mockQuery.mockResolvedValue([] as any);
+    await getSubmissionsNeedingAssessmentQuery();
+    const sql = sqlOf().replace(/\s+/g, " ");
+    // A null live_checks (before the feature, or checks off) gives NULL, coalesced to false.
+    // A pending stage that never started (submit stopped waiting) ages from created_at.
+    expect(sql).toContain(
+      "COALESCE( live_checks->'ai'->>'status' = 'pending' AND COALESCE((live_checks->'ai'->>'stageStartedAt')::timestamptz, created_at) < NOW() - interval '10 minutes', false ) AS \"needsLiveChecks\"",
+    );
+    expect(sql).toContain('OR "needsLiveChecks"');
+  });
 });
 
 describe("submission row mapping", () => {
@@ -239,5 +253,43 @@ describe("submission row mapping", () => {
     await getSubmissionByIdQuery(5, 9);
     expect(sqlOf()).toContain('suggested_risks as "suggestedRisks"');
     expect(sqlOf()).toContain('notification_sent_at as "notificationSentAt"');
+  });
+});
+
+describe("live checks queries", () => {
+  beforeEach(() => {
+    mockQuery.mockReset();
+    mockQuery.mockResolvedValue([] as any);
+  });
+
+  it("updateLiveChecksQuery stores the block, scoped to the organization", async () => {
+    const lc = {
+      version: 1,
+      rules: [],
+      ai: { status: "skipped", hints: [] },
+      prefill: {},
+    } as const;
+    await updateLiveChecksQuery(4, 9, lc as any);
+    expect(sqlOf()).toMatch(/UPDATE intake_submissions\b/);
+    expect(sqlOf()).toContain("organization_id = :organizationId");
+    expect(optsOf().replacements).toMatchObject({
+      organizationId: 9,
+      submissionId: 4,
+      liveChecks: JSON.stringify(lc),
+    });
+  });
+
+  it("setLiveChecksAiQuery only touches the ai key and skips rows without live checks", async () => {
+    const ai = { status: "done", hints: [] } as const;
+    await setLiveChecksAiQuery(4, 9, ai as any);
+    expect(sqlOf()).toContain("jsonb_set(live_checks, '{ai}'");
+    expect(sqlOf()).toContain("live_checks IS NOT NULL");
+    expect(sqlOf()).toContain("organization_id = :organizationId");
+    expect(optsOf().replacements.ai).toBe(JSON.stringify(ai));
+  });
+
+  it("the submission select returns live checks", async () => {
+    await getSubmissionByIdQuery(4, 9);
+    expect(sqlOf()).toContain('live_checks AS "liveChecks"');
   });
 });

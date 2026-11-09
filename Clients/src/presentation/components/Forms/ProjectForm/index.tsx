@@ -1,3 +1,11 @@
+import {
+  EXTERNAL_OWNER_OPTION,
+  EXTERNAL_OWNER_OPTION_ID,
+  externalOwnerPayload,
+  ownerSelectValue,
+  validateExternalOwner,
+} from "../../../../application/utils/externalOwner";
+import ExternalOwnerFields from "../../ExternalOwner/ExternalOwnerFields";
 import { Alert, Box, SelectChangeEvent, Stack, Typography, useTheme } from "@mui/material";
 import { TabContext } from "@mui/lab";
 import { X as ClearIcon } from "lucide-react";
@@ -18,6 +26,8 @@ import Select from "../../../components/Inputs/Select";
 
 import useUsers from "../../../../application/hooks/useUsers";
 import useFrameworks from "../../../../application/hooks/useFrameworks";
+import { useUseCaseOrgSettings } from "../../../../application/hooks/useUseCaseOrgSettings";
+import { GEOGRAPHY_ITEMS } from "../../../../application/constants/geography";
 import DatePicker from "../../../components/Inputs/Datepicker";
 import dayjs, { Dayjs } from "dayjs";
 import { checkStringValidation } from "../../../../application/validations/stringValidation";
@@ -93,7 +103,9 @@ export const ProjectForm = ({
     if (projectToEdit) {
       return {
         project_title: projectToEdit.project_title || "",
-        owner: projectToEdit.owner || 0,
+        owner: ownerSelectValue(projectToEdit),
+        external_owner_name: projectToEdit.external_owner_name || "",
+        external_owner_email: projectToEdit.external_owner_email || "",
         members: [], // Will be populated in useEffect when users data is available
         start_date: projectToEdit.start_date || "",
         ai_risk_classification: projectToEdit.ai_risk_classification || null,
@@ -122,7 +134,7 @@ export const ProjectForm = ({
     };
   });
   const { users } = useUsers();
-  const { allFrameworks } = useFrameworks({ listOfFrameworks: [] });
+  const { allFrameworks, loading: frameworksLoading } = useFrameworks({ listOfFrameworks: [] });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState<"details" | "custom-fields">("details");
   const customFieldsRef = useRef<CustomFieldsSectionHandle | null>(null);
@@ -148,9 +160,18 @@ export const ProjectForm = ({
         return r.accepted ? "" : r.message;
       },
       owner: (v: unknown) => {
+        if (v === EXTERNAL_OWNER_OPTION_ID) return "";
         const r = selectValidation("Owner", v as number);
         return r.accepted ? "" : r.message;
       },
+      external_owner_name: (v: unknown, vals: FormValues) =>
+        vals.owner === EXTERNAL_OWNER_OPTION_ID
+          ? (validateExternalOwner(v as string, vals.external_owner_email).name ?? "")
+          : "",
+      external_owner_email: (v: unknown, vals: FormValues) =>
+        vals.owner === EXTERNAL_OWNER_OPTION_ID
+          ? (validateExternalOwner(vals.external_owner_name, v as string).email ?? "")
+          : "",
       geography: (v: unknown) => {
         const r = selectValidation("Geography", v as number);
         return r.accepted ? "" : r.message;
@@ -296,6 +317,50 @@ export const ProjectForm = ({
 
     return [];
   }, [allFrameworks, values.framework_type]);
+
+  // A new use case starts with the organization's defaults (Settings →
+  // Organization), once they and the framework list have loaded. Only fields
+  // the user hasn't touched are filled, and only frameworks this form offers.
+  // Editing never reads them.
+  const { data: useCaseDefaults } = useUseCaseOrgSettings({ enabled: !projectToEdit });
+  const defaultsApplied = useRef(false);
+  useEffect(() => {
+    // useFrameworks hands out [] while loading: wait for the real list, or
+    // the default frameworks would be dropped for good.
+    if (
+      defaultsApplied.current ||
+      projectToEdit ||
+      !useCaseDefaults ||
+      frameworksLoading ||
+      allFrameworks.length === 0
+    ) {
+      return;
+    }
+    defaultsApplied.current = true;
+    if (values.framework_type !== FrameworkTypeEnum.ProjectBased) return;
+    const offered = filteredFrameworks.filter((fw) =>
+      useCaseDefaults.default_framework_ids.includes(fw._id),
+    );
+    setValues((prev) => ({
+      ...prev,
+      geography:
+        prev.geography === initialState.geography && useCaseDefaults.default_geography
+          ? useCaseDefaults.default_geography
+          : prev.geography,
+      monitored_regulations_and_standards:
+        prev.monitored_regulations_and_standards.length === 0
+          ? offered
+          : prev.monitored_regulations_and_standards,
+    }));
+  }, [
+    useCaseDefaults,
+    allFrameworks,
+    frameworksLoading,
+    filteredFrameworks,
+    projectToEdit,
+    values.framework_type,
+  ]);
+
   const authState = useSelector(
     (state: { auth: { authToken: string; userExists: boolean } }) => state.auth,
   );
@@ -311,17 +376,7 @@ export const ProjectForm = ({
     [],
   );
 
-  const geographyItems = useMemo(
-    () => [
-      { _id: 1, name: "Global" },
-      { _id: 2, name: "Europe" },
-      { _id: 3, name: "North America" },
-      { _id: 4, name: "South America" },
-      { _id: 5, name: "Asia" },
-      { _id: 6, name: "Africa" },
-    ],
-    [],
-  );
+  const geographyItems = useMemo(() => [...GEOGRAPHY_ITEMS], []);
 
   const projectStatusItems = useMemo(() => PROJECT_STATUS_ITEMS, []);
 
@@ -449,6 +504,11 @@ export const ProjectForm = ({
           last_updated_by: userInfo?.id,
           members: teamMember,
           enable_ai_data_insertion: values.enable_ai_data_insertion,
+          ...externalOwnerPayload(
+            values.owner,
+            values.external_owner_name,
+            values.external_owner_email,
+          ),
         };
 
         // Add AI-specific fields only when EU AI Act is selected
@@ -783,7 +843,7 @@ export const ProjectForm = ({
               </Suspense>
             </Stack>
 
-            {/* Row 2: Owner | Status */}
+            {/* Row 2: Owner | Status (external owner details below when selected) */}
             <Stack
               className="vwproject-form-row"
               sx={{ flexDirection: { xs: "column", md: "row" }, gap: 6 }}
@@ -795,13 +855,14 @@ export const ProjectForm = ({
                 value={values.owner || ""}
                 onChange={handleOnSelectChange("owner")}
                 onBlur={handleFieldBlur("owner")}
-                items={
-                  users?.map((user: any) => ({
+                items={[
+                  ...(users?.map((user: any) => ({
                     _id: user.id,
                     name: `${user.name} ${user.surname}`,
                     email: user.email,
-                  })) || []
-                }
+                  })) || []),
+                  EXTERNAL_OWNER_OPTION,
+                ]}
                 sx={{
                   flex: 1,
                   backgroundColor: theme.palette.background.main,
@@ -827,6 +888,22 @@ export const ProjectForm = ({
                 error={errors.status}
               />
             </Stack>
+            {values.owner === EXTERNAL_OWNER_OPTION_ID && (
+              <ExternalOwnerFields
+                name={values.external_owner_name}
+                email={values.external_owner_email}
+                nameError={errors.external_owner_name}
+                emailError={errors.external_owner_email}
+                onNameChange={(value) => {
+                  setValues((prev) => ({ ...prev, external_owner_name: value }));
+                  clearFieldError("external_owner_name");
+                }}
+                onEmailChange={(value) => {
+                  setValues((prev) => ({ ...prev, external_owner_email: value }));
+                  clearFieldError("external_owner_email");
+                }}
+              />
+            )}
 
             {/* Row 3: Start date | Geography */}
             <Stack

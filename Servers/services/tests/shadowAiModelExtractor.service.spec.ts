@@ -116,6 +116,16 @@ describe("shadowAiModelExtractor.service", () => {
       expect(result).toBeNull();
     });
 
+    it("returns null for a capture longer than the detected_model column", async () => {
+      const longModel = "g".repeat(256);
+      expect(
+        await extractModel("api.openai.com", `/v1/chat/completions?model=${longModel}`),
+      ).toBeNull();
+      expect(
+        await extractModel("api.openai.com", `/v1/chat/completions?model=${"g".repeat(255)}`),
+      ).toBe("g".repeat(255));
+    });
+
     it("should extract model when pattern matches", async () => {
       const result = await extractModel("api.openai.com", "/v1/chat/completions?model=gpt-4");
       expect(result).toBe("gpt-4");

@@ -79,6 +79,7 @@ describe("model lifecycle detach file", () => {
     ({
       params: { id: "10", itemId: "20", fileId: "99" },
       organizationId: 1,
+      userId: 7,
       t: (key: string) => key,
     }) as unknown as Request;
 
@@ -88,7 +89,7 @@ describe("model lifecycle detach file", () => {
 
     await detachFileCtrl(detachRequest(), res);
 
-    expect(svc.detachFile).toHaveBeenCalledWith(1, 10, 20, 99);
+    expect(svc.detachFile).toHaveBeenCalledWith(1, 10, 20, 99, 7);
     expect(res.status).toHaveBeenCalledWith(404);
   });
 

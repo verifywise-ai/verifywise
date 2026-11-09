@@ -135,6 +135,11 @@ spec:
               name: verifywise-secrets
               key: EVAL_SERVER_INTERNAL_KEY
 
+        # Shadow AI syslog listener is off by default. To enable it, add the
+        # SHADOW_AI_SYSLOG_* variables (see docs/technical/infrastructure/shadow-ai-syslog.md),
+        # mount the TLS certificate and key, add containerPort 6514 and a
+        # TCP Service. The Helm chart does all of this with shadowAiSyslog.enabled.
+
         # Feature Flags
         - name: MULTI_TENANCY_ENABLED
           valueFrom:

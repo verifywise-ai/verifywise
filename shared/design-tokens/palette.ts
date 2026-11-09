@@ -80,6 +80,12 @@ export const text = {
   subdued: grey[450],
 } as const;
 
+/** Icon strokes. Read the scales directly so icons do not depend on text tokens. */
+export const icon = {
+  default: grey[450],
+  error: red[500],
+} as const;
+
 export const background = {
   main: grey[50],
   alt: grey[100],
@@ -102,6 +108,45 @@ export const brand = {
   primaryHover: green[900],
   primaryLight: green[100],
   primaryDark: green[800],
+} as const;
+
+/**
+ * Button tokens. Shape: button.<intent>.<variant>.<slot>.<state>.
+ * Disabled values are deliberately separate from `border` and `text` so the
+ * disabled look can change without touching those tokens.
+ */
+export const button = {
+  primary: {
+    contained: {
+      bg: { default: green[700], hover: green[800], disabled: grey[200] },
+      text: { default: grey[50], disabled: grey[350] },
+    },
+    outlined: {
+      text: { default: green[700], disabled: grey[350] },
+      border: {
+        default: green[700],
+        hover: green[800],
+        disabled: grey[200],
+      },
+    },
+    text: {
+      text: { default: green[700], disabled: grey[350] },
+    },
+  },
+  secondary: {
+    contained: {
+      bg: { default: grey[500], hover: grey[600], disabled: grey[200] },
+      text: { default: grey[50], disabled: grey[350] },
+    },
+    outlined: {
+      bg: {  hover: grey[150] },
+      text: { default: grey[700] },
+      border: { default: grey[300], hover: grey[500] },
+    },
+    text: {
+      text: { default: grey[500] },
+    },
+  },
 } as const;
 
 export const editor = {
@@ -139,9 +184,11 @@ export const palette = {
   accent,
   chart,
   text,
+  icon,
   background,
   border,
   brand,
+  button,
   editor,
 } as const;
 

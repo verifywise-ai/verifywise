@@ -66,6 +66,12 @@ export const EMAIL_TEMPLATES = {
   // File lifecycle templates
   FILE_EXPIRING: "file-expiring.mjml",
 
+  // Inventory lifecycle templates
+  LIFECYCLE_CONFIRMATION_DUE: "lifecycle-confirmation-due.mjml",
+
+  // External use case owners (no account; email only)
+  EXTERNAL_OWNER_NOTICE: "external-owner-notice.mjml",
+
   // AI Gateway templates
   AI_GATEWAY_BUDGET_WARNING: "ai-gateway-budget-warning.mjml",
   AI_GATEWAY_BUDGET_EXHAUSTED: "ai-gateway-budget-exhausted.mjml",

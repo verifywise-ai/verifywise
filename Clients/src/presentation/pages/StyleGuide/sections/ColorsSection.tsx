@@ -13,6 +13,8 @@ import {
   teal,
   pink,
 } from "@design-tokens/primitives";
+import { button } from "../../../themes/palette";
+import { fontSize } from "../../../themes/typography";
 
 const ColorsSection: React.FC = () => {
   const theme = useTheme();
@@ -250,9 +252,9 @@ const ColorsSection: React.FC = () => {
           />
           <ColorCard
             label="Primary hover"
-            color="#0f604d"
-            usage="Hover state for primary elements"
-            themeKey="Custom (darken 15%)"
+            color={button.primary.contained.bg.hover}
+            usage="Hover state for primary buttons"
+            themeKey="button.primary.contained.bg.hover"
             onCopy={handleCopy}
           />
           <ColorCard
@@ -429,7 +431,7 @@ const ColorsSection: React.FC = () => {
           <ColorCard
             label="Success main"
             color="#138A5E"
-            usage="Success icons, indicators"
+            usage="Success indicators"
             themeKey="theme.palette.status.success.main"
             onCopy={handleCopy}
             textColor="#fff"
@@ -482,7 +484,7 @@ const ColorsSection: React.FC = () => {
           <ColorCard
             label="Error main"
             color="#D32F2F"
-            usage="Error icons"
+            usage="Error indicators"
             themeKey="theme.palette.status.error.main"
             onCopy={handleCopy}
             textColor="#fff"
@@ -588,7 +590,7 @@ const ColorsSection: React.FC = () => {
           <ColorCard
             label="Info main"
             color="#1565C0"
-            usage="Info icons"
+            usage="Info indicators"
             themeKey="theme.palette.status.info.main"
             onCopy={handleCopy}
             textColor="#fff"
@@ -622,24 +624,26 @@ const ColorsSection: React.FC = () => {
       {/* Button Colors */}
       <SpecSection title="Button colors">
         <Typography sx={{ fontSize: 13, color: theme.palette.text.tertiary, mb: "24px" }}>
-          Color palette for buttons. Each color has contained, outlined, and text variants.
+          CustomizableButton primary and secondary fills come from button tokens (shape:
+          button.intent.variant.slot.state). Success, warning, error, and info still use the local
+          palette in v1SingleTheme.ts.
         </Typography>
         <ColorGrid columns={6}>
           <ColorCard
             label="Primary"
-            color="#13715B"
+            color={button.primary.contained.bg.default}
             usage="Main actions"
-            themeKey="primary"
+            themeKey="button.primary.contained.bg.default"
             onCopy={handleCopy}
-            textColor="#fff"
+            textColor={button.primary.contained.text.default}
           />
           <ColorCard
             label="Secondary"
-            color="#F4F4F4"
+            color={button.secondary.contained.bg.default}
             usage="Utility actions"
-            themeKey="secondary"
+            themeKey="button.secondary.contained.bg.default"
             onCopy={handleCopy}
-            textColor="#475467"
+            textColor={button.secondary.contained.text.default}
           />
           <ColorCard
             label="Success"
@@ -678,20 +682,44 @@ const ColorsSection: React.FC = () => {
 
       <Divider sx={{ my: "32px" }} />
 
-      {/* Other Colors */}
-      <SpecSection title="Other colors">
-        <Typography sx={{ fontSize: 13, color: theme.palette.text.tertiary, mb: "24px" }}>
-          Miscellaneous colors for icons, lines, and other UI elements.
+      {/* Icon Colors */}
+      <SpecSection title="Icon colors">
+        <Typography
+          sx={{ fontSize: fontSize.base, color: theme.palette.text.tertiary, mb: "24px" }}
+        >
+          Stroke colors for icons. These read the color scales directly and are separate from text
+          tokens.
         </Typography>
-        <ColorGrid>
+        <ColorGrid columns={2}>
           <ColorCard
             label="Icon default"
-            color="#667085"
-            usage="Default icon color"
-            themeKey="theme.palette.other.icon"
+            color={theme.palette.icon.default}
+            usage="Default icon stroke"
+            themeKey="icon.default"
             onCopy={handleCopy}
-            textColor="#fff"
+            textColor={theme.palette.text.primary}
           />
+          <ColorCard
+            label="Icon error"
+            color={theme.palette.icon.error}
+            usage="Destructive icons, such as delete"
+            themeKey="icon.error"
+            onCopy={handleCopy}
+            textColor={theme.palette.text.primary}
+          />
+        </ColorGrid>
+      </SpecSection>
+
+      <Divider sx={{ my: "32px" }} />
+
+      {/* Other Colors */}
+      <SpecSection title="Other colors">
+        <Typography
+          sx={{ fontSize: fontSize.base, color: theme.palette.text.tertiary, mb: "24px" }}
+        >
+          Miscellaneous colors for lines and other UI elements.
+        </Typography>
+        <ColorGrid>
           <ColorCard
             label="Line"
             color="#d6d9dd"
@@ -807,6 +835,7 @@ const ColorsSection: React.FC = () => {
         <Stack spacing="8px">
           {[
             "Define hex values only in shared/design-tokens/primitives.ts — use palette.ts semantics in components",
+            "CustomizableButton primary and secondary colors come from button tokens, not from theme.palette.secondary",
             "Grey primitives power text, border, and background tokens",
             "Green primitives power brand, success, and accent tokens",
             "Red primitives power error and critical risk tokens",

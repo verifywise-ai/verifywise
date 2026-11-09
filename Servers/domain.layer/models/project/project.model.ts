@@ -4,6 +4,7 @@ import { IProjectAttributes } from "../../interfaces/i.project";
 import { AiRiskClassification } from "../../enums/ai-risk-classification.enum";
 import { HighRiskRole } from "../../enums/high-risk-role.enum";
 import { ProjectStatus } from "../../enums/project-status.enum";
+import { LifecycleStage } from "../../enums/lifecycle-stage.enum";
 import { legacyHighRiskRole, normalizeHighRiskRoles } from "../../../utils/highRiskRoles.utils";
 
 @Table({
@@ -34,7 +35,18 @@ export class ProjectModel extends Model<ProjectModel> implements IProjectAttribu
   @Column({
     type: DataType.INTEGER,
   })
-  owner!: number;
+  owner!: number | null;
+
+  // An owner with no account (#5256); set only when owner is null.
+  @Column({
+    type: DataType.STRING(255),
+  })
+  external_owner_name?: string | null;
+
+  @Column({
+    type: DataType.STRING(254),
+  })
+  external_owner_email?: string | null;
 
   @Column({
     type: DataType.DATE,
@@ -166,6 +178,50 @@ export class ProjectModel extends Model<ProjectModel> implements IProjectAttribu
   })
   _source?: string;
 
+  @Column({
+    type: DataType.STRING(20),
+    allowNull: false,
+    defaultValue: LifecycleStage.PLANNED,
+  })
+  lifecycle_stage?: LifecycleStage;
+
+  @Column({
+    type: DataType.DATEONLY,
+    allowNull: true,
+  })
+  go_live_date?: string | null;
+
+  @Column({
+    type: DataType.DATE,
+    allowNull: true,
+  })
+  retired_at?: Date | null;
+
+  @Column({
+    type: DataType.DATE,
+    allowNull: true,
+  })
+  last_confirmed_at?: Date | null;
+
+  @ForeignKey(() => UserModel)
+  @Column({
+    type: DataType.INTEGER,
+    allowNull: true,
+  })
+  last_confirmed_by?: number | null;
+
+  @Column({
+    type: DataType.DATE,
+    allowNull: true,
+  })
+  confirmation_reminded_at?: Date | null;
+
+  @Column({
+    type: DataType.STRING(255),
+    allowNull: true,
+  })
+  department?: string | null;
+
   static async CreateNewProject(projectAttributes: Partial<IProjectAttributes>) {
     // Convert Partial<IProjectAttributes> to Optional<ProjectModel, NullishPropertiesOf<ProjectModel>>
     const attributes = projectAttributes as any;
@@ -190,6 +246,8 @@ export class ProjectModel extends Model<ProjectModel> implements IProjectAttribu
       uc_id: this.uc_id,
       project_title: this.project_title,
       owner: this.owner,
+      external_owner_name: this.external_owner_name ?? null,
+      external_owner_email: this.external_owner_email ?? null,
       start_date: this.start_date?.toISOString(),
       geography: this.geography,
       ai_risk_classification: this.ai_risk_classification,
@@ -209,6 +267,12 @@ export class ProjectModel extends Model<ProjectModel> implements IProjectAttribu
       created_at: (this.createdAt ?? this.created_at)?.toISOString(),
       is_organizational: this.is_organizational,
       status: this.status,
+      lifecycle_stage: this.lifecycle_stage,
+      go_live_date: this.go_live_date ?? null,
+      retired_at: this.retired_at ?? null,
+      last_confirmed_at: this.last_confirmed_at ?? null,
+      last_confirmed_by: this.last_confirmed_by ?? null,
+      department: this.department ?? null,
       _source: (this as any)._source,
       // Include dynamically added properties from queries
       framework: dataValues?.framework,

@@ -60,9 +60,11 @@ export const tenantIsolationRegistry: IsolationEntity[] = [
     },
     denial: { read: [403, 404] },
   }),
+  // users is identity only; a user's organizations and roles are their
+  // organization_members rows.
   {
     name: "users",
-    tables: ["users"],
+    tables: ["organization_members"],
     baseRoute: "/api/users",
   },
   // Custom organization roles and their permission matrix (issue #4588):
@@ -135,6 +137,25 @@ export const tenantIsolationRegistry: IsolationEntity[] = [
     testFile: "file-org-settings.isolation.test.ts",
   },
   {
+    name: "use_case_org_settings",
+    tables: ["use_case_org_settings"],
+    baseRoute: "/api/v1/use-case-org-settings",
+    testFile: "use-case-org-settings.isolation.test.ts",
+  },
+  {
+    // One row per user per organization; the JWT alone picks the row.
+    name: "dashboard_preferences",
+    tables: ["dashboard_preferences"],
+    baseRoute: "/api/v1/dashboard/preferences",
+    testFile: "dashboard-preferences.isolation.test.ts",
+  },
+  {
+    name: "lifecycle_org_settings",
+    tables: ["lifecycle_org_settings"],
+    baseRoute: "/api/v1/lifecycle-settings",
+    testFile: "lifecycle-org-settings.isolation.test.ts",
+  },
+  {
     name: "data_retention",
     tables: [
       "data_retention_settings",
@@ -170,6 +191,11 @@ export const tenantIsolationRegistry: IsolationEntity[] = [
     name: "file_change_history",
     tables: ["file_change_history"],
     baseRoute: "/api/file-change-history",
+  },
+  {
+    name: "ai_app_change_history",
+    tables: ["ai_app_change_history"],
+    baseRoute: "/api/v1/ai-app-lifecycle",
   },
   {
     name: "mrm_validations",

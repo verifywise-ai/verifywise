@@ -416,8 +416,25 @@ Registration is what feeds the proxy's tool catalog.
 - **Auth config** (`auth_config`, migration `a0013`): `{}` for none, `{"token_enc"}` for bearer,
   `{"header", "key_enc"}` for API key (header defaults to `X-API-Key`). Secrets are AES-256-GCM
   encrypted via `utils/encryption.py`; `utils/mcp_credentials.py` handles encrypt, decrypt and the
-  masked hint (shown to Admins only). A blank credential on edit keeps the stored one. OAuth is
-  not supported. Transport is Streamable HTTP; tools only (no resources or prompts).
+  masked hint (shown to Admins only). A blank credential on edit keeps the stored one. Transport is
+  Streamable HTTP; tools only (no resources or prompts).
+- **OAuth and AWS IAM auth** (`auth_type` `oauth` / `aws_iam`, no migration; `auth_type` is
+  `VARCHAR(20)`). Shapes: `oauth` is `{"client_id", "client_secret_enc", "token_url",
+  "token_url_source": "manual"|"discovered", "scope"?, "resource"?, "auth_method":
+  "client_secret_basic"|"client_secret_post"}`; `aws_iam` is `{"region", "access_key_id",
+  "secret_access_key_enc", "resource"}` (resource defaults to `aws-mcp.amazonaws.com`).
+  `services/mcp_token_service.py` gets the access token (OAuth client credentials, or boto3
+  `signin.create_oauth2_token_with_iam` built only from the stored keys, never the default
+  credential chain; no session tokens or AssumeRole) and sends it as a bearer token on discovery
+  and `tools/call`. Tokens are cached per config until 60 s before expiry (`expires_in` missing
+  means 3600; 60 s or less is used once, not cached) with one in-flight fetch per config.
+  `services/mcp_oauth_discovery.py` backs `POST /mcp/servers/discover-oauth` (Admin): protected
+  resource metadata (RFC 9728), then authorization server metadata (RFC 8414); the form fills the
+  token URL from it and the Admin sees it before saving. Every outbound URL goes through
+  `assert_safe_outbound_url`. A token failure raises `TokenError` (not a `ValueError`); the agent
+  sees a generic -32603 "Internal error", the breaker is not charged, and the server's health and
+  `last_discovery_error` are written only when the outcome changes. Messages never contain
+  secrets. The authorization-code (Connect) flow is not built.
 - **Outbound URL policy** (`utils/safe_outbound_url.py`, a port of `Servers/utils/safeOutboundUrl.ts`):
   http or https only, no embedded username or password, and cloud metadata (169.254.169.254) and
   `0.0.0.0` are refused. Private network addresses are allowed (on-prem).

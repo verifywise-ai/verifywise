@@ -193,7 +193,7 @@ const RiskAnalysisModal: React.FC<RiskAnalysisModalProps> = ({
       hideFooter
     >
       {loadError ? (
-        <Alert variant="error" body={loadError} isToast={false} sx={{ position: "static" }} />
+        <Alert variant="error" body={loadError} inline />
       ) : !questionnaire ? (
         <Box sx={{ display: "flex", justifyContent: "center", padding: "24px" }}>
           <CircularProgress size={24} />

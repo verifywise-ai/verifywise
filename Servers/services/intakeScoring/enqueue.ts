@@ -3,13 +3,17 @@
 // the submit handlers can enqueue without loading the scoring code.
 import { automationQueue } from "../automations/automationProducer";
 
-export type AssessmentStage = "scoring" | "suggestions";
+/**
+ * "liveChecks" is the AI half of the submitter's live checks. It runs after
+ * the other two have settled and the email has gone, and never holds either.
+ */
+export type AssessmentStage = "scoring" | "suggestions" | "liveChecks";
 
 export interface IntakeAssessmentJobData {
   organizationId: number;
   submissionId: number;
   stages: AssessmentStage[];
-  /** Send the new-submission email once both stages have settled. */
+  /** Send the new-submission email once scoring and suggestions have settled. */
   notify: boolean;
   lang?: string;
   /**
