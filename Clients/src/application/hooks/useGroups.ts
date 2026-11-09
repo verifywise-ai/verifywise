@@ -87,12 +87,13 @@ export function useAddGroupMembers(groupId: number) {
   });
 }
 
-export function useSetGroupMembers(groupId: number) {
+export function useSetGroupMembers() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (userIds: number[]) => setGroupMembers({ id: groupId, userIds }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: groupsKeys.members(groupId) });
+    mutationFn: ({ id, userIds }: { id: number; userIds: number[] }) =>
+      setGroupMembers({ id, userIds }),
+    onSuccess: (_data, { id }) => {
+      qc.invalidateQueries({ queryKey: groupsKeys.members(id) });
       qc.invalidateQueries({ queryKey: groupsKeys.lists() });
     },
   });
