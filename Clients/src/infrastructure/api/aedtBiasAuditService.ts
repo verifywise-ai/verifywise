@@ -146,6 +146,8 @@ export interface AedtCategoryTable {
   rows: AedtGroupResult[];
   highestGroup: string | null;
   highestRate: number | null;
+  /** Set when no group could anchor an impact ratio. Never a clean result. */
+  noComparison?: "all_excluded" | "single_group" | "zero_rate" | "only_excluded_nonzero" | null;
 }
 
 export interface AedtAuditResult {

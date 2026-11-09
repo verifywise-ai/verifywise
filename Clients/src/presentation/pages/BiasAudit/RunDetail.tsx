@@ -59,7 +59,18 @@ const BASIS_LABEL: Record<string, string> = {
   test_volume: "Test data: too few historical records",
   test_attribute: "Test data: the characteristics are not recorded",
   test_availability: "Test data: the records exist but are not ours",
+  test_stated: "Test data: stated in your answers, although you hold historical records",
   not_applicable: "Not applicable",
+};
+
+const NO_COMPARISON_LABEL: Record<NonNullable<AedtCategoryTable["noComparison"]>, string> = {
+  all_excluded:
+    "No impact ratio could be calculated: every group is below the small-sample exclusion.",
+  single_group:
+    "No impact ratio could be calculated: only one group is left in the calculation, so there is nothing to compare it with.",
+  zero_rate: "No impact ratio could be calculated: no group with a value has a non-zero rate.",
+  only_excluded_nonzero:
+    "No impact ratio could be calculated: only groups below the small-sample exclusion have a non-zero rate.",
 };
 
 const pct = (n: number) => `${(n * 100).toFixed(1)}%`;
@@ -100,6 +111,7 @@ const Summary = ({
   const flagged = result
     ? result.tables.reduce((n, t) => n + t.rows.filter((r) => r.flagged).length, 0)
     : 0;
+  const noComparison = result?.tables.some((t) => t.noComparison) ?? false;
   return (
     <Box sx={cardSx} data-testid="aedt-run-summary">
       <SectionTitle>Results</SectionTitle>
@@ -153,6 +165,14 @@ const Summary = ({
               Local Law 144 sets no pass mark. 0.80 is the EEOC four-fifths convention: a lower
               ratio is something to investigate and report, not a failure.
             </Typography>
+            {noComparison && (
+              <Typography
+                sx={{ fontSize: 13, color: palette.status.warning.text }}
+                data-testid="aedt-run-no-comparison"
+              >
+                At least one category has no impact ratio. The impact ratios below say why.
+              </Typography>
+            )}
           </Stack>
         </>
       ) : (
@@ -160,7 +180,7 @@ const Summary = ({
           No figures were calculated for this run. The data checks below say why.
         </Alert>
       )}
-      {findings.length === 0 && (
+      {findings.length === 0 && !noComparison && (
         <Stack direction="row" alignItems="center" gap="6px" sx={{ mt: "12px" }}>
           <CircleCheck size={14} strokeWidth={1.5} color={palette.status.success.text} />
           <Typography sx={{ fontSize: 13, color: palette.text.secondary }}>
@@ -277,6 +297,14 @@ const Figures = ({ result }: { result: AedtAuditResult }) => {
                 </TableBody>
               </Table>
             </Box>
+            {table.noComparison && (
+              <Typography
+                sx={{ fontSize: 13, color: palette.status.warning.text, mt: "8px" }}
+                data-testid={`no-comparison-${table.categoryKey}`}
+              >
+                {NO_COMPARISON_LABEL[table.noComparison]}
+              </Typography>
+            )}
           </Box>
         ))}
       </Stack>

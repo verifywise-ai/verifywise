@@ -500,6 +500,18 @@ export const de: Record<string, string> = {
   "Lowest impact ratio": "Niedrigstes Auswirkungsverhältnis",
   "No impact ratio was computed for this run.":
     "Für diesen Lauf wurde kein Auswirkungsverhältnis berechnet.",
+  "Test data: stated in your answers, although you hold historical records":
+    "Testdaten: laut Ihren Antworten, obwohl Sie historische Datensätze besitzen",
+  "No impact ratio could be calculated: every group is below the small-sample exclusion.":
+    "Es konnte kein Auswirkungsverhältnis berechnet werden: Alle Gruppen liegen unter dem Ausschluss für kleine Stichproben.",
+  "No impact ratio could be calculated: only one group is left in the calculation, so there is nothing to compare it with.":
+    "Es konnte kein Auswirkungsverhältnis berechnet werden: In der Berechnung verbleibt nur eine Gruppe, daher gibt es keinen Vergleich.",
+  "No impact ratio could be calculated: no group with a value has a non-zero rate.":
+    "Es konnte kein Auswirkungsverhältnis berechnet werden: Keine Gruppe mit einem Wert hat eine Rate über null.",
+  "No impact ratio could be calculated: only groups below the small-sample exclusion have a non-zero rate.":
+    "Es konnte kein Auswirkungsverhältnis berechnet werden: Nur Gruppen unter dem Ausschluss für kleine Stichproben haben eine Rate über null.",
+  "At least one category has no impact ratio. The impact ratios below say why.":
+    "Für mindestens eine Kategorie gibt es kein Auswirkungsverhältnis. Die Auswirkungsverhältnisse unten nennen den Grund.",
   "Question set": "Fragenkatalog",
   "Job description": "Stellenbeschreibung",
   "Break": "Unterbrechung",
@@ -1021,6 +1033,18 @@ export const fr: Record<string, string> = {
   "Lowest impact ratio": "Ratio d’impact le plus bas",
   "No impact ratio was computed for this run.":
     "Aucun ratio d’impact n’a été calculé pour cette exécution.",
+  "Test data: stated in your answers, although you hold historical records":
+    "Données de test : d’après vos réponses, bien que vous déteniez des enregistrements historiques",
+  "No impact ratio could be calculated: every group is below the small-sample exclusion.":
+    "Aucun ratio d’impact n’a pu être calculé : tous les groupes sont sous le seuil d’exclusion des petits échantillons.",
+  "No impact ratio could be calculated: only one group is left in the calculation, so there is nothing to compare it with.":
+    "Aucun ratio d’impact n’a pu être calculé : un seul groupe reste dans le calcul, il n’y a donc rien à comparer.",
+  "No impact ratio could be calculated: no group with a value has a non-zero rate.":
+    "Aucun ratio d’impact n’a pu être calculé : aucun groupe disposant d’une valeur n’a un taux supérieur à zéro.",
+  "No impact ratio could be calculated: only groups below the small-sample exclusion have a non-zero rate.":
+    "Aucun ratio d’impact n’a pu être calculé : seuls des groupes sous le seuil d’exclusion des petits échantillons ont un taux supérieur à zéro.",
+  "At least one category has no impact ratio. The impact ratios below say why.":
+    "Au moins une catégorie n’a pas de ratio d’impact. Les ratios d’impact ci-dessous en donnent la raison.",
   "Question set": "Jeu de questions",
   "Job description": "Description de poste",
   "Break": "Interruption",
@@ -1538,6 +1562,18 @@ export const es: Record<string, string> = {
   "Lowest impact ratio": "Ratio de impacto más bajo",
   "No impact ratio was computed for this run.":
     "No se calculó ningún ratio de impacto para esta ejecución.",
+  "Test data: stated in your answers, although you hold historical records":
+    "Datos de prueba: según sus respuestas, aunque dispone de registros históricos",
+  "No impact ratio could be calculated: every group is below the small-sample exclusion.":
+    "No se pudo calcular ningún ratio de impacto: todos los grupos están por debajo de la exclusión de muestras pequeñas.",
+  "No impact ratio could be calculated: only one group is left in the calculation, so there is nothing to compare it with.":
+    "No se pudo calcular ningún ratio de impacto: solo queda un grupo en el cálculo, por lo que no hay nada con qué compararlo.",
+  "No impact ratio could be calculated: no group with a value has a non-zero rate.":
+    "No se pudo calcular ningún ratio de impacto: ningún grupo con un valor tiene una tasa superior a cero.",
+  "No impact ratio could be calculated: only groups below the small-sample exclusion have a non-zero rate.":
+    "No se pudo calcular ningún ratio de impacto: solo los grupos por debajo de la exclusión de muestras pequeñas tienen una tasa superior a cero.",
+  "At least one category has no impact ratio. The impact ratios below say why.":
+    "Al menos una categoría no tiene ratio de impacto. Los ratios de impacto de abajo indican el motivo.",
   "Question set": "Conjunto de preguntas",
   "Job description": "Descripción del puesto",
   "Break": "Interrupción",
