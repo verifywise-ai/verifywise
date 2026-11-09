@@ -98,7 +98,9 @@ export async function bulkImportFrameworks(req: Request, res: Response): Promise
       organizationId,
       error: error as Error,
     });
-    return res.status(statusOf(error)).json(STATUS_CODE[statusOf(error)](translateError(req, error)));
+    return res
+      .status(statusOf(error))
+      .json(STATUS_CODE[statusOf(error)](translateError(req, error)));
   }
 }
 
@@ -125,7 +127,9 @@ export async function listImportedFrameworks(req: Request, res: Response): Promi
       organizationId,
       error: error as Error,
     });
-    return res.status(statusOf(error)).json(STATUS_CODE[statusOf(error)](translateError(req, error)));
+    return res
+      .status(statusOf(error))
+      .json(STATUS_CODE[statusOf(error)](translateError(req, error)));
   }
 }
 
@@ -164,7 +168,9 @@ export async function updateImportedFramework(req: Request, res: Response): Prom
       organizationId,
       error: error as Error,
     });
-    return res.status(statusOf(error)).json(STATUS_CODE[statusOf(error)](translateError(req, error)));
+    return res
+      .status(statusOf(error))
+      .json(STATUS_CODE[statusOf(error)](translateError(req, error)));
   }
 }
 
@@ -202,6 +208,8 @@ export async function deleteImportedFramework(req: Request, res: Response): Prom
       organizationId,
       error: error as Error,
     });
-    return res.status(statusOf(error)).json(STATUS_CODE[statusOf(error)](translateError(req, error)));
+    return res
+      .status(statusOf(error))
+      .json(STATUS_CODE[statusOf(error)](translateError(req, error)));
   }
 }
