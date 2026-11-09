@@ -17,7 +17,7 @@ import { History, ChevronDown, ChevronUp, ChevronRight } from "lucide-react";
 import Chip from "../../../components/Chip";
 import { friaRepository } from "../../../../application/repository/fria.repository";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
-import { brand } from "../../../themes/palette";
+import { brand, background, border, status, text, accent } from "../../../themes/palette";
 
 // The diff helpers below are pure, so the preference-aware formatter is passed
 // in rather than read from a hook they cannot call.
@@ -267,7 +267,7 @@ const FriaVersionHistory = ({
   const renderDiffTable = (diffs: FieldDiff[], isFirstVersion: boolean) => {
     if (diffs.length === 0) {
       return (
-        <Box sx={{ padding: "12px" }}>
+        <Box sx={{ padding: 6 }}>
           <Typography sx={{ fontSize: 13, color: theme.palette.text.secondary }}>
             {isFirstVersion
               ? "Initial snapshot with no fields filled."
@@ -278,16 +278,17 @@ const FriaVersionHistory = ({
     }
 
     return (
-      <Table size="small" sx={{ "& td, & th": { borderColor: "#e0e4e9" } }}>
+      <Table size="small" sx={{ "& td, & th": { borderColor: background.alt } }}>
         <TableHead>
-          <TableRow sx={{ backgroundColor: "#fff" }}>
+          <TableRow sx={{ backgroundColor: background.main }}>
             <TableCell
               sx={{
                 fontSize: 11,
                 fontWeight: 600,
-                color: theme.palette.text.secondary,
+                color: text.secondary,
                 textTransform: "uppercase",
-                padding: "6px 12px",
+                paddingY: 4,
+                paddingX: 6,
                 width: "30%",
               }}
             >
@@ -300,7 +301,8 @@ const FriaVersionHistory = ({
                   fontWeight: 600,
                   color: theme.palette.text.secondary,
                   textTransform: "uppercase",
-                  padding: "6px 12px",
+                  paddingY: 4,
+                  paddingX: 6,
                   width: "35%",
                 }}
               >
@@ -313,7 +315,8 @@ const FriaVersionHistory = ({
                 fontWeight: 600,
                 color: theme.palette.text.secondary,
                 textTransform: "uppercase",
-                padding: "6px 12px",
+                paddingY: 4,
+                paddingX: 6,
                 width: isFirstVersion ? "70%" : "35%",
               }}
             >
@@ -328,7 +331,8 @@ const FriaVersionHistory = ({
                 sx={{
                   fontSize: 12,
                   color: theme.palette.text.primary,
-                  padding: "6px 12px",
+                  paddingY: 4,
+                  paddingX: 8,
                   fontWeight: 500,
                   verticalAlign: "top",
                 }}
@@ -339,9 +343,11 @@ const FriaVersionHistory = ({
                 <TableCell
                   sx={{
                     fontSize: 12,
-                    padding: "6px 12px",
-                    color: diff.type === "removed" ? "#d32f2f" : theme.palette.text.secondary,
-                    backgroundColor: diff.type === "removed" ? "#fef2f2" : "transparent",
+                    paddingY: 4,
+                    paddingX: 6,
+                    color:
+                      diff.type === "removed" ? status.error.text : theme.palette.text.secondary,
+                    backgroundColor: diff.type === "removed" ? accent.red.bg : "transparent",
                     textDecoration: diff.type === "changed" ? "line-through" : "none",
                     verticalAlign: "top",
                     wordBreak: "break-word",
@@ -354,9 +360,10 @@ const FriaVersionHistory = ({
               <TableCell
                 sx={{
                   fontSize: 12,
-                  padding: "6px 12px",
+                  paddingY: 4,
+                  paddingX: 6,
                   color: diff.type === "removed" ? theme.palette.text.secondary : brand.primary,
-                  backgroundColor: diff.type === "removed" ? "transparent" : "#f0fdf4",
+                  backgroundColor: diff.type === "removed" ? "transparent" : accent.primary.bg,
                   fontWeight: diff.type !== "removed" ? 500 : 400,
                   verticalAlign: "top",
                   wordBreak: "break-word",
@@ -375,19 +382,19 @@ const FriaVersionHistory = ({
   const renderContent = () => (
     <>
       {isLoading && (
-        <Box sx={{ display: "flex", justifyContent: "center", padding: "32px 0" }}>
+        <Box sx={{ display: "flex", justifyContent: "center", paddingY: 16, paddingX: 0 }}>
           <CircularProgress size={24} />
         </Box>
       )}
 
       {error && (
-        <Box sx={{ padding: "16px" }}>
+        <Box sx={{ padding: 8 }}>
           <Typography sx={{ fontSize: 13, color: theme.palette.error.main }}>{error}</Typography>
         </Box>
       )}
 
       {!isLoading && !error && versions.length === 0 && (
-        <Box sx={{ padding: "24px 16px" }}>
+        <Box sx={{ paddingY: 12, paddingX: 8 }}>
           <Typography sx={{ fontSize: 13, color: theme.palette.text.secondary }}>
             No snapshots saved yet. Use "Save snapshot" to create one.
           </Typography>
@@ -399,8 +406,8 @@ const FriaVersionHistory = ({
           <TableHead>
             <TableRow
               sx={{
-                backgroundColor: "#f9fafb",
-                borderTop: inline ? "none" : "1px solid #d0d5dd",
+                backgroundColor: background.alt,
+                borderTop: inline ? "none" : `1px solid ${border.dark}`,
               }}
             >
               <TableCell
@@ -409,7 +416,8 @@ const FriaVersionHistory = ({
                   fontWeight: 600,
                   color: theme.palette.text.secondary,
                   textTransform: "uppercase",
-                  padding: "8px 16px",
+                  paddingY: 4,
+                  paddingX: 8,
                 }}
               >
                 Version
@@ -420,7 +428,8 @@ const FriaVersionHistory = ({
                   fontWeight: 600,
                   color: theme.palette.text.secondary,
                   textTransform: "uppercase",
-                  padding: "8px 16px",
+                  paddingY: 4,
+                  paddingX: 8,
                 }}
               >
                 Note
@@ -431,7 +440,8 @@ const FriaVersionHistory = ({
                   fontWeight: 600,
                   color: theme.palette.text.secondary,
                   textTransform: "uppercase",
-                  padding: "8px 16px",
+                  paddingY: 4,
+                  paddingX: 8,
                 }}
               >
                 Saved by
@@ -442,12 +452,13 @@ const FriaVersionHistory = ({
                   fontWeight: 600,
                   color: theme.palette.text.secondary,
                   textTransform: "uppercase",
-                  padding: "8px 16px",
+                  paddingY: 4,
+                  paddingX: 8,
                 }}
               >
                 Date
               </TableCell>
-              <TableCell sx={{ width: 36, padding: "8px" }} />
+              <TableCell sx={{ width: 36, padding: 4 }} />
             </TableRow>
           </TableHead>
           <TableBody>
@@ -466,8 +477,8 @@ const FriaVersionHistory = ({
                       cursor: v.snapshot_data ? "pointer" : "default",
                     }}
                   >
-                    <TableCell sx={{ padding: "10px 16px" }}>
-                      <Box sx={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <TableCell sx={{ paddingY: 4, paddingX: 8 }}>
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 4 }}>
                         <Chip
                           label={`v${v.version}`}
                           variant="info"
@@ -483,7 +494,8 @@ const FriaVersionHistory = ({
                       sx={{
                         fontSize: 13,
                         color: theme.palette.text.primary,
-                        padding: "10px 16px",
+                        paddingY: 4,
+                        paddingX: 8,
                         maxWidth: 300,
                         overflow: "hidden",
                         textOverflow: "ellipsis",
@@ -496,7 +508,8 @@ const FriaVersionHistory = ({
                       sx={{
                         fontSize: 13,
                         color: theme.palette.text.secondary,
-                        padding: "10px 16px",
+                        paddingY: 4,
+                        paddingX: 8,
                       }}
                     >
                       {v.created_by_name || "—"}
@@ -505,14 +518,15 @@ const FriaVersionHistory = ({
                       sx={{
                         fontSize: 13,
                         color: theme.palette.text.secondary,
-                        padding: "10px 16px",
+                        paddingY: 4,
+                        paddingX: 8,
                       }}
                     >
                       {v.created_at
                         ? formatDate(new Date(v.created_at), { includeTime: true })
                         : "—"}
                     </TableCell>
-                    <TableCell sx={{ width: 36, padding: "10px 8px", textAlign: "center" }}>
+                    <TableCell sx={{ width: 36, paddingY: 6, paddingX: 4, textAlign: "center" }}>
                       {v.snapshot_data && (
                         <Box
                           sx={{
@@ -536,16 +550,17 @@ const FriaVersionHistory = ({
                       <TableCell colSpan={5} sx={{ padding: 0 }}>
                         <Box
                           sx={{
-                            backgroundColor: "#f9fafb",
-                            padding: "12px 16px",
+                            backgroundColor: background.alt,
+                            paddingY: 6,
+                            paddingX: 8,
                           }}
                         >
                           <Box
                             sx={{
                               display: "flex",
                               alignItems: "center",
-                              gap: "8px",
-                              marginBottom: "8px",
+                              gap: 4,
+                              marginBottom: 4,
                             }}
                           >
                             <Typography
@@ -568,8 +583,8 @@ const FriaVersionHistory = ({
                           </Box>
                           <Box
                             sx={{
-                              backgroundColor: "#fff",
-                              border: "1px solid #d0d5dd",
+                              backgroundColor: background.main,
+                              border: `1px solid ${border.dark}`,
                               borderRadius: "4px",
                               overflow: "hidden",
                               maxHeight: 320,
@@ -599,7 +614,7 @@ const FriaVersionHistory = ({
     <Card
       variant="outlined"
       sx={{
-        borderColor: "#d0d5dd",
+        borderColor: border.dark,
         borderRadius: "4px",
         boxShadow: "none",
         overflow: "hidden",
@@ -611,7 +626,8 @@ const FriaVersionHistory = ({
           "display": "flex",
           "alignItems": "center",
           "justifyContent": "space-between",
-          "padding": "14px 16px",
+          "paddingY": 6,
+          "paddingX": 8,
           "cursor": "pointer",
           "userSelect": "none",
           "backgroundColor": theme.palette.background.paper,
@@ -620,7 +636,7 @@ const FriaVersionHistory = ({
           },
         }}
       >
-        <Box sx={{ display: "flex", alignItems: "center", gap: "8px" }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 4 }}>
           <History size={16} strokeWidth={1.5} color={theme.palette.text.secondary} />
           <Typography sx={{ fontSize: 13, fontWeight: 600, color: theme.palette.text.primary }}>
             Version history

@@ -25,7 +25,7 @@ export type GreyStep = keyof typeof grey;
 
 /** Green scale: 50 (lightest) → 900 (darkest) */
 export const green = {
-  50: "#F0FDF4",
+  50: "#E6F4EE",
   100: "#E6F0EC",
   200: "#E6F4EA",
   300: "#C8E6D0",
@@ -48,6 +48,13 @@ export const red = {
 } as const;
 
 export type RedStep = keyof typeof red;
+
+/** Yellow scale */
+export const yellow = {
+  600: "#FBBF24",
+} as const;
+
+export type YellowStep = keyof typeof yellow;
 
 /** Warning / medium — amber surfaces with brown-toned text */
 export const amber = {

@@ -4,6 +4,7 @@ import { Check as CheckGreenIcon, Shield as ShieldIcon } from "lucide-react";
 import { getFrameworkBadgePath } from "../../../tools/frameworkBadge";
 import StandardModal from "../../../components/Modals/StandardModal";
 import { CustomizableButton } from "../../../components/button/customizable-button";
+import { background, icon } from "../../../themes/palette";
 import { Project } from "../../../../domain/types/Project";
 import { Framework } from "../../../../domain/types/Framework";
 import {
@@ -121,19 +122,7 @@ const AddFrameworkModal: React.FC<AddFrameworkModalProps> = ({
       customFooter={
         <>
           <Box />
-          <CustomizableButton
-            variant="contained"
-            text="Done"
-            onClick={onClose}
-            sx={{
-              "minWidth": "80px",
-              "height": "34px",
-              "backgroundColor": "brand.primary",
-              "&:hover": {
-                backgroundColor: "brand.primaryHover",
-              },
-            }}
-          />
+          <CustomizableButton variant="contained" size="medium" text="Done" onClick={onClose} />
         </>
       }
     >
@@ -152,7 +141,7 @@ const AddFrameworkModal: React.FC<AddFrameworkModalProps> = ({
           sx={{
             display: "grid",
             gridTemplateColumns: "repeat(3, 1fr)",
-            gap: "16px",
+            gap: 8,
             alignItems: "stretch",
           }}
         >
@@ -183,12 +172,12 @@ const AddFrameworkModal: React.FC<AddFrameworkModalProps> = ({
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
-                          backgroundColor: "#F1F3F4",
+                          backgroundColor: background.alt,
                           borderRadius: "4px",
                           flexShrink: 0,
                         }}
                       >
-                        <ShieldIcon size={18} color="#666666" />
+                        <ShieldIcon size={18} color={icon.default} />
                       </Box>
                     )}
                     <Typography sx={frameworkCardTitleStyle}>{fw.name}</Typography>
@@ -203,42 +192,24 @@ const AddFrameworkModal: React.FC<AddFrameworkModalProps> = ({
                 <Typography sx={frameworkCardDescriptionStyle}>{fw.description}</Typography>
                 <Box display="flex" justifyContent="flex-end" mt={2}>
                   {isAdded ? (
-                    <Button
+                    <CustomizableButton
                       variant="outlined"
+                      color="primary"
                       size="small"
                       disabled={isLoading}
                       onClick={() => {
                         setFrameworkToRemove(fw);
                         setIsRemoveModalOpen(true);
                       }}
-                      sx={{
-                        "minWidth": 100,
-                        "borderColor": "#F87171",
-                        "color": "#DC2626",
-                        "fontWeight": 600,
-                        "textTransform": "none",
-                        "&:hover": {
-                          borderColor: "#EF4444",
-                          backgroundColor: "#FEF2F2",
-                        },
-                      }}
                     >
                       Remove
-                    </Button>
+                    </CustomizableButton>
                   ) : (
                     <Button
                       variant="contained"
                       size="small"
                       disabled={isLoading}
                       onClick={() => handleAddFramework(fw)}
-                      sx={{
-                        "minWidth": 100,
-                        "fontWeight": 600,
-                        "textTransform": "none",
-                        "backgroundColor": "#13715B",
-                        "color": "#fff",
-                        "&:hover": { backgroundColor: "#0e5c47" },
-                      }}
                     >
                       Add
                     </Button>

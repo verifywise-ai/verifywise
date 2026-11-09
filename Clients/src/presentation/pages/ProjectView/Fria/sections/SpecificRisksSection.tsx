@@ -11,7 +11,7 @@ import FriaEvidenceButton from "../FriaEvidenceButton";
 import FriaRiskImportModal from "../FriaRiskImportModal";
 import FriaSectionCard from "../FriaSectionCard";
 import { EU_ACT_LINK } from "../friaConstants";
-import { brand } from "../../../../themes/palette";
+import { brand, border } from "../../../../themes/palette";
 import { getAllProjectRisksByProjectId } from "../../../../../application/repository/projectRisk.repository";
 
 interface SpecificRisksSectionProps {
@@ -74,15 +74,15 @@ function RiskRow({
   return (
     <Box
       sx={{
-        border: "1px solid #d0d5dd",
+        border: `1px solid ${border.dark}`,
         borderRadius: "4px",
-        padding: "16px",
+        padding: 8,
         display: "flex",
         flexDirection: "column",
-        gap: "8px",
+        gap: 4,
       }}
     >
-      <Box sx={{ display: "flex", gap: "8px", alignItems: "flex-start" }}>
+      <Box sx={{ display: "flex", gap: 4, alignItems: "flex-start" }}>
         <Box sx={{ flex: 1 }}>
           <Field
             id={`risk-desc-${item.id}`}
@@ -103,7 +103,7 @@ function RiskRow({
           sx={{
             "color": "text.secondary",
             "&:hover": { color: "error.main" },
-            "mt": "2px",
+            "mt": 1,
             "flexShrink": 0,
           }}
         >
@@ -115,7 +115,7 @@ function RiskRow({
         sx={{
           display: "grid",
           gridTemplateColumns: "1fr 1fr 1fr",
-          gap: "8px",
+          gap: 4,
         }}
       >
         <Select
@@ -162,7 +162,7 @@ function RiskRow({
         sx={{
           display: "grid",
           gridTemplateColumns: "1fr 1fr",
-          gap: "8px",
+          gap: 4,
         }}
       >
         <Field
@@ -304,7 +304,7 @@ function SpecificRisksSection({
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            marginBottom: "8px",
+            marginBottom: 4,
           }}
         >
           <Typography
@@ -321,9 +321,9 @@ function SpecificRisksSection({
         {riskItems.length === 0 ? (
           <Box
             sx={{
-              border: "1px solid #d0d5dd",
+              border: `1px solid ${border.dark}`,
               borderRadius: "4px",
-              padding: "24px",
+              padding: 12,
               textAlign: "center",
               fontSize: 13,
               color: theme.palette.text.secondary,
@@ -332,7 +332,7 @@ function SpecificRisksSection({
             No risk items yet. Add a risk to get started.
           </Box>
         ) : (
-          <Box sx={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 4 }}>
             {riskItems.map((item) => (
               <RiskRow
                 key={item.id}
@@ -346,7 +346,7 @@ function SpecificRisksSection({
           </Box>
         )}
 
-        <Box sx={{ marginTop: "8px", display: "flex", gap: "8px" }}>
+        <Box sx={{ marginTop: 4, display: "flex", gap: 4 }}>
           <CustomizableButton
             text="Add risk"
             variant="outlined"

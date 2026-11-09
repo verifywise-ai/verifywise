@@ -43,6 +43,7 @@ import { useNavigate, useSearchParams } from "react-router";
 import useProjectData from "../../../../application/hooks/useProjectData";
 import useUsers from "../../../../application/hooks/useUsers";
 import { CustomizableButton } from "../../../components/button/customizable-button";
+import { border, text } from "../../../themes/palette";
 import { Save as SaveIcon, Trash2 as DeleteIcon } from "lucide-react";
 import CustomizableToast from "../../../components/Toast";
 import CustomizableSkeleton from "../../../components/Skeletons";
@@ -705,7 +706,8 @@ const ProjectSettings = React.memo(
       () => ({
         "backgroundColor": theme.palette.background.main,
         "& input": {
-          padding: "0 14px",
+          paddingY: 0,
+          paddingX: 6,
         },
       }),
       [theme.palette.background.main],
@@ -932,7 +934,7 @@ const ProjectSettings = React.memo(
           <CustomizableSkeleton variant="rectangular" width="50%" height={200} />
         ) : (
           <Box sx={styles.root}>
-            <Stack component="form" onSubmit={handleSubmit} rowGap="15px">
+            <Stack component="form" onSubmit={handleSubmit} rowGap={8}>
               {/* Use Case Overview Card */}
               <Box sx={styles.card}>
                 <Typography sx={styles.sectionTitle}>Use Case Overview</Typography>
@@ -940,8 +942,8 @@ const ProjectSettings = React.memo(
                   sx={{
                     display: "grid",
                     gridTemplateColumns: "220px 1fr",
-                    rowGap: "25px",
-                    columnGap: "250px",
+                    rowGap: 12,
+                    columnGap: 124,
                     alignItems: "center",
                     mt: 2,
                   }}
@@ -949,7 +951,7 @@ const ProjectSettings = React.memo(
                   {/* Use case title Row */}
                   <Box>
                     <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Use case title</Typography>
-                    <Typography sx={{ fontSize: 12, color: "#888", mt: 0.5 }}>
+                    <Typography sx={{ fontSize: 12, color: text.subdued, mt: 0.5 }}>
                       A concise name for your AI use case
                     </Typography>
                   </Box>
@@ -967,7 +969,7 @@ const ProjectSettings = React.memo(
                   {/* Description Row */}
                   <Box>
                     <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Description</Typography>
-                    <Typography sx={{ fontSize: 12, color: "#888", mt: 0.5 }}>
+                    <Typography sx={{ fontSize: 12, color: text.subdued, mt: 0.5 }}>
                       Overview of this use case
                     </Typography>
                   </Box>
@@ -987,7 +989,7 @@ const ProjectSettings = React.memo(
                   {/* Goal Row */}
                   <Box>
                     <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Goal</Typography>
-                    <Typography sx={{ fontSize: 12, color: "#888", mt: 0.5 }}>
+                    <Typography sx={{ fontSize: 12, color: text.subdued, mt: 0.5 }}>
                       What you aim to achieve
                     </Typography>
                   </Box>
@@ -1008,7 +1010,7 @@ const ProjectSettings = React.memo(
                   {/* Target industry Row */}
                   <Box>
                     <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Target industry</Typography>
-                    <Typography sx={{ fontSize: 12, color: "#888", mt: 0.5 }}>
+                    <Typography sx={{ fontSize: 12, color: text.subdued, mt: 0.5 }}>
                       Industry sector for this use case
                     </Typography>
                   </Box>
@@ -1034,8 +1036,8 @@ const ProjectSettings = React.memo(
                   sx={{
                     display: "grid",
                     gridTemplateColumns: "220px 1fr",
-                    rowGap: "25px",
-                    columnGap: "250px",
+                    rowGap: 12,
+                    columnGap: 124,
                     alignItems: "center",
                     mt: 2,
                   }}
@@ -1159,7 +1161,7 @@ const ProjectSettings = React.memo(
                   {/* Use case status Row */}
                   <Box>
                     <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Use case status</Typography>
-                    <Typography sx={{ fontSize: 12, color: "#888", mt: 0.5 }}>
+                    <Typography sx={{ fontSize: 12, color: text.subdued, mt: 0.5 }}>
                       Development stage of this use case
                     </Typography>
                   </Box>
@@ -1186,8 +1188,8 @@ const ProjectSettings = React.memo(
                   sx={{
                     display: "grid",
                     gridTemplateColumns: "220px 1fr",
-                    rowGap: "25px",
-                    columnGap: "250px",
+                    rowGap: 12,
+                    columnGap: 124,
                     alignItems: "center",
                     mt: 2,
                   }}
@@ -1200,7 +1202,9 @@ const ProjectSettings = React.memo(
                         <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
                           Applicable regulations (optional)
                         </Typography>
-                        <Typography sx={{ fontSize: 12, color: "#888", whiteSpace: "nowrap" }}>
+                        <Typography
+                          sx={{ fontSize: 12, color: text.subdued, whiteSpace: "nowrap" }}
+                        >
                           Add all monitored regulations and standards of the use case.
                         </Typography>
                       </Box>
@@ -1301,7 +1305,8 @@ const ProjectSettings = React.memo(
                                   sx={{
                                     "& .MuiOutlinedInput-root": {
                                       height: "34px",
-                                      padding: "0 10px",
+                                      paddingY: 0,
+                                      paddingX: 4,
                                       display: "flex",
                                       alignItems: "center",
                                     },
@@ -1355,9 +1360,8 @@ const ProjectSettings = React.memo(
                                     "& .MuiAutocomplete-listbox": {
                                       "& .MuiAutocomplete-option": {
                                         fontSize: "13px",
-                                        color: "#1c2130",
-                                        paddingLeft: "9px",
-                                        paddingRight: "9px",
+                                        color: text.primary,
+                                        paddingX: 4,
                                       },
                                       "& .MuiAutocomplete-option.Mui-focused": {
                                         background: "background.accent",
@@ -1365,8 +1369,7 @@ const ProjectSettings = React.memo(
                                     },
                                     "& .MuiAutocomplete-noOptions": {
                                       fontSize: "13px",
-                                      paddingLeft: "9px",
-                                      paddingRight: "9px",
+                                      paddingX: 4,
                                     },
                                   },
                                 },
@@ -1381,7 +1384,7 @@ const ProjectSettings = React.memo(
                   {/* Team members Row */}
                   <Box>
                     <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Team members</Typography>
-                    <Typography sx={{ fontSize: 12, color: "#888", whiteSpace: "nowrap" }}>
+                    <Typography sx={{ fontSize: 12, color: text.subdued, whiteSpace: "nowrap" }}>
                       Add all team members of the use case.
                       <br />
                       Only those who are added will be able to see the use case.
@@ -1421,7 +1424,7 @@ const ProjectSettings = React.memo(
                               fontSize: "11px",
                               color: "rgb(157, 157, 157)",
                               position: "absolute",
-                              right: "9px",
+                              right: 4,
                             }}
                           >
                             {userEmail}
@@ -1441,7 +1444,8 @@ const ProjectSettings = React.memo(
                         sx={{
                           "& .MuiOutlinedInput-root": {
                             height: "34px",
-                            padding: "0 10px",
+                            paddingY: 0,
+                            paddingX: 4,
                             display: "flex",
                             alignItems: "center",
                           },
@@ -1484,7 +1488,7 @@ const ProjectSettings = React.memo(
                           "& .MuiAutocomplete-listbox": {
                             "& .MuiAutocomplete-option": {
                               fontSize: "13px",
-                              color: "#1c2130",
+                              color: text.primary,
                               paddingLeft: "9px",
                               paddingRight: "9px",
                             },
@@ -1494,8 +1498,7 @@ const ProjectSettings = React.memo(
                           },
                           "& .MuiAutocomplete-noOptions": {
                             fontSize: "13px",
-                            paddingLeft: "9px",
-                            paddingRight: "9px",
+                            paddingX: 4,
                           },
                         },
                       },
@@ -1510,7 +1513,9 @@ const ProjectSettings = React.memo(
                           AI risk classification *
                         </Typography>
                         {canClassify && (
-                          <Typography sx={{ fontSize: 12, color: "#888", whiteSpace: "nowrap" }}>
+                          <Typography
+                            sx={{ fontSize: 12, color: text.subdued, whiteSpace: "nowrap" }}
+                          >
                             Not sure about your risk level?&nbsp;
                             <VWLink onClick={() => setIsRiskModalOpen(true)}>
                               Calculate your AI risk classification
@@ -1538,7 +1543,9 @@ const ProjectSettings = React.memo(
                         <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
                           High-risk roles *
                         </Typography>
-                        <Typography sx={{ fontSize: 12, color: "#888", whiteSpace: "nowrap" }}>
+                        <Typography
+                          sx={{ fontSize: 12, color: text.subdued, whiteSpace: "nowrap" }}
+                        >
                           If you are not sure about the high risk role,&nbsp;
                           <VWLink
                             url="https://artificialintelligenceact.eu/high-level-summary/"
@@ -1567,7 +1574,7 @@ const ProjectSettings = React.memo(
                     <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
                       Use case category
                     </Typography>
-                    <Typography sx={{ fontSize: 12, color: "#888", whiteSpace: "nowrap" }}>
+                    <Typography sx={{ fontSize: 12, color: text.subdued, whiteSpace: "nowrap" }}>
                       Select the category that best describes the use case.
                     </Typography>
                   </Box>
@@ -1588,7 +1595,7 @@ const ProjectSettings = React.memo(
                   {/* Use case purpose Row */}
                   <Box>
                     <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Use case purpose</Typography>
-                    <Typography sx={{ fontSize: 12, color: "#888", whiteSpace: "nowrap" }}>
+                    <Typography sx={{ fontSize: 12, color: text.subdued, whiteSpace: "nowrap" }}>
                       What business purpose does the use case serve?
                     </Typography>
                   </Box>
@@ -1611,7 +1618,7 @@ const ProjectSettings = React.memo(
                     <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
                       Use case audience
                     </Typography>
-                    <Typography sx={{ fontSize: 12, color: "#888", whiteSpace: "nowrap" }}>
+                    <Typography sx={{ fontSize: 12, color: text.subdued, whiteSpace: "nowrap" }}>
                       Who is the intended audience for the use case?
                     </Typography>
                   </Box>
@@ -1634,7 +1641,7 @@ const ProjectSettings = React.memo(
                     <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
                       Deployment context
                     </Typography>
-                    <Typography sx={{ fontSize: 12, color: "#888", whiteSpace: "nowrap" }}>
+                    <Typography sx={{ fontSize: 12, color: text.subdued, whiteSpace: "nowrap" }}>
                       How is the AI use case deployed?
                     </Typography>
                   </Box>
@@ -1674,7 +1681,7 @@ const ProjectSettings = React.memo(
                   <CustomizableButton
                     sx={{
                       ...styles.saveButton,
-                      backgroundColor: isSaveDisabled ? "#ccc" : "brand.primary",
+                      backgroundColor: isSaveDisabled ? text.disabled : "brand.primary",
                       border: isSaveDisabled
                         ? "1px solid rgba(0, 0, 0, 0.26)"
                         : "1px solid brand.primary",
@@ -1690,7 +1697,7 @@ const ProjectSettings = React.memo(
                 </Box>
 
                 {/* divider for seperation */}
-                <Box sx={{ mt: 6, borderTop: "1px solid #E0E0E0", pt: 8, width: "100%" }} />
+                <Box sx={{ mt: 6, borderTop: `1px solid ${border.dark}`, pt: 8, width: "100%" }} />
                 <Typography
                   sx={{
                     fontSize: theme.typography.fontSize,
@@ -1714,13 +1721,11 @@ const ProjectSettings = React.memo(
                   sx={{
                     width: { xs: "100%", sm: theme.spacing(80) },
                     mb: theme.spacing(4),
-                    backgroundColor: "#DB504A",
-                    color: "background.main",
-                    border: "1px solid #DB504A",
                     gap: 2,
                   }}
                   icon={<DeleteIcon size={16} />}
                   variant="contained"
+                  color="error"
                   onClick={handleOpenDeleteDialog}
                   text="Delete use case"
                   isDisabled={!allowedRoles.projects.delete.includes(userRoleName)}
