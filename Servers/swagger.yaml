@@ -27855,6 +27855,88 @@ paths:
       security:
         -
           bearerAuth: []
+  '/v1/ai-apps/{id}/use-cases':
+    get:
+      summary: 'List Ai App Use Cases'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai Apps'
+      operationId: listAiAppUseCases
+      security:
+        -
+          bearerAuth: []
+    post:
+      summary: 'Link Ai App Use Case'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai Apps'
+      operationId: linkAiAppUseCase
+      security:
+        -
+          bearerAuth: []
+  '/v1/ai-apps/{id}/use-cases/{projectId}':
+    delete:
+      summary: 'Unlink Ai App Use Case'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai Apps'
+      operationId: unlinkAiAppUseCase
+      security:
+        -
+          bearerAuth: []
+  '/v1/projects/{id}/ai-apps':
+    get:
+      summary: 'List Use Case Ai Apps'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Projects'
+      operationId: listUseCaseAiApps
+      security:
+        -
+          bearerAuth: []
+  '/v1/projects/{id}/create-ai-app':
+    get:
+      summary: 'Get Create Ai App Preview'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Projects'
+      operationId: getCreateAiAppPreview
+      security:
+        -
+          bearerAuth: []
+    post:
+      summary: 'Create Ai App From Use Case'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Projects'
+      operationId: createAiAppFromUseCase
+      security:
+        -
+          bearerAuth: []
   '/v1/projects/{id}/raci':
     get:
       summary: 'Get Raci Matrix'

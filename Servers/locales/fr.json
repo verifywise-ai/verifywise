@@ -982,5 +982,10 @@
   "User not found in this organization": "Utilisateur introuvable dans cette organisation",
   "Use case not found": "Cas d'usage introuvable",
   "Failed to load the RACI matrix": "Impossible de charger la matrice RACI",
-  "Failed to update the RACI matrix": "Impossible de mettre à jour la matrice RACI"
+  "Failed to update the RACI matrix": "Impossible de mettre à jour la matrice RACI",
+  "AI app name must be text of at most 255 characters": "Le nom de l'application IA doit être un texte de 255 caractères maximum",
+  "AI app or use case not found": "Application IA ou cas d'usage introuvable",
+  "Link not found": "Lien introuvable",
+  "Organizational use cases cannot be linked to an AI app": "Les cas d'usage organisationnels ne peuvent pas être liés à une application IA",
+  "Use cases that are waiting for approval or were rejected cannot be linked to an AI app": "Les cas d'usage en attente d'approbation ou rejetés ne peuvent pas être liés à une application IA"
 }

@@ -11,6 +11,12 @@ import {
   setDataExposureForAiApp,
   getPolicySuggestions,
   promoteFromShadowAi,
+  getProjectAiApps,
+  getCreateAiAppPreview,
+  createAiAppFromUseCase,
+  getAiAppUseCases,
+  linkUseCaseToAiApp,
+  unlinkUseCaseFromAiApp,
 } from "../repository/aiApp.repository";
 import {
   IAIAppCreatePayload,
@@ -29,6 +35,15 @@ export const aiAppQueryKeys = {
   details: () => [...aiAppQueryKeys.all, "detail"] as const,
   detail: (id: number) => [...aiAppQueryKeys.details(), id] as const,
   policySuggestions: (name: string) => [...aiAppQueryKeys.all, "policySuggestions", name] as const,
+  /** AI apps linked to one use case (#5259). */
+  allByProject: () => [...aiAppQueryKeys.all, "byProject"] as const,
+  byProject: (projectId: number) => [...aiAppQueryKeys.allByProject(), projectId] as const,
+  /** What creating an AI app from a use case would copy (#5259). */
+  createPreview: (projectId: number) =>
+    [...aiAppQueryKeys.all, "createPreview", projectId] as const,
+  /** Use cases linked to one AI app (#5259). */
+  allUseCases: () => [...aiAppQueryKeys.all, "useCases"] as const,
+  useCases: (id: number) => [...aiAppQueryKeys.allUseCases(), id] as const,
 };
 
 export const useAiApps = (
@@ -82,6 +97,9 @@ export const useUpdateAiApp = () => {
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: aiAppQueryKeys.detail(id) });
       queryClient.invalidateQueries({ queryKey: aiAppQueryKeys.lists() });
+      // The linked AI app chips show its name.
+      queryClient.invalidateQueries({ queryKey: aiAppQueryKeys.allByProject() });
+      queryClient.invalidateQueries({ queryKey: aiAppQueryKeys.useCases(id) });
       // Tab counts, stale markers and the lifecycle stage follow status and existence.
       queryClient.invalidateQueries({ queryKey: aiAppQueryKeys.lifecycle() });
     },
@@ -111,8 +129,11 @@ export const useDeleteAiApp = () => {
     mutationFn: async (id: number) => {
       return await deleteAiApp(id);
     },
-    onSuccess: () => {
+    onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: aiAppQueryKeys.lists() });
+      // Deleting the app removes its links.
+      queryClient.invalidateQueries({ queryKey: aiAppQueryKeys.allByProject() });
+      queryClient.invalidateQueries({ queryKey: aiAppQueryKeys.useCases(id) });
       // Tab counts, stale markers and the lifecycle stage follow status and existence.
       queryClient.invalidateQueries({ queryKey: aiAppQueryKeys.lifecycle() });
     },
@@ -183,6 +204,69 @@ export const usePolicySuggestions = (name: string) => {
     enabled: name.trim().length > 0,
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
+  });
+};
+
+export const useProjectAiApps = (projectId: number) => {
+  return useQuery({
+    queryKey: aiAppQueryKeys.byProject(projectId),
+    queryFn: ({ signal }) => getProjectAiApps(projectId, signal),
+    staleTime: 60 * 1000,
+  });
+};
+
+export const useCreateAiAppPreview = (projectId: number, enabled: boolean) => {
+  return useQuery({
+    queryKey: aiAppQueryKeys.createPreview(projectId),
+    queryFn: ({ signal }) => getCreateAiAppPreview(projectId, signal),
+    enabled,
+    staleTime: 0,
+  });
+};
+
+export const useCreateAiAppFromUseCase = (projectId: number) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (name: string) => createAiAppFromUseCase(projectId, name),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: aiAppQueryKeys.byProject(projectId) });
+      queryClient.invalidateQueries({ queryKey: aiAppQueryKeys.lists() });
+      // Tab counts, stale markers and the lifecycle stage follow status and existence.
+      queryClient.invalidateQueries({ queryKey: aiAppQueryKeys.lifecycle() });
+    },
+  });
+};
+
+export const useAiAppUseCases = (id: number) => {
+  return useQuery({
+    queryKey: aiAppQueryKeys.useCases(id),
+    queryFn: ({ signal }) => getAiAppUseCases(id, signal),
+    staleTime: 60 * 1000,
+  });
+};
+
+export const useLinkUseCaseToAiApp = (id: number) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (projectId: number) => linkUseCaseToAiApp(id, projectId),
+    onSuccess: (_, projectId) => {
+      queryClient.invalidateQueries({ queryKey: aiAppQueryKeys.useCases(id) });
+      queryClient.invalidateQueries({ queryKey: aiAppQueryKeys.byProject(projectId) });
+    },
+  });
+};
+
+export const useUnlinkUseCaseFromAiApp = (id: number) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (projectId: number) => unlinkUseCaseFromAiApp(id, projectId),
+    onSuccess: (_, projectId) => {
+      queryClient.invalidateQueries({ queryKey: aiAppQueryKeys.useCases(id) });
+      queryClient.invalidateQueries({ queryKey: aiAppQueryKeys.byProject(projectId) });
+    },
   });
 };
 

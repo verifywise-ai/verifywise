@@ -982,5 +982,10 @@
   "User not found in this organization": "Benutzer in dieser Organisation nicht gefunden",
   "Use case not found": "Anwendungsfall nicht gefunden",
   "Failed to load the RACI matrix": "Die RACI-Matrix konnte nicht geladen werden",
-  "Failed to update the RACI matrix": "Die RACI-Matrix konnte nicht aktualisiert werden"
+  "Failed to update the RACI matrix": "Die RACI-Matrix konnte nicht aktualisiert werden",
+  "AI app name must be text of at most 255 characters": "Der Name der KI-App muss ein Text mit höchstens 255 Zeichen sein",
+  "AI app or use case not found": "KI-App oder Anwendungsfall nicht gefunden",
+  "Link not found": "Verknüpfung nicht gefunden",
+  "Organizational use cases cannot be linked to an AI app": "Organisationsweite Anwendungsfälle können nicht mit einer KI-App verknüpft werden",
+  "Use cases that are waiting for approval or were rejected cannot be linked to an AI app": "Anwendungsfälle, die auf Genehmigung warten oder abgelehnt wurden, können nicht mit einer KI-App verknüpft werden"
 }
