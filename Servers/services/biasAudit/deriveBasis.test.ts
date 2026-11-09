@@ -12,14 +12,14 @@ describe("the split that a single answer would flatten", () => {
   // ethnicity at all. Sex was auditable from historical data; race and the
   // intersectional categories were not.
   it("splits sex from race when only sex is held", () => {
-    const d = deriveBasis(a({ "data.held": "sex_only", "data.basis": "test_attribute" }));
+    const d = deriveBasis(a({ "data.held": "sex_only", "data.basis": "historical" }));
     expect(find(d, "sex").basis).toBe("historical");
     expect(find(d, "race_ethnicity").basis).toBe("test_attribute");
     expect(find(d, "intersectional").basis).toBe("test_attribute");
   });
 
   it("gives the race basis an expiry that sex volume cannot satisfy", () => {
-    const d = deriveBasis(a({ "data.held": "sex_only", "data.basis": "test_attribute" }));
+    const d = deriveBasis(a({ "data.held": "sex_only", "data.basis": "historical" }));
     const race = find(d, "race_ethnicity");
     expect(race.expiryTrigger).toMatch(/race and ethnicity/i);
     expect(race.expiryTrigger).not.toMatch(/sex/i);
@@ -52,6 +52,40 @@ describe("the uniform cases", () => {
     );
     expect(d!.perCategory.every((c) => c.basis === "test_availability")).toBe(true);
     expect(find(d, "sex").expiryTrigger).toMatch(/become available/i);
+  });
+});
+
+describe("a stated test-data basis stands when data is held (5-302(b))", () => {
+  it("reports all_sufficient held but test data stated as test data, with a trigger", () => {
+    const d = deriveBasis(a({ "data.held": "all_sufficient", "data.basis": "test_volume" }));
+    for (const c of ["sex", "race_ethnicity", "intersectional"]) {
+      expect(find(d, c).basis).toBe("test_volume");
+      expect(find(d, c).expiryTrigger).not.toBe("");
+    }
+  });
+
+  it("applies to sex_only: sex is test data too, not historical", () => {
+    const d = deriveBasis(a({ "data.held": "sex_only", "data.basis": "test_attribute" }));
+    expect(find(d, "sex").basis).toBe("test_attribute");
+    expect(find(d, "sex").expiryTrigger).not.toBe("");
+    expect(find(d, "race_ethnicity").basis).toBe("test_attribute");
+    expect(find(d, "intersectional").basis).toBe("test_attribute");
+  });
+
+  it.each(["all_low_volume", "customers_hold_it"])(
+    "respects the stated test basis over the holdings for %s",
+    (heldAnswer) => {
+      const d = deriveBasis(a({ "data.held": heldAnswer, "data.basis": "test_attribute" }));
+      expect(find(d, "sex").basis).toBe("test_attribute");
+      expect(find(d, "race_ethnicity").basis).toBe("test_attribute");
+    },
+  );
+
+  it("leaves a stated historical basis to the holdings", () => {
+    const low = deriveBasis(a({ "data.held": "all_low_volume", "data.basis": "historical" }));
+    expect(find(low, "sex").basis).toBe("test_volume");
+    const all = deriveBasis(a({ "data.held": "all_sufficient", "data.basis": "historical" }));
+    expect(find(all, "race_ethnicity").basis).toBe("historical");
   });
 });
 

@@ -12,7 +12,9 @@
  * could not, and the expiry conditions differ: a race attribute basis ends when
  * customers begin capturing race, and records of another characteristic never
  * end it however far their volume grows. A customer who later collects 50,000
- * sex disclosures must not see a race basis reported as resolved.
+ * sex disclosures must not see a race basis reported as resolved. That split
+ * follows from a stated "historical" basis; a stated test-data basis describes
+ * the whole run and is respected for every category (see `held`).
  *
  * This is OUR INFERENCE, not the customer's statement. Writing an inference
  * back as a client's words is a named failure that put a false sentence in a
@@ -110,22 +112,36 @@ function notHeld(stated: BasisKind): BasisKind {
   return stated === "historical" ? "test_attribute" : stated;
 }
 
+function isTestData(basis: BasisKind): boolean {
+  return basis === "test_volume" || basis === "test_attribute" || basis === "test_availability";
+}
+
+/**
+ * For a characteristic that is held. `data.basis` is the reason for the run as
+ * a whole, so a stated test-data basis stands: the run did not use historical
+ * records, whatever the customer holds, and 5-302(b) applies to it. Otherwise
+ * the basis follows from what is held.
+ */
+function held(stated: BasisKind, fromHoldings: BasisKind): BasisKind {
+  return isTestData(stated) ? stated : fromHoldings;
+}
+
 /** Per-characteristic basis from what is held, falling back to the stated basis. */
 function perCharacteristic(
-  held: string,
+  heldAnswer: string,
   stated: BasisKind,
 ): { sex: BasisKind; race: BasisKind } | null {
-  switch (held) {
+  switch (heldAnswer) {
     case "none":
       return { sex: notHeld(stated), race: notHeld(stated) };
     case "sex_only":
-      return { sex: "historical", race: notHeld(stated) };
+      return { sex: held(stated, "historical"), race: notHeld(stated) };
     case "all_low_volume":
-      return { sex: "test_volume", race: "test_volume" };
+      return { sex: held(stated, "test_volume"), race: held(stated, "test_volume") };
     case "all_sufficient":
-      return { sex: "historical", race: "historical" };
+      return { sex: held(stated, "historical"), race: held(stated, "historical") };
     case "customers_hold_it":
-      return { sex: "test_availability", race: "test_availability" };
+      return { sex: held(stated, "test_availability"), race: held(stated, "test_availability") };
     default:
       return null;
   }
