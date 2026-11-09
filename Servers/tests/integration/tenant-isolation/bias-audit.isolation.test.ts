@@ -726,7 +726,9 @@ describe("bias audit routes tenant isolation", () => {
       .put(`/api/v1/bias-audit/profiles/${project}/${LL144}`)
       .send({ answers: IN_SCOPE_ANSWERS });
     expect(put.status).toBe(200);
-    const attest = await owner.request.post(`/api/v1/bias-audit/profiles/${project}/${LL144}/attest`);
+    const attest = await owner.request.post(
+      `/api/v1/bias-audit/profiles/${project}/${LL144}/attest`,
+    );
     expect(attest.status).toBe(200);
     const run = await owner.request
       .post("/api/v1/bias-audit/runs")
@@ -874,7 +876,8 @@ describe("bias audit routes tenant isolation", () => {
       // The question set is filtered by the project's saved answers, so it is
       // the project's data too.
       expect(
-        (await who.request.get(`/api/v1/bias-audit/questions/${LL144}?projectId=${project}`)).status,
+        (await who.request.get(`/api/v1/bias-audit/questions/${LL144}?projectId=${project}`))
+          .status,
       ).toBe(404);
     }
     expect(leaked).toEqual([]);
@@ -1125,9 +1128,9 @@ describe("bias audit routes tenant isolation", () => {
       replacements: { fileId },
     });
     expect((after as any[])[0].tags ?? []).not.toContain("leak");
-    expect((await owner.request.get(`/api/v1/bias-audit/stances/${stanceId}/download`)).status).toBe(
-      200,
-    );
+    expect(
+      (await owner.request.get(`/api/v1/bias-audit/stances/${stanceId}/download`)).status,
+    ).toBe(200);
   });
 
   it("serves a stance PDF only to its project's people, not to others in the organization", async () => {
@@ -1214,7 +1217,9 @@ describe("bias audit routes tenant isolation", () => {
       .put(`/api/v1/bias-audit/profiles/${project}/${LL144}`)
       .send({ answers: OUT_OF_SCOPE_ANSWERS });
     expect(put.status).toBe(200);
-    const attest = await owner.request.post(`/api/v1/bias-audit/profiles/${project}/${LL144}/attest`);
+    const attest = await owner.request.post(
+      `/api/v1/bias-audit/profiles/${project}/${LL144}/attest`,
+    );
     expect(attest.status).toBe(200);
     return {
       owner,
