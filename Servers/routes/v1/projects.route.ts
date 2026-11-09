@@ -7,10 +7,16 @@ import {
   validateUpdateProjectV1,
 } from "../../middleware/validators/project.validator";
 import { createProject, updateProjectById } from "../../controllers/project.ctrl";
+import {
+  createAiAppFromUseCase,
+  getCreateAiAppPreview,
+  listUseCaseAiApps,
+} from "../../controllers/aiAppProject.ctrl";
 
 // Use case create and update with external owners (#5256). The legacy
 // /api/projects contract is frozen, so only these two writes have a v1 version;
-// everything else, reads included, stays on the legacy router.
+// other existing reads stay on the legacy router. The AI app links below (#5259)
+// are new, so they start here.
 const acceptExternalOwner = (_req: Request, res: Response, next: NextFunction) => {
   res.locals.acceptsExternalOwner = true;
   next();
@@ -32,5 +38,9 @@ router.patch(
   acceptExternalOwner,
   updateProjectById,
 );
+
+router.get("/:id/ai-apps", authenticateJWT, listUseCaseAiApps);
+router.get("/:id/create-ai-app", authenticateJWT, authorize("aiApp.edit"), getCreateAiAppPreview);
+router.post("/:id/create-ai-app", authenticateJWT, authorize("aiApp.edit"), createAiAppFromUseCase);
 
 export default router;

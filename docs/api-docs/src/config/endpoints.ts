@@ -12472,6 +12472,39 @@ export const v1V1aiAppsEndpoints: Endpoint[] = [
     ],
     tag: "v1: V1/Ai Apps",
   },
+  {
+    method: 'GET',
+    path: '/v1/ai-apps/{id}/use-cases',
+    summary: "List Ai App Use Cases",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai Apps",
+  },
+  {
+    method: 'POST',
+    path: '/v1/ai-apps/{id}/use-cases',
+    summary: "Link Ai App Use Case",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai Apps",
+  },
+  {
+    method: 'DELETE',
+    path: '/v1/ai-apps/{id}/use-cases/{projectId}',
+    summary: "Unlink Ai App Use Case",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai Apps",
+  },
 ];
 
 // v1: V1/Dashboard endpoints
@@ -12569,6 +12602,39 @@ export const v1V1projectsEndpoints: Endpoint[] = [
     method: 'PATCH',
     path: '/v1/projects/{id}',
     summary: "Update Project By Id",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Projects",
+  },
+  {
+    method: 'GET',
+    path: '/v1/projects/{id}/ai-apps',
+    summary: "List Use Case Ai Apps",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Projects",
+  },
+  {
+    method: 'GET',
+    path: '/v1/projects/{id}/create-ai-app',
+    summary: "Get Create Ai App Preview",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Projects",
+  },
+  {
+    method: 'POST',
+    path: '/v1/projects/{id}/create-ai-app',
+    summary: "Create Ai App From Use Case",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },

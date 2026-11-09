@@ -977,5 +977,9 @@
   "A use case cannot have both an owner and an external owner": "A use case cannot have both an owner and an external owner",
   "An external owner needs both a name and an email": "An external owner needs both a name and an email",
   "External owner name is not valid": "External owner name is not valid",
-  "External owner email is not valid": "External owner email is not valid"
+  "External owner email is not valid": "External owner email is not valid",
+  "AI app name must be text of at most 255 characters": "AI app name must be text of at most 255 characters",
+  "AI app or use case not found": "AI app or use case not found",
+  "Link not found": "Link not found",
+  "Organizational use cases cannot be linked to an AI app": "Organizational use cases cannot be linked to an AI app"
 }
