@@ -1,9 +1,9 @@
 import React, { useMemo, useCallback, useState } from "react";
 import CustomizablePolicyTable from "../Table/PolicyTable";
-import { Box, Stack, TableRow, TableCell, Typography } from "@mui/material";
+import { Box, IconButton, Stack, TableRow, TableCell, Tooltip, Typography } from "@mui/material";
 import VWSelect from "../Inputs/Select";
 import CustomizableMultiSelect from "../Inputs/Select/Multi";
-import { Archive, UserCheck, Tag as TagIcon } from "lucide-react";
+import { Archive, BookmarkPlus, UserCheck, Tag as TagIcon } from "lucide-react";
 import singleTheme from "../../themes/v1SingleTheme";
 import CustomIconButton from "../../components/IconButton";
 import useUsers from "../../../application/hooks/useUsers";
@@ -39,6 +39,7 @@ const PolicyTable: React.FC<PolicyTableProps> = ({
   onDelete,
   onLinkedObjects,
   onAssignToFolder,
+  onSaveAsTemplate,
   isLoading,
   error,
   onRefresh,
@@ -470,6 +471,19 @@ const PolicyTable: React.FC<PolicyTableProps> = ({
               }}
             >
               <div onClick={(e) => e.stopPropagation()}>
+                {onSaveAsTemplate && canModifyPolicies && (
+                  <Tooltip title="Save as template" arrow>
+                    <IconButton
+                      size="small"
+                      disableRipple
+                      aria-label={`Save policy ${policy.title} as template`}
+                      onClick={() => onSaveAsTemplate(policy.id)}
+                      sx={{ mr: 0.5 }}
+                    >
+                      <BookmarkPlus size={16} />
+                    </IconButton>
+                  </Tooltip>
+                )}
                 <CustomIconButton
                   id={Number(policy.id)}
                   onDelete={() => {
