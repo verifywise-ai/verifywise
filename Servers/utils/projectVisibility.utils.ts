@@ -8,7 +8,8 @@ export const seesAllProjects = (role: string | undefined): boolean =>
  *
  * The single definition behind the use cases list (getUserProjects) and the
  * lifecycle summary and dashboard queries, so their counts always agree. It
- * also gates PATCH /projects/:id (canViewProjectQuery).
+ * also gates PATCH /projects/:id (canViewProjectQuery) and the routes behind
+ * requireProjectAccess (getProjectAccessQuery).
  * Returns an SQL fragment (starting with " AND ", or empty) against `alias`
  * and the replacements it needs. The caller's query must bind
  * :organizationId.
