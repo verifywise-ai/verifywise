@@ -194,6 +194,35 @@ describe("external use case owners", () => {
     expect(Number(due[0].contact_user_id)).toBe(adminId);
   });
 
+  it("clears a sent reminder only when a different external owner is named", async () => {
+    const orgId = await createTestOrganization();
+    const adminId = await admin(orgId);
+    const projectId = await createExternal(orgId, adminId);
+    await sequelize.query(
+      `UPDATE projects
+          SET lifecycle_stage = 'live', go_live_date = CURRENT_DATE - 100,
+              last_updated_by = :adminId, confirmation_reminded_at = NOW()
+        WHERE id = :id`,
+      { replacements: { id: projectId, adminId } },
+    );
+    const due = () => findConfirmationsDue(LIFECYCLE_ENTITIES.use_case, orgId, 90);
+    const api = await apiAs(orgId, adminId, "Admin");
+
+    expect(await due()).toHaveLength(0);
+
+    await api
+      .patch(`/api/v1/projects/${projectId}`)
+      .send({ external_owner_name: "Ada King" })
+      .expect(202);
+    expect(await due()).toHaveLength(0);
+
+    await api
+      .patch(`/api/v1/projects/${projectId}`)
+      .send({ external_owner_name: "Eve", external_owner_email: "eve@example.com" })
+      .expect(202);
+    expect(await due()).toHaveLength(1);
+  });
+
   it("never lets an external owner match a user's visibility check", async () => {
     const orgId = await createTestOrganization();
     const adminId = await admin(orgId);

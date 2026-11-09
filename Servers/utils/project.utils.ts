@@ -721,6 +721,14 @@ export const updateProjectByIdQuery = async (
     setParts.push(`high_risk_roles = ${roles.sql}`);
     Object.assign(updateProject, roles.replacements);
   }
+  // A new external owner is told they will get reminders, so one already sent
+  // to the previous owner must not hold theirs back for a whole interval.
+  if (
+    project.external_owner_email &&
+    project.external_owner_email !== oldProject?.external_owner_email
+  ) {
+    setParts.push("confirmation_reminded_at = NULL");
+  }
   const setClause = setParts.join(", ");
 
   // With no column to change (e.g. a members-only update), "UPDATE projects SET WHERE"
