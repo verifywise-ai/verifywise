@@ -772,27 +772,6 @@ export async function scheduleLifecycleConfirmationSweep() {
   );
 }
 
-export async function scheduleTrainingReminderSweep() {
-  logger.info("Adding training reminder sweep job to the queue...");
-  // Daily at 7 AM. Flips past-due training assignments to overdue, then
-  // emails assignees whose training is due within 7 days (or overdue) at
-  // most once every 3 days. Dedup is last_reminded_at, so a re-run does
-  // not email twice. No obliterate here — the scheduler upsert is
-  // idempotent by scheduler id.
-  await automationQueue.upsertJobScheduler(
-    "training_reminder_sweep",
-    { pattern: "0 7 * * *" },
-    {
-      name: "training_reminder_sweep",
-      data: { type: "training_reminder" },
-      opts: {
-        removeOnComplete: true,
-        removeOnFail: false,
-      },
-    },
-  );
-}
-
 export async function scheduleEvidenceFreshnessSweep() {
   logger.info("Adding evidence freshness sweep job to the queue...");
   // Daily at 5 AM -- 3 AM is the MRM retention prune and 4 AM the revalidation
