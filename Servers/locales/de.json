@@ -977,5 +977,10 @@
   "A use case cannot have both an owner and an external owner": "Ein Anwendungsfall kann nicht gleichzeitig einen Verantwortlichen und einen externen Verantwortlichen haben",
   "An external owner needs both a name and an email": "Ein externer Verantwortlicher benötigt sowohl einen Namen als auch eine E-Mail-Adresse",
   "External owner name is not valid": "Der Name des externen Verantwortlichen ist ungültig",
-  "External owner email is not valid": "Die E-Mail-Adresse des externen Verantwortlichen ist ungültig"
+  "External owner email is not valid": "Die E-Mail-Adresse des externen Verantwortlichen ist ungültig",
+  "Organizational use cases do not have a RACI matrix": "Organisatorische Anwendungsfälle haben keine RACI-Matrix",
+  "User not found in this organization": "Benutzer in dieser Organisation nicht gefunden",
+  "Use case not found": "Anwendungsfall nicht gefunden",
+  "Failed to load the RACI matrix": "Die RACI-Matrix konnte nicht geladen werden",
+  "Failed to update the RACI matrix": "Die RACI-Matrix konnte nicht aktualisiert werden"
 }

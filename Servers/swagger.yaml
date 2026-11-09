@@ -27855,3 +27855,31 @@ paths:
       security:
         -
           bearerAuth: []
+  '/v1/projects/{id}/raci':
+    get:
+      summary: 'Get Raci Matrix'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Projects'
+      operationId: getRaciMatrix
+      security:
+        -
+          bearerAuth: []
+  '/v1/projects/{id}/raci/users/{userId}':
+    put:
+      summary: 'Update Raci User Roles'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Projects'
+      operationId: updateRaciUserRoles
+      security:
+        -
+          bearerAuth: []

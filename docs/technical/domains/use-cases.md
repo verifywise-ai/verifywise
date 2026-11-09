@@ -619,6 +619,34 @@ Permission key `useCase.classify` (module "Use cases") is granted to Admin and E
 
 Public intake submissions send `euAiActRiskAnswers` with the form data. When the form has the step, the server validates and scores them; on failure it returns 400 with `step: "eu_ai_act_risk"`, and the public form returns to the risk step only for that response. The submission preview returns `euAiActClassification` (questionnaire, answers, role, current result, `changedSinceSubmission`). On approval the reviewer may send `euAiActOverride: { level, justification }`; the level must be one of the five questionnaire levels, and a level different from the computed one needs a justification of at least 10 characters. Submissions without a run approve as before.
 
+## RACI matrix
+
+Each regular use case has a RACI matrix (tab **RACI**, `V1.0ProjectView/Raci/`). Organizational use cases have none: the tab is hidden and the API answers 400.
+
+Roles are derived when the matrix is read, so they follow the data. `verifywise.raci_entries` only stores manual changes on top: effective roles = derived, plus `assigned`, minus `removed`. A removal therefore sticks, and a role that is added back deletes the override.
+
+| Role | Derived from | Source |
+| ---- | ------------ | ------ |
+| A | `projects.owner`, or a read-only row for `external_owner_name` when there is no owner | `owner` |
+| R | `projects_members`, except the owner | `member` |
+| C | Approvers of `projects.approval_workflow_id` (`approval_workflow_steps` → `approval_step_approvers`) | `approver` |
+| R | Assignees of tasks linked to this use case, unless the task is Completed or Deleted | `task_assignee` |
+
+A person can hold several roles, and each role lists its sources (`manual` for an override). Only members of the organization appear, and leaving the organization deletes the person's overrides there.
+
+**Task links.** Tasks never store a use case id. The link picker's "Use-case" option leads to a framework requirement, so `task_entity_links` holds `eu_control`, `eu_subcontrol`, `iso42001_subclause`, `iso42001_annexcategory`, `iso27001_subclause`, `iso27001_annexcontrol` or `nist_subcategory`, which reach the use case through `projects_frameworks`. See `TASK_LINK_TARGETS` in `Servers/utils/raciData.utils.ts`.
+
+**API** (`Servers/routes/v1/projects.route.ts`). Both endpoints answer 404 for a use case the caller cannot see, including one in another organization.
+
+| Endpoint | Access | Notes |
+| -------- | ------ | ----- |
+| `GET /api/v1/projects/:id/raci` | Authenticated, use case visible | Returns `{ rows, warnings }`, accountable people first, then by name |
+| `PUT /api/v1/projects/:id/raci/users/:userId` | `useCase.edit`, use case visible | Body `{ roles }` is the person's full desired set; an empty list clears them. Returns the same shape as `GET` |
+
+`warnings` holds `no_accountable` or `multiple_accountable`, computed on effective roles. They never block a change. Effective role changes are recorded in the use case's change history with the field name `RACI: <person>`.
+
+The derivation and merge rules are pure functions in `Servers/utils/raci.utils.ts`. Groups (#5253) will add a nullable `group_id`; the API already uses `subject_type` and `subject_id` so its shape will not change.
+
 ## Key Files
 
 ### Backend

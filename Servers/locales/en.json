@@ -977,5 +977,10 @@
   "A use case cannot have both an owner and an external owner": "A use case cannot have both an owner and an external owner",
   "An external owner needs both a name and an email": "An external owner needs both a name and an email",
   "External owner name is not valid": "External owner name is not valid",
-  "External owner email is not valid": "External owner email is not valid"
+  "External owner email is not valid": "External owner email is not valid",
+  "Organizational use cases do not have a RACI matrix": "Organizational use cases do not have a RACI matrix",
+  "User not found in this organization": "User not found in this organization",
+  "Use case not found": "Use case not found",
+  "Failed to load the RACI matrix": "Failed to load the RACI matrix",
+  "Failed to update the RACI matrix": "Failed to update the RACI matrix"
 }

@@ -123,6 +123,7 @@ export const de: Record<string, string> = {
   "High-risk roles *": "Hochrisiko-Rollen *",
   "Not a high-risk role:": "Keine Hochrisiko-Rolle:",
   "Roles:": "Rollen:",
+  "Roles": "Rollen",
   "Upload new": "Neu hochladen",
   "Manage all organization risks in risk management":
     "Alle Risiken der Organisation im Risikomanagement verwalten",
@@ -711,6 +712,38 @@ export const de: Record<string, string> = {
   "Use case defaults saved": "Standardwerte für Anwendungsfälle gespeichert",
   "Failed to save use case defaults":
     "Standardwerte für Anwendungsfälle konnten nicht gespeichert werden",
+  "RACI": "RACI",
+  "RACI matrix": "RACI-Matrix",
+  "Add person": "Person hinzufügen",
+  "Give someone in your organization a role on this use case.":
+    "Geben Sie einer Person aus Ihrer Organisation eine Rolle für diesen Anwendungsfall.",
+  "No one has a RACI role on this use case yet.":
+    "Für diesen Anwendungsfall hat noch niemand eine RACI-Rolle.",
+  "Person": "Person",
+  "Select a person": "Person auswählen",
+  "The RACI matrix could not be loaded.": "Die RACI-Matrix konnte nicht geladen werden.",
+  "Who is responsible, accountable, consulted and informed":
+    "Wer verantwortlich, rechenschaftspflichtig, konsultiert und informiert ist",
+  "Responsible": "Verantwortlich",
+  "Accountable": "Rechenschaftspflichtig",
+  "Consulted": "Konsultiert",
+  "Informed": "Informiert",
+  "Responsible: does the work": "Verantwortlich: erledigt die Arbeit",
+  "Accountable: answers for the outcome": "Rechenschaftspflichtig: steht für das Ergebnis ein",
+  "Consulted: gives input before decisions": "Konsultiert: gibt vor Entscheidungen Rückmeldung",
+  "Informed: kept up to date": "Informiert: wird auf dem Laufenden gehalten",
+  "Owner of this use case": "Eigentümer dieses Anwendungsfalls",
+  "Team member of this use case": "Teammitglied dieses Anwendungsfalls",
+  "Approver in this use case's approval workflow":
+    "Genehmiger im Genehmigungsablauf dieses Anwendungsfalls",
+  "Assigned to an open task linked to this use case":
+    "Einer offenen Aufgabe zugewiesen, die mit diesem Anwendungsfall verknüpft ist",
+  "Added manually": "Manuell hinzugefügt",
+  "No one is accountable for this use case yet. Give one person the A role.":
+    "Für diesen Anwendungsfall ist noch niemand rechenschaftspflichtig. Geben Sie einer Person die Rolle A.",
+  "More than one person is accountable for this use case. Keep one person in the A role where you can.":
+    "Für diesen Anwendungsfall ist mehr als eine Person rechenschaftspflichtig. Belassen Sie die Rolle A möglichst bei einer Person.",
+  "Everyone is already in this matrix": "Alle sind bereits in dieser Matrix",
 };
 
 export const fr: Record<string, string> = {
@@ -833,6 +866,7 @@ export const fr: Record<string, string> = {
   "High-risk roles *": "Rôles à haut risque *",
   "Not a high-risk role:": "Pas un rôle à haut risque :",
   "Roles:": "Rôles :",
+  "Roles": "Rôles",
   "Upload new": "Téléverser nouveau",
   "Manage all organization risks in risk management":
     "Gérer tous les risques de l'organisation dans la gestion des risques",
@@ -1418,6 +1452,38 @@ export const fr: Record<string, string> = {
   "Use case defaults saved": "Valeurs par défaut des cas d'usage enregistrées",
   "Failed to save use case defaults":
     "Impossible d'enregistrer les valeurs par défaut des cas d'usage",
+  "RACI": "RACI",
+  "RACI matrix": "Matrice RACI",
+  "Add person": "Ajouter une personne",
+  "Give someone in your organization a role on this use case.":
+    "Attribuez à une personne de votre organisation un rôle sur ce cas d'usage.",
+  "No one has a RACI role on this use case yet.":
+    "Personne n'a encore de rôle RACI sur ce cas d'usage.",
+  "Person": "Personne",
+  "Select a person": "Sélectionner une personne",
+  "The RACI matrix could not be loaded.": "La matrice RACI n'a pas pu être chargée.",
+  "Who is responsible, accountable, consulted and informed":
+    "Qui est responsable, redevable, consulté et informé",
+  "Responsible": "Responsable",
+  "Accountable": "Redevable",
+  "Consulted": "Consulté",
+  "Informed": "Informé",
+  "Responsible: does the work": "Responsable : réalise le travail",
+  "Accountable: answers for the outcome": "Redevable : répond du résultat",
+  "Consulted: gives input before decisions": "Consulté : donne son avis avant les décisions",
+  "Informed: kept up to date": "Informé : tenu au courant",
+  "Owner of this use case": "Propriétaire de ce cas d'usage",
+  "Team member of this use case": "Membre de l'équipe de ce cas d'usage",
+  "Approver in this use case's approval workflow":
+    "Approbateur dans le circuit d'approbation de ce cas d'usage",
+  "Assigned to an open task linked to this use case":
+    "Affecté à une tâche ouverte liée à ce cas d'usage",
+  "Added manually": "Ajouté manuellement",
+  "No one is accountable for this use case yet. Give one person the A role.":
+    "Personne n'est encore redevable de ce cas d'usage. Attribuez le rôle A à une personne.",
+  "More than one person is accountable for this use case. Keep one person in the A role where you can.":
+    "Plusieurs personnes sont redevables de ce cas d'usage. Dans la mesure du possible, gardez une seule personne dans le rôle A.",
+  "Everyone is already in this matrix": "Tout le monde figure déjà dans cette matrice",
 };
 
 export const es: Record<string, string> = {
@@ -1539,6 +1605,7 @@ export const es: Record<string, string> = {
   "High-risk roles *": "Roles de alto riesgo *",
   "Not a high-risk role:": "No es un rol de alto riesgo:",
   "Roles:": "Roles:",
+  "Roles": "Roles",
   "Upload new": "Subir nuevo",
   "Manage all organization risks in risk management":
     "Gestionar todos los riesgos de la organización en gestión de riesgos",
@@ -2121,4 +2188,37 @@ export const es: Record<string, string> = {
   "Use case defaults saved": "Valores predeterminados de casos de uso guardados",
   "Failed to save use case defaults":
     "No se pudieron guardar los valores predeterminados de los casos de uso",
+  "RACI": "RACI",
+  "RACI matrix": "Matriz RACI",
+  "Add person": "Añadir persona",
+  "Give someone in your organization a role on this use case.":
+    "Asigne a alguien de su organización un rol en este caso de uso.",
+  "No one has a RACI role on this use case yet.":
+    "Nadie tiene todavía un rol RACI en este caso de uso.",
+  "Person": "Persona",
+  "Select a person": "Seleccionar una persona",
+  "The RACI matrix could not be loaded.": "No se pudo cargar la matriz RACI.",
+  "Who is responsible, accountable, consulted and informed":
+    "Quién es responsable, rinde cuentas, es consultado y es informado",
+  "Responsible": "Responsable",
+  "Accountable": "Rinde cuentas",
+  "Consulted": "Consultado",
+  "Informed": "Informado",
+  "Responsible: does the work": "Responsable: realiza el trabajo",
+  "Accountable: answers for the outcome": "Rinde cuentas: responde por el resultado",
+  "Consulted: gives input before decisions":
+    "Consultado: aporta su opinión antes de las decisiones",
+  "Informed: kept up to date": "Informado: se le mantiene al día",
+  "Owner of this use case": "Propietario de este caso de uso",
+  "Team member of this use case": "Miembro del equipo de este caso de uso",
+  "Approver in this use case's approval workflow":
+    "Aprobador en el flujo de aprobación de este caso de uso",
+  "Assigned to an open task linked to this use case":
+    "Asignado a una tarea abierta vinculada a este caso de uso",
+  "Added manually": "Añadido manualmente",
+  "No one is accountable for this use case yet. Give one person the A role.":
+    "Todavía nadie rinde cuentas de este caso de uso. Asigne el rol A a una persona.",
+  "More than one person is accountable for this use case. Keep one person in the A role where you can.":
+    "Más de una persona rinde cuentas de este caso de uso. Siempre que pueda, mantenga a una sola persona en el rol A.",
+  "Everyone is already in this matrix": "Todos están ya en esta matriz",
 };

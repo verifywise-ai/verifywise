@@ -99,7 +99,13 @@ vi.mock("../../../components/breadcrumbs/routeMapping", () => ({
   getRouteIcon: () => null,
 }));
 vi.mock("../../../components/TabBar", () => ({
-  default: () => <div data-testid="tab-bar" />,
+  default: ({ tabs }: { tabs: Array<{ label: string }> }) => (
+    <div data-testid="tab-bar">
+      {tabs.map((tab) => (
+        <span key={tab.label}>{tab.label}</span>
+      ))}
+    </div>
+  ),
 }));
 
 // Mock react-router
@@ -172,5 +178,28 @@ describe("ProjectView (VWProjectView)", () => {
     renderWithProviders(<VWProjectView />, { route: "/project-view?projectId=1" });
 
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("UC-7: Resume screening");
+  });
+
+  it("offers the RACI tab on a regular use case", () => {
+    projectDataMock.mockReturnValue({
+      project: { id: 1, project_title: "Resume screening", is_organizational: false },
+      error: null,
+      isLoading: false,
+    });
+    renderWithProviders(<VWProjectView />, { route: "/project-view?projectId=1" });
+
+    expect(screen.getByText("RACI")).toBeInTheDocument();
+  });
+
+  it("hides the RACI tab on an organizational use case", () => {
+    projectDataMock.mockReturnValue({
+      project: { id: 1, project_title: "ISO programme", is_organizational: true },
+      error: null,
+      isLoading: false,
+    });
+    renderWithProviders(<VWProjectView />, { route: "/project-view?projectId=1" });
+
+    expect(screen.getByTestId("tab-bar")).toBeInTheDocument();
+    expect(screen.queryByText("RACI")).not.toBeInTheDocument();
   });
 });

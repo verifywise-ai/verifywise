@@ -19,6 +19,7 @@ import FriaAssessment from "../Fria";
 import allowedRoles from "../../../../application/constants/permissions";
 import { PageBreadcrumbs } from "../../../components/breadcrumbs/PageBreadcrumbs";
 import { useAuth } from "../../../../application/hooks/useAuth";
+import Raci from "./Raci";
 import { BreadcrumbItem } from "../../../types/interfaces/i.breadcrumbs";
 import { getRouteIcon } from "../../../components/breadcrumbs/routeMapping";
 import { FileText as FileTextIcon, FileX as FileXIcon } from "lucide-react";
@@ -285,6 +286,17 @@ const VWProjectView = () => {
                 disabled: isApprovalBlocked,
                 tooltip: "Recent changes and audit trail",
               },
+              ...(project?.is_organizational
+                ? []
+                : [
+                    {
+                      label: "RACI",
+                      value: "raci",
+                      icon: "Users" as const,
+                      disabled: isApprovalBlocked,
+                      tooltip: "Who is responsible, accountable, consulted and informed",
+                    },
+                  ]),
               {
                 label: "Monitoring",
                 value: "monitoring",
@@ -381,6 +393,16 @@ const VWProjectView = () => {
               <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
             )}
           </TabPanel>
+
+          {!project?.is_organizational && (
+            <TabPanel value="raci" sx={tabPanelStyle}>
+              {project ? (
+                <Raci projectId={numericProjectId} />
+              ) : (
+                <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
+              )}
+            </TabPanel>
+          )}
 
           <TabPanel value="activity" sx={tabPanelStyle}>
             {project ? (
