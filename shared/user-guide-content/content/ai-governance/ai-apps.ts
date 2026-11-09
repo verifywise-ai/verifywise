@@ -169,6 +169,16 @@ export const aiAppsContent: ArticleContent = {
     },
     {
       type: 'heading',
+      id: 'linked-use-cases',
+      level: 3,
+      text: 'Linked use cases',
+    },
+    {
+      type: 'paragraph',
+      text: 'List the use cases this app serves. Select **Add use case**, choose one and select **Add**, or select the X next to a use case to remove the link. You only see the names of use cases you have access to. Any others are shown as a count.',
+    },
+    {
+      type: 'heading',
       id: 'shadow-ai',
       level: 2,
       text: 'Promoting a shadow AI tool',

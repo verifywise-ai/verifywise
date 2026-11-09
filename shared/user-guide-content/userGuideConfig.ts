@@ -84,7 +84,7 @@ export const collections: Collection[] = [
         id: 'use-cases',
         title: 'Use cases',
         description: 'Create and manage AI use cases with risk classification, framework linking, team assignment, and approval workflows.',
-        keywords: ['use case', 'project', 'create', 'risk classification', 'high risk', 'deployer', 'provider', 'framework', 'approval', 'owner', 'team', 'scope', 'geography', 'industry'],
+        keywords: ['use case', 'project', 'create', 'risk classification', 'high risk', 'deployer', 'provider', 'framework', 'approval', 'owner', 'team', 'scope', 'geography', 'industry', 'raci', 'responsible', 'accountable', 'consulted', 'informed', 'ai app', 'access'],
       },
       {
         id: 'intake-forms',
@@ -732,8 +732,8 @@ export const collections: Collection[] = [
       {
         id: 'organization-settings',
         title: 'Organization settings',
-        description: 'Set your organization name and branding.',
-        keywords: ['organization', 'settings', 'name', 'logo', 'branding'],
+        description: 'Set your organization name and branding, and connect an MCP client.',
+        keywords: ['organization', 'settings', 'name', 'logo', 'branding', 'mcp', 'claude code', 'api token'],
       },
       {
         id: 'user-management',
