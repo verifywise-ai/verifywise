@@ -28,3 +28,6 @@ would put the old values back.
 `selection_rate_single_group` was also edited by hand: the Python gave a lone group a ratio of
 0.999999 and reported no flags. With one group there is nothing to compare, so the port gives no
 ratio and the summary says so.
+
+No case holds a blank score, so the port's scored-sample rule has no oracle case. It is covered
+in `index.test.ts`.

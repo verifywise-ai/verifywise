@@ -56,14 +56,21 @@ function twoDecimals(x: number): string {
  * Like the Python, it reads those literal keys rather than the configured
  * column names, so a caller maps its columns before calling.
  *
- * Deliberate divergences from the Python, all in the summary text; the
- * arithmetic is identical. Where the Python reports "No adverse impact flags
- * detected" for a computation that produced no ratios, this says why instead:
+ * Deliberate divergences from the Python. These change figures:
+ *
+ *  - the reference rate comes only from groups left in the calculation, so a
+ *    group under the small-sample exclusion cannot set it (impactRatios.ts);
+ *  - in scoring mode the tables and the 2% share use the scored records, so a
+ *    blank score is in neither the numerator nor the denominator;
+ *  - a table with fewer than two groups in the calculation has no ratios.
+ *
+ * These change only the summary text. Where the Python reports "No adverse
+ * impact flags detected" for a computation that produced no ratios, this says
+ * why instead:
  *
  *  - a degenerate median: none, or too few, of the records score above it
  *    (the condition is also returned in `diagnostics`);
- *  - a table with no reference group, because no group with a value has a
- *    non-zero rate;
+ *  - a table with no comparison (`noComparison` on the table, stating why);
  *  - no protected category configured at all.
  *
  * Group names also differ in one respect: a whitespace-only value is blank

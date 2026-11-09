@@ -42,6 +42,24 @@ result must carry, such as the § 5-301(c) count of records in an unknown catego
 | `idOrderCheck.ts`             | Run-count test on input ordering                                     |
 | `index.ts`                    | `runAudit`: gate, then compute; clustered ordering withholds the PDF |
 
+## Deliberate divergences from EvalServer
+
+The engine is a port of EvalServer's Python, and differs from it on purpose in these ways:
+
+- **Reference rate.** The highest rate comes only from groups left in the calculation, so a
+  group under the 2% exclusion cannot set the denominator. This is our reading of § 5-301(d),
+  which the rule does not state outright.
+- **Scored sample.** In scoring-rate mode the tables, the 2% share and the demographic gates use
+  the records with a score. A blank score is in neither the numerator nor the denominator, and
+  the result reports how many were left out.
+- **No comparison.** A table with fewer than two groups in the calculation, or none with a
+  non-zero rate, has no ratios and says why. It is never reported as clean.
+- **Blank values.** A whitespace-only demographic value is blank, not a group.
+- **Summary text.** A computation that produced no ratios says why instead of "No adverse impact
+  flags detected".
+
+Two oracle cases were edited by hand to match; the fixtures README lists them.
+
 ## The oracle
 
 `engine/__fixtures__/expected.json` holds EvalServer's Python output for twelve cases,
