@@ -228,7 +228,7 @@ A permission such as `useCase.edit` says what a role may do, not on which use ca
 | `POST /api/v1/use-case-lifecycle/:id/go-live`, `/retire`, `/confirm` |
 | `PATCH /api/v1/use-case-lifecycle/:id/department` |
 
-- **No access:** 403 with "Access denied", logged with `logFailure`, nothing written. Never use a detail listed in `SESSION_DENIED_DETAILS` (`customAxios.ts`): those end the user's session.
+- **No access:** 403 with "Access denied", logged with `logFailure`, nothing written. A refused write also reaches the event log; a refused `GET` only reaches the file log, because `logFailure` skips the event log for `Read`. Never use a detail listed in `SESSION_DENIED_DETAILS` (`customAxios.ts`): those end the user's session.
 - **Not found or another organization:** passed on, so the controller answers its 404.
 - **An error in the check:** 500, never allowed.
 - **Adds to route rules, does not replace them.** The lifecycle rule (`useCase.edit` or owner, Auditors never) and the `useCase.edit` / `useCase.classify` checks still apply.

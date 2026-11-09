@@ -240,7 +240,7 @@ describe("project access guard", () => {
       expect(res.status).toBe(200);
     });
 
-    it("answers an unparsable id with the controller's 400", async () => {
+    it("answers an unparsable id with the guard's 400", async () => {
       const api = await apiAs(orgId, ownerId, "Editor");
       const res = await goLive(api, "abc");
       expect(res.status).toBe(400);

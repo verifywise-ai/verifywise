@@ -35,7 +35,7 @@ export const requireProjectAccess =
 
     const eventType = eventTypeFor(req.method);
     const projectId = toId(req.params[paramName]);
-    if (isNaN(projectId) || projectId <= 0) {
+    if (!Number.isSafeInteger(projectId) || projectId <= 0) {
       return res.status(400).json(STATUS_CODE[400](req.t!("Invalid project ID")));
     }
 

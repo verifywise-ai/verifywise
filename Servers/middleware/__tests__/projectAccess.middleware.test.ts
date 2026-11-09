@@ -135,15 +135,18 @@ describe("requireProjectAccess", () => {
     expect(accessQuery).not.toHaveBeenCalled();
   });
 
-  it.each(["abc", "0", "-3", "12abc", "1.5", ""])("answers 400 for the id %j", async (id) => {
-    const res = createRes();
+  it.each(["abc", "0", "-3", "12abc", "1.5", "", "9007199254740992", "9".repeat(400)])(
+    "answers 400 for the id %j",
+    async (id) => {
+      const res = createRes();
 
-    await requireProjectAccess()(createReq({ params: { id } }), res, next);
+      await requireProjectAccess()(createReq({ params: { id } }), res, next);
 
-    expect(res.status).toHaveBeenCalledWith(400);
-    expect(next).not.toHaveBeenCalled();
-    expect(accessQuery).not.toHaveBeenCalled();
-  });
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(next).not.toHaveBeenCalled();
+      expect(accessQuery).not.toHaveBeenCalled();
+    },
+  );
 
   it("reads the id from a named route parameter", async () => {
     accessQuery.mockResolvedValue("allowed");
