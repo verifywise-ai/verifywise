@@ -2,6 +2,7 @@ import { getFileById, getFileMetadataByProjectId } from "../../utils/fileUpload.
 import {
   createFolderQuery,
   assignFilesToFolderQuery,
+  getFolderByIdQuery,
   removeFileFromFolderQuery,
 } from "../../utils/virtualFolder.utils";
 import {
@@ -412,8 +413,16 @@ const agentAssignFileToFolder = createWriteToolFn({
   descriptionFn: (params) => `Assign file #${params.file_id} to folder #${params.folder_id}`,
   executeFn: async (params, organizationId) => {
     const fileId = params.file_id as number;
-    const folderId = params.folder_id as number;
+    const folderId = Number(params.folder_id);
 
+    // A missing folder and another organization's folder answer alike.
+    if (
+      !Number.isSafeInteger(folderId) ||
+      folderId <= 0 ||
+      !(await getFolderByIdQuery(organizationId, folderId))
+    ) {
+      throw new Error("Folder not found.");
+    }
     await assertFileVisible(fileId, organizationId);
 
     const count = await assignFilesToFolderQuery(

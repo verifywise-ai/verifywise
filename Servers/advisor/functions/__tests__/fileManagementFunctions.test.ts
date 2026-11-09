@@ -7,6 +7,7 @@ const mockQuery = jest.fn();
 const mockGetFileById = jest.fn();
 const mockGetFileMetadata = jest.fn();
 const mockAssignToFolder = jest.fn();
+const mockGetFolder = jest.fn();
 const mockAllVisible = jest.fn();
 
 jest.mock("../../../database/db", () => ({
@@ -24,6 +25,7 @@ jest.mock("../../../utils/fileUpload.utils", () => ({
 jest.mock("../../../utils/virtualFolder.utils", () => ({
   createFolderQuery: jest.fn(),
   assignFilesToFolderQuery: (...args: any[]) => mockAssignToFolder(...args),
+  getFolderByIdQuery: (...args: any[]) => mockGetFolder(...args),
   removeFileFromFolderQuery: jest.fn(),
 }));
 jest.mock("../../../utils/files/visibleFiles", () => ({
@@ -44,6 +46,7 @@ beforeEach(() => {
   mockGetFileById.mockReset();
   mockGetFileMetadata.mockReset();
   mockAssignToFolder.mockReset().mockResolvedValue(1);
+  mockGetFolder.mockReset().mockResolvedValue({ id: 2 });
   mockAllVisible.mockReset().mockResolvedValue(true);
 });
 
@@ -143,6 +146,23 @@ describe("advisor file writes", () => {
   it("refuses assigning a stance PDF to a folder", async () => {
     mockAllVisible.mockResolvedValue(false);
     await expect(execute("agent_assign_file_to_folder", folder)).rejects.toThrow("File not found.");
+    expect(mockAssignToFolder).not.toHaveBeenCalled();
+  });
+
+  it("refuses a missing or foreign folder with a clean message", async () => {
+    mockGetFolder.mockResolvedValue(null);
+    await expect(execute("agent_assign_file_to_folder", folder)).rejects.toThrow(
+      "Folder not found.",
+    );
+    expect(mockGetFolder).toHaveBeenCalledWith(ORG, 2);
+    expect(mockAssignToFolder).not.toHaveBeenCalled();
+  });
+
+  it.each([[0], [-1], ["abc"], [undefined]])("refuses folder id %j", async (folderId) => {
+    await expect(
+      execute("agent_assign_file_to_folder", { file_id: 7, folder_id: folderId }),
+    ).rejects.toThrow("Folder not found.");
+    expect(mockGetFolder).not.toHaveBeenCalled();
     expect(mockAssignToFolder).not.toHaveBeenCalled();
   });
 
