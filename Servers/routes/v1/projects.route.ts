@@ -6,7 +6,12 @@ import {
   validateCreateProjectV1,
   validateUpdateProjectV1,
 } from "../../middleware/validators/project.validator";
+import {
+  validateRaciProjectId,
+  validateRaciRoleChange,
+} from "../../middleware/validators/raci.validator";
 import { createProject, updateProjectById } from "../../controllers/project.ctrl";
+import { getRaciMatrix, updateRaciUserRoles } from "../../controllers/raci.ctrl";
 import {
   createAiAppFromUseCase,
   getCreateAiAppPreview,
@@ -37,6 +42,15 @@ router.patch(
   validateUpdateProjectV1,
   acceptExternalOwner,
   updateProjectById,
+);
+
+router.get("/:id/raci", authenticateJWT, validateRaciProjectId, getRaciMatrix);
+router.put(
+  "/:id/raci/users/:userId",
+  authenticateJWT,
+  authorize("useCase.edit"),
+  validateRaciRoleChange,
+  updateRaciUserRoles,
 );
 
 router.get("/:id/ai-apps", authenticateJWT, listUseCaseAiApps);

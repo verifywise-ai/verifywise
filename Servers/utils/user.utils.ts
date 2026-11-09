@@ -429,6 +429,15 @@ const clearOrganizationReferencesToUser = async (
   await reassignAgentOwnersOfDeletedUsersQuery([id], organizationId, transaction);
 
   await sequelize.query(
+    `DELETE FROM raci_entries WHERE organization_id = :organizationId AND user_id = :user_id`,
+    {
+      replacements: { user_id: id, organizationId },
+      type: QueryTypes.DELETE,
+      transaction,
+    },
+  );
+
+  await sequelize.query(
     `DELETE FROM projects_members WHERE organization_id = :organizationId AND user_id = :user_id`,
     {
       replacements: { user_id: id, organizationId },

@@ -12642,6 +12642,28 @@ export const v1V1projectsEndpoints: Endpoint[] = [
     ],
     tag: "v1: V1/Projects",
   },
+  {
+    method: 'GET',
+    path: '/v1/projects/{id}/raci',
+    summary: "Get Raci Matrix",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Projects",
+  },
+  {
+    method: 'PUT',
+    path: '/v1/projects/{id}/raci/users/{userId}',
+    summary: "Update Raci User Roles",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Projects",
+  },
 ];
 
 // v1: V1/Use Case Lifecycle endpoints
