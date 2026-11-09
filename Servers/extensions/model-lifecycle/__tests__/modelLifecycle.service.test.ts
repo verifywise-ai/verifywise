@@ -269,7 +269,7 @@ describe("attachFile", () => {
 
   it("records the attached file in the model's history", async () => {
     mockQuery
-      .mockResolvedValueOnce([{ "?column?": 1 }]) // ownership SELECT
+      .mockResolvedValueOnce([{ count: "1" }]) // visibility COUNT
       .mockResolvedValueOnce(undefined) // ensureValueRow INSERT
       .mockResolvedValueOnce([{ id: 55 }]) // ensureValueRow SELECT
       .mockResolvedValueOnce([[{ id: 3, value_id: 55, file_id: 99 }], 1]) // link INSERT
@@ -293,7 +293,7 @@ describe("attachFile", () => {
 
   it("records nothing when the file was already linked", async () => {
     mockQuery
-      .mockResolvedValueOnce([{ "?column?": 1 }]) // ownership SELECT
+      .mockResolvedValueOnce([{ count: "1" }]) // visibility COUNT
       .mockResolvedValueOnce(undefined) // ensureValueRow INSERT
       .mockResolvedValueOnce([{ id: 55 }]) // ensureValueRow SELECT
       .mockResolvedValueOnce([[], 0]); // ON CONFLICT DO NOTHING

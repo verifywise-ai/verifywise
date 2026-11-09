@@ -415,6 +415,9 @@ const agentAssignFileToFolder = createWriteToolFn({
     const fileId = params.file_id as number;
     const folderId = Number(params.folder_id);
 
+    if (!(await allFilesVisibleQuery([fileId], organizationId))) {
+      throw new Error(`File #${fileId} not found.`);
+    }
     // A missing folder and another organization's folder answer alike.
     if (
       !Number.isSafeInteger(folderId) ||
@@ -422,9 +425,6 @@ const agentAssignFileToFolder = createWriteToolFn({
       !(await getFolderByIdQuery(organizationId, folderId))
     ) {
       throw new Error("Folder not found.");
-    }
-    if (!(await allFilesVisibleQuery([fileId], organizationId))) {
-      throw new Error(`File #${fileId} not found.`);
     }
 
     const count = await assignFilesToFolderQuery(

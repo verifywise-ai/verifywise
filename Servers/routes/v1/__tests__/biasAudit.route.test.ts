@@ -44,6 +44,13 @@ jest.mock("../../../controllers/biasAudit.ctrl", () => {
     getRunTrend: jest.fn(handler),
     listRuns: jest.fn(handler),
     saveProfileAnswers: jest.fn(handler),
+    compareCriteria: jest.fn(handler),
+    createCorpus: jest.fn(handler),
+    downloadCorpus: jest.fn(handler),
+    getCorpus: jest.fn(handler),
+    getJobDescriptions: jest.fn(handler),
+    listCorpora: jest.fn(handler),
+    resumeCorpus: jest.fn(handler),
   };
 });
 

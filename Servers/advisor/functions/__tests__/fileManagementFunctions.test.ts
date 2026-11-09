@@ -74,7 +74,8 @@ describe("advisor file reads", () => {
   it.each(["get_file_detail", "get_file_change_history"])(
     "%s answers for a stance PDF as for a missing file",
     async (tool) => {
-      mockGetFileById.mockResolvedValue({ id: 7, source: BIAS_AUDIT_STANCE_SOURCE });
+      // getFileById applies the visibility filter, so a stance row comes back empty.
+      mockGetFileById.mockResolvedValue(undefined);
       await expect(tools[tool]({ file_id: 7 }, ORG)).resolves.toEqual({
         message: "File not found.",
         file_id: 7,
@@ -122,9 +123,10 @@ describe("advisor file writes", () => {
     ["agent_attach_file_to_entity", attach],
     ["agent_detach_file_from_entity", detach],
   ])("%s refuses a stance PDF and changes nothing", async (tool, params) => {
-    mockAllVisible.mockResolvedValue(false);
-    await expect(execute(tool, params)).rejects.toThrow("File not found.");
-    expect(mockQuery).not.toHaveBeenCalled();
+    // The update is filtered by visibility, so a stance row returns nothing.
+    mockQuery.mockResolvedValue([]);
+    await expect(execute(tool, params)).rejects.toThrow("File #7 not found.");
+    expect(sqlOf(0)).toContain("source IS DISTINCT FROM :stanceSource");
   });
 
   it("refuses writing the stance source onto a file", async () => {
@@ -133,9 +135,8 @@ describe("advisor file writes", () => {
         ...attach,
         entity_type: BIAS_AUDIT_STANCE_SOURCE,
       }),
-    ).rejects.toThrow(/reserved/);
+    ).rejects.toThrow(/Unsupported entity_type/);
     expect(mockQuery).not.toHaveBeenCalled();
-    expect(mockAllVisible).not.toHaveBeenCalled();
   });
 
   it("guards the attach update itself against a stance row", async () => {
@@ -145,7 +146,9 @@ describe("advisor file writes", () => {
 
   it("refuses assigning a stance PDF to a folder", async () => {
     mockAllVisible.mockResolvedValue(false);
-    await expect(execute("agent_assign_file_to_folder", folder)).rejects.toThrow("File not found.");
+    await expect(execute("agent_assign_file_to_folder", folder)).rejects.toThrow(
+      "File #7 not found.",
+    );
     expect(mockAssignToFolder).not.toHaveBeenCalled();
   });
 
