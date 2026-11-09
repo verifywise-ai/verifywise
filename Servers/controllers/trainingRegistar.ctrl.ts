@@ -14,7 +14,6 @@ import { sequelize } from "../database/db";
 import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper";
 import logger from "../utils/logger/fileLogger";
 import { notifyTrainingAssigned } from "../services/inAppNotification.service";
-import { completeAllPendingAssignmentsForTrainingQuery } from "../utils/trainingAssignment.utils";
 import { getAllUsersQuery } from "../utils/user.utils";
 import { translateError } from "../utils/i18n.utils";
 import {
@@ -299,26 +298,6 @@ export async function updateTrainingRegistarById(req: Request, res: Response): P
       }
 
       await transaction.commit();
-
-      // Completing the training itself completes its open assignments
-      // (#5260). Best-effort: a failure here must not fail the update.
-      const finalStatus = (trainingRegistar as any)?.dataValues?.status ?? trainingRegistar?.status;
-      if (finalStatus === "Completed") {
-        try {
-          const completedCount = await completeAllPendingAssignmentsForTrainingQuery(
-            trainingRegistarId,
-            req.organizationId!,
-          );
-          if (completedCount > 0) {
-            logger.info(
-              `Training ${trainingRegistarId} completed: auto-completed ${completedCount} assignments`,
-            );
-          }
-        } catch (assignError) {
-          logger.error("Failed to auto-complete training assignments:", assignError);
-        }
-      }
-
       await logSuccess({
         eventType: "Update",
         description: `Successfully updated training registrar ID ${trainingRegistarId}`,
