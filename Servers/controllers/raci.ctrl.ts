@@ -1,7 +1,11 @@
 import { Request, Response } from "express";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import { logFailure, logProcessing, logSuccess } from "../utils/logger/logHelper";
-import { getRaciMatrixForViewer, setUserRaciRoles, type RaciResult } from "../utils/raciData.utils";
+import {
+  changeUserRaciRoles,
+  getRaciMatrixForViewer,
+  type RaciResult,
+} from "../utils/raciData.utils";
 import type { RaciRole } from "../domain.layer/enums/raci.enum";
 
 const FILE = "raci.ctrl.ts";
@@ -69,10 +73,13 @@ export async function updateRaciUserRoles(req: Request, res: Response) {
   logProcessing({ description: `Updating RACI roles of ${subject}`, ...context });
 
   try {
-    const result = await setUserRaciRoles(
+    const result = await changeUserRaciRoles(
       projectId,
       targetUserId,
-      req.body.roles as RaciRole[],
+      {
+        add: (req.body.add ?? []) as RaciRole[],
+        remove: (req.body.remove ?? []) as RaciRole[],
+      },
       { userId: req.userId!, role: req.role! },
       req.organizationId!,
     );

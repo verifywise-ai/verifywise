@@ -25,12 +25,17 @@ export async function getRaciMatrix(projectId: number): Promise<RaciMatrix> {
   return (response.data as { data: RaciMatrix }).data;
 }
 
-/** Sends the person's full desired set of roles; an empty set clears them. */
+/** Only the roles to change: the server applies them to what the person holds now. */
+export interface RaciRoleChange {
+  add?: RaciRole[];
+  remove?: RaciRole[];
+}
+
 export async function updateRaciUserRoles(
   projectId: number,
   userId: number,
-  roles: RaciRole[],
+  change: RaciRoleChange,
 ): Promise<RaciMatrix> {
-  const response = await apiServices.put(`${route(projectId)}/users/${userId}`, { roles });
+  const response = await apiServices.put(`${route(projectId)}/users/${userId}`, change);
   return (response.data as { data: RaciMatrix }).data;
 }

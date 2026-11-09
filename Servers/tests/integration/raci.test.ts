@@ -66,7 +66,7 @@ describe("RACI per use case", () => {
       expect([400, 401]).toContain(read.status);
       const write = await testRequest(app)
         .put("/api/v1/projects/1/raci/users/1")
-        .send({ roles: ["R"] });
+        .send({ add: ["R"] });
       expect([400, 401]).toContain(write.status);
     });
   });
@@ -93,11 +93,12 @@ describe("RACI per use case", () => {
       expect(rolesFor(res.body, memberId)).toEqual(["R"]);
     });
 
-    it("includes approvers from the use case's workflow as consulted", async () => {
-      const orgId = await createTestOrganization("RACI approvers");
-      const ownerId = await user(orgId);
-      const approverId = await user(orgId, 2);
-      const projectId = await createTestProject(orgId, ownerId);
+    async function attachWorkflow(
+      orgId: number,
+      ownerId: number,
+      approverId: number,
+      projectId: number,
+    ) {
       const [workflow] = await sequelize.query(
         `INSERT INTO approval_workflows (organization_id, workflow_title, entity_type, created_by)
          VALUES (:orgId, 'Review', 'use_case', :ownerId) RETURNING id`,
@@ -118,6 +119,15 @@ describe("RACI per use case", () => {
         `UPDATE projects SET approval_workflow_id = :workflowId WHERE id = :projectId`,
         { replacements: { workflowId, projectId } },
       );
+      return workflowId as number;
+    }
+
+    it("includes approvers from the use case's workflow as consulted", async () => {
+      const orgId = await createTestOrganization("RACI approvers");
+      const ownerId = await user(orgId);
+      const approverId = await user(orgId, 2);
+      const projectId = await createTestProject(orgId, ownerId);
+      await attachWorkflow(orgId, ownerId, approverId, projectId);
       const api = await apiAs(orgId, ownerId);
 
       const res = await api.get(`/api/v1/projects/${projectId}/raci`);
@@ -126,12 +136,33 @@ describe("RACI per use case", () => {
       expect(res.body.data.warnings).toEqual([]);
     });
 
+    it("leaves out approvers of a deleted workflow", async () => {
+      const orgId = await createTestOrganization("RACI inactive workflow");
+      const ownerId = await user(orgId);
+      const approverId = await user(orgId, 2);
+      const projectId = await createTestProject(orgId, ownerId);
+      const workflowId = await attachWorkflow(orgId, ownerId, approverId, projectId);
+      await sequelize.query(
+        `UPDATE approval_workflows SET is_active = false WHERE id = :workflowId`,
+        {
+          replacements: { workflowId },
+        },
+      );
+      const api = await apiAs(orgId, ownerId);
+
+      const res = await api.get(`/api/v1/projects/${projectId}/raci`);
+
+      expect(res.status).toBe(200);
+      expect(rowFor(res.body, approverId)).toBeUndefined();
+    });
+
     it("counts assignees of open tasks linked to the use case's requirements only", async () => {
       const orgId = await createTestOrganization("RACI tasks");
       const ownerId = await user(orgId);
       const openAssignee = await user(orgId, 3);
       const doneAssignee = await user(orgId, 3);
       const otherAssignee = await user(orgId, 3);
+      const subcontrolAssignee = await user(orgId, 3);
       const projectId = await createTestProject(orgId, ownerId);
       const otherProjectId = await createTestProject(orgId, ownerId);
 
@@ -148,7 +179,12 @@ describe("RACI per use case", () => {
         );
         return (controls as any[])[0].id as number;
       };
-      const addLinkedTask = async (controlId: number, status: string, assignee: number) => {
+      const addLinkedTask = async (
+        controlId: number,
+        status: string,
+        assignee: number,
+        entityType = "eu_control",
+      ) => {
         const [tasks] = await sequelize.query(
           `INSERT INTO tasks (organization_id, title, creator_id, status)
            VALUES (:orgId, 'Task', :ownerId, :status) RETURNING id`,
@@ -162,13 +198,24 @@ describe("RACI per use case", () => {
         );
         await sequelize.query(
           `INSERT INTO task_entity_links (organization_id, task_id, entity_type, entity_id)
-           VALUES (:orgId, :taskId, 'eu_control', :controlId)`,
-          { replacements: { orgId, taskId, controlId } },
+           VALUES (:orgId, :taskId, :entityType, :controlId)`,
+          { replacements: { orgId, taskId, controlId, entityType } },
         );
       };
 
       const controlId = await addControl(projectId);
       await addLinkedTask(controlId, "Open", openAssignee);
+      const [subcontrols] = await sequelize.query(
+        `INSERT INTO subcontrols_eu (organization_id, control_id)
+         VALUES (:orgId, :controlId) RETURNING id`,
+        { replacements: { orgId, controlId } },
+      );
+      await addLinkedTask(
+        (subcontrols as any[])[0].id,
+        "Open",
+        subcontrolAssignee,
+        "eu_subcontrol",
+      );
       await addLinkedTask(controlId, "Completed", doneAssignee);
       await addLinkedTask(await addControl(otherProjectId), "Open", otherAssignee);
       const api = await apiAs(orgId, ownerId);
@@ -176,6 +223,9 @@ describe("RACI per use case", () => {
       const res = await api.get(`/api/v1/projects/${projectId}/raci`);
 
       expect(rowFor(res.body, openAssignee).roles).toEqual([
+        { role: "R", sources: ["task_assignee"] },
+      ]);
+      expect(rowFor(res.body, subcontrolAssignee).roles).toEqual([
         { role: "R", sources: ["task_assignee"] },
       ]);
       expect(rowFor(res.body, doneAssignee)).toBeUndefined();
@@ -282,7 +332,7 @@ describe("RACI per use case", () => {
       await addMember(orgId, projectId, auditorId);
       const api = await apiAs(orgId, auditorId, 4);
 
-      const res = await api.put(url(memberId)).send({ roles: ["C"] });
+      const res = await api.put(url(memberId)).send({ add: ["C"] });
 
       expect(res.status).toBe(403);
       expect(await overrides(projectId, memberId)).toEqual([]);
@@ -293,7 +343,7 @@ describe("RACI per use case", () => {
       const orgB = await createTestOrganization("RACI attacker");
       const api = await apiAs(orgB, await user(orgB));
 
-      const res = await api.put(url(memberId)).send({ roles: ["C"] });
+      const res = await api.put(url(memberId)).send({ add: ["C"] });
 
       expect(res.status).toBe(404);
       expect(await overrides(projectId, memberId)).toEqual([]);
@@ -303,7 +353,7 @@ describe("RACI per use case", () => {
       const { orgId, projectId, url, memberId } = await setup();
       const api = await apiAs(orgId, await user(orgId, 3), 3);
 
-      const res = await api.put(url(memberId)).send({ roles: ["C"] });
+      const res = await api.put(url(memberId)).send({ add: ["C"] });
 
       expect(res.status).toBe(404);
       expect(await overrides(projectId, memberId)).toEqual([]);
@@ -314,7 +364,7 @@ describe("RACI per use case", () => {
       const orgB = await createTestOrganization("RACI other org");
       const stranger = await user(orgB);
 
-      expect((await api.put(url(stranger)).send({ roles: ["R"] })).status).toBe(404);
+      expect((await api.put(url(stranger)).send({ add: ["R"] })).status).toBe(404);
     });
 
     it("refuses an organizational use case", async () => {
@@ -323,16 +373,20 @@ describe("RACI per use case", () => {
         replacements: { projectId },
       });
 
-      expect((await api.put(url(memberId)).send({ roles: ["R"] })).status).toBe(400);
+      expect((await api.put(url(memberId)).send({ add: ["R"] })).status).toBe(400);
     });
 
     it.each([
-      ["missing roles", {}],
-      ["roles not a list", { roles: "R" }],
-      ["unknown role", { roles: ["X"] }],
-      ["lower-case role", { roles: ["r"] }],
-      ["non-string role", { roles: [1] }],
-      ["repeated role", { roles: ["R", "R"] }],
+      ["no lists", {}],
+      ["empty lists", { add: [], remove: [] }],
+      ["add not a list", { add: "R" }],
+      ["remove not a list", { remove: "R" }],
+      ["null add", { add: null, remove: ["R"] }],
+      ["unknown role", { add: ["X"] }],
+      ["lower-case role", { remove: ["r"] }],
+      ["non-string role", { add: [1] }],
+      ["repeated role", { add: ["R", "R"] }],
+      ["the same role in both lists", { add: ["R"], remove: ["R"] }],
     ])("rejects %s", async (_label, body) => {
       const { api, url, memberId } = await setup();
 
@@ -342,7 +396,9 @@ describe("RACI per use case", () => {
     it("rejects a malformed user id", async () => {
       const { api, projectId } = await setup();
 
-      const res = await api.put(`/api/v1/projects/${projectId}/raci/users/abc`).send({ roles: [] });
+      const res = await api
+        .put(`/api/v1/projects/${projectId}/raci/users/abc`)
+        .send({ add: ["R"] });
 
       expect(res.status).toBe(400);
     });
@@ -351,7 +407,7 @@ describe("RACI per use case", () => {
       const { orgId, projectId, api, url } = await setup();
       const newPerson = await user(orgId, 3);
 
-      const res = await api.put(url(newPerson)).send({ roles: ["C", "I"] });
+      const res = await api.put(url(newPerson)).send({ add: ["C", "I"] });
 
       expect(res.status).toBe(200);
       expect(rowFor(res.body, newPerson).roles).toEqual([
@@ -367,7 +423,7 @@ describe("RACI per use case", () => {
     it("keeps a removed derived role removed across a re-read", async () => {
       const { projectId, api, url, memberId } = await setup();
 
-      const removed = await api.put(url(memberId)).send({ roles: [] });
+      const removed = await api.put(url(memberId)).send({ remove: ["R"] });
       expect(removed.status).toBe(200);
       expect(rowFor(removed.body, memberId)).toBeUndefined();
 
@@ -378,9 +434,9 @@ describe("RACI per use case", () => {
 
     it("deletes the override when the role is added back", async () => {
       const { projectId, api, url, memberId } = await setup();
-      await api.put(url(memberId)).send({ roles: [] });
+      await api.put(url(memberId)).send({ remove: ["R"] });
 
-      const restored = await api.put(url(memberId)).send({ roles: ["R"] });
+      const restored = await api.put(url(memberId)).send({ add: ["R"] });
 
       expect(rowFor(restored.body, memberId).roles).toEqual([{ role: "R", sources: ["member"] }]);
       expect(await overrides(projectId, memberId)).toEqual([]);
@@ -389,14 +445,53 @@ describe("RACI per use case", () => {
     it("warns about no accountable and multiple accountable without blocking", async () => {
       const { ownerId, memberId, api, url } = await setup();
 
-      const none = await api.put(url(ownerId)).send({ roles: [] });
+      const none = await api.put(url(ownerId)).send({ remove: ["A"] });
       expect(none.status).toBe(200);
       expect(none.body.data.warnings).toEqual(["no_accountable"]);
 
-      await api.put(url(ownerId)).send({ roles: ["A"] });
-      const two = await api.put(url(memberId)).send({ roles: ["R", "A"] });
+      await api.put(url(ownerId)).send({ add: ["A"] });
+      const two = await api.put(url(memberId)).send({ add: ["A"] });
       expect(two.status).toBe(200);
       expect(two.body.data.warnings).toEqual(["multiple_accountable"]);
+    });
+
+    it("keeps a role derived after the client last read the matrix", async () => {
+      const { orgId, projectId, api, url } = await setup();
+      const person = await user(orgId, 3);
+      await api.put(url(person)).send({ add: ["I"] });
+      const staleRead = await api.get(`/api/v1/projects/${projectId}/raci`);
+      expect(rolesFor(staleRead.body, person)).toEqual(["I"]);
+
+      // Becomes a member after that read, which derives R.
+      await addMember(orgId, projectId, person);
+      const toggled = await api.put(url(person)).send({ add: ["C"] });
+
+      expect(toggled.status).toBe(200);
+      expect(rolesFor(toggled.body, person)).toEqual(["R", "C", "I"]);
+      expect(await overrides(projectId, person)).toEqual([
+        { raci_role: "C", state: "assigned" },
+        { raci_role: "I", state: "assigned" },
+      ]);
+    });
+
+    it("keeps another editor's manual role when toggling a different one", async () => {
+      const { orgId, ownerId, projectId, api, url, memberId } = await setup();
+      const otherEditor = await apiAs(orgId, ownerId);
+
+      await otherEditor.put(url(memberId)).send({ add: ["I"] });
+      const toggled = await api.put(url(memberId)).send({ add: ["C"] });
+
+      expect(rolesFor(toggled.body, memberId)).toEqual(["R", "C", "I"]);
+      expect(await overrides(projectId, memberId)).toHaveLength(2);
+    });
+
+    it("applies add and remove in one request", async () => {
+      const { api, url, memberId } = await setup();
+
+      const res = await api.put(url(memberId)).send({ add: ["C"], remove: ["R"] });
+
+      expect(res.status).toBe(200);
+      expect(rolesFor(res.body, memberId)).toEqual(["C"]);
     });
 
     it("records the change in the use case history, and only real changes", async () => {
@@ -410,8 +505,8 @@ describe("RACI per use case", () => {
         return rows as any[];
       };
 
-      await api.put(url(memberId)).send({ roles: ["R", "C"] });
-      await api.put(url(memberId)).send({ roles: ["R", "C"] });
+      await api.put(url(memberId)).send({ add: ["C"] });
+      await api.put(url(memberId)).send({ add: ["C"] });
 
       const rows = await history();
       expect(rows).toHaveLength(1);
@@ -420,7 +515,7 @@ describe("RACI per use case", () => {
 
     it("stamps who made the change", async () => {
       const { ownerId, projectId, api, url, memberId } = await setup();
-      await api.put(url(memberId)).send({ roles: ["R", "I"] });
+      await api.put(url(memberId)).send({ add: ["I"] });
 
       const [rows] = await sequelize.query(
         `SELECT updated_by FROM raci_entries WHERE project_id = :projectId AND raci_role = 'I'`,
@@ -431,7 +526,7 @@ describe("RACI per use case", () => {
 
     it("drops a deleted user from the matrix and from the overrides", async () => {
       const { projectId, api, url, memberId } = await setup();
-      await api.put(url(memberId)).send({ roles: ["R", "I"] });
+      await api.put(url(memberId)).send({ add: ["I"] });
 
       await sequelize.query(`DELETE FROM users WHERE id = :memberId`, {
         replacements: { memberId },
@@ -445,7 +540,7 @@ describe("RACI per use case", () => {
 
     it("hides someone who left the organization even with an override", async () => {
       const { orgId, projectId, api, url, memberId } = await setup();
-      await api.put(url(memberId)).send({ roles: ["R", "I"] });
+      await api.put(url(memberId)).send({ add: ["I"] });
 
       // A second membership keeps the account alive after leaving this organization.
       const otherOrg = await createTestOrganization("RACI other membership");
@@ -465,7 +560,7 @@ describe("RACI per use case", () => {
 
     it("hides an override of a user whose membership row is gone", async () => {
       const { orgId, projectId, api, url, memberId } = await setup();
-      await api.put(url(memberId)).send({ roles: ["R", "I"] });
+      await api.put(url(memberId)).send({ add: ["I"] });
       const otherOrg = await createTestOrganization("RACI stray override");
       await sequelize.query(
         `INSERT INTO organization_members (organization_id, user_id, role_id)

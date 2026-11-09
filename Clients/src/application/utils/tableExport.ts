@@ -16,6 +16,21 @@ const sanitizeFilename = (filename: string): string => {
     .slice(0, 200);
 };
 
+const NUMERIC_TEXT = /^[+-]?(\d+(\.\d*)?|\.\d+)\s*$/;
+
+/**
+ * Spreadsheets run a cell that starts with one of these as a formula, and table
+ * values can be free text. A leading quote makes the cell plain text. Numbers,
+ * including signed numeric strings, are left as they are.
+ */
+const neutralizeCsvFormula = (value: unknown): string => {
+  const text = String(value);
+  if (typeof value !== "string") return text;
+  // Skips leading whitespace except tab and carriage return, which are triggers.
+  const start = text.replace(/^[^\S\t\r]+/, "");
+  return /^[=+\-@\t\r]/.test(start) && !NUMERIC_TEXT.test(start) ? `'${text}` : text;
+};
+
 /**
  * Export table data to CSV
  */
@@ -28,8 +43,7 @@ export const exportToCSV = (
   const rows = data.map((row) =>
     columns
       .map((col) => {
-        const value = row[col.id] ?? "";
-        const strValue = String(value);
+        const strValue = neutralizeCsvFormula(row[col.id] ?? "");
         // Escape quotes and wrap in quotes if contains comma, quote, or newline
         return strValue.match(/[,"\n]/) ? `"${strValue.replace(/"/g, '""')}"` : strValue;
       })

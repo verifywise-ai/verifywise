@@ -1,6 +1,7 @@
 import { describe, expect, it } from "@jest/globals";
 import { RaciRole, RaciSubjectType } from "../../domain.layer/enums/raci.enum";
 import {
+  applyRaciDelta,
   buildDerivedRaci,
   effectiveRolesOf,
   mergeRaciOverrides,
@@ -166,6 +167,12 @@ describe("mergeRaciOverrides", () => {
     expect(rolesOf(derived, 2)).toEqual({ R: ["member"] });
   });
 
+  it("does not add to the source lists of the derived roles it was given", () => {
+    const derived = buildDerivedRaci(input({ memberIds: [2] }));
+    mergeRaciOverrides(derived, [{ userId: 2, role: R, state: "assigned" }], PEOPLE);
+    expect(rolesOf(derived, 2)).toEqual({ R: ["member"] });
+  });
+
   it("hides an override for someone no longer in the organization", () => {
     const { rows } = merged({}, [{ userId: 9, role: R, state: "assigned" }]);
     expect(rows).toEqual([]);
@@ -243,6 +250,24 @@ describe("planRaciOverrides", () => {
       { role: C, state: "assigned" },
     ]);
     expect(plan.deletes).toEqual([R, I]);
+  });
+});
+
+describe("applyRaciDelta", () => {
+  it("adds to what the person holds now", () => {
+    expect(applyRaciDelta([R, I], [C], [])).toEqual([R, C, I]);
+  });
+
+  it("removes only the named role", () => {
+    expect(applyRaciDelta([R, A, I], [], [A])).toEqual([R, I]);
+  });
+
+  it("applies both lists together", () => {
+    expect(applyRaciDelta([R], [C], [R])).toEqual([C]);
+  });
+
+  it("changes nothing for a role already held or already absent", () => {
+    expect(applyRaciDelta([R], [R], [C])).toEqual([R]);
   });
 });
 

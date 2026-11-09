@@ -145,6 +145,9 @@ const VWProjectView = () => {
     fetchLinkedModelsCount();
   }, [numericProjectId, refreshKey]);
 
+  // Organizational use cases have no RACI tab, so a link to it lands on overview.
+  const activeTab = value === "raci" && project?.is_organizational ? "overview" : value;
+
   const handleChange = (_: SyntheticEvent, newValue: string) => {
     searchParams.set("tab", newValue);
     searchParams.delete("framework");
@@ -230,7 +233,7 @@ const VWProjectView = () => {
         )}
       </Stack>
       <Stack className="vw-project-view-body">
-        <TabContext value={value}>
+        <TabContext value={activeTab}>
           <TabBar
             tabs={[
               {
@@ -312,7 +315,7 @@ const VWProjectView = () => {
                 tooltip: "Use case configuration and permissions",
               },
             ]}
-            activeTab={value}
+            activeTab={activeTab}
             onChange={handleChange}
             disabledTabTooltip={getDisabledTooltip()}
             scrollable

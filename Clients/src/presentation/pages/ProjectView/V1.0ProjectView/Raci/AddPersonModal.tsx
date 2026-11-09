@@ -14,7 +14,8 @@ interface AddPersonModalProps {
   /** People already in the matrix, who cannot be picked again. */
   existingUserIds: number[];
   onClose: () => void;
-  onSubmit: (userId: number, roles: RaciRole[]) => void;
+  /** Call `onAdded` once saved, so the modal closes and resets. */
+  onSubmit: (userId: number, roles: RaciRole[], onAdded: () => void) => void;
 }
 
 const AddPersonModal: FC<AddPersonModalProps> = ({
@@ -24,7 +25,7 @@ const AddPersonModal: FC<AddPersonModalProps> = ({
   onClose,
   onSubmit,
 }) => {
-  const { users } = useUsers();
+  const { users, loading, error } = useUsers();
   const [person, setPerson] = useState<User | null>(null);
   const [roles, setRoles] = useState<RaciRole[]>([]);
 
@@ -32,6 +33,11 @@ const AddPersonModal: FC<AddPersonModalProps> = ({
     () => users.filter((user) => !existingUserIds.includes(Number(user.id))),
     [users, existingUserIds],
   );
+
+  let noOptionsText = "Everyone is already in this matrix";
+  if (loading) noOptionsText = "Loading people...";
+  else if (error) noOptionsText = "People could not be loaded.";
+  else if (users.length === 0) noOptionsText = "No people found.";
 
   const toggleRole = (role: RaciRole) => {
     setRoles((current) =>
@@ -46,7 +52,7 @@ const AddPersonModal: FC<AddPersonModalProps> = ({
   };
 
   const handleSubmit = () => {
-    if (person) onSubmit(Number(person.id), roles);
+    if (person) onSubmit(Number(person.id), roles, handleClose);
   };
 
   return (
@@ -71,7 +77,7 @@ const AddPersonModal: FC<AddPersonModalProps> = ({
           onChange={(_event, value) => setPerson(value)}
           getOptionLabel={(user) => `${user.name} ${user.surname}`}
           isOptionEqualToValue={(option, value) => option.id === value.id}
-          noOptionsText="Everyone is already in this matrix"
+          noOptionsText={noOptionsText}
         />
         <Stack sx={{ gap: "8px" }}>
           <Typography sx={{ fontSize: "13px", fontWeight: 500 }}>Roles</Typography>

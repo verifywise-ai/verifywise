@@ -40,23 +40,25 @@ export function isValidEntityType(type: string): type is EntityType {
   return VALID_ENTITY_TYPES.includes(type as EntityType);
 }
 
+/** The table behind each entity type a task can link to. */
+export const TASK_ENTITY_TABLES: Record<EntityType, string> = {
+  vendor: "vendors",
+  model: "model_inventories",
+  policy: "policy_manager",
+  nist_subcategory: "nist_ai_rmf_subcategories",
+  iso42001_subclause: "subclauses_iso",
+  iso42001_annexcategory: "annexcategories_iso",
+  iso27001_subclause: "subclauses_iso27001",
+  iso27001_annexcontrol: "annexcontrols_iso27001",
+  eu_control: "controls_eu",
+  eu_subcontrol: "subcontrols_eu",
+};
+
 /**
  * Get the table name for an entity type
  */
 function getEntityTableName(entityType: EntityType): string {
-  const tableMap: Record<EntityType, string> = {
-    vendor: "vendors",
-    model: "model_inventories",
-    policy: "policy_manager",
-    nist_subcategory: "nist_ai_rmf_subcategories",
-    iso42001_subclause: "subclauses_iso",
-    iso42001_annexcategory: "annexcategories_iso",
-    iso27001_subclause: "subclauses_iso27001",
-    iso27001_annexcontrol: "annexcontrols_iso27001",
-    eu_control: "controls_eu",
-    eu_subcontrol: "subcontrols_eu",
-  };
-  return tableMap[entityType];
+  return TASK_ENTITY_TABLES[entityType];
 }
 
 /**

@@ -629,19 +629,19 @@ Roles are derived when the matrix is read, so they follow the data. `verifywise.
 | ---- | ------------ | ------ |
 | A | `projects.owner`, or a read-only row for `external_owner_name` when there is no owner | `owner` |
 | R | `projects_members`, except the owner | `member` |
-| C | Approvers of `projects.approval_workflow_id` (`approval_workflow_steps` → `approval_step_approvers`) | `approver` |
+| C | Approvers of `projects.approval_workflow_id` while that workflow is active (`approval_workflow_steps` → `approval_step_approvers`) | `approver` |
 | R | Assignees of tasks linked to this use case, unless the task is Completed or Deleted | `task_assignee` |
 
 A person can hold several roles, and each role lists its sources (`manual` for an override). Only members of the organization appear, and leaving the organization deletes the person's overrides there.
 
-**Task links.** Tasks never store a use case id. The link picker's "Use-case" option leads to a framework requirement, so `task_entity_links` holds `eu_control`, `eu_subcontrol`, `iso42001_subclause`, `iso42001_annexcategory`, `iso27001_subclause`, `iso27001_annexcontrol` or `nist_subcategory`, which reach the use case through `projects_frameworks`. See `TASK_LINK_TARGETS` in `Servers/utils/raciData.utils.ts`.
+**Task links.** Tasks never store a use case id. The link picker's "Use-case" option leads to a framework requirement, so `task_entity_links` holds `eu_control`, `eu_subcontrol`, `iso42001_subclause`, `iso42001_annexcategory`, `iso27001_subclause`, `iso27001_annexcontrol` or `nist_subcategory`, which reach the use case through `projects_frameworks`. See `TASK_LINK_CONDITIONS` in `Servers/utils/raciData.utils.ts`, built from `TASK_ENTITY_TABLES` in `taskEntityLink.utils.ts`.
 
 **API** (`Servers/routes/v1/projects.route.ts`). Both endpoints answer 404 for a use case the caller cannot see, including one in another organization.
 
 | Endpoint | Access | Notes |
 | -------- | ------ | ----- |
 | `GET /api/v1/projects/:id/raci` | Authenticated, use case visible | Returns `{ rows, warnings }`, accountable people first, then by name |
-| `PUT /api/v1/projects/:id/raci/users/:userId` | `useCase.edit`, use case visible | Body `{ roles }` is the person's full desired set; an empty list clears them. Returns the same shape as `GET` |
+| `PUT /api/v1/projects/:id/raci/users/:userId` | `useCase.edit`, use case visible | Body `{ add, remove }` lists roles to change, applied to what the person holds at that moment so a stale page cannot undo a newer role. At least one entry, and no role in both lists. Returns the same shape as `GET` |
 
 `warnings` holds `no_accountable` or `multiple_accountable`, computed on effective roles. They never block a change. Effective role changes are recorded in the use case's change history with the field name `RACI: <person>`.
 

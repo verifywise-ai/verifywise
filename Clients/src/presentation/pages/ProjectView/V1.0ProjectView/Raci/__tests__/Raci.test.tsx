@@ -6,10 +6,16 @@ import type { RaciMatrix, RaciRow } from "../../../../../../application/reposito
 import Raci from "../index";
 import { buildRaciExportRows } from "../raci.constants";
 
-const { getMock, updateMock, authMock, exportProps } = vi.hoisted(() => ({
+const PEOPLE = [
+  { id: 7, name: "Grace", surname: "Hopper", email: "grace@example.com" },
+  { id: 8, name: "Alan", surname: "Turing", email: "alan@example.com" },
+];
+
+const { getMock, updateMock, authMock, usersMock, exportProps } = vi.hoisted(() => ({
   getMock: vi.fn(),
   updateMock: vi.fn(),
   authMock: vi.fn(() => ({ userRoleName: "Admin" })),
+  usersMock: vi.fn(),
   exportProps: { current: null as null | { data: unknown[]; columns: unknown[] } },
 }));
 
@@ -23,12 +29,7 @@ vi.mock("../../../../../../application/hooks/useAuth", () => ({
 }));
 
 vi.mock("../../../../../../application/hooks/useUsers", () => ({
-  default: () => ({
-    users: [
-      { id: 7, name: "Grace", surname: "Hopper", email: "grace@example.com" },
-      { id: 8, name: "Alan", surname: "Turing", email: "alan@example.com" },
-    ],
-  }),
+  default: usersMock,
 }));
 
 vi.mock("../../../../../components/Table/ExportMenu", () => ({
@@ -80,6 +81,7 @@ describe("Raci", () => {
     getMock.mockReset();
     updateMock.mockReset();
     authMock.mockReturnValue({ userRoleName: "Admin" });
+    usersMock.mockReturnValue({ users: PEOPLE, loading: false, error: null });
     exportProps.current = null;
   });
 
@@ -91,7 +93,7 @@ describe("Raci", () => {
     expect(screen.getByTestId("button-raci-R-1")).toHaveAttribute("aria-pressed", "false");
   });
 
-  it("sends the full desired set when a role is switched on", async () => {
+  it("sends only the role switched on", async () => {
     getMock.mockResolvedValue(matrix([member]));
     updateMock.mockResolvedValue(matrix([member]));
     renderRaci();
@@ -99,22 +101,20 @@ describe("Raci", () => {
     fireEvent.click(await screen.findByTestId("button-raci-C-2"));
 
     await waitFor(() =>
-      expect(updateMock).toHaveBeenCalledWith(5, 2, [
-        RaciRole.RESPONSIBLE,
-        RaciRole.CONSULTED,
-        RaciRole.INFORMED,
-      ]),
+      expect(updateMock).toHaveBeenCalledWith(5, 2, { add: [RaciRole.CONSULTED] }),
     );
   });
 
-  it("sends the remaining set when a role is switched off", async () => {
+  it("sends only the role switched off", async () => {
     getMock.mockResolvedValue(matrix([member]));
     updateMock.mockResolvedValue(matrix([]));
     renderRaci();
 
     fireEvent.click(await screen.findByTestId("button-raci-R-2"));
 
-    await waitFor(() => expect(updateMock).toHaveBeenCalledWith(5, 2, [RaciRole.INFORMED]));
+    await waitFor(() =>
+      expect(updateMock).toHaveBeenCalledWith(5, 2, { remove: [RaciRole.RESPONSIBLE] }),
+    );
   });
 
   it("replaces the matrix with the server's answer", async () => {
@@ -271,7 +271,52 @@ describe("Raci", () => {
       fireEvent.click(screen.getByLabelText("Consulted: gives input before decisions"));
       fireEvent.click(screen.getByRole("button", { name: "Add person" }));
 
-      await waitFor(() => expect(updateMock).toHaveBeenCalledWith(5, 8, [RaciRole.CONSULTED]));
+      await waitFor(() =>
+        expect(updateMock).toHaveBeenCalledWith(5, 8, { add: [RaciRole.CONSULTED] }),
+      );
+    });
+
+    it("starts empty when reopened after a successful add", async () => {
+      const combobox = await openModal();
+      fireEvent.mouseDown(combobox);
+      fireEvent.click(await screen.findByRole("option", { name: /Alan Turing/ }));
+      fireEvent.click(screen.getByLabelText("Consulted: gives input before decisions"));
+      fireEvent.click(screen.getByRole("button", { name: "Add person" }));
+      await waitFor(() => expect(screen.queryByRole("combobox")).not.toBeInTheDocument());
+
+      fireEvent.click(screen.getByTestId("button-raci-add-person"));
+
+      expect(await screen.findByRole("combobox")).toHaveValue("");
+      expect(screen.getByLabelText("Consulted: gives input before decisions")).not.toBeChecked();
+    });
+
+    it.each([
+      ["while people load", { users: [], loading: true, error: null }, "Loading people..."],
+      [
+        "after a failed load",
+        { users: [], loading: false, error: "Failed" },
+        "People could not be loaded.",
+      ],
+      ["when there are no people", { users: [], loading: false, error: null }, "No people found."],
+    ])("says the right thing %s", async (_label, usersState, message) => {
+      usersMock.mockReturnValue(usersState);
+      const combobox = await openModal();
+
+      fireEvent.mouseDown(combobox);
+
+      expect(await screen.findByText(message)).toBeInTheDocument();
+      expect(screen.queryByText("Everyone is already in this matrix")).not.toBeInTheDocument();
+    });
+
+    it("says everyone is in the matrix when they really are", async () => {
+      usersMock.mockReturnValue({ users: [PEOPLE[0]], loading: false, error: null });
+      getMock.mockResolvedValue(matrix([{ ...member, subject_id: 7 }]));
+      renderRaci();
+      fireEvent.click(await screen.findByTestId("button-raci-add-person"));
+
+      fireEvent.mouseDown(await screen.findByRole("combobox"));
+
+      expect(await screen.findByText("Everyone is already in this matrix")).toBeInTheDocument();
     });
 
     it("cannot submit without a role", async () => {

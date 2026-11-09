@@ -91,15 +91,15 @@ const Raci: FC<RaciProps> = ({ projectId }) => {
 
   const handleToggle = (row: RaciRow, role: RaciRole) => {
     if (row.subject_id === null) return;
-    const current = row.roles.map((entry) => entry.role);
-    const roles = current.includes(role)
-      ? current.filter((held) => held !== role)
-      : RACI_ROLES.filter((candidate) => candidate === role || current.includes(candidate));
-    updateRoles.mutate({ userId: row.subject_id, roles });
+    const isHeld = row.roles.some((entry) => entry.role === role);
+    updateRoles.mutate({
+      userId: row.subject_id,
+      change: isHeld ? { remove: [role] } : { add: [role] },
+    });
   };
 
-  const handleAddPerson = (userId: number, roles: RaciRole[]) => {
-    updateRoles.mutate({ userId, roles }, { onSuccess: () => setIsAddOpen(false) });
+  const handleAddPerson = (userId: number, roles: RaciRole[], onAdded: () => void) => {
+    updateRoles.mutate({ userId, change: { add: roles } }, { onSuccess: onAdded });
   };
 
   if (isLoading) {

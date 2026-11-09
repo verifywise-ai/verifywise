@@ -8,7 +8,7 @@ import {
 } from "../../middleware/validators/project.validator";
 import {
   validateRaciProjectId,
-  validateRaciUserRoles,
+  validateRaciRoleChange,
 } from "../../middleware/validators/raci.validator";
 import { createProject, updateProjectById } from "../../controllers/project.ctrl";
 import { getRaciMatrix, updateRaciUserRoles } from "../../controllers/raci.ctrl";
@@ -43,7 +43,7 @@ router.put(
   "/:id/raci/users/:userId",
   authenticateJWT,
   authorize("useCase.edit"),
-  validateRaciUserRoles,
+  validateRaciRoleChange,
   updateRaciUserRoles,
 );
 

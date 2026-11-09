@@ -24,9 +24,7 @@ describe("RACI entries tenant isolation", () => {
     const projectId = await createTestProject(owner.orgId, owner.userId);
     const url = `/api/v1/projects/${projectId}/raci`;
 
-    const write = await owner.request
-      .put(`${url}/users/${owner.userId}`)
-      .send({ roles: ["A", "C"] });
+    const write = await owner.request.put(`${url}/users/${owner.userId}`).send({ add: ["C"] });
     expect(write.status).toBe(200);
     const stored = await entries(projectId);
     expect(stored).toEqual([
@@ -42,7 +40,7 @@ describe("RACI entries tenant isolation", () => {
 
     const attackerWrite = await attacker.request
       .put(`${url}/users/${owner.userId}`)
-      .send({ roles: [] });
+      .send({ remove: ["C"] });
     expect(attackerWrite.status).toBe(404);
     expect(await entries(projectId)).toEqual(stored);
   });
@@ -53,7 +51,7 @@ describe("RACI entries tenant isolation", () => {
 
     const res = await owner.request
       .put(`/api/v1/projects/${projectId}/raci/users/${attacker.userId}`)
-      .send({ roles: ["R"] });
+      .send({ add: ["R"] });
 
     expect(res.status).toBe(404);
     expect(await entries(projectId)).toEqual([]);

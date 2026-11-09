@@ -132,7 +132,10 @@ export function mergeRaciOverrides(
   people: Map<number, RaciPerson>,
 ): RaciMatrix {
   const effective: DerivedRaci["users"] = new Map(
-    [...derived.users].map(([userId, roles]) => [userId, new Map(roles)]),
+    [...derived.users].map(([userId, roles]) => [
+      userId,
+      new Map([...roles].map(([role, sources]) => [role, [...sources]])),
+    ]),
   );
 
   for (const { userId, role, state } of overrides) {
@@ -199,6 +202,17 @@ export function planRaciOverrides(
     }
   }
   return plan;
+}
+
+/** The roles a person should end up with after a change, in R, A, C, I order. */
+export function applyRaciDelta(
+  current: readonly RaciRole[],
+  add: readonly RaciRole[],
+  remove: readonly RaciRole[],
+): RaciRole[] {
+  return RACI_ROLES.filter(
+    (role) => !remove.includes(role) && (current.includes(role) || add.includes(role)),
+  );
 }
 
 /** A user's effective roles in the matrix, in R, A, C, I order. */

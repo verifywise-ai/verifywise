@@ -1,6 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { getRaciMatrix, updateRaciUserRoles, type RaciMatrix } from "../repository/raci.repository";
-import type { RaciRole } from "../../domain/enums/raci.enum";
+import {
+  getRaciMatrix,
+  updateRaciUserRoles,
+  type RaciMatrix,
+  type RaciRoleChange,
+} from "../repository/raci.repository";
 
 export const raciQueryKey = (projectId: number) => ["raci", projectId] as const;
 
@@ -13,12 +17,12 @@ export function useRaci(projectId: number) {
   });
 }
 
-/** Save one person's roles; the response replaces the cached matrix. */
+/** Change one person's roles; the response replaces the cached matrix. */
 export function useUpdateRaciRoles(projectId: number) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ userId, roles }: { userId: number; roles: RaciRole[] }) =>
-      updateRaciUserRoles(projectId, userId, roles),
+    mutationFn: ({ userId, change }: { userId: number; change: RaciRoleChange }) =>
+      updateRaciUserRoles(projectId, userId, change),
     onSuccess: (matrix) => {
       queryClient.setQueryData(raciQueryKey(projectId), matrix);
     },

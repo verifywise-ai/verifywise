@@ -744,6 +744,9 @@ export const de: Record<string, string> = {
   "More than one person is accountable for this use case. Keep one person in the A role where you can.":
     "Für diesen Anwendungsfall ist mehr als eine Person rechenschaftspflichtig. Belassen Sie die Rolle A möglichst bei einer Person.",
   "Everyone is already in this matrix": "Alle sind bereits in dieser Matrix",
+  "Loading people...": "Personen werden geladen...",
+  "People could not be loaded.": "Die Personen konnten nicht geladen werden.",
+  "No people found.": "Keine Personen gefunden.",
 };
 
 export const fr: Record<string, string> = {
@@ -1484,6 +1487,9 @@ export const fr: Record<string, string> = {
   "More than one person is accountable for this use case. Keep one person in the A role where you can.":
     "Plusieurs personnes sont redevables de ce cas d'usage. Dans la mesure du possible, gardez une seule personne dans le rôle A.",
   "Everyone is already in this matrix": "Tout le monde figure déjà dans cette matrice",
+  "Loading people...": "Chargement des personnes...",
+  "People could not be loaded.": "Les personnes n'ont pas pu être chargées.",
+  "No people found.": "Aucune personne trouvée.",
 };
 
 export const es: Record<string, string> = {
@@ -2221,4 +2227,7 @@ export const es: Record<string, string> = {
   "More than one person is accountable for this use case. Keep one person in the A role where you can.":
     "Más de una persona rinde cuentas de este caso de uso. Siempre que pueda, mantenga a una sola persona en el rol A.",
   "Everyone is already in this matrix": "Todos están ya en esta matriz",
+  "Loading people...": "Cargando personas...",
+  "People could not be loaded.": "No se pudieron cargar las personas.",
+  "No people found.": "No se encontraron personas.",
 };

@@ -7,12 +7,14 @@ import { sequelize } from "../database/db";
 import { RaciRole } from "../domain.layer/enums/raci.enum";
 import { projectVisibilitySql } from "./projectVisibility.utils";
 import { recordEntityChange } from "./changeHistory.base.utils";
+import { TASK_ENTITY_TABLES, VALID_ENTITY_TYPES, type EntityType } from "./taskEntityLink.utils";
 import {
+  applyRaciDelta,
   buildDerivedRaci,
   effectiveRolesOf,
   mergeRaciOverrides,
   planRaciOverrides,
-  type DerivedRaci,
+  type DerivedRaciInput,
   type RaciMatrix,
   type RaciOverride,
   type RaciOverrideState,
@@ -32,44 +34,48 @@ interface Viewer {
   role: string;
 }
 
+type RaciInputs = Omit<DerivedRaciInput, "orgMemberIds">;
+
 export type RaciResult =
   | { status: "ok"; matrix: RaciMatrix }
   | { status: "not_found" }
   | { status: "organizational" }
   | { status: "user_not_found" };
 
+/** Task link targets that do not belong to any one use case. */
+const ORGANIZATION_WIDE_LINK_TYPES: readonly EntityType[] = ["vendor", "model", "policy"];
+
+/** Task link targets that reach projects_frameworks through a parent row. */
+const LINK_PARENTS: Partial<Record<EntityType, { table: string; foreignKey: string }>> = {
+  eu_subcontrol: { table: "controls_eu", foreignKey: "control_id" },
+};
+
 /**
  * How a task's link reaches a use case. Tasks never store a use case id: the
  * link picker's "Use-case" option leads to one of the use case's framework
- * requirements, and that requirement is what task_entity_links records.
+ * requirements, and that requirement is what task_entity_links records. A new
+ * entity type is treated as a framework requirement, so if its table has no
+ * projects_frameworks_id this query fails rather than quietly ignoring it.
  */
-const TASK_LINK_TARGETS = [
-  { entityType: "eu_control", table: "controls_eu" },
-  { entityType: "iso42001_subclause", table: "subclauses_iso" },
-  { entityType: "iso42001_annexcategory", table: "annexcategories_iso" },
-  { entityType: "iso27001_subclause", table: "subclauses_iso27001" },
-  { entityType: "iso27001_annexcontrol", table: "annexcontrols_iso27001" },
-  { entityType: "nist_subcategory", table: "nist_ai_rmf_subcategories" },
-] as const;
-
-const TASK_LINK_CONDITIONS = [
-  ...TASK_LINK_TARGETS.map(
-    ({ entityType, table }) => `(tel.entity_type = '${entityType}' AND tel.entity_id IN (
-       SELECT e.id FROM ${table} e
-         JOIN projects_frameworks pf ON pf.id = e.projects_frameworks_id
-        WHERE e.organization_id = :organizationId
+const TASK_LINK_CONDITIONS = VALID_ENTITY_TYPES.filter(
+  (entityType) => !ORGANIZATION_WIDE_LINK_TYPES.includes(entityType),
+)
+  .map((entityType) => {
+    const table = TASK_ENTITY_TABLES[entityType];
+    const parent = LINK_PARENTS[entityType];
+    const source = parent
+      ? `${table} e JOIN ${parent.table} parent ON parent.id = e.${parent.foreignKey}`
+      : `${table} e`;
+    const frameworkKey = parent ? "parent.projects_frameworks_id" : "e.projects_frameworks_id";
+    const parentScope = parent ? "AND parent.organization_id = :organizationId" : "";
+    return `(tel.entity_type = '${entityType}' AND tel.entity_id IN (
+       SELECT e.id FROM ${source}
+         JOIN projects_frameworks pf ON pf.id = ${frameworkKey}
+        WHERE e.organization_id = :organizationId ${parentScope}
           AND pf.organization_id = :organizationId
-          AND pf.project_id = :projectId))`,
-  ),
-  `(tel.entity_type = 'eu_subcontrol' AND tel.entity_id IN (
-     SELECT s.id FROM subcontrols_eu s
-       JOIN controls_eu c ON c.id = s.control_id
-       JOIN projects_frameworks pf ON pf.id = c.projects_frameworks_id
-      WHERE s.organization_id = :organizationId
-        AND c.organization_id = :organizationId
-        AND pf.organization_id = :organizationId
-        AND pf.project_id = :projectId))`,
-].join("\n OR ");
+          AND pf.project_id = :projectId))`;
+  })
+  .join("\n OR ");
 
 async function selectRows<T extends object>(
   sql: string,
@@ -100,27 +106,29 @@ async function getVisibleProject(
   return rows[0] ?? null;
 }
 
+/** Those of the given users who are members of this organization. */
 async function getOrganizationPeople(
+  userIds: Set<number>,
   organizationId: number,
   transaction?: Transaction,
 ): Promise<Map<number, RaciPerson>> {
+  if (userIds.size === 0) return new Map();
   const rows = await selectRows<RaciPerson>(
     `SELECT u.id, u.name, u.surname, u.email
        FROM users u
        JOIN organization_members om ON om.user_id = u.id
-      WHERE om.organization_id = :organizationId`,
-    { organizationId },
+      WHERE om.organization_id = :organizationId AND u.id IN (:userIds)`,
+    { organizationId, userIds: [...userIds] },
     transaction,
   );
   return new Map(rows.map((person) => [person.id, person]));
 }
 
-async function getDerivedRaci(
+async function getDerivationInputs(
   project: RaciProject,
-  people: Map<number, RaciPerson>,
   organizationId: number,
   transaction?: Transaction,
-): Promise<DerivedRaci> {
+): Promise<RaciInputs> {
   const scope = { organizationId, projectId: project.id };
 
   const members = await selectRows<{ user_id: number }>(
@@ -130,14 +138,18 @@ async function getDerivedRaci(
     transaction,
   );
 
+  // Deleting a workflow only deactivates it, so its approvers stay in the tables.
   const approvers = project.approval_workflow_id
     ? await selectRows<{ approver_id: number }>(
         `SELECT DISTINCT asa.approver_id
-           FROM approval_workflow_steps aws
+           FROM approval_workflows aw
+           JOIN approval_workflow_steps aws ON aws.workflow_id = aw.id
            JOIN approval_step_approvers asa ON asa.workflow_step_id = aws.id
-          WHERE aws.organization_id = :organizationId
+          WHERE aw.organization_id = :organizationId
+            AND aws.organization_id = :organizationId
             AND asa.organization_id = :organizationId
-            AND aws.workflow_id = :workflowId`,
+            AND aw.id = :workflowId
+            AND aw.is_active = true`,
         { organizationId, workflowId: project.approval_workflow_id },
         transaction,
       )
@@ -156,14 +168,13 @@ async function getDerivedRaci(
     transaction,
   );
 
-  return buildDerivedRaci({
+  return {
     ownerId: project.owner,
     externalOwnerName: project.external_owner_name,
     memberIds: members.map((row) => row.user_id),
     approverIds: approvers.map((row) => row.approver_id),
     taskAssignees: taskAssignees.map((row) => ({ userId: row.user_id, status: row.status })),
-    orgMemberIds: people.keys(),
-  });
+  };
 }
 
 async function getOverrides(
@@ -184,6 +195,18 @@ async function getOverrides(
   return rows.map((row) => ({ userId: row.user_id, role: row.raci_role, state: row.state }));
 }
 
+/** Everyone the matrix could mention, so only they are loaded. */
+function collectUserIds(inputs: RaciInputs, overrides: RaciOverride[]): Set<number> {
+  const ids = new Set<number>([
+    ...inputs.memberIds,
+    ...inputs.approverIds,
+    ...inputs.taskAssignees.map((assignee) => assignee.userId),
+    ...overrides.map((override) => override.userId),
+  ]);
+  if (inputs.ownerId !== null) ids.add(inputs.ownerId);
+  return ids;
+}
+
 export async function getRaciMatrixForViewer(
   projectId: number,
   viewer: Viewer,
@@ -193,17 +216,22 @@ export async function getRaciMatrixForViewer(
   if (!project) return { status: "not_found" };
   if (project.is_organizational) return { status: "organizational" };
 
-  const people = await getOrganizationPeople(organizationId);
-  const derived = await getDerivedRaci(project, people, organizationId);
+  const inputs = await getDerivationInputs(project, organizationId);
   const overrides = await getOverrides(projectId, organizationId);
+  const people = await getOrganizationPeople(collectUserIds(inputs, overrides), organizationId);
+  const derived = buildDerivedRaci({ ...inputs, orgMemberIds: people.keys() });
   return { status: "ok", matrix: mergeRaciOverrides(derived, overrides, people) };
 }
 
-/** Make `wanted` the user's effective roles on this use case. */
-export async function setUserRaciRoles(
+/**
+ * Add and remove roles from what the user holds right now. The change is applied
+ * to current roles under the use case's row lock, not to what the caller last
+ * saw, so a stale page cannot undo a role that appeared after it loaded.
+ */
+export async function changeUserRaciRoles(
   projectId: number,
   targetUserId: number,
-  wanted: RaciRole[],
+  change: { add: RaciRole[]; remove: RaciRole[] },
   viewer: Viewer,
   organizationId: number,
 ): Promise<RaciResult> {
@@ -212,16 +240,20 @@ export async function setUserRaciRoles(
     if (!project) return { status: "not_found" };
     if (project.is_organizational) return { status: "organizational" };
 
-    const people = await getOrganizationPeople(organizationId, transaction);
+    const inputs = await getDerivationInputs(project, organizationId, transaction);
+    const overridesBefore = await getOverrides(projectId, organizationId, transaction);
+    const people = await getOrganizationPeople(
+      collectUserIds(inputs, overridesBefore).add(targetUserId),
+      organizationId,
+      transaction,
+    );
     const target = people.get(targetUserId);
     if (!target) return { status: "user_not_found" };
 
-    const derived = await getDerivedRaci(project, people, organizationId, transaction);
-    const before = mergeRaciOverrides(
-      derived,
-      await getOverrides(projectId, organizationId, transaction),
-      people,
-    );
+    const derived = buildDerivedRaci({ ...inputs, orgMemberIds: people.keys() });
+    const before = mergeRaciOverrides(derived, overridesBefore, people);
+    const oldRoles = effectiveRolesOf(before, targetUserId);
+    const wanted = applyRaciDelta(oldRoles, change.add, change.remove);
 
     const plan = planRaciOverrides(wanted, new Set(derived.users.get(targetUserId)?.keys()));
     const scope = { organizationId, projectId, userId: targetUserId };
@@ -251,9 +283,9 @@ export async function setUserRaciRoles(
       people,
     );
 
-    const oldRoles = effectiveRolesOf(before, targetUserId).join(", ");
-    const newRoles = effectiveRolesOf(matrix, targetUserId).join(", ");
-    if (oldRoles !== newRoles) {
+    const oldValue = oldRoles.join(", ");
+    const newValue = effectiveRolesOf(matrix, targetUserId).join(", ");
+    if (oldValue !== newValue) {
       await recordEntityChange(
         "use_case",
         projectId,
@@ -261,8 +293,8 @@ export async function setUserRaciRoles(
         viewer.userId,
         organizationId,
         `RACI: ${target.name} ${target.surname}`.trim().slice(0, 255),
-        oldRoles,
-        newRoles,
+        oldValue,
+        newValue,
         transaction,
       );
     }
