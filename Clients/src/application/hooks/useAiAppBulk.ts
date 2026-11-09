@@ -149,7 +149,15 @@ export const useCancelAiAppAssessments = () => {
 };
 
 export const useDownloadAiAppAssessmentWorksheet = () =>
-  useMutation({ mutationFn: (id: number) => downloadAiAppAssessmentWorksheet(id) });
+  useMutation({
+    mutationFn: ({
+      questionnaireId,
+      assignedToMe,
+    }: {
+      questionnaireId: number;
+      assignedToMe: boolean;
+    }) => downloadAiAppAssessmentWorksheet(questionnaireId, assignedToMe),
+  });
 
 export const useUploadAiAppAssessmentAnswers = () => {
   const queryClient = useQueryClient();

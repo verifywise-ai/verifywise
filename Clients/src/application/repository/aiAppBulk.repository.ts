@@ -19,6 +19,7 @@ const BASE = "/v1/ai-apps";
 
 /** These screens show their own errors, so the global toast would be a duplicate. */
 const OWN_ERROR_UI = { suppressGlobalErrorToast: true };
+const IMPORT_TIMEOUT_MS = 300000;
 
 const unwrap = <T>(response: { data: unknown }): T => (response.data as { data: T }).data;
 
@@ -63,7 +64,11 @@ export async function downloadAiAppImportTemplate(): Promise<Blob> {
 }
 
 export async function importAiApps(payload: IAiAppImportPayload): Promise<IAiAppImportResult> {
-  const response = await apiServices.post(`${BASE}/import`, payload, OWN_ERROR_UI);
+  // Creating up to 1000 apps in one transaction can take minutes on a slow database.
+  const response = await apiServices.post(`${BASE}/import`, payload, {
+    ...OWN_ERROR_UI,
+    timeout: IMPORT_TIMEOUT_MS,
+  });
   return unwrap<IAiAppImportResult>(response);
 }
 
@@ -147,9 +152,13 @@ export async function cancelAiAppAssessments(
   return unwrap<{ cancelled: number }>(response);
 }
 
-export async function downloadAiAppAssessmentWorksheet(questionnaireId: number): Promise<Blob> {
+export async function downloadAiAppAssessmentWorksheet(
+  questionnaireId: number,
+  assignedToMe: boolean,
+): Promise<Blob> {
+  const assigned = assignedToMe ? "&assigned_to_me=true" : "";
   const response = await apiServices.get(
-    `${BASE}/assessments/worksheet?questionnaire_id=${questionnaireId}`,
+    `${BASE}/assessments/worksheet?questionnaire_id=${questionnaireId}${assigned}`,
     { responseType: "blob", ...OWN_ERROR_UI },
   );
   return response.data as Blob;

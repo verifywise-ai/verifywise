@@ -145,6 +145,8 @@ export const de: Record<string, string> = {
     "Das erste Tabellenblatt enthält keine Zeilen zum Importieren.",
   "The import failed. Nothing was imported.":
     "Der Import ist fehlgeschlagen. Es wurde nichts importiert.",
+  "The import result is unknown. Check the AI apps list before trying again.":
+    "Das Ergebnis des Imports ist unbekannt. Prüfen Sie die KI-Apps-Liste, bevor Sie es erneut versuchen.",
   "The worksheet has no rows.": "Das Arbeitsblatt enthält keine Zeilen.",
   "There is nothing new to import in this file.":
     "Diese Datei enthält nichts Neues zum Importieren.",
@@ -312,6 +314,8 @@ export const fr: Record<string, string> = {
   "The first sheet has no rows to import.":
     "La première feuille ne contient aucune ligne à importer.",
   "The import failed. Nothing was imported.": "L'import a échoué. Rien n'a été importé.",
+  "The import result is unknown. Check the AI apps list before trying again.":
+    "Le résultat de l'import est inconnu. Vérifiez la liste des applications d'IA avant de réessayer.",
   "The worksheet has no rows.": "La feuille de calcul ne contient aucune ligne.",
   "There is nothing new to import in this file.":
     "Ce fichier ne contient rien de nouveau à importer.",
@@ -480,6 +484,8 @@ export const es: Record<string, string> = {
     "La primera fila necesita una columna Name. Descarga la plantilla e inténtalo de nuevo.",
   "The first sheet has no rows to import.": "La primera hoja no tiene filas para importar.",
   "The import failed. Nothing was imported.": "La importación falló. No se importó nada.",
+  "The import result is unknown. Check the AI apps list before trying again.":
+    "Se desconoce el resultado de la importación. Compruebe la lista de aplicaciones de IA antes de volver a intentarlo.",
   "The worksheet has no rows.": "La hoja de trabajo no tiene filas.",
   "There is nothing new to import in this file.": "Este archivo no tiene nada nuevo que importar.",
   "This assessment's questionnaire is no longer available.":

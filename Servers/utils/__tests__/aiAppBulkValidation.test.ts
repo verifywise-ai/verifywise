@@ -14,6 +14,7 @@ import {
   parseIdList,
   parseImportRows,
   parseQuestionnaireBody,
+  questionKey,
   planImport,
   WorksheetAssessment,
 } from "../validations/aiAppBulkValidation.utils";
@@ -83,6 +84,11 @@ describe("parseAiAppStatus", () => {
 });
 
 describe("parseImportRows", () => {
+  it("reports a department too long to store", () => {
+    const { errors } = parseImportRows([importRow({ departments: `Sales, ${"x".repeat(256)}` })]);
+    expect(errors.map((error) => error.field)).toContain("departments");
+  });
+
   it("defaults the status to draft and keeps a clean row", () => {
     const { parsed, errors } = parseImportRows([importRow()]);
     expect(errors).toEqual([]);
@@ -180,7 +186,40 @@ describe("parseQuestionnaireBody", () => {
     ...overrides,
   });
 
-  it("assigns keys in order and ignores keys sent by the client", () => {
+  it("keeps a question's key when the questions are reordered", () => {
+    const parse = (labels: string[]) => {
+      const result = parseQuestionnaireBody(
+        body({ questions: labels.map((label) => ({ label, weight: 1 })) }),
+        { partial: false },
+      );
+      if (!result.ok) throw new Error(result.message);
+      return Object.fromEntries(result.value.questions!.map((q) => [q.label, q.key]));
+    };
+    expect(parse(["A", "B"])).toEqual(parse(["B", "A"]));
+  });
+
+  it("treats labels differing only in whitespace as duplicates", () => {
+    const result = parseQuestionnaireBody(
+      body({
+        questions: [
+          { label: "Data use", weight: 1 },
+          { label: "Data  use", weight: 1 },
+        ],
+      }),
+      { partial: false },
+    );
+    expect(result).toEqual({ ok: false, message: "Question labels must be unique" });
+  });
+
+  it("refuses a fixed worksheet column with extra whitespace", () => {
+    const result = parseQuestionnaireBody(
+      body({ questions: [{ label: "Assessment  ID", weight: 1 }] }),
+      { partial: false },
+    );
+    expect(result.ok).toBe(false);
+  });
+
+  it("derives keys from labels and ignores keys sent by the client", () => {
     const result = parseQuestionnaireBody(
       body({
         questions: [
@@ -195,8 +234,8 @@ describe("parseQuestionnaireBody", () => {
       value: {
         name: "Q",
         questions: [
-          { key: "q1", label: "A", weight: 1 },
-          { key: "q2", label: "B", weight: 5, description: "d" },
+          { key: questionKey("A"), label: "A", weight: 1 },
+          { key: questionKey("B"), label: "B", weight: 5, description: "d" },
         ],
       },
     });

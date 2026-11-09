@@ -20,6 +20,8 @@ import {
   evaluateAnswers,
   evaluateWorksheetRows,
   groupOwnerSummaries,
+  positiveId,
+  questionKey,
   QuestionnaireInput,
   WORKSHEET_FIXED_COLUMNS,
   WorksheetAssessment,
@@ -41,8 +43,8 @@ const DEFAULT_QUESTIONNAIRE = {
     ["Vendor maturity", "Vendor security posture, review status and track record"],
     ["Regulatory scope", "Applicable regulations such as GDPR, HIPAA or sector rules"],
     ["Output impact", "Consequences of incorrect or biased outputs on customers or IP"],
-  ].map(([label, description], index): AiAppQuestion => {
-    return { key: `q${index + 1}`, label, description, weight: 1 };
+  ].map(([label, description]): AiAppQuestion => {
+    return { key: questionKey(label), label, description, weight: 1 };
   }),
 };
 
@@ -553,19 +555,32 @@ export async function submitWorksheetAnswersQuery(
     "FOR SHARE",
   );
 
+  // Only the file's own rows are locked, so answers elsewhere don't wait on it.
+  const submittedIds = rows
+    .map((row) => positiveId((row as { assessment_id?: unknown } | null)?.assessment_id))
+    .filter((id): id is number => id !== null);
   const ownerFilter = actor.canEditAny ? "" : "AND app.owner_id = :userId";
-  const [found] = await sequelize.query(
-    `SELECT a.id, a.ai_app_id, a.status
-     FROM ai_app_assessments a
-     JOIN ai_apps app ON app.id = a.ai_app_id AND app.organization_id = a.organization_id
-     WHERE a.organization_id = :orgId AND a.questionnaire_id = :questionnaireId ${ownerFilter}
-     ORDER BY a.id
-     FOR UPDATE OF a`,
-    {
-      replacements: { orgId: organizationId, questionnaireId, userId: actor.userId },
-      transaction,
-    },
-  );
+  const [found] =
+    submittedIds.length === 0
+      ? [[]]
+      : await sequelize.query(
+          `SELECT a.id, a.ai_app_id, a.status
+           FROM ai_app_assessments a
+           JOIN ai_apps app ON app.id = a.ai_app_id AND app.organization_id = a.organization_id
+           WHERE a.organization_id = :orgId AND a.questionnaire_id = :questionnaireId
+             AND a.id IN (:submittedIds) ${ownerFilter}
+           ORDER BY a.id
+           FOR UPDATE OF a`,
+          {
+            replacements: {
+              orgId: organizationId,
+              questionnaireId,
+              submittedIds,
+              userId: actor.userId,
+            },
+            transaction,
+          },
+        );
   const assessments = new Map(
     (found as WorksheetAssessment[]).map((assessment) => [assessment.id, assessment]),
   );
@@ -616,10 +631,11 @@ export async function buildAssessmentWorksheet(
   questionnaireId: number,
   organizationId: number,
   actor: AssessmentActor,
+  assignedToMe: boolean,
 ): Promise<{ buffer: Buffer; filename: string }> {
   const questionnaire = await requireQuestionnaire(questionnaireId, organizationId);
 
-  const ownerFilter = actor.canEditAny ? "" : "AND app.owner_id = :userId";
+  const ownerFilter = actor.canEditAny && !assignedToMe ? "" : "AND app.owner_id = :userId";
   const [rows] = await sequelize.query(
     `SELECT a.id, app.name AS app_name, v.vendor_name
      FROM ai_app_assessments a

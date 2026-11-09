@@ -4,6 +4,7 @@ import { createTestApp, testRequest } from "../setup";
 import { cleanupDatabase } from "../helpers";
 import { seedTwoTenantContexts } from "./tenantIsolation.harness";
 import { sequelize } from "../../../database/db";
+import { questionKey } from "../../../utils/validations/aiAppBulkValidation.utils";
 
 const BASE = "/api/v1/ai-apps/questionnaires";
 const body = (name: string) => ({ name, questions: [{ label: "Risk", weight: 2 }] });
@@ -36,7 +37,7 @@ describe("AI app questionnaire tenant isolation", () => {
 
     const created = await owner.request.post(BASE).send(body("Private list"));
     expect(created.status).toBe(201);
-    expect(created.body.data.questions[0].key).toBe("q1");
+    expect(created.body.data.questions[0].key).toBe(questionKey("Risk"));
 
     const attackerList = await attacker.request.get(BASE);
     const names = attackerList.body.data.questionnaires.map((q: any) => q.name);

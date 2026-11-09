@@ -1,3 +1,4 @@
+import { createHash } from "crypto";
 import { AiAppStatus } from "../../domain.layer/enums/ai-app-status.enum";
 import { toId } from "./validation.utils";
 
@@ -157,6 +158,9 @@ export function parseImportRows(rows: unknown[]): {
     const ownerEmail = text("owner_email", "Owner email", SHORT_TEXT_MAX_LENGTH);
     const statusText = text("status", "Status", SHORT_TEXT_MAX_LENGTH);
     const departments = text("departments", "Departments", DESCRIPTION_MAX_LENGTH);
+    if (departments.split(",").some((item) => item.trim().length > SHORT_TEXT_MAX_LENGTH)) {
+      fail("departments", `Each department must be at most ${SHORT_TEXT_MAX_LENGTH} characters`);
+    }
     const requiredTraining = text("required_training", "Required training", SHORT_TEXT_MAX_LENGTH);
 
     const nameKey = comparisonKey(name);
@@ -292,6 +296,14 @@ export interface QuestionnaireInput {
 const QUESTION_ERROR =
   "Each question needs a label of at most 255 characters and a weight from 1 to 5";
 
+/**
+ * A question's key comes from its label. Reordering keeps every answer on its
+ * question, and answers sent against a renamed question are rejected as unknown.
+ */
+export function questionKey(label: string): string {
+  return `q_${createHash("sha256").update(comparisonKey(label)).digest("hex").slice(0, 12)}`;
+}
+
 function parseQuestions(
   raw: unknown,
 ): { ok: true; questions: AiAppQuestion[] } | { ok: false; message: string } {
@@ -306,14 +318,15 @@ function parseQuestions(
   const seenLabels = new Set<string>();
   const questions: AiAppQuestion[] = [];
 
-  for (const [index, item] of raw.entries()) {
+  for (const item of raw) {
     if (item === null || typeof item !== "object" || Array.isArray(item)) {
       return { ok: false, message: QUESTION_ERROR };
     }
     const source = item as Record<string, unknown>;
 
     if (typeof source.label !== "string") return { ok: false, message: QUESTION_ERROR };
-    const label = source.label.trim();
+    // Worksheet headers are matched with whitespace collapsed, so labels are too.
+    const label = source.label.trim().replace(/\s+/g, " ");
     if (!label || label.length > SHORT_TEXT_MAX_LENGTH) {
       return { ok: false, message: QUESTION_ERROR };
     }
@@ -340,7 +353,7 @@ function parseQuestions(
     }
     seenLabels.add(key);
 
-    const question: AiAppQuestion = { key: `q${index + 1}`, label, weight };
+    const question: AiAppQuestion = { key: questionKey(label), label, weight };
     if (source.description !== undefined && source.description !== null) {
       if (typeof source.description !== "string") {
         return { ok: false, message: "A question description must be text" };
@@ -359,7 +372,7 @@ function parseQuestions(
 
 /**
  * Validates a create (all fields) or update (only the fields sent) body.
- * Question keys are assigned here on every save; keys in the body are ignored.
+ * Question keys are derived here from each label; keys in the body are ignored.
  */
 export function parseQuestionnaireBody(
   body: unknown,

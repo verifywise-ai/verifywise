@@ -18,7 +18,8 @@ import {
 } from "../../../application/utils/parseSpreadsheet";
 import type { IAiAppImportResult, IAiAppImportRow } from "../../../domain/interfaces/i.aiAppBulk";
 import { CountSummary, RowIssuesTable } from "./AIAppAssessments/AssessmentDisplay";
-import { mapImportRows, MAX_BULK_ROWS, saveBlob } from "./bulkUtils";
+import { triggerBrowserDownload } from "../../utils/browserDownload.utils";
+import { mapImportRows, MAX_BULK_ROWS } from "./bulkUtils";
 import { controlButtonSx } from "./style";
 
 interface AIAppImportModalProps {
@@ -43,7 +44,7 @@ export default function AIAppImportModal({ onClose }: AIAppImportModalProps) {
 
   const handleDownloadTemplate = async () => {
     try {
-      saveBlob(await templateMutation.mutateAsync(), "ai-apps-import-template.xlsx");
+      triggerBrowserDownload(await templateMutation.mutateAsync(), "ai-apps-import-template.xlsx");
     } catch {
       setError(t("Could not download the template. Try again."));
     }
@@ -110,10 +111,14 @@ export default function AIAppImportModal({ onClose }: AIAppImportModalProps) {
     } catch (err) {
       const rejected = errorBody<IAiAppImportResult>(err, 422);
       if (rejected) setPreview(rejected);
+      // No HTTP status means a timeout or lost connection: the server may have finished.
+      const hasResponse = Boolean((err as { status?: number } | null)?.status);
       setError(
         rejected
           ? t("Nothing was imported. Fix these rows and choose the file again.")
-          : errorMessage(err, t("The import failed. Nothing was imported.")),
+          : hasResponse
+            ? errorMessage(err, t("The import failed. Nothing was imported."))
+            : t("The import result is unknown. Check the AI apps list before trying again."),
       );
     }
   };

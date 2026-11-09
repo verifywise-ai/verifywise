@@ -62,7 +62,10 @@ function handled(
     logProcessing({ ...context(req, functionName), description: `starting ${functionName}` });
     try {
       const result = await handler(req, res);
-      await logSuccess({ ...context(req, functionName), eventType, description });
+      // The event log records what happened: refused requests and previews changed nothing.
+      if (res.statusCode < 400 && !res.locals.noChangeMade) {
+        await logSuccess({ ...context(req, functionName), eventType, description });
+      }
       return result;
     } catch (error) {
       const pg = (error as { parent?: { code?: string; constraint?: string } })?.parent;
@@ -146,6 +149,7 @@ export const importAiApps = handled(
     }
 
     if (dryRun) {
+      res.locals.noChangeMade = true;
       const preview = await previewAiAppImport(rows, req.organizationId!);
       return res.status(200).json(STATUS_CODE[200](preview));
     }
@@ -378,6 +382,7 @@ export const downloadAiAppAssessmentWorksheet = handled(
       questionnaireId,
       req.organizationId!,
       await actorOf(req),
+      req.query.assigned_to_me === "true",
     );
     return sendWorkbook(res, file);
   },

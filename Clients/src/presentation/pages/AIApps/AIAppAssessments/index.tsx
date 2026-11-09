@@ -26,7 +26,7 @@ import type {
   AiAppAssessmentStatus,
   IAiAppAssessment,
 } from "../../../../domain/interfaces/i.aiAppBulk";
-import { saveBlob } from "../bulkUtils";
+import { triggerBrowserDownload } from "../../../utils/browserDownload.utils";
 import {
   controlButtonSx,
   controlSearchSx,
@@ -121,6 +121,12 @@ export default function AIAppAssessments() {
     !isLoadingQuestionnaires,
   );
   const assessments = useMemo(() => data?.assessments ?? [], [data]);
+
+  // Answering or cancelling the last row of the last page leaves that page empty.
+  const lastPage = Math.max(0, Math.ceil((data?.total ?? 0) / rowsPerPage) - 1);
+  useEffect(() => {
+    if (data && page > lastPage) setPaging({ key: filterKey, page: lastPage });
+  }, [data, page, lastPage, filterKey]);
   const pendingRows = useMemo(
     () => assessments.filter((assessment) => assessment.status === "pending"),
     [assessments],
@@ -173,8 +179,11 @@ export default function AIAppAssessments() {
   const handleDownloadWorksheet = async () => {
     if (!selectedQuestionnaire) return;
     try {
-      const blob = await worksheetMutation.mutateAsync(selectedQuestionnaire.id);
-      saveBlob(blob, "ai-app-assessment-worksheet.xlsx");
+      const blob = await worksheetMutation.mutateAsync({
+        questionnaireId: selectedQuestionnaire.id,
+        assignedToMe,
+      });
+      triggerBrowserDownload(blob, "ai-app-assessment-worksheet.xlsx");
     } catch {
       setAlert({ variant: "error", body: t("Could not download the worksheet. Try again.") });
     }

@@ -5,6 +5,7 @@ import { createTestApp, testRequest } from "../setup";
 import { cleanupDatabase, createTestUser } from "../helpers";
 import { seedTwoTenantContexts, TenantContext } from "./tenantIsolation.harness";
 import { notifyAiAppAssessmentsAssigned } from "../../../services/inAppNotification.service";
+import { questionKey } from "../../../utils/validations/aiAppBulkValidation.utils";
 
 // setup.ts replaces the notification service with mocks.
 const notifyMock = notifyAiAppAssessmentsAssigned as jest.Mock;
@@ -66,7 +67,10 @@ async function assessmentCount(appId: number): Promise<number> {
   return (rows as any[])[0].total;
 }
 
-const validAnswers = { answers: { q1: 1, q2: 5 } };
+const DATA_KEY = questionKey("Data");
+const USERS_KEY = questionKey("Users");
+const validAnswers = { answers: { [DATA_KEY]: 1, [USERS_KEY]: 5 } };
+const lowestAnswers = { [DATA_KEY]: 1, [USERS_KEY]: 1 };
 
 describe("AI app assessment tenant isolation", () => {
   afterEach(async () => {
@@ -144,7 +148,7 @@ describe("AI app assessment tenant isolation", () => {
     const attackerQuestionnaire = await questionnaireIn(attacker);
     const foreignRow = await attacker.request.post(`${BASE}/assessments/answers`).send({
       questionnaire_id: attackerQuestionnaire,
-      rows: [{ row_number: 2, assessment_id: assessmentId, answers: { q1: 1, q2: 1 } }],
+      rows: [{ row_number: 2, assessment_id: assessmentId, answers: lowestAnswers }],
     });
     expect(foreignRow.status).toBe(422);
     expect(foreignRow.body.data.errors[0].message).toBe("Unknown assessment");
@@ -226,14 +230,14 @@ describe("AI app assessment tenant isolation", () => {
 
     const otherSheet = await otherAuditor.request.post(`${BASE}/assessments/answers`).send({
       questionnaire_id: questionnaireId,
-      rows: [{ row_number: 2, assessment_id: ownedAssessment, answers: { q1: 1, q2: 1 } }],
+      rows: [{ row_number: 2, assessment_id: ownedAssessment, answers: lowestAnswers }],
     });
     expect(otherSheet.status).toBe(422);
     expect(otherSheet.body.data.errors[0].message).toBe("Unknown assessment");
 
     const ownSheet = await appOwner.request.post(`${BASE}/assessments/answers`).send({
       questionnaire_id: questionnaireId,
-      rows: [{ row_number: 2, assessment_id: ownedAssessment, answers: { q1: 1, q2: 1 } }],
+      rows: [{ row_number: 2, assessment_id: ownedAssessment, answers: lowestAnswers }],
     });
     expect(ownSheet.status).toBe(200);
     expect(ownSheet.body.data).toMatchObject({ completed: 1, errors: [] });

@@ -3,6 +3,7 @@ import { Transaction } from "sequelize";
 import { sequelize } from "../database/db";
 import { AiAppDiscoveredSource } from "../domain.layer/enums/ai-app-status.enum";
 import { aiAppDepartmentsFrom, createAiAppQuery } from "./aiApp.utils";
+import { recordVendorCreation } from "./vendorChangeHistory.utils";
 import { createNewVendorQuery } from "./vendor.utils";
 import {
   AI_APP_STATUS_LABELS,
@@ -124,8 +125,8 @@ export async function commitAiAppImport(
 
   const newVendorIds = new Map<string, number>();
   for (const [key, vendorName] of plan.newVendors) {
-    // Required text columns stay empty rather than invented, and a bulk load
-    // must not fire one vendor_added automation per row.
+    // Required text columns stay empty rather than invented. A bulk load records
+    // each vendor's history but must not fire one vendor_added automation per row.
     const vendor = await createNewVendorQuery(
       {
         vendor_name: vendorName,
@@ -138,6 +139,13 @@ export async function commitAiAppImport(
       transaction,
       false,
       { runAutomations: false },
+    );
+    await recordVendorCreation(
+      vendor.id!,
+      userId,
+      organizationId,
+      { vendor_name: vendorName },
+      transaction,
     );
     newVendorIds.set(key, vendor.id!);
   }

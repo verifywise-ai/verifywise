@@ -31,9 +31,12 @@ case-insensitive), `description`, `questions` JSONB, `is_default`, `created_by`,
 `created_at`, `updated_at`. A partial unique index allows one `is_default` row
 per org.
 
-Question shape: `{ key: "q1", label: string, description?: string, weight: 1..5 }`.
-The server assigns keys `q1..qN` on every save. Labels are unique within a
-questionnaire because worksheet columns are matched by label.
+Question shape: `{ key: string, label: string, description?: string, weight: 1..5 }`.
+The server derives each key from the question's label, so reordering questions
+keeps answers on the right question, and answers sent against a renamed question
+are rejected instead of being scored against something else. Labels are unique
+within a questionnaire, ignoring case and repeated spaces, because worksheet
+columns are matched by label.
 
 `ai_app_assessments`: `id`, `organization_id`, `ai_app_id` (cascade delete),
 `questionnaire_id` (set null on delete), `status` (`pending` | `completed`),
@@ -70,7 +73,7 @@ standard `STATUS_CODE` envelope. Writes need `aiApp.edit` unless noted.
 | `GET /:id/assessments` | One app's assessments, newest first, with `can_answer`. |
 | `PUT /assessments/:assessmentId/answers` | `{ answers: { q1: 1..5 } }`. Every question is required. `aiApp.edit` or app owner, otherwise 403. 409 if already completed. |
 | `POST /assessments/cancel` | `{ assessment_ids }`. `aiApp.edit`. Removes pending ones, returns `{ cancelled }`. |
-| `GET /assessments/worksheet?questionnaire_id=` | Excel file of the pending assessments for one questionnaire. Without `aiApp.edit`, only the caller's own apps. |
+| `GET /assessments/worksheet?questionnaire_id=` | Excel file of up to 1000 pending assessments for one questionnaire. Without `aiApp.edit`, or with `assigned_to_me=true`, only the caller's own apps. |
 | `POST /assessments/answers` | `{ questionnaire_id, rows }`. Worksheet answers, see below. Without `aiApp.edit`, a row for another owner's app counts as an unknown assessment. |
 
 `notify_owners` covers only assessments this run created. The summary goes out
