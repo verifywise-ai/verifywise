@@ -1,11 +1,11 @@
 import { describe, it, expect, jest, beforeEach } from "@jest/globals";
 
 // Mock the sequelize instance before importing the module under test.
-const mockQuery = jest.fn<any>();
+const mockQuery = jest.fn<(sql: string, options?: unknown) => Promise<any>>();
 
 jest.mock("../database/db", () => ({
   sequelize: {
-    query: (...args: unknown[]) => mockQuery(...args),
+    query: (sql: string, options?: unknown) => mockQuery(sql, options),
   },
 }));
 
@@ -45,11 +45,11 @@ describe("createGroupQuery", () => {
     expect(options.replacements.organizationId).toBe(ORG);
   });
 
-  it.each([
+  it.each<[string | number, string]>([
     ["a", "too short"],
     [123, "not a string"],
     ["x".repeat(256), "too long"],
-  ])("rejects invalid name %p (%s)", async (name) => {
+  ])("rejects invalid name %p (%s)", async (name, _desc) => {
     await expect(createGroupQuery({ name }, ORG, 42)).rejects.toBeInstanceOf(ValidationException);
     expect(mockQuery).not.toHaveBeenCalled();
   });
