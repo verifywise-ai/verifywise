@@ -134,13 +134,17 @@ export function computeBiasAudit(
     overallRate = scored.length > 0 ? totalSelected / scored.length : 0;
     const rateOf = aboveMedian(median, RECORD_KEYS.score);
 
+    // Each category and intersectional table runs on the scored sample too,
+    // so a group's rate and the 2% share are over its scored records. The
+    // gates report the blank-score count (dataGates.ts, score_values_blank).
+    const scoredApplicants = scored.length;
     for (const [categoryKey, categoryConfig] of Object.entries(config.categories)) {
       countTable(
         computeCategoryTable({
-          records,
+          records: scored,
           categoryKey,
           categoryLabel: categoryConfig.label,
-          totalApplicants,
+          totalApplicants: scoredApplicants,
           threshold: config.threshold,
           smallSampleExclusion: config.smallSampleExclusion,
           rateOf,
@@ -152,9 +156,9 @@ export function computeBiasAudit(
     if (config.intersectional.required && config.intersectional.cross.length >= 2) {
       countTable(
         computeIntersectionalTable({
-          records,
+          records: scored,
           crossKeys: config.intersectional.cross,
-          totalApplicants,
+          totalApplicants: scoredApplicants,
           threshold: config.threshold,
           smallSampleExclusion: config.smallSampleExclusion,
           rateOf,

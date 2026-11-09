@@ -397,3 +397,52 @@ describe("summary when a small-sample exclusion leaves no reference", () => {
     expect(got.flagsCount).toBe(0);
   });
 });
+
+describe("blank scores in scoring rate mode", () => {
+  // Group A: 100 rows, 50 blank, 25 of the 50 scored above the median.
+  const groupA = [
+    ...Array.from({ length: 50 }, () => ({ sex: "A", score: null })),
+    ...Array.from({ length: 25 }, () => ({ sex: "A", score: 10 })),
+    ...Array.from({ length: 25 }, () => ({ sex: "A", score: 1 })),
+  ];
+  const groupB = Array.from({ length: 50 }, (_, i) => ({ sex: "B", score: i < 25 ? 10 : 1 }));
+  const records = [...groupA, ...groupB];
+  const config: BiasAuditConfig = {
+    presetId: "t",
+    metric: "scoring_rate",
+    categories: { sex: { label: "Sex", groups: [] } },
+    intersectional: { required: false, cross: [] },
+    threshold: 0.8,
+    smallSampleExclusion: 0.02,
+    outcomeColumn: "selected",
+    scoreColumn: "score",
+    predictionColumn: null,
+    groundTruthColumn: null,
+  };
+
+  it("rates a group over its scored records: 25 of 50 is 0.50, not 25 of 100", () => {
+    const got = computeBiasAudit(records, config);
+    const a = got.tables[0].rows.find((r) => r.categoryName === "A")!;
+    expect(a.applicantCount).toBe(50);
+    expect(a.selectedCount).toBe(25);
+    expect(a.selectionRate).toBe(0.5);
+    expect(a.impactRatio).toBe(1);
+    expect(a.flagged).toBe(false);
+    expect(got.overallSelectionRate).toBe(0.5);
+  });
+
+  it("measures the 2% small-sample share against scored records", () => {
+    const small = [
+      ...Array.from({ length: 900 }, () => ({ sex: "Z", score: null })),
+      ...Array.from({ length: 50 }, () => ({ sex: "A", score: 10 })),
+      ...Array.from({ length: 48 }, () => ({ sex: "B", score: 1 })),
+      ...Array.from({ length: 2 }, () => ({ sex: "C", score: 10 })),
+    ];
+    const got = computeBiasAudit(small, config);
+    const c = got.tables[0].rows.find((r) => r.categoryName === "C")!;
+    // C holds 2 of 100 scored records: exactly 2%, not excluded.
+    expect(c.excluded).toBe(false);
+    // Z has no scored records, so it is not a group in the table at all.
+    expect(got.tables[0].rows.some((r) => r.categoryName === "Z")).toBe(false);
+  });
+});

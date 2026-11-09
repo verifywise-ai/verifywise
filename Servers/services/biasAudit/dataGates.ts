@@ -244,6 +244,18 @@ export function runDataGates(records: AuditRecord[], config: BiasAuditConfig): G
       .map((r) => scoreValue(r, RECORD_KEYS.score))
       .filter((v): v is number => v !== null);
     const distinctValues = new Set(values).size;
+    const blankScores = total - values.length;
+    if (blankScores > 0 && values.length > 0) {
+      findings.push({
+        code: "score_values_blank",
+        severity: "note",
+        message:
+          `${withThousands(blankScores)} of ${withThousands(total)} records have a blank score. ` +
+          `They are left out of the median and every scoring rate, so each group's rate is over ` +
+          `its scored records only.`,
+        detail: { column: RECORD_KEYS.score, blank: blankScores, total },
+      });
+    }
     if (values.length === 0) {
       findings.push({
         code: "score_column_empty",

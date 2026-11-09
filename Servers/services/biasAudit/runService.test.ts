@@ -291,6 +291,35 @@ describe("createRun, scoring rate", () => {
     expect(stored().resultJson.totalApplicants).toBe(300);
   });
 
+  it("rates each group over its scored records and records a blank-score note", async () => {
+    utils.getProfileAnswersQuery.mockResolvedValue([
+      ...PERSON,
+      ans("threshold.operational", "stated"),
+    ]);
+    const rows = ["gender,race,s"];
+    // Female: 100 rows, 50 blank, 25 of the 50 scored above the median.
+    for (let i = 0; i < 100; i++) {
+      const score = i < 50 ? "" : i < 75 ? "9" : "1";
+      rows.push(`Female,${i % 2 ? "White" : "Asian"},${score}`);
+    }
+    for (let i = 0; i < 100; i++) {
+      rows.push(`Male,${i % 2 ? "White" : "Asian"},${i < 50 ? "9" : "1"}`);
+    }
+    const out = await run({ csv: rows.join("\n") + "\n", mapping: SCORE_MAPPING });
+    expect(out.outcome.result).not.toBeNull();
+    const sex = stored().resultJson.tables.find(
+      (t: { categoryKey: string }) => t.categoryKey === "sex",
+    );
+    const female = sex.rows.find((r: { categoryName: string }) => r.categoryName === "Female");
+    expect(female.applicantCount).toBe(50);
+    expect(female.selectionRate).toBe(0.5);
+    const note = stored().gateFindingsJson.find(
+      (f: { code: string }) => f.code === "score_values_blank",
+    );
+    expect(note.detail.blank).toBe(50);
+    expect(stored().resultJson.totalApplicants).toBe(200);
+  });
+
   it("accepts the score key and refuses the selected key for a scoring run", async () => {
     utils.getProfileAnswersQuery.mockResolvedValue([
       ...PERSON,
