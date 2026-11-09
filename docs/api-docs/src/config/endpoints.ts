@@ -12500,6 +12500,131 @@ export const v1V1dashboardEndpoints: Endpoint[] = [
   },
 ];
 
+// v1: V1/Groups endpoints
+export const v1V1groupsEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/groups',
+    summary: "List Groups",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Groups",
+  },
+  {
+    method: 'POST',
+    path: '/v1/groups',
+    summary: "Create Group",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Groups",
+  },
+  {
+    method: 'GET',
+    path: '/v1/groups/{id}',
+    summary: "Get Group By Id",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Groups",
+  },
+  {
+    method: 'PATCH',
+    path: '/v1/groups/{id}',
+    summary: "Update Group By Id",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Groups",
+  },
+  {
+    method: 'DELETE',
+    path: '/v1/groups/{id}',
+    summary: "Delete Group By Id",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Groups",
+  },
+  {
+    method: 'GET',
+    path: '/v1/groups/{id}/members',
+    summary: "List Group Members",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Groups",
+  },
+  {
+    method: 'POST',
+    path: '/v1/groups/{id}/members',
+    summary: "Add Group Members",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Groups",
+  },
+  {
+    method: 'PUT',
+    path: '/v1/groups/{id}/members',
+    summary: "Set Group Members",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Groups",
+  },
+  {
+    method: 'DELETE',
+    path: '/v1/groups/{id}/members/{userId}',
+    summary: "Remove Group Member",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Groups",
+  },
+  {
+    method: 'GET',
+    path: '/v1/groups/projects/{projectId}/groups',
+    summary: "List Project Groups",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Groups",
+  },
+  {
+    method: 'PUT',
+    path: '/v1/groups/projects/{projectId}/groups',
+    summary: "Set Project Groups",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Groups",
+  },
+];
+
 // v1: V1/Intake Form Review Time endpoints
 export const v1V1intakeFormReviewTimeEndpoints: Endpoint[] = [
   {
@@ -13010,6 +13135,7 @@ export const allEndpoints = {
   v1V1aiAppLifecycle: v1V1aiAppLifecycleEndpoints,
   v1V1aiApps: v1V1aiAppsEndpoints,
   v1V1dashboard: v1V1dashboardEndpoints,
+  v1V1groups: v1V1groupsEndpoints,
   v1V1intakeFormReviewTime: v1V1intakeFormReviewTimeEndpoints,
   v1V1lifecycleSettings: v1V1lifecycleSettingsEndpoints,
   v1V1projects: v1V1projectsEndpoints,

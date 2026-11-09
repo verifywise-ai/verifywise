@@ -30,6 +30,7 @@ import aiAppsRoutes from "./aiApps.route";
 import aiAppLifecycleRoutes from "./aiAppLifecycle.route";
 import projectsRoutes from "./projects.route";
 import dashboardPreferencesRoutes from "./dashboardPreferences.route";
+import groupsRoutes from "./groups.route";
 
 const router = express.Router();
 
@@ -71,5 +72,8 @@ router.use("/projects", projectsRoutes);
 
 // Per-user dashboard layout (#5257).
 router.use("/dashboard", dashboardPreferencesRoutes);
+
+// Groups / teams with RBAC and group-level use-case access (#5253).
+router.use("/groups", groupsRoutes);
 
 export default router;

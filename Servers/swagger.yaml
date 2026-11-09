@@ -7926,6 +7926,8 @@ tags:
   -
     name: 'v1: V1/Dashboard'
   -
+    name: 'v1: V1/Groups'
+  -
     name: 'v1: V1/Intake Form Review Time'
   -
     name: 'v1: V1/Lifecycle Settings'
@@ -27852,6 +27854,154 @@ paths:
       tags:
         - 'v1: V1/Projects'
       operationId: v1_projects_updateProjectById
+      security:
+        -
+          bearerAuth: []
+  /v1/groups:
+    get:
+      summary: 'List Groups'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Groups'
+      operationId: listGroups
+      security:
+        -
+          bearerAuth: []
+    post:
+      summary: 'Create Group'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Groups'
+      operationId: createGroup
+      security:
+        -
+          bearerAuth: []
+  '/v1/groups/{id}':
+    get:
+      summary: 'Get Group By Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Groups'
+      operationId: getGroupById
+      security:
+        -
+          bearerAuth: []
+    patch:
+      summary: 'Update Group By Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Groups'
+      operationId: updateGroupById
+      security:
+        -
+          bearerAuth: []
+    delete:
+      summary: 'Delete Group By Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Groups'
+      operationId: deleteGroupById
+      security:
+        -
+          bearerAuth: []
+  '/v1/groups/{id}/members':
+    get:
+      summary: 'List Group Members'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Groups'
+      operationId: listGroupMembers
+      security:
+        -
+          bearerAuth: []
+    post:
+      summary: 'Add Group Members'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Groups'
+      operationId: addGroupMembers
+      security:
+        -
+          bearerAuth: []
+    put:
+      summary: 'Set Group Members'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Groups'
+      operationId: setGroupMembers
+      security:
+        -
+          bearerAuth: []
+  '/v1/groups/{id}/members/{userId}':
+    delete:
+      summary: 'Remove Group Member'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Groups'
+      operationId: removeGroupMember
+      security:
+        -
+          bearerAuth: []
+  '/v1/groups/projects/{projectId}/groups':
+    get:
+      summary: 'List Project Groups'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Groups'
+      operationId: listProjectGroups
+      security:
+        -
+          bearerAuth: []
+    put:
+      summary: 'Set Project Groups'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Groups'
+      operationId: setProjectGroups
       security:
         -
           bearerAuth: []
