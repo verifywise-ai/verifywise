@@ -108,10 +108,7 @@ describe("validateRow", () => {
   });
 
   it("flattens ExcelJS rich-text cell values", () => {
-    const errors = validateRow(
-      validRow({ topic_name: { richText: [{ text: "  " }] } as any }),
-      2,
-    );
+    const errors = validateRow(validRow({ topic_name: { richText: [{ text: "  " }] } as any }), 2);
     expect(errors.some((e) => e.field === "topic_name")).toBe(true);
   });
 });
@@ -261,9 +258,9 @@ describe("updateImportedFrameworkQuery", () => {
     spyOnTx();
     mockQuery.mockResolvedValueOnce([]); // guard select finds nothing
 
-    await expect(
-      updateImportedFrameworkQuery(1, ORG_ID, { name: "Nope" }),
-    ).rejects.toBeInstanceOf(NotFoundException);
+    await expect(updateImportedFrameworkQuery(1, ORG_ID, { name: "Nope" })).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
     expect(rolledBack()).toBe(true);
   });
 
@@ -295,9 +292,7 @@ describe("deleteImportedFrameworkQuery", () => {
     spyOnTx();
     mockQuery.mockResolvedValueOnce([]);
 
-    await expect(deleteImportedFrameworkQuery(2, ORG_ID)).rejects.toBeInstanceOf(
-      NotFoundException,
-    );
+    await expect(deleteImportedFrameworkQuery(2, ORG_ID)).rejects.toBeInstanceOf(NotFoundException);
     expect(rolledBack()).toBe(true);
   });
 });
