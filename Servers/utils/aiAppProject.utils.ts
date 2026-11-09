@@ -41,8 +41,12 @@ const HISTORY_LINKED = "Linked use case";
 
 const ORGANIZATIONAL_REFUSAL = "Organizational use cases cannot be linked to an AI app";
 
-function useCaseLabel(project: Pick<VisibleProject, "uc_id" | "project_title">): string {
-  return project.uc_id ? `${project.uc_id}: ${project.project_title}` : project.project_title;
+/**
+ * How the AI app's change history names a use case. Anyone in the org can read
+ * that history, including people who cannot see the use case, so never the title.
+ */
+function useCaseLabel(project: Pick<VisibleProject, "id" | "uc_id">): string {
+  return project.uc_id ?? `#${project.id}`;
 }
 
 function refuseOrganizational(project: VisibleProject): void {
@@ -85,9 +89,9 @@ async function aiAppExistsQuery(
 }
 
 /**
- * The models a use case hands to a new AI app. model_inventories_projects_frameworks
- * holds one row per framework, so DISTINCT is what keeps a model used under two
- * frameworks from breaking the UNIQUE on ai_apps_model_inventories.
+ * The models a use case hands to a new AI app: the ones on its Linked models tab
+ * (getModelByProjectIdQuery). Rows with a framework_id belong to the framework;
+ * their project_id is just the first project found using that framework.
  */
 async function getProjectModelIdsQuery(
   projectId: number,
@@ -99,6 +103,7 @@ async function getProjectModelIdsQuery(
        FROM model_inventories_projects_frameworks
       WHERE organization_id = :organizationId
         AND project_id = :projectId
+        AND framework_id IS NULL
         AND model_inventory_id IS NOT NULL`,
     { replacements: { organizationId, projectId }, type: QueryTypes.SELECT, transaction },
   );

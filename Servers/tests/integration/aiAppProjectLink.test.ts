@@ -17,6 +17,20 @@ import {
 const ROLE = { Admin: 1, Reviewer: 2, Editor: 3, Auditor: 4 } as const;
 type RoleName = keyof typeof ROLE;
 
+/** A model on the use case's own Linked models tab: no framework_id. */
+async function linkModelToUseCase(
+  orgId: number,
+  modelInventoryId: number,
+  projectId: number,
+): Promise<void> {
+  await sequelize.query(
+    `INSERT INTO model_inventories_projects_frameworks
+       (organization_id, model_inventory_id, project_id)
+     VALUES (:orgId, :modelInventoryId, :projectId)`,
+    { replacements: { orgId, modelInventoryId, projectId } },
+  );
+}
+
 let counter = 0;
 async function userIn(orgId: number, role: RoleName): Promise<number> {
   counter += 1;
@@ -184,10 +198,11 @@ describe("AI app and use case links", () => {
       await setProject(projectId, "description = 'Scores payments', is_demo = true");
       const modelA = await createTestModelInventory(orgId);
       const modelB = await createTestModelInventory(orgId, { model: "Other" });
-      // One model under two frameworks: two rows, one dependency.
-      await linkModelToProject(orgId, modelA, projectId, 1);
-      await linkModelToProject(orgId, modelA, projectId, 2);
-      await linkModelToProject(orgId, modelB, projectId, 1);
+      await linkModelToUseCase(orgId, modelA, projectId);
+      await linkModelToUseCase(orgId, modelB, projectId);
+      // A framework-level row names an arbitrary project using that framework.
+      const frameworkOnly = await createTestModelInventory(orgId, { model: "Framework only" });
+      await linkModelToProject(orgId, frameworkOnly, projectId, 1);
       const api = await as(orgId, adminId, "Admin");
 
       const preview = await api.get(`/api/v1/projects/${projectId}/create-ai-app`);
@@ -211,7 +226,7 @@ describe("AI app and use case links", () => {
         expect.objectContaining({
           action: "created",
           field_name: "Created from use case",
-          new_value: "UC-7: Fraud scoring",
+          new_value: "UC-7",
           changed_by_user_id: adminId,
         }),
       ]);
@@ -430,12 +445,12 @@ describe("AI app and use case links", () => {
           action: "updated",
           field_name: "Linked use case",
           old_value: "-",
-          new_value: "UC-9: Claims",
+          new_value: "UC-9",
         }),
         expect.objectContaining({
           action: "updated",
           field_name: "Linked use case",
-          old_value: "UC-9: Claims",
+          old_value: "UC-9",
           new_value: "-",
         }),
       ]);
