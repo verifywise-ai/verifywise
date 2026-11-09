@@ -1,5 +1,6 @@
 import { QueryTypes, Transaction } from "sequelize";
 import { sequelize } from "../database/db";
+import { TaskStatus } from "../domain.layer/enums/task-status.enum";
 
 /**
  * Valid entity types for task entity links
@@ -40,23 +41,74 @@ export function isValidEntityType(type: string): type is EntityType {
   return VALID_ENTITY_TYPES.includes(type as EntityType);
 }
 
+/** The table behind each entity type a task can link to. */
+export const TASK_ENTITY_TABLES: Record<EntityType, string> = {
+  vendor: "vendors",
+  model: "model_inventories",
+  policy: "policy_manager",
+  nist_subcategory: "nist_ai_rmf_subcategories",
+  iso42001_subclause: "subclauses_iso",
+  iso42001_annexcategory: "annexcategories_iso",
+  iso27001_subclause: "subclauses_iso27001",
+  iso27001_annexcontrol: "annexcontrols_iso27001",
+  eu_control: "controls_eu",
+  eu_subcontrol: "subcontrols_eu",
+};
+
 /**
  * Get the table name for an entity type
  */
 function getEntityTableName(entityType: EntityType): string {
-  const tableMap: Record<EntityType, string> = {
-    vendor: "vendors",
-    model: "model_inventories",
-    policy: "policy_manager",
-    nist_subcategory: "nist_ai_rmf_subcategories",
-    iso42001_subclause: "subclauses_iso",
-    iso42001_annexcategory: "annexcategories_iso",
-    iso27001_subclause: "subclauses_iso27001",
-    iso27001_annexcontrol: "annexcontrols_iso27001",
-    eu_control: "controls_eu",
-    eu_subcontrol: "subcontrols_eu",
-  };
-  return tableMap[entityType];
+  return TASK_ENTITY_TABLES[entityType];
+}
+
+/** Task link targets that do not belong to any one use case. */
+const ORGANIZATION_WIDE_LINK_TYPES: readonly EntityType[] = ["vendor", "model", "policy"];
+
+/** Task link targets that reach projects_frameworks through a parent row. */
+const LINK_PARENTS: Partial<Record<EntityType, { table: string; foreignKey: string }>> = {
+  eu_subcontrol: { table: "controls_eu", foreignKey: "control_id" },
+};
+
+/**
+ * SQL condition: :visibilityUserId is assigned to a task linked to the use case
+ * `projectIdSql`. Tasks never store a use case id; a link to one of the use
+ * case's framework requirements is what ties them, so a new entity type is
+ * treated as a requirement and fails here if its table has no
+ * projects_frameworks_id, rather than being quietly ignored. A deleted task
+ * gives no access. The caller's query must bind :organizationId and
+ * :visibilityUserId.
+ */
+export function taskAssigneeOfProjectSql(projectIdSql: string): string {
+  const linkConditions = VALID_ENTITY_TYPES.filter(
+    (entityType) => !ORGANIZATION_WIDE_LINK_TYPES.includes(entityType),
+  )
+    .map((entityType) => {
+      const parent = LINK_PARENTS[entityType];
+      const source = parent
+        ? `${TASK_ENTITY_TABLES[entityType]} e
+           JOIN ${parent.table} parent ON parent.id = e.${parent.foreignKey}`
+        : `${TASK_ENTITY_TABLES[entityType]} e`;
+      const frameworkKey = parent ? "parent.projects_frameworks_id" : "e.projects_frameworks_id";
+      const parentScope = parent ? "AND parent.organization_id = :organizationId" : "";
+      return `(tel.entity_type = '${entityType}' AND tel.entity_id IN (
+         SELECT e.id FROM ${source}
+           JOIN projects_frameworks pf ON pf.id = ${frameworkKey}
+          WHERE e.organization_id = :organizationId ${parentScope}
+            AND pf.organization_id = :organizationId
+            AND pf.project_id = ${projectIdSql}))`;
+    })
+    .join(" OR ");
+
+  return `EXISTS (
+    SELECT 1
+      FROM task_assignees ta
+      JOIN tasks t ON t.id = ta.task_id AND t.organization_id = :organizationId
+      JOIN task_entity_links tel ON tel.task_id = t.id AND tel.organization_id = :organizationId
+     WHERE ta.organization_id = :organizationId
+       AND ta.user_id = :visibilityUserId
+       AND t.status <> '${TaskStatus.DELETED}'
+       AND (${linkConditions}))`;
 }
 
 /**

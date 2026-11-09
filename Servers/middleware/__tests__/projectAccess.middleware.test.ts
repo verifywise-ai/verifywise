@@ -3,16 +3,20 @@ import { Request, Response } from "express";
 
 jest.mock("../../utils/project.utils", () => ({
   getProjectAccessQuery: jest.fn(),
+  getProjectReadAccessQuery: jest.fn(),
 }));
 jest.mock("../../utils/logger/logHelper", () => ({
   logFailure: jest.fn(),
 }));
 
 import { requireProjectAccess } from "../projectAccess.middleware";
-import { getProjectAccessQuery } from "../../utils/project.utils";
+import { getProjectAccessQuery, getProjectReadAccessQuery } from "../../utils/project.utils";
 import { logFailure } from "../../utils/logger/logHelper";
 
 const accessQuery = getProjectAccessQuery as unknown as jest.Mock<(...args: any[]) => Promise<any>>;
+const readAccessQuery = getProjectReadAccessQuery as unknown as jest.Mock<
+  (...args: any[]) => Promise<any>
+>;
 const logged = logFailure as unknown as jest.Mock<(...args: any[]) => Promise<any>>;
 
 function createReq(overrides: Record<string, unknown> = {}): Request {
@@ -88,11 +92,34 @@ describe("requireProjectAccess", () => {
     ["DELETE", "Delete"],
   ])("logs a refused %s as %s", async (method, eventType) => {
     accessQuery.mockResolvedValue("denied");
+    readAccessQuery.mockResolvedValue("denied");
 
     await requireProjectAccess()(createReq({ method }), createRes(), next);
 
     expect(logged).toHaveBeenCalledWith(expect.objectContaining({ eventType }));
   });
+
+  it("uses the read rule, which includes task assignees, for a GET", async () => {
+    readAccessQuery.mockResolvedValue("allowed");
+
+    await requireProjectAccess()(createReq({ method: "GET" }), createRes(), next);
+
+    expect(readAccessQuery).toHaveBeenCalledWith(12, { userId: 7, role: "Editor" }, 3);
+    expect(accessQuery).not.toHaveBeenCalled();
+    expect(next).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(["POST", "PUT", "PATCH", "DELETE"])(
+    "keeps the stricter rule for a %s",
+    async (method) => {
+      accessQuery.mockResolvedValue("allowed");
+
+      await requireProjectAccess()(createReq({ method }), createRes(), next);
+
+      expect(accessQuery).toHaveBeenCalledTimes(1);
+      expect(readAccessQuery).not.toHaveBeenCalled();
+    },
+  );
 
   it("leaves a missing use case to the controller's 404", async () => {
     accessQuery.mockResolvedValue("not_found");
@@ -158,5 +185,46 @@ describe("requireProjectAccess", () => {
     );
 
     expect(accessQuery).toHaveBeenCalledWith(44, expect.anything(), 3);
+  });
+
+  describe("reading the id from the query", () => {
+    const fromQuery = requireProjectAccess("projectId", "query");
+
+    it("checks the query's id and ignores params and body", async () => {
+      accessQuery.mockResolvedValue("allowed");
+
+      await fromQuery(
+        createReq({
+          method: "POST",
+          params: { projectId: "1" },
+          body: { projectId: 2 },
+          query: { projectId: "44" },
+        }),
+        createRes(),
+        next,
+      );
+
+      expect(accessQuery).toHaveBeenCalledWith(44, expect.anything(), 3);
+      expect(next).toHaveBeenCalledTimes(1);
+    });
+
+    it.each([
+      ["a repeated field", ["1", "2"]],
+      ["a nested object", { id: "1" }],
+      ["no value", undefined],
+      ["a value parseInt would truncate", "44abc"],
+    ])("answers 400 for %s", async (_name, projectId) => {
+      const res = createRes();
+
+      await fromQuery(
+        createReq({ params: { projectId: "1" }, body: { projectId: 1 }, query: { projectId } }),
+        res,
+        next,
+      );
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(next).not.toHaveBeenCalled();
+      expect(accessQuery).not.toHaveBeenCalled();
+    });
   });
 });

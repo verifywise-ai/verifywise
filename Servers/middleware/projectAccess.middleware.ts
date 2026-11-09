@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import { logFailure } from "../utils/logger/logHelper";
-import { getProjectAccessQuery } from "../utils/project.utils";
+import { getProjectAccessQuery, getProjectReadAccessQuery } from "../utils/project.utils";
 import { toId } from "../utils/validations/validation.utils";
 
 const FILE = "projectAccess.middleware.ts";
@@ -16,17 +16,21 @@ const eventTypeFor = (method: string): "Read" | "Delete" | "Update" => {
 /**
  * Lets a request through only when the caller can see the use case named by
  * the route: an Admin, its owner or a member, the rule that scopes the use case
- * list. A permission such as useCase.edit alone says nothing about which use
- * case. Use after authenticateJWT and any param validation.
+ * list. A GET also lets through the assignees of a task linked to the use case.
+ * A permission such as useCase.edit alone says nothing about which use case.
+ * Use after authenticateJWT and any param validation.
  *
  * A use case that does not exist, or is in another organization, is passed on
  * so the controller answers its usual 404. An error in the check is a 500:
  * never treated as allowed.
  *
- * @param paramName route parameter holding the use case id
+ * @param paramName name of the field holding the use case id
+ * @param source where the handler reads that field. It must be the same place:
+ * a repeated query field is refused rather than resolved, so the id checked
+ * here is the id the handler acts on.
  */
 export const requireProjectAccess =
-  (paramName: string = "id") =>
+  (paramName: string = "id", source: "params" | "query" = "params") =>
   async (req: Request, res: Response, next: NextFunction) => {
     const { userId, role, organizationId } = req;
     if (!userId || !role) {
@@ -34,15 +38,16 @@ export const requireProjectAccess =
     }
 
     const eventType = eventTypeFor(req.method);
-    const projectId = toId(req.params[paramName]);
+    const projectId = toId(req[source][paramName]);
     if (!Number.isSafeInteger(projectId) || projectId <= 0) {
       return res.status(400).json(STATUS_CODE[400](req.t!("Invalid project ID")));
     }
 
     try {
+      const accessQuery = req.method === "GET" ? getProjectReadAccessQuery : getProjectAccessQuery;
       // No organization means nothing to scope the check to (a pure SuperAdmin).
       const access = organizationId
-        ? await getProjectAccessQuery(projectId, { userId, role }, organizationId)
+        ? await accessQuery(projectId, { userId, role }, organizationId)
         : "denied";
 
       if (access === "denied") {

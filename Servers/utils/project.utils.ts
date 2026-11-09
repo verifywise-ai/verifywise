@@ -6,6 +6,7 @@ import { QueryTypes, Transaction } from "sequelize";
 import { LifecycleStage } from "../domain.layer/enums/lifecycle-stage.enum";
 import { parseDepartment } from "./lifecycle.utils";
 import { projectVisibilitySql } from "./projectVisibility.utils";
+import { taskAssigneeOfProjectSql } from "./taskEntityLink.utils";
 import { VendorsProjectsModel } from "../domain.layer/models/vendorsProjects/vendorsProjects.model";
 import { RiskModel } from "../domain.layer/models/risks/risk.model";
 import { FileModel } from "../domain.layer/models/file/file.model";
@@ -192,6 +193,9 @@ export const keepPreviousOwnerAsMemberQuery = async (
 
 export type ProjectAccess = "allowed" | "denied" | "not_found";
 
+type ProjectViewer = { userId: number; role: string };
+type ProjectAccessSql = ReturnType<typeof projectVisibilitySql>;
+
 /**
  * Whether the user can see this use case, by the rule that scopes the use case
  * list. Tells a use case they may not see from one that is not in their
@@ -199,11 +203,39 @@ export type ProjectAccess = "allowed" | "denied" | "not_found";
  */
 export const getProjectAccessQuery = async (
   projectId: number,
-  viewer: { userId: number; role: string },
+  viewer: ProjectViewer,
+  organizationId: number,
+  transaction?: Transaction,
+): Promise<ProjectAccess> =>
+  evaluateProjectAccess(projectVisibilitySql("p", viewer), projectId, organizationId, transaction);
+
+/**
+ * Same as getProjectAccessQuery, and also true for the assignees of a task
+ * linked to the use case. Reads only: a task assignment lets someone open the
+ * use case from the task, not change it, and does not add it to their list.
+ */
+export const getProjectReadAccessQuery = async (
+  projectId: number,
+  viewer: ProjectViewer,
   organizationId: number,
   transaction?: Transaction,
 ): Promise<ProjectAccess> => {
   const visibility = projectVisibilitySql("p", viewer);
+  const readAccess: ProjectAccessSql = visibility.sql
+    ? {
+        sql: ` AND ((TRUE${visibility.sql}) OR ${taskAssigneeOfProjectSql("p.id")})`,
+        replacements: visibility.replacements,
+      }
+    : visibility;
+  return evaluateProjectAccess(readAccess, projectId, organizationId, transaction);
+};
+
+const evaluateProjectAccess = async (
+  visibility: ProjectAccessSql,
+  projectId: number,
+  organizationId: number,
+  transaction?: Transaction,
+): Promise<ProjectAccess> => {
   const rows = await sequelize.query<{ can_view: boolean | null }>(
     `SELECT (TRUE${visibility.sql}) AS can_view FROM projects p
       WHERE p.organization_id = :organizationId AND p.id = :projectId`,
@@ -221,7 +253,7 @@ export const getProjectAccessQuery = async (
 /** Whether the user can see this use case, inside the caller's transaction. */
 export const canViewProjectQuery = async (
   projectId: number,
-  viewer: { userId: number; role: string },
+  viewer: ProjectViewer,
   organizationId: number,
   transaction: Transaction,
 ): Promise<boolean> =>
