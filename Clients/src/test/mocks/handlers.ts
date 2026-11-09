@@ -75,6 +75,11 @@ export const handlers = [
     }),
   ),
 
+  // Per-user dashboard layout: none saved, so the default layout applies.
+  http.get("/api/v1/dashboard/preferences", () =>
+    HttpResponse.json({ data: { layout: null, updated_at: null } }),
+  ),
+
   // ==================== Auth / Users ====================
 
   // Specific auth routes (must precede /api/users/:id)

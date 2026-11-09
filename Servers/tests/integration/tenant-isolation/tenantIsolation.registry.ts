@@ -143,6 +143,13 @@ export const tenantIsolationRegistry: IsolationEntity[] = [
     testFile: "use-case-org-settings.isolation.test.ts",
   },
   {
+    // One row per user per organization; the JWT alone picks the row.
+    name: "dashboard_preferences",
+    tables: ["dashboard_preferences"],
+    baseRoute: "/api/v1/dashboard/preferences",
+    testFile: "dashboard-preferences.isolation.test.ts",
+  },
+  {
     name: "lifecycle_org_settings",
     tables: ["lifecycle_org_settings"],
     baseRoute: "/api/v1/lifecycle-settings",

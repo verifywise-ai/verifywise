@@ -10,6 +10,7 @@ The Dashboard domain provides centralized metrics, visualizations, and analytics
 - Time-series risk history tracking
 - Interactive charts (line, pie/donut)
 - Executive and operations views (selection remembered per browser)
+- Per-user layout: show, hide and reorder widgets, saved to the account
 - Client-side caching with localStorage
 - Organization-wide and project-specific views
 - Framework compliance progress tracking
@@ -21,6 +22,13 @@ The Dashboard domain provides centralized metrics, visualizations, and analytics
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/dashboard` | Main dashboard metrics |
+
+### Per-user layout (v1)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/v1/dashboard/preferences` | The caller's saved layout in their organization, or `{ layout: null }` |
+| PUT | `/v1/dashboard/preferences` | Replace the caller's layout |
 
 ### Risk History
 
@@ -224,6 +232,24 @@ function shouldRecordSnapshot(current, previous): boolean {
 | Framework Dashboard | `/framework/dashboard` | Organization-wide |
 | Policy Dashboard | `/policy-dashboard` | Policy metrics |
 | Evals Dashboard | `/evals-dashboard` | LLM evaluation |
+
+## Per-user layout (#5257)
+
+Each person can show, hide and reorder the widgets of the overview page with the "Edit layout" modal. Customization is presentation only: `getDashboardData` and the metrics hooks are unchanged and the widgets still draw from the single aggregate payload.
+
+**Storage.** `dashboard_preferences` holds one row per `(user_id, organization_id)`, with `layout` as a JSONB list of `{ widgetKey, visible, position }` and an RLS `tenant_isolation` policy. The row owner comes from the JWT; the body cannot name a user or organization. Any role can read and write its own layout. The PUT validator (`middleware/validators/dashboardPreferences.validator.ts`) accepts at most 200 entries with no repeated key or position, and checks the form of a key but not whether the widget exists.
+
+**Registry.** `pages/DashboardOverview/widgetRegistry.ts` lists every widget with a label, a width and `defaultVisible`, plus the default order of each view. `DashboardWidgets.tsx` maps each key to what it renders; the compiler rejects a registered widget without a renderer. Widget keys are stored in user data, so they must never be renamed.
+
+**Views.** Operations and executive each have their own layout. Saved keys are `<view>.<widget key>`, for example `operations.task-radar`.
+
+**Resolving a layout** (`resolveViewLayout`):
+
+- No saved row, a failed or slow fetch (5 second limit) or malformed data gives the default layout. The page waits for this request so widgets do not jump after they appear.
+- Saved keys the registry does not know are ignored, and kept when the layout is saved again.
+- A widget missing from a saved layout (added in a later release) appears right after its nearest default predecessor, using `defaultVisible`.
+
+**Rows** (`groupWidgetRows`). Consecutive widgets of the same width share a grid; a change of width starts a new row. The default order therefore gives the same rows as the fixed layout did. `organizational-frameworks` and `quantitative-portfolio` only exist when their data does: they are left out of the page and of the edit list otherwise, but keep their saved place.
 
 ## Custom Hooks
 
@@ -438,6 +464,9 @@ const results = await Promise.allSettled([
 | `routes/dashboard.route.ts` | Dashboard routes |
 | `controllers/dashboard.ctrl.ts` | Dashboard handler |
 | `utils/dashboard.utils.ts` | Aggregation queries |
+| `routes/v1/dashboardPreferences.route.ts` | Per-user layout routes |
+| `controllers/dashboardPreferences.ctrl.ts` | Per-user layout handlers |
+| `utils/dashboardPreferences.utils.ts` | Per-user layout queries |
 | `routes/riskHistory.route.ts` | Risk history routes |
 | `controllers/riskHistory.ctrl.ts` | Time-series handler |
 | `utils/history/riskHistory.utils.ts` | Snapshot utilities |
@@ -447,6 +476,10 @@ const results = await Promise.allSettled([
 | File | Purpose |
 |------|---------|
 | `pages/DashboardOverview/` | Main dashboard |
+| `pages/DashboardOverview/widgetRegistry.ts` | Widget keys, defaults, layout resolution |
+| `pages/DashboardOverview/DashboardWidgets.tsx` | What each widget renders |
+| `pages/DashboardOverview/EditLayoutModal.tsx` | Show, hide and reorder |
+| `hooks/useDashboardPreferences.ts` | Saved layout query and mutation |
 | `pages/Framework/Dashboard/` | Framework analytics |
 | `hooks/useDashboard.ts` | Dashboard data hook |
 | `hooks/useDashboardMetrics.ts` | Metrics aggregation |

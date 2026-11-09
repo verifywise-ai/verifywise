@@ -28,6 +28,7 @@ import useCaseLifecycleRoutes from "./useCaseLifecycle.route";
 import lifecycleSettingsRoutes from "./lifecycleSettings.route";
 import aiAppsRoutes from "./aiApps.route";
 import aiAppLifecycleRoutes from "./aiAppLifecycle.route";
+import dashboardPreferencesRoutes from "./dashboardPreferences.route";
 
 const router = express.Router();
 
@@ -63,5 +64,8 @@ router.use("/lifecycle-settings", lifecycleSettingsRoutes);
 // AI apps with their lifecycle (#5193).
 router.use("/ai-apps", aiAppsRoutes);
 router.use("/ai-app-lifecycle", aiAppLifecycleRoutes);
+
+// Per-user dashboard layout (#5257).
+router.use("/dashboard", dashboardPreferencesRoutes);
 
 export default router;
