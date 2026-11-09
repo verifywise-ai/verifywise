@@ -143,6 +143,11 @@ export const tenantIsolationRegistry: IsolationEntity[] = [
     testFile: "use-case-org-settings.isolation.test.ts",
   },
   {
+    name: "raci_entries",
+    tables: ["raci_entries"],
+    baseRoute: "/api/v1/projects",
+  },
+  {
     // One row per user per organization; the JWT alone picks the row.
     name: "dashboard_preferences",
     tables: ["dashboard_preferences"],
