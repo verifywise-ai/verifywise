@@ -48,8 +48,8 @@ export async function createTask(req: Request, res: Response): Promise<any> {
 
   const transaction = await sequelize.transaction();
   try {
-    const { userId } = req;
-    if (!userId) {
+    const { userId, role } = req;
+    if (!userId || !role) {
       await transaction.rollback();
       return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
     }
@@ -95,7 +95,13 @@ export async function createTask(req: Request, res: Response): Promise<any> {
     // other entities survive even if a client skips the follow-up
     // POST /tasks/:id/entities calls.
     if (task.id && Array.isArray(entity_links) && entity_links.length > 0) {
-      await persistTaskEntityLinks(task.id, entity_links, req.organizationId!, transaction);
+      await persistTaskEntityLinks(
+        task.id,
+        entity_links,
+        { userId, role },
+        req.organizationId!,
+        transaction,
+      );
     }
 
     await transaction.commit();
@@ -471,7 +477,13 @@ export async function updateTask(req: Request, res: Response): Promise<any> {
     // Persist any new entity links atomically with the task update (additive
     // only — removals continue to go through DELETE /tasks/:id/entities/:linkId).
     if (updatedTask.id && Array.isArray(entity_links) && entity_links.length > 0) {
-      await persistTaskEntityLinks(updatedTask.id, entity_links, req.organizationId!, transaction);
+      await persistTaskEntityLinks(
+        updatedTask.id,
+        entity_links,
+        { userId, role },
+        req.organizationId!,
+        transaction,
+      );
     }
 
     await transaction.commit();

@@ -6,6 +6,7 @@ import { QueryTypes, Transaction } from "sequelize";
 import { LifecycleStage } from "../domain.layer/enums/lifecycle-stage.enum";
 import { parseDepartment } from "./lifecycle.utils";
 import { projectVisibilitySql } from "./projectVisibility.utils";
+import { taskAssigneeOfProjectSql } from "./taskEntityLink.utils";
 import { VendorsProjectsModel } from "../domain.layer/models/vendorsProjects/vendorsProjects.model";
 import { RiskModel } from "../domain.layer/models/risks/risk.model";
 import { FileModel } from "../domain.layer/models/file/file.model";
@@ -192,6 +193,9 @@ export const keepPreviousOwnerAsMemberQuery = async (
 
 export type ProjectAccess = "allowed" | "denied" | "not_found";
 
+type ProjectViewer = { userId: number; role: string };
+type ProjectAccessSql = ReturnType<typeof projectVisibilitySql>;
+
 /**
  * Whether the user can see this use case, by the rule that scopes the use case
  * list. Tells a use case they may not see from one that is not in their
@@ -199,11 +203,58 @@ export type ProjectAccess = "allowed" | "denied" | "not_found";
  */
 export const getProjectAccessQuery = async (
   projectId: number,
-  viewer: { userId: number; role: string },
+  viewer: ProjectViewer,
+  organizationId: number,
+  transaction?: Transaction,
+): Promise<ProjectAccess> =>
+  evaluateProjectAccess(projectVisibilitySql("p", viewer), projectId, organizationId, transaction);
+
+/**
+ * SQL condition: :visibilityUserId approves a step of the active workflow set
+ * on `p`. Setting that workflow takes write access to the use case and editing
+ * one takes approvalWorkflow.admin, so nobody can grant themselves this. The
+ * caller's query must bind :organizationId and :visibilityUserId.
+ */
+const WORKFLOW_APPROVER_OF_PROJECT_SQL = `EXISTS (
+    SELECT 1
+      FROM approval_workflows aw
+      JOIN approval_workflow_steps aws
+        ON aws.workflow_id = aw.id AND aws.organization_id = :organizationId
+      JOIN approval_step_approvers asa
+        ON asa.workflow_step_id = aws.id AND asa.organization_id = :organizationId
+     WHERE aw.organization_id = :organizationId
+       AND aw.id = p.approval_workflow_id
+       AND aw.is_active = true
+       AND asa.approver_id = :visibilityUserId)`;
+
+/**
+ * Same as getProjectAccessQuery, and also true for the assignees of a task
+ * linked to the use case and the approvers of its workflow. Reads only: both
+ * are sent to the use case to do their part, not to change it, and it is not
+ * added to their list.
+ */
+export const getProjectReadAccessQuery = async (
+  projectId: number,
+  viewer: ProjectViewer,
   organizationId: number,
   transaction?: Transaction,
 ): Promise<ProjectAccess> => {
   const visibility = projectVisibilitySql("p", viewer);
+  const readAccess: ProjectAccessSql = visibility.sql
+    ? {
+        sql: ` AND ((TRUE${visibility.sql}) OR ${taskAssigneeOfProjectSql("p.id")} OR ${WORKFLOW_APPROVER_OF_PROJECT_SQL})`,
+        replacements: visibility.replacements,
+      }
+    : visibility;
+  return evaluateProjectAccess(readAccess, projectId, organizationId, transaction);
+};
+
+const evaluateProjectAccess = async (
+  visibility: ProjectAccessSql,
+  projectId: number,
+  organizationId: number,
+  transaction?: Transaction,
+): Promise<ProjectAccess> => {
   const rows = await sequelize.query<{ can_view: boolean | null }>(
     `SELECT (TRUE${visibility.sql}) AS can_view FROM projects p
       WHERE p.organization_id = :organizationId AND p.id = :projectId`,
@@ -221,7 +272,7 @@ export const getProjectAccessQuery = async (
 /** Whether the user can see this use case, inside the caller's transaction. */
 export const canViewProjectQuery = async (
   projectId: number,
-  viewer: { userId: number; role: string },
+  viewer: ProjectViewer,
   organizationId: number,
   transaction: Transaction,
 ): Promise<boolean> =>

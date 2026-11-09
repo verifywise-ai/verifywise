@@ -219,21 +219,34 @@ Read models: `GET /api/v1/use-case-lifecycle/summary` (stale ids and the interva
 
 A permission such as `useCase.edit` says what a role may do, not on which use case. `requireProjectAccess` (`middleware/projectAccess.middleware.ts`) adds the use case: the caller must be an Admin, its owner or a member, the rule that scopes the use case list (`projectVisibilitySql`). It runs after authentication and param validation.
 
-| Guarded route |
-|---------------|
-| `DELETE /api/projects/:id` |
-| `PATCH /api/projects/:id/status` |
-| `POST /api/projects/:id/eu-ai-act-classification` |
-| `GET /api/projects/stats/:id` |
-| `POST /api/v1/use-case-lifecycle/:id/go-live`, `/retire`, `/confirm` |
-| `PATCH /api/v1/use-case-lifecycle/:id/department` |
+**Reads also allow task assignees.** On a `GET`, the assignee of a non-deleted task linked to one of the use case's framework requirements passes too (`getProjectReadAccessQuery`, `taskAssigneeOfProjectSql` in `utils/taskEntityLink.utils.ts`). Tasks store no use case id; the link to a requirement (`eu_control`, `eu_subcontrol`, the ISO 42001 and 27001 and NIST types) reaches the use case through `projects_frameworks`. Vendor, model and policy links belong to the organization and give no access. Assignees are not added to the use case list and cannot use any guarded write. Because a link grants this, linking a task to a requirement takes access to its use case (`canLinkTaskToEntityQuery`): `POST /api/tasks/:id/entities` answers 403 without it, and `entity_links` on task create and update skips that link.
+
+**Reads also allow workflow approvers.** On a `GET`, anyone approving a step of the active workflow in `projects.approval_workflow_id` passes too, since the approval request email and notification link them to `/project-view`. Setting that workflow takes write access to the use case and editing a workflow takes `approvalWorkflow.admin`, so nobody can grant themselves this. Approvers are not added to the use case list and cannot use any guarded write.
+
+| Guarded route | Id read from |
+|---------------|--------------|
+| `GET` and `DELETE /api/projects/:id` | path |
+| `PATCH /api/projects/:id/status` | path |
+| `POST` and `GET /api/projects/:id/eu-ai-act-classification` | path |
+| `GET /api/projects/stats/:id` | path |
+| `GET /api/projects/calculateProjectRisks/:id`, `/calculateVendorRisks/:id` | path |
+| `GET /api/projects/compliance/progress/:id`, `/assessment/progress/:id` | path |
+| `GET /api/projects/complainces/:projid` | path |
+| `PUT /api/ce-marking/:projectId` | path |
+| `PUT /api/fria/:projectId` | path |
+| `POST /api/pmm/projects/:projectId/start-cycle` | path |
+| `POST /api/frameworks/toProject`, `DELETE /api/frameworks/fromProject` | `projectId` query field |
+| `POST /api/v1/use-case-lifecycle/:id/go-live`, `/retire`, `/confirm` | path |
+| `PATCH /api/v1/use-case-lifecycle/:id/department` | path |
+
+The guard reads the id from the same place the handler does: `requireProjectAccess("projectId", "query")` for the framework routes. A body value is never considered, and a repeated query field is a 400, so the id checked is the id acted on.
 
 - **No access:** 403 with "Access denied", logged with `logFailure`, nothing written. A refused write also reaches the event log; a refused `GET` only reaches the file log, because `logFailure` skips the event log for `Read`. Never use a detail listed in `SESSION_DENIED_DETAILS` (`customAxios.ts`): those end the user's session.
 - **Not found or another organization:** passed on, so the controller answers its 404.
 - **An error in the check:** 500, never allowed.
 - **Adds to route rules, does not replace them.** The lifecycle rule (`useCase.edit` or owner, Auditors never) and the `useCase.edit` / `useCase.classify` checks still apply.
 - **`PATCH /api/projects/:id` and `PATCH /api/v1/projects/:id`** keep their own check in `updateProjectById` (`canViewProjectQuery`), inside the update's transaction.
-- **`GET /api/projects/:id` is not guarded.** A task can be assigned to anyone in the organization and linked to an EU AI Act requirement; its email links to `/project-view`, which needs this read, and EU AI Act requirements have no page outside the use case. Scoping the read needs a decision on those users first. A refused or failed load shows the empty state in `ProjectView`.
+- **A refused or failed `GET /api/projects/:id`** shows the empty state in `ProjectView`.
 - **MCP tools** call services directly and are not behind this guard.
 
 ## Create Project

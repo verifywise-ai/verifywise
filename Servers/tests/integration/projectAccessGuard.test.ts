@@ -3,8 +3,16 @@ jest.setTimeout(60000);
 import { sequelize } from "../../database/db";
 import { cleanupDatabase, createTestOrganization, createTestUser, seedFrameworks } from "./helpers";
 import { createTestApp, testRequest } from "./setup";
-import { createTestProject, createTestProjectFramework } from "../factories";
+import {
+  assignTaskToUser,
+  createTestControlEU,
+  createTestProject,
+  createTestProjectFramework,
+  createTestTask,
+  createTestVendor,
+} from "../factories";
 import { EU_AI_ACT_FRAMEWORK_ID } from "../../utils/validations/projectValidation.utils";
+import { addFrameworkToProjectQuery } from "../../utils/framework.utils";
 
 /**
  * requireProjectAccess: holding a permission such as useCase.edit is not enough
@@ -42,27 +50,72 @@ async function addMember(orgId: number, projectId: number, userId: number): Prom
   );
 }
 
-/** Everything a guarded route could change: the row and its classification runs. */
+/** Everything a guarded route could change: the row and what hangs off it. */
 async function snapshot(projectId: number) {
-  const [projects] = await sequelize.query(
-    `SELECT to_jsonb(p) AS project FROM projects p WHERE p.id = :projectId`,
+  const [rows] = await sequelize.query(
+    `SELECT (SELECT to_jsonb(p) FROM projects p WHERE p.id = :projectId) AS project,
+            (SELECT COUNT(*)::int FROM eu_ai_act_classifications WHERE use_case_id = :projectId) AS runs,
+            (SELECT to_jsonb(c) FROM ce_markings c WHERE c.project_id = :projectId) AS ce_marking,
+            (SELECT to_jsonb(f) FROM fria_assessments f WHERE f.project_id = :projectId) AS fria,
+            (SELECT COUNT(*)::int FROM post_market_monitoring_cycles cy
+               JOIN post_market_monitoring_configs co ON co.id = cy.config_id
+              WHERE co.project_id = :projectId) AS cycles,
+            (SELECT COALESCE(array_agg(framework_id ORDER BY framework_id), '{}')
+               FROM projects_frameworks WHERE project_id = :projectId) AS frameworks`,
     { replacements: { projectId } },
   );
-  const [runs] = await sequelize.query(
-    `SELECT COUNT(*)::int AS runs FROM eu_ai_act_classifications WHERE use_case_id = :projectId`,
-    { replacements: { projectId } },
-  );
-  return { project: (projects as any[])[0]?.project, runs: (runs as any[])[0].runs as number };
+  const row = (rows as any[])[0];
+  return {
+    project: row.project ?? undefined,
+    runs: row.runs as number,
+    ceMarking: row.ce_marking,
+    fria: row.fria,
+    cycles: row.cycles as number,
+    frameworks: row.frameworks as number[],
+  };
 }
 
 interface GuardedRoute {
   name: string;
   call: (api: Api, id: number | string) => any;
+  /**
+   * Status once past the guard. 500 marks a route whose own query is already
+   * broken (a dropped legacy table or column): past the guard is all it can show.
+   */
   success: number;
+  /** Status for a use case that is missing or in another organization; default 404. */
+  missing?: number;
   prepare?: (orgId: number, projectId: number) => Promise<void>;
   /** What a successful call changed; absent for reads. */
   verify?: (after: Awaited<ReturnType<typeof snapshot>>) => void;
 }
+
+/** A framework the guarded framework routes can add and remove. */
+const NEW_FRAMEWORK_ID = EU_AI_ACT_FRAMEWORK_ID;
+
+/** The controller only reads; its CE marking row is what the PUT changes. */
+const addCeMarking = async (orgId: number, projectId: number) => {
+  await sequelize.query(
+    `INSERT INTO ce_markings (project_id, organization_id) VALUES (:projectId, :orgId)`,
+    { replacements: { orgId, projectId } },
+  );
+};
+
+const addFria = async (orgId: number, projectId: number) => {
+  await sequelize.query(
+    `INSERT INTO fria_assessments (organization_id, project_id, version, status, created_by)
+     SELECT :orgId, :projectId, 1, 'draft', p.owner FROM projects p WHERE p.id = :projectId`,
+    { replacements: { orgId, projectId } },
+  );
+};
+
+const addPmmConfig = async (orgId: number, projectId: number) => {
+  await sequelize.query(
+    `INSERT INTO post_market_monitoring_configs (organization_id, project_id, is_active)
+     VALUES (:orgId, :projectId, TRUE)`,
+    { replacements: { orgId, projectId } },
+  );
+};
 
 const goLive = (api: Api, id: number | string) =>
   api.post(`/api/v1/use-case-lifecycle/${id}/go-live`).send({});
@@ -91,6 +144,11 @@ const GUARDED_ROUTES: GuardedRoute[] = [
       await createTestProjectFramework(orgId, projectId, EU_AI_ACT_FRAMEWORK_ID);
     },
     verify: (after) => expect(after.runs).toBe(1),
+  },
+  {
+    name: "GET /api/projects/:id",
+    call: (api, id) => api.get(`/api/projects/${id}`),
+    success: 200,
   },
   {
     name: "GET /api/projects/stats/:id",
@@ -127,6 +185,76 @@ const GUARDED_ROUTES: GuardedRoute[] = [
       api.patch(`/api/v1/use-case-lifecycle/${id}/department`).send({ department: "Risk" }),
     success: 200,
     verify: (after) => expect(after.project.department).toBe("Risk"),
+  },
+  {
+    name: "GET /api/projects/calculateProjectRisks/:id",
+    call: (api, id) => api.get(`/api/projects/calculateProjectRisks/${id}`),
+    success: 200,
+    missing: 200,
+  },
+  {
+    name: "GET /api/projects/calculateVendorRisks/:id",
+    call: (api, id) => api.get(`/api/projects/calculateVendorRisks/${id}`),
+    success: 500,
+    missing: 500,
+  },
+  {
+    name: "GET /api/projects/compliance/progress/:id",
+    call: (api, id) => api.get(`/api/projects/compliance/progress/${id}`),
+    success: 500,
+  },
+  {
+    name: "GET /api/projects/assessment/progress/:id",
+    call: (api, id) => api.get(`/api/projects/assessment/progress/${id}`),
+    success: 500,
+  },
+  {
+    name: "GET /api/projects/complainces/:projid",
+    call: (api, id) => api.get(`/api/projects/complainces/${id}`),
+    success: 500,
+  },
+  {
+    name: "GET /api/projects/:id/eu-ai-act-classification",
+    call: (api, id) => api.get(`/api/projects/${id}/eu-ai-act-classification`),
+    success: 200,
+  },
+  {
+    name: "PUT /api/ce-marking/:projectId",
+    call: (api, id) => api.put(`/api/ce-marking/${id}`).send({ isHighRiskAISystem: true }),
+    success: 200,
+    prepare: addCeMarking,
+    verify: (after) => expect(after.ceMarking.is_high_risk_ai_system).toBe(true),
+  },
+  {
+    name: "PUT /api/fria/:projectId",
+    call: (api, id) => api.put(`/api/fria/${id}`).send({ operational_context: "Updated" }),
+    success: 200,
+    prepare: addFria,
+    verify: (after) => expect(after.fria.operational_context).toBe("Updated"),
+  },
+  {
+    name: "POST /api/pmm/projects/:projectId/start-cycle",
+    call: (api, id) => api.post(`/api/pmm/projects/${id}/start-cycle`),
+    success: 500,
+    prepare: addPmmConfig,
+  },
+  {
+    name: "POST /api/frameworks/toProject",
+    call: (api, id) =>
+      api.post(`/api/frameworks/toProject?frameworkId=${NEW_FRAMEWORK_ID}&projectId=${id}`),
+    success: 200,
+    verify: (after) => expect(after.frameworks).toEqual([NEW_FRAMEWORK_ID]),
+  },
+  {
+    name: "DELETE /api/frameworks/fromProject",
+    call: (api, id) =>
+      api.delete(`/api/frameworks/fromProject?frameworkId=${NEW_FRAMEWORK_ID}&projectId=${id}`),
+    success: 200,
+    prepare: (orgId, projectId) =>
+      sequelize.transaction(async (transaction) => {
+        await addFrameworkToProjectQuery(NEW_FRAMEWORK_ID, projectId, orgId, transaction);
+      }),
+    verify: (after) => expect(after.frameworks).toEqual([]),
   },
 ];
 
@@ -198,14 +326,209 @@ describe("project access guard", () => {
 
       const res = await route.call(api, projectId);
 
-      expect(res.status).toBe(404);
+      expect(res.status).toBe(route.missing ?? 404);
       expect(await snapshot(projectId)).toEqual(before);
     });
 
-    it("still returns 404 for a use case that does not exist", async () => {
+    it("still returns its usual answer for a use case that does not exist", async () => {
       const api = await apiAs(orgId, await user(orgId, "Editor"), "Editor");
       const res = await route.call(api, 2147483000);
-      expect(res.status).toBe(404);
+      expect(res.status).toBe(route.missing ?? 404);
+    });
+  });
+
+  describe("assignees of a task linked to the use case", () => {
+    const READS = GUARDED_ROUTES.filter((route) => route.name.startsWith("GET "));
+    const WRITES = GUARDED_ROUTES.filter((route) => !route.name.startsWith("GET "));
+
+    async function linkedTask(
+      entityId: number,
+      entityType: string,
+      assignee: number,
+      status = "Open",
+    ): Promise<number> {
+      const taskId = await createTestTask(orgId, { status });
+      await assignTaskToUser(orgId, taskId, assignee);
+      await sequelize.query(
+        `INSERT INTO task_entity_links (organization_id, task_id, entity_id, entity_type)
+         VALUES (:orgId, :taskId, :entityId, :entityType)`,
+        { replacements: { orgId, taskId, entityId, entityType } },
+      );
+      return taskId;
+    }
+
+    async function euControlOf(projectId: number): Promise<number> {
+      const [existing] = await sequelize.query(
+        `SELECT id FROM projects_frameworks WHERE project_id = :projectId AND framework_id = :id`,
+        { replacements: { projectId, id: EU_AI_ACT_FRAMEWORK_ID } },
+      );
+      const projectFrameworkId =
+        (existing as any[])[0]?.id ??
+        (await createTestProjectFramework(orgId, projectId, EU_AI_ACT_FRAMEWORK_ID));
+      return createTestControlEU(orgId, { projects_frameworks_id: projectFrameworkId });
+    }
+
+    async function assigneeOf(projectId: number): Promise<number> {
+      const assignee = await user(orgId, "Editor");
+      await linkedTask(await euControlOf(projectId), "eu_control", assignee);
+      return assignee;
+    }
+
+    it.each(READS)("lets the assignee read $name", async (route) => {
+      const projectId = await createTestProject(orgId, ownerId);
+      await route.prepare?.(orgId, projectId);
+      const assignee = await assigneeOf(projectId);
+
+      const res = await route.call(await apiAs(orgId, assignee, "Editor"), projectId);
+
+      expect(res.status).toBe(route.success);
+    });
+
+    it.each(WRITES)("does not let the assignee use $name", async (route) => {
+      const projectId = await createTestProject(orgId, ownerId);
+      await route.prepare?.(orgId, projectId);
+      const assignee = await assigneeOf(projectId);
+      const before = await snapshot(projectId);
+
+      const res = await route.call(await apiAs(orgId, assignee, "Editor"), projectId);
+
+      expect(res.status).toBe(403);
+      expect(await snapshot(projectId)).toEqual(before);
+    });
+
+    const readProgress = (api: Api, id: number) =>
+      api.get(`/api/projects/calculateProjectRisks/${id}`);
+
+    it("follows a subcontrol link through its parent control", async () => {
+      const projectId = await createTestProject(orgId, ownerId);
+      const controlId = await euControlOf(projectId);
+      const [subcontrol] = await sequelize.query(
+        `INSERT INTO subcontrols_eu (organization_id, control_id) VALUES (:orgId, :controlId)
+         RETURNING id`,
+        { replacements: { orgId, controlId } },
+      );
+      const assignee = await user(orgId, "Editor");
+      await linkedTask((subcontrol as any[])[0].id, "eu_subcontrol", assignee);
+
+      const res = await readProgress(await apiAs(orgId, assignee, "Editor"), projectId);
+
+      expect(res.status).toBe(200);
+    });
+
+    it("follows an ISO 42001 requirement link", async () => {
+      const projectId = await createTestProject(orgId, ownerId);
+      const projectFrameworkId = await createTestProjectFramework(orgId, projectId, 2);
+      const [subclause] = await sequelize.query(
+        `INSERT INTO subclauses_iso (organization_id, projects_frameworks_id)
+         VALUES (:orgId, :projectFrameworkId) RETURNING id`,
+        { replacements: { orgId, projectFrameworkId } },
+      );
+      const assignee = await user(orgId, "Editor");
+      await linkedTask((subclause as any[])[0].id, "iso42001_subclause", assignee);
+
+      const res = await readProgress(await apiAs(orgId, assignee, "Editor"), projectId);
+
+      expect(res.status).toBe(200);
+    });
+
+    it("refuses the assignee of a task linked to another use case", async () => {
+      const projectId = await createTestProject(orgId, ownerId);
+      const other = await createTestProject(orgId, ownerId);
+      const assignee = await assigneeOf(other);
+
+      const res = await readProgress(await apiAs(orgId, assignee, "Editor"), projectId);
+
+      expect(res.status).toBe(403);
+    });
+
+    it("refuses someone whose task link is organization-wide", async () => {
+      const projectId = await createTestProject(orgId, ownerId);
+      const vendorId = await createTestVendor(orgId);
+      const assignee = await user(orgId, "Editor");
+      await linkedTask(vendorId, "vendor", assignee);
+
+      const res = await readProgress(await apiAs(orgId, assignee, "Editor"), projectId);
+
+      expect(res.status).toBe(403);
+    });
+
+    it("refuses the assignee of a deleted task", async () => {
+      const projectId = await createTestProject(orgId, ownerId);
+      const assignee = await user(orgId, "Editor");
+      await linkedTask(await euControlOf(projectId), "eu_control", assignee, "Deleted");
+
+      const res = await readProgress(await apiAs(orgId, assignee, "Editor"), projectId);
+
+      expect(res.status).toBe(403);
+    });
+
+    it("refuses someone else on the same control's task", async () => {
+      const projectId = await createTestProject(orgId, ownerId);
+      await assigneeOf(projectId);
+      const stranger = await user(orgId, "Editor");
+
+      const res = await readProgress(await apiAs(orgId, stranger, "Editor"), projectId);
+
+      expect(res.status).toBe(403);
+    });
+
+    it("does not add the use case to the assignee's list", async () => {
+      const projectId = await createTestProject(orgId, ownerId);
+      const assignee = await assigneeOf(projectId);
+
+      const res = await (await apiAs(orgId, assignee, "Editor")).get("/api/projects");
+
+      const ids = (res.body.data ?? []).map((project: { id: number }) => project.id);
+      expect(ids).not.toContain(projectId);
+    });
+  });
+
+  describe("framework routes take the id from the query", () => {
+    const toProject = (api: Api, query: string, body: object = {}) =>
+      api.post(`/api/frameworks/toProject?${query}`).send(body);
+
+    it("checks the query's id, not one placed in the body", async () => {
+      const projectId = await createTestProject(orgId, ownerId);
+      const before = await snapshot(projectId);
+      const stranger = await user(orgId, "Editor");
+      const theirs = await createTestProject(orgId, stranger);
+
+      const res = await toProject(
+        await apiAs(orgId, stranger, "Editor"),
+        `frameworkId=${NEW_FRAMEWORK_ID}&projectId=${projectId}`,
+        { projectId: theirs },
+      );
+
+      expect(res.status).toBe(403);
+      expect(await snapshot(projectId)).toEqual(before);
+    });
+
+    it("refuses a repeated projectId rather than picking one", async () => {
+      const projectId = await createTestProject(orgId, ownerId);
+      const before = await snapshot(projectId);
+      const stranger = await user(orgId, "Editor");
+      const theirs = await createTestProject(orgId, stranger);
+
+      const res = await toProject(
+        await apiAs(orgId, stranger, "Editor"),
+        `frameworkId=${NEW_FRAMEWORK_ID}&projectId=${theirs}&projectId=${projectId}`,
+      );
+
+      expect(res.status).toBe(400);
+      expect(await snapshot(projectId)).toEqual(before);
+    });
+
+    it("refuses an id only given in the body", async () => {
+      const projectId = await createTestProject(orgId, ownerId);
+
+      const res = await toProject(
+        await apiAs(orgId, ownerId, "Editor"),
+        `frameworkId=${NEW_FRAMEWORK_ID}`,
+        { projectId },
+      );
+
+      expect(res.status).toBe(400);
+      expect((await snapshot(projectId)).frameworks).toEqual([]);
     });
   });
 
@@ -245,6 +568,245 @@ describe("project access guard", () => {
       const res = await goLive(api, "abc");
       expect(res.status).toBe(400);
       expect(res.body.data).toBe("Invalid project ID");
+    });
+  });
+
+  describe("linking a task to a use case's requirement", () => {
+    async function euControlIn(projectId: number): Promise<number> {
+      const projectFrameworkId = await createTestProjectFramework(
+        orgId,
+        projectId,
+        EU_AI_ACT_FRAMEWORK_ID,
+      );
+      return createTestControlEU(orgId, { projects_frameworks_id: projectFrameworkId });
+    }
+
+    async function ownTask(userId: number): Promise<number> {
+      const taskId = await createTestTask(orgId, { creator_id: userId });
+      await assignTaskToUser(orgId, taskId, userId);
+      return taskId;
+    }
+
+    async function linkCount(entityId: number, entityType: string): Promise<number> {
+      const [rows] = await sequelize.query(
+        `SELECT COUNT(*)::int AS count FROM task_entity_links
+          WHERE organization_id = :orgId AND entity_id = :entityId AND entity_type = :entityType`,
+        { replacements: { orgId, entityId, entityType } },
+      );
+      return (rows as any[])[0].count;
+    }
+
+    const link = (api: Api, taskId: number, entity_id: number, entity_type: string) =>
+      api.post(`/api/tasks/${taskId}/entities`).send({ entity_id, entity_type });
+
+    it("refuses a non-member, who then cannot read the use case", async () => {
+      const projectId = await createTestProject(orgId, ownerId);
+      const controlId = await euControlIn(projectId);
+      const stranger = await user(orgId, "Editor");
+      const api = await apiAs(orgId, stranger, "Editor");
+
+      const res = await link(api, await ownTask(stranger), controlId, "eu_control");
+
+      expect(res.status).toBe(403);
+      expect(await linkCount(controlId, "eu_control")).toBe(0);
+      expect((await api.get(`/api/projects/${projectId}`)).status).toBe(403);
+    });
+
+    it("refuses a non-member linking a subcontrol through its parent", async () => {
+      const projectId = await createTestProject(orgId, ownerId);
+      const controlId = await euControlIn(projectId);
+      const [subcontrol] = await sequelize.query(
+        `INSERT INTO subcontrols_eu (organization_id, control_id) VALUES (:orgId, :controlId)
+         RETURNING id`,
+        { replacements: { orgId, controlId } },
+      );
+      const subcontrolId = (subcontrol as any[])[0].id;
+      const stranger = await user(orgId, "Editor");
+
+      const res = await link(
+        await apiAs(orgId, stranger, "Editor"),
+        await ownTask(stranger),
+        subcontrolId,
+        "eu_subcontrol",
+      );
+
+      expect(res.status).toBe(403);
+      expect(await linkCount(subcontrolId, "eu_subcontrol")).toBe(0);
+    });
+
+    it("drops the link when a non-member sends it with a new task", async () => {
+      const projectId = await createTestProject(orgId, ownerId);
+      const controlId = await euControlIn(projectId);
+      const stranger = await user(orgId, "Editor");
+      const api = await apiAs(orgId, stranger, "Editor");
+
+      const res = await api.post("/api/tasks").send({
+        title: "Self assigned",
+        assignees: [stranger],
+        entity_links: [{ entity_id: controlId, entity_type: "eu_control" }],
+      });
+
+      expect(res.status).toBe(201);
+      expect(await linkCount(controlId, "eu_control")).toBe(0);
+      expect((await api.get(`/api/projects/${projectId}`)).status).toBe(403);
+    });
+
+    it("drops the link when a non-member sends it on a task update", async () => {
+      const projectId = await createTestProject(orgId, ownerId);
+      const controlId = await euControlIn(projectId);
+      const stranger = await user(orgId, "Editor");
+
+      const res = await (
+        await apiAs(orgId, stranger, "Editor")
+      )
+        .put(`/api/tasks/${await ownTask(stranger)}`)
+        .send({
+          title: "Renamed",
+          entity_links: [{ entity_id: controlId, entity_type: "eu_control" }],
+        });
+
+      expect(res.status).toBe(200);
+      expect(await linkCount(controlId, "eu_control")).toBe(0);
+    });
+
+    it("lets a member link, and the assignee then read", async () => {
+      const projectId = await createTestProject(orgId, ownerId);
+      const controlId = await euControlIn(projectId);
+      const member = await user(orgId, "Editor");
+      await addMember(orgId, projectId, member);
+      const taskId = await ownTask(member);
+      const assignee = await user(orgId, "Editor");
+      await assignTaskToUser(orgId, taskId, assignee);
+
+      const res = await link(await apiAs(orgId, member, "Editor"), taskId, controlId, "eu_control");
+
+      expect(res.status).toBe(201);
+      const read = await (await apiAs(orgId, assignee, "Editor")).get(`/api/projects/${projectId}`);
+      expect(read.status).toBe(200);
+    });
+
+    it("lets an Admin link without being a member", async () => {
+      const projectId = await createTestProject(orgId, ownerId);
+      const controlId = await euControlIn(projectId);
+      const admin = await user(orgId, "Admin");
+
+      const res = await link(
+        await apiAs(orgId, admin, "Admin"),
+        await ownTask(admin),
+        controlId,
+        "eu_control",
+      );
+
+      expect(res.status).toBe(201);
+    });
+
+    it("still lets anyone link an organization-wide entity", async () => {
+      const vendorId = await createTestVendor(orgId);
+      const stranger = await user(orgId, "Editor");
+
+      const res = await link(
+        await apiAs(orgId, stranger, "Editor"),
+        await ownTask(stranger),
+        vendorId,
+        "vendor",
+      );
+
+      expect(res.status).toBe(201);
+    });
+  });
+
+  describe("approvers of the use case's workflow", () => {
+    async function workflowApprovedBy(approver: number): Promise<number> {
+      const [workflow] = await sequelize.query(
+        `INSERT INTO approval_workflows (organization_id, workflow_title, entity_type, created_by)
+         VALUES (:orgId, 'Review', 'use_case', :ownerId) RETURNING id`,
+        { replacements: { orgId, ownerId } },
+      );
+      const workflowId = (workflow as any[])[0].id;
+      const [step] = await sequelize.query(
+        `INSERT INTO approval_workflow_steps (organization_id, workflow_id, step_number, step_name)
+         VALUES (:orgId, :workflowId, 1, 'Step') RETURNING id`,
+        { replacements: { orgId, workflowId } },
+      );
+      await sequelize.query(
+        `INSERT INTO approval_step_approvers (organization_id, workflow_step_id, approver_id)
+         VALUES (:orgId, :stepId, :approver)`,
+        { replacements: { orgId, stepId: (step as any[])[0].id, approver } },
+      );
+      return workflowId;
+    }
+
+    async function useCaseWithApprover(approver: number): Promise<number> {
+      const projectId = await createTestProject(orgId, ownerId);
+      await sequelize.query(
+        `UPDATE projects SET approval_workflow_id = :workflowId WHERE id = :projectId`,
+        { replacements: { workflowId: await workflowApprovedBy(approver), projectId } },
+      );
+      return projectId;
+    }
+
+    it("lets the approver open the use case", async () => {
+      const approver = await user(orgId, "Reviewer");
+      const projectId = await useCaseWithApprover(approver);
+
+      const res = await (
+        await apiAs(orgId, approver, "Reviewer")
+      ).get(`/api/projects/${projectId}`);
+
+      expect(res.status).toBe(200);
+    });
+
+    it("does not let the approver write", async () => {
+      const approver = await user(orgId, "Editor");
+      const projectId = await useCaseWithApprover(approver);
+      const before = await snapshot(projectId);
+
+      const res = await (
+        await apiAs(orgId, approver, "Editor")
+      )
+        .patch(`/api/projects/${projectId}/status`)
+        .send({ status: "On hold" });
+
+      expect(res.status).toBe(403);
+      expect(await snapshot(projectId)).toEqual(before);
+    });
+
+    it("refuses the approver of a workflow that was deleted", async () => {
+      const approver = await user(orgId, "Reviewer");
+      const projectId = await useCaseWithApprover(approver);
+      await sequelize.query(
+        `UPDATE approval_workflows SET is_active = false
+          WHERE id = (SELECT approval_workflow_id FROM projects WHERE id = :projectId)`,
+        { replacements: { projectId } },
+      );
+
+      const res = await (
+        await apiAs(orgId, approver, "Reviewer")
+      ).get(`/api/projects/${projectId}`);
+
+      expect(res.status).toBe(403);
+    });
+
+    it("refuses the approver of a workflow on another use case", async () => {
+      const approver = await user(orgId, "Reviewer");
+      await useCaseWithApprover(approver);
+      const projectId = await useCaseWithApprover(await user(orgId, "Reviewer"));
+
+      const res = await (
+        await apiAs(orgId, approver, "Reviewer")
+      ).get(`/api/projects/${projectId}`);
+
+      expect(res.status).toBe(403);
+    });
+
+    it("does not add the use case to the approver's list", async () => {
+      const approver = await user(orgId, "Reviewer");
+      const projectId = await useCaseWithApprover(approver);
+
+      const res = await (await apiAs(orgId, approver, "Reviewer")).get("/api/projects");
+
+      const ids = (res.body.data ?? []).map((project: { id: number }) => project.id);
+      expect(ids).not.toContain(projectId);
     });
   });
 
