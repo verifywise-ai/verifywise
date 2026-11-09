@@ -10758,6 +10758,7 @@ export const shadowAiEndpoints: Endpoint[] = [
     responses: [
       { status: 201, description: "Created successfully" },
       { status: 401, description: "Unauthorized" },
+      { status: 409, description: "The tool is already under governance" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Shadow AI",

@@ -16,6 +16,13 @@ import Toggle from "../../components/Inputs/Toggle";
 import useUsers from "../../../application/hooks/useUsers";
 import { palette } from "../../themes/palette";
 
+type DataSensitivity = NonNullable<
+  NonNullable<ShadowAiGovernanceRequest["risk_assessment"]>["data_sensitivity"]
+>;
+
+/** Matches the server limit on risk_assessment.description. */
+const MAX_RISK_DESCRIPTION_LENGTH = 5000;
+
 interface GovernanceWizardModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -34,7 +41,7 @@ export default function GovernanceWizardModal({
   const [model, setModel] = useState(tool.name);
   const [version, setVersion] = useState("");
   const [ownerId, setOwnerId] = useState<string>("");
-  const [dataSensitivity, setDataSensitivity] = useState("");
+  const [dataSensitivity, setDataSensitivity] = useState<DataSensitivity | "">("");
   const [riskDescription, setRiskDescription] = useState("");
   const [startLifecycle, setStartLifecycle] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -54,6 +61,10 @@ export default function GovernanceWizardModal({
       setError("Governance owner is required.");
       return;
     }
+    if (riskDescription.trim().length > MAX_RISK_DESCRIPTION_LENGTH) {
+      setError(`Risk description must be ${MAX_RISK_DESCRIPTION_LENGTH} characters or fewer.`);
+      return;
+    }
 
     setSubmitting(true);
     setError(null);
@@ -68,9 +79,9 @@ export default function GovernanceWizardModal({
         },
         governance_owner_id: parseInt(ownerId, 10),
         risk_assessment:
-          dataSensitivity.trim() || riskDescription.trim()
+          dataSensitivity || riskDescription.trim()
             ? {
-                data_sensitivity: dataSensitivity.trim() || undefined,
+                data_sensitivity: dataSensitivity || undefined,
                 description: riskDescription.trim() || undefined,
               }
             : undefined,
@@ -156,7 +167,7 @@ export default function GovernanceWizardModal({
           label="Data sensitivity"
           value={dataSensitivity}
           onChange={(e: SelectChangeEvent<string | number>) =>
-            setDataSensitivity(String(e.target.value))
+            setDataSensitivity(String(e.target.value) as DataSensitivity | "")
           }
           items={[
             { _id: "High", name: "High" },

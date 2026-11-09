@@ -224,7 +224,7 @@ export default function UserActivityPage() {
     const fetchCounts = async () => {
       try {
         const [usersData, deptData] = await Promise.all([
-          getUsers({ page: 1, limit: 1, period, sort_by: "total_prompts", order: "desc" }),
+          getUsers({ page: 1, limit: 1, period }),
           getDepartmentActivity(period),
         ]);
         if (controller.signal.aborted) return;
@@ -250,8 +250,6 @@ export default function UserActivityPage() {
             page,
             limit: 20,
             period,
-            sort_by: "total_prompts",
-            order: "desc",
           };
           const result = await getUsers(params);
           if (controller.signal.aborted) return;

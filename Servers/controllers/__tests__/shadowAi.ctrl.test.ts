@@ -18,6 +18,15 @@ jest.mock("../../utils/shadowAiTools.utils", () => ({
   updateToolStatusQuery: jest.fn(),
   linkToolToModelInventoryQuery: jest.fn(),
 }));
+jest.mock("../../utils/modelRisk.utils", () => ({
+  createNewModelRiskQuery: jest.fn(),
+}));
+jest.mock("../../utils/user.utils", () => ({
+  getUserByIdQuery: jest.fn(),
+}));
+jest.mock("../../utils/changeHistory.base.utils", () => ({
+  recordEntityCreation: jest.fn(),
+}));
 jest.mock("../../utils/shadowAiRules.utils", () => ({
   getAllRulesQuery: jest.fn(),
   createRuleQuery: jest.fn(),
@@ -81,6 +90,9 @@ jest.mock("../../database/db", () => ({
 }));
 
 import { sequelize } from "../../database/db";
+import { createNewModelRiskQuery } from "../../utils/modelRisk.utils";
+import { getUserByIdQuery } from "../../utils/user.utils";
+import { recordEntityCreation } from "../../utils/changeHistory.base.utils";
 import { getSyslogListenerState } from "../../services/shadowAiSyslog/listener";
 import { readSyslogListenerConfig } from "../../services/shadowAiSyslog/config";
 import { invalidateSourceCacheAfterCommit } from "../../services/shadowAiSyslog/sourceCache";
@@ -572,6 +584,44 @@ describe("shadowAi.ctrl", () => {
   });
 
   describe("startGovernance", () => {
+    beforeEach(() => {
+      (getUserByIdQuery as jest.MockedFunction<any>).mockResolvedValue({ id: 2 });
+    });
+
+    it("returns 400 when the governance owner is not in the organization", async () => {
+      (getUserByIdQuery as jest.MockedFunction<any>).mockResolvedValue(null);
+      mockGetToolById.mockResolvedValue({ id: 1, name: "ChatGPT" });
+      const req = createReq({
+        params: { id: "1" },
+        body: {
+          model_inventory: { provider: "OpenAI", model: "GPT-4" },
+          governance_owner_id: "99",
+        },
+      });
+      const res = createRes();
+      await startGovernance(req, res);
+      expect(getUserByIdQuery).toHaveBeenCalledWith(99, null, 1);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(mockSequelizeQuery).not.toHaveBeenCalled();
+    });
+
+    it("returns 409 and writes nothing when the tool is already governed", async () => {
+      mockGetToolById.mockResolvedValue({ id: 1, name: "ChatGPT", model_inventory_id: 10 });
+      const req = createReq({
+        params: { id: "1" },
+        body: {
+          model_inventory: { provider: "OpenAI", model: "GPT-4" },
+          governance_owner_id: "2",
+          risk_assessment: { data_sensitivity: "High" },
+        },
+      });
+      const res = createRes();
+      await startGovernance(req, res);
+      expect(res.status).toHaveBeenCalledWith(409);
+      expect(mockSequelizeQuery).not.toHaveBeenCalled();
+      expect(createNewModelRiskQuery).not.toHaveBeenCalled();
+    });
+
     it("should return 403 for non-write role", async () => {
       const req = createReq({ role: "Auditor", params: { id: "1" }, body: {} });
       const res = createRes();
@@ -640,6 +690,71 @@ describe("shadowAi.ctrl", () => {
       const res = createRes();
       await startGovernance(req, res);
       expect(mockLinkTool).toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(201);
+    });
+
+    it("records the form's risk assessment as a risk on the new model", async () => {
+      const mockCreateRisk = createNewModelRiskQuery as jest.MockedFunction<any>;
+      mockCreateRisk.mockResolvedValue({ id: 55 });
+      mockGetToolById.mockResolvedValue({ id: 1, name: "ChatGPT" });
+      mockLinkTool.mockResolvedValue(undefined);
+      mockSequelizeQuery
+        .mockResolvedValueOnce([[{ id: 10 }]]) // INSERT INTO model_inventories RETURNING id
+        .mockResolvedValueOnce(undefined); // UPDATE shadow_ai_tools
+      const req = createReq({
+        params: { id: "1" },
+        body: {
+          model_inventory: { provider: "OpenAI", model: "GPT-4" },
+          governance_owner_id: "2",
+          risk_assessment: { data_sensitivity: "High", description: "Customer data pasted in" },
+        },
+      });
+      const res = createRes();
+      await startGovernance(req, res);
+      expect(mockCreateRisk).toHaveBeenCalledWith(
+        expect.objectContaining({
+          risk_name: "Use of ChatGPT",
+          risk_level: "High",
+          owner: "2",
+          description: "Customer data pasted in",
+          model_id: 10,
+        }),
+        1,
+        expect.anything(),
+      );
+      expect(mockLinkTool).toHaveBeenCalledWith(1, 1, 10, 55, expect.anything());
+      expect(recordEntityCreation).toHaveBeenCalledWith(
+        "model_risk",
+        55,
+        expect.any(Number),
+        1,
+        expect.objectContaining({ risk_name: "Use of ChatGPT" }),
+        expect.anything(),
+      );
+      expect(res.status).toHaveBeenCalledWith(201);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ risk_entry_id: 55 }),
+        }),
+      );
+    });
+
+    it("creates no risk when the risk assessment is empty", async () => {
+      const mockCreateRisk = createNewModelRiskQuery as jest.MockedFunction<any>;
+      mockGetToolById.mockResolvedValue({ id: 1, name: "ChatGPT" });
+      mockLinkTool.mockResolvedValue(undefined);
+      mockSequelizeQuery.mockResolvedValueOnce([[{ id: 10 }]]).mockResolvedValueOnce(undefined);
+      const req = createReq({
+        params: { id: "1" },
+        body: {
+          model_inventory: { provider: "OpenAI", model: "GPT-4" },
+          governance_owner_id: "2",
+          risk_assessment: { description: "   " },
+        },
+      });
+      const res = createRes();
+      await startGovernance(req, res);
+      expect(mockCreateRisk).not.toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(201);
     });
 
