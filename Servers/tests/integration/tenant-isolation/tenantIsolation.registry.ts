@@ -178,7 +178,7 @@ export const tenantIsolationRegistry: IsolationEntity[] = [
     // until then the hand-written file pins what the schema guarantees.
     name: "bias_audit",
     tables: ["aedt_profiles", "aedt_profile_answers", "bias_audit_runs", "bias_audit_stances"],
-    baseRoute: "/api/bias-audit",
+    baseRoute: "/api/v1/bias-audit",
   },
   {
     // Jira incidents extension. Routes are keyed by the caller's organization

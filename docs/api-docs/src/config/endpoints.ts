@@ -2226,142 +2226,6 @@ export const automationEndpoints: Endpoint[] = [
   },
 ];
 
-// Bias Audit endpoints
-export const biasAuditEndpoints: Endpoint[] = [
-  {
-    method: 'GET',
-    path: '/bias-audit/questions/{frameworkId}',
-    summary: "Get Questions",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Bias Audit",
-  },
-  {
-    method: 'GET',
-    path: '/bias-audit/profiles/{projectId}/{frameworkId}',
-    summary: "Get Profile",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Bias Audit",
-  },
-  {
-    method: 'PUT',
-    path: '/bias-audit/profiles/{projectId}/{frameworkId}',
-    summary: "Save Profile Answers",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Bias Audit",
-  },
-  {
-    method: 'POST',
-    path: '/bias-audit/profiles/{projectId}/{frameworkId}/attest',
-    summary: "Attest Profile",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Bias Audit",
-  },
-  {
-    method: 'POST',
-    path: '/bias-audit/profiles/{projectId}/{frameworkId}/stance',
-    summary: "Generate Profile Stance",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Bias Audit",
-  },
-  {
-    method: 'GET',
-    path: '/bias-audit/runs',
-    summary: "List Runs",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Bias Audit",
-  },
-  {
-    method: 'POST',
-    path: '/bias-audit/runs',
-    summary: "Create Run",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Bias Audit",
-  },
-  {
-    method: 'GET',
-    path: '/bias-audit/runs/trend',
-    summary: "Get Run Trend",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Bias Audit",
-  },
-  {
-    method: 'GET',
-    path: '/bias-audit/runs/{id}',
-    summary: "Get Run",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Bias Audit",
-  },
-  {
-    method: 'POST',
-    path: '/bias-audit/runs/{id}/derived-basis/confirm',
-    summary: "Confirm Derived Basis",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Bias Audit",
-  },
-  {
-    method: 'POST',
-    path: '/bias-audit/runs/{id}/stance',
-    summary: "Generate Stance",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Bias Audit",
-  },
-  {
-    method: 'GET',
-    path: '/bias-audit/stances/{id}/download',
-    summary: "Download Stance",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Bias Audit",
-  },
-];
-
 // CE Marking endpoints
 export const ceMarkingEndpoints: Endpoint[] = [
   {
@@ -12610,6 +12474,142 @@ export const v1V1aiAppsEndpoints: Endpoint[] = [
   },
 ];
 
+// v1: V1/Bias Audit endpoints
+export const v1V1biasAuditEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/bias-audit/questions/{frameworkId}',
+    summary: "Get Questions",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Bias Audit",
+  },
+  {
+    method: 'GET',
+    path: '/v1/bias-audit/profiles/{projectId}/{frameworkId}',
+    summary: "Get Profile",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Bias Audit",
+  },
+  {
+    method: 'PUT',
+    path: '/v1/bias-audit/profiles/{projectId}/{frameworkId}',
+    summary: "Save Profile Answers",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Bias Audit",
+  },
+  {
+    method: 'POST',
+    path: '/v1/bias-audit/profiles/{projectId}/{frameworkId}/attest',
+    summary: "Attest Profile",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Bias Audit",
+  },
+  {
+    method: 'POST',
+    path: '/v1/bias-audit/profiles/{projectId}/{frameworkId}/stance',
+    summary: "Generate Profile Stance",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Bias Audit",
+  },
+  {
+    method: 'GET',
+    path: '/v1/bias-audit/runs',
+    summary: "List Runs",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Bias Audit",
+  },
+  {
+    method: 'POST',
+    path: '/v1/bias-audit/runs',
+    summary: "Create Run",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Bias Audit",
+  },
+  {
+    method: 'GET',
+    path: '/v1/bias-audit/runs/trend',
+    summary: "Get Run Trend",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Bias Audit",
+  },
+  {
+    method: 'GET',
+    path: '/v1/bias-audit/runs/{id}',
+    summary: "Get Run",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Bias Audit",
+  },
+  {
+    method: 'POST',
+    path: '/v1/bias-audit/runs/{id}/derived-basis/confirm',
+    summary: "Confirm Derived Basis",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Bias Audit",
+  },
+  {
+    method: 'POST',
+    path: '/v1/bias-audit/runs/{id}/stance',
+    summary: "Generate Stance",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Bias Audit",
+  },
+  {
+    method: 'GET',
+    path: '/v1/bias-audit/stances/{id}/download',
+    summary: "Download Stance",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Bias Audit",
+  },
+];
+
 // v1: V1/Dashboard endpoints
 export const v1V1dashboardEndpoints: Endpoint[] = [
   {
@@ -13050,7 +13050,6 @@ export const allEndpoints = {
   audit: auditEndpoints,
   authentication: authenticationEndpoints,
   automation: automationEndpoints,
-  biasAudit: biasAuditEndpoints,
   ceMarking: ceMarkingEndpoints,
   changeHistory: changeHistoryEndpoints,
   compliance: complianceEndpoints,
@@ -13120,6 +13119,7 @@ export const allEndpoints = {
   v1UseCaseSettings: v1UseCaseSettingsEndpoints,
   v1V1aiAppLifecycle: v1V1aiAppLifecycleEndpoints,
   v1V1aiApps: v1V1aiAppsEndpoints,
+  v1V1biasAudit: v1V1biasAuditEndpoints,
   v1V1dashboard: v1V1dashboardEndpoints,
   v1V1intakeFormReviewTime: v1V1intakeFormReviewTimeEndpoints,
   v1V1lifecycleSettings: v1V1lifecycleSettingsEndpoints,

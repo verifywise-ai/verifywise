@@ -723,13 +723,13 @@ describe("bias audit routes tenant isolation", () => {
     const { owner, attacker } = await seedTwoTenantContexts();
     const project = await createTestProject(owner.orgId, owner.userId);
     const put = await owner.request
-      .put(`/api/bias-audit/profiles/${project}/${LL144}`)
+      .put(`/api/v1/bias-audit/profiles/${project}/${LL144}`)
       .send({ answers: IN_SCOPE_ANSWERS });
     expect(put.status).toBe(200);
-    const attest = await owner.request.post(`/api/bias-audit/profiles/${project}/${LL144}/attest`);
+    const attest = await owner.request.post(`/api/v1/bias-audit/profiles/${project}/${LL144}/attest`);
     expect(attest.status).toBe(200);
     const run = await owner.request
-      .post("/api/bias-audit/runs")
+      .post("/api/v1/bias-audit/runs")
       .field("projectId", String(project))
       .field("frameworkId", String(LL144))
       .field("mapping", MAPPING)
@@ -768,11 +768,11 @@ describe("bias audit routes tenant isolation", () => {
   it("denies every read of another organization's project, run and list", async () => {
     const { owner, attacker, project, runId } = await ownerWithRun();
     const reads = [
-      `/api/bias-audit/questions/${LL144}?projectId=${project}`,
-      `/api/bias-audit/profiles/${project}/${LL144}`,
-      `/api/bias-audit/runs?projectId=${project}&frameworkId=${LL144}`,
-      `/api/bias-audit/runs/trend?projectId=${project}&frameworkId=${LL144}`,
-      `/api/bias-audit/runs/${runId}`,
+      `/api/v1/bias-audit/questions/${LL144}?projectId=${project}`,
+      `/api/v1/bias-audit/profiles/${project}/${LL144}`,
+      `/api/v1/bias-audit/runs?projectId=${project}&frameworkId=${LL144}`,
+      `/api/v1/bias-audit/runs/trend?projectId=${project}&frameworkId=${LL144}`,
+      `/api/v1/bias-audit/runs/${runId}`,
     ];
     for (const route of reads) {
       // Owner positive control first: a missing route would also answer 404.
@@ -782,7 +782,7 @@ describe("bias audit routes tenant isolation", () => {
       expect(JSON.stringify(res.body)).not.toContain("It ranks applicants");
     }
     const list = await owner.request.get(
-      `/api/bias-audit/runs?projectId=${project}&frameworkId=${LL144}`,
+      `/api/v1/bias-audit/runs?projectId=${project}&frameworkId=${LL144}`,
     );
     expect(list.body.data.runs.map((r: any) => r.id)).toEqual([runId]);
   });
@@ -792,17 +792,17 @@ describe("bias audit routes tenant isolation", () => {
     const before = await snapshot(project);
     const writes = [
       attacker.request
-        .put(`/api/bias-audit/profiles/${project}/${LL144}`)
+        .put(`/api/v1/bias-audit/profiles/${project}/${LL144}`)
         .send({ answers: IN_SCOPE_ANSWERS }),
-      attacker.request.post(`/api/bias-audit/profiles/${project}/${LL144}/attest`),
+      attacker.request.post(`/api/v1/bias-audit/profiles/${project}/${LL144}/attest`),
       attacker.request
-        .post("/api/bias-audit/runs")
+        .post("/api/v1/bias-audit/runs")
         .field("projectId", String(project))
         .field("frameworkId", String(LL144))
         .field("mapping", MAPPING)
         .attach("file", CSV, { filename: "d.csv", contentType: "text/csv" }),
-      attacker.request.post(`/api/bias-audit/runs/${runId}/derived-basis/confirm`),
-      attacker.request.post(`/api/bias-audit/runs/${runId}/stance`),
+      attacker.request.post(`/api/v1/bias-audit/runs/${runId}/derived-basis/confirm`),
+      attacker.request.post(`/api/v1/bias-audit/runs/${runId}/stance`),
     ];
     for (const w of writes) {
       expect((await w).status).toBe(404);
@@ -834,24 +834,24 @@ describe("bias audit routes tenant isolation", () => {
     const before = await snapshot(project);
 
     const reads = [
-      `/api/bias-audit/profiles/${project}/${LL144}`,
-      `/api/bias-audit/runs?projectId=${project}&frameworkId=${LL144}`,
-      `/api/bias-audit/runs/trend?projectId=${project}&frameworkId=${LL144}`,
-      `/api/bias-audit/runs/${runId}`,
+      `/api/v1/bias-audit/profiles/${project}/${LL144}`,
+      `/api/v1/bias-audit/runs?projectId=${project}&frameworkId=${LL144}`,
+      `/api/v1/bias-audit/runs/trend?projectId=${project}&frameworkId=${LL144}`,
+      `/api/v1/bias-audit/runs/${runId}`,
     ];
     const writes = (u: { request: ReturnType<typeof testRequest> }) => [
       u.request
-        .put(`/api/bias-audit/profiles/${project}/${LL144}`)
+        .put(`/api/v1/bias-audit/profiles/${project}/${LL144}`)
         .send({ answers: IN_SCOPE_ANSWERS }),
-      u.request.post(`/api/bias-audit/profiles/${project}/${LL144}/attest`),
+      u.request.post(`/api/v1/bias-audit/profiles/${project}/${LL144}/attest`),
       u.request
-        .post("/api/bias-audit/runs")
+        .post("/api/v1/bias-audit/runs")
         .field("projectId", String(project))
         .field("frameworkId", String(LL144))
         .field("mapping", MAPPING)
         .attach("file", CSV, { filename: "d.csv", contentType: "text/csv" }),
-      u.request.post(`/api/bias-audit/runs/${runId}/derived-basis/confirm`),
-      u.request.post(`/api/bias-audit/runs/${runId}/stance`),
+      u.request.post(`/api/v1/bias-audit/runs/${runId}/derived-basis/confirm`),
+      u.request.post(`/api/v1/bias-audit/runs/${runId}/stance`),
     ];
 
     const leaked: unknown[] = [];
@@ -874,7 +874,7 @@ describe("bias audit routes tenant isolation", () => {
       // The question set is filtered by the project's saved answers, so it is
       // the project's data too.
       expect(
-        (await who.request.get(`/api/bias-audit/questions/${LL144}?projectId=${project}`)).status,
+        (await who.request.get(`/api/v1/bias-audit/questions/${LL144}?projectId=${project}`)).status,
       ).toBe(404);
     }
     expect(leaked).toEqual([]);
@@ -888,7 +888,7 @@ describe("bias audit routes tenant isolation", () => {
     for (const route of reads) expect((await editor.request.get(route)).status).toBe(200);
     // A member's write reaches the service: the profile saves a new version.
     const put = await editor.request
-      .put(`/api/bias-audit/profiles/${project}/${LL144}`)
+      .put(`/api/v1/bias-audit/profiles/${project}/${LL144}`)
       .send({ answers: IN_SCOPE_ANSWERS });
     expect(put.status).toBe(200);
     expect((await snapshot(project)).profiles).toBeGreaterThan(before.profiles);
@@ -899,10 +899,10 @@ describe("bias audit routes tenant isolation", () => {
     const editor = await sameOrgUser(owner.orgId, 3, "Editor");
     const project = await createTestProject(owner.orgId, editor.userId);
     const routes = [
-      `/api/bias-audit/profiles/${project}/${LL144}`,
-      `/api/bias-audit/questions/${LL144}?projectId=${project}`,
-      `/api/bias-audit/runs?projectId=${project}&frameworkId=${LL144}`,
-      `/api/bias-audit/runs/trend?projectId=${project}&frameworkId=${LL144}`,
+      `/api/v1/bias-audit/profiles/${project}/${LL144}`,
+      `/api/v1/bias-audit/questions/${LL144}?projectId=${project}`,
+      `/api/v1/bias-audit/runs?projectId=${project}&frameworkId=${LL144}`,
+      `/api/v1/bias-audit/runs/trend?projectId=${project}&frameworkId=${LL144}`,
     ];
     const statuses = await Promise.all(
       routes.map(async (route) => [route, (await editor.request.get(route)).status]),
@@ -918,8 +918,8 @@ describe("bias audit routes tenant isolation", () => {
     )) as [Array<{ max: number }>, unknown];
     const missing = max + 1000;
     const answer = async (id: number) => {
-      const res = await editor.request.get(`/api/bias-audit/runs/${id}`);
-      const stance = await editor.request.post(`/api/bias-audit/runs/${id}/stance`);
+      const res = await editor.request.get(`/api/v1/bias-audit/runs/${id}`);
+      const stance = await editor.request.post(`/api/v1/bias-audit/runs/${id}/stance`);
       return [res.status, JSON.stringify(res.body), stance.status, JSON.stringify(stance.body)].map(
         (v) => String(v).replace(String(id), "<id>"),
       );
@@ -940,11 +940,11 @@ describe("bias audit routes tenant isolation", () => {
     );
 
     const routes = [
-      `/api/bias-audit/profiles/${project}/${LL144}`,
-      `/api/bias-audit/questions/${LL144}?projectId=${project}`,
-      `/api/bias-audit/runs?projectId=${project}&frameworkId=${LL144}`,
-      `/api/bias-audit/runs/trend?projectId=${project}&frameworkId=${LL144}`,
-      `/api/bias-audit/runs/${runId}`,
+      `/api/v1/bias-audit/profiles/${project}/${LL144}`,
+      `/api/v1/bias-audit/questions/${LL144}?projectId=${project}`,
+      `/api/v1/bias-audit/runs?projectId=${project}&frameworkId=${LL144}`,
+      `/api/v1/bias-audit/runs/trend?projectId=${project}&frameworkId=${LL144}`,
+      `/api/v1/bias-audit/runs/${runId}`,
     ];
     const statuses = await Promise.all(
       routes.map(async (route) => [route, (await editor.request.get(route)).status]),
@@ -1125,7 +1125,7 @@ describe("bias audit routes tenant isolation", () => {
       replacements: { fileId },
     });
     expect((after as any[])[0].tags ?? []).not.toContain("leak");
-    expect((await owner.request.get(`/api/bias-audit/stances/${stanceId}/download`)).status).toBe(
+    expect((await owner.request.get(`/api/v1/bias-audit/stances/${stanceId}/download`)).status).toBe(
       200,
     );
   });
@@ -1133,7 +1133,7 @@ describe("bias audit routes tenant isolation", () => {
   it("serves a stance PDF only to its project's people, not to others in the organization", async () => {
     const { owner, project, runId } = await ownerWithRun();
     const { stanceId } = await seedStance(owner, project, runId);
-    const route = `/api/bias-audit/stances/${stanceId}/download`;
+    const route = `/api/v1/bias-audit/stances/${stanceId}/download`;
 
     // An Editor in the same organization who is not on the project.
     const editorId = await createTestUser(
@@ -1161,7 +1161,7 @@ describe("bias audit routes tenant isolation", () => {
   it("serves a stance PDF only to its organization, 410 once the file is gone, and hides it from deletion", async () => {
     const { owner, attacker, project, runId } = await ownerWithRun();
     const { pdf, sha, stanceId } = await seedStance(owner, project, runId);
-    const route = `/api/bias-audit/stances/${stanceId}/download`;
+    const route = `/api/v1/bias-audit/stances/${stanceId}/download`;
 
     const ok = await owner.request
       .get(route)
@@ -1191,7 +1191,7 @@ describe("bias audit routes tenant isolation", () => {
     await sequelize.query(`DELETE FROM files WHERE id = :fileId`, { replacements: { fileId } });
     expect((await owner.request.get(route)).status).toBe(410);
     expect(
-      (await owner.request.get(`/api/bias-audit/runs/${runId}`)).body.data.stances,
+      (await owner.request.get(`/api/v1/bias-audit/runs/${runId}`)).body.data.stances,
     ).toHaveLength(1);
   });
   const OUT_OF_SCOPE_ANSWERS = [
@@ -1211,16 +1211,16 @@ describe("bias audit routes tenant isolation", () => {
     const { owner, attacker } = await seedTwoTenantContexts();
     const project = await createTestProject(owner.orgId, owner.userId);
     const put = await owner.request
-      .put(`/api/bias-audit/profiles/${project}/${LL144}`)
+      .put(`/api/v1/bias-audit/profiles/${project}/${LL144}`)
       .send({ answers: OUT_OF_SCOPE_ANSWERS });
     expect(put.status).toBe(200);
-    const attest = await owner.request.post(`/api/bias-audit/profiles/${project}/${LL144}/attest`);
+    const attest = await owner.request.post(`/api/v1/bias-audit/profiles/${project}/${LL144}/attest`);
     expect(attest.status).toBe(200);
     return {
       owner,
       attacker,
       project,
-      stanceRoute: `/api/bias-audit/profiles/${project}/${LL144}/stance`,
+      stanceRoute: `/api/v1/bias-audit/profiles/${project}/${LL144}/stance`,
     };
   }
 
@@ -1268,10 +1268,10 @@ describe("bias audit routes tenant isolation", () => {
     expect((runs as any[])[0].n).toBe(0);
 
     // Listed on the profile view, downloadable like any stance.
-    const view = await owner.request.get(`/api/bias-audit/profiles/${project}/${LL144}`);
+    const view = await owner.request.get(`/api/v1/bias-audit/profiles/${project}/${LL144}`);
     expect(view.body.data.scopeDeterminations.map((s: any) => s.version)).toEqual([2, 1]);
     const dl = await owner.request.get(
-      `/api/bias-audit/stances/${first.body.data.stanceId}/download`,
+      `/api/v1/bias-audit/stances/${first.body.data.stanceId}/download`,
     );
     expect(dl.status).toBe(200);
     expect(dl.headers["x-content-sha256"]).toBe(first.body.data.sha256);
@@ -1284,14 +1284,14 @@ describe("bias audit routes tenant isolation", () => {
     expect(first.body.data.version).toBe(1);
 
     // Re-attest: the edit opens a new draft version, attesting it supersedes the first.
-    const put = await owner.request.put(`/api/bias-audit/profiles/${project}/${LL144}`).send({
+    const put = await owner.request.put(`/api/v1/bias-audit/profiles/${project}/${LL144}`).send({
       answers: OUT_OF_SCOPE_ANSWERS.map((a) =>
         a.questionKey === "data.held" ? { ...a, notes: "We still hold none." } : a,
       ),
     });
     expect(put.status).toBe(200);
     expect(
-      (await owner.request.post(`/api/bias-audit/profiles/${project}/${LL144}/attest`)).status,
+      (await owner.request.post(`/api/v1/bias-audit/profiles/${project}/${LL144}/attest`)).status,
     ).toBe(200);
 
     const second = await owner.request.post(stanceRoute);
@@ -1311,7 +1311,7 @@ describe("bias audit routes tenant isolation", () => {
     expect(rows[0].profile_id).not.toBe(rows[1].profile_id);
 
     // The profile view marks only the determination of the attested profile current.
-    const view = await owner.request.get(`/api/bias-audit/profiles/${project}/${LL144}`);
+    const view = await owner.request.get(`/api/v1/bias-audit/profiles/${project}/${LL144}`);
     expect(view.body.data.scopeDeterminations.map((s: any) => [s.version, s.isCurrent])).toEqual([
       [2, true],
       [1, false],
@@ -1321,7 +1321,7 @@ describe("bias audit routes tenant isolation", () => {
   it("refuses a scope determination for an in-scope profile with 422, pointing at a run", async () => {
     const { owner, project } = await ownerWithRun();
     const before = await snapshot(project);
-    const res = await owner.request.post(`/api/bias-audit/profiles/${project}/${LL144}/stance`);
+    const res = await owner.request.post(`/api/v1/bias-audit/profiles/${project}/${LL144}/stance`);
     expect(res.status).toBe(422);
     expect(res.body.data).toMatch(/comes from a run/);
     expect(await snapshot(project)).toEqual(before);
@@ -1330,7 +1330,7 @@ describe("bias audit routes tenant isolation", () => {
   it("answers 404 when there is no attested profile", async () => {
     const { owner } = await seedTwoTenantContexts();
     const project = await createTestProject(owner.orgId, owner.userId);
-    const res = await owner.request.post(`/api/bias-audit/profiles/${project}/${LL144}/stance`);
+    const res = await owner.request.post(`/api/v1/bias-audit/profiles/${project}/${LL144}/stance`);
     expect(res.status).toBe(404);
   });
 
@@ -1366,7 +1366,7 @@ describe("bias audit routes tenant isolation", () => {
     const stanceId = made.body.data.stanceId as number;
 
     // The download follows the stance-download rule: project people, not others.
-    const download = `/api/bias-audit/stances/${stanceId}/download`;
+    const download = `/api/v1/bias-audit/stances/${stanceId}/download`;
     expect((await attacker.request.get(download)).status).toBe(404);
     const outsider = await sameOrgUser(owner.orgId, 3, "Editor");
     expect((await outsider.request.get(download)).status).toBe(404);
@@ -1392,7 +1392,7 @@ describe("bias audit routes tenant isolation", () => {
     });
     expect(still).toHaveLength(1);
     expect(
-      (await owner.request.get(`/api/bias-audit/stances/${made.body.data.stanceId}/download`))
+      (await owner.request.get(`/api/v1/bias-audit/stances/${made.body.data.stanceId}/download`))
         .status,
     ).toBe(200);
   });

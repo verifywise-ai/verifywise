@@ -11,8 +11,8 @@
 import express from "express";
 import multer from "multer";
 import path from "path";
-import authenticateJWT from "../middleware/auth.middleware";
-import authorize from "../middleware/accessControl.middleware";
+import authenticateJWT from "../../middleware/auth.middleware";
+import authorize from "../../middleware/accessControl.middleware";
 import {
   attestProfile,
   confirmDerivedBasis,
@@ -28,7 +28,7 @@ import {
   handleDatasetUploadError,
   listRuns,
   saveProfileAnswers,
-} from "../controllers/biasAudit.ctrl";
+} from "../../controllers/biasAudit.ctrl";
 
 const router = express.Router();
 

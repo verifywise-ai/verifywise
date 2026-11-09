@@ -1,10 +1,10 @@
 import { describe, it, expect, jest } from "@jest/globals";
 
-jest.mock("../../middleware/auth.middleware", () => ({
+jest.mock("../../../middleware/auth.middleware", () => ({
   __esModule: true,
   default: jest.fn((_req: any, _res: any, next: any) => next()),
 }));
-jest.mock("../../middleware/accessControl.middleware", () => ({
+jest.mock("../../../middleware/accessControl.middleware", () => ({
   __esModule: true,
   default: jest.fn((permission: string) => {
     const mw: any = (_req: any, _res: any, next: any) => next();
@@ -12,7 +12,7 @@ jest.mock("../../middleware/accessControl.middleware", () => ({
     return mw;
   }),
 }));
-jest.mock("../../controllers/biasAudit.ctrl", () => ({
+jest.mock("../../../controllers/biasAudit.ctrl", () => ({
   getQuestions: jest.fn(),
   getProfile: jest.fn(),
   saveProfileAnswers: jest.fn(),
@@ -26,17 +26,18 @@ jest.mock("../../controllers/biasAudit.ctrl", () => ({
   generateProfileStance: jest.fn(),
   downloadStance: jest.fn(),
   // The real upload error mapper and limit, so the upload layer is exercised.
-  handleDatasetUploadError: jest.requireActual<any>("../../controllers/biasAudit.ctrl")
+  handleDatasetUploadError: jest.requireActual<any>("../../../controllers/biasAudit.ctrl")
     .handleDatasetUploadError,
-  DATASET_MAX_BYTES: jest.requireActual<any>("../../controllers/biasAudit.ctrl").DATASET_MAX_BYTES,
+  DATASET_MAX_BYTES: jest.requireActual<any>("../../../controllers/biasAudit.ctrl")
+    .DATASET_MAX_BYTES,
 }));
 
 import express from "express";
 import request from "supertest";
 import router from "../biasAudit.route";
-import authenticateJWT from "../../middleware/auth.middleware";
-import * as ctrl from "../../controllers/biasAudit.ctrl";
-import { ROLE_PERMISSIONS } from "../../config/rolePermissions.config";
+import authenticateJWT from "../../../middleware/auth.middleware";
+import * as ctrl from "../../../controllers/biasAudit.ctrl";
+import { ROLE_PERMISSIONS } from "../../../config/rolePermissions.config";
 
 function layerFor(method: string, path: string) {
   return (router as any).stack.find((l: any) => l.route?.path === path && l.route.methods[method]);

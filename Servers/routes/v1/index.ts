@@ -29,6 +29,7 @@ import lifecycleSettingsRoutes from "./lifecycleSettings.route";
 import aiAppsRoutes from "./aiApps.route";
 import aiAppLifecycleRoutes from "./aiAppLifecycle.route";
 import dashboardPreferencesRoutes from "./dashboardPreferences.route";
+import biasAuditRoutes from "./biasAudit.route";
 
 const router = express.Router();
 
@@ -67,5 +68,8 @@ router.use("/ai-app-lifecycle", aiAppLifecycleRoutes);
 
 // Per-user dashboard layout (#5257).
 router.use("/dashboard", dashboardPreferencesRoutes);
+
+// Self-service NYC Local Law 144 bias audit: profiles, runs, stances.
+router.use("/bias-audit", biasAuditRoutes);
 
 export default router;

@@ -22,7 +22,6 @@ import datasetChangeHistoryRoutes from "../datasetChangeHistory.route";
 import approvalWorkflowRoutes from "../approvalWorkflow.route";
 import approvalRequestRoutes from "../approvalRequest.route";
 import auditLedgerRoutes from "../auditLedger.route";
-import biasAuditRoutes from "../biasAudit.route";
 
 export function registerWorkflowsRoutes(app: express.Application): void {
   app.use("/api/model-inventory-change-history", modelInventoryChangeHistoryRoutes);
@@ -41,5 +40,4 @@ export function registerWorkflowsRoutes(app: express.Application): void {
   app.use("/api/approval-workflows", approvalWorkflowRoutes);
   app.use("/api/approval-requests", approvalRequestRoutes);
   app.use("/api/audit-ledger", auditLedgerRoutes);
-  app.use("/api/bias-audit", biasAuditRoutes);
 }
