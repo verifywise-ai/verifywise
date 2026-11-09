@@ -210,6 +210,32 @@ export const canViewProjectQuery = async (
   return rows.length > 0;
 };
 
+export type ProjectAccess = "allowed" | "denied" | "not_found";
+
+/**
+ * canViewProjectQuery's rule, but telling a use case the user may not see from
+ * one that is not in their organization, so a caller can keep answering 404
+ * for the second.
+ */
+export const getProjectAccessQuery = async (
+  projectId: number,
+  viewer: { userId: number; role: string },
+  organizationId: number,
+): Promise<ProjectAccess> => {
+  const visibility = projectVisibilitySql("p", viewer);
+  const rows = await sequelize.query<{ can_view: boolean | null }>(
+    `SELECT (TRUE${visibility.sql}) AS can_view FROM projects p
+      WHERE p.organization_id = :organizationId AND p.id = :projectId`,
+    {
+      replacements: { organizationId, projectId, ...visibility.replacements },
+      type: QueryTypes.SELECT,
+    },
+  );
+  if (rows.length === 0) return "not_found";
+  // A NULL owner makes the comparison NULL, which is no access.
+  return rows[0].can_view === true ? "allowed" : "denied";
+};
+
 export const getAllProjectsQuery = async (
   {
     userId,
