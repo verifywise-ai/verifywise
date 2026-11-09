@@ -1,3 +1,7 @@
+/** Roles that see every use case in the org, whatever the owner or members. */
+export const seesAllProjects = (role: string | undefined): boolean =>
+  role === "Admin" || role === "SuperAdmin";
+
 /**
  * Which use cases (projects) a user can see: Admins (and SuperAdmins) every
  * one in the org, everyone else the ones they own or are a member of.
@@ -13,7 +17,7 @@ export function projectVisibilitySql(
   alias: string,
   viewer: { userId: number; role: string },
 ): { sql: string; replacements: Record<string, unknown> } {
-  if (viewer.role === "Admin" || viewer.role === "SuperAdmin") {
+  if (seesAllProjects(viewer.role)) {
     return { sql: "", replacements: {} };
   }
   return {

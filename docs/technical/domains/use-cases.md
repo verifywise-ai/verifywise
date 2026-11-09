@@ -31,7 +31,9 @@ projects
 ├── id (PK)
 ├── uc_id (UNIQUE)           # Auto-generated UC-ID
 ├── project_title            # Display name
-├── owner (FK → users)       # Project owner
+├── owner (FK → users)       # Project owner; NULL for an external owner
+├── external_owner_name      # Owner with no account (#5256)
+├── external_owner_email     # Lowercase; email notices only
 ├── start_date
 ├── geography
 ├── ai_risk_classification   # PROHIBITED, HIGH_RISK, LIMITED_RISK, MINIMAL_RISK
@@ -221,7 +223,9 @@ Read models: `GET /api/v1/use-case-lifecycle/summary` (stale ids and the interva
 POST /projects
 {
   project_title: string,           // Required
-  owner: number,                   // Required, user ID
+  owner?: number | null,           // User ID; required unless an external owner is given
+  external_owner_name?: string,    // With external_owner_email, instead of owner (max 255)
+  external_owner_email?: string,   // Valid email, stored lowercase (max 254)
   members: number[],               // Optional, user IDs
   framework: number[],             // Required, framework IDs
   start_date: Date,                // Required
@@ -320,6 +324,23 @@ When a project is deleted, the following are removed:
 - Has administrative access
 - Receives project notifications
 - Stored in `projects.owner` field
+
+### External Owners
+
+A use case can instead be owned by someone with no account (#5256): a name and email in `projects.external_owner_name` and `projects.external_owner_email`, with `owner` NULL.
+
+- **API.** External owners exist only on `POST /api/v1/projects` and `PATCH /api/v1/projects/:id` (`routes/v1/projects.route.ts`), thin adapters over the same controllers with their own validators. Reads stay on the legacy routes. On legacy `POST /api/projects` and `PATCH /api/projects/:id` the contract is unchanged: `owner` stays required on create, `owner: null` still clears it on update, and `external_owner_*` are ignored. The router sets `res.locals.acceptsExternalOwner`; without it the controllers drop those fields. A legacy update that sets a numeric owner on an externally owned row clears the external fields, so a row never has both.
+- **Either a user or an external owner, never both.** Selecting one clears the other. `utils/externalOwner.utils.ts` (`resolveOwnerForCreate`, `resolveOwnerForUpdate`) enforces this, normalises the email to lowercase and, on v1, rejects a write that would leave no owner. A partial update that does not mention ownership is left alone. `owner: null` on a row with no user owner (external, or its user was deleted) is a no-op.
+- **Writing needs access to the use case.** `updateProjectById` requires being an Admin, the owner or a member, the rule that scopes the use case list, on both `PATCH /api/v1/projects/:id` and `PATCH /api/projects/:id`; `useCase.edit` alone is a 403, with no write and no email.
+- **The MCP update tool skips the controller.** It is open only to super admins and organization Admins, who see every use case, and calls `updateUseCaseService` with a `SuperAdmin` role, so the service's external owner check never refuses it. That check is a backstop for any future caller that passes a narrower role.
+- **Naming a new external owner resets the still-live reminder.** `confirmation_reminded_at` is cleared when the email changes, so a reminder sent to the previous owner does not delay theirs. Correcting the name of the same person does not reset it.
+- **Nobody loses access when a use case moves to an external owner.** Non-Admins see a use case only as owner or member, so the previous non-Admin owner and a non-Admin who makes the change are added to `projects_members` in the same transaction, as is a non-Admin who creates a use case with an external owner.
+- **No database CHECK requires an owner.** `owner` is `ON DELETE SET NULL`, so such a CHECK would make deleting a user fail. A row can therefore have neither kind of owner after its user is deleted.
+- **External owners never gain access.** Every access check compares `owner` to a user id, and SQL `NULL = :userId` matches nothing. They are not in `projects_members`, and they cannot sign in.
+- **Notifications are email only** (`services/externalOwnerNotification.service.ts`, template `external-owner-notice.mjml`): no in-app rows, and no link they could not open. Each email names someone to contact: on assignment, the person who assigned them; for the still-live check, the last editor of the use case, falling back to an organization Admin. A failed email never fails a save. A failed still-live reminder is not stamped and is retried the next day. Assignment emails are capped at 30 per person per organization per clock hour (UTC), counted in Redis, because the address and title are free text. Callers await `notifyExternalOwnerAssigned` before responding, since with RLS on a later query would run on the request's finished transaction; it does not wait for the mail provider. Over the cap the save still succeeds, the email is skipped and a warning is logged. If Redis is unavailable the email is sent uncounted. Still-live reminders are not capped.
+- **Only the assignment notice and the still-live check reach external owners.** Task and risk assignment notices go to their own assignees and never reach an external owner. Automatic governance tasks that default to the use case owner stay unassigned for an externally owned use case. Post-market monitoring falls back from the first member to the user owner, so a cycle for an externally owned use case with no members has no stakeholder and the external owner is not notified.
+- **Display:** "Name (external)" with a Mail icon in the list and overview (`components/ExternalOwner/ExternalOwnerName.tsx`).
+- **Reports and automations** use "Name (external)" as the owner name.
 
 ### Project Members
 

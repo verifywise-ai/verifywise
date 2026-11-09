@@ -54,6 +54,7 @@ const fetchUseCases = async (
       status: p.status,
       ai_risk_classification: p.ai_risk_classification,
       owner: p.owner,
+      external_owner_name: p.external_owner_name ?? null,
       start_date: p.start_date,
       goal: p.goal,
       target_industry: p.target_industry,

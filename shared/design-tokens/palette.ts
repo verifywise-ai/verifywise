@@ -74,15 +74,18 @@ export const text = {
   tertiary: grey[600],
   accent: grey[400],
   disabled: grey[350],
+  onPrimary: grey[50],
   black: grey[950],
   icon: grey[450],
   muted: grey[600],
-  subdued: grey[450],
+  subdued: grey[400],
+  error: red[500],
 } as const;
 
 /** Icon strokes. Read the scales directly so icons do not depend on text tokens. */
 export const icon = {
   default: grey[450],
+  brand: green[700],
   error: red[500],
 } as const;
 

@@ -133,6 +133,7 @@ Before delivering notifications:
 | `user_added` | Member added to project | Email |
 | `role_changed_to_admin` | Role promoted | Email |
 | `project_created` | New project | Email |
+| External owner notice | External owner named (#5256) or still-live check due | Email only (`external-owner-notice.mjml`); no in-app row |
 
 ### Risk Notifications
 

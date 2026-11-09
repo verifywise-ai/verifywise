@@ -15,6 +15,9 @@ jest.mock("../../../../utils/lifecycle.utils", () => {
 jest.mock("../../../inAppNotification.service", () => ({
   notifyLifecycleConfirmationDue: jest.fn<any>(),
 }));
+jest.mock("../../../externalOwnerNotification.service", () => ({
+  notifyExternalOwnerConfirmationDue: jest.fn<any>(),
+}));
 jest.mock("../../../../utils/logger/fileLogger", () => ({
   __esModule: true,
   default: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
@@ -31,6 +34,7 @@ import {
   markConfirmationReminded,
 } from "../../../../utils/lifecycle.utils";
 import { notifyLifecycleConfirmationDue } from "../../../inAppNotification.service";
+import { notifyExternalOwnerConfirmationDue } from "../../../externalOwnerNotification.service";
 import { getAllOrganizationsQuery } from "../../../../utils/organization.utils";
 
 const m = (fn: unknown) => fn as jest.MockedFunction<any>;
@@ -73,6 +77,60 @@ describe("runLifecycleConfirmationSweep", () => {
     expect(markConfirmationReminded).toHaveBeenCalledTimes(1);
     expect(markConfirmationReminded).toHaveBeenCalledWith(LIFECYCLE_ENTITIES.use_case, 3, 11);
     expect(summary).toEqual({ organization_id: 3, entity: "use_case", candidates: 2, notified: 1 });
+  });
+
+  describe("external owners (#5256)", () => {
+    const external = {
+      id: 21,
+      title: "Vendor bot",
+      owner: null,
+      external_owner_name: "Ada Lovelace",
+      external_owner_email: "ada@example.com",
+      contact_user_id: 8,
+      baseline: "2026-06-01",
+    };
+
+    it("emails an external owner, creates no in-app row and stamps the entry", async () => {
+      m(findConfirmationsDue).mockResolvedValue([external]);
+      m(notifyExternalOwnerConfirmationDue).mockResolvedValue(undefined);
+
+      const summary = await runLifecycleConfirmationSweep(3, LIFECYCLE_ENTITIES.use_case);
+
+      expect(notifyLifecycleConfirmationDue).not.toHaveBeenCalled();
+      expect(notifyExternalOwnerConfirmationDue).toHaveBeenCalledWith({
+        organizationId: 3,
+        entryTitle: "Vendor bot",
+        noun: "use case",
+        since: "2026-06-01",
+        intervalDays: 30,
+        recipient: { name: "Ada Lovelace", email: "ada@example.com" },
+        contactUserId: 8,
+      });
+      expect(markConfirmationReminded).toHaveBeenCalledWith(LIFECYCLE_ENTITIES.use_case, 3, 21);
+      expect(summary.notified).toBe(1);
+    });
+
+    it("does not stamp an external owner whose email failed, so it retries", async () => {
+      m(findConfirmationsDue).mockResolvedValue([external]);
+      m(notifyExternalOwnerConfirmationDue).mockRejectedValue(new Error("smtp down"));
+
+      const summary = await runLifecycleConfirmationSweep(3, LIFECYCLE_ENTITIES.use_case);
+
+      expect(markConfirmationReminded).not.toHaveBeenCalled();
+      expect(summary.notified).toBe(0);
+    });
+
+    it("skips a row with no owner of either kind without notifying id 0", async () => {
+      m(findConfirmationsDue).mockResolvedValue([
+        { id: 22, title: "Orphan", owner: null, baseline: "2026-06-01" },
+      ]);
+
+      await runLifecycleConfirmationSweep(3, LIFECYCLE_ENTITIES.use_case);
+
+      expect(notifyLifecycleConfirmationDue).not.toHaveBeenCalled();
+      expect(notifyExternalOwnerConfirmationDue).not.toHaveBeenCalled();
+      expect(markConfirmationReminded).not.toHaveBeenCalled();
+    });
   });
 });
 

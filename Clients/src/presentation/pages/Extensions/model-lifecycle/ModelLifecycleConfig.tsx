@@ -18,7 +18,6 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
-  Button,
   TextField,
   Select,
   MenuItem,
@@ -38,28 +37,27 @@ import {
 } from "lucide-react";
 import { LifecycleItem, useLifecycleConfig } from "./useModelLifecycle";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
+import { background, border, brand, editor, icon, status, text } from "../../../themes/palette";
+import { textStyles } from "../../../../presentation/themes/typography";
+import { CustomizableButton } from "../../../components/button/customizable-button";
 
 // ============================================================================
 // VerifyWise Theme Constants
 // ============================================================================
 
 const VW_COLORS = {
-  primary: "#13715B",
-  primaryDark: "#0F5A47",
-  textPrimary: "#1c2130",
-  textSecondary: "#344054",
-  textTertiary: "#475467",
-  textAccent: "#838c99",
-  bgMain: "#FFFFFF",
-  bgAlt: "#FCFCFD",
-  bgFill: "#F4F4F4",
-  bgAccent: "#f9fafb",
-  borderLight: "#eaecf0",
-  borderDark: "#d0d5dd",
-  error: "#f04438",
-  errorBg: "#FEE2E2",
-  success: "#079455",
-  successBg: "#ecfdf3",
+  primary: brand.primary,
+  primaryDark: brand.primaryHover,
+  textPrimary: text.primary,
+  textSecondary: text.secondary,
+  textTertiary: text.tertiary,
+  textAccent: text.accent,
+  bgMain: background.main,
+
+  bgAccent: background.alt,
+  error: icon.error,
+  errorBg: editor.imageErrorBg,
+  success: status.success.strong,
 };
 
 const VW_TYPOGRAPHY = {
@@ -71,45 +69,17 @@ const VW_TYPOGRAPHY = {
 // Styled Components
 // ============================================================================
 
-const vwButtonPrimary = {
-  "textTransform": "none",
-  "fontWeight": 500,
-  "fontSize": "13px",
-  "fontFamily": VW_TYPOGRAPHY.fontFamily,
-  "borderRadius": "4px",
-  "backgroundColor": VW_COLORS.primary,
-  "color": "#fff",
-  "&:hover": {
-    backgroundColor: VW_COLORS.primaryDark,
-  },
-};
-
-const vwButtonSecondary = {
-  "textTransform": "none",
-  "fontWeight": 400,
-  "fontSize": "13px",
-  "fontFamily": VW_TYPOGRAPHY.fontFamily,
-  "borderRadius": "4px",
-  "borderColor": VW_COLORS.borderDark,
-  "color": VW_COLORS.textSecondary,
-  "&:hover": {
-    borderColor: VW_COLORS.borderDark,
-    backgroundColor: VW_COLORS.bgFill,
-  },
-};
-
 const vwTextField = {
   "& .MuiOutlinedInput-root": {
     "backgroundColor": VW_COLORS.bgMain,
     "borderRadius": "4px",
-    "fontSize": "13px",
-    "fontFamily": VW_TYPOGRAPHY.fontFamily,
+    ...textStyles.body,
     "& .MuiOutlinedInput-notchedOutline": {
-      borderColor: VW_COLORS.borderDark,
+      borderColor: border.dark,
       borderWidth: "1px",
     },
     "&:hover .MuiOutlinedInput-notchedOutline": {
-      borderColor: VW_COLORS.borderDark,
+      borderColor: border.dark,
     },
     "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
       borderColor: VW_COLORS.primary,
@@ -121,13 +91,12 @@ const vwTextField = {
 const vwSelect = {
   "backgroundColor": VW_COLORS.bgMain,
   "borderRadius": "4px",
-  "fontSize": "13px",
-  "fontFamily": VW_TYPOGRAPHY.fontFamily,
+  ...textStyles.body,
   "& .MuiOutlinedInput-notchedOutline": {
-    borderColor: VW_COLORS.borderDark,
+    borderColor: border.dark,
   },
   "&:hover .MuiOutlinedInput-notchedOutline": {
-    borderColor: VW_COLORS.borderDark,
+    borderColor: border.dark,
   },
   "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
     borderColor: VW_COLORS.primary,
@@ -135,7 +104,7 @@ const vwSelect = {
 };
 
 const vwAccordion = {
-  "border": `1px solid ${VW_COLORS.borderLight}`,
+  "border": `1px solid ${border.light}`,
   "borderRadius": "4px !important",
   "&:before": { display: "none" },
   "boxShadow": "none",
@@ -144,25 +113,24 @@ const vwAccordion = {
 
 const vwAccordionSummary = {
   "backgroundColor": VW_COLORS.bgAccent,
-  "px": "16px",
-  "py": "10px",
-  "minHeight": "44px",
+  "px": 8,
+  "py": 4,
+  "minHeight": 20,
   "& .MuiAccordionSummary-expandIconWrapper": {
     transform: "none !important",
     order: -1,
-    mr: "10px",
+    mr: 4,
   },
   "& .MuiAccordionSummary-content": {
     margin: 0,
     alignItems: "center",
-    gap: "10px",
+    gap: 4,
   },
 };
 
 const vwDialog = {
   "& .MuiDialog-paper": {
     borderRadius: "8px",
-    backgroundColor: VW_COLORS.bgAlt,
   },
 };
 
@@ -403,7 +371,7 @@ export default function ModelLifecycleConfig() {
 
   return (
     <>
-      <Stack sx={{ gap: "16px" }}>
+      <Stack sx={{ gap: 8 }}>
         {/* Phases Summary */}
         {loading ? (
           <Stack alignItems="center" sx={{ py: 2 }}>
@@ -412,21 +380,18 @@ export default function ModelLifecycleConfig() {
         ) : phases.length === 0 ? (
           <Typography
             sx={{
-              fontSize: "13px",
-              fontFamily: VW_TYPOGRAPHY.fontFamily,
+              ...textStyles.body,
               color: VW_COLORS.textTertiary,
             }}
           >
             No lifecycle phases configured yet. Click the button below to add phases.
           </Typography>
         ) : (
-          <Stack sx={{ gap: "8px" }}>
+          <Stack sx={{ gap: 4 }}>
             <Typography
               sx={{
-                fontWeight: 600,
-                fontSize: "13px",
-                fontFamily: VW_TYPOGRAPHY.fontFamily,
-                color: VW_COLORS.textSecondary,
+                ...textStyles.subsectionTitle,
+                color: text.primary,
               }}
             >
               Configured Phases ({phases.filter((p) => p.is_active).length} active)
@@ -437,22 +402,21 @@ export default function ModelLifecycleConfig() {
                 sx={{
                   display: "flex",
                   alignItems: "center",
-                  gap: "12px",
-                  py: "8px",
-                  px: "12px",
-                  backgroundColor: phase.is_active ? VW_COLORS.bgAccent : VW_COLORS.bgFill,
+                  gap: 6,
+                  py: 4,
+                  px: 6,
+                  backgroundColor: phase.is_active ? VW_COLORS.bgAccent : background.main,
                   borderRadius: "4px",
-                  border: `1px solid ${VW_COLORS.borderLight}`,
+                  border: `1px solid ${border.light}`,
                   opacity: phase.is_active ? 1 : 0.6,
                 }}
               >
                 <Typography
                   sx={{
-                    fontSize: "12px",
-                    fontWeight: 600,
-                    fontFamily: VW_TYPOGRAPHY.fontFamily,
-                    color: VW_COLORS.textAccent,
-                    minWidth: "20px",
+                    ...textStyles.formLabel,
+
+                    color: text.subdued,
+                    minWidth: 10,
                   }}
                 >
                   {idx + 1}.
@@ -474,8 +438,8 @@ export default function ModelLifecycleConfig() {
                   sx={{
                     fontSize: "11px",
                     fontFamily: VW_TYPOGRAPHY.fontFamily,
-                    height: "20px",
-                    backgroundColor: VW_COLORS.bgFill,
+                    height: 10,
+                    backgroundColor: background.main,
                     color: VW_COLORS.textTertiary,
                     borderRadius: "4px",
                   }}
@@ -487,9 +451,9 @@ export default function ModelLifecycleConfig() {
                     sx={{
                       fontSize: "11px",
                       fontFamily: VW_TYPOGRAPHY.fontFamily,
-                      height: "20px",
-                      backgroundColor: VW_COLORS.errorBg,
-                      color: VW_COLORS.error,
+                      height: 10,
+                      backgroundColor: status.error.bg,
+                      color: status.error.text,
                       borderRadius: "4px",
                     }}
                   />
@@ -500,14 +464,15 @@ export default function ModelLifecycleConfig() {
         )}
 
         {/* Configure Button */}
-        <Button
+        <CustomizableButton
           variant="outlined"
+          color="secondary"
           startIcon={<Settings size={16} />}
           onClick={() => setConfigOpen(true)}
-          sx={{ ...vwButtonSecondary, alignSelf: "flex-start" }}
+          sx={{ alignSelf: "flex-start" }}
         >
           Configure Phases
-        </Button>
+        </CustomizableButton>
       </Stack>
 
       {/* Configuration Dialog */}
@@ -524,9 +489,9 @@ export default function ModelLifecycleConfig() {
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            borderBottom: `1px solid ${VW_COLORS.borderLight}`,
-            py: "12px",
-            px: "20px",
+            borderBottom: `1px solid ${border.light}`,
+            py: 6,
+            px: 10,
           }}
         >
           <Typography
@@ -549,13 +514,13 @@ export default function ModelLifecycleConfig() {
           </IconButton>
         </DialogTitle>
 
-        <DialogContent sx={{ p: "20px" }}>
+        <DialogContent sx={{ p: 10 }}>
           {loading && phases.length === 0 ? (
             <Stack alignItems="center" sx={{ py: 4 }}>
               <CircularProgress sx={{ color: VW_COLORS.primary }} />
             </Stack>
           ) : (
-            <Stack sx={{ gap: "12px" }}>
+            <Stack sx={{ gap: 6 }}>
               {phases.map((phase, phaseIdx) => (
                 <Accordion
                   key={phase.id}
@@ -580,7 +545,7 @@ export default function ModelLifecycleConfig() {
                       <Stack
                         direction="row"
                         alignItems="center"
-                        sx={{ flex: 1, gap: "6px", mr: "8px" }}
+                        sx={{ flex: 1, gap: 2, mr: 4 }}
                         onClick={(e) => e.stopPropagation()}
                       >
                         <TextField
@@ -609,7 +574,7 @@ export default function ModelLifecycleConfig() {
                       <Stack
                         direction="row"
                         alignItems="center"
-                        sx={{ "flex": 1, "gap": "6px", "&:hover .phase-edit-icon": { opacity: 1 } }}
+                        sx={{ "flex": 1, "gap": 4, "&:hover .phase-edit-icon": { opacity: 1 } }}
                       >
                         <Typography
                           sx={{
@@ -633,7 +598,7 @@ export default function ModelLifecycleConfig() {
                           sx={{
                             opacity: 0,
                             transition: "opacity 0.2s",
-                            p: "2px",
+                            p: 1,
                             color: VW_COLORS.textTertiary,
                           }}
                           onClick={(e) => {
@@ -720,9 +685,7 @@ export default function ModelLifecycleConfig() {
                     </IconButton>
                   </AccordionSummary>
 
-                  <AccordionDetails
-                    sx={{ px: "16px", py: "12px", backgroundColor: VW_COLORS.bgMain }}
-                  >
+                  <AccordionDetails sx={{ px: 8, py: 6, backgroundColor: VW_COLORS.bgMain }}>
                     <Stack spacing={0}>
                       {(Array.isArray(phase.items) ? phase.items : []).map((item, itemIdx) => (
                         <Stack
@@ -730,9 +693,9 @@ export default function ModelLifecycleConfig() {
                           direction="row"
                           alignItems="center"
                           sx={{
-                            gap: "12px",
-                            py: "10px",
-                            borderBottom: `1px solid ${VW_COLORS.borderLight}`,
+                            gap: 6,
+                            py: 4,
+                            borderBottom: `1px solid ${border.light}`,
                           }}
                         >
                           <Typography
@@ -752,7 +715,7 @@ export default function ModelLifecycleConfig() {
                             sx={{
                               fontSize: "11px",
                               fontFamily: VW_TYPOGRAPHY.fontFamily,
-                              borderColor: VW_COLORS.borderDark,
+                              borderColor: border.dark,
                               color: VW_COLORS.textTertiary,
                               borderRadius: "4px",
                             }}
@@ -792,9 +755,9 @@ export default function ModelLifecycleConfig() {
                             direction="row"
                             alignItems="center"
                             sx={{
-                              gap: "4px",
-                              pl: "12px",
-                              borderLeft: `1px solid ${VW_COLORS.borderLight}`,
+                              gap: 2,
+                              pl: 6,
+                              borderLeft: `1px solid ${border.light}`,
                             }}
                           >
                             <IconButton
@@ -838,7 +801,7 @@ export default function ModelLifecycleConfig() {
                       ))}
 
                       {addingItemForPhase === phase.id ? (
-                        <Stack direction="row" sx={{ gap: "8px", pt: "12px" }} alignItems="center">
+                        <Stack direction="row" sx={{ gap: 4, pt: 6 }} alignItems="center">
                           <TextField
                             placeholder="Item name"
                             value={newItemName}
@@ -887,47 +850,41 @@ export default function ModelLifecycleConfig() {
                             }
                             sx={{ ml: "4px" }}
                           />
-                          <Button
+                          <CustomizableButton
                             variant="contained"
                             size="small"
                             onClick={() => handleCreateItem(phase.id)}
                             disabled={!newItemName.trim() || saving}
-                            sx={vwButtonPrimary}
                           >
                             Add
-                          </Button>
-                          <Button
+                          </CustomizableButton>
+                          <CustomizableButton
                             variant="text"
+                            color="secondary"
                             size="small"
                             onClick={() => {
                               setAddingItemForPhase(null);
                               setNewItemName("");
                             }}
-                            sx={{ ...vwButtonSecondary, border: "none" }}
                           >
                             Cancel
-                          </Button>
+                          </CustomizableButton>
                         </Stack>
                       ) : (
-                        <Button
+                        <CustomizableButton
                           variant="text"
+                          color="primary"
                           size="small"
                           startIcon={<Plus size={14} />}
                           onClick={() => setAddingItemForPhase(phase.id)}
                           sx={{
-                            "alignSelf": "flex-start",
-                            "mt": "12px",
-                            "textTransform": "none",
-                            "fontSize": "13px",
-                            "fontFamily": VW_TYPOGRAPHY.fontFamily,
-                            "color": VW_COLORS.primary,
-                            "&:hover": {
-                              backgroundColor: VW_COLORS.bgAccent,
-                            },
+                            alignSelf: "flex-start",
+                            mt: 6,
+                            textTransform: "none",
                           }}
                         >
                           Add item
-                        </Button>
+                        </CustomizableButton>
                       )}
                     </Stack>
                   </AccordionDetails>
@@ -937,24 +894,23 @@ export default function ModelLifecycleConfig() {
               {/* Add new phase */}
               <Box
                 sx={{
-                  border: `1px dashed ${VW_COLORS.borderDark}`,
-                  borderRadius: "4px",
-                  p: "16px",
+                  border: `1px dashed ${border.dark}`,
+                  borderRadius: 2,
+                  p: 8,
                   backgroundColor: VW_COLORS.bgMain,
                 }}
               >
                 <Typography
                   sx={{
-                    fontWeight: 600,
+                    ...textStyles.subsectionTitle,
                     fontSize: "13px",
-                    fontFamily: VW_TYPOGRAPHY.fontFamily,
-                    color: VW_COLORS.textSecondary,
-                    mb: "12px",
+                    color: text.primary,
+                    mb: 6,
                   }}
                 >
                   Add new phase
                 </Typography>
-                <Stack sx={{ gap: "10px" }}>
+                <Stack sx={{ gap: 4 }}>
                   <TextField
                     placeholder="Phase name"
                     value={newPhaseName}
@@ -973,16 +929,16 @@ export default function ModelLifecycleConfig() {
                     fullWidth
                     sx={vwTextField}
                   />
-                  <Button
+                  <CustomizableButton
                     variant="contained"
-                    size="small"
+                    size="medium"
                     startIcon={<Plus size={14} />}
                     onClick={handleCreatePhase}
                     disabled={!newPhaseName.trim() || saving}
-                    sx={{ ...vwButtonPrimary, alignSelf: "flex-start" }}
+                    sx={{ alignSelf: "flex-start" }}
                   >
                     Create phase
-                  </Button>
+                  </CustomizableButton>
                 </Stack>
               </Box>
             </Stack>
@@ -991,14 +947,18 @@ export default function ModelLifecycleConfig() {
 
         <DialogActions
           sx={{
-            px: "20px",
-            py: "12px",
-            borderTop: `1px solid ${VW_COLORS.borderLight}`,
+            px: 10,
+            py: 6,
+            borderTop: `1px solid ${border.light}`,
           }}
         >
-          <Button variant="outlined" onClick={() => setConfigOpen(false)} sx={vwButtonSecondary}>
+          <CustomizableButton
+            variant="outlined"
+            color="secondary"
+            onClick={() => setConfigOpen(false)}
+          >
             Close
-          </Button>
+          </CustomizableButton>
         </DialogActions>
       </Dialog>
 
@@ -1006,10 +966,8 @@ export default function ModelLifecycleConfig() {
       <Dialog open={deletePhaseId !== null} onClose={() => setDeletePhaseId(null)} sx={vwDialog}>
         <DialogTitle
           sx={{
-            fontWeight: 600,
-            fontSize: "16px",
-            fontFamily: VW_TYPOGRAPHY.fontFamily,
-            color: VW_COLORS.textPrimary,
+            ...textStyles.cardTitle,
+            color: text.primary,
           }}
         >
           Delete phase
@@ -1017,30 +975,29 @@ export default function ModelLifecycleConfig() {
         <DialogContent>
           <Typography
             sx={{
-              fontSize: "13px",
-              fontFamily: VW_TYPOGRAPHY.fontFamily,
-              color: VW_COLORS.textSecondary,
+              ...textStyles.body,
+              color: text.primary,
             }}
           >
             Delete this phase and all its items? This cannot be undone.
           </Typography>
         </DialogContent>
-        <DialogActions sx={{ px: "20px", py: "12px" }}>
-          <Button onClick={() => setDeletePhaseId(null)} sx={vwButtonSecondary}>
+        <DialogActions sx={{ px: 10, py: 6 }}>
+          <CustomizableButton
+            onClick={() => setDeletePhaseId(null)}
+            variant="text"
+            color="secondary"
+          >
             Cancel
-          </Button>
-          <Button
+          </CustomizableButton>
+          <CustomizableButton
             onClick={confirmDeletePhase}
             variant="contained"
+            color="error"
             disabled={saving}
-            sx={{
-              ...vwButtonPrimary,
-              "backgroundColor": VW_COLORS.error,
-              "&:hover": { backgroundColor: "#dc2626" },
-            }}
           >
             Delete
-          </Button>
+          </CustomizableButton>
         </DialogActions>
       </Dialog>
 
@@ -1048,10 +1005,8 @@ export default function ModelLifecycleConfig() {
       <Dialog open={deleteItemId !== null} onClose={() => setDeleteItemId(null)} sx={vwDialog}>
         <DialogTitle
           sx={{
-            fontWeight: 600,
-            fontSize: "16px",
-            fontFamily: VW_TYPOGRAPHY.fontFamily,
-            color: VW_COLORS.textPrimary,
+            ...textStyles.cardTitle,
+            color: text.primary,
           }}
         >
           Delete item
@@ -1059,30 +1014,29 @@ export default function ModelLifecycleConfig() {
         <DialogContent>
           <Typography
             sx={{
-              fontSize: "13px",
-              fontFamily: VW_TYPOGRAPHY.fontFamily,
-              color: VW_COLORS.textSecondary,
+              ...textStyles.body,
+              color: text.primary,
             }}
           >
             Delete this item? This cannot be undone.
           </Typography>
         </DialogContent>
-        <DialogActions sx={{ px: "20px", py: "12px" }}>
-          <Button onClick={() => setDeleteItemId(null)} sx={vwButtonSecondary}>
+        <DialogActions sx={{ px: 6, py: 6 }}>
+          <CustomizableButton
+            onClick={() => setDeleteItemId(null)}
+            variant="text"
+            color="secondary"
+          >
             Cancel
-          </Button>
-          <Button
+          </CustomizableButton>
+          <CustomizableButton
             onClick={confirmDeleteItem}
             variant="contained"
+            color="error"
             disabled={saving}
-            sx={{
-              ...vwButtonPrimary,
-              "backgroundColor": VW_COLORS.error,
-              "&:hover": { backgroundColor: "#dc2626" },
-            }}
           >
             Delete
-          </Button>
+          </CustomizableButton>
         </DialogActions>
       </Dialog>
     </>

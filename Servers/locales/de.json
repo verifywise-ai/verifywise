@@ -974,5 +974,10 @@
   "Only a live AI app can be confirmed as still live": "Nur eine aktive KI-App kann als weiterhin aktiv bestätigt werden",
   "Invalid lifecycle stage": "Ungültige Lebenszyklusphase",
   "An AI app with this name already exists": "Eine KI-App mit diesem Namen existiert bereits",
-  "AI app requests cannot carry accepted risk suggestions": "KI-App-Anfragen können keine angenommenen Risikovorschläge enthalten"
+  "AI app requests cannot carry accepted risk suggestions": "KI-App-Anfragen können keine angenommenen Risikovorschläge enthalten",
+  "A use case needs an owner or an external owner": "Ein Anwendungsfall benötigt einen Verantwortlichen oder einen externen Verantwortlichen",
+  "A use case cannot have both an owner and an external owner": "Ein Anwendungsfall kann nicht gleichzeitig einen Verantwortlichen und einen externen Verantwortlichen haben",
+  "An external owner needs both a name and an email": "Ein externer Verantwortlicher benötigt sowohl einen Namen als auch eine E-Mail-Adresse",
+  "External owner name is not valid": "Der Name des externen Verantwortlichen ist ungültig",
+  "External owner email is not valid": "Die E-Mail-Adresse des externen Verantwortlichen ist ungültig"
 }

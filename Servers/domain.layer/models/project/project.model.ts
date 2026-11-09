@@ -35,7 +35,18 @@ export class ProjectModel extends Model<ProjectModel> implements IProjectAttribu
   @Column({
     type: DataType.INTEGER,
   })
-  owner!: number;
+  owner!: number | null;
+
+  // An owner with no account (#5256); set only when owner is null.
+  @Column({
+    type: DataType.STRING(255),
+  })
+  external_owner_name?: string | null;
+
+  @Column({
+    type: DataType.STRING(254),
+  })
+  external_owner_email?: string | null;
 
   @Column({
     type: DataType.DATE,
@@ -235,6 +246,8 @@ export class ProjectModel extends Model<ProjectModel> implements IProjectAttribu
       uc_id: this.uc_id,
       project_title: this.project_title,
       owner: this.owner,
+      external_owner_name: this.external_owner_name ?? null,
+      external_owner_email: this.external_owner_email ?? null,
       start_date: this.start_date?.toISOString(),
       geography: this.geography,
       ai_risk_classification: this.ai_risk_classification,
