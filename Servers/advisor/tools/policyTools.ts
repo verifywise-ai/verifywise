@@ -89,7 +89,7 @@ export const toolsDefinition: any[] = [
     function: {
       name: "search_policy_templates",
       description:
-        "Search the library of policy templates. Use this tool to help users find relevant policy templates by category or tag. Templates provide starting points for creating new policies based on best practices and regulatory requirements.",
+        "Search the library of policy templates. Use this tool to help users find relevant policy templates by category or tag. Templates provide starting points for creating new policies based on best practices and regulatory requirements. The library includes the built-in system templates plus templates the organization has created or duplicated for its own use.",
       parameters: {
         type: "object",
         properties: {
