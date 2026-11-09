@@ -284,9 +284,11 @@ export async function updateGroupByIdQuery(
   await getGroupByIdOrThrowQuery(id, organizationId);
   const sets: string[] = [];
   const replacements: Record<string, unknown> = { id, organizationId };
+  let validatedName: string | undefined;
   if (patch.name !== undefined) {
+    validatedName = assertGroupName(patch.name);
     sets.push("name = :name");
-    replacements.name = assertGroupName(patch.name);
+    replacements.name = validatedName;
   }
   if (patch.description !== undefined) {
     sets.push("description = :description");
@@ -307,9 +309,9 @@ export async function updateGroupByIdQuery(
   } catch (error) {
     if ((error as { original?: { code?: string } })?.original?.code === "23505") {
       throw new ConflictException(
-        `A group named "${replacements.name}" already exists`,
+        `A group named "${validatedName}" already exists`,
         "name",
-        replacements.name,
+        validatedName,
       );
     }
     throw error;
