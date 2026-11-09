@@ -12,6 +12,7 @@ import Alert from "../../../components/Alert";
 import AIAppApprovalCenter from "./AIAppApprovalCenter";
 import AIAppPolicyMapping from "./AIAppPolicyMapping";
 import AIAppModelDependencies from "./AIAppModelDependencies";
+import AIAppLinkedUseCases from "./AIAppLinkedUseCases";
 import AIAppRiskAssessment from "./AIAppRiskAssessment";
 import AIAppLifecyclePanel from "./AIAppLifecyclePanel";
 
@@ -89,6 +90,10 @@ export default function AIAppDetail() {
 
         <Box sx={sectionCardStyle}>
           <AIAppModelDependencies appId={app.id!} models={app.models || []} />
+        </Box>
+
+        <Box sx={sectionCardStyle}>
+          <AIAppLinkedUseCases appId={app.id!} />
         </Box>
 
         <Box sx={sectionCardStyle}>

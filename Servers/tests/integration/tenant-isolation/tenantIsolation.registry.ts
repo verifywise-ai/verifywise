@@ -198,6 +198,13 @@ export const tenantIsolationRegistry: IsolationEntity[] = [
     baseRoute: "/api/v1/ai-app-lifecycle",
   },
   {
+    // Links between AI apps and use cases (#5259); both sides are org-checked.
+    name: "ai_apps_projects",
+    tables: ["ai_apps_projects"],
+    baseRoute: "/api/v1/ai-apps",
+    testFile: "ai-apps-projects.isolation.test.ts",
+  },
+  {
     name: "mrm_validations",
     tables: ["mrm_validations"],
     baseRoute: "/api/mrm/validations",

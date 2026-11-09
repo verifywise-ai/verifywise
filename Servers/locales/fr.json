@@ -977,5 +977,10 @@
   "A use case cannot have both an owner and an external owner": "Un cas d'usage ne peut pas avoir à la fois un responsable et un responsable externe",
   "An external owner needs both a name and an email": "Un responsable externe nécessite un nom et une adresse e-mail",
   "External owner name is not valid": "Le nom du responsable externe n'est pas valide",
-  "External owner email is not valid": "L'adresse e-mail du responsable externe n'est pas valide"
+  "External owner email is not valid": "L'adresse e-mail du responsable externe n'est pas valide",
+  "AI app name must be text of at most 255 characters": "Le nom de l'application IA doit être un texte de 255 caractères maximum",
+  "AI app or use case not found": "Application IA ou cas d'usage introuvable",
+  "Link not found": "Lien introuvable",
+  "Organizational use cases cannot be linked to an AI app": "Les cas d'usage organisationnels ne peuvent pas être liés à une application IA",
+  "Use cases that are waiting for approval or were rejected cannot be linked to an AI app": "Les cas d'usage en attente d'approbation ou rejetés ne peuvent pas être liés à une application IA"
 }

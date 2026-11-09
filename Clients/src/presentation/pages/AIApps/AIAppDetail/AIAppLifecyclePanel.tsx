@@ -1,14 +1,11 @@
 import LifecyclePanel from "../../../components/LifecycleTabs/LifecyclePanel";
 import { useAuth } from "../../../../application/hooks/useAuth";
-import { useMyPermissions } from "../../../../application/hooks/useMyPermissions";
+import { useCanEditAiApps } from "../../../../application/hooks/useCanEditAiApps";
 import {
   useAiAppLifecycle,
   useAiAppLifecycleActions,
 } from "../../../../application/hooks/useAiAppLifecycle";
 import { canManageLifecycle } from "../../../../application/utils/useCaseLifecycle";
-
-/** Built-in roles holding aiApp.edit; only stands in until permissions load. */
-const AI_APP_EDIT_ROLES = ["Admin", "Editor"];
 
 /**
  * Lifecycle strip on the AI app detail page (#5193): the shared
@@ -18,13 +15,10 @@ const AIAppLifecyclePanel = ({ appId }: { appId: number }) => {
   const { userRoleName, userId } = useAuth();
   const { data: lifecycle } = useAiAppLifecycle(appId);
   const { goLive, retire, confirm } = useAiAppLifecycleActions(appId);
-  const { permissions } = useMyPermissions();
+  const canEdit = useCanEditAiApps();
 
   if (!lifecycle) return null;
 
-  const canEdit = permissions
-    ? permissions.includes("aiApp.edit")
-    : AI_APP_EDIT_ROLES.includes(userRoleName);
   const canManage = canManageLifecycle(userRoleName, userId, lifecycle.owner ?? undefined, canEdit);
 
   return (

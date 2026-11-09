@@ -230,6 +230,25 @@ describe("customAxios", () => {
       expect(callback).not.toHaveBeenCalled();
     });
 
+    it("leaves only a 409 on POST create-ai-app to the modal", async () => {
+      const callback = vi.fn();
+      setShowAlertCallback(callback);
+      const failure = (method: string, status: number) => ({
+        config: { url: "/v1/projects/5/create-ai-app", method },
+        response: { status, data: { message: "Failed", data: "Name taken" } },
+        message: "Failed",
+      });
+
+      const taken = failure("post", 409);
+      await expect(rejected(taken)).rejects.toEqual(taken);
+      expect(callback).not.toHaveBeenCalled();
+
+      for (const other of [failure("post", 400), failure("get", 409)]) {
+        await expect(rejected(other)).rejects.toEqual(other);
+      }
+      expect(callback).toHaveBeenCalledTimes(2);
+    });
+
     it("does not show a toast when the request opted out with suppressGlobalErrorToast", async () => {
       const callback = vi.fn();
       setShowAlertCallback(callback);
