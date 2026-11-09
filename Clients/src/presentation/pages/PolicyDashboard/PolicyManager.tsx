@@ -12,6 +12,9 @@ import {
 import PolicyTable from "../../components/Policies/PolicyTable";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import { useDeletePolicy } from "../../../application/hooks/usePolicyMutations";
+import { useCreatePolicyTemplateFromPolicy } from "../../../application/hooks/usePolicyTemplates";
+import StandardModal from "../../components/Modals/StandardModal";
+import Field from "../../components/Inputs/Field";
 import { EmptyState } from "../../components/EmptyState";
 import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
 import StandardTableHead from "../../components/Table/StandardTableHead";
@@ -190,6 +193,42 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
 
   const handleAddNewPolicy = () => {
     handleOpen();
+  };
+
+  // Save-as-template state (#5261): which policy is being templated and the
+  // name the user wants for the new organization template.
+  const [templateSourceId, setTemplateSourceId] = useState<number | null>(null);
+  const [templateName, setTemplateName] = useState("");
+  const createTemplateMutation = useCreatePolicyTemplateFromPolicy();
+
+  const handleSaveAsTemplate = (id: number) => {
+    const policy = policies.find((p) => Number(p.id) === id);
+    setTemplateName(policy ? `${policy.title} (template)` : "");
+    setTemplateSourceId(id);
+  };
+
+  const handleConfirmSaveAsTemplate = async () => {
+    if (templateSourceId === null) return;
+    try {
+      await createTemplateMutation.mutateAsync({
+        policy_id: templateSourceId,
+        name: templateName.trim() || undefined,
+      });
+      setTemplateSourceId(null);
+      handleAlert({
+        variant: "success",
+        body: "The policy was saved as an organization template.",
+        setAlert,
+        alertTimeout: 4000,
+      });
+    } catch {
+      handleAlert({
+        variant: "error",
+        body: "Could not save the template. Please try again.",
+        setAlert,
+        alertTimeout: 4000,
+      });
+    }
   };
 
   const handleDelete = async (id: number) => {
@@ -742,6 +781,7 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
                     onDelete={handleDelete}
                     onLinkedObjects={handleLinkedObject}
                     onAssignToFolder={handleAssignToFolder}
+                    onSaveAsTemplate={handleSaveAsTemplate}
                     hidePagination={options?.hidePagination}
                     flashRowId={flashRowId}
                     visibleColumns={visibleColumns}
@@ -773,6 +813,30 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
             policyId={policyId}
             isOpen={showLinkedObjectModal}
           />
+        )}
+
+        {/* Save as template modal (#5261) */}
+        {templateSourceId !== null && (
+          <StandardModal
+            isOpen
+            onClose={() => setTemplateSourceId(null)}
+            title="Save as template"
+            description="Save this policy as a reusable template for your organization. It will appear under Policy templates → Our templates."
+            onSubmit={handleConfirmSaveAsTemplate}
+            submitButtonText="Save template"
+            isSubmitting={createTemplateMutation.isPending}
+            maxWidth="560px"
+          >
+            <Stack spacing={6}>
+              <Field
+                label="Template name"
+                placeholder="e.g. AI Accountability and Roles Policy"
+                value={templateName}
+                onChange={(e) => setTemplateName(e.target.value)}
+                isRequired
+              />
+            </Stack>
+          </StandardModal>
         )}
 
         {/* Assign to Folder Modal */}
