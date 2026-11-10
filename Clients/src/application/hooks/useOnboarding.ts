@@ -1,16 +1,10 @@
-import { useState, useEffect, useCallback } from "react";
+import { useEffect, useCallback } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { OnboardingState } from "../../presentation/types/interfaces/i.onboarding";
 import { useAuth } from "./useAuth";
 import { setOnboardingStatus as setReduxOnboardingStatus } from "../redux/auth/authSlice";
 import type { RootState } from "../redux/store";
-import { storageService } from "../../infrastructure/storage";
-
-/**
- * The retired step-by-step onboarding modal saved its progress under this key.
- * Nothing reads it any more, so it is removed whenever it is found.
- */
-const legacyStorageKey = (userId: number) => `verifywise_onboarding_${userId}`;
+import { dynamicKeys, storageService } from "../../infrastructure/storage";
 
 /**
  * Decides whether App shows the SetupModal. It is shown only to the
@@ -23,24 +17,19 @@ export const useOnboarding = () => {
   const serverOnboardingStatus = useSelector((state: RootState) => state.auth?.onboardingStatus);
   const isOrgCreator = useSelector((state: RootState) => state.auth?.isOrgCreator);
 
-  const [state, setState] = useState<OnboardingState>({ isComplete: true });
-  const [isLoading, setIsLoading] = useState(true);
-
+  // The retired step-by-step modal saved progress per user. Nothing reads it,
+  // so drop it once for each signed-in user.
   useEffect(() => {
-    if (!userId) {
-      setIsLoading(false);
-      return;
-    }
+    if (userId) storageService.remove(dynamicKeys.legacyOnboarding(userId));
+  }, [userId]);
 
-    storageService.remove(legacyStorageKey(userId));
-    setState({ isComplete: serverOnboardingStatus !== "pending" || !isOrgCreator });
-    setIsLoading(false);
-  }, [userId, serverOnboardingStatus, isOrgCreator]);
+  const state: OnboardingState = {
+    isComplete: !userId || serverOnboardingStatus !== "pending" || !isOrgCreator,
+  };
 
   const completeOnboarding = useCallback(() => {
-    setState({ isComplete: true });
     dispatch(setReduxOnboardingStatus("completed"));
   }, [dispatch]);
 
-  return { state, isLoading, completeOnboarding };
+  return { state, completeOnboarding };
 };

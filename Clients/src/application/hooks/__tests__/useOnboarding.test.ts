@@ -9,7 +9,9 @@ vi.mock("../useAuth", () => ({
 const mockAuthState = { onboardingStatus: "pending", isOrgCreator: true };
 const mockDispatch = vi.fn();
 vi.mock("react-redux", () => ({
-  useSelector: vi.fn((fn: any) => fn({ auth: mockAuthState })),
+  useSelector: vi.fn((fn: (s: { auth: typeof mockAuthState }) => unknown) =>
+    fn({ auth: mockAuthState }),
+  ),
   useDispatch: () => mockDispatch,
 }));
 
@@ -34,7 +36,6 @@ describe("useOnboarding", () => {
   it("is incomplete for the org creator while the server says pending", () => {
     const { result } = renderHook(() => useOnboarding());
 
-    expect(result.current.isLoading).toBe(false);
     expect(result.current.state.isComplete).toBe(false);
   });
 
@@ -52,22 +53,20 @@ describe("useOnboarding", () => {
     expect(result.current.state.isComplete).toBe(true);
   });
 
-  it("stays complete and stops loading when there is no user", () => {
+  it("is complete when there is no signed-in user", () => {
     mockUserId.mockReturnValue(undefined);
     const { result } = renderHook(() => useOnboarding());
 
-    expect(result.current.isLoading).toBe(false);
     expect(result.current.state.isComplete).toBe(true);
   });
 
-  it("completeOnboarding marks it complete and updates Redux", () => {
+  it("completeOnboarding marks onboarding completed in Redux", () => {
     const { result } = renderHook(() => useOnboarding());
 
     act(() => {
       result.current.completeOnboarding();
     });
 
-    expect(result.current.state.isComplete).toBe(true);
     expect(mockDispatch).toHaveBeenCalledWith({
       type: "auth/setOnboardingStatus",
       payload: "completed",
