@@ -51,8 +51,8 @@ import {
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
-import { DatasetStatus, DataClassification, DatasetType } from "../../../domain/enums/dataset.enum";
-import Chip from "../../components/Chip";
+import { DataClassification, DatasetType } from "../../../domain/enums/dataset.enum";
+import StatusBadge from "../../components/StatusBadge";
 import { palette } from "../../themes/palette";
 
 dayjs.extend(utc);
@@ -98,10 +98,6 @@ const TooltipCell: React.FC<{ value: string | null | undefined }> = ({ value }) 
   );
 };
 
-const StatusBadge: React.FC<{ status: DatasetStatus }> = ({ status }) => {
-  return <Chip label={status} />;
-};
-
 /**
  * type and classification are nullable columns with no default, so a dataset
  * saved without them arrives here as null. An empty chip says nothing, so these
@@ -109,18 +105,18 @@ const StatusBadge: React.FC<{ status: DatasetStatus }> = ({ status }) => {
  */
 const TypeBadge: React.FC<{ type: DatasetType | null }> = ({ type }) => {
   if (!type) return <TooltipCell value={type} />;
-  return <Chip label={type} />;
+  return <StatusBadge label={type} />;
 };
 
 const ClassificationBadge: React.FC<{ classification: DataClassification | null }> = ({
   classification,
 }) => {
   if (!classification) return <TooltipCell value={classification} />;
-  return <Chip label={classification} />;
+  return <StatusBadge label={classification} />;
 };
 
 const PIIBadge: React.FC<{ containsPii: boolean }> = ({ containsPii }) => {
-  return <Chip label={containsPii ? "Yes" : "No"} />;
+  return <StatusBadge label={containsPii ? "Yes" : "No"} />;
 };
 
 const DatasetTable: React.FC<DatasetTableProps> = ({
@@ -410,7 +406,7 @@ const DatasetTable: React.FC<DatasetTableProps> = ({
                 )}
                 {isVisible("status") && (
                   <TableCell>
-                    <StatusBadge status={dataset.status} />
+                    <StatusBadge label={dataset.status} />
                   </TableCell>
                 )}
                 {isVisible("owner") && (

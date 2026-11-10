@@ -2,7 +2,7 @@ import { memo } from "react";
 import { TableCell, TableHead, TableRow, Box, Typography } from "@mui/material";
 import { ChevronsUpDown, ChevronUp, ChevronDown } from "lucide-react";
 import singleTheme from "../../../themes/v1SingleTheme";
-import { text } from "../../../themes/palette";
+import { text, border } from "../../../themes/palette";
 import Checkbox from "../../Inputs/Checkbox";
 import type {
   SelectionColumnConfig,
@@ -33,7 +33,7 @@ const StandardTableHead: React.FC<StandardTableHeadProps> = memo(
                 minWidth: 40,
                 maxWidth: 40,
                 padding: 0,
-                borderBottom: "1px solid #d0d5dd",
+                borderBottom: `1px solid ${border.dark}`,
               }}
             >
               <Box

@@ -58,6 +58,7 @@ import EvidenceAnalysisPanel from "../../EvidenceAnalysisPanel";
 import EvidenceQualityBadge, { type QualityGrade } from "../../EvidenceQualityBadge";
 import StandardModal from "../../Modals/StandardModal";
 import { getAllFolders } from "../../../../application/repository/virtualFolder.repository";
+import { background, border } from "../../../themes/palette";
 import type { IFolderWithCount } from "../../../../domain/interfaces/i.virtualFolder";
 
 const DEFAULT_ROWS_PER_PAGE = 10;
@@ -150,7 +151,7 @@ const SortableTableHead: React.FC<{
               minWidth: 40,
               maxWidth: 40,
               padding: 0,
-              borderBottom: "1px solid #d0d5dd",
+              borderBottom: `1px solid ${border.dark}`,
             }}
           >
             <Box
@@ -716,8 +717,8 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
                           data.cols[colIndex++]?.name,
                           sortConfig,
                         )
-                          ? "#e8e8e8"
-                          : "#fafafa",
+                          ? background.surface
+                          : background.alt,
                       }}
                     >
                       <Box
