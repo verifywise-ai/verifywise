@@ -6,7 +6,7 @@
 import fs from "fs";
 import path from "path";
 import { NAME_ONLY_LOOKUP_NOTE, OFAC_ALT_URL, OFAC_SDN_URL } from "../../../records/ofac";
-import { ofacConnector } from "../ofac";
+import { ofacConnector, parseCsv, readCsv } from "../ofac";
 import type { ConnectorFetch } from "../types";
 
 const SDN = fs.readFileSync(path.join(__dirname, "fixtures/ofac-sdn.csv"), "utf8");
@@ -313,5 +313,74 @@ describe("ofacConnector.download", () => {
       lastModified: null,
       bytes: Buffer.byteLength(SDN) + Buffer.byteLength(ALT),
     });
+  });
+});
+
+describe("readCsv, the limit of columns (kit v2)", () => {
+  /** What a reading holds, counted: a failed assertion must not print ten million cells. */
+  const shapeOf = (csv: ReturnType<typeof readCsv>) => ({
+    rows: csv.rows.length,
+    cells: csv.rows.reduce((count, row) => count + row.length, 0),
+    cut: csv.cut === null ? null : csv.cut.length,
+    more: csv.more,
+    wide: csv.wide,
+  });
+
+  it("is the reading it always was when no limit of columns is given, with no `wide` in the result", () => {
+    const text = 'a,"b ""c"" d",e\n\n"f\r\ng",,h\nk,l,m\n';
+    const result = readCsv(text, 10);
+    expect(result).toEqual({
+      rows: [
+        ["a", 'b "c" d', "e"],
+        ["f\r\ng", "", "h"],
+        ["k", "l", "m"],
+      ],
+      cut: null,
+      more: false,
+    });
+    expect("wide" in result).toBe(false);
+    expect(readCsv(text, 10, Number.POSITIVE_INFINITY)).toEqual(result);
+    expect(parseCsv(text)).toEqual(result.rows);
+  });
+
+  it("reads a row of exactly the limit and stops at the first row of more", () => {
+    expect(readCsv("a,b\nc,d\n", 10, 2)).toEqual({
+      rows: [
+        ["a", "b"],
+        ["c", "d"],
+      ],
+      cut: null,
+      more: false,
+    });
+    expect(readCsv("a,b\nc,d,e\nf,g\n", 10, 2)).toEqual({
+      rows: [["a", "b"]],
+      cut: null,
+      more: false,
+      wide: true,
+    });
+  });
+
+  it("counts a quoted comma as no column and an empty cell as one", () => {
+    expect(readCsv('"a,b,c",d\n', 10, 2).wide).toBeUndefined();
+    expect(readCsv("a,b,,\n", 10, 3).wide).toBe(true);
+    expect(readCsv("a,b,\n", 10, 3).wide).toBeUndefined();
+  });
+
+  it("refuses every row when the limit is no number", () => {
+    expect(readCsv("a\n", 10, Number.NaN)).toEqual({
+      rows: [],
+      cut: null,
+      more: false,
+      wide: true,
+    });
+  });
+
+  it("stops at once on one line of ten million commas, with no cell of it kept", () => {
+    const text = ",".repeat(10_000_000);
+    const before = process.memoryUsage().heapUsed;
+    const csv = readCsv(text, 1_000_000, 1000);
+    const grew = process.memoryUsage().heapUsed - before;
+    expect(shapeOf(csv)).toEqual({ rows: 0, cells: 0, cut: null, more: false, wide: true });
+    expect(grew).toBeLessThan(100 * 1024 * 1024);
   });
 });

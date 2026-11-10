@@ -16,13 +16,14 @@
  * One parse (`directoryOf`, `dataOf`) asks for the bytes it needs; `forEachZipEntry` and `readZip`
  * give them from a buffer (the first hands each entry out as it is read, the second gives them all)
  * and `readZipFile` from a file, one entry in memory at a time, and inflates a zip inside the zip to
- * a temporary file of its own, which it deletes.
+ * a temporary file of its own, which it deletes. `streamZipEntry` reads the one file of a zip in
+ * memory without ever holding the file: its inflated bytes go to the caller in pieces, as they come.
  */
 import { createReadStream, createWriteStream, promises as fsp } from "fs";
 import type { FileHandle } from "fs/promises";
 import os from "os";
 import path from "path";
-import { Readable, Transform } from "stream";
+import { Readable, Transform, Writable } from "stream";
 import { pipeline } from "stream/promises";
 import zlib from "zlib";
 
@@ -458,4 +459,132 @@ export async function readZipFile(
   await readFileLevel(file, accept, limits, onEntry, options.tempDir ?? os.tmpdir(), 0, {
     bytes: 0,
   });
+}
+
+/** The bytes of a zip's data that `streamZipEntry` hands to the inflater at a time, by default. */
+const PIECE_BYTES = 65_536;
+
+/** The most bytes the inflater of `streamZipEntry` gives at a time: the size of its own buffer. */
+const INFLATED_CHUNK_BYTES = 65_536;
+
+export interface ZipStreamOptions {
+  /** The bytes of the zip's data handed to the inflater at a time; 65,536 by default. */
+  pieceBytes?: number;
+  /** An entry that is stored (method 0) is `unsupported`; the list's zip is deflated. */
+  deflatedOnly?: boolean;
+}
+
+/** The data of an entry in pieces of `pieceBytes` bytes: views of the zip, so that nothing is copied. */
+function* piecesOf(raw: Buffer, pieceBytes: number): Generator<Buffer> {
+  for (let at = 0; at < raw.length; at += pieceBytes) yield raw.subarray(at, at + pieceBytes);
+}
+
+/**
+ * Streams the one file of a zip in memory: its inflated bytes go to `onChunk` in pieces as they
+ * come, and nothing of the entry is held, so that a file of hundreds of megabytes costs the pieces
+ * and not the file (`forEachZipEntry` holds the whole entry: about 0.7 GB at the peak for one of
+ * 390 MB, where a stream holds about 0.1 GB).
+ *
+ * The directory is read from the buffer as the other readers read it. The zip must hold exactly one
+ * entry that is not a folder, `accept` is asked about that entry only and must take it, its name
+ * must not end in `.zip` (a zip inside the zip is not read here), and with `deflatedOnly` it must
+ * be deflated; anything else is `unsupported` (an encrypted entry, or a method other than stored or
+ * deflated, is `unsupported` as in the other readers). The name is looked at before the size.
+ *
+ * The size is capped twice. From the directory first: a declared size above `limits.maxEntryBytes`
+ * (or what is left of `maxTotalBytes`, which for the one entry is the smaller of the two), or more
+ * compressed bytes than a deflate stream of that size could have, is `too_large` before a byte is
+ * read. Then by the count: the sizes are those of the central directory, never of the local header
+ * (an entry with general purpose bit 3 and a data descriptor has zeros there), and the bytes the
+ * inflater gives are counted as they come. A chunk that would take the count past the declared size
+ * is not handed on: the read stops as `corrupt`, so that a directory that lies about the size never
+ * lets more through than it says, whatever the data holds.
+ *
+ * The data is read as pieces of `options.pieceBytes` bytes (views of the zip, no copy) to
+ * `zlib.createInflateRaw`, in a `pipeline`: the backpressure is the pipeline's. A stored entry
+ * follows the same rules without the inflater. A chunk is at most 64 KiB (and at most `pieceBytes`
+ * for a stored entry). A zlib error is `corrupt`: a deflate stream that is cut, or that is not one.
+ * Bytes after the end of the deflate stream are left unread, as the buffer reader leaves them.
+ * Once the data has ended, the count must equal the declared size and the CRC-32, which is kept as
+ * the chunks come, the directory's: else `corrupt`.
+ *
+ * The contract of the callback. `onChunk` is synchronous. Its chunk is valid during the call only:
+ * copy what you keep. What the chunks hold is NOT checked until the returned promise resolves,
+ * since the size and the CRC-32 are checked last: when it rejects, discard everything that was made
+ * from the chunks. An error that `onChunk` throws (of any kind, an Error or not) stops the read
+ * and is what the promise rejects with, untouched; no chunk follows it.
+ *
+ * There is no temporary file and no state shared between calls. `pieceBytes` that is not a whole
+ * number above zero is a RangeError (a mistake of the caller, never of the data), checked first.
+ * The result is the entry's name and its inflated size.
+ */
+export async function streamZipEntry(
+  buffer: Buffer,
+  accept: (name: string) => boolean,
+  limits: ZipLimits,
+  onChunk: (chunk: Buffer) => void,
+  options: ZipStreamOptions = {},
+): Promise<{ name: string; bytes: number }> {
+  const pieceBytes = options.pieceBytes ?? PIECE_BYTES;
+  if (!Number.isInteger(pieceBytes) || pieceBytes < 1) {
+    throw new RangeError("pieceBytes must be a whole number above zero.");
+  }
+  const directory = run(directoryOf(buffer.length, limits), buffer);
+  const files = directory.entries.filter((entry) => !isFolder(entry));
+  if (files.length !== 1) throw new ZipError("unsupported");
+  const [entry] = files;
+  if (
+    !accept(entry.name) ||
+    NESTED.test(entry.name) ||
+    (options.deflatedOnly === true && entry.method !== DEFLATED)
+  ) {
+    throw new ZipError("unsupported");
+  }
+  planOf(entry, limits, 0, { bytes: 0 });
+  const place = run(dataOf(entry, directory.offset), buffer);
+  const raw = sliceOf(buffer, { offset: place.start, length: place.length });
+
+  let bytes = 0;
+  let crc = 0;
+  // What the callback threw is kept apart: a thrown `undefined` must not read as success, and its
+  // error, whatever its code, is not a zlib error to be turned into `corrupt`.
+  const failure: { thrown: boolean; error?: unknown } = { thrown: false };
+  const sink = new Writable({
+    write(chunk: Buffer, _encoding, done) {
+      if (chunk.length === 0) {
+        done();
+        return;
+      }
+      bytes += chunk.length;
+      if (bytes > entry.size) {
+        done(new ZipError("corrupt"));
+        return;
+      }
+      crc = zlib.crc32(chunk, crc);
+      try {
+        onChunk(chunk);
+      } catch (error) {
+        failure.thrown = true;
+        failure.error = error;
+        done(error instanceof Error ? error : new Error("The callback failed."));
+        return;
+      }
+      done();
+    },
+  });
+  const source = Readable.from(piecesOf(raw, pieceBytes));
+  try {
+    if (entry.method === DEFLATED) {
+      await pipeline(source, zlib.createInflateRaw({ chunkSize: INFLATED_CHUNK_BYTES }), sink);
+    } else {
+      await pipeline(source, sink);
+    }
+  } catch (error) {
+    if (failure.thrown) throw failure.error;
+    if (error instanceof ZipError) throw error;
+    if (codeOf(error).startsWith("Z_")) throw new ZipError("corrupt");
+    throw error;
+  }
+  if (bytes !== entry.size || crc !== entry.crc) throw new ZipError("corrupt");
+  return { name: entry.name, bytes };
 }

@@ -73,12 +73,17 @@ export function parseCsv(text: string, maxRows = Number.POSITIVE_INFINITY): stri
 /**
  * The rows of a CSV text as `parseCsv` reads them, except a last row that a quote never closed,
  * which is `cut` (the text was cut short inside it), and whether more rows followed the first
- * `maxRows` (`more`).
+ * `maxRows` (`more`). A row of more than `maxColumns` cells stops the reading at once: the rows
+ * before it are kept, `wide` is true (and `cut` null, `more` false), nothing after it is read, and
+ * no more than `maxColumns` + 1 cells of it were ever held, so that one line of ten million commas
+ * is not ten million cells. The default is no limit, and then the result has no `wide` and reads as
+ * it always did.
  */
 export function readCsv(
   text: string,
   maxRows = Number.POSITIVE_INFINITY,
-): { rows: string[][]; cut: string[] | null; more: boolean } {
+  maxColumns = Number.POSITIVE_INFINITY,
+): { rows: string[][]; cut: string[] | null; more: boolean; wide?: true } {
   const rows: string[][] = [];
   const length = text.length;
   let at = 0;
@@ -120,6 +125,8 @@ export function readCsv(
       while (at < length && !endsField(text.charCodeAt(at))) at += 1;
       if (at > from) value += text.slice(from, at);
       row.push(value);
+      // Not `row.length > maxColumns`: a limit that is no number then refuses every row.
+      if (!(row.length <= maxColumns)) return { rows, cut: null, more: false, wide: true };
       if (at >= length) break;
       const delimiter = text.charCodeAt(at);
       at += 1;
