@@ -19,6 +19,7 @@ import EntraIdConfig from "./EntraIdConfig";
 import { useSsoFeatureEnabled } from "../../../application/hooks/useSsoFeatureEnabled";
 import CustomFieldsTab from "./CustomFields";
 import AIApprovalRules from "./AIApprovalRules";
+import RolesTab from "./Roles";
 import TabBar, { TabItem } from "../../components/TabBar";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
 
@@ -43,6 +44,7 @@ const BUILT_IN_TABS = [
   "data-retention",
   "sso",
   "custom-fields",
+  "roles",
   ...(SHOW_AI_APPROVAL_RULES ? ["ai-approval-rules"] : []),
 ];
 
@@ -58,6 +60,8 @@ export default function ProfilePage() {
   // Data retention follows the organization.admin permission its routes
   // authorize on, so a custom role granted it gets the tab too.
   const canManageRetention = useHasPermission("organization.admin", { fallbackToAdmin: true });
+  // Roles admin: the roles.manage permission its routes authorize on (#5253).
+  const canManageRoles = useHasPermission("roles.manage", { fallbackToAdmin: true });
   // Resolved means the permissions arrived (or failed, when the Admin fallback
   // applies). A disabled query (no user yet) is not resolved, even though
   // React Query reports it as not loading.
@@ -238,6 +242,16 @@ export default function ProfilePage() {
                   },
                 ]
               : []),
+            ...(canManageRoles
+              ? [
+                  {
+                    label: "Roles",
+                    value: "roles",
+                    icon: "User" as TabItem["icon"],
+                    tooltip: "Edit what each custom role is allowed to do",
+                  },
+                ]
+              : []),
             ...(SHOW_AI_APPROVAL_RULES && !isAuditLedgerDisabled
               ? [
                   {
@@ -314,6 +328,11 @@ export default function ProfilePage() {
         {!isCustomFieldsDisabled && (
           <TabPanel sx={{ p: 0 }} value="custom-fields">
             <CustomFieldsTab />
+          </TabPanel>
+        )}
+        {canManageRoles && (
+          <TabPanel sx={{ p: 0 }} value="roles">
+            <RolesTab />
           </TabPanel>
         )}
         {SHOW_AI_APPROVAL_RULES && !isAuditLedgerDisabled && (
