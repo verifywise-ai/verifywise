@@ -14,20 +14,35 @@ vi.mock("../../../../application/hooks/useAuth", () => ({
     isSuperAdmin: mockIsSuperAdmin,
   }),
 }));
+let mockHasRolesManage = false;
 vi.mock("../../../../application/hooks/useMyPermissions", () => ({
   useHasPermission: (key: string) =>
-    !mockPermissionsLoading && key === "organization.admin" && mockHasOrganizationAdmin,
+    !mockPermissionsLoading &&
+    ((key === "organization.admin" && mockHasOrganizationAdmin) ||
+      (key === "roles.manage" && mockHasRolesManage)),
   // While loading (or disabled, before a user is known) React Query has no
   // data; v5 reports a disabled query as not loading.
   useMyPermissions: () => ({
     permissions: mockPermissionsLoading
       ? undefined
-      : mockHasOrganizationAdmin
-        ? ["organization.admin"]
-        : [],
+      : [
+          ...(mockHasOrganizationAdmin ? ["organization.admin"] : []),
+          ...(mockHasRolesManage ? ["roles.manage"] : []),
+        ],
     isLoading: false,
     error: null,
   }),
+}));
+
+// RolesTab mounts (hidden) whenever the tab is permitted — its hooks must not
+// throw or the whole settings page falls into the error boundary (#5253).
+vi.mock("../../../../application/hooks/useRoles", () => ({
+  useRoles: () => ({ roles: [], loading: false, error: null, refreshRoles: vi.fn() }),
+}));
+vi.mock("../../../../application/hooks/useRolePermissions", () => ({
+  usePermissionCatalog: () => ({ data: [], isLoading: false }),
+  useRolePermissions: () => ({ data: [], isLoading: false }),
+  useReplaceRolePermissions: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 
 // Mock child tab components
@@ -197,5 +212,14 @@ describe("SettingsPage", () => {
       route: "/settings",
     });
     expect(container).toBeTruthy();
+  });
+
+  it("mounts the Roles tab panel without crashing when roles.manage is granted", () => {
+    mockHasRolesManage = true;
+    renderWithProviders(<ProfilePage />, { route: "/settings" });
+    // The tab is offered and the (hidden) panel mounted — the page itself
+    // must still render the default profile tab.
+    expect(screen.getByText("Roles")).toBeInTheDocument();
+    expect(screen.getByTestId("profile-tab")).toBeInTheDocument();
   });
 });
