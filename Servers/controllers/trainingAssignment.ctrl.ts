@@ -3,6 +3,7 @@ import { STATUS_CODE } from "../utils/statusCode.utils";
 import { logFailure, logProcessing, logSuccess } from "../utils/logger/logHelper";
 import logger from "../utils/logger/fileLogger";
 import { roleHasPermission } from "../utils/rolePermissions.utils";
+import { recordMultipleFieldChanges } from "../utils/changeHistory.base.utils";
 import { notifyTrainingAssigned } from "../services/inAppNotification.service";
 import {
   completeAllTrainingAssignmentsQuery,
@@ -79,6 +80,48 @@ async function handle(
   }
 }
 
+const personName = (name: string, surname: string): string => `${name} ${surname}`.trim();
+
+const dateOnly = (value: string): string => new Date(value).toISOString().slice(0, 10);
+
+const describeAssignment = (assignment: TrainingAssignment): string =>
+  assignment.completed_at
+    ? `Completed on ${dateOnly(assignment.completed_at)}, due ${assignment.due_date}`
+    : `Open, due ${assignment.due_date}`;
+
+/**
+ * Writes assignment events to the training's change history, so reopening or
+ * removing an assignment leaves a record of what it was and who changed it.
+ * Ledger entries run one at a time afterwards: an assignment can name 500
+ * people, and each ledger append takes a pool connection.
+ */
+async function recordAssignmentHistory(
+  req: Request,
+  trainingId: number,
+  entries: Array<{ person: string; oldValue: string; newValue: string }>,
+): Promise<void> {
+  const ledgerAppends: Array<() => void> = [];
+  await recordMultipleFieldChanges(
+    "training",
+    trainingId,
+    req.userId!,
+    req.organizationId!,
+    entries.map(({ person, oldValue, newValue }) => ({
+      fieldName: `Assignment: ${person}`,
+      oldValue,
+      newValue,
+    })),
+    undefined,
+    false,
+    (append) => {
+      ledgerAppends.push(append);
+    },
+  );
+  void (async () => {
+    for (const append of ledgerAppends) await append();
+  })();
+}
+
 /**
  * An assignment change by its assignee or by anyone who can edit training.
  * The id is checked against the organization first, so a foreign id is a 404
@@ -86,7 +129,7 @@ async function handle(
  */
 async function changeAsAssigneeOrEditor(
   req: Request,
-  change: (id: number) => Promise<void>,
+  change: (existing: TrainingAssignment) => Promise<void>,
 ): Promise<Outcome> {
   const id = parseAssignmentId(req.params.id);
   if (!id.ok) return invalid(id);
@@ -104,7 +147,7 @@ async function changeAsAssigneeOrEditor(
     };
   }
 
-  await change(id.value);
+  await change(existing);
   const updated = await getTrainingAssignmentByIdQuery(id.value, req.organizationId!);
   return updated ? { status: 200, data: updated } : notFound("Training assignment not found");
 }
@@ -160,7 +203,7 @@ export async function listTrainingAssignments(req: Request, res: Response) {
     {
       functionName: "listTrainingAssignments",
       eventType: "Read",
-      description: `Listing assignments of training ID ${req.query.training_id}`,
+      description: "Listing the assignments of a training",
       failure: "Failed to load training assignments",
     },
     async () => {
@@ -235,6 +278,15 @@ export async function createTrainingAssignments(req: Request, res: Response) {
         { trainingId, userIds, dueDate, assignedBy: req.userId! },
         req.organizationId!,
       );
+      await recordAssignmentHistory(
+        req,
+        trainingId,
+        created.map((assignment) => ({
+          person: personName(assignment.user_name, assignment.user_surname),
+          oldValue: "-",
+          newValue: `Assigned, due ${assignment.due_date}`,
+        })),
+      );
       await notifyAssignees(req, training, created);
       return { status: 201, data: { created, skipped_user_ids: skippedUserIds } };
     },
@@ -248,7 +300,7 @@ export async function completeAllTrainingAssignments(req: Request, res: Response
     {
       functionName: "completeAllTrainingAssignments",
       eventType: "Update",
-      description: `Completing all assignments of training ID ${req.body?.training_id}`,
+      description: "Completing all assignments of a training",
       failure: "Failed to update the training assignment",
     },
     async () => {
@@ -261,7 +313,16 @@ export async function completeAllTrainingAssignments(req: Request, res: Response
         req.userId!,
         req.organizationId!,
       );
-      return { status: 200, data: { completed } };
+      await recordAssignmentHistory(
+        req,
+        trainingId.value,
+        completed.map(({ name, surname, due_date: dueDate }) => ({
+          person: personName(name, surname),
+          oldValue: `Open, due ${dueDate}`,
+          newValue: "Completed",
+        })),
+      );
+      return { status: 200, data: { completed: completed.length } };
     },
   );
 }
@@ -273,7 +334,7 @@ export async function updateTrainingAssignment(req: Request, res: Response) {
     {
       functionName: "updateTrainingAssignment",
       eventType: "Update",
-      description: `Updating training assignment ID ${req.params.id}`,
+      description: "Updating a training assignment",
       failure: "Failed to update the training assignment",
     },
     async () => {
@@ -286,6 +347,15 @@ export async function updateTrainingAssignment(req: Request, res: Response) {
       if (!existing) return notFound("Training assignment not found");
 
       await updateTrainingAssignmentDueDateQuery(id.value, dueDate.value, req.organizationId!);
+      if (dueDate.value !== existing.due_date) {
+        await recordAssignmentHistory(req, existing.training_id, [
+          {
+            person: personName(existing.user_name, existing.user_surname),
+            oldValue: `Due ${existing.due_date}`,
+            newValue: `Due ${dueDate.value}`,
+          },
+        ]);
+      }
       const updated = await getTrainingAssignmentByIdQuery(id.value, req.organizationId!);
       return updated ? { status: 200, data: updated } : notFound("Training assignment not found");
     },
@@ -299,13 +369,21 @@ export async function completeTrainingAssignment(req: Request, res: Response) {
     {
       functionName: "completeTrainingAssignment",
       eventType: "Update",
-      description: `Completing training assignment ID ${req.params.id}`,
+      description: "Completing a training assignment",
       failure: "Failed to update the training assignment",
     },
     () =>
-      changeAsAssigneeOrEditor(req, (id) =>
-        completeTrainingAssignmentQuery(id, req.userId!, req.organizationId!),
-      ),
+      changeAsAssigneeOrEditor(req, async (existing) => {
+        if (existing.completed_at) return;
+        await completeTrainingAssignmentQuery(existing.id, req.userId!, req.organizationId!);
+        await recordAssignmentHistory(req, existing.training_id, [
+          {
+            person: personName(existing.user_name, existing.user_surname),
+            oldValue: describeAssignment(existing),
+            newValue: "Completed",
+          },
+        ]);
+      }),
   );
 }
 
@@ -316,11 +394,21 @@ export async function reopenTrainingAssignment(req: Request, res: Response) {
     {
       functionName: "reopenTrainingAssignment",
       eventType: "Update",
-      description: `Reopening training assignment ID ${req.params.id}`,
+      description: "Reopening a training assignment",
       failure: "Failed to update the training assignment",
     },
     () =>
-      changeAsAssigneeOrEditor(req, (id) => reopenTrainingAssignmentQuery(id, req.organizationId!)),
+      changeAsAssigneeOrEditor(req, async (existing) => {
+        if (!existing.completed_at) return;
+        await reopenTrainingAssignmentQuery(existing.id, req.organizationId!);
+        await recordAssignmentHistory(req, existing.training_id, [
+          {
+            person: personName(existing.user_name, existing.user_surname),
+            oldValue: describeAssignment(existing),
+            newValue: "Reopened",
+          },
+        ]);
+      }),
   );
 }
 
@@ -331,7 +419,7 @@ export async function deleteTrainingAssignment(req: Request, res: Response) {
     {
       functionName: "deleteTrainingAssignment",
       eventType: "Delete",
-      description: `Deleting training assignment ID ${req.params.id}`,
+      description: "Deleting a training assignment",
       failure: "Failed to delete the training assignment",
     },
     async () => {
@@ -340,6 +428,13 @@ export async function deleteTrainingAssignment(req: Request, res: Response) {
       const existing = await getTrainingAssignmentByIdQuery(id.value, req.organizationId!);
       if (!existing) return notFound("Training assignment not found");
       await deleteTrainingAssignmentQuery(id.value, req.organizationId!);
+      await recordAssignmentHistory(req, existing.training_id, [
+        {
+          person: personName(existing.user_name, existing.user_surname),
+          oldValue: describeAssignment(existing),
+          newValue: "Removed",
+        },
+      ]);
       return { status: 200, data: { id: id.value } };
     },
   );

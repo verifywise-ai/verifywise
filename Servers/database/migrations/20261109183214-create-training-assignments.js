@@ -46,6 +46,9 @@ module.exports = {
 
       await queryInterface.sequelize.query(
         `
+        CREATE INDEX IF NOT EXISTS idx_training_assignments_org_user
+          ON verifywise.training_assignments(organization_id, user_id);
+
         CREATE INDEX IF NOT EXISTS idx_training_assignments_open_due_date
           ON verifywise.training_assignments(due_date)
           WHERE completed_at IS NULL;

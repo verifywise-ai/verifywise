@@ -44,7 +44,7 @@ export interface CreateTrainingAssignmentsResult {
 
 const ROUTE = "/v1/training/assignments";
 
-// Every write shows its failure next to the control that made it.
+// For calls whose failure is shown next to the control or list that made them.
 const OWN_ERROR_UI = { suppressGlobalErrorToast: true };
 
 export async function getTrainingAssignments(trainingId: number): Promise<TrainingAssignment[]> {
@@ -58,7 +58,8 @@ export async function getMyTrainingAssignments(): Promise<MyTrainingAssignment[]
 }
 
 export async function getTrainingAssignmentSummary(): Promise<TrainingAssignmentSummary[]> {
-  const response = await apiServices.get(`${ROUTE}/summary`, OWN_ERROR_UI);
+  // No error UI of its own: the registry table would look like nothing is assigned.
+  const response = await apiServices.get(`${ROUTE}/summary`);
   return (response.data as { data: TrainingAssignmentSummary[] }).data;
 }
 

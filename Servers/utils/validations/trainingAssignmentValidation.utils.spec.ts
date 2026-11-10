@@ -38,8 +38,15 @@ describe("training assignment validation", () => {
       expect(parseDueDate("2028-02-29", TODAY)).toEqual({ ok: true, value: "2028-02-29" });
     });
 
+    it("accepts yesterday in UTC, which is still today west of UTC", () => {
+      const yesterday = new Date(Date.parse(`${TODAY}T00:00:00Z`) - 86_400_000)
+        .toISOString()
+        .slice(0, 10);
+      expect(parseDueDate(yesterday, TODAY)).toEqual({ ok: true, value: yesterday });
+    });
+
     it("rejects the past", () => {
-      expect(parseDueDate("2026-11-08", TODAY)).toMatchObject({
+      expect(parseDueDate("2026-11-01", TODAY)).toMatchObject({
         ok: false,
         message: "Due date must be today or later",
       });

@@ -204,6 +204,15 @@ export const trainingTrackingContent: ArticleContent = {
       text: 'Changing a training\'s status to Completed leaves its assignments as they are.',
     },
     {
+      type: 'paragraph',
+      text: 'Every assignment, due date change, completion, reopen and removal is recorded in the Activity tab of the training record, with who made the change and when.',
+    },
+    {
+      type: 'callout',
+      variant: 'info',
+      text: '"Mark complete" records what the person or an editor reports, and asks for no proof. To back a completion with a certificate or attendance record, upload it to the Evidence tab of the training record.',
+    },
+    {
       type: 'heading',
       id: 'my-training',
       level: 3,
@@ -221,7 +230,7 @@ export const trainingTrackingContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Each person gets one reminder when an open assignment is due within 7 days, by email and in-app notification. They get one more when it becomes overdue. If you assign a training with a due date less than 7 days away, the first reminder is skipped, because the assignment notice has already told them.',
+      text: 'Each person gets one reminder when an open assignment is due within 7 days, by email and in-app notification. They get one more when it becomes overdue. If you assign a training with a due date less than 7 days away, the first reminder is skipped, because the assignment notice has already told them. Changing the due date or reopening an assignment restarts the reminders.',
     },
     {
       type: 'heading',

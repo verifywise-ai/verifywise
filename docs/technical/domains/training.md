@@ -341,11 +341,16 @@ Assignees are checked against the organization's current members, since a user c
 
 Changing a training's status to Completed does not complete its assignments. A finished training record does not show that each person took it, so completing everyone is an explicit action.
 
+### Change history
+
+Assign, due date change, complete, reopen and remove each write a row to `training_change_history` with the field name `Assignment: <person>`, and so to the audit ledger. They appear in the Activity tab of the training record. The person's name, the old state and the actor are stored on the row, so reopening or removing an assignment keeps the record of what it was. Completion is self-reported and needs no proof; certificates belong in the training's evidence.
+
 ### Notifications and reminders
 
 - On assignment each new assignee gets an in-app notice and the `training-assigned` email. A failed email does not fail the save.
 - A daily job at 08:30 server time (`trainingAssignmentReminderSweep`) sends the `training-reminder` email once when an open assignment is due within 7 days, and once when it is overdue. A failed send is not stamped and retries the next day.
-- An assignment created or rescheduled with a due date within 7 days skips the due-soon reminder, since the person has just been told.
+- An assignment created with a due date within 7 days skips the due-soon reminder, since the assignment notice covers it. Changing the due date or reopening an assignment restarts the reminders.
+- The server accepts a due date one day before today in UTC, because in the evening west of UTC the user's today is already yesterday in UTC.
 
 ## Related Documentation
 

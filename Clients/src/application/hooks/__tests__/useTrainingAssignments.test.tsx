@@ -44,7 +44,7 @@ describe("training assignment repository", () => {
     api.get.mockResolvedValue(envelope(rows));
 
     await expect(getTrainingAssignmentSummary()).resolves.toEqual(rows);
-    expect(api.get).toHaveBeenCalledWith("/v1/training/assignments/summary", NO_TOAST);
+    expect(api.get).toHaveBeenCalledWith("/v1/training/assignments/summary");
   });
 
   it("sends each write to its route", async () => {

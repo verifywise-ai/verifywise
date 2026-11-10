@@ -257,8 +257,8 @@ export async function getTrainingAssignmentByIdQuery(
 }
 
 /**
- * Change a due date. A real change restarts the reminders: the old due-soon
- * and overdue notices were about a date that no longer applies.
+ * Change a due date. A real change restarts the reminders: the old notices were
+ * about a date that no longer applies, and nothing else tells the assignee.
  */
 export async function updateTrainingAssignmentDueDateQuery(
   id: number,
@@ -270,7 +270,6 @@ export async function updateTrainingAssignmentDueDateQuery(
     `UPDATE training_assignments
         SET due_soon_reminded_at = CASE
               WHEN due_date = ${newDate} THEN due_soon_reminded_at
-              WHEN ${newDate} <= CURRENT_DATE + ${DUE_SOON_DAYS} THEN now()
               ELSE NULL
             END,
             overdue_reminded_at = CASE
@@ -298,23 +297,27 @@ export async function completeTrainingAssignmentQuery(
   );
 }
 
-/** Only current members' rows count, matching what the assignment list shows. */
+/**
+ * Only current members' rows count, matching what the assignment list shows.
+ * Returns who was completed, for the training's change history.
+ */
 export async function completeAllTrainingAssignmentsQuery(
   trainingId: number,
   completedBy: number,
   organizationId: number,
-): Promise<number> {
-  const rows = await writeReturningIds<{ id: number }>(
+): Promise<Array<{ name: string; surname: string; due_date: string }>> {
+  return writeReturningIds<{ name: string; surname: string; due_date: string }>(
     `UPDATE training_assignments ta
         SET completed_at = now(), completed_by = :completedBy, updated_at = now()
-      WHERE ta.organization_id = :organizationId
+       FROM users u
+      WHERE u.id = ta.user_id
+        AND ta.organization_id = :organizationId
         AND ta.training_id = :trainingId
         AND ta.completed_at IS NULL
         AND ${IS_ORG_MEMBER}
-      RETURNING ta.id`,
+      RETURNING u.name, u.surname, to_char(ta.due_date, 'YYYY-MM-DD') AS due_date`,
     { organizationId, trainingId, completedBy },
   );
-  return rows.length;
 }
 
 export async function reopenTrainingAssignmentQuery(
@@ -323,7 +326,8 @@ export async function reopenTrainingAssignmentQuery(
 ): Promise<void> {
   await sequelize.query(
     `UPDATE training_assignments
-        SET completed_at = NULL, completed_by = NULL, updated_at = now()
+        SET completed_at = NULL, completed_by = NULL,
+            due_soon_reminded_at = NULL, overdue_reminded_at = NULL, updated_at = now()
       WHERE organization_id = :organizationId AND id = :id`,
     { replacements: { organizationId, id } },
   );

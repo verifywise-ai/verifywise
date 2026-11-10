@@ -58,12 +58,18 @@ function isRealCalendarDate(value: string): boolean {
   );
 }
 
-/** A strict "YYYY-MM-DD" that is a real date, today or later. */
+const dayBefore = (date: string): string =>
+  new Date(Date.parse(`${date}T00:00:00Z`) - 86_400_000).toISOString().slice(0, 10);
+
+/**
+ * A strict "YYYY-MM-DD" that is a real date, today or later. One day of slack:
+ * in the evening west of UTC, the user's today is already yesterday in UTC.
+ */
 export function parseDueDate(value: unknown, today: string = todayUtc()): Parsed<string> {
   if (typeof value !== "string" || !isRealCalendarDate(value)) {
     return fail("Due date must be a valid date in YYYY-MM-DD format");
   }
-  if (value < today) return fail("Due date must be today or later");
+  if (value < dayBefore(today)) return fail("Due date must be today or later");
   return { ok: true, value };
 }
 

@@ -77,8 +77,7 @@ const AssignmentDueDate: FC<AssignmentDueDateProps> = ({ assignment, today, isBu
       handleDateChange={ignoreChange}
       onAccept={handleAccept}
       isFieldReadOnly
-      // A completed row can hold a past date, which is not an error to flag.
-      minDate={assignment.status === "completed" ? undefined : today}
+      minDate={today}
       disabled={isBusy}
       sx={{ "width": "150px", "& .MuiPickersOutlinedInput-root": { height: "30px" } }}
     />
@@ -313,10 +312,8 @@ const TrainingAssignmentsModal: FC<TrainingAssignmentsModalProps> = ({
                         {assignment.user_name} {assignment.user_surname}
                       </TableCell>
                       <TableCell sx={CELL_SX}>
-                        {canEdit ? (
+                        {canEdit && !isCompleted ? (
                           <AssignmentDueDate
-                            // A new saved date remounts the field with a fresh draft.
-                            key={assignment.due_date}
                             assignment={assignment}
                             today={today}
                             isBusy={isBusy}

@@ -266,7 +266,7 @@ describe("Training assignments", () => {
     it("rejects past and invalid dates, and bad people lists", async () => {
       const { traineeId, trainingId, admin } = await setup();
       const bodies = [
-        { training_id: trainingId, user_ids: [traineeId], due_date: dateIn(-1) },
+        { training_id: trainingId, user_ids: [traineeId], due_date: dateIn(-2) },
         { training_id: trainingId, user_ids: [traineeId], due_date: "2026-02-30" },
         { training_id: trainingId, user_ids: [], due_date: dateIn(5) },
         { training_id: "x", user_ids: [traineeId], due_date: dateIn(5) },
@@ -381,6 +381,47 @@ describe("Training assignments", () => {
     });
   });
 
+  describe("change history", () => {
+    it("records each change, its old state and who made it", async () => {
+      const { orgId, traineeId, trainingId, admin } = await setup();
+      const trainee = await apiAs(orgId, traineeId, 3);
+      const dueDate = dateIn(30);
+      const laterDate = dateIn(40);
+      const { created } = await assign(admin, trainingId, [traineeId], dueDate);
+      const id = created[0].id;
+
+      await admin.patch(`${BASE}/${id}`).send({ due_date: laterDate });
+      await admin.patch(`${BASE}/${id}`).send({ due_date: laterDate });
+      await trainee.post(`${BASE}/${id}/complete`);
+      await trainee.post(`${BASE}/${id}/complete`);
+      await admin.post(`${BASE}/${id}/reopen`);
+      await admin.post(`${BASE}/${id}/reopen`);
+      await admin.post(`${BASE}/complete-all`).send({ training_id: trainingId });
+      await admin.delete(`${BASE}/${id}`);
+
+      const [rows] = await sequelize.query(
+        `SELECT field_name, old_value, new_value, changed_by_user_id
+           FROM training_change_history WHERE training_id = :trainingId ORDER BY id`,
+        { replacements: { trainingId } },
+      );
+      const history = rows as Array<Record<string, any>>;
+      const today = dateIn(0);
+      const open = `Open, due ${laterDate}`;
+
+      expect(history.map(({ old_value, new_value }) => [old_value, new_value])).toEqual([
+        ["-", `Assigned, due ${dueDate}`],
+        [`Due ${dueDate}`, `Due ${laterDate}`],
+        [open, "Completed"],
+        [`Completed on ${today}, due ${laterDate}`, "Reopened"],
+        [open, "Completed"],
+        [`Completed on ${today}, due ${laterDate}`, "Removed"],
+      ]);
+      expect(history.every((row) => String(row.field_name).startsWith("Assignment: "))).toBe(true);
+      expect(history[2].changed_by_user_id).toBe(traineeId);
+      expect(history[3].changed_by_user_id).not.toBe(traineeId);
+    });
+  });
+
   describe("completion", () => {
     it("lets the assignee complete and reopen their own", async () => {
       const { orgId, traineeId, trainingId, admin } = await setup();
@@ -391,6 +432,11 @@ describe("Training assignments", () => {
       const done = await trainee.post(`${BASE}/${id}/complete`);
       expect(done.status).toBe(200);
       expect(done.body.data).toMatchObject({ status: "completed", completed_by: traineeId });
+      await sequelize.query(
+        `UPDATE training_assignments
+            SET due_soon_reminded_at = now(), overdue_reminded_at = now() WHERE id = :id`,
+        { replacements: { id } },
+      );
 
       const reopened = await trainee.post(`${BASE}/${id}/reopen`);
       expect(reopened.status).toBe(200);
@@ -399,6 +445,9 @@ describe("Training assignments", () => {
         completed_at: null,
         completed_by: null,
       });
+      const stored = await storedRow(id);
+      expect(stored.due_soon_reminded_at).toBeNull();
+      expect(stored.overdue_reminded_at).toBeNull();
     });
 
     it("allows a read-only role to complete only their own", async () => {
@@ -473,8 +522,9 @@ describe("Training assignments", () => {
       expect(stored.overdue_reminded_at).toBeNull();
 
       await admin.patch(`${BASE}/${id}`).send({ due_date: dateIn(3) });
+      // Nothing else tells the assignee about a closer date, so the sweep must.
       stored = await storedRow(id);
-      expect(stored.due_soon_reminded_at).not.toBeNull();
+      expect(stored.due_soon_reminded_at).toBeNull();
       expect(stored.overdue_reminded_at).toBeNull();
     });
 
@@ -502,7 +552,7 @@ describe("Training assignments", () => {
       const dueDate = dateIn(30);
       const { created } = await assign(admin, trainingId, [traineeId], dueDate);
 
-      const res = await admin.patch(`${BASE}/${created[0].id}`).send({ due_date: dateIn(-1) });
+      const res = await admin.patch(`${BASE}/${created[0].id}`).send({ due_date: dateIn(-2) });
 
       expect(res.status).toBe(400);
       expect((await storedRow(created[0].id)).due_date).toBe(dueDate);
