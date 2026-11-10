@@ -22,6 +22,10 @@ let mockPolicies: PolicyManagerModel[] = [];
 let mockPoliciesLoading = false;
 let mockPoliciesError: Error | null = null;
 const mockUsePolicies = vi.fn();
+vi.mock("../../../../application/hooks/usePolicyTemplates", () => ({
+  useCreatePolicyTemplateFromPolicy: () => ({ mutateAsync: vi.fn(), isPending: false }),
+}));
+
 vi.mock("../../../../application/hooks/usePolicies", () => ({
   usePolicies: (...args: unknown[]) => {
     mockUsePolicies(...args);
