@@ -7932,6 +7932,8 @@ tags:
   -
     name: 'v1: V1/Lifecycle Settings'
   -
+    name: 'v1: V1/Policy Templates'
+  -
     name: 'v1: V1/Projects'
   -
     name: 'v1: V1/Use Case Lifecycle'
@@ -28002,6 +28004,156 @@ paths:
       tags:
         - 'v1: V1/Groups'
       operationId: setProjectGroups
+      security:
+        -
+          bearerAuth: []
+  /v1/policy-templates:
+    get:
+      summary: 'List Policy Templates'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Policy Templates'
+      operationId: listPolicyTemplates
+      security:
+        -
+          bearerAuth: []
+    post:
+      summary: 'Create Policy Template'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Policy Templates'
+      operationId: createPolicyTemplate
+      security:
+        -
+          bearerAuth: []
+  '/v1/policy-templates/{id}':
+    get:
+      summary: 'Get Policy Template'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Policy Templates'
+      operationId: getPolicyTemplate
+      security:
+        -
+          bearerAuth: []
+    patch:
+      summary: 'Update Policy Template'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Policy Templates'
+      operationId: updatePolicyTemplate
+      security:
+        -
+          bearerAuth: []
+    delete:
+      summary: 'Delete Policy Template'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Policy Templates'
+      operationId: deletePolicyTemplate
+      security:
+        -
+          bearerAuth: []
+  /v1/policy-templates/from-policy:
+    post:
+      summary: 'Create Policy Template From Policy'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Policy Templates'
+      operationId: createPolicyTemplateFromPolicy
+      security:
+        -
+          bearerAuth: []
+  /extensions/framework-import/template:
+    get:
+      summary: 'Download Excel Template'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: extensions_framework_import_downloadExcelTemplate
+      security:
+        -
+          bearerAuth: []
+  /extensions/framework-import/import:
+    post:
+      summary: 'Bulk Import Frameworks'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: bulkImportFrameworks
+      security:
+        -
+          bearerAuth: []
+  /extensions/framework-import/imported:
+    get:
+      summary: 'List Imported Frameworks'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: listImportedFrameworks
+      security:
+        -
+          bearerAuth: []
+  '/extensions/framework-import/imported/{id}':
+    patch:
+      summary: 'Update Imported Framework'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: updateImportedFramework
+      security:
+        -
+          bearerAuth: []
+    delete:
+      summary: 'Delete Imported Framework'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: deleteImportedFramework
       security:
         -
           bearerAuth: []

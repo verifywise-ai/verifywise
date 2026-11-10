@@ -4453,6 +4453,61 @@ export const extensionEndpoints: Endpoint[] = [
     ],
     tag: "Extensions",
   },
+  {
+    method: 'GET',
+    path: '/extensions/framework-import/template',
+    summary: "Download Excel Template",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'POST',
+    path: '/extensions/framework-import/import',
+    summary: "Bulk Import Frameworks",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'GET',
+    path: '/extensions/framework-import/imported',
+    summary: "List Imported Frameworks",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'PATCH',
+    path: '/extensions/framework-import/imported/{id}',
+    summary: "Update Imported Framework",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'DELETE',
+    path: '/extensions/framework-import/imported/{id}',
+    summary: "Delete Imported Framework",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
 ];
 
 // Extensions/Jira Incidents endpoints
@@ -12677,6 +12732,76 @@ export const v1V1lifecycleSettingsEndpoints: Endpoint[] = [
   },
 ];
 
+// v1: V1/Policy Templates endpoints
+export const v1V1policyTemplatesEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/policy-templates',
+    summary: "List Policy Templates",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Policy Templates",
+  },
+  {
+    method: 'POST',
+    path: '/v1/policy-templates',
+    summary: "Create Policy Template",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Policy Templates",
+  },
+  {
+    method: 'GET',
+    path: '/v1/policy-templates/{id}',
+    summary: "Get Policy Template",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Policy Templates",
+  },
+  {
+    method: 'PATCH',
+    path: '/v1/policy-templates/{id}',
+    summary: "Update Policy Template",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Policy Templates",
+  },
+  {
+    method: 'DELETE',
+    path: '/v1/policy-templates/{id}',
+    summary: "Delete Policy Template",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Policy Templates",
+  },
+  {
+    method: 'POST',
+    path: '/v1/policy-templates/from-policy',
+    summary: "Create Policy Template From Policy",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Policy Templates",
+  },
+];
+
 // v1: V1/Projects endpoints
 export const v1V1projectsEndpoints: Endpoint[] = [
   {
@@ -13138,6 +13263,7 @@ export const allEndpoints = {
   v1V1groups: v1V1groupsEndpoints,
   v1V1intakeFormReviewTime: v1V1intakeFormReviewTimeEndpoints,
   v1V1lifecycleSettings: v1V1lifecycleSettingsEndpoints,
+  v1V1policyTemplates: v1V1policyTemplatesEndpoints,
   v1V1projects: v1V1projectsEndpoints,
   v1V1useCaseLifecycle: v1V1useCaseLifecycleEndpoints,
   vendor: vendorEndpoints,

@@ -566,6 +566,7 @@ export function deriveTag(basePath: string): string {
     "/api/extensions/jira-assets": "Extensions",
     "/api/extensions/model-lifecycle": "Extensions",
     "/api/extensions/risk-import": "Extensions",
+    "/api/extensions/framework-import": "Extensions",
     "/api/extensions/dataset-bulk-upload": "Extensions",
     "/api/notifications": "Notifications",
     "/api/entity-graph": "Entity Graph",
