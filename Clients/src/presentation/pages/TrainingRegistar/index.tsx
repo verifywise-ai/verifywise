@@ -47,6 +47,12 @@ import { User } from "../../../domain/types/User";
 import Alert from "../../../presentation/components/Alert";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import ListStateWrapper from "../../components/ListStateWrapper";
+import MyTrainingTable from "./MyTrainingTable";
+import TrainingAssignmentsModal from "../../components/Modals/TrainingAssignments";
+import {
+  useMyTrainingAssignments,
+  useTrainingAssignmentSummary,
+} from "../../../application/hooks/useTrainingAssignments";
 
 // Types (Type Safety)
 type AlertVariant = "success" | "info" | "warning" | "error";
@@ -95,6 +101,7 @@ type TrainingColumn =
   | "department"
   | "status"
   | "numberOfPeople"
+  | "assignments"
   | "actions";
 
 const TRAINING_COLUMNS: ColumnConfig<TrainingColumn>[] = [
@@ -104,6 +111,9 @@ const TRAINING_COLUMNS: ColumnConfig<TrainingColumn>[] = [
   { key: "department", label: "Department", defaultVisible: true },
   { key: "status", label: "Status", defaultVisible: true },
   { key: "numberOfPeople", label: "People", defaultVisible: true },
+  // Always visible: it is the only way into assignments, and a saved column list
+  // from before this column existed would otherwise keep it hidden.
+  { key: "assignments", label: "Assigned", defaultVisible: true, alwaysVisible: true },
   { key: "actions", label: "Actions", defaultVisible: true, alwaysVisible: true },
 ];
 
@@ -126,10 +136,11 @@ const EVIDENCE_COLUMNS: ColumnConfig<EvidenceColumn>[] = [
   { key: "actions", label: "Actions", defaultVisible: true, alwaysVisible: true },
 ];
 
-type TrainingTab = "trainings" | "evidence-hub";
+type TrainingTab = "trainings" | "my-training" | "evidence-hub";
 
 const getTabFromPath = (pathname: string): TrainingTab => {
   if (pathname.includes("/evidence-hub")) return "evidence-hub";
+  if (pathname.includes("/my-training")) return "my-training";
   return "trainings";
 };
 
@@ -198,10 +209,28 @@ const Training: React.FC = () => {
     setActiveTab(next);
     if (next === "trainings") {
       navigate("/training");
+    } else if (next === "my-training") {
+      navigate("/training/my-training");
     } else if (next === "evidence-hub") {
       navigate("/training/evidence-hub");
     }
   };
+
+  // Assignments
+  const { data: assignmentSummary } = useTrainingAssignmentSummary();
+  const { data: myAssignments, isLoading: isMyAssignmentsLoading } = useMyTrainingAssignments();
+  const [assignmentsTraining, setAssignmentsTraining] = useState<TrainingRegistarModel | null>(
+    null,
+  );
+
+  const assignmentSummaries = useMemo(
+    () => new Map(assignmentSummary?.map((row) => [row.training_id, row])),
+    [assignmentSummary],
+  );
+  const openAssignmentCount = useMemo(
+    () => myAssignments?.filter((assignment) => assignment.completed_at === null).length ?? 0,
+    [myAssignments],
+  );
 
   // Evidence tab state
   const [evidenceHubData, setEvidenceHubData] = useState<EvidenceHubModel[]>([]);
@@ -878,6 +907,8 @@ const Training: React.FC = () => {
           onDelete={handleDeleteTraining}
           hidePagination={options?.hidePagination}
           visibleColumns={visibleColumns as Set<string>}
+          assignmentSummaries={assignmentSummaries}
+          onOpenAssignments={setAssignmentsTraining}
         />
       )}
     />
@@ -929,6 +960,14 @@ const Training: React.FC = () => {
                 count: trainingData.length,
                 isLoading: isLoading,
                 tooltip: "All AI-related training programs",
+              },
+              {
+                label: "My training",
+                value: "my-training",
+                icon: "GraduationCap",
+                count: openAssignmentCount,
+                isLoading: isMyAssignmentsLoading,
+                tooltip: "Training assigned to you",
               },
               {
                 label: "Evidence hub",
@@ -1027,6 +1066,8 @@ const Training: React.FC = () => {
         </>
       )}
 
+      {activeTab === "my-training" && <MyTrainingTable />}
+
       {activeTab === "evidence-hub" && (
         <>
           <Stack
@@ -1114,6 +1155,15 @@ const Training: React.FC = () => {
         isEdit={!!selectedTraining}
         entityId={selectedTraining?.id ? Number(selectedTraining.id) : undefined}
       />
+
+      {assignmentsTraining && (
+        <TrainingAssignmentsModal
+          isOpen
+          onClose={() => setAssignmentsTraining(null)}
+          trainingId={Number(assignmentsTraining.id)}
+          trainingName={assignmentsTraining.training_name}
+        />
+      )}
 
       <NewTrainingEvidence
         isOpen={isEvidenceHubModalOpen}

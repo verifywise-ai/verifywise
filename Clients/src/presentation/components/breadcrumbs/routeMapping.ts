@@ -98,6 +98,7 @@ export const routeMapping: Record<string, string> = {
 
   // Training
   "/training": "Training registry",
+  "/training/my-training": "My training",
 
   // Event tracking
   "/event-tracker": "Event tracker",

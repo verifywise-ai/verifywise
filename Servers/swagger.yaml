@@ -7932,6 +7932,8 @@ tags:
   -
     name: 'v1: V1/Projects'
   -
+    name: 'v1: V1/Training'
+  -
     name: 'v1: V1/Use Case Lifecycle'
 paths:
   /webhooks/github:
@@ -28156,6 +28158,130 @@ paths:
       tags:
         - 'v1: V1/Ai Apps'
       operationId: listAiAppAssessmentsForApp
+      security:
+        -
+          bearerAuth: []
+  /v1/training/assignments/mine:
+    get:
+      summary: 'List My Training Assignments'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Training'
+      operationId: listMyTrainingAssignments
+      security:
+        -
+          bearerAuth: []
+  /v1/training/assignments/summary:
+    get:
+      summary: 'Get Training Assignment Summary'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Training'
+      operationId: getTrainingAssignmentSummary
+      security:
+        -
+          bearerAuth: []
+  /v1/training/assignments:
+    get:
+      summary: 'List Training Assignments'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Training'
+      operationId: listTrainingAssignments
+      security:
+        -
+          bearerAuth: []
+    post:
+      summary: 'Create Training Assignments'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Training'
+      operationId: createTrainingAssignments
+      security:
+        -
+          bearerAuth: []
+  /v1/training/assignments/complete-all:
+    post:
+      summary: 'Complete All Training Assignments'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Training'
+      operationId: completeAllTrainingAssignments
+      security:
+        -
+          bearerAuth: []
+  '/v1/training/assignments/{id}':
+    patch:
+      summary: 'Update Training Assignment'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Training'
+      operationId: updateTrainingAssignment
+      security:
+        -
+          bearerAuth: []
+    delete:
+      summary: 'Delete Training Assignment'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Training'
+      operationId: deleteTrainingAssignment
+      security:
+        -
+          bearerAuth: []
+  '/v1/training/assignments/{id}/complete':
+    post:
+      summary: 'Complete Training Assignment'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Training'
+      operationId: completeTrainingAssignment
+      security:
+        -
+          bearerAuth: []
+  '/v1/training/assignments/{id}/reopen':
+    post:
+      summary: 'Reopen Training Assignment'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Training'
+      operationId: reopenTrainingAssignment
       security:
         -
           bearerAuth: []

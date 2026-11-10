@@ -148,6 +148,11 @@ export const tenantIsolationRegistry: IsolationEntity[] = [
     baseRoute: "/api/v1/projects",
   },
   {
+    name: "training_assignments",
+    tables: ["training_assignments"],
+    baseRoute: "/api/v1/training/assignments",
+  },
+  {
     // One row per user per organization; the JWT alone picks the row.
     name: "dashboard_preferences",
     tables: ["dashboard_preferences"],

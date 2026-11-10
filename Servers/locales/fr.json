@@ -1004,5 +1004,19 @@
   "Only the app's owner or an editor can answer this assessment": "Seul le propriétaire de l'application ou un éditeur peut répondre à cette évaluation",
   "This assessment is already completed": "Cette évaluation est déjà terminée",
   "This assessment's questionnaire no longer exists": "Le questionnaire de cette évaluation n'existe plus",
-  "Answer every question with a whole number from 1 to 5": "Répondez à chaque question par un nombre entier de 1 à 5"
+  "Answer every question with a whole number from 1 to 5": "Répondez à chaque question par un nombre entier de 1 à 5",
+  "Training ID must be a positive integer": "L'identifiant de la formation doit être un entier positif",
+  "Assignment ID must be a positive integer": "L'identifiant de l'affectation doit être un entier positif",
+  "User IDs must be a non-empty list of positive integers": "Les identifiants d'utilisateur doivent être une liste non vide d'entiers positifs",
+  "A training can be assigned to at most {max} people at once": "Une formation peut être affectée à {max} personnes au maximum à la fois",
+  "Due date must be a valid date in YYYY-MM-DD format": "La date d'échéance doit être une date valide au format AAAA-MM-JJ",
+  "Due date must be today or later": "La date d'échéance doit être aujourd'hui ou une date ultérieure",
+  "Training not found": "Formation introuvable",
+  "Training assignment not found": "Affectation de formation introuvable",
+  "Every person must be a member of this organization": "Chaque personne doit être membre de cette organisation",
+  "Only the assignee or someone who can edit training can do this": "Seule la personne affectée ou une personne autorisée à modifier les formations peut effectuer cette action",
+  "Failed to load training assignments": "Impossible de charger les affectations de formation",
+  "Failed to create training assignments": "Impossible de créer les affectations de formation",
+  "Failed to update the training assignment": "Impossible de mettre à jour l'affectation de formation",
+  "Failed to delete the training assignment": "Impossible de supprimer l'affectation de formation"
 }

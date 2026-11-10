@@ -49,6 +49,7 @@ export const EMAIL_TEMPLATES = {
 
   // Training templates
   TRAINING_ASSIGNED: "training-assigned.mjml",
+  TRAINING_REMINDER: "training-reminder.mjml",
 
   // Vendor templates
   VENDOR_REVIEW_DUE: "vendor-review-due.mjml",

@@ -201,6 +201,8 @@ export async function createNewTrainingRegistar(req: Request, res: Response): Pr
               name: newTrainingRegistar.training_name,
               description: newTrainingRegistar.description,
               duration: newTrainingRegistar.duration,
+              // These recipients are admins hearing about a new record, not trainees.
+              actionPath: `/training?trainingId=${trainingId}`,
             },
             creatorName,
             baseUrl,
