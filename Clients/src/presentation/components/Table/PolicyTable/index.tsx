@@ -391,8 +391,8 @@ const CustomizablePolicyTable = ({
                         inputProps: { id: "pagination-dropdown" },
                         IconComponent: SelectorVertical,
                         sx: {
-                          "ml": 4,
-                          "mr": 12,
+                          "ml": "8px",
+                          "mr": "24px",
                           "minWidth": theme.spacing(20),
                           "textAlign": "left",
                           "&.Mui-focused > div": {
@@ -405,7 +405,7 @@ const CustomizablePolicyTable = ({
                       "mt": theme.spacing(6),
                       "color": theme.palette.text.secondary,
                       "& .MuiSelect-icon": {
-                        width: 12,
+                        width: "24px",
                         height: "fit-content",
                       },
                       "& .MuiSelect-select": {

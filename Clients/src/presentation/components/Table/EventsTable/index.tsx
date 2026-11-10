@@ -26,8 +26,7 @@ import {
   setPaginationRowCount,
 } from "../../../../application/utils/paginationStorage";
 import { IEventsTableProps } from "../../../types/interfaces/i.table";
-import { brand, text, border } from "../../../themes/palette";
-import type { ChipVariant } from "../../../types/interfaces/i.chip";
+import { status, risk, border, background } from "../../../themes/palette";
 import StatusBadge from "../../StatusBadge";
 import { pageOfLabel } from "../pageOfLabel";
 
@@ -51,16 +50,21 @@ const TABLE_COLUMNS = [
 
 const DEFAULT_ROWS_PER_PAGE = 10;
 
-const EVENT_TYPE_VARIANTS: Record<Event["event_type"], ChipVariant> = {
-  Create: "success",
-  Read: "info",
-  Update: "warning",
-  Delete: "error",
-  Error: "high",
+// Read, Update and the unknown fallback have no palette token with the same
+// value, so they keep their literals to stay visually unchanged.
+const EVENT_TYPE_COLORS: Record<Event["event_type"], { bg: string; text: string }> = {
+  Create: { bg: status.success.bg, text: status.success.text },
+  Read: { bg: "#DCEFFF", text: "#1976D2" },
+  Update: { bg: status.warning.bg, text: "#795000" },
+  Delete: { bg: status.error.bg, text: status.error.text },
+  Error: { bg: risk.high.bg, text: risk.high.text },
 };
 
+const UNKNOWN_EVENT_TYPE_COLORS = { bg: "#E0E0E0", text: "#424242" };
+
 const EventTypeBadge: React.FC<{ eventType: Event["event_type"] }> = ({ eventType }) => {
-  return <StatusBadge label={eventType} variant={EVENT_TYPE_VARIANTS[eventType] ?? "default"} />;
+  const colors = EVENT_TYPE_COLORS[eventType] ?? UNKNOWN_EVENT_TYPE_COLORS;
+  return <StatusBadge label={eventType} backgroundColor={colors.bg} textColor={colors.text} />;
 };
 
 const EventsTable: React.FC<IEventsTableProps> = ({
@@ -205,7 +209,11 @@ const EventsTable: React.FC<IEventsTableProps> = ({
               sx={{
                 ...singleTheme.tableStyles.primary.header.cell,
                 "width":
-                  column.id === "description" ? "auto" : column.id === "id" ? 40 : "fit-content",
+                  column.id === "description"
+                    ? "auto"
+                    : column.id === "id"
+                      ? "80px"
+                      : "fit-content",
                 "whiteSpace": column.id === "description" ? "normal" : "nowrap",
                 "cursor": "pointer",
                 "userSelect": "none",
@@ -226,7 +234,7 @@ const EventsTable: React.FC<IEventsTableProps> = ({
                 <div
                   style={{
                     fontWeight: 400,
-                    color: sortConfig.key === column.label ? brand.primary : text.subdued,
+                    color: sortConfig.key === column.label ? "primary.main" : "inherit",
                   }}
                 >
                   {column.label}
@@ -235,7 +243,7 @@ const EventsTable: React.FC<IEventsTableProps> = ({
                   sx={{
                     display: "flex",
                     alignItems: "center",
-                    color: sortConfig.key === column.label ? brand.primary : text.subdued,
+                    color: sortConfig.key === column.label ? "primary.main" : "text.disabled",
                   }}
                 >
                   {sortConfig.key === column.label && sortConfig.direction === "asc" && (
@@ -270,12 +278,12 @@ const EventsTable: React.FC<IEventsTableProps> = ({
               <TableCell
                 sx={{
                   ...singleTheme.tableStyles.primary.body.cell,
-                  width: 40,
+                  width: "80px",
                   whiteSpace: "nowrap",
                   backgroundColor:
                     sortConfig.key && sortConfig.key.toLowerCase().includes("id")
-                      ? "background.surface"
-                      : undefined,
+                      ? background.surface
+                      : background.alt,
                 }}
               >
                 {event.id}
@@ -290,7 +298,7 @@ const EventsTable: React.FC<IEventsTableProps> = ({
                     (sortConfig.key.toLowerCase().includes("event") ||
                       sortConfig.key.toLowerCase().includes("type"))
                       ? "background.surface"
-                      : undefined,
+                      : "inherit",
                 }}
               >
                 <EventTypeBadge eventType={event.event_type} />
@@ -303,7 +311,7 @@ const EventsTable: React.FC<IEventsTableProps> = ({
                   backgroundColor:
                     sortConfig.key && sortConfig.key.toLowerCase().includes("description")
                       ? "background.surface"
-                      : undefined,
+                      : "inherit",
                 }}
               >
                 {event.description}
@@ -316,7 +324,7 @@ const EventsTable: React.FC<IEventsTableProps> = ({
                   backgroundColor:
                     sortConfig.key && sortConfig.key.toLowerCase().includes("user")
                       ? "background.surface"
-                      : undefined,
+                      : "inherit",
                 }}
               >
                 {(() => {
@@ -336,7 +344,7 @@ const EventsTable: React.FC<IEventsTableProps> = ({
                     (sortConfig.key.toLowerCase().includes("timestamp") ||
                       sortConfig.key.toLowerCase().includes("time"))
                       ? "background.surface"
-                      : undefined,
+                      : "inherit",
                 }}
               >
                 {event.timestamp
@@ -374,8 +382,8 @@ const EventsTable: React.FC<IEventsTableProps> = ({
           border: `1px solid ${border.light}`,
           borderRadius: "4px",
           padding: theme.spacing(15, 5),
-          paddingBottom: 20,
-          gap: 10,
+          paddingBottom: theme.spacing(20),
+          gap: theme.spacing(10),
           minHeight: 200,
         }}
       >

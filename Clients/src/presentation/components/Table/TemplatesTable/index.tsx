@@ -12,7 +12,7 @@ import {
   CircularProgress,
 } from "@mui/material";
 import { CustomizableButton } from "../../button/customizable-button";
-import Chip from "../../Chip";
+import StatusBadge from "../../StatusBadge";
 import singleTheme from "../../../themes/v1SingleTheme";
 import { useMemo, useState } from "react";
 import TablePaginationActions from "../../TablePagination";
@@ -26,12 +26,12 @@ import { brand, text, background, border as borderPalette, status } from "../../
 // Re-export TemplateRow from TemplatesList
 export type { TemplateRow } from "./TemplatesList";
 import type { TemplateRow } from "./TemplatesList";
-import { getPredominantDifficultyLabel } from "./TemplatesList";
 import {
-  getDatasetCategoryVariant,
-  getDatasetTypeVariant,
-  getDifficultyVariant,
-} from "../../../utils/datasetBadgeVariants";
+  getPredominantDifficultyLabel,
+  getDifficultyStyles,
+  getCategoryStyles,
+  getTypeStyles,
+} from "./TemplatesList";
 
 export type SortDirection = "asc" | "desc" | null;
 export type SortConfig = {
@@ -271,7 +271,7 @@ const TemplatesTable: React.FC<TemplatesTableProps> = ({
                     sx={{ ...singleTheme.tableStyles.primary.body.cell, textAlign: "center" }}
                   >
                     {template.type ? (
-                      <Chip
+                      <StatusBadge
                         label={
                           template.type === "single-turn"
                             ? "Single-Turn"
@@ -281,7 +281,8 @@ const TemplatesTable: React.FC<TemplatesTableProps> = ({
                         }
                         size="small"
                         uppercase={false}
-                        variant={getDatasetTypeVariant(template.type)}
+                        backgroundColor={getTypeStyles(template.type).backgroundColor}
+                        textColor={getTypeStyles(template.type).color}
                       />
                     ) : (
                       <Typography sx={{ fontSize: "13px", color: `${text.disabled}` }}>
@@ -292,7 +293,7 @@ const TemplatesTable: React.FC<TemplatesTableProps> = ({
                   <TableCell
                     sx={{ ...singleTheme.tableStyles.primary.body.cell, textAlign: "center" }}
                   >
-                    <Chip
+                    <StatusBadge
                       label={
                         template.category === "rag"
                           ? "RAG"
@@ -302,7 +303,8 @@ const TemplatesTable: React.FC<TemplatesTableProps> = ({
                       }
                       size="small"
                       uppercase={false}
-                      variant={getDatasetCategoryVariant(template.category)}
+                      backgroundColor={getCategoryStyles(template.category).backgroundColor}
+                      textColor={getCategoryStyles(template.category).color}
                     />
                   </TableCell>
                   <TableCell
@@ -317,11 +319,12 @@ const TemplatesTable: React.FC<TemplatesTableProps> = ({
                   <TableCell
                     sx={{ ...singleTheme.tableStyles.primary.body.cell, textAlign: "center" }}
                   >
-                    <Chip
+                    <StatusBadge
                       label={difficultyLabel}
                       size="small"
                       uppercase={false}
-                      variant={getDifficultyVariant(difficultyLabel)}
+                      backgroundColor={getDifficultyStyles(difficultyLabel).backgroundColor}
+                      textColor={getDifficultyStyles(difficultyLabel).color}
                     />
                   </TableCell>
                   <TableCell
@@ -379,4 +382,10 @@ const TemplatesTable: React.FC<TemplatesTableProps> = ({
 };
 
 export default TemplatesTable;
-export { getPredominantDifficultyLabel } from "./TemplatesList";
+export {
+  getPredominantDifficultyLabel,
+  getDifficultyStyles,
+  getTypeStyles,
+  getCategoryStyles,
+} from "./TemplatesList";
+export { default as TemplatesList } from "./TemplatesList";

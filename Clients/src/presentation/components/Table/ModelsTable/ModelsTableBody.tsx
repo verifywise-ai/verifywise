@@ -32,30 +32,28 @@ const formatTimestamp = (
   return formatDate(dateStr, { includeTime: true });
 };
 
-// Provider color mapping for chips. Providers are categories, so they use the
-// accent group (not status tokens, which imply a state).
-const DEFAULT_PROVIDER_COLORS = { bg: background.surface, text: status.default.text };
-const PROVIDER_COLORS: Record<string, { bg: string; text: string }> = {
-  openai: { bg: accent.teal.bg, text: accent.teal.text },
-  anthropic: { bg: accent.orange.bg, text: accent.orange.text },
-  google: { bg: accent.blue.bg, text: accent.blue.text },
-  mistral: { bg: accent.purple.bg, text: accent.purple.text },
-  ollama: DEFAULT_PROVIDER_COLORS,
-  huggingface: { bg: accent.amber.bg, text: accent.amber.text },
-  xai: DEFAULT_PROVIDER_COLORS,
-  bedrock: { bg: accent.orange.bg, text: accent.orange.text },
-  meta: { bg: accent.blue.bg, text: accent.blue.text },
-  deepseek: { bg: accent.purple.bg, text: accent.purple.text },
-  microsoft: { bg: accent.indigo.bg, text: accent.indigo.text },
-  cohere: { bg: accent.amber.bg, text: accent.amber.text },
-  perplexity: { bg: accent.teal.bg, text: accent.teal.text },
-  nvidia: { bg: accent.teal.bg, text: accent.teal.text },
-  qwen: { bg: accent.orange.bg, text: accent.orange.text },
-  moonshot: { bg: accent.purple.bg, text: accent.purple.text },
-};
-
+// Provider color mapping for chips. Values with an identical palette token use
+// it; the rest are provider-specific shades with no token and stay literal.
 const getProviderColor = (provider: string): { bg: string; text: string } => {
-  return PROVIDER_COLORS[provider.toLowerCase()] ?? DEFAULT_PROVIDER_COLORS;
+  const colors: Record<string, { bg: string; text: string }> = {
+    openai: { bg: "#E8F5E9", text: "#2E7D32" },
+    anthropic: { bg: "#FFF3E0", text: "#E65100" },
+    google: { bg: accent.blue.bg, text: accent.blue.text },
+    mistral: { bg: "#F3E5F5", text: "#7B1FA2" },
+    ollama: { bg: "#ECEFF1", text: "#37474F" },
+    huggingface: { bg: accent.amber.bg, text: "#F57F17" },
+    xai: { bg: "#FAFAFA", text: "#212121" },
+    bedrock: { bg: "#FFF3E0", text: "#FF6F00" },
+    meta: { bg: "#E8F0FE", text: "#1A56DB" },
+    deepseek: { bg: "#EDE8FD", text: "#5B21B6" },
+    microsoft: { bg: accent.blue.bg, text: "#0369A1" },
+    cohere: { bg: "#FFF3E0", text: "#B45309" },
+    perplexity: { bg: "#F0FDF4", text: "#15803D" },
+    nvidia: { bg: "#F0FDF4", text: "#166534" },
+    qwen: { bg: "#FFF7ED", text: "#C2410C" },
+    moonshot: { bg: "#F5F3FF", text: "#6D28D9" },
+  };
+  return colors[provider.toLowerCase()] || { bg: `${background.surface}`, text: "#616161" };
 };
 
 import * as ProviderIcons from "../../ProviderIcons";
@@ -225,7 +223,9 @@ const ModelsTableBody: React.FC<ModelsTableBodyProps> = ({
                 textAlign: "left",
               }}
             >
-              <Box sx={{ display: "inline-flex", alignItems: "center", gap: 4, textAlign: "left" }}>
+              <Box
+                sx={{ display: "inline-flex", alignItems: "center", gap: "8px", textAlign: "left" }}
+              >
                 <Box
                   sx={{
                     width: 24,
@@ -291,8 +291,8 @@ const ModelsTableBody: React.FC<ModelsTableBodyProps> = ({
               sx={{
                 ...singleTheme.tableStyles.primary.body.cell,
                 textAlign: "center",
-                minWidth: 40,
-                maxWidth: 40,
+                minWidth: "80px",
+                maxWidth: "80px",
                 verticalAlign: "middle",
               }}
               onClick={(e) => e.stopPropagation()}
@@ -339,10 +339,21 @@ const ModelsTableBody: React.FC<ModelsTableBodyProps> = ({
           {onDelete && (
             <CustomizableButton
               variant="outlined"
-              color="error"
-              size="medium"
               onClick={deleteModelRow}
               startIcon={<Trash2 size={14} />}
+              sx={{
+                "height": "34px",
+                "fontSize": "13px",
+                "fontWeight": 500,
+                "color": status.error.text,
+                "borderColor": `${borderPalette.dark}`,
+                "backgroundColor": "transparent",
+                "justifyContent": "flex-start",
+                "&:hover": {
+                  backgroundColor: "#FEF2F2",
+                  borderColor: status.error.text,
+                },
+              }}
             >
               Delete
             </CustomizableButton>

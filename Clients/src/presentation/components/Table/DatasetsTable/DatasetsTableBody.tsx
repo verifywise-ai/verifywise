@@ -11,17 +11,12 @@ import {
 } from "@mui/material";
 import { MoreVertical, Eye, Edit3, Download, Trash2 } from "lucide-react";
 import { CustomizableButton } from "../../button/customizable-button";
-import palette, { icon } from "../../../themes/palette";
+import palette from "../../../themes/palette";
 import StatusBadge from "../../StatusBadge";
 import singleTheme from "../../../themes/v1SingleTheme";
 import { DatasetRow } from "./index";
-import { text, background, status } from "../../../themes/palette";
+import { text, background, status, accent } from "../../../themes/palette";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
-import {
-  getDatasetCategoryVariant,
-  getDatasetTypeVariant,
-  getDifficultyVariant,
-} from "../../../utils/datasetBadgeVariants";
 
 interface DatasetsTableBodyProps {
   rows: DatasetRow[];
@@ -138,7 +133,20 @@ const DatasetsTableBody: React.FC<DatasetsTableBodyProps> = ({
                   }
                   size="small"
                   uppercase={false}
-                  variant={getDatasetTypeVariant(dataset.type)}
+                  backgroundColor={
+                    dataset.type === "single-turn"
+                      ? "#FEF3C7"
+                      : dataset.type === "multi-turn"
+                        ? accent.blue.bg
+                        : "#F3E8FF"
+                  }
+                  textColor={
+                    dataset.type === "single-turn"
+                      ? accent.amber.text
+                      : dataset.type === "multi-turn"
+                        ? accent.blue.text
+                        : "#7C3AED"
+                  }
                 />
               ) : (
                 <Typography sx={{ fontSize: "13px", color: `${text.disabled}` }}>-</Typography>
@@ -162,7 +170,24 @@ const DatasetsTableBody: React.FC<DatasetsTableBodyProps> = ({
                   }
                   size="small"
                   uppercase={false}
-                  variant={getDatasetCategoryVariant(dataset.useCase)}
+                  backgroundColor={
+                    dataset.useCase === "chatbot"
+                      ? "#CCFBF1"
+                      : dataset.useCase === "rag"
+                        ? "#f3e5f5"
+                        : dataset.useCase === "agent"
+                          ? "#FEE2E2"
+                          : "#e0e0e0"
+                  }
+                  textColor={
+                    dataset.useCase === "chatbot"
+                      ? "#0D9488"
+                      : dataset.useCase === "rag"
+                        ? "#7b1fa2"
+                        : dataset.useCase === "agent"
+                          ? "#DC2626"
+                          : "#616161"
+                  }
                 />
               ) : (
                 <Typography sx={{ fontSize: "13px", color: `${text.disabled}` }}>-</Typography>
@@ -182,7 +207,7 @@ const DatasetsTableBody: React.FC<DatasetsTableBodyProps> = ({
               ) : metadata?.promptCount === 0 ? (
                 <StatusBadge label="Empty" size="small" variant="error" />
               ) : (
-                <Typography sx={{ fontSize: "13px", color: `${text.primary}` }}>
+                <Typography sx={{ fontSize: "13px", color: `${text.secondary}` }}>
                   {metadata?.promptCount ?? "-"}
                 </Typography>
               )}
@@ -203,7 +228,24 @@ const DatasetsTableBody: React.FC<DatasetsTableBodyProps> = ({
                   label={metadata?.avgDifficulty ?? "Medium"}
                   size="small"
                   uppercase={false}
-                  variant={getDifficultyVariant(metadata?.avgDifficulty)}
+                  backgroundColor={
+                    metadata?.avgDifficulty === "Easy"
+                      ? "#c8e6c9"
+                      : metadata?.avgDifficulty === "Medium"
+                        ? "#fff3e0"
+                        : metadata?.avgDifficulty === "Hard"
+                          ? "#ffebee"
+                          : "#e0e0e0"
+                  }
+                  textColor={
+                    metadata?.avgDifficulty === "Easy"
+                      ? "#388e3c"
+                      : metadata?.avgDifficulty === "Medium"
+                        ? "#ef6c00"
+                        : metadata?.avgDifficulty === "Hard"
+                          ? "#c62828"
+                          : "#616161"
+                  }
                 />
               )}
             </TableCell>
@@ -235,8 +277,8 @@ const DatasetsTableBody: React.FC<DatasetsTableBodyProps> = ({
                 size="small"
                 onClick={(e) => openDatasetMenu(e, dataset)}
                 sx={{
-                  "color": `${icon.default}`,
-                  "padding": 2,
+                  "color": `${text.icon}`,
+                  "padding": "6px",
                   "&:hover": {
                     backgroundColor: `${background.hover}`,
                   },
@@ -273,11 +315,22 @@ const DatasetsTableBody: React.FC<DatasetsTableBodyProps> = ({
           {onView && (
             <CustomizableButton
               variant="outlined"
-              color="secondary"
-              size="medium"
               onClick={handleViewClick}
               startIcon={<Eye size={14} />}
-              sx={{ justifyContent: "flex-start" }}
+              sx={{
+                "height": "34px",
+                "fontSize": "13px",
+                "fontWeight": 500,
+                "color": palette.text.secondary,
+                "borderColor": palette.border.dark,
+                "backgroundColor": "transparent",
+                "justifyContent": "flex-start",
+                "&:hover": {
+                  backgroundColor: palette.status.success.bg,
+                  borderColor: palette.brand.primary,
+                  color: palette.brand.primary,
+                },
+              }}
             >
               View prompts
             </CustomizableButton>
@@ -285,11 +338,22 @@ const DatasetsTableBody: React.FC<DatasetsTableBodyProps> = ({
           {onEdit && (
             <CustomizableButton
               variant="outlined"
-              color="secondary"
-              size="medium"
               onClick={handleEditClick}
               startIcon={<Edit3 size={14} />}
-              sx={{ justifyContent: "flex-start" }}
+              sx={{
+                "height": "34px",
+                "fontSize": "13px",
+                "fontWeight": 500,
+                "color": palette.text.secondary,
+                "borderColor": palette.border.dark,
+                "backgroundColor": "transparent",
+                "justifyContent": "flex-start",
+                "&:hover": {
+                  backgroundColor: palette.status.success.bg,
+                  borderColor: palette.brand.primary,
+                  color: palette.brand.primary,
+                },
+              }}
             >
               Open in editor
             </CustomizableButton>
@@ -297,11 +361,22 @@ const DatasetsTableBody: React.FC<DatasetsTableBodyProps> = ({
           {onDownload && (
             <CustomizableButton
               variant="outlined"
-              color="secondary"
-              size="medium"
               onClick={handleDownloadClick}
               startIcon={<Download size={14} />}
-              sx={{ justifyContent: "flex-start" }}
+              sx={{
+                "height": "34px",
+                "fontSize": "13px",
+                "fontWeight": 500,
+                "color": palette.text.secondary,
+                "borderColor": palette.border.dark,
+                "backgroundColor": "transparent",
+                "justifyContent": "flex-start",
+                "&:hover": {
+                  backgroundColor: palette.status.success.bg,
+                  borderColor: palette.brand.primary,
+                  color: palette.brand.primary,
+                },
+              }}
             >
               Download
             </CustomizableButton>
@@ -309,11 +384,21 @@ const DatasetsTableBody: React.FC<DatasetsTableBodyProps> = ({
           {onDelete && (
             <CustomizableButton
               variant="outlined"
-              color="error"
-              size="medium"
-              sx={{ justifyContent: "flex-start" }}
               onClick={deleteDatasetRow}
               startIcon={<Trash2 size={14} />}
+              sx={{
+                "height": "34px",
+                "fontSize": "13px",
+                "fontWeight": 500,
+                "color": palette.status.error.text,
+                "borderColor": palette.border.dark,
+                "backgroundColor": "transparent",
+                "justifyContent": "flex-start",
+                "&:hover": {
+                  backgroundColor: palette.status.error.bg,
+                  borderColor: palette.status.error.text,
+                },
+              }}
             >
               Delete
             </CustomizableButton>

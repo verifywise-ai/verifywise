@@ -53,7 +53,6 @@ import utc from "dayjs/plugin/utc";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import { DataClassification, DatasetType } from "../../../domain/enums/dataset.enum";
 import StatusBadge from "../../components/StatusBadge";
-import type { ChipVariant } from "../../types/interfaces/i.chip";
 import { palette } from "../../themes/palette";
 
 dayjs.extend(utc);
@@ -99,22 +98,6 @@ const TooltipCell: React.FC<{ value: string | null | undefined }> = ({ value }) 
   );
 };
 
-/** Category colors for the TYPE and CLASSIFICATION columns. */
-const TYPE_VARIANTS: Record<DatasetType, ChipVariant> = {
-  [DatasetType.TRAINING]: "info",
-  [DatasetType.VALIDATION]: "warning",
-  [DatasetType.TESTING]: "accent-purple",
-  [DatasetType.PRODUCTION]: "success",
-  [DatasetType.REFERENCE]: "default",
-};
-
-const CLASSIFICATION_VARIANTS: Record<DataClassification, ChipVariant> = {
-  [DataClassification.PUBLIC]: "success",
-  [DataClassification.INTERNAL]: "default",
-  [DataClassification.CONFIDENTIAL]: "warning",
-  [DataClassification.RESTRICTED]: "error",
-};
-
 /**
  * type and classification are nullable columns with no default, so a dataset
  * saved without them arrives here as null. An empty chip says nothing, so these
@@ -122,19 +105,14 @@ const CLASSIFICATION_VARIANTS: Record<DataClassification, ChipVariant> = {
  */
 const TypeBadge: React.FC<{ type: DatasetType | null }> = ({ type }) => {
   if (!type) return <TooltipCell value={type} />;
-  return <StatusBadge label={type} variant={TYPE_VARIANTS[type] ?? "default"} />;
+  return <StatusBadge label={type} />;
 };
 
 const ClassificationBadge: React.FC<{ classification: DataClassification | null }> = ({
   classification,
 }) => {
   if (!classification) return <TooltipCell value={classification} />;
-  return (
-    <StatusBadge
-      label={classification}
-      variant={CLASSIFICATION_VARIANTS[classification] ?? "default"}
-    />
-  );
+  return <StatusBadge label={classification} />;
 };
 
 const PIIBadge: React.FC<{ containsPii: boolean }> = ({ containsPii }) => {

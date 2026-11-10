@@ -21,8 +21,7 @@ import {
   getPaginationRowCount,
   setPaginationRowCount,
 } from "../../../../application/utils/paginationStorage";
-import { text, border, brand } from "../../../themes/palette";
-import type { ChipVariant } from "../../../types/interfaces/i.chip";
+import { text, status, risk, border, background } from "../../../themes/palette";
 import StatusBadge from "../../StatusBadge";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import { pageOfLabel } from "../pageOfLabel";
@@ -103,19 +102,24 @@ const parseLogLine = (line: string, index: number): ParsedLogEntry | null => {
   return null;
 };
 
-const STATE_VARIANTS: Record<string, ChipVariant> = {
-  successful: "success",
-  success: "success",
-  processing: "warning",
-  error: "error",
-  info: "info",
-  warn: "high",
-  warning: "high",
-  debug: "accent-purple",
+// processing text, info, debug and the unknown fallback have no palette token
+// with the same value, so they keep their literals to stay visually unchanged.
+const STATE_COLORS: Record<string, { bg: string; text: string }> = {
+  successful: { bg: status.success.bg, text: status.success.text },
+  success: { bg: status.success.bg, text: status.success.text },
+  processing: { bg: status.warning.bg, text: "#795000" },
+  error: { bg: status.error.bg, text: status.error.text },
+  info: { bg: "#DCEFFF", text: "#1976D2" },
+  warn: { bg: risk.high.bg, text: risk.high.text },
+  warning: { bg: risk.high.bg, text: risk.high.text },
+  debug: { bg: "#F3E5F5", text: "#6A1B9A" },
 };
 
+const UNKNOWN_STATE_COLORS = { bg: "#E0E0E0", text: "#424242" };
+
 const StateBadge: React.FC<{ state: string }> = ({ state }) => {
-  return <StatusBadge label={state} variant={STATE_VARIANTS[state.toLowerCase()] ?? "default"} />;
+  const colors = STATE_COLORS[state.toLowerCase()] ?? UNKNOWN_STATE_COLORS;
+  return <StatusBadge label={state} backgroundColor={colors.bg} textColor={colors.text} />;
 };
 
 const LogsTable: React.FC<LogsTableProps> = ({ data, isLoading = false, paginated = true }) => {
@@ -270,7 +274,7 @@ const LogsTable: React.FC<LogsTableProps> = ({ data, isLoading = false, paginate
                 <div
                   style={{
                     fontWeight: 400,
-                    color: sortConfig.key === column.label ? brand.primary : text.subdued,
+                    color: sortConfig.key === column.label ? "primary.main" : "inherit",
                   }}
                 >
                   {column.label}
@@ -279,7 +283,7 @@ const LogsTable: React.FC<LogsTableProps> = ({ data, isLoading = false, paginate
                   sx={{
                     display: "flex",
                     alignItems: "center",
-                    color: sortConfig.key === column.label ? brand.primary : text.subdued,
+                    color: sortConfig.key === column.label ? "primary.main" : `${text.disabled}`,
                   }}
                 >
                   {sortConfig.key === column.label && sortConfig.direction === "asc" && (
@@ -322,8 +326,8 @@ const LogsTable: React.FC<LogsTableProps> = ({ data, isLoading = false, paginate
                     fontSize: "12px",
                     backgroundColor:
                       sortConfig.key && sortConfig.key.toLowerCase().includes("id")
-                        ? "background.surface"
-                        : undefined,
+                        ? background.surface
+                        : background.alt,
                   }}
                 >
                   {log.id}
@@ -338,7 +342,7 @@ const LogsTable: React.FC<LogsTableProps> = ({ data, isLoading = false, paginate
                     backgroundColor:
                       sortConfig.key && sortConfig.key.toLowerCase().includes("timestamp")
                         ? "background.surface"
-                        : undefined,
+                        : "inherit",
                   }}
                 >
                   {formatTimestamp(log.timestamp)}
@@ -351,7 +355,7 @@ const LogsTable: React.FC<LogsTableProps> = ({ data, isLoading = false, paginate
                     backgroundColor:
                       sortConfig.key && sortConfig.key.toLowerCase().includes("state")
                         ? "background.surface"
-                        : undefined,
+                        : "inherit",
                   }}
                 >
                   <StateBadge state={log.state} />
@@ -364,7 +368,7 @@ const LogsTable: React.FC<LogsTableProps> = ({ data, isLoading = false, paginate
                     backgroundColor:
                       sortConfig.key && sortConfig.key.toLowerCase().includes("description")
                         ? "background.surface"
-                        : undefined,
+                        : "inherit",
                   }}
                 >
                   {log.description}
@@ -380,7 +384,7 @@ const LogsTable: React.FC<LogsTableProps> = ({ data, isLoading = false, paginate
                     backgroundColor:
                       sortConfig.key && sortConfig.key.toLowerCase().includes("function")
                         ? "background.surface"
-                        : undefined,
+                        : "inherit",
                   }}
                 >
                   {log.functionName}
@@ -396,7 +400,7 @@ const LogsTable: React.FC<LogsTableProps> = ({ data, isLoading = false, paginate
                     backgroundColor:
                       sortConfig.key && sortConfig.key.toLowerCase().includes("file")
                         ? "background.surface"
-                        : undefined,
+                        : "inherit",
                   }}
                 >
                   {log.fileName}

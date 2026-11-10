@@ -1,11 +1,6 @@
-import { Box, Typography, Stack, Divider } from "@mui/material";
+import { Box, Typography, Chip, Stack, Divider } from "@mui/material";
 import { Check, FileText } from "lucide-react";
-import { brand, text, background, status } from "../../../themes/palette";
-import StatusBadge from "../../StatusBadge";
-import {
-  getDatasetCategoryVariant,
-  getDifficultyVariant,
-} from "../../../utils/datasetBadgeVariants";
+import { brand, text, background, status, accent } from "../../../themes/palette";
 
 // Re-export TemplateRow from this file to avoid circular dependency
 export interface TemplateRow {
@@ -31,6 +26,32 @@ const getPredominantDifficultyLabel = (diff?: {
   if (diff.hard >= diff.medium && diff.hard >= diff.easy) return "Hard";
   if (diff.medium >= diff.easy) return "Medium";
   return "Easy";
+};
+
+const getDifficultyStyles = (difficulty: string) => {
+  switch (difficulty) {
+    case "Easy":
+      return { backgroundColor: "#c8e6c9", color: "#388e3c" };
+    case "Medium":
+      return { backgroundColor: "#fff3e0", color: "#ef6c00" };
+    case "Hard":
+      return { backgroundColor: "#ffebee", color: "#c62828" };
+    default:
+      return { backgroundColor: "#e0e0e0", color: "#616161" };
+  }
+};
+
+const getCategoryStyles = (category: string) => {
+  switch (category) {
+    case "chatbot":
+      return { backgroundColor: "#CCFBF1", color: "#0D9488" };
+    case "rag":
+      return { backgroundColor: "#E0E7FF", color: "#3730A3" };
+    case "agent":
+      return { backgroundColor: "#FEE2E2", color: "#DC2626" };
+    default:
+      return { backgroundColor: `${background.hover}`, color: `${status.default.text}` };
+  }
 };
 
 export interface TemplatesListProps {
@@ -70,11 +91,11 @@ const TemplatesList: React.FC<TemplatesListProps> = ({
           "borderColor": isSelected ? `${brand.primary}` : `${status.default.border}`,
           "borderRadius": "8px",
           "cursor": "pointer",
-          "backgroundColor": isSelected ? background.selected : `${background.main}`,
+          "backgroundColor": isSelected ? "#F0FDF4" : `${background.main}`,
           "transition": "all 0.15s ease",
           "&:hover": {
             borderColor: `${brand.primary}`,
-            backgroundColor: isSelected ? background.selected : `${background.accent}`,
+            backgroundColor: isSelected ? "#F0FDF4" : `${background.accent}`,
           },
         }}
       >
@@ -101,7 +122,7 @@ const TemplatesList: React.FC<TemplatesListProps> = ({
               sx={{
                 fontSize: compact ? "12px" : "13px",
                 fontWeight: 500,
-                color: text.primary,
+                color: text.secondary,
                 whiteSpace: "nowrap",
                 overflow: "hidden",
                 textOverflow: "ellipsis",
@@ -124,7 +145,7 @@ const TemplatesList: React.FC<TemplatesListProps> = ({
             )}
           </Box>
           <Stack direction="row" alignItems="center" spacing={0.5} sx={{ flexShrink: 0 }}>
-            <StatusBadge
+            <Chip
               label={
                 template.category === "rag"
                   ? "RAG"
@@ -133,19 +154,30 @@ const TemplatesList: React.FC<TemplatesListProps> = ({
                     : "Agent"
               }
               size="small"
-              uppercase={false}
-              variant={getDatasetCategoryVariant(template.category)}
+              sx={{
+                height: compact ? "18px" : "20px",
+                fontSize: compact ? "9px" : "10px",
+                fontWeight: 500,
+                borderRadius: "4px",
+                ...getCategoryStyles(template.category),
+              }}
             />
             {template.test_count && (
               <Typography sx={{ fontSize: compact ? "10px" : "11px", color: `${text.disabled}` }}>
                 {template.test_count}
               </Typography>
             )}
-            <StatusBadge
+            <Chip
               label={difficultyLabel}
               size="small"
-              uppercase={false}
-              variant={getDifficultyVariant(difficultyLabel)}
+              sx={{
+                ...getDifficultyStyles(difficultyLabel),
+                "height": compact ? "18px" : "20px",
+                "fontSize": compact ? "9px" : "10px",
+                "fontWeight": 500,
+                "borderRadius": "4px",
+                "& .MuiChip-label": { px: 0.75 },
+              }}
             />
             {isSelected && <Check size={14} color={brand.primary} />}
           </Stack>
@@ -193,11 +225,16 @@ const TemplatesList: React.FC<TemplatesListProps> = ({
                 >
                   Multi-Turn Conversations
                 </Typography>
-                <StatusBadge
-                  label={String(multiTurn.length)}
+                <Chip
+                  label={multiTurn.length}
                   size="small"
-                  uppercase={false}
-                  variant="info"
+                  sx={{
+                    "height": "16px",
+                    "fontSize": "10px",
+                    "backgroundColor": accent.blue.bg,
+                    "color": accent.blue.text,
+                    "& .MuiChip-label": { px: 0.75 },
+                  }}
                 />
               </Stack>
               <Stack spacing={0.75}>
@@ -224,11 +261,16 @@ const TemplatesList: React.FC<TemplatesListProps> = ({
                 >
                   Single-Turn Prompts
                 </Typography>
-                <StatusBadge
-                  label={String(singleTurn.length)}
+                <Chip
+                  label={singleTurn.length}
                   size="small"
-                  uppercase={false}
-                  variant="warning"
+                  sx={{
+                    "height": "16px",
+                    "fontSize": "10px",
+                    "backgroundColor": "#FEF3C7",
+                    "color": accent.amber.text,
+                    "& .MuiChip-label": { px: 0.75 },
+                  }}
                 />
               </Stack>
               <Stack spacing={0.75}>
@@ -255,11 +297,16 @@ const TemplatesList: React.FC<TemplatesListProps> = ({
                 >
                   Simulated Conversations
                 </Typography>
-                <StatusBadge
-                  label={String(simulated.length)}
+                <Chip
+                  label={simulated.length}
                   size="small"
-                  uppercase={false}
-                  variant="accent-purple"
+                  sx={{
+                    "height": "16px",
+                    "fontSize": "10px",
+                    "backgroundColor": "#EDE9FE",
+                    "color": "#6D28D9",
+                    "& .MuiChip-label": { px: 0.75 },
+                  }}
                 />
               </Stack>
               <Stack spacing={0.75}>
@@ -282,4 +329,18 @@ const TemplatesList: React.FC<TemplatesListProps> = ({
 };
 
 export default TemplatesList;
-export { TemplatesList, getPredominantDifficultyLabel };
+export { TemplatesList, getPredominantDifficultyLabel, getDifficultyStyles, getCategoryStyles };
+
+// Re-export getTypeStyles (same logic, re-implemented for co-location)
+export const getTypeStyles = (type?: string) => {
+  switch (type) {
+    case "single-turn":
+      return { backgroundColor: "#FEF3C7", color: accent.amber.text };
+    case "multi-turn":
+      return { backgroundColor: accent.blue.bg, color: accent.blue.text };
+    case "simulated":
+      return { backgroundColor: "#EDE9FE", color: "#6D28D9" };
+    default:
+      return { backgroundColor: `${background.hover}`, color: `${status.default.text}` };
+  }
+};
