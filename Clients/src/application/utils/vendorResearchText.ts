@@ -31,6 +31,7 @@ import { fill } from "../../i18n/fill";
 import type {
   BackfilledCredibilityBasis,
   CategorySummaryEntry,
+  CoverageSource,
   CredibilityBasis,
   CredibilityLabel,
   CredibilityRule,
@@ -457,6 +458,29 @@ const DATABASE_NAMES: Record<RecordSourceId, string> = {
   nhtsa_sgo: "NHTSA Standing General Order crash reports",
   fda_ai_devices: "FDA list of AI-enabled medical devices",
   fda_device_recalls: "FDA recalls of AI-enabled medical devices",
+  canada_sema: "Consolidated Canadian Autonomous Sanctions List",
+  california_breaches: "California Attorney General data breach list",
+  uk_ofsi: "UK OFSI financial sanctions enforcement notices",
+  charlotin: "AI Hallucination Cases database",
+  ftc_penalties: "FTC civil penalty cases",
+  piperoll: "PipeRoll Agent Incident Registry",
+  eu_dg_comp: "European Commission competition cases",
+  disclose_io: "disclose.io program list",
+  uk_cma: "UK Competition and Markets Authority cases",
+  canada_ai_register: "Government of Canada AI Register",
+  ftc_competition: "FTC nonmerger enforcement actions",
+  omb_ai_inventory: "US federal AI use case inventory",
+  co_sic_penalties: "Colombia SIC consumer protection sanctions",
+  uk_atrs: "UK Algorithmic Transparency Recording Standard records",
+  nhtsa_recalls: "NHTSA vehicle and equipment recalls",
+  fmti: "Foundation Model Transparency Index",
+  uk_mhra: "UK MHRA field safety notice lists",
+  nl_algoritmeregister: "Dutch Algorithm Register",
+  nhtsa_odi: "NHTSA defect investigations",
+  fedramp: "FedRAMP Marketplace",
+  epoch_ai: "Epoch AI Data on AI Models",
+  c2pa_conforming: "C2PA Conforming Products List",
+  gleif: "GLEIF LEI records",
 };
 
 /** The lists as "the {list} entry" names them. */
@@ -477,6 +501,29 @@ const LIST_NAMES: Record<RecordSourceId, string> = {
   nhtsa_sgo: "NHTSA Standing General Order crash reports",
   fda_ai_devices: "FDA list of AI-enabled medical devices",
   fda_device_recalls: "FDA device recall database",
+  canada_sema: "Consolidated Canadian Autonomous Sanctions List",
+  california_breaches: "California Attorney General data breach list",
+  uk_ofsi: "UK OFSI financial sanctions enforcement notices",
+  charlotin: "AI Hallucination Cases database",
+  ftc_penalties: "FTC civil penalty case list",
+  piperoll: "PipeRoll Agent Incident Registry",
+  eu_dg_comp: "European Commission antitrust, cartel and DMA case data",
+  disclose_io: "disclose.io vulnerability disclosure program list",
+  uk_cma: "UK Competition and Markets Authority cases",
+  canada_ai_register: "Government of Canada AI Register",
+  ftc_competition: "FTC nonmerger enforcement action list",
+  omb_ai_inventory: "US federal AI use case inventory",
+  co_sic_penalties: "Colombia SIC consumer protection sanctions list",
+  uk_atrs: "UK Algorithmic Transparency Records",
+  nhtsa_recalls: "NHTSA recalls file",
+  fmti: "Foundation Model Transparency Index",
+  uk_mhra: "UK MHRA field safety notice lists",
+  nl_algoritmeregister: "Dutch Algorithm Register",
+  nhtsa_odi: "NHTSA defect investigations file",
+  fedramp: "FedRAMP Marketplace data",
+  epoch_ai: "Epoch AI Data on AI Models",
+  c2pa_conforming: "C2PA Conforming Products List",
+  gleif: "GLEIF LEI records",
 };
 
 /** The sentence of a record its database no longer stands by, with the day of the copy and without. */
@@ -572,6 +619,29 @@ const firstRead = (sources: readonly CredibilitySource[]): CredibilitySource | u
 const isActive = (source: CredibilitySource): boolean =>
   source.record == null || source.record.status === "active";
 
+/**
+ * The lists whose records never raise a risk (the register and status lists of the prompt `vr-15`):
+ * context for another risk. A copy of `CONTEXT_ONLY_RECORD_SOURCES` of the server
+ * (services/vendorResearch/records/types.ts), so that the line of a label reads as the server's
+ * English line does.
+ */
+const CONTEXT_ONLY_LISTS: ReadonlySet<string> = new Set([
+  "canada_ai_register",
+  "omb_ai_inventory",
+  "nl_algoritmeregister",
+  "uk_atrs",
+  "epoch_ai",
+  "fmti",
+  "c2pa_conforming",
+  "fedramp",
+  "disclose_io",
+  "gleif",
+]);
+
+/** A record of a register is context for a finding, never what supports its label. */
+const isContextOnly = (source: CredibilitySource): boolean =>
+  source.record != null && CONTEXT_ONLY_LISTS.has(source.record.source);
+
 /** The trusted publishers, each once by its registry entry, named by the registry or the host. */
 function publishersOf(sources: readonly CredibilitySource[]): Array<string | null> {
   const names = new Map<string, string | null>();
@@ -599,13 +669,16 @@ const sourcesOf = (basis: CredibilityBasis): CredibilitySource[] =>
 
 /**
  * The sentence of the rule that decided a label, naming what the rule held with: the sources that
- * are neither contradicted nor a record no longer stood by, and the first of them that was read.
- * Empty for a rule this file does not know, and for a basis without the source its rule names.
+ * are neither contradicted, nor a record no longer stood by, nor a record of a register, and the
+ * first of them that was read. Empty for a rule this file does not know, and for a basis without
+ * the source its rule names. A finding that cites registers only has no such source: its line says
+ * so (rule `unverified`), and a register is never the record that the line of an `inactive` label
+ * names.
  */
 function ruleSentence(basis: CredibilityBasis, t: Translate, lang: string): string {
   const sources = sourcesOf(basis);
   const supporting = sources.filter(
-    (source) => source.reading !== "contradicted" && isActive(source),
+    (source) => source.reading !== "contradicted" && isActive(source) && !isContextOnly(source),
   );
   const strong = supporting.filter((source) => source.record?.match !== "weak");
 
@@ -705,6 +778,13 @@ function ruleSentence(basis: CredibilityBasis, t: Translate, lang: string): stri
         : fill(t("Low: the {list} entry matches the vendor by name only."), { list: t(list) });
     }
     case "unverified": {
+      // Nothing supports the label and what is cited is a register: say so, rather than that
+      // unverified sources report it (a register is not one, and a register entry raises no risk).
+      if (supporting.length === 0 && sources.some(isContextOnly)) {
+        return t(
+          "Low: only registers that list the vendor are cited, and a register entry is not evidence of a risk.",
+        );
+      }
       const hosts = joinedOnce(
         supporting
           .filter((source) => source.category === "unverified")
@@ -717,7 +797,8 @@ function ruleSentence(basis: CredibilityBasis, t: Translate, lang: string): stri
     case "self_claim":
       return t("Low: only the vendor's own claims support it.");
     case "inactive": {
-      const record = sources.find((source) => !isActive(source))?.record;
+      // A register never names itself in the line of a label: the record is one of another list.
+      const record = sources.find((source) => !isActive(source) && !isContextOnly(source))?.record;
       // The list that rejected the record's CVE, when another did: the CVE Program, say.
       const operator = labelFor(DATABASE_NAMES, record?.rejected_by ?? record?.source);
       const sentences = labelFor(INACTIVE_SENTENCES, record?.status);
@@ -732,7 +813,11 @@ function ruleSentence(basis: CredibilityBasis, t: Translate, lang: string): stri
   }
 }
 
-/** The day of the oldest out-of-date copy of the vendor risk database cited; null for none. */
+/**
+ * The day of the oldest out-of-date copy of the vendor risk database cited; null for none. The copy
+ * of a register is not counted: a register is context, never what the line of a label holds with,
+ * so its age is not the age of the source the line is about.
+ */
 function staleSentence(
   sources: readonly CredibilitySource[],
   t: Translate,
@@ -740,7 +825,9 @@ function staleSentence(
 ): string | null {
   const days = sources
     .flatMap((source) =>
-      source.record?.stale === true && typeof source.record.as_of === "string"
+      !isContextOnly(source) &&
+      source.record?.stale === true &&
+      typeof source.record.as_of === "string"
         ? [source.record.as_of]
         : [],
     )
@@ -854,7 +941,52 @@ const ATTRIBUTIONS: Record<VrdbSourceId, string> = {
     "NHTSA Standing General Order crash reports, US Department of Transportation. Counted by VerifyWise; NHTSA states the data may be incomplete or unverified.",
   fda_ai_devices: "FDA list of AI-enabled medical devices, US Food and Drug Administration",
   fda_device_recalls:
-    "FDA medical device recalls through openFDA, US Food and Drug Administration (CC0 1.0), joined by VerifyWise to the FDA list of AI-enabled medical devices.",
+    "FDA medical device recalls and enforcement reports through openFDA, US Food and Drug Administration (CC0 1.0), joined by VerifyWise to the FDA list of AI-enabled medical devices. Data provided by the U.S. Food and Drug Administration (https://open.fda.gov).",
+  canada_sema:
+    "Contains information licensed under the Open Government Licence - Canada (https://open.canada.ca/en/open-government-licence-canada). Source: Global Affairs Canada, Consolidated Canadian Autonomous Sanctions List. Not endorsed by the Government of Canada. Entries adapted by VerifyWise.",
+  california_breaches:
+    "Source: State of California Department of Justice, Office of the Attorney General, data security breach list. Not endorsed by the Department. Entries adapted by VerifyWise.",
+  uk_ofsi:
+    "UK Office of Financial Sanctions Implementation (HM Treasury) enforcement notices, published on GOV.UK. Contains public sector information licensed under the Open Government Licence v3.0. Adapted by VerifyWise; no endorsement by HM Treasury is implied.",
+  charlotin:
+    "AI Hallucination Cases Database, Damien Charlotin, https://www.damiencharlotin.com/hallucinations/. Licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Counted and adapted by VerifyWise; not endorsed by its author.",
+  ftc_penalties:
+    "Source: United States Federal Trade Commission, www.ftc.gov (consumer protection civil penalty cases, CC0 1.0). Not endorsed by the FTC. Entries adapted by VerifyWise.",
+  piperoll:
+    "PipeRoll Agent Incident Registry (piperoll.org), CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/); each record cites the PIR ids of the entries it shows and links the newest entry. Adapted by VerifyWise: titles shortened and edited, entries counted; not endorsed by PipeRoll.",
+  eu_dg_comp:
+    "Source: European Commission, DG Competition case data (open data), (c) European Union, reused under the Commission reuse notice (CC BY 4.0). Changes made by VerifyWise.",
+  disclose_io:
+    "disclose.io diodb (https://github.com/disclose/diodb), CC0 1.0 per its LICENSE, attributed as CC BY 4.0 per its README. Entries are community contributions; adapted by VerifyWise.",
+  uk_cma:
+    "UK Competition and Markets Authority cases, published on GOV.UK. Contains public sector information licensed under the Open Government Licence v3.0. Adapted by VerifyWise (party names extracted from case titles and cases counted); no endorsement by the Competition and Markets Authority is implied.",
+  canada_ai_register:
+    "Contains information licensed under the Open Government Licence - Canada (https://open.canada.ca/en/open-government-licence-canada). Source: Government of Canada AI Register (Minimum Viable Product), Treasury Board of Canada Secretariat. Adapted by VerifyWise; not endorsed by the Government of Canada.",
+  ftc_competition:
+    "Source: United States Federal Trade Commission, www.ftc.gov (nonmerger enforcement actions, CC0 1.0). Not endorsed by the FTC. Parties read from the matter titles and entries adapted by VerifyWise.",
+  omb_ai_inventory:
+    "Source: US Office of Management and Budget, 2025 Federal Agency AI Use Case Inventory (compiled from agencies' public inventories). Entries adapted by VerifyWise; not endorsed by OMB.",
+  co_sic_penalties:
+    "Fuente: Portal de Datos Abiertos www.datos.gov.co (Superintendencia de Industria y Comercio, consumer protection sanctions), CC BY-SA 4.0. Adapted by VerifyWise; the adapted records are shared under CC BY-SA 4.0.",
+  uk_atrs:
+    "UK Algorithmic Transparency Recording Standard records, published on GOV.UK. Contains public sector information licensed under the Open Government Licence v3.0. Adapted by VerifyWise (supplier names extracted and records counted); no endorsement by the Cabinet Office or the publishing bodies is implied.",
+  nhtsa_recalls:
+    "Source: US National Highway Traffic Safety Administration, recalls flat file. Not endorsed by NHTSA. Entries adapted by VerifyWise.",
+  fmti: "Foundation Model Transparency Index (Bommasani, Klyman et al.), Stanford Center for Research on Foundation Models, CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Indicators counted by VerifyWise from the published scores file; not endorsed by Stanford CRFM.",
+  uk_mhra:
+    "UK Medicines and Healthcare products Regulatory Agency field safety notice lists, published on GOV.UK. Contains public sector information licensed under the Open Government Licence v3.0. Adapted by VerifyWise (entries counted by manufacturer); no endorsement by the MHRA is implied.",
+  nl_algoritmeregister:
+    "Bron: Algoritmeregister van de Nederlandse overheid (algoritmes.overheid.nl); each record names up to three of the public bodies that published the descriptions it counts and links the register's search, which lists them all. Entries adapted by VerifyWise; not endorsed by the Dutch government.",
+  nhtsa_odi:
+    "Source: US National Highway Traffic Safety Administration, Office of Defects Investigation (defect investigations flat file). Not endorsed by NHTSA. Entries adapted by VerifyWise.",
+  fedramp:
+    "Source: US General Services Administration, FedRAMP Marketplace data. Not endorsed by GSA or FedRAMP. Entries adapted by VerifyWise.",
+  epoch_ai:
+    "Epoch AI, 'Data on AI models', published online at epoch.ai (https://epoch.ai/data/ai-models-documentation), under the Creative Commons Attribution licence. Counted and adapted by VerifyWise; not endorsed by Epoch AI.",
+  c2pa_conforming:
+    "C2PA Conforming Products List, c2pa-org/conformance-public repository, CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Adapted by VerifyWise; not endorsed by the C2PA.",
+  gleif:
+    "GLEIF LEI data (CC0 1.0), from the Global Legal Entity Identifier Foundation's API. VerifyWise is not associated with GLEIF, and GLEIF does not provide, support, authorise or endorse VerifyWise or its products.",
 };
 
 /**
@@ -870,15 +1002,51 @@ export function joinAttributions(attributions: readonly string[]): string {
     .join("; ");
 }
 
+/**
+ * The lists added on 2026-11-10 but Canada's sanctions list: a run names one of them only when it
+ * was offered a record of it, and credits it only then; the others it counts. The shipped lists
+ * and the sanctions lists keep their lines.
+ */
+const LISTS_SHOWN_WHEN_FOUND: ReadonlySet<string> = new Set([
+  "uk_ofsi",
+  "ftc_penalties",
+  "eu_dg_comp",
+  "uk_cma",
+  "ftc_competition",
+  "co_sic_penalties",
+  "nhtsa_recalls",
+  "uk_mhra",
+  "nhtsa_odi",
+  "california_breaches",
+  "charlotin",
+  "piperoll",
+  "canada_ai_register",
+  "omb_ai_inventory",
+  "uk_atrs",
+  "nl_algoritmeregister",
+  "epoch_ai",
+  "fmti",
+  "fedramp",
+  "c2pa_conforming",
+  "disclose_io",
+  "gleif",
+]);
+
 export interface CoverageText {
-  /** The lists and the databases the run asked, with what each list held; null for none. */
+  /**
+   * The lists and the databases the run asked, with what each list held; null for none. A list of
+   * those shown when found that held nothing is not named: the last item counts them.
+   */
   checked: string | null;
   /**
    * The lists and the databases the run could not check (a list with no copy, a lookup that
    * failed): its findings rest on none of them; null for none.
    */
   notChecked: string | null;
-  /** The lists that held nothing of the vendor, as of the days of their copies; null for none. */
+  /**
+   * The lists that held nothing of the vendor, as of the days of their copies; null for none. The
+   * lists shown when found are not in it: `checked` counts them.
+   */
   none: string | null;
   /** A line for each list the run asked whose copy is out of date. */
   stale: string[];
@@ -886,7 +1054,10 @@ export interface CoverageText {
   cited: string;
   /** True when every list of the vendor risk database was turned off. */
   off: boolean;
-  /** What each list the run asked is credited with, in its owner's words. */
+  /**
+   * What each list the run asked is credited with, in its owner's words. A list shown when found is
+   * credited only when it offered a record.
+   */
   attributions: string[];
 }
 
@@ -896,6 +1067,9 @@ export interface CoverageText {
  * from ids, outcomes, days and counts alone: the names and the attributions are the screen's own,
  * and a list or a database this file does not know is left out. A database the vendor risk
  * database reads through (the NVD) is a list here: its count, the day of its answer, its notice.
+ * A list added on 2026-11-10 (`LISTS_SHOWN_WHEN_FOUND`) is named only when the run was offered a
+ * record of it; a run that asked such lists and found nothing counts them in one item, so that the
+ * lines stay short. A list that could not be checked is always named.
  */
 export function coverageLines(coverage: RunCoverage, t: Translate, lang: string): CoverageText {
   const lists = (Array.isArray(coverage?.sources) ? coverage.sources : []).filter(
@@ -914,22 +1088,44 @@ export function coverageLines(coverage: RunCoverage, t: Translate, lang: string)
   const nameOf = (id: RecordSourceId): string => t(DATABASE_NAMES[id]);
   // The lists the run asked: what its findings can rest on.
   const asked = lists.filter((source) => source.checked === true);
+  const heldRecords = (source: CoverageSource): boolean =>
+    countOf(source.strong) + countOf(source.weak) > 0;
+  const shownWhenFound = (source: CoverageSource): boolean => LISTS_SHOWN_WHEN_FOUND.has(source.id);
 
+  // A list shown when found is named only when it held a record; the others are counted in a last
+  // item, so that the line does not grow with every list that was asked and held nothing.
+  const named = asked.filter((source) => !shownWhenFound(source) || heldRecords(source));
+  const quiet = asked.length - named.length;
   const checked = [
-    ...asked.map(
+    ...named.map(
       (source) => `${nameOf(source.id)} (${countOf(source.strong) + countOf(source.weak)})`,
     ),
     ...lookups.map((lookup) => nameOf(lookup.id)),
   ];
-  // What the run could not check: a silent gap in the screening would read as a clean one.
+  if (quiet > 0) {
+    const key =
+      checked.length === 0
+        ? quiet === 1
+          ? "1 list with no records"
+          : "{count} lists with no records"
+        : quiet === 1
+          ? "1 more list with no records"
+          : "{count} more lists with no records";
+    checked.push(fill(t(key), { count: quiet }));
+  }
+  // What the run could not check: a silent gap in the screening would read as a clean one. Every
+  // list that failed is named, whichever group it is in.
   const failed = [
     ...lists.filter((source) => source.outcome === "failed").map((source) => nameOf(source.id)),
     ...known.filter((lookup) => lookup.outcome === "failed").map((lookup) => nameOf(lookup.id)),
   ];
-  const empty = lists.flatMap((source) => {
-    const date = source.outcome === "none" ? dayOf(source.last_success_at, lang) : null;
-    return date === null ? [] : [{ name: nameOf(source.id), date }];
-  });
+  // The lists shown when found that held nothing are in the count above, not in this line.
+  const empty = lists
+    .filter((source) => !shownWhenFound(source))
+    .flatMap((source) => {
+      const date = source.outcome === "none" ? dayOf(source.last_success_at, lang) : null;
+      return date === null ? [] : [{ name: nameOf(source.id), date }];
+    });
   const cited = coverage?.cited;
 
   return {
@@ -969,6 +1165,17 @@ export function coverageLines(coverage: RunCoverage, t: Translate, lang: string)
       },
     ),
     off: lists.length > 0 && lists.every((source) => source.outcome === "off"),
-    attributions: [...new Set(asked.map((source) => ATTRIBUTIONS[source.id]))],
+    // The credit follows the data: a list shown when found is credited only when it offered a
+    // record, whether or not it failed (a read-through list offers the records it had stored); a
+    // run that offered none of a list shows nothing of it and owes it nothing.
+    attributions: [
+      ...new Set(
+        lists
+          .filter((source) =>
+            shownWhenFound(source) ? heldRecords(source) : source.checked === true,
+          )
+          .map((source) => ATTRIBUTIONS[source.id]),
+      ),
+    ],
   };
 }

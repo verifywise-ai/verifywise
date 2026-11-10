@@ -69,7 +69,30 @@ export type RecordSourceId =
   | "atlas"
   | "nhtsa_sgo"
   | "fda_ai_devices"
-  | "fda_device_recalls";
+  | "fda_device_recalls"
+  | "canada_sema"
+  | "california_breaches"
+  | "uk_ofsi"
+  | "charlotin"
+  | "ftc_penalties"
+  | "piperoll"
+  | "eu_dg_comp"
+  | "disclose_io"
+  | "uk_cma"
+  | "canada_ai_register"
+  | "ftc_competition"
+  | "omb_ai_inventory"
+  | "co_sic_penalties"
+  | "uk_atrs"
+  | "nhtsa_recalls"
+  | "fmti"
+  | "uk_mhra"
+  | "nl_algoritmeregister"
+  | "nhtsa_odi"
+  | "fedramp"
+  | "epoch_ai"
+  | "c2pa_conforming"
+  | "gleif";
 
 /**
  * The lists the vendor risk database mirrors, and the databases it reads through (the NVD, the
@@ -93,7 +116,30 @@ export type VrdbSourceId =
   | "atlas"
   | "nhtsa_sgo"
   | "fda_ai_devices"
-  | "fda_device_recalls";
+  | "fda_device_recalls"
+  | "canada_sema"
+  | "california_breaches"
+  | "uk_ofsi"
+  | "charlotin"
+  | "ftc_penalties"
+  | "piperoll"
+  | "eu_dg_comp"
+  | "disclose_io"
+  | "uk_cma"
+  | "canada_ai_register"
+  | "ftc_competition"
+  | "omb_ai_inventory"
+  | "co_sic_penalties"
+  | "uk_atrs"
+  | "nhtsa_recalls"
+  | "fmti"
+  | "uk_mhra"
+  | "nl_algoritmeregister"
+  | "nhtsa_odi"
+  | "fedramp"
+  | "epoch_ai"
+  | "c2pa_conforming"
+  | "gleif";
 
 /**
  * What a run learned from one source of records: records were found, none were, the lookup

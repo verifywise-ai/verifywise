@@ -192,6 +192,8 @@ export const de: Record<string, string> = {
   "Low: only unverified sources report it ({hosts}).":
     "Niedrig: Nur ungeprüfte Quellen berichten darüber ({hosts}).",
   "Low: only unverified sources report it.": "Niedrig: Nur ungeprüfte Quellen berichten darüber.",
+  "Low: only registers that list the vendor are cited, and a register entry is not evidence of a risk.":
+    "Niedrig: Es werden nur Register zitiert, die den Anbieter verzeichnen, und ein Registereintrag ist kein Beleg für ein Risiko.",
   "Low: only the vendor's own claims support it.":
     "Niedrig: Nur die eigenen Angaben des Anbieters stützen es.",
   "Low: {operator} withdrew the record on {date}.":
@@ -231,7 +233,55 @@ export const de: Record<string, string> = {
   "FDA list of AI-enabled medical devices": "FDA-Liste KI-gestützter Medizinprodukte",
   "FDA recalls of AI-enabled medical devices": "FDA-Rückrufe KI-gestützter Medizinprodukte",
   "FDA device recall database": "FDA-Rückrufdatenbank für Medizinprodukte",
+  "Consolidated Canadian Autonomous Sanctions List":
+    "Konsolidierte kanadische Liste autonomer Sanktionen",
+  "UK OFSI financial sanctions enforcement notices":
+    "Durchsetzungsmitteilungen des britischen OFSI zu Finanzsanktionen",
+  "FTC civil penalty cases": "Zivilstrafverfahren der FTC",
+  "FTC civil penalty case list": "Liste der Zivilstrafverfahren der FTC",
+  "European Commission competition cases": "Wettbewerbsverfahren der Europäischen Kommission",
+  "European Commission antitrust, cartel and DMA case data":
+    "Falldaten der Europäischen Kommission zu Kartellrecht, Kartellen und DMA",
+  "UK Competition and Markets Authority cases":
+    "Verfahren der britischen Competition and Markets Authority",
+  "FTC nonmerger enforcement actions":
+    "Kartellrechtliche Durchsetzungsmaßnahmen der FTC (ohne Fusionen)",
+  "FTC nonmerger enforcement action list":
+    "Liste kartellrechtlicher Durchsetzungsmaßnahmen der FTC (ohne Fusionen)",
+  "Colombia SIC consumer protection sanctions":
+    "Verbraucherschutzsanktionen der kolumbianischen SIC",
+  "Colombia SIC consumer protection sanctions list":
+    "Liste der Verbraucherschutzsanktionen der kolumbianischen SIC",
+  "NHTSA vehicle and equipment recalls": "NHTSA-Rückrufe von Fahrzeugen und Ausrüstung",
+  "NHTSA recalls file": "NHTSA-Rückrufdatei",
+  "UK MHRA field safety notice lists":
+    "Listen der Sicherheitsmitteilungen im Feld der britischen MHRA",
+  "NHTSA defect investigations": "NHTSA-Mängeluntersuchungen",
+  "NHTSA defect investigations file": "NHTSA-Datei der Mängeluntersuchungen",
+  "California Attorney General data breach list":
+    "Liste der Datenschutzverletzungen beim Attorney General von Kalifornien",
+  "AI Hallucination Cases database": "Datenbank AI Hallucination Cases",
+  "PipeRoll Agent Incident Registry": "PipeRoll Agent Incident Registry",
+  "Government of Canada AI Register": "KI-Register der Regierung von Kanada",
+  "US federal AI use case inventory": "Verzeichnis der KI-Anwendungsfälle der US-Bundesbehörden",
+  "UK Algorithmic Transparency Recording Standard records":
+    "Einträge nach dem britischen Algorithmic Transparency Recording Standard",
+  "UK Algorithmic Transparency Records": "Britische Algorithmic Transparency Records",
+  "Dutch Algorithm Register": "Niederländisches Algorithmenregister",
+  "Epoch AI Data on AI Models": "Epoch AI Data on AI Models",
+  "Foundation Model Transparency Index": "Foundation Model Transparency Index",
+  "FedRAMP Marketplace": "FedRAMP Marketplace",
+  "FedRAMP Marketplace data": "FedRAMP-Marketplace-Daten",
+  "C2PA Conforming Products List": "C2PA Conforming Products List",
+  "disclose.io program list": "disclose.io-Programmliste",
+  "disclose.io vulnerability disclosure program list":
+    "disclose.io-Liste der Programme zur Offenlegung von Schwachstellen",
+  "GLEIF LEI records": "GLEIF-LEI-Datensätze",
   "Checked: {sources}": "Geprüft: {sources}",
+  "{count} more lists with no records": "{count} weitere Listen ohne Einträge",
+  "1 more list with no records": "1 weitere Liste ohne Einträge",
+  "{count} lists with no records": "{count} Listen ohne Einträge",
+  "1 list with no records": "1 Liste ohne Einträge",
   "Not checked: {sources}": "Nicht geprüft: {sources}",
   "No records in {sources} as of {dates}": "Keine Einträge ({sources}), Stand: {dates}",
   "{source}: last updated {date}, not up to date":
@@ -510,6 +560,8 @@ export const fr: Record<string, string> = {
     "Faible : seules des sources non vérifiées le signalent ({hosts}).",
   "Low: only unverified sources report it.":
     "Faible : seules des sources non vérifiées le signalent.",
+  "Low: only registers that list the vendor are cited, and a register entry is not evidence of a risk.":
+    "Faible : seuls des registres qui répertorient le fournisseur sont cités, et une entrée de registre n'est pas la preuve d'un risque.",
   "Low: only the vendor's own claims support it.":
     "Faible : seules les affirmations du fournisseur lui-même l'étayent.",
   "Low: {operator} withdrew the record on {date}.":
@@ -551,7 +603,55 @@ export const fr: Record<string, string> = {
   "FDA recalls of AI-enabled medical devices":
     "rappels de dispositifs médicaux dotés d'IA enregistrés par la FDA",
   "FDA device recall database": "base de données de la FDA sur les rappels de dispositifs médicaux",
+  "Consolidated Canadian Autonomous Sanctions List":
+    "liste consolidée des sanctions autonomes canadiennes",
+  "UK OFSI financial sanctions enforcement notices":
+    "avis d'application des sanctions financières de l'OFSI (Royaume-Uni)",
+  "FTC civil penalty cases": "affaires de sanctions civiles de la FTC",
+  "FTC civil penalty case list": "liste des affaires de sanctions civiles de la FTC",
+  "European Commission competition cases": "affaires de concurrence de la Commission européenne",
+  "European Commission antitrust, cartel and DMA case data":
+    "données de la Commission européenne sur les affaires d'antitrust, de cartels et du DMA",
+  "UK Competition and Markets Authority cases":
+    "affaires de la Competition and Markets Authority (Royaume-Uni)",
+  "FTC nonmerger enforcement actions":
+    "actions de la FTC en matière de concurrence (hors concentrations)",
+  "FTC nonmerger enforcement action list":
+    "liste des actions de la FTC en matière de concurrence (hors concentrations)",
+  "Colombia SIC consumer protection sanctions":
+    "sanctions de protection des consommateurs de la SIC (Colombie)",
+  "Colombia SIC consumer protection sanctions list":
+    "liste des sanctions de protection des consommateurs de la SIC (Colombie)",
+  "NHTSA vehicle and equipment recalls": "rappels de véhicules et d'équipements de la NHTSA",
+  "NHTSA recalls file": "fichier des rappels de la NHTSA",
+  "UK MHRA field safety notice lists": "listes d'avis de sécurité de la MHRA (Royaume-Uni)",
+  "NHTSA defect investigations": "enquêtes de la NHTSA sur les défauts",
+  "NHTSA defect investigations file": "fichier des enquêtes de la NHTSA sur les défauts",
+  "California Attorney General data breach list":
+    "liste des violations de données du procureur général de Californie",
+  "AI Hallucination Cases database": "base de données AI Hallucination Cases",
+  "PipeRoll Agent Incident Registry": "PipeRoll Agent Incident Registry",
+  "Government of Canada AI Register": "registre de l'IA du gouvernement du Canada",
+  "US federal AI use case inventory":
+    "inventaire des cas d'usage de l'IA de l'administration fédérale américaine",
+  "UK Algorithmic Transparency Recording Standard records":
+    "fiches de l'Algorithmic Transparency Recording Standard (Royaume-Uni)",
+  "UK Algorithmic Transparency Records": "fiches de transparence algorithmique (Royaume-Uni)",
+  "Dutch Algorithm Register": "registre néerlandais des algorithmes",
+  "Epoch AI Data on AI Models": "Epoch AI Data on AI Models",
+  "Foundation Model Transparency Index": "Foundation Model Transparency Index",
+  "FedRAMP Marketplace": "FedRAMP Marketplace",
+  "FedRAMP Marketplace data": "données du FedRAMP Marketplace",
+  "C2PA Conforming Products List": "C2PA Conforming Products List",
+  "disclose.io program list": "liste des programmes disclose.io",
+  "disclose.io vulnerability disclosure program list":
+    "liste disclose.io des programmes de divulgation de vulnérabilités",
+  "GLEIF LEI records": "enregistrements LEI de la GLEIF",
   "Checked: {sources}": "Sources consultées : {sources}",
+  "{count} more lists with no records": "{count} autres listes sans enregistrement",
+  "1 more list with no records": "1 autre liste sans enregistrement",
+  "{count} lists with no records": "{count} listes sans enregistrement",
+  "1 list with no records": "1 liste sans enregistrement",
   "Not checked: {sources}": "Sources non consultées : {sources}",
   "No records in {sources} as of {dates}": "Aucun enregistrement ({sources}) à la date du {dates}",
   "{source}: last updated {date}, not up to date":
@@ -827,6 +927,8 @@ export const es: Record<string, string> = {
   "Low: only unverified sources report it ({hosts}).":
     "Bajo: solo fuentes sin verificar lo informan ({hosts}).",
   "Low: only unverified sources report it.": "Bajo: solo fuentes sin verificar lo informan.",
+  "Low: only registers that list the vendor are cited, and a register entry is not evidence of a risk.":
+    "Bajo: solo se citan registros públicos en los que figura el proveedor, y una entrada de un registro no es prueba de un riesgo.",
   "Low: only the vendor's own claims support it.":
     "Bajo: solo las afirmaciones del propio proveedor lo respaldan.",
   "Low: {operator} withdrew the record on {date}.":
@@ -868,7 +970,56 @@ export const es: Record<string, string> = {
   "FDA recalls of AI-enabled medical devices":
     "retiradas de productos sanitarios con IA registradas por la FDA",
   "FDA device recall database": "base de datos de la FDA sobre retiradas de productos sanitarios",
+  "Consolidated Canadian Autonomous Sanctions List":
+    "lista consolidada de sanciones autónomas de Canadá",
+  "UK OFSI financial sanctions enforcement notices":
+    "avisos de aplicación de sanciones financieras de la OFSI (Reino Unido)",
+  "FTC civil penalty cases": "casos de sanciones civiles de la FTC",
+  "FTC civil penalty case list": "lista de casos de sanciones civiles de la FTC",
+  "European Commission competition cases": "asuntos de competencia de la Comisión Europea",
+  "European Commission antitrust, cartel and DMA case data":
+    "datos de la Comisión Europea sobre asuntos de defensa de la competencia, cárteles y DMA",
+  "UK Competition and Markets Authority cases":
+    "casos de la Competition and Markets Authority (Reino Unido)",
+  "FTC nonmerger enforcement actions":
+    "acciones de la FTC en materia de competencia (sin fusiones)",
+  "FTC nonmerger enforcement action list":
+    "lista de acciones de la FTC en materia de competencia (sin fusiones)",
+  "Colombia SIC consumer protection sanctions":
+    "sanciones de protección al consumidor de la SIC (Colombia)",
+  "Colombia SIC consumer protection sanctions list":
+    "lista de sanciones de protección al consumidor de la SIC (Colombia)",
+  "NHTSA vehicle and equipment recalls": "llamadas a revisión de vehículos y equipos de la NHTSA",
+  "NHTSA recalls file": "archivo de llamadas a revisión de la NHTSA",
+  "UK MHRA field safety notice lists":
+    "listas de notas de aviso de seguridad de la MHRA (Reino Unido)",
+  "NHTSA defect investigations": "investigaciones de defectos de la NHTSA",
+  "NHTSA defect investigations file": "archivo de investigaciones de defectos de la NHTSA",
+  "California Attorney General data breach list":
+    "lista de brechas de datos del fiscal general de California",
+  "AI Hallucination Cases database": "base de datos AI Hallucination Cases",
+  "PipeRoll Agent Incident Registry": "PipeRoll Agent Incident Registry",
+  "Government of Canada AI Register": "registro de IA del Gobierno de Canadá",
+  "US federal AI use case inventory":
+    "inventario de casos de uso de IA del Gobierno federal de EE. UU.",
+  "UK Algorithmic Transparency Recording Standard records":
+    "registros del Algorithmic Transparency Recording Standard (Reino Unido)",
+  "UK Algorithmic Transparency Records": "registros de transparencia algorítmica (Reino Unido)",
+  "Dutch Algorithm Register": "registro neerlandés de algoritmos",
+  "Epoch AI Data on AI Models": "Epoch AI Data on AI Models",
+  "Foundation Model Transparency Index": "Foundation Model Transparency Index",
+  "FedRAMP Marketplace": "FedRAMP Marketplace",
+  "FedRAMP Marketplace data": "datos del FedRAMP Marketplace",
+  "C2PA Conforming Products List": "C2PA Conforming Products List",
+  "disclose.io program list": "lista de programas de disclose.io",
+  "disclose.io vulnerability disclosure program list":
+    "lista de disclose.io de programas de divulgación de vulnerabilidades",
+  "GLEIF LEI records": "registros LEI de la GLEIF",
   "Checked: {sources}": "Fuentes consultadas: {sources}",
+  "{count} more lists with no records": "{count} listas más sin registros",
+  "1 more list with no records": "1 lista más sin registros",
+  "{count} lists with no records": "{count} listas sin registros",
+  "1 list with no records": "1 lista sin registros",
   "Not checked: {sources}": "Fuentes no consultadas: {sources}",
   "No records in {sources} as of {dates}": "Ningún registro ({sources}) a fecha de {dates}",
   "{source}: last updated {date}, not up to date":

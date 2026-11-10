@@ -3333,7 +3333,7 @@ describe("the coverage of the latest run", () => {
     const CSL_NOTICE =
       "This product uses data from the International Trade Administration's Consolidated Screening List but is not endorsed or certified by the International Trade Administration. Entries adapted by VerifyWise.";
     const RECALLS_NOTICE =
-      "FDA medical device recalls through openFDA, US Food and Drug Administration (CC0 1.0), joined by VerifyWise to the FDA list of AI-enabled medical devices.";
+      "FDA medical device recalls and enforcement reports through openFDA, US Food and Drug Administration (CC0 1.0), joined by VerifyWise to the FDA list of AI-enabled medical devices. Data provided by the U.S. Food and Drug Administration (https://open.fda.gov).";
 
     it("lists the two lists the run checked, with their notices as their owners wrote them", async () => {
       mocks.latest.mockResolvedValue(
@@ -3423,6 +3423,68 @@ describe("the coverage of the latest run", () => {
       expect(await screen.findByText("Public databases turned off")).toBeInTheDocument();
       expect(screen.queryByText(/^Checked:/)).not.toBeInTheDocument();
       expect(screen.queryByText(/^Data sources:/)).not.toBeInTheDocument();
+    });
+  });
+
+  describe("with the lists added on 2026-11-10", () => {
+    /** The notice of the UK OFSI list, as the server stores it (vrdb/sources.ts). */
+    const OFSI_NOTICE =
+      "UK Office of Financial Sanctions Implementation (HM Treasury) enforcement notices, published on GOV.UK. Contains public sector information licensed under the Open Government Licence v3.0. Adapted by VerifyWise; no endorsement by HM Treasury is implied.";
+
+    it("names the list that held a record, counts the ones that held none, and credits only the first", async () => {
+      mocks.latest.mockResolvedValue(
+        run({
+          coverage: coverage({
+            sources: [
+              listCopy("kev", { outcome: "found", strong: 1 }),
+              listCopy("uk_ofsi", { outcome: "found", weak: 1 }),
+              listCopy("charlotin"),
+              listCopy("epoch_ai"),
+              listCopy("gleif", {
+                mode: "read_through",
+                checked: false,
+                outcome: "failed",
+                last_success_at: null,
+              }),
+            ],
+            lookups: [],
+          }),
+        }),
+      );
+      renderSection({ route: WITH_VENDOR_7 });
+
+      expect(
+        await screen.findByText(
+          "Checked: CISA Known Exploited Vulnerabilities (1), UK OFSI financial sanctions enforcement notices (1), 2 more lists with no records",
+        ),
+      ).toBeInTheDocument();
+      // A list that could not be checked is always named: a silent gap would read as a clean check.
+      expect(screen.getByText("Not checked: GLEIF LEI records")).toBeInTheDocument();
+      // The lists that held nothing are counted, never named, and owe no credit.
+      expect(screen.queryByText(/AI Hallucination Cases/)).toBeNull();
+      expect(screen.queryByText(/Epoch AI/)).toBeNull();
+      expect(screen.queryByText(/^No records in/)).toBeNull();
+      const line = screen.getByText(
+        `Data sources: ${joinAttributions([ATTRIBUTIONS[0], OFSI_NOTICE])}`,
+      );
+      expect(line.closest("[data-vw-no-translate]")).not.toBeNull();
+    });
+
+    it("says nothing of the lists a run asked when none of them held a record, but counts them", async () => {
+      mocks.latest.mockResolvedValue(
+        run({
+          coverage: coverage({
+            sources: [listCopy("charlotin"), listCopy("epoch_ai"), listCopy("gleif")],
+            lookups: [],
+            cited: { official: 0, trusted_press: 0, vendor: 0, unverified: 0 },
+          }),
+        }),
+      );
+      renderSection({ route: WITH_VENDOR_7 });
+
+      expect(await screen.findByText("Checked: 3 lists with no records")).toBeInTheDocument();
+      expect(screen.queryByText(/^Data sources:/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/^Not checked:/)).not.toBeInTheDocument();
     });
   });
 

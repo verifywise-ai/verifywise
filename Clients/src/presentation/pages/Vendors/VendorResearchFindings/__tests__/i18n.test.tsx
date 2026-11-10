@@ -238,7 +238,7 @@ const CSL_AND_RECALLS = [
 const CSL_NOTICE =
   "This product uses data from the International Trade Administration's Consolidated Screening List but is not endorsed or certified by the International Trade Administration. Entries adapted by VerifyWise.";
 const RECALLS_NOTICE =
-  "FDA medical device recalls through openFDA, US Food and Drug Administration (CC0 1.0), joined by VerifyWise to the FDA list of AI-enabled medical devices.";
+  "FDA medical device recalls and enforcement reports through openFDA, US Food and Drug Administration (CC0 1.0), joined by VerifyWise to the FDA list of AI-enabled medical devices. Data provided by the U.S. Food and Drug Administration (https://open.fda.gov).";
 
 /**
  * A basis for every sentence the line of a credibility label can be, and the values the sentence
@@ -427,6 +427,28 @@ const RATIONALES: Rationale[] = [
     rule: "unverified",
     sources: [citedSource({ url: "x" })],
     key: "Low: only unverified sources report it.",
+  },
+  // A finding that cites a register only (a list whose records never raise a risk): the line says so
+  // and names no list, whether the record is current or its list dropped it.
+  {
+    rule: "unverified",
+    sources: [recordSource("fedramp")],
+    key: "Low: only registers that list the vendor are cited, and a register entry is not evidence of a risk.",
+  },
+  {
+    rule: "unverified",
+    sources: [recordSource("gleif", { status: "withdrawn", as_of: undefined })],
+    key: "Low: only registers that list the vendor are cited, and a register entry is not evidence of a risk.",
+  },
+  // A register cited beside an official page does not change the sentence of that page.
+  {
+    rule: "official_page",
+    sources: [
+      recordSource("fedramp"),
+      citedSource({ url: "https://www.sec.gov/a", category: "official" }),
+    ],
+    key: "High: an official source reports it ({host}).",
+    values: () => ({ host: "sec.gov" }),
   },
   {
     rule: "self_claim",
@@ -1411,6 +1433,105 @@ describe.each(LANGS)("research findings in %s", (lang) => {
           lang,
           "Sources cited: {official} official, {press} trusted press, {vendor} vendor, {unverified} unverified",
           { official: 1, press: 0, vendor: 0, unverified: 0 },
+        ),
+      ),
+    ).toBeInTheDocument();
+
+    expectNoUntranslatedText(lang, FIXTURES);
+  });
+
+  it("translates the coverage of a run that asked lists added on 2026-11-10: the one that held a record by name, the others counted", async () => {
+    /** The notice of the UK OFSI list, as the server stores it (vrdb/sources.ts). */
+    const OFSI_NOTICE =
+      "UK Office of Financial Sanctions Implementation (HM Treasury) enforcement notices, published on GOV.UK. Contains public sector information licensed under the Open Government Licence v3.0. Adapted by VerifyWise; no endorsement by HM Treasury is implied.";
+    mocks.latest.mockResolvedValue(
+      run({
+        category_summary: FOUR_OUTCOMES,
+        coverage: coverage({
+          sources: [
+            listCopy("kev", { outcome: "found", strong: 1 }),
+            listCopy("uk_ofsi", { outcome: "found", weak: 1 }),
+            listCopy("charlotin"),
+            listCopy("epoch_ai"),
+            listCopy("gleif", {
+              mode: "read_through",
+              checked: false,
+              outcome: "failed",
+              last_success_at: null,
+            }),
+          ],
+          lookups: [],
+          cited: { official: 1, trusted_press: 0, vendor: 0, unverified: 0 },
+        }),
+      }),
+    );
+    renderSection();
+    const name = (key: string) => tr(lang, key);
+
+    expect(
+      await screen.findByText(
+        tr(lang, "Checked: {sources}", {
+          sources: [
+            `${name("CISA Known Exploited Vulnerabilities")} (1)`,
+            `${name("UK OFSI financial sanctions enforcement notices")} (1)`,
+            tr(lang, "{count} more lists with no records", { count: 2 }),
+          ].join(", "),
+        }),
+      ),
+    ).toBeInTheDocument();
+    // A list that could not be checked is always named; the lists that held nothing are only counted.
+    expect(
+      screen.getByText(tr(lang, "Not checked: {sources}", { sources: name("GLEIF LEI records") })),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/AI Hallucination Cases/)).toBeNull();
+    expect(screen.queryByText(/Epoch AI/)).toBeNull();
+    // Only the notice of the list that held a record is shown, as its owner wrote it.
+    expect(
+      screen.getByText(
+        tr(lang, "Data sources: {attributions}", {
+          attributions: joinAttributions([ATTRIBUTIONS[0], OFSI_NOTICE]),
+        }),
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        tr(
+          lang,
+          "Sources cited: {official} official, {press} trusted press, {vendor} vendor, {unverified} unverified",
+          { official: 1, press: 0, vendor: 0, unverified: 0 },
+        ),
+      ),
+    ).toBeInTheDocument();
+
+    expectNoUntranslatedText(lang, FIXTURES);
+  });
+
+  it("counts the lists that held no record in one item when no list is named, in the language of the screen", async () => {
+    mocks.latest.mockResolvedValue(
+      run({
+        category_summary: FOUR_OUTCOMES,
+        coverage: coverage({
+          sources: [listCopy("charlotin"), listCopy("epoch_ai"), listCopy("gleif")],
+          lookups: [],
+          cited: { official: 0, trusted_press: 0, vendor: 0, unverified: 0 },
+        }),
+      }),
+    );
+    renderSection();
+
+    expect(
+      await screen.findByText(
+        tr(lang, "Checked: {sources}", {
+          sources: tr(lang, "{count} lists with no records", { count: 3 }),
+        }),
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        tr(
+          lang,
+          "Sources cited: {official} official, {press} trusted press, {vendor} vendor, {unverified} unverified",
+          { official: 0, press: 0, vendor: 0, unverified: 0 },
         ),
       ),
     ).toBeInTheDocument();

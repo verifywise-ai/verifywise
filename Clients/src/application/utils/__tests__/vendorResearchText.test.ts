@@ -621,6 +621,153 @@ const basisOf = (
   nameOnly = false,
 ): CredibilityBasis => ({ rule, registry_version: "2026-10-29.1", name_only: nameOnly, sources });
 
+/**
+ * The 23 lists of the vendor risk database added on 2026-11-10, in the order of the id unions: the
+ * name the screen gives the list when it is the operator of a record (the server's `name`, vrdb/
+ * sources.ts), the name of the list as "the {list} entry" says it (the server's `listName`), and
+ * whether its records never raise a risk (a register or status list: context for another risk, never
+ * what supports a label).
+ */
+const NEW_LISTS = [
+  {
+    id: "canada_sema",
+    name: "Consolidated Canadian Autonomous Sanctions List",
+    list: "Consolidated Canadian Autonomous Sanctions List",
+    context: false,
+  },
+  {
+    id: "california_breaches",
+    name: "California Attorney General data breach list",
+    list: "California Attorney General data breach list",
+    context: false,
+  },
+  {
+    id: "uk_ofsi",
+    name: "UK OFSI financial sanctions enforcement notices",
+    list: "UK OFSI financial sanctions enforcement notices",
+    context: false,
+  },
+  {
+    id: "charlotin",
+    name: "AI Hallucination Cases database",
+    list: "AI Hallucination Cases database",
+    context: false,
+  },
+  {
+    id: "ftc_penalties",
+    name: "FTC civil penalty cases",
+    list: "FTC civil penalty case list",
+    context: false,
+  },
+  {
+    id: "piperoll",
+    name: "PipeRoll Agent Incident Registry",
+    list: "PipeRoll Agent Incident Registry",
+    context: false,
+  },
+  {
+    id: "eu_dg_comp",
+    name: "European Commission competition cases",
+    list: "European Commission antitrust, cartel and DMA case data",
+    context: false,
+  },
+  {
+    id: "disclose_io",
+    name: "disclose.io program list",
+    list: "disclose.io vulnerability disclosure program list",
+    context: true,
+  },
+  {
+    id: "uk_cma",
+    name: "UK Competition and Markets Authority cases",
+    list: "UK Competition and Markets Authority cases",
+    context: false,
+  },
+  {
+    id: "canada_ai_register",
+    name: "Government of Canada AI Register",
+    list: "Government of Canada AI Register",
+    context: true,
+  },
+  {
+    id: "ftc_competition",
+    name: "FTC nonmerger enforcement actions",
+    list: "FTC nonmerger enforcement action list",
+    context: false,
+  },
+  {
+    id: "omb_ai_inventory",
+    name: "US federal AI use case inventory",
+    list: "US federal AI use case inventory",
+    context: true,
+  },
+  {
+    id: "co_sic_penalties",
+    name: "Colombia SIC consumer protection sanctions",
+    list: "Colombia SIC consumer protection sanctions list",
+    context: false,
+  },
+  {
+    id: "uk_atrs",
+    name: "UK Algorithmic Transparency Recording Standard records",
+    list: "UK Algorithmic Transparency Records",
+    context: true,
+  },
+  {
+    id: "nhtsa_recalls",
+    name: "NHTSA vehicle and equipment recalls",
+    list: "NHTSA recalls file",
+    context: false,
+  },
+  {
+    id: "fmti",
+    name: "Foundation Model Transparency Index",
+    list: "Foundation Model Transparency Index",
+    context: true,
+  },
+  {
+    id: "uk_mhra",
+    name: "UK MHRA field safety notice lists",
+    list: "UK MHRA field safety notice lists",
+    context: false,
+  },
+  {
+    id: "nl_algoritmeregister",
+    name: "Dutch Algorithm Register",
+    list: "Dutch Algorithm Register",
+    context: true,
+  },
+  {
+    id: "nhtsa_odi",
+    name: "NHTSA defect investigations",
+    list: "NHTSA defect investigations file",
+    context: false,
+  },
+  { id: "fedramp", name: "FedRAMP Marketplace", list: "FedRAMP Marketplace data", context: true },
+  {
+    id: "epoch_ai",
+    name: "Epoch AI Data on AI Models",
+    list: "Epoch AI Data on AI Models",
+    context: true,
+  },
+  {
+    id: "c2pa_conforming",
+    name: "C2PA Conforming Products List",
+    list: "C2PA Conforming Products List",
+    context: true,
+  },
+  { id: "gleif", name: "GLEIF LEI records", list: "GLEIF LEI records", context: true },
+] as const satisfies ReadonlyArray<{
+  id: VrdbSourceId;
+  name: string;
+  list: string;
+  context: boolean;
+}>;
+
+/** The lists whose records never raise a risk, and the lists whose records can. */
+const REGISTERS = NEW_LISTS.filter((list) => list.context);
+const RAISING = NEW_LISTS.filter((list) => !list.context);
+
 const RECORD_SOURCES: RecordSourceId[] = [
   "kev",
   "nvd",
@@ -638,6 +785,7 @@ const RECORD_SOURCES: RecordSourceId[] = [
   "nhtsa_sgo",
   "fda_ai_devices",
   "fda_device_recalls",
+  ...NEW_LISTS.map((list) => list.id),
 ];
 
 /**
@@ -758,8 +906,10 @@ type CslOrRecalls = (typeof CSL_AND_RECALLS)[number];
  */
 const CSL_AND_RECALLS_NOTICES = {
   csl: "This product uses data from the International Trade Administration's Consolidated Screening List but is not endorsed or certified by the International Trade Administration. Entries adapted by VerifyWise.",
+  // The string the server stores for the list (vrdb/sources.ts), as amended when the FDA's
+  // enforcement reports were folded into the recalls list.
   fda_device_recalls:
-    "FDA medical device recalls through openFDA, US Food and Drug Administration (CC0 1.0), joined by VerifyWise to the FDA list of AI-enabled medical devices.",
+    "FDA medical device recalls and enforcement reports through openFDA, US Food and Drug Administration (CC0 1.0), joined by VerifyWise to the FDA list of AI-enabled medical devices. Data provided by the U.S. Food and Drug Administration (https://open.fda.gov).",
 };
 
 /** The record of one of those lists as the server describes it: weak, in the class of its list. */
@@ -771,6 +921,13 @@ const cslOrRecallRecordOf = (
   url: list.url,
   category: list.category,
 });
+
+/**
+ * What the line of a Low label says when every source it cites is a register or a status list (a
+ * list whose records never raise a risk): the server's English line, word for word.
+ */
+const REGISTER_ONLY_SENTENCE =
+  "Low: only registers that list the vendor are cited, and a register entry is not evidence of a risk.";
 
 /** The sentence of every rule, with what the server's English line says for the same basis. */
 const RULE_SENTENCES: Array<[name: string, basis: CredibilityBasis, sentence: string]> = [
@@ -892,6 +1049,11 @@ const RULE_SENTENCES: Array<[name: string, basis: CredibilityBasis, sentence: st
     "unverified sources whose addresses do not parse",
     basisOf("unverified", [cited({ url: "nowhere" })]),
     "Low: only unverified sources report it.",
+  ],
+  [
+    "a finding that cites a register only",
+    basisOf("unverified", [recordOf("fedramp")]),
+    REGISTER_ONLY_SENTENCE,
   ],
   [
     "the vendor's own claims",
@@ -1117,6 +1279,217 @@ describe("credibilityRationale", () => {
     expect(sentenceOf("fda_device_recalls")).toBe(
       "Low: the FDA device recall database entry matches the vendor by name only.",
     );
+    // The lists added on 2026-11-10 read "the {list} entry" too, never "the the … entry entry".
+    expect(sentenceOf("uk_ofsi")).toBe(
+      "Low: the UK OFSI financial sanctions enforcement notices entry matches the vendor by name only.",
+    );
+    expect(sentenceOf("nhtsa_recalls")).toBe(
+      "Low: the NHTSA recalls file entry matches the vendor by name only.",
+    );
+    for (const list of RAISING) {
+      const sentence = sentenceOf(list.id);
+      expect(sentence).toBe(`Low: the ${list.list} entry matches the vendor by name only.`);
+      expect(sentence).not.toMatch(/\bthe the\b|\bentry entry\b/);
+    }
+    // A record of a register is context for a finding, never what supports it (prompt vr-15): the
+    // line of a label has no sentence for it, so its list is never named here.
+    for (const list of REGISTERS) expect(sentenceOf(list.id)).toBe("");
+  });
+
+  describe("a record of a register is context for a finding, never what supports it", () => {
+    const KEV_SENTENCE =
+      "High: CISA Known Exploited Vulnerabilities lists it (CVE-2026-28001), as of 7 Oct 2026.";
+    const sentenceOf = (basis: CredibilityBasis) =>
+      credibilityRationale(basis, english, "en").sentence;
+
+    it("a FedRAMP record cited before a KEV record does not give its name to the label the KEV record decided", () => {
+      const sentence = sentenceOf(
+        basisOf("official_record", [recordOf("fedramp"), recordOf("kev")]),
+      );
+      expect(sentence).toBe(KEV_SENTENCE);
+      expect(sentence).not.toContain("FedRAMP Marketplace");
+    });
+
+    it("holds for every register and status list, whichever is cited first", () => {
+      for (const list of REGISTERS) {
+        const before = sentenceOf(basisOf("official_record", [recordOf(list.id), recordOf("kev")]));
+        const after = sentenceOf(basisOf("official_record", [recordOf("kev"), recordOf(list.id)]));
+        expect([list.id, before]).toEqual([list.id, KEV_SENTENCE]);
+        expect([list.id, after]).toEqual([list.id, KEV_SENTENCE]);
+      }
+    });
+
+    it("has no sentence when a register record is all the official record there is", () => {
+      for (const list of REGISTERS) {
+        expect([
+          list.id,
+          credibilityRationale(basisOf("official_record", [recordOf(list.id)]), english, "en"),
+        ]).toEqual([list.id, { sentence: "", stale: null }]);
+      }
+    });
+
+    it("leaves the other new lists in the sentence: a record of one of them is named as its operator", () => {
+      for (const list of RAISING) {
+        expect([list.id, sentenceOf(basisOf("official_record", [recordOf(list.id)]))]).toEqual([
+          list.id,
+          `High: ${list.name} lists it (CVE-2026-28001), as of 7 Oct 2026.`,
+        ]);
+      }
+    });
+
+    it("names no register in the line of a label decided by name only, nor a host in the line of unverified sources", () => {
+      expect(
+        sentenceOf(
+          basisOf(
+            "name_only",
+            [recordOf("epoch_ai", { match: "weak" }), recordOf("uk_ofsi", { match: "weak" })],
+            true,
+          ),
+        ),
+      ).toBe(
+        "Low: the UK OFSI financial sanctions enforcement notices entry matches the vendor by name only.",
+      );
+      const register = {
+        ...recordOf("disclose_io", { match: "weak" }),
+        category: "unverified" as const,
+        url: "https://disclose.example/program/1",
+      };
+      expect(
+        sentenceOf(
+          basisOf("unverified", [register, cited({ url: "https://forum.example/thread/1" })], true),
+        ),
+      ).toBe("Low: only unverified sources report it (forum.example).");
+    });
+
+    describe("a finding that cites registers only, and a register that is stale or withdrawn", () => {
+      const wordsOf = (basis: CredibilityBasis) => credibilityRationale(basis, english, "en");
+
+      it("says that only registers are cited, for every register and status list", () => {
+        for (const list of REGISTERS) {
+          expect([list.id, wordsOf(basisOf("unverified", [recordOf(list.id)]))]).toEqual([
+            list.id,
+            { sentence: REGISTER_ONLY_SENTENCE, stale: null },
+          ]);
+        }
+        // Matched by name, or several of them: the same line.
+        expect(
+          wordsOf(basisOf("unverified", [recordOf("gleif", { match: "weak" })], true)).sentence,
+        ).toBe(REGISTER_ONLY_SENTENCE);
+        expect(
+          wordsOf(
+            basisOf("unverified", [recordOf("fedramp"), recordOf("gleif"), recordOf("epoch_ai")]),
+          ).sentence,
+        ).toBe(REGISTER_ONLY_SENTENCE);
+      });
+
+      it("names no register in it, and does not call a register an unverified source", () => {
+        for (const list of REGISTERS) {
+          const { sentence } = wordsOf(basisOf("unverified", [recordOf(list.id)]));
+          expect(sentence).not.toContain(list.name);
+          expect(sentence).not.toContain(list.list);
+          expect(sentence).not.toContain("unverified");
+        }
+      });
+
+      it("is the line of the label the backfill decided again, too", () => {
+        const backfilled = {
+          ...basisOf("unverified", [recordOf("fedramp")]),
+          rule: "backfill_unverified" as const,
+        };
+        expect(credibilityRationale(backfilled, english, "en").sentence).toBe(
+          `${REGISTER_ONLY_SENTENCE} Rated again with the current rule.`,
+        );
+      });
+
+      it("keeps the other lines of the rule when anything besides a register is cited", () => {
+        // An unverified page beside a register: the page is what the line is about.
+        expect(wordsOf(basisOf("unverified", [recordOf("fedramp"), cited()])).sentence).toBe(
+          "Low: only unverified sources report it (forum.example).",
+        );
+        // Nothing cited, or a record its list withdrew and no register: the line it always had.
+        expect(wordsOf(basisOf("unverified", [])).sentence).toBe(
+          "Low: only unverified sources report it.",
+        );
+        expect(
+          wordsOf(basisOf("unverified", [recordOf("kev", { status: "withdrawn" })])).sentence,
+        ).toBe("Low: only unverified sources report it.");
+        // A register beside an official page that decided a High label: the sentence of that rule.
+        expect(
+          wordsOf(
+            basisOf("official_page", [
+              recordOf("fedramp"),
+              cited({ url: "https://www.fca.org.uk/c", category: "official" }),
+            ]),
+          ).sentence,
+        ).toBe("High: an official source reports it (fca.org.uk).");
+      });
+
+      it("reads a withdrawn register record alone as a register only, and names no register", () => {
+        for (const list of REGISTERS) {
+          for (const status of ["withdrawn", "rejected", "delisted"] as const) {
+            const record = recordOf(list.id, { status, as_of: "2026-11-01" });
+            // As the server words it: the label falls to the rule of an unverified source.
+            expect([list.id, status, wordsOf(basisOf("unverified", [record])).sentence]).toEqual([
+              list.id,
+              status,
+              REGISTER_ONLY_SENTENCE,
+            ]);
+            // A basis stored by the earlier rule (`inactive`) has no line that names the register.
+            expect([list.id, status, wordsOf(basisOf("inactive", [record]))]).toEqual([
+              list.id,
+              status,
+              { sentence: "", stale: null },
+            ]);
+          }
+        }
+      });
+
+      it("names the record of another list that its list dropped, whichever record is cited first", () => {
+        const register = recordOf("fedramp", { status: "withdrawn", as_of: "2026-11-01" });
+        const dropped = recordOf("kev", { status: "withdrawn", as_of: "2026-10-09" });
+        for (const sources of [
+          [register, dropped],
+          [dropped, register],
+        ]) {
+          expect(wordsOf(basisOf("inactive", sources)).sentence).toBe(
+            "Low: CISA Known Exploited Vulnerabilities withdrew the record on 9 Oct 2026.",
+          );
+        }
+      });
+
+      it("counts no stale register copy: a stale register beside a current record adds no line", () => {
+        for (const list of REGISTERS) {
+          const stale = recordOf(list.id, { stale: true, as_of: "2026-09-01" });
+          expect([list.id, wordsOf(basisOf("official_record", [recordOf("kev"), stale]))]).toEqual([
+            list.id,
+            { sentence: KEV_SENTENCE, stale: null },
+          ]);
+        }
+      });
+
+      it("counts a stale copy of another list, and the oldest day among those alone", () => {
+        expect(
+          wordsOf(
+            basisOf("official_record", [
+              recordOf("kev"),
+              recordOf("ofac", { stale: true, as_of: "2026-08-01" }),
+            ]),
+          ),
+        ).toEqual({
+          sentence: KEV_SENTENCE,
+          stale: "The source has not been updated since 1 Aug 2026.",
+        });
+        // A register that is older still is not the oldest: only the other lists' copies count.
+        expect(
+          wordsOf(
+            basisOf("official_record", [
+              recordOf("kev", { stale: true, as_of: "2026-10-05" }),
+              recordOf("fedramp", { stale: true, as_of: "2026-09-01" }),
+            ]),
+          ).stale,
+        ).toBe("The source has not been updated since 5 Oct 2026.");
+      });
+    });
   });
 
   it("words a strong match of the US Consolidated Screening List as it does the other official lists", () => {
@@ -1991,6 +2364,178 @@ describe("coverageLines", () => {
     });
   });
 
+  describe("with the lists added on 2026-11-10: named when they held a record, counted when they held none", () => {
+    /** What the terms of three of them ask a screen to say, as the server stores it (vrdb/sources.ts). */
+    const NOTICES = {
+      canada_sema:
+        "Contains information licensed under the Open Government Licence - Canada (https://open.canada.ca/en/open-government-licence-canada). Source: Global Affairs Canada, Consolidated Canadian Autonomous Sanctions List. Not endorsed by the Government of Canada. Entries adapted by VerifyWise.",
+      uk_ofsi:
+        "UK Office of Financial Sanctions Implementation (HM Treasury) enforcement notices, published on GOV.UK. Contains public sector information licensed under the Open Government Licence v3.0. Adapted by VerifyWise; no endorsement by HM Treasury is implied.",
+      gleif:
+        "GLEIF LEI data (CC0 1.0), from the Global Legal Entity Identifier Foundation's API. VerifyWise is not associated with GLEIF, and GLEIF does not provide, support, authorise or endorse VerifyWise or its products.",
+    };
+    /** A run that asked these lists and none of the databases looked up on the web. */
+    const runOf = (...sources: CoverageSource[]) => coverageOf({ sources, lookups: [] });
+    const kev = () => listCopy("kev", { outcome: "found", strong: 1 });
+    /** A list that held one record, matched by name: every match of the new lists is. */
+    const found = (id: VrdbSourceId, overrides: Partial<CoverageSource> = {}) =>
+      listCopy(id, { outcome: "found", weak: 1, ...overrides });
+    const noCopy = (id: VrdbSourceId, overrides: Partial<CoverageSource> = {}) =>
+      listCopy(id, { checked: false, outcome: "failed", last_success_at: null, ...overrides });
+
+    it("names a list that held a record, and counts the ones that held none in a last item", () => {
+      const lines = linesOf(
+        runOf(
+          kev(),
+          listCopy("ofac"),
+          found("uk_ofsi"),
+          listCopy("charlotin"),
+          listCopy("epoch_ai"),
+          noCopy("gleif", { mode: "read_through" }),
+        ),
+      );
+      expect(lines.checked).toBe(
+        "Checked: CISA Known Exploited Vulnerabilities (1), OFAC Specially Designated Nationals list (0), UK OFSI financial sanctions enforcement notices (1), 2 more lists with no records",
+      );
+      // The lists that held nothing are counted above: only the shipped list is named here.
+      expect(lines.none).toBe(
+        "No records in OFAC Specially Designated Nationals list as of 10 Oct 2026",
+      );
+      expect(lines.notChecked).toBe("Not checked: GLEIF LEI records");
+      // A list that held no record owes no credit: nothing of it is in the findings.
+      expect(lines.attributions).toEqual([ATTRIBUTIONS[0], ATTRIBUTIONS[1], NOTICES.uk_ofsi]);
+    });
+
+    it("counts the lists that held none in four forms, the item last", () => {
+      const none = (...ids: VrdbSourceId[]) => ids.map((id) => listCopy(id));
+      const checkedOf = (...sources: CoverageSource[]) => linesOf(runOf(...sources)).checked;
+      expect(checkedOf(...none("charlotin", "epoch_ai", "gleif"))).toBe(
+        "Checked: 3 lists with no records",
+      );
+      expect(checkedOf(...none("charlotin"))).toBe("Checked: 1 list with no records");
+      expect(checkedOf(kev(), ...none("charlotin"))).toBe(
+        "Checked: CISA Known Exploited Vulnerabilities (1), 1 more list with no records",
+      );
+      expect(checkedOf(kev(), ...none("charlotin", "epoch_ai", "fmti"))).toBe(
+        "Checked: CISA Known Exploited Vulnerabilities (1), 3 more lists with no records",
+      );
+      // After the databases the run looked up on the web too.
+      const lookedUp = (sources: CoverageSource[]) =>
+        linesOf(coverageOf({ sources, lookups: [{ id: "hibp", outcome: "none" }] })).checked;
+      expect(lookedUp([kev(), ...none("charlotin")])).toBe(
+        "Checked: CISA Known Exploited Vulnerabilities (1), Have I Been Pwned, 1 more list with no records",
+      );
+      expect(lookedUp(none("charlotin", "epoch_ai"))).toBe(
+        "Checked: Have I Been Pwned, 2 more lists with no records",
+      );
+      // Never in the line of the lists that held nothing, whatever the day of the copy.
+      expect(linesOf(runOf(...none("charlotin", "epoch_ai"))).none).toBeNull();
+      // A count that is not a whole number is no record.
+      const odd = listCopy("charlotin", {
+        outcome: "found",
+        strong: "2" as never,
+        weak: Number.NaN,
+      });
+      expect(checkedOf(odd)).toBe("Checked: 1 list with no records");
+    });
+
+    it("says nothing of a list the run did not ask: the vendor has no website, or the list is off", () => {
+      const lines = linesOf(
+        runOf(
+          kev(),
+          listCopy("charlotin", { checked: false, outcome: "not_researched" }),
+          listCopy("epoch_ai", { checked: false, outcome: "off" }),
+        ),
+      );
+      expect(lines.checked).toBe("Checked: CISA Known Exploited Vulnerabilities (1)");
+      expect(lines.notChecked).toBeNull();
+      expect(lines.attributions).toEqual([ATTRIBUTIONS[0]]);
+    });
+
+    it("always names a list it could not check, and credits it only when it offered a record it had stored", () => {
+      const lines = linesOf(
+        runOf(
+          kev(),
+          noCopy("charlotin"),
+          noCopy("gleif", {
+            mode: "read_through",
+            strong: 1,
+            last_success_at: "2026-10-09T08:00:00.000Z",
+          }),
+        ),
+      );
+      expect(lines.notChecked).toBe(
+        "Not checked: AI Hallucination Cases database, GLEIF LEI records",
+      );
+      expect(lines.checked).toBe("Checked: CISA Known Exploited Vulnerabilities (1)");
+      // The stored record is in the findings, so its notice is shown; the other list offered none.
+      expect(lines.attributions).toEqual([ATTRIBUTIONS[0], NOTICES.gleif]);
+    });
+
+    it("still names an out-of-date list in a line of its own, whether or not it held a record", () => {
+      const lines = linesOf(
+        runOf(
+          listCopy("charlotin", { stale: true, last_success_at: "2026-10-07T09:23:00.000Z" }),
+          found("uk_ofsi", { stale: true, last_success_at: "2026-10-06T00:00:00.000Z" }),
+        ),
+      );
+      expect(lines.stale).toEqual([
+        "AI Hallucination Cases database: last updated 7 Oct 2026, not up to date",
+        "UK OFSI financial sanctions enforcement notices: last updated 6 Oct 2026, not up to date",
+      ]);
+      expect(lines.checked).toBe(
+        "Checked: UK OFSI financial sanctions enforcement notices (1), 1 more list with no records",
+      );
+      expect(lines.none).toBeNull();
+    });
+
+    it("keeps Canada's sanctions list among the lists it names, with its count, its day and its notice", () => {
+      const lines = linesOf(runOf(listCopy("canada_sema"), listCopy("uk_ofsi")));
+      expect(lines.checked).toBe(
+        "Checked: Consolidated Canadian Autonomous Sanctions List (0), 1 more list with no records",
+      );
+      expect(lines.none).toBe(
+        "No records in Consolidated Canadian Autonomous Sanctions List as of 10 Oct 2026",
+      );
+      expect(lines.attributions).toEqual([NOTICES.canada_sema]);
+    });
+
+    it("hides no list that held a record or failed, however many lists the run asked", () => {
+      const held = linesOf(runOf(...NEW_LISTS.map((list) => found(list.id))));
+      expect(held.checked).toBe(
+        `Checked: ${NEW_LISTS.map((list) => `${list.name} (1)`).join(", ")}`,
+      );
+      expect(held.none).toBeNull();
+      expect(held.attributions).toHaveLength(NEW_LISTS.length);
+
+      const failed = linesOf(runOf(...NEW_LISTS.map((list) => noCopy(list.id))));
+      expect(failed.notChecked).toBe(
+        `Not checked: ${NEW_LISTS.map((list) => list.name).join(", ")}`,
+      );
+      expect(failed.checked).toBeNull();
+      expect(failed.attributions).toEqual([]);
+    });
+
+    it("turned off, they are off with the other lists", () => {
+      const off = linesOf(
+        runOf(
+          listCopy("kev", { checked: false, outcome: "off" }),
+          ...NEW_LISTS.map((list) => listCopy(list.id, { checked: false, outcome: "off" })),
+        ),
+      );
+      expect(off.off).toBe(true);
+      expect(off.checked).toBeNull();
+      expect(off.attributions).toEqual([]);
+
+      // One of them on is not off, and a list that held nothing is counted.
+      const oneOn = linesOf(
+        runOf(listCopy("kev", { checked: false, outcome: "off" }), listCopy("charlotin")),
+      );
+      expect(oneOn.off).toBe(false);
+      expect(oneOn.checked).toBe("Checked: 1 list with no records");
+    });
+  });
+
   it("leaves out a list or a database it does not know", () => {
     const lines = linesOf(
       coverageOf({
@@ -2054,10 +2599,10 @@ describe("joinAttributions", () => {
     const { csl, fda_device_recalls: recalls } = CSL_AND_RECALLS_NOTICES;
     // The notice of each ends in a full stop: the one before a semicolon goes, the last stays.
     expect(joinAttributions([csl, recalls])).toBe(
-      "This product uses data from the International Trade Administration's Consolidated Screening List but is not endorsed or certified by the International Trade Administration. Entries adapted by VerifyWise; FDA medical device recalls through openFDA, US Food and Drug Administration (CC0 1.0), joined by VerifyWise to the FDA list of AI-enabled medical devices.",
+      "This product uses data from the International Trade Administration's Consolidated Screening List but is not endorsed or certified by the International Trade Administration. Entries adapted by VerifyWise; FDA medical device recalls and enforcement reports through openFDA, US Food and Drug Administration (CC0 1.0), joined by VerifyWise to the FDA list of AI-enabled medical devices. Data provided by the U.S. Food and Drug Administration (https://open.fda.gov).",
     );
     expect(joinAttributions([recalls, csl])).toBe(
-      "FDA medical device recalls through openFDA, US Food and Drug Administration (CC0 1.0), joined by VerifyWise to the FDA list of AI-enabled medical devices; This product uses data from the International Trade Administration's Consolidated Screening List but is not endorsed or certified by the International Trade Administration. Entries adapted by VerifyWise.",
+      "FDA medical device recalls and enforcement reports through openFDA, US Food and Drug Administration (CC0 1.0), joined by VerifyWise to the FDA list of AI-enabled medical devices. Data provided by the U.S. Food and Drug Administration (https://open.fda.gov); This product uses data from the International Trade Administration's Consolidated Screening List but is not endorsed or certified by the International Trade Administration. Entries adapted by VerifyWise.",
     );
     // Only a final full stop is dropped: the one inside the screening list's notice is its own.
     expect(joinAttributions([csl, recalls])).toContain(
@@ -2141,45 +2686,54 @@ describe("translation", () => {
     }
     for (const status of ["withdrawn", "rejected", "delisted"] as const)
       recordStatusLabel(status, t);
-    // The coverage of a run, with every list and every database checked, and a stale copy.
+    // The coverage of a run, with every list and every database checked, and a stale copy. The
+    // lists added on 2026-11-10 held nothing: but Canada's sanctions list they are counted, not named.
+    const askedOf = (ids: readonly VrdbSourceId[]): RunCoverage => ({
+      registry_version: "2026-10-29.1",
+      sources: ids.map((id) => ({
+        id,
+        name: id,
+        attribution: id,
+        mode: "mirror" as const,
+        checked: true,
+        outcome: "none" as const,
+        strong: 0,
+        weak: 0,
+        last_success_at: "2026-10-10T11:00:00.000Z",
+        stale: true,
+      })),
+      lookups: [],
+      cited: { official: 1, trusted_press: 1, vendor: 1, unverified: 1 },
+    });
+    const SHIPPED_LISTS: VrdbSourceId[] = [
+      "kev",
+      "nvd",
+      "sec",
+      "ofac",
+      "uk_sanctions",
+      "eu_fsf",
+      "cve",
+      "un_sanctions",
+      "csl",
+      "aiid",
+      "atlas",
+      "nhtsa_sgo",
+      "fda_ai_devices",
+      "fda_device_recalls",
+    ];
     coverageLines(
       {
-        registry_version: "2026-10-29.1",
-        sources: (
-          [
-            "kev",
-            "nvd",
-            "sec",
-            "ofac",
-            "uk_sanctions",
-            "eu_fsf",
-            "cve",
-            "un_sanctions",
-            "csl",
-            "aiid",
-            "atlas",
-            "nhtsa_sgo",
-            "fda_ai_devices",
-            "fda_device_recalls",
-          ] as const
-        ).map((id) => ({
-          id,
-          name: id,
-          attribution: id,
-          mode: "mirror" as const,
-          checked: true,
-          outcome: "none" as const,
-          strong: 0,
-          weak: 0,
-          last_success_at: "2026-10-10T11:00:00.000Z",
-          stale: true,
-        })),
+        ...askedOf([...SHIPPED_LISTS, ...NEW_LISTS.map((list) => list.id)]),
         lookups: RECORD_SOURCES.map((id) => ({ id, outcome: "found" as const })),
-        cited: { official: 1, trusted_press: 1, vendor: 1, unverified: 1 },
       },
       t,
       "en",
     );
+    // The item that counts the lists that held nothing, in its other three forms: beside a list that
+    // is named or alone, for one list or for several.
+    for (const ids of [["kev", "charlotin"], ["charlotin"], ["charlotin", "epoch_ai"]] as const) {
+      coverageLines(askedOf(ids), t, "en");
+    }
     return [...keys];
   };
 
@@ -2216,6 +2770,18 @@ describe("translation", () => {
         "US Consolidated Screening List",
         "FDA recalls of AI-enabled medical devices",
         "FDA device recall database",
+        // The line of a finding that cites registers only.
+        REGISTER_ONLY_SENTENCE,
+        // The item that counts the lists that held nothing, in its four forms.
+        "{count} more lists with no records",
+        "1 more list with no records",
+        "{count} lists with no records",
+        "1 list with no records",
+        // The lists added on 2026-11-10, by name and by the name their entries have.
+        "Consolidated Canadian Autonomous Sanctions List",
+        "UK OFSI financial sanctions enforcement notices",
+        "NHTSA recalls file",
+        "GLEIF LEI records",
       ]),
     );
   });
@@ -2331,6 +2897,153 @@ describe("translation", () => {
         CSL_AND_RECALLS_NOTICES.csl,
         CSL_AND_RECALLS_NOTICES.fda_device_recalls,
       ]);
+    },
+  );
+
+  /**
+   * The titles that stay as they are in every language: a database is known by its own title, as the
+   * AI Incident Database is. Every other name of the lists added on 2026-11-10 is worded in the language.
+   */
+  const KEPT_AS_WRITTEN = new Set([
+    "PipeRoll Agent Incident Registry",
+    "Epoch AI Data on AI Models",
+    "Foundation Model Transparency Index",
+    "FedRAMP Marketplace",
+    "C2PA Conforming Products List",
+  ]);
+
+  it.each(LANGS)(
+    "has the name and the list name of every list added on 2026-11-10 in %s",
+    (lang) => {
+      for (const list of NEW_LISTS) {
+        for (const english of new Set([list.name, list.list])) {
+          const words = translations[lang][english];
+          expect(words, `${lang}: ${english}`).toBeDefined();
+          // Only a title that a database goes by stays as it is.
+          expect([english, words === english]).toEqual([english, KEPT_AS_WRITTEN.has(english)]);
+        }
+      }
+    },
+  );
+
+  it.each(LANGS)(
+    "names the lists added on 2026-11-10 in %s, in the coverage and in the line of a label, and leaves their notices as they are",
+    (lang) => {
+      const t = (key: string) => translations[lang][key] ?? key;
+      const coverage: RunCoverage = {
+        registry_version: "2026-10-29.1",
+        sources: NEW_LISTS.map((list) => ({
+          id: list.id,
+          name: "The server's name",
+          attribution: "The server's attribution",
+          mode: "mirror" as const,
+          checked: true,
+          outcome: "found" as const,
+          strong: 0,
+          weak: 1,
+          last_success_at: "2026-10-10T11:00:00.000Z",
+          stale: false,
+        })),
+        lookups: [],
+        cited: { official: 0, trusted_press: 0, vendor: 0, unverified: 0 },
+      };
+      const lines = coverageLines(coverage, t, lang);
+      for (const list of NEW_LISTS) {
+        expect(lines.checked).toContain(`${translations[lang][list.name]} (1)`);
+      }
+      // The words of a licence are never translated: they are the English screen's, list by list.
+      expect(lines.attributions).toHaveLength(NEW_LISTS.length);
+      expect(lines.attributions).toEqual(coverageLines(coverage, english, "en").attributions);
+
+      // In the sentence of a record matched by name, for the lists whose records can raise a risk.
+      for (const list of RAISING) {
+        const { sentence } = credibilityRationale(
+          basisOf("name_only", [recordOf(list.id, { match: "weak" })], true),
+          t,
+          lang,
+        );
+        expect(sentence, `${lang}: ${list.id}`).toContain(translations[lang][list.list]);
+        expect(sentence).not.toContain("{");
+      }
+    },
+  );
+
+  it.each(LANGS)(
+    "counts the lists that held no record in %s, in each of its four forms",
+    (lang) => {
+      const t = (key: string) => translations[lang][key] ?? key;
+      const checkedOf = (ids: readonly VrdbSourceId[]) =>
+        coverageLines(
+          {
+            registry_version: "2026-10-29.1",
+            sources: ids.map((id) => ({
+              id,
+              name: "The server's name",
+              attribution: "The server's attribution",
+              mode: "mirror" as const,
+              checked: true,
+              outcome: "none" as const,
+              strong: 0,
+              weak: 0,
+              last_success_at: "2026-10-10T11:00:00.000Z",
+              stale: false,
+            })),
+            lookups: [],
+            cited: { official: 0, trusted_press: 0, vendor: 0, unverified: 0 },
+          },
+          t,
+          lang,
+        ).checked ?? "";
+      const COUNTS = {
+        de: [
+          "1 Liste ohne Einträge",
+          "3 Listen ohne Einträge",
+          "1 weitere Liste ohne Einträge",
+          "3 weitere Listen ohne Einträge",
+        ],
+        fr: [
+          "1 liste sans enregistrement",
+          "3 listes sans enregistrement",
+          "1 autre liste sans enregistrement",
+          "3 autres listes sans enregistrement",
+        ],
+        es: [
+          "1 lista sin registros",
+          "3 listas sin registros",
+          "1 lista más sin registros",
+          "3 listas más sin registros",
+        ],
+      } as const;
+      const [one, many, moreOne, moreMany] = COUNTS[lang];
+      expect(checkedOf(["charlotin"])).toContain(one);
+      expect(checkedOf(["charlotin", "epoch_ai", "gleif"])).toContain(many);
+      expect(checkedOf(["kev", "charlotin"])).toContain(moreOne);
+      expect(checkedOf(["kev", "charlotin", "epoch_ai", "gleif"])).toContain(moreMany);
+      // The count is filled in: no placeholder is left in any form.
+      for (const ids of [["charlotin"], ["charlotin", "epoch_ai"], ["kev", "charlotin"]] as const) {
+        expect(checkedOf(ids)).not.toContain("{");
+      }
+    },
+  );
+
+  it.each(LANGS)(
+    "says in %s that only registers are cited, in the words its neighbours use for a Low label",
+    (lang) => {
+      const t = (key: string) => translations[lang][key] ?? key;
+      const registers = credibilityRationale(basisOf("unverified", [recordOf("fedramp")]), t, lang);
+      const neighbour = credibilityRationale(basisOf("unverified", [cited()]), t, lang);
+      expect(registers).toEqual({
+        sentence: translations[lang][REGISTER_ONLY_SENTENCE],
+        stale: null,
+      });
+      // Worded in the language, with no placeholder and no angle bracket.
+      expect(registers.sentence).not.toBe(REGISTER_ONLY_SENTENCE);
+      expect(registers.sentence).not.toMatch(/[<>{}]/);
+      // It starts with the word that the other sentences of a Low label start with: "Niedrig:",
+      // "Faible :", "Bajo:".
+      const label = (sentence: string) => sentence.split(":")[0].trim();
+      expect(label(registers.sentence)).toBe(label(neighbour.sentence));
+      expect(label(registers.sentence)).toBe(translations[lang]["Low"]);
     },
   );
 
