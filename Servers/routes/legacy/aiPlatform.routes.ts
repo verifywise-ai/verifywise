@@ -10,6 +10,7 @@ import extensionRoutes from "../extension.route";
 import extensionRunsRoutes from "../extensionRuns.route";
 import datasetBulkUploadRoutes from "../../extensions/dataset-bulk-upload/datasetBulkUpload.route";
 import riskImportRoutes from "../../extensions/risk-import/riskImport.route";
+import frameworkImportRoutes from "../../extensions/framework-import/frameworkImport.route";
 import slackExtensionRoutes from "../../extensions/slack/slack.route";
 import mlflowExtensionRoutes from "../../extensions/mlflow/mlflow.route";
 import azureAiFoundryExtensionRoutes from "../../extensions/azure-ai-foundry/azureAiFoundry.route";
@@ -53,6 +54,7 @@ export function registerAiPlatformRoutes(app: express.Application): void {
   app.use("/api/extensions", extensionRunsRoutes);
   app.use("/api/extensions/dataset-bulk-upload", datasetBulkUploadRoutes);
   app.use("/api/extensions/risk-import", riskImportRoutes);
+  app.use("/api/extensions/framework-import", frameworkImportRoutes);
   app.use("/api/extensions/slack", slackExtensionRoutes);
   app.use("/api/extensions/mlflow", mlflowExtensionRoutes);
   app.use("/api/extensions/azure-ai-foundry", azureAiFoundryExtensionRoutes);
