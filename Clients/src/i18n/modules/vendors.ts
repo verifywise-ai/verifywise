@@ -315,6 +315,53 @@ export const de: Record<string, string> = {
   "Research risks": "Risiken recherchieren",
   "Finding dismissed.": "Befund verworfen.",
   "This finding no longer exists.": "Dieser Befund existiert nicht mehr.",
+  // Research findings in plain words: the summary, the one line of a row, its cautions
+  "{count} possible risks to review.": "{count} mögliche Risiken zu prüfen.",
+  "1 possible risk to review.": "1 mögliches Risiko zu prüfen.",
+  "{count} are high risk.": "{count} davon sind hohe Risiken.",
+  "1 is high risk.": "1 davon ist ein hohes Risiko.",
+  "All are high risk.": "Alle sind hohe Risiken.",
+  "It is high risk.": "Es ist ein hohes Risiko.",
+  "Most are about: {topics}.": "Die meisten betreffen: {topics}.",
+  "One source could not be checked, so results may be incomplete: {sources}.":
+    "Eine Quelle konnte nicht geprüft werden, die Ergebnisse können daher unvollständig sein: {sources}.",
+  "{count} sources could not be checked, so results may be incomplete: {sources}.":
+    "{count} Quellen konnten nicht geprüft werden, die Ergebnisse können daher unvollständig sein: {sources}.",
+  "Last researched: {date}": "Zuletzt recherchiert: {date}",
+  "How it was researched": "So wurde recherchiert",
+  "Hide research details": "Recherchedetails ausblenden",
+  "What the last research found": "Was die letzte Recherche ergab",
+  "What it checked": "Was geprüft wurde",
+  "* Earlier estimate: 1 of these findings was rated before the current rules for rating sources.":
+    "* Frühere Einschätzung: 1 dieser Befunde wurde vor den aktuellen Regeln zur Bewertung von Quellen bewertet.",
+  "* Earlier estimate: {count} of these findings were rated before the current rules for rating sources.":
+    "* Frühere Einschätzung: {count} dieser Befunde wurden vor den aktuellen Regeln zur Bewertung von Quellen bewertet.",
+  "Earlier estimate": "Frühere Einschätzung",
+  "{label}*: one source reports it.": "{label}*: Eine Quelle berichtet darüber.",
+  "{label}*: one source reports it ({host}).": "{label}*: Eine Quelle berichtet darüber ({host}).",
+  "{label}*: {count} sources report it.": "{label}*: {count} Quellen berichten darüber.",
+  "{label}*: {count} sources report it ({hosts}).":
+    "{label}*: {count} Quellen berichten darüber ({hosts}).",
+  "Based on search results only: it could not be confirmed on the source pages.":
+    "Beruht nur auf Suchergebnissen: Auf den Seiten der Quellen ließ es sich nicht bestätigen.",
+  "A cited record was withdrawn by its source.":
+    "Ein zitierter Eintrag wurde von seiner Quelle zurückgezogen.",
+  "A cited record was rejected by its source.":
+    "Ein zitierter Eintrag wurde von seiner Quelle abgelehnt.",
+  "A cited record was removed from its list.":
+    "Ein zitierter Eintrag wurde von seiner Liste gestrichen.",
+  "Why it matters to you": "Warum das für Sie wichtig ist",
+  "What to do": "Was zu tun ist",
+  "Why this risk level": "Warum diese Risikostufe",
+  "Severity: {severity} · Likelihood: {likelihood}":
+    "Schweregrad: {severity} · Wahrscheinlichkeit: {likelihood}",
+  "Official source": "Offizielle Quelle",
+  "Trusted publisher": "Vertrauenswürdiges Medium",
+  "Vendor's own page": "Eigene Seite des Anbieters",
+  "Unverified source": "Ungeprüfte Quelle",
+  "Record withdrawn": "Eintrag zurückgezogen",
+  "Record rejected": "Eintrag abgelehnt",
+  "Removed from the list": "Von der Liste gestrichen",
 };
 
 export const fr: Record<string, string> = {
@@ -635,6 +682,52 @@ export const fr: Record<string, string> = {
   "Research risks": "Rechercher les risques",
   "Finding dismissed.": "Résultat rejeté.",
   "This finding no longer exists.": "Ce résultat n'existe plus.",
+  // Research findings in plain words: the summary, the one line of a row, its cautions
+  "{count} possible risks to review.": "{count} risques possibles à examiner.",
+  "1 possible risk to review.": "1 risque possible à examiner.",
+  "{count} are high risk.": "{count} présentent un risque élevé.",
+  "1 is high risk.": "1 présente un risque élevé.",
+  "All are high risk.": "Tous présentent un risque élevé.",
+  "It is high risk.": "Il présente un risque élevé.",
+  "Most are about: {topics}.": "La plupart concernent : {topics}.",
+  "One source could not be checked, so results may be incomplete: {sources}.":
+    "Une source n'a pas pu être consultée, les résultats peuvent donc être incomplets : {sources}.",
+  "{count} sources could not be checked, so results may be incomplete: {sources}.":
+    "{count} sources n'ont pas pu être consultées, les résultats peuvent donc être incomplets : {sources}.",
+  "Last researched: {date}": "Dernière recherche : {date}",
+  "How it was researched": "Comment la recherche a été menée",
+  "Hide research details": "Masquer les détails de la recherche",
+  "What the last research found": "Ce que la dernière recherche a trouvé",
+  "What it checked": "Ce qui a été consulté",
+  "* Earlier estimate: 1 of these findings was rated before the current rules for rating sources.":
+    "* Estimation antérieure : 1 de ces résultats a été évalué avant les règles actuelles d'évaluation des sources.",
+  "* Earlier estimate: {count} of these findings were rated before the current rules for rating sources.":
+    "* Estimation antérieure : {count} de ces résultats ont été évalués avant les règles actuelles d'évaluation des sources.",
+  "Earlier estimate": "Estimation antérieure",
+  "{label}*: one source reports it.": "{label}* : une source le signale.",
+  "{label}*: one source reports it ({host}).": "{label}* : une source le signale ({host}).",
+  "{label}*: {count} sources report it.": "{label}* : {count} sources le signalent.",
+  "{label}*: {count} sources report it ({hosts}).":
+    "{label}* : {count} sources le signalent ({hosts}).",
+  "Based on search results only: it could not be confirmed on the source pages.":
+    "Repose uniquement sur des résultats de recherche : les pages des sources n'ont pas permis de le confirmer.",
+  "A cited record was withdrawn by its source.":
+    "Un enregistrement cité a été retiré par sa source.",
+  "A cited record was rejected by its source.":
+    "Un enregistrement cité a été rejeté par sa source.",
+  "A cited record was removed from its list.": "Un enregistrement cité a été radié de sa liste.",
+  "Why it matters to you": "Pourquoi cela vous concerne",
+  "What to do": "Que faire",
+  "Why this risk level": "Pourquoi ce niveau de risque",
+  "Severity: {severity} · Likelihood: {likelihood}":
+    "Gravité : {severity} · Probabilité : {likelihood}",
+  "Official source": "Source officielle",
+  "Trusted publisher": "Éditeur fiable",
+  "Vendor's own page": "Page du fournisseur lui-même",
+  "Unverified source": "Source non vérifiée",
+  "Record withdrawn": "Enregistrement retiré",
+  "Record rejected": "Enregistrement rejeté",
+  "Removed from the list": "Radié de la liste",
 };
 
 export const es: Record<string, string> = {
@@ -951,4 +1044,48 @@ export const es: Record<string, string> = {
   "Research risks": "Investigar riesgos",
   "Finding dismissed.": "Hallazgo descartado.",
   "This finding no longer exists.": "Este hallazgo ya no existe.",
+  // Research findings in plain words: the summary, the one line of a row, its cautions
+  "{count} possible risks to review.": "{count} posibles riesgos por revisar.",
+  "1 possible risk to review.": "1 posible riesgo por revisar.",
+  "{count} are high risk.": "{count} son de riesgo alto.",
+  "1 is high risk.": "1 es de riesgo alto.",
+  "All are high risk.": "Todos son de riesgo alto.",
+  "It is high risk.": "Es de riesgo alto.",
+  "Most are about: {topics}.": "La mayoría trata de: {topics}.",
+  "One source could not be checked, so results may be incomplete: {sources}.":
+    "No se pudo consultar una fuente, por lo que los resultados pueden estar incompletos: {sources}.",
+  "{count} sources could not be checked, so results may be incomplete: {sources}.":
+    "No se pudieron consultar {count} fuentes, por lo que los resultados pueden estar incompletos: {sources}.",
+  "Last researched: {date}": "Última investigación: {date}",
+  "How it was researched": "Cómo se investigó",
+  "Hide research details": "Ocultar los detalles de la investigación",
+  "What the last research found": "Qué encontró la última investigación",
+  "What it checked": "Qué se consultó",
+  "* Earlier estimate: 1 of these findings was rated before the current rules for rating sources.":
+    "* Estimación anterior: 1 de estos hallazgos se evaluó antes de las reglas actuales para evaluar las fuentes.",
+  "* Earlier estimate: {count} of these findings were rated before the current rules for rating sources.":
+    "* Estimación anterior: {count} de estos hallazgos se evaluaron antes de las reglas actuales para evaluar las fuentes.",
+  "Earlier estimate": "Estimación anterior",
+  "{label}*: one source reports it.": "{label}*: una fuente lo informa.",
+  "{label}*: one source reports it ({host}).": "{label}*: una fuente lo informa ({host}).",
+  "{label}*: {count} sources report it.": "{label}*: {count} fuentes lo informan.",
+  "{label}*: {count} sources report it ({hosts}).":
+    "{label}*: {count} fuentes lo informan ({hosts}).",
+  "Based on search results only: it could not be confirmed on the source pages.":
+    "Se basa solo en resultados de búsqueda: no se pudo confirmar en las páginas de las fuentes.",
+  "A cited record was withdrawn by its source.": "Un registro citado fue retirado por su fuente.",
+  "A cited record was rejected by its source.": "Un registro citado fue rechazado por su fuente.",
+  "A cited record was removed from its list.": "Un registro citado fue excluido de su lista.",
+  "Why it matters to you": "Por qué le afecta",
+  "What to do": "Qué hacer",
+  "Why this risk level": "Por qué este nivel de riesgo",
+  "Severity: {severity} · Likelihood: {likelihood}":
+    "Gravedad: {severity} · Probabilidad: {likelihood}",
+  "Official source": "Fuente oficial",
+  "Trusted publisher": "Medio fiable",
+  "Vendor's own page": "Página del propio proveedor",
+  "Unverified source": "Fuente sin verificar",
+  "Record withdrawn": "Registro retirado",
+  "Record rejected": "Registro rechazado",
+  "Removed from the list": "Excluido de la lista",
 };

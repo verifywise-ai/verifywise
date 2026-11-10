@@ -1567,6 +1567,7 @@ describe("coverageLines", () => {
     expect(linesOf(off)).toEqual({
       checked: null,
       notChecked: null,
+      unchecked: [],
       none: null,
       stale: [],
       cited: "Sources cited: 0 official, 1 trusted press, 0 vendor, 0 unverified",
