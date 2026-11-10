@@ -100,7 +100,7 @@ export async function bulkImportFrameworks(req: Request, res: Response): Promise
     });
     return res
       .status(statusOf(error))
-      .json(STATUS_CODE[statusOf(error)](translateError(req, error)));
+      .json((STATUS_CODE as any)[statusOf(error)](translateError(req, error)));
   }
 }
 
@@ -129,7 +129,7 @@ export async function listImportedFrameworks(req: Request, res: Response): Promi
     });
     return res
       .status(statusOf(error))
-      .json(STATUS_CODE[statusOf(error)](translateError(req, error)));
+      .json((STATUS_CODE as any)[statusOf(error)](translateError(req, error)));
   }
 }
 
@@ -170,7 +170,7 @@ export async function updateImportedFramework(req: Request, res: Response): Prom
     });
     return res
       .status(statusOf(error))
-      .json(STATUS_CODE[statusOf(error)](translateError(req, error)));
+      .json((STATUS_CODE as any)[statusOf(error)](translateError(req, error)));
   }
 }
 
@@ -210,6 +210,6 @@ export async function deleteImportedFramework(req: Request, res: Response): Prom
     });
     return res
       .status(statusOf(error))
-      .json(STATUS_CODE[statusOf(error)](translateError(req, error)));
+      .json((STATUS_CODE as any)[statusOf(error)](translateError(req, error)));
   }
 }
