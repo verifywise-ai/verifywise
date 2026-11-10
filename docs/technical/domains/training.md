@@ -351,6 +351,7 @@ Assign, due date change, complete, reopen and remove each write a row to `traini
 - A daily job at 08:30 server time (`trainingAssignmentReminderSweep`) sends the `training-reminder` email once when an open assignment is due within 7 days, and once when it is overdue. A failed send is not stamped and retries the next day.
 - An assignment created with a due date within 7 days skips the due-soon reminder, since the assignment notice covers it. Changing the due date or reopening an assignment restarts the reminders.
 - The server accepts a due date one day before today in UTC, because in the evening west of UTC the user's today is already yesterday in UTC.
+- Overdue and the reminder sweep use the UTC date. West of UTC an assignment shows as overdue from the evening of its due date, and an assignment created that evening for "today" is overdue at once. There is no organization time zone to use instead.
 
 ## Related Documentation
 

@@ -94,6 +94,9 @@ const describeAssignment = (assignment: TrainingAssignment): string =>
  * removing an assignment leaves a record of what it was and who changed it.
  * Ledger entries run one at a time afterwards: an assignment can name 500
  * people, and each ledger append takes a pool connection.
+ *
+ * The change itself is already saved, so a history failure is logged rather
+ * than turned into an error response that would hide a completed change.
  */
 async function recordAssignmentHistory(
   req: Request,
@@ -101,22 +104,27 @@ async function recordAssignmentHistory(
   entries: Array<{ person: string; oldValue: string; newValue: string }>,
 ): Promise<void> {
   const ledgerAppends: Array<() => void> = [];
-  await recordMultipleFieldChanges(
-    "training",
-    trainingId,
-    req.userId!,
-    req.organizationId!,
-    entries.map(({ person, oldValue, newValue }) => ({
-      fieldName: `Assignment: ${person}`,
-      oldValue,
-      newValue,
-    })),
-    undefined,
-    false,
-    (append) => {
-      ledgerAppends.push(append);
-    },
-  );
+  try {
+    await recordMultipleFieldChanges(
+      "training",
+      trainingId,
+      req.userId!,
+      req.organizationId!,
+      entries.map(({ person, oldValue, newValue }) => ({
+        // field_name is VARCHAR(255).
+        fieldName: `Assignment: ${person}`.slice(0, 255),
+        oldValue,
+        newValue,
+      })),
+      undefined,
+      false,
+      (append) => {
+        ledgerAppends.push(append);
+      },
+    );
+  } catch (error) {
+    logger.error(`Failed to record assignment history for training ${trainingId}:`, error);
+  }
   void (async () => {
     for (const append of ledgerAppends) await append();
   })();
@@ -374,8 +382,12 @@ export async function completeTrainingAssignment(req: Request, res: Response) {
     },
     () =>
       changeAsAssigneeOrEditor(req, async (existing) => {
-        if (existing.completed_at) return;
-        await completeTrainingAssignmentQuery(existing.id, req.userId!, req.organizationId!);
+        const changed = await completeTrainingAssignmentQuery(
+          existing.id,
+          req.userId!,
+          req.organizationId!,
+        );
+        if (!changed) return;
         await recordAssignmentHistory(req, existing.training_id, [
           {
             person: personName(existing.user_name, existing.user_surname),
@@ -399,8 +411,8 @@ export async function reopenTrainingAssignment(req: Request, res: Response) {
     },
     () =>
       changeAsAssigneeOrEditor(req, async (existing) => {
-        if (!existing.completed_at) return;
-        await reopenTrainingAssignmentQuery(existing.id, req.organizationId!);
+        const changed = await reopenTrainingAssignmentQuery(existing.id, req.organizationId!);
+        if (!changed) return;
         await recordAssignmentHistory(req, existing.training_id, [
           {
             person: personName(existing.user_name, existing.user_surname),

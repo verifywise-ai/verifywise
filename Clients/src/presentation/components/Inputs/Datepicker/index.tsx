@@ -110,7 +110,8 @@ function DatePicker({
           format="MM/DD/YYYY"
           disabled={disabled}
           slotProps={{
-            field: { readOnly: isFieldReadOnly },
+            // Only when asked, so other pickers keep their own read-only behaviour.
+            ...(isFieldReadOnly ? { field: { readOnly: true } } : {}),
             textField: {
               id: fieldId,
               onBlur,

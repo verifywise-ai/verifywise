@@ -283,18 +283,23 @@ export async function updateTrainingAssignmentDueDateQuery(
   );
 }
 
-/** Idempotent: a finished assignment keeps its first completed_at/completed_by. */
+/**
+ * Idempotent: a finished assignment keeps its first completed_at/completed_by.
+ * Returns whether this call completed it, so a concurrent call records nothing.
+ */
 export async function completeTrainingAssignmentQuery(
   id: number,
   completedBy: number,
   organizationId: number,
-): Promise<void> {
-  await sequelize.query(
+): Promise<boolean> {
+  const rows = await writeReturningIds<{ id: number }>(
     `UPDATE training_assignments
         SET completed_at = now(), completed_by = :completedBy, updated_at = now()
-      WHERE organization_id = :organizationId AND id = :id AND completed_at IS NULL`,
-    { replacements: { organizationId, id, completedBy } },
+      WHERE organization_id = :organizationId AND id = :id AND completed_at IS NULL
+      RETURNING id`,
+    { organizationId, id, completedBy },
   );
+  return rows.length > 0;
 }
 
 /**
@@ -320,17 +325,20 @@ export async function completeAllTrainingAssignmentsQuery(
   );
 }
 
+/** Returns whether this call reopened it, so a concurrent call records nothing. */
 export async function reopenTrainingAssignmentQuery(
   id: number,
   organizationId: number,
-): Promise<void> {
-  await sequelize.query(
+): Promise<boolean> {
+  const rows = await writeReturningIds<{ id: number }>(
     `UPDATE training_assignments
         SET completed_at = NULL, completed_by = NULL,
             due_soon_reminded_at = NULL, overdue_reminded_at = NULL, updated_at = now()
-      WHERE organization_id = :organizationId AND id = :id`,
-    { replacements: { organizationId, id } },
+      WHERE organization_id = :organizationId AND id = :id AND completed_at IS NOT NULL
+      RETURNING id`,
+    { organizationId, id },
   );
+  return rows.length > 0;
 }
 
 export async function deleteTrainingAssignmentQuery(
