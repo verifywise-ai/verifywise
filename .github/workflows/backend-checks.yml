@@ -16,6 +16,7 @@ on:
     paths:
       - "Servers/**"
       - ".github/workflows/backend-checks.yml"
+  workflow_dispatch:
 
 jobs:
   security-audit:
