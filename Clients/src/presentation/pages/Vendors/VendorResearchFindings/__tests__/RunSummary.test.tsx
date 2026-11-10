@@ -1,13 +1,17 @@
 /**
- * The line of the latest research run that says which search the run used. The run summary has
- * its other lines tested with the whole section (VendorResearchFindings.test.tsx); this file is
- * about the engine line only: the words for each engine, the credit that the GDELT Project's terms
- * ask for, nothing for a run from before the engine was recorded, and the words in German, French
- * and Spanish through the real translator and dictionary.
+ * Which search a run used, in the two places that say it. Claude's own search needs no credit, so
+ * it is named with what the run did, behind "How it was researched". The GDELT Project's terms ask
+ * for a credit with a link, so the project is credited under the summary, on screen without a
+ * click. Nothing is said for a run from before the engine was recorded, and the words are in
+ * German, French and Spanish through the real translator and dictionary.
+ *
+ * The other lines of the run are tested with the whole section (VendorResearchFindings.test.tsx
+ * and PlainLayout.test.tsx).
  */
 
 import { describe, it, expect, vi, beforeEach, afterAll } from "vitest";
 import { screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { renderWithProviders } from "../../../../../test/renderWithProviders";
 import { LANGS, resetAudit, setLanguage, tr } from "../../../../../test/i18nHelpers";
 import { translations } from "../../../../../i18n/translations";
@@ -25,6 +29,8 @@ vi.mock(
 );
 
 import * as repository from "../../../../../application/repository/vendorResearch.repository";
+import { useLatestVendorResearch } from "../../../../../application/hooks/useVendorResearch";
+import ResearchCredits from "../ResearchCredits";
 import RunSummary from "../RunSummary";
 
 const mocks = { latest: vi.mocked(repository.getLatestVendorResearch) };
@@ -34,21 +40,37 @@ const GDELT_LINE = "News searched with the GDELT Project (last 3 months)";
 const GDELT_NAME = "GDELT Project";
 const GDELT_URL = "https://www.gdeltproject.org/";
 const SEARCHES_LINE = "Searches: 6, pages read: 4";
+const DETAILS = "How it was researched";
 
 /** A finished run that searched, so that the line of what it did is there for the engine to follow. */
 const searched = (overrides: Parameters<typeof run>[0] = {}) =>
   run({ category_summary: FOUR_OUTCOMES, searches_used: 6, pages_read: 4, ...overrides });
 
-const renderSummary = () =>
-  renderWithProviders(
-    <RunSummary
-      vendorId={7}
-      vendorName="Acme Cloud"
-      canStart
-      notConfigured={false}
-      onNotify={vi.fn()}
-    />,
+const onNotify = vi.fn();
+
+/** The summary and the credits as the section mounts them: on one read of the vendor's latest run. */
+function SummaryAndCredits() {
+  const latest = useLatestVendorResearch(7);
+  return (
+    <>
+      <RunSummary
+        latest={latest}
+        vendorId={7}
+        vendorName="Acme Cloud"
+        canStart
+        notConfigured={false}
+        onNotify={onNotify}
+      />
+      <ResearchCredits run={latest.data} />
+    </>
   );
+}
+
+const renderSummary = () => renderWithProviders(<SummaryAndCredits />);
+
+/** Opens what the run found and checked; the name of the button is in the language of the page. */
+const openDetails = async (name = DETAILS) =>
+  userEvent.click(await screen.findByRole("button", { name }));
 
 /** The paragraph that holds the credit: the link, and the words around it. */
 const creditLine = async () => {
@@ -63,32 +85,32 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe("the line that says which search a run used", () => {
-  it("says a run searched with the web search of Claude, under the line of what the run did", async () => {
+describe("the lines that say which search a run used", () => {
+  it("names the web search of Claude with what the run did, once the details are open", async () => {
     mocks.latest.mockResolvedValue(searched({ search_engine: "anthropic" }));
     renderSummary();
 
-    const did = await screen.findByText(SEARCHES_LINE);
-    const line = screen.getByText(CLAUDE_LINE);
+    await screen.findByRole("button", { name: DETAILS });
+    expect(screen.queryByText(CLAUDE_LINE)).not.toBeInTheDocument();
+    await openDetails();
 
-    expect(follows(did, line)).toBe(true);
-    // Before the day of the run, which closes the summary.
-    expect(follows(line, screen.getByText(/^Last run: /))).toBe(true);
+    expect(follows(screen.getByText(SEARCHES_LINE), screen.getByText(CLAUDE_LINE))).toBe(true);
     // Claude's search needs no credit of the kind GDELT asks for.
     expect(screen.queryByRole("link", { name: GDELT_NAME })).not.toBeInTheDocument();
   });
 
-  it("says a run searched the news with the GDELT Project, and credits the project with a link", async () => {
+  it("credits the GDELT Project with a link, under the summary and without a click", async () => {
     mocks.latest.mockResolvedValue(searched({ search_engine: "gdelt" }));
     renderSummary();
 
-    const did = await screen.findByText(SEARCHES_LINE);
     const line = await creditLine();
 
     // The words are one sentence on the screen, with the name of the project inside it.
     expect(line.textContent).toBe(GDELT_LINE);
-    expect(follows(did, line)).toBe(true);
-    expect(follows(line, screen.getByText(/^Last run: /))).toBe(true);
+    // The credit is under the day of the run, and none of the lines behind the button.
+    expect(follows(screen.getByText(/^Last researched: /), line)).toBe(true);
+    expect(screen.getByRole("button", { name: DETAILS })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByText(SEARCHES_LINE)).not.toBeInTheDocument();
 
     // The link is the credit: it goes to the project's own site, and opens beside this page.
     const link = within(line).getByRole("link", { name: GDELT_NAME });
@@ -96,20 +118,22 @@ describe("the line that says which search a run used", () => {
     expect(link).toHaveAttribute("target", "_blank");
     expect(link.getAttribute("rel")).toContain("noopener");
     expect(link.getAttribute("rel")).toContain("noreferrer");
+  });
+
+  it("credits the GDELT Project once, whether the details are open or not", async () => {
+    mocks.latest.mockResolvedValue(searched({ search_engine: "gdelt" }));
+    renderSummary();
+    await creditLine();
+
+    await openDetails();
+
+    expect(screen.getByText(SEARCHES_LINE)).toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: GDELT_NAME })).toHaveLength(1);
+    expect(screen.getAllByText(/GDELT Project/)).toHaveLength(1);
     expect(screen.queryByText(CLAUDE_LINE)).not.toBeInTheDocument();
   });
 
-  it("credits the GDELT Project once", async () => {
-    mocks.latest.mockResolvedValue(searched({ search_engine: "gdelt" }));
-    renderSummary();
-
-    await creditLine();
-
-    expect(screen.getAllByRole("link", { name: GDELT_NAME })).toHaveLength(1);
-    expect(screen.getAllByText(/GDELT Project/)).toHaveLength(1);
-  });
-
-  it("says it for a run that failed after it searched as well", async () => {
+  it("credits it for a run that failed after it searched as well", async () => {
     mocks.latest.mockResolvedValue(
       run({
         status: "failed",
@@ -121,8 +145,9 @@ describe("the line that says which search a run used", () => {
     );
     renderSummary();
 
-    expect(await screen.findByText("Searches: 3, pages read: 0")).toBeInTheDocument();
     expect((await creditLine()).textContent).toBe(GDELT_LINE);
+    await openDetails();
+    expect(screen.getByText("Searches: 3, pages read: 0")).toBeInTheDocument();
   });
 
   // A run from before the column, one that searched nothing, and a response cached before the
@@ -133,8 +158,9 @@ describe("the line that says which search a run used", () => {
   ])("says nothing of the search of a run whose engine is %s", async (_name, fields) => {
     mocks.latest.mockResolvedValue(searched(fields));
     renderSummary();
+    await openDetails();
 
-    expect(await screen.findByText(SEARCHES_LINE)).toBeInTheDocument();
+    expect(screen.getByText(SEARCHES_LINE)).toBeInTheDocument();
     expect(screen.queryByText(/Searched with/)).not.toBeInTheDocument();
     expect(screen.queryByText(/News searched with/)).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: GDELT_NAME })).not.toBeInTheDocument();
@@ -146,11 +172,12 @@ describe("the line that says which search a run used", () => {
     for (const engine of ["openai", "bing"]) {
       mocks.latest.mockResolvedValue(searched({ search_engine: engine as unknown as "anthropic" }));
       const { unmount } = renderSummary();
+      await openDetails();
 
-      expect(await screen.findByText(SEARCHES_LINE)).toBeInTheDocument();
+      expect(screen.getByText(SEARCHES_LINE)).toBeInTheDocument();
       expect(screen.queryByText(/Searched with|News searched with/)).not.toBeInTheDocument();
       expect(screen.queryByRole("link", { name: GDELT_NAME })).not.toBeInTheDocument();
-      expect(screen.getByText(/^Last run: /)).toBeInTheDocument();
+      expect(screen.getByText(/^Last researched: /)).toBeInTheDocument();
       unmount();
     }
   });
@@ -164,16 +191,17 @@ describe("the line that says which search a run used", () => {
     expect(await screen.findByText("Researching…")).toBeInTheDocument();
     expect(screen.queryByText(/Searched with|News searched with/)).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: GDELT_NAME })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: DETAILS })).not.toBeInTheDocument();
   });
 });
 
-describe("the line of the engine in German, French and Spanish", () => {
+describe("the lines of the engine in German, French and Spanish", () => {
   afterAll(async () => {
     await setLanguage("en");
   });
 
   it.each(LANGS)(
-    "is translated in %s, with the credit still a link to the project",
+    "translates the credit in %s, with the name still a link to the project",
     async (lang) => {
       resetAudit();
       await setLanguage(lang);
@@ -192,11 +220,13 @@ describe("the line of the engine in German, French and Spanish", () => {
     },
   );
 
-  it.each(LANGS)("says Claude's search in %s", async (lang) => {
+  it.each(LANGS)("says Claude's search in %s, behind the button of that language", async (lang) => {
     resetAudit();
     await setLanguage(lang);
     mocks.latest.mockResolvedValue(searched({ search_engine: "anthropic" }));
     renderSummary();
+
+    await openDetails(tr(lang, DETAILS));
 
     expect(await screen.findByText(tr(lang, CLAUDE_LINE))).toBeInTheDocument();
     expect(screen.queryByText(CLAUDE_LINE)).not.toBeInTheDocument();
@@ -204,9 +234,9 @@ describe("the line of the engine in German, French and Spanish", () => {
 });
 
 describe("the dictionary", () => {
-  // The line of the engine is built from the translation of the sentence, so a translation has to
-  // keep what the screen finds in it: the name of the project, once, to put the link on.
-  it.each(LANGS)("has the words of the engine line in %s", (lang) => {
+  // The credit is built from the translation of the sentence, so a translation has to keep what
+  // the screen finds in it: the name of the project, once, to put the link on.
+  it.each(LANGS)("has the words of the engine lines in %s", (lang) => {
     for (const key of [CLAUDE_LINE, GDELT_LINE]) {
       const text = translations[lang][key];
       expect(text, `${lang}: ${key}`).toEqual(expect.any(String));

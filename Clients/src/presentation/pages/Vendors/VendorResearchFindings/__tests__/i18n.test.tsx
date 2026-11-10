@@ -688,10 +688,11 @@ const CATEGORIES = [
 const OUTCOMES = ["risks found", "nothing found", "could not be researched", "skipped"];
 
 /**
- * The text the section builds out of translated parts: the pending count, the line of every
- * category, and the date of the last run. A test that is about something else still has them
- * on screen, so they are expected in every test. Only their translated forms are: the same line
- * with one part left in English would not be in this list, and would fail the test.
+ * The text the section builds out of translated parts: the pending count, what most findings are
+ * about, the line of every category, and the day of the last run. A test that is about something
+ * else still has them on screen, so they are expected in every test. Only their translated forms
+ * are: the same line with one part left in English would not be in this list, and would fail the
+ * test.
  */
 const registerComposedText = (lang: (typeof LANGS)[number]) => {
   for (const count of [0, 1, 2, 3, 250]) tr(lang, "Pending: {count}", { count });
@@ -703,7 +704,13 @@ const registerComposedText = (lang: (typeof LANGS)[number]) => {
       });
     }
   }
-  tr(lang, "Last run: {date}", { date: plain(dateIn(lang, "2026-10-10T09:01:00.000Z")) });
+  tr(lang, "Last researched: {date}", { date: plain(dateIn(lang, "2026-10-10T09:01:00.000Z")) });
+  // The two findings most tests list are of two categories, which the summary then names.
+  tr(lang, "Most are about: {topics}.", {
+    topics: [`${tr(lang, "Security incidents")} (1)`, `${tr(lang, "Certifications")} (1)`].join(
+      ", ",
+    ),
+  });
 };
 
 describe.each(LANGS)("research findings in %s", (lang) => {
@@ -713,7 +720,27 @@ describe.each(LANGS)("research findings in %s", (lang) => {
     registerComposedText(lang);
   });
 
-  it("translates the header, the filter and a populated list", async () => {
+  /**
+   * The row of the finding with this text, with its details open: a click of the risk opens them.
+   * What the page translator writes in the details arrives a moment later, so a test waits for
+   * those words (`findByText`); what the row words itself is there at once.
+   */
+  const openRow = async (text: string) => {
+    const risk = await screen.findByText(text);
+    await userEvent.click(risk.closest("button") as HTMLElement);
+    return risk.closest("li") as HTMLElement;
+  };
+  /** Opens what the latest run found and checked, which is behind one button of the summary. */
+  const openRunDetails = async () =>
+    userEvent.click(await screen.findByRole("button", { name: tr(lang, "How it was researched") }));
+  /** The two scales a level is computed from, as the one line an open row shows them on. */
+  const scales = (severity: string, likelihood: string) =>
+    tr(lang, "Severity: {severity} · Likelihood: {likelihood}", {
+      severity: tr(lang, severity),
+      likelihood: tr(lang, likelihood),
+    });
+
+  it("translates the header, the filter, the summary and a populated list", async () => {
     renderSection();
 
     expect(await screen.findByText(tr(lang, "Research findings"))).toBeInTheDocument();
@@ -726,31 +753,48 @@ describe.each(LANGS)("research findings in %s", (lang) => {
       await screen.findByRole("list", { name: tr(lang, "Pending research findings") }),
     ).toBeInTheDocument();
 
-    const first = within((await screen.findByText(finding().risk_description)).closest("li")!);
+    // The summary: how many are pending and how many of them are high, then what most are about.
+    // The audit does not read a sentence that starts with a number, so this one is checked here.
+    const pending = [
+      tr(lang, "{count} possible risks to review.", { count: 2 }),
+      tr(lang, "1 is high risk."),
+    ].join(" ");
+    expect(screen.getByText(pending)).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        tr(lang, "Most are about: {topics}.", {
+          topics: [
+            `${tr(lang, "Security incidents")} (1)`,
+            `${tr(lang, "Certifications")} (1)`,
+          ].join(", "),
+        }),
+      ),
+    ).toBeInTheDocument();
+    // Each finding stands under the name of its category.
+    for (const category of ["Security incidents", "Certifications"]) {
+      expect(screen.getByRole("list", { name: tr(lang, category) })).toBeInTheDocument();
+    }
+
+    const first = within(await openRow(finding().risk_description));
     for (const word of [
-      "Security incidents",
-      "Risk level",
-      "Severity",
-      "Likelihood",
-      "Credibility",
-      "Action plan",
-      "Why this rating",
-      "Sources",
       "High Risk",
-      "Major",
-      "Likely",
+      "Credibility",
       "Medium",
       "Preview",
       "Dismiss",
+      "Why it matters to you",
+      "What to do",
+      "Why this risk level",
     ]) {
       expect(first.getByText(tr(lang, word))).toBeInTheDocument();
     }
-    const second = within(
-      (await screen.findByText(secondFinding().risk_description)).closest("li")!,
-    );
-    for (const word of ["Certifications", "Medium Risk", "Moderate", "Possible", "High"]) {
+    expect(await first.findByText(tr(lang, "Sources"))).toBeInTheDocument();
+    expect(first.getByText(scales("Major", "Likely"))).toBeInTheDocument();
+    const second = within(await openRow(secondFinding().risk_description));
+    for (const word of ["Medium Risk", "High"]) {
       expect(second.getByText(tr(lang, word))).toBeInTheDocument();
     }
+    expect(second.getByText(scales("Moderate", "Possible"))).toBeInTheDocument();
 
     expectNoUntranslatedText(lang, FIXTURES);
   });
@@ -779,9 +823,9 @@ describe.each(LANGS)("research findings in %s", (lang) => {
     // written, as the vendor named "Other" is.
     mocks.list.mockResolvedValue({ rows: [finding({ action_plan: "Other" })], total: 1 });
     renderSection();
-    const row = within((await screen.findByText(finding().risk_description)).closest("li")!);
+    const row = within(await openRow(finding().risk_description));
 
-    expect(row.getByText(tr(lang, "Action plan"))).toBeInTheDocument();
+    expect(row.getByText(tr(lang, "What to do"))).toBeInTheDocument();
     expect(row.getByText("Other")).toBeInTheDocument();
     expect(row.queryByText(tr(lang, "Other"))).not.toBeInTheDocument();
 
@@ -792,9 +836,9 @@ describe.each(LANGS)("research findings in %s", (lang) => {
     // "Other" is a word of the dictionary. The rationale is the model's text, not ours.
     mocks.list.mockResolvedValue({ rows: [finding({ rationale: "Other" })], total: 1 });
     renderSection();
-    const row = within((await screen.findByText(finding().risk_description)).closest("li")!);
+    const row = within(await openRow(finding().risk_description));
 
-    expect(row.getByText(tr(lang, "Why this rating"))).toBeInTheDocument();
+    expect(row.getByText(tr(lang, "Why this risk level"))).toBeInTheDocument();
     expect(row.getByText("Other")).toBeInTheDocument();
     expect(row.queryByText(tr(lang, "Other"))).not.toBeInTheDocument();
 
@@ -806,8 +850,11 @@ describe.each(LANGS)("research findings in %s", (lang) => {
     renderSection();
     const row = within((await screen.findByText(finding().risk_description)).closest("li")!);
 
+    // A caution is on the row without a click.
     expect(
-      row.getByText(tr(lang, "Not confirmed on the page. The quotes come from search results.")),
+      row.getByText(
+        tr(lang, "Based on search results only: it could not be confirmed on the source pages."),
+      ),
     ).toBeInTheDocument();
 
     expectNoUntranslatedText(lang, FIXTURES);
@@ -825,6 +872,7 @@ describe.each(LANGS)("research findings in %s", (lang) => {
       total: 1,
     });
     renderSection();
+    await openRow(finding().risk_description);
 
     expect(await screen.findByText(tr(lang, "Unknown source"))).toBeInTheDocument();
 
@@ -861,25 +909,21 @@ describe.each(LANGS)("research findings in %s", (lang) => {
     });
     renderSection();
 
-    await screen.findByText("Second");
-    for (const word of [
-      "Almost certain",
-      "Catastrophic",
-      "Very High Risk",
-      "Rare",
-      "Negligible",
-      "Very Low Risk",
-      "Unlikely",
-      "Minor",
-      "Low Risk",
+    // The level is on the row; the two scales it is computed from are one line of an open row.
+    for (const [text, level, severity, likelihood] of [
+      [finding().risk_description, "Very High Risk", "Catastrophic", "Almost certain"],
+      ["Second", "Very Low Risk", "Negligible", "Rare"],
+      ["Third", "Low Risk", "Minor", "Unlikely"],
     ]) {
-      expect(screen.getAllByText(tr(lang, word)).length).toBeGreaterThan(0);
+      const row = within(await openRow(text));
+      expect(row.getByText(tr(lang, level))).toBeInTheDocument();
+      expect(row.getByText(scales(severity, likelihood))).toBeInTheDocument();
     }
 
     expectNoUntranslatedText(lang, FIXTURES);
   });
 
-  it("translates the credibility of a finding: its chip, its line, the note, the badges and the status of a record", async () => {
+  it("translates the credibility of a finding: its line, its cautions, the tags of its sources and what became of a record", async () => {
     mocks.list.mockResolvedValue({
       rows: [
         finding({
@@ -962,10 +1006,9 @@ describe.each(LANGS)("research findings in %s", (lang) => {
       total: 1,
     });
     renderSection();
-    const row = within((await screen.findByText(finding().risk_description)).closest("li")!);
+    const row = within(await openRow(finding().risk_description));
 
     expect(row.getByText(tr(lang, "Credibility"))).toBeInTheDocument();
-    expect(row.getByText(tr(lang, "High"))).toBeInTheDocument();
     expect(row.queryByText(tr(lang, "Confidence"))).not.toBeInTheDocument();
     const sentence = tr(
       lang,
@@ -979,17 +1022,24 @@ describe.each(LANGS)("research findings in %s", (lang) => {
       date: dateIn(lang, "2026-10-07"),
     });
     expect(row.getByText(plain(`${sentence} ${stale}`))).toBeInTheDocument();
-    expect(
-      row.getByText(tr(lang, "Matched by name only: this may be another company.")),
-    ).toBeInTheDocument();
-    expect(row.getAllByText(tr(lang, "Official"))).toHaveLength(3);
+    // What to be careful about, each in a sentence of its own.
+    for (const caution of [
+      "Matched by name only: this may be another company.",
+      "A cited record was withdrawn by its source.",
+      "A cited record was rejected by its source.",
+      "A cited record was removed from its list.",
+    ]) {
+      expect(row.getByText(tr(lang, caution))).toBeInTheDocument();
+    }
+    // What kind of source each is, and what became of a record its database no longer stands by.
+    expect(row.getAllByText(tr(lang, "Official source"))).toHaveLength(3);
     for (const word of [
-      "Trusted press",
-      "Vendor",
-      "Unverified",
-      "Withdrawn",
-      "Rejected",
-      "Delisted",
+      "Trusted publisher",
+      "Vendor's own page",
+      "Unverified source",
+      "Record withdrawn",
+      "Record rejected",
+      "Removed from the list",
     ]) {
       expect(row.getByText(tr(lang, word))).toBeInTheDocument();
     }
@@ -1026,7 +1076,7 @@ describe.each(LANGS)("research findings in %s", (lang) => {
     expectNoUntranslatedText(lang, FIXTURES);
   });
 
-  it("translates the notes of a label the backfill wrote, and the line and note of an earlier rating", async () => {
+  it("translates the note of a label the backfill wrote, and the line and the legend of an earlier estimate", async () => {
     mocks.list.mockResolvedValue({
       rows: [
         finding({ credibility: "medium", credibility_basis: { rule: "legacy_confidence" } }),
@@ -1044,18 +1094,36 @@ describe.each(LANGS)("research findings in %s", (lang) => {
     });
     renderSection();
 
-    const legacy = within((await screen.findByText(finding().risk_description)).closest("li")!);
-    expect(legacy.getByText(tr(lang, EARLIER_LINE))).toBeInTheDocument();
-    expect(legacy.getByText(tr(lang, "Earlier rating"))).toBeInTheDocument();
+    const legacyRow = (await screen.findByText(finding().risk_description)).closest("li")!;
+    const legacy = within(legacyRow);
     expect(legacy.getByText(tr(lang, "Credibility"))).toBeInTheDocument();
-    expect(legacy.getByText(tr(lang, "Medium"))).toBeInTheDocument();
+    expect(
+      legacy.getByText(
+        tr(lang, "{label}*: one source reports it ({host}).", {
+          label: tr(lang, "Medium"),
+          host: "news.example.com",
+        }),
+      ),
+    ).toBeInTheDocument();
+    // What the asterisk stands for: once above the list, and on the row for those who do not see it.
+    expect(
+      screen.getByText(
+        tr(
+          lang,
+          "* Earlier estimate: 1 of these findings was rated before the current rules for rating sources.",
+        ),
+      ),
+    ).toBeInTheDocument();
+    expect(legacyRow).toHaveTextContent(`(${tr(lang, "Earlier estimate")})`);
     expect(legacy.queryByText(tr(lang, "Confidence"))).not.toBeInTheDocument();
-    const backfilled = within(screen.getByText(secondFinding().risk_description).closest("li")!);
+    // The screen words the line itself: the server's line is not shown in any language.
+    expect(screen.queryByText(tr(lang, EARLIER_LINE))).not.toBeInTheDocument();
+    // An open row says that its label was rated again; only the earlier estimate has the asterisk.
+    const backfilled = within(await openRow(secondFinding().risk_description));
     const sentence = tr(lang, "Low: only the vendor's own claims support it.");
     const note = tr(lang, "Rated again with the current rule.");
     expect(backfilled.getByText(plain(`${sentence} ${note}`))).toBeInTheDocument();
-    // Only the earlier rating says so.
-    expect(backfilled.queryByText(tr(lang, "Earlier rating"))).not.toBeInTheDocument();
+    expect(backfilled.queryByText(/\*/)).not.toBeInTheDocument();
 
     expectNoUntranslatedText(lang, FIXTURES);
   });
@@ -1088,7 +1156,9 @@ describe.each(LANGS)("research findings in %s", (lang) => {
     );
     renderSection();
     const name = (key: string) => tr(lang, key);
+    await openRunDetails();
 
+    expect(await screen.findByText(tr(lang, "What it checked"))).toBeInTheDocument();
     expect(
       await screen.findByText(
         tr(lang, "Checked: {sources}", {
@@ -1166,7 +1236,16 @@ describe.each(LANGS)("research findings in %s", (lang) => {
     );
     renderSection();
     const name = (key: string) => tr(lang, key);
+    await openRunDetails();
 
+    // Without a click: the gap, in a sentence. Behind the button: what was and was not checked.
+    expect(
+      screen.getByText(
+        tr(lang, "One source could not be checked, so results may be incomplete: {sources}.", {
+          sources: name("SEC EDGAR"),
+        }),
+      ),
+    ).toBeInTheDocument();
     expect(
       await screen.findByText(
         tr(lang, "Checked: {sources}", {
@@ -1244,7 +1323,16 @@ describe.each(LANGS)("research findings in %s", (lang) => {
     );
     renderSection();
     const name = (key: string) => tr(lang, key);
+    await openRunDetails();
 
+    // Without a click: the gap, in a sentence. Behind the button: what was and was not checked.
+    expect(
+      screen.getByText(
+        tr(lang, "One source could not be checked, so results may be incomplete: {sources}.", {
+          sources: name("FDA list of AI-enabled medical devices"),
+        }),
+      ),
+    ).toBeInTheDocument();
     expect(
       await screen.findByText(
         tr(lang, "Checked: {sources}", {
@@ -1324,6 +1412,7 @@ describe.each(LANGS)("research findings in %s", (lang) => {
     );
     renderSection();
     const name = (key: string) => tr(lang, key);
+    await openRunDetails();
 
     expect(
       await screen.findByText(
@@ -1387,7 +1476,16 @@ describe.each(LANGS)("research findings in %s", (lang) => {
     );
     renderSection();
     const name = (key: string) => tr(lang, key);
+    await openRunDetails();
 
+    // Without a click: the gap, in a sentence. Behind the button: what was and was not checked.
+    expect(
+      screen.getByText(
+        tr(lang, "One source could not be checked, so results may be incomplete: {sources}.", {
+          sources: name("US Consolidated Screening List"),
+        }),
+      ),
+    ).toBeInTheDocument();
     expect(
       await screen.findByText(
         tr(lang, "Not checked: {sources}", { sources: name("US Consolidated Screening List") }),
@@ -1431,18 +1529,25 @@ describe.each(LANGS)("research findings in %s", (lang) => {
       }),
     );
     renderSection();
+    await openRunDetails();
+    const sources = [
+      tr(lang, "OFAC Specially Designated Nationals list"),
+      tr(lang, "the vendor's status page"),
+    ].join(", ");
 
+    // Without a click: the gap, in a sentence that counts and names what could not be checked.
     expect(
-      await screen.findByText(
-        tr(lang, "Not checked: {sources}", {
-          sources: [
-            tr(lang, "OFAC Specially Designated Nationals list"),
-            tr(lang, "the vendor's status page"),
-          ].join(", "),
+      screen.getByText(
+        tr(lang, "{count} sources could not be checked, so results may be incomplete: {sources}.", {
+          count: 2,
+          sources,
         }),
       ),
     ).toBeInTheDocument();
-    // The other lines of the block, which the screen shows beside it.
+    // Behind the button, with the other lines of what the run checked.
+    expect(
+      await screen.findByText(tr(lang, "Not checked: {sources}", { sources })),
+    ).toBeInTheDocument();
     expect(
       screen.getByText(
         tr(lang, "Checked: {sources}", {
@@ -1478,8 +1583,9 @@ describe.each(LANGS)("research findings in %s", (lang) => {
     renderSection();
 
     expect(await screen.findByText(tr(lang, "Public databases turned off"))).toBeInTheDocument();
+    await openRunDetails();
     expect(
-      screen.getByText(
+      await screen.findByText(
         tr(
           lang,
           "Sources cited: {official} official, {press} trusted press, {vendor} vendor, {unverified} unverified",
@@ -1512,8 +1618,14 @@ describe.each(LANGS)("research findings in %s", (lang) => {
     );
     renderSection();
 
-    expect(await screen.findByText(tr(lang, "Latest research"))).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: tr(lang, "Research again") })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: tr(lang, "Research again") }),
+    ).toBeInTheDocument();
+    await openRunDetails();
+    expect(await screen.findByText(tr(lang, "What the last research found"))).toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: tr(lang, "Hide research details") }),
+    ).toBeInTheDocument();
     const line = (category: string, outcome: string) =>
       tr(lang, "{category}: {outcome}", {
         category: tr(lang, category),
@@ -1536,7 +1648,9 @@ describe.each(LANGS)("research findings in %s", (lang) => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        tr(lang, "Last run: {date}", { date: plain(dateIn(lang, "2026-10-10T09:01:00.000Z")) }),
+        tr(lang, "Last researched: {date}", {
+          date: plain(dateIn(lang, "2026-10-10T09:01:00.000Z")),
+        }),
       ),
     ).toBeInTheDocument();
 
@@ -1561,6 +1675,7 @@ describe.each(LANGS)("research findings in %s", (lang) => {
       }),
     );
     renderSection();
+    await openRunDetails();
 
     expect(
       await screen.findByText(
@@ -1618,6 +1733,7 @@ describe.each(LANGS)("research findings in %s", (lang) => {
       }),
     );
     renderSection();
+    await openRunDetails();
 
     expect(
       await screen.findByText(tr(lang, "No risks were found in the sources reviewed.")),
@@ -1684,6 +1800,7 @@ describe.each(LANGS)("research findings in %s", (lang) => {
       }),
     );
     renderSection();
+    await openRunDetails();
 
     expect(
       await screen.findByText(tr(lang, "Not researched: the time limit was reached.")),
@@ -1704,6 +1821,7 @@ describe.each(LANGS)("research findings in %s", (lang) => {
       run({ category_summary: FOUR_OUTCOMES, searches_used: 6, pages_read: 4 }),
     );
     renderSection();
+    await openRunDetails();
 
     expect(
       await screen.findByText(
@@ -1733,7 +1851,9 @@ describe.each(LANGS)("research findings in %s", (lang) => {
     expect(
       await screen.findByText(tr(lang, "The web could not be reached from the server.")),
     ).toBeInTheDocument();
-    expect(screen.getByText(tr(lang, "The search was not available."))).toBeInTheDocument();
+    // What the run found before it failed is behind the button, like that of any other run.
+    await openRunDetails();
+    expect(await screen.findByText(tr(lang, "The search was not available."))).toBeInTheDocument();
 
     expectNoUntranslatedText(lang, FIXTURES);
   });

@@ -1,21 +1,23 @@
-import { useId } from "react";
-import { Box, Stack, Typography } from "@mui/material";
-import { Info } from "lucide-react";
+import { useId, useState } from "react";
+import { Box, ButtonBase, Stack, Typography } from "@mui/material";
+import { AlertTriangle, ChevronDown, ChevronRight } from "lucide-react";
 import Chip from "../../../components/Chip";
 import { VWLink } from "../../../components/Link";
 import { CustomizableButton } from "../../../components/button/customizable-button";
-import { background, border } from "../../../themes/palette";
+import palette, { background, border } from "../../../themes/palette";
 import { textStyles } from "../../../themes/typography";
 import useTranslation from "../../../../application/hooks/useTranslation";
 import {
+  credibilityLine,
+  readSourceLink,
+  recordTag,
+  rowCautions,
+  scalesLine,
+  sourceTag,
+} from "../../../../application/utils/vendorResearchPlainText";
+import {
   categoryLabel,
-  credibilityLabel,
-  credibilityRationale,
-  earlierRatingNote,
   formatResearchDate,
-  nameOnlyNote,
-  recordStatusLabel,
-  sourceCategoryLabel,
 } from "../../../../application/utils/vendorResearchText";
 import type {
   FindingSource,
@@ -33,6 +35,11 @@ interface FindingRowProps {
   canDecide: boolean;
   /** The decision in flight for this row, if any. It disables both buttons of the row. */
   busy: RowAction | null;
+  /**
+   * Whether the row names its category. The rows of one vendor stand under the heading of their
+   * category; the rows of every vendor stand under the vendor, so each says its category itself.
+   */
+  showCategory: boolean;
   /** Opens the finding in the vendor risk form; it is accepted only when the person saves it there. */
   onPreview: (finding: VendorRiskFinding) => void;
   onDismiss: (finding: VendorRiskFinding) => void;
@@ -44,11 +51,24 @@ interface FindingRowProps {
 }
 
 const captionSx = { ...textStyles.caption, color: "text.accent" };
-const scaleSx = { gap: "4px", alignItems: "flex-start" };
+const detailTextSx = { ...textStyles.body, color: "text.secondary", overflowWrap: "anywhere" };
+/** What the second line and the details are indented by: the width of the chevron and its gap. */
+const INDENT = "24px";
+
+/** Read by a screen reader, not shown: what the asterisk of an earlier estimate stands for. */
+const visuallyHiddenSx = {
+  position: "absolute",
+  width: "1px",
+  height: "1px",
+  overflow: "hidden",
+  clip: "rect(0 0 0 0)",
+  clipPath: "inset(50%)",
+  whiteSpace: "nowrap",
+};
 
 /**
- * A small outlined chip next to a source: its category, or the status of a record its database no
- * longer stands by. Neutral, like the credibility chip: neither is a risk colour.
+ * A small outlined chip next to a source: what kind of source it is, or what became of a record
+ * its database no longer stands by. Neutral: neither is a risk colour.
  */
 function SourceTag({ label }: { label: string }) {
   return (
@@ -61,22 +81,6 @@ function SourceTag({ label }: { label: string }) {
       borderColor={border.dark}
     />
   );
-}
-
-/**
- * Where a source points, when it points somewhere safe. A source URL is text from the open
- * web: only http and https become a link, so `javascript:`, `data:` and the like never do.
- * `parsed.href` is the normalized address, and the hostname is what the link says.
- */
-function readLink(url: string): { href: string; host: string } | null {
-  try {
-    const parsed = new URL(url);
-    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return null;
-    if (parsed.hostname === "") return null;
-    return { href: parsed.href, host: parsed.hostname };
-  } catch {
-    return null;
-  }
 }
 
 /**
@@ -111,16 +115,15 @@ function SourceItem({
   t: (key: string) => string;
   lang: string;
 }) {
-  const link = readLink(source.url);
+  const link = readSourceLink(source.url);
   const date = formatResearchDate(source.published_at, lang);
   // What the credibility rule found the source to be; a finding of another run has neither.
-  const badge = sourceCategoryLabel(category, t);
-  const status = recordStatusLabel(source.record?.status, t);
+  const kind = sourceTag(category, t);
+  const status = recordTag(source.record?.status, t);
 
   return (
     <Stack sx={{ gap: "4px" }}>
       <Stack direction="row" sx={{ alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-        {badge !== null && <SourceTag label={badge} />}
         {link ? (
           <Box component="span" data-vw-no-translate="true">
             <VWLink url={link.href} openInNewTab>
@@ -137,6 +140,7 @@ function SourceItem({
             {date}
           </Typography>
         )}
+        {kind !== null && <SourceTag label={kind} />}
         {status !== null && <SourceTag label={status} />}
       </Stack>
       {/* The quote is the web's text through a model: plain text, never markup. */}
@@ -161,33 +165,40 @@ function SourceItem({
   );
 }
 
-/** One risk candidate: what was found, how it scores, where it comes from, and the decision. */
+/**
+ * One risk candidate on one line: how severe it is, what was found, how well the sources establish
+ * it, what to be careful about, and the decision. The rest (why it matters, what to do, why the
+ * level is what it is, and the sources with their quotes) opens on a click of the risk.
+ *
+ * What is on screen before the click is what a person who does not know how the research works can
+ * read: no chips of scales side by side, no name of a rule. A caution about the finding is never
+ * folded away.
+ */
 export default function FindingRow({
   finding,
   canDecide,
   busy,
+  showCategory,
   onPreview,
   onDismiss,
   rowRef,
 }: FindingRowProps) {
   const { t, lang } = useTranslation();
+  const [open, setOpen] = useState(false);
   const disabled = busy !== null;
   // The buttons are all named "Preview" and "Dismiss": they are described by the risk they decide on.
   const riskId = useId();
+  const detailsId = useId();
   // A list cached before the field existed has none; an empty sentence is no sentence.
   const rationale = finding.rationale?.trim() ?? "";
-  // Every finding shows its credibility, with a line worded here from its basis. A finding of a run
-  // before the credibility rule has its earlier confidence as the label, on a basis of its own,
-  // and says so. One with no label (a list cached before the field existed), or with a label this
-  // screen does not know, shows no credibility: there is no other rating to show in its place.
-  const credibility = credibilityLabel(finding.credibility, t);
+  // How well the sources establish the finding, in one line worded from what the server's code
+  // decided. An open row says the whole of it (that a label was rated again, too). A finding with
+  // no label (a list cached before the field existed), or with a label this screen does not know,
+  // shows no credibility: there is no other rating to show in its place.
+  const credibility = credibilityLine(finding, t, lang, { full: open });
   const basis = credibility === null ? null : (finding.credibility_basis ?? null);
-  const credibilityWords = credibilityRationale(basis, t, lang);
-  const credibilityLine = [credibilityWords.sentence, credibilityWords.stale ?? ""]
-    .filter((sentence) => sentence !== "")
-    .join(" ");
-  const note = nameOnlyNote(basis, t);
-  const earlierRating = earlierRatingNote(basis, t);
+  const cautions = rowCautions(finding, t);
+  const Chevron = open ? ChevronDown : ChevronRight;
 
   return (
     <Box
@@ -196,160 +207,126 @@ export default function FindingRow({
       aria-busy={disabled}
       sx={{
         listStyle: "none",
-        p: "16px",
+        p: "12px 16px",
         border: "1px solid",
         borderColor: "border.dark",
         borderRadius: "4px",
         backgroundColor: "background.main",
       }}
     >
-      <Stack sx={{ gap: "12px" }}>
-        <Stack direction="row" sx={{ alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-          <Chip
-            label={categoryLabel(finding.category, t)}
-            variant="default"
-            uppercase={false}
-            size="small"
-          />
-          {finding.vendor_name && (
-            <Typography
-              data-vw-no-translate="true"
-              sx={{ ...textStyles.bodySmall, color: "text.tertiary" }}
-            >
-              {finding.vendor_name}
-            </Typography>
-          )}
-        </Stack>
-
-        {/* The finding's own words: the model wrote them from web sources, so they are data. The
-            action plan is one of them, and the one that saving the risk copies into the register
-            with the other two: it is shown here so that the person who adds the risk has read it.
-            The page translator leaves everything in this box alone, caption included, so the
-            caption is translated by hand. */}
-        <Box data-vw-no-translate="true">
-          <Typography
-            id={riskId}
-            sx={{ ...textStyles.subsectionTitle, color: "text.primary", overflowWrap: "anywhere" }}
-          >
-            {finding.risk_description}
-          </Typography>
-          <Typography
-            sx={{
-              ...textStyles.body,
-              color: "text.secondary",
-              mt: "4px",
-              overflowWrap: "anywhere",
-            }}
-          >
-            {finding.impact_description}
-          </Typography>
-          {finding.action_plan && (
-            <Box sx={{ mt: "8px" }}>
-              <Typography sx={captionSx}>{t("Action plan")}</Typography>
-              <Typography
-                sx={{ ...textStyles.body, color: "text.secondary", overflowWrap: "anywhere" }}
-              >
-                {finding.action_plan}
-              </Typography>
-            </Box>
-          )}
+      {/* The risk is the button: the whole first line opens and closes the row. */}
+      <ButtonBase
+        aria-expanded={open}
+        aria-controls={detailsId}
+        onClick={() => setOpen((current) => !current)}
+        disableRipple
+        sx={{
+          "display": "flex",
+          "width": "100%",
+          "alignItems": "flex-start",
+          "justifyContent": "flex-start",
+          "gap": "8px",
+          "textAlign": "left",
+          "borderRadius": "4px",
+          "&:focus-visible": {
+            outline: `2px solid ${palette.brand.primary}`,
+            outlineOffset: "2px",
+          },
+        }}
+      >
+        <Box
+          component="span"
+          sx={{ display: "inline-flex", mt: "4px", flexShrink: 0, color: "text.tertiary" }}
+        >
+          <Chevron size={16} aria-hidden="true" />
         </Box>
-
-        <Stack direction="row" sx={{ gap: "24px", flexWrap: "wrap" }}>
-          <Stack sx={scaleSx}>
-            <Typography sx={captionSx}>Risk level</Typography>
-            <Chip label={finding.risk_level} uppercase={false} size="small" />
-          </Stack>
-          <Stack sx={scaleSx}>
-            <Typography sx={captionSx}>Severity</Typography>
-            <Chip label={finding.risk_severity} uppercase={false} size="small" />
-          </Stack>
-          <Stack sx={scaleSx}>
-            <Typography sx={captionSx}>Likelihood</Typography>
-            <Chip label={finding.likelihood} uppercase={false} size="small" />
-          </Stack>
-          {credibility !== null && (
-            <Stack sx={scaleSx}>
-              <Typography sx={captionSx}>Credibility</Typography>
-              {/* Not a risk colour: it says how well the sources establish the facts. The quiet
-                  note beside the chip says when the label is the finding's earlier confidence,
-                  which the source rules did not decide. */}
-              <Stack direction="row" sx={{ alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                <Chip label={credibility} variant="default" uppercase={false} size="small" />
-                {earlierRating !== null && (
-                  <Typography sx={{ ...textStyles.caption, color: "text.tertiary" }}>
-                    {earlierRating}
-                  </Typography>
-                )}
-              </Stack>
-            </Stack>
-          )}
-        </Stack>
-
-        {/* Why the credibility is what it is, worded from what the server's code decided: our own
-            words in the screen's language, with the names of the databases and hosts of the
-            sources in them. Under the row of the ratings, so that a long line does not widen the
-            column of its chip. */}
-        {(credibilityLine !== "" || note !== null) && (
-          <Stack sx={{ gap: "4px" }}>
-            {credibilityLine !== "" && (
-              <Typography
-                sx={{ ...textStyles.bodySmall, color: "text.secondary", overflowWrap: "anywhere" }}
-              >
-                {credibilityLine}
-              </Typography>
-            )}
-            {note !== null && (
-              <Stack
-                direction="row"
-                sx={{ alignItems: "center", gap: "6px", color: "status.info.text" }}
-              >
-                <Info size={14} aria-hidden="true" />
-                <Typography sx={{ ...textStyles.bodySmall, color: "inherit" }}>{note}</Typography>
-              </Stack>
-            )}
-          </Stack>
-        )}
-
-        {/* Why the likelihood and the severity are what they are: the model's sentence, so data.
-            Findings stored before the sentence existed have none. The caption is translated by
-            hand, like the action plan's, because the page translator leaves this box alone. */}
-        {rationale !== "" && (
-          <Box data-vw-no-translate="true">
-            <Typography sx={captionSx}>{t("Why this rating")}</Typography>
-            <Typography
-              sx={{ ...textStyles.body, color: "text.secondary", overflowWrap: "anywhere" }}
-            >
-              {rationale}
-            </Typography>
+        <Box component="span" sx={{ flexShrink: 0 }}>
+          <Chip label={finding.risk_level} uppercase={false} size="small" />
+        </Box>
+        {showCategory && (
+          <Box component="span" sx={{ flexShrink: 0 }}>
+            <Chip
+              label={categoryLabel(finding.category, t)}
+              variant="default"
+              uppercase={false}
+              size="small"
+            />
           </Box>
         )}
+        {/* The finding's own words: the model wrote them from web sources, so they are data, and
+            the page translator leaves them alone. Two lines until the row is opened. */}
+        <Typography
+          component="span"
+          id={riskId}
+          data-vw-no-translate="true"
+          sx={{
+            ...textStyles.body,
+            color: "text.primary",
+            overflowWrap: "anywhere",
+            minWidth: 0,
+            mt: "2px",
+            ...(open
+              ? {}
+              : {
+                  display: "-webkit-box",
+                  WebkitBoxOrient: "vertical",
+                  WebkitLineClamp: 2,
+                  overflow: "hidden",
+                }),
+          }}
+        >
+          {finding.risk_description}
+        </Typography>
+      </ButtonBase>
 
-        <Stack sx={{ gap: "8px" }}>
-          <Typography sx={captionSx}>Sources</Typography>
-          {/* The search results were the only place the quotes were found: the page was read after
-              the analysis and did not hold them, or could not be read. Our own text, so it is
-              translated by the page translator like the captions around it. */}
-          {finding.snippet_only === true && (
-            <Typography sx={{ ...textStyles.body, color: "text.secondary" }}>
-              Not confirmed on the page. The quotes come from search results.
+      <Stack
+        direction="row"
+        sx={{
+          pl: INDENT,
+          mt: "8px",
+          gap: "12px",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+        }}
+      >
+        {/* Our own words in the screen's language, with the names of the databases and the hosts
+            of the sources in them: the page translator leaves the box alone, so its caption is
+            translated by hand. */}
+        <Stack data-vw-no-translate="true" sx={{ gap: "4px", flex: "1 1 320px", minWidth: 0 }}>
+          {credibility !== null && (
+            <Typography sx={{ ...textStyles.bodySmall, color: "text.secondary" }}>
+              <Box component="span" sx={{ color: "text.accent", mr: "6px" }}>
+                {t("Credibility")}
+              </Box>
+              <Box component="span" sx={{ overflowWrap: "anywhere" }}>
+                {credibility.text}
+                {credibility.earlier && (
+                  <Box component="span" sx={visuallyHiddenSx}>
+                    {` (${t("Earlier estimate")})`}
+                  </Box>
+                )}
+              </Box>
             </Typography>
           )}
-          {(finding.sources ?? []).map((source, index) => (
-            <SourceItem
-              key={index}
-              source={source}
-              category={categoryOf(source, basis, index)}
-              t={t}
-              lang={lang}
-            />
+          {cautions.map((caution) => (
+            <Stack
+              key={caution}
+              direction="row"
+              sx={{ alignItems: "flex-start", gap: "6px", color: "status.warning.text" }}
+            >
+              <Box component="span" sx={{ display: "inline-flex", mt: "2px", flexShrink: 0 }}>
+                <AlertTriangle size={14} aria-hidden="true" />
+              </Box>
+              <Typography sx={{ ...textStyles.bodySmall, color: "inherit" }}>{caution}</Typography>
+            </Stack>
           ))}
         </Stack>
 
         {canDecide && (
-          <Stack direction="row" sx={{ gap: "8px", justifyContent: "flex-end" }}>
+          <Stack direction="row" sx={{ gap: "8px", ml: "auto" }}>
             <CustomizableButton
-              variant="outlined"
+              variant="text"
               isDisabled={disabled}
               ariaDescribedBy={riskId}
               onClick={() => onDismiss(finding)}
@@ -358,7 +335,7 @@ export default function FindingRow({
               Dismiss
             </CustomizableButton>
             <CustomizableButton
-              variant="contained"
+              variant="outlined"
               isDisabled={disabled}
               ariaDescribedBy={riskId}
               onClick={() => onPreview(finding)}
@@ -369,6 +346,46 @@ export default function FindingRow({
           </Stack>
         )}
       </Stack>
+
+      {open && (
+        <Stack id={detailsId} sx={{ pl: INDENT, mt: "12px", gap: "12px" }}>
+          {/* The model's texts, so data: shown as written, under captions translated by hand. The
+              action plan is the one that saving the risk copies into the register with the other
+              two, so the person who adds the risk can read it here first. */}
+          <Box data-vw-no-translate="true">
+            <Typography sx={captionSx}>{t("Why it matters to you")}</Typography>
+            <Typography sx={detailTextSx}>{finding.impact_description}</Typography>
+          </Box>
+          {finding.action_plan && (
+            <Box data-vw-no-translate="true">
+              <Typography sx={captionSx}>{t("What to do")}</Typography>
+              <Typography sx={detailTextSx}>{finding.action_plan}</Typography>
+            </Box>
+          )}
+          {/* Why the level is what it is: the model's sentence when the finding has one (findings
+              stored before the sentence existed have none), then the two scales the level is
+              computed from, on one quiet line instead of a chip each. */}
+          <Box data-vw-no-translate="true">
+            <Typography sx={captionSx}>{t("Why this risk level")}</Typography>
+            {rationale !== "" && <Typography sx={detailTextSx}>{rationale}</Typography>}
+            <Typography sx={{ ...textStyles.bodySmall, color: "text.tertiary" }}>
+              {scalesLine(finding, t)}
+            </Typography>
+          </Box>
+          <Stack sx={{ gap: "8px" }}>
+            <Typography sx={captionSx}>Sources</Typography>
+            {(finding.sources ?? []).map((source, index) => (
+              <SourceItem
+                key={index}
+                source={source}
+                category={categoryOf(source, basis, index)}
+                t={t}
+                lang={lang}
+              />
+            ))}
+          </Stack>
+        </Stack>
+      )}
     </Box>
   );
 }
