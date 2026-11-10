@@ -75,13 +75,13 @@ function SummarySection({ assessment, rights, onUpdate, isSaving }: SummarySecti
     >
       <Box
         sx={{
-          padding: 8,
+          padding: "16px",
           border: `1px solid ${border.dark}`,
           borderRadius: "4px",
           backgroundColor: theme.palette.background.default,
           display: "flex",
           flexDirection: "column",
-          gap: 6,
+          gap: "12px",
         }}
         aria-label="Assessment summary"
       >
@@ -89,11 +89,13 @@ function SummarySection({ assessment, rights, onUpdate, isSaving }: SummarySecti
           sx={{
             display: "grid",
             gridTemplateColumns: "1fr 1fr",
-            gap: 4,
+            gap: "8px",
           }}
         >
           <Box>
-            <Typography sx={{ fontSize: 11, color: theme.palette.text.secondary, marginBottom: 2 }}>
+            <Typography
+              sx={{ fontSize: 11, color: theme.palette.text.secondary, marginBottom: "4px" }}
+            >
               Completion
             </Typography>
             <Typography sx={{ fontSize: 13, fontWeight: 600, color: theme.palette.text.primary }}>
@@ -101,10 +103,12 @@ function SummarySection({ assessment, rights, onUpdate, isSaving }: SummarySecti
             </Typography>
           </Box>
           <Box>
-            <Typography sx={{ fontSize: 11, color: theme.palette.text.secondary, marginBottom: 2 }}>
+            <Typography
+              sx={{ fontSize: 11, color: theme.palette.text.secondary, marginBottom: "4px" }}
+            >
               Risk score
             </Typography>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: "8px" }}>
               <Typography sx={{ fontSize: 13, fontWeight: 600, color: theme.palette.text.primary }}>
                 {assessment.risk_score}/100
               </Typography>
@@ -112,7 +116,9 @@ function SummarySection({ assessment, rights, onUpdate, isSaving }: SummarySecti
             </Box>
           </Box>
           <Box>
-            <Typography sx={{ fontSize: 11, color: theme.palette.text.secondary, marginBottom: 2 }}>
+            <Typography
+              sx={{ fontSize: 11, color: theme.palette.text.secondary, marginBottom: "4px" }}
+            >
               Rights flagged
             </Typography>
             <Typography sx={{ fontSize: 13, fontWeight: 600, color: theme.palette.text.primary }}>
@@ -120,7 +126,9 @@ function SummarySection({ assessment, rights, onUpdate, isSaving }: SummarySecti
             </Typography>
           </Box>
           <Box>
-            <Typography sx={{ fontSize: 11, color: theme.palette.text.secondary, marginBottom: 2 }}>
+            <Typography
+              sx={{ fontSize: 11, color: theme.palette.text.secondary, marginBottom: "4px" }}
+            >
               Status
             </Typography>
             <Chip label={assessment.status} size="small" />
@@ -129,10 +137,12 @@ function SummarySection({ assessment, rights, onUpdate, isSaving }: SummarySecti
 
         {flaggedRights.length > 0 && (
           <Box>
-            <Typography sx={{ fontSize: 11, color: theme.palette.text.secondary, marginBottom: 4 }}>
+            <Typography
+              sx={{ fontSize: 11, color: theme.palette.text.secondary, marginBottom: "8px" }}
+            >
               Flagged rights
             </Typography>
-            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+            <Box sx={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
               {flaggedRights.map((right) => (
                 <Chip key={right.id} label={right.right_title} variant="warning" size="small" />
               ))}

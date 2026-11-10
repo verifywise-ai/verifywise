@@ -16,6 +16,6 @@ export const headerContainerStyle: SxProps<Theme> = {
 export const tabListStyle: SxProps<Theme> = {
   "minHeight": "20px",
   "& .MuiTabs-flexContainer": {
-    columnGap: 16,
+    columnGap: "34px",
   },
 };

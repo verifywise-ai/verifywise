@@ -19,7 +19,6 @@ import relativeTime from "dayjs/plugin/relativeTime";
 import { brand, border, background, icon, text, accent } from "../../../themes/palette";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import { displayFormattedTime } from "../../../tools/isoDateToString";
-import { textStyles } from "../../../themes/typography";
 
 dayjs.extend(relativeTime);
 
@@ -168,8 +167,9 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
       <>
         <Typography
           sx={{
-            ...textStyles.body,
+            fontSize: 13,
             color: isOldValue ? accent.red.text : accent.primary.text,
+            fontWeight: 400,
             wordBreak: "break-word",
             textDecoration: isOldValue ? "line-through" : "none",
           }}
@@ -189,10 +189,10 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
             }}
             sx={{
               "fontSize": 12,
-              "color": text.primary,
+              "color": brand.primary,
               "fontWeight": 500,
               "cursor": "pointer",
-              "marginTop": 4,
+              "marginTop": "4px",
               "&:hover": {
                 textDecoration: "underline",
               },
@@ -225,8 +225,8 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
       <Box
         key={`${firstEntry.changed_at}_${firstEntry.id}`}
         sx={{
-          "marginBottom": 16,
-          "padding": 8,
+          "marginBottom": "32px",
+          "padding": "16px",
           "backgroundColor": background.main,
           "borderRadius": "8px",
           "border": `1px solid ${border.dark}`,
@@ -235,7 +235,7 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
           },
         }}
       >
-        <Stack direction="row" gap={6} alignItems="center" marginBottom={8}>
+        <Stack direction="row" gap="12px" alignItems="center" marginBottom="16px">
           <VWAvatar
             user={{
               firstname: firstEntry.user_name || userName,
@@ -261,7 +261,7 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
                 `${userName} updated ${group.length} field${group.length > 1 ? "s" : ""}`}
               {firstEntry.action === "deleted" && `${userName} deleted this ${config.entityName}`}
             </Typography>
-            <Stack direction="row" gap={4} alignItems="center">
+            <Stack direction="row" gap="8px" alignItems="center">
               <Clock size={12} color={text.secondary} />
               <Typography
                 sx={{
@@ -282,8 +282,8 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
             <Box
               key={entry.id}
               sx={{
-                "marginBottom": 6,
-                "paddingLeft": 24,
+                "marginBottom": "12px",
+                "paddingLeft": "48px",
                 "&:last-child": {
                   marginBottom: 0,
                 },
@@ -294,7 +294,7 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
                   fontSize: 12,
                   fontWeight: 500,
                   color: text.secondary,
-                  marginBottom: 4,
+                  marginBottom: "8px",
                 }}
               >
                 {entry.field_name}
@@ -303,7 +303,7 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
               {entry.action === "created" && entry.new_value && entry.new_value !== "-" ? (
                 <Box
                   sx={{
-                    padding: (theme) => theme.spacing(4, 6),
+                    padding: "8px 12px",
                     borderRadius: "4px",
                     backgroundColor: accent.primary.bg,
                   }}
@@ -316,8 +316,7 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
                     <Box
                       sx={{
                         flex: 1,
-                        paddingY: 4,
-                        paddingX: 6,
+                        padding: "8px 12px",
                         borderRadius: "4px",
                         backgroundColor: accent.red.bg,
                       }}
@@ -344,8 +343,7 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
                     <Box
                       sx={{
                         flex: 1,
-                        paddingY: 4,
-                        paddingX: 6,
+                        padding: "8px 12px",
                         borderRadius: "4px",
                         backgroundColor: accent.primary.bg,
                       }}
@@ -372,8 +370,7 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
           justifyContent: "center",
           minHeight: 300,
           textAlign: "center",
-          paddingY: 0,
-          paddingX: 6,
+          padding: "0 24px",
         }}
       >
         <Clock size={48} strokeWidth={1.5} color={icon.error} opacity={0.6} />
@@ -382,7 +379,7 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
             fontSize: 16,
             fontWeight: 600,
             color: text.primary,
-            marginTop: 8,
+            marginTop: "16px",
           }}
         >
           Unable to load activity history
@@ -391,7 +388,7 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
           sx={{
             fontSize: 13,
             color: text.secondary,
-            marginTop: 4,
+            marginTop: "8px",
             lineHeight: 1.6,
           }}
         >
@@ -427,8 +424,7 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
           justifyContent: "center",
           minHeight: 300,
           textAlign: "center",
-          paddingY: 0,
-          paddingX: 6,
+          padding: "0 24px",
         }}
       >
         <Clock size={48} strokeWidth={1.5} color={brand.primary} opacity={0.6} />
@@ -437,7 +433,7 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
             fontSize: 16,
             fontWeight: 600,
             color: text.primary,
-            marginTop: 8,
+            marginTop: "16px",
           }}
         >
           {config.emptyStateTitle}
@@ -446,7 +442,7 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
           sx={{
             fontSize: 13,
             color: text.secondary,
-            marginTop: 4,
+            marginTop: "8px",
             lineHeight: 1.6,
           }}
         >
@@ -461,9 +457,8 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
       {creationInfo && (
         <Box
           sx={{
-            paddingY: 6,
-            paddingX: 8,
-            marginBottom: 12,
+            padding: "12px 16px",
+            marginBottom: "24px",
             backgroundColor: background.alt,
             borderRadius: "4px",
             border: `1px solid ${border.dark}`,
@@ -471,7 +466,7 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
         >
           <Typography
             sx={{
-              ...textStyles.body,
+              fontSize: 13,
               color: text.secondary,
             }}
           >
@@ -498,7 +493,7 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
           sx={{
             display: "flex",
             justifyContent: "center",
-            paddingTop: 12,
+            paddingTop: "24px",
           }}
         >
           <Typography
@@ -506,7 +501,7 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
             sx={{
               "fontSize": 14,
               "fontWeight": 500,
-              "color": isFetchingNextPage ? text.disabled : text.primary,
+              "color": isFetchingNextPage ? text.disabled : brand.primary,
               "cursor": isFetchingNextPage ? "default" : "pointer",
               "&:hover": {
                 textDecoration: isFetchingNextPage ? "none" : "underline",

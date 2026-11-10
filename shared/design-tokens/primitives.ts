@@ -25,7 +25,7 @@ export type GreyStep = keyof typeof grey;
 
 /** Green scale: 50 (lightest) → 900 (darkest) */
 export const green = {
-  50: "#E6F4EE",
+  50: "#F0FDF4",
   100: "#E6F0EC",
   200: "#E6F4EA",
   300: "#C8E6D0",

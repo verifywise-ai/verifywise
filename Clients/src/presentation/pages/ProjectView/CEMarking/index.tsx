@@ -21,7 +21,7 @@ import { useNavigate } from "react-router";
 import dayjs, { Dayjs } from "dayjs";
 import { Info as GreyCircleInfoIcon } from "lucide-react";
 import { cardStyles } from "../../../themes";
-import { yellow } from "@design-tokens/primitives";
+import { green, yellow } from "@design-tokens/primitives";
 import { background, border, status, text } from "../../../themes/palette";
 import {
   CEMarkingData,
@@ -171,8 +171,7 @@ const getTableHeaderCellStyles = () => ({
   color: "text.tertiary",
   fontSize: "13px",
   fontWeight: 400,
-  paddingY: 6,
-  paddingX: 4,
+  padding: "12px 10px",
   whiteSpace: "nowrap",
 });
 
@@ -191,8 +190,7 @@ const getTableBodyRowStyles = () => ({
 
 const getTableBodyCellStyles = () => ({
   fontSize: "13px",
-  paddingY: 6,
-  paddingX: 4,
+  padding: "12px 10px",
   whiteSpace: "nowrap",
   backgroundColor: "white",
 });
@@ -200,9 +198,9 @@ const getTableBodyCellStyles = () => ({
 const getStatusColor = (stepStatus: ConformityStepStatus): string => {
   switch (stepStatus) {
     case ConformityStepStatus.Completed:
-      return status.success.text;
+      return green[500];
     case ConformityStepStatus.InProgress:
-      return status.info.text;
+      return "#3B82F6";
     case ConformityStepStatus.NotStarted:
       return status.default.text;
     case ConformityStepStatus.NotNeeded:
@@ -215,15 +213,15 @@ const getStatusColor = (stepStatus: ConformityStepStatus): string => {
 const getStatusBgColor = (stepStatus: ConformityStepStatus): string => {
   switch (stepStatus) {
     case ConformityStepStatus.Completed:
-      return status.success.bg;
+      return `${green[500]}20`;
     case ConformityStepStatus.InProgress:
-      return status.info.bg;
+      return "#3B82F620";
     case ConformityStepStatus.NotStarted:
-      return status.default.bg;
+      return `${status.default.text}20`;
     case ConformityStepStatus.NotNeeded:
       return `${text.disabled}20`;
     default:
-      return status.default.bg;
+      return `${status.default.text}20`;
   }
 };
 
@@ -712,7 +710,7 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
   // Handle project error
   if (projectError) {
     return (
-      <Box sx={{ width: "100%", display: "flex", flexDirection: "column", gap: 8 }}>
+      <Box sx={{ width: "100%", display: "flex", flexDirection: "column", gap: "16px" }}>
         <Typography sx={{ fontSize: 14, color: theme.palette.text.secondary }}>
           {projectError}
         </Typography>
@@ -723,7 +721,7 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
   // Handle null data case (shouldn't happen as backend creates default record)
   if (!data) {
     return (
-      <Box sx={{ width: "100%", display: "flex", flexDirection: "column", gap: 8 }}>
+      <Box sx={{ width: "100%", display: "flex", flexDirection: "column", gap: "16px" }}>
         <Typography sx={{ fontSize: 14, color: theme.palette.text.secondary }}>
           Unable to load CE Marking data. Please refresh the page or contact support if the problem
           persists.
@@ -755,7 +753,7 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
         sx={{
           display: "grid",
           gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
-          gap: 8,
+          gap: "16px",
         }}
       >
         {/* Classification and scope */}
@@ -772,7 +770,7 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
               Classification and scope
             </Typography>
 
-            <Stack sx={{ gap: 4 }}>
+            <Stack sx={{ gap: "8px" }}>
               <Box>
                 <Typography
                   sx={{
@@ -917,7 +915,7 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
                     "borderRadius": 4,
                     "backgroundColor": "background.hover",
                     "& .MuiLinearProgress-bar": {
-                      backgroundColor: status.info.bg,
+                      backgroundColor: yellow[600],
                       borderRadius: 4,
                     },
                   }}
@@ -964,7 +962,7 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
                 />
               </Box>
 
-              <Box sx={{ display: "flex", justifyContent: "flex-end", paddingTop: 4 }}>
+              <Box sx={{ display: "flex", justifyContent: "flex-end", paddingTop: "8px" }}>
                 <VWLink onClick={handleViewChecklist}>View detailed EU AI Act checklist</VWLink>
               </Box>
             </Stack>
@@ -1100,7 +1098,7 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
         sx={{
           display: "grid",
           gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
-          gap: 8,
+          gap: "16px",
         }}
       >
         {/* Declaration of conformity */}
@@ -1117,7 +1115,7 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
               Declaration of conformity
             </Typography>
 
-            <Stack sx={{ gap: 4 }}>
+            <Stack sx={{ gap: "8px" }}>
               <Box>
                 <Typography
                   sx={{
@@ -1201,14 +1199,21 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
                 )}
               </Box>
 
-              <Box sx={{ marginTop: 4 }}>
+              <Box sx={{ marginTop: "8px" }}>
                 <CustomizableButton
                   variant="outlined"
-                  color="secondary"
                   text="Edit declaration details"
                   onClick={handleDeclarationClick}
                   sx={{
-                    width: "100%",
+                    "width": "100%",
+                    "height": 34,
+                    "fontSize": 13,
+                    "borderColor": border.dark,
+                    "color": text.secondary,
+                    "&:hover": {
+                      borderColor: "text.disabled",
+                      backgroundColor: "background.accent",
+                    },
                   }}
                 />
               </Box>
@@ -1230,7 +1235,7 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
               EU registration
             </Typography>
 
-            <Stack sx={{ gap: 4 }}>
+            <Stack sx={{ gap: "8px" }}>
               <Box>
                 <Typography
                   sx={{
@@ -1313,14 +1318,21 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
                 )}
               </Box>
 
-              <Box sx={{ marginTop: 4 }}>
+              <Box sx={{ marginTop: "8px" }}>
                 <CustomizableButton
                   variant="outlined"
-                  color="secondary"
                   text="Edit EU registration details"
                   onClick={handleRegistrationClick}
                   sx={{
-                    width: "100%",
+                    "width": "100%",
+                    "height": 34,
+                    "fontSize": 13,
+                    "borderColor": border.dark,
+                    "color": text.secondary,
+                    "&:hover": {
+                      borderColor: "text.disabled",
+                      backgroundColor: "background.accent",
+                    },
                   }}
                 />
               </Box>
@@ -1342,7 +1354,7 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
               Policies and evidence
             </Typography>
 
-            <Stack sx={{ gap: 4 }}>
+            <Stack sx={{ gap: "8px" }}>
               <Box>
                 <Typography
                   sx={{
@@ -1404,7 +1416,7 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
               Incidents for this use case
             </Typography>
 
-            <Stack sx={{ gap: 4 }}>
+            <Stack sx={{ gap: "8px" }}>
               <Box>
                 <Typography
                   sx={{
@@ -1760,7 +1772,7 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
                       "padding": "12px",
                       "borderBottom":
                         index < availablePolicies.length - 1
-                          ? `1px solid ${theme.palette.border?.light || "border.light"}`
+                          ? `1px solid ${theme.palette.border?.light || border.light}`
                           : "none",
                       "&:hover": {
                         backgroundColor: theme.palette.action?.hover || background.surface,
@@ -1842,10 +1854,10 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
                     sx={{
                       "display": "flex",
                       "alignItems": "flex-start",
-                      "padding": 6,
+                      "padding": "12px",
                       "borderBottom":
                         index < availableEvidences.length - 1
-                          ? `1px solid ${theme.palette.border?.light || "border.light"}`
+                          ? `1px solid ${theme.palette.border?.light || border.light}`
                           : "none",
                       "&:hover": {
                         backgroundColor: theme.palette.action?.hover || background.surface,
@@ -1937,10 +1949,10 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
                     sx={{
                       "display": "flex",
                       "alignItems": "flex-start",
-                      "padding": 6,
+                      "padding": "12px",
                       "borderBottom":
                         index < availableIncidents.length - 1
-                          ? `1px solid ${theme.palette.border?.light || "border.light"}`
+                          ? `1px solid ${theme.palette.border?.light || border.light}`
                           : "none",
                       "&:hover": {
                         backgroundColor: theme.palette.action?.hover || background.surface,

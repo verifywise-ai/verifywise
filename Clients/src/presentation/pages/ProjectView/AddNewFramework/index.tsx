@@ -4,7 +4,7 @@ import { Check as CheckGreenIcon, Shield as ShieldIcon } from "lucide-react";
 import { getFrameworkBadgePath } from "../../../tools/frameworkBadge";
 import StandardModal from "../../../components/Modals/StandardModal";
 import { CustomizableButton } from "../../../components/button/customizable-button";
-import { background, icon } from "../../../themes/palette";
+import { accent, background, brand, icon, text } from "../../../themes/palette";
 import { Project } from "../../../../domain/types/Project";
 import { Framework } from "../../../../domain/types/Framework";
 import {
@@ -122,7 +122,13 @@ const AddFrameworkModal: React.FC<AddFrameworkModalProps> = ({
       customFooter={
         <>
           <Box />
-          <CustomizableButton variant="contained" size="medium" text="Done" onClick={onClose} />
+          <CustomizableButton
+            variant="contained"
+            size="medium"
+            text="Done"
+            onClick={onClose}
+            sx={{ minWidth: "80px" }}
+          />
         </>
       }
     >
@@ -141,7 +147,7 @@ const AddFrameworkModal: React.FC<AddFrameworkModalProps> = ({
           sx={{
             display: "grid",
             gridTemplateColumns: "repeat(3, 1fr)",
-            gap: 8,
+            gap: "16px",
             alignItems: "stretch",
           }}
         >
@@ -172,7 +178,7 @@ const AddFrameworkModal: React.FC<AddFrameworkModalProps> = ({
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
-                          backgroundColor: background.alt,
+                          backgroundColor: background.surface,
                           borderRadius: "4px",
                           flexShrink: 0,
                         }}
@@ -192,24 +198,42 @@ const AddFrameworkModal: React.FC<AddFrameworkModalProps> = ({
                 <Typography sx={frameworkCardDescriptionStyle}>{fw.description}</Typography>
                 <Box display="flex" justifyContent="flex-end" mt={2}>
                   {isAdded ? (
-                    <CustomizableButton
+                    <Button
                       variant="outlined"
-                      color="primary"
                       size="small"
                       disabled={isLoading}
                       onClick={() => {
                         setFrameworkToRemove(fw);
                         setIsRemoveModalOpen(true);
                       }}
+                      sx={{
+                        "minWidth": "100px",
+                        "borderColor": "#F87171",
+                        "color": accent.red.text,
+                        "fontWeight": 600,
+                        "textTransform": "none",
+                        "&:hover": {
+                          borderColor: "#EF4444",
+                          backgroundColor: accent.red.bg,
+                        },
+                      }}
                     >
                       Remove
-                    </CustomizableButton>
+                    </Button>
                   ) : (
                     <Button
                       variant="contained"
                       size="small"
                       disabled={isLoading}
                       onClick={() => handleAddFramework(fw)}
+                      sx={{
+                        "minWidth": "100px",
+                        "fontWeight": 600,
+                        "textTransform": "none",
+                        "backgroundColor": brand.primary,
+                        "color": text.inverse,
+                        "&:hover": { backgroundColor: brand.primaryHover },
+                      }}
                     >
                       Add
                     </Button>

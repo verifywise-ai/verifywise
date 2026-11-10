@@ -706,8 +706,7 @@ const ProjectSettings = React.memo(
       () => ({
         "backgroundColor": theme.palette.background.main,
         "& input": {
-          paddingY: 0,
-          paddingX: 6,
+          padding: "0 14px",
         },
       }),
       [theme.palette.background.main],
@@ -934,7 +933,7 @@ const ProjectSettings = React.memo(
           <CustomizableSkeleton variant="rectangular" width="50%" height={200} />
         ) : (
           <Box sx={styles.root}>
-            <Stack component="form" onSubmit={handleSubmit} rowGap={8}>
+            <Stack component="form" onSubmit={handleSubmit} rowGap="15px">
               {/* Use Case Overview Card */}
               <Box sx={styles.card}>
                 <Typography sx={styles.sectionTitle}>Use Case Overview</Typography>
@@ -942,8 +941,8 @@ const ProjectSettings = React.memo(
                   sx={{
                     display: "grid",
                     gridTemplateColumns: "220px 1fr",
-                    rowGap: 12,
-                    columnGap: 124,
+                    rowGap: "25px",
+                    columnGap: "250px",
                     alignItems: "center",
                     mt: 2,
                   }}
@@ -1036,8 +1035,8 @@ const ProjectSettings = React.memo(
                   sx={{
                     display: "grid",
                     gridTemplateColumns: "220px 1fr",
-                    rowGap: 12,
-                    columnGap: 124,
+                    rowGap: "25px",
+                    columnGap: "250px",
                     alignItems: "center",
                     mt: 2,
                   }}
@@ -1188,8 +1187,8 @@ const ProjectSettings = React.memo(
                   sx={{
                     display: "grid",
                     gridTemplateColumns: "220px 1fr",
-                    rowGap: 12,
-                    columnGap: 124,
+                    rowGap: "25px",
+                    columnGap: "250px",
                     alignItems: "center",
                     mt: 2,
                   }}
@@ -1305,8 +1304,7 @@ const ProjectSettings = React.memo(
                                   sx={{
                                     "& .MuiOutlinedInput-root": {
                                       height: "34px",
-                                      paddingY: 0,
-                                      paddingX: 4,
+                                      padding: "0 10px",
                                       display: "flex",
                                       alignItems: "center",
                                     },
@@ -1361,7 +1359,8 @@ const ProjectSettings = React.memo(
                                       "& .MuiAutocomplete-option": {
                                         fontSize: "13px",
                                         color: text.primary,
-                                        paddingX: 4,
+                                        paddingLeft: "9px",
+                                        paddingRight: "9px",
                                       },
                                       "& .MuiAutocomplete-option.Mui-focused": {
                                         background: "background.accent",
@@ -1369,7 +1368,8 @@ const ProjectSettings = React.memo(
                                     },
                                     "& .MuiAutocomplete-noOptions": {
                                       fontSize: "13px",
-                                      paddingX: 4,
+                                      paddingLeft: "9px",
+                                      paddingRight: "9px",
                                     },
                                   },
                                 },
@@ -1424,7 +1424,7 @@ const ProjectSettings = React.memo(
                               fontSize: "11px",
                               color: "rgb(157, 157, 157)",
                               position: "absolute",
-                              right: 4,
+                              right: "9px",
                             }}
                           >
                             {userEmail}
@@ -1444,8 +1444,7 @@ const ProjectSettings = React.memo(
                         sx={{
                           "& .MuiOutlinedInput-root": {
                             height: "34px",
-                            paddingY: 0,
-                            paddingX: 4,
+                            padding: "0 10px",
                             display: "flex",
                             alignItems: "center",
                           },
@@ -1498,7 +1497,8 @@ const ProjectSettings = React.memo(
                           },
                           "& .MuiAutocomplete-noOptions": {
                             fontSize: "13px",
-                            paddingX: 4,
+                            paddingLeft: "9px",
+                            paddingRight: "9px",
                           },
                         },
                       },
@@ -1681,7 +1681,7 @@ const ProjectSettings = React.memo(
                   <CustomizableButton
                     sx={{
                       ...styles.saveButton,
-                      backgroundColor: isSaveDisabled ? text.disabled : "brand.primary",
+                      backgroundColor: isSaveDisabled ? border.dark : "brand.primary",
                       border: isSaveDisabled
                         ? "1px solid rgba(0, 0, 0, 0.26)"
                         : "1px solid brand.primary",

@@ -139,7 +139,7 @@ const FriaAssessment = ({ projectId }: FriaProps) => {
         : "Low risk level";
 
   return (
-    <Stack spacing={0} gap={8}>
+    <Stack spacing={0} gap="16px">
       {/* Stat cards row */}
       <Box
         sx={{
@@ -177,15 +177,17 @@ const FriaAssessment = ({ projectId }: FriaProps) => {
       </Box>
 
       {/* Action buttons row */}
-      <Box sx={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 4 }}>
+      <Box sx={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "8px" }}>
         {isSaving && (
-          <Typography sx={{ fontSize: 12, color: "text.secondary", mr: 4 }}>Saving...</Typography>
+          <Typography sx={{ fontSize: 12, color: "text.secondary", mr: "8px" }}>
+            Saving...
+          </Typography>
         )}
         {!isSaving && lastSaveStatus === "saved" && (
-          <Typography sx={{ fontSize: 12, color: brand.primary, mr: 4 }}>Saved</Typography>
+          <Typography sx={{ fontSize: 12, color: brand.primary, mr: "8px" }}>Saved</Typography>
         )}
         {!isSaving && lastSaveStatus === "error" && (
-          <Typography sx={{ fontSize: 12, color: "error.main", mr: 4 }}>Save failed</Typography>
+          <Typography sx={{ fontSize: 12, color: "error.main", mr: "8px" }}>Save failed</Typography>
         )}
         <CustomizableButton
           text="Version history"

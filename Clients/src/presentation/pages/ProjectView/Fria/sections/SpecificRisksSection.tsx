@@ -76,13 +76,13 @@ function RiskRow({
       sx={{
         border: `1px solid ${border.dark}`,
         borderRadius: "4px",
-        padding: 8,
+        padding: "16px",
         display: "flex",
         flexDirection: "column",
-        gap: 4,
+        gap: "8px",
       }}
     >
-      <Box sx={{ display: "flex", gap: 4, alignItems: "flex-start" }}>
+      <Box sx={{ display: "flex", gap: "8px", alignItems: "flex-start" }}>
         <Box sx={{ flex: 1 }}>
           <Field
             id={`risk-desc-${item.id}`}
@@ -103,7 +103,7 @@ function RiskRow({
           sx={{
             "color": "text.secondary",
             "&:hover": { color: "error.main" },
-            "mt": 1,
+            "mt": "2px",
             "flexShrink": 0,
           }}
         >
@@ -115,7 +115,7 @@ function RiskRow({
         sx={{
           display: "grid",
           gridTemplateColumns: "1fr 1fr 1fr",
-          gap: 4,
+          gap: "8px",
         }}
       >
         <Select
@@ -162,7 +162,7 @@ function RiskRow({
         sx={{
           display: "grid",
           gridTemplateColumns: "1fr 1fr",
-          gap: 4,
+          gap: "8px",
         }}
       >
         <Field
@@ -304,7 +304,7 @@ function SpecificRisksSection({
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            marginBottom: 4,
+            marginBottom: "8px",
           }}
         >
           <Typography
@@ -323,7 +323,7 @@ function SpecificRisksSection({
             sx={{
               border: `1px solid ${border.dark}`,
               borderRadius: "4px",
-              padding: 12,
+              padding: "24px",
               textAlign: "center",
               fontSize: 13,
               color: theme.palette.text.secondary,
@@ -332,7 +332,7 @@ function SpecificRisksSection({
             No risk items yet. Add a risk to get started.
           </Box>
         ) : (
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: "8px" }}>
             {riskItems.map((item) => (
               <RiskRow
                 key={item.id}
@@ -346,7 +346,7 @@ function SpecificRisksSection({
           </Box>
         )}
 
-        <Box sx={{ marginTop: 4, display: "flex", gap: 4 }}>
+        <Box sx={{ marginTop: "8px", display: "flex", gap: "8px" }}>
           <CustomizableButton
             text="Add risk"
             variant="outlined"
