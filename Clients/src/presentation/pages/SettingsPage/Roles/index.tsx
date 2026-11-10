@@ -17,7 +17,7 @@ import {
 import singleTheme from "../../../themes/v1SingleTheme";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import { useHasPermission } from "../../../../application/hooks/useMyPermissions";
-import useRoles from "../../../../application/hooks/useRoles";
+import { useRoles } from "../../../../application/hooks/useRoles";
 import {
   usePermissionCatalog,
   useReplaceRolePermissions,
