@@ -43,6 +43,17 @@ vi.mock("react", async () => {
   };
 });
 
+// Mock contexts
+vi.mock("../../../../application/contexts/Extensions.context", () => ({
+  useExtensions: () => ({ isEnabled: () => false }),
+  ExtensionsProvider: ({ children }: any) => children,
+}));
+
+vi.mock("../../../../application/hooks/useFrameworkImport", () => ({
+  useImportedFrameworks: () => ({ data: [] }),
+  useDeleteImportedFramework: () => ({ mutateAsync: vi.fn(), isPending: false }),
+}));
+
 // Mock repositories
 const mockGetAllEntities = vi.fn();
 vi.mock("../../../../application/repository/entity.repository", () => ({
