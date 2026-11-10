@@ -12,7 +12,7 @@
  */
 
 import React, { useState } from "react";
-import { Box, Stack, Typography, CircularProgress } from "@mui/material";
+import { Box, Stack, Typography, CircularProgress, alpha } from "@mui/material";
 import { Database, LayoutDashboard } from "lucide-react";
 import { useDispatch } from "react-redux";
 import { CustomizableButton } from "../button/customizable-button";
@@ -214,7 +214,7 @@ const SetupModal: React.FC<SetupModalProps> = ({ onComplete, onSkip }) => {
               "transition": "all 0.2s ease",
               "&:hover": {
                 borderColor: isLoading ? border.light : `${brand.primary}`,
-                backgroundColor: isLoading ? "transparent" : background.fill,
+                backgroundColor: isLoading ? "transparent" : alpha(brand.primary, 0.03),
               },
             }}
           >
@@ -273,7 +273,7 @@ const SetupModal: React.FC<SetupModalProps> = ({ onComplete, onSkip }) => {
               "transition": "all 0.2s ease",
               "&:hover": {
                 borderColor: isLoading ? border.light : `${brand.primary}`,
-                backgroundColor: isLoading ? "transparent" : background.fill,
+                backgroundColor: isLoading ? "transparent" : alpha(brand.primary, 0.03),
               },
             }}
           >

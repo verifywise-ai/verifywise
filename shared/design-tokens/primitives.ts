@@ -99,7 +99,7 @@ export type IndigoStep = keyof typeof indigo;
 export const purple = {
   50: "#EDE7F6",
   100: "#D1C4E9",
-  600: "#7A52CB",
+  600: "#5E35B1",
 } as const;
 
 export type PurpleStep = keyof typeof purple;
