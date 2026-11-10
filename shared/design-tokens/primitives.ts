@@ -60,7 +60,6 @@ export type YellowStep = keyof typeof yellow;
 export const amber = {
   100: "#FFF8E1",
   200: "#F5E6B8",
-  500: "#F59E0B",
   600: "#795548",
   700: "#92400E",
 } as const;
