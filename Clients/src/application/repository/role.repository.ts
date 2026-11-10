@@ -46,6 +46,59 @@ export async function deleteRole({ id }: { id: number }): Promise<any> {
   return response;
 }
 
+export interface PermissionCatalogEntry {
+  key: string;
+  module: string;
+  description: string;
+}
+
+/** The full permission catalog (#4588) for the roles admin matrix. */
+export async function getPermissionCatalog({
+  signal,
+}: {
+  signal?: AbortSignal;
+} = {}): Promise<PermissionCatalogEntry[]> {
+  const response = await apiServices.get<{ data: PermissionCatalogEntry[] }>(
+    "/roles/permissions/catalog",
+    { signal },
+  );
+  const catalog = response.data?.data;
+  return Array.isArray(catalog) ? catalog : [];
+}
+
+export interface RolePermissionRow {
+  permission_key: string;
+  allowed: boolean;
+}
+
+/** One role's granted custom permissions. */
+export async function getRolePermissions({
+  id,
+  signal,
+}: {
+  id: number;
+  signal?: AbortSignal;
+}): Promise<RolePermissionRow[]> {
+  const response = await apiServices.get<{ data: RolePermissionRow[] }>(
+    `/roles/${id}/permissions`,
+    { signal },
+  );
+  const rows = response.data?.data;
+  return Array.isArray(rows) ? rows : [];
+}
+
+/** Replace a custom role's permission set (grant/revoke matrix save). */
+export async function replaceRolePermissions({
+  id,
+  permissions,
+}: {
+  id: number;
+  permissions: RolePermissionRow[];
+}): Promise<any> {
+  const response = await apiServices.put(`/roles/${id}/permissions`, { permissions });
+  return response;
+}
+
 /**
  * The current user's effective permission keys (e.g. "agentDiscovery.admin"):
  * their role's built-in grants, or a custom role's granted permissions.
