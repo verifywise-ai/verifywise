@@ -502,8 +502,45 @@ describe("flatText", () => {
     let flat = "";
     expect(took(() => (flat = flatText(text)))).toBeLessThan(10_000);
     expect(flat).toHaveLength(text.length - 1);
-    // A run of one megabyte: a longer one can overflow the regular expression stack of V8 when memory is short.
-    expect(took(() => flatText(" ".repeat(MEGABYTE)))).toBeLessThan(10_000);
+  });
+
+  it.each([1, 2, 1023, 1024, 1025, 2048, 2049, MEGABYTE, 5 * MEGABYTE])(
+    "writes a run of %p units of white space as one blank, in little time",
+    (length) => {
+      let flat = "";
+      expect(took(() => (flat = flatText(`a${" ".repeat(length)}b`)))).toBeLessThan(10_000);
+      expect(flat).toBe("a b");
+    },
+  );
+
+  it("writes a run of mixed white space and controls that is longer than a piece as one blank", () => {
+    const kinds = [" ", "\t", "\n", "\r", NBSP, NEL, DEL, cp(0x3000), cp(0x2028)];
+    const run = Array.from({ length: 5000 }, (_, index) => kinds[index % kinds.length]).join("");
+    expect(flatText(`a${run}b${run}c`)).toBe("a b c");
+  });
+
+  it("gives what one expression over the whole text gives, with runs that cross the pieces", () => {
+    const alphabet = ["a", "b", "é", " ", "\t", "\n", NBSP, NEL, DEL, cp(0x3000), ZWSP];
+    let seed = 20261110;
+    const next = (): number => {
+      seed = (seed * 48271) % 2147483647;
+      return seed / 2147483647;
+    };
+    for (let round = 0; round < 40; round += 1) {
+      let text = "";
+      while (text.length < 6000) {
+        const unit = alphabet[Math.floor(next() * alphabet.length)];
+        text += unit.repeat(
+          next() < 0.1 ? Math.floor(next() * 2500) + 1 : 1 + Math.floor(next() * 3),
+        );
+      }
+      const expected = text
+        .split(ZWSP)
+        .join("")
+        .replace(/[\s\u007f-\u009f]+/g, " ")
+        .trim();
+      expect(flatText(text)).toBe(expected);
+    }
   });
 });
 

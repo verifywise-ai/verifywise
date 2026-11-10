@@ -40,8 +40,33 @@ export const MARK_RUN_MAX = 16;
  */
 const HIDDEN = /[\p{Cf}\p{Default_Ignorable_Code_Point}\u{2800}]/gu;
 
-/** White space, and the controls that are left, as one blank. */
+/**
+ * White space, and the controls that are left, as one blank. A loop with no upper bound keeps an entry
+ * on the backtrack stack of the regular expression engine for every unit that it passes, and V8
+ * compiles the loops of its later regular expressions without optimising them once a process has
+ * compiled much regexp code: a run of a few million units then overflows that stack (a RangeError,
+ * "Maximum call stack size exceeded"). A line is read to LINE_INPUT_MAX units only, which the stack
+ * holds; a text of any length goes through `collapseBreaks`.
+ */
 const BREAKS = /[\s\p{Cc}]+/gu;
+
+/** The most units of a run of white space that one match of `BREAK_PIECES` passes. */
+const BREAK_PIECE_MAX = 1024;
+const BREAK_PIECES = new RegExp(`[\\s\\p{Cc}]{1,${BREAK_PIECE_MAX}}`, "gu");
+const BREAK_PAIR = /[\s\p{Cc}]{2}/u;
+
+/**
+ * The text with every run of white space and controls written as one blank, as `BREAKS` writes it,
+ * whatever the length of the run. A run is written as one blank for each BREAK_PIECE_MAX units of it,
+ * and a pass that follows joins those blanks, so that a run of n units takes about log(n) passes
+ * (three for a run of five million) and the engine never passes more than BREAK_PIECE_MAX units of
+ * a run in one loop. A pass with no run of two units left in the text is the last.
+ */
+function collapseBreaks(text: string): string {
+  let collapsed = text.replace(BREAK_PIECES, " ");
+  while (BREAK_PAIR.test(collapsed)) collapsed = collapsed.replace(BREAK_PIECES, " ");
+  return collapsed;
+}
 
 /**
  * A run of more than MARK_RUN_MAX marks. U+FF9E and U+FF9F are letters (the half-width voiced sound
@@ -156,7 +181,7 @@ export function lineWithin(value: unknown, max: number): string | null {
  * is cut: the text is the caller's own, and a record's summary keeps its sentences intact.
  */
 export const flatText = (text: string): string =>
-  cleanText(text).replace(HIDDEN, "").replace(BREAKS, " ").trim();
+  collapseBreaks(cleanText(text).replace(HIDDEN, "")).trim();
 
 /**
  * `<` and the characters that a fold makes one: the full-width and the small less-than sign, and
