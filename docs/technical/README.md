@@ -59,7 +59,7 @@ Deep-dive into specific feature areas. Each document covers data models, API end
 |----------|-------------|
 | [Use Cases](./domains/use-cases.md) | AI use case management, risk classification |
 | [Risk Management](./domains/risk-management.md) | Risk identification, assessment, mitigation |
-| [Compliance Frameworks](./domains/compliance-frameworks.md) | EU AI Act, ISO 42001, ISO 27001, NIST AI RMF, plus 21 bundled frameworks (SOC 2, GDPR, HIPAA, ...) |
+| [Compliance Frameworks](./domains/compliance-frameworks.md) | EU AI Act, ISO 42001, ISO 27001, NIST AI RMF, plus 22 bundled frameworks (SOC 2, GDPR, HIPAA, EN 18286, ...) |
 | [Post-Market Monitoring](./domains/post-market-monitoring.md) | Monitoring cycles, notifications, reports |
 | [Vendors](./domains/vendors.md) | Third-party vendor management |
 | [Models](./domains/models.md) | AI model inventory and lifecycle |

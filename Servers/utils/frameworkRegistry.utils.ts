@@ -386,3 +386,7 @@ export const deleteProjectFrameworkHIPAAQuery = makeDelete("hipaa");
 // NIST CSF (id=25)
 export const createNISTCSFFrameworkQuery = makeCreate("nist-csf");
 export const deleteProjectFrameworkNISTCSFQuery = makeDelete("nist-csf");
+
+// EN 18286 (id=26)
+export const createEN18286FrameworkQuery = makeCreate("en-18286");
+export const deleteProjectFrameworkEN18286Query = makeDelete("en-18286");

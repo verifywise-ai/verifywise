@@ -1,5 +1,5 @@
 /**
- * Runtime + migration registry for the 21 migrated frameworks (SOC2, GDPR,
+ * Runtime + migration registry for the 22 registry frameworks (SOC2, GDPR,
  * HIPAA, ...). Each framework lives in its own folder under this directory
  * and exports a FrameworkStructure describing table names, columns, entity
  * types, and the seed structure the initial migration inserts.

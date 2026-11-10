@@ -44,6 +44,7 @@ export type FileSource =
   | "Colorado AI Act sections"
   | "Data Governance practices"
   | "DORA requirements"
+  | "EN 18286 requirements"
   | "FTC AI Guidelines requirements"
   | "GDPR articles"
   | "HIPAA standards"
@@ -232,6 +233,7 @@ export class FileModel extends Model<File> {
       "Colorado AI Act sections",
       "Data Governance practices",
       "DORA requirements",
+      "EN 18286 requirements",
       "FTC AI Guidelines requirements",
       "GDPR articles",
       "HIPAA standards",

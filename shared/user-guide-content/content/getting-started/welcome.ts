@@ -73,7 +73,7 @@ export const welcomeContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Another 21 frameworks are built in and ready to add, including SOC 2, GDPR, HIPAA, DORA and the NIST Cybersecurity Framework. There is nothing to install: add them from the Frameworks page or from a use case.',
+      text: 'Another 22 frameworks are built in and ready to add, including SOC 2, GDPR, HIPAA, DORA and the NIST Cybersecurity Framework. There is nothing to install: add them from the Frameworks page or from a use case.',
     },
     {
       type: 'heading',

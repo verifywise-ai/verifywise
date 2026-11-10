@@ -5,7 +5,7 @@
 VerifyWise ships 25 compliance frameworks, all available to every organization. None of them needs to be installed or enabled.
 
 - **4 core frameworks** (ids 1–4): EU AI Act, ISO 42001, ISO 27001 and NIST AI RMF. Each has hand-built tables, endpoints and pages. Most of this document describes these.
-- **21 bundled frameworks** (ids 5–25): SOC 2, GDPR, HIPAA and others. They are declared in the structure registry (`Servers/structures/`) and served by generic endpoints and a generic UI. See [Bundled frameworks (ids 5–25)](#bundled-frameworks-ids-525).
+- **22 bundled frameworks** (ids 5–26): SOC 2, GDPR, HIPAA and others. They are declared in the structure registry (`Servers/structures/`) and served by generic endpoints and a generic UI. See [Bundled frameworks (ids 5–25)](#bundled-frameworks-ids-525).
 
 All frameworks share the same patterns for progress tracking, status management and risk linking. Users cannot create, import or export their own frameworks. New frameworks are added in code. See [Adding a New Compliance Framework](../guides/adding-new-framework.md).
 
@@ -17,7 +17,7 @@ All frameworks share the same patterns for progress tracking, status management 
 | ISO 42001 | 2 | AI management system |
 | ISO 27001 | 3 | Information security management |
 | NIST AI RMF | 4 | AI risk management |
-| 21 bundled frameworks | 5–25 | See [Bundled frameworks](#bundled-frameworks-ids-525) |
+| 22 bundled frameworks | 5–26 | See [Bundled frameworks](#bundled-frameworks-ids-525) |
 
 ## Framework Structures
 
@@ -490,7 +490,7 @@ These frameworks shipped as plugins until PR #4443 (August 2026). They are now c
 
 Names and flags come from each structure's `seed.name` and `seed.is_organizational`.
 
-**Organization-level (12)**: added under **Frameworks → Manage frameworks → Add/remove frameworks**
+**Organization-level (13)**: added under **Frameworks → Manage frameworks → Add/remove frameworks**
 
 | ID | Key | Name | Levels |
 |----|-----|------|--------|
@@ -506,6 +506,7 @@ Names and flags come from each structure's `seed.name` and `seed.is_organization
 | 20 | `bahrain-pdpl` | Bahrain Personal Data Protection Law | 2 |
 | 21 | `quebec-law25` | Quebec Law 25 Compliance Framework | 2 |
 | 25 | `nist-csf` | NIST Cybersecurity Framework | 3 |
+| 26 | `en-18286` | EN 18286 | 2 |
 
 **Use-case-level (9)**: added from a use case's **Frameworks/regulations** tab
 
@@ -521,7 +522,9 @@ Names and flags come from each structure's `seed.name` and `seed.is_organization
 | 23 | `colorado-ai-act` | Colorado Artificial Intelligence Act Framework | 2 |
 | 24 | `hipaa` | HIPAA Security Rule Framework | 3 |
 
-Total: 4 core + 21 bundled = **25 frameworks**.
+Total: 4 core + 22 bundled = **26 frameworks**.
+
+EN 18286 (id 26) was added after the August 2026 migrations, by `20261110121006-add-en-18286-framework.js`. That migration returns early on databases where the `20260805*` migrations already created it.
 
 ### Tables
 

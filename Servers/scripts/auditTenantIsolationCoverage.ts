@@ -533,6 +533,16 @@ const deferredScopedTables: SharedTableEntry[] = [
       "Deferred to a future isolation wave; not covered by the first-pass matrix. Per-framework impl/risks table added by the custom-framework plugin migration (carries organization_id). See runbook section 2.4.",
   },
   {
+    name: "en_18286_requirements",
+    justification:
+      "Deferred to a future isolation wave; not covered by the first-pass matrix. Per-framework impl/risks table added by the structure registry migration for EN 18286 (carries organization_id). See runbook section 2.4.",
+  },
+  {
+    name: "en_18286_requirements__risks",
+    justification:
+      "Deferred to a future isolation wave; not covered by the first-pass matrix. Per-framework impl/risks table added by the structure registry migration for EN 18286 (carries organization_id). See runbook section 2.4.",
+  },
+  {
     name: "ftc_ai_guidelines_requirements",
     justification:
       "Deferred to a future isolation wave; not covered by the first-pass matrix. Per-framework impl/risks table added by the custom-framework plugin migration (carries organization_id). See runbook section 2.4.",

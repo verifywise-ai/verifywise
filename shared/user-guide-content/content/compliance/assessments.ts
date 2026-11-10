@@ -53,7 +53,7 @@ export const assessmentsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Another 21 frameworks are built in as well, including SOC 2 Type II, GDPR, CCPA, DORA, HIPAA, PCI-DSS, CIS Controls v8, the NIST Cybersecurity Framework, NYC Local Law 144 and several national data protection laws. All of them are available to every organization. See **Adding frameworks** for the full list and how to add them.',
+      text: 'Another 22 frameworks are built in as well, including EN 18286, SOC 2 Type II, GDPR, CCPA, DORA, HIPAA, PCI-DSS, CIS Controls v8, the NIST Cybersecurity Framework, NYC Local Law 144 and several national data protection laws. All of them are available to every organization. See **Adding frameworks** for the full list and how to add them.',
     },
     {
       type: 'heading',

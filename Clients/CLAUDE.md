@@ -1,6 +1,6 @@
 # Clients — Frontend Development Guide
 
-> **Last Updated:** 2026-10-13
+> **Last Updated:** 2026-11-10
 
 ---
 
@@ -34,7 +34,7 @@ infrastructure/   → API clients, external services
 | Axios config      | `src/infrastructure/api/customAxios.ts` |
 | Redux store       | `src/application/redux/store.ts`        |
 
-**Extensions:** UI in `src/presentation/pages/Extensions/` (catalog, `Settings/`, one folder per extension key). Gate every entry point with `useExtensions().isEnabled("<key>")` (`src/application/contexts/Extensions.context.tsx`). Bundled frameworks (ids 5–25) render through `pages/Framework/Generic` + `components/Drawer/GenericFrameworkDrawer`. There is no per-framework UI. See `docs/technical/infrastructure/extensions.md` and `docs/technical/guides/adding-new-framework.md`.
+**Extensions:** UI in `src/presentation/pages/Extensions/` (catalog, `Settings/`, one folder per extension key). Gate every entry point with `useExtensions().isEnabled("<key>")` (`src/application/contexts/Extensions.context.tsx`). Bundled frameworks (ids 5–26) render through `pages/Framework/Generic` + `components/Drawer/GenericFrameworkDrawer`. There is no per-framework UI. See `docs/technical/infrastructure/extensions.md` and `docs/technical/guides/adding-new-framework.md`.
 
 ---
 
