@@ -149,7 +149,11 @@ function asText(value: unknown): string | undefined {
   if (value === undefined || value === null) return undefined;
   if (typeof value === "object") {
     const rich = (value as { richText?: Array<{ text: string }> }).richText;
-    if (Array.isArray(rich)) return rich.map((r) => r.text).join("").trim();
+    if (Array.isArray(rich))
+      return rich
+        .map((r) => r.text)
+        .join("")
+        .trim();
     if ((value as { text?: string }).text !== undefined) {
       return String((value as { text: string }).text).trim();
     }
@@ -282,9 +286,7 @@ interface ParsedRow {
 }
 
 function isUniqueViolation(err: unknown): boolean {
-  return (
-    typeof err === "object" && err !== null && (err as { code?: string }).code === "23505"
-  );
+  return typeof err === "object" && err !== null && (err as { code?: string }).code === "23505";
 }
 
 async function deleteImportedStructure(
@@ -591,7 +593,7 @@ export async function updateImportedFrameworkQuery(
           name: patch.name ?? null,
           hasDescription: patch.description !== undefined,
           description: patch.description ?? null,
-          isActive: patch.isActive ?? null,
+          isActive: patch.is_active ?? null,
         },
         transaction,
       },
