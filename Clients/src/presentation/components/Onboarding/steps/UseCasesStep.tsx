@@ -3,7 +3,8 @@ import { Box, Typography, Stack } from "@mui/material";
 import { OnboardingStepProps } from "../../../types/interfaces/i.onboarding";
 import { FolderPlus, Users, TrendingUp, Shield } from "lucide-react";
 import onboardingBanner from "../../../assets/onboarding-banner.svg";
-import { text, background } from "../../../themes/palette";
+import { green } from "@design-tokens/primitives";
+import { text, background, accent } from "../../../themes/palette";
 
 const UseCasesStep: React.FC<OnboardingStepProps> = () => {
   return (
@@ -69,28 +70,28 @@ const UseCasesStep: React.FC<OnboardingStepProps> = () => {
             title: "Create use cases",
             description:
               "Document your AI projects with detailed information about goals, teams, and timelines.",
-            color: "#3B82F6",
+            color: accent.blue.text,
           },
           {
             icon: <Users size={20} />,
             title: "Assign teams",
             description:
               "Collaborate with team members by assigning owners and stakeholders to each project.",
-            color: "#F59E0B",
+            color: accent.amber.text,
           },
           {
             icon: <TrendingUp size={20} />,
             title: "Track status",
             description:
               "Monitor progress from initiation to completion with real-time status updates.",
-            color: "#8B5CF6",
+            color: accent.purple.text,
           },
           {
             icon: <Shield size={20} />,
             title: "Ensure compliance",
             description:
               "Link projects to relevant frameworks and ensure regulatory requirements are met.",
-            color: "#10B981",
+            color: green[500],
           },
         ].map((feature, index) => (
           <Box
@@ -130,7 +131,7 @@ const UseCasesStep: React.FC<OnboardingStepProps> = () => {
                 sx={{
                   fontSize: "14px",
                   fontWeight: 600,
-                  color: "#111827",
+                  color: text.primary,
                   marginBottom: 0.5,
                 }}
               >

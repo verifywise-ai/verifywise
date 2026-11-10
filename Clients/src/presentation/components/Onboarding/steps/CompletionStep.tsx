@@ -4,7 +4,8 @@ import { CheckCircle2, Check } from "lucide-react";
 import confetti from "canvas-confetti";
 import { OnboardingStepProps } from "../../../types/interfaces/i.onboarding";
 import { CustomizableButton } from "../../button/customizable-button";
-import { brand, text } from "../../../themes/palette";
+import { green } from "@design-tokens/primitives";
+import { brand, text, status } from "../../../themes/palette";
 
 const CompletionStep: React.FC<OnboardingStepProps> = ({ onNext }) => {
   useEffect(() => {
@@ -32,13 +33,25 @@ const CompletionStep: React.FC<OnboardingStepProps> = ({ onNext }) => {
         ...defaults,
         particleCount,
         origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 },
-        colors: [`${brand.primary}`, "#10B981", "#D1FAE5", "#34D399", "#6EE7B7"],
+        colors: [
+          `${brand.primary}`,
+          green[500],
+          status.success.border,
+          status.success.text,
+          status.success.bg,
+        ],
       });
       confetti({
         ...defaults,
         particleCount,
         origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 },
-        colors: [`${brand.primary}`, "#10B981", "#D1FAE5", "#34D399", "#6EE7B7"],
+        colors: [
+          `${brand.primary}`,
+          green[500],
+          status.success.border,
+          status.success.text,
+          status.success.bg,
+        ],
       });
     }, 250);
 
@@ -70,7 +83,7 @@ const CompletionStep: React.FC<OnboardingStepProps> = ({ onNext }) => {
           sx={{
             fontWeight: 600,
             fontSize: "28px",
-            color: "#111827",
+            color: text.primary,
             textAlign: "center",
           }}
         >

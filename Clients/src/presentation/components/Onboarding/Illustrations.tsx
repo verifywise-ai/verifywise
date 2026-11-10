@@ -1,7 +1,7 @@
 import React from "react";
 import { Box } from "@mui/material";
 import { IllustrationType } from "../../../domain/enums/onboarding.enum";
-import { brand, background } from "../../themes/palette";
+import { brand, background, accent, text } from "../../themes/palette";
 
 interface IllustrationProps {
   type: IllustrationType;
@@ -47,7 +47,7 @@ const GradientCircles: React.FC = () => (
         width: "100px",
         height: "100px",
         borderRadius: "50%",
-        background: `linear-gradient(135deg, ${brand.primary} 0%, #2D9B7F 100%)`,
+        background: `linear-gradient(135deg, ${brand.primary} 0%, ${accent.primary.text} 100%)`,
         top: "50%",
         left: "50%",
         transform: "translate(-50%, -50%)",
@@ -87,7 +87,7 @@ const GeometricShapes: React.FC = () => (
         height: "0",
         borderLeft: "60px solid transparent",
         borderRight: "60px solid transparent",
-        borderBottom: "100px solid #2D9B7F",
+        borderBottom: `100px solid ${accent.primary.text}`,
         top: "20px",
         right: "40px",
         opacity: 0.5,
@@ -151,7 +151,7 @@ const AbstractWaves: React.FC = () => (
           <stop offset="100%" stopColor={brand.primary} />
         </linearGradient>
         <linearGradient id="wave-gradient3" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#2D9B7F" />
+          <stop offset="0%" stopColor={accent.primary.text} />
           <stop offset="100%" stopColor={brand.primary} />
         </linearGradient>
       </defs>
@@ -176,7 +176,7 @@ const IconGrid: React.FC = () => (
       <Box
         key={i}
         sx={{
-          "backgroundColor": "white",
+          "backgroundColor": background.main,
           "borderRadius": "8px",
           "display": "flex",
           "alignItems": "center",
@@ -191,7 +191,7 @@ const IconGrid: React.FC = () => (
             height: "4px",
             top: 0,
             left: 0,
-            background: `linear-gradient(90deg, #13715B ${i * 15}%, #0F5A47 100%)`,
+            background: `linear-gradient(90deg, ${brand.primary} ${i * 15}%, ${brand.primaryHover} 100%)`,
           },
         }}
       />
@@ -220,14 +220,14 @@ const FlowDiagram: React.FC = () => (
             width: "80px",
             height: "80px",
             borderRadius: "8px",
-            background: `linear-gradient(135deg, #13715B ${step * 20}%, #0F5A47 100%)`,
+            background: `linear-gradient(135deg, ${brand.primary} ${step * 20}%, ${brand.primaryHover} 100%)`,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            color: "white",
+            color: text.inverse,
             fontSize: "24px",
             fontWeight: 600,
-            boxShadow: "0 4px 6px rgba(19, 113, 91, 0.3)",
+            boxShadow: `0 4px 6px ${brand.primary}4D`,
           }}
         >
           {step}

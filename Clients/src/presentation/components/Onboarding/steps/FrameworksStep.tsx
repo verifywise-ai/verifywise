@@ -3,7 +3,8 @@ import { Box, Typography, Stack } from "@mui/material";
 import { OnboardingStepProps } from "../../../types/interfaces/i.onboarding";
 import { Shield, FileText, Scale, Activity } from "lucide-react";
 import onboardingBanner from "../../../assets/onboarding-banner.svg";
-import { text, background } from "../../../themes/palette";
+import { amber, green } from "@design-tokens/primitives";
+import { text, background, accent } from "../../../themes/palette";
 
 const FrameworksStep: React.FC<OnboardingStepProps> = () => {
   const frameworks = [
@@ -11,25 +12,25 @@ const FrameworksStep: React.FC<OnboardingStepProps> = () => {
       name: "EU AI Act",
       icon: <Scale size={20} />,
       description: "Comply with the European Union's comprehensive AI regulation framework.",
-      color: "#3B82F6",
+      color: accent.blue.text,
     },
     {
       name: "NIST AI RMF",
       icon: <Activity size={20} />,
       description: "Follow NIST's AI Risk Management Framework for trustworthy AI systems.",
-      color: "#F59E0B",
+      color: amber[500],
     },
     {
       name: "ISO 42001",
       icon: <Shield size={20} />,
       description: "Meet international standards for AI management systems and best practices.",
-      color: "#8B5CF6",
+      color: accent.purple.text,
     },
     {
       name: "ISO 27001",
       icon: <FileText size={20} />,
       description: "Ensure information security management for your AI systems and data.",
-      color: "#10B981",
+      color: green[500],
     },
   ];
 
@@ -128,7 +129,7 @@ const FrameworksStep: React.FC<OnboardingStepProps> = () => {
                 sx={{
                   fontSize: "14px",
                   fontWeight: 600,
-                  color: "#111827",
+                  color: text.primary,
                   marginBottom: 0.5,
                 }}
               >

@@ -1,5 +1,6 @@
 import React from "react";
 import { Box } from "@mui/material";
+import { green } from "@design-tokens/primitives";
 
 interface ProgressDotsProps {
   totalSteps: number;
@@ -23,7 +24,7 @@ const ProgressDots: React.FC<ProgressDotsProps> = ({ totalSteps, currentStep }) 
             width: currentStep === index ? 48 : 16,
             height: 8,
             borderRadius: 4,
-            backgroundColor: currentStep === index ? "#10B981" : "rgba(0, 0, 0, 0.15)",
+            backgroundColor: currentStep === index ? green[500] : "rgba(0, 0, 0, 0.15)",
             transition: "all 0.3s ease",
           }}
         />

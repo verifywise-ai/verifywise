@@ -17,7 +17,7 @@ import TaskWorkflowStep from "./steps/TaskWorkflowStep";
 import SampleProjectStep from "./steps/SampleProjectStep";
 import InviteTeamStep from "./steps/InviteTeamStep";
 import CompletionStep from "./steps/CompletionStep";
-import { brand, text, border as borderPalette, status } from "../../themes/palette";
+import { brand, text, background, border as borderPalette, status } from "../../themes/palette";
 
 const OnboardingModal: React.FC<OnboardingModalProps> = ({
   onComplete,
@@ -208,7 +208,7 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
           role="dialog"
           aria-modal="true"
           sx={{
-            backgroundColor: "white",
+            backgroundColor: background.main,
             borderRadius: "8px",
             boxShadow: "0 20px 60px rgba(0, 0, 0, 0.3)",
             width: "60%",
@@ -265,7 +265,7 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
                       "color": `${status.default.text}`,
                       "&:hover": {
                         backgroundColor: "transparent",
-                        color: "#374151",
+                        color: text.secondary,
                       },
                     }}
                   />

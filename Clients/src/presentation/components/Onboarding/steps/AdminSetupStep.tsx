@@ -3,7 +3,8 @@ import { Box, Typography, Stack } from "@mui/material";
 import { OnboardingStepProps } from "../../../types/interfaces/i.onboarding";
 import { UserPlus, Settings, Shield } from "lucide-react";
 import onboardingBanner from "../../../assets/onboarding-banner.svg";
-import { text, background, status } from "../../../themes/palette";
+import { green } from "@design-tokens/primitives";
+import { text, background, status, accent } from "../../../themes/palette";
 
 const AdminSetupStep: React.FC<OnboardingStepProps> = () => {
   const setupTasks = [
@@ -12,21 +13,21 @@ const AdminSetupStep: React.FC<OnboardingStepProps> = () => {
       title: "Invite team members",
       hint: "Settings → Team",
       description: "Add colleagues to collaborate on compliance and risk management tasks.",
-      color: "#3B82F6",
+      color: accent.blue.text,
     },
     {
       icon: <Shield size={24} />,
       title: "Enable frameworks",
       hint: "Settings → Frameworks",
       description: "Activate the compliance frameworks relevant to your organization.",
-      color: "#8B5CF6",
+      color: accent.purple.text,
     },
     {
       icon: <Settings size={24} />,
       title: "Configure organization settings",
       hint: "Settings → Organization",
       description: "Customize branding, notifications, and organizational preferences.",
-      color: "#10B981",
+      color: green[500],
     },
   ];
 
@@ -86,7 +87,7 @@ const AdminSetupStep: React.FC<OnboardingStepProps> = () => {
             key={index}
             sx={{
               "padding": 3,
-              "backgroundColor": "white",
+              "backgroundColor": background.main,
               "border": `2px solid ${status.default.border}`,
               "borderRadius": "4px",
               "transition": "all 0.2s",
@@ -118,7 +119,7 @@ const AdminSetupStep: React.FC<OnboardingStepProps> = () => {
                     sx={{
                       fontSize: "15px",
                       fontWeight: 600,
-                      color: "#111827",
+                      color: text.primary,
                     }}
                   >
                     {task.title}

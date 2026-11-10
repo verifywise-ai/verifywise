@@ -3,7 +3,8 @@ import { Box, Typography, Stack } from "@mui/material";
 import { OnboardingStepProps } from "../../../types/interfaces/i.onboarding";
 import { AlertTriangle, CheckCircle, Clock, Users } from "lucide-react";
 import onboardingBanner from "../../../assets/onboarding-banner.svg";
-import { text, background } from "../../../themes/palette";
+import { green } from "@design-tokens/primitives";
+import { text, background, accent } from "../../../themes/palette";
 
 const RiskManagementStep: React.FC<OnboardingStepProps> = () => {
   const capabilities = [
@@ -11,25 +12,25 @@ const RiskManagementStep: React.FC<OnboardingStepProps> = () => {
       icon: <AlertTriangle size={18} />,
       title: "Identify risks",
       description: "Catalog potential risks across your AI systems",
-      color: "#EF4444",
+      color: accent.red.text,
     },
     {
       icon: <Users size={18} />,
       title: "Assign ownership",
       description: "Delegate risk mitigation to responsible teams",
-      color: "#F59E0B",
+      color: accent.amber.text,
     },
     {
       icon: <Clock size={18} />,
       title: "Track progress",
       description: "Monitor mitigation efforts in real-time",
-      color: "#3B82F6",
+      color: accent.blue.text,
     },
     {
       icon: <CheckCircle size={18} />,
       title: "Close risks",
       description: "Mark risks as resolved when mitigation is complete",
-      color: "#10B981",
+      color: green[500],
     },
   ];
 
@@ -121,7 +122,7 @@ const RiskManagementStep: React.FC<OnboardingStepProps> = () => {
               sx={{
                 fontSize: "13px",
                 fontWeight: 600,
-                color: "#111827",
+                color: text.primary,
               }}
             >
               {capability.title}

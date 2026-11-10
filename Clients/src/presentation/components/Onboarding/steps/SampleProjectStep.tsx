@@ -6,7 +6,15 @@ import Select from "../../../components/Inputs/Select";
 import useFrameworks from "../../../../application/hooks/useFrameworks";
 import { Framework } from "../../../../domain/types/Framework";
 import onboardingBanner from "../../../assets/onboarding-banner.svg";
-import { brand, text, background, border as borderPalette, status } from "../../../themes/palette";
+import { green } from "@design-tokens/primitives";
+import {
+  brand,
+  text,
+  background,
+  border as borderPalette,
+  status,
+  accent,
+} from "../../../themes/palette";
 
 const USE_CASE_TEMPLATES = [
   { _id: "demo-chatbot", name: "AI Chatbot for Customer Support" },
@@ -105,13 +113,13 @@ const SampleProjectStep: React.FC<OnboardingStepProps> = ({
             alignItems: "center",
             gap: 1.5,
             padding: 2,
-            backgroundColor: "#FEF3C7",
-            border: "1px solid #FDE68A",
+            backgroundColor: status.warning.bg,
+            border: `1px solid ${status.warning.border}`,
             borderRadius: "4px",
           }}
         >
           <Typography sx={{ fontSize: "18px" }}>{DEMO_PROJECT_BANNER.icon}</Typography>
-          <Typography sx={{ fontSize: "13px", color: "#92400E", fontWeight: 500 }}>
+          <Typography sx={{ fontSize: "13px", color: accent.amber.text, fontWeight: 500 }}>
             {DEMO_PROJECT_BANNER.message}
           </Typography>
         </Box>
@@ -128,7 +136,7 @@ const SampleProjectStep: React.FC<OnboardingStepProps> = ({
               marginBottom: 1,
             }}
           >
-            Demo use case <span style={{ color: "#DC2626" }}>*</span>
+            Demo use case <span style={{ color: accent.red.text }}>*</span>
           </Typography>
           <Select
             id="use-case-select"
@@ -151,7 +159,7 @@ const SampleProjectStep: React.FC<OnboardingStepProps> = ({
               marginBottom: 2,
             }}
           >
-            Select regulations/frameworks to apply <span style={{ color: "#DC2626" }}>*</span>
+            Select regulations/frameworks to apply <span style={{ color: accent.red.text }}>*</span>
           </Typography>
 
           {hasFrameworks ? (
@@ -180,12 +188,12 @@ const SampleProjectStep: React.FC<OnboardingStepProps> = ({
                     "justifyContent": "center",
                     "gap": 1,
                     "backgroundColor": selectedFrameworks.includes(Number(framework.id))
-                      ? "#F0FDF4"
-                      : "white",
+                      ? green[50]
+                      : background.main,
                     "transition": "all 0.2s",
                     "&:hover": {
                       backgroundColor: selectedFrameworks.includes(Number(framework.id))
-                        ? "#F0FDF4"
+                        ? green[50]
                         : `${background.accent}`,
                       borderColor: `${brand.primary}`,
                     },
@@ -205,7 +213,7 @@ const SampleProjectStep: React.FC<OnboardingStepProps> = ({
                   <Typography
                     sx={{
                       fontSize: "12px",
-                      color: "#111827",
+                      color: text.primary,
                       fontWeight: 500,
                       textAlign: "center",
                     }}
@@ -219,12 +227,12 @@ const SampleProjectStep: React.FC<OnboardingStepProps> = ({
             <Box
               sx={{
                 padding: 2,
-                backgroundColor: "#FEF2F2",
-                border: "1px solid #FECACA",
+                backgroundColor: accent.red.bg,
+                border: `1px solid ${status.error.border}`,
                 borderRadius: "4px",
               }}
             >
-              <Typography sx={{ fontSize: "12px", color: "#991B1B" }}>
+              <Typography sx={{ fontSize: "12px", color: accent.red.text }}>
                 No frameworks available. Please contact support if this issue persists.
               </Typography>
             </Box>
@@ -236,12 +244,12 @@ const SampleProjectStep: React.FC<OnboardingStepProps> = ({
           <Box
             sx={{
               padding: 2,
-              backgroundColor: "#FEF2F2",
-              border: "1px solid #FECACA",
+              backgroundColor: accent.red.bg,
+              border: `1px solid ${status.error.border}`,
               borderRadius: "4px",
             }}
           >
-            <Typography sx={{ fontSize: "12px", color: "#991B1B" }}>
+            <Typography sx={{ fontSize: "12px", color: accent.red.text }}>
               Please select both a use case and at least one framework to continue.
             </Typography>
           </Box>

@@ -9,6 +9,8 @@ import { sendInviteEmail } from "../../../../application/repository/mail.reposit
 import { useAuth } from "../../../../application/hooks/useAuth";
 import { useRoles } from "../../../../application/hooks/useRoles";
 import onboardingBanner from "../../../assets/onboarding-banner.svg";
+import { green } from "@design-tokens/primitives";
+import { accent, status } from "../../../themes/palette";
 
 interface TeamMemberInvite {
   email: string;
@@ -232,8 +234,8 @@ const InviteTeamStep: React.FC<OnboardingStepProps> = () => {
         {successMessage && (
           <Box
             sx={{
-              backgroundColor: "#F0FDF4",
-              border: "1px solid #D1FAE5",
+              backgroundColor: green[50],
+              border: `1px solid ${status.success.border}`,
               borderRadius: "4px",
               padding: 2.5,
             }}
@@ -247,13 +249,13 @@ const InviteTeamStep: React.FC<OnboardingStepProps> = () => {
         {errorMessage && (
           <Box
             sx={{
-              backgroundColor: "#FEF2F2",
-              border: "1px solid #FECACA",
+              backgroundColor: accent.red.bg,
+              border: `1px solid ${status.error.border}`,
               borderRadius: "4px",
               padding: 2.5,
             }}
           >
-            <Typography sx={{ fontSize: "13px", color: "#DC2626", lineHeight: 1.6 }}>
+            <Typography sx={{ fontSize: "13px", color: accent.red.text, lineHeight: 1.6 }}>
               {errorMessage}
             </Typography>
           </Box>
@@ -261,8 +263,8 @@ const InviteTeamStep: React.FC<OnboardingStepProps> = () => {
 
         <Box
           sx={{
-            backgroundColor: "#F0FDF4",
-            border: "1px solid #D1FAE5",
+            backgroundColor: green[50],
+            border: `1px solid ${status.success.border}`,
             borderRadius: "4px",
             padding: 2.5,
           }}
