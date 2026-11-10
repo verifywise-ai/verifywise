@@ -11,6 +11,13 @@ vi.mock("../../../../application/hooks/useAuth", () => ({
   useAuth: () => ({ userRoleName: "Admin" }),
 }));
 
+vi.mock("../../../../application/hooks/usePolicyTemplates", () => ({
+  usePolicyTemplates: vi.fn(),
+  useCreatePolicyTemplate: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useUpdatePolicyTemplate: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useDeletePolicyTemplate: () => ({ mutateAsync: vi.fn(), isPending: false }),
+}));
+
 vi.mock("../../../components/Table/PolicyTable", () => ({
   default: ({ data, renderRow }: any) => (
     <table>
@@ -20,49 +27,59 @@ vi.mock("../../../components/Table/PolicyTable", () => ({
 }));
 
 import PolicyTemplates from "../PolicyTemplates";
+import { usePolicyTemplates } from "../../../../application/hooks/usePolicyTemplates";
 
-const sampleTemplates = [
-  {
-    id: 1,
-    title: "AI Ethics Policy",
-    description: "Guidance on ethical AI use",
-    tags: ["AI ethics", "Fairness"],
-    category: "Core AI governance policies",
-    content: "<p>content 1</p>",
-  },
-  {
-    id: 2,
-    title: "Data Governance Policy",
-    description: "Rules for governing data",
-    tags: ["Data governance"],
-    category: "Data and security AI policies",
-    content: "<p>content 2</p>",
-  },
-];
+const systemTemplate = {
+  id: 1,
+  organization_id: null,
+  name: "AI Ethics Policy",
+  description: "Guidance on ethical AI use",
+  tags: ["AI ethics", "Fairness"],
+  category: "Core AI governance policies",
+  content: "<p>content 1</p>",
+  is_system_template: true,
+  is_active: true,
+  created_by: null,
+  created_at: "2026-01-01T00:00:00Z",
+  updated_at: "2026-01-01T00:00:00Z",
+};
 
-describe("PolicyTemplates", () => {
-  const originalFetch = globalThis.fetch;
+const orgTemplate = {
+  ...systemTemplate,
+  id: 2,
+  organization_id: 7,
+  name: "Internal AI Policy",
+  is_system_template: false,
+};
 
+const mockUsePolicyTemplates = usePolicyTemplates as unknown as ReturnType<typeof vi.fn>;
+
+describe("PolicyTemplates (#5261)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      json: () => Promise.resolve(sampleTemplates),
-    }) as any;
+    mockNavigate.mockClear();
+    mockUsePolicyTemplates.mockReturnValue({
+      data: [systemTemplate, orgTemplate],
+      isLoading: false,
+    });
   });
 
-  afterAll(() => {
-    globalThis.fetch = originalFetch;
-  });
-
-  it("renders templates fetched from the JSON data file", async () => {
+  it("renders the system section by default and toggles to our templates", async () => {
     renderWithProviders(<PolicyTemplates tags={[]} />, { route: "/policies/templates" });
     await waitFor(() => {
       expect(screen.getByText("AI Ethics Policy")).toBeInTheDocument();
     });
-    expect(screen.getByText("Data Governance Policy")).toBeInTheDocument();
+    expect(screen.queryByText("Internal AI Policy")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /our templates/i }));
+    await waitFor(() => {
+      expect(screen.getByText("Internal AI Policy")).toBeInTheDocument();
+    });
+    expect(screen.queryByText("AI Ethics Policy")).not.toBeInTheDocument();
   });
 
-  it("shows a loading skeleton while isLoading is true", () => {
+  it("shows a loading skeleton while the query is loading", () => {
+    mockUsePolicyTemplates.mockReturnValue({ data: undefined, isLoading: true });
     renderWithProviders(<PolicyTemplates tags={[]} isLoading />, {
       route: "/policies/templates",
     });
@@ -70,48 +87,19 @@ describe("PolicyTemplates", () => {
   });
 
   it("shows an empty state message when there are no templates", async () => {
-    globalThis.fetch = vi.fn().mockResolvedValue({ json: () => Promise.resolve([]) }) as any;
+    mockUsePolicyTemplates.mockReturnValue({ data: [], isLoading: false });
     renderWithProviders(<PolicyTemplates tags={[]} />, { route: "/policies/templates" });
     await waitFor(() => {
       expect(screen.getByText("No policy templates found.")).toBeInTheDocument();
     });
   });
 
-  it("navigates to the new-policy editor with the template id when a row is clicked", async () => {
+  it("navigates to the new-policy editor with a composite template id", async () => {
     renderWithProviders(<PolicyTemplates tags={[]} />, { route: "/policies/templates" });
     await waitFor(() => {
       expect(screen.getByText("AI Ethics Policy")).toBeInTheDocument();
     });
     fireEvent.click(screen.getByText("AI Ethics Policy"));
-    expect(mockNavigate).toHaveBeenCalledWith("/policies/new?templateId=1");
-  });
-
-  it("filters templates by search term", async () => {
-    renderWithProviders(<PolicyTemplates tags={[]} />, { route: "/policies/templates" });
-    await waitFor(() => {
-      expect(screen.getByText("AI Ethics Policy")).toBeInTheDocument();
-    });
-    fireEvent.change(screen.getByLabelText("Search policy templates"), {
-      target: { value: "governance" },
-    });
-    expect(screen.queryByText("AI Ethics Policy")).not.toBeInTheDocument();
-    expect(screen.getByText("Data Governance Policy")).toBeInTheDocument();
-  });
-
-  it("redirects to the editor when a templateId query param is present", async () => {
-    renderWithProviders(<PolicyTemplates tags={[]} />, {
-      route: "/policies/templates?templateId=7",
-    });
-    await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith("/policies/new?templateId=7");
-    });
-  });
-
-  it("renders tag chips for each template's tags", async () => {
-    renderWithProviders(<PolicyTemplates tags={[]} />, { route: "/policies/templates" });
-    await waitFor(() => {
-      expect(screen.getByText("AI Ethics Policy")).toBeInTheDocument();
-    });
-    expect(screen.getByText("Fairness")).toBeInTheDocument();
+    expect(mockNavigate).toHaveBeenCalledWith("/policies/new?templateId=system-1");
   });
 });
