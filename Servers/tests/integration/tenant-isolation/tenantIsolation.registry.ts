@@ -18,7 +18,14 @@
 
 import { crudEntity } from "./tenantIsolation.matrix";
 import type { MatrixSpec } from "./tenantIsolation.matrix";
-import { fileFixture, projectFixture, riskFixture, taskFixture } from "./tenantIsolation.fixtures";
+import {
+  fileFixture,
+  groupFixture,
+  policyTemplateFixture,
+  projectFixture,
+  riskFixture,
+  taskFixture,
+} from "./tenantIsolation.fixtures";
 
 export interface IsolationEntity {
   /** Human-readable entity name (kebab-case). */
@@ -84,6 +91,21 @@ export const tenantIsolationRegistry: IsolationEntity[] = [
   crudEntity("tasks", "/api/tasks", ["tasks", "task_assignees"], taskFixture, {
     updateVerb: "PUT",
   }),
+  // Groups / teams with group-level use-case access (#5253): membership and
+  // project_groups rows are only reachable through the groups API.
+  crudEntity(
+    "groups",
+    "/api/v1/groups",
+    ["groups", "group_members", "project_groups"],
+    groupFixture,
+  ),
+  // Organisation-owned policy templates (#5261).
+  crudEntity(
+    "policy_templates",
+    "/api/v1/policy-templates",
+    ["policy_templates"],
+    policyTemplateFixture,
+  ),
   {
     name: "ai_incidents",
     tables: ["ai_incident_managements"],
